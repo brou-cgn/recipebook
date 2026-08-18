@@ -238,9 +238,7 @@ describe('EventGuestSelectionPage', () => {
       />
     );
 
-    // There are two Abbrechen buttons (header close and form action); click the form action one
-    const abrechenButtons = screen.getAllByRole('button', { name: 'Abbrechen' });
-    fireEvent.click(abrechenButtons[abrechenButtons.length - 1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
 
     expect(onBack).toHaveBeenCalledTimes(1);
   });
@@ -262,24 +260,5 @@ describe('EventGuestSelectionPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
     expect(onSave).toHaveBeenCalledWith([], []);
-  });
-
-  test('calls onBack when header close button is clicked', () => {
-    const onBack = jest.fn();
-    render(
-      <EventGuestSelectionPage
-        currentUser={currentUser}
-        selectedGuestIds={[]}
-        driverGuestIds={[]}
-        onSave={jest.fn()}
-        onBack={onBack}
-      />
-    );
-
-    // Header close button is the first Abbrechen button
-    const abrechenButtons = screen.getAllByRole('button', { name: 'Abbrechen' });
-    fireEvent.click(abrechenButtons[0]);
-
-    expect(onBack).toHaveBeenCalledTimes(1);
   });
 });

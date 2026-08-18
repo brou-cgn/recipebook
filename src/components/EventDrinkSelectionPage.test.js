@@ -264,27 +264,7 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
-    const abrechenButtons = screen.getAllByRole('button', { name: 'Abbrechen' });
-    fireEvent.click(abrechenButtons[abrechenButtons.length - 1]);
-
-    expect(onBack).toHaveBeenCalledTimes(1);
-  });
-
-  test('calls onBack when header close button is clicked', () => {
-    const onBack = jest.fn();
-    render(
-      <EventDrinkSelectionPage
-        customDrinks={customDrinks}
-        customDrinkIds={[]}
-        guestPreferenceMultipliers={{}}
-        selectedGuestIds={[]}
-        onSave={jest.fn()}
-        onBack={onBack}
-      />,
-    );
-
-    const abrechenButtons = screen.getAllByRole('button', { name: 'Abbrechen' });
-    fireEvent.click(abrechenButtons[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
 
     expect(onBack).toHaveBeenCalledTimes(1);
   });
