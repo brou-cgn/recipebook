@@ -343,20 +343,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
             {currentUser?.sortCarousel && (
               <SortCarousel activeSort={activeSort} onSortChange={handleSortChange} />
             )}
-            {onCategoryFilterChange && (
-              <select
-                className="category-filter-arrow"
-                value={categoryFilter}
-                onChange={(e) => onCategoryFilterChange(e.target.value)}
-                title="Nach Kategorie filtern"
-                aria-label="Kategorie filtern"
-              >
-                <option value="">Alle Kategorien</option>
-                {customLists.mealCategories.map((category) => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
-            )}
           </div>
           <div className="recipe-list-actions">
             <div className="filter-group">
