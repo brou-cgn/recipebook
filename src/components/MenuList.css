@@ -22,6 +22,9 @@
   padding: 0 0 1rem;
 }
 
+/* Below 900px the sidebar (see MenuFilterSidebar.css) hides itself and the
+   mobile view falls back to its original FAB buttons defined below, so the
+   mobile layout stays exactly as it was before the sidebar was introduced. */
 @media (max-width: 900px) {
   .menu-overview-layout {
     display: block;
@@ -66,6 +69,130 @@
 .empty-hint {
   font-size: 0.9rem;
   color: #999;
+}
+
+.empty-hint-mobile {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .empty-hint-desktop {
+    display: none;
+  }
+
+  .empty-hint-mobile {
+    display: block;
+  }
+}
+
+/* Mobile-only FAB buttons, restored to match the pre-sidebar mobile view.
+   Desktop uses the persistent MenuFilterSidebar instead (see
+   MenuFilterSidebar.css). */
+.menu-favorites-filter-button,
+.add-menu-fab-button {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .menu-favorites-filter-button {
+    display: flex;
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 1101;
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    max-width: 56px;
+    border-radius: 50%;
+    padding: 0;
+    background: white;
+    color: #666;
+    border: 1px solid #ddd;
+    opacity: 0.85;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.4rem;
+    font-weight: 600;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    touch-action: manipulation;
+    will-change: transform;
+    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+                background 0.15s ease,
+                box-shadow 0.15s ease;
+  }
+
+  .menu-favorites-filter-button.pressed {
+    transform: scale(1.15);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+  }
+
+  .menu-favorites-filter-button:focus,
+  .menu-favorites-filter-button:focus-visible {
+    outline: none;
+  }
+
+  .menu-favorites-filter-button:active {
+    outline: none;
+  }
+
+  .menu-favorites-filter-button.active {
+    background: #DF7A00;
+    border-color: #DF7A00;
+    color: white;
+  }
+
+  .menu-favorites-filter-button .button-icon-image {
+    width: 1.4rem;
+    height: 1.4rem;
+    object-fit: contain;
+  }
+
+  .add-menu-fab-button {
+    display: flex;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1101;
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    max-width: 56px;
+    border-radius: 50%;
+    padding: 0;
+    background: white;
+    color: white;
+    border: 1px solid #ddd;
+    opacity: 0.85;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    touch-action: manipulation;
+    will-change: transform;
+    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+                background 0.15s ease,
+                box-shadow 0.15s ease;
+    font-size: 1.1rem;
+  }
+
+  .add-menu-fab-button.pressed {
+    transform: scale(1.15);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.3);
+  }
+
+  .add-menu-fab-button .button-icon-image {
+    width: 1.4rem;
+    height: 1.4rem;
+    object-fit: contain;
+  }
 }
 
 .menu-grid {
