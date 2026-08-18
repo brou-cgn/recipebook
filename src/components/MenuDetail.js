@@ -528,11 +528,59 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     return combineIngredients(converted);
   };
 
+  const canEdit = canEditMenu(currentUser, menu);
+  const showHeaderButtons = !isMobileOrTablet && (
+    (canEdit && onEdit) ||
+    (menu.privat && canEdit && onPublish) ||
+    (canDeleteMenu(currentUser, menu) && onDelete)
+  );
+
   return (
     <div className="menu-detail-container">
-      <div className="menu-detail-header">
+      {showHeaderButtons && (
+        <div className="menu-detail-header">
           <div className="action-buttons">
-          <button 
+            {canEdit && onEdit && !showShoppingListModal && !showPortionSelector && (
+              <button
+                className="menu-edit-button"
+                onClick={() => onEdit(menu)}
+                title="Menü bearbeiten"
+              >
+                Bearbeiten
+              </button>
+            )}
+            {menu.privat && canEdit && onPublish && (
+              <button
+                className="publish-menu-button"
+                onClick={handlePublish}
+                disabled={publishLoading}
+                title="Menü veröffentlichen"
+              >
+                {publishLoading ? '…' : 'Veröffentlichen'}
+              </button>
+            )}
+            {canDeleteMenu(currentUser, menu) && onDelete && (
+              <button
+                className="menu-delete-button"
+                onClick={handleDelete}
+                title="Menü löschen"
+              >
+                Löschen
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="menu-detail-content">
+        {menu.image && (
+          <div className="menu-detail-image">
+            <img src={menu.image} alt={menu.name} />
+          </div>
+        )}
+
+        <div className="mobile-action-buttons">
+          <button
             className={`favorite-button ${isFavorite ? 'favorite-active' : ''}`}
             onClick={handleToggleFavorite}
             title={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
@@ -563,35 +611,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
               shoppingListIcon
             )}
           </button>
-          {!isMobileOrTablet && canEditMenu(currentUser, menu) && onEdit && !showShoppingListModal && !showPortionSelector && (
-            <button
-              className="menu-edit-button"
-              onClick={() => onEdit(menu)}
-              title="Menü bearbeiten"
-            >
-              Bearbeiten
-            </button>
-          )}
-          {!isMobileOrTablet && menu.privat && canEditMenu(currentUser, menu) && onPublish && (
-            <button
-              className="publish-menu-button"
-              onClick={handlePublish}
-              disabled={publishLoading}
-              title="Menü veröffentlichen"
-            >
-              {publishLoading ? '…' : 'Veröffentlichen'}
-            </button>
-          )}
-          {!isMobileOrTablet && canDeleteMenu(currentUser, menu) && onDelete && (
-            <button
-              className="menu-delete-button"
-              onClick={handleDelete}
-              title="Menü löschen"
-            >
-              Löschen
-            </button>
-          )}
-          {canEditMenu(currentUser, menu) && !menu.shareId && (
+          {canEdit && !menu.shareId && (
             <button
               className="share-button"
               onClick={handleToggleShare}
@@ -601,7 +621,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
               {shareLoading ? '…' : '↑ Teilen'}
             </button>
           )}
-          {canEditMenu(currentUser, menu) && menu.shareId && (
+          {canEdit && menu.shareId && (
             <button
               className="share-copy-url-button"
               onClick={handleCopyShareUrl}
@@ -616,7 +636,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
               )}
             </button>
           )}
-          {isSharedView && !canEditMenu(currentUser, menu) && (
+          {isSharedView && !canEdit && (
             <button
               className="share-copy-url-button"
               onClick={handleCopyShareUrl}
@@ -632,9 +652,8 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
             </button>
           )}
         </div>
-      </div>
 
-      <div className="menu-detail-content">
+        <div className="menu-detail-body">
         <div className="menu-title-row">
           <h1 className="menu-title">{menu.name}</h1>
           <button className="close-button" onClick={onBack} title="Schließen">
@@ -777,6 +796,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
             </section>
           );
         })}
+        </div>
       </div>
       {isMobileOrTablet && canDeleteMenu(currentUser, menu) && onDelete && (
         <button
