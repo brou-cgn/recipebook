@@ -516,8 +516,9 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
               ? profile.bevorzugteKategorien.map(getDrinkCategoryLabel)
               : [];
             const preferredSummary = [...preferredDrinkNames, ...preferredCategoryNames];
+            const guestDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode) || '🗑';
             return (
-              <div key={profile.id} className="events-card" onClick={() => openEdit(profile)}>
+              <div key={profile.id} className="events-card events-guest-card" onClick={() => openEdit(profile)}>
                 <div className="events-card-main">
                   <h3>{fullName || 'Unbenannter Gast'}</h3>
                   {profile.kind === true && <p className="events-info-text">Kind</p>}
@@ -527,6 +528,22 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
                     </p>
                   )}
                 </div>
+                <button
+                  type="button"
+                  className="events-guest-delete-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(profile);
+                  }}
+                  aria-label={`${fullName || 'Gast'} löschen`}
+                  title="Gast löschen"
+                >
+                  {isBase64Image(guestDeleteIcon) ? (
+                    <img src={guestDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
+                  ) : (
+                    <span className="swipe-delete-icon-text">{guestDeleteIcon}</span>
+                  )}
+                </button>
               </div>
             );
           })}
