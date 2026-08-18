@@ -2297,7 +2297,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   )}
                 </button>
                 )}
-                {recipe.isPrivate && (
+                {(recipe.isPrivate || !isRecipePublic) && (
                   <div className="private-badge-button" title="Unveröffentlichtes Rezept" aria-label="Unveröffentlichtes Rezept">
                     {isBase64Image(privateBadgeIcon) ? (
                       <img src={privateBadgeIcon} alt="Privat" className="button-icon-image" draggable="false" />
