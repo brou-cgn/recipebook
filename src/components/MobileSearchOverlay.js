@@ -34,6 +34,26 @@ function incrementCuisineUsage(cuisineName) {
 }
 
 /**
+ * Splits a pill list into two independent rows (first half / second half) so
+ * the two-row carousel doesn't have to align pill columns – each row wraps
+ * its own content and keeps a uniform gap regardless of neighboring pill
+ * widths. Row membership is derived from the stable (unfiltered-by-selection)
+ * pill list so a pill never jumps rows just because it becomes active –
+ * that would force React to unmount/remount it and drop focus mid-click.
+ */
+function splitIntoTwoRows(items) {
+  const half = Math.ceil(items.length / 2);
+  return [items.slice(0, half), items.slice(half)];
+}
+
+/** Reorders a row's pills so active (selected) ones come first, without changing row membership. */
+function reorderActiveFirst(items, selected) {
+  const active = items.filter((name) => selected.includes(name));
+  const inactive = items.filter((name) => !selected.includes(name));
+  return [...active, ...inactive];
+}
+
+/**
  * Compute all cuisine types sorted by usage frequency (localStorage) desc,
  * then recipe count desc. Only includes types that have at least one recipe.
  */
@@ -355,12 +375,20 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
     return result;
   }, [allCuisinePills, debouncedTerm, cuisineGroups, allSortedCuisineTypes]);
 
-  // Active (selected) pills are always shown first (leftmost) in the carousel
-  const orderedCuisinePills = useMemo(() => {
-    const active = visibleCuisinePills.filter((name) => selectedCuisines.includes(name));
-    const inactive = visibleCuisinePills.filter((name) => !selectedCuisines.includes(name));
-    return [...active, ...inactive];
-  }, [visibleCuisinePills, selectedCuisines]);
+  // Row membership stays stable regardless of selection; within each row,
+  // active (selected) pills are always shown first (leftmost).
+  const [cuisineRow1Base, cuisineRow2Base] = useMemo(
+    () => splitIntoTwoRows(visibleCuisinePills),
+    [visibleCuisinePills]
+  );
+  const cuisinePillsRow1 = useMemo(
+    () => reorderActiveFirst(cuisineRow1Base, selectedCuisines),
+    [cuisineRow1Base, selectedCuisines]
+  );
+  const cuisinePillsRow2 = useMemo(
+    () => reorderActiveFirst(cuisineRow2Base, selectedCuisines),
+    [cuisineRow2Base, selectedCuisines]
+  );
 
   // Speisekategorien with at least one matching recipe
   const availableCategories = useMemo(() => {
@@ -384,12 +412,20 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
     return availableCategories.filter((name) => name.toLowerCase().includes(lower));
   }, [availableCategories, debouncedTerm]);
 
-  // Active (selected) pills are always shown first (leftmost) in the carousel
-  const orderedCategoryPills = useMemo(() => {
-    const active = visibleCategoryPills.filter((name) => selectedCategories.includes(name));
-    const inactive = visibleCategoryPills.filter((name) => !selectedCategories.includes(name));
-    return [...active, ...inactive];
-  }, [visibleCategoryPills, selectedCategories]);
+  // Row membership stays stable regardless of selection; within each row,
+  // active (selected) pills are always shown first (leftmost).
+  const [categoryRow1Base, categoryRow2Base] = useMemo(
+    () => splitIntoTwoRows(visibleCategoryPills),
+    [visibleCategoryPills]
+  );
+  const categoryPillsRow1 = useMemo(
+    () => reorderActiveFirst(categoryRow1Base, selectedCategories),
+    [categoryRow1Base, selectedCategories]
+  );
+  const categoryPillsRow2 = useMemo(
+    () => reorderActiveFirst(categoryRow2Base, selectedCategories),
+    [categoryRow2Base, selectedCategories]
+  );
 
   // Author pills: filtered by search term, active (selected) authors shown first
   const orderedAuthorPills = useMemo(() => {
@@ -505,16 +541,20 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
         {/* Active (selected) pills are always shown first (leftmost) in the carousel */}
         {visibleCategoryPills.length > 0 && (
           <div className="mobile-search-cuisine-grid mobile-search-category-grid">
-            {orderedCategoryPills.map((name) => (
-              <button
-                key={name}
-                className={`mobile-search-filter-pill mobile-search-cuisine-pill${selectedCategories.includes(name) ? ' active' : ''}`}
-                onClick={() => handleCategoryPillClick(name)}
-                aria-pressed={selectedCategories.includes(name)}
-                title={selectedCategories.includes(name) ? 'Filter aufheben' : `Nach ${name} filtern`}
-              >
-                {name}
-              </button>
+            {[categoryPillsRow1, categoryPillsRow2].filter((row) => row.length > 0).map((row, rowIndex) => (
+              <div className="mobile-search-cuisine-row" key={rowIndex}>
+                {row.map((name) => (
+                  <button
+                    key={name}
+                    className={`mobile-search-filter-pill mobile-search-cuisine-pill${selectedCategories.includes(name) ? ' active' : ''}`}
+                    onClick={() => handleCategoryPillClick(name)}
+                    aria-pressed={selectedCategories.includes(name)}
+                    title={selectedCategories.includes(name) ? 'Filter aufheben' : `Nach ${name} filtern`}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
         )}
@@ -523,16 +563,20 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
         {/* Active (selected) pills are always shown first (leftmost) in the carousel */}
         {visibleCuisinePills.length > 0 && (
           <div className="mobile-search-cuisine-grid">
-            {orderedCuisinePills.map((name) => (
-              <button
-                key={name}
-                className={`mobile-search-filter-pill mobile-search-cuisine-pill${selectedCuisines.includes(name) ? ' active' : ''}`}
-                onClick={() => handleCuisinePillClick(name)}
-                aria-pressed={selectedCuisines.includes(name)}
-                title={selectedCuisines.includes(name) ? 'Filter aufheben' : `Nach ${name} filtern`}
-              >
-                {name}
-              </button>
+            {[cuisinePillsRow1, cuisinePillsRow2].filter((row) => row.length > 0).map((row, rowIndex) => (
+              <div className="mobile-search-cuisine-row" key={rowIndex}>
+                {row.map((name) => (
+                  <button
+                    key={name}
+                    className={`mobile-search-filter-pill mobile-search-cuisine-pill${selectedCuisines.includes(name) ? ' active' : ''}`}
+                    onClick={() => handleCuisinePillClick(name)}
+                    aria-pressed={selectedCuisines.includes(name)}
+                    title={selectedCuisines.includes(name) ? 'Filter aufheben' : `Nach ${name} filtern`}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
         )}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import MobileSearchOverlay from './MobileSearchOverlay';
 
 const mockNutritionReferenceState = {
@@ -420,25 +420,26 @@ describe('MobileSearchOverlay – active cuisine pills shown leftmost', () => {
     expandCuisineSelection.mockImplementation((selected) => selected);
   });
 
-  test('active pill moves to the first position after clicking', () => {
-    renderOverlay();
+  test('active pill moves to the first position within its row after clicking', () => {
+    const { container } = renderOverlay();
 
-    const pills = () =>
-      screen.getAllByRole('button', { name: /Küche$/ });
+    const getRows = () => container.querySelectorAll('.mobile-search-cuisine-row');
 
-    // Before clicking, get the initial order
-    const initialFirstPill = pills()[0];
+    // Pick the carousel's second row and its last pill
+    const rowsBefore = getRows();
+    expect(rowsBefore.length).toBe(2);
+    const secondRowButtonsBefore = within(rowsBefore[1]).getAllByRole('button');
+    const initialFirstOfRow = secondRowButtonsBefore[0];
+    const lastPill = secondRowButtonsBefore[secondRowButtonsBefore.length - 1];
 
-    // Click the last cuisine pill to make it active
-    const lastPill = pills()[pills().length - 1];
     fireEvent.click(lastPill);
 
-    // After clicking, the active pill should now be the first pill
-    const updatedPills = pills();
-    expect(updatedPills[0]).toHaveClass('active');
-    // And the previously first pill (if it wasn't the one we clicked) should no longer be first
-    if (initialFirstPill !== lastPill) {
-      expect(updatedPills[0]).not.toBe(initialFirstPill);
+    // After clicking, the clicked pill should now be first within its own row
+    // (rows are independent, so it doesn't need to become globally first)
+    const secondRowButtonsAfter = within(getRows()[1]).getAllByRole('button');
+    expect(secondRowButtonsAfter[0]).toHaveClass('active');
+    if (initialFirstOfRow !== lastPill) {
+      expect(secondRowButtonsAfter[0]).not.toBe(initialFirstOfRow);
     }
   });
 
@@ -691,7 +692,7 @@ describe('MobileSearchOverlay – meal category (Speisekategorie) pills', () => 
     expect(screen.getByText('Desserts')).not.toHaveClass('active');
   });
 
-  test('active category pills are shown before inactive ones', () => {
+  test('active category pills are shown before inactive ones within their row', () => {
     renderOverlay({
       recipes: mealCategoryRecipes,
       mealCategories: mockMealCategories,
@@ -700,11 +701,15 @@ describe('MobileSearchOverlay – meal category (Speisekategorie) pills', () => 
     const categoryPill = (name) =>
       screen.getAllByRole('button', { name: /^(Hauptspeisen|Desserts|Vorspeisen)$/ }).find((btn) => btn.textContent === name);
 
-    fireEvent.click(categoryPill('Vorspeisen'));
+    const clickedPill = categoryPill('Vorspeisen');
+    fireEvent.click(clickedPill);
 
-    const updatedPills = screen.getAllByRole('button', { name: /^(Hauptspeisen|Desserts|Vorspeisen)$/ });
-    expect(updatedPills[0]).toHaveTextContent('Vorspeisen');
-    expect(updatedPills[0]).toHaveClass('active');
+    // The clicked pill should now be first within its own row (rows are
+    // independent, so it doesn't need to become globally first).
+    const ownRow = clickedPill.closest('.mobile-search-cuisine-row');
+    const rowButtons = within(ownRow).getAllByRole('button');
+    expect(rowButtons[0]).toHaveTextContent('Vorspeisen');
+    expect(rowButtons[0]).toHaveClass('active');
   });
 });
 
