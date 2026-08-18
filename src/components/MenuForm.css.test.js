@@ -26,4 +26,17 @@ describe('MenuForm CSS mobile drag-handle layout', () => {
 
     expect(containerRule).toContain('padding: calc(1rem + env(safe-area-inset-top, 0px)) 1rem 1rem;');
   });
+
+  test('lets the photo button wrap below the date field instead of overlapping it', () => {
+    const rowRule = getRuleBody(css, '.menu-date-row');
+    const fieldRule = getRuleBody(css, '.menu-date-row .menu-date-field');
+    const dateInputRule = getRuleBody(css, '.menu-date-row .menu-date-field input[type="date"]');
+
+    // Without a wrap fallback, the fixed-width photo button and the date
+    // input can be squeezed into overlapping each other when the row is too
+    // narrow to fit both (e.g. iPhone landscape).
+    expect(rowRule).toContain('flex-wrap: wrap;');
+    expect(fieldRule).toContain('min-width: 150px;');
+    expect(dateInputRule).toContain('min-width: 0;');
+  });
 });

@@ -2,6 +2,14 @@
   box-sizing: border-box;
 }
 
+html {
+  /* Prevent Safari from auto-boosting font sizes (most noticeable after an
+     orientation change on iPhone), which drifts form elements out of their
+     flex layout and causes them to visually overlap. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 button {
   -webkit-user-select: none;
   -moz-user-select: none;
