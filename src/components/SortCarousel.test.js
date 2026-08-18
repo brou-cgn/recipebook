@@ -87,23 +87,13 @@ describe('SortCarousel', () => {
       jest.useRealTimers();
     });
 
-    test('starts expanded, showing all pills, then folds down to the active pill on its own', () => {
+    test('starts collapsed, showing only the active pill', () => {
       render(<SortCarousel activeSort="alphabetical" onSortChange={() => {}} />);
-      expect(screen.getByRole('tablist')).toHaveClass('sort-carousel--expanded');
-
-      act(() => {
-        jest.advanceTimersByTime(1400);
-      });
       expect(screen.getByRole('tablist')).not.toHaveClass('sort-carousel--expanded');
     });
 
     test('a native scroll event (the swipe gesture) expands the carousel', () => {
       render(<SortCarousel activeSort="alphabetical" onSortChange={() => {}} />);
-      // Past both the mount collapse (1400ms) and the scroll-suppression
-      // window it triggers (400ms), so this scroll reads as a real swipe.
-      act(() => {
-        jest.advanceTimersByTime(1800);
-      });
       expect(screen.getByRole('tablist')).not.toHaveClass('sort-carousel--expanded');
 
       fireEvent.scroll(screen.getByRole('tablist'));
@@ -113,9 +103,6 @@ describe('SortCarousel', () => {
     test('tapping the active pill toggles the expanded state without selecting', () => {
       const handleChange = jest.fn();
       render(<SortCarousel activeSort="alphabetical" onSortChange={handleChange} />);
-      act(() => {
-        jest.advanceTimersByTime(1400);
-      });
       const activeTab = screen.getByRole('tab', { name: 'Alphabetisch' });
 
       fireEvent.click(activeTab);
