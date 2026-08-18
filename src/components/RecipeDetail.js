@@ -2297,15 +2297,29 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   )}
                 </button>
                 )}
-                {(recipe.isPrivate || !isRecipePublic) && (
-                  <div className="private-badge-button" title="Unveröffentlichtes Rezept" aria-label="Unveröffentlichtes Rezept">
-                    {isBase64Image(privateBadgeIcon) ? (
-                      <img src={privateBadgeIcon} alt="Privat" className="button-icon-image" draggable="false" />
-                    ) : (
-                      privateBadgeIcon
-                    )}
-                  </div>
-                )}
+                {(recipe.isPrivate || !isRecipePublic) && (() => {
+                  const badgeIcon = isBase64Image(privateBadgeIcon) ? (
+                    <img src={privateBadgeIcon} alt="Privat" className="button-icon-image" draggable="false" />
+                  ) : (
+                    privateBadgeIcon
+                  );
+                  return userCanPublish && onPublish ? (
+                    <button
+                      type="button"
+                      className="private-badge-button"
+                      onClick={handlePublish}
+                      disabled={publishLoading}
+                      title="Rezept veröffentlichen"
+                      aria-label="Rezept veröffentlichen"
+                    >
+                      {badgeIcon}
+                    </button>
+                  ) : (
+                    <div className="private-badge-button" title="Unveröffentlichtes Rezept" aria-label="Unveröffentlichtes Rezept">
+                      {badgeIcon}
+                    </div>
+                  );
+                })()}
                 <button
                   className="shopping-list-trigger-button"
                   onClick={handleShoppingListClick}

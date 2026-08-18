@@ -601,15 +601,29 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
               )
             )}
           </button>
-          {menu.privat && (
-            <div className="private-badge-button" title="Privates Menü" aria-label="Privates Menü">
-              {isBase64Image(privateBadgeIcon) ? (
-                <img src={privateBadgeIcon} alt="Privat" className="button-icon-image" draggable="false" />
-              ) : (
-                privateBadgeIcon
-              )}
-            </div>
-          )}
+          {menu.privat && (() => {
+            const badgeIcon = isBase64Image(privateBadgeIcon) ? (
+              <img src={privateBadgeIcon} alt="Privat" className="button-icon-image" draggable="false" />
+            ) : (
+              privateBadgeIcon
+            );
+            return canEdit && onPublish ? (
+              <button
+                type="button"
+                className="private-badge-button"
+                onClick={handlePublish}
+                disabled={publishLoading}
+                title="Menü veröffentlichen"
+                aria-label="Menü veröffentlichen"
+              >
+                {badgeIcon}
+              </button>
+            ) : (
+              <div className="private-badge-button" title="Privates Menü" aria-label="Privates Menü">
+                {badgeIcon}
+              </div>
+            );
+          })()}
           <button
             className="shopping-list-trigger-button"
             onClick={handleShoppingListClick}
