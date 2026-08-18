@@ -7,6 +7,7 @@ import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 
 const MIN_DISTRIBUTION_FACTOR = 0.1;
 const MAX_DISTRIBUTION_FACTOR = 2.0;
+const DEFAULT_PUFFER_PROZENT = 25;
 
 const normalizeDistributionFactor = (value) => {
   const parsed = Number(value);
@@ -295,6 +296,7 @@ function EventDrinkSelectionPage({
   customDrinkIds: initialCustomDrinkIds,
   drinkDistributionFactors: initialDrinkDistributionFactors,
   drinkSelectedEinheiten: initialDrinkSelectedEinheiten,
+  pufferProzent: initialPufferProzent,
   recipes,
   onSave,
   onBack,
@@ -310,6 +312,7 @@ function EventDrinkSelectionPage({
   const [drinkSelectedEinheiten, setDrinkSelectedEinheiten] = useState(() =>
     buildInitialSelectedEinheiten(customDrinks, initialCustomDrinkIds, initialDrinkSelectedEinheiten),
   );
+  const [pufferProzent, setPufferProzent] = useState(initialPufferProzent ?? DEFAULT_PUFFER_PROZENT);
   const [drinkToAdd, setDrinkToAdd] = useState('');
   const [swipeDeleteVisibleId, setSwipeDeleteVisibleId] = useState(null);
   const [fabPressed, setFabPressed] = useState(false);
@@ -364,7 +367,7 @@ function EventDrinkSelectionPage({
       }
       return acc;
     }, {});
-    onSave(customDrinkIds, optimizedFactors, optimizedEinheiten);
+    onSave(customDrinkIds, optimizedFactors, optimizedEinheiten, Number(pufferProzent));
   };
 
   const selectedDrinks = customDrinks.filter((d) => customDrinkIds.includes(d.id));
@@ -458,6 +461,17 @@ function EventDrinkSelectionPage({
             {customDrinkIds.length} {customDrinkIds.length === 1 ? 'Getränk' : 'Getränke'} ausgewählt.
           </span>
         </div>
+
+        <label className="events-form-field">
+          <span>Puffer (%)</span>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={pufferProzent}
+            onChange={(e) => setPufferProzent(e.target.value)}
+          />
+        </label>
 
         <div className="events-form-actions">
           <button type="button" className="events-secondary-btn events-save-desktop-only" onClick={onBack}>
