@@ -68,15 +68,13 @@ describe('App CSS FAB bottom offset selectors', () => {
     expect(mobileBlock).toContain('bottom: calc(16px + env(safe-area-inset-bottom, 0px) + var(--bottom-nav-offset, 0px));');
   });
 
-  test('keeps recipe and menu overview FAB buttons at fixed hidden-nav position', () => {
+  test('keeps recipe overview FAB buttons at fixed hidden-nav position', () => {
     const cssPath = path.join(__dirname, 'App.css');
     const css = fs.readFileSync(cssPath, 'utf8');
     const mobileBlock = getMediaBlock(css, '(max-width: 768px)');
 
     expect(mobileBlock).toContain('.App .add-icon-button,');
     expect(mobileBlock).toContain('.App .filter-button,');
-    expect(mobileBlock).toContain('.App .menu-favorites-filter-button,');
-    expect(mobileBlock).toContain('.App .add-menu-fab-button,');
     expect(mobileBlock).toContain('.App .events-add-fab-button {');
     expect(mobileBlock).toContain('bottom: calc(16px + env(safe-area-inset-bottom, 0px));');
   });

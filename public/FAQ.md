@@ -99,7 +99,7 @@ Sobald eine ingredientID den Status **Freigegeben** erhält, wird zusätzlich da
 ### Menü erstellen
 <!-- id: faq-menue-erstellen -->
 
-1. Navigiere über das Hauptmenü zu **„Menüs"** und klicke auf **„+ Menü erstellen"**.
+1. Navigiere über das Hauptmenü zu **„Menüs"** und klicke auf **„+ Menü"**.
 2. Gib einen **Namen** (Pflichtfeld) und optional eine **Beschreibung** sowie ein **Datum** ein.
 3. Füge **Abschnitte** (Gänge) hinzu, z. B. „Vorspeise", „Hauptgang", „Dessert".
 4. Weise jedem Abschnitt über die Rezeptsuche die passenden Rezepte zu.

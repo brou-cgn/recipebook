@@ -54,8 +54,6 @@
 
   .App .add-icon-button,
   .App .filter-button,
-  .App .menu-favorites-filter-button,
-  .App .add-menu-fab-button,
   .App .events-add-fab-button {
     bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     transition:
@@ -116,10 +114,8 @@
   .App .startseite-fab-button,
   .App .kueche-fab-button,
   .App .add-icon-button,
-  .App .add-menu-fab-button,
   .App .events-add-fab-button,
   .App .events-page-container .edit-fab-button,
-  .App .menu-favorites-filter-button,
   .App .recipe-detail-container .edit-fab-button,
   .App .recipe-detail-container .new-version-fab-button,
   .App .recipe-detail-container .delete-fab-button,
