@@ -538,14 +538,6 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
     <div className="events-page-container">
       <div className="events-page-header">
         <h2>Einkauf & Verbrauch</h2>
-        <button
-          className="events-close-btn"
-          onClick={onCancel}
-          aria-label="Abbrechen"
-          title="Abbrechen"
-        >
-          ×
-        </button>
       </div>
       {prefillWarnings.length > 0 && (
         <div className="events-warnings">

@@ -4,8 +4,8 @@ import GroupList from './GroupList';
 
 // Mock customLists so icon loading resolves immediately
 jest.mock('../utils/customLists', () => ({
-  getButtonIcons: () => Promise.resolve({ privateListBack: '✕', addRecipe: '+' }),
-  DEFAULT_BUTTON_ICONS: { privateListBack: '✕', addRecipe: '+' },
+  getButtonIcons: () => Promise.resolve({ closeButtonDefaultImg: '✕', addRecipe: '+' }),
+  DEFAULT_BUTTON_ICONS: { closeButtonDefaultImg: '✕', addRecipe: '+' },
   getEffectiveIcon: (icons, key) => icons[key] ?? '',
   getDarkModePreference: () => false,
 }));
@@ -212,7 +212,7 @@ describe('GroupList', () => {
     );
     const titleRow = container.querySelector('.group-list-header');
     expect(titleRow).toBeInTheDocument();
-    const closeBtn = titleRow.querySelector('.group-list-close-btn');
+    const closeBtn = titleRow.querySelector('.app-close-button');
     expect(closeBtn).toBeInTheDocument();
   });
 
@@ -229,7 +229,7 @@ describe('GroupList', () => {
     );
     const actions = container.querySelector('.group-list-actions');
     expect(actions).toBeInTheDocument();
-    const closeBtnInActions = actions.querySelector('.group-list-close-btn');
+    const closeBtnInActions = actions.querySelector('.app-close-button');
     expect(closeBtnInActions).not.toBeInTheDocument();
   });
 

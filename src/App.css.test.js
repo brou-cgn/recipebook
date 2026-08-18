@@ -105,3 +105,33 @@ describe('App CSS FAB bottom offset selectors', () => {
     expect(reducedMotionBlock).toContain('.App .recipe-detail-container .reset-thumbnail-fab-button,');
   });
 });
+
+describe('App CSS standardized close button', () => {
+  const getRuleBody = (css, selector) => {
+    const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = css.match(new RegExp(`${escapedSelector}\\s*\\{([\\s\\S]*?)\\}`, 'm'));
+    return match ? match[1] : '';
+  };
+
+  test('matches the recipe detail close button (.recipe-detail__close) exactly', () => {
+    const appCssPath = path.join(__dirname, 'App.css');
+    const appCss = fs.readFileSync(appCssPath, 'utf8');
+    const recipeDetailCssPath = path.join(__dirname, 'components', 'RecipeDetail.css');
+    const recipeDetailCss = fs.readFileSync(recipeDetailCssPath, 'utf8');
+
+    const closeButtonRule = getRuleBody(appCss, '.app-close-button');
+    const closeButtonHoverRule = getRuleBody(appCss, '.app-close-button:hover');
+    const closeButtonFocusVisibleRule = getRuleBody(appCss, '.app-close-button:focus-visible');
+    const closeButtonIconRule = getRuleBody(appCss, '.app-close-button-icon-img');
+
+    const referenceRule = getRuleBody(recipeDetailCss, '.recipe-detail__close');
+    const referenceHoverRule = getRuleBody(recipeDetailCss, '.recipe-detail__close:hover');
+    const referenceFocusVisibleRule = getRuleBody(recipeDetailCss, '.recipe-detail__close:focus-visible');
+    const referenceIconRule = getRuleBody(recipeDetailCss, '.close-button-icon-img');
+
+    expect(closeButtonRule.replace(/\s/g, '')).toBe(referenceRule.replace(/\s/g, ''));
+    expect(closeButtonHoverRule.replace(/\s/g, '')).toBe(referenceHoverRule.replace(/\s/g, ''));
+    expect(closeButtonFocusVisibleRule.replace(/\s/g, '')).toBe(referenceFocusVisibleRule.replace(/\s/g, ''));
+    expect(closeButtonIconRule.replace(/\s/g, '')).toBe(referenceIconRule.replace(/\s/g, ''));
+  });
+});

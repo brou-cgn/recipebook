@@ -7,7 +7,7 @@ import { isBase64Image } from '../utils/imageUtils';
 function MeineKuechenstarsPage({ onBack, currentUser, recipes = [] }) {
   const [recipeCalls, setRecipeCalls] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
+  const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.closeButtonDefaultImg);
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
 
@@ -30,7 +30,11 @@ function MeineKuechenstarsPage({ onBack, currentUser, recipes = [] }) {
   }, []);
 
   useEffect(() => {
-    setCloseIcon(getEffectiveIcon(allButtonIcons, 'privateListBack', isDarkMode) || DEFAULT_BUTTON_ICONS.privateListBack);
+    setCloseIcon(
+      getEffectiveIcon(allButtonIcons, 'closeButtonDefaultImg', isDarkMode) ||
+      getEffectiveIcon(allButtonIcons, 'closeButton', isDarkMode) ||
+      DEFAULT_BUTTON_ICONS.closeButtonDefaultImg
+    );
   }, [allButtonIcons, isDarkMode]);
 
   useEffect(() => {
@@ -59,15 +63,15 @@ function MeineKuechenstarsPage({ onBack, currentUser, recipes = [] }) {
         <h2>Meine Küchenstars</h2>
         {onBack && (
           <button
-            className="meine-kuechenstars-close-btn"
+            className="app-close-button"
             onClick={onBack}
-            aria-label="Schließen"
-            title="Schließen"
+            aria-label="Meine Küchenstars schließen"
+            title="Meine Küchenstars schließen"
           >
             {isBase64Image(closeIcon) ? (
-              <img src={closeIcon} alt="Schließen" className="meine-kuechenstars-close-icon-img" />
+              <img src={closeIcon} alt="Meine Küchenstars schließen" className="app-close-button-icon-img" />
             ) : (
-              <span>{closeIcon}</span>
+              closeIcon
             )}
           </button>
         )}

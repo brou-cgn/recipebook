@@ -51,6 +51,7 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
 
   const canManageGuests = canEditRecipes(currentUser);
+  const closeIcon = getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode) || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode);
 
   useEffect(() => {
     const loadIcons = async () => {
@@ -213,12 +214,16 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
           <h2>Gäste verwalten</h2>
           {onBack && (
             <button
-              className="events-close-btn"
+              className="app-close-button"
               onClick={onBack}
-              aria-label="Zurück"
-              title="Zurück"
+              aria-label="Gäste verwalten schließen"
+              title="Gäste verwalten schließen"
             >
-              ×
+              {isBase64Image(closeIcon) ? (
+                <img src={closeIcon} alt="Gäste verwalten schließen" className="app-close-button-icon-img" />
+              ) : (
+                closeIcon || '×'
+              )}
             </button>
           )}
         </div>
@@ -234,14 +239,6 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
       <div className="events-page-container">
         <div className="events-page-header">
           <h2>{editId ? 'Gast bearbeiten' : 'Neuen Gast erfassen'}</h2>
-          <button
-            className="events-close-btn"
-            onClick={() => setShowForm(false)}
-            aria-label="Abbrechen"
-            title="Abbrechen"
-          >
-            ×
-          </button>
         </div>
         <form className="events-form" onSubmit={handleSave} ref={formRef}>
           <div className="events-form-row">
@@ -483,12 +480,16 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
         <h2>Gäste verwalten</h2>
         {onBack && (
           <button
-            className="events-close-btn"
+            className="app-close-button"
             onClick={onBack}
-            aria-label="Zurück"
-            title="Zurück"
+            aria-label="Gäste verwalten schließen"
+            title="Gäste verwalten schließen"
           >
-            ×
+            {isBase64Image(closeIcon) ? (
+              <img src={closeIcon} alt="Gäste verwalten schließen" className="app-close-button-icon-img" />
+            ) : (
+              closeIcon || '×'
+            )}
           </button>
         )}
       </div>

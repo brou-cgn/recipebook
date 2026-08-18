@@ -166,7 +166,7 @@ const DARK_MODE_ICON_ROWS = [
   { key: 'webImport', label: 'Web-Import-Button' },
   { key: 'closeButton', label: 'Schließen-Button' },
   { key: 'closeButtonAlt', label: 'Schließen-Alt (helles Bild oben rechts)' },
-  { key: 'closeButtonDefaultImg', label: 'Schließen-Button (Standard-Kategoriebild)' },
+  { key: 'closeButtonDefaultImg', label: 'Schließen-Button (Allgemein)' },
   { key: 'menuCloseButton', label: 'Menü-Schließen-Button' },
   { key: 'filterButton', label: 'Filter-Button' },
   { key: 'filterButtonActive', label: 'Filter-Button (aktiv)' },

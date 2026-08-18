@@ -304,14 +304,6 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
     <div className="events-page-container">
       <div className="events-page-header">
         <h2>{isEditing ? 'Event bearbeiten' : 'Neues Event'}</h2>
-        <button
-          className="events-close-btn"
-          onClick={onCancel}
-          aria-label="Abbrechen"
-          title="Abbrechen"
-        >
-          ×
-        </button>
       </div>
       <form className="events-form" onSubmit={handleSubmit}>
         <label className="events-form-field">
