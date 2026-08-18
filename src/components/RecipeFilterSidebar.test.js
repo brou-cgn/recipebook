@@ -113,3 +113,61 @@ describe('RecipeFilterSidebar', () => {
     expect(onSearchChange).toHaveBeenCalledWith('Sushi');
   });
 });
+
+describe('RecipeFilterSidebar top-5 category/cuisine cap', () => {
+  const manyRecipes = [
+    { id: '1', title: 'A', kulinarik: ['Küche 1'], speisekategorie: ['Kategorie 1'] },
+    { id: '2', title: 'B', kulinarik: ['Küche 1'], speisekategorie: ['Kategorie 1'] },
+    { id: '3', title: 'C', kulinarik: ['Küche 2'], speisekategorie: ['Kategorie 2'] },
+    { id: '4', title: 'D', kulinarik: ['Küche 3'], speisekategorie: ['Kategorie 3'] },
+    { id: '5', title: 'E', kulinarik: ['Küche 4'], speisekategorie: ['Kategorie 4'] },
+    { id: '6', title: 'F', kulinarik: ['Küche 5'], speisekategorie: ['Kategorie 5'] },
+    { id: '7', title: 'G', kulinarik: ['Küche 6'], speisekategorie: ['Kategorie 6'] },
+  ];
+  const manyCategories = ['Kategorie 1', 'Kategorie 2', 'Kategorie 3', 'Kategorie 4', 'Kategorie 5', 'Kategorie 6'];
+  const manyCuisines = ['Küche 1', 'Küche 2', 'Küche 3', 'Küche 4', 'Küche 5', 'Küche 6'];
+
+  function renderManySidebar(props = {}) {
+    return render(
+      <RecipeFilterSidebar
+        recipes={manyRecipes}
+        mealCategories={manyCategories}
+        cuisineTypes={manyCuisines}
+        {...props}
+      />
+    );
+  }
+
+  test('shows only the top 5 categories and cuisines by recipe count, most-used first', () => {
+    renderManySidebar();
+    expect(screen.getByText('Kategorie 1')).toBeInTheDocument();
+    expect(screen.getByText('Kategorie 5')).toBeInTheDocument();
+    expect(screen.queryByText('Kategorie 6')).not.toBeInTheDocument();
+    expect(screen.getByText('Küche 1')).toBeInTheDocument();
+    expect(screen.getByText('Küche 5')).toBeInTheDocument();
+    expect(screen.queryByText('Küche 6')).not.toBeInTheDocument();
+  });
+
+  test('expands to show all categories via the "+" pill, then collapses again via "-"', () => {
+    renderManySidebar();
+    fireEvent.click(screen.getByRole('button', { name: /weitere Kategorien anzeigen/i }));
+    expect(screen.getByText('Kategorie 6')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Weniger Kategorien anzeigen/i }));
+    expect(screen.queryByText('Kategorie 6')).not.toBeInTheDocument();
+  });
+
+  test('expands to show all cuisines via the "+" pill, then collapses again via "-"', () => {
+    renderManySidebar();
+    fireEvent.click(screen.getByRole('button', { name: /weitere Kulinariktypen anzeigen/i }));
+    expect(screen.getByText('Küche 6')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Weniger Kulinariktypen anzeigen/i }));
+    expect(screen.queryByText('Küche 6')).not.toBeInTheDocument();
+  });
+
+  test('does not cap results while a search term is active', () => {
+    renderManySidebar({ searchTerm: 'Kategorie' });
+    expect(screen.getByText('Kategorie 6')).toBeInTheDocument();
+  });
+});
