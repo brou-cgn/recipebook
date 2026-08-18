@@ -991,6 +991,24 @@
   color: #aaa;
 }
 
+[data-theme="dark"] .menu-favorites-filter-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .menu-favorites-filter-button.active {
+  background: #DF7A00;
+  color: #fff;
+  border-color: #DF7A00;
+}
+
+[data-theme="dark"] .add-menu-fab-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
 [data-theme="dark"] .events-add-fab-button {
   background: #2a2a2a;
   color: #e8e8e8;

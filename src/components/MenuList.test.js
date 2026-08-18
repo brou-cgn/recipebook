@@ -154,7 +154,10 @@ describe('MenuList - dynamic title', () => {
       />
     );
 
-    const favButton = await screen.findByTitle('Nur Favoriten anzeigen');
+    // Both the desktop sidebar pill and the mobile FAB expose this title;
+    // CSS media queries that hide one of them per viewport aren't applied
+    // in jsdom, so either match toggles the same shared state.
+    const [favButton] = await screen.findAllByTitle('Nur Favoriten anzeigen');
     fireEvent.click(favButton);
 
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Meine Festtafel');
@@ -175,11 +178,11 @@ describe('MenuList - dynamic title', () => {
       />
     );
 
-    const favButton = await screen.findByTitle('Nur Favoriten anzeigen');
+    const [favButton] = await screen.findAllByTitle('Nur Favoriten anzeigen');
     fireEvent.click(favButton);
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Meine Festtafel');
 
-    const allButton = screen.getByTitle('Alle Festtafeln anzeigen');
+    const [allButton] = screen.getAllByTitle('Alle Festtafeln anzeigen');
     fireEvent.click(allButton);
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Festtafel');
   });

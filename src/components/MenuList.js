@@ -8,6 +8,8 @@ import { isBase64Image } from '../utils/imageUtils';
 function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorite, currentUser, allUsers }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState([]);
+  const [addPressed, setAddPressed] = useState(false);
+  const [favPressed, setFavPressed] = useState(false);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
 
@@ -119,11 +121,14 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
       {filteredMenus.length === 0 ? (
         <div className="empty-state">
           <p>{showFavoritesOnly ? 'Keine favorisierten Menüs!' : 'Noch keine Menüs!'}</p>
-          <p className="empty-hint">
-            {showFavoritesOnly 
-              ? 'Markiere Menüs als Favorit, so findest du sie schneller.' 
-              : 'Tippe auf "+ Menü", um deine Rezepte in Menüs zu organisieren'}
-          </p>
+          {showFavoritesOnly ? (
+            <p className="empty-hint">Markiere Menüs als Favorit, so findest du sie schneller.</p>
+          ) : (
+            <>
+              <p className="empty-hint empty-hint-desktop">Tippe auf "+ Menü", um deine Rezepte in Menüs zu organisieren</p>
+              <p className="empty-hint empty-hint-mobile">Tippe auf "Menü erstellen", um deine Rezepte in Menüs zu organisieren</p>
+            </>
+          )}
         </div>
       ) : (
         <div className="menu-grid">
@@ -188,6 +193,50 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
           })}
         </div>
       )}
+      <button
+        className={`add-menu-fab-button ${addPressed ? 'pressed' : ''}`}
+        onClick={onAddMenu}
+        onTouchStart={() => setAddPressed(true)}
+        onTouchEnd={() => setAddPressed(false)}
+        onTouchCancel={() => setAddPressed(false)}
+        onMouseDown={() => setAddPressed(true)}
+        onMouseUp={() => setAddPressed(false)}
+        onMouseLeave={() => setAddPressed(false)}
+        title="Menü erstellen"
+        aria-label="Menü erstellen"
+      >
+        {isBase64Image(getEffectiveIcon(buttonIcons, 'addMenu', isDarkMode)) ? (
+          <img src={getEffectiveIcon(buttonIcons, 'addMenu', isDarkMode)} alt="Menü erstellen" className="button-icon-image" draggable="false" />
+        ) : (
+          getEffectiveIcon(buttonIcons, 'addMenu', isDarkMode)
+        )}
+      </button>
+      <button
+        className={`menu-favorites-filter-button ${showFavoritesOnly ? 'active' : ''} ${favPressed ? 'pressed' : ''}`}
+        onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+        onTouchStart={() => setFavPressed(true)}
+        onTouchEnd={() => setFavPressed(false)}
+        onTouchCancel={() => setFavPressed(false)}
+        onMouseDown={() => setFavPressed(true)}
+        onMouseUp={() => setFavPressed(false)}
+        onMouseLeave={() => setFavPressed(false)}
+        title={showFavoritesOnly ? 'Alle Festtafeln anzeigen' : 'Nur Favoriten anzeigen'}
+        aria-label={showFavoritesOnly ? 'Alle Festtafeln anzeigen' : 'Nur Favoriten anzeigen'}
+      >
+        {showFavoritesOnly ? (
+          isBase64Image(getEffectiveIcon(buttonIcons, 'menuFavoritesButtonActive', isDarkMode)) ? (
+            <img src={getEffectiveIcon(buttonIcons, 'menuFavoritesButtonActive', isDarkMode)} alt="Favoriten aktiv" className="button-icon-image" draggable="false" />
+          ) : (
+            getEffectiveIcon(buttonIcons, 'menuFavoritesButtonActive', isDarkMode)
+          )
+        ) : (
+          isBase64Image(getEffectiveIcon(buttonIcons, 'menuFavoritesButton', isDarkMode)) ? (
+            <img src={getEffectiveIcon(buttonIcons, 'menuFavoritesButton', isDarkMode)} alt="Favoriten" className="button-icon-image" draggable="false" />
+          ) : (
+            getEffectiveIcon(buttonIcons, 'menuFavoritesButton', isDarkMode)
+          )
+        )}
+      </button>
     </div>
       </div>
     </div>

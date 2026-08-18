@@ -1,7 +1,7 @@
 /* Persistent left-hand filter navigation for the menu overview, mirrors
-   RecipeFilterSidebar.css's visual language. Unlike the recipe sidebar this
-   stays visible on narrow viewports (non-sticky, full width) since menus
-   have no separate mobile filter entry point to fall back on. */
+   RecipeFilterSidebar.css's visual language. Desktop-only: below the 900px
+   breakpoint the mobile view keeps its original FAB buttons (see
+   MenuList.css) instead of the sidebar. */
 
 .menu-filter-sidebar {
   display: flex;
@@ -146,7 +146,6 @@
 
 @media (max-width: 900px) {
   .menu-filter-sidebar {
-    position: static;
-    width: 100%;
+    display: none;
   }
 }
