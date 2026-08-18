@@ -111,6 +111,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnlyProp || showSeasonalOnly || (activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
+    activeFilters.selectedCategories?.length > 0 ||
     activeFilters.selectedAuthors?.length > 0 ||
     activeFilters.selectedPrivateLists?.length > 0
   )));

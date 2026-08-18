@@ -623,6 +623,91 @@ describe('MobileSearchOverlay – private list carousel', () => {
   });
 });
 
+describe('MobileSearchOverlay – meal category (Speisekategorie) pills', () => {
+  const mockMealCategories = ['Hauptspeisen', 'Desserts', 'Vorspeisen'];
+  const mealCategoryRecipes = [
+    { id: '1', title: 'Sushi', speisekategorie: ['Hauptspeisen'] },
+    { id: '2', title: 'Tiramisu', speisekategorie: ['Desserts'] },
+    { id: '3', title: 'Bruschetta', speisekategorie: ['Vorspeisen'] },
+  ];
+
+  beforeEach(() => {
+    localStorage.clear();
+    const { expandCuisineSelection } = require('../utils/customLists');
+    expandCuisineSelection.mockImplementation((selected) => selected);
+  });
+
+  test('shows only meal categories that have at least one matching recipe', () => {
+    renderOverlay({
+      recipes: mealCategoryRecipes,
+      mealCategories: [...mockMealCategories, 'Drinks'],
+    });
+
+    expect(screen.getByText('Hauptspeisen')).toBeInTheDocument();
+    expect(screen.getByText('Desserts')).toBeInTheDocument();
+    expect(screen.getByText('Vorspeisen')).toBeInTheDocument();
+    expect(screen.queryByText('Drinks')).not.toBeInTheDocument();
+  });
+
+  test('clicking a category pill calls onMealCategoryFilterChange and marks it active', () => {
+    const onMealCategoryFilterChange = jest.fn();
+    renderOverlay({
+      recipes: mealCategoryRecipes,
+      mealCategories: mockMealCategories,
+      onMealCategoryFilterChange,
+    });
+
+    fireEvent.click(screen.getByText('Desserts'));
+    expect(onMealCategoryFilterChange).toHaveBeenCalledWith(['Desserts']);
+    expect(screen.getByText('Desserts')).toHaveClass('active');
+  });
+
+  test('supports multi-select and filters the tile results to matching categories', () => {
+    renderOverlay({
+      recipes: mealCategoryRecipes,
+      mealCategories: mockMealCategories,
+    });
+
+    fireEvent.click(screen.getByText('Desserts'));
+    fireEvent.click(screen.getByText('Vorspeisen'));
+
+    expect(screen.getByText('Tiramisu')).toBeInTheDocument();
+    expect(screen.getByText('Bruschetta')).toBeInTheDocument();
+    expect(screen.queryByText('Sushi')).not.toBeInTheDocument();
+  });
+
+  test('clicking an active category pill deselects it', () => {
+    const onMealCategoryFilterChange = jest.fn();
+    renderOverlay({
+      recipes: mealCategoryRecipes,
+      mealCategories: mockMealCategories,
+      onMealCategoryFilterChange,
+    });
+
+    fireEvent.click(screen.getByText('Desserts'));
+    fireEvent.click(screen.getByText('Desserts'));
+
+    expect(onMealCategoryFilterChange).toHaveBeenLastCalledWith([]);
+    expect(screen.getByText('Desserts')).not.toHaveClass('active');
+  });
+
+  test('active category pills are shown before inactive ones', () => {
+    renderOverlay({
+      recipes: mealCategoryRecipes,
+      mealCategories: mockMealCategories,
+    });
+
+    const categoryPill = (name) =>
+      screen.getAllByRole('button', { name: /^(Hauptspeisen|Desserts|Vorspeisen)$/ }).find((btn) => btn.textContent === name);
+
+    fireEvent.click(categoryPill('Vorspeisen'));
+
+    const updatedPills = screen.getAllByRole('button', { name: /^(Hauptspeisen|Desserts|Vorspeisen)$/ });
+    expect(updatedPills[0]).toHaveTextContent('Vorspeisen');
+    expect(updatedPills[0]).toHaveClass('active');
+  });
+});
+
 describe('MobileSearchOverlay – pre-populated search term', () => {
   beforeEach(() => {
     localStorage.clear();
