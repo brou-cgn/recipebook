@@ -139,6 +139,24 @@ describe('EventDrinkSelectionPage', () => {
     expect(screen.getByText('1 Getränk ausgewählt.')).toBeInTheDocument();
   });
 
+  test('removes a drink via the always-visible desktop delete button, without swiping', () => {
+    render(
+      <EventDrinkSelectionPage
+        customDrinks={customDrinks}
+        customDrinkIds={['custom-wasser', 'custom-bier']}
+        guestPreferenceMultipliers={{}}
+        selectedGuestIds={[]}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText('Wasser (eigen) löschen'));
+
+    expect(screen.queryByText('Wasser (eigen)', { selector: '.events-drink-row-name' })).not.toBeInTheDocument();
+    expect(screen.getByText('1 Getränk ausgewählt.')).toBeInTheDocument();
+  });
+
   test('deletes drink when delete button receives touchstart before click (regression: touchend hid the button before click landed)', () => {
     render(
       <EventDrinkSelectionPage

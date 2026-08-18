@@ -228,7 +228,22 @@ function DrinkRow({
         onTouchEnd={handleTouchEnd}
         onTouchCancel={resetSwipe}
       >
-        <div className="events-drink-row-name">{displayName}</div>
+        <div className="events-drink-row-header">
+          <div className="events-drink-row-name">{displayName}</div>
+          <button
+            type="button"
+            className="events-drink-row-delete-btn"
+            onClick={onRemove}
+            aria-label={`${displayName} löschen`}
+            title="Getränk entfernen"
+          >
+            {isBase64Image(swipeDeleteIcon) ? (
+              <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
+            ) : (
+              <span className="swipe-delete-icon-text">{swipeDeleteIcon || '🗑'}</span>
+            )}
+          </button>
+        </div>
         <div className="events-drink-row-details">
           <div className="events-drink-row-einheiten">
             {einheiten.length > 1 ? (
