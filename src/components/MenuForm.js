@@ -181,7 +181,7 @@ function SortableSection({
         <div className="section-actions">
           <button
             type="button"
-            className="remove-section-button"
+            className="app-close-button remove-section-button"
             onClick={() => onRemoveSection(sectionIndex)}
             title="Abschnitt löschen"
           >
