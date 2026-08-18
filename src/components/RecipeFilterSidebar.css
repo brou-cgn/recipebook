@@ -1,0 +1,119 @@
+/* Persistent left-hand filter navigation for the recipe overview (desktop/tablet only) */
+
+.recipe-filter-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  width: 240px;
+  flex-shrink: 0;
+  padding: 1rem 0.9rem;
+  box-sizing: border-box;
+  background: #F5F2EF;
+  border: 1px solid #E5DED8;
+  border-radius: 16px;
+  align-self: flex-start;
+  position: sticky;
+  top: 1rem;
+}
+
+.recipe-filter-sidebar-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  background: white;
+  border: 1px solid #E5DED8;
+  border-radius: 20px;
+}
+
+.recipe-filter-sidebar-search-icon {
+  display: flex;
+  color: #999;
+  flex-shrink: 0;
+}
+
+.recipe-filter-sidebar-search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.9rem;
+  color: #3E2B1C;
+}
+
+.recipe-filter-sidebar-search-input::placeholder {
+  color: #999;
+}
+
+.recipe-filter-sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.recipe-filter-sidebar-heading {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #8A7A6B;
+}
+
+.recipe-filter-sidebar-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.recipe-filter-sidebar-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid #E5DED8;
+  background: white;
+  color: #3E2B1C;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.recipe-filter-sidebar-pill:hover {
+  border-color: #DF7A00;
+}
+
+.recipe-filter-sidebar-pill.active {
+  background: #DF7A00;
+  color: white;
+  border-color: #DF7A00;
+}
+
+.recipe-filter-sidebar-pill:focus-visible {
+  outline: 2px solid #007aff;
+  outline-offset: 2px;
+}
+
+.recipe-filter-sidebar-reset {
+  background: none;
+  border: none;
+  color: #DF7A00;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.4rem 0;
+  text-align: left;
+  text-decoration: underline;
+}
+
+/* Hidden on mobile/tablet – the existing filter button + bottom sheet dialog
+   remains the entry point for narrow viewports. */
+@media (max-width: 900px) {
+  .recipe-filter-sidebar {
+    display: none;
+  }
+}

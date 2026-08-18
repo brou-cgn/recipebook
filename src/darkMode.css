@@ -189,6 +189,41 @@
   border-color: #DF7A00;
 }
 
+/* ---- Recipe filter sidebar ---- */
+[data-theme="dark"] .recipe-filter-sidebar {
+  background: #1e1e1e;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .recipe-filter-sidebar-search {
+  background: #2a2a2a;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .recipe-filter-sidebar-search-input {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .recipe-filter-sidebar-search-input::placeholder {
+  color: #777;
+}
+
+[data-theme="dark"] .recipe-filter-sidebar-heading {
+  color: #999;
+}
+
+[data-theme="dark"] .recipe-filter-sidebar-pill {
+  background: #2A2623;
+  color: #E6DED6;
+  border-color: #3A342F;
+}
+
+[data-theme="dark"] .recipe-filter-sidebar-pill.active {
+  background: #DF7A00;
+  color: white;
+  border-color: #DF7A00;
+}
+
 /* ---- Recipe List ---- */
 [data-theme="dark"] .recipe-list-container {
   background: #121212;
