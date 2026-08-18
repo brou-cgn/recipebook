@@ -224,6 +224,10 @@
   border-color: #DF7A00;
 }
 
+[data-theme="dark"] .recipe-filter-sidebar-pill--more {
+  color: #999;
+}
+
 [data-theme="dark"] .recipe-filter-sidebar-toggle {
   background: #2a2a2a;
   border-color: #3d3d3d;

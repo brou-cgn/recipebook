@@ -3,13 +3,13 @@
 .recipe-filter-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
-  width: 240px;
+  gap: 1.35rem;
+  width: 280px;
   flex-shrink: 0;
-  padding: 1rem 0.9rem;
+  padding: 1.5rem 1.25rem;
   box-sizing: border-box;
-  background: #F5F2EF;
-  border: 1px solid #E5DED8;
+  background: #FFFFFF;
+  border: 1px solid #E6E2DD;
   border-radius: 16px;
   align-self: flex-start;
   position: sticky;
@@ -39,13 +39,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
-  border-radius: 8px;
-  border: 1px solid #E5DED8;
+  border-radius: 10px;
+  border: 1.5px solid #211F1C;
   background: white;
-  color: #3E2B1C;
+  color: #211F1C;
   cursor: pointer;
   padding: 0;
   transition: border-color 0.15s ease;
@@ -63,17 +63,17 @@
 .recipe-filter-sidebar-add-button {
   flex: 1;
   min-width: 0;
-  height: 32px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0 0.75rem;
   background: white;
-  border: 1px solid #402C1C;
-  border-radius: 6px;
-  color: #402C1C;
-  font-size: 0.85rem;
-  font-weight: 600;
+  border: 1.5px solid #211F1C;
+  border-radius: 10px;
+  color: #211F1C;
+  font-size: 0.95rem;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
@@ -82,7 +82,7 @@
 }
 
 .recipe-filter-sidebar-add-button:hover {
-  background: #402C1C;
+  background: #211F1C;
   color: white;
 }
 
@@ -94,16 +94,16 @@
 .recipe-filter-sidebar-search {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 0.75rem;
-  background: white;
-  border: 1px solid #E5DED8;
-  border-radius: 20px;
+  gap: 0.6rem;
+  padding: 0.7rem 1rem;
+  background: #FAF9F8;
+  border: 1px solid #E0DCD6;
+  border-radius: 999px;
 }
 
 .recipe-filter-sidebar-search-icon {
   display: flex;
-  color: #999;
+  color: #9A938A;
   flex-shrink: 0;
 }
 
@@ -113,7 +113,7 @@
   border: none;
   outline: none;
   background: transparent;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   color: #3E2B1C;
 }
 
@@ -124,38 +124,50 @@
 .recipe-filter-sidebar-section {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.7rem;
 }
 
 .recipe-filter-sidebar-heading {
-  margin: 0;
+  margin: 0 0 0.1rem;
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: #8A7A6B;
+  letter-spacing: 0.08em;
+  color: #A29A90;
 }
 
 .recipe-filter-sidebar-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.55rem;
+}
+
+.recipe-filter-sidebar-quickfilters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
 }
 
 .recipe-filter-sidebar-pill {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  border: 1px solid #E5DED8;
-  background: white;
-  color: #3E2B1C;
-  font-size: 0.85rem;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid #E6E2DD;
+  background: #F4F2F0;
+  color: #2C2925;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   white-space: nowrap;
+}
+
+.recipe-filter-sidebar-pill--quick {
+  justify-content: flex-start;
+  width: 100%;
+  padding: 11px 18px;
 }
 
 .recipe-filter-sidebar-pill:hover {
@@ -165,6 +177,7 @@
 .recipe-filter-sidebar-pill.active {
   background: #DF7A00;
   color: white;
+  font-weight: 700;
   border-color: #DF7A00;
 }
 
@@ -174,7 +187,8 @@
 }
 
 .recipe-filter-sidebar-pill--more {
-  color: #8A7A6B;
+  color: #A29A90;
+  background: transparent;
   border-style: dashed;
 }
 

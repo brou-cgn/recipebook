@@ -251,10 +251,10 @@ function RecipeFilterSidebar({
             )}
           </div>
 
-          <div className="recipe-filter-sidebar-section recipe-filter-sidebar-row">
+          <div className="recipe-filter-sidebar-section recipe-filter-sidebar-quickfilters">
             <button
               type="button"
-              className={`recipe-filter-sidebar-pill${showFavoritesOnly ? ' active' : ''}`}
+              className={`recipe-filter-sidebar-pill recipe-filter-sidebar-pill--quick${showFavoritesOnly ? ' active' : ''}`}
               onClick={() => onFavoritesToggle?.(!showFavoritesOnly)}
               aria-pressed={showFavoritesOnly}
             >
@@ -262,7 +262,7 @@ function RecipeFilterSidebar({
             </button>
             <button
               type="button"
-              className={`recipe-filter-sidebar-pill${showSeasonalOnly ? ' active' : ''}`}
+              className={`recipe-filter-sidebar-pill recipe-filter-sidebar-pill--quick${showSeasonalOnly ? ' active' : ''}`}
               onClick={() => onSeasonalToggle?.(!showSeasonalOnly)}
               aria-pressed={showSeasonalOnly}
             >
