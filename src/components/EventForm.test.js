@@ -137,16 +137,6 @@ describe('EventForm', () => {
     expect(screen.queryByRole('button', { name: 'Gäste speichern' })).not.toBeInTheDocument();
   });
 
-  test('shows guest count summary after selecting guests', () => {
-    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Gäste verwalten' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Gäste speichern' }));
-
-    expect(screen.getByText(/1 Gast ausgewählt/)).toBeInTheDocument();
-    expect(screen.getByText(/1 Fahrer markiert/)).toBeInTheDocument();
-  });
-
   test('counts child guests separately from adults after guest assignment', async () => {
     render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
 

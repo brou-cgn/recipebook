@@ -358,28 +358,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
           </label>
         </div>
 
-        {guests.length > 0 && (
-          <div className="events-form-field">
-            <span>Gäste</span>
-            {selectedGuestIds.length > 0 ? (
-              <p className="events-info-text">
-                {selectedGuestIds.length} {selectedGuestIds.length === 1 ? 'Gast' : 'Gäste'} ausgewählt
-                {driverGuestIds.length > 0 ? `, ${driverGuestIds.length} Fahrer markiert` : ''}.
-              </p>
-            ) : (
-              <p className="events-info-text">Keine Gäste ausgewählt.</p>
-            )}
-            <button
-              type="button"
-              className="events-secondary-btn"
-              onClick={() => setShowGuestSelection(true)}
-            >
-              Gäste verwalten
-            </button>
-          </div>
-        )}
-
-        <div className="events-form-row">
+        <div className="events-form-row events-form-row--guests">
           <label className="events-form-field">
             <span>Erwachsene</span>
             <input
@@ -398,6 +377,29 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
               onChange={(e) => setChildren(e.target.value)}
             />
           </label>
+          {guests.length > 0 && (
+            <button
+              type="button"
+              className="events-secondary-btn events-guests-manage-btn"
+              onClick={() => setShowGuestSelection(true)}
+              aria-label="Gäste verwalten"
+              title="Gäste verwalten"
+            >
+              {isBase64Image(getEffectiveIcon(buttonIcons, 'editRecipe', isDarkMode)) ? (
+                <img
+                  src={getEffectiveIcon(buttonIcons, 'editRecipe', isDarkMode)}
+                  alt=""
+                  className="button-icon-image"
+                  draggable="false"
+                />
+              ) : (
+                <span className="events-guests-manage-btn-icon">
+                  {getEffectiveIcon(buttonIcons, 'editRecipe', isDarkMode)}
+                </span>
+              )}
+              Gäste verwalten
+            </button>
+          )}
         </div>
 
         <div className="events-form-field">

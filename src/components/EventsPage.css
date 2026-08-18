@@ -344,6 +344,29 @@
   min-width: 140px;
 }
 
+.events-form-row--guests {
+  align-items: flex-end;
+}
+
+.events-guests-manage-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.events-guests-manage-btn .button-icon-image {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.events-guests-manage-btn-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
 .events-einheit-group {
   display: flex;
   flex-direction: column;
