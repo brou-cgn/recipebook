@@ -7,6 +7,7 @@ import { isBase64Image } from '../utils/imageUtils';
 
 function EventGuestSelectionPage({
   currentUser,
+  ownerId,
   selectedGuestIds: initialSelectedGuestIds,
   driverGuestIds: initialDriverGuestIds,
   onSave,
@@ -24,12 +25,13 @@ function EventGuestSelectionPage({
   const searchRef = useRef(null);
   const dropdownRef = useRef(null);
   const effectiveButtonIcons = buttonIcons || DEFAULT_BUTTON_ICONS;
+  const effectiveOwnerId = ownerId || currentUser?.id;
 
   useEffect(() => {
-    if (!currentUser?.id) return undefined;
-    const unsubGuests = subscribeToGuestProfiles(currentUser.id, setGuests);
+    if (!effectiveOwnerId) return undefined;
+    const unsubGuests = subscribeToGuestProfiles(effectiveOwnerId, setGuests);
     return unsubGuests;
-  }, [currentUser?.id]);
+  }, [effectiveOwnerId]);
 
   useEffect(() => {
     setDriverGuestIds((prev) => prev.filter((guestId) => selectedGuestIds.includes(guestId)));

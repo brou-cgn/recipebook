@@ -649,21 +649,33 @@ exports.calculateEventDrinks = onCall({maxInstances: 10}, async (request) => {
     throw new HttpsError('unauthenticated', 'Login erforderlich.');
   }
   const uid = request.auth.uid;
-  const {event, eventId} = request.data || {};
+  const {event, eventId, ownerId} = request.data || {};
 
   if (!event || !event.durationHours || !event.guests) {
     throw new HttpsError('invalid-argument', 'event mit durationHours und guests ist erforderlich.');
   }
 
   const db = admin.firestore();
+
+  // Admins may recalculate/save an event on behalf of another user (full
+  // edit access to all events); everyone else may only act on their own.
+  const targetUid = ownerId || uid;
+  if (targetUid !== uid) {
+    const userSnap = await db.collection('users').doc(uid).get();
+    const role = userSnap.exists ? userSnap.data()?.role : null;
+    if (role !== 'admin') {
+      throw new HttpsError('permission-denied', 'Nur Admins können Events anderer Nutzer bearbeiten.');
+    }
+  }
+
   const [ratesDb, customDrinksMap, childrenRatesDb] = await Promise.all([
-    loadRatesDb(db, uid),
-    loadCustomDrinks(db, uid, event.customDrinkIds),
+    loadRatesDb(db, targetUid),
+    loadCustomDrinks(db, targetUid, event.customDrinkIds),
     loadChildrenDrinkWeightsFromFirestore(db),
   ]);
   const result = calculate(event, ratesDb, customDrinksMap, childrenRatesDb);
 
-  const eventsRef = db.collection('users').doc(uid).collection('events');
+  const eventsRef = db.collection('users').doc(targetUid).collection('events');
   let docRef;
   if (eventId) {
     docRef = eventsRef.doc(eventId);

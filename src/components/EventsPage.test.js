@@ -600,7 +600,7 @@ describe('EventsPage', () => {
       expect(screen.queryByRole('button', { name: 'Alle Anwender' })).not.toBeInTheDocument();
     });
 
-    test('admin can switch to "Alle Anwender" and open another user\'s event read-only', async () => {
+    test('admin can switch to "Alle Anwender" and edit another user\'s event', async () => {
       const othersEvent = {
         id: 'e1',
         eventName: 'Fremdes Fest',
@@ -625,9 +625,12 @@ describe('EventsPage', () => {
       fireEvent.click(screen.getByText('Fremdes Fest'));
 
       expect(await screen.findByRole('heading', { name: 'Fremdes Fest' })).toBeInTheDocument();
-      // Read-only: no edit affordances for another user's event.
-      expect(screen.queryByRole('button', { name: 'Bearbeiten' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Event bearbeiten' })).not.toBeInTheDocument();
+      // Admins have full edit access to every user's events.
+      const editButton = screen.getByRole('button', { name: 'Bearbeiten' });
+      expect(editButton).toBeInTheDocument();
+
+      fireEvent.click(editButton);
+      expect(screen.getByText('EventForm geöffnet')).toBeInTheDocument();
     });
   });
 });

@@ -103,14 +103,26 @@ exports.submitConsumption = onCall({maxInstances: 10}, async (request) => {
     throw new HttpsError('unauthenticated', 'Login erforderlich.');
   }
   const uid = request.auth.uid;
-  const {eventId, gebinde, verbrauchGesperrtKategorien} = request.data || {};
+  const {eventId, gebinde, verbrauchGesperrtKategorien, ownerId} = request.data || {};
 
   if (!eventId || !gebinde) {
     throw new HttpsError('invalid-argument', 'eventId und gebinde sind erforderlich.');
   }
 
   const db = admin.firestore();
-  const eventRef = db.collection('users').doc(uid).collection('events').doc(eventId);
+
+  // Admins may record consumption on behalf of another user (full edit
+  // access to all events); everyone else may only act on their own.
+  const targetUid = ownerId || uid;
+  if (targetUid !== uid) {
+    const userSnap = await db.collection('users').doc(uid).get();
+    const role = userSnap.exists ? userSnap.data()?.role : null;
+    if (role !== 'admin') {
+      throw new HttpsError('permission-denied', 'Nur Admins können Events anderer Nutzer bearbeiten.');
+    }
+  }
+
+  const eventRef = db.collection('users').doc(targetUid).collection('events').doc(eventId);
   const eventSnap = await eventRef.get();
   if (!eventSnap.exists) {
     throw new HttpsError('not-found', 'Event nicht gefunden.');
@@ -144,7 +156,7 @@ exports.submitConsumption = onCall({maxInstances: 10}, async (request) => {
       batch.set(snapshotRef, {
         ...snapshot,
         eventId,
-        uid,
+        uid: targetUid,
         erstelltAm: admin.firestore.FieldValue.serverTimestamp(),
       });
     }

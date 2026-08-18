@@ -175,20 +175,20 @@ service cloud.firestore {
     }
 
     // Event drink-calculation planning (Menüpunkt "Events").
-    // Admins may additionally read (but not write) any user's events, so they
-    // can see all events across the app.
+    // Admins have full read/write access to any user's events, so they can
+    // see, edit and delete events across the app.
     match /users/{userId}/events/{eventId} {
       allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow write: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
 
     // User-defined custom drinks library (reusable across events).
     // Readable by any recognised user – drinks are a shared library visible to
-    // everyone – but only the owner may create/update/delete their own entries,
-    // so existing drinks from other users cannot be edited, only newly added.
+    // everyone. Owners may create/update/delete their own entries; admins may
+    // additionally edit/delete any user's entries.
     match /users/{userId}/customDrinks/{drinkId} {
       allow read: if isAnyUser();
-      allow write: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
 
     // Reusable guest profiles for drink planning
@@ -199,8 +199,10 @@ service cloud.firestore {
 
     // Guest profiles (new data model):
     // /guests/{userId}/profiles/{guestId}
-    // Reads are limited to the owner, plus admins who may read (but not write)
-    // any user's guest profiles. Writes happen via Cloud Function (Admin SDK).
+    // Reads are limited to the owner, plus admins who may read any user's
+    // guest profiles. All writes happen via the manageGuestProfile Cloud
+    // Function (Admin SDK bypasses these rules), which additionally lets
+    // admins create/update/delete any user's guest profiles.
     match /guests/{userId}/profiles/{guestId} {
       allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow write: if false;

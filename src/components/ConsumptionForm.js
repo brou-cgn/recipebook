@@ -268,7 +268,8 @@ function LockStateIcon({ state }) {
   );
 }
 
-function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
+function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerId }) {
+  const effectiveOwnerId = ownerId || currentUser?.id;
   const kategorien = (event.berechnung?.ergebnis || []).filter((row) => (row.isCustomDrink || row.isPredefinedDrink) && row.gebindeGroesseLiter);
   const drinkGroups = groupKategorienByDrink(kategorien, recipes);
   const { prefillMap, warnings: prefillWarnings } = getCascadePrefill(drinkGroups);
@@ -294,6 +295,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
   const einkaufLock = useGroupLock({
     initialLocked: event.einkaufGesperrt,
     currentUser,
+    ownerId: effectiveOwnerId,
     eventId: event.id,
     lockFn: lockEinkaufMengen,
     unlockFn: unlockEinkaufMengen,
@@ -301,6 +303,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
   const verbrauchLock = useGroupLock({
     initialLocked: event.verbrauchGesperrt,
     currentUser,
+    ownerId: effectiveOwnerId,
     eventId: event.id,
     lockFn: lockVerbrauchMengen,
     unlockFn: unlockVerbrauchMengen,
@@ -449,14 +452,14 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
       });
       return werteByKategorie;
     });
-    if (!currentUser?.id) return;
+    if (!effectiveOwnerId) return;
     const allLocked = allGroupsLockedIn(nextLocked);
     if (allLocked && event.status === 'berechnet') {
-      setEventStatus(currentUser.id, event.id, 'eingekauft').catch((err) => {
+      setEventStatus(effectiveOwnerId, event.id, 'eingekauft').catch((err) => {
         console.error('Error setting event status to eingekauft:', err);
       });
     } else if (!allLocked && event.status === 'eingekauft') {
-      setEventStatus(currentUser.id, event.id, 'berechnet').catch((err) => {
+      setEventStatus(effectiveOwnerId, event.id, 'berechnet').catch((err) => {
         console.error('Error resetting event status to berechnet:', err);
       });
     }
@@ -497,7 +500,13 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
     setError('');
     try {
       const gesperrt = verbrauchGesperrtKategorien || verbrauchLock.lockedKategorien;
-      await submitConsumption(event.id, buildGebindePayload(), Array.from(gesperrt));
+      // Admin recording consumption for another user's event: pass their
+      // ownerId through so the Cloud Function writes to the right event.
+      if (effectiveOwnerId && effectiveOwnerId !== currentUser?.id) {
+        await submitConsumption(event.id, buildGebindePayload(), Array.from(gesperrt), effectiveOwnerId);
+      } else {
+        await submitConsumption(event.id, buildGebindePayload(), Array.from(gesperrt));
+      }
       onDone(event.id);
     } catch (err) {
       console.error('Error submitting consumption:', err);

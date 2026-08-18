@@ -223,6 +223,8 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
       || null;
   }, [events, allEvents, selectedEventId, fallbackEvent]);
   const isOwnEvent = selectedEventOwnerId === currentUser?.id;
+  // Admins have full edit/delete access to every user's events, not just their own.
+  const canManageSelectedEvent = isOwnEvent || isAdmin;
   const getOwnerFirstName = (ownerId) => {
     if (!ownerId) return null;
     return allUsers.find((u) => u.id === ownerId)?.vorname || null;
@@ -240,7 +242,10 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
 
   const handleEventSaved = (eventId) => {
     setSelectedEventId(eventId);
-    setSelectedEventOwnerId(currentUser?.id);
+    // When editing, keep the event's existing owner (e.g. an admin editing
+    // another user's event); a newly created event always belongs to the
+    // current user.
+    setSelectedEventOwnerId(subView === 'edit' ? selectedEventOwnerId : currentUser?.id);
     setFallbackEvent(null);
     setSubView('detail');
   };
@@ -248,7 +253,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
   const handleDelete = async (event) => {
     if (!window.confirm(`Möchtest du "${event.eventName}" wirklich löschen?`)) return;
     try {
-      await deleteEvent(currentUser.id, event.id);
+      await deleteEvent(selectedEventOwnerId || currentUser.id, event.id);
       setSubView('list');
       setSelectedEventId(null);
       setFallbackEvent(null);
@@ -289,13 +294,14 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
     );
   }
 
-  if (subView === 'edit' && selectedEvent && isOwnEvent) {
+  if (subView === 'edit' && selectedEvent && canManageSelectedEvent) {
     return (
       <EventForm
         onSaved={handleEventSaved}
         onCancel={() => setSubView('detail')}
         onDelete={() => handleDelete(selectedEvent)}
         currentUser={currentUser}
+        ownerId={selectedEventOwnerId}
         onManageDrinks={() => setSubView('drinks')}
         initialEvent={selectedEvent}
         recipes={recipes}
@@ -303,12 +309,13 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
     );
   }
 
-  if (subView === 'consumption' && selectedEvent && isOwnEvent) {
+  if (subView === 'consumption' && selectedEvent && canManageSelectedEvent) {
     return (
       <ConsumptionForm
         event={selectedEvent}
         recipes={recipes}
         currentUser={currentUser}
+        ownerId={selectedEventOwnerId}
         onDone={(eventId) => {
           setSelectedEventId(eventId);
           setFallbackEvent(null);
@@ -425,7 +432,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
             </>
           )}
 
-          {isOwnEvent && (
+          {canManageSelectedEvent && (
             <div className="events-form-actions">
               {(selectedEvent.status === 'berechnet' || selectedEvent.status === 'eingekauft') && (
                 <button
@@ -448,7 +455,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
             </div>
           )}
         </div>
-        {isOwnEvent && isMobileView && (
+        {canManageSelectedEvent && isMobileView && (
           <button
             type="button"
             className={`edit-fab-button events-edit-fab-button${editFabPressed ? ' pressed' : ''}`}

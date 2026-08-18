@@ -48,12 +48,34 @@ function validateProfile(profile) {
   };
 }
 
-async function requireEditRole(db, uid) {
+async function getUserRole(db, uid) {
   const userSnap = await db.collection('users').doc(uid).get();
-  const role = userSnap.exists ? userSnap.data()?.role : null;
+  return userSnap.exists ? userSnap.data()?.role : null;
+}
+
+/**
+ * Ermittelt, unter welchem Nutzer (targetUid) die Gaeste-Operation ausgefuehrt
+ * werden darf. Standardmaessig wirkt der Aufruf auf die eigenen Gaeste (uid
+ * benoetigt edit-Rechte); wird ein abweichendes ownerId angegeben, darf nur
+ * ein Admin auf die Gaeste eines anderen Nutzers zugreifen.
+ * @param {object} db Firestore-Instanz.
+ * @param {string} uid Firebase-Nutzer-ID des Aufrufers.
+ * @param {string|undefined} ownerId Optionales Ziel-Nutzer-ID (fuer Admin-Zugriff).
+ * @return {Promise<string>} Die Nutzer-ID, deren Gaesteprofile bearbeitet werden.
+ */
+async function resolveTargetUid(db, uid, ownerId) {
+  const role = await getUserRole(db, uid);
+  const targetUid = ownerId || uid;
+  if (targetUid !== uid) {
+    if (role !== 'admin') {
+      throw new HttpsError('permission-denied', 'Nur Admins können Gäste anderer Nutzer verwalten.');
+    }
+    return targetUid;
+  }
   if (!ALLOWED_ROLES.has(role)) {
     throw new HttpsError('permission-denied', 'Nur Benutzer mit edit-Rechten können Gäste verwalten.');
   }
+  return targetUid;
 }
 
 exports.manageGuestProfile = onCall({maxInstances: 10}, async (request) => {
@@ -62,12 +84,12 @@ exports.manageGuestProfile = onCall({maxInstances: 10}, async (request) => {
   }
 
   const uid = request.auth.uid;
-  const {action, profileId, profile} = request.data || {};
+  const {action, profileId, profile, ownerId} = request.data || {};
   const db = admin.firestore();
 
-  await requireEditRole(db, uid);
+  const targetUid = await resolveTargetUid(db, uid, ownerId);
 
-  const guestsRef = db.collection('guests').doc(uid).collection('profiles');
+  const guestsRef = db.collection('guests').doc(targetUid).collection('profiles');
   const now = admin.firestore.FieldValue.serverTimestamp();
 
   if (action === 'delete') {

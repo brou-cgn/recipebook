@@ -40,6 +40,7 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [editOwnerId, setEditOwnerId] = useState(null);
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -131,6 +132,7 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
 
   const openNew = () => {
     setEditId(null);
+    setEditOwnerId(null);
     setForm(emptyForm());
     setDrinkToAdd('');
     setCategoryToAdd('');
@@ -140,6 +142,7 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
 
   const openEdit = (profile) => {
     setEditId(profile.id);
+    setEditOwnerId(profile.ownerId || null);
     setForm({
       vorname: profile.vorname || '',
       nachname: profile.nachname || '',
@@ -198,20 +201,23 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
     setSaving(true);
     setError('');
     try {
-      await saveGuestProfile(
-        currentUser.id,
-        {
-          vorname: form.vorname.trim(),
-          nachname: form.nachname.trim(),
-          email: form.email.trim(),
-          kind: form.kind === true,
-          alkoholischeGetränke: form.alkoholischeGetraenke,
-          bevorzugteGetränke: form.bevorzugteGetraenke,
-          bevorzugteKategorien: form.bevorzugteKategorien,
-          präferenzFaktor: normalizePreferenceFactor(form.praeferenzFaktor),
-        },
-        editId || undefined,
-      );
+      const payload = {
+        vorname: form.vorname.trim(),
+        nachname: form.nachname.trim(),
+        email: form.email.trim(),
+        kind: form.kind === true,
+        alkoholischeGetränke: form.alkoholischeGetraenke,
+        bevorzugteGetränke: form.bevorzugteGetraenke,
+        bevorzugteKategorien: form.bevorzugteKategorien,
+        präferenzFaktor: normalizePreferenceFactor(form.praeferenzFaktor),
+      };
+      // Admin editing another user's guest: pass their ownerId through so the
+      // manageGuestProfile Cloud Function writes to the right owner's profiles.
+      if (editId && editOwnerId && editOwnerId !== currentUser.id) {
+        await saveGuestProfile(currentUser.id, payload, editId, editOwnerId);
+      } else {
+        await saveGuestProfile(currentUser.id, payload, editId || undefined);
+      }
       setShowForm(false);
     } catch (err) {
       console.error('Error saving guest profile:', err);
@@ -226,7 +232,12 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
     const name = getGuestDisplayName(profile) || 'diesen Gast';
     if (!window.confirm(`Möchtest du "${name}" wirklich löschen?`)) return;
     try {
-      await deleteGuestProfile(currentUser.id, profile.id);
+      // Admin deleting another user's guest: pass their ownerId through.
+      if (profile.ownerId && profile.ownerId !== currentUser.id) {
+        await deleteGuestProfile(currentUser.id, profile.id, profile.ownerId);
+      } else {
+        await deleteGuestProfile(currentUser.id, profile.id);
+      }
     } catch (err) {
       console.error('Error deleting guest profile:', err);
     }
@@ -564,8 +575,9 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
             {sortedAllProfiles.map((profile) => {
               const fullName = getGuestDisplayName(profile);
               const ownerName = getOwnerFirstName(profile.ownerId);
+              const guestDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode) || '🗑';
               return (
-                <div key={`${profile.ownerId}_${profile.id}`} className="events-card events-guest-card">
+                <div key={`${profile.ownerId}_${profile.id}`} className="events-card events-guest-card" onClick={() => openEdit(profile)}>
                   <div className="events-card-main">
                     <h3>{fullName || 'Unbenannter Gast'}</h3>
                     {profile.kind === true && <p className="events-info-text">Kind</p>}
@@ -573,6 +585,22 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
                       <p className="events-card-meta">von {ownerName}</p>
                     )}
                   </div>
+                  <button
+                    type="button"
+                    className="events-guest-delete-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(profile);
+                    }}
+                    aria-label={`${fullName || 'Gast'} löschen`}
+                    title="Gast löschen"
+                  >
+                    {isBase64Image(guestDeleteIcon) ? (
+                      <img src={guestDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
+                    ) : (
+                      <span className="swipe-delete-icon-text">{guestDeleteIcon}</span>
+                    )}
+                  </button>
                 </div>
               );
             })}
