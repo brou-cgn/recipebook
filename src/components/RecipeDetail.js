@@ -2497,11 +2497,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 </div>
               )}
 
-              {/* Nutrition icon - always visible */}
+              {/* Nutrition icon */}
               {!isSharedView && (
                 <div className="metadata-item">
                   <button
                     className="nutrition-metadata-btn"
+                    style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
                     onClick={handleNutritionButtonClick}
                     disabled={recipe.naehrwerte?.calcPending}
                     title={nutritionButtonTitle}
