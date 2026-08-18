@@ -273,9 +273,10 @@
   justify-content: center;
   flex-shrink: 0;
 
-  background: #fff;
-  border: 1px solid #f0f0f0 !important;
+  background: rgba(64, 44, 28, 0.9);
+  border: none !important;
   border-radius: 12px !important;
+  color: #fff;
 
   line-height: 1;
   font-size: 1.4rem;

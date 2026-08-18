@@ -149,7 +149,13 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
                 })()}
                 <div className="menu-card-badges">
                   {menu.privat && (
-                    <div className="private-badge">Privat</div>
+                    <div className="private-badge" title="Privates Menü" aria-label="Privates Menü">
+                      {isBase64Image(getEffectiveIcon(buttonIcons, 'privateBadge', isDarkMode)) ? (
+                        <img src={getEffectiveIcon(buttonIcons, 'privateBadge', isDarkMode)} alt="Privat" className="button-icon-image" draggable="false" />
+                      ) : (
+                        getEffectiveIcon(buttonIcons, 'privateBadge', isDarkMode)
+                      )}
+                    </div>
                   )}
                   {isFavorite && (
                     <div className="menu-favorite-badge favorite-active">
