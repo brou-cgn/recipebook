@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { canEditRecipes } from '../utils/userManagement';
 import './RecipeFilterSidebar.css';
 
 const COLLAPSED_STORAGE_KEY = 'recipeFilterSidebar_collapsed';
@@ -42,8 +43,19 @@ function RecipeFilterSidebar({
   onPrivateListFilterChange,
   showPrivateListFilters = true,
   onClearAllFilters,
+  onAddRecipe,
+  activePrivateListId = null,
 }) {
   const [collapsed, setCollapsed] = useState(getStoredCollapsed);
+  const userCanEdit = canEditRecipes(currentUser);
+
+  const handleAddClick = () => {
+    if (activePrivateListId) {
+      onAddRecipe?.(activePrivateListId);
+    } else {
+      onAddRecipe?.();
+    }
+  };
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
@@ -158,18 +170,31 @@ function RecipeFilterSidebar({
       className={`recipe-filter-sidebar${collapsed ? ' recipe-filter-sidebar--collapsed' : ''}`}
       aria-label="Rezeptfilter"
     >
-      <button
-        type="button"
-        className="recipe-filter-sidebar-toggle"
-        onClick={toggleCollapsed}
-        aria-expanded={!collapsed}
-        aria-label={collapsed ? 'Filter einblenden' : 'Filter ausblenden'}
-        title={collapsed ? 'Filter einblenden' : 'Filter ausblenden'}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          {collapsed ? <polyline points="9 6 15 12 9 18" /> : <polyline points="15 6 9 12 15 18" />}
-        </svg>
-      </button>
+      <div className="recipe-filter-sidebar-header">
+        {!collapsed && userCanEdit && (
+          <button
+            type="button"
+            className="recipe-filter-sidebar-add-button"
+            onClick={handleAddClick}
+            title={activePrivateListId ? 'Privates Rezept hinzufügen' : 'Rezept hinzufügen'}
+            aria-label={activePrivateListId ? 'Privates Rezept hinzufügen' : 'Rezept hinzufügen'}
+          >
+            {activePrivateListId ? 'Privates Rezept hinzufügen' : 'Rezept hinzufügen'}
+          </button>
+        )}
+        <button
+          type="button"
+          className="recipe-filter-sidebar-toggle"
+          onClick={toggleCollapsed}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? 'Filter einblenden' : 'Filter ausblenden'}
+          title={collapsed ? 'Filter einblenden' : 'Filter ausblenden'}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            {collapsed ? <polyline points="9 6 15 12 9 18" /> : <polyline points="15 6 9 12 15 18" />}
+          </svg>
+        </button>
+      </div>
 
       {!collapsed && (
         <>

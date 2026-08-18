@@ -152,7 +152,8 @@
    point. Scoped to the main recipe overview only (.recipe-overview-main) so
    other views without the sidebar (e.g. private list detail) keep it. */
 @media (min-width: 901px) {
-  .recipe-overview-main .filter-button {
+  .recipe-overview-main .filter-button,
+  .recipe-overview-main .add-icon-button {
     display: none;
   }
 }
