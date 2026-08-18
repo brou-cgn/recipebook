@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import SortCarousel, { SORT_OPTIONS } from './SortCarousel';
 
 // JSDOM does not implement scrollIntoView — provide a no-op mock.
@@ -75,5 +75,70 @@ describe('SortCarousel', () => {
   test('has an accessible tablist role', () => {
     render(<SortCarousel activeSort="alphabetical" onSortChange={() => {}} />);
     expect(screen.getByRole('tablist', { name: 'Sortierung' })).toBeInTheDocument();
+  });
+
+  describe('expand/collapse', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    test('starts collapsed, showing only the active pill', () => {
+      render(<SortCarousel activeSort="alphabetical" onSortChange={() => {}} />);
+      expect(screen.getByRole('tablist')).not.toHaveClass('sort-carousel--expanded');
+    });
+
+    test('a native scroll event (the swipe gesture) expands the carousel', () => {
+      render(<SortCarousel activeSort="alphabetical" onSortChange={() => {}} />);
+      fireEvent.scroll(screen.getByRole('tablist'));
+      expect(screen.getByRole('tablist')).toHaveClass('sort-carousel--expanded');
+    });
+
+    test('tapping the active pill toggles the expanded state without selecting', () => {
+      const handleChange = jest.fn();
+      render(<SortCarousel activeSort="alphabetical" onSortChange={handleChange} />);
+      const activeTab = screen.getByRole('tab', { name: 'Alphabetisch' });
+
+      fireEvent.click(activeTab);
+      expect(screen.getByRole('tablist')).toHaveClass('sort-carousel--expanded');
+
+      fireEvent.click(activeTab);
+      expect(screen.getByRole('tablist')).not.toHaveClass('sort-carousel--expanded');
+      expect(handleChange).not.toHaveBeenCalled();
+    });
+
+    test('focusing the carousel expands it; blurring away from it schedules a collapse', () => {
+      render(<SortCarousel activeSort="alphabetical" onSortChange={() => {}} />);
+      const tablist = screen.getByRole('tablist');
+      const activeTab = screen.getByRole('tab', { name: 'Alphabetisch' });
+
+      fireEvent.focus(activeTab);
+      expect(tablist).toHaveClass('sort-carousel--expanded');
+
+      // React's onBlur is backed by the (bubbling) native "focusout" event,
+      // not "blur" — fire that directly rather than fireEvent.blur, which
+      // jsdom does not pair with a focusout on its own.
+      fireEvent.focusOut(activeTab, { relatedTarget: null });
+      act(() => {
+        jest.advanceTimersByTime(1200);
+      });
+      expect(tablist).not.toHaveClass('sort-carousel--expanded');
+    });
+
+    test('selecting an option collapses the carousel again', () => {
+      const handleChange = jest.fn();
+      render(<SortCarousel activeSort="alphabetical" onSortChange={handleChange} />);
+      const tablist = screen.getByRole('tablist');
+
+      fireEvent.scroll(tablist);
+      expect(tablist).toHaveClass('sort-carousel--expanded');
+
+      fireEvent.click(screen.getByRole('tab', { name: 'Im Trend' }));
+      expect(handleChange).toHaveBeenCalledWith('trending');
+      expect(tablist).not.toHaveClass('sort-carousel--expanded');
+    });
   });
 });

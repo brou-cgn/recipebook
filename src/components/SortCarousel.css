@@ -10,7 +10,6 @@
   .sort-carousel {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
     /* Break out of the recipe-list-container's 1rem side padding so the
        carousel spans the full viewport width; the matching horizontal
        padding below re-creates that 1rem gap for the pill at each end,
@@ -35,6 +34,7 @@
 
 .sort-carousel-item {
   flex: 0 0 auto;
+  min-width: 0;
   scroll-snap-align: center;
 
   appearance: none;
@@ -48,11 +48,38 @@
   font-size: 0.85rem;
   font-weight: 600;
   white-space: nowrap;
+  margin-right: 0.5rem;
 
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease,
+    max-width 0.25s ease, opacity 0.2s ease, margin-right 0.25s ease, padding 0.25s ease,
+    border-width 0.25s ease;
   -webkit-tap-highlight-color: transparent;
+}
+
+.sort-carousel-item:last-child {
+  margin-right: 0;
+}
+
+/* Collapsed (default) state: only the active pill is shown. The other
+   pills are shrunk to zero width via `max-width` rather than removed
+   from the DOM, so focus order, ARIA state and keyboard navigation stay
+   intact — they're just visually and pointer-wise unreachable until the
+   carousel expands. */
+.sort-carousel:not(.sort-carousel--expanded) .sort-carousel-item:not(.sort-carousel-item--active) {
+  max-width: 0;
+  margin-right: 0;
+  padding-left: 0;
+  padding-right: 0;
+  border-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.sort-carousel--expanded .sort-carousel-item {
+  max-width: 12rem;
 }
 
 .sort-carousel-item:active {
