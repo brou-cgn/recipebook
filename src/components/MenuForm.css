@@ -77,12 +77,7 @@
   }
 
   .menu-form-header {
-    justify-content: flex-end;
-  }
-
-  .cancel-fab-button,
-  .save-fab-button {
-    display: none;
+    justify-content: flex-start;
   }
 }
 
@@ -626,6 +621,14 @@
   width: 1.2rem;
   height: 1.2rem;
   object-fit: contain;
+}
+
+/* Desktop: buttons live in the header, floating FABs are not shown */
+@media (min-width: 769px) {
+  .cancel-fab-button,
+  .save-fab-button {
+    display: none;
+  }
 }
 
 /* Mobile: Larger FAB button with pressed animation */
