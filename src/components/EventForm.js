@@ -345,6 +345,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
               aria-label="Startuhrzeit"
+              step="900"
             />
           </label>
           <label className="events-form-field">
