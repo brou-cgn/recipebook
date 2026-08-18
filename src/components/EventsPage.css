@@ -569,6 +569,8 @@
 .events-form-field input[type="date"],
 .events-form-field input[type="time"] {
   line-height: normal;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .events-form-field input[type="date"]::-webkit-date-and-time-value,
