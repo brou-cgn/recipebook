@@ -354,17 +354,15 @@
 
 .recipe-kulinarik {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.4rem;
   margin-top: 0.25rem;
   overflow: hidden;
-
-  /* ca. 2 Zeilen sichtbar */
-  max-height: 3.2rem;
 }
 
 .kulinarik-tag {
   display: inline-block;
+  flex-shrink: 0;
   background: #F5F2EF;
   color: #3E2B1C;
   border: 1px solid #E5DED8;
@@ -372,6 +370,7 @@
   padding: 0.15rem 0.6rem;
   font-size: 0.78rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .kulinarik-tag-more {
