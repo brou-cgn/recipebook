@@ -125,9 +125,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const [activeSort, setActiveSort] = useState(
     () => sessionStorage.getItem(SORT_STORAGE_KEY) || 'alphabetical'
   );
-  const [carouselExpanded, setCarouselExpanded] = useState(false);
   const handleSortChange = useCallback((sort) => setActiveSort(sort), []);
-  const handleCarouselExpandChange = useCallback((expanded) => setCarouselExpanded(expanded), []);
   const [allUsers, setAllUsers] = useState([]);
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [customLists, setCustomLists] = useState({ mealCategories: [] });
@@ -336,19 +334,15 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     return author.vorname;
   };
 
-  const targetExpandedWidth = Math.min(window.innerWidth * 0.85, 320);
-  const collapsedWidth = 160; // oder später dynamisch aus dem Carousel ableiten
-  const widthDelta = targetExpandedWidth - collapsedWidth;
-  const filterShift = carouselExpanded ? -(widthDelta / 2) : 0;
-  const filterTransform = `translateX(${filterShift}px)`;
-  const addShift = carouselExpanded ? window.innerWidth : 0;
-
   return (
     <div className="recipe-list-container">
       <div className="recipe-list-header">
         <div className="recipe-list-header-top">
           <div className="recipe-list-title-area">
-            <h2>{getHeading()}</h2>
+            <h2 className={currentUser?.sortCarousel ? 'recipe-list-heading--replaced-on-mobile' : ''}>{getHeading()}</h2>
+            {currentUser?.sortCarousel && (
+              <SortCarousel activeSort={activeSort} onSortChange={handleSortChange} />
+            )}
             {onCategoryFilterChange && (
               <select
                 className="category-filter-arrow"
@@ -369,7 +363,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
               <button 
                   ref={filterButtonRef}
                   className={`filter-button ${hasActiveFilters ? 'has-active-filters' : ''} ${filterPressed ? 'pressed' : ''}`}
-                  style={{ '--filter-transform': filterTransform }}
                   onTouchStart={handleFilterTouchStart}
                   onTouchEnd={handleFilterTouchEnd}
                   onTouchCancel={handleFilterTouchCancel}
@@ -398,7 +391,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                   {!activePrivateListId && (
                     <button
                       className={`add-icon-button ${addPressed ? 'pressed' : ''}`}
-                      style={{ '--add-shift': `${addShift}px` }}
                       onClick={() => onAddRecipe()}
                       onTouchStart={() => setAddPressed(true)}
                       onTouchEnd={() => setAddPressed(false)}
@@ -419,7 +411,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                   {activePrivateListId && (
                     <button
                       className={`add-icon-button ${addPressed ? 'pressed' : ''}`}
-                      style={{ '--add-shift': `${addShift}px` }}
                       onClick={() => onAddRecipe(activePrivateListId)}
                       onTouchStart={() => setAddPressed(true)}
                       onTouchEnd={() => setAddPressed(false)}
@@ -440,9 +431,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                 </>
               )}
             </div>
-            {currentUser?.sortCarousel && (
-              <SortCarousel activeSort={activeSort} onSortChange={handleSortChange} onExpandChange={handleCarouselExpandChange} />
-            )}
           </div>
         </div>
       </div>

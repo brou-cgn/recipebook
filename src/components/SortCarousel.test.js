@@ -1,55 +1,13 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import SortCarousel, { SORT_OPTIONS } from './SortCarousel';
 
-// JSDOM does not implement ResizeObserver — provide a no-op mock so the component
-// can register/unregister observers without throwing.
-global.ResizeObserver = class ResizeObserver {
-  constructor(cb) { this.cb = cb; }
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-};
-
-// Helper: fire a complete touch gesture (touchStart → [expand step] → touchMove → touchEnd).
-// For swipes larger than 10 px, one intermediate touchMove is fired at startX ± 11 px to
-// trigger expansion and simultaneously start drag tracking (sets dragStartX).
-function simulateTouchSwipe(element, startX, endX, startY = 100, endY = 100) {
-  fireEvent.touchStart(element, { touches: [{ clientX: startX, clientY: startY }] });
-  if (Math.abs(endX - startX) > 10) {
-    const expandX = endX < startX ? startX - 11 : startX + 11;
-    // Intermediate: triggers expansion and starts drag tracking simultaneously
-    fireEvent.touchMove(element, { touches: [{ clientX: expandX, clientY: startY }] });
-  }
-  fireEvent.touchMove(element, { touches: [{ clientX: endX, clientY: endY }] });
-  fireEvent.touchEnd(element, { changedTouches: [{ clientX: endX, clientY: endY }] });
-}
-
-// Helper: mock the first carousel item's getBoundingClientRect to return a known width
-function mockItemWidth(container, width) {
-  const items = container.firstChild
-    .querySelector('.sort-carousel-track')
-    .querySelectorAll('.sort-carousel-item');
-  jest.spyOn(items[0], 'getBoundingClientRect').mockReturnValue({
-    width, height: 40, top: 0, left: 0, right: width, bottom: 40,
-  });
-}
+// JSDOM does not implement scrollIntoView — provide a no-op mock.
+beforeAll(() => {
+  Element.prototype.scrollIntoView = jest.fn();
+});
 
 describe('SortCarousel', () => {
-  // Freeze Date.now so all non-velocity tests see elapsed=0 → velocity=0 → old paths.
-  let nowSpy;
-  beforeEach(() => {
-    nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1000);
-  });
-  afterEach(() => {
-    nowSpy.mockRestore();
-  });
-
-  test('renders the active option label', () => {
-    render(<SortCarousel activeSort="alphabetical" onSortChange={() => {}} />);
-    expect(screen.getByText('Alphabetisch')).toBeInTheDocument();
-  });
-
   test('renders all option labels', () => {
     render(<SortCarousel activeSort="alphabetical" onSortChange={() => {}} />);
     SORT_OPTIONS.forEach(opt => {
@@ -57,199 +15,65 @@ describe('SortCarousel', () => {
     });
   });
 
-  test('starts collapsed (no expanded class)', () => {
-    const { container } = render(
-      <SortCarousel activeSort="alphabetical" onSortChange={() => {}} />
-    );
-    expect(container.firstChild).not.toHaveClass('sort-carousel--expanded');
-  });
-
-  test('expands on long press', () => {
-    jest.useFakeTimers();
-    const { container } = render(
-      <SortCarousel activeSort="alphabetical" onSortChange={() => {}} />
-    );
-    fireEvent.touchStart(container.firstChild, { touches: [{ clientX: 100, clientY: 100 }] });
-    expect(container.firstChild).not.toHaveClass('sort-carousel--expanded');
-    act(() => { jest.advanceTimersByTime(300); });
-    expect(container.firstChild).toHaveClass('sort-carousel--expanded');
-    jest.useRealTimers();
-  });
-
-  test('expands immediately on horizontal swipe', () => {
-    const { container } = render(
-      <SortCarousel activeSort="alphabetical" onSortChange={() => {}} />
-    );
-    fireEvent.touchStart(container.firstChild, { touches: [{ clientX: 100, clientY: 100 }] });
-    fireEvent.touchMove(container.firstChild, { touches: [{ clientX: 115, clientY: 100 }] });
-    expect(container.firstChild).toHaveClass('sort-carousel--expanded');
-  });
-
-  test('sets dragging class while finger is moving', () => {
-    const { container } = render(
-      <SortCarousel activeSort="alphabetical" onSortChange={() => {}} />
-    );
-    fireEvent.touchStart(container.firstChild, { touches: [{ clientX: 200, clientY: 100 }] });
-    // First move crosses HORIZONTAL_SWIPE_MIN: expands AND starts dragging immediately
-    fireEvent.touchMove(container.firstChild, { touches: [{ clientX: 215, clientY: 100 }] });
-    expect(container.firstChild).toHaveClass('sort-carousel--expanded');
-    expect(container.firstChild).toHaveClass('sort-carousel--dragging');
-  });
-
-  test('selects next sort option via swipe left and collapses', () => {
-    const handleChange = jest.fn();
-    const { container } = render(
-      <SortCarousel activeSort="alphabetical" onSortChange={handleChange} />
-    );
-    simulateTouchSwipe(container.firstChild, 200, 100); // -100 px > threshold
-    expect(handleChange).toHaveBeenCalledWith('trending');
-    expect(container.firstChild).not.toHaveClass('sort-carousel--expanded');
-  });
-
-  test('selects previous sort option via swipe right', () => {
-    const handleChange = jest.fn();
-    const { container } = render(
-      <SortCarousel activeSort="trending" onSortChange={handleChange} />
-    );
-    simulateTouchSwipe(container.firstChild, 100, 200); // +100 px > threshold
-    expect(handleChange).toHaveBeenCalledWith('alphabetical');
-  });
-
-  test('multi-step swipe left skips multiple options based on item width', () => {
-    const handleChange = jest.fn();
-    const { container } = render(
-      <SortCarousel activeSort="alphabetical" onSortChange={handleChange} />
-    );
-    // swipe left ~500 px from drag origin (after expansion step): 489/160 ≈ 3.06 → 3 steps from 'alphabetical' → 'rating'
-    simulateTouchSwipe(container.firstChild, 600, 100);
-    expect(handleChange).toHaveBeenCalledWith('rating');
-  });
-
-  test('multi-step swipe right skips multiple options based on item width', () => {
-    const handleChange = jest.fn();
-    const { container } = render(
-      <SortCarousel activeSort="rating" onSortChange={handleChange} />
-    );
-    // swipe right ~500 px from drag origin (after expansion step): 489/160 ≈ 3.06 → 3 steps back → index 0 → 'alphabetical'
-    simulateTouchSwipe(container.firstChild, 100, 600);
-    expect(handleChange).toHaveBeenCalledWith('alphabetical');
-  });
-
-  test('short swipe collapses without changing sort', () => {
-    const handleChange = jest.fn();
-    const { container } = render(
-      <SortCarousel activeSort="alphabetical" onSortChange={handleChange} />
-    );
-    // 20 px: expands (> 10 px) but below the 30 px sort threshold
-    simulateTouchSwipe(container.firstChild, 200, 220);
-    expect(handleChange).not.toHaveBeenCalled();
-    expect(container.firstChild).not.toHaveClass('sort-carousel--expanded');
-  });
-
-  test('very short tap (< 10 px) does not expand', () => {
-    const { container } = render(
-      <SortCarousel activeSort="alphabetical" onSortChange={() => {}} />
-    );
-    simulateTouchSwipe(container.firstChild, 200, 205); // 5 px — below expand threshold
-    expect(container.firstChild).not.toHaveClass('sort-carousel--expanded');
-  });
-
-  test('initial dragOffset on expansion is 0 (no visual jump)', () => {
-    const { container } = render(
-      <SortCarousel activeSort="alphabetical" onSortChange={() => {}} />
-    );
-    const track = container.firstChild.querySelector('.sort-carousel-track');
-    const transformBefore = track.style.transform;
-    // Trigger expansion via horizontal swipe (deltaX = 15 > 10 px threshold)
-    fireEvent.touchStart(container.firstChild, { touches: [{ clientX: 100, clientY: 100 }] });
-    fireEvent.touchMove(container.firstChild, { touches: [{ clientX: 115, clientY: 100 }] });
-    // Carousel should be expanded…
-    expect(container.firstChild).toHaveClass('sort-carousel--expanded');
-    // …but the track transform must not have shifted (dragOffset = 0, no visual jump)
-    expect(track.style.transform).toBe(transformBefore);
-  });
-
-  test('keyboard: Enter expands the carousel', () => {
-    const { container } = render(
-      <SortCarousel activeSort="alphabetical" onSortChange={() => {}} />
-    );
-    fireEvent.keyDown(container.firstChild, { key: 'Enter' });
-    expect(container.firstChild).toHaveClass('sort-carousel--expanded');
-  });
-
-  test('keyboard: Escape collapses the carousel', () => {
-    const { container } = render(
-      <SortCarousel activeSort="alphabetical" onSortChange={() => {}} />
-    );
-    fireEvent.keyDown(container.firstChild, { key: 'Enter' });
-    expect(container.firstChild).toHaveClass('sort-carousel--expanded');
-    fireEvent.keyDown(container.firstChild, { key: 'Escape' });
-    expect(container.firstChild).not.toHaveClass('sort-carousel--expanded');
-  });
-
-  test('keyboard: ArrowRight advances to next option', () => {
-    const handleChange = jest.fn();
-    const { container } = render(
-      <SortCarousel activeSort="alphabetical" onSortChange={handleChange} />
-    );
-    fireEvent.keyDown(container.firstChild, { key: 'Enter' }); // expand
-    fireEvent.keyDown(container.firstChild, { key: 'ArrowRight' });
-    expect(handleChange).toHaveBeenCalledWith('trending');
-  });
-
-  test('keyboard: ArrowLeft wraps around to last option', () => {
-    const handleChange = jest.fn();
-    const { container } = render(
-      <SortCarousel activeSort="alphabetical" onSortChange={handleChange} />
-    );
-    fireEvent.keyDown(container.firstChild, { key: 'Enter' }); // expand
-    fireEvent.keyDown(container.firstChild, { key: 'ArrowLeft' });
-    // 'alphabetical' is index 0, wrapping back goes to last item
-    expect(handleChange).toHaveBeenCalledWith(SORT_OPTIONS[SORT_OPTIONS.length - 1].id);
-  });
-
   test('active item has aria-selected=true', () => {
     render(<SortCarousel activeSort="newest" onSortChange={() => {}} />);
-    const activeItem = screen.getByRole('option', { name: 'Neue Rezepte' });
+    const activeItem = screen.getByRole('tab', { name: 'Neue Rezepte' });
     expect(activeItem).toHaveAttribute('aria-selected', 'true');
+    expect(activeItem).toHaveClass('sort-carousel-item--active');
   });
 
   test('non-active items have aria-selected=false', () => {
     render(<SortCarousel activeSort="newest" onSortChange={() => {}} />);
-    const inactiveItem = screen.getByRole('option', { name: 'Alphabetisch' });
+    const inactiveItem = screen.getByRole('tab', { name: 'Alphabetisch' });
     expect(inactiveItem).toHaveAttribute('aria-selected', 'false');
+    expect(inactiveItem).not.toHaveClass('sort-carousel-item--active');
   });
 
-  test('fast swipe left uses velocity-based steps', () => {
+  test('clicking an option selects it directly', () => {
     const handleChange = jest.fn();
-    const { container } = render(
-      <SortCarousel activeSort="alphabetical" onSortChange={handleChange} />
-    );
-    // Override frozen clock: 1st call (touchStart) → 1000, rest (touchEnd) → 1200
-    let nowCallCount = 0;
-    nowSpy.mockImplementation(() => nowCallCount++ === 0 ? 1000 : 1200);
+    render(<SortCarousel activeSort="alphabetical" onSortChange={handleChange} />);
 
-    // Swipe left: dragStartX = 300-11=289, endX=100 → delta=-189 px, elapsed=200 ms
-    // velocity = 189/200 = 0.945 px/ms → steps = min(round(0.945*3), 4) = 3
-    // selectIndex(0 + 3) → 'rating'
-    simulateTouchSwipe(container.firstChild, 300, 100);
+    fireEvent.click(screen.getByRole('tab', { name: 'Im Trend' }));
 
-    expect(handleChange).toHaveBeenCalledWith('rating');
+    expect(handleChange).toHaveBeenCalledWith('trending');
   });
 
-  test('fast swipe right uses velocity-based steps', () => {
+  test('clicking the already-active option does not call onSortChange', () => {
     const handleChange = jest.fn();
-    const { container } = render(
-      <SortCarousel activeSort="rating" onSortChange={handleChange} />
-    );
-    let nowCallCount = 0;
-    nowSpy.mockImplementation(() => nowCallCount++ === 0 ? 1000 : 1200);
+    render(<SortCarousel activeSort="alphabetical" onSortChange={handleChange} />);
 
-    // Swipe right: dragStartX = 100+11=111, endX=300 → delta=189 px, elapsed=200 ms
-    // velocity = 189/200 = 0.945 px/ms → steps = 3
-    // selectIndex(3 - 3) → 'alphabetical'
-    simulateTouchSwipe(container.firstChild, 100, 300);
+    fireEvent.click(screen.getByRole('tab', { name: 'Alphabetisch' }));
 
-    expect(handleChange).toHaveBeenCalledWith('alphabetical');
+    expect(handleChange).not.toHaveBeenCalled();
+  });
+
+  test('only the active option is reachable via Tab (roving tabindex)', () => {
+    render(<SortCarousel activeSort="rating" onSortChange={() => {}} />);
+
+    expect(screen.getByRole('tab', { name: 'Nach Bewertung' })).toHaveAttribute('tabIndex', '0');
+    expect(screen.getByRole('tab', { name: 'Alphabetisch' })).toHaveAttribute('tabIndex', '-1');
+  });
+
+  test('keyboard: ArrowRight selects the next option', () => {
+    const handleChange = jest.fn();
+    render(<SortCarousel activeSort="alphabetical" onSortChange={handleChange} />);
+
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Alphabetisch' }), { key: 'ArrowRight' });
+
+    expect(handleChange).toHaveBeenCalledWith('trending');
+  });
+
+  test('keyboard: ArrowLeft wraps around to the last option', () => {
+    const handleChange = jest.fn();
+    render(<SortCarousel activeSort="alphabetical" onSortChange={handleChange} />);
+
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Alphabetisch' }), { key: 'ArrowLeft' });
+
+    expect(handleChange).toHaveBeenCalledWith(SORT_OPTIONS[SORT_OPTIONS.length - 1].id);
+  });
+
+  test('has an accessible tablist role', () => {
+    render(<SortCarousel activeSort="alphabetical" onSortChange={() => {}} />);
+    expect(screen.getByRole('tablist', { name: 'Sortierung' })).toBeInTheDocument();
   });
 });
