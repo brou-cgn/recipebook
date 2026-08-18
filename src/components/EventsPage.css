@@ -362,6 +362,9 @@
   flex: 0 0 auto;
   white-space: nowrap;
   height: 44px;
+}
+
+.events-secondary-btn.events-guests-manage-btn {
   background: transparent;
   border: 1px solid transparent;
 }
