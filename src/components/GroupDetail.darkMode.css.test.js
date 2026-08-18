@@ -53,22 +53,16 @@ describe('GroupDetail dark mode styles', () => {
 });
 
 describe('GroupDetail light mode styles', () => {
-  test('keeps settings button boxed but back button transparent in header actions', () => {
+  test('keeps settings button boxed in header actions', () => {
     const cssPath = path.join(__dirname, 'GroupDetail.css');
     const css = fs.readFileSync(cssPath, 'utf8');
     const settingsRule = getRuleBody(css, '.group-header-actions .list-settings-trigger-button');
     const shoppingRule = getRuleBody(css, '.group-header-actions .shopping-list-trigger-button');
     const settingsIconRule = getRuleBody(css, '.list-settings-icon-img');
-    const backRule = getRuleBody(css, '.group-header-actions .group-back-icon-btn');
 
     expect(settingsRule).toContain('background: #fff !important;');
     expect(settingsRule).toContain('border: 1px solid #f0f0f0 !important;');
-    expect(backRule).toContain('background: transparent !important;');
-    expect(backRule).toContain('border: none !important;');
-    expect(backRule).toContain('-webkit-tap-highlight-color: transparent;');
-    expect(backRule).toContain('touch-action: manipulation;');
     expect(settingsRule).toContain('display: inline-flex;');
-    expect(backRule).toContain('display: inline-flex;');
     expect(settingsRule).toContain('-webkit-tap-highlight-color: transparent;');
     expect(settingsRule).toContain('touch-action: manipulation;');
     expect(shoppingRule).toContain('-webkit-tap-highlight-color: transparent;');

@@ -95,7 +95,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   useEffect(() => {
     if (!allButtonIcons) return;
     const eff = (key) => getEffectiveIcon(allButtonIcons, key, isDarkMode);
-    setCloseButtonIcon(eff('menuCloseButton') || '×');
+    setCloseButtonIcon(eff('closeButtonDefaultImg') || eff('closeButton') || '×');
     setCopyLinkIcon(eff('copyLink') || 'Link');
     setOpenEventIcon(eff('openLinkedEvent') || '📅');
     setShoppingListIcon(eff('shoppingList') || 'Einkauf');
@@ -667,9 +667,9 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
         <div className="menu-detail-body">
         <div className="menu-title-row">
           <h1 className="menu-title">{menu.name}</h1>
-          <button className="close-button" onClick={onBack} title="Schließen">
+          <button className="app-close-button" onClick={onBack} aria-label="Menüdetailansicht schließen" title="Menüdetailansicht schließen">
             {isBase64Image(closeButtonIcon) ? (
-              <img src={closeButtonIcon} alt="Schließen" className="close-button-icon-img" />
+              <img src={closeButtonIcon} alt="Menüdetailansicht schließen" className="app-close-button-icon-img" />
             ) : (
               closeButtonIcon
             )}

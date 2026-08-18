@@ -72,7 +72,7 @@ function GroupDetail({
     setActiveTab(tab);
     if (onActiveTabChange) onActiveTabChange(tab);
   };
-  const [backIcon, setBackIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
+  const [backIcon, setBackIcon] = useState(DEFAULT_BUTTON_ICONS.closeButtonDefaultImg);
   const [shoppingListIcon, setShoppingListIcon] = useState(DEFAULT_BUTTON_ICONS.shoppingList || 'Einkauf');
   const [listSettingsIcon, setListSettingsIcon] = useState(DEFAULT_BUTTON_ICONS.listSettings || DEFAULT_LIST_SETTINGS_ICON);
   const [listSettingsActiveIcon, setListSettingsActiveIcon] = useState(resolveListSettingsActiveIcon(DEFAULT_BUTTON_ICONS, getDarkModePreference()));
@@ -120,7 +120,11 @@ function GroupDetail({
   }, []);
 
   useEffect(() => {
-    setBackIcon(getEffectiveIcon(allButtonIcons, 'privateListBack', isDarkMode) || DEFAULT_BUTTON_ICONS.privateListBack);
+    setBackIcon(
+      getEffectiveIcon(allButtonIcons, 'closeButtonDefaultImg', isDarkMode) ||
+      getEffectiveIcon(allButtonIcons, 'closeButton', isDarkMode) ||
+      DEFAULT_BUTTON_ICONS.closeButtonDefaultImg
+    );
     setShoppingListIcon(getEffectiveIcon(allButtonIcons, 'shoppingList', isDarkMode) || DEFAULT_BUTTON_ICONS.shoppingList || 'Einkauf');
     setListSettingsIcon(getEffectiveIcon(allButtonIcons, 'listSettings', isDarkMode) || DEFAULT_BUTTON_ICONS.listSettings || DEFAULT_LIST_SETTINGS_ICON);
     setListSettingsActiveIcon(resolveListSettingsActiveIcon(allButtonIcons, isDarkMode));
@@ -564,11 +568,11 @@ function GroupDetail({
               )}
             </button>
           )}
-          <button className="group-back-icon-btn" onClick={onBack} aria-label="Zurück">
+          <button className="app-close-button" onClick={onBack} aria-label="Private Liste schließen" title="Private Liste schließen">
             {isBase64Image(backIcon) ? (
-              <img src={backIcon} alt="Zurück" className="group-back-icon-img" />
+              <img src={backIcon} alt="Private Liste schließen" className="app-close-button-icon-img" />
             ) : (
-              <span>{backIcon}</span>
+              backIcon
             )}
           </button>
         </div>

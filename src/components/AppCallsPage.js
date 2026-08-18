@@ -200,7 +200,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       setLocalActiveTab(tab);
     }
   };
-  const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
+  const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.closeButtonDefaultImg);
   const [nutritionEmptyIcon, setNutritionEmptyIcon] = useState(normalizeNutritionEmptyIcon());
   const [nutritionManualSaveIcon, setNutritionManualSaveIcon] = useState(DEFAULT_BUTTON_ICONS.nutritionManualSave || '💾');
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
@@ -350,7 +350,11 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   }, []);
 
   useEffect(() => {
-    setCloseIcon(getEffectiveIcon(allButtonIcons, 'privateListBack', isDarkMode) || DEFAULT_BUTTON_ICONS.privateListBack);
+    setCloseIcon(
+      getEffectiveIcon(allButtonIcons, 'closeButtonDefaultImg', isDarkMode) ||
+      getEffectiveIcon(allButtonIcons, 'closeButton', isDarkMode) ||
+      DEFAULT_BUTTON_ICONS.closeButtonDefaultImg
+    );
     setNutritionEmptyIcon(normalizeNutritionEmptyIcon(getEffectiveIcon(allButtonIcons, 'nutritionEmpty', isDarkMode)));
     setNutritionManualSaveIcon(getEffectiveIcon(allButtonIcons, 'nutritionManualSave', isDarkMode) || DEFAULT_BUTTON_ICONS.nutritionManualSave || '💾');
   }, [allButtonIcons, isDarkMode]);
@@ -1145,15 +1149,15 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         <div className="app-calls-header">
           <h2>Küchenbetrieb</h2>
           <button
-            className="group-list-close-btn"
+            className="app-close-button"
             onClick={onBack}
             aria-label="Schließen"
             title="Schließen"
           >
             {isBase64Image(closeIcon) ? (
-              <img src={closeIcon} alt="Schließen" className="group-list-close-icon-img" />
+              <img src={closeIcon} alt="Schließen" className="app-close-button-icon-img" />
             ) : (
-              <span>{closeIcon}</span>
+              closeIcon
             )}
           </button>
         </div>
@@ -1171,15 +1175,15 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       <div className="app-calls-header">
         <h2>Küchenbetrieb</h2>
         <button
-          className="group-list-close-btn"
+          className="app-close-button"
           onClick={onBack}
           aria-label="Schließen"
           title="Schließen"
         >
           {isBase64Image(closeIcon) ? (
-            <img src={closeIcon} alt="Schließen" className="group-list-close-icon-img" />
+            <img src={closeIcon} alt="Schließen" className="app-close-button-icon-img" />
           ) : (
-            <span>{closeIcon}</span>
+            closeIcon
           )}
         </button>
       </div>

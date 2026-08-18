@@ -197,6 +197,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
     return events.find((e) => e.id === selectedEventId) || fallbackEvent || null;
   }, [events, selectedEventId, fallbackEvent]);
   const editEventIcon = getEffectiveIcon(buttonIcons, 'editRecipe', isDarkMode);
+  const eventsCloseIcon = getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode) || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode);
 
   const handleSelectEvent = (event) => {
     setOpenedFromMenuLink(false);
@@ -296,7 +297,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
         <div className="events-page-header">
           <h2>{selectedEvent.eventName}</h2>
           <button
-            className="events-close-btn"
+            className="app-close-button"
             onClick={() => {
               if (openedFromMenuLink && onCloseLinkedEventDetail) {
                 setOpenedFromMenuLink(false);
@@ -310,7 +311,11 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
             aria-label={openedFromMenuLink ? 'Zurück zum Menü' : 'Zurück zur Liste'}
             title={openedFromMenuLink ? 'Zurück zum Menü' : 'Zurück zur Liste'}
           >
-            ×
+            {isBase64Image(eventsCloseIcon) ? (
+              <img src={eventsCloseIcon} alt="Schließen" className="app-close-button-icon-img" />
+            ) : (
+              eventsCloseIcon || '×'
+            )}
           </button>
         </div>
 
@@ -446,12 +451,16 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
         <h2>Events</h2>
         {onBack && (
           <button
-            className="events-close-btn"
+            className="app-close-button"
             onClick={onBack}
-            aria-label="Schließen"
-            title="Schließen"
+            aria-label="Events schließen"
+            title="Events schließen"
           >
-            ×
+            {isBase64Image(eventsCloseIcon) ? (
+              <img src={eventsCloseIcon} alt="Events schließen" className="app-close-button-icon-img" />
+            ) : (
+              eventsCloseIcon || '×'
+            )}
           </button>
         )}
       </div>

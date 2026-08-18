@@ -42,68 +42,6 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-.group-list-close-btn {
-  width: 48px;
-  height: 48px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  background: transparent;
-  border: none;
-  outline: none;
-  -webkit-appearance: none;
-  appearance: none;
-  border-radius: 12px;
-  cursor: pointer;
-  line-height: 1;
-  font-size: 1.4rem;
-  color: #555;
-  -webkit-tap-highlight-color: transparent;
-  -webkit-appearance: none;
-  appearance: none;
-  touch-action: manipulation;
-  transition:
-    color 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.15s ease;
-}
-
-.group-list-close-btn:hover {
-  background: #f0f0f0;
-}
-
-.group-list-close-btn:focus {
-  outline: none;
-  background: transparent;
-  box-shadow: none;
-  -webkit-box-shadow: none;
-}
-
-.group-list-close-btn:focus-visible {
-  outline: 2px solid #5A2A4A;
-  outline-offset: 2px;
-  background: transparent;
-}
-
-.group-list-close-btn:focus:not(:focus-visible) {
-  background: transparent !important;
-  outline: none;
-  box-shadow: none;
-}
-
-.group-list-close-btn:active {
-  transform: scale(1.1);
-  opacity: 0.2;
-}
-
-.group-list-close-icon-img {
-  width: 1.4rem;
-  height: 1.4rem;
-  object-fit: contain;
-}
-
 .group-section {
   margin-bottom: 2rem;
 }

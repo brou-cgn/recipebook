@@ -19,38 +19,6 @@ describe('GroupList CSS layout', () => {
     expect(headingRule).toContain('flex: 1;');
   });
 
-  test('keeps the close button centered with transparent light mode chrome', () => {
-    const cssPath = path.join(__dirname, 'GroupList.css');
-    const css = fs.readFileSync(cssPath, 'utf8');
-    const closeButtonRule = getRuleBody(css, '.group-list-close-btn');
-    const closeButtonHoverRule = getRuleBody(css, '.group-list-close-btn:hover');
-    const closeButtonFocusRule = getRuleBody(css, '.group-list-close-btn:focus');
-    const closeButtonFocusVisibleRule = getRuleBody(css, '.group-list-close-btn:focus-visible');
-    const closeButtonFocusNotVisibleRule = getRuleBody(css, '.group-list-close-btn:focus:not(:focus-visible)');
-
-    expect(closeButtonRule).toContain('display: inline-flex;');
-    expect(closeButtonRule).toContain('align-items: center;');
-    expect(closeButtonRule).toContain('justify-content: center;');
-    expect(closeButtonRule).toContain('background: transparent;');
-    expect(closeButtonRule).toContain('border: none;');
-    expect(closeButtonRule).toContain('outline: none;');
-    expect(closeButtonRule).toContain('-webkit-appearance: none;');
-    expect(closeButtonRule).toContain('appearance: none;');
-    expect(closeButtonRule).toContain('-webkit-tap-highlight-color: transparent;');
-    expect(closeButtonRule).toContain('touch-action: manipulation;');
-    expect(closeButtonHoverRule).toContain('background: #f0f0f0;');
-    expect(closeButtonFocusRule).toContain('outline: none;');
-    expect(closeButtonFocusRule).toContain('background: transparent;');
-    expect(closeButtonFocusRule).toContain('box-shadow: none;');
-    expect(closeButtonFocusRule).toContain('-webkit-box-shadow: none;');
-    expect(closeButtonFocusVisibleRule).toContain('outline: 2px solid #5A2A4A;');
-    expect(closeButtonFocusVisibleRule).toContain('outline-offset: 2px;');
-    expect(closeButtonFocusVisibleRule).toContain('background: transparent;');
-    expect(closeButtonFocusNotVisibleRule).toContain('background: transparent !important;');
-    expect(closeButtonFocusNotVisibleRule).toContain('outline: none;');
-    expect(closeButtonFocusNotVisibleRule).toContain('box-shadow: none;');
-  });
-
   test('shows full card descriptions without line clamp and keeps card height content-driven', () => {
     const cssPath = path.join(__dirname, 'GroupList.css');
     const css = fs.readFileSync(cssPath, 'utf8');

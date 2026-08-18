@@ -1173,23 +1173,7 @@
   background: #2a2a2a;
 }
 
-[data-theme="dark"] .group-list-close-btn {
-  background: transparent !important;
-  border-color: transparent !important;
-  color: #e8e8e8;
-}
-
-[data-theme="dark"] .group-list-close-btn:hover {
-  background: #333 !important;
-}
-
 /* ---- Group Detail ---- */
-[data-theme="dark"] .group-header-actions .group-back-icon-btn {
-  background: transparent !important;
-  border-color: transparent !important;
-  color: #e8e8e8;
-}
-
 [data-theme="dark"] .group-header-actions .list-settings-trigger-button {
   background: #2a2a2a !important;
   border-color: #555 !important;

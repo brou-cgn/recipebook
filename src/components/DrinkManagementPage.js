@@ -423,14 +423,6 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
       <div className="events-page-container">
         <div className="events-page-header">
           <h2>{editId ? 'Getränk bearbeiten' : 'Neues Getränk'}</h2>
-          <button
-            className="events-close-btn"
-            onClick={closeForm}
-            aria-label="Abbrechen"
-            title="Abbrechen"
-          >
-            ×
-          </button>
         </div>
         <form className="events-form" onSubmit={handleSave} ref={formRef}>
           <label className="events-form-field">
@@ -707,6 +699,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
   }
 
   const swipeDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode) || '🗑';
+  const closeIcon = getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode) || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode);
 
   return (
     <div className="events-page-container">
@@ -714,12 +707,16 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
         <h2>Getränke verwalten</h2>
         {onBack && (
           <button
-            className="events-close-btn"
+            className="app-close-button"
             onClick={onBack}
-            aria-label="Zurück"
-            title="Zurück"
+            aria-label="Getränke verwalten schließen"
+            title="Getränke verwalten schließen"
           >
-            ×
+            {isBase64Image(closeIcon) ? (
+              <img src={closeIcon} alt="Getränke verwalten schließen" className="app-close-button-icon-img" />
+            ) : (
+              closeIcon || '×'
+            )}
           </button>
         )}
       </div>

@@ -39,7 +39,7 @@ jest.mock('../utils/menuSections', () => {
 });
 
 jest.mock('../utils/customLists', () => ({
-  getButtonIcons: () => Promise.resolve({ menuCloseButton: '✕', copyLink: '📋' }),
+  getButtonIcons: () => Promise.resolve({ closeButtonDefaultImg: '✕', copyLink: '📋' }),
   getCustomLists: () => Promise.resolve({ conversionTable: [] }),
   addMissingConversionEntries: jest.fn(() => Promise.resolve()),
   getEffectiveIcon: (icons, key) => icons[key] ?? '',
@@ -210,7 +210,7 @@ describe('MenuDetail - Close Button in Title Row', () => {
 
     const titleRow = container.querySelector('.menu-title-row');
     expect(titleRow).toBeInTheDocument();
-    const closeButton = titleRow.querySelector('.close-button');
+    const closeButton = titleRow.querySelector('.app-close-button');
     expect(closeButton).toBeInTheDocument();
   });
 
@@ -231,7 +231,7 @@ describe('MenuDetail - Close Button in Title Row', () => {
 
     const header = container.querySelector('.menu-detail-header');
     expect(header).toBeInTheDocument();
-    const closeButtonInHeader = header.querySelector('.close-button');
+    const closeButtonInHeader = header.querySelector('.app-close-button');
     expect(closeButtonInHeader).not.toBeInTheDocument();
   });
 });

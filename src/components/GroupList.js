@@ -19,7 +19,7 @@ import { LIST_KIND_OPTIONS } from '../utils/groupFirestore';
  */
 function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup, onBack }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
+  const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.closeButtonDefaultImg);
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [addFabPressed, setAddFabPressed] = useState(false);
@@ -32,7 +32,11 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
   }, []);
 
   useEffect(() => {
-    setCloseIcon(getEffectiveIcon(allButtonIcons, 'privateListBack', isDarkMode) || DEFAULT_BUTTON_ICONS.privateListBack);
+    setCloseIcon(
+      getEffectiveIcon(allButtonIcons, 'closeButtonDefaultImg', isDarkMode) ||
+      getEffectiveIcon(allButtonIcons, 'closeButton', isDarkMode) ||
+      DEFAULT_BUTTON_ICONS.closeButtonDefaultImg
+    );
   }, [allButtonIcons, isDarkMode]);
 
   useEffect(() => {
@@ -69,15 +73,15 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
         {onBack && (
           <button
             ref={closeBtnRef}
-            className="group-list-close-btn"
+            className="app-close-button"
             onClick={onBack}
-            aria-label="Private Liste schließen"
-            title="Private Liste schließen"
+            aria-label="Meine Mise en Place schließen"
+            title="Meine Mise en Place schließen"
           >
             {isBase64Image(closeIcon) ? (
-              <img src={closeIcon} alt="Private Liste schließen" className="group-list-close-icon-img" />
+              <img src={closeIcon} alt="Meine Mise en Place schließen" className="app-close-button-icon-img" />
             ) : (
-              <span>{closeIcon}</span>
+              closeIcon
             )}
           </button>
         )}

@@ -8,7 +8,7 @@ jest.mock('../utils/recipeCallsFirestore', () => ({
 
 jest.mock('../utils/customLists', () => ({
   getButtonIcons: () => Promise.resolve({}),
-  DEFAULT_BUTTON_ICONS: { privateListBack: '✕' },
+  DEFAULT_BUTTON_ICONS: { closeButtonDefaultImg: '✕' },
   getEffectiveIcon: (icons, key) => icons[key] ?? '',
   getDarkModePreference: () => false,
 }));
