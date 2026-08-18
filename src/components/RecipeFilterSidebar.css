@@ -24,11 +24,21 @@
   align-items: center;
 }
 
+.recipe-filter-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.recipe-filter-sidebar--collapsed .recipe-filter-sidebar-header {
+  justify-content: center;
+}
+
 .recipe-filter-sidebar-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
-  align-self: flex-end;
   width: 32px;
   height: 32px;
   flex-shrink: 0;
@@ -41,15 +51,42 @@
   transition: border-color 0.15s ease;
 }
 
-.recipe-filter-sidebar--collapsed .recipe-filter-sidebar-toggle {
-  align-self: center;
-}
-
 .recipe-filter-sidebar-toggle:hover {
   border-color: #DF7A00;
 }
 
 .recipe-filter-sidebar-toggle:focus-visible {
+  outline: 2px solid #007aff;
+  outline-offset: 2px;
+}
+
+.recipe-filter-sidebar-add-button {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.75rem;
+  background: white;
+  border: 1px solid #402C1C;
+  border-radius: 6px;
+  color: #402C1C;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.3s ease;
+}
+
+.recipe-filter-sidebar-add-button:hover {
+  background: #402C1C;
+  color: white;
+}
+
+.recipe-filter-sidebar-add-button:focus-visible {
   outline: 2px solid #007aff;
   outline-offset: 2px;
 }

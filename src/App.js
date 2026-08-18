@@ -2231,6 +2231,8 @@ function App() {
             onPrivateListFilterChange={isPrivateListSearchContext ? emptyPrivateListFilterHandler : handlePrivateListFilterChangeFromSearch}
             showPrivateListFilters={!isPrivateListSearchContext}
             onClearAllFilters={handleClearAllFilters}
+            onAddRecipe={handleAddRecipe}
+            activePrivateListId={recipeFilters.selectedGroup || (recipeFilters.selectedPrivateLists.length === 1 ? recipeFilters.selectedPrivateLists[0] : null)}
           />
           <div className="recipe-overview-main">
             <RecipeList

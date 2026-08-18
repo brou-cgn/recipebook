@@ -224,6 +224,23 @@
   border-color: #DF7A00;
 }
 
+[data-theme="dark"] .recipe-filter-sidebar-toggle {
+  background: #2a2a2a;
+  border-color: #3d3d3d;
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .recipe-filter-sidebar-add-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #e8e8e8;
+}
+
+[data-theme="dark"] .recipe-filter-sidebar-add-button:hover {
+  background: #e8e8e8;
+  color: #1e1e1e;
+}
+
 /* ---- Recipe List ---- */
 [data-theme="dark"] .recipe-list-container {
   background: #121212;
