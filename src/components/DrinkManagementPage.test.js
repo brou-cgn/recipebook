@@ -2,16 +2,20 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import DrinkManagementPage from './DrinkManagementPage';
 
-const mockSubscribeToCustomDrinks = jest.fn();
+const mockSubscribeToAllCustomDrinks = jest.fn();
 const mockSaveCustomDrink = jest.fn();
 const mockDeleteCustomDrink = jest.fn();
 const mockGetCustomLists = jest.fn();
 const mockUpdateRecipe = jest.fn();
 
 jest.mock('../utils/eventsFirestore', () => ({
-  subscribeToCustomDrinks: (...args) => mockSubscribeToCustomDrinks(...args),
+  subscribeToAllCustomDrinks: (...args) => mockSubscribeToAllCustomDrinks(...args),
   saveCustomDrink: (...args) => mockSaveCustomDrink(...args),
   deleteCustomDrink: (...args) => mockDeleteCustomDrink(...args),
+}));
+
+jest.mock('../utils/userManagement', () => ({
+  getUsers: () => Promise.resolve([]),
 }));
 
 jest.mock('../utils/recipeFirestore', () => ({
@@ -35,7 +39,7 @@ describe('DrinkManagementPage', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
       cb([]);
       return jest.fn();
     });
@@ -96,7 +100,7 @@ describe('DrinkManagementPage', () => {
   });
 
   test('displays Weißwein subcategory label in drink list', () => {
-    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
       cb([{ id: 'd1', name: 'Riesling', kategorie: 'wein_weisswein' }]);
       return jest.fn();
     });
@@ -107,7 +111,7 @@ describe('DrinkManagementPage', () => {
   });
 
   test('displays Kölsch subcategory label in drink list', () => {
-    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
       cb([{ id: 'd2', name: 'Dom Kölsch', kategorie: 'bier_koelsch' }]);
       return jest.fn();
     });
@@ -118,7 +122,7 @@ describe('DrinkManagementPage', () => {
   });
 
   test('drink list is grouped by category and sorted by name within each group', () => {
-    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
       cb([
         { id: 'd1', name: 'Cola', kategorie: 'softdrinks' },
         { id: 'd2', name: 'Rotwein Trocken', kategorie: 'wein_rotwein' },
@@ -146,7 +150,7 @@ describe('DrinkManagementPage', () => {
   });
 
   test('drinks without a category are grouped under "Ohne Kategorie"', () => {
-    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
       cb([{ id: 'd1', name: 'Mystery Drink', kategorie: '' }]);
       return jest.fn();
     });
@@ -314,7 +318,7 @@ describe('DrinkManagementPage', () => {
   });
 
   test('displays einheiten info in the drink list card', () => {
-    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
       cb([{
         id: 'd1',
         name: 'Craft-Bier',
@@ -472,7 +476,7 @@ describe('DrinkManagementPage', () => {
   });
 
   test('predefined Mineralwasser row uses persisted data when a custom document exists', () => {
-    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
       cb([{
         id: 'predefined_mineralwasser',
         name: 'Mineralwasser',
@@ -608,7 +612,7 @@ describe('DrinkManagementPage', () => {
     });
 
     test('the drink list shows the linked recipe name instead of the raw link', () => {
-      mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+      mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
         cb([{ id: 'd1', name: '#recipe:r1:Mojito', kategorie: 'longdrink', einheiten: [] }]);
         return jest.fn();
       });
@@ -634,7 +638,7 @@ describe('DrinkManagementPage', () => {
       ];
 
       test('shows the ingredients of the linked recipe with amount and unit', () => {
-        mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+        mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
           cb([{ id: 'd1', name: '#recipe:r1:Mojito', kategorie: 'longdrink', einheiten: [] }]);
           return jest.fn();
         });
@@ -652,7 +656,7 @@ describe('DrinkManagementPage', () => {
       });
 
       test('does not show an ingredient list for a normal (non-recipe) drink', () => {
-        mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+        mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
           cb([{ id: 'd1', name: 'Craft-Bier', kategorie: 'bier', einheiten: [] }]);
           return jest.fn();
         });
@@ -665,7 +669,7 @@ describe('DrinkManagementPage', () => {
       });
 
       test('toggling an ingredient persists includedInCalculation on the recipe document', async () => {
-        mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+        mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
           cb([{ id: 'd1', name: '#recipe:r1:Mojito', kategorie: 'longdrink', einheiten: [] }]);
           return jest.fn();
         });
@@ -713,7 +717,7 @@ describe('DrinkManagementPage', () => {
     });
 
     test('swipe-delete button appears after swiping a custom drink left', async () => {
-      mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+      mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
         cb([{ id: 'd1', name: 'Craft-Bier', kategorie: 'bier', einheiten: [] }]);
         return jest.fn();
       });
@@ -734,7 +738,7 @@ describe('DrinkManagementPage', () => {
 
     test('clicking swipe-delete button calls deleteCustomDrink', async () => {
       mockDeleteCustomDrink.mockResolvedValue(undefined);
-      mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+      mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
         cb([{ id: 'd1', name: 'Craft-Bier', kategorie: 'bier', einheiten: [] }]);
         return jest.fn();
       });
@@ -759,7 +763,7 @@ describe('DrinkManagementPage', () => {
 
     test('delete banner appears after deleting a drink', async () => {
       mockDeleteCustomDrink.mockResolvedValue(undefined);
-      mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+      mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
         cb([{ id: 'd1', name: 'Craft-Bier', kategorie: 'bier', einheiten: [] }]);
         return jest.fn();
       });
@@ -783,6 +787,39 @@ describe('DrinkManagementPage', () => {
       render(<DrinkManagementPage currentUser={currentUser} />);
 
       expect(screen.queryByRole('button', { name: /Mineralwasser löschen/i })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('shared library across users', () => {
+    test('shows drinks from other users but does not allow editing or deleting them', () => {
+      mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
+        cb([
+          { id: 'd1', name: 'Eigenes Bier', kategorie: 'bier', einheiten: [], ownerId: 'u1' },
+          { id: 'd2', name: 'Papas Wein', kategorie: 'wein', einheiten: [], ownerId: 'u2' },
+        ]);
+        return jest.fn();
+      });
+
+      render(<DrinkManagementPage currentUser={currentUser} />);
+
+      expect(screen.getByText('Eigenes Bier')).toBeInTheDocument();
+      expect(screen.getByText('Papas Wein')).toBeInTheDocument();
+
+      // Own drink stays editable.
+      fireEvent.click(screen.getByText('Eigenes Bier'));
+      expect(screen.getByRole('heading', { level: 2, name: 'Getränk bearbeiten' })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+
+      // Someone else's drink is not clickable into the edit form.
+      fireEvent.click(screen.getByText('Papas Wein'));
+      expect(screen.queryByRole('heading', { level: 2, name: 'Getränk bearbeiten' })).not.toBeInTheDocument();
+
+      // Someone else's drink can't be swiped open for deletion either.
+      const othersDrinkContent = screen.getByText('Papas Wein').closest('.drink-swipe-content');
+      fireEvent.touchStart(othersDrinkContent, { touches: [{ clientX: 200, clientY: 100 }], cancelable: false, preventDefault: jest.fn() });
+      fireEvent.touchMove(othersDrinkContent, { touches: [{ clientX: 130, clientY: 100 }], cancelable: false, preventDefault: jest.fn() });
+      fireEvent.touchEnd(othersDrinkContent, {});
+      expect(screen.queryByRole('button', { name: 'Papas Wein löschen' })).not.toBeInTheDocument();
     });
   });
 });

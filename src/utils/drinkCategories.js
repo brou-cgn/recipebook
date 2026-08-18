@@ -48,8 +48,21 @@ export const PREDEFINED_DRINKS = [
   },
 ];
 
-export const mergePredefinedDrinks = (customDrinks = []) => {
-  const customById = new Map((Array.isArray(customDrinks) ? customDrinks : []).map((drink) => [drink.id, drink]));
+/**
+ * @param {Array} customDrinks - Custom drinks, possibly from multiple owners
+ *   (a shared library) when each entry carries an `ownerId`.
+ * @param {string} [currentUserId] - When drinks from multiple owners can be
+ *   present, only this user's own override of a predefined drink is merged
+ *   into its slot; other owners' overrides of the same predefined id are
+ *   ignored so they don't collide on the predefined drink's fixed id.
+ */
+export const mergePredefinedDrinks = (customDrinks = [], currentUserId = null) => {
+  const list = Array.isArray(customDrinks) ? customDrinks : [];
+  const predefinedIds = new Set(PREDEFINED_DRINKS.map((drink) => drink.id));
+  const relevant = currentUserId
+    ? list.filter((drink) => !predefinedIds.has(drink.id) || !drink.ownerId || drink.ownerId === currentUserId)
+    : list;
+  const customById = new Map(relevant.map((drink) => [drink.id, drink]));
 
   const mergedPredefined = PREDEFINED_DRINKS.map((predefinedDrink) => {
     const customDrink = customById.get(predefinedDrink.id);

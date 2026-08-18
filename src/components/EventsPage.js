@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './EventsPage.css';
-import { subscribeToEvents, deleteEvent, getEvent } from '../utils/eventsFirestore';
+import { subscribeToEvents, subscribeToAllEvents, deleteEvent, getEvent } from '../utils/eventsFirestore';
 import { CATEGORY_LABELS, EVENT_TYPE_LABELS } from './EventForm';
 import EventForm from './EventForm';
 import ConsumptionForm from './ConsumptionForm';
 import DrinkManagementPage from './DrinkManagementPage';
 import GuestManagementPage from './GuestManagementPage';
 import OverviewAddFab from './OverviewAddFab';
-import { canEditRecipes } from '../utils/userManagement';
+import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { DEFAULT_BUTTON_ICONS, getButtonIcons, getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
@@ -103,7 +103,14 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
   // Drinks section, so closing it can return to that menu instead of the events list.
   const [openedFromMenuLink, setOpenedFromMenuLink] = useState(() => !!pendingEventDetailRequest?.eventId);
   const [selectedEventId, setSelectedEventId] = useState(null);
+  const [selectedEventOwnerId, setSelectedEventOwnerId] = useState(currentUser?.id ?? null);
   const [fallbackEvent, setFallbackEvent] = useState(null); // used right after calculation, before onSnapshot syncs
+  // Admin-only: browse all users' events instead of just the current user's own.
+  const isAdmin = currentUser?.isAdmin === true;
+  const [showAllEvents, setShowAllEvents] = useState(false);
+  const [allEvents, setAllEvents] = useState([]);
+  const [allEventsLoading, setAllEventsLoading] = useState(true);
+  const [allUsers, setAllUsers] = useState([]);
 
   useEffect(() => {
     const handleResize = () => setIsMobileView(window.innerWidth <= 768);
@@ -138,6 +145,20 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
     return unsubscribe;
   }, [currentUser?.id]);
 
+  useEffect(() => {
+    if (!isAdmin) return;
+    getUsers().then(setAllUsers).catch(() => setAllUsers([]));
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin || !showAllEvents) return undefined;
+    const unsubscribe = subscribeToAllEvents((loadedEvents) => {
+      setAllEvents(loadedEvents);
+      setAllEventsLoading(false);
+    });
+    return unsubscribe;
+  }, [isAdmin, showAllEvents]);
+
   // Deep link from a push notification: jump straight to the consumption form.
   useEffect(() => {
     if (!pendingEventReminderId || !currentUser?.id) return;
@@ -150,6 +171,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
       }
       setFallbackEvent(event);
       setSelectedEventId(event.id);
+      setSelectedEventOwnerId(currentUser.id);
       setSubView('consumption');
     });
     onPendingEventReminderHandled?.();
@@ -177,6 +199,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
       } else {
         setFallbackEvent(event);
         setSelectedEventId(event.id);
+        setSelectedEventOwnerId(ownerId);
         setSubView('detail');
       }
       // Clearing the request (via the parent's state) is deferred until here,
@@ -194,20 +217,30 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
   }, [pendingEventDetailRequest]);
 
   const selectedEvent = useMemo(() => {
-    return events.find((e) => e.id === selectedEventId) || fallbackEvent || null;
-  }, [events, selectedEventId, fallbackEvent]);
+    return events.find((e) => e.id === selectedEventId)
+      || allEvents.find((e) => e.id === selectedEventId)
+      || fallbackEvent
+      || null;
+  }, [events, allEvents, selectedEventId, fallbackEvent]);
+  const isOwnEvent = selectedEventOwnerId === currentUser?.id;
+  const getOwnerFirstName = (ownerId) => {
+    if (!ownerId) return null;
+    return allUsers.find((u) => u.id === ownerId)?.vorname || null;
+  };
   const editEventIcon = getEffectiveIcon(buttonIcons, 'editRecipe', isDarkMode);
   const eventsCloseIcon = getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode) || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode);
 
-  const handleSelectEvent = (event) => {
+  const handleSelectEvent = (event, ownerId = currentUser?.id) => {
     setOpenedFromMenuLink(false);
     setSelectedEventId(event.id);
+    setSelectedEventOwnerId(ownerId);
     setFallbackEvent(event);
     setSubView('detail');
   };
 
   const handleEventSaved = (eventId) => {
     setSelectedEventId(eventId);
+    setSelectedEventOwnerId(currentUser?.id);
     setFallbackEvent(null);
     setSubView('detail');
   };
@@ -256,7 +289,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
     );
   }
 
-  if (subView === 'edit' && selectedEvent) {
+  if (subView === 'edit' && selectedEvent && isOwnEvent) {
     return (
       <EventForm
         onSaved={handleEventSaved}
@@ -270,7 +303,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
     );
   }
 
-  if (subView === 'consumption' && selectedEvent) {
+  if (subView === 'consumption' && selectedEvent && isOwnEvent) {
     return (
       <ConsumptionForm
         event={selectedEvent}
@@ -333,6 +366,9 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
             {driverGuestIds.length > 0 && (
               <span>Fahrer: {driverNames.join(', ')}</span>
             )}
+            {!isOwnEvent && getOwnerFirstName(selectedEventOwnerId) && (
+              <span>von {getOwnerFirstName(selectedEventOwnerId)}</span>
+            )}
           </div>
 
           {berechnung?.warnungen?.length > 0 && (
@@ -389,28 +425,30 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
             </>
           )}
 
-          <div className="events-form-actions">
-            {(selectedEvent.status === 'berechnet' || selectedEvent.status === 'eingekauft') && (
-              <button
-                type="button"
-                className="events-primary-btn"
-                onClick={() => setSubView('consumption')}
-              >
-                Einkauf & Verbrauch
-              </button>
-            )}
-            {!isMobileView && (
-              <button
-                type="button"
-                className="events-secondary-btn"
-                onClick={() => setSubView('edit')}
-              >
-                Bearbeiten
-              </button>
-            )}
-          </div>
+          {isOwnEvent && (
+            <div className="events-form-actions">
+              {(selectedEvent.status === 'berechnet' || selectedEvent.status === 'eingekauft') && (
+                <button
+                  type="button"
+                  className="events-primary-btn"
+                  onClick={() => setSubView('consumption')}
+                >
+                  Einkauf & Verbrauch
+                </button>
+              )}
+              {!isMobileView && (
+                <button
+                  type="button"
+                  className="events-secondary-btn"
+                  onClick={() => setSubView('edit')}
+                >
+                  Bearbeiten
+                </button>
+              )}
+            </div>
+          )}
         </div>
-        {isMobileView && (
+        {isOwnEvent && isMobileView && (
           <button
             type="button"
             className={`edit-fab-button events-edit-fab-button${editFabPressed ? ' pressed' : ''}`}
@@ -476,7 +514,58 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
         )}
       </div>
 
-      {loading ? (
+      {isAdmin && (
+        <div className="events-manage-links">
+          <button
+            type="button"
+            className="events-manage-link-btn"
+            aria-pressed={!showAllEvents}
+            onClick={() => setShowAllEvents(false)}
+          >
+            Meine Events
+          </button>
+          <button
+            type="button"
+            className="events-manage-link-btn"
+            aria-pressed={showAllEvents}
+            onClick={() => setShowAllEvents(true)}
+          >
+            Alle Anwender
+          </button>
+        </div>
+      )}
+
+      {showAllEvents && isAdmin ? (
+        allEventsLoading ? (
+          <div className="events-empty-state">Laden...</div>
+        ) : allEvents.length === 0 ? (
+          <div className="events-empty-state">
+            <p>Keine Events vorhanden.</p>
+          </div>
+        ) : (
+          <div className="events-list">
+            {allEvents.map((event) => {
+              const ownerName = getOwnerFirstName(event.ownerId);
+              return (
+                <div key={`${event.ownerId}_${event.id}`} className="events-card" onClick={() => handleSelectEvent(event, event.ownerId)}>
+                  <div className="events-card-main">
+                    <h3>{event.eventName}</h3>
+                    <div className="events-card-meta-row">
+                      <p className="events-card-meta">
+                        {formatDate(event.date)} · {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
+                        {ownerName ? ` · von ${ownerName}` : ''}
+                      </p>
+                      <span className={`events-status-badge events-status-${event.status}`}>
+                        {STATUS_LABELS[event.status] || event.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
+      ) : loading ? (
         <div className="events-empty-state">Laden...</div>
       ) : events.length === 0 ? (
         <div className="events-empty-state">

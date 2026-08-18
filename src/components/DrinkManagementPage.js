@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './EventsPage.css';
-import { subscribeToCustomDrinks, saveCustomDrink, deleteCustomDrink } from '../utils/eventsFirestore';
+import { subscribeToAllCustomDrinks, saveCustomDrink, deleteCustomDrink } from '../utils/eventsFirestore';
 import OverviewAddFab from './OverviewAddFab';
 import RecipeTypeahead from './RecipeTypeahead';
 import { DRINK_CATEGORIES, getDrinkCategoryLabel, mergePredefinedDrinks } from '../utils/drinkCategories';
 import { getCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
+import { getUsers } from '../utils/userManagement';
 import { isBase64Image } from '../utils/imageUtils';
 import { encodeRecipeLink, containsHashForTypeahead } from '../utils/recipeLinks';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
@@ -92,7 +93,7 @@ const emptyForm = () => ({
   einheiten: [emptyEinheit()],
 });
 
-function DrinkRow({ drink, displayName, onEdit, onDelete, swipeDeleteIcon }) {
+function DrinkRow({ drink, displayName, ownerName, canManage, onEdit, onDelete, swipeDeleteIcon }) {
   const touchStartXRef = React.useRef(null);
   const touchStartYRef = React.useRef(null);
   const swipeDirectionLockedRef = React.useRef(null);
@@ -115,7 +116,7 @@ function DrinkRow({ drink, displayName, onEdit, onDelete, swipeDeleteIcon }) {
 
   const handleTouchStart = (e) => {
     const touch = e.touches?.[0];
-    if (!touch || drink.predefined) return;
+    if (!touch || drink.predefined || !canManage) return;
     if (isDeleteVisible) setIsDeleteVisible(false);
     touchStartXRef.current = touch.clientX;
     touchStartYRef.current = touch.clientY;
@@ -125,7 +126,7 @@ function DrinkRow({ drink, displayName, onEdit, onDelete, swipeDeleteIcon }) {
 
   const handleTouchMove = (e) => {
     const touch = e.touches?.[0];
-    if (!touch || touchStartXRef.current === null || touchStartYRef.current === null || drink.predefined) return;
+    if (!touch || touchStartXRef.current === null || touchStartYRef.current === null || drink.predefined || !canManage) return;
 
     const deltaX = touch.clientX - touchStartXRef.current;
     const deltaY = touch.clientY - touchStartYRef.current;
@@ -159,7 +160,7 @@ function DrinkRow({ drink, displayName, onEdit, onDelete, swipeDeleteIcon }) {
       className={`drink-list-item events-card${effectiveOffset < 0 ? ' swipe-delete-active' : ''}`}
       style={{ padding: 0 }}
     >
-      {!drink.predefined && (
+      {!drink.predefined && canManage && (
         <div className="drink-swipe-delete-background" aria-hidden={!isDeleteVisible}>
           {isDeleteVisible && (
             <button
@@ -180,7 +181,7 @@ function DrinkRow({ drink, displayName, onEdit, onDelete, swipeDeleteIcon }) {
       <div
         className="drink-swipe-content events-card-main"
         style={{ transform: `translateX(${effectiveOffset}px)`, padding: '16px 20px', width: '100%' }}
-        onClick={effectiveOffset < 0 ? undefined : () => onEdit(drink)}
+        onClick={effectiveOffset < 0 || !canManage ? undefined : () => onEdit(drink)}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -195,6 +196,7 @@ function DrinkRow({ drink, displayName, onEdit, onDelete, swipeDeleteIcon }) {
                   .map((e) => getUnitSizeLabel(e.einheitsgroesse) || String(e.einheitsgroesse))
                   .join(', ')
               : null,
+            !canManage && ownerName ? `von ${ownerName}` : null,
           ].filter(Boolean).join(' · ')}
         </p>
       </div>
@@ -204,6 +206,7 @@ function DrinkRow({ drink, displayName, onEdit, onDelete, swipeDeleteIcon }) {
 
 function DrinkManagementPage({ onBack, currentUser, recipes }) {
   const [drinks, setDrinks] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -243,13 +246,16 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
   }, []);
 
   useEffect(() => {
-    if (!currentUser?.id) return undefined;
-    const unsubscribe = subscribeToCustomDrinks(currentUser.id, (loaded) => {
+    getUsers().then(setAllUsers).catch(() => setAllUsers([]));
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToAllCustomDrinks((loaded) => {
       setDrinks(loaded);
       setLoading(false);
     });
     return unsubscribe;
-  }, [currentUser?.id]);
+  }, []);
 
   useEffect(() => {
     const timeouts = deleteBannerTimeoutsRef.current;
@@ -263,8 +269,15 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
     () => (Array.isArray(recipes) ? recipes.filter(isDrinkRecipe) : []),
     [recipes]
   );
-  const allDrinks = useMemo(() => mergePredefinedDrinks(drinks), [drinks]);
+  const allDrinks = useMemo(
+    () => mergePredefinedDrinks(drinks, currentUser?.id),
+    [drinks, currentUser?.id]
+  );
   const groupedDrinks = useMemo(() => groupDrinksByCategory(allDrinks, recipes), [allDrinks, recipes]);
+  const getOwnerFirstName = (ownerId) => {
+    if (!ownerId) return null;
+    return allUsers.find((u) => u.id === ownerId)?.vorname || null;
+  };
 
   const nameDrinkDisplay = resolveDrinkDisplay(form.name, recipes);
 
@@ -730,9 +743,11 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
               <h3 className="drink-category-group-header">{group.label}</h3>
               {group.drinks.map((drink) => (
                 <DrinkRow
-                  key={drink.id}
+                  key={`${drink.ownerId || ''}_${drink.id}`}
                   drink={drink}
                   displayName={resolveDrinkDisplay(drink, recipes).displayName}
+                  ownerName={getOwnerFirstName(drink.ownerId)}
+                  canManage={drink.predefined || !drink.ownerId || drink.ownerId === currentUser?.id}
                   onEdit={openEdit}
                   onDelete={handleDelete}
                   swipeDeleteIcon={swipeDeleteIcon}
@@ -741,7 +756,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
             </div>
           ))}
           {drinks.length === 0 && (
-            <p className="events-info-text">Noch keine eigenen Getränke angelegt.</p>
+            <p className="events-info-text">Noch keine Getränke angelegt.</p>
           )}
         </div>
       )}

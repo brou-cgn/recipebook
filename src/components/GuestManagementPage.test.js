@@ -3,19 +3,22 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import GuestManagementPage from './GuestManagementPage';
 
 const mockSubscribeToGuestProfiles = jest.fn();
-const mockSubscribeToCustomDrinks = jest.fn();
+const mockSubscribeToAllGuestProfiles = jest.fn();
+const mockSubscribeToAllCustomDrinks = jest.fn();
 const mockSaveGuestProfile = jest.fn();
 const mockDeleteGuestProfile = jest.fn();
 
 jest.mock('../utils/eventsFirestore', () => ({
   subscribeToGuestProfiles: (...args) => mockSubscribeToGuestProfiles(...args),
-  subscribeToCustomDrinks: (...args) => mockSubscribeToCustomDrinks(...args),
+  subscribeToAllGuestProfiles: (...args) => mockSubscribeToAllGuestProfiles(...args),
+  subscribeToAllCustomDrinks: (...args) => mockSubscribeToAllCustomDrinks(...args),
   saveGuestProfile: (...args) => mockSaveGuestProfile(...args),
   deleteGuestProfile: (...args) => mockDeleteGuestProfile(...args),
 }));
 
 jest.mock('../utils/userManagement', () => ({
   canEditRecipes: () => true,
+  getUsers: () => Promise.resolve([]),
 }));
 
 jest.mock('../utils/customLists', () => ({
@@ -40,7 +43,7 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
       cb([]);
       return jest.fn();
     });
-    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
       cb([]);
       return jest.fn();
     });
@@ -75,7 +78,7 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
   });
 
   test('adding a drink creates a chip and removes it from the dropdown', () => {
-    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
       cb([{ id: 'mineral-wasser', name: 'Mineral Wasser' }]);
       return jest.fn();
     });
@@ -97,7 +100,7 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
   });
 
   test('removing a chip via × button makes drink available in dropdown again', () => {
-    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
       cb([{ id: 'craft-bier', name: 'Craft Bier' }]);
       return jest.fn();
     });
@@ -116,7 +119,7 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
   });
 
   test('editing an existing guest shows pre-selected custom drinks as chips', () => {
-    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
       cb([{ id: 'hauswein', name: 'Hauswein' }]);
       return jest.fn();
     });
@@ -144,7 +147,7 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
   });
 
   test('custom drinks appear in the dropdown', () => {
-    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
       cb([{ id: 'craft-ipa', name: 'Craft IPA' }]);
       return jest.fn();
     });
@@ -333,5 +336,30 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Anna Adler löschen' }));
 
     expect(screen.queryByRole('heading', { name: 'Gast bearbeiten' })).not.toBeInTheDocument();
+  });
+
+  describe('admin cross-user guest visibility', () => {
+    const adminUser = { id: 'admin1', isAdmin: true };
+
+    test('non-admins do not see the "Alle Anwender" toggle', () => {
+      render(<GuestManagementPage currentUser={currentUser} />);
+      expect(screen.queryByRole('button', { name: 'Alle Anwender' })).not.toBeInTheDocument();
+    });
+
+    test('admin can switch to "Alle Anwender" and sees another user\'s guest without a delete button', async () => {
+      mockSubscribeToAllGuestProfiles.mockImplementation((cb) => {
+        cb([
+          { id: 'g1', vorname: 'Ben', nachname: 'Beispiel', ownerId: 'other-user' },
+        ]);
+        return jest.fn();
+      });
+
+      render(<GuestManagementPage currentUser={adminUser} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Alle Anwender' }));
+
+      expect(await screen.findByText('Ben Beispiel')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Ben Beispiel löschen' })).not.toBeInTheDocument();
+    });
   });
 });

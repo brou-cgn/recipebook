@@ -6,6 +6,7 @@
 import { db, functions } from '../firebase';
 import {
   collection,
+  collectionGroup,
   doc,
   getDoc,
   getDocs,
@@ -79,6 +80,30 @@ export const subscribeToEvent = (uid, eventId, callback) => {
   }, (error) => {
     console.error('Error subscribing to event:', error);
     callback(null);
+  });
+};
+
+/**
+ * Set up a real-time listener across ALL users' events, newest/next first.
+ * Intended for admins, who may read (but not write) any user's events – see
+ * firestore.rules. Each event is annotated with `ownerId` (derived from its
+ * document path) so callers can tell whose event it is.
+ * @param {Function} callback - Receives the array of events
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToAllEvents = (callback) => {
+  const eventsRef = collectionGroup(db, 'events');
+  const eventsQuery = query(eventsRef, orderBy('date', 'desc'));
+
+  return onSnapshot(eventsQuery, (snapshot) => {
+    const events = [];
+    snapshot.forEach((docSnap) => {
+      events.push({ id: docSnap.id, ...docSnap.data(), ownerId: docSnap.ref.parent.parent.id });
+    });
+    callback(events);
+  }, (error) => {
+    console.error('Error subscribing to all events:', error);
+    callback([]);
   });
 };
 
@@ -251,6 +276,51 @@ export const subscribeToCustomDrinks = (uid, callback) => {
 };
 
 /**
+ * Set up a real-time listener across ALL users' custom drinks, ordered by
+ * name. Drinks are a shared library visible to everyone; each drink is
+ * annotated with `ownerId` (derived from its document path) so callers can
+ * tell who added it and gate editing/deletion to that owner.
+ * @param {Function} callback - Receives the array of custom drinks
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToAllCustomDrinks = (callback) => {
+  const ref = collectionGroup(db, 'customDrinks');
+  const q = query(ref, orderBy('name', 'asc'));
+  return onSnapshot(q, (snapshot) => {
+    const drinks = [];
+    snapshot.forEach((docSnap) => {
+      drinks.push({ id: docSnap.id, ...docSnap.data(), ownerId: docSnap.ref.parent.parent.id });
+    });
+    callback(drinks);
+  }, (error) => {
+    console.error('Error subscribing to all customDrinks:', error);
+    callback([]);
+  });
+};
+
+/**
+ * Get ALL users' custom drinks (one-time fetch, ordered by name). Drinks are
+ * a shared library visible to everyone; each drink is annotated with
+ * `ownerId` (derived from its document path).
+ * @returns {Promise<Array>} The custom drinks
+ */
+export const getAllCustomDrinks = async () => {
+  try {
+    const ref = collectionGroup(db, 'customDrinks');
+    const q = query(ref, orderBy('name', 'asc'));
+    const snapshot = await getDocs(q);
+    const drinks = [];
+    snapshot.forEach((docSnap) => {
+      drinks.push({ id: docSnap.id, ...docSnap.data(), ownerId: docSnap.ref.parent.parent.id });
+    });
+    return drinks;
+  } catch (error) {
+    console.error('Error getting all customDrinks:', error);
+    return [];
+  }
+};
+
+/**
  * Get a user's custom drinks (one-time fetch, ordered by name).
  * @param {string} uid - Current user ID
  * @returns {Promise<Array>} The custom drinks
@@ -327,6 +397,30 @@ export const subscribeToGuestProfiles = (uid, callback) => {
     callback(profiles);
   }, (error) => {
     console.error('Error subscribing to guestProfiles:', error);
+    callback([]);
+  });
+};
+
+/**
+ * Set up a real-time listener across ALL users' guest profiles, ordered by
+ * last name. Intended for admins, who may read (but not write) any user's
+ * guest profiles – see firestore.rules. Each profile is annotated with
+ * `ownerId` (derived from its document path) so callers can tell whose
+ * guest it is.
+ * @param {Function} callback - Receives the array of guest profiles
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToAllGuestProfiles = (callback) => {
+  const ref = collectionGroup(db, 'profiles');
+  const q = query(ref, orderBy('nachname', 'asc'));
+  return onSnapshot(q, (snapshot) => {
+    const profiles = [];
+    snapshot.forEach((docSnap) => {
+      profiles.push({ id: docSnap.id, ...docSnap.data(), ownerId: docSnap.ref.parent.parent.id });
+    });
+    callback(profiles);
+  }, (error) => {
+    console.error('Error subscribing to all guestProfiles:', error);
     callback([]);
   });
 };
