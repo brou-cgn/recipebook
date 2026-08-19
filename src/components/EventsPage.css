@@ -334,7 +334,7 @@
 }
 
 /* Getränke/Gästeübersicht FABs (mobile Events-Übersicht, unten links) -
-   gleiche Formatierung wie der "Neues Event"-FAB (weiß/umrandet). */
+   gleiche Formatierung wie der "Neues Event"-FAB (weiß/umrandet, rund). */
 .events-drinks-fab-button,
 .events-guests-fab-button {
   display: none;
@@ -383,6 +383,13 @@
 .events-drinks-fab-button:active,
 .events-guests-fab-button:active {
   background: white;
+  outline: none;
+}
+
+.events-drinks-fab-button:focus,
+.events-drinks-fab-button:focus-visible,
+.events-guests-fab-button:focus,
+.events-guests-fab-button:focus-visible {
   outline: none;
 }
 

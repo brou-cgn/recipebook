@@ -677,8 +677,8 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
           onMouseDown={() => setGuestsFabPressed(true)}
           onMouseUp={() => setGuestsFabPressed(false)}
           onMouseLeave={() => setGuestsFabPressed(false)}
-          title="Gästeübersicht"
-          aria-label="Gästeübersicht"
+          title="Gäste verwalten"
+          aria-label="Gäste verwalten"
         >
           {isBase64Image(guestsFabIcon) ? (
             <img src={guestsFabIcon} alt="Gäste" className="button-icon-image" draggable="false" />

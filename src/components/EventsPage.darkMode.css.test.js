@@ -38,6 +38,16 @@ describe('EventsPage dark mode FAB styles', () => {
     expect(rule).toContain('border-color: #555;');
   });
 
+  test('styles the events-drinks-fab-button for dark mode', () => {
+    const cssPath = path.join(__dirname, '..', 'darkMode.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const rule = getRuleBody(css, '[data-theme="dark"] .events-drinks-fab-button,\n[data-theme="dark"] .events-guests-fab-button');
+
+    expect(rule).toContain('background: #2a2a2a;');
+    expect(rule).toContain('color: #e8e8e8;');
+    expect(rule).toContain('border-color: #555;');
+  });
+
   test('styles the events table for dark mode', () => {
     const cssPath = path.join(__dirname, '..', 'darkMode.css');
     const css = fs.readFileSync(cssPath, 'utf8');
