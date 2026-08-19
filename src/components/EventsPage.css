@@ -1374,7 +1374,7 @@
     height: 56px;
     min-width: 56px;
     max-width: 56px;
-    opacity: 0.6;
+    opacity: 0.85;
   }
 
   .events-cancel-fab-button {
@@ -1391,10 +1391,6 @@
   }
 
   .events-secondary-btn--desktop-only {
-    display: none;
-  }
-
-  .events-manage-links {
     display: none;
   }
 
