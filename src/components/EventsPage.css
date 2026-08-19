@@ -1394,6 +1394,10 @@
     display: none;
   }
 
+  .events-manage-links {
+    display: none;
+  }
+
   .event-save-fab-button {
     display: flex;
     position: fixed;
