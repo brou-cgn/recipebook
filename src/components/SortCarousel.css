@@ -43,9 +43,14 @@
 
   /* Expanded: the track grows to the full row width so all pills fit
      (or can be swiped through); collapsed, it shrinks back to fit just
-     the active pill via the max-width transition above. */
+     the active pill via the max-width transition above. Only max-width
+     changes here — width stays fit-content (see the base rule) so the
+     track's growth is driven entirely by the transitioning max-width.
+     Setting width: 100% here as well used to make the track snap
+     instantly to its old max-width cap (200px) the moment this class
+     was added, before the max-width transition had animated past that
+     same value, producing a visible jump right as the carousel opened. */
   .sort-carousel--expanded {
-    width: 100%;
     max-width: 100%;
   }
 }
