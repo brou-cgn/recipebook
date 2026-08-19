@@ -2506,6 +2506,15 @@
   background: #2a2a2a;
 }
 
+[data-theme="dark"] .selected-recipe-item-content {
+  background: #1e1e1e;
+}
+
+[data-theme="dark"] .selected-recipe-item.dragging .selected-recipe-item-content {
+  background: #2a2a2a;
+  border-color: #555;
+}
+
 [data-theme="dark"] .selected-recipes h5 {
   color: #aaa;
 }
