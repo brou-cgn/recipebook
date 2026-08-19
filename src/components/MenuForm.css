@@ -505,6 +505,17 @@
   border: 1px solid #402C1C;
 }
 
+/* This field sits directly above the red .swipe-delete-background (unlike
+   e.g. EventsPage's row headers, which nest inside an already-opaque
+   wrapper), so it must opt out of DeleteRowButton.css's shared hover/focus
+   row tint (a low-alpha rgba) with its own solid background rather than
+   `transparent` - otherwise the red swipe-delete area bleeds through on
+   hover/touch instead of staying hidden behind an opaque field. */
+.selected-recipe-item-content.delete-row-hover-target:hover,
+.selected-recipe-item-content.delete-row-hover-target:focus-within {
+  background: #fff;
+}
+
 /* Mobile: the delete button is only revealed via the left-swipe gesture
    (useSwipeToDelete), mirroring the swipe-to-delete used elsewhere (e.g.
    EventsPage's guest/drink rows). Compounded with .delete-row-button so this
