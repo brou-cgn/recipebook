@@ -736,12 +736,15 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
               )
             : section.recipes.map((recipe) => ({ compositeId: `recipe:${recipe.id}`, type: 'recipe', recipe }));
 
+          // A Drinks section with nothing in it and no linked event has no content to
+          // show and no action to offer a viewer, so it's suppressed entirely rather
+          // than rendering an empty heading with a placeholder message underneath.
+          if (isDrinksSection && !hasCards && !menu.eventId && !isLoadingDrinks) {
+            return null;
+          }
+
           let emptyText = 'Keine Rezepte in diesem Abschnitt';
-          if (isDrinksSection && !menu.eventId) {
-            emptyText = canEditMenu(currentUser, menu)
-              ? 'Noch kein Event verknüpft. Event über "Menü bearbeiten" verknüpfen oder erstellen.'
-              : 'Noch kein Event verknüpft.';
-          } else if (isDrinksSection && menu.eventId && !linkedEventLoading && !linkedEvent) {
+          if (isDrinksSection && menu.eventId && !linkedEventLoading && !linkedEvent) {
             emptyText = 'Verknüpftes Event konnte nicht geladen werden.';
           }
 
