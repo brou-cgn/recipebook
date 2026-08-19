@@ -922,6 +922,15 @@
   box-shadow: 0 0 0 3px rgba(47, 93, 80, 0.3);
 }
 
+/* Brown ("App-Braun") variant, used for the Drinks-section toggle in the menu editor. */
+.drink-own-filter-toggle--brown input:checked + .drink-own-filter-toggle-slider {
+  background-color: #402C1C;
+}
+
+.drink-own-filter-toggle--brown input:focus-visible + .drink-own-filter-toggle-slider {
+  box-shadow: 0 0 0 3px rgba(150, 98, 47, 0.3);
+}
+
 .events-drink-selector {
   display: flex;
   gap: 8px;
