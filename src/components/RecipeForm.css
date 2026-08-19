@@ -690,6 +690,23 @@
   align-items: stretch;
   z-index: 1;
 }
+
+/* Dedicated column for DeleteRowButton, outside the input field so every
+   row's field stays the same width and the buttons all line up. Desktop
+   only - mobile keeps using the swipe-to-delete gesture. */
+.form-list-item-delete-col {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  .form-list-item-delete-col {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    flex: 0 0 28px;
+  }
+}
 .input-wrapper input,
 .input-wrapper textarea {
   flex: 1;
@@ -932,20 +949,6 @@
   justify-content: center;
   position: relative;
   z-index: 1;
-}
-
-.swipe-undo-banner {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 0.75rem;
-  margin: 0.35rem 0 0.5rem;
-  padding: 0.5rem 0.7rem;
-  border: 1px solid #f0c5bf;
-  border-radius: 8px;
-  background: #fff5f4;
-  color: #8b2d21;
-  font-size: 0.9rem;
 }
 
 .add-item-button .button-icon-image {

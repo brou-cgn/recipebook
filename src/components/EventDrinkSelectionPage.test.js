@@ -134,14 +134,14 @@ describe('EventDrinkSelectionPage', () => {
     fireEvent.touchStart(wasserRowContent, { touches: [{ clientX: 200, clientY: 100 }] });
     fireEvent.touchMove(wasserRowContent, { touches: [{ clientX: 80, clientY: 100 }] });
     fireEvent.touchEnd(wasserRowContent);
-    fireEvent.click(screen.getByLabelText('Wasser (eigen) entfernen'));
+    fireEvent.click(wasserRowContent.parentElement.querySelector('.events-drink-row-swipe-action'));
 
     expect(screen.queryByText('Wasser (eigen)', { selector: '.events-drink-row-name' })).not.toBeInTheDocument();
     expect(screen.getByText('1 Getränk ausgewählt.')).toBeInTheDocument();
   });
 
   test('removes a drink via the always-visible desktop delete button, without swiping', () => {
-    render(
+    const { container } = render(
       <EventDrinkSelectionPage
         customDrinks={customDrinks}
         customDrinkIds={['custom-wasser', 'custom-bier']}
@@ -152,7 +152,7 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
-    fireEvent.click(screen.getByLabelText('Wasser (eigen) löschen'));
+    fireEvent.click(container.querySelector('.events-drink-row-delete-btn'));
 
     expect(screen.queryByText('Wasser (eigen)', { selector: '.events-drink-row-name' })).not.toBeInTheDocument();
     expect(screen.getByText('1 Getränk ausgewählt.')).toBeInTheDocument();
@@ -176,7 +176,7 @@ describe('EventDrinkSelectionPage', () => {
     fireEvent.touchMove(wasserRowContent, { touches: [{ clientX: 80, clientY: 100 }] });
     fireEvent.touchEnd(wasserRowContent);
 
-    const deleteButton = screen.getByLabelText('Wasser (eigen) entfernen');
+    const deleteButton = wasserRowContent.parentElement.querySelector('.events-drink-row-swipe-action');
 
     // Simulate a real tap on the delete button: touchstart, touchend, then click all target the
     // button itself. Since touch handlers only live on the content element (not the row or the
@@ -208,7 +208,7 @@ describe('EventDrinkSelectionPage', () => {
     fireEvent.touchMove(wasserRowContent, { touches: [{ clientX: 80, clientY: 100 }] });
     fireEvent.touchEnd(wasserRowContent);
 
-    expect(screen.getByLabelText('Wasser (eigen) entfernen')).toHaveTextContent('❌');
+    expect(wasserRowContent.parentElement.querySelector('.events-drink-row-swipe-action')).toHaveTextContent('❌');
   });
 
   test('adds a drink via the dropdown', () => {
