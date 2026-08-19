@@ -34,6 +34,135 @@ const getPreferenceLabel = (factor) => {
   return 'wird nicht berücksichtigt';
 };
 
+// Matches the "Zutat löschen" swipe-to-delete gesture from the recipe edit page
+// (see SortableIngredient in RecipeForm.js): swiping left reveals the delete
+// button on the right. On desktop the static button next to the card stays
+// visible instead (no touch events to trigger the swipe).
+const SWIPE_DELETE_THRESHOLD = 56;
+const SWIPE_DELETE_MAX_OFFSET = 96;
+const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
+
+function GuestCard({ fullName, deleteIcon, onOpenEdit, onDelete, children }) {
+  const touchStartXRef = React.useRef(null);
+  const touchStartYRef = React.useRef(null);
+  const swipeDirectionLockedRef = React.useRef(null);
+  const isSwipingRef = React.useRef(false);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [isDeleteActionVisible, setIsDeleteActionVisible] = useState(false);
+
+  const effectiveSwipeOffset = isDeleteActionVisible ? -SWIPE_DELETE_MAX_OFFSET : swipeOffset;
+  const deleteLabel = `${fullName || 'Gast'} löschen`;
+
+  const resetSwipe = ({ keepDeleteAction = false } = {}) => {
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+    swipeDirectionLockedRef.current = null;
+    isSwipingRef.current = false;
+    setSwipeOffset(0);
+    if (!keepDeleteAction) setIsDeleteActionVisible(false);
+  };
+
+  const handleTouchStart = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    if (isDeleteActionVisible) setIsDeleteActionVisible(false);
+    touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+    swipeDirectionLockedRef.current = null;
+    isSwipingRef.current = false;
+  };
+
+  const handleTouchMove = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch || touchStartXRef.current === null || touchStartYRef.current === null) return;
+    const deltaX = touch.clientX - touchStartXRef.current;
+    const deltaY = touch.clientY - touchStartYRef.current;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (!swipeDirectionLockedRef.current && (absX > SWIPE_DIRECTION_LOCK_THRESHOLD || absY > SWIPE_DIRECTION_LOCK_THRESHOLD)) {
+      swipeDirectionLockedRef.current = absX > absY ? 'horizontal' : 'vertical';
+    }
+
+    if (swipeDirectionLockedRef.current === 'horizontal' && deltaX < 0) {
+      isSwipingRef.current = true;
+      setSwipeOffset(Math.max(deltaX, -SWIPE_DELETE_MAX_OFFSET));
+      if (e.cancelable) e.preventDefault();
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isSwipingRef.current && Math.abs(swipeOffset) >= SWIPE_DELETE_THRESHOLD) {
+      setIsDeleteActionVisible(true);
+      resetSwipe({ keepDeleteAction: true });
+      return;
+    }
+    resetSwipe();
+  };
+
+  const handleContentClick = () => {
+    if (isDeleteActionVisible) {
+      resetSwipe();
+      return;
+    }
+    onOpenEdit();
+  };
+
+  const handleSwipeDeleteClick = (e) => {
+    e.stopPropagation();
+    onDelete();
+    resetSwipe();
+  };
+
+  return (
+    <div className={`events-card events-guest-card${isDeleteActionVisible ? ' swipe-delete-active' : ''}`}>
+      <div className="swipe-delete-background" aria-hidden={!isDeleteActionVisible}>
+        {isDeleteActionVisible && (
+          <button
+            type="button"
+            className="swipe-delete-action"
+            onClick={handleSwipeDeleteClick}
+            aria-label={deleteLabel}
+          >
+            {isBase64Image(deleteIcon) ? (
+              <img src={deleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
+            ) : (
+              <span className="swipe-delete-icon-text">{deleteIcon}</span>
+            )}
+          </button>
+        )}
+      </div>
+      <div
+        className="events-guest-card-content"
+        style={{ transform: `translateX(${effectiveSwipeOffset}px)`, transition: 'transform 0.15s ease' }}
+        onClick={handleContentClick}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={() => resetSwipe()}
+      >
+        {children}
+        <button
+          type="button"
+          className="events-guest-delete-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          aria-label={deleteLabel}
+          title="Gast löschen"
+        >
+          {isBase64Image(deleteIcon) ? (
+            <img src={deleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
+          ) : (
+            <span className="swipe-delete-icon-text">{deleteIcon}</span>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function GuestManagementPage({ onBack, currentUser, recipes }) {
   const [profiles, setProfiles] = useState([]);
   const [customDrinks, setCustomDrinks] = useState([]);
@@ -555,7 +684,13 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
               const ownerName = getOwnerFirstName(profile.ownerId);
               const guestDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode) || '🗑';
               return (
-                <div key={`${profile.ownerId}_${profile.id}`} className="events-card events-guest-card" onClick={() => openEdit(profile)}>
+                <GuestCard
+                  key={`${profile.ownerId}_${profile.id}`}
+                  fullName={fullName}
+                  deleteIcon={guestDeleteIcon}
+                  onOpenEdit={() => openEdit(profile)}
+                  onDelete={() => handleDelete(profile)}
+                >
                   <div className="events-card-main">
                     <h3>{fullName || 'Unbenannter Gast'}</h3>
                     {profile.kind === true && <p className="events-info-text">Kind</p>}
@@ -563,23 +698,7 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
                       <p className="events-card-meta">von {ownerName}</p>
                     )}
                   </div>
-                  <button
-                    type="button"
-                    className="events-guest-delete-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(profile);
-                    }}
-                    aria-label={`${fullName || 'Gast'} löschen`}
-                    title="Gast löschen"
-                  >
-                    {isBase64Image(guestDeleteIcon) ? (
-                      <img src={guestDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
-                    ) : (
-                      <span className="swipe-delete-icon-text">{guestDeleteIcon}</span>
-                    )}
-                  </button>
-                </div>
+                </GuestCard>
               );
             })}
           </div>
@@ -608,7 +727,13 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
             const preferredSummary = [...preferredDrinkNames, ...preferredCategoryNames];
             const guestDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode) || '🗑';
             return (
-              <div key={profile.id} className="events-card events-guest-card" onClick={() => openEdit(profile)}>
+              <GuestCard
+                key={profile.id}
+                fullName={fullName}
+                deleteIcon={guestDeleteIcon}
+                onOpenEdit={() => openEdit(profile)}
+                onDelete={() => handleDelete(profile)}
+              >
                 <div className="events-card-main">
                   <h3>{fullName || 'Unbenannter Gast'}</h3>
                   {profile.kind === true && <p className="events-info-text">Kind</p>}
@@ -618,23 +743,7 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
                     </p>
                   )}
                 </div>
-                <button
-                  type="button"
-                  className="events-guest-delete-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(profile);
-                  }}
-                  aria-label={`${fullName || 'Gast'} löschen`}
-                  title="Gast löschen"
-                >
-                  {isBase64Image(guestDeleteIcon) ? (
-                    <img src={guestDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
-                  ) : (
-                    <span className="swipe-delete-icon-text">{guestDeleteIcon}</span>
-                  )}
-                </button>
-              </div>
+              </GuestCard>
             );
           })}
         </div>
