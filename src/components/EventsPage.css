@@ -1591,6 +1591,18 @@
   background: white;
   border: 1px solid #e8e8e8;
   box-shadow: none;
+  /* Establishes this row's own stacking context (scoped to z-index 0, same
+     as every other row) so .events-drink-row--dropdown-open below can lift
+     the whole row - dropdown included - above the next row in paint order.
+     Without this, .events-drink-row-content's own z-index/transform-based
+     stacking context gets compared directly against the next row's, and
+     later DOM order wins regardless of the dropdown's z-index, painting the
+     next row's card over the open dropdown. */
+  z-index: 0;
+}
+
+.events-drink-row--dropdown-open {
+  z-index: 5;
 }
 
 .events-drink-row.swipe-delete-active {
