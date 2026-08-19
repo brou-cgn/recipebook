@@ -302,6 +302,7 @@ function EventDrinkSelectionPage({
   onBack,
   buttonIcons,
   isDarkMode,
+  currentUserId,
 }) {
   const effectiveButtonIcons = buttonIcons || DEFAULT_BUTTON_ICONS;
   const swipeDeleteIcon = getEffectiveIcon(effectiveButtonIcons, 'swipeDelete', isDarkMode) || '🗑';
@@ -314,6 +315,7 @@ function EventDrinkSelectionPage({
   );
   const [pufferProzent, setPufferProzent] = useState(initialPufferProzent ?? DEFAULT_PUFFER_PROZENT);
   const [drinkToAdd, setDrinkToAdd] = useState('');
+  const [showOwnOnly, setShowOwnOnly] = useState(true);
   const [swipeDeleteVisibleId, setSwipeDeleteVisibleId] = useState(null);
   const [fabPressed, setFabPressed] = useState(false);
   const [cancelPressed, setCancelPressed] = useState(false);
@@ -403,6 +405,7 @@ function EventDrinkSelectionPage({
                   <option value="">Getränk auswählen …</option>
                   {customDrinks
                     .filter((d) => !customDrinkIds.includes(d.id))
+                    .filter((d) => !showOwnOnly || !d.ownerId || d.ownerId === currentUserId)
                     .map((drink) => (
                       <option key={drink.id} value={drink.id}>{resolveDrinkDisplay(drink, recipes).displayName}</option>
                     ))}
@@ -421,6 +424,21 @@ function EventDrinkSelectionPage({
                 >
                   Hinzufügen
                 </button>
+              </div>
+
+              <div className="drink-own-filter-row">
+                <label className="drink-own-filter-label">
+                  <span>Eigene Getränke</span>
+                  <span className="drink-own-filter-toggle">
+                    <input
+                      type="checkbox"
+                      checked={showOwnOnly}
+                      onChange={(e) => setShowOwnOnly(e.target.checked)}
+                      aria-label="Nur eigene Getränke in der Auswahl anzeigen"
+                    />
+                    <span className="drink-own-filter-toggle-slider" aria-hidden="true" />
+                  </span>
+                </label>
               </div>
 
               {selectedDrinks.length > 0 && (
