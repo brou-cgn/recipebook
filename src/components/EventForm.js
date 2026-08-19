@@ -466,7 +466,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
 
         <div className="events-form-actions">
           {isEditing && onDelete && (
-            <button type="button" className="events-secondary-btn events-delete-btn" onClick={onDelete} disabled={saving}>
+            <button type="button" className="events-secondary-btn events-delete-btn events-secondary-btn--desktop-only" onClick={onDelete} disabled={saving}>
               Löschen
             </button>
           )}
