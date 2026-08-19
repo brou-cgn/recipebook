@@ -114,7 +114,12 @@
   min-width: 0;
 }
 
-.events-guest-card.swipe-delete-active .swipe-delete-background {
+/* Unlike the opacity-gated reveal used elsewhere (e.g. RecipeForm's
+   ingredient rows), the guest card's delete background stays fully opaque
+   at all times. It's already hidden behind the opaque content row (z-index
+   1) at rest, so this lets it slide into view together with the content as
+   the user drags instead of only popping in once the swipe gesture ends. */
+.events-guest-card .swipe-delete-background {
   opacity: 1;
   pointer-events: auto;
 }
