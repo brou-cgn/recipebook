@@ -363,7 +363,7 @@ function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex, sw
     isDragging,
   } = useSortable({ id });
 
-  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete();
+  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ maxOffset: 72 });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -439,7 +439,7 @@ function SortableDrinkItem({ id, displayName, isFavorite, onRemove, swipeDeleteI
     isDragging,
   } = useSortable({ id });
 
-  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete();
+  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ maxOffset: 72 });
 
   const style = {
     transform: CSS.Transform.toString(transform),

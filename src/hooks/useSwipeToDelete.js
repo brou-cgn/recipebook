@@ -16,12 +16,15 @@ export const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
  * @param {(info: {deltaX: number, deltaY: number, absX: number, absY: number, direction: string|null}|null) => void} [options.onMove] -
  *   Called on every touchmove with the raw gesture delta (or null when the move is ignored), for callers that need
  *   to react to movement beyond the swipe itself (e.g. cancelling a long-press timer).
+ * @param {number} [options.maxOffset] - Overrides SWIPE_DELETE_MAX_OFFSET for callers whose row is narrower
+ *   or wants a shorter reveal (e.g. MenuForm's recipe/drink rows).
  */
 export default function useSwipeToDelete({
   disabled = false,
   isDeleteVisible: controlledVisible,
   onDeleteVisibleChange,
   onMove,
+  maxOffset = SWIPE_DELETE_MAX_OFFSET,
 } = {}) {
   const touchStartXRef = useRef(null);
   const touchStartYRef = useRef(null);
@@ -38,7 +41,7 @@ export default function useSwipeToDelete({
     else setInternalVisible(value);
   }, [isControlled, onDeleteVisibleChange]);
 
-  const offset = isDeleteVisible ? -SWIPE_DELETE_MAX_OFFSET : swipeOffset;
+  const offset = isDeleteVisible ? -maxOffset : swipeOffset;
 
   const reset = useCallback(({ keepDelete = false } = {}) => {
     touchStartXRef.current = null;
@@ -79,13 +82,13 @@ export default function useSwipeToDelete({
 
     if (direction === 'horizontal' && deltaX < 0) {
       isSwipingRef.current = true;
-      const clamped = Math.max(deltaX, -SWIPE_DELETE_MAX_OFFSET);
+      const clamped = Math.max(deltaX, -maxOffset);
       swipeOffsetRef.current = clamped;
       setSwipeOffset(clamped);
       if (e.cancelable) e.preventDefault();
     }
     onMove?.({ deltaX, deltaY, absX, absY, direction });
-  }, [disabled, onMove]);
+  }, [disabled, maxOffset, onMove]);
 
   const onTouchEnd = useCallback(() => {
     if (isSwipingRef.current && Math.abs(swipeOffsetRef.current) >= SWIPE_DELETE_THRESHOLD) {
