@@ -62,7 +62,16 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
       }
     }
 
-    if (hasSwipeAction && swipeDirectionLocked.current === 'horizontal' && deltaX > SWIPE_HORIZONTAL_THRESHOLD) {
+    if (swipeDirectionLocked.current !== 'horizontal') return;
+
+    if (swipeRevealed) {
+      if (deltaX < -SWIPE_HORIZONTAL_THRESHOLD) {
+        isSwiping.current = true;
+        e.preventDefault();
+        const offset = Math.min(Math.max(MAX_SWIPE_OFFSET + deltaX, 0), MAX_SWIPE_OFFSET);
+        setSwipeOffset(offset);
+      }
+    } else if (hasSwipeAction && deltaX > SWIPE_HORIZONTAL_THRESHOLD) {
       isSwiping.current = true;
       e.preventDefault();
       const offset = Math.min(deltaX, MAX_SWIPE_OFFSET);
@@ -72,9 +81,17 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
 
   const handleTouchEnd = () => {
     if (isSwiping.current) {
-      if (swipeOffset >= SWIPE_REVEAL_THRESHOLD) {
+      if (swipeRevealed) {
+        if (swipeOffset <= MAX_SWIPE_OFFSET - SWIPE_REVEAL_THRESHOLD) {
+          setSwipeRevealed(false);
+          setSwipeOffset(0);
+        } else {
+          setSwipeRevealed(true);
+          setSwipeOffset(MAX_SWIPE_OFFSET);
+        }
+      } else if (swipeOffset >= SWIPE_REVEAL_THRESHOLD) {
         setSwipeRevealed(true);
-        setSwipeOffset(0);
+        setSwipeOffset(MAX_SWIPE_OFFSET);
       } else {
         setSwipeRevealed(false);
         setSwipeOffset(0);
@@ -184,7 +201,7 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
       <div
         className="recipe-card"
         style={{
-          transform: `translateX(${swipeRevealed ? MAX_SWIPE_OFFSET : swipeOffset}px)`,
+          transform: `translateX(${swipeOffset}px)`,
           transition: isSwiping.current ? 'none' : 'transform 0.2s ease',
         }}
         onClick={handleCardClick}
@@ -210,7 +227,11 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
           <div className="new-badge">Neu</div>
         )}
         {hasImages && (
-          <div className="recipe-image" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="recipe-image"
+            onClick={(e) => e.stopPropagation()}
+            style={swipeRevealed ? { pointerEvents: 'none' } : undefined}
+          >
             <RecipeImageCarousel
               key={recipe.id}
               images={orderedImages}
