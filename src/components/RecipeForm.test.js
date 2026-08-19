@@ -2116,11 +2116,7 @@ describe('RecipeForm - Swipe Delete', () => {
     expect(screen.getByPlaceholderText('Zutat 1')).toHaveValue('');
   });
 
-<<<<<<< HEAD
   test('auto-hides delete banners after 6 seconds (CLAUDE.md undo-snackbar spec) and allows multiple banners', async () => {
-=======
-  test('undo snackbar shows only one at a time and auto-hides after 6 seconds', async () => {
->>>>>>> origin/main
     jest.useFakeTimers();
     try {
       render(
@@ -2144,7 +2140,6 @@ describe('RecipeForm - Swipe Delete', () => {
       swipeLeft(screen.getByPlaceholderText('Zutat 1'));
       fireEvent.click(await screen.findByRole('button', { name: 'Zutat löschen' }));
 
-<<<<<<< HEAD
       await waitFor(() => expect(screen.getAllByText('Zutat gelöscht.')).toHaveLength(2));
       expect(screen.getAllByRole('button', { name: 'Rückgängig' })).toHaveLength(2);
 
@@ -2155,14 +2150,6 @@ describe('RecipeForm - Swipe Delete', () => {
 
       act(() => {
         jest.advanceTimersByTime(1);
-=======
-      // A new deletion replaces the previous snackbar - only one is shown at a time.
-      expect(screen.queryByText('„Mehl" entfernt')).not.toBeInTheDocument();
-      expect(screen.getByText('„Milch" entfernt')).toBeInTheDocument();
-
-      act(() => {
-        jest.advanceTimersByTime(6000);
->>>>>>> origin/main
       });
 
       await waitFor(() => {

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // Shared "Löschen wirkt sofort + Snackbar 'Rückgängig'" behavior (see CLAUDE.md),
@@ -15,12 +14,17 @@ const UNDO_TIMEOUT_MS = 6000;
  *   pendingKeys: Set<string>,
  *   scheduleDelete: (opts: { key: string, message: string, onConfirm: () => void, onUndo: () => void }) => void,
  *   undoDelete: (id: number) => void,
+ *   notifyDeleted: (opts: { id: string|number, name: string, undo: () => void }) => void,
+ *   undo: () => void,
+ *   pendingName: string|null,
  * }}
  */
 export default function useUndoableDelete(timeoutMs = UNDO_TIMEOUT_MS) {
   const [banners, setBanners] = useState([]);
   const entriesRef = useRef(new Map()); // id -> { key, timeoutId, onUndo }
   const counterRef = useRef(0);
+  const lastCompatIdRef = useRef(null);
+  const lastCompatNameRef = useRef(null);
 
   useEffect(() => {
     const entries = entriesRef.current;
@@ -53,66 +57,23 @@ export default function useUndoableDelete(timeoutMs = UNDO_TIMEOUT_MS) {
 
   const pendingKeys = useMemo(() => new Set(banners.map((banner) => banner.key)), [banners]);
 
-  return { banners, pendingKeys, scheduleDelete, undoDelete };
-=======
-import { useCallback, useEffect, useRef, useState } from 'react';
-
-const UNDO_TIMEOUT_MS = 6000;
-
-/**
- * Gemeinsames "sofort löschen + Rückgängig"-Muster für Listen-Zeilen
- * (DeleteRowButton + UndoSnackbar). Die Löschung selbst passiert sofort und
- * synchron beim Aufruf von `notifyDeleted` - der Aufrufer entfernt das
- * Element also schon, bevor er den Hook informiert. Der Hook merkt sich nur,
- * wie man die Löschung rückgängig macht, zeigt 6s lang die Undo-Snackbar
- * und ruft bei Klick auf "Rückgängig" die übergebene `undo`-Funktion auf.
- * Es ist immer nur eine Snackbar/ein Undo gleichzeitig aktiv: eine neue
- * Löschung ersetzt die alte (deren Undo-Möglichkeit damit verfällt, die
- * Löschung selbst bleibt bestehen) und startet den 6s-Timer neu. Der Timer
- * wird beim Unmount abgebrochen (die Löschung ist da längst passiert, es
- * gibt nur nichts mehr zu tun als das Timeout selbst zu vergessen).
- */
-export default function useUndoableDelete() {
-  const [pending, setPending] = useState(null); // { id, name, undo }
-  const pendingRef = useRef(null);
-  const timeoutRef = useRef(null);
-
-  const clearTimer = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => () => clearTimer(), [clearTimer]);
-
-  const notifyDeleted = useCallback(({ id, name, undo }) => {
-    clearTimer();
-    const entry = { id, name, undo };
-    pendingRef.current = entry;
-    setPending(entry);
-
-    timeoutRef.current = setTimeout(() => {
-      timeoutRef.current = null;
-      if (pendingRef.current === entry) {
-        pendingRef.current = null;
-        setPending(null);
-      }
-    }, UNDO_TIMEOUT_MS);
-  }, [clearTimer]);
+  // Compatibility API for components that use the simpler notifyDeleted/undo/pendingName pattern.
+  const notifyDeleted = useCallback(({ id, name, undo: onUndo }) => {
+    const key = String(id);
+    const message = `„${name}" entfernt`;
+    scheduleDelete({ key, message, onConfirm: () => {}, onUndo });
+    lastCompatNameRef.current = name;
+  }, [scheduleDelete]);
 
   const undo = useCallback(() => {
-    clearTimer();
-    const entry = pendingRef.current;
-    pendingRef.current = null;
-    setPending(null);
-    if (entry) entry.undo();
-  }, [clearTimer]);
+    // Undo the most recently scheduled deletion tracked via notifyDeleted.
+    const entries = entriesRef.current;
+    if (entries.size === 0) return;
+    const lastId = Math.max(...entries.keys());
+    undoDelete(lastId);
+  }, [undoDelete]);
 
-  return {
-    notifyDeleted,
-    undo,
-    pendingName: pending?.name ?? null,
-  };
->>>>>>> origin/main
+  const pendingName = banners.length > 0 ? lastCompatNameRef.current : null;
+
+  return { banners, pendingKeys, scheduleDelete, undoDelete, notifyDeleted, undo, pendingName };
 }

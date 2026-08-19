@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import './EventsPage.css';
 import OverviewAddFab from './OverviewAddFab';
 import DeleteRowButton from './DeleteRowButton';
-import UndoSnackbar from './UndoSnackbar';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import {
   subscribeToGuestProfiles,
@@ -18,7 +17,6 @@ import { DEFAULT_BUTTON_ICONS, getButtonIcons, getDarkModePreference, getEffecti
 import { isBase64Image } from '../utils/imageUtils';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
-import useUndoableDelete from '../hooks/useUndoableDelete';
 
 const emptyForm = () => ({
   vorname: '',
@@ -75,13 +73,8 @@ function GuestCard({ fullName, deleteIcon, onOpenEdit, onDelete, children }) {
         </button>
       </div>
       <div
-<<<<<<< HEAD
         className="events-guest-card-content"
         style={{ transform: `translateX(${offset}px)`, transition: 'transform 0.15s ease' }}
-=======
-        className="events-guest-card-content delete-row-hover-target"
-        style={{ transform: `translateX(${effectiveSwipeOffset}px)`, transition: 'transform 0.15s ease' }}
->>>>>>> origin/main
         onClick={handleContentClick}
         {...handlers}
       >
@@ -299,7 +292,6 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
     }
   };
 
-<<<<<<< HEAD
   const handleDelete = (profile) => {
     if (!canManageGuests) return;
     const name = getGuestDisplayName(profile) || 'diesen Gast';
@@ -319,40 +311,6 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
         }
       },
       onUndo: () => {},
-=======
-  const { notifyDeleted, undo, pendingName } = useUndoableDelete();
-
-  const handleDelete = async (profile) => {
-    if (!canManageGuests) return;
-    const name = getGuestDisplayName(profile) || 'diesen Gast';
-    try {
-      // Admin deleting another user's guest: pass their ownerId through.
-      if (profile.ownerId && profile.ownerId !== currentUser.id) {
-        await deleteGuestProfile(currentUser.id, profile.id, profile.ownerId);
-      } else {
-        await deleteGuestProfile(currentUser.id, profile.id);
-      }
-    } catch (err) {
-      console.error('Error deleting guest profile:', err);
-      return;
-    }
-    notifyDeleted({
-      id: `${profile.ownerId || ''}_${profile.id}`,
-      name,
-      undo: async () => {
-        // eslint-disable-next-line no-unused-vars
-        const { id, ownerId, ...payload } = profile;
-        try {
-          if (profile.ownerId && profile.ownerId !== currentUser.id) {
-            await saveGuestProfile(currentUser.id, payload, profile.id, profile.ownerId);
-          } else {
-            await saveGuestProfile(currentUser.id, payload, profile.id);
-          }
-        } catch (err) {
-          console.error('Error restoring guest profile:', err);
-        }
-      },
->>>>>>> origin/main
     });
   };
 
@@ -754,7 +712,6 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
         </div>
       ))}
       <OverviewAddFab onClick={openNew} title="Gast anlegen" ariaLabel="Gast anlegen" />
-      <UndoSnackbar itemName={pendingName} onUndo={undo} />
     </div>
   );
 }

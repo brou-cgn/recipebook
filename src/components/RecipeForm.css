@@ -951,7 +951,6 @@
   z-index: 1;
 }
 
-<<<<<<< HEAD
 .undo-snackbar {
   display: flex;
   align-items: center;
@@ -982,8 +981,6 @@
   text-decoration: underline;
 }
 
-=======
->>>>>>> origin/main
 .add-item-button .button-icon-image {
   width: 1.4rem;
   height: 1.4rem;

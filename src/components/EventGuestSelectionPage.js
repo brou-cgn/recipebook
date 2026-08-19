@@ -4,22 +4,9 @@ import { subscribeToGuestProfiles } from '../utils/eventsFirestore';
 import { getGuestDisplayName } from '../utils/guestPreferences';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
-<<<<<<< HEAD
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
-import useUndoableDelete from '../hooks/useUndoableDelete';
-=======
 import DeleteRowButton from './DeleteRowButton';
-import UndoSnackbar from './UndoSnackbar';
 import useUndoableDelete from '../hooks/useUndoableDelete';
-
-// Matches the swipe-to-delete gesture and delete button behavior used for
-// drinks (see DrinkRow in EventDrinkSelectionPage.js): swiping left reveals
-// the delete button on the right; on desktop the static button next to the
-// row stays visible instead (no touch events to trigger the swipe).
-const SWIPE_DELETE_THRESHOLD = 56;
-const SWIPE_DELETE_MAX_OFFSET = 96;
-const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
->>>>>>> origin/main
 
 function GuestRow({
   fullName,
@@ -117,7 +104,6 @@ function EventGuestSelectionPage({
   const effectiveButtonIcons = buttonIcons || DEFAULT_BUTTON_ICONS;
   const effectiveOwnerId = ownerId || currentUser?.id;
   const swipeDeleteIcon = getEffectiveIcon(effectiveButtonIcons, 'swipeDelete', isDarkMode) || '🗑';
-  const { notifyDeleted, undo, pendingName } = useUndoableDelete();
 
   useEffect(() => {
     if (!effectiveOwnerId) return undefined;
@@ -150,7 +136,6 @@ function EventGuestSelectionPage({
     );
   };
 
-<<<<<<< HEAD
   const handleRemoveGuest = (guest) => {
     const fullName = getGuestDisplayName(guest) || 'Unbenannter Gast';
     scheduleDelete({
@@ -158,20 +143,6 @@ function EventGuestSelectionPage({
       message: `"${fullName}" entfernt.`,
       onConfirm: () => toggleGuest(guest.id),
       onUndo: () => {},
-=======
-  const handleRemoveGuest = (guestId, fullName) => {
-    const wasDriver = driverGuestIds.includes(guestId);
-    toggleGuest(guestId);
-    notifyDeleted({
-      id: guestId,
-      name: fullName,
-      undo: () => {
-        setSelectedGuestIds((prev) => (prev.includes(guestId) ? prev : [...prev, guestId]));
-        if (wasDriver) {
-          setDriverGuestIds((prev) => (prev.includes(guestId) ? prev : [...prev, guestId]));
-        }
-      },
->>>>>>> origin/main
     });
   };
 
@@ -279,11 +250,7 @@ function EventGuestSelectionPage({
                     isDriver={driverGuestIds.includes(guest.id)}
                     isDeleteVisible={isDeleteVisible}
                     onToggleDriver={() => toggleDriverGuest(guest.id)}
-<<<<<<< HEAD
                     onRemove={() => handleRemoveGuest(guest)}
-=======
-                    onRemove={() => handleRemoveGuest(guest.id, fullName)}
->>>>>>> origin/main
                     onSwipeDeleteVisible={() => setSwipeDeleteVisibleId(guest.id)}
                     onSwipeDeleteHidden={() =>
                       setSwipeDeleteVisibleId((prev) => (prev === guest.id ? null : prev))
@@ -370,7 +337,6 @@ function EventGuestSelectionPage({
           getEffectiveIcon(effectiveButtonIcons, 'cancelRecipe', isDarkMode)
         )}
       </button>
-      <UndoSnackbar itemName={pendingName} onUndo={undo} />
     </div>
   );
 }
