@@ -138,6 +138,7 @@ function DrinkRow({
   const swipeDirectionLockedRef = useRef(null);
   const isSwipingRef = useRef(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
+  const [factorInput, setFactorInput] = useState(factor.toFixed(2));
 
   const effectiveSwipeOffset = isDeleteVisible ? -SWIPE_DELETE_MAX_OFFSET : swipeOffset;
 
@@ -277,11 +278,16 @@ function DrinkRow({
           <div className="events-drink-row-factor">
             <input
               type="number"
+              inputMode="decimal"
               min={minFactor}
               max={maxFactor}
               step="0.01"
-              value={factor.toFixed(2)}
-              onChange={(e) => onUpdateFactor(e.target.value)}
+              value={factorInput}
+              onChange={(e) => {
+                setFactorInput(e.target.value);
+                onUpdateFactor(e.target.value);
+              }}
+              onBlur={() => setFactorInput(factor.toFixed(2))}
               aria-label={`${displayName} Faktor`}
             />
           </div>

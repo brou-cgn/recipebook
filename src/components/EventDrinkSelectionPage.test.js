@@ -270,6 +270,49 @@ describe('EventDrinkSelectionPage', () => {
     expect(onSave).toHaveBeenCalledWith(['custom-wasser'], {}, {}, 25);
   });
 
+  test('allows typing intermediate partial values into the factor field without resetting to default', () => {
+    render(
+      <EventDrinkSelectionPage
+        customDrinks={customDrinks}
+        customDrinkIds={['custom-wasser']}
+        guestPreferenceMultipliers={{}}
+        selectedGuestIds={[]}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />,
+    );
+
+    const input = screen.getByRole('spinbutton', { name: 'Wasser (eigen) Faktor' });
+    // Typing "0.5" goes through intermediate states that are out of the
+    // valid 0.1–2.0 range or not yet parseable ("0", "0."). The field must
+    // keep showing what was typed instead of snapping back to "1.00".
+    fireEvent.change(input, { target: { value: '0' } });
+    expect(input).toHaveValue(0);
+    fireEvent.change(input, { target: { value: '0.' } });
+    expect(input).toHaveValue(null);
+    fireEvent.change(input, { target: { value: '0.5' } });
+    expect(input).toHaveValue(0.5);
+  });
+
+  test('reformats the factor field to the normalized value on blur', () => {
+    render(
+      <EventDrinkSelectionPage
+        customDrinks={customDrinks}
+        customDrinkIds={['custom-wasser']}
+        guestPreferenceMultipliers={{}}
+        selectedGuestIds={[]}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />,
+    );
+
+    const input = screen.getByRole('spinbutton', { name: 'Wasser (eigen) Faktor' });
+    fireEvent.change(input, { target: { value: '4' } });
+    fireEvent.blur(input);
+
+    expect(input).toHaveValue(1);
+  });
+
   test('calls onBack when Abbrechen button is clicked', () => {
     const onBack = jest.fn();
     render(
