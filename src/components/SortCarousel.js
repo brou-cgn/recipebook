@@ -9,17 +9,10 @@ export const SORT_OPTIONS = [
   { id: 'index', label: 'Nach Relevanz' },
 ];
 
-// How long the carousel stays expanded on first mount, giving the user a
-// glance at all the options before it folds down to just the active pill.
-const MOUNT_COLLAPSE_DELAY_MS = 1400;
-
-// How long it stays expanded after the user picks an option, so the
-// selection is visible for a moment before the pill bar folds away.
-const SELECT_COLLAPSE_DELAY_MS = 900;
-
-// How long it stays expanded after the user opens it without selecting
-// anything (scrolling, tapping the active pill, or focusing it).
-const EXPAND_COLLAPSE_DELAY_MS = 2600;
+// How long the carousel stays expanded after the user stops interacting
+// with it (scrolling, tapping the active pill, or focusing it) before it
+// collapses back down to just the active pill.
+const COLLAPSE_DELAY_MS = 1200;
 
 // Collapsing shrinks the inactive pills' max-width to 0 (see
 // SortCarousel.css), which can shrink the scroll container's content
@@ -41,9 +34,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
   const collapseTimer = useRef(null);
   const ignoreScrollTimer = useRef(null);
   const ignoreScroll = useRef(false);
-  // Starts expanded so the user sees all options at a glance, then folds
-  // down to the active pill on its own (see MOUNT_COLLAPSE_DELAY_MS below).
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   const activeIndex = SORT_OPTIONS.findIndex((o) => o.id === activeSort);
   const safeIndex = activeIndex >= 0 ? activeIndex : 0;
@@ -80,29 +71,18 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
     setExpanded(false);
   }, [suppressScroll]);
 
-  const scheduleCollapse = useCallback(
-    (delay) => {
-      clearTimeout(collapseTimer.current);
-      collapseTimer.current = setTimeout(collapseNow, delay);
-    },
-    [collapseNow]
-  );
-
-  // Reveal all options briefly on mount, then fold down to the active pill.
-  useEffect(() => {
-    scheduleCollapse(MOUNT_COLLAPSE_DELAY_MS);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const scheduleCollapse = useCallback(() => {
+    clearTimeout(collapseTimer.current);
+    collapseTimer.current = setTimeout(collapseNow, COLLAPSE_DELAY_MS);
+  }, [collapseNow]);
 
   const handleSelect = useCallback(
     (id) => {
       if (id !== activeSort) onSortChange?.(id);
-      // Keep it expanded a moment so the new selection is visible before
-      // folding away, instead of collapsing instantly.
-      setExpanded(true);
-      scheduleCollapse(SELECT_COLLAPSE_DELAY_MS);
+      clearTimeout(collapseTimer.current);
+      collapseNow();
     },
-    [activeSort, onSortChange, scheduleCollapse]
+    [activeSort, onSortChange, collapseNow]
   );
 
   const onKeyDown = useCallback(
@@ -124,7 +104,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
   const handleScroll = useCallback(() => {
     if (ignoreScroll.current) return;
     setExpanded(true);
-    scheduleCollapse(EXPAND_COLLAPSE_DELAY_MS);
+    scheduleCollapse();
   }, [scheduleCollapse]);
 
   // Lets mouse, keyboard and screen-reader users reach the other pills
@@ -135,7 +115,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
       collapseNow();
     } else {
       setExpanded(true);
-      scheduleCollapse(EXPAND_COLLAPSE_DELAY_MS);
+      scheduleCollapse();
     }
   }, [expanded, collapseNow, scheduleCollapse]);
 
@@ -147,7 +127,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
   const handleBlur = useCallback(
     (e) => {
       if (e.currentTarget.contains(e.relatedTarget)) return;
-      scheduleCollapse(EXPAND_COLLAPSE_DELAY_MS);
+      scheduleCollapse();
     },
     [scheduleCollapse]
   );

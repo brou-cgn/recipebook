@@ -86,25 +86,13 @@ describe('SortCarousel', () => {
       jest.useRealTimers();
     });
 
-    test('starts expanded, showing all pills, then folds down to the active pill on its own', () => {
+    test('starts collapsed, showing only the active pill', () => {
       render(<SortCarousel activeSort="alphabetical" onSortChange={() => {}} />);
-      expect(screen.getByRole('tablist')).toHaveClass('sort-carousel--expanded');
-
-      act(() => {
-        jest.advanceTimersByTime(1400);
-      });
       expect(screen.getByRole('tablist')).not.toHaveClass('sort-carousel--expanded');
     });
 
     test('a native scroll event (the swipe gesture) expands the carousel', () => {
       render(<SortCarousel activeSort="alphabetical" onSortChange={() => {}} />);
-      // Past both the mount collapse (1400ms) and the scroll-suppression
-      // window it triggers (400ms), so this scroll reads as a real swipe.
-      act(() => {
-        jest.advanceTimersByTime(1800);
-      });
-      expect(screen.getByRole('tablist')).not.toHaveClass('sort-carousel--expanded');
-
       fireEvent.scroll(screen.getByRole('tablist'));
       expect(screen.getByRole('tablist')).toHaveClass('sort-carousel--expanded');
     });
@@ -112,9 +100,6 @@ describe('SortCarousel', () => {
     test('tapping the active pill toggles the expanded state without selecting', () => {
       const handleChange = jest.fn();
       render(<SortCarousel activeSort="alphabetical" onSortChange={handleChange} />);
-      act(() => {
-        jest.advanceTimersByTime(1400);
-      });
       const activeTab = screen.getByRole('tab', { name: 'Alphabetisch' });
 
       fireEvent.click(activeTab);
@@ -138,23 +123,21 @@ describe('SortCarousel', () => {
       // jsdom does not pair with a focusout on its own.
       fireEvent.focusOut(activeTab, { relatedTarget: null });
       act(() => {
-        jest.advanceTimersByTime(2600);
+        jest.advanceTimersByTime(1200);
       });
       expect(tablist).not.toHaveClass('sort-carousel--expanded');
     });
 
-    test('selecting an option keeps it expanded briefly, then collapses', () => {
+    test('selecting an option collapses the carousel again', () => {
       const handleChange = jest.fn();
       render(<SortCarousel activeSort="alphabetical" onSortChange={handleChange} />);
       const tablist = screen.getByRole('tablist');
 
-      fireEvent.click(screen.getByRole('tab', { name: 'Im Trend' }));
-      expect(handleChange).toHaveBeenCalledWith('trending');
+      fireEvent.scroll(tablist);
       expect(tablist).toHaveClass('sort-carousel--expanded');
 
-      act(() => {
-        jest.advanceTimersByTime(900);
-      });
+      fireEvent.click(screen.getByRole('tab', { name: 'Im Trend' }));
+      expect(handleChange).toHaveBeenCalledWith('trending');
       expect(tablist).not.toHaveClass('sort-carousel--expanded');
     });
 
@@ -163,10 +146,10 @@ describe('SortCarousel', () => {
       render(<SortCarousel activeSort="alphabetical" onSortChange={handleChange} />);
       const tablist = screen.getByRole('tablist');
 
+      fireEvent.scroll(tablist);
+      expect(tablist).toHaveClass('sort-carousel--expanded');
+
       fireEvent.click(screen.getByRole('tab', { name: 'Nach Relevanz' }));
-      act(() => {
-        jest.advanceTimersByTime(900);
-      });
       expect(tablist).not.toHaveClass('sort-carousel--expanded');
 
       // The collapse CSS transition shrinking the other pills can itself
