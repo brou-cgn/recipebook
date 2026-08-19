@@ -137,6 +137,7 @@ function DrinkRow({ drink, displayName, ownerName, canManage, onEdit, onDelete, 
           {!drink.predefined && canManage && (
             <DeleteRowButton
               itemName={displayName}
+              className="drink-list-item-delete-btn"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(drink);

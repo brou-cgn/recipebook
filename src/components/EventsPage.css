@@ -1884,7 +1884,24 @@
   transition: transform 0.15s ease;
 }
 
-<<<<<<< HEAD
+/* Mobile: the delete button is only revealed via the left-swipe gesture,
+   mirroring the guest card's swipe-to-delete. Compounded with
+   .delete-row-button so this wins regardless of CSS import order between
+   this file and DeleteRowButton.css. */
+@media (max-width: 768px) {
+  .delete-row-button.drink-list-item-delete-btn {
+    display: none;
+  }
+}
+
+/* Desktop: no touch swipe, so the static delete button stays visible and
+   the swipe reveal background never engages. */
+@media (min-width: 769px) {
+  .drink-swipe-delete-background {
+    display: none;
+  }
+}
+
 .undo-snackbar {
   display: flex;
   align-items: center;
@@ -1914,9 +1931,6 @@
 .undo-snackbar-btn:focus-visible {
   text-decoration: underline;
 }
-
-=======
->>>>>>> origin/main
 /* ── Swipe-Delete für Event-Karten (gleiches Pattern wie bei Getränken) ── */
 
 .events-card-swipe-wrapper {
