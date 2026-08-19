@@ -2076,6 +2076,10 @@
   color: #DF7A00;
 }
 
+[data-theme="dark"] .menu-item-events.active {
+  color: #2F5D50;
+}
+
 [data-theme="dark"] .menu-user-name {
   color: #e8e8e8;
 }

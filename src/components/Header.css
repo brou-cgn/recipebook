@@ -437,6 +437,10 @@
   color: #DF7A00;
 }
 
+.menu-item-events.active {
+  color: #2F5D50;
+}
+
 .menu-user-info {
   padding: 0.75rem 1rem;
   display: flex;
