@@ -55,9 +55,8 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
   const canManageGuests = canEditRecipes(currentUser);
   const closeIcon = getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode) || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode);
 
-  // Admin-only: browse all users' guest profiles instead of just the current user's own.
+  // Admin: always browse all users' guest profiles instead of just the current user's own.
   const isAdmin = currentUser?.isAdmin === true;
-  const [showAllGuests, setShowAllGuests] = useState(false);
   const [allProfiles, setAllProfiles] = useState([]);
   const [allProfilesLoading, setAllProfilesLoading] = useState(true);
   const [allUsers, setAllUsers] = useState([]);
@@ -68,13 +67,13 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
   }, [isAdmin]);
 
   useEffect(() => {
-    if (!isAdmin || !showAllGuests) return undefined;
+    if (!isAdmin) return undefined;
     const unsubscribe = subscribeToAllGuestProfiles((loaded) => {
       setAllProfiles(loaded);
       setAllProfilesLoading(false);
     });
     return unsubscribe;
-  }, [isAdmin, showAllGuests]);
+  }, [isAdmin]);
 
   const getOwnerFirstName = (ownerId) => {
     if (!ownerId) return null;
@@ -542,28 +541,7 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
         )}
       </div>
 
-      {isAdmin && (
-        <div className="events-manage-links">
-          <button
-            type="button"
-            className="events-manage-link-btn"
-            aria-pressed={!showAllGuests}
-            onClick={() => setShowAllGuests(false)}
-          >
-            Meine Gäste
-          </button>
-          <button
-            type="button"
-            className="events-manage-link-btn"
-            aria-pressed={showAllGuests}
-            onClick={() => setShowAllGuests(true)}
-          >
-            Alle Anwender
-          </button>
-        </div>
-      )}
-
-      {showAllGuests && isAdmin ? (
+      {isAdmin ? (
         allProfilesLoading ? (
           <div className="events-empty-state">Laden...</div>
         ) : sortedAllProfiles.length === 0 ? (

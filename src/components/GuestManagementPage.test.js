@@ -341,12 +341,23 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
   describe('admin cross-user guest visibility', () => {
     const adminUser = { id: 'admin1', isAdmin: true };
 
-    test('non-admins do not see the "Alle Anwender" toggle', () => {
+    test('non-admins do not see the "Meine Gäste"/"Alle Anwender" toggle', () => {
       render(<GuestManagementPage currentUser={currentUser} />);
       expect(screen.queryByRole('button', { name: 'Alle Anwender' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Meine Gäste' })).not.toBeInTheDocument();
     });
 
-    test('admin can switch to "Alle Anwender" and edit/delete another user\'s guest', async () => {
+    test('admin does not see the "Meine Gäste"/"Alle Anwender" toggle either', () => {
+      mockSubscribeToAllGuestProfiles.mockImplementation((cb) => {
+        cb([]);
+        return jest.fn();
+      });
+      render(<GuestManagementPage currentUser={adminUser} />);
+      expect(screen.queryByRole('button', { name: 'Alle Anwender' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Meine Gäste' })).not.toBeInTheDocument();
+    });
+
+    test('admin immediately sees all users\' guests and can edit/delete another user\'s guest', async () => {
       window.confirm = jest.fn(() => true);
       mockSubscribeToAllGuestProfiles.mockImplementation((cb) => {
         cb([
@@ -365,8 +376,6 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
       });
 
       render(<GuestManagementPage currentUser={adminUser} />);
-
-      fireEvent.click(screen.getByRole('button', { name: 'Alle Anwender' }));
 
       expect(await screen.findByText('Ben Beispiel')).toBeInTheDocument();
 
@@ -389,7 +398,7 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
       });
     });
 
-    test('admin deleting another user\'s guest passes the owner id through', () => {
+    test('admin deleting another user\'s guest passes the owner id through', async () => {
       window.confirm = jest.fn(() => true);
       mockSubscribeToAllGuestProfiles.mockImplementation((cb) => {
         cb([
@@ -399,9 +408,8 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
       });
 
       render(<GuestManagementPage currentUser={adminUser} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Alle Anwender' }));
 
-      fireEvent.click(screen.getByRole('button', { name: 'Ben Beispiel löschen' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Ben Beispiel löschen' }));
 
       expect(mockDeleteGuestProfile).toHaveBeenCalledWith(adminUser.id, 'g1', 'other-user');
     });
