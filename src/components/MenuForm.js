@@ -86,6 +86,7 @@ function SortableSection({
   isDrinksSection, drinkSearchQueries, onDrinkSearchChange, onAddDrinkToSection,
   onAddRecipeToDrinksSection, onRemoveDrinkFromSection, getFilteredDrinkSectionOptions,
   getDrinkDisplayName, eventDrinks = [], onRemoveEventDrink, onDragEndDrinks,
+  showOwnDrinksOnly, onToggleShowOwnDrinksOnly,
 }) {
   const {
     attributes,
@@ -320,6 +321,20 @@ function SortableSection({
               </div>
             )}
           </div>
+          <div className="drink-own-filter-row">
+            <label className="drink-own-filter-label">
+              <span>Eigene Getränke</span>
+              <span className="drink-own-filter-toggle drink-own-filter-toggle--brown">
+                <input
+                  type="checkbox"
+                  checked={showOwnDrinksOnly}
+                  onChange={(e) => onToggleShowOwnDrinksOnly(e.target.checked)}
+                  aria-label="Nur eigene Getränke in der Suche anzeigen"
+                />
+                <span className="drink-own-filter-toggle-slider" aria-hidden="true" />
+              </span>
+            </label>
+          </div>
         </div>
       )}
       <div className="section-summary">
@@ -468,6 +483,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [availableEvents, setAvailableEvents] = useState([]);
   const [userCustomDrinks, setUserCustomDrinks] = useState([]);
   const [drinkSearchQueries, setDrinkSearchQueries] = useState({});
+  const [showOwnDrinksOnly, setShowOwnDrinksOnly] = useState(true);
   const [newEventDrinkIds, setNewEventDrinkIds] = useState([]);
   const [preparingNewEvent, setPreparingNewEvent] = useState(false);
 
@@ -699,6 +715,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       // offered as their underlying recipe in recipeOptions above - listing
       // both would show the same name twice.
       .filter((drink) => !decodeRecipeLink(drink.name))
+      .filter((drink) => !showOwnDrinksOnly || !drink.ownerId || drink.ownerId === currentUser?.id)
       .map((drink) => ({ type: 'drink', id: drink.id, drink, searchLabel: resolveDrinkDisplay(drink, recipes).displayName }));
 
     const combinedOptions = [...recipeOptions, ...drinkOptions];
@@ -1662,6 +1679,8 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                   eventDrinks={section.name?.toLowerCase() === 'drinks' ? orderedEventDrinks : []}
                   onRemoveEventDrink={handleRemoveEventDrink}
                   onDragEndDrinks={handleDragEndDrinks}
+                  showOwnDrinksOnly={showOwnDrinksOnly}
+                  onToggleShowOwnDrinksOnly={setShowOwnDrinksOnly}
                 />
                 {isMobile && (
                   <div className="add-section-gap">
