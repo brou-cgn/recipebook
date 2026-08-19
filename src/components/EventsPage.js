@@ -105,9 +105,8 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [selectedEventOwnerId, setSelectedEventOwnerId] = useState(currentUser?.id ?? null);
   const [fallbackEvent, setFallbackEvent] = useState(null); // used right after calculation, before onSnapshot syncs
-  // Admin-only: browse all users' events instead of just the current user's own.
+  // Admins always see every user's events instead of just their own.
   const isAdmin = currentUser?.isAdmin === true;
-  const [showAllEvents, setShowAllEvents] = useState(false);
   const [allEvents, setAllEvents] = useState([]);
   const [allEventsLoading, setAllEventsLoading] = useState(true);
   const [allUsers, setAllUsers] = useState([]);
@@ -151,13 +150,13 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
   }, [isAdmin]);
 
   useEffect(() => {
-    if (!isAdmin || !showAllEvents) return undefined;
+    if (!isAdmin) return undefined;
     const unsubscribe = subscribeToAllEvents((loadedEvents) => {
       setAllEvents(loadedEvents);
       setAllEventsLoading(false);
     });
     return unsubscribe;
-  }, [isAdmin, showAllEvents]);
+  }, [isAdmin]);
 
   // Deep link from a push notification: jump straight to the consumption form.
   useEffect(() => {
@@ -521,28 +520,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
         )}
       </div>
 
-      {isAdmin && (
-        <div className="events-manage-links">
-          <button
-            type="button"
-            className="events-manage-link-btn"
-            aria-pressed={!showAllEvents}
-            onClick={() => setShowAllEvents(false)}
-          >
-            Meine Events
-          </button>
-          <button
-            type="button"
-            className="events-manage-link-btn"
-            aria-pressed={showAllEvents}
-            onClick={() => setShowAllEvents(true)}
-          >
-            Alle Anwender
-          </button>
-        </div>
-      )}
-
-      {showAllEvents && isAdmin ? (
+      {isAdmin ? (
         allEventsLoading ? (
           <div className="events-empty-state">Laden...</div>
         ) : allEvents.length === 0 ? (

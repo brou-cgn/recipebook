@@ -595,12 +595,12 @@ describe('EventsPage', () => {
   describe('admin cross-user event visibility', () => {
     const adminUser = { id: 'admin1', isAdmin: true };
 
-    test('non-admins do not see the "Alle Anwender" toggle', () => {
+    test('non-admins do not see events from other users', () => {
       render(<EventsPage currentUser={currentUser} />);
-      expect(screen.queryByRole('button', { name: 'Alle Anwender' })).not.toBeInTheDocument();
+      expect(mockSubscribeToAllEvents).not.toHaveBeenCalled();
     });
 
-    test('admin can switch to "Alle Anwender" and edit another user\'s event', async () => {
+    test('admins always see all users\' events and can edit another user\'s event', async () => {
       const othersEvent = {
         id: 'e1',
         eventName: 'Fremdes Fest',
@@ -619,7 +619,6 @@ describe('EventsPage', () => {
 
       render(<EventsPage currentUser={adminUser} />);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Alle Anwender' }));
       expect(await screen.findByText('Fremdes Fest')).toBeInTheDocument();
 
       fireEvent.click(screen.getByText('Fremdes Fest'));
