@@ -484,6 +484,13 @@
   overflow: hidden;
   border-radius: 6px;
   margin-bottom: 0.5rem;
+  /* iOS Safari can fail to clip an overflow:hidden + border-radius parent
+     around a translateX'd sibling (the swiped content), leaving the red
+     .swipe-delete-background's right corners square instead of following
+     this radius. Forcing a mask (a no-op everywhere else) makes the clip
+     reliable so the fully-swiped row's right corners stay rounded and red
+     all the way into the corner instead of showing a square notch. */
+  -webkit-mask-image: -webkit-radial-gradient(#fff, #000);
 }
 
 .selected-recipe-item-content {
@@ -537,6 +544,10 @@
   left: auto;
   width: 6rem;
   border-radius: 6px;
+  /* Pull the icon in from RecipeForm.css's base 0.85rem so more of the red
+     fill sits behind the rounded right corners instead of just the icon's
+     hit area. */
+  padding-right: 0.5rem;
 }
 
 /* Square off the two corners that face each other across the field/red
