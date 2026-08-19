@@ -70,8 +70,8 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
   const [date, setDate] = useState(initialEvent?.date ?? todayIsoDate());
   const [startTime, setStartTime] = useState(initialEvent?.startTime ?? currentHourStartTime());
   const [durationHours, setDurationHours] = useState(initialEvent?.durationHours ?? 4);
-  const [adults, setAdults] = useState(initialEvent?.guests?.adults ?? 10);
-  const [children, setChildren] = useState(initialEvent?.guests?.children ?? 0);
+  const [adults, setAdults] = useState(initialEvent?.guests?.adults ?? '');
+  const [children, setChildren] = useState(initialEvent?.guests?.children ?? '');
   const [eventType, setEventType] = useState(initialEvent?.eventType ?? 'familienfeier');
   const [customDrinkIds, setCustomDrinkIds] = useState(initialEvent?.customDrinkIds ?? []);
   const [drinkDistributionFactors, setDrinkDistributionFactors] = useState(initialEvent?.drinkDistributionFactors ?? {});
@@ -154,10 +154,6 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
     e.preventDefault();
     if (!eventName.trim() || !date || !durationHours) {
       setError('Bitte Name, Datum und Dauer angeben.');
-      return;
-    }
-    if (customDrinkIds.length === 0) {
-      setError('Bitte mindestens ein eigenes Getränk auswählen.');
       return;
     }
     setSaving(true);
