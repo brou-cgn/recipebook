@@ -107,6 +107,7 @@
   background: white;
   position: relative;
   z-index: 1;
+  border-radius: 10px;
 }
 
 .events-guest-card .events-card-main {
@@ -122,6 +123,7 @@
 .events-guest-card .swipe-delete-background {
   opacity: 1;
   pointer-events: auto;
+  border-radius: 10px;
 }
 
 .events-guest-delete-btn {
