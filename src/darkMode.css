@@ -3901,6 +3901,18 @@
   color: #7fb8a3;
 }
 
+[data-theme="dark"] .drink-list-item-header h3.drink-list-item-title--foreign {
+  color: #ccc;
+}
+
+[data-theme="dark"] .drink-add-units-name {
+  color: #7fb8a3;
+}
+
+[data-theme="dark"] .drink-existing-einheiten-list {
+  color: #bbb;
+}
+
 [data-theme="dark"] .drink-category-group-header {
   color: #7fb8a3;
 }

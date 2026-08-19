@@ -81,6 +81,45 @@ export const mergePredefinedDrinks = (customDrinks = [], currentUserId = null) =
   return [...mergedPredefined, ...customById.values()];
 };
 
+/**
+ * Merge per-user "additional units" into the drinks they extend.
+ *
+ * Any user may maintain their own extra Einheiten for a drink owned by
+ * someone else without being able to write to that owner's document (the
+ * Firestore rules only let a drink's own owner/admin write it). Instead,
+ * an addition is stored as an ordinary customDrinks doc under the
+ * contributing user's own path, reusing the target drink's id and carrying
+ * `extendsOwnerId` (the target drink's owner) to mark it as an addition
+ * rather than a standalone drink. Addition docs never appear on their own
+ * in the merged list – each is folded into its target drink's `einheiten`,
+ * tagged with `addedByUserId` so callers can tell who contributed it.
+ *
+ * @param {Array} rawDrinks - Raw customDrinks docs, each annotated with
+ *   `ownerId` (as produced by subscribeToAllCustomDrinks/getAllCustomDrinks).
+ */
+export const mergeDrinkUnitAdditions = (rawDrinks = []) => {
+  const list = Array.isArray(rawDrinks) ? rawDrinks : [];
+  const additions = list.filter((drink) => drink.extendsOwnerId);
+  const drinks = list.filter((drink) => !drink.extendsOwnerId);
+
+  return drinks.map((drink) => {
+    const ownAdditions = additions.filter(
+      (addition) => addition.extendsOwnerId === drink.ownerId && addition.id === drink.id
+    );
+    if (ownAdditions.length === 0) return drink;
+    const addedEinheiten = ownAdditions.flatMap((addition) =>
+      (Array.isArray(addition.einheiten) ? addition.einheiten : []).map((einheit) => ({
+        ...einheit,
+        addedByUserId: addition.ownerId,
+      }))
+    );
+    return {
+      ...drink,
+      einheiten: [...(Array.isArray(drink.einheiten) ? drink.einheiten : []), ...addedEinheiten],
+    };
+  });
+};
+
 export const getDrinkCategoryLabel = (kategorieId) => {
   for (const cat of DRINK_CATEGORIES) {
     if (cat.id === kategorieId) return cat.label;

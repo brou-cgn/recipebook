@@ -835,9 +835,12 @@ describe('DrinkManagementPage', () => {
       expect(screen.getByRole('heading', { level: 2, name: 'Getränk bearbeiten' })).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
 
-      // Someone else's drink is not clickable into the edit form.
+      // Someone else's drink is not clickable into the full edit form – it
+      // opens the "add my own units" form instead.
       fireEvent.click(screen.getByText('Papas Wein'));
       expect(screen.queryByRole('heading', { level: 2, name: 'Getränk bearbeiten' })).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 2, name: 'Zusätzliche Einheiten' })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
 
       // Someone else's drink can't be swiped open for deletion either.
       const othersDrinkContent = screen.getByText('Papas Wein').closest('.drink-swipe-content');
@@ -853,6 +856,64 @@ describe('DrinkManagementPage', () => {
       render(<DrinkManagementPage currentUser={currentUser} />);
 
       expect(screen.getByText('Mineralwasser')).toBeInTheDocument();
+    });
+
+    test('does not show the drink creator\'s name', () => {
+      mockOtherUsersDrinks();
+
+      render(<DrinkManagementPage currentUser={currentUser} />);
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Nur eigene Getränke anzeigen' }));
+
+      expect(screen.queryByText(/von /)).not.toBeInTheDocument();
+    });
+
+    test('a drink belonging to another user gets an anthracite heading instead of the default green', () => {
+      mockOtherUsersDrinks();
+
+      render(<DrinkManagementPage currentUser={currentUser} />);
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Nur eigene Getränke anzeigen' }));
+
+      expect(screen.getByText('Eigenes Bier')).not.toHaveClass('drink-list-item-title--foreign');
+      expect(screen.getByText('Papas Wein')).toHaveClass('drink-list-item-title--foreign');
+    });
+
+    test('saving additional units for another user\'s drink stores them under the current user, not the owner', async () => {
+      mockOtherUsersDrinks();
+      mockSaveCustomDrink.mockResolvedValue(undefined);
+
+      render(<DrinkManagementPage currentUser={currentUser} />);
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Nur eigene Getränke anzeigen' }));
+
+      fireEvent.click(screen.getByText('Papas Wein'));
+      expect(screen.getByRole('heading', { level: 2, name: 'Zusätzliche Einheiten' })).toBeInTheDocument();
+      // No name/category fields to edit for a foreign drink.
+      expect(screen.queryByRole('textbox', { name: /Name/i })).not.toBeInTheDocument();
+
+      const einheitInput = screen.getByPlaceholderText('z. B. Glas, Flasche, Dose');
+      fireEvent.change(einheitInput, { target: { value: 'Piccolo' } });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+      await waitFor(() => {
+        expect(mockSaveCustomDrink).toHaveBeenCalledWith(
+          currentUser.id,
+          expect.objectContaining({
+            extendsOwnerId: 'u2',
+            einheiten: [expect.objectContaining({ einheit: 'Piccolo' })],
+          }),
+          'd2',
+        );
+      });
+    });
+
+    test('an admin keeps full edit access to another user\'s drink instead of the add-units form', () => {
+      mockOtherUsersDrinks();
+
+      render(<DrinkManagementPage currentUser={{ id: 'u1', isAdmin: true }} />);
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Nur eigene Getränke anzeigen' }));
+
+      fireEvent.click(screen.getByText('Papas Wein'));
+      expect(screen.getByRole('heading', { level: 2, name: 'Getränk bearbeiten' })).toBeInTheDocument();
     });
   });
 });

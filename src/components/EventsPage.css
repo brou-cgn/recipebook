@@ -1912,6 +1912,26 @@
   gap: 12px;
 }
 
+/* Drinks belonging to another user are visually distinguished from the
+   current user's own drinks (which keep the default green heading). */
+.drink-list-item-header h3.drink-list-item-title--foreign {
+  color: #383838;
+}
+
+.drink-add-units-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #2F5D50;
+}
+
+.drink-existing-einheiten-list {
+  margin: 4px 0 0;
+  padding: 0 0 0 20px;
+  color: #555;
+  font-size: 14px;
+}
+
 /* These row headers opt out of the shared row tint from DeleteRowButton.css —
    only the delete button itself should react when the row is hovered/focused. */
 .events-drink-row-header.delete-row-hover-target:hover,

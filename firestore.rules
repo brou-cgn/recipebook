@@ -186,6 +186,12 @@ service cloud.firestore {
     // Readable by any recognised user – drinks are a shared library visible to
     // everyone. Owners may create/update/delete their own entries; admins may
     // additionally edit/delete any user's entries.
+    //
+    // A doc carrying `extendsOwnerId` is not a standalone drink but another
+    // user's own "additional units" contribution to the drink owned by
+    // `extendsOwnerId` with the same `drinkId` (see mergeDrinkUnitAdditions
+    // in src/utils/drinkCategories.js). It still lives under its
+    // contributor's own path, so this rule already covers it without change.
     match /users/{userId}/customDrinks/{drinkId} {
       allow read: if isAnyUser();
       allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
