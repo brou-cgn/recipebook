@@ -305,6 +305,7 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
     expect(names).toEqual(['Anna Adler', 'Zora Adler', 'Bernd Zimmer']);
   });
 
+<<<<<<< HEAD
   test('clicking the delete button on a guest card hides the guest immediately and deletes it once the undo window passes', async () => {
     jest.useFakeTimers();
     try {
@@ -314,9 +315,20 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
         ]);
         return jest.fn();
       });
+=======
+  test('clicking the delete button on a guest card deletes the guest immediately without a confirm dialog', () => {
+    window.confirm = jest.fn(() => true);
+    mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
+      cb([
+        { id: 'g1', vorname: 'Anna', nachname: 'Adler', alkoholischeGetränke: true, bevorzugteGetränke: [], bevorzugteKategorien: [], präferenzFaktor: 0.5 },
+      ]);
+      return jest.fn();
+    });
+>>>>>>> origin/main
 
       render(<GuestManagementPage currentUser={currentUser} />);
 
+<<<<<<< HEAD
       fireEvent.click(screen.getByRole('button', { name: 'Anna Adler löschen' }));
 
       expect(screen.queryByText('Anna Adler')).not.toBeInTheDocument();
@@ -330,6 +342,12 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
     } finally {
       jest.useRealTimers();
     }
+=======
+    fireEvent.click(screen.getByRole('button', { name: 'Anna Adler entfernen' }));
+
+    expect(window.confirm).not.toHaveBeenCalled();
+    expect(mockDeleteGuestProfile).toHaveBeenCalledWith('u1', 'g1');
+>>>>>>> origin/main
   });
 
   test('delete button click does not trigger the edit form to open', () => {
@@ -342,7 +360,7 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
 
     render(<GuestManagementPage currentUser={currentUser} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Anna Adler löschen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Anna Adler entfernen' }));
 
     expect(screen.queryByRole('heading', { name: 'Gast bearbeiten' })).not.toBeInTheDocument();
   });
@@ -367,7 +385,6 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
     });
 
     test('admin immediately sees all users\' guests and can edit/delete another user\'s guest', async () => {
-      window.confirm = jest.fn(() => true);
       mockSubscribeToAllGuestProfiles.mockImplementation((cb) => {
         cb([
           {
@@ -388,7 +405,7 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
 
       expect(await screen.findByText('Ben Beispiel')).toBeInTheDocument();
 
-      const deleteBtn = screen.getByRole('button', { name: 'Ben Beispiel löschen' });
+      const deleteBtn = screen.getByRole('button', { name: 'Ben Beispiel entfernen' });
       expect(deleteBtn).toBeInTheDocument();
 
       // Clicking the card opens the edit form for the other user's guest.
@@ -408,6 +425,7 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
     });
 
     test('admin deleting another user\'s guest passes the owner id through', async () => {
+<<<<<<< HEAD
       jest.useFakeTimers();
       try {
         mockSubscribeToAllGuestProfiles.mockImplementation((cb) => {
@@ -416,10 +434,22 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
           ]);
           return jest.fn();
         });
+=======
+      mockSubscribeToAllGuestProfiles.mockImplementation((cb) => {
+        cb([
+          { id: 'g1', vorname: 'Ben', nachname: 'Beispiel', ownerId: 'other-user' },
+        ]);
+        return jest.fn();
+      });
+>>>>>>> origin/main
 
         render(<GuestManagementPage currentUser={adminUser} />);
 
+<<<<<<< HEAD
         fireEvent.click(await screen.findByRole('button', { name: 'Ben Beispiel löschen' }));
+=======
+      fireEvent.click(await screen.findByRole('button', { name: 'Ben Beispiel entfernen' }));
+>>>>>>> origin/main
 
         await act(async () => {
           jest.advanceTimersByTime(6000);

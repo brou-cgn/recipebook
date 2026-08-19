@@ -185,7 +185,7 @@ describe('MenuForm - Drinks section manual drink selection', () => {
 
     expect(await screen.findByText('Ausgewählte Rezepte & Getränke:')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTitle('Getränk entfernen'));
+    fireEvent.click(screen.getByTitle('Cola entfernen'));
 
     await waitFor(() => {
       expect(screen.queryByText('Ausgewählte Rezepte & Getränke:')).not.toBeInTheDocument();
@@ -514,12 +514,12 @@ describe('MenuForm - linked event drinks display', () => {
     );
 
     expect(await screen.findByText('Ausgewählte Rezepte & Getränke:')).toBeInTheDocument();
-    expect(screen.queryByTitle('Getränk aus Event entfernen')).not.toBeInTheDocument();
+    expect(screen.getAllByTitle('Mojito entfernen')).toHaveLength(1);
 
-    fireEvent.click(screen.getByTitle('Rezept entfernen'));
+    fireEvent.click(screen.getByTitle('Mojito entfernen'));
 
     expect(screen.queryByText('Mojito')).not.toBeInTheDocument();
-    expect(screen.queryByTitle('Getränk aus Event entfernen')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Mojito entfernen')).not.toBeInTheDocument();
   });
 
   test('removing a drink that is both manually added and in the linked event removes it in one click, not two', async () => {
@@ -553,12 +553,12 @@ describe('MenuForm - linked event drinks display', () => {
 
     expect(await screen.findByText('Ausgewählte Rezepte & Getränke:')).toBeInTheDocument();
     expect(screen.getAllByText('Cola')).toHaveLength(1);
-    expect(screen.queryByTitle('Getränk entfernen')).not.toBeInTheDocument();
+    expect(screen.getAllByTitle('Cola entfernen')).toHaveLength(1);
 
-    fireEvent.click(screen.getByTitle('Getränk aus Event entfernen'));
+    fireEvent.click(screen.getByTitle('Cola entfernen'));
 
     expect(screen.queryByText('Cola')).not.toBeInTheDocument();
-    expect(screen.queryByTitle('Getränk entfernen')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Cola entfernen')).not.toBeInTheDocument();
   });
 });
 

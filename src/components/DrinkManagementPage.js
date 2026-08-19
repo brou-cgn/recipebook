@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './EventsPage.css';
 import { subscribeToAllCustomDrinks, saveCustomDrink, deleteCustomDrink } from '../utils/eventsFirestore';
 import OverviewAddFab from './OverviewAddFab';
+import DeleteRowButton from './DeleteRowButton';
+import UndoSnackbar from './UndoSnackbar';
+import useUndoableDelete from '../hooks/useUndoableDelete';
 import RecipeTypeahead from './RecipeTypeahead';
 import { DRINK_CATEGORIES, getDrinkCategoryLabel, mergePredefinedDrinks } from '../utils/drinkCategories';
 import { getCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
@@ -56,6 +59,13 @@ const isDrinkRecipe = (recipe) =>
     ? recipe.speisekategorie.includes(DRINK_RECIPE_CATEGORY)
     : recipe?.speisekategorie === DRINK_RECIPE_CATEGORY;
 
+<<<<<<< HEAD
+=======
+const SWIPE_DELETE_THRESHOLD = 56;
+const SWIPE_DELETE_MAX_OFFSET = 96;
+const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
+
+>>>>>>> origin/main
 const UNIT_SIZES = [
   { label: '200 ml', value: 0.2 },
   { label: '330 ml', value: 0.33 },
@@ -122,7 +132,18 @@ function DrinkRow({ drink, displayName, ownerName, canManage, onEdit, onDelete, 
         onClick={offset < 0 || !canManage ? undefined : () => onEdit(drink)}
         {...handlers}
       >
-        <h3>{displayName}</h3>
+        <div className="drink-list-item-header delete-row-hover-target">
+          <h3>{displayName}</h3>
+          {!drink.predefined && canManage && (
+            <DeleteRowButton
+              itemName={displayName}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(drink);
+              }}
+            />
+          )}
+        </div>
         <p className="events-card-meta">
           {[
             drink.kategorie ? getDrinkCategoryLabel(drink.kategorie) : null,
@@ -158,7 +179,11 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [fabPressed, setFabPressed] = useState(false);
   const [cancelPressed, setCancelPressed] = useState(false);
+<<<<<<< HEAD
   const { banners: deleteBanners, pendingKeys: pendingDeleteKeys, scheduleDelete, undoDelete } = useUndoableDelete();
+=======
+  const { notifyDeleted, undo, pendingName } = useUndoableDelete();
+>>>>>>> origin/main
   const [showOwnOnly, setShowOwnOnly] = useState(true);
   const formRef = useRef(null);
 
@@ -347,6 +372,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
     }
   };
 
+<<<<<<< HEAD
   const handleDelete = (drink) => {
     const ownerId = drink.ownerId || currentUser.id;
     const deletedDisplayName = resolveDrinkDisplay(drink, recipes).displayName;
@@ -361,6 +387,28 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
         }
       },
       onUndo: () => {},
+=======
+  const handleDelete = async (drink) => {
+    const displayName = resolveDrinkDisplay(drink, recipes).displayName;
+    try {
+      await deleteCustomDrink(drink.ownerId || currentUser.id, drink.id);
+    } catch (err) {
+      console.error('Error deleting custom drink:', err);
+      return;
+    }
+    notifyDeleted({
+      id: `${drink.ownerId || ''}_${drink.id}`,
+      name: displayName,
+      undo: async () => {
+        // eslint-disable-next-line no-unused-vars
+        const { id, ownerId, predefined, ...payload } = drink;
+        try {
+          await saveCustomDrink(drink.ownerId || currentUser.id, payload, drink.id);
+        } catch (err) {
+          console.error('Error restoring custom drink:', err);
+        }
+      },
+>>>>>>> origin/main
     });
   };
 
@@ -718,6 +766,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
           )}
         </div>
       )}
+<<<<<<< HEAD
       {deleteBanners.map((banner) => (
         <div key={banner.id} className="undo-snackbar" role="status">
           <span>{banner.message}</span>
@@ -726,7 +775,10 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
           </button>
         </div>
       ))}
+=======
+>>>>>>> origin/main
       <OverviewAddFab onClick={openNew} title="Getränk anlegen" ariaLabel="Getränk anlegen" />
+      <UndoSnackbar itemName={pendingName} onUndo={undo} />
     </div>
   );
 }

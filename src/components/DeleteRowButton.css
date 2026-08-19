@@ -1,0 +1,96 @@
+/* Unified row-delete button (see DeleteRowButton.js).
+   Resting state stays quiet on purpose - red is reserved for hover/focus. */
+.delete-row-button {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(74, 52, 34, 0.38);
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+/* Hit area >= 32px without growing the visible circle. */
+.delete-row-button::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .delete-row-button::before {
+    inset: -8px;
+  }
+}
+
+/* The row the button lives in should add this class to its hoverable
+   container so it gets the row tint and the icon darkens with it. */
+.delete-row-hover-target:hover,
+.delete-row-hover-target:focus-within {
+  background: rgba(120, 84, 52, 0.07);
+}
+
+.delete-row-hover-target:hover .delete-row-button:not(:hover):not(:focus-visible),
+.delete-row-hover-target:focus-within .delete-row-button:not(:hover):not(:focus-visible) {
+  color: rgba(74, 52, 34, 0.62);
+}
+
+.delete-row-button:hover,
+.delete-row-button:active,
+.delete-row-button:focus-visible {
+  color: #a33a26;
+  background: rgba(163, 58, 38, 0.12);
+}
+
+.delete-row-button:focus-visible {
+  outline: 2px solid rgba(163, 58, 38, 0.5);
+  outline-offset: 2px;
+}
+
+/* Narrow / touch viewports have no hover to reveal the row tint, so keep
+   the icon reachably visible at all times instead of only on rest alpha. */
+@media (max-width: 768px), (hover: none), (pointer: coarse) {
+  .delete-row-button {
+    color: rgba(74, 52, 34, 0.62);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .delete-row-button {
+    transition: none;
+  }
+}
+
+[data-theme="dark"] .delete-row-button {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+[data-theme="dark"] .delete-row-hover-target:hover,
+[data-theme="dark"] .delete-row-hover-target:focus-within {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .delete-row-hover-target:hover .delete-row-button:not(:hover):not(:focus-visible),
+[data-theme="dark"] .delete-row-hover-target:focus-within .delete-row-button:not(:hover):not(:focus-visible) {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+[data-theme="dark"] .delete-row-button:hover,
+[data-theme="dark"] .delete-row-button:active,
+[data-theme="dark"] .delete-row-button:focus-visible {
+  color: #ff8a72;
+  background: rgba(255, 114, 90, 0.18);
+}
+
+@media (max-width: 768px), (hover: none), (pointer: coarse) {
+  [data-theme="dark"] .delete-row-button {
+    color: rgba(255, 255, 255, 0.62);
+  }
+}

@@ -4,7 +4,12 @@ import UnitChip from './UnitChip';
 import { getEffectiveIcon, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
+<<<<<<< HEAD
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
+=======
+import DeleteRowButton from './DeleteRowButton';
+import UndoSnackbar from './UndoSnackbar';
+>>>>>>> origin/main
 import useUndoableDelete from '../hooks/useUndoableDelete';
 
 const MIN_DISTRIBUTION_FACTOR = 0.1;
@@ -172,21 +177,13 @@ function DrinkRow({
         style={swipeContentStyle}
         {...handlers}
       >
-        <div className="events-drink-row-header">
+        <div className="events-drink-row-header delete-row-hover-target">
           <div className="events-drink-row-name">{displayName}</div>
-          <button
-            type="button"
+          <DeleteRowButton
             className="events-drink-row-delete-btn"
+            itemName={displayName}
             onClick={onRemove}
-            aria-label={`${displayName} löschen`}
-            title="Getränk entfernen"
-          >
-            {isBase64Image(swipeDeleteIcon) ? (
-              <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
-            ) : (
-              <span className="swipe-delete-icon-text">{swipeDeleteIcon || '🗑'}</span>
-            )}
-          </button>
+          />
         </div>
         <div className="events-drink-row-details">
           <div className="events-drink-row-einheiten">
@@ -267,7 +264,11 @@ function EventDrinkSelectionPage({
   const [swipeDeleteVisibleId, setSwipeDeleteVisibleId] = useState(null);
   const [fabPressed, setFabPressed] = useState(false);
   const [cancelPressed, setCancelPressed] = useState(false);
+<<<<<<< HEAD
   const { banners: deleteBanners, pendingKeys: pendingDeleteKeys, scheduleDelete, undoDelete } = useUndoableDelete();
+=======
+  const { notifyDeleted, undo, pendingName } = useUndoableDelete();
+>>>>>>> origin/main
 
   const toggleCustomDrink = (id) => {
     setCustomDrinkIds((prev) => {
@@ -301,6 +302,26 @@ function EventDrinkSelectionPage({
         current.add(idx);
       }
       return { ...prev, [drinkId]: current };
+    });
+  };
+
+  const handleRemoveDrink = (drinkId, displayName) => {
+    const priorFactor = drinkDistributionFactors[drinkId];
+    const priorEinheiten = drinkSelectedEinheiten[drinkId];
+    toggleCustomDrink(drinkId);
+    notifyDeleted({
+      id: drinkId,
+      name: displayName,
+      undo: () => {
+        setCustomDrinkIds((prev) => (prev.includes(drinkId) ? prev : [...prev, drinkId]));
+        if (priorFactor !== undefined) {
+          setDrinkDistributionFactors((prev) => ({ ...prev, [drinkId]: priorFactor }));
+        }
+        setDrinkSelectedEinheiten((prev) => ({
+          ...prev,
+          [drinkId]: priorEinheiten ? new Set(priorEinheiten) : new Set([0]),
+        }));
+      },
     });
   };
 
@@ -422,7 +443,11 @@ function EventDrinkSelectionPage({
                         isDeleteVisible={isDeleteVisible}
                         onToggleEinheit={(idx) => toggleEinheit(drink.id, idx)}
                         onUpdateFactor={(val) => updateDistributionFactor(drink.id, val)}
+<<<<<<< HEAD
                         onRemove={() => handleRemoveDrink(drink)}
+=======
+                        onRemove={() => handleRemoveDrink(drink.id, resolveDrinkDisplay(drink, recipes).displayName)}
+>>>>>>> origin/main
                         onSwipeDeleteVisible={() => setSwipeDeleteVisibleId(drink.id)}
                         onSwipeDeleteHidden={() => setSwipeDeleteVisibleId((prev) => prev === drink.id ? null : prev)}
                         minFactor={MIN_DISTRIBUTION_FACTOR}
@@ -512,6 +537,7 @@ function EventDrinkSelectionPage({
           getEffectiveIcon(effectiveButtonIcons, 'cancelRecipe', isDarkMode)
         )}
       </button>
+      <UndoSnackbar itemName={pendingName} onUndo={undo} />
     </div>
   );
 }

@@ -2028,7 +2028,7 @@ describe('RecipeForm - Swipe Delete', () => {
     fireEvent.click(deleteButton);
 
     await waitFor(() => expect(screen.getAllByPlaceholderText(/Zutat/)).toHaveLength(1));
-    expect(screen.getByText('Zutat gelöscht.')).toBeInTheDocument();
+    expect(screen.getByText('„Milch" entfernt')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Zutat 1')).toHaveValue('Mehl');
   });
 
@@ -2073,7 +2073,7 @@ describe('RecipeForm - Swipe Delete', () => {
     fireEvent.click(deleteButton);
 
     await waitFor(() => expect(screen.getAllByPlaceholderText(/Schritt/)).toHaveLength(1));
-    expect(screen.getByText('Schritt gelöscht.')).toBeInTheDocument();
+    expect(screen.getByText('„Mischen" entfernt')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Schritt 1')).toHaveValue('Backen');
   });
 
@@ -2116,7 +2116,11 @@ describe('RecipeForm - Swipe Delete', () => {
     expect(screen.getByPlaceholderText('Zutat 1')).toHaveValue('');
   });
 
+<<<<<<< HEAD
   test('auto-hides delete banners after 6 seconds (CLAUDE.md undo-snackbar spec) and allows multiple banners', async () => {
+=======
+  test('undo snackbar shows only one at a time and auto-hides after 6 seconds', async () => {
+>>>>>>> origin/main
     jest.useFakeTimers();
     try {
       render(
@@ -2135,9 +2139,12 @@ describe('RecipeForm - Swipe Delete', () => {
       swipeLeft(screen.getByPlaceholderText('Zutat 2'));
       fireEvent.click(await screen.findByRole('button', { name: 'Zutat löschen' }));
 
+      expect(screen.getByText('„Mehl" entfernt')).toBeInTheDocument();
+
       swipeLeft(screen.getByPlaceholderText('Zutat 1'));
       fireEvent.click(await screen.findByRole('button', { name: 'Zutat löschen' }));
 
+<<<<<<< HEAD
       await waitFor(() => expect(screen.getAllByText('Zutat gelöscht.')).toHaveLength(2));
       expect(screen.getAllByRole('button', { name: 'Rückgängig' })).toHaveLength(2);
 
@@ -2148,10 +2155,18 @@ describe('RecipeForm - Swipe Delete', () => {
 
       act(() => {
         jest.advanceTimersByTime(1);
+=======
+      // A new deletion replaces the previous snackbar - only one is shown at a time.
+      expect(screen.queryByText('„Mehl" entfernt')).not.toBeInTheDocument();
+      expect(screen.getByText('„Milch" entfernt')).toBeInTheDocument();
+
+      act(() => {
+        jest.advanceTimersByTime(6000);
+>>>>>>> origin/main
       });
 
       await waitFor(() => {
-        expect(screen.queryByText('Zutat gelöscht.')).not.toBeInTheDocument();
+        expect(screen.queryByText('„Milch" entfernt')).not.toBeInTheDocument();
       });
     } finally {
       jest.useRealTimers();
@@ -2609,7 +2624,7 @@ describe('RecipeForm - Drag and Drop', () => {
     expect(inputWrapper.contains(handle)).toBe(true);
   });
 
-  test('does not render inline x remove buttons for ingredients and steps', () => {
+  test('renders the delete button outside the input field, not inline in the text', () => {
     const regularUser = {
       id: 'user-1',
       vorname: 'Regular',
@@ -2628,8 +2643,15 @@ describe('RecipeForm - Drag and Drop', () => {
       />
     );
 
-    expect(screen.queryByLabelText('Zutat entfernen')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Schritt entfernen')).not.toBeInTheDocument();
+    const ingredientDeleteButton = screen.getByLabelText('Zutat entfernen');
+    expect(ingredientDeleteButton).toBeInTheDocument();
+    expect(ingredientDeleteButton.closest('.input-wrapper')).toBeNull();
+    expect(ingredientDeleteButton.closest('.form-list-item-delete-col')).not.toBeNull();
+
+    const stepDeleteButton = screen.getByLabelText('Schritt entfernen');
+    expect(stepDeleteButton).toBeInTheDocument();
+    expect(stepDeleteButton.closest('.input-wrapper')).toBeNull();
+    expect(stepDeleteButton.closest('.form-list-item-delete-col')).not.toBeNull();
   });
 });
 
