@@ -17,6 +17,7 @@ import DrinkManagementPage from './DrinkManagementPage';
 import DeleteRowButton from './DeleteRowButton';
 import UndoSnackbar from './UndoSnackbar';
 import useUndoableDelete from '../hooks/useUndoableDelete';
+import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import {
   DndContext,
   closestCenter,
@@ -89,7 +90,7 @@ function SortableSection({
   isDrinksSection, drinkSearchQueries, onDrinkSearchChange, onAddDrinkToSection,
   onAddRecipeToDrinksSection, onRemoveDrinkFromSection, getFilteredDrinkSectionOptions,
   getDrinkDisplayName, eventDrinks = [], onRemoveEventDrink, onDragEndDrinks,
-  showOwnDrinksOnly, onToggleShowOwnDrinksOnly,
+  showOwnDrinksOnly, onToggleShowOwnDrinksOnly, swipeDeleteIcon,
 }) {
   const {
     attributes,
@@ -162,6 +163,7 @@ function SortableSection({
               isFavorite={isFavorite}
               sectionIndex={sectionIndex}
               onRemove={onRemoveRecipeFromSection}
+              swipeDeleteIcon={swipeDeleteIcon}
             />
           );
         })}
@@ -223,6 +225,7 @@ function SortableSection({
                           else if (item.type === 'event') onRemoveEventDrink(item.id, item.displayName);
                           else onRemoveDrinkFromSection(sectionIndex, item.id, item.displayName);
                         }}
+                        swipeDeleteIcon={swipeDeleteIcon}
                       />
                     ))}
                   </SortableContext>
@@ -350,7 +353,7 @@ function SortableSection({
 }
 
 // Sortable Recipe Item Component for menu sections
-function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex }) {
+function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex, swipeDeleteIcon }) {
   const {
     attributes,
     listeners,
@@ -360,35 +363,65 @@ function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex }) 
     isDragging,
   } = useSortable({ id });
 
+  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete();
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+  };
+  const swipeContentStyle = {
+    transform: `translateX(${offset}px)`,
+    transition: isDragging ? transition : 'transform 0.15s ease',
+  };
+
+  const handleSwipeDeleteClick = () => {
+    onRemove(sectionIndex, recipe.id, recipe.title);
+    reset();
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`selected-recipe-item delete-row-hover-target ${isDragging ? 'dragging' : ''}`}
+      className={`selected-recipe-item ${isDragging ? 'dragging' : ''}${offset < 0 ? ' swipe-delete-active' : ''}`}
     >
-      <button
-        type="button"
-        className="drag-handle"
-        {...attributes}
-        {...listeners}
-        aria-label="Rezept verschieben"
-      >
-        ⋮⋮
-      </button>
-      <span className="recipe-name">
-        {recipe.title}
-        {isFavorite && <span className="favorite-indicator">★</span>}
-      </span>
-      <DeleteRowButton
-        itemName={recipe.title}
-        onClick={() => onRemove(sectionIndex, recipe.id, recipe.title)}
-      />
+      <div className="swipe-delete-background" aria-hidden={!isDeleteVisible}>
+        {isDeleteVisible && (
+          <button
+            type="button"
+            className="swipe-delete-action"
+            onClick={handleSwipeDeleteClick}
+            aria-label={`${recipe.title} entfernen`}
+          >
+            {isBase64Image(swipeDeleteIcon) ? (
+              <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
+            ) : (
+              <span className="swipe-delete-icon-text">{swipeDeleteIcon || '🗑'}</span>
+            )}
+          </button>
+        )}
+      </div>
+      <div className="selected-recipe-item-content delete-row-hover-target" style={swipeContentStyle}>
+        <button
+          type="button"
+          className="drag-handle"
+          {...attributes}
+          {...listeners}
+          aria-label="Rezept verschieben"
+        >
+          ⋮⋮
+        </button>
+        <span className="recipe-name" {...handlers}>
+          {recipe.title}
+          {isFavorite && <span className="favorite-indicator">★</span>}
+        </span>
+        <DeleteRowButton
+          itemName={recipe.title}
+          className="selected-recipe-item-delete-btn"
+          onClick={() => onRemove(sectionIndex, recipe.id, recipe.title)}
+        />
+      </div>
     </div>
   );
 }
@@ -396,7 +429,7 @@ function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex }) 
 // Sortable item for the menu's "Drinks" section, which mixes drink recipes,
 // event-linked drinks, and manually added drinks in a single freely
 // reorderable list (see getDrinksSectionItems).
-function SortableDrinkItem({ id, displayName, isFavorite, onRemove }) {
+function SortableDrinkItem({ id, displayName, isFavorite, onRemove, swipeDeleteIcon }) {
   const {
     attributes,
     listeners,
@@ -406,32 +439,65 @@ function SortableDrinkItem({ id, displayName, isFavorite, onRemove }) {
     isDragging,
   } = useSortable({ id });
 
+  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete();
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+  };
+  const swipeContentStyle = {
+    transform: `translateX(${offset}px)`,
+    transition: isDragging ? transition : 'transform 0.15s ease',
+  };
+
+  const handleSwipeDeleteClick = () => {
+    onRemove();
+    reset();
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`selected-recipe-item delete-row-hover-target ${isDragging ? 'dragging' : ''}`}
+      className={`selected-recipe-item ${isDragging ? 'dragging' : ''}${offset < 0 ? ' swipe-delete-active' : ''}`}
     >
-      <button
-        type="button"
-        className="drag-handle"
-        {...attributes}
-        {...listeners}
-        aria-label="Eintrag verschieben"
-      >
-        ⋮⋮
-      </button>
-      <span className="recipe-name">
-        {displayName}
-        {isFavorite && <span className="favorite-indicator">★</span>}
-      </span>
-      <DeleteRowButton itemName={displayName} onClick={onRemove} />
+      <div className="swipe-delete-background" aria-hidden={!isDeleteVisible}>
+        {isDeleteVisible && (
+          <button
+            type="button"
+            className="swipe-delete-action"
+            onClick={handleSwipeDeleteClick}
+            aria-label={`${displayName} entfernen`}
+          >
+            {isBase64Image(swipeDeleteIcon) ? (
+              <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
+            ) : (
+              <span className="swipe-delete-icon-text">{swipeDeleteIcon || '🗑'}</span>
+            )}
+          </button>
+        )}
+      </div>
+      <div className="selected-recipe-item-content delete-row-hover-target" style={swipeContentStyle}>
+        <button
+          type="button"
+          className="drag-handle"
+          {...attributes}
+          {...listeners}
+          aria-label="Eintrag verschieben"
+        >
+          ⋮⋮
+        </button>
+        <span className="recipe-name" {...handlers}>
+          {displayName}
+          {isFavorite && <span className="favorite-indicator">★</span>}
+        </span>
+        <DeleteRowButton
+          itemName={displayName}
+          className="selected-recipe-item-delete-btn"
+          onClick={onRemove}
+        />
+      </div>
     </div>
   );
 }
@@ -1692,6 +1758,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                   favoriteIds={favoriteIds}
                   searchQueries={searchQueries}
                   closeIcon={getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode) || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode)}
+                  swipeDeleteIcon={getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode) || '🗑'}
                   onRemoveSection={handleRemoveSection}
                   onDragEndRecipes={handleDragEndRecipes}
                   onRemoveRecipeFromSection={handleRemoveRecipeFromSection}
