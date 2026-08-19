@@ -491,7 +491,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 0.75rem;
-  background: #f9f6f3;
+  background: #fff;
+  border: 1px solid #e0d5c7;
   border-radius: 6px;
   gap: 0.5rem;
   position: relative;
