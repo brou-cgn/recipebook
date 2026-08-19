@@ -653,20 +653,30 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
     <div className="events-page-container">
       <div className="events-page-header">
         <h2>Gäste verwalten</h2>
-        {onBack && (
+        <div className="events-page-header-actions">
           <button
-            className="app-close-button"
-            onClick={onBack}
-            aria-label="Gäste verwalten schließen"
-            title="Gäste verwalten schließen"
+            type="button"
+            className="events-primary-btn events-header-add-btn"
+            onClick={openNew}
+            aria-label="Neuen Gast anlegen"
           >
-            {isBase64Image(closeIcon) ? (
-              <img src={closeIcon} alt="Gäste verwalten schließen" className="app-close-button-icon-img" />
-            ) : (
-              closeIcon || '×'
-            )}
+            + Gast
           </button>
-        )}
+          {onBack && (
+            <button
+              className="app-close-button"
+              onClick={onBack}
+              aria-label="Gäste verwalten schließen"
+              title="Gäste verwalten schließen"
+            >
+              {isBase64Image(closeIcon) ? (
+                <img src={closeIcon} alt="Gäste verwalten schließen" className="app-close-button-icon-img" />
+              ) : (
+                closeIcon || '×'
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       {isAdmin ? (
