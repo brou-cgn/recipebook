@@ -22,6 +22,14 @@ import {
 import { httpsCallable } from 'firebase/functions';
 import { mergeDrinkUnitAdditions } from './drinkCategories';
 
+// Additional-units contribution docs (see mergeDrinkUnitAdditions) never carry
+// a `name` field. Firestore excludes any document missing an orderBy field
+// from the query results entirely, so collection-group queries over
+// customDrinks must not sort by `name` in Firestore or those contributions
+// would never come back. Sort client-side instead.
+const sortDrinksByName = (drinks) =>
+  [...drinks].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'de', { sensitivity: 'base' }));
+
 export const EVENT_CATEGORIES = [
   'wasser', 'softdrinks', 'saft', 'bier', 'wein', 'sekt', 'spirituosen', 'kaffee', 'tee',
 ];
@@ -292,13 +300,12 @@ export const subscribeToCustomDrinks = (uid, callback) => {
  */
 export const subscribeToAllCustomDrinks = (callback) => {
   const ref = collectionGroup(db, 'customDrinks');
-  const q = query(ref, orderBy('name', 'asc'));
-  return onSnapshot(q, (snapshot) => {
+  return onSnapshot(ref, (snapshot) => {
     const drinks = [];
     snapshot.forEach((docSnap) => {
       drinks.push({ id: docSnap.id, ...docSnap.data(), ownerId: docSnap.ref.parent.parent.id });
     });
-    callback(mergeDrinkUnitAdditions(drinks));
+    callback(sortDrinksByName(mergeDrinkUnitAdditions(drinks)));
   }, (error) => {
     console.error('Error subscribing to all customDrinks:', error);
     callback([]);
@@ -314,13 +321,12 @@ export const subscribeToAllCustomDrinks = (callback) => {
 export const getAllCustomDrinks = async () => {
   try {
     const ref = collectionGroup(db, 'customDrinks');
-    const q = query(ref, orderBy('name', 'asc'));
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(ref);
     const drinks = [];
     snapshot.forEach((docSnap) => {
       drinks.push({ id: docSnap.id, ...docSnap.data(), ownerId: docSnap.ref.parent.parent.id });
     });
-    return mergeDrinkUnitAdditions(drinks);
+    return sortDrinksByName(mergeDrinkUnitAdditions(drinks));
   } catch (error) {
     console.error('Error getting all customDrinks:', error);
     return [];

@@ -143,6 +143,37 @@ describe('subscribeToAllCustomDrinks', () => {
 
     expect(cb).toHaveBeenCalledWith([]);
   });
+
+  it('does not order the collection-group query by name, since Firestore drops any document missing that field from the results – which would silently exclude every nameless additional-units doc', () => {
+    const groupRef = { __marker: 'customDrinks-group' };
+    mockCollectionGroup.mockReturnValue(groupRef);
+    mockOnSnapshot.mockImplementation((_ref, cb) => {
+      cb(createSnapshot([]));
+      return jest.fn();
+    });
+
+    subscribeToAllCustomDrinks(jest.fn());
+
+    expect(mockQuery).not.toHaveBeenCalled();
+    expect(mockOrderBy).not.toHaveBeenCalled();
+    expect(mockOnSnapshot).toHaveBeenCalledWith(groupRef, expect.any(Function), expect.any(Function));
+  });
+
+  it('sorts the merged result by name client-side', () => {
+    const drinks = [
+      { id: 'd2', __ownerId: 'u1', name: 'Wasser', einheiten: [] },
+      { id: 'd1', __ownerId: 'u1', name: 'Apfelsaft', einheiten: [] },
+    ];
+    mockOnSnapshot.mockImplementation((_ref, cb) => {
+      cb(createSnapshot(drinks));
+      return jest.fn();
+    });
+
+    const cb = jest.fn();
+    subscribeToAllCustomDrinks(cb);
+
+    expect(cb.mock.calls[0][0].map((d) => d.name)).toEqual(['Apfelsaft', 'Wasser']);
+  });
 });
 
 describe('getAllCustomDrinks / getCustomDrinks', () => {
@@ -165,6 +196,18 @@ describe('getAllCustomDrinks / getCustomDrinks', () => {
         einheiten: [{ einheitsgroesse: 0.33, addedByUserId: 'u2' }],
       },
     ]);
+  });
+
+  it('getAllCustomDrinks does not order the collection-group query by name, since Firestore drops any document missing that field from the results – which would silently exclude every nameless additional-units doc', async () => {
+    const groupRef = { __marker: 'customDrinks-group' };
+    mockCollectionGroup.mockReturnValue(groupRef);
+    mockGetDocs.mockResolvedValue(createSnapshot([]));
+
+    await getAllCustomDrinks();
+
+    expect(mockQuery).not.toHaveBeenCalled();
+    expect(mockOrderBy).not.toHaveBeenCalled();
+    expect(mockGetDocs).toHaveBeenCalledWith(groupRef);
   });
 
   it('getCustomDrinks excludes this user\'s own additional-units contributions to someone else\'s drink', async () => {
