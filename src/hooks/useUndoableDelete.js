@@ -61,19 +61,30 @@ export default function useUndoableDelete(timeoutMs = UNDO_TIMEOUT_MS) {
   const notifyDeleted = useCallback(({ id, name, undo: onUndo }) => {
     const key = String(id);
     const message = `„${name}" entfernt`;
-    scheduleDelete({ key, message, onConfirm: () => {}, onUndo });
+    const bannerId = counterRef.current;
+    lastCompatIdRef.current = bannerId;
     lastCompatNameRef.current = name;
+    scheduleDelete({ key, message, onConfirm: () => {
+      if (lastCompatIdRef.current === bannerId) {
+        lastCompatIdRef.current = null;
+        lastCompatNameRef.current = null;
+      }
+    }, onUndo: () => {
+      if (lastCompatIdRef.current === bannerId) {
+        lastCompatIdRef.current = null;
+        lastCompatNameRef.current = null;
+      }
+      onUndo();
+    } });
   }, [scheduleDelete]);
 
   const undo = useCallback(() => {
-    // Undo the most recently scheduled deletion tracked via notifyDeleted.
-    const entries = entriesRef.current;
-    if (entries.size === 0) return;
-    const lastId = Math.max(...entries.keys());
-    undoDelete(lastId);
+    const bannerId = lastCompatIdRef.current;
+    if (bannerId === null) return;
+    undoDelete(bannerId);
   }, [undoDelete]);
 
-  const pendingName = banners.length > 0 ? lastCompatNameRef.current : null;
+  const pendingName = banners.some((b) => b.id === lastCompatIdRef.current) ? lastCompatNameRef.current : null;
 
   return { banners, pendingKeys, scheduleDelete, undoDelete, notifyDeleted, undo, pendingName };
 }
