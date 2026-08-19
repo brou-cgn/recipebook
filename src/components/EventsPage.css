@@ -671,6 +671,14 @@
   accent-color: #2F5D50;
 }
 
+.events-category-checkbox input[type="checkbox"],
+.events-driver-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 .events-preferred-drinks-list {
   display: flex;
   flex-wrap: wrap;
