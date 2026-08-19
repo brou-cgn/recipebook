@@ -128,24 +128,15 @@
 
 .events-guest-delete-btn {
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1px solid #ececec;
-  background: white;
-  color: #b3261e;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  margin-left: auto;
 }
 
 /* Mobile: the delete button is only revealed via the left-swipe gesture,
-   mirroring the "Zutat löschen" swipe-to-delete on the recipe edit page. */
+   mirroring the "Zutat löschen" swipe-to-delete on the recipe edit page.
+   Compounded with .delete-row-button so this wins regardless of CSS import
+   order between this file and DeleteRowButton.css. */
 @media (max-width: 768px) {
-  .events-guest-delete-btn {
+  .delete-row-button.events-guest-delete-btn {
     display: none;
   }
 }
@@ -156,17 +147,6 @@
   .events-guest-card .swipe-delete-background {
     display: none;
   }
-}
-
-.events-guest-delete-btn:hover {
-  background: #fdecea;
-  border-color: #f3b7b1;
-}
-
-.events-guest-delete-btn .swipe-delete-icon-image {
-  width: 1.1rem;
-  height: 1.1rem;
-  object-fit: contain;
 }
 
 .events-card-main h3 {
@@ -1495,36 +1475,14 @@
 }
 
 /* Delete button for desktop, where left-swipe-to-delete isn't available. */
-.events-drink-row-delete-btn {
+.delete-row-button.events-drink-row-delete-btn {
   display: none;
   flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 1px solid #ececec;
-  background: white;
-  color: #b3261e;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.events-drink-row-delete-btn:hover {
-  background: #fdecea;
-  border-color: #f3b7b1;
-}
-
-.events-drink-row-delete-btn .swipe-delete-icon-image {
-  width: 1rem;
-  height: 1rem;
-  object-fit: contain;
 }
 
 @media (min-width: 769px) {
-  .events-drink-row-delete-btn {
-    display: flex;
+  .delete-row-button.events-drink-row-delete-btn {
+    display: inline-flex;
   }
 }
 
@@ -1742,36 +1700,14 @@
 }
 
 /* Delete button for desktop, where left-swipe-to-delete isn't available. */
-.events-guest-row-delete-btn {
+.delete-row-button.events-guest-row-delete-btn {
   display: none;
   flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 1px solid #ececec;
-  background: white;
-  color: #b3261e;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.events-guest-row-delete-btn:hover {
-  background: #fdecea;
-  border-color: #f3b7b1;
-}
-
-.events-guest-row-delete-btn .swipe-delete-icon-image {
-  width: 1rem;
-  height: 1rem;
-  object-fit: contain;
 }
 
 @media (min-width: 769px) {
-  .events-guest-row-delete-btn {
-    display: flex;
+  .delete-row-button.events-guest-row-delete-btn {
+    display: inline-flex;
   }
 }
 
@@ -1789,6 +1725,13 @@
   position: relative;
   overflow: hidden;
   border-radius: 10px;
+}
+
+.drink-list-item-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .drink-list-item.swipe-delete-active .drink-swipe-delete-background {
@@ -1831,20 +1774,6 @@
   background: white;
   border-radius: 10px;
   transition: transform 0.15s ease;
-}
-
-.drink-delete-banner {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 0.75rem;
-  margin: 0.35rem 0 0.5rem;
-  padding: 0.5rem 0.7rem;
-  border: 1px solid #f0c5bf;
-  border-radius: 8px;
-  background: #fff5f4;
-  color: #8b2d21;
-  font-size: 0.9rem;
 }
 
 /* ── Swipe-Delete für Event-Karten (gleiches Pattern wie bei Getränken) ── */

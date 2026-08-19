@@ -3017,12 +3017,6 @@
   background: #a7372d;
 }
 
-[data-theme="dark"] .swipe-undo-banner {
-  background: #2b1b19;
-  border-color: #6b332c;
-  color: #f2b8af;
-}
-
 [data-theme="dark"] .swipe-undo-button {
   color: #f2b8af;
 }
@@ -3947,17 +3941,6 @@
   background: #1e1e1e;
 }
 
-[data-theme="dark"] .events-guest-delete-btn {
-  background: #2a2a2a;
-  border-color: #555;
-  color: #e8837a;
-}
-
-[data-theme="dark"] .events-guest-delete-btn:hover {
-  background: #3a2323;
-  border-color: #6b3a35;
-}
-
 [data-theme="dark"] .events-guest-typeahead-list {
   background: #262626;
   border-color: #555;
@@ -4176,17 +4159,6 @@
   color: #7fb8a3;
 }
 
-[data-theme="dark"] .events-drink-row-delete-btn {
-  background: #2a2a2a;
-  border-color: #555;
-  color: #e8837a;
-}
-
-[data-theme="dark"] .events-drink-row-delete-btn:hover {
-  background: #3a2323;
-  border-color: #6b3a35;
-}
-
 [data-theme="dark"] .events-drink-row-empty-label,
 [data-theme="dark"] .events-drink-row-single-unit {
   color: #999;
@@ -4251,17 +4223,6 @@
 
 [data-theme="dark"] .events-guest-row-name {
   color: #7fb8a3;
-}
-
-[data-theme="dark"] .events-guest-row-delete-btn {
-  background: #2a2a2a;
-  border-color: #555;
-  color: #e8837a;
-}
-
-[data-theme="dark"] .events-guest-row-delete-btn:hover {
-  background: #3a2323;
-  border-color: #6b3a35;
 }
 
 [data-theme="dark"] .events-guest-row-driver {

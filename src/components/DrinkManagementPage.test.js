@@ -761,7 +761,7 @@ describe('DrinkManagementPage', () => {
       });
     });
 
-    test('delete banner appears after deleting a drink', async () => {
+    test('undo snackbar appears after deleting a drink', async () => {
       mockDeleteCustomDrink.mockResolvedValue(undefined);
       mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
         cb([{ id: 'd1', name: 'Craft-Bier', kategorie: 'bier', einheiten: [] }]);
@@ -779,7 +779,7 @@ describe('DrinkManagementPage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Craft-Bier löschen' }));
 
       await waitFor(() => {
-        expect(screen.getByRole('status')).toHaveTextContent('"Craft-Bier" gelöscht.');
+        expect(screen.getByRole('status')).toHaveTextContent('„Craft-Bier" entfernt');
       });
     });
 

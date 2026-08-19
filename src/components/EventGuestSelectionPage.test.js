@@ -187,14 +187,14 @@ describe('EventGuestSelectionPage', () => {
     fireEvent.touchStart(annaRowContent, { touches: [{ clientX: 200, clientY: 100 }] });
     fireEvent.touchMove(annaRowContent, { touches: [{ clientX: 80, clientY: 100 }] });
     fireEvent.touchEnd(annaRowContent);
-    fireEvent.click(screen.getByLabelText('Anna Beispiel entfernen'));
+    fireEvent.click(annaRowContent.parentElement.querySelector('.events-guest-row-swipe-action'));
 
     expect(screen.getByText('0 Gäste ausgewählt.')).toBeInTheDocument();
     expect(screen.queryByText('Anna Beispiel', { selector: '.events-guest-row-name' })).not.toBeInTheDocument();
   });
 
   test('removes a guest via the always-visible desktop delete button, without swiping', () => {
-    render(
+    const { container } = render(
       <EventGuestSelectionPage
         currentUser={currentUser}
         selectedGuestIds={['g1']}
@@ -204,7 +204,7 @@ describe('EventGuestSelectionPage', () => {
       />
     );
 
-    fireEvent.click(screen.getByLabelText('Anna Beispiel löschen'));
+    fireEvent.click(container.querySelector('.events-guest-row-delete-btn'));
 
     expect(screen.getByText('0 Gäste ausgewählt.')).toBeInTheDocument();
     expect(screen.queryByText('Anna Beispiel', { selector: '.events-guest-row-name' })).not.toBeInTheDocument();
@@ -274,7 +274,7 @@ describe('EventGuestSelectionPage', () => {
       />
     );
 
-    fireEvent.click(screen.getByLabelText('Anna Beispiel löschen'));
+    fireEvent.click(screen.getByLabelText('Anna Beispiel entfernen'));
 
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 

@@ -15,6 +15,9 @@ import RecipeImportModal from './RecipeImportModal';
 import OcrScanModal from './OcrScanModal';
 import WebImportModal from './WebImportModal';
 import RecipeTypeahead from './RecipeTypeahead';
+import DeleteRowButton from './DeleteRowButton';
+import UndoSnackbar from './UndoSnackbar';
+import useUndoableDelete from '../hooks/useUndoableDelete';
 import {
   DndContext,
   closestCenter,
@@ -36,12 +39,6 @@ import { CSS } from '@dnd-kit/utilities';
 const SWIPE_DELETE_THRESHOLD = 56;
 const SWIPE_DELETE_MAX_OFFSET = 96;
 const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
-const DELETE_BANNER_TIMEOUT_MS = 10000;
-
-const clearBannerTimeouts = (bannerTimeoutsRef) => {
-  bannerTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
-  bannerTimeoutsRef.current.clear();
-};
 
 // Sortable Ingredient Item Component
 function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, onToggleType, swipeDeleteIcon }) {
@@ -178,7 +175,7 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
   };
 
   const handleSwipeDeleteClick = () => {
-    onRemove(index, { fromSwipe: true });
+    onRemove(index);
     resetSwipe();
   };
 
@@ -188,7 +185,7 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
     <div
       ref={setNodeRef}
       style={style}
-      className={`form-list-item ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}${effectiveSwipeOffset < 0 ? ' swipe-delete-active' : ''}`}
+      className={`form-list-item delete-row-hover-target ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}${effectiveSwipeOffset < 0 ? ' swipe-delete-active' : ''}`}
     >
       {canRemove && (
         <div className="swipe-delete-background" aria-hidden={!isDeleteActionVisible}>
@@ -233,6 +230,14 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
         >
           ⋮⋮
         </button>
+      </div>
+      <div className="form-list-item-delete-col">
+        {canRemove && (
+          <DeleteRowButton
+            itemName={isHeading ? (text || 'Überschrift') : (text || 'Zutat')}
+            onClick={() => onRemove(index)}
+          />
+        )}
       </div>
       {showContextMenu && (
         <>
@@ -393,7 +398,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
   };
 
   const handleSwipeDeleteClick = () => {
-    onRemove(index, { fromSwipe: true });
+    onRemove(index);
     resetSwipe();
   };
 
@@ -403,7 +408,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
     <div
       ref={setNodeRef}
       style={style}
-      className={`form-list-item ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}${effectiveSwipeOffset < 0 ? ' swipe-delete-active' : ''}`}
+      className={`form-list-item delete-row-hover-target ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}${effectiveSwipeOffset < 0 ? ' swipe-delete-active' : ''}`}
     >
       {canRemove && (
         <div className="swipe-delete-background" aria-hidden={!isDeleteActionVisible}>
@@ -446,6 +451,14 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
         >
           ⋮⋮
         </button>
+      </div>
+      <div className="form-list-item-delete-col">
+        {canRemove && (
+          <DeleteRowButton
+            itemName={isHeading ? (text || 'Überschrift') : (text || 'Schritt')}
+            onClick={() => onRemove(index)}
+          />
+        )}
       </div>
       {showContextMenu && (
         <>
@@ -521,11 +534,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const formRef = useRef(null);
   // Cancel button press state
   const [cancelPressed, setCancelPressed] = useState(false);
-  const [ingredientDeleteBanners, setIngredientDeleteBanners] = useState([]);
-  const [stepDeleteBanners, setStepDeleteBanners] = useState([]);
-  const ingredientDeleteBannerTimeoutsRef = useRef(new Map());
-  const stepDeleteBannerTimeoutsRef = useRef(new Map());
-  const swipeDeleteBannerCounterRef = useRef(0);
+  const { notifyDeleted: notifyRowDeleted, undo: undoRowDelete, pendingName: pendingRowDeleteName } = useUndoableDelete();
 
   // Nutrition reference rows for auto-assigning ingredient IDs
   const { rows: nutritionReferenceRows } = useNutritionReference();
@@ -768,28 +777,30 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     setIngredients([...ingredients, { type: 'ingredient', text: '' }]);
   };
 
-  const showTimedDeleteBanner = (setBanners, bannerTimeoutsRef, message) => {
-    const counter = swipeDeleteBannerCounterRef.current;
-    swipeDeleteBannerCounterRef.current = (counter + 1) % 100000;
-    const id = `swipe-delete-${Date.now()}-${counter}`;
-    setBanners((prev) => [...prev, { id, message }]);
-    const timeoutId = setTimeout(() => {
-      setBanners((prev) => prev.filter((banner) => banner.id !== id));
-      bannerTimeoutsRef.current.delete(id);
-    }, DELETE_BANNER_TIMEOUT_MS);
-    bannerTimeoutsRef.current.set(id, timeoutId);
-  };
+  const describeIngredient = (item) =>
+    item.type === 'heading' ? (item.text || 'Überschrift') : (item.text || 'Zutat');
 
-  const handleRemoveIngredient = (index, options = {}) => {
-    if (!ingredients[index]) return;
-    if (ingredients.length > 1) {
+  const handleRemoveIngredient = (index) => {
+    const removedItem = ingredients[index];
+    if (!removedItem) return;
+    const hadOthers = ingredients.length > 1;
+    if (hadOthers) {
       setIngredients(ingredients.filter((_, i) => i !== index));
     } else {
       setIngredients([{ type: 'ingredient', text: '' }]);
     }
-    if (options.fromSwipe) {
-      showTimedDeleteBanner(setIngredientDeleteBanners, ingredientDeleteBannerTimeoutsRef, 'Zutat gelöscht.');
-    }
+    notifyRowDeleted({
+      id: `ingredient-${index}`,
+      name: describeIngredient(removedItem),
+      undo: () => {
+        setIngredients((prev) => {
+          if (!hadOthers) return [removedItem];
+          const next = [...prev];
+          next.splice(Math.min(index, next.length), 0, removedItem);
+          return next;
+        });
+      },
+    });
   };
 
   const handleIngredientChange = (index, value) => {
@@ -833,22 +844,31 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     setSteps([...steps, { type: 'step', text: '' }]);
   };
 
-  const handleRemoveStep = (index, options = {}) => {
-    if (!steps[index]) return;
-    if (steps.length > 1) {
+  const describeStep = (item) =>
+    item.type === 'heading' ? (item.text || 'Überschrift') : (item.text || 'Schritt');
+
+  const handleRemoveStep = (index) => {
+    const removedItem = steps[index];
+    if (!removedItem) return;
+    const hadOthers = steps.length > 1;
+    if (hadOthers) {
       setSteps(steps.filter((_, i) => i !== index));
     } else {
       setSteps([{ type: 'step', text: '' }]);
     }
-    if (options.fromSwipe) {
-      showTimedDeleteBanner(setStepDeleteBanners, stepDeleteBannerTimeoutsRef, 'Schritt gelöscht.');
-    }
+    notifyRowDeleted({
+      id: `step-${index}`,
+      name: describeStep(removedItem),
+      undo: () => {
+        setSteps((prev) => {
+          if (!hadOthers) return [removedItem];
+          const next = [...prev];
+          next.splice(Math.min(index, next.length), 0, removedItem);
+          return next;
+        });
+      },
+    });
   };
-
-  useEffect(() => () => {
-    clearBannerTimeouts(ingredientDeleteBannerTimeoutsRef);
-    clearBannerTimeouts(stepDeleteBannerTimeoutsRef);
-  }, []);
 
   const handleStepChange = (index, value) => {
     const newSteps = [...steps];
@@ -1685,11 +1705,6 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               ))}
             </SortableContext>
           </DndContext>
-          {ingredientDeleteBanners.map((banner) => (
-            <div key={banner.id} className="swipe-undo-banner" role="status">
-              <span>{banner.message}</span>
-            </div>
-          ))}
           <button
             type="button"
             className="add-item-button add-item-button--ingredient"
@@ -1748,11 +1763,6 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               })}
             </SortableContext>
           </DndContext>
-          {stepDeleteBanners.map((banner) => (
-            <div key={banner.id} className="swipe-undo-banner" role="status">
-              <span>{banner.message}</span>
-            </div>
-          ))}
           <button
             type="button"
             className="add-item-button add-item-button--step"
@@ -1870,6 +1880,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
           getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)
         )}
       </button>
+      <UndoSnackbar itemName={pendingRowDeleteName} onUndo={undoRowDelete} />
     </div>
   );
 }

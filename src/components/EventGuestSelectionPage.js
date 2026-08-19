@@ -4,6 +4,9 @@ import { subscribeToGuestProfiles } from '../utils/eventsFirestore';
 import { getGuestDisplayName } from '../utils/guestPreferences';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+import DeleteRowButton from './DeleteRowButton';
+import UndoSnackbar from './UndoSnackbar';
+import useUndoableDelete from '../hooks/useUndoableDelete';
 
 // Matches the swipe-to-delete gesture and delete button behavior used for
 // drinks (see DrinkRow in EventDrinkSelectionPage.js): swiping left reveals
@@ -117,21 +120,13 @@ function GuestRow({
         onTouchEnd={handleTouchEnd}
         onTouchCancel={resetSwipe}
       >
-        <div className="events-guest-row-header">
+        <div className="events-guest-row-header delete-row-hover-target">
           <div className="events-guest-row-name">{fullName}</div>
-          <button
-            type="button"
+          <DeleteRowButton
             className="events-guest-row-delete-btn"
+            itemName={fullName}
             onClick={onRemove}
-            aria-label={`${fullName} löschen`}
-            title="Gast entfernen"
-          >
-            {isBase64Image(swipeDeleteIcon) ? (
-              <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
-            ) : (
-              <span className="swipe-delete-icon-text">{swipeDeleteIcon || '🗑'}</span>
-            )}
-          </button>
+          />
         </div>
         <label className="events-guest-row-driver">
           <input
@@ -171,6 +166,7 @@ function EventGuestSelectionPage({
   const effectiveButtonIcons = buttonIcons || DEFAULT_BUTTON_ICONS;
   const effectiveOwnerId = ownerId || currentUser?.id;
   const swipeDeleteIcon = getEffectiveIcon(effectiveButtonIcons, 'swipeDelete', isDarkMode) || '🗑';
+  const { notifyDeleted, undo, pendingName } = useUndoableDelete();
 
   useEffect(() => {
     if (!effectiveOwnerId) return undefined;
@@ -201,6 +197,21 @@ function EventGuestSelectionPage({
     setSelectedGuestIds((prev) =>
       prev.includes(guestId) ? prev.filter((id) => id !== guestId) : [...prev, guestId]
     );
+  };
+
+  const handleRemoveGuest = (guestId, fullName) => {
+    const wasDriver = driverGuestIds.includes(guestId);
+    toggleGuest(guestId);
+    notifyDeleted({
+      id: guestId,
+      name: fullName,
+      undo: () => {
+        setSelectedGuestIds((prev) => (prev.includes(guestId) ? prev : [...prev, guestId]));
+        if (wasDriver) {
+          setDriverGuestIds((prev) => (prev.includes(guestId) ? prev : [...prev, guestId]));
+        }
+      },
+    });
   };
 
   const toggleDriverGuest = (guestId) => {
@@ -301,7 +312,7 @@ function EventGuestSelectionPage({
                     isDriver={driverGuestIds.includes(guest.id)}
                     isDeleteVisible={isDeleteVisible}
                     onToggleDriver={() => toggleDriverGuest(guest.id)}
-                    onRemove={() => toggleGuest(guest.id)}
+                    onRemove={() => handleRemoveGuest(guest.id, fullName)}
                     onSwipeDeleteVisible={() => setSwipeDeleteVisibleId(guest.id)}
                     onSwipeDeleteHidden={() =>
                       setSwipeDeleteVisibleId((prev) => (prev === guest.id ? null : prev))
@@ -380,6 +391,7 @@ function EventGuestSelectionPage({
           getEffectiveIcon(effectiveButtonIcons, 'cancelRecipe', isDarkMode)
         )}
       </button>
+      <UndoSnackbar itemName={pendingName} onUndo={undo} />
     </div>
   );
 }

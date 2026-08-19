@@ -14,6 +14,9 @@ import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { encodeRecipeLink, decodeRecipeLink } from '../utils/recipeLinks';
 import EventForm from './EventForm';
 import DrinkManagementPage from './DrinkManagementPage';
+import DeleteRowButton from './DeleteRowButton';
+import UndoSnackbar from './UndoSnackbar';
+import useUndoableDelete from '../hooks/useUndoableDelete';
 import {
   DndContext,
   closestCenter,
@@ -215,11 +218,10 @@ function SortableSection({
                         displayName={item.displayName}
                         isFavorite={item.type === 'recipe' && favoriteIds.includes(item.id)}
                         onRemove={() => {
-                          if (item.type === 'recipe') onRemoveRecipeFromSection(sectionIndex, item.id);
-                          else if (item.type === 'event') onRemoveEventDrink(item.id);
-                          else onRemoveDrinkFromSection(sectionIndex, item.id);
+                          if (item.type === 'recipe') onRemoveRecipeFromSection(sectionIndex, item.id, item.displayName);
+                          else if (item.type === 'event') onRemoveEventDrink(item.id, item.displayName);
+                          else onRemoveDrinkFromSection(sectionIndex, item.id, item.displayName);
                         }}
-                        removeTitle={item.type === 'recipe' ? 'Rezept entfernen' : item.type === 'event' ? 'Getränk aus Event entfernen' : 'Getränk entfernen'}
                       />
                     ))}
                   </SortableContext>
@@ -353,7 +355,7 @@ function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex }) 
     <div
       ref={setNodeRef}
       style={style}
-      className={`selected-recipe-item ${isDragging ? 'dragging' : ''}`}
+      className={`selected-recipe-item delete-row-hover-target ${isDragging ? 'dragging' : ''}`}
     >
       <button
         type="button"
@@ -368,14 +370,10 @@ function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex }) 
         {recipe.title}
         {isFavorite && <span className="favorite-indicator">★</span>}
       </span>
-      <button
-        type="button"
-        className="remove-recipe-button"
-        onClick={() => onRemove(sectionIndex, recipe.id)}
-        title="Rezept entfernen"
-      >
-        ×
-      </button>
+      <DeleteRowButton
+        itemName={recipe.title}
+        onClick={() => onRemove(sectionIndex, recipe.id, recipe.title)}
+      />
     </div>
   );
 }
@@ -383,7 +381,7 @@ function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex }) 
 // Sortable item for the menu's "Drinks" section, which mixes drink recipes,
 // event-linked drinks, and manually added drinks in a single freely
 // reorderable list (see getDrinksSectionItems).
-function SortableDrinkItem({ id, displayName, isFavorite, onRemove, removeTitle }) {
+function SortableDrinkItem({ id, displayName, isFavorite, onRemove }) {
   const {
     attributes,
     listeners,
@@ -403,7 +401,7 @@ function SortableDrinkItem({ id, displayName, isFavorite, onRemove, removeTitle 
     <div
       ref={setNodeRef}
       style={style}
-      className={`selected-recipe-item ${isDragging ? 'dragging' : ''}`}
+      className={`selected-recipe-item delete-row-hover-target ${isDragging ? 'dragging' : ''}`}
     >
       <button
         type="button"
@@ -418,14 +416,7 @@ function SortableDrinkItem({ id, displayName, isFavorite, onRemove, removeTitle 
         {displayName}
         {isFavorite && <span className="favorite-indicator">★</span>}
       </span>
-      <button
-        type="button"
-        className="remove-recipe-button"
-        onClick={onRemove}
-        title={removeTitle}
-      >
-        ×
-      </button>
+      <DeleteRowButton itemName={displayName} onClick={onRemove} />
     </div>
   );
 }
@@ -461,6 +452,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   // Drinks the user removed from the linked event via this menu's "Drinks"
   // section, staged locally until the menu is saved (see handleSubmit).
   const [removedEventDrinkIds, setRemovedEventDrinkIds] = useState([]);
+  const { notifyDeleted, undo, pendingName } = useUndoableDelete();
   // Drag-and-drop reordering of event-linked drinks, staged locally until the
   // menu is saved (see handleSubmit, which writes it back into the linked
   // event's customDrinkIds order).
@@ -653,17 +645,32 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     setRemovedEventDrinkIds((prev) => prev.filter((id) => id !== drinkId));
   };
 
-  const handleRemoveDrinkFromSection = (sectionIndex, drinkId) => {
+  const handleRemoveDrinkFromSection = (sectionIndex, drinkId, displayName) => {
+    const index = (sections[sectionIndex]?.drinkIds || []).indexOf(drinkId);
     setSections((prevSections) => prevSections.map((s, i) => {
       if (i !== sectionIndex) return s;
       return { ...s, drinkIds: (s.drinkIds || []).filter((id) => id !== drinkId) };
     }));
+    notifyDeleted({
+      id: `drink:${sectionIndex}:${drinkId}`,
+      name: displayName || drinkId,
+      undo: () => {
+        setSections((prev) => prev.map((s, i) => {
+          if (i !== sectionIndex) return s;
+          const ids = s.drinkIds || [];
+          if (ids.includes(drinkId)) return s;
+          const next = [...ids];
+          next.splice(Math.min(index, next.length), 0, drinkId);
+          return { ...s, drinkIds: next };
+        }));
+      },
+    });
   };
 
   // Stages the removal of one of the linked event's drinks; it's actually
   // removed from the event (and the event's Getränkeverteilung recalculated)
   // once the menu is saved, see handleSubmit.
-  const handleRemoveEventDrink = (drinkId) => {
+  const handleRemoveEventDrink = (drinkId, displayName) => {
     setRemovedEventDrinkIds((prev) => (prev.includes(drinkId) ? prev : [...prev, drinkId]));
     // The same drink can also sit in a section's own drinkIds (manualDrinkIds
     // is deduped by id against the event drinks, so only the merged
@@ -677,6 +684,11 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
         ? { ...s, drinkIds: s.drinkIds.filter((id) => id !== drinkId) }
         : s
     )));
+    notifyDeleted({
+      id: `event:${drinkId}`,
+      name: displayName || drinkId,
+      undo: () => setRemovedEventDrinkIds((prev) => prev.filter((id) => id !== drinkId)),
+    });
   };
 
   // Merged search results for the Drinks section's single search field:
@@ -1239,22 +1251,40 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     });
   };
 
-  const handleRemoveRecipeFromSection = (sectionIndex, recipeId) => {
+  const handleRemoveRecipeFromSection = (sectionIndex, recipeId, displayName) => {
     // If this recipe is a drink recipe deduped against a linked event drink
     // (see the `eventDrinks` useMemo above), removing it here would only
     // hide the recipe entry - the event drink would then reappear as its
     // own entry (dedup no longer applies) and need a second click to
     // actually go away. Stage its removal too so both disappear together.
     const section = sections[sectionIndex];
+    const index = section ? section.recipeIds.indexOf(recipeId) : -1;
+    let linkedEventDrinkId = null;
     if (section?.name?.toLowerCase() === 'drinks') {
       const linkedEventDrink = eventDrinks.find((drink) => drink.recipeId === recipeId);
       if (linkedEventDrink) {
+        linkedEventDrinkId = linkedEventDrink.id;
         setRemovedEventDrinkIds((prev) => (prev.includes(linkedEventDrink.id) ? prev : [...prev, linkedEventDrink.id]));
       }
     }
     setSections((prevSections) => prevSections.map((s, i) => (
       i === sectionIndex ? { ...s, recipeIds: s.recipeIds.filter((id) => id !== recipeId) } : s
     )));
+    notifyDeleted({
+      id: `recipe:${sectionIndex}:${recipeId}`,
+      name: displayName || 'Rezept',
+      undo: () => {
+        setSections((prev) => prev.map((s, i) => {
+          if (i !== sectionIndex || s.recipeIds.includes(recipeId)) return s;
+          const next = [...s.recipeIds];
+          next.splice(Math.min(index, next.length), 0, recipeId);
+          return { ...s, recipeIds: next };
+        }));
+        if (linkedEventDrinkId) {
+          setRemovedEventDrinkIds((prev) => prev.filter((id) => id !== linkedEventDrinkId));
+        }
+      },
+    });
   };
 
   const handleDragEndRecipes = (sectionIndex, event) => {
@@ -1736,6 +1766,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
           getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)
         )}
       </button>
+      <UndoSnackbar itemName={pendingName} onUndo={undo} />
     </div>
   );
 }

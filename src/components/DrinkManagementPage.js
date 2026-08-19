@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './EventsPage.css';
 import { subscribeToAllCustomDrinks, saveCustomDrink, deleteCustomDrink } from '../utils/eventsFirestore';
 import OverviewAddFab from './OverviewAddFab';
+import DeleteRowButton from './DeleteRowButton';
+import UndoSnackbar from './UndoSnackbar';
+import useUndoableDelete from '../hooks/useUndoableDelete';
 import RecipeTypeahead from './RecipeTypeahead';
 import { DRINK_CATEGORIES, getDrinkCategoryLabel, mergePredefinedDrinks } from '../utils/drinkCategories';
 import { getCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
@@ -57,7 +60,6 @@ const isDrinkRecipe = (recipe) =>
 const SWIPE_DELETE_THRESHOLD = 56;
 const SWIPE_DELETE_MAX_OFFSET = 96;
 const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
-const DELETE_BANNER_TIMEOUT_MS = 5000;
 
 const UNIT_SIZES = [
   { label: '200 ml', value: 0.2 },
@@ -187,7 +189,18 @@ function DrinkRow({ drink, displayName, ownerName, canManage, onEdit, onDelete, 
         onTouchEnd={handleTouchEnd}
         onTouchCancel={resetSwipe}
       >
-        <h3>{displayName}</h3>
+        <div className="drink-list-item-header delete-row-hover-target">
+          <h3>{displayName}</h3>
+          {!drink.predefined && canManage && (
+            <DeleteRowButton
+              itemName={displayName}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(drink);
+              }}
+            />
+          )}
+        </div>
         <p className="events-card-meta">
           {[
             drink.kategorie ? getDrinkCategoryLabel(drink.kategorie) : null,
@@ -223,9 +236,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [fabPressed, setFabPressed] = useState(false);
   const [cancelPressed, setCancelPressed] = useState(false);
-  const [deleteBanners, setDeleteBanners] = useState([]);
-  const deleteBannerCounterRef = useRef(0);
-  const deleteBannerTimeoutsRef = useRef(new Map());
+  const { notifyDeleted, undo, pendingName } = useUndoableDelete();
   const formRef = useRef(null);
 
   useEffect(() => {
@@ -257,14 +268,6 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
       setLoading(false);
     });
     return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    const timeouts = deleteBannerTimeoutsRef.current;
-    return () => {
-      timeouts.forEach((id) => clearTimeout(id));
-      timeouts.clear();
-    };
   }, []);
 
   const drinkRecipes = useMemo(
@@ -420,20 +423,26 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
   };
 
   const handleDelete = async (drink) => {
+    const displayName = resolveDrinkDisplay(drink, recipes).displayName;
     try {
       await deleteCustomDrink(drink.ownerId || currentUser.id, drink.id);
-      const id = deleteBannerCounterRef.current;
-      deleteBannerCounterRef.current = (id + 1) % 100000;
-      const deletedDisplayName = resolveDrinkDisplay(drink, recipes).displayName;
-      setDeleteBanners((prev) => [...prev, { id, message: `"${deletedDisplayName}" gelöscht.` }]);
-      const timeoutId = setTimeout(() => {
-        setDeleteBanners((prev) => prev.filter((b) => b.id !== id));
-        deleteBannerTimeoutsRef.current.delete(id);
-      }, DELETE_BANNER_TIMEOUT_MS);
-      deleteBannerTimeoutsRef.current.set(id, timeoutId);
     } catch (err) {
       console.error('Error deleting custom drink:', err);
+      return;
     }
+    notifyDeleted({
+      id: `${drink.ownerId || ''}_${drink.id}`,
+      name: displayName,
+      undo: async () => {
+        // eslint-disable-next-line no-unused-vars
+        const { id, ownerId, predefined, ...payload } = drink;
+        try {
+          await saveCustomDrink(drink.ownerId || currentUser.id, payload, drink.id);
+        } catch (err) {
+          console.error('Error restoring custom drink:', err);
+        }
+      },
+    });
   };
 
   if (showForm) {
@@ -765,12 +774,8 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
           )}
         </div>
       )}
-      {deleteBanners.map((banner) => (
-        <div key={banner.id} className="drink-delete-banner" role="status">
-          <span>{banner.message}</span>
-        </div>
-      ))}
       <OverviewAddFab onClick={openNew} title="Getränk anlegen" ariaLabel="Getränk anlegen" />
+      <UndoSnackbar itemName={pendingName} onUndo={undo} />
     </div>
   );
 }
