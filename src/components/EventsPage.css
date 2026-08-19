@@ -91,15 +91,32 @@
 }
 
 .events-guest-card {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+}
+
+.events-guest-card-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16px 20px;
+  background: white;
+  position: relative;
+  z-index: 1;
 }
 
 .events-guest-card .events-card-main {
   flex: 1;
   min-width: 0;
+}
+
+.events-guest-card.swipe-delete-active .swipe-delete-background {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .events-guest-delete-btn {
@@ -116,6 +133,22 @@
   font-size: 1rem;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
+}
+
+/* Mobile: the delete button is only revealed via the left-swipe gesture,
+   mirroring the "Zutat löschen" swipe-to-delete on the recipe edit page. */
+@media (max-width: 768px) {
+  .events-guest-delete-btn {
+    display: none;
+  }
+}
+
+/* Desktop: no touch swipe, so the static delete button stays visible and
+   the swipe reveal background never engages. */
+@media (min-width: 769px) {
+  .events-guest-card .swipe-delete-background {
+    display: none;
+  }
 }
 
 .events-guest-delete-btn:hover {
