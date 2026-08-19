@@ -17,12 +17,11 @@
   align-self: flex-start;
   position: sticky;
   top: 1rem;
-  overflow-x: hidden;
   transition: width 0.2s ease, padding 0.2s ease;
 }
 
 .menu-filter-sidebar--collapsed {
-  width: 64px;
+  width: auto;
   gap: 0;
   padding: 1rem 0.6rem;
   align-items: center;
