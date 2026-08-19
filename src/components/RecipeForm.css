@@ -934,10 +934,10 @@
   z-index: 1;
 }
 
-.swipe-undo-banner {
+.undo-snackbar {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   gap: 0.75rem;
   margin: 0.35rem 0 0.5rem;
   padding: 0.5rem 0.7rem;
@@ -946,6 +946,22 @@
   background: #fff5f4;
   color: #8b2d21;
   font-size: 0.9rem;
+}
+
+.undo-snackbar-btn {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: #a33a26;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.15rem 0.3rem;
+  cursor: pointer;
+}
+
+.undo-snackbar-btn:hover,
+.undo-snackbar-btn:focus-visible {
+  text-decoration: underline;
 }
 
 .add-item-button .button-icon-image {

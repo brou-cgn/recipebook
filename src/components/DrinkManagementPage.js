@@ -11,6 +11,8 @@ import { encodeRecipeLink, containsHashForTypeahead } from '../utils/recipeLinks
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { parseIngredientPartsSync } from '../utils/ingredientUtils';
 import { updateRecipe } from '../utils/recipeFirestore';
+import useSwipeToDelete from '../hooks/useSwipeToDelete';
+import useUndoableDelete from '../hooks/useUndoableDelete';
 
 const DRINK_RECIPE_CATEGORY = 'Drinks';
 
@@ -54,11 +56,6 @@ const isDrinkRecipe = (recipe) =>
     ? recipe.speisekategorie.includes(DRINK_RECIPE_CATEGORY)
     : recipe?.speisekategorie === DRINK_RECIPE_CATEGORY;
 
-const SWIPE_DELETE_THRESHOLD = 56;
-const SWIPE_DELETE_MAX_OFFSET = 96;
-const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
-const DELETE_BANNER_TIMEOUT_MS = 5000;
-
 const UNIT_SIZES = [
   { label: '200 ml', value: 0.2 },
   { label: '330 ml', value: 0.33 },
@@ -94,70 +91,11 @@ const emptyForm = () => ({
 });
 
 function DrinkRow({ drink, displayName, ownerName, canManage, onEdit, onDelete, swipeDeleteIcon }) {
-  const touchStartXRef = React.useRef(null);
-  const touchStartYRef = React.useRef(null);
-  const swipeDirectionLockedRef = React.useRef(null);
-  const isSwipingRef = React.useRef(false);
-  const swipeOffsetRef = React.useRef(0);
-  const [swipeOffset, setSwipeOffset] = React.useState(0);
-  const [isDeleteVisible, setIsDeleteVisible] = React.useState(false);
-
-  const effectiveOffset = isDeleteVisible ? -SWIPE_DELETE_MAX_OFFSET : swipeOffset;
-
-  const resetSwipe = ({ keepDelete = false } = {}) => {
-    touchStartXRef.current = null;
-    touchStartYRef.current = null;
-    swipeDirectionLockedRef.current = null;
-    isSwipingRef.current = false;
-    swipeOffsetRef.current = 0;
-    setSwipeOffset(0);
-    if (!keepDelete) setIsDeleteVisible(false);
-  };
-
-  const handleTouchStart = (e) => {
-    const touch = e.touches?.[0];
-    if (!touch || drink.predefined || !canManage) return;
-    if (isDeleteVisible) setIsDeleteVisible(false);
-    touchStartXRef.current = touch.clientX;
-    touchStartYRef.current = touch.clientY;
-    swipeDirectionLockedRef.current = null;
-    isSwipingRef.current = false;
-  };
-
-  const handleTouchMove = (e) => {
-    const touch = e.touches?.[0];
-    if (!touch || touchStartXRef.current === null || touchStartYRef.current === null || drink.predefined || !canManage) return;
-
-    const deltaX = touch.clientX - touchStartXRef.current;
-    const deltaY = touch.clientY - touchStartYRef.current;
-    const absX = Math.abs(deltaX);
-    const absY = Math.abs(deltaY);
-
-    if (!swipeDirectionLockedRef.current && (absX > SWIPE_DIRECTION_LOCK_THRESHOLD || absY > SWIPE_DIRECTION_LOCK_THRESHOLD)) {
-      swipeDirectionLockedRef.current = absX > absY ? 'horizontal' : 'vertical';
-    }
-
-    if (swipeDirectionLockedRef.current === 'horizontal' && deltaX < 0) {
-      isSwipingRef.current = true;
-      const clamped = Math.max(deltaX, -SWIPE_DELETE_MAX_OFFSET);
-      swipeOffsetRef.current = clamped;
-      setSwipeOffset(clamped);
-      if (e.cancelable) e.preventDefault();
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (isSwipingRef.current && Math.abs(swipeOffsetRef.current) >= SWIPE_DELETE_THRESHOLD) {
-      setIsDeleteVisible(true);
-      resetSwipe({ keepDelete: true });
-      return;
-    }
-    resetSwipe();
-  };
+  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ disabled: drink.predefined || !canManage });
 
   return (
     <div
-      className={`drink-list-item events-card${effectiveOffset < 0 ? ' swipe-delete-active' : ''}`}
+      className={`drink-list-item events-card${offset < 0 ? ' swipe-delete-active' : ''}`}
       style={{ padding: 0 }}
     >
       {!drink.predefined && canManage && (
@@ -166,7 +104,7 @@ function DrinkRow({ drink, displayName, ownerName, canManage, onEdit, onDelete, 
             <button
               type="button"
               className="drink-swipe-delete-action"
-              onClick={() => { onDelete(drink); resetSwipe(); }}
+              onClick={() => { onDelete(drink); reset(); }}
               aria-label={`${displayName} löschen`}
             >
               {isBase64Image(swipeDeleteIcon) ? (
@@ -180,12 +118,9 @@ function DrinkRow({ drink, displayName, ownerName, canManage, onEdit, onDelete, 
       )}
       <div
         className="drink-swipe-content events-card-main"
-        style={{ transform: `translateX(${effectiveOffset}px)`, padding: '16px 20px', width: '100%' }}
-        onClick={effectiveOffset < 0 || !canManage ? undefined : () => onEdit(drink)}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={resetSwipe}
+        style={{ transform: `translateX(${offset}px)`, padding: '16px 20px', width: '100%' }}
+        onClick={offset < 0 || !canManage ? undefined : () => onEdit(drink)}
+        {...handlers}
       >
         <h3>{displayName}</h3>
         <p className="events-card-meta">
@@ -223,10 +158,8 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [fabPressed, setFabPressed] = useState(false);
   const [cancelPressed, setCancelPressed] = useState(false);
-  const [deleteBanners, setDeleteBanners] = useState([]);
+  const { banners: deleteBanners, pendingKeys: pendingDeleteKeys, scheduleDelete, undoDelete } = useUndoableDelete();
   const [showOwnOnly, setShowOwnOnly] = useState(true);
-  const deleteBannerCounterRef = useRef(0);
-  const deleteBannerTimeoutsRef = useRef(new Map());
   const formRef = useRef(null);
 
   useEffect(() => {
@@ -260,23 +193,16 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
     return unsubscribe;
   }, []);
 
-  useEffect(() => {
-    const timeouts = deleteBannerTimeoutsRef.current;
-    return () => {
-      timeouts.forEach((id) => clearTimeout(id));
-      timeouts.clear();
-    };
-  }, []);
-
   const drinkRecipes = useMemo(
     () => (Array.isArray(recipes) ? recipes.filter(isDrinkRecipe) : []),
     [recipes]
   );
   const allDrinks = useMemo(() => {
-    const merged = mergePredefinedDrinks(drinks, currentUser?.id);
+    const merged = mergePredefinedDrinks(drinks, currentUser?.id)
+      .filter((drink) => !pendingDeleteKeys.has(`${drink.ownerId || ''}_${drink.id}`));
     if (!showOwnOnly) return merged;
     return merged.filter((drink) => !drink.ownerId || drink.ownerId === currentUser?.id);
-  }, [drinks, currentUser?.id, showOwnOnly]);
+  }, [drinks, currentUser?.id, showOwnOnly, pendingDeleteKeys]);
   const groupedDrinks = useMemo(() => groupDrinksByCategory(allDrinks, recipes), [allDrinks, recipes]);
   const getOwnerFirstName = (ownerId) => {
     if (!ownerId) return null;
@@ -421,21 +347,21 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
     }
   };
 
-  const handleDelete = async (drink) => {
-    try {
-      await deleteCustomDrink(drink.ownerId || currentUser.id, drink.id);
-      const id = deleteBannerCounterRef.current;
-      deleteBannerCounterRef.current = (id + 1) % 100000;
-      const deletedDisplayName = resolveDrinkDisplay(drink, recipes).displayName;
-      setDeleteBanners((prev) => [...prev, { id, message: `"${deletedDisplayName}" gelöscht.` }]);
-      const timeoutId = setTimeout(() => {
-        setDeleteBanners((prev) => prev.filter((b) => b.id !== id));
-        deleteBannerTimeoutsRef.current.delete(id);
-      }, DELETE_BANNER_TIMEOUT_MS);
-      deleteBannerTimeoutsRef.current.set(id, timeoutId);
-    } catch (err) {
-      console.error('Error deleting custom drink:', err);
-    }
+  const handleDelete = (drink) => {
+    const ownerId = drink.ownerId || currentUser.id;
+    const deletedDisplayName = resolveDrinkDisplay(drink, recipes).displayName;
+    scheduleDelete({
+      key: `${drink.ownerId || ''}_${drink.id}`,
+      message: `"${deletedDisplayName}" gelöscht.`,
+      onConfirm: async () => {
+        try {
+          await deleteCustomDrink(ownerId, drink.id);
+        } catch (err) {
+          console.error('Error deleting custom drink:', err);
+        }
+      },
+      onUndo: () => {},
+    });
   };
 
   if (showForm) {
@@ -793,8 +719,11 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
         </div>
       )}
       {deleteBanners.map((banner) => (
-        <div key={banner.id} className="drink-delete-banner" role="status">
+        <div key={banner.id} className="undo-snackbar" role="status">
           <span>{banner.message}</span>
+          <button type="button" className="undo-snackbar-btn" onClick={() => undoDelete(banner.id)}>
+            Rückgängig
+          </button>
         </div>
       ))}
       <OverviewAddFab onClick={openNew} title="Getränk anlegen" ariaLabel="Getränk anlegen" />

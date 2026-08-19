@@ -4,6 +4,8 @@ import UnitChip from './UnitChip';
 import { getEffectiveIcon, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
+import useSwipeToDelete from '../hooks/useSwipeToDelete';
+import useUndoableDelete from '../hooks/useUndoableDelete';
 
 const MIN_DISTRIBUTION_FACTOR = 0.1;
 const MAX_DISTRIBUTION_FACTOR = 2.0;
@@ -113,10 +115,6 @@ function EinheitenTypeahead({ einheiten, selectedIndices, onToggle, drinkName })
   );
 }
 
-const SWIPE_DELETE_THRESHOLD = 56;
-const SWIPE_DELETE_MAX_OFFSET = 96;
-const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
-
 function DrinkRow({
   drink,
   displayName,
@@ -133,78 +131,25 @@ function DrinkRow({
   maxFactor,
   swipeDeleteIcon,
 }) {
-  const touchStartXRef = useRef(null);
-  const touchStartYRef = useRef(null);
-  const swipeDirectionLockedRef = useRef(null);
-  const isSwipingRef = useRef(false);
-  const [swipeOffset, setSwipeOffset] = useState(0);
+  const { offset, reset, handlers } = useSwipeToDelete({
+    isDeleteVisible,
+    onDeleteVisibleChange: (visible) => (visible ? onSwipeDeleteVisible() : onSwipeDeleteHidden()),
+  });
   const [factorInput, setFactorInput] = useState(factor.toFixed(2));
-
-  const effectiveSwipeOffset = isDeleteVisible ? -SWIPE_DELETE_MAX_OFFSET : swipeOffset;
-
-  const resetSwipe = ({ keepDeleteAction = false } = {}) => {
-    touchStartXRef.current = null;
-    touchStartYRef.current = null;
-    swipeDirectionLockedRef.current = null;
-    isSwipingRef.current = false;
-    setSwipeOffset(0);
-    if (!keepDeleteAction) {
-      onSwipeDeleteHidden();
-    }
-  };
-
-  const handleTouchStart = (e) => {
-    const touch = e.touches?.[0];
-    if (!touch) return;
-    if (isDeleteVisible) onSwipeDeleteHidden();
-    touchStartXRef.current = touch.clientX;
-    touchStartYRef.current = touch.clientY;
-    swipeDirectionLockedRef.current = null;
-    isSwipingRef.current = false;
-  };
-
-  const handleTouchMove = (e) => {
-    const touch = e.touches?.[0];
-    if (!touch || touchStartXRef.current === null || touchStartYRef.current === null) return;
-
-    const deltaX = touch.clientX - touchStartXRef.current;
-    const deltaY = touch.clientY - touchStartYRef.current;
-    const absX = Math.abs(deltaX);
-    const absY = Math.abs(deltaY);
-
-    if (!swipeDirectionLockedRef.current && (absX > SWIPE_DIRECTION_LOCK_THRESHOLD || absY > SWIPE_DIRECTION_LOCK_THRESHOLD)) {
-      swipeDirectionLockedRef.current = absX > absY ? 'horizontal' : 'vertical';
-    }
-
-    if (swipeDirectionLockedRef.current === 'horizontal' && deltaX < 0) {
-      isSwipingRef.current = true;
-      setSwipeOffset(Math.max(deltaX, -SWIPE_DELETE_MAX_OFFSET));
-      if (e.cancelable) e.preventDefault();
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (isSwipingRef.current && Math.abs(swipeOffset) >= SWIPE_DELETE_THRESHOLD) {
-      onSwipeDeleteVisible();
-      resetSwipe({ keepDeleteAction: true });
-      return;
-    }
-    resetSwipe();
-  };
 
   const handleSwipeDeleteClick = () => {
     onRemove();
-    resetSwipe();
+    reset();
   };
 
   const swipeContentStyle = {
-    transform: `translateX(${effectiveSwipeOffset}px)`,
+    transform: `translateX(${offset}px)`,
     transition: 'transform 0.15s ease',
   };
 
   return (
     <div
-      className={`events-drink-row${effectiveSwipeOffset < 0 ? ' swipe-delete-active' : ''}`}
+      className={`events-drink-row${offset < 0 ? ' swipe-delete-active' : ''}`}
     >
       <div className="events-drink-row-swipe-background" aria-hidden={!isDeleteVisible}>
         {isDeleteVisible && (
@@ -225,10 +170,7 @@ function DrinkRow({
       <div
         className="events-drink-row-content"
         style={swipeContentStyle}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={resetSwipe}
+        {...handlers}
       >
         <div className="events-drink-row-header">
           <div className="events-drink-row-name">{displayName}</div>
@@ -325,6 +267,7 @@ function EventDrinkSelectionPage({
   const [swipeDeleteVisibleId, setSwipeDeleteVisibleId] = useState(null);
   const [fabPressed, setFabPressed] = useState(false);
   const [cancelPressed, setCancelPressed] = useState(false);
+  const { banners: deleteBanners, pendingKeys: pendingDeleteKeys, scheduleDelete, undoDelete } = useUndoableDelete();
 
   const toggleCustomDrink = (id) => {
     setCustomDrinkIds((prev) => {
@@ -362,12 +305,16 @@ function EventDrinkSelectionPage({
   };
 
   const handleSave = () => {
-    const optimizedFactors = customDrinkIds.reduce((acc, drinkId) => {
+    // Drinks still pending an undoable swipe-delete haven't actually been removed from
+    // customDrinkIds yet (see handleRemoveDrink), but should be saved as removed since
+    // they're already hidden from view.
+    const drinkIdsToSave = customDrinkIds.filter((id) => !pendingDeleteKeys.has(id));
+    const optimizedFactors = drinkIdsToSave.reduce((acc, drinkId) => {
       const factor = normalizeDistributionFactor(drinkDistributionFactors[drinkId]);
       if (factor !== 1) acc[drinkId] = factor;
       return acc;
     }, {});
-    const optimizedEinheiten = customDrinkIds.reduce((acc, drinkId) => {
+    const optimizedEinheiten = drinkIdsToSave.reduce((acc, drinkId) => {
       const selected = drinkSelectedEinheiten[drinkId];
       const indices = selected ? [...selected].sort((a, b) => a - b) : [0];
       if (indices.length > 1 || (indices.length === 1 && indices[0] !== 0)) {
@@ -375,10 +322,20 @@ function EventDrinkSelectionPage({
       }
       return acc;
     }, {});
-    onSave(customDrinkIds, optimizedFactors, optimizedEinheiten, Number(pufferProzent));
+    onSave(drinkIdsToSave, optimizedFactors, optimizedEinheiten, Number(pufferProzent));
   };
 
-  const selectedDrinks = customDrinks.filter((d) => customDrinkIds.includes(d.id));
+  const handleRemoveDrink = (drink) => {
+    const displayName = resolveDrinkDisplay(drink, recipes).displayName;
+    scheduleDelete({
+      key: drink.id,
+      message: `"${displayName}" entfernt.`,
+      onConfirm: () => toggleCustomDrink(drink.id),
+      onUndo: () => {},
+    });
+  };
+
+  const selectedDrinks = customDrinks.filter((d) => customDrinkIds.includes(d.id) && !pendingDeleteKeys.has(d.id));
   const updateDistributionFactor = (drinkId, value) => {
     setDrinkDistributionFactors((prev) => {
       const factor = normalizeDistributionFactor(value);
@@ -465,7 +422,7 @@ function EventDrinkSelectionPage({
                         isDeleteVisible={isDeleteVisible}
                         onToggleEinheit={(idx) => toggleEinheit(drink.id, idx)}
                         onUpdateFactor={(val) => updateDistributionFactor(drink.id, val)}
-                        onRemove={() => toggleCustomDrink(drink.id)}
+                        onRemove={() => handleRemoveDrink(drink)}
                         onSwipeDeleteVisible={() => setSwipeDeleteVisibleId(drink.id)}
                         onSwipeDeleteHidden={() => setSwipeDeleteVisibleId((prev) => prev === drink.id ? null : prev)}
                         minFactor={MIN_DISTRIBUTION_FACTOR}
@@ -480,9 +437,17 @@ function EventDrinkSelectionPage({
           ) : (
             <p className="events-info-text">Noch keine eigenen Getränke angelegt.</p>
           )}
+          {deleteBanners.map((banner) => (
+            <div key={banner.id} className="undo-snackbar" role="status">
+              <span>{banner.message}</span>
+              <button type="button" className="undo-snackbar-btn" onClick={() => undoDelete(banner.id)}>
+                Rückgängig
+              </button>
+            </div>
+          ))}
 
           <span className="events-selected-count-badge">
-            {customDrinkIds.length} {customDrinkIds.length === 1 ? 'Getränk' : 'Getränke'} ausgewählt.
+            {selectedDrinks.length} {selectedDrinks.length === 1 ? 'Getränk' : 'Getränke'} ausgewählt.
           </span>
         </div>
 

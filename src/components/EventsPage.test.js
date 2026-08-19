@@ -671,7 +671,7 @@ describe('EventsPage', () => {
       });
     });
 
-    test('clicking swipe-delete button calls deleteEvent and shows a banner, without opening the event', async () => {
+    test('clicking swipe-delete button hides the event immediately and shows an undo banner, without calling deleteEvent yet', async () => {
       mockDeleteEvent.mockResolvedValue(undefined);
       mockSubscribeToEvents.mockImplementation((_uid, cb) => {
         cb([event]);
@@ -691,12 +691,70 @@ describe('EventsPage', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Sommerfest löschen' }));
 
-      await waitFor(() => {
+      expect(screen.queryByText('Sommerfest')).not.toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent('"Sommerfest" gelöscht.');
+      expect(mockDeleteEvent).not.toHaveBeenCalled();
+    });
+
+    test('deletes the event only after the undo window passes without a click on "Rückgängig"', async () => {
+      jest.useFakeTimers();
+      try {
+        mockDeleteEvent.mockResolvedValue(undefined);
+        mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+          cb([event]);
+          return jest.fn();
+        });
+
+        render(<EventsPage currentUser={currentUser} />);
+
+        const eventCardContent = screen.getByText('Sommerfest').closest('.events-card-swipe-content');
+        fireEvent.touchStart(eventCardContent, createTouchEvent(200, 100));
+        fireEvent.touchMove(eventCardContent, createTouchEvent(130, 100));
+        fireEvent.touchEnd(eventCardContent, {});
+        fireEvent.click(screen.getByRole('button', { name: 'Sommerfest löschen' }));
+
+        expect(mockDeleteEvent).not.toHaveBeenCalled();
+
+        await act(async () => {
+          jest.advanceTimersByTime(6000);
+        });
+
         expect(mockDeleteEvent).toHaveBeenCalledWith(currentUser.id, 'e1');
-      });
-      await waitFor(() => {
-        expect(screen.getByRole('status')).toHaveTextContent('"Sommerfest" gelöscht.');
-      });
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    test('clicking "Rückgängig" restores the event and never calls deleteEvent', async () => {
+      jest.useFakeTimers();
+      try {
+        mockDeleteEvent.mockResolvedValue(undefined);
+        mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+          cb([event]);
+          return jest.fn();
+        });
+
+        render(<EventsPage currentUser={currentUser} />);
+
+        const eventCardContent = screen.getByText('Sommerfest').closest('.events-card-swipe-content');
+        fireEvent.touchStart(eventCardContent, createTouchEvent(200, 100));
+        fireEvent.touchMove(eventCardContent, createTouchEvent(130, 100));
+        fireEvent.touchEnd(eventCardContent, {});
+        fireEvent.click(screen.getByRole('button', { name: 'Sommerfest löschen' }));
+
+        fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+
+        expect(screen.getByText('Sommerfest')).toBeInTheDocument();
+        expect(screen.queryByRole('status')).not.toBeInTheDocument();
+
+        await act(async () => {
+          jest.advanceTimersByTime(6000);
+        });
+
+        expect(mockDeleteEvent).not.toHaveBeenCalled();
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 });

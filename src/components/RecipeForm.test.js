@@ -2116,7 +2116,7 @@ describe('RecipeForm - Swipe Delete', () => {
     expect(screen.getByPlaceholderText('Zutat 1')).toHaveValue('');
   });
 
-  test('auto-hides delete banners after 10 seconds and allows multiple banners', async () => {
+  test('auto-hides delete banners after 6 seconds (CLAUDE.md undo-snackbar spec) and allows multiple banners', async () => {
     jest.useFakeTimers();
     try {
       render(
@@ -2139,9 +2139,15 @@ describe('RecipeForm - Swipe Delete', () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Zutat löschen' }));
 
       await waitFor(() => expect(screen.getAllByText('Zutat gelöscht.')).toHaveLength(2));
+      expect(screen.getAllByRole('button', { name: 'Rückgängig' })).toHaveLength(2);
 
       act(() => {
-        jest.advanceTimersByTime(10000);
+        jest.advanceTimersByTime(5999);
+      });
+      expect(screen.getAllByText('Zutat gelöscht.')).toHaveLength(2);
+
+      act(() => {
+        jest.advanceTimersByTime(1);
       });
 
       await waitFor(() => {
@@ -2150,6 +2156,31 @@ describe('RecipeForm - Swipe Delete', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  test('clicking "Rückgängig" restores a swipe-deleted ingredient at its original position', async () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Zutat 1'), { target: { value: 'Milch' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Zutat hinzufügen' }));
+    fireEvent.change(screen.getByPlaceholderText('Zutat 2'), { target: { value: 'Mehl' } });
+
+    swipeLeft(screen.getByPlaceholderText('Zutat 1'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Zutat löschen' }));
+
+    expect(screen.queryByDisplayValue('Milch')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+
+    expect(screen.getByPlaceholderText('Zutat 1')).toHaveValue('Milch');
+    expect(screen.getByPlaceholderText('Zutat 2')).toHaveValue('Mehl');
   });
 
   test('uses configurable swipe delete icon from settings', async () => {
