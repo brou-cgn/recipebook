@@ -518,10 +518,13 @@
 /* Confine the red reveal to the delete icon's own hit area (RecipeForm.css's
    base .swipe-delete-background spans the full row via inset:0) so the
    recipe/drink name keeps its normal row background while sliding, with red
-   only behind the icon on the right — not across the whole swiped area. */
+   only behind the icon on the right — not across the whole swiped area.
+   Width matches SWIPE_DELETE_MAX_OFFSET (96px, useSwipeToDelete.js) so the
+   red area is flush with the row's right edge once fully swiped open —
+   not SWIPE_DELETE_THRESHOLD, which would leave a gap. */
 .selected-recipe-item .swipe-delete-background {
   left: auto;
-  width: 3.5rem;
+  width: 6rem;
   border-radius: 6px;
 }
 
