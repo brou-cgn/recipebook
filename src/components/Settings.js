@@ -216,6 +216,8 @@ const DARK_MODE_ICON_ROWS = [
   { key: 'trendingDifficultyIcon', label: 'Trend-Kachel: Icon vor Schwierigkeitsgrad' },
   { key: 'trendingTimeIcon', label: 'Trend-Kachel: Icon vor Zubereitungszeit' },
   { key: 'kuecheFab', label: 'Küche-FAB-Button' },
+  { key: 'eventsDrinksFab', label: 'Events: Getränke-FAB (Mobile)' },
+  { key: 'eventsGuestsFab', label: 'Events: Gästeübersicht-FAB (Mobile)' },
   { key: 'bottomNavHome', label: 'Bottom Navigation: Küche' },
   { key: 'bottomNavRecipes', label: 'Bottom Navigation: Kochbuch' },
   { key: 'bottomNavMenus', label: 'Bottom Navigation: Festtafel' },

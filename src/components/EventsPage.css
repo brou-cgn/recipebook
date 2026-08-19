@@ -333,6 +333,66 @@
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
 }
 
+/* Getränke/Gästeübersicht FABs (mobile Events-Übersicht, unten links) -
+   gleiche Position/Größe wie Veröffentlichen/Löschen-FAB auf der
+   Rezeptdetailansicht, aber gefüllt in Event-Grün statt weiß/umrandet. */
+.events-drinks-fab-button,
+.events-guests-fab-button {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  z-index: 1101;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  border-radius: 50%;
+  padding: 0;
+  background: #2F5D50;
+  color: white;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+  will-change: transform;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 0.15s ease,
+              box-shadow 0.15s ease;
+}
+
+.events-drinks-fab-button {
+  left: 20px;
+}
+
+.events-guests-fab-button {
+  left: 86px;
+}
+
+.events-drinks-fab-button .button-icon-image,
+.events-guests-fab-button .button-icon-image {
+  width: 1.4rem;
+  height: 1.4rem;
+  object-fit: contain;
+}
+
+.events-drinks-fab-button:active,
+.events-guests-fab-button:active {
+  background: #2F5D50;
+  outline: none;
+}
+
+.events-drinks-fab-button.pressed,
+.events-guests-fab-button.pressed {
+  transform: scale(1.15);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+}
+
 .events-save-fab-button {
   display: none;
 }
@@ -1299,6 +1359,16 @@
   }
 
   .events-edit-fab-button {
+    display: flex;
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    max-width: 56px;
+    opacity: 0.85;
+  }
+
+  .events-drinks-fab-button,
+  .events-guests-fab-button {
     display: flex;
     width: 56px;
     height: 56px;
