@@ -4,12 +4,8 @@ import UnitChip from './UnitChip';
 import { getEffectiveIcon, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
-<<<<<<< HEAD
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
-=======
 import DeleteRowButton from './DeleteRowButton';
-import UndoSnackbar from './UndoSnackbar';
->>>>>>> origin/main
 import useUndoableDelete from '../hooks/useUndoableDelete';
 
 const MIN_DISTRIBUTION_FACTOR = 0.1;
@@ -264,11 +260,7 @@ function EventDrinkSelectionPage({
   const [swipeDeleteVisibleId, setSwipeDeleteVisibleId] = useState(null);
   const [fabPressed, setFabPressed] = useState(false);
   const [cancelPressed, setCancelPressed] = useState(false);
-<<<<<<< HEAD
   const { banners: deleteBanners, pendingKeys: pendingDeleteKeys, scheduleDelete, undoDelete } = useUndoableDelete();
-=======
-  const { notifyDeleted, undo, pendingName } = useUndoableDelete();
->>>>>>> origin/main
 
   const toggleCustomDrink = (id) => {
     setCustomDrinkIds((prev) => {
@@ -302,26 +294,6 @@ function EventDrinkSelectionPage({
         current.add(idx);
       }
       return { ...prev, [drinkId]: current };
-    });
-  };
-
-  const handleRemoveDrink = (drinkId, displayName) => {
-    const priorFactor = drinkDistributionFactors[drinkId];
-    const priorEinheiten = drinkSelectedEinheiten[drinkId];
-    toggleCustomDrink(drinkId);
-    notifyDeleted({
-      id: drinkId,
-      name: displayName,
-      undo: () => {
-        setCustomDrinkIds((prev) => (prev.includes(drinkId) ? prev : [...prev, drinkId]));
-        if (priorFactor !== undefined) {
-          setDrinkDistributionFactors((prev) => ({ ...prev, [drinkId]: priorFactor }));
-        }
-        setDrinkSelectedEinheiten((prev) => ({
-          ...prev,
-          [drinkId]: priorEinheiten ? new Set(priorEinheiten) : new Set([0]),
-        }));
-      },
     });
   };
 
@@ -443,11 +415,7 @@ function EventDrinkSelectionPage({
                         isDeleteVisible={isDeleteVisible}
                         onToggleEinheit={(idx) => toggleEinheit(drink.id, idx)}
                         onUpdateFactor={(val) => updateDistributionFactor(drink.id, val)}
-<<<<<<< HEAD
                         onRemove={() => handleRemoveDrink(drink)}
-=======
-                        onRemove={() => handleRemoveDrink(drink.id, resolveDrinkDisplay(drink, recipes).displayName)}
->>>>>>> origin/main
                         onSwipeDeleteVisible={() => setSwipeDeleteVisibleId(drink.id)}
                         onSwipeDeleteHidden={() => setSwipeDeleteVisibleId((prev) => prev === drink.id ? null : prev)}
                         minFactor={MIN_DISTRIBUTION_FACTOR}
@@ -537,7 +505,6 @@ function EventDrinkSelectionPage({
           getEffectiveIcon(effectiveButtonIcons, 'cancelRecipe', isDarkMode)
         )}
       </button>
-      <UndoSnackbar itemName={pendingName} onUndo={undo} />
     </div>
   );
 }
