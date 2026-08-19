@@ -277,7 +277,7 @@ const Header = forwardRef(function Header({
                         Festtafel
                       </button>
                       <button
-                        className={`menu-item ${currentView === 'events' ? 'active' : ''}`}
+                        className={`menu-item menu-item-events ${currentView === 'events' ? 'active' : ''}`}
                         onClick={() => handleViewChangeInternal('events')}
                       >
                         Events
