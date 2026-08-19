@@ -187,6 +187,24 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
     });
   });
 
+  test('enabling Kind disables Alkoholische Getränke and vice versa', () => {
+    openNewGuestForm();
+
+    const kindCheckbox = screen.getByLabelText('Kind');
+    const alkoholCheckbox = screen.getByLabelText('Alkoholische Getränke');
+
+    expect(kindCheckbox).not.toBeChecked();
+    expect(alkoholCheckbox).toBeChecked();
+
+    fireEvent.click(kindCheckbox);
+    expect(kindCheckbox).toBeChecked();
+    expect(alkoholCheckbox).not.toBeChecked();
+
+    fireEvent.click(alkoholCheckbox);
+    expect(alkoholCheckbox).toBeChecked();
+    expect(kindCheckbox).not.toBeChecked();
+  });
+
   test('shows a category dropdown with standard drink categories', () => {
     openNewGuestForm();
     const categorySelect = screen.getByRole('combobox', { name: 'Getränkekategorie auswählen' });

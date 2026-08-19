@@ -396,7 +396,14 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
               type="checkbox"
               role="switch"
               checked={form.kind}
-              onChange={(e) => setForm((f) => ({ ...f, kind: e.target.checked }))}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setForm((f) => ({
+                  ...f,
+                  kind: checked,
+                  alkoholischeGetraenke: checked ? false : f.alkoholischeGetraenke,
+                }));
+              }}
             />
             <span>Kind</span>
           </label>
@@ -406,7 +413,14 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
               type="checkbox"
               role="switch"
               checked={form.alkoholischeGetraenke}
-              onChange={(e) => setForm((f) => ({ ...f, alkoholischeGetraenke: e.target.checked }))}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setForm((f) => ({
+                  ...f,
+                  alkoholischeGetraenke: checked,
+                  kind: checked ? false : f.kind,
+                }));
+              }}
             />
             <span>Alkoholische Getränke</span>
           </label>
