@@ -136,6 +136,8 @@ function EventCard({ event, ownerName, canManage, onSelect, onDelete, swipeDelet
 function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPendingEventReminderHandled, pendingEventDetailRequest, onPendingEventDetailRequestHandled, onCloseLinkedEventDetail }) {
   const [isMobileView, setIsMobileView] = useState(() => window.innerWidth <= 768);
   const [editFabPressed, setEditFabPressed] = useState(false);
+  const [drinksFabPressed, setDrinksFabPressed] = useState(false);
+  const [guestsFabPressed, setGuestsFabPressed] = useState(false);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [events, setEvents] = useState([]);
@@ -281,6 +283,8 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
   const editEventIcon = getEffectiveIcon(buttonIcons, 'editRecipe', isDarkMode);
   const eventsCloseIcon = getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode) || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode);
   const swipeDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode) || '🗑';
+  const drinksFabIcon = getEffectiveIcon(buttonIcons, 'eventsDrinksFab', isDarkMode);
+  const guestsFabIcon = getEffectiveIcon(buttonIcons, 'eventsGuestsFab', isDarkMode);
 
   const handleSelectEvent = (event, ownerId = currentUser?.id) => {
     setOpenedFromMenuLink(false);
@@ -641,6 +645,48 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
         </div>
       ))}
       <OverviewAddFab onClick={() => setSubView('new')} title="Event erstellen" ariaLabel="Event erstellen" />
+      {isMobileView && (
+        <button
+          type="button"
+          className={`events-drinks-fab-button${drinksFabPressed ? ' pressed' : ''}`}
+          onClick={() => setSubView('drinks')}
+          onTouchStart={() => setDrinksFabPressed(true)}
+          onTouchEnd={() => setDrinksFabPressed(false)}
+          onTouchCancel={() => setDrinksFabPressed(false)}
+          onMouseDown={() => setDrinksFabPressed(true)}
+          onMouseUp={() => setDrinksFabPressed(false)}
+          onMouseLeave={() => setDrinksFabPressed(false)}
+          title="Getränke verwalten"
+          aria-label="Getränke verwalten"
+        >
+          {isBase64Image(drinksFabIcon) ? (
+            <img src={drinksFabIcon} alt="Getränke" className="button-icon-image" draggable="false" />
+          ) : (
+            drinksFabIcon
+          )}
+        </button>
+      )}
+      {isMobileView && canEditRecipes(currentUser) && (
+        <button
+          type="button"
+          className={`events-guests-fab-button${guestsFabPressed ? ' pressed' : ''}`}
+          onClick={() => setSubView('guests')}
+          onTouchStart={() => setGuestsFabPressed(true)}
+          onTouchEnd={() => setGuestsFabPressed(false)}
+          onTouchCancel={() => setGuestsFabPressed(false)}
+          onMouseDown={() => setGuestsFabPressed(true)}
+          onMouseUp={() => setGuestsFabPressed(false)}
+          onMouseLeave={() => setGuestsFabPressed(false)}
+          title="Gästeübersicht"
+          aria-label="Gästeübersicht"
+        >
+          {isBase64Image(guestsFabIcon) ? (
+            <img src={guestsFabIcon} alt="Gäste" className="button-icon-image" draggable="false" />
+          ) : (
+            guestsFabIcon
+          )}
+        </button>
+      )}
     </div>
   );
 }
