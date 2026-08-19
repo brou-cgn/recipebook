@@ -136,6 +136,7 @@ function GuestRow({
         <label className="events-guest-row-driver">
           <input
             type="checkbox"
+            role="switch"
             className="events-driver-checkbox"
             checked={isDriver}
             onChange={onToggleDriver}
