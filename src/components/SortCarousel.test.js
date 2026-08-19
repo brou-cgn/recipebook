@@ -171,5 +171,31 @@ describe('SortCarousel', () => {
       fireEvent.scroll(tablist);
       expect(tablist).toHaveClass('sort-carousel--expanded');
     });
+
+    test('collapsing first swipes the active pill to its target position, then shrinks the track', () => {
+      render(<SortCarousel activeSort="alphabetical" onSortChange={() => {}} />);
+      const tablist = screen.getByRole('tablist');
+      const activeTab = screen.getByRole('tab', { name: 'Alphabetisch' });
+
+      // Simulate the active pill sitting away from the track's left edge,
+      // as if the user had swiped it into view.
+      jest.spyOn(tablist, 'getBoundingClientRect').mockReturnValue({ left: 0 });
+      jest.spyOn(activeTab, 'getBoundingClientRect').mockReturnValue({ left: 20 });
+      Object.defineProperty(tablist, 'scrollLeft', { value: 50, writable: true });
+
+      fireEvent.click(activeTab);
+      expect(tablist).toHaveClass('sort-carousel--expanded');
+
+      fireEvent.click(activeTab);
+
+      // The pre-collapse swipe has started but not yet settled, so the
+      // track must not have started shrinking yet.
+      expect(tablist.scrollTo).toHaveBeenCalledWith({ left: 70, behavior: 'smooth' });
+      expect(tablist).toHaveClass('sort-carousel--expanded');
+
+      // Once the browser reports the swipe as finished, the shrink runs.
+      fireEvent(tablist, new Event('scrollend'));
+      expect(tablist).not.toHaveClass('sort-carousel--expanded');
+    });
   });
 });
