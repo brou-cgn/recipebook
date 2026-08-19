@@ -595,7 +595,7 @@
   color: #333;
 }
 
-.events-form-field input,
+.events-form-field input:not([type="checkbox"]),
 .events-form-field select {
   height: 44px;
   padding: 8px 16px;
