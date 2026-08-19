@@ -5,6 +5,149 @@ import { getGuestDisplayName } from '../utils/guestPreferences';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 
+// Matches the swipe-to-delete gesture and delete button behavior used for
+// drinks (see DrinkRow in EventDrinkSelectionPage.js): swiping left reveals
+// the delete button on the right; on desktop the static button next to the
+// row stays visible instead (no touch events to trigger the swipe).
+const SWIPE_DELETE_THRESHOLD = 56;
+const SWIPE_DELETE_MAX_OFFSET = 96;
+const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
+
+function GuestRow({
+  fullName,
+  isDriver,
+  isDeleteVisible,
+  onToggleDriver,
+  onRemove,
+  onSwipeDeleteVisible,
+  onSwipeDeleteHidden,
+  swipeDeleteIcon,
+}) {
+  const touchStartXRef = useRef(null);
+  const touchStartYRef = useRef(null);
+  const swipeDirectionLockedRef = useRef(null);
+  const isSwipingRef = useRef(false);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+
+  const effectiveSwipeOffset = isDeleteVisible ? -SWIPE_DELETE_MAX_OFFSET : swipeOffset;
+
+  const resetSwipe = ({ keepDeleteAction = false } = {}) => {
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+    swipeDirectionLockedRef.current = null;
+    isSwipingRef.current = false;
+    setSwipeOffset(0);
+    if (!keepDeleteAction) {
+      onSwipeDeleteHidden();
+    }
+  };
+
+  const handleTouchStart = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    if (isDeleteVisible) onSwipeDeleteHidden();
+    touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+    swipeDirectionLockedRef.current = null;
+    isSwipingRef.current = false;
+  };
+
+  const handleTouchMove = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch || touchStartXRef.current === null || touchStartYRef.current === null) return;
+
+    const deltaX = touch.clientX - touchStartXRef.current;
+    const deltaY = touch.clientY - touchStartYRef.current;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (!swipeDirectionLockedRef.current && (absX > SWIPE_DIRECTION_LOCK_THRESHOLD || absY > SWIPE_DIRECTION_LOCK_THRESHOLD)) {
+      swipeDirectionLockedRef.current = absX > absY ? 'horizontal' : 'vertical';
+    }
+
+    if (swipeDirectionLockedRef.current === 'horizontal' && deltaX < 0) {
+      isSwipingRef.current = true;
+      setSwipeOffset(Math.max(deltaX, -SWIPE_DELETE_MAX_OFFSET));
+      if (e.cancelable) e.preventDefault();
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isSwipingRef.current && Math.abs(swipeOffset) >= SWIPE_DELETE_THRESHOLD) {
+      onSwipeDeleteVisible();
+      resetSwipe({ keepDeleteAction: true });
+      return;
+    }
+    resetSwipe();
+  };
+
+  const handleSwipeDeleteClick = () => {
+    onRemove();
+    resetSwipe();
+  };
+
+  const swipeContentStyle = {
+    transform: `translateX(${effectiveSwipeOffset}px)`,
+    transition: 'transform 0.15s ease',
+  };
+
+  return (
+    <div className={`events-guest-row${effectiveSwipeOffset < 0 ? ' swipe-delete-active' : ''}`}>
+      <div className="events-guest-row-swipe-background" aria-hidden={!isDeleteVisible}>
+        {isDeleteVisible && (
+          <button
+            type="button"
+            className="events-guest-row-swipe-action"
+            onClick={handleSwipeDeleteClick}
+            aria-label={`${fullName} entfernen`}
+          >
+            {isBase64Image(swipeDeleteIcon) ? (
+              <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
+            ) : (
+              <span className="swipe-delete-icon-text">{swipeDeleteIcon || '🗑'}</span>
+            )}
+          </button>
+        )}
+      </div>
+      <div
+        className="events-guest-row-content"
+        style={swipeContentStyle}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={resetSwipe}
+      >
+        <div className="events-guest-row-header">
+          <div className="events-guest-row-name">{fullName}</div>
+          <button
+            type="button"
+            className="events-guest-row-delete-btn"
+            onClick={onRemove}
+            aria-label={`${fullName} löschen`}
+            title="Gast entfernen"
+          >
+            {isBase64Image(swipeDeleteIcon) ? (
+              <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
+            ) : (
+              <span className="swipe-delete-icon-text">{swipeDeleteIcon || '🗑'}</span>
+            )}
+          </button>
+        </div>
+        <label className="events-guest-row-driver">
+          <input
+            type="checkbox"
+            className="events-driver-checkbox"
+            checked={isDriver}
+            onChange={onToggleDriver}
+            aria-label={`${fullName} als Fahrer markieren`}
+          />
+          <span>Fahrer</span>
+        </label>
+      </div>
+    </div>
+  );
+}
+
 function EventGuestSelectionPage({
   currentUser,
   ownerId,
@@ -22,10 +165,12 @@ function EventGuestSelectionPage({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [fabPressed, setFabPressed] = useState(false);
   const [cancelPressed, setCancelPressed] = useState(false);
+  const [swipeDeleteVisibleId, setSwipeDeleteVisibleId] = useState(null);
   const searchRef = useRef(null);
   const dropdownRef = useRef(null);
   const effectiveButtonIcons = buttonIcons || DEFAULT_BUTTON_ICONS;
   const effectiveOwnerId = ownerId || currentUser?.id;
+  const swipeDeleteIcon = getEffectiveIcon(effectiveButtonIcons, 'swipeDelete', isDarkMode) || '🗑';
 
   useEffect(() => {
     if (!effectiveOwnerId) return undefined;
@@ -145,44 +290,26 @@ function EventGuestSelectionPage({
           </div>
 
           {selectedGuests.length > 0 && (
-            <div className="events-table-container">
-              <table className="events-table">
-                <thead>
-                  <tr>
-                    <th>Gast</th>
-                    <th>Fahrer</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedGuests.map((guest) => {
-                    const fullName = getGuestDisplayName(guest) || 'Unbenannter Gast';
-                    return (
-                      <tr key={guest.id}>
-                        <td>
-                          <label className="events-category-checkbox">
-                            <input
-                              type="checkbox"
-                              checked
-                              onChange={() => toggleGuest(guest.id)}
-                              aria-label={`${fullName} als Gast auswählen`}
-                            />
-                            <span>{fullName}</span>
-                          </label>
-                        </td>
-                        <td>
-                          <input
-                            type="checkbox"
-                            className="events-driver-checkbox"
-                            checked={driverGuestIds.includes(guest.id)}
-                            onChange={() => toggleDriverGuest(guest.id)}
-                            aria-label={`${fullName} als Fahrer markieren`}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="events-guest-list">
+              {selectedGuests.map((guest) => {
+                const fullName = getGuestDisplayName(guest) || 'Unbenannter Gast';
+                const isDeleteVisible = swipeDeleteVisibleId === guest.id;
+                return (
+                  <GuestRow
+                    key={guest.id}
+                    fullName={fullName}
+                    isDriver={driverGuestIds.includes(guest.id)}
+                    isDeleteVisible={isDeleteVisible}
+                    onToggleDriver={() => toggleDriverGuest(guest.id)}
+                    onRemove={() => toggleGuest(guest.id)}
+                    onSwipeDeleteVisible={() => setSwipeDeleteVisibleId(guest.id)}
+                    onSwipeDeleteHidden={() =>
+                      setSwipeDeleteVisibleId((prev) => (prev === guest.id ? null : prev))
+                    }
+                    swipeDeleteIcon={swipeDeleteIcon}
+                  />
+                );
+              })}
             </div>
           )}
 
