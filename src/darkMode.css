@@ -4172,6 +4172,10 @@
   background: #1e1e1e;
 }
 
+[data-theme="dark"] .drink-swipe-content {
+  background: #1e1e1e;
+}
+
 [data-theme="dark"] .events-drink-row-name {
   color: #7fb8a3;
 }

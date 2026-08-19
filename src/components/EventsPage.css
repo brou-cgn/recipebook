@@ -1710,6 +1710,8 @@
 .drink-swipe-content {
   position: relative;
   z-index: 1;
+  background: white;
+  border-radius: 10px;
   transition: transform 0.15s ease;
 }
 
