@@ -484,13 +484,6 @@
   overflow: hidden;
   border-radius: 6px;
   margin-bottom: 0.5rem;
-  /* iOS Safari can fail to clip an overflow:hidden + border-radius parent
-     around a translateX'd sibling (the swiped content), leaving the red
-     .swipe-delete-background's right corners square instead of following
-     this radius. Forcing a mask (a no-op everywhere else) makes the clip
-     reliable so the fully-swiped row's right corners stay rounded and red
-     all the way into the corner instead of showing a square notch. */
-  -webkit-mask-image: -webkit-radial-gradient(#fff, #000);
 }
 
 .selected-recipe-item-content {
@@ -533,38 +526,16 @@
   pointer-events: auto;
 }
 
-/* Confine the red reveal to the delete icon's own hit area (RecipeForm.css's
-   base .swipe-delete-background spans the full row via inset:0) so the
-   recipe/drink name keeps its normal row background while sliding, with red
-   only behind the icon on the right — not across the whole swiped area.
-   Width matches SWIPE_DELETE_MAX_OFFSET (96px, useSwipeToDelete.js) so the
-   red area is flush with the row's right edge once fully swiped open —
-   not SWIPE_DELETE_THRESHOLD, which would leave a gap. */
+/* Same pattern as EventsPage.css's .drink-swipe-delete-background /
+   .events-card-swipe-delete-background (see CLAUDE.md: mobile swipe-delete
+   mirrors the event/drink interaction): the red reveal spans the full row
+   (RecipeForm.css's base .swipe-delete-background already sets inset:0) and
+   keeps the row's own corner radius on all four corners, rather than being
+   confined to the icon's hit area. The field on top keeps its own full
+   radius too (not squared off on the right), so at full swipe its rounded
+   right corner shows the red fill curving in behind it. */
 .selected-recipe-item .swipe-delete-background {
-  left: auto;
-  width: 6rem;
   border-radius: 6px;
-  /* Pull the icon in from RecipeForm.css's base 0.85rem so more of the red
-     fill sits behind the rounded right corners instead of just the icon's
-     hit area. */
-  padding-right: 0.5rem;
-}
-
-/* Square off the two corners that face each other across the field/red
-   seam (the field's right corners, the red area's left corners) so the
-   swiped-open boundary is a flush straight line - rounding both sides
-   there leaves a notch where neither div paints, exposing the page
-   background underneath. The row's own rounded shape still comes through:
-   the field's left corners at rest (clipped by the outer overflow:hidden)
-   and the red area's right corners once fully swiped open. */
-.selected-recipe-item-content {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-.selected-recipe-item .swipe-delete-background {
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
 }
 
 @media (max-width: 768px) {
