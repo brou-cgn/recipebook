@@ -101,7 +101,7 @@ describe('EventGuestSelectionPage', () => {
     expect(screen.getByText('Keine Gäste gefunden.')).toBeInTheDocument();
   });
 
-  test('selecting a guest from the dropdown adds them to the selection table', () => {
+  test('selecting a guest from the dropdown adds them to the selection list', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
@@ -119,8 +119,7 @@ describe('EventGuestSelectionPage', () => {
     fireEvent.mouseDown(option);
 
     expect(screen.getByText('1 Gast ausgewählt.')).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Gast' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Anna Beispiel als Gast auswählen')).toBeInTheDocument();
+    expect(screen.getByText('Anna Beispiel', { selector: '.events-guest-row-name' })).toBeInTheDocument();
   });
 
   test('search input is cleared after selecting a guest', () => {
@@ -158,7 +157,7 @@ describe('EventGuestSelectionPage', () => {
     expect(screen.queryByRole('option', { name: 'Anna Beispiel' })).not.toBeInTheDocument();
   });
 
-  test('shows selected guests table with Gast and Fahrer columns', () => {
+  test('shows selected guests as rows with a Fahrer checkbox', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
@@ -169,12 +168,11 @@ describe('EventGuestSelectionPage', () => {
       />
     );
 
-    expect(screen.getByRole('columnheader', { name: 'Gast' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Fahrer' })).toBeInTheDocument();
     expect(screen.getByText('Anna Beispiel')).toBeInTheDocument();
+    expect(screen.getByLabelText('Anna Beispiel als Fahrer markieren')).toBeInTheDocument();
   });
 
-  test('deselecting a guest in the table removes them from the selection', () => {
+  test('removes a guest when swiped left and delete button is clicked', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
@@ -185,10 +183,31 @@ describe('EventGuestSelectionPage', () => {
       />
     );
 
-    fireEvent.click(screen.getByLabelText('Anna Beispiel als Gast auswählen'));
+    const annaRowContent = screen.getByText('Anna Beispiel').closest('.events-guest-row-content');
+    fireEvent.touchStart(annaRowContent, { touches: [{ clientX: 200, clientY: 100 }] });
+    fireEvent.touchMove(annaRowContent, { touches: [{ clientX: 80, clientY: 100 }] });
+    fireEvent.touchEnd(annaRowContent);
+    fireEvent.click(screen.getByLabelText('Anna Beispiel entfernen'));
 
     expect(screen.getByText('0 Gäste ausgewählt.')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Anna Beispiel als Gast auswählen')).not.toBeInTheDocument();
+    expect(screen.queryByText('Anna Beispiel', { selector: '.events-guest-row-name' })).not.toBeInTheDocument();
+  });
+
+  test('removes a guest via the always-visible desktop delete button, without swiping', () => {
+    render(
+      <EventGuestSelectionPage
+        currentUser={currentUser}
+        selectedGuestIds={['g1']}
+        driverGuestIds={[]}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Anna Beispiel löschen'));
+
+    expect(screen.getByText('0 Gäste ausgewählt.')).toBeInTheDocument();
+    expect(screen.queryByText('Anna Beispiel', { selector: '.events-guest-row-name' })).not.toBeInTheDocument();
   });
 
   test('toggles driver when checkbox is clicked', () => {
@@ -255,7 +274,7 @@ describe('EventGuestSelectionPage', () => {
       />
     );
 
-    fireEvent.click(screen.getByLabelText('Anna Beispiel als Gast auswählen'));
+    fireEvent.click(screen.getByLabelText('Anna Beispiel löschen'));
 
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
