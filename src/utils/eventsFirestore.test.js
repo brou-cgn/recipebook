@@ -8,18 +8,22 @@ const mockAddDoc = jest.fn();
 const mockSetDoc = jest.fn();
 const mockDeleteDoc = jest.fn();
 const mockOnSnapshot = jest.fn();
+const mockGetDocs = jest.fn();
 const mockServerTimestamp = jest.fn(() => 'mock-ts');
 const mockOrderBy = jest.fn((...args) => args);
 const mockQuery = jest.fn((...args) => args);
 const mockCollection = jest.fn();
+const mockCollectionGroup = jest.fn();
 const mockDoc = jest.fn();
 const mockHttpsCallable = jest.fn();
 const mockGuestCallable = jest.fn();
 
 jest.mock('firebase/firestore', () => ({
   collection: (...args) => mockCollection(...args),
+  collectionGroup: (...args) => mockCollectionGroup(...args),
   doc: (...args) => mockDoc(...args),
   getDoc: jest.fn(),
+  getDocs: (...args) => mockGetDocs(...args),
   addDoc: (...args) => mockAddDoc(...args),
   setDoc: (...args) => mockSetDoc(...args),
   deleteDoc: (...args) => mockDeleteDoc(...args),
@@ -35,6 +39,9 @@ jest.mock('firebase/functions', () => ({
 
 import {
   subscribeToCustomDrinks,
+  subscribeToAllCustomDrinks,
+  getAllCustomDrinks,
+  getCustomDrinks,
   saveCustomDrink,
   deleteCustomDrink,
   subscribeToGuestProfiles,
@@ -44,7 +51,11 @@ import {
 
 const createSnapshot = (items) => ({
   forEach: (cb) =>
-    items.forEach((item) => cb({ id: item.id, data: () => { const { id, ...rest } = item; return rest; } })),
+    items.forEach((item) => cb({
+      id: item.id,
+      data: () => { const { id, __ownerId, ...rest } = item; return rest; },
+      ref: { parent: { parent: { id: item.__ownerId || 'owner' } } },
+    })),
 });
 
 describe('subscribeToCustomDrinks', () => {
@@ -73,6 +84,99 @@ describe('subscribeToCustomDrinks', () => {
     subscribeToCustomDrinks('user1', cb);
 
     expect(cb).toHaveBeenCalledWith([]);
+  });
+
+  it('filters out this user\'s own additional-units contributions to someone else\'s drink', () => {
+    const drinks = [
+      { id: 'd1', name: 'Craft-Bier', einheiten: [] },
+      { id: 'd2', extendsOwnerId: 'other-user', einheiten: [{ einheitsgroesse: 0.2 }] },
+    ];
+    mockOnSnapshot.mockImplementation((_ref, cb) => {
+      cb(createSnapshot(drinks));
+      return jest.fn();
+    });
+
+    const cb = jest.fn();
+    subscribeToCustomDrinks('user1', cb);
+
+    expect(cb).toHaveBeenCalledWith([{ id: 'd1', name: 'Craft-Bier', einheiten: [] }]);
+  });
+});
+
+describe('subscribeToAllCustomDrinks', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('merges another user\'s additional-units addition into the drink it extends', () => {
+    const drinks = [
+      { id: 'd1', __ownerId: 'u1', name: 'Papas Wein', einheiten: [{ einheitsgroesse: 0.75 }] },
+      { id: 'd1', __ownerId: 'u2', extendsOwnerId: 'u1', einheiten: [{ einheitsgroesse: 0.2, einheit: 'Glas' }] },
+    ];
+    mockOnSnapshot.mockImplementation((_ref, cb) => {
+      cb(createSnapshot(drinks));
+      return jest.fn();
+    });
+
+    const cb = jest.fn();
+    subscribeToAllCustomDrinks(cb);
+
+    expect(cb).toHaveBeenCalledWith([
+      {
+        id: 'd1',
+        name: 'Papas Wein',
+        ownerId: 'u1',
+        einheiten: [
+          { einheitsgroesse: 0.75 },
+          { einheitsgroesse: 0.2, einheit: 'Glas', addedByUserId: 'u2' },
+        ],
+      },
+    ]);
+  });
+
+  it('calls callback with empty array on error', () => {
+    mockOnSnapshot.mockImplementation((_ref, _success, errorCb) => {
+      errorCb(new Error('firestore error'));
+      return jest.fn();
+    });
+
+    const cb = jest.fn();
+    subscribeToAllCustomDrinks(cb);
+
+    expect(cb).toHaveBeenCalledWith([]);
+  });
+});
+
+describe('getAllCustomDrinks / getCustomDrinks', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('getAllCustomDrinks merges additional-units additions across owners', async () => {
+    const drinks = [
+      { id: 'd1', __ownerId: 'u1', name: 'Papas Wein', einheiten: [] },
+      { id: 'd1', __ownerId: 'u2', extendsOwnerId: 'u1', einheiten: [{ einheitsgroesse: 0.33 }] },
+    ];
+    mockGetDocs.mockResolvedValue(createSnapshot(drinks));
+
+    const result = await getAllCustomDrinks();
+
+    expect(result).toEqual([
+      {
+        id: 'd1',
+        name: 'Papas Wein',
+        ownerId: 'u1',
+        einheiten: [{ einheitsgroesse: 0.33, addedByUserId: 'u2' }],
+      },
+    ]);
+  });
+
+  it('getCustomDrinks excludes this user\'s own additional-units contributions to someone else\'s drink', async () => {
+    const drinks = [
+      { id: 'd1', name: 'Eigenes Bier', einheiten: [] },
+      { id: 'd2', extendsOwnerId: 'other-user', einheiten: [{ einheitsgroesse: 0.2 }] },
+    ];
+    mockGetDocs.mockResolvedValue(createSnapshot(drinks));
+
+    const result = await getCustomDrinks('user1');
+
+    expect(result).toEqual([{ id: 'd1', name: 'Eigenes Bier', einheiten: [] }]);
   });
 });
 

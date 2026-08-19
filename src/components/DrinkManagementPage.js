@@ -7,7 +7,6 @@ import useUndoableDelete from '../hooks/useUndoableDelete';
 import RecipeTypeahead from './RecipeTypeahead';
 import { DRINK_CATEGORIES, getDrinkCategoryLabel, mergePredefinedDrinks } from '../utils/drinkCategories';
 import { getCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
-import { getUsers } from '../utils/userManagement';
 import { isBase64Image } from '../utils/imageUtils';
 import { encodeRecipeLink, containsHashForTypeahead } from '../utils/recipeLinks';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
@@ -91,8 +90,13 @@ const emptyForm = () => ({
   einheiten: [emptyEinheit()],
 });
 
-function DrinkRow({ drink, displayName, ownerName, canManage, onEdit, onDelete, swipeDeleteIcon }) {
+function DrinkRow({ drink, displayName, isForeign, canManage, canAddUnits, onEdit, onAddUnits, onDelete, swipeDeleteIcon }) {
   const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ disabled: drink.predefined || !canManage });
+  const isClickable = canManage || canAddUnits;
+  const handleRowClick = () => {
+    if (canManage) onEdit(drink);
+    else if (canAddUnits) onAddUnits(drink);
+  };
 
   return (
     <div
@@ -120,11 +124,11 @@ function DrinkRow({ drink, displayName, ownerName, canManage, onEdit, onDelete, 
       <div
         className="drink-swipe-content events-card-main"
         style={{ transform: `translateX(${offset}px)`, padding: '16px 20px', width: '100%' }}
-        onClick={offset < 0 || !canManage ? undefined : () => onEdit(drink)}
+        onClick={offset < 0 || !isClickable ? undefined : handleRowClick}
         {...handlers}
       >
         <div className="drink-list-item-header delete-row-hover-target">
-          <h3>{displayName}</h3>
+          <h3 className={isForeign ? 'drink-list-item-title--foreign' : undefined}>{displayName}</h3>
           {!drink.predefined && canManage && (
             <DeleteRowButton
               itemName={displayName}
@@ -144,7 +148,6 @@ function DrinkRow({ drink, displayName, ownerName, canManage, onEdit, onDelete, 
                   .map((e) => getUnitSizeLabel(e.einheitsgroesse) || String(e.einheitsgroesse))
                   .join(', ')
               : null,
-            ownerName ? `von ${ownerName}` : null,
           ].filter(Boolean).join(' · ')}
         </p>
       </div>
@@ -154,12 +157,13 @@ function DrinkRow({ drink, displayName, ownerName, canManage, onEdit, onDelete, 
 
 function DrinkManagementPage({ onBack, currentUser, recipes }) {
   const [drinks, setDrinks] = useState([]);
-  const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
   const [editOwnerId, setEditOwnerId] = useState(null);
   const [isPredefined, setIsPredefined] = useState(false);
+  const [isAddUnitsMode, setIsAddUnitsMode] = useState(false);
+  const [addUnitsDrink, setAddUnitsDrink] = useState(null);
   const isAdmin = currentUser?.isAdmin === true;
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
@@ -195,10 +199,6 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
   }, []);
 
   useEffect(() => {
-    getUsers().then(setAllUsers).catch(() => setAllUsers([]));
-  }, []);
-
-  useEffect(() => {
     const unsubscribe = subscribeToAllCustomDrinks((loaded) => {
       setDrinks(loaded);
       setLoading(false);
@@ -217,10 +217,6 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
     return merged.filter((drink) => !drink.ownerId || drink.ownerId === currentUser?.id);
   }, [drinks, currentUser?.id, showOwnOnly, pendingDeleteKeys]);
   const groupedDrinks = useMemo(() => groupDrinksByCategory(allDrinks, recipes), [allDrinks, recipes]);
-  const getOwnerFirstName = (ownerId) => {
-    if (!ownerId) return null;
-    return allUsers.find((u) => u.id === ownerId)?.vorname || null;
-  };
 
   const nameDrinkDisplay = resolveDrinkDisplay(form.name, recipes);
 
@@ -228,6 +224,8 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
     setEditId(null);
     setEditOwnerId(null);
     setIsPredefined(false);
+    setIsAddUnitsMode(false);
+    setAddUnitsDrink(null);
     setForm(emptyForm());
     setError('');
     setShowNameTypeahead(false);
@@ -238,6 +236,8 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
     setEditId(drink.id);
     setEditOwnerId(drink.ownerId || null);
     setIsPredefined(Boolean(drink.predefined));
+    setIsAddUnitsMode(false);
+    setAddUnitsDrink(null);
     setForm({
       name: drink.name || '',
       kategorie: drink.kategorie || '',
@@ -250,6 +250,34 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
               einheitenProGebinde: e.einheitenProGebinde ?? '',
             }))
           : [emptyEinheit()],
+    });
+    setError('');
+    setShowNameTypeahead(false);
+    setShowForm(true);
+  };
+
+  // Drinks owned by another user can't be edited directly (Firestore only
+  // lets the owner/an admin write their document); instead, the current
+  // user maintains their own additional Einheiten alongside the owner's,
+  // stored under their own account and merged in wherever the drink is used.
+  const openAddUnits = (drink) => {
+    setEditId(drink.id);
+    setEditOwnerId(drink.ownerId || null);
+    setIsPredefined(false);
+    setIsAddUnitsMode(true);
+    setAddUnitsDrink(drink);
+    const ownEinheiten = (Array.isArray(drink.einheiten) ? drink.einheiten : [])
+      .filter((e) => e.addedByUserId === currentUser?.id)
+      .map((e) => ({
+        einheitsgroesse: e.einheitsgroesse ?? 0.5,
+        einheit: e.einheit || '',
+        gebindeinheit: e.gebindeinheit || '',
+        einheitenProGebinde: e.einheitenProGebinde ?? '',
+      }));
+    setForm({
+      name: drink.name || '',
+      kategorie: drink.kategorie || '',
+      einheiten: ownEinheiten.length > 0 ? ownEinheiten : [emptyEinheit()],
     });
     setError('');
     setShowNameTypeahead(false);
@@ -273,6 +301,8 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
   const closeForm = () => {
     setShowNameTypeahead(false);
     setShowForm(false);
+    setIsAddUnitsMode(false);
+    setAddUnitsDrink(null);
   };
 
   const addEinheit = () => {
@@ -307,8 +337,45 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
     }
   };
 
+  const buildEinheitenPayload = () => form.einheiten.map((e) => {
+    const einheit = { einheitsgroesse: Number(e.einheitsgroesse) };
+    const einheitTrimmed = String(e.einheit || '').trim();
+    if (einheitTrimmed) einheit.einheit = einheitTrimmed;
+    const gebindeinheitTrimmed = String(e.gebindeinheit || '').trim();
+    if (gebindeinheitTrimmed) einheit.gebindeinheit = gebindeinheitTrimmed;
+    if (e.einheitenProGebinde !== '' && e.einheitenProGebinde !== null && e.einheitenProGebinde !== undefined) {
+      einheit.einheitenProGebinde = Number(e.einheitenProGebinde);
+    }
+    return einheit;
+  });
+
+  const handleSaveUnitAddition = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const einheiten = buildEinheitenPayload().filter((e) => e.einheitsgroesse);
+      if (einheiten.length === 0) {
+        await deleteCustomDrink(currentUser.id, editId);
+      } else {
+        await saveCustomDrink(currentUser.id, { einheiten, extendsOwnerId: editOwnerId }, editId);
+      }
+      setShowForm(false);
+      setIsAddUnitsMode(false);
+      setAddUnitsDrink(null);
+    } catch (err) {
+      console.error('Error saving drink unit addition:', err);
+      setError('Die zusätzlichen Einheiten konnten nicht gespeichert werden. Bitte versuche es erneut.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
+    if (isAddUnitsMode) {
+      await handleSaveUnitAddition();
+      return;
+    }
     if (!isPredefined && !form.name.trim()) {
       setError('Bitte einen Namen angeben.');
       return;
@@ -328,17 +395,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
     try {
       const payload = {
         ...(isPredefined ? {} : { name: form.name.trim(), kategorie: form.kategorie || null }),
-        einheiten: form.einheiten.map((e) => {
-          const einheit = { einheitsgroesse: Number(e.einheitsgroesse) };
-          const einheitTrimmed = String(e.einheit || '').trim();
-          if (einheitTrimmed) einheit.einheit = einheitTrimmed;
-          const gebindeinheitTrimmed = String(e.gebindeinheit || '').trim();
-          if (gebindeinheitTrimmed) einheit.gebindeinheit = gebindeinheitTrimmed;
-          if (e.einheitenProGebinde !== '' && e.einheitenProGebinde !== null && e.einheitenProGebinde !== undefined) {
-            einheit.einheitenProGebinde = Number(e.einheitenProGebinde);
-          }
-          return einheit;
-        }),
+        einheiten: buildEinheitenPayload(),
       };
       const targetOwnerId = editId ? (editOwnerId || currentUser.id) : currentUser.id;
       if (isPredefined) {
@@ -381,62 +438,91 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
     return (
       <div className="events-page-container">
         <div className="events-page-header">
-          <h2>{editId ? 'Getränk bearbeiten' : 'Neues Getränk'}</h2>
+          <h2>{isAddUnitsMode ? 'Zusätzliche Einheiten' : editId ? 'Getränk bearbeiten' : 'Neues Getränk'}</h2>
         </div>
         <form className="events-form" onSubmit={handleSave} ref={formRef}>
-          <label className="events-form-field">
-            <span>Name</span>
-            <div className="events-name-input-wrapper">
-              <input
-                type="text"
-                value={nameDrinkDisplay.isRecipe ? nameDrinkDisplay.displayName : form.name}
-                onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="z. B. Craft-Bier, Apfelsaft, ... (# verlinkt ein Rezept)"
-                required={!isPredefined}
-                disabled={isPredefined}
-                readOnly={nameDrinkDisplay.isRecipe}
-                className={nameDrinkDisplay.isRecipe ? 'recipe-link-input' : ''}
-                title={nameDrinkDisplay.isRecipe ? `Verlinktes Rezept: ${nameDrinkDisplay.displayName}` : undefined}
-              />
-              {nameDrinkDisplay.isRecipe && !isPredefined && (
-                <button
-                  type="button"
-                  className="events-name-link-clear-btn"
-                  onClick={handleClearNameLink}
-                  aria-label="Verknüpfung entfernen"
-                  title="Verknüpfung entfernen"
+          {isAddUnitsMode ? (
+            <div className="events-form-field">
+              <span>Getränk</span>
+              <p className="drink-add-units-name">{resolveDrinkDisplay(addUnitsDrink, recipes).displayName}</p>
+            </div>
+          ) : (
+            <>
+              <label className="events-form-field">
+                <span>Name</span>
+                <div className="events-name-input-wrapper">
+                  <input
+                    type="text"
+                    value={nameDrinkDisplay.isRecipe ? nameDrinkDisplay.displayName : form.name}
+                    onChange={(e) => handleNameChange(e.target.value)}
+                    placeholder="z. B. Craft-Bier, Apfelsaft, ... (# verlinkt ein Rezept)"
+                    required={!isPredefined}
+                    disabled={isPredefined}
+                    readOnly={nameDrinkDisplay.isRecipe}
+                    className={nameDrinkDisplay.isRecipe ? 'recipe-link-input' : ''}
+                    title={nameDrinkDisplay.isRecipe ? `Verlinktes Rezept: ${nameDrinkDisplay.displayName}` : undefined}
+                  />
+                  {nameDrinkDisplay.isRecipe && !isPredefined && (
+                    <button
+                      type="button"
+                      className="events-name-link-clear-btn"
+                      onClick={handleClearNameLink}
+                      aria-label="Verknüpfung entfernen"
+                      title="Verknüpfung entfernen"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              </label>
+
+              <label className="events-form-field">
+                <span>Getränkekategorie</span>
+                <select
+                  value={form.kategorie}
+                  onChange={(e) => setForm((f) => ({ ...f, kategorie: e.target.value }))}
+                  disabled={isPredefined}
                 >
-                  ×
-                </button>
+                  <option value="">Keine Kategorie</option>
+                  {DRINK_CATEGORIES.map((cat) =>
+                    cat.subcategories ? (
+                      <optgroup key={cat.id} label={cat.label}>
+                        <option value={cat.id}>{cat.label}</option>
+                        {cat.subcategories.map((sub) => (
+                          <option key={sub.id} value={sub.id}>{sub.label}</option>
+                        ))}
+                      </optgroup>
+                    ) : (
+                      <option key={cat.id} value={cat.id}>{cat.label}</option>
+                    )
+                  )}
+                </select>
+              </label>
+            </>
+          )}
+
+          {isAddUnitsMode && (
+            <div className="events-form-field">
+              <span>Vorhandene Einheiten</span>
+              {(Array.isArray(addUnitsDrink?.einheiten) ? addUnitsDrink.einheiten : [])
+                .filter((e) => e.addedByUserId !== currentUser?.id).length > 0 ? (
+                <ul className="drink-existing-einheiten-list">
+                  {addUnitsDrink.einheiten
+                    .filter((e) => e.addedByUserId !== currentUser?.id)
+                    .map((e, idx) => (
+                      <li key={idx}>
+                        {[getUnitSizeLabel(e.einheitsgroesse) || String(e.einheitsgroesse), e.einheit].filter(Boolean).join(' ')}
+                      </li>
+                    ))}
+                </ul>
+              ) : (
+                <p className="events-info-text">Noch keine Einheiten vorhanden.</p>
               )}
             </div>
-          </label>
-
-          <label className="events-form-field">
-            <span>Getränkekategorie</span>
-            <select
-              value={form.kategorie}
-              onChange={(e) => setForm((f) => ({ ...f, kategorie: e.target.value }))}
-              disabled={isPredefined}
-            >
-              <option value="">Keine Kategorie</option>
-              {DRINK_CATEGORIES.map((cat) =>
-                cat.subcategories ? (
-                  <optgroup key={cat.id} label={cat.label}>
-                    <option value={cat.id}>{cat.label}</option>
-                    {cat.subcategories.map((sub) => (
-                      <option key={sub.id} value={sub.id}>{sub.label}</option>
-                    ))}
-                  </optgroup>
-                ) : (
-                  <option key={cat.id} value={cat.id}>{cat.label}</option>
-                )
-              )}
-            </select>
-          </label>
+          )}
 
           <div className="events-form-field">
-            <span>Einheiten</span>
+            <span>{isAddUnitsMode ? 'Meine zusätzlichen Einheiten' : 'Einheiten'}</span>
             {form.einheiten.map((einheit, idx) => (
               <div key={idx} className="events-einheit-group">
                 <div className="events-form-row events-einheit-row">
@@ -523,7 +609,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
                       />
                     )}
                   </label>
-                  {form.einheiten.length > 1 && (
+                  {(form.einheiten.length > 1 || isAddUnitsMode) && (
                     <button
                       type="button"
                       className="events-secondary-btn"
@@ -545,7 +631,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
             </button>
           </div>
 
-          {nameDrinkDisplay.isRecipe && nameDrinkDisplay.recipe && (
+          {!isAddUnitsMode && nameDrinkDisplay.isRecipe && nameDrinkDisplay.recipe && (
             <div className="events-form-field">
               <span>Zutaten von „{nameDrinkDisplay.displayName}"</span>
               <ul className="drink-recipe-ingredient-list">
@@ -614,8 +700,8 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
           onTouchStart={() => setFabPressed(true)}
           onTouchEnd={() => setFabPressed(false)}
           disabled={saving}
-          aria-label={editId ? 'Getränk aktualisieren' : 'Getränk speichern'}
-          title={editId ? 'Getränk aktualisieren' : 'Getränk speichern'}
+          aria-label={isAddUnitsMode ? 'Einheiten speichern' : editId ? 'Getränk aktualisieren' : 'Getränk speichern'}
+          title={isAddUnitsMode ? 'Einheiten speichern' : editId ? 'Getränk aktualisieren' : 'Getränk speichern'}
         >
           {isBase64Image(getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)) ? (
             <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt="Speichern" className="button-icon-image" draggable="false" />
@@ -712,18 +798,25 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
           {groupedDrinks.map((group) => (
             <div key={group.id} className="drink-category-group">
               <h3 className="drink-category-group-header">{group.label}</h3>
-              {group.drinks.map((drink) => (
-                <DrinkRow
-                  key={`${drink.ownerId || ''}_${drink.id}`}
-                  drink={drink}
-                  displayName={resolveDrinkDisplay(drink, recipes).displayName}
-                  ownerName={drink.ownerId && drink.ownerId !== currentUser?.id ? getOwnerFirstName(drink.ownerId) : null}
-                  canManage={drink.predefined || !drink.ownerId || drink.ownerId === currentUser?.id || isAdmin}
-                  onEdit={openEdit}
-                  onDelete={handleDelete}
-                  swipeDeleteIcon={swipeDeleteIcon}
-                />
-              ))}
+              {group.drinks.map((drink) => {
+                const isForeign = Boolean(drink.ownerId) && drink.ownerId !== currentUser?.id;
+                const canManage = drink.predefined || !isForeign || isAdmin;
+                const canAddUnits = isForeign && !isAdmin;
+                return (
+                  <DrinkRow
+                    key={`${drink.ownerId || ''}_${drink.id}`}
+                    drink={drink}
+                    displayName={resolveDrinkDisplay(drink, recipes).displayName}
+                    isForeign={isForeign}
+                    canManage={canManage}
+                    canAddUnits={canAddUnits}
+                    onEdit={openEdit}
+                    onAddUnits={openAddUnits}
+                    onDelete={handleDelete}
+                    swipeDeleteIcon={swipeDeleteIcon}
+                  />
+                );
+              })}
             </div>
           ))}
           {drinks.length === 0 && (

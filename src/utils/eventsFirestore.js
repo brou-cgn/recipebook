@@ -20,6 +20,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
+import { mergeDrinkUnitAdditions } from './drinkCategories';
 
 export const EVENT_CATEGORIES = [
   'wasser', 'softdrinks', 'saft', 'bier', 'wein', 'sekt', 'spirituosen', 'kaffee', 'tee',
@@ -268,7 +269,11 @@ export const subscribeToCustomDrinks = (uid, callback) => {
   return onSnapshot(q, (snapshot) => {
     const drinks = [];
     snapshot.forEach((docSnap) => {
-      drinks.push({ id: docSnap.id, ...docSnap.data() });
+      const data = docSnap.data();
+      // Docs carrying extendsOwnerId are this user's additional-units
+      // contributions to someone else's drink, not drinks of their own.
+      if (data.extendsOwnerId) return;
+      drinks.push({ id: docSnap.id, ...data });
     });
     callback(drinks);
   }, (error) => {
@@ -293,7 +298,7 @@ export const subscribeToAllCustomDrinks = (callback) => {
     snapshot.forEach((docSnap) => {
       drinks.push({ id: docSnap.id, ...docSnap.data(), ownerId: docSnap.ref.parent.parent.id });
     });
-    callback(drinks);
+    callback(mergeDrinkUnitAdditions(drinks));
   }, (error) => {
     console.error('Error subscribing to all customDrinks:', error);
     callback([]);
@@ -315,7 +320,7 @@ export const getAllCustomDrinks = async () => {
     snapshot.forEach((docSnap) => {
       drinks.push({ id: docSnap.id, ...docSnap.data(), ownerId: docSnap.ref.parent.parent.id });
     });
-    return drinks;
+    return mergeDrinkUnitAdditions(drinks);
   } catch (error) {
     console.error('Error getting all customDrinks:', error);
     return [];
@@ -334,7 +339,11 @@ export const getCustomDrinks = async (uid) => {
     const snapshot = await getDocs(q);
     const drinks = [];
     snapshot.forEach((docSnap) => {
-      drinks.push({ id: docSnap.id, ...docSnap.data() });
+      const data = docSnap.data();
+      // Docs carrying extendsOwnerId are this user's additional-units
+      // contributions to someone else's drink, not drinks of their own.
+      if (data.extendsOwnerId) return;
+      drinks.push({ id: docSnap.id, ...data });
     });
     return drinks;
   } catch (error) {
@@ -344,7 +353,12 @@ export const getCustomDrinks = async (uid) => {
 };
 
 /**
- * Save a custom drink (create or update).
+ * Save a custom drink (create or update). Also used to save another user's
+ * "additional units" contribution to someone else's drink: pass `uid` as the
+ * contributor, `drinkId` as the target drink's id, and `drink` as
+ * `{ einheiten, extendsOwnerId }` (no name/kategorie) – see
+ * mergeDrinkUnitAdditions in drinkCategories.js for how these are folded
+ * back into the target drink.
  * @param {string} uid - Current user ID
  * @param {Object} drink - { name, kategorie, einheiten: [{ einheitsgroesse, gebindeinheit, einheitenProGebinde }] }
  * @param {string} [drinkId] - If provided, update existing drink
