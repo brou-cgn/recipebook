@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import DrinkManagementPage from './DrinkManagementPage';
 
 const mockSubscribeToAllCustomDrinks = jest.fn();
@@ -736,29 +736,38 @@ describe('DrinkManagementPage', () => {
       });
     });
 
-    test('clicking swipe-delete button calls deleteCustomDrink', async () => {
-      mockDeleteCustomDrink.mockResolvedValue(undefined);
-      mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
-        cb([{ id: 'd1', name: 'Craft-Bier', kategorie: 'bier', einheiten: [] }]);
-        return jest.fn();
-      });
+    test('clicking swipe-delete button calls deleteCustomDrink only after the undo window passes', async () => {
+      jest.useFakeTimers();
+      try {
+        mockDeleteCustomDrink.mockResolvedValue(undefined);
+        mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
+          cb([{ id: 'd1', name: 'Craft-Bier', kategorie: 'bier', einheiten: [] }]);
+          return jest.fn();
+        });
 
-      render(<DrinkManagementPage currentUser={currentUser} />);
+        render(<DrinkManagementPage currentUser={currentUser} />);
 
-      const drinkContent = screen.getByText('Craft-Bier').closest('.drink-swipe-content');
-      fireEvent.touchStart(drinkContent, createTouchEvent('touchstart', 200, 100));
-      fireEvent.touchMove(drinkContent, createTouchEvent('touchmove', 130, 100));
-      fireEvent.touchEnd(drinkContent, {});
+        const drinkContent = screen.getByText('Craft-Bier').closest('.drink-swipe-content');
+        fireEvent.touchStart(drinkContent, createTouchEvent('touchstart', 200, 100));
+        fireEvent.touchMove(drinkContent, createTouchEvent('touchmove', 130, 100));
+        fireEvent.touchEnd(drinkContent, {});
 
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Craft-Bier löschen' })).toBeInTheDocument();
-      });
+        await waitFor(() => {
+          expect(screen.getByRole('button', { name: 'Craft-Bier löschen' })).toBeInTheDocument();
+        });
 
-      fireEvent.click(screen.getByRole('button', { name: 'Craft-Bier löschen' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Craft-Bier löschen' }));
 
-      await waitFor(() => {
+        expect(mockDeleteCustomDrink).not.toHaveBeenCalled();
+
+        await act(async () => {
+          jest.advanceTimersByTime(6000);
+        });
+
         expect(mockDeleteCustomDrink).toHaveBeenCalledWith(currentUser.id, 'd1');
-      });
+      } finally {
+        jest.useRealTimers();
+      }
     });
 
     test('undo snackbar appears after deleting a drink', async () => {

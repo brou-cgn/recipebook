@@ -35,10 +35,15 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+<<<<<<< HEAD
+import useSwipeToDelete, { SWIPE_DIRECTION_LOCK_THRESHOLD } from '../hooks/useSwipeToDelete';
+import useUndoableDelete from '../hooks/useUndoableDelete';
+=======
 
 const SWIPE_DELETE_THRESHOLD = 56;
 const SWIPE_DELETE_MAX_OFFSET = 96;
 const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
+>>>>>>> origin/main
 
 // Sortable Ingredient Item Component
 function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, onToggleType, swipeDeleteIcon }) {
@@ -55,15 +60,34 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
   const [contextMenuPos, setContextMenuPos] = useState({ top: 0, right: 0 });
   const longPressTimerRef = useRef(null);
   const inputRef = useRef(null);
-  const touchStartXRef = useRef(null);
-  const touchStartYRef = useRef(null);
-  const swipeDirectionLockedRef = useRef(null);
-  const isSwipingRef = useRef(false);
-  const [swipeOffset, setSwipeOffset] = useState(0);
-  const [isDeleteActionVisible, setIsDeleteActionVisible] = useState(false);
+
+  const startLongPress = () => {
+    longPressTimerRef.current = setTimeout(() => {
+      if (inputRef.current) {
+        const rect = inputRef.current.getBoundingClientRect();
+        setContextMenuPos({ top: rect.top, right: window.innerWidth - rect.right });
+      }
+      setShowContextMenu(true);
+    }, 500);
+  };
+
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({
+    disabled: !canRemove,
+    onMove: (info) => {
+      if (!info || (info.direction === 'horizontal' && info.deltaX < 0) || info.absY > SWIPE_DIRECTION_LOCK_THRESHOLD) {
+        cancelLongPress();
+      }
+    },
+  });
 
   const baseTransform = CSS.Transform.toString(transform);
-  const effectiveSwipeOffset = isDeleteActionVisible ? -SWIPE_DELETE_MAX_OFFSET : swipeOffset;
 
   const style = {
     transform: baseTransform,
@@ -71,7 +95,7 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
     opacity: isDragging ? 0.5 : 1,
   };
   const swipeContentStyle = {
-    transform: `translateX(${effectiveSwipeOffset}px)`,
+    transform: `translateX(${offset}px)`,
     transition: isDragging ? transition : 'transform 0.15s ease',
   };
 
@@ -96,87 +120,29 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
     setShowContextMenu(true);
   };
 
-  const startLongPress = () => {
-    longPressTimerRef.current = setTimeout(() => {
-      if (inputRef.current) {
-        const rect = inputRef.current.getBoundingClientRect();
-        setContextMenuPos({ top: rect.top, right: window.innerWidth - rect.right });
-      }
-      setShowContextMenu(true);
-    }, 500);
-  };
-
-  const cancelLongPress = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  };
-
-  const resetSwipe = ({ keepDeleteAction = false } = {}) => {
-    cancelLongPress();
-    touchStartXRef.current = null;
-    touchStartYRef.current = null;
-    swipeDirectionLockedRef.current = null;
-    isSwipingRef.current = false;
-    setSwipeOffset(0);
-    if (!keepDeleteAction) {
-      setIsDeleteActionVisible(false);
-    }
-  };
-
   const handleTouchStart = (e) => {
     startLongPress();
-    const touch = e.touches?.[0];
-    if (!touch || !canRemove) return;
-    if (isDeleteActionVisible) {
-      setIsDeleteActionVisible(false);
-    }
-    touchStartXRef.current = touch.clientX;
-    touchStartYRef.current = touch.clientY;
-    swipeDirectionLockedRef.current = null;
-    isSwipingRef.current = false;
+    handlers.onTouchStart(e);
   };
 
-  const handleTouchMove = (e) => {
-    const touch = e.touches?.[0];
-    if (!touch || touchStartXRef.current === null || touchStartYRef.current === null || !canRemove) {
-      cancelLongPress();
-      return;
-    }
-
-    const deltaX = touch.clientX - touchStartXRef.current;
-    const deltaY = touch.clientY - touchStartYRef.current;
-    const absX = Math.abs(deltaX);
-    const absY = Math.abs(deltaY);
-
-    if (!swipeDirectionLockedRef.current && (absX > SWIPE_DIRECTION_LOCK_THRESHOLD || absY > SWIPE_DIRECTION_LOCK_THRESHOLD)) {
-      swipeDirectionLockedRef.current = absX > absY ? 'horizontal' : 'vertical';
-    }
-
-    if (swipeDirectionLockedRef.current === 'horizontal' && deltaX < 0) {
-      isSwipingRef.current = true;
-      cancelLongPress();
-      setSwipeOffset(Math.max(deltaX, -SWIPE_DELETE_MAX_OFFSET));
-      if (e.cancelable) e.preventDefault();
-    } else if (absY > SWIPE_DIRECTION_LOCK_THRESHOLD) {
-      cancelLongPress();
-    }
-  };
-
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (e) => {
     cancelLongPress();
-    if (isSwipingRef.current && canRemove && Math.abs(swipeOffset) >= SWIPE_DELETE_THRESHOLD) {
-      setIsDeleteActionVisible(true);
-      resetSwipe({ keepDeleteAction: true });
-      return;
-    }
-    resetSwipe();
+    handlers.onTouchEnd(e);
+  };
+
+  const handleTouchCancel = (e) => {
+    cancelLongPress();
+    handlers.onTouchCancel(e);
   };
 
   const handleSwipeDeleteClick = () => {
+<<<<<<< HEAD
+    onRemove(index, { fromSwipe: true });
+    reset();
+=======
     onRemove(index);
     resetSwipe();
+>>>>>>> origin/main
   };
 
   useEffect(() => () => cancelLongPress(), []);
@@ -185,11 +151,15 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
     <div
       ref={setNodeRef}
       style={style}
+<<<<<<< HEAD
+      className={`form-list-item ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}${offset < 0 ? ' swipe-delete-active' : ''}`}
+=======
       className={`form-list-item delete-row-hover-target ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}${effectiveSwipeOffset < 0 ? ' swipe-delete-active' : ''}`}
+>>>>>>> origin/main
     >
       {canRemove && (
-        <div className="swipe-delete-background" aria-hidden={!isDeleteActionVisible}>
-          {isDeleteActionVisible && (
+        <div className="swipe-delete-background" aria-hidden={!isDeleteVisible}>
+          {isDeleteVisible && (
             <button
               type="button"
               className="swipe-delete-action"
@@ -218,8 +188,8 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
           onContextMenu={handleContextMenu}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
-          onTouchCancel={resetSwipe}
-          onTouchMove={handleTouchMove}
+          onTouchCancel={handleTouchCancel}
+          onTouchMove={handlers.onTouchMove}
         />
         <button
           type="button"
@@ -276,15 +246,34 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPos, setContextMenuPos] = useState({ top: 0, right: 0 });
   const longPressTimerRef = useRef(null);
-  const touchStartXRef = useRef(null);
-  const touchStartYRef = useRef(null);
-  const swipeDirectionLockedRef = useRef(null);
-  const isSwipingRef = useRef(false);
-  const [swipeOffset, setSwipeOffset] = useState(0);
-  const [isDeleteActionVisible, setIsDeleteActionVisible] = useState(false);
+
+  const startLongPress = () => {
+    longPressTimerRef.current = setTimeout(() => {
+      if (textareaRef.current) {
+        const rect = textareaRef.current.getBoundingClientRect();
+        setContextMenuPos({ top: rect.top, right: window.innerWidth - rect.right });
+      }
+      setShowContextMenu(true);
+    }, 500);
+  };
+
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({
+    disabled: !canRemove,
+    onMove: (info) => {
+      if (!info || (info.direction === 'horizontal' && info.deltaX < 0) || info.absY > SWIPE_DIRECTION_LOCK_THRESHOLD) {
+        cancelLongPress();
+      }
+    },
+  });
 
   const baseTransform = CSS.Transform.toString(transform);
-  const effectiveSwipeOffset = isDeleteActionVisible ? -SWIPE_DELETE_MAX_OFFSET : swipeOffset;
 
   const style = {
     transform: baseTransform,
@@ -292,7 +281,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
     opacity: isDragging ? 0.5 : 1,
   };
   const swipeContentStyle = {
-    transform: `translateX(${effectiveSwipeOffset}px)`,
+    transform: `translateX(${offset}px)`,
     transition: isDragging ? transition : 'transform 0.15s ease',
   };
 
@@ -319,87 +308,29 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
     setShowContextMenu(true);
   };
 
-  const startLongPress = () => {
-    longPressTimerRef.current = setTimeout(() => {
-      if (textareaRef.current) {
-        const rect = textareaRef.current.getBoundingClientRect();
-        setContextMenuPos({ top: rect.top, right: window.innerWidth - rect.right });
-      }
-      setShowContextMenu(true);
-    }, 500);
-  };
-
-  const cancelLongPress = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  };
-
-  const resetSwipe = ({ keepDeleteAction = false } = {}) => {
-    cancelLongPress();
-    touchStartXRef.current = null;
-    touchStartYRef.current = null;
-    swipeDirectionLockedRef.current = null;
-    isSwipingRef.current = false;
-    setSwipeOffset(0);
-    if (!keepDeleteAction) {
-      setIsDeleteActionVisible(false);
-    }
-  };
-
   const handleTouchStart = (e) => {
     startLongPress();
-    const touch = e.touches?.[0];
-    if (!touch || !canRemove) return;
-    if (isDeleteActionVisible) {
-      setIsDeleteActionVisible(false);
-    }
-    touchStartXRef.current = touch.clientX;
-    touchStartYRef.current = touch.clientY;
-    swipeDirectionLockedRef.current = null;
-    isSwipingRef.current = false;
+    handlers.onTouchStart(e);
   };
 
-  const handleTouchMove = (e) => {
-    const touch = e.touches?.[0];
-    if (!touch || touchStartXRef.current === null || touchStartYRef.current === null || !canRemove) {
-      cancelLongPress();
-      return;
-    }
-
-    const deltaX = touch.clientX - touchStartXRef.current;
-    const deltaY = touch.clientY - touchStartYRef.current;
-    const absX = Math.abs(deltaX);
-    const absY = Math.abs(deltaY);
-
-    if (!swipeDirectionLockedRef.current && (absX > SWIPE_DIRECTION_LOCK_THRESHOLD || absY > SWIPE_DIRECTION_LOCK_THRESHOLD)) {
-      swipeDirectionLockedRef.current = absX > absY ? 'horizontal' : 'vertical';
-    }
-
-    if (swipeDirectionLockedRef.current === 'horizontal' && deltaX < 0) {
-      isSwipingRef.current = true;
-      cancelLongPress();
-      setSwipeOffset(Math.max(deltaX, -SWIPE_DELETE_MAX_OFFSET));
-      if (e.cancelable) e.preventDefault();
-    } else if (absY > SWIPE_DIRECTION_LOCK_THRESHOLD) {
-      cancelLongPress();
-    }
-  };
-
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (e) => {
     cancelLongPress();
-    if (isSwipingRef.current && canRemove && Math.abs(swipeOffset) >= SWIPE_DELETE_THRESHOLD) {
-      setIsDeleteActionVisible(true);
-      resetSwipe({ keepDeleteAction: true });
-      return;
-    }
-    resetSwipe();
+    handlers.onTouchEnd(e);
+  };
+
+  const handleTouchCancel = (e) => {
+    cancelLongPress();
+    handlers.onTouchCancel(e);
   };
 
   const handleSwipeDeleteClick = () => {
+<<<<<<< HEAD
+    onRemove(index, { fromSwipe: true });
+    reset();
+=======
     onRemove(index);
     resetSwipe();
+>>>>>>> origin/main
   };
 
   useEffect(() => () => cancelLongPress(), []);
@@ -408,11 +339,15 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
     <div
       ref={setNodeRef}
       style={style}
+<<<<<<< HEAD
+      className={`form-list-item ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}${offset < 0 ? ' swipe-delete-active' : ''}`}
+=======
       className={`form-list-item delete-row-hover-target ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}${effectiveSwipeOffset < 0 ? ' swipe-delete-active' : ''}`}
+>>>>>>> origin/main
     >
       {canRemove && (
-        <div className="swipe-delete-background" aria-hidden={!isDeleteActionVisible}>
-          {isDeleteActionVisible && (
+        <div className="swipe-delete-background" aria-hidden={!isDeleteVisible}>
+          {isDeleteVisible && (
             <button
               type="button"
               className="swipe-delete-action"
@@ -439,8 +374,8 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
           onContextMenu={handleContextMenu}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
-          onTouchCancel={resetSwipe}
-          onTouchMove={handleTouchMove}
+          onTouchCancel={handleTouchCancel}
+          onTouchMove={handlers.onTouchMove}
         />
         <button
           type="button"
@@ -534,7 +469,12 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const formRef = useRef(null);
   // Cancel button press state
   const [cancelPressed, setCancelPressed] = useState(false);
+<<<<<<< HEAD
+  const ingredientUndo = useUndoableDelete();
+  const stepUndo = useUndoableDelete();
+=======
   const { notifyDeleted: notifyRowDeleted, undo: undoRowDelete, pendingName: pendingRowDeleteName } = useUndoableDelete();
+>>>>>>> origin/main
 
   // Nutrition reference rows for auto-assigning ingredient IDs
   const { rows: nutritionReferenceRows } = useNutritionReference();
@@ -777,6 +717,13 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     setIngredients([...ingredients, { type: 'ingredient', text: '' }]);
   };
 
+<<<<<<< HEAD
+  const handleRemoveIngredient = (index, options = {}) => {
+    const removedItem = ingredients[index];
+    if (!removedItem) return;
+    const wasOnlyItem = ingredients.length === 1;
+    if (!wasOnlyItem) {
+=======
   const describeIngredient = (item) =>
     item.type === 'heading' ? (item.text || 'Überschrift') : (item.text || 'Zutat');
 
@@ -785,10 +732,28 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     if (!removedItem) return;
     const hadOthers = ingredients.length > 1;
     if (hadOthers) {
+>>>>>>> origin/main
       setIngredients(ingredients.filter((_, i) => i !== index));
     } else {
       setIngredients([{ type: 'ingredient', text: '' }]);
     }
+<<<<<<< HEAD
+    if (options.fromSwipe) {
+      ingredientUndo.scheduleDelete({
+        key: `ingredient-${index}`,
+        message: 'Zutat gelöscht.',
+        onConfirm: () => {},
+        onUndo: () => {
+          setIngredients((current) => {
+            if (wasOnlyItem) return [removedItem];
+            const next = [...current];
+            next.splice(index, 0, removedItem);
+            return next;
+          });
+        },
+      });
+    }
+=======
     notifyRowDeleted({
       id: `ingredient-${index}`,
       name: describeIngredient(removedItem),
@@ -801,6 +766,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         });
       },
     });
+>>>>>>> origin/main
   };
 
   const handleIngredientChange = (index, value) => {
@@ -844,6 +810,13 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     setSteps([...steps, { type: 'step', text: '' }]);
   };
 
+<<<<<<< HEAD
+  const handleRemoveStep = (index, options = {}) => {
+    const removedItem = steps[index];
+    if (!removedItem) return;
+    const wasOnlyItem = steps.length === 1;
+    if (!wasOnlyItem) {
+=======
   const describeStep = (item) =>
     item.type === 'heading' ? (item.text || 'Überschrift') : (item.text || 'Schritt');
 
@@ -852,10 +825,28 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     if (!removedItem) return;
     const hadOthers = steps.length > 1;
     if (hadOthers) {
+>>>>>>> origin/main
       setSteps(steps.filter((_, i) => i !== index));
     } else {
       setSteps([{ type: 'step', text: '' }]);
     }
+<<<<<<< HEAD
+    if (options.fromSwipe) {
+      stepUndo.scheduleDelete({
+        key: `step-${index}`,
+        message: 'Schritt gelöscht.',
+        onConfirm: () => {},
+        onUndo: () => {
+          setSteps((current) => {
+            if (wasOnlyItem) return [removedItem];
+            const next = [...current];
+            next.splice(index, 0, removedItem);
+            return next;
+          });
+        },
+      });
+    }
+=======
     notifyRowDeleted({
       id: `step-${index}`,
       name: describeStep(removedItem),
@@ -868,6 +859,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         });
       },
     });
+>>>>>>> origin/main
   };
 
   const handleStepChange = (index, value) => {
@@ -1705,6 +1697,17 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               ))}
             </SortableContext>
           </DndContext>
+<<<<<<< HEAD
+          {ingredientUndo.banners.map((banner) => (
+            <div key={banner.id} className="undo-snackbar" role="status">
+              <span>{banner.message}</span>
+              <button type="button" className="undo-snackbar-btn" onClick={() => ingredientUndo.undoDelete(banner.id)}>
+                Rückgängig
+              </button>
+            </div>
+          ))}
+=======
+>>>>>>> origin/main
           <button
             type="button"
             className="add-item-button add-item-button--ingredient"
@@ -1763,6 +1766,17 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               })}
             </SortableContext>
           </DndContext>
+<<<<<<< HEAD
+          {stepUndo.banners.map((banner) => (
+            <div key={banner.id} className="undo-snackbar" role="status">
+              <span>{banner.message}</span>
+              <button type="button" className="undo-snackbar-btn" onClick={() => stepUndo.undoDelete(banner.id)}>
+                Rückgängig
+              </button>
+            </div>
+          ))}
+=======
+>>>>>>> origin/main
           <button
             type="button"
             className="add-item-button add-item-button--step"

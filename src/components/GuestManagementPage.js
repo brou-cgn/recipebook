@@ -17,6 +17,8 @@ import { DRINK_CATEGORIES, getDrinkCategoryLabel } from '../utils/drinkCategorie
 import { DEFAULT_BUTTON_ICONS, getButtonIcons, getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
+import useSwipeToDelete from '../hooks/useSwipeToDelete';
+import useUndoableDelete from '../hooks/useUndoableDelete';
 
 const emptyForm = () => ({
   vorname: '',
@@ -37,75 +39,13 @@ const getPreferenceLabel = (factor) => {
   return 'wird nicht berücksichtigt';
 };
 
-// Matches the "Zutat löschen" swipe-to-delete gesture from the recipe edit page
-// (see SortableIngredient in RecipeForm.js): swiping left reveals the delete
-// button on the right. On desktop the static button next to the card stays
-// visible instead (no touch events to trigger the swipe).
-const SWIPE_DELETE_THRESHOLD = 56;
-const SWIPE_DELETE_MAX_OFFSET = 96;
-const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
-
 function GuestCard({ fullName, deleteIcon, onOpenEdit, onDelete, children }) {
-  const touchStartXRef = React.useRef(null);
-  const touchStartYRef = React.useRef(null);
-  const swipeDirectionLockedRef = React.useRef(null);
-  const isSwipingRef = React.useRef(false);
-  const [swipeOffset, setSwipeOffset] = useState(0);
-  const [isDeleteActionVisible, setIsDeleteActionVisible] = useState(false);
-
-  const effectiveSwipeOffset = isDeleteActionVisible ? -SWIPE_DELETE_MAX_OFFSET : swipeOffset;
+  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete();
   const deleteLabel = `${fullName || 'Gast'} löschen`;
 
-  const resetSwipe = ({ keepDeleteAction = false } = {}) => {
-    touchStartXRef.current = null;
-    touchStartYRef.current = null;
-    swipeDirectionLockedRef.current = null;
-    isSwipingRef.current = false;
-    setSwipeOffset(0);
-    if (!keepDeleteAction) setIsDeleteActionVisible(false);
-  };
-
-  const handleTouchStart = (e) => {
-    const touch = e.touches?.[0];
-    if (!touch) return;
-    if (isDeleteActionVisible) setIsDeleteActionVisible(false);
-    touchStartXRef.current = touch.clientX;
-    touchStartYRef.current = touch.clientY;
-    swipeDirectionLockedRef.current = null;
-    isSwipingRef.current = false;
-  };
-
-  const handleTouchMove = (e) => {
-    const touch = e.touches?.[0];
-    if (!touch || touchStartXRef.current === null || touchStartYRef.current === null) return;
-    const deltaX = touch.clientX - touchStartXRef.current;
-    const deltaY = touch.clientY - touchStartYRef.current;
-    const absX = Math.abs(deltaX);
-    const absY = Math.abs(deltaY);
-
-    if (!swipeDirectionLockedRef.current && (absX > SWIPE_DIRECTION_LOCK_THRESHOLD || absY > SWIPE_DIRECTION_LOCK_THRESHOLD)) {
-      swipeDirectionLockedRef.current = absX > absY ? 'horizontal' : 'vertical';
-    }
-
-    if (swipeDirectionLockedRef.current === 'horizontal' && deltaX < 0) {
-      isSwipingRef.current = true;
-      setSwipeOffset(Math.max(deltaX, -SWIPE_DELETE_MAX_OFFSET));
-      if (e.cancelable) e.preventDefault();
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (isSwipingRef.current && Math.abs(swipeOffset) >= SWIPE_DELETE_THRESHOLD) {
-      setIsDeleteActionVisible(true);
-      resetSwipe({ keepDeleteAction: true });
-      return;
-    }
-    resetSwipe();
-  };
-
   const handleContentClick = () => {
-    if (isDeleteActionVisible) {
-      resetSwipe();
+    if (isDeleteVisible) {
+      reset();
       return;
     }
     onOpenEdit();
@@ -114,18 +54,18 @@ function GuestCard({ fullName, deleteIcon, onOpenEdit, onDelete, children }) {
   const handleSwipeDeleteClick = (e) => {
     e.stopPropagation();
     onDelete();
-    resetSwipe();
+    reset();
   };
 
   return (
-    <div className={`events-card events-guest-card${isDeleteActionVisible ? ' swipe-delete-active' : ''}`}>
-      <div className="swipe-delete-background" aria-hidden={!isDeleteActionVisible && effectiveSwipeOffset === 0}>
+    <div className={`events-card events-guest-card${isDeleteVisible ? ' swipe-delete-active' : ''}`}>
+      <div className="swipe-delete-background" aria-hidden={!isDeleteVisible && offset === 0}>
         <button
           type="button"
           className="swipe-delete-action"
           onClick={handleSwipeDeleteClick}
           aria-label={deleteLabel}
-          tabIndex={isDeleteActionVisible ? 0 : -1}
+          tabIndex={isDeleteVisible ? 0 : -1}
         >
           {isBase64Image(deleteIcon) ? (
             <img src={deleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
@@ -135,13 +75,15 @@ function GuestCard({ fullName, deleteIcon, onOpenEdit, onDelete, children }) {
         </button>
       </div>
       <div
+<<<<<<< HEAD
+        className="events-guest-card-content"
+        style={{ transform: `translateX(${offset}px)`, transition: 'transform 0.15s ease' }}
+=======
         className="events-guest-card-content delete-row-hover-target"
         style={{ transform: `translateX(${effectiveSwipeOffset}px)`, transition: 'transform 0.15s ease' }}
+>>>>>>> origin/main
         onClick={handleContentClick}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={() => resetSwipe()}
+        {...handlers}
       >
         {children}
         <DeleteRowButton
@@ -174,6 +116,7 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
   const formRef = React.useRef(null);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
+  const { banners: deleteBanners, pendingKeys: pendingDeleteKeys, scheduleDelete, undoDelete } = useUndoableDelete();
 
   const canManageGuests = canEditRecipes(currentUser);
   const closeIcon = getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode) || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode);
@@ -249,8 +192,15 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
     });
   };
 
-  const sortedProfiles = useMemo(() => sortByName(profiles), [profiles]);
-  const sortedAllProfiles = useMemo(() => sortByName(allProfiles), [allProfiles]);
+  const getProfileKey = (profile) => `${profile.ownerId || currentUser?.id}_${profile.id}`;
+  const sortedProfiles = useMemo(
+    () => sortByName(profiles).filter((p) => !pendingDeleteKeys.has(`${p.ownerId || currentUser?.id}_${p.id}`)),
+    [profiles, pendingDeleteKeys, currentUser?.id]
+  );
+  const sortedAllProfiles = useMemo(
+    () => sortByName(allProfiles).filter((p) => !pendingDeleteKeys.has(`${p.ownerId || currentUser?.id}_${p.id}`)),
+    [allProfiles, pendingDeleteKeys, currentUser?.id]
+  );
 
   const openNew = () => {
     setEditId(null);
@@ -349,6 +299,27 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
     }
   };
 
+<<<<<<< HEAD
+  const handleDelete = (profile) => {
+    if (!canManageGuests) return;
+    const name = getGuestDisplayName(profile) || 'diesen Gast';
+    scheduleDelete({
+      key: getProfileKey(profile),
+      message: `"${name}" gelöscht.`,
+      onConfirm: async () => {
+        try {
+          // Admin deleting another user's guest: pass their ownerId through.
+          if (profile.ownerId && profile.ownerId !== currentUser.id) {
+            await deleteGuestProfile(currentUser.id, profile.id, profile.ownerId);
+          } else {
+            await deleteGuestProfile(currentUser.id, profile.id);
+          }
+        } catch (err) {
+          console.error('Error deleting guest profile:', err);
+        }
+      },
+      onUndo: () => {},
+=======
   const { notifyDeleted, undo, pendingName } = useUndoableDelete();
 
   const handleDelete = async (profile) => {
@@ -381,6 +352,7 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
           console.error('Error restoring guest profile:', err);
         }
       },
+>>>>>>> origin/main
     });
   };
 
@@ -773,6 +745,14 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
           })}
         </div>
       )}
+      {deleteBanners.map((banner) => (
+        <div key={banner.id} className="undo-snackbar" role="status">
+          <span>{banner.message}</span>
+          <button type="button" className="undo-snackbar-btn" onClick={() => undoDelete(banner.id)}>
+            Rückgängig
+          </button>
+        </div>
+      ))}
       <OverviewAddFab onClick={openNew} title="Gast anlegen" ariaLabel="Gast anlegen" />
       <UndoSnackbar itemName={pendingName} onUndo={undo} />
     </div>
