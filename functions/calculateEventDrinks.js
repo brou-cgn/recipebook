@@ -640,8 +640,10 @@ function calculate(event, ratesDb, customDrinksMap, childrenRatesDb = CHILDREN_D
  * - event: Parameter-Objekt (eventName, date, durationHours, guests, season,
  *   eventType, categories, customDrinkIds, drinkDistributionFactors, pufferProzent)
  * - eventId: falls gesetzt, wird das bestehende Event-Dokument mit dem
- *   Ergebnis aktualisiert (status -> "berechnet"). Sonst wird ein neues
- *   Event-Dokument angelegt.
+ *   Ergebnis aktualisiert. Sonst wird ein neues Event-Dokument angelegt.
+ *   Status wird dabei auf "berechnet" gesetzt, wenn Erwachsene + Kinder > 0
+ *   sind und mindestens ein eigenes Getraenk zugeordnet ist -- sonst bleibt
+ *   (bzw. wird) der Status "geplant".
  * Gibt { eventId, ...Berechnungsergebnis } zurueck.
  */
 exports.calculateEventDrinks = onCall({maxInstances: 10}, async (request) => {
@@ -675,13 +677,20 @@ exports.calculateEventDrinks = onCall({maxInstances: 10}, async (request) => {
   ]);
   const result = calculate(event, ratesDb, customDrinksMap, childrenRatesDb);
 
+  // "Berechnet" setzt voraus, dass ueberhaupt Gaeste und mindestens ein
+  // eigenes Getraenk erfasst sind -- sonst bleibt das Event "geplant"
+  // (siehe Konzept "Event-Status"), auch wenn hier bereits (leer) gerechnet wurde.
+  const guestCount = (Number(event.guests?.adults) || 0) + (Number(event.guests?.children) || 0);
+  const hasCustomDrink = Array.isArray(event.customDrinkIds) && event.customDrinkIds.length > 0;
+  const status = guestCount > 0 && hasCustomDrink ? 'berechnet' : 'geplant';
+
   const eventsRef = db.collection('users').doc(targetUid).collection('events');
   let docRef;
   if (eventId) {
     docRef = eventsRef.doc(eventId);
-    await docRef.set({...event, berechnung: result, status: 'berechnet'}, {merge: true});
+    await docRef.set({...event, berechnung: result, status}, {merge: true});
   } else {
-    docRef = await eventsRef.add({...event, berechnung: result, status: 'berechnet'});
+    docRef = await eventsRef.add({...event, berechnung: result, status});
   }
 
   return {eventId: docRef.id, ...result};
