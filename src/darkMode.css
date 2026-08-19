@@ -4002,6 +4002,14 @@
   background-color: #555;
 }
 
+[data-theme="dark"] .drink-own-filter-label {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .drink-own-filter-toggle-slider {
+  background-color: #555;
+}
+
 [data-theme="dark"] .events-delete-btn {
   background: #4a2323;
   color: #f0a0a0;

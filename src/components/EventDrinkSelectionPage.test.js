@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import EventDrinkSelectionPage from './EventDrinkSelectionPage';
 
 const customDrinks = [
@@ -270,6 +270,49 @@ describe('EventDrinkSelectionPage', () => {
     expect(onSave).toHaveBeenCalledWith(['custom-wasser'], {}, {}, 25);
   });
 
+  test('allows typing intermediate partial values into the factor field without resetting to default', () => {
+    render(
+      <EventDrinkSelectionPage
+        customDrinks={customDrinks}
+        customDrinkIds={['custom-wasser']}
+        guestPreferenceMultipliers={{}}
+        selectedGuestIds={[]}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />,
+    );
+
+    const input = screen.getByRole('spinbutton', { name: 'Wasser (eigen) Faktor' });
+    // Typing "0.5" goes through intermediate states that are out of the
+    // valid 0.1–2.0 range or not yet parseable ("0", "0."). The field must
+    // keep showing what was typed instead of snapping back to "1.00".
+    fireEvent.change(input, { target: { value: '0' } });
+    expect(input).toHaveValue(0);
+    fireEvent.change(input, { target: { value: '0.' } });
+    expect(input).toHaveValue(null);
+    fireEvent.change(input, { target: { value: '0.5' } });
+    expect(input).toHaveValue(0.5);
+  });
+
+  test('reformats the factor field to the normalized value on blur', () => {
+    render(
+      <EventDrinkSelectionPage
+        customDrinks={customDrinks}
+        customDrinkIds={['custom-wasser']}
+        guestPreferenceMultipliers={{}}
+        selectedGuestIds={[]}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />,
+    );
+
+    const input = screen.getByRole('spinbutton', { name: 'Wasser (eigen) Faktor' });
+    fireEvent.change(input, { target: { value: '4' } });
+    fireEvent.blur(input);
+
+    expect(input).toHaveValue(1);
+  });
+
   test('calls onBack when Abbrechen button is clicked', () => {
     const onBack = jest.fn();
     render(
@@ -334,6 +377,52 @@ describe('EventDrinkSelectionPage', () => {
     const options = Array.from(select.options).map((o) => o.text);
     expect(options).not.toContain('Wasser (eigen)');
     expect(options).toContain('Bier (eigen)');
+  });
+
+  describe('"Eigene Getränke" filter on the add dropdown', () => {
+    const sharedCustomDrinks = [
+      { id: 'own-wasser', name: 'Eigenes Wasser', kategorie: 'wasser', ownerId: 'u1' },
+      { id: 'other-bier', name: 'Fremdes Bier', kategorie: 'bier', ownerId: 'u2' },
+      { id: 'unowned-saft', name: 'Saft ohne Owner', kategorie: 'saft' },
+    ];
+
+    test('is enabled by default and hides other users\' drinks from the dropdown', () => {
+      render(
+        <EventDrinkSelectionPage
+          customDrinks={sharedCustomDrinks}
+          customDrinkIds={[]}
+          currentUserId="u1"
+          onSave={jest.fn()}
+          onBack={jest.fn()}
+        />,
+      );
+
+      expect(screen.getByRole('checkbox', { name: 'Nur eigene Getränke in der Auswahl anzeigen' })).toBeChecked();
+
+      const select = screen.getByRole('combobox', { name: 'Getränk auswählen' });
+      const options = Array.from(select.options).map((o) => o.text);
+      expect(options).toContain('Eigenes Wasser');
+      expect(options).toContain('Saft ohne Owner');
+      expect(options).not.toContain('Fremdes Bier');
+    });
+
+    test('disabling the filter shows drinks from other users in the dropdown', () => {
+      render(
+        <EventDrinkSelectionPage
+          customDrinks={sharedCustomDrinks}
+          customDrinkIds={[]}
+          currentUserId="u1"
+          onSave={jest.fn()}
+          onBack={jest.fn()}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Nur eigene Getränke in der Auswahl anzeigen' }));
+
+      const select = screen.getByRole('combobox', { name: 'Getränk auswählen' });
+      const options = Array.from(select.options).map((o) => o.text);
+      expect(options).toContain('Fremdes Bier');
+    });
   });
 
   const drinksWithMultipleEinheiten = [
@@ -455,7 +544,8 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
-    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    const drinkRow = screen.getByText('Saft').closest('.events-drink-row');
+    expect(within(drinkRow).queryByRole('checkbox')).not.toBeInTheDocument();
     expect(screen.getByText('1,0 l (Flasche)')).toBeInTheDocument();
   });
 
