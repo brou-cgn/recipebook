@@ -4,6 +4,10 @@ import { subscribeToGuestProfiles } from '../utils/eventsFirestore';
 import { getGuestDisplayName } from '../utils/guestPreferences';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+<<<<<<< HEAD
+import useSwipeToDelete from '../hooks/useSwipeToDelete';
+import useUndoableDelete from '../hooks/useUndoableDelete';
+=======
 import DeleteRowButton from './DeleteRowButton';
 import UndoSnackbar from './UndoSnackbar';
 import useUndoableDelete from '../hooks/useUndoableDelete';
@@ -15,6 +19,7 @@ import useUndoableDelete from '../hooks/useUndoableDelete';
 const SWIPE_DELETE_THRESHOLD = 56;
 const SWIPE_DELETE_MAX_OFFSET = 96;
 const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
+>>>>>>> origin/main
 
 function GuestRow({
   fullName,
@@ -26,76 +31,23 @@ function GuestRow({
   onSwipeDeleteHidden,
   swipeDeleteIcon,
 }) {
-  const touchStartXRef = useRef(null);
-  const touchStartYRef = useRef(null);
-  const swipeDirectionLockedRef = useRef(null);
-  const isSwipingRef = useRef(false);
-  const [swipeOffset, setSwipeOffset] = useState(0);
-
-  const effectiveSwipeOffset = isDeleteVisible ? -SWIPE_DELETE_MAX_OFFSET : swipeOffset;
-
-  const resetSwipe = ({ keepDeleteAction = false } = {}) => {
-    touchStartXRef.current = null;
-    touchStartYRef.current = null;
-    swipeDirectionLockedRef.current = null;
-    isSwipingRef.current = false;
-    setSwipeOffset(0);
-    if (!keepDeleteAction) {
-      onSwipeDeleteHidden();
-    }
-  };
-
-  const handleTouchStart = (e) => {
-    const touch = e.touches?.[0];
-    if (!touch) return;
-    if (isDeleteVisible) onSwipeDeleteHidden();
-    touchStartXRef.current = touch.clientX;
-    touchStartYRef.current = touch.clientY;
-    swipeDirectionLockedRef.current = null;
-    isSwipingRef.current = false;
-  };
-
-  const handleTouchMove = (e) => {
-    const touch = e.touches?.[0];
-    if (!touch || touchStartXRef.current === null || touchStartYRef.current === null) return;
-
-    const deltaX = touch.clientX - touchStartXRef.current;
-    const deltaY = touch.clientY - touchStartYRef.current;
-    const absX = Math.abs(deltaX);
-    const absY = Math.abs(deltaY);
-
-    if (!swipeDirectionLockedRef.current && (absX > SWIPE_DIRECTION_LOCK_THRESHOLD || absY > SWIPE_DIRECTION_LOCK_THRESHOLD)) {
-      swipeDirectionLockedRef.current = absX > absY ? 'horizontal' : 'vertical';
-    }
-
-    if (swipeDirectionLockedRef.current === 'horizontal' && deltaX < 0) {
-      isSwipingRef.current = true;
-      setSwipeOffset(Math.max(deltaX, -SWIPE_DELETE_MAX_OFFSET));
-      if (e.cancelable) e.preventDefault();
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (isSwipingRef.current && Math.abs(swipeOffset) >= SWIPE_DELETE_THRESHOLD) {
-      onSwipeDeleteVisible();
-      resetSwipe({ keepDeleteAction: true });
-      return;
-    }
-    resetSwipe();
-  };
+  const { offset, reset, handlers } = useSwipeToDelete({
+    isDeleteVisible,
+    onDeleteVisibleChange: (visible) => (visible ? onSwipeDeleteVisible() : onSwipeDeleteHidden()),
+  });
 
   const handleSwipeDeleteClick = () => {
     onRemove();
-    resetSwipe();
+    reset();
   };
 
   const swipeContentStyle = {
-    transform: `translateX(${effectiveSwipeOffset}px)`,
+    transform: `translateX(${offset}px)`,
     transition: 'transform 0.15s ease',
   };
 
   return (
-    <div className={`events-guest-row${effectiveSwipeOffset < 0 ? ' swipe-delete-active' : ''}`}>
+    <div className={`events-guest-row${offset < 0 ? ' swipe-delete-active' : ''}`}>
       <div className="events-guest-row-swipe-background" aria-hidden={!isDeleteVisible}>
         {isDeleteVisible && (
           <button
@@ -115,10 +67,7 @@ function GuestRow({
       <div
         className="events-guest-row-content"
         style={swipeContentStyle}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={resetSwipe}
+        {...handlers}
       >
         <div className="events-guest-row-header delete-row-hover-target">
           <div className="events-guest-row-name">{fullName}</div>
@@ -162,6 +111,7 @@ function EventGuestSelectionPage({
   const [fabPressed, setFabPressed] = useState(false);
   const [cancelPressed, setCancelPressed] = useState(false);
   const [swipeDeleteVisibleId, setSwipeDeleteVisibleId] = useState(null);
+  const { banners: deleteBanners, pendingKeys: pendingDeleteKeys, scheduleDelete, undoDelete } = useUndoableDelete();
   const searchRef = useRef(null);
   const dropdownRef = useRef(null);
   const effectiveButtonIcons = buttonIcons || DEFAULT_BUTTON_ICONS;
@@ -200,6 +150,15 @@ function EventGuestSelectionPage({
     );
   };
 
+<<<<<<< HEAD
+  const handleRemoveGuest = (guest) => {
+    const fullName = getGuestDisplayName(guest) || 'Unbenannter Gast';
+    scheduleDelete({
+      key: guest.id,
+      message: `"${fullName}" entfernt.`,
+      onConfirm: () => toggleGuest(guest.id),
+      onUndo: () => {},
+=======
   const handleRemoveGuest = (guestId, fullName) => {
     const wasDriver = driverGuestIds.includes(guestId);
     toggleGuest(guestId);
@@ -212,6 +171,7 @@ function EventGuestSelectionPage({
           setDriverGuestIds((prev) => (prev.includes(guestId) ? prev : [...prev, guestId]));
         }
       },
+>>>>>>> origin/main
     });
   };
 
@@ -223,7 +183,11 @@ function EventGuestSelectionPage({
   };
 
   const handleSave = () => {
-    onSave(selectedGuestIds, driverGuestIds);
+    // Guests still pending an undoable swipe-delete haven't actually been removed from
+    // selectedGuestIds yet (see handleRemoveGuest), but should be saved as removed since
+    // they're already hidden from view.
+    const guestIdsToSave = selectedGuestIds.filter((id) => !pendingDeleteKeys.has(id));
+    onSave(guestIdsToSave, driverGuestIds.filter((id) => guestIdsToSave.includes(id)));
   };
 
   const handleSearchChange = (e) => {
@@ -245,7 +209,9 @@ function EventGuestSelectionPage({
       })
     : [];
 
-  const selectedGuests = guests.filter((g) => selectedGuestIds.includes(g.id));
+  const effectiveSelectedGuestIds = selectedGuestIds.filter((id) => !pendingDeleteKeys.has(id));
+  const effectiveDriverGuestIds = driverGuestIds.filter((id) => !pendingDeleteKeys.has(id));
+  const selectedGuests = guests.filter((g) => selectedGuestIds.includes(g.id) && !pendingDeleteKeys.has(g.id));
 
   return (
     <div className="events-page-container">
@@ -313,7 +279,11 @@ function EventGuestSelectionPage({
                     isDriver={driverGuestIds.includes(guest.id)}
                     isDeleteVisible={isDeleteVisible}
                     onToggleDriver={() => toggleDriverGuest(guest.id)}
+<<<<<<< HEAD
+                    onRemove={() => handleRemoveGuest(guest)}
+=======
                     onRemove={() => handleRemoveGuest(guest.id, fullName)}
+>>>>>>> origin/main
                     onSwipeDeleteVisible={() => setSwipeDeleteVisibleId(guest.id)}
                     onSwipeDeleteHidden={() =>
                       setSwipeDeleteVisibleId((prev) => (prev === guest.id ? null : prev))
@@ -324,13 +294,21 @@ function EventGuestSelectionPage({
               })}
             </div>
           )}
+          {deleteBanners.map((banner) => (
+            <div key={banner.id} className="undo-snackbar" role="status">
+              <span>{banner.message}</span>
+              <button type="button" className="undo-snackbar-btn" onClick={() => undoDelete(banner.id)}>
+                Rückgängig
+              </button>
+            </div>
+          ))}
 
           <div className="events-guest-summary-badges">
             <span className="events-summary-badge">
-              {selectedGuestIds.length} {selectedGuestIds.length === 1 ? 'Gast' : 'Gäste'} ausgewählt.
+              {effectiveSelectedGuestIds.length} {effectiveSelectedGuestIds.length === 1 ? 'Gast' : 'Gäste'} ausgewählt.
             </span>
             <span className="events-summary-badge">
-              {driverGuestIds.length} Fahrer markiert.
+              {effectiveDriverGuestIds.length} Fahrer markiert.
             </span>
           </div>
         </div>
