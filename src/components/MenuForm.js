@@ -387,7 +387,7 @@ function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex, sw
       className={`selected-recipe-item ${isDragging ? 'dragging' : ''}${offset < 0 ? ' swipe-delete-active' : ''}`}
     >
       <div className="swipe-delete-background" aria-hidden={!isDeleteVisible}>
-        {isDeleteVisible && (
+        {(isDeleteVisible || offset < 0) && (
           <button
             type="button"
             className="swipe-delete-action"
@@ -463,7 +463,7 @@ function SortableDrinkItem({ id, displayName, isFavorite, onRemove, swipeDeleteI
       className={`selected-recipe-item ${isDragging ? 'dragging' : ''}${offset < 0 ? ' swipe-delete-active' : ''}`}
     >
       <div className="swipe-delete-background" aria-hidden={!isDeleteVisible}>
-        {isDeleteVisible && (
+        {(isDeleteVisible || offset < 0) && (
           <button
             type="button"
             className="swipe-delete-action"
