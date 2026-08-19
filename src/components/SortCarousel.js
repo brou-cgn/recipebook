@@ -9,6 +9,10 @@ export const SORT_OPTIONS = [
   { id: 'index', label: 'Nach Relevanz' },
 ];
 
+// How long the carousel stays expanded on first mount, giving the user a
+// glance at all the options before it folds down to just the active pill.
+const MOUNT_COLLAPSE_DELAY_MS = 1400;
+
 // How long it stays expanded after the user picks an option, so the
 // selection is visible for a moment before the pill bar folds away.
 const SELECT_COLLAPSE_DELAY_MS = 900;
@@ -38,9 +42,9 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
   const collapseTimer = useRef(null);
   const ignoreScrollTimer = useRef(null);
   const ignoreScroll = useRef(false);
-  // Starts collapsed, showing just the active pill, until the user swipes,
-  // taps, or focuses it (see the expand handlers below).
-  const [expanded, setExpanded] = useState(false);
+  // Starts expanded so the user sees all options at a glance, then folds
+  // down to the active pill on its own (see MOUNT_COLLAPSE_DELAY_MS below).
+  const [expanded, setExpanded] = useState(true);
 
   const activeIndex = SORT_OPTIONS.findIndex((o) => o.id === activeSort);
   const safeIndex = activeIndex >= 0 ? activeIndex : 0;
@@ -94,6 +98,12 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
     },
     [collapseNow]
   );
+
+  // Reveal all options briefly on mount, then fold down to the active pill.
+  useEffect(() => {
+    scheduleCollapse(MOUNT_COLLAPSE_DELAY_MS);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSelect = useCallback(
     (id) => {
