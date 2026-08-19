@@ -711,13 +711,28 @@
 
 .events-category-checkbox input[type="checkbox"],
 .events-driver-checkbox {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
   width: 18px;
   height: 18px;
   margin: 0;
   padding: 0;
+  border: 1.5px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px 12px;
   cursor: pointer;
   flex-shrink: 0;
-  accent-color: #2F5D50;
+}
+
+.events-category-checkbox input[type="checkbox"]:checked,
+.events-driver-checkbox:checked {
+  background-color: #2F5D50;
+  border-color: #2F5D50;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3 3 7-7' stroke='white' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .events-preferred-drinks-list {
