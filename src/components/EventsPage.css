@@ -21,6 +21,17 @@
   text-align: left;
 }
 
+.events-page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.events-header-add-btn {
+  display: inline-flex;
+  white-space: nowrap;
+}
+
 .events-close-btn {
   background: none;
   border: none;
@@ -1446,6 +1457,10 @@
 
 @media (max-width: 768px) {
   .events-save-desktop-only {
+    display: none;
+  }
+
+  .events-header-add-btn {
     display: none;
   }
 
