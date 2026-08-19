@@ -333,11 +333,13 @@
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
 }
 
-/* Getränke/Gästeübersicht FABs (mobile Events-Übersicht, unten links) -
-   gleiche Formatierung wie der "Neues Event"-FAB (weiß/umrandet). */
+/* Getränke/Gästeübersicht FABs (Events-Übersicht, unten links) - ersetzen die
+   frühere "Getränke verwalten"/"Gäste verwalten"-Textlinks und übernehmen
+   dieselbe Formatierung wie der "Neues Event"-FAB (weiß/umrandet, rund),
+   auf Desktop wie Mobile sichtbar. */
 .events-drinks-fab-button,
 .events-guests-fab-button {
-  display: none;
+  display: flex;
   position: fixed;
   bottom: 20px;
   z-index: 1101;
@@ -383,6 +385,13 @@
 .events-drinks-fab-button:active,
 .events-guests-fab-button:active {
   background: white;
+  outline: none;
+}
+
+.events-drinks-fab-button:focus,
+.events-drinks-fab-button:focus-visible,
+.events-guests-fab-button:focus,
+.events-guests-fab-button:focus-visible {
   outline: none;
 }
 
@@ -1262,13 +1271,6 @@
   color: #888;
 }
 
-.events-manage-links {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-
 .events-manage-link-btn {
   background: none;
   border: 1px solid #2F5D50;
@@ -1374,10 +1376,6 @@
     min-width: 56px;
     max-width: 56px;
     opacity: 0.85;
-  }
-
-  .events-manage-links {
-    display: none;
   }
 
   .events-cancel-fab-button {

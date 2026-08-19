@@ -121,6 +121,8 @@
   .App .add-menu-fab-button,
   .App .events-add-fab-button,
   .App .events-page-container .edit-fab-button,
+  .App .events-page-container .events-drinks-fab-button,
+  .App .events-page-container .events-guests-fab-button,
   .App .menu-favorites-filter-button,
   .App .recipe-detail-container .edit-fab-button,
   .App .recipe-detail-container .new-version-fab-button,
