@@ -698,18 +698,43 @@
   color: #444;
 }
 
-.events-category-checkbox input[type="checkbox"],
-.events-form-field input[type="range"],
-.events-driver-checkbox {
+.events-form-field input[type="range"] {
   accent-color: #2F5D50;
 }
 
 .events-category-checkbox input[type="checkbox"],
 .events-driver-checkbox {
+  -webkit-appearance: none;
+  appearance: none;
   width: 18px;
   height: 18px;
+  margin: 0;
+  border: 1.5px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
   cursor: pointer;
   flex-shrink: 0;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.events-category-checkbox input[type="checkbox"]:checked,
+.events-driver-checkbox:checked {
+  background-color: #2F5D50;
+  border-color: #2F5D50;
+}
+
+.events-category-checkbox input[type="checkbox"]:checked::after,
+.events-driver-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .events-preferred-drinks-list {
