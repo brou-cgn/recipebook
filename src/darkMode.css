@@ -2490,11 +2490,6 @@
   background: #2a2a2a;
 }
 
-[data-theme="dark"] .selected-recipe-item .swipe-delete-action {
-  background: rgba(255, 114, 90, 0.18);
-  color: #ff8a72;
-}
-
 [data-theme="dark"] .selected-recipes h5 {
   color: #aaa;
 }

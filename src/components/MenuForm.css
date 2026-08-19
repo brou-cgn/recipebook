@@ -484,7 +484,6 @@
   overflow: hidden;
   border-radius: 6px;
   margin-bottom: 0.5rem;
-  background: #f9f6f3;
 }
 
 .selected-recipe-item-content {
@@ -513,24 +512,6 @@
 .selected-recipe-item.swipe-delete-active .swipe-delete-background {
   opacity: 1;
   pointer-events: auto;
-}
-
-/* Unlike the solid red reveal used elsewhere, only the button itself should
-   read as red here (CLAUDE.md DeleteRowButton spec: red is reserved for the
-   button, never a filled row/area). The row keeps its normal background as
-   it slides away; a DeleteRowButton-styled circle sits in the revealed
-   strip instead of a red rectangle. */
-.selected-recipe-item .swipe-delete-background {
-  background: transparent;
-  padding-right: 0.6rem;
-}
-
-.selected-recipe-item .swipe-delete-action {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  background: rgba(163, 58, 38, 0.12);
-  color: #a33a26;
 }
 
 @media (max-width: 768px) {
