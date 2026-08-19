@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import EventsPage from './EventsPage';
 
 const mockSubscribeToEvents = jest.fn();
@@ -630,6 +630,73 @@ describe('EventsPage', () => {
 
       fireEvent.click(editButton);
       expect(screen.getByText('EventForm geöffnet')).toBeInTheDocument();
+    });
+  });
+
+  describe('swipe-delete', () => {
+    const createTouchEvent = (clientX, clientY) => ({
+      touches: [{ clientX, clientY }],
+      cancelable: false,
+      preventDefault: jest.fn(),
+    });
+
+    const event = {
+      id: 'e1',
+      eventName: 'Sommerfest',
+      date: '2025-07-01',
+      durationHours: 4,
+      eventType: 'party',
+      status: 'berechnet',
+      guests: { adults: 10, children: 0 },
+      berechnung: { ergebnis: [] },
+    };
+
+    test('swipe-delete button appears after swiping an event card left', async () => {
+      mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+        cb([event]);
+        return jest.fn();
+      });
+
+      render(<EventsPage currentUser={currentUser} />);
+
+      const eventCardContent = screen.getByText('Sommerfest').closest('.events-card-swipe-content');
+      expect(eventCardContent).toBeInTheDocument();
+
+      fireEvent.touchStart(eventCardContent, createTouchEvent(200, 100));
+      fireEvent.touchMove(eventCardContent, createTouchEvent(130, 100));
+      fireEvent.touchEnd(eventCardContent, {});
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Sommerfest löschen' })).toBeInTheDocument();
+      });
+    });
+
+    test('clicking swipe-delete button calls deleteEvent and shows a banner, without opening the event', async () => {
+      mockDeleteEvent.mockResolvedValue(undefined);
+      mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+        cb([event]);
+        return jest.fn();
+      });
+
+      render(<EventsPage currentUser={currentUser} />);
+
+      const eventCardContent = screen.getByText('Sommerfest').closest('.events-card-swipe-content');
+      fireEvent.touchStart(eventCardContent, createTouchEvent(200, 100));
+      fireEvent.touchMove(eventCardContent, createTouchEvent(130, 100));
+      fireEvent.touchEnd(eventCardContent, {});
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Sommerfest löschen' })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Sommerfest löschen' }));
+
+      await waitFor(() => {
+        expect(mockDeleteEvent).toHaveBeenCalledWith(currentUser.id, 'e1');
+      });
+      await waitFor(() => {
+        expect(screen.getByRole('status')).toHaveTextContent('"Sommerfest" gelöscht.');
+      });
     });
   });
 });

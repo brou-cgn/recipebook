@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import './EventsPage.css';
 import { subscribeToEvents, subscribeToAllEvents, deleteEvent, getEvent } from '../utils/eventsFirestore';
 import { CATEGORY_LABELS, EVENT_TYPE_LABELS } from './EventForm';
@@ -18,6 +18,11 @@ const STATUS_LABELS = {
   eingekauft: 'Eingekauft',
   verbrauchErfasst: 'Verbrauch erfasst',
 };
+
+const SWIPE_DELETE_THRESHOLD = 56;
+const SWIPE_DELETE_MAX_OFFSET = 96;
+const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
+const DELETE_BANNER_TIMEOUT_MS = 5000;
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
@@ -84,6 +89,115 @@ const formatDrinkSummary = (berechnung) => {
     .join(', ');
 };
 
+function EventCard({ event, ownerName, canManage, onSelect, onDelete, swipeDeleteIcon }) {
+  const touchStartXRef = React.useRef(null);
+  const touchStartYRef = React.useRef(null);
+  const swipeDirectionLockedRef = React.useRef(null);
+  const isSwipingRef = React.useRef(false);
+  const swipeOffsetRef = React.useRef(0);
+  const [swipeOffset, setSwipeOffset] = React.useState(0);
+  const [isDeleteVisible, setIsDeleteVisible] = React.useState(false);
+
+  const effectiveOffset = isDeleteVisible ? -SWIPE_DELETE_MAX_OFFSET : swipeOffset;
+
+  const resetSwipe = ({ keepDelete = false } = {}) => {
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+    swipeDirectionLockedRef.current = null;
+    isSwipingRef.current = false;
+    swipeOffsetRef.current = 0;
+    setSwipeOffset(0);
+    if (!keepDelete) setIsDeleteVisible(false);
+  };
+
+  const handleTouchStart = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch || !canManage) return;
+    if (isDeleteVisible) setIsDeleteVisible(false);
+    touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+    swipeDirectionLockedRef.current = null;
+    isSwipingRef.current = false;
+  };
+
+  const handleTouchMove = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch || touchStartXRef.current === null || touchStartYRef.current === null || !canManage) return;
+
+    const deltaX = touch.clientX - touchStartXRef.current;
+    const deltaY = touch.clientY - touchStartYRef.current;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (!swipeDirectionLockedRef.current && (absX > SWIPE_DIRECTION_LOCK_THRESHOLD || absY > SWIPE_DIRECTION_LOCK_THRESHOLD)) {
+      swipeDirectionLockedRef.current = absX > absY ? 'horizontal' : 'vertical';
+    }
+
+    if (swipeDirectionLockedRef.current === 'horizontal' && deltaX < 0) {
+      isSwipingRef.current = true;
+      const clamped = Math.max(deltaX, -SWIPE_DELETE_MAX_OFFSET);
+      swipeOffsetRef.current = clamped;
+      setSwipeOffset(clamped);
+      if (e.cancelable) e.preventDefault();
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isSwipingRef.current && Math.abs(swipeOffsetRef.current) >= SWIPE_DELETE_THRESHOLD) {
+      setIsDeleteVisible(true);
+      resetSwipe({ keepDelete: true });
+      return;
+    }
+    resetSwipe();
+  };
+
+  return (
+    <div
+      className={`events-card-swipe-wrapper events-card${effectiveOffset < 0 ? ' swipe-delete-active' : ''}`}
+      style={{ padding: 0 }}
+    >
+      {canManage && (
+        <div className="events-card-swipe-delete-background" aria-hidden={!isDeleteVisible}>
+          {isDeleteVisible && (
+            <button
+              type="button"
+              className="events-card-swipe-delete-action"
+              onClick={() => { onDelete(event); resetSwipe(); }}
+              aria-label={`${event.eventName} löschen`}
+            >
+              {isBase64Image(swipeDeleteIcon) ? (
+                <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
+              ) : (
+                <span className="swipe-delete-icon-text">{swipeDeleteIcon || '🗑'}</span>
+              )}
+            </button>
+          )}
+        </div>
+      )}
+      <div
+        className="events-card-swipe-content events-card-main"
+        style={{ transform: `translateX(${effectiveOffset}px)`, padding: '16px 20px', width: '100%' }}
+        onClick={effectiveOffset < 0 || !canManage ? undefined : () => onSelect(event)}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={resetSwipe}
+      >
+        <h3>{event.eventName}</h3>
+        <div className="events-card-meta-row">
+          <p className="events-card-meta">
+            {formatDate(event.date)} · {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
+            {ownerName ? ` · von ${ownerName}` : ''}
+          </p>
+          <span className={`events-status-badge events-status-${event.status}`}>
+            {STATUS_LABELS[event.status] || event.status}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPendingEventReminderHandled, pendingEventDetailRequest, onPendingEventDetailRequestHandled, onCloseLinkedEventDetail }) {
   const [isMobileView, setIsMobileView] = useState(() => window.innerWidth <= 768);
   const [editFabPressed, setEditFabPressed] = useState(false);
@@ -110,6 +224,9 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
   const [allEvents, setAllEvents] = useState([]);
   const [allEventsLoading, setAllEventsLoading] = useState(true);
   const [allUsers, setAllUsers] = useState([]);
+  const [deleteBanners, setDeleteBanners] = useState([]);
+  const deleteBannerCounterRef = useRef(0);
+  const deleteBannerTimeoutsRef = useRef(new Map());
 
   useEffect(() => {
     const handleResize = () => setIsMobileView(window.innerWidth <= 768);
@@ -157,6 +274,14 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
     });
     return unsubscribe;
   }, [isAdmin]);
+
+  useEffect(() => {
+    const timeouts = deleteBannerTimeoutsRef.current;
+    return () => {
+      timeouts.forEach((id) => clearTimeout(id));
+      timeouts.clear();
+    };
+  }, []);
 
   // Deep link from a push notification: jump straight to the consumption form.
   useEffect(() => {
@@ -230,6 +355,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
   };
   const editEventIcon = getEffectiveIcon(buttonIcons, 'editRecipe', isDarkMode);
   const eventsCloseIcon = getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode) || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode);
+  const swipeDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode) || '🗑';
 
   const handleSelectEvent = (event, ownerId = currentUser?.id) => {
     setOpenedFromMenuLink(false);
@@ -256,6 +382,22 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
       setSubView('list');
       setSelectedEventId(null);
       setFallbackEvent(null);
+    } catch (err) {
+      console.error('Error deleting event:', err);
+    }
+  };
+
+  const handleSwipeDelete = async (event) => {
+    try {
+      await deleteEvent(event.ownerId || currentUser.id, event.id);
+      const id = deleteBannerCounterRef.current;
+      deleteBannerCounterRef.current = (id + 1) % 100000;
+      setDeleteBanners((prev) => [...prev, { id, message: `"${event.eventName}" gelöscht.` }]);
+      const timeoutId = setTimeout(() => {
+        setDeleteBanners((prev) => prev.filter((b) => b.id !== id));
+        deleteBannerTimeoutsRef.current.delete(id);
+      }, DELETE_BANNER_TIMEOUT_MS);
+      deleteBannerTimeoutsRef.current.set(id, timeoutId);
     } catch (err) {
       console.error('Error deleting event:', err);
     }
@@ -529,25 +671,17 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
           </div>
         ) : (
           <div className="events-list">
-            {allEvents.map((event) => {
-              const ownerName = getOwnerFirstName(event.ownerId);
-              return (
-                <div key={`${event.ownerId}_${event.id}`} className="events-card" onClick={() => handleSelectEvent(event, event.ownerId)}>
-                  <div className="events-card-main">
-                    <h3>{event.eventName}</h3>
-                    <div className="events-card-meta-row">
-                      <p className="events-card-meta">
-                        {formatDate(event.date)} · {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
-                        {ownerName ? ` · von ${ownerName}` : ''}
-                      </p>
-                      <span className={`events-status-badge events-status-${event.status}`}>
-                        {STATUS_LABELS[event.status] || event.status}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {allEvents.map((event) => (
+              <EventCard
+                key={`${event.ownerId}_${event.id}`}
+                event={event}
+                ownerName={getOwnerFirstName(event.ownerId)}
+                canManage
+                onSelect={(e) => handleSelectEvent(e, event.ownerId)}
+                onDelete={handleSwipeDelete}
+                swipeDeleteIcon={swipeDeleteIcon}
+              />
+            ))}
           </div>
         )
       ) : loading ? (
@@ -561,25 +695,23 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
         </div>
       ) : (
         <div className="events-list">
-          {events.map((event) => {
-            return (
-              <div key={event.id} className="events-card" onClick={() => handleSelectEvent(event)}>
-                <div className="events-card-main">
-                  <h3>{event.eventName}</h3>
-                  <div className="events-card-meta-row">
-                    <p className="events-card-meta">
-                      {formatDate(event.date)} · {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
-                    </p>
-                    <span className={`events-status-badge events-status-${event.status}`}>
-                      {STATUS_LABELS[event.status] || event.status}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {events.map((event) => (
+            <EventCard
+              key={event.id}
+              event={event}
+              canManage
+              onSelect={handleSelectEvent}
+              onDelete={handleSwipeDelete}
+              swipeDeleteIcon={swipeDeleteIcon}
+            />
+          ))}
         </div>
       )}
+      {deleteBanners.map((banner) => (
+        <div key={banner.id} className="events-delete-banner" role="status">
+          <span>{banner.message}</span>
+        </div>
+      ))}
       <OverviewAddFab onClick={() => setSubView('new')} title="Event erstellen" ariaLabel="Event erstellen" />
     </div>
   );
