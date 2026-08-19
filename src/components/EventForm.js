@@ -413,7 +413,6 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
         </div>
 
         <div className="events-form-field">
-          <span>Eigene Getränke</span>
           {customDrinks.length > 0 ? (
             <div className="events-form-row events-form-row--guests">
               {customDrinkIds.length > 0 ? (
