@@ -116,21 +116,20 @@ function GuestCard({ fullName, deleteIcon, onOpenEdit, onDelete, children }) {
 
   return (
     <div className={`events-card events-guest-card${isDeleteActionVisible ? ' swipe-delete-active' : ''}`}>
-      <div className="swipe-delete-background" aria-hidden={!isDeleteActionVisible}>
-        {isDeleteActionVisible && (
-          <button
-            type="button"
-            className="swipe-delete-action"
-            onClick={handleSwipeDeleteClick}
-            aria-label={deleteLabel}
-          >
-            {isBase64Image(deleteIcon) ? (
-              <img src={deleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
-            ) : (
-              <span className="swipe-delete-icon-text">{deleteIcon}</span>
-            )}
-          </button>
-        )}
+      <div className="swipe-delete-background" aria-hidden={!isDeleteActionVisible && effectiveSwipeOffset === 0}>
+        <button
+          type="button"
+          className="swipe-delete-action"
+          onClick={handleSwipeDeleteClick}
+          aria-label={deleteLabel}
+          tabIndex={isDeleteActionVisible ? 0 : -1}
+        >
+          {isBase64Image(deleteIcon) ? (
+            <img src={deleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
+          ) : (
+            <span className="swipe-delete-icon-text">{deleteIcon}</span>
+          )}
+        </button>
       </div>
       <div
         className="events-guest-card-content"
