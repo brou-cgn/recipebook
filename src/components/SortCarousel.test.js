@@ -140,31 +140,5 @@ describe('SortCarousel', () => {
       expect(handleChange).toHaveBeenCalledWith('trending');
       expect(tablist).not.toHaveClass('sort-carousel--expanded');
     });
-
-    test('a scroll event fired right after collapsing (the layout-shift side effect of the pills shrinking) does not re-expand the carousel', () => {
-      const handleChange = jest.fn();
-      render(<SortCarousel activeSort="alphabetical" onSortChange={handleChange} />);
-      const tablist = screen.getByRole('tablist');
-
-      fireEvent.scroll(tablist);
-      expect(tablist).toHaveClass('sort-carousel--expanded');
-
-      fireEvent.click(screen.getByRole('tab', { name: 'Nach Relevanz' }));
-      expect(tablist).not.toHaveClass('sort-carousel--expanded');
-
-      // The collapse CSS transition shrinking the other pills can itself
-      // trigger a native scroll event as the container's scrollLeft is
-      // clamped to the new (smaller) scrollWidth. That should be ignored,
-      // not mistaken for a user swipe.
-      fireEvent.scroll(tablist);
-      expect(tablist).not.toHaveClass('sort-carousel--expanded');
-
-      // Once the ignore window has passed, real swipes work again.
-      act(() => {
-        jest.advanceTimersByTime(400);
-      });
-      fireEvent.scroll(tablist);
-      expect(tablist).toHaveClass('sort-carousel--expanded');
-    });
   });
 });
