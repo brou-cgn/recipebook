@@ -123,7 +123,7 @@ describe('Header - Hamburger Menu Visibility', () => {
     process.env.REACT_APP_VERSION = originalVersion;
   });
 
-  test('navigation items are ordered as Kochbuch, Festtafel, Kochatelier, Chefkoch & mehr', () => {
+  test('navigation items are ordered as Kochbuch, Festtafel, Events, Kochatelier, Chefkoch & mehr', () => {
     render(
       <Header
         currentView="recipes"
@@ -145,15 +145,18 @@ describe('Header - Hamburger Menu Visibility', () => {
 
     const kochbuchIndex = menuItems.indexOf('Kochbuch');
     const festtafelIndex = menuItems.indexOf('Festtafel');
+    const eventsIndex = menuItems.indexOf('Events');
     const kochatelierIndex = menuItems.indexOf('Kochatelier');
     const chefkochIndex = menuItems.indexOf('Chefkoch & mehr');
 
     expect(kochbuchIndex).not.toBe(-1);
     expect(festtafelIndex).not.toBe(-1);
+    expect(eventsIndex).not.toBe(-1);
     expect(kochatelierIndex).not.toBe(-1);
     expect(chefkochIndex).not.toBe(-1);
     expect(kochbuchIndex).toBeLessThan(festtafelIndex);
-    expect(festtafelIndex).toBeLessThan(kochatelierIndex);
+    expect(festtafelIndex).toBeLessThan(eventsIndex);
+    expect(eventsIndex).toBeLessThan(kochatelierIndex);
     expect(kochatelierIndex).toBeLessThan(chefkochIndex);
   });
 
