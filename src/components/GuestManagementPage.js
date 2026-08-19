@@ -450,6 +450,7 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
           <label className="events-category-checkbox">
             <input
               type="checkbox"
+              role="switch"
               checked={form.kind}
               onChange={(e) => setForm((f) => ({ ...f, kind: e.target.checked }))}
             />
@@ -459,6 +460,7 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
           <label className="events-category-checkbox">
             <input
               type="checkbox"
+              role="switch"
               checked={form.alkoholischeGetraenke}
               onChange={(e) => setForm((f) => ({ ...f, alkoholischeGetraenke: e.target.checked }))}
             />
