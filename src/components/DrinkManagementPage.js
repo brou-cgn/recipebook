@@ -224,6 +224,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
   const [fabPressed, setFabPressed] = useState(false);
   const [cancelPressed, setCancelPressed] = useState(false);
   const [deleteBanners, setDeleteBanners] = useState([]);
+  const [showOwnOnly, setShowOwnOnly] = useState(true);
   const deleteBannerCounterRef = useRef(0);
   const deleteBannerTimeoutsRef = useRef(new Map());
   const formRef = useRef(null);
@@ -271,10 +272,11 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
     () => (Array.isArray(recipes) ? recipes.filter(isDrinkRecipe) : []),
     [recipes]
   );
-  const allDrinks = useMemo(
-    () => mergePredefinedDrinks(drinks, currentUser?.id),
-    [drinks, currentUser?.id]
-  );
+  const allDrinks = useMemo(() => {
+    const merged = mergePredefinedDrinks(drinks, currentUser?.id);
+    if (!showOwnOnly) return merged;
+    return merged.filter((drink) => !drink.ownerId || drink.ownerId === currentUser?.id);
+  }, [drinks, currentUser?.id, showOwnOnly]);
   const groupedDrinks = useMemo(() => groupDrinksByCategory(allDrinks, recipes), [allDrinks, recipes]);
   const getOwnerFirstName = (ownerId) => {
     if (!ownerId) return null;
@@ -737,6 +739,21 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
             )}
           </button>
         )}
+      </div>
+
+      <div className="drink-own-filter-row">
+        <label className="drink-own-filter-label">
+          <span>Eigene Getränke</span>
+          <span className="drink-own-filter-toggle">
+            <input
+              type="checkbox"
+              checked={showOwnOnly}
+              onChange={(e) => setShowOwnOnly(e.target.checked)}
+              aria-label="Nur eigene Getränke anzeigen"
+            />
+            <span className="drink-own-filter-toggle-slider" aria-hidden="true" />
+          </span>
+        </label>
       </div>
 
       {loading ? (

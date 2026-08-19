@@ -791,7 +791,7 @@ describe('DrinkManagementPage', () => {
   });
 
   describe('shared library across users', () => {
-    test('shows drinks from other users but does not allow editing or deleting them', () => {
+    const mockOtherUsersDrinks = () => {
       mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
         cb([
           { id: 'd1', name: 'Eigenes Bier', kategorie: 'bier', einheiten: [], ownerId: 'u1' },
@@ -799,8 +799,24 @@ describe('DrinkManagementPage', () => {
         ]);
         return jest.fn();
       });
+    };
+
+    test('"Eigene Getränke" is enabled by default and hides other users\' drinks', () => {
+      mockOtherUsersDrinks();
 
       render(<DrinkManagementPage currentUser={currentUser} />);
+
+      expect(screen.getByRole('checkbox', { name: 'Nur eigene Getränke anzeigen' })).toBeChecked();
+      expect(screen.getByText('Eigenes Bier')).toBeInTheDocument();
+      expect(screen.queryByText('Papas Wein')).not.toBeInTheDocument();
+    });
+
+    test('disabling "Eigene Getränke" shows drinks from other users but does not allow editing or deleting them', () => {
+      mockOtherUsersDrinks();
+
+      render(<DrinkManagementPage currentUser={currentUser} />);
+
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Nur eigene Getränke anzeigen' }));
 
       expect(screen.getByText('Eigenes Bier')).toBeInTheDocument();
       expect(screen.getByText('Papas Wein')).toBeInTheDocument();
@@ -820,6 +836,14 @@ describe('DrinkManagementPage', () => {
       fireEvent.touchMove(othersDrinkContent, { touches: [{ clientX: 130, clientY: 100 }], cancelable: false, preventDefault: jest.fn() });
       fireEvent.touchEnd(othersDrinkContent, {});
       expect(screen.queryByRole('button', { name: 'Papas Wein löschen' })).not.toBeInTheDocument();
+    });
+
+    test('predefined drinks stay visible while "Eigene Getränke" is enabled', () => {
+      mockOtherUsersDrinks();
+
+      render(<DrinkManagementPage currentUser={currentUser} />);
+
+      expect(screen.getByText('Mineralwasser')).toBeInTheDocument();
     });
   });
 });

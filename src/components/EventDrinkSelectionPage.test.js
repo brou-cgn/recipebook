@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import EventDrinkSelectionPage from './EventDrinkSelectionPage';
 
 const customDrinks = [
@@ -379,6 +379,52 @@ describe('EventDrinkSelectionPage', () => {
     expect(options).toContain('Bier (eigen)');
   });
 
+  describe('"Eigene Getränke" filter on the add dropdown', () => {
+    const sharedCustomDrinks = [
+      { id: 'own-wasser', name: 'Eigenes Wasser', kategorie: 'wasser', ownerId: 'u1' },
+      { id: 'other-bier', name: 'Fremdes Bier', kategorie: 'bier', ownerId: 'u2' },
+      { id: 'unowned-saft', name: 'Saft ohne Owner', kategorie: 'saft' },
+    ];
+
+    test('is enabled by default and hides other users\' drinks from the dropdown', () => {
+      render(
+        <EventDrinkSelectionPage
+          customDrinks={sharedCustomDrinks}
+          customDrinkIds={[]}
+          currentUserId="u1"
+          onSave={jest.fn()}
+          onBack={jest.fn()}
+        />,
+      );
+
+      expect(screen.getByRole('checkbox', { name: 'Nur eigene Getränke in der Auswahl anzeigen' })).toBeChecked();
+
+      const select = screen.getByRole('combobox', { name: 'Getränk auswählen' });
+      const options = Array.from(select.options).map((o) => o.text);
+      expect(options).toContain('Eigenes Wasser');
+      expect(options).toContain('Saft ohne Owner');
+      expect(options).not.toContain('Fremdes Bier');
+    });
+
+    test('disabling the filter shows drinks from other users in the dropdown', () => {
+      render(
+        <EventDrinkSelectionPage
+          customDrinks={sharedCustomDrinks}
+          customDrinkIds={[]}
+          currentUserId="u1"
+          onSave={jest.fn()}
+          onBack={jest.fn()}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Nur eigene Getränke in der Auswahl anzeigen' }));
+
+      const select = screen.getByRole('combobox', { name: 'Getränk auswählen' });
+      const options = Array.from(select.options).map((o) => o.text);
+      expect(options).toContain('Fremdes Bier');
+    });
+  });
+
   const drinksWithMultipleEinheiten = [
     {
       id: 'custom-bier-multi',
@@ -498,7 +544,8 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
-    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    const drinkRow = screen.getByText('Saft').closest('.events-drink-row');
+    expect(within(drinkRow).queryByRole('checkbox')).not.toBeInTheDocument();
     expect(screen.getByText('1,0 l (Flasche)')).toBeInTheDocument();
   });
 
