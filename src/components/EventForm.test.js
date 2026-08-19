@@ -169,10 +169,10 @@ describe('EventForm', () => {
     expect(event.guests).toEqual({ adults: 1, children: 1 });
   });
 
-  test('shows only Eigene Getränke section, no Standardkategorien', () => {
+  test('shows no Standardkategorien and no Eigene Getränke heading', () => {
     render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
 
-    expect(screen.getByText('Eigene Getränke')).toBeInTheDocument();
+    expect(screen.queryByText('Eigene Getränke')).not.toBeInTheDocument();
     expect(screen.queryByText('Standardkategorien')).not.toBeInTheDocument();
   });
 
