@@ -334,8 +334,7 @@
 }
 
 /* Getränke/Gästeübersicht FABs (mobile Events-Übersicht, unten links) -
-   gleiche Position/Größe wie Veröffentlichen/Löschen-FAB auf der
-   Rezeptdetailansicht, aber gefüllt in Event-Grün statt weiß/umrandet. */
+   gleiche Formatierung wie der "Neues Event"-FAB (weiß/umrandet). */
 .events-drinks-fab-button,
 .events-guests-fab-button {
   display: none;
@@ -348,9 +347,9 @@
   max-width: 44px;
   border-radius: 50%;
   padding: 0;
-  background: #2F5D50;
+  background: white;
   color: white;
-  border: none;
+  border: 1px solid #ddd;
   font-size: 1.1rem;
   cursor: pointer;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
@@ -383,7 +382,7 @@
 
 .events-drinks-fab-button:active,
 .events-guests-fab-button:active {
-  background: #2F5D50;
+  background: white;
   outline: none;
 }
 
@@ -1375,6 +1374,10 @@
     min-width: 56px;
     max-width: 56px;
     opacity: 0.85;
+  }
+
+  .events-manage-links {
+    display: none;
   }
 
   .events-cancel-fab-button {
