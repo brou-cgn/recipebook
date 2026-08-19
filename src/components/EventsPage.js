@@ -580,6 +580,17 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
         )}
       </div>
 
+      <div className="events-manage-links">
+        <button type="button" className="events-manage-link-btn" onClick={() => setSubView('drinks')}>
+          Getränke verwalten
+        </button>
+        {canEditRecipes(currentUser) && (
+          <button type="button" className="events-manage-link-btn" onClick={() => setSubView('guests')}>
+            Gäste verwalten
+          </button>
+        )}
+      </div>
+
       {isAdmin ? (
         allEventsLoading ? (
           <div className="events-empty-state">Laden...</div>
@@ -634,26 +645,28 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
         </div>
       ))}
       <OverviewAddFab onClick={() => setSubView('new')} title="Event erstellen" ariaLabel="Event erstellen" />
-      <button
-        type="button"
-        className={`events-drinks-fab-button${drinksFabPressed ? ' pressed' : ''}`}
-        onClick={() => setSubView('drinks')}
-        onTouchStart={() => setDrinksFabPressed(true)}
-        onTouchEnd={() => setDrinksFabPressed(false)}
-        onTouchCancel={() => setDrinksFabPressed(false)}
-        onMouseDown={() => setDrinksFabPressed(true)}
-        onMouseUp={() => setDrinksFabPressed(false)}
-        onMouseLeave={() => setDrinksFabPressed(false)}
-        title="Getränke verwalten"
-        aria-label="Getränke verwalten"
-      >
-        {isBase64Image(drinksFabIcon) ? (
-          <img src={drinksFabIcon} alt="Getränke" className="button-icon-image" draggable="false" />
-        ) : (
-          drinksFabIcon
-        )}
-      </button>
-      {canEditRecipes(currentUser) && (
+      {isMobileView && (
+        <button
+          type="button"
+          className={`events-drinks-fab-button${drinksFabPressed ? ' pressed' : ''}`}
+          onClick={() => setSubView('drinks')}
+          onTouchStart={() => setDrinksFabPressed(true)}
+          onTouchEnd={() => setDrinksFabPressed(false)}
+          onTouchCancel={() => setDrinksFabPressed(false)}
+          onMouseDown={() => setDrinksFabPressed(true)}
+          onMouseUp={() => setDrinksFabPressed(false)}
+          onMouseLeave={() => setDrinksFabPressed(false)}
+          title="Getränke verwalten"
+          aria-label="Getränke verwalten"
+        >
+          {isBase64Image(drinksFabIcon) ? (
+            <img src={drinksFabIcon} alt="Getränke" className="button-icon-image" draggable="false" />
+          ) : (
+            drinksFabIcon
+          )}
+        </button>
+      )}
+      {isMobileView && canEditRecipes(currentUser) && (
         <button
           type="button"
           className={`events-guests-fab-button${guestsFabPressed ? ' pressed' : ''}`}
