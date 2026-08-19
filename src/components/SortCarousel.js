@@ -2,9 +2,9 @@ import React, { useRef, useEffect, useCallback, useState } from 'react';
 import './SortCarousel.css';
 
 // Newton-Raphson solver for a CSS-style cubic-bezier(x1, y1, x2, y2) easing
-// curve, so the scrollLeft reset in collapseNow (below) can move on exactly
-// the same curve as the CSS max-width transition instead of the browser's
-// own (differently-timed) native smooth scroll.
+// curve, so the scrollLeft reset in animateScrollToStart (below) can move on
+// exactly the same curve as the CSS max-width transition instead of the
+// browser's own (differently-timed) native smooth scroll.
 function cubicBezier(x1, y1, x2, y2) {
   const a = (a1, a2) => 1.0 - 3.0 * a2 + 3.0 * a1;
   const b = (a1, a2) => 3.0 * a2 - 6.0 * a1;
@@ -51,6 +51,11 @@ const EXPAND_COLLAPSE_DELAY_MS = 2600;
 // ourselves.
 const IGNORE_SCROLL_MS = 400;
 
+// Fallback for the "swipe active pill to its target" pre-collapse step
+// below, in case the browser never fires 'scrollend' (older Safari).
+// Comfortably longer than any native smooth-scroll over a pill's width.
+const SWIPE_SETTLE_TIMEOUT_MS = 500;
+
 // Must match the `max-width` transition on .sort-carousel-item in
 // SortCarousel.css (duration and curve). The active pill's on-screen
 // position during collapse is the sum of that width transition (which
@@ -73,6 +78,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
   const ignoreScrollTimer = useRef(null);
   const ignoreScroll = useRef(false);
   const scrollAnimFrame = useRef(null);
+  const swipeSettleCleanup = useRef(null);
   // Starts collapsed, showing just the active pill, until the user swipes,
   // taps, or focuses it (see the expand handlers below).
   const [expanded, setExpanded] = useState(false);
@@ -80,12 +86,22 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
   const activeIndex = SORT_OPTIONS.findIndex((o) => o.id === activeSort);
   const safeIndex = activeIndex >= 0 ? activeIndex : 0;
 
+  // Starts (or extends) an ignore window that ends automatically after
+  // IGNORE_SCROLL_MS. Used for scroll noise we expect to settle quickly on
+  // its own (the shrink's own scrollLeft clamp).
   const suppressScroll = useCallback(() => {
     ignoreScroll.current = true;
     clearTimeout(ignoreScrollTimer.current);
     ignoreScrollTimer.current = setTimeout(() => {
       ignoreScroll.current = false;
     }, IGNORE_SCROLL_MS);
+  }, []);
+
+  // Starts an open-ended ignore window with no auto-revert, for scroll
+  // noise whose end we detect explicitly (the pre-collapse swipe below).
+  const holdScroll = useCallback(() => {
+    ignoreScroll.current = true;
+    clearTimeout(ignoreScrollTimer.current);
   }, []);
 
   useEffect(() => {
@@ -101,6 +117,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
       clearTimeout(collapseTimer.current);
       clearTimeout(ignoreScrollTimer.current);
       cancelAnimationFrame(scrollAnimFrame.current);
+      swipeSettleCleanup.current?.();
     },
     []
   );
@@ -109,9 +126,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
   // max-width: 0), so the container's scroll position always ends up at
   // 0. Left to itself the browser only clamps scrollLeft once the
   // shrinking content can no longer contain it, and that clamp is an
-  // instant jump, not part of the width transition — most jarring for a
-  // pill that was scrolled deep into the middle (e.g. "Neue Rezepte",
-  // "Nach Bewertung"), since it has the furthest to snap back.
+  // instant jump, not part of the width transition.
   //
   // Native `scrollTo({ behavior: 'smooth' })` avoids that clamp, but runs
   // on the browser's own (unrelated) timing and easing, not the pills'
@@ -119,6 +134,11 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
   // visibly wobbles. Driving scrollLeft by hand on the same duration and
   // curve as the CSS keeps it moving in lockstep with the shrinking pills
   // instead.
+  //
+  // This only works cleanly if scrollLeft is already flush with the
+  // active pill's left edge (see swipeActiveToTarget below) *before* this
+  // runs — otherwise the pill both shrinks into view and slides sideways
+  // at once, which is the "hop" this used to produce.
   const animateScrollToStart = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -137,14 +157,67 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
     scrollAnimFrame.current = requestAnimationFrame(step);
   }, []);
 
-  // Collapsing itself can trigger a spurious scroll event (see
-  // IGNORE_SCROLL_MS above), so every path that collapses the carousel
-  // goes through here rather than calling setExpanded(false) directly.
-  const collapseNow = useCallback(() => {
+  // Phase 2: shrink the inactive pills (and the track around them) now
+  // that the active pill sits flush left. Collapsing itself can trigger a
+  // spurious scroll event (see IGNORE_SCROLL_MS above), so this is the
+  // only place that calls setExpanded(false).
+  const shrinkTrack = useCallback(() => {
     suppressScroll();
     animateScrollToStart();
     setExpanded(false);
   }, [suppressScroll, animateScrollToStart]);
+
+  // Phase 1: before touching any widths, bring the active pill to the
+  // position it'll occupy once collapsed (flush against the track's left
+  // edge) via a plain native smooth scroll, and wait for the browser to
+  // actually finish it. Doing this first — instead of animating scrollLeft
+  // by hand at the same time as the shrink, as we used to — means phase 2
+  // never has to fight leftover touch momentum or scroll-snap settling; by
+  // the time it starts, the pill is already stationary and correctly
+  // positioned, so the shrink can't make it hop.
+  const swipeActiveToTarget = useCallback(
+    (onSettled) => {
+      const el = containerRef.current;
+      const activeEl = itemRefs.current[safeIndex];
+      if (!el || !activeEl) {
+        onSettled();
+        return;
+      }
+
+      const target = activeEl.getBoundingClientRect().left - el.getBoundingClientRect().left + el.scrollLeft;
+      if (Math.abs(target - el.scrollLeft) < 1) {
+        onSettled();
+        return;
+      }
+
+      holdScroll();
+      // Cancel any still-pending swipe from a previous call (without
+      // firing its onSettled) before starting this one.
+      swipeSettleCleanup.current?.();
+
+      let settled = false;
+      const cleanup = () => {
+        el.removeEventListener('scrollend', finish);
+        clearTimeout(fallback);
+        swipeSettleCleanup.current = null;
+      };
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        onSettled();
+      };
+      const fallback = setTimeout(finish, SWIPE_SETTLE_TIMEOUT_MS);
+      swipeSettleCleanup.current = cleanup;
+      el.addEventListener('scrollend', finish);
+      el.scrollTo({ left: target, behavior: 'smooth' });
+    },
+    [safeIndex, holdScroll]
+  );
+
+  const collapseNow = useCallback(() => {
+    swipeActiveToTarget(shrinkTrack);
+  }, [swipeActiveToTarget, shrinkTrack]);
 
   const scheduleCollapse = useCallback(
     (delay) => {
