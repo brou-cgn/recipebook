@@ -15,14 +15,13 @@
   position: sticky;
   top: 1rem;
   max-height: calc(100vh - 2rem);
-  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   transition: width 0.2s ease, padding 0.2s ease;
 }
 
 .recipe-filter-sidebar--collapsed {
-  width: 64px;
+  width: auto;
   gap: 0;
   padding: 1rem 0.6rem;
   align-items: center;

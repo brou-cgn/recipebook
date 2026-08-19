@@ -138,10 +138,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
   // This only works cleanly if scrollLeft is already flush with the
   // active pill's left edge (see swipeActiveToTarget below) *before* this
   // runs — otherwise the pill both shrinks into view and slides sideways
-  // at once, which is the "hop" this used to produce. It also needs to
-  // start on the same frame as the CSS transition it's shadowing (see the
-  // rAF scheduling in shrinkTrack below), or the two still drift apart for
-  // their first few frames even with matching duration/easing.
+  // at once, which is the "hop" this used to produce.
   const animateScrollToStart = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -166,18 +163,8 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
   // only place that calls setExpanded(false).
   const shrinkTrack = useCallback(() => {
     suppressScroll();
+    animateScrollToStart();
     setExpanded(false);
-    // animateScrollToStart must begin on the exact same frame the CSS
-    // max-width transition (triggered by the class change above) visually
-    // starts, or the two drift apart for their first few frames and the
-    // active pill wobbles as shrinking siblings briefly peek back into
-    // view. React only commits the class removal — and the browser only
-    // starts transitioning from the old value — after this frame paints,
-    // so wait two rAFs (commit, then paint) before starting the scrollLeft
-    // animation to line its start up with that.
-    requestAnimationFrame(() => {
-      requestAnimationFrame(animateScrollToStart);
-    });
   }, [suppressScroll, animateScrollToStart]);
 
   // Phase 1: before touching any widths, bring the active pill to the
