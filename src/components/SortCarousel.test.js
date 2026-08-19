@@ -2,10 +2,9 @@ import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import SortCarousel, { SORT_OPTIONS } from './SortCarousel';
 
-// JSDOM does not implement scrollIntoView or scrollTo — provide no-op mocks.
+// JSDOM does not implement scrollIntoView — provide a no-op mock.
 beforeAll(() => {
   Element.prototype.scrollIntoView = jest.fn();
-  Element.prototype.scrollTo = jest.fn();
 });
 
 describe('SortCarousel', () => {
