@@ -93,7 +93,7 @@ jobs:
           for attempt in $(seq 1 "$max_attempts"); do
             echo "Firebase deploy attempt $attempt/$max_attempts"
             set +e
-            deploy_output=$(firebase deploy --only hosting,functions,firestore:rules --project "$firebase_project" --force 2>&1)
+            deploy_output=$(firebase deploy --only hosting,functions,firestore:rules,firestore:indexes --project "$firebase_project" --force 2>&1)
             deploy_exit_code=$?
             set -e
             echo "$deploy_output"
