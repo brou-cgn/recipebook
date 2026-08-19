@@ -46,7 +46,7 @@ const buildInitialSelectedEinheiten = (customDrinks, initialCustomDrinkIds, init
   return result;
 };
 
-function EinheitenTypeahead({ einheiten, selectedIndices, onToggle, drinkName }) {
+function EinheitenTypeahead({ einheiten, selectedIndices, onToggle, drinkName, onOpenChange }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
@@ -77,6 +77,17 @@ function EinheitenTypeahead({ einheiten, selectedIndices, onToggle, drinkName })
     };
   }, [open]);
 
+  // The dropdown itself decides its open/visible state (also gated on having
+  // results), so it's the source of truth for whether it's actually showing.
+  // The row needs to know this to lift itself above the next row, which sits
+  // right on top of it in paint order otherwise (see .events-drink-row in
+  // EventsPage.css).
+  const isShowingDropdown = open && filtered.length > 0;
+  useEffect(() => {
+    onOpenChange?.(isShowingDropdown);
+    return () => onOpenChange?.(false);
+  }, [isShowingDropdown, onOpenChange]);
+
   if (unselectedEinheiten.length === 0) return null;
 
   return (
@@ -93,7 +104,7 @@ function EinheitenTypeahead({ einheiten, selectedIndices, onToggle, drinkName })
         }}
         onFocus={() => setOpen(true)}
       />
-      {open && filtered.length > 0 && (
+      {isShowingDropdown && (
         <ul className="events-einheiten-typeahead-dropdown" role="listbox">
           {filtered.map(({ einheit, idx }) => (
             <li key={idx} role="option" aria-selected="false">
@@ -137,6 +148,7 @@ function DrinkRow({
     onDeleteVisibleChange: (visible) => (visible ? onSwipeDeleteVisible() : onSwipeDeleteHidden()),
   });
   const [factorInput, setFactorInput] = useState(factor.toFixed(2));
+  const [isUnitDropdownOpen, setIsUnitDropdownOpen] = useState(false);
 
   const handleSwipeDeleteClick = () => {
     onRemove();
@@ -150,7 +162,7 @@ function DrinkRow({
 
   return (
     <div
-      className={`events-drink-row${offset < 0 ? ' swipe-delete-active' : ''}`}
+      className={`events-drink-row${offset < 0 ? ' swipe-delete-active' : ''}${isUnitDropdownOpen ? ' events-drink-row--dropdown-open' : ''}`}
     >
       <div className="events-drink-row-swipe-background" aria-hidden={!isDeleteVisible}>
         {isDeleteVisible && (
@@ -202,6 +214,7 @@ function DrinkRow({
                   selectedIndices={selectedIndices}
                   onToggle={onToggleEinheit}
                   drinkName={displayName}
+                  onOpenChange={setIsUnitDropdownOpen}
                 />
               </div>
             ) : einheiten.length === 1 ? (
