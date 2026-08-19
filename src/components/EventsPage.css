@@ -1842,6 +1842,17 @@
   gap: 12px;
 }
 
+/* These row headers opt out of the shared row tint from DeleteRowButton.css —
+   only the delete button itself should react when the row is hovered/focused. */
+.events-drink-row-header.delete-row-hover-target:hover,
+.events-drink-row-header.delete-row-hover-target:focus-within,
+.events-guest-row-header.delete-row-hover-target:hover,
+.events-guest-row-header.delete-row-hover-target:focus-within,
+.drink-list-item-header.delete-row-hover-target:hover,
+.drink-list-item-header.delete-row-hover-target:focus-within {
+  background: transparent;
+}
+
 .drink-list-item.swipe-delete-active .drink-swipe-delete-background {
   opacity: 1;
   pointer-events: auto;
