@@ -139,6 +139,14 @@ jobs:
               fi
             fi
 
+            if echo "$deploy_output" | grep -Eiq "timed out after"; then
+              if [ "$attempt" -lt "$max_attempts" ]; then
+                echo "A Cloud Functions deploy task timed out. Retrying in 15s..."
+                sleep 15
+                continue
+              fi
+            fi
+
             exit "$deploy_exit_code"
           done
         env:
