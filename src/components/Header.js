@@ -3,6 +3,9 @@ import './Header.css';
 import { getHeaderSlogan, getAppLogoImage } from '../utils/customLists';
 import { subscribeToFaqs } from '../utils/faqFirestore';
 import SearchIcon from './icons/SearchIcon';
+import ImportProgressIndicator from './ImportProgressIndicator';
+import ImportProgressDialog from './ImportProgressDialog';
+import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 
 /**
  * Renders text with **bold** markdown syntax as <strong> elements.
@@ -42,8 +45,10 @@ const Header = forwardRef(function Header({
   const [faqModalOpen, setFaqModalOpen] = useState(false);
   const [expandedFaqId, setExpandedFaqId] = useState(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const menuRef = useRef(null);
   const searchRef = useRef(null);
+  const { jobs: importJobs, dismissJob: dismissImportJob } = useRecipeImportQueue();
 
   useImperativeHandle(ref, () => ({
     openSearch() {
@@ -240,6 +245,12 @@ const Header = forwardRef(function Header({
               </div>
           )}
           {currentUser && (
+            <ImportProgressIndicator
+              jobs={importJobs}
+              onClick={() => setImportDialogOpen(true)}
+            />
+          )}
+          {currentUser && (
               <div className="hamburger-menu-container" ref={menuRef}>
               <button 
                 className="hamburger-btn" 
@@ -418,6 +429,14 @@ const Header = forwardRef(function Header({
             </div>
           </div>
         </div>
+      )}
+
+      {importDialogOpen && (
+        <ImportProgressDialog
+          jobs={importJobs}
+          onClose={() => setImportDialogOpen(false)}
+          onDismissJob={dismissImportJob}
+        />
       )}
     </>
   );

@@ -1,0 +1,64 @@
+.import-progress-indicator {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.import-progress-track {
+  stroke: rgba(26, 26, 26, 0.15);
+}
+
+.import-progress-fill {
+  stroke: #1a1a1a;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.2s ease;
+}
+
+.import-progress-indicator.has-error .import-progress-track {
+  stroke: rgba(163, 58, 38, 0.25);
+}
+
+.import-progress-error-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #a33a26;
+}
+
+.import-progress-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
+
+[data-theme="dark"] .import-progress-track {
+  stroke: rgba(232, 232, 232, 0.2);
+}
+
+[data-theme="dark"] .import-progress-fill {
+  stroke: #e8e8e8;
+}
+
+[data-theme="dark"] .import-progress-badge {
+  background: #e8e8e8;
+  color: #1a1a1a;
+}

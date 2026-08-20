@@ -1,10 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './OcrScanModal.css';
-import { recognizeText } from '../utils/ocrService';
-import { parseOcrTextSmart, buildRecipeFromAiResult } from '../utils/ocrParser';
-import { getValidationSummary } from '../utils/ocrValidation';
+import { buildRecipeFromAiResult } from '../utils/ocrParser';
 import { fileToBase64 } from '../utils/imageUtils';
 import { recognizeRecipeWithAI } from '../utils/aiOcrService';
+import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 
 const MAX_CAMERA_PHOTOS = 10;
 // Max number of images processed at the same time during a batch scan.
@@ -12,47 +11,166 @@ const MAX_CAMERA_PHOTOS = 10;
 // while staying well under the Cloud Function's per-user rate limit.
 const BATCH_CONCURRENCY = 3;
 
-// initialImage: single image that triggers immediate OCR (takes precedence over initialImages)
+// Remove duplicate strings using Levenshtein similarity
+function stringSimilarity(s1, s2) {
+  const longer = s1.length > s2.length ? s1 : s2;
+  const shorter = s1.length > s2.length ? s2 : s1;
+  if (longer.length === 0) return 1.0;
+  const editDistance = levenshteinDistance(longer, shorter);
+  return (longer.length - editDistance) / longer.length;
+}
+
+function levenshteinDistance(s1, s2) {
+  const costs = [];
+  for (let i = 0; i <= s1.length; i++) {
+    let lastValue = i;
+    for (let j = 0; j <= s2.length; j++) {
+      if (i === 0) {
+        costs[j] = j;
+      } else if (j > 0) {
+        let newValue = costs[j - 1];
+        if (s1.charAt(i - 1) !== s2.charAt(j - 1)) {
+          newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+        }
+        costs[j - 1] = lastValue;
+        lastValue = newValue;
+      }
+    }
+    if (i > 0) costs[s2.length] = lastValue;
+  }
+  return costs[s2.length];
+}
+
+function removeDuplicates(items) {
+  if (!items || items.length === 0) return [];
+  const unique = [];
+  for (const item of items) {
+    const normalized = item.toLowerCase().trim();
+    const isDuplicate = unique.some(existing =>
+      stringSimilarity(existing.toLowerCase().trim(), normalized) > 0.8
+    );
+    if (!isDuplicate) {
+      unique.push(item);
+    }
+  }
+  return unique;
+}
+
+// Combine multiple per-image AI OCR results into one recipe
+function mergeAiResults(results) {
+  const validResults = results.filter(r => !r.error);
+  if (validResults.length === 0) {
+    throw new Error('Keine gültigen OCR-Ergebnisse gefunden');
+  }
+
+  const merged = { ...validResults[0] };
+
+  const allIngredients = validResults.flatMap(r => r.ingredients || []);
+  merged.ingredients = removeDuplicates(allIngredients);
+
+  const allSteps = validResults.flatMap(r => r.steps || []);
+  merged.steps = removeDuplicates(allSteps);
+
+  const allTags = validResults.flatMap(r => r.tags || []);
+  merged.tags = [...new Set(allTags)];
+
+  const allNotes = validResults
+    .map(r => r.notes)
+    .filter(n => n && n.trim())
+    .join('\n\n');
+  merged.notes = allNotes || merged.notes;
+
+  merged.servings = merged.servings || validResults.find(r => r.servings)?.servings;
+  merged.prepTime = merged.prepTime || validResults.find(r => r.prepTime)?.prepTime;
+  merged.cookTime = merged.cookTime || validResults.find(r => r.cookTime)?.cookTime;
+  merged.difficulty = merged.difficulty || validResults.find(r => r.difficulty)?.difficulty;
+  merged.cuisine = merged.cuisine || validResults.find(r => r.cuisine)?.cuisine;
+  merged.category = merged.category || validResults.find(r => r.category)?.category;
+
+  return merged;
+}
+
+// Runs AI OCR on a batch of images (concurrently, up to BATCH_CONCURRENCY at
+// once) and returns the merged recipe. Passed as the `run` function to
+// enqueueImportJob() so it executes in the background, after the modal has
+// already closed.
+async function runPhotoScanImport(images, language, onProgress) {
+  const total = images.length;
+  const results = new Array(total);
+  const progressPerImage = new Array(total).fill(0);
+
+  const updateOverall = () => {
+    const sum = progressPerImage.reduce((a, b) => a + b, 0);
+    onProgress(Math.round(sum / total));
+  };
+
+  let nextIndex = 0;
+  const worker = async () => {
+    while (nextIndex < total) {
+      const i = nextIndex++;
+      try {
+        const result = await recognizeRecipeWithAI(images[i], {
+          language,
+          provider: 'gemini',
+          onProgress: (progress) => {
+            progressPerImage[i] = progress;
+            updateOverall();
+          },
+        });
+        results[i] = result;
+      } catch (err) {
+        results[i] = { error: err.message };
+      }
+      progressPerImage[i] = 100;
+      updateOverall();
+    }
+  };
+
+  const workerCount = Math.min(BATCH_CONCURRENCY, total);
+  await Promise.all(Array.from({ length: workerCount }, worker));
+
+  const merged = mergeAiResults(results);
+  return buildRecipeFromAiResult(merged);
+}
+
+// initialImage: single image that triggers an immediate background scan (takes precedence over initialImages)
 // initialImages: array of base64 images to pre-fill the image-preview step
-function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [] }) {
-  // initialImage starts OCR immediately; initialImages shows the preview step; neither → upload step
-  const [step, setStep] = useState(initialImage ? 'scan' : (initialImages.length > 0 ? 'image-preview' : 'upload')); // 'upload', 'scan', 'edit', 'batch-processing', 'image-preview'
-  // imageBase64 tracks the current image but OCR functions receive it directly as parameter
-  // This state is maintained for potential future features (e.g., image preview, retry)
-  // eslint-disable-next-line no-unused-vars
-  const [imageBase64, setImageBase64] = useState(initialImage);
+function OcrScanModal({ onCancel, initialImage = '', initialImages = [], userId = '', importContext = {} }) {
+  // initialImage queues immediately (no step UI shown); initialImages shows the
+  // image-preview step; neither → upload step
+  const [step, setStep] = useState(initialImage ? 'queuing' : (initialImages.length > 0 ? 'image-preview' : 'upload'));
   const [language, setLanguage] = useState('de'); // 'de' or 'en'
-  const [scanning, setScanning] = useState(false);
-  const [scanProgress, setScanProgress] = useState(0);
-  const [ocrText, setOcrText] = useState('');
   const [error, setError] = useState('');
   const [cameraActive, setCameraActive] = useState(false);
-  const [ocrMode, setOcrMode] = useState('ai'); // 'standard' or 'ai'
-  const [validationResult, setValidationResult] = useState(null);
-  const [remainingScans, setRemainingScans] = useState(null);
-  const [aiFailed, setAiFailed] = useState(false);
-  const [lastImageForRetry, setLastImageForRetry] = useState(null);
   const [uploadedImages, setUploadedImages] = useState(initialImages.length > 0 ? [...initialImages] : []);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  // Which batch images are currently being processed / already done (batch images
-  // are processed concurrently, so several can be "processing" at once, and they
-  // don't necessarily finish in order).
-  const [activeImageIndices, setActiveImageIndices] = useState(() => new Set());
-  const [doneImageIndices, setDoneImageIndices] = useState(() => new Set());
   const [capturedPhotos, setCapturedPhotos] = useState([]);
-  
+
+  const { enqueueImportJob } = useRecipeImportQueue();
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const initialScanTriggered = useRef(false);
   const addMoreInputRef = useRef(null);
 
-  // When initialImage is provided, start OCR automatically
-  // We only want this to run once on mount, not when performOcr changes
+  // Queue a background scan for the given images and close the modal
+  // immediately; the recipe is saved with a TEMP flag once analysis
+  // finishes and shows up for review on "Neues Rezept hinzufügen".
+  const queuePhotoScan = (images) => {
+    enqueueImportJob({
+      label: images.length === 1 ? 'Foto-Scan' : `Foto-Scan (${images.length} Bilder)`,
+      userId,
+      context: importContext,
+      run: (onProgress) => runPhotoScanImport(images, language, onProgress),
+    });
+    stopCamera();
+    onCancel();
+  };
+
+  // When initialImage is provided, queue the scan automatically on mount
   useEffect(() => {
     if (initialImage && !initialScanTriggered.current) {
       initialScanTriggered.current = true;
-      performOcr(initialImage);
+      queuePhotoScan([initialImage]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialImage]);
@@ -63,6 +181,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
       videoRef.current.srcObject = streamRef.current;
     }
   }, [cameraActive]);
+
   // Handle file upload (single or multiple) – shows preview before analysis
   const handleMultiFileUpload = async (e) => {
     const files = Array.from(e.target.files);
@@ -105,121 +224,10 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
     });
   };
 
-  // Start analysis on all selected uploaded images
-  const startUploadedAnalysis = async () => {
+  // Queue analysis on all selected uploaded images
+  const startUploadedAnalysis = () => {
     if (uploadedImages.length === 0) return;
-    const images = [...uploadedImages];
-    setCurrentImageIndex(0);
-    setStep('batch-processing');
-    await processBase64Batch(images);
-  };
-
-  // Combine multiple OCR results into one recipe
-  const mergeOcrResults = (results, mode) => {
-    if (mode === 'ai') {
-      return mergeAiResults(results);
-    } else {
-      return mergeTextResults(results);
-    }
-  };
-
-  const mergeAiResults = (results) => {
-    const validResults = results.filter(r => !r.error);
-
-    if (validResults.length === 0) {
-      throw new Error('Keine gültigen OCR-Ergebnisse gefunden');
-    }
-
-    const merged = { ...validResults[0] };
-
-    const allIngredients = validResults.flatMap(r => r.ingredients || []);
-    merged.ingredients = removeDuplicates(allIngredients);
-
-    const allSteps = validResults.flatMap(r => r.steps || []);
-    merged.steps = removeDuplicates(allSteps);
-
-    const allTags = validResults.flatMap(r => r.tags || []);
-    merged.tags = [...new Set(allTags)];
-
-    const allNotes = validResults
-      .map(r => r.notes)
-      .filter(n => n && n.trim())
-      .join('\n\n');
-    merged.notes = allNotes || merged.notes;
-
-    merged.servings = merged.servings || validResults.find(r => r.servings)?.servings;
-    merged.prepTime = merged.prepTime || validResults.find(r => r.prepTime)?.prepTime;
-    merged.cookTime = merged.cookTime || validResults.find(r => r.cookTime)?.cookTime;
-    merged.difficulty = merged.difficulty || validResults.find(r => r.difficulty)?.difficulty;
-    merged.cuisine = merged.cuisine || validResults.find(r => r.cuisine)?.cuisine;
-    merged.category = merged.category || validResults.find(r => r.category)?.category;
-
-    return merged;
-  };
-
-  const mergeTextResults = (results) => {
-    const validResults = results.filter(r => !r.error && r.text);
-
-    if (validResults.length === 0) {
-      throw new Error('Keine gültigen OCR-Ergebnisse gefunden');
-    }
-
-    const combinedText = validResults
-      .map((r, i) => `--- Bild ${i + 1} ---\n${r.text}`)
-      .join('\n\n');
-
-    return { text: combinedText };
-  };
-
-  // Remove duplicate strings using Levenshtein similarity
-  const removeDuplicates = (items) => {
-    if (!items || items.length === 0) return [];
-
-    const unique = [];
-
-    for (const item of items) {
-      const normalized = item.toLowerCase().trim();
-      const isDuplicate = unique.some(existing =>
-        stringSimilarity(existing.toLowerCase().trim(), normalized) > 0.8
-      );
-
-      if (!isDuplicate) {
-        unique.push(item);
-      }
-    }
-
-    return unique;
-  };
-
-  const stringSimilarity = (s1, s2) => {
-    const longer = s1.length > s2.length ? s1 : s2;
-    const shorter = s1.length > s2.length ? s2 : s1;
-
-    if (longer.length === 0) return 1.0;
-
-    const editDistance = levenshteinDistance(longer, shorter);
-    return (longer.length - editDistance) / longer.length;
-  };
-
-  const levenshteinDistance = (s1, s2) => {
-    const costs = [];
-    for (let i = 0; i <= s1.length; i++) {
-      let lastValue = i;
-      for (let j = 0; j <= s2.length; j++) {
-        if (i === 0) {
-          costs[j] = j;
-        } else if (j > 0) {
-          let newValue = costs[j - 1];
-          if (s1.charAt(i - 1) !== s2.charAt(j - 1)) {
-            newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
-          }
-          costs[j - 1] = lastValue;
-          lastValue = newValue;
-        }
-      }
-      if (i > 0) costs[s2.length] = lastValue;
-    }
-    return costs[s2.length];
+    queuePhotoScan([...uploadedImages]);
   };
 
   // Start camera
@@ -264,289 +272,20 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
     setCapturedPhotos([]);
   };
 
-  // Process an array of base64 images concurrently (up to BATCH_CONCURRENCY at
-  // once). Similar to processBatchImages(), but accepts base64 strings directly
-  // instead of File objects, avoiding an extra fileToBase64 conversion step.
-  // Images are independent of each other, so processing several in parallel
-  // cuts total wait time roughly to (batch size / concurrency) instead of the
-  // sum of every individual OCR call.
-  const processBase64Batch = async (base64Images) => {
-    const results = new Array(base64Images.length);
-    const total = base64Images.length;
-    // Per-image progress (0-100), combined below into one overall percentage
-    // so several images updating concurrently don't make the bar jump around.
-    const progressPerImage = new Array(total).fill(0);
-    let doneCount = 0;
-
-    const updateOverallProgress = () => {
-      const sum = progressPerImage.reduce((a, b) => a + b, 0);
-      setScanProgress(Math.round(sum / total));
-    };
-
-    setCurrentImageIndex(0);
-    setScanProgress(0);
-    setActiveImageIndices(new Set());
-    setDoneImageIndices(new Set());
-
-    let nextIndex = 0;
-    const processNext = async () => {
-      while (nextIndex < total) {
-        const i = nextIndex++;
-        setActiveImageIndices(prev => new Set(prev).add(i));
-
-        try {
-          const base64 = base64Images[i];
-
-          if (ocrMode === 'ai') {
-            const result = await recognizeRecipeWithAI(base64, {
-              language,
-              provider: 'gemini',
-              onProgress: (progress) => {
-                progressPerImage[i] = progress;
-                updateOverallProgress();
-              }
-            });
-
-            // Update remaining scans if provided by the Cloud Function
-            if (result.remainingScans !== undefined) {
-              setRemainingScans(result.remainingScans);
-            }
-
-            results[i] = result;
-          } else {
-            const langCode = language === 'de' ? 'deu' : 'eng';
-            const result = await recognizeText(base64, langCode,
-              (progress) => {
-                progressPerImage[i] = progress;
-                updateOverallProgress();
-              }
-            );
-            results[i] = { text: result.text };
-          }
-        } catch (err) {
-          console.error(`Error processing photo ${i + 1}:`, err);
-          results[i] = { error: err.message };
-        }
-
-        doneCount += 1;
-        progressPerImage[i] = 100;
-        setActiveImageIndices(prev => {
-          const next = new Set(prev);
-          next.delete(i);
-          return next;
-        });
-        setDoneImageIndices(prev => new Set(prev).add(i));
-        setCurrentImageIndex(doneCount);
-        updateOverallProgress();
-      }
-    };
-
-    const workerCount = Math.min(BATCH_CONCURRENCY, total);
-    await Promise.all(Array.from({ length: workerCount }, processNext));
-
-    const allFailed = results.every(r => r.error);
-    if (allFailed) {
-      // Use the first individual error message (consistent with single-image performOcr)
-      const firstError = results[0]?.error || 'Unbekannter Fehler';
-      const isQuotaError = firstError.includes('Tageslimit') ||
-        firstError.includes('resource-exhausted') ||
-        firstError.includes('quota');
-      setError('OCR fehlgeschlagen: ' + firstError);
-      if (ocrMode === 'ai') {
-        setAiFailed(true);
-        setLastImageForRetry(base64Images[0]);
-      }
-      if (!isQuotaError) {
-        setStep('upload');
-      }
-      return;
-    }
-
-    try {
-      const merged = mergeOcrResults(results, ocrMode);
-
-      if (ocrMode === 'ai') {
-        onImport(buildRecipeFromAiResult(merged));
-      } else {
-        setOcrText(merged.text);
-        setStep('edit');
-      }
-    } catch (err) {
-      setError(err.message);
-      setStep('upload');
-    }
-  };
-
-  // Start batch OCR analysis on all captured camera photos
-  const startBatchAnalysis = async () => {
+  // Queue analysis on all captured camera photos
+  const startBatchAnalysis = () => {
     if (capturedPhotos.length === 0) return;
-
-    const photos = [...capturedPhotos];
-    stopCamera();
-    setCurrentImageIndex(0);
-    setUploadedImages(photos);
-    setStep('batch-processing');
-    await processBase64Batch(photos);
+    queuePhotoScan([...capturedPhotos]);
   };
 
   // Stop camera
-  const stopCamera = () => {
+  function stopCamera() {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
     setCameraActive(false);
-  };
-
-  // Perform OCR
-  const performOcr = async (imageToProcess) => {
-    // Validate input
-    if (!imageToProcess) {
-      setError('Kein Bild zum Scannen verfügbar. Bitte laden Sie ein Bild hoch.');
-      setStep('upload');
-      return;
-    }
-
-    setScanning(true);
-    setScanProgress(0);
-    setError('');
-    setAiFailed(false);
-
-    try {
-
-    console.log('DEBUG performOcr called, ocrMode:', ocrMode);
-    console.log('DEBUG performOcr called, imageToProcess length:', imageToProcess?.length);
-	
-      if (ocrMode === 'ai') {
-        // AI OCR using Gemini Vision
-        const result = await recognizeRecipeWithAI(imageToProcess, {
-          language,
-          provider: 'gemini',
-          onProgress: (progress) => setScanProgress(progress)
-        });
-
-        // Update remaining scans if provided by the Cloud Function
-        if (result.remainingScans !== undefined) {
-          setRemainingScans(result.remainingScans);
-        }
-
-        onImport(buildRecipeFromAiResult(result));
-      } else {
-        // Standard OCR using Tesseract
-        const langCode = language === 'de' ? 'deu' : 'eng';
-        const result = await recognizeText(
-          imageToProcess,
-          langCode,
-          (progress) => setScanProgress(progress)
-        );
-
-        setOcrText(result.text);
-        setStep('edit');
-      }
-    } catch (err) {
-      const isQuotaError = err.message && (
-        err.message.includes('Tageslimit') ||
-        err.message.includes('resource-exhausted') ||
-        err.message.includes('quota')
-      );
-      setError('OCR fehlgeschlagen: ' + err.message);
-      if (ocrMode === 'ai') {
-        setAiFailed(true);
-        setLastImageForRetry(imageToProcess);
-      }
-      if (!isQuotaError) {
-        setStep('upload');
-      }
-    } finally {
-      setScanning(false);
-      setScanProgress(0);
-    }
-  };
-
-  // Fall back to standard OCR after AI failure
-  const fallbackToStandardOcr = async () => {
-    if (!lastImageForRetry) return;
-    setOcrMode('standard');
-    setError('');
-    setAiFailed(false);
-    setScanning(true);
-    setScanProgress(0);
-    setStep('scan');
-    try {
-      const langCode = language === 'de' ? 'deu' : 'eng';
-      const result = await recognizeText(
-        lastImageForRetry,
-        langCode,
-        (progress) => setScanProgress(progress)
-      );
-      setOcrText(result.text);
-      setStep('edit');
-    } catch (err) {
-      setError('OCR fehlgeschlagen: ' + err.message);
-      setStep('upload');
-    } finally {
-      setScanning(false);
-      setScanProgress(0);
-    }
-  };
-
-  // Handle import of OCR text (standard/text mode; AI results import immediately after analysis)
-  const handleImport = () => {
-    setError('');
-
-    // Standard text import with validation
-    if (!ocrText.trim()) {
-      setError('Kein Text erkannt. Bitte versuchen Sie es erneut.');
-      return;
-    }
-
-    try {
-      // Use smart parsing with classification and validation
-      const result = parseOcrTextSmart(ocrText, language);
-      
-      // Store validation result for display
-      setValidationResult(result.validation);
-      
-      // Show warnings if quality is low
-      if (result.validation.score < 50) {
-        const summary = getValidationSummary(result.validation, language);
-        setError(`Erkennungsqualität ist niedrig (${result.validation.score}%):\n${summary}\n\nKlicken Sie auf "Trotzdem übernehmen" um das Rezept dennoch zu importieren.`);
-        // Don't import automatically - wait for user confirmation
-        return;
-      }
-      
-      onImport(result.recipe);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-  
-  // Force import despite low quality
-  const forceImport = () => {
-    setError('');
-    try {
-      const result = parseOcrTextSmart(ocrText, language);
-      onImport(result.recipe);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  // Reset to start
-  const handleReset = () => {
-    stopCamera();
-    setStep('upload');
-    setImageBase64('');
-    setOcrText('');
-    setError('');
-    setOcrMode('ai');
-    setValidationResult(null);
-    setAiFailed(false);
-    setLastImageForRetry(null);
-    setUploadedImages([]);
-    setCurrentImageIndex(0);
-    setCapturedPhotos([]);
-  };
+  }
 
   // Handle cancel
   const handleCancel = () => {
@@ -587,15 +326,6 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
                   </button>
                 </div>
               </div>
-
-              {remainingScans !== null && ocrMode === 'ai' && (
-                <div className={`scan-quota-info ${remainingScans < 5 ? 'scan-quota-warning' : ''}`}>
-                  {remainingScans < 5
-                    ? `Noch ${remainingScans} KI-Scans heute verfügbar. Danach Standard-OCR verwenden.`
-                    : `${remainingScans} KI-Scans heute noch verfügbar`
-                  }
-                </div>
-              )}
 
               {!cameraActive && (
                 <div className="upload-buttons">
@@ -748,129 +478,9 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
             </div>
           )}
 
-          {/* Scan Step */}
-          {step === 'scan' && scanning && (
-            <div className="scan-section">
-              <p className="ocr-instructions">
-                {ocrMode === 'ai' ? 'Analysiere Rezept...' : 'Scanne Text...'}
-              </p>
-              <div className="progress-container">
-                <div className="progress-bar">
-                  <div
-                    className="progress-fill"
-                    style={{ width: `${scanProgress}%` }}
-                  />
-                </div>
-                <p className="progress-text">{scanProgress}%</p>
-              </div>
-            </div>
-          )}
-
-          {/* Batch Processing Step */}
-          {step === 'batch-processing' && (
-            <div className="batch-processing-section">
-              <p className="ocr-instructions">
-                Verarbeite {uploadedImages.length} Bilder...
-              </p>
-
-              <div className="batch-progress">
-                <div className="batch-image-progress">
-                  {currentImageIndex} von {uploadedImages.length} Bildern verarbeitet
-                </div>
-
-                <div className="progress-container">
-                  <div className="progress-bar">
-                    <div
-                      className="progress-fill"
-                      style={{ width: `${scanProgress}%` }}
-                    />
-                  </div>
-                  <p className="progress-text">{scanProgress}%</p>
-                </div>
-
-                <div className="processed-images">
-                  {uploadedImages.map((_, index) => {
-                    const isDone = doneImageIndices.has(index);
-                    const isActive = activeImageIndices.has(index);
-                    return (
-                      <div
-                        key={index}
-                        className={`image-indicator ${
-                          isDone ? 'completed' :
-                          isActive ? 'processing' :
-                          'pending'
-                        }`}
-                      >
-                        {isDone ? '✓' : isActive ? '...' : '○'}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Edit Step */}
-          {step === 'edit' && (
-            <div className="edit-section">
-              <p className="ocr-instructions">
-                Überprüfen und bearbeiten Sie den erkannten Text
-              </p>
-
-              {/* Validation Results */}
-              {validationResult && (
-                <div className={`validation-info ${validationResult.score >= 70 ? 'validation-good' : validationResult.score >= 50 ? 'validation-moderate' : 'validation-poor'}`}>
-                  <h4>Erkennungsqualität: {validationResult.score}%</h4>
-                  {validationResult.warnings.length > 0 && (
-                    <div className="validation-warnings">
-                      <strong>Hinweise:</strong>
-                      <ul>
-                        {validationResult.warnings.map((warning, idx) => (
-                          <li key={idx}>{warning}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {validationResult.suggestions.length > 0 && (
-                    <div className="validation-suggestions">
-                      <strong>Verbesserungsvorschläge:</strong>
-                      <ul>
-                        {validationResult.suggestions.slice(0, 3).map((suggestion, idx) => (
-                          <li key={idx}>{suggestion}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <textarea
-                className="ocr-textarea"
-                value={ocrText}
-                onChange={(e) => setOcrText(e.target.value)}
-                placeholder="Erkannter Text..."
-                rows="15"
-              />
-
-              <button className="new-scan-button" onClick={handleReset}>
-                ↻ Neuer Scan
-              </button>
-            </div>
-          )}
-
           {error && (
             <div className="ocr-error">
               {error}
-              {validationResult && validationResult.score < 50 && (
-                <button className="force-import-button" onClick={forceImport}>
-                  Trotzdem übernehmen
-                </button>
-              )}
-              {aiFailed && (
-                <button className="fallback-ocr-button" onClick={fallbackToStandardOcr}>
-                  Mit Standard-OCR fortfahren
-                </button>
-              )}
             </div>
           )}
         </div>
@@ -879,12 +489,6 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
           <button className="cancel-button" onClick={handleCancel}>
             Abbrechen
           </button>
-          
-          {step === 'edit' && (
-            <button className="import-button" onClick={handleImport}>
-              Übernehmen
-            </button>
-          )}
         </div>
       </div>
     </div>
