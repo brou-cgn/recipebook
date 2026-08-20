@@ -1284,7 +1284,14 @@ function App() {
   const handleNavigateToRecipesOverview = () => {
     handleViewChange('recipes');
     if (pendingReviewRecipes.length > 0) {
-      handleAddRecipe();
+      // Load the pending review recipe directly instead of handleAddRecipe():
+      // isFormOpen is set false (by handleViewChange above) and true (below)
+      // within the same batched update, so it never actually renders as
+      // false in between — the effect that swaps an empty add-form for the
+      // next pending review (triggered by isFormOpen going false) would
+      // never fire, leaving an empty "Rezept hinzufügen" form open until the
+      // user cancels it.
+      handleReviewTempRecipe(pendingReviewRecipes[0]);
     }
   };
 
