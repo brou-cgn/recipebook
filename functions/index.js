@@ -55,6 +55,7 @@ const ALLOWED_ORIGINS = [
  */
 const RATE_LIMITS = {
   admin: 1000, // 1000 scans per day for admin users
+  moderator: 50, // 50 scans per day for moderator users
   authenticated: 20, // 20 scans per day for authenticated users
   guest: 5, // 5 scans per day for guest/anonymous users
 };
@@ -294,12 +295,29 @@ async function getRecipeExtractionPrompt() {
  * Get the appropriate rate limit for a user based on their role
  * @param {boolean} isAdmin - Whether user is an admin
  * @param {boolean} isAuthenticated - Whether user is authenticated
+ * @param {boolean} isModerator - Whether user is a moderator
  * @returns {number} The rate limit for the user
  */
-function getRateLimit(isAdmin, isAuthenticated) {
+function getRateLimit(isAdmin, isAuthenticated, isModerator = false) {
   return isAdmin ? RATE_LIMITS.admin
+    : isModerator ? RATE_LIMITS.moderator
     : isAuthenticated ? RATE_LIMITS.authenticated
     : RATE_LIMITS.guest;
+}
+
+/**
+ * Look up whether the given user has the 'moderator' role in Firestore.
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+async function isModeratorUser(userId) {
+  try {
+    const doc = await admin.firestore().doc(`users/${userId}`).get();
+    return doc.exists && doc.data()?.role === 'moderator';
+  } catch (err) {
+    console.error(`isModeratorUser: failed to look up role for ${userId}:`, err);
+    return false;
+  }
 }
 
 /**
@@ -307,15 +325,16 @@ function getRateLimit(isAdmin, isAuthenticated) {
  * @param {string} userId - User ID (or IP for anonymous)
  * @param {boolean} isAuthenticated - Whether user is authenticated
  * @param {boolean} isAdmin - Whether user is an admin
+ * @param {boolean} isModerator - Whether user is a moderator
  * @returns {Promise<{allowed: boolean, remaining: number, limit: number}>}
  */
-async function checkRateLimit(userId, isAuthenticated, isAdmin = false) {
+async function checkRateLimit(userId, isAuthenticated, isAdmin = false, isModerator = false) {
   const db = admin.firestore();
   // Use MEZ (Europe/Berlin) timezone so counter resets at 0 Uhr MEZ
   const today = new Date().toLocaleDateString('sv-SE', {timeZone: 'Europe/Berlin'}); // YYYY-MM-DD
   const docRef = db.collection('aiScanLimits').doc(`${userId}_${today}`);
 
-  const limit = getRateLimit(isAdmin, isAuthenticated);
+  const limit = getRateLimit(isAdmin, isAuthenticated, isModerator);
 
   try {
     const result = await db.runTransaction(async (transaction) => {
@@ -329,6 +348,7 @@ async function checkRateLimit(userId, isAuthenticated, isAdmin = false) {
           count: 1,
           isAuthenticated: isAuthenticated,
           isAdmin: isAdmin,
+          isModerator: isModerator,
         });
         return {allowed: true, remaining: limit - 1, limit};
       }
@@ -676,13 +696,14 @@ exports.scanRecipeWithAI = onCall(
       const userId = auth.uid;
       const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
       const isAdmin = auth.token.admin === true;
+      const isModerator = !isAdmin && await isModeratorUser(userId);
 
       console.log(`AI Scan request from user ${userId} (authenticated: ${isAuthenticated}, admin: ${isAdmin})`);
 
       // Rate limiting
-      const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin);
+      const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin, isModerator);
       if (!rateLimitResult.allowed) {
-        const limit = getRateLimit(isAdmin, isAuthenticated);
+        const limit = getRateLimit(isAdmin, isAuthenticated, isModerator);
         throw new HttpsError(
             'resource-exhausted',
             `Tageslimit erreicht (${limit}/${limit} Scans). Versuche es morgen erneut oder nutze Standard-OCR.`
@@ -972,6 +993,7 @@ exports.processHtmlWithAI = onCall(
       const userId = auth.uid;
       const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
       const isAdmin = auth.token.admin === true;
+      const isModerator = !isAdmin && await isModeratorUser(userId);
 
       console.log(`HTML processing request from user ${userId}`);
 
@@ -989,9 +1011,9 @@ exports.processHtmlWithAI = onCall(
       }
 
       // Rate limiting (shared with image scanning)
-      const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin);
+      const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin, isModerator);
       if (!rateLimitResult.allowed) {
-        const limit = getRateLimit(isAdmin, isAuthenticated);
+        const limit = getRateLimit(isAdmin, isAuthenticated, isModerator);
         throw new HttpsError(
             'resource-exhausted',
             `Tageslimit erreicht (${limit}/${limit} Scans). Versuche es morgen erneut.`,
@@ -1080,6 +1102,7 @@ exports.scrapeInstagramReel = onCall(
       const userId = auth.uid;
       const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
       const isAdmin = auth.token.admin === true;
+      const isModerator = !isAdmin && await isModeratorUser(userId);
 
       console.log(`Instagram scrape request from user ${userId} for URL: ${url}`);
 
@@ -1100,9 +1123,9 @@ exports.scrapeInstagramReel = onCall(
       }
 
       // Rate limiting (shared with image scanning)
-      const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin);
+      const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin, isModerator);
       if (!rateLimitResult.allowed) {
-        const limit = getRateLimit(isAdmin, isAuthenticated);
+        const limit = getRateLimit(isAdmin, isAuthenticated, isModerator);
         throw new HttpsError(
             'resource-exhausted',
             `Tageslimit erreicht (${limit}/${limit} Scans). Versuche es morgen erneut.`,
@@ -1377,6 +1400,7 @@ exports.fetchRecipeHtml = onCall(
       const userId = auth.uid;
       const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
       const isAdmin = auth.token.admin === true;
+      const isModerator = !isAdmin && await isModeratorUser(userId);
 
       // Validate URL (includes SSRF guard for private/internal hosts)
       if (!url || typeof url !== 'string') {
@@ -1385,9 +1409,9 @@ exports.fetchRecipeHtml = onCall(
       assertPublicUrl(url);
 
       // Rate limiting (shared with other AI endpoints)
-      const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin);
+      const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin, isModerator);
       if (!rateLimitResult.allowed) {
-        const limit = getRateLimit(isAdmin, isAuthenticated);
+        const limit = getRateLimit(isAdmin, isAuthenticated, isModerator);
         throw new HttpsError(
             'resource-exhausted',
             `Rate limit exceeded: maximum ${limit} requests per day`,
@@ -1475,6 +1499,7 @@ exports.captureWebsiteScreenshot = onCall(
       const userId = auth.uid;
       const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
       const isAdmin = auth.token.admin === true;
+      const isModerator = !isAdmin && await isModeratorUser(userId);
 
       console.log(`Screenshot request from user ${userId} for URL: ${url}`);
 
@@ -1485,9 +1510,9 @@ exports.captureWebsiteScreenshot = onCall(
       assertPublicUrl(url);
 
       // Rate limiting
-      const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin);
+      const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin, isModerator);
       if (!rateLimitResult.allowed) {
-        const limit = getRateLimit(isAdmin, isAuthenticated);
+        const limit = getRateLimit(isAdmin, isAuthenticated, isModerator);
         throw new HttpsError(
             'resource-exhausted',
             `Rate limit exceeded: maximum ${limit} captures per day`
@@ -2164,15 +2189,16 @@ exports.importRecipeCallable = onCall(
       const isAuthenticated =
         auth.token.firebase?.sign_in_provider !== 'anonymous';
       const isAdmin = auth.token.admin === true;
+      const isModerator = !isAdmin && await isModeratorUser(userId);
 
       if (!url || typeof url !== 'string') {
         throw new HttpsError('invalid-argument', 'URL must be a non-empty string');
       }
       assertPublicUrl(url);
 
-      const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin);
+      const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin, isModerator);
       if (!rateLimitResult.allowed) {
-        const limit = getRateLimit(isAdmin, isAuthenticated);
+        const limit = getRateLimit(isAdmin, isAuthenticated, isModerator);
         throw new HttpsError(
             'resource-exhausted',
             `Rate limit exceeded: maximum ${limit} requests per day`,
