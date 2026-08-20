@@ -44,41 +44,25 @@ Das Webimport-Button-Icon kann in den Einstellungen unter "Allgemein" > "Button-
 - Standard: 🌐 (Globus-Emoji)
 - Kann durch Emoji, Text oder eigenes Bild ersetzt werden
 
-### Puppeteer-Installation (Erforderlich)
+### Puppeteer-Installation
 
-**WICHTIG**: Die Screenshot-Funktion benötigt Puppeteer, das aktuell noch nicht installiert ist.
+Puppeteer (`puppeteer@^21.0.0`) und `@sparticuz/chromium` sind in `functions/package.json` als Dependencies eingetragen und in `captureWebsiteScreenshot` (`functions/index.js`) aktiv implementiert (kein Platzhalter, kein auskommentierter Code). Die Function nutzt `chromium.executablePath()`, `memory: '2GiB'` und `timeoutSeconds: 120`.
 
-#### Schritte zur Aktivierung:
+Falls die Cloud Functions noch nicht mit dieser Version deployed wurden:
 
-1. Puppeteer zu Cloud Functions hinzufügen:
-   ```bash
-   cd functions
-   npm install puppeteer@^21.0.0
-   ```
-
-2. Cloud Functions neu deployen:
-   ```bash
-   firebase deploy --only functions
-   ```
-
-3. Memory und Timeout in `functions/index.js` ggf. anpassen:
-   ```javascript
-   exports.captureWebsiteScreenshot = onCall({
-     maxInstances: 10,
-     memory: '2GiB',  // Erhöht für Puppeteer
-     timeoutSeconds: 60,
-   }, ...)
-   ```
+```bash
+cd functions
+npm install
+firebase deploy --only functions:captureWebsiteScreenshot
+```
 
 ### Aktuelle Implementierung
 
-Die Cloud Function ist bereits vorbereitet und enthält:
-- ✅ URL-Validierung
+Die Cloud Function enthält:
+- ✅ URL-Validierung (inkl. SSRF-Schutz via `assertPublicUrl`)
 - ✅ Rate Limiting
 - ✅ Authentifizierung
-- ⏳ Puppeteer-Integration (auskommentiert, bis Puppeteer installiert ist)
-
-Aktuell wird ein hilfreicher Fehler zurückgegeben, der erklärt, dass Puppeteer installiert werden muss.
+- ✅ Puppeteer-Integration (aktiv, inkl. User-Agent-Spoofing und Automation-Fingerprint-Unterdrückung)
 
 ## Nutzung
 
