@@ -66,16 +66,27 @@ function ImportProgressDialog({ jobs, onClose, onDismissJob, onRestartJob, onCan
                       />
                     </div>
                   )}
-                  {job.status === 'queued' && job.canRestart && (
+                  {job.status === 'queued' && (
                     <div className="import-progress-item-actions">
+                      {job.canRestart && (
+                        <button
+                          type="button"
+                          className="import-progress-item-restart"
+                          onClick={() => onRestartJob(job.id)}
+                          title="Import neu starten"
+                          aria-label={`${job.label || 'Import'} neu starten`}
+                        >
+                          Neu starten
+                        </button>
+                      )}
                       <button
                         type="button"
-                        className="import-progress-item-restart"
-                        onClick={() => onRestartJob(job.id)}
-                        title="Import neu starten"
-                        aria-label={`${job.label || 'Import'} neu starten`}
+                        className="import-progress-item-dismiss"
+                        onClick={() => onCancelJob(job.id)}
+                        title="Import abbrechen"
+                        aria-label={`${job.label || 'Import'} abbrechen`}
                       >
-                        Neu starten
+                        Abbrechen
                       </button>
                     </div>
                   )}
