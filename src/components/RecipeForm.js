@@ -1256,6 +1256,13 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         <div className="version-info-banner temp-import-banner">
           <div className="version-info-text">
             <p>Dieses Rezept wurde automatisch importiert. Bitte prüfen und speichern oder verwerfen.</p>
+            {reviewRecipes.length > 1 && (
+              <p>
+                {reviewRecipes.length - 1 === 1
+                  ? 'Noch 1 weiterer Import wartet auf Überprüfung.'
+                  : `Noch ${reviewRecipes.length - 1} weitere Importe warten auf Überprüfung.`}
+              </p>
+            )}
           </div>
         </div>
       )}

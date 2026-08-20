@@ -67,7 +67,7 @@ import {
   removeRecipeFromGroup as removeRecipeFromGroupInFirestore
 } from './utils/groupFirestore';
 import { NutritionReferenceProvider, useNutritionReference } from './contexts/NutritionReferenceContext';
-import { RecipeImportQueueProvider } from './contexts/RecipeImportQueueContext';
+import { RecipeImportQueueProvider, useRecipeImportQueue } from './contexts/RecipeImportQueueContext';
 import { resolveRecipeGroupContext, resolveImportGroupContext } from './utils/recipeGroupContext';
 
 // Lazily loaded: everything below is a secondary view/overlay that isn't
@@ -255,6 +255,16 @@ function AppNutritionRowsSync({ onRows }) {
   return null;
 }
 
+function AppReviewRecipesSync({ onReviewRecipes }) {
+  const { reviewRecipes } = useRecipeImportQueue();
+
+  useEffect(() => {
+    onReviewRecipes(reviewRecipes);
+  }, [reviewRecipes, onReviewRecipes]);
+
+  return null;
+}
+
 function matchesSeasonalFilter(recipe, showSeasonalOnly, seasonMatrixEntries, nutritionReferenceRows) {
   if (!showSeasonalOnly) return true;
   return hasHauptsaisonIngredient(recipe, seasonMatrixEntries, undefined, nutritionReferenceRows);
@@ -337,6 +347,7 @@ function App() {
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState(null);
+  const [pendingReviewRecipes, setPendingReviewRecipes] = useState([]);
   const [isCreatingVersion, setIsCreatingVersion] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [currentView, setCurrentView] = useState('recipes');
@@ -958,9 +969,30 @@ function App() {
     // Load a pending background import into the form for full review;
     // handleSaveRecipe/handleCancelForm branch on editingRecipe.isTemp to
     // confirm (clear the flag) or discard (delete the document) it.
+    setActiveGroupId(null);
     setEditingRecipe(tempRecipe);
     setIsCreatingVersion(false);
+    setIsFormOpen(true);
   };
+
+  // Whenever the recipe overview is showing (no form/detail/menu/settings open)
+  // and finished background imports are waiting for review, load them into the
+  // "Neues Rezept hinzufügen" form one after another — the effect re-fires once
+  // handleSaveRecipe/handleCancelForm close the form again, picking up the next
+  // pending recipe until none are left.
+  useEffect(() => {
+    if (
+      currentView === 'recipes' &&
+      !isFormOpen &&
+      !selectedRecipe &&
+      !selectedMenu &&
+      !isSettingsOpen &&
+      pendingReviewRecipes.length > 0
+    ) {
+      handleReviewTempRecipe(pendingReviewRecipes[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentView, isFormOpen, selectedRecipe, selectedMenu, isSettingsOpen, pendingReviewRecipes]);
 
   const handleCreateVersion = (recipe) => {
     setEditingRecipe(recipe);
@@ -978,6 +1010,7 @@ function App() {
       if (editingRecipe && editingRecipe.id !== undefined && !isCreatingVersion) {
         // Update existing recipe (direct edit) — also covers confirming a
         // pending background import (isTemp), which just clears the flag.
+        const wasTempReview = Boolean(editingRecipe.isTemp);
         const { id, ...updates } = recipe;
 
         // Automatically clear WhatsApp thumbnail when the default image changes,
@@ -997,14 +1030,19 @@ function App() {
           editingRecipe.authorId
         );
 
-        // Build local state: exclude Firestore sentinels so they don't end up in React state
-        const nextSelectedRecipe = { ...editingRecipe, ...updates };
-        if (shouldClearThumbnail) {
-          delete nextSelectedRecipe.imageThumbnail;
+        if (!wasTempReview) {
+          // Build local state: exclude Firestore sentinels so they don't end up in React state
+          const nextSelectedRecipe = { ...editingRecipe, ...updates };
+          if (shouldClearThumbnail) {
+            delete nextSelectedRecipe.imageThumbnail;
+          }
+          delete nextSelectedRecipe.isTemp;
+          // Navigate back to the recipe detail view after a successful update
+          setSelectedRecipe(nextSelectedRecipe);
         }
-        delete nextSelectedRecipe.isTemp;
-        // Navigate back to the recipe detail view after a successful update
-        setSelectedRecipe(nextSelectedRecipe);
+        // Confirming a pending background import instead returns to the recipe
+        // overview, so the next queued import (if any) loads straight into the
+        // form — see the auto-review effect above.
       } else {
         // Add new recipe or new version; attach groupId if created from within a group,
         // otherwise fall back to the public group (from state or from the groups subscription)
@@ -2019,6 +2057,7 @@ function App() {
     <NutritionReferenceProvider enabled={!!currentUser}>
     <RecipeImportQueueProvider userId={currentUser?.id}>
       <AppNutritionRowsSync onRows={setNutritionReferenceRows} />
+      <AppReviewRecipesSync onReviewRecipes={setPendingReviewRecipes} />
       <div className="App" style={appBottomNavStyle}>
         <Header
           ref={headerRef}
