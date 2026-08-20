@@ -15,19 +15,20 @@
     calc(var(--bottom-nav-vertical-padding, 0.4rem) + env(safe-area-inset-bottom, 0px));
   background: #ffffff;
   border-top: 1px solid #E0E0DE;
+  opacity: 1;
   transform: translateY(0);
-  transition: transform 250ms ease-in-out;
+  transition: opacity 0.28s ease, transform 0.34s cubic-bezier(.22,1,.36,1);
 }
 
 .bottom-navigation--hidden {
   transform: translateY(100%);
+  transition: transform 250ms ease-in-out;
 }
 
 .bottom-navigation--crossfaded {
   opacity: 0;
-  transform: translateY(14px);
   pointer-events: none;
-  transition: opacity 0.28s ease, transform 0.34s cubic-bezier(.22,1,.36,1);
+  transition: opacity 0.28s ease;
 }
 
 .bottom-navigation__tab {
@@ -128,8 +129,8 @@
 
 .bottom-navigation-pill--crossfaded {
   opacity: 0;
-  transform: translateY(14px);
   pointer-events: none;
+  transition: opacity 0.28s ease;
 }
 
 .bottom-navigation-pill--hidden {
@@ -178,17 +179,17 @@
 }
 
 .bottom-navigation-pill__icon {
-  min-height: 24px;
+  min-height: 28px;
 }
 
 .bottom-navigation-pill__icon svg {
   width: 28px;
-  height: 24px;
+  height: 28px;
 }
 
 .bottom-navigation-pill__icon .bottom-navigation__icon-image {
   width: 28px;
-  height: 24px;
+  height: 28px;
 }
 
 .bottom-navigation-pill__label {
