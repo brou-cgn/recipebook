@@ -65,6 +65,7 @@ import { hasHauptsaisonIngredient } from './utils/recipeSortIndex';
 import { getAllCookDatesForUser } from './utils/recipeCookDates';
 import {
   subscribeToRecipes,
+  subscribeToTempRecipes,
   addRecipe as addRecipeToFirestore,
   updateRecipe as updateRecipeInFirestore,
   deleteRecipe as deleteRecipeFromFirestore,
@@ -344,6 +345,7 @@ function App() {
   const [publicGroupId, setPublicGroupId] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [recipesLoaded, setRecipesLoaded] = useState(false);
+  const [hasPendingTempImports, setHasPendingTempImports] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
   const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
@@ -812,6 +814,21 @@ function App() {
     return () => unsubscribe();
   }, [currentUser, userGroupIds]);
 
+  // Track whether the current user has background imports (isTemp recipes)
+  // awaiting review, so navigating to the Kochbuch overview via the bottom
+  // nav / hamburger menu can jump straight to the review form instead of
+  // the plain recipe list — see handleNavigateToRecipesOverview.
+  useEffect(() => {
+    if (!currentUser) {
+      setHasPendingTempImports(false);
+      return undefined;
+    }
+    const unsubscribe = subscribeToTempRecipes(currentUser.id, (tempRecipes) => {
+      setHasPendingTempImports(tempRecipes.length > 0);
+    });
+    return () => unsubscribe();
+  }, [currentUser]);
+
   // Migrate old global favorites to user-specific favorites (one-time migration)
   useEffect(() => {
     if (currentUser && recipesLoaded && recipes.length > 0) {
@@ -1163,6 +1180,19 @@ function App() {
     setCategoryFilter('');
   };
 
+  // Used specifically by the bottom nav "Kochbuch" tab and the hamburger
+  // menu's "Kochbuch" item: if the user has background imports waiting for
+  // review, jump straight into the add-recipe form (which surfaces that
+  // pending-imports list) instead of the plain recipe list. Other paths
+  // that navigate to the recipe view (private-list links, "back" buttons)
+  // keep calling handleViewChange directly and are unaffected.
+  const handleNavigateToRecipesOverview = () => {
+    handleViewChange('recipes');
+    if (hasPendingTempImports) {
+      handleAddRecipe();
+    }
+  };
+
   const handleChefkochClick = () => {
     handleViewChange('kueche');
     setKuecheOpenPersonalData(true);
@@ -1193,7 +1223,11 @@ function App() {
     }
 
     setIsBottomNavVisible(getBottomNavBehavior(tab.view) !== 'hidden');
-    handleViewChange(tab.view);
+    if (tab.view === 'recipes') {
+      handleNavigateToRecipesOverview();
+    } else {
+      handleViewChange(tab.view);
+    }
     window.scrollTo(0, 0);
   };
 
@@ -1974,7 +2008,7 @@ function App() {
           ref={headerRef}
           onSettingsClick={handleOpenSettings}
           currentView={currentView}
-          onViewChange={handleViewChange}
+          onViewChange={(view) => (view === 'recipes' ? handleNavigateToRecipesOverview() : handleViewChange(view))}
           categoryFilter={categoryFilter}
           onCategoryFilterChange={handleCategoryFilterChange}
           currentUser={currentUser}
