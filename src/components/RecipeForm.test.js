@@ -3233,6 +3233,51 @@ describe('RecipeForm - AI OCR Limit', () => {
       expect(scanLabel).toHaveAttribute('aria-disabled', 'true');
     });
   });
+
+  const moderatorWithPermissions = {
+    ...userWithPermissions,
+    id: 'moderator-1',
+    role: 'moderator',
+  };
+
+  test('webimport button stays enabled for moderator at count 20 (raised to 50/day)', async () => {
+    getUserAiOcrScanCount.mockResolvedValue(20);
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={moderatorWithPermissions}
+      />
+    );
+
+    await waitFor(() => {
+      expect(getUserAiOcrScanCount).toHaveBeenCalled();
+    });
+
+    const webimportBtn = screen.getByLabelText('Webimport');
+    expect(webimportBtn).not.toBeDisabled();
+  });
+
+  test('webimport button is disabled for moderator once count reaches 50', async () => {
+    getUserAiOcrScanCount.mockResolvedValue(50);
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={moderatorWithPermissions}
+      />
+    );
+
+    await waitFor(() => {
+      const webimportBtn = screen.getByLabelText('Webimport');
+      expect(webimportBtn).toBeDisabled();
+      expect(webimportBtn).toHaveAttribute('title', expect.stringContaining('(50/Tag)'));
+    });
+  });
 });
 
 describe('RecipeForm - Signature Sentence', () => {
