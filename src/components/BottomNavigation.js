@@ -163,9 +163,11 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect }) {
     const pillTabs = tabs.filter((tab) => PILL_TAB_KEYS.includes(tab.key));
     const index = pillTabs.findIndex((tab) => tab.key === activeKey);
     if (index < 0) return;
-    const itemWidth = rail.clientWidth / pillTabs.length;
+    const target = rail.children[index];
+    if (!target) return;
+    const left = target.offsetLeft - (rail.clientWidth - target.offsetWidth) / 2;
     if (typeof rail.scrollTo === 'function') {
-      rail.scrollTo({ left: Math.max(0, (index - 1) * itemWidth), behavior: 'smooth' });
+      rail.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
     }
   }, [activeKey, tabs, isPillMode]);
 

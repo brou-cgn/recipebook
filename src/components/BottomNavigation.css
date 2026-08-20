@@ -148,7 +148,7 @@
 
 .bottom-navigation-pill__rail {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   height: 100%;
   overflow-x: auto;
   overflow-y: hidden;
@@ -162,7 +162,7 @@
 }
 
 .bottom-navigation-pill__item {
-  flex: 0 0 33.333%;
+  flex: 0 0 42%;
   scroll-snap-align: center;
   display: flex;
   flex-direction: column;
