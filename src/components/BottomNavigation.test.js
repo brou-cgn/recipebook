@@ -75,4 +75,27 @@ describe('BottomNavigation icon rendering', () => {
     expect(fullBar.getByText('📖')).toBeInTheDocument();
     expect(fullBar.queryByText('🍳')).not.toBeInTheDocument();
   });
+
+  test('pill navigation only shows Kochbuch, Festtafel and Atelier', async () => {
+    const allTabs = [
+      { key: 'home', label: 'Küche' },
+      { key: 'recipes', label: 'Kochbuch' },
+      { key: 'menus', label: 'Festtafel' },
+      { key: 'atelier', label: 'Atelier' },
+      { key: 'chef', label: 'Chefkoch' },
+    ];
+
+    const { container } = render(
+      <BottomNavigation tabs={allTabs} activeKey="recipes" isVisible onSelect={() => {}} />
+    );
+
+    await waitFor(() => expect(getButtonIcons).toHaveBeenCalled());
+
+    const pill = within(container.querySelector('.bottom-navigation-pill'));
+    expect(pill.getByLabelText('Kochbuch')).toBeInTheDocument();
+    expect(pill.getByLabelText('Festtafel')).toBeInTheDocument();
+    expect(pill.getByLabelText('Atelier')).toBeInTheDocument();
+    expect(pill.queryByLabelText('Küche')).not.toBeInTheDocument();
+    expect(pill.queryByLabelText('Chefkoch')).not.toBeInTheDocument();
+  });
 });
