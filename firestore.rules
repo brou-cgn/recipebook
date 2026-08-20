@@ -164,6 +164,14 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Background recipe-import job status (Web-Import / Foto-OCR). Synced so the
+    // header's progress indicator shows the same running/failed jobs in every
+    // open session (tab/device) of the owning user, not just the one that
+    // started the import.
+    match /users/{userId}/importJobs/{jobId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
     // User favorites subcollection
     match /users/{userId}/favorites/{favoriteId} {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;

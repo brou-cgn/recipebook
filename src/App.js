@@ -1967,7 +1967,7 @@ function App() {
 
   return (
     <NutritionReferenceProvider enabled={!!currentUser}>
-    <RecipeImportQueueProvider>
+    <RecipeImportQueueProvider userId={currentUser?.id}>
       <AppNutritionRowsSync onRows={setNutritionReferenceRows} />
       <div className="App" style={appBottomNavStyle}>
         <Header
