@@ -269,7 +269,7 @@
 /* FAB button - fixed bottom right */
 .startseite-fab-button {
   position: fixed;
-  bottom: 20px;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
   right: 20px;
   z-index: 1101;
   width: 56px;
