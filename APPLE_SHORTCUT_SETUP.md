@@ -203,7 +203,9 @@ Die Cloud Function gibt zurück:
 
 ### App-URL aufbauen
 
-Nach dem API-Call öffnest du die `importUrl` direkt mit der Aktion „URL öffnen". Die App erkennt automatisch den Import und startet den Import-Workflow.
+Nach dem API-Call öffnest du die `importUrl` mit der Aktion „URL öffnen".
+
+**Hinweis:** `recipeImportPage` ist aktuell eine eigenständige, statische Antwortseite der Cloud Function (Titel + Rezepttext + JSON-LD) ohne Verbindung zur React-App-Shell — es gibt keinen automatischen Redirect in den Import-Workflow der App. Zusätzlich öffnet iOS eine per Shortcuts-Aktion „URL öffnen" aufgerufene Adresse grundsätzlich in Safari, auch wenn die PWA installiert ist und dieselbe Domain/denselben Scope hat; das ist eine iOS-Plattformeinschränkung und lässt sich nicht per Manifest/Scope-Konfiguration umgehen. Für einen tatsächlichen In-App-Import muss der Nutzer nach dem Öffnen manuell zur installierten App wechseln.
 
 ---
 
