@@ -160,8 +160,7 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect }) {
     if (!isPillMode) return;
     const rail = railRef.current;
     if (!rail) return;
-    const pillTabs = tabs.filter((tab) => PILL_TAB_KEYS.includes(tab.key));
-    const index = pillTabs.findIndex((tab) => tab.key === activeKey);
+    const index = tabs.findIndex((tab) => tab.key === activeKey);
     if (index < 0) return;
     const target = rail.children[index];
     if (!target) return;
@@ -217,7 +216,7 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect }) {
           role="navigation"
           aria-label="Hauptnavigation (kompakt)"
         >
-          {tabs.filter((tab) => PILL_TAB_KEYS.includes(tab.key)).map((tab) => {
+          {tabs.map((tab) => {
             const isActive = tab.key === activeKey;
             return (
               <button

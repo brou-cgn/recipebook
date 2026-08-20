@@ -76,7 +76,7 @@ describe('BottomNavigation icon rendering', () => {
     expect(fullBar.queryByText('🍳')).not.toBeInTheDocument();
   });
 
-  test('pill navigation only shows Kochbuch, Festtafel and Atelier', async () => {
+  test('pill navigation carousel keeps Küche and Chefkoch reachable by scrolling', async () => {
     const allTabs = [
       { key: 'home', label: 'Küche' },
       { key: 'recipes', label: 'Kochbuch' },
@@ -91,11 +91,15 @@ describe('BottomNavigation icon rendering', () => {
 
     await waitFor(() => expect(getButtonIcons).toHaveBeenCalled());
 
+    // Kochbuch, Festtafel and Atelier are the three tabs visible by default
+    // (activeKey is always one of these while the pill carousel is shown).
+    // Küche and Chefkoch stay in the rail too, just scrolled out of view, so
+    // the carousel can be scrolled to reach them.
     const pill = within(container.querySelector('.bottom-navigation-pill'));
     expect(pill.getByLabelText('Kochbuch')).toBeInTheDocument();
     expect(pill.getByLabelText('Festtafel')).toBeInTheDocument();
     expect(pill.getByLabelText('Atelier')).toBeInTheDocument();
-    expect(pill.queryByLabelText('Küche')).not.toBeInTheDocument();
-    expect(pill.queryByLabelText('Chefkoch')).not.toBeInTheDocument();
+    expect(pill.getByLabelText('Küche')).toBeInTheDocument();
+    expect(pill.getByLabelText('Chefkoch')).toBeInTheDocument();
   });
 });
