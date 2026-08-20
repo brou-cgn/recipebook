@@ -4063,28 +4063,23 @@
 }
 
 [data-theme="dark"] .events-status-badge {
-  background: #333;
-  color: #ccc;
+  background: #222524;
+  border-color: #333835;
+  color: #c9cfcc;
 }
 
-[data-theme="dark"] .events-status-geplant {
-  background: #4a3f1a;
-  color: #e8c766;
+[data-theme="dark"] .events-status-progress-seg {
+  background: #3b403d;
 }
 
-[data-theme="dark"] .events-status-berechnet {
-  background: #1a3350;
-  color: #8fb8e8;
+[data-theme="dark"] .events-status-progress-seg.is-done {
+  background: #8FC9AE;
 }
 
-[data-theme="dark"] .events-status-eingekauft {
-  background: #362a52;
-  color: #c4a8f0;
-}
-
-[data-theme="dark"] .events-status-verbrauchErfasst {
-  background: #1a3a2a;
-  color: #7fd9a8;
+[data-theme="dark"] .events-status-complete {
+  background: #8FC9AE;
+  border-color: #8FC9AE;
+  color: #101613;
 }
 
 [data-theme="dark"] .events-warnings {
