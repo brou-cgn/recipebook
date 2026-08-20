@@ -11,6 +11,8 @@ import { formatIngredientSpacing, expandSaltAndPepperIngredients } from '../util
 import { encodeRecipeLink, decodeRecipeLink, containsHashForTypeahead } from '../utils/recipeLinks';
 import { getAutoAssignedIngredients } from '../utils/ingredientIdMatching';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
+import { resolveImportGroupContext } from '../utils/recipeGroupContext';
+import { subscribeToTempRecipes } from '../utils/recipeFirestore';
 import RecipeImportModal from './RecipeImportModal';
 import OcrScanModal from './OcrScanModal';
 import WebImportModal from './WebImportModal';
@@ -391,7 +393,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
   );
 }
 
-function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCreatingVersion = false, allRecipes = [], activeGroupId = null, groups = [], privateLists = [], initialWebImportUrl = '', initialWebImportAuthorId = '' }) {
+function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCreatingVersion = false, allRecipes = [], activeGroupId = null, groups = [], publicGroupId, privateLists = [], initialWebImportUrl = '', initialWebImportAuthorId = '', onSelectTempRecipe }) {
   const [title, setTitle] = useState('');
   const [image, setImage] = useState('');
   // Array of { url: string, isDefault: boolean } for multi-image support
@@ -634,6 +636,25 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   useEffect(() => {
     setImageError(false);
   }, [image]);
+
+  // Group/publish context applied to background-imported recipes (Web-Import,
+  // Foto-Scan), mirroring the same rules App.js uses when saving a new recipe.
+  const importContext = useMemo(
+    () => resolveImportGroupContext({ selectedGroupId: selectedPrivateListId, activeGroupId, groups, publicGroupId }),
+    [selectedPrivateListId, activeGroupId, groups, publicGroupId]
+  );
+
+  // Pending background imports (isTemp recipes) awaiting review — only
+  // relevant on the plain "Neues Rezept hinzufügen" page.
+  const [tempRecipes, setTempRecipes] = useState([]);
+  useEffect(() => {
+    if (recipe || isCreatingVersion || !currentUser?.id) {
+      setTempRecipes([]);
+      return undefined;
+    }
+    const unsubscribe = subscribeToTempRecipes(currentUser.id, setTempRecipes);
+    return () => unsubscribe();
+  }, [recipe, isCreatingVersion, currentUser?.id]);
 
   const handleCuisinePillToggle = (name) => {
     setKulinarik((prev) =>
@@ -1153,24 +1174,9 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     }
   };
 
-  const handleOcrScan = (ocrRecipe) => {
-    // Populate form with OCR scanned data
-    handleImport(ocrRecipe);
-    // Close the OCR modal
-    setShowOcrModal(false);
-    setOcrImagesBase64([]);
-  };
-
   const handleOcrCancel = () => {
     setShowOcrModal(false);
     setOcrImagesBase64([]);
-  };
-
-  const handleWebImport = (webRecipe) => {
-    // Populate form with web imported data
-    handleImport(webRecipe);
-    // Close the web import modal
-    setShowWebImportModal(false);
   };
 
   const handleRecipeSelect = (selectedRecipe) => {
@@ -1210,7 +1216,11 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     <div className="recipe-form-container">
       <div className="recipe-form-header">
         <h2 className="recipe-form-header-title">
-          {isCreatingVersion ? 'Eigene Version erstellen' : (recipe ? 'Rezept bearbeiten' : 'Neues Rezept hinzufügen')}
+          {isCreatingVersion
+            ? 'Eigene Version erstellen'
+            : recipe?.isTemp
+              ? 'Import überprüfen'
+              : (recipe ? 'Rezept bearbeiten' : 'Neues Rezept hinzufügen')}
         </h2>
         <div className="recipe-form-header-actions">
           <button
@@ -1240,6 +1250,38 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
           <div className="version-info-text">
             <p>Du erstellst eine neue Version von "{recipe?.title}".</p>
           </div>
+        </div>
+      )}
+
+      {recipe?.isTemp && (
+        <div className="version-info-banner temp-import-banner">
+          <div className="version-info-text">
+            <p>Dieses Rezept wurde automatisch importiert. Bitte prüfen und speichern oder verwerfen.</p>
+          </div>
+        </div>
+      )}
+
+      {!recipe && !isCreatingVersion && tempRecipes.length > 0 && (
+        <div className="pending-imports-section">
+          <p className="pending-imports-title">
+            {tempRecipes.length === 1
+              ? '1 automatischer Import wartet auf Überprüfung'
+              : `${tempRecipes.length} automatische Importe warten auf Überprüfung`}
+          </p>
+          <ul className="pending-imports-list">
+            {tempRecipes.map((tempRecipe) => (
+              <li key={tempRecipe.id}>
+                <button
+                  type="button"
+                  className="pending-import-item"
+                  onClick={() => onSelectTempRecipe?.(tempRecipe)}
+                >
+                  <span className="pending-import-item-title">{tempRecipe.title || 'Unbenanntes Rezept'}</span>
+                  <span className="pending-import-item-arrow">›</span>
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -1750,18 +1792,20 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
 
       {showOcrModal && (
         <OcrScanModal
-          onImport={handleOcrScan}
           onCancel={handleOcrCancel}
           initialImages={ocrImagesBase64}
+          userId={currentUser?.id}
+          importContext={importContext}
         />
       )}
 
       {showWebImportModal && (
         <WebImportModal
           initialUrl={initialWebImportUrl}
-          onImport={handleWebImport}
           onCancel={() => setShowWebImportModal(false)}
           authorId={initialWebImportAuthorId}
+          userId={currentUser?.id}
+          importContext={importContext}
         />
       )}
 

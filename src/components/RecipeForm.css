@@ -222,6 +222,84 @@
   line-height: 1.4;
 }
 
+.temp-import-banner {
+  background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+  border-left-color: #FB8C00;
+}
+
+.pending-imports-section {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.pending-imports-title {
+  margin: 0 0 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #555;
+}
+
+.pending-imports-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pending-import-item {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.95rem;
+  color: #1a1a1a;
+}
+
+.pending-import-item:hover {
+  background: #ececec;
+}
+
+.pending-import-item-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pending-import-item-arrow {
+  flex-shrink: 0;
+  color: #888;
+  font-size: 1.1rem;
+}
+
+[data-theme="dark"] .pending-imports-section {
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .pending-imports-title {
+  color: #ccc;
+}
+
+[data-theme="dark"] .pending-import-item {
+  background: #2a2a2a;
+  border-color: #3d3d3d;
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .pending-import-item:hover {
+  background: #333;
+}
+
 .group-assignment-banner {
   display: flex;
   align-s: center;

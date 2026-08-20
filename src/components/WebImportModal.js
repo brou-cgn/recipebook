@@ -5,17 +5,33 @@ import {
   isRecipeImportPageUrl,
   parseRecipeImportPage,
   isInstagramUrl,
-  isInstagramReelUrl,
   importInstagramReel,
   importRecipeFromUrl,
 } from '../utils/webImportService';
 import { buildRecipeFromAiResult } from '../utils/ocrParser';
+import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 
-function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) {
-  const [step, setStep] = useState('url'); // 'url', 'loading'
+async function runWebImport(normalizedUrl, authorId, onProgress) {
+  let result;
+
+  if (isInstagramUrl(normalizedUrl)) {
+    // Instagram path (post, reel, or IGTV) – extract caption and page text with Puppeteer + Gemini
+    result = await importInstagramReel(normalizedUrl, onProgress);
+  } else if (isRecipeImportPageUrl(normalizedUrl)) {
+    // Direct HTML parsing path – no screenshot or AI needed
+    result = await parseRecipeImportPage(normalizedUrl, onProgress);
+  } else {
+    // Multi-step import: JSON-LD → Text+Gemini → Screenshot+Vision
+    result = await importRecipeFromUrl(normalizedUrl, onProgress);
+  }
+
+  return buildRecipeFromAiResult(result, authorId);
+}
+
+function WebImportModal({ onCancel, initialUrl = '', authorId = '', userId = '', importContext = {} }) {
   const [url, setUrl] = useState(() => normalizeImportedUrl(initialUrl));
   const [error, setError] = useState('');
-  const [progress, setProgress] = useState(0);
+  const { enqueueImportJob } = useRecipeImportQueue();
 
   useEffect(() => {
     setUrl(normalizeImportedUrl(initialUrl));
@@ -31,8 +47,11 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
     }
   };
 
-  // Core submission logic – works with an explicit URL argument
-  const submitUrl = async (urlToSubmit) => {
+  // Core submission logic – works with an explicit URL argument. Queues the
+  // actual recognition as a background job and closes immediately; the
+  // recipe is saved with a TEMP flag once analysis finishes and shows up
+  // for review on "Neues Rezept hinzufügen".
+  const submitUrl = (urlToSubmit) => {
     const normalizedUrl = normalizeImportedUrl(urlToSubmit);
     setError('');
 
@@ -46,31 +65,14 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
       return;
     }
 
-    setStep('loading');
-    setProgress(10);
+    enqueueImportJob({
+      label: normalizedUrl,
+      userId,
+      context: importContext,
+      run: (onProgress) => runWebImport(normalizedUrl, authorId, onProgress),
+    });
 
-    try {
-      let result;
-
-      if (isInstagramUrl(normalizedUrl)) {
-        // Instagram path (post, reel, or IGTV) – extract caption and page text with Puppeteer + Gemini
-        result = await importInstagramReel(normalizedUrl, setProgress);
-      } else if (isRecipeImportPageUrl(normalizedUrl)) {
-        // Direct HTML parsing path – no screenshot or AI needed
-        result = await parseRecipeImportPage(normalizedUrl, setProgress);
-      } else {
-        // Multi-step import: JSON-LD → Text+Gemini → Screenshot+Vision
-        result = await importRecipeFromUrl(normalizedUrl, setProgress);
-      }
-
-      setProgress(100);
-      onImport(buildRecipeFromAiResult(result, authorId));
-    } catch (err) {
-      console.error('Web import error:', err);
-      setError(err.message || 'Fehler beim Importieren der Website');
-      setStep('url');
-      setProgress(0);
-    }
+    onCancel();
   };
 
   // Handle URL submission from the form
@@ -94,62 +96,34 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
         </div>
 
         <div className="web-import-modal-content">
-          {/* URL Input Step */}
-          {step === 'url' && (
-            <div className="url-input-section">
-              <p className="web-import-instructions">
-                Gebe die URL deines Rezepts ein
-              </p>
+          <div className="url-input-section">
+            <p className="web-import-instructions">
+              Gebe die URL deines Rezepts ein
+            </p>
 
-              <div className="url-input-container">
-                <label htmlFor="urlInput">Website-URL:</label>
-                <input
-                  type="text"
-                  id="urlInput"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder="z.B. https://www.chefkoch.de/rezepte/..."
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleSubmit();
-                    }
-                  }}
-                  autoFocus
-                />
-              </div>
-
-              <div className="url-input-hint">
-                <p>Tipp: Die Website wird automatisch erfasst und das Rezept extrahiert.</p>
-                <p>Instagram Reels werden direkt unterstützt – die Caption wird automatisch ausgelesen.</p>
-              </div>
+            <div className="url-input-container">
+              <label htmlFor="urlInput">Website-URL:</label>
+              <input
+                type="text"
+                id="urlInput"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="z.B. https://www.chefkoch.de/rezepte/..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSubmit();
+                  }
+                }}
+                autoFocus
+              />
             </div>
-          )}
 
-          {/* Loading Step */}
-          {step === 'loading' && (
-            <div className="loading-section">
-              <p className="web-import-instructions">
-                {isInstagramReelUrl(url)
-                  ? (progress < 70
-                      ? 'Extrahiere Caption und Kommentare...'
-                      : 'Analysiere Rezept...')
-                  : (progress < 30
-                      ? 'Analysiere Website-Struktur...'
-                      : progress < 40
-                        ? 'Extrahiere Rezeptdaten...'
-                        : 'Analysiere Rezept...')}
-              </p>
-              <div className="progress-container">
-                <div className="progress-bar">
-                  <div
-                    className="progress-fill"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-                <p className="progress-text">{Math.round(progress)}%</p>
-              </div>
+            <div className="url-input-hint">
+              <p>Tipp: Die Website wird automatisch erfasst und das Rezept extrahiert.</p>
+              <p>Instagram Reels werden direkt unterstützt – die Caption wird automatisch ausgelesen.</p>
+              <p>Der Import läuft im Hintergrund – du kannst währenddessen weiterarbeiten.</p>
             </div>
-          )}
+          </div>
 
           {error && (
             <div className="web-import-error">
@@ -162,12 +136,9 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
           <button className="cancel-button" onClick={onCancel}>
             Abbrechen
           </button>
-          
-          {step === 'url' && (
-            <button className="submit-button" onClick={handleSubmit}>
-              Weiter
-            </button>
-          )}
+          <button className="submit-button" onClick={handleSubmit}>
+            Import starten
+          </button>
         </div>
       </div>
     </div>

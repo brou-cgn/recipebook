@@ -35,7 +35,7 @@ import { deleteRecipeImage } from './storageUtils';
  */
 export const subscribeToRecipes = (userId, isAdmin, callback, userGroupIds = [], publicGroupIds = []) => {
   const recipesRef = collection(db, 'recipes');
-  
+
   return onSnapshot(recipesRef, (snapshot) => {
     const recipes = [];
     snapshot.forEach((doc) => {
@@ -43,7 +43,14 @@ export const subscribeToRecipes = (userId, isAdmin, callback, userGroupIds = [],
         id: doc.id,
         ...doc.data()
       };
-      
+
+      // Pending background imports (isTemp) are not real recipes yet — they
+      // only surface in the "Neues Rezept hinzufügen" pending-imports review
+      // list (see subscribeToTempRecipes), never in the main recipe list.
+      if (recipe.isTemp) {
+        return;
+      }
+
       // Group recipes are only visible to group members (and admins),
       // unless the recipe has been published to the public list.
       if (recipe.groupId && !recipe.publishedToPublic) {
@@ -81,7 +88,12 @@ export const getRecipes = async (userId, isAdmin) => {
         id: doc.id,
         ...doc.data()
       };
-      
+
+      // Pending background imports (isTemp) are not real recipes yet.
+      if (recipe.isTemp) {
+        return;
+      }
+
       // Include recipe if it's public OR if it's private and (user is admin OR recipe author)
       if (!recipe.isPrivate || isAdmin || recipe.authorId === userId) {
         recipes.push(recipe);
@@ -92,6 +104,35 @@ export const getRecipes = async (userId, isAdmin) => {
     console.error('Error getting recipes:', error);
     return [];
   }
+};
+
+/**
+ * Set up a real-time listener for the current user's pending background
+ * imports (recipes saved with isTemp:true, awaiting review on the "Neues
+ * Rezept hinzufügen" page).
+ * @param {string} userId - Current user ID (only their own temp imports are returned)
+ * @param {Function} callback - Callback function that receives the temp recipes array
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToTempRecipes = (userId, callback) => {
+  if (!userId) {
+    callback([]);
+    return () => {};
+  }
+
+  const recipesRef = collection(db, 'recipes');
+  const q = query(recipesRef, where('authorId', '==', userId), where('isTemp', '==', true));
+
+  return onSnapshot(q, (snapshot) => {
+    const recipes = [];
+    snapshot.forEach((doc) => {
+      recipes.push({ id: doc.id, ...doc.data() });
+    });
+    callback(recipes);
+  }, (error) => {
+    console.error('Error subscribing to temp recipes:', error);
+    callback([]);
+  });
 };
 
 /**

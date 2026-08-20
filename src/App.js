@@ -89,6 +89,8 @@ import {
   removeRecipeFromGroup as removeRecipeFromGroupInFirestore
 } from './utils/groupFirestore';
 import { NutritionReferenceProvider, useNutritionReference } from './contexts/NutritionReferenceContext';
+import { RecipeImportQueueProvider } from './contexts/RecipeImportQueueContext';
+import { resolveRecipeGroupContext, resolveImportGroupContext } from './utils/recipeGroupContext';
 
 const PENDING_WEBIMPORT_URL_STORAGE_KEY = 'pendingWebimportUrl';
 const PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY = 'pendingWebimportAuthor';
@@ -925,6 +927,14 @@ function App() {
     window.scrollTo(0, 0);
   };
 
+  const handleReviewTempRecipe = (tempRecipe) => {
+    // Load a pending background import into the form for full review;
+    // handleSaveRecipe/handleCancelForm branch on editingRecipe.isTemp to
+    // confirm (clear the flag) or discard (delete the document) it.
+    setEditingRecipe(tempRecipe);
+    setIsCreatingVersion(false);
+  };
+
   const handleCreateVersion = (recipe) => {
     setEditingRecipe(recipe);
     setIsCreatingVersion(true);
@@ -939,7 +949,8 @@ function App() {
 
     try {
       if (editingRecipe && editingRecipe.id !== undefined && !isCreatingVersion) {
-        // Update existing recipe (direct edit)
+        // Update existing recipe (direct edit) — also covers confirming a
+        // pending background import (isTemp), which just clears the flag.
         const { id, ...updates } = recipe;
 
         // Automatically clear WhatsApp thumbnail when the default image changes,
@@ -951,37 +962,29 @@ function App() {
 
         await updateRecipeInFirestore(
           id,
-          shouldClearThumbnail ? { ...updates, imageThumbnail: deleteField() } : updates,
+          {
+            ...updates,
+            ...(shouldClearThumbnail ? { imageThumbnail: deleteField() } : {}),
+            ...(editingRecipe.isTemp ? { isTemp: deleteField() } : {}),
+          },
           editingRecipe.authorId
         );
 
-        // Build local state: exclude Firestore sentinel so it doesn't end up in React state
+        // Build local state: exclude Firestore sentinels so they don't end up in React state
         const nextSelectedRecipe = { ...editingRecipe, ...updates };
         if (shouldClearThumbnail) {
           delete nextSelectedRecipe.imageThumbnail;
         }
+        delete nextSelectedRecipe.isTemp;
         // Navigate back to the recipe detail view after a successful update
         setSelectedRecipe(nextSelectedRecipe);
       } else {
         // Add new recipe or new version; attach groupId if created from within a group,
         // otherwise fall back to the public group (from state or from the groups subscription)
-        const resolvedPublicGroupId = publicGroupId || groups.find(g => g.type === 'public')?.id;
-        let safeGroupId;
-        let autoPublish;
         const { selectedGroupId, ...recipeWithoutMeta } = recipe;
-        if (selectedGroupId) {
-          // User explicitly chose a private list from the form dropdown
-          safeGroupId = selectedGroupId;
-          autoPublish = false;
-        } else {
-          safeGroupId = activeGroupId
-            ? (typeof activeGroupId === 'string' ? activeGroupId : activeGroupId.id ?? String(activeGroupId))
-            : resolvedPublicGroupId;
-          // Auto-publish when creating via "Rezept hinzufügen" (no active private group)
-          autoPublish = !activeGroupId && !isCreatingVersion;
-        }
-        const activeGroup = groups.find(g => g.id === safeGroupId);
-        const groupType = activeGroup?.type ?? 'public';
+        const { groupId: safeGroupId, groupType, autoPublish } = resolveRecipeGroupContext({
+          selectedGroupId, activeGroupId, groups, publicGroupId, isCreatingVersion,
+        });
         const recipeWithGroup = safeGroupId
           ? { ...recipeWithoutMeta, groupId: safeGroupId, groupType, ...(autoPublish ? { publishedToPublic: true } : {}) }
           : recipeWithoutMeta;
@@ -1081,8 +1084,19 @@ function App() {
   };
 
   const handleCancelForm = () => {
+    if (editingRecipe?.isTemp) {
+      // Discarding a pending background import deletes the recipe document
+      // entirely (it only ever existed as a TEMP draft), so confirm first —
+      // same rule as deleting any other recipe with content.
+      if (!window.confirm(`Möchten Sie den Import "${editingRecipe.title || 'Unbenanntes Rezept'}" wirklich verwerfen?`)) {
+        return;
+      }
+      deleteRecipeFromFirestore(editingRecipe.id).catch((error) => {
+        console.error('Error discarding temp recipe:', error);
+      });
+    }
     setIsFormOpen(false);
-    if (editingRecipe && editingRecipe.id !== undefined && !isCreatingVersion) {
+    if (!editingRecipe?.isTemp && editingRecipe && editingRecipe.id !== undefined && !isCreatingVersion) {
       // Return to recipe detail view when canceling an edit of an existing recipe
       const recipe = recipes.find(r => r.id === editingRecipe.id) || editingRecipe;
       setSelectedRecipe(recipe);
@@ -1848,17 +1862,6 @@ function App() {
     );
   }, [atelierCategoryOptions]);
 
-  const handleUniversalImport = (recipe) => {
-    setShowUniversalImport(false);
-    setSharedData({ images: [], title: '', text: '', url: '' });
-    clearSharedDataFromDB();
-    // Open RecipeForm pre-populated with the imported recipe
-    setEditingRecipe(recipe);
-    setIsCreatingVersion(false);
-    setActiveGroupId(null);
-    setIsFormOpen(true);
-  };
-
   const handleUniversalImportCancel = () => {
     setShowUniversalImport(false);
     setSharedData({ images: [], title: '', text: '', url: '' });
@@ -1964,9 +1967,10 @@ function App() {
 
   return (
     <NutritionReferenceProvider enabled={!!currentUser}>
+    <RecipeImportQueueProvider>
       <AppNutritionRowsSync onRows={setNutritionReferenceRows} />
       <div className="App" style={appBottomNavStyle}>
-        <Header 
+        <Header
           ref={headerRef}
           onSettingsClick={handleOpenSettings}
           currentView={currentView}
@@ -2013,9 +2017,11 @@ function App() {
           allRecipes={recipes}
           activeGroupId={activeGroupId}
           groups={groups}
+          publicGroupId={publicGroupId}
           privateLists={groups.filter(g => g.type === 'private' && (g.ownerId === currentUser?.id || (Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id))))}
           initialWebImportUrl={webimportDeeplink}
           initialWebImportAuthorId={webimportAuthorId}
+          onSelectTempRecipe={handleReviewTempRecipe}
         />
         ) : selectedMenu ? (
         // Menu detail view - shown regardless of currentView
@@ -2239,8 +2245,9 @@ function App() {
             initialTitle={sharedData.title}
             initialText={sharedData.text}
             initialUrl={sharedData.url}
-            onImport={handleUniversalImport}
             onCancel={handleUniversalImportCancel}
+            userId={currentUser?.id}
+            importContext={resolveImportGroupContext({ activeGroupId, groups, publicGroupId })}
           />
         )}
         <MobileSearchOverlay
@@ -2293,6 +2300,7 @@ function App() {
           <AtelierTasteIntroOverlay onContinue={handleAtelierTasteIntroContinue} />
         )}
       </div>
+    </RecipeImportQueueProvider>
     </NutritionReferenceProvider>
   );
 }
