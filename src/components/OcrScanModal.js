@@ -33,7 +33,7 @@ function OcrScanModal({ onCancel, initialImage = '', initialImages = [], userId 
       label: images.length === 1 ? 'Foto-Scan' : `Foto-Scan (${images.length} Bilder)`,
       userId,
       context: importContext,
-      run: (onProgress) => runPhotoScanImport(images, language, onProgress),
+      run: (onProgress, jobMeta) => runPhotoScanImport(images, language, onProgress, jobMeta),
       source: { type: 'photo', images, language },
     });
     stopCamera();

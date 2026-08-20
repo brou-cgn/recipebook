@@ -86,9 +86,12 @@ async function getRecipeExtractionPrompt(lang = 'de') {
  * @param {string} rawHtml - Raw HTML string to process
  * @param {string} lang - Language code ('de' or 'en')
  * @param {Function} onProgress - Optional progress callback
+ * @param {{jobId?: string, authorId?: string}} [jobMeta] - Background-import
+ *   job to finalize server-side if this call is the job's sole/final step —
+ *   see RecipeImportQueueContext for how jobId/authorId are supplied.
  * @returns {Promise<Object>} Structured recipe data
  */
-export async function processHtmlWithGemini(rawHtml, lang = 'de', onProgress = null) {
+export async function processHtmlWithGemini(rawHtml, lang = 'de', onProgress = null, jobMeta = null) {
   if (onProgress) onProgress(10);
 
   if (!rawHtml || typeof rawHtml !== 'string') {
@@ -134,6 +137,8 @@ export async function processHtmlWithGemini(rawHtml, lang = 'de', onProgress = n
         language: lang,
         cuisineTypes,
         mealCategories,
+        jobId: jobMeta?.jobId,
+        authorId: jobMeta?.authorId,
       });
 
       clearInterval(progressInterval);
@@ -196,9 +201,11 @@ export async function processHtmlWithGemini(rawHtml, lang = 'de', onProgress = n
  * @param {string} imageBase64 - Base64 encoded image (with or without data URL prefix)
  * @param {string} lang - Language code ('de' or 'en')
  * @param {Function} onProgress - Optional progress callback
+ * @param {{jobId?: string, authorId?: string}} [jobMeta] - Background-import
+ *   job to finalize server-side if this call is the job's sole/final step.
  * @returns {Promise<Object>} Structured recipe data
  */
-export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProgress = null) {
+export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProgress = null, jobMeta = null) {
   if (onProgress) onProgress(10);
 
   // Validate image data
@@ -248,6 +255,8 @@ export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProg
         language: lang,
         cuisineTypes,
         mealCategories,
+        jobId: jobMeta?.jobId,
+        authorId: jobMeta?.authorId,
       });
 
       clearInterval(progressInterval);
@@ -310,6 +319,99 @@ export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProg
 }
 
 /**
+ * Batch-scan multiple recipe photos with AI in a single Cloud Function call.
+ * Used for multi-image imports (Foto-Scan, Universal-Import photos-only) so
+ * the concurrent per-image OCR and the merge into one recipe both run
+ * server-side and can finalize a queued background-import job even if the
+ * tab that started it is closed before every image finishes.
+ *
+ * @param {string[]} images - Base64 encoded images (max 10)
+ * @param {string} lang - Language code ('de' or 'en')
+ * @param {Function} onProgress - Optional progress callback (0-100)
+ * @param {{jobId?: string, authorId?: string}} [jobMeta] - Background-import
+ *   job to finalize server-side.
+ * @returns {Promise<Object>} Merged structured recipe data
+ */
+export async function scanRecipesWithAI(images, lang = 'de', onProgress = null, jobMeta = null) {
+  if (onProgress) onProgress(10);
+
+  if (!Array.isArray(images) || images.length === 0) {
+    throw new Error('Invalid image data');
+  }
+
+  let cuisineTypes;
+  let mealCategories;
+  try {
+    const lists = await getCustomLists();
+    cuisineTypes = lists.cuisineTypes;
+    mealCategories = lists.mealCategories;
+  } catch (e) {
+    console.warn('Failed to load custom lists for AI prompt, using base prompt:', e);
+  }
+
+  let progressInterval = null;
+  try {
+    const scanRecipesWithAICallable = httpsCallable(functions, 'scanRecipesWithAI');
+
+    let simulatedProgress = 20;
+    if (onProgress) {
+      onProgress(20);
+      progressInterval = setInterval(() => {
+        simulatedProgress = Math.min(85, simulatedProgress + 1);
+        onProgress(simulatedProgress);
+      }, 400);
+    }
+
+    const result = await scanRecipesWithAICallable({
+      images,
+      language: lang,
+      cuisineTypes,
+      mealCategories,
+      jobId: jobMeta?.jobId,
+      authorId: jobMeta?.authorId,
+    });
+
+    clearInterval(progressInterval);
+    progressInterval = null;
+    if (onProgress) onProgress(100);
+
+    const recipeData = result.data;
+    if (!recipeData) {
+      throw new Error('No response from AI service');
+    }
+
+    return recipeData;
+  } catch (error) {
+    clearInterval(progressInterval);
+    progressInterval = null;
+    if (onProgress) onProgress(0);
+
+    const errorDetails = getCallableErrorDetails(error);
+    const { code: errorCode } = errorDetails;
+
+    if (errorCode === 'unauthenticated' && !isInvokerAuthFailure(errorDetails)) {
+      throw new Error('Bitte melde dich an, um AI-Scan zu nutzen.');
+    } else if (errorCode === 'permission-denied' || isInvokerAuthFailure(errorDetails)) {
+      throw new Error(INVOKER_ERROR_MESSAGE_OCR);
+    } else if (errorCode === 'resource-exhausted') {
+      throw new Error(error.message || 'Tageslimit erreicht. Versuche es morgen erneut oder nutze Standard-OCR.');
+    } else if (errorCode === 'invalid-argument') {
+      throw new Error(error.message || 'Ungültige Bilder.');
+    } else if (errorCode === 'failed-precondition') {
+      throw new Error('AI-Service nicht konfiguriert. Bitte kontaktiere den Administrator.');
+    } else if (errorCode === 'unavailable') {
+      throw new Error('Netzwerkfehler. Bitte überprüfe deine Internetverbindung.');
+    } else if (errorCode === 'deadline-exceeded') {
+      throw new Error('Zeitüberschreitung. Bitte versuche es erneut.');
+    } else if (error.message) {
+      throw new Error(error.message);
+    }
+
+    throw new Error('KI-Bildverarbeitung fehlgeschlagen. Bitte versuche es erneut.');
+  }
+}
+
+/**
  * Recognize recipe using OpenAI GPT-4o Vision (future implementation)
  * @param {string} imageBase64 - Base64 encoded image
  * @param {string} lang - Language code ('de' or 'en')
@@ -344,13 +446,16 @@ export async function recognizeRecipeWithOpenAI(imageBase64, lang = 'de', onProg
  * @param {string} options.language - Language code ('de' or 'en')
  * @param {string} options.provider - Preferred provider ('gemini' or 'openai')
  * @param {Function} options.onProgress - Progress callback (0-100)
+ * @param {{jobId?: string, authorId?: string}} [options.jobMeta] - Background-import
+ *   job to finalize server-side if this call is the job's sole/final step.
  * @returns {Promise<Object>} Structured recipe data
  */
 export async function recognizeRecipeWithAI(imageBase64, options = {}) {
   const {
     language = 'de',
     provider = 'gemini',
-    onProgress = null
+    onProgress = null,
+    jobMeta = null,
   } = options;
 
   // Validate image data
@@ -375,7 +480,7 @@ export async function recognizeRecipeWithAI(imageBase64, options = {}) {
   // Call the appropriate provider
   switch (selectedProvider) {
     case 'gemini':
-      return await recognizeRecipeWithGemini(imageBase64, language, onProgress);
+      return await recognizeRecipeWithGemini(imageBase64, language, onProgress, jobMeta);
     case 'openai':
       return await recognizeRecipeWithOpenAI(imageBase64, language, onProgress);
     default:

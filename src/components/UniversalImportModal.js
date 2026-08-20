@@ -47,7 +47,7 @@ function UniversalImportModal({ onCancel, initialImages = [], initialText = '', 
       label: snapshot.url.trim() || 'Rezept-Import',
       userId,
       context: importContext,
-      run: (onProgress) => runUniversalImport(snapshot, onProgress),
+      run: (onProgress, jobMeta) => runUniversalImport(snapshot, onProgress, jobMeta),
       source: { type: 'universal', images: snapshot.images, text: snapshot.text, url: snapshot.url },
     });
 

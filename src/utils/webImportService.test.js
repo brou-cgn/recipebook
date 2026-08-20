@@ -493,6 +493,7 @@ ${withJsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
       expect.not.stringMatching(/<[^>]+>/),
       'de',
       null,
+      null,
     );
 
     // recognizeRecipeWithAI (canvas-based) should NOT have been called
@@ -524,6 +525,7 @@ ${withJsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
     expect(processHtmlWithGemini).toHaveBeenCalledWith(
       expect.not.stringMatching(/<[^>]+>/),
       'de',
+      null,
       null,
     );
     expect(recognizeRecipeWithAI).not.toHaveBeenCalled();
