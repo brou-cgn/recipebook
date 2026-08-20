@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './OcrScanModal.css';
 import { recognizeText } from '../utils/ocrService';
-import { parseOcrTextSmart, extractKulinarikFromTags } from '../utils/ocrParser';
+import { parseOcrTextSmart, buildRecipeFromAiResult } from '../utils/ocrParser';
 import { getValidationSummary } from '../utils/ocrValidation';
 import { fileToBase64 } from '../utils/imageUtils';
 import { recognizeRecipeWithAI } from '../utils/aiOcrService';
@@ -12,7 +12,7 @@ const MAX_CAMERA_PHOTOS = 10;
 // initialImages: array of base64 images to pre-fill the image-preview step
 function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [] }) {
   // initialImage starts OCR immediately; initialImages shows the preview step; neither → upload step
-  const [step, setStep] = useState(initialImage ? 'scan' : (initialImages.length > 0 ? 'image-preview' : 'upload')); // 'upload', 'scan', 'edit', 'ai-result', 'batch-processing', 'image-preview'
+  const [step, setStep] = useState(initialImage ? 'scan' : (initialImages.length > 0 ? 'image-preview' : 'upload')); // 'upload', 'scan', 'edit', 'batch-processing', 'image-preview'
   // imageBase64 tracks the current image but OCR functions receive it directly as parameter
   // This state is maintained for potential future features (e.g., image preview, retry)
   // eslint-disable-next-line no-unused-vars
@@ -24,14 +24,12 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
   const [error, setError] = useState('');
   const [cameraActive, setCameraActive] = useState(false);
   const [ocrMode, setOcrMode] = useState('ai'); // 'standard' or 'ai'
-  const [aiResult, setAiResult] = useState(null);
   const [validationResult, setValidationResult] = useState(null);
   const [remainingScans, setRemainingScans] = useState(null);
   const [aiFailed, setAiFailed] = useState(false);
   const [lastImageForRetry, setLastImageForRetry] = useState(null);
   const [uploadedImages, setUploadedImages] = useState(initialImages.length > 0 ? [...initialImages] : []);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [allOcrResults, setAllOcrResults] = useState([]);
   const [capturedPhotos, setCapturedPhotos] = useState([]);
   
   const videoRef = useRef(null);
@@ -103,7 +101,6 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
     if (uploadedImages.length === 0) return;
     const images = [...uploadedImages];
     setCurrentImageIndex(0);
-    setAllOcrResults([]);
     setStep('batch-processing');
     await processBase64Batch(images);
   };
@@ -297,8 +294,6 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
       }
     }
 
-    setAllOcrResults(results);
-
     const allFailed = results.every(r => r.error);
     if (allFailed) {
       // Use the first individual error message (consistent with single-image performOcr)
@@ -321,8 +316,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
       const merged = mergeOcrResults(results, ocrMode);
 
       if (ocrMode === 'ai') {
-        setAiResult(merged);
-        setStep('ai-result');
+        onImport(buildRecipeFromAiResult(merged));
       } else {
         setOcrText(merged.text);
         setStep('edit');
@@ -340,7 +334,6 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
     const photos = [...capturedPhotos];
     stopCamera();
     setCurrentImageIndex(0);
-    setAllOcrResults([]);
     setUploadedImages(photos);
     setStep('batch-processing');
     await processBase64Batch(photos);
@@ -387,8 +380,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
           setRemainingScans(result.remainingScans);
         }
 
-        setAiResult(result);
-        setStep('ai-result');
+        onImport(buildRecipeFromAiResult(result));
       } else {
         // Standard OCR using Tesseract
         const langCode = language === 'de' ? 'deu' : 'eng';
@@ -448,41 +440,9 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
     }
   };
 
-  // Handle import of OCR text
+  // Handle import of OCR text (standard/text mode; AI results import immediately after analysis)
   const handleImport = () => {
     setError('');
-
-    // AI result import
-    if (step === 'ai-result' && aiResult) {
-      try {
-        // Parse time values more robustly
-        const parseTime = (timeStr) => {
-          if (!timeStr) return 0;
-          const numMatch = String(timeStr).match(/\d+/);
-          return numMatch ? parseInt(numMatch[0], 10) : 0;
-        };
-
-        const kulinarikFromCuisine = aiResult.cuisine ? [aiResult.cuisine] : [];
-        const kulinarikFromTags = extractKulinarikFromTags(aiResult.tags || []);
-        const kulinarikSet = new Set(kulinarikFromCuisine);
-        kulinarikFromTags.forEach(k => kulinarikSet.add(k));
-
-        const recipe = {
-          title: aiResult.title || '',
-          ingredients: aiResult.ingredients || [],
-          steps: aiResult.steps || [],
-          portionen: aiResult.servings || 4,
-          kochdauer: parseTime(aiResult.prepTime) || parseTime(aiResult.cookTime) || 30,
-          kulinarik: [...kulinarikSet],
-          schwierigkeit: aiResult.difficulty || 3,
-          speisekategorie: aiResult.category || '',
-        };
-        onImport(recipe);
-      } catch (err) {
-        setError(err.message);
-      }
-      return;
-    }
 
     // Standard text import with validation
     if (!ocrText.trim()) {
@@ -529,14 +489,12 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
     setImageBase64('');
     setOcrText('');
     setError('');
-    setAiResult(null);
     setOcrMode('ai');
     setValidationResult(null);
     setAiFailed(false);
     setLastImageForRetry(null);
     setUploadedImages([]);
     setCurrentImageIndex(0);
-    setAllOcrResults([]);
     setCapturedPhotos([]);
   };
 
@@ -544,63 +502,6 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
   const handleCancel = () => {
     stopCamera();
     onCancel();
-  };
-
-  // Convert AI result to text format for editing
-  const convertAiResultToText = () => {
-    if (!aiResult) return;
-
-    let text = '';
-    
-    // Title
-    if (aiResult.title) {
-      text += aiResult.title + '\n\n';
-    }
-
-    // Meta information
-    if (aiResult.servings) {
-      text += `Portionen: ${aiResult.servings}\n`;
-    }
-    if (aiResult.prepTime || aiResult.cookTime) {
-      const time = aiResult.prepTime || aiResult.cookTime;
-      text += `Zeit: ${time}\n`;
-    }
-    if (aiResult.difficulty) {
-      text += `Schwierigkeit: ${aiResult.difficulty}\n`;
-    }
-    if (aiResult.cuisine) {
-      text += `Kulinarik: ${aiResult.cuisine}\n`;
-    }
-    if (aiResult.category) {
-      text += `Kategorie: ${aiResult.category}\n`;
-    }
-    text += '\n';
-
-    // Ingredients
-    if (aiResult.ingredients && aiResult.ingredients.length > 0) {
-      text += 'Zutaten\n\n';
-      aiResult.ingredients.forEach(ingredient => {
-        text += ingredient + '\n';
-      });
-      text += '\n';
-    }
-
-    // Steps
-    if (aiResult.steps && aiResult.steps.length > 0) {
-      text += 'Zubereitung\n\n';
-      aiResult.steps.forEach((step, index) => {
-        text += `${index + 1}. ${step}\n`;
-      });
-      text += '\n';
-    }
-
-    // Notes
-    if (aiResult.notes) {
-      text += `Notizen: ${aiResult.notes}\n`;
-    }
-
-    setOcrText(text.trim());
-    setStep('edit');
   };
 
   return (
@@ -855,74 +756,6 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
             </div>
           )}
 
-          {/* AI Result Step */}
-          {step === 'ai-result' && aiResult && (
-            <div className={`ai-result-section${allOcrResults.length > 1 ? ' merged' : ''}`}>
-              <p className="ocr-instructions">
-                KI-Analyse abgeschlossen - Überprüfen Sie die erkannten Daten
-              </p>
-
-              <h3 className="ai-result-title">{aiResult.title || 'Unbenanntes Rezept'}</h3>
-
-              {(aiResult.servings || aiResult.prepTime || aiResult.cookTime || aiResult.difficulty || aiResult.cuisine || aiResult.category) && (
-                <div className="ai-result-meta">
-                  {aiResult.servings && (
-                    <span className="ai-meta-badge">{aiResult.servings} Portionen</span>
-                  )}
-                  {(aiResult.prepTime || aiResult.cookTime) && (
-                    <span className="ai-meta-badge">{aiResult.prepTime || aiResult.cookTime}</span>
-                  )}
-                  {aiResult.difficulty && (
-                    <span className="ai-meta-badge">Schwierigkeit: {aiResult.difficulty}/5</span>
-                  )}
-                  {aiResult.cuisine && (
-                    <span className="ai-meta-badge">{aiResult.cuisine}</span>
-                  )}
-                  {aiResult.category && (
-                    <span className="ai-meta-badge">{aiResult.category}</span>
-                  )}
-                </div>
-              )}
-
-              {aiResult.ingredients && aiResult.ingredients.length > 0 && (
-                <div className="ai-result-ingredients">
-                  <h4>Zutaten</h4>
-                  <ul>
-                    {aiResult.ingredients.map((ingredient, index) => (
-                      <li key={index}>{ingredient}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {aiResult.steps && aiResult.steps.length > 0 && (
-                <div className="ai-result-steps">
-                  <h4>Zubereitung</h4>
-                  <ol>
-                    {aiResult.steps.map((step, index) => (
-                      <li key={index}>{step}</li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-
-              {aiResult.tags && aiResult.tags.length > 0 && (
-                <div className="ai-result-tags">
-                  <h4>Tags</h4>
-                  <div className="ai-tags-list">
-                    {aiResult.tags.map((tag, index) => (
-                      <span key={index} className="ai-tag">{tag}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <button className="edit-text-button" onClick={convertAiResultToText}>
-                Als Text bearbeiten
-              </button>
-            </div>
-          )}
-
           {/* Edit Step */}
           {step === 'edit' && (
             <div className="edit-section">
@@ -993,7 +826,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
             Abbrechen
           </button>
           
-          {(step === 'edit' || step === 'ai-result') && (
+          {step === 'edit' && (
             <button className="import-button" onClick={handleImport}>
               Übernehmen
             </button>

@@ -3,7 +3,7 @@ import './UniversalImportModal.css';
 import { fileToBase64 } from '../utils/imageUtils';
 import { recognizeRecipeWithAI } from '../utils/aiOcrService';
 import { captureWebsiteScreenshot } from '../utils/webImportService';
-import { extractKulinarikFromTags } from '../utils/ocrParser';
+import { buildRecipeFromAiResult } from '../utils/ocrParser';
 
 function buildInitialText(title, text) {
   return [title, text].filter(Boolean).join('\n\n');
@@ -13,10 +13,9 @@ function UniversalImportModal({ onImport, onCancel, initialImages = [], initialT
   const [images, setImages] = useState(initialImages);
   const [text, setText] = useState(buildInitialText(initialTitle, initialText));
   const [url, setUrl] = useState(initialUrl);
-  const [step, setStep] = useState('preview'); // 'preview' | 'processing' | 'result'
+  const [step, setStep] = useState('preview'); // 'preview' | 'processing'
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [scanProgress, setScanProgress] = useState(0);
-  const [aiResult, setAiResult] = useState(null);
   const [error, setError] = useState('');
   const [processingLabel, setProcessingLabel] = useState('');
 
@@ -181,42 +180,10 @@ function UniversalImportModal({ onImport, onCancel, initialImages = [], initialT
 
     try {
       const merged = mergeAiResults(results);
-      setAiResult(merged);
-      setStep('result');
+      onImport(buildRecipeFromAiResult(merged));
     } catch (err) {
       setError(err.message);
       setStep('preview');
-    }
-  };
-
-  const handleImport = () => {
-    if (!aiResult) return;
-    setError('');
-    try {
-      const parseTime = (timeStr) => {
-        if (!timeStr) return 0;
-        const numMatch = String(timeStr).match(/\d+/);
-        return numMatch ? parseInt(numMatch[0], 10) : 0;
-      };
-
-      const kulinarikFromCuisine = aiResult.cuisine ? [aiResult.cuisine] : [];
-      const kulinarikFromTags = extractKulinarikFromTags(aiResult.tags || []);
-      const kulinarikSet = new Set(kulinarikFromCuisine);
-      kulinarikFromTags.forEach(k => kulinarikSet.add(k));
-
-      const recipe = {
-        title: aiResult.title || '',
-        ingredients: aiResult.ingredients || [],
-        steps: aiResult.steps || [],
-        portionen: aiResult.servings || 4,
-        kochdauer: parseTime(aiResult.prepTime) || parseTime(aiResult.cookTime) || 30,
-        kulinarik: [...kulinarikSet],
-        schwierigkeit: aiResult.difficulty || 3,
-        speisekategorie: aiResult.category || '',
-      };
-      onImport(recipe);
-    } catch (err) {
-      setError(err.message);
     }
   };
 
@@ -339,56 +306,6 @@ function UniversalImportModal({ onImport, onCancel, initialImages = [], initialT
             </div>
           )}
 
-          {/* Result Step */}
-          {step === 'result' && aiResult && (
-            <div className="universal-result">
-              {totalItems > 1 && (
-                <div className="universal-merged-notice">
-                  Aus {totalItems} Inhalten zusammengeführt
-                </div>
-              )}
-              {aiResult.title && (
-                <h3 className="universal-result-title">{aiResult.title}</h3>
-              )}
-              <div className="universal-result-meta">
-                {aiResult.servings && (
-                  <span className="universal-meta-badge">{aiResult.servings} Portionen</span>
-                )}
-                {(aiResult.prepTime || aiResult.cookTime) && (
-                  <span className="universal-meta-badge">
-                    {aiResult.prepTime || aiResult.cookTime}
-                  </span>
-                )}
-                {aiResult.difficulty && (
-                  <span className="universal-meta-badge">Schwierigkeit: {aiResult.difficulty}</span>
-                )}
-                {aiResult.cuisine && (
-                  <span className="universal-meta-badge">{aiResult.cuisine}</span>
-                )}
-              </div>
-              {aiResult.ingredients && aiResult.ingredients.length > 0 && (
-                <div className="universal-result-section">
-                  <h4>Zutaten</h4>
-                  <ul>
-                    {aiResult.ingredients.map((ing, i) => (
-                      <li key={i}>{ing}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {aiResult.steps && aiResult.steps.length > 0 && (
-                <div className="universal-result-section">
-                  <h4>Zubereitung</h4>
-                  <ol>
-                    {aiResult.steps.map((s, i) => (
-                      <li key={i}>{s}</li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-              {error && <div className="universal-error">{error}</div>}
-            </div>
-          )}
         </div>
 
         <div className="universal-import-actions">
@@ -403,22 +320,6 @@ function UniversalImportModal({ onImport, onCancel, initialImages = [], initialT
             >
               Analyse starten
             </button>
-          )}
-          {step === 'result' && (
-            <>
-              <button
-                className="universal-back-button"
-                onClick={() => setStep('preview')}
-              >
-                ← Zurück
-              </button>
-              <button
-                className="universal-import-button"
-                onClick={handleImport}
-              >
-                ✓ Rezept importieren
-              </button>
-            </>
           )}
         </div>
       </div>
