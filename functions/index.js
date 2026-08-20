@@ -210,12 +210,25 @@ BEISPIEL GUTE EXTRAKTION:
 
 Extrahiere nun alle sichtbaren Informationen aus dem Bild genau nach diesem Schema.`;
 
+// In-memory cache for the AI recipe extraction prompt, shared across warm
+// invocations of the same Cloud Functions instance. TTL keeps changes made
+// in Settings visible within a few minutes without a Firestore read on
+// every single OCR/import call.
+let recipeExtractionPromptCache = null;
+let recipeExtractionPromptCacheExpiry = 0;
+const RECIPE_EXTRACTION_PROMPT_CACHE_TTL_MS = 5 * 60 * 1000;
+
 /**
  * Get the recipe extraction prompt
- * Loads from Firestore settings, throws an error if not configured
+ * Loads from Firestore settings (cached in-memory for a few minutes),
+ * throws an error if not configured
  * @returns {Promise<string>} The formatted prompt
  */
 async function getRecipeExtractionPrompt() {
+  if (recipeExtractionPromptCache && Date.now() < recipeExtractionPromptCacheExpiry) {
+    return recipeExtractionPromptCache;
+  }
+
   const db = admin.firestore();
 
   try {
@@ -255,6 +268,9 @@ async function getRecipeExtractionPrompt() {
 
     console.log('Successfully loaded AI prompt from Firestore settings');
     console.log(`Prompt length: ${aiRecipePrompt.length} characters`);
+
+    recipeExtractionPromptCache = aiRecipePrompt;
+    recipeExtractionPromptCacheExpiry = Date.now() + RECIPE_EXTRACTION_PROMPT_CACHE_TTL_MS;
 
     return aiRecipePrompt;
   } catch (error) {

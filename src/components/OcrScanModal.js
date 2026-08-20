@@ -7,6 +7,10 @@ import { fileToBase64 } from '../utils/imageUtils';
 import { recognizeRecipeWithAI } from '../utils/aiOcrService';
 
 const MAX_CAMERA_PHOTOS = 10;
+// Max number of images processed at the same time during a batch scan.
+// Keeps the OCR calls independent (each image is unrelated to the others)
+// while staying well under the Cloud Function's per-user rate limit.
+const BATCH_CONCURRENCY = 3;
 
 // initialImage: single image that triggers immediate OCR (takes precedence over initialImages)
 // initialImages: array of base64 images to pre-fill the image-preview step
@@ -30,6 +34,11 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
   const [lastImageForRetry, setLastImageForRetry] = useState(null);
   const [uploadedImages, setUploadedImages] = useState(initialImages.length > 0 ? [...initialImages] : []);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  // Which batch images are currently being processed / already done (batch images
+  // are processed concurrently, so several can be "processing" at once, and they
+  // don't necessarily finish in order).
+  const [activeImageIndices, setActiveImageIndices] = useState(() => new Set());
+  const [doneImageIndices, setDoneImageIndices] = useState(() => new Set());
   const [capturedPhotos, setCapturedPhotos] = useState([]);
   
   const videoRef = useRef(null);
@@ -255,44 +264,85 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
     setCapturedPhotos([]);
   };
 
-  // Process an array of base64 images sequentially (camera batch).
-  // Similar to processBatchImages(), but accepts base64 strings directly
+  // Process an array of base64 images concurrently (up to BATCH_CONCURRENCY at
+  // once). Similar to processBatchImages(), but accepts base64 strings directly
   // instead of File objects, avoiding an extra fileToBase64 conversion step.
+  // Images are independent of each other, so processing several in parallel
+  // cuts total wait time roughly to (batch size / concurrency) instead of the
+  // sum of every individual OCR call.
   const processBase64Batch = async (base64Images) => {
-    const results = [];
+    const results = new Array(base64Images.length);
+    const total = base64Images.length;
+    // Per-image progress (0-100), combined below into one overall percentage
+    // so several images updating concurrently don't make the bar jump around.
+    const progressPerImage = new Array(total).fill(0);
+    let doneCount = 0;
 
-    for (let i = 0; i < base64Images.length; i++) {
-      setCurrentImageIndex(i);
-      setScanProgress(0);
+    const updateOverallProgress = () => {
+      const sum = progressPerImage.reduce((a, b) => a + b, 0);
+      setScanProgress(Math.round(sum / total));
+    };
 
-      try {
-        const base64 = base64Images[i];
+    setCurrentImageIndex(0);
+    setScanProgress(0);
+    setActiveImageIndices(new Set());
+    setDoneImageIndices(new Set());
 
-        if (ocrMode === 'ai') {
-          const result = await recognizeRecipeWithAI(base64, {
-            language,
-            provider: 'gemini',
-            onProgress: (progress) => setScanProgress(progress)
-          });
+    let nextIndex = 0;
+    const processNext = async () => {
+      while (nextIndex < total) {
+        const i = nextIndex++;
+        setActiveImageIndices(prev => new Set(prev).add(i));
 
-          // Update remaining scans if provided by the Cloud Function
-          if (result.remainingScans !== undefined) {
-            setRemainingScans(result.remainingScans);
+        try {
+          const base64 = base64Images[i];
+
+          if (ocrMode === 'ai') {
+            const result = await recognizeRecipeWithAI(base64, {
+              language,
+              provider: 'gemini',
+              onProgress: (progress) => {
+                progressPerImage[i] = progress;
+                updateOverallProgress();
+              }
+            });
+
+            // Update remaining scans if provided by the Cloud Function
+            if (result.remainingScans !== undefined) {
+              setRemainingScans(result.remainingScans);
+            }
+
+            results[i] = result;
+          } else {
+            const langCode = language === 'de' ? 'deu' : 'eng';
+            const result = await recognizeText(base64, langCode,
+              (progress) => {
+                progressPerImage[i] = progress;
+                updateOverallProgress();
+              }
+            );
+            results[i] = { text: result.text };
           }
-
-          results.push(result);
-        } else {
-          const langCode = language === 'de' ? 'deu' : 'eng';
-          const result = await recognizeText(base64, langCode,
-            (progress) => setScanProgress(progress)
-          );
-          results.push({ text: result.text });
+        } catch (err) {
+          console.error(`Error processing photo ${i + 1}:`, err);
+          results[i] = { error: err.message };
         }
-      } catch (err) {
-        console.error(`Error processing photo ${i + 1}:`, err);
-        results.push({ error: err.message });
+
+        doneCount += 1;
+        progressPerImage[i] = 100;
+        setActiveImageIndices(prev => {
+          const next = new Set(prev);
+          next.delete(i);
+          return next;
+        });
+        setDoneImageIndices(prev => new Set(prev).add(i));
+        setCurrentImageIndex(doneCount);
+        updateOverallProgress();
       }
-    }
+    };
+
+    const workerCount = Math.min(BATCH_CONCURRENCY, total);
+    await Promise.all(Array.from({ length: workerCount }, processNext));
 
     const allFailed = results.every(r => r.error);
     if (allFailed) {
@@ -725,7 +775,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
 
               <div className="batch-progress">
                 <div className="batch-image-progress">
-                  Bild {currentImageIndex + 1} von {uploadedImages.length}
+                  {currentImageIndex} von {uploadedImages.length} Bildern verarbeitet
                 </div>
 
                 <div className="progress-container">
@@ -739,18 +789,22 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
                 </div>
 
                 <div className="processed-images">
-                  {uploadedImages.map((_, index) => (
-                    <div
-                      key={index}
-                      className={`image-indicator ${
-                        index < currentImageIndex ? 'completed' :
-                        index === currentImageIndex ? 'processing' :
-                        'pending'
-                      }`}
-                    >
-                      {index < currentImageIndex ? '✓' : index === currentImageIndex ? '...' : '○'}
-                    </div>
-                  ))}
+                  {uploadedImages.map((_, index) => {
+                    const isDone = doneImageIndices.has(index);
+                    const isActive = activeImageIndices.has(index);
+                    return (
+                      <div
+                        key={index}
+                        className={`image-indicator ${
+                          isDone ? 'completed' :
+                          isActive ? 'processing' :
+                          'pending'
+                        }`}
+                      >
+                        {isDone ? '✓' : isActive ? '...' : '○'}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
