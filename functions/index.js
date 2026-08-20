@@ -665,12 +665,106 @@ async function callGeminiAPI(base64Data, mimeType, lang, apiKey, cuisineTypes, m
 }
 
 /**
+ * Convert a raw Gemini/AI result into the recipe field shape used by
+ * RecipeForm/RecipeImportQueueContext. Node-side port of the browser
+ * buildRecipeFromAiResult (src/utils/ocrParser.js) so background import
+ * jobs can be finalized directly from a Cloud Function, without depending
+ * on the client tab staying open to write the result back.
+ *
+ * @param {Object} aiResult - Structured recipe data (title, ingredients, ...)
+ * @param {string} [authorId] - Optional author id to attach to the recipe
+ * @returns {Object} Recipe field object matching the RecipeForm shape
+ */
+function buildRecipeFieldsFromResult(aiResult, authorId = '') {
+  const parseTime = (timeStr) => {
+    if (!timeStr) return 0;
+    const numMatch = String(timeStr).match(/\d+/);
+    return numMatch ? parseInt(numMatch[0], 10) : 0;
+  };
+
+  const kulinarikTagKeywords = {vegetarisch: 'Vegetarisch', vegan: 'Vegan'};
+  const tags = Array.isArray(aiResult.tags) ? aiResult.tags : [];
+  const kulinarikFromTags = tags.reduce((result, tag) => {
+    const canonical = kulinarikTagKeywords[String(tag).toLowerCase().trim()];
+    if (canonical && !result.includes(canonical)) result.push(canonical);
+    return result;
+  }, []);
+  const kulinarikSet = new Set(aiResult.cuisine ? [aiResult.cuisine] : []);
+  kulinarikFromTags.forEach((k) => kulinarikSet.add(k));
+
+  return {
+    title: aiResult.title || '',
+    ingredients: aiResult.ingredients || [],
+    steps: aiResult.steps || [],
+    portionen: aiResult.servings || 4,
+    kochdauer: parseTime(aiResult.prepTime) || parseTime(aiResult.cookTime) || 30,
+    kulinarik: [...kulinarikSet],
+    schwierigkeit: aiResult.difficulty || 3,
+    speisekategorie: aiResult.category || '',
+    ...(authorId ? {authorId} : {}),
+  };
+}
+
+/**
+ * Write a completed background-import result directly to its temp-recipe
+ * Firestore document, so the job finishes even if the client tab that
+ * queued it (RecipeImportQueueContext) was closed before the Cloud
+ * Function call returned. Best-effort: swallows its own errors so a
+ * Firestore write failure never masks the actual AI result from a client
+ * that is still connected and waiting on the callable's response.
+ *
+ * @param {string} jobId - Firestore recipes/{jobId} doc id (the temp recipe)
+ * @param {string} authorId - Owner of the queued job
+ * @param {Object} aiResult - Structured recipe data to persist
+ * @returns {Promise<void>}
+ */
+async function finalizeImportJob(jobId, authorId, aiResult) {
+  if (!jobId) return;
+  try {
+    await admin.firestore().collection('recipes').doc(jobId).update({
+      ...buildRecipeFieldsFromResult(aiResult, authorId),
+      authorId,
+      isTemp: true,
+      importStatus: admin.firestore.FieldValue.delete(),
+      importProgress: admin.firestore.FieldValue.delete(),
+    });
+  } catch (error) {
+    console.error(`finalizeImportJob: failed to write result for job ${jobId}:`, error);
+  }
+}
+
+/**
+ * Mark a background-import job as failed directly in Firestore, mirroring
+ * finalizeImportJob above but for the error path. Best-effort for the same
+ * reason.
+ *
+ * @param {string} jobId - Firestore recipes/{jobId} doc id
+ * @param {string} message - User-facing error message
+ * @returns {Promise<void>}
+ */
+async function failImportJob(jobId, message) {
+  if (!jobId) return;
+  try {
+    await admin.firestore().collection('recipes').doc(jobId).update({
+      importStatus: 'error',
+      importError: message || 'Import fehlgeschlagen',
+    });
+  } catch (error) {
+    console.error(`failImportJob: failed to write error state for job ${jobId}:`, error);
+  }
+}
+
+/**
  * Cloud Function: Scan recipe with AI
  * This is a callable function that can be invoked from the client
  *
  * Input data:
  * - imageBase64: Base64 encoded image (with or without data URL prefix)
  * - language: Language code ('de' or 'en'), defaults to 'de'
+ * - jobId: Optional background-import job id (temp recipe doc). When set,
+ *   the result (or error) is written directly to that Firestore document so
+ *   the import survives the calling tab being closed mid-request.
+ * - authorId: Owner of the job; required for jobId to take effect.
  *
  * Returns: Structured recipe data
  */
@@ -682,7 +776,7 @@ exports.scanRecipeWithAI = onCall(
       timeoutSeconds: 60,
     },
     async (request) => {
-      const {imageBase64, language = 'de', cuisineTypes, mealCategories} = request.data;
+      const {imageBase64, language = 'de', cuisineTypes, mealCategories, jobId, authorId} = request.data;
 
       // Authentication check
       const auth = request.auth;
@@ -732,6 +826,7 @@ exports.scanRecipeWithAI = onCall(
       try {
         const result = await callGeminiAPI(base64Data, mimeType, language, apiKey, cuisineTypes, mealCategories);
         console.log(`AI Scan successful for user ${userId}`);
+        if (jobId) await finalizeImportJob(jobId, authorId || userId, result);
         return {
           ...result,
           remainingScans: rateLimitResult.remaining,
@@ -739,9 +834,204 @@ exports.scanRecipeWithAI = onCall(
         };
       } catch (error) {
         console.error(`AI Scan failed for user ${userId}:`, error);
+        if (jobId) await failImportJob(jobId, error.message);
         throw error;
       }
     }
+);
+
+/**
+ * Maximum number of images accepted by a single scanRecipesWithAI batch call.
+ */
+const MAX_BATCH_IMAGES = 10;
+
+/**
+ * Number of images processed concurrently within one scanRecipesWithAI call.
+ * Mirrors BATCH_CONCURRENCY in src/utils/importRunners.js.
+ */
+const BATCH_IMAGE_CONCURRENCY = 3;
+
+/**
+ * Levenshtein edit distance between two strings (Node-side port of the
+ * browser helper in src/utils/importRunners.js, used for near-duplicate
+ * ingredient/step filtering when merging multi-image scan results).
+ * @param {string} s1
+ * @param {string} s2
+ * @returns {number}
+ */
+function levenshteinDistance(s1, s2) {
+  const costs = [];
+  for (let i = 0; i <= s1.length; i++) {
+    let lastValue = i;
+    for (let j = 0; j <= s2.length; j++) {
+      if (i === 0) {
+        costs[j] = j;
+      } else if (j > 0) {
+        let newValue = costs[j - 1];
+        if (s1.charAt(i - 1) !== s2.charAt(j - 1)) {
+          newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+        }
+        costs[j - 1] = lastValue;
+        lastValue = newValue;
+      }
+    }
+    if (i > 0) costs[s2.length] = lastValue;
+  }
+  return costs[s2.length];
+}
+
+/**
+ * @param {string} s1
+ * @param {string} s2
+ * @returns {number} Similarity ratio between 0 and 1
+ */
+function stringSimilarity(s1, s2) {
+  const longer = s1.length > s2.length ? s1 : s2;
+  const shorter = s1.length > s2.length ? s2 : s1;
+  if (longer.length === 0) return 1.0;
+  const editDistance = levenshteinDistance(longer, shorter);
+  return (longer.length - editDistance) / longer.length;
+}
+
+/**
+ * Remove near-duplicate strings (similarity > 0.8) from a list, keeping the
+ * first occurrence of each. Node-side port of the browser helper used to
+ * merge ingredients/steps collected from multiple scanned images.
+ * @param {string[]} items
+ * @returns {string[]}
+ */
+function removeDuplicateStrings(items) {
+  if (!items || items.length === 0) return [];
+  const unique = [];
+  for (const item of items) {
+    const normalized = item.toLowerCase().trim();
+    const isDuplicate = unique.some(
+        (existing) => stringSimilarity(existing.toLowerCase().trim(), normalized) > 0.8,
+    );
+    if (!isDuplicate) unique.push(item);
+  }
+  return unique;
+}
+
+/**
+ * Combine multiple per-image AI OCR results into one recipe. Node-side port
+ * of mergePhotoAiResults in src/utils/importRunners.js.
+ * @param {Array<Object>} results - Per-image results, each possibly {error}
+ * @returns {Object} Merged recipe data
+ */
+function mergePhotoAiResultsServer(results) {
+  const validResults = results.filter((r) => r && !r.error);
+  if (validResults.length === 0) {
+    throw new HttpsError('invalid-argument', 'Keine gültigen OCR-Ergebnisse gefunden');
+  }
+
+  const merged = {...validResults[0]};
+  merged.ingredients = removeDuplicateStrings(validResults.flatMap((r) => r.ingredients || []));
+  merged.steps = removeDuplicateStrings(validResults.flatMap((r) => r.steps || []));
+  merged.tags = [...new Set(validResults.flatMap((r) => r.tags || []))];
+  merged.notes = validResults.map((r) => r.notes).filter((n) => n && n.trim()).join('\n\n') || merged.notes;
+  merged.servings = merged.servings || validResults.find((r) => r.servings)?.servings;
+  merged.prepTime = merged.prepTime || validResults.find((r) => r.prepTime)?.prepTime;
+  merged.cookTime = merged.cookTime || validResults.find((r) => r.cookTime)?.cookTime;
+  merged.difficulty = merged.difficulty || validResults.find((r) => r.difficulty)?.difficulty;
+  merged.cuisine = merged.cuisine || validResults.find((r) => r.cuisine)?.cuisine;
+  merged.category = merged.category || validResults.find((r) => r.category)?.category;
+
+  return merged;
+}
+
+/**
+ * Cloud Function: Batch-scan multiple recipe photos with AI in one call.
+ * Replaces N separate scanRecipeWithAI calls from the client for multi-image
+ * Foto-Scan imports so the whole batch (concurrent OCR + merge) runs
+ * server-side and can finalize the background-import job even if the
+ * calling tab is closed before all images finish.
+ *
+ * Input data:
+ * - images: string[]   Required – base64-encoded images (1..MAX_BATCH_IMAGES)
+ * - language: string    Optional – 'de' or 'en', defaults to 'de'
+ * - jobId: string        Optional – background-import job id (temp recipe doc)
+ * - authorId: string     Optional – owner of the job; required for jobId to take effect
+ *
+ * Returns: Merged structured recipe data (same shape as scanRecipeWithAI)
+ */
+exports.scanRecipesWithAI = onCall(
+    {
+      secrets: [geminiApiKey],
+      maxInstances: 10,
+      memory: '1GiB',
+      timeoutSeconds: 180,
+    },
+    async (request) => {
+      const {images, language = 'de', cuisineTypes, mealCategories, jobId, authorId} = request.data;
+
+      const auth = request.auth;
+      if (!auth) {
+        throw new HttpsError('unauthenticated', 'You must be logged in to use AI recipe scanning');
+      }
+
+      const userId = auth.uid;
+      const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
+      const isAdmin = auth.token.admin === true;
+      const isModerator = !isAdmin && await isModeratorUser(userId);
+
+      if (!Array.isArray(images) || images.length === 0) {
+        throw new HttpsError('invalid-argument', 'images must be a non-empty array');
+      }
+      if (images.length > MAX_BATCH_IMAGES) {
+        throw new HttpsError('invalid-argument', `A maximum of ${MAX_BATCH_IMAGES} images is supported per batch`);
+      }
+      if (!['de', 'en'].includes(language)) {
+        throw new HttpsError('invalid-argument', 'Language must be "de" or "en"');
+      }
+
+      const apiKey = geminiApiKey.value();
+      if (!apiKey) {
+        console.error('GEMINI_API_KEY secret not configured');
+        throw new HttpsError('failed-precondition', 'AI service not configured. Please contact administrator.');
+      }
+
+      console.log(`Batch AI Scan request from user ${userId}: ${images.length} images`);
+
+      const results = new Array(images.length);
+      let lastRateLimit = null;
+      let nextIndex = 0;
+      const worker = async () => {
+        while (nextIndex < images.length) {
+          const i = nextIndex++;
+          try {
+            const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin, isModerator);
+            lastRateLimit = rateLimitResult;
+            if (!rateLimitResult.allowed) {
+              const limit = getRateLimit(isAdmin, isAuthenticated, isModerator);
+              throw new Error(`Tageslimit erreicht (${limit}/${limit} Scans). Versuche es morgen erneut oder nutze Standard-OCR.`);
+            }
+            const {mimeType, base64Data} = validateImageData(images[i]);
+            results[i] = await callGeminiAPI(base64Data, mimeType, language, apiKey, cuisineTypes, mealCategories);
+          } catch (error) {
+            results[i] = {error: error.message};
+          }
+        }
+      };
+
+      const workerCount = Math.min(BATCH_IMAGE_CONCURRENCY, images.length);
+      await Promise.all(Array.from({length: workerCount}, worker));
+
+      try {
+        const merged = mergePhotoAiResultsServer(results);
+        console.log(`Batch AI Scan successful for user ${userId}`);
+        if (jobId) await finalizeImportJob(jobId, authorId || userId, merged);
+        return {
+          ...merged,
+          remainingScans: lastRateLimit?.remaining,
+          dailyLimit: lastRateLimit?.limit,
+        };
+      } catch (error) {
+        console.error(`Batch AI Scan failed for user ${userId}:`, error);
+        if (jobId) await failImportJob(jobId, error.message);
+        throw error;
+      }
+    },
 );
 
 /**
@@ -979,7 +1269,7 @@ exports.processHtmlWithAI = onCall(
       timeoutSeconds: 60,
     },
     async (request) => {
-      const {rawHtml, language = 'de', cuisineTypes, mealCategories} = request.data;
+      const {rawHtml, language = 'de', cuisineTypes, mealCategories, jobId, authorId} = request.data;
 
       // Authentication check
       const auth = request.auth;
@@ -1033,6 +1323,7 @@ exports.processHtmlWithAI = onCall(
       try {
         const result = await callGeminiTextAPI(rawHtml, language, apiKey, cuisineTypes, mealCategories);
         console.log(`HTML processing successful for user ${userId}`);
+        if (jobId) await finalizeImportJob(jobId, authorId || userId, result);
         return {
           ...result,
           remainingScans: rateLimitResult.remaining,
@@ -1040,6 +1331,7 @@ exports.processHtmlWithAI = onCall(
         };
       } catch (error) {
         console.error(`HTML processing failed for user ${userId}:`, error);
+        if (jobId) await failImportJob(jobId, error.message);
         throw error;
       }
     },
@@ -1088,7 +1380,7 @@ exports.scrapeInstagramReel = onCall(
       timeoutSeconds: 180,
     },
     async (request) => {
-      const {url, language = 'de', cuisineTypes, mealCategories} = request.data;
+      const {url, language = 'de', cuisineTypes, mealCategories, jobId, authorId} = request.data;
 
       // Authentication check
       const auth = request.auth;
@@ -1330,6 +1622,7 @@ exports.scrapeInstagramReel = onCall(
         );
 
         console.log(`Instagram Reel import successful for user ${userId}`);
+        if (jobId) await finalizeImportJob(jobId, authorId || userId, result);
         return {
           ...result,
           remainingScans: rateLimitResult.remaining,
@@ -1346,22 +1639,21 @@ exports.scrapeInstagramReel = onCall(
         }
 
         if (error instanceof HttpsError) {
+          if (jobId) await failImportJob(jobId, error.message);
           throw error;
         }
 
         console.error(`Instagram Reel scrape failed for user ${userId}:`, error);
 
         if (error.message && error.message.includes('timeout')) {
-          throw new HttpsError(
-              'deadline-exceeded',
-              'Die Instagram-Seite hat zu lange gebraucht. Bitte versuche es erneut.',
-          );
+          const message = 'Die Instagram-Seite hat zu lange gebraucht. Bitte versuche es erneut.';
+          if (jobId) await failImportJob(jobId, message);
+          throw new HttpsError('deadline-exceeded', message);
         }
 
-        throw new HttpsError(
-            'internal',
-            'Instagram-Import fehlgeschlagen: ' + error.message,
-        );
+        const message = 'Instagram-Import fehlgeschlagen: ' + error.message;
+        if (jobId) await failImportJob(jobId, message);
+        throw new HttpsError('internal', message);
       }
     },
 );
@@ -2175,7 +2467,7 @@ exports.importRecipeCallable = onCall(
       invoker: 'public',
     },
     async (request) => {
-      const {url, cuisineTypes, mealCategories} = request.data;
+      const {url, cuisineTypes, mealCategories, jobId, authorId} = request.data;
 
       const auth = request.auth;
       if (!auth) {
@@ -2214,17 +2506,24 @@ exports.importRecipeCallable = onCall(
       }
 
       try {
-        return await runImportFromUrl(url, {
+        const result = await runImportFromUrl(url, {
           apiKey,
           cuisineTypes,
           mealCategories,
           source: 'callable',
           userId,
         });
+        if (jobId) await finalizeImportJob(jobId, authorId || userId, result);
+        return result;
       } catch (error) {
-        if (error instanceof HttpsError) throw error;
+        if (error instanceof HttpsError) {
+          if (jobId) await failImportJob(jobId, error.message);
+          throw error;
+        }
         console.error(`importRecipeCallable failed for user ${userId}:`, error);
-        throw new HttpsError('internal', 'Import failed: ' + error.message);
+        const message = 'Import failed: ' + error.message;
+        if (jobId) await failImportJob(jobId, message);
+        throw new HttpsError('internal', message);
       }
     },
 );

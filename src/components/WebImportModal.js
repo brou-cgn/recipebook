@@ -45,7 +45,7 @@ function WebImportModal({ onCancel, initialUrl = '', authorId = '', userId = '',
       label: normalizedUrl,
       userId,
       context: importContext,
-      run: (onProgress) => runWebImport(normalizedUrl, authorId, onProgress),
+      run: (onProgress, jobMeta) => runWebImport(normalizedUrl, authorId, onProgress, jobMeta),
       source: { type: 'web', url: normalizedUrl, authorId },
     });
 

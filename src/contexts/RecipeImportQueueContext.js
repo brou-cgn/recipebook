@@ -39,15 +39,19 @@ async function buildImportSourceSnapshot(source) {
 // Reconstructs the `run` function an import job was originally queued with,
 // from its persisted importSource — used to restart a job that is stuck
 // waiting (e.g. its owning tab was closed/reloaded before it could finish).
+// `run` receives (onProgress, jobMeta) — see processQueue below for how
+// jobMeta ({jobId, authorId}) is supplied on every attempt, fresh or
+// restarted, so the underlying Cloud Function call can finalize the job
+// directly in Firestore and survive this tab being closed again.
 function buildRunFromSource(source) {
   if (!source) return null;
   switch (source.type) {
     case 'web':
-      return (onProgress) => runWebImport(source.url, source.authorId, onProgress);
+      return (onProgress, jobMeta) => runWebImport(source.url, source.authorId, onProgress, jobMeta);
     case 'universal':
-      return (onProgress) => runUniversalImport({ images: source.images, text: source.text, url: source.url }, onProgress);
+      return (onProgress, jobMeta) => runUniversalImport({ images: source.images, text: source.text, url: source.url }, onProgress, jobMeta);
     case 'photo':
-      return (onProgress) => runPhotoScanImport(source.images, source.language, onProgress);
+      return (onProgress, jobMeta) => runPhotoScanImport(source.images, source.language, onProgress, jobMeta);
     default:
       return null;
   }
@@ -144,7 +148,10 @@ export function RecipeImportQueueProvider({ userId, children }) {
         }
         patchJob(job.id, { importStatus: 'processing' });
         try {
-          const recipe = await job.run((progress, label) => patchProgress(job.id, progress, label));
+          const recipe = await job.run(
+            (progress, label) => patchProgress(job.id, progress, label),
+            { jobId: job.id, authorId: job.userId },
+          );
           if (cancelledJobsRef.current.has(job.id)) {
             // Cancelled (or superseded by a restart) while running — the
             // recognition finished, but nobody is waiting on this result

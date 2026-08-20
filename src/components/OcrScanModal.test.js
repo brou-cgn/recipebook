@@ -171,7 +171,11 @@ describe('OcrScanModal', () => {
     });
     fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
-    await expect(runQueuedJob()).rejects.toThrow('Keine gültigen OCR-Ergebnisse gefunden');
+    // A single-image scan now calls recognizeRecipeWithAI directly (see
+    // runPhotoScanImport) instead of always going through a merge step, so
+    // its rejection surfaces as-is rather than being flattened into the
+    // generic "no valid OCR results" message multi-image merges produce.
+    await expect(runQueuedJob()).rejects.toThrow('OCR processing failed');
   }, OCR_TIMEOUT);
 
   test('modal queues an immediate scan and closes when initialImage is provided', async () => {
@@ -231,7 +235,12 @@ describe('OcrScanModal', () => {
     const aiCall = recognizeRecipeWithAI.mock.calls[0];
     expect(aiCall).toHaveLength(2);
     expect(aiCall[1]).toHaveProperty('onProgress');
-    expect(aiCall[1].onProgress).toBeInstanceOf(Function);
+    // A single-image scan now forwards the queue's progress callback to
+    // recognizeRecipeWithAI directly (see runPhotoScanImport) instead of
+    // wrapping it in a local closure, so `onProgress` here is the same
+    // jest.fn() passed to job.run() — `typeof` avoids the jsdom/jest-mock
+    // realm mismatch that `toBeInstanceOf(Function)` hits on that value.
+    expect(typeof aiCall[1].onProgress).toBe('function');
   });
 
   test('queued job adds vegetarisch and vegan tags to kulinarik', async () => {

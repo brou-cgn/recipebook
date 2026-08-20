@@ -200,9 +200,11 @@ export const isInstagramReelUrl = isInstagramUrl;
  *
  * @param {string} url - Instagram Reel URL
  * @param {Function} [onProgress] - Optional progress callback (0–100)
+ * @param {{jobId?: string, authorId?: string}} [jobMeta] - Background-import
+ *   job to finalize server-side so it survives the tab being closed mid-import.
  * @returns {Promise<Object>} Structured recipe data
  */
-export async function importInstagramReel(url, onProgress = null) {
+export async function importInstagramReel(url, onProgress = null, jobMeta = null) {
   const normalizedUrl = normalizeImportedUrl(url);
 
   if (!isInstagramUrl(normalizedUrl)) {
@@ -243,6 +245,8 @@ export async function importInstagramReel(url, onProgress = null) {
       language: 'de',
       cuisineTypes,
       mealCategories,
+      jobId: jobMeta?.jobId,
+      authorId: jobMeta?.authorId,
     });
 
     clearInterval(progressInterval);
@@ -379,9 +383,14 @@ export function extractTextFromHtml(html) {
  *
  * @param {string} url - A recipeImportPage URL (validated by isRecipeImportPageUrl)
  * @param {Function} [onProgress] - Optional progress callback (0–100)
+ * @param {{jobId?: string, authorId?: string}} [jobMeta] - Background-import
+ *   job to finalize server-side. Only honored on the raw-HTML branch below
+ *   (processHtmlWithGemini); the JSON-LD/canvas-vision branch can still fall
+ *   back to local text parsing on AI failure, so it isn't wired up as the
+ *   job's authoritative final step.
  * @returns {Promise<Object>} Structured recipe data
  */
-export async function parseRecipeImportPage(url, onProgress = null) {
+export async function parseRecipeImportPage(url, onProgress = null, jobMeta = null) {
   if (onProgress) onProgress(10);
 
   let response;
@@ -448,6 +457,7 @@ export async function parseRecipeImportPage(url, onProgress = null) {
     try {
       aiResult = await processHtmlWithGemini(cleanedText, 'de',
         onProgress ? (p) => onProgress(50 + Math.round(p * 0.5)) : null,
+        jobMeta,
       );
     } catch (htmlAiError) {
       throw new Error(
@@ -768,9 +778,11 @@ export function jsonLdToText(candidate) {
  *
  * @param {string} url - The recipe URL to import
  * @param {Function} [onProgress] - Optional progress callback (0–100)
+ * @param {{jobId?: string, authorId?: string}} [jobMeta] - Background-import
+ *   job to finalize server-side so it survives the tab being closed mid-import.
  * @returns {Promise<Object>} Structured recipe data
  */
-export async function importRecipeFromUrl(url, onProgress = null) {
+export async function importRecipeFromUrl(url, onProgress = null, jobMeta = null) {
   const normalizedUrl = normalizeImportedUrl(url);
 
   if (onProgress) onProgress(10);
@@ -806,6 +818,8 @@ export async function importRecipeFromUrl(url, onProgress = null) {
       url: normalizedUrl,
       cuisineTypes,
       mealCategories,
+      jobId: jobMeta?.jobId,
+      authorId: jobMeta?.authorId,
     });
 
     clearInterval(progressInterval);

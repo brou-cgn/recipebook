@@ -7,7 +7,7 @@ import {
   captureWebsiteScreenshot,
 } from './webImportService';
 import { buildRecipeFromAiResult } from './ocrParser';
-import { recognizeRecipeWithAI } from './aiOcrService';
+import { recognizeRecipeWithAI, scanRecipesWithAI } from './aiOcrService';
 
 // Max number of images processed at the same time during a multi-image
 // import/scan. Images are independent OCR calls, so processing several in
@@ -21,18 +21,24 @@ const BATCH_CONCURRENCY = 3;
 // the `run` function to enqueueImportJob() from WebImportModal, and
 // reconstructed identically by RecipeImportQueueContext when restarting a
 // job whose importSource was persisted to Firestore.
-export async function runWebImport(normalizedUrl, authorId, onProgress) {
+//
+// jobMeta ({jobId, authorId}), when supplied by RecipeImportQueueContext,
+// lets the Cloud Function write its result directly to the queued temp
+// recipe document — so the import still finishes even if this tab is
+// closed before the call returns. See RecipeImportQueueContext for how
+// jobMeta is threaded through.
+export async function runWebImport(normalizedUrl, authorId, onProgress, jobMeta) {
   let result;
 
   if (isInstagramUrl(normalizedUrl)) {
     // Instagram path (post, reel, or IGTV) – extract caption and page text with Puppeteer + Gemini
-    result = await importInstagramReel(normalizedUrl, onProgress);
+    result = await importInstagramReel(normalizedUrl, onProgress, jobMeta);
   } else if (isRecipeImportPageUrl(normalizedUrl)) {
     // Direct HTML parsing path – no screenshot or AI needed
-    result = await parseRecipeImportPage(normalizedUrl, onProgress);
+    result = await parseRecipeImportPage(normalizedUrl, onProgress, jobMeta);
   } else {
     // Multi-step import: JSON-LD → Text+Gemini → Screenshot+Vision
-    result = await importRecipeFromUrl(normalizedUrl, onProgress);
+    result = await importRecipeFromUrl(normalizedUrl, onProgress, jobMeta);
   }
 
   return buildRecipeFromAiResult(result, authorId);
@@ -79,8 +85,17 @@ function mergeUniversalAiResults(results) {
 // Runs recognition for a combination of images/text/url and returns the
 // merged recipe. Passed as the `run` function to enqueueImportJob() from
 // UniversalImportModal, and reconstructed identically on restart.
-export async function runUniversalImport({ images, text, url }, onProgress) {
+//
+// jobMeta ({jobId, authorId}) lets the underlying Cloud Function call write
+// its result directly to the queued temp recipe document, so the import
+// survives this tab being closed mid-run. That's only safe when exactly one
+// content leg (url XOR text XOR images) was submitted — with several legs,
+// the final recipe only exists after mergeUniversalAiResults() below runs
+// client-side, so soleLegMeta stays null and none of them finalize the job.
+export async function runUniversalImport({ images, text, url }, onProgress, jobMeta) {
   const results = [];
+  const legCount = (url.trim() ? 1 : 0) + (text.trim() ? 1 : 0) + (images.length > 0 ? 1 : 0);
+  const soleLegMeta = legCount === 1 ? jobMeta : null;
 
   if (url.trim()) {
     const screenshotBase64 = await captureWebsiteScreenshot(url.trim(), (prog) => {
@@ -92,6 +107,7 @@ export async function runUniversalImport({ images, text, url }, onProgress) {
         language: 'de',
         provider: 'gemini',
         onProgress: (prog) => onProgress(50 + Math.round(prog * 0.5)),
+        jobMeta: soleLegMeta,
       });
       results.push(result);
     } catch (err) {
@@ -136,6 +152,7 @@ export async function runUniversalImport({ images, text, url }, onProgress) {
         language: 'de',
         provider: 'gemini',
         onProgress: (prog) => onProgress(prog),
+        jobMeta: soleLegMeta,
       });
       results.push(result);
     } catch (err) {
@@ -143,13 +160,36 @@ export async function runUniversalImport({ images, text, url }, onProgress) {
     }
   }
 
-  if (images.length > 0) {
+  if (images.length === 1) {
+    onProgress(0, 'Analysiere Bild...');
+    try {
+      const result = await recognizeRecipeWithAI(images[0], {
+        language: 'de',
+        provider: 'gemini',
+        onProgress: (prog) => onProgress(prog),
+        jobMeta: soleLegMeta,
+      });
+      results.push(result);
+    } catch (err) {
+      results.push({ error: err.message });
+    }
+  } else if (images.length > 1 && soleLegMeta) {
+    // Sole leg, several images: run the whole batch (concurrent OCR + merge)
+    // server-side in one call so it can still finalize the job if this tab
+    // closes before every image finishes — see scanRecipesWithAI.
+    try {
+      const merged = await scanRecipesWithAI(images, 'de', onProgress, soleLegMeta);
+      results.push(merged);
+    } catch (err) {
+      results.push({ error: err.message });
+    }
+  } else if (images.length > 1) {
     const imageResults = new Array(images.length);
     const progressPerImage = new Array(images.length).fill(0);
 
     const updateOverallProgress = () => {
       const sum = progressPerImage.reduce((a, b) => a + b, 0);
-      onProgress(Math.round(sum / images.length), images.length === 1 ? 'Analysiere Bild...' : `Analysiere ${images.length} Bilder...`);
+      onProgress(Math.round(sum / images.length), `Analysiere ${images.length} Bilder...`);
     };
 
     let nextIndex = 0;
@@ -184,124 +224,26 @@ export async function runUniversalImport({ images, text, url }, onProgress) {
   return buildRecipeFromAiResult(merged);
 }
 
-// Remove duplicate strings using Levenshtein similarity
-function stringSimilarity(s1, s2) {
-  const longer = s1.length > s2.length ? s1 : s2;
-  const shorter = s1.length > s2.length ? s2 : s1;
-  if (longer.length === 0) return 1.0;
-  const editDistance = levenshteinDistance(longer, shorter);
-  return (longer.length - editDistance) / longer.length;
-}
-
-function levenshteinDistance(s1, s2) {
-  const costs = [];
-  for (let i = 0; i <= s1.length; i++) {
-    let lastValue = i;
-    for (let j = 0; j <= s2.length; j++) {
-      if (i === 0) {
-        costs[j] = j;
-      } else if (j > 0) {
-        let newValue = costs[j - 1];
-        if (s1.charAt(i - 1) !== s2.charAt(j - 1)) {
-          newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
-        }
-        costs[j - 1] = lastValue;
-        lastValue = newValue;
-      }
-    }
-    if (i > 0) costs[s2.length] = lastValue;
-  }
-  return costs[s2.length];
-}
-
-function removeDuplicates(items) {
-  if (!items || items.length === 0) return [];
-  const unique = [];
-  for (const item of items) {
-    const normalized = item.toLowerCase().trim();
-    const isDuplicate = unique.some(existing =>
-      stringSimilarity(existing.toLowerCase().trim(), normalized) > 0.8
-    );
-    if (!isDuplicate) {
-      unique.push(item);
-    }
-  }
-  return unique;
-}
-
-// Combine multiple per-image AI OCR results into one recipe
-function mergePhotoAiResults(results) {
-  const validResults = results.filter(r => !r.error);
-  if (validResults.length === 0) {
-    throw new Error('Keine gültigen OCR-Ergebnisse gefunden');
+// Runs AI OCR on a batch of images and returns the merged recipe. Passed as
+// the `run` function to enqueueImportJob() from OcrScanModal, and
+// reconstructed identically on restart.
+//
+// A single image is scanned directly so the one Cloud Function call can
+// finalize the queued job (jobMeta) server-side on its own. Several images
+// are handed to the scanRecipesWithAI batch function instead, which runs the
+// concurrent per-image OCR and the merge server-side in one call — both
+// paths survive this tab being closed before the scan finishes.
+export async function runPhotoScanImport(images, language, onProgress, jobMeta) {
+  if (images.length === 1) {
+    const result = await recognizeRecipeWithAI(images[0], {
+      language,
+      provider: 'gemini',
+      onProgress,
+      jobMeta,
+    });
+    return buildRecipeFromAiResult(result);
   }
 
-  const merged = { ...validResults[0] };
-
-  const allIngredients = validResults.flatMap(r => r.ingredients || []);
-  merged.ingredients = removeDuplicates(allIngredients);
-
-  const allSteps = validResults.flatMap(r => r.steps || []);
-  merged.steps = removeDuplicates(allSteps);
-
-  const allTags = validResults.flatMap(r => r.tags || []);
-  merged.tags = [...new Set(allTags)];
-
-  const allNotes = validResults
-    .map(r => r.notes)
-    .filter(n => n && n.trim())
-    .join('\n\n');
-  merged.notes = allNotes || merged.notes;
-
-  merged.servings = merged.servings || validResults.find(r => r.servings)?.servings;
-  merged.prepTime = merged.prepTime || validResults.find(r => r.prepTime)?.prepTime;
-  merged.cookTime = merged.cookTime || validResults.find(r => r.cookTime)?.cookTime;
-  merged.difficulty = merged.difficulty || validResults.find(r => r.difficulty)?.difficulty;
-  merged.cuisine = merged.cuisine || validResults.find(r => r.cuisine)?.cuisine;
-  merged.category = merged.category || validResults.find(r => r.category)?.category;
-
-  return merged;
-}
-
-// Runs AI OCR on a batch of images (concurrently, up to BATCH_CONCURRENCY at
-// once) and returns the merged recipe. Passed as the `run` function to
-// enqueueImportJob() from OcrScanModal, and reconstructed identically on
-// restart.
-export async function runPhotoScanImport(images, language, onProgress) {
-  const total = images.length;
-  const results = new Array(total);
-  const progressPerImage = new Array(total).fill(0);
-
-  const updateOverall = () => {
-    const sum = progressPerImage.reduce((a, b) => a + b, 0);
-    onProgress(Math.round(sum / total));
-  };
-
-  let nextIndex = 0;
-  const worker = async () => {
-    while (nextIndex < total) {
-      const i = nextIndex++;
-      try {
-        const result = await recognizeRecipeWithAI(images[i], {
-          language,
-          provider: 'gemini',
-          onProgress: (progress) => {
-            progressPerImage[i] = progress;
-            updateOverall();
-          },
-        });
-        results[i] = result;
-      } catch (err) {
-        results[i] = { error: err.message };
-      }
-      progressPerImage[i] = 100;
-      updateOverall();
-    }
-  };
-
-  const workerCount = Math.min(BATCH_CONCURRENCY, total);
-  await Promise.all(Array.from({ length: workerCount }, worker));
-
-  const merged = mergePhotoAiResults(results);
+  const merged = await scanRecipesWithAI(images, language, onProgress, jobMeta);
   return buildRecipeFromAiResult(merged);
 }
