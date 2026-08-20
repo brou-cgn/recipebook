@@ -110,6 +110,11 @@
  * position as the full bar but inset horizontally so it doesn't overlap the
  * existing per-page corner FABs (filter/favorites on the left, add on the
  * right) — those stay exactly where they already are.
+ *
+ * Fixed height (rather than sizing to the label's rendered content) so the
+ * icon's distance from the container top never depends on label line-height
+ * rounding — it stays pinned at the same offset from the viewport bottom as
+ * the full bar's icon, matching --bottom-nav-min-height's deterministic role.
  */
 .bottom-navigation-pill {
   position: fixed;
@@ -118,6 +123,7 @@
   bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   z-index: 1200;
   display: none;
+  height: 56px;
   border-radius: 999px;
   background: #ffffff;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.14);
@@ -141,6 +147,8 @@
 
 .bottom-navigation-pill__rail {
   display: flex;
+  align-items: flex-start;
+  height: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
