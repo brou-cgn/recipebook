@@ -1017,7 +1017,7 @@ function App() {
         if (wasTempReview) {
           handledTempReviewIdsRef.current.add(editingRecipe.id);
         }
-        const { id, ...updates } = recipe;
+        const { id, selectedGroupId, ...updates } = recipe;
 
         // Automatically clear WhatsApp thumbnail when the default image changes,
         // so it gets regenerated from the new default image on the next share.
@@ -1026,17 +1026,53 @@ function App() {
           await deleteRecipeThumbnail(editingRecipe.imageThumbnail);
         }
 
+        // Confirming a pending background import used to go through the "Add
+        // new recipe" branch below (it had no id yet), which is where group
+        // assignment and the share link were applied. Now that the temp doc
+        // already carries an id, this branch runs instead — so re-apply the
+        // same group resolution and auto-share here for a confirmed import.
+        let importGroupType;
+        let importGroupId;
+        const importGroupUpdates = {};
+        if (wasTempReview) {
+          const resolved = resolveRecipeGroupContext({
+            selectedGroupId, activeGroupId, groups, publicGroupId, isCreatingVersion: false,
+          });
+          importGroupId = resolved.groupId;
+          importGroupType = resolved.groupType;
+          if (importGroupId) {
+            importGroupUpdates.groupId = importGroupId;
+            importGroupUpdates.groupType = importGroupType;
+            if (resolved.autoPublish) {
+              importGroupUpdates.publishedToPublic = true;
+            }
+          }
+        }
+
         await updateRecipeInFirestore(
           id,
           {
             ...updates,
+            ...importGroupUpdates,
             ...(shouldClearThumbnail ? { imageThumbnail: deleteField() } : {}),
             ...(editingRecipe.isTemp ? { isTemp: deleteField() } : {}),
           },
           editingRecipe.authorId
         );
 
-        if (!wasTempReview) {
+        if (wasTempReview) {
+          // Auto-share a confirmed import to generate the share link immediately,
+          // mirroring "Add new recipe" — imports never go through the manual
+          // sharing toggle.
+          try {
+            await enableRecipeSharing(id);
+          } catch (shareError) {
+            console.error('Error generating share link:', shareError);
+          }
+          if (importGroupType === 'private' && importGroupId) {
+            notifyPrivateListMembers(importGroupId, id, currentUser.id, 'created');
+          }
+        } else {
           // Build local state: exclude Firestore sentinels so they don't end up in React state
           const nextSelectedRecipe = { ...editingRecipe, ...updates };
           if (shouldClearThumbnail) {
