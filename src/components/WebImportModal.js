@@ -9,14 +9,13 @@ import {
   importInstagramReel,
   importRecipeFromUrl,
 } from '../utils/webImportService';
-import { extractKulinarikFromTags } from '../utils/ocrParser';
+import { buildRecipeFromAiResult } from '../utils/ocrParser';
 
 function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) {
-  const [step, setStep] = useState('url'); // 'url', 'loading', 'result'
+  const [step, setStep] = useState('url'); // 'url', 'loading'
   const [url, setUrl] = useState(() => normalizeImportedUrl(initialUrl));
   const [error, setError] = useState('');
   const [progress, setProgress] = useState(0);
-  const [aiResult, setAiResult] = useState(null);
 
   useEffect(() => {
     setUrl(normalizeImportedUrl(initialUrl));
@@ -65,8 +64,7 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
       }
 
       setProgress(100);
-      setAiResult(result);
-      setStep('result');
+      onImport(buildRecipeFromAiResult(result, authorId));
     } catch (err) {
       console.error('Web import error:', err);
       setError(err.message || 'Fehler beim Importieren der Website');
@@ -77,53 +75,6 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
 
   // Handle URL submission from the form
   const handleSubmit = () => submitUrl(url);
-
-  // Handle import of AI result
-  const handleImport = () => {
-    if (!aiResult) {
-      setError('Keine Daten zum Importieren verfügbar');
-      return;
-    }
-
-    try {
-      // Parse time values more robustly
-      const parseTime = (timeStr) => {
-        if (!timeStr) return 0;
-        const numMatch = String(timeStr).match(/\d+/);
-        return numMatch ? parseInt(numMatch[0], 10) : 0;
-      };
-
-      const kulinarikFromCuisine = aiResult.cuisine ? [aiResult.cuisine] : [];
-      const kulinarikFromTags = extractKulinarikFromTags(aiResult.tags || []);
-      const kulinarikSet = new Set(kulinarikFromCuisine);
-      kulinarikFromTags.forEach(k => kulinarikSet.add(k));
-
-      const recipe = {
-        title: aiResult.title || '',
-        ingredients: aiResult.ingredients || [],
-        steps: aiResult.steps || [],
-        portionen: aiResult.servings || 4,
-        kochdauer: parseTime(aiResult.prepTime) || parseTime(aiResult.cookTime) || 30,
-        kulinarik: [...kulinarikSet],
-        schwierigkeit: aiResult.difficulty || 3,
-        speisekategorie: aiResult.category || '',
-        ...(authorId ? { authorId } : {}),
-      };
-      
-      onImport(recipe);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  // Handle reset
-  const handleReset = () => {
-    setStep('url');
-    setUrl('');
-    setError('');
-    setProgress(0);
-    setAiResult(null);
-  };
 
   // Auto-submit when initialUrl is provided and valid
   useEffect(() => {
@@ -200,67 +151,6 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
             </div>
           )}
 
-          {/* Result Step */}
-          {step === 'result' && aiResult && (
-            <div className="result-section">
-              <p className="web-import-instructions">
-                Analyse abgeschlossen - Überprüfe die erkannten Daten
-              </p>
-
-              <div className="source-url">
-                <strong>Quelle:</strong> <a href={url} target="_blank" rel="noopener noreferrer">{url}</a>
-              </div>
-
-              <h3 className="result-title">{aiResult.title || 'Unbenanntes Rezept'}</h3>
-
-              {(aiResult.servings || aiResult.prepTime || aiResult.cookTime || aiResult.difficulty || aiResult.cuisine || aiResult.category) && (
-                <div className="result-meta">
-                  {aiResult.servings && (
-                    <span className="meta-badge">{aiResult.servings} Portionen</span>
-                  )}
-                  {(aiResult.prepTime || aiResult.cookTime) && (
-                    <span className="meta-badge">{aiResult.prepTime || aiResult.cookTime}</span>
-                  )}
-                  {aiResult.difficulty && (
-                    <span className="meta-badge">Schwierigkeit: {aiResult.difficulty}/5</span>
-                  )}
-                  {aiResult.cuisine && (
-                    <span className="meta-badge">{aiResult.cuisine}</span>
-                  )}
-                  {aiResult.category && (
-                    <span className="meta-badge">{aiResult.category}</span>
-                  )}
-                </div>
-              )}
-
-              {aiResult.ingredients && aiResult.ingredients.length > 0 && (
-                <div className="result-ingredients">
-                  <h4>Zutaten</h4>
-                  <ul>
-                    {aiResult.ingredients.map((ingredient, index) => (
-                      <li key={index}>{ingredient}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {aiResult.steps && aiResult.steps.length > 0 && (
-                <div className="result-steps">
-                  <h4>Zubereitung</h4>
-                  <ol>
-                    {aiResult.steps.map((step, index) => (
-                      <li key={index}>{step}</li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-
-              <button className="new-import-button" onClick={handleReset}>
-                ↻ Neue URL importieren
-              </button>
-            </div>
-          )}
-
           {error && (
             <div className="web-import-error">
               {error}
@@ -276,12 +166,6 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
           {step === 'url' && (
             <button className="submit-button" onClick={handleSubmit}>
               Weiter
-            </button>
-          )}
-
-          {step === 'result' && (
-            <button className="import-button" onClick={handleImport}>
-              Übernehmen
             </button>
           )}
         </div>

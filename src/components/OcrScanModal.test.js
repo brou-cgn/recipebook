@@ -15,7 +15,8 @@ jest.mock('../utils/ocrService', () => ({
 jest.mock('../utils/ocrParser', () => ({
   parseOcrText: jest.fn(),
   parseOcrTextSmart: jest.fn(),
-  extractKulinarikFromTags: jest.requireActual('../utils/ocrParser').extractKulinarikFromTags
+  extractKulinarikFromTags: jest.requireActual('../utils/ocrParser').extractKulinarikFromTags,
+  buildRecipeFromAiResult: jest.requireActual('../utils/ocrParser').buildRecipeFromAiResult
 }));
 
 // Mock the OCR validation
@@ -100,9 +101,11 @@ describe('OcrScanModal', () => {
     // Start analysis
     fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
-    // OCR should complete and show results
+    // OCR should complete and import the recipe directly, without a review step
     await waitFor(() => {
-      expect(screen.getByText('Test Recipe')).toBeInTheDocument();
+      expect(mockOnImport).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Test Recipe' })
+      );
     }, { timeout: OCR_TIMEOUT });
   });
 
@@ -120,12 +123,12 @@ describe('OcrScanModal', () => {
     expect(englishButton).toHaveClass('active');
   });
 
-  test('import button parses OCR text and calls onImport', async () => {
+  test('AI OCR result is imported automatically once analysis completes', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
     const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
-    
+
     fileToBase64.mockResolvedValue('data:image/png;base64,test');
-    
+
     const mockAiResult = {
       title: 'Test Recipe',
       ingredients: ['200g Zutat'],
@@ -133,7 +136,7 @@ describe('OcrScanModal', () => {
       servings: 4,
       prepTime: '30 min'
     };
-    
+
     recognizeRecipeWithAI.mockResolvedValue(mockAiResult);
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
@@ -148,24 +151,19 @@ describe('OcrScanModal', () => {
     });
     fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
+    // Verify AI import was called without any review/confirm step
     await waitFor(() => {
-      expect(screen.getByText('Übernehmen')).toBeInTheDocument();
+      expect(mockOnImport).toHaveBeenCalledWith({
+        title: 'Test Recipe',
+        ingredients: ['200g Zutat'],
+        steps: ['Mix'],
+        portionen: 4,
+        kochdauer: 30,
+        kulinarik: [],
+        schwierigkeit: 3,
+        speisekategorie: ''
+      });
     }, { timeout: OCR_TIMEOUT });
-
-    const importButton = screen.getByText('Übernehmen');
-    fireEvent.click(importButton);
-
-    // Verify AI import was called
-    expect(mockOnImport).toHaveBeenCalledWith({
-      title: 'Test Recipe',
-      ingredients: ['200g Zutat'],
-      steps: ['Mix'],
-      portionen: 4,
-      kochdauer: 30,
-      kulinarik: [],
-      schwierigkeit: 3,
-      speisekategorie: ''
-    });
   });
 
   test('displays error when AI OCR returns empty results', async () => {
@@ -191,64 +189,18 @@ describe('OcrScanModal', () => {
     });
     fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
+    // AI results are imported as-is, even if empty (with defaults) — no review step needed
     await waitFor(() => {
-      expect(screen.getByText('Übernehmen')).toBeInTheDocument();
-    }, { timeout: OCR_TIMEOUT });
-
-    const importButton = screen.getByText('Übernehmen');
-    fireEvent.click(importButton);
-
-    // AI results are imported as-is, even if empty (with defaults)
-    expect(mockOnImport).toHaveBeenCalledWith({
-      title: '',
-      ingredients: [],
-      steps: [],
-      portionen: 4,
-      kochdauer: 30,
-      kulinarik: [],
-      schwierigkeit: 3,
-      speisekategorie: ''
-    });
-  });
-
-  test('editable textarea allows text modification', async () => {
-    const { fileToBase64 } = require('../utils/imageUtils');
-    const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
-    
-    fileToBase64.mockResolvedValue('data:image/png;base64,test');
-    recognizeRecipeWithAI.mockResolvedValue({
-      title: 'Original Text',
-      ingredients: ['Ingredient'],
-      steps: ['Step'],
-      servings: 4
-    });
-
-    render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
-
-    const fileInput = screen.getByLabelText('Bild(er) hochladen');
-    const file = new File(['test'], 'test.png', { type: 'image/png' });
-    fireEvent.change(fileInput, { target: { files: [file] } });
-
-    // Wait for preview step and start analysis
-    await waitFor(() => {
-      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
-
-    await waitFor(() => {
-      expect(screen.getByText('Original Text')).toBeInTheDocument();
-    }, { timeout: OCR_TIMEOUT });
-
-    // Convert to text editing mode
-    const editButton = screen.getByText(/Als Text bearbeiten/i);
-    fireEvent.click(editButton);
-
-    await waitFor(() => {
-      const textarea = screen.getByPlaceholderText('Erkannter Text...');
-      expect(textarea).toBeInTheDocument();
-      
-      fireEvent.change(textarea, { target: { value: 'Modified Text' } });
-      expect(textarea).toHaveValue('Modified Text');
+      expect(mockOnImport).toHaveBeenCalledWith({
+        title: '',
+        ingredients: [],
+        steps: [],
+        portionen: 4,
+        kochdauer: 30,
+        kulinarik: [],
+        schwierigkeit: 3,
+        speisekategorie: ''
+      });
     }, { timeout: OCR_TIMEOUT });
   });
 
@@ -316,61 +268,17 @@ describe('OcrScanModal', () => {
     fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     await waitFor(() => {
-      expect(screen.getByText('Übernehmen')).toBeInTheDocument();
+      expect(mockOnImport).toHaveBeenCalledWith({
+        title: 'Test',
+        ingredients: ['Ingredient'],
+        steps: ['Step'],
+        portionen: 4,
+        kochdauer: 30,
+        kulinarik: [],
+        schwierigkeit: 3,
+        speisekategorie: ''
+      });
     }, { timeout: OCR_TIMEOUT });
-
-    const importButton = screen.getByText('Übernehmen');
-    fireEvent.click(importButton);
-
-    expect(mockOnImport).toHaveBeenCalledWith({
-      title: 'Test',
-      ingredients: ['Ingredient'],
-      steps: ['Step'],
-      portionen: 4,
-      kochdauer: 30,
-      kulinarik: [],
-      schwierigkeit: 3,
-      speisekategorie: ''
-    });
-  });
-
-  test('new scan button is available after OCR completes', async () => {
-    const { fileToBase64 } = require('../utils/imageUtils');
-    const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
-    
-    fileToBase64.mockResolvedValue('data:image/png;base64,test');
-    recognizeRecipeWithAI.mockResolvedValue({
-      title: 'Test Recipe',
-      ingredients: ['Ingredient'],
-      steps: ['Step']
-    });
-
-    render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
-
-    const fileInput = screen.getByLabelText('Bild(er) hochladen');
-    const file = new File(['test'], 'test.png', { type: 'image/png' });
-    fireEvent.change(fileInput, { target: { files: [file] } });
-
-    // Wait for preview step and start analysis
-    await waitFor(() => {
-      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
-
-    // Wait for OCR to complete and results to show
-    await waitFor(() => {
-      expect(screen.getByText('Test Recipe')).toBeInTheDocument();
-    }, { timeout: OCR_TIMEOUT });
-
-    // Convert to text editing mode to see "Neuer Scan" button
-    const editButton = screen.getByText(/Als Text bearbeiten/i);
-    fireEvent.click(editButton);
-
-    // Verify that "Neuer Scan" button exists and is available
-    await waitFor(() => {
-      const newScanButton = screen.getByText(/Neuer Scan/i);
-      expect(newScanButton).toBeInTheDocument();
-    });
   });
 
   test('progress callback is passed to recognizeRecipeWithAI', async () => {
@@ -504,13 +412,13 @@ describe('OcrScanModal', () => {
     });
   });
 
-  test('AI OCR mode processes image with Gemini by default', async () => {
+  test('AI OCR mode processes image with Gemini and imports the result directly', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
     const { isAiOcrAvailable, recognizeRecipeWithAI } = require('../utils/aiOcrService');
-    
+
     fileToBase64.mockResolvedValue('data:image/png;base64,test');
     isAiOcrAvailable.mockReturnValue(true);
-    
+
     const mockAiResult = {
       title: 'AI-erkanntes Rezept',
       servings: 4,
@@ -537,21 +445,23 @@ describe('OcrScanModal', () => {
     });
     fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
-    // Should display AI result after analysis
+    // Should import directly after analysis, without a review step
     await waitFor(() => {
-      expect(screen.getByText('AI-erkanntes Rezept')).toBeInTheDocument();
-      expect(screen.getByText(/200g Pasta/i)).toBeInTheDocument();
-      expect(screen.getByText(/Pasta kochen/i)).toBeInTheDocument();
+      expect(mockOnImport).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'AI-erkanntes Rezept',
+        ingredients: ['200g Pasta', '100g Tomaten'],
+        steps: ['Pasta kochen', 'Mit Tomaten servieren']
+      }));
     }, { timeout: OCR_TIMEOUT });
   });
 
   test('AI result can be imported directly', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
     const { isAiOcrAvailable, recognizeRecipeWithAI } = require('../utils/aiOcrService');
-    
+
     fileToBase64.mockResolvedValue('data:image/png;base64,test');
     isAiOcrAvailable.mockReturnValue(true);
-    
+
     const mockAiResult = {
       title: 'Testrezept',
       servings: 2,
@@ -577,22 +487,17 @@ describe('OcrScanModal', () => {
     fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     await waitFor(() => {
-      expect(screen.getByText('Testrezept')).toBeInTheDocument();
+      expect(mockOnImport).toHaveBeenCalledWith({
+        title: 'Testrezept',
+        ingredients: ['100g Zucker'],
+        steps: ['Zucker schmelzen'],
+        portionen: 2,
+        kochdauer: 20,
+        kulinarik: ['Deutsch'],
+        schwierigkeit: 2,
+        speisekategorie: 'Dessert'
+      });
     }, { timeout: OCR_TIMEOUT });
-
-    const importButton = screen.getByText('Übernehmen');
-    fireEvent.click(importButton);
-
-    expect(mockOnImport).toHaveBeenCalledWith({
-      title: 'Testrezept',
-      ingredients: ['100g Zucker'],
-      steps: ['Zucker schmelzen'],
-      portionen: 2,
-      kochdauer: 20,
-      kulinarik: ['Deutsch'],
-      schwierigkeit: 2,
-      speisekategorie: 'Dessert'
-    });
   });
 
   test('AI result adds vegetarisch and vegan tags to kulinarik', async () => {
@@ -628,15 +533,10 @@ describe('OcrScanModal', () => {
     fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     await waitFor(() => {
-      expect(screen.getByText('Veganer Salat')).toBeInTheDocument();
+      expect(mockOnImport).toHaveBeenCalledWith(expect.objectContaining({
+        kulinarik: expect.arrayContaining(['Mediterran', 'Vegan', 'Vegetarisch'])
+      }));
     }, { timeout: OCR_TIMEOUT });
-
-    const importButton = screen.getByText('Übernehmen');
-    fireEvent.click(importButton);
-
-    expect(mockOnImport).toHaveBeenCalledWith(expect.objectContaining({
-      kulinarik: expect.arrayContaining(['Mediterran', 'Vegan', 'Vegetarisch'])
-    }));
   });
 
   test('AI result does not duplicate kulinarik when tag matches cuisine', async () => {
@@ -672,61 +572,11 @@ describe('OcrScanModal', () => {
     fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     await waitFor(() => {
-      expect(screen.getByText('Veggie Burger')).toBeInTheDocument();
+      expect(mockOnImport).toHaveBeenCalled();
     }, { timeout: OCR_TIMEOUT });
-
-    const importButton = screen.getByText('Übernehmen');
-    fireEvent.click(importButton);
 
     const calledWith = mockOnImport.mock.calls[0][0];
     expect(calledWith.kulinarik.filter(k => k === 'Vegetarisch')).toHaveLength(1);
-  });
-
-  test('AI result can be converted to text for editing', async () => {
-    const { fileToBase64 } = require('../utils/imageUtils');
-    const { isAiOcrAvailable, recognizeRecipeWithAI } = require('../utils/aiOcrService');
-    
-    fileToBase64.mockResolvedValue('data:image/png;base64,test');
-    isAiOcrAvailable.mockReturnValue(true);
-    
-    const mockAiResult = {
-      title: 'Kuchen',
-      servings: 8,
-      prepTime: '45 min',
-      difficulty: 3,
-      cuisine: 'International',
-      category: 'Dessert',
-      ingredients: ['200g Mehl', '100g Zucker'],
-      steps: ['Teig mischen', 'Backen']
-    };
-    recognizeRecipeWithAI.mockResolvedValue(mockAiResult);
-
-    render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
-
-    const fileInput = screen.getByLabelText('Bild(er) hochladen');
-    const file = new File(['test'], 'test.png', { type: 'image/png' });
-    fireEvent.change(fileInput, { target: { files: [file] } });
-
-    // Wait for preview step and start analysis
-    await waitFor(() => {
-      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
-
-    await waitFor(() => {
-      expect(screen.getByText('Kuchen')).toBeInTheDocument();
-    }, { timeout: OCR_TIMEOUT });
-
-    const editButton = screen.getByText(/Als Text bearbeiten/i);
-    fireEvent.click(editButton);
-
-    await waitFor(() => {
-      const textarea = screen.getByPlaceholderText('Erkannter Text...');
-      expect(textarea).toBeInTheDocument();
-      expect(textarea.value).toContain('Kuchen');
-      expect(textarea.value).toContain('200g Mehl');
-      expect(textarea.value).toContain('Teig mischen');
-    });
   });
 
   test('handles AI OCR error gracefully', async () => {
@@ -804,7 +654,7 @@ describe('OcrScanModal', () => {
     }, { timeout: OCR_TIMEOUT });
   });
 
-  test('displays remaining scans info when AI scan succeeds', async () => {
+  test('AI import includes the recipe data even when remainingScans is reported', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
     const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
 
@@ -831,18 +681,9 @@ describe('OcrScanModal', () => {
     fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     await waitFor(() => {
-      expect(screen.getByText('Test Recipe')).toBeInTheDocument();
-    }, { timeout: OCR_TIMEOUT });
-
-    // Reset to upload step to see quota info
-    const editButton = screen.getByText(/Als Text bearbeiten/i);
-    fireEvent.click(editButton);
-
-    const newScanButton = screen.getByText(/Neuer Scan/i);
-    fireEvent.click(newScanButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/3 KI-Scans/i)).toBeInTheDocument();
+      expect(mockOnImport).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Test Recipe' })
+      );
     }, { timeout: OCR_TIMEOUT });
   });
 
@@ -1038,12 +879,12 @@ describe('OcrScanModal', () => {
       // Start analysis
       fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
+      // Should import the recipe directly, without a review step
       await waitFor(() => {
-        expect(screen.getByText('Kamera Rezept')).toBeInTheDocument();
+        expect(mockOnImport).toHaveBeenCalledWith(
+          expect.objectContaining({ title: 'Kamera Rezept' })
+        );
       }, { timeout: OCR_TIMEOUT });
-
-      // Should show import button
-      expect(screen.getByText('Übernehmen')).toBeInTheDocument();
     });
   });
 });

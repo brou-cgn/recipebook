@@ -125,6 +125,38 @@ export function extractKulinarikFromTags(tags) {
 }
 
 /**
+ * Convert an AI OCR/import result (from recognizeRecipeWithAI, web import, etc.)
+ * into the recipe object shape expected by RecipeForm's handleImport().
+ * @param {Object} aiResult - Raw AI result (title, ingredients, steps, servings, ...)
+ * @param {string} [authorId] - Optional author id to attach to the recipe
+ * @returns {Object} - Recipe object ready for onImport()
+ */
+export function buildRecipeFromAiResult(aiResult, authorId = '') {
+  const parseTime = (timeStr) => {
+    if (!timeStr) return 0;
+    const numMatch = String(timeStr).match(/\d+/);
+    return numMatch ? parseInt(numMatch[0], 10) : 0;
+  };
+
+  const kulinarikFromCuisine = aiResult.cuisine ? [aiResult.cuisine] : [];
+  const kulinarikFromTags = extractKulinarikFromTags(aiResult.tags || []);
+  const kulinarikSet = new Set(kulinarikFromCuisine);
+  kulinarikFromTags.forEach(k => kulinarikSet.add(k));
+
+  return {
+    title: aiResult.title || '',
+    ingredients: aiResult.ingredients || [],
+    steps: aiResult.steps || [],
+    portionen: aiResult.servings || 4,
+    kochdauer: parseTime(aiResult.prepTime) || parseTime(aiResult.cookTime) || 30,
+    kulinarik: [...kulinarikSet],
+    schwierigkeit: aiResult.difficulty || 3,
+    speisekategorie: aiResult.category || '',
+    ...(authorId ? { authorId } : {}),
+  };
+}
+
+/**
  * Parse OCR text into structured recipe data
  * @param {string} text - OCR-recognized text
  * @param {string} lang - Language code ('de' or 'en'), optional
