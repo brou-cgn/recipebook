@@ -1,165 +1,11 @@
 import React, { useState, useRef } from 'react';
 import './UniversalImportModal.css';
 import { fileToBase64 } from '../utils/imageUtils';
-import { recognizeRecipeWithAI } from '../utils/aiOcrService';
-import { captureWebsiteScreenshot } from '../utils/webImportService';
-import { buildRecipeFromAiResult } from '../utils/ocrParser';
+import { runUniversalImport } from '../utils/importRunners';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 
 function buildInitialText(title, text) {
   return [title, text].filter(Boolean).join('\n\n');
-}
-
-// Max number of images processed at the same time during a multi-image import.
-// Images are independent OCR calls, so processing several in parallel cuts
-// total wait time roughly to (image count / concurrency) instead of the sum
-// of every individual call, while staying under the per-user rate limit.
-const BATCH_CONCURRENCY = 3;
-
-function mergeAiResults(results) {
-  const validResults = results.filter(r => !r.error);
-  if (validResults.length === 0) {
-    throw new Error('Keine gültigen OCR-Ergebnisse gefunden');
-  }
-
-  const merged = { ...validResults[0] };
-
-  const allIngredients = validResults.flatMap(r => r.ingredients || []);
-  const seenIngredients = new Set();
-  merged.ingredients = allIngredients.filter(ing => {
-    const key = ing.toLowerCase().trim();
-    if (seenIngredients.has(key)) return false;
-    seenIngredients.add(key);
-    return true;
-  });
-
-  merged.steps = validResults.flatMap(r => r.steps || []);
-
-  const allTags = validResults.flatMap(r => r.tags || []);
-  merged.tags = [...new Set(allTags)];
-
-  const allNotes = validResults
-    .map(r => r.notes)
-    .filter(n => n && n.trim())
-    .join('\n\n');
-  merged.notes = allNotes || merged.notes;
-
-  merged.servings = merged.servings || validResults.find(r => r.servings)?.servings;
-  merged.prepTime = merged.prepTime || validResults.find(r => r.prepTime)?.prepTime;
-  merged.cookTime = merged.cookTime || validResults.find(r => r.cookTime)?.cookTime;
-  merged.difficulty = merged.difficulty || validResults.find(r => r.difficulty)?.difficulty;
-  merged.cuisine = merged.cuisine || validResults.find(r => r.cuisine)?.cuisine;
-  merged.category = merged.category || validResults.find(r => r.category)?.category;
-
-  return merged;
-}
-
-// Runs recognition for a combination of images/text/url and returns the
-// merged recipe. Passed as the `run` function to enqueueImportJob() so it
-// executes in the background, after the modal has already closed.
-async function runUniversalImport({ images, text, url }, onProgress) {
-  const results = [];
-
-  if (url.trim()) {
-    const screenshotBase64 = await captureWebsiteScreenshot(url.trim(), (prog) => {
-      onProgress(Math.round(prog * 0.5), 'Lade Website...');
-    });
-    onProgress(50, 'Analysiere Website...');
-    try {
-      const result = await recognizeRecipeWithAI(screenshotBase64, {
-        language: 'de',
-        provider: 'gemini',
-        onProgress: (prog) => onProgress(50 + Math.round(prog * 0.5)),
-      });
-      results.push(result);
-    } catch (err) {
-      results.push({ error: err.message });
-    }
-  }
-
-  if (text.trim()) {
-    onProgress(0, 'Analysiere Text...');
-    // Create a simple canvas image with the text for Gemini to extract from
-    const canvas = document.createElement('canvas');
-    canvas.width = 800;
-    canvas.height = Math.min(4000, Math.max(600, text.split('\n').length * 24 + 80));
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#000000';
-    ctx.font = '18px Arial, sans-serif';
-    const lines = text.split('\n');
-    let y = 40;
-    for (const line of lines) {
-      const words = line.split(' ');
-      let currentLine = '';
-      for (const word of words) {
-        const testLine = currentLine + (currentLine ? ' ' : '') + word;
-        if (ctx.measureText(testLine).width > 760 && currentLine) {
-          ctx.fillText(currentLine, 20, y);
-          y += 26;
-          currentLine = word;
-        } else {
-          currentLine = testLine;
-        }
-      }
-      if (currentLine) {
-        ctx.fillText(currentLine, 20, y);
-        y += 26;
-      }
-    }
-    const textImageBase64 = canvas.toDataURL('image/png');
-    try {
-      const result = await recognizeRecipeWithAI(textImageBase64, {
-        language: 'de',
-        provider: 'gemini',
-        onProgress: (prog) => onProgress(prog),
-      });
-      results.push(result);
-    } catch (err) {
-      results.push({ error: err.message });
-    }
-  }
-
-  if (images.length > 0) {
-    const imageResults = new Array(images.length);
-    const progressPerImage = new Array(images.length).fill(0);
-
-    const updateOverallProgress = () => {
-      const sum = progressPerImage.reduce((a, b) => a + b, 0);
-      onProgress(Math.round(sum / images.length), images.length === 1 ? 'Analysiere Bild...' : `Analysiere ${images.length} Bilder...`);
-    };
-
-    let nextIndex = 0;
-    const processNext = async () => {
-      while (nextIndex < images.length) {
-        const i = nextIndex++;
-        try {
-          const result = await recognizeRecipeWithAI(images[i], {
-            language: 'de',
-            provider: 'gemini',
-            onProgress: (progress) => {
-              progressPerImage[i] = progress;
-              updateOverallProgress();
-            }
-          });
-          imageResults[i] = result;
-        } catch (err) {
-          imageResults[i] = { error: err.message };
-        }
-        progressPerImage[i] = 100;
-        updateOverallProgress();
-      }
-    };
-
-    const workerCount = Math.min(BATCH_CONCURRENCY, images.length);
-    await Promise.all(Array.from({ length: workerCount }, processNext));
-
-    results.push(...imageResults);
-  }
-
-  const merged = mergeAiResults(results);
-  return buildRecipeFromAiResult(merged);
 }
 
 function UniversalImportModal({ onCancel, initialImages = [], initialText = '', initialUrl = '', initialTitle = '', userId = '', importContext = {} }) {
@@ -202,6 +48,7 @@ function UniversalImportModal({ onCancel, initialImages = [], initialText = '', 
       userId,
       context: importContext,
       run: (onProgress) => runUniversalImport(snapshot, onProgress),
+      source: { type: 'universal', images: snapshot.images, text: snapshot.text, url: snapshot.url },
     });
 
     // The import now runs in the background (see the header's progress

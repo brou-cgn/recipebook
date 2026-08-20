@@ -1,137 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './OcrScanModal.css';
-import { buildRecipeFromAiResult } from '../utils/ocrParser';
 import { fileToBase64 } from '../utils/imageUtils';
-import { recognizeRecipeWithAI } from '../utils/aiOcrService';
+import { runPhotoScanImport } from '../utils/importRunners';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 
 const MAX_CAMERA_PHOTOS = 10;
-// Max number of images processed at the same time during a batch scan.
-// Keeps the OCR calls independent (each image is unrelated to the others)
-// while staying well under the Cloud Function's per-user rate limit.
-const BATCH_CONCURRENCY = 3;
-
-// Remove duplicate strings using Levenshtein similarity
-function stringSimilarity(s1, s2) {
-  const longer = s1.length > s2.length ? s1 : s2;
-  const shorter = s1.length > s2.length ? s2 : s1;
-  if (longer.length === 0) return 1.0;
-  const editDistance = levenshteinDistance(longer, shorter);
-  return (longer.length - editDistance) / longer.length;
-}
-
-function levenshteinDistance(s1, s2) {
-  const costs = [];
-  for (let i = 0; i <= s1.length; i++) {
-    let lastValue = i;
-    for (let j = 0; j <= s2.length; j++) {
-      if (i === 0) {
-        costs[j] = j;
-      } else if (j > 0) {
-        let newValue = costs[j - 1];
-        if (s1.charAt(i - 1) !== s2.charAt(j - 1)) {
-          newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
-        }
-        costs[j - 1] = lastValue;
-        lastValue = newValue;
-      }
-    }
-    if (i > 0) costs[s2.length] = lastValue;
-  }
-  return costs[s2.length];
-}
-
-function removeDuplicates(items) {
-  if (!items || items.length === 0) return [];
-  const unique = [];
-  for (const item of items) {
-    const normalized = item.toLowerCase().trim();
-    const isDuplicate = unique.some(existing =>
-      stringSimilarity(existing.toLowerCase().trim(), normalized) > 0.8
-    );
-    if (!isDuplicate) {
-      unique.push(item);
-    }
-  }
-  return unique;
-}
-
-// Combine multiple per-image AI OCR results into one recipe
-function mergeAiResults(results) {
-  const validResults = results.filter(r => !r.error);
-  if (validResults.length === 0) {
-    throw new Error('Keine gültigen OCR-Ergebnisse gefunden');
-  }
-
-  const merged = { ...validResults[0] };
-
-  const allIngredients = validResults.flatMap(r => r.ingredients || []);
-  merged.ingredients = removeDuplicates(allIngredients);
-
-  const allSteps = validResults.flatMap(r => r.steps || []);
-  merged.steps = removeDuplicates(allSteps);
-
-  const allTags = validResults.flatMap(r => r.tags || []);
-  merged.tags = [...new Set(allTags)];
-
-  const allNotes = validResults
-    .map(r => r.notes)
-    .filter(n => n && n.trim())
-    .join('\n\n');
-  merged.notes = allNotes || merged.notes;
-
-  merged.servings = merged.servings || validResults.find(r => r.servings)?.servings;
-  merged.prepTime = merged.prepTime || validResults.find(r => r.prepTime)?.prepTime;
-  merged.cookTime = merged.cookTime || validResults.find(r => r.cookTime)?.cookTime;
-  merged.difficulty = merged.difficulty || validResults.find(r => r.difficulty)?.difficulty;
-  merged.cuisine = merged.cuisine || validResults.find(r => r.cuisine)?.cuisine;
-  merged.category = merged.category || validResults.find(r => r.category)?.category;
-
-  return merged;
-}
-
-// Runs AI OCR on a batch of images (concurrently, up to BATCH_CONCURRENCY at
-// once) and returns the merged recipe. Passed as the `run` function to
-// enqueueImportJob() so it executes in the background, after the modal has
-// already closed.
-async function runPhotoScanImport(images, language, onProgress) {
-  const total = images.length;
-  const results = new Array(total);
-  const progressPerImage = new Array(total).fill(0);
-
-  const updateOverall = () => {
-    const sum = progressPerImage.reduce((a, b) => a + b, 0);
-    onProgress(Math.round(sum / total));
-  };
-
-  let nextIndex = 0;
-  const worker = async () => {
-    while (nextIndex < total) {
-      const i = nextIndex++;
-      try {
-        const result = await recognizeRecipeWithAI(images[i], {
-          language,
-          provider: 'gemini',
-          onProgress: (progress) => {
-            progressPerImage[i] = progress;
-            updateOverall();
-          },
-        });
-        results[i] = result;
-      } catch (err) {
-        results[i] = { error: err.message };
-      }
-      progressPerImage[i] = 100;
-      updateOverall();
-    }
-  };
-
-  const workerCount = Math.min(BATCH_CONCURRENCY, total);
-  await Promise.all(Array.from({ length: workerCount }, worker));
-
-  const merged = mergeAiResults(results);
-  return buildRecipeFromAiResult(merged);
-}
 
 // initialImage: single image that triggers an immediate background scan (takes precedence over initialImages)
 // initialImages: array of base64 images to pre-fill the image-preview step
@@ -161,6 +34,7 @@ function OcrScanModal({ onCancel, initialImage = '', initialImages = [], userId 
       userId,
       context: importContext,
       run: (onProgress) => runPhotoScanImport(images, language, onProgress),
+      source: { type: 'photo', images, language },
     });
     stopCamera();
     onCancel();
