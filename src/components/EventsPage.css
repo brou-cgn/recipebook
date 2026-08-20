@@ -166,10 +166,12 @@
   font-size: 18px;
 }
 
+/* Statuspille sitzt unter Titel und Datumszeile (linksbuendig), damit lange
+   Labels wie "Verbrauch erfasst" den Text nicht mehr umbrechen. */
 .events-card-meta-row {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 12px;
 }
 
@@ -189,35 +191,44 @@
   margin: 4px 0 0;
 }
 
+/* Ein Pillenstil fuer alle Status: die Farbe bleibt das Markengruen, den
+   Status traegt der Fortschrittsbalken. */
 .events-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
   flex-shrink: 0;
-  padding: 4px 10px;
+  padding: 5px 11px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
-  background: #eee;
-  color: #555;
+  background: #f7f8f7;
+  border: 1px solid #dbdfdd;
+  color: #3f4a45;
 }
 
-.events-status-geplant {
-  background: #fff3cd;
-  color: #8a6d1a;
+.events-status-progress {
+  display: flex;
+  gap: 2px;
 }
 
-.events-status-berechnet {
-  background: #dbeafe;
-  color: #1d4f8c;
+.events-status-progress-seg {
+  width: 8px;
+  height: 3px;
+  border-radius: 2px;
+  background: #cfd5d2;
 }
 
-.events-status-eingekauft {
-  background: #ede9fe;
-  color: #5b3fa8;
+.events-status-progress-seg.is-done {
+  background: #2F5D50;
 }
 
-.events-status-verbrauchErfasst {
-  background: #d7f0e3;
-  color: #1c6b46;
+/* Abgeschlossen ("Verbrauch erfasst"): gefuellte Pille ohne Segmente. */
+.events-status-complete {
+  background: #2F5D50;
+  border-color: #2F5D50;
+  color: #f2f6f4;
 }
 
 .events-add-fab-button {
@@ -1462,6 +1473,11 @@
 
   .events-card-meta {
     font-size: 16px;
+  }
+
+  .events-status-badge {
+    font-size: 13px;
+    padding: 6px 12px;
   }
 
   .events-card-drink-summary {

@@ -21,6 +21,39 @@ const STATUS_LABELS = {
   verbrauchErfasst: 'Verbrauch erfasst',
 };
 
+const STATUS_STEPS = {
+  geplant: 1,
+  berechnet: 2,
+  eingekauft: 3,
+  verbrauchErfasst: 4,
+};
+
+const TOTAL_STATUS_STEPS = 4;
+
+// Statuspille als Fortschrittsanzeige: vier Segmente zeigen, wie weit ein Event
+// ist; der Endzustand ("Verbrauch erfasst") wird stattdessen gefuellt gesetzt.
+function StatusBadge({ status }) {
+  const step = STATUS_STEPS[status] || 0;
+  const isComplete = step === TOTAL_STATUS_STEPS;
+  return (
+    <span
+      className={`events-status-badge events-status-${status}${isComplete ? ' events-status-complete' : ''}`}
+    >
+      {!isComplete && step > 0 && (
+        <span className="events-status-progress" aria-hidden="true">
+          {Array.from({ length: TOTAL_STATUS_STEPS }, (_, idx) => (
+            <span
+              key={idx}
+              className={`events-status-progress-seg${idx < step ? ' is-done' : ''}`}
+            />
+          ))}
+        </span>
+      )}
+      {STATUS_LABELS[status] || status}
+    </span>
+  );
+}
+
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
   try {
@@ -124,9 +157,7 @@ function EventCard({ event, ownerName, canManage, onSelect, onDelete, swipeDelet
             {formatDate(event.date)} · {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
             {ownerName ? ` · von ${ownerName}` : ''}
           </p>
-          <span className={`events-status-badge events-status-${event.status}`}>
-            {STATUS_LABELS[event.status] || event.status}
-          </span>
+          <StatusBadge status={event.status} />
         </div>
       </div>
     </div>
@@ -431,9 +462,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
 
         <div className="events-result-card">
           <div className="events-detail-meta">
-            <span className={`events-status-badge events-status-${selectedEvent.status}`}>
-              {STATUS_LABELS[selectedEvent.status] || selectedEvent.status}
-            </span>
+            <StatusBadge status={selectedEvent.status} />
             <span>{formatDate(selectedEvent.date)}</span>
             <span>{selectedEvent.durationHours} Std.</span>
             <span>{EVENT_TYPE_LABELS[selectedEvent.eventType] || selectedEvent.eventType}</span>
