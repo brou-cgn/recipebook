@@ -63,6 +63,19 @@ function buildRunFromSource(source) {
 // processing → error) and the final 100% always write immediately.
 const PROGRESS_WRITE_INTERVAL_MS = 1000;
 
+// A job whose importHeartbeatAt is older than this is considered orphaned —
+// its owning tab was closed/reloaded/backgrounded before finishing — and
+// becomes eligible for automatic recovery (see the orphan-recovery effect
+// below). Comfortably above HEARTBEAT_INTERVAL_MS so a tab that's still
+// alive and actively processing never gets pre-empted by another tab.
+const STALE_JOB_MS = 60000;
+
+// While a job is actively running in this tab, its importHeartbeatAt is
+// refreshed on this interval — independent of progress updates — so a job
+// stuck on a long silent network call (e.g. a slow screenshot capture) still
+// reads as "alive" to other tabs instead of being treated as orphaned.
+const HEARTBEAT_INTERVAL_MS = 20000;
+
 const PENDING_STATUSES = ['queued', 'processing', 'error'];
 const isPendingImport = (tempRecipe) => PENDING_STATUSES.includes(tempRecipe.importStatus);
 
@@ -146,7 +159,10 @@ export function RecipeImportQueueProvider({ userId, children }) {
           queueRef.current.shift();
           continue;
         }
-        patchJob(job.id, { importStatus: 'processing' });
+        patchJob(job.id, { importStatus: 'processing', importHeartbeatAt: Date.now() });
+        const heartbeatInterval = setInterval(() => {
+          patchJob(job.id, { importHeartbeatAt: Date.now() });
+        }, HEARTBEAT_INTERVAL_MS);
         try {
           const recipe = await job.run(
             (progress, label) => patchProgress(job.id, progress, label),
@@ -169,6 +185,7 @@ export function RecipeImportQueueProvider({ userId, children }) {
               isTemp: true,
               importStatus: deleteField(),
               importProgress: deleteField(),
+              importHeartbeatAt: deleteField(),
             });
           }
           delete lastProgressWriteRef.current[job.id];
@@ -180,6 +197,7 @@ export function RecipeImportQueueProvider({ userId, children }) {
             patchJob(job.id, { importStatus: 'error', importError: error?.message || 'Import fehlgeschlagen' });
           }
         } finally {
+          clearInterval(heartbeatInterval);
           queueRef.current.shift();
         }
       }
@@ -196,6 +214,7 @@ export function RecipeImportQueueProvider({ userId, children }) {
           isTemp: true,
           importStatus: 'queued',
           importProgress: 0,
+          importHeartbeatAt: Date.now(),
           ...context,
           ...(importSource ? { importSource } : {}),
         },
@@ -227,30 +246,59 @@ export function RecipeImportQueueProvider({ userId, children }) {
     });
   }, []);
 
-  // Restarts a waiting/failed/running job from its persisted importSource —
-  // this is what makes a job stuck in 'queued'/'error' (e.g. because the tab
-  // that queued it was closed or reloaded, dropping the in-memory queue)
-  // worth recovering from, instead of only being dismissable. Restarting a
-  // 'processing' job supersedes its current attempt (cancelledJobsRef makes
-  // sure the stale result is discarded) and queues a fresh one behind it.
-  const restartJob = useCallback((id) => {
-    const tempRecipe = tempRecipes.find((r) => r.id === id);
-    if (!tempRecipe || !tempRecipe.importSource) return;
+  // Requeues a job from its persisted importSource — shared by the manual
+  // "Neu starten" button (restartJob) and the orphan-recovery effect below.
+  // Restarting a 'processing' job supersedes its current attempt
+  // (cancelledJobsRef makes sure the stale result is discarded) and queues a
+  // fresh one behind it.
+  const queueRestart = useCallback((tempRecipe) => {
     const run = buildRunFromSource(tempRecipe.importSource);
     if (!run) return;
 
     // Only mark the old attempt cancelled if one is actually still
-    // queued/in-flight (queueRef) — e.g. restarting an 'error' job has
-    // nothing left in the queue to supersede, and flagging its id here
+    // queued/in-flight in *this* tab's queueRef — e.g. restarting an
+    // 'error' job, or recovering a job orphaned by a different tab, has
+    // nothing of this tab's own to supersede, and flagging its id here
     // would wrongly cause the freshly-queued attempt below to be discarded
     // by the very first "is this cancelled?" check in processQueue.
-    if (queueRef.current.some((job) => job.id === id)) {
-      cancelledJobsRef.current.add(id);
+    if (queueRef.current.some((job) => job.id === tempRecipe.id)) {
+      cancelledJobsRef.current.add(tempRecipe.id);
     }
-    patchJob(id, { importStatus: 'queued', importProgress: 0, importError: deleteField() });
-    queueRef.current.push({ id, run, context: {}, userId: tempRecipe.authorId });
+    patchJob(tempRecipe.id, { importStatus: 'queued', importProgress: 0, importHeartbeatAt: Date.now(), importError: deleteField() });
+    queueRef.current.push({ id: tempRecipe.id, run, context: {}, userId: tempRecipe.authorId });
     processQueue();
-  }, [tempRecipes, patchJob, processQueue]);
+  }, [patchJob, processQueue]);
+
+  // Restarts a waiting/failed/running job from its persisted importSource —
+  // this is what makes a job stuck in 'queued'/'error' (e.g. because the tab
+  // that queued it was closed or reloaded, dropping the in-memory queue)
+  // worth recovering from, instead of only being dismissable.
+  const restartJob = useCallback((id) => {
+    const tempRecipe = tempRecipes.find((r) => r.id === id);
+    if (!tempRecipe || !tempRecipe.importSource) return;
+    queueRestart(tempRecipe);
+  }, [tempRecipes, queueRestart]);
+
+  // Auto-recovers jobs orphaned by a tab that closed/reloaded/was
+  // backgrounded before finishing: on every Firestore update (including the
+  // first one after mount), any pending job that isn't tracked in *this*
+  // tab's queueRef and whose heartbeat has gone stale is requeued here,
+  // exactly like clicking "Neu starten" — without requiring the user to
+  // notice and click it. 'error' jobs are left alone (the user decides via
+  // the existing restart/dismiss actions); jobs without an importSource
+  // can't be rebuilt at all. Jobs still legitimately being worked on by
+  // another live tab keep a fresh heartbeat and are skipped.
+  useEffect(() => {
+    const now = Date.now();
+    tempRecipes.forEach((tempRecipe) => {
+      if (!isPendingImport(tempRecipe) || tempRecipe.importStatus === 'error') return;
+      if (!tempRecipe.importSource) return;
+      if (queueRef.current.some((job) => job.id === tempRecipe.id)) return;
+      const heartbeat = tempRecipe.importHeartbeatAt || 0;
+      if (now - heartbeat < STALE_JOB_MS) return;
+      queueRestart(tempRecipe);
+    });
+  }, [tempRecipes, queueRestart]);
 
   const value = { jobs, reviewRecipes, enqueueImportJob, dismissJob, restartJob, cancelJob };
 
