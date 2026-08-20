@@ -1937,16 +1937,18 @@ function App() {
     };
     return (
       <NutritionReferenceProvider>
-        <div className="App" style={appBottomNavStyle}>
-          <Header />
-          <Suspense fallback={<ViewLoadingFallback />}>
-            <SharePage
-              shareId={sharePageId}
-              currentUser={currentUser}
-              onClose={handleSharePageClose}
-            />
-          </Suspense>
-        </div>
+        <RecipeImportQueueProvider userId={currentUser?.id}>
+          <div className="App" style={appBottomNavStyle}>
+            <Header />
+            <Suspense fallback={<ViewLoadingFallback />}>
+              <SharePage
+                shareId={sharePageId}
+                currentUser={currentUser}
+                onClose={handleSharePageClose}
+              />
+            </Suspense>
+          </div>
+        </RecipeImportQueueProvider>
       </NutritionReferenceProvider>
     );
   }
@@ -1964,16 +1966,18 @@ function App() {
     };
     return (
       <NutritionReferenceProvider>
-        <div className="App" style={appBottomNavStyle}>
-          <Header />
-          <Suspense fallback={<ViewLoadingFallback />}>
-            <MenuSharePage
-              shareId={menuSharePageId}
-              currentUser={currentUser}
-              onClose={handleMenuSharePageClose}
-            />
-          </Suspense>
-        </div>
+        <RecipeImportQueueProvider userId={currentUser?.id}>
+          <div className="App" style={appBottomNavStyle}>
+            <Header />
+            <Suspense fallback={<ViewLoadingFallback />}>
+              <MenuSharePage
+                shareId={menuSharePageId}
+                currentUser={currentUser}
+                onClose={handleMenuSharePageClose}
+              />
+            </Suspense>
+          </div>
+        </RecipeImportQueueProvider>
       </NutritionReferenceProvider>
     );
   }
