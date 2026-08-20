@@ -434,6 +434,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [selectedPrivateListId, setSelectedPrivateListId] = useState('');
   // AI OCR daily limit state
   const [aiOcrLimitReached, setAiOcrLimitReached] = useState(false);
+  const [aiOcrDailyLimit, setAiOcrDailyLimit] = useState(20);
   // Tracks whether the web import default list pre-selection has been applied
   const webImportListPreselected = useRef(false);
   // FAB button pressed state for animation
@@ -626,12 +627,15 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   useEffect(() => {
     const checkAiOcrLimit = async () => {
       if (currentUser?.id) {
+        // Mirrors the server-side RATE_LIMITS tiers in functions/index.js
+        const limit = currentUser.isAdmin ? 1000 : currentUser.role === 'moderator' ? 50 : 20;
         const count = await getUserAiOcrScanCount(currentUser.id);
-        setAiOcrLimitReached(count >= 20);
+        setAiOcrDailyLimit(limit);
+        setAiOcrLimitReached(count >= limit);
       }
     };
     checkAiOcrLimit();
-  }, [currentUser?.id]);
+  }, [currentUser?.id, currentUser?.isAdmin, currentUser?.role]);
 
   useEffect(() => {
     setImageError(false);
@@ -1305,7 +1309,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                 type="button"
                 className="webimport-button-header"
                 onClick={() => !aiOcrLimitReached && setShowWebImportModal(true)}
-                title={aiOcrLimitReached ? 'KI-OCR Tageslimit erreicht (20/Tag). Import nicht verfügbar.' : 'Rezept von Website importieren'}
+                title={aiOcrLimitReached ? `KI-OCR Tageslimit erreicht (${aiOcrDailyLimit}/Tag). Import nicht verfügbar.` : 'Rezept von Website importieren'}
                 aria-label="Webimport"
                 disabled={aiOcrLimitReached}
               >
@@ -1321,7 +1325,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                 <label
                   htmlFor={aiOcrLimitReached ? undefined : 'ocrImageUpload'}
                   className={`ocr-scan-button-header${aiOcrLimitReached ? ' disabled' : ''}`}
-                  title={aiOcrLimitReached ? 'KI-OCR Tageslimit erreicht (20/Tag). Scan nicht verfügbar.' : 'Rezept mit Kamera scannen'}
+                  title={aiOcrLimitReached ? `KI-OCR Tageslimit erreicht (${aiOcrDailyLimit}/Tag). Scan nicht verfügbar.` : 'Rezept mit Kamera scannen'}
                   aria-label="Rezept mit Kamera scannen"
                   aria-disabled={aiOcrLimitReached}
                   style={{ cursor: aiOcrLimitReached ? 'not-allowed' : 'pointer' }}
