@@ -1,22 +1,17 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { addRecipe as addRecipeToFirestore } from '../utils/recipeFirestore';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { deleteField } from 'firebase/firestore';
 import {
-  subscribeToImportJobs,
-  createImportJob,
-  updateImportJob,
-  deleteImportJob,
-} from '../utils/importJobsFirestore';
+  addRecipe,
+  updateRecipe,
+  deleteRecipe,
+  subscribeToTempRecipes,
+} from '../utils/recipeFirestore';
 
 const RecipeImportQueueContext = createContext(null);
 
-let jobIdCounter = 0;
-function nextJobId() {
-  jobIdCounter += 1;
-  return `import-${Date.now()}-${jobIdCounter}`;
-}
-
 const noopQueue = {
   jobs: [],
+  reviewRecipes: [],
   enqueueImportJob: () => undefined,
   dismissJob: () => {},
 };
@@ -27,53 +22,69 @@ const noopQueue = {
 // processing → error) and the final 100% always write immediately.
 const PROGRESS_WRITE_INTERVAL_MS = 1000;
 
+const PENDING_STATUSES = ['queued', 'processing', 'error'];
+const isPendingImport = (tempRecipe) => PENDING_STATUSES.includes(tempRecipe.importStatus);
+
 /**
  * Runs recipe-import recognition (web import, AI photo OCR, ...) as a
  * sequential background queue: enqueueImportJob() takes an async `run`
- * function that resolves to a recipe object (no id yet), and once it
- * resolves, the recipe is saved directly to Firestore with isTemp:true.
+ * function that resolves to a recipe object (no id yet).
+ *
+ * Rather than a separate job-tracking collection, each queued import is a
+ * normal isTemp recipe document (the same one used for the "Neues Rezept
+ * hinzufügen" review queue, see subscribeToTempRecipes), created up front
+ * with importStatus:'queued'/'processing'/'error' and importProgress. Once
+ * the recognition resolves, that same document is updated in place with the
+ * real recipe fields and the import* fields are cleared, at which point it
+ * naturally becomes a normal pending-review item. This keeps job status and
+ * review queue on one Firestore listener, synced across every open session
+ * (tab/device) of the user — not just the one running the import.
+ *
  * Jobs are processed one at a time (FIFO) so multiple queued imports don't
  * race each other or blow through OCR rate limits.
- *
- * Job status/progress is mirrored to users/{userId}/importJobs so the
- * header's progress indicator shows the same jobs in every open session
- * (tab/device) of the user, not just the one running the import.
- *
- * Pending temp recipes are later surfaced on the "Neues Rezept hinzufügen"
- * page (see subscribeToTempRecipes) for the user to confirm or discard.
  */
 export function RecipeImportQueueProvider({ userId, children }) {
-  const [jobs, setJobs] = useState([]);
+  const [tempRecipes, setTempRecipes] = useState([]);
   const queueRef = useRef([]);
   const processingRef = useRef(false);
   const lastProgressWriteRef = useRef({});
 
   useEffect(() => {
-    const unsubscribe = subscribeToImportJobs(userId, setJobs);
+    const unsubscribe = subscribeToTempRecipes(userId, setTempRecipes);
     return unsubscribe;
   }, [userId]);
 
-  const patchJob = useCallback((job, patch) => {
-    updateImportJob(job.userId, job.id, patch).catch((error) => {
+  const jobs = useMemo(() => tempRecipes
+    .filter(isPendingImport)
+    .map((r) => ({
+      id: r.id,
+      label: r.title,
+      status: r.importStatus,
+      progress: r.importProgress || 0,
+      error: r.importError,
+    })), [tempRecipes]);
+
+  const reviewRecipes = useMemo(
+    () => tempRecipes.filter((r) => !isPendingImport(r)),
+    [tempRecipes]
+  );
+
+  const patchJob = useCallback((jobId, patch) => {
+    updateRecipe(jobId, patch).catch((error) => {
       console.error('Fehler beim Aktualisieren des Import-Jobs:', error);
     });
   }, []);
 
-  const patchProgress = useCallback((job, progress, label) => {
+  const patchProgress = useCallback((jobId, progress, label) => {
     const clamped = Math.max(0, Math.min(100, Math.round(progress || 0)));
     const now = Date.now();
-    const lastWrite = lastProgressWriteRef.current[job.id] || 0;
+    const lastWrite = lastProgressWriteRef.current[jobId] || 0;
     if (clamped < 100 && !label && now - lastWrite < PROGRESS_WRITE_INTERVAL_MS) {
       return;
     }
-    lastProgressWriteRef.current[job.id] = now;
-    patchJob(job, { progress: clamped, ...(label ? { label } : {}) });
+    lastProgressWriteRef.current[jobId] = now;
+    patchJob(jobId, { importProgress: clamped, ...(label ? { title: label } : {}) });
   }, [patchJob]);
-
-  const removeJob = useCallback((job) => {
-    delete lastProgressWriteRef.current[job.id];
-    return deleteImportJob(job.userId, job.id);
-  }, []);
 
   const processQueue = useCallback(async () => {
     if (processingRef.current) return;
@@ -81,14 +92,25 @@ export function RecipeImportQueueProvider({ userId, children }) {
     try {
       while (queueRef.current.length > 0) {
         const job = queueRef.current[0];
-        patchJob(job, { status: 'processing' });
+        patchJob(job.id, { importStatus: 'processing' });
         try {
-          const recipe = await job.run((progress, label) => patchProgress(job, progress, label));
-          await addRecipeToFirestore({ ...recipe, ...job.context, isTemp: true }, job.userId);
-          await removeJob(job);
+          const recipe = await job.run((progress, label) => patchProgress(job.id, progress, label));
+          await updateRecipe(job.id, {
+            ...recipe,
+            ...job.context,
+            // Matches the previous addRecipe(..., job.userId) behavior: the
+            // doc's owner is always whoever queued the job, regardless of
+            // any authorId the parsed recipe itself may carry (e.g. an
+            // Instagram caption's author).
+            authorId: job.userId,
+            isTemp: true,
+            importStatus: deleteField(),
+            importProgress: deleteField(),
+          });
+          delete lastProgressWriteRef.current[job.id];
         } catch (error) {
           console.error('Hintergrund-Import fehlgeschlagen:', error);
-          patchJob(job, { status: 'error', error: error?.message || 'Import fehlgeschlagen' });
+          patchJob(job.id, { importStatus: 'error', importError: error?.message || 'Import fehlgeschlagen' });
         } finally {
           queueRef.current.shift();
         }
@@ -96,24 +118,27 @@ export function RecipeImportQueueProvider({ userId, children }) {
     } finally {
       processingRef.current = false;
     }
-  }, [patchJob, patchProgress, removeJob]);
+  }, [patchJob, patchProgress]);
 
   const enqueueImportJob = useCallback(({ label, run, context = {}, userId: jobUserId }) => {
-    const id = nextJobId();
-    const job = { id, run, context, userId: jobUserId };
-    queueRef.current.push(job);
-    createImportJob(jobUserId, id, label).catch((error) => {
+    addRecipe(
+      { title: label || 'Rezept-Import', isTemp: true, importStatus: 'queued', importProgress: 0, ...context },
+      jobUserId
+    ).then((created) => {
+      queueRef.current.push({ id: created.id, run, context, userId: jobUserId });
+      processQueue();
+    }).catch((error) => {
       console.error('Fehler beim Anlegen des Import-Jobs:', error);
     });
-    processQueue();
-    return id;
   }, [processQueue]);
 
-  // Jobs in `jobs` always belong to `userId` (that's what they're subscribed
-  // by), so dismissal doesn't need to look up the job's own userId field.
-  const dismissJob = useCallback((id) => removeJob({ id, userId }), [removeJob, userId]);
+  const dismissJob = useCallback((id) => {
+    deleteRecipe(id).catch((error) => {
+      console.error('Fehler beim Verwerfen des Import-Jobs:', error);
+    });
+  }, []);
 
-  const value = { jobs, enqueueImportJob, dismissJob };
+  const value = { jobs, reviewRecipes, enqueueImportJob, dismissJob };
 
   return (
     <RecipeImportQueueContext.Provider value={value}>

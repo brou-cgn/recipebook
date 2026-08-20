@@ -12,7 +12,7 @@ import { encodeRecipeLink, decodeRecipeLink, containsHashForTypeahead } from '..
 import { getAutoAssignedIngredients } from '../utils/ingredientIdMatching';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import { resolveImportGroupContext } from '../utils/recipeGroupContext';
-import { subscribeToTempRecipes } from '../utils/recipeFirestore';
+import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 import RecipeImportModal from './RecipeImportModal';
 import OcrScanModal from './OcrScanModal';
 import WebImportModal from './WebImportModal';
@@ -644,17 +644,12 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     [selectedPrivateListId, activeGroupId, groups, publicGroupId]
   );
 
-  // Pending background imports (isTemp recipes) awaiting review — only
-  // relevant on the plain "Neues Rezept hinzufügen" page.
-  const [tempRecipes, setTempRecipes] = useState([]);
-  useEffect(() => {
-    if (recipe || isCreatingVersion || !currentUser?.id) {
-      setTempRecipes([]);
-      return undefined;
-    }
-    const unsubscribe = subscribeToTempRecipes(currentUser.id, setTempRecipes);
-    return () => unsubscribe();
-  }, [recipe, isCreatingVersion, currentUser?.id]);
+  // Pending background imports (finished isTemp recipes) awaiting review —
+  // only relevant on the plain "Neues Rezept hinzufügen" page. Sourced from
+  // the shared import queue context, which already subscribes to the same
+  // isTemp recipes for the header's progress indicator.
+  const { reviewRecipes } = useRecipeImportQueue();
+  const tempRecipes = (!recipe && !isCreatingVersion) ? reviewRecipes : [];
 
   const handleCuisinePillToggle = (name) => {
     setKulinarik((prev) =>
