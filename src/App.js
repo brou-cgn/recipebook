@@ -315,7 +315,7 @@ function getBottomNavActiveKey(currentView) {
 }
 
 function getBottomNavBehavior(currentView) {
-  if (currentView === 'tagesmenu' || currentView === 'atelierCategorySelection' || currentView === 'events') return 'hidden';
+  if (currentView === 'atelierCategorySelection' || currentView === 'events') return 'hidden';
   return 'visible';
 }
 
