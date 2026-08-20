@@ -113,6 +113,12 @@
   transition: width 0.2s ease;
 }
 
+.import-progress-item-actions {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .import-progress-item-error {
   margin-top: 8px;
   display: flex;
@@ -123,15 +129,35 @@
   color: #a33a26;
 }
 
-.import-progress-item-dismiss {
-  background: transparent;
-  border: 1px solid #a33a26;
-  color: #a33a26;
+.import-progress-item-error span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.import-progress-item-error-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.import-progress-item-dismiss,
+.import-progress-item-restart {
   border-radius: 999px;
   padding: 2px 10px;
   font-size: 0.75rem;
   cursor: pointer;
   flex-shrink: 0;
+  background: transparent;
+}
+
+.import-progress-item-dismiss {
+  border: 1px solid #a33a26;
+  color: #a33a26;
+}
+
+.import-progress-item-restart {
+  border: 1px solid #2196f3;
+  color: #2196f3;
 }
 
 .import-progress-hint {

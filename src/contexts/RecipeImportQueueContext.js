@@ -6,6 +6,8 @@ import {
   deleteRecipe,
   subscribeToTempRecipes,
 } from '../utils/recipeFirestore';
+import { compressImage } from '../utils/imageUtils';
+import { runWebImport, runUniversalImport, runPhotoScanImport } from '../utils/importRunners';
 
 const RecipeImportQueueContext = createContext(null);
 
@@ -14,7 +16,41 @@ const noopQueue = {
   reviewRecipes: [],
   enqueueImportJob: () => undefined,
   dismissJob: () => {},
+  restartJob: () => {},
 };
+
+// Images are compressed before being persisted as importSource (for
+// restarting a job later) to stay well clear of Firestore's 1 MiB document
+// size limit — uploaded photos can be up to 5MB uncompressed (see
+// fileToBase64). The live run for the current attempt still uses the
+// original, uncompressed images; only the restart snapshot is compressed.
+async function buildImportSourceSnapshot(source) {
+  if (!source) return null;
+  if ((source.type === 'universal' || source.type === 'photo') && Array.isArray(source.images) && source.images.length > 0) {
+    const compressedImages = await Promise.all(
+      source.images.map((img) => compressImage(img, 1000, 1400, 0.5).catch(() => img))
+    );
+    return { ...source, images: compressedImages };
+  }
+  return source;
+}
+
+// Reconstructs the `run` function an import job was originally queued with,
+// from its persisted importSource — used to restart a job that is stuck
+// waiting (e.g. its owning tab was closed/reloaded before it could finish).
+function buildRunFromSource(source) {
+  if (!source) return null;
+  switch (source.type) {
+    case 'web':
+      return (onProgress) => runWebImport(source.url, source.authorId, onProgress);
+    case 'universal':
+      return (onProgress) => runUniversalImport({ images: source.images, text: source.text, url: source.url }, onProgress);
+    case 'photo':
+      return (onProgress) => runPhotoScanImport(source.images, source.language, onProgress);
+    default:
+      return null;
+  }
+}
 
 // Progress-only Firestore writes are throttled to this interval so a fast
 // OCR/screenshot progress callback (which can fire many times per second)
@@ -62,6 +98,7 @@ export function RecipeImportQueueProvider({ userId, children }) {
       status: r.importStatus,
       progress: r.importProgress || 0,
       error: r.importError,
+      canRestart: Boolean(r.importSource),
     })), [tempRecipes]);
 
   const reviewRecipes = useMemo(
@@ -120,11 +157,20 @@ export function RecipeImportQueueProvider({ userId, children }) {
     }
   }, [patchJob, patchProgress]);
 
-  const enqueueImportJob = useCallback(({ label, run, context = {}, userId: jobUserId }) => {
-    addRecipe(
-      { title: label || 'Rezept-Import', isTemp: true, importStatus: 'queued', importProgress: 0, ...context },
-      jobUserId
-    ).then((created) => {
+  const enqueueImportJob = useCallback(({ label, run, context = {}, userId: jobUserId, source = null }) => {
+    buildImportSourceSnapshot(source).catch(() => null).then((importSource) => (
+      addRecipe(
+        {
+          title: label || 'Rezept-Import',
+          isTemp: true,
+          importStatus: 'queued',
+          importProgress: 0,
+          ...context,
+          ...(importSource ? { importSource } : {}),
+        },
+        jobUserId
+      )
+    )).then((created) => {
       queueRef.current.push({ id: created.id, run, context, userId: jobUserId });
       processQueue();
     }).catch((error) => {
@@ -138,7 +184,23 @@ export function RecipeImportQueueProvider({ userId, children }) {
     });
   }, []);
 
-  const value = { jobs, reviewRecipes, enqueueImportJob, dismissJob };
+  // Restarts a waiting/failed job from its persisted importSource — this is
+  // what makes a job stuck in 'queued'/'error' (e.g. because the tab that
+  // queued it was closed or reloaded, dropping the in-memory queue) worth
+  // recovering from, instead of only being dismissable.
+  const restartJob = useCallback((id) => {
+    const tempRecipe = tempRecipes.find((r) => r.id === id);
+    if (!tempRecipe || !tempRecipe.importSource) return;
+    const run = buildRunFromSource(tempRecipe.importSource);
+    if (!run) return;
+
+    patchJob(id, { importStatus: 'queued', importProgress: 0, importError: deleteField() });
+    queueRef.current = queueRef.current.filter((job) => job.id !== id);
+    queueRef.current.push({ id, run, context: {}, userId: tempRecipe.authorId });
+    processQueue();
+  }, [tempRecipes, patchJob, processQueue]);
+
+  const value = { jobs, reviewRecipes, enqueueImportJob, dismissJob, restartJob };
 
   return (
     <RecipeImportQueueContext.Provider value={value}>

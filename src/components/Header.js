@@ -48,7 +48,7 @@ const Header = forwardRef(function Header({
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const menuRef = useRef(null);
   const searchRef = useRef(null);
-  const { jobs: importJobs, dismissJob: dismissImportJob } = useRecipeImportQueue();
+  const { jobs: importJobs, dismissJob: dismissImportJob, restartJob: restartImportJob } = useRecipeImportQueue();
 
   useImperativeHandle(ref, () => ({
     openSearch() {
@@ -436,6 +436,7 @@ const Header = forwardRef(function Header({
           jobs={importJobs}
           onClose={() => setImportDialogOpen(false)}
           onDismissJob={dismissImportJob}
+          onRestartJob={restartImportJob}
         />
       )}
     </>

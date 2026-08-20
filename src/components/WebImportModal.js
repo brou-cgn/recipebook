@@ -1,32 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './WebImportModal.css';
-import {
-  normalizeImportedUrl,
-  isRecipeImportPageUrl,
-  parseRecipeImportPage,
-  isInstagramUrl,
-  importInstagramReel,
-  importRecipeFromUrl,
-} from '../utils/webImportService';
-import { buildRecipeFromAiResult } from '../utils/ocrParser';
+import { normalizeImportedUrl } from '../utils/webImportService';
+import { runWebImport } from '../utils/importRunners';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
-
-async function runWebImport(normalizedUrl, authorId, onProgress) {
-  let result;
-
-  if (isInstagramUrl(normalizedUrl)) {
-    // Instagram path (post, reel, or IGTV) – extract caption and page text with Puppeteer + Gemini
-    result = await importInstagramReel(normalizedUrl, onProgress);
-  } else if (isRecipeImportPageUrl(normalizedUrl)) {
-    // Direct HTML parsing path – no screenshot or AI needed
-    result = await parseRecipeImportPage(normalizedUrl, onProgress);
-  } else {
-    // Multi-step import: JSON-LD → Text+Gemini → Screenshot+Vision
-    result = await importRecipeFromUrl(normalizedUrl, onProgress);
-  }
-
-  return buildRecipeFromAiResult(result, authorId);
-}
 
 function WebImportModal({ onCancel, initialUrl = '', authorId = '', userId = '', importContext = {} }) {
   const [url, setUrl] = useState(() => normalizeImportedUrl(initialUrl));
@@ -70,6 +46,7 @@ function WebImportModal({ onCancel, initialUrl = '', authorId = '', userId = '',
       userId,
       context: importContext,
       run: (onProgress) => runWebImport(normalizedUrl, authorId, onProgress),
+      source: { type: 'web', url: normalizedUrl, authorId },
     });
 
     onCancel();

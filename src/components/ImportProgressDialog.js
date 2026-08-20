@@ -18,7 +18,7 @@ function statusLabel(status) {
 // every queued/running/failed background import job; finished imports leave
 // this list immediately and show up as pending reviews on "Neues Rezept
 // hinzufügen" instead.
-function ImportProgressDialog({ jobs, onClose, onDismissJob }) {
+function ImportProgressDialog({ jobs, onClose, onDismissJob, onRestartJob }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="import-progress-dialog" onClick={(e) => e.stopPropagation()}>
@@ -46,16 +46,42 @@ function ImportProgressDialog({ jobs, onClose, onDismissJob }) {
                       />
                     </div>
                   )}
+                  {job.status === 'queued' && job.canRestart && (
+                    <div className="import-progress-item-actions">
+                      <button
+                        type="button"
+                        className="import-progress-item-restart"
+                        onClick={() => onRestartJob(job.id)}
+                        title="Import neu starten"
+                        aria-label={`${job.label || 'Import'} neu starten`}
+                      >
+                        Neu starten
+                      </button>
+                    </div>
+                  )}
                   {job.status === 'error' && (
                     <div className="import-progress-item-error">
                       <span>{job.error}</span>
-                      <button
-                        type="button"
-                        className="import-progress-item-dismiss"
-                        onClick={() => onDismissJob(job.id)}
-                      >
-                        Verwerfen
-                      </button>
+                      <div className="import-progress-item-error-actions">
+                        {job.canRestart && (
+                          <button
+                            type="button"
+                            className="import-progress-item-restart"
+                            onClick={() => onRestartJob(job.id)}
+                            title="Import neu starten"
+                            aria-label={`${job.label || 'Import'} neu starten`}
+                          >
+                            Neu starten
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="import-progress-item-dismiss"
+                          onClick={() => onDismissJob(job.id)}
+                        >
+                          Verwerfen
+                        </button>
+                      </div>
                     </div>
                   )}
                 </li>
