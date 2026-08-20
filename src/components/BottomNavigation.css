@@ -23,6 +23,13 @@
   transform: translateY(100%);
 }
 
+.bottom-navigation--crossfaded {
+  opacity: 0;
+  transform: translateY(14px);
+  pointer-events: none;
+  transition: opacity 0.28s ease, transform 0.34s cubic-bezier(.22,1,.36,1);
+}
+
 .bottom-navigation__tab {
   display: flex;
   flex: 1 1 0;
@@ -96,9 +103,117 @@
   }
 }
 
+/*
+ * Compact "pill" carousel shown instead of the full bar while Kochbuch,
+ * Festtafel or Atelier is the active tab. Sits in the same fixed bottom
+ * position as the full bar but inset horizontally so it doesn't overlap the
+ * existing per-page corner FABs (filter/favorites on the left, add on the
+ * right) — those stay exactly where they already are.
+ */
+.bottom-navigation-pill {
+  position: fixed;
+  left: 86px;
+  right: 86px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 1200;
+  display: none;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.14);
+  overflow: hidden;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.28s ease, transform 0.34s cubic-bezier(.22,1,.36,1);
+}
+
+.bottom-navigation-pill--crossfaded {
+  opacity: 0;
+  transform: translateY(14px);
+  pointer-events: none;
+}
+
+.bottom-navigation-pill--hidden {
+  opacity: 0;
+  transform: translateY(100%);
+  pointer-events: none;
+}
+
+.bottom-navigation-pill__rail {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.bottom-navigation-pill__rail::-webkit-scrollbar {
+  display: none;
+}
+
+.bottom-navigation-pill__item {
+  flex: 0 0 33.333%;
+  scroll-snap-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  min-height: 44px;
+  padding: 0.4rem 0.15rem;
+  color: #78716c;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bottom-navigation-pill__item--active {
+  color: #d97f0d;
+}
+
+.bottom-navigation-pill__item:focus-visible {
+  outline: 2px solid #d97f0d;
+  outline-offset: -2px;
+}
+
+.bottom-navigation-pill__icon {
+  min-height: 24px;
+}
+
+.bottom-navigation-pill__icon svg {
+  width: 28px;
+  height: 24px;
+}
+
+.bottom-navigation-pill__icon .bottom-navigation__icon-image {
+  width: 28px;
+  height: 24px;
+}
+
+.bottom-navigation-pill__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+}
+
+@media (max-width: 768px) {
+  .bottom-navigation-pill {
+    display: block;
+  }
+}
+
 [data-theme="dark"] .bottom-navigation {
   background: #1E1E1C;
   border-top: 1px solid #3B3B38;
+}
+
+[data-theme="dark"] .bottom-navigation-pill {
+  background: #1E1E1C;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
 }
 
 [data-theme="dark"] .bottom-navigation__tab {
@@ -114,7 +229,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bottom-navigation {
+  .bottom-navigation,
+  .bottom-navigation-pill {
     transition: none;
   }
 }

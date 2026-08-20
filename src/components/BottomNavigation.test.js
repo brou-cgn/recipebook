@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, waitFor, within } from '@testing-library/react';
 import BottomNavigation from './BottomNavigation';
 
 jest.mock('../utils/customLists', () => ({
@@ -36,9 +36,12 @@ describe('BottomNavigation icon rendering', () => {
   test('renders configured text icon from button icon list', async () => {
     getButtonIcons.mockResolvedValue({ bottomNavHome: '🍳' });
 
-    render(<BottomNavigation tabs={tabs} activeKey="home" isVisible onSelect={() => {}} />);
+    const { container } = render(
+      <BottomNavigation tabs={tabs} activeKey="home" isVisible onSelect={() => {}} />
+    );
+    const fullBar = within(container.querySelector('.bottom-navigation'));
 
-    expect(await screen.findByText('🍳')).toBeInTheDocument();
+    expect(await fullBar.findByText('🍳')).toBeInTheDocument();
   });
 
   test('renders configured image icon from button icon list', async () => {
@@ -63,10 +66,13 @@ describe('BottomNavigation icon rendering', () => {
       bottomNavRecipes: '📖',
     });
 
-    render(<BottomNavigation tabs={tabs} activeKey="home" isVisible onSelect={() => {}} />);
+    const { container } = render(
+      <BottomNavigation tabs={tabs} activeKey="home" isVisible onSelect={() => {}} />
+    );
+    const fullBar = within(container.querySelector('.bottom-navigation'));
 
-    expect(await screen.findByText('🔥')).toBeInTheDocument();
-    expect(screen.getByText('📖')).toBeInTheDocument();
-    expect(screen.queryByText('🍳')).not.toBeInTheDocument();
+    expect(await fullBar.findByText('🔥')).toBeInTheDocument();
+    expect(fullBar.getByText('📖')).toBeInTheDocument();
+    expect(fullBar.queryByText('🍳')).not.toBeInTheDocument();
   });
 });

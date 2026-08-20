@@ -517,9 +517,7 @@ describe('App authentication view handling', () => {
     expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
   });
 
-  test('bottom navigation auto-hides on recipe scrolling and hides immediately in atelier mode', async () => {
-    jest.useFakeTimers();
-
+  test('bottom navigation stays visible while scrolling in Kochbuch and hides immediately in atelier mode', async () => {
     render(<App />);
     expect(await screen.findByTestId('login-view')).toBeInTheDocument();
 
@@ -542,22 +540,13 @@ describe('App authentication view handling', () => {
     fireEvent.click(navQueries.getByRole('button', { name: 'Kochbuch' }));
     expect(nav).toHaveAttribute('data-visible', 'true');
 
+    // Kochbuch switches to the compact pill representation, so the full bar
+    // crossfades out but stays mounted (and "visible" in the isVisible sense).
+    expect(nav.className).toContain('bottom-navigation--crossfaded');
+
     await act(async () => {
       window.scrollY = 24;
       window.dispatchEvent(new Event('scroll'));
-    });
-    expect(nav).toHaveAttribute('data-visible', 'false');
-
-    await act(async () => {
-      window.scrollY = 10;
-      window.dispatchEvent(new Event('scroll'));
-    });
-    expect(nav).toHaveAttribute('data-visible', 'true');
-
-    await act(async () => {
-      window.scrollY = 30;
-      window.dispatchEvent(new Event('scroll'));
-      jest.advanceTimersByTime(2000);
     });
     expect(nav).toHaveAttribute('data-visible', 'true');
 
@@ -565,8 +554,6 @@ describe('App authentication view handling', () => {
     fireEvent.click(navQueries.getByRole('button', { name: 'Atelier' }));
     expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
     expect(nav).toHaveAttribute('data-visible', 'false');
-
-    jest.useRealTimers();
   });
 
   test('atelier opens directly without onboarding overlay when global onboarding testmode is disabled', async () => {
