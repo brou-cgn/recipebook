@@ -694,11 +694,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0rem;
-}
-
-.form-section .section-header + .form-list-item {
-  margin-top: -0.35rem;
+  margin-bottom: 0.5rem;
 }
 
 .form-section h3 {

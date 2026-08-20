@@ -86,11 +86,9 @@ describe('RecipeForm toolbar CSS layout', () => {
     expect(addItemButtonDarkRule).toContain('border-color: #555;');
   });
 
-  test('keeps section headings close to the first ingredient and step fields', () => {
+  test('keeps a small gap between section headings and the first ingredient/step field', () => {
     const sectionHeaderRule = getRuleBody(css, '.section-header');
-    const firstListItemRule = getRuleBody(css, '.form-section .section-header + .form-list-item');
 
-    expect(sectionHeaderRule).toContain('margin-bottom: 0rem;');
-    expect(firstListItemRule).toContain('margin-top: -0.35rem;');
+    expect(sectionHeaderRule).toContain('margin-bottom: 0.5rem;');
   });
 });
