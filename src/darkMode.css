@@ -1357,6 +1357,20 @@
   color: #e8e8e8;
 }
 
+[data-theme="dark"] .ocr-step-label {
+  color: #8f867c;
+}
+
+[data-theme="dark"] .ocr-modal-header .close-button {
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #a8a099;
+}
+
+[data-theme="dark"] .ocr-modal-header .close-button:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #f5f1ea;
+}
+
 [data-theme="dark"] .close-button,
 [data-theme="dark"] .cook-date-modal-close,
 [data-theme="dark"] .rating-modal-close,
@@ -2750,19 +2764,61 @@
 }
 
 [data-theme="dark"] .image-preview-item {
-  background: #2a2a2a;
-  border-color: #3d3d3d;
+  background: #221f1c;
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 [data-theme="dark"] .image-preview-add {
-  background: #2a2a2a;
-  border-color: #555;
-  color: #7a8fdf;
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #8f867c;
+}
+
+[data-theme="dark"] .image-preview-add:hover {
+  border-color: #2f9bf5;
+  color: #5cb3f8;
 }
 
 [data-theme="dark"] .image-preview-number {
-  background: #333;
-  color: #e8e8e8;
+  background: rgba(0, 0, 0, 0.45);
+  color: #cfc7bd;
+}
+
+[data-theme="dark"] .image-preview-remove {
+  background: rgba(15, 14, 13, 0.78);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #e6e0d8;
+}
+
+[data-theme="dark"] .image-preview-remove:hover {
+  background: #d64726;
+  border-color: transparent;
+  color: #fff;
+}
+
+[data-theme="dark"] .ocr-status-row {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .ocr-status-title {
+  color: #f0ece5;
+}
+
+[data-theme="dark"] .ocr-status-subtitle {
+  color: #938b82;
+}
+
+[data-theme="dark"] .ocr-file-hint {
+  color: #7d756d;
+}
+
+[data-theme="dark"] .image-preview-cancel {
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #ddd6cd;
+}
+
+[data-theme="dark"] .image-preview-cancel:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 /* ---- RecipeDetail additional ---- */
