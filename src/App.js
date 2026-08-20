@@ -1,35 +1,12 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Suspense, lazy } from 'react';
 import './App.css';
 import RecipeList from './components/RecipeList';
 import RecipeFilterSidebar from './components/RecipeFilterSidebar';
-import RecipeDetail from './components/RecipeDetail';
-import RecipeForm from './components/RecipeForm';
 import Header from './components/Header';
-import Settings from './components/Settings';
-import MenuList from './components/MenuList';
-import MenuDetail from './components/MenuDetail';
-import MenuForm from './components/MenuForm';
 import Login from './components/Login';
-import Register from './components/Register';
-import PasswordChangeModal from './components/PasswordChangeModal';
-import Kueche from './components/Kueche';
-import SharePage from './components/SharePage';
-import MenuSharePage from './components/MenuSharePage';
-import GroupList from './components/GroupList';
-import GroupDetail from './components/GroupDetail';
-import AppCallsPage from './components/AppCallsPage';
-import MeineKuechenstarsPage from './components/MeineKuechenstarsPage';
-import EventsPage from './components/EventsPage';
-import Tagesmenu from './components/Tagesmenu';
-import UniversalImportModal from './components/UniversalImportModal';
-import Startseite from './components/Startseite';
 import MobileSearchOverlay from './components/MobileSearchOverlay';
 import BottomNavigation from './components/BottomNavigation';
-import AtelierOnboardingOverlay from './components/AtelierOnboardingOverlay';
-import AtelierSwipeTrainerOverlay from './components/AtelierSwipeTrainerOverlay';
-import AtelierTasteIntroOverlay from './components/AtelierTasteIntroOverlay';
-import AtelierCategorySelectionPage from './components/AtelierCategorySelectionPage';
-import { 
+import {
   loginUser, 
   logoutUser, 
   registerUser,
@@ -91,6 +68,39 @@ import {
 import { NutritionReferenceProvider, useNutritionReference } from './contexts/NutritionReferenceContext';
 import { RecipeImportQueueProvider } from './contexts/RecipeImportQueueContext';
 import { resolveRecipeGroupContext, resolveImportGroupContext } from './utils/recipeGroupContext';
+
+// Lazily loaded: everything below is a secondary view/overlay that isn't
+// needed for the initial "recipes" screen. Splitting these out of the main
+// bundle (which included tesseract.js via RecipeForm -> OcrScanModal) cuts
+// the initial JS payload substantially, which matters most on slower mobile
+// CPUs/networks (e.g. iPhone on cellular).
+const RecipeDetail = lazy(() => import('./components/RecipeDetail'));
+const RecipeForm = lazy(() => import('./components/RecipeForm'));
+const Settings = lazy(() => import('./components/Settings'));
+const MenuList = lazy(() => import('./components/MenuList'));
+const MenuDetail = lazy(() => import('./components/MenuDetail'));
+const MenuForm = lazy(() => import('./components/MenuForm'));
+const Register = lazy(() => import('./components/Register'));
+const PasswordChangeModal = lazy(() => import('./components/PasswordChangeModal'));
+const Kueche = lazy(() => import('./components/Kueche'));
+const SharePage = lazy(() => import('./components/SharePage'));
+const MenuSharePage = lazy(() => import('./components/MenuSharePage'));
+const GroupList = lazy(() => import('./components/GroupList'));
+const GroupDetail = lazy(() => import('./components/GroupDetail'));
+const AppCallsPage = lazy(() => import('./components/AppCallsPage'));
+const MeineKuechenstarsPage = lazy(() => import('./components/MeineKuechenstarsPage'));
+const EventsPage = lazy(() => import('./components/EventsPage'));
+const Tagesmenu = lazy(() => import('./components/Tagesmenu'));
+const UniversalImportModal = lazy(() => import('./components/UniversalImportModal'));
+const Startseite = lazy(() => import('./components/Startseite'));
+const AtelierOnboardingOverlay = lazy(() => import('./components/AtelierOnboardingOverlay'));
+const AtelierSwipeTrainerOverlay = lazy(() => import('./components/AtelierSwipeTrainerOverlay'));
+const AtelierTasteIntroOverlay = lazy(() => import('./components/AtelierTasteIntroOverlay'));
+const AtelierCategorySelectionPage = lazy(() => import('./components/AtelierCategorySelectionPage'));
+
+const ViewLoadingFallback = () => (
+  <div style={{ padding: '2rem', textAlign: 'center' }}>Laden...</div>
+);
 
 const PENDING_WEBIMPORT_URL_STORAGE_KEY = 'pendingWebimportUrl';
 const PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY = 'pendingWebimportAuthor';
@@ -1895,11 +1905,13 @@ function App() {
       <NutritionReferenceProvider>
         <div className="App" style={appBottomNavStyle}>
           <Header />
-          <SharePage
-            shareId={sharePageId}
-            currentUser={currentUser}
-            onClose={handleSharePageClose}
-          />
+          <Suspense fallback={<ViewLoadingFallback />}>
+            <SharePage
+              shareId={sharePageId}
+              currentUser={currentUser}
+              onClose={handleSharePageClose}
+            />
+          </Suspense>
         </div>
       </NutritionReferenceProvider>
     );
@@ -1920,11 +1932,13 @@ function App() {
       <NutritionReferenceProvider>
         <div className="App" style={appBottomNavStyle}>
           <Header />
-          <MenuSharePage
-            shareId={menuSharePageId}
-            currentUser={currentUser}
-            onClose={handleMenuSharePageClose}
-          />
+          <Suspense fallback={<ViewLoadingFallback />}>
+            <MenuSharePage
+              shareId={menuSharePageId}
+              currentUser={currentUser}
+              onClose={handleMenuSharePageClose}
+            />
+          </Suspense>
         </div>
       </NutritionReferenceProvider>
     );
@@ -1949,17 +1963,19 @@ function App() {
           </div>
         )}
         {authView === 'login' ? (
-          <Login 
+          <Login
             onLogin={handleLogin}
             onSwitchToRegister={handleSwitchToRegister}
             onGuestLogin={handleGuestLogin}
             onResetPassword={handleResetPassword}
           />
         ) : (
-          <Register 
-            onRegister={handleRegister}
-            onSwitchToLogin={handleSwitchToLogin}
-          />
+          <Suspense fallback={<ViewLoadingFallback />}>
+            <Register
+              onRegister={handleRegister}
+              onSwitchToLogin={handleSwitchToLogin}
+            />
+          </Suspense>
         )}
       </div>
     );
@@ -1985,6 +2001,7 @@ function App() {
           startseiteEnabled={!!currentUser?.startseite}
           onChefkochClick={currentUser ? handleChefkochClick : undefined}
         />
+        <Suspense fallback={<ViewLoadingFallback />}>
         {isSettingsOpen ? (
           <Settings onBack={handleCloseSettings} currentUser={currentUser} allUsers={allUsers} allRecipes={recipes} onUpdateRecipe={(id, updates) => updateRecipeInFirestore(id, updates)} />
         ) : selectedRecipe ? (
@@ -2233,22 +2250,27 @@ function App() {
           </div>
         </div>
         )}
+        </Suspense>
         {requiresPasswordChange && currentUser && (
-          <PasswordChangeModal 
-            user={currentUser}
-            onPasswordChanged={handlePasswordChanged}
-          />
+          <Suspense fallback={null}>
+            <PasswordChangeModal
+              user={currentUser}
+              onPasswordChanged={handlePasswordChanged}
+            />
+          </Suspense>
         )}
         {showUniversalImport && (
-          <UniversalImportModal
-            initialImages={sharedData.images}
-            initialTitle={sharedData.title}
-            initialText={sharedData.text}
-            initialUrl={sharedData.url}
-            onCancel={handleUniversalImportCancel}
-            userId={currentUser?.id}
-            importContext={resolveImportGroupContext({ activeGroupId, groups, publicGroupId })}
-          />
+          <Suspense fallback={null}>
+            <UniversalImportModal
+              initialImages={sharedData.images}
+              initialTitle={sharedData.title}
+              initialText={sharedData.text}
+              initialUrl={sharedData.url}
+              onCancel={handleUniversalImportCancel}
+              userId={currentUser?.id}
+              importContext={resolveImportGroupContext({ activeGroupId, groups, publicGroupId })}
+            />
+          </Suspense>
         )}
         <MobileSearchOverlay
           isOpen={isMobileSearchOpen}
@@ -2291,13 +2313,19 @@ function App() {
           />
         )}
         {showAtelierOnboarding && (
-          <AtelierOnboardingOverlay onConfirm={handleAtelierOnboardingConfirm} />
+          <Suspense fallback={null}>
+            <AtelierOnboardingOverlay onConfirm={handleAtelierOnboardingConfirm} />
+          </Suspense>
         )}
         {showAtelierSwipeTrainer && (
-          <AtelierSwipeTrainerOverlay onComplete={handleAtelierSwipeTrainerComplete} />
+          <Suspense fallback={null}>
+            <AtelierSwipeTrainerOverlay onComplete={handleAtelierSwipeTrainerComplete} />
+          </Suspense>
         )}
         {showAtelierTasteIntro && (
-          <AtelierTasteIntroOverlay onContinue={handleAtelierTasteIntroContinue} />
+          <Suspense fallback={null}>
+            <AtelierTasteIntroOverlay onContinue={handleAtelierTasteIntroContinue} />
+          </Suspense>
         )}
       </div>
     </RecipeImportQueueProvider>

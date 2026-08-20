@@ -102,17 +102,17 @@ describe('Share URL hash routing', () => {
     jest.clearAllMocks();
   });
 
-  test('shows SharePage when initial URL hash is #share/:shareId', () => {
+  test('shows SharePage when initial URL hash is #share/:shareId', async () => {
     window.location.hash = '#share/abc-123';
     render(<App />);
-    expect(screen.getByTestId('share-page')).toBeInTheDocument();
+    expect(await screen.findByTestId('share-page')).toBeInTheDocument();
     expect(screen.getByTestId('share-page')).toHaveAttribute('data-share-id', 'abc-123');
   });
 
-  test('shows MenuSharePage when initial URL hash is #menu-share/:shareId', () => {
+  test('shows MenuSharePage when initial URL hash is #menu-share/:shareId', async () => {
     window.location.hash = '#menu-share/xyz-456';
     render(<App />);
-    expect(screen.getByTestId('menu-share-page')).toBeInTheDocument();
+    expect(await screen.findByTestId('menu-share-page')).toBeInTheDocument();
     expect(screen.getByTestId('menu-share-page')).toHaveAttribute('data-share-id', 'xyz-456');
   });
 

@@ -484,14 +484,14 @@ describe('App authentication view handling', () => {
     expect(screen.getByTestId('recipe-list-view')).toBeInTheDocument();
 
     fireEvent.click(navQueries.getByRole('button', { name: 'Festtafel' }));
-    expect(screen.getByTestId('menu-list-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('menu-list-view')).toBeInTheDocument();
 
     localStorage.setItem('atelierOnboardingSeen', 'true');
     fireEvent.click(navQueries.getByRole('button', { name: 'Atelier' }));
-    expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('tagesmenu-view')).toBeInTheDocument();
 
     fireEvent.click(navQueries.getByRole('button', { name: 'Chefkoch' }));
-    expect(screen.getByTestId('kueche-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('kueche-view')).toBeInTheDocument();
   });
 
   test('clicking the active bottom navigation tab scrolls back to the top', async () => {
@@ -552,7 +552,7 @@ describe('App authentication view handling', () => {
 
     localStorage.setItem('atelierOnboardingSeen', 'true');
     fireEvent.click(navQueries.getByRole('button', { name: 'Atelier' }));
-    expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('tagesmenu-view')).toBeInTheDocument();
     // Kochatelier keeps the compact pill visible instead of hiding the bottom nav.
     expect(nav).toHaveAttribute('data-visible', 'true');
   });
@@ -579,7 +579,7 @@ describe('App authentication view handling', () => {
     const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
     fireEvent.click(within(nav).getByRole('button', { name: 'Atelier' }));
 
-    expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('tagesmenu-view')).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Atelier Onboarding' })).not.toBeInTheDocument();
   });
 
@@ -627,7 +627,7 @@ describe('App authentication view handling', () => {
     const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
     fireEvent.click(within(nav).getByRole('button', { name: 'Atelier' }));
 
-    expect(screen.getByRole('dialog', { name: 'Atelier Onboarding' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Atelier Onboarding' })).toBeInTheDocument();
     expect(screen.queryByTestId('tagesmenu-view')).not.toBeInTheDocument();
   });
 
@@ -655,7 +655,7 @@ describe('App authentication view handling', () => {
     const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
     fireEvent.click(within(nav).getByRole('button', { name: 'Atelier' }));
 
-    expect(screen.getByRole('dialog', { name: 'Atelier Onboarding' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Atelier Onboarding' })).toBeInTheDocument();
     expect(screen.queryByTestId('tagesmenu-view')).not.toBeInTheDocument();
   });
 
@@ -683,7 +683,7 @@ describe('App authentication view handling', () => {
     const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
     fireEvent.click(within(nav).getByRole('button', { name: 'Atelier' }));
 
-    expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('tagesmenu-view')).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Atelier Onboarding' })).not.toBeInTheDocument();
   });
 
@@ -730,20 +730,20 @@ describe('App authentication view handling', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }));
 
-    expect(screen.getByTestId('atelier-category-selection-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('atelier-category-selection-view')).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Swipe-Training' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Dessert' }));
     fireEvent.click(screen.getByRole('button', { name: 'Kochatelier öffnen' }));
 
-    expect(screen.getByRole('dialog', { name: 'Swipe-Training' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Swipe-Training' })).toBeInTheDocument();
 
     swipeTrainerRight();
     swipeTrainerLeft();
     swipeTrainerUp();
     swipeTrainerLeft();
 
-    expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('tagesmenu-view')).toBeInTheDocument();
     expect(mockTagesmenuProps.mock.lastCall[0].selectedCategories).toEqual(['Dessert']);
   });
 
@@ -784,7 +784,7 @@ describe('App authentication view handling', () => {
     localStorage.setItem('atelierOnboardingSeen', 'true');
     fireEvent.click(within(nav).getByRole('button', { name: 'Atelier' }));
 
-    expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('tagesmenu-view')).toBeInTheDocument();
     // Kochatelier keeps the compact pill visible instead of hiding the bottom nav.
     expect(nav).toHaveAttribute('data-visible', 'true');
     expect(app.style.getPropertyValue('--bottom-nav-offset')).toBe('var(--bottom-nav-height)');
@@ -837,10 +837,10 @@ describe('App authentication view handling', () => {
     expect(await screen.findByTestId('startseite-view')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'startseite-go-groups' }));
-    expect(screen.getByTestId('group-list-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('group-list-view')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'close-groups' }));
-    expect(screen.getByTestId('startseite-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('startseite-view')).toBeInTheDocument();
   });
 
   test('closing groups still returns to kueche when groups were not opened from startseite', async () => {
@@ -864,11 +864,11 @@ describe('App authentication view handling', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'go-recipes' }));
     fireEvent.click(screen.getByRole('button', { name: 'go-groups' }));
-    expect(screen.getByTestId('group-list-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('group-list-view')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'close-groups' }));
 
-    expect(screen.getByTestId('kueche-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('kueche-view')).toBeInTheDocument();
     expect(screen.queryByTestId('startseite-view')).not.toBeInTheDocument();
   });
 
@@ -892,16 +892,16 @@ describe('App authentication view handling', () => {
     expect(await screen.findByTestId('startseite-view')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'startseite-go-groups' }));
-    expect(screen.getByTestId('group-list-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('group-list-view')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'open-group' }));
-    expect(screen.getByTestId('group-detail-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('group-detail-view')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'back-to-groups' }));
-    expect(screen.getByTestId('group-list-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('group-list-view')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'close-groups' }));
-    expect(screen.getByTestId('startseite-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('startseite-view')).toBeInTheDocument();
   });
 
   test('updates selected private list data immediately after editing group properties', async () => {
@@ -1047,7 +1047,7 @@ describe('App authentication view handling', () => {
     expect(await screen.findByTestId('app-calls-view')).toHaveAttribute('data-visible-tabs', '["kulinariktypen"]');
 
     fireEvent.click(screen.getByRole('button', { name: 'appcalls-back' }));
-    expect(screen.getByTestId('kueche-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('kueche-view')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'go-appcalls' }));
 
@@ -1078,7 +1078,7 @@ describe('App authentication view handling', () => {
     fireEvent.click(screen.getByRole('button', { name: 'go-recipes' }));
     fireEvent.click(screen.getByRole('button', { name: 'add-recipe' }));
 
-    expect(screen.getByTestId('recipe-form-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('recipe-form-view')).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Hauptnavigation' })).not.toBeInTheDocument();
   });
 
@@ -1104,7 +1104,7 @@ describe('App authentication view handling', () => {
     fireEvent.click(screen.getByRole('button', { name: 'go-recipes' }));
     fireEvent.click(screen.getByRole('button', { name: 'open-recipe' }));
 
-    expect(screen.getByTestId('recipe-detail-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('recipe-detail-view')).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Hauptnavigation' })).not.toBeInTheDocument();
   });
 
@@ -1127,9 +1127,9 @@ describe('App authentication view handling', () => {
 
     const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
     fireEvent.click(within(nav).getByRole('button', { name: 'Festtafel' }));
-    fireEvent.click(screen.getByRole('button', { name: 'add-menu' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'add-menu' }));
 
-    expect(screen.getByTestId('menu-form-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('menu-form-view')).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Hauptnavigation' })).not.toBeInTheDocument();
   });
 
@@ -1152,9 +1152,9 @@ describe('App authentication view handling', () => {
 
     const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
     fireEvent.click(within(nav).getByRole('button', { name: 'Festtafel' }));
-    fireEvent.click(screen.getByRole('button', { name: 'open-menu' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'open-menu' }));
 
-    expect(screen.getByTestId('menu-detail-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('menu-detail-view')).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Hauptnavigation' })).not.toBeInTheDocument();
   });
 
@@ -1178,7 +1178,7 @@ describe('App authentication view handling', () => {
     expect(await screen.findByRole('navigation', { name: 'Hauptnavigation' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'go-kueche' }));
-    expect(screen.getByTestId('kueche-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('kueche-view')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'open-personal-data' }));
     expect(screen.queryByRole('navigation', { name: 'Hauptnavigation' })).not.toBeInTheDocument();
@@ -1207,10 +1207,10 @@ describe('App authentication view handling', () => {
     await screen.findByRole('navigation', { name: 'Hauptnavigation' });
 
     fireEvent.click(screen.getByRole('button', { name: 'go-groups' }));
-    expect(screen.getByTestId('group-list-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('group-list-view')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'open-group' }));
-    expect(screen.getByTestId('group-detail-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('group-detail-view')).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Hauptnavigation' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'open-settings-tab' }));
