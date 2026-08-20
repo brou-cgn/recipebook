@@ -517,7 +517,7 @@ describe('App authentication view handling', () => {
     expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
   });
 
-  test('bottom navigation stays visible while scrolling in Kochbuch and hides immediately in atelier mode', async () => {
+  test('bottom navigation stays visible while scrolling in Kochbuch and remains visible in atelier mode', async () => {
     render(<App />);
     expect(await screen.findByTestId('login-view')).toBeInTheDocument();
 
@@ -553,7 +553,8 @@ describe('App authentication view handling', () => {
     localStorage.setItem('atelierOnboardingSeen', 'true');
     fireEvent.click(navQueries.getByRole('button', { name: 'Atelier' }));
     expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
-    expect(nav).toHaveAttribute('data-visible', 'false');
+    // Kochatelier keeps the compact pill visible instead of hiding the bottom nav.
+    expect(nav).toHaveAttribute('data-visible', 'true');
   });
 
   test('atelier opens directly without onboarding overlay when global onboarding testmode is disabled', async () => {
@@ -784,9 +785,10 @@ describe('App authentication view handling', () => {
     fireEvent.click(within(nav).getByRole('button', { name: 'Atelier' }));
 
     expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
-    expect(nav).toHaveAttribute('data-visible', 'false');
-    expect(app.style.getPropertyValue('--bottom-nav-offset')).toBe('0px');
-    expect(app.style.getPropertyValue('--bottom-spacing')).toBe('0px');
+    // Kochatelier keeps the compact pill visible instead of hiding the bottom nav.
+    expect(nav).toHaveAttribute('data-visible', 'true');
+    expect(app.style.getPropertyValue('--bottom-nav-offset')).toBe('var(--bottom-nav-height)');
+    expect(app.style.getPropertyValue('--bottom-spacing')).toBe('calc(var(--bottom-nav-height) + 16px)');
   });
 
   test('seasonal startseite navigation opens the seasonal recipe overview', async () => {
