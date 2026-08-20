@@ -301,6 +301,7 @@ jest.mock('./utils/storageUtils', () => ({
 
 jest.mock('./utils/recipeFirestore', () => ({
   subscribeToRecipes: jest.fn(() => () => {}),
+  subscribeToTempRecipes: jest.fn(() => () => {}),
   addRecipe: jest.fn(),
   updateRecipe: jest.fn(),
   deleteRecipe: jest.fn(),
