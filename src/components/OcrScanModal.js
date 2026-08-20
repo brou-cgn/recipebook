@@ -5,6 +5,8 @@ import { runPhotoScanImport } from '../utils/importRunners';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 
 const MAX_CAMERA_PHOTOS = 10;
+const MAX_UPLOAD_PAGES = 8;
+const UPLOAD_ACCEPT = 'image/jpeg,image/jpg,image/png,image/heic,image/heif,.heic,.heif';
 
 // initialImage: single image that triggers an immediate background scan (takes precedence over initialImages)
 // initialImages: array of base64 images to pre-fill the image-preview step
@@ -65,7 +67,13 @@ function OcrScanModal({ onCancel, initialImage = '', initialImages = [], userId 
     setError('');
     try {
       const base64s = await Promise.all(files.map(f => fileToBase64(f)));
-      setUploadedImages(prev => [...prev, ...base64s]);
+      setUploadedImages(prev => {
+        const combined = [...prev, ...base64s];
+        if (combined.length > MAX_UPLOAD_PAGES) {
+          setError(`Maximal ${MAX_UPLOAD_PAGES} Seiten möglich.`);
+        }
+        return combined.slice(0, MAX_UPLOAD_PAGES);
+      });
       setStep('image-preview');
     } catch (err) {
       setError(err.message);
@@ -81,7 +89,13 @@ function OcrScanModal({ onCancel, initialImage = '', initialImages = [], userId 
     setError('');
     try {
       const base64s = await Promise.all(files.map(f => fileToBase64(f)));
-      setUploadedImages(prev => [...prev, ...base64s]);
+      setUploadedImages(prev => {
+        const combined = [...prev, ...base64s];
+        if (combined.length > MAX_UPLOAD_PAGES) {
+          setError(`Maximal ${MAX_UPLOAD_PAGES} Seiten möglich.`);
+        }
+        return combined.slice(0, MAX_UPLOAD_PAGES);
+      });
     } catch (err) {
       setError(err.message);
     }
@@ -171,8 +185,11 @@ function OcrScanModal({ onCancel, initialImage = '', initialImages = [], userId 
     <div className="modal-overlay">
       <div className="ocr-modal">
         <div className="ocr-modal-header">
-          <h2>Rezept scannen</h2>
-          <button className="close-button" onClick={handleCancel}>×</button>
+          <div className="ocr-modal-heading">
+            <span className="ocr-step-label">Schritt {step === 'image-preview' ? 2 : 1} von 2</span>
+            <h2>Rezept scannen</h2>
+          </div>
+          <button className="close-button" onClick={handleCancel} aria-label="Schließen">×</button>
         </div>
 
         <div className="ocr-modal-content">
@@ -212,7 +229,7 @@ function OcrScanModal({ onCancel, initialImage = '', initialImages = [], userId 
                   <input
                     type="file"
                     id="imageUpload"
-                    accept="image/jpeg,image/jpg,image/png"
+                    accept={UPLOAD_ACCEPT}
                     multiple
                     onChange={handleMultiFileUpload}
                     style={{ display: 'none' }}
@@ -297,9 +314,15 @@ function OcrScanModal({ onCancel, initialImage = '', initialImages = [], userId 
           {/* Image Preview Step – review & extend selection before analysis */}
           {step === 'image-preview' && (
             <div className="image-preview-section">
-              <p className="ocr-instructions">
-                {uploadedImages.length} Bild{uploadedImages.length !== 1 ? 'er' : ''} ausgewählt – Weitere hinzufügen oder Analyse starten
-              </p>
+              <div className="ocr-status-row">
+                <span className="ocr-status-dot" />
+                <div className="ocr-status-text">
+                  <div className="ocr-status-title">
+                    {uploadedImages.length} Bild{uploadedImages.length !== 1 ? 'er' : ''} ausgewählt
+                  </div>
+                  <div className="ocr-status-subtitle">Weitere Seiten hinzufügen oder Analyse starten</div>
+                </div>
+              </div>
 
               <div className="image-preview-grid">
                 {uploadedImages.map((src, index) => (
@@ -309,6 +332,7 @@ function OcrScanModal({ onCancel, initialImage = '', initialImages = [], userId 
                       alt={`Bild ${index + 1}`}
                       className="image-preview-thumb"
                     />
+                    <span className="image-preview-number">S{index + 1}</span>
                     <button
                       className="image-preview-remove"
                       onClick={() => handleRemoveUploadedImage(index)}
@@ -317,22 +341,26 @@ function OcrScanModal({ onCancel, initialImage = '', initialImages = [], userId 
                     >
                       ×
                     </button>
-                    <span className="image-preview-number">{index + 1}</span>
                   </div>
                 ))}
 
-                <label className="image-preview-add" title="Weitere Bilder hinzufügen">
-                  <span>+</span>
-                  <input
-                    ref={addMoreInputRef}
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png"
-                    multiple
-                    onChange={handleAddMoreImages}
-                    style={{ display: 'none' }}
-                  />
-                </label>
+                {uploadedImages.length < MAX_UPLOAD_PAGES && (
+                  <label className="image-preview-add" title="Weitere Seiten hinzufügen">
+                    <span className="image-preview-add-icon">+</span>
+                    <span className="image-preview-add-label">Seite</span>
+                    <input
+                      ref={addMoreInputRef}
+                      type="file"
+                      accept={UPLOAD_ACCEPT}
+                      multiple
+                      onChange={handleAddMoreImages}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                )}
               </div>
+
+              <p className="ocr-file-hint">JPG · PNG · HEIC — max. {MAX_UPLOAD_PAGES} Seiten</p>
 
               <div className="image-preview-actions">
                 <button
@@ -340,13 +368,13 @@ function OcrScanModal({ onCancel, initialImage = '', initialImages = [], userId 
                   onClick={startUploadedAnalysis}
                   aria-label={`Analyse starten für ${uploadedImages.length} Bild${uploadedImages.length !== 1 ? 'er' : ''}`}
                 >
-                  ✓ Analyse starten ({uploadedImages.length})
+                  Analyse starten ({uploadedImages.length})
                 </button>
                 <button
-                  className="new-scan-button"
-                  onClick={() => setStep('upload')}
+                  className="image-preview-cancel"
+                  onClick={handleCancel}
                 >
-                  Zurück
+                  Abbrechen
                 </button>
               </div>
             </div>
@@ -359,11 +387,13 @@ function OcrScanModal({ onCancel, initialImage = '', initialImages = [], userId 
           )}
         </div>
 
-        <div className="ocr-modal-actions">
-          <button className="cancel-button" onClick={handleCancel}>
-            Abbrechen
-          </button>
-        </div>
+        {step !== 'image-preview' && (
+          <div className="ocr-modal-actions">
+            <button className="cancel-button" onClick={handleCancel}>
+              Abbrechen
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

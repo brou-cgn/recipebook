@@ -137,6 +137,42 @@ describe('OcrScanModal', () => {
     });
   }, OCR_TIMEOUT);
 
+  test('shows step indicator and status row on the image-preview step', async () => {
+    const { fileToBase64 } = require('../utils/imageUtils');
+    fileToBase64.mockResolvedValue('data:image/png;base64,test');
+
+    render(<OcrScanModal onCancel={mockOnCancel} />);
+
+    expect(screen.getByText('Schritt 1 von 2')).toBeInTheDocument();
+
+    const fileInput = screen.getByLabelText('Bild(er) hochladen');
+    const file = new File(['test'], 'test.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Schritt 2 von 2')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Weitere Seiten hinzufügen oder Analyse starten')).toBeInTheDocument();
+    expect(screen.getByText('JPG · PNG · HEIC — max. 8 Seiten')).toBeInTheDocument();
+  });
+
+  test('caps uploaded pages at 8 and hides the add-page tile once reached', async () => {
+    const { fileToBase64 } = require('../utils/imageUtils');
+    fileToBase64.mockImplementation((f) => Promise.resolve(`data:image/png;base64,${f.name}`));
+
+    render(<OcrScanModal onCancel={mockOnCancel} />);
+
+    const files = Array.from({ length: 9 }, (_, i) => new File(['x'], `p${i}.png`, { type: 'image/png' }));
+    const fileInput = screen.getByLabelText('Bild(er) hochladen');
+    fireEvent.change(fileInput, { target: { files } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(8\)/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Maximal 8 Seiten möglich/i)).toBeInTheDocument();
+    expect(screen.queryByTitle('Weitere Seiten hinzufügen')).not.toBeInTheDocument();
+  });
+
   test('handles file upload error', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
 
