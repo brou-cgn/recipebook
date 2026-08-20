@@ -160,9 +160,10 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect }) {
     if (!isPillMode) return;
     const rail = railRef.current;
     if (!rail) return;
-    const index = tabs.findIndex((tab) => tab.key === activeKey);
+    const pillTabs = tabs.filter((tab) => PILL_TAB_KEYS.includes(tab.key));
+    const index = pillTabs.findIndex((tab) => tab.key === activeKey);
     if (index < 0) return;
-    const itemWidth = rail.clientWidth / 3;
+    const itemWidth = rail.clientWidth / pillTabs.length;
     if (typeof rail.scrollTo === 'function') {
       rail.scrollTo({ left: Math.max(0, (index - 1) * itemWidth), behavior: 'smooth' });
     }
@@ -214,7 +215,7 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect }) {
           role="navigation"
           aria-label="Hauptnavigation (kompakt)"
         >
-          {tabs.map((tab) => {
+          {tabs.filter((tab) => PILL_TAB_KEYS.includes(tab.key)).map((tab) => {
             const isActive = tab.key === activeKey;
             return (
               <button
