@@ -762,19 +762,6 @@ export function jsonLdToText(candidate) {
 }
 
 /**
- * Fetch the raw HTML of a URL via the `fetchRecipeHtml` Cloud Function.
- * This bypasses CORS restrictions by performing the request server-side.
- *
- * @param {string} url - URL to fetch
- * @returns {Promise<string>} Raw HTML content
- */
-async function fetchRecipeHtml(url) {
-  const fetchHtml = httpsCallable(functions, 'fetchRecipeHtml');
-  const result = await fetchHtml({ url });
-  return result.data.html;
-}
-
-/**
  * Import a recipe from any regular URL by delegating the full pipeline to the
  * `importRecipeCallable` Cloud Function (HTML fetch → JSON-LD → text → screenshot).
  * All processing happens server-side, eliminating browser CORS issues.

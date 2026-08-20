@@ -6,7 +6,7 @@
 
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
-import { getAIRecipePrompt, getCustomLists, clearSettingsCache } from './customLists';
+import { getAIRecipePrompt, getCustomLists } from './customLists';
 
 /**
  * Retry configuration for transient errors
@@ -101,7 +101,6 @@ export async function processHtmlWithGemini(rawHtml, lang = 'de', onProgress = n
   let cuisineTypes;
   let mealCategories;
   try {
-    clearSettingsCache();
     const lists = await getCustomLists();
     cuisineTypes = lists.cuisineTypes;
     mealCategories = lists.mealCategories;
@@ -213,7 +212,6 @@ export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProg
   let cuisineTypes;
   let mealCategories;
   try {
-    clearSettingsCache();
     const lists = await getCustomLists();
     cuisineTypes = lists.cuisineTypes;
     mealCategories = lists.mealCategories;

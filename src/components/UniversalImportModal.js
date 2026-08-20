@@ -9,12 +9,22 @@ function buildInitialText(title, text) {
   return [title, text].filter(Boolean).join('\n\n');
 }
 
+// Max number of images processed at the same time during a multi-image import.
+// Images are independent OCR calls, so processing several in parallel cuts
+// total wait time roughly to (image count / concurrency) instead of the sum
+// of every individual call, while staying under the per-user rate limit.
+const BATCH_CONCURRENCY = 3;
+
 function UniversalImportModal({ onImport, onCancel, initialImages = [], initialText = '', initialUrl = '', initialTitle = '' }) {
   const [images, setImages] = useState(initialImages);
   const [text, setText] = useState(buildInitialText(initialTitle, initialText));
   const [url, setUrl] = useState(initialUrl);
   const [step, setStep] = useState('preview'); // 'preview' | 'processing'
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  // Which images are currently being processed / already done. Images are
+  // processed concurrently, so several can be "processing" at once and don't
+  // necessarily finish in order.
+  const [activeImageIndices, setActiveImageIndices] = useState(() => new Set());
+  const [doneImageIndices, setDoneImageIndices] = useState(() => new Set());
   const [scanProgress, setScanProgress] = useState(0);
   const [error, setError] = useState('');
   const [processingLabel, setProcessingLabel] = useState('');
@@ -86,7 +96,6 @@ function UniversalImportModal({ onImport, onCancel, initialImages = [], initialT
 
     setError('');
     setStep('processing');
-    setCurrentImageIndex(0);
     setScanProgress(0);
 
     const results = [];
@@ -160,22 +169,61 @@ function UniversalImportModal({ onImport, onCancel, initialImages = [], initialT
       }
     }
 
-    // Process images
-    for (let i = 0; i < images.length; i++) {
-      setCurrentImageIndex(i);
+    // Process images concurrently (up to BATCH_CONCURRENCY at once). Results
+    // are written back at their original index so step/ingredient order in
+    // the merged recipe stays independent of which image finishes first.
+    if (images.length > 0) {
+      const imageResults = new Array(images.length);
+      const progressPerImage = new Array(images.length).fill(0);
+
+      const updateOverallProgress = () => {
+        const sum = progressPerImage.reduce((a, b) => a + b, 0);
+        setScanProgress(Math.round(sum / images.length));
+      };
+
       setScanProgress(0);
-      setProcessingLabel(`Analysiere Bild ${i + 1} von ${images.length}...`);
-      try {
-        const result = await recognizeRecipeWithAI(images[i], {
-          language: 'de',
-          provider: 'gemini',
-          onProgress: (progress) => setScanProgress(progress)
-        });
-        results.push(result);
-      } catch (err) {
-        console.error(`Error processing image ${i + 1}:`, err);
-        results.push({ error: err.message });
-      }
+      setActiveImageIndices(new Set());
+      setDoneImageIndices(new Set());
+      setProcessingLabel(
+        images.length === 1 ? 'Analysiere Bild...' : `Analysiere ${images.length} Bilder...`
+      );
+
+      let nextIndex = 0;
+      const processNext = async () => {
+        while (nextIndex < images.length) {
+          const i = nextIndex++;
+          setActiveImageIndices(prev => new Set(prev).add(i));
+
+          try {
+            const result = await recognizeRecipeWithAI(images[i], {
+              language: 'de',
+              provider: 'gemini',
+              onProgress: (progress) => {
+                progressPerImage[i] = progress;
+                updateOverallProgress();
+              }
+            });
+            imageResults[i] = result;
+          } catch (err) {
+            console.error(`Error processing image ${i + 1}:`, err);
+            imageResults[i] = { error: err.message };
+          }
+
+          progressPerImage[i] = 100;
+          setActiveImageIndices(prev => {
+            const next = new Set(prev);
+            next.delete(i);
+            return next;
+          });
+          setDoneImageIndices(prev => new Set(prev).add(i));
+          updateOverallProgress();
+        }
+      };
+
+      const workerCount = Math.min(BATCH_CONCURRENCY, images.length);
+      await Promise.all(Array.from({ length: workerCount }, processNext));
+
+      results.push(...imageResults);
     }
 
     try {
@@ -287,20 +335,20 @@ function UniversalImportModal({ onImport, onCancel, initialImages = [], initialT
               <p className="universal-progress-text">{scanProgress}%</p>
               {images.length > 1 && (
                 <div className="universal-image-indicators">
-                  {images.map((_, index) => (
-                    <div
-                      key={index}
-                      className={`universal-image-indicator ${
-                        index < currentImageIndex
-                          ? 'completed'
-                          : index === currentImageIndex
-                          ? 'processing'
-                          : 'pending'
-                      }`}
-                    >
-                      {index < currentImageIndex ? '✓' : index + 1}
-                    </div>
-                  ))}
+                  {images.map((_, index) => {
+                    const isDone = doneImageIndices.has(index);
+                    const isActive = activeImageIndices.has(index);
+                    return (
+                      <div
+                        key={index}
+                        className={`universal-image-indicator ${
+                          isDone ? 'completed' : isActive ? 'processing' : 'pending'
+                        }`}
+                      >
+                        {isDone ? '✓' : index + 1}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -10,7 +10,7 @@ import {
   compareOcrMethods,
 } from './aiOcrService';
 import { httpsCallable } from 'firebase/functions';
-import { clearSettingsCache, getCustomLists } from './customLists';
+import { getCustomLists } from './customLists';
 
 // Mock Firebase Functions
 jest.mock('../firebase', () => ({
@@ -25,7 +25,6 @@ jest.mock('firebase/functions', () => ({
 jest.mock('./customLists', () => ({
   getCustomLists: jest.fn(),
   getAIRecipePrompt: jest.fn(),
-  clearSettingsCache: jest.fn(),
 }));
 
 // Mock environment variables
@@ -129,7 +128,6 @@ describe('AI OCR Service', () => {
       const result = await recognizeRecipeWithGemini(imageBase64, 'de');
 
       expect(httpsCallable).toHaveBeenCalledWith(expect.anything(), 'scanRecipeWithAI');
-      expect(clearSettingsCache).toHaveBeenCalledTimes(1);
       expect(mockCallable).toHaveBeenCalledWith({
         imageBase64: imageBase64,
         language: 'de',
