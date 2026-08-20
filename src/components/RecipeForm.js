@@ -437,6 +437,10 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [aiOcrDailyLimit, setAiOcrDailyLimit] = useState(20);
   // Tracks whether the web import default list pre-selection has been applied
   const webImportListPreselected = useRef(false);
+  // Tracks which pending-import id the review-list pre-selection was already
+  // applied for (RecipeForm isn't remounted between reviewed imports, so a
+  // plain boolean ref would only fire for the first one).
+  const tempReviewListPreselected = useRef(null);
   // FAB button pressed state for animation
   const [fabPressed, setFabPressed] = useState(false);
   // Saving state to show loading overlay and disable FAB button
@@ -495,6 +499,25 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     const listExists = defaultId && privateLists.some(l => l.id === defaultId);
     setSelectedPrivateListId(listExists ? defaultId : privateLists[0].id);
   }, [initialWebImportUrl, privateLists, currentUser, recipe]);
+
+  // Pre-select a private list when reviewing a finished background import
+  // (Webimport/Foto-Scan/Universal-Import all land here, not just the
+  // deeplink case above): keep the list the import already carries, if any,
+  // otherwise default to the user's configured Inspirationssammlung list.
+  useEffect(() => {
+    if (!recipe?.isTemp || isCreatingVersion) return;
+    if (tempReviewListPreselected.current === recipe.id) return;
+    if (privateLists.length === 0) return;
+    tempReviewListPreselected.current = recipe.id;
+    const importListId = recipe.groupType === 'private' ? recipe.groupId : null;
+    if (importListId && privateLists.some(l => l.id === importListId)) {
+      setSelectedPrivateListId(importListId);
+      return;
+    }
+    const defaultId = currentUser?.defaultWebImportListId;
+    const listExists = defaultId && privateLists.some(l => l.id === defaultId);
+    setSelectedPrivateListId(listExists ? defaultId : '');
+  }, [recipe, privateLists, currentUser, isCreatingVersion]);
 
   // Drag and drop sensors with touch support
   const sensors = useSensors(
@@ -1065,7 +1088,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         isPrivate: isPrivate,
         createdAt: isCreatingVersion ? new Date().toISOString() : recipe?.createdAt,
         versionCreatedFrom: isCreatingVersion ? recipe?.title : null,
-        ...(!recipe && !isCreatingVersion && selectedPrivateListId ? { selectedGroupId: selectedPrivateListId } : {}),
+        ...(((!recipe && !isCreatingVersion) || recipe?.isTemp) && selectedPrivateListId ? { selectedGroupId: selectedPrivateListId } : {}),
       };
 
       // Add id only if it exists (editing existing recipe)
@@ -1292,7 +1315,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       )}
 
       <form ref={formRef} className="recipe-form" onSubmit={handleSubmit}>
-        {!recipe && !isCreatingVersion && (
+        {((!recipe && !isCreatingVersion) || recipe?.isTemp) && (
           <div className="recipe-form-toolbar">
             {privateLists.length > 0 && (
               <div className="toolbar-private-list">
@@ -1311,7 +1334,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                 </select>
               </div>
             )}
-            {currentUser?.webimport && (
+            {!recipe && currentUser?.webimport && (
               <button
                 type="button"
                 className="webimport-button-header"
@@ -1327,7 +1350,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                 )}
               </button>
             )}
-            {currentUser?.fotoscan && (
+            {!recipe && currentUser?.fotoscan && (
               <>
                 <label
                   htmlFor={aiOcrLimitReached ? undefined : 'ocrImageUpload'}
@@ -1361,7 +1384,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                 />
               </>
             )}
-            {currentUser?.recipeImport && (
+            {!recipe && currentUser?.recipeImport && (
               <button
                 type="button"
                 className="import-button-header"
