@@ -398,6 +398,11 @@ function App() {
   const recipeCountsInitialized = useRef(false);
   const recipeListScrollPositionRef = useRef(0);
   const shouldRestoreRecipeListScrollRef = useRef(false);
+  // Ids of temp-review recipes whose confirm/discard has already been kicked
+  // off locally but may not have round-tripped through the Firestore
+  // listener yet, so they can still briefly linger in pendingReviewRecipes —
+  // see the auto-review effect below.
+  const handledTempReviewIdsRef = useRef(new Set());
   const [sharedData, setSharedData] = useState({ images: [], title: '', text: '', url: '' });
   const [showUniversalImport, setShowUniversalImport] = useState(false);
   const [isBottomNavVisible, setIsBottomNavVisible] = useState(true);
@@ -981,15 +986,30 @@ function App() {
   // handleSaveRecipe/handleCancelForm close the form again, picking up the next
   // pending recipe until none are left.
   useEffect(() => {
+    const handledIds = handledTempReviewIdsRef.current;
+    // Confirming/discarding a temp review closes the form (isFormOpen: false)
+    // before the Firestore listener has necessarily caught up, so the just-
+    // handled recipe can still be sitting in pendingReviewRecipes for one more
+    // render. Skip ids we already told Firestore to confirm/delete, and drop
+    // them from the tracking set once the listener catches up and removes
+    // them for real, so it doesn't grow unbounded.
+    for (const id of handledIds) {
+      if (!pendingReviewRecipes.some((r) => r.id === id)) {
+        handledIds.delete(id);
+      }
+    }
+
     if (
       currentView === 'recipes' &&
       !isFormOpen &&
       !selectedRecipe &&
       !selectedMenu &&
-      !isSettingsOpen &&
-      pendingReviewRecipes.length > 0
+      !isSettingsOpen
     ) {
-      handleReviewTempRecipe(pendingReviewRecipes[0]);
+      const nextPending = pendingReviewRecipes.find((r) => !handledIds.has(r.id));
+      if (nextPending) {
+        handleReviewTempRecipe(nextPending);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentView, isFormOpen, selectedRecipe, selectedMenu, isSettingsOpen, pendingReviewRecipes]);
@@ -1011,6 +1031,9 @@ function App() {
         // Update existing recipe (direct edit) — also covers confirming a
         // pending background import (isTemp), which just clears the flag.
         const wasTempReview = Boolean(editingRecipe.isTemp);
+        if (wasTempReview) {
+          handledTempReviewIdsRef.current.add(editingRecipe.id);
+        }
         const { id, ...updates } = recipe;
 
         // Automatically clear WhatsApp thumbnail when the default image changes,
@@ -1156,6 +1179,7 @@ function App() {
       if (!window.confirm(`Möchten Sie den Import "${editingRecipe.title || 'Unbenanntes Rezept'}" wirklich verwerfen?`)) {
         return;
       }
+      handledTempReviewIdsRef.current.add(editingRecipe.id);
       deleteRecipeFromFirestore(editingRecipe.id).catch((error) => {
         console.error('Error discarding temp recipe:', error);
       });
