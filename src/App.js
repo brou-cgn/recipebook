@@ -315,9 +315,7 @@ function getBottomNavActiveKey(currentView) {
 }
 
 function getBottomNavBehavior(currentView) {
-  if (currentView === 'startseite') return 'visible';
   if (currentView === 'tagesmenu' || currentView === 'atelierCategorySelection' || currentView === 'events') return 'hidden';
-  if (['recipes', 'seasonalRecipes', 'trendingRecipes', 'menus', 'groups'].includes(currentView)) return 'auto';
   return 'visible';
 }
 
@@ -351,8 +349,6 @@ function App() {
   const [allUsers, setAllUsers] = useState([]);
   const [headerVisible, setHeaderVisible] = useState(true);
   const headerRef = useRef(null);
-  const bottomNavTimeoutRef = useRef(null);
-  const bottomNavLastScrollYRef = useRef(0);
   const [kuecheOpenPersonalData, setKuecheOpenPersonalData] = useState(false);
   const [appCallsActiveTab, setAppCallsActiveTab] = useState('app');
   const [appCallsVisibleTabs, setAppCallsVisibleTabs] = useState(null);
@@ -1159,60 +1155,8 @@ function App() {
   };
 
   useEffect(() => {
-    if (!showBottomNav) return undefined;
-
-    if (bottomNavTimeoutRef.current) {
-      clearTimeout(bottomNavTimeoutRef.current);
-      bottomNavTimeoutRef.current = null;
-    }
-
-    if (bottomNavBehavior === 'hidden') {
-      setIsBottomNavVisible(false);
-      return undefined;
-    }
-
-    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-    if (bottomNavBehavior === 'visible' || prefersReducedMotion) {
-      setIsBottomNavVisible(true);
-      return undefined;
-    }
-
-    const showBottomNavAfterPause = () => {
-      if (bottomNavTimeoutRef.current) {
-        clearTimeout(bottomNavTimeoutRef.current);
-      }
-      bottomNavTimeoutRef.current = setTimeout(() => {
-        setIsBottomNavVisible(true);
-      }, 2000);
-    };
-
-    bottomNavLastScrollYRef.current = window.scrollY;
-    setIsBottomNavVisible(true);
-    showBottomNavAfterPause();
-
-    const handleScroll = () => {
-      const nextScrollY = Math.max(window.scrollY, 0);
-      const delta = nextScrollY - bottomNavLastScrollYRef.current;
-
-      if (nextScrollY <= 0 || delta < 0) {
-        setIsBottomNavVisible(true);
-      } else if (delta > 10) {
-        setIsBottomNavVisible(false);
-      }
-
-      bottomNavLastScrollYRef.current = nextScrollY;
-      showBottomNavAfterPause();
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (bottomNavTimeoutRef.current) {
-        clearTimeout(bottomNavTimeoutRef.current);
-        bottomNavTimeoutRef.current = null;
-      }
-    };
+    if (!showBottomNav) return;
+    setIsBottomNavVisible(bottomNavBehavior !== 'hidden');
   }, [bottomNavBehavior, showBottomNav]);
 
   const handleBottomNavSelect = (tab) => {
