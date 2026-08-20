@@ -18,7 +18,7 @@ function statusLabel(status) {
 // every queued/running/failed background import job; finished imports leave
 // this list immediately and show up as pending reviews on "Neues Rezept
 // hinzufügen" instead.
-function ImportProgressDialog({ jobs, onClose, onDismissJob, onRestartJob }) {
+function ImportProgressDialog({ jobs, onClose, onDismissJob, onRestartJob, onCancelJob }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="import-progress-dialog" onClick={(e) => e.stopPropagation()}>
@@ -56,6 +56,30 @@ function ImportProgressDialog({ jobs, onClose, onDismissJob, onRestartJob }) {
                         aria-label={`${job.label || 'Import'} neu starten`}
                       >
                         Neu starten
+                      </button>
+                    </div>
+                  )}
+                  {job.status === 'processing' && (
+                    <div className="import-progress-item-actions">
+                      {job.canRestart && (
+                        <button
+                          type="button"
+                          className="import-progress-item-restart"
+                          onClick={() => onRestartJob(job.id)}
+                          title="Import neu starten"
+                          aria-label={`${job.label || 'Import'} neu starten`}
+                        >
+                          Neu starten
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="import-progress-item-dismiss"
+                        onClick={() => onCancelJob(job.id)}
+                        title="Import abbrechen"
+                        aria-label={`${job.label || 'Import'} abbrechen`}
+                      >
+                        Abbrechen
                       </button>
                     </div>
                   )}
