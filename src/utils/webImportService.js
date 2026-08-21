@@ -16,7 +16,7 @@ import { parseOcrText } from './ocrParser';
  * @param {Error & {code?: string}} error - Error thrown by a callable function
  * @returns {{code: string, message: string, lowerMessage: string}}
  */
-function getCallableErrorDetails(error) {
+export function getCallableErrorDetails(error) {
   const rawCode = error?.code ? String(error.code) : '';
   const code = rawCode.replace(/^functions\//, '').toLowerCase();
   const message = error?.message ? String(error.message).trim() : '';

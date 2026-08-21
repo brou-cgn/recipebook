@@ -13,6 +13,7 @@ const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const sharp = require('sharp');
 const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
+const {requireWebImportUnlocked} = require('./webImportPin');
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -1710,6 +1711,8 @@ exports.scrapeInstagramReel = onCall(
         throw new HttpsError('invalid-argument', 'Language must be "de" or "en"');
       }
 
+      await requireWebImportUnlocked(userId);
+
       // Rate limiting (shared with image scanning)
       const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin, isModerator);
       if (!rateLimitResult.allowed) {
@@ -1890,6 +1893,8 @@ exports.captureWebsiteScreenshot = onCall(
         throw new HttpsError('invalid-argument', 'URL must be a non-empty string');
       }
       assertPublicUrl(url);
+
+      await requireWebImportUnlocked(userId);
 
       // Rate limiting
       const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin, isModerator);
@@ -2577,6 +2582,8 @@ exports.importRecipeCallable = onCall(
         throw new HttpsError('invalid-argument', 'URL must be a non-empty string');
       }
       assertPublicUrl(url);
+
+      await requireWebImportUnlocked(userId);
 
       const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin, isModerator);
       if (!rateLimitResult.allowed) {
@@ -7161,6 +7168,12 @@ exports.calculateEventDrinks = require('./calculateEventDrinks').calculateEventD
 exports.submitConsumption = require('./submitConsumption').submitConsumption;
 exports.reminderConsumption = require('./reminderConsumption').reminderConsumption;
 exports.manageGuestProfile = require('./manageGuestProfile').manageGuestProfile;
+
+// Webimport-PIN: pro Nutzer optionaler PIN-Schutz für die Webimport-Funktionen
+// (importRecipeCallable/scrapeInstagramReel/captureWebsiteScreenshot unten
+// rufen requireWebImportUnlocked() auf, bevor sie loslegen).
+exports.setWebImportPin = require('./webImportPin').setWebImportPin;
+exports.verifyWebImportPin = require('./webImportPin').verifyWebImportPin;
 
 // Server-seitige Aggregation von ratingAvg/ratingCount auf recipes/{recipeId}
 // aus der ratings-Subcollection (ersetzt den bisherigen offenen Client-Write).
