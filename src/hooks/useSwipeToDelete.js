@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 // drinks, guests, recipe ingredients/steps). See CLAUDE.md: mobile uses this
 // gesture in place of the desktop DeleteRowButton.
 export const SWIPE_DELETE_THRESHOLD = 56;
-export const SWIPE_DELETE_MAX_OFFSET = 96;
+export const SWIPE_DELETE_MAX_OFFSET = 72;
 export const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
 
 /**
@@ -17,7 +17,7 @@ export const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
  *   Called on every touchmove with the raw gesture delta (or null when the move is ignored), for callers that need
  *   to react to movement beyond the swipe itself (e.g. cancelling a long-press timer).
  * @param {number} [options.maxOffset] - Overrides SWIPE_DELETE_MAX_OFFSET for callers whose row is narrower
- *   or wants a shorter reveal (e.g. MenuForm's recipe/drink rows).
+ *   or wants a shorter reveal.
  */
 export default function useSwipeToDelete({
   disabled = false,
