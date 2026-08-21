@@ -2,6 +2,14 @@
 
 Diese Anleitung erklärt, wie du Rezepte direkt aus einem Apple Kurzbefehl (Shortcut) in dein RecipeBook importieren kannst.
 
+## Fertigen Kurzbefehl herunterladen
+
+Statt den Kurzbefehl manuell nachzubauen (siehe unten), kannst du auch den fertigen Kurzbefehl laden, der den Rezept-Import per Deeplink startet:
+
+**[Kurzbefehl herunterladen](https://www.icloud.com/shortcuts/47ecb3c5292d473eb92ee5ae2f2a92e4)**
+
+Der Link ist außerdem im Hamburger-Menü der App unter **Hilfe → Kurzbefehl installieren** hinterlegt und dort für alle Nutzer sichtbar (nicht nur Admins).
+
 ## Authentifizierung
 
 Die `addRecipeViaAPI` Cloud Function verwendet **API Key Authentifizierung** statt Firebase Auth Tokens. Ein API Key ist dauerhaft gültig und muss nur einmal im Kurzbefehl hinterlegt werden.
