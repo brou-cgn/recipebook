@@ -129,9 +129,10 @@ export function extractKulinarikFromTags(tags) {
  * into the recipe object shape expected by RecipeForm's handleImport().
  * @param {Object} aiResult - Raw AI result (title, ingredients, steps, servings, ...)
  * @param {string} [authorId] - Optional author id to attach to the recipe
+ * @param {string} [sourceUrl] - Optional URL the recipe was imported from
  * @returns {Object} - Recipe object ready for onImport()
  */
-export function buildRecipeFromAiResult(aiResult, authorId = '') {
+export function buildRecipeFromAiResult(aiResult, authorId = '', sourceUrl = '') {
   const parseTime = (timeStr) => {
     if (!timeStr) return 0;
     const numMatch = String(timeStr).match(/\d+/);
@@ -153,6 +154,7 @@ export function buildRecipeFromAiResult(aiResult, authorId = '') {
     schwierigkeit: aiResult.difficulty || 3,
     speisekategorie: aiResult.category || '',
     ...(authorId ? { authorId } : {}),
+    ...(sourceUrl ? { sourceUrl } : {}),
   };
 }
 

@@ -41,7 +41,7 @@ export async function runWebImport(normalizedUrl, authorId, onProgress, jobMeta)
     result = await importRecipeFromUrl(normalizedUrl, onProgress, jobMeta);
   }
 
-  return buildRecipeFromAiResult(result, authorId);
+  return buildRecipeFromAiResult(result, authorId, normalizedUrl);
 }
 
 function mergeUniversalAiResults(results) {
@@ -221,7 +221,7 @@ export async function runUniversalImport({ images, text, url }, onProgress, jobM
   }
 
   const merged = mergeUniversalAiResults(results);
-  return buildRecipeFromAiResult(merged);
+  return buildRecipeFromAiResult(merged, '', url.trim());
 }
 
 // Runs AI OCR on a batch of images and returns the merged recipe. Passed as
