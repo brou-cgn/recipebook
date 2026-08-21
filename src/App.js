@@ -401,6 +401,10 @@ function App() {
   // listener yet, so they can still briefly linger in pendingReviewRecipes —
   // see the auto-review effect below.
   const handledTempReviewIdsRef = useRef(new Set());
+  // Tracks whether the previous render was already sitting idle on the
+  // recipe overview (no form/detail/menu/settings open) — see the auto-review
+  // effect below, which only acts on the transition into that state.
+  const wasIdleRecipesOverviewRef = useRef(false);
   const [sharedData, setSharedData] = useState({ images: [], title: '', text: '', url: '' });
   const [showUniversalImport, setShowUniversalImport] = useState(false);
   const [isBottomNavVisible, setIsBottomNavVisible] = useState(true);
@@ -982,18 +986,26 @@ function App() {
       }
     }
 
-    if (
+    const isIdleRecipesOverview =
       currentView === 'recipes' &&
       !isFormOpen &&
       !selectedRecipe &&
       !selectedMenu &&
-      !isSettingsOpen
-    ) {
+      !isSettingsOpen;
+
+    // Only act on the transition into the idle overview (navigating in, or
+    // closing the form/detail/menu/settings), not merely on pendingReviewRecipes
+    // changing while the user is already sitting there — otherwise a background
+    // import finishing mid-browse would yank them into the add-recipe form.
+    // The next time they actually (re-)enter the overview, this fires again
+    // and picks up whatever is pending then.
+    if (isIdleRecipesOverview && !wasIdleRecipesOverviewRef.current) {
       const nextPending = pendingReviewRecipes.find((r) => !handledIds.has(r.id));
       if (nextPending) {
         handleReviewTempRecipe(nextPending);
       }
     }
+    wasIdleRecipesOverviewRef.current = isIdleRecipesOverview;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentView, isFormOpen, selectedRecipe, selectedMenu, isSettingsOpen, pendingReviewRecipes]);
 
