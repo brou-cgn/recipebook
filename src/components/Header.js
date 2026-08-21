@@ -7,6 +7,8 @@ import ImportProgressIndicator from './ImportProgressIndicator';
 import ImportProgressDialog from './ImportProgressDialog';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 
+const RECIPE_IMPORT_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/47ecb3c5292d473eb92ee5ae2f2a92e4';
+
 /**
  * Renders text with **bold** markdown syntax as <strong> elements.
  */
@@ -309,9 +311,9 @@ const Header = forwardRef(function Header({
                       </button>
                     </div>
                   )}
-                  {visibleFaqs.length > 0 && (
-                    <div className="menu-section">
-                      <div className="menu-section-title">Hilfe</div>
+                  <div className="menu-section">
+                    <div className="menu-section-title">Hilfe</div>
+                    {visibleFaqs.length > 0 && (
                       <button
                         className="menu-item"
                         onClick={() => {
@@ -322,8 +324,17 @@ const Header = forwardRef(function Header({
                       >
                         Kochschule
                       </button>
-                    </div>
-                  )}
+                    )}
+                    <button
+                      className="menu-item"
+                      onClick={() => {
+                        window.open(RECIPE_IMPORT_SHORTCUT_URL, '_blank', 'noopener,noreferrer');
+                        setMenuOpen(false);
+                      }}
+                    >
+                      Kurzbefehl installieren
+                    </button>
+                  </div>
                   {onSettingsClick && (currentUser?.isAdmin || currentUser?.settingsAccess) && (
                     <div className="menu-section">
                       <div className="menu-section-title">Verwaltung</div>

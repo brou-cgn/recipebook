@@ -8,7 +8,7 @@ Statt den Kurzbefehl manuell nachzubauen (siehe unten), kannst du auch den ferti
 
 **[Kurzbefehl herunterladen](https://www.icloud.com/shortcuts/47ecb3c5292d473eb92ee5ae2f2a92e4)**
 
-Der Link ist außerdem in der App unter **Einstellungen → Allgemein → Kurzbefehle** hinterlegt.
+Der Link ist außerdem im Hamburger-Menü der App unter **Hilfe → Kurzbefehl installieren** hinterlegt und dort für alle Nutzer sichtbar (nicht nur Admins).
 
 ## Authentifizierung
 

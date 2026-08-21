@@ -1597,21 +1597,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
             </div>
 
             <div className="settings-section">
-              <h3>Kurzbefehle</h3>
-              <p className="section-description">
-                Apple Kurzbefehl, der den Rezept-Import per Deeplink startet. Auf einem iPhone, iPad oder Mac öffnen, um ihn zur Kurzbefehle-App hinzuzufügen.
-              </p>
-              <a
-                href="https://www.icloud.com/shortcuts/47ecb3c5292d473eb92ee5ae2f2a92e4"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="image-upload-label"
-              >
-                Kurzbefehl herunterladen
-              </a>
-            </div>
-
-            <div className="settings-section">
               <h3>Onboarding</h3>
               <p className="section-description">
                 Aktiviert den generischen Onboarding-Testmodus. Onboarding-Overlays werden nur angezeigt, wenn dieser Schalter aktiv ist und die jeweilige Rolle zusätzlich die Berechtigung „Onboarding-Testmodus“ besitzt.
