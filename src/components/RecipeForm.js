@@ -1201,6 +1201,23 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     setOcrImagesBase64([]);
   };
 
+  // Once a URL import or photo scan has actually been queued, leave the
+  // empty "Neues Rezept hinzufügen" form entirely and return to whichever
+  // page the user was on before starting it, instead of leaving them on
+  // the now-pointless blank add-recipe form. These modals only ever open
+  // from that blank form (the buttons that show them are gated on !recipe),
+  // so it's always safe to close the whole form here.
+  const handleOcrImported = () => {
+    setShowOcrModal(false);
+    setOcrImagesBase64([]);
+    onCancel();
+  };
+
+  const handleWebImportImported = () => {
+    setShowWebImportModal(false);
+    onCancel();
+  };
+
   const handleRecipeSelect = (selectedRecipe) => {
     if (typeaheadIngredientIndex !== null) {
       const newIngredients = [...ingredients];
@@ -1822,6 +1839,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       {showOcrModal && (
         <OcrScanModal
           onCancel={handleOcrCancel}
+          onImported={handleOcrImported}
           initialImages={ocrImagesBase64}
           userId={currentUser?.id}
           importContext={importContext}
@@ -1832,6 +1850,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         <WebImportModal
           initialUrl={initialWebImportUrl}
           onCancel={() => setShowWebImportModal(false)}
+          onImported={handleWebImportImported}
           authorId={initialWebImportAuthorId}
           userId={currentUser?.id}
           importContext={importContext}

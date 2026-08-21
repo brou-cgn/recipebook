@@ -10,7 +10,7 @@ const UPLOAD_ACCEPT = 'image/jpeg,image/jpg,image/png,image/heic,image/heif,.hei
 
 // initialImage: single image that triggers an immediate background scan (takes precedence over initialImages)
 // initialImages: array of base64 images to pre-fill the image-preview step
-function OcrScanModal({ onCancel, initialImage = '', initialImages = [], userId = '', importContext = {} }) {
+function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages = [], userId = '', importContext = {} }) {
   // initialImage queues immediately (no step UI shown); initialImages shows the
   // image-preview step; neither → upload step
   const [step, setStep] = useState(initialImage ? 'queuing' : (initialImages.length > 0 ? 'image-preview' : 'upload'));
@@ -39,7 +39,10 @@ function OcrScanModal({ onCancel, initialImage = '', initialImages = [], userId 
       source: { type: 'photo', images, language },
     });
     stopCamera();
-    onCancel();
+    // Once the job is queued, hand control back to whoever wants to leave
+    // the empty add-recipe form (e.g. return to the page the user came
+    // from) rather than just closing this modal on top of it.
+    (onImported || onCancel)();
   };
 
   // When initialImage is provided, queue the scan automatically on mount

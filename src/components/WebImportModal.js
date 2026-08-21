@@ -4,7 +4,7 @@ import { normalizeImportedUrl } from '../utils/webImportService';
 import { runWebImport } from '../utils/importRunners';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 
-function WebImportModal({ onCancel, initialUrl = '', authorId = '', userId = '', importContext = {} }) {
+function WebImportModal({ onCancel, onImported, initialUrl = '', authorId = '', userId = '', importContext = {} }) {
   const [url, setUrl] = useState(() => normalizeImportedUrl(initialUrl));
   const [error, setError] = useState('');
   const { enqueueImportJob } = useRecipeImportQueue();
@@ -49,7 +49,10 @@ function WebImportModal({ onCancel, initialUrl = '', authorId = '', userId = '',
       source: { type: 'web', url: normalizedUrl, authorId },
     });
 
-    onCancel();
+    // Once the job is queued, hand control back to whoever wants to leave
+    // the empty add-recipe form (e.g. return to the page the user came
+    // from) rather than just closing this modal on top of it.
+    (onImported || onCancel)();
   };
 
   // Handle URL submission from the form
