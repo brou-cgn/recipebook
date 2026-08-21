@@ -54,6 +54,23 @@ Für den Fall „ich habe eine Rezept-URL und will sie importieren" (der Anwendu
 
 Der Kurzbefehl braucht auf diese Antwort hin nichts weiter zu tun – kein Warten, kein Öffnen der App nötig. Ein `success: true` bedeutet nur „URL wurde entgegengenommen", nicht „Rezept wurde korrekt erkannt"; falls die Erkennung fehlschlägt, taucht der Job mit Fehlermeldung (statt als fertiges Rezept) in der Review-Queue auf und kann dort neu gestartet werden.
 
+### Mehrere Personen, ein gemeinsamer Shortcut-User
+
+Wenn mehrere Haushaltsmitglieder denselben Kurzbefehl mit demselben Service-User (`isShortcutUser: true`, siehe unten) nutzen, landen ohne weiteres Zutun **alle** importierten Rezepte unter diesem einen Service-User als Autor – nicht unter der Person, die den Kurzbefehl tatsächlich ausgeführt hat.
+
+Dafür gibt es das optionale Body-Feld `authorEmail`: Trägt jede Person in ihrer eigenen Kurzbefehl-Kopie ihre eigene, in RecipeBook registrierte E-Mail-Adresse ein, wird das Rezept dieser Person zugeordnet, statt dem gemeinsamen Service-User. `X-Api-Key`/`X-User-Id` bleiben dabei für alle identisch (Service-User) – `authorEmail` ändert nur, wem das Rezept gehört, nicht wer den Import auslösen darf.
+
+**Body mit Autor-Zuordnung:**
+
+```json
+{
+  "url": "<Rezept-URL>",
+  "authorEmail": "person@example.com"
+}
+```
+
+Ist die Adresse ungültig, nicht registriert, oder wird das Feld weggelassen, greift automatisch wieder der gemeinsame Service-User als Autor – der Import schlägt dadurch nie fehl.
+
 ---
 
 ## Schritt 1: API Key generieren

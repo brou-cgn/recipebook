@@ -2720,13 +2720,40 @@ exports.importRecipeShortcut = onRequest(
         }
       }
 
-      const {url} = body || {};
+      const {url, authorEmail} = body || {};
       if (!url || typeof url !== 'string') {
         res.status(400).json({
           success: false,
           error: 'Missing required field: url (string)',
         });
         return;
+      }
+
+      // When multiple people share one Shortcut (and thus one X-User-Id, a
+      // dedicated isShortcutUser service account — see APPLE_SHORTCUT_SETUP.md),
+      // authorEmail lets each person's own Shortcut instance attribute the
+      // imported recipe to themselves instead of the shared service account.
+      // This is attribution only, not authentication: the request is already
+      // authorized above via the shared account's API key + role, and a
+      // missing/unresolvable/invalid authorEmail just falls back to that
+      // account as the author rather than failing the import.
+      let authorId = userId;
+      if (typeof authorEmail === 'string' && authorEmail.trim()) {
+        const normalizedAuthorEmail = authorEmail.trim().toLowerCase();
+        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedAuthorEmail)) {
+          try {
+            const authorRecord = await admin.auth().getUserByEmail(normalizedAuthorEmail);
+            authorId = authorRecord.uid;
+          } catch (emailErr) {
+            if (emailErr.code !== 'auth/user-not-found') {
+              console.error(`importRecipeShortcut: error resolving authorEmail for user ${userId}:`, emailErr);
+            } else {
+              console.warn(`importRecipeShortcut: authorEmail ${normalizedAuthorEmail} not found, falling back to requesting user ${userId}`);
+            }
+          }
+        } else {
+          console.warn(`importRecipeShortcut: ignoring malformed authorEmail from user ${userId}`);
+        }
       }
 
       // SSRF guard
@@ -2746,7 +2773,7 @@ exports.importRecipeShortcut = onRequest(
         return;
       }
 
-      console.log(`importRecipeShortcut: import queued by user ${userId} for URL: ${url}`);
+      console.log(`importRecipeShortcut: import queued by user ${userId} (author ${authorId}) for URL: ${url}`);
 
       // Queue the job and respond immediately instead of running the whole
       // import (screenshot/JSON-LD + Gemini, ~10-20s) inline — a Shortcut's
@@ -2762,7 +2789,7 @@ exports.importRecipeShortcut = onRequest(
         const jobRef = db.collection('recipes').doc();
         await jobRef.set({
           title: 'Rezept-Import',
-          authorId: userId,
+          authorId,
           isTemp: true,
           importStatus: 'queued',
           importProgress: 0,

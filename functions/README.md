@@ -81,12 +81,14 @@ X-User-Id: <Firebase User ID>
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `url` | string | ✅ | Public recipe URL to import |
+| `authorEmail` | string | – | Attributes the recipe to this person instead of the requesting `X-User-Id`. Only relevant when several people share one Shortcut/service account (`isShortcutUser: true`) — resolved via `admin.auth().getUserByEmail`; a missing, malformed, or unmatched address silently falls back to `X-User-Id` as author rather than failing the import. This is attribution only, not authentication — it never changes who is authorized to call the endpoint. |
 
 **Example request body:**
 
 ```json
 {
-  "url": "https://www.lecker.de/zucchini-kartoffel-puffer-127503.html"
+  "url": "https://www.lecker.de/zucchini-kartoffel-puffer-127503.html",
+  "authorEmail": "person@example.com"
 }
 ```
 
