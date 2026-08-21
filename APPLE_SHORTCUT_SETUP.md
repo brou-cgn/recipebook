@@ -4,18 +4,55 @@ Diese Anleitung erklärt, wie du Rezepte direkt aus einem Apple Kurzbefehl (Shor
 
 ## Fertigen Kurzbefehl herunterladen
 
-Statt den Kurzbefehl manuell nachzubauen (siehe unten), kannst du auch den fertigen Kurzbefehl laden, der den Rezept-Import per Deeplink startet:
+Statt den Kurzbefehl manuell nachzubauen (siehe unten), kannst du auch den fertigen Kurzbefehl laden:
 
 **[Kurzbefehl herunterladen](https://www.icloud.com/shortcuts/47ecb3c5292d473eb92ee5ae2f2a92e4)**
 
 Der Link ist außerdem im Hamburger-Menü der App unter **Hilfe → Kurzbefehl installieren** hinterlegt und dort für alle Nutzer sichtbar (nicht nur Admins) – der Menüpunkt erscheint aber nur auf iPhone, iPad und Mac, da nur dort eine Kurzbefehle-App existiert.
 
+**Hinweis:** Dieser fertige Kurzbefehl startet den Import per **Deeplink** (`https://broubook.web.app/?webimport=<url>`, Aktion „URL öffnen"). Das öffnet dabei jedes Mal die komplette Web-App in Safari (JS-Bundle laden, Firebase-Auth initialisieren) und wartet erst danach auf den eigentlichen Import – das kann sich auf dem iPhone lange und wackelig anfühlen. Für einen deutlich schnelleren und stabileren Import per URL nutze stattdessen den Abschnitt **„Rezept von einer URL importieren"** unten – dafür musst du den heruntergeladenen Kurzbefehl entsprechend abändern (die „URL öffnen"-Aktion durch „Inhalt von URL laden" ersetzen) oder ihn manuell nachbauen.
+
 ## Authentifizierung
 
-Die `addRecipeViaAPI` Cloud Function verwendet **API Key Authentifizierung** statt Firebase Auth Tokens. Ein API Key ist dauerhaft gültig und muss nur einmal im Kurzbefehl hinterlegt werden.
+Alle Shortcut-Endpoints (`importRecipeShortcut`, `addRecipeViaAPI`, `createRecipeImportFromText`) verwenden **API Key Authentifizierung** statt Firebase Auth Tokens. Ein API Key ist dauerhaft gültig und muss nur einmal im Kurzbefehl hinterlegt werden – derselbe Key funktioniert für alle drei Endpoints.
 
 - **`X-Api-Key`** Header: dein persönlicher API Key (als Firebase Secret gespeichert)
 - **`X-User-Id`** Header: deine Firebase User ID
+
+---
+
+## Rezept von einer URL importieren (empfohlen)
+
+Für den Fall „ich habe eine Rezept-URL und will sie importieren" (der Anwendungsfall des bisherigen Deeplink-Kurzbefehls) rufst du direkt die `importRecipeShortcut` Cloud Function auf. Sie legt die URL sofort als Import-Job in Firestore ab und antwortet in unter einer Sekunde – der eigentliche Import (Website laden, JSON-LD/Text/Screenshot + Gemini AI) läuft danach serverseitig im Hintergrund, unabhängig davon, ob der Kurzbefehl/das Handy währenddessen online bleibt. Das fertige Rezept erscheint automatisch in der Review-Queue „Neue Rezepte" der App, sobald du sie das nächste Mal öffnest.
+
+### Aktion: „Inhalt von URL laden"
+
+| Feld | Wert |
+|------|------|
+| URL | `https://us-central1-<PROJECT-ID>.cloudfunctions.net/importRecipeShortcut` |
+| Methode | `POST` |
+
+**Headers:**
+
+| Name | Wert |
+|------|------|
+| `Content-Type` | `application/json` |
+| `X-Api-Key` | `<dein-api-key>` |
+| `X-User-Id` | `<deine-firebase-uid>` |
+
+**Body:**
+
+```json
+{ "url": "<Rezept-URL, z. B. aus „Text abrufen aus Eingabe“>" }
+```
+
+**Antwort (HTTP 200) – Job wurde eingereiht, noch nicht fertig importiert:**
+
+```json
+{ "success": true, "jobId": "abc123xyz", "status": "queued" }
+```
+
+Der Kurzbefehl braucht auf diese Antwort hin nichts weiter zu tun – kein Warten, kein Öffnen der App nötig. Ein `success: true` bedeutet nur „URL wurde entgegengenommen", nicht „Rezept wurde korrekt erkannt"; falls die Erkennung fehlschlägt, taucht der Job mit Fehlermeldung (statt als fertiges Rezept) in der Review-Queue auf und kann dort neu gestartet werden.
 
 ---
 

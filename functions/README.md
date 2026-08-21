@@ -49,8 +49,18 @@ Authenticates via `SHORTCUT_API_KEY` (same mechanism as `addRecipeViaAPI`).
 **Features:**
 - ✅ Authentication: API Key (`X-Api-Key` header) + User ID (`X-User-Id` header)
 - ✅ CORS enabled for allowed origins
-- ✅ Full import pipeline (HTML fetch → JSON-LD → text → screenshot fallback)
 - ✅ Requires user role `edit`, `admin`, or flag `isShortcutUser: true`
+- ✅ Asynchronous: queues the job and responds in well under a second instead
+  of waiting for the full import pipeline (HTML fetch → JSON-LD → text →
+  screenshot fallback, ~10–20s) — a mobile Shortcut has no business holding
+  an HTTP connection open that long. The queued job (a temp recipe document
+  with `importOrigin: 'shortcut'`) is picked up within seconds by the
+  `processShortcutImportJob` Firestore trigger, which runs the same pipeline
+  server-side and finalizes the result — or, if that instant trigger is ever
+  missed, by the `recoverStuckImportJobs` sweeper (every 10 min) as a
+  fallback. Either way the imported recipe shows up in the app's normal
+  "Neue Rezepte" review queue; there's nothing further to poll from the
+  Shortcut.
 
 **Setup:**
 1. Generate API key: `openssl rand -hex 32`
@@ -71,8 +81,6 @@ X-User-Id: <Firebase User ID>
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `url` | string | ✅ | Public recipe URL to import |
-| `cuisineTypes` | string[] | – | Cuisine types for AI prompt |
-| `mealCategories` | string[] | – | Meal categories for AI prompt |
 
 **Example request body:**
 
@@ -94,22 +102,13 @@ Headers:
 Body:   {"url": "<the recipe URL>"}
 ```
 
-**Success response (200):**
+**Success response (200) — job queued, not yet imported:**
 
 ```json
 {
   "success": true,
-  "recipe": {
-    "title": "Zucchini-Kartoffel-Puffer",
-    "ingredients": ["500 g Zucchini", "300 g Kartoffeln"],
-    "steps": ["Zucchini raspeln ...", "Kartoffeln schälen ..."],
-    "servings": 4,
-    "cookTime": "30 min",
-    "difficulty": 2,
-    "cuisine": "Deutsch",
-    "category": "Hauptgericht",
-    "tags": ["vegetarisch"]
-  }
+  "jobId": "aBcD1234efGh",
+  "status": "queued"
 }
 ```
 
@@ -121,8 +120,13 @@ Body:   {"url": "<the recipe URL>"}
 | 401 | Missing or invalid `X-Api-Key` / `X-User-Id` |
 | 403 | User not found or insufficient permissions |
 | 405 | Wrong HTTP method (only POST allowed) |
-| 500 | Server misconfiguration or unexpected error |
-| 504 | Import timed out (deadline exceeded) |
+| 500 | Server misconfiguration, or the job could not be written to Firestore |
+
+A 200 response only means the import was queued successfully — it does not
+guarantee the recipe was recognized correctly. Check the app's review queue
+for the actual result; a failed job shows up there with `importStatus:
+'error'` (visible/retryable from the "Neue Rezepte" queue) rather than as an
+HTTP error.
 
 ---
 

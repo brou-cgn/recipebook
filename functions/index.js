@@ -2720,7 +2720,7 @@ exports.importRecipeShortcut = onRequest(
         }
       }
 
-      const {url, cuisineTypes, mealCategories} = body || {};
+      const {url} = body || {};
       if (!url || typeof url !== 'string') {
         res.status(400).json({
           success: false,
@@ -2746,28 +2746,34 @@ exports.importRecipeShortcut = onRequest(
         return;
       }
 
-      console.log(`importRecipeShortcut: import requested by user ${userId} for URL: ${url}`);
+      console.log(`importRecipeShortcut: import queued by user ${userId} for URL: ${url}`);
 
+      // Queue the job and respond immediately instead of running the whole
+      // import (screenshot/JSON-LD + Gemini, ~10-20s) inline — a Shortcut's
+      // HTTP call over a mobile connection has no business staying open that
+      // long. processShortcutImportJob (a Firestore trigger, see above)
+      // picks this up within seconds and finishes it server-side; the result
+      // shows up in the app's normal import review queue like any other
+      // import. cuisineTypes/mealCategories aren't persisted onto the job —
+      // same tradeoff recoverStuckImportJobs already accepts for redriven
+      // 'web' jobs (see runImportFromWebSource).
       try {
-        const recipe = await runImportFromUrl(url, {
-          apiKey: geminiKey,
-          cuisineTypes,
-          mealCategories,
-          source: 'shortcut',
-          userId,
+        const db = admin.firestore();
+        const jobRef = db.collection('recipes').doc();
+        await jobRef.set({
+          title: 'Rezept-Import',
+          authorId: userId,
+          isTemp: true,
+          importStatus: 'queued',
+          importProgress: 0,
+          importHeartbeatAt: Date.now(),
+          importOrigin: 'shortcut',
+          importSource: {type: 'web', url},
         });
-        res.status(200).json({success: true, recipe});
+        res.status(200).json({success: true, jobId: jobRef.id, status: 'queued'});
       } catch (err) {
-        let statusCode = 500;
-        if (err instanceof HttpsError) {
-          if (err.code === 'deadline-exceeded') {
-            statusCode = 504;
-          } else if (err.code === 'invalid-argument') {
-            statusCode = 400;
-          }
-        }
-        console.error(`importRecipeShortcut: import failed for user ${userId}:`, err);
-        res.status(statusCode).json({success: false, error: err.message});
+        console.error(`importRecipeShortcut: failed to queue import for user ${userId}:`, err);
+        res.status(500).json({success: false, error: 'Import konnte nicht in die Warteschlange gestellt werden.'});
       }
     },
 );
@@ -6963,6 +6969,46 @@ async function runImportFromSource(source, authorId, jobId) {
     }
   }
 }
+
+/**
+ * Firestore trigger: instantly processes background-import jobs that were
+ * queued by importRecipeShortcut (see below) — there is no browser tab
+ * involved for those, so unlike the normal web-import flow (where the
+ * client that just created the job immediately starts processing it itself
+ * via RecipeImportQueueContext) they would otherwise sit untouched until
+ * recoverStuckImportJobs' next sweep, up to STUCK_IMPORT_JOB_MS +
+ * (sweep interval) later. Scoped to importOrigin:'shortcut' specifically so
+ * it never races the client-driven flow for jobs a live tab already owns.
+ */
+exports.processShortcutImportJob = onDocumentCreated(
+    {
+      document: 'recipes/{recipeId}',
+      region: 'us-central1',
+      secrets: [geminiApiKey],
+    },
+    async (event) => {
+      const jobId = event.params.recipeId;
+      const data = event.data ? event.data.data() : null;
+      if (!data || data.importOrigin !== 'shortcut' || data.importStatus !== 'queued') {
+        return;
+      }
+
+      const authorId = data.authorId || 'unknown';
+      await event.data.ref.update({
+        importStatus: 'processing',
+        importHeartbeatAt: Date.now(),
+        importAttempts: 1,
+      });
+
+      try {
+        const result = await runImportFromSource(data.importSource, authorId, jobId);
+        await finalizeImportJob(jobId, authorId, result);
+      } catch (error) {
+        console.error(`processShortcutImportJob: job ${jobId} failed`, error);
+        await failImportJob(jobId, error);
+      }
+    },
+);
 
 /**
  * Threshold above which a queued/processing (or already-failed-but-
