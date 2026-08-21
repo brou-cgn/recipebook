@@ -183,7 +183,7 @@ Füge im Kurzbefehl eine **„Inhalt von URL laden"** Aktion hinzu und konfiguri
 |-------------|-----------|
 | 400 | Fehlende oder ungültige Felder im Body |
 | 401 | Fehlender oder ungültiger API Key / User Email Header |
-| 403 | E-Mail-Adresse unbekannt oder fehlende Berechtigung (Rolle muss `edit` oder `admin` sein) – aus Enumeration-Schutz gibt es hierfür bewusst nur eine generische Fehlermeldung |
+| 403 | E-Mail-Adresse unbekannt oder fehlende Berechtigung (Rolle muss `edit`, `admin` oder `moderator` sein) – aus Enumeration-Schutz gibt es hierfür bewusst nur eine generische Fehlermeldung |
 | 405 | Falsche HTTP-Methode (nur POST erlaubt) |
 | 500 | Fehler beim Speichern in Firestore oder fehlendes SHORTCUT_API_KEY Secret |
 
@@ -259,7 +259,7 @@ Nach dem API-Call öffnest du die `importUrl` mit der Aktion „URL öffnen".
 **„Access denied" / „Insufficient permissions" (403)**
 - Prüfe, ob die E-Mail-Adresse korrekt (und exakt wie registriert) eingetragen wurde
 - Stelle sicher, dass der Benutzer in der Firebase Authentication existiert und einen Eintrag in der `users` Firestore-Collection hat
-- Stelle sicher, dass der Benutzer die Rolle `edit` oder `admin` hat, oder `isShortcutUser: true` gesetzt ist
+- Stelle sicher, dass der Benutzer die Rolle `edit`, `admin` oder `moderator` hat, oder `isShortcutUser: true` gesetzt ist
 
 **„Method not allowed" (405)**
 - Stelle sicher, dass die HTTP-Methode auf `POST` gesetzt ist

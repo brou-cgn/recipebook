@@ -2722,7 +2722,7 @@ exports.importRecipeShortcut = onRequest(
         const userData = userDoc.data();
         const role = userData?.role;
         const isShortcutUser = userData?.isShortcutUser === true;
-        if (role !== 'edit' && role !== 'admin' && !isShortcutUser) {
+        if (role !== 'edit' && role !== 'admin' && role !== 'moderator' && !isShortcutUser) {
           res.status(403).json({success: false, error: 'Insufficient permissions'});
           return;
         }
@@ -4664,7 +4664,7 @@ exports.addRecipeViaAPI = onRequest(
           return;
         }
         const role = userDoc.data()?.role;
-        if (role !== 'edit' && role !== 'admin') {
+        if (role !== 'edit' && role !== 'admin' && role !== 'moderator') {
           res.status(403).json({success: false, error: 'Insufficient permissions'});
           return;
         }
@@ -4822,7 +4822,7 @@ exports.createRecipeImportFromText = onRequest(
 
       const userRole = userData.role || '';
       const isShortcutUser = userData.isShortcutUser === true;
-      if (userRole !== 'edit' && userRole !== 'admin' && !userData.isAdmin && !isShortcutUser) {
+      if (userRole !== 'edit' && userRole !== 'admin' && userRole !== 'moderator' && !userData.isAdmin && !isShortcutUser) {
         res.status(403).json({
           success: false,
           error: 'Insufficient permissions.',

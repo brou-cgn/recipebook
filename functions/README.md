@@ -49,7 +49,7 @@ Authenticates via `SHORTCUT_API_KEY` (same mechanism as `addRecipeViaAPI`).
 **Features:**
 - ✅ Authentication: API Key (`X-Api-Key` header) + User Email (`X-User-Email` header, resolved server-side to a Firebase uid via `admin.auth().getUserByEmail`)
 - ✅ CORS enabled for allowed origins
-- ✅ Requires user role `edit`, `admin`, or flag `isShortcutUser: true`
+- ✅ Requires user role `edit`, `admin`, `moderator`, or flag `isShortcutUser: true`
 - ✅ Asynchronous: queues the job and responds in well under a second instead
   of waiting for the full import pipeline (HTML fetch → JSON-LD → text →
   screenshot fallback, ~10–20s) — a mobile Shortcut has no business holding
@@ -249,7 +249,7 @@ An HTTP endpoint that stores unstructured recipe text temporarily in Firestore a
 
 **Features:**
 - ✅ Authentication: API Key (`X-Api-Key` header) + User Email (`X-User-Email` header, resolved server-side to a Firebase uid via `admin.auth().getUserByEmail`)
-- ✅ Role check: only users with role `edit`, `admin`, or flag `isShortcutUser: true` may create imports
+- ✅ Role check: only users with role `edit`, `admin`, `moderator`, or flag `isShortcutUser: true` may create imports
 - ✅ Configurable TTL (default 10 minutes)
 - ✅ Returns a capability URL (`importUrl`) that is publicly accessible
 
@@ -291,7 +291,7 @@ X-User-Email: <registered email address of the user/service account>
 |--------|--------|
 | 400 | Missing or empty `rawText` |
 | 401 | Missing or invalid API Key / User Email header |
-| 403 | Unknown email address or role insufficient (requires `edit`, `admin`, or `isShortcutUser: true`) – same generic response for both, to avoid email enumeration |
+| 403 | Unknown email address or role insufficient (requires `edit`, `admin`, `moderator`, or `isShortcutUser: true`) – same generic response for both, to avoid email enumeration |
 | 405 | Wrong HTTP method (only POST allowed) |
 | 500 | Firestore write error |
 
