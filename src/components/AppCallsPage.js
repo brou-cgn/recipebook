@@ -745,6 +745,14 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       }
     }
 
+    if (referencesToCreate.length > 0 || ingredientLearningData.size > 0) {
+      try {
+        await reloadNutritionReferences({ throwOnError: true });
+      } catch (err) {
+        console.error('Could not refresh nutritionReferences cache after ingredientID match:', err);
+      }
+    }
+
     await persistIngredientIDs(fieldName, nextIngredients, dialogRecipe);
     setIngredientMatchDialog(null);
     ingredientMatchFromModalRef.current = false;

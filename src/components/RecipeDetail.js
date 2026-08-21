@@ -1037,6 +1037,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       }
     }
 
+    if (referencesToCreate.length > 0 || ingredientLearningData.size > 0) {
+      try {
+        await reloadNutritionReferences({ throwOnError: true });
+      } catch (err) {
+        console.error('Could not refresh nutritionReferences cache after ingredientID match:', err);
+      }
+    }
+
     await persistIngredientIDs(fieldName, nextIngredients);
     setIngredientMatchDialog(null);
     setOpenIngredientInfoIndex(null);
