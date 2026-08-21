@@ -13,7 +13,7 @@ const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const sharp = require('sharp');
 const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
-const {requireWebImportUnlocked} = require('./webImportPin');
+const {requireWebImportUnlocked, requireShortcutPin} = require('./webImportPin');
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -2639,12 +2639,15 @@ exports.importRecipeCallable = onCall(
  *
  * Body (JSON):
  *   url {string}            Required – public recipe URL to import
+ *   pin {string}            Required, wenn der Zielnutzer einen Webimport-PIN
+ *                            eingerichtet hat (sonst nicht erforderlich) –
+ *                            siehe requireShortcutPin in webImportPin.js
  *   cuisineTypes {string[]} Optional – cuisine type list for AI prompt
  *   mealCategories {string[]} Optional – meal category list for AI prompt
  *
  * Returns:
  *   200 { success: true, recipe: <structured recipe data> }
- *   400/401/403/500 { success: false, error: string }
+ *   400/401/403/429/500 { success: false, error: string }
  */
 exports.importRecipeShortcut = onRequest(
     {
@@ -2751,12 +2754,24 @@ exports.importRecipeShortcut = onRequest(
         }
       }
 
-      const {url} = body || {};
+      const {url, pin} = body || {};
       if (!url || typeof url !== 'string') {
         res.status(400).json({
           success: false,
           error: 'Missing required field: url (string)',
         });
+        return;
+      }
+
+      // Webimport-PIN: no-op if the target user never set one; otherwise the
+      // Shortcut must send a matching `pin` field with every request (it has
+      // no interactive session to stay "unlocked" like the in-app modals).
+      try {
+        await requireShortcutPin(userId, pin);
+      } catch (pinErr) {
+        const status = pinErr.code === 'resource-exhausted' ? 429 :
+          pinErr.code === 'invalid-argument' ? 400 : 403;
+        res.status(status).json({success: false, error: pinErr.message || 'PIN erforderlich.'});
         return;
       }
 
