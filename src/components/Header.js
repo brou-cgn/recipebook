@@ -7,7 +7,7 @@ import ImportProgressIndicator from './ImportProgressIndicator';
 import ImportProgressDialog from './ImportProgressDialog';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 
-const RECIPE_IMPORT_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/47ecb3c5292d473eb92ee5ae2f2a92e4';
+const RECIPE_IMPORT_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/7bf344e170574bbba4fb4cddc046ddba';
 
 /**
  * Detects iPhone/iPad/Mac, the only platforms with a Shortcuts app that can
