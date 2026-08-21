@@ -161,6 +161,14 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Webimport-PIN (gehashter PIN + Lockout-Zähler). Ausschließlich über die
+    // Cloud Functions setWebImportPin/verifyWebImportPin lesbar/schreibbar
+    // (Admin SDK umgeht diese Regeln) – kein Client-Zugriff, auch nicht durch
+    // den Owner, damit der Hash niemals an den Client geht.
+    match /users/{userId}/security/webImportPin {
+      allow read, write: if false;
+    }
+
     // User favorites subcollection
     match /users/{userId}/favorites/{favoriteId} {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;

@@ -184,6 +184,10 @@
   background: none;
 }
 
+.settings-row--static {
+  cursor: default;
+}
+
 .settings-row-label {
   font-size: 1rem;
   color: #1a1a1a;

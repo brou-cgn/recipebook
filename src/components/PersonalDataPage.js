@@ -4,6 +4,12 @@ import { updateUserProfile, changePassword, saveFcmToken } from '../utils/userMa
 import { ALARM_SOUNDS, getAlarmSoundPreference, saveAlarmSoundPreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference } from '../utils/customLists';
 import { previewAlarmSound } from '../utils/alarmAudioUtils';
 import { requestNotificationPermission } from '../utils/pushNotifications';
+import { setWebImportPin, clearWebImportPin } from '../utils/webImportPin';
+import DeleteRowButton from './DeleteRowButton';
+import UndoSnackbar from './UndoSnackbar';
+import useUndoableDelete from '../hooks/useUndoableDelete';
+
+const PIN_PATTERN = /^\d{4,8}$/;
 
 const NO_LIST_OPTION = { id: '', name: '– Keine Vorauswahl –' };
 
@@ -40,6 +46,15 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const [notificationPermission, setNotificationPermission] = useState('default');
   const [notificationSupported, setNotificationSupported] = useState(false);
   const [requestingNotification, setRequestingNotification] = useState(false);
+
+  const [webImportPinEnabled, setWebImportPinEnabledState] = useState(Boolean(currentUser?.webImportPinEnabled));
+  const [pinRemovedLocally, setPinRemovedLocally] = useState(false);
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [savingPin, setSavingPin] = useState(false);
+  const [pinMessage, setPinMessage] = useState(null);
+  const { banners: pinBanners, scheduleDelete: schedulePinDelete, undoDelete: undoPinDelete } = useUndoableDelete();
+  const pinActive = webImportPinEnabled && !pinRemovedLocally;
 
   useEffect(() => {
     if (typeof Notification === 'undefined') {
@@ -159,6 +174,54 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
       setNewPassword('');
       setConfirmPassword('');
     }
+  };
+
+  const handleSetPin = async (e) => {
+    e.preventDefault();
+    setPinMessage(null);
+
+    if (!PIN_PATTERN.test(newPin)) {
+      setPinMessage({ success: false, text: 'PIN muss aus 4 bis 8 Ziffern bestehen.' });
+      return;
+    }
+    if (newPin !== confirmPin) {
+      setPinMessage({ success: false, text: 'Die PINs stimmen nicht überein.' });
+      return;
+    }
+
+    setSavingPin(true);
+    try {
+      await setWebImportPin(newPin);
+      setWebImportPinEnabledState(true);
+      setPinRemovedLocally(false);
+      setNewPin('');
+      setConfirmPin('');
+      setPinMessage({ success: true, text: 'Webimport-PIN gespeichert.' });
+      if (onProfileUpdated) onProfileUpdated({ ...currentUser, webImportPinEnabled: true });
+    } catch (err) {
+      setPinMessage({ success: false, text: err.message });
+    } finally {
+      setSavingPin(false);
+    }
+  };
+
+  const handleRemovePin = () => {
+    setPinRemovedLocally(true);
+    schedulePinDelete({
+      key: 'webImportPin',
+      message: '„Webimport-PIN" entfernt',
+      onConfirm: async () => {
+        try {
+          await clearWebImportPin();
+          setWebImportPinEnabledState(false);
+          if (onProfileUpdated) onProfileUpdated({ ...currentUser, webImportPinEnabled: false });
+        } catch (err) {
+          setPinRemovedLocally(false);
+          setPinMessage({ success: false, text: err.message });
+        }
+      },
+      onUndo: () => setPinRemovedLocally(false),
+    });
   };
 
   return (
@@ -538,7 +601,69 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           </div>
         </form>
       </section>
+
+      <div className="personal-data-section-divider" />
+
+      <section className="personal-data-webimport-pin-section">
+        <h3 className="personal-data-section-title">Webimport-PIN</h3>
+        <p className="personal-data-password-hint">
+          Schützt den Webimport zusätzlich mit einer PIN, die nur du kennst – so kann niemand mit deinem Zugang ungefragt Rezepte importieren.
+        </p>
+
+        {pinActive ? (
+          <div className="preferences-group">
+            <div className="settings-row settings-row--static delete-row-hover-target">
+              <span className="settings-row-label">PIN aktiv</span>
+              <span className="settings-row-right">
+                <DeleteRowButton itemName="Webimport-PIN" onClick={handleRemovePin} />
+              </span>
+            </div>
+          </div>
+        ) : (
+          <p className="personal-data-password-hint">Kein PIN gesetzt.</p>
+        )}
+
+        <form className="personal-data-form" onSubmit={handleSetPin}>
+          <div className="personal-data-field">
+            <label htmlFor="newPin">{pinActive ? 'Neuer PIN (4–8 Ziffern)' : 'PIN (4–8 Ziffern)'}</label>
+            <input
+              id="newPin"
+              type="password"
+              inputMode="numeric"
+              autoComplete="off"
+              value={newPin}
+              onChange={(e) => setNewPin(e.target.value)}
+              required
+            />
+          </div>
+          <div className="personal-data-field">
+            <label htmlFor="confirmPin">PIN bestätigen</label>
+            <input
+              id="confirmPin"
+              type="password"
+              inputMode="numeric"
+              autoComplete="off"
+              value={confirmPin}
+              onChange={(e) => setConfirmPin(e.target.value)}
+              required
+            />
+          </div>
+          {pinMessage && (
+            <div className={`personal-data-message ${pinMessage.success ? 'success' : 'error'}`}>
+              {pinMessage.text}
+            </div>
+          )}
+          <div className="personal-data-actions">
+            <button type="submit" className="personal-data-save-btn" disabled={savingPin}>
+              {savingPin ? 'Wird gespeichert…' : pinActive ? 'PIN ändern' : 'PIN setzen'}
+            </button>
+          </div>
+        </form>
+      </section>
       </div>
+      {pinBanners.length > 0 && (
+        <UndoSnackbar itemName="Webimport-PIN" onUndo={() => undoPinDelete(pinBanners[0].id)} />
+      )}
     </div>
   );
 }

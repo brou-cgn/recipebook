@@ -2412,6 +2412,7 @@ function App() {
               onCancel={handleUniversalImportCancel}
               userId={currentUser?.id}
               importContext={resolveImportGroupContext({ activeGroupId, groups, publicGroupId })}
+              webImportPinEnabled={currentUser?.webImportPinEnabled || false}
             />
           </Suspense>
         )}
