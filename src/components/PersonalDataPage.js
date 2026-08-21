@@ -609,6 +609,11 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
         <p className="personal-data-password-hint">
           Schützt den Webimport zusätzlich mit einer PIN, die nur du kennst – so kann niemand mit deinem Zugang ungefragt Rezepte importieren.
         </p>
+        {pinActive && (
+          <p className="personal-data-password-hint">
+            Nutzt du den Apple-Kurzbefehl für den Webimport, musst du diesen PIN dort im Anfragetext als Feld „pin" ergänzen – sonst schlägt der Import ab jetzt fehl.
+          </p>
+        )}
 
         {pinActive ? (
           <div className="preferences-group">

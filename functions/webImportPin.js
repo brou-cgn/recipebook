@@ -28,6 +28,17 @@ function getSecurityDocRef(db, uid) {
 }
 
 /**
+ * @param {string} code HttpsError-artiger Fehlercode (z.B. 'permission-denied').
+ * @param {string} message Für Nutzer bestimmte Fehlermeldung.
+ * @return {Error} Error-Objekt mit angehängtem `code`, wie es HttpsError erwartet.
+ */
+function pinError(code, message) {
+  const err = new Error(message);
+  err.code = code;
+  return err;
+}
+
+/**
  * Cloud Function: setWebImportPin
  * Sets, changes, or (pin === null/'') clears the caller's own Webimport-PIN.
  * The PIN is never stored in plaintext – only a salted scrypt hash lands in
@@ -83,33 +94,31 @@ exports.setWebImportPin = onCall({maxInstances: 10}, async (request) => {
 });
 
 /**
- * Cloud Function: verifyWebImportPin
- * Verifies the caller's PIN against the stored hash. On success, opens a
- * time-limited "unlock window" (UNLOCK_MINUTES) recorded server-side on the
- * security doc; requireWebImportUnlocked() below checks that window before
- * letting an import Cloud Function run, so the client never needs to resend
- * the PIN with every single import call. Failed attempts are counted and
- * lock the PIN out for LOCKOUT_MINUTES after MAX_FAILED_ATTEMPTS in a row.
+ * Core PIN check shared by verifyWebImportPin (onCall, used by the in-app
+ * modals) and requireShortcutPin (used inline by the importRecipeShortcut
+ * HTTP endpoint, which has no interactive "stay unlocked" session and so
+ * must send the PIN with every request). Verifies `pin` against the stored
+ * hash for `uid`, tracking failed attempts / lockout, and on success opens
+ * the UNLOCK_MINUTES window that requireWebImportUnlocked() checks for the
+ * in-app import calls. Throws an Error with an HttpsError-style `code`
+ * property on failure – callers translate that to their own error shape.
+ * @param {string} uid Firebase-Nutzer-ID.
+ * @param {string} pin Vom Aufrufer übermittelter PIN.
+ * @return {Promise<{configured: boolean}>} configured=false, wenn der Nutzer
+ *   keinen PIN eingerichtet hat (dann wurde nichts geprüft).
  */
-exports.verifyWebImportPin = onCall({maxInstances: 20}, async (request) => {
-  const auth = request.auth;
-  if (!auth) {
-    throw new HttpsError('unauthenticated', 'Login erforderlich.');
-  }
-
-  const {pin} = request.data || {};
-  if (typeof pin !== 'string' || !pin) {
-    throw new HttpsError('invalid-argument', 'PIN ist erforderlich.');
-  }
-
-  const uid = auth.uid;
+async function verifyPinCore(uid, pin) {
   const db = admin.firestore();
   const docRef = getSecurityDocRef(db, uid);
   const snap = await docRef.get();
 
   if (!snap.exists) {
     // No PIN configured for this user – nothing to verify against.
-    return {ok: true};
+    return {configured: false};
+  }
+
+  if (typeof pin !== 'string' || !pin) {
+    throw pinError('invalid-argument', 'PIN ist erforderlich.');
   }
 
   const data = snap.data();
@@ -117,7 +126,7 @@ exports.verifyWebImportPin = onCall({maxInstances: 20}, async (request) => {
 
   if (data.lockedUntil && data.lockedUntil.toMillis && data.lockedUntil.toMillis() > now) {
     const minutesLeft = Math.ceil((data.lockedUntil.toMillis() - now) / 60000);
-    throw new HttpsError(
+    throw pinError(
         'resource-exhausted',
         `Zu viele Fehlversuche. Bitte in ${minutesLeft} Minute${minutesLeft === 1 ? '' : 'n'} erneut versuchen.`,
     );
@@ -137,13 +146,36 @@ exports.verifyWebImportPin = onCall({maxInstances: 20}, async (request) => {
       update.failedAttempts = 0;
     }
     await docRef.set(update, {merge: true});
-    throw new HttpsError('permission-denied', 'Falscher PIN.');
+    throw pinError('permission-denied', 'Falscher PIN.');
   }
 
   const unlockedUntil = admin.firestore.Timestamp.fromMillis(now + UNLOCK_MINUTES * 60000);
   await docRef.set({failedAttempts: 0, lockedUntil: null, unlockedUntil}, {merge: true});
 
-  return {ok: true, unlockedUntilMs: unlockedUntil.toMillis()};
+  return {configured: true};
+}
+
+/**
+ * Cloud Function: verifyWebImportPin
+ * Verifies the caller's PIN against the stored hash (see verifyPinCore). On
+ * success, opens a time-limited "unlock window" (UNLOCK_MINUTES) recorded
+ * server-side on the security doc; requireWebImportUnlocked() below checks
+ * that window before letting an import Cloud Function run, so the client
+ * never needs to resend the PIN with every single import call.
+ */
+exports.verifyWebImportPin = onCall({maxInstances: 20}, async (request) => {
+  const auth = request.auth;
+  if (!auth) {
+    throw new HttpsError('unauthenticated', 'Login erforderlich.');
+  }
+
+  const {pin} = request.data || {};
+  try {
+    await verifyPinCore(auth.uid, pin);
+    return {ok: true};
+  } catch (err) {
+    throw new HttpsError(err.code || 'internal', err.message || 'PIN-Prüfung fehlgeschlagen.');
+  }
 });
 
 /**
@@ -174,3 +206,20 @@ async function requireWebImportUnlocked(uid) {
 }
 
 exports.requireWebImportUnlocked = requireWebImportUnlocked;
+
+/**
+ * Called by importRecipeShortcut (functions/index.js) on every request. The
+ * Apple Shortcut has no interactive session to "stay unlocked" the way the
+ * in-app modals do (see requireWebImportUnlocked above), so it must send the
+ * PIN with every call instead – this checks it directly against the stored
+ * hash. A no-op when the target user never configured a PIN, so existing
+ * Shortcuts keep working unchanged until their owner sets one.
+ * @param {string} uid Firebase-Nutzer-ID, für die importiert werden soll.
+ * @param {string} pin Vom Kurzbefehl übermittelter PIN.
+ * @return {Promise<void>}
+ */
+async function requireShortcutPin(uid, pin) {
+  await verifyPinCore(uid, pin);
+}
+
+exports.requireShortcutPin = requireShortcutPin;
