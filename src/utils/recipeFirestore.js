@@ -220,13 +220,19 @@ export const updateRecipe = async (recipeId, updates, previousAuthorId) => {
  */
 export const deleteRecipe = async (recipeId) => {
   try {
-    // First, get the recipe to check if it has images
+    // Read the recipe first so we know which images/author to clean up, but
+    // delete the document itself right away — UI that reacts to the recipe
+    // being gone (e.g. onSnapshot listeners) is only unblocked once this
+    // deleteDoc lands, so Storage image cleanup and the recipe_count
+    // decrement (both slower, unrelated network calls) must not sit in
+    // front of it or the UI appears to hang/ignore the delete.
     const recipeRef = doc(db, 'recipes', recipeId);
     const recipeSnap = await getDoc(recipeRef);
-    
+    await deleteDoc(recipeRef);
+
     if (recipeSnap.exists()) {
       const recipeData = recipeSnap.data();
-      
+
       // Delete all images from Storage if they exist
       if (Array.isArray(recipeData.images) && recipeData.images.length > 0) {
         await Promise.all(recipeData.images.map(img => deleteRecipeImage(img.url)));
@@ -240,9 +246,6 @@ export const deleteRecipe = async (recipeId) => {
         await updateDoc(doc(db, 'users', recipeData.authorId), { recipe_count: increment(-1) });
       }
     }
-    
-    // Delete the recipe document
-    await deleteDoc(recipeRef);
   } catch (error) {
     console.error('Error deleting recipe:', error);
     throw error;
