@@ -9,7 +9,7 @@ The web import flow uses a **hybrid architecture** to avoid browser CORS/auth is
 | Path | Function | Auth |
 |------|----------|------|
 | Web app | `importRecipeCallable` (onCall) | Firebase Auth (httpsCallable) |
-| Apple Shortcut | `importRecipeShortcut` (onRequest) | `X-Api-Key` + `X-User-Id` headers |
+| Apple Shortcut | `importRecipeShortcut` (onRequest) | `X-Api-Key` + `X-User-Email` headers |
 
 Both endpoints share the same internal `runImportFromUrl` pipeline:
 1. **fetch_html** – server-side HTTP GET of the recipe URL
@@ -47,7 +47,7 @@ HTTP endpoint for **Apple Shortcut** deep-link imports.
 Authenticates via `SHORTCUT_API_KEY` (same mechanism as `addRecipeViaAPI`).
 
 **Features:**
-- ✅ Authentication: API Key (`X-Api-Key` header) + User ID (`X-User-Id` header)
+- ✅ Authentication: API Key (`X-Api-Key` header) + User Email (`X-User-Email` header, resolved server-side to a Firebase uid via `admin.auth().getUserByEmail`)
 - ✅ CORS enabled for allowed origins
 - ✅ Requires user role `edit`, `admin`, or flag `isShortcutUser: true`
 - ✅ Asynchronous: queues the job and responds in well under a second instead
@@ -65,7 +65,7 @@ Authenticates via `SHORTCUT_API_KEY` (same mechanism as `addRecipeViaAPI`).
 **Setup:**
 1. Generate API key: `openssl rand -hex 32`
 2. Store as secret: `firebase functions:secrets:set SHORTCUT_API_KEY`
-3. Copy Firebase User ID from Firebase Console (Authentication → select user → UID)
+3. Use the registered email address of the target account – no UID lookup needed
 
 **Request:**
 
@@ -73,7 +73,7 @@ Authenticates via `SHORTCUT_API_KEY` (same mechanism as `addRecipeViaAPI`).
 POST https://<region>-<project-id>.cloudfunctions.net/importRecipeShortcut
 Content-Type: application/json
 X-Api-Key: <SHORTCUT_API_KEY>
-X-User-Id: <Firebase User ID>
+X-User-Email: <registered email address>
 ```
 
 **Body (JSON):**
@@ -96,9 +96,9 @@ X-User-Id: <Firebase User ID>
 Method: POST
 URL:    https://us-central1-broubook.cloudfunctions.net/importRecipeShortcut
 Headers:
-  Content-Type: application/json
-  X-Api-Key:  <your SHORTCUT_API_KEY>
-  X-User-Id:  <your Firebase UID>
+  Content-Type:  application/json
+  X-Api-Key:     <your SHORTCUT_API_KEY>
+  X-User-Email:  <your registered email address>
 Body:   {"url": "<the recipe URL>"}
 ```
 
@@ -117,8 +117,8 @@ Body:   {"url": "<the recipe URL>"}
 | Status | Reason |
 |--------|--------|
 | 400 | Missing or invalid `url` field |
-| 401 | Missing or invalid `X-Api-Key` / `X-User-Id` |
-| 403 | User not found or insufficient permissions |
+| 401 | Missing or invalid `X-Api-Key` / `X-User-Email` |
+| 403 | Unknown email address or insufficient permissions (same generic response for both, to avoid email enumeration) |
 | 405 | Wrong HTTP method (only POST allowed) |
 | 500 | Server misconfiguration, or the job could not be written to Firestore |
 
@@ -135,7 +135,7 @@ HTTP error.
 An HTTP endpoint that lets external tools – such as an **Apple Shortcut** – create recipes directly in Firestore without going through the RecipeBook UI.
 
 **Features:**
-- ✅ Authentication: API Key (`X-Api-Key` header) + User ID (`X-User-Id` header)
+- ✅ Authentication: API Key (`X-Api-Key` header) + User Email (`X-User-Email` header, resolved server-side to a Firebase uid via `admin.auth().getUserByEmail`)
 - ✅ Accepts both German and English field names (compatible with AI/Shortcut output)
 - ✅ Input validation with descriptive error messages
 - ✅ CORS enabled
@@ -147,7 +147,7 @@ An HTTP endpoint that lets external tools – such as an **Apple Shortcut** – 
 **Setup:**
 1. API Key generieren: `openssl rand -hex 32`
 2. Als Secret speichern: `firebase functions:secrets:set SHORTCUT_API_KEY`
-3. User ID aus Firebase Console kopieren (Authentication → Benutzer auswählen → UID kopieren)
+3. Registrierte E-Mail-Adresse des Ziel-Accounts verwenden – keine UID nötig
 
 **Request:**
 
@@ -155,7 +155,7 @@ An HTTP endpoint that lets external tools – such as an **Apple Shortcut** – 
 POST https://<region>-<project-id>.cloudfunctions.net/addRecipeViaAPI
 Content-Type: application/json
 X-Api-Key: <API Key>
-X-User-Id: <Firebase User ID>
+X-User-Email: <registrierte E-Mail-Adresse>
 ```
 
 **Body (JSON) – supported field names:**
@@ -218,8 +218,8 @@ X-User-Id: <Firebase User ID>
 | Status | Reason |
 |--------|--------|
 | 400 | Missing or invalid fields |
-| 401 | Missing or invalid API Key / User ID header |
-| 404 | User not found |
+| 401 | Missing or invalid API Key / User Email header |
+| 403 | Unknown email address or insufficient permissions (same generic response for both, to avoid email enumeration) |
 | 405 | Wrong HTTP method (only POST allowed) |
 | 500 | Firestore write error |
 
@@ -231,11 +231,11 @@ See [APPLE_SHORTCUT_SETUP.md](../APPLE_SHORTCUT_SETUP.md) for a full step-by-ste
 
 1. **Generate an API key** once: `openssl rand -hex 32`
 2. **Store the key** as a Firebase Secret: `firebase functions:secrets:set SHORTCUT_API_KEY`
-3. **Find your User ID** in Firebase Console → Authentication → select your user → copy UID.
+3. **Use your registered email address** – no UID lookup needed.
 4. **Send the recipe** with a "Get Contents of URL" action:
    - Method: `POST`
    - URL: `https://us-central1-<project-id>.cloudfunctions.net/addRecipeViaAPI`
-   - Headers: `X-Api-Key: <your-api-key>`, `X-User-Id: <your-uid>`, `Content-Type: application/json`
+   - Headers: `X-Api-Key: <your-api-key>`, `X-User-Email: <your-email>`, `Content-Type: application/json`
    - Body: JSON with the recipe fields listed above.
 5. **Check the result**: the response contains `recipeId` if successful.
 
@@ -248,7 +248,7 @@ See [APPLE_SHORTCUT_SETUP.md](../APPLE_SHORTCUT_SETUP.md) for a full step-by-ste
 An HTTP endpoint that stores unstructured recipe text temporarily in Firestore and returns a public URL that renders the text as structured HTML. This enables Apple Shortcuts or other tools to hand off raw text to an AI/website-import workflow without having to build JSON arrays manually.
 
 **Features:**
-- ✅ Authentication: API Key (`X-Api-Key` header) + User ID (`X-User-Id` header)
+- ✅ Authentication: API Key (`X-Api-Key` header) + User Email (`X-User-Email` header, resolved server-side to a Firebase uid via `admin.auth().getUserByEmail`)
 - ✅ Role check: only users with role `edit`, `admin`, or flag `isShortcutUser: true` may create imports
 - ✅ Configurable TTL (default 10 minutes)
 - ✅ Returns a capability URL (`importUrl`) that is publicly accessible
@@ -259,7 +259,7 @@ An HTTP endpoint that stores unstructured recipe text temporarily in Firestore a
 POST https://<region>-<project-id>.cloudfunctions.net/createRecipeImportFromText
 Content-Type: application/json
 X-Api-Key: <API Key>
-X-User-Id: <Firebase User ID of the service/shortcut user>
+X-User-Email: <registered email address of the user/service account>
 ```
 
 **Body (JSON):**
@@ -290,9 +290,8 @@ X-User-Id: <Firebase User ID of the service/shortcut user>
 | Status | Reason |
 |--------|--------|
 | 400 | Missing or empty `rawText` |
-| 401 | Missing or invalid API Key / User ID header |
-| 403 | User role insufficient (requires `edit`, `admin`, or `isShortcutUser: true`) |
-| 404 | User not found |
+| 401 | Missing or invalid API Key / User Email header |
+| 403 | Unknown email address or role insufficient (requires `edit`, `admin`, or `isShortcutUser: true`) – same generic response for both, to avoid email enumeration |
 | 405 | Wrong HTTP method (only POST allowed) |
 | 500 | Firestore write error |
 
@@ -302,7 +301,7 @@ To use a technical service account for authentication:
 
 1. Create a dedicated user in Firebase Authentication for the shortcut/service account
 2. In Firestore `users` collection, set `isShortcutUser: true` on that user's document
-3. In the iOS Shortcut, use the service user's UID in `X-User-Id`
+3. In the iOS Shortcut, use the service user's email address in `X-User-Email`
 
 ---
 
