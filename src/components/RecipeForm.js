@@ -404,6 +404,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [schwierigkeit, setSchwierigkeit] = useState(0);
   const [kochdauer, setKochdauer] = useState('');
   const [speisekategorie, setSpeisekategorie] = useState([]);
+  const [sourceUrl, setSourceUrl] = useState('');
   const [ingredients, setIngredients] = useState([{ type: 'ingredient', text: '' }]);
   const [steps, setSteps] = useState([{ type: 'step', text: '' }]);
   const [imageError, setImageError] = useState(false); // eslint-disable-line no-unused-vars
@@ -590,6 +591,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       setIngredients(recipe.ingredients?.length > 0 ? normalizeIngredients(recipe.ingredients) : [{ type: 'ingredient', text: '' }]);
       setSteps(recipe.steps?.length > 0 ? normalizeSteps(recipe.steps) : [{ type: 'step', text: '' }]);
       setIsPrivate(recipe.isPrivate || false);
+      setSourceUrl(recipe.sourceUrl || '');
       
       // If creating a version, set current user as author and track parent
       if (isCreatingVersion) {
@@ -604,6 +606,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       setAuthorId(currentUser?.id || '');
       setParentRecipeId('');
       setIsPrivate(false);
+      setSourceUrl('');
       if (!initialWebImportUrl) {
         setSelectedPrivateListId('');
       }
@@ -1088,6 +1091,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         isPrivate: isPrivate,
         createdAt: isCreatingVersion ? new Date().toISOString() : recipe?.createdAt,
         versionCreatedFrom: isCreatingVersion ? recipe?.title : null,
+        ...(sourceUrl ? { sourceUrl } : {}),
         ...(((!recipe && !isCreatingVersion) || recipe?.isTemp) && selectedPrivateListId ? { selectedGroupId: selectedPrivateListId } : {}),
       };
 
