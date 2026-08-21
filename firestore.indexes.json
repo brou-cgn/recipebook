@@ -7,6 +7,15 @@
         {"fieldPath": "status", "order": "ASCENDING"},
         {"fieldPath": "date", "order": "ASCENDING"}
       ]
+    },
+    {
+      "collectionGroup": "recipes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "isTemp", "order": "ASCENDING"},
+        {"fieldPath": "importStatus", "order": "ASCENDING"},
+        {"fieldPath": "importHeartbeatAt", "order": "ASCENDING"}
+      ]
     }
   ],
   "fieldOverrides": [
