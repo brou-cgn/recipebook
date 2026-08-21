@@ -10,6 +10,21 @@ import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 const RECIPE_IMPORT_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/47ecb3c5292d473eb92ee5ae2f2a92e4';
 
 /**
+ * Detects iPhone/iPad/Mac, the only platforms with a Shortcuts app that can
+ * install a Kurzbefehl. iPadOS 13+ reports navigator.platform as "MacIntel"
+ * like a Mac, so it's distinguished via touch support.
+ */
+function isAppleDevice() {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  const platform = navigator.platform || '';
+  const isIOSUserAgent = /iPad|iPhone|iPod/.test(ua);
+  const isIPadOS13Plus = platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  const isMac = /^Mac/.test(platform) && !isIPadOS13Plus;
+  return isIOSUserAgent || isIPadOS13Plus || isMac;
+}
+
+/**
  * Renders text with **bold** markdown syntax as <strong> elements.
  */
 function renderBoldText(text) {
@@ -47,6 +62,7 @@ const Header = forwardRef(function Header({
   const [faqModalOpen, setFaqModalOpen] = useState(false);
   const [expandedFaqId, setExpandedFaqId] = useState(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  const [isApple] = useState(isAppleDevice);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const menuRef = useRef(null);
   const searchRef = useRef(null);
@@ -311,30 +327,34 @@ const Header = forwardRef(function Header({
                       </button>
                     </div>
                   )}
-                  <div className="menu-section">
-                    <div className="menu-section-title">Hilfe</div>
-                    {visibleFaqs.length > 0 && (
-                      <button
-                        className="menu-item"
-                        onClick={() => {
-                          setFaqModalOpen(true);
-                          setExpandedFaqId(null);
-                          setMenuOpen(false);
-                        }}
-                      >
-                        Kochschule
-                      </button>
-                    )}
-                    <button
-                      className="menu-item"
-                      onClick={() => {
-                        window.open(RECIPE_IMPORT_SHORTCUT_URL, '_blank', 'noopener,noreferrer');
-                        setMenuOpen(false);
-                      }}
-                    >
-                      Kurzbefehl installieren
-                    </button>
-                  </div>
+                  {(visibleFaqs.length > 0 || isApple) && (
+                    <div className="menu-section">
+                      <div className="menu-section-title">Hilfe</div>
+                      {visibleFaqs.length > 0 && (
+                        <button
+                          className="menu-item"
+                          onClick={() => {
+                            setFaqModalOpen(true);
+                            setExpandedFaqId(null);
+                            setMenuOpen(false);
+                          }}
+                        >
+                          Kochschule
+                        </button>
+                      )}
+                      {isApple && (
+                        <button
+                          className="menu-item"
+                          onClick={() => {
+                            window.open(RECIPE_IMPORT_SHORTCUT_URL, '_blank', 'noopener,noreferrer');
+                            setMenuOpen(false);
+                          }}
+                        >
+                          Kurzbefehl installieren
+                        </button>
+                      )}
+                    </div>
+                  )}
                   {onSettingsClick && (currentUser?.isAdmin || currentUser?.settingsAccess) && (
                     <div className="menu-section">
                       <div className="menu-section-title">Verwaltung</div>
