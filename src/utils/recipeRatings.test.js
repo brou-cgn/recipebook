@@ -21,7 +21,6 @@ const mockSetDoc = jest.fn();
 const mockGetDoc = jest.fn();
 const mockGetDocs = jest.fn();
 const mockOnSnapshot = jest.fn();
-const mockUpdateDoc = jest.fn();
 const mockCollection = jest.fn();
 const mockDoc = jest.fn();
 const mockServerTimestamp = jest.fn(() => 'mock-timestamp');
@@ -34,7 +33,6 @@ jest.mock('firebase/firestore', () => ({
   getDoc: (...args) => mockGetDoc(...args),
   getDocs: (...args) => mockGetDocs(...args),
   onSnapshot: (...args) => mockOnSnapshot(...args),
-  updateDoc: (...args) => mockUpdateDoc(...args),
   deleteDoc: (...args) => mockDeleteDoc(...args),
   collection: (...args) => mockCollection(...args),
   serverTimestamp: () => mockServerTimestamp()
@@ -157,17 +155,9 @@ describe('rateRecipe', () => {
   beforeEach(() => {
     mockDoc.mockReturnValue('ref');
     mockSetDoc.mockResolvedValue();
-    mockUpdateDoc.mockResolvedValue();
     mockServerTimestamp.mockReturnValue('mock-timestamp');
     // getDoc returns non-existing doc by default (new rating)
     mockGetDoc.mockResolvedValue({ exists: () => false });
-    // getDocs returns an empty snapshot by default (for updateRatingSummary)
-    mockGetDocs.mockResolvedValue({
-      empty: false,
-      size: 1,
-      forEach: (cb) => cb({ data: () => ({ rating: 3 }) })
-    });
-    mockCollection.mockReturnValue('ratings-ref');
   });
 
   it('throws on invalid rating value', async () => {
@@ -222,27 +212,12 @@ describe('rateRecipe', () => {
     const [, data] = mockSetDoc.mock.calls[0];
     expect(data.createdAt).toBeUndefined();
   });
-
-  it('updates the rating summary on the recipe document', async () => {
-    await rateRecipe('recipe1', 4, { id: 'user1', vorname: 'Max' });
-    expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
-    const [, updates] = mockUpdateDoc.mock.calls[0];
-    expect(updates.ratingAvg).toBeDefined();
-    expect(updates.ratingCount).toBeDefined();
-  });
 });
 
 describe('deleteRating', () => {
   beforeEach(() => {
     mockDoc.mockReturnValue('ref');
     mockDeleteDoc.mockResolvedValue();
-    mockUpdateDoc.mockResolvedValue();
-    mockGetDocs.mockResolvedValue({
-      empty: false,
-      size: 1,
-      forEach: (cb) => cb({ data: () => ({ rating: 4 }) })
-    });
-    mockCollection.mockReturnValue('ratings-ref');
   });
 
   it('throws when recipeId is missing', async () => {
@@ -257,13 +232,5 @@ describe('deleteRating', () => {
     await deleteRating('recipe1', 'rater1');
     expect(mockDeleteDoc).toHaveBeenCalledTimes(1);
     expect(mockDeleteDoc).toHaveBeenCalledWith('ref');
-  });
-
-  it('updates the rating summary after deletion', async () => {
-    await deleteRating('recipe1', 'rater1');
-    expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
-    const [, updates] = mockUpdateDoc.mock.calls[0];
-    expect(updates.ratingAvg).toBeDefined();
-    expect(updates.ratingCount).toBeDefined();
   });
 });

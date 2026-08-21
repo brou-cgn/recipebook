@@ -14,8 +14,7 @@ import {
   collection,
   getDocs,
   onSnapshot,
-  serverTimestamp,
-  updateDoc
+  serverTimestamp
 } from 'firebase/firestore';
 
 /**
@@ -48,32 +47,6 @@ export const getRaterKey = (currentUser) => {
  * @returns {number} Rounded average
  */
 const computeAvg = (sum, count) => Math.round((sum / count) * 10) / 10;
-
-/**
- * Recompute and store the rating summary (avg, count) on the recipe document.
- * Does NOT update the recipe's updatedAt timestamp to avoid polluting update history.
- * @param {string} recipeId - Recipe ID
- * @returns {Promise<void>}
- */
-const updateRatingSummary = async (recipeId) => {
-  const ratingsRef = collection(db, 'recipes', recipeId, 'ratings');
-  const snapshot = await getDocs(ratingsRef);
-
-  const recipeRef = doc(db, 'recipes', recipeId);
-  if (snapshot.empty) {
-    await updateDoc(recipeRef, { ratingAvg: null, ratingCount: 0 });
-    return;
-  }
-
-  let sum = 0;
-  snapshot.forEach((d) => {
-    sum += d.data().rating;
-  });
-  const count = snapshot.size;
-  const avg = computeAvg(sum, count);
-
-  await updateDoc(recipeRef, { ratingAvg: avg, ratingCount: count });
-};
 
 /**
  * Submit or update a rating for a recipe.
@@ -115,8 +88,6 @@ export const rateRecipe = async (recipeId, rating, currentUser, comment = null, 
   }
 
   await setDoc(ratingRef, data, { merge: true });
-
-  await updateRatingSummary(recipeId);
 };
 
 /**
@@ -198,7 +169,7 @@ export const getAllRatings = async (recipeId) => {
 };
 
 /**
- * Delete a specific rating from a recipe and update the summary.
+ * Delete a specific rating from a recipe.
  * @param {string} recipeId - Recipe ID
  * @param {string} ratingId - Rating document ID (raterKey) to delete
  * @returns {Promise<void>}
@@ -209,7 +180,6 @@ export const deleteRating = async (recipeId, ratingId) => {
   }
   const ratingRef = doc(db, 'recipes', recipeId, 'ratings', ratingId);
   await deleteDoc(ratingRef);
-  await updateRatingSummary(recipeId);
 };
 
 /**

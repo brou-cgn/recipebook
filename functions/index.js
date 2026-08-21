@@ -7136,3 +7136,7 @@ exports.calculateEventDrinks = require('./calculateEventDrinks').calculateEventD
 exports.submitConsumption = require('./submitConsumption').submitConsumption;
 exports.reminderConsumption = require('./reminderConsumption').reminderConsumption;
 exports.manageGuestProfile = require('./manageGuestProfile').manageGuestProfile;
+
+// Server-seitige Aggregation von ratingAvg/ratingCount auf recipes/{recipeId}
+// aus der ratings-Subcollection (ersetzt den bisherigen offenen Client-Write).
+exports.aggregateRecipeRating = require('./recipeRatingAggregation').aggregateRecipeRating;

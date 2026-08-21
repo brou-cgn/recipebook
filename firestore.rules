@@ -40,13 +40,10 @@ service cloud.firestore {
       allow get: if isAnyUser() || !resource.data.isPrivate;
       allow list: if isAnyUser() || resource.data.shareId != null;
       allow create, delete: if isEditOrAdmin();
-      allow update: if isEditOrAdmin()
-                 || (
-                      // Allow anyone (authenticated or guest-rated) to update only the
-                      // rating summary fields written by updateRatingSummary().
-                      request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['ratingAvg', 'ratingCount'])
-                    );
+      // ratingAvg/ratingCount are written exclusively by the aggregateRecipeRating
+      // Cloud Function (Admin SDK bypasses these rules) in response to changes in
+      // the ratings subcollection below; no client write path for these fields.
+      allow update: if isEditOrAdmin();
 
       // Ratings subcollection – anyone (including guests) may read and write their own rating.
       // Guests are identified by a localStorage-generated ID (prefixed 'guest_');
