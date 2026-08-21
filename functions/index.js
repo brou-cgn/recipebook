@@ -713,6 +713,13 @@ function buildRecipeFieldsFromResult(aiResult, authorId = '') {
  * Firestore write failure never masks the actual AI result from a client
  * that is still connected and waiting on the callable's response.
  *
+ * Runs inside a transaction and only writes when the document still has an
+ * importStatus set (queued/processing/error) — once another caller has
+ * already finalized or discarded the job, importStatus is gone (deleted on
+ * success, or the whole doc removed by dismissJob/cancelJob), so a late
+ * result from a superseded attempt (e.g. one the sweeper restarted while a
+ * client tab was also mid-retry) can no longer clobber it.
+ *
  * @param {string} jobId - Firestore recipes/{jobId} doc id (the temp recipe)
  * @param {string} authorId - Owner of the queued job
  * @param {Object} aiResult - Structured recipe data to persist
@@ -720,17 +727,59 @@ function buildRecipeFieldsFromResult(aiResult, authorId = '') {
  */
 async function finalizeImportJob(jobId, authorId, aiResult) {
   if (!jobId) return;
+  const db = admin.firestore();
+  const ref = db.collection('recipes').doc(jobId);
   try {
-    await admin.firestore().collection('recipes').doc(jobId).update({
-      ...buildRecipeFieldsFromResult(aiResult, authorId),
-      authorId,
-      isTemp: true,
-      importStatus: admin.firestore.FieldValue.delete(),
-      importProgress: admin.firestore.FieldValue.delete(),
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return;
+      if (!snap.get('importStatus')) return;
+      tx.update(ref, {
+        ...buildRecipeFieldsFromResult(aiResult, authorId),
+        authorId,
+        isTemp: true,
+        importStatus: admin.firestore.FieldValue.delete(),
+        importProgress: admin.firestore.FieldValue.delete(),
+      });
     });
   } catch (error) {
     console.error(`finalizeImportJob: failed to write result for job ${jobId}:`, error);
   }
+}
+
+/**
+ * Firebase Functions error codes that mean retrying without user
+ * intervention won't help (bad input, quota, missing config, auth) — a job
+ * that fails with one of these is left in 'error' for the user's own
+ * "Neu starten" action rather than being retried automatically.
+ */
+const PERMANENT_IMPORT_ERROR_CODES = new Set([
+  'invalid-argument', 'resource-exhausted', 'failed-precondition', 'unauthenticated',
+]);
+
+/**
+ * Firebase Functions error codes that are plausibly transient (server-side
+ * hiccup, timeout, upstream outage) — recoverStuckImportJobs will redrive
+ * jobs failing with one of these, up to the retry budget.
+ */
+const RETRYABLE_IMPORT_ERROR_CODES = new Set(['internal', 'deadline-exceeded', 'unavailable']);
+
+/**
+ * Classify an import failure as 'permanent' or 'retryable' for
+ * recoverStuckImportJobs. Codes outside both known sets (e.g. a plain Error
+ * with no .code, or 'not-found') default to 'retryable' — the sweeper's
+ * attempt budget (MAX_IMPORT_ATTEMPTS) already bounds the cost of a wrong
+ * guess, whereas defaulting to 'permanent' would strand a possibly-transient
+ * failure without ever giving recovery a chance.
+ *
+ * @param {Error} error
+ * @returns {'permanent'|'retryable'}
+ */
+function classifyImportErrorKind(error) {
+  const code = error && error.code;
+  if (PERMANENT_IMPORT_ERROR_CODES.has(code)) return 'permanent';
+  if (RETRYABLE_IMPORT_ERROR_CODES.has(code)) return 'retryable';
+  return 'retryable';
 }
 
 /**
@@ -739,18 +788,21 @@ async function finalizeImportJob(jobId, authorId, aiResult) {
  * reason.
  *
  * @param {string} jobId - Firestore recipes/{jobId} doc id
- * @param {string} message - User-facing error message
+ * @param {Error} error - The failure; error.message becomes importError and
+ *   error.code (a Firebase Functions error code, e.g. from an HttpsError or
+ *   from a plain Error assigned one) is classified into importErrorKind.
  * @returns {Promise<void>}
  */
-async function failImportJob(jobId, message) {
+async function failImportJob(jobId, error) {
   if (!jobId) return;
   try {
     await admin.firestore().collection('recipes').doc(jobId).update({
       importStatus: 'error',
-      importError: message || 'Import fehlgeschlagen',
+      importError: error?.message || 'Import fehlgeschlagen',
+      importErrorKind: classifyImportErrorKind(error),
     });
-  } catch (error) {
-    console.error(`failImportJob: failed to write error state for job ${jobId}:`, error);
+  } catch (writeError) {
+    console.error(`failImportJob: failed to write error state for job ${jobId}:`, writeError);
   }
 }
 
@@ -834,7 +886,7 @@ exports.scanRecipeWithAI = onCall(
         };
       } catch (error) {
         console.error(`AI Scan failed for user ${userId}:`, error);
-        if (jobId) await failImportJob(jobId, error.message);
+        if (jobId) await failImportJob(jobId, error);
         throw error;
       }
     }
@@ -1028,7 +1080,7 @@ exports.scanRecipesWithAI = onCall(
         };
       } catch (error) {
         console.error(`Batch AI Scan failed for user ${userId}:`, error);
-        if (jobId) await failImportJob(jobId, error.message);
+        if (jobId) await failImportJob(jobId, error);
         throw error;
       }
     },
@@ -1331,7 +1383,7 @@ exports.processHtmlWithAI = onCall(
         };
       } catch (error) {
         console.error(`HTML processing failed for user ${userId}:`, error);
-        if (jobId) await failImportJob(jobId, error.message);
+        if (jobId) await failImportJob(jobId, error);
         throw error;
       }
     },
@@ -1353,6 +1405,227 @@ function isInstagramUrl(url) {
     );
   } catch {
     return false;
+  }
+}
+
+/**
+ * Core Instagram Reel/post scraping + Gemini extraction: navigates with
+ * Puppeteer, extracts the caption/page text (and transcribes the Reel's
+ * audio when a video URL is captured), then runs the combined text through
+ * callGeminiTextAPI. Shared by the scrapeInstagramReel callable and
+ * recoverStuckImportJobs so the puppeteer scraping logic isn't duplicated.
+ * Throws plain Errors, some carrying a Firebase Functions error .code
+ * ('not-found' / 'deadline-exceeded' / 'internal') — HttpsError wrapping is
+ * the onCall wrapper's job, not this function's.
+ *
+ * @param {string} url - Instagram Reel/post URL (validated by the caller)
+ * @param {{language?: string, apiKey: string, cuisineTypes?: string[], mealCategories?: string[]}} opts
+ * @returns {Promise<Object>} Structured recipe data (same shape as callGeminiAPI), plus sourceUrl
+ */
+async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineTypes, mealCategories} = {}) {
+  const puppeteer = require('puppeteer');
+  const chromium = require('@sparticuz/chromium');
+
+  let browser = null;
+  try {
+    browser = await puppeteer.launch({
+      args: chromium.args.concat([
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+      ]),
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+    });
+
+    const page = await browser.newPage();
+    let videoUrl = null;
+    page.on('response', (response) => {
+      try {
+        const responseUrl = response.url();
+        if (
+          !videoUrl &&
+          responseUrl.includes('.mp4') &&
+          response.request().resourceType() === 'media'
+        ) {
+          videoUrl = responseUrl;
+        }
+      } catch (error) {
+        console.warn('Instagram video response listener warning:', error.message || error);
+      }
+    });
+
+    await page.setViewport({width: 1280, height: 800});
+
+    // Use a mobile user-agent as Instagram serves more content to mobile browsers
+    await page.setUserAgent(
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) ' +
+        'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+    );
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
+    });
+
+    // Navigate to the Instagram Reel page
+    try {
+      await page.goto(url, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
+    } catch (navError) {
+      // Continue even if navigation times out – we may still have partial content
+      console.warn(`Navigation warning for ${url}:`, navError.message);
+    }
+
+    // Short pause to let meta tags and initial content render
+    await new Promise((r) => setTimeout(r, 2000));
+
+    // Extract content from the page
+    const extractedData = await page.evaluate(() => {
+      const getMeta = (name) => {
+        const el = document.querySelector(
+            `meta[property="${name}"], meta[name="${name}"]`,
+        );
+        return el ? (el.getAttribute('content') || '') : '';
+      };
+
+      const title = getMeta('og:title') || document.title || '';
+      const description = getMeta('og:description') || '';
+
+      // Try to get visible text from the page body (caption + comments)
+      const textParts = [];
+
+      // Try article elements (Instagram uses <article> for posts)
+      document.querySelectorAll('article').forEach((a) => {
+        const text = (a.innerText || a.textContent || '').trim();
+        if (text) textParts.push(text);
+      });
+
+      // Try the main content area as a fallback
+      const main = document.querySelector('main');
+      if (main && textParts.length === 0) {
+        const text = (main.innerText || main.textContent || '').trim();
+        if (text.length > 50) textParts.push(text);
+      }
+
+      const bodyText = textParts
+          .join('\n\n')
+          .replace(/[ \t]{2,}/g, ' ')
+          .replace(/\n{3,}/g, '\n\n')
+          .slice(0, 10000);
+
+      return {title, description, bodyText};
+    });
+
+    await browser.close();
+    browser = null;
+
+    let transcribedAudio = null;
+    if (videoUrl) {
+      try {
+        const videoResponse = await fetch(videoUrl, {
+          signal: AbortSignal.timeout(15000),
+        });
+
+        if (!videoResponse.ok) {
+          console.warn(
+              `Instagram video download failed with status ${videoResponse.status}: ` +
+              `${videoResponse.statusText}`,
+          );
+        } else {
+          const contentLengthHeader = videoResponse.headers.get('content-length');
+          const parsedContentLength = contentLengthHeader ?
+            parseInt(contentLengthHeader, 10) :
+            NaN;
+          const contentLength = Number.isFinite(parsedContentLength) ?
+            parsedContentLength :
+            null;
+
+          if (contentLength && contentLength > MAX_REEL_VIDEO_SIZE) {
+            console.warn(
+                `Instagram video too large by header: ${contentLength} bytes ` +
+                `(max ${MAX_REEL_VIDEO_SIZE})`,
+            );
+          } else {
+            const videoArrayBuffer = await videoResponse.arrayBuffer();
+            const videoBuffer = Buffer.from(videoArrayBuffer);
+
+            if (videoBuffer.length > MAX_REEL_VIDEO_SIZE) {
+              console.warn(
+                  `Instagram video too large after download: ${videoBuffer.length} bytes ` +
+                  `(max ${MAX_REEL_VIDEO_SIZE})`,
+              );
+            } else {
+              transcribedAudio = await transcribeVideoWithGemini(
+                  videoBuffer, language, apiKey,
+              );
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Instagram video download/transcription warning:', error.message || error);
+      }
+    } else {
+      console.warn('No Instagram Reel video URL captured; continuing without transcription.');
+    }
+
+    // Minimum character lengths for heuristic content quality checks
+    const MIN_BODY_TEXT_LENGTH = 100;
+    const MIN_COMBINED_TEXT_LENGTH = 30;
+
+    // Build combined text from all available sources
+    const parts = [];
+    if (extractedData.title) parts.push(`Titel: ${extractedData.title}`);
+    if (extractedData.description) {
+      parts.push(`Caption:\n${extractedData.description}`);
+    }
+    if (extractedData.bodyText && extractedData.bodyText.length > MIN_BODY_TEXT_LENGTH) {
+      parts.push(`Seiteninhalt:\n${extractedData.bodyText}`);
+    }
+    if (transcribedAudio) {
+      const transcriptionLabel = language === 'de' ?
+        'Gesprochener Inhalt (Audiotranskription)' :
+        'Spoken Content (Audio Transcription)';
+      parts.push(`${transcriptionLabel}:\n${transcribedAudio}`);
+    }
+    const combinedText = parts.join('\n\n');
+
+    if (!combinedText.trim() || combinedText.length < MIN_COMBINED_TEXT_LENGTH) {
+      const notFoundError = new Error(
+          'Kein Rezeptinhalt auf der Instagram-Seite gefunden. ' +
+          'Das Reel ist möglicherweise privat oder enthält kein Rezept in der Bildunterschrift.',
+      );
+      notFoundError.code = 'not-found';
+      throw notFoundError;
+    }
+
+    console.log(`Instagram Reel content extracted, length: ${combinedText.length}`);
+
+    // Process the combined text with Gemini AI
+    const result = await callGeminiTextAPI(
+        combinedText, language, apiKey, cuisineTypes, mealCategories,
+    );
+
+    return {...result, sourceUrl: url};
+  } catch (error) {
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (closeErr) {
+        console.error('Error closing browser after failure:', closeErr);
+      }
+    }
+    if (error.code) throw error;
+    if (error.message && error.message.includes('timeout')) {
+      const timeoutError = new Error('Die Instagram-Seite hat zu lange gebraucht. Bitte versuche es erneut.');
+      timeoutError.code = 'deadline-exceeded';
+      throw timeoutError;
+    }
+    const internalError = new Error('Instagram-Import fehlgeschlagen: ' + error.message);
+    internalError.code = 'internal';
+    throw internalError;
   }
 }
 
@@ -1434,226 +1707,20 @@ exports.scrapeInstagramReel = onCall(
         );
       }
 
-      const puppeteer = require('puppeteer');
-      const chromium = require('@sparticuz/chromium');
-
-      let browser = null;
       try {
-        browser = await puppeteer.launch({
-          args: chromium.args.concat([
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-          ]),
-          defaultViewport: chromium.defaultViewport,
-          executablePath: await chromium.executablePath(),
-          headless: chromium.headless,
-        });
-
-        const page = await browser.newPage();
-        let videoUrl = null;
-        page.on('response', (response) => {
-          try {
-            const responseUrl = response.url();
-            if (
-              !videoUrl &&
-              responseUrl.includes('.mp4') &&
-              response.request().resourceType() === 'media'
-            ) {
-              videoUrl = responseUrl;
-            }
-          } catch (error) {
-            console.warn('Instagram video response listener warning:', error.message || error);
-          }
-        });
-
-        await page.setViewport({width: 1280, height: 800});
-
-        // Use a mobile user-agent as Instagram serves more content to mobile browsers
-        await page.setUserAgent(
-            'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) ' +
-            'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
-        );
-        await page.setExtraHTTPHeaders({
-          'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
-        });
-
-        // Navigate to the Instagram Reel page
-        try {
-          await page.goto(url, {
-            waitUntil: 'domcontentloaded',
-            timeout: 30000,
-          });
-        } catch (navError) {
-          // Continue even if navigation times out – we may still have partial content
-          console.warn(`Navigation warning for ${url}:`, navError.message);
-        }
-
-        // Short pause to let meta tags and initial content render
-        await new Promise((r) => setTimeout(r, 2000));
-
-        // Extract content from the page
-        const extractedData = await page.evaluate(() => {
-          const getMeta = (name) => {
-            const el = document.querySelector(
-                `meta[property="${name}"], meta[name="${name}"]`,
-            );
-            return el ? (el.getAttribute('content') || '') : '';
-          };
-
-          const title = getMeta('og:title') || document.title || '';
-          const description = getMeta('og:description') || '';
-
-          // Try to get visible text from the page body (caption + comments)
-          const textParts = [];
-
-          // Try article elements (Instagram uses <article> for posts)
-          document.querySelectorAll('article').forEach((a) => {
-            const text = (a.innerText || a.textContent || '').trim();
-            if (text) textParts.push(text);
-          });
-
-          // Try the main content area as a fallback
-          const main = document.querySelector('main');
-          if (main && textParts.length === 0) {
-            const text = (main.innerText || main.textContent || '').trim();
-            if (text.length > 50) textParts.push(text);
-          }
-
-          const bodyText = textParts
-              .join('\n\n')
-              .replace(/[ \t]{2,}/g, ' ')
-              .replace(/\n{3,}/g, '\n\n')
-              .slice(0, 10000);
-
-          return {title, description, bodyText};
-        });
-
-        await browser.close();
-        browser = null;
-
-        let transcribedAudio = null;
-        if (videoUrl) {
-          try {
-            const videoResponse = await fetch(videoUrl, {
-              signal: AbortSignal.timeout(15000),
-            });
-
-            if (!videoResponse.ok) {
-              console.warn(
-                  `Instagram video download failed with status ${videoResponse.status}: ` +
-                  `${videoResponse.statusText}`,
-              );
-            } else {
-              const contentLengthHeader = videoResponse.headers.get('content-length');
-              const parsedContentLength = contentLengthHeader ?
-                parseInt(contentLengthHeader, 10) :
-                NaN;
-              const contentLength = Number.isFinite(parsedContentLength) ?
-                parsedContentLength :
-                null;
-
-              if (contentLength && contentLength > MAX_REEL_VIDEO_SIZE) {
-                console.warn(
-                    `Instagram video too large by header: ${contentLength} bytes ` +
-                    `(max ${MAX_REEL_VIDEO_SIZE})`,
-                );
-              } else {
-                const videoArrayBuffer = await videoResponse.arrayBuffer();
-                const videoBuffer = Buffer.from(videoArrayBuffer);
-
-                if (videoBuffer.length > MAX_REEL_VIDEO_SIZE) {
-                  console.warn(
-                      `Instagram video too large after download: ${videoBuffer.length} bytes ` +
-                      `(max ${MAX_REEL_VIDEO_SIZE})`,
-                  );
-                } else {
-                  transcribedAudio = await transcribeVideoWithGemini(
-                      videoBuffer, language, apiKey,
-                  );
-                }
-              }
-            }
-          } catch (error) {
-            console.warn('Instagram video download/transcription warning:', error.message || error);
-          }
-        } else {
-          console.warn('No Instagram Reel video URL captured; continuing without transcription.');
-        }
-
-        // Minimum character lengths for heuristic content quality checks
-        const MIN_BODY_TEXT_LENGTH = 100;
-        const MIN_COMBINED_TEXT_LENGTH = 30;
-
-        // Build combined text from all available sources
-        const parts = [];
-        if (extractedData.title) parts.push(`Titel: ${extractedData.title}`);
-        if (extractedData.description) {
-          parts.push(`Caption:\n${extractedData.description}`);
-        }
-        if (extractedData.bodyText && extractedData.bodyText.length > MIN_BODY_TEXT_LENGTH) {
-          parts.push(`Seiteninhalt:\n${extractedData.bodyText}`);
-        }
-        if (transcribedAudio) {
-          const transcriptionLabel = language === 'de' ?
-            'Gesprochener Inhalt (Audiotranskription)' :
-            'Spoken Content (Audio Transcription)';
-          parts.push(`${transcriptionLabel}:\n${transcribedAudio}`);
-        }
-        const combinedText = parts.join('\n\n');
-
-        if (!combinedText.trim() || combinedText.length < MIN_COMBINED_TEXT_LENGTH) {
-          throw new HttpsError(
-              'not-found',
-              'Kein Rezeptinhalt auf der Instagram-Seite gefunden. ' +
-              'Das Reel ist möglicherweise privat oder enthält kein Rezept in der Bildunterschrift.',
-          );
-        }
-
-        console.log(
-            `Instagram Reel content extracted for user ${userId}, ` +
-            `length: ${combinedText.length}`,
-        );
-
-        // Process the combined text with Gemini AI
-        const result = await callGeminiTextAPI(
-            combinedText, language, apiKey, cuisineTypes, mealCategories,
-        );
-
+        const result = await runImportFromInstagram(url, {language, apiKey, cuisineTypes, mealCategories});
         console.log(`Instagram Reel import successful for user ${userId}`);
         if (jobId) await finalizeImportJob(jobId, authorId || userId, result);
         return {
           ...result,
           remainingScans: rateLimitResult.remaining,
           dailyLimit: rateLimitResult.limit,
-          sourceUrl: url,
         };
       } catch (error) {
-        if (browser) {
-          try {
-            await browser.close();
-          } catch (closeErr) {
-            console.error('Error closing browser after failure:', closeErr);
-          }
-        }
-
-        if (error instanceof HttpsError) {
-          if (jobId) await failImportJob(jobId, error.message);
-          throw error;
-        }
-
         console.error(`Instagram Reel scrape failed for user ${userId}:`, error);
-
-        if (error.message && error.message.includes('timeout')) {
-          const message = 'Die Instagram-Seite hat zu lange gebraucht. Bitte versuche es erneut.';
-          if (jobId) await failImportJob(jobId, message);
-          throw new HttpsError('deadline-exceeded', message);
-        }
-
-        const message = 'Instagram-Import fehlgeschlagen: ' + error.message;
-        if (jobId) await failImportJob(jobId, message);
-        throw new HttpsError('internal', message);
+        const httpsError = new HttpsError(error.code || 'internal', error.message);
+        if (jobId) await failImportJob(jobId, httpsError);
+        throw httpsError;
       }
     },
 );
@@ -2517,13 +2584,13 @@ exports.importRecipeCallable = onCall(
         return result;
       } catch (error) {
         if (error instanceof HttpsError) {
-          if (jobId) await failImportJob(jobId, error.message);
+          if (jobId) await failImportJob(jobId, error);
           throw error;
         }
         console.error(`importRecipeCallable failed for user ${userId}:`, error);
-        const message = 'Import failed: ' + error.message;
-        if (jobId) await failImportJob(jobId, message);
-        throw new HttpsError('internal', message);
+        const internalError = new HttpsError('internal', 'Import failed: ' + error.message);
+        if (jobId) await failImportJob(jobId, internalError);
+        throw internalError;
       }
     },
 );
@@ -6687,6 +6754,334 @@ exports.nightlySwipeFlagsCleanup = onSchedule(
       }
 
       console.log(`nightlySwipeFlagsCleanup: cleaned up ${cleanedCount} expired swipe flag document(s)`);
+    },
+);
+
+/**
+ * Run a batch of images through Gemini Vision concurrently (no per-user rate
+ * limiting — recoverStuckImportJobs runs without an auth context, restarting
+ * work a user already authorized when the job was first queued). Node-side
+ * counterpart of the per-image worker loop in scanRecipesWithAI, minus the
+ * rate-limit check that only makes sense for a live onCall request.
+ *
+ * @param {string[]} images - Base64-encoded images
+ * @param {{language?: string, apiKey: string, cuisineTypes?: string[],
+ *   mealCategories?: string[], concurrency?: number}} opts
+ * @returns {Promise<Array<Object>>} Per-image results, each possibly {error}
+ */
+async function scanImagesWithGemini(images, {
+  language = 'de', apiKey, cuisineTypes, mealCategories, concurrency = BATCH_IMAGE_CONCURRENCY,
+} = {}) {
+  const results = new Array(images.length);
+  let nextIndex = 0;
+  const worker = async () => {
+    while (nextIndex < images.length) {
+      const i = nextIndex++;
+      try {
+        const {mimeType, base64Data} = validateImageData(images[i]);
+        results[i] = await callGeminiAPI(
+            base64Data, mimeType, language, apiKey, cuisineTypes, mealCategories,
+        );
+      } catch (error) {
+        results[i] = {error: error.message};
+      }
+    }
+  };
+  const workerCount = Math.min(concurrency, images.length);
+  await Promise.all(Array.from({length: workerCount}, worker));
+  return results;
+}
+
+/**
+ * Combine per-leg AI results (url screenshot, text, images) collected for a
+ * 'universal' import into one recipe. Node-side port of
+ * mergeUniversalAiResults in src/utils/importRunners.js.
+ *
+ * @param {Array<Object>} results - Per-leg results, each possibly {error}
+ * @returns {Object} Merged recipe data
+ */
+function mergeUniversalAiResultsServer(results) {
+  const validResults = results.filter((r) => r && !r.error);
+  if (validResults.length === 0) {
+    const error = new Error('Keine gültigen OCR-Ergebnisse gefunden');
+    error.code = 'invalid-argument';
+    throw error;
+  }
+
+  const merged = {...validResults[0]};
+
+  const allIngredients = validResults.flatMap((r) => r.ingredients || []);
+  const seenIngredients = new Set();
+  merged.ingredients = allIngredients.filter((ing) => {
+    const key = ing.toLowerCase().trim();
+    if (seenIngredients.has(key)) return false;
+    seenIngredients.add(key);
+    return true;
+  });
+
+  merged.steps = validResults.flatMap((r) => r.steps || []);
+  merged.tags = [...new Set(validResults.flatMap((r) => r.tags || []))];
+  merged.notes = validResults.map((r) => r.notes).filter((n) => n && n.trim()).join('\n\n') || merged.notes;
+  merged.servings = merged.servings || validResults.find((r) => r.servings)?.servings;
+  merged.prepTime = merged.prepTime || validResults.find((r) => r.prepTime)?.prepTime;
+  merged.cookTime = merged.cookTime || validResults.find((r) => r.cookTime)?.cookTime;
+  merged.difficulty = merged.difficulty || validResults.find((r) => r.difficulty)?.difficulty;
+  merged.cuisine = merged.cuisine || validResults.find((r) => r.cuisine)?.cuisine;
+  merged.category = merged.category || validResults.find((r) => r.category)?.category;
+
+  return merged;
+}
+
+/**
+ * Rebuild the 'web' leg of runImportFromSource: Instagram URLs go through
+ * the dedicated scraper (JSON-LD/screenshot parsing doesn't work on
+ * Instagram's app-shell markup); every other URL goes through
+ * runImportFromUrl's JSON-LD → text → screenshot+vision chain, same as
+ * importRecipeCallable. This intentionally skips the client's
+ * isRecipeImportPageUrl fast-path (a plain fetchable HTML page, so it still
+ * resolves correctly through the generic chain — just via a different phase).
+ *
+ * @param {{url: string}} source
+ * @param {{apiKey: string}} opts
+ * @returns {Promise<Object>}
+ */
+async function runImportFromWebSource(source, {apiKey} = {}) {
+  const url = source && source.url;
+  if (!url || typeof url !== 'string') {
+    const error = new Error('Keine URL für den Web-Import vorhanden');
+    error.code = 'invalid-argument';
+    throw error;
+  }
+  if (isInstagramUrl(url)) {
+    return runImportFromInstagram(url, {language: 'de', apiKey});
+  }
+  return runImportFromUrl(url, {apiKey, source: 'sweeper'});
+}
+
+/**
+ * Rebuilds the 'universal' leg combination (url/text/images) of
+ * runImportFromSource, server-side equivalent of runUniversalImport in
+ * src/utils/importRunners.js. Two differences from the client version, both
+ * because this runs without a browser: the text leg is sent straight to
+ * callGeminiTextAPI instead of being rendered onto a canvas first (Gemini
+ * doesn't need that detour — it only existed to reuse the vision-only
+ * client OCR path), and the url leg reuses runImportFromUrl's multi-phase
+ * chain instead of a dedicated screenshot capture.
+ *
+ * @param {{url?: string, text?: string, images?: string[]}} source
+ * @param {{apiKey: string}} opts
+ * @returns {Promise<Object>}
+ */
+async function runImportFromUniversalSource(source, {apiKey} = {}) {
+  const url = (source && source.url || '').trim();
+  const text = (source && source.text || '').trim();
+  const images = Array.isArray(source && source.images) ? source.images : [];
+  const results = [];
+
+  if (url) {
+    try {
+      results.push(await runImportFromUrl(url, {apiKey, source: 'sweeper-universal'}));
+    } catch (error) {
+      results.push({error: error.message});
+    }
+  }
+
+  if (text) {
+    try {
+      results.push(await callGeminiTextAPI(text, 'de', apiKey));
+    } catch (error) {
+      results.push({error: error.message});
+    }
+  }
+
+  if (images.length > 0) {
+    const imageResults = await scanImagesWithGemini(images, {language: 'de', apiKey});
+    const hasValidImageResult = imageResults.some((r) => r && !r.error);
+    results.push(hasValidImageResult ? mergePhotoAiResultsServer(imageResults) : {error: 'Keine gültigen OCR-Ergebnisse gefunden'});
+  }
+
+  return mergeUniversalAiResultsServer(results);
+}
+
+/**
+ * Rebuilds the 'photo' leg of runImportFromSource, server-side equivalent of
+ * runPhotoScanImport in src/utils/importRunners.js.
+ *
+ * @param {{images?: string[], language?: string}} source
+ * @param {{apiKey: string}} opts
+ * @returns {Promise<Object>}
+ */
+async function runImportFromPhotoSource(source, {apiKey} = {}) {
+  const images = Array.isArray(source && source.images) ? source.images : [];
+  const language = ['de', 'en'].includes(source && source.language) ? source.language : 'de';
+  if (images.length === 0) {
+    const error = new Error('Kein Bild für den Foto-Import vorhanden');
+    error.code = 'invalid-argument';
+    throw error;
+  }
+  if (images.length === 1) {
+    const {mimeType, base64Data} = validateImageData(images[0]);
+    return callGeminiAPI(base64Data, mimeType, language, apiKey);
+  }
+  const results = await scanImagesWithGemini(images, {language, apiKey});
+  return mergePhotoAiResultsServer(results);
+}
+
+/**
+ * Internal dispatcher used by recoverStuckImportJobs to redrive a stuck
+ * background-import job purely from its persisted importSource — no auth
+ * context, no rate limiting, no HttpsError throwing (that belongs to the
+ * onCall wrappers above, not the scheduler). Mirrors buildRunFromSource in
+ * src/contexts/RecipeImportQueueContext.js.
+ *
+ * @param {Object} source - Persisted importSource ({type, ...})
+ * @param {string} authorId - Owner of the job (used only for logging here)
+ * @param {string} jobId - Firestore recipes/{jobId} doc id (used only for logging here)
+ * @returns {Promise<Object>} Structured recipe data (same shape as callGeminiAPI)
+ */
+async function runImportFromSource(source, authorId, jobId) {
+  const apiKey = geminiApiKey.value();
+  if (!apiKey) {
+    const error = new Error('AI service not configured. Please contact administrator.');
+    error.code = 'failed-precondition';
+    throw error;
+  }
+
+  console.log(`recoverStuckImportJobs: running job=${jobId} author=${authorId} type=${source && source.type}`);
+
+  switch (source && source.type) {
+    case 'web':
+      return runImportFromWebSource(source, {apiKey});
+    case 'universal':
+      return runImportFromUniversalSource(source, {apiKey});
+    case 'photo':
+      return runImportFromPhotoSource(source, {apiKey});
+    default: {
+      const error = new Error(`Unbekannter importSource-Typ: ${source && source.type}`);
+      error.code = 'invalid-argument';
+      throw error;
+    }
+  }
+}
+
+/**
+ * Threshold above which a queued/processing (or already-failed-but-
+ * retryable) import job with a stale importHeartbeatAt is considered
+ * orphaned and eligible for server-side recovery. Must stay comfortably
+ * above the longest-running import Cloud Function timeout (180s —
+ * scanRecipesWithAI / scrapeInstagramReel) so this sweeper never restarts a
+ * job while its original attempt could still be legitimately in flight.
+ * Deliberately NOT the client's STALE_JOB_MS (60s, RecipeImportQueueContext.js)
+ * — that threshold is tuned for same-tab/other-open-tab recovery between
+ * live clients, not for restarting a job whose Cloud Function call may
+ * still be running.
+ */
+const STUCK_IMPORT_JOB_MS = 300000; // 5 minutes
+
+/** Maximum number of stuck import jobs redriven per sweeper run. */
+const MAX_STUCK_IMPORT_JOBS_PER_RUN = 20;
+
+/** Maximum number of run attempts (fresh + restarts) before giving up for good. */
+const MAX_IMPORT_ATTEMPTS = 3;
+
+/**
+ * Scheduled Cloud Function: recover background-import jobs (recipes/{id}
+ * with isTemp:true and an importStatus) that got stuck because the client
+ * tab that owned them closed, reloaded, or crashed before finishing — the
+ * only recovery path today is RecipeImportQueueContext's orphan-recovery
+ * effect, which only runs while some tab is open. This sweeper redrives the
+ * same jobs entirely server-side via runImportFromSource, independent of any
+ * open tab.
+ *
+ * Also redrives jobs already in importStatus:'error' when their
+ * importErrorKind is 'retryable' (see failImportJob/classifyImportErrorKind)
+ * — jobs classified 'permanent' are left for the user's own "Neu starten".
+ *
+ * Schedule: every 10 minutes.
+ */
+exports.recoverStuckImportJobs = onSchedule(
+    {
+      schedule: '*/10 * * * *',
+      timeZone: 'Europe/Berlin',
+      timeoutSeconds: 540,
+      secrets: [geminiApiKey],
+    },
+    async (_event) => {
+      const db = admin.firestore();
+      const cutoff = Date.now() - STUCK_IMPORT_JOB_MS;
+
+      const snapshot = await db.collection('recipes')
+          .where('isTemp', '==', true)
+          .where('importStatus', 'in', ['queued', 'processing', 'error'])
+          .where('importHeartbeatAt', '<', cutoff)
+          .limit(MAX_STUCK_IMPORT_JOBS_PER_RUN)
+          .get();
+
+      if (snapshot.empty) {
+        console.log('recoverStuckImportJobs: nichts zu tun (keine liegengebliebenen Importe gefunden)');
+        return;
+      }
+
+      let restarted = 0;
+      let abandoned = 0;
+
+      for (const docSnap of snapshot.docs) {
+        const jobId = docSnap.id;
+        const data = docSnap.data() || {};
+        const authorId = data.authorId || 'unknown';
+        const attempts = data.importAttempts || 0;
+        const wasError = data.importStatus === 'error';
+
+        if (wasError && data.importErrorKind !== 'retryable') {
+          // Permanent failure (or a legacy error doc from before
+          // importErrorKind existed) – leave it for the user's own "Neu
+          // starten" action, don't touch it here.
+          continue;
+        }
+
+        if (!data.importSource) {
+          const error = new Error('Import kann nicht wiederhergestellt werden: keine importSource gespeichert');
+          error.code = 'failed-precondition';
+          await failImportJob(jobId, error);
+          abandoned++;
+          continue;
+        }
+
+        if (attempts >= MAX_IMPORT_ATTEMPTS) {
+          const error = new Error(`Import endgültig fehlgeschlagen nach ${attempts} Versuchen`);
+          error.code = 'failed-precondition';
+          await failImportJob(jobId, error);
+          abandoned++;
+          continue;
+        }
+
+        // Claim the job (heartbeat + attempt count) before doing any work,
+        // so the next tick 10 minutes from now doesn't pick the same doc
+        // again while this attempt is still running.
+        await docSnap.ref.update({
+          importStatus: 'processing',
+          importHeartbeatAt: Date.now(),
+          importAttempts: attempts + 1,
+          ...(wasError ? {
+            importError: admin.firestore.FieldValue.delete(),
+            importErrorKind: admin.firestore.FieldValue.delete(),
+          } : {}),
+        });
+
+        try {
+          const result = await runImportFromSource(data.importSource, authorId, jobId);
+          await finalizeImportJob(jobId, authorId, result);
+          restarted++;
+        } catch (error) {
+          console.error(`recoverStuckImportJobs: job ${jobId} failed`, error);
+          await failImportJob(jobId, error);
+          abandoned++;
+        }
+      }
+
+      console.log(
+          `recoverStuckImportJobs: geprüft=${snapshot.size} neu gestartet=${restarted} aufgegeben=${abandoned}`,
+      );
     },
 );
 
