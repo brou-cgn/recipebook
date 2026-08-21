@@ -109,6 +109,29 @@ function assertPublicUrl(urlString) {
 }
 
 /**
+ * Resolves a Shortcut request's X-User-Email header to a Firebase Auth uid.
+ * Returns null (instead of throwing) for any lookup failure so callers can
+ * respond with the same generic 403 used for other permission failures —
+ * this avoids letting a caller who already holds a valid API key enumerate
+ * which email addresses are registered.
+ * @param {string} email - raw X-User-Email header value
+ * @return {Promise<string|null>}
+ */
+async function resolveShortcutUserId(email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) return null;
+  try {
+    const userRecord = await admin.auth().getUserByEmail(normalizedEmail);
+    return userRecord.uid;
+  } catch (err) {
+    if (err.code !== 'auth/user-not-found') {
+      console.error('resolveShortcutUserId: error looking up user by email:', err);
+    }
+    return null;
+  }
+}
+
+/**
  * Input validation constants
  */
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20 MB in bytes (Gemini API limit)
@@ -2603,8 +2626,8 @@ exports.importRecipeCallable = onCall(
  * POST /importRecipeShortcut
  *
  * Headers:
- *   X-Api-Key:  <SHORTCUT_API_KEY secret>
- *   X-User-Id:  <Firebase User ID>
+ *   X-Api-Key:    <SHORTCUT_API_KEY secret>
+ *   X-User-Email: <registrierte E-Mail-Adresse des Users>
  *   Content-Type: application/json
  *
  * Body (JSON):
@@ -2633,7 +2656,7 @@ exports.importRecipeShortcut = onRequest(
         res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
         res.set(
             'Access-Control-Allow-Headers',
-            'Content-Type, X-Api-Key, X-User-Id',
+            'Content-Type, X-Api-Key, X-User-Email',
         );
         if (req.method === 'OPTIONS') {
           res.status(204).send('');
@@ -2649,15 +2672,15 @@ exports.importRecipeShortcut = onRequest(
         return;
       }
 
-      // Authentication via SHORTCUT_API_KEY + user ID
+      // Authentication via SHORTCUT_API_KEY + user email
       const apiKeyHeader = req.headers['x-api-key'];
-      const userId = req.headers['x-user-id'];
+      const userEmail = req.headers['x-user-email'];
 
-      if (!apiKeyHeader || !userId) {
+      if (!apiKeyHeader || !userEmail) {
         res.status(401).json({
           success: false,
           error: 'Missing authentication headers',
-          requiredHeaders: ['X-Api-Key', 'X-User-Id'],
+          requiredHeaders: ['X-Api-Key', 'X-User-Email'],
         });
         return;
       }
@@ -2687,11 +2710,12 @@ exports.importRecipeShortcut = onRequest(
         return;
       }
 
-      // Validate user role in Firestore
+      // Resolve the email to a Firebase uid, then validate role in Firestore
+      const userId = await resolveShortcutUserId(userEmail);
       const db = admin.firestore();
       try {
-        const userDoc = await db.collection('users').doc(userId).get();
-        if (!userDoc.exists) {
+        const userDoc = userId ? await db.collection('users').doc(userId).get() : null;
+        if (!userId || !userDoc.exists) {
           res.status(403).json({success: false, error: 'Access denied'});
           return;
         }
@@ -4552,8 +4576,8 @@ function validateAndNormaliseRecipeInput(body) {
  * POST /addRecipeViaAPI
  *
  * Headers:
- *   X-Api-Key: <API Key stored as SHORTCUT_API_KEY secret>
- *   X-User-Id: <Firebase User ID>
+ *   X-Api-Key:    <API Key stored as SHORTCUT_API_KEY secret>
+ *   X-User-Email: <registrierte E-Mail-Adresse des Users>
  *   Content-Type: application/json
  *
  * Body (JSON) – supports both German and English field names:
@@ -4583,7 +4607,7 @@ exports.addRecipeViaAPI = onRequest(
       if (origin && ALLOWED_ORIGINS.includes(origin)) {
         res.set('Access-Control-Allow-Origin', origin);
         res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key, X-User-Id');
+        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key, X-User-Email');
         if (req.method === 'OPTIONS') {
           res.status(204).send('');
           return;
@@ -4600,13 +4624,13 @@ exports.addRecipeViaAPI = onRequest(
 
       // --- Authentication via API Key ---
       const apiKey = req.headers['x-api-key'];
-      const userId = req.headers['x-user-id'];
+      const userEmail = req.headers['x-user-email'];
 
-      if (!apiKey || !userId) {
+      if (!apiKey || !userEmail) {
         res.status(401).json({
           success: false,
           error: 'Missing authentication headers',
-          requiredHeaders: ['X-Api-Key', 'X-User-Id'],
+          requiredHeaders: ['X-Api-Key', 'X-User-Email'],
         });
         return;
       }
@@ -4630,11 +4654,12 @@ exports.addRecipeViaAPI = onRequest(
         return;
       }
 
-      // --- Validate user exists in Firestore and has required role ---
+      // --- Resolve email to uid, then validate user exists and has required role ---
+      const userId = await resolveShortcutUserId(userEmail);
       const db = admin.firestore();
       try {
-        const userDoc = await db.collection('users').doc(userId).get();
-        if (!userDoc.exists) {
+        const userDoc = userId ? await db.collection('users').doc(userId).get() : null;
+        if (!userId || !userDoc.exists) {
           res.status(403).json({success: false, error: 'Access denied'});
           return;
         }
@@ -4710,8 +4735,8 @@ const RECIPE_IMPORT_TTL_MS = 10 * 60 * 1000;
  * POST /createRecipeImportFromText
  *
  * Headers:
- *   X-Api-Key: <API Key stored as SHORTCUT_API_KEY secret>
- *   X-User-Id: <Firebase User ID>
+ *   X-Api-Key:    <API Key stored as SHORTCUT_API_KEY secret>
+ *   X-User-Email: <registrierte E-Mail-Adresse des Users/Service-Users>
  *   Content-Type: application/json
  *
  * Body (JSON):
@@ -4722,7 +4747,6 @@ const RECIPE_IMPORT_TTL_MS = 10 * 60 * 1000;
  *   400 { success: false, error: string }
  *   401 { success: false, error: string }
  *   403 { success: false, error: string }
- *   404 { success: false, error: string }
  *   405 { success: false, error: string }
  *   500 { success: false, error: string }
  */
@@ -4733,7 +4757,7 @@ exports.createRecipeImportFromText = onRequest(
       if (origin && ALLOWED_ORIGINS.includes(origin)) {
         res.set('Access-Control-Allow-Origin', origin);
         res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key, X-User-Id');
+        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key, X-User-Email');
         if (req.method === 'OPTIONS') {
           res.status(204).send('');
           return;
@@ -4750,13 +4774,13 @@ exports.createRecipeImportFromText = onRequest(
 
       // --- Authentication via API Key ---
       const apiKey = req.headers['x-api-key'];
-      const userId = req.headers['x-user-id'];
+      const userEmail = req.headers['x-user-email'];
 
-      if (!apiKey || !userId) {
+      if (!apiKey || !userEmail) {
         res.status(401).json({
           success: false,
           error: 'Missing authentication headers',
-          required: ['X-Api-Key', 'X-User-Id'],
+          required: ['X-Api-Key', 'X-User-Email'],
         });
         return;
       }
@@ -4779,13 +4803,14 @@ exports.createRecipeImportFromText = onRequest(
         return;
       }
 
-      // --- Validate user exists and has required role ---
+      // --- Resolve email to uid, then validate user exists and has required role ---
+      const userId = await resolveShortcutUserId(userEmail);
       const db = admin.firestore();
       let userData;
       try {
-        const userDoc = await db.collection('users').doc(userId).get();
-        if (!userDoc.exists) {
-          res.status(404).json({success: false, error: 'User not found'});
+        const userDoc = userId ? await db.collection('users').doc(userId).get() : null;
+        if (!userId || !userDoc.exists) {
+          res.status(403).json({success: false, error: 'Access denied'});
           return;
         }
         userData = userDoc.data();

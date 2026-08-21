@@ -17,7 +17,7 @@ Der Link ist außerdem im Hamburger-Menü der App unter **Hilfe → Kurzbefehl i
 Alle Shortcut-Endpoints (`importRecipeShortcut`, `addRecipeViaAPI`, `createRecipeImportFromText`) verwenden **API Key Authentifizierung** statt Firebase Auth Tokens. Ein API Key ist dauerhaft gültig und muss nur einmal im Kurzbefehl hinterlegt werden – derselbe Key funktioniert für alle drei Endpoints.
 
 - **`X-Api-Key`** Header: dein persönlicher API Key (als Firebase Secret gespeichert)
-- **`X-User-Id`** Header: deine Firebase User ID
+- **`X-User-Email`** Header: deine registrierte E-Mail-Adresse (wird serverseitig per `admin.auth().getUserByEmail` zur Firebase User ID aufgelöst – du musst deine UID nicht mehr nachschlagen)
 
 ---
 
@@ -38,7 +38,7 @@ Für den Fall „ich habe eine Rezept-URL und will sie importieren" (der Anwendu
 |------|------|
 | `Content-Type` | `application/json` |
 | `X-Api-Key` | `<dein-api-key>` |
-| `X-User-Id` | `<deine-firebase-uid>` |
+| `X-User-Email` | `<deine-e-mail-adresse>` |
 
 **Body:**
 
@@ -89,13 +89,9 @@ firebase deploy --only functions:addRecipeViaAPI
 
 ---
 
-## Schritt 3: User ID herausfinden
+## Schritt 3: E-Mail-Adresse verwenden
 
-1. Öffne die [Firebase Console](https://console.firebase.google.com/)
-2. Wähle dein Projekt aus
-3. Navigiere zu **Authentication** → **Benutzer**
-4. Suche deinen Benutzer und klicke darauf
-5. Kopiere die **UID** (z. B. `abc123XYZdef456`)
+Nutze einfach die E-Mail-Adresse, mit der du in RecipeBook registriert bist – eine UID musst du dafür nicht mehr nachschlagen.
 
 ---
 
@@ -116,7 +112,7 @@ Füge im Kurzbefehl eine **„Inhalt von URL laden"** Aktion hinzu und konfiguri
 |------|------|
 | `Content-Type` | `application/json` |
 | `X-Api-Key` | `<dein-api-key>` |
-| `X-User-Id` | `<deine-firebase-uid>` |
+| `X-User-Email` | `<deine-e-mail-adresse>` |
 
 **Body:** JSON (siehe Beispiel unten)
 
@@ -186,8 +182,8 @@ Füge im Kurzbefehl eine **„Inhalt von URL laden"** Aktion hinzu und konfiguri
 | HTTP Status | Bedeutung |
 |-------------|-----------|
 | 400 | Fehlende oder ungültige Felder im Body |
-| 401 | Fehlender oder ungültiger API Key / User ID Header |
-| 403 | User nicht gefunden oder fehlende Berechtigung (Rolle muss `edit` oder `admin` sein) |
+| 401 | Fehlender oder ungültiger API Key / User Email Header |
+| 403 | E-Mail-Adresse unbekannt oder fehlende Berechtigung (Rolle muss `edit` oder `admin` sein) – aus Enumeration-Schutz gibt es hierfür bewusst nur eine generische Fehlermeldung |
 | 405 | Falsche HTTP-Methode (nur POST erlaubt) |
 | 500 | Fehler beim Speichern in Firestore oder fehlendes SHORTCUT_API_KEY Secret |
 
@@ -214,7 +210,7 @@ Für den Kurzbefehl „Rezept exportieren" wird ein technischer **Service-User**
 
 1. Erstelle einen dedizierten Service-User in Firebase Authentication (z. B. `shortcut-service@example.com`)
 2. Setze in der Firestore `users`-Collection auf diesem User-Dokument: `isShortcutUser: true`
-3. Notiere die UID des Service-Users
+3. Notiere die E-Mail-Adresse des Service-Users
 
 ### Kurzbefehl-Aktion: `createRecipeImportFromText`
 
@@ -231,7 +227,7 @@ Füge eine **„Inhalt von URL laden"** Aktion hinzu:
 |------|------|
 | `Content-Type` | `application/json` |
 | `X-Api-Key` | `<dein-api-key>` |
-| `X-User-Id` | `<uid-des-service-users>` |
+| `X-User-Email` | `<e-mail-adresse-des-service-users>` |
 
 **Body:** `{ "rawText": "<Rezepttext>" }`
 
@@ -260,8 +256,8 @@ Nach dem API-Call öffnest du die `importUrl` mit der Aktion „URL öffnen".
 - Prüfe, ob der API Key im Header exakt mit dem gespeicherten Secret übereinstimmt
 - Stelle sicher, dass die Function neu deployt wurde: `firebase deploy --only functions:addRecipeViaAPI`
 
-**„User not found" oder „Insufficient permissions" (403)**
-- Prüfe, ob die User ID korrekt kopiert wurde
+**„Access denied" / „Insufficient permissions" (403)**
+- Prüfe, ob die E-Mail-Adresse korrekt (und exakt wie registriert) eingetragen wurde
 - Stelle sicher, dass der Benutzer in der Firebase Authentication existiert und einen Eintrag in der `users` Firestore-Collection hat
 - Stelle sicher, dass der Benutzer die Rolle `edit` oder `admin` hat, oder `isShortcutUser: true` gesetzt ist
 
