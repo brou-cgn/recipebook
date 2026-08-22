@@ -1,6 +1,24 @@
 import React, { useState } from 'react';
 import './Login.css';
 
+function EmailIcon() {
+  return (
+    <svg className="login-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="3"></rect>
+      <path d="M3 6.5l9 6 9-6"></path>
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg className="login-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="10" width="16" height="10" rx="2.5"></rect>
+      <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+    </svg>
+  );
+}
+
 function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,7 +33,7 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-    
+
     try {
       // Trim email only; password must not be trimmed to preserve user-intended characters
       const result = await onLogin((email || '').trim(), password || '');
@@ -73,29 +91,34 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
   if (showResetForm) {
     return (
       <div className="login-container">
-        <div className="login-box">
-          <h2>Passwort zurücksetzen</h2>
+        <div className="login-card">
+          <h2 className="login-title">Passwort zurücksetzen</h2>
           {resetMessage ? (
-            <div className="success-message">{resetMessage}</div>
+            <div className="login-success">{resetMessage}</div>
           ) : (
             <form onSubmit={handleResetPassword}>
-              <p className="reset-info">
+              <p className="login-reset-info">
                 Geben Sie Ihre E-Mail-Adresse ein. Sie erhalten eine E-Mail mit einem Link zum Zurücksetzen Ihres Passworts.
               </p>
-              <div className="form-group">
-                <label htmlFor="reset-email">E-Mail-Adresse</label>
-                <input
-                  type="email"
-                  id="reset-email"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  autoComplete="email"
-                  required
-                  disabled={isLoading}
-                />
+              <div className="login-field">
+                <label htmlFor="reset-email" className="login-label">E-MAIL-ADRESSE</label>
+                <div className="login-input-wrap">
+                  <EmailIcon />
+                  <input
+                    type="email"
+                    id="reset-email"
+                    className="login-input"
+                    placeholder="name@beispiel.de"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    autoComplete="email"
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
-              {resetError && <div className="error-message">{resetError}</div>}
-              <button type="submit" className="submit-btn" disabled={isLoading}>
+              {resetError && <div className="login-error">{resetError}</div>}
+              <button type="submit" className="login-cta-btn" disabled={isLoading}>
                 {isLoading ? 'Wird gesendet...' : 'E-Mail senden'}
               </button>
             </form>
@@ -103,7 +126,7 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
           <div className="login-footer">
             <button
               type="button"
-              className="switch-btn"
+              className="login-back-link"
               onClick={handleBackToLogin}
               disabled={isLoading}
             >
@@ -117,36 +140,46 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
 
   return (
     <div className="login-container">
-      <div className="login-box">
-        <h2>Anmelden</h2>
+      <div className="login-card">
+        <h2 className="login-title">Anmelden</h2>
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="email">E-Mail-Adresse</label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              required
-              disabled={isLoading}
-            />
+          <div className="login-field">
+            <label htmlFor="email" className="login-label">E-MAIL-ADRESSE</label>
+            <div className="login-input-wrap">
+              <EmailIcon />
+              <input
+                type="email"
+                id="email"
+                className="login-input"
+                placeholder="name@beispiel.de"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                required
+                disabled={isLoading}
+              />
+            </div>
           </div>
-          <div className="form-group">
-            <label htmlFor="password">Passwort</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-              disabled={isLoading}
-            />
+          <div className="login-field">
+            <label htmlFor="password" className="login-label">PASSWORT</label>
+            <div className="login-input-wrap">
+              <LockIcon />
+              <input
+                type="password"
+                id="password"
+                className="login-input"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+                disabled={isLoading}
+              />
+            </div>
             {onResetPassword && (
               <button
                 type="button"
-                className="forgot-password-btn"
+                className="login-forgot-btn"
                 onClick={() => setShowResetForm(true)}
                 disabled={isLoading}
               >
@@ -154,34 +187,42 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
               </button>
             )}
           </div>
-          {error && <div className="error-message">{error}</div>}
-          <button type="submit" className="submit-btn" disabled={isLoading}>
+          {error && <div className="login-error">{error}</div>}
+          <button type="submit" className="login-cta-btn" disabled={isLoading}>
             {isLoading ? 'Anmeldung läuft...' : 'Anmelden'}
           </button>
         </form>
+
+        {onGuestLogin && (
+          <>
+            <div className="login-divider">
+              <span></span>
+              <span>oder</span>
+              <span></span>
+            </div>
+            <button
+              type="button"
+              className="login-ghost-btn"
+              onClick={handleGuestLogin}
+              disabled={isLoading}
+            >
+              Als Gast anmelden
+            </button>
+          </>
+        )}
+
         <div className="login-footer">
-          <p>Noch kein Konto?</p>
-          <button 
-            type="button" 
-            className="switch-btn"
-            onClick={onSwitchToRegister}
-            disabled={isLoading}
-          >
-            Jetzt registrieren
-          </button>
-          {onGuestLogin && (
-            <>
-              <p className="or-divider">oder</p>
-              <button 
-                type="button" 
-                className="guest-btn"
-                onClick={handleGuestLogin}
-                disabled={isLoading}
-              >
-                Als Gast anmelden
-              </button>
-            </>
-          )}
+          <p>
+            Noch kein Konto?{' '}
+            <button
+              type="button"
+              className="login-register-link"
+              onClick={onSwitchToRegister}
+              disabled={isLoading}
+            >
+              Jetzt registrieren
+            </button>
+          </p>
         </div>
       </div>
     </div>
