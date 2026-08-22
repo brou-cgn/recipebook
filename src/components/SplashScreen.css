@@ -1,0 +1,95 @@
+.splash-screen {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  background: #fafaf8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.splash-screen__content {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding-top: 48px;
+}
+
+.splash-screen__logo {
+  width: 116px;
+  height: 116px;
+  object-fit: contain;
+  display: block;
+  animation: splash-screen-logo-in 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.splash-screen__tagline {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #402C1C;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  animation: splash-screen-fade-up 480ms ease-out 260ms both;
+}
+
+.splash-screen__hairline {
+  width: 100%;
+  height: 2px;
+  background: rgba(64, 44, 28, 0.08);
+  overflow: hidden;
+  margin-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  animation: splash-screen-fade-in 400ms ease-out 500ms both;
+}
+
+.splash-screen__sweep {
+  width: 40%;
+  height: 100%;
+  background: #DF7A00;
+  animation: splash-screen-hairline-sweep 1.6s ease-in-out infinite;
+}
+
+@keyframes splash-screen-logo-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes splash-screen-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes splash-screen-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes splash-screen-hairline-sweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-screen__logo,
+  .splash-screen__tagline,
+  .splash-screen__hairline,
+  .splash-screen__sweep {
+    animation: none;
+  }
+}
+
+[data-theme="dark"] .splash-screen {
+  background: #121212;
+}
+
+[data-theme="dark"] .splash-screen__tagline {
+  color: #e8e8e8;
+  opacity: 0.85;
+}
+
+[data-theme="dark"] .splash-screen__hairline {
+  background: rgba(255, 255, 255, 0.08);
+}
