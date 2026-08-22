@@ -2472,43 +2472,127 @@ async function runImportFromUrl(url, {apiKey, cuisineTypes, mealCategories, sour
       // no h1 – proceed anyway
     }
 
-    // Take screenshot (full-page → viewport fallback)
-    let screenshot;
+    // Determine page height to decide between a single full-page screenshot
+    // and a tiled scroll capture. Very long single-scroll recipe pages (e.g.
+    // cook-mode layouts with one photo per step) lose legibility once
+    // stitched into one tall image and downscaled by Gemini Vision, so only
+    // the top of the page (the first couple of steps) ends up recognized.
+    const viewportHeight = 800;
+    let pageHeight = viewportHeight;
     try {
-      screenshot = await page.screenshot({
-        encoding: 'base64',
-        fullPage: true,
-        type: 'jpeg',
-        quality: 80,
-      });
-    } catch (fullPageErr) {
-      console.warn(
-          `[importRecipe:screenshot:fullpage_fallback] ` +
-          `host=${hostname}: ${fullPageErr.message}`,
+      pageHeight = await page.evaluate(() =>
+        Math.max(document.body.scrollHeight, document.documentElement.scrollHeight),
       );
-      screenshot = await page.screenshot({
-        encoding: 'base64',
-        fullPage: false,
-        type: 'jpeg',
-        quality: 80,
-      });
+    } catch (_) {
+      // ignore – fall back to single-viewport height
+    }
+
+    const TILE_SCROLL_RATIO = 0.9; // slight overlap between tiles
+    const MAX_TILES = 8;
+    const screenshots = [];
+
+    if (pageHeight > viewportHeight * 1.5) {
+      console.log(
+          `[importRecipe:screenshot:tiling] host=${hostname} ` +
+          `pageHeight=${pageHeight} viewportHeight=${viewportHeight}`,
+      );
+      const scrollStep = Math.round(viewportHeight * TILE_SCROLL_RATIO);
+      let scrollY = 0;
+      while (screenshots.length < MAX_TILES) {
+        try {
+          await page.evaluate((y) => window.scrollTo(0, y), scrollY);
+        } catch (_) {
+          break;
+        }
+        // Let lazy-loaded images/content at the new scroll position render
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        try {
+          screenshots.push(await page.screenshot({
+            encoding: 'base64',
+            fullPage: false,
+            type: 'jpeg',
+            quality: 80,
+          }));
+        } catch (tileErr) {
+          console.warn(
+              `[importRecipe:screenshot:tile_fail] host=${hostname}: ${tileErr.message}`,
+          );
+          break;
+        }
+        if (scrollY + viewportHeight >= pageHeight) break;
+        scrollY += scrollStep;
+      }
+    }
+
+    if (screenshots.length === 0) {
+      // Single-viewport page (or tiling failed) – full-page → viewport fallback
+      try {
+        screenshots.push(await page.screenshot({
+          encoding: 'base64',
+          fullPage: true,
+          type: 'jpeg',
+          quality: 80,
+        }));
+      } catch (fullPageErr) {
+        console.warn(
+            `[importRecipe:screenshot:fullpage_fallback] ` +
+            `host=${hostname}: ${fullPageErr.message}`,
+        );
+        screenshots.push(await page.screenshot({
+          encoding: 'base64',
+          fullPage: false,
+          type: 'jpeg',
+          quality: 80,
+        }));
+      }
     }
 
     await browser.close();
     console.log(
-        `[importRecipe:screenshot:ok] host=${hostname} ` +
+        `[importRecipe:screenshot:ok] host=${hostname} tiles=${screenshots.length} ` +
         `elapsed=${Date.now() - startMs}ms`,
     );
 
-    // Gemini Vision API
-    const {mimeType: _mime, base64Data} = validateImageData(
-        `data:image/jpeg;base64,${screenshot}`,
-    );
-    const result = await callGeminiAPI(
-        base64Data, 'image/jpeg', 'de', apiKey, cuisineTypes, mealCategories,
-    );
+    // Gemini Vision API – one call for a single screenshot, or one call per
+    // tile (merged the same way multi-photo Foto-Scan imports are merged)
+    // for a tiled scroll capture.
+    if (screenshots.length === 1) {
+      const {mimeType: _mime, base64Data} = validateImageData(
+          `data:image/jpeg;base64,${screenshots[0]}`,
+      );
+      const result = await callGeminiAPI(
+          base64Data, 'image/jpeg', 'de', apiKey, cuisineTypes, mealCategories,
+      );
+      console.log(
+          `[importRecipe:vision:ok] host=${hostname} ` +
+          `elapsed=${Date.now() - startMs}ms`,
+      );
+      return result;
+    }
+
+    const tileResults = new Array(screenshots.length);
+    let nextTileIndex = 0;
+    const tileWorker = async () => {
+      while (nextTileIndex < screenshots.length) {
+        const idx = nextTileIndex++;
+        try {
+          const {mimeType: _m, base64Data} = validateImageData(
+              `data:image/jpeg;base64,${screenshots[idx]}`,
+          );
+          tileResults[idx] = await callGeminiAPI(
+              base64Data, 'image/jpeg', 'de', apiKey, cuisineTypes, mealCategories,
+          );
+        } catch (tileErr) {
+          tileResults[idx] = {error: tileErr.message};
+        }
+      }
+    };
+    const tileWorkerCount = Math.min(BATCH_IMAGE_CONCURRENCY, screenshots.length);
+    await Promise.all(Array.from({length: tileWorkerCount}, tileWorker));
+
+    const result = mergePhotoAiResultsServer(tileResults);
     console.log(
-        `[importRecipe:vision:ok] host=${hostname} ` +
+        `[importRecipe:vision:tiled_ok] host=${hostname} tiles=${screenshots.length} ` +
         `elapsed=${Date.now() - startMs}ms`,
     );
     return result;
