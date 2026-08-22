@@ -1,8 +1,8 @@
 import React from 'react';
 import './SplashScreen.css';
 
-const SplashScreen = () => (
-  <div className="splash-screen">
+const SplashScreen = ({ exiting = false }) => (
+  <div className={`splash-screen${exiting ? ' splash-screen--exiting' : ''}`}>
     <div className="splash-screen__content">
       <img
         className="splash-screen__logo"

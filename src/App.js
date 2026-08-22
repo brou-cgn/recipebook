@@ -375,6 +375,11 @@ function App() {
   // used to keep the splash screen up through that first load without
   // bringing it back on later visits to the start page.
   const [initialStartseiteReady, setInitialStartseiteReady] = useState(false);
+  // Mirrors initialStartseiteReady but latches one animation frame later, so the
+  // splash screen keeps rendering (with the --exiting class) for the duration of
+  // its fade/scale-out transition instead of being unmounted mid-animation. See
+  // SPLASH_EXIT_DURATION_MS below and splash-screen--exiting in SplashScreen.css.
+  const [splashDismissed, setSplashDismissed] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
   const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
@@ -948,6 +953,17 @@ function App() {
     currentUser, currentView, isSettingsOpen, selectedRecipe, isFormOpen, selectedMenu, isMenuFormOpen,
     groupsLoading, recipesLoaded, startseiteCarouselsLoaded, initialStartseiteReady,
   ]);
+
+  // Keep the splash screen mounted just long enough to play its exit
+  // transition (fade + slight scale-out) once initialStartseiteReady latches,
+  // instead of cutting it away instantly. Duration matches the CSS transition
+  // on .splash-screen in SplashScreen.css.
+  useEffect(() => {
+    if (!initialStartseiteReady || splashDismissed) return undefined;
+    const SPLASH_EXIT_DURATION_MS = 380;
+    const timer = setTimeout(() => setSplashDismissed(true), SPLASH_EXIT_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [initialStartseiteReady, splashDismissed]);
 
   const handleSelectRecipe = (recipe) => {
     // Save scroll position when opening a recipe from the recipe list (not from a menu)
@@ -2187,7 +2203,7 @@ function App() {
 
   return (
     <>
-      {!initialStartseiteReady && <SplashScreen />}
+      {!splashDismissed && <SplashScreen exiting={initialStartseiteReady} />}
       <NutritionReferenceProvider enabled={!!currentUser}>
     <RecipeImportQueueProvider userId={currentUser?.id}>
       <AppNutritionRowsSync onRows={setNutritionReferenceRows} />
