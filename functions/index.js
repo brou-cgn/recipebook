@@ -2226,6 +2226,32 @@ function extractPlainTextFromHtml(html) {
 }
 
 /**
+ * Heuristic check for whether a phase-2/3 (JSON-LD or plain-text) result looks
+ * like a genuinely complete recipe, or just a short SEO/social-preview teaser.
+ *
+ * Many JS-rendered sites (Next.js/React SPAs) only server-render a short
+ * summary (title, og:description with a one/two-sentence teaser) in the raw
+ * HTML returned by a plain `fetch()`; the full ingredient/step list is only
+ * populated client-side after hydration. Gemini can still produce a
+ * well-formed-looking recipe object from that teaser text (a title plus 2-3
+ * steps), which would otherwise be returned immediately and short-circuit
+ * the more thorough (and more expensive) screenshot/vision phase.
+ *
+ * @param {Object} result - Structured recipe data from callGeminiTextAPI
+ * @param {string} sourceText - The text that was sent to Gemini for this phase
+ * @returns {boolean} True when the result looks incomplete and the pipeline
+ *   should fall through to the next phase instead of returning immediately.
+ */
+function looksLikeIncompleteRecipe(result, sourceText) {
+  const stepsCount = Array.isArray(result?.steps) ? result.steps.length : 0;
+  const ingredientsCount = Array.isArray(result?.ingredients) ? result.ingredients.length : 0;
+  if (stepsCount === 0 && ingredientsCount === 0) return true;
+  // A handful of steps extracted from very little source text is a strong
+  // sign the fetched HTML only contained a short teaser, not the full recipe.
+  return stepsCount < 4 && (sourceText?.length || 0) < 1200;
+}
+
+/**
  * Shared import pipeline: HTML fetch → JSON-LD → plain text → screenshot/vision.
  *
  * @param {string} url - Validated public URL to import from
@@ -2289,6 +2315,12 @@ async function runImportFromUrl(url, {apiKey, cuisineTypes, mealCategories, sour
     );
   }
 
+  // Best result seen so far from a phase that looked incomplete (e.g. a
+  // short SEO teaser on a JS-rendered page). Kept as a last-resort fallback
+  // in case the more thorough screenshot phase below fails outright.
+  let bestPartialResult = null;
+  const partialStepsCount = (r) => (Array.isArray(r?.steps) ? r.steps.length : 0);
+
   if (html) {
     // ── Phase 2: JSON-LD extraction ────────────────────────────────────────
     try {
@@ -2301,11 +2333,19 @@ async function runImportFromUrl(url, {apiKey, cuisineTypes, mealCategories, sour
           const result = await callGeminiTextAPI(
               jsonLdText, 'de', apiKey, cuisineTypes, mealCategories,
           );
-          console.log(
-              `[importRecipe:jsonld:ai_ok] host=${hostname} ` +
-              `elapsed=${Date.now() - startMs}ms`,
-          );
-          return result;
+          if (looksLikeIncompleteRecipe(result, jsonLdText)) {
+            console.warn(
+                `[importRecipe:jsonld:incomplete] host=${hostname} ` +
+                `steps=${partialStepsCount(result)} – trying next phase`,
+            );
+            bestPartialResult = result;
+          } else {
+            console.log(
+                `[importRecipe:jsonld:ai_ok] host=${hostname} ` +
+                `elapsed=${Date.now() - startMs}ms`,
+            );
+            return result;
+          }
         } catch (aiErr) {
           console.warn(
               `[importRecipe:jsonld:ai_fail] host=${hostname} ` +
@@ -2330,11 +2370,21 @@ async function runImportFromUrl(url, {apiKey, cuisineTypes, mealCategories, sour
         const result = await callGeminiTextAPI(
             plainText, 'de', apiKey, cuisineTypes, mealCategories,
         );
-        console.log(
-            `[importRecipe:text:ok] host=${hostname} ` +
-            `elapsed=${Date.now() - startMs}ms`,
-        );
-        return result;
+        if (looksLikeIncompleteRecipe(result, plainText)) {
+          console.warn(
+              `[importRecipe:text:incomplete] host=${hostname} ` +
+              `steps=${partialStepsCount(result)} – trying next phase`,
+          );
+          if (partialStepsCount(result) > partialStepsCount(bestPartialResult)) {
+            bestPartialResult = result;
+          }
+        } else {
+          console.log(
+              `[importRecipe:text:ok] host=${hostname} ` +
+              `elapsed=${Date.now() - startMs}ms`,
+          );
+          return result;
+        }
       }
     } catch (textErr) {
       console.warn(
@@ -2608,6 +2658,19 @@ async function runImportFromUrl(url, {apiKey, cuisineTypes, mealCategories, sour
         `[importRecipe:screenshot:fail] host=${hostname} ` +
         `err=${error.message} elapsed=${Date.now() - startMs}ms`,
     );
+
+    // The screenshot/vision phase failed outright (navigation error, no
+    // Gemini result on any tile, etc.) – rather than failing the whole
+    // import, fall back to the incomplete-but-non-empty result an earlier
+    // phase produced, if any. A partial recipe beats no recipe.
+    if (bestPartialResult) {
+      console.warn(
+          `[importRecipe:fallback_to_partial] host=${hostname} ` +
+          `steps=${partialStepsCount(bestPartialResult)}`,
+      );
+      return bestPartialResult;
+    }
+
     const context = hasFragment ? ` (fragment: ${fragmentHash})` : '';
     if (error instanceof HttpsError) throw error;
     if (error.message && error.message.includes('timeout')) {
