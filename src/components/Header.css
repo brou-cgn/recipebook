@@ -652,6 +652,107 @@
   border-bottom: 1px solid #f0f0f0;
 }
 
+/* Shortcut-PIN Modal Styles */
+.shortcut-pin-modal {
+  max-width: 420px;
+}
+
+.shortcut-pin-modal-body {
+  padding: 1.25rem 1.5rem 1.5rem;
+  overflow-y: auto;
+}
+
+.shortcut-pin-modal-hint {
+  margin: 0 0 1.2rem 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.shortcut-pin-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.shortcut-pin-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.shortcut-pin-modal-field label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.shortcut-pin-modal-field input {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.shortcut-pin-modal-field input:focus {
+  outline: none;
+  border-color: #1a1a1a;
+}
+
+.shortcut-pin-modal-message {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: #fdecea;
+  color: #c62828;
+}
+
+.shortcut-pin-modal-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.shortcut-pin-modal-cancel,
+.shortcut-pin-modal-submit {
+  flex: 1;
+  padding: 1rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.shortcut-pin-modal-cancel {
+  background: #f0f0f0;
+  color: #1a1a1a;
+}
+
+.shortcut-pin-modal-cancel:hover {
+  background: #e0e0e0;
+}
+
+.shortcut-pin-modal-submit {
+  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
+  color: white;
+}
+
+.shortcut-pin-modal-submit:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.shortcut-pin-modal-submit:active {
+  transform: translateY(0);
+}
+
+.shortcut-pin-modal-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .faq-item:last-child {
   border-bottom: none;
 }

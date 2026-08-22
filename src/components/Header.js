@@ -6,8 +6,10 @@ import SearchIcon from './icons/SearchIcon';
 import ImportProgressIndicator from './ImportProgressIndicator';
 import ImportProgressDialog from './ImportProgressDialog';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
+import { setWebImportPin } from '../utils/webImportPin';
 
 const RECIPE_IMPORT_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/7bf344e170574bbba4fb4cddc046ddba';
+const SHORTCUT_PIN_PATTERN = /^\d{4,8}$/;
 
 /**
  * Detects iPhone/iPad/Mac, the only platforms with a Shortcuts app that can
@@ -51,7 +53,8 @@ const Header = forwardRef(function Header({
   onSearchChange,
   interactiveLists = [],
   startseiteEnabled = false,
-  onChefkochClick
+  onChefkochClick,
+  onProfileUpdated
 }, ref) {
   const [headerSlogan, setHeaderSlogan] = useState('');
   const [appLogoImage, setAppLogoImage] = useState(null);
@@ -64,6 +67,11 @@ const Header = forwardRef(function Header({
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const [isApple] = useState(isAppleDevice);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [shortcutPinModalOpen, setShortcutPinModalOpen] = useState(false);
+  const [shortcutPin, setShortcutPin] = useState('');
+  const [shortcutPinConfirm, setShortcutPinConfirm] = useState('');
+  const [savingShortcutPin, setSavingShortcutPin] = useState(false);
+  const [shortcutPinError, setShortcutPinError] = useState(null);
   const menuRef = useRef(null);
   const searchRef = useRef(null);
   const {
@@ -203,6 +211,46 @@ const Header = forwardRef(function Header({
       onViewChange('startseite');
     }
     setMenuOpen(false);
+  };
+
+  const handleInstallShortcutClick = () => {
+    setMenuOpen(false);
+    if (currentUser?.webImportPinEnabled) {
+      window.open(RECIPE_IMPORT_SHORTCUT_URL, '_blank', 'noopener,noreferrer');
+    } else {
+      setShortcutPin('');
+      setShortcutPinConfirm('');
+      setShortcutPinError(null);
+      setShortcutPinModalOpen(true);
+    }
+  };
+
+  const handleSetShortcutPin = async (e) => {
+    e.preventDefault();
+    setShortcutPinError(null);
+    if (!SHORTCUT_PIN_PATTERN.test(shortcutPin)) {
+      setShortcutPinError('PIN muss aus 4 bis 8 Ziffern bestehen.');
+      return;
+    }
+    if (shortcutPin !== shortcutPinConfirm) {
+      setShortcutPinError('Die PINs stimmen nicht überein.');
+      return;
+    }
+    setSavingShortcutPin(true);
+    try {
+      await setWebImportPin(shortcutPin);
+      if (onProfileUpdated) {
+        onProfileUpdated({ ...currentUser, webImportPinEnabled: true });
+      }
+      setShortcutPinModalOpen(false);
+      setShortcutPin('');
+      setShortcutPinConfirm('');
+      window.open(RECIPE_IMPORT_SHORTCUT_URL, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      setShortcutPinError(err.message);
+    } finally {
+      setSavingShortcutPin(false);
+    }
   };
 
   const headerTitleContent = (
@@ -352,10 +400,7 @@ const Header = forwardRef(function Header({
                       {isApple && (
                         <button
                           className="menu-item"
-                          onClick={() => {
-                            window.open(RECIPE_IMPORT_SHORTCUT_URL, '_blank', 'noopener,noreferrer');
-                            setMenuOpen(false);
-                          }}
+                          onClick={handleInstallShortcutClick}
                         >
                           Kurzbefehl installieren
                         </button>
@@ -464,6 +509,70 @@ const Header = forwardRef(function Header({
                 </div>
                 )
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {shortcutPinModalOpen && (
+        <div className="faq-modal-overlay" onClick={() => setShortcutPinModalOpen(false)}>
+          <div className="faq-modal shortcut-pin-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="faq-modal-header">
+              <h2 className="faq-modal-title">Webimport-PIN erforderlich</h2>
+              <button
+                className="faq-modal-close"
+                onClick={() => setShortcutPinModalOpen(false)}
+                aria-label="Dialog schließen"
+              >
+                ×
+              </button>
+            </div>
+            <div className="faq-modal-body shortcut-pin-modal-body">
+              <p className="shortcut-pin-modal-hint">
+                Bevor du den Kurzbefehl herunterladen kannst, musst du einen Webimport-PIN vergeben.
+                Er schützt deinen Zugang davor, dass über den Kurzbefehl ungefragt Rezepte importiert werden.
+              </p>
+              <form className="shortcut-pin-modal-form" onSubmit={handleSetShortcutPin}>
+                <div className="shortcut-pin-modal-field">
+                  <label htmlFor="shortcutPin">PIN (4–8 Ziffern)</label>
+                  <input
+                    id="shortcutPin"
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    value={shortcutPin}
+                    onChange={(e) => setShortcutPin(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="shortcut-pin-modal-field">
+                  <label htmlFor="shortcutPinConfirm">PIN bestätigen</label>
+                  <input
+                    id="shortcutPinConfirm"
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    value={shortcutPinConfirm}
+                    onChange={(e) => setShortcutPinConfirm(e.target.value)}
+                    required
+                  />
+                </div>
+                {shortcutPinError && (
+                  <div className="shortcut-pin-modal-message">{shortcutPinError}</div>
+                )}
+                <div className="shortcut-pin-modal-actions">
+                  <button
+                    type="button"
+                    className="shortcut-pin-modal-cancel"
+                    onClick={() => setShortcutPinModalOpen(false)}
+                  >
+                    Abbrechen
+                  </button>
+                  <button type="submit" className="shortcut-pin-modal-submit" disabled={savingShortcutPin}>
+                    {savingShortcutPin ? 'Wird gespeichert…' : 'PIN setzen & herunterladen'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
