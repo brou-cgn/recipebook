@@ -8,6 +8,7 @@ import {
 } from '../utils/recipeFirestore';
 import { compressImage } from '../utils/imageUtils';
 import { runWebImport, runUniversalImport, runPhotoScanImport } from '../utils/importRunners';
+import { logFailedWebImport } from '../utils/failedWebImportsFirestore';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 
 const RecipeImportQueueContext = createContext(null);
@@ -237,17 +238,31 @@ export function RecipeImportQueueProvider({ userId, children }) {
   }, [processQueue]);
 
   const dismissJob = useCallback((id, label) => {
+    // Snapshot the job now (not inside onConfirm) — by the time the 6s undo
+    // window passes, this job may already have been removed from tempRecipes.
+    const tempRecipe = tempRecipes.find((r) => r.id === id);
     scheduleDelete({
       key: id,
       message: `„${label || 'Import'}" verworfen`,
       onConfirm: () => {
+        // Log dismissed, failed web imports (URL + error) so app development
+        // can look into what went wrong on that site. Only web imports have
+        // a meaningful source URL for this purpose.
+        if (tempRecipe?.importStatus === 'error' && tempRecipe.importSource?.type === 'web') {
+          logFailedWebImport({
+            url: tempRecipe.importSource.url,
+            error: tempRecipe.importError,
+            title: tempRecipe.title,
+            userId: tempRecipe.authorId,
+          });
+        }
         deleteRecipe(id).catch((error) => {
           console.error('Fehler beim Verwerfen des Import-Jobs:', error);
         });
       },
       onUndo: () => {},
     });
-  }, [scheduleDelete]);
+  }, [scheduleDelete, tempRecipes]);
 
   // Cancels a queued or actively running job: it disappears from the list
   // immediately and, if the job is mid-run, its eventual result is discarded
