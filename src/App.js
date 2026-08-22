@@ -2223,6 +2223,7 @@ function App() {
           interactiveLists={interactiveLists}
           startseiteEnabled={!!currentUser?.startseite}
           onChefkochClick={currentUser ? handleChefkochClick : undefined}
+          onProfileUpdated={(updatedUser) => setCurrentUser(prev => ({ ...prev, ...updatedUser }))}
         />
         <Suspense fallback={<ViewLoadingFallback />}>
         {isSettingsOpen ? (
