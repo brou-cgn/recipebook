@@ -375,6 +375,15 @@ service cloud.firestore {
       allow read: if isAdmin();
     }
 
+    // Failed web imports collection - logs URL + error message whenever a user dismisses
+    // a failed web import, so app development can investigate what went wrong on that
+    // site. Write-only debugging data for admins; regular users cannot read others' logs.
+    match /failedWebImports/{entryId} {
+      allow read: if isAdmin();
+      allow create: if isAnyUser();
+      allow update, delete: if isAdmin();
+    }
+
     // Cuisine proposals collection - tracks user-proposed cuisine types for admin review
     match /cuisineProposals/{proposalId} {
       // Any authenticated user can read proposals
