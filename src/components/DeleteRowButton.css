@@ -1,3 +1,52 @@
+/* Base swipe-to-delete reveal, shared by every mobile list row (recipe
+   ingredients/steps, menu's selected recipes, events, drinks, guests - see
+   CLAUDE.md: useSwipeToDelete). Lives here rather than in a single page's CSS
+   (e.g. RecipeForm.css) because pages are separate lazy-loaded chunks: a rule
+   scoped to one page's stylesheet is simply absent for every other page until
+   that page's chunk has loaded once in the session, leaving the reveal
+   unpositioned/unsized (oversized icon, unclipped red bar) elsewhere. Every
+   swipe-to-delete row already renders a DeleteRowButton for desktop (see
+   below), so this file is guaranteed to be loaded wherever these classes
+   are used. Individual pages still layer their own `.swipe-delete-active`
+   parent selector and cosmetic overrides (border-radius, opacity behavior)
+   on top of this base. */
+.swipe-delete-background {
+  position: absolute;
+  inset: 0;
+  background: #e05245;
+  color: #fff;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-right: 0.85rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.swipe-delete-icon-image {
+  width: 1.2rem;
+  height: 1.2rem;
+  object-fit: contain;
+}
+
+.swipe-delete-icon-text {
+  font-size: 1.1rem;
+}
+
+.swipe-delete-action {
+  border: none;
+  background: transparent;
+  color: inherit;
+  width: 2.5rem;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
 /* Unified row-delete button (see DeleteRowButton.js).
    Resting state stays quiet on purpose - red is reserved for hover/focus. */
 .delete-row-button {
