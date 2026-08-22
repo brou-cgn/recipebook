@@ -12,6 +12,7 @@ const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const sharp = require('sharp');
+const cheerio = require('cheerio');
 const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 const {requireWebImportUnlocked, requireShortcutPin} = require('./webImportPin');
 
@@ -2091,8 +2092,31 @@ exports.captureWebsiteScreenshot = onCall(
 // both importRecipeCallable (web app) and importRecipeShortcut (Apple Shortcut).
 
 /**
+ * @param {*} type - A JSON-LD `@type` value (string or array of strings).
+ * @returns {boolean} True if the type is (or includes) "Recipe".
+ */
+function isRecipeType(type) {
+  return type === 'Recipe' || (Array.isArray(type) && type.includes('Recipe'));
+}
+
+/**
+ * @param {Object} node - Candidate JSON-LD node.
+ * @returns {boolean} True if the node has enough content to be usable.
+ */
+function hasUsableRecipeContent(node) {
+  if (!node) return false;
+  const hasIngredients =
+    Array.isArray(node.recipeIngredient) && node.recipeIngredient.length > 0;
+  const hasInstructions =
+    Array.isArray(node.recipeInstructions) && node.recipeInstructions.length > 0;
+  return hasIngredients || hasInstructions;
+}
+
+/**
  * Extract the first Schema.org Recipe JSON-LD candidate from raw HTML.
  * Node-safe regex alternative to the browser-side findJsonLdRecipeCandidate.
+ * Handles both a bare Recipe node and one wrapped in `@graph` and/or nested
+ * under a WebPage's `mainEntity` (a common pattern on recipe blogs).
  *
  * @param {string} html
  * @returns {Object|null}
@@ -2108,30 +2132,153 @@ function extractJsonLdRecipeCandidateFromHtml(html) {
     } catch {
       continue;
     }
+    const roots = Array.isArray(json) ? json : [json];
     const candidates = [];
-    if (Array.isArray(json)) {
-      candidates.push(...json);
-    } else if (json['@graph'] && Array.isArray(json['@graph'])) {
-      candidates.push(...json['@graph']);
-    } else {
-      candidates.push(json);
+    for (const node of roots) {
+      if (node && Array.isArray(node['@graph'])) {
+        candidates.push(...node['@graph']);
+      } else if (node) {
+        candidates.push(node);
+      }
     }
     for (const candidate of candidates) {
-      const type = candidate['@type'];
-      const isRecipe =
-        type === 'Recipe' || (Array.isArray(type) && type.includes('Recipe'));
-      if (!isRecipe) continue;
-      const hasIngredients =
-        Array.isArray(candidate.recipeIngredient) &&
-        candidate.recipeIngredient.length > 0;
-      const hasInstructions =
-        Array.isArray(candidate.recipeInstructions) &&
-        candidate.recipeInstructions.length > 0;
-      if (!hasIngredients && !hasInstructions) continue;
-      return candidate;
+      const nodesToCheck = [candidate];
+      if (candidate && candidate.mainEntity) {
+        const mainEntity = candidate.mainEntity;
+        nodesToCheck.push(...(Array.isArray(mainEntity) ? mainEntity : [mainEntity]));
+      }
+      for (const node of nodesToCheck) {
+        if (!node || !isRecipeType(node['@type'])) continue;
+        if (!hasUsableRecipeContent(node)) continue;
+        return node;
+      }
     }
   }
   return null;
+}
+
+/**
+ * Read a Schema.org microdata `itemprop` element's effective value: the
+ * `content` attribute when present (used on `<meta>` and often duplicated
+ * elsewhere for machine-readable values), the `datetime` attribute for
+ * `<time>` elements (e.g. ISO-8601 durations), the `src` for `<img>`, and
+ * otherwise the element's trimmed text content.
+ *
+ * @param {import('cheerio').Cheerio<any>} $el
+ * @returns {string}
+ */
+function microdataPropValue($el) {
+  const tagName = ($el.get(0)?.tagName || '').toLowerCase();
+  if (tagName === 'meta') return ($el.attr('content') || '').trim();
+  if (tagName === 'time') {
+    return ($el.attr('datetime') || $el.attr('content') || $el.text()).trim();
+  }
+  if (tagName === 'img') return ($el.attr('src') || $el.attr('content') || '').trim();
+  if ($el.attr('content') !== undefined) return ($el.attr('content') || '').trim();
+  return $el.text().trim();
+}
+
+/**
+ * Find elements with `[itemprop="name"]` inside `$root` that belong directly
+ * to it (skipping any that fall inside a nested `[itemscope]`, e.g. an
+ * author, rating or nutrition sub-object, so a Recipe's own `name` isn't
+ * confused with the `name` of its author or of an ingredient sub-item).
+ *
+ * @param {import('cheerio').CheerioAPI} $
+ * @param {import('cheerio').Cheerio<any>} $root
+ * @param {string} propName
+ * @returns {import('cheerio').Cheerio<any>[]}
+ */
+function directItemProps($, $root, propName) {
+  const results = [];
+  $root.find(`[itemprop="${propName}"]`).each((_, el) => {
+    const $el = $(el);
+    let belongsToRoot = true;
+    $el.parentsUntil($root).each((__, ancestor) => {
+      if ($(ancestor).attr('itemscope') !== undefined) belongsToRoot = false;
+    });
+    if (belongsToRoot) results.push($el);
+  });
+  return results;
+}
+
+/**
+ * Extract `recipeInstructions` from a microdata Recipe root, supporting both
+ * plain text list items (`<li itemprop="recipeInstructions">…</li>`, common
+ * on WordPress recipe plugins) and nested HowToStep items
+ * (`<div itemprop="recipeInstructions" itemscope itemtype=".../HowToStep">`).
+ *
+ * @param {import('cheerio').CheerioAPI} $
+ * @param {import('cheerio').Cheerio<any>} $root
+ * @returns {string[]}
+ */
+function extractMicrodataInstructions($, $root) {
+  const steps = [];
+  for (const $el of directItemProps($, $root, 'recipeInstructions')) {
+    if ($el.attr('itemscope') !== undefined) {
+      const textEls = directItemProps($, $el, 'text');
+      const nameEls = directItemProps($, $el, 'name');
+      const text =
+        (textEls[0] && microdataPropValue(textEls[0])) ||
+        (nameEls[0] && microdataPropValue(nameEls[0])) ||
+        $el.text().trim();
+      if (text) steps.push(text);
+    } else {
+      const text = microdataPropValue($el);
+      if (text) steps.push(text);
+    }
+  }
+  return steps;
+}
+
+/**
+ * Extract a Schema.org Recipe candidate from HTML microdata
+ * (`itemscope`/`itemtype`/`itemprop` attributes), for sites that mark up
+ * recipes without JSON-LD. Returns the same node shape as
+ * {@link extractJsonLdRecipeCandidateFromHtml} so it can be fed through the
+ * same `jsonLdCandidateToText` conversion and Gemini normalization step.
+ *
+ * @param {string} html
+ * @returns {Object|null}
+ */
+function extractMicrodataRecipeCandidateFromHtml(html) {
+  let $;
+  try {
+    $ = cheerio.load(html);
+  } catch {
+    return null;
+  }
+  const $root = $('[itemscope][itemtype]')
+      .filter((_, el) => /schema\.org\/Recipe\/?$/i.test(($(el).attr('itemtype') || '').trim()))
+      .first();
+  if (!$root.length) return null;
+
+  const propValue = (name) => {
+    const els = directItemProps($, $root, name);
+    return els[0] ? microdataPropValue(els[0]) : undefined;
+  };
+  const propValueList = (name) => {
+    const list = directItemProps($, $root, name).map(microdataPropValue).filter(Boolean);
+    // Return undefined (not []) when absent, matching the JSON-LD candidate
+    // shape: jsonLdCandidateToText treats a present-but-empty array as truthy
+    // and would otherwise emit a blank "Küche:"/"Kategorie:" line.
+    return list.length ? list : undefined;
+  };
+
+  const candidate = {
+    '@type': 'Recipe',
+    name: propValue('name'),
+    description: propValue('description'),
+    recipeYield: propValue('recipeYield'),
+    prepTime: propValue('prepTime'),
+    cookTime: propValue('cookTime'),
+    totalTime: propValue('totalTime'),
+    recipeCuisine: propValueList('recipeCuisine'),
+    recipeCategory: propValueList('recipeCategory'),
+    recipeIngredient: propValueList('recipeIngredient'),
+    recipeInstructions: extractMicrodataInstructions($, $root),
+  };
+  return hasUsableRecipeContent(candidate) ? candidate : null;
 }
 
 /**
@@ -2359,6 +2506,52 @@ async function runImportFromUrl(url, {apiKey, cuisineTypes, mealCategories, sour
       console.warn(
           `[importRecipe:jsonld:error] host=${hostname} ` +
           `err=${jsonLdErr.message}`,
+      );
+    }
+
+    // ── Phase 2b: Microdata extraction ────────────────────────────────────
+    // Fallback for sites (often WordPress recipe plugins) that mark up
+    // recipes with itemscope/itemprop microdata instead of JSON-LD. Feeds
+    // through the same jsonLdCandidateToText → Gemini normalization step as
+    // Phase 2, so no app-specific normalization behavior changes.
+    try {
+      console.log(`[importRecipe:microdata:start] host=${hostname}`);
+      const candidate = extractMicrodataRecipeCandidateFromHtml(html);
+      if (candidate) {
+        console.log(`[importRecipe:microdata:found] host=${hostname}`);
+        const microdataText = jsonLdCandidateToText(candidate);
+        try {
+          const result = await callGeminiTextAPI(
+              microdataText, 'de', apiKey, cuisineTypes, mealCategories,
+          );
+          if (looksLikeIncompleteRecipe(result, microdataText)) {
+            console.warn(
+                `[importRecipe:microdata:incomplete] host=${hostname} ` +
+                `steps=${partialStepsCount(result)} – trying next phase`,
+            );
+            if (partialStepsCount(result) > partialStepsCount(bestPartialResult)) {
+              bestPartialResult = result;
+            }
+          } else {
+            console.log(
+                `[importRecipe:microdata:ai_ok] host=${hostname} ` +
+                `elapsed=${Date.now() - startMs}ms`,
+            );
+            return result;
+          }
+        } catch (aiErr) {
+          console.warn(
+              `[importRecipe:microdata:ai_fail] host=${hostname} ` +
+              `err=${aiErr.message}`,
+          );
+        }
+      } else {
+        console.log(`[importRecipe:microdata:not_found] host=${hostname}`);
+      }
+    } catch (microdataErr) {
+      console.warn(
+          `[importRecipe:microdata:error] host=${hostname} ` +
+          `err=${microdataErr.message}`,
       );
     }
 
