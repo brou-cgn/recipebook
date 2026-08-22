@@ -8,16 +8,19 @@ import {
 } from '../utils/recipeFirestore';
 import { compressImage } from '../utils/imageUtils';
 import { runWebImport, runUniversalImport, runPhotoScanImport } from '../utils/importRunners';
+import useUndoableDelete from '../hooks/useUndoableDelete';
 
 const RecipeImportQueueContext = createContext(null);
 
 const noopQueue = {
   jobs: [],
   reviewRecipes: [],
+  deleteBanners: [],
   enqueueImportJob: () => undefined,
   dismissJob: () => {},
   restartJob: () => {},
   cancelJob: () => {},
+  undoDelete: () => {},
 };
 
 // Images are compressed before being persisted as importSource (for
@@ -109,6 +112,10 @@ export function RecipeImportQueueProvider({ userId, children }) {
   // screenshot / AI calls), so a "cancel" can't actually stop the network
   // work in flight; it only makes sure the stale result is never persisted.
   const cancelledJobsRef = useRef(new Set());
+  // CLAUDE.md: every delete acts immediately + a 6s "Rückgängig" snackbar;
+  // the row disappears from `jobs` right away, the underlying Firestore
+  // delete only runs once the undo window passes unconfirmed.
+  const { banners: deleteBanners, pendingKeys: pendingDeleteKeys, scheduleDelete, undoDelete } = useUndoableDelete();
 
   useEffect(() => {
     const unsubscribe = subscribeToTempRecipes(userId, setTempRecipes);
@@ -117,6 +124,7 @@ export function RecipeImportQueueProvider({ userId, children }) {
 
   const jobs = useMemo(() => tempRecipes
     .filter(isPendingImport)
+    .filter((r) => !pendingDeleteKeys.has(r.id))
     .map((r) => ({
       id: r.id,
       label: r.title,
@@ -124,7 +132,7 @@ export function RecipeImportQueueProvider({ userId, children }) {
       progress: r.importProgress || 0,
       error: r.importError,
       canRestart: Boolean(r.importSource),
-    })), [tempRecipes]);
+    })), [tempRecipes, pendingDeleteKeys]);
 
   const reviewRecipes = useMemo(
     () => tempRecipes.filter((r) => !isPendingImport(r)),
@@ -228,23 +236,41 @@ export function RecipeImportQueueProvider({ userId, children }) {
     });
   }, [processQueue]);
 
-  const dismissJob = useCallback((id) => {
-    deleteRecipe(id).catch((error) => {
-      console.error('Fehler beim Verwerfen des Import-Jobs:', error);
+  const dismissJob = useCallback((id, label) => {
+    scheduleDelete({
+      key: id,
+      message: `„${label || 'Import'}" verworfen`,
+      onConfirm: () => {
+        deleteRecipe(id).catch((error) => {
+          console.error('Fehler beim Verwerfen des Import-Jobs:', error);
+        });
+      },
+      onUndo: () => {},
     });
-  }, []);
+  }, [scheduleDelete]);
 
-  // Cancels a queued or actively running job: the temp-recipe doc is
-  // removed right away, and if the job is mid-run its eventual result is
-  // discarded by processQueue instead of being written back (see
-  // cancelledJobsRef above — there's no way to actually abort the
-  // in-flight OCR/screenshot call itself).
-  const cancelJob = useCallback((id) => {
+  // Cancels a queued or actively running job: it disappears from the list
+  // immediately and, if the job is mid-run, its eventual result is discarded
+  // by processQueue right away instead of being written back (see
+  // cancelledJobsRef above — there's no way to actually abort the in-flight
+  // OCR/screenshot call itself). The temp-recipe doc itself is only deleted
+  // once the undo window passes; undoing puts the job back in the run
+  // discard-list so a still-in-flight attempt resumes being honored.
+  const cancelJob = useCallback((id, label) => {
     cancelledJobsRef.current.add(id);
-    deleteRecipe(id).catch((error) => {
-      console.error('Fehler beim Abbrechen des Import-Jobs:', error);
+    scheduleDelete({
+      key: id,
+      message: `„${label || 'Import'}" abgebrochen`,
+      onConfirm: () => {
+        deleteRecipe(id).catch((error) => {
+          console.error('Fehler beim Abbrechen des Import-Jobs:', error);
+        });
+      },
+      onUndo: () => {
+        cancelledJobsRef.current.delete(id);
+      },
     });
-  }, []);
+  }, [scheduleDelete]);
 
   // Requeues a job from its persisted importSource — shared by the manual
   // "Neu starten" button (restartJob) and the orphan-recovery effect below.
@@ -300,7 +326,7 @@ export function RecipeImportQueueProvider({ userId, children }) {
     });
   }, [tempRecipes, queueRestart]);
 
-  const value = { jobs, reviewRecipes, enqueueImportJob, dismissJob, restartJob, cancelJob };
+  const value = { jobs, reviewRecipes, deleteBanners, enqueueImportJob, dismissJob, restartJob, cancelJob, undoDelete };
 
   return (
     <RecipeImportQueueContext.Provider value={value}>

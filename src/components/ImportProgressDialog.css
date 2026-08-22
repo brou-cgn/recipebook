@@ -13,164 +13,212 @@
 
 .import-progress-dialog {
   background: white;
-  border-radius: 8px;
+  border-radius: 12px;
   width: 100%;
-  max-width: 420px;
+  max-width: 380px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(20, 16, 12, 0.16);
 }
 
 .import-progress-dialog-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 14px 16px;
+  border-bottom: 1px solid #ececea;
+}
+
+.import-progress-dialog-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
 }
 
 .import-progress-dialog-header h2 {
   margin: 0;
-  font-size: 1.25rem;
-  color: #333;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.import-progress-dialog-count {
+  font-size: 0.78rem;
+  color: #6b5744;
+  flex-shrink: 0;
 }
 
 .import-progress-dialog-header .close-button {
-  background: transparent;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
   border: none;
-  font-size: 1.5rem;
-  line-height: 1;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   cursor: pointer;
-  color: #666;
-  padding: 4px 8px;
+  color: rgba(74, 52, 34, 0.55);
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.import-progress-dialog-header .close-button:hover,
+.import-progress-dialog-header .close-button:focus-visible {
+  background: rgba(120, 84, 52, 0.08);
+  color: #1a1a1a;
 }
 
 .import-progress-dialog-content {
-  padding: 16px 20px;
+  padding: 4px 8px;
   overflow-y: auto;
 }
 
 .import-progress-empty {
-  color: #666;
+  color: #6b5744;
   text-align: center;
-  margin: 12px 0;
+  margin: 20px 0;
+  font-size: 0.9rem;
 }
 
 .import-progress-list {
   list-style: none;
   margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  padding: 4px 0;
 }
 
+/* One row per import: icon, title (+ error text below), status, actions —
+   stays a single line except when an error message needs a second line. */
 .import-progress-item {
-  border: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px;
   border-radius: 8px;
-  padding: 10px 12px;
 }
 
 .import-progress-item.status-error {
-  border-color: rgba(163, 58, 38, 0.4);
-  background: rgba(163, 58, 38, 0.05);
+  align-items: flex-start;
+  background: rgba(163, 58, 38, 0.045);
 }
 
-.import-progress-item-main {
+.import-progress-item.delete-row-hover-target:hover,
+.import-progress-item.delete-row-hover-target:focus-within {
+  background: rgba(120, 84, 52, 0.07);
+}
+
+.import-progress-item.status-error.delete-row-hover-target:hover,
+.import-progress-item.status-error.delete-row-hover-target:focus-within {
+  background: rgba(163, 58, 38, 0.09);
+}
+
+.import-row-icon {
+  flex-shrink: 0;
+}
+
+.import-progress-item.status-error .import-row-icon {
+  margin-top: 1px;
+}
+
+.import-row-icon-track {
+  stroke: rgba(26, 26, 26, 0.14);
+}
+
+.import-row-icon-fill {
+  stroke: #1a1a1a;
+  transition: stroke-dashoffset 0.2s ease;
+}
+
+.import-progress-item-body {
+  min-width: 0;
+  flex-grow: 1;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
+  flex-direction: column;
 }
 
 .import-progress-item-label {
-  color: #1a1a1a;
+  font-size: 0.86rem;
   font-weight: 600;
+  color: #1a1a1a;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.import-progress-item-error-text {
+  font-size: 0.74rem;
+  color: #a33a26;
+  margin-top: 2px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .import-progress-item-status {
-  color: #666;
+  font-size: 0.74rem;
+  color: #6b5744;
   flex-shrink: 0;
-  font-size: 0.8rem;
-}
-
-.import-progress-item-bar {
-  margin-top: 8px;
-  height: 6px;
-  border-radius: 999px;
-  background: #eee;
-  overflow: hidden;
-}
-
-.import-progress-item-bar-fill {
-  height: 100%;
-  background: #1a1a1a;
-  transition: width 0.2s ease;
+  white-space: nowrap;
 }
 
 .import-progress-item-actions {
-  margin-top: 8px;
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.import-progress-item-error {
-  margin-top: 8px;
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
-  color: #a33a26;
-}
-
-.import-progress-item-error span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.import-progress-item-error-actions {
-  display: flex;
-  gap: 8px;
+  gap: 2px;
   flex-shrink: 0;
 }
 
-.import-progress-item-dismiss,
+.import-progress-item.status-error .import-progress-item-actions {
+  margin-top: 1px;
+}
+
 .import-progress-item-restart {
+  width: 26px;
+  height: 26px;
   border-radius: 999px;
-  padding: 2px 10px;
-  font-size: 0.75rem;
-  cursor: pointer;
-  flex-shrink: 0;
+  border: none;
   background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(74, 52, 34, 0.4);
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
 }
 
-.import-progress-item-dismiss {
-  border: 1px solid #a33a26;
-  color: #a33a26;
+.import-progress-item.delete-row-hover-target:hover .import-progress-item-restart:not(:hover):not(:focus-visible),
+.import-progress-item.delete-row-hover-target:focus-within .import-progress-item-restart:not(:hover):not(:focus-visible) {
+  color: rgba(74, 52, 34, 0.62);
 }
 
-.import-progress-item-restart {
-  border: 1px solid #2196f3;
-  color: #2196f3;
+.import-progress-item-restart:hover,
+.import-progress-item-restart:focus-visible {
+  color: #DF7A00;
+  background: rgba(223, 122, 0, 0.12);
+}
+
+.import-progress-item-restart:focus-visible {
+  outline: 2px solid rgba(223, 122, 0, 0.5);
+  outline-offset: 2px;
+}
+
+.import-progress-item.status-error .import-progress-item-restart {
+  color: #DF7A00;
 }
 
 .import-progress-hint {
-  margin: 16px 0 4px;
-  color: #666;
-  font-size: 0.8rem;
+  margin: 12px 0 4px;
+  color: #6b5744;
+  font-size: 0.74rem;
   text-align: center;
 }
 
 [data-theme="dark"] .import-progress-dialog {
   background: #1e1e1e;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 
 [data-theme="dark"] .import-progress-dialog-header {
@@ -181,27 +229,85 @@
   color: #e8e8e8;
 }
 
-[data-theme="dark"] .import-progress-item {
-  border-color: #3d3d3d;
+[data-theme="dark"] .import-progress-dialog-count,
+[data-theme="dark"] .import-progress-empty,
+[data-theme="dark"] .import-progress-item-status,
+[data-theme="dark"] .import-progress-hint {
+  color: #b8ac9d;
+}
+
+[data-theme="dark"] .import-progress-dialog-header .close-button {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+[data-theme="dark"] .import-progress-dialog-header .close-button:hover,
+[data-theme="dark"] .import-progress-dialog-header .close-button:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .import-progress-item.delete-row-hover-target:hover,
+[data-theme="dark"] .import-progress-item.delete-row-hover-target:focus-within {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 [data-theme="dark"] .import-progress-item.status-error {
   background: rgba(163, 58, 38, 0.12);
 }
 
+[data-theme="dark"] .import-progress-item.status-error.delete-row-hover-target:hover,
+[data-theme="dark"] .import-progress-item.status-error.delete-row-hover-target:focus-within {
+  background: rgba(163, 58, 38, 0.18);
+}
+
+[data-theme="dark"] .import-row-icon-track {
+  stroke: rgba(232, 232, 232, 0.2);
+}
+
+[data-theme="dark"] .import-row-icon-fill {
+  stroke: #e8e8e8;
+}
+
 [data-theme="dark"] .import-progress-item-label {
   color: #e8e8e8;
 }
 
-[data-theme="dark"] .import-progress-item-bar {
-  background: #3d3d3d;
+[data-theme="dark"] .import-progress-item-restart {
+  color: rgba(255, 255, 255, 0.4);
 }
 
-[data-theme="dark"] .import-progress-item-bar-fill {
-  background: #e8e8e8;
+[data-theme="dark"] .import-progress-item.delete-row-hover-target:hover .import-progress-item-restart:not(:hover):not(:focus-visible),
+[data-theme="dark"] .import-progress-item.delete-row-hover-target:focus-within .import-progress-item-restart:not(:hover):not(:focus-visible) {
+  color: rgba(255, 255, 255, 0.62);
 }
 
-[data-theme="dark"] .import-progress-empty,
-[data-theme="dark"] .import-progress-hint {
-  color: #aaa;
+[data-theme="dark"] .import-progress-item-restart:hover,
+[data-theme="dark"] .import-progress-item-restart:focus-visible {
+  color: #f0a341;
+  background: rgba(240, 163, 65, 0.16);
+}
+
+[data-theme="dark"] .import-progress-item.status-error .import-progress-item-restart {
+  color: #f0a341;
+}
+
+/* Narrow / touch viewports have no hover to reveal row actions, so keep the
+   restart icon reachably visible at rest instead of only on hover (matches
+   DeleteRowButton's own touch-viewport rule in the same file family). */
+@media (max-width: 768px), (hover: none), (pointer: coarse) {
+  .import-progress-item-restart {
+    color: rgba(74, 52, 34, 0.62);
+  }
+
+  [data-theme="dark"] .import-progress-item-restart {
+    color: rgba(255, 255, 255, 0.62);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .import-row-icon-fill,
+  .import-progress-item-restart,
+  .import-progress-dialog-header .close-button {
+    transition: none;
+  }
 }
