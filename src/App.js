@@ -4,6 +4,7 @@ import RecipeList from './components/RecipeList';
 import RecipeFilterSidebar from './components/RecipeFilterSidebar';
 import Header from './components/Header';
 import Login from './components/Login';
+import SplashScreen from './components/SplashScreen';
 import MobileSearchOverlay from './components/MobileSearchOverlay';
 import BottomNavigation from './components/BottomNavigation';
 import {
@@ -2029,16 +2030,9 @@ function App() {
     clearSharedDataFromDB();
   };
 
-  // Show loading state while checking auth
+  // Show splash screen while checking auth
   if (authLoading) {
-    return (
-      <div className="App" style={appBottomNavStyle}>
-        <Header />
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
-          Laden...
-        </div>
-      </div>
-    );
+    return <SplashScreen />;
   }
 
   // If accessing a share URL, show SharePage (no login required)
