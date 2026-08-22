@@ -22,7 +22,7 @@ const ALLTAGSKLASSIKER_TOP = 10;
 const KOCHIDEEN_KARUSSELL_MAX = 6;
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 
-function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], groupsLoading = false, onCreateInspirationList, onSelectExistingInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes, onOpenSeasonalRecipes, onAddRecipe }) {
+function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], groupsLoading = false, onCreateInspirationList, onSelectExistingInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes, onOpenSeasonalRecipes, onAddRecipe, onCarouselsLoadedChange }) {
   const { rows: nutritionReferenceRows } = useNutritionReference();
   const nutritionReferenceIndex = useMemo(
     () => buildNutritionReferenceIndex(nutritionReferenceRows),
@@ -455,6 +455,13 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
     }
     onViewChange?.('recipes');
   };
+
+  // Report whether all carousels that have their own async loading phase
+  // (Meine Kochideen, Im Trend) have finished, so the caller (App) can keep
+  // the splash screen visible until the start page is fully populated.
+  useEffect(() => {
+    onCarouselsLoadedChange?.(!loading && !kandidatenLoading);
+  }, [loading, kandidatenLoading, onCarouselsLoadedChange]);
 
   // Condition: show setup button when no default list or the list is not interactive
   const showInspirationSetupButton = !groupsLoading && (!defaultWebImportList || defaultWebImportList.listKind !== 'interactive');

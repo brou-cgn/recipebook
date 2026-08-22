@@ -23,7 +23,7 @@
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#402C1C",
-  "background_color": "#ffffff",
+  "background_color": "transparent",
   "description": "brouBook - Eine Progressive Web App zum Verwalten deiner Lieblingsrezepte",
   "categories": ["food", "lifestyle", "productivity"],
   "orientation": "portrait-primary",
