@@ -2064,9 +2064,21 @@ function App() {
     clearSharedDataFromDB();
   };
 
-  // Show splash screen while checking auth
+  // Show splash screen while checking auth. It is always rendered as the
+  // first child of the same top-level fragment across every branch below
+  // (never as the entire return value on its own) so that React keeps
+  // reconciling it at the same tree position instead of unmounting and
+  // remounting it — and replaying its enter animations — when the branch
+  // taken by the rest of the render changes (e.g. authLoading flips to
+  // false right into the "still loading startseite data" branch further
+  // down). See splash-screen-logo-in / splash-screen-fade-up in
+  // SplashScreen.css for the animations this avoids re-triggering.
   if (authLoading) {
-    return <SplashScreen />;
+    return (
+      <>
+        <SplashScreen />
+      </>
+    );
   }
 
   // If accessing a share URL, show SharePage (no login required)
@@ -2081,20 +2093,23 @@ function App() {
       setCurrentView('recipes');
     };
     return (
-      <NutritionReferenceProvider>
-        <RecipeImportQueueProvider userId={currentUser?.id}>
-          <div className="App" style={appBottomNavStyle}>
-            <Header />
-            <Suspense fallback={<ViewLoadingFallback />}>
-              <SharePage
-                shareId={sharePageId}
-                currentUser={currentUser}
-                onClose={handleSharePageClose}
-              />
-            </Suspense>
-          </div>
-        </RecipeImportQueueProvider>
-      </NutritionReferenceProvider>
+      <>
+        {null}
+        <NutritionReferenceProvider>
+          <RecipeImportQueueProvider userId={currentUser?.id}>
+            <div className="App" style={appBottomNavStyle}>
+              <Header />
+              <Suspense fallback={<ViewLoadingFallback />}>
+                <SharePage
+                  shareId={sharePageId}
+                  currentUser={currentUser}
+                  onClose={handleSharePageClose}
+                />
+              </Suspense>
+            </div>
+          </RecipeImportQueueProvider>
+        </NutritionReferenceProvider>
+      </>
     );
   }
 
@@ -2110,28 +2125,33 @@ function App() {
       setCurrentView('recipes');
     };
     return (
-      <NutritionReferenceProvider>
-        <RecipeImportQueueProvider userId={currentUser?.id}>
-          <div className="App" style={appBottomNavStyle}>
-            <Header />
-            <Suspense fallback={<ViewLoadingFallback />}>
-              <MenuSharePage
-                shareId={menuSharePageId}
-                currentUser={currentUser}
-                onClose={handleMenuSharePageClose}
-              />
-            </Suspense>
-          </div>
-        </RecipeImportQueueProvider>
-      </NutritionReferenceProvider>
+      <>
+        {null}
+        <NutritionReferenceProvider>
+          <RecipeImportQueueProvider userId={currentUser?.id}>
+            <div className="App" style={appBottomNavStyle}>
+              <Header />
+              <Suspense fallback={<ViewLoadingFallback />}>
+                <MenuSharePage
+                  shareId={menuSharePageId}
+                  currentUser={currentUser}
+                  onClose={handleMenuSharePageClose}
+                />
+              </Suspense>
+            </div>
+          </RecipeImportQueueProvider>
+        </NutritionReferenceProvider>
+      </>
     );
   }
 
   // If user is not logged in, show login/register view
   if (!currentUser) {
     return (
-      <div className="App">
-        <Header />
+      <>
+        {null}
+        <div className="App">
+          <Header />
         {pendingWebimportUrl && (
           <div style={{
             background: '#E3F2FD',
@@ -2161,15 +2181,17 @@ function App() {
           </Suspense>
         )}
       </div>
+      </>
     );
   }
 
   return (
-    <NutritionReferenceProvider enabled={!!currentUser}>
+    <>
+      {!initialStartseiteReady && <SplashScreen />}
+      <NutritionReferenceProvider enabled={!!currentUser}>
     <RecipeImportQueueProvider userId={currentUser?.id}>
       <AppNutritionRowsSync onRows={setNutritionReferenceRows} />
       <AppReviewRecipesSync onReviewRecipes={setPendingReviewRecipes} />
-      {!initialStartseiteReady && <SplashScreen />}
       <div className="App" style={appBottomNavStyle}>
         <Header
           ref={headerRef}
@@ -2517,6 +2539,7 @@ function App() {
       </div>
     </RecipeImportQueueProvider>
     </NutritionReferenceProvider>
+    </>
   );
 }
 
