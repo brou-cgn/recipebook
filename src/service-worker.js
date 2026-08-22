@@ -88,8 +88,9 @@ async function resizeImage(base64, targetSize) {
     const x = (targetSize - scaledWidth) / 2;
     const y = (targetSize - scaledHeight) / 2;
 
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, targetSize, targetSize);
+    // Leave the canvas transparent (its default) instead of filling it
+    // opaque white, so the app's light/dark splash background shows
+    // through around the logo like it does for the default brand logo.
     ctx.drawImage(imageBitmap, x, y, scaledWidth, scaledHeight);
 
     return await canvas.convertToBlob({ type: 'image/png' });
