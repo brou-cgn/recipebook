@@ -111,13 +111,23 @@ function resolveTabIcon(tab, isActive, buttonIcons, isDarkMode) {
   return { Icon, iconValue: activeIconValue || normalIconValue };
 }
 
-function TabIcon({ tab, isActive, buttonIcons, isDarkMode, iconClassName }) {
+function NavBadge({ count }) {
+  if (!count || count < 1) return null;
+  return (
+    <span className="bottom-navigation__badge">
+      {count > 99 ? '99+' : count}
+    </span>
+  );
+}
+
+function TabIcon({ tab, isActive, buttonIcons, isDarkMode, iconClassName, badgeCount }) {
   const { Icon, iconValue } = resolveTabIcon(tab, isActive, buttonIcons, isDarkMode);
 
   if (isBase64Image(iconValue)) {
     return (
       <span className={`bottom-navigation__icon${iconClassName ? ` ${iconClassName}` : ''}`} aria-hidden="true">
         <img src={iconValue} alt="" className="bottom-navigation__icon-image" draggable="false" />
+        <NavBadge count={badgeCount} />
       </span>
     );
   }
@@ -125,13 +135,19 @@ function TabIcon({ tab, isActive, buttonIcons, isDarkMode, iconClassName }) {
     return (
       <span className={`bottom-navigation__icon bottom-navigation__icon-text${iconClassName ? ` ${iconClassName}` : ''}`} aria-hidden="true">
         {iconValue}
+        <NavBadge count={badgeCount} />
       </span>
     );
   }
-  return Icon ? <Icon className={iconClassName} /> : null;
+  return Icon ? (
+    <span className="bottom-navigation__icon-wrapper">
+      <Icon className={iconClassName} />
+      <NavBadge count={badgeCount} />
+    </span>
+  ) : null;
 }
 
-function BottomNavigation({ tabs, activeKey, isVisible, onSelect }) {
+function BottomNavigation({ tabs, activeKey, isVisible, onSelect, badgeCounts }) {
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const railRef = useRef(null);
@@ -191,16 +207,17 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect }) {
       >
         {tabs.map((tab) => {
           const isActive = tab.key === activeKey;
+          const badgeCount = badgeCounts?.[tab.key] || 0;
           return (
             <button
               key={tab.key}
               type="button"
               className={`bottom-navigation__tab${isActive ? ' bottom-navigation__tab--active' : ''}`}
               onClick={() => onSelect(tab)}
-              aria-label={tab.label}
+              aria-label={badgeCount > 0 ? `${tab.label} (${badgeCount})` : tab.label}
               aria-current={isActive ? 'page' : undefined}
             >
-              <TabIcon tab={tab} isActive={isActive} buttonIcons={buttonIcons} isDarkMode={isDarkMode} />
+              <TabIcon tab={tab} isActive={isActive} buttonIcons={buttonIcons} isDarkMode={isDarkMode} badgeCount={badgeCount} />
               <span className="bottom-navigation__label">{tab.label}</span>
             </button>
           );
@@ -218,13 +235,14 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect }) {
         >
           {tabs.map((tab) => {
             const isActive = tab.key === activeKey;
+            const badgeCount = badgeCounts?.[tab.key] || 0;
             return (
               <button
                 key={tab.key}
                 type="button"
                 className={`bottom-navigation-pill__item${isActive ? ' bottom-navigation-pill__item--active' : ''}`}
                 onClick={() => onSelect(tab)}
-                aria-label={tab.label}
+                aria-label={badgeCount > 0 ? `${tab.label} (${badgeCount})` : tab.label}
                 aria-current={isActive ? 'page' : undefined}
               >
                 <TabIcon
@@ -233,6 +251,7 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect }) {
                   buttonIcons={buttonIcons}
                   isDarkMode={isDarkMode}
                   iconClassName="bottom-navigation-pill__icon"
+                  badgeCount={badgeCount}
                 />
                 <span className="bottom-navigation-pill__label">{tab.label}</span>
               </button>

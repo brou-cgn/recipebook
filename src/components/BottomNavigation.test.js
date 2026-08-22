@@ -102,4 +102,40 @@ describe('BottomNavigation icon rendering', () => {
     expect(pill.getByLabelText('Küche')).toBeInTheDocument();
     expect(pill.getByLabelText('Chefkoch')).toBeInTheDocument();
   });
+
+  test('shows a count badge on a tab with pending items', async () => {
+    const { container } = render(
+      <BottomNavigation
+        tabs={tabs}
+        activeKey="home"
+        isVisible
+        onSelect={() => {}}
+        badgeCounts={{ recipes: 3 }}
+      />
+    );
+
+    await waitFor(() => expect(getButtonIcons).toHaveBeenCalled());
+
+    const fullBar = within(container.querySelector('.bottom-navigation'));
+    expect(fullBar.getByText('3')).toBeInTheDocument();
+    expect(fullBar.getByLabelText('Kochbuch (3)')).toBeInTheDocument();
+  });
+
+  test('hides the badge and plain label when the count is zero', async () => {
+    const { container } = render(
+      <BottomNavigation
+        tabs={tabs}
+        activeKey="home"
+        isVisible
+        onSelect={() => {}}
+        badgeCounts={{ recipes: 0 }}
+      />
+    );
+
+    await waitFor(() => expect(getButtonIcons).toHaveBeenCalled());
+
+    const fullBar = within(container.querySelector('.bottom-navigation'));
+    expect(container.querySelector('.bottom-navigation__badge')).not.toBeInTheDocument();
+    expect(fullBar.getByLabelText('Kochbuch')).toBeInTheDocument();
+  });
 });
