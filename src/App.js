@@ -67,6 +67,7 @@ import {
 } from './utils/groupFirestore';
 import { NutritionReferenceProvider, useNutritionReference } from './contexts/NutritionReferenceContext';
 import { RecipeImportQueueProvider, useRecipeImportQueue } from './contexts/RecipeImportQueueContext';
+import { updateAppBadge } from './utils/appBadge';
 import { resolveRecipeGroupContext, resolveImportGroupContext } from './utils/recipeGroupContext';
 
 // Lazily loaded: everything below is a secondary view/overlay that isn't
@@ -520,6 +521,18 @@ function App() {
     () => BOTTOM_NAV_TABS.filter((tab) => tab.view !== 'startseite' || currentUser?.startseite),
     [currentUser?.startseite]
   );
+  const bottomNavBadgeCounts = useMemo(
+    () => ({ recipes: pendingReviewRecipes.length }),
+    [pendingReviewRecipes.length]
+  );
+
+  // Mirrors the pending-review-imports count onto the installed app's home
+  // screen/taskbar icon via the Badging API, so it's visible even when the
+  // app isn't open (see AppReviewRecipesSync above for how pendingReviewRecipes
+  // is populated from the import queue).
+  useEffect(() => {
+    updateAppBadge(pendingReviewRecipes.length);
+  }, [pendingReviewRecipes.length]);
   const appBottomNavStyle = useMemo(() => ({
     '--bottom-nav-offset': showBottomNav && isBottomNavVisible ? 'var(--bottom-nav-height)' : '0px',
     '--bottom-spacing': showBottomNav && isBottomNavVisible ? 'calc(var(--bottom-nav-height) + 16px)' : '0px',
@@ -2454,6 +2467,7 @@ function App() {
             activeKey={bottomNavActiveKey}
             isVisible={isBottomNavVisible}
             onSelect={handleBottomNavSelect}
+            badgeCounts={bottomNavBadgeCounts}
           />
         )}
         {showAtelierOnboarding && (
