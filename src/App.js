@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense, lazy } from 'react';
 import './App.css';
 import RecipeList from './components/RecipeList';
 import RecipeFilterSidebar from './components/RecipeFilterSidebar';
@@ -367,6 +367,14 @@ function App() {
   const [publicGroupId, setPublicGroupId] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [recipesLoaded, setRecipesLoaded] = useState(false);
+  // Whether the Startseite's own carousels (Meine Kochideen, Im Trend) have
+  // finished loading their data, reported back via onCarouselsLoadedChange.
+  const [startseiteCarouselsLoaded, setStartseiteCarouselsLoaded] = useState(false);
+  // Latches to true the first time everything the initial "startseite" view
+  // needs (groups, recipes, its own carousels) has loaded, and never resets —
+  // used to keep the splash screen up through that first load without
+  // bringing it back on later visits to the start page.
+  const [initialStartseiteReady, setInitialStartseiteReady] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
   const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
@@ -914,6 +922,32 @@ function App() {
 
     return () => unsubscribe();
   }, [currentUser]);
+
+  const handleStartseiteCarouselsLoadedChange = useCallback((ready) => {
+    setStartseiteCarouselsLoaded(ready);
+  }, []);
+
+  // Latch initialStartseiteReady once, the first time everything the initial
+  // "startseite" landing view needs has finished loading. Users who don't
+  // land on the start page (currentUser.startseite is off), and cases where
+  // something else (a deep link into the recipe form, an event reminder,
+  // settings, ...) takes over before Startseite ever finishes loading, latch
+  // it immediately instead — there's nothing left to wait for in that case.
+  useEffect(() => {
+    if (initialStartseiteReady || !currentUser) return;
+    const startseiteVisible = currentView === 'startseite'
+      && !isSettingsOpen && !selectedRecipe && !isFormOpen && !selectedMenu && !isMenuFormOpen;
+    if (!currentUser.startseite || !startseiteVisible) {
+      setInitialStartseiteReady(true);
+      return;
+    }
+    if (!groupsLoading && recipesLoaded && startseiteCarouselsLoaded) {
+      setInitialStartseiteReady(true);
+    }
+  }, [
+    currentUser, currentView, isSettingsOpen, selectedRecipe, isFormOpen, selectedMenu, isMenuFormOpen,
+    groupsLoading, recipesLoaded, startseiteCarouselsLoaded, initialStartseiteReady,
+  ]);
 
   const handleSelectRecipe = (recipe) => {
     // Save scroll position when opening a recipe from the recipe list (not from a menu)
@@ -2135,6 +2169,7 @@ function App() {
     <RecipeImportQueueProvider userId={currentUser?.id}>
       <AppNutritionRowsSync onRows={setNutritionReferenceRows} />
       <AppReviewRecipesSync onReviewRecipes={setPendingReviewRecipes} />
+      {!initialStartseiteReady && <SplashScreen />}
       <div className="App" style={appBottomNavStyle}>
         <Header
           ref={headerRef}
@@ -2330,7 +2365,7 @@ function App() {
           allUsers={allUsers}
         />
         ) : currentView === 'startseite' ? (
-        <Startseite currentUser={currentUser} onViewChange={handleViewChange} onSelectRecipe={handleSelectRecipe} recipes={recipes} groups={groups} groupsLoading={groupsLoading} onCreateInspirationList={handleCreateInspirationList} onSelectExistingInspirationList={handleSelectExistingInspirationList} onAssignEverydayClassicsList={handleAssignEverydayClassicsList} onOpenPrivateListRecipes={handleOpenPrivateListRecipes} onOpenSeasonalRecipes={handleOpenSeasonalRecipes} onAddRecipe={handleAddRecipe} />
+        <Startseite currentUser={currentUser} onViewChange={handleViewChange} onSelectRecipe={handleSelectRecipe} recipes={recipes} groups={groups} groupsLoading={groupsLoading} onCreateInspirationList={handleCreateInspirationList} onSelectExistingInspirationList={handleSelectExistingInspirationList} onAssignEverydayClassicsList={handleAssignEverydayClassicsList} onOpenPrivateListRecipes={handleOpenPrivateListRecipes} onOpenSeasonalRecipes={handleOpenSeasonalRecipes} onAddRecipe={handleAddRecipe} onCarouselsLoadedChange={handleStartseiteCarouselsLoadedChange} />
         ) : (
         // Recipe views
         <div className="recipe-overview-layout">

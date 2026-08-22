@@ -1,7 +1,10 @@
 .splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
   width: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
   box-sizing: border-box;
   background: #fafaf8;
   display: flex;
