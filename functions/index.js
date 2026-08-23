@@ -137,7 +137,14 @@ async function resolveShortcutUserId(email) {
  * Input validation constants
  */
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20 MB in bytes (Gemini API limit)
-const MAX_REEL_VIDEO_SIZE = 20 * 1024 * 1024; // 20 MB for optional Instagram video transcription
+// Gemini's generateContent endpoint caps the total inline-data request payload at 20 MB.
+// Base64-encoding a video inflates its raw byte size by 4/3, so the raw video must stay
+// well under that ceiling once encoded, leaving headroom for the prompt text/JSON overhead.
+// Checking the raw buffer against the full 20 MB (as before) let ~14-20 MB reels pass the
+// pre-check and then fail the Gemini call once base64-encoded — a failure that
+// transcribeVideoWithGemini swallows silently, so no audio ever got transcribed for them.
+const GEMINI_INLINE_REQUEST_LIMIT = 20 * 1024 * 1024;
+const MAX_REEL_VIDEO_SIZE = Math.floor((GEMINI_INLINE_REQUEST_LIMIT - 64 * 1024) * 3 / 4); // ~14.95 MB raw
 const MAX_HTML_SIZE = 500000; // 500 KB in characters – used by processHtmlWithAI input validation
 const MAX_FETCH_HTML_SIZE = 1000000; // 1 MB – higher limit for raw HTML fetch to avoid truncating JSON-LD on large pages
 const ALLOWED_MIME_TYPES = [
@@ -1638,6 +1645,29 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
 
     // Short pause to let meta tags and initial content render
     await new Promise((r) => setTimeout(r, 2000));
+
+    // Instagram only issues the video network request once the <video> element
+    // starts loading/playing — it does not fire from a static page load alone.
+    // Chromium blocks unmuted autoplay, so mute + scroll it into view + play(),
+    // then poll (instead of trusting the fixed pause above) until the response
+    // listener registered above captures the .mp4 URL or this times out.
+    try {
+      await page.evaluate(() => {
+        const videoEl = document.querySelector('video');
+        if (videoEl) {
+          videoEl.muted = true;
+          videoEl.scrollIntoView({behavior: 'auto', block: 'center'});
+          videoEl.play().catch(() => {});
+        }
+      });
+    } catch (playError) {
+      console.warn('Instagram video autoplay trigger warning:', playError.message || playError);
+    }
+
+    const videoCaptureDeadline = Date.now() + 5000;
+    while (!videoUrl && Date.now() < videoCaptureDeadline) {
+      await new Promise((r) => setTimeout(r, 250));
+    }
 
     // Extract content from the page
     const extractedData = await page.evaluate(() => {
