@@ -31,7 +31,7 @@ const VALID_IMAGE = 'data:image/jpeg;base64,' + 'A'.repeat(200);
 // A recipe prompt that satisfies the placeholder/migration checks in
 // getRecipeExtractionPrompt() without needing the real 2 KB default prompt.
 const TEST_PROMPT =
-  'Extrahiere Rezept. {{CUISINE_TYPES}} {{MEAL_CATEGORIES}} imperiale Einheiten.';
+  'Extrahiere Rezept. {{CUISINE_TYPES}} {{MEAL_CATEGORIES}} imperiale Einheiten. ergänze KEINE zusätzlichen Arbeitsschritte.';
 
 // Gemini API response that parses to a valid German-locale recipe.
 const GEMINI_JSON = JSON.stringify({
