@@ -11,13 +11,13 @@ const RestartIcon = ({ color = 'currentColor', size = 16 }) => {
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M4 10a6 6 0 1 1 1.76 4.24"
+        d="M12.8 5.15A5.6 5.6 0 1 1 5.71 6.4"
         stroke={color}
         strokeWidth="1.6"
         strokeLinecap="round"
       />
       <path
-        d="M4 14.5V10h4.5"
+        d="M3.33 7.46L5.71 6.4L5.08 8.92"
         stroke={color}
         strokeWidth="1.6"
         strokeLinecap="round"
