@@ -6,7 +6,7 @@ Diese Anleitung erklärt, wie du Rezepte direkt aus einem Apple Kurzbefehl (Shor
 
 Statt den Kurzbefehl manuell nachzubauen (siehe unten), kannst du auch den fertigen Kurzbefehl laden:
 
-**[Kurzbefehl herunterladen](https://www.icloud.com/shortcuts/ba2d0c88d84a4292a486c79a4b48683b)**
+**[Kurzbefehl herunterladen](https://www.icloud.com/shortcuts/0b14acff0be64d8b96b00a8871ccca32)**
 
 Der Link ist außerdem im Hamburger-Menü der App unter **Hilfe → Kurzbefehl installieren** hinterlegt und dort für alle Nutzer sichtbar (nicht nur Admins) – der Menüpunkt erscheint aber nur auf iPhone, iPad und Mac, da nur dort eine Kurzbefehle-App existiert.
 
