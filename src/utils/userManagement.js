@@ -1172,6 +1172,28 @@ export const removeFcmToken = async (userId, token) => {
 };
 
 /**
+ * Enable or disable push-driven background updates for a user — e.g. the OS
+ * app-icon badge reflecting pending recipe-import reviews even while
+ * brouBook is closed (see functions/index.js sendImportStatusPush and
+ * public/firebase-messaging-sw.js). Requires the user to also have a saved
+ * FCM token; the caller is responsible for requesting notification
+ * permission first.
+ *
+ * @param {string} userId
+ * @param {boolean} enabled
+ * @returns {Promise<void>}
+ */
+export const setBackgroundUpdatesEnabled = async (userId, enabled) => {
+  if (!userId) return;
+  await updateDoc(doc(db, 'users', userId), {
+    backgroundUpdatesEnabled: !!enabled
+  });
+  if (currentUserCache && currentUserCache.id === userId) {
+    currentUserCache = { ...currentUserCache, backgroundUpdatesEnabled: !!enabled };
+  }
+};
+
+/**
  * Default role permissions for settingsAccess, fotoscan, webimport, appCalls, appCallsMenu, recipeImport, deleteRating, abortCalc, sortCarousel, editLists, tagesmenuTestmode, themeToggle, printRecipe, recipeIndex, startseite, kuecheFab and onboardingTestmode features.
  * Admins get all features enabled by default; printRecipe is enabled for all roles by default; recipeIndex defaults to true for admin/moderator; all other features start with all disabled for non-admin roles.
  */

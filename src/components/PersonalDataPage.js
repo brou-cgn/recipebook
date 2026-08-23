@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './PersonalDataPage.css';
-import { updateUserProfile, changePassword, saveFcmToken } from '../utils/userManagement';
+import { updateUserProfile, changePassword, saveFcmToken, setBackgroundUpdatesEnabled } from '../utils/userManagement';
 import { ALARM_SOUNDS, getAlarmSoundPreference, saveAlarmSoundPreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference } from '../utils/customLists';
 import { previewAlarmSound } from '../utils/alarmAudioUtils';
 import { requestNotificationPermission } from '../utils/pushNotifications';
@@ -47,6 +47,10 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const [notificationSupported, setNotificationSupported] = useState(false);
   const [requestingNotification, setRequestingNotification] = useState(false);
 
+  const [backgroundUpdatesEnabled, setBackgroundUpdatesEnabledState] = useState(Boolean(currentUser?.backgroundUpdatesEnabled));
+  const [togglingBackgroundUpdates, setTogglingBackgroundUpdates] = useState(false);
+  const [backgroundUpdatesMessage, setBackgroundUpdatesMessage] = useState(null);
+
   const [webImportPinEnabled, setWebImportPinEnabledState] = useState(Boolean(currentUser?.webImportPinEnabled));
   const [pinRemovedLocally, setPinRemovedLocally] = useState(false);
   const [newPin, setNewPin] = useState('');
@@ -86,6 +90,40 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
       console.warn('Fehler beim Anfordern der Benachrichtigungserlaubnis:', err);
     } finally {
       setRequestingNotification(false);
+    }
+  };
+
+  const handleToggleBackgroundUpdates = async () => {
+    if (togglingBackgroundUpdates) return;
+    const nextValue = !backgroundUpdatesEnabled;
+    setTogglingBackgroundUpdates(true);
+    setBackgroundUpdatesMessage(null);
+    try {
+      if (nextValue) {
+        // Background updates arrive as push messages, so they need
+        // notification permission and a saved FCM token first.
+        let permission = notificationPermission;
+        if (permission !== 'granted') {
+          const token = await requestNotificationPermission();
+          if (token && currentUser?.id) {
+            await saveFcmToken(currentUser.id, token);
+          }
+          permission = typeof Notification !== 'undefined' ? Notification.permission : permission;
+          setNotificationPermission(permission);
+        }
+        if (permission !== 'granted') {
+          setBackgroundUpdatesMessage('Hintergrundaktualisierung benötigt die Erlaubnis für Mitteilungen.');
+          return;
+        }
+      }
+      await setBackgroundUpdatesEnabled(currentUser.id, nextValue);
+      setBackgroundUpdatesEnabledState(nextValue);
+      if (onProfileUpdated) onProfileUpdated({ ...currentUser, backgroundUpdatesEnabled: nextValue });
+    } catch (err) {
+      console.warn('Fehler beim Umschalten der Hintergrundaktualisierung:', err);
+      setBackgroundUpdatesMessage('Änderung konnte nicht gespeichert werden.');
+    } finally {
+      setTogglingBackgroundUpdates(false);
     }
   };
 
@@ -544,6 +582,31 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
         {notificationSupported && notificationPermission === 'denied' && (
           <p className="pwa-notification-hint pwa-notification-hint--warning">
             Mitteilungen wurden abgelehnt. Um sie zu aktivieren, erlauben Sie brouBook in Ihren Browsereinstellungen den Zugriff auf Benachrichtigungen.
+          </p>
+        )}
+
+        <p className="personal-data-password-hint">
+          Hintergrundaktualisierung zeigt neue, zur Prüfung bereite Rezept-Importe als Kennzeichen auf dem App-Symbol an – auch wenn brouBook gerade geschlossen ist.
+        </p>
+        <div className="preferences-group">
+          <button
+            type="button"
+            className="settings-row"
+            onClick={handleToggleBackgroundUpdates}
+            disabled={togglingBackgroundUpdates || (!backgroundUpdatesEnabled && !notificationSupported)}
+            aria-label={`Hintergrundaktualisierung: ${backgroundUpdatesEnabled ? 'Aktiv' : 'Aus'}. Zum ${backgroundUpdatesEnabled ? 'Deaktivieren' : 'Aktivieren'} klicken.`}
+          >
+            <span className="settings-row-label">Hintergrundaktualisierung</span>
+            <span className="settings-row-right">
+              <span className="settings-row-value">
+                {togglingBackgroundUpdates ? 'Wird geändert…' : backgroundUpdatesEnabled ? 'Aktiv' : 'Aus'}
+              </span>
+            </span>
+          </button>
+        </div>
+        {backgroundUpdatesMessage && (
+          <p className="pwa-notification-hint pwa-notification-hint--warning">
+            {backgroundUpdatesMessage}
           </p>
         )}
       </section>
