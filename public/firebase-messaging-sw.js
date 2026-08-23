@@ -42,6 +42,23 @@ function initFirebase(config) {
         setTimeout(() => shownNotifications.delete(notificationId), NOTIFICATION_DEDUP_WINDOW_MS);
       }
 
+      // "Hintergrundaktualisierung": mirror the sender's pending-review count
+      // onto the installed app's home screen/taskbar icon via the Badging
+      // API, even while brouBook is fully closed. Feature-detected — most
+      // browsers besides Chrome/Edge don't support it in a service worker.
+      if (payload.data?.pendingReviewCount != null) {
+        const count = parseInt(payload.data.pendingReviewCount, 10) || 0;
+        try {
+          if (count > 0 && typeof self.navigator?.setAppBadge === 'function') {
+            self.navigator.setAppBadge(count).catch(() => {});
+          } else if (count === 0 && typeof self.navigator?.clearAppBadge === 'function') {
+            self.navigator.clearAppBadge().catch(() => {});
+          }
+        } catch (badgeErr) {
+          // Badging API not available/allowed here — ignore.
+        }
+      }
+
       const notificationTitle =
         payload.notification?.title || payload.data?.title || 'RecipeBook';
       const notificationOptions = {
@@ -85,6 +102,9 @@ self.addEventListener('message', (event) => {
 function buildNotificationTargetUrl(data) {
   if (data?.type === 'consumption_reminder' && data.eventId) {
     return `/?eventReminder=${encodeURIComponent(data.eventId)}`;
+  }
+  if (data?.type === 'import_ready' || data?.type === 'import_failed') {
+    return '/?reviewImport=1';
   }
   return '/';
 }

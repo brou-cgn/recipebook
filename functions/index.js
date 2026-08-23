@@ -832,6 +832,137 @@ async function failImportJob(jobId, error) {
 }
 
 /**
+ * Push a data-only FCM message to a user's own devices when a fully
+ * background-run import job finishes — i.e. one with no client tab involved
+ * (processShortcutImportJob, recoverStuckImportJobs), as opposed to the
+ * callable-driven flow where an open tab already learns the result directly.
+ * This is what lets the "Hintergrundaktualisierung" setting update the OS
+ * app badge / show a notification while brouBook is closed.
+ *
+ * No-op unless the user opted in (users/{authorId}.backgroundUpdatesEnabled)
+ * and has at least one saved FCM token. Best-effort: never throws, mirrors
+ * the token-cleanup approach used by notifyPrivateListMembers.
+ *
+ * @param {string} authorId - Owner of the job (recipes/{jobId}.authorId)
+ * @param {Object} info
+ * @param {string} info.jobId - Firestore recipes/{jobId} doc id
+ * @param {'ready'|'error'} info.status
+ * @param {string} [info.title] - Recipe title, for the 'ready' case
+ * @param {string} [info.errorMessage] - Failure reason, for the 'error' case
+ * @returns {Promise<void>}
+ */
+async function sendImportStatusPush(authorId, {jobId, status, title, errorMessage}) {
+  if (!authorId || authorId === 'unknown') return;
+  const db = admin.firestore();
+  try {
+    const userRef = db.collection('users').doc(authorId);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) return;
+    const userData = userSnap.data();
+    if (!userData.backgroundUpdatesEnabled) return;
+    const tokens = Array.isArray(userData.fcmTokens) ? userData.fcmTokens.filter(Boolean) : [];
+    if (tokens.length === 0) return;
+
+    let pendingReviewCount = 0;
+    try {
+      const countSnap = await db.collection('recipes')
+          .where('authorId', '==', authorId)
+          .where('isTemp', '==', true)
+          .count()
+          .get();
+      pendingReviewCount = countSnap.data().count;
+    } catch (countErr) {
+      console.warn('sendImportStatusPush: count query failed', countErr);
+    }
+
+    const notificationTitle = status === 'ready' ?
+      'Rezept bereit zur Prüfung' :
+      'Import fehlgeschlagen';
+    const notificationBody = status === 'ready' ?
+      `„${title || 'Ein Rezept'}" wartet auf deine Bestätigung.` :
+      (errorMessage || 'Der Hintergrund-Import ist fehlgeschlagen.');
+
+    const notificationPayload = {
+      data: {
+        type: status === 'ready' ? 'import_ready' : 'import_failed',
+        title: notificationTitle,
+        body: notificationBody,
+        icon: '/logo192.png',
+        badge: '/favicon.ico',
+        recipeId: jobId || '',
+        pendingReviewCount: String(pendingReviewCount),
+        notificationId: `import-${jobId}-${Date.now()}`,
+      },
+      apns: {
+        headers: {
+          'apns-push-type': 'alert',
+          'apns-priority': '10',
+        },
+        payload: {
+          aps: {
+            alert: {
+              title: notificationTitle,
+              body: notificationBody,
+            },
+            sound: 'default',
+            'mutable-content': 1,
+            badge: pendingReviewCount,
+          },
+        },
+      },
+      webpush: {
+        fcm_options: {
+          link: '/?reviewImport=1',
+        },
+      },
+    };
+
+    const response = await admin.messaging().sendEachForMulticast({
+      tokens,
+      ...notificationPayload,
+    });
+
+    const staleTokens = [];
+    response.responses.forEach((resp, idx) => {
+      if (
+        !resp.success &&
+        (resp.error?.code === 'messaging/registration-token-not-registered' ||
+          resp.error?.code === 'messaging/invalid-registration-token')
+      ) {
+        staleTokens.push(tokens[idx]);
+      }
+    });
+    if (staleTokens.length > 0) {
+      await userRef.update({
+        fcmTokens: tokens.filter((t) => !staleTokens.includes(t)),
+      });
+    }
+  } catch (err) {
+    console.error(`sendImportStatusPush: failed for job ${jobId}:`, err);
+  }
+}
+
+/**
+ * finalizeImportJob wrapper for the fully-background paths (see
+ * sendImportStatusPush) — writes the result and then, best-effort, notifies
+ * the user's own devices.
+ */
+async function finalizeImportJobBackground(jobId, authorId, aiResult) {
+  await finalizeImportJob(jobId, authorId, aiResult);
+  await sendImportStatusPush(authorId, {jobId, status: 'ready', title: aiResult?.title});
+}
+
+/**
+ * failImportJob wrapper for the fully-background paths (see
+ * sendImportStatusPush) — writes the error state and then, best-effort,
+ * notifies the user's own devices.
+ */
+async function failImportJobBackground(jobId, authorId, error) {
+  await failImportJob(jobId, error);
+  await sendImportStatusPush(authorId, {jobId, status: 'error', errorMessage: error?.message});
+}
+
+/**
  * Cloud Function: Scan recipe with AI
  * This is a callable function that can be invoked from the client
  *
@@ -7389,10 +7520,10 @@ exports.processShortcutImportJob = onDocumentCreated(
 
       try {
         const result = await runImportFromSource(data.importSource, authorId, jobId);
-        await finalizeImportJob(jobId, authorId, result);
+        await finalizeImportJobBackground(jobId, authorId, result);
       } catch (error) {
         console.error(`processShortcutImportJob: job ${jobId} failed`, error);
-        await failImportJob(jobId, error);
+        await failImportJobBackground(jobId, authorId, error);
       }
     },
 );
@@ -7475,7 +7606,7 @@ exports.recoverStuckImportJobs = onSchedule(
         if (!data.importSource) {
           const error = new Error('Import kann nicht wiederhergestellt werden: keine importSource gespeichert');
           error.code = 'failed-precondition';
-          await failImportJob(jobId, error);
+          await failImportJobBackground(jobId, authorId, error);
           abandoned++;
           continue;
         }
@@ -7483,7 +7614,7 @@ exports.recoverStuckImportJobs = onSchedule(
         if (attempts >= MAX_IMPORT_ATTEMPTS) {
           const error = new Error(`Import endgültig fehlgeschlagen nach ${attempts} Versuchen`);
           error.code = 'failed-precondition';
-          await failImportJob(jobId, error);
+          await failImportJobBackground(jobId, authorId, error);
           abandoned++;
           continue;
         }
@@ -7503,11 +7634,11 @@ exports.recoverStuckImportJobs = onSchedule(
 
         try {
           const result = await runImportFromSource(data.importSource, authorId, jobId);
-          await finalizeImportJob(jobId, authorId, result);
+          await finalizeImportJobBackground(jobId, authorId, result);
           restarted++;
         } catch (error) {
           console.error(`recoverStuckImportJobs: job ${jobId} failed`, error);
-          await failImportJob(jobId, error);
+          await failImportJobBackground(jobId, authorId, error);
           abandoned++;
         }
       }
