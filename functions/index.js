@@ -5,6 +5,7 @@
 
 const {onCall, onRequest, HttpsError} = require('firebase-functions/v2/https');
 const {onDocumentCreated, onDocumentWritten} = require('firebase-functions/v2/firestore');
+const {onObjectFinalized} = require('firebase-functions/v2/storage');
 const {onSchedule} = require('firebase-functions/v2/scheduler');
 const {defineSecret} = require('firebase-functions/params');
 const {GoogleGenerativeAI} = require('@google/generative-ai');
@@ -3364,6 +3365,248 @@ exports.importRecipeShortcut = onRequest(
       } catch (err) {
         console.error(`importRecipeShortcut: failed to queue import for user ${userId}:`, err);
         res.status(500).json({success: false, error: 'Import konnte nicht in die Warteschlange gestellt werden.'});
+      }
+    },
+);
+
+/** Storage path prefix for Shortcut-uploaded Reel videos awaiting transcription. */
+const VIDEO_IMPORT_STORAGE_PREFIX = 'pending-video-imports';
+
+/**
+ * Cloud Function: Issue a signed upload URL for a Shortcut-provided Reel
+ * video (see APPLE_SHORTCUT_SETUP.md). This exists because Instagram's
+ * anti-bot detection blocks our Puppeteer scraper (scrapeInstagramReel) from
+ * a meaningful share of requests — a video the user already saved to their
+ * own device sidesteps that entirely, at the cost of one extra manual step
+ * (saving the video first). The video is uploaded straight to Storage via
+ * the signed URL (never through this function's own request body) so a
+ * multi-minute Reel doesn't run into Cloud Functions' ~32MB HTTP request
+ * limit. processVideoImportUpload (Storage trigger, below) picks the file up
+ * once the PUT completes and deletes it again once processing finishes.
+ *
+ * Input (POST JSON body): { pin, language? }
+ * Returns: { success: true, jobId, uploadUrl } — uploadUrl accepts a single
+ * PUT with Content-Type: video/mp4, valid for 10 minutes.
+ */
+exports.getVideoUploadUrl = onRequest(
+    {
+      maxInstances: 10,
+      memory: '256MiB',
+      timeoutSeconds: 30,
+      secrets: [shortcutApiKey],
+      invoker: 'public',
+    },
+    async (req, res) => {
+      const origin = req.headers.origin;
+      if (origin && ALLOWED_ORIGINS.includes(origin)) {
+        res.set('Access-Control-Allow-Origin', origin);
+        res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.set(
+            'Access-Control-Allow-Headers',
+            'Content-Type, X-Api-Key, X-User-Email',
+        );
+        if (req.method === 'OPTIONS') {
+          res.status(204).send('');
+          return;
+        }
+      } else if (req.method === 'OPTIONS') {
+        res.status(403).send('');
+        return;
+      }
+
+      if (req.method !== 'POST') {
+        res.status(405).json({success: false, error: 'Method not allowed. Use POST.'});
+        return;
+      }
+
+      const apiKeyHeader = req.headers['x-api-key'];
+      const userEmail = req.headers['x-user-email'];
+      if (!apiKeyHeader || !userEmail) {
+        res.status(401).json({
+          success: false,
+          error: 'Missing authentication headers',
+          requiredHeaders: ['X-Api-Key', 'X-User-Email'],
+        });
+        return;
+      }
+
+      const validApiKey = shortcutApiKey.value();
+      if (!validApiKey) {
+        console.error('getVideoUploadUrl: SHORTCUT_API_KEY secret is not set');
+        res.status(500).json({
+          success: false,
+          error: 'Server misconfiguration: SHORTCUT_API_KEY secret is not set',
+        });
+        return;
+      }
+
+      let isValidKey = false;
+      try {
+        isValidKey = crypto.timingSafeEqual(
+            Buffer.from(apiKeyHeader),
+            Buffer.from(validApiKey),
+        );
+      } catch (_) {
+        isValidKey = false;
+      }
+      if (!isValidKey) {
+        console.warn('getVideoUploadUrl: invalid API key attempt');
+        res.status(401).json({success: false, error: 'Invalid API key'});
+        return;
+      }
+
+      const userId = await resolveShortcutUserId(userEmail);
+      const db = admin.firestore();
+      try {
+        const userDoc = userId ? await db.collection('users').doc(userId).get() : null;
+        if (!userId || !userDoc.exists) {
+          res.status(403).json({success: false, error: 'Access denied'});
+          return;
+        }
+        const userData = userDoc.data();
+        const role = userData?.role;
+        const isShortcutUser = userData?.isShortcutUser === true;
+        if (role !== 'edit' && role !== 'admin' && role !== 'moderator' && !isShortcutUser) {
+          res.status(403).json({success: false, error: 'Insufficient permissions'});
+          return;
+        }
+      } catch (err) {
+        console.error('getVideoUploadUrl: error validating user:', err);
+        res.status(500).json({success: false, error: 'Failed to validate user'});
+        return;
+      }
+
+      let body = req.body;
+      if (!body || (typeof body === 'object' && Object.keys(body).length === 0)) {
+        try {
+          const raw = req.rawBody;
+          if (raw) body = JSON.parse(raw.toString('utf8'));
+        } catch (_) {
+          res.status(400).json({success: false, error: 'Invalid JSON body'});
+          return;
+        }
+      }
+
+      const {pin} = body || {};
+      const language = ['de', 'en'].includes(body?.language) ? body.language : 'de';
+
+      try {
+        await requireShortcutPin(userId, pin);
+      } catch (pinErr) {
+        const status = pinErr.code === 'resource-exhausted' ? 429 :
+          pinErr.code === 'invalid-argument' ? 400 : 403;
+        res.status(status).json({success: false, error: pinErr.message || 'PIN erforderlich.'});
+        return;
+      }
+
+      try {
+        const jobRef = db.collection('recipes').doc();
+        const storagePath = `${VIDEO_IMPORT_STORAGE_PREFIX}/${userId}/${jobRef.id}.mp4`;
+
+        // importStatus is 'awaiting_upload', not 'queued' – processShortcutImportJob
+        // (the Firestore trigger for the 'web' shortcut flow above) only acts on
+        // importStatus:'queued' and would otherwise try to process this job before
+        // any video has actually been uploaded. processVideoImportUpload picks it
+        // up once the file lands in Storage instead.
+        await jobRef.set({
+          title: 'Rezept-Import',
+          authorId: userId,
+          isTemp: true,
+          importStatus: 'awaiting_upload',
+          importProgress: 0,
+          importHeartbeatAt: Date.now(),
+          importOrigin: 'shortcut',
+          importSource: {type: 'video', storagePath, language},
+        });
+
+        const bucket = admin.storage().bucket();
+        const [uploadUrl] = await bucket.file(storagePath).getSignedUrl({
+          version: 'v4',
+          action: 'write',
+          expires: Date.now() + 10 * 60 * 1000,
+          contentType: 'video/mp4',
+        });
+
+        console.log(`getVideoUploadUrl: issued upload URL for user ${userId}, job ${jobRef.id}`);
+        res.status(200).json({success: true, jobId: jobRef.id, uploadUrl});
+      } catch (err) {
+        console.error(`getVideoUploadUrl: failed to prepare upload for user ${userId}:`, err);
+        res.status(500).json({success: false, error: 'Video-Upload konnte nicht vorbereitet werden.'});
+      }
+    },
+);
+
+/**
+ * Storage trigger: processes a Reel video once a Shortcut finishes uploading
+ * it to the signed URL from getVideoUploadUrl (path pending-video-imports/
+ * {userId}/{jobId}.mp4). Transcribes it and runs the transcript through the
+ * normal recipe-extraction step, then deletes the video from Storage
+ * regardless of outcome — it has already served its purpose and shouldn't
+ * linger (cost, and it's the user's personal upload).
+ */
+exports.processVideoImportUpload = onObjectFinalized(
+    {
+      region: 'us-central1',
+      secrets: [geminiApiKey],
+      memory: '512MiB',
+      timeoutSeconds: 120,
+    },
+    async (event) => {
+      const filePath = event.data.name;
+      if (!filePath || !filePath.startsWith(`${VIDEO_IMPORT_STORAGE_PREFIX}/`)) {
+        return;
+      }
+
+      const match = filePath.match(
+          new RegExp(`^${VIDEO_IMPORT_STORAGE_PREFIX}/([^/]+)/([^/]+)\\.mp4$`),
+      );
+      if (!match) {
+        console.warn(`processVideoImportUpload: unexpected path ${filePath}, ignoring`);
+        return;
+      }
+      const [, userId, jobId] = match;
+
+      const db = admin.firestore();
+      const jobRef = db.collection('recipes').doc(jobId);
+      const bucket = admin.storage().bucket(event.data.bucket);
+      const file = bucket.file(filePath);
+
+      try {
+        const jobSnap = await jobRef.get();
+        if (!jobSnap.exists) {
+          console.warn(`processVideoImportUpload: job ${jobId} not found, discarding upload`);
+          return;
+        }
+        const jobData = jobSnap.data();
+        if (jobData.importStatus !== 'awaiting_upload' || jobData.authorId !== userId) {
+          // Already processed (or redriven by recoverStuckImportJobs), or a
+          // path/user mismatch – don't reprocess or clobber that outcome.
+          return;
+        }
+
+        await jobRef.update({
+          importStatus: 'processing',
+          importHeartbeatAt: Date.now(),
+          importAttempts: 1,
+        });
+
+        const apiKey = geminiApiKey.value();
+        if (!apiKey) {
+          const error = new Error('AI service not configured. Please contact administrator.');
+          error.code = 'failed-precondition';
+          throw error;
+        }
+
+        const language = jobData.importSource?.language || 'de';
+        const result = await runImportFromVideoSource({storagePath: filePath, language}, {apiKey});
+        await finalizeImportJobBackground(jobId, userId, result);
+      } catch (error) {
+        console.error(`processVideoImportUpload: job ${jobId} failed`, error);
+        await failImportJobBackground(jobId, userId, error);
+      } finally {
+        await file.delete().catch((delErr) => {
+          console.warn(`processVideoImportUpload: failed to delete ${filePath}:`, delErr.message || delErr);
+        });
       }
     },
 );
@@ -7525,6 +7768,55 @@ async function runImportFromPhotoSource(source, {apiKey} = {}) {
 }
 
 /**
+ * Import source leg for user-uploaded Reel videos (see getVideoUploadUrl /
+ * processVideoImportUpload in the Hybrid Import Architecture section above).
+ * Downloads the video from Storage, transcribes it with Gemini, then runs
+ * the transcript through the same text-extraction step as every other
+ * source — no Puppeteer/Instagram involved, the video already sits in our
+ * own Storage bucket by the time this runs.
+ *
+ * @param {{storagePath: string, language?: string}} source
+ * @param {{apiKey: string}} opts
+ * @returns {Promise<Object>} Structured recipe data (same shape as callGeminiAPI)
+ */
+async function runImportFromVideoSource(source, {apiKey} = {}) {
+  const storagePath = source && source.storagePath;
+  const language = ['de', 'en'].includes(source && source.language) ? source.language : 'de';
+  if (!storagePath) {
+    const error = new Error('Kein Video für den Video-Import vorhanden');
+    error.code = 'invalid-argument';
+    throw error;
+  }
+
+  const bucket = admin.storage().bucket();
+  const file = bucket.file(storagePath);
+
+  const [metadata] = await file.getMetadata();
+  const size = Number(metadata.size) || 0;
+  if (size > MAX_REEL_VIDEO_SIZE) {
+    const error = new Error(
+        `Video ist zu groß (${(size / (1024 * 1024)).toFixed(1)} MB, ` +
+        `max. ${(MAX_REEL_VIDEO_SIZE / (1024 * 1024)).toFixed(1)} MB).`,
+    );
+    error.code = 'invalid-argument';
+    throw error;
+  }
+
+  const [videoBuffer] = await file.download();
+  const transcribedText = await transcribeVideoWithGemini(videoBuffer, language, apiKey);
+
+  if (!transcribedText || !transcribedText.trim()) {
+    const error = new Error(
+        'Konnte keinen Rezeptinhalt aus dem Video erkennen. Enthält das Video gesprochenen Text?',
+    );
+    error.code = 'not-found';
+    throw error;
+  }
+
+  return callGeminiTextAPI(transcribedText, language, apiKey);
+}
+
+/**
  * Internal dispatcher used by recoverStuckImportJobs to redrive a stuck
  * background-import job purely from its persisted importSource — no auth
  * context, no rate limiting, no HttpsError throwing (that belongs to the
@@ -7553,6 +7845,8 @@ async function runImportFromSource(source, authorId, jobId) {
       return runImportFromUniversalSource(source, {apiKey});
     case 'photo':
       return runImportFromPhotoSource(source, {apiKey});
+    case 'video':
+      return runImportFromVideoSource(source, {apiKey});
     default: {
       const error = new Error(`Unbekannter importSource-Typ: ${source && source.type}`);
       error.code = 'invalid-argument';
