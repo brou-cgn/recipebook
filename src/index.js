@@ -5,6 +5,7 @@ import './darkMode.css';
 import App from './App';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import reportWebVitals from './reportWebVitals';
+import { markSwUpdateReload } from './utils/swUpdateReloadFlag';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -20,6 +21,10 @@ let refreshingAfterSwUpdate = false;
 navigator.serviceWorker?.addEventListener('controllerchange', () => {
   if (refreshingAfterSwUpdate) return;
   refreshingAfterSwUpdate = true;
+  // Skip the splash screen's entrance animations on the reload we're about
+  // to force, so activating a newly installed version reads as a seamless
+  // continuation instead of the tagline visibly re-animating.
+  markSwUpdateReload();
   window.location.reload();
 });
 
