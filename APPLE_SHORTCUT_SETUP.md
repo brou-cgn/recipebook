@@ -14,7 +14,7 @@ Der Link ist außerdem im Hamburger-Menü der App unter **Hilfe → Kurzbefehl i
 
 ## Authentifizierung
 
-Alle Shortcut-Endpoints (`importRecipeShortcut`, `addRecipeViaAPI`, `createRecipeImportFromText`) verwenden **API Key Authentifizierung** statt Firebase Auth Tokens. Ein API Key ist dauerhaft gültig und muss nur einmal im Kurzbefehl hinterlegt werden – derselbe Key funktioniert für alle drei Endpoints.
+Alle Shortcut-Endpoints (`importRecipeShortcut`, `addRecipeViaAPI`, `createRecipeImportFromText`, `getVideoUploadUrl`) verwenden **API Key Authentifizierung** statt Firebase Auth Tokens. Ein API Key ist dauerhaft gültig und muss nur einmal im Kurzbefehl hinterlegt werden – derselbe Key funktioniert für alle Endpoints.
 
 - **`X-Api-Key`** Header: dein persönlicher API Key (als Firebase Secret gespeichert)
 - **`X-User-Email`** Header: deine registrierte E-Mail-Adresse (wird serverseitig per `admin.auth().getUserByEmail` zur Firebase User ID aufgelöst – du musst deine UID nicht mehr nachschlagen)
@@ -55,6 +55,67 @@ Das Feld `pin` ist nur nötig, wenn du im Hamburger-Menü unter „Kurzbefehl in
 ```
 
 Der Kurzbefehl braucht auf diese Antwort hin nichts weiter zu tun – kein Warten, kein Öffnen der App nötig. Ein `success: true` bedeutet nur „URL wurde entgegengenommen", nicht „Rezept wurde korrekt erkannt"; falls die Erkennung fehlschlägt, taucht der Job mit Fehlermeldung (statt als fertiges Rezept) in der Review-Queue auf und kann dort neu gestartet werden.
+
+---
+
+## Rezept aus einem gespeicherten Reel-Video importieren
+
+Für den Fall „ich habe ein Instagram-Reel als Video gespeichert und will das gesprochene Rezept daraus importieren". Instagrams Bot-Erkennung blockiert unseren Server-seitigen Scraper (`scrapeInstagramReel`) bei einem Teil der Anfragen mit einem Login-Wall-Redirect – ein Video, das du bereits selbst auf deinem Gerät gesichert hast, umgeht das komplett, weil dabei gar keine Anfrage mehr an Instagram geht.
+
+**Voraussetzung:** Das Reel-Video muss als Datei auf deinem iPhone liegen (z. B. über Instagrams eigene „Video speichern"-Funktion in die Fotos-App, sofern der/die Ersteller:in das erlaubt).
+
+Der Import läuft in zwei Kurzbefehl-Schritten ab:
+
+### Schritt A: Upload-URL anfordern
+
+**Aktion „Inhalt von URL laden":**
+
+| Feld | Wert |
+|------|------|
+| URL | `https://us-central1-<PROJECT-ID>.cloudfunctions.net/getVideoUploadUrl` |
+| Methode | `POST` |
+
+**Headers:**
+
+| Name | Wert |
+|------|------|
+| `Content-Type` | `application/json` |
+| `X-Api-Key` | `<dein-api-key>` |
+| `X-User-Email` | `<deine-e-mail-adresse>` |
+
+**Body:**
+
+```json
+{ "pin": "<dein Webimport-PIN>", "language": "de" }
+```
+
+**Antwort (HTTP 200):**
+
+```json
+{ "success": true, "jobId": "abc123xyz", "uploadUrl": "https://storage.googleapis.com/..." }
+```
+
+`uploadUrl` ist 10 Minuten gültig und akzeptiert genau einen Upload.
+
+### Schritt B: Video direkt zur Upload-URL hochladen
+
+**Aktion „Inhalt von URL laden" (zweite Instanz):**
+
+| Feld | Wert |
+|------|------|
+| URL | `uploadUrl` aus der Antwort von Schritt A (Aktion „Wert aus Wörterbuch abrufen") |
+| Methode | `PUT` |
+| Anfragetext | das ausgewählte Video (als Datei, **nicht** als Text/Base64) |
+
+**Headers:**
+
+| Name | Wert |
+|------|------|
+| `Content-Type` | `video/mp4` |
+
+Der `Content-Type` muss exakt `video/mp4` sein – die Upload-URL ist serverseitig genau darauf signiert, jeder andere Wert wird von Google Cloud Storage mit HTTP 403 abgelehnt.
+
+Danach ist nichts weiter zu tun: Sobald der Upload abgeschlossen ist, übernimmt eine Storage-getriggerte Cloud Function automatisch die Transkription (Gemini) und Rezept-Extraktion; das fertige Rezept erscheint wie gewohnt in der Review-Queue „Neue Rezepte". Das hochgeladene Video wird danach von unserem Server automatisch gelöscht.
 
 ---
 
