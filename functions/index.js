@@ -1632,29 +1632,44 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
       'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
     });
 
-    // Navigate to the Instagram Reel page
-    let navigationStatus = null;
-    try {
-      const gotoResponse = await page.goto(url, {
-        waitUntil: 'domcontentloaded',
-        timeout: 30000,
-      });
-      navigationStatus = gotoResponse ? gotoResponse.status() : null;
-    } catch (navError) {
-      // Continue even if navigation times out – we may still have partial content
-      console.warn(`Navigation warning for ${url}:`, navError.message);
-    }
+    // Navigate to the Instagram Reel page. Instagram's bot detection turned out
+    // to be probabilistic rather than a hard per-request block: confirmed via
+    // logging (now removed) that two test runs reached the real Reel page
+    // while a third got redirected to /accounts/login/. A single retry with a
+    // fresh navigation is a cheap way to recover from that without needing
+    // proxies or an authenticated session.
+    const navigateAndCheckLoginWall = async () => {
+      let status = null;
+      try {
+        const gotoResponse = await page.goto(url, {
+          waitUntil: 'domcontentloaded',
+          timeout: 30000,
+        });
+        status = gotoResponse ? gotoResponse.status() : null;
+      } catch (navError) {
+        // Continue even if navigation times out – we may still have partial content
+        console.warn(`Navigation warning for ${url}:`, navError.message);
+      }
+      const currentUrl = page.url();
+      const loginWall = /\/accounts\/login/.test(currentUrl);
+      return {status, currentUrl, loginWall};
+    };
 
-    // Diagnostic: an empty scrape result is ambiguous on its own (timing? blocked?
-    // private post?) – logging the actual navigation outcome tells us which.
-    // Instagram redirects unauthenticated/suspicious traffic (e.g. cloud IPs) to
-    // /accounts/login/ instead of serving the Reel page.
-    const finalUrl = page.url();
-    const likelyLoginWall = /\/accounts\/login/.test(finalUrl);
+    let navResult = await navigateAndCheckLoginWall();
     console.log(
-        `Instagram navigation result: status=${navigationStatus}, finalUrl=${finalUrl}, ` +
-        `likelyLoginWall=${likelyLoginWall}`,
+        `Instagram navigation result: status=${navResult.status}, finalUrl=${navResult.currentUrl}, ` +
+        `likelyLoginWall=${navResult.loginWall}`,
     );
+
+    if (navResult.loginWall) {
+      console.warn('Instagram redirected to login wall; retrying navigation once.');
+      await new Promise((r) => setTimeout(r, 1500));
+      navResult = await navigateAndCheckLoginWall();
+      console.log(
+          `Instagram navigation retry result: status=${navResult.status}, finalUrl=${navResult.currentUrl}, ` +
+          `likelyLoginWall=${navResult.loginWall}`,
+      );
+    }
 
     // Short pause to let meta tags and initial content render
     await new Promise((r) => setTimeout(r, 2000));
@@ -1690,17 +1705,6 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
       console.warn('Instagram video autoplay trigger warning:', playError.message || playError);
     }
     console.log(`Instagram <video> element present in DOM: ${videoElementPresent}`);
-
-    // Two rounds of "wait longer" (fixed pause, then explicit waitForSelector)
-    // both still found no <video> element. That rules out a hydration-timing
-    // issue — something else is being served instead (login gate? cookie
-    // banner? content-unavailable notice?). Rather than guess a third time,
-    // log what's actually visible so the next test run tells us directly.
-    // TEMPORARY debug aid — remove once the actual cause is confirmed.
-    const debugBodySnippet = await page.evaluate(() =>
-      (document.body && document.body.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 1500),
-    ).catch(() => '');
-    console.log(`Instagram page body text snippet (debug): ${debugBodySnippet}`);
 
     const videoCaptureDeadline = Date.now() + 5000;
     while (!videoUrl && Date.now() < videoCaptureDeadline) {
