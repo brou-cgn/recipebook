@@ -61,6 +61,16 @@ function registerValidSW(swUrl, config) {
         registration.update();
       }, 60 * 60 * 1000);
 
+      // iOS suspends this timer while the installed PWA is backgrounded, so
+      // relying on it alone can leave a reopened app on a stale service
+      // worker for a long time. Also check right when the app comes back
+      // into view, which is exactly when a user would notice stale content.
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          registration.update();
+        }
+      });
+
       registration.onupdatefound = () => {
         const installingWorker = registration.installing;
         if (installingWorker == null) {
