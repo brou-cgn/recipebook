@@ -66,4 +66,16 @@ describe('BottomNavigation CSS sizing', () => {
     expect(darkActiveTabRule).toContain('color: #D4820A;');
     expect(darkActivePillRule).toContain('color: #D4820A;');
   });
+
+  test('keeps the pill container fully opaque so its text/icon colors are not dimmed', () => {
+    const cssPath = path.join(__dirname, 'BottomNavigation.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const pillRule = getRuleBody(css, '.bottom-navigation-pill');
+
+    // Translucency lives in the background color (rgba), not in the
+    // element's own opacity — an opacity < 1 would fade every descendant,
+    // including the active item's orange label/icon.
+    expect(pillRule).toContain('opacity: 1;');
+    expect(pillRule).toMatch(/background:\s*rgba\(/);
+  });
 });
