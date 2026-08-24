@@ -1659,6 +1659,16 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
     // Short pause to let meta tags and initial content render
     await new Promise((r) => setTimeout(r, 2000));
 
+    // A prior test run showed the fixed 2s pause above isn't enough: Instagram
+    // hydrates the <video> element client-side well after domcontentloaded, so
+    // checking for it immediately after the pause found nothing. Wait
+    // explicitly for the element instead of guessing a fixed delay — this
+    // resolves as soon as it appears rather than always paying the full 6s.
+    const videoSelectorFound = await page.waitForSelector('video', {timeout: 6000})
+        .then(() => true)
+        .catch(() => false);
+    console.log(`Instagram <video> element found via waitForSelector: ${videoSelectorFound}`);
+
     // Instagram only issues the video network request once the <video> element
     // starts loading/playing — it does not fire from a static page load alone.
     // Chromium blocks unmuted autoplay, so mute + scroll it into view + play(),
