@@ -1063,8 +1063,9 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       // Same for steps
       const filteredSteps = steps.filter(s => s.text.trim() !== '');
 
-      // Append signature sentence as last step for new recipes (not edits/versions)
-      const signatureSatz = !recipe && !isCreatingVersion ? currentUser?.signatureSatz?.trim() : '';
+      // Append signature sentence as last step for new recipes (not edits/versions),
+      // including reviewing a pending import (isTemp) — those are new recipes too.
+      const signatureSatz = ((!recipe && !isCreatingVersion) || recipe?.isTemp) ? currentUser?.signatureSatz?.trim() : '';
       if (signatureSatz) {
         filteredSteps.push({ type: 'step', text: signatureSatz });
       }

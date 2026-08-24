@@ -3414,6 +3414,45 @@ describe('RecipeForm - Signature Sentence', () => {
       })
     ));
   });
+
+  test('appends signature sentence when reviewing a pending web import (isTemp)', async () => {
+    const userWithSignature = {
+      id: 'user-1',
+      vorname: 'John',
+      nachname: 'Doe',
+      email: 'john@example.com',
+      isAdmin: false,
+      role: 'edit',
+      signatureSatz: 'Guten Appetit!',
+    };
+
+    const tempImportRecipe = {
+      id: 'temp-1',
+      title: 'Importiertes Rezept',
+      ingredients: ['Zutat 1'],
+      steps: ['Importierter Schritt'],
+      authorId: 'user-1',
+      speisekategorie: ['Main Course'],
+      isTemp: true,
+    };
+
+    render(
+      <RecipeForm
+        recipe={tempImportRecipe}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={userWithSignature}
+      />
+    );
+
+    fireEvent.submit(document.querySelector('.recipe-form'));
+
+    await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        steps: ['Importierter Schritt', 'Guten Appetit!'],
+      })
+    ));
+  });
 });
 
 describe('RecipeForm - Group Assignment Indicator', () => {
