@@ -43,16 +43,27 @@ describe('BottomNavigation CSS sizing', () => {
     expect(darkTabRule).toContain('color: #E0D5C7;');
   });
 
-  test('uses unified label color for active and inactive tabs in dark mode', () => {
+  test('uses beige label color for inactive tabs in dark mode', () => {
     const cssPath = path.join(__dirname, 'BottomNavigation.css');
     const css = fs.readFileSync(cssPath, 'utf8');
     const darkLabelRule = getRuleBody(css, '[data-theme="dark"] .bottom-navigation__label');
-    const darkActiveTabRule = getRuleBody(
-      css,
-      '[data-theme="dark"] .bottom-navigation__tab--active'
-    );
 
     expect(darkLabelRule).toContain('color: #E0D5C7;');
-    expect(darkActiveTabRule).toContain('color: #E0D5C7;');
+  });
+
+  test('highlights the active tab and pill item in orange in dark mode', () => {
+    const cssPath = path.join(__dirname, 'BottomNavigation.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const darkActiveTabRule = getRuleBody(
+      css,
+      '[data-theme="dark"] .bottom-navigation__tab--active,\n[data-theme="dark"] .bottom-navigation__tab--active .bottom-navigation__label'
+    );
+    const darkActivePillRule = getRuleBody(
+      css,
+      '[data-theme="dark"] .bottom-navigation-pill__item--active'
+    );
+
+    expect(darkActiveTabRule).toContain('color: #D4820A;');
+    expect(darkActivePillRule).toContain('color: #D4820A;');
   });
 });
