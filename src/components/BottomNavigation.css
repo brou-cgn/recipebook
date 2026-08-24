@@ -265,7 +265,24 @@
   color: #D4820A;
 }
 
+/*
+ * The generic `[data-theme="dark"] span { color: #e8e8e8 }` rule in
+ * darkMode.css matches these icon-wrapper spans directly, which beats mere
+ * inheritance from the active tab/item's orange — so the icon needs its
+ * own same-specificity-class override here, same as the label above.
+ */
+[data-theme="dark"] .bottom-navigation__tab--active .bottom-navigation__icon,
+[data-theme="dark"] .bottom-navigation__tab--active .bottom-navigation__icon-wrapper {
+  color: #D4820A;
+}
+
 [data-theme="dark"] .bottom-navigation-pill__item--active {
+  color: #D4820A;
+}
+
+[data-theme="dark"] .bottom-navigation-pill__item--active .bottom-navigation-pill__label,
+[data-theme="dark"] .bottom-navigation-pill__item--active .bottom-navigation__icon,
+[data-theme="dark"] .bottom-navigation-pill__item--active .bottom-navigation__icon-wrapper {
   color: #D4820A;
 }
 

@@ -78,4 +78,24 @@ describe('BottomNavigation CSS sizing', () => {
     expect(pillRule).toContain('opacity: 1;');
     expect(pillRule).toMatch(/background:\s*rgba\(/);
   });
+
+  test('overrides the generic dark-mode span color for active tab/pill icons', () => {
+    const cssPath = path.join(__dirname, 'BottomNavigation.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+
+    // darkMode.css sets `[data-theme="dark"] span { color: #e8e8e8 }`, which
+    // matches the icon-wrapper spans directly and beats plain inheritance
+    // from the active tab/item's orange color, so each needs its own rule.
+    const darkActiveTabIconRule = getRuleBody(
+      css,
+      '[data-theme="dark"] .bottom-navigation__tab--active .bottom-navigation__icon,\n[data-theme="dark"] .bottom-navigation__tab--active .bottom-navigation__icon-wrapper'
+    );
+    const darkActivePillDescendantsRule = getRuleBody(
+      css,
+      '[data-theme="dark"] .bottom-navigation-pill__item--active .bottom-navigation-pill__label,\n[data-theme="dark"] .bottom-navigation-pill__item--active .bottom-navigation__icon,\n[data-theme="dark"] .bottom-navigation-pill__item--active .bottom-navigation__icon-wrapper'
+    );
+
+    expect(darkActiveTabIconRule).toContain('color: #D4820A;');
+    expect(darkActivePillDescendantsRule).toContain('color: #D4820A;');
+  });
 });
