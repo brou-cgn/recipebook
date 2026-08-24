@@ -1858,7 +1858,6 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
           authorId={initialWebImportAuthorId}
           userId={currentUser?.id}
           importContext={importContext}
-          webImportPinEnabled={currentUser?.webImportPinEnabled || false}
         />
       )}
 

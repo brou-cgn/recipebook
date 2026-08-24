@@ -3,16 +3,11 @@ import './WebImportModal.css';
 import { normalizeImportedUrl } from '../utils/webImportService';
 import { runWebImport } from '../utils/importRunners';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
-import { isWebImportUnlocked, verifyWebImportPin } from '../utils/webImportPin';
 
-function WebImportModal({ onCancel, onImported, initialUrl = '', authorId = '', userId = '', importContext = {}, webImportPinEnabled = false }) {
+function WebImportModal({ onCancel, onImported, initialUrl = '', authorId = '', userId = '', importContext = {} }) {
   const [url, setUrl] = useState(() => normalizeImportedUrl(initialUrl));
-  const [pin, setPin] = useState('');
   const [error, setError] = useState('');
-  const [verifyingPin, setVerifyingPin] = useState(false);
   const { enqueueImportJob } = useRecipeImportQueue();
-
-  const pinRequired = webImportPinEnabled && !isWebImportUnlocked();
 
   useEffect(() => {
     setUrl(normalizeImportedUrl(initialUrl));
@@ -46,22 +41,6 @@ function WebImportModal({ onCancel, onImported, initialUrl = '', authorId = '', 
       return;
     }
 
-    if (webImportPinEnabled && !isWebImportUnlocked()) {
-      if (!pin.trim()) {
-        setError('Bitte gib deinen Webimport-PIN ein');
-        return;
-      }
-      setVerifyingPin(true);
-      try {
-        await verifyWebImportPin(pin.trim());
-      } catch (pinError) {
-        setVerifyingPin(false);
-        setError(pinError.message);
-        return;
-      }
-      setVerifyingPin(false);
-    }
-
     enqueueImportJob({
       label: normalizedUrl,
       userId,
@@ -79,11 +58,10 @@ function WebImportModal({ onCancel, onImported, initialUrl = '', authorId = '', 
   // Handle URL submission from the form
   const handleSubmit = () => submitUrl(url);
 
-  // Auto-submit when initialUrl is provided and valid. Skipped while a PIN
-  // still needs to be entered – the user has to confirm it manually first.
+  // Auto-submit when initialUrl is provided and valid.
   useEffect(() => {
     const normalizedInitialUrl = normalizeImportedUrl(initialUrl);
-    if (normalizedInitialUrl && isValidUrl(normalizedInitialUrl) && !pinRequired) {
+    if (normalizedInitialUrl && isValidUrl(normalizedInitialUrl)) {
       submitUrl(normalizedInitialUrl);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -120,26 +98,6 @@ function WebImportModal({ onCancel, onImported, initialUrl = '', authorId = '', 
               />
             </div>
 
-            {pinRequired && (
-              <div className="url-input-container">
-                <label htmlFor="webImportPinInput">Webimport-PIN:</label>
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  id="webImportPinInput"
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value)}
-                  placeholder="PIN eingeben"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleSubmit();
-                    }
-                  }}
-                />
-              </div>
-            )}
-
             <div className="url-input-hint">
               <p>Tipp: Die Website wird automatisch erfasst und das Rezept extrahiert.</p>
               <p>Instagram Reels werden direkt unterstützt – die Caption wird automatisch ausgelesen.</p>
@@ -158,8 +116,8 @@ function WebImportModal({ onCancel, onImported, initialUrl = '', authorId = '', 
           <button className="cancel-button" onClick={onCancel}>
             Abbrechen
           </button>
-          <button className="submit-button" onClick={handleSubmit} disabled={verifyingPin}>
-            {verifyingPin ? 'PIN wird geprüft…' : 'Import starten'}
+          <button className="submit-button" onClick={handleSubmit}>
+            Import starten
           </button>
         </div>
       </div>

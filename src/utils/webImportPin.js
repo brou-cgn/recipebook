@@ -1,56 +1,19 @@
 /**
  * Webimport-PIN
- * Client-side helpers around the setWebImportPin/verifyWebImportPin Cloud
- * Functions. The PIN itself never lands in Firestore in plaintext or
- * reversible form – functions/webImportPin.js only ever stores a salted hash
- * in a subcollection the client cannot read (see firestore.rules).
+ * Client-side helpers around the setWebImportPin Cloud Function. The PIN
+ * itself never lands in Firestore in plaintext or reversible form –
+ * functions/webImportPin.js only ever stores a salted hash in a
+ * subcollection the client cannot read (see firestore.rules).
  *
- * A successful verifyWebImportPin() call opens a server-side "unlock window"
- * (see UNLOCK_MINUTES in functions/webImportPin.js) during which the actual
- * import Cloud Functions accept requests without asking for the PIN again.
- * unlockedUntilMs below mirrors that window client-side (slightly shorter)
- * purely so the UI can hide the PIN field once unlocked for this tab – the
- * server-side check is the actual security boundary.
+ * The PIN protects only the Apple-Shortcut import path (importRecipeShortcut
+ * in functions/index.js, checked via requireShortcutPin on every request –
+ * the Shortcut authenticates via a long-lived API key with no session to
+ * stay "unlocked"). In-app imports through the logged-in web app never need
+ * this PIN.
  */
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import { getCallableErrorDetails } from './webImportService';
-
-const CLIENT_UNLOCK_WINDOW_MS = 25 * 60 * 1000;
-
-let unlockedUntilMs = 0;
-
-/**
- * @returns {boolean} Whether this tab has verified the PIN recently enough
- *   that the import Cloud Functions should still accept requests without it.
- */
-export function isWebImportUnlocked() {
-  return Date.now() < unlockedUntilMs;
-}
-
-/**
- * Verify the given PIN against the caller's configured Webimport-PIN.
- * @param {string} pin - The PIN as entered by the user.
- * @returns {Promise<void>} Resolves on success; throws with a German message on failure.
- */
-export async function verifyWebImportPin(pin) {
-  try {
-    await httpsCallable(functions, 'verifyWebImportPin')({ pin });
-    unlockedUntilMs = Date.now() + CLIENT_UNLOCK_WINDOW_MS;
-  } catch (error) {
-    const { code, message } = getCallableErrorDetails(error);
-    if (code === 'unauthenticated') {
-      throw new Error('Bitte melde dich an, um den Webimport-PIN zu prüfen.');
-    } else if (code === 'permission-denied') {
-      throw new Error(message || 'Falscher PIN.');
-    } else if (code === 'resource-exhausted') {
-      throw new Error(message || 'Zu viele Fehlversuche. Bitte später erneut versuchen.');
-    } else if (message) {
-      throw new Error(message);
-    }
-    throw new Error('PIN-Prüfung fehlgeschlagen. Bitte versuche es erneut.');
-  }
-}
 
 /**
  * Set or change the caller's Webimport-PIN.
@@ -74,10 +37,9 @@ export async function setWebImportPin(pin) {
 }
 
 /**
- * Remove the caller's Webimport-PIN entirely (Webimport then works unprotected again).
+ * Remove the caller's Webimport-PIN entirely (the Kurzbefehl-Import then works unprotected again).
  * @returns {Promise<void>}
  */
 export async function clearWebImportPin() {
   await setWebImportPin(null);
-  unlockedUntilMs = 0;
 }
