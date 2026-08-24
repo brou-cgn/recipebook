@@ -3,27 +3,21 @@ import './UniversalImportModal.css';
 import { fileToBase64 } from '../utils/imageUtils';
 import { runUniversalImport } from '../utils/importRunners';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
-import { isWebImportUnlocked, verifyWebImportPin } from '../utils/webImportPin';
 
 function buildInitialText(title, text) {
   return [title, text].filter(Boolean).join('\n\n');
 }
 
-function UniversalImportModal({ onCancel, initialImages = [], initialText = '', initialUrl = '', initialTitle = '', userId = '', importContext = {}, webImportPinEnabled = false }) {
+function UniversalImportModal({ onCancel, initialImages = [], initialText = '', initialUrl = '', initialTitle = '', userId = '', importContext = {} }) {
   const [images, setImages] = useState(initialImages);
   const [text, setText] = useState(buildInitialText(initialTitle, initialText));
   const [url, setUrl] = useState(initialUrl);
-  const [pin, setPin] = useState('');
-  const [verifyingPin, setVerifyingPin] = useState(false);
   const [error, setError] = useState('');
   const { enqueueImportJob } = useRecipeImportQueue();
 
   const fileInputRef = useRef(null);
 
   const hasContent = images.length > 0 || text.trim() || url.trim();
-  // A PIN is only needed for the URL leg – images/text alone never call the
-  // Webimport Cloud Functions (see runUniversalImport in importRunners.js).
-  const pinRequired = url.trim() && webImportPinEnabled && !isWebImportUnlocked();
 
   const handleAddImages = async (e) => {
     const files = Array.from(e.target.files);
@@ -46,22 +40,6 @@ function UniversalImportModal({ onCancel, initialImages = [], initialText = '', 
     if (!hasContent) {
       setError('Bitte fügen Sie mindestens einen Inhalt hinzu.');
       return;
-    }
-
-    if (pinRequired) {
-      if (!pin.trim()) {
-        setError('Bitte gib deinen Webimport-PIN ein');
-        return;
-      }
-      setVerifyingPin(true);
-      try {
-        await verifyWebImportPin(pin.trim());
-      } catch (pinError) {
-        setVerifyingPin(false);
-        setError(pinError.message);
-        return;
-      }
-      setVerifyingPin(false);
     }
 
     const snapshot = { images: [...images], text, url };
@@ -114,21 +92,6 @@ function UniversalImportModal({ onCancel, initialImages = [], initialText = '', 
               onChange={(e) => setUrl(e.target.value)}
             />
           </div>
-
-          {pinRequired && (
-            <div className="universal-import-field">
-              <label className="universal-import-label">Webimport-PIN</label>
-              <input
-                type="password"
-                inputMode="numeric"
-                autoComplete="off"
-                className="universal-import-url-input"
-                placeholder="PIN eingeben"
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
-              />
-            </div>
-          )}
 
           {/* Text field */}
           <div className="universal-import-field">
@@ -183,9 +146,9 @@ function UniversalImportModal({ onCancel, initialImages = [], initialText = '', 
           <button
             className="universal-analyse-button"
             onClick={handleQueueImport}
-            disabled={!hasContent || verifyingPin}
+            disabled={!hasContent}
           >
-            {verifyingPin ? 'PIN wird geprüft…' : 'Import starten'}
+            Import starten
           </button>
         </div>
       </div>

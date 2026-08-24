@@ -43,8 +43,10 @@ Für den Fall „ich habe eine Rezept-URL und will sie importieren" (der Anwendu
 **Body:**
 
 ```json
-{ "url": "<Rezept-URL, z. B. aus „Text abrufen aus Eingabe“>" }
+{ "url": "<Rezept-URL, z. B. aus „Text abrufen aus Eingabe“>", "pin": "<dein Webimport-PIN>" }
 ```
+
+Das Feld `pin` ist nur nötig, wenn du im Hamburger-Menü unter „Kurzbefehl installieren" einen Webimport-PIN vergeben hast (das ist inzwischen Voraussetzung für den Download des Kurzbefehls) – ohne `pin` schlägt der Aufruf dann mit HTTP 403 fehl. Der PIN schützt ausschließlich diesen Kurzbefehl-Endpoint, der über den dauerhaft gültigen API Key statt einer Session läuft; er wird deshalb bei jedem Aufruf neu mitgeschickt und nicht wie in der App einmalig „entsperrt". Für Importe direkt in der eingeloggten Web-App wird kein PIN verlangt.
 
 **Antwort (HTTP 200) – Job wurde eingereiht, noch nicht fertig importiert:**
 
