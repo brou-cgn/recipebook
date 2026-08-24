@@ -1755,6 +1755,19 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
         `bodyTextLength=${extractedData.bodyText.length}`,
     );
 
+    // Grab the (anonymous) session cookies Instagram set during this page visit
+    // while the browser is still around – the out-of-band video fetch below
+    // otherwise looks like plain hotlinking to Instagram's CDN (no Referer, no
+    // cookies) and gets rejected. This is not a user login, just the same
+    // request context the browser already established for itself.
+    let cookieHeader = '';
+    try {
+      const cookies = await page.cookies();
+      cookieHeader = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+    } catch (cookieError) {
+      console.warn('Instagram cookie capture warning:', cookieError.message || cookieError);
+    }
+
     await browser.close();
     browser = null;
 
@@ -1762,6 +1775,13 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
     if (videoUrl) {
       try {
         const videoResponse = await fetch(videoUrl, {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) ' +
+              'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+            'Referer': 'https://www.instagram.com/',
+            ...(cookieHeader ? {'Cookie': cookieHeader} : {}),
+          },
           signal: AbortSignal.timeout(15000),
         });
 
