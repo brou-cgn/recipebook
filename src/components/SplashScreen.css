@@ -102,6 +102,15 @@
   }
 }
 
+/* Reload forced by a freshly activated service worker update: the tagline
+   already played its entrance once moments ago, so skip it here instead of
+   visibly re-flashing it. See src/utils/swUpdateReloadFlag.js. */
+.splash-screen--instant .splash-screen__logo,
+.splash-screen--instant .splash-screen__tagline,
+.splash-screen--instant .splash-screen__hairline {
+  animation: none;
+}
+
 [data-theme="dark"] .splash-screen {
   background: #121212;
 }
