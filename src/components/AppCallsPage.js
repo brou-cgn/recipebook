@@ -41,6 +41,7 @@ import {
   buildPendingNutritionReferenceDraft,
   classifyIngredientWords,
   hasMissingIngredientIDs,
+  initializeCommonAdjectivesFromFirebase,
   initializeCommonUnitsFromFirebase,
   initializeIgnoredMarkersFromFirebase,
   normalizeIngredientNameForIdMatching,
@@ -307,6 +308,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         return acc;
       }, {});
       setCommonAdjectives(loadedGroups);
+      Promise.resolve(initializeCommonAdjectivesFromFirebase({ forceReload: true })).catch((error) => {
+        console.warn('Common adjectives initialization failed after loading grouped adjectives.', error);
+      });
     }).catch((error) => {
       console.error('Error loading common adjectives:', error);
       setCommonAdjectives(getEmptyCommonAdjectiveGroups());
@@ -980,6 +984,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     setStandardTermsFeedback('');
     try {
       await saveCommonAdjectives(updatedGroups, currentUser?.id);
+      await initializeCommonAdjectivesFromFirebase({ forceReload: true });
       setStandardTermsFeedback('Standard-Adjektivgruppen gespeichert.');
     } catch (err) {
       console.error('Error saving common adjectives:', err);
@@ -997,6 +1002,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     setStandardTermsFeedback('');
     try {
       await saveCommonAdjectives(updatedGroups, currentUser?.id);
+      await initializeCommonAdjectivesFromFirebase({ forceReload: true });
       setStandardTermsFeedback('Standard-Adjektivgruppen gespeichert.');
     } catch (err) {
       console.error('Error saving common adjectives:', err);
