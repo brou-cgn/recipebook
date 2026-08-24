@@ -1633,15 +1633,28 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
     });
 
     // Navigate to the Instagram Reel page
+    let navigationStatus = null;
     try {
-      await page.goto(url, {
+      const gotoResponse = await page.goto(url, {
         waitUntil: 'domcontentloaded',
         timeout: 30000,
       });
+      navigationStatus = gotoResponse ? gotoResponse.status() : null;
     } catch (navError) {
       // Continue even if navigation times out – we may still have partial content
       console.warn(`Navigation warning for ${url}:`, navError.message);
     }
+
+    // Diagnostic: an empty scrape result is ambiguous on its own (timing? blocked?
+    // private post?) – logging the actual navigation outcome tells us which.
+    // Instagram redirects unauthenticated/suspicious traffic (e.g. cloud IPs) to
+    // /accounts/login/ instead of serving the Reel page.
+    const finalUrl = page.url();
+    const likelyLoginWall = /\/accounts\/login/.test(finalUrl);
+    console.log(
+        `Instagram navigation result: status=${navigationStatus}, finalUrl=${finalUrl}, ` +
+        `likelyLoginWall=${likelyLoginWall}`,
+    );
 
     // Short pause to let meta tags and initial content render
     await new Promise((r) => setTimeout(r, 2000));
@@ -1651,18 +1664,22 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
     // Chromium blocks unmuted autoplay, so mute + scroll it into view + play(),
     // then poll (instead of trusting the fixed pause above) until the response
     // listener registered above captures the .mp4 URL or this times out.
+    let videoElementPresent = false;
     try {
-      await page.evaluate(() => {
+      videoElementPresent = await page.evaluate(() => {
         const videoEl = document.querySelector('video');
         if (videoEl) {
           videoEl.muted = true;
           videoEl.scrollIntoView({behavior: 'auto', block: 'center'});
           videoEl.play().catch(() => {});
+          return true;
         }
+        return false;
       });
     } catch (playError) {
       console.warn('Instagram video autoplay trigger warning:', playError.message || playError);
     }
+    console.log(`Instagram <video> element present in DOM: ${videoElementPresent}`);
 
     const videoCaptureDeadline = Date.now() + 5000;
     while (!videoUrl && Date.now() < videoCaptureDeadline) {
@@ -1705,6 +1722,12 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
 
       return {title, description, bodyText};
     });
+
+    console.log(
+        `Instagram page content extracted: titleLength=${extractedData.title.length}, ` +
+        `descriptionLength=${extractedData.description.length}, ` +
+        `bodyTextLength=${extractedData.bodyText.length}`,
+    );
 
     await browser.close();
     browser = null;
