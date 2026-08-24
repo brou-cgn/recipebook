@@ -777,7 +777,13 @@ async function finalizeImportJob(jobId, authorId, aiResult) {
       });
     });
   } catch (error) {
+    // Previously logged-and-swallowed: the job was left stuck on its prior
+    // importStatus forever (no error, no result) since nothing else marks it
+    // failed once execution reaches this point. Write the error state too so
+    // it surfaces in the app (and becomes retryable via "Neu starten")
+    // instead of silently hanging.
     console.error(`finalizeImportJob: failed to write result for job ${jobId}:`, error);
+    await failImportJob(jobId, error);
   }
 }
 
@@ -7833,7 +7839,19 @@ async function runImportFromVideoSource(source, {apiKey} = {}) {
     throw error;
   }
 
-  return callGeminiTextAPI(transcribedText, language, apiKey);
+  // callGeminiTextAPI's prompt tells the model it's receiving raw HTML from a
+  // social-media page ("bereinige alle HTML-Artefakte...") — true for the web
+  // and Instagram legs, but this is a plain spoken-word transcript with no
+  // HTML at all. Label it the same way the Instagram leg labels its own
+  // transcription segment (see the 'Gesprochener Inhalt' part above), so the
+  // model doesn't go looking for markup to strip and skip past the actual
+  // recipe content, e.g. only pull a title with empty ingredients/steps.
+  const transcriptionLabel = language === 'de' ?
+    'Gesprochener Inhalt (Audiotranskription)' :
+    'Spoken Content (Audio Transcription)';
+  const labeledTranscript = `${transcriptionLabel}:\n${transcribedText}`;
+
+  return callGeminiTextAPI(labeledTranscript, language, apiKey);
 }
 
 /**
