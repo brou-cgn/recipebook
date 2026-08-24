@@ -173,20 +173,69 @@ describe('Firestore Utilities', () => {
         nested: 'value',
         count: 42
       };
-      
+
       const input = {
         title: 'Test Recipe',
         metadata: regularObj,
         portionen: 4
       };
-      
+
       const result = removeUndefinedFields(input);
-      
+
       expect(result).toEqual({
         title: 'Test Recipe',
         metadata: regularObj,
         portionen: 4
       });
+    });
+
+    it('should remove undefined fields nested inside plain objects', () => {
+      const input = {
+        title: 'Test Recipe',
+        nutrition: { calories: 250, protein: undefined }
+      };
+
+      const result = removeUndefinedFields(input);
+
+      expect(result).toEqual({
+        title: 'Test Recipe',
+        nutrition: { calories: 250 }
+      });
+    });
+
+    it('should remove undefined fields nested inside array items (e.g. AI-imported ingredients)', () => {
+      const input = {
+        ingredients: [
+          { name: 'Salz', amount: undefined },
+          { name: 'Mehl', amount: '200g' }
+        ]
+      };
+
+      const result = removeUndefinedFields(input);
+
+      expect(result).toEqual({
+        ingredients: [
+          { name: 'Salz' },
+          { name: 'Mehl', amount: '200g' }
+        ]
+      });
+    });
+
+    it('should drop undefined entries from plain arrays', () => {
+      const input = { tags: ['a', undefined, 'b'] };
+
+      const result = removeUndefinedFields(input);
+
+      expect(result).toEqual({ tags: ['a', 'b'] });
+    });
+
+    it('should not touch nested objects/arrays that contain no undefined values', () => {
+      const nestedArray = [{ name: 'Mehl', amount: '200g' }];
+      const input = { ingredients: nestedArray, title: 'Test' };
+
+      const result = removeUndefinedFields(input);
+
+      expect(result.ingredients).toBe(nestedArray); // same reference, untouched
     });
   });
 });
