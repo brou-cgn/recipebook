@@ -151,11 +151,11 @@
   display: none;
   height: 64px;
   border-radius: 999px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.85);
   border: 1px solid #ddd;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   overflow: hidden;
-  opacity: 0.85;
+  opacity: 1;
   transform: translateY(0);
   transition: opacity 0.28s ease, transform 0.34s cubic-bezier(.22,1,.36,1);
 }
@@ -248,7 +248,7 @@
 }
 
 [data-theme="dark"] .bottom-navigation-pill {
-  background: #2a2a2a;
+  background: rgba(42, 42, 42, 0.85);
   border-color: #555;
 }
 
