@@ -56,15 +56,23 @@ function registerValidSW(swUrl, config) {
   navigator.serviceWorker
     .register(swUrl)
     .then((registration) => {
+      // Browsers throttle their own automatic update checks on navigation to
+      // roughly once every 24h per registration, independent of the
+      // no-cache header on service-worker.js — so simply reloading or fully
+      // relaunching the installed PWA is not guaranteed to notice a new
+      // deploy. Force an explicit check on every load instead.
+      registration.update();
+
       // Alle 60 Minuten auf Updates prüfen
       setInterval(() => {
         registration.update();
       }, 60 * 60 * 1000);
 
-      // iOS suspends this timer while the installed PWA is backgrounded, so
-      // relying on it alone can leave a reopened app on a stale service
-      // worker for a long time. Also check right when the app comes back
-      // into view, which is exactly when a user would notice stale content.
+      // The interval above only helps while this JS context keeps running;
+      // iOS suspends it while the installed PWA is backgrounded, and a full
+      // close+relaunch restarts it from zero. Also check right when the app
+      // comes back into view (resumed from background rather than relaunched),
+      // which is exactly when a user would notice stale content.
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
           registration.update();
