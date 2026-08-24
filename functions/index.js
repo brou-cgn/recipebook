@@ -1691,6 +1691,17 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
     }
     console.log(`Instagram <video> element present in DOM: ${videoElementPresent}`);
 
+    // Two rounds of "wait longer" (fixed pause, then explicit waitForSelector)
+    // both still found no <video> element. That rules out a hydration-timing
+    // issue — something else is being served instead (login gate? cookie
+    // banner? content-unavailable notice?). Rather than guess a third time,
+    // log what's actually visible so the next test run tells us directly.
+    // TEMPORARY debug aid — remove once the actual cause is confirmed.
+    const debugBodySnippet = await page.evaluate(() =>
+      (document.body && document.body.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 1500),
+    ).catch(() => '');
+    console.log(`Instagram page body text snippet (debug): ${debugBodySnippet}`);
+
     const videoCaptureDeadline = Date.now() + 5000;
     while (!videoUrl && Date.now() < videoCaptureDeadline) {
       await new Promise((r) => setTimeout(r, 250));
