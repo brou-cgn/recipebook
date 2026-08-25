@@ -99,6 +99,8 @@ const NAV_ICON_KEYS_ACTIVE = {
 
 // Tabs shown in the compact pill/carousel representation instead of the full bar.
 const PILL_TAB_KEYS = ['recipes', 'menus', 'atelier'];
+// Tab centered when the pill first opens, before the active tab takes over centering.
+const PILL_DEFAULT_CENTER_KEY = 'menus';
 
 function resolveTabIcon(tab, isActive, buttonIcons, isDarkMode) {
   const Icon = ICONS[tab.key];
@@ -151,6 +153,7 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect, badgeCounts })
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const railRef = useRef(null);
+  const wasPillModeRef = useRef(false);
 
   const isPillMode = PILL_TAB_KEYS.includes(activeKey);
 
@@ -173,16 +176,26 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect, badgeCounts })
   }, []);
 
   useEffect(() => {
-    if (!isPillMode) return;
+    if (!isPillMode) {
+      wasPillModeRef.current = false;
+      return;
+    }
     const rail = railRef.current;
     if (!rail) return;
-    const index = tabs.findIndex((tab) => tab.key === activeKey);
+
+    // The pill carousel always opens centered on Festtafel; once open, the
+    // already-active tab takes over centering (see below) on every further change.
+    const justOpened = !wasPillModeRef.current;
+    wasPillModeRef.current = true;
+    const centerKey = justOpened ? PILL_DEFAULT_CENTER_KEY : activeKey;
+
+    const index = tabs.findIndex((tab) => tab.key === centerKey);
     if (index < 0) return;
     const target = rail.children[index];
     if (!target) return;
     const left = target.offsetLeft - (rail.clientWidth - target.offsetWidth) / 2;
     if (typeof rail.scrollTo === 'function') {
-      rail.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+      rail.scrollTo({ left: Math.max(0, left), behavior: justOpened ? 'auto' : 'smooth' });
     }
   }, [activeKey, tabs, isPillMode]);
 
