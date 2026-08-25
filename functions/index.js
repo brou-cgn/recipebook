@@ -1726,12 +1726,7 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
       'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
     });
 
-    // Navigate to the Instagram Reel page. Instagram's bot detection turned out
-    // to be probabilistic rather than a hard per-request block: confirmed via
-    // logging (now removed) that two test runs reached the real Reel page
-    // while a third got redirected to /accounts/login/. A single retry with a
-    // fresh navigation is a cheap way to recover from that without needing
-    // proxies or an authenticated session.
+    // Navigate to the Instagram Reel page.
     const navigateAndCheckLoginWall = async () => {
       let status = null;
       try {
@@ -1749,7 +1744,7 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
       return {status, currentUrl, loginWall};
     };
 
-    let navResult = await navigateAndCheckLoginWall();
+    const navResult = await navigateAndCheckLoginWall();
     console.log(
         `Instagram navigation result: status=${navResult.status}, finalUrl=${navResult.currentUrl}, ` +
         `likelyLoginWall=${navResult.loginWall}`,
@@ -1760,21 +1755,6 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
         Boolean(navResult.status) && navResult.status < 400 && !navResult.loginWall,
         `status=${navResult.status} url=${navResult.currentUrl} loginWall=${navResult.loginWall}`,
     );
-
-    if (navResult.loginWall) {
-      console.warn('Instagram redirected to login wall; retrying navigation once.');
-      await new Promise((r) => setTimeout(r, 1500));
-      navResult = await navigateAndCheckLoginWall();
-      console.log(
-          `Instagram navigation retry result: status=${navResult.status}, finalUrl=${navResult.currentUrl}, ` +
-          `likelyLoginWall=${navResult.loginWall}`,
-      );
-      recordStep(
-          'login_wall_retry',
-          !navResult.loginWall,
-          `status=${navResult.status} url=${navResult.currentUrl} loginWall=${navResult.loginWall}`,
-      );
-    }
 
     // Short pause to let meta tags and initial content render
     await new Promise((r) => setTimeout(r, 2000));
@@ -1979,18 +1959,17 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
     if (!combinedText.trim() || combinedText.length < MIN_COMBINED_TEXT_LENGTH) {
       // Distinguish the two empty-result causes so the user gets an actionable
       // message instead of a generic "nothing found": a login-wall redirect
-      // (even after the retry above) means Instagram blocked this request
-      // entirely — no caption, no video — and simply trying again likely
-      // won't help either, since we've observed it isn't a per-request coin
-      // flip but more like a temporary block against this IP/URL. Point the
+      // means Instagram blocked this request entirely — no caption, no video —
+      // and it reflects a temporary block against this IP/URL rather than a
+      // per-request coin flip, so retrying immediately won't help. Point the
       // user at the video-upload Shortcut path instead, which never touches
       // Instagram from our server at all.
       const notFoundError = navResult.loginWall ?
         new Error(
-            'Instagram hat diese Anfrage blockiert und keine Inhalte ausgeliefert (Login-Wall) – ' +
-            'auch nach einem erneuten Versuch. Ein weiterer Import-Versuch wird vermutlich ' +
-            'genauso fehlschlagen. Nutze stattdessen den Video-Upload-Kurzbefehl: Video über ' +
-            '„Video speichern" sichern und direkt hochladen statt den Link zu importieren.',
+            'Instagram hat diese Anfrage blockiert und keine Inhalte ausgeliefert (Login-Wall). ' +
+            'Das ist meist eine vorübergehende Sperre – ein sofortiger erneuter Versuch wird ' +
+            'vermutlich genauso fehlschlagen. Nutze stattdessen den Video-Upload-Kurzbefehl: Video ' +
+            'über „Video speichern" sichern und direkt hochladen statt den Link zu importieren.',
         ) :
         new Error(
             'Kein Rezeptinhalt auf der Instagram-Seite gefunden. ' +
