@@ -103,6 +103,53 @@ describe('BottomNavigation icon rendering', () => {
     expect(pill.getByLabelText('Chefkoch')).toBeInTheDocument();
   });
 
+  test('pill centers on Festtafel when it first opens, then centers the active tab afterwards', async () => {
+    const allTabs = [
+      { key: 'home', label: 'Küche' },
+      { key: 'recipes', label: 'Kochbuch' },
+      { key: 'menus', label: 'Festtafel' },
+      { key: 'atelier', label: 'Atelier' },
+      { key: 'chef', label: 'Chefkoch' },
+    ];
+    const labelOrder = allTabs.map((tab) => tab.label);
+
+    const offsetLeftSpy = jest
+      .spyOn(window.HTMLElement.prototype, 'offsetLeft', 'get')
+      .mockImplementation(function offsetLeftMock() {
+        const index = labelOrder.indexOf(this.getAttribute('aria-label'));
+        return index >= 0 ? index * 100 : 0;
+      });
+    const offsetWidthSpy = jest
+      .spyOn(window.HTMLElement.prototype, 'offsetWidth', 'get')
+      .mockReturnValue(100);
+    const clientWidthSpy = jest
+      .spyOn(window.HTMLElement.prototype, 'clientWidth', 'get')
+      .mockReturnValue(300);
+    const scrollToMock = jest.fn();
+    window.HTMLElement.prototype.scrollTo = scrollToMock;
+
+    try {
+      // Opening the pill on "Kochbuch" (recipes) should still center Festtafel first.
+      const { rerender } = render(
+        <BottomNavigation tabs={allTabs} activeKey="recipes" isVisible onSelect={() => {}} />
+      );
+
+      await waitFor(() => expect(getButtonIcons).toHaveBeenCalled());
+      expect(scrollToMock).toHaveBeenLastCalledWith({ left: 100, behavior: 'auto' });
+
+      // Selecting a different pill tab afterwards centers that active tab instead.
+      rerender(
+        <BottomNavigation tabs={allTabs} activeKey="atelier" isVisible onSelect={() => {}} />
+      );
+      expect(scrollToMock).toHaveBeenLastCalledWith({ left: 200, behavior: 'smooth' });
+    } finally {
+      offsetLeftSpy.mockRestore();
+      offsetWidthSpy.mockRestore();
+      clientWidthSpy.mockRestore();
+      delete window.HTMLElement.prototype.scrollTo;
+    }
+  });
+
   test('shows a count badge on a tab with pending items', async () => {
     const { container } = render(
       <BottomNavigation
