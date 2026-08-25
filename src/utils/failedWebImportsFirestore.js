@@ -12,6 +12,18 @@
  *   - title:     string          – the (fallback) recipe title/label at time of dismissal
  *   - userId:    string | null   – authorId of the user who queued/dismissed the import
  *   - createdAt: serverTimestamp
+ *
+ * The same collection also holds a second, server-written kind of entry: a
+ * step-by-step protocol for every Instagram Reel / video import attempt
+ * (success or failure), written by writeImportProtocolEntry in
+ * functions/index.js. Those entries additionally carry:
+ *   - jobId:     string | null   – recipes/{jobId} doc id, when one exists
+ *   - sourceType: string | null  – 'instagram' | 'video'
+ *   - success:   boolean
+ *   - steps:     Array<{step, ok, detail, at}> – what happened, in order
+ *   - expiresAt: Timestamp       – only set when success:true; the entry is
+ *     deleted 7 days later by the nightlyImportProtocolCleanup scheduled
+ *     function. Failed entries have no expiresAt and are kept indefinitely.
  */
 
 import { db } from '../firebase';
