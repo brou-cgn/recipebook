@@ -3654,6 +3654,181 @@ exports.processVideoImportUpload = onObjectFinalized(
     },
 );
 
+/**
+ * Cloud Function: Synchronous Instagram Reel scrape for Shortcuts.
+ *
+ * importRecipeShortcut (above) deliberately queues and returns immediately —
+ * its own comment explains why: "a Shortcut's HTTP call over a mobile
+ * connection has no business staying open" for a 10-30s Puppeteer scrape.
+ * This endpoint exists anyway because the Shortcut itself needs to know,
+ * synchronously, whether the scrape actually found a recipe — so it can
+ * branch to the video-upload fallback (getVideoUploadUrl) on failure instead
+ * of silently landing an error in the review queue. That means holding the
+ * Shortcut's connection open for the full scrape duration (~15-30s observed,
+ * up to the 180s function timeout) is an intentional trade-off here, not an
+ * oversight — accept the latency, or use importRecipeShortcut's queued flow
+ * if that's not acceptable. Only handles Instagram URLs (use
+ * importRecipeShortcut for generic recipe URLs).
+ *
+ * Input (POST JSON body): { url, pin, cuisineTypes?, mealCategories? }
+ * Returns on success (HTTP 200): { success: true, recipeId }
+ * Returns when the scrape ran but found nothing (HTTP 200, not an error
+ * status — the request itself succeeded): { success: false, error,
+ * loginWall: boolean } — loginWall:true means Instagram blocked the request;
+ * the Shortcut should branch to the video-upload flow on any success:false,
+ * loginWall is extra context if you want to branch more narrowly.
+ */
+exports.scrapeInstagramReelShortcut = onRequest(
+    {
+      maxInstances: 5,
+      memory: '4GiB',
+      timeoutSeconds: 180,
+      secrets: [geminiApiKey, shortcutApiKey],
+      invoker: 'public',
+    },
+    async (req, res) => {
+      const origin = req.headers.origin;
+      if (origin && ALLOWED_ORIGINS.includes(origin)) {
+        res.set('Access-Control-Allow-Origin', origin);
+        res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.set(
+            'Access-Control-Allow-Headers',
+            'Content-Type, X-Api-Key, X-User-Email',
+        );
+        if (req.method === 'OPTIONS') {
+          res.status(204).send('');
+          return;
+        }
+      } else if (req.method === 'OPTIONS') {
+        res.status(403).send('');
+        return;
+      }
+
+      if (req.method !== 'POST') {
+        res.status(405).json({success: false, error: 'Method not allowed. Use POST.'});
+        return;
+      }
+
+      const apiKeyHeader = req.headers['x-api-key'];
+      const userEmail = req.headers['x-user-email'];
+      if (!apiKeyHeader || !userEmail) {
+        res.status(401).json({
+          success: false,
+          error: 'Missing authentication headers',
+          requiredHeaders: ['X-Api-Key', 'X-User-Email'],
+        });
+        return;
+      }
+
+      const validApiKey = shortcutApiKey.value();
+      if (!validApiKey) {
+        console.error('scrapeInstagramReelShortcut: SHORTCUT_API_KEY secret is not set');
+        res.status(500).json({
+          success: false,
+          error: 'Server misconfiguration: SHORTCUT_API_KEY secret is not set',
+        });
+        return;
+      }
+
+      let isValidKey = false;
+      try {
+        isValidKey = crypto.timingSafeEqual(
+            Buffer.from(apiKeyHeader),
+            Buffer.from(validApiKey),
+        );
+      } catch (_) {
+        isValidKey = false;
+      }
+      if (!isValidKey) {
+        console.warn('scrapeInstagramReelShortcut: invalid API key attempt');
+        res.status(401).json({success: false, error: 'Invalid API key'});
+        return;
+      }
+
+      const userId = await resolveShortcutUserId(userEmail);
+      const db = admin.firestore();
+      try {
+        const userDoc = userId ? await db.collection('users').doc(userId).get() : null;
+        if (!userId || !userDoc.exists) {
+          res.status(403).json({success: false, error: 'Access denied'});
+          return;
+        }
+        const userData = userDoc.data();
+        const role = userData?.role;
+        const isShortcutUser = userData?.isShortcutUser === true;
+        if (role !== 'edit' && role !== 'admin' && role !== 'moderator' && !isShortcutUser) {
+          res.status(403).json({success: false, error: 'Insufficient permissions'});
+          return;
+        }
+      } catch (err) {
+        console.error('scrapeInstagramReelShortcut: error validating user:', err);
+        res.status(500).json({success: false, error: 'Failed to validate user'});
+        return;
+      }
+
+      let body = req.body;
+      if (!body || (typeof body === 'object' && Object.keys(body).length === 0)) {
+        try {
+          const raw = req.rawBody;
+          if (raw) body = JSON.parse(raw.toString('utf8'));
+        } catch (_) {
+          res.status(400).json({success: false, error: 'Invalid JSON body'});
+          return;
+        }
+      }
+
+      const {url, pin, cuisineTypes, mealCategories} = body || {};
+      if (!url || typeof url !== 'string') {
+        res.status(400).json({success: false, error: 'Missing required field: url (string)'});
+        return;
+      }
+      if (!isInstagramUrl(url)) {
+        res.status(400).json({
+          success: false,
+          error: 'URL must be a valid Instagram URL (e.g. https://www.instagram.com/reel/... or .../p/...)',
+        });
+        return;
+      }
+
+      try {
+        await requireShortcutPin(userId, pin);
+      } catch (pinErr) {
+        const status = pinErr.code === 'resource-exhausted' ? 429 :
+          pinErr.code === 'invalid-argument' ? 400 : 403;
+        res.status(status).json({success: false, error: pinErr.message || 'PIN erforderlich.'});
+        return;
+      }
+
+      const apiKey = geminiApiKey.value();
+      if (!apiKey) {
+        res.status(500).json({
+          success: false,
+          error: 'AI service not configured. Please contact administrator.',
+        });
+        return;
+      }
+
+      console.log(`scrapeInstagramReelShortcut: sync scrape requested by user ${userId} for URL: ${url}`);
+
+      try {
+        const result = await runImportFromInstagram(url, {language: 'de', apiKey, cuisineTypes, mealCategories});
+        const docRef = await db.collection('recipes').add({
+          ...buildRecipeFieldsFromResult(result, userId),
+          isTemp: true,
+        });
+        console.log(`scrapeInstagramReelShortcut: recipe ${docRef.id} created for user ${userId}`);
+        res.status(200).json({success: true, recipeId: docRef.id});
+      } catch (error) {
+        console.error(`scrapeInstagramReelShortcut: scrape failed for user ${userId}:`, error);
+        const loginWall = /Login-Wall/i.test(error.message || '');
+        // 200, not 4xx/5xx: the request itself was handled correctly, the
+        // scrape just didn't find a recipe — the Shortcut branches on the
+        // success field in the body, not the HTTP status.
+        res.status(200).json({success: false, error: error.message, loginWall});
+      }
+    },
+);
+
 // ─── End of Hybrid Import Architecture ────────────────────────────────────────
 
 /**

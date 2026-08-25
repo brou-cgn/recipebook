@@ -14,7 +14,7 @@ Der Link ist außerdem im Hamburger-Menü der App unter **Hilfe → Kurzbefehl i
 
 ## Authentifizierung
 
-Alle Shortcut-Endpoints (`importRecipeShortcut`, `addRecipeViaAPI`, `createRecipeImportFromText`, `getVideoUploadUrl`) verwenden **API Key Authentifizierung** statt Firebase Auth Tokens. Ein API Key ist dauerhaft gültig und muss nur einmal im Kurzbefehl hinterlegt werden – derselbe Key funktioniert für alle Endpoints.
+Alle Shortcut-Endpoints (`importRecipeShortcut`, `addRecipeViaAPI`, `createRecipeImportFromText`, `getVideoUploadUrl`, `scrapeInstagramReelShortcut`) verwenden **API Key Authentifizierung** statt Firebase Auth Tokens. Ein API Key ist dauerhaft gültig und muss nur einmal im Kurzbefehl hinterlegt werden – derselbe Key funktioniert für alle Endpoints.
 
 - **`X-Api-Key`** Header: dein persönlicher API Key (als Firebase Secret gespeichert)
 - **`X-User-Email`** Header: deine registrierte E-Mail-Adresse (wird serverseitig per `admin.auth().getUserByEmail` zur Firebase User ID aufgelöst – du musst deine UID nicht mehr nachschlagen)
@@ -120,6 +120,55 @@ Der Import läuft in zwei Kurzbefehl-Schritten ab:
 Der `Content-Type` muss exakt `video/mp4` sein – die Upload-URL ist serverseitig genau darauf signiert, jeder andere Wert wird von Google Cloud Storage mit HTTP 403 abgelehnt.
 
 Danach ist nichts weiter zu tun: Sobald der Upload abgeschlossen ist, übernimmt eine Storage-getriggerte Cloud Function automatisch die Transkription (Gemini) und Rezept-Extraktion; das fertige Rezept erscheint wie gewohnt in der Review-Queue „Neue Rezepte". Das hochgeladene Video wird danach von unserem Server automatisch gelöscht.
+
+---
+
+## Kombinierter Ablauf: erst URL-Scrape, bei Fehler automatisch Video-Upload
+
+Für den Fall „probiere zuerst den bequemen URL-Import, und nur falls Instagram blockiert, mach automatisch mit dem Video-Upload weiter" – alles in einem Kurzbefehl-Lauf, ohne dass du manuell zwischen zwei Kurzbefehlen wählen musst.
+
+**Wichtiger Unterschied zu `importRecipeShortcut`:** Dieser Endpoint (`scrapeInstagramReelShortcut`) wartet den kompletten Scrape ab und liefert das Ergebnis direkt in der Antwort zurück (Erfolg oder Misserfolg), statt sofort mit „queued" zu antworten. Das dauert typischerweise 15–30 Sekunden, kann aber – v. a. wenn der Kurzbefehl aus dem Share Sheet statt aus der Kurzbefehle-App gestartet wird – an iOS' Zeitlimit für Hintergrund-Ausführung stoßen. Wenn dir das zu unzuverlässig ist, nutze stattdessen die beiden einzelnen Kurzbefehle von oben und wähle manuell.
+
+### Aktion 1: Synchroner Scrape-Versuch
+
+**Aktion „Inhalt von URL laden":**
+
+| Feld | Wert |
+|------|------|
+| URL | `https://us-central1-<PROJECT-ID>.cloudfunctions.net/scrapeInstagramReelShortcut` |
+| Methode | `POST` |
+
+**Headers:**
+
+| Name | Wert |
+|------|------|
+| `Content-Type` | `application/json` |
+| `X-Api-Key` | `<dein-api-key>` |
+| `X-User-Email` | `<deine-e-mail-adresse>` |
+
+**Body:**
+
+```json
+{ "url": "<Instagram-Reel-URL>", "pin": "<dein Webimport-PIN>" }
+```
+
+**Antwort (immer HTTP 200):**
+
+```json
+{ "success": true, "recipeId": "abc123xyz" }
+```
+oder
+```json
+{ "success": false, "error": "...", "loginWall": true }
+```
+
+### Aktion 2: „Wert aus Wörterbuch abrufen" – Schlüssel `success`
+
+### Aktion 3: „Wenn" – ist `success` gleich `Nein`?
+
+**Ja-Zweig (Scrape fehlgeschlagen):** Video-Upload-Fallback starten – die drei Aktionen aus „Rezept aus einem gespeicherten Reel-Video importieren" oben (Caption abfragen optional → `getVideoUploadUrl` → `uploadUrl` auslesen → PUT-Upload). Das Video muss dafür schon vorher gespeichert sein (Instagrams „Video speichern") – falls nicht, an dieser Stelle den Nutzer daran erinnern, bevor der Kurzbefehl weiterläuft.
+
+**Nein-Zweig (Scrape erfolgreich):** Nichts weiter zu tun, das Rezept liegt schon in der Review-Queue.
 
 ---
 
