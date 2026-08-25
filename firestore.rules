@@ -378,6 +378,10 @@ service cloud.firestore {
     // Failed web imports collection - logs URL + error message whenever a user dismisses
     // a failed web import, so app development can investigate what went wrong on that
     // site. Write-only debugging data for admins; regular users cannot read others' logs.
+    // Also holds server-written step-by-step protocol entries for Instagram Reel / video
+    // imports (see writeImportProtocolEntry in functions/index.js) - those writes use the
+    // Admin SDK and bypass these rules entirely; failed entries are kept indefinitely,
+    // successful ones are deleted after 7 days by nightlyImportProtocolCleanup.
     match /failedWebImports/{entryId} {
       allow read: if isAdmin();
       allow create: if isAnyUser();

@@ -740,6 +740,57 @@ function buildRecipeFieldsFromResult(aiResult, authorId = '') {
 }
 
 /**
+ * Retention window for successful Reel/video import protocol entries in
+ * failedWebImports (see writeImportProtocolEntry) before
+ * nightlyImportProtocolCleanup removes them. Failed entries have no
+ * expiresAt and are kept indefinitely for developer review.
+ */
+const IMPORT_PROTOCOL_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+/**
+ * Persists a step-by-step record ("Protokoll") of an Instagram Reel / video
+ * import attempt to failedWebImports — the same collection
+ * src/utils/failedWebImportsFirestore.js already logs dismissed failed web
+ * imports to, so there is one place to look for "what happened with an
+ * import". Only called for Reel-style sources (see isReelImportSource):
+ * those are the paths detailed enough (navigate, video capture,
+ * transcription, caption, combined text, AI extraction) to produce a
+ * meaningful step list; other import types (plain web/universal/photo)
+ * aren't instrumented and never reach here. Best-effort — a logging failure
+ * must never mask the actual import outcome.
+ *
+ * @param {Object} params
+ * @param {string|null} params.jobId - Firestore recipes/{jobId} doc id, or null
+ *   (the synchronous Shortcut endpoint creates its recipe doc only on success)
+ * @param {string|null} params.authorId
+ * @param {Object} params.source - importSource-shaped object ({type, url|storagePath, ...})
+ * @param {boolean} params.success
+ * @param {Array<{step: string, ok: boolean, detail?: string, at?: number}>} params.steps
+ * @param {Error} [params.error] - The failure, when success is false
+ * @returns {Promise<void>}
+ */
+async function writeImportProtocolEntry({jobId, authorId, source, success, steps, error}) {
+  try {
+    const entry = {
+      jobId: jobId || null,
+      userId: authorId || null,
+      sourceType: (source && source.type) || null,
+      url: (source && source.url) || null,
+      success: Boolean(success),
+      steps: Array.isArray(steps) ? steps : [],
+      error: success ? null : (error && error.message ? error.message : 'Import fehlgeschlagen'),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      ...(success ? {
+        expiresAt: admin.firestore.Timestamp.fromMillis(Date.now() + IMPORT_PROTOCOL_TTL_MS),
+      } : {}),
+    };
+    await admin.firestore().collection('failedWebImports').add(entry);
+  } catch (writeError) {
+    console.error('writeImportProtocolEntry: failed to write import protocol entry:', writeError);
+  }
+}
+
+/**
  * Write a completed background-import result directly to its temp-recipe
  * Firestore document, so the job finishes even if the client tab that
  * queued it (RecipeImportQueueContext) was closed before the Cloud
@@ -757,9 +808,11 @@ function buildRecipeFieldsFromResult(aiResult, authorId = '') {
  * @param {string} jobId - Firestore recipes/{jobId} doc id (the temp recipe)
  * @param {string} authorId - Owner of the queued job
  * @param {Object} aiResult - Structured recipe data to persist
+ * @param {{steps: Array, source: Object}} [meta] - Reel import protocol data
+ *   (see writeImportProtocolEntry); omitted for non-Reel import types.
  * @returns {Promise<void>}
  */
-async function finalizeImportJob(jobId, authorId, aiResult) {
+async function finalizeImportJob(jobId, authorId, aiResult, meta) {
   if (!jobId) return;
   const db = admin.firestore();
   const ref = db.collection('recipes').doc(jobId);
@@ -776,6 +829,11 @@ async function finalizeImportJob(jobId, authorId, aiResult) {
         importProgress: admin.firestore.FieldValue.delete(),
       });
     });
+    if (meta && meta.steps) {
+      await writeImportProtocolEntry({
+        jobId, authorId, source: meta.source, success: true, steps: meta.steps,
+      });
+    }
   } catch (error) {
     // Previously logged-and-swallowed: the job was left stuck on its prior
     // importStatus forever (no error, no result) since nothing else marks it
@@ -783,7 +841,7 @@ async function finalizeImportJob(jobId, authorId, aiResult) {
     // it surfaces in the app (and becomes retryable via "Neu starten")
     // instead of silently hanging.
     console.error(`finalizeImportJob: failed to write result for job ${jobId}:`, error);
-    await failImportJob(jobId, error);
+    await failImportJob(jobId, error, meta);
   }
 }
 
@@ -831,9 +889,11 @@ function classifyImportErrorKind(error) {
  * @param {Error} error - The failure; error.message becomes importError and
  *   error.code (a Firebase Functions error code, e.g. from an HttpsError or
  *   from a plain Error assigned one) is classified into importErrorKind.
+ * @param {{steps: Array, source: Object, authorId?: string}} [meta] - Reel import
+ *   protocol data (see writeImportProtocolEntry); omitted for non-Reel import types.
  * @returns {Promise<void>}
  */
-async function failImportJob(jobId, error) {
+async function failImportJob(jobId, error, meta) {
   if (!jobId) return;
   try {
     await admin.firestore().collection('recipes').doc(jobId).update({
@@ -843,6 +903,11 @@ async function failImportJob(jobId, error) {
     });
   } catch (writeError) {
     console.error(`failImportJob: failed to write error state for job ${jobId}:`, writeError);
+  }
+  if (meta && meta.steps) {
+    await writeImportProtocolEntry({
+      jobId, authorId: meta.authorId || null, source: meta.source, success: false, steps: meta.steps, error,
+    });
   }
 }
 
@@ -962,8 +1027,8 @@ async function sendImportStatusPush(authorId, {jobId, status, title, errorMessag
  * sendImportStatusPush) — writes the result and then, best-effort, notifies
  * the user's own devices.
  */
-async function finalizeImportJobBackground(jobId, authorId, aiResult) {
-  await finalizeImportJob(jobId, authorId, aiResult);
+async function finalizeImportJobBackground(jobId, authorId, aiResult, meta) {
+  await finalizeImportJob(jobId, authorId, aiResult, meta);
   await sendImportStatusPush(authorId, {jobId, status: 'ready', title: aiResult?.title});
 }
 
@@ -972,8 +1037,8 @@ async function finalizeImportJobBackground(jobId, authorId, aiResult) {
  * sendImportStatusPush) — writes the error state and then, best-effort,
  * notifies the user's own devices.
  */
-async function failImportJobBackground(jobId, authorId, error) {
-  await failImportJob(jobId, error);
+async function failImportJobBackground(jobId, authorId, error, meta) {
+  await failImportJob(jobId, error, meta ? {...meta, authorId} : meta);
   await sendImportStatusPush(authorId, {jobId, status: 'error', errorMessage: error?.message});
 }
 
@@ -1580,6 +1645,22 @@ function isInstagramUrl(url) {
 }
 
 /**
+ * Whether a persisted importSource is a Reel-style import (Instagram scrape
+ * or the video-upload fallback) — the two paths detailed enough to produce a
+ * step-by-step protocol (see writeImportProtocolEntry). A plain 'web'
+ * source only counts when its URL is actually an Instagram link; 'universal'
+ * and 'photo' sources never do.
+ * @param {Object} source - importSource-shaped object ({type, url|storagePath, ...})
+ * @returns {boolean}
+ */
+function isReelImportSource(source) {
+  const type = source && source.type;
+  if (type === 'video') return true;
+  if (type === 'web' && isInstagramUrl(source && source.url)) return true;
+  return false;
+}
+
+/**
  * Core Instagram Reel/post scraping + Gemini extraction: navigates with
  * Puppeteer, extracts the caption/page text (and transcribes the Reel's
  * audio when a video URL is captured), then runs the combined text through
@@ -1593,9 +1674,15 @@ function isInstagramUrl(url) {
  * @param {{language?: string, apiKey: string, cuisineTypes?: string[], mealCategories?: string[]}} opts
  * @returns {Promise<Object>} Structured recipe data (same shape as callGeminiAPI), plus sourceUrl
  */
-async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineTypes, mealCategories} = {}) {
+async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineTypes, mealCategories, steps} = {}) {
   const puppeteer = require('puppeteer');
   const chromium = require('@sparticuz/chromium');
+
+  // Appends a step to the caller's protocol array (see writeImportProtocolEntry)
+  // when one was passed in; a no-op otherwise so this function works standalone.
+  const recordStep = (step, ok, detail) => {
+    if (Array.isArray(steps)) steps.push({step, ok: Boolean(ok), detail: detail || '', at: Date.now()});
+  };
 
   let browser = null;
   try {
@@ -1668,6 +1755,12 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
         `likelyLoginWall=${navResult.loginWall}`,
     );
 
+    recordStep(
+        'navigate',
+        Boolean(navResult.status) && navResult.status < 400 && !navResult.loginWall,
+        `status=${navResult.status} url=${navResult.currentUrl} loginWall=${navResult.loginWall}`,
+    );
+
     if (navResult.loginWall) {
       console.warn('Instagram redirected to login wall; retrying navigation once.');
       await new Promise((r) => setTimeout(r, 1500));
@@ -1675,6 +1768,11 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
       console.log(
           `Instagram navigation retry result: status=${navResult.status}, finalUrl=${navResult.currentUrl}, ` +
           `likelyLoginWall=${navResult.loginWall}`,
+      );
+      recordStep(
+          'login_wall_retry',
+          !navResult.loginWall,
+          `status=${navResult.status} url=${navResult.currentUrl} loginWall=${navResult.loginWall}`,
       );
     }
 
@@ -1690,6 +1788,7 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
         .then(() => true)
         .catch(() => false);
     console.log(`Instagram <video> element found via waitForSelector: ${videoSelectorFound}`);
+    recordStep('video_element_found', videoSelectorFound, `found=${videoSelectorFound}`);
 
     // Instagram only issues the video network request once the <video> element
     // starts loading/playing — it does not fire from a static page load alone.
@@ -1760,6 +1859,12 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
         `descriptionLength=${extractedData.description.length}, ` +
         `bodyTextLength=${extractedData.bodyText.length}`,
     );
+    recordStep(
+        'caption_extracted',
+        Boolean(extractedData.description || extractedData.bodyText),
+        `titleLen=${extractedData.title.length} descLen=${extractedData.description.length} ` +
+        `bodyLen=${extractedData.bodyText.length}`,
+    );
 
     // Grab the (anonymous) session cookies Instagram set during this page visit
     // while the browser is still around – the out-of-band video fetch below
@@ -1776,6 +1881,8 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
 
     await browser.close();
     browser = null;
+
+    recordStep('video_url_captured', Boolean(videoUrl), videoUrl ? 'video url captured' : 'no video url captured within timeout');
 
     let transcribedAudio = null;
     if (videoUrl) {
@@ -1796,6 +1903,7 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
               `Instagram video download failed with status ${videoResponse.status}: ` +
               `${videoResponse.statusText}`,
           );
+          recordStep('video_transcription', false, `download failed: HTTP ${videoResponse.status}`);
         } else {
           const contentLengthHeader = videoResponse.headers.get('content-length');
           const parsedContentLength = contentLengthHeader ?
@@ -1810,6 +1918,7 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
                 `Instagram video too large by header: ${contentLength} bytes ` +
                 `(max ${MAX_REEL_VIDEO_SIZE})`,
             );
+            recordStep('video_transcription', false, `video too large (header): ${contentLength} bytes`);
           } else {
             const videoArrayBuffer = await videoResponse.arrayBuffer();
             const videoBuffer = Buffer.from(videoArrayBuffer);
@@ -1819,18 +1928,26 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
                   `Instagram video too large after download: ${videoBuffer.length} bytes ` +
                   `(max ${MAX_REEL_VIDEO_SIZE})`,
               );
+              recordStep('video_transcription', false, `video too large (downloaded): ${videoBuffer.length} bytes`);
             } else {
               transcribedAudio = await transcribeVideoWithGemini(
                   videoBuffer, language, apiKey,
+              );
+              recordStep(
+                  'video_transcription',
+                  Boolean(transcribedAudio),
+                  transcribedAudio ? `transcript length=${transcribedAudio.length}` : 'transcription returned empty',
               );
             }
           }
         }
       } catch (error) {
         console.warn('Instagram video download/transcription warning:', error.message || error);
+        recordStep('video_transcription', false, `error: ${error.message || error}`);
       }
     } else {
       console.warn('No Instagram Reel video URL captured; continuing without transcription.');
+      recordStep('video_transcription', false, 'no video url captured, skipped');
     }
 
     // Minimum character lengths for heuristic content quality checks
@@ -1853,6 +1970,11 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
       parts.push(`${transcriptionLabel}:\n${transcribedAudio}`);
     }
     const combinedText = parts.join('\n\n');
+    recordStep(
+        'content_combined',
+        combinedText.trim().length >= MIN_COMBINED_TEXT_LENGTH,
+        `combined length=${combinedText.length}`,
+    );
 
     if (!combinedText.trim() || combinedText.length < MIN_COMBINED_TEXT_LENGTH) {
       // Distinguish the two empty-result causes so the user gets an actionable
@@ -1875,6 +1997,7 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
             'Das Reel ist möglicherweise privat oder enthält kein Rezept in der Bildunterschrift.',
         );
       notFoundError.code = 'not-found';
+      recordStep('result', false, notFoundError.message);
       throw notFoundError;
     }
 
@@ -1884,6 +2007,7 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
     const result = await callGeminiTextAPI(
         combinedText, language, apiKey, cuisineTypes, mealCategories,
     );
+    recordStep('ai_extraction', true, 'Gemini-Extraktion erfolgreich');
 
     return {...result, sourceUrl: url};
   } catch (error) {
@@ -1894,14 +2018,21 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
         console.error('Error closing browser after failure:', closeErr);
       }
     }
-    if (error.code) throw error;
+    if (error.code) {
+      // Already recorded at its own throw site above (not-found) or is a
+      // rethrow from a nested call that recorded its own step — avoid a
+      // duplicate, undifferentiated entry here.
+      throw error;
+    }
     if (error.message && error.message.includes('timeout')) {
       const timeoutError = new Error('Die Instagram-Seite hat zu lange gebraucht. Bitte versuche es erneut.');
       timeoutError.code = 'deadline-exceeded';
+      recordStep('result', false, timeoutError.message);
       throw timeoutError;
     }
     const internalError = new Error('Instagram-Import fehlgeschlagen: ' + error.message);
     internalError.code = 'internal';
+    recordStep('result', false, internalError.message);
     throw internalError;
   }
 }
@@ -1984,10 +2115,13 @@ exports.scrapeInstagramReel = onCall(
         );
       }
 
+      const steps = [];
       try {
-        const result = await runImportFromInstagram(url, {language, apiKey, cuisineTypes, mealCategories});
+        const result = await runImportFromInstagram(url, {language, apiKey, cuisineTypes, mealCategories, steps});
         console.log(`Instagram Reel import successful for user ${userId}`);
-        if (jobId) await finalizeImportJob(jobId, authorId || userId, result);
+        if (jobId) {
+          await finalizeImportJob(jobId, authorId || userId, result, {steps, source: {type: 'instagram', url}});
+        }
         return {
           ...result,
           remainingScans: rateLimitResult.remaining,
@@ -1996,7 +2130,9 @@ exports.scrapeInstagramReel = onCall(
       } catch (error) {
         console.error(`Instagram Reel scrape failed for user ${userId}:`, error);
         const httpsError = new HttpsError(error.code || 'internal', error.message);
-        if (jobId) await failImportJob(jobId, httpsError);
+        if (jobId) {
+          await failImportJob(jobId, httpsError, {steps, source: {type: 'instagram', url}, authorId: authorId || userId});
+        }
         throw httpsError;
       }
     },
@@ -3613,13 +3749,15 @@ exports.processVideoImportUpload = onObjectFinalized(
       const bucket = admin.storage().bucket(event.data.bucket);
       const file = bucket.file(filePath);
 
+      const steps = [];
+      let jobData = null;
       try {
         const jobSnap = await jobRef.get();
         if (!jobSnap.exists) {
           console.warn(`processVideoImportUpload: job ${jobId} not found, discarding upload`);
           return;
         }
-        const jobData = jobSnap.data();
+        jobData = jobSnap.data();
         if (jobData.importStatus !== 'awaiting_upload' || jobData.authorId !== userId) {
           // Already processed (or redriven by recoverStuckImportJobs), or a
           // path/user mismatch – don't reprocess or clobber that outcome.
@@ -3641,11 +3779,14 @@ exports.processVideoImportUpload = onObjectFinalized(
 
         const language = jobData.importSource?.language || 'de';
         const caption = jobData.importSource?.caption || '';
-        const result = await runImportFromVideoSource({storagePath: filePath, language, caption}, {apiKey});
-        await finalizeImportJobBackground(jobId, userId, result);
+        const result = await runImportFromVideoSource({storagePath: filePath, language, caption}, {apiKey, steps});
+        await finalizeImportJobBackground(jobId, userId, result, {steps, source: {type: 'video', storagePath: filePath}});
       } catch (error) {
         console.error(`processVideoImportUpload: job ${jobId} failed`, error);
-        await failImportJobBackground(jobId, userId, error);
+        await failImportJobBackground(
+            jobId, userId, error,
+            {steps, source: jobData?.importSource || {type: 'video', storagePath: filePath}},
+        );
       } finally {
         await file.delete().catch((delErr) => {
           console.warn(`processVideoImportUpload: failed to delete ${filePath}:`, delErr.message || delErr);
@@ -3810,17 +3951,24 @@ exports.scrapeInstagramReelShortcut = onRequest(
 
       console.log(`scrapeInstagramReelShortcut: sync scrape requested by user ${userId} for URL: ${url}`);
 
+      const steps = [];
       try {
-        const result = await runImportFromInstagram(url, {language: 'de', apiKey, cuisineTypes, mealCategories});
+        const result = await runImportFromInstagram(url, {language: 'de', apiKey, cuisineTypes, mealCategories, steps});
         const docRef = await db.collection('recipes').add({
           ...buildRecipeFieldsFromResult(result, userId),
           isTemp: true,
         });
         console.log(`scrapeInstagramReelShortcut: recipe ${docRef.id} created for user ${userId}`);
+        await writeImportProtocolEntry({
+          jobId: docRef.id, authorId: userId, source: {type: 'instagram', url}, success: true, steps,
+        });
         res.status(200).json({success: true, recipeId: docRef.id});
       } catch (error) {
         console.error(`scrapeInstagramReelShortcut: scrape failed for user ${userId}:`, error);
         const loginWall = /Login-Wall/i.test(error.message || '');
+        await writeImportProtocolEntry({
+          jobId: null, authorId: userId, source: {type: 'instagram', url}, success: false, steps, error,
+        });
         // 200, not 4xx/5xx: the request itself was handled correctly, the
         // scrape just didn't find a recipe — the Shortcut branches on the
         // success field in the body, not the HTTP status.
@@ -7816,6 +7964,55 @@ exports.nightlySwipeFlagsCleanup = onSchedule(
 );
 
 /**
+ * Scheduled Cloud Function: deletes expired Reel/video import protocol
+ * entries from failedWebImports (see writeImportProtocolEntry) — only
+ * entries logged for a *successful* import carry an expiresAt (7 days out);
+ * failed entries have none and are never matched by this query, so they're
+ * kept indefinitely for developer review, same as the pre-existing
+ * dismissed-web-import log this collection already held.
+ */
+exports.nightlyImportProtocolCleanup = onSchedule(
+    {
+      schedule: '30 1 * * *',
+      timeZone: 'Europe/Berlin',
+    },
+    async (_event) => {
+      const db = admin.firestore();
+      const now = admin.firestore.Timestamp.now();
+      const snapshot = await db.collection('failedWebImports')
+          .where('expiresAt', '<=', now)
+          .get();
+
+      if (snapshot.empty) {
+        console.log('nightlyImportProtocolCleanup: no expired protocol entries found');
+        return;
+      }
+
+      let deletedCount = 0;
+      let batch = db.batch();
+      let operationCount = 0;
+
+      for (const docSnap of snapshot.docs) {
+        batch.delete(docSnap.ref);
+        operationCount += 1;
+        if (operationCount >= 450) {
+          await batch.commit();
+          deletedCount += operationCount;
+          batch = db.batch();
+          operationCount = 0;
+        }
+      }
+
+      if (operationCount > 0) {
+        await batch.commit();
+        deletedCount += operationCount;
+      }
+
+      console.log(`nightlyImportProtocolCleanup: deleted ${deletedCount} expired import protocol entr${deletedCount === 1 ? 'y' : 'ies'}`);
+    },
+);
+
+/**
  * Run a batch of images through Gemini Vision concurrently (no per-user rate
  * limiting — recoverStuckImportJobs runs without an auth context, restarting
  * work a user already authorized when the job was first queued). Node-side
@@ -7903,7 +8100,7 @@ function mergeUniversalAiResultsServer(results) {
  * @param {{apiKey: string}} opts
  * @returns {Promise<Object>}
  */
-async function runImportFromWebSource(source, {apiKey} = {}) {
+async function runImportFromWebSource(source, {apiKey, steps} = {}) {
   const url = source && source.url;
   if (!url || typeof url !== 'string') {
     const error = new Error('Keine URL für den Web-Import vorhanden');
@@ -7911,7 +8108,7 @@ async function runImportFromWebSource(source, {apiKey} = {}) {
     throw error;
   }
   if (isInstagramUrl(url)) {
-    return runImportFromInstagram(url, {language: 'de', apiKey});
+    return runImportFromInstagram(url, {language: 'de', apiKey, steps});
   }
   return runImportFromUrl(url, {apiKey, source: 'sweeper'});
 }
@@ -8002,7 +8199,11 @@ async function runImportFromPhotoSource(source, {apiKey} = {}) {
  * @param {{apiKey: string}} opts
  * @returns {Promise<Object>} Structured recipe data (same shape as callGeminiAPI)
  */
-async function runImportFromVideoSource(source, {apiKey} = {}) {
+async function runImportFromVideoSource(source, {apiKey, steps} = {}) {
+  const recordStep = (step, ok, detail) => {
+    if (Array.isArray(steps)) steps.push({step, ok: Boolean(ok), detail: detail || '', at: Date.now()});
+  };
+
   const storagePath = source && source.storagePath;
   const language = ['de', 'en'].includes(source && source.language) ? source.language : 'de';
   const caption = typeof (source && source.caption) === 'string' ? source.caption.trim() : '';
@@ -8023,11 +8224,19 @@ async function runImportFromVideoSource(source, {apiKey} = {}) {
         `max. ${(MAX_REEL_VIDEO_SIZE / (1024 * 1024)).toFixed(1)} MB).`,
     );
     error.code = 'invalid-argument';
+    recordStep('video_downloaded', false, error.message);
     throw error;
   }
+  recordStep('video_downloaded', true, `size=${size} bytes`);
 
   const [videoBuffer] = await file.download();
   const transcribedText = await transcribeVideoWithGemini(videoBuffer, language, apiKey);
+  recordStep(
+      'video_transcription',
+      Boolean(transcribedText && transcribedText.trim()),
+      transcribedText && transcribedText.trim() ? `transcript length=${transcribedText.length}` : 'transcription returned empty',
+  );
+  recordStep('caption_provided', Boolean(caption), caption ? `caption length=${caption.length}` : 'no caption provided');
 
   // callGeminiTextAPI's prompt tells the model it's receiving raw HTML from a
   // social-media page ("bereinige alle HTML-Artefakte...") — true for the web
@@ -8053,10 +8262,14 @@ async function runImportFromVideoSource(source, {apiKey} = {}) {
         'oder war eine Caption angegeben?',
     );
     error.code = 'not-found';
+    recordStep('content_combined', false, error.message);
     throw error;
   }
+  recordStep('content_combined', true, `combined length=${parts.join('\n\n').length}`);
 
-  return callGeminiTextAPI(parts.join('\n\n'), language, apiKey);
+  const result = await callGeminiTextAPI(parts.join('\n\n'), language, apiKey);
+  recordStep('ai_extraction', true, 'Gemini-Extraktion erfolgreich');
+  return result;
 }
 
 /**
@@ -8069,9 +8282,11 @@ async function runImportFromVideoSource(source, {apiKey} = {}) {
  * @param {Object} source - Persisted importSource ({type, ...})
  * @param {string} authorId - Owner of the job (used only for logging here)
  * @param {string} jobId - Firestore recipes/{jobId} doc id (used only for logging here)
+ * @param {Array} [steps] - Protocol step collector (see writeImportProtocolEntry), only
+ *   populated for Reel-style sources (web/Instagram, video) — ignored otherwise.
  * @returns {Promise<Object>} Structured recipe data (same shape as callGeminiAPI)
  */
-async function runImportFromSource(source, authorId, jobId) {
+async function runImportFromSource(source, authorId, jobId, steps) {
   const apiKey = geminiApiKey.value();
   if (!apiKey) {
     const error = new Error('AI service not configured. Please contact administrator.');
@@ -8083,13 +8298,13 @@ async function runImportFromSource(source, authorId, jobId) {
 
   switch (source && source.type) {
     case 'web':
-      return runImportFromWebSource(source, {apiKey});
+      return runImportFromWebSource(source, {apiKey, steps});
     case 'universal':
       return runImportFromUniversalSource(source, {apiKey});
     case 'photo':
       return runImportFromPhotoSource(source, {apiKey});
     case 'video':
-      return runImportFromVideoSource(source, {apiKey});
+      return runImportFromVideoSource(source, {apiKey, steps});
     default: {
       const error = new Error(`Unbekannter importSource-Typ: ${source && source.type}`);
       error.code = 'invalid-argument';
@@ -8128,12 +8343,16 @@ exports.processShortcutImportJob = onDocumentCreated(
         importAttempts: 1,
       });
 
+      const steps = [];
+      const reelMeta = isReelImportSource(data.importSource) ?
+        {steps, source: data.importSource} :
+        undefined;
       try {
-        const result = await runImportFromSource(data.importSource, authorId, jobId);
-        await finalizeImportJobBackground(jobId, authorId, result);
+        const result = await runImportFromSource(data.importSource, authorId, jobId, steps);
+        await finalizeImportJobBackground(jobId, authorId, result, reelMeta);
       } catch (error) {
         console.error(`processShortcutImportJob: job ${jobId} failed`, error);
-        await failImportJobBackground(jobId, authorId, error);
+        await failImportJobBackground(jobId, authorId, error, reelMeta);
       }
     },
 );
@@ -8221,10 +8440,14 @@ exports.recoverStuckImportJobs = onSchedule(
           continue;
         }
 
+        const reelMeta = isReelImportSource(data.importSource) ?
+          {steps: [], source: data.importSource} :
+          undefined;
+
         if (attempts >= MAX_IMPORT_ATTEMPTS) {
           const error = new Error(`Import endgültig fehlgeschlagen nach ${attempts} Versuchen`);
           error.code = 'failed-precondition';
-          await failImportJobBackground(jobId, authorId, error);
+          await failImportJobBackground(jobId, authorId, error, reelMeta);
           abandoned++;
           continue;
         }
@@ -8243,12 +8466,14 @@ exports.recoverStuckImportJobs = onSchedule(
         });
 
         try {
-          const result = await runImportFromSource(data.importSource, authorId, jobId);
-          await finalizeImportJobBackground(jobId, authorId, result);
+          const result = await runImportFromSource(
+              data.importSource, authorId, jobId, reelMeta && reelMeta.steps,
+          );
+          await finalizeImportJobBackground(jobId, authorId, result, reelMeta);
           restarted++;
         } catch (error) {
           console.error(`recoverStuckImportJobs: job ${jobId} failed`, error);
-          await failImportJobBackground(jobId, authorId, error);
+          await failImportJobBackground(jobId, authorId, error, reelMeta);
           abandoned++;
         }
       }
