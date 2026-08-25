@@ -3515,6 +3515,7 @@ exports.getVideoUploadUrl = onRequest(
 
       const {pin} = body || {};
       const language = ['de', 'en'].includes(body?.language) ? body.language : 'de';
+      const caption = typeof body?.caption === 'string' ? body.caption.slice(0, 10000) : '';
 
       try {
         await requireShortcutPin(userId, pin);
@@ -3542,7 +3543,7 @@ exports.getVideoUploadUrl = onRequest(
           importProgress: 0,
           importHeartbeatAt: Date.now(),
           importOrigin: 'shortcut',
-          importSource: {type: 'video', storagePath, language},
+          importSource: {type: 'video', storagePath, language, caption},
         });
 
         const bucket = admin.storage().bucket();
@@ -3624,7 +3625,8 @@ exports.processVideoImportUpload = onObjectFinalized(
         }
 
         const language = jobData.importSource?.language || 'de';
-        const result = await runImportFromVideoSource({storagePath: filePath, language}, {apiKey});
+        const caption = jobData.importSource?.caption || '';
+        const result = await runImportFromVideoSource({storagePath: filePath, language, caption}, {apiKey});
         await finalizeImportJobBackground(jobId, userId, result);
       } catch (error) {
         console.error(`processVideoImportUpload: job ${jobId} failed`, error);
@@ -7796,18 +7798,24 @@ async function runImportFromPhotoSource(source, {apiKey} = {}) {
 /**
  * Import source leg for user-uploaded Reel videos (see getVideoUploadUrl /
  * processVideoImportUpload in the Hybrid Import Architecture section above).
- * Downloads the video from Storage, transcribes it with Gemini, then runs
- * the transcript through the same text-extraction step as every other
- * source — no Puppeteer/Instagram involved, the video already sits in our
- * own Storage bucket by the time this runs.
+ * Downloads the video from Storage, transcribes it with Gemini, and combines
+ * that transcript with the optional caption text the Shortcut sent along
+ * (Instagram's caption often carries exact quantities that aren't spoken
+ * aloud in the video, or vice versa — using both together, the way
+ * runImportFromInstagram already combines caption + transcription for the
+ * scraped leg, catches recipe details either one alone would miss). No
+ * Puppeteer/Instagram involved here — the video already sits in our own
+ * Storage bucket by the time this runs, and the caption is whatever text the
+ * user pasted into the Shortcut, not scraped.
  *
- * @param {{storagePath: string, language?: string}} source
+ * @param {{storagePath: string, language?: string, caption?: string}} source
  * @param {{apiKey: string}} opts
  * @returns {Promise<Object>} Structured recipe data (same shape as callGeminiAPI)
  */
 async function runImportFromVideoSource(source, {apiKey} = {}) {
   const storagePath = source && source.storagePath;
   const language = ['de', 'en'].includes(source && source.language) ? source.language : 'de';
+  const caption = typeof (source && source.caption) === 'string' ? source.caption.trim() : '';
   if (!storagePath) {
     const error = new Error('Kein Video für den Video-Import vorhanden');
     error.code = 'invalid-argument';
@@ -7831,27 +7839,34 @@ async function runImportFromVideoSource(source, {apiKey} = {}) {
   const [videoBuffer] = await file.download();
   const transcribedText = await transcribeVideoWithGemini(videoBuffer, language, apiKey);
 
-  if (!transcribedText || !transcribedText.trim()) {
+  // callGeminiTextAPI's prompt tells the model it's receiving raw HTML from a
+  // social-media page ("bereinige alle HTML-Artefakte...") — true for the web
+  // and Instagram legs, but this is a plain spoken-word transcript with no
+  // HTML at all. Label both parts the same way the Instagram leg labels its
+  // own caption/transcription segments, so the model doesn't go looking for
+  // markup to strip and skip past the actual recipe content, e.g. only pull
+  // a title with empty ingredients/steps.
+  const parts = [];
+  if (caption) {
+    parts.push(`Caption:\n${caption}`);
+  }
+  if (transcribedText && transcribedText.trim()) {
+    const transcriptionLabel = language === 'de' ?
+      'Gesprochener Inhalt (Audiotranskription)' :
+      'Spoken Content (Audio Transcription)';
+    parts.push(`${transcriptionLabel}:\n${transcribedText}`);
+  }
+
+  if (parts.length === 0) {
     const error = new Error(
-        'Konnte keinen Rezeptinhalt aus dem Video erkennen. Enthält das Video gesprochenen Text?',
+        'Konnte keinen Rezeptinhalt aus dem Video erkennen. Enthält das Video gesprochenen Text, ' +
+        'oder war eine Caption angegeben?',
     );
     error.code = 'not-found';
     throw error;
   }
 
-  // callGeminiTextAPI's prompt tells the model it's receiving raw HTML from a
-  // social-media page ("bereinige alle HTML-Artefakte...") — true for the web
-  // and Instagram legs, but this is a plain spoken-word transcript with no
-  // HTML at all. Label it the same way the Instagram leg labels its own
-  // transcription segment (see the 'Gesprochener Inhalt' part above), so the
-  // model doesn't go looking for markup to strip and skip past the actual
-  // recipe content, e.g. only pull a title with empty ingredients/steps.
-  const transcriptionLabel = language === 'de' ?
-    'Gesprochener Inhalt (Audiotranskription)' :
-    'Spoken Content (Audio Transcription)';
-  const labeledTranscript = `${transcriptionLabel}:\n${transcribedText}`;
-
-  return callGeminiTextAPI(labeledTranscript, language, apiKey);
+  return callGeminiTextAPI(parts.join('\n\n'), language, apiKey);
 }
 
 /**
