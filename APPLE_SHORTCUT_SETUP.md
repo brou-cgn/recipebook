@@ -64,6 +64,8 @@ Für den Fall „ich habe ein Instagram-Reel als Video gespeichert und will das 
 
 **Voraussetzung:** Das Reel-Video muss als Datei auf deinem iPhone liegen (z. B. über Instagrams eigene „Video speichern"-Funktion in die Fotos-App, sofern der/die Ersteller:in das erlaubt).
 
+**Empfehlung:** Kopiere zusätzlich die Bildunterschrift (Caption) des Reels (in Instagram auf den Text tippen, „..." → „Text kopieren" o. ä.) und gib sie im Kurzbefehl mit an. Video-Transkript und Caption werden dann **gemeinsam** zur Rezept-Erkennung verwendet – die Caption enthält oft exakte Mengenangaben, die im gesprochenen Text fehlen, und umgekehrt. Ohne Caption funktioniert der Import genauso, nur mit weniger Kontext.
+
 Der Import läuft in zwei Kurzbefehl-Schritten ab:
 
 ### Schritt A: Upload-URL anfordern
@@ -86,8 +88,10 @@ Der Import läuft in zwei Kurzbefehl-Schritten ab:
 **Body:**
 
 ```json
-{ "pin": "<dein Webimport-PIN>", "language": "de" }
+{ "pin": "<dein Webimport-PIN>", "language": "de", "caption": "<Bildunterschrift, optional>" }
 ```
+
+`caption` ist optional – weglassen oder leer lassen funktioniert genauso (dann wird nur das Transkript verwendet).
 
 **Antwort (HTTP 200):**
 
