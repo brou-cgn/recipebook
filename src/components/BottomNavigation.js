@@ -176,14 +176,10 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect, badgeCounts })
   }, []);
 
   useEffect(() => {
-    if (!isPillMode) {
-      wasPillModeRef.current = false;
-      return;
-    }
     const rail = railRef.current;
-    if (!rail) return;
 
     const centerOn = (key, behavior) => {
+      if (!rail) return;
       const index = tabs.findIndex((tab) => tab.key === key);
       if (index < 0) return;
       const target = rail.children[index];
@@ -193,6 +189,17 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect, badgeCounts })
         rail.scrollTo({ left: Math.max(0, left), behavior });
       }
     };
+
+    if (!isPillMode) {
+      // Reset the rail back to Festtafel the instant the pill closes (rather
+      // than only correcting it on the next open) so it can never be caught
+      // showing a stale scroll position while fading back in.
+      if (wasPillModeRef.current) {
+        centerOn(PILL_DEFAULT_CENTER_KEY, 'auto');
+      }
+      wasPillModeRef.current = false;
+      return;
+    }
 
     // The pill carousel always opens centered on Festtafel; once open, the
     // already-active tab takes over centering (see below) on every further change.
