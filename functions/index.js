@@ -3952,6 +3952,11 @@ exports.scrapeInstagramReelShortcut = onRequest(
       console.log(`scrapeInstagramReelShortcut: sync scrape requested by user ${userId} for URL: ${url}`);
 
       const steps = [];
+      // Surfaced to the Shortcut alongside success/error so it can tell "Gemini
+      // extracted a recipe from the caption alone" apart from "the Reel's video
+      // was actually captured and transcribed" — the former can silently miss
+      // ingredients/steps that only appear in the video's audio.
+      const videoFound = () => Boolean(steps.find((s) => s.step === 'video_element_found')?.ok);
       try {
         const result = await runImportFromInstagram(url, {language: 'de', apiKey, cuisineTypes, mealCategories, steps});
         const docRef = await db.collection('recipes').add({
@@ -3962,7 +3967,7 @@ exports.scrapeInstagramReelShortcut = onRequest(
         await writeImportProtocolEntry({
           jobId: docRef.id, authorId: userId, source: {type: 'instagram', url}, success: true, steps,
         });
-        res.status(200).json({success: true, recipeId: docRef.id});
+        res.status(200).json({success: true, recipeId: docRef.id, videoFound: videoFound()});
       } catch (error) {
         console.error(`scrapeInstagramReelShortcut: scrape failed for user ${userId}:`, error);
         const loginWall = /Login-Wall/i.test(error.message || '');
@@ -3972,7 +3977,7 @@ exports.scrapeInstagramReelShortcut = onRequest(
         // 200, not 4xx/5xx: the request itself was handled correctly, the
         // scrape just didn't find a recipe — the Shortcut branches on the
         // success field in the body, not the HTTP status.
-        res.status(200).json({success: false, error: error.message, loginWall});
+        res.status(200).json({success: false, error: error.message, loginWall, videoFound: videoFound()});
       }
     },
 );
