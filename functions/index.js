@@ -1855,10 +1855,25 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
     const combinedText = parts.join('\n\n');
 
     if (!combinedText.trim() || combinedText.length < MIN_COMBINED_TEXT_LENGTH) {
-      const notFoundError = new Error(
-          'Kein Rezeptinhalt auf der Instagram-Seite gefunden. ' +
-          'Das Reel ist möglicherweise privat oder enthält kein Rezept in der Bildunterschrift.',
-      );
+      // Distinguish the two empty-result causes so the user gets an actionable
+      // message instead of a generic "nothing found": a login-wall redirect
+      // (even after the retry above) means Instagram blocked this request
+      // entirely — no caption, no video — and simply trying again likely
+      // won't help either, since we've observed it isn't a per-request coin
+      // flip but more like a temporary block against this IP/URL. Point the
+      // user at the video-upload Shortcut path instead, which never touches
+      // Instagram from our server at all.
+      const notFoundError = navResult.loginWall ?
+        new Error(
+            'Instagram hat diese Anfrage blockiert und keine Inhalte ausgeliefert (Login-Wall) – ' +
+            'auch nach einem erneuten Versuch. Ein weiterer Import-Versuch wird vermutlich ' +
+            'genauso fehlschlagen. Nutze stattdessen den Video-Upload-Kurzbefehl: Video über ' +
+            '„Video speichern" sichern und direkt hochladen statt den Link zu importieren.',
+        ) :
+        new Error(
+            'Kein Rezeptinhalt auf der Instagram-Seite gefunden. ' +
+            'Das Reel ist möglicherweise privat oder enthält kein Rezept in der Bildunterschrift.',
+        );
       notFoundError.code = 'not-found';
       throw notFoundError;
     }
