@@ -129,13 +129,15 @@ describe('BottomNavigation icon rendering', () => {
     window.HTMLElement.prototype.scrollTo = scrollToMock;
 
     try {
-      // Opening the pill on "Kochbuch" (recipes) should still center Festtafel first.
+      // Opening the pill on "Kochbuch" (recipes) should still center Festtafel first...
       const { rerender } = render(
         <BottomNavigation tabs={allTabs} activeKey="recipes" isVisible onSelect={() => {}} />
       );
 
       await waitFor(() => expect(getButtonIcons).toHaveBeenCalled());
-      expect(scrollToMock).toHaveBeenLastCalledWith({ left: 100, behavior: 'auto' });
+      expect(scrollToMock).toHaveBeenNthCalledWith(1, { left: 100, behavior: 'auto' });
+      // ...then animate onto the actually active tab (Kochbuch), same as any other switch.
+      expect(scrollToMock).toHaveBeenLastCalledWith({ left: 0, behavior: 'smooth' });
 
       // Selecting a different pill tab afterwards centers that active tab instead.
       rerender(
