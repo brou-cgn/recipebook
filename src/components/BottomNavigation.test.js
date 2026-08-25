@@ -152,6 +152,70 @@ describe('BottomNavigation icon rendering', () => {
     }
   });
 
+  test('pill re-centers on Festtafel every time it is reopened, not the tab it was left on', async () => {
+    const allTabs = [
+      { key: 'home', label: 'Küche' },
+      { key: 'recipes', label: 'Kochbuch' },
+      { key: 'menus', label: 'Festtafel' },
+      { key: 'atelier', label: 'Atelier' },
+      { key: 'chef', label: 'Chefkoch' },
+    ];
+    const labelOrder = allTabs.map((tab) => tab.label);
+
+    const offsetLeftSpy = jest
+      .spyOn(window.HTMLElement.prototype, 'offsetLeft', 'get')
+      .mockImplementation(function offsetLeftMock() {
+        const index = labelOrder.indexOf(this.getAttribute('aria-label'));
+        return index >= 0 ? index * 100 : 0;
+      });
+    const offsetWidthSpy = jest
+      .spyOn(window.HTMLElement.prototype, 'offsetWidth', 'get')
+      .mockReturnValue(100);
+    const clientWidthSpy = jest
+      .spyOn(window.HTMLElement.prototype, 'clientWidth', 'get')
+      .mockReturnValue(300);
+    // A scrollTo mock that actually tracks scrollLeft, so a stale position
+    // carried across a close/reopen cycle would show up here too.
+    const scrollToMock = jest.fn(function scrollToImpl({ left }) {
+      this.scrollLeft = left;
+    });
+    window.HTMLElement.prototype.scrollTo = scrollToMock;
+
+    try {
+      const { rerender } = render(
+        <BottomNavigation tabs={allTabs} activeKey="recipes" isVisible onSelect={() => {}} />
+      );
+      await waitFor(() => expect(getButtonIcons).toHaveBeenCalled());
+
+      // Wander to Atelier while the pill is open.
+      rerender(
+        <BottomNavigation tabs={allTabs} activeKey="atelier" isVisible onSelect={() => {}} />
+      );
+      expect(scrollToMock).toHaveBeenLastCalledWith({ left: 200, behavior: 'smooth' });
+
+      // Close the pill via Chefkoch (outside the pill tabs) — the rail resets
+      // to Festtafel right away instead of staying parked on Atelier.
+      rerender(
+        <BottomNavigation tabs={allTabs} activeKey="chef" isVisible onSelect={() => {}} />
+      );
+      expect(scrollToMock).toHaveBeenLastCalledWith({ left: 100, behavior: 'auto' });
+
+      // Reopening on a different pill tab (Kochbuch) must still land there,
+      // not on whatever tab was showing right before the pill last closed.
+      scrollToMock.mockClear();
+      rerender(
+        <BottomNavigation tabs={allTabs} activeKey="recipes" isVisible onSelect={() => {}} />
+      );
+      expect(scrollToMock).toHaveBeenNthCalledWith(1, { left: 100, behavior: 'auto' });
+      expect(scrollToMock).toHaveBeenLastCalledWith({ left: 0, behavior: 'smooth' });
+    } finally {
+      offsetLeftSpy.mockRestore();
+      offsetWidthSpy.mockRestore();
+      clientWidthSpy.mockRestore();
+      delete window.HTMLElement.prototype.scrollTo;
+    }
+  });
+
   test('shows a count badge on a tab with pending items', async () => {
     const { container } = render(
       <BottomNavigation
