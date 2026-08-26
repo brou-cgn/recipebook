@@ -38,6 +38,13 @@ const smtpPassword = defineSecret('SMTP_PASSWORD');
 const smtpFrom = defineSecret('SMTP_FROM');
 
 /**
+ * Default Firebase Storage bucket for the broubook project.
+ * Must be provided explicitly for firebase-functions v7+ storage triggers,
+ * since the SDK now validates the bucket name at module load time.
+ */
+const STORAGE_BUCKET = 'broubook.firebasestorage.app';
+
+/**
  * Trusted origins allowed for CORS on API endpoints.
  * Server-to-server callers (e.g. Apple Shortcuts) send no Origin header and
  * are therefore unaffected by this list.
@@ -1698,6 +1705,7 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
+        '--disable-blink-features=AutomationControlled',
       ]),
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(),
@@ -1705,6 +1713,12 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
     });
 
     const page = await browser.newPage();
+
+    // Hide automation fingerprint before any page scripts run
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, 'webdriver', {get: () => false});
+    });
+
     let videoUrl = null;
     page.on('response', (response) => {
       try {
@@ -3719,6 +3733,7 @@ exports.getVideoUploadUrl = onRequest(
  */
 exports.processVideoImportUpload = onObjectFinalized(
     {
+      bucket: STORAGE_BUCKET,
       region: 'us-central1',
       secrets: [geminiApiKey],
       memory: '512MiB',
