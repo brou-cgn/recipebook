@@ -1692,6 +1692,7 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
+        '--disable-blink-features=AutomationControlled',
       ]),
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(),
@@ -1699,6 +1700,12 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
     });
 
     const page = await browser.newPage();
+
+    // Hide automation fingerprint before any page scripts run
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, 'webdriver', {get: () => false});
+    });
+
     let videoUrl = null;
     page.on('response', (response) => {
       try {
