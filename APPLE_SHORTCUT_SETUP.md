@@ -88,10 +88,12 @@ Der Import läuft in zwei Kurzbefehl-Schritten ab:
 **Body:**
 
 ```json
-{ "pin": "<dein Webimport-PIN>", "language": "de", "caption": "<Bildunterschrift, optional>" }
+{ "pin": "<dein Webimport-PIN>", "language": "de", "caption": "<Bildunterschrift, optional>", "audioOnly": false }
 ```
 
 `caption` ist optional – weglassen oder leer lassen funktioniert genauso (dann wird nur das Transkript verwendet).
+
+`audioOnly` ist ebenfalls optional (Standard `false`). Da server­seitig ohnehin nur die Tonspur transkribiert wird, kann der Kurzbefehl mit `audioOnly: true` statt des vollen Videos nur die extrahierte Audiospur hochladen – das reduziert die Dateigröße drastisch und hilft, unter dem Upload-Limit zu bleiben. Bei `audioOnly: true` ändert sich auch der erwartete `Content-Type` in Schritt B (siehe dort).
 
 **Antwort (HTTP 200):**
 
@@ -109,15 +111,15 @@ Der Import läuft in zwei Kurzbefehl-Schritten ab:
 |------|------|
 | URL | `uploadUrl` aus der Antwort von Schritt A (Aktion „Wert aus Wörterbuch abrufen") |
 | Methode | `PUT` |
-| Anfragetext | das ausgewählte Video (als Datei, **nicht** als Text/Base64) |
+| Anfragetext | das ausgewählte Video bzw. die extrahierte Audiospur (als Datei, **nicht** als Text/Base64) |
 
 **Headers:**
 
 | Name | Wert |
 |------|------|
-| `Content-Type` | `video/mp4` |
+| `Content-Type` | `video/mp4` (bei `audioOnly: true` in Schritt A stattdessen `audio/mp4`) |
 
-Der `Content-Type` muss exakt `video/mp4` sein – die Upload-URL ist serverseitig genau darauf signiert, jeder andere Wert wird von Google Cloud Storage mit HTTP 403 abgelehnt.
+Der `Content-Type` muss exakt zu dem passen, was in Schritt A angefragt wurde (`video/mp4` normal, `audio/mp4` bei `audioOnly: true`) – die Upload-URL ist serverseitig genau darauf signiert, jeder andere Wert wird von Google Cloud Storage mit HTTP 403 abgelehnt. Bei `audioOnly: true` entsprechend im Kurzbefehl vor dem Upload die Tonspur extrahieren (z. B. „Medien kodieren" → Format „Nur Audio" → `m4a`) und diese Datei statt des Videos hochladen.
 
 Danach ist nichts weiter zu tun: Sobald der Upload abgeschlossen ist, übernimmt eine Storage-getriggerte Cloud Function automatisch die Transkription (Gemini) und Rezept-Extraktion; das fertige Rezept erscheint wie gewohnt in der Review-Queue „Neue Rezepte". Das hochgeladene Video wird danach von unserem Server automatisch gelöscht.
 

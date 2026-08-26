@@ -1475,12 +1475,16 @@ async function callGeminiTextAPI(rawHtml, lang, apiKey, cuisineTypes, mealCatego
  * Transcribe spoken text from a video buffer using Gemini.
  * Fail-safe: returns null on errors.
  *
- * @param {Buffer} videoBuffer - Video data as buffer
+ * @param {Buffer} videoBuffer - Video (or audio-only) data as buffer
  * @param {string} language - Language code ('de' or 'en')
  * @param {string} apiKey - Gemini API key
+ * @param {string} [mimeType] - Actual MIME type of videoBuffer, e.g. 'video/mp4'
+ *   or 'audio/mp4' for an audio-only upload (see getVideoUploadUrl's
+ *   audioOnly option). Must match the real content — Gemini rejects a
+ *   video/mp4 declaration for a file with no video frames.
  * @returns {Promise<string|null>} Transcribed text or null
  */
-async function transcribeVideoWithGemini(videoBuffer, language, apiKey) {
+async function transcribeVideoWithGemini(videoBuffer, language, apiKey, mimeType = 'video/mp4') {
   try {
     if (!videoBuffer || !Buffer.isBuffer(videoBuffer) || videoBuffer.length === 0) {
       return null;
@@ -1503,7 +1507,7 @@ async function transcribeVideoWithGemini(videoBuffer, language, apiKey) {
             {text: prompt},
             {
               inline_data: {
-                mime_type: 'video/mp4',
+                mime_type: mimeType,
                 data: base64Video,
               },
             },
@@ -3542,9 +3546,14 @@ const VIDEO_IMPORT_STORAGE_PREFIX = 'pending-video-imports';
  * limit. processVideoImportUpload (Storage trigger, below) picks the file up
  * once the PUT completes and deletes it again once processing finishes.
  *
- * Input (POST JSON body): { pin, language? }
+ * Input (POST JSON body): { pin, language?, audioOnly? }
  * Returns: { success: true, jobId, uploadUrl } — uploadUrl accepts a single
- * PUT with Content-Type: video/mp4, valid for 10 minutes.
+ * PUT with Content-Type matching what was requested (video/mp4, or
+ * audio/mp4 when audioOnly is true), valid for 10 minutes. audioOnly lets
+ * the Shortcut send just the extracted audio track instead of the full
+ * video — only the soundtrack is ever transcribed (see
+ * transcribeVideoWithGemini), so this cuts the upload size drastically for
+ * Reels whose video track would otherwise blow past MAX_REEL_VIDEO_SIZE.
  */
 exports.getVideoUploadUrl = onRequest(
     {
@@ -3648,6 +3657,9 @@ exports.getVideoUploadUrl = onRequest(
       const {pin} = body || {};
       const language = ['de', 'en'].includes(body?.language) ? body.language : 'de';
       const caption = typeof body?.caption === 'string' ? body.caption.slice(0, 10000) : '';
+      const audioOnly = body?.audioOnly === true;
+      const extension = audioOnly ? 'm4a' : 'mp4';
+      const contentType = audioOnly ? 'audio/mp4' : 'video/mp4';
 
       try {
         await requireShortcutPin(userId, pin);
@@ -3660,7 +3672,7 @@ exports.getVideoUploadUrl = onRequest(
 
       try {
         const jobRef = db.collection('recipes').doc();
-        const storagePath = `${VIDEO_IMPORT_STORAGE_PREFIX}/${userId}/${jobRef.id}.mp4`;
+        const storagePath = `${VIDEO_IMPORT_STORAGE_PREFIX}/${userId}/${jobRef.id}.${extension}`;
 
         // importStatus is 'awaiting_upload', not 'queued' – processShortcutImportJob
         // (the Firestore trigger for the 'web' shortcut flow above) only acts on
@@ -3675,7 +3687,7 @@ exports.getVideoUploadUrl = onRequest(
           importProgress: 0,
           importHeartbeatAt: Date.now(),
           importOrigin: 'shortcut',
-          importSource: {type: 'video', storagePath, language, caption},
+          importSource: {type: 'video', storagePath, language, caption, mimeType: contentType},
         });
 
         const bucket = admin.storage().bucket();
@@ -3683,7 +3695,7 @@ exports.getVideoUploadUrl = onRequest(
           version: 'v4',
           action: 'write',
           expires: Date.now() + 10 * 60 * 1000,
-          contentType: 'video/mp4',
+          contentType,
         });
 
         console.log(`getVideoUploadUrl: issued upload URL for user ${userId}, job ${jobRef.id}`);
@@ -3696,12 +3708,14 @@ exports.getVideoUploadUrl = onRequest(
 );
 
 /**
- * Storage trigger: processes a Reel video once a Shortcut finishes uploading
- * it to the signed URL from getVideoUploadUrl (path pending-video-imports/
- * {userId}/{jobId}.mp4). Transcribes it and runs the transcript through the
- * normal recipe-extraction step, then deletes the video from Storage
- * regardless of outcome — it has already served its purpose and shouldn't
- * linger (cost, and it's the user's personal upload).
+ * Storage trigger: processes a Reel video (or, when getVideoUploadUrl issued
+ * an audioOnly upload URL, just its audio track) once a Shortcut finishes
+ * uploading it to the signed URL from getVideoUploadUrl (path
+ * pending-video-imports/{userId}/{jobId}.mp4 or .m4a). Transcribes it and
+ * runs the transcript through the normal recipe-extraction step, then
+ * deletes the upload from Storage regardless of outcome — it has already
+ * served its purpose and shouldn't linger (cost, and it's the user's
+ * personal upload).
  */
 exports.processVideoImportUpload = onObjectFinalized(
     {
@@ -3717,7 +3731,7 @@ exports.processVideoImportUpload = onObjectFinalized(
       }
 
       const match = filePath.match(
-          new RegExp(`^${VIDEO_IMPORT_STORAGE_PREFIX}/([^/]+)/([^/]+)\\.mp4$`),
+          new RegExp(`^${VIDEO_IMPORT_STORAGE_PREFIX}/([^/]+)/([^/]+)\\.(?:mp4|m4a)$`),
       );
       if (!match) {
         console.warn(`processVideoImportUpload: unexpected path ${filePath}, ignoring`);
@@ -8181,7 +8195,7 @@ async function runImportFromPhotoSource(source, {apiKey} = {}) {
  * Storage bucket by the time this runs, and the caption is whatever text the
  * user pasted into the Shortcut, not scraped.
  *
- * @param {{storagePath: string, language?: string, caption?: string}} source
+ * @param {{storagePath: string, language?: string, caption?: string, mimeType?: string}} source
  * @param {{apiKey: string}} opts
  * @returns {Promise<Object>} Structured recipe data (same shape as callGeminiAPI)
  */
@@ -8193,6 +8207,7 @@ async function runImportFromVideoSource(source, {apiKey, steps} = {}) {
   const storagePath = source && source.storagePath;
   const language = ['de', 'en'].includes(source && source.language) ? source.language : 'de';
   const caption = typeof (source && source.caption) === 'string' ? source.caption.trim() : '';
+  const mimeType = (source && source.mimeType) || 'video/mp4';
   if (!storagePath) {
     const error = new Error('Kein Video für den Video-Import vorhanden');
     error.code = 'invalid-argument';
@@ -8216,7 +8231,7 @@ async function runImportFromVideoSource(source, {apiKey, steps} = {}) {
   recordStep('video_downloaded', true, `size=${size} bytes`);
 
   const [videoBuffer] = await file.download();
-  const transcribedText = await transcribeVideoWithGemini(videoBuffer, language, apiKey);
+  const transcribedText = await transcribeVideoWithGemini(videoBuffer, language, apiKey, mimeType);
   recordStep(
       'video_transcription',
       Boolean(transcribedText && transcribedText.trim()),
