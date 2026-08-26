@@ -3712,6 +3712,7 @@ exports.getVideoUploadUrl = onRequest(
  */
 exports.processVideoImportUpload = onObjectFinalized(
     {
+      bucket: 'broubook.firebasestorage.app',
       region: 'us-central1',
       secrets: [geminiApiKey],
       memory: '512MiB',
