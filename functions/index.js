@@ -38,6 +38,13 @@ const smtpPassword = defineSecret('SMTP_PASSWORD');
 const smtpFrom = defineSecret('SMTP_FROM');
 
 /**
+ * Default Firebase Storage bucket for the broubook project.
+ * Must be provided explicitly for firebase-functions v7+ storage triggers,
+ * since the SDK now validates the bucket name at module load time.
+ */
+const STORAGE_BUCKET = 'broubook.firebasestorage.app';
+
+/**
  * Trusted origins allowed for CORS on API endpoints.
  * Server-to-server callers (e.g. Apple Shortcuts) send no Origin header and
  * are therefore unaffected by this list.
@@ -3712,7 +3719,7 @@ exports.getVideoUploadUrl = onRequest(
  */
 exports.processVideoImportUpload = onObjectFinalized(
     {
-      bucket: 'broubook.firebasestorage.app',
+      bucket: STORAGE_BUCKET,
       region: 'us-central1',
       secrets: [geminiApiKey],
       memory: '512MiB',
