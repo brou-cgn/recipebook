@@ -1524,8 +1524,10 @@ async function transcribeVideoWithGemini(videoBuffer, language, apiKey) {
     });
 
     if (!response.ok) {
+      const errorBody = await response.text().catch(() => '');
       console.warn(
-          `Gemini video transcription failed with status ${response.status}: ${response.statusText}`,
+          `Gemini video transcription failed with status ${response.status}: ${response.statusText}` +
+          (errorBody ? ` - ${errorBody.slice(0, 1000)}` : ''),
       );
       return null;
     }
