@@ -1970,6 +1970,45 @@ describe('RecipeDetail - Source URL Metadata Icon', () => {
 
     expect(screen.queryByTitle('Rezeptquelle öffnen')).toBeNull();
   });
+
+  test('uses configured recipeSourceLink icon, editable in Settings like the other button icons', async () => {
+    const customLists = require('../utils/customLists');
+    jest.spyOn(customLists, 'getButtonIcons').mockResolvedValue({
+      recipeSourceLink: '🌐',
+    });
+    const importedRecipe = { ...baseRecipe, sourceUrl: 'https://example.com/original-recipe' };
+
+    await act(async () => {
+      render(
+        <RecipeDetail
+          recipe={importedRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    expect(screen.getByTitle('Rezeptquelle öffnen')).toHaveTextContent('🌐');
+    jest.restoreAllMocks();
+  });
+
+  test('falls back to default 🔗 icon when no custom recipeSourceLink icon is configured', () => {
+    const importedRecipe = { ...baseRecipe, sourceUrl: 'https://example.com/original-recipe' };
+
+    render(
+      <RecipeDetail
+        recipe={importedRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    expect(screen.getByTitle('Rezeptquelle öffnen')).toHaveTextContent('🔗');
+  });
 });
 
 describe('RecipeDetail - Metadata Order', () => {

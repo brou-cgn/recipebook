@@ -987,9 +987,16 @@ button.private-badge-button:active {
 }
 
 .source-url-icon {
+  font-size: 1.2rem;
   display: inline-flex;
   align-items: center;
   transition: transform 0.15s ease;
+}
+
+.source-url-icon img {
+  width: 1.2rem;
+  height: 1.2rem;
+  object-fit: contain;
 }
 
 .source-url-metadata-btn:hover .source-url-icon,

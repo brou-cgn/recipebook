@@ -142,6 +142,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [deleteRecipeIcon, setDeleteRecipeIcon] = useState('🗑');
   const [deleteFabPressed, setDeleteFabPressed] = useState(false);
   const [resetThumbnailIcon, setResetThumbnailIcon] = useState('📷');
+  const [sourceUrlIcon, setSourceUrlIcon] = useState('🔗');
   const [resetThumbnailFabPressed, setResetThumbnailFabPressed] = useState(false);
   const [resetThumbnailLoading, setResetThumbnailLoading] = useState(false);
   const [conversionTable, setConversionTable] = useState([]);
@@ -212,6 +213,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setPrivateBadgeIcon(eff('privateBadge') || '🔒');
       setDeleteRecipeIcon(eff('deleteRecipe') || '🗑');
       setResetThumbnailIcon(eff('resetThumbnail') || '📷');
+      setSourceUrlIcon(eff('recipeSourceLink') || '🔗');
       setAllButtonIcons(icons);
       setPortionUnits(lists.portionUnits || []);
       setButtonIconsLoaded(true);
@@ -259,6 +261,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setPrivateBadgeIcon(eff('privateBadge') || '🔒');
     setDeleteRecipeIcon(eff('deleteRecipe') || '🗑');
     setResetThumbnailIcon(eff('resetThumbnail') || '📷');
+    setSourceUrlIcon(eff('recipeSourceLink') || '🔗');
   }, [allButtonIcons, isDarkMode]);
 
   // Listen for dark mode changes
@@ -2556,18 +2559,19 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 <div className="metadata-item">
                   <a
                     className="source-url-metadata-btn"
+                    style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
                     href={recipeSourceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     title="Rezeptquelle öffnen"
                     aria-label="Rezeptquelle öffnen"
                   >
-                    <span className="source-url-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" width="1.2rem" height="1.2rem" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                        <path d="M15 3h6v6" />
-                        <path d="M10 14 21 3" />
-                      </svg>
+                    <span className="source-url-icon">
+                      {isBase64Image(sourceUrlIcon) ? (
+                        <img src={sourceUrlIcon} alt="Rezeptquelle öffnen" />
+                      ) : (
+                        sourceUrlIcon
+                      )}
                     </span>
                   </a>
                 </div>
