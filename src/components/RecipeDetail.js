@@ -199,7 +199,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setNutritionEmptyIcon(normalizeNutritionEmptyIcon(eff('nutritionEmpty')));
       setNutritionFilledIcon(eff('nutritionFilled') || 'Nähr.');
       setNutritionRecalcIcon(eff('nutritionRecalc') || '↻');
-      setNutritionManualSaveIcon(eff('nutritionManualSave') || '💾');
+      setNutritionManualSaveIcon(eff('saveRecipe') || '💾');
       setShoppingListIcon(eff('shoppingList') || 'Einkauf');
       setBringButtonIcon(eff('bringButton') || 'Bring');
       setTimerStartIcon(eff('timerStart') || '▶');
@@ -247,7 +247,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setNutritionEmptyIcon(normalizeNutritionEmptyIcon(eff('nutritionEmpty')));
     setNutritionFilledIcon(eff('nutritionFilled') || 'Nähr.');
     setNutritionRecalcIcon(eff('nutritionRecalc') || '↻');
-    setNutritionManualSaveIcon(eff('nutritionManualSave') || '💾');
+    setNutritionManualSaveIcon(eff('saveRecipe') || '💾');
     setShoppingListIcon(eff('shoppingList') || 'Einkauf');
     setBringButtonIcon(eff('bringButton') || 'Bring');
     setTimerStartIcon(eff('timerStart') || '▶');

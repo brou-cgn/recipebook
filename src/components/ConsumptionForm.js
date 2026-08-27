@@ -768,10 +768,10 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
         title="Abbrechen"
         aria-label="Verbrauch abbrechen"
       >
-        {isBase64Image(getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)) ? (
-          <img src={getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
+        {isBase64Image(getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)) ? (
+          <img src={getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
         ) : (
-          getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)
+          getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)
         )}
       </button>
 

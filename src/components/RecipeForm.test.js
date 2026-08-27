@@ -31,7 +31,7 @@ jest.mock('../utils/customLists', () => ({
     scanImage: '📷',
     webImport: '🌐',
     saveRecipe: '💾',
-    cancelRecipe: '✕',
+    closeButtonDefaultImg: '✕',
     addImage: '🖼',
     addIngredient: '🥕',
     addStep: '📝',
@@ -60,7 +60,6 @@ jest.mock('../utils/customLists', () => ({
     timerStop: '⏹',
     cookDate: '📅',
     addRecipe: '➕',
-    addMenu: '📋',
     addPrivateRecipe: '🔒',
     addImage: '🖼',
     addIngredient: '🥕',
@@ -69,8 +68,7 @@ jest.mock('../utils/customLists', () => ({
     swipeLeft: '👎',
     swipeUp: '⭐',
     swipeDelete: '🗑',
-    menuFavoritesButton: '★',
-    tagesmenuFilterButton: '☰'
+    menuFavoritesButton: '★'
   },
   getEffectiveIcon: (icons, key) => icons[key] ?? '',
   getDarkModePreference: () => false,

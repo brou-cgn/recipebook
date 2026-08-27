@@ -1038,9 +1038,9 @@ describe('button icons localStorage cache', () => {
 });
 
 describe('button icon dark-mode resolution', () => {
-  test('includes a default entry for the nutrition manual-save icon and its dark variant', () => {
-    expect(DEFAULT_BUTTON_ICONS.nutritionManualSave).toBe('💾');
-    expect(DEFAULT_BUTTON_ICONS.nutritionManualSaveDark).toBe('');
+  test('includes a default entry for the save icon and its dark variant, shared with the nutrition manual-save button', () => {
+    expect(DEFAULT_BUTTON_ICONS.saveRecipe).toBe('Speich.');
+    expect(DEFAULT_BUTTON_ICONS.saveRecipeDark).toBe('');
   });
 
   test('includes configurable default entries for bottom navigation icons, active icons and their dark variants', () => {
@@ -1066,21 +1066,21 @@ describe('button icon dark-mode resolution', () => {
     expect(DEFAULT_BUTTON_ICONS.bottomNavChefActiveDark).toBe('');
   });
 
-  test('prefers the dark variant for nutrition manual-save icons in dark mode and otherwise falls back to the normal icon', () => {
+  test('prefers the dark variant for save icons in dark mode and otherwise falls back to the normal icon', () => {
     expect(getEffectiveIcon({
-      nutritionManualSave: '💽',
-      nutritionManualSaveDark: '🌙💽',
-    }, 'nutritionManualSave', true)).toBe('🌙💽');
+      saveRecipe: '💽',
+      saveRecipeDark: '🌙💽',
+    }, 'saveRecipe', true)).toBe('🌙💽');
 
     expect(getEffectiveIcon({
-      nutritionManualSave: '💽',
-      nutritionManualSaveDark: '',
-    }, 'nutritionManualSave', true)).toBe('💽');
+      saveRecipe: '💽',
+      saveRecipeDark: '',
+    }, 'saveRecipe', true)).toBe('💽');
 
     expect(getEffectiveIcon({
-      nutritionManualSave: '💽',
-      nutritionManualSaveDark: '🌙💽',
-    }, 'nutritionManualSave', false)).toBe('💽');
+      saveRecipe: '💽',
+      saveRecipeDark: '🌙💽',
+    }, 'saveRecipe', false)).toBe('💽');
   });
 });
 

@@ -25,7 +25,7 @@ function OverviewAddFab({ onClick, title, ariaLabel }) {
     return () => window.removeEventListener('darkModeChange', handler);
   }, []);
 
-  const icon = getEffectiveIcon(buttonIcons, 'addMenu', isDarkMode);
+  const icon = getEffectiveIcon(buttonIcons, 'addRecipe', isDarkMode);
 
   return (
     <button

@@ -71,7 +71,7 @@ jest.mock('../utils/recipeFirestore', () => ({
 
 jest.mock('../utils/customLists', () => ({
   getButtonIcons: jest.fn(() => Promise.resolve({})),
-  DEFAULT_BUTTON_ICONS: { closeButtonDefaultImg: '✕', nutritionManualSave: '💾' },
+  DEFAULT_BUTTON_ICONS: { closeButtonDefaultImg: '✕', saveRecipe: '💾' },
   getEffectiveIcon: jest.fn((icons, key, isDarkMode) => {
     if (isDarkMode && icons[`${key}Dark`]) return icons[`${key}Dark`];
     return icons[key] ?? '';
@@ -687,7 +687,7 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
     getButtonIcons.mockReset();
     getButtonIcons.mockResolvedValue({});
     getEffectiveIcon.mockImplementation((icons, key, isDarkMode) => {
-      if (key === 'nutritionManualSave') return '💽';
+      if (key === 'saveRecipe') return '💽';
       if (key === 'nutritionEmpty') return '🥗';
       if (isDarkMode && icons[`${key}Dark`]) return icons[`${key}Dark`];
       return icons[key] ?? '';
@@ -713,7 +713,7 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
         mockNutritionModalProps.mock.calls.some(([props]) => props.manualSaveIcon === '💽')
       ).toBe(true);
     });
-    expect(getEffectiveIcon.mock.calls.some(([, key]) => key === 'nutritionManualSave')).toBe(true);
+    expect(getEffectiveIcon.mock.calls.some(([, key]) => key === 'saveRecipe')).toBe(true);
   });
 
   test('shows ingredientID dialog and persists manual selection when modal requests matching', async () => {
