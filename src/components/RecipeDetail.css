@@ -636,12 +636,10 @@ button.private-badge-button:active {
 /* Author and date caption container */
 .author-date-caption {
   padding: 0 1.5rem 1rem 1.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   font-size: 0.85rem;
-  color: #666;
-  font-weight: 500;
+  font-style: italic;
+  color: #3a3f42;
+  font-weight: 400;
 }
 
 .version-arrow {
@@ -686,13 +684,11 @@ button.private-badge-button:active {
 }
 
 .author-name {
-  flex: 0 0 auto;
+  font-weight: 700;
 }
 
 .creation-date {
-  flex: 0 0 auto;
-  text-align: right;
-  color: #888;
+  color: inherit;
 }
 
 .recipe-detail-image {
@@ -939,18 +935,28 @@ button.private-badge-button:active {
   padding: 1rem 1.5rem 1.5rem;
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 1rem;
   border-bottom: 1px solid #f0f0f0;
 }
 
 .metadata-item {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   padding: 0;
   background: transparent;
   border-radius: 8px;
-  font-size: 0.95rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.recipe-metadata .metadata-item:not(:first-child) {
+  padding-left: 1rem;
+  border-left: 1px solid #e5ded8;
 }
 
 .metadata-icon {
@@ -962,8 +968,25 @@ button.private-badge-button:active {
   color: #666;
 }
 
-.metadata-value {
-  color: #333;
+/* Kept in the DOM for print and screen readers; hidden visually on screen
+   for the items whose value/icon already carries the meaning (Kulinarik,
+   Zeit, Schwierigkeit) — see CLAUDE.md editorial metadata redesign. */
+@media screen {
+  .metadata-label--hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+.recipe-metadata .metadata-value {
+  color: #3a3f42;
 }
 
 .metadata-index-button {
@@ -981,21 +1004,25 @@ button.private-badge-button:active {
 .source-url-metadata-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  color: #666;
+  gap: 0.4rem;
+  color: #3a3f42;
   text-decoration: none;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .source-url-icon {
-  font-size: 1.2rem;
+  font-size: 0.85rem;
   display: inline-flex;
   align-items: center;
   transition: transform 0.15s ease;
 }
 
 .source-url-icon img {
-  width: 1.2rem;
-  height: 1.2rem;
+  width: 0.85rem;
+  height: 0.85rem;
   object-fit: contain;
 }
 
@@ -1244,14 +1271,23 @@ button.private-badge-button:active {
   color: #aaa;
 }
 
+.recipe-cuisine-line {
+  position: relative;
+  padding: 0 1.5rem 0.75rem;
+  font-size: 0.88rem;
+  color: #3a3f42;
+}
+
 .cuisine-badge {
-  background: #F5F2EF;
-  color: #3E2B1C;
-  border: 1px solid #E5DED8;
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.85rem;
+  background: transparent;
+  color: #3a3f42;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.88rem;
   font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .difficulty-stars {
@@ -1441,6 +1477,10 @@ button.private-badge-button:active {
   .author-date-caption {
     padding: 0 1.5rem 1rem 1rem;
 }
+
+  .recipe-cuisine-line {
+    padding: 0 1.5rem 0.75rem 1rem;
+  }
 
   /* Remove hover effects on mobile/touch devices */
   @media (hover: none) {
@@ -2681,6 +2721,16 @@ button.private-badge-button:active {
     font-size: 0.85rem !important;
     color: #555 !important;
     padding: 0 !important;
+  }
+
+  /* Cuisine line (own row since the editorial metadata redesign) */
+  .recipe-cuisine-line {
+    display: flex !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    padding: 0 !important;
+    margin: 0 0 0.5rem !important;
+    color: #333 !important;
   }
 
   /* Metadata row */

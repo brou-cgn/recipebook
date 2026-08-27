@@ -2851,6 +2851,10 @@
   color: #aaa;
 }
 
+[data-theme="dark"] .author-date-caption {
+  color: #ccc;
+}
+
 [data-theme="dark"] .author-name {
   color: #ccc;
 }
@@ -2876,7 +2880,11 @@
 }
 
 [data-theme="dark"] .source-url-metadata-btn {
-  color: #aaa;
+  color: #ccc;
+}
+
+[data-theme="dark"] .nutrition-metadata-btn {
+  color: #ccc;
 }
 
 [data-theme="dark"] .source-url-metadata-btn:hover .source-url-icon,
@@ -2955,15 +2963,15 @@
 }
 
 [data-theme="dark"] .cuisine-badge {
-  background: #2A2623;
-  color: #E6DED6;
-  border-color: #3A342F;
+  background: transparent;
+  color: #ccc;
+  border: none;
 }
 
 [data-theme="dark"] .nutrition-kcal-badge {
-  background: #2A2623;
-  color: #E6DED6;
-  border-color: #3A342F;
+  background: transparent;
+  color: inherit;
+  border: none;
 }
 
 [data-theme="dark"] .serving-control {
