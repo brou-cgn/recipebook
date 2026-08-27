@@ -957,7 +957,7 @@ button.private-badge-button:active {
 
 .recipe-metadata .metadata-item:not(:first-child) {
   padding-left: 1rem;
-  border-left: 1px solid #cbc3b8;
+  border-left: 1px solid #f0f0f0;
 }
 
 .metadata-icon {

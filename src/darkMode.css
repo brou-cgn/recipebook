@@ -435,7 +435,12 @@
 }
    
 [data-theme="dark"] .recipe-metadata {
+   border-top-color: #3d3d3d;
    border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .recipe-metadata .metadata-item:not(:first-child) {
+  border-left-color: #3d3d3d;
 }
 
 [data-theme="dark"] .ingredient-item.checked {
