@@ -1877,6 +1877,57 @@ describe('RecipeDetail - Share Button Visibility', () => {
   });
 });
 
+describe('RecipeDetail - Source URL Metadata Icon', () => {
+  const currentUser = {
+    id: 'user-1',
+    vorname: 'Test',
+    nachname: 'User',
+  };
+
+  const baseRecipe = {
+    id: 'recipe-1',
+    title: 'Test Recipe',
+    authorId: 'user-1',
+    portionen: 4,
+    ingredients: ['Ingredient 1'],
+    steps: ['Step 1'],
+  };
+
+  test('shows source URL icon linking to the saved URL when recipe was imported via webimport', () => {
+    const importedRecipe = { ...baseRecipe, sourceUrl: 'https://example.com/original-recipe' };
+
+    render(
+      <RecipeDetail
+        recipe={importedRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    const link = screen.getByTitle('Rezeptquelle öffnen');
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute('href', 'https://example.com/original-recipe');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  test('hides source URL icon when recipe has no sourceUrl', () => {
+    render(
+      <RecipeDetail
+        recipe={baseRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    expect(screen.queryByTitle('Rezeptquelle öffnen')).toBeNull();
+  });
+});
+
 describe('RecipeDetail - Metadata Order', () => {
   const currentUser = {
     id: 'user-1',
