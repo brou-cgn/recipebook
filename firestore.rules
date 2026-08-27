@@ -255,17 +255,17 @@ service cloud.firestore {
       allow delete: if isAdmin();
       // Admins may update any settings document.
       // edit/moderator users may update only the list fields in settings/app
-      // (cuisineTypes, cuisineGroups, mealCategories, units, portionUnits,
-      //  conversionTable, plus the legacy customUnits field) or the standard
-      // ingredient term fields in settings/standardIngredientTerms – all other
-      // fields remain admin-only.
+      // (cuisineTypes, cuisineGroups, cuisineIcons, mealCategories, units,
+      //  portionUnits, conversionTable, plus the legacy customUnits field) or
+      //  the standard ingredient term fields in settings/standardIngredientTerms
+      //  – all other fields remain admin-only.
       // Moderators may additionally update Kochatelier name/description fields.
       allow update: if isAdmin()
                  || (
                       isEditOrAdmin()
                       && settingId == 'app'
                       && request.resource.data.diff(resource.data).affectedKeys()
-                           .hasOnly(['cuisineTypes', 'cuisineGroups', 'mealCategories',
+                           .hasOnly(['cuisineTypes', 'cuisineGroups', 'cuisineIcons', 'mealCategories',
                                      'units', 'portionUnits', 'conversionTable', 'customUnits'])
                     )
                  || (
