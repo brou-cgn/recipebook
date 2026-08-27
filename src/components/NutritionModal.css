@@ -399,9 +399,12 @@
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.95rem;
-  color: inherit;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #3a3f42;
   font-family: inherit;
 }
 
@@ -410,32 +413,32 @@
 }
 
 .nutrition-icon {
-  font-size: 1.2rem;
+  font-size: 0.85rem;
   transition: transform 0.15s ease;
   display: inline-flex;
   align-items: center;
 }
 
 .nutrition-icon img {
-  width: 1.2rem;
-  height: 1.2rem;
+  width: 0.85rem;
+  height: 0.85rem;
   object-fit: contain;
 }
 
 .nutrition-kcal-badge {
-  background: #F5F2EF;
-  color: #3E2B1C;
-  border: 1px solid #E5DED8;
-  border-radius: 6px;
-  padding: 0.1rem 0.45rem;
-  font-size: 0.78rem;
-  font-weight: 700;
+  background: transparent;
+  color: inherit;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  font-size: inherit;
+  font-weight: 600;
   white-space: nowrap;
 }
 
 .nutrition-label {
   font-weight: 600;
-  color: #666;
+  color: inherit;
 }
 
 .nutrition-stale-warning {

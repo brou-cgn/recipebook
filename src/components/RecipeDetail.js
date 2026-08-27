@@ -2487,29 +2487,33 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
             {(authorName || formattedCreatedAt) && (
               <div className="author-date-caption">
-                {authorName && <span className="author-name">Autor: {authorName}</span>}
-                {formattedCreatedAt && <span className="creation-date">Erstellt am: {formattedCreatedAt}</span>}
+                {authorName && (
+                  <>{'Von '}<span className="author-name">{authorName}</span></>
+                )}
+                {formattedCreatedAt && (
+                  <span className="creation-date">{authorName ? ' erstellt am ' : 'Erstellt am '}{formattedCreatedAt}</span>
+                )}
+              </div>
+            )}
+
+            {cuisineDisplay && (
+              <div className="recipe-cuisine-line">
+                <span className="metadata-label metadata-label--hidden">Kulinarik:</span>
+                <span className="metadata-value cuisine-badge">{cuisineDisplay}</span>
               </div>
             )}
 
             <div className="recipe-metadata">
-              {cuisineDisplay && (
-                <div className="metadata-item">
-                  <span className="metadata-label">Kulinarik:</span>
-                  <span className="metadata-value cuisine-badge">{cuisineDisplay}</span>
-                </div>
-              )}
-              
               {recipe.kochdauer && (
                 <div className="metadata-item">
-                  <span className="metadata-label">Zeit:</span>
+                  <span className="metadata-label metadata-label--hidden">Zeit:</span>
                   <span className="metadata-value">{recipe.kochdauer} Min.</span>
                 </div>
               )}
-              
+
               {recipe.schwierigkeit && (
                 <div className="metadata-item">
-                  <span className="metadata-label">Schwierigkeit:</span>
+                  <span className="metadata-label metadata-label--hidden">Schwierigkeit:</span>
                   <span className="metadata-value difficulty-stars">
                     {[1, 2, 3, 4, 5].map((level) => (
                       <span
@@ -2568,11 +2572,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   >
                     <span className="source-url-icon">
                       {isBase64Image(sourceUrlIcon) ? (
-                        <img src={sourceUrlIcon} alt="Rezeptquelle öffnen" />
+                        <img src={sourceUrlIcon} alt="" />
                       ) : (
                         sourceUrlIcon
                       )}
                     </span>
+                    <span className="source-url-text">Quelle</span>
                   </a>
                 </div>
               )}
