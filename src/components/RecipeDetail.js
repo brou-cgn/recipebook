@@ -2552,6 +2552,28 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 </div>
               )}
 
+              {/* Source URL icon - shown when the recipe was imported via webimport and a source URL was saved */}
+              {recipe.sourceUrl && (
+                <div className="metadata-item">
+                  <a
+                    className="source-url-metadata-btn"
+                    href={recipe.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Rezeptquelle öffnen"
+                    aria-label="Rezeptquelle öffnen"
+                  >
+                    <span className="source-url-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="1.2rem" height="1.2rem" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <path d="M15 3h6v6" />
+                        <path d="M10 14 21 3" />
+                      </svg>
+                    </span>
+                  </a>
+                </div>
+              )}
+
               {/* Nutrition icon */}
               {!isSharedView && (
                 <div className="metadata-item">

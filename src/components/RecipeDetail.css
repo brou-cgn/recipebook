@@ -978,6 +978,26 @@ button.private-badge-button:active {
   text-underline-offset: 2px;
 }
 
+.source-url-metadata-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #666;
+  text-decoration: none;
+}
+
+.source-url-icon {
+  display: inline-flex;
+  align-items: center;
+  transition: transform 0.15s ease;
+}
+
+.source-url-metadata-btn:hover .source-url-icon,
+.source-url-metadata-btn:focus-visible .source-url-icon {
+  transform: scale(1.15);
+  color: #402C1C;
+}
+
 .metadata-index-button:disabled {
   cursor: default;
   text-decoration: none;
@@ -2641,6 +2661,7 @@ button.private-badge-button:active {
   .overlay-actions,
   .image-overlay-actions,
   .nutrition-metadata-btn,
+  .source-url-metadata-btn,
   .serving-control,
   .private-lists-section,
   .step-today-btn-wrapper,

@@ -2885,6 +2885,15 @@
   color: #e8e8e8;
 }
 
+[data-theme="dark"] .source-url-metadata-btn {
+  color: #aaa;
+}
+
+[data-theme="dark"] .source-url-metadata-btn:hover .source-url-icon,
+[data-theme="dark"] .source-url-metadata-btn:focus-visible .source-url-icon {
+  color: #f0f0f0;
+}
+
 [data-theme="dark"] .index-dialog {
   background: #1f1f1f;
   color: #f0f0f0;
