@@ -321,6 +321,7 @@ export const NUTRITION_REFERENCE_BOOLEAN_FIELDS = [
   'isFresh',
   'isSpice',
   'isProcessed',
+  'isDefaultVariant',
 ];
 
 export const NUTRITION_REFERENCE_EMPTY_STATUS = '';
