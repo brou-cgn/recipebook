@@ -1090,7 +1090,15 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         authorId: authorId,
         parentRecipeId: parentRecipeId || null,
         isPrivate: isPrivate,
-        createdAt: isCreatingVersion ? new Date().toISOString() : recipe?.createdAt,
+        // recipe?.createdAt can be missing here for a pending background
+        // import (isTemp) created via one of the Apple-Shortcut endpoints —
+        // those write the temp recipe doc server-side without createdAt
+        // (see functions/index.js importRecipeShortcut/scanRecipePhotoShortcut/
+        // getVideoUploadUrl/scrapeInstagramReelShortcut). Falling back to now
+        // here, at the point the user confirms the review, ensures the saved
+        // recipe always ends up with a createdAt instead of permanently
+        // missing it (updateRecipe() never backfills it after the fact).
+        createdAt: isCreatingVersion ? new Date().toISOString() : (recipe ? (recipe.createdAt || new Date().toISOString()) : undefined),
         versionCreatedFrom: isCreatingVersion ? recipe?.title : null,
         ...(sourceUrl ? { sourceUrl } : {}),
         ...(((!recipe && !isCreatingVersion) || recipe?.isTemp) && selectedPrivateListId ? { selectedGroupId: selectedPrivateListId } : {}),

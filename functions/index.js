@@ -3531,6 +3531,7 @@ exports.importRecipeShortcut = onRequest(
           title: 'Rezept-Import',
           authorId: userId,
           isTemp: true,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
           importStatus: 'queued',
           importProgress: 0,
           importHeartbeatAt: Date.now(),
@@ -3754,6 +3755,7 @@ exports.scanRecipePhotoShortcut = onRequest(
           title: 'Rezept-Import',
           authorId: userId,
           isTemp: true,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
           importStatus: 'queued',
           importProgress: 0,
           importHeartbeatAt: Date.now(),
@@ -3920,6 +3922,7 @@ exports.getVideoUploadUrl = onRequest(
           title: 'Rezept-Import',
           authorId: userId,
           isTemp: true,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
           importStatus: 'awaiting_upload',
           importProgress: 0,
           importHeartbeatAt: Date.now(),
@@ -4195,6 +4198,7 @@ exports.scrapeInstagramReelShortcut = onRequest(
         const docRef = await db.collection('recipes').add({
           ...buildRecipeFieldsFromResult(result, userId),
           isTemp: true,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
         console.log(`scrapeInstagramReelShortcut: recipe ${docRef.id} created for user ${userId}`);
         await writeImportProtocolEntry({
