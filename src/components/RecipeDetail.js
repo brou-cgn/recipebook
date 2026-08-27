@@ -1407,6 +1407,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Handle both array and string formats for kulinarik
   const cuisineList = (Array.isArray(recipe.kulinarik) ? recipe.kulinarik : [recipe.kulinarik]).filter(Boolean);
   const cuisineDisplay = cuisineList.join(', ');
+  // Kulinariktypen mit Icon werden ans Ende sortiert, Reihenfolge sonst stabil
+  const cuisineListSorted = [
+    ...cuisineList.filter((cuisine) => !getEffectiveCuisineIcon(cuisineIcons, cuisine, isDarkMode)),
+    ...cuisineList.filter((cuisine) => getEffectiveCuisineIcon(cuisineIcons, cuisine, isDarkMode)),
+  ];
 
   // The webimport URL lands in `sourceUrl` once an import finishes
   // successfully; a job that is still queued/processing or ended in error
@@ -2501,8 +2506,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               <div className="recipe-cuisine-line">
                 <span className="metadata-label metadata-label--hidden">Kulinarik:</span>
                 <span className="metadata-value cuisine-badge">
-                  {cuisineList.map((cuisine, index) => {
+                  {cuisineListSorted.map((cuisine, index) => {
                     const icon = getEffectiveCuisineIcon(cuisineIcons, cuisine, isDarkMode);
+                    const isLast = index === cuisineListSorted.length - 1;
+                    const nextHasIcon = !isLast && Boolean(
+                      getEffectiveCuisineIcon(cuisineIcons, cuisineListSorted[index + 1], isDarkMode)
+                    );
                     return (
                       <span key={`${cuisine}-${index}`} className="cuisine-badge-item">
                         {icon ? (
@@ -2510,7 +2519,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                             ? <img src={icon} alt={cuisine} title={cuisine} className="cuisine-badge-icon-img" />
                             : <span title={cuisine} aria-label={cuisine}>{icon}</span>
                         ) : cuisine}
-                        {index < cuisineList.length - 1 ? ', ' : ''}
+                        {!isLast && (nextHasIcon ? '  ' : ', ')}
                       </span>
                     );
                   })}
