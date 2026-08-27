@@ -13,6 +13,7 @@ const mockGetDocs = jest.fn();
 const mockGetDoc = jest.fn();
 const mockCollection = jest.fn(() => 'nutritionReferences-collection');
 const mockDoc = jest.fn(() => 'appConfig/nutritionReferences');
+const mockOnSnapshot = jest.fn(() => () => {});
 
 jest.mock('../firebase', () => ({
   db: {},
@@ -23,6 +24,7 @@ jest.mock('firebase/firestore', () => ({
   getDocs: (...args) => mockGetDocs(...args),
   doc: (...args) => mockDoc(...args),
   getDoc: (...args) => mockGetDoc(...args),
+  onSnapshot: (...args) => mockOnSnapshot(...args),
 }));
 
 function NutritionReferenceConsumer() {
@@ -51,6 +53,8 @@ describe('NutritionReferenceContext caching', () => {
     mockGetDoc.mockReset();
     mockCollection.mockClear();
     mockDoc.mockClear();
+    mockOnSnapshot.mockReset();
+    mockOnSnapshot.mockReturnValue(() => {});
   });
 
   test('saves, loads and clears nutrition reference cache helpers', () => {
@@ -125,6 +129,58 @@ describe('NutritionReferenceContext caching', () => {
     const stored = JSON.parse(localStorage.getItem(NUTRITION_REF_CACHE_KEY));
     expect(stored.lastUpdatedAt).toBe(2000);
     expect(stored.rows[0].ingredientID).toBe('fresh-tomate');
+  });
+
+  test('refetches rows when the appConfig marker doc changes after mount (live cross-session sync)', async () => {
+    saveCachedRows([{ ingredientID: 'tomate', status: 'Prüfung ausstehend' }], 1000);
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ lastUpdatedAt: { toMillis: () => 1000 } }),
+    });
+    mockGetDocs.mockResolvedValue({ docs: [] });
+
+    let snapshotCallback;
+    mockOnSnapshot.mockImplementation((_ref, onNext) => {
+      snapshotCallback = onNext;
+      return () => {};
+    });
+
+    render(
+      <NutritionReferenceProvider>
+        <NutritionReferenceConsumer />
+      </NutritionReferenceProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading')).toHaveTextContent('ready');
+    });
+    expect(mockGetDocs).not.toHaveBeenCalled();
+    expect(screen.getByTestId('first-id')).toHaveTextContent('tomate');
+
+    // First snapshot mirrors the state already handled by the mount-time load — must not refetch.
+    await act(async () => {
+      snapshotCallback({ exists: () => true, data: () => ({ lastUpdatedAt: { toMillis: () => 1000 } }) });
+    });
+    expect(mockGetDocs).not.toHaveBeenCalled();
+
+    // A later snapshot (e.g. another session approved an ingredient) must trigger a refetch.
+    mockGetDocs.mockResolvedValue({
+      docs: [
+        {
+          id: 'tomate',
+          data: () => ({ ingredientID: 'tomate', status: 'Freigegeben', source: 'openfoodfacts' }),
+        },
+      ],
+    });
+    await act(async () => {
+      snapshotCallback({ exists: () => true, data: () => ({ lastUpdatedAt: { toMillis: () => 2000 } }) });
+    });
+
+    await waitFor(() => {
+      expect(mockGetDocs).toHaveBeenCalledTimes(1);
+    });
+    const stored = JSON.parse(localStorage.getItem(NUTRITION_REF_CACHE_KEY));
+    expect(stored.lastUpdatedAt).toBe(2000);
   });
 
   test('reload throws when requested so callers can show error feedback', async () => {
