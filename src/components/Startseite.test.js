@@ -143,20 +143,20 @@ describe('Startseite', () => {
     const calls = manyRecipes.map((r, i) => ({ id: `c${i}`, recipeId: r.id }));
     getRecentRecipeCalls.mockResolvedValue(calls);
     const { container } = render(<Startseite currentUser={{ id: 'u1' }} recipes={manyRecipes} />);
-    await screen.findByText('Rezept 0');
-    // Both carousels (Im Trend + Neue Rezepte) cap at 10 each → 20 items total
+    await screen.findAllByText('Rezept 0');
+    // Im Trend, Neue Rezepte and Relevante Rezepte cap at 10 each → 30 items total
     const items = container.querySelectorAll('.startseite-carousel-item');
-    expect(items.length).toBe(20);
+    expect(items.length).toBe(30);
   });
 
-  test('renders "mehr" buttons for all five carousels', async () => {
+  test('renders "mehr" buttons for all six carousels', async () => {
     const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
     getRecentRecipeCalls.mockResolvedValue([]);
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />);
     await screen.findByText('Keine Trendrezepte vorhanden.');
     await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
     const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
-    expect(mehrButtons.length).toBe(5);
+    expect(mehrButtons.length).toBe(6);
   });
 
   test('shows "Meine Alltagsklassiker" directly below "Meine Kochideen"', async () => {
@@ -200,15 +200,18 @@ describe('Startseite', () => {
       { id: 'c1', recipeId: 'r1' },
     ]);
     const onSelectRecipe = jest.fn();
-    render(
+    const { container } = render(
       <Startseite
         currentUser={{ id: 'u1' }}
         recipes={mockRecipes}
         onSelectRecipe={onSelectRecipe}
       />
     );
-    const card = await screen.findByText('Rezept 1');
-    fireEvent.click(card);
+    await screen.findAllByText('Rezept 1');
+    const trendSection = Array.from(container.querySelectorAll('.startseite-trending-section')).find(
+      (section) => section.querySelector('.startseite-section-title')?.textContent === 'Im Trend'
+    );
+    fireEvent.click(trendSection.querySelector('[data-testid="trending-card"]'));
     expect(onSelectRecipe).toHaveBeenCalledWith(mockRecipes[0]);
   });
 
@@ -288,7 +291,8 @@ describe('Startseite', () => {
     const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
     getRecentRecipeCalls.mockResolvedValue([]);
     render(<Startseite currentUser={{ id: 'u1' }} recipes={[]} />);
-    expect(await screen.findByText('Keine Rezepte vorhanden.')).toBeInTheDocument();
+    // Both "Neue Rezepte" and "Relevante Rezepte" show the same empty text
+    expect(await screen.findAllByText('Keine Rezepte vorhanden.')).toHaveLength(2);
   });
 
   test('shows up to 10 recipes in Neue Rezepte carousel', async () => {
@@ -302,9 +306,9 @@ describe('Startseite', () => {
     }));
     const { container } = render(<Startseite currentUser={{ id: 'u1' }} recipes={manyRecipes} />);
     await screen.findByText('Keine Trendrezepte vorhanden.');
-    // Only one carousel (Neue Rezepte) has items; it should show 10
+    // "Neue Rezepte" and "Relevante Rezepte" both cap at 10 → 20 items total
     const items = container.querySelectorAll('.startseite-carousel-item');
-    expect(items.length).toBe(10);
+    expect(items.length).toBe(20);
   });
 
   test('Neue Rezepte carousel sorts recipes by createdAt descending', async () => {
@@ -461,7 +465,7 @@ describe('Startseite', () => {
     const { container } = render(<Startseite currentUser={user} recipes={recipes} groups={[group]} />);
 
     // Wait for the candidates carousel to finish loading
-    await screen.findByText('Apfelkuchen');
+    await screen.findAllByText('Apfelkuchen');
 
     // Find the "Meine Kochideen" section and check the order of items
     const sections = container.querySelectorAll('.startseite-trending-section');

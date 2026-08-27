@@ -290,6 +290,15 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
     onViewChange?.('neueRezepte');
   };
 
+  const handleRelevanteRezepteMehrClick = () => {
+    try {
+      sessionStorage.setItem(SORT_STORAGE_KEY, 'newest');
+    } catch (e) {
+      // sessionStorage might be unavailable in some environments
+    }
+    onViewChange?.('neueRezepte');
+  };
+
   const kuechenbetriebFabConfig = useMemo(
     () => getKuechenbetriebFabConfig({ recipes, nutritionReferenceRows, cuisineProposals }),
     [recipes, nutritionReferenceRows, cuisineProposals]
@@ -663,6 +672,21 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         )}
         emptyText="Keine Rezepte vorhanden."
         onMehr={handleNeueRezepteMehrClick}
+      />
+      <StartseitenKarussell
+        title="Relevante Rezepte"
+        items={neueRezepte}
+        loading={false}
+        renderItem={(recipe) => (
+          <TrendingCard
+            recipe={recipe}
+            onSelectRecipe={onSelectRecipe}
+            difficultyIcon={getEffectiveIcon(buttonIcons, 'trendingDifficultyIcon', isDarkMode)}
+            timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
+          />
+        )}
+        emptyText="Keine Rezepte vorhanden."
+        onMehr={handleRelevanteRezepteMehrClick}
       />
       {currentUser?.kuecheFab && kuechenbetriebFabConfig.showFab && (
         <button
