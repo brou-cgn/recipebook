@@ -43,7 +43,7 @@ function getSortableItemStyle(transform, transition, isDragging) {
   };
 }
 
-function SortableListItem({ id, label, onRemove, onRename }) {
+function SortableListItem({ id, label, onRemove, onRename, icon, onIconChange }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(label);
 
@@ -102,6 +102,18 @@ function SortableListItem({ id, label, onRemove, onRename }) {
         />
       ) : (
         <span>{label}</span>
+      )}
+      {onIconChange && !isEditing && (
+        <input
+          type="text"
+          value={icon || ''}
+          onChange={(e) => onIconChange(e.target.value)}
+          placeholder="Icon"
+          maxLength={4}
+          className="list-item-icon-input"
+          aria-label={`Icon für ${label}`}
+          title="Optionales Icon (Emoji)"
+        />
       )}
       {onRename && !isEditing && (
         <button className="edit-btn" onClick={handleEditStart} title="Umbenennen">✎</button>
@@ -399,6 +411,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [lists, setLists] = useState({
     cuisineTypes: [],
     cuisineGroups: [],
+    cuisineIcons: {},
     mealCategories: [],
     units: [],
     portionUnits: [],
@@ -950,28 +963,53 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   };
 
   const removeCuisine = (cuisine) => {
-    setLists(prev => ({
-      ...prev,
-      cuisineTypes: prev.cuisineTypes.filter(c => c !== cuisine),
-      cuisineGroups: (prev.cuisineGroups || []).map(g => ({
-        ...g,
-        children: g.children.filter(c => c !== cuisine)
-      }))
-    }));
+    setLists(prev => {
+      const cuisineIcons = { ...(prev.cuisineIcons || {}) };
+      delete cuisineIcons[cuisine];
+      return {
+        ...prev,
+        cuisineTypes: prev.cuisineTypes.filter(c => c !== cuisine),
+        cuisineGroups: (prev.cuisineGroups || []).map(g => ({
+          ...g,
+          children: g.children.filter(c => c !== cuisine)
+        })),
+        cuisineIcons
+      };
+    });
     setPendingCuisineDeletes(prev => prev.includes(cuisine) ? prev : [...prev, cuisine]);
+  };
+
+  const setCuisineIcon = (cuisine, value) => {
+    setLists(prev => {
+      const cuisineIcons = { ...(prev.cuisineIcons || {}) };
+      if (value) {
+        cuisineIcons[cuisine] = value;
+      } else {
+        delete cuisineIcons[cuisine];
+      }
+      return { ...prev, cuisineIcons };
+    });
   };
 
   const renameCuisine = (oldName, newName) => {
     const trimmed = newName.trim();
     if (!trimmed || oldName === trimmed) return;
-    setLists(prev => ({
-      ...prev,
-      cuisineTypes: prev.cuisineTypes.map(c => c === oldName ? trimmed : c),
-      cuisineGroups: (prev.cuisineGroups || []).map(g => ({
-        ...g,
-        children: g.children.map(c => c === oldName ? trimmed : c)
-      }))
-    }));
+    setLists(prev => {
+      const cuisineIcons = { ...(prev.cuisineIcons || {}) };
+      if (oldName in cuisineIcons) {
+        cuisineIcons[trimmed] = cuisineIcons[oldName];
+        delete cuisineIcons[oldName];
+      }
+      return {
+        ...prev,
+        cuisineTypes: prev.cuisineTypes.map(c => c === oldName ? trimmed : c),
+        cuisineGroups: (prev.cuisineGroups || []).map(g => ({
+          ...g,
+          children: g.children.map(c => c === oldName ? trimmed : c)
+        })),
+        cuisineIcons
+      };
+    });
     setPendingCuisineRenames(prev => {
       const existingIdx = prev.findIndex(r => r.to === oldName);
       if (existingIdx >= 0) {
@@ -2725,7 +2763,15 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
             <SortableContext items={lists.cuisineTypes} strategy={verticalListSortingStrategy}>
               <div className="list-items">
                 {lists.cuisineTypes.map((cuisine) => (
-                  <SortableListItem key={cuisine} id={cuisine} label={cuisine} onRemove={() => removeCuisine(cuisine)} onRename={canEditLists ? renameCuisine : undefined} />
+                  <SortableListItem
+                    key={cuisine}
+                    id={cuisine}
+                    label={cuisine}
+                    icon={(lists.cuisineIcons || {})[cuisine]}
+                    onIconChange={canEditLists ? (value) => setCuisineIcon(cuisine, value) : undefined}
+                    onRemove={() => removeCuisine(cuisine)}
+                    onRename={canEditLists ? renameCuisine : undefined}
+                  />
                 ))}
               </div>
             </SortableContext>

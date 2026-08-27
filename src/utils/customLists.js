@@ -24,6 +24,12 @@ export const DEFAULT_CUISINE_TYPES = [
   'Weihnachtliche Küche'
 ];
 
+/**
+ * Optional icons for cuisine types, keyed by cuisine type name.
+ * @type {Object<string, string>}
+ */
+export const DEFAULT_CUISINE_ICONS = {};
+
 export const DEFAULT_MEAL_CATEGORIES = [
   'Appetizer',
   'Dips & Saucen',
@@ -1284,6 +1290,7 @@ export async function getCustomLists() {
   return {
     cuisineTypes: settings.cuisineTypes ?? DEFAULT_CUISINE_TYPES,
     cuisineGroups: settings.cuisineGroups ?? DEFAULT_CUISINE_GROUPS,
+    cuisineIcons: settings.cuisineIcons ?? DEFAULT_CUISINE_ICONS,
     mealCategories: settings.mealCategories ?? DEFAULT_MEAL_CATEGORIES,
     units: settings.units ?? DEFAULT_UNITS,
     portionUnits: settings.portionUnits ?? DEFAULT_PORTION_UNITS,
@@ -1544,6 +1551,7 @@ export async function resetCustomLists() {
   const defaultLists = {
     cuisineTypes: DEFAULT_CUISINE_TYPES,
     cuisineGroups: DEFAULT_CUISINE_GROUPS,
+    cuisineIcons: DEFAULT_CUISINE_ICONS,
     mealCategories: DEFAULT_MEAL_CATEGORIES,
     units: DEFAULT_UNITS,
     portionUnits: DEFAULT_PORTION_UNITS,
