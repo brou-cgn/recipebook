@@ -43,7 +43,74 @@ function getSortableItemStyle(transform, transition, isDragging) {
   };
 }
 
-function SortableListItem({ id, label, onRemove, onRename, icon, onIconChange, iconDark, onIconDarkChange }) {
+function CuisineIconSlot({ value, onTextChange, onUpload, onRemoveImage, uploading, placeholder, ariaLabel, title, inputId }) {
+  const isImage = isBase64Image(value);
+  return (
+    <span className="cuisine-icon-slot">
+      {isImage ? (
+        <>
+          <span className="cuisine-icon-preview">
+            <img src={value} alt="" className="cuisine-icon-preview-image" />
+          </span>
+          <button
+            type="button"
+            className="cuisine-icon-remove-btn"
+            onClick={onRemoveImage}
+            title="Bild entfernen"
+            aria-label={`Bild entfernen: ${ariaLabel}`}
+          >
+            ×
+          </button>
+        </>
+      ) : (
+        <>
+          <input
+            type="text"
+            value={value || ''}
+            onChange={(e) => onTextChange(e.target.value)}
+            placeholder={placeholder}
+            maxLength={4}
+            className="list-item-icon-input"
+            aria-label={ariaLabel}
+            title={title}
+          />
+          <label
+            htmlFor={inputId}
+            className="cuisine-icon-upload-btn"
+            title="Bild hochladen"
+          >
+            {uploading ? '...' : '📷'}
+          </label>
+          <input
+            type="file"
+            id={inputId}
+            accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+            onChange={onUpload}
+            style={{ display: 'none' }}
+            disabled={uploading}
+          />
+        </>
+      )}
+    </span>
+  );
+}
+
+function SortableListItem({
+  id,
+  label,
+  onRemove,
+  onRename,
+  icon,
+  onIconChange,
+  onIconUpload,
+  onIconRemoveImage,
+  uploadingLight,
+  iconDark,
+  onIconDarkChange,
+  onIconDarkUpload,
+  onIconDarkRemoveImage,
+  uploadingDark,
+}) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(label);
 
@@ -106,27 +173,29 @@ function SortableListItem({ id, label, onRemove, onRename, icon, onIconChange, i
       {(onIconChange || onIconDarkChange) && !isEditing && (
         <div className="list-item-icon-group">
           {onIconChange && (
-            <input
-              type="text"
-              value={icon || ''}
-              onChange={(e) => onIconChange(e.target.value)}
+            <CuisineIconSlot
+              value={icon}
+              onTextChange={onIconChange}
+              onUpload={onIconUpload}
+              onRemoveImage={onIconRemoveImage}
+              uploading={uploadingLight}
               placeholder="☀"
-              maxLength={4}
-              className="list-item-icon-input"
-              aria-label={`Icon für Hellmodus für ${label}`}
-              title="Optionales Icon für Hellmodus (Emoji)"
+              ariaLabel={`Icon für Hellmodus für ${label}`}
+              title="Optionales Icon für Hellmodus (Emoji oder Bild)"
+              inputId={`cuisineIconLight-${String(id).replace(/\s+/g, '-')}`}
             />
           )}
           {onIconDarkChange && (
-            <input
-              type="text"
-              value={iconDark || ''}
-              onChange={(e) => onIconDarkChange(e.target.value)}
+            <CuisineIconSlot
+              value={iconDark}
+              onTextChange={onIconDarkChange}
+              onUpload={onIconDarkUpload}
+              onRemoveImage={onIconDarkRemoveImage}
+              uploading={uploadingDark}
               placeholder="🌙"
-              maxLength={4}
-              className="list-item-icon-input"
-              aria-label={`Icon für Dunkelmodus für ${label}`}
-              title="Optionales Icon für Dunkelmodus (Emoji)"
+              ariaLabel={`Icon für Dunkelmodus für ${label}`}
+              title="Optionales Icon für Dunkelmodus (Emoji oder Bild)"
+              inputId={`cuisineIconDark-${String(id).replace(/\s+/g, '-')}`}
             />
           )}
         </div>
@@ -458,6 +527,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
 
   // New cuisine group state (for adding a new parent group)
   const [newGroupName, setNewGroupName] = useState('');
+
+  // Tracks which cuisineIcons map key (cuisine name, or "<name>Dark") is currently uploading
+  const [uploadingCuisineIcon, setUploadingCuisineIcon] = useState(null);
 
   // Pending renames for cuisine types and meal categories (to propagate to recipes on save)
   const [pendingCuisineRenames, setPendingCuisineRenames] = useState([]);
@@ -996,9 +1068,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     setPendingCuisineDeletes(prev => prev.includes(cuisine) ? prev : [...prev, cuisine]);
   };
 
-  // variant: 'light' (default) sets the base icon; 'dark' sets the "<name>Dark" variant
-  const setCuisineIcon = (cuisine, value, variant = 'light') => {
-    const mapKey = variant === 'dark' ? `${cuisine}Dark` : cuisine;
+  const setCuisineIconValue = (mapKey, value) => {
     setLists(prev => {
       const cuisineIcons = { ...(prev.cuisineIcons || {}) };
       if (value) {
@@ -1008,6 +1078,32 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       }
       return { ...prev, cuisineIcons };
     });
+  };
+
+  // variant: 'light' (default) sets the base icon; 'dark' sets the "<name>Dark" variant
+  const setCuisineIcon = (cuisine, value, variant = 'light') => {
+    setCuisineIconValue(variant === 'dark' ? `${cuisine}Dark` : cuisine, value);
+  };
+
+  const handleCuisineIconUpload = async (mapKey, e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    setUploadingCuisineIcon(mapKey);
+    try {
+      const base64 = await fileToBase64(file);
+      const compressedBase64 = await compressImage(base64, 128, 128, 0.85, true);
+      setCuisineIconValue(mapKey, compressedBase64);
+    } catch (error) {
+      alert(`Fehler beim Hochladen des Icons: ${error.message}`);
+    } finally {
+      setUploadingCuisineIcon(null);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveCuisineIconImage = (mapKey) => {
+    setCuisineIconValue(mapKey, '');
   };
 
   const renameCuisine = (oldName, newName) => {
@@ -2796,6 +2892,12 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     iconDark={(lists.cuisineIcons || {})[`${cuisine}Dark`]}
                     onIconChange={canEditLists ? (value) => setCuisineIcon(cuisine, value, 'light') : undefined}
                     onIconDarkChange={canEditLists ? (value) => setCuisineIcon(cuisine, value, 'dark') : undefined}
+                    onIconUpload={canEditLists ? (e) => handleCuisineIconUpload(cuisine, e) : undefined}
+                    onIconDarkUpload={canEditLists ? (e) => handleCuisineIconUpload(`${cuisine}Dark`, e) : undefined}
+                    onIconRemoveImage={canEditLists ? () => handleRemoveCuisineIconImage(cuisine) : undefined}
+                    onIconDarkRemoveImage={canEditLists ? () => handleRemoveCuisineIconImage(`${cuisine}Dark`) : undefined}
+                    uploadingLight={uploadingCuisineIcon === cuisine}
+                    uploadingDark={uploadingCuisineIcon === `${cuisine}Dark`}
                     onRemove={() => removeCuisine(cuisine)}
                     onRename={canEditLists ? renameCuisine : undefined}
                   />
