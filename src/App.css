@@ -41,7 +41,6 @@
   .App .events-page-container .events-guests-fab-button,
   .App .recipe-detail-container .new-version-fab-button,
   .App .recipe-detail-container .delete-fab-button,
-  .App .recipe-detail-container .publish-fab-button,
   .App .recipe-detail-container .reset-thumbnail-fab-button {
     bottom: calc(24px + env(safe-area-inset-bottom, 0px) + var(--bottom-nav-offset, 0px));
     transition:
@@ -135,7 +134,6 @@
   .App .recipe-detail-container .edit-fab-button,
   .App .recipe-detail-container .new-version-fab-button,
   .App .recipe-detail-container .delete-fab-button,
-  .App .recipe-detail-container .publish-fab-button,
   .App .recipe-detail-container .reset-thumbnail-fab-button,
   .App .filter-button,
   .App .sort-carousel,

@@ -53,8 +53,6 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [deleteMenuIcon, setDeleteMenuIcon] = useState('🗑');
   const [deleteFabPressed, setDeleteFabPressed] = useState(false);
-  const [publishMenuIcon, setPublishMenuIcon] = useState('↑');
-  const [publishFabPressed, setPublishFabPressed] = useState(false);
   const [publishLoading, setPublishLoading] = useState(false);
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(() => window.innerWidth <= MOBILE_TABLET_BREAKPOINT);
   const [allButtonIcons, setAllButtonIcons] = useState(null);
@@ -105,7 +103,6 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     setPrivateBadgeIcon(eff('privateBadge') || '🔒');
     setEditMenuIcon(eff('editRecipe') || 'Edit');
     setDeleteMenuIcon(eff('deleteRecipe') || '🗑');
-    setPublishMenuIcon(eff('publishRecipe') || '↑');
   }, [allButtonIcons, isDarkMode]);
 
   // Listen for dark mode changes
@@ -318,14 +315,6 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
         setPublishLoading(false);
       }
     }
-  };
-
-  const handlePublishFabPressStart = () => {
-    setPublishFabPressed(true);
-  };
-
-  const handlePublishFabPressEnd = () => {
-    setPublishFabPressed(false);
   };
 
   // Derive favorite status from favoriteMenuIds
@@ -838,29 +827,6 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
             <img src={deleteMenuIcon} alt="Löschen" className="button-icon-image" draggable="false" />
           ) : (
             deleteMenuIcon
-          )}
-        </button>
-      )}
-      {isMobileOrTablet && menu.privat && canEditMenu(currentUser, menu) && onPublish && (
-        <button
-          className={`publish-fab-button${publishFabPressed ? ' pressed' : ''}`}
-          onClick={handlePublish}
-          onTouchStart={handlePublishFabPressStart}
-          onTouchEnd={handlePublishFabPressEnd}
-          onTouchCancel={handlePublishFabPressEnd}
-          onMouseDown={handlePublishFabPressStart}
-          onMouseUp={handlePublishFabPressEnd}
-          onMouseLeave={handlePublishFabPressEnd}
-          disabled={publishLoading}
-          title="Menü veröffentlichen"
-          aria-label="Menü veröffentlichen"
-        >
-          {publishLoading ? '…' : (
-            isBase64Image(publishMenuIcon) ? (
-              <img src={publishMenuIcon} alt="Veröffentlichen" className="button-icon-image" draggable="false" />
-            ) : (
-              publishMenuIcon
-            )
           )}
         </button>
       )}

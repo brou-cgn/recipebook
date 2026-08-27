@@ -139,8 +139,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('★');
   const [privateBadgeIcon, setPrivateBadgeIcon] = useState('🔒');
   const [newVersionFabPressed, setNewVersionFabPressed] = useState(false);
-  const [publishRecipeIcon, setPublishRecipeIcon] = useState('↑');
-  const [publishFabPressed, setPublishFabPressed] = useState(false);
   const [deleteRecipeIcon, setDeleteRecipeIcon] = useState('🗑');
   const [deleteFabPressed, setDeleteFabPressed] = useState(false);
   const [resetThumbnailIcon, setResetThumbnailIcon] = useState('📷');
@@ -212,7 +210,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
       setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
       setPrivateBadgeIcon(eff('privateBadge') || '🔒');
-      setPublishRecipeIcon(eff('publishRecipe') || '↑');
       setDeleteRecipeIcon(eff('deleteRecipe') || '🗑');
       setResetThumbnailIcon(eff('resetThumbnail') || '📷');
       setAllButtonIcons(icons);
@@ -260,7 +257,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
     setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
     setPrivateBadgeIcon(eff('privateBadge') || '🔒');
-    setPublishRecipeIcon(eff('publishRecipe') || '↑');
     setDeleteRecipeIcon(eff('deleteRecipe') || '🗑');
     setResetThumbnailIcon(eff('resetThumbnail') || '📷');
   }, [allButtonIcons, isDarkMode]);
@@ -598,10 +594,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const isRecipePublic = !recipe.groupId || recipe.groupId === publicGroupId || !!recipe.publishedToPublic;
   const userCanDelete = canDeleteRecipe(currentUser, recipe, isRecipePublic);
   const userCanPublish = !isRecipePublic && userCanDirectlyEdit;
-  const deleteAtPublishPosition = isRecipePublic && userCanDelete;
   const userCanResetThumbnail = canDeleteRecipes(currentUser);
   const hasRecipeIndexViewPermission = canViewRecipeIndex(currentUser);
-  const thumbnailResetAtSecondPosition = deleteAtPublishPosition && userCanResetThumbnail;
 
   // Calculate the sort index breakdown for display in the recipe detail (pure calculation, no Firestore reads)
   const sortIndexBreakdown = useMemo(() => {
@@ -3008,7 +3002,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       )}
       {(isMobile || isTablet || isMobileLandscape) && userCanDelete && onDelete && !cookingMode && (
         <button
-          className={`delete-fab-button${deleteFabPressed ? ' pressed' : ''}${deleteAtPublishPosition ? ' at-publish-position' : ''}`}
+          className={`delete-fab-button${deleteFabPressed ? ' pressed' : ''}`}
           style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
           onClick={handleDelete}
           onTouchStart={() => setDeleteFabPressed(true)}
@@ -3027,33 +3021,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           )}
         </button>
       )}
-      {(isMobile || isTablet || isMobileLandscape) && userCanPublish && onPublish && !cookingMode && (
-        <button
-          className={`publish-fab-button${publishFabPressed ? ' pressed' : ''}`}
-          style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
-          onClick={handlePublish}
-          onTouchStart={() => setPublishFabPressed(true)}
-          onTouchEnd={() => setPublishFabPressed(false)}
-          onTouchCancel={() => setPublishFabPressed(false)}
-          onMouseDown={() => setPublishFabPressed(true)}
-          onMouseUp={() => setPublishFabPressed(false)}
-          onMouseLeave={() => setPublishFabPressed(false)}
-          disabled={publishLoading}
-          title="Rezept veröffentlichen"
-          aria-label="Rezept veröffentlichen"
-        >
-          {publishLoading ? '…' : (
-            isBase64Image(publishRecipeIcon) ? (
-              <img src={publishRecipeIcon} alt="Veröffentlichen" className="button-icon-image" draggable="false" />
-            ) : (
-              publishRecipeIcon
-            )
-          )}
-        </button>
-      )}
       {(isMobile || isTablet || isMobileLandscape) && userCanResetThumbnail && !cookingMode && (
         <button
-          className={`reset-thumbnail-fab-button${resetThumbnailFabPressed ? ' pressed' : ''}${thumbnailResetAtSecondPosition ? ' at-second-position' : ''}`}
+          className={`reset-thumbnail-fab-button${resetThumbnailFabPressed ? ' pressed' : ''}`}
           style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
           onClick={handleResetThumbnail}
           onTouchStart={() => setResetThumbnailFabPressed(true)}

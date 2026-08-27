@@ -58,7 +58,6 @@ describe('App CSS FAB bottom offset selectors', () => {
       '.App .events-page-container .edit-fab-button,',
       '.App .recipe-detail-container .new-version-fab-button,',
       '.App .recipe-detail-container .delete-fab-button,',
-      '.App .recipe-detail-container .publish-fab-button,',
       '.App .recipe-detail-container .reset-thumbnail-fab-button {',
     ];
 
@@ -104,7 +103,6 @@ describe('App CSS FAB bottom offset selectors', () => {
     expect(reducedMotionBlock).toContain('.App .events-add-fab-button,');
     expect(reducedMotionBlock).toContain('.App .recipe-detail-container .new-version-fab-button,');
     expect(reducedMotionBlock).toContain('.App .recipe-detail-container .delete-fab-button,');
-    expect(reducedMotionBlock).toContain('.App .recipe-detail-container .publish-fab-button,');
     expect(reducedMotionBlock).toContain('.App .recipe-detail-container .reset-thumbnail-fab-button,');
   });
 });
