@@ -275,6 +275,40 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
       .slice(0, NEUE_REZEPTE_TOP);
   }, [recipes]);
 
+  const relevanteRezepte = useMemo(() => {
+    const currentMonth = new Date().getMonth() + 1;
+
+    return [...recipes]
+      .sort((a, b) => {
+        const scoreA = calculateRecipeSortIndex({
+          isFavorite: favoriteRecipeIds.includes(a.id),
+          lastCookDateMs: lastOwnCookDateByRecipeId[a.id] ?? null,
+          seasonMatrixEntries,
+          nutritionReferenceRows,
+          nutritionReferenceIndex,
+          recipe: a,
+          currentMonth,
+        });
+        const scoreB = calculateRecipeSortIndex({
+          isFavorite: favoriteRecipeIds.includes(b.id),
+          lastCookDateMs: lastOwnCookDateByRecipeId[b.id] ?? null,
+          seasonMatrixEntries,
+          nutritionReferenceRows,
+          nutritionReferenceIndex,
+          recipe: b,
+          currentMonth,
+        });
+        const scoreDiff = scoreB - scoreA;
+        if (scoreDiff !== 0) return scoreDiff;
+
+        const titleDiff = (a.title || '').localeCompare((b.title || ''), undefined, { sensitivity: 'base' });
+        if (titleDiff !== 0) return titleDiff;
+
+        return (a.id || '').localeCompare((b.id || ''), undefined, { sensitivity: 'base' });
+      })
+      .slice(0, NEUE_REZEPTE_TOP);
+  }, [recipes, lastOwnCookDateByRecipeId, favoriteRecipeIds, seasonMatrixEntries, nutritionReferenceRows, nutritionReferenceIndex]);
+
   const saisonaleRezepte = useMemo(() => (
     recipes
       .filter((recipe) => hasHauptsaisonIngredient(recipe, seasonMatrixEntries, undefined, nutritionReferenceRows, nutritionReferenceIndex))
@@ -292,7 +326,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
 
   const handleRelevanteRezepteMehrClick = () => {
     try {
-      sessionStorage.setItem(SORT_STORAGE_KEY, 'newest');
+      sessionStorage.setItem(SORT_STORAGE_KEY, 'index');
     } catch (e) {
       // sessionStorage might be unavailable in some environments
     }
@@ -675,7 +709,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
       />
       <StartseitenKarussell
         title="Relevante Rezepte"
-        items={neueRezepte}
+        items={relevanteRezepte}
         loading={false}
         renderItem={(recipe) => (
           <TrendingCard
