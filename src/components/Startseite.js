@@ -257,29 +257,15 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   };
 
   const neueRezepte = useMemo(() => {
-    const currentMonth = new Date().getMonth() + 1;
+    const toMs = (ts) => {
+      if (!ts) return 0;
+      if (typeof ts.toDate === 'function') return ts.toDate().getTime();
+      return new Date(ts).getTime();
+    };
     return [...recipes]
       .sort((a, b) => {
-        const scoreA = calculateRecipeSortIndex({
-          isFavorite: favoriteRecipeIds.includes(a.id),
-          lastCookDateMs: lastOwnCookDateByRecipeId[a.id] ?? null,
-          seasonMatrixEntries,
-          nutritionReferenceRows,
-          nutritionReferenceIndex,
-          recipe: a,
-          currentMonth,
-        });
-        const scoreB = calculateRecipeSortIndex({
-          isFavorite: favoriteRecipeIds.includes(b.id),
-          lastCookDateMs: lastOwnCookDateByRecipeId[b.id] ?? null,
-          seasonMatrixEntries,
-          nutritionReferenceRows,
-          nutritionReferenceIndex,
-          recipe: b,
-          currentMonth,
-        });
-        const scoreDiff = scoreB - scoreA;
-        if (scoreDiff !== 0) return scoreDiff;
+        const createdDiff = toMs(b.createdAt) - toMs(a.createdAt);
+        if (createdDiff !== 0) return createdDiff;
 
         const titleDiff = (a.title || '').localeCompare((b.title || ''), undefined, { sensitivity: 'base' });
         if (titleDiff !== 0) return titleDiff;
@@ -287,7 +273,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         return (a.id || '').localeCompare((b.id || ''), undefined, { sensitivity: 'base' });
       })
       .slice(0, NEUE_REZEPTE_TOP);
-  }, [recipes, lastOwnCookDateByRecipeId, favoriteRecipeIds, seasonMatrixEntries, nutritionReferenceRows, nutritionReferenceIndex]);
+  }, [recipes]);
 
   const saisonaleRezepte = useMemo(() => (
     recipes
