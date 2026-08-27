@@ -81,7 +81,7 @@ jobs:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
 
       - name: Install Firebase CLI
-        run: npm install -g firebase-tools
+        run: npm install -g firebase-tools@13.35.1
 
       - name: Deploy to Firebase (Hosting, Functions, Firestore Rules)
         run: |
