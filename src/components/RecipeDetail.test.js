@@ -87,6 +87,14 @@ jest.mock('../utils/customLists', () => ({
   getPrintFormats: () => Promise.resolve([]),
   DEFAULT_BUTTON_ICONS: { cookingMode: '👨‍🍳', closeButton: '✕' },
   getEffectiveIcon: (icons, key) => icons[key] ?? '',
+  getEffectiveCuisineIcon: (cuisineIcons, cuisineName, isDarkMode) => {
+    if (!cuisineIcons) return '';
+    if (isDarkMode) {
+      const darkIcon = cuisineIcons[`${cuisineName}Dark`];
+      if (darkIcon) return darkIcon;
+    }
+    return cuisineIcons[cuisineName] || '';
+  },
   getDarkModePreference: () => false,
   ALARM_SOUNDS: [
     { key: 'radar',   label: 'Radar' },
@@ -3302,5 +3310,78 @@ describe('RecipeDetail - Shared-View optional-loader guards', () => {
     });
 
     expect(screen.getByText('Shared Recipe')).toBeInTheDocument();
+  });
+});
+
+describe('RecipeDetail - Kulinarik icon', () => {
+  const currentUser = {
+    id: 'user-1',
+    vorname: 'Test',
+    nachname: 'User',
+  };
+
+  const baseRecipe = {
+    id: 'recipe-1',
+    title: 'Test Recipe',
+    authorId: 'user-1',
+    portionen: 4,
+    portionUnitId: 'portion',
+    ingredients: ['1 Stück Ingredient 1'],
+    steps: ['Step 1'],
+    kulinarik: ['Italian', 'French'],
+  };
+
+  test('shows the cuisine text when no icon is configured for it', async () => {
+    const customLists = require('../utils/customLists');
+    jest.spyOn(customLists, 'getCustomLists').mockResolvedValueOnce({
+      portionUnits: [{ id: 'portion', singular: 'Portion', plural: 'Portionen' }],
+      cuisineTypes: [],
+      mealCategories: [],
+      units: [],
+      conversionTable: [],
+      cuisineIcons: {},
+    });
+
+    await act(async () => {
+      render(
+        <RecipeDetail
+          recipe={baseRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    expect(screen.getByText('Italian', { exact: false })).toBeInTheDocument();
+  });
+
+  test('shows the configured icon instead of the text for a cuisine that has one', async () => {
+    const customLists = require('../utils/customLists');
+    jest.spyOn(customLists, 'getCustomLists').mockResolvedValueOnce({
+      portionUnits: [{ id: 'portion', singular: 'Portion', plural: 'Portionen' }],
+      cuisineTypes: [],
+      mealCategories: [],
+      units: [],
+      conversionTable: [],
+      cuisineIcons: { Italian: '🍝' },
+    });
+
+    await act(async () => {
+      render(
+        <RecipeDetail
+          recipe={baseRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    expect(screen.queryByText('Italian', { exact: false })).not.toBeInTheDocument();
+    expect(screen.getByTitle('Italian')).toHaveTextContent('🍝');
+    expect(screen.getByText('French', { exact: false })).toBeInTheDocument();
   });
 });
