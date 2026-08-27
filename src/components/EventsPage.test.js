@@ -47,7 +47,7 @@ jest.mock('../utils/userManagement', () => ({
 
 jest.mock('../utils/customLists', () => ({
   getButtonIcons: () => new Promise(() => {}),
-  DEFAULT_BUTTON_ICONS: { addMenu: 'Menü+', editRecipe: 'Edit' },
+  DEFAULT_BUTTON_ICONS: { addRecipe: 'Menü+', editRecipe: 'Edit' },
   getEffectiveIcon: (icons, key) => icons[key] ?? '',
   getDarkModePreference: () => false,
 }));

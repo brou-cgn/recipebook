@@ -23,8 +23,8 @@ jest.mock('../utils/recipeFirestore', () => ({
 }));
 
 jest.mock('../utils/customLists', () => ({
-  getButtonIcons: () => Promise.resolve({ addMenu: 'Menü+' }),
-  DEFAULT_BUTTON_ICONS: { addMenu: 'Menü+' },
+  getButtonIcons: () => Promise.resolve({ addRecipe: 'Menü+' }),
+  DEFAULT_BUTTON_ICONS: { addRecipe: 'Menü+' },
   getEffectiveIcon: (icons, key) => icons[key] ?? '',
   getDarkModePreference: () => false,
   getCustomLists: (...args) => mockGetCustomLists(...args),

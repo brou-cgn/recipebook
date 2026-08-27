@@ -3135,10 +3135,10 @@ describe('RecipeDetail - Nutrition manual save icon', () => {
     jest.restoreAllMocks();
   });
 
-  test('uses configured nutritionManualSave icon on the save button in the NutritionModal composition table', async () => {
+  test('uses configured saveRecipe icon on the save button in the NutritionModal composition table', async () => {
     const customLists = require('../utils/customLists');
     jest.spyOn(customLists, 'getButtonIcons').mockResolvedValue({
-      nutritionManualSave: '💽',
+      saveRecipe: '💽',
     });
 
     await act(async () => {
@@ -3160,11 +3160,11 @@ describe('RecipeDetail - Nutrition manual save icon', () => {
     expect(saveBtn).toHaveTextContent('💽');
   });
 
-  test('uses dark variant of nutritionManualSave icon in dark mode when configured', async () => {
+  test('uses dark variant of saveRecipe icon in dark mode when configured', async () => {
     const customLists = require('../utils/customLists');
     jest.spyOn(customLists, 'getButtonIcons').mockResolvedValue({
-      nutritionManualSave: '💽',
-      nutritionManualSaveDark: '🌙💽',
+      saveRecipe: '💽',
+      saveRecipeDark: '🌙💽',
     });
     jest.spyOn(customLists, 'getDarkModePreference').mockReturnValue(true);
     jest.spyOn(customLists, 'getEffectiveIcon').mockImplementation(
@@ -3190,7 +3190,7 @@ describe('RecipeDetail - Nutrition manual save icon', () => {
     expect(saveBtn).toHaveTextContent('🌙💽');
   });
 
-  test('falls back to default 💾 icon when no custom nutritionManualSave icon is configured', async () => {
+  test('falls back to default 💾 icon when no custom saveRecipe icon is configured', async () => {
     await act(async () => {
       render(
         <RecipeDetail

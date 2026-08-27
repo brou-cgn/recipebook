@@ -95,7 +95,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     const eff = (key) => getEffectiveIcon(allButtonIcons, key, isDarkMode);
     setCloseButtonIcon(eff('closeButtonDefaultImg') || eff('closeButton') || '×');
     setCopyLinkIcon(eff('copyLink') || 'Link');
-    setOpenEventIcon(eff('openLinkedEvent') || '📅');
+    setOpenEventIcon(eff('nutritionEmpty') || '📅');
     setShoppingListIcon(eff('shoppingList') || 'Einkauf');
     setBringButtonIcon(eff('bringButton') || 'Bring');
     setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');

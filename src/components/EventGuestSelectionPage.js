@@ -331,10 +331,10 @@ function EventGuestSelectionPage({
         title="Abbrechen"
         aria-label="Gästeauswahl abbrechen"
       >
-        {isBase64Image(getEffectiveIcon(effectiveButtonIcons, 'cancelRecipe', isDarkMode)) ? (
-          <img src={getEffectiveIcon(effectiveButtonIcons, 'cancelRecipe', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
+        {isBase64Image(getEffectiveIcon(effectiveButtonIcons, 'closeButtonDefaultImg', isDarkMode)) ? (
+          <img src={getEffectiveIcon(effectiveButtonIcons, 'closeButtonDefaultImg', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
         ) : (
-          getEffectiveIcon(effectiveButtonIcons, 'cancelRecipe', isDarkMode)
+          getEffectiveIcon(effectiveButtonIcons, 'closeButtonDefaultImg', isDarkMode)
         )}
       </button>
     </div>

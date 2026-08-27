@@ -205,10 +205,10 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
         title="Menü erstellen"
         aria-label="Menü erstellen"
       >
-        {isBase64Image(getEffectiveIcon(buttonIcons, 'addMenu', isDarkMode)) ? (
-          <img src={getEffectiveIcon(buttonIcons, 'addMenu', isDarkMode)} alt="Menü erstellen" className="button-icon-image" draggable="false" />
+        {isBase64Image(getEffectiveIcon(buttonIcons, 'addRecipe', isDarkMode)) ? (
+          <img src={getEffectiveIcon(buttonIcons, 'addRecipe', isDarkMode)} alt="Menü erstellen" className="button-icon-image" draggable="false" />
         ) : (
-          getEffectiveIcon(buttonIcons, 'addMenu', isDarkMode)
+          getEffectiveIcon(buttonIcons, 'addRecipe', isDarkMode)
         )}
       </button>
       <button

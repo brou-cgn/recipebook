@@ -153,7 +153,7 @@ function Tagesmenu({
   });
 
   // Configurable filter button icon loaded from settings
-  const [filterButtonIcon, setFilterButtonIcon] = useState(DEFAULT_BUTTON_ICONS.tagesmenuFilterButton);
+  const [filterButtonIcon, setFilterButtonIcon] = useState(DEFAULT_BUTTON_ICONS.filterButton);
 
   // Configurable "Zum Tagesmenü" button icon loaded from settings
   const [zumTagesMenuIcon, setZumTagesMenuIcon] = useState(DEFAULT_BUTTON_ICONS.tagesmenuZumTagesMenu);
@@ -259,7 +259,7 @@ function Tagesmenu({
       swipeLeft: eff('swipeLeft'),
       swipeUp: eff('swipeUp'),
     });
-    setFilterButtonIcon(eff('tagesmenuFilterButton'));
+    setFilterButtonIcon(eff('filterButton'));
     setZumTagesMenuIcon(eff('tagesmenuZumTagesMenu'));
     setMeineAuswahlIcon(eff('tagesmenuMeineAuswahl'));
     setKachelMenuIcon(eff('tagesmenuKachelMenu'));

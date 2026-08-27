@@ -202,7 +202,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   };
   const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.closeButtonDefaultImg);
   const [nutritionEmptyIcon, setNutritionEmptyIcon] = useState(normalizeNutritionEmptyIcon());
-  const [nutritionManualSaveIcon, setNutritionManualSaveIcon] = useState(DEFAULT_BUTTON_ICONS.nutritionManualSave || '💾');
+  const [nutritionManualSaveIcon, setNutritionManualSaveIcon] = useState(DEFAULT_BUTTON_ICONS.saveRecipe || '💾');
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [creatingShareIds, setCreatingShareIds] = useState({});
@@ -359,7 +359,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       DEFAULT_BUTTON_ICONS.closeButtonDefaultImg
     );
     setNutritionEmptyIcon(normalizeNutritionEmptyIcon(getEffectiveIcon(allButtonIcons, 'nutritionEmpty', isDarkMode)));
-    setNutritionManualSaveIcon(getEffectiveIcon(allButtonIcons, 'nutritionManualSave', isDarkMode) || DEFAULT_BUTTON_ICONS.nutritionManualSave || '💾');
+    setNutritionManualSaveIcon(getEffectiveIcon(allButtonIcons, 'saveRecipe', isDarkMode) || DEFAULT_BUTTON_ICONS.saveRecipe || '💾');
   }, [allButtonIcons, isDarkMode]);
 
   useEffect(() => {
