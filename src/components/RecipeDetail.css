@@ -937,6 +937,7 @@ button.private-badge-button:active {
   flex-wrap: wrap;
   align-items: center;
   gap: 1rem;
+  border-top: 1px solid #f0f0f0;
   border-bottom: 1px solid #f0f0f0;
 }
 
@@ -1292,11 +1293,11 @@ button.private-badge-button:active {
 
 .difficulty-stars {
   display: flex;
-  gap: 0.25rem;
+  gap: 0.15rem;
 }
 
 .difficulty-stars .star {
-  font-size: 1.25rem;
+  font-size: 0.85rem;
   color: #DF7A00;
   transition: all 0.2s ease;
   user-select: none;
@@ -1544,15 +1545,6 @@ button.private-badge-button:active {
   }
 
   .cooking-mode-icon {
-    font-size: 1.25rem;
-  }
-
-  /* Difficulty stars - ensure consistent styling on mobile */
-  .difficulty-stars {
-    gap: 0.25rem;
-  }
-
-  .difficulty-stars .star {
     font-size: 1.25rem;
   }
 
