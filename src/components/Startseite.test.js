@@ -307,51 +307,47 @@ describe('Startseite', () => {
     expect(items.length).toBe(10);
   });
 
-  test('Neue Rezepte carousel sorts recipes by calculateRecipeSortIndex score', async () => {
+  test('Neue Rezepte carousel sorts recipes by createdAt descending', async () => {
     const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
-    const { getAllCookDates } = require('../utils/recipeCookDates');
-    const { getUserFavorites } = require('../utils/userFavorites');
-    const { subscribeToSeasonMatrix } = require('../utils/seasonMatrix');
     getRecentRecipeCalls.mockResolvedValue([]);
-    try {
-      jest.useFakeTimers().setSystemTime(new Date('2026-05-15T12:00:00.000Z'));
-      const recipes = [
-        { id: 'r1', title: 'Frisch gekocht', ingredients: [{ type: 'ingredient', text: '500g Spargel', ingredientID: 'ing-spargel' }] },
-        { id: 'r2', title: 'Liebling', ingredients: [{ type: 'ingredient', text: '200g Nudeln' }] },
-        { id: 'r3', title: 'Saisonhit', ingredients: [{ type: 'ingredient', text: '500g Spargel', ingredientID: 'ing-spargel' }] },
-      ];
-      subscribeToSeasonMatrix.mockImplementation((callback) => {
-        callback([{
-          id: 'spargel',
-          name: 'Spargel',
-          mainSeasonMonths: [4, 5, 6],
-          secondarySeasonMonths: [],
-          seasonScore: 100,
-          isActive: true,
-        }]);
-        return jest.fn();
-      });
-      getUserFavorites.mockResolvedValue(['r2']);
-      getAllCookDates.mockImplementation((recipeId) => {
-        if (recipeId === 'r1') {
-          return Promise.resolve([{ id: 'cd-r1', userId: 'u1', recipeId, date: new Date('2026-05-12T12:00:00.000Z') }]);
-        }
-        return Promise.resolve([]);
-      });
+    const recipes = [
+      { id: 'r1', title: 'Frisch gekocht', createdAt: '2026-05-10T12:00:00.000Z' },
+      { id: 'r2', title: 'Liebling', createdAt: '2026-05-14T12:00:00.000Z' },
+      { id: 'r3', title: 'Saisonhit', createdAt: '2026-05-12T12:00:00.000Z' },
+    ];
 
-      const { container } = render(<Startseite currentUser={{ id: 'u1' }} recipes={recipes} />);
-      await screen.findByText('Keine Trendrezepte vorhanden.');
-      const neueRezepteSection = Array.from(container.querySelectorAll('.startseite-trending-section')).find(
-        (section) => section.querySelector('.startseite-section-title')?.textContent === 'Neue Rezepte'
-      );
-      expect(neueRezepteSection).toBeTruthy();
-      await waitFor(() => {
-        const titles = Array.from(neueRezepteSection.querySelectorAll('[data-testid="trending-card"]')).map((card) => card.textContent);
-        expect(titles).toEqual(['Saisonhit', 'Liebling', 'Frisch gekocht']);
-      });
-    } finally {
-      jest.useRealTimers();
-    }
+    const { container } = render(<Startseite currentUser={{ id: 'u1' }} recipes={recipes} />);
+    await screen.findByText('Keine Trendrezepte vorhanden.');
+    const neueRezepteSection = Array.from(container.querySelectorAll('.startseite-trending-section')).find(
+      (section) => section.querySelector('.startseite-section-title')?.textContent === 'Neue Rezepte'
+    );
+    expect(neueRezepteSection).toBeTruthy();
+    await waitFor(() => {
+      const titles = Array.from(neueRezepteSection.querySelectorAll('[data-testid="trending-card"]')).map((card) => card.textContent);
+      expect(titles).toEqual(['Liebling', 'Saisonhit', 'Frisch gekocht']);
+    });
+  });
+
+  test('Neue Rezepte carousel shows only the 10 most recently created recipes when more exist', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([]);
+    const now = Date.now();
+    const manyRecipes = Array.from({ length: 15 }, (_, i) => ({
+      id: `r${i}`,
+      title: `Rezept ${i}`,
+      createdAt: new Date(now - i * 1000).toISOString(),
+    }));
+    const { container } = render(<Startseite currentUser={{ id: 'u1' }} recipes={manyRecipes} />);
+    await screen.findByText('Keine Trendrezepte vorhanden.');
+    const neueRezepteSection = Array.from(container.querySelectorAll('.startseite-trending-section')).find(
+      (section) => section.querySelector('.startseite-section-title')?.textContent === 'Neue Rezepte'
+    );
+    expect(neueRezepteSection).toBeTruthy();
+    await waitFor(() => {
+      const titles = Array.from(neueRezepteSection.querySelectorAll('[data-testid="trending-card"]')).map((card) => card.textContent);
+      // Newest 10 (r0 = most recent .. r9), descending by createdAt
+      expect(titles).toEqual(Array.from({ length: 10 }, (_, i) => `Rezept ${i}`));
+    });
   });
 
   test('Neue Rezepte carousel uses deterministic tie-breaker by title', async () => {
