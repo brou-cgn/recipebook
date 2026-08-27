@@ -33,7 +33,7 @@
   }
 
   .recipe-overview-main .recipe-list-container {
-    padding: 1rem;
+    padding: 1rem 1rem calc(1rem + var(--bottom-spacing, 0px));
   }
 }
 
