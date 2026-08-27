@@ -1345,11 +1345,48 @@
 .dark-icon-header-row,
 .dark-icon-row {
   display: grid;
-  grid-template-columns: minmax(80px, 1fr) 2fr 2fr;
+  grid-template-columns: auto minmax(80px, 1fr) 2fr 2fr;
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.6rem;
   border-bottom: 1px solid #eee;
+}
+
+.dark-icon-col-handle {
+  width: 1.6rem;
+}
+
+.dark-icon-drag-handle {
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: grab;
+  padding: 0.25rem 0.3rem;
+  font-size: 0.85rem;
+  line-height: 1;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: pan-y;
+}
+
+.dark-icon-drag-handle:hover {
+  background: #e8e8e8;
+  color: #402C1C;
+  border-color: #402C1C;
+}
+
+.dark-icon-drag-handle:active {
+  cursor: grabbing;
+  background: #ddd;
+}
+
+.dark-icon-row.dragging {
+  opacity: 0.5;
+  background: #f9f9f9;
+  z-index: 1000;
 }
 
 .dark-icon-header-row {
@@ -1441,7 +1478,7 @@
 @media (max-width: 768px) {
   .dark-icon-header-row,
   .dark-icon-row {
-    grid-template-columns: minmax(60px, 0.8fr) 1.5fr 1.5fr;
+    grid-template-columns: auto minmax(60px, 0.8fr) 1.5fr 1.5fr;
     gap: 0.3rem;
     padding: 0.35rem 0.4rem;
   }
