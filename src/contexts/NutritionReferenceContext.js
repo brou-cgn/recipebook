@@ -1,5 +1,5 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { collection, doc, getDoc, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import {
   NUTRITION_REFERENCE_FIELDS,
@@ -145,6 +145,11 @@ export function NutritionReferenceProvider({ children, enabled = true }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(enabled);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
+  const lastUpdatedAtRef = useRef(null);
+
+  useEffect(() => {
+    lastUpdatedAtRef.current = lastUpdatedAt;
+  }, [lastUpdatedAt]);
 
   const reload = useCallback(async ({ throwOnError = false } = {}) => {
     if (!enabled) {
@@ -225,6 +230,59 @@ export function NutritionReferenceProvider({ children, enabled = true }) {
 
     return () => {
       isMounted = false;
+    };
+  }, [enabled]);
+
+  // Live guard against stale sessions: nutritionReferences is only fetched once per
+  // session above, so a change saved elsewhere (another tab, another device) would
+  // otherwise never reach an already-open session. onNutritionReferenceChanged (Cloud
+  // Function) bumps this tiny marker doc on every write to the collection; watching it
+  // is far cheaper than watching the whole collection and lets us refetch only when
+  // something actually changed.
+  useEffect(() => {
+    if (!enabled) return undefined;
+
+    let isMounted = true;
+    let isFirstSnapshot = true;
+    let unsubscribe = () => {};
+
+    try {
+      unsubscribe = onSnapshot(
+        doc(db, 'appConfig', 'nutritionReferences'),
+        (snap) => {
+          if (isFirstSnapshot) {
+            // The mount-time load above already handles the initial fetch/cache check.
+            isFirstSnapshot = false;
+            return;
+          }
+
+          const ts = snap.exists() ? snap.data()?.lastUpdatedAt : null;
+          const updatedAt = ts?.toMillis ? ts.toMillis() : (typeof ts === 'number' ? ts : null);
+          if (updatedAt == null) return;
+          if (lastUpdatedAtRef.current != null && updatedAt <= lastUpdatedAtRef.current) return;
+
+          fetchNutritionReferenceRows()
+            .then((loaded) => {
+              if (!isMounted) return;
+              saveCachedRows(loaded, updatedAt);
+              setRows(loaded);
+              setLastUpdatedAt(updatedAt);
+            })
+            .catch((error) => {
+              console.error('Fehler beim Live-Aktualisieren der Nährwert-Referenzen:', error);
+            });
+        },
+        (error) => {
+          console.error('Nährwert-Referenzen Live-Listener fehlgeschlagen:', error);
+        }
+      ) || (() => {});
+    } catch (error) {
+      console.error('Nährwert-Referenzen Live-Listener konnte nicht gestartet werden:', error);
+    }
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
     };
   }, [enabled]);
 
