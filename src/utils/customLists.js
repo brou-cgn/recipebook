@@ -840,6 +840,10 @@ export const DEFAULT_BUTTON_ICONS = {
   bottomNavChefActiveDark: '',
 };
 
+// Default (empty) custom order for the button icons list – an empty array means
+// "use the built-in DARK_MODE_ICON_ROWS order defined in Settings.js".
+export const DEFAULT_BUTTON_ICONS_ORDER = [];
+
 /**
  * Returns the effective icon for a given key, respecting dark mode.
  * If dark mode is active and a dark variant is set, returns the dark variant.
@@ -1154,6 +1158,7 @@ export async function getSettings() {
         inspirationTargetListName: settings.inspirationTargetListName ?? DEFAULT_INSPIRATION_TARGET_LIST_NAME,
         inspirationTargetListDescription: settings.inspirationTargetListDescription ?? DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION,
         printFormats: settings.printFormats || DEFAULT_PRINT_FORMATS,
+        buttonIconsOrder: settings.buttonIconsOrder ?? DEFAULT_BUTTON_ICONS_ORDER,
         // Image data from settings/images
         faviconImage: imagesData.faviconImage || null,
         appLogoImage: imagesData.appLogoImage || null,
@@ -1205,8 +1210,9 @@ export async function getSettings() {
       inspirationTargetListName: DEFAULT_INSPIRATION_TARGET_LIST_NAME,
       inspirationTargetListDescription: DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION,
       printFormats: DEFAULT_PRINT_FORMATS,
+      buttonIconsOrder: DEFAULT_BUTTON_ICONS_ORDER,
     };
-    
+
     // Create the settings/app document with text config only
     await setDoc(doc(db, 'settings', 'app'), defaultSettings);
     settingsCache = {
@@ -1273,6 +1279,7 @@ export async function getSettings() {
       inspirationTargetListName: DEFAULT_INSPIRATION_TARGET_LIST_NAME,
       inspirationTargetListDescription: DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION,
       printFormats: DEFAULT_PRINT_FORMATS,
+      buttonIconsOrder: DEFAULT_BUTTON_ICONS_ORDER,
     };
   }
 }
@@ -2403,6 +2410,37 @@ export async function saveStartseitenKandidatenLeertext(text) {
     }
   } catch (error) {
     console.error('Error saving startseitenKandidatenLeertext:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get the custom row order for the Button-Icons list in Settings.
+ * An empty array means no custom order has been saved yet – the caller should
+ * fall back to its own built-in default order.
+ * @returns {Promise<string[]>} Promise resolving to an array of icon keys
+ */
+export async function getButtonIconsOrder() {
+  const settings = await getSettings();
+  return Array.isArray(settings.buttonIconsOrder) ? settings.buttonIconsOrder : DEFAULT_BUTTON_ICONS_ORDER;
+}
+
+/**
+ * Save the custom row order for the Button-Icons list in Settings.
+ * @param {string[]} order - Ordered array of icon keys
+ * @returns {Promise<void>}
+ */
+export async function saveButtonIconsOrder(order) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    await updateDoc(settingsRef, { buttonIconsOrder: order });
+
+    // Update cache
+    if (settingsCache) {
+      settingsCache.buttonIconsOrder = order;
+    }
+  } catch (error) {
+    console.error('Error saving buttonIconsOrder:', error);
     throw error;
   }
 }
