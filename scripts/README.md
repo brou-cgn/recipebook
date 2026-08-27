@@ -30,6 +30,21 @@ Pure JavaScript module for parsing the `ImportDatum.csv` file. Used by `updateRe
 **Exports:**
 - `parseCSV(filePath)` - Parse CSV file and return array of recipe data
 
+## findRecipesMissingCreatedAt.js
+
+Read-only Audit-Skript: listet alle Dokumente in der `recipes`-Collection auf,
+die kein `createdAt`-Feld haben (fehlend, `null` oder `undefined`). Verändert
+keine Daten.
+
+**Usage:**
+```bash
+node scripts/findRecipesMissingCreatedAt.js
+```
+
+**Prerequisites:**
+- Firebase service account key (`serviceAccountKey.json`) in the root directory,
+  oder `GOOGLE_APPLICATION_CREDENTIALS` gesetzt
+
 ## migrateNutritionReferenceApprovedAt.js
 
 One-time migration for `nutritionReferences`: sets `approvedAt` for entries with status `Freigegeben` where the field is still missing.
