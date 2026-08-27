@@ -38,14 +38,13 @@ import IngredientIDSelect from './IngredientIDSelect';
 import { db, functions } from '../firebase';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import {
+  buildIngredientMatchLearningPlan,
   buildPendingNutritionReferenceDraft,
   classifyIngredientWords,
   hasMissingIngredientIDs,
   initializeCommonAdjectivesFromFirebase,
   initializeCommonUnitsFromFirebase,
   initializeIgnoredMarkersFromFirebase,
-  normalizeIngredientNameForIdMatching,
-  parseIngredientNameAndUnit,
   setCustomIngredientMatchingTerms,
 } from '../utils/ingredientIdMatching';
 import { normalizeNutritionEmptyIcon } from '../utils/nutritionIconUtils';
@@ -613,7 +612,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     if (!ingredientMatchDialog) return;
     const { recipe: dialogRecipe, fieldName, updatedIngredients, unresolved, selections } = ingredientMatchDialog;
     const nextIngredients = [...updatedIngredients];
-    const ingredientLearningData = new Map();
+    const resolvedEntries = [];
     const createdReferenceDrafts = new Map();
     const referencesToCreate = [];
 
@@ -668,23 +667,19 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         ? { type: 'ingredient', text: original, ingredientID: selectedIngredientID }
         : { ...restOriginal, ingredientID: selectedIngredientID };
 
-      const selectedSuggestion = entry.suggestions.find((suggestion) => suggestion.ingredientID === selectedIngredientID);
-      const shouldLearnSynonym = ingredientMatchDialog.learnSynonyms?.[entry.index] !== false;
-      if (shouldLearnSynonym && selectedSuggestion && selectedSuggestion.confidencePercent < 100) {
-        const learningUpdate = ingredientLearningData.get(selectedIngredientID) || { synonyms: new Set(), possibleUnits: new Set() };
-        const { name, unit } = parseIngredientNameAndUnit(entry.ingredient);
-        const parsedSynonym = normalizeIngredientNameForIdMatching(name);
-        const parsedUnit = String(unit || '').trim();
-
-        if (parsedSynonym && parsedSynonym.length >= 3) {
-          learningUpdate.synonyms.add(parsedSynonym);
-        }
-        if (parsedUnit) {
-          learningUpdate.possibleUnits.add(parsedUnit);
-        }
-        ingredientLearningData.set(selectedIngredientID, learningUpdate);
-      }
+      resolvedEntries.push({
+        index: entry.index,
+        ingredient: entry.ingredient,
+        suggestions: entry.suggestions,
+        selectedIngredientID,
+      });
     }
+
+    const { additions: ingredientLearningData, removals: ingredientLearningRemovals } = buildIngredientMatchLearningPlan({
+      resolvedEntries,
+      learnSynonyms: ingredientMatchDialog.learnSynonyms,
+      nutritionReferenceRows,
+    });
 
     if (referencesToCreate.length > 0) {
       await Promise.all(referencesToCreate.map(async (draft) => {
@@ -749,7 +744,30 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       }
     }
 
-    if (referencesToCreate.length > 0 || ingredientLearningData.size > 0) {
+    for (const [ingredientID, tokensToRemove] of ingredientLearningRemovals.entries()) {
+      const existingRow = nutritionReferenceRows.find((row) => String(row?.ingredientID || '').trim() === ingredientID);
+      const existingSynonyms = Array.isArray(existingRow?.synonyms) ? existingRow.synonyms : [];
+      const nextSynonyms = existingSynonyms.filter((synonym) => !tokensToRemove.has(synonym));
+      if (nextSynonyms.length === existingSynonyms.length || nextSynonyms.length === 0) continue;
+
+      const normalizedSynonyms = getNormalizedNutritionReferenceSynonyms({ synonyms: nextSynonyms });
+      try {
+        await setDoc(
+          doc(db, 'nutritionReferences', ingredientID),
+          {
+            ingredientID,
+            synonyms: nextSynonyms,
+            normalizedSynonyms,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } catch (err) {
+        console.error(`Could not prune ambiguous ingredient synonym for ${ingredientID}:`, err);
+      }
+    }
+
+    if (referencesToCreate.length > 0 || ingredientLearningData.size > 0 || ingredientLearningRemovals.size > 0) {
       try {
         await reloadNutritionReferences({ throwOnError: true });
       } catch (err) {

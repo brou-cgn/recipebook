@@ -620,9 +620,37 @@ export function getIngredientIdSuggestions(ingredientText, nutritionReferenceRow
 }
 
 /**
+ * Picks the suggestion that should be auto-assigned without asking the user, or null if
+ * the match remains ambiguous.
+ *
+ * A unique top-scoring 100%-confidence suggestion is always auto-assignable. When several
+ * candidates tie at 100% (e.g. "Paprikapulver" matching both "Paprika" and "Paprika
+ * rosenscharf" because the same word is registered as a synonym on both), the tie is
+ * resolved automatically only if exactly one of the tied candidates is flagged as the
+ * `isDefaultVariant` in nutritionReferenceRows – otherwise the ambiguity still requires a
+ * manual decision (see useIngredientIDMatching / IngredientIDSelect).
+ */
+export function resolveAutoAssignableSuggestion(suggestions = [], nutritionReferenceRows = []) {
+  const top = suggestions[0];
+  if (!top || top.confidencePercent !== 100) return null;
+
+  const tiedAt100 = suggestions.filter((entry) => entry.confidencePercent === 100);
+  if (tiedAt100.length === 1) return top;
+
+  const defaultVariants = tiedAt100.filter((entry) => {
+    const row = nutritionReferenceRows.find(
+      (candidate) => String(candidate?.ingredientID || candidate?.id || '').trim() === entry.ingredientID
+    );
+    return row?.isDefaultVariant === true;
+  });
+
+  return defaultVariants.length === 1 ? defaultVariants[0] : null;
+}
+
+/**
  * Returns a copy of rawIngredients with ingredientID auto-assigned for any ingredient
- * that has a unique 100% match in nutritionReferenceRows.
- * Only handles exact matches – ambiguous or unmatched ingredients are left unchanged.
+ * that has an unambiguous 100% match in nutritionReferenceRows (see
+ * resolveAutoAssignableSuggestion). Ambiguous or unmatched ingredients are left unchanged.
  */
 export function getAutoAssignedIngredients(rawIngredients = [], nutritionReferenceRows = []) {
   const updatedIngredients = [...rawIngredients];
@@ -643,22 +671,110 @@ export function getAutoAssignedIngredients(rawIngredients = [], nutritionReferen
     }
 
     const suggestions = getIngredientIdSuggestions(ingredientItem.text, nutritionReferenceRows);
-    const top = suggestions[0];
-    const hasUniqueTop =
-      Boolean(top) &&
-      suggestions.filter((entry) => entry.confidencePercent === top.confidencePercent).length === 1;
+    const resolved = resolveAutoAssignableSuggestion(suggestions, nutritionReferenceRows);
 
-    if (top && top.confidencePercent === 100 && hasUniqueTop) {
+    if (resolved) {
       const nextItem =
         typeof item === 'string'
-          ? { type: 'ingredient', text: item, ingredientID: top.ingredientID }
-          : { ...item, ingredientID: top.ingredientID };
+          ? { type: 'ingredient', text: item, ingredientID: resolved.ingredientID }
+          : { ...item, ingredientID: resolved.ingredientID };
       updatedIngredients[index] = nextItem;
       autoAssigned += 1;
     }
   });
 
   return { updatedIngredients, autoAssigned };
+}
+
+/**
+ * Computes the Firestore write plan for the "Synonym lernen" checkbox in the ambiguous-
+ * ingredient dialog (IngredientIDSelect / RecipeDetail / AppCallsPage).
+ *
+ * - For a fuzzy match (<100%), the user's chosen ingredientID gains the parsed ingredient
+ *   name as a new synonym (and its unit as a new possibleUnit), so the same wording matches
+ *   exactly next time.
+ * - For a 100%-confidence entry that still reached this dialog, the top score must have been
+ *   tied across multiple candidates (a unique 100% match is auto-assigned upstream and never
+ *   reaches here). The ambiguous word is removed from the synonym lists of the rejected
+ *   candidates so it becomes a unique exact match for the chosen ingredient from now on – the
+ *   same tie will no longer occur for this word. A candidate's own canonical ingredientID is
+ *   never touched, only entries in its `synonyms` array.
+ *
+ * @param {object} params
+ * @param {Array<{index:number, ingredient:string, suggestions:Array, selectedIngredientID:string}>} params.resolvedEntries
+ * @param {object} [params.learnSynonyms] - map of entry.index -> boolean (checkbox state)
+ * @param {Array} [params.nutritionReferenceRows]
+ * @returns {{ additions: Map<string,{synonyms:Set<string>, possibleUnits:Set<string>}>, removals: Map<string,Set<string>> }}
+ */
+export function buildIngredientMatchLearningPlan({
+  resolvedEntries = [],
+  learnSynonyms = {},
+  nutritionReferenceRows = [],
+} = {}) {
+  const additions = new Map();
+  const removals = new Map();
+
+  const getAddition = (ingredientID) => {
+    if (!additions.has(ingredientID)) {
+      additions.set(ingredientID, { synonyms: new Set(), possibleUnits: new Set() });
+    }
+    return additions.get(ingredientID);
+  };
+  const getRemoval = (ingredientID) => {
+    if (!removals.has(ingredientID)) {
+      removals.set(ingredientID, new Set());
+    }
+    return removals.get(ingredientID);
+  };
+
+  resolvedEntries.forEach(({ index, ingredient, suggestions = [], selectedIngredientID }) => {
+    if (!selectedIngredientID) return;
+    if (learnSynonyms?.[index] === false) return;
+
+    const selectedSuggestion = suggestions.find((entry) => entry.ingredientID === selectedIngredientID);
+    if (!selectedSuggestion) return;
+
+    if (selectedSuggestion.confidencePercent < 100) {
+      const { name, unit } = parseIngredientNameAndUnit(ingredient);
+      const parsedSynonym = normalizeIngredientNameForIdMatching(name);
+      const parsedUnit = String(unit || '').trim();
+
+      if (parsedSynonym && parsedSynonym.length >= 3) {
+        getAddition(selectedIngredientID).synonyms.add(parsedSynonym);
+      }
+      if (parsedUnit) {
+        getAddition(selectedIngredientID).possibleUnits.add(parsedUnit);
+      }
+      return;
+    }
+
+    const tiedAt100 = suggestions.filter((entry) => entry.confidencePercent === 100);
+    if (tiedAt100.length <= 1) return;
+
+    const { name } = parseIngredientNameAndUnit(ingredient);
+    const normalizedIngredientName = normalizeNutritionReferenceId(normalizeIngredientNameForIdMatching(name));
+    if (!normalizedIngredientName) return;
+
+    tiedAt100
+      .filter((candidate) => candidate.ingredientID !== selectedIngredientID)
+      .forEach((loser) => {
+        // Never touch a row whose own canonical ingredientID equals the ambiguous word –
+        // that would require renaming a stable identifier, which is out of scope here.
+        if (normalizeNutritionReferenceId(loser.ingredientID) === normalizedIngredientName) return;
+
+        const row = nutritionReferenceRows.find(
+          (candidate) => String(candidate?.ingredientID || candidate?.id || '').trim() === loser.ingredientID
+        );
+        const matchingSynonym = (Array.isArray(row?.synonyms) ? row.synonyms : []).find(
+          (synonym) => normalizeNutritionReferenceId(synonym) === normalizedIngredientName
+        );
+        if (matchingSynonym) {
+          getRemoval(loser.ingredientID).add(matchingSynonym);
+        }
+      });
+  });
+
+  return { additions, removals };
 }
 
 /**

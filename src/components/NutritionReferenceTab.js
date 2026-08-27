@@ -24,6 +24,7 @@ import {
   parseNutritionReferenceSynonyms,
   parseNutritionReferencePossibleUnits,
   getNormalizedNutritionReferenceSynonyms,
+  normalizeNutritionReferenceId,
   calculateOpenFoodFactsDiagnostics,
 } from '../utils/nutritionReferenceUtils';
 import { hasMeaningfulGeneratedNutrition } from '../utils/nutritionStatusResolver';
@@ -47,6 +48,7 @@ const NUTRITION_BOOLEAN_LABELS = {
   isFresh: 'Frischprodukt',
   isSpice: 'Gewürz',
   isProcessed: 'Verarbeitet',
+  isDefaultVariant: 'Standardvariante',
 };
 
 const SOURCE_OPTIONS = [
@@ -320,6 +322,39 @@ function NutritionReferenceTab({ currentUser }) {
     row.id !== ownRowId && getIngredientID(row).toLowerCase() === ingredientID.toLowerCase()
   ));
 
+  // A synonym that exactly matches another row's ingredientID or synonym causes the
+  // automatic ingredientID-matching (ingredientIdMatching.js) to produce a 100%-confidence
+  // tie for that word, which blocks automatic assignment. Warn before that happens.
+  const findSynonymConflicts = (synonyms, ownRowId = null) => {
+    const ownTokens = new Set(synonyms.map((entry) => normalizeNutritionReferenceId(entry)).filter(Boolean));
+    if (ownTokens.size === 0) return [];
+    const conflicts = [];
+    rows.forEach((other) => {
+      if (other.id === ownRowId) return;
+      const otherId = getIngredientID(other);
+      if (!otherId) return;
+      const otherTokens = [
+        normalizeNutritionReferenceId(otherId),
+        ...parseNutritionReferenceSynonyms(other).map((entry) => normalizeNutritionReferenceId(entry)),
+      ].filter(Boolean);
+      otherTokens.forEach((token) => {
+        if (ownTokens.has(token)) conflicts.push({ token, otherId });
+      });
+    });
+    return conflicts;
+  };
+
+  const confirmSynonymConflicts = (synonyms, ownRowId = null) => {
+    const conflicts = findSynonymConflicts(synonyms, ownRowId);
+    if (conflicts.length === 0) return true;
+    const details = [...new Set(conflicts.map((c) => `„${c.token}" (auch bei ${c.otherId})`))].join(', ');
+    return window.confirm(
+      `Achtung: Folgende Synonyme sind bereits einer anderen ingredientID zugeordnet: ${details}.\n\n`
+      + 'Dadurch entstehen mehrdeutige 100%-Treffer, die nicht mehr automatisch zugeordnet werden können. '
+      + 'Trotzdem speichern?'
+    );
+  };
+
   const validateRow = (row) => {
     const ingredientID = getIngredientID(row);
     const synonyms = parseNutritionReferenceSynonyms(row);
@@ -333,6 +368,9 @@ function NutritionReferenceTab({ currentUser }) {
     }
     if (hasIngredientIDConflict(ingredientID, row.id)) {
       alert('Diese ingredientID existiert bereits.');
+      return null;
+    }
+    if (!confirmSynonymConflicts(synonyms, row.id)) {
       return null;
     }
     return ingredientID;
@@ -421,6 +459,9 @@ function NutritionReferenceTab({ currentUser }) {
     }
     if (hasIngredientIDConflict(ingredientID)) {
       alert('Diese ingredientID existiert bereits.');
+      return;
+    }
+    if (!confirmSynonymConflicts(synonyms)) {
       return;
     }
 

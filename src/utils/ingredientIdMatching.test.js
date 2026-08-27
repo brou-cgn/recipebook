@@ -11,6 +11,8 @@ import {
   getIngredientIdSuggestions,
   parseIngredientNameAndUnit,
   getAutoAssignedIngredients,
+  resolveAutoAssignableSuggestion,
+  buildIngredientMatchLearningPlan,
   hasMissingIngredientIDs,
   normalizeIngredientNameForIdMatching,
   classifyIngredientWords,
@@ -382,6 +384,130 @@ describe('getAutoAssignedIngredients', () => {
     expect(autoAssigned).toBe(2);
     expect(updatedIngredients[0]).toEqual({ type: 'ingredient', text: '200 g Tomaten', ingredientID: 'tomate' });
     expect(updatedIngredients[1]).toEqual({ type: 'ingredient', text: '1 Zwiebel', ingredientID: 'zwiebel' });
+  });
+
+  test('does not auto-assign a 100%-confidence tie without a default variant', () => {
+    const tiedReferenceRows = [
+      { ingredientID: 'paprika', synonyms: ['Paprika', 'Paprikapulver'] },
+      { ingredientID: 'paprika-rosenscharf', synonyms: ['Paprika rosenscharf', 'Paprikapulver'] },
+    ];
+    const ingredients = [{ type: 'ingredient', text: '1 TL Paprikapulver' }];
+    const { updatedIngredients, autoAssigned } = getAutoAssignedIngredients(ingredients, tiedReferenceRows);
+    expect(autoAssigned).toBe(0);
+    expect(updatedIngredients[0].ingredientID).toBeUndefined();
+  });
+
+  test('auto-assigns a 100%-confidence tie to the flagged default variant', () => {
+    const tiedReferenceRows = [
+      { ingredientID: 'paprika', synonyms: ['Paprika', 'Paprikapulver'], isDefaultVariant: true },
+      { ingredientID: 'paprika-rosenscharf', synonyms: ['Paprika rosenscharf', 'Paprikapulver'] },
+    ];
+    const ingredients = [{ type: 'ingredient', text: '1 TL Paprikapulver' }];
+    const { updatedIngredients, autoAssigned } = getAutoAssignedIngredients(ingredients, tiedReferenceRows);
+    expect(autoAssigned).toBe(1);
+    expect(updatedIngredients[0].ingredientID).toBe('paprika');
+  });
+
+  test('does not auto-assign when several tied candidates are flagged as default variant', () => {
+    const tiedReferenceRows = [
+      { ingredientID: 'paprika', synonyms: ['Paprika', 'Paprikapulver'], isDefaultVariant: true },
+      { ingredientID: 'paprika-rosenscharf', synonyms: ['Paprika rosenscharf', 'Paprikapulver'], isDefaultVariant: true },
+    ];
+    const ingredients = [{ type: 'ingredient', text: '1 TL Paprikapulver' }];
+    const { updatedIngredients, autoAssigned } = getAutoAssignedIngredients(ingredients, tiedReferenceRows);
+    expect(autoAssigned).toBe(0);
+    expect(updatedIngredients[0].ingredientID).toBeUndefined();
+  });
+});
+
+describe('resolveAutoAssignableSuggestion', () => {
+  test('returns null for an empty suggestion list', () => {
+    expect(resolveAutoAssignableSuggestion([], [])).toBeNull();
+  });
+
+  test('returns null when the top suggestion is below 100%', () => {
+    const suggestions = [{ ingredientID: 'a', confidencePercent: 90 }];
+    expect(resolveAutoAssignableSuggestion(suggestions, [])).toBeNull();
+  });
+
+  test('returns the unique 100% suggestion', () => {
+    const suggestions = [{ ingredientID: 'a', confidencePercent: 100 }, { ingredientID: 'b', confidencePercent: 80 }];
+    expect(resolveAutoAssignableSuggestion(suggestions, [])).toBe(suggestions[0]);
+  });
+});
+
+describe('buildIngredientMatchLearningPlan', () => {
+  test('adds a new synonym for a fuzzy (<100%) manual match', () => {
+    const resolvedEntries = [
+      {
+        index: 0,
+        ingredient: '1 Bund Petersilie glatt',
+        suggestions: [{ ingredientID: 'petersilie', confidencePercent: 80 }],
+        selectedIngredientID: 'petersilie',
+      },
+    ];
+    const { additions, removals } = buildIngredientMatchLearningPlan({ resolvedEntries, nutritionReferenceRows: [] });
+    expect(removals.size).toBe(0);
+    expect([...additions.get('petersilie').synonyms]).toEqual(['Petersilie glatt']);
+  });
+
+  test('skips learning when the checkbox is unchecked', () => {
+    const resolvedEntries = [
+      {
+        index: 0,
+        ingredient: '1 Bund Petersilie glatt',
+        suggestions: [{ ingredientID: 'petersilie', confidencePercent: 80 }],
+        selectedIngredientID: 'petersilie',
+      },
+    ];
+    const { additions, removals } = buildIngredientMatchLearningPlan({
+      resolvedEntries,
+      learnSynonyms: { 0: false },
+      nutritionReferenceRows: [],
+    });
+    expect(additions.size).toBe(0);
+    expect(removals.size).toBe(0);
+  });
+
+  test('prunes the ambiguous synonym from the rejected candidates of a resolved 100% tie', () => {
+    const nutritionReferenceRows = [
+      { ingredientID: 'paprika', synonyms: ['Paprika', 'Paprikapulver'] },
+      { ingredientID: 'paprika-rosenscharf', synonyms: ['Paprika rosenscharf', 'Paprikapulver'] },
+    ];
+    const resolvedEntries = [
+      {
+        index: 0,
+        ingredient: '1 TL Paprikapulver',
+        suggestions: [
+          { ingredientID: 'paprika', confidencePercent: 100 },
+          { ingredientID: 'paprika-rosenscharf', confidencePercent: 100 },
+        ],
+        selectedIngredientID: 'paprika',
+      },
+    ];
+    const { additions, removals } = buildIngredientMatchLearningPlan({ resolvedEntries, nutritionReferenceRows });
+    expect(additions.size).toBe(0);
+    expect([...removals.get('paprika-rosenscharf')]).toEqual(['Paprikapulver']);
+  });
+
+  test('never prunes a candidate whose own ingredientID equals the ambiguous word', () => {
+    const nutritionReferenceRows = [
+      { ingredientID: 'paprikapulver', synonyms: ['Paprikapulver'] },
+      { ingredientID: 'paprika-rosenscharf', synonyms: ['Paprika rosenscharf', 'Paprikapulver'] },
+    ];
+    const resolvedEntries = [
+      {
+        index: 0,
+        ingredient: '1 TL Paprikapulver',
+        suggestions: [
+          { ingredientID: 'paprikapulver', confidencePercent: 100 },
+          { ingredientID: 'paprika-rosenscharf', confidencePercent: 100 },
+        ],
+        selectedIngredientID: 'paprika-rosenscharf',
+      },
+    ];
+    const { removals } = buildIngredientMatchLearningPlan({ resolvedEntries, nutritionReferenceRows });
+    expect(removals.size).toBe(0);
   });
 });
 

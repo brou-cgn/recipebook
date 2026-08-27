@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getIngredientIdSuggestions } from '../utils/ingredientIdMatching';
+import { getIngredientIdSuggestions, resolveAutoAssignableSuggestion } from '../utils/ingredientIdMatching';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 
 export const INGREDIENT_MATCH_CREATE_NEW_OPTION = '__ingredient_match_create_new__';
@@ -69,20 +69,19 @@ export function useIngredientIDMatching({
       }
 
       const suggestions = getIngredientIdSuggestions(ingredientItem.text, nutritionReferenceRows);
-      const top = suggestions[0];
-      const hasUniqueTop = Boolean(top) && suggestions.filter((entry) => entry.confidencePercent === top.confidencePercent).length === 1;
+      const resolved = resolveAutoAssignableSuggestion(suggestions, nutritionReferenceRows);
 
-      if (top && top.confidencePercent === 100 && hasUniqueTop) {
+      if (resolved) {
         const nextItem = typeof item === 'string'
-          ? { type: 'ingredient', text: item, ingredientID: top.ingredientID }
-          : { ...item, ingredientID: top.ingredientID };
+          ? { type: 'ingredient', text: item, ingredientID: resolved.ingredientID }
+          : { ...item, ingredientID: resolved.ingredientID };
         updatedIngredients[index] = nextItem;
         autoAssigned += 1;
         matchingLog.push({
           ingredient: ingredientItem.text,
           status: 'auto',
-          selectedIngredientID: top.ingredientID,
-          confidencePercent: top.confidencePercent,
+          selectedIngredientID: resolved.ingredientID,
+          confidencePercent: resolved.confidencePercent,
           ...(existingIngredientID ? { previousIngredientID: existingIngredientID } : {}),
         });
         return;
