@@ -3384,4 +3384,32 @@ describe('RecipeDetail - Kulinarik icon', () => {
     expect(screen.getByTitle('Italian')).toHaveTextContent('🍝');
     expect(screen.getByText('French', { exact: false })).toBeInTheDocument();
   });
+
+  test('sorts cuisines with an icon to the end and drops the comma before them', async () => {
+    const customLists = require('../utils/customLists');
+    jest.spyOn(customLists, 'getCustomLists').mockResolvedValueOnce({
+      portionUnits: [{ id: 'portion', singular: 'Portion', plural: 'Portionen' }],
+      cuisineTypes: [],
+      mealCategories: [],
+      units: [],
+      conversionTable: [],
+      cuisineIcons: { Italian: '🍝' },
+    });
+
+    await act(async () => {
+      render(
+        <RecipeDetail
+          recipe={{ ...baseRecipe, kulinarik: ['Italian', 'French'] }}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    const cuisineBadge = screen.getByTitle('Italian').closest('.cuisine-badge');
+    expect(cuisineBadge.textContent.replace(/ /g, ' ')).toBe('French  🍝');
+    expect(cuisineBadge.textContent).not.toContain(',');
+  });
 });
