@@ -289,6 +289,12 @@
   min-width: 0;
 }
 
+.list-item-icon-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 .list-item-icon-input {
   width: 2.5rem;
   font-size: 0.95rem;

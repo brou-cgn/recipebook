@@ -43,7 +43,7 @@ function getSortableItemStyle(transform, transition, isDragging) {
   };
 }
 
-function SortableListItem({ id, label, onRemove, onRename, icon, onIconChange }) {
+function SortableListItem({ id, label, onRemove, onRename, icon, onIconChange, iconDark, onIconDarkChange }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(label);
 
@@ -103,17 +103,33 @@ function SortableListItem({ id, label, onRemove, onRename, icon, onIconChange })
       ) : (
         <span>{label}</span>
       )}
-      {onIconChange && !isEditing && (
-        <input
-          type="text"
-          value={icon || ''}
-          onChange={(e) => onIconChange(e.target.value)}
-          placeholder="Icon"
-          maxLength={4}
-          className="list-item-icon-input"
-          aria-label={`Icon für ${label}`}
-          title="Optionales Icon (Emoji)"
-        />
+      {(onIconChange || onIconDarkChange) && !isEditing && (
+        <div className="list-item-icon-group">
+          {onIconChange && (
+            <input
+              type="text"
+              value={icon || ''}
+              onChange={(e) => onIconChange(e.target.value)}
+              placeholder="☀"
+              maxLength={4}
+              className="list-item-icon-input"
+              aria-label={`Icon für Hellmodus für ${label}`}
+              title="Optionales Icon für Hellmodus (Emoji)"
+            />
+          )}
+          {onIconDarkChange && (
+            <input
+              type="text"
+              value={iconDark || ''}
+              onChange={(e) => onIconDarkChange(e.target.value)}
+              placeholder="🌙"
+              maxLength={4}
+              className="list-item-icon-input"
+              aria-label={`Icon für Dunkelmodus für ${label}`}
+              title="Optionales Icon für Dunkelmodus (Emoji)"
+            />
+          )}
+        </div>
       )}
       {onRename && !isEditing && (
         <button className="edit-btn" onClick={handleEditStart} title="Umbenennen">✎</button>
@@ -966,6 +982,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     setLists(prev => {
       const cuisineIcons = { ...(prev.cuisineIcons || {}) };
       delete cuisineIcons[cuisine];
+      delete cuisineIcons[`${cuisine}Dark`];
       return {
         ...prev,
         cuisineTypes: prev.cuisineTypes.filter(c => c !== cuisine),
@@ -979,13 +996,15 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     setPendingCuisineDeletes(prev => prev.includes(cuisine) ? prev : [...prev, cuisine]);
   };
 
-  const setCuisineIcon = (cuisine, value) => {
+  // variant: 'light' (default) sets the base icon; 'dark' sets the "<name>Dark" variant
+  const setCuisineIcon = (cuisine, value, variant = 'light') => {
+    const mapKey = variant === 'dark' ? `${cuisine}Dark` : cuisine;
     setLists(prev => {
       const cuisineIcons = { ...(prev.cuisineIcons || {}) };
       if (value) {
-        cuisineIcons[cuisine] = value;
+        cuisineIcons[mapKey] = value;
       } else {
-        delete cuisineIcons[cuisine];
+        delete cuisineIcons[mapKey];
       }
       return { ...prev, cuisineIcons };
     });
@@ -999,6 +1018,12 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       if (oldName in cuisineIcons) {
         cuisineIcons[trimmed] = cuisineIcons[oldName];
         delete cuisineIcons[oldName];
+      }
+      const oldDarkKey = `${oldName}Dark`;
+      const newDarkKey = `${trimmed}Dark`;
+      if (oldDarkKey in cuisineIcons) {
+        cuisineIcons[newDarkKey] = cuisineIcons[oldDarkKey];
+        delete cuisineIcons[oldDarkKey];
       }
       return {
         ...prev,
@@ -2768,7 +2793,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     id={cuisine}
                     label={cuisine}
                     icon={(lists.cuisineIcons || {})[cuisine]}
-                    onIconChange={canEditLists ? (value) => setCuisineIcon(cuisine, value) : undefined}
+                    iconDark={(lists.cuisineIcons || {})[`${cuisine}Dark`]}
+                    onIconChange={canEditLists ? (value) => setCuisineIcon(cuisine, value, 'light') : undefined}
+                    onIconDarkChange={canEditLists ? (value) => setCuisineIcon(cuisine, value, 'dark') : undefined}
                     onRemove={() => removeCuisine(cuisine)}
                     onRename={canEditLists ? renameCuisine : undefined}
                   />

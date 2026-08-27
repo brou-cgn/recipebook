@@ -25,10 +25,30 @@ export const DEFAULT_CUISINE_TYPES = [
 ];
 
 /**
- * Optional icons for cuisine types, keyed by cuisine type name.
+ * Optional icons for cuisine types, keyed by cuisine type name. The light-mode icon is
+ * stored under the cuisine name itself; an optional dark-mode variant is stored under
+ * the same name with a "Dark" suffix (e.g. "Italienische Küche" / "Italienische KücheDark"),
+ * mirroring the convention used for DEFAULT_BUTTON_ICONS / getEffectiveIcon.
  * @type {Object<string, string>}
  */
 export const DEFAULT_CUISINE_ICONS = {};
+
+/**
+ * Resolve the icon to display for a cuisine type, preferring the dark-mode variant
+ * when isDarkMode is true and one is configured, falling back to the light-mode icon.
+ * @param {Object<string, string>} cuisineIcons
+ * @param {string} cuisineName
+ * @param {boolean} isDarkMode
+ * @returns {string}
+ */
+export function getEffectiveCuisineIcon(cuisineIcons, cuisineName, isDarkMode) {
+  if (!cuisineIcons) return '';
+  if (isDarkMode) {
+    const darkIcon = cuisineIcons[`${cuisineName}Dark`];
+    if (darkIcon) return darkIcon;
+  }
+  return cuisineIcons[cuisineName] || '';
+}
 
 export const DEFAULT_MEAL_CATEGORIES = [
   'Appetizer',
