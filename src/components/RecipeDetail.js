@@ -2558,30 +2558,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 </div>
               )}
 
-              {/* Source URL icon - shown when the recipe was imported via webimport and a source URL was saved */}
-              {recipeSourceUrl && (
-                <div className="metadata-item">
-                  <a
-                    className="source-url-metadata-btn"
-                    style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
-                    href={recipeSourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Rezeptquelle öffnen"
-                    aria-label="Rezeptquelle öffnen"
-                  >
-                    <span className="source-url-icon">
-                      {isBase64Image(sourceUrlIcon) ? (
-                        <img src={sourceUrlIcon} alt="" />
-                      ) : (
-                        sourceUrlIcon
-                      )}
-                    </span>
-                    <span className="source-url-text">Quelle</span>
-                  </a>
-                </div>
-              )}
-
               {/* Nutrition icon */}
               {!isSharedView && (
                 <div className="metadata-item">
@@ -2624,6 +2600,30 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       {recipe.naehrwerte?.calcPending ? 'Berechne…' : (hasNutritionValues ? null : 'Nährwerte berechnen')}
                     </span>
                   </button>
+                </div>
+              )}
+
+              {/* Source URL icon - shown when the recipe was imported via webimport and a source URL was saved */}
+              {recipeSourceUrl && (
+                <div className="metadata-item">
+                  <a
+                    className="source-url-metadata-btn"
+                    style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
+                    href={recipeSourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Rezeptquelle öffnen"
+                    aria-label="Rezeptquelle öffnen"
+                  >
+                    <span className="source-url-icon">
+                      {isBase64Image(sourceUrlIcon) ? (
+                        <img src={sourceUrlIcon} alt="" />
+                      ) : (
+                        sourceUrlIcon
+                      )}
+                    </span>
+                    <span className="source-url-text">Quelle</span>
+                  </a>
                 </div>
               )}
             </div>
