@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import './Settings.css';
 import './AppCallsPage.css';
 import { httpsCallable } from 'firebase/functions';
 import { getAppCalls } from '../utils/appCallsFirestore';
