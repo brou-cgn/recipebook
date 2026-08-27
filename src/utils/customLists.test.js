@@ -20,6 +20,7 @@ jest.mock('firebase/firestore', () => ({
 import {
   getSettings,
   getCustomLists,
+  saveCustomLists,
   clearSettingsCache,
   clearButtonIconsLocalStorageCache,
   getButtonIcons,
@@ -288,6 +289,21 @@ describe('getCustomLists – default fallbacks', () => {
     expect(lists.portionUnits).toEqual(savedPortionUnits);
     expect(lists.portionUnits).toHaveLength(3);
     expect(lists.portionUnits[2].id).toBe('neue-einheit');
+  });
+
+  test('returns saved cuisineIcons from Firestore instead of defaults', async () => {
+    const savedCuisineIcons = { Italian: '🍝', ItalianDark: '🍝' };
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({
+        cuisineIcons: savedCuisineIcons,
+        aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT,
+      }),
+    });
+
+    const lists = await getCustomLists();
+
+    expect(lists.cuisineIcons).toEqual(savedCuisineIcons);
   });
 
   test('normalizes legacy string packageUnits from Firestore to object shape', async () => {
@@ -942,6 +958,22 @@ describe('getSettings – settings/images document split', () => {
     // settings/images MUST have been fetched
     const imagesDocCalls = getDoc.mock.calls.filter(call => call[0]?.path === 'settings/images');
     expect(imagesDocCalls).toHaveLength(1);
+  });
+});
+
+describe('saveCustomLists – cuisineIcons persistence', () => {
+  test('writes cuisineIcons into the localStorage cache so they survive a hard reload', async () => {
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }),
+    });
+    const lists = await getCustomLists();
+    updateDoc.mockResolvedValue(undefined);
+
+    await saveCustomLists({ ...lists, cuisineIcons: { Italian: '🍝' } });
+
+    const cached = JSON.parse(localStorage.getItem('appSettingsCache'));
+    expect(cached.cuisineIcons).toEqual({ Italian: '🍝' });
   });
 });
 
