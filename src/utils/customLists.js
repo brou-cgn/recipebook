@@ -1143,6 +1143,7 @@ export async function getSettings() {
         // Text configuration from settings/app
         cuisineTypes: settings.cuisineTypes || DEFAULT_CUISINE_TYPES,
         cuisineGroups: settings.cuisineGroups || DEFAULT_CUISINE_GROUPS,
+        cuisineIcons: settings.cuisineIcons || DEFAULT_CUISINE_ICONS,
         mealCategories: settings.mealCategories || DEFAULT_MEAL_CATEGORIES,
         units: settings.units || DEFAULT_UNITS,
         portionUnits: settings.portionUnits || DEFAULT_PORTION_UNITS,
@@ -1552,10 +1553,11 @@ export async function saveCustomLists(lists) {
   try {
     const settingsRef = doc(db, 'settings', 'app');
     await updateDoc(settingsRef, lists);
-    
+
     // Update cache
     if (settingsCache) {
       settingsCache = { ...settingsCache, ...lists };
+      saveSettingsToLocalStorageCache(settingsCache);
     }
   } catch (error) {
     console.error('Error saving custom lists:', error);
