@@ -1400,9 +1400,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const portionLabel = currentServings === 1 ? portionUnit.singular : portionUnit.plural;
 
   // Handle both array and string formats for kulinarik
-  const cuisineDisplay = Array.isArray(recipe.kulinarik) 
-    ? recipe.kulinarik.join(', ') 
+  const cuisineDisplay = Array.isArray(recipe.kulinarik)
+    ? recipe.kulinarik.join(', ')
     : recipe.kulinarik;
+
+  // The webimport URL lands in `sourceUrl` once an import finishes
+  // successfully; a job that is still queued/processing or ended in error
+  // only has it on the persisted `importSource` restart snapshot.
+  const recipeSourceUrl = recipe.sourceUrl || recipe.importSource?.url;
 
   const toggleCookingMode = () => {
     setCookingMode(prev => !prev);
@@ -2547,11 +2552,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               )}
 
               {/* Source URL icon - shown when the recipe was imported via webimport and a source URL was saved */}
-              {recipe.sourceUrl && (
+              {recipeSourceUrl && (
                 <div className="metadata-item">
                   <a
                     className="source-url-metadata-btn"
-                    href={recipe.sourceUrl}
+                    href={recipeSourceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     title="Rezeptquelle öffnen"

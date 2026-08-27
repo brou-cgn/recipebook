@@ -1913,6 +1913,50 @@ describe('RecipeDetail - Source URL Metadata Icon', () => {
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
+  test('shows source URL icon using importSource.url when a webimport job has no sourceUrl yet (e.g. still queued or errored)', () => {
+    const erroredImportRecipe = {
+      ...baseRecipe,
+      isTemp: true,
+      importStatus: 'error',
+      importError: 'Instagram-Import fehlgeschlagen. Bitte versuche es erneut.',
+      importSource: { type: 'web', url: 'https://www.instagram.com/p/DbaHhZhsU3d/', authorId: '' },
+    };
+
+    render(
+      <RecipeDetail
+        recipe={erroredImportRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    const link = screen.getByTitle('Rezeptquelle öffnen');
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute('href', 'https://www.instagram.com/p/DbaHhZhsU3d/');
+  });
+
+  test('prefers sourceUrl over importSource.url when both are present', () => {
+    const recipe = {
+      ...baseRecipe,
+      sourceUrl: 'https://example.com/final-recipe',
+      importSource: { type: 'web', url: 'https://example.com/original-job-url' },
+    };
+
+    render(
+      <RecipeDetail
+        recipe={recipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    expect(screen.getByTitle('Rezeptquelle öffnen')).toHaveAttribute('href', 'https://example.com/final-recipe');
+  });
+
   test('hides source URL icon when recipe has no sourceUrl', () => {
     render(
       <RecipeDetail
