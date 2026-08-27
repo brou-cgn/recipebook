@@ -538,16 +538,6 @@
   background: #2a2a2a;
 }
 
-[data-theme="dark"] .publish-fab-button {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
-[data-theme="dark"] .publish-fab-button:active {
-  background: #2a2a2a;
-}
-
 [data-theme="dark"] .delete-fab-button {
   background: #2a2a2a;
   color: #e8e8e8;
@@ -3021,7 +3011,6 @@
   color: #4caf50;
 }
 
-[data-theme="dark"] .publish-fab-button,
 [data-theme="dark"] .delete-fab-button,
 [data-theme="dark"] .reset-thumbnail-fab-button {
   background: #2a2a2a;
@@ -3029,13 +3018,11 @@
   border-color: #555;
 }
 
-[data-theme="dark"] .publish-fab-button:active,
 [data-theme="dark"] .delete-fab-button:active,
 [data-theme="dark"] .reset-thumbnail-fab-button:active {
   background: #333;
 }
 
-[data-theme="dark"] .publish-fab-button.pressed,
 [data-theme="dark"] .delete-fab-button.pressed,
 [data-theme="dark"] .reset-thumbnail-fab-button.pressed {
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.5);
