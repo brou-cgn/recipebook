@@ -24,7 +24,7 @@ import NutritionModal from './NutritionModal';
 import IngredientIDSelect from './IngredientIDSelect';
 import ShoppingListModal from './ShoppingListModal';
 import RatingModal from './RatingModal';
-import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, DEFAULT_PRINT_FORMATS, selectPrintFormat, mergePrintElementsWithDefaults, getAlarmSoundPreference } from '../utils/customLists';
+import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getEffectiveCuisineIcon, getDarkModePreference, DEFAULT_PRINT_FORMATS, selectPrintFormat, mergePrintElementsWithDefaults, getAlarmSoundPreference } from '../utils/customLists';
 import { playAlarmPattern } from '../utils/alarmAudioUtils';
 import RecipeRating from './RecipeRating';
 import CookDateModal from './CookDateModal';
@@ -95,6 +95,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
   // Get portion units from custom lists
   const [portionUnits, setPortionUnits] = useState([]);
+  const [cuisineIcons, setCuisineIcons] = useState({});
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [cookingModeIcon, setCookingModeIcon] = useState('♨');
@@ -216,6 +217,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setSourceUrlIcon(eff('recipeSourceLink') || '🔗');
       setAllButtonIcons(icons);
       setPortionUnits(lists.portionUnits || []);
+      setCuisineIcons(lists.cuisineIcons || {});
       setButtonIconsLoaded(true);
       setConversionTable(lists.conversionTable || []);
       setCategoryImageSet(new Set((catImages || []).map(ci => ci.image).filter(Boolean)));
@@ -1403,9 +1405,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const portionLabel = currentServings === 1 ? portionUnit.singular : portionUnit.plural;
 
   // Handle both array and string formats for kulinarik
-  const cuisineDisplay = Array.isArray(recipe.kulinarik)
-    ? recipe.kulinarik.join(', ')
-    : recipe.kulinarik;
+  const cuisineList = (Array.isArray(recipe.kulinarik) ? recipe.kulinarik : [recipe.kulinarik]).filter(Boolean);
+  const cuisineDisplay = cuisineList.join(', ');
 
   // The webimport URL lands in `sourceUrl` once an import finishes
   // successfully; a job that is still queued/processing or ended in error
@@ -2499,7 +2500,21 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             {cuisineDisplay && (
               <div className="recipe-cuisine-line">
                 <span className="metadata-label metadata-label--hidden">Kulinarik:</span>
-                <span className="metadata-value cuisine-badge">{cuisineDisplay}</span>
+                <span className="metadata-value cuisine-badge">
+                  {cuisineList.map((cuisine, index) => {
+                    const icon = getEffectiveCuisineIcon(cuisineIcons, cuisine, isDarkMode);
+                    return (
+                      <span key={`${cuisine}-${index}`} className="cuisine-badge-item">
+                        {icon ? (
+                          isBase64Image(icon)
+                            ? <img src={icon} alt={cuisine} title={cuisine} className="cuisine-badge-icon-img" />
+                            : <span title={cuisine} aria-label={cuisine}>{icon}</span>
+                        ) : cuisine}
+                        {index < cuisineList.length - 1 ? ', ' : ''}
+                      </span>
+                    );
+                  })}
+                </span>
               </div>
             )}
 

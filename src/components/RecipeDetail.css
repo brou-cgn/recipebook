@@ -1304,6 +1304,17 @@ button.private-badge-button:active {
   letter-spacing: normal;
 }
 
+.cuisine-badge-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+.cuisine-badge-icon-img {
+  height: 1.1em;
+  width: auto;
+  vertical-align: middle;
+}
+
 .difficulty-stars {
   display: flex;
   gap: 0.15rem;
