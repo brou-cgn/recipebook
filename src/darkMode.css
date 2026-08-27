@@ -2811,6 +2811,10 @@
   border-color: #555;
 }
 
+[data-theme="dark"] .private-badge-button {
+  border-color: #555 !important;
+}
+
 [data-theme="dark"] .shopping-list-trigger-button,
 [data-theme="dark"] .list-settings-trigger-button {
   background: #2a2a2a !important;
