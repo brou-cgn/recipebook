@@ -934,7 +934,7 @@ button.private-badge-button:active {
 .recipe-metadata {
   padding: 1rem 1.5rem 1.5rem;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 1rem;
   border-top: 1px solid #f0f0f0;
@@ -957,7 +957,20 @@ button.private-badge-button:active {
 
 .recipe-metadata .metadata-item:not(:first-child) {
   padding-left: 1rem;
-  border-left: 1px solid #f0f0f0;
+}
+
+/* Fixed-height divider, independent of each item's own content height
+   (the difficulty stars are taller than the plain text items), so all
+   dividers in the row read as the same size. */
+.recipe-metadata .metadata-item:not(:first-child)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 1px;
+  height: 14px;
+  background: #f0f0f0;
+  transform: translateY(-50%);
 }
 
 .metadata-icon {
@@ -1525,7 +1538,14 @@ button.private-badge-button:active {
   .recipe-metadata {
     padding: 1rem 1rem 1rem;
   }
-  
+
+  /* Not enough room for the whole row on narrow screens - drop the
+     "Quelle" word and keep just the icon so the row still fits on
+     one line instead of wrapping. */
+  .source-url-text {
+    display: none;
+  }
+
   .recipe-section {
     padding: 1rem;
   }
