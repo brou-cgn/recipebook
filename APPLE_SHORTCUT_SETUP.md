@@ -14,7 +14,7 @@ Der Link ist außerdem im Hamburger-Menü der App unter **Hilfe → Kurzbefehl i
 
 ## Authentifizierung
 
-Alle Shortcut-Endpoints (`importRecipeShortcut`, `addRecipeViaAPI`, `createRecipeImportFromText`, `getVideoUploadUrl`, `scrapeInstagramReelShortcut`) verwenden **API Key Authentifizierung** statt Firebase Auth Tokens. Ein API Key ist dauerhaft gültig und muss nur einmal im Kurzbefehl hinterlegt werden – derselbe Key funktioniert für alle Endpoints.
+Alle Shortcut-Endpoints (`importRecipeShortcut`, `addRecipeViaAPI`, `createRecipeImportFromText`, `getVideoUploadUrl`, `scrapeInstagramReelShortcut`, `scanRecipePhotoShortcut`) verwenden **API Key Authentifizierung** statt Firebase Auth Tokens. Ein API Key ist dauerhaft gültig und muss nur einmal im Kurzbefehl hinterlegt werden – derselbe Key funktioniert für alle Endpoints.
 
 - **`X-Api-Key`** Header: dein persönlicher API Key (als Firebase Secret gespeichert)
 - **`X-User-Email`** Header: deine registrierte E-Mail-Adresse (wird serverseitig per `admin.auth().getUserByEmail` zur Firebase User ID aufgelöst – du musst deine UID nicht mehr nachschlagen)
@@ -55,6 +55,49 @@ Das Feld `pin` ist nur nötig, wenn du im Hamburger-Menü unter „Kurzbefehl in
 ```
 
 Der Kurzbefehl braucht auf diese Antwort hin nichts weiter zu tun – kein Warten, kein Öffnen der App nötig. Ein `success: true` bedeutet nur „URL wurde entgegengenommen", nicht „Rezept wurde korrekt erkannt"; falls die Erkennung fehlschlägt, taucht der Job mit Fehlermeldung (statt als fertiges Rezept) in der Review-Queue auf und kann dort neu gestartet werden.
+
+---
+
+## Rezept von Fotos importieren (OCR)
+
+Für den Fall „ich habe ein Rezept fotografiert (z. B. eine Kochbuch-Seite oder ein handgeschriebenes Rezept) und will es per Kurzbefehl importieren". Die Fotos werden direkt im Request-Body als Base64-JSON verschickt (kein separater Upload-Schritt wie beim Reel-Video nötig, da Fotos deutlich kleiner sind) und lösen serverseitig denselben KI-OCR-Scan aus, den auch der Foto-Scan-Import in der App verwendet.
+
+### Aktion: „Inhalt von URL laden"
+
+| Feld | Wert |
+|------|------|
+| URL | `https://us-central1-<PROJECT-ID>.cloudfunctions.net/scanRecipePhotoShortcut` |
+| Methode | `POST` |
+
+**Headers:**
+
+| Name | Wert |
+|------|------|
+| `Content-Type` | `application/json` |
+| `X-Api-Key` | `<dein-api-key>` |
+| `X-User-Email` | `<deine-e-mail-adresse>` |
+
+**Body:**
+
+```json
+{ "images": ["<Base64-kodiertes Foto>", "..."], "language": "de", "pin": "<dein Webimport-PIN>" }
+```
+
+`images` ist ein Array mit 1 bis 5 Base64-kodierten Fotos (mit oder ohne `data:image/jpeg;base64,`-Präfix). Baue den Kurzbefehl z. B. so: Foto(s) auswählen → „Bild in Format konvertieren" (Format `JPEG`) → „Base64 kodieren" auf jedes Foto anwenden → als Liste in `images` einsetzen (Aktion „Wörterbuch bearbeiten" / „Text"). Mehrere Fotos werden serverseitig zu einem Rezept zusammengeführt (wie beim Mehrfach-Foto-Scan in der App) – praktisch für Rezepte über mehrere Buchseiten.
+
+**Wichtig – Bildformat:** iPhone-Kamerafotos liegen standardmäßig als HEIC vor, das dieser Endpoint (anders als der Datei-Upload in der Web-App, der HEIC clientseitig automatisch nach JPEG konvertiert) nicht direkt akzeptiert. Füge deshalb vor dem Base64-Schritt immer die Aktion „Bild in Format konvertieren" (Ziel: JPEG oder PNG) ein, sonst schlägt der Import mit HTTP 400 fehl.
+
+**Achtung Dateigröße:** Alle Fotos zusammen dürfen nicht mehr als ca. 15 MB (Base64-kodiert) ergeben, sonst lehnt der Endpoint den Request mit HTTP 400 ab. Falls dein iPhone-Foto in voller Auflösung größer ist, füge vor dem Kodieren eine „Bild anpassen"-Aktion ein (z. B. auf max. 2000 px Breite).
+
+`language` ist optional (Standard `de`). `pin` ist wie beim URL-Import nur nötig, wenn du einen Webimport-PIN eingerichtet hast.
+
+**Antwort (HTTP 200) – Job wurde eingereiht, noch nicht fertig gescannt:**
+
+```json
+{ "success": true, "jobId": "abc123xyz", "status": "queued" }
+```
+
+Genau wie beim URL-Import läuft der eigentliche OCR-Scan (Gemini) danach serverseitig im Hintergrund; das fertige Rezept erscheint automatisch in der Review-Queue „Neue Rezepte", sobald du die App das nächste Mal öffnest.
 
 ---
 

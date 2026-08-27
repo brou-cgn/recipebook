@@ -3545,6 +3545,229 @@ exports.importRecipeShortcut = onRequest(
     },
 );
 
+/** Maximum number of photos accepted per scanRecipePhotoShortcut request. */
+const MAX_SHORTCUT_PHOTO_IMAGES = 5;
+
+/**
+ * Maximum combined base64 length of all photos in one scanRecipePhotoShortcut
+ * request. Unlike the Reel video upload (getVideoUploadUrl), which uses a
+ * signed Storage URL because videos are far larger, photos travel inline in
+ * the JSON body — kept comfortably under Cloud Functions' ~32MB request
+ * limit so an oversized request fails fast with a clear message instead of a
+ * generic platform-level 413.
+ */
+const MAX_SHORTCUT_PHOTO_TOTAL_BASE64 = 15 * 1024 * 1024;
+
+/**
+ * Cloud Function: Queue up to MAX_SHORTCUT_PHOTO_IMAGES Shortcut-provided
+ * recipe photos for AI OCR import (see APPLE_SHORTCUT_SETUP.md).
+ * Authenticates via SHORTCUT_API_KEY (same mechanism as importRecipeShortcut
+ * / addRecipeViaAPI). processShortcutImportJob (Firestore trigger, further
+ * below) already knows how to run a 'photo' importSource
+ * (runImportFromPhotoSource) — the same code path the in-app Foto-Scan
+ * import uses — so queuing the job here is all this endpoint needs to do.
+ *
+ * POST /scanRecipePhotoShortcut
+ *
+ * Headers:
+ *   X-Api-Key:    <SHORTCUT_API_KEY secret>
+ *   X-User-Email: <registrierte E-Mail-Adresse des Users>
+ *   Content-Type: application/json
+ *
+ * Body (JSON):
+ *   images {string[]}       Required – 1..MAX_SHORTCUT_PHOTO_IMAGES base64-encoded
+ *                             photos (data URL prefix optional, see validateImageData)
+ *   language {string}       Optional – 'de' or 'en', defaults to 'de'
+ *   pin {string}            Required, wenn der Zielnutzer einen Webimport-PIN
+ *                             eingerichtet hat (sonst nicht erforderlich) –
+ *                             siehe requireShortcutPin in webImportPin.js
+ *
+ * Returns:
+ *   200 { success: true, jobId: string, status: 'queued' }
+ *   400/401/403/429/500 { success: false, error: string }
+ */
+exports.scanRecipePhotoShortcut = onRequest(
+    {
+      maxInstances: 10,
+      memory: '256MiB',
+      timeoutSeconds: 30,
+      secrets: [shortcutApiKey],
+      invoker: 'public',
+    },
+    async (req, res) => {
+      // CORS – see importRecipeShortcut above for the rationale.
+      const origin = req.headers.origin;
+      if (origin && ALLOWED_ORIGINS.includes(origin)) {
+        res.set('Access-Control-Allow-Origin', origin);
+        res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.set(
+            'Access-Control-Allow-Headers',
+            'Content-Type, X-Api-Key, X-User-Email',
+        );
+        if (req.method === 'OPTIONS') {
+          res.status(204).send('');
+          return;
+        }
+      } else if (req.method === 'OPTIONS') {
+        res.status(403).send('');
+        return;
+      }
+
+      if (req.method !== 'POST') {
+        res.status(405).json({success: false, error: 'Method not allowed. Use POST.'});
+        return;
+      }
+
+      // Authentication via SHORTCUT_API_KEY + user email
+      const apiKeyHeader = req.headers['x-api-key'];
+      const userEmail = req.headers['x-user-email'];
+
+      if (!apiKeyHeader || !userEmail) {
+        res.status(401).json({
+          success: false,
+          error: 'Missing authentication headers',
+          requiredHeaders: ['X-Api-Key', 'X-User-Email'],
+        });
+        return;
+      }
+
+      const validApiKey = shortcutApiKey.value();
+      if (!validApiKey) {
+        console.error('scanRecipePhotoShortcut: SHORTCUT_API_KEY secret is not set');
+        res.status(500).json({
+          success: false,
+          error: 'Server misconfiguration: SHORTCUT_API_KEY secret is not set',
+        });
+        return;
+      }
+
+      let isValidKey = false;
+      try {
+        isValidKey = crypto.timingSafeEqual(
+            Buffer.from(apiKeyHeader),
+            Buffer.from(validApiKey),
+        );
+      } catch (_) {
+        isValidKey = false;
+      }
+      if (!isValidKey) {
+        console.warn('scanRecipePhotoShortcut: invalid API key attempt');
+        res.status(401).json({success: false, error: 'Invalid API key'});
+        return;
+      }
+
+      // Resolve the email to a Firebase uid, then validate role in Firestore
+      const userId = await resolveShortcutUserId(userEmail);
+      const db = admin.firestore();
+      try {
+        const userDoc = userId ? await db.collection('users').doc(userId).get() : null;
+        if (!userId || !userDoc.exists) {
+          res.status(403).json({success: false, error: 'Access denied'});
+          return;
+        }
+        const userData = userDoc.data();
+        const role = userData?.role;
+        const isShortcutUser = userData?.isShortcutUser === true;
+        if (role !== 'edit' && role !== 'admin' && role !== 'moderator' && !isShortcutUser) {
+          res.status(403).json({success: false, error: 'Insufficient permissions'});
+          return;
+        }
+      } catch (err) {
+        console.error('scanRecipePhotoShortcut: error validating user:', err);
+        res.status(500).json({success: false, error: 'Failed to validate user'});
+        return;
+      }
+
+      // Parse JSON body
+      let body = req.body;
+      if (!body || (typeof body === 'object' && Object.keys(body).length === 0)) {
+        try {
+          const raw = req.rawBody;
+          if (raw) body = JSON.parse(raw.toString('utf8'));
+        } catch (_) {
+          res.status(400).json({success: false, error: 'Invalid JSON body'});
+          return;
+        }
+      }
+
+      const {images, pin} = body || {};
+      const language = ['de', 'en'].includes(body?.language) ? body.language : 'de';
+
+      if (!Array.isArray(images) || images.length === 0) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required field: images (non-empty array of base64-encoded photos)',
+        });
+        return;
+      }
+      if (images.length > MAX_SHORTCUT_PHOTO_IMAGES) {
+        res.status(400).json({
+          success: false,
+          error: `A maximum of ${MAX_SHORTCUT_PHOTO_IMAGES} images is supported per request`,
+        });
+        return;
+      }
+
+      const totalBase64Length = images.reduce(
+          (sum, img) => sum + (typeof img === 'string' ? img.length : 0), 0,
+      );
+      if (totalBase64Length > MAX_SHORTCUT_PHOTO_TOTAL_BASE64) {
+        res.status(400).json({
+          success: false,
+          error: `Bilder zu groß (~${Math.round(totalBase64Length / 1024 / 1024)} MB, ` +
+            `max ~${Math.round(MAX_SHORTCUT_PHOTO_TOTAL_BASE64 / 1024 / 1024)} MB gesamt). ` +
+            'Weniger oder kleinere Fotos verwenden.',
+        });
+        return;
+      }
+
+      // Fail fast on malformed/oversized/wrong-type images instead of
+      // queuing a job that's doomed to fail once processShortcutImportJob
+      // picks it up.
+      try {
+        images.forEach((img) => validateImageData(img));
+      } catch (validationErr) {
+        res.status(400).json({success: false, error: validationErr.message});
+        return;
+      }
+
+      // Webimport-PIN: no-op if the target user never set one; otherwise the
+      // Shortcut must send a matching `pin` field with every request (it has
+      // no interactive session to stay "unlocked" like the in-app modals).
+      try {
+        await requireShortcutPin(userId, pin);
+      } catch (pinErr) {
+        const status = pinErr.code === 'resource-exhausted' ? 429 :
+          pinErr.code === 'invalid-argument' ? 400 : 403;
+        res.status(status).json({success: false, error: pinErr.message || 'PIN erforderlich.'});
+        return;
+      }
+
+      console.log(`scanRecipePhotoShortcut: import queued by user ${userId} for ${images.length} image(s)`);
+
+      // Queue the job and respond immediately, same pattern as
+      // importRecipeShortcut — processShortcutImportJob (Firestore trigger)
+      // picks this up within seconds and runs the OCR scan server-side.
+      try {
+        const jobRef = db.collection('recipes').doc();
+        await jobRef.set({
+          title: 'Rezept-Import',
+          authorId: userId,
+          isTemp: true,
+          importStatus: 'queued',
+          importProgress: 0,
+          importHeartbeatAt: Date.now(),
+          importOrigin: 'shortcut',
+          importSource: {type: 'photo', images, language},
+        });
+        res.status(200).json({success: true, jobId: jobRef.id, status: 'queued'});
+      } catch (err) {
+        console.error(`scanRecipePhotoShortcut: failed to queue import for user ${userId}:`, err);
+        res.status(500).json({success: false, error: 'Import konnte nicht in die Warteschlange gestellt werden.'});
+      }
+    },
+);
+
 /** Storage path prefix for Shortcut-uploaded Reel videos awaiting transcription. */
 const VIDEO_IMPORT_STORAGE_PREFIX = 'pending-video-imports';
 
