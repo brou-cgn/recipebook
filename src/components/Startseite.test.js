@@ -399,6 +399,71 @@ describe('Startseite', () => {
     expect(sessionStorage.getItem('recipebook_active_sort')).toBe('newest');
   });
 
+  // ─── Relevante Rezepte carousel ────────────────────────────────────
+
+  test('sorts Relevante Rezepte by calculateRecipeSortIndex score, not createdAt', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    const { getAllCookDates } = require('../utils/recipeCookDates');
+    const { getUserFavorites } = require('../utils/userFavorites');
+    const { subscribeToSeasonMatrix } = require('../utils/seasonMatrix');
+    try {
+      jest.useFakeTimers().setSystemTime(new Date('2026-05-15T12:00:00.000Z'));
+      getRecentRecipeCalls.mockResolvedValue([]);
+      const recipes = [
+        { id: 'r1', title: 'Frisch gekocht', createdAt: '2026-05-14T12:00:00.000Z', ingredients: [{ type: 'ingredient', text: '500g Spargel', ingredientID: 'ing-spargel' }] },
+        { id: 'r2', title: 'Liebling', createdAt: '2026-05-10T12:00:00.000Z', ingredients: [{ type: 'ingredient', text: '200g Nudeln' }] },
+        { id: 'r3', title: 'Saisonhit', createdAt: '2026-05-12T12:00:00.000Z', ingredients: [{ type: 'ingredient', text: '500g Spargel', ingredientID: 'ing-spargel' }] },
+      ];
+      subscribeToSeasonMatrix.mockImplementation((callback) => {
+        callback([{
+          id: 'spargel',
+          name: 'Spargel',
+          mainSeasonMonths: [4, 5, 6],
+          secondarySeasonMonths: [],
+          seasonScore: 100,
+          isActive: true,
+        }]);
+        return jest.fn();
+      });
+      getUserFavorites.mockResolvedValue(['r2']);
+      getAllCookDates.mockImplementation((recipeId) => {
+        if (recipeId === 'r1') {
+          return Promise.resolve([{ id: 'cd-r1', userId: 'u1', recipeId, date: new Date('2026-05-12T12:00:00.000Z') }]);
+        }
+        return Promise.resolve([]);
+      });
+
+      const { container } = render(<Startseite currentUser={{ id: 'u1' }} recipes={recipes} />);
+      await screen.findByText('Keine Trendrezepte vorhanden.');
+      const relevanteSection = Array.from(container.querySelectorAll('.startseite-trending-section')).find(
+        (section) => section.querySelector('.startseite-section-title')?.textContent === 'Relevante Rezepte'
+      );
+      expect(relevanteSection).toBeTruthy();
+      await waitFor(() => {
+        const titles = Array.from(relevanteSection.querySelectorAll('[data-testid="trending-card"]')).map((card) => card.textContent);
+        // r1 cooked 3 days ago (-50 penalty) drops to the bottom despite being newest;
+        // r3 has the Hauptsaison bonus with no cook penalty; r2 has the favorite bonus but no season bonus
+        expect(titles).toEqual(['Saisonhit', 'Liebling', 'Frisch gekocht']);
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('"mehr" button of "Relevante Rezepte" sets sessionStorage sort to index', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([]);
+    const onViewChange = jest.fn();
+    const { container } = render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
+    await screen.findByText('Keine Trendrezepte vorhanden.');
+    const relevanteSection = Array.from(container.querySelectorAll('.startseite-trending-section')).find(
+      (section) => section.querySelector('.startseite-section-title')?.textContent === 'Relevante Rezepte'
+    );
+    fireEvent.click(relevanteSection.querySelector('.startseite-mehr-btn'));
+    expect(onViewChange).toHaveBeenCalledWith('neueRezepte');
+    expect(sessionStorage.getItem('recipebook_active_sort')).toBe('index');
+  });
+
   // ─── Meine Kochideen carousel ──────────────────────────────────────
 
   test('shows "Meine Kochideen" section title', async () => {
