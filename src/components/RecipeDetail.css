@@ -947,7 +947,7 @@ button.private-badge-button:active {
   gap: 0.4rem;
   padding: 0;
   background: transparent;
-  border-radius: 8px;
+  border-radius: 0;
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -956,7 +956,7 @@ button.private-badge-button:active {
 
 .recipe-metadata .metadata-item:not(:first-child) {
   padding-left: 1rem;
-  border-left: 1px solid #e5ded8;
+  border-left: 1px solid #cbc3b8;
 }
 
 .metadata-icon {
