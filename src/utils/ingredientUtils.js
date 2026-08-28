@@ -3,6 +3,8 @@
  * Provides utilities for formatting and normalizing ingredient text
  */
 
+import { decodeRecipeLink } from './recipeLinks';
+
 /**
  * Returns the greatest common divisor of two non-negative integers.
  * @param {number} a
@@ -383,6 +385,48 @@ export async function parseIngredientParts(ingredient) {
 export function isWaterIngredient(ingredient) {
   const { name } = parseIngredientPartsSync(ingredient);
   return name.toLowerCase() === 'wasser';
+}
+
+// Volume in ml represented by one unit of a given ingredient unit, for units
+// that can meaningfully be summed as liquid volume (used to derive a
+// recipe-linked drink's total Einheitsgröße from its ingredients).
+const ML_PER_VOLUME_UNIT = {
+  ml: 1,
+  cl: 10,
+  dl: 100,
+  l: 1000,
+  el: 15,
+  esslöffel: 15,
+  tl: 5,
+  teelöffel: 5,
+};
+
+/**
+ * Sums the liquid-volume quantities of a recipe's ingredients in milliliters.
+ * Used to derive the Einheitsgröße of a Getränk created from a Rezept.
+ * Headings, ingredients excluded via includedInCalculation === false, nested
+ * recipe links, and ingredients with a non-volume or unrecognized unit (e.g.
+ * "Stück", "Prise", or no unit at all) are skipped.
+ * @param {Array<string|{type: string, text: string, includedInCalculation?: boolean}>} ingredients
+ * @returns {number} Total volume in ml (0 if nothing summable was found)
+ */
+export function sumRecipeIngredientAmountsInMl(ingredients) {
+  if (!Array.isArray(ingredients)) return 0;
+  let totalMl = 0;
+  for (const rawItem of ingredients) {
+    const item = typeof rawItem === 'string' ? { type: 'ingredient', text: rawItem } : rawItem;
+    if (!item || item.type === 'heading') continue;
+    if (item.includedInCalculation === false) continue;
+    const text = item.text;
+    if (!text || decodeRecipeLink(text)) continue;
+    const { amount, amountMax, unit } = parseIngredientPartsSync(text);
+    const effectiveAmount = amountMax != null ? amountMax : amount;
+    if (effectiveAmount == null || !unit) continue;
+    const factor = ML_PER_VOLUME_UNIT[unit.toLowerCase()];
+    if (!factor) continue;
+    totalMl += effectiveAmount * factor;
+  }
+  return totalMl;
 }
 
 /**

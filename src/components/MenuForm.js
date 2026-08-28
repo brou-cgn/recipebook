@@ -12,6 +12,7 @@ import { subscribeToEvent, subscribeToEvents, subscribeToCustomDrinks, subscribe
 import { mergePredefinedDrinks, getDrinkParentCategoryId, categoryHasOwnBudget } from '../utils/drinkCategories';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { encodeRecipeLink, decodeRecipeLink } from '../utils/recipeLinks';
+import { sumRecipeIngredientAmountsInMl } from '../utils/ingredientUtils';
 import EventForm from './EventForm';
 import DrinkManagementPage from './DrinkManagementPage';
 import DeleteRowButton from './DeleteRowButton';
@@ -844,10 +845,13 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     if (!recipe) return null;
     const existing = userCustomDrinks.find((drink) => decodeRecipeLink(drink.name)?.recipeId === recipeId);
     if (existing) return existing.id;
+    // Getränke aus einem Rezept: Kategorie immer Longdrinks, Einheitsgröße als
+    // Summe der Zutatenmengen (in l), Einheit immer "Drink".
+    const totalMl = sumRecipeIngredientAmountsInMl(recipe.ingredients);
     return saveCustomDrink(currentUser.id, {
       name: encodeRecipeLink(recipe.id, recipe.title),
-      kategorie: null,
-      einheiten: [{ einheitsgroesse: 0.5 }],
+      kategorie: 'longdrinks',
+      einheiten: [{ einheitsgroesse: totalMl > 0 ? totalMl / 1000 : 0.5, einheit: 'Drink' }],
     });
   };
 

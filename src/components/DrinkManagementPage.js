@@ -10,7 +10,7 @@ import { getCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePref
 import { isBase64Image } from '../utils/imageUtils';
 import { encodeRecipeLink, containsHashForTypeahead, decodeRecipeLink } from '../utils/recipeLinks';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
-import { parseIngredientPartsSync } from '../utils/ingredientUtils';
+import { parseIngredientPartsSync, sumRecipeIngredientAmountsInMl } from '../utils/ingredientUtils';
 import { updateRecipe } from '../utils/recipeFirestore';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 
@@ -290,7 +290,19 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
   };
 
   const handleNameRecipeSelect = (selectedRecipe) => {
-    setForm((f) => ({ ...f, name: encodeRecipeLink(selectedRecipe.id, selectedRecipe.title) }));
+    // Getränk aus einem Rezept: Kategorie immer Longdrinks, Einheitsgröße als
+    // Summe der Zutatenmengen (in l), Einheit immer "Drink".
+    const totalMl = sumRecipeIngredientAmountsInMl(selectedRecipe.ingredients);
+    setForm((f) => ({
+      ...f,
+      name: encodeRecipeLink(selectedRecipe.id, selectedRecipe.title),
+      kategorie: 'longdrinks',
+      einheiten: [{
+        ...emptyEinheit(),
+        einheitsgroesse: totalMl > 0 ? totalMl / 1000 : 0.5,
+        einheit: 'Drink',
+      }],
+    }));
     setShowNameTypeahead(false);
   };
 
