@@ -1,7 +1,6 @@
-// Canonical list of every Button-Icon row (used by both the legacy flat
-// Settings > Allgemein table and the grouped Button-Icons admin tab), plus
-// the logic to merge "normal" / "aktiv" pairs into one row and to bucket
-// them into default groups for the grouped view.
+// Canonical list of every Button-Icon row (used by the grouped Button-Icons
+// admin tab), plus the logic to merge "normal" / "aktiv" pairs into one row
+// and to bucket them into default groups for the grouped view.
 //
 // Icon values themselves always live in the `buttonIcons` Firestore
 // collection (see src/utils/customLists.js) as flat `key` -> value docs.
@@ -73,26 +72,6 @@ export const DARK_MODE_ICON_ROWS = [
   { key: 'bottomNavAtelierActive', label: 'Bottom Navigation: Atelier (aktiv)' },
   { key: 'bottomNavChefActive', label: 'Bottom Navigation: Chefkoch (aktiv)' },
 ];
-
-/**
- * Applies a saved drag & drop order (array of icon keys) to DARK_MODE_ICON_ROWS.
- * Keys from the saved order that still exist are placed first in that order;
- * any rows not yet present in the saved order (e.g. newly added icons) are
- * appended afterwards in their built-in default order.
- */
-export function getOrderedButtonIconRows(order) {
-  if (!order || order.length === 0) return DARK_MODE_ICON_ROWS;
-
-  const rowsByKey = new Map(DARK_MODE_ICON_ROWS.map((row) => [row.key, row]));
-  const ordered = order
-    .map((key) => rowsByKey.get(key))
-    .filter(Boolean);
-
-  const orderedKeys = new Set(ordered.map((row) => row.key));
-  const remaining = DARK_MODE_ICON_ROWS.filter((row) => !orderedKeys.has(row.key));
-
-  return [...ordered, ...remaining];
-}
 
 /**
  * Merges "<key>" / "<key>Active" pairs from DARK_MODE_ICON_ROWS into single
