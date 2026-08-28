@@ -718,8 +718,6 @@ export const DEFAULT_BUTTON_ICONS = {
   scanImage: 'Scan',
   webImport: 'Web',
   closeButton: '×',
-  // Alt icon shown when the top-right image corner is too bright (high luminance)
-  closeButtonAlt: '×',
   // Icon shown when the recipe uses the default category image (light mode)
   closeButtonDefaultImg: '×',
   filterButton: '⚙',
@@ -792,7 +790,6 @@ export const DEFAULT_BUTTON_ICONS = {
   scanImageDark: '',
   webImportDark: '',
   closeButtonDark: '',
-  closeButtonAltDark: '',
   // Dark mode variant for the default category image icon
   closeButtonDefaultImgDark: '',
   filterButtonDark: '',
