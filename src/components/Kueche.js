@@ -5,7 +5,6 @@ import PersonalDataPage from './PersonalDataPage';
 import {
   getTimelineBubbleIcon,
   getTimelineMenuBubbleIcon,
-  getTimelineMenuDefaultImage,
   getTimelineCookEventBubbleIcon,
   getTimelineCookEventDefaultImage,
   getButtonIcons,
@@ -171,7 +170,6 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   const [timelineMenuBubbleIcon, setTimelineMenuBubbleIcon] = useState(null);
   const [timelineCookEventBubbleIcon, setTimelineCookEventBubbleIcon] = useState(null);
   const [categoryImages, setCategoryImages] = useState([]);
-  const [timelineMenuDefaultImage, setTimelineMenuDefaultImage] = useState(null);
   const [timelineCookEventDefaultImage, setTimelineCookEventDefaultImage] = useState(null);
   const [showPersonalData, setShowPersonalData] = useState(false);
   const [appCalls, setAppCalls] = useState([]);
@@ -225,14 +223,12 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
       getTimelineBubbleIcon(),
       getTimelineMenuBubbleIcon(),
       getCategoryImages(),
-      getTimelineMenuDefaultImage(),
       getTimelineCookEventBubbleIcon(),
       getTimelineCookEventDefaultImage(),
-    ]).then(([icon, menuIcon, catImages, menuImg, cookEventIcon, cookEventImg]) => {
+    ]).then(([icon, menuIcon, catImages, cookEventIcon, cookEventImg]) => {
       setTimelineBubbleIcon(icon);
       setTimelineMenuBubbleIcon(menuIcon);
       setCategoryImages(catImages);
-      setTimelineMenuDefaultImage(menuImg);
       setTimelineCookEventBubbleIcon(cookEventIcon);
       setTimelineCookEventDefaultImage(cookEventImg);
     }).catch(() => {});
@@ -508,7 +504,7 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
               timelineMenuBubbleIcon={timelineMenuBubbleIcon}
               timelineCookEventBubbleIcon={timelineCookEventBubbleIcon}
               categoryImages={categoryImages}
-              defaultImage={timelineMenuDefaultImage}
+              defaultImage={getEffectiveIcon(buttonIcons, 'timelineMenuDefaultImg', isDarkMode) || null}
               timelineCookEventDefaultImage={timelineCookEventDefaultImage}
             />
           )}

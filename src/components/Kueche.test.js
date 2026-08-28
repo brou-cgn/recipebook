@@ -8,10 +8,9 @@ let mockNutritionReferenceStateHolder = { rows: [], loading: false, reload: jest
 jest.mock('../utils/customLists', () => ({
   getTimelineBubbleIcon: () => Promise.resolve(null),
   getTimelineMenuBubbleIcon: () => Promise.resolve(null),
-  getTimelineMenuDefaultImage: () => Promise.resolve(DEFAULT_MENU_IMAGE),
   getTimelineCookEventBubbleIcon: () => Promise.resolve(null),
   getTimelineCookEventDefaultImage: () => Promise.resolve(null),
-  getButtonIcons: () => Promise.resolve({}),
+  getButtonIcons: () => Promise.resolve({ timelineMenuDefaultImg: DEFAULT_MENU_IMAGE }),
   DEFAULT_BUTTON_ICONS: { kuecheFab: '+' },
   getEffectiveIcon: jest.fn((icons, key, isDarkMode) => {
     if (isDarkMode && icons[`${key}Dark`]) return icons[`${key}Dark`];
@@ -44,6 +43,7 @@ jest.mock('../utils/appCallsFirestore', () => ({
 
 jest.mock('../utils/recipeCallsFirestore', () => ({
   getRecipeCalls: jest.fn(),
+  getRecentRecipeCalls: jest.fn(),
 }));
 
 jest.mock('../utils/userManagement', () => ({
@@ -62,12 +62,18 @@ describe('Kueche', () => {
   beforeEach(() => {
     const { getAppCalls } = require('../utils/appCallsFirestore');
     getAppCalls.mockResolvedValue([]);
-    const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
+    const { getRecipeCalls, getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
     getRecipeCalls.mockResolvedValue([]);
+    getRecentRecipeCalls.mockResolvedValue([]);
     const { getAllCookDates } = require('../utils/recipeCookDates');
     getAllCookDates.mockResolvedValue([]);
     const { getCuisineProposals } = require('../utils/cuisineProposalsFirestore');
     getCuisineProposals.mockResolvedValue([]);
+    const { getEffectiveIcon } = require('../utils/customLists');
+    getEffectiveIcon.mockImplementation((icons, key, isDarkMode) => {
+      if (isDarkMode && icons[`${key}Dark`]) return icons[`${key}Dark`];
+      return icons[key] ?? '';
+    });
     mockNutritionReferenceStateHolder = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
   });
 
@@ -786,8 +792,8 @@ describe('Kueche', () => {
   });
 
   test('Meine Küchenstars tile shows most viewed own recipe', async () => {
-    const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
-    getRecipeCalls.mockResolvedValueOnce([
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValueOnce([
       { id: 'rc1', recipeId: '1', timestamp: { toDate: () => new Date() } },
       { id: 'rc2', recipeId: '1', timestamp: { toDate: () => new Date() } },
       { id: 'rc3', recipeId: '2', timestamp: { toDate: () => new Date() } },

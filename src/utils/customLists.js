@@ -757,6 +757,8 @@ export const DEFAULT_BUTTON_ICONS = {
   tagesmenuKachelMenu: '⋯',
   // Alt icon shown when the tile image is dark (low luminance)
   tagesmenuKachelMenuAlt: '⋯',
+  // Fallback image for menu cards in the Küche timeline that have no own image
+  timelineMenuDefaultImg: '',
   newVersion: 'Version',
   publishRecipe: '↑',
   deleteRecipe: '🗑',
@@ -829,6 +831,7 @@ export const DEFAULT_BUTTON_ICONS = {
   tagesmenuMeineAuswahlDark: '',
   tagesmenuKachelMenuDark: '',
   tagesmenuKachelMenuAltDark: '',
+  timelineMenuDefaultImgDark: '',
   newVersionDark: '',
   publishRecipeDark: '',
   deleteRecipeDark: '',
@@ -1030,7 +1033,7 @@ export async function getSettings() {
     try {
       const imagesDoc = await getDoc(doc(db, 'settings', 'images'));
       const imagesData = imagesDoc.exists() ? imagesDoc.data() : {};
-      const buttonIcons = await getButtonIcons();
+      const buttonIcons = await getButtonIcons(imagesData);
       settingsCache = {
         ...lsCache,
         faviconImage: imagesData.faviconImage || null,
@@ -1135,7 +1138,7 @@ export async function getSettings() {
 
       // Load button icons from the buttonIcons collection.
       // settingsCache has not been set yet at this point, so getButtonIcons() fetches from Firestore.
-      const buttonIcons = await getButtonIcons();
+      const buttonIcons = await getButtonIcons(imagesData);
 
       // Ensure all fields exist for backward compatibility
       settingsCache = {
@@ -1896,9 +1899,12 @@ export async function addMissingConversionEntries(missingEntries, currentTable =
 
 /**
  * Get the button icons from the buttonIcons collection (or return from cache / defaults).
+ * @param {Object} [preloadedImagesData] - Already-fetched settings/images data, if the
+ *   caller has it at hand (e.g. getSettings()) - avoids a redundant Firestore read for
+ *   the legacy timeline menu default image migration below.
  * @returns {Promise<Object>} Promise resolving to button icons object
  */
-export async function getButtonIcons() {
+export async function getButtonIcons(preloadedImagesData) {
   if (settingsCache?.buttonIcons) {
     return settingsCache.buttonIcons;
   }
@@ -1914,6 +1920,26 @@ export async function getButtonIcons() {
     snapshot.forEach((docSnap) => {
       icons[docSnap.id] = docSnap.data().value;
     });
+
+    // One-time migration: the timeline menu default image used to live in
+    // settings/images.timelineMenuDefaultImage. Carry it over into the
+    // buttonIcons collection so it shows up in the Button-Icons (neu) list.
+    if (!icons.timelineMenuDefaultImg) {
+      try {
+        const imagesData = preloadedImagesData
+          ?? await getDoc(doc(db, 'settings', 'images')).then((snap) => (snap.exists() ? snap.data() : {}));
+        const legacyImage = imagesData?.timelineMenuDefaultImage;
+        if (legacyImage) {
+          icons.timelineMenuDefaultImg = legacyImage;
+          saveButtonIcon('timelineMenuDefaultImg', legacyImage).catch((error) => {
+            console.error('Error migrating timeline menu default image:', error);
+          });
+        }
+      } catch (error) {
+        console.error('Error checking legacy timeline menu default image:', error);
+      }
+    }
+
     saveButtonIconsToLocalStorageCache(icons);
     return icons;
   } catch (error) {
@@ -2085,35 +2111,6 @@ export async function saveTimelineRecipeDefaultImage(imageBase64) {
     }
   } catch (error) {
     console.error('Error saving timeline recipe default image:', error);
-    throw error;
-  }
-}
-
-/**
- * Get the default menu image for the timeline from Firestore
- * @returns {Promise<string|null>} Promise resolving to base64 encoded image or null
- */
-export async function getTimelineMenuDefaultImage() {
-  const settings = await getSettings();
-  return settings.timelineMenuDefaultImage || null;
-}
-
-/**
- * Save the default menu image for the timeline to Firestore (settings/images)
- * @param {string|null} imageBase64 - Base64 encoded image or null to remove
- * @returns {Promise<void>}
- */
-export async function saveTimelineMenuDefaultImage(imageBase64) {
-  try {
-    const imagesRef = doc(db, 'settings', 'images');
-    await setDoc(imagesRef, { timelineMenuDefaultImage: imageBase64 || null }, { merge: true });
-
-    // Update cache
-    if (settingsCache) {
-      settingsCache.timelineMenuDefaultImage = imageBase64 || null;
-    }
-  } catch (error) {
-    console.error('Error saving timeline menu default image:', error);
     throw error;
   }
 }
