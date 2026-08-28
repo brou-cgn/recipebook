@@ -99,8 +99,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [cookingModeIcon, setCookingModeIcon] = useState('♨');
-  const [cookingModeAltIcon, setCookingModeAltIcon] = useState('♨');
   const [cookingModeDefaultImgIcon, setCookingModeDefaultImgIcon] = useState('♨');
+  // Light-mode variant of the default-category-image icon, forced regardless of the
+  // app's current dark mode setting - bright recipe images always show this one.
+  const [cookingModeDefaultImgLightIcon, setCookingModeDefaultImgLightIcon] = useState('♨');
   const [closeButtonIcon, setCloseButtonIcon] = useState('×');
   const [closeButtonAltIcon, setCloseButtonAltIcon] = useState('×');
   const [closeButtonDefaultImgIcon, setCloseButtonDefaultImgIcon] = useState('×');
@@ -190,9 +192,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       // the initial text/emoji placeholders.
       const currentDarkMode = getDarkModePreference();
       const eff = (key) => getEffectiveIcon(icons, key, currentDarkMode);
+      const effLight = (key) => getEffectiveIcon(icons, key, false);
       setCookingModeIcon(eff('cookingMode') || '♨');
-      setCookingModeAltIcon(eff('cookingModeAlt') || eff('cookingMode') || '♨');
       setCookingModeDefaultImgIcon(eff('cookingModeDefaultImg') || eff('cookingMode') || '♨');
+      setCookingModeDefaultImgLightIcon(effLight('cookingModeDefaultImg') || effLight('cookingMode') || '♨');
       setCloseButtonIcon(eff('closeButton') || '×');
       setCloseButtonAltIcon(eff('closeButtonAlt') || eff('closeButton') || '×');
       setCloseButtonDefaultImgIcon(eff('closeButtonDefaultImg') || eff('closeButton') || '×');
@@ -239,9 +242,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Re-compute individual icon states when icons or dark mode changes
   useEffect(() => {
     const eff = (key) => getEffectiveIcon(allButtonIcons, key, isDarkMode);
+    const effLight = (key) => getEffectiveIcon(allButtonIcons, key, false);
     setCookingModeIcon(eff('cookingMode') || '♨');
-    setCookingModeAltIcon(eff('cookingModeAlt') || eff('cookingMode') || '♨');
     setCookingModeDefaultImgIcon(eff('cookingModeDefaultImg') || eff('cookingMode') || '♨');
+    setCookingModeDefaultImgLightIcon(effLight('cookingModeDefaultImg') || effLight('cookingMode') || '♨');
     setCloseButtonIcon(eff('closeButton') || '×');
     setCloseButtonAltIcon(eff('closeButtonAlt') || eff('closeButton') || '×');
     setCloseButtonDefaultImgIcon(eff('closeButtonDefaultImg') || eff('closeButton') || '×');
@@ -2275,12 +2279,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         onContextMenu={(e) => e.preventDefault()}
                         aria-label="Kochmodus aktivieren"
                       >
-                        {/* Use default-category-image icon when the displayed image is a category image,
-                            otherwise fall back to alt icon for bright corners or the normal icon */}
+                        {/* Use the default-category-image icon when the displayed image is a
+                            category image (respects dark mode); for bright image corners always
+                            use its light-mode variant, regardless of the app's dark mode setting;
+                            otherwise the normal icon */}
                         {(() => {
                           const icon = isDefaultCategoryImage
                             ? cookingModeDefaultImgIcon
-                            : (useCookingModeAlt ? cookingModeAltIcon : cookingModeIcon);
+                            : (useCookingModeAlt ? cookingModeDefaultImgLightIcon : cookingModeIcon);
                           return isBase64Image(icon)
                             ? <img src={icon} alt="Kochmodus" className="overlay-cooking-mode-icon-img" />
                             : <span>{icon}</span>;
