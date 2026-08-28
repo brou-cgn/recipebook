@@ -16,10 +16,16 @@ Skill sorgt dafür, dass das JSON beim ersten Versuch passt, egal wie
 unstrukturiert der Ausgangstext ist (Fließtext, Kochbuch-Diktat,
 Instagram-Caption, handschriftliche Notiz-Transkription).
 
-Der Skill ruft die Cloud Function **nie selbst auf** — dafür fehlt ihm der
-`SHORTCUT_API_KEY` und die registrierte E-Mail des Nutzers. Er liefert nur
-das fertige JSON (und optional ein curl-Template), das der Nutzer selbst
-per Kurzbefehl, curl oder in der App weiterverwendet.
+Der Skill ruft `addRecipeViaAPI` **nie selbst auf** — er würde damit ein
+Rezept anlegen, ohne dass der Nutzer das JSON vorher gesehen hat, und ohne
+API-Key/E-Mail des Nutzers ginge das ohnehin nicht. Er liefert nur das
+fertige JSON (und optional ein curl-Template), das der Nutzer selbst per
+Kurzbefehl, curl oder in der App weiterverwendet.
+
+Anders bei `getRecipeOptionsShortcut` (siehe Regel 3): das ist ein reiner
+Lesezugriff, der nichts anlegt oder verändert — wenn HTTP-Zugriff und die
+nötigen Zugangsdaten vorhanden sind, darf und sollte der Skill diesen
+Endpoint selbst aufrufen, um die aktuellen Listen zu holen.
 
 ## Das Zielschema
 
@@ -97,9 +103,26 @@ unabhängig vom Importweg gleich aussieht.
 
 3. **`kulinarik` und `speisekategorie` an die App-Listen anlehnen**: Die
    App validiert diese Felder nicht hart gegen eine feste Liste, aber für
-   Konsistenz mit dem Rest des RecipeBooks aus diesen Standardwerten wählen
-   (der Nutzer kann seine Listen in den Einstellungen angepasst haben —
-   bei Unsicherheit lieber den nächstliegenden Wert nehmen als raten):
+   Konsistenz mit dem Rest des RecipeBooks sollten nur Werte verwendet
+   werden, die dort auch tatsächlich existieren.
+
+   **Bevorzugt — Live-Listen abfragen:** Hat Claude in der aktuellen
+   Umgebung HTTP-Zugriff (z. B. `curl`/`WebFetch` in Claude Code) und
+   liegen API-Key + registrierte E-Mail des Nutzers vor (z. B. weil er sie
+   im Chat genannt hat oder ein Kurzbefehl sie mitschickt), rufe zuerst
+   `GET https://us-central1-<PROJECT-ID>.cloudfunctions.net/getRecipeOptionsShortcut`
+   auf (Headers `X-Api-Key`, `X-User-Email` — siehe
+   `APPLE_SHORTCUT_SETUP.md`). Die Antwort liefert `cuisineTypes` und
+   `mealCategories` als aktuell in der App konfigurierte Arrays — das ist
+   ein reiner Lesezugriff (siehe Hinweis oben) und liefert die
+   tatsächlichen Werte, auch wenn der Nutzer seine Listen in den
+   App-Einstellungen angepasst hat.
+
+   **Fallback — Standardwerte:** Ohne HTTP-Zugriff oder Zugangsdaten auf
+   diese Standardwerte (`DEFAULT_CUISINE_TYPES`/`DEFAULT_MEAL_CATEGORIES`)
+   zurückfallen und den Nutzer kurz darauf hinweisen, dass es sich um
+   Standardwerte handelt, die von seiner tatsächlichen Konfiguration
+   abweichen können:
    - **Kulinarik** (Array, `DEFAULT_CUISINE_TYPES`): Deutsche, Französische,
      Italienische, Österreichische, Schweizer, Türkische, Chinesische,
      Indische, Japanische, Orientalische, Thailändische, Mexikanische,
