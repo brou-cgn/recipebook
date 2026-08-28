@@ -635,6 +635,30 @@ describe('DrinkManagementPage', () => {
             { type: 'heading', text: 'Deko' },
           ],
         },
+        {
+          id: 'r2',
+          title: 'Basilikumsirup',
+          speisekategorie: ['Drinks'],
+          ingredients: [],
+        },
+      ];
+
+      const recipesWithLinkedIngredient = [
+        {
+          id: 'r1',
+          title: 'Lemon Basil Olive Oil Spritz',
+          speisekategorie: ['Drinks'],
+          ingredients: [
+            { type: 'ingredient', text: '90 ml Gin' },
+            { type: 'ingredient', text: '30 ml #recipe:r2:Basilikumsirup' },
+          ],
+        },
+        {
+          id: 'r2',
+          title: 'Basilikumsirup',
+          speisekategorie: ['Drinks'],
+          ingredients: [],
+        },
       ];
 
       test('shows the ingredients of the linked recipe with amount and unit', () => {
@@ -653,6 +677,21 @@ describe('DrinkManagementPage', () => {
         expect(screen.getByText('2 EL')).toBeInTheDocument();
         // Headings are not rendered as ingredient rows
         expect(screen.queryByText('Deko')).not.toBeInTheDocument();
+      });
+
+      test('shows the linked recipe name instead of the raw #recipe link for an ingredient that is itself a recipe link', () => {
+        mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
+          cb([{ id: 'd1', name: '#recipe:r1:Lemon Basil Olive Oil Spritz', kategorie: 'longdrink', einheiten: [] }]);
+          return jest.fn();
+        });
+
+        render(<DrinkManagementPage currentUser={currentUser} recipes={recipesWithLinkedIngredient} />);
+
+        fireEvent.click(screen.getByText('Lemon Basil Olive Oil Spritz'));
+
+        expect(screen.getByText('Basilikumsirup')).toBeInTheDocument();
+        expect(screen.getByText('30 ml')).toBeInTheDocument();
+        expect(screen.queryByText(/#recipe:/)).not.toBeInTheDocument();
       });
 
       test('does not show an ingredient list for a normal (non-recipe) drink', () => {
