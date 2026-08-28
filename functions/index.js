@@ -5245,9 +5245,6 @@ exports.generateNutritionFromReference = onCall(
         preserveOnManualSourceChange: true,
         fromNutritionGeneration: true,
       });
-      if (trackingFields.recalcDate !== undefined) {
-        trackingFields.recalcDate = admin.firestore.FieldValue.serverTimestamp();
-      }
       const updatePayload = {
         ...(searchTerm ? {searchTerm} : {}),
         ...selectedValues,
