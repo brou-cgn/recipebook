@@ -249,6 +249,13 @@
 }
 .bia-row-name-input:hover, .bia-row-name-input:focus { border-color: #e0dcd4; background: #fbfaf7; }
 
+.bia-row-name-static {
+  font-size: 13.5px;
+  color: #23211e;
+  padding: 4px 6px;
+  cursor: default;
+}
+
 .bia-fallback-note {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10px;
@@ -539,6 +546,7 @@
 [data-theme="dark"] .bia-row { border-color: #2a2d31; }
 [data-theme="dark"] .bia-row-name-input { color: #f2f0ec; }
 [data-theme="dark"] .bia-row-name-input:hover, [data-theme="dark"] .bia-row-name-input:focus { border-color: #33373d; background: #202226; }
+[data-theme="dark"] .bia-row-name-static { color: #f2f0ec; }
 [data-theme="dark"] .bia-fallback-note { color: #7d838c; }
 
 [data-theme="dark"] .bia-slot-light { border-color: #4a463f; }

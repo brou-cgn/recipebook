@@ -11,6 +11,7 @@ jest.mock('firebase/firestore', () => ({
   getDocs: jest.fn(),
   setDoc: jest.fn(),
   updateDoc: jest.fn(),
+  deleteDoc: jest.fn(),
   deleteField: jest.fn(() => ({ _methodName: 'FieldValue.delete' })),
   collection: jest.fn((db, name) => ({ id: name })),
   writeBatch: jest.fn(),
@@ -290,10 +291,15 @@ describe('getCustomLists – default fallbacks', () => {
   });
 
   test('returns saved cuisineIcons from Firestore instead of defaults', async () => {
+    // Legacy per-cuisine icons stored directly on settings/app.cuisineIcons are
+    // migrated into the buttonIcons collection on load (see
+    // migrateCuisineIconsToButtonIcons) and re-derived from there afterwards -
+    // cuisineTypes must list the cuisine for its icon to surface.
     const savedCuisineIcons = { Italian: '🍝', ItalianDark: '🍝' };
     mockGetDoc.mockResolvedValue({
       exists: () => true,
       data: () => ({
+        cuisineTypes: ['Italian'],
         cuisineIcons: savedCuisineIcons,
         aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT,
       }),
@@ -960,18 +966,25 @@ describe('getSettings – settings/images document split', () => {
 });
 
 describe('saveCustomLists – cuisineIcons persistence', () => {
-  test('writes cuisineIcons into the localStorage cache so they survive a hard reload', async () => {
+  test('never writes cuisineIcons back to settings/app or the localStorage cache', async () => {
+    // cuisineIcons is derived from the buttonIcons collection (see
+    // buildCuisineIconsMap / cuisineTypeIconKey) - saveCustomLists must not
+    // resurrect the legacy settings/app.cuisineIcons field it migrates away.
     mockGetDoc.mockResolvedValue({
       exists: () => true,
       data: () => ({ aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }),
     });
     const lists = await getCustomLists();
+    updateDoc.mockClear();
     updateDoc.mockResolvedValue(undefined);
 
     await saveCustomLists({ ...lists, cuisineIcons: { Italian: '🍝' } });
 
+    const [, payload] = updateDoc.mock.calls[updateDoc.mock.calls.length - 1];
+    expect(payload.cuisineIcons).toBeUndefined();
+
     const cached = JSON.parse(localStorage.getItem('appSettingsCache'));
-    expect(cached.cuisineIcons).toEqual({ Italian: '🍝' });
+    expect(cached.cuisineIcons).toBeUndefined();
   });
 });
 

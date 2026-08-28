@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getButtonIconsOrder, saveButtonIconsOrder, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT, PRINT_FORMAT_LAYOUT_VERSION, selectPrintFormat } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, renameCuisineTypeIcon, deleteCuisineTypeIcon, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getButtonIconsOrder, saveButtonIconsOrder, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT, PRINT_FORMAT_LAYOUT_VERSION, selectPrintFormat } from '../utils/customLists';
 import { getOnboardingTestmodeActive, saveOnboardingTestmodeActive } from '../utils/onboardingSettings';
 import PrintFormatEditor from './PrintFormatEditor';
 import PrintPreview from './PrintPreview';
@@ -8,7 +8,7 @@ import { invalidateUnitsCache } from '../utils/ingredientUtils';
 import { isCurrentUserAdmin, ROLES, getRolePermissions, canManageSeasonMatrix, canManageDrinkWeights } from '../utils/userManagement';
 import UserManagement from './UserManagement';
 import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
-import { fileToBase64, isBase64Image, compressImage } from '../utils/imageUtils';
+import { fileToBase64, compressImage } from '../utils/imageUtils';
 import { applyFaviconSettings } from '../utils/faviconUtils';
 import { uploadAppLogoToStorage, deleteAppLogoFromStorage } from '../utils/storageUtils';
 import { addFaq, updateFaq, deleteFaq, subscribeToFaqs, importFaqsFromMarkdown } from '../utils/faqFirestore';
@@ -44,74 +44,13 @@ function getSortableItemStyle(transform, transition, isDragging) {
   };
 }
 
-function CuisineIconSlot({ value, onTextChange, onUpload, onRemoveImage, uploading, placeholder, ariaLabel, title, inputId }) {
-  const isImage = isBase64Image(value);
-  return (
-    <span className="cuisine-icon-slot">
-      {isImage ? (
-        <>
-          <span className="cuisine-icon-preview">
-            <img src={value} alt="" className="cuisine-icon-preview-image" />
-          </span>
-          <button
-            type="button"
-            className="cuisine-icon-remove-btn"
-            onClick={onRemoveImage}
-            title="Bild entfernen"
-            aria-label={`Bild entfernen: ${ariaLabel}`}
-          >
-            ×
-          </button>
-        </>
-      ) : (
-        <>
-          <input
-            type="text"
-            value={value || ''}
-            onChange={(e) => onTextChange(e.target.value)}
-            placeholder={placeholder}
-            maxLength={4}
-            className="list-item-icon-input"
-            aria-label={ariaLabel}
-            title={title}
-          />
-          <label
-            htmlFor={inputId}
-            className="cuisine-icon-upload-btn"
-            title="Bild hochladen"
-          >
-            {uploading ? '...' : '📷'}
-          </label>
-          <input
-            type="file"
-            id={inputId}
-            accept="image/png,image/jpeg,image/jpg,image/svg+xml"
-            onChange={onUpload}
-            style={{ display: 'none' }}
-            disabled={uploading}
-          />
-        </>
-      )}
-    </span>
-  );
-}
-
 function SortableListItem({
   id,
   label,
   onRemove,
   onRename,
-  icon,
-  onIconChange,
-  onIconUpload,
-  onIconRemoveImage,
-  uploadingLight,
-  iconDark,
-  onIconDarkChange,
-  onIconDarkUpload,
-  onIconDarkRemoveImage,
-  uploadingDark,
   placeholderColumn,
+  placeholderColumnTitle = 'Bild – folgt in Kürze',
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(label);
@@ -172,39 +111,9 @@ function SortableListItem({
       ) : (
         <span>{label}</span>
       )}
-      {(onIconChange || onIconDarkChange) && !isEditing && (
+      {placeholderColumn && !isEditing && (
         <div className="list-item-icon-group">
-          {onIconChange && (
-            <CuisineIconSlot
-              value={icon}
-              onTextChange={onIconChange}
-              onUpload={onIconUpload}
-              onRemoveImage={onIconRemoveImage}
-              uploading={uploadingLight}
-              placeholder="☀"
-              ariaLabel={`Icon für Hellmodus für ${label}`}
-              title="Optionales Icon für Hellmodus (Emoji oder Bild)"
-              inputId={`cuisineIconLight-${String(id).replace(/\s+/g, '-')}`}
-            />
-          )}
-          {onIconDarkChange && (
-            <CuisineIconSlot
-              value={iconDark}
-              onTextChange={onIconDarkChange}
-              onUpload={onIconDarkUpload}
-              onRemoveImage={onIconDarkRemoveImage}
-              uploading={uploadingDark}
-              placeholder="🌙"
-              ariaLabel={`Icon für Dunkelmodus für ${label}`}
-              title="Optionales Icon für Dunkelmodus (Emoji oder Bild)"
-              inputId={`cuisineIconDark-${String(id).replace(/\s+/g, '-')}`}
-            />
-          )}
-        </div>
-      )}
-      {!onIconChange && !onIconDarkChange && placeholderColumn && !isEditing && (
-        <div className="list-item-icon-group">
-          <span className="list-item-column-placeholder" title="Bild – folgt in Kürze" aria-label={`Bildspalte für ${label} – folgt in Kürze`}>🖼</span>
+          <span className="list-item-column-placeholder" title={placeholderColumnTitle} aria-label={`${placeholderColumnTitle} (${label})`}>🖼</span>
         </div>
       )}
       {onRename && !isEditing && (
@@ -296,9 +205,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
 
   // New cuisine group state (for adding a new parent group)
   const [newGroupName, setNewGroupName] = useState('');
-
-  // Tracks which cuisineIcons map key (cuisine name, or "<name>Dark") is currently uploading
-  const [uploadingCuisineIcon, setUploadingCuisineIcon] = useState(null);
 
   // Pending renames for cuisine types and meal categories (to propagate to recipes on save)
   const [pendingCuisineRenames, setPendingCuisineRenames] = useState([]);
@@ -729,6 +635,12 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       await saveInspirationListSettings({ inspirationListName, inspirationListDescription, inspirationTargetListName, inspirationTargetListDescription });
       await saveOnboardingTestmodeActive(onboardingTestmodeActive);
 
+      // Carry cuisine type icons (managed in "Bilder & Icons") over renames, and
+      // remove them for deleted cuisine types - mirrors the recipe propagation
+      // below, deferred until Save just like every other list change here.
+      await Promise.all(pendingCuisineRenames.map(({ from, to }) => renameCuisineTypeIcon(from, to)));
+      await Promise.all(pendingCuisineDeletes.map((name) => deleteCuisineTypeIcon(name)));
+
       // Propagate cuisine type renames to all affected recipes
       await propagateRenames(pendingCuisineRenames, 'kulinarik', setPendingCuisineRenames);
 
@@ -794,86 +706,28 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   };
 
   const removeCuisine = (cuisine) => {
-    setLists(prev => {
-      const cuisineIcons = { ...(prev.cuisineIcons || {}) };
-      delete cuisineIcons[cuisine];
-      delete cuisineIcons[`${cuisine}Dark`];
-      return {
-        ...prev,
-        cuisineTypes: prev.cuisineTypes.filter(c => c !== cuisine),
-        cuisineGroups: (prev.cuisineGroups || []).map(g => ({
-          ...g,
-          children: g.children.filter(c => c !== cuisine)
-        })),
-        cuisineIcons
-      };
-    });
+    setLists(prev => ({
+      ...prev,
+      cuisineTypes: prev.cuisineTypes.filter(c => c !== cuisine),
+      cuisineGroups: (prev.cuisineGroups || []).map(g => ({
+        ...g,
+        children: g.children.filter(c => c !== cuisine)
+      })),
+    }));
     setPendingCuisineDeletes(prev => prev.includes(cuisine) ? prev : [...prev, cuisine]);
-  };
-
-  const setCuisineIconValue = (mapKey, value) => {
-    setLists(prev => {
-      const cuisineIcons = { ...(prev.cuisineIcons || {}) };
-      if (value) {
-        cuisineIcons[mapKey] = value;
-      } else {
-        delete cuisineIcons[mapKey];
-      }
-      return { ...prev, cuisineIcons };
-    });
-  };
-
-  // variant: 'light' (default) sets the base icon; 'dark' sets the "<name>Dark" variant
-  const setCuisineIcon = (cuisine, value, variant = 'light') => {
-    setCuisineIconValue(variant === 'dark' ? `${cuisine}Dark` : cuisine, value);
-  };
-
-  const handleCuisineIconUpload = async (mapKey, e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-
-    setUploadingCuisineIcon(mapKey);
-    try {
-      const base64 = await fileToBase64(file);
-      const compressedBase64 = await compressImage(base64, 128, 128, 0.85, true);
-      setCuisineIconValue(mapKey, compressedBase64);
-    } catch (error) {
-      alert(`Fehler beim Hochladen des Icons: ${error.message}`);
-    } finally {
-      setUploadingCuisineIcon(null);
-      e.target.value = '';
-    }
-  };
-
-  const handleRemoveCuisineIconImage = (mapKey) => {
-    setCuisineIconValue(mapKey, '');
   };
 
   const renameCuisine = (oldName, newName) => {
     const trimmed = newName.trim();
     if (!trimmed || oldName === trimmed) return;
-    setLists(prev => {
-      const cuisineIcons = { ...(prev.cuisineIcons || {}) };
-      if (oldName in cuisineIcons) {
-        cuisineIcons[trimmed] = cuisineIcons[oldName];
-        delete cuisineIcons[oldName];
-      }
-      const oldDarkKey = `${oldName}Dark`;
-      const newDarkKey = `${trimmed}Dark`;
-      if (oldDarkKey in cuisineIcons) {
-        cuisineIcons[newDarkKey] = cuisineIcons[oldDarkKey];
-        delete cuisineIcons[oldDarkKey];
-      }
-      return {
-        ...prev,
-        cuisineTypes: prev.cuisineTypes.map(c => c === oldName ? trimmed : c),
-        cuisineGroups: (prev.cuisineGroups || []).map(g => ({
-          ...g,
-          children: g.children.map(c => c === oldName ? trimmed : c)
-        })),
-        cuisineIcons
-      };
-    });
+    setLists(prev => ({
+      ...prev,
+      cuisineTypes: prev.cuisineTypes.map(c => c === oldName ? trimmed : c),
+      cuisineGroups: (prev.cuisineGroups || []).map(g => ({
+        ...g,
+        children: g.children.map(c => c === oldName ? trimmed : c)
+      })),
+    }));
     setPendingCuisineRenames(prev => {
       const existingIdx = prev.findIndex(r => r.to === oldName);
       if (existingIdx >= 0) {
@@ -2468,16 +2322,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     key={cuisine}
                     id={cuisine}
                     label={cuisine}
-                    icon={(lists.cuisineIcons || {})[cuisine]}
-                    iconDark={(lists.cuisineIcons || {})[`${cuisine}Dark`]}
-                    onIconChange={canEditLists ? (value) => setCuisineIcon(cuisine, value, 'light') : undefined}
-                    onIconDarkChange={canEditLists ? (value) => setCuisineIcon(cuisine, value, 'dark') : undefined}
-                    onIconUpload={canEditLists ? (e) => handleCuisineIconUpload(cuisine, e) : undefined}
-                    onIconDarkUpload={canEditLists ? (e) => handleCuisineIconUpload(`${cuisine}Dark`, e) : undefined}
-                    onIconRemoveImage={canEditLists ? () => handleRemoveCuisineIconImage(cuisine) : undefined}
-                    onIconDarkRemoveImage={canEditLists ? () => handleRemoveCuisineIconImage(`${cuisine}Dark`) : undefined}
-                    uploadingLight={uploadingCuisineIcon === cuisine}
-                    uploadingDark={uploadingCuisineIcon === `${cuisine}Dark`}
+                    placeholderColumn
+                    placeholderColumnTitle="Icon – siehe „Bilder & Icons“"
                     onRemove={() => removeCuisine(cuisine)}
                     onRename={canEditLists ? renameCuisine : undefined}
                   />

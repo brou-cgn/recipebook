@@ -2,9 +2,9 @@
  * Default configuration values for customizable lists
  */
 import { db } from '../firebase';
-import { doc, getDoc, getDocs, setDoc, updateDoc, deleteField, collection, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField, collection, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { normalizeNutritionReferenceId } from './nutritionReferenceUtils';
-import { getDefaultButtonIconGroups, reconcileButtonIconGroups } from './buttonIconRows';
+import { getDefaultButtonIconGroups, reconcileButtonIconGroups, reconcileCuisineTypeGroup, cuisineTypeIconKey } from './buttonIconRows';
 
 export const DEFAULT_CUISINE_TYPES = [
   'Deutsche Küche',
@@ -49,6 +49,28 @@ export function getEffectiveCuisineIcon(cuisineIcons, cuisineName, isDarkMode) {
     if (darkIcon) return darkIcon;
   }
   return cuisineIcons[cuisineName] || '';
+}
+
+/**
+ * Derives the `cuisineIcons` map (see getEffectiveCuisineIcon above) from the
+ * buttonIcons collection, where each cuisine type's icons now live (see
+ * cuisineTypeIconKey in buttonIconRows.js). Cuisine icons used to be stored
+ * directly on settings/app.cuisineIcons; that field is migrated away on first
+ * load (see getSettings()) and kept only as a legacy fallback source.
+ * @param {string[]} cuisineTypes
+ * @param {Object<string, string>} buttonIcons
+ * @returns {Object<string, string>}
+ */
+function buildCuisineIconsMap(cuisineTypes, buttonIcons) {
+  const map = {};
+  if (!buttonIcons) return map;
+  for (const name of cuisineTypes || []) {
+    const lightValue = buttonIcons[cuisineTypeIconKey(name)];
+    const darkValue = buttonIcons[`${cuisineTypeIconKey(name)}Dark`];
+    if (lightValue) map[name] = lightValue;
+    if (darkValue) map[`${name}Dark`] = darkValue;
+  }
+  return map;
 }
 
 export const DEFAULT_MEAL_CATEGORIES = [
@@ -893,6 +915,9 @@ const SETTINGS_LOCALSTORAGE_EXCLUDED_FIELDS = [
   'timelineMenuDefaultImage',
   'timelineCookEventDefaultImage',
   'buttonIcons',
+  // Derived from buttonIcons on every getSettings() call (see buildCuisineIconsMap) -
+  // never trust a stale cached copy, and it may still contain base64 images.
+  'cuisineIcons',
 ];
 
 function getSettingsFromLocalStorageCache() {
@@ -1001,6 +1026,36 @@ async function migrateButtonIconsToCollection(icons) {
 }
 
 /**
+ * One-time migration: cuisine type icons used to live directly on
+ * settings/app.cuisineIcons, keyed by cuisine name (and "<name>Dark" for the
+ * dark-mode variant). They now live in the buttonIcons collection instead, one
+ * row per cuisine type, so they show up in the "Bilder & Icons" admin list
+ * alongside every other icon. Mutates `buttonIcons` in place so the caller's
+ * already-loaded copy reflects the migrated values immediately.
+ * @param {Object<string, string>} legacyCuisineIcons
+ * @param {Object} buttonIcons - loaded buttonIcons map, updated in place
+ * @returns {Promise<void>}
+ */
+async function migrateCuisineIconsToButtonIcons(legacyCuisineIcons, buttonIcons) {
+  const entries = Object.entries(legacyCuisineIcons || {}).filter(([, value]) => value);
+  if (entries.length === 0) return;
+  try {
+    const batch = writeBatch(db);
+    for (const [legacyKey, value] of entries) {
+      const isDark = legacyKey.endsWith('Dark');
+      const cuisineName = isDark ? legacyKey.slice(0, -'Dark'.length) : legacyKey;
+      const targetKey = isDark ? `${cuisineTypeIconKey(cuisineName)}Dark` : cuisineTypeIconKey(cuisineName);
+      batch.set(doc(db, BUTTON_ICONS_COLLECTION, targetKey), { value, updatedAt: serverTimestamp() });
+      buttonIcons[targetKey] = value;
+    }
+    await batch.commit();
+    console.log('Migrated cuisineIcons into the buttonIcons collection');
+  } catch (error) {
+    console.error('Failed to migrate cuisineIcons to buttonIcons collection:', error);
+  }
+}
+
+/**
  * Get settings from Firestore or return defaults.
  * Text configuration is read from settings/app; image data from settings/images.
  * Automatically migrates any image fields still stored in settings/app to settings/images.
@@ -1029,6 +1084,7 @@ export async function getSettings() {
         appLogoImage: imagesData.appLogoImage || null,
         appLogoImageUrl: imagesData.appLogoImageUrl || null,
         buttonIcons,
+        cuisineIcons: buildCuisineIconsMap(lsCache.cuisineTypes || DEFAULT_CUISINE_TYPES, buttonIcons),
         timelineBubbleIcon: imagesData.timelineBubbleIcon || null,
         timelineMenuBubbleIcon: imagesData.timelineMenuBubbleIcon || null,
         timelineCookEventBubbleIcon: imagesData.timelineCookEventBubbleIcon || null,
@@ -1128,13 +1184,25 @@ export async function getSettings() {
       // Load button icons from the buttonIcons collection.
       // settingsCache has not been set yet at this point, so getButtonIcons() fetches from Firestore.
       const buttonIcons = await getButtonIcons(imagesData);
+      const resolvedCuisineTypes = settings.cuisineTypes || DEFAULT_CUISINE_TYPES;
+
+      // One-time migration: move per-cuisine icons from settings/app.cuisineIcons into
+      // the buttonIcons collection (one row per cuisine type - see cuisineTypeIconKey).
+      if (settings.cuisineIcons && Object.keys(settings.cuisineIcons).length > 0) {
+        try {
+          await migrateCuisineIconsToButtonIcons(settings.cuisineIcons, buttonIcons);
+          await updateDoc(doc(db, 'settings', 'app'), { cuisineIcons: deleteField() });
+        } catch (migrationError) {
+          console.error('Failed to migrate cuisineIcons to buttonIcons collection:', migrationError);
+        }
+      }
 
       // Ensure all fields exist for backward compatibility
       settingsCache = {
         // Text configuration from settings/app
-        cuisineTypes: settings.cuisineTypes || DEFAULT_CUISINE_TYPES,
+        cuisineTypes: resolvedCuisineTypes,
         cuisineGroups: settings.cuisineGroups || DEFAULT_CUISINE_GROUPS,
-        cuisineIcons: settings.cuisineIcons || DEFAULT_CUISINE_ICONS,
+        cuisineIcons: buildCuisineIconsMap(resolvedCuisineTypes, buttonIcons),
         mealCategories: settings.mealCategories || DEFAULT_MEAL_CATEGORIES,
         units: settings.units || DEFAULT_UNITS,
         portionUnits: settings.portionUnits || DEFAULT_PORTION_UNITS,
@@ -1538,13 +1606,18 @@ export async function saveCommonUnits(groups, userId) {
  * @returns {Promise<void>}
  */
 export async function saveCustomLists(lists) {
+  // cuisineIcons now lives in the buttonIcons collection (see cuisineTypeIconKey /
+  // getEffectiveCuisineIcon) and is only ever derived, never written back here -
+  // doing so would resurrect the legacy settings/app.cuisineIcons field that
+  // getSettings() deletes once migrated.
+  const { cuisineIcons, ...listsToSave } = lists;
   try {
     const settingsRef = doc(db, 'settings', 'app');
-    await updateDoc(settingsRef, lists);
+    await updateDoc(settingsRef, listsToSave);
 
     // Update cache
     if (settingsCache) {
-      settingsCache = { ...settingsCache, ...lists };
+      settingsCache = { ...settingsCache, ...listsToSave };
       saveSettingsToLocalStorageCache(settingsCache);
     }
   } catch (error) {
@@ -2006,6 +2079,54 @@ export async function saveButtonIcon(iconKey, iconValue) {
 }
 
 /**
+ * Carries a cuisine type's icons (light + dark) over to its new name in the
+ * buttonIcons collection, so renaming a cuisine type in "Listen & Kategorien"
+ * doesn't orphan the icons configured for it in "Bilder & Icons".
+ * @param {string} oldName
+ * @param {string} newName
+ * @returns {Promise<void>}
+ */
+export async function renameCuisineTypeIcon(oldName, newName) {
+  if (!oldName || !newName || oldName === newName) return;
+  const pairs = [
+    [cuisineTypeIconKey(oldName), cuisineTypeIconKey(newName)],
+    [`${cuisineTypeIconKey(oldName)}Dark`, `${cuisineTypeIconKey(newName)}Dark`],
+  ];
+  try {
+    await Promise.all(pairs.map(async ([oldKey, newKey]) => {
+      const existing = settingsCache?.buttonIcons?.[oldKey];
+      const snap = existing !== undefined ? null : await getDoc(doc(db, BUTTON_ICONS_COLLECTION, oldKey));
+      const value = existing !== undefined ? existing : (snap.exists() ? snap.data().value : undefined);
+      if (!value) return;
+      await saveButtonIcon(newKey, value);
+      await deleteDoc(doc(db, BUTTON_ICONS_COLLECTION, oldKey));
+      if (settingsCache?.buttonIcons) delete settingsCache.buttonIcons[oldKey];
+    }));
+  } catch (error) {
+    console.error('Error renaming cuisine type icons:', error);
+  }
+}
+
+/**
+ * Deletes a cuisine type's icons (light + dark) from the buttonIcons collection,
+ * called when the cuisine type itself is removed in "Listen & Kategorien".
+ * @param {string} cuisineName
+ * @returns {Promise<void>}
+ */
+export async function deleteCuisineTypeIcon(cuisineName) {
+  if (!cuisineName) return;
+  const keys = [cuisineTypeIconKey(cuisineName), `${cuisineTypeIconKey(cuisineName)}Dark`];
+  try {
+    await Promise.all(keys.map((key) => deleteDoc(doc(db, BUTTON_ICONS_COLLECTION, key)).catch(() => {})));
+    if (settingsCache?.buttonIcons) {
+      keys.forEach((key) => delete settingsCache.buttonIcons[key]);
+    }
+  } catch (error) {
+    console.error('Error deleting cuisine type icons:', error);
+  }
+}
+
+/**
  * Reset button icons to defaults
  * @returns {Promise<Object>} Promise resolving to default button icons
  */
@@ -2427,11 +2548,14 @@ export async function saveStartseitenKandidatenLeertext(text) {
 export async function getButtonIconGroups() {
   const settings = await getSettings();
   const saved = settings.buttonIconGroups;
+  const cuisineTypes = settings.cuisineTypes || DEFAULT_CUISINE_TYPES;
   if (saved && Array.isArray(saved.groups)) {
     const hiddenRowKeys = Array.isArray(saved.hiddenRowKeys) ? saved.hiddenRowKeys : [];
-    return { groups: reconcileButtonIconGroups(saved.groups, hiddenRowKeys), hiddenRowKeys };
+    const groups = reconcileCuisineTypeGroup(reconcileButtonIconGroups(saved.groups, hiddenRowKeys), cuisineTypes);
+    return { groups, hiddenRowKeys };
   }
-  return getDefaultButtonIconGroups();
+  const defaults = getDefaultButtonIconGroups();
+  return { groups: reconcileCuisineTypeGroup(defaults.groups, cuisineTypes), hiddenRowKeys: defaults.hiddenRowKeys };
 }
 
 /**
