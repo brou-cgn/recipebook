@@ -50,35 +50,96 @@ weiteren Notizen/Tipps:
 "notizen": "<Beschreibung>\n\n<weitere Notizen, falls vorhanden>"
 ```
 
+## Warum die Zutaten-Normalisierung wichtig ist
+
+`addRecipeViaAPI` hat **keinen eigenen KI-Normalisierungsschritt** — anders
+als der Foto-/Video-Scan-Import der App, der Rezepte über einen Gemini-Prompt
+laufen lässt, der Einheiten vereinheitlicht, Brüche in Dezimalzahlen wandelt
+und US-Maße in metrische umrechnet (siehe `aiRecipePrompt` in
+`src/utils/customLists.js`). Wenn dieser Skill diese Normalisierung nicht
+selbst übernimmt, sehen per `addRecipeViaAPI` importierte Rezepte anders aus
+als alle anderen im RecipeBook — uneinheitliche Abkürzungen, Brüche statt
+Dezimalzahlen, cups/oz statt g/ml. Die folgenden Regeln spiegeln genau die
+Normalisierung, die der interne Prompt vorschreibt, damit das Ergebnis
+unabhängig vom Importweg gleich aussieht.
+
 ## Umwandlungsregeln
 
-1. **Zutaten als Array**: eine Zutat pro Element, Mengen/Einheiten exakt
-   wie im Original übernehmen (keine Umrechnung, z. B. "1/2 TL" bleibt
-   "1/2 TL", nicht "0,5 TL").
+1. **Zutaten als Array, normalisiert**: eine Zutat pro Element, im Format
+   `"Zahl Einheit Zutat"` (z. B. "500 g Mehl", "2 Esslöffel Olivenöl", "1
+   Prise Salz"). Dabei:
+   - Einheiten **immer ausschreiben**, nie abkürzen: "Esslöffel" statt
+     "EL", "Teelöffel" statt "TL", "g" (nicht "Gramm"), "ml" (nicht
+     "Milliliter").
+   - Brüche in Dezimalzahlen mit **Komma** umwandeln: "1/2" → "0,5", "1
+     1/2" → "1,5".
+   - **Imperiale Einheiten immer in metrische umrechnen**, mit diesen
+     Umrechnungen: 1 cup (Flüssigkeit) = 240 ml, 1 cup (Mehl) = 130 g, 1
+     cup (Zucker) = 200 g, 1 cup (Butter) = 227 g, 1 oz = 28 g, 1 lb = 454
+     g, 1 fl oz = 30 ml, 1 quart = 946 ml, 1 pint = 473 ml, 1 gallon =
+     3785 ml, 1 stick Butter = 113 g. Bei cups das zur Zutat passende
+     Gewicht wählen (z. B. "1 cup flour" → "130 g Mehl", "1 cup milk" →
+     "240 ml Milch"). Ergebnisse auf sinnvolle Werte runden (454 g → 450
+     g, 227 g → 225 g).
 
-2. **Zubereitungsschritte als Array**: nummerierte Präfixe ("1.", "2.
-   Schritt", …) entfernen — die Array-Position übernimmt die
-   Nummerierung. Ein vorangestelltes Kurz-Label wie "Ofen vorheizen:"
-   dagegen im Schritt-Text belassen, wenn es im Original steht — es ist
-   Teil des Inhalts, keine reine Nummerierung.
+2. **Zubereitungsschritte als Array**: jeder Schritt ein eigener String,
+   niemals mehrere Schritte in einem String zusammenfassen. Nummerierte
+   Präfixe ("1.", "2. Schritt", …) entfernen — die Array-Position
+   übernimmt die Nummerierung. Ein vorangestelltes Kurz-Label wie "Ofen
+   vorheizen:" dagegen im Schritt-Text belassen, wenn es im Original
+   steht — es ist Teil des Inhalts, keine reine Nummerierung. Übernimm
+   **nur** Schritte, die tatsächlich im Ausgangstext stehen — ergänze
+   keine zusätzlichen Arbeitsschritte, Zeiten oder Temperaturen aus
+   allgemeinem Kochwissen, auch wenn sie plausibel wirken. Enthält der
+   Text nur eine Zutatenliste ohne Zubereitungsanleitung, erfinde keine
+   Schritte (siehe Pflichtfeld-Hinweis unten — dann lieber nachfragen,
+   statt zu raten).
 
-3. **Fehlende optionale Felder schätzen, aber kennzeichnen**: Wenn
-   `kochdauer`, `schwierigkeit`, `speisekategorie`, `kulinarik` oder
-   `tags` im Text nicht explizit stehen, schätze sie sinnvoll aus dem
-   Kontext (Zutaten, Zubereitungsart, Gerichtstyp) statt sie wegzulassen —
-   ein grob geschätztes Feld ist für den Nutzer nützlicher als ein
-   fehlendes, das er dann manuell in der App nachträgt. Liste aber am
-   Ende **kurz auf, welche Felder geschätzt wurden** (nicht wörtlich aus
-   dem Text übernommen), damit der Nutzer sie bei Bedarf korrigieren
-   kann, bevor er das JSON verwendet.
+3. **`kulinarik` und `speisekategorie` an die App-Listen anlehnen**: Die
+   App validiert diese Felder nicht hart gegen eine feste Liste, aber für
+   Konsistenz mit dem Rest des RecipeBooks aus diesen Standardwerten wählen
+   (der Nutzer kann seine Listen in den Einstellungen angepasst haben —
+   bei Unsicherheit lieber den nächstliegenden Wert nehmen als raten):
+   - **Kulinarik** (Array, `DEFAULT_CUISINE_TYPES`): Deutsche, Französische,
+     Italienische, Österreichische, Schweizer, Türkische, Chinesische,
+     Indische, Japanische, Orientalische, Thailändische, Mexikanische,
+     US-Amerikanische, Weihnachtliche Küche, sowie **Vegetarisch** und
+     **Vegan**. Enthält das Rezept kein Fleisch/Fisch, füge zusätzlich
+     immer `"Vegetarisch"` hinzu; enthält es keinerlei tierische Produkte
+     (auch keine Butter/Eier/Milchprodukte), füge zusätzlich immer
+     `"Vegetarisch"` **und** `"Vegan"` hinzu — das kommt zur eigentlichen
+     Herkunfts-Küche dazu, ersetzt sie nicht.
+   - **Speisekategorie** (`DEFAULT_MEAL_CATEGORIES`): Appetizer, Dips &
+     Saucen, Vorspeisen, Salate, Suppen & Eintöpfe, Hauptspeisen,
+     Desserts, Drinks, Beilagen & Grundrezepte, Gebäcke & Teige, Kuchen &
+     Torten, Grillrezepte. **Wichtig:** anders als im internen KI-Prompt
+     ist `speisekategorie` bei `addRecipeViaAPI` ein einzelner String,
+     keine Mehrfachauswahl — wähle die am besten passende Kategorie.
 
-4. **`schwierigkeit`** liegt zwischen 1 und 5 (die Cloud Function lehnt
+4. **Tags**: nur hinzufügen, was im Text explizit erwähnt wird oder
+   eindeutig aus den Zutaten ableitbar ist (z. B. "glutenfrei", wenn
+   explizit so bezeichnet) — nicht mit den `kulinarik`-Werten
+   Vegetarisch/Vegan doppeln, die gehören dort hinein, nicht in `tags`.
+
+5. **Fehlende optionale Felder schätzen, aber kennzeichnen**: Wenn
+   `kochdauer` oder `schwierigkeit` im Text nicht explizit stehen,
+   schätze sie sinnvoll aus dem Kontext (Zutaten, Zubereitungsart,
+   Gerichtstyp) statt sie wegzulassen — ein grob geschätztes Feld ist für
+   den Nutzer nützlicher als ein fehlendes, das er dann manuell in der
+   App nachträgt. Liste aber am Ende **kurz auf, welche Felder geschätzt
+   wurden** (nicht wörtlich aus dem Text übernommen oder nach der
+   Listen-Regel oben bestimmt), damit der Nutzer sie bei Bedarf
+   korrigieren kann, bevor er das JSON verwendet.
+
+6. **`schwierigkeit`** liegt zwischen 1 und 5 (die Cloud Function lehnt
    alles außerhalb ab). Schätze nach Anzahl/Komplexität der Schritte und
    Techniken, nicht nach Zutatenanzahl allein.
 
-5. **`kochdauer`** ist die Gesamtzeit in Minuten als reine Zahl (kein
-   "ca." oder "Min." im Wert). Bei getrennt genannten Vor-/Kochzeiten
-   addiere sie, sofern der Text nicht explizit nur eine Backzeit meint.
+7. **`kochdauer`** ist die Gesamtzeit in Minuten als reine Zahl (kein
+   "ca." oder "Min." im Wert). Nennt der Text Zubereitungszeit und
+   Kochzeit getrennt (wie im internen Prompt als `zubereitungszeit` +
+   `kochzeit`), addiere sie zu einer Gesamtzahl — `addRecipeViaAPI` hat
+   nur ein einziges Zeitfeld, keine getrennten Vor-/Kochzeiten.
 
 ## Output-Format
 
@@ -129,7 +190,9 @@ Zubereitung:
 {
   "title": "Süßkartoffelspalten mit Chipotle-Mayo",
   "portionen": 4,
-  "ingredients": ["800 g Süßkartoffeln", "3 EL Olivenöl"],
+  "kulinarik": ["US-Amerikanische Küche", "Vegetarisch"],
+  "speisekategorie": "Beilagen & Grundrezepte",
+  "ingredients": ["800 g Süßkartoffeln", "3 Esslöffel Olivenöl"],
   "steps": [
     "Ofen vorheizen: Backofen auf 220°C vorheizen.",
     "Süßkartoffeln in Spalten schneiden."
@@ -139,4 +202,6 @@ Zubereitung:
 ```
 (Beachte: Der numerierte Präfix "1."/"2." ist weg, "Ofen vorheizen:" als
 Label im ersten Schritt ist geblieben, die Beschreibung ist in `notizen`
-gewandert.)
+gewandert, "3 EL" wurde zu "3 Esslöffel" ausgeschrieben, und da das
+Rezept ohne Fleisch/Fisch auskommt, wurde "Vegetarisch" zur `kulinarik`
+hinzugefügt statt es zu ersetzen.)
