@@ -7887,6 +7887,7 @@ exports.runNutritionRecalcForFlaggedRecipes = onCall(
       timeoutSeconds: 10,
       maxInstances: 1,
       secrets: [geminiApiKey, smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom],
+      invoker: 'public',
     },
     async (request) => {
       const callerUid = request.auth?.uid;
