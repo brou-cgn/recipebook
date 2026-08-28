@@ -757,7 +757,6 @@ export const DEFAULT_BUTTON_ICONS = {
   // Fallback image for menu cards in the Küche timeline that have no own image
   timelineMenuDefaultImg: '',
   newVersion: 'Version',
-  publishRecipe: '↑',
   deleteRecipe: '🗑',
   printRecipe: '⎙',
   addSection: '+',
@@ -828,7 +827,6 @@ export const DEFAULT_BUTTON_ICONS = {
   tagesmenuKachelMenuAltDark: '',
   timelineMenuDefaultImgDark: '',
   newVersionDark: '',
-  publishRecipeDark: '',
   deleteRecipeDark: '',
   printRecipeDark: '',
   addSectionDark: '',
