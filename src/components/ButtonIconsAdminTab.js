@@ -76,10 +76,6 @@ function SortableIconRow({
   onOpenEditor,
   onDelete,
   onRename,
-  onMoveUp,
-  onMoveDown,
-  isFirst,
-  isLast,
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: entry.key,
@@ -131,10 +127,6 @@ function SortableIconRow({
       </div>
       <div className="bia-row-content" style={swipeContentStyle} {...handlers}>
         <button type="button" className="bia-drag-handle" {...attributes} {...listeners} aria-label={`${label} verschieben`}>⠿</button>
-        <div className="bia-move-buttons">
-          <button type="button" className="bia-move-btn" onClick={onMoveUp} disabled={isFirst} aria-label={`${label} nach oben`}>▲</button>
-          <button type="button" className="bia-move-btn" onClick={onMoveDown} disabled={isLast} aria-label={`${label} nach unten`}>▼</button>
-        </div>
 
         <div className="bia-row-name">
           <input
@@ -158,10 +150,6 @@ function SortableIconRow({
         </div>
         <div className="bia-slot-col">
           <VariantSlot mode="dark" value={def.darkActiveKey ? icons[def.darkActiveKey] : null} disabled={!def.darkActiveKey} label={`${label} – Dunkelmodus aktiv`} onClick={() => onOpenEditor(3)} />
-        </div>
-
-        <div className="bia-row-delete delete-row-hover-target">
-          <DeleteRowButton itemName={label} onClick={onDelete} />
         </div>
       </div>
     </div>
@@ -187,15 +175,9 @@ function SortableGroupSection({
   onToggle,
   onRename,
   onDissolve,
-  onMoveUp,
-  onMoveDown,
-  isFirst,
-  isLast,
   onOpenEditor,
   onDeleteRow,
   onRenameRow,
-  onMoveRowUp,
-  onMoveRowDown,
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: group.id,
@@ -207,10 +189,6 @@ function SortableGroupSection({
     <div ref={setNodeRef} style={style} className={`bia-group${isDragging ? ' bia-dragging' : ''}`}>
       <div className="bia-group-header">
         <button type="button" className="bia-drag-handle" {...attributes} {...listeners} aria-label={`${group.name} verschieben`}>⠿</button>
-        <div className="bia-move-buttons">
-          <button type="button" className="bia-move-btn" onClick={onMoveUp} disabled={isFirst} aria-label={`${group.name} nach oben`}>▲</button>
-          <button type="button" className="bia-move-btn" onClick={onMoveDown} disabled={isLast} aria-label={`${group.name} nach unten`}>▼</button>
-        </div>
         <button type="button" className="bia-chevron" onClick={onToggle} aria-label={isOpen ? `${group.name} einklappen` : `${group.name} ausklappen`}>
           {isOpen ? '▼' : '▶'}
         </button>
@@ -229,7 +207,7 @@ function SortableGroupSection({
 
       {isOpen && (
         <SortableContext items={visibleRows.map(({ entry }) => entry.key)} strategy={verticalListSortingStrategy}>
-          {visibleRows.map(({ entry, def }, idx) => (
+          {visibleRows.map(({ entry, def }) => (
             <SortableIconRow
               key={entry.key}
               group={group}
@@ -241,10 +219,6 @@ function SortableGroupSection({
               onOpenEditor={(variantIndex) => onOpenEditor(group.id, entry.key, variantIndex)}
               onDelete={() => onDeleteRow(group.id, entry.key)}
               onRename={(value) => onRenameRow(group.id, entry.key, value)}
-              onMoveUp={() => onMoveRowUp(group.id, entry.key)}
-              onMoveDown={() => onMoveRowDown(group.id, entry.key)}
-              isFirst={idx === 0}
-              isLast={idx === visibleRows.length - 1}
             />
           ))}
           {visibleRows.length === 0 && <EmptyGroupDropZone groupId={group.id} />}
@@ -324,13 +298,6 @@ function ButtonIconsAdminTab() {
     setCollapsed((c) => ({ ...c, [groupId]: !c[groupId] }));
   };
 
-  const handleMoveGroup = (groupId, direction) => {
-    const idx = data.groups.findIndex((g) => g.id === groupId);
-    const newIdx = idx + direction;
-    if (idx === -1 || newIdx < 0 || newIdx >= data.groups.length) return;
-    persistData({ ...data, groups: arrayMove(data.groups, idx, newIdx) });
-  };
-
   const handleDissolveGroup = (groupId) => {
     const idx = data.groups.findIndex((g) => g.id === groupId);
     if (idx === -1) return;
@@ -377,19 +344,6 @@ function ButtonIconsAdminTab() {
       groups: data.groups.map((g) => (
         g.id !== groupId ? g : { ...g, rowKeys: g.rowKeys.map((r) => (r.key === rowKey ? { ...r, label } : r)) }
       )),
-    });
-  };
-
-  const handleMoveRow = (groupId, rowKey, direction) => {
-    const gIdx = data.groups.findIndex((g) => g.id === groupId);
-    if (gIdx === -1) return;
-    const rowKeys = data.groups[gIdx].rowKeys;
-    const idx = rowKeys.findIndex((r) => r.key === rowKey);
-    const newIdx = idx + direction;
-    if (idx === -1 || newIdx < 0 || newIdx >= rowKeys.length) return;
-    persistData({
-      ...data,
-      groups: data.groups.map((g, i) => (i === gIdx ? { ...g, rowKeys: arrayMove(g.rowKeys, idx, newIdx) } : g)),
     });
   };
 
@@ -635,12 +589,11 @@ function ButtonIconsAdminTab() {
                 <span>aktiv</span>
               </div>
             </div>
-            <span className="bia-header-delete" aria-hidden="true" />
           </div>
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={data.groups.map((g) => g.id)} strategy={verticalListSortingStrategy}>
-              {visibleGroups.map(({ group, rows }, idx) => (
+              {visibleGroups.map(({ group, rows }) => (
                 <SortableGroupSection
                   key={group.id}
                   group={group}
@@ -652,15 +605,9 @@ function ButtonIconsAdminTab() {
                   onToggle={() => handleToggleGroup(group.id)}
                   onRename={(name) => handleRenameGroup(group.id, name)}
                   onDissolve={() => handleDissolveGroup(group.id)}
-                  onMoveUp={() => handleMoveGroup(group.id, -1)}
-                  onMoveDown={() => handleMoveGroup(group.id, 1)}
-                  isFirst={idx === 0}
-                  isLast={idx === visibleGroups.length - 1}
                   onOpenEditor={openEditor}
                   onDeleteRow={handleDeleteRow}
                   onRenameRow={handleRenameRow}
-                  onMoveRowUp={(groupId, rowKey) => handleMoveRow(groupId, rowKey, -1)}
-                  onMoveRowDown={(groupId, rowKey) => handleMoveRow(groupId, rowKey, 1)}
                 />
               ))}
             </SortableContext>
@@ -673,7 +620,7 @@ function ButtonIconsAdminTab() {
         </div>
 
         <div className="bia-legend">
-          <span>⠿ Zeilen und Gruppen per Drag &amp; Drop sortieren – auch zwischen Gruppen (▲▼ als Tastatur-Alternative)</span>
+          <span>⠿ Zeilen und Gruppen per Drag &amp; Drop sortieren – auch zwischen Gruppen (Ziehgriff fokussieren, mit Leertaste aufnehmen und Pfeiltasten verschieben)</span>
           <span>Klick auf ein Feld: Icon setzen und auf mehrere Varianten anwenden</span>
         </div>
       </div>

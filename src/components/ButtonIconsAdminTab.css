@@ -99,7 +99,7 @@
 .bia-header-row,
 .bia-row-content {
   display: grid;
-  grid-template-columns: 34px minmax(200px, 1fr) 76px 76px 20px 76px 76px 40px;
+  grid-template-columns: 34px minmax(260px, 620px) 76px 76px 20px 76px 76px;
   gap: 10px;
   align-items: center;
 }
@@ -178,24 +178,6 @@
   padding: 4px;
 }
 .bia-drag-handle:active { cursor: grabbing; }
-
-.bia-move-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.bia-move-btn {
-  border: none;
-  background: transparent;
-  color: #a8a29a;
-  font-size: 8px;
-  line-height: 1;
-  padding: 1px;
-  cursor: pointer;
-  border-radius: 3px;
-}
-.bia-move-btn:hover:not(:disabled) { background: rgba(64, 44, 28, 0.08); color: #402C1C; }
-.bia-move-btn:disabled { opacity: 0.25; cursor: default; }
 
 .bia-chevron {
   width: 20px;
@@ -317,8 +299,6 @@
 .bia-slot-plus { font-size: 15px; color: #c2bdb4; }
 .bia-slot-dash { font-size: 14px; color: #7d838c; }
 .bia-slot-inherit { font-size: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: #7d838c; }
-
-.bia-row-delete { display: flex; justify-content: flex-end; border-radius: 8px; }
 
 .bia-empty-group {
   padding: 18px;
@@ -508,7 +488,7 @@
 @media (max-width: 720px) {
   .bia-header-row { display: none; }
   .bia-row-content {
-    grid-template-columns: 26px minmax(140px, 1fr) repeat(4, 52px) 36px;
+    grid-template-columns: 26px minmax(140px, 1fr) repeat(4, 52px);
     gap: 6px;
   }
   .bia-slot { width: 48px; height: 36px; font-size: 16px; }
@@ -549,9 +529,7 @@
 
 [data-theme="dark"] .bia-group-header { background: #24272b; border-color: #33373d; }
 [data-theme="dark"] .bia-drag-handle,
-[data-theme="dark"] .bia-move-btn,
 [data-theme="dark"] .bia-chevron { color: #7d838c; }
-[data-theme="dark"] .bia-move-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); color: #f2f0ec; }
 [data-theme="dark"] .bia-group-name { color: #f2f0ec; }
 [data-theme="dark"] .bia-group-name:hover, [data-theme="dark"] .bia-group-name:focus { border-color: #3a3d42; background: #1d1f23; }
 
