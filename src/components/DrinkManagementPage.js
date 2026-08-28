@@ -8,7 +8,7 @@ import RecipeTypeahead from './RecipeTypeahead';
 import { DRINK_CATEGORIES, getDrinkCategoryLabel, mergePredefinedDrinks } from '../utils/drinkCategories';
 import { getCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
-import { encodeRecipeLink, containsHashForTypeahead } from '../utils/recipeLinks';
+import { encodeRecipeLink, containsHashForTypeahead, decodeRecipeLink } from '../utils/recipeLinks';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { parseIngredientPartsSync } from '../utils/ingredientUtils';
 import { updateRecipe } from '../utils/recipeFirestore';
@@ -638,10 +638,20 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
                 {nameDrinkDisplay.ingredients.map((rawItem, idx) => {
                   const item = typeof rawItem === 'string' ? { type: 'ingredient', text: rawItem } : rawItem;
                   if (item.type === 'heading') return null;
-                  const { amount, amountMax, unit, name } = parseIngredientPartsSync(item.text);
-                  const amountLabel = amount != null
-                    ? `${amount}${amountMax != null ? `–${amountMax}` : ''}${unit ? ` ${unit}` : ''}`
-                    : null;
+                  const recipeLink = decodeRecipeLink(item.text);
+                  let name;
+                  let amountLabel;
+                  if (recipeLink) {
+                    const linkedRecipe = recipes.find((r) => r.id === recipeLink.recipeId);
+                    name = linkedRecipe ? linkedRecipe.title : recipeLink.recipeName;
+                    amountLabel = recipeLink.quantityPrefix || null;
+                  } else {
+                    const parsed = parseIngredientPartsSync(item.text);
+                    name = parsed.name;
+                    amountLabel = parsed.amount != null
+                      ? `${parsed.amount}${parsed.amountMax != null ? `–${parsed.amountMax}` : ''}${parsed.unit ? ` ${parsed.unit}` : ''}`
+                      : null;
+                  }
                   const included = item.includedInCalculation !== false;
                   return (
                     <li key={idx} className="drink-recipe-ingredient-row">
