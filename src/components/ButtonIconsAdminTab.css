@@ -205,6 +205,11 @@
 }
 .bia-group-name:hover, .bia-group-name:focus { border-color: #d8d4cc; background: #fff; }
 
+/* Speisekategorien section header: same look as an editable group name,
+   but it's plain text (there's nothing to rename here). */
+.bia-group-name-static { cursor: default; }
+.bia-group-name-static:hover, .bia-group-name-static:focus { border-color: transparent; background: transparent; }
+
 .bia-group-meta {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
@@ -266,14 +271,15 @@
 .bia-slot-col { display: flex; justify-content: center; }
 .bia-col-sep { display: flex; justify-content: center; color: #dcd8d1; font-size: 13px; }
 
-/* Kulinarik-Typen rows only (see CLAUDE.md: DeleteRowButton, desktop only -
-   mobile uses the left-swipe gesture above via useSwipeToDelete instead). */
+/* Kulinarik-Typen and Speisekategorien rows only (see CLAUDE.md: DeleteRowButton,
+   desktop only - mobile uses the left-swipe gesture above via useSwipeToDelete
+   instead). */
 .bia-row-delete-btn { display: none; }
 @media (min-width: 721px) {
   .bia-row-delete-btn { display: inline-flex; }
 }
 
-/* ---- Kulinarik-Typen: manually add a row ---- */
+/* ---- Kulinarik-Typen / Speisekategorien: manually add a row ---- */
 
 .bia-cuisine-add-row {
   display: flex;
@@ -285,13 +291,6 @@
   flex-wrap: wrap;
 }
 
-/* The blank row created by "+ Bild/Icon" - overflow must stay visible here
-   (unlike .bia-row) so the typeahead dropdown isn't clipped. */
-.bia-row.bia-row-new {
-  overflow: visible;
-  z-index: 5;
-}
-
 .bia-row-name-typeahead {
   position: relative;
   grid-column: 2 / -2;
@@ -300,12 +299,14 @@
   grid-column: -2 / -1;
 }
 
-.bia-cuisine-typeahead-list {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 20;
+/* The typeahead's option list is rendered into a portal (document.body) and
+   positioned via an inline fixed-position rect (see TypeaheadPanel in
+   ButtonIconsAdminTab.js), so it is never clipped by an ancestor card's
+   `overflow: hidden` (used elsewhere to keep row corners rounded) regardless
+   of where the add-row sits in the list. Only cosmetic rules live here -
+   position/left/width/top/bottom come from that inline style. */
+.bia-typeahead-list {
+  z-index: 1000;
   background: #fff;
   border: 1px solid #dcd8d1;
   border-radius: 8px;
@@ -315,7 +316,7 @@
   padding: 4px;
 }
 
-.bia-cuisine-typeahead-item {
+.bia-typeahead-item {
   display: block;
   width: 100%;
   text-align: left;
@@ -328,9 +329,9 @@
   cursor: pointer;
   font-family: inherit;
 }
-.bia-cuisine-typeahead-item:hover { background: #f1efe9; }
+.bia-typeahead-item:hover { background: #f1efe9; }
 
-.bia-cuisine-typeahead-empty {
+.bia-typeahead-empty {
   padding: 8px 10px;
   font-size: 12.5px;
   color: #8d8880;
@@ -418,6 +419,11 @@
   border-radius: 0;
 }
 .bia-row.bia-swipe-active .bia-row-content { z-index: 1; }
+.bia-row.bia-swipe-active .swipe-delete-background,
+.bia-catimg-row-wrap.bia-swipe-active .swipe-delete-background {
+  opacity: 1;
+  pointer-events: auto;
+}
 
 /* ---- modal ---- */
 
@@ -626,10 +632,10 @@
 [data-theme="dark"] .bia-legend { color: #7d838c; }
 
 [data-theme="dark"] .bia-cuisine-add-row { background: #202226; border-color: #2a2d31; }
-[data-theme="dark"] .bia-cuisine-typeahead-list { background: #23262a; border-color: #3a3d42; box-shadow: none; }
-[data-theme="dark"] .bia-cuisine-typeahead-item { color: #f2f0ec; }
-[data-theme="dark"] .bia-cuisine-typeahead-item:hover { background: #2a2d31; }
-[data-theme="dark"] .bia-cuisine-typeahead-empty { color: #7d838c; }
+[data-theme="dark"] .bia-typeahead-list { background: #23262a; border-color: #3a3d42; box-shadow: none; }
+[data-theme="dark"] .bia-typeahead-item { color: #f2f0ec; }
+[data-theme="dark"] .bia-typeahead-item:hover { background: #2a2d31; }
+[data-theme="dark"] .bia-typeahead-empty { color: #7d838c; }
 
 [data-theme="dark"] .bia-modal { background: #1d1f23; }
 [data-theme="dark"] .bia-modal-header,
@@ -646,29 +652,85 @@
 [data-theme="dark"] .bia-modal-apply-btn--checked { border-color: #6f757e; }
 [data-theme="dark"] .bia-modal-apply-check { border-color: #4a463f; color: #f2f0ec; }
 
-/* ---- category images (Kategoriebilder) ---- */
+/* ---- category images (Speisekategorien) ----
+   Same row/group chrome as the Kulinarik-Typen group above (.bia-group-header,
+   .bia-typeahead-list add-flow, DeleteRowButton, swipe-to-delete on mobile) -
+   one row per Speisekategorie, each holding a single placeholder image
+   (no light/dark variants: these are recipe photos, not themed icons). */
 
-.bia-catimg-card { padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+.bia-catimg-card { display: flex; flex-direction: column; }
 
-.bia-catimg-heading h3 { font-size: 15px; font-weight: 600; color: #23211e; margin: 0 0 4px; }
+.bia-catimg-description { padding: 14px 18px 0; margin: 0; }
 
-.bia-catimg-upload {
-  padding: 14px;
-  background: #fbfaf7;
-  border: 1px dashed #cfcbc3;
+.bia-catimg-rows { display: flex; flex-direction: column; gap: 10px; padding: 14px 18px 18px; }
+
+.bia-catimg-row-wrap {
+  position: relative;
   border-radius: 11px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  overflow: hidden;
 }
 
-.bia-catimg-category-select label {
-  display: block;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #33302b;
-  margin-bottom: 8px;
+.bia-catimg-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid #e8e5de;
+  border-radius: 11px;
+  background: #fff;
 }
+
+.bia-catimg-row-wrap-new .bia-catimg-row { border-style: dashed; align-items: center; }
+
+.bia-catimg-preview {
+  width: 84px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #faf9f6;
+  border: 1px solid #ddd9d2;
+}
+.bia-catimg-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.bia-catimg-preview-btn {
+  padding: 0;
+  border: 1px solid #ddd9d2;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+}
+.bia-catimg-preview-btn:hover { border-color: #8a857c; }
+
+.bia-catimg-preview-placeholder { display: flex; align-items: center; justify-content: center; }
+.bia-catimg-preview-plus { font-size: 20px; color: #c2bdb4; }
+.bia-catimg-uploading { font-size: 12px; color: #8d887e; }
+
+.bia-catimg-typeahead { position: relative; flex: 1; min-width: 0; }
+.bia-catimg-typeahead .bia-row-name-input { width: 100%; }
+
+.bia-catimg-categories { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; align-items: center; min-height: 28px; }
+
+.bia-catimg-badge {
+  display: inline-block;
+  background: #402C1C;
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.bia-catimg-empty { font-size: 12.5px; color: #a5a096; font-style: italic; }
+
+.bia-catimg-edit-btn { flex-shrink: 0; }
+
+.bia-catimg-edit { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.bia-catimg-edit-actions { display: flex; gap: 8px; }
 
 .bia-catimg-checkboxes { display: flex; flex-wrap: wrap; gap: 8px; }
 
@@ -690,62 +752,15 @@
 .bia-catimg-checkbox input[type="checkbox"] { cursor: pointer; accent-color: #402C1C; }
 .bia-catimg-checkbox-disabled input[type="checkbox"] { cursor: not-allowed; }
 
-.bia-catimg-upload-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.bia-catimg-upload-actions label.bia-btn-primary { cursor: pointer; }
-.bia-catimg-hint { font-size: 12px; color: #8d887e; font-style: italic; }
-
-.bia-catimg-rows { display: flex; flex-direction: column; gap: 10px; }
-
-.bia-catimg-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 12px;
-  border: 1px solid #e8e5de;
-  border-radius: 11px;
-  background: #fff;
-}
-
-.bia-catimg-preview {
-  width: 84px;
-  height: 64px;
-  border-radius: 8px;
-  overflow: hidden;
-  flex-shrink: 0;
-  background: #faf9f6;
-  border: 1px solid #ddd9d2;
-}
-.bia-catimg-preview img { width: 100%; height: 100%; object-fit: cover; }
-
-.bia-catimg-categories { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; align-items: center; min-height: 28px; }
-
-.bia-catimg-badge {
-  display: inline-block;
-  background: #402C1C;
-  color: #fff;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.bia-catimg-empty { font-size: 12.5px; color: #a5a096; font-style: italic; }
-
-.bia-catimg-edit-btn { flex-shrink: 0; }
-
-.bia-catimg-edit { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.bia-catimg-edit-actions { display: flex; gap: 8px; }
-
 @media (max-width: 720px) {
   .bia-catimg-row { flex-wrap: wrap; }
 }
 
-[data-theme="dark"] .bia-catimg-heading h3 { color: #f2f0ec; }
-[data-theme="dark"] .bia-catimg-upload { background: #202226; border-color: #3a3d42; }
-[data-theme="dark"] .bia-catimg-category-select label { color: #cfcbc3; }
 [data-theme="dark"] .bia-catimg-checkbox { background: #1d1f23; border-color: #3a3d42; color: #cfcbc3; }
 [data-theme="dark"] .bia-catimg-checkbox:hover:not(.bia-catimg-checkbox-disabled) { border-color: #6f757e; }
-[data-theme="dark"] .bia-catimg-hint { color: #7d838c; }
 [data-theme="dark"] .bia-catimg-row { background: #1d1f23; border-color: #2a2d31; }
 [data-theme="dark"] .bia-catimg-preview { background: #202226; border-color: #3a3d42; }
+[data-theme="dark"] .bia-catimg-preview-btn { border-color: #3a3d42; }
+[data-theme="dark"] .bia-catimg-preview-btn:hover { border-color: #6f757e; }
 [data-theme="dark"] .bia-catimg-empty { color: #7d838c; }
+[data-theme="dark"] .bia-catimg-uploading { color: #7d838c; }
