@@ -6005,6 +6005,9 @@ function validateAndNormaliseRecipeInput(body) {
  *   kulinarik / cuisine     {string|string[]} Optional – cuisine type(s)
  *   tags                    {string[]} Optional – tags
  *   notizen / notes         {string}   Optional – additional notes
+ *   pin                     {string}   Required only if the target user configured a
+ *                            Webimport-PIN (see requireShortcutPin in webImportPin.js) –
+ *                            no-op otherwise.
  *
  * Returns:
  *   200 { success: true, recipeId: string }
@@ -6012,6 +6015,7 @@ function validateAndNormaliseRecipeInput(body) {
  *   401 { success: false, error: string, requiredHeaders?: string[] }
  *   403 { success: false, error: string }
  *   405 { success: false, error: string }
+ *   429 { success: false, error: string }
  *   500 { success: false, error: string }
  */
 exports.addRecipeViaAPI = onRequest(
@@ -6100,6 +6104,18 @@ exports.addRecipeViaAPI = onRequest(
         }
       }
 
+      // Webimport-PIN: no-op if the target user never set one; otherwise the
+      // Shortcut must send a matching `pin` field with every request (it has
+      // no interactive session to stay "unlocked" like the in-app modals).
+      try {
+        await requireShortcutPin(userId, body?.pin);
+      } catch (pinErr) {
+        const status = pinErr.code === 'resource-exhausted' ? 429 :
+          pinErr.code === 'invalid-argument' ? 400 : 403;
+        res.status(status).json({success: false, error: pinErr.message || 'PIN erforderlich.'});
+        return;
+      }
+
       // --- Validate & normalise ---
       let recipeData;
       try {
@@ -6159,17 +6175,24 @@ const FALLBACK_MEAL_CATEGORIES = [
  * categories (for Apple Shortcuts / external integrations, e.g. Claude, to use
  * the same values as addRecipeViaAPI's `kulinarik`/`speisekategorie` fields).
  *
- * GET /getRecipeOptionsShortcut
+ * GET /getRecipeOptionsShortcut?pin=<pin>
  *
  * Headers:
  *   X-Api-Key:    <API Key stored as SHORTCUT_API_KEY secret>
  *   X-User-Email: <registrierte E-Mail-Adresse des Users>
+ *
+ * Query params:
+ *   pin {string} Required only if the target user configured a Webimport-PIN
+ *       (see requireShortcutPin in webImportPin.js) – no-op otherwise. A GET
+ *       request has no body, so the PIN travels as a query param here (all
+ *       other pinned endpoints are POST and take it in the JSON body instead).
  *
  * Returns:
  *   200 { success: true, cuisineTypes: string[], mealCategories: string[] }
  *   401 { success: false, error: string, requiredHeaders?: string[] }
  *   403 { success: false, error: string }
  *   405 { success: false, error: string }
+ *   429 { success: false, error: string }
  *   500 { success: false, error: string }
  */
 exports.getRecipeOptionsShortcut = onRequest(
@@ -6243,6 +6266,18 @@ exports.getRecipeOptionsShortcut = onRequest(
       } catch (err) {
         console.error('getRecipeOptionsShortcut: error validating user:', err);
         res.status(500).json({success: false, error: 'Failed to validate user'});
+        return;
+      }
+
+      // Webimport-PIN: no-op if the target user never set one; otherwise the
+      // Shortcut must send a matching `pin` query param with every request (it
+      // has no interactive session to stay "unlocked" like the in-app modals).
+      try {
+        await requireShortcutPin(userId, req.query?.pin);
+      } catch (pinErr) {
+        const status = pinErr.code === 'resource-exhausted' ? 429 :
+          pinErr.code === 'invalid-argument' ? 400 : 403;
+        res.status(status).json({success: false, error: pinErr.message || 'PIN erforderlich.'});
         return;
       }
 

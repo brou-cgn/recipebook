@@ -111,7 +111,8 @@ unabhängig vom Importweg gleich aussieht.
    liegen API-Key + registrierte E-Mail des Nutzers vor (z. B. weil er sie
    im Chat genannt hat oder ein Kurzbefehl sie mitschickt), rufe zuerst
    `GET https://us-central1-<PROJECT-ID>.cloudfunctions.net/getRecipeOptionsShortcut`
-   auf (Headers `X-Api-Key`, `X-User-Email` — siehe
+   auf (Headers `X-Api-Key`, `X-User-Email`; falls ein Webimport-PIN bekannt
+   ist, zusätzlich als Query-Parameter `?pin=<PIN>` anhängen — siehe
    `APPLE_SHORTCUT_SETUP.md`). Die Antwort liefert `cuisineTypes` und
    `mealCategories` als aktuell in der App konfigurierte Arrays — das ist
    ein reiner Lesezugriff (siehe Hinweis oben) und liefert die
@@ -185,6 +186,11 @@ curl -X POST "https://us-central1-<PROJECT-ID>.cloudfunctions.net/addRecipeViaAP
 Danach kurz (2–3 Zeilen, kein eigener Abschnitt nötig) die geschätzten
 Felder benennen, z. B.: "Geschätzt habe ich `schwierigkeit` (2) und
 `speisekategorie` (Hauptgericht) — im Text nicht explizit genannt."
+
+Falls der Nutzer einen Webimport-PIN erwähnt (oder du ihn aus dem Kontext
+kennst), füge dem JSON zusätzlich `"pin": "<PIN>"` hinzu — `addRecipeViaAPI`
+verlangt das Feld nur, wenn der Ziel-Account einen PIN eingerichtet hat,
+sonst wird es ignoriert. Ohne bekannten PIN einfach weglassen, nicht raten.
 
 Wenn ein **Pflichtfeld** (Titel, Zutaten oder Zubereitungsschritte) im
 Ausgangstext fehlt oder leer ist, erzeuge kein unvollständiges JSON,
