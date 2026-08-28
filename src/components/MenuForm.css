@@ -774,7 +774,7 @@
 .menu-date-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   gap: 0.75rem;
 }
 
@@ -806,39 +806,32 @@
   flex-shrink: 0;
 }
 
-.menu-photo-upload-wrap .menu-photo-upload-btn {
-  flex-shrink: 0;
+/* Matches the add-image button on the recipe edit page (transparent, no border) */
+.menu-photo-upload-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #555;
+  font-size: 1.5rem;
+  transition: all 0.3s ease;
+  width: 2.25rem;
+  height: 1.5rem;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  margin: 0;
-  padding: 0;
-  background: #402C1C;
-  color: white;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1.3rem;
+  flex-shrink: 0;
   line-height: 1;
-  transition: background 0.2s ease;
 }
 
-.menu-photo-upload-wrap .menu-photo-upload-btn:hover {
-  background: #1a1a1a;
+.menu-photo-upload-btn:active {
+  transform: scale(1.1);
+  opacity: 0.2;
 }
 
-.menu-photo-upload-wrap .menu-photo-upload-btn.uploading {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-.menu-photo-upload-wrap .menu-photo-upload-btn .button-icon-image {
-  display: block;
-  width: 1.4rem;
-  height: 1.4rem;
-  margin: auto;
-  object-fit: contain;
+.menu-photo-upload-icon-img {
+  width: 2.25rem;
+  height: 1.5rem;
 }
 
 .menu-image-preview {
