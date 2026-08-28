@@ -532,7 +532,7 @@ function ButtonIconsAdminTab() {
     return (
       <>
         <div className="settings-tab-header">
-          <h2>Button-Icons (neu)</h2>
+          <h2>Bilder & Icons</h2>
         </div>
         <div className="settings-section bia-tab">
           <p className="section-description">Lädt…</p>
@@ -549,7 +549,7 @@ function ButtonIconsAdminTab() {
   return (
     <>
       <div className="settings-tab-header">
-        <h2>Button-Icons (neu)</h2>
+        <h2>Bilder & Icons</h2>
       </div>
       <div className="settings-section bia-tab">
         <p className="section-description">
