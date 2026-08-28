@@ -141,6 +141,7 @@ An HTTP endpoint that lets external tools – such as an **Apple Shortcut** – 
 - ✅ CORS enabled
 - ✅ Automatically sets `authorId`, `createdAt`, `updatedAt`
 - ✅ Increments user's `recipe_count`
+- ✅ Creates the recipe with `isTemp: true` (same pending-review status as an Instagram import) — it only appears in the "Neues Rezept hinzufügen" review queue until the user reviews and saves it
 
 **Authentication:** API Key (stored as Firebase Secret `SHORTCUT_API_KEY`)
 

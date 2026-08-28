@@ -6166,6 +6166,10 @@ exports.addRecipeViaAPI = onRequest(
           updatedAt: now,
           isPrivate: false,
           shareId,
+          // Same pending-review treatment as the other Shortcut import paths
+          // (see scrapeInstagramReelShortcut above) — the recipe only leaves
+          // TEMP status once the user reviews and saves it via RecipeForm.
+          isTemp: true,
         };
 
         const docRef = await db.collection('recipes').add(docData);
