@@ -479,13 +479,19 @@ function validateImageData(imageBase64) {
   let mimeType = 'image/jpeg'; // default
 
   if (imageBase64.startsWith('data:')) {
-    const match = imageBase64.match(/^data:([^;]+);base64,(.+)$/);
+    const match = imageBase64.match(/^data:([^;]+);base64,([\s\S]+)$/);
     if (!match) {
       throw new HttpsError('invalid-argument', 'Invalid data URL format');
     }
     mimeType = match[1];
     base64Data = match[2];
   }
+
+  // Strip whitespace/line breaks some sources (e.g. Apple Shortcuts' Base64
+  // Encode action, or MIME-style 76-char wrapping) insert into the payload.
+  // Gemini's base64 decoder rejects any embedded \r\n, so this must happen
+  // unconditionally, not just for the data-URL branch above.
+  base64Data = base64Data.replace(/\s/g, '');
 
   // Validate MIME type
   if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
