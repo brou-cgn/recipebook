@@ -336,9 +336,12 @@ Das Feld `pin` ist nur nötig, wenn du im Hamburger-Menü unter „Kurzbefehl in
 ```json
 {
   "success": true,
-  "recipeId": "abc123xyz"
+  "recipeId": "abc123xyz",
+  "shareUrl": "https://broubook.web.app/share/1a2b3c4d-..."
 }
 ```
+
+Das Rezept landet automatisch in deiner **Inspirationssammlung**-Liste (die unter Einstellungen → Inspirationssammlung hinterlegte private Liste, sofern eingerichtet – Hamburger-Menü → Persönliche Daten) und ist sofort über `shareUrl` teilbar, genau wie Rezepte aus dem normalen Review-Queue-Import.
 
 ---
 

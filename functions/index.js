@@ -6009,8 +6009,15 @@ function validateAndNormaliseRecipeInput(body) {
  *                            Webimport-PIN (see requireShortcutPin in webImportPin.js) –
  *                            no-op otherwise.
  *
+ * The recipe is attached to the caller's configured Inspirationssammlung list
+ * (users/{uid}.defaultWebImportListId – same private list RecipeForm.js
+ * pre-selects for review-queue imports) when one is set up, and is made
+ * shareable immediately via a generated shareId (see enableSharing in
+ * src/utils/recipeFirestore.js), matching how recipes created through the
+ * normal review flow can be attached/shared.
+ *
  * Returns:
- *   200 { success: true, recipeId: string }
+ *   200 { success: true, recipeId: string, shareUrl: string }
  *   400 { success: false, error: string }
  *   401 { success: false, error: string, requiredHeaders?: string[] }
  *   403 { success: false, error: string }
@@ -6075,17 +6082,20 @@ exports.addRecipeViaAPI = onRequest(
       // --- Resolve email to uid, then validate user exists and has required role ---
       const userId = await resolveShortcutUserId(userEmail);
       const db = admin.firestore();
+      let defaultWebImportListId = null;
       try {
         const userDoc = userId ? await db.collection('users').doc(userId).get() : null;
         if (!userId || !userDoc.exists) {
           res.status(403).json({success: false, error: 'Access denied'});
           return;
         }
-        const role = userDoc.data()?.role;
+        const userData = userDoc.data();
+        const role = userData?.role;
         if (role !== 'edit' && role !== 'admin' && role !== 'moderator') {
           res.status(403).json({success: false, error: 'Insufficient permissions'});
           return;
         }
+        defaultWebImportListId = userData?.defaultWebImportListId || null;
       } catch (err) {
         console.error('addRecipeViaAPI: error validating user:', err);
         res.status(500).json({success: false, error: 'Failed to validate user'});
@@ -6128,12 +6138,34 @@ exports.addRecipeViaAPI = onRequest(
       // --- Save to Firestore ---
       try {
         const now = admin.firestore.FieldValue.serverTimestamp();
+
+        // Attach to the user's configured Inspirationssammlung list (the same
+        // private list RecipeForm.js pre-selects for review-queue imports, see
+        // resolveImportGroupContext in src/utils/recipeGroupContext.js) so the
+        // recipe lands in the same place other import paths put it, instead of
+        // floating with no list at all. Falls back to no list if the user never
+        // set one up, or if the stored list id no longer exists.
+        let groupFields = {};
+        if (defaultWebImportListId) {
+          const listDoc = await db.collection('groups').doc(defaultWebImportListId).get();
+          if (listDoc.exists) {
+            groupFields = {groupId: defaultWebImportListId, groupType: 'private'};
+          }
+        }
+
+        // Generate a shareId up front so the recipe has a working Share-Link
+        // immediately (see enableSharing in src/utils/recipeFirestore.js) instead
+        // of requiring the user to manually enable sharing after the fact.
+        const shareId = crypto.randomUUID();
+
         const docData = {
           ...recipeData,
+          ...groupFields,
           authorId: userId,
           createdAt: now,
           updatedAt: now,
           isPrivate: false,
+          shareId,
         };
 
         const docRef = await db.collection('recipes').add(docData);
@@ -6148,7 +6180,11 @@ exports.addRecipeViaAPI = onRequest(
         }
 
         console.log(`addRecipeViaAPI: recipe "${recipeData.title}" created by user ${userId} (id: ${docRef.id})`);
-        res.status(200).json({success: true, recipeId: docRef.id});
+        res.status(200).json({
+          success: true,
+          recipeId: docRef.id,
+          shareUrl: `https://broubook.web.app/share/${shareId}`,
+        });
       } catch (err) {
         console.error('addRecipeViaAPI: Firestore error:', err);
         res.status(500).json({success: false, error: 'Fehler beim Speichern des Rezepts'});
