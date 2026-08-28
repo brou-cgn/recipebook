@@ -131,6 +131,14 @@
   box-sizing: border-box;
 }
 
+/* Without this, the native date control keeps its own OS chrome in the
+   resting (non-focused) state on some mobile browsers, which paints past
+   our border-radius and leaves the top-right corner square. */
+.form-group input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
@@ -803,7 +811,14 @@
 
 .menu-photo-upload-wrap {
   display: flex;
+  align-items: center;
   flex-shrink: 0;
+  /* .menu-date-row centers items against the row's tallest child, which is
+     the label+input stack, not the input alone. Self-aligning to the row's
+     bottom and matching the input's own height re-centers the icon on the
+     input box itself instead of on the label+input stack. */
+  align-self: flex-end;
+  height: 48px;
 }
 
 /* Matches the add-image button on the recipe edit page (transparent, no border) */
@@ -830,8 +845,9 @@
 }
 
 .menu-photo-upload-icon-img {
-  width: 2.25rem;
+  width: 1.5rem;
   height: 1.5rem;
+  object-fit: contain;
 }
 
 .menu-image-preview {
