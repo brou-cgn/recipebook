@@ -7,6 +7,7 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
+  padding: 0 1.5rem;
 }
 
 .bia-toolbar {
@@ -486,6 +487,7 @@
 }
 
 @media (max-width: 720px) {
+  .bia-tab { padding: 0 1rem; }
   .bia-header-row { display: none; }
   .bia-row-content {
     grid-template-columns: 26px minmax(140px, 1fr) repeat(4, 52px);
