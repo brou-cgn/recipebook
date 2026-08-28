@@ -8,7 +8,7 @@ import {
   saveButtonIconGroups,
   getCustomLists,
 } from '../utils/customLists';
-import { mergeButtonIconRowDefs } from '../utils/buttonIconRows';
+import { mergeButtonIconRowDefs, buildCuisineTypeRowDefs } from '../utils/buttonIconRows';
 import { fileToBase64, isBase64Image, compressImage } from '../utils/imageUtils';
 import {
   getCategoryImages,
@@ -142,12 +142,18 @@ function SortableIconRow({
         <button type="button" className="bia-drag-handle" {...attributes} {...listeners} aria-label={`${label} verschieben`}>⠿</button>
 
         <div className="bia-row-name">
-          <input
-            value={label}
-            onChange={(e) => onRename(e.target.value)}
-            className="bia-row-name-input"
-            aria-label="Buttonname"
-          />
+          {onRename ? (
+            <input
+              value={label}
+              onChange={(e) => onRename(e.target.value)}
+              className="bia-row-name-input"
+              aria-label="Buttonname"
+            />
+          ) : (
+            <span className="bia-row-name-static" title="Kulinarik-Typ – Umbenennung erfolgt in „Listen & Kategorien“">
+              {label}
+            </span>
+          )}
           {fallbackNote && <span className="bia-fallback-note">{fallbackNote}</span>}
         </div>
 
@@ -231,7 +237,7 @@ function SortableGroupSection({
               onDeleteVisibleChange={(visible) => onSetDeleteVisibleRowKey(visible ? entry.key : null)}
               onOpenEditor={(variantIndex) => onOpenEditor(group.id, entry.key, variantIndex)}
               onDelete={() => onDeleteRow(group.id, entry.key)}
-              onRename={(value) => onRenameRow(group.id, entry.key, value)}
+              onRename={def.cuisineType ? undefined : (value) => onRenameRow(group.id, entry.key, value)}
             />
           ))}
           {visibleRows.length === 0 && <EmptyGroupDropZone groupId={group.id} />}
@@ -244,6 +250,7 @@ function SortableGroupSection({
 function ButtonIconsAdminTab() {
   const [icons, setIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [data, setData] = useState({ groups: [], hiddenRowKeys: [] });
+  const [cuisineTypes, setCuisineTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState({});
@@ -257,7 +264,11 @@ function ButtonIconsAdminTab() {
   const [selectedCategories, setSelectedCategories] = useState([]);
 
   const structureSaveTimeoutRef = useRef(null);
-  const rowDefsByKey = useMemo(() => new Map(mergeButtonIconRowDefs().map((r) => [r.key, r])), []);
+  const rowDefsByKey = useMemo(() => {
+    const map = new Map(mergeButtonIconRowDefs().map((r) => [r.key, r]));
+    buildCuisineTypeRowDefs(cuisineTypes).forEach((r) => map.set(r.key, r));
+    return map;
+  }, [cuisineTypes]);
   const undo = useUndoableDelete();
 
   useEffect(() => {
@@ -265,6 +276,7 @@ function ButtonIconsAdminTab() {
     Promise.all([getButtonIcons(), getButtonIconGroups(), getCategoryImages(), getCustomLists()]).then(([iconsRes, groupsRes, catImagesRes, listsRes]) => {
       if (cancelled) return;
       setIcons(iconsRes);
+      setCuisineTypes(listsRes.cuisineTypes || []);
       setData(groupsRes);
       setCategoryImages(catImagesRes);
       setMealCategories(listsRes.mealCategories || []);

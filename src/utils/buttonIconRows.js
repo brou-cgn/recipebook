@@ -151,6 +151,92 @@ export function getDefaultButtonIconGroups() {
   return { groups, hiddenRowKeys: [] };
 }
 
+// Prefix identifying rows that represent a cuisine type (Kulinarik-Typ) rather
+// than a static app button. These rows are not declared in DARK_MODE_ICON_ROWS -
+// they are generated dynamically from the live list of cuisine types (see
+// buildCuisineTypeRowDefs / reconcileCuisineTypeGroup below), because that list
+// is admin-editable (types get added, renamed, removed).
+const CUISINE_TYPE_ROW_PREFIX = 'cuisineType__';
+export const CUISINE_TYPES_GROUP_ID = 'g-kulinarik-typen';
+export const CUISINE_TYPES_GROUP_NAME = 'Kulinarik-Typen';
+
+/**
+ * The buttonIcons collection key holding the light-mode icon for a given cuisine
+ * type. The dark-mode variant is the same key with a "Dark" suffix, matching the
+ * convention used by every other row in this file.
+ * @param {string} cuisineName
+ * @returns {string}
+ */
+export function cuisineTypeIconKey(cuisineName) {
+  // Firestore document IDs may not contain "/" - defensively strip it, since
+  // cuisine type names are free text entered by admins.
+  return `${CUISINE_TYPE_ROW_PREFIX}${String(cuisineName).replace(/\//g, '_')}`;
+}
+
+/**
+ * Builds one merged row def per cuisine type (Kulinarik-Typ), in the same shape
+ * as mergeButtonIconRowDefs() rows, so they can be rendered by the same grid.
+ * Cuisine types only ever have a light/dark icon - no separate "aktiv" state -
+ * so activeKey/darkActiveKey are always null. The `cuisineType` field is the
+ * column that ties the row back to the actual cuisine type it represents,
+ * independent of the row's (here: non-editable) display label.
+ * @param {string[]} cuisineTypes
+ * @returns {Array<{key:string,label:string,activeKey:null,darkKey:string,darkActiveKey:null,cuisineType:string}>}
+ */
+export function buildCuisineTypeRowDefs(cuisineTypes) {
+  return (cuisineTypes || []).map((name) => ({
+    key: cuisineTypeIconKey(name),
+    label: name,
+    activeKey: null,
+    darkKey: `${cuisineTypeIconKey(name)}Dark`,
+    darkActiveKey: null,
+    cuisineType: name,
+  }));
+}
+
+/**
+ * Reconciles the "Kulinarik-Typen" group inside a saved `buttonIconGroups.groups`
+ * structure against the live list of cuisine types: adds rows for cuisine types
+ * that don't have one yet (new types, or a first-time migration), and drops rows
+ * for cuisine types that no longer exist (renamed or removed elsewhere in
+ * "Listen & Kategorien" - renaming changes the row's key, so the old one is
+ * dropped and a fresh row for the new name is added).
+ * @param {Array<{id:string,name:string,rowKeys:Array<{key:string,label:string}>}>} groups
+ * @param {string[]} cuisineTypes
+ * @returns {Array<{id:string,name:string,rowKeys:Array<{key:string,label:string}>}>} the same
+ *   array reference if nothing changed, otherwise a new reconciled array.
+ */
+export function reconcileCuisineTypeGroup(groups, cuisineTypes) {
+  const rowDefs = buildCuisineTypeRowDefs(cuisineTypes);
+  const validKeys = new Set(rowDefs.map((r) => r.key));
+  let changed = false;
+
+  let nextGroups = groups.map((g) => {
+    const filtered = g.rowKeys.filter((r) => !r.key.startsWith(CUISINE_TYPE_ROW_PREFIX) || validKeys.has(r.key));
+    if (filtered.length !== g.rowKeys.length) {
+      changed = true;
+      return { ...g, rowKeys: filtered };
+    }
+    return g;
+  });
+
+  const placed = new Set();
+  nextGroups.forEach((g) => g.rowKeys.forEach((r) => {
+    if (r.key.startsWith(CUISINE_TYPE_ROW_PREFIX)) placed.add(r.key);
+  }));
+  const missing = rowDefs.filter((r) => !placed.has(r.key));
+  if (missing.length > 0) {
+    changed = true;
+    const missingEntries = missing.map((r) => ({ key: r.key, label: r.label }));
+    const existingIdx = nextGroups.findIndex((g) => g.id === CUISINE_TYPES_GROUP_ID);
+    nextGroups = existingIdx > -1
+      ? nextGroups.map((g, i) => (i === existingIdx ? { ...g, rowKeys: [...g.rowKeys, ...missingEntries] } : g))
+      : [...nextGroups, { id: CUISINE_TYPES_GROUP_ID, name: CUISINE_TYPES_GROUP_NAME, rowKeys: missingEntries }];
+  }
+
+  return changed ? nextGroups : groups;
+}
+
 /**
  * Reconciles a saved `buttonIconGroups.groups` structure against the current
  * set of merged rows. A saved structure only ever contains the rows that
