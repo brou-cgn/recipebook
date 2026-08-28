@@ -14,7 +14,7 @@ Der Link ist außerdem im Hamburger-Menü der App unter **Hilfe → Kurzbefehl i
 
 ## Authentifizierung
 
-Alle Shortcut-Endpoints (`importRecipeShortcut`, `addRecipeViaAPI`, `createRecipeImportFromText`, `getVideoUploadUrl`, `scrapeInstagramReelShortcut`, `scanRecipePhotoShortcut`) verwenden **API Key Authentifizierung** statt Firebase Auth Tokens. Ein API Key ist dauerhaft gültig und muss nur einmal im Kurzbefehl hinterlegt werden – derselbe Key funktioniert für alle Endpoints.
+Alle Shortcut-Endpoints (`importRecipeShortcut`, `addRecipeViaAPI`, `createRecipeImportFromText`, `getVideoUploadUrl`, `scrapeInstagramReelShortcut`, `scanRecipePhotoShortcut`, `getRecipeOptionsShortcut`) verwenden **API Key Authentifizierung** statt Firebase Auth Tokens. Ein API Key ist dauerhaft gültig und muss nur einmal im Kurzbefehl hinterlegt werden – derselbe Key funktioniert für alle Endpoints.
 
 - **`X-Api-Key`** Header: dein persönlicher API Key (als Firebase Secret gespeichert)
 - **`X-User-Email`** Header: deine registrierte E-Mail-Adresse (wird serverseitig per `admin.auth().getUserByEmail` zur Firebase User ID aufgelöst – du musst deine UID nicht mehr nachschlagen)
@@ -360,6 +360,40 @@ Du kannst im Kurzbefehl **OpenAI** (oder eine andere KI) nutzen, um Rezepttexte 
 3. Das strukturierte JSON schickst du dann an `addRecipeViaAPI`
 
 So ersetzt du den bisherigen „Notiz erstellen"-Schritt durch einen direkten Import ins RecipeBook.
+
+---
+
+## Aktuelle Kulinarik-Typen und Speisekategorien abfragen
+
+`addRecipeViaAPI` validiert `kulinarik`/`speisekategorie` nicht gegen eine feste Liste – trotzdem sollte eine KI (z. B. Claude), die ein Rezept vor dem Import strukturiert, möglichst die **tatsächlich in deiner App konfigurierten** Werte verwenden, statt zu raten. Diese können vom Standard abweichen, falls du sie unter Einstellungen → Kulinarik-Typen/Speisekategorien angepasst hast.
+
+### Aktion: „Inhalt von URL laden"
+
+| Feld | Wert |
+|------|------|
+| URL | `https://us-central1-<PROJECT-ID>.cloudfunctions.net/getRecipeOptionsShortcut` |
+| Methode | `GET` |
+
+**Headers:**
+
+| Name | Wert |
+|------|------|
+| `X-Api-Key` | `<dein-api-key>` |
+| `X-User-Email` | `<deine-e-mail-adresse>` |
+
+**Antwort (HTTP 200):**
+
+```json
+{
+  "success": true,
+  "cuisineTypes": ["Deutsche Küche", "Italienische Küche", "..."],
+  "mealCategories": ["Hauptspeisen", "Desserts", "..."]
+}
+```
+
+Ruft der Kurzbefehl vor dem KI-Aufruf zuerst diesen Endpoint auf, kannst du `cuisineTypes`/`mealCategories` aus der Antwort in den KI-Prompt einsetzen (z. B. anstelle von `{{CUISINE_TYPES}}`/`{{MEAL_CATEGORIES}}`), damit die KI nur Werte wählt, die auch tatsächlich in deiner App existieren. Ohne diesen Zwischenschritt fällt eine KI auf ihre eigene Einschätzung sinnvoller Standardwerte zurück.
+
+Derselbe Endpoint eignet sich auch für Claude direkt (z. B. den `recipe-webimport-json`-Skill), sofern Claude in der jeweiligen Umgebung HTTP-Zugriff hat und API Key + E-Mail vorliegen.
 
 ---
 

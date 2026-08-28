@@ -6140,6 +6140,129 @@ exports.addRecipeViaAPI = onRequest(
     },
 );
 
+// Fallback lists if settings/app has no cuisineTypes/mealCategories yet (kept in
+// sync with DEFAULT_CUISINE_TYPES / DEFAULT_MEAL_CATEGORIES in src/utils/customLists.js).
+const FALLBACK_CUISINE_TYPES = [
+  'Deutsche Küche', 'Französische Küche', 'Italienische Küche', 'Österreichische Küche',
+  'Schweizer Küche', 'Türkische Küche', 'Chinesische Küche', 'Indische Küche',
+  'Japanische Küche', 'Orientalische Küche', 'Thailändische Küche', 'Mexikanische Küche',
+  'US-Amerikanische Küche', 'Vegetarisch', 'Vegan', 'Weihnachtliche Küche',
+];
+const FALLBACK_MEAL_CATEGORIES = [
+  'Appetizer', 'Dips & Saucen', 'Vorspeisen', 'Salate', 'Suppen & Eintöpfe',
+  'Hauptspeisen', 'Desserts', 'Drinks', 'Beilagen & Grundrezepte', 'Gebäcke & Teige',
+  'Kuchen & Torten', 'Grillrezepte',
+];
+
+/**
+ * Cloud Function: Return the app's currently configured cuisine types and meal
+ * categories (for Apple Shortcuts / external integrations, e.g. Claude, to use
+ * the same values as addRecipeViaAPI's `kulinarik`/`speisekategorie` fields).
+ *
+ * GET /getRecipeOptionsShortcut
+ *
+ * Headers:
+ *   X-Api-Key:    <API Key stored as SHORTCUT_API_KEY secret>
+ *   X-User-Email: <registrierte E-Mail-Adresse des Users>
+ *
+ * Returns:
+ *   200 { success: true, cuisineTypes: string[], mealCategories: string[] }
+ *   401 { success: false, error: string, requiredHeaders?: string[] }
+ *   403 { success: false, error: string }
+ *   405 { success: false, error: string }
+ *   500 { success: false, error: string }
+ */
+exports.getRecipeOptionsShortcut = onRequest(
+    {maxInstances: 10, secrets: [shortcutApiKey], invoker: 'public'},
+    async (req, res) => {
+      const origin = req.headers.origin;
+      if (origin && ALLOWED_ORIGINS.includes(origin)) {
+        res.set('Access-Control-Allow-Origin', origin);
+        res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key, X-User-Email');
+        if (req.method === 'OPTIONS') {
+          res.status(204).send('');
+          return;
+        }
+      } else if (req.method === 'OPTIONS') {
+        res.status(403).send('');
+        return;
+      }
+
+      if (req.method !== 'GET') {
+        res.status(405).json({success: false, error: 'Method not allowed. Use GET.'});
+        return;
+      }
+
+      // --- Authentication via API Key (same scheme as addRecipeViaAPI) ---
+      const apiKey = req.headers['x-api-key'];
+      const userEmail = req.headers['x-user-email'];
+
+      if (!apiKey || !userEmail) {
+        res.status(401).json({
+          success: false,
+          error: 'Missing authentication headers',
+          requiredHeaders: ['X-Api-Key', 'X-User-Email'],
+        });
+        return;
+      }
+
+      const validApiKey = shortcutApiKey.value();
+      if (!validApiKey) {
+        console.error('getRecipeOptionsShortcut: SHORTCUT_API_KEY secret is not set');
+        res.status(500).json({success: false, error: 'Server misconfiguration: SHORTCUT_API_KEY secret is not set'});
+        return;
+      }
+
+      let isValidKey = false;
+      try {
+        isValidKey = crypto.timingSafeEqual(Buffer.from(apiKey), Buffer.from(validApiKey));
+      } catch (_) {
+        isValidKey = false;
+      }
+      if (!isValidKey) {
+        console.warn('getRecipeOptionsShortcut: invalid API key attempt');
+        res.status(401).json({success: false, error: 'Invalid API key'});
+        return;
+      }
+
+      // --- Resolve email to uid, then validate user exists and has required role ---
+      const userId = await resolveShortcutUserId(userEmail);
+      const db = admin.firestore();
+      try {
+        const userDoc = userId ? await db.collection('users').doc(userId).get() : null;
+        if (!userId || !userDoc.exists) {
+          res.status(403).json({success: false, error: 'Access denied'});
+          return;
+        }
+        const role = userDoc.data()?.role;
+        if (role !== 'edit' && role !== 'admin' && role !== 'moderator') {
+          res.status(403).json({success: false, error: 'Insufficient permissions'});
+          return;
+        }
+      } catch (err) {
+        console.error('getRecipeOptionsShortcut: error validating user:', err);
+        res.status(500).json({success: false, error: 'Failed to validate user'});
+        return;
+      }
+
+      // --- Read configured lists from settings/app, fall back to defaults ---
+      try {
+        const settingsDoc = await db.collection('settings').doc('app').get();
+        const data = settingsDoc.exists ? settingsDoc.data() : {};
+        const cuisineTypes = Array.isArray(data?.cuisineTypes) && data.cuisineTypes.length > 0 ?
+          data.cuisineTypes : FALLBACK_CUISINE_TYPES;
+        const mealCategories = Array.isArray(data?.mealCategories) && data.mealCategories.length > 0 ?
+          data.mealCategories : FALLBACK_MEAL_CATEGORIES;
+
+        res.status(200).json({success: true, cuisineTypes, mealCategories});
+      } catch (err) {
+        console.error('getRecipeOptionsShortcut: Firestore error:', err);
+        res.status(500).json({success: false, error: 'Fehler beim Lesen der Einstellungen'});
+      }
+    },
+);
+
 // TTL for recipe text imports (default: 10 minutes)
 const RECIPE_IMPORT_TTL_MS = 10 * 60 * 1000;
 
