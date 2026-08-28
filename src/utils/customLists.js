@@ -4,6 +4,7 @@
 import { db } from '../firebase';
 import { doc, getDoc, getDocs, setDoc, updateDoc, deleteField, collection, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { normalizeNutritionReferenceId } from './nutritionReferenceUtils';
+import { getDefaultButtonIconGroups } from './buttonIconRows';
 
 export const DEFAULT_CUISINE_TYPES = [
   'Deutsche Küche',
@@ -2459,6 +2460,44 @@ export async function saveButtonIconsOrder(order) {
     }
   } catch (error) {
     console.error('Error saving buttonIconsOrder:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get the grouped/reordered structure for the redesigned Button-Icons admin
+ * tab (see ButtonIconsAdminTab.js). This is purely organisational metadata -
+ * which merged rows belong to which named group, in what order, and which
+ * rows an admin has hidden from this curated view. It never touches the
+ * underlying icon values (buttonIcons collection) or the legacy flat
+ * `buttonIconsOrder` used by the old Settings > Allgemein table, so both
+ * views keep working independently (see README migration notes).
+ * @returns {Promise<{groups: Array<{id:string,name:string,rowKeys:Array<{key:string,label:string}>}>, hiddenRowKeys: string[]}>}
+ */
+export async function getButtonIconGroups() {
+  const settings = await getSettings();
+  const saved = settings.buttonIconGroups;
+  if (saved && Array.isArray(saved.groups)) {
+    return { groups: saved.groups, hiddenRowKeys: Array.isArray(saved.hiddenRowKeys) ? saved.hiddenRowKeys : [] };
+  }
+  return getDefaultButtonIconGroups();
+}
+
+/**
+ * Save the grouped/reordered structure for the redesigned Button-Icons admin tab.
+ * @param {{groups: Array, hiddenRowKeys: string[]}} buttonIconGroups
+ * @returns {Promise<void>}
+ */
+export async function saveButtonIconGroups(buttonIconGroups) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    await updateDoc(settingsRef, { buttonIconGroups });
+
+    if (settingsCache) {
+      settingsCache.buttonIconGroups = buttonIconGroups;
+    }
+  } catch (error) {
+    console.error('Error saving buttonIconGroups:', error);
     throw error;
   }
 }

@@ -15,6 +15,8 @@ import { addFaq, updateFaq, deleteFaq, subscribeToFaqs, importFaqsFromMarkdown }
 import SeasonMatrixTab from './SeasonMatrixTab';
 import NutritionReferenceTab from './NutritionReferenceTab';
 import DrinkWeightsTab from './DrinkWeightsTab';
+import ButtonIconsAdminTab from './ButtonIconsAdminTab';
+import { getOrderedButtonIconRows } from '../utils/buttonIconRows';
 import {
   DndContext,
   closestCenter,
@@ -401,94 +403,6 @@ function renderBoldText(text) {
     }
     return part;
   });
-}
-
-const DARK_MODE_ICON_ROWS = [
-  { key: 'cookingMode', label: 'Kochmodus-Button' },
-  { key: 'cookingModeAlt', label: 'Kochmodus-Alt (helles Bild oben links)' },
-  { key: 'cookingModeDefaultImg', label: 'Kochmodus-Button (Standard-Kategoriebild)' },
-  { key: 'importRecipe', label: 'Import-Button' },
-  { key: 'scanImage', label: 'Bild-scannen-Button' },
-  { key: 'webImport', label: 'Web-Import-Button' },
-  { key: 'closeButton', label: 'Schließen-Button' },
-  { key: 'closeButtonAlt', label: 'Schließen-Alt (helles Bild oben rechts)' },
-  { key: 'closeButtonDefaultImg', label: 'Schließen-Button (Allgemein)' },
-  { key: 'filterButton', label: 'Filter-Button' },
-  { key: 'filterButtonActive', label: 'Filter-Button (aktiv)' },
-  { key: 'copyLink', label: 'Link kopieren' },
-  { key: 'nutritionEmpty', label: 'Kalkulieren' },
-  { key: 'nutritionFilled', label: 'Nährwerte vorhanden' },
-  { key: 'nutritionRecalc', label: 'Nährwerte nachkalkulieren' },
-  { key: 'ratingHeartEmpty', label: 'Bewertung (leer)' },
-  { key: 'ratingHeartEmptyModal', label: 'Bewertung Modal (leer)' },
-  { key: 'ratingHeartFilled', label: 'Bewertung (gefüllt)' },
-  { key: 'shoppingList', label: 'Einkaufslisten-Button' },
-  { key: 'listSettings', label: 'Einstellungen-Button (private Liste)' },
-  { key: 'listSettingsActive', label: 'Einstellungen-Button (private Liste geöffnet)' },
-  { key: 'bringButton', label: 'Bring!-Button' },
-  { key: 'timerStart', label: 'Timer starten' },
-  { key: 'timerStop', label: 'Timer stoppen' },
-  { key: 'cookDate', label: 'Kochdatum' },
-  { key: 'addRecipe', label: 'Hinzufügen (Allgemein)' },
-  { key: 'editRecipe', label: 'Rezept bearbeiten' },
-  { key: 'addPrivateRecipe', label: 'Privates Rezept hinzufügen' },
-  { key: 'addGroupMember', label: 'Mitglied hinzufügen' },
-  { key: 'saveRecipe', label: 'Speichern (Allgemein)' },
-  { key: 'swipeRight', label: 'Swipe rechts (Ja)' },
-  { key: 'swipeLeft', label: 'Swipe links (Nein)' },
-  { key: 'swipeUp', label: 'Swipe hoch (Favorit)' },
-  { key: 'swipeDelete', label: 'Swipe löschen (Rezeptformular)' },
-  { key: 'menuFavoritesButton', label: 'Menü-Favoriten' },
-  { key: 'menuFavoritesButtonActive', label: 'Menü-Favoriten (aktiv)' },
-  { key: 'privateBadge', label: 'Privat-Badge (Menü/Rezept)' },
-  { key: 'tagesmenuZumTagesMenu', label: 'Zum Tagesmenü' },
-  { key: 'tagesmenuMeineAuswahl', label: 'Meine Auswahl' },
-  { key: 'tagesmenuKachelMenu', label: 'Tagesmenü-Kachelmenü' },
-  { key: 'tagesmenuKachelMenuAlt', label: 'Tagesmenü-Kachelmenü (dunkles Bild)' },
-  { key: 'newVersion', label: 'Neue Version' },
-  { key: 'publishRecipe', label: 'Rezept veröffentlichen' },
-  { key: 'deleteRecipe', label: 'Rezept löschen' },
-  { key: 'printRecipe', label: 'Rezept drucken' },
-  { key: 'addSection', label: 'Abschnitt hinzufügen (Menü bearbeiten)' },
-  { key: 'resetThumbnail', label: 'Thumbnail-Löschen-Button (FAB)' },
-  { key: 'recipeSourceLink', label: 'Rezeptquelle öffnen (Webimport)' },
-  { key: 'recipeCardSwipeRight', label: 'Rezeptkarte: Rechts-Swipe-Button' },
-  { key: 'addImage', label: 'Bild hinzufügen (neben Titel)' },
-  { key: 'trendingDifficultyIcon', label: 'Trend-Kachel: Icon vor Schwierigkeitsgrad' },
-  { key: 'trendingTimeIcon', label: 'Trend-Kachel: Icon vor Zubereitungszeit' },
-  { key: 'kuecheFab', label: 'Küche-FAB-Button' },
-  { key: 'eventsDrinksFab', label: 'Events: Getränke-FAB (Mobile)' },
-  { key: 'eventsGuestsFab', label: 'Events: Gästeübersicht-FAB (Mobile)' },
-  { key: 'bottomNavHome', label: 'Bottom Navigation: Küche' },
-  { key: 'bottomNavRecipes', label: 'Bottom Navigation: Kochbuch' },
-  { key: 'bottomNavMenus', label: 'Bottom Navigation: Festtafel' },
-  { key: 'bottomNavAtelier', label: 'Bottom Navigation: Atelier' },
-  { key: 'bottomNavChef', label: 'Bottom Navigation: Chefkoch' },
-  { key: 'bottomNavHomeActive', label: 'Bottom Navigation: Küche (aktiv)' },
-  { key: 'bottomNavRecipesActive', label: 'Bottom Navigation: Kochbuch (aktiv)' },
-  { key: 'bottomNavMenusActive', label: 'Bottom Navigation: Festtafel (aktiv)' },
-  { key: 'bottomNavAtelierActive', label: 'Bottom Navigation: Atelier (aktiv)' },
-  { key: 'bottomNavChefActive', label: 'Bottom Navigation: Chefkoch (aktiv)' },
-];
-
-/**
- * Applies a saved drag & drop order (array of icon keys) to DARK_MODE_ICON_ROWS.
- * Keys from the saved order that still exist are placed first in that order;
- * any rows not yet present in the saved order (e.g. newly added icons) are
- * appended afterwards in their built-in default order.
- */
-function getOrderedButtonIconRows(order) {
-  if (!order || order.length === 0) return DARK_MODE_ICON_ROWS;
-
-  const rowsByKey = new Map(DARK_MODE_ICON_ROWS.map((row) => [row.key, row]));
-  const ordered = order
-    .map((key) => rowsByKey.get(key))
-    .filter(Boolean);
-
-  const orderedKeys = new Set(ordered.map((row) => row.key));
-  const remaining = DARK_MODE_ICON_ROWS.filter((row) => !orderedKeys.has(row.key));
-
-  return [...ordered, ...remaining];
 }
 
 function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdateRecipe }) {
@@ -1817,7 +1731,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     { label: 'Zeitleisten-Icon (Kochereignisse)', icon: timelineCookEventBubbleIcon, uploading: uploadingTimelineCookEventBubbleIcon, onChange: handleTimelineCookEventBubbleIconUpload, onRemove: handleRemoveTimelineCookEventBubbleIcon, fileId: 'timelineCookEventBubbleIconFile' },
   ];
 
-  const isFullWidthTab = ['users', 'saisonmatrix', 'naehrwerte', 'getraenkegewichte'].includes(activeTab);
+  const isFullWidthTab = ['users', 'saisonmatrix', 'naehrwerte', 'getraenkegewichte', 'buttonIconsV2'].includes(activeTab);
 
   return (
     <div className="settings-container">
@@ -1876,6 +1790,14 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     onClick={() => setActiveTab('users')}
                   >
                     Benutzerverwaltung
+                  </button>
+                )}
+                {isAdmin && (
+                  <button
+                    className={`tab-button ${activeTab === 'buttonIconsV2' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('buttonIconsV2')}
+                  >
+                    Button-Icons (neu)
                   </button>
                 )}
                 {isAdmin && (
@@ -3545,6 +3467,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               )}
             </div>
           </>
+        ) : activeTab === 'buttonIconsV2' ? (
+          <ButtonIconsAdminTab />
         ) : activeTab === 'saisonmatrix' ? (
           <SeasonMatrixTab currentUser={currentUser} />
         ) : activeTab === 'naehrwerte' ? (
