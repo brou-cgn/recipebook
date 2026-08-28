@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import './ButtonIconsAdminTab.css';
 import {
   getButtonIcons,
@@ -178,9 +179,60 @@ function SortableIconRow({
   );
 }
 
-function NewCuisineTypeRow({ value, onChange, suggestions, onSelect, onCancel }) {
+// Renders a typeahead's option list into document.body, positioned via a fixed
+// rect computed from the anchor input. Ancestor cards use `overflow: hidden`
+// (for rounded corners on the row list), which used to clip this dropdown
+// whenever the add-row sat near the bottom of a card - a portal escapes that
+// clipping regardless of where the row lives. Flips above the input when
+// there isn't enough room below.
+function TypeaheadPanel({ anchorRef, id, children }) {
+  const [style, setStyle] = useState(null);
+
+  useEffect(() => {
+    const anchor = anchorRef.current;
+    if (!anchor) return undefined;
+
+    const updatePosition = () => {
+      const rect = anchor.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const openUpward = spaceBelow < 220 && spaceAbove > spaceBelow;
+      setStyle({
+        position: 'fixed',
+        left: rect.left,
+        width: rect.width,
+        ...(openUpward
+          ? { bottom: viewportHeight - rect.top + 4 }
+          : { top: rect.bottom + 4 }),
+      });
+    };
+
+    updatePosition();
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [anchorRef]);
+
+  if (!style) return null;
+  return createPortal(
+    <div className="bia-typeahead-list" id={id} role="listbox" style={style}>
+      {children}
+    </div>,
+    document.body
+  );
+}
+
+// Shared behavior for the "search & pick one item" add-row pattern (Kulinarik-
+// Typen and Speisekategorien). Callers own the visual row shell - this hook
+// just wires the input, filtering, keyboard handling and outside-click-cancel.
+function useTypeaheadCombobox({ value, onChange, suggestions, onSelect, onCancel }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     const handlePointerDown = (e) => {
@@ -207,47 +259,229 @@ function NewCuisineTypeRow({ value, onChange, suggestions, onSelect, onCancel })
     }
   };
 
+  return {
+    open,
+    containerRef,
+    inputRef,
+    filtered,
+    inputProps: {
+      ref: inputRef,
+      value,
+      onChange: (e) => { onChange(e.target.value); setOpen(true); },
+      onFocus: () => setOpen(true),
+      onKeyDown: handleKeyDown,
+      'aria-expanded': open,
+      'aria-autocomplete': 'list',
+      role: 'combobox',
+      autoFocus: true,
+    },
+  };
+}
+
+function TypeaheadOptions({ filtered, emptyLabel, onSelect }) {
+  return filtered.length > 0 ? (
+    filtered.map((name) => (
+      <button
+        type="button"
+        key={name}
+        className="bia-typeahead-item"
+        role="option"
+        aria-selected="false"
+        onMouseDown={(e) => { e.preventDefault(); onSelect(name); }}
+      >
+        {name}
+      </button>
+    ))
+  ) : (
+    <div className="bia-typeahead-empty">{emptyLabel}</div>
+  );
+}
+
+function NewCuisineTypeRow({ value, onChange, suggestions, onSelect, onCancel }) {
+  const { open, containerRef, inputRef, filtered, inputProps } = useTypeaheadCombobox({
+    value, onChange, suggestions, onSelect, onCancel,
+  });
+
   return (
     <div className="bia-row bia-row-new" ref={containerRef}>
       <div className="bia-row-content delete-row-hover-target">
         <div className="bia-row-name bia-row-name-typeahead">
           <input
+            {...inputProps}
             type="text"
-            value={value}
-            onChange={(e) => { onChange(e.target.value); setOpen(true); }}
-            onFocus={() => setOpen(true)}
-            onKeyDown={handleKeyDown}
             placeholder="Kulinarik-Typ suchen…"
             className="bia-row-name-input"
             aria-label="Kulinarik-Typ suchen und auswählen"
-            aria-expanded={open}
-            aria-autocomplete="list"
             aria-controls="bia-cuisine-typeahead-list"
-            role="combobox"
-            autoFocus
           />
           {open && (
-            <div className="bia-cuisine-typeahead-list" id="bia-cuisine-typeahead-list" role="listbox">
-              {filtered.length > 0 ? (
-                filtered.map((name) => (
-                  <button
-                    type="button"
-                    key={name}
-                    className="bia-cuisine-typeahead-item"
-                    role="option"
-                    aria-selected="false"
-                    onMouseDown={(e) => { e.preventDefault(); onSelect(name); }}
-                  >
-                    {name}
-                  </button>
-                ))
-              ) : (
-                <div className="bia-cuisine-typeahead-empty">Kein passender Kulinarik-Typ</div>
-              )}
-            </div>
+            <TypeaheadPanel anchorRef={inputRef} id="bia-cuisine-typeahead-list">
+              <TypeaheadOptions filtered={filtered} emptyLabel="Kein passender Kulinarik-Typ" onSelect={onSelect} />
+            </TypeaheadPanel>
           )}
         </div>
         <DeleteRowButton itemName={value.trim() || 'Neue Zeile'} onClick={onCancel} className="bia-row-delete-btn" />
+      </div>
+    </div>
+  );
+}
+
+function NewCategoryImageRow({ value, onChange, suggestions, onSelect, onCancel }) {
+  const { open, containerRef, inputRef, filtered, inputProps } = useTypeaheadCombobox({
+    value, onChange, suggestions, onSelect, onCancel,
+  });
+
+  return (
+    <div className="bia-catimg-row-wrap bia-catimg-row-wrap-new">
+      <div className="bia-catimg-row delete-row-hover-target" ref={containerRef}>
+        <div className="bia-catimg-preview bia-catimg-preview-placeholder" aria-hidden="true">+</div>
+        <div className="bia-catimg-typeahead">
+          <input
+            {...inputProps}
+            type="text"
+            placeholder="Speisekategorie suchen…"
+            className="bia-row-name-input"
+            aria-label="Speisekategorie suchen und auswählen"
+            aria-controls="bia-catimg-typeahead-list"
+          />
+          {open && (
+            <TypeaheadPanel anchorRef={inputRef} id="bia-catimg-typeahead-list">
+              <TypeaheadOptions filtered={filtered} emptyLabel="Keine passende Speisekategorie" onSelect={onSelect} />
+            </TypeaheadPanel>
+          )}
+        </div>
+        <DeleteRowButton itemName={value.trim() || 'Neue Zeile'} onClick={onCancel} className="bia-row-delete-btn" />
+      </div>
+    </div>
+  );
+}
+
+function CategoryImageRow({
+  img,
+  mealCategories,
+  categoryImages,
+  isDeleteVisible,
+  onDeleteVisibleChange,
+  onImageClick,
+  isUploading,
+  isEditing,
+  selectedCategories,
+  onCategoryToggle,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
+  onDelete,
+}) {
+  const { offset, isDeleteVisible: swipeVisible, reset, handlers } = useSwipeToDelete({
+    isDeleteVisible,
+    onDeleteVisibleChange,
+  });
+  const swipeContentStyle = {
+    transform: `translateX(${offset}px)`,
+    transition: 'transform 0.15s ease',
+  };
+  const rowName = categoryImageRowName(img);
+
+  const handleSwipeDeleteClick = () => {
+    onDelete();
+    reset();
+  };
+
+  return (
+    <div className={`bia-catimg-row-wrap${offset < 0 ? ' bia-swipe-active' : ''}`}>
+      <div className="swipe-delete-background" aria-hidden={!swipeVisible}>
+        {swipeVisible && (
+          <button
+            type="button"
+            className="swipe-delete-action"
+            onClick={handleSwipeDeleteClick}
+            aria-label={`${rowName} entfernen`}
+          >
+            <span className="swipe-delete-icon-text">🗑</span>
+          </button>
+        )}
+      </div>
+      <div className="bia-catimg-row delete-row-hover-target" style={swipeContentStyle} {...handlers}>
+        <button
+          type="button"
+          className="bia-catimg-preview bia-catimg-preview-btn"
+          onClick={() => onImageClick(img.id)}
+          title={`Bild für ${rowName} hochladen/ändern`}
+          aria-label={`Bild für ${rowName} hochladen/ändern`}
+        >
+          {img.image ? (
+            <img src={img.image} alt="" />
+          ) : isUploading ? (
+            <span className="bia-catimg-uploading">…</span>
+          ) : (
+            <span className="bia-catimg-preview-plus" aria-hidden="true">+</span>
+          )}
+        </button>
+
+        {isEditing ? (
+          <div className="bia-catimg-edit">
+            <div className="bia-catimg-checkboxes">
+              {mealCategories.map((category) => {
+                const isAssignedToOther = categoryImages.some(
+                  (otherImg) => otherImg.id !== img.id && otherImg.categories.includes(category)
+                );
+                const isSelected = selectedCategories.includes(category);
+                return (
+                  <label
+                    key={category}
+                    className={`bia-catimg-checkbox${isAssignedToOther ? ' bia-catimg-checkbox-disabled' : ''}`}
+                    title={isAssignedToOther ? 'Diese Kategorie ist bereits einem anderen Bild zugeordnet' : ''}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => onCategoryToggle(category)}
+                      disabled={isAssignedToOther}
+                    />
+                    <span>{category}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="bia-catimg-edit-actions">
+              <button
+                type="button"
+                className="bia-btn-primary"
+                onClick={onSaveEdit}
+                disabled={selectedCategories.length === 0}
+              >
+                Speichern
+              </button>
+              <button type="button" className="bia-btn-secondary" onClick={onCancelEdit}>
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="bia-catimg-categories">
+              {img.categories.length > 0 ? (
+                img.categories.map((cat) => (
+                  <span key={cat} className="bia-catimg-badge">{cat}</span>
+                ))
+              ) : (
+                <span className="bia-catimg-empty">Keine Kategorien zugeordnet</span>
+              )}
+            </div>
+            <button
+              type="button"
+              className="bia-btn-tertiary bia-catimg-edit-btn"
+              onClick={() => onStartEdit(img.id)}
+              title="Kategorien bearbeiten"
+            >
+              Bearbeiten
+            </button>
+          </>
+        )}
+
+        {!isEditing && (
+          <DeleteRowButton itemName={rowName} onClick={onDelete} className="bia-row-delete-btn" />
+        )}
       </div>
     </div>
   );
@@ -344,9 +578,14 @@ function ButtonIconsAdminTab() {
 
   const [categoryImages, setCategoryImages] = useState([]);
   const [mealCategories, setMealCategories] = useState([]);
-  const [uploadingCategoryImage, setUploadingCategoryImage] = useState(false);
   const [editingCategoryImageId, setEditingCategoryImageId] = useState(null);
   const [selectedCategories, setSelectedCategories] = useState([]);
+  const [catimgAdding, setCatimgAdding] = useState(false);
+  const [catimgAddValue, setCatimgAddValue] = useState('');
+  const [catimgDeleteVisibleId, setCatimgDeleteVisibleId] = useState(null);
+  const [uploadingRowId, setUploadingRowId] = useState(null);
+  const rowUploadTargetIdRef = useRef(null);
+  const categoryFileInputRef = useRef(null);
 
   const structureSaveTimeoutRef = useRef(null);
   const rowDefsByKey = useMemo(() => {
@@ -359,6 +598,9 @@ function ButtonIconsAdminTab() {
     data.groups.forEach((g) => g.rowKeys.forEach((r) => usedKeys.add(r.key)));
     return cuisineTypes.filter((name) => !usedKeys.has(cuisineTypeIconKey(name)));
   }, [data.groups, cuisineTypes]);
+  const availableMealCategoryNames = useMemo(() => (
+    mealCategories.filter((name) => !categoryImages.some((img) => img.categories.includes(name)))
+  ), [mealCategories, categoryImages]);
   const undo = useUndoableDelete();
 
   useEffect(() => {
@@ -525,33 +767,58 @@ function ButtonIconsAdminTab() {
     setCuisineAddValue('');
   };
 
-  // ---- category images (Kategoriebilder)
+  // ---- category images (Speisekategorien), integrated into the same
+  // row/typeahead pattern as the Kulinarik-Typen group above.
   const handleCategoryToggle = (category) => {
     setSelectedCategories((prev) => (prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]));
   };
 
-  const handleCategoryImageUpload = async (e) => {
+  const handleStartAddCategoryImage = () => {
+    setCatimgAdding(true);
+    setCatimgAddValue('');
+  };
+
+  const handleCancelAddCategoryImage = () => {
+    setCatimgAdding(false);
+    setCatimgAddValue('');
+  };
+
+  const handleSelectMealCategory = async (name) => {
+    if (!name) return;
+    setCatimgAdding(false);
+    setCatimgAddValue('');
+    try {
+      const newImage = await addCategoryImage('', [name]);
+      setCategoryImages((prev) => [...prev, newImage]);
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  const handleRowImageClick = (imageId) => {
+    rowUploadTargetIdRef.current = imageId;
+    categoryFileInputRef.current?.click();
+  };
+
+  const handleRowImageFileChange = async (e) => {
     const file = e.target.files[0];
     e.target.value = '';
-    if (!file) return;
+    const targetId = rowUploadTargetIdRef.current;
+    rowUploadTargetIdRef.current = null;
+    if (!file || !targetId) return;
 
-    const alreadyAssigned = await getAlreadyAssignedCategories(selectedCategories);
-    if (alreadyAssigned.length > 0) {
-      alert(CATEGORY_ALREADY_ASSIGNED_ERROR.replace('{categories}', alreadyAssigned.join(', ')));
-      return;
-    }
-
-    setUploadingCategoryImage(true);
+    setUploadingRowId(targetId);
     try {
       const base64 = await fileToBase64(file);
       const compressed = await compressImage(base64);
-      const newImage = await addCategoryImage(compressed, selectedCategories);
-      setCategoryImages((prev) => [...prev, newImage]);
-      setSelectedCategories([]);
+      const ok = await updateCategoryImage(targetId, { image: compressed });
+      if (ok) {
+        setCategoryImages((prev) => prev.map((img) => (img.id === targetId ? { ...img, image: compressed } : img)));
+      }
     } catch (error) {
       alert(error.message);
     } finally {
-      setUploadingCategoryImage(false);
+      setUploadingRowId(null);
     }
   };
 
@@ -873,136 +1140,81 @@ function ButtonIconsAdminTab() {
         </div>
 
         <div className="bia-card bia-catimg-card">
-          <div className="bia-catimg-heading">
-            <h3>Kategoriebilder</h3>
-            <p className="section-description">
-              Laden Sie Bilder hoch und verknüpfen Sie diese mit Speisekategorien. Diese Bilder werden als
-              Platzhalter verwendet, wenn ein Rezept ohne Titelbild gespeichert wird. Jede Kategorie kann nur
-              einem Bild zugeordnet werden.
-            </p>
+          <div className="bia-group-header">
+            <button
+              type="button"
+              className="bia-chevron"
+              onClick={() => setCollapsed((c) => ({ ...c, catimg: !c.catimg }))}
+              aria-label={collapsed.catimg ? 'Speisekategorien ausklappen' : 'Speisekategorien einklappen'}
+            >
+              {collapsed.catimg ? '▶' : '▼'}
+            </button>
+            <span className="bia-group-name bia-group-name-static">Speisekategorien</span>
+            <span className="bia-group-meta">{categoryImages.length} {categoryImages.length === 1 ? 'Bild' : 'Bilder'}</span>
           </div>
 
-          {!editingCategoryImageId && (
-            <div className="bia-catimg-upload">
-              <div className="bia-catimg-category-select">
-                <label>Speisekategorien für das neue Bild wählen:</label>
-                <div className="bia-catimg-checkboxes">
-                  {mealCategories.map((category) => {
-                    const isAssigned = categoryImages.some((img) => img.categories.includes(category));
-                    const isSelected = selectedCategories.includes(category);
-                    return (
-                      <label
-                        key={category}
-                        className={`bia-catimg-checkbox${isAssigned && !isSelected ? ' bia-catimg-checkbox-disabled' : ''}`}
-                        title={isAssigned && !isSelected ? 'Diese Kategorie ist bereits einem Bild zugeordnet' : ''}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => handleCategoryToggle(category)}
-                          disabled={isAssigned && !isSelected}
-                        />
-                        <span>{category}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
+          {!collapsed.catimg && (
+            <>
+              <p className="section-description bia-catimg-description">
+                Jede Speisekategorie bekommt (analog zu den Kulinarik-Typen oben) eine eigene Zeile mit einem Bild.
+                Es wird als Platzhalter verwendet, wenn ein Rezept ohne Titelbild gespeichert wird.
+              </p>
 
-              <div className="bia-catimg-upload-actions">
-                <label htmlFor="bia-catimg-file" className="bia-btn-primary">
-                  {uploadingCategoryImage ? 'Hochladen…' : 'Neues Bild hochladen'}
-                </label>
-                <input
-                  type="file"
-                  id="bia-catimg-file"
-                  accept="image/*"
-                  onChange={handleCategoryImageUpload}
-                  style={{ display: 'none' }}
-                  disabled={uploadingCategoryImage || selectedCategories.length === 0}
-                />
-                {selectedCategories.length === 0 && (
-                  <span className="bia-catimg-hint">Bitte wählen Sie mindestens eine Kategorie aus.</span>
+              <div className="bia-catimg-rows">
+                {categoryImages.map((img) => (
+                  <CategoryImageRow
+                    key={img.id}
+                    img={img}
+                    mealCategories={mealCategories}
+                    categoryImages={categoryImages}
+                    isDeleteVisible={catimgDeleteVisibleId === img.id}
+                    onDeleteVisibleChange={(visible) => setCatimgDeleteVisibleId(visible ? img.id : null)}
+                    onImageClick={handleRowImageClick}
+                    isUploading={uploadingRowId === img.id}
+                    isEditing={editingCategoryImageId === img.id}
+                    selectedCategories={selectedCategories}
+                    onCategoryToggle={handleCategoryToggle}
+                    onStartEdit={handleEditCategoryImageCategories}
+                    onSaveEdit={handleSaveCategoryImageCategories}
+                    onCancelEdit={handleCancelEditCategoryImageCategories}
+                    onDelete={() => handleDeleteCategoryImage(img.id)}
+                  />
+                ))}
+                {categoryImages.length === 0 && !catimgAdding && (
+                  <div className="bia-empty-group">Noch keine Kategoriebilder</div>
                 )}
-              </div>
-            </div>
-          )}
-
-          <div className="bia-catimg-rows">
-            {categoryImages.map((img) => (
-              <div key={img.id} className="bia-catimg-row delete-row-hover-target">
-                <div className="bia-catimg-preview">
-                  <img src={img.image} alt="" />
-                </div>
-
-                {editingCategoryImageId === img.id ? (
-                  <div className="bia-catimg-edit">
-                    <div className="bia-catimg-checkboxes">
-                      {mealCategories.map((category) => {
-                        const isAssignedToOther = categoryImages.some(
-                          (otherImg) => otherImg.id !== img.id && otherImg.categories.includes(category)
-                        );
-                        const isSelected = selectedCategories.includes(category);
-                        return (
-                          <label
-                            key={category}
-                            className={`bia-catimg-checkbox${isAssignedToOther ? ' bia-catimg-checkbox-disabled' : ''}`}
-                            title={isAssignedToOther ? 'Diese Kategorie ist bereits einem anderen Bild zugeordnet' : ''}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => handleCategoryToggle(category)}
-                              disabled={isAssignedToOther}
-                            />
-                            <span>{category}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                    <div className="bia-catimg-edit-actions">
-                      <button
-                        type="button"
-                        className="bia-btn-primary"
-                        onClick={handleSaveCategoryImageCategories}
-                        disabled={selectedCategories.length === 0}
-                      >
-                        Speichern
-                      </button>
-                      <button type="button" className="bia-btn-secondary" onClick={handleCancelEditCategoryImageCategories}>
-                        Abbrechen
-                      </button>
-                    </div>
-                  </div>
+                {catimgAdding ? (
+                  <NewCategoryImageRow
+                    value={catimgAddValue}
+                    onChange={setCatimgAddValue}
+                    suggestions={availableMealCategoryNames}
+                    onSelect={handleSelectMealCategory}
+                    onCancel={handleCancelAddCategoryImage}
+                  />
                 ) : (
-                  <>
-                    <div className="bia-catimg-categories">
-                      {img.categories.length > 0 ? (
-                        img.categories.map((cat) => (
-                          <span key={cat} className="bia-catimg-badge">{cat}</span>
-                        ))
-                      ) : (
-                        <span className="bia-catimg-empty">Keine Kategorien zugeordnet</span>
-                      )}
-                    </div>
+                  <div className="bia-cuisine-add-row">
                     <button
                       type="button"
-                      className="bia-btn-tertiary bia-catimg-edit-btn"
-                      onClick={() => handleEditCategoryImageCategories(img.id)}
-                      title="Kategorien bearbeiten"
+                      className="bia-btn-dashed"
+                      onClick={handleStartAddCategoryImage}
+                      disabled={availableMealCategoryNames.length === 0}
+                      title={availableMealCategoryNames.length === 0 ? 'Alle Speisekategorien sind bereits als Zeile angelegt' : undefined}
                     >
-                      Bearbeiten
+                      + Bild/Icon
                     </button>
-                  </>
-                )}
-
-                {editingCategoryImageId !== img.id && (
-                  <DeleteRowButton itemName={categoryImageRowName(img)} onClick={() => handleDeleteCategoryImage(img.id)} />
+                  </div>
                 )}
               </div>
-            ))}
-            {categoryImages.length === 0 && <div className="bia-empty-group">Noch keine Kategoriebilder</div>}
-          </div>
+
+              <input
+                type="file"
+                accept="image/*"
+                ref={categoryFileInputRef}
+                onChange={handleRowImageFileChange}
+                style={{ display: 'none' }}
+              />
+            </>
+          )}
         </div>
       </div>
 
