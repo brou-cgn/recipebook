@@ -845,8 +845,9 @@
 }
 
 .menu-photo-upload-icon-img {
-  width: 2.25rem;
+  width: 1.5rem;
   height: 1.5rem;
+  object-fit: contain;
 }
 
 .menu-image-preview {
