@@ -3257,6 +3257,11 @@
   background: #333;
 }
 
+[data-theme="dark"] .list-item-column-placeholder {
+  border-color: #555;
+  color: #777;
+}
+
 /* ---- ShoppingListModal additional ---- */
 [data-theme="dark"] .shopping-list-item {
   background: #1e1e1e;

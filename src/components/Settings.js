@@ -111,6 +111,7 @@ function SortableListItem({
   onIconDarkUpload,
   onIconDarkRemoveImage,
   uploadingDark,
+  placeholderColumn,
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(label);
@@ -199,6 +200,11 @@ function SortableListItem({
               inputId={`cuisineIconDark-${String(id).replace(/\s+/g, '-')}`}
             />
           )}
+        </div>
+      )}
+      {!onIconChange && !onIconDarkChange && placeholderColumn && !isEditing && (
+        <div className="list-item-icon-group">
+          <span className="list-item-column-placeholder" title="Bild – folgt in Kürze" aria-label={`Bildspalte für ${label} – folgt in Kürze`}>🖼</span>
         </div>
       )}
       {onRename && !isEditing && (
@@ -1511,7 +1517,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     className={`tab-button ${activeTab === 'buttonIconsV2' ? 'active' : ''}`}
                     onClick={() => setActiveTab('buttonIconsV2')}
                   >
-                    Button-Icons (neu)
+                    Bilder & Icons
                   </button>
                 )}
                 {isAdmin && (
@@ -2552,7 +2558,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
             <SortableContext items={lists.mealCategories} strategy={verticalListSortingStrategy}>
               <div className="list-items">
                 {lists.mealCategories.map((category) => (
-                  <SortableListItem key={category} id={category} label={category} onRemove={() => removeCategory(category)} onRename={canEditLists ? renameCategory : undefined} />
+                  <SortableListItem key={category} id={category} label={category} onRemove={() => removeCategory(category)} onRename={canEditLists ? renameCategory : undefined} placeholderColumn />
                 ))}
               </div>
             </SortableContext>

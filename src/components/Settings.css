@@ -370,6 +370,19 @@
   background: #d32f2f;
 }
 
+.list-item-column-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+  color: #aaa;
+  font-size: 0.9rem;
+  background: transparent;
+}
+
 .list-item .drag-handle {
   background: #f5f5f5;
   color: #666;
