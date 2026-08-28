@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './Settings.css';
 import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getButtonIconsOrder, saveButtonIconsOrder, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT, PRINT_FORMAT_LAYOUT_VERSION, selectPrintFormat } from '../utils/customLists';
 import { getOnboardingTestmodeActive, saveOnboardingTestmodeActive } from '../utils/onboardingSettings';
@@ -16,7 +16,6 @@ import SeasonMatrixTab from './SeasonMatrixTab';
 import NutritionReferenceTab from './NutritionReferenceTab';
 import DrinkWeightsTab from './DrinkWeightsTab';
 import ButtonIconsAdminTab from './ButtonIconsAdminTab';
-import { getOrderedButtonIconRows } from '../utils/buttonIconRows';
 import {
   DndContext,
   closestCenter,
@@ -239,155 +238,6 @@ function SortablePortionUnitItem({ id, unit, onRemove }) {
   );
 }
 
-function SortableButtonIconRow({
-  id,
-  label,
-  darkKey,
-  buttonIcons,
-  uploadingButtonIcon,
-  onTextChange,
-  onImageUpload,
-  onRemoveImage,
-  onReset,
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
-
-  const style = getSortableItemStyle(transform, transition, isDragging);
-  const key = id;
-
-  return (
-    <div ref={setNodeRef} style={style} className={`dark-icon-row ${isDragging ? 'dragging' : ''}`}>
-      <button
-        type="button"
-        className="drag-handle dark-icon-drag-handle"
-        {...attributes}
-        {...listeners}
-        aria-label={`${label} verschieben`}
-      >
-        ⋮⋮
-      </button>
-      <span className="dark-icon-col-label">{label}</span>
-      <div className="dark-icon-col-normal">
-        <div className="dark-icon-input-group">
-          {!isBase64Image(buttonIcons[key]) ? (
-            <>
-              <input
-                type="text"
-                value={buttonIcons[key] || ''}
-                onChange={(e) => onTextChange(key, e.target.value)}
-                placeholder="–"
-                maxLength={10}
-                className="dark-icon-text-input"
-              />
-              <label
-                htmlFor={`${key}NormalFile`}
-                className="upload-icon-btn"
-                title="Bild hochladen"
-              >
-                {uploadingButtonIcon === key ? '...' : 'Foto'}
-              </label>
-              <input
-                type="file"
-                id={`${key}NormalFile`}
-                accept="image/png,image/jpeg,image/jpg,image/svg+xml"
-                onChange={(e) => onImageUpload(key, e)}
-                style={{ display: 'none' }}
-                disabled={uploadingButtonIcon === key}
-              />
-            </>
-          ) : (
-            <>
-              <span className="dark-icon-image-info">Bild</span>
-              <button
-                type="button"
-                className="reset-icon-btn"
-                onClick={() => onRemoveImage(key)}
-                title="Bild entfernen"
-              >
-                ×
-              </button>
-            </>
-          )}
-          <button
-            type="button"
-            className="reset-icon-btn"
-            onClick={() => onReset(key)}
-            title="Auf Standard zurücksetzen"
-          >
-            ↻
-          </button>
-          <div className="dark-icon-preview">
-            {isBase64Image(buttonIcons[key]) ? (
-              <img src={buttonIcons[key]} alt={label} className="icon-image" />
-            ) : (
-              <span>{buttonIcons[key]}</span>
-            )}
-          </div>
-        </div>
-      </div>
-      <div className="dark-icon-col-dark">
-        <div className="dark-icon-input-group">
-          {!isBase64Image(buttonIcons[darkKey]) ? (
-            <input
-              type="text"
-              value={buttonIcons[darkKey] || ''}
-              onChange={(e) => onTextChange(darkKey, e.target.value)}
-              placeholder="–"
-              maxLength={10}
-              className="dark-icon-text-input"
-            />
-          ) : (
-            <span className="dark-icon-image-info">Bild</span>
-          )}
-          <label
-            htmlFor={`${darkKey}File`}
-            className="upload-icon-btn"
-            title="Bild hochladen"
-          >
-            {uploadingButtonIcon === darkKey ? '...' : 'Foto'}
-          </label>
-          <input
-            type="file"
-            id={`${darkKey}File`}
-            accept="image/png,image/jpeg,image/jpg,image/svg+xml"
-            onChange={(e) => onImageUpload(darkKey, e)}
-            style={{ display: 'none' }}
-            disabled={uploadingButtonIcon === darkKey}
-          />
-          {buttonIcons[darkKey] ? (
-            <button
-              type="button"
-              className="reset-icon-btn"
-              onClick={() => onReset(darkKey)}
-              title="Dunkel-Variante entfernen"
-            >
-              ×
-            </button>
-          ) : null}
-          <div className="dark-icon-preview">
-            {isBase64Image(buttonIcons[darkKey]) ? (
-              <img src={buttonIcons[darkKey]} alt="Dunkel" className="icon-image" />
-            ) : buttonIcons[darkKey] ? (
-              <span>{buttonIcons[darkKey]}</span>
-            ) : (
-              <span className="dark-icon-fallback">
-                {isBase64Image(buttonIcons[key]) ? '↑' : buttonIcons[key]}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 const CATEGORY_ALREADY_ASSIGNED_ERROR ='Die folgenden Kategorien sind bereits einem anderen Bild zugeordnet: {categories}\n\nBitte wählen Sie andere Kategorien.';
 const STATUS_VALIDITY_HINT = 'Nach X Tagen erscheint das Rezept wieder im Stack. Leer = kein Ablaufdatum.';
 
@@ -466,13 +316,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [appLogoImage, setAppLogoImage] = useState(null);
   const [appLogoImageUrl, setAppLogoImageUrl] = useState(null);
   const [uploadingAppLogo, setUploadingAppLogo] = useState(false);
-
-  // Button icons state
-  const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
-  const [uploadingButtonIcon, setUploadingButtonIcon] = useState(null);
-  const buttonIconSaveTimeoutsRef = useRef({});
-  // Custom drag & drop order for the Button-Icons rows (array of icon keys); empty = default order
-  const [buttonIconOrder, setButtonIconOrder] = useState([]);
 
   // Timeline bubble icon state
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
@@ -572,8 +415,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       const faviconTxt = await getFaviconText();
       const appLogoImg = await getAppLogoImage();
       const appLogoUrl = await getAppLogoImageUrl();
-      const icons = await getButtonIcons();
-      const iconOrder = await getButtonIconsOrder();
       const catImages = await getCategoryImages();
       const timelineIcon = await getTimelineBubbleIcon();
       const timelineMenuIcon = await getTimelineMenuBubbleIcon();
@@ -596,8 +437,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       setFaviconText(faviconTxt);
       setAppLogoImage(appLogoImg);
       setAppLogoImageUrl(appLogoUrl);
-      setButtonIcons({ ...DEFAULT_BUTTON_ICONS, ...icons });
-      setButtonIconOrder(iconOrder);
       setTimelineBubbleIcon(timelineIcon);
       setTimelineMenuBubbleIcon(timelineMenuIcon);
       setTimelineCookEventBubbleIcon(timelineCookEventIcon);
@@ -637,14 +476,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     resizeInspirationTextarea(inspirationListDescriptionRef.current);
     resizeInspirationTextarea(inspirationTargetListDescriptionRef.current);
   }, [inspirationListDescription, inspirationTargetListDescription, resizeInspirationTextarea]);
-
-  // Cleanup pending button icon save timeouts on unmount
-  useEffect(() => {
-    const timeouts = buttonIconSaveTimeoutsRef.current;
-    return () => {
-      Object.values(timeouts).forEach(clearTimeout);
-    };
-  }, []);
 
   // Subscribe to FAQs for real-time updates
   useEffect(() => {
@@ -1299,12 +1130,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     })
   );
 
-  // Effective row order for the Button-Icons list, applying the saved drag & drop order
-  const orderedButtonIconRows = useMemo(
-    () => getOrderedButtonIconRows(buttonIconOrder),
-    [buttonIconOrder]
-  );
-
   // Drag and drop handlers
   const handleDragEndCuisineTypes = (event) => {
     const { active, over } = event;
@@ -1388,22 +1213,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
         };
       });
     }
-  };
-
-  const handleDragEndButtonIcons = (event) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const currentKeys = orderedButtonIconRows.map((row) => row.key);
-    const oldIndex = currentKeys.indexOf(active.id);
-    const newIndex = currentKeys.indexOf(over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-
-    const newOrder = arrayMove(currentKeys, oldIndex, newIndex);
-    setButtonIconOrder(newOrder);
-    saveButtonIconsOrder(newOrder).catch((error) => {
-      console.error('Fehler beim Speichern der Button-Icon-Reihenfolge:', error);
-    });
   };
 
   // Category image handlers
@@ -1535,72 +1344,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
 
   const handleRemoveAppLogo = () => {
     setAppLogoImage(null);
-  };
-
-  // Button icon image handlers
-  const handleButtonIconImageUpload = async (iconKey, e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setUploadingButtonIcon(iconKey);
-
-    try {
-      const base64 = await fileToBase64(file);
-      const compressedBase64 = await compressImage(base64);
-
-      // Update local state immediately (optimistic update)
-      setButtonIcons({ ...buttonIcons, [iconKey]: compressedBase64 });
-
-      // Save to Firestore immediately (incremental save)
-      await saveButtonIcon(iconKey, compressedBase64);
-    } catch (error) {
-      alert(`Fehler beim Speichern des Icons: ${error.message}`);
-      // Revert local state on error
-      setButtonIcons(prev => ({ ...prev, [iconKey]: DEFAULT_BUTTON_ICONS[iconKey] }));
-    } finally {
-      setUploadingButtonIcon(null);
-    }
-  };
-
-  const handleRemoveButtonIconImage = async (iconKey) => {
-    const defaultValue = DEFAULT_BUTTON_ICONS[iconKey];
-    setButtonIcons({ ...buttonIcons, [iconKey]: defaultValue });
-
-    try {
-      await saveButtonIcon(iconKey, defaultValue);
-    } catch (error) {
-      alert(`Fehler beim Zurücksetzen des Icons: ${error.message}`);
-    }
-  };
-
-  const handleResetButtonIcon = async (iconKey) => {
-    const defaultValue = DEFAULT_BUTTON_ICONS[iconKey];
-    setButtonIcons(prev => ({ ...prev, [iconKey]: defaultValue }));
-
-    try {
-      await saveButtonIcon(iconKey, defaultValue);
-    } catch (error) {
-      alert(`Fehler beim Zurücksetzen des Icons: ${error.message}`);
-    }
-  };
-
-  const handleButtonIconTextChange = async (iconKey, value) => {
-    // Update local state immediately
-    setButtonIcons(prev => ({ ...prev, [iconKey]: value }));
-
-    // Debounce per icon: Save after 1 second of no typing for this specific icon
-    if (buttonIconSaveTimeoutsRef.current[iconKey]) {
-      clearTimeout(buttonIconSaveTimeoutsRef.current[iconKey]);
-    }
-
-    buttonIconSaveTimeoutsRef.current[iconKey] = setTimeout(async () => {
-      delete buttonIconSaveTimeoutsRef.current[iconKey];
-      try {
-        await saveButtonIcon(iconKey, value);
-      } catch (error) {
-        alert(`Fehler beim Speichern des Icons: ${error.message}`);
-      }
-    }, 1000);
   };
 
   // Timeline bubble icon handlers
@@ -1963,37 +1706,18 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
             </div>
 
             <div className="settings-section">
-              <h3>Button-Icons</h3>
+              <h3>Zeitleisten-Icons</h3>
               <p className="section-description">
-                Wählen Sie für jeden Button das Normal- und optional eine Darkmode-Variante.
-                Unterstützte Formate: Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB).
-                Ist keine Dunkelmodusvariante gespeichert, wird das normale Icon auch im Dunkelmodus angezeigt.
+                Icons für die Sprechblasen in der Zeitleiste (Rezepte, Menüs, Kochereignisse).
+                Unterstützte Formate: PNG, JPG, SVG, max. 5MB.
               </p>
               <div className="dark-icon-config">
                 <div className="dark-icon-header-row">
                   <span className="dark-icon-col-handle" aria-hidden="true"></span>
-                  <span className="dark-icon-col-label">Button</span>
-                  <span className="dark-icon-col-normal">Normal</span>
+                  <span className="dark-icon-col-label">Element</span>
+                  <span className="dark-icon-col-normal">Icon</span>
                   <span className="dark-icon-col-dark">Dunkel-Variante</span>
                 </div>
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndButtonIcons}>
-                  <SortableContext items={orderedButtonIconRows.map(({ key }) => key)} strategy={verticalListSortingStrategy}>
-                    {orderedButtonIconRows.map(({ key, label }) => (
-                      <SortableButtonIconRow
-                        key={key}
-                        id={key}
-                        label={label}
-                        darkKey={key + 'Dark'}
-                        buttonIcons={buttonIcons}
-                        uploadingButtonIcon={uploadingButtonIcon}
-                        onTextChange={handleButtonIconTextChange}
-                        onImageUpload={handleButtonIconImageUpload}
-                        onRemoveImage={handleRemoveButtonIconImage}
-                        onReset={handleResetButtonIcon}
-                      />
-                    ))}
-                  </SortableContext>
-                </DndContext>
                 {timelineBubbleIconRows.map(({ label, icon, uploading, onChange, onRemove, fileId }) => (
                   <div className="dark-icon-row" key={fileId}>
                     <span className="dark-icon-col-label">{label}</span>

@@ -1,7 +1,6 @@
-// Canonical list of every Button-Icon row (used by both the legacy flat
-// Settings > Allgemein table and the grouped Button-Icons admin tab), plus
-// the logic to merge "normal" / "aktiv" pairs into one row and to bucket
-// them into default groups for the grouped view.
+// Canonical list of every Button-Icon row (used by the grouped Button-Icons
+// admin tab), plus the logic to merge "normal" / "aktiv" pairs into one row
+// and to bucket them into default groups for the grouped view.
 //
 // Icon values themselves always live in the `buttonIcons` Firestore
 // collection (see src/utils/customLists.js) as flat `key` -> value docs.
@@ -10,13 +9,11 @@
 
 export const DARK_MODE_ICON_ROWS = [
   { key: 'cookingMode', label: 'Kochmodus-Button' },
-  { key: 'cookingModeAlt', label: 'Kochmodus-Alt (helles Bild oben links)' },
   { key: 'cookingModeDefaultImg', label: 'Kochmodus-Button (Standard-Kategoriebild)' },
   { key: 'importRecipe', label: 'Import-Button' },
   { key: 'scanImage', label: 'Bild-scannen-Button' },
   { key: 'webImport', label: 'Web-Import-Button' },
   { key: 'closeButton', label: 'Schließen-Button' },
-  { key: 'closeButtonAlt', label: 'Schließen-Alt (helles Bild oben rechts)' },
   { key: 'closeButtonDefaultImg', label: 'Schließen-Button (Allgemein)' },
   { key: 'filterButton', label: 'Filter-Button' },
   { key: 'filterButtonActive', label: 'Filter-Button (aktiv)' },
@@ -78,26 +75,6 @@ export const DARK_MODE_ICON_ROWS = [
 ];
 
 /**
- * Applies a saved drag & drop order (array of icon keys) to DARK_MODE_ICON_ROWS.
- * Keys from the saved order that still exist are placed first in that order;
- * any rows not yet present in the saved order (e.g. newly added icons) are
- * appended afterwards in their built-in default order.
- */
-export function getOrderedButtonIconRows(order) {
-  if (!order || order.length === 0) return DARK_MODE_ICON_ROWS;
-
-  const rowsByKey = new Map(DARK_MODE_ICON_ROWS.map((row) => [row.key, row]));
-  const ordered = order
-    .map((key) => rowsByKey.get(key))
-    .filter(Boolean);
-
-  const orderedKeys = new Set(ordered.map((row) => row.key));
-  const remaining = DARK_MODE_ICON_ROWS.filter((row) => !orderedKeys.has(row.key));
-
-  return [...ordered, ...remaining];
-}
-
-/**
  * Merges "<key>" / "<key>Active" pairs from DARK_MODE_ICON_ROWS into single
  * rows carrying all four variant keys (light normal/active, dark normal/active).
  * Rows without a matching "Active" counterpart keep `activeKey`/`darkActiveKey`
@@ -127,10 +104,10 @@ export function mergeButtonIconRowDefs() {
 // Button-Icons admin tab. Purely organisational - editable/reorderable by
 // admins afterwards via `buttonIconGroups` (see customLists.js).
 const BUTTON_ICON_GROUP_DEFS = [
-  { id: 'g-kochmodus', name: 'Kochmodus', keys: ['cookingMode', 'cookingModeAlt', 'cookingModeDefaultImg'] },
+  { id: 'g-kochmodus', name: 'Kochmodus', keys: ['cookingMode', 'cookingModeDefaultImg'] },
   { id: 'g-trend-kacheln', name: 'Trend-Kacheln', keys: ['trendingDifficultyIcon', 'trendingTimeIcon'] },
   { id: 'g-import', name: 'Import & Erfassung', keys: ['importRecipe', 'scanImage', 'webImport'] },
-  { id: 'g-allgemein', name: 'Allgemeine Aktionen', keys: ['closeButton', 'closeButtonAlt', 'closeButtonDefaultImg', 'filterButton', 'addRecipe', 'editRecipe', 'saveRecipe', 'copyLink'] },
+  { id: 'g-allgemein', name: 'Allgemeine Aktionen', keys: ['closeButton', 'closeButtonDefaultImg', 'filterButton', 'addRecipe', 'editRecipe', 'saveRecipe', 'copyLink'] },
   { id: 'g-rezept-details', name: 'Rezept-Details', keys: ['nutritionEmpty', 'nutritionFilled', 'nutritionRecalc', 'ratingHeartEmpty', 'ratingHeartEmptyModal', 'ratingHeartFilled', 'cookDate', 'printRecipe', 'publishRecipe', 'deleteRecipe', 'newVersion', 'recipeSourceLink', 'addImage', 'resetThumbnail'] },
   { id: 'g-rezeptformular', name: 'Rezeptformular', keys: ['swipeRight', 'swipeLeft', 'swipeUp', 'swipeDelete', 'addSection', 'recipeCardSwipeRight', 'addPrivateRecipe'] },
   { id: 'g-einkaufsliste', name: 'Einkaufsliste', keys: ['shoppingList', 'listSettings', 'bringButton'] },

@@ -26,8 +26,6 @@ import {
   getButtonIcons,
   saveButtonIcons,
   saveButtonIcon,
-  getButtonIconsOrder,
-  saveButtonIconsOrder,
   DEFAULT_BUTTON_ICONS,
   getEffectiveIcon,
   DEFAULT_AI_RECIPE_PROMPT,
@@ -1116,45 +1114,3 @@ describe('button icon dark-mode resolution', () => {
   });
 });
 
-describe('button icons order', () => {
-  test('getButtonIconsOrder returns an empty array when nothing is stored', async () => {
-    getDoc.mockResolvedValue({ exists: () => false, data: () => ({}) });
-
-    const order = await getButtonIconsOrder();
-
-    expect(order).toEqual([]);
-  });
-
-  test('getButtonIconsOrder returns the stored order from Firestore', async () => {
-    getDoc.mockResolvedValue({
-      exists: () => true,
-      data: () => ({ buttonIconsOrder: ['deleteRecipe', 'cookingMode'] }),
-    });
-
-    const order = await getButtonIconsOrder();
-
-    expect(order).toEqual(['deleteRecipe', 'cookingMode']);
-  });
-
-  test('saveButtonIconsOrder persists the order to settings/app and updates the cache', async () => {
-    updateDoc.mockResolvedValue(undefined);
-    getDoc.mockResolvedValue({
-      exists: () => true,
-      data: () => ({ buttonIconsOrder: [] }),
-    });
-
-    // Prime the settings cache
-    await getSettings();
-
-    const newOrder = ['cookingMode', 'deleteRecipe', 'importRecipe'];
-    await saveButtonIconsOrder(newOrder);
-
-    expect(updateDoc).toHaveBeenCalledWith(
-      expect.objectContaining({ path: 'settings/app' }),
-      { buttonIconsOrder: newOrder }
-    );
-
-    const settings = await getSettings();
-    expect(settings.buttonIconsOrder).toEqual(newOrder);
-  });
-});
