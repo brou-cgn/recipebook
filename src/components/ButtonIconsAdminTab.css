@@ -100,7 +100,7 @@
 .bia-header-row,
 .bia-row-content {
   display: grid;
-  grid-template-columns: 34px minmax(260px, 620px) 76px 76px 20px 76px 76px;
+  grid-template-columns: 34px minmax(260px, 620px) 76px 76px 20px 76px 76px 28px;
   gap: 10px;
   align-items: center;
 }
@@ -265,6 +265,38 @@
 
 .bia-slot-col { display: flex; justify-content: center; }
 .bia-col-sep { display: flex; justify-content: center; color: #dcd8d1; font-size: 13px; }
+
+/* Kulinarik-Typen rows only (see CLAUDE.md: DeleteRowButton, desktop only -
+   mobile uses the left-swipe gesture above via useSwipeToDelete instead). */
+.bia-row-delete-btn { display: none; }
+@media (min-width: 721px) {
+  .bia-row-delete-btn { display: inline-flex; }
+}
+
+/* ---- Kulinarik-Typen: manually add a row ---- */
+
+.bia-cuisine-add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: #fbfaf7;
+  border-top: 1px solid #f0eee8;
+  flex-wrap: wrap;
+}
+
+.bia-cuisine-add-select {
+  height: 34px;
+  min-width: 200px;
+  border: 1px solid #dcd8d1;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 10px;
+  font-size: 13px;
+  color: #23211e;
+  font-family: inherit;
+}
+.bia-cuisine-add-select:focus { outline: 2px solid #402C1C; outline-offset: 1px; }
 
 .bia-slot {
   width: 64px;
@@ -554,6 +586,9 @@
 [data-theme="dark"] .bia-empty-group.bia-drop-over { background: rgba(255, 255, 255, 0.06); color: #f2f0ec; }
 [data-theme="dark"] .bia-footer { background: #202226; }
 [data-theme="dark"] .bia-legend { color: #7d838c; }
+
+[data-theme="dark"] .bia-cuisine-add-row { background: #202226; border-color: #2a2d31; }
+[data-theme="dark"] .bia-cuisine-add-select { background: #23262a; border-color: #3a3d42; color: #f2f0ec; }
 
 [data-theme="dark"] .bia-modal { background: #1d1f23; }
 [data-theme="dark"] .bia-modal-header,
