@@ -126,6 +126,14 @@ jobs:
               continue
             fi
 
+            if echo "$deploy_output" | grep -Fiq "Failed to list functions"; then
+              if [ "$attempt" -lt "$max_attempts" ]; then
+                echo "Firebase failed to list functions (transient API error). Retrying in 15s..."
+                sleep 15
+                continue
+              fi
+            fi
+
             if echo "$deploy_output" | grep -Eiq "HTTP Error: 503|Service Unavailable"; then
               if [ "$attempt" -lt "$max_attempts" ]; then
                 case "$attempt" in
