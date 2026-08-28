@@ -306,7 +306,8 @@ Füge im Kurzbefehl eine **„Inhalt von URL laden"** Aktion hinzu und konfiguri
     "Pasta zum Guanciale geben, von der Hitze nehmen.",
     "Ei-Käse-Mischung unterrühren, mit Nudelwasser cremig rühren und sofort servieren."
   ],
-  "notizen": "Pfanne unbedingt von der Hitze nehmen, bevor die Eier hinzugefügt werden."
+  "notizen": "Pfanne unbedingt von der Hitze nehmen, bevor die Eier hinzugefügt werden.",
+  "pin": "<dein Webimport-PIN>"
 }
 ```
 
@@ -324,6 +325,9 @@ Füge im Kurzbefehl eine **„Inhalt von URL laden"** Aktion hinzu und konfiguri
 | `kulinarik` | `cuisine`, `kulinarisch` | string \| string[] | – |
 | `tags` | – | string \| string[] | – |
 | `notizen` | `notes` | string | – |
+| `pin` | – | string | nur, wenn Webimport-PIN eingerichtet |
+
+Das Feld `pin` ist nur nötig, wenn du im Hamburger-Menü unter „Kurzbefehl installieren" einen Webimport-PIN vergeben hast – ohne `pin` schlägt der Aufruf dann mit HTTP 403 fehl. Ohne eingerichteten PIN kannst du das Feld einfach weglassen.
 
 ---
 
@@ -371,7 +375,7 @@ So ersetzt du den bisherigen „Notiz erstellen"-Schritt durch einen direkten Im
 
 | Feld | Wert |
 |------|------|
-| URL | `https://us-central1-<PROJECT-ID>.cloudfunctions.net/getRecipeOptionsShortcut` |
+| URL | `https://us-central1-<PROJECT-ID>.cloudfunctions.net/getRecipeOptionsShortcut` (bzw. `?pin=<dein Webimport-PIN>` anhängen, falls eingerichtet) |
 | Methode | `GET` |
 
 **Headers:**
@@ -380,6 +384,8 @@ So ersetzt du den bisherigen „Notiz erstellen"-Schritt durch einen direkten Im
 |------|------|
 | `X-Api-Key` | `<dein-api-key>` |
 | `X-User-Email` | `<deine-e-mail-adresse>` |
+
+Da ein GET-Request keinen Body hat, wandert der PIN hier – anders als bei den übrigen Endpunkten – als Query-Parameter `?pin=...` an die URL, nicht als JSON-Feld. Ohne eingerichteten Webimport-PIN einfach weglassen.
 
 **Antwort (HTTP 200):**
 
