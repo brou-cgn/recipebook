@@ -2490,6 +2490,7 @@ export async function saveButtonIconGroups(buttonIconGroups) {
 
     if (settingsCache) {
       settingsCache.buttonIconGroups = buttonIconGroups;
+      saveSettingsToLocalStorageCache(settingsCache);
     }
   } catch (error) {
     console.error('Error saving buttonIconGroups:', error);
