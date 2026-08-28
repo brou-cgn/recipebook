@@ -4,7 +4,7 @@
 import { db } from '../firebase';
 import { doc, getDoc, getDocs, setDoc, updateDoc, deleteField, collection, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { normalizeNutritionReferenceId } from './nutritionReferenceUtils';
-import { getDefaultButtonIconGroups } from './buttonIconRows';
+import { getDefaultButtonIconGroups, reconcileButtonIconGroups } from './buttonIconRows';
 
 export const DEFAULT_CUISINE_TYPES = [
   'Deutsche Küche',
@@ -2475,7 +2475,8 @@ export async function getButtonIconGroups() {
   const settings = await getSettings();
   const saved = settings.buttonIconGroups;
   if (saved && Array.isArray(saved.groups)) {
-    return { groups: saved.groups, hiddenRowKeys: Array.isArray(saved.hiddenRowKeys) ? saved.hiddenRowKeys : [] };
+    const hiddenRowKeys = Array.isArray(saved.hiddenRowKeys) ? saved.hiddenRowKeys : [];
+    return { groups: reconcileButtonIconGroups(saved.groups, hiddenRowKeys), hiddenRowKeys };
   }
   return getDefaultButtonIconGroups();
 }

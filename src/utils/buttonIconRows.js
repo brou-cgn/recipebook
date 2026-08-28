@@ -174,3 +174,32 @@ export function getDefaultButtonIconGroups() {
 
   return { groups, hiddenRowKeys: [] };
 }
+
+/**
+ * Reconciles a saved `buttonIconGroups.groups` structure against the current
+ * set of merged rows. A saved structure only ever contains the rows that
+ * existed when it was last written, so a row added to DARK_MODE_ICON_ROWS
+ * afterwards (e.g. a newly migrated setting) would otherwise silently
+ * disappear from the grouped Button-Icons admin view for anyone who already
+ * customised their groups. Any such missing row (not hidden, not already
+ * placed in a group) is appended to a "Sonstiges" catch-all group - reusing
+ * one that already exists, or creating it.
+ * @param {Array<{id:string,name:string,rowKeys:Array<{key:string,label:string}>}>} groups
+ * @param {string[]} hiddenRowKeys
+ * @returns {Array<{id:string,name:string,rowKeys:Array<{key:string,label:string}>}>}
+ */
+export function reconcileButtonIconGroups(groups, hiddenRowKeys) {
+  const rowsByKey = new Map(mergeButtonIconRowDefs().map((r) => [r.key, r]));
+  const placed = new Set(hiddenRowKeys);
+  groups.forEach((g) => g.rowKeys.forEach((r) => placed.add(r.key)));
+
+  const missing = [...rowsByKey.values()].filter((r) => !placed.has(r.key));
+  if (missing.length === 0) return groups;
+
+  const missingEntries = missing.map((r) => ({ key: r.key, label: r.label }));
+  const existingIdx = groups.findIndex((g) => g.id === 'g-sonstiges');
+  if (existingIdx > -1) {
+    return groups.map((g, i) => (i === existingIdx ? { ...g, rowKeys: [...g.rowKeys, ...missingEntries] } : g));
+  }
+  return [...groups, { id: 'g-sonstiges', name: 'Sonstiges', rowKeys: missingEntries }];
+}
