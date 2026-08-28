@@ -99,7 +99,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [cookingModeIcon, setCookingModeIcon] = useState('♨');
-  const [cookingModeAltIcon, setCookingModeAltIcon] = useState('♨');
   const [cookingModeDefaultImgIcon, setCookingModeDefaultImgIcon] = useState('♨');
   const [closeButtonIcon, setCloseButtonIcon] = useState('×');
   const [closeButtonAltIcon, setCloseButtonAltIcon] = useState('×');
@@ -191,7 +190,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       const currentDarkMode = getDarkModePreference();
       const eff = (key) => getEffectiveIcon(icons, key, currentDarkMode);
       setCookingModeIcon(eff('cookingMode') || '♨');
-      setCookingModeAltIcon(eff('cookingModeAlt') || eff('cookingMode') || '♨');
       setCookingModeDefaultImgIcon(eff('cookingModeDefaultImg') || eff('cookingMode') || '♨');
       setCloseButtonIcon(eff('closeButton') || '×');
       setCloseButtonAltIcon(eff('closeButtonAlt') || eff('closeButton') || '×');
@@ -240,7 +238,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   useEffect(() => {
     const eff = (key) => getEffectiveIcon(allButtonIcons, key, isDarkMode);
     setCookingModeIcon(eff('cookingMode') || '♨');
-    setCookingModeAltIcon(eff('cookingModeAlt') || eff('cookingMode') || '♨');
     setCookingModeDefaultImgIcon(eff('cookingModeDefaultImg') || eff('cookingMode') || '♨');
     setCloseButtonIcon(eff('closeButton') || '×');
     setCloseButtonAltIcon(eff('closeButtonAlt') || eff('closeButton') || '×');
@@ -2275,12 +2272,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         onContextMenu={(e) => e.preventDefault()}
                         aria-label="Kochmodus aktivieren"
                       >
-                        {/* Use default-category-image icon when the displayed image is a category image,
-                            otherwise fall back to alt icon for bright corners or the normal icon */}
+                        {/* Use the default-category-image icon whenever the displayed image is a
+                            category image or has a bright corner, otherwise the normal icon */}
                         {(() => {
-                          const icon = isDefaultCategoryImage
+                          const icon = (isDefaultCategoryImage || useCookingModeAlt)
                             ? cookingModeDefaultImgIcon
-                            : (useCookingModeAlt ? cookingModeAltIcon : cookingModeIcon);
+                            : cookingModeIcon;
                           return isBase64Image(icon)
                             ? <img src={icon} alt="Kochmodus" className="overlay-cooking-mode-icon-img" />
                             : <span>{icon}</span>;
