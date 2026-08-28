@@ -1576,19 +1576,17 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
             <div className="menu-photo-upload-wrap">
               <label
                 htmlFor="menuImageFile"
-                className={`menu-photo-upload-btn${uploadingMenuImage ? ' uploading' : ''}`}
-                title="Foto hochladen"
-                aria-label="Foto hochladen"
+                className="menu-photo-upload-btn"
+                title={uploadingMenuImage ? 'Hochladen...' : 'Foto hochladen'}
               >
-                {isBase64Image(getEffectiveIcon(buttonIcons, 'menuPhotoUpload', isDarkMode)) ? (
+                {isBase64Image(getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)) ? (
                   <img
-                    src={getEffectiveIcon(buttonIcons, 'menuPhotoUpload', isDarkMode)}
-                    alt=""
-                    className="button-icon-image"
-                    draggable="false"
+                    src={getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)}
+                    alt="Foto hochladen"
+                    className="button-icon-img menu-photo-upload-icon-img"
                   />
                 ) : (
-                  getEffectiveIcon(buttonIcons, 'menuPhotoUpload', isDarkMode)
+                  getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)
                 )}
               </label>
             </div>
