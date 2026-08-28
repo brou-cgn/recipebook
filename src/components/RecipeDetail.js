@@ -99,10 +99,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [cookingModeIcon, setCookingModeIcon] = useState('♨');
-  const [cookingModeAltIcon, setCookingModeAltIcon] = useState('♨');
   const [cookingModeDefaultImgIcon, setCookingModeDefaultImgIcon] = useState('♨');
+  // Light-mode variant of the default-category-image icon, forced regardless of the
+  // app's current dark mode setting - bright recipe images always show this one.
+  const [cookingModeDefaultImgLightIcon, setCookingModeDefaultImgLightIcon] = useState('♨');
   const [closeButtonIcon, setCloseButtonIcon] = useState('×');
-  const [closeButtonAltIcon, setCloseButtonAltIcon] = useState('×');
+  // Icon used for the close button over bright recipe images: always the
+  // light-mode "Schließen (Allgemein)" icon, regardless of app dark/light mode.
+  const [closeButtonBrightImgIcon, setCloseButtonBrightImgIcon] = useState('×');
   const [closeButtonDefaultImgIcon, setCloseButtonDefaultImgIcon] = useState('×');
   // Whether to use alt icons due to bright image corners
   const [useCookingModeAlt, setUseCookingModeAlt] = useState(false);
@@ -190,11 +194,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       // the initial text/emoji placeholders.
       const currentDarkMode = getDarkModePreference();
       const eff = (key) => getEffectiveIcon(icons, key, currentDarkMode);
+      const effLight = (key) => getEffectiveIcon(icons, key, false);
       setCookingModeIcon(eff('cookingMode') || '♨');
-      setCookingModeAltIcon(eff('cookingModeAlt') || eff('cookingMode') || '♨');
       setCookingModeDefaultImgIcon(eff('cookingModeDefaultImg') || eff('cookingMode') || '♨');
+      setCookingModeDefaultImgLightIcon(effLight('cookingModeDefaultImg') || effLight('cookingMode') || '♨');
       setCloseButtonIcon(eff('closeButton') || '×');
-      setCloseButtonAltIcon(eff('closeButtonAlt') || eff('closeButton') || '×');
+      setCloseButtonBrightImgIcon(getEffectiveIcon(icons, 'closeButton', false) || '×');
       setCloseButtonDefaultImgIcon(eff('closeButtonDefaultImg') || eff('closeButton') || '×');
       setCopyLinkIcon(eff('copyLink') || 'Link');
       setNutritionEmptyIcon(normalizeNutritionEmptyIcon(eff('nutritionEmpty')));
@@ -239,11 +244,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Re-compute individual icon states when icons or dark mode changes
   useEffect(() => {
     const eff = (key) => getEffectiveIcon(allButtonIcons, key, isDarkMode);
+    const effLight = (key) => getEffectiveIcon(allButtonIcons, key, false);
     setCookingModeIcon(eff('cookingMode') || '♨');
-    setCookingModeAltIcon(eff('cookingModeAlt') || eff('cookingMode') || '♨');
     setCookingModeDefaultImgIcon(eff('cookingModeDefaultImg') || eff('cookingMode') || '♨');
+    setCookingModeDefaultImgLightIcon(effLight('cookingModeDefaultImg') || effLight('cookingMode') || '♨');
     setCloseButtonIcon(eff('closeButton') || '×');
-    setCloseButtonAltIcon(eff('closeButtonAlt') || eff('closeButton') || '×');
+    setCloseButtonBrightImgIcon(getEffectiveIcon(allButtonIcons, 'closeButton', false) || '×');
     setCloseButtonDefaultImgIcon(eff('closeButtonDefaultImg') || eff('closeButton') || '×');
     setCopyLinkIcon(eff('copyLink') || 'Link');
     setNutritionEmptyIcon(normalizeNutritionEmptyIcon(eff('nutritionEmpty')));
@@ -2275,12 +2281,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         onContextMenu={(e) => e.preventDefault()}
                         aria-label="Kochmodus aktivieren"
                       >
-                        {/* Use default-category-image icon when the displayed image is a category image,
-                            otherwise fall back to alt icon for bright corners or the normal icon */}
+                        {/* Use the default-category-image icon when the displayed image is a
+                            category image (respects dark mode); for bright image corners always
+                            use its light-mode variant, regardless of the app's dark mode setting;
+                            otherwise the normal icon */}
                         {(() => {
                           const icon = isDefaultCategoryImage
                             ? cookingModeDefaultImgIcon
-                            : (useCookingModeAlt ? cookingModeAltIcon : cookingModeIcon);
+                            : (useCookingModeAlt ? cookingModeDefaultImgLightIcon : cookingModeIcon);
                           return isBase64Image(icon)
                             ? <img src={icon} alt="Kochmodus" className="overlay-cooking-mode-icon-img" />
                             : <span>{icon}</span>;
@@ -2292,11 +2300,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         title="Zurück"
                       >
                         {/* Use default-category-image icon when the displayed image is a category image,
-                            otherwise fall back to alt icon for bright corners or the normal icon */}
+                            otherwise use the "Schließen (Allgemein)" light-mode icon for bright corners
+                            (regardless of app dark/light mode), or the normal icon */}
                         {(() => {
                           const icon = isDefaultCategoryImage
                             ? closeButtonDefaultImgIcon
-                            : (useCloseButtonAlt ? closeButtonAltIcon : closeButtonIcon);
+                            : (useCloseButtonAlt ? closeButtonBrightImgIcon : closeButtonIcon);
                           return isBase64Image(icon)
                             ? <img src={icon} alt="Schließen" className="close-button-icon-img" />
                             : icon;

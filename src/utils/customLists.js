@@ -711,16 +711,13 @@ Extrahiere nun alle sichtbaren Informationen aus dem Bild genau nach diesem Sche
 // Default button icons (emoji icons)
 export const DEFAULT_BUTTON_ICONS = {
   cookingMode: '♨',
-  // Alt icon shown when the top-left image corner is too bright (high luminance)
-  cookingModeAlt: '♨',
-  // Icon shown when the recipe uses the default category image (light mode)
+  // Icon shown when the recipe uses the default category image, or when the
+  // displayed image has a bright corner (light mode)
   cookingModeDefaultImg: '♨',
   importRecipe: 'Import',
   scanImage: 'Scan',
   webImport: 'Web',
   closeButton: '×',
-  // Alt icon shown when the top-right image corner is too bright (high luminance)
-  closeButtonAlt: '×',
   // Icon shown when the recipe uses the default category image (light mode)
   closeButtonDefaultImg: '×',
   filterButton: '⚙',
@@ -789,14 +786,12 @@ export const DEFAULT_BUTTON_ICONS = {
   trendingDifficultyIconDark: '',
   trendingTimeIconDark: '',
   cookingModeDark: '',
-  cookingModeAltDark: '',
   // Dark mode variant for the default category image icon
   cookingModeDefaultImgDark: '',
   importRecipeDark: '',
   scanImageDark: '',
   webImportDark: '',
   closeButtonDark: '',
-  closeButtonAltDark: '',
   // Dark mode variant for the default category image icon
   closeButtonDefaultImgDark: '',
   filterButtonDark: '',
@@ -857,10 +852,6 @@ export const DEFAULT_BUTTON_ICONS = {
   bottomNavAtelierActiveDark: '',
   bottomNavChefActiveDark: '',
 };
-
-// Default (empty) custom order for the button icons list – an empty array means
-// "use the built-in DARK_MODE_ICON_ROWS order defined in Settings.js".
-export const DEFAULT_BUTTON_ICONS_ORDER = [];
 
 /**
  * Returns the effective icon for a given key, respecting dark mode.
@@ -1177,7 +1168,6 @@ export async function getSettings() {
         inspirationTargetListName: settings.inspirationTargetListName ?? DEFAULT_INSPIRATION_TARGET_LIST_NAME,
         inspirationTargetListDescription: settings.inspirationTargetListDescription ?? DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION,
         printFormats: settings.printFormats || DEFAULT_PRINT_FORMATS,
-        buttonIconsOrder: settings.buttonIconsOrder ?? DEFAULT_BUTTON_ICONS_ORDER,
         // Image data from settings/images
         faviconImage: imagesData.faviconImage || null,
         appLogoImage: imagesData.appLogoImage || null,
@@ -1229,7 +1219,6 @@ export async function getSettings() {
       inspirationTargetListName: DEFAULT_INSPIRATION_TARGET_LIST_NAME,
       inspirationTargetListDescription: DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION,
       printFormats: DEFAULT_PRINT_FORMATS,
-      buttonIconsOrder: DEFAULT_BUTTON_ICONS_ORDER,
     };
 
     // Create the settings/app document with text config only
@@ -1298,7 +1287,6 @@ export async function getSettings() {
       inspirationTargetListName: DEFAULT_INSPIRATION_TARGET_LIST_NAME,
       inspirationTargetListDescription: DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION,
       printFormats: DEFAULT_PRINT_FORMATS,
-      buttonIconsOrder: DEFAULT_BUTTON_ICONS_ORDER,
     };
   }
 }
@@ -2431,44 +2419,11 @@ export async function saveStartseitenKandidatenLeertext(text) {
 }
 
 /**
- * Get the custom row order for the Button-Icons list in Settings.
- * An empty array means no custom order has been saved yet – the caller should
- * fall back to its own built-in default order.
- * @returns {Promise<string[]>} Promise resolving to an array of icon keys
- */
-export async function getButtonIconsOrder() {
-  const settings = await getSettings();
-  return Array.isArray(settings.buttonIconsOrder) ? settings.buttonIconsOrder : DEFAULT_BUTTON_ICONS_ORDER;
-}
-
-/**
- * Save the custom row order for the Button-Icons list in Settings.
- * @param {string[]} order - Ordered array of icon keys
- * @returns {Promise<void>}
- */
-export async function saveButtonIconsOrder(order) {
-  try {
-    const settingsRef = doc(db, 'settings', 'app');
-    await updateDoc(settingsRef, { buttonIconsOrder: order });
-
-    // Update cache
-    if (settingsCache) {
-      settingsCache.buttonIconsOrder = order;
-    }
-  } catch (error) {
-    console.error('Error saving buttonIconsOrder:', error);
-    throw error;
-  }
-}
-
-/**
  * Get the grouped/reordered structure for the redesigned Button-Icons admin
  * tab (see ButtonIconsAdminTab.js). This is purely organisational metadata -
  * which merged rows belong to which named group, in what order, and which
  * rows an admin has hidden from this curated view. It never touches the
- * underlying icon values (buttonIcons collection) or the legacy flat
- * `buttonIconsOrder` used by the old Settings > Allgemein table, so both
- * views keep working independently (see README migration notes).
+ * underlying icon values themselves (buttonIcons collection).
  * @returns {Promise<{groups: Array<{id:string,name:string,rowKeys:Array<{key:string,label:string}>}>, hiddenRowKeys: string[]}>}
  */
 export async function getButtonIconGroups() {
@@ -2492,6 +2447,7 @@ export async function saveButtonIconGroups(buttonIconGroups) {
 
     if (settingsCache) {
       settingsCache.buttonIconGroups = buttonIconGroups;
+      saveSettingsToLocalStorageCache(settingsCache);
     }
   } catch (error) {
     console.error('Error saving buttonIconGroups:', error);

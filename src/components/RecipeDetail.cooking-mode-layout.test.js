@@ -51,7 +51,6 @@ jest.mock('../utils/customLists', () => ({
   addMissingConversionEntries: jest.fn(() => Promise.resolve()),
   DEFAULT_BUTTON_ICONS: {
     cookingMode: '👨‍🍳',
-    cookingModeAlt: '👨‍🍳',
     importRecipe: '📥',
     scanImage: '📷',
     webImport: '🌐',
