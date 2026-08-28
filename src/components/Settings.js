@@ -7,7 +7,6 @@ import PrintPreview from './PrintPreview';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
 import { isCurrentUserAdmin, ROLES, getRolePermissions, canManageSeasonMatrix, canManageDrinkWeights } from '../utils/userManagement';
 import UserManagement from './UserManagement';
-import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
 import { fileToBase64, isBase64Image, compressImage } from '../utils/imageUtils';
 import { applyFaviconSettings } from '../utils/faviconUtils';
 import { uploadAppLogoToStorage, deleteAppLogoFromStorage } from '../utils/storageUtils';
@@ -244,7 +243,6 @@ function SortablePortionUnitItem({ id, unit, onRemove }) {
   );
 }
 
-const CATEGORY_ALREADY_ASSIGNED_ERROR ='Die folgenden Kategorien sind bereits einem anderen Bild zugeordnet: {categories}\n\nBitte wählen Sie andere Kategorien.';
 const STATUS_VALIDITY_HINT = 'Nach X Tagen erscheint das Rezept wieder im Stack. Leer = kein Ablaufdatum.';
 
 /**
@@ -307,12 +305,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [pendingCuisineDeletes, setPendingCuisineDeletes] = useState([]);
   const [pendingCategoryDeletes, setPendingCategoryDeletes] = useState([]);
   
-  // Category images state
-  const [categoryImages, setCategoryImages] = useState([]);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [editingImageId, setEditingImageId] = useState(null);
-  const [selectedCategories, setSelectedCategories] = useState([]);
-
   // Favicon state
   const [faviconImage, setFaviconImage] = useState(null);
   const [faviconText, setFaviconText] = useState('');
@@ -421,7 +413,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       const faviconTxt = await getFaviconText();
       const appLogoImg = await getAppLogoImage();
       const appLogoUrl = await getAppLogoImageUrl();
-      const catImages = await getCategoryImages();
       const timelineIcon = await getTimelineBubbleIcon();
       const timelineMenuIcon = await getTimelineMenuBubbleIcon();
       const timelineCookEventIcon = await getTimelineCookEventBubbleIcon();
@@ -438,7 +429,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       
       setLists(lists);
       setHeaderSlogan(slogan);
-      setCategoryImages(catImages);
       setFaviconImage(faviconImg);
       setFaviconText(faviconTxt);
       setAppLogoImage(appLogoImg);
@@ -1221,91 +1211,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     }
   };
 
-  // Category image handlers
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setUploadingImage(true);
-
-    try {
-      const base64 = await fileToBase64(file);
-      const compressedBase64 = await compressImage(base64);
-      
-      if (editingImageId) {
-        // Update existing image
-        await updateCategoryImage(editingImageId, { image: compressedBase64 });
-        const catImages = await getCategoryImages();
-        setCategoryImages(catImages);
-        setEditingImageId(null);
-      } else {
-        // Add new image with selected categories
-        const alreadyAssigned = await getAlreadyAssignedCategories(selectedCategories);
-        if (alreadyAssigned.length > 0) {
-          alert(CATEGORY_ALREADY_ASSIGNED_ERROR.replace('{categories}', alreadyAssigned.join(', ')));
-          setUploadingImage(false);
-          return;
-        }
-        
-        await addCategoryImage(compressedBase64, selectedCategories);
-        const catImages = await getCategoryImages();
-        setCategoryImages(catImages);
-        setSelectedCategories([]);
-      }
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-  const handleCategoryToggle = (category) => {
-    setSelectedCategories(prev => {
-      if (prev.includes(category)) {
-        return prev.filter(c => c !== category);
-      } else {
-        return [...prev, category];
-      }
-    });
-  };
-
-  const handleRemoveCategoryImage = async (imageId) => {
-    if (window.confirm('Möchten Sie dieses Bild wirklich entfernen?')) {
-      await removeCategoryImage(imageId);
-      const catImages = await getCategoryImages();
-      setCategoryImages(catImages);
-    }
-  };
-
-  const handleEditImageCategories = (imageId) => {
-    const image = categoryImages.find(img => img.id === imageId);
-    if (image) {
-      setEditingImageId(imageId);
-      setSelectedCategories([...image.categories]);
-    }
-  };
-
-  const handleSaveImageCategories = async () => {
-    if (!editingImageId) return;
-
-    const alreadyAssigned = await getAlreadyAssignedCategories(selectedCategories, editingImageId);
-    if (alreadyAssigned.length > 0) {
-      alert(CATEGORY_ALREADY_ASSIGNED_ERROR.replace('{categories}', alreadyAssigned.join(', ')));
-      return;
-    }
-
-    await updateCategoryImage(editingImageId, { categories: selectedCategories });
-    const catImages = await getCategoryImages();
-    setCategoryImages(catImages);
-    setEditingImageId(null);
-    setSelectedCategories([]);
-  };
-
-  const handleCancelEditCategories = () => {
-    setEditingImageId(null);
-    setSelectedCategories([]);
-  };
-
   // Favicon handlers
   const handleFaviconUpload = async (e) => {
     const file = e.target.files[0];
@@ -1769,149 +1674,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <div className="dark-icon-col-dark">
                       <span className="dark-icon-fallback" style={{ padding: '0.25rem 0.4rem' }}>–</span>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="settings-section">
-              <h3>Kategoriebilder</h3>
-              <p className="section-description">
-                Laden Sie Bilder hoch und verknüpfen Sie diese mit Speisekategorien. 
-                Diese Bilder werden als Platzhalter verwendet, wenn ein Rezept ohne Titelbild gespeichert wird.
-                Jede Kategorie kann nur einem Bild zugeordnet werden.
-              </p>
-              
-              {/* Upload new image section */}
-              {!editingImageId && (
-                <div className="category-image-upload">
-                  <div className="category-selection">
-                    <label>Wählen Sie Speisekategorien für das neue Bild:</label>
-                    <div className="category-checkboxes">
-                      {lists.mealCategories.map(category => {
-                        const isAssigned = categoryImages.some(img => img.categories.includes(category));
-                        const isSelected = selectedCategories.includes(category);
-                        return (
-                          <label 
-                            key={category} 
-                            className={`category-checkbox ${isAssigned && !isSelected ? 'disabled' : ''}`}
-                            title={isAssigned && !isSelected ? 'Diese Kategorie ist bereits einem Bild zugeordnet' : ''}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => handleCategoryToggle(category)}
-                              disabled={isAssigned && !isSelected}
-                            />
-                            <span>{category}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  
-                  <div className="image-upload-button-container">
-                    <label htmlFor="categoryImageFile" className="image-upload-label">
-                      {uploadingImage ? 'Hochladen...' : 'Neues Bild hochladen'}
-                    </label>
-                    <input
-                      type="file"
-                      id="categoryImageFile"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      style={{ display: 'none' }}
-                      disabled={uploadingImage || selectedCategories.length === 0}
-                    />
-                    {selectedCategories.length === 0 && (
-                      <p className="upload-hint">Bitte wählen Sie mindestens eine Kategorie aus.</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Existing images */}
-              <div className="category-images-list">
-                {categoryImages.map(img => (
-                  <div key={img.id} className="category-image-item">
-                    <div className="category-image-preview">
-                      <img src={img.image} alt="Category" />
-                      {editingImageId !== img.id && (
-                        <button
-                          className="category-image-remove-icon"
-                          onClick={() => handleRemoveCategoryImage(img.id)}
-                          title="Bild entfernen"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                    
-                    {editingImageId === img.id ? (
-                      <div className="category-image-edit">
-                        <div className="category-selection">
-                          <label>Kategorien bearbeiten:</label>
-                          <div className="category-checkboxes">
-                            {lists.mealCategories.map(category => {
-                              const isAssignedToOther = categoryImages.some(
-                                otherImg => otherImg.id !== img.id && otherImg.categories.includes(category)
-                              );
-                              const isSelected = selectedCategories.includes(category);
-                              return (
-                                <label 
-                                  key={category} 
-                                  className={`category-checkbox ${isAssignedToOther ? 'disabled' : ''}`}
-                                  title={isAssignedToOther ? 'Diese Kategorie ist bereits einem anderen Bild zugeordnet' : ''}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    onChange={() => handleCategoryToggle(category)}
-                                    disabled={isAssignedToOther}
-                                  />
-                                  <span>{category}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
-                        <div className="category-image-actions">
-                          <button 
-                            className="save-categories-btn" 
-                            onClick={handleSaveImageCategories}
-                            disabled={selectedCategories.length === 0}
-                          >
-                            ✓ Speichern
-                          </button>
-                          <button 
-                            className="cancel-edit-btn" 
-                            onClick={handleCancelEditCategories}
-                          >
-                            × Abbrechen
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="category-image-info">
-                        <div className="category-image-categories">
-                          {img.categories.length > 0 ? (
-                            img.categories.map(cat => (
-                              <span key={cat} className="category-badge">{cat}</span>
-                            ))
-                          ) : (
-                            <span className="no-categories">Keine Kategorien zugeordnet</span>
-                          )}
-                        </div>
-                        <div className="category-image-actions">
-                          <button 
-                            className="edit-categories-btn" 
-                            onClick={() => handleEditImageCategories(img.id)}
-                            title="Kategorien bearbeiten"
-                          >
-                           Bearbeiten
-                          </button>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
