@@ -153,9 +153,9 @@ export function getDefaultButtonIconGroups() {
 
 // Prefix identifying rows that represent a cuisine type (Kulinarik-Typ) rather
 // than a static app button. These rows are not declared in DARK_MODE_ICON_ROWS -
-// they are generated dynamically from the live list of cuisine types (see
-// buildCuisineTypeRowDefs / reconcileCuisineTypeGroup below), because that list
-// is admin-editable (types get added, renamed, removed).
+// admins add them one at a time (via the "+ Bild/Icon" control in the Kulinarik-
+// Typen group, see ButtonIconsAdminTab.js), picking the name from the live list
+// of cuisine types (see buildCuisineTypeRowDefs / reconcileCuisineTypeGroup below).
 const CUISINE_TYPE_ROW_PREFIX = 'cuisineType__';
 export const CUISINE_TYPES_GROUP_ID = 'g-kulinarik-typen';
 export const CUISINE_TYPES_GROUP_NAME = 'Kulinarik-Typen';
@@ -196,11 +196,13 @@ export function buildCuisineTypeRowDefs(cuisineTypes) {
 
 /**
  * Reconciles the "Kulinarik-Typen" group inside a saved `buttonIconGroups.groups`
- * structure against the live list of cuisine types: adds rows for cuisine types
- * that don't have one yet (new types, or a first-time migration), and drops rows
- * for cuisine types that no longer exist (renamed or removed elsewhere in
- * "Listen & Kategorien" - renaming changes the row's key, so the old one is
- * dropped and a fresh row for the new name is added).
+ * structure against the live list of cuisine types. Rows are added manually by
+ * admins (one per cuisine type, via the "+ Bild/Icon" control) rather than being
+ * auto-populated for every cuisine type, so this only: drops rows for cuisine
+ * types that no longer exist (renamed or removed elsewhere in "Listen &
+ * Kategorien" - renaming changes the row's key, so the old one is simply
+ * dropped, nothing is auto-added for the new name), and makes sure the group
+ * itself always exists (even empty) so the add control has somewhere to live.
  * @param {Array<{id:string,name:string,rowKeys:Array<{key:string,label:string}>}>} groups
  * @param {string[]} cuisineTypes
  * @returns {Array<{id:string,name:string,rowKeys:Array<{key:string,label:string}>}>} the same
@@ -220,18 +222,9 @@ export function reconcileCuisineTypeGroup(groups, cuisineTypes) {
     return g;
   });
 
-  const placed = new Set();
-  nextGroups.forEach((g) => g.rowKeys.forEach((r) => {
-    if (r.key.startsWith(CUISINE_TYPE_ROW_PREFIX)) placed.add(r.key);
-  }));
-  const missing = rowDefs.filter((r) => !placed.has(r.key));
-  if (missing.length > 0) {
+  if (!nextGroups.some((g) => g.id === CUISINE_TYPES_GROUP_ID)) {
     changed = true;
-    const missingEntries = missing.map((r) => ({ key: r.key, label: r.label }));
-    const existingIdx = nextGroups.findIndex((g) => g.id === CUISINE_TYPES_GROUP_ID);
-    nextGroups = existingIdx > -1
-      ? nextGroups.map((g, i) => (i === existingIdx ? { ...g, rowKeys: [...g.rowKeys, ...missingEntries] } : g))
-      : [...nextGroups, { id: CUISINE_TYPES_GROUP_ID, name: CUISINE_TYPES_GROUP_NAME, rowKeys: missingEntries }];
+    nextGroups = [...nextGroups, { id: CUISINE_TYPES_GROUP_ID, name: CUISINE_TYPES_GROUP_NAME, rowKeys: [] }];
   }
 
   return changed ? nextGroups : groups;

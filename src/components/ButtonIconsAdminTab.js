@@ -8,7 +8,7 @@ import {
   saveButtonIconGroups,
   getCustomLists,
 } from '../utils/customLists';
-import { mergeButtonIconRowDefs, buildCuisineTypeRowDefs } from '../utils/buttonIconRows';
+import { mergeButtonIconRowDefs, buildCuisineTypeRowDefs, cuisineTypeIconKey, CUISINE_TYPES_GROUP_ID } from '../utils/buttonIconRows';
 import { fileToBase64, isBase64Image, compressImage } from '../utils/imageUtils';
 import {
   getCategoryImages,
@@ -138,7 +138,7 @@ function SortableIconRow({
           </button>
         )}
       </div>
-      <div className="bia-row-content" style={swipeContentStyle} {...handlers}>
+      <div className={`bia-row-content${def.cuisineType ? ' delete-row-hover-target' : ''}`} style={swipeContentStyle} {...handlers}>
         <button type="button" className="bia-drag-handle" {...attributes} {...listeners} aria-label={`${label} verschieben`}>⠿</button>
 
         <div className="bia-row-name">
@@ -170,6 +170,9 @@ function SortableIconRow({
         <div className="bia-slot-col">
           <VariantSlot mode="dark" value={def.darkActiveKey ? icons[def.darkActiveKey] : null} disabled={!def.darkActiveKey} label={`${label} – Dunkelmodus aktiv`} onClick={() => onOpenEditor(3)} />
         </div>
+        {def.cuisineType && (
+          <DeleteRowButton itemName={label} onClick={onDelete} className="bia-row-delete-btn" />
+        )}
       </div>
     </div>
   );
@@ -197,6 +200,7 @@ function SortableGroupSection({
   onOpenEditor,
   onDeleteRow,
   onRenameRow,
+  cuisineAddControls,
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: group.id,
@@ -225,23 +229,26 @@ function SortableGroupSection({
       </div>
 
       {isOpen && (
-        <SortableContext items={visibleRows.map(({ entry }) => entry.key)} strategy={verticalListSortingStrategy}>
-          {visibleRows.map(({ entry, def }) => (
-            <SortableIconRow
-              key={entry.key}
-              group={group}
-              entry={entry}
-              def={def}
-              icons={icons}
-              isDeleteVisible={deleteVisibleRowKey === entry.key}
-              onDeleteVisibleChange={(visible) => onSetDeleteVisibleRowKey(visible ? entry.key : null)}
-              onOpenEditor={(variantIndex) => onOpenEditor(group.id, entry.key, variantIndex)}
-              onDelete={() => onDeleteRow(group.id, entry.key)}
-              onRename={def.cuisineType ? undefined : (value) => onRenameRow(group.id, entry.key, value)}
-            />
-          ))}
-          {visibleRows.length === 0 && <EmptyGroupDropZone groupId={group.id} />}
-        </SortableContext>
+        <>
+          <SortableContext items={visibleRows.map(({ entry }) => entry.key)} strategy={verticalListSortingStrategy}>
+            {visibleRows.map(({ entry, def }) => (
+              <SortableIconRow
+                key={entry.key}
+                group={group}
+                entry={entry}
+                def={def}
+                icons={icons}
+                isDeleteVisible={deleteVisibleRowKey === entry.key}
+                onDeleteVisibleChange={(visible) => onSetDeleteVisibleRowKey(visible ? entry.key : null)}
+                onOpenEditor={(variantIndex) => onOpenEditor(group.id, entry.key, variantIndex)}
+                onDelete={() => onDeleteRow(group.id, entry.key)}
+                onRename={def.cuisineType ? undefined : (value) => onRenameRow(group.id, entry.key, value)}
+              />
+            ))}
+            {visibleRows.length === 0 && <EmptyGroupDropZone groupId={group.id} />}
+          </SortableContext>
+          {cuisineAddControls}
+        </>
       )}
     </div>
   );
@@ -256,6 +263,8 @@ function ButtonIconsAdminTab() {
   const [collapsed, setCollapsed] = useState({});
   const [editing, setEditing] = useState(null);
   const [deleteVisibleRowKey, setDeleteVisibleRowKey] = useState(null);
+  const [cuisineAddGroupId, setCuisineAddGroupId] = useState(null);
+  const [cuisineAddValue, setCuisineAddValue] = useState('');
 
   const [categoryImages, setCategoryImages] = useState([]);
   const [mealCategories, setMealCategories] = useState([]);
@@ -269,6 +278,11 @@ function ButtonIconsAdminTab() {
     buildCuisineTypeRowDefs(cuisineTypes).forEach((r) => map.set(r.key, r));
     return map;
   }, [cuisineTypes]);
+  const availableCuisineTypeNames = useMemo(() => {
+    const usedKeys = new Set();
+    data.groups.forEach((g) => g.rowKeys.forEach((r) => usedKeys.add(r.key)));
+    return cuisineTypes.filter((name) => !usedKeys.has(cuisineTypeIconKey(name)));
+  }, [data.groups, cuisineTypes]);
   const undo = useUndoableDelete();
 
   useEffect(() => {
@@ -412,6 +426,27 @@ function ButtonIconsAdminTab() {
         });
       },
     });
+  };
+
+  const handleStartAddCuisineRow = (groupId) => {
+    setCuisineAddGroupId(groupId);
+    setCuisineAddValue('');
+  };
+
+  const handleCancelAddCuisineRow = () => {
+    setCuisineAddGroupId(null);
+    setCuisineAddValue('');
+  };
+
+  const handleConfirmAddCuisineRow = (groupId) => {
+    if (!cuisineAddValue) return;
+    const entry = { key: cuisineTypeIconKey(cuisineAddValue), label: cuisineAddValue };
+    persistData({
+      ...data,
+      groups: data.groups.map((g) => (g.id === groupId ? { ...g, rowKeys: [...g.rowKeys, entry] } : g)),
+    });
+    setCuisineAddGroupId(null);
+    setCuisineAddValue('');
   };
 
   // ---- category images (Kategoriebilder)
@@ -721,6 +756,47 @@ function ButtonIconsAdminTab() {
                   onOpenEditor={openEditor}
                   onDeleteRow={handleDeleteRow}
                   onRenameRow={handleRenameRow}
+                  cuisineAddControls={group.id === CUISINE_TYPES_GROUP_ID ? (
+                    <div className="bia-cuisine-add-row">
+                      {cuisineAddGroupId === group.id ? (
+                        <>
+                          <select
+                            className="bia-cuisine-add-select"
+                            value={cuisineAddValue}
+                            onChange={(e) => setCuisineAddValue(e.target.value)}
+                            aria-label="Kulinarik-Typ wählen"
+                            autoFocus
+                          >
+                            <option value="">Kulinarik-Typ wählen…</option>
+                            {availableCuisineTypeNames.map((name) => (
+                              <option key={name} value={name}>{name}</option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            className="bia-btn-primary"
+                            disabled={!cuisineAddValue}
+                            onClick={() => handleConfirmAddCuisineRow(group.id)}
+                          >
+                            Hinzufügen
+                          </button>
+                          <button type="button" className="bia-btn-secondary" onClick={handleCancelAddCuisineRow}>
+                            Abbrechen
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          className="bia-btn-dashed"
+                          onClick={() => handleStartAddCuisineRow(group.id)}
+                          disabled={availableCuisineTypeNames.length === 0}
+                          title={availableCuisineTypeNames.length === 0 ? 'Alle Kulinarik-Typen sind bereits als Zeile angelegt' : undefined}
+                        >
+                          + Bild/Icon
+                        </button>
+                      )}
+                    </div>
+                  ) : null}
                 />
               ))}
             </SortableContext>
