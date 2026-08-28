@@ -178,6 +178,81 @@ function SortableIconRow({
   );
 }
 
+function NewCuisineTypeRow({ value, onChange, suggestions, onSelect, onCancel }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const handlePointerDown = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        onCancel();
+      }
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [onCancel]);
+
+  const normalizedValue = value.trim().toLowerCase();
+  const filtered = normalizedValue
+    ? suggestions.filter((name) => name.toLowerCase().includes(normalizedValue))
+    : suggestions;
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      onCancel();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (filtered.length === 1) onSelect(filtered[0]);
+    }
+  };
+
+  return (
+    <div className="bia-row bia-row-new" ref={containerRef}>
+      <div className="bia-row-content delete-row-hover-target">
+        <div className="bia-row-name bia-row-name-typeahead">
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+            onFocus={() => setOpen(true)}
+            onKeyDown={handleKeyDown}
+            placeholder="Kulinarik-Typ suchen…"
+            className="bia-row-name-input"
+            aria-label="Kulinarik-Typ suchen und auswählen"
+            aria-expanded={open}
+            aria-autocomplete="list"
+            aria-controls="bia-cuisine-typeahead-list"
+            role="combobox"
+            autoFocus
+          />
+          {open && (
+            <div className="bia-cuisine-typeahead-list" id="bia-cuisine-typeahead-list" role="listbox">
+              {filtered.length > 0 ? (
+                filtered.map((name) => (
+                  <button
+                    type="button"
+                    key={name}
+                    className="bia-cuisine-typeahead-item"
+                    role="option"
+                    aria-selected="false"
+                    onMouseDown={(e) => { e.preventDefault(); onSelect(name); }}
+                  >
+                    {name}
+                  </button>
+                ))
+              ) : (
+                <div className="bia-cuisine-typeahead-empty">Kein passender Kulinarik-Typ</div>
+              )}
+            </div>
+          )}
+        </div>
+        <DeleteRowButton itemName={value.trim() || 'Neue Zeile'} onClick={onCancel} className="bia-row-delete-btn" />
+      </div>
+    </div>
+  );
+}
+
 function EmptyGroupDropZone({ groupId }) {
   const { setNodeRef, isOver } = useDroppable({ id: `empty-${groupId}`, data: { type: 'group', groupId } });
   return (
@@ -201,6 +276,7 @@ function SortableGroupSection({
   onDeleteRow,
   onRenameRow,
   cuisineAddControls,
+  isAddingCuisineRow,
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: group.id,
@@ -245,7 +321,7 @@ function SortableGroupSection({
                 onRename={def.cuisineType ? undefined : (value) => onRenameRow(group.id, entry.key, value)}
               />
             ))}
-            {visibleRows.length === 0 && <EmptyGroupDropZone groupId={group.id} />}
+            {visibleRows.length === 0 && !isAddingCuisineRow && <EmptyGroupDropZone groupId={group.id} />}
           </SortableContext>
           {cuisineAddControls}
         </>
@@ -438,9 +514,9 @@ function ButtonIconsAdminTab() {
     setCuisineAddValue('');
   };
 
-  const handleConfirmAddCuisineRow = (groupId) => {
-    if (!cuisineAddValue) return;
-    const entry = { key: cuisineTypeIconKey(cuisineAddValue), label: cuisineAddValue };
+  const handleSelectCuisineType = (groupId, name) => {
+    if (!name) return;
+    const entry = { key: cuisineTypeIconKey(name), label: name };
     persistData({
       ...data,
       groups: data.groups.map((g) => (g.id === groupId ? { ...g, rowKeys: [...g.rowKeys, entry] } : g)),
@@ -756,35 +832,18 @@ function ButtonIconsAdminTab() {
                   onOpenEditor={openEditor}
                   onDeleteRow={handleDeleteRow}
                   onRenameRow={handleRenameRow}
+                  isAddingCuisineRow={group.id === CUISINE_TYPES_GROUP_ID && cuisineAddGroupId === group.id}
                   cuisineAddControls={group.id === CUISINE_TYPES_GROUP_ID ? (
-                    <div className="bia-cuisine-add-row">
-                      {cuisineAddGroupId === group.id ? (
-                        <>
-                          <select
-                            className="bia-cuisine-add-select"
-                            value={cuisineAddValue}
-                            onChange={(e) => setCuisineAddValue(e.target.value)}
-                            aria-label="Kulinarik-Typ wählen"
-                            autoFocus
-                          >
-                            <option value="">Kulinarik-Typ wählen…</option>
-                            {availableCuisineTypeNames.map((name) => (
-                              <option key={name} value={name}>{name}</option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            className="bia-btn-primary"
-                            disabled={!cuisineAddValue}
-                            onClick={() => handleConfirmAddCuisineRow(group.id)}
-                          >
-                            Hinzufügen
-                          </button>
-                          <button type="button" className="bia-btn-secondary" onClick={handleCancelAddCuisineRow}>
-                            Abbrechen
-                          </button>
-                        </>
-                      ) : (
+                    cuisineAddGroupId === group.id ? (
+                      <NewCuisineTypeRow
+                        value={cuisineAddValue}
+                        onChange={setCuisineAddValue}
+                        suggestions={availableCuisineTypeNames}
+                        onSelect={(name) => handleSelectCuisineType(group.id, name)}
+                        onCancel={handleCancelAddCuisineRow}
+                      />
+                    ) : (
+                      <div className="bia-cuisine-add-row">
                         <button
                           type="button"
                           className="bia-btn-dashed"
@@ -794,8 +853,8 @@ function ButtonIconsAdminTab() {
                         >
                           + Bild/Icon
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    )
                   ) : null}
                 />
               ))}
