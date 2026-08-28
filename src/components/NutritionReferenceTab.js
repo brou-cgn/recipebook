@@ -304,9 +304,6 @@ function NutritionReferenceTab({ currentUser }) {
       preserveOnManualSourceChange: true,
       fromNutritionGeneration: false,
     });
-    if (trackingFields.recalcDate !== undefined) {
-      trackingFields.recalcDate = serverTimestamp();
-    }
     Object.assign(payload, trackingFields);
     if (
       isApprovalTransition
