@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT, PRINT_FORMAT_LAYOUT_VERSION, selectPrintFormat } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getButtonIconsOrder, saveButtonIconsOrder, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT, PRINT_FORMAT_LAYOUT_VERSION, selectPrintFormat } from '../utils/customLists';
 import { getOnboardingTestmodeActive, saveOnboardingTestmodeActive } from '../utils/onboardingSettings';
 import PrintFormatEditor from './PrintFormatEditor';
 import PrintPreview from './PrintPreview';
@@ -325,10 +325,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [timelineMenuBubbleIcon, setTimelineMenuBubbleIcon] = useState(null);
   const [uploadingTimelineMenuBubbleIcon, setUploadingTimelineMenuBubbleIcon] = useState(false);
 
-  // Timeline default images state
-  const [timelineMenuDefaultImage, setTimelineMenuDefaultImage] = useState(null);
-  const [uploadingTimelineMenuDefaultImage, setUploadingTimelineMenuDefaultImage] = useState(false);
-
   // Timeline cook event bubble icon state
   const [timelineCookEventBubbleIcon, setTimelineCookEventBubbleIcon] = useState(null);
   const [uploadingTimelineCookEventBubbleIcon, setUploadingTimelineCookEventBubbleIcon] = useState(false);
@@ -422,7 +418,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       const catImages = await getCategoryImages();
       const timelineIcon = await getTimelineBubbleIcon();
       const timelineMenuIcon = await getTimelineMenuBubbleIcon();
-      const timelineMenuImg = await getTimelineMenuDefaultImage();
       const timelineCookEventIcon = await getTimelineCookEventBubbleIcon();
       const timelineCookEventImg = await getTimelineCookEventDefaultImage();
       const aiRecipePrompt = await getAIRecipePrompt();
@@ -444,7 +439,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       setAppLogoImageUrl(appLogoUrl);
       setTimelineBubbleIcon(timelineIcon);
       setTimelineMenuBubbleIcon(timelineMenuIcon);
-      setTimelineMenuDefaultImage(timelineMenuImg);
       setTimelineCookEventBubbleIcon(timelineCookEventIcon);
       setTimelineCookEventDefaultImage(timelineCookEventImg);
       setAiPrompt(aiRecipePrompt);
@@ -707,7 +701,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       // Button icons are now saved incrementally (auto-save after each change)
       saveTimelineBubbleIcon(timelineBubbleIcon);
       saveTimelineMenuBubbleIcon(timelineMenuBubbleIcon);
-      saveTimelineMenuDefaultImage(timelineMenuDefaultImage);
       saveTimelineCookEventBubbleIcon(timelineCookEventBubbleIcon);
       saveTimelineCookEventDefaultImage(timelineCookEventDefaultImage);
       saveTileSizePreference(tileSize);
@@ -1397,28 +1390,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     setTimelineMenuBubbleIcon(null);
   };
 
-  // Timeline menu default image handlers
-  const handleTimelineMenuDefaultImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setUploadingTimelineMenuDefaultImage(true);
-
-    try {
-      const base64 = await fileToBase64(file);
-      const compressedBase64 = await compressImage(base64);
-      setTimelineMenuDefaultImage(compressedBase64);
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      setUploadingTimelineMenuDefaultImage(false);
-    }
-  };
-
-  const handleRemoveTimelineMenuDefaultImage = () => {
-    setTimelineMenuDefaultImage(null);
-  };
-
   // Timeline cook event bubble icon handlers
   const handleTimelineCookEventBubbleIconUpload = async (e) => {
     const file = e.target.files[0];
@@ -1794,48 +1765,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     </div>
                   </div>
                 ))}
-              </div>
-            </div>
-
-            <div className="settings-section">
-              <h3>Standardbild für Menüs in der Zeitleiste</h3>
-              <p className="section-description">
-                Dieses Bild wird ausschließlich für Menükarten in der Zeitleiste verwendet.
-                Es wird nicht in der normalen Menüübersicht angezeigt.
-                Unterstützte Formate: JPEG, PNG, WebP. Empfohlen: 16:9 oder quadratisches Format.
-              </p>
-              <div className="favicon-image-section">
-                {timelineMenuDefaultImage ? (
-                  <div className="favicon-preview">
-                    <img src={timelineMenuDefaultImage} alt="Standardbild Menüs" style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} />
-                    <div className="favicon-actions">
-                      <label htmlFor="timelineMenuDefaultImageFile" className="favicon-change-btn">
-                        {uploadingTimelineMenuDefaultImage ? 'Hochladen...' : 'Ändern'}
-                      </label>
-                      <button
-                        className="favicon-remove-btn"
-                        onClick={handleRemoveTimelineMenuDefaultImage}
-                        disabled={uploadingTimelineMenuDefaultImage}
-                      >
-                        × Entfernen
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="favicon-upload">
-                    <label htmlFor="timelineMenuDefaultImageFile" className="image-upload-label">
-                      {uploadingTimelineMenuDefaultImage ? 'Hochladen...' : 'Standardbild hochladen'}
-                    </label>
-                  </div>
-                )}
-                <input
-                  type="file"
-                  id="timelineMenuDefaultImageFile"
-                  accept="image/*"
-                  onChange={handleTimelineMenuDefaultImageUpload}
-                  style={{ display: 'none' }}
-                  disabled={uploadingTimelineMenuDefaultImage}
-                />
               </div>
             </div>
 
