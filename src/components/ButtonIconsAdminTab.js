@@ -10,6 +10,13 @@ import {
 } from '../utils/customLists';
 import { mergeButtonIconRowDefs, buildCuisineTypeRowDefs } from '../utils/buttonIconRows';
 import { fileToBase64, isBase64Image, compressImage } from '../utils/imageUtils';
+import {
+  getCategoryImages,
+  addCategoryImage,
+  updateCategoryImage,
+  removeCategoryImage,
+  getAlreadyAssignedCategories,
+} from '../utils/categoryImages';
 import DeleteRowButton from './DeleteRowButton';
 import UndoSnackbar from './UndoSnackbar';
 import useUndoableDelete from '../hooks/useUndoableDelete';
@@ -36,6 +43,11 @@ import { CSS } from '@dnd-kit/utilities';
 const VARIANT_LABELS = ['Hellmodus · normal', 'Hellmodus · aktiv', 'Dunkelmodus · normal', 'Dunkelmodus · aktiv'];
 const VARIANT_SHORT_LABELS = ['Hell · normal', 'Hell · aktiv', 'Dunkel · normal', 'Dunkel · aktiv'];
 const STRUCTURE_SAVE_DEBOUNCE_MS = 600;
+const CATEGORY_ALREADY_ASSIGNED_ERROR = 'Die folgenden Kategorien sind bereits einem anderen Bild zugeordnet: {categories}\n\nBitte wählen Sie andere Kategorien.';
+
+function categoryImageRowName(img) {
+  return img.categories.length > 0 ? img.categories.join(', ') : 'Kategoriebild';
+}
 
 function variantKeysForRow(def) {
   return [def.key, def.activeKey, def.darkKey, def.darkActiveKey];
@@ -245,6 +257,12 @@ function ButtonIconsAdminTab() {
   const [editing, setEditing] = useState(null);
   const [deleteVisibleRowKey, setDeleteVisibleRowKey] = useState(null);
 
+  const [categoryImages, setCategoryImages] = useState([]);
+  const [mealCategories, setMealCategories] = useState([]);
+  const [uploadingCategoryImage, setUploadingCategoryImage] = useState(false);
+  const [editingCategoryImageId, setEditingCategoryImageId] = useState(null);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+
   const structureSaveTimeoutRef = useRef(null);
   const rowDefsByKey = useMemo(() => {
     const map = new Map(mergeButtonIconRowDefs().map((r) => [r.key, r]));
@@ -255,11 +273,13 @@ function ButtonIconsAdminTab() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getButtonIcons(), getButtonIconGroups(), getCustomLists()]).then(([iconsRes, groupsRes, listsRes]) => {
+    Promise.all([getButtonIcons(), getButtonIconGroups(), getCategoryImages(), getCustomLists()]).then(([iconsRes, groupsRes, catImagesRes, listsRes]) => {
       if (cancelled) return;
       setIcons(iconsRes);
       setCuisineTypes(listsRes.cuisineTypes || []);
       setData(groupsRes);
+      setCategoryImages(catImagesRes);
+      setMealCategories(listsRes.mealCategories || []);
       setLoading(false);
     }).catch((error) => {
       console.error('Error loading button icon groups:', error);
@@ -390,6 +410,86 @@ function ButtonIconsAdminTab() {
           saveButtonIconGroups(restored).catch((error) => console.error('Error saving button icon groups:', error));
           return restored;
         });
+      },
+    });
+  };
+
+  // ---- category images (Kategoriebilder)
+  const handleCategoryToggle = (category) => {
+    setSelectedCategories((prev) => (prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]));
+  };
+
+  const handleCategoryImageUpload = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+
+    const alreadyAssigned = await getAlreadyAssignedCategories(selectedCategories);
+    if (alreadyAssigned.length > 0) {
+      alert(CATEGORY_ALREADY_ASSIGNED_ERROR.replace('{categories}', alreadyAssigned.join(', ')));
+      return;
+    }
+
+    setUploadingCategoryImage(true);
+    try {
+      const base64 = await fileToBase64(file);
+      const compressed = await compressImage(base64);
+      const newImage = await addCategoryImage(compressed, selectedCategories);
+      setCategoryImages((prev) => [...prev, newImage]);
+      setSelectedCategories([]);
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setUploadingCategoryImage(false);
+    }
+  };
+
+  const handleEditCategoryImageCategories = (imageId) => {
+    const image = categoryImages.find((img) => img.id === imageId);
+    if (!image) return;
+    setEditingCategoryImageId(imageId);
+    setSelectedCategories([...image.categories]);
+  };
+
+  const handleCancelEditCategoryImageCategories = () => {
+    setEditingCategoryImageId(null);
+    setSelectedCategories([]);
+  };
+
+  const handleSaveCategoryImageCategories = async () => {
+    if (!editingCategoryImageId) return;
+    const alreadyAssigned = await getAlreadyAssignedCategories(selectedCategories, editingCategoryImageId);
+    if (alreadyAssigned.length > 0) {
+      alert(CATEGORY_ALREADY_ASSIGNED_ERROR.replace('{categories}', alreadyAssigned.join(', ')));
+      return;
+    }
+    const ok = await updateCategoryImage(editingCategoryImageId, { categories: selectedCategories });
+    if (ok) {
+      const savedId = editingCategoryImageId;
+      setCategoryImages((prev) => prev.map((img) => (img.id === savedId ? { ...img, categories: selectedCategories } : img)));
+    }
+    setEditingCategoryImageId(null);
+    setSelectedCategories([]);
+  };
+
+  const handleDeleteCategoryImage = (imageId) => {
+    const idx = categoryImages.findIndex((img) => img.id === imageId);
+    if (idx === -1) return;
+    const removedImage = categoryImages[idx];
+
+    setCategoryImages((prev) => prev.filter((img) => img.id !== imageId));
+    removeCategoryImage(imageId).catch((error) => console.error('Error removing category image:', error));
+
+    undo.notifyDeleted({
+      id: `catimg:${imageId}`,
+      name: categoryImageRowName(removedImage),
+      undo: () => {
+        addCategoryImage(removedImage.image, removedImage.categories).then((restoredImage) => {
+          setCategoryImages((prev) => {
+            const insertAt = Math.min(idx, prev.length);
+            return [...prev.slice(0, insertAt), restoredImage, ...prev.slice(insertAt)];
+          });
+        }).catch((error) => console.error('Error restoring category image:', error));
       },
     });
   };
@@ -635,6 +735,139 @@ function ButtonIconsAdminTab() {
         <div className="bia-legend">
           <span>⠿ Zeilen und Gruppen per Drag &amp; Drop sortieren – auch zwischen Gruppen (Ziehgriff fokussieren, mit Leertaste aufnehmen und Pfeiltasten verschieben)</span>
           <span>Klick auf ein Feld: Icon setzen und auf mehrere Varianten anwenden</span>
+        </div>
+
+        <div className="bia-card bia-catimg-card">
+          <div className="bia-catimg-heading">
+            <h3>Kategoriebilder</h3>
+            <p className="section-description">
+              Laden Sie Bilder hoch und verknüpfen Sie diese mit Speisekategorien. Diese Bilder werden als
+              Platzhalter verwendet, wenn ein Rezept ohne Titelbild gespeichert wird. Jede Kategorie kann nur
+              einem Bild zugeordnet werden.
+            </p>
+          </div>
+
+          {!editingCategoryImageId && (
+            <div className="bia-catimg-upload">
+              <div className="bia-catimg-category-select">
+                <label>Speisekategorien für das neue Bild wählen:</label>
+                <div className="bia-catimg-checkboxes">
+                  {mealCategories.map((category) => {
+                    const isAssigned = categoryImages.some((img) => img.categories.includes(category));
+                    const isSelected = selectedCategories.includes(category);
+                    return (
+                      <label
+                        key={category}
+                        className={`bia-catimg-checkbox${isAssigned && !isSelected ? ' bia-catimg-checkbox-disabled' : ''}`}
+                        title={isAssigned && !isSelected ? 'Diese Kategorie ist bereits einem Bild zugeordnet' : ''}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleCategoryToggle(category)}
+                          disabled={isAssigned && !isSelected}
+                        />
+                        <span>{category}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="bia-catimg-upload-actions">
+                <label htmlFor="bia-catimg-file" className="bia-btn-primary">
+                  {uploadingCategoryImage ? 'Hochladen…' : 'Neues Bild hochladen'}
+                </label>
+                <input
+                  type="file"
+                  id="bia-catimg-file"
+                  accept="image/*"
+                  onChange={handleCategoryImageUpload}
+                  style={{ display: 'none' }}
+                  disabled={uploadingCategoryImage || selectedCategories.length === 0}
+                />
+                {selectedCategories.length === 0 && (
+                  <span className="bia-catimg-hint">Bitte wählen Sie mindestens eine Kategorie aus.</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="bia-catimg-rows">
+            {categoryImages.map((img) => (
+              <div key={img.id} className="bia-catimg-row delete-row-hover-target">
+                <div className="bia-catimg-preview">
+                  <img src={img.image} alt="" />
+                </div>
+
+                {editingCategoryImageId === img.id ? (
+                  <div className="bia-catimg-edit">
+                    <div className="bia-catimg-checkboxes">
+                      {mealCategories.map((category) => {
+                        const isAssignedToOther = categoryImages.some(
+                          (otherImg) => otherImg.id !== img.id && otherImg.categories.includes(category)
+                        );
+                        const isSelected = selectedCategories.includes(category);
+                        return (
+                          <label
+                            key={category}
+                            className={`bia-catimg-checkbox${isAssignedToOther ? ' bia-catimg-checkbox-disabled' : ''}`}
+                            title={isAssignedToOther ? 'Diese Kategorie ist bereits einem anderen Bild zugeordnet' : ''}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleCategoryToggle(category)}
+                              disabled={isAssignedToOther}
+                            />
+                            <span>{category}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <div className="bia-catimg-edit-actions">
+                      <button
+                        type="button"
+                        className="bia-btn-primary"
+                        onClick={handleSaveCategoryImageCategories}
+                        disabled={selectedCategories.length === 0}
+                      >
+                        Speichern
+                      </button>
+                      <button type="button" className="bia-btn-secondary" onClick={handleCancelEditCategoryImageCategories}>
+                        Abbrechen
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="bia-catimg-categories">
+                      {img.categories.length > 0 ? (
+                        img.categories.map((cat) => (
+                          <span key={cat} className="bia-catimg-badge">{cat}</span>
+                        ))
+                      ) : (
+                        <span className="bia-catimg-empty">Keine Kategorien zugeordnet</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="bia-btn-tertiary bia-catimg-edit-btn"
+                      onClick={() => handleEditCategoryImageCategories(img.id)}
+                      title="Kategorien bearbeiten"
+                    >
+                      Bearbeiten
+                    </button>
+                  </>
+                )}
+
+                {editingCategoryImageId !== img.id && (
+                  <DeleteRowButton itemName={categoryImageRowName(img)} onClick={() => handleDeleteCategoryImage(img.id)} />
+                )}
+              </div>
+            ))}
+            {categoryImages.length === 0 && <div className="bia-empty-group">Noch keine Kategoriebilder</div>}
+          </div>
         </div>
       </div>
 

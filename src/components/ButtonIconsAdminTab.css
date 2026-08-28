@@ -569,3 +569,107 @@
 [data-theme="dark"] .bia-modal-apply-btn { background: #1d1f23; border-color: #3a3d42; color: #cfcbc3; }
 [data-theme="dark"] .bia-modal-apply-btn--checked { border-color: #6f757e; }
 [data-theme="dark"] .bia-modal-apply-check { border-color: #4a463f; color: #f2f0ec; }
+
+/* ---- category images (Kategoriebilder) ---- */
+
+.bia-catimg-card { padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+
+.bia-catimg-heading h3 { font-size: 15px; font-weight: 600; color: #23211e; margin: 0 0 4px; }
+
+.bia-catimg-upload {
+  padding: 14px;
+  background: #fbfaf7;
+  border: 1px dashed #cfcbc3;
+  border-radius: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bia-catimg-category-select label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #33302b;
+  margin-bottom: 8px;
+}
+
+.bia-catimg-checkboxes { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.bia-catimg-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #fff;
+  border: 1px solid #dcd8d1;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: #33302b;
+  user-select: none;
+}
+.bia-catimg-checkbox:hover:not(.bia-catimg-checkbox-disabled) { border-color: #402C1C; }
+.bia-catimg-checkbox-disabled { opacity: 0.5; cursor: not-allowed; }
+.bia-catimg-checkbox input[type="checkbox"] { cursor: pointer; accent-color: #402C1C; }
+.bia-catimg-checkbox-disabled input[type="checkbox"] { cursor: not-allowed; }
+
+.bia-catimg-upload-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.bia-catimg-upload-actions label.bia-btn-primary { cursor: pointer; }
+.bia-catimg-hint { font-size: 12px; color: #8d887e; font-style: italic; }
+
+.bia-catimg-rows { display: flex; flex-direction: column; gap: 10px; }
+
+.bia-catimg-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid #e8e5de;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.bia-catimg-preview {
+  width: 84px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #faf9f6;
+  border: 1px solid #ddd9d2;
+}
+.bia-catimg-preview img { width: 100%; height: 100%; object-fit: cover; }
+
+.bia-catimg-categories { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; align-items: center; min-height: 28px; }
+
+.bia-catimg-badge {
+  display: inline-block;
+  background: #402C1C;
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.bia-catimg-empty { font-size: 12.5px; color: #a5a096; font-style: italic; }
+
+.bia-catimg-edit-btn { flex-shrink: 0; }
+
+.bia-catimg-edit { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.bia-catimg-edit-actions { display: flex; gap: 8px; }
+
+@media (max-width: 720px) {
+  .bia-catimg-row { flex-wrap: wrap; }
+}
+
+[data-theme="dark"] .bia-catimg-heading h3 { color: #f2f0ec; }
+[data-theme="dark"] .bia-catimg-upload { background: #202226; border-color: #3a3d42; }
+[data-theme="dark"] .bia-catimg-category-select label { color: #cfcbc3; }
+[data-theme="dark"] .bia-catimg-checkbox { background: #1d1f23; border-color: #3a3d42; color: #cfcbc3; }
+[data-theme="dark"] .bia-catimg-checkbox:hover:not(.bia-catimg-checkbox-disabled) { border-color: #6f757e; }
+[data-theme="dark"] .bia-catimg-hint { color: #7d838c; }
+[data-theme="dark"] .bia-catimg-row { background: #1d1f23; border-color: #2a2d31; }
+[data-theme="dark"] .bia-catimg-preview { background: #202226; border-color: #3a3d42; }
+[data-theme="dark"] .bia-catimg-empty { color: #7d838c; }
