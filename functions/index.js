@@ -3575,22 +3575,56 @@ const MAX_SHORTCUT_PHOTO_TOTAL_BASE64 = 15 * 1024 * 1024;
 const MAX_SHORTCUT_PHOTO_FIRESTORE_BASE64 = 900 * 1024;
 
 /**
+ * Resize/quality presets tried in order by compressPhotoForImportJob, from
+ * highest fidelity to most aggressive. Unlike the client's own
+ * buildImportSourceSnapshot compression (RecipeImportQueueContext.js), which
+ * only ever produces a *fallback* snapshot for job restarts — the actual OCR
+ * call there always runs against the original, uncompressed photo — this
+ * endpoint has no such "live" attempt: the persisted Firestore importSource
+ * is the only copy Gemini ever sees. Starting at a much higher-fidelity
+ * preset (and only stepping down if a photo doesn't fit its budget) keeps
+ * text legible for OCR on the common case of 1-3 photos, while still falling
+ * back toward the old flat preset when many photos share the budget.
+ */
+const PHOTO_COMPRESSION_PRESETS = [
+  {width: 2000, height: 2800, quality: 80},
+  {width: 1600, height: 2200, quality: 70},
+  {width: 1200, height: 1700, quality: 60},
+  {width: 1000, height: 1400, quality: 50},
+  {width: 800, height: 1100, quality: 40},
+];
+
+/**
  * Recompresses a validated recipe photo before it's persisted into a
  * Firestore importSource (see MAX_SHORTCUT_PHOTO_FIRESTORE_BASE64 above for
- * why). Mirrors the resize/quality the client uses for the same purpose in
- * RecipeImportQueueContext.js's buildImportSourceSnapshot
- * (compressImage(img, 1000, 1400, 0.5)) — plenty of resolution left for
- * Gemini's OCR, at a fraction of the original file size.
+ * why a size budget is needed at all). Tries PHOTO_COMPRESSION_PRESETS from
+ * highest fidelity down, keeping the first one that fits maxBase64Length —
+ * so a request with fewer photos (more budget to share) keeps noticeably
+ * more OCR-relevant detail than one with many.
  * @param {string} base64Data - Pure base64 image data (no data: prefix)
+ * @param {number} maxBase64Length - This photo's share of the total budget
  * @returns {Promise<string>} data: URL of the recompressed JPEG
  */
-async function compressPhotoForImportJob(base64Data) {
+async function compressPhotoForImportJob(base64Data, maxBase64Length) {
   const imageBuffer = Buffer.from(base64Data, 'base64');
-  const compressedBuffer = await sharp(imageBuffer)
-      .resize(1000, 1400, {fit: 'inside', withoutEnlargement: true})
-      .jpeg({quality: 50})
-      .toBuffer();
-  return `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
+  let smallestDataUrl = null;
+  for (const {width, height, quality} of PHOTO_COMPRESSION_PRESETS) {
+    const compressedBuffer = await sharp(imageBuffer)
+        .resize(width, height, {fit: 'inside', withoutEnlargement: true})
+        .jpeg({quality})
+        .toBuffer();
+    const dataUrl = `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
+    if (!smallestDataUrl || dataUrl.length < smallestDataUrl.length) {
+      smallestDataUrl = dataUrl;
+    }
+    if (dataUrl.length <= maxBase64Length) {
+      return dataUrl;
+    }
+  }
+  // Even the most aggressive preset didn't fit — return it anyway; the
+  // caller's post-compression total-size check catches a still-too-large
+  // result with a clear error instead of a failed Firestore write.
+  return smallestDataUrl;
 }
 
 /**
@@ -3766,20 +3800,18 @@ exports.scanRecipePhotoShortcut = onRequest(
 
       // Fail fast on malformed/oversized/wrong-type images instead of
       // queuing a job that's doomed to fail once processShortcutImportJob
-      // picks it up. Then recompress each photo before it's persisted —
-      // mirrors buildImportSourceSnapshot's compressImage(img, 1000, 1400, 0.5)
-      // call in RecipeImportQueueContext.js, needed for the same reason:
-      // Firestore documents cap out at 1 MiB, and unlike the client's
-      // import flow (which runs the *original* images through the live
-      // in-memory attempt and only persists a compressed snapshot for
-      // restarts) this endpoint has no separate live attempt — the
-      // Firestore doc this writes is the only copy processShortcutImportJob
-      // ever sees, so it must already be small enough to fit.
+      // picks it up. Then recompress each photo before it's persisted — see
+      // PHOTO_COMPRESSION_PRESETS above for why this endpoint needs its own
+      // (higher-fidelity-when-possible) compression rather than reusing the
+      // client's fixed low-fidelity restart-snapshot preset. Each photo gets
+      // an equal share of the total Firestore budget, so fewer photos in a
+      // request buys each of them more OCR-relevant detail.
+      const perImageBudget = Math.floor(MAX_SHORTCUT_PHOTO_FIRESTORE_BASE64 / images.length);
       let compressedImages;
       try {
         compressedImages = await Promise.all(images.map(async (img) => {
           const {base64Data} = validateImageData(img);
-          return compressPhotoForImportJob(base64Data);
+          return compressPhotoForImportJob(base64Data, perImageBudget);
         }));
       } catch (validationErr) {
         console.error('scanRecipePhotoShortcut: image validation/compression failed:', validationErr);
