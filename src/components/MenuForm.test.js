@@ -277,6 +277,29 @@ describe('MenuForm - Drinks section manual drink selection', () => {
     expect(capturedEventFormProps.initialEvent.customDrinkIds).toEqual(['drink-cola', 'predefined_mineralwasser']);
   });
 
+  test('carries the menu\'s tagged guests over to a newly created event', async () => {
+    render(
+      <MenuForm
+        menu={null}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
+    fireEvent.click(await screen.findByText('Anna Adler'));
+
+    fireEvent.click(screen.getByText('Neue Kalkulation erstellen'));
+
+    await waitFor(() => {
+      expect(capturedEventFormProps).not.toBeNull();
+    });
+    expect(capturedEventFormProps.initialEvent.selectedGuestIds).toEqual(['guest-1']);
+  });
+
   test('adds the predefined Mineralwasser drink to both the new event and the menu\'s Drinks section when missing', async () => {
     render(
       <MenuForm
@@ -618,6 +641,36 @@ describe('MenuForm - linked event drinks display', () => {
 
     expect(screen.queryByText('Cola')).not.toBeInTheDocument();
     expect(screen.queryByTitle('Cola entfernen')).not.toBeInTheDocument();
+  });
+});
+
+describe('MenuForm - linking an existing event merges guests', () => {
+  test('merges the linked event\'s guests into this menu\'s guest pills without dropping ones already tagged', async () => {
+    mockSubscribeToEvents.mockImplementation((uid, callback) => {
+      callback([{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', selectedGuestIds: ['guest-2'] }]);
+      return () => {};
+    });
+
+    render(
+      <MenuForm
+        menu={null}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    // Tag guest-1 on the menu before linking, so the merge shouldn't drop it.
+    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
+    fireEvent.click(await screen.findByText('Anna Adler'));
+
+    fireEvent.click(screen.getByText('Bestehende Kalkulation verknüpfen'));
+    fireEvent.click(await screen.findByText('Sommerfest'));
+
+    expect(await screen.findByText('Anna Adler')).toBeInTheDocument();
+    expect(screen.getByText('Ben Beispiel')).toBeInTheDocument();
   });
 });
 

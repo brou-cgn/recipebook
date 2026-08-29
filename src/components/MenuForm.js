@@ -9,7 +9,7 @@ import { uploadMenuGridImage, uploadMenuGridImageDark, deleteMenuGridImage, dele
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getButtonIcons } from '../utils/customLists';
 import { getCategoryImages } from '../utils/categoryImages';
 import { subscribeToEvent, subscribeToEvents, subscribeToCustomDrinks, subscribeToAllCustomDrinks, subscribeToGuestProfiles, saveCustomDrink, calculateEventDrinks } from '../utils/eventsFirestore';
-import { getGuestDisplayName } from '../utils/guestPreferences';
+import { getGuestDisplayName, computeGuestPreferenceMultipliers } from '../utils/guestPreferences';
 import { mergePredefinedDrinks, getDrinkParentCategoryId, categoryHasOwnBudget } from '../utils/drinkCategories';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { encodeRecipeLink, decodeRecipeLink } from '../utils/recipeLinks';
@@ -912,6 +912,15 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     setEventId(id);
     setEventOwnerId(currentUser.id);
     setFormSubView('main');
+    // Linking to an existing event merges the guest lists on both sides
+    // (union) so no guest already present on either side is lost. From here
+    // on, saving either the menu or the event keeps the two lists mirrored
+    // (see handleSubmit below and EventForm's handleSubmit).
+    const targetEvent = availableEvents.find((event) => event.id === id);
+    const eventGuestIds = Array.isArray(targetEvent?.selectedGuestIds) ? targetEvent.selectedGuestIds : [];
+    if (eventGuestIds.length > 0) {
+      setDescriptionGuestIds((prev) => [...prev, ...eventGuestIds.filter((guestId) => !prev.includes(guestId))]);
+    }
   };
 
   const handleUnlinkEvent = () => {
@@ -1292,7 +1301,16 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
             targetDrinkIds.length !== existingEventDrinkIds.length ||
             targetDrinkIds.some((id, index) => id !== existingEventDrinkIds[index]);
 
-          if (drinksChanged) {
+          // Keep the linked event's guest list mirrored to this menu's guest
+          // pills too: once linked, the two lists always stay in sync, in
+          // both directions (see EventForm's handleSubmit for the reverse).
+          const existingEventGuestIds = Array.isArray(linkedEvent.selectedGuestIds) ? linkedEvent.selectedGuestIds : [];
+          const guestsChanged =
+            descriptionGuestIds.length !== existingEventGuestIds.length ||
+            descriptionGuestIds.some((id) => !existingEventGuestIds.includes(id)) ||
+            existingEventGuestIds.some((id) => !descriptionGuestIds.includes(id));
+
+          if (drinksChanged || guestsChanged) {
             const drinkDistributionFactors = { ...(linkedEvent.drinkDistributionFactors || {}) };
             const drinkSelectedEinheiten = { ...(linkedEvent.drinkSelectedEinheiten || {}) };
             Object.keys(drinkDistributionFactors).forEach((id) => {
@@ -1310,13 +1328,24 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                 .filter(Boolean)
                 .map((categoryId) => (categoryHasOwnBudget(categoryId) ? categoryId : getDrinkParentCategoryId(categoryId) || categoryId))
             )];
-            console.log('[MenuForm:handleSubmit] Syncing drinks to linked event and recalculating Getränkeverteilung:', targetDrinkIds);
+            const targetDriverGuestIds = (linkedEvent.driverGuestIds || []).filter((id) => descriptionGuestIds.includes(id));
+            const selectedGuestObjs = guests.filter((guest) => descriptionGuestIds.includes(guest.id));
+            const guestNamesById = selectedGuestObjs.reduce((acc, guest) => {
+              acc[guest.id] = getGuestDisplayName(guest) || 'Unbenannter Gast';
+              return acc;
+            }, {});
+            const guestPreferenceMultipliers = computeGuestPreferenceMultipliers(selectedGuestObjs, allEventDrinks, targetDriverGuestIds);
+            console.log('[MenuForm:handleSubmit] Syncing drinks/guests to linked event and recalculating Getränkeverteilung:', targetDrinkIds, descriptionGuestIds);
             await calculateEventDrinks({
               ...eventFields,
               customDrinkIds: targetDrinkIds,
               drinkDistributionFactors,
               drinkSelectedEinheiten,
               categories,
+              selectedGuestIds: descriptionGuestIds,
+              driverGuestIds: targetDriverGuestIds,
+              guestNamesById,
+              guestPreferenceMultipliers,
             }, eventId);
           }
         } catch (err) {
@@ -1508,7 +1537,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       <EventForm
         currentUser={currentUser}
         recipes={recipes}
-        initialEvent={{ eventName: name.trim(), date: menuDate, customDrinkIds: newEventDrinkIds }}
+        initialEvent={{ eventName: name.trim(), date: menuDate, customDrinkIds: newEventDrinkIds, selectedGuestIds: descriptionGuestIds }}
         onCancel={() => setFormSubView('main')}
         onSaved={(newEventId) => {
           setEventId(newEventId);
