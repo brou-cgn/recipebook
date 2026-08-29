@@ -62,7 +62,7 @@ const mergeUniqueNormalizedValues = (existingValues = [], valuesToAdd = []) => {
 // Regex to detect German time expressions: "10 Minuten", "2 Stunden", "45 Sek"
 const TIME_REGEX_SOURCE = String.raw`(\d+(?:[.,]\d+)?)\s*(Stunden?|h\b|Minuten?|Min\.?|Sekunden?|Sek\.?)`;
 
-function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId, menuPortionCount, onPortionCountChange }) {
+function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId, menuPortionCount, onPortionCountChange, guestsText }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
   const { rows: nutritionReferenceRows, loading: nutritionReferenceLoading, lastUpdatedAt, reload: reloadNutritionReferences } = useNutritionReference();
@@ -2509,6 +2509,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   <span className="creation-date">{authorName ? ' erstellt am ' : 'Erstellt am '}{formattedCreatedAt}</span>
                 )}
               </div>
+            )}
+
+            {guestsText && (
+              <p className="recipe-guests-caption">{guestsText}</p>
             )}
 
             {cuisineDisplay && (

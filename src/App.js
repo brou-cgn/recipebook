@@ -37,6 +37,8 @@ import { applyFaviconSettings } from './utils/faviconUtils';
 import { applyTileSizePreference, applyDarkModePreference, getCustomLists, expandCuisineSelection, getInspirationListSettings } from './utils/customLists';
 import { logRecipeCall } from './utils/recipeCallsFirestore';
 import { deleteRecipeThumbnail } from './utils/storageUtils';
+import { subscribeToGuestProfiles } from './utils/eventsFirestore';
+import { formatMenuGuestsFliesstext } from './utils/guestPreferences';
 import { deleteField, serverTimestamp } from 'firebase/firestore';
 import { getSeasonMatrixOnce } from './utils/seasonMatrix';
 import { hasHauptsaisonIngredient } from './utils/recipeSortIndex';
@@ -356,6 +358,7 @@ function App() {
   const [groupsOpenedFromStartseite, setGroupsOpenedFromStartseite] = useState(false);
   const [menus, setMenus] = useState([]);
   const [selectedMenu, setSelectedMenu] = useState(null);
+  const [selectedMenuGuests, setSelectedMenuGuests] = useState([]);
   const [pendingEventDetailRequest, setPendingEventDetailRequest] = useState(null);
   const [menuBeforeEventDetail, setMenuBeforeEventDetail] = useState(null);
   const [isMenuFormOpen, setIsMenuFormOpen] = useState(false);
@@ -1118,6 +1121,18 @@ function App() {
     wasIdleRecipesOverviewRef.current = isIdleRecipesOverview;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentView, isFormOpen, selectedRecipe, selectedMenu, isSettingsOpen, pendingReviewRecipes]);
+
+  // Guests selected for the currently open menu, used to show a "Gäste: ..."
+  // Fließtext on a recipe opened from within that menu. Only resolvable when
+  // the viewer is the menu's author (guest profiles are private per-user data).
+  useEffect(() => {
+    if (!selectedMenu?.descriptionGuestIds?.length || !selectedMenu?.authorId) {
+      setSelectedMenuGuests([]);
+      return undefined;
+    }
+    const unsubGuests = subscribeToGuestProfiles(selectedMenu.authorId, setSelectedMenuGuests);
+    return () => unsubGuests();
+  }, [selectedMenu?.descriptionGuestIds, selectedMenu?.authorId]);
 
   const handleCreateVersion = (recipe) => {
     setEditingRecipe(recipe);
@@ -2291,6 +2306,7 @@ function App() {
           publicGroupId={publicGroupId}
           menuPortionCount={selectedMenu ? (selectedMenu.portionCounts?.[selectedRecipe?.id] ?? null) : null}
           onPortionCountChange={selectedMenu ? handleMenuPortionCountChange : undefined}
+          guestsText={selectedMenu ? formatMenuGuestsFliesstext(selectedMenu.descriptionGuestIds, selectedMenuGuests) : ''}
         />
         ) : isFormOpen ? (
         // Recipe form - shown with priority over menu/recipe detail

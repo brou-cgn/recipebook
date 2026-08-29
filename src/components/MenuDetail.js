@@ -10,9 +10,10 @@ import { enableMenuSharing, disableMenuSharing } from '../utils/menuFirestore';
 import { scaleIngredient, combineIngredients, convertIngredientUnits, isWaterIngredient } from '../utils/ingredientUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
-import { subscribeToEvent, subscribeToCustomDrinks, getAllCustomDrinks } from '../utils/eventsFirestore';
+import { subscribeToEvent, subscribeToCustomDrinks, getAllCustomDrinks, subscribeToGuestProfiles } from '../utils/eventsFirestore';
 import { mergePredefinedDrinks } from '../utils/drinkCategories';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
+import { formatMenuGuestsFliesstext } from '../utils/guestPreferences';
 import { getImageForCategory } from '../utils/categoryImages';
 import ShoppingListModal from './ShoppingListModal';
 import RecipeCard from './RecipeCard';
@@ -39,6 +40,7 @@ const MOBILE_TABLET_BREAKPOINT = 768;
 
 function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPublish, onSelectRecipe, onToggleMenuFavorite, onOpenEvent, currentUser, allUsers, isSharedView }) {
   const [menu, setMenu] = useState(initialMenu);
+  const [menuGuests, setMenuGuests] = useState([]);
   const [favoriteMenuIds, setFavoriteMenuIds] = useState([]);
   const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
   const [closeButtonIcon, setCloseButtonIcon] = useState('×');
@@ -167,6 +169,18 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     };
   }, [menu.eventId, menu.eventOwnerId]);
 
+  // Guests selected for this menu, used to show a "Gäste: ..." Fließtext on
+  // the menu's recipe cards. Only resolvable when the viewer is the menu's
+  // author (guest profiles are private per-user data).
+  useEffect(() => {
+    if (!menu.descriptionGuestIds?.length || !menu.authorId) {
+      setMenuGuests([]);
+      return undefined;
+    }
+    const unsubGuests = subscribeToGuestProfiles(menu.authorId, setMenuGuests);
+    return () => unsubGuests();
+  }, [menu.descriptionGuestIds, menu.authorId]);
+
   // Load the default category image for the "Drinks" meal category once, used
   // as a fallback picture for drink cards that have no image of their own.
   useEffect(() => {
@@ -243,6 +257,11 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     if (!author) return null;
     return author.vorname;
   }, [menu.authorId, allUsers]);
+
+  const menuGuestsText = useMemo(
+    () => formatMenuGuestsFliesstext(menu.descriptionGuestIds, menuGuests),
+    [menu.descriptionGuestIds, menuGuests]
+  );
 
   const getRecipeAuthorName = (recipe) => {
     if (!recipe.authorId || !allUsers || allUsers.length === 0) return null;
@@ -772,6 +791,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                           favoriteActiveIcon={favoritesButtonActiveIcon}
                           authorName={getRecipeAuthorName(recipe)}
                           currentUser={currentUser}
+                          guestsText={menuGuestsText}
                         />
                       );
                     }
