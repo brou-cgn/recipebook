@@ -3776,11 +3776,23 @@ exports.scanRecipePhotoShortcut = onRequest(
       if (typeof rawImages === 'string') {
         try {
           rawImages = JSON.parse(rawImages);
-        } catch (_) {
+        } catch (parseError) {
+          // Shortcuts has no reliable way to preview a Text action's exact
+          // characters (smart quotes silently substituted by the keyboard's
+          // "Intelligente Anführungszeichen" setting are a common invisible
+          // cause of this). Echo back a bounded preview of what was actually
+          // received so the raw response the Shortcut already displays
+          // doubles as a way to see it, without dumping a possibly
+          // multi-megabyte base64 string into the error.
+          const preview = rawImages.length > 200 ?
+            `${rawImages.slice(0, 100)}…[${rawImages.length} Zeichen gesamt]…${rawImages.slice(-100)}` :
+            rawImages;
           res.status(400).json({
             success: false,
             error: 'Field "images" was a string but not valid JSON. Build it as ' +
               '["photo1","photo2"] (see APPLE_SHORTCUT_SETUP.md) instead of a native array field.',
+            parseError: parseError.message,
+            receivedPreview: preview,
           });
           return;
         }
