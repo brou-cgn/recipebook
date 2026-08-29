@@ -3774,19 +3774,30 @@ exports.scanRecipePhotoShortcut = onRequest(
       // field instead of a native JSON array. Accept that here transparently
       // so the Shortcut doesn't have to fight the array-field UI.
       if (typeof rawImages === 'string') {
+        // Shortcuts' "Base64 kodieren" action wraps its output in MIME-style
+        // 76-char lines joined by literal CRLF — valid inside a *native*
+        // JSON array (Shortcuts serializes each item as a proper escaped
+        // string there), but the hand-built `["<b64>","<b64>"]` string this
+        // endpoint also accepts embeds those raw \r\n bytes unescaped inside
+        // a string literal, which violates the JSON spec and makes
+        // JSON.parse throw even though the brackets/quotes are all correct.
+        // They're pure line-wrap noise for base64 data, so strip them
+        // before parsing (mirrors the equivalent strip in validateImageData
+        // below, which only runs on already-parsed individual images).
+        const stripped = rawImages.replace(/[\r\n]/g, '');
         try {
-          rawImages = JSON.parse(rawImages);
+          rawImages = JSON.parse(stripped);
         } catch (parseError) {
           // Shortcuts has no reliable way to preview a Text action's exact
           // characters (smart quotes silently substituted by the keyboard's
-          // "Intelligente Anführungszeichen" setting are a common invisible
-          // cause of this). Echo back a bounded preview of what was actually
-          // received so the raw response the Shortcut already displays
-          // doubles as a way to see it, without dumping a possibly
+          // "Intelligente Anführungszeichen" setting are another common
+          // invisible cause of this). Echo back a bounded preview of what
+          // was actually received so the raw response the Shortcut already
+          // displays doubles as a way to see it, without dumping a possibly
           // multi-megabyte base64 string into the error.
-          const preview = rawImages.length > 200 ?
-            `${rawImages.slice(0, 100)}…[${rawImages.length} Zeichen gesamt]…${rawImages.slice(-100)}` :
-            rawImages;
+          const preview = stripped.length > 200 ?
+            `${stripped.slice(0, 100)}…[${stripped.length} Zeichen gesamt]…${stripped.slice(-100)}` :
+            stripped;
           res.status(400).json({
             success: false,
             error: 'Field "images" was a string but not valid JSON. Build it as ' +
