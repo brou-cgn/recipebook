@@ -8698,8 +8698,177 @@ async function runImportFromUniversalSource(source, {apiKey} = {}) {
 }
 
 /**
+ * Like callGeminiAPI, but sends multiple photos as separate inline_data
+ * parts within a SINGLE Gemini request instead of one request per photo
+ * (see scanImagesWithGemini/mergePhotoAiResultsServer above for that
+ * approach). runImportFromPhotoSource uses this one instead for the same
+ * reason those two exist for scanRecipesWithAI: a multi-page recipe often
+ * has a continuation page — more ingredients/steps, no title or context of
+ * its own — that doesn't parse as a valid *standalone* recipe when Gemini
+ * only ever sees that one photo in isolation. Scanned independently, that
+ * photo's Gemini call throws (or returns something that fails JSON
+ * parsing) and mergePhotoAiResultsServer silently drops the whole result,
+ * losing that photo's content entirely. Giving the model every page in one
+ * request lets it read them the way a person flipping through would, so a
+ * continuation page's content lands in the combined result instead of
+ * being discarded.
+ * @param {Array<{mimeType: string, base64Data: string}>} imageInputs
+ * @param {string} lang
+ * @param {string} apiKey
+ * @param {string[]|undefined} cuisineTypes
+ * @param {string[]|undefined} mealCategories
+ * @returns {Promise<Object>} Structured recipe data (same shape as callGeminiAPI)
+ */
+async function callGeminiMultiImageAPI(imageInputs, lang, apiKey, cuisineTypes, mealCategories) {
+  let prompt = await getRecipeExtractionPrompt();
+
+  if (Array.isArray(cuisineTypes) && cuisineTypes.length > 0) {
+    const cuisineList = cuisineTypes.map((c) => `- ${c}`).join('\n');
+    prompt = prompt.replaceAll('{{CUISINE_TYPES}}', cuisineList);
+  } else {
+    prompt = prompt.replaceAll(
+        '{{CUISINE_TYPES}}',
+        '- Italian\n- Thai\n- Chinese\n- Japanese\n- Indian\n- Mexican\n- French\n- German\n- American\n- Mediterranean',
+    );
+  }
+  if (Array.isArray(mealCategories) && mealCategories.length > 0) {
+    const categoryList = mealCategories.map((c) => `- ${c}`).join('\n');
+    prompt = prompt.replaceAll('{{MEAL_CATEGORIES}}', categoryList);
+  } else {
+    prompt = prompt.replaceAll(
+        '{{MEAL_CATEGORIES}}',
+        '- Appetizer\n- Main Course\n- Dessert\n- Soup\n- Salad\n- Snack\n- Beverage\n- Side Dish',
+    );
+  }
+
+  const multiPagePrefix = lang === 'de' ?
+    'Die folgenden Fotos zeigen mehrere Seiten DESSELBEN Rezepts in der richtigen Reihenfolge ' +
+      '(z. B. Zutatenliste auf einer Seite, Zubereitungsschritte auf der/den nächsten). ' +
+      'Kombiniere die Informationen aus allen Fotos zu EINEM vollständigen Rezept.\n\n' :
+    'The following photos show multiple pages of the SAME recipe in order ' +
+      '(e.g. ingredient list on one page, preparation steps on the next). ' +
+      'Combine the information from all photos into ONE complete recipe.\n\n';
+
+  const parts = [{text: multiPagePrefix + prompt}];
+  for (const {mimeType, base64Data} of imageInputs) {
+    parts.push({inline_data: {mime_type: mimeType, data: base64Data}});
+  }
+
+  const requestBody = {
+    contents: [{parts}],
+    generationConfig: {
+      temperature: 0.1,
+      topK: 32,
+      topP: 1,
+      maxOutputTokens: 8192,
+    },
+  };
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Gemini API error (multi-image):', errorData);
+      const errorMessage = errorData.error?.message || response.statusText;
+      if (response.status === 429) {
+        throw new HttpsError(
+            'resource-exhausted',
+            'Die KI-API ist momentan ausgelastet. Bitte versuche es in einigen Minuten erneut oder nutze Standard-OCR.',
+        );
+      } else if (response.status === 503 || response.status === 502) {
+        throw new HttpsError('unavailable', `Gemini API error: ${errorMessage}`);
+      }
+      throw new HttpsError('internal', `Gemini API error: ${errorMessage}`);
+    }
+
+    const data = await response.json();
+    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!textResponse) {
+      throw new HttpsError('internal', 'No response from Gemini API');
+    }
+
+    let jsonText = textResponse.trim();
+    const codeBlockMatch = jsonText.match(/```(?:json)?\r?\n([\s\S]*?)\r?\n```/);
+    if (codeBlockMatch) {
+      jsonText = codeBlockMatch[1].trim();
+    } else if (!jsonText.startsWith('{')) {
+      const jsonObjectMatch = jsonText.match(/\{[\s\S]*\}/);
+      if (jsonObjectMatch) {
+        jsonText = jsonObjectMatch[0];
+      }
+    }
+
+    const recipeData = JSON.parse(jsonText);
+
+    if (lang === 'de') {
+      return {
+        title: recipeData.titel || '',
+        servings: recipeData.portionen || 0,
+        prepTime: recipeData.zubereitungszeit || '',
+        cookTime: recipeData.kochzeit || '',
+        difficulty: recipeData.schwierigkeit || 0,
+        cuisine: recipeData.kulinarik || '',
+        category: recipeData.kategorie || '',
+        tags: recipeData.tags || [],
+        ingredients: normalizeIngredientUnits(recipeData.zutaten || []),
+        steps: recipeData.zubereitung || [],
+        notes: recipeData.notizen || '',
+        confidence: 95,
+        provider: 'gemini',
+        rawResponse: textResponse,
+      };
+    }
+    return {
+      title: recipeData.title || '',
+      servings: recipeData.servings || 0,
+      prepTime: recipeData.prepTime || '',
+      cookTime: recipeData.cookTime || '',
+      difficulty: recipeData.difficulty || 0,
+      cuisine: recipeData.cuisine || '',
+      category: recipeData.category || '',
+      tags: recipeData.tags || [],
+      ingredients: normalizeIngredientUnits(recipeData.ingredients || []),
+      steps: recipeData.steps || [],
+      notes: recipeData.notes || '',
+      confidence: 95,
+      provider: 'gemini',
+      rawResponse: textResponse,
+    };
+  } catch (error) {
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    console.error('Gemini API call error (multi-image):', error);
+    if (error.message.includes('quota')) {
+      throw new HttpsError('resource-exhausted', 'API quota exceeded. Please try again later.');
+    } else if (error.name === 'AbortError' || error.message.includes('timeout')) {
+      throw new HttpsError('deadline-exceeded', 'Request timed out. Please try again.');
+    } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' ||
+               error.message.includes('fetch') || error.message.includes('network')) {
+      throw new HttpsError('unavailable', 'Network error. Please check your connection.');
+    } else if (error.message.includes('JSON')) {
+      throw new HttpsError(
+          'invalid-argument',
+          'Failed to parse recipe data. The images might not contain a valid recipe.',
+      );
+    }
+    throw new HttpsError('internal', 'Failed to process images with AI: ' + error.message);
+  }
+}
+
+/**
  * Rebuilds the 'photo' leg of runImportFromSource, server-side equivalent of
- * runPhotoScanImport in src/utils/importRunners.js.
+ * runPhotoScanImport in src/utils/importRunners.js. Unlike that client path
+ * (which calls scanRecipesWithAI's per-image-then-merge approach), multiple
+ * photos here go through callGeminiMultiImageAPI as one combined request —
+ * see its doc comment for why.
  *
  * @param {{images?: string[], language?: string}} source
  * @param {{apiKey: string}} opts
@@ -8713,12 +8882,11 @@ async function runImportFromPhotoSource(source, {apiKey} = {}) {
     error.code = 'invalid-argument';
     throw error;
   }
-  if (images.length === 1) {
-    const {mimeType, base64Data} = validateImageData(images[0]);
-    return callGeminiAPI(base64Data, mimeType, language, apiKey);
+  const imageInputs = images.map((img) => validateImageData(img));
+  if (imageInputs.length === 1) {
+    return callGeminiAPI(imageInputs[0].base64Data, imageInputs[0].mimeType, language, apiKey);
   }
-  const results = await scanImagesWithGemini(images, {language, apiKey});
-  return mergePhotoAiResultsServer(results);
+  return callGeminiMultiImageAPI(imageInputs, language, apiKey);
 }
 
 /**
