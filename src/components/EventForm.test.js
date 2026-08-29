@@ -540,6 +540,74 @@ describe('EventForm', () => {
     expect(updates.sections[0].drinkIds).toEqual(['custom-cola']);
   });
 
+  test('mirrors the event\'s guest list into linked menus\' descriptionGuestIds on save', async () => {
+    const onSaved = jest.fn();
+    const initialEvent = {
+      id: 'event-42',
+      eventName: 'Geburtstag',
+      date: '2025-06-15',
+      durationHours: 5,
+      guests: { adults: 0, children: 0 },
+      eventType: 'party',
+      customDrinkIds: [],
+      selectedGuestIds: [],
+      pufferProzent: 10,
+    };
+    mockCalculateEventDrinks.mockResolvedValue({ eventId: 'event-42' });
+    mockGetMenusByEventId.mockResolvedValue([
+      { id: 'menu-1', sections: [], descriptionGuestIds: [] },
+    ]);
+    render(
+      <EventForm
+        onSaved={onSaved}
+        onCancel={jest.fn()}
+        currentUser={{ id: 'u1' }}
+        initialEvent={initialEvent}
+      />,
+    );
+
+    // Add guest g1 via the guest selection sub-page, then save the event.
+    fireEvent.click(screen.getByRole('button', { name: 'Gäste verwalten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gäste speichern' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Berechnung aktualisieren' }));
+
+    await waitFor(() => expect(mockUpdateMenu).toHaveBeenCalledTimes(1));
+    expect(mockGetMenusByEventId).toHaveBeenCalledWith('u1', 'event-42');
+    const [menuId, updates] = mockUpdateMenu.mock.calls[0];
+    expect(menuId).toBe('menu-1');
+    expect(updates.descriptionGuestIds).toEqual(['g1']);
+  });
+
+  test('does not touch linked menus when the guest list is unchanged and no drinks were removed', async () => {
+    const onSaved = jest.fn();
+    const initialEvent = {
+      id: 'event-42',
+      eventName: 'Geburtstag',
+      date: '2025-06-15',
+      durationHours: 5,
+      guests: { adults: 0, children: 0 },
+      eventType: 'party',
+      customDrinkIds: [],
+      selectedGuestIds: [],
+      pufferProzent: 10,
+    };
+    mockCalculateEventDrinks.mockResolvedValue({ eventId: 'event-42' });
+    render(
+      <EventForm
+        onSaved={onSaved}
+        onCancel={jest.fn()}
+        currentUser={{ id: 'u1' }}
+        initialEvent={initialEvent}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('Berechnung aktualisieren'));
+
+    await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
+    expect(mockGetMenusByEventId).not.toHaveBeenCalled();
+    expect(mockUpdateMenu).not.toHaveBeenCalled();
+  });
+
   test('removes a deleted drink recipe from linked menus\' recipeIds on save', async () => {
     const onSaved = jest.fn();
     mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {

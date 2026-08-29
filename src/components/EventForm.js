@@ -218,7 +218,15 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
       const removedRecipeIds = removedDrinkIds
         .map((id) => decodeRecipeLink(allDrinks.find((drink) => drink.id === id)?.name)?.recipeId)
         .filter(Boolean);
-      if (removedDrinkIds.length > 0 && effectiveOwnerId) {
+      // Keep every linked menu's guest pills mirrored to this event's guest
+      // list, in both directions (see MenuForm's handleSubmit for the
+      // reverse: menu guests pushed into the event).
+      const initialGuestIds = initialEvent?.selectedGuestIds ?? [];
+      const guestsChanged =
+        selectedGuestIds.length !== initialGuestIds.length ||
+        selectedGuestIds.some((id) => !initialGuestIds.includes(id)) ||
+        initialGuestIds.some((id) => !selectedGuestIds.includes(id));
+      if ((removedDrinkIds.length > 0 || guestsChanged) && effectiveOwnerId) {
         try {
           const linkedMenus = await getMenusByEventId(effectiveOwnerId, result.eventId);
           await Promise.all(linkedMenus.map((linkedMenu) => {
@@ -241,11 +249,20 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
               }
               return nextSection;
             });
-            if (!changed) return null;
-            return updateMenu(linkedMenu.id, { sections: nextSections });
+            const updates = {};
+            if (changed) updates.sections = nextSections;
+            const existingMenuGuestIds = Array.isArray(linkedMenu.descriptionGuestIds) ? linkedMenu.descriptionGuestIds : [];
+            const menuGuestsDiffer =
+              guestsChanged &&
+              (existingMenuGuestIds.length !== selectedGuestIds.length ||
+                existingMenuGuestIds.some((id) => !selectedGuestIds.includes(id)) ||
+                selectedGuestIds.some((id) => !existingMenuGuestIds.includes(id)));
+            if (menuGuestsDiffer) updates.descriptionGuestIds = selectedGuestIds;
+            if (Object.keys(updates).length === 0) return null;
+            return updateMenu(linkedMenu.id, updates);
           }));
         } catch (err) {
-          console.error('Error syncing removed drinks to linked menus:', err);
+          console.error('Error syncing removed drinks/guests to linked menus:', err);
         }
       }
 
