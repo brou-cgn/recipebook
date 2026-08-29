@@ -1123,6 +1123,20 @@
   color: #ccc;
 }
 
+[data-theme="dark"] .menu-description-field {
+  border-color: #555;
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .menu-description-field:focus-within {
+  border-color: #7a8fdf;
+}
+
+[data-theme="dark"] .menu-description-guest-pill {
+  background: #1f2b27;
+  color: #9fc4b7;
+}
+
 /* ---- Register ---- */
 [data-theme="dark"] .register-box {
   background: #1e1e1e;

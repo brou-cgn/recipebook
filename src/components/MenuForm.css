@@ -476,6 +476,83 @@
   text-align: center;
 }
 
+/* Guest pills in the menu description field (see CLAUDE.md: guests are
+   pulled from the Event module's guest catalog, searched via typeahead, and
+   removed with the shared DeleteRowButton). The wrapper visually stands in
+   for the textarea's own border so pills read as being "in" the field. */
+.menu-description-field {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0.75rem;
+  transition: border-color 0.3s ease;
+}
+
+.menu-description-field:focus-within {
+  border-color: #402C1C;
+}
+
+.menu-description-guest-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.menu-description-guest-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: #e8f0ee;
+  color: #2F5D50;
+  border-radius: 999px;
+  padding: 2px 2px 2px 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* This chip already carries its own background, so it opts out of the
+   shared row tint from DeleteRowButton.css - only the button itself should
+   react on hover/focus. */
+.menu-description-guest-pill.delete-row-hover-target:hover,
+.menu-description-guest-pill.delete-row-hover-target:focus-within {
+  background: #e8f0ee;
+}
+
+[data-theme="dark"] .menu-description-guest-pill.delete-row-hover-target:hover,
+[data-theme="dark"] .menu-description-guest-pill.delete-row-hover-target:focus-within {
+  background: #1f2b27;
+}
+
+.form-group .menu-description-field .menu-description-guest-search {
+  margin: 0 0 0.5rem;
+}
+
+/* !important here beats the global dark-mode input reset in darkMode.css
+   (`input:not([type="checkbox"]):not([type="radio"]):not([type="range"])`),
+   whose three :not() clauses outweigh this selector's own specificity. */
+.form-group .menu-description-field input.menu-description-guest-search-input {
+  border: none !important;
+  padding: 0.4rem 0;
+  background: transparent !important;
+}
+
+.form-group .menu-description-field input.menu-description-guest-search-input:focus {
+  outline: none;
+  border: none !important;
+  background: transparent !important;
+}
+
+.form-group .menu-description-field textarea.menu-description-textarea {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.form-group .menu-description-field textarea.menu-description-textarea:focus {
+  outline: none;
+  border: none;
+}
+
 .selected-recipes {
   margin-bottom: 1rem;
 }

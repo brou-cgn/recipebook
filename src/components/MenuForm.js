@@ -8,7 +8,8 @@ import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage, 
 import { uploadMenuGridImage, uploadMenuGridImageDark, deleteMenuGridImage, deleteMenuGridImageDark, isStorageUrl } from '../utils/storageUtils';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getButtonIcons } from '../utils/customLists';
 import { getCategoryImages } from '../utils/categoryImages';
-import { subscribeToEvent, subscribeToEvents, subscribeToCustomDrinks, subscribeToAllCustomDrinks, saveCustomDrink, calculateEventDrinks } from '../utils/eventsFirestore';
+import { subscribeToEvent, subscribeToEvents, subscribeToCustomDrinks, subscribeToAllCustomDrinks, subscribeToGuestProfiles, saveCustomDrink, calculateEventDrinks } from '../utils/eventsFirestore';
+import { getGuestDisplayName } from '../utils/guestPreferences';
 import { mergePredefinedDrinks, getDrinkParentCategoryId, categoryHasOwnBudget } from '../utils/drinkCategories';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { encodeRecipeLink, decodeRecipeLink } from '../utils/recipeLinks';
@@ -545,6 +546,11 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [showOwnDrinksOnly, setShowOwnDrinksOnly] = useState(true);
   const [newEventDrinkIds, setNewEventDrinkIds] = useState([]);
   const [preparingNewEvent, setPreparingNewEvent] = useState(false);
+  // Guests from the Event module that can be tagged as pills in the
+  // description field (see the "menuDescription" form-group below).
+  const [guests, setGuests] = useState([]);
+  const [descriptionGuestIds, setDescriptionGuestIds] = useState([]);
+  const [guestSearchQuery, setGuestSearchQuery] = useState('');
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -570,6 +576,17 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       }
     };
     loadFavorites();
+  }, [currentUser?.id]);
+
+  // Load the current user's guest catalog from the Event module, so guests
+  // can be tagged as pills in the menu description field.
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setGuests([]);
+      return undefined;
+    }
+    const unsubscribe = subscribeToGuestProfiles(currentUser.id, setGuests);
+    return unsubscribe;
   }, [currentUser?.id]);
 
   // Load button icons
@@ -909,6 +926,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     if (menu) {
       setName(menu.name || '');
       setDescription(menu.description || '');
+      setDescriptionGuestIds(menu.descriptionGuestIds || []);
       setMenuImage(menu.image || '');
       setEventId(menu.eventId || null);
       setEventOwnerId(menu.eventOwnerId || null);
@@ -950,6 +968,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       setMenuDate(new Date().toISOString().slice(0, 10));
       setEventId(null);
       setEventOwnerId(null);
+      setDescriptionGuestIds([]);
     }
   }, [menu]);
 
@@ -1221,6 +1240,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
         id: menu?.id,
         name: name.trim(),
         description: description.trim(),
+        descriptionGuestIds,
         menuDate: menuDate,
         image: menuImage,
         gridImage: gridImage || null,
@@ -1310,6 +1330,36 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     } finally {
       setSavingMenu(false);
     }
+  };
+
+  // Guests tagged as pills in the description field (see the "menuDescription"
+  // form-group below). Mirrors the recipe/drink search handlers above.
+  const handleAddDescriptionGuest = (guestId) => {
+    setDescriptionGuestIds((prev) => (prev.includes(guestId) ? prev : [...prev, guestId]));
+    setGuestSearchQuery('');
+  };
+
+  const handleRemoveDescriptionGuest = (guestId, displayName) => {
+    const index = descriptionGuestIds.indexOf(guestId);
+    setDescriptionGuestIds((prev) => prev.filter((id) => id !== guestId));
+    notifyDeleted({
+      id: `description-guest:${guestId}`,
+      name: displayName || 'Gast',
+      undo: () => {
+        setDescriptionGuestIds((prev) => {
+          if (prev.includes(guestId)) return prev;
+          const next = [...prev];
+          next.splice(Math.min(index, next.length), 0, guestId);
+          return next;
+        });
+      },
+    });
+  };
+
+  const getFilteredDescriptionGuests = () => {
+    const availableGuests = guests.filter((guest) => !descriptionGuestIds.includes(guest.id));
+    if (!guestSearchQuery.trim()) return availableGuests;
+    return fuzzyFilter(availableGuests, guestSearchQuery, (guest) => getGuestDisplayName(guest) || '');
   };
 
   const handleSearchChange = (sectionIndex, query) => {
@@ -1557,13 +1607,65 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
 
         <div className="form-group">
           <label htmlFor="menuDescription">Beschreibung (optional)</label>
-          <textarea
-            id="menuDescription"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Sag etwas über dein Menü."
-            rows="3"
-          />
+          <div className="menu-description-field">
+            {descriptionGuestIds.length > 0 && (
+              <div className="menu-description-guest-pills">
+                {descriptionGuestIds.map((guestId) => {
+                  const guest = guests.find((g) => g.id === guestId);
+                  const fullName = getGuestDisplayName(guest) || 'Unbenannter Gast';
+                  return (
+                    <span key={guestId} className="menu-description-guest-pill delete-row-hover-target">
+                      {fullName}
+                      <DeleteRowButton
+                        itemName={fullName}
+                        className="menu-description-guest-pill-delete"
+                        onClick={() => handleRemoveDescriptionGuest(guestId, fullName)}
+                      />
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="typeahead-container menu-description-guest-search">
+              <input
+                type="text"
+                className="typeahead-input menu-description-guest-search-input"
+                placeholder="Gast suchen und als Pille hinzufügen..."
+                value={guestSearchQuery}
+                onChange={(e) => setGuestSearchQuery(e.target.value)}
+              />
+
+              {guestSearchQuery.trim() && (
+                <div className="typeahead-dropdown">
+                  {(() => {
+                    const filteredGuests = getFilteredDescriptionGuests();
+                    if (filteredGuests.length === 0) {
+                      return <div className="typeahead-no-results">Keine Gäste gefunden</div>;
+                    }
+                    return filteredGuests.slice(0, 10).map((guest) => (
+                      <div
+                        key={guest.id}
+                        className="typeahead-item"
+                        onClick={() => handleAddDescriptionGuest(guest.id)}
+                      >
+                        <span className="recipe-name">{getGuestDisplayName(guest) || 'Unbenannter Gast'}</span>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              )}
+            </div>
+
+            <textarea
+              id="menuDescription"
+              className="menu-description-textarea"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Sag etwas über dein Menü."
+              rows="3"
+            />
+          </div>
         </div>
 
         <div className="form-group menu-date-row">
