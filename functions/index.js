@@ -8741,15 +8741,30 @@ async function callGeminiMultiImageAPI(imageInputs, lang, apiKey, cuisineTypes, 
     );
   }
 
-  const multiPagePrefix = lang === 'de' ?
-    'Die folgenden Fotos zeigen mehrere Seiten DESSELBEN Rezepts in der richtigen Reihenfolge ' +
-      '(z. B. Zutatenliste auf einer Seite, Zubereitungsschritte auf der/den nächsten). ' +
-      'Kombiniere die Informationen aus allen Fotos zu EINEM vollständigen Rezept.\n\n' :
-    'The following photos show multiple pages of the SAME recipe in order ' +
-      '(e.g. ingredient list on one page, preparation steps on the next). ' +
-      'Combine the information from all photos into ONE complete recipe.\n\n';
+  // The base prompt (above, from Settings) is written for a single image —
+  // it opens with "Analysiere dieses Rezeptbild" and, more importantly,
+  // closes with "Extrahiere nun alle sichtbaren Informationen aus dem Bild"
+  // (singular "the image"). A prefix alone got diluted by that closing
+  // line and the model kept anchoring on one photo, silently dropping a
+  // continuation page's content. Appending this note AFTER the base
+  // prompt instead makes it the last instruction the model reads before
+  // the images themselves, so it overrides the singular framing rather
+  // than competing with it.
+  const multiPageNote = lang === 'de' ?
+    '\n\nWICHTIGER HINWEIS ZU DEN BILDERN: Die obigen Anweisungen sprechen von "dem Bild" (Singular) – ' +
+      'tatsächlich erhältst du mehrere Fotos, die zusammen SEITEN DESSELBEN Rezepts zeigen, in der Reihenfolge, ' +
+      'in der sie angehängt sind (z. B. Zutatenliste auf einem Foto, Zubereitungsschritte auf einem anderen). ' +
+      'Betrachte JEDES einzelne angehängte Foto genau und kombiniere die Informationen aus ALLEN Fotos zu ' +
+      'EINEM vollständigen Rezept-JSON. Ignoriere KEIN Foto, auch wenn es für sich allein unvollständig wirkt ' +
+      '(z. B. nur Zubereitungsschritte ohne eigenen Titel) – solche Fotos ergänzen die Informationen der anderen.' :
+    '\n\nIMPORTANT NOTE ABOUT THE IMAGES: The instructions above refer to "the image" (singular) – ' +
+      'you are actually receiving multiple photos that together show PAGES OF THE SAME recipe, in the order ' +
+      'they are attached (e.g. ingredient list on one photo, preparation steps on another). Examine EVERY ' +
+      'attached photo closely and combine the information from ALL photos into ONE complete recipe JSON. ' +
+      'Do not ignore any photo, even if it looks incomplete on its own (e.g. only preparation steps with no ' +
+      'title of its own) – such photos complement the information in the others.';
 
-  const parts = [{text: multiPagePrefix + prompt}];
+  const parts = [{text: prompt + multiPageNote}];
   for (const {mimeType, base64Data} of imageInputs) {
     parts.push({inline_data: {mime_type: mimeType, data: base64Data}});
   }
