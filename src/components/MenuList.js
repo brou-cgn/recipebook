@@ -4,6 +4,8 @@ import MenuFilterSidebar from './MenuFilterSidebar';
 import { getUserMenuFavorites } from '../utils/menuFavorites';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+import { subscribeToGuestProfiles, subscribeToAllGuestProfiles } from '../utils/eventsFirestore';
+import { formatMenuGuestsFliesstext } from '../utils/guestPreferences';
 
 function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorite, currentUser, allUsers }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -12,6 +14,22 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
   const [favPressed, setFavPressed] = useState(false);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
+  const [guests, setGuests] = useState([]);
+
+  // Guest profiles used to resolve descriptionGuestIds into first names for
+  // the "Gäste: ..." Fließtext on each menu card. Regular users only ever see
+  // their own guests (Firestore rules); admins see everyone's, annotated with
+  // ownerId, so they can resolve guests on menus authored by other users too.
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setGuests([]);
+      return undefined;
+    }
+    const unsubGuests = currentUser.role === 'admin'
+      ? subscribeToAllGuestProfiles(setGuests)
+      : subscribeToGuestProfiles(currentUser.id, setGuests);
+    return () => unsubGuests();
+  }, [currentUser?.id, currentUser?.role]);
 
   // Load button icons on mount
   useEffect(() => {
@@ -52,6 +70,8 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
     if (!author) return null;
     return author.vorname;
   };
+
+  const getMenuGuestsText = (menu) => formatMenuGuestsFliesstext(menu.descriptionGuestIds, guests);
 
   const getMenuDate = (menu) => {
     if (menu.menuDate) {
@@ -136,6 +156,7 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
             const isFavorite = favoriteIds.includes(menu.id);
             const menuDate = getMenuDate(menu);
             const authorName = getAuthorName(menu);
+            const menuGuestsText = getMenuGuestsText(menu);
             return (
               <div
                 key={menu.id}
@@ -182,6 +203,9 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
                   <h3>{menu.name}</h3>
                   {menu.description && (
                     <p className="menu-description">{menu.description}</p>
+                  )}
+                  {menuGuestsText && (
+                    <p className="menu-description menu-guests-text">{menuGuestsText}</p>
                   )}
                   <div className="menu-meta">
                     {menuDate && <span>{menuDate}</span>}

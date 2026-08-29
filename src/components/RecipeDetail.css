@@ -642,14 +642,6 @@ button.private-badge-button:active {
   font-weight: 400;
 }
 
-.recipe-guests-caption {
-  margin: 0;
-  padding: 0 1.5rem 1rem 1.5rem;
-  font-size: 0.85rem;
-  color: #3a3f42;
-  font-weight: 400;
-}
-
 .version-arrow {
   background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
   color: white;
