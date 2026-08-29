@@ -134,7 +134,7 @@ jobs:
               fi
             fi
 
-            if echo "$deploy_output" | grep -Eiq "Failed to make request to https://serviceusage.googleapis.com|Failed to make request to .*serviceusage.googleapis.com"; then
+            if echo "$deploy_output" | grep -Eiq "Failed to make request to .*serviceusage\.googleapis\.com"; then
               if [ "$attempt" -lt "$max_attempts" ]; then
                 case "$attempt" in
                   1) sleep_seconds=10 ;;
