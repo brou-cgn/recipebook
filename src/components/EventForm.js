@@ -150,6 +150,28 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
   }, [selectedGuestCounts.adults, selectedGuestCounts.children, selectedGuestIds.length]);
 
 
+  // Immediately mirrors this event's guest list into every linked menu, so
+  // the two lists never depend on the event's own "Berechnung aktualisieren"
+  // being clicked afterwards. Only meaningful for an already-saved event -
+  // a brand new one can't have any linked menus yet.
+  const pushGuestsToLinkedMenus = async (nextGuestIds) => {
+    if (!isEditing || !effectiveOwnerId) return;
+    try {
+      const linkedMenus = await getMenusByEventId(effectiveOwnerId, initialEvent.id);
+      await Promise.all(linkedMenus.map((linkedMenu) => {
+        const existingMenuGuestIds = Array.isArray(linkedMenu.descriptionGuestIds) ? linkedMenu.descriptionGuestIds : [];
+        const differs =
+          existingMenuGuestIds.length !== nextGuestIds.length ||
+          existingMenuGuestIds.some((id) => !nextGuestIds.includes(id)) ||
+          nextGuestIds.some((id) => !existingMenuGuestIds.includes(id));
+        if (!differs) return null;
+        return updateMenu(linkedMenu.id, { descriptionGuestIds: nextGuestIds });
+      }));
+    } catch (err) {
+      console.error('Error syncing guests to linked menus:', err);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!eventName.trim() || !date || !durationHours) {
@@ -294,6 +316,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
             setChildren(nextCounts.children);
           }
           setShowGuestSelection(false);
+          pushGuestsToLinkedMenus(newSelectedIds);
         }}
         onBack={() => setShowGuestSelection(false)}
       />

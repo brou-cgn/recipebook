@@ -540,7 +540,7 @@ describe('EventForm', () => {
     expect(updates.sections[0].drinkIds).toEqual(['custom-cola']);
   });
 
-  test('mirrors the event\'s guest list into linked menus\' descriptionGuestIds on save', async () => {
+  test('mirrors the event\'s guest list into linked menus\' descriptionGuestIds immediately, without needing "Berechnung aktualisieren"', async () => {
     const onSaved = jest.fn();
     const initialEvent = {
       id: 'event-42',
@@ -566,16 +566,18 @@ describe('EventForm', () => {
       />,
     );
 
-    // Add guest g1 via the guest selection sub-page, then save the event.
+    // Add guest g1 via the guest selection sub-page - the sub-page's own
+    // "Speichern" already pushes the change to linked menus, before the
+    // outer event form's "Berechnung aktualisieren" is ever clicked.
     fireEvent.click(screen.getByRole('button', { name: 'Gäste verwalten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Gäste speichern' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Berechnung aktualisieren' }));
 
-    await waitFor(() => expect(mockUpdateMenu).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockUpdateMenu).toHaveBeenCalled());
     expect(mockGetMenusByEventId).toHaveBeenCalledWith('u1', 'event-42');
     const [menuId, updates] = mockUpdateMenu.mock.calls[0];
     expect(menuId).toBe('menu-1');
     expect(updates.descriptionGuestIds).toEqual(['g1']);
+    expect(mockCalculateEventDrinks).not.toHaveBeenCalled();
   });
 
   test('does not touch linked menus when the guest list is unchanged and no drinks were removed', async () => {
