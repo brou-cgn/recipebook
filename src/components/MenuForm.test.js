@@ -672,6 +672,101 @@ describe('MenuForm - linking an existing event merges guests', () => {
     expect(await screen.findByText('Anna Adler')).toBeInTheDocument();
     expect(screen.getByText('Ben Beispiel')).toBeInTheDocument();
   });
+
+  test('pushes the merged guest list to the event immediately on link, without needing the menu\'s "Speichern"', async () => {
+    mockSubscribeToEvents.mockImplementation((uid, callback) => {
+      callback([{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 1, children: 0 }, selectedGuestIds: ['guest-2'] }]);
+      return () => {};
+    });
+
+    render(
+      <MenuForm
+        menu={null}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
+    fireEvent.click(await screen.findByText('Anna Adler'));
+
+    fireEvent.click(screen.getByText('Bestehende Kalkulation verknüpfen'));
+    fireEvent.click(await screen.findByText('Sommerfest'));
+
+    await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalled());
+    const [event, eventId] = mockCalculateEventDrinks.mock.calls[0];
+    expect(eventId).toBe('event-9');
+    expect(event.selectedGuestIds).toEqual(expect.arrayContaining(['guest-1', 'guest-2']));
+  });
+});
+
+describe('MenuForm - immediate guest sync with a linked event', () => {
+  test('removing a guest pill pushes the change to the linked event right away, before "Speichern" is clicked', async () => {
+    mockSubscribeToEvent.mockImplementation((uid, eventId, callback) => {
+      callback({ id: 'event-1', eventName: 'Testparty', customDrinkIds: [], durationHours: 4, guests: { adults: 1, children: 0 }, selectedGuestIds: ['guest-1'] });
+      return () => {};
+    });
+
+    render(
+      <MenuForm
+        menu={{
+          id: 'menu-1',
+          name: 'Testmenü',
+          sections: [{ name: 'Drinks', recipeIds: [], drinkIds: ['drink-cola'] }],
+          descriptionGuestIds: ['guest-1'],
+          eventId: 'event-1',
+          eventOwnerId: 'user-1',
+        }}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    expect(await screen.findByText('Anna Adler')).toBeInTheDocument();
+    fireEvent.click(screen.getByTitle('Anna Adler entfernen'));
+
+    await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalled());
+    const [event, eventId] = mockCalculateEventDrinks.mock.calls[0];
+    expect(eventId).toBe('event-1');
+    expect(event.selectedGuestIds).toEqual([]);
+  });
+
+  test('adding a guest pill pushes the change to the linked event right away', async () => {
+    mockSubscribeToEvent.mockImplementation((uid, eventId, callback) => {
+      callback({ id: 'event-1', eventName: 'Testparty', customDrinkIds: [], durationHours: 4, guests: { adults: 0, children: 0 }, selectedGuestIds: [] });
+      return () => {};
+    });
+
+    render(
+      <MenuForm
+        menu={{
+          id: 'menu-1',
+          name: 'Testmenü',
+          sections: [{ name: 'Drinks', recipeIds: [], drinkIds: ['drink-cola'] }],
+          eventId: 'event-1',
+          eventOwnerId: 'user-1',
+        }}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    const guestSearchInput = await screen.findByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
+    fireEvent.click(await screen.findByText('Anna Adler'));
+
+    await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalled());
+    const [event, eventId] = mockCalculateEventDrinks.mock.calls[0];
+    expect(eventId).toBe('event-1');
+    expect(event.selectedGuestIds).toEqual(['guest-1']);
+  });
 });
 
 describe('MenuForm - recipe drag-and-drop items', () => {

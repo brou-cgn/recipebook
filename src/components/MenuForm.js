@@ -908,18 +908,49 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     }
   };
 
+  // Immediately mirrors a guest-pill add/remove into the linked event, so the
+  // two lists never depend on the menu's own "Speichern" being clicked
+  // afterwards (mirrors how the pill itself disappears/appears immediately).
+  // `targetEventId`/`eventDoc` are passed explicitly rather than read from
+  // `eventId`/`linkedEvent` state, since right after linking a new event
+  // those haven't propagated/loaded yet.
+  const pushGuestsToEvent = async (targetEventId, nextGuestIds, eventDoc) => {
+    if (!targetEventId || !eventDoc) return;
+    try {
+      const { id: _eventDocId, berechnung: _berechnung, ...eventFields } = eventDoc;
+      const allEventDrinks = mergePredefinedDrinks(linkedEventCustomDrinks);
+      const targetDriverGuestIds = (eventDoc.driverGuestIds || []).filter((id) => nextGuestIds.includes(id));
+      const selectedGuestObjs = guests.filter((guest) => nextGuestIds.includes(guest.id));
+      const guestNamesById = selectedGuestObjs.reduce((acc, guest) => {
+        acc[guest.id] = getGuestDisplayName(guest) || 'Unbenannter Gast';
+        return acc;
+      }, {});
+      const guestPreferenceMultipliers = computeGuestPreferenceMultipliers(selectedGuestObjs, allEventDrinks, targetDriverGuestIds);
+      await calculateEventDrinks({
+        ...eventFields,
+        selectedGuestIds: nextGuestIds,
+        driverGuestIds: targetDriverGuestIds,
+        guestNamesById,
+        guestPreferenceMultipliers,
+      }, targetEventId);
+    } catch (err) {
+      console.error('[MenuForm] Fehler beim Synchronisieren der Event-Gäste:', err);
+    }
+  };
+
   const handleLinkEvent = (id) => {
     setEventId(id);
     setEventOwnerId(currentUser.id);
     setFormSubView('main');
     // Linking to an existing event merges the guest lists on both sides
-    // (union) so no guest already present on either side is lost. From here
-    // on, saving either the menu or the event keeps the two lists mirrored
-    // (see handleSubmit below and EventForm's handleSubmit).
+    // (union) so no guest already present on either side is lost, and pushes
+    // the merge to the event right away.
     const targetEvent = availableEvents.find((event) => event.id === id);
     const eventGuestIds = Array.isArray(targetEvent?.selectedGuestIds) ? targetEvent.selectedGuestIds : [];
     if (eventGuestIds.length > 0) {
-      setDescriptionGuestIds((prev) => [...prev, ...eventGuestIds.filter((guestId) => !prev.includes(guestId))]);
+      const merged = [...descriptionGuestIds, ...eventGuestIds.filter((guestId) => !descriptionGuestIds.includes(guestId))];
+      setDescriptionGuestIds(merged);
+      pushGuestsToEvent(id, merged, targetEvent);
     }
   };
 
@@ -1364,23 +1395,43 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   // Guests tagged as pills in the description field (see the "menuDescription"
   // form-group below). Mirrors the recipe/drink search handlers above.
   const handleAddDescriptionGuest = (guestId) => {
-    setDescriptionGuestIds((prev) => (prev.includes(guestId) ? prev : [...prev, guestId]));
+    if (descriptionGuestIds.includes(guestId)) {
+      setGuestSearchQuery('');
+      return;
+    }
+    const next = [...descriptionGuestIds, guestId];
+    setDescriptionGuestIds(next);
+    if (eventId && linkedEvent && eventOwnerId === currentUser?.id) {
+      pushGuestsToEvent(eventId, next, linkedEvent);
+    }
     setGuestSearchQuery('');
   };
 
   const handleRemoveDescriptionGuest = (guestId, displayName) => {
     const index = descriptionGuestIds.indexOf(guestId);
-    setDescriptionGuestIds((prev) => prev.filter((id) => id !== guestId));
+    const canSyncToEvent = eventId && linkedEvent && eventOwnerId === currentUser?.id;
+    const next = descriptionGuestIds.filter((id) => id !== guestId);
+    setDescriptionGuestIds(next);
+    if (canSyncToEvent) pushGuestsToEvent(eventId, next, linkedEvent);
     notifyDeleted({
       id: `description-guest:${guestId}`,
       name: displayName || 'Gast',
       undo: () => {
+        // Kept side-effect-free (the sync push happens after, not inside the
+        // updater) so React StrictMode's double-invoke of updater functions
+        // can't fire the network call twice.
+        let restored = null;
         setDescriptionGuestIds((prev) => {
-          if (prev.includes(guestId)) return prev;
-          const next = [...prev];
-          next.splice(Math.min(index, next.length), 0, guestId);
-          return next;
+          if (prev.includes(guestId)) {
+            restored = prev;
+            return prev;
+          }
+          const nextIds = [...prev];
+          nextIds.splice(Math.min(index, nextIds.length), 0, guestId);
+          restored = nextIds;
+          return nextIds;
         });
+        if (canSyncToEvent && restored) pushGuestsToEvent(eventId, restored, linkedEvent);
       },
     });
   };
