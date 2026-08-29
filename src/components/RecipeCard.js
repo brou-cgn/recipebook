@@ -29,7 +29,7 @@ function renderKulinarikTags(kulinarik) {
   );
 }
 
-function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, authorName, versionCount, currentUser, privateLists, onAddToPrivateList, onRemoveFromPrivateList, swipeRightIcon, publicGroupId, onMoveRecipeToPublic }) {
+function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, authorName, versionCount, currentUser, privateLists, onAddToPrivateList, onRemoveFromPrivateList, swipeRightIcon, publicGroupId, onMoveRecipeToPublic, guestsText }) {
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const isSwiping = useRef(false);
@@ -250,6 +250,9 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
                 : <span className="kulinarik-tag">{recipe.kulinarik}</span>
               }
             </div>
+          )}
+          {guestsText && (
+            <p className="recipe-card-guests">{guestsText}</p>
           )}
           <div className="recipe-footer">
             {authorName && (

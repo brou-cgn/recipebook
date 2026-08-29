@@ -17,6 +17,28 @@ export const getGuestDisplayName = (guest) => {
   return `${firstName} ${lastName}`.trim();
 };
 
+/**
+ * Formats the guests selected for a menu as Fließtext, e.g.
+ * "Gäste: Anna, Ben und Clara". Only first names are used, joined by commas
+ * except between the last two, which get "und". Guest IDs that can't be
+ * resolved (guest not loaded yet, or missing vorname) are silently skipped.
+ * @param {string[]} guestIds - descriptionGuestIds from a menu document
+ * @param {Array} guests - resolved guest profile objects (with id, vorname)
+ * @returns {string} The formatted text, or '' if there are no resolvable guests
+ */
+export const formatMenuGuestsFliesstext = (guestIds, guests) => {
+  if (!Array.isArray(guestIds) || guestIds.length === 0) return '';
+  const guestList = Array.isArray(guests) ? guests : [];
+  const firstNames = guestIds
+    .map((id) => guestList.find((g) => g.id === id))
+    .map((guest) => (typeof guest?.vorname === 'string' ? guest.vorname.trim() : ''))
+    .filter((name) => name.length > 0);
+
+  if (firstNames.length === 0) return '';
+  if (firstNames.length === 1) return `Gäste: ${firstNames[0]}`;
+  return `Gäste: ${firstNames.slice(0, -1).join(', ')} und ${firstNames[firstNames.length - 1]}`;
+};
+
 export const countGuestsByCategory = (guests) => {
   if (!Array.isArray(guests) || guests.length === 0) {
     return { adults: 0, children: 0 };
