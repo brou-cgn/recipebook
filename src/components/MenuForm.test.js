@@ -6,6 +6,7 @@ const mockSubscribeToCustomDrinks = jest.fn();
 const mockSubscribeToAllCustomDrinks = jest.fn();
 const mockSubscribeToEvents = jest.fn();
 const mockSubscribeToEvent = jest.fn();
+const mockSubscribeToGuestProfiles = jest.fn();
 const mockSaveCustomDrink = jest.fn();
 const mockCalculateEventDrinks = jest.fn();
 
@@ -54,6 +55,7 @@ jest.mock('../utils/eventsFirestore', () => ({
   subscribeToEvents: (...args) => mockSubscribeToEvents(...args),
   subscribeToCustomDrinks: (...args) => mockSubscribeToCustomDrinks(...args),
   subscribeToAllCustomDrinks: (...args) => mockSubscribeToAllCustomDrinks(...args),
+  subscribeToGuestProfiles: (...args) => mockSubscribeToGuestProfiles(...args),
   saveCustomDrink: (...args) => mockSaveCustomDrink(...args),
   calculateEventDrinks: (...args) => mockCalculateEventDrinks(...args),
 }));
@@ -122,6 +124,11 @@ const recipes = [
   { id: 'recipe-2', title: 'Mojito', portionen: 1, ingredients: [], speisekategorie: ['Drinks'] },
 ];
 
+const guests = [
+  { id: 'guest-1', vorname: 'Anna', nachname: 'Adler' },
+  { id: 'guest-2', vorname: 'Ben', nachname: 'Beispiel' },
+];
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockSortableContextItemsCalls.length = 0;
@@ -136,7 +143,59 @@ beforeEach(() => {
   });
   mockSubscribeToEvents.mockImplementation(() => () => {});
   mockSubscribeToEvent.mockImplementation(() => () => {});
+  mockSubscribeToGuestProfiles.mockImplementation((uid, callback) => {
+    callback(guests);
+    return () => {};
+  });
   mockSaveCustomDrink.mockResolvedValue('drink-new-mojito');
+});
+
+describe('MenuForm - description field guest pills', () => {
+  test('lets the user tag a guest from the Event module as a pill via typeahead search', async () => {
+    render(
+      <MenuForm
+        menu={null}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
+
+    fireEvent.click(await screen.findByText('Anna Adler'));
+
+    expect(screen.getByText('Anna Adler')).toBeInTheDocument();
+    // Selected guests drop out of further search results.
+    fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
+    expect(screen.getByText('Keine Gäste gefunden')).toBeInTheDocument();
+  });
+
+  test('removes a tagged guest pill immediately, with an undo snackbar', async () => {
+    render(
+      <MenuForm
+        menu={null}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    fireEvent.change(guestSearchInput, { target: { value: 'Ben' } });
+    fireEvent.click(await screen.findByText('Ben Beispiel'));
+
+    fireEvent.click(screen.getByTitle('Ben Beispiel entfernen'));
+
+    expect(screen.queryByText('Ben Beispiel')).not.toBeInTheDocument();
+    expect(screen.getByText('Rückgängig')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Rückgängig'));
+    expect(screen.getByText('Ben Beispiel')).toBeInTheDocument();
+  });
 });
 
 describe('MenuForm - Drinks section manual drink selection', () => {
