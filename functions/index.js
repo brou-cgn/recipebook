@@ -3718,16 +3718,24 @@ exports.scanRecipePhotoShortcut = onRequest(
         }
       }
 
-      const {images, pin} = body || {};
+      const {images: rawImages, pin} = body || {};
       const language = ['de', 'en'].includes(body?.language) ? body.language : 'de';
 
-      if (!Array.isArray(images) || images.length === 0) {
+      if (!Array.isArray(rawImages) || rawImages.length === 0) {
         res.status(400).json({
           success: false,
           error: 'Missing required field: images (non-empty array of base64-encoded photos)',
         });
         return;
       }
+
+      // Some Shortcuts image actions (e.g. converting a Live Photo) can emit
+      // the same photo twice as byte-identical base64 strings under
+      // different list positions — dedupe here since Shortcuts itself has
+      // no built-in "remove duplicates" list action a user could insert
+      // upstream to guard against it.
+      const images = [...new Set(rawImages)];
+
       if (images.length > MAX_SHORTCUT_PHOTO_IMAGES) {
         res.status(400).json({
           success: false,
