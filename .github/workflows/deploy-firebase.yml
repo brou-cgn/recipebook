@@ -134,6 +134,19 @@ jobs:
               fi
             fi
 
+            if echo "$deploy_output" | grep -Eiq "Failed to make request to .*serviceusage\.googleapis\.com"; then
+              if [ "$attempt" -lt "$max_attempts" ]; then
+                case "$attempt" in
+                  1) sleep_seconds=10 ;;
+                  2) sleep_seconds=20 ;;
+                  *) sleep_seconds=40 ;;
+                esac
+                echo "Firebase Service Usage API request failed. Retrying in ${sleep_seconds}s..."
+                sleep "$sleep_seconds"
+                continue
+              fi
+            fi
+
             if echo "$deploy_output" | grep -Eiq "HTTP Error: 503|Service Unavailable"; then
               if [ "$attempt" -lt "$max_attempts" ]; then
                 case "$attempt" in
