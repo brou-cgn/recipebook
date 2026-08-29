@@ -3759,8 +3759,32 @@ exports.scanRecipePhotoShortcut = onRequest(
         }
       }
 
-      const {images: rawImages, pin} = body || {};
+      let {images: rawImages} = body || {};
+      const {pin} = body || {};
       const language = ['de', 'en'].includes(body?.language) ? body.language : 'de';
+
+      // Shortcuts' native array-field editor for a JSON request body only
+      // supports adding items one at a time by hand — it has no way to bind
+      // a whole list *variable* (e.g. the "Fotos" list built up via "Zu
+      // Variable hinzufügen" in a loop) as the array's content in one go.
+      // The documented workaround (see APPLE_SHORTCUT_SETUP.md) is to send
+      // `images` as a single Text field holding the output of Shortcuts'
+      // "JSON kodieren" ("Encode JSON") action applied to that list, i.e. a
+      // JSON-array-shaped string, instead of a native JSON array. Accept
+      // that here transparently so the Shortcut doesn't have to fight the
+      // array-field UI.
+      if (typeof rawImages === 'string') {
+        try {
+          rawImages = JSON.parse(rawImages);
+        } catch (_) {
+          res.status(400).json({
+            success: false,
+            error: 'Field "images" was a string but not valid JSON. Use the "JSON kodieren" ' +
+              'action on your photo list to produce a proper JSON array string.',
+          });
+          return;
+        }
+      }
 
       if (!Array.isArray(rawImages) || rawImages.length === 0) {
         res.status(400).json({
