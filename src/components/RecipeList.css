@@ -388,15 +388,6 @@
   background: #F5F2EF;
 }
 
-.recipe-card-guests {
-  margin: 0.35rem 0 0;
-  color: #666;
-  font-size: 0.85rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 
 /* =========================================================
    9. Card Footer

@@ -362,10 +362,6 @@
   color: #aaa;
 }
 
-[data-theme="dark"] .recipe-card-guests {
-  color: #aaa;
-}
-
 [data-theme="dark"] .recipe-card-meta,
 [data-theme="dark"] .recipe-card-info {
   color: #aaa;
@@ -2879,10 +2875,6 @@
 }
 
 [data-theme="dark"] .author-date-caption {
-  color: #ccc;
-}
-
-[data-theme="dark"] .recipe-guests-caption {
   color: #ccc;
 }
 

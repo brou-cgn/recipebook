@@ -710,6 +710,10 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
           <p className="menu-description">{menu.description}</p>
         )}
 
+        {menuGuestsText && (
+          <p className="menu-description menu-guests-text">{menuGuestsText}</p>
+        )}
+
         {displaySections.map((section, index) => {
           const isDrinksSection = section.name?.toLowerCase() === DRINKS_SECTION_NAME.toLowerCase();
           // Drinks (event-linked or manual) that resolve to a recipe already shown
@@ -791,7 +795,6 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                           favoriteActiveIcon={favoritesButtonActiveIcon}
                           authorName={getRecipeAuthorName(recipe)}
                           currentUser={currentUser}
-                          guestsText={menuGuestsText}
                         />
                       );
                     }
