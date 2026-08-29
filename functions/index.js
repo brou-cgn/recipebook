@@ -3559,6 +3559,34 @@ const MAX_SHORTCUT_PHOTO_IMAGES = 5;
 const MAX_SHORTCUT_PHOTO_TOTAL_BASE64 = 15 * 1024 * 1024;
 
 /**
+ * Safe ceiling for the combined base64 length of all *recompressed* photos
+ * in one scanRecipePhotoShortcut job, applied after compressPhotoForImportJob.
+ * Firestore documents cap out at 1 MiB (1,048,576 bytes) total, and the job
+ * doc carries a few other small fields alongside importSource.images —
+ * this leaves comfortable headroom under that hard limit.
+ */
+const MAX_SHORTCUT_PHOTO_FIRESTORE_BASE64 = 900 * 1024;
+
+/**
+ * Recompresses a validated recipe photo before it's persisted into a
+ * Firestore importSource (see MAX_SHORTCUT_PHOTO_FIRESTORE_BASE64 above for
+ * why). Mirrors the resize/quality the client uses for the same purpose in
+ * RecipeImportQueueContext.js's buildImportSourceSnapshot
+ * (compressImage(img, 1000, 1400, 0.5)) — plenty of resolution left for
+ * Gemini's OCR, at a fraction of the original file size.
+ * @param {string} base64Data - Pure base64 image data (no data: prefix)
+ * @returns {Promise<string>} data: URL of the recompressed JPEG
+ */
+async function compressPhotoForImportJob(base64Data) {
+  const imageBuffer = Buffer.from(base64Data, 'base64');
+  const compressedBuffer = await sharp(imageBuffer)
+      .resize(1000, 1400, {fit: 'inside', withoutEnlargement: true})
+      .jpeg({quality: 50})
+      .toBuffer();
+  return `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
+}
+
+/**
  * Cloud Function: Queue up to MAX_SHORTCUT_PHOTO_IMAGES Shortcut-provided
  * recipe photos for AI OCR import (see APPLE_SHORTCUT_SETUP.md).
  * Authenticates via SHORTCUT_API_KEY (same mechanism as importRecipeShortcut
@@ -3723,11 +3751,38 @@ exports.scanRecipePhotoShortcut = onRequest(
 
       // Fail fast on malformed/oversized/wrong-type images instead of
       // queuing a job that's doomed to fail once processShortcutImportJob
-      // picks it up.
+      // picks it up. Then recompress each photo before it's persisted —
+      // mirrors buildImportSourceSnapshot's compressImage(img, 1000, 1400, 0.5)
+      // call in RecipeImportQueueContext.js, needed for the same reason:
+      // Firestore documents cap out at 1 MiB, and unlike the client's
+      // import flow (which runs the *original* images through the live
+      // in-memory attempt and only persists a compressed snapshot for
+      // restarts) this endpoint has no separate live attempt — the
+      // Firestore doc this writes is the only copy processShortcutImportJob
+      // ever sees, so it must already be small enough to fit.
+      let compressedImages;
       try {
-        images.forEach((img) => validateImageData(img));
+        compressedImages = await Promise.all(images.map(async (img) => {
+          const {base64Data} = validateImageData(img);
+          return compressPhotoForImportJob(base64Data);
+        }));
       } catch (validationErr) {
-        res.status(400).json({success: false, error: validationErr.message});
+        console.error('scanRecipePhotoShortcut: image validation/compression failed:', validationErr);
+        res.status(400).json({
+          success: false,
+          error: validationErr.message || 'Fotos konnten nicht verarbeitet werden.',
+        });
+        return;
+      }
+
+      const compressedTotalLength = compressedImages.reduce((sum, img) => sum + img.length, 0);
+      if (compressedTotalLength > MAX_SHORTCUT_PHOTO_FIRESTORE_BASE64) {
+        res.status(400).json({
+          success: false,
+          error: `Bilder auch nach Komprimierung zu groß (~${Math.round(compressedTotalLength / 1024)} KB, ` +
+            `max ~${Math.round(MAX_SHORTCUT_PHOTO_FIRESTORE_BASE64 / 1024)} KB gesamt). ` +
+            'Weniger Fotos pro Anfrage verwenden.',
+        });
         return;
       }
 
@@ -3758,7 +3813,7 @@ exports.scanRecipePhotoShortcut = onRequest(
           importProgress: 0,
           importHeartbeatAt: Date.now(),
           importOrigin: 'shortcut',
-          importSource: {type: 'photo', images, language},
+          importSource: {type: 'photo', images: compressedImages, language},
         });
         res.status(200).json({success: true, jobId: jobRef.id, status: 'queued'});
       } catch (err) {
