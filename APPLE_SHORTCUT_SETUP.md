@@ -83,7 +83,9 @@ Für den Fall „ich habe ein Rezept fotografiert (z. B. eine Kochbuch-Seite ode
 { "images": ["<Base64-kodiertes Foto>", "..."], "language": "de", "pin": "<dein Webimport-PIN>" }
 ```
 
-`images` ist ein Array mit 1 bis 5 Base64-kodierten Fotos (mit oder ohne `data:image/jpeg;base64,`-Präfix). Baue den Kurzbefehl z. B. so: Foto(s) auswählen → „Bild in Format konvertieren" (Format `JPEG`) → „Base64 kodieren" auf jedes Foto anwenden → als Liste in `images` einsetzen (Aktion „Wörterbuch bearbeiten" / „Text"). Mehrere Fotos werden serverseitig zu einem Rezept zusammengeführt (wie beim Mehrfach-Foto-Scan in der App) – praktisch für Rezepte über mehrere Buchseiten.
+`images` ist ein Array mit 1 bis 5 Base64-kodierten Fotos (mit oder ohne `data:image/jpeg;base64,`-Präfix). Baue den Kurzbefehl z. B. so: Foto(s) auswählen → „Bild in Format konvertieren" (Format `JPEG`) → „Base64 kodieren" auf jedes Foto anwenden → in einer Schleife per „Zu Variable hinzufügen" zu einer Listen-Variable sammeln. Mehrere Fotos werden serverseitig zu einem Rezept zusammengeführt (wie beim Mehrfach-Foto-Scan in der App) – praktisch für Rezepte über mehrere Buchseiten.
+
+**Mehrere Fotos in den Body einsetzen:** Der native Array-Feld-Editor von „Inhalt von URL laden" erlaubt nur das manuelle Hinzufügen einzelner Elemente – er kann keine ganze Listen-Variable (z. B. die oben gesammelte Fotos-Liste) in einem Schritt als Array-Inhalt übernehmen. Verwende stattdessen: `images`-Feld im Body als Typ **Text** (nicht Array) anlegen, und als Wert das Ergebnis der Aktion **„JSON kodieren"** angewendet auf die Fotos-Liste einsetzen (liefert einen Text wie `["<Base64...>","<Base64...>"]`). Der Endpoint erkennt einen JSON-kodierten String in `images` automatisch und parst ihn serverseitig zu einem Array.
 
 **Wichtig – Bildformat:** iPhone-Kamerafotos liegen standardmäßig als HEIC vor, das dieser Endpoint (anders als der Datei-Upload in der Web-App, der HEIC clientseitig automatisch nach JPEG konvertiert) nicht direkt akzeptiert. Füge deshalb vor dem Base64-Schritt immer die Aktion „Bild in Format konvertieren" (Ziel: JPEG oder PNG) ein, sonst schlägt der Import mit HTTP 400 fehl.
 
