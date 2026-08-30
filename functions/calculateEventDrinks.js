@@ -685,12 +685,20 @@ exports.calculateEventDrinks = onCall({maxInstances: 10}, async (request) => {
   const status = guestCount > 0 && hasCustomDrink ? 'berechnet' : 'geplant';
 
   const eventsRef = db.collection('users').doc(targetUid).collection('events');
+  const payload = {...event, berechnung: result, status};
   let docRef;
   if (eventId) {
     docRef = eventsRef.doc(eventId);
-    await docRef.set({...event, berechnung: result, status}, {merge: true});
+    // {merge: true} deep-merges nested map fields (e.g. guestNamesById,
+    // drinkDistributionFactors), so a key removed client-side (e.g. a guest
+    // taken off the event) would linger in Firestore forever instead of
+    // disappearing along with it. {mergeFields: Object.keys(payload)}
+    // replaces each top-level field wholesale instead, while still leaving
+    // fields outside payload (einkaufGesperrt, verbrauchGesperrt,
+    // istVerbrauch) untouched, exactly like {merge: true} did for those.
+    await docRef.set(payload, {mergeFields: Object.keys(payload)});
   } else {
-    docRef = await eventsRef.add({...event, berechnung: result, status});
+    docRef = await eventsRef.add(payload);
   }
 
   return {eventId: docRef.id, ...result};
