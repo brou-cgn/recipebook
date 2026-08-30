@@ -3773,22 +3773,22 @@ describe('RecipeForm - Saving Loading State', () => {
 
     await fillRequiredFields();
 
-    expect(document.querySelector('.recipe-form-saving-overlay')).not.toBeInTheDocument();
+    expect(document.querySelector('.saving-overlay')).not.toBeInTheDocument();
 
     fireEvent.submit(document.querySelector('.recipe-form'));
 
     await waitFor(() => {
-      expect(document.querySelector('.recipe-form-saving-overlay')).toBeInTheDocument();
+      expect(document.querySelector('.saving-overlay')).toBeInTheDocument();
     });
 
     // Three dots should be rendered
-    expect(document.querySelectorAll('.recipe-form-saving-dot')).toHaveLength(3);
+    expect(document.querySelectorAll('.saving-overlay-dot')).toHaveLength(3);
 
     // Overlay disappears after save completes
     await act(async () => { resolveSave(); });
 
     await waitFor(() => {
-      expect(document.querySelector('.recipe-form-saving-overlay')).not.toBeInTheDocument();
+      expect(document.querySelector('.saving-overlay')).not.toBeInTheDocument();
     });
   });
 
@@ -3840,7 +3840,7 @@ describe('RecipeForm - Saving Loading State', () => {
 
     // Submit the form twice
     fireEvent.submit(document.querySelector('.recipe-form'));
-    await waitFor(() => expect(document.querySelector('.recipe-form-saving-overlay')).toBeInTheDocument());
+    await waitFor(() => expect(document.querySelector('.saving-overlay')).toBeInTheDocument());
     fireEvent.submit(document.querySelector('.recipe-form'));
 
     await act(async () => { resolveSave(); });

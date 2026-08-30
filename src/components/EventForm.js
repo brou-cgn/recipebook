@@ -9,6 +9,7 @@ import {
 } from '../utils/eventsFirestore';
 import { getMenusByEventId, updateMenu } from '../utils/menuFirestore';
 import { decodeRecipeLink } from '../utils/recipeLinks';
+import SavingOverlay from './SavingOverlay';
 import { getDrinkParentCategoryId, categoryHasOwnBudget, PREDEFINED_DRINKS, mergePredefinedDrinks } from '../utils/drinkCategories';
 import {
   computeGuestPreferenceMultipliers,
@@ -559,6 +560,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
           getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)
         )}
       </button>
+      {saving && <SavingOverlay label="Event wird gespeichert" />}
     </div>
   );
 }

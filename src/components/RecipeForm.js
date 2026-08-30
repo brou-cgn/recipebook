@@ -18,6 +18,7 @@ import OcrScanModal from './OcrScanModal';
 import WebImportModal from './WebImportModal';
 import RecipeTypeahead from './RecipeTypeahead';
 import DeleteRowButton from './DeleteRowButton';
+import SavingOverlay from './SavingOverlay';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import {
   DndContext,
@@ -1880,15 +1881,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       )}
 
       {/* Loading overlay with animated dots while saving */}
-      {isSaving && (
-        <div className="recipe-form-saving-overlay" aria-busy="true" aria-label="Rezept wird gespeichert">
-          <div className="recipe-form-saving-dots">
-            <span className="recipe-form-saving-dot" />
-            <span className="recipe-form-saving-dot" />
-            <span className="recipe-form-saving-dot" />
-          </div>
-        </div>
-      )}
+      {isSaving && <SavingOverlay label="Rezept wird gespeichert" />}
 
       {/* FAB Save Button */}
       <button

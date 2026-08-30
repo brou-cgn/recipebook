@@ -13,6 +13,7 @@ import { getGuestDisplayName, computeGuestPreferenceMultipliers } from '../utils
 import { mergePredefinedDrinks, getDrinkParentCategoryId, categoryHasOwnBudget } from '../utils/drinkCategories';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { encodeRecipeLink, decodeRecipeLink } from '../utils/recipeLinks';
+import SavingOverlay from './SavingOverlay';
 import { sumRecipeIngredientAmountsInMl } from '../utils/ingredientUtils';
 import EventForm from './EventForm';
 import DrinkManagementPage from './DrinkManagementPage';
@@ -2036,6 +2037,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
           getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)
         )}
       </button>
+      {savingMenu && <SavingOverlay label="Menü wird gespeichert" />}
       <UndoSnackbar itemName={pendingName} onUndo={undo} />
     </div>
   );
