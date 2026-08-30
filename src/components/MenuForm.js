@@ -9,6 +9,7 @@ import { uploadMenuGridImage, uploadMenuGridImageDark, deleteMenuGridImage, dele
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getButtonIcons } from '../utils/customLists';
 import { getCategoryImages } from '../utils/categoryImages';
 import { subscribeToEvent, subscribeToEvents, subscribeToCustomDrinks, subscribeToAllCustomDrinks, subscribeToGuestProfiles, saveCustomDrink, calculateEventDrinks } from '../utils/eventsFirestore';
+import { updateMenu } from '../utils/menuFirestore';
 import { getGuestDisplayName, computeGuestPreferenceMultipliers } from '../utils/guestPreferences';
 import { mergePredefinedDrinks, getDrinkParentCategoryId, categoryHasOwnBudget } from '../utils/drinkCategories';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
@@ -938,10 +939,24 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     }
   };
 
+  // Persists the menu <-> event link on the menu document itself right away,
+  // instead of waiting for this menu's own "Speichern": the event->menu
+  // guest sync (EventForm's pushGuestsToLinkedMenus) looks up linked menus
+  // by querying menus whose eventId/eventOwnerId are already saved in
+  // Firestore, so without this it silently finds nothing until the menu
+  // happens to be saved once after linking.
+  const persistEventLink = (nextEventId, nextEventOwnerId) => {
+    if (!menu?.id) return;
+    updateMenu(menu.id, { eventId: nextEventId, eventOwnerId: nextEventOwnerId }).catch((err) => {
+      console.error('[MenuForm] Fehler beim Speichern der Event-Verknüpfung:', err);
+    });
+  };
+
   const handleLinkEvent = (id) => {
     setEventId(id);
     setEventOwnerId(currentUser.id);
     setFormSubView('main');
+    persistEventLink(id, currentUser.id);
     // Linking to an existing event merges the guest lists on both sides
     // (union) so no guest already present on either side is lost, and pushes
     // the merge to the event right away.
@@ -957,6 +972,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const handleUnlinkEvent = () => {
     setEventId(null);
     setEventOwnerId(null);
+    persistEventLink(null, null);
   };
 
   useEffect(() => {
@@ -1594,6 +1610,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
           setEventId(newEventId);
           setEventOwnerId(currentUser.id);
           setFormSubView('main');
+          persistEventLink(newEventId, currentUser.id);
         }}
         onManageDrinks={() => setFormSubView('manageDrinks')}
       />
