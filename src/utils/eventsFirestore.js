@@ -30,6 +30,47 @@ import { mergeDrinkUnitAdditions } from './drinkCategories';
 const sortDrinksByName = (drinks) =>
   [...drinks].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'de', { sensitivity: 'base' }));
 
+// Firestore's onSnapshot only invokes its error callback for terminal errors
+// (e.g. permission-denied while the ID token is mid-refresh) — transient
+// network blips are retried internally by the SDK and never reach here. A
+// failed listener never restarts itself, though, so previously every
+// subscribeTo* below reacted to that terminal error by wiping the caller's
+// data via callback([]) / callback(null), which made the whole Events module
+// (events, drinks, guests) go and stay blank for the rest of the session
+// until a full app reload re-created the listener from scratch. Instead, on
+// error we keep showing the last known data and quietly re-establish the
+// listener with backoff, so the module recovers on its own.
+const RETRY_DELAYS_MS = [1000, 3000, 8000, 20000, 30000];
+
+const subscribeWithRetry = (label, ref, onData) => {
+  let attempt = 0;
+  let retryTimer = null;
+  let stopped = false;
+  let currentUnsubscribe = null;
+
+  const start = () => {
+    if (stopped) return;
+    currentUnsubscribe = onSnapshot(ref, (snapshot) => {
+      attempt = 0;
+      onData(snapshot);
+    }, (error) => {
+      console.error(`Error subscribing to ${label}:`, error);
+      if (stopped) return;
+      const delay = RETRY_DELAYS_MS[Math.min(attempt, RETRY_DELAYS_MS.length - 1)];
+      attempt += 1;
+      retryTimer = setTimeout(start, delay);
+    });
+  };
+
+  start();
+
+  return () => {
+    stopped = true;
+    if (retryTimer) clearTimeout(retryTimer);
+    if (currentUnsubscribe) currentUnsubscribe();
+  };
+};
+
 export const EVENT_CATEGORIES = [
   'wasser', 'softdrinks', 'saft', 'bier', 'wein', 'sekt', 'spirituosen', 'kaffee', 'tee',
 ];
@@ -62,15 +103,12 @@ export const subscribeToEvents = (uid, callback) => {
   const eventsRef = collection(db, 'users', uid, 'events');
   const eventsQuery = query(eventsRef, orderBy('date', 'desc'));
 
-  return onSnapshot(eventsQuery, (snapshot) => {
+  return subscribeWithRetry('events', eventsQuery, (snapshot) => {
     const events = [];
     snapshot.forEach((docSnap) => {
       events.push({ id: docSnap.id, ...docSnap.data() });
     });
     callback(events);
-  }, (error) => {
-    console.error('Error subscribing to events:', error);
-    callback([]);
   });
 };
 
@@ -84,11 +122,8 @@ export const subscribeToEvents = (uid, callback) => {
  */
 export const subscribeToEvent = (uid, eventId, callback) => {
   const eventRef = doc(db, 'users', uid, 'events', eventId);
-  return onSnapshot(eventRef, (snap) => {
+  return subscribeWithRetry('event', eventRef, (snap) => {
     callback(snap.exists() ? { id: snap.id, ...snap.data() } : null);
-  }, (error) => {
-    console.error('Error subscribing to event:', error);
-    callback(null);
   });
 };
 
@@ -104,15 +139,12 @@ export const subscribeToAllEvents = (callback) => {
   const eventsRef = collectionGroup(db, 'events');
   const eventsQuery = query(eventsRef, orderBy('date', 'desc'));
 
-  return onSnapshot(eventsQuery, (snapshot) => {
+  return subscribeWithRetry('all events', eventsQuery, (snapshot) => {
     const events = [];
     snapshot.forEach((docSnap) => {
       events.push({ id: docSnap.id, ...docSnap.data(), ownerId: docSnap.ref.parent.parent.id });
     });
     callback(events);
-  }, (error) => {
-    console.error('Error subscribing to all events:', error);
-    callback([]);
   });
 };
 
@@ -274,7 +306,7 @@ export const submitConsumption = async (eventId, gebinde, verbrauchGesperrtKateg
 export const subscribeToCustomDrinks = (uid, callback) => {
   const ref = collection(db, 'users', uid, 'customDrinks');
   const q = query(ref, orderBy('name', 'asc'));
-  return onSnapshot(q, (snapshot) => {
+  return subscribeWithRetry('customDrinks', q, (snapshot) => {
     const drinks = [];
     snapshot.forEach((docSnap) => {
       const data = docSnap.data();
@@ -284,9 +316,6 @@ export const subscribeToCustomDrinks = (uid, callback) => {
       drinks.push({ id: docSnap.id, ...data });
     });
     callback(drinks);
-  }, (error) => {
-    console.error('Error subscribing to customDrinks:', error);
-    callback([]);
   });
 };
 
@@ -300,15 +329,12 @@ export const subscribeToCustomDrinks = (uid, callback) => {
  */
 export const subscribeToAllCustomDrinks = (callback) => {
   const ref = collectionGroup(db, 'customDrinks');
-  return onSnapshot(ref, (snapshot) => {
+  return subscribeWithRetry('all customDrinks', ref, (snapshot) => {
     const drinks = [];
     snapshot.forEach((docSnap) => {
       drinks.push({ id: docSnap.id, ...docSnap.data(), ownerId: docSnap.ref.parent.parent.id });
     });
     callback(sortDrinksByName(mergeDrinkUnitAdditions(drinks)));
-  }, (error) => {
-    console.error('Error subscribing to all customDrinks:', error);
-    callback([]);
   });
 };
 
@@ -411,15 +437,12 @@ export const deleteCustomDrink = async (uid, drinkId) => {
 export const subscribeToGuestProfiles = (uid, callback) => {
   const ref = collection(db, 'guests', uid, 'profiles');
   const q = query(ref, orderBy('nachname', 'asc'));
-  return onSnapshot(q, (snapshot) => {
+  return subscribeWithRetry('guestProfiles', q, (snapshot) => {
     const profiles = [];
     snapshot.forEach((docSnap) => {
       profiles.push({ id: docSnap.id, ...docSnap.data() });
     });
     callback(profiles);
-  }, (error) => {
-    console.error('Error subscribing to guestProfiles:', error);
-    callback([]);
   });
 };
 
@@ -435,15 +458,12 @@ export const subscribeToGuestProfiles = (uid, callback) => {
 export const subscribeToAllGuestProfiles = (callback) => {
   const ref = collectionGroup(db, 'profiles');
   const q = query(ref, orderBy('nachname', 'asc'));
-  return onSnapshot(q, (snapshot) => {
+  return subscribeWithRetry('all guestProfiles', q, (snapshot) => {
     const profiles = [];
     snapshot.forEach((docSnap) => {
       profiles.push({ id: docSnap.id, ...docSnap.data(), ownerId: docSnap.ref.parent.parent.id });
     });
     callback(profiles);
-  }, (error) => {
-    console.error('Error subscribing to all guestProfiles:', error);
-    callback([]);
   });
 };
 

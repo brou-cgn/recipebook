@@ -74,16 +74,27 @@ describe('subscribeToCustomDrinks', () => {
     expect(cb).toHaveBeenCalledWith([{ id: 'd1', name: 'Craft-Bier', gebindeLiter: 0.33 }]);
   });
 
-  it('calls callback with empty array on error', () => {
-    mockOnSnapshot.mockImplementation((_ref, _success, errorCb) => {
-      errorCb(new Error('firestore error'));
+  it('does not wipe existing data on error, and retries the listener instead', () => {
+    jest.useFakeTimers();
+    let attempt = 0;
+    mockOnSnapshot.mockImplementation((_ref, successCb, errorCb) => {
+      attempt += 1;
+      if (attempt === 1) {
+        errorCb(new Error('firestore error'));
+      } else {
+        successCb(createSnapshot([{ id: 'd1', name: 'Craft-Bier' }]));
+      }
       return jest.fn();
     });
 
     const cb = jest.fn();
     subscribeToCustomDrinks('user1', cb);
+    expect(cb).not.toHaveBeenCalled();
 
-    expect(cb).toHaveBeenCalledWith([]);
+    jest.runOnlyPendingTimers();
+    expect(cb).toHaveBeenCalledWith([{ id: 'd1', name: 'Craft-Bier' }]);
+
+    jest.useRealTimers();
   });
 
   it('filters out this user\'s own additional-units contributions to someone else\'s drink', () => {
@@ -132,16 +143,27 @@ describe('subscribeToAllCustomDrinks', () => {
     ]);
   });
 
-  it('calls callback with empty array on error', () => {
-    mockOnSnapshot.mockImplementation((_ref, _success, errorCb) => {
-      errorCb(new Error('firestore error'));
+  it('does not wipe existing data on error, and retries the listener instead', () => {
+    jest.useFakeTimers();
+    let attempt = 0;
+    mockOnSnapshot.mockImplementation((_ref, successCb, errorCb) => {
+      attempt += 1;
+      if (attempt === 1) {
+        errorCb(new Error('firestore error'));
+      } else {
+        successCb(createSnapshot([{ id: 'd1', __ownerId: 'u1', name: 'Craft-Bier', einheiten: [] }]));
+      }
       return jest.fn();
     });
 
     const cb = jest.fn();
     subscribeToAllCustomDrinks(cb);
+    expect(cb).not.toHaveBeenCalled();
 
-    expect(cb).toHaveBeenCalledWith([]);
+    jest.runOnlyPendingTimers();
+    expect(cb).toHaveBeenCalledWith([{ id: 'd1', ownerId: 'u1', name: 'Craft-Bier', einheiten: [] }]);
+
+    jest.useRealTimers();
   });
 
   it('does not order the collection-group query by name, since Firestore drops any document missing that field from the results – which would silently exclude every nameless additional-units doc', () => {
@@ -282,16 +304,27 @@ describe('subscribeToGuestProfiles', () => {
     expect(mockCollection).toHaveBeenCalledWith({}, 'guests', 'user1', 'profiles');
   });
 
-  it('calls callback with empty array on error', () => {
-    mockOnSnapshot.mockImplementation((_ref, _success, errorCb) => {
-      errorCb(new Error('firestore error'));
+  it('does not wipe existing data on error, and retries the listener instead', () => {
+    jest.useFakeTimers();
+    let attempt = 0;
+    mockOnSnapshot.mockImplementation((_ref, successCb, errorCb) => {
+      attempt += 1;
+      if (attempt === 1) {
+        errorCb(new Error('firestore error'));
+      } else {
+        successCb(createSnapshot([{ id: 'p1', name: 'Familie', adults: 4, children: 2 }]));
+      }
       return jest.fn();
     });
 
     const cb = jest.fn();
     subscribeToGuestProfiles('user1', cb);
+    expect(cb).not.toHaveBeenCalled();
 
-    expect(cb).toHaveBeenCalledWith([]);
+    jest.runOnlyPendingTimers();
+    expect(cb).toHaveBeenCalledWith([{ id: 'p1', name: 'Familie', adults: 4, children: 2 }]);
+
+    jest.useRealTimers();
   });
 });
 
