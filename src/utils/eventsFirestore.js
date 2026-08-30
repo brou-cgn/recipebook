@@ -62,12 +62,37 @@ const subscribeWithRetry = (label, ref, onData) => {
     });
   };
 
+  // The most common trigger for a terminal error here is the ID token being
+  // mid-refresh right when the tab was backgrounded (phone locked, app
+  // switched) or the network dropped — exactly the moments a phone/tab is
+  // resumed or comes back online. Rather than let an already-scheduled retry
+  // sit out its full backoff, jump straight back in as soon as either
+  // happens, so the module recovers the instant the user is looking again
+  // instead of up to ~30s later.
+  const retryNow = () => {
+    if (stopped || !retryTimer) return;
+    clearTimeout(retryTimer);
+    retryTimer = null;
+    start();
+  };
+  const handleVisible = () => {
+    if (document.visibilityState === 'visible') retryNow();
+  };
+  if (typeof window !== 'undefined') {
+    window.addEventListener('online', retryNow);
+    document.addEventListener('visibilitychange', handleVisible);
+  }
+
   start();
 
   return () => {
     stopped = true;
     if (retryTimer) clearTimeout(retryTimer);
     if (currentUnsubscribe) currentUnsubscribe();
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('online', retryNow);
+      document.removeEventListener('visibilitychange', handleVisible);
+    }
   };
 };
 
