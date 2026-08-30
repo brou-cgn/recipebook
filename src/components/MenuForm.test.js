@@ -9,6 +9,7 @@ const mockSubscribeToEvent = jest.fn();
 const mockSubscribeToGuestProfiles = jest.fn();
 const mockSaveCustomDrink = jest.fn();
 const mockCalculateEventDrinks = jest.fn();
+const mockUpdateMenu = jest.fn();
 
 jest.mock('../utils/userFavorites', () => ({
   getUserFavorites: () => Promise.resolve([]),
@@ -58,6 +59,10 @@ jest.mock('../utils/eventsFirestore', () => ({
   subscribeToGuestProfiles: (...args) => mockSubscribeToGuestProfiles(...args),
   saveCustomDrink: (...args) => mockSaveCustomDrink(...args),
   calculateEventDrinks: (...args) => mockCalculateEventDrinks(...args),
+}));
+
+jest.mock('../utils/menuFirestore', () => ({
+  updateMenu: (...args) => mockUpdateMenu(...args),
 }));
 
 jest.mock('./DrinkManagementPage', () => function MockDrinkManagementPage() {
@@ -148,6 +153,7 @@ beforeEach(() => {
     return () => {};
   });
   mockSaveCustomDrink.mockResolvedValue('drink-new-mojito');
+  mockUpdateMenu.mockResolvedValue();
 });
 
 describe('MenuForm - description field guest pills', () => {
@@ -671,6 +677,35 @@ describe('MenuForm - linking an existing event merges guests', () => {
 
     expect(await screen.findByText('Anna Adler')).toBeInTheDocument();
     expect(screen.getByText('Ben Beispiel')).toBeInTheDocument();
+  });
+
+  test('persists the eventId/eventOwnerId link on the menu document immediately, without needing "Speichern"', async () => {
+    // Without this, EventForm's guest->menu sync (which looks up linked
+    // menus by querying eventId/eventOwnerId in Firestore) finds nothing
+    // until the menu happens to be saved once after linking.
+    mockSubscribeToEvents.mockImplementation((uid, callback) => {
+      callback([{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 0, children: 0 }, selectedGuestIds: [] }]);
+      return () => {};
+    });
+
+    render(
+      <MenuForm
+        menu={{
+          id: 'menu-1',
+          name: 'Testmenü',
+          sections: [{ name: 'Drinks', recipeIds: [], drinkIds: ['drink-cola'] }],
+        }}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Bestehende Kalkulation verknüpfen'));
+    fireEvent.click(await screen.findByText('Sommerfest'));
+
+    await waitFor(() => expect(mockUpdateMenu).toHaveBeenCalledWith('menu-1', { eventId: 'event-9', eventOwnerId: 'user-1' }));
   });
 
   test('pushes the merged guest list to the event immediately on link, without needing the menu\'s "Speichern"', async () => {
