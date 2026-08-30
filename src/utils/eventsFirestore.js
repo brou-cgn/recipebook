@@ -173,6 +173,19 @@ export const subscribeToAllEvents = (callback) => {
   });
 };
 
+// EventsPage's deep-link handling (opened from a push notification reminder,
+// or from a menu's "open linked event" button) treats a null result from
+// getEvent() as "this event doesn't exist" and falls back to the plain
+// events list. That's correct when the document genuinely doesn't exist,
+// but wrong for a transient read failure (the same token/rule-evaluation
+// hiccups the realtime listeners in this file retry around) — a single
+// getDoc() with no retry would silently swallow that as "not found" and the
+// deep link would land on an empty list instead of the requested event, most
+// noticeably right after a related write (e.g. saving the event, or a linked
+// menu sync) briefly increases Firestore traffic. Retry a few times before
+// giving up so a transient failure doesn't get misreported as a missing event.
+const GET_EVENT_RETRY_DELAYS_MS = [300, 1000, 3000];
+
 /**
  * Get a single event by ID (one-time fetch).
  * @param {string} uid - Current user ID
@@ -180,14 +193,18 @@ export const subscribeToAllEvents = (callback) => {
  * @returns {Promise<Object|null>} The event, or null if not found
  */
 export const getEvent = async (uid, eventId) => {
-  try {
-    const eventRef = doc(db, 'users', uid, 'events', eventId);
-    const snap = await getDoc(eventRef);
-    if (!snap.exists()) return null;
-    return { id: snap.id, ...snap.data() };
-  } catch (error) {
-    console.error('Error getting event:', error);
-    return null;
+  const eventRef = doc(db, 'users', uid, 'events', eventId);
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      const snap = await getDoc(eventRef);
+      return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+    } catch (error) {
+      if (attempt >= GET_EVENT_RETRY_DELAYS_MS.length) {
+        console.error('Error getting event:', error);
+        return null;
+      }
+      await new Promise((resolve) => setTimeout(resolve, GET_EVENT_RETRY_DELAYS_MS[attempt]));
+    }
   }
 };
 
