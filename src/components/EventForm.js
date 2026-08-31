@@ -4,7 +4,6 @@ import {
   EVENT_TYPES,
   deriveSeason,
   calculateEventDrinks,
-  subscribeToAllCustomDrinks,
   subscribeToGuestProfiles,
 } from '../utils/eventsFirestore';
 import { getMenusByEventId, updateMenu } from '../utils/menuFirestore';
@@ -64,7 +63,7 @@ const todayIsoDate = () => new Date().toISOString().slice(0, 10);
 
 const currentHourStartTime = () => `${String(new Date().getHours()).padStart(2, '0')}:00`;
 
-function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManageDrinks, initialEvent, recipes }) {
+function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManageDrinks, initialEvent, recipes, guestProfiles = [], customDrinks = [] }) {
   const isEditing = Boolean(initialEvent?.id);
   const effectiveOwnerId = ownerId || currentUser?.id;
 
@@ -87,30 +86,30 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
 
   const [guests, setGuests] = useState([]);
-  const [customDrinks, setCustomDrinks] = useState([]);
   const [selectedGuestIds, setSelectedGuestIds] = useState(initialEvent?.selectedGuestIds ?? []);
   const [driverGuestIds, setDriverGuestIds] = useState(initialEvent?.driverGuestIds ?? []);
   const [showGuestSelection, setShowGuestSelection] = useState(false);
   const [showDrinkSelection, setShowDrinkSelection] = useState(false);
 
+  // Guests are already loaded once at App level for the current user (see App.js).
+  // Only an admin editing another user's event needs a dedicated subscription here.
+  const isOwnGuests = effectiveOwnerId === currentUser?.id;
   useEffect(() => {
+    if (isOwnGuests) {
+      setGuests(guestProfiles || []);
+      return undefined;
+    }
     if (!effectiveOwnerId) return undefined;
     const unsubGuests = subscribeToGuestProfiles(effectiveOwnerId, setGuests);
-    const unsubDrinks = subscribeToAllCustomDrinks((drinks) => {
-      setCustomDrinks(drinks);
-      // Auto-select only Mineralwasser for new events
-      setCustomDrinkIds((prev) => {
-        if (!isEditing && prev.length === 0) {
-          return ['predefined_mineralwasser'];
-        }
-        return prev;
-      });
-    });
-    return () => {
-      unsubGuests();
-      unsubDrinks();
-    };
-  }, [effectiveOwnerId]);
+    return () => unsubGuests();
+  }, [isOwnGuests, effectiveOwnerId, guestProfiles]);
+
+  // Auto-select only Mineralwasser for new events, once the shared drinks
+  // library (subscribed once at App level) has data.
+  useEffect(() => {
+    if (isEditing) return;
+    setCustomDrinkIds((prev) => (prev.length === 0 ? ['predefined_mineralwasser'] : prev));
+  }, [customDrinks, isEditing]);
 
   useEffect(() => {
     const loadButtonIcons = async () => {
@@ -283,6 +282,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
       <EventGuestSelectionPage
         currentUser={currentUser}
         ownerId={effectiveOwnerId}
+        guests={guests}
         selectedGuestIds={selectedGuestIds}
         driverGuestIds={driverGuestIds}
         buttonIcons={buttonIcons}

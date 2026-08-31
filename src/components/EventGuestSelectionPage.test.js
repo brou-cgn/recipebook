@@ -2,12 +2,6 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import EventGuestSelectionPage from './EventGuestSelectionPage';
 
-const mockSubscribeToGuestProfiles = jest.fn();
-
-jest.mock('../utils/eventsFirestore', () => ({
-  subscribeToGuestProfiles: (...args) => mockSubscribeToGuestProfiles(...args),
-}));
-
 describe('EventGuestSelectionPage', () => {
   const currentUser = { id: 'u1' };
   const guests = [
@@ -17,16 +11,13 @@ describe('EventGuestSelectionPage', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
-      cb(guests);
-      return jest.fn();
-    });
   });
 
   test('renders guest selection header', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
+        guests={guests}
         selectedGuestIds={[]}
         driverGuestIds={[]}
         onSave={jest.fn()}
@@ -41,6 +32,7 @@ describe('EventGuestSelectionPage', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
+        guests={guests}
         selectedGuestIds={[]}
         driverGuestIds={[]}
         onSave={jest.fn()}
@@ -55,6 +47,7 @@ describe('EventGuestSelectionPage', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
+        guests={guests}
         selectedGuestIds={[]}
         driverGuestIds={[]}
         onSave={jest.fn()}
@@ -70,6 +63,7 @@ describe('EventGuestSelectionPage', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
+        guests={guests}
         selectedGuestIds={[]}
         driverGuestIds={[]}
         onSave={jest.fn()}
@@ -88,6 +82,7 @@ describe('EventGuestSelectionPage', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
+        guests={guests}
         selectedGuestIds={[]}
         driverGuestIds={[]}
         onSave={jest.fn()}
@@ -105,6 +100,7 @@ describe('EventGuestSelectionPage', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
+        guests={guests}
         selectedGuestIds={[]}
         driverGuestIds={[]}
         onSave={jest.fn()}
@@ -126,6 +122,7 @@ describe('EventGuestSelectionPage', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
+        guests={guests}
         selectedGuestIds={[]}
         driverGuestIds={[]}
         onSave={jest.fn()}
@@ -144,6 +141,7 @@ describe('EventGuestSelectionPage', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
+        guests={guests}
         selectedGuestIds={['g1']}
         driverGuestIds={[]}
         onSave={jest.fn()}
@@ -161,6 +159,7 @@ describe('EventGuestSelectionPage', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
+        guests={guests}
         selectedGuestIds={['g1']}
         driverGuestIds={[]}
         onSave={jest.fn()}
@@ -176,6 +175,7 @@ describe('EventGuestSelectionPage', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
+        guests={guests}
         selectedGuestIds={['g1']}
         driverGuestIds={[]}
         onSave={jest.fn()}
@@ -197,6 +197,7 @@ describe('EventGuestSelectionPage', () => {
     const { container } = render(
       <EventGuestSelectionPage
         currentUser={currentUser}
+        guests={guests}
         selectedGuestIds={['g1']}
         driverGuestIds={[]}
         onSave={jest.fn()}
@@ -214,6 +215,7 @@ describe('EventGuestSelectionPage', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
+        guests={guests}
         selectedGuestIds={['g1']}
         driverGuestIds={[]}
         onSave={jest.fn()}
@@ -233,6 +235,7 @@ describe('EventGuestSelectionPage', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
+        guests={guests}
         selectedGuestIds={['g1']}
         driverGuestIds={['g1']}
         onSave={onSave}
@@ -250,6 +253,7 @@ describe('EventGuestSelectionPage', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
+        guests={guests}
         selectedGuestIds={[]}
         driverGuestIds={[]}
         onSave={jest.fn()}
@@ -267,6 +271,7 @@ describe('EventGuestSelectionPage', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
+        guests={guests}
         selectedGuestIds={['g1']}
         driverGuestIds={['g1']}
         onSave={onSave}

@@ -8,7 +8,7 @@ import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage, 
 import { uploadMenuGridImage, uploadMenuGridImageDark, deleteMenuGridImage, deleteMenuGridImageDark, isStorageUrl } from '../utils/storageUtils';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getButtonIcons } from '../utils/customLists';
 import { getCategoryImages } from '../utils/categoryImages';
-import { getEvent, subscribeToEvent, subscribeToEvents, subscribeToCustomDrinks, subscribeToAllCustomDrinks, subscribeToGuestProfiles, saveCustomDrink, calculateEventDrinks } from '../utils/eventsFirestore';
+import { getEvent, subscribeToEvent, subscribeToCustomDrinks, saveCustomDrink, calculateEventDrinks } from '../utils/eventsFirestore';
 import { updateMenu } from '../utils/menuFirestore';
 import { getGuestDisplayName, computeGuestPreferenceMultipliers } from '../utils/guestPreferences';
 import { pushGuestIdsToLinkedEvent, resolveGuestLinkChoice } from '../utils/guestLinkSync';
@@ -508,7 +508,7 @@ function SortableDrinkItem({ id, displayName, isFavorite, onRemove, swipeDeleteI
   );
 }
 
-function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
+function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEvents = [], guestProfiles = [], customDrinks: sharedCustomDrinks = [], customDrinksLoaded }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [menuDate, setMenuDate] = useState('');
@@ -544,15 +544,18 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   // menu is saved (see handleSubmit, which writes it back into the linked
   // event's customDrinkIds order).
   const [eventDrinkOrder, setEventDrinkOrder] = useState([]);
-  const [availableEvents, setAvailableEvents] = useState([]);
-  const [userCustomDrinks, setUserCustomDrinks] = useState([]);
+  // The current user's own events (for the "Bestehende Kalkulation verknüpfen"
+  // picker) and drinks library are already subscribed once at App level.
+  const availableEvents = userEvents;
+  const userCustomDrinks = sharedCustomDrinks;
   const [drinkSearchQueries, setDrinkSearchQueries] = useState({});
   const [showOwnDrinksOnly, setShowOwnDrinksOnly] = useState(true);
   const [newEventDrinkIds, setNewEventDrinkIds] = useState([]);
   const [preparingNewEvent, setPreparingNewEvent] = useState(false);
   // Guests from the Event module that can be tagged as pills in the
-  // description field (see the "menuDescription" form-group below).
-  const [guests, setGuests] = useState([]);
+  // description field (see the "menuDescription" form-group below); also
+  // subscribed once at App level.
+  const guests = guestProfiles;
   const [descriptionGuestIds, setDescriptionGuestIds] = useState([]);
   const [guestSearchQuery, setGuestSearchQuery] = useState('');
   // Set while linking to an existing event whose guest list conflicts with
@@ -583,17 +586,6 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       }
     };
     loadFavorites();
-  }, [currentUser?.id]);
-
-  // Load the current user's guest catalog from the Event module, so guests
-  // can be tagged as pills in the menu description field.
-  useEffect(() => {
-    if (!currentUser?.id) {
-      setGuests([]);
-      return undefined;
-    }
-    const unsubscribe = subscribeToGuestProfiles(currentUser.id, setGuests);
-    return unsubscribe;
   }, [currentUser?.id]);
 
   // Load button icons
@@ -700,24 +692,6 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       return [...prevSections, createMenuSection('Drinks', [])];
     });
   }, [eventId]);
-
-  // Load the current user's events while the "Bestehende Kalkulation verknüpfen" picker is open.
-  useEffect(() => {
-    if (formSubView !== 'linkPicker' || !currentUser?.id) return undefined;
-    const unsubscribe = subscribeToEvents(currentUser.id, setAvailableEvents);
-    return unsubscribe;
-  }, [formSubView, currentUser?.id]);
-
-  // Load the current user's drink catalog (custom + predefined) so drinks from
-  // the event area can be manually added to the menu's "Drinks" section.
-  useEffect(() => {
-    if (!currentUser?.id) {
-      setUserCustomDrinks([]);
-      return undefined;
-    }
-    const unsubscribe = subscribeToAllCustomDrinks(setUserCustomDrinks);
-    return unsubscribe;
-  }, [currentUser?.id]);
 
   const allDrinks = useMemo(
     () => mergePredefinedDrinks(userCustomDrinks, currentUser?.id),
@@ -1649,6 +1623,8 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       <EventForm
         currentUser={currentUser}
         recipes={recipes}
+        guestProfiles={guestProfiles}
+        customDrinks={sharedCustomDrinks}
         initialEvent={{ eventName: name.trim(), date: menuDate, customDrinkIds: newEventDrinkIds, selectedGuestIds: descriptionGuestIds }}
         onCancel={() => setFormSubView('main')}
         onSaved={async (newEventId) => {
@@ -1678,6 +1654,8 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
         onBack={() => setFormSubView('newEvent')}
         currentUser={currentUser}
         recipes={recipes}
+        customDrinks={sharedCustomDrinks}
+        customDrinksLoaded={customDrinksLoaded}
       />
     );
   }

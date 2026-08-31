@@ -2,14 +2,10 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import EventsPage from './EventsPage';
 
-const mockSubscribeToEvents = jest.fn();
-const mockSubscribeToAllEvents = jest.fn();
 const mockDeleteEvent = jest.fn();
 const mockGetEvent = jest.fn();
 
 jest.mock('../utils/eventsFirestore', () => ({
-  subscribeToEvents: (...args) => mockSubscribeToEvents(...args),
-  subscribeToAllEvents: (...args) => mockSubscribeToAllEvents(...args),
   deleteEvent: (...args) => mockDeleteEvent(...args),
   getEvent: (...args) => mockGetEvent(...args),
 }));
@@ -63,15 +59,7 @@ describe('EventsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalInnerWidth });
-    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-      cb([]);
-      return jest.fn();
-    });
     mockGetEvent.mockResolvedValue(null);
-    mockSubscribeToAllEvents.mockImplementation((cb) => {
-      cb([]);
-      return jest.fn();
-    });
   });
 
   afterAll(() => {
@@ -99,12 +87,8 @@ describe('EventsPage', () => {
       guests: { adults: 10, children: 0 },
       berechnung: { ergebnis: [] },
     };
-    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-      cb([event]);
-      return jest.fn();
-    });
 
-    render(<EventsPage currentUser={currentUser} />);
+    render(<EventsPage currentUser={currentUser} events={[event]} />);
 
     // Click the event card to open detail view
     fireEvent.click(screen.getByText('Sommerfest'));
@@ -126,10 +110,6 @@ describe('EventsPage', () => {
       guests: { adults: 1, children: 0 },
       berechnung: { ergebnis: [] },
     };
-    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-      cb([otherEvent]);
-      return jest.fn();
-    });
     const linkedEvent = {
       id: 'e1',
       eventName: 'Sommerfest',
@@ -146,6 +126,7 @@ describe('EventsPage', () => {
     render(
       <EventsPage
         currentUser={currentUser}
+        events={[otherEvent]}
         pendingEventDetailRequest={{ ownerId: 'owner-1', eventId: 'e1' }}
         onPendingEventDetailRequestHandled={() => {}}
       />
@@ -209,10 +190,6 @@ describe('EventsPage', () => {
   });
 
   test('closing an event opened via pendingEventDetailRequest calls onCloseLinkedEventDetail instead of showing the events list', async () => {
-    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-      cb([]);
-      return jest.fn();
-    });
     const linkedEvent = {
       id: 'e1',
       eventName: 'Sommerfest',
@@ -255,13 +232,9 @@ describe('EventsPage', () => {
       guests: { adults: 10, children: 0 },
       berechnung: { ergebnis: [] },
     };
-    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-      cb([event]);
-      return jest.fn();
-    });
     const onCloseLinkedEventDetail = jest.fn();
 
-    render(<EventsPage currentUser={currentUser} onCloseLinkedEventDetail={onCloseLinkedEventDetail} />);
+    render(<EventsPage currentUser={currentUser} events={[event]} onCloseLinkedEventDetail={onCloseLinkedEventDetail} />);
 
     fireEvent.click(screen.getByText('Sommerfest'));
     expect(screen.getByTitle('Zurück zur Liste')).toBeInTheDocument();
@@ -285,12 +258,8 @@ describe('EventsPage', () => {
       guests: { adults: 10, children: 0 },
       berechnung: { ergebnis: [] },
     };
-    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-      cb([event]);
-      return jest.fn();
-    });
 
-    render(<EventsPage currentUser={currentUser} />);
+    render(<EventsPage currentUser={currentUser} events={[event]} />);
 
     fireEvent.click(screen.getByText('Sommerfest'));
 
@@ -315,12 +284,8 @@ describe('EventsPage', () => {
       guestNamesById: { g1: 'Anna Beispiel' },
       berechnung: { ergebnis: [] },
     };
-    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-      cb([event]);
-      return jest.fn();
-    });
 
-    render(<EventsPage currentUser={currentUser} />);
+    render(<EventsPage currentUser={currentUser} events={[event]} />);
 
     fireEvent.click(screen.getByText('Sommerfest'));
 
@@ -338,12 +303,8 @@ describe('EventsPage', () => {
       guests: { adults: 10, children: 0 },
       berechnung: { ergebnis: [] },
     };
-    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-      cb([event]);
-      return jest.fn();
-    });
 
-    render(<EventsPage currentUser={currentUser} />);
+    render(<EventsPage currentUser={currentUser} events={[event]} />);
 
     expect(screen.getByText('Eingekauft')).toBeInTheDocument();
 
@@ -366,12 +327,8 @@ describe('EventsPage', () => {
         ],
       },
     };
-    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-      cb([event]);
-      return jest.fn();
-    });
 
-    render(<EventsPage currentUser={currentUser} />);
+    render(<EventsPage currentUser={currentUser} events={[event]} />);
 
     expect(screen.queryByText(/~50L wasser/)).not.toBeInTheDocument();
     expect(screen.queryByText(/~30L softdrinks/)).not.toBeInTheDocument();
@@ -391,12 +348,8 @@ describe('EventsPage', () => {
         ],
       },
     };
-    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-      cb([event]);
-      return jest.fn();
-    });
 
-    render(<EventsPage currentUser={currentUser} />);
+    render(<EventsPage currentUser={currentUser} events={[event]} />);
 
     expect(screen.queryByText(/~10L Bitburger/)).not.toBeInTheDocument();
     expect(screen.queryByText(/~20L bier/)).not.toBeInTheDocument();
@@ -415,12 +368,8 @@ describe('EventsPage', () => {
         ],
       },
     };
-    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-      cb([event]);
-      return jest.fn();
-    });
 
-    render(<EventsPage currentUser={currentUser} />);
+    render(<EventsPage currentUser={currentUser} events={[event]} />);
 
     expect(screen.queryByText(/~40L/)).not.toBeInTheDocument();
   });
@@ -434,12 +383,8 @@ describe('EventsPage', () => {
       status: 'berechnet',
       berechnung: { ergebnis: [] },
     };
-    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-      cb([event]);
-      return jest.fn();
-    });
 
-    render(<EventsPage currentUser={currentUser} />);
+    render(<EventsPage currentUser={currentUser} events={[event]} />);
 
     expect(screen.queryByText(/events-card-drink-summary/)).not.toBeInTheDocument();
     expect(screen.queryByText(/~.*L/)).not.toBeInTheDocument();
@@ -458,12 +403,8 @@ describe('EventsPage', () => {
         ],
       },
     };
-    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-      cb([event]);
-      return jest.fn();
-    });
 
-    render(<EventsPage currentUser={currentUser} />);
+    render(<EventsPage currentUser={currentUser} events={[event]} />);
 
     expect(screen.queryByText(/~15L Craft Bier/)).not.toBeInTheDocument();
   });
@@ -498,12 +439,8 @@ describe('EventsPage', () => {
         ],
       },
     };
-    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-      cb([event]);
-      return jest.fn();
-    });
 
-    render(<EventsPage currentUser={currentUser} />);
+    render(<EventsPage currentUser={currentUser} events={[event]} />);
 
     fireEvent.click(screen.getByText('Bierfest'));
 
@@ -534,12 +471,8 @@ describe('EventsPage', () => {
       },
       istVerbrauch: { custom_2: 6.75 },
     };
-    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-      cb([event]);
-      return jest.fn();
-    });
 
-    render(<EventsPage currentUser={currentUser} />);
+    render(<EventsPage currentUser={currentUser} events={[event]} />);
 
     fireEvent.click(screen.getByText('Gartenparty'));
 
@@ -579,12 +512,8 @@ describe('EventsPage', () => {
       },
       istVerbrauch: { 'custom_1:0': 10, 'custom_1:1': 5.5 },
     };
-    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-      cb([event]);
-      return jest.fn();
-    });
 
-    render(<EventsPage currentUser={currentUser} />);
+    render(<EventsPage currentUser={currentUser} events={[event]} />);
 
     fireEvent.click(screen.getByText('Bierfest'));
 
@@ -595,9 +524,14 @@ describe('EventsPage', () => {
   describe('admin cross-user event visibility', () => {
     const adminUser = { id: 'admin1', isAdmin: true };
 
-    test('non-admins do not see events from other users', () => {
-      render(<EventsPage currentUser={currentUser} />);
-      expect(mockSubscribeToAllEvents).not.toHaveBeenCalled();
+    test('non-admins do not see events from other users, even if allEvents is populated', () => {
+      render(
+        <EventsPage
+          currentUser={currentUser}
+          allEvents={[{ id: 'x', eventName: 'Fremdes Fest', ownerId: 'other-user' }]}
+        />
+      );
+      expect(screen.queryByText('Fremdes Fest')).not.toBeInTheDocument();
     });
 
     test('admins always see all users\' events and can edit another user\'s event', async () => {
@@ -612,12 +546,8 @@ describe('EventsPage', () => {
         berechnung: { ergebnis: [] },
         ownerId: 'other-user',
       };
-      mockSubscribeToAllEvents.mockImplementation((cb) => {
-        cb([othersEvent]);
-        return jest.fn();
-      });
 
-      render(<EventsPage currentUser={adminUser} />);
+      render(<EventsPage currentUser={adminUser} allEvents={[othersEvent]} />);
 
       expect(await screen.findByText('Fremdes Fest')).toBeInTheDocument();
 
@@ -652,12 +582,7 @@ describe('EventsPage', () => {
     };
 
     test('swipe-delete button appears after swiping an event card left', async () => {
-      mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-        cb([event]);
-        return jest.fn();
-      });
-
-      render(<EventsPage currentUser={currentUser} />);
+      render(<EventsPage currentUser={currentUser} events={[event]} />);
 
       const eventCardContent = screen.getByText('Sommerfest').closest('.events-card-swipe-content');
       expect(eventCardContent).toBeInTheDocument();
@@ -673,12 +598,8 @@ describe('EventsPage', () => {
 
     test('clicking swipe-delete button hides the event immediately and shows an undo banner, without calling deleteEvent yet', async () => {
       mockDeleteEvent.mockResolvedValue(undefined);
-      mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-        cb([event]);
-        return jest.fn();
-      });
 
-      render(<EventsPage currentUser={currentUser} />);
+      render(<EventsPage currentUser={currentUser} events={[event]} />);
 
       const eventCardContent = screen.getByText('Sommerfest').closest('.events-card-swipe-content');
       fireEvent.touchStart(eventCardContent, createTouchEvent(200, 100));
@@ -700,12 +621,8 @@ describe('EventsPage', () => {
       jest.useFakeTimers();
       try {
         mockDeleteEvent.mockResolvedValue(undefined);
-        mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-          cb([event]);
-          return jest.fn();
-        });
 
-        render(<EventsPage currentUser={currentUser} />);
+        render(<EventsPage currentUser={currentUser} events={[event]} />);
 
         const eventCardContent = screen.getByText('Sommerfest').closest('.events-card-swipe-content');
         fireEvent.touchStart(eventCardContent, createTouchEvent(200, 100));
@@ -729,12 +646,8 @@ describe('EventsPage', () => {
       jest.useFakeTimers();
       try {
         mockDeleteEvent.mockResolvedValue(undefined);
-        mockSubscribeToEvents.mockImplementation((_uid, cb) => {
-          cb([event]);
-          return jest.fn();
-        });
 
-        render(<EventsPage currentUser={currentUser} />);
+        render(<EventsPage currentUser={currentUser} events={[event]} />);
 
         const eventCardContent = screen.getByText('Sommerfest').closest('.events-card-swipe-content');
         fireEvent.touchStart(eventCardContent, createTouchEvent(200, 100));

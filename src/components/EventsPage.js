@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './EventsPage.css';
-import { subscribeToEvents, subscribeToAllEvents, deleteEvent, getEvent } from '../utils/eventsFirestore';
+import { deleteEvent, getEvent } from '../utils/eventsFirestore';
 import { CATEGORY_LABELS, EVENT_TYPE_LABELS } from './EventForm';
 import EventForm from './EventForm';
 import ConsumptionForm from './ConsumptionForm';
@@ -164,15 +164,20 @@ function EventCard({ event, ownerName, canManage, onSelect, onDelete, swipeDelet
   );
 }
 
-function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPendingEventReminderHandled, pendingEventDetailRequest, onPendingEventDetailRequestHandled, onCloseLinkedEventDetail }) {
+function EventsPage({
+  onBack, currentUser, recipes,
+  events = [], eventsLoaded = true, allEvents = [], allEventsLoaded = true,
+  guestProfiles = [], guestProfilesLoaded = true, allGuestProfiles = [], allGuestProfilesLoaded = true,
+  customDrinks = [], customDrinksLoaded = true,
+  pendingEventReminderId, onPendingEventReminderHandled, pendingEventDetailRequest, onPendingEventDetailRequestHandled, onCloseLinkedEventDetail,
+}) {
   const [isMobileView, setIsMobileView] = useState(() => window.innerWidth <= 768);
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [drinksFabPressed, setDrinksFabPressed] = useState(false);
   const [guestsFabPressed, setGuestsFabPressed] = useState(false);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const loading = !eventsLoaded;
   // Deep links (push notification reminder, menu's "open linked event" button) know their
   // target subView before the event data has loaded, so start there instead of flashing
   // the full events overview first.
@@ -189,8 +194,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
   const [fallbackEvent, setFallbackEvent] = useState(null); // used right after calculation, before onSnapshot syncs
   // Admins always see every user's events instead of just their own.
   const isAdmin = currentUser?.isAdmin === true;
-  const [allEvents, setAllEvents] = useState([]);
-  const [allEventsLoading, setAllEventsLoading] = useState(true);
+  const allEventsLoading = !allEventsLoaded;
   const [allUsers, setAllUsers] = useState([]);
   const { banners: deleteBanners, pendingKeys: pendingDeleteKeys, scheduleDelete, undoDelete } = useUndoableDelete();
 
@@ -219,26 +223,8 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
   }, []);
 
   useEffect(() => {
-    if (!currentUser?.id) return undefined;
-    const unsubscribe = subscribeToEvents(currentUser.id, (loadedEvents) => {
-      setEvents(loadedEvents);
-      setLoading(false);
-    });
-    return unsubscribe;
-  }, [currentUser?.id]);
-
-  useEffect(() => {
     if (!isAdmin) return;
     getUsers().then(setAllUsers).catch(() => setAllUsers([]));
-  }, [isAdmin]);
-
-  useEffect(() => {
-    if (!isAdmin) return undefined;
-    const unsubscribe = subscribeToAllEvents((loadedEvents) => {
-      setAllEvents(loadedEvents);
-      setAllEventsLoading(false);
-    });
-    return unsubscribe;
   }, [isAdmin]);
 
   // Deep link from a push notification: jump straight to the consumption form.
@@ -369,6 +355,8 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
         onBack={() => setSubView('list')}
         currentUser={currentUser}
         recipes={recipes}
+        customDrinks={customDrinks}
+        customDrinksLoaded={customDrinksLoaded}
       />
     );
   }
@@ -379,6 +367,11 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
         onBack={() => setSubView('list')}
         currentUser={currentUser}
         recipes={recipes}
+        guestProfiles={guestProfiles}
+        guestProfilesLoaded={guestProfilesLoaded}
+        allGuestProfiles={allGuestProfiles}
+        allGuestProfilesLoaded={allGuestProfilesLoaded}
+        customDrinks={customDrinks}
       />
     );
   }
@@ -391,6 +384,8 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
         currentUser={currentUser}
         onManageDrinks={() => setSubView('drinks')}
         recipes={recipes}
+        guestProfiles={guestProfiles}
+        customDrinks={customDrinks}
       />
     );
   }
@@ -406,6 +401,8 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
         onManageDrinks={() => setSubView('drinks')}
         initialEvent={selectedEvent}
         recipes={recipes}
+        guestProfiles={guestProfiles}
+        customDrinks={customDrinks}
       />
     );
   }

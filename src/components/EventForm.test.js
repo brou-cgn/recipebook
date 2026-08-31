@@ -3,8 +3,10 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import EventForm from './EventForm';
 
 const mockCalculateEventDrinks = jest.fn();
+// EventForm only calls this itself when editing another user's event (ownerId
+// differs from currentUser.id); none of these tests exercise that path since
+// guests are otherwise passed in directly via the guestProfiles prop.
 const mockSubscribeToGuestProfiles = jest.fn();
-const mockSubscribeToAllCustomDrinks = jest.fn();
 const mockGetMenusByEventId = jest.fn();
 const mockUpdateMenu = jest.fn();
 
@@ -13,7 +15,6 @@ jest.mock('../utils/eventsFirestore', () => ({
   deriveSeason: jest.fn(() => 'sommer'),
   calculateEventDrinks: (...args) => mockCalculateEventDrinks(...args),
   subscribeToGuestProfiles: (...args) => mockSubscribeToGuestProfiles(...args),
-  subscribeToAllCustomDrinks: (...args) => mockSubscribeToAllCustomDrinks(...args),
 }));
 
 jest.mock('../utils/menuFirestore', () => ({
@@ -52,6 +53,31 @@ jest.mock('./EventDrinkSelectionPage', () => function MockEventDrinkSelectionPag
   );
 });
 
+const defaultGuestProfiles = [
+  {
+    id: 'g1',
+    vorname: 'Anna',
+    nachname: 'Beispiel',
+    alkoholischeGetränke: true,
+    bevorzugteGetränke: ['custom-wasser'],
+    präferenzFaktor: 1,
+  },
+  {
+    id: 'g2',
+    vorname: 'Tom',
+    nachname: 'Kind',
+    kind: true,
+    alkoholischeGetränke: false,
+    bevorzugteGetränke: [],
+    präferenzFaktor: 0,
+  },
+];
+
+const defaultCustomDrinks = [
+  { id: 'custom-wasser', name: 'Wasser (eigen)', kategorie: 'wasser' },
+  { id: 'custom-bier', name: 'Bier (eigen)', kategorie: 'bier_alkoholfrei' },
+];
+
 describe('EventForm', () => {
   const getInlineCalculateButton = () => document.querySelector('.events-form-actions .events-primary-btn');
 
@@ -61,39 +87,14 @@ describe('EventForm', () => {
     mockGetMenusByEventId.mockResolvedValue([]);
     mockUpdateMenu.mockResolvedValue();
     mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
-      cb([
-        {
-          id: 'g1',
-          vorname: 'Anna',
-          nachname: 'Beispiel',
-          alkoholischeGetränke: true,
-          bevorzugteGetränke: ['custom-wasser'],
-          präferenzFaktor: 1,
-        },
-        {
-          id: 'g2',
-          vorname: 'Tom',
-          nachname: 'Kind',
-          kind: true,
-          alkoholischeGetränke: false,
-          bevorzugteGetränke: [],
-          präferenzFaktor: 0,
-        },
-      ]);
-      return jest.fn();
-    });
-    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
-      cb([
-        { id: 'custom-wasser', name: 'Wasser (eigen)', kategorie: 'wasser' },
-        { id: 'custom-bier', name: 'Bier (eigen)', kategorie: 'bier_alkoholfrei' },
-      ]);
+      cb(defaultGuestProfiles);
       return jest.fn();
     });
   });
 
   test('submits selected guests, drivers and preference multipliers', async () => {
     const onSaved = jest.fn();
-    render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Sommerfest' } });
 
@@ -120,13 +121,13 @@ describe('EventForm', () => {
   });
 
   test('shows "Gäste verwalten" button when guests are available', () => {
-    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     expect(screen.getByRole('button', { name: 'Gäste verwalten' })).toBeInTheDocument();
   });
 
   test('shows guest selection sub-page when manage button is clicked', () => {
-    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Gäste verwalten' }));
 
@@ -135,7 +136,7 @@ describe('EventForm', () => {
   });
 
   test('returns to main form when guest sub-page is cancelled', () => {
-    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Gäste verwalten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Gäste abbrechen' }));
@@ -145,7 +146,7 @@ describe('EventForm', () => {
   });
 
   test('counts child guests separately from adults after guest assignment', async () => {
-    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Gäste verwalten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Gäste mit Kind speichern' }));
@@ -157,7 +158,7 @@ describe('EventForm', () => {
   });
 
   test('submits child guests in the children count instead of adult count', async () => {
-    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Familienfest' } });
     fireEvent.click(screen.getByRole('button', { name: 'Gäste verwalten' }));
@@ -170,23 +171,21 @@ describe('EventForm', () => {
   });
 
   test('shows no Standardkategorien and no Eigene Getränke heading', () => {
-    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     expect(screen.queryByText('Eigene Getränke')).not.toBeInTheDocument();
     expect(screen.queryByText('Standardkategorien')).not.toBeInTheDocument();
   });
 
   test('shows Getränke verwalten link when no custom drinks and onManageDrinks is provided', () => {
-    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
-      cb([]);
-      return jest.fn();
-    });
     const onManageDrinks = jest.fn();
     render(
       <EventForm
         onSaved={jest.fn()}
         onCancel={jest.fn()}
         currentUser={{ id: 'u1' }}
+        guestProfiles={defaultGuestProfiles}
+        customDrinks={[]}
         onManageDrinks={onManageDrinks}
       />,
     );
@@ -199,7 +198,7 @@ describe('EventForm', () => {
 
   test('auto-selects only Mineralwasser on load for new events', async () => {
     const onSaved = jest.fn();
-    render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Sommerfest' } });
     fireEvent.click(getInlineCalculateButton());
@@ -212,23 +211,19 @@ describe('EventForm', () => {
   });
 
   test('does not show Getränke verwalten link when onManageDrinks is not provided', () => {
-    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
-      cb([]);
-      return jest.fn();
-    });
-    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={[]} />);
 
     expect(screen.queryByRole('button', { name: 'Getränke verwalten' })).not.toBeInTheDocument();
   });
 
   test('no longer shows the Puffer (%) field on the main event form', () => {
-    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     expect(screen.queryByLabelText('Puffer (%)')).not.toBeInTheDocument();
   });
 
   test('passes default puffer of 25 percent to the Getränke verwalten sub-page for new events', () => {
-    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Getränke verwalten' }));
 
@@ -236,7 +231,7 @@ describe('EventForm', () => {
   });
 
   test('shows mobile FAB buttons on the new event page', () => {
-    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     expect(document.querySelector('.event-save-fab-button[aria-label="Einkaufsliste berechnen"]')).toBeInTheDocument();
     expect(document.querySelector('.events-cancel-fab-button[aria-label="Neues Event abbrechen"]')).toBeInTheDocument();
@@ -244,7 +239,7 @@ describe('EventForm', () => {
 
   test('new event cancel FAB calls onCancel', () => {
     const onCancel = jest.fn();
-    render(<EventForm onSaved={jest.fn()} onCancel={onCancel} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={jest.fn()} onCancel={onCancel} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Neues Event abbrechen' }));
 
@@ -268,6 +263,8 @@ describe('EventForm', () => {
         onSaved={jest.fn()}
         onCancel={jest.fn()}
         currentUser={{ id: 'u1' }}
+        guestProfiles={defaultGuestProfiles}
+        customDrinks={defaultCustomDrinks}
         initialEvent={initialEvent}
       />,
     );
@@ -295,6 +292,8 @@ describe('EventForm', () => {
         onCancel={jest.fn()}
         onDelete={onDelete}
         currentUser={{ id: 'u1' }}
+        guestProfiles={defaultGuestProfiles}
+        customDrinks={defaultCustomDrinks}
         initialEvent={initialEvent}
       />,
     );
@@ -304,7 +303,7 @@ describe('EventForm', () => {
   });
 
   test('does not show delete button for new events', () => {
-    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     expect(screen.queryByRole('button', { name: 'Löschen' })).not.toBeInTheDocument();
   });
@@ -327,6 +326,8 @@ describe('EventForm', () => {
         onSaved={jest.fn()}
         onCancel={jest.fn()}
         currentUser={{ id: 'u1' }}
+        guestProfiles={defaultGuestProfiles}
+        customDrinks={defaultCustomDrinks}
         initialEvent={initialEvent}
       />,
     );
@@ -360,6 +361,8 @@ describe('EventForm', () => {
         onSaved={onSaved}
         onCancel={jest.fn()}
         currentUser={{ id: 'u1' }}
+        guestProfiles={defaultGuestProfiles}
+        customDrinks={defaultCustomDrinks}
         initialEvent={initialEvent}
       />,
     );
@@ -374,7 +377,7 @@ describe('EventForm', () => {
 
   test('passes startTime to calculateEventDrinks when provided', async () => {
     const onSaved = jest.fn();
-    render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Nachmittagsfest' } });
     fireEvent.change(screen.getByLabelText('Startuhrzeit'), { target: { value: '14:00' } });
@@ -387,7 +390,7 @@ describe('EventForm', () => {
 
   test('omits startTime from event when not provided', async () => {
     const onSaved = jest.fn();
-    render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Sommerfest' } });
     fireEvent.click(getInlineCalculateButton());
@@ -417,6 +420,8 @@ describe('EventForm', () => {
         onSaved={onSaved}
         onCancel={jest.fn()}
         currentUser={{ id: 'u1' }}
+        guestProfiles={defaultGuestProfiles}
+        customDrinks={defaultCustomDrinks}
         initialEvent={initialEvent}
       />,
     );
@@ -431,7 +436,7 @@ describe('EventForm', () => {
   });
 
   test('shows Anlass field directly after Name field', () => {
-    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     const formFields = Array.from(document.querySelectorAll('.events-form-field, .events-form-row'));
     const nameIndex = formFields.findIndex((el) => el.querySelector('input[type="text"]'));
@@ -440,13 +445,13 @@ describe('EventForm', () => {
   });
 
   test('shows "Getränke verwalten" button when custom drinks are available', () => {
-    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     expect(screen.getByRole('button', { name: 'Getränke verwalten' })).toBeInTheDocument();
   });
 
   test('shows drink selection sub-page when Getränke verwalten button is clicked', () => {
-    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Getränke verwalten' }));
 
@@ -455,7 +460,7 @@ describe('EventForm', () => {
   });
 
   test('returns to main form when drink sub-page is cancelled', () => {
-    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Getränke verwalten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Getränke abbrechen' }));
@@ -466,7 +471,7 @@ describe('EventForm', () => {
 
   test('updates selected drinks when drink sub-page is saved', async () => {
     const onSaved = jest.fn();
-    render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Getränke verwalten' }));
     // Mock sub-page saves only custom-wasser
@@ -484,7 +489,7 @@ describe('EventForm', () => {
 
   test('submits the puffer percent returned from the Getränke verwalten sub-page', async () => {
     const onSaved = jest.fn();
-    render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Getränke verwalten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Getränke mit neuem Puffer speichern' }));
@@ -524,6 +529,8 @@ describe('EventForm', () => {
         onSaved={onSaved}
         onCancel={jest.fn()}
         currentUser={{ id: 'u1' }}
+        guestProfiles={defaultGuestProfiles}
+        customDrinks={defaultCustomDrinks}
         initialEvent={initialEvent}
       />,
     );
@@ -562,6 +569,8 @@ describe('EventForm', () => {
         onSaved={onSaved}
         onCancel={jest.fn()}
         currentUser={{ id: 'u1' }}
+        guestProfiles={defaultGuestProfiles}
+        customDrinks={defaultCustomDrinks}
         initialEvent={initialEvent}
       />,
     );
@@ -599,6 +608,8 @@ describe('EventForm', () => {
         onSaved={onSaved}
         onCancel={jest.fn()}
         currentUser={{ id: 'u1' }}
+        guestProfiles={defaultGuestProfiles}
+        customDrinks={defaultCustomDrinks}
         initialEvent={initialEvent}
       />,
     );
@@ -612,13 +623,10 @@ describe('EventForm', () => {
 
   test('removes a deleted drink recipe from linked menus\' recipeIds on save', async () => {
     const onSaved = jest.fn();
-    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
-      cb([
-        { id: 'custom-wasser', name: 'Wasser (eigen)', kategorie: 'wasser' },
-        { id: 'custom-bier-rezept', name: '#recipe:recipe-1:Craft Bier', kategorie: 'bier' },
-      ]);
-      return jest.fn();
-    });
+    const recipeLinkedCustomDrinks = [
+      { id: 'custom-wasser', name: 'Wasser (eigen)', kategorie: 'wasser' },
+      { id: 'custom-bier-rezept', name: '#recipe:recipe-1:Craft Bier', kategorie: 'bier' },
+    ];
     const initialEvent = {
       id: 'event-42',
       eventName: 'Geburtstag',
@@ -644,6 +652,8 @@ describe('EventForm', () => {
         onSaved={onSaved}
         onCancel={jest.fn()}
         currentUser={{ id: 'u1' }}
+        guestProfiles={defaultGuestProfiles}
+        customDrinks={recipeLinkedCustomDrinks}
         initialEvent={initialEvent}
       />,
     );
@@ -660,7 +670,7 @@ describe('EventForm', () => {
   });
 
   test('does not show "Getränke nach Gästewunsch filtern" button', () => {
-    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     expect(screen.queryByRole('button', { name: /Getränke nach Gästewunsch/ })).not.toBeInTheDocument();
   });

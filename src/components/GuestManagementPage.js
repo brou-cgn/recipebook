@@ -4,11 +4,8 @@ import OverviewAddFab from './OverviewAddFab';
 import DeleteRowButton from './DeleteRowButton';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import {
-  subscribeToGuestProfiles,
-  subscribeToAllGuestProfiles,
   saveGuestProfile,
   deleteGuestProfile,
-  subscribeToAllCustomDrinks,
 } from '../utils/eventsFirestore';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { getGuestDisplayName, normalizePreferenceFactor } from '../utils/guestPreferences';
@@ -92,10 +89,13 @@ function GuestCard({ fullName, deleteIcon, onOpenEdit, onDelete, children }) {
   );
 }
 
-function GuestManagementPage({ onBack, currentUser, recipes }) {
-  const [profiles, setProfiles] = useState([]);
-  const [customDrinks, setCustomDrinks] = useState([]);
-  const [loading, setLoading] = useState(true);
+function GuestManagementPage({
+  onBack, currentUser, recipes,
+  guestProfiles: profiles = [], guestProfilesLoaded = true,
+  allGuestProfiles: allProfiles = [], allGuestProfilesLoaded = true,
+  customDrinks = [],
+}) {
+  const loading = !guestProfilesLoaded;
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
   const [editOwnerId, setEditOwnerId] = useState(null);
@@ -116,22 +116,12 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
 
   // Admin: always browse all users' guest profiles instead of just the current user's own.
   const isAdmin = currentUser?.isAdmin === true;
-  const [allProfiles, setAllProfiles] = useState([]);
-  const [allProfilesLoading, setAllProfilesLoading] = useState(true);
+  const allProfilesLoading = !allGuestProfilesLoaded;
   const [allUsers, setAllUsers] = useState([]);
 
   useEffect(() => {
     if (!isAdmin) return;
     getUsers().then(setAllUsers).catch(() => setAllUsers([]));
-  }, [isAdmin]);
-
-  useEffect(() => {
-    if (!isAdmin) return undefined;
-    const unsubscribe = subscribeToAllGuestProfiles((loaded) => {
-      setAllProfiles(loaded);
-      setAllProfilesLoading(false);
-    });
-    return unsubscribe;
   }, [isAdmin]);
 
   const getOwnerFirstName = (ownerId) => {
@@ -152,19 +142,6 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
     window.addEventListener('darkModeChange', handler);
     return () => window.removeEventListener('darkModeChange', handler);
   }, []);
-
-  useEffect(() => {
-    if (!currentUser?.id) return undefined;
-    const unsubscribeProfiles = subscribeToGuestProfiles(currentUser.id, (loaded) => {
-      setProfiles(loaded);
-      setLoading(false);
-    });
-    const unsubscribeDrinks = subscribeToAllCustomDrinks(setCustomDrinks);
-    return () => {
-      unsubscribeProfiles();
-      unsubscribeDrinks();
-    };
-  }, [currentUser?.id]);
 
   const availableDrinks = useMemo(() => {
     // Predefined drinks can be overridden per-owner but share the same fixed
