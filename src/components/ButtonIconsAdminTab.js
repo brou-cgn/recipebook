@@ -675,6 +675,7 @@ function ButtonIconsAdminTab() {
       setIcons(iconsRes);
       setCuisineTypes(listsRes.cuisineTypes || []);
       setData(groupsRes);
+      setCollapsed(Object.fromEntries((groupsRes.groups || []).map((g) => [g.id, true])));
       setCategoryImages(catImagesRes);
       setMealCategories(listsRes.mealCategories || []);
       setLoading(false);
@@ -715,6 +716,7 @@ function ButtonIconsAdminTab() {
   const handleAddGroup = () => {
     const id = `g-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
     persistData({ ...data, groups: [...data.groups, { id, name: 'Neue Gruppe', rowKeys: [] }] });
+    setCollapsed((c) => ({ ...c, [id]: false }));
   };
 
   const handleRenameGroup = (groupId, name) => {
