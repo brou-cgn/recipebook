@@ -587,7 +587,7 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
 
         {/* Cancel FAB button - positioned at bottom-left */}
         <button
-          className={`cancel-fab-button ${cancelPressed ? 'pressed' : ''}`}
+          className={`events-cancel-fab-button ${cancelPressed ? 'pressed' : ''}`}
           onClick={() => setShowForm(false)}
           onTouchStart={() => setCancelPressed(true)}
           onTouchEnd={() => setCancelPressed(false)}
