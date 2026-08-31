@@ -17,6 +17,7 @@ import {
   updateCategoryImage,
   removeCategoryImage,
   getAlreadyAssignedCategories,
+  reorderCategoryImages,
 } from '../utils/categoryImages';
 import DeleteRowButton from './DeleteRowButton';
 import UndoSnackbar from './UndoSnackbar';
@@ -372,13 +373,23 @@ function CategoryImageRow({
   onCancelEdit,
   onDelete,
 }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: img.id,
+    data: { type: 'catimg' },
+    disabled: isEditing,
+  });
   const { offset, isDeleteVisible: swipeVisible, reset, handlers } = useSwipeToDelete({
     isDeleteVisible,
     onDeleteVisibleChange,
   });
+  const dragStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
   const swipeContentStyle = {
     transform: `translateX(${offset}px)`,
-    transition: 'transform 0.15s ease',
+    transition: isDragging ? transition : 'transform 0.15s ease',
   };
   const rowName = categoryImageRowName(img);
 
@@ -392,7 +403,7 @@ function CategoryImageRow({
   // instead of the Kulinarik-Typ column grid used below.
   if (isEditing) {
     return (
-      <div className={`bia-catimg-row-wrap${offset < 0 ? ' bia-swipe-active' : ''}`}>
+      <div ref={setNodeRef} style={dragStyle} className={`bia-catimg-row-wrap${offset < 0 ? ' bia-swipe-active' : ''}${isDragging ? ' bia-dragging' : ''}`}>
         <div className="swipe-delete-background" aria-hidden={!swipeVisible}>
           {swipeVisible && (
             <button
@@ -471,7 +482,7 @@ function CategoryImageRow({
   // slot and the other three are shown disabled, exactly like a Kulinarik-Typ
   // row without an "aktiv" state.
   return (
-    <div className={`bia-row bia-catimg-row-wrap${offset < 0 ? ' bia-swipe-active' : ''}`}>
+    <div ref={setNodeRef} style={dragStyle} className={`bia-row bia-catimg-row-wrap${offset < 0 ? ' bia-swipe-active' : ''}${isDragging ? ' bia-dragging' : ''}`}>
       <div className="swipe-delete-background" aria-hidden={!swipeVisible}>
         {swipeVisible && (
           <button
@@ -485,17 +496,16 @@ function CategoryImageRow({
         )}
       </div>
       <div className="bia-row-content delete-row-hover-target" style={swipeContentStyle} {...handlers}>
-        <span className="bia-drag-handle-placeholder" aria-hidden="true" />
+        <button type="button" className="bia-drag-handle" {...attributes} {...listeners} aria-label={`${rowName} verschieben`}>⠿</button>
 
         <div className="bia-row-name bia-catimg-row-name">
-          <span className="bia-row-name-static" title={rowName}>{rowName}</span>
           <button
             type="button"
-            className="bia-btn-tertiary bia-catimg-edit-btn"
+            className="bia-row-name-static bia-row-name-btn"
             onClick={() => onStartEdit(img.id)}
-            title="Kategorien bearbeiten"
+            title={`${rowName} – Kategorien bearbeiten`}
           >
-            Bearbeiten
+            {rowName}
           </button>
         </div>
 
@@ -829,7 +839,7 @@ function ButtonIconsAdminTab() {
     setCatimgAdding(false);
     setCatimgAddValue('');
     try {
-      const newImage = await addCategoryImage('', [name]);
+      const newImage = await addCategoryImage('', [name], categoryImages.length);
       setCategoryImages((prev) => [...prev, newImage]);
     } catch (error) {
       alert(error.message);
@@ -933,6 +943,19 @@ function ButtonIconsAdminTab() {
       const newIndex = data.groups.findIndex((g) => g.id === overGroupId);
       if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
       persistData({ ...data, groups: arrayMove(data.groups, oldIndex, newIndex) });
+      return;
+    }
+
+    if (activeType === 'catimg') {
+      if (active.id === over.id) return;
+      const oldIndex = categoryImages.findIndex((img) => img.id === active.id);
+      const newIndex = categoryImages.findIndex((img) => img.id === over.id);
+      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+      const reordered = arrayMove(categoryImages, oldIndex, newIndex);
+      setCategoryImages(reordered);
+      reorderCategoryImages(reordered.map((img) => img.id)).catch((error) => {
+        console.error('Error reordering category images:', error);
+      });
       return;
     }
 
@@ -1174,31 +1197,28 @@ function ButtonIconsAdminTab() {
                     metaLabel={isMealCategoriesGroup ? `${categoryImages.length} ${categoryImages.length === 1 ? 'Bild' : 'Bilder'}` : undefined}
                     customBody={isMealCategoriesGroup ? (
                       <div className="bia-catimg-body">
-                        <p className="section-description bia-catimg-description">
-                          Jede Speisekategorie bekommt (analog zu den Kulinarik-Typen oben) eine eigene Zeile mit einem Bild.
-                          Es wird als Platzhalter verwendet, wenn ein Rezept ohne Titelbild gespeichert wird.
-                        </p>
-
                         <div className="bia-catimg-rows">
-                          {categoryImages.map((img) => (
-                            <CategoryImageRow
-                              key={img.id}
-                              img={img}
-                              mealCategories={mealCategories}
-                              categoryImages={categoryImages}
-                              isDeleteVisible={catimgDeleteVisibleId === img.id}
-                              onDeleteVisibleChange={(visible) => setCatimgDeleteVisibleId(visible ? img.id : null)}
-                              onImageClick={handleRowImageClick}
-                              isUploading={uploadingRowId === img.id}
-                              isEditing={editingCategoryImageId === img.id}
-                              selectedCategories={selectedCategories}
-                              onCategoryToggle={handleCategoryToggle}
-                              onStartEdit={handleEditCategoryImageCategories}
-                              onSaveEdit={handleSaveCategoryImageCategories}
-                              onCancelEdit={handleCancelEditCategoryImageCategories}
-                              onDelete={() => handleDeleteCategoryImage(img.id)}
-                            />
-                          ))}
+                          <SortableContext items={categoryImages.map((img) => img.id)} strategy={verticalListSortingStrategy}>
+                            {categoryImages.map((img) => (
+                              <CategoryImageRow
+                                key={img.id}
+                                img={img}
+                                mealCategories={mealCategories}
+                                categoryImages={categoryImages}
+                                isDeleteVisible={catimgDeleteVisibleId === img.id}
+                                onDeleteVisibleChange={(visible) => setCatimgDeleteVisibleId(visible ? img.id : null)}
+                                onImageClick={handleRowImageClick}
+                                isUploading={uploadingRowId === img.id}
+                                isEditing={editingCategoryImageId === img.id}
+                                selectedCategories={selectedCategories}
+                                onCategoryToggle={handleCategoryToggle}
+                                onStartEdit={handleEditCategoryImageCategories}
+                                onSaveEdit={handleSaveCategoryImageCategories}
+                                onCancelEdit={handleCancelEditCategoryImageCategories}
+                                onDelete={() => handleDeleteCategoryImage(img.id)}
+                              />
+                            ))}
+                          </SortableContext>
                           {categoryImages.length === 0 && !catimgAdding && (
                             <div className="bia-empty-group">Noch keine Kategoriebilder</div>
                           )}
