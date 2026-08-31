@@ -44,8 +44,8 @@ const smtpFrom = defineSecret('SMTP_FROM');
 // already shipped in the web app bundle (REACT_APP_FIREBASE_API_KEY) —
 // stored as a secret here purely for consistency with the other config
 // values above.
-// Set with: firebase functions:secrets:set FIREBASE_WEB_API_KEY
-const firebaseWebApiKey = defineSecret('FIREBASE_WEB_API_KEY');
+// Set with: firebase functions:secrets:set WEB_API_KEY
+const firebaseWebApiKey = defineSecret('WEB_API_KEY');
 
 /**
  * Trusted origins allowed for CORS on API endpoints.
@@ -7120,12 +7120,12 @@ const CALLABLE_BASE_URL = 'https://us-central1-broubook.cloudfunctions.net';
  * token with the Admin SDK and exchanging it via the Identity Toolkit REST
  * API — the same exchange the client SDK performs internally.
  *
- * @param {string} webApiKey - Firebase Web API key (FIREBASE_WEB_API_KEY secret)
+ * @param {string} webApiKey - Firebase Web API key (WEB_API_KEY secret)
  * @returns {Promise<string>} A Firebase ID token for AI_IMPORTER_TEST_UID
  */
 async function mintImporterTestIdToken(webApiKey) {
   if (!webApiKey) {
-    throw new Error('FIREBASE_WEB_API_KEY-Secret ist nicht konfiguriert');
+    throw new Error('WEB_API_KEY-Secret ist nicht konfiguriert');
   }
   const customToken = await admin.auth().createCustomToken(AI_IMPORTER_TEST_UID);
   const response = await fetch(
@@ -7336,7 +7336,7 @@ async function runAllImporterTests(apiKey, webApiKey) {
   }));
 
   // Mint one ID token up front and reuse it for tests 2–4. If this fails
-  // (e.g. FIREBASE_WEB_API_KEY missing), all three report the same clear
+  // (e.g. WEB_API_KEY missing), all three report the same clear
   // cause instead of three unrelated-looking errors.
   let idToken = null;
   let idTokenError = null;

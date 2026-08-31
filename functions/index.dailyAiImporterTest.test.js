@@ -67,7 +67,7 @@ function loadFunction() {
     if (request === 'firebase-functions/params') {
       return {
         defineSecret: (name) => ({
-          value: () => (name === 'FIREBASE_WEB_API_KEY' ? webApiKeySecretValue : geminiSecretValue),
+          value: () => (name === 'WEB_API_KEY' ? webApiKeySecretValue : geminiSecretValue),
         }),
       };
     }
@@ -206,7 +206,7 @@ test('fetch+extraction is a connected chain: a failed fetch also fails the extra
   assert.match(mail.text, /Übersprungen: fetchRecipeHtml lieferte kein HTML/);
 });
 
-test('missing FIREBASE_WEB_API_KEY fails only the three callable-based tests, not the config test', async () => {
+test('missing WEB_API_KEY fails only the three callable-based tests, not the config test', async () => {
   webApiKeySecretValue = undefined;
   await dailyAiImporterTest({});
   const mail = sentMails[0];

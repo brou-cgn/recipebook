@@ -435,11 +435,11 @@ The function uses Firebase Secrets for secure API key storage:
 
 - `GEMINI_API_KEY` - Google Gemini Vision API key (required for `scanRecipeWithAI`)
 - `SHORTCUT_API_KEY` - API key for `addRecipeViaAPI` (required for Apple Shortcut integration)
-- `FIREBASE_WEB_API_KEY` - the project's public Web API key (same value as the
+- `WEB_API_KEY` - the project's public Web API key (same value as the
   app's `REACT_APP_FIREBASE_API_KEY`), required by the nightly
   `dailyAiImporterTest` to mint a test-user ID token and call the real
   `fetchRecipeHtml` / `processHtmlWithAI` / `scanRecipeWithAI` callables over
-  HTTPS. Set it with `firebase functions:secrets:set FIREBASE_WEB_API_KEY`
+  HTTPS. Set it with `firebase functions:secrets:set WEB_API_KEY`
   **before** deploying `dailyAiImporterTest` — the deploy fails if a
   function declares a secret that doesn't exist yet in Secret Manager.
 
