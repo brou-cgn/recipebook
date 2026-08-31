@@ -172,14 +172,21 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   // Guests selected for this menu, used to show a "Gäste: ..." Fließtext on
   // the menu's recipe cards. Only resolvable when the viewer is the menu's
   // author (guest profiles are private per-user data).
+  const menuGuestIdsKey = (menu.descriptionGuestIds || []).join(',');
+
   useEffect(() => {
-    if (!menu.descriptionGuestIds?.length || !menu.authorId) {
+    if (!menuGuestIdsKey || !menu.authorId) {
       setMenuGuests([]);
       return undefined;
     }
     const unsubGuests = subscribeToGuestProfiles(menu.authorId, setMenuGuests);
     return () => unsubGuests();
-  }, [menu.descriptionGuestIds, menu.authorId]);
+    // descriptionGuestIds is an array, so depending on it directly re-ran this
+    // effect on every new `menu` object identity — tearing the guest listener
+    // down and building a new one that has to load from scratch each time.
+    // Only the ids themselves matter here, so depend on their serialised form.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [menuGuestIdsKey, menu.authorId]);
 
   // Load the default category image for the "Drinks" meal category once, used
   // as a fallback picture for drink cards that have no image of their own.
