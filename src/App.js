@@ -935,9 +935,12 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipes]);
 
-  // Initialize recipe counts for all users once after recipes are loaded
+  // Initialize recipe counts for all users once after recipes are loaded.
+  // Writes recipe_count onto every user document, which firestore.rules only
+  // permits for admins (a non-admin may update only their own doc) - so this
+  // must stay admin-gated, otherwise every other user hits a permission error.
   useEffect(() => {
-    if (currentUser && recipesLoaded && !recipeCountsInitialized.current) {
+    if (currentUser?.isAdmin && recipesLoaded && !recipeCountsInitialized.current) {
       recipeCountsInitialized.current = true;
       initializeRecipeCounts().catch((err) => {
         console.error('Error initializing recipe counts:', err);
