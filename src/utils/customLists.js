@@ -1234,6 +1234,7 @@ export async function getSettings() {
         inspirationTargetListName: settings.inspirationTargetListName ?? DEFAULT_INSPIRATION_TARGET_LIST_NAME,
         inspirationTargetListDescription: settings.inspirationTargetListDescription ?? DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION,
         printFormats: settings.printFormats || DEFAULT_PRINT_FORMATS,
+        buttonIconGroups: settings.buttonIconGroups,
         // Image data from settings/images
         faviconImage: imagesData.faviconImage || null,
         appLogoImage: imagesData.appLogoImage || null,
