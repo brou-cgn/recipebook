@@ -778,6 +778,10 @@ export const DEFAULT_BUTTON_ICONS = {
   tagesmenuKachelMenuAlt: '⋯',
   // Fallback image for menu cards in the Küche timeline that have no own image
   timelineMenuDefaultImg: '',
+  // Sprechblasen-Icons in der Küche-Zeitleiste (Rezepte, Menüs, Kochereignisse)
+  timelineBubbleIcon: '',
+  timelineMenuBubbleIcon: '',
+  timelineCookEventBubbleIcon: '',
   newVersion: 'Version',
   deleteRecipe: '🗑',
   printRecipe: '⎙',
@@ -848,6 +852,9 @@ export const DEFAULT_BUTTON_ICONS = {
   tagesmenuKachelMenuDark: '',
   tagesmenuKachelMenuAltDark: '',
   timelineMenuDefaultImgDark: '',
+  timelineBubbleIconDark: '',
+  timelineMenuBubbleIconDark: '',
+  timelineCookEventBubbleIconDark: '',
   newVersionDark: '',
   deleteRecipeDark: '',
   printRecipeDark: '',
@@ -2000,6 +2007,31 @@ export async function getButtonIcons(preloadedImagesData) {
       }
     }
 
+    // One-time migration: the three timeline "Sprechblasen"-Icons (Rezepte, Menüs,
+    // Kochereignisse) used to live directly on settings/images. Carry them over
+    // into the buttonIcons collection so they show up in the "Bilder & Icons"
+    // admin list alongside every other icon - same treatment as
+    // timelineMenuDefaultImg above.
+    const legacyBubbleIconKeys = ['timelineBubbleIcon', 'timelineMenuBubbleIcon', 'timelineCookEventBubbleIcon'];
+    const missingBubbleIconKeys = legacyBubbleIconKeys.filter((key) => !icons[key]);
+    if (missingBubbleIconKeys.length > 0) {
+      try {
+        const imagesData = preloadedImagesData
+          ?? await getDoc(doc(db, 'settings', 'images')).then((snap) => (snap.exists() ? snap.data() : {}));
+        missingBubbleIconKeys.forEach((key) => {
+          const legacyImage = imagesData?.[key];
+          if (legacyImage) {
+            icons[key] = legacyImage;
+            saveButtonIcon(key, legacyImage).catch((error) => {
+              console.error(`Error migrating ${key}:`, error);
+            });
+          }
+        });
+      } catch (error) {
+        console.error('Error checking legacy timeline bubble icons:', error);
+      }
+    }
+
     saveButtonIconsToLocalStorageCache(icons);
     return icons;
   } catch (error) {
@@ -2141,24 +2173,19 @@ export async function resetButtonIcons() {
  * @returns {Promise<string|null>} Promise resolving to base64 encoded image or null
  */
 export async function getTimelineBubbleIcon() {
-  const settings = await getSettings();
-  return settings.timelineBubbleIcon || null;
+  const icons = await getButtonIcons();
+  return icons.timelineBubbleIcon || null;
 }
 
 /**
- * Save the timeline bubble icon to Firestore (settings/images)
+ * Save the timeline bubble icon to the buttonIcons collection, so it shows up
+ * in the "Bilder & Icons" admin list alongside every other icon.
  * @param {string|null} imageBase64 - Base64 encoded image or null to remove
  * @returns {Promise<void>}
  */
 export async function saveTimelineBubbleIcon(imageBase64) {
   try {
-    const imagesRef = doc(db, 'settings', 'images');
-    await setDoc(imagesRef, { timelineBubbleIcon: imageBase64 || null }, { merge: true });
-
-    // Update cache
-    if (settingsCache) {
-      settingsCache.timelineBubbleIcon = imageBase64 || null;
-    }
+    await saveButtonIcon('timelineBubbleIcon', imageBase64 || '');
   } catch (error) {
     console.error('Error saving timeline bubble icon:', error);
     throw error;
@@ -2170,24 +2197,19 @@ export async function saveTimelineBubbleIcon(imageBase64) {
  * @returns {Promise<string|null>} Promise resolving to base64 encoded image or null
  */
 export async function getTimelineMenuBubbleIcon() {
-  const settings = await getSettings();
-  return settings.timelineMenuBubbleIcon || null;
+  const icons = await getButtonIcons();
+  return icons.timelineMenuBubbleIcon || null;
 }
 
 /**
- * Save the timeline menu bubble icon to Firestore (settings/images)
+ * Save the timeline menu bubble icon to the buttonIcons collection, so it shows
+ * up in the "Bilder & Icons" admin list alongside every other icon.
  * @param {string|null} imageBase64 - Base64 encoded image or null to remove
  * @returns {Promise<void>}
  */
 export async function saveTimelineMenuBubbleIcon(imageBase64) {
   try {
-    const imagesRef = doc(db, 'settings', 'images');
-    await setDoc(imagesRef, { timelineMenuBubbleIcon: imageBase64 || null }, { merge: true });
-
-    // Update cache
-    if (settingsCache) {
-      settingsCache.timelineMenuBubbleIcon = imageBase64 || null;
-    }
+    await saveButtonIcon('timelineMenuBubbleIcon', imageBase64 || '');
   } catch (error) {
     console.error('Error saving timeline menu bubble icon:', error);
     throw error;
@@ -2228,24 +2250,19 @@ export async function saveTimelineRecipeDefaultImage(imageBase64) {
  * @returns {Promise<string|null>} Promise resolving to base64 encoded image or null
  */
 export async function getTimelineCookEventBubbleIcon() {
-  const settings = await getSettings();
-  return settings.timelineCookEventBubbleIcon || null;
+  const icons = await getButtonIcons();
+  return icons.timelineCookEventBubbleIcon || null;
 }
 
 /**
- * Save the timeline cook event bubble icon to Firestore (settings/images)
+ * Save the timeline cook event bubble icon to the buttonIcons collection, so
+ * it shows up in the "Bilder & Icons" admin list alongside every other icon.
  * @param {string|null} imageBase64 - Base64 encoded image or null to remove
  * @returns {Promise<void>}
  */
 export async function saveTimelineCookEventBubbleIcon(imageBase64) {
   try {
-    const imagesRef = doc(db, 'settings', 'images');
-    await setDoc(imagesRef, { timelineCookEventBubbleIcon: imageBase64 || null }, { merge: true });
-
-    // Update cache
-    if (settingsCache) {
-      settingsCache.timelineCookEventBubbleIcon = imageBase64 || null;
-    }
+    await saveButtonIcon('timelineCookEventBubbleIcon', imageBase64 || '');
   } catch (error) {
     console.error('Error saving timeline cook event bubble icon:', error);
     throw error;
