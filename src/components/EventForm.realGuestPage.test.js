@@ -9,7 +9,6 @@ import EventForm from './EventForm';
 
 const mockCalculateEventDrinks = jest.fn();
 const mockSubscribeToGuestProfiles = jest.fn();
-const mockSubscribeToAllCustomDrinks = jest.fn();
 const mockGetMenusByEventId = jest.fn();
 const mockUpdateMenu = jest.fn();
 
@@ -18,8 +17,12 @@ jest.mock('../utils/eventsFirestore', () => ({
   deriveSeason: jest.fn(() => 'sommer'),
   calculateEventDrinks: (...args) => mockCalculateEventDrinks(...args),
   subscribeToGuestProfiles: (...args) => mockSubscribeToGuestProfiles(...args),
-  subscribeToAllCustomDrinks: (...args) => mockSubscribeToAllCustomDrinks(...args),
 }));
+
+const defaultGuestProfiles = [
+  { id: 'g1', vorname: 'Anna', nachname: 'Beispiel' },
+  { id: 'g2', vorname: 'Ben', nachname: 'Muster' },
+];
 
 jest.mock('../utils/menuFirestore', () => ({
   getMenusByEventId: (...args) => mockGetMenusByEventId(...args),
@@ -39,14 +42,7 @@ describe('EventForm + real EventGuestSelectionPage - guest removal sync', () => 
     ]);
     mockUpdateMenu.mockResolvedValue();
     mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
-      cb([
-        { id: 'g1', vorname: 'Anna', nachname: 'Beispiel' },
-        { id: 'g2', vorname: 'Ben', nachname: 'Muster' },
-      ]);
-      return jest.fn();
-    });
-    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
-      cb([]);
+      cb(defaultGuestProfiles);
       return jest.fn();
     });
   });
@@ -69,6 +65,8 @@ describe('EventForm + real EventGuestSelectionPage - guest removal sync', () => 
         onSaved={jest.fn()}
         onCancel={jest.fn()}
         currentUser={{ id: 'u1' }}
+        guestProfiles={defaultGuestProfiles}
+        customDrinks={[]}
         initialEvent={initialEvent}
       />,
     );

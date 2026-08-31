@@ -66,6 +66,13 @@ import {
   addRecipeToGroup as addRecipeToGroupInFirestore,
   removeRecipeFromGroup as removeRecipeFromGroupInFirestore
 } from './utils/groupFirestore';
+import {
+  subscribeToEvents,
+  subscribeToAllEvents,
+  subscribeToGuestProfiles,
+  subscribeToAllGuestProfiles,
+  subscribeToAllCustomDrinks
+} from './utils/eventsFirestore';
 import { NutritionReferenceProvider, useNutritionReference } from './contexts/NutritionReferenceContext';
 import { RecipeImportQueueProvider, useRecipeImportQueue } from './contexts/RecipeImportQueueContext';
 import { updateAppBadge } from './utils/appBadge';
@@ -368,6 +375,19 @@ function App() {
   const [publicGroupId, setPublicGroupId] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [recipesLoaded, setRecipesLoaded] = useState(false);
+  // Events module data (Events, guest profiles, custom drinks): subscribed once here,
+  // same as recipes/menus/groups above, so navigating into/out of the Events area
+  // doesn't tear down and re-create these listeners (and refetch) on every visit.
+  const [events, setEvents] = useState([]);
+  const [eventsLoaded, setEventsLoaded] = useState(false);
+  const [allEvents, setAllEvents] = useState([]);
+  const [allEventsLoaded, setAllEventsLoaded] = useState(false);
+  const [guestProfiles, setGuestProfiles] = useState([]);
+  const [guestProfilesLoaded, setGuestProfilesLoaded] = useState(false);
+  const [allGuestProfiles, setAllGuestProfiles] = useState([]);
+  const [allGuestProfilesLoaded, setAllGuestProfilesLoaded] = useState(false);
+  const [customDrinks, setCustomDrinks] = useState([]);
+  const [customDrinksLoaded, setCustomDrinksLoaded] = useState(false);
   // Whether the Startseite's own carousels (Meine Kochideen, Im Trend) have
   // finished loading their data, reported back via onCarouselsLoadedChange.
   const [startseiteCarouselsLoaded, setStartseiteCarouselsLoaded] = useState(false);
@@ -974,6 +994,58 @@ function App() {
       setGroupsLoading(false);
     });
 
+    return () => unsubscribe();
+  }, [currentUser]);
+
+  // Set up real-time listener for the current user's events from Firestore.
+  useEffect(() => {
+    if (!currentUser) return undefined;
+    const unsubscribe = subscribeToEvents(currentUser.id, (eventsFromFirestore) => {
+      setEvents(eventsFromFirestore);
+      setEventsLoaded(true);
+    });
+    return () => unsubscribe();
+  }, [currentUser]);
+
+  // Admins additionally see every user's events (see EventsPage's admin view).
+  useEffect(() => {
+    if (!currentUser?.isAdmin) return undefined;
+    const unsubscribe = subscribeToAllEvents((eventsFromFirestore) => {
+      setAllEvents(eventsFromFirestore);
+      setAllEventsLoaded(true);
+    });
+    return () => unsubscribe();
+  }, [currentUser?.isAdmin]);
+
+  // Set up real-time listener for the current user's guest profiles from Firestore.
+  useEffect(() => {
+    if (!currentUser) return undefined;
+    const unsubscribe = subscribeToGuestProfiles(currentUser.id, (profilesFromFirestore) => {
+      setGuestProfiles(profilesFromFirestore);
+      setGuestProfilesLoaded(true);
+    });
+    return () => unsubscribe();
+  }, [currentUser]);
+
+  // Admins additionally see every user's guest profiles.
+  useEffect(() => {
+    if (!currentUser?.isAdmin) return undefined;
+    const unsubscribe = subscribeToAllGuestProfiles((profilesFromFirestore) => {
+      setAllGuestProfiles(profilesFromFirestore);
+      setAllGuestProfilesLoaded(true);
+    });
+    return () => unsubscribe();
+  }, [currentUser?.isAdmin]);
+
+  // Set up real-time listener for the shared custom-drinks library (every user's
+  // drinks, merged), used across the Events module (EventForm, GuestManagementPage,
+  // DrinkManagementPage, MenuForm's Drinks section).
+  useEffect(() => {
+    if (!currentUser) return undefined;
+    const unsubscribe = subscribeToAllCustomDrinks((drinksFromFirestore) => {
+      setCustomDrinks(drinksFromFirestore);
+      setCustomDrinksLoaded(true);
+    });
     return () => unsubscribe();
   }, [currentUser]);
 
@@ -2337,6 +2409,10 @@ function App() {
           onCancel={handleCancelMenuForm}
           currentUser={currentUser}
           allUsers={allUsers}
+          events={events}
+          guestProfiles={guestProfiles}
+          customDrinks={customDrinks}
+          customDrinksLoaded={customDrinksLoaded}
         />
         ) : currentView === 'appCalls' ? (
         <AppCallsPage
@@ -2360,6 +2436,16 @@ function App() {
           onBack={() => handleViewChange('recipes')}
           currentUser={currentUser}
           recipes={recipes}
+          events={events}
+          eventsLoaded={eventsLoaded}
+          allEvents={allEvents}
+          allEventsLoaded={allEventsLoaded}
+          guestProfiles={guestProfiles}
+          guestProfilesLoaded={guestProfilesLoaded}
+          allGuestProfiles={allGuestProfiles}
+          allGuestProfilesLoaded={allGuestProfilesLoaded}
+          customDrinks={customDrinks}
+          customDrinksLoaded={customDrinksLoaded}
           pendingEventReminderId={pendingEventReminderId}
           onPendingEventReminderHandled={() => {
             setPendingEventReminderId(null);

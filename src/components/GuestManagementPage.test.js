@@ -2,16 +2,10 @@ import React from 'react';
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import GuestManagementPage from './GuestManagementPage';
 
-const mockSubscribeToGuestProfiles = jest.fn();
-const mockSubscribeToAllGuestProfiles = jest.fn();
-const mockSubscribeToAllCustomDrinks = jest.fn();
 const mockSaveGuestProfile = jest.fn();
 const mockDeleteGuestProfile = jest.fn();
 
 jest.mock('../utils/eventsFirestore', () => ({
-  subscribeToGuestProfiles: (...args) => mockSubscribeToGuestProfiles(...args),
-  subscribeToAllGuestProfiles: (...args) => mockSubscribeToAllGuestProfiles(...args),
-  subscribeToAllCustomDrinks: (...args) => mockSubscribeToAllCustomDrinks(...args),
   saveGuestProfile: (...args) => mockSaveGuestProfile(...args),
   deleteGuestProfile: (...args) => mockDeleteGuestProfile(...args),
 }));
@@ -32,26 +26,33 @@ jest.mock('../utils/imageUtils', () => ({
   isBase64Image: () => false,
 }));
 
-const CATEGORY_LABELS = { wasser: 'Wasser', bier: 'Bier', wein: 'Wein' };
-
 describe('GuestManagementPage – Bevorzugte Getränke', () => {
   const currentUser = { id: 'u1' };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
-      cb([]);
-      return jest.fn();
-    });
-    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
-      cb([]);
-      return jest.fn();
-    });
     mockSaveGuestProfile.mockResolvedValue(undefined);
   });
 
-  function openNewGuestForm() {
-    render(<GuestManagementPage currentUser={currentUser} />);
+  // guestProfiles/allGuestProfiles/customDrinks are subscribed once at App level
+  // and passed down as props (see App.js) - tests supply them directly instead
+  // of mocking a Firestore subscription.
+  function renderGuestManagementPage(props = {}) {
+    return render(
+      <GuestManagementPage
+        currentUser={currentUser}
+        guestProfiles={[]}
+        guestProfilesLoaded
+        allGuestProfiles={[]}
+        allGuestProfilesLoaded
+        customDrinks={[]}
+        {...props}
+      />
+    );
+  }
+
+  function openNewGuestForm(props = {}) {
+    renderGuestManagementPage(props);
     fireEvent.click(screen.getByRole('button', { name: 'Ersten Gast anlegen' }));
   }
 
@@ -78,11 +79,7 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
   });
 
   test('adding a drink creates a chip and removes it from the dropdown', () => {
-    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
-      cb([{ id: 'mineral-wasser', name: 'Mineral Wasser' }]);
-      return jest.fn();
-    });
-    openNewGuestForm();
+    openNewGuestForm({ customDrinks: [{ id: 'mineral-wasser', name: 'Mineral Wasser' }] });
     const select = screen.getByRole('combobox', { name: 'Getränk auswählen' });
     fireEvent.change(select, { target: { value: 'mineral-wasser' } });
 
@@ -100,11 +97,7 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
   });
 
   test('removing a chip via × button makes drink available in dropdown again', () => {
-    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
-      cb([{ id: 'craft-bier', name: 'Craft Bier' }]);
-      return jest.fn();
-    });
-    openNewGuestForm();
+    openNewGuestForm({ customDrinks: [{ id: 'craft-bier', name: 'Craft Bier' }] });
     const select = screen.getByRole('combobox', { name: 'Getränk auswählen' });
     fireEvent.change(select, { target: { value: 'craft-bier' } });
     fireEvent.click(screen.getAllByRole('button', { name: 'Hinzufügen' })[0]);
@@ -119,12 +112,9 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
   });
 
   test('editing an existing guest shows pre-selected custom drinks as chips', () => {
-    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
-      cb([{ id: 'hauswein', name: 'Hauswein' }]);
-      return jest.fn();
-    });
-    mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
-      cb([
+    renderGuestManagementPage({
+      customDrinks: [{ id: 'hauswein', name: 'Hauswein' }],
+      guestProfiles: [
         {
           id: 'g1',
           vorname: 'Max',
@@ -133,11 +123,8 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
           bevorzugteGetränke: ['hauswein'],
           präferenzFaktor: 0.5,
         },
-      ]);
-      return jest.fn();
+      ],
     });
-
-    render(<GuestManagementPage currentUser={currentUser} />);
     fireEvent.click(screen.getByText('Max Mustermann'));
 
     // Hauswein chip should be present
@@ -147,17 +134,12 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
   });
 
   test('custom drinks appear in the dropdown', () => {
-    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
-      cb([{ id: 'craft-ipa', name: 'Craft IPA' }]);
-      return jest.fn();
-    });
-
-    openNewGuestForm();
+    openNewGuestForm({ customDrinks: [{ id: 'craft-ipa', name: 'Craft IPA' }] });
     expect(screen.getByRole('option', { name: 'Craft IPA' })).toBeInTheDocument();
   });
 
   test('renders the mobile add FAB even in the empty state and opens the create form', () => {
-    render(<GuestManagementPage currentUser={currentUser} />);
+    renderGuestManagementPage();
 
     const fabButton = screen.getByRole('button', { name: 'Gast anlegen' });
     expect(fabButton).toBeInTheDocument();
@@ -244,8 +226,8 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
   });
 
   test('editing a guest loads pre-selected categories as chips', () => {
-    mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
-      cb([
+    renderGuestManagementPage({
+      guestProfiles: [
         {
           id: 'g2',
           vorname: 'Erika',
@@ -255,19 +237,16 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
           bevorzugteKategorien: ['wein_rotwein'],
           präferenzFaktor: 0.5,
         },
-      ]);
-      return jest.fn();
+      ],
     });
-
-    render(<GuestManagementPage currentUser={currentUser} />);
     fireEvent.click(screen.getByText('Erika Muster'));
 
     expect(screen.getByLabelText('Rotwein entfernen')).toBeInTheDocument();
   });
 
   test('guest overview card shows preferred drink categories', () => {
-    mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
-      cb([
+    renderGuestManagementPage({
+      guestProfiles: [
         {
           id: 'g3',
           vorname: 'Petra',
@@ -277,18 +256,15 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
           bevorzugteKategorien: ['wein_rotwein', 'bier'],
           präferenzFaktor: 0.5,
         },
-      ]);
-      return jest.fn();
+      ],
     });
-
-    render(<GuestManagementPage currentUser={currentUser} />);
 
     expect(screen.getByText('Bevorzugt: Rotwein, Bier')).toBeInTheDocument();
   });
 
   test('guest overview card shows no preference line when no categories are set', () => {
-    mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
-      cb([
+    renderGuestManagementPage({
+      guestProfiles: [
         {
           id: 'g4',
           vorname: 'Otto',
@@ -298,26 +274,20 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
           bevorzugteKategorien: [],
           präferenzFaktor: 0.5,
         },
-      ]);
-      return jest.fn();
+      ],
     });
-
-    render(<GuestManagementPage currentUser={currentUser} />);
 
     expect(screen.queryByText(/Bevorzugt:/)).not.toBeInTheDocument();
   });
 
   test('guest overview is sorted by nachname then vorname ascending', () => {
-    mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
-      cb([
+    renderGuestManagementPage({
+      guestProfiles: [
         { id: 'g1', vorname: 'Bernd', nachname: 'Zimmer', alkoholischeGetränke: true, bevorzugteGetränke: [], bevorzugteKategorien: [], präferenzFaktor: 0.5 },
         { id: 'g2', vorname: 'Zora', nachname: 'Adler', alkoholischeGetränke: true, bevorzugteGetränke: [], bevorzugteKategorien: [], präferenzFaktor: 0.5 },
         { id: 'g3', vorname: 'Anna', nachname: 'Adler', alkoholischeGetränke: true, bevorzugteGetränke: [], bevorzugteKategorien: [], präferenzFaktor: 0.5 },
-      ]);
-      return jest.fn();
+      ],
     });
-
-    render(<GuestManagementPage currentUser={currentUser} />);
 
     const names = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
     expect(names).toEqual(['Anna Adler', 'Zora Adler', 'Bernd Zimmer']);
@@ -326,14 +296,11 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
   test('clicking the delete button on a guest card hides the guest immediately and deletes it once the undo window passes', async () => {
     jest.useFakeTimers();
     try {
-      mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
-        cb([
+      renderGuestManagementPage({
+        guestProfiles: [
           { id: 'g1', vorname: 'Anna', nachname: 'Adler', alkoholischeGetränke: true, bevorzugteGetränke: [], bevorzugteKategorien: [], präferenzFaktor: 0.5 },
-        ]);
-        return jest.fn();
+        ],
       });
-
-      render(<GuestManagementPage currentUser={currentUser} />);
 
       fireEvent.click(screen.getByRole('button', { name: 'Anna Adler löschen' }));
 
@@ -351,14 +318,11 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
   });
 
   test('delete button click does not trigger the edit form to open', () => {
-    mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
-      cb([
+    renderGuestManagementPage({
+      guestProfiles: [
         { id: 'g1', vorname: 'Anna', nachname: 'Adler', alkoholischeGetränke: true, bevorzugteGetränke: [], bevorzugteKategorien: [], präferenzFaktor: 0.5 },
-      ]);
-      return jest.fn();
+      ],
     });
-
-    render(<GuestManagementPage currentUser={currentUser} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Anna Adler entfernen' }));
 
@@ -369,24 +333,21 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
     const adminUser = { id: 'admin1', isAdmin: true };
 
     test('non-admins do not see the "Meine Gäste"/"Alle Anwender" toggle', () => {
-      render(<GuestManagementPage currentUser={currentUser} />);
+      renderGuestManagementPage();
       expect(screen.queryByRole('button', { name: 'Alle Anwender' })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Meine Gäste' })).not.toBeInTheDocument();
     });
 
     test('admin does not see the "Meine Gäste"/"Alle Anwender" toggle either', () => {
-      mockSubscribeToAllGuestProfiles.mockImplementation((cb) => {
-        cb([]);
-        return jest.fn();
-      });
-      render(<GuestManagementPage currentUser={adminUser} />);
+      renderGuestManagementPage({ currentUser: adminUser });
       expect(screen.queryByRole('button', { name: 'Alle Anwender' })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Meine Gäste' })).not.toBeInTheDocument();
     });
 
     test('admin immediately sees all users\' guests and can edit/delete another user\'s guest', async () => {
-      mockSubscribeToAllGuestProfiles.mockImplementation((cb) => {
-        cb([
+      renderGuestManagementPage({
+        currentUser: adminUser,
+        allGuestProfiles: [
           {
             id: 'g1',
             vorname: 'Ben',
@@ -397,11 +358,8 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
             bevorzugteKategorien: [],
             präferenzFaktor: 0.5,
           },
-        ]);
-        return jest.fn();
+        ],
       });
-
-      render(<GuestManagementPage currentUser={adminUser} />);
 
       expect(await screen.findByText('Ben Beispiel')).toBeInTheDocument();
 
@@ -427,14 +385,12 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
     test('admin deleting another user\'s guest passes the owner id through', async () => {
       jest.useFakeTimers();
       try {
-        mockSubscribeToAllGuestProfiles.mockImplementation((cb) => {
-          cb([
+        renderGuestManagementPage({
+          currentUser: adminUser,
+          allGuestProfiles: [
             { id: 'g1', vorname: 'Ben', nachname: 'Beispiel', ownerId: 'other-user' },
-          ]);
-          return jest.fn();
+          ],
         });
-
-        render(<GuestManagementPage currentUser={adminUser} />);
 
         fireEvent.click(await screen.findByRole('button', { name: 'Ben Beispiel löschen' }));
 

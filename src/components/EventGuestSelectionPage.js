@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './EventsPage.css';
-import { subscribeToGuestProfiles } from '../utils/eventsFirestore';
 import { getGuestDisplayName } from '../utils/guestPreferences';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
@@ -81,8 +80,7 @@ function GuestRow({
 }
 
 function EventGuestSelectionPage({
-  currentUser,
-  ownerId,
+  guests = [],
   selectedGuestIds: initialSelectedGuestIds,
   driverGuestIds: initialDriverGuestIds,
   onSave,
@@ -90,7 +88,6 @@ function EventGuestSelectionPage({
   buttonIcons,
   isDarkMode,
 }) {
-  const [guests, setGuests] = useState([]);
   const [selectedGuestIds, setSelectedGuestIds] = useState(initialSelectedGuestIds ?? []);
   const [driverGuestIds, setDriverGuestIds] = useState(initialDriverGuestIds ?? []);
   const [searchQuery, setSearchQuery] = useState('');
@@ -102,14 +99,7 @@ function EventGuestSelectionPage({
   const searchRef = useRef(null);
   const dropdownRef = useRef(null);
   const effectiveButtonIcons = buttonIcons || DEFAULT_BUTTON_ICONS;
-  const effectiveOwnerId = ownerId || currentUser?.id;
   const swipeDeleteIcon = getEffectiveIcon(effectiveButtonIcons, 'swipeDelete', isDarkMode) || '🗑';
-
-  useEffect(() => {
-    if (!effectiveOwnerId) return undefined;
-    const unsubGuests = subscribeToGuestProfiles(effectiveOwnerId, setGuests);
-    return unsubGuests;
-  }, [effectiveOwnerId]);
 
   useEffect(() => {
     setDriverGuestIds((prev) => prev.filter((guestId) => selectedGuestIds.includes(guestId)));

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './EventsPage.css';
-import { subscribeToAllCustomDrinks, saveCustomDrink, deleteCustomDrink } from '../utils/eventsFirestore';
+import { saveCustomDrink, deleteCustomDrink } from '../utils/eventsFirestore';
 import OverviewAddFab from './OverviewAddFab';
 import DeleteRowButton from './DeleteRowButton';
 import useUndoableDelete from '../hooks/useUndoableDelete';
@@ -155,9 +155,8 @@ function DrinkRow({ drink, displayName, isForeign, canManage, canAddUnits, onEdi
   );
 }
 
-function DrinkManagementPage({ onBack, currentUser, recipes }) {
-  const [drinks, setDrinks] = useState([]);
-  const [loading, setLoading] = useState(true);
+function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drinks = [], customDrinksLoaded = true }) {
+  const loading = !customDrinksLoaded;
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
   const [editOwnerId, setEditOwnerId] = useState(null);
@@ -196,14 +195,6 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
     const handler = () => setIsDarkMode(getDarkModePreference());
     window.addEventListener('darkModeChange', handler);
     return () => window.removeEventListener('darkModeChange', handler);
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = subscribeToAllCustomDrinks((loaded) => {
-      setDrinks(loaded);
-      setLoading(false);
-    });
-    return unsubscribe;
   }, []);
 
   const drinkRecipes = useMemo(

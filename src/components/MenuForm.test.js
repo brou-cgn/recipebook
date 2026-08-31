@@ -3,10 +3,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import MenuForm from './MenuForm';
 
 const mockSubscribeToCustomDrinks = jest.fn();
-const mockSubscribeToAllCustomDrinks = jest.fn();
-const mockSubscribeToEvents = jest.fn();
 const mockSubscribeToEvent = jest.fn();
-const mockSubscribeToGuestProfiles = jest.fn();
 const mockSaveCustomDrink = jest.fn();
 const mockCalculateEventDrinks = jest.fn();
 const mockGetEvent = jest.fn();
@@ -54,10 +51,7 @@ jest.mock('../utils/categoryImages', () => ({
 
 jest.mock('../utils/eventsFirestore', () => ({
   subscribeToEvent: (...args) => mockSubscribeToEvent(...args),
-  subscribeToEvents: (...args) => mockSubscribeToEvents(...args),
   subscribeToCustomDrinks: (...args) => mockSubscribeToCustomDrinks(...args),
-  subscribeToAllCustomDrinks: (...args) => mockSubscribeToAllCustomDrinks(...args),
-  subscribeToGuestProfiles: (...args) => mockSubscribeToGuestProfiles(...args),
   saveCustomDrink: (...args) => mockSaveCustomDrink(...args),
   calculateEventDrinks: (...args) => mockCalculateEventDrinks(...args),
   getEvent: (...args) => mockGetEvent(...args),
@@ -144,16 +138,7 @@ beforeEach(() => {
     callback(customDrinks);
     return () => {};
   });
-  mockSubscribeToAllCustomDrinks.mockImplementation((callback) => {
-    callback(customDrinks);
-    return () => {};
-  });
-  mockSubscribeToEvents.mockImplementation(() => () => {});
   mockSubscribeToEvent.mockImplementation(() => () => {});
-  mockSubscribeToGuestProfiles.mockImplementation((uid, callback) => {
-    callback(guests);
-    return () => {};
-  });
   mockSaveCustomDrink.mockResolvedValue('drink-new-mojito');
   mockUpdateMenu.mockResolvedValue();
   mockGetEvent.mockResolvedValue(null);
@@ -168,6 +153,8 @@ describe('MenuForm - description field guest pills', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
       />
     );
 
@@ -190,6 +177,8 @@ describe('MenuForm - description field guest pills', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
       />
     );
 
@@ -216,6 +205,8 @@ describe('MenuForm - Drinks section manual drink selection', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
       />
     );
 
@@ -241,6 +232,8 @@ describe('MenuForm - Drinks section manual drink selection', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
       />
     );
 
@@ -268,6 +261,8 @@ describe('MenuForm - Drinks section manual drink selection', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
       />
     );
 
@@ -294,6 +289,8 @@ describe('MenuForm - Drinks section manual drink selection', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
       />
     );
 
@@ -322,6 +319,8 @@ describe('MenuForm - Drinks section manual drink selection', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
       />
     );
 
@@ -349,6 +348,8 @@ describe('MenuForm - Drinks section manual drink selection', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
       />
     );
 
@@ -382,6 +383,8 @@ describe('MenuForm - Drinks section manual drink selection', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
       />
     );
 
@@ -408,6 +411,8 @@ describe('MenuForm - Drinks section manual drink selection', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
       />
     );
 
@@ -441,11 +446,6 @@ describe('MenuForm - Drinks section manual drink selection', () => {
       kategorie: null,
       einheiten: [{ einheitsgroesse: 0.3 }],
     };
-    mockSubscribeToAllCustomDrinks.mockImplementation((callback) => {
-      callback([...customDrinks, existingLinkedDrink]);
-      return () => {};
-    });
-
     render(
       <MenuForm
         menu={null}
@@ -453,6 +453,8 @@ describe('MenuForm - Drinks section manual drink selection', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={[...customDrinks, existingLinkedDrink]}
       />
     );
 
@@ -482,11 +484,6 @@ describe('MenuForm - Drinks section manual drink selection', () => {
       kategorie: null,
       einheiten: [{ einheitsgroesse: 0.3 }],
     };
-    mockSubscribeToAllCustomDrinks.mockImplementation((callback) => {
-      callback([...customDrinks, existingLinkedDrink]);
-      return () => {};
-    });
-
     render(
       <MenuForm
         menu={null}
@@ -494,6 +491,8 @@ describe('MenuForm - Drinks section manual drink selection', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={[...customDrinks, existingLinkedDrink]}
       />
     );
 
@@ -516,6 +515,8 @@ describe('MenuForm - Drinks section manual drink selection', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
       />
     );
 
@@ -561,6 +562,8 @@ describe('MenuForm - linked event drinks display', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
       />
     );
 
@@ -598,6 +601,8 @@ describe('MenuForm - linked event drinks display', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
       />
     );
 
@@ -633,6 +638,8 @@ describe('MenuForm - linked event drinks display', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
       />
     );
 
@@ -671,6 +678,8 @@ describe('MenuForm - linked event drinks display', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
       />
     );
 
@@ -687,11 +696,6 @@ describe('MenuForm - linked event drinks display', () => {
 
 describe('MenuForm - linking an existing event merges guests', () => {
   test('merges the linked event\'s guests into this menu\'s guest pills without dropping ones already tagged', async () => {
-    mockSubscribeToEvents.mockImplementation((uid, callback) => {
-      callback([{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', selectedGuestIds: ['guest-2'] }]);
-      return () => {};
-    });
-
     render(
       <MenuForm
         menu={null}
@@ -699,6 +703,9 @@ describe('MenuForm - linking an existing event merges guests', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
+        events={[{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', selectedGuestIds: ['guest-2'] }]}
       />
     );
 
@@ -722,11 +729,6 @@ describe('MenuForm - linking an existing event merges guests', () => {
     // Without this, EventForm's guest->menu sync (which looks up linked
     // menus by querying eventId/eventOwnerId in Firestore) finds nothing
     // until the menu happens to be saved once after linking.
-    mockSubscribeToEvents.mockImplementation((uid, callback) => {
-      callback([{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 0, children: 0 }, selectedGuestIds: [] }]);
-      return () => {};
-    });
-
     render(
       <MenuForm
         menu={{
@@ -738,6 +740,9 @@ describe('MenuForm - linking an existing event merges guests', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
+        events={[{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 0, children: 0 }, selectedGuestIds: [] }]}
       />
     );
 
@@ -748,11 +753,6 @@ describe('MenuForm - linking an existing event merges guests', () => {
   });
 
   test('pushes the merged guest list to the event immediately on link, without needing the menu\'s "Speichern"', async () => {
-    mockSubscribeToEvents.mockImplementation((uid, callback) => {
-      callback([{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 1, children: 0 }, selectedGuestIds: ['guest-2'] }]);
-      return () => {};
-    });
-
     render(
       <MenuForm
         menu={null}
@@ -760,6 +760,9 @@ describe('MenuForm - linking an existing event merges guests', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
+        events={[{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 1, children: 0 }, selectedGuestIds: ['guest-2'] }]}
       />
     );
 
@@ -780,11 +783,6 @@ describe('MenuForm - linking an existing event merges guests', () => {
   });
 
   test('adopts the event\'s guests onto the menu with no prompt when only the event has guests', async () => {
-    mockSubscribeToEvents.mockImplementation((uid, callback) => {
-      callback([{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 1, children: 0 }, selectedGuestIds: ['guest-2'] }]);
-      return () => {};
-    });
-
     render(
       <MenuForm
         menu={null}
@@ -792,6 +790,9 @@ describe('MenuForm - linking an existing event merges guests', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
+        events={[{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 1, children: 0 }, selectedGuestIds: ['guest-2'] }]}
       />
     );
 
@@ -805,11 +806,6 @@ describe('MenuForm - linking an existing event merges guests', () => {
   });
 
   test('pushes the menu\'s guests onto the event with no prompt when only the menu has guests', async () => {
-    mockSubscribeToEvents.mockImplementation((uid, callback) => {
-      callback([{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 0, children: 0 }, selectedGuestIds: [] }]);
-      return () => {};
-    });
-
     render(
       <MenuForm
         menu={null}
@@ -817,6 +813,9 @@ describe('MenuForm - linking an existing event merges guests', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
+        events={[{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 0, children: 0 }, selectedGuestIds: [] }]}
       />
     );
 
@@ -835,11 +834,6 @@ describe('MenuForm - linking an existing event merges guests', () => {
   });
 
   test('asks which list to keep when both sides already have guests, and "Gäste vom Event" discards the menu\'s own', async () => {
-    mockSubscribeToEvents.mockImplementation((uid, callback) => {
-      callback([{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 1, children: 0 }, selectedGuestIds: ['guest-2'] }]);
-      return () => {};
-    });
-
     render(
       <MenuForm
         menu={null}
@@ -847,6 +841,9 @@ describe('MenuForm - linking an existing event merges guests', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
+        events={[{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 1, children: 0 }, selectedGuestIds: ['guest-2'] }]}
       />
     );
 
@@ -868,11 +865,6 @@ describe('MenuForm - linking an existing event merges guests', () => {
   });
 
   test('asks which list to keep when both sides already have guests, and "Gäste vom Menü" pushes the menu\'s list onto the event', async () => {
-    mockSubscribeToEvents.mockImplementation((uid, callback) => {
-      callback([{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 1, children: 0 }, selectedGuestIds: ['guest-2'] }]);
-      return () => {};
-    });
-
     render(
       <MenuForm
         menu={null}
@@ -880,6 +872,9 @@ describe('MenuForm - linking an existing event merges guests', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
+        events={[{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 1, children: 0 }, selectedGuestIds: ['guest-2'] }]}
       />
     );
 
@@ -901,11 +896,6 @@ describe('MenuForm - linking an existing event merges guests', () => {
   });
 
   test('cancelling the conflict dialog leaves the menu unlinked', async () => {
-    mockSubscribeToEvents.mockImplementation((uid, callback) => {
-      callback([{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 1, children: 0 }, selectedGuestIds: ['guest-2'] }]);
-      return () => {};
-    });
-
     render(
       <MenuForm
         menu={null}
@@ -913,6 +903,9 @@ describe('MenuForm - linking an existing event merges guests', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
+        events={[{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 1, children: 0 }, selectedGuestIds: ['guest-2'] }]}
       />
     );
 
@@ -954,6 +947,8 @@ describe('MenuForm - immediate guest sync with a linked event', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
       />
     );
 
@@ -985,6 +980,8 @@ describe('MenuForm - immediate guest sync with a linked event', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
       />
     );
 
@@ -1012,6 +1009,8 @@ describe('MenuForm - recipe drag-and-drop items', () => {
         onSave={jest.fn()}
         onCancel={jest.fn()}
         currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
       />
     );
 
