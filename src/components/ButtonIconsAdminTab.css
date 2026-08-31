@@ -618,6 +618,7 @@
 [data-theme="dark"] .bia-row-name-input { color: #f2f0ec; }
 [data-theme="dark"] .bia-row-name-input:hover, [data-theme="dark"] .bia-row-name-input:focus { border-color: #33373d; background: #202226; }
 [data-theme="dark"] .bia-row-name-static { color: #f2f0ec; }
+[data-theme="dark"] .bia-row-name-btn:hover, [data-theme="dark"] .bia-row-name-btn:focus { background: #24272b; }
 [data-theme="dark"] .bia-fallback-note { color: #7d838c; }
 
 [data-theme="dark"] .bia-slot-light { border-color: #4a463f; }
@@ -657,8 +658,6 @@
    shared with the Kulinarik-Typen rows above. */
 
 .bia-catimg-body { display: flex; flex-direction: column; }
-
-.bia-catimg-description { padding: 14px 18px 0; margin: 0; }
 
 .bia-catimg-rows { display: flex; flex-direction: column; gap: 10px; padding: 14px 18px 18px; }
 
@@ -713,14 +712,21 @@
 
 /* Non-editing Speisekategorien row: same grid as Kulinarik-Typen (.bia-row-content),
    so the image sits in the "Hellmodus normal" slot column and the name lines up
-   with the shared header. .bia-drag-handle-placeholder reserves the handle column
-   without offering drag/reorder, which these rows don't support. */
-.bia-drag-handle-placeholder { width: 34px; height: 1px; }
+   with the shared header. Drag handle and reordering work exactly like the
+   Kulinarik-Typen rows (see .bia-drag-handle). */
 
 .bia-catimg-row-name { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
 .bia-catimg-row-name .bia-row-name-static { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.bia-catimg-edit-btn { flex-shrink: 0; }
+.bia-row-name-btn {
+  background: transparent;
+  border: none;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.bia-row-name-btn:hover, .bia-row-name-btn:focus { background: #f1efe9; }
 
 .bia-catimg-edit { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .bia-catimg-edit-actions { display: flex; gap: 8px; }

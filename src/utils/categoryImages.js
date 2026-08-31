@@ -5,7 +5,7 @@
  */
 
 import { db } from '../firebase';
-import { doc, getDoc, updateDoc, collection, getDocs, setDoc, deleteDoc, deleteField } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, getDocs, setDoc, deleteDoc, deleteField, writeBatch } from 'firebase/firestore';
 
 const CATEGORY_IMAGES_KEY = 'categoryImages';
 const CATEGORY_IMAGES_COLLECTION = 'categoryImages';
@@ -114,12 +114,15 @@ export async function getCategoryImages() {
     if (!imagesSnapshot.empty) {
       const images = [];
       imagesSnapshot.forEach((doc) => {
+        const data = doc.data();
         images.push({
           id: doc.id,
-          image: doc.data().image,
-          categories: doc.data().categories || []
+          image: data.image,
+          categories: data.categories || [],
+          ...(data.order !== undefined ? { order: data.order } : {})
         });
       });
+      images.sort((a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER));
       return images;
     }
     
@@ -179,19 +182,23 @@ export async function saveCategoryImages(images) {
  * Add a new category image
  * @param {string} imageBase64 - Base64 encoded image
  * @param {Array} categories - Array of category names
+ * @param {number} [order] - Position among existing category images (e.g. current list length to append)
  * @returns {Promise<Object>} The newly created image object
  */
-export async function addCategoryImage(imageBase64, categories = []) {
+export async function addCategoryImage(imageBase64, categories = [], order) {
+  const orderField = order !== undefined ? { order } : {};
   const newImage = {
     id: generateId(),
     image: imageBase64,
-    categories: categories
+    categories: categories,
+    ...orderField
   };
-  
+
   try {
     await setDoc(doc(db, CATEGORY_IMAGES_COLLECTION, newImage.id), {
       image: newImage.image,
-      categories: newImage.categories
+      categories: newImage.categories,
+      ...orderField
     });
     return newImage;
   } catch (error) {
@@ -199,6 +206,25 @@ export async function addCategoryImage(imageBase64, categories = []) {
       throw new Error('Speicherplatz voll. Bitte entfernen Sie einige Kategoriebilder oder verwenden Sie kleinere Bilder.');
     }
     throw error;
+  }
+}
+
+/**
+ * Persist a new display order for category images (drag & drop reordering)
+ * @param {Array<string>} orderedIds - Image IDs in their new display order
+ * @returns {Promise<boolean>} True if successful, false otherwise
+ */
+export async function reorderCategoryImages(orderedIds) {
+  try {
+    const batch = writeBatch(db);
+    orderedIds.forEach((id, index) => {
+      batch.update(doc(db, CATEGORY_IMAGES_COLLECTION, id), { order: index });
+    });
+    await batch.commit();
+    return true;
+  } catch (error) {
+    console.error('Error reordering category images:', error);
+    return false;
   }
 }
 
