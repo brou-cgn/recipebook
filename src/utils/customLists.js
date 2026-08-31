@@ -4,7 +4,7 @@
 import { db } from '../firebase';
 import { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField, collection, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { normalizeNutritionReferenceId } from './nutritionReferenceUtils';
-import { getDefaultButtonIconGroups, reconcileButtonIconGroups, reconcileCuisineTypeGroup, cuisineTypeIconKey } from './buttonIconRows';
+import { getDefaultButtonIconGroups, reconcileButtonIconGroups, reconcileCuisineTypeGroup, reconcileMealCategoriesGroup, cuisineTypeIconKey } from './buttonIconRows';
 
 export const DEFAULT_CUISINE_TYPES = [
   'Deutsche Küche',
@@ -2551,11 +2551,14 @@ export async function getButtonIconGroups() {
   const cuisineTypes = settings.cuisineTypes || DEFAULT_CUISINE_TYPES;
   if (saved && Array.isArray(saved.groups)) {
     const hiddenRowKeys = Array.isArray(saved.hiddenRowKeys) ? saved.hiddenRowKeys : [];
-    const groups = reconcileCuisineTypeGroup(reconcileButtonIconGroups(saved.groups, hiddenRowKeys), cuisineTypes);
+    const groups = reconcileMealCategoriesGroup(reconcileCuisineTypeGroup(reconcileButtonIconGroups(saved.groups, hiddenRowKeys), cuisineTypes));
     return { groups, hiddenRowKeys };
   }
   const defaults = getDefaultButtonIconGroups();
-  return { groups: reconcileCuisineTypeGroup(defaults.groups, cuisineTypes), hiddenRowKeys: defaults.hiddenRowKeys };
+  return {
+    groups: reconcileMealCategoriesGroup(reconcileCuisineTypeGroup(defaults.groups, cuisineTypes)),
+    hiddenRowKeys: defaults.hiddenRowKeys,
+  };
 }
 
 /**

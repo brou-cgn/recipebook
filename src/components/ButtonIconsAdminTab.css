@@ -205,11 +205,6 @@
 }
 .bia-group-name:hover, .bia-group-name:focus { border-color: #d8d4cc; background: #fff; }
 
-/* Speisekategorien section header: same look as an editable group name,
-   but it's plain text (there's nothing to rename here). */
-.bia-group-name-static { cursor: default; }
-.bia-group-name-static:hover, .bia-group-name-static:focus { border-color: transparent; background: transparent; }
-
 .bia-group-meta {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
@@ -653,12 +648,15 @@
 [data-theme="dark"] .bia-modal-apply-check { border-color: #4a463f; color: #f2f0ec; }
 
 /* ---- category images (Speisekategorien) ----
-   Same row/group chrome as the Kulinarik-Typen group above (.bia-group-header,
-   .bia-typeahead-list add-flow, DeleteRowButton, swipe-to-delete on mobile) -
-   one row per Speisekategorie, each holding a single placeholder image
-   (no light/dark variants: these are recipe photos, not themed icons). */
+   Rendered as the custom body of its own entry in the same draggable/
+   sortable group list as Kulinarik-Typen (.bia-group, .bia-group-header) -
+   no separate card chrome of its own here, just the row content: one row per
+   Speisekategorie, each holding a single placeholder image (no light/dark
+   variants: these are recipe photos, not themed icons). Add-flow
+   (.bia-typeahead-list), DeleteRowButton and swipe-to-delete on mobile are
+   shared with the Kulinarik-Typen rows above. */
 
-.bia-catimg-card { display: flex; flex-direction: column; }
+.bia-catimg-body { display: flex; flex-direction: column; }
 
 .bia-catimg-description { padding: 14px 18px 0; margin: 0; }
 

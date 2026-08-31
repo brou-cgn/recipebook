@@ -9,7 +9,7 @@ import {
   saveButtonIconGroups,
   getCustomLists,
 } from '../utils/customLists';
-import { mergeButtonIconRowDefs, buildCuisineTypeRowDefs, cuisineTypeIconKey, CUISINE_TYPES_GROUP_ID } from '../utils/buttonIconRows';
+import { mergeButtonIconRowDefs, buildCuisineTypeRowDefs, cuisineTypeIconKey, CUISINE_TYPES_GROUP_ID, MEAL_CATEGORIES_GROUP_ID } from '../utils/buttonIconRows';
 import { fileToBase64, isBase64Image, compressImage } from '../utils/imageUtils';
 import {
   getCategoryImages,
@@ -511,6 +511,8 @@ function SortableGroupSection({
   onRenameRow,
   cuisineAddControls,
   isAddingCuisineRow,
+  metaLabel,
+  customBody,
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: group.id,
@@ -531,7 +533,7 @@ function SortableGroupSection({
           onChange={(e) => onRename(e.target.value)}
           aria-label="Gruppenname"
         />
-        <span className="bia-group-meta">{group.rowKeys.length} {group.rowKeys.length === 1 ? 'Button' : 'Buttons'}</span>
+        <span className="bia-group-meta">{metaLabel || `${group.rowKeys.length} ${group.rowKeys.length === 1 ? 'Button' : 'Buttons'}`}</span>
         <span className="bia-spacer" />
         <div className="delete-row-hover-target">
           <DeleteRowButton itemName={group.name} onClick={onDissolve} />
@@ -539,26 +541,28 @@ function SortableGroupSection({
       </div>
 
       {isOpen && (
-        <>
-          <SortableContext items={visibleRows.map(({ entry }) => entry.key)} strategy={verticalListSortingStrategy}>
-            {visibleRows.map(({ entry, def }) => (
-              <SortableIconRow
-                key={entry.key}
-                group={group}
-                entry={entry}
-                def={def}
-                icons={icons}
-                isDeleteVisible={deleteVisibleRowKey === entry.key}
-                onDeleteVisibleChange={(visible) => onSetDeleteVisibleRowKey(visible ? entry.key : null)}
-                onOpenEditor={(variantIndex) => onOpenEditor(group.id, entry.key, variantIndex)}
-                onDelete={() => onDeleteRow(group.id, entry.key)}
-                onRename={def.cuisineType ? undefined : (value) => onRenameRow(group.id, entry.key, value)}
-              />
-            ))}
-            {visibleRows.length === 0 && !isAddingCuisineRow && <EmptyGroupDropZone groupId={group.id} />}
-          </SortableContext>
-          {cuisineAddControls}
-        </>
+        customBody ? customBody : (
+          <>
+            <SortableContext items={visibleRows.map(({ entry }) => entry.key)} strategy={verticalListSortingStrategy}>
+              {visibleRows.map(({ entry, def }) => (
+                <SortableIconRow
+                  key={entry.key}
+                  group={group}
+                  entry={entry}
+                  def={def}
+                  icons={icons}
+                  isDeleteVisible={deleteVisibleRowKey === entry.key}
+                  onDeleteVisibleChange={(visible) => onSetDeleteVisibleRowKey(visible ? entry.key : null)}
+                  onOpenEditor={(variantIndex) => onOpenEditor(group.id, entry.key, variantIndex)}
+                  onDelete={() => onDeleteRow(group.id, entry.key)}
+                  onRename={def.cuisineType ? undefined : (value) => onRenameRow(group.id, entry.key, value)}
+                />
+              ))}
+              {visibleRows.length === 0 && !isAddingCuisineRow && <EmptyGroupDropZone groupId={group.id} />}
+            </SortableContext>
+            {cuisineAddControls}
+          </>
+        )
       )}
     </div>
   );
@@ -914,6 +918,11 @@ function ButtonIconsAdminTab() {
         destIndex = destGroup ? destGroup.rowKeys.length : -1;
       }
       if (!destGroupId || destIndex === -1) return;
+      // Speisekategorien is not a real icon-row group (its content lives in the
+      // categoryImages collection, not rowKeys) - it never renders row drop
+      // targets itself, but its group container is still a valid drop target,
+      // so reject a row dropped there directly instead of silently orphaning it.
+      if (destGroupId === MEAL_CATEGORIES_GROUP_ID) return;
 
       if (sourceGroupId === destGroupId) {
         if (sourceIndex === destIndex) return;
@@ -1084,47 +1093,105 @@ function ButtonIconsAdminTab() {
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={data.groups.map((g) => g.id)} strategy={verticalListSortingStrategy}>
-              {visibleGroups.map(({ group, rows }) => (
-                <SortableGroupSection
-                  key={group.id}
-                  group={group}
-                  isOpen={isSearching || !collapsed[group.id]}
-                  visibleRows={rows}
-                  icons={icons}
-                  deleteVisibleRowKey={deleteVisibleRowKey}
-                  onSetDeleteVisibleRowKey={setDeleteVisibleRowKey}
-                  onToggle={() => handleToggleGroup(group.id)}
-                  onRename={(name) => handleRenameGroup(group.id, name)}
-                  onDissolve={() => handleDissolveGroup(group.id)}
-                  onOpenEditor={openEditor}
-                  onDeleteRow={handleDeleteRow}
-                  onRenameRow={handleRenameRow}
-                  isAddingCuisineRow={group.id === CUISINE_TYPES_GROUP_ID && cuisineAddGroupId === group.id}
-                  cuisineAddControls={group.id === CUISINE_TYPES_GROUP_ID ? (
-                    cuisineAddGroupId === group.id ? (
-                      <NewCuisineTypeRow
-                        value={cuisineAddValue}
-                        onChange={setCuisineAddValue}
-                        suggestions={availableCuisineTypeNames}
-                        onSelect={(name) => handleSelectCuisineType(group.id, name)}
-                        onCancel={handleCancelAddCuisineRow}
-                      />
-                    ) : (
-                      <div className="bia-cuisine-add-row">
-                        <button
-                          type="button"
-                          className="bia-btn-dashed"
-                          onClick={() => handleStartAddCuisineRow(group.id)}
-                          disabled={availableCuisineTypeNames.length === 0}
-                          title={availableCuisineTypeNames.length === 0 ? 'Alle Kulinarik-Typen sind bereits als Zeile angelegt' : undefined}
-                        >
-                          + Bild/Icon
-                        </button>
+              {visibleGroups.map(({ group, rows }) => {
+                const isMealCategoriesGroup = group.id === MEAL_CATEGORIES_GROUP_ID;
+                return (
+                  <SortableGroupSection
+                    key={group.id}
+                    group={group}
+                    isOpen={isSearching || !collapsed[group.id]}
+                    visibleRows={rows}
+                    icons={icons}
+                    deleteVisibleRowKey={deleteVisibleRowKey}
+                    onSetDeleteVisibleRowKey={setDeleteVisibleRowKey}
+                    onToggle={() => handleToggleGroup(group.id)}
+                    onRename={(name) => handleRenameGroup(group.id, name)}
+                    onDissolve={() => handleDissolveGroup(group.id)}
+                    onOpenEditor={openEditor}
+                    onDeleteRow={handleDeleteRow}
+                    onRenameRow={handleRenameRow}
+                    isAddingCuisineRow={group.id === CUISINE_TYPES_GROUP_ID && cuisineAddGroupId === group.id}
+                    cuisineAddControls={group.id === CUISINE_TYPES_GROUP_ID ? (
+                      cuisineAddGroupId === group.id ? (
+                        <NewCuisineTypeRow
+                          value={cuisineAddValue}
+                          onChange={setCuisineAddValue}
+                          suggestions={availableCuisineTypeNames}
+                          onSelect={(name) => handleSelectCuisineType(group.id, name)}
+                          onCancel={handleCancelAddCuisineRow}
+                        />
+                      ) : (
+                        <div className="bia-cuisine-add-row">
+                          <button
+                            type="button"
+                            className="bia-btn-dashed"
+                            onClick={() => handleStartAddCuisineRow(group.id)}
+                            disabled={availableCuisineTypeNames.length === 0}
+                            title={availableCuisineTypeNames.length === 0 ? 'Alle Kulinarik-Typen sind bereits als Zeile angelegt' : undefined}
+                          >
+                            + Bild/Icon
+                          </button>
+                        </div>
+                      )
+                    ) : null}
+                    metaLabel={isMealCategoriesGroup ? `${categoryImages.length} ${categoryImages.length === 1 ? 'Bild' : 'Bilder'}` : undefined}
+                    customBody={isMealCategoriesGroup ? (
+                      <div className="bia-catimg-body">
+                        <p className="section-description bia-catimg-description">
+                          Jede Speisekategorie bekommt (analog zu den Kulinarik-Typen oben) eine eigene Zeile mit einem Bild.
+                          Es wird als Platzhalter verwendet, wenn ein Rezept ohne Titelbild gespeichert wird.
+                        </p>
+
+                        <div className="bia-catimg-rows">
+                          {categoryImages.map((img) => (
+                            <CategoryImageRow
+                              key={img.id}
+                              img={img}
+                              mealCategories={mealCategories}
+                              categoryImages={categoryImages}
+                              isDeleteVisible={catimgDeleteVisibleId === img.id}
+                              onDeleteVisibleChange={(visible) => setCatimgDeleteVisibleId(visible ? img.id : null)}
+                              onImageClick={handleRowImageClick}
+                              isUploading={uploadingRowId === img.id}
+                              isEditing={editingCategoryImageId === img.id}
+                              selectedCategories={selectedCategories}
+                              onCategoryToggle={handleCategoryToggle}
+                              onStartEdit={handleEditCategoryImageCategories}
+                              onSaveEdit={handleSaveCategoryImageCategories}
+                              onCancelEdit={handleCancelEditCategoryImageCategories}
+                              onDelete={() => handleDeleteCategoryImage(img.id)}
+                            />
+                          ))}
+                          {categoryImages.length === 0 && !catimgAdding && (
+                            <div className="bia-empty-group">Noch keine Kategoriebilder</div>
+                          )}
+                          {catimgAdding ? (
+                            <NewCategoryImageRow
+                              value={catimgAddValue}
+                              onChange={setCatimgAddValue}
+                              suggestions={availableMealCategoryNames}
+                              onSelect={handleSelectMealCategory}
+                              onCancel={handleCancelAddCategoryImage}
+                            />
+                          ) : (
+                            <div className="bia-cuisine-add-row">
+                              <button
+                                type="button"
+                                className="bia-btn-dashed"
+                                onClick={handleStartAddCategoryImage}
+                                disabled={availableMealCategoryNames.length === 0}
+                                title={availableMealCategoryNames.length === 0 ? 'Alle Speisekategorien sind bereits als Zeile angelegt' : undefined}
+                              >
+                                + Bild/Icon
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    )
-                  ) : null}
-                />
-              ))}
+                    ) : undefined}
+                  />
+                );
+              })}
             </SortableContext>
           </DndContext>
 
@@ -1139,83 +1206,13 @@ function ButtonIconsAdminTab() {
           <span>Klick auf ein Feld: Icon setzen und auf mehrere Varianten anwenden</span>
         </div>
 
-        <div className="bia-card bia-catimg-card">
-          <div className="bia-group-header">
-            <button
-              type="button"
-              className="bia-chevron"
-              onClick={() => setCollapsed((c) => ({ ...c, catimg: !c.catimg }))}
-              aria-label={collapsed.catimg ? 'Speisekategorien ausklappen' : 'Speisekategorien einklappen'}
-            >
-              {collapsed.catimg ? '▶' : '▼'}
-            </button>
-            <span className="bia-group-name bia-group-name-static">Speisekategorien</span>
-            <span className="bia-group-meta">{categoryImages.length} {categoryImages.length === 1 ? 'Bild' : 'Bilder'}</span>
-          </div>
-
-          {!collapsed.catimg && (
-            <>
-              <p className="section-description bia-catimg-description">
-                Jede Speisekategorie bekommt (analog zu den Kulinarik-Typen oben) eine eigene Zeile mit einem Bild.
-                Es wird als Platzhalter verwendet, wenn ein Rezept ohne Titelbild gespeichert wird.
-              </p>
-
-              <div className="bia-catimg-rows">
-                {categoryImages.map((img) => (
-                  <CategoryImageRow
-                    key={img.id}
-                    img={img}
-                    mealCategories={mealCategories}
-                    categoryImages={categoryImages}
-                    isDeleteVisible={catimgDeleteVisibleId === img.id}
-                    onDeleteVisibleChange={(visible) => setCatimgDeleteVisibleId(visible ? img.id : null)}
-                    onImageClick={handleRowImageClick}
-                    isUploading={uploadingRowId === img.id}
-                    isEditing={editingCategoryImageId === img.id}
-                    selectedCategories={selectedCategories}
-                    onCategoryToggle={handleCategoryToggle}
-                    onStartEdit={handleEditCategoryImageCategories}
-                    onSaveEdit={handleSaveCategoryImageCategories}
-                    onCancelEdit={handleCancelEditCategoryImageCategories}
-                    onDelete={() => handleDeleteCategoryImage(img.id)}
-                  />
-                ))}
-                {categoryImages.length === 0 && !catimgAdding && (
-                  <div className="bia-empty-group">Noch keine Kategoriebilder</div>
-                )}
-                {catimgAdding ? (
-                  <NewCategoryImageRow
-                    value={catimgAddValue}
-                    onChange={setCatimgAddValue}
-                    suggestions={availableMealCategoryNames}
-                    onSelect={handleSelectMealCategory}
-                    onCancel={handleCancelAddCategoryImage}
-                  />
-                ) : (
-                  <div className="bia-cuisine-add-row">
-                    <button
-                      type="button"
-                      className="bia-btn-dashed"
-                      onClick={handleStartAddCategoryImage}
-                      disabled={availableMealCategoryNames.length === 0}
-                      title={availableMealCategoryNames.length === 0 ? 'Alle Speisekategorien sind bereits als Zeile angelegt' : undefined}
-                    >
-                      + Bild/Icon
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <input
-                type="file"
-                accept="image/*"
-                ref={categoryFileInputRef}
-                onChange={handleRowImageFileChange}
-                style={{ display: 'none' }}
-              />
-            </>
-          )}
-        </div>
+        <input
+          type="file"
+          accept="image/*"
+          ref={categoryFileInputRef}
+          onChange={handleRowImageFileChange}
+          style={{ display: 'none' }}
+        />
       </div>
 
       <UndoSnackbar itemName={undo.pendingName} onUndo={undo.undo} />
