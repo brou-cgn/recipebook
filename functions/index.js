@@ -37,6 +37,16 @@ const smtpUser = defineSecret('SMTP_USER');
 const smtpPassword = defineSecret('SMTP_PASSWORD');
 const smtpFrom = defineSecret('SMTP_FROM');
 
+// Firebase Web API key, used only by dailyAiImporterTest to exchange a
+// server-minted custom token for an ID token so the nightly test can call
+// the public callables (fetchRecipeHtml, processHtmlWithAI, scanRecipeWithAI)
+// exactly like a real client does. This is the same non-secret public key
+// already shipped in the web app bundle (REACT_APP_FIREBASE_API_KEY) —
+// stored as a secret here purely for consistency with the other config
+// values above.
+// Set with: firebase functions:secrets:set WEB_API_KEY
+const firebaseWebApiKey = defineSecret('WEB_API_KEY');
+
 /**
  * Default Firebase Storage bucket for the broubook project.
  * Must be provided explicitly for firebase-functions v7+ storage triggers,
@@ -7633,7 +7643,10 @@ exports.backfillRecipeThumbnails = onCall(
 /**
  * Minimal HTML snippet used as test input for the daily AI importer test.
  * Kept small to minimise API cost. Contains a clearly structured recipe so
- * the AI can extract all required fields reliably.
+ * the AI can extract all required fields reliably. Served over real HTTP by
+ * importerTestFixturePage below so the nightly test can fetch it through the
+ * exact same fetchRecipeHtml callable real users hit — instead of holding it
+ * only in memory and skipping the network fetch entirely.
  */
 const IMPORTER_TEST_HTML = `<!DOCTYPE html>
 <html lang="de">
@@ -7658,10 +7671,130 @@ const IMPORTER_TEST_HTML = `<!DOCTYPE html>
 </html>`;
 
 /**
+ * Public HTTP endpoint that serves IMPORTER_TEST_HTML as a real, fetchable
+ * page. Exists solely as a stable fixture for dailyAiImporterTest below, so
+ * that test can exercise the real fetchRecipeHtml callable's network fetch
+ * (headers, redirects, timeout, content-type check) against an actual HTTP
+ * round trip instead of an unrelated third-party page or an in-memory string.
+ */
+exports.importerTestFixturePage = onRequest(
+    {cors: false, region: 'us-central1', invoker: 'public'},
+    (_req, res) => {
+      res.set('Cache-Control', 'no-store');
+      res.set('Content-Type', 'text/html; charset=utf-8');
+      res.status(200).send(IMPORTER_TEST_HTML);
+    },
+);
+
+/**
  * Minimum number of ingredients / steps expected from the HTML test recipe.
  */
 const IMPORTER_TEST_MIN_INGREDIENTS = 2;
 const IMPORTER_TEST_MIN_STEPS = 2;
+
+/**
+ * Fixed UID used only to mint a throwaway Firebase Auth identity for the
+ * nightly importer test. signInWithCustomToken provisions this user on first
+ * use, so no manual Firebase Console setup is required. It never gets an
+ * admin/moderator role, so it exercises the same "authenticated" rate-limit
+ * tier as a regular logged-in user.
+ */
+const AI_IMPORTER_TEST_UID = 'nightly-ai-importer-test';
+
+/**
+ * Region + project host used to call the deployed callables directly over
+ * HTTPS (bypassing the Firebase client SDK, which isn't usable from within a
+ * Cloud Function) so the nightly test exercises the exact same auth/IAM
+ * boundary a real client hits.
+ */
+const CALLABLE_BASE_URL = 'https://us-central1-broubook.cloudfunctions.net';
+
+/**
+ * Mint a Firebase ID token for AI_IMPORTER_TEST_UID by creating a custom
+ * token with the Admin SDK and exchanging it via the Identity Toolkit REST
+ * API — the same exchange the client SDK performs internally.
+ *
+ * @param {string} webApiKey - Firebase Web API key (WEB_API_KEY secret)
+ * @returns {Promise<string>} A Firebase ID token for AI_IMPORTER_TEST_UID
+ */
+async function mintImporterTestIdToken(webApiKey) {
+  if (!webApiKey) {
+    throw new Error('WEB_API_KEY-Secret ist nicht konfiguriert');
+  }
+  const customToken = await admin.auth().createCustomToken(AI_IMPORTER_TEST_UID);
+  const response = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${webApiKey}`,
+      {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({token: customToken, returnSecureToken: true}),
+        signal: AbortSignal.timeout(15000),
+      },
+  );
+  const body = await response.json();
+  if (!response.ok || !body.idToken) {
+    throw new Error(
+        `Identity-Toolkit-Token-Exchange fehlgeschlagen: ${body.error?.message || response.status}`,
+    );
+  }
+  return body.idToken;
+}
+
+/**
+ * Invoke a deployed onCall function directly over HTTPS using the callable
+ * protocol, so dailyAiImporterTest exercises the real public entry point
+ * (Firebase Auth verification + Cloud Run invoker permissions + rate
+ * limiting) instead of calling the underlying helper function in-process.
+ * This is the only way to catch an IAM/invoker misconfiguration that makes
+ * every real client call fail (see issue #2611).
+ *
+ * @param {string} functionName - Name of the exported onCall function
+ * @param {Object} data - Callable request payload
+ * @param {string} idToken - Firebase ID token to send as the caller's identity
+ * @returns {Promise<Object>} The callable's `result` payload
+ */
+async function callPublicCallable(functionName, data, idToken) {
+  const response = await fetch(`${CALLABLE_BASE_URL}/${functionName}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}`,
+    },
+    body: JSON.stringify({data}),
+    signal: AbortSignal.timeout(60000),
+  });
+  const body = await response.json();
+  if (!response.ok || body.error) {
+    throw new Error(`${functionName}: ${body.error?.message || `HTTP ${response.status}`}`);
+  }
+  return body.result;
+}
+
+/**
+ * Render a small JPEG photo of a printed recipe using sharp, so the nightly
+ * test can exercise scanRecipeWithAI's real image/OCR pipeline (Gemini
+ * vision) end-to-end without checking a binary fixture into the repo.
+ *
+ * @returns {Promise<string>} data: URL (base64 JPEG) suitable for scanRecipeWithAI
+ */
+async function renderImporterTestRecipeImage() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
+    <rect width="800" height="600" fill="white"/>
+    <text x="40" y="60" font-size="36" font-family="sans-serif" font-weight="bold">Rührei</text>
+    <text x="40" y="110" font-size="20" font-family="sans-serif">Für 2 Personen</text>
+    <text x="40" y="160" font-size="24" font-family="sans-serif" font-weight="bold">Zutaten</text>
+    <text x="40" y="195" font-size="20" font-family="sans-serif">- 4 Eier</text>
+    <text x="40" y="225" font-size="20" font-family="sans-serif">- 2 Esslöffel Butter</text>
+    <text x="40" y="255" font-size="20" font-family="sans-serif">- 1 Prise Salz</text>
+    <text x="40" y="310" font-size="24" font-family="sans-serif" font-weight="bold">Zubereitung</text>
+    <text x="40" y="345" font-size="20" font-family="sans-serif">1. Eier verquirlen und salzen.</text>
+    <text x="40" y="375" font-size="20" font-family="sans-serif">2. Butter in der Pfanne schmelzen.</text>
+    <text x="40" y="405" font-size="20" font-family="sans-serif">3. Eimasse unter Rühren stocken lassen.</text>
+    <text x="40" y="435" font-size="20" font-family="sans-serif">4. Sofort servieren.</text>
+  </svg>`;
+  const jpegBuffer = await sharp(Buffer.from(svg)).jpeg().toBuffer();
+  return `data:image/jpeg;base64,${jpegBuffer.toString('base64')}`;
+}
 
 /**
  * Load the AI recipe extraction prompt for internal tests.
@@ -7700,12 +7833,18 @@ function validateImporterResult(recipe) {
     return {valid: false, issues: ['Kein Ergebnisobjekt erhalten']};
   }
 
+  if (typeof recipe.title !== 'string' || recipe.title.trim().length === 0) {
+    issues.push('Kein Titel im Ergebnis enthalten');
+  }
+
   if (!recipe.ingredients || !Array.isArray(recipe.ingredients) ||
       recipe.ingredients.length < IMPORTER_TEST_MIN_INGREDIENTS) {
     issues.push(
         `Zu wenige Zutaten: erwartet mind. ${IMPORTER_TEST_MIN_INGREDIENTS}, ` +
         `erhalten ${Array.isArray(recipe.ingredients) ? recipe.ingredients.length : 0}`,
     );
+  } else if (recipe.ingredients.some((i) => !String(i || '').trim())) {
+    issues.push('Mindestens eine Zutat ist leer');
   }
 
   if (!recipe.steps || !Array.isArray(recipe.steps) ||
@@ -7714,6 +7853,8 @@ function validateImporterResult(recipe) {
         `Zu wenige Zubereitungsschritte: erwartet mind. ${IMPORTER_TEST_MIN_STEPS}, ` +
         `erhalten ${Array.isArray(recipe.steps) ? recipe.steps.length : 0}`,
     );
+  } else if (recipe.steps.some((s) => !String(s || '').trim())) {
+    issues.push('Mindestens ein Zubereitungsschritt ist leer');
   }
 
   return {valid: issues.length === 0, issues};
@@ -7746,79 +7887,111 @@ async function runTest(name, fn) {
 /**
  * Execute all AI recipe importer tests.
  *
+ * Unlike the previous version, tests 2–4 no longer call internal helper
+ * functions directly — they go through the real deployed callables over
+ * HTTPS with a genuine Firebase ID token, exactly like the web app and the
+ * Apple Shortcut integration do. This means the nightly run now also catches
+ * an IAM/Cloud-Run-Invoker misconfiguration or an auth-guard regression that
+ * previously would have gone unnoticed (see issue #2611) — a
+ * `callGeminiTextAPI` call from within the same process could never fail
+ * that way.
+ *
  * Tests covered:
- * 1. Configuration – Gemini API key present + prompt accessible
- * 2. processHtmlWithAI – full end-to-end extraction from test HTML
- * 3. fetchRecipeHtml – HTTP connectivity to a public recipe page
+ * 1. Konfiguration – Gemini API key present + prompt accessible
+ * 2. fetchRecipeHtml (öffentliche Schnittstelle) – real HTTP fetch of a
+ *    dedicated fixture page (importerTestFixturePage) through the deployed
+ *    callable
+ * 3. processHtmlWithAI (öffentliche Schnittstelle) – feeds test 2's fetched
+ *    HTML into the deployed callable, so fetch + AI extraction are verified
+ *    as one connected chain instead of two disjoint checks
+ * 4. scanRecipeWithAI (öffentliche Schnittstelle) – the image/OCR import
+ *    path, previously never exercised by this nightly run at all
  *
  * @param {string} apiKey - Gemini API key value
+ * @param {string} webApiKey - Firebase Web API key value (for the ID-token exchange)
  * @returns {Promise<Array<{name: string, success: boolean, details: string, durationMs: number}>>}
  */
-async function runAllImporterTests(apiKey) {
-  const tests = [
-    // Test 1: verify Gemini API key is present and prompt is loadable
-    runTest('Konfiguration (GEMINI_API_KEY & Prompt)', async () => {
-      if (!apiKey) {
-        throw new Error('GEMINI_API_KEY-Secret ist nicht konfiguriert');
-      }
-      const prompt = await getAiRecipePromptForTest();
-      if (!prompt || prompt.trim().length === 0) {
-        throw new Error('KI-Prompt ist leer oder nicht konfiguriert');
-      }
-      return {
-        details:
-          `API-Schlüssel vorhanden. Prompt geladen (${prompt.length} Zeichen).`,
-      };
-    }),
+async function runAllImporterTests(apiKey, webApiKey) {
+  const results = [];
 
-    // Test 2: full end-to-end HTML processing via Gemini
-    runTest('processHtmlWithAI – HTML-Rezept-Extraktion (Gemini)', async () => {
-      const result = await callGeminiTextAPI(
-          IMPORTER_TEST_HTML, 'de', apiKey, undefined, undefined,
-      );
-      const {valid, issues} = validateImporterResult(result);
-      const title = result.title || '(kein Titel)';
-      const ingredientCount = Array.isArray(result.ingredients) ?
-        result.ingredients.length : 0;
-      const stepCount = Array.isArray(result.steps) ? result.steps.length : 0;
-      if (!valid) {
-        throw new Error(`Validierungsfehler: ${issues.join('; ')}`);
-      }
-      return {
-        details:
-          `Rezept "${title}" extrahiert – ` +
-          `${ingredientCount} Zutaten, ${stepCount} Schritte.`,
-      };
-    }),
+  // Test 1: verify Gemini API key is present and prompt is loadable
+  results.push(await runTest('Konfiguration (GEMINI_API_KEY & Prompt)', async () => {
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY-Secret ist nicht konfiguriert');
+    }
+    const prompt = await getAiRecipePromptForTest();
+    if (!prompt || prompt.trim().length === 0) {
+      throw new Error('KI-Prompt ist leer oder nicht konfiguriert');
+    }
+    return {
+      details:
+        `API-Schlüssel vorhanden. Prompt geladen (${prompt.length} Zeichen).`,
+    };
+  }));
 
-    // Test 3: HTTP connectivity for fetchRecipeHtml
-    runTest('fetchRecipeHtml – HTTP-Abruf einer Rezept-URL', async () => {
-      const testUrl =
-        'https://httpbin.org/html';
-      const response = await fetch(testUrl, {
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (compatible; RecipebookImporterTest/1.0)',
-          'Accept': 'text/html',
-        },
-        signal: AbortSignal.timeout(20000),
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      const html = await response.text();
-      if (html.length < 500) {
-        throw new Error(
-            `Antwort zu kurz (${html.length} Zeichen) – URL möglicherweise nicht erreichbar`,
-        );
-      }
-      return {
-        details: `HTTP ${response.status}, ${html.length} Zeichen HTML empfangen.`,
-      };
-    }),
-  ];
+  // Mint one ID token up front and reuse it for tests 2–4. If this fails
+  // (e.g. WEB_API_KEY missing), all three report the same clear
+  // cause instead of three unrelated-looking errors.
+  let idToken = null;
+  let idTokenError = null;
+  try {
+    idToken = await mintImporterTestIdToken(webApiKey);
+  } catch (err) {
+    idTokenError = err.message || String(err);
+  }
 
-  return await Promise.all(tests);
+  // Test 2: real HTTP fetch of the fixture page via the public callable
+  let fetchedHtml = null;
+  results.push(await runTest('fetchRecipeHtml (öffentliche Schnittstelle)', async () => {
+    if (idTokenError) throw new Error(`Kein Test-ID-Token: ${idTokenError}`);
+    const fixtureUrl = `${CALLABLE_BASE_URL}/importerTestFixturePage`;
+    const result = await callPublicCallable('fetchRecipeHtml', {url: fixtureUrl}, idToken);
+    const html = result?.html || '';
+    if (!html.includes('Rührei') || html.length < 200) {
+      throw new Error(`Unerwarteter Seiteninhalt (${html.length} Zeichen empfangen)`);
+    }
+    fetchedHtml = html;
+    return {details: `${html.length} Zeichen HTML über die öffentliche Callable geladen.`};
+  }));
+
+  // Test 3: pipe test 2's fetched HTML into processHtmlWithAI — a genuinely
+  // connected fetch-then-extract chain, not two independent checks.
+  results.push(await runTest('processHtmlWithAI (öffentliche Schnittstelle) – Fetch+Extraktion', async () => {
+    if (idTokenError) throw new Error(`Kein Test-ID-Token: ${idTokenError}`);
+    if (!fetchedHtml) throw new Error('Übersprungen: fetchRecipeHtml lieferte kein HTML (siehe Test oben)');
+    const result = await callPublicCallable(
+        'processHtmlWithAI', {rawHtml: fetchedHtml, language: 'de'}, idToken,
+    );
+    const {valid, issues} = validateImporterResult(result);
+    if (!valid) throw new Error(`Validierungsfehler: ${issues.join('; ')}`);
+    const ingredientCount = result.ingredients.length;
+    const stepCount = result.steps.length;
+    return {
+      details:
+        `Rezept "${result.title}" extrahiert – ` +
+        `${ingredientCount} Zutaten, ${stepCount} Schritte.`,
+    };
+  }));
+
+  // Test 4: image/OCR import path — previously never covered by this test.
+  results.push(await runTest('scanRecipeWithAI (öffentliche Schnittstelle) – Bild-/OCR-Import', async () => {
+    if (idTokenError) throw new Error(`Kein Test-ID-Token: ${idTokenError}`);
+    const imageBase64 = await renderImporterTestRecipeImage();
+    const result = await callPublicCallable(
+        'scanRecipeWithAI', {imageBase64, language: 'de'}, idToken,
+    );
+    const {valid, issues} = validateImporterResult(result);
+    if (!valid) throw new Error(`Validierungsfehler: ${issues.join('; ')}`);
+    const ingredientCount = result.ingredients.length;
+    const stepCount = result.steps.length;
+    return {
+      details:
+        `Rezept "${result.title}" aus Testbild erkannt – ` +
+        `${ingredientCount} Zutaten, ${stepCount} Schritte.`,
+    };
+  }));
+
+  return results;
 }
 
 /**
@@ -8293,9 +8466,9 @@ exports.dailyAiImporterTest = onSchedule(
     {
       schedule: '0 6 * * *',
       timeZone: 'Europe/Berlin',
-      secrets: [geminiApiKey, smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom],
+      secrets: [geminiApiKey, firebaseWebApiKey, smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom],
       memory: '512MiB',
-      timeoutSeconds: 300,
+      timeoutSeconds: 420,
     },
     async (_event) => {
       const runAt = new Date().toLocaleString('de-DE', {timeZone: 'Europe/Berlin'});
@@ -8315,9 +8488,10 @@ exports.dailyAiImporterTest = onSchedule(
 
       // Run all importer tests
       const apiKeyVal = geminiApiKey.value();
+      const webApiKeyVal = firebaseWebApiKey.value();
       let results;
       try {
-        results = await runAllImporterTests(apiKeyVal);
+        results = await runAllImporterTests(apiKeyVal, webApiKeyVal);
       } catch (runErr) {
         console.error('dailyAiImporterTest: unexpected error running tests:', runErr);
         results = [{
