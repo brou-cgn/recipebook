@@ -792,6 +792,13 @@
   }
 }
 
+/* Mobile: keep the undo snackbar clear of the Cancel/Save FABs (56px, bottom: 20px) */
+@media (max-width: 768px) {
+  .menu-form-container .undo-snackbar {
+    bottom: 92px;
+  }
+}
+
 /* Mobile: Add-section FAB buttons in section gaps */
 .add-section-gap {
   display: none;
