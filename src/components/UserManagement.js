@@ -17,6 +17,26 @@ import {
   updateRolePermission
 } from '../utils/userManagement';
 
+const ROLE_PERMISSION_COLUMNS = [
+  { key: 'settingsAccess', label: 'Einstellungen', name: 'Einstellungen' },
+  { key: 'fotoscan', label: 'Fotoscan', name: 'Fotoscan' },
+  { key: 'webimport', label: 'Webimport', name: 'Webimport' },
+  { key: 'appCalls', label: 'App-Aufrufe', name: 'App-Aufrufe' },
+  { key: 'appCallsMenu', label: 'Menüpunkt', name: 'App-Aufrufe Menüpunkt' },
+  { key: 'recipeImport', label: 'Rezepteimport', name: 'Rezepteimport' },
+  { key: 'deleteRating', label: 'Bew. löschen', name: 'Bewertungs-/Kochdatum-Löschen' },
+  { key: 'abortCalc', label: 'NW-Abbruch', name: 'Nährwert-Abbruch' },
+  { key: 'sortCarousel', label: 'Sortier-Karussell', name: 'Sortier-Karussell' },
+  { key: 'editLists', label: 'Listen bearbeiten', name: 'Listen bearbeiten' },
+  { key: 'tagesmenuTestmode', label: 'Testmodus Tagesmenü', name: 'Testmodus Tagesmenü' },
+  { key: 'themeToggle', label: 'Erscheinungsbild', name: 'Erscheinungsbild' },
+  { key: 'printRecipe', label: 'Drucken', name: 'Drucken' },
+  { key: 'recipeIndex', label: 'Rezeptindex', name: 'Rezeptindex' },
+  { key: 'startseite', label: 'Startseite', name: 'Startseite' },
+  { key: 'kuecheFab', label: 'Küche-FAB', name: 'Küche-FAB' },
+  { key: 'onboardingTestmode', label: 'Onboarding-Testmodus', name: 'Onboarding-Testmodus' },
+];
+
 function UserManagement({ onBack, currentUser, allUsers = [] }) {
   const [users, setUsers] = useState(allUsers);
   const [message, setMessage] = useState({ text: '', type: '' }); // 'success' or 'error'
@@ -237,192 +257,36 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
             <table className="role-permissions-table">
               <thead>
                 <tr>
-                  <th>Berechtigung</th>
-                  <th>Einstellungen</th>
-                  <th>Fotoscan</th>
-                  <th>Webimport</th>
-                  <th>App-Aufrufe</th>
-                  <th>Menüpunkt</th>
-                  <th>Rezepteimport</th>
-                  <th>Bew. löschen</th>
-                  <th>NW-Abbruch</th>
-                  <th>Sortier-Karussell</th>
-                  <th>Listen bearbeiten</th>
-                  <th>Testmodus Tagesmenü</th>
-                  <th>Erscheinungsbild</th>
-                  <th>Drucken</th>
-                  <th>Rezeptindex</th>
-                  <th>Startseite</th>
-                  <th>Küche-FAB</th>
-                  <th>Onboarding-Testmodus</th>
+                  <th>Funktion</th>
+                  {[ROLES.ADMIN, ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].map((role) => (
+                    <th key={role}>
+                      <span className={`role-badge role-${role}`}>
+                        {getRoleDisplayName(role)}
+                      </span>
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {[ROLES.ADMIN, ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].map((role) => {
-                  const perms = rolePermissions?.[role] || ROLE_PERMISSIONS_DEFAULT[role];
-                  return (
-                    <tr key={role}>
-                      <td>
-                        <span className={`role-badge role-${role}`}>
-                          {getRoleDisplayName(role)}
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          className={`permission-toggle ${perms.settingsAccess ? 'active' : ''}`}
-                          onClick={() => handleToggleRolePermission(role, 'settingsAccess', perms.settingsAccess)}
-                          title={perms.settingsAccess ? 'Einstellungen deaktivieren' : 'Einstellungen aktivieren'}
-                        >
-                          {perms.settingsAccess ? '✓' : '✗'}
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          className={`permission-toggle ${perms.fotoscan ? 'active' : ''}`}
-                          onClick={() => handleToggleRolePermission(role, 'fotoscan', perms.fotoscan)}
-                          title={perms.fotoscan ? 'Fotoscan deaktivieren' : 'Fotoscan aktivieren'}
-                        >
-                          {perms.fotoscan ? '✓' : '✗'}
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          className={`permission-toggle ${perms.webimport ? 'active' : ''}`}
-                          onClick={() => handleToggleRolePermission(role, 'webimport', perms.webimport)}
-                          title={perms.webimport ? 'Webimport deaktivieren' : 'Webimport aktivieren'}
-                        >
-                          {perms.webimport ? '✓' : '✗'}
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          className={`permission-toggle ${perms.appCalls ? 'active' : ''}`}
-                          onClick={() => handleToggleRolePermission(role, 'appCalls', perms.appCalls)}
-                          title={perms.appCalls ? 'App-Aufrufe deaktivieren' : 'App-Aufrufe aktivieren'}
-                        >
-                          {perms.appCalls ? '✓' : '✗'}
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          className={`permission-toggle ${perms.appCallsMenu ? 'active' : ''}`}
-                          onClick={() => handleToggleRolePermission(role, 'appCallsMenu', perms.appCallsMenu)}
-                          title={perms.appCallsMenu ? 'App-Aufrufe Menüpunkt deaktivieren' : 'App-Aufrufe Menüpunkt aktivieren'}
-                        >
-                          {perms.appCallsMenu ? '✓' : '✗'}
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          className={`permission-toggle ${perms.recipeImport ? 'active' : ''}`}
-                          onClick={() => handleToggleRolePermission(role, 'recipeImport', perms.recipeImport)}
-                          title={perms.recipeImport ? 'Rezepteimport deaktivieren' : 'Rezepteimport aktivieren'}
-                        >
-                          {perms.recipeImport ? '✓' : '✗'}
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          className={`permission-toggle ${perms.deleteRating ? 'active' : ''}`}
-                          onClick={() => handleToggleRolePermission(role, 'deleteRating', perms.deleteRating)}
-                          title={perms.deleteRating ? 'Bewertungs-/Kochdatum-Löschen deaktivieren' : 'Bewertungs-/Kochdatum-Löschen aktivieren'}
-                        >
-                          {perms.deleteRating ? '✓' : '✗'}
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          className={`permission-toggle ${perms.abortCalc ? 'active' : ''}`}
-                          onClick={() => handleToggleRolePermission(role, 'abortCalc', perms.abortCalc)}
-                          title={perms.abortCalc ? 'Nährwert-Abbruch deaktivieren' : 'Nährwert-Abbruch aktivieren'}
-                        >
-                          {perms.abortCalc ? '✓' : '✗'}
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          className={`permission-toggle ${perms.sortCarousel ? 'active' : ''}`}
-                          onClick={() => handleToggleRolePermission(role, 'sortCarousel', perms.sortCarousel)}
-                          title={perms.sortCarousel ? 'Sortier-Karussell deaktivieren' : 'Sortier-Karussell aktivieren'}
-                        >
-                          {perms.sortCarousel ? '✓' : '✗'}
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          className={`permission-toggle ${perms.editLists ? 'active' : ''}`}
-                          onClick={() => handleToggleRolePermission(role, 'editLists', perms.editLists)}
-                          title={perms.editLists ? 'Listen bearbeiten deaktivieren' : 'Listen bearbeiten aktivieren'}
-                        >
-                          {perms.editLists ? '✓' : '✗'}
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          className={`permission-toggle ${perms.tagesmenuTestmode ? 'active' : ''}`}
-                          onClick={() => handleToggleRolePermission(role, 'tagesmenuTestmode', perms.tagesmenuTestmode)}
-                          title={perms.tagesmenuTestmode ? 'Testmodus Tagesmenü deaktivieren' : 'Testmodus Tagesmenü aktivieren'}
-                        >
-                          {perms.tagesmenuTestmode ? '✓' : '✗'}
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          className={`permission-toggle ${perms.themeToggle ? 'active' : ''}`}
-                          onClick={() => handleToggleRolePermission(role, 'themeToggle', perms.themeToggle)}
-                          title={perms.themeToggle ? 'Erscheinungsbild deaktivieren' : 'Erscheinungsbild aktivieren'}
-                        >
-                          {perms.themeToggle ? '✓' : '✗'}
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          className={`permission-toggle ${perms.printRecipe ? 'active' : ''}`}
-                          onClick={() => handleToggleRolePermission(role, 'printRecipe', perms.printRecipe)}
-                          title={perms.printRecipe ? 'Drucken deaktivieren' : 'Drucken aktivieren'}
-                        >
-                          {perms.printRecipe ? '✓' : '✗'}
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          className={`permission-toggle ${perms.recipeIndex ? 'active' : ''}`}
-                          onClick={() => handleToggleRolePermission(role, 'recipeIndex', perms.recipeIndex)}
-                          title={perms.recipeIndex ? 'Rezeptindex deaktivieren' : 'Rezeptindex aktivieren'}
-                        >
-                          {perms.recipeIndex ? '✓' : '✗'}
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          className={`permission-toggle ${perms.startseite ? 'active' : ''}`}
-                          onClick={() => handleToggleRolePermission(role, 'startseite', perms.startseite)}
-                          title={perms.startseite ? 'Startseite deaktivieren' : 'Startseite aktivieren'}
-                        >
-                          {perms.startseite ? '✓' : '✗'}
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          className={`permission-toggle ${perms.kuecheFab ? 'active' : ''}`}
-                          onClick={() => handleToggleRolePermission(role, 'kuecheFab', perms.kuecheFab)}
-                          title={perms.kuecheFab ? 'Küche-FAB deaktivieren' : 'Küche-FAB aktivieren'}
-                        >
-                          {perms.kuecheFab ? '✓' : '✗'}
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          className={`permission-toggle ${perms.onboardingTestmode ? 'active' : ''}`}
-                          onClick={() => handleToggleRolePermission(role, 'onboardingTestmode', perms.onboardingTestmode)}
-                          title={perms.onboardingTestmode ? 'Onboarding-Testmodus deaktivieren' : 'Onboarding-Testmodus aktivieren'}
-                        >
-                          {perms.onboardingTestmode ? '✓' : '✗'}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {ROLE_PERMISSION_COLUMNS.map(({ key, label, name }) => (
+                  <tr key={key}>
+                    <td>{label}</td>
+                    {[ROLES.ADMIN, ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].map((role) => {
+                      const perms = rolePermissions?.[role] || ROLE_PERMISSIONS_DEFAULT[role];
+                      return (
+                        <td key={role}>
+                          <button
+                            className={`permission-toggle ${perms[key] ? 'active' : ''}`}
+                            onClick={() => handleToggleRolePermission(role, key, perms[key])}
+                            title={perms[key] ? `${name} deaktivieren` : `${name} aktivieren`}
+                          >
+                            {perms[key] ? '✓' : '✗'}
+                          </button>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
