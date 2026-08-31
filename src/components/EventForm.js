@@ -8,6 +8,7 @@ import {
   subscribeToGuestProfiles,
 } from '../utils/eventsFirestore';
 import { getMenusByEventId, updateMenu } from '../utils/menuFirestore';
+import { pushGuestIdsToLinkedMenus } from '../utils/guestLinkSync';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import SavingOverlay from './SavingOverlay';
 import { getDrinkParentCategoryId, categoryHasOwnBudget, PREDEFINED_DRINKS, mergePredefinedDrinks } from '../utils/drinkCategories';
@@ -155,22 +156,9 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
   // the two lists never depend on the event's own "Berechnung aktualisieren"
   // being clicked afterwards. Only meaningful for an already-saved event -
   // a brand new one can't have any linked menus yet.
-  const pushGuestsToLinkedMenus = async (nextGuestIds) => {
+  const pushGuestsToLinkedMenus = (nextGuestIds) => {
     if (!isEditing || !effectiveOwnerId) return;
-    try {
-      const linkedMenus = await getMenusByEventId(effectiveOwnerId, initialEvent.id);
-      await Promise.all(linkedMenus.map((linkedMenu) => {
-        const existingMenuGuestIds = Array.isArray(linkedMenu.descriptionGuestIds) ? linkedMenu.descriptionGuestIds : [];
-        const differs =
-          existingMenuGuestIds.length !== nextGuestIds.length ||
-          existingMenuGuestIds.some((id) => !nextGuestIds.includes(id)) ||
-          nextGuestIds.some((id) => !existingMenuGuestIds.includes(id));
-        if (!differs) return null;
-        return updateMenu(linkedMenu.id, { descriptionGuestIds: nextGuestIds });
-      }));
-    } catch (err) {
-      console.error('Error syncing guests to linked menus:', err);
-    }
+    pushGuestIdsToLinkedMenus(effectiveOwnerId, initialEvent.id, nextGuestIds);
   };
 
   const handleSubmit = async (e) => {
@@ -241,15 +229,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
       const removedRecipeIds = removedDrinkIds
         .map((id) => decodeRecipeLink(allDrinks.find((drink) => drink.id === id)?.name)?.recipeId)
         .filter(Boolean);
-      // Keep every linked menu's guest pills mirrored to this event's guest
-      // list, in both directions (see MenuForm's handleSubmit for the
-      // reverse: menu guests pushed into the event).
-      const initialGuestIds = initialEvent?.selectedGuestIds ?? [];
-      const guestsChanged =
-        selectedGuestIds.length !== initialGuestIds.length ||
-        selectedGuestIds.some((id) => !initialGuestIds.includes(id)) ||
-        initialGuestIds.some((id) => !selectedGuestIds.includes(id));
-      if ((removedDrinkIds.length > 0 || guestsChanged) && effectiveOwnerId) {
+      if (removedDrinkIds.length > 0 && effectiveOwnerId) {
         try {
           const linkedMenus = await getMenusByEventId(effectiveOwnerId, result.eventId);
           await Promise.all(linkedMenus.map((linkedMenu) => {
@@ -272,22 +252,22 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
               }
               return nextSection;
             });
-            const updates = {};
-            if (changed) updates.sections = nextSections;
-            const existingMenuGuestIds = Array.isArray(linkedMenu.descriptionGuestIds) ? linkedMenu.descriptionGuestIds : [];
-            const menuGuestsDiffer =
-              guestsChanged &&
-              (existingMenuGuestIds.length !== selectedGuestIds.length ||
-                existingMenuGuestIds.some((id) => !selectedGuestIds.includes(id)) ||
-                selectedGuestIds.some((id) => !existingMenuGuestIds.includes(id)));
-            if (menuGuestsDiffer) updates.descriptionGuestIds = selectedGuestIds;
-            if (Object.keys(updates).length === 0) return null;
-            return updateMenu(linkedMenu.id, updates);
+            if (!changed) return null;
+            return updateMenu(linkedMenu.id, { sections: nextSections });
           }));
         } catch (err) {
-          console.error('Error syncing removed drinks/guests to linked menus:', err);
+          console.error('Error removing deleted drinks from linked menus:', err);
         }
       }
+
+      // Keep every linked menu's guest pills mirrored to this event's guest
+      // list, in both directions (see guestLinkSync.js / MenuForm's
+      // pushGuestsToEvent for the reverse: menu guests pushed into the event).
+      const initialGuestIds = initialEvent?.selectedGuestIds ?? [];
+      const guestsChanged =
+        selectedGuestIds.length !== initialGuestIds.length ||
+        selectedGuestIds.some((id) => !initialGuestIds.includes(id));
+      if (guestsChanged) pushGuestsToLinkedMenus(selectedGuestIds);
 
       onSaved(result.eventId);
     } catch (err) {
