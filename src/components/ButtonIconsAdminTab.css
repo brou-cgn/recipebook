@@ -659,12 +659,20 @@
 
 .bia-catimg-body { display: flex; flex-direction: column; }
 
-.bia-catimg-rows { display: flex; flex-direction: column; gap: 10px; padding: 14px 18px 18px; }
+.bia-catimg-rows { display: flex; flex-direction: column; }
 
 .bia-catimg-row-wrap {
   position: relative;
   border-radius: 11px;
   overflow: hidden;
+}
+
+/* The editing-mode row (category checkboxes) keeps its own bordered card look
+   and therefore its own inset, unlike the display rows below, which already
+   get their 18px inset from the shared .bia-row-content grid (same as every
+   other group) and would otherwise sit flush with the card edge. */
+.bia-catimg-row-wrap:not(.bia-row) {
+  margin: 10px 18px;
 }
 
 .bia-catimg-row {

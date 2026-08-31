@@ -9,7 +9,16 @@ import {
   saveButtonIconGroups,
   getCustomLists,
 } from '../utils/customLists';
-import { mergeButtonIconRowDefs, buildCuisineTypeRowDefs, cuisineTypeIconKey, CUISINE_TYPES_GROUP_ID, MEAL_CATEGORIES_GROUP_ID } from '../utils/buttonIconRows';
+import {
+  mergeButtonIconRowDefs,
+  buildCuisineTypeRowDefs,
+  cuisineTypeIconKey,
+  CUISINE_TYPES_GROUP_ID,
+  MEAL_CATEGORIES_GROUP_ID,
+  categoryImageRowKey,
+  isCategoryImageRowKey,
+  buildCategoryImageRowDef,
+} from '../utils/buttonIconRows';
 import { fileToBase64, isBase64Image, compressImage } from '../utils/imageUtils';
 import {
   getCategoryImages,
@@ -172,7 +181,7 @@ function SortableIconRow({
         <div className="bia-slot-col">
           <VariantSlot mode="dark" value={def.darkActiveKey ? icons[def.darkActiveKey] : null} disabled={!def.darkActiveKey} label={`${label} – Dunkelmodus aktiv`} onClick={() => onOpenEditor(3)} />
         </div>
-        {def.cuisineType && (
+        {(def.cuisineType || def.custom) && (
           <DeleteRowButton itemName={label} onClick={onDelete} className="bia-row-delete-btn" />
         )}
       </div>
@@ -642,8 +651,13 @@ function ButtonIconsAdminTab() {
   const rowDefsByKey = useMemo(() => {
     const map = new Map(mergeButtonIconRowDefs().map((r) => [r.key, r]));
     buildCuisineTypeRowDefs(cuisineTypes).forEach((r) => map.set(r.key, r));
+    data.groups.forEach((g) => g.rowKeys.forEach((entry) => {
+      if (!map.has(entry.key) && isCategoryImageRowKey(entry.key)) {
+        map.set(entry.key, buildCategoryImageRowDef(entry));
+      }
+    }));
     return map;
-  }, [cuisineTypes]);
+  }, [cuisineTypes, data.groups]);
   const availableCuisineTypeNames = useMemo(() => {
     const usedKeys = new Set();
     data.groups.forEach((g) => g.rowKeys.forEach((r) => usedKeys.add(r.key)));
@@ -923,6 +937,36 @@ function ButtonIconsAdminTab() {
     });
   };
 
+  // Converts a Speisekategorien image into a normal icon row in another
+  // group (triggered by dragging its row out of the Speisekategorien group -
+  // see handleDragEnd below). The image becomes the row's single (light-mode)
+  // buttonIcons value, matching how cuisine-type rows work; the category
+  // assignment(s) that image had are not preserved, since a regular icon row
+  // has no notion of Speisekategorien membership.
+  const handleConvertCategoryImageToRow = (img, destGroupId, destIndex) => {
+    const key = categoryImageRowKey(img.id);
+    const entry = { key, label: categoryImageRowName(img) };
+
+    setCategoryImages((prev) => prev.filter((i) => i.id !== img.id));
+    setIcons((prev) => ({ ...prev, [key]: img.image || '' }));
+    persistData({
+      ...data,
+      groups: data.groups.map((g) => {
+        if (g.id !== destGroupId) return g;
+        const rowKeys = g.rowKeys.slice();
+        rowKeys.splice(destIndex, 0, entry);
+        return { ...g, rowKeys };
+      }),
+    });
+
+    saveButtonIcon(key, img.image || '').catch((error) => {
+      console.error('Error saving converted category image icon:', error);
+    });
+    removeCategoryImage(img.id).catch((error) => {
+      console.error('Error removing converted category image:', error);
+    });
+  };
+
   // ---- drag & drop (groups reorder, rows reorder within/across groups)
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -935,9 +979,22 @@ function ButtonIconsAdminTab() {
     if (!over) return;
     const activeType = active.data.current?.type;
 
+    // Resolves which group a drop target belongs to, whatever kind of
+    // sortable/droppable the cursor actually landed on (a group header, an
+    // icon row, a category-image row, or an empty group's drop zone) - all
+    // of these live in the same DndContext, so a drag can land on any of
+    // them regardless of what's being dragged.
+    const resolveOverGroupId = (o) => {
+      const t = o.data.current?.type;
+      if (t === 'group') return o.data.current.groupId || o.id;
+      if (t === 'row') return o.data.current.groupId || null;
+      if (t === 'catimg') return MEAL_CATEGORIES_GROUP_ID;
+      return null;
+    };
+
     if (activeType === 'group') {
       if (active.id === over.id) return;
-      const overGroupId = over.data.current?.type === 'group' ? (over.data.current.groupId || over.id) : null;
+      const overGroupId = resolveOverGroupId(over);
       if (!overGroupId) return;
       const oldIndex = data.groups.findIndex((g) => g.id === active.id);
       const newIndex = data.groups.findIndex((g) => g.id === overGroupId);
@@ -947,15 +1004,35 @@ function ButtonIconsAdminTab() {
     }
 
     if (activeType === 'catimg') {
-      if (active.id === over.id) return;
-      const oldIndex = categoryImages.findIndex((img) => img.id === active.id);
-      const newIndex = categoryImages.findIndex((img) => img.id === over.id);
-      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
-      const reordered = arrayMove(categoryImages, oldIndex, newIndex);
-      setCategoryImages(reordered);
-      reorderCategoryImages(reordered.map((img) => img.id)).catch((error) => {
-        console.error('Error reordering category images:', error);
-      });
+      const draggedImg = categoryImages.find((img) => img.id === active.id);
+      if (!draggedImg) return;
+      const overType = over.data.current?.type;
+
+      if (overType === 'catimg') {
+        if (active.id === over.id) return;
+        const oldIndex = categoryImages.findIndex((img) => img.id === active.id);
+        const newIndex = categoryImages.findIndex((img) => img.id === over.id);
+        if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+        const reordered = arrayMove(categoryImages, oldIndex, newIndex);
+        setCategoryImages(reordered);
+        reorderCategoryImages(reordered.map((img) => img.id)).catch((error) => {
+          console.error('Error reordering category images:', error);
+        });
+        return;
+      }
+
+      // Dropped outside the Speisekategorien group: convert into a normal
+      // icon row in the destination group (see handleConvertCategoryImageToRow).
+      const destGroupId = resolveOverGroupId(over);
+      if (!destGroupId || destGroupId === MEAL_CATEGORIES_GROUP_ID) return;
+      const destGroup = data.groups.find((g) => g.id === destGroupId);
+      if (!destGroup) return;
+      let destIndex = destGroup.rowKeys.length;
+      if (overType === 'row') {
+        const idx = destGroup.rowKeys.findIndex((r) => r.key === over.id);
+        if (idx !== -1) destIndex = idx;
+      }
+      handleConvertCategoryImageToRow(draggedImg, destGroupId, destIndex);
       return;
     }
 

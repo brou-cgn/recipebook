@@ -269,6 +269,50 @@ export function reconcileMealCategoriesGroup(groups) {
   return [...groups, { id: MEAL_CATEGORIES_GROUP_ID, name: MEAL_CATEGORIES_GROUP_NAME, rowKeys: [] }];
 }
 
+// Prefix identifying rows that started life as a Speisekategorie image (see
+// categoryImages.js) and were converted into a normal icon row by dragging
+// them out of the Speisekategorien group into another group. Converting
+// copies the image into the buttonIcons collection as a single (light-mode)
+// icon value and removes the categoryImages doc, so the row behaves exactly
+// like any admin-created row afterwards - renamable and deletable, with no
+// external list (like cuisineTypes) to reconcile it against.
+const CATEGORY_IMAGE_ROW_PREFIX = 'categoryImageRow__';
+
+/**
+ * @param {string} imageId - The categoryImages doc id being converted.
+ * @returns {string} the buttonIcons key to store the converted row's icon under.
+ */
+export function categoryImageRowKey(imageId) {
+  return `${CATEGORY_IMAGE_ROW_PREFIX}${imageId}`;
+}
+
+/**
+ * @param {string} key
+ * @returns {boolean} true if `key` was created by categoryImageRowKey().
+ */
+export function isCategoryImageRowKey(key) {
+  return key.startsWith(CATEGORY_IMAGE_ROW_PREFIX);
+}
+
+/**
+ * Builds the merged-row def for a converted category-image row, in the same
+ * shape as mergeButtonIconRowDefs()/buildCuisineTypeRowDefs() rows. Only a
+ * light-mode icon exists (no "aktiv" state), matching cuisine-type rows, but
+ * `custom: true` (rather than `cuisineType`) marks it as freely renamable and
+ * deletable like a regular admin-created row.
+ * @param {{key: string, label: string}} entry - the row's saved rowKeys entry.
+ */
+export function buildCategoryImageRowDef(entry) {
+  return {
+    key: entry.key,
+    label: entry.label,
+    activeKey: null,
+    darkKey: `${entry.key}Dark`,
+    darkActiveKey: null,
+    custom: true,
+  };
+}
+
 export function reconcileButtonIconGroups(groups, hiddenRowKeys) {
   const rowsByKey = new Map(mergeButtonIconRowDefs().map((r) => [r.key, r]));
   const placed = new Set(hiddenRowKeys);
