@@ -21,6 +21,13 @@ import {
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { mergeDrinkUnitAdditions } from './drinkCategories';
+import {
+  bindFirestoreRecoveryTriggers,
+  recoverFirestoreNetworkIfStuck,
+  recoverFirestoreNetworkThrottled,
+  reportCacheOnlySnapshot,
+  reportServerSnapshot,
+} from './firestoreConnection';
 
 // Additional-units contribution docs (see mergeDrinkUnitAdditions) never carry
 // a `name` field. Firestore excludes any document missing an orderBy field
@@ -42,18 +49,94 @@ const sortDrinksByName = (drinks) =>
 // listener with backoff, so the module recovers on its own.
 const RETRY_DELAYS_MS = [1000, 3000, 8000, 20000, 30000];
 
+// The error path above is only half the story, and it was the half that kept
+// the Events module blank even after it was fixed. Firestore's *other* failure
+// mode never reaches an error callback at all: when the backend stream is gone
+// but the SDK still believes the client is healthy (the normal state of an iOS
+// PWA that was just resumed from suspension), every listener is answered
+// straight out of the local IndexedDB cache, flagged `metadata.fromCache`.
+//
+// A listener created in that state resolves immediately — with whatever the
+// cache holds for that exact query. For a query the device has not run before,
+// or one whose cached results Safari's storage eviction has since thrown away,
+// that is an EMPTY result. The caller can't tell it apart from a genuine
+// "you have no guests": it clears its loading flag and renders an empty list,
+// and no retry is triggered because nothing failed.
+//
+// That is the whole "I open the app, go to the menu overview and the cards
+// show no guests" report — MenuList mounts a brand-new guest listener at that
+// moment, so the cache is all it has to answer from. Events, drinks and guests
+// all go blank together because they all subscribe on page mount, while
+// recipes and menus survive: those are subscribed once at App level and their
+// data has been sitting in React state since login.
+//
+// So: never report an empty cache-only snapshot as data. Hold it back (callers
+// keep showing "Laden…", which is the truthful state) and let the connection
+// recovery in firestoreConnection.js rebuild the stream. `includeMetadataChanges`
+// is required for this to terminate — without it the SDK does not raise a
+// second event when a cached empty result is confirmed empty by the server, so
+// a user who genuinely has no guests would wait forever.
+const isEmptySnapshot = (snapshot) => {
+  // DocumentSnapshot (subscribeToEvent)
+  if (typeof snapshot?.exists === 'function') return !snapshot.exists();
+  // QuerySnapshot
+  if (typeof snapshot?.empty === 'boolean') return snapshot.empty;
+  if (typeof snapshot?.size === 'number') return snapshot.size === 0;
+  // Unknown shape (test doubles): treat as data and deliver it.
+  return false;
+};
+
+let nextListenerId = 0;
+
 const subscribeWithRetry = (label, ref, onData) => {
+  const listenerId = `${label}#${(nextListenerId += 1)}`;
   let attempt = 0;
   let retryTimer = null;
   let stopped = false;
   let currentUnsubscribe = null;
+  let hasDeliveredServerData = false;
+
+  bindFirestoreRecoveryTriggers();
+
+  const handleSnapshot = (snapshot) => {
+    attempt = 0;
+    const fromCache = snapshot?.metadata?.fromCache === true;
+
+    if (fromCache) {
+      reportCacheOnlySnapshot(listenerId);
+      // An empty cache-only answer is indistinguishable from "no data
+      // exists" to every caller, so don't hand it over as if it were the
+      // truth — unless we've already shown server data for this listener, in
+      // which case the caller is deliberately being kept on its last known
+      // good state anyway.
+      if (isEmptySnapshot(snapshot) && !hasDeliveredServerData) {
+        recoverFirestoreNetworkIfStuck();
+        return;
+      }
+    } else {
+      reportServerSnapshot(listenerId);
+      hasDeliveredServerData = true;
+    }
+
+    onData(snapshot);
+  };
 
   const start = () => {
     if (stopped) return;
-    currentUnsubscribe = onSnapshot(ref, (snapshot) => {
-      attempt = 0;
-      onData(snapshot);
-    }, (error) => {
+    // The scheduled retry (if any) has now been consumed. Leaving a fired
+    // timer id in place used to make retryNow() below believe a retry was
+    // still pending, so the next visibilitychange started a *second* listener
+    // over the top of a healthy one — the old handle was overwritten without
+    // ever being called, leaking a live listener per resume. On an iPhone,
+    // where visibilitychange fires on every lock, app switch and notification
+    // banner, those leaks pile up against Firestore's per-client listener
+    // limit until new listeners stop being served at all.
+    retryTimer = null;
+    if (currentUnsubscribe) {
+      currentUnsubscribe();
+      currentUnsubscribe = null;
+    }
+    currentUnsubscribe = onSnapshot(ref, { includeMetadataChanges: true }, handleSnapshot, (error) => {
       console.error(`Error subscribing to ${label}:`, error);
       if (stopped) return;
       const delay = RETRY_DELAYS_MS[Math.min(attempt, RETRY_DELAYS_MS.length - 1)];
@@ -87,6 +170,10 @@ const subscribeWithRetry = (label, ref, onData) => {
 
   return () => {
     stopped = true;
+    // A torn-down listener must not keep the client counted as "stuck on
+    // cache" — otherwise navigating away from a page that never loaded would
+    // leave a permanent recovery trigger behind.
+    reportServerSnapshot(listenerId);
     if (retryTimer) clearTimeout(retryTimer);
     if (currentUnsubscribe) currentUnsubscribe();
     if (typeof window !== 'undefined') {
@@ -195,11 +282,24 @@ const GET_EVENT_RETRY_DELAYS_MS = [300, 1000, 3000];
 export const getEvent = async (uid, eventId) => {
   const eventRef = doc(db, 'users', uid, 'events', eventId);
   for (let attempt = 0; ; attempt += 1) {
+    const lastAttempt = attempt >= GET_EVENT_RETRY_DELAYS_MS.length;
     try {
       const snap = await getDoc(eventRef);
-      return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+      if (snap.exists()) return { id: snap.id, ...snap.data() };
+      // A getDoc() served out of the local cache resolves without error even
+      // when the client has no live connection, and a document the cache has
+      // never seen simply reports itself as non-existent. That is not proof
+      // the event is gone — it's the same cache-only state the listeners
+      // above guard against — so kick the connection and ask again rather
+      // than sending the deep link to an empty events list.
+      if (snap.metadata?.fromCache && !lastAttempt) {
+        await recoverFirestoreNetworkThrottled();
+        await new Promise((resolve) => setTimeout(resolve, GET_EVENT_RETRY_DELAYS_MS[attempt]));
+        continue;
+      }
+      return null;
     } catch (error) {
-      if (attempt >= GET_EVENT_RETRY_DELAYS_MS.length) {
+      if (lastAttempt) {
         console.error('Error getting event:', error);
         return null;
       }

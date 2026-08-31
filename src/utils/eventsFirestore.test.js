@@ -37,6 +37,15 @@ jest.mock('firebase/functions', () => ({
   httpsCallable: (...args) => mockHttpsCallable(...args),
 }));
 
+const mockRecoverIfStuck = jest.fn();
+jest.mock('./firestoreConnection', () => ({
+  bindFirestoreRecoveryTriggers: jest.fn(),
+  recoverFirestoreNetworkIfStuck: (...args) => mockRecoverIfStuck(...args),
+  recoverFirestoreNetworkThrottled: jest.fn(),
+  reportCacheOnlySnapshot: jest.fn(),
+  reportServerSnapshot: jest.fn(),
+}));
+
 import {
   subscribeToCustomDrinks,
   subscribeToAllCustomDrinks,
@@ -49,7 +58,10 @@ import {
   deleteGuestProfile,
 } from './eventsFirestore';
 
-const createSnapshot = (items) => ({
+const createSnapshot = (items, { fromCache = false } = {}) => ({
+  empty: items.length === 0,
+  size: items.length,
+  metadata: { fromCache },
   forEach: (cb) =>
     items.forEach((item) => cb({
       id: item.id,
@@ -63,7 +75,7 @@ describe('subscribeToCustomDrinks', () => {
 
   it('calls callback with loaded drinks', () => {
     const drinks = [{ id: 'd1', name: 'Craft-Bier', gebindeLiter: 0.33 }];
-    mockOnSnapshot.mockImplementation((_ref, cb) => {
+    mockOnSnapshot.mockImplementation((_ref, _opts, cb) => {
       cb(createSnapshot(drinks));
       return jest.fn();
     });
@@ -77,7 +89,7 @@ describe('subscribeToCustomDrinks', () => {
   it('does not wipe existing data on error, and retries the listener instead', () => {
     jest.useFakeTimers();
     let attempt = 0;
-    mockOnSnapshot.mockImplementation((_ref, successCb, errorCb) => {
+    mockOnSnapshot.mockImplementation((_ref, _opts, successCb, errorCb) => {
       attempt += 1;
       if (attempt === 1) {
         errorCb(new Error('firestore error'));
@@ -102,7 +114,7 @@ describe('subscribeToCustomDrinks', () => {
       { id: 'd1', name: 'Craft-Bier', einheiten: [] },
       { id: 'd2', extendsOwnerId: 'other-user', einheiten: [{ einheitsgroesse: 0.2 }] },
     ];
-    mockOnSnapshot.mockImplementation((_ref, cb) => {
+    mockOnSnapshot.mockImplementation((_ref, _opts, cb) => {
       cb(createSnapshot(drinks));
       return jest.fn();
     });
@@ -122,7 +134,7 @@ describe('subscribeToAllCustomDrinks', () => {
       { id: 'd1', __ownerId: 'u1', name: 'Papas Wein', einheiten: [{ einheitsgroesse: 0.75 }] },
       { id: 'd1', __ownerId: 'u2', extendsOwnerId: 'u1', einheiten: [{ einheitsgroesse: 0.2, einheit: 'Glas' }] },
     ];
-    mockOnSnapshot.mockImplementation((_ref, cb) => {
+    mockOnSnapshot.mockImplementation((_ref, _opts, cb) => {
       cb(createSnapshot(drinks));
       return jest.fn();
     });
@@ -146,7 +158,7 @@ describe('subscribeToAllCustomDrinks', () => {
   it('does not wipe existing data on error, and retries the listener instead', () => {
     jest.useFakeTimers();
     let attempt = 0;
-    mockOnSnapshot.mockImplementation((_ref, successCb, errorCb) => {
+    mockOnSnapshot.mockImplementation((_ref, _opts, successCb, errorCb) => {
       attempt += 1;
       if (attempt === 1) {
         errorCb(new Error('firestore error'));
@@ -169,7 +181,7 @@ describe('subscribeToAllCustomDrinks', () => {
   it('does not order the collection-group query by name, since Firestore drops any document missing that field from the results – which would silently exclude every nameless additional-units doc', () => {
     const groupRef = { __marker: 'customDrinks-group' };
     mockCollectionGroup.mockReturnValue(groupRef);
-    mockOnSnapshot.mockImplementation((_ref, cb) => {
+    mockOnSnapshot.mockImplementation((_ref, _opts, cb) => {
       cb(createSnapshot([]));
       return jest.fn();
     });
@@ -178,7 +190,7 @@ describe('subscribeToAllCustomDrinks', () => {
 
     expect(mockQuery).not.toHaveBeenCalled();
     expect(mockOrderBy).not.toHaveBeenCalled();
-    expect(mockOnSnapshot).toHaveBeenCalledWith(groupRef, expect.any(Function), expect.any(Function));
+    expect(mockOnSnapshot).toHaveBeenCalledWith(groupRef, { includeMetadataChanges: true }, expect.any(Function), expect.any(Function));
   });
 
   it('sorts the merged result by name client-side', () => {
@@ -186,7 +198,7 @@ describe('subscribeToAllCustomDrinks', () => {
       { id: 'd2', __ownerId: 'u1', name: 'Wasser', einheiten: [] },
       { id: 'd1', __ownerId: 'u1', name: 'Apfelsaft', einheiten: [] },
     ];
-    mockOnSnapshot.mockImplementation((_ref, cb) => {
+    mockOnSnapshot.mockImplementation((_ref, _opts, cb) => {
       cb(createSnapshot(drinks));
       return jest.fn();
     });
@@ -287,12 +299,91 @@ describe('deleteCustomDrink', () => {
   });
 });
 
+describe('subscribeWithRetry cache handling', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('does not report an empty cache-only snapshot as "no data" – that is the state a resumed iOS PWA starts every new listener in, and it is indistinguishable from a genuinely empty collection', () => {
+    mockOnSnapshot.mockImplementation((_ref, _opts, cb) => {
+      cb(createSnapshot([], { fromCache: true }));
+      return jest.fn();
+    });
+
+    const cb = jest.fn();
+    subscribeToGuestProfiles('user1', cb);
+
+    expect(cb).not.toHaveBeenCalled();
+    expect(mockRecoverIfStuck).toHaveBeenCalled();
+  });
+
+  it('delivers the empty result once the server confirms it, so a user who really has no guests is not stuck loading', () => {
+    let emit;
+    mockOnSnapshot.mockImplementation((_ref, _opts, cb) => {
+      emit = cb;
+      cb(createSnapshot([], { fromCache: true }));
+      return jest.fn();
+    });
+
+    const cb = jest.fn();
+    subscribeToGuestProfiles('user1', cb);
+    expect(cb).not.toHaveBeenCalled();
+
+    emit(createSnapshot([], { fromCache: false }));
+    expect(cb).toHaveBeenCalledWith([]);
+  });
+
+  it('still delivers non-empty cached data, so offline use keeps working', () => {
+    mockOnSnapshot.mockImplementation((_ref, _opts, cb) => {
+      cb(createSnapshot([{ id: 'g1', vorname: 'Anna', nachname: 'B' }], { fromCache: true }));
+      return jest.fn();
+    });
+
+    const cb = jest.fn();
+    subscribeToGuestProfiles('user1', cb);
+
+    expect(cb).toHaveBeenCalledWith([{ id: 'g1', vorname: 'Anna', nachname: 'B' }]);
+  });
+
+  it('subscribes with includeMetadataChanges, without which a cached empty result is never confirmed by the server', () => {
+    mockOnSnapshot.mockImplementation(() => jest.fn());
+    subscribeToGuestProfiles('user1', jest.fn());
+
+    expect(mockOnSnapshot).toHaveBeenCalledWith(
+      undefined,
+      { includeMetadataChanges: true },
+      expect.any(Function),
+      expect.any(Function),
+    );
+  });
+
+  it('tears the previous listener down before starting a replacement, so a resume cannot leak a second live listener onto the same query', () => {
+    jest.useFakeTimers();
+    const unsubscribes = [];
+    mockOnSnapshot.mockImplementation((_ref, _opts, successCb, errorCb) => {
+      const unsub = jest.fn();
+      unsubscribes.push(unsub);
+      if (unsubscribes.length === 1) errorCb(new Error('token refresh'));
+      return unsub;
+    });
+
+    subscribeToGuestProfiles('user1', jest.fn());
+    jest.runOnlyPendingTimers();
+    expect(unsubscribes).toHaveLength(2);
+
+    // A retry has already been consumed; a resume must not start a third
+    // listener over the top of the healthy second one.
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(unsubscribes).toHaveLength(2);
+
+    jest.useRealTimers();
+  });
+});
+
 describe('subscribeToGuestProfiles', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('calls callback with loaded profiles', () => {
     const profiles = [{ id: 'p1', name: 'Familie', adults: 4, children: 2 }];
-    mockOnSnapshot.mockImplementation((_ref, cb) => {
+    mockOnSnapshot.mockImplementation((_ref, _opts, cb) => {
       cb(createSnapshot(profiles));
       return jest.fn();
     });
@@ -307,7 +398,7 @@ describe('subscribeToGuestProfiles', () => {
   it('does not wipe existing data on error, and retries the listener instead', () => {
     jest.useFakeTimers();
     let attempt = 0;
-    mockOnSnapshot.mockImplementation((_ref, successCb, errorCb) => {
+    mockOnSnapshot.mockImplementation((_ref, _opts, successCb, errorCb) => {
       attempt += 1;
       if (attempt === 1) {
         errorCb(new Error('firestore error'));

@@ -77,6 +77,42 @@ export const getUserProfile = async (userId) => {
   }
 };
 
+// onAuthStateChange treats a null profile as "not signed in" and the whole app
+// tears itself down: currentUser goes null, every page unmounts its listeners,
+// and the Events module's events/guests/drinks all disappear at once. But
+// getUserProfile() also returns null when the read merely *failed* — offline,
+// mid-token-refresh, or served from a cache that has never seen this document,
+// all routine on a resumed iOS PWA. Distinguish the two: retry a transient
+// failure, and only report "no profile" when the read actually succeeded and
+// the document is genuinely absent.
+const USER_PROFILE_RETRY_DELAYS_MS = [300, 1000, 3000];
+
+const loadUserProfileForAuth = async (userId) => {
+  for (let attempt = 0; ; attempt += 1) {
+    const lastAttempt = attempt >= USER_PROFILE_RETRY_DELAYS_MS.length;
+    try {
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      if (userDoc.exists()) {
+        return { profile: { id: userDoc.id, ...userDoc.data() }, readFailed: false };
+      }
+      // A getDoc() answered out of the local cache reports an uncached
+      // document as missing without ever raising an error. That is not proof
+      // the account is gone, so keep trying before concluding anything.
+      if (userDoc.metadata?.fromCache && !lastAttempt) {
+        await new Promise((resolve) => setTimeout(resolve, USER_PROFILE_RETRY_DELAYS_MS[attempt]));
+        continue;
+      }
+      return { profile: null, readFailed: false };
+    } catch (error) {
+      if (lastAttempt) {
+        console.error('Error getting user profile:', error);
+        return { profile: null, readFailed: true };
+      }
+      await new Promise((resolve) => setTimeout(resolve, USER_PROFILE_RETRY_DELAYS_MS[attempt]));
+    }
+  }
+};
+
 /**
  * Register a new user
  * @param {Object} userData - User data {vorname, nachname, email, password}
@@ -270,7 +306,18 @@ export const onAuthStateChange = (callback) => {
       }
 
       // Regular user: load Firestore profile
-      const userProfile = await getUserProfile(firebaseUser.uid);
+      const { profile: userProfile, readFailed } = await loadUserProfileForAuth(firebaseUser.uid);
+      if (!userProfile && readFailed) {
+        // The read failed rather than telling us the account is gone. Firebase
+        // Auth still has a valid session, so signalling "signed out" here would
+        // blank the entire app (and the whole Events module with it) over a
+        // network hiccup. Keep whatever user we already had; the next
+        // onAuthStateChanged / token refresh retries the read.
+        if (currentUserCache) {
+          callback(currentUserCache);
+          return;
+        }
+      }
       if (userProfile) {
         const user = { id: firebaseUser.uid, ...userProfile };
         currentUserCache = user;
