@@ -4,7 +4,7 @@ import './EventsPage.css';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getSavedSections, saveSectionNames, createMenuSection, applyItemOrder } from '../utils/menuSections';
 import { fuzzyFilter } from '../utils/fuzzySearch';
-import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage, isBase64Image } from '../utils/imageUtils';
+import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage, convertImageUrlsToBase64, isBase64Image } from '../utils/imageUtils';
 import { uploadMenuGridImage, uploadMenuGridImageDark, deleteMenuGridImage, deleteMenuGridImageDark, isStorageUrl } from '../utils/storageUtils';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getButtonIcons } from '../utils/customLists';
 import { getCategoryImages } from '../utils/categoryImages';
@@ -1239,73 +1239,88 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
         const uploadMenuId = menu?.id || `temp-${Date.now()}`;
 
         if (selectedUrls.length > 0) {
-          console.log('[MenuForm:handleSubmit] Calling buildMenuGridImage...');
+          // Fetch each source image over the network once and reuse the
+          // converted Base64 for both the light and dark variant below,
+          // instead of every buildMenuGridImage() call re-fetching them.
+          console.log('[MenuForm:handleSubmit] Converting source images to Base64...');
+          const tConvert = performance.now();
+          const convertedUrls = await convertImageUrlsToBase64(selectedUrls);
+          console.log('[MenuForm:handleSubmit] convertImageUrlsToBase64() done in %.1fms',
+            performance.now() - tConvert);
+
+          console.log('[MenuForm:handleSubmit] Calling buildMenuGridImage (light + dark, in parallel)...');
           const tGrid = performance.now();
-          const gridImageBase64 = await buildMenuGridImage(selectedUrls, {
-            width: 600,
-            height: 300,
-            gap: 0,
-            quality: 0.8
-          });
-          console.log('[MenuForm:handleSubmit] buildMenuGridImage() done in %.1fms → gridImage generated: %s',
-            performance.now() - tGrid, Boolean(gridImageBase64));
+          const [gridImageBase64, gridImageDarkBase64] = await Promise.all([
+            buildMenuGridImage(convertedUrls, {
+              width: 600,
+              height: 300,
+              gap: 0,
+              quality: 0.8
+            }),
+            buildMenuGridImage(convertedUrls, {
+              width: 600,
+              height: 300,
+              gap: 0,
+              quality: 0.8,
+              backgroundColor: '#1e1e1e',
+              placeholderColor: '#2a2a2a',
+            }),
+          ]);
+          console.log('[MenuForm:handleSubmit] buildMenuGridImage() done in %.1fms → light: %s, dark: %s',
+            performance.now() - tGrid, Boolean(gridImageBase64), Boolean(gridImageDarkBase64));
 
-          if (gridImageBase64) {
-            // Delete old grid image from Firebase Storage if updating an existing menu
-            if (menu?.gridImage && isStorageUrl(menu.gridImage)) {
-              try {
-                await deleteMenuGridImage(menu.gridImage);
-              } catch (err) {
-                console.warn('[MenuForm:handleSubmit] Could not delete old grid image:', err);
+          // Delete-old+upload-new for the light and dark variants are
+          // independent Firebase Storage operations, so run them in parallel
+          // rather than waiting on one before starting the other.
+          [gridImage, gridImageDark] = await Promise.all([
+            (async () => {
+              if (!gridImageBase64) return null;
+              // Delete old grid image from Firebase Storage if updating an existing menu
+              if (menu?.gridImage && isStorageUrl(menu.gridImage)) {
+                try {
+                  await deleteMenuGridImage(menu.gridImage);
+                } catch (err) {
+                  console.warn('[MenuForm:handleSubmit] Could not delete old grid image:', err);
+                }
               }
-            }
-
-            // Upload grid image to Firebase Storage
-            try {
-              console.log('[MenuForm:handleSubmit] Uploading grid image to Firebase Storage...');
-              const tUpload = performance.now();
-              gridImage = await uploadMenuGridImage(gridImageBase64, uploadMenuId);
-              console.log('[MenuForm:handleSubmit] Grid image uploaded in %.1fms → URL: %s',
-                performance.now() - tUpload, gridImage.substring(0, 80));
-            } catch (uploadErr) {
-              console.error('[MenuForm:handleSubmit] Failed to upload grid image:', uploadErr);
-              // Fall back to null if upload fails — don't block menu save
-              gridImage = null;
-            }
-          }
-
-          // Dark variant
-          const gridImageDarkBase64 = await buildMenuGridImage(selectedUrls, {
-            width: 600,
-            height: 300,
-            gap: 0,
-            quality: 0.8,
-            backgroundColor: '#1e1e1e',
-            placeholderColor: '#2a2a2a',
-          });
-
-          if (gridImageDarkBase64) {
-            // Delete old dark grid image from Firebase Storage if updating an existing menu
-            if (menu?.gridImageDark && isStorageUrl(menu.gridImageDark)) {
+              // Upload grid image to Firebase Storage
               try {
-                await deleteMenuGridImageDark(menu.gridImageDark);
-              } catch (err) {
-                console.warn('[MenuForm:handleSubmit] Could not delete old dark grid image:', err);
+                console.log('[MenuForm:handleSubmit] Uploading grid image to Firebase Storage...');
+                const tUpload = performance.now();
+                const url = await uploadMenuGridImage(gridImageBase64, uploadMenuId);
+                console.log('[MenuForm:handleSubmit] Grid image uploaded in %.1fms → URL: %s',
+                  performance.now() - tUpload, url.substring(0, 80));
+                return url;
+              } catch (uploadErr) {
+                console.error('[MenuForm:handleSubmit] Failed to upload grid image:', uploadErr);
+                // Fall back to null if upload fails — don't block menu save
+                return null;
               }
-            }
-
-            // Upload dark grid image to Firebase Storage
-            try {
-              console.log('[MenuForm:handleSubmit] Uploading dark grid image to Firebase Storage...');
-              const tUploadDark = performance.now();
-              gridImageDark = await uploadMenuGridImageDark(gridImageDarkBase64, uploadMenuId);
-              console.log('[MenuForm:handleSubmit] Dark grid image uploaded in %.1fms → URL: %s',
-                performance.now() - tUploadDark, gridImageDark.substring(0, 80));
-            } catch (uploadErr) {
-              console.error('[MenuForm:handleSubmit] Failed to upload dark grid image:', uploadErr);
-              gridImageDark = null;
-            }
-          }
+            })(),
+            (async () => {
+              if (!gridImageDarkBase64) return null;
+              // Delete old dark grid image from Firebase Storage if updating an existing menu
+              if (menu?.gridImageDark && isStorageUrl(menu.gridImageDark)) {
+                try {
+                  await deleteMenuGridImageDark(menu.gridImageDark);
+                } catch (err) {
+                  console.warn('[MenuForm:handleSubmit] Could not delete old dark grid image:', err);
+                }
+              }
+              // Upload dark grid image to Firebase Storage
+              try {
+                console.log('[MenuForm:handleSubmit] Uploading dark grid image to Firebase Storage...');
+                const tUploadDark = performance.now();
+                const url = await uploadMenuGridImageDark(gridImageDarkBase64, uploadMenuId);
+                console.log('[MenuForm:handleSubmit] Dark grid image uploaded in %.1fms → URL: %s',
+                  performance.now() - tUploadDark, url.substring(0, 80));
+                return url;
+              } catch (uploadErr) {
+                console.error('[MenuForm:handleSubmit] Failed to upload dark grid image:', uploadErr);
+                return null;
+              }
+            })(),
+          ]);
         } else {
           console.warn('[MenuForm:handleSubmit] No URLs selected — skipping grid generation');
         }
@@ -1423,7 +1438,16 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
 
       console.log('=== [MenuForm:handleSubmit] END (%.1fms) ===', performance.now() - t0);
 
-      onSave(menuData);
+      // Await the parent's save (Firestore write + closing the form) so the
+      // "saving" state - and the re-entrancy guard at the top of this
+      // function - stays active until the menu is actually persisted and the
+      // form is about to close. Without this, savingMenu flips back to false
+      // as soon as onSave is merely *called*, re-enabling "Speichern" while
+      // the real save is still in flight: an impatient click during that
+      // window starts a second, fully redundant submit (redoing the grid
+      // image work above) and can leave the user back on this edit screen
+      // instead of wherever the completed save should have taken them.
+      await onSave(menuData);
     } finally {
       setSavingMenu(false);
     }

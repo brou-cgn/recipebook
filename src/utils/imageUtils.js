@@ -458,6 +458,30 @@ export async function convertFirebaseImageToBase64(url) {
 }
 
 /**
+ * Convert a list of image URLs to Base64 data-URLs (in parallel), leaving
+ * any already-Base64 entries untouched. Split out of buildMenuGridImage so
+ * callers that need the same source images rendered more than once (e.g. a
+ * light and a dark grid variant) can fetch each remote image over the
+ * network only once and reuse the converted result for every render.
+ *
+ * @param {string[]} imageUrls - Image sources (URL or base64 data-URL).
+ * @returns {Promise<string[]>} Base64 data-URLs (or the original URL where conversion failed).
+ */
+export async function convertImageUrlsToBase64(imageUrls) {
+  const validUrls = (imageUrls || []).filter(url => typeof url === 'string' && url.length > 0);
+  return Promise.all(
+    validUrls.map(async (url, i) => {
+      if (url.startsWith('data:')) return url;
+      const b64 = await convertFirebaseImageToBase64(url);
+      if (!b64) {
+        console.warn('[convertImageUrlsToBase64] [%d] Could not convert to Base64, using original URL: %s', i, url);
+      }
+      return b64 || url;
+    })
+  );
+}
+
+/**
  * Build a grid/mosaic image from up to six image URLs or base64 strings.
  *
  * @param {string[]} imageUrls - Image sources (URL or base64 data-URL).
@@ -502,16 +526,7 @@ export async function buildMenuGridImage(imageUrls, options = {}) {
 
   // Convert remote Firebase Storage URLs to Base64 to avoid CORS issues.
   console.log('[buildMenuGridImage] --- Converting remote URLs to Base64 ---');
-  const convertedUrls = await Promise.all(
-    validUrls.map(async (url, i) => {
-      if (url.startsWith('data:')) return url;
-      const b64 = await convertFirebaseImageToBase64(url);
-      if (!b64) {
-        console.warn('[buildMenuGridImage] [%d] Could not convert to Base64, using original URL: %s', i, url);
-      }
-      return b64 || url;
-    })
-  );
+  const convertedUrls = await convertImageUrlsToBase64(validUrls);
 
   const count = Math.min(convertedUrls.length, 6);
   const urls = convertedUrls.slice(0, count);
