@@ -1075,6 +1075,18 @@ function App() {
     groupsLoading, recipesLoaded, startseiteCarouselsLoaded, initialStartseiteReady,
   ]);
 
+  // Safety net: force initialStartseiteReady after 10s even if groups/recipes/
+  // carousels never finish loading (e.g. a Firestore listener stuck on a
+  // torn-down connection). Without this, a stalled subscription leaves the
+  // splash screen visible forever — see issue #1240, which hit the same
+  // failure mode in the (since removed) image-preload gate this replaced.
+  useEffect(() => {
+    if (initialStartseiteReady || !currentUser) return undefined;
+    const SPLASH_MAX_WAIT_MS = 10000;
+    const timer = setTimeout(() => setInitialStartseiteReady(true), SPLASH_MAX_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, [currentUser, initialStartseiteReady]);
+
   // Keep the splash screen mounted just long enough to play its exit
   // transition (fade + slight scale-out) once initialStartseiteReady latches,
   // instead of cutting it away instantly. Duration matches the CSS transition
