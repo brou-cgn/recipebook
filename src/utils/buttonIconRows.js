@@ -243,6 +243,32 @@ export function reconcileCuisineTypeGroup(groups, cuisineTypes) {
  * @param {string[]} hiddenRowKeys
  * @returns {Array<{id:string,name:string,rowKeys:Array<{key:string,label:string}>}>}
  */
+// Id/name of the group that hosts the Speisekategorien section (category
+// placeholder images - see categoryImages.js / ButtonIconsAdminTab.js). Unlike
+// every other group, its rowKeys stay permanently empty: the section's actual
+// content (one row per category image) lives in the separate `categoryImages`
+// Firestore collection, not in buttonIcons/buttonIconGroups. The group entry
+// exists purely so the section participates in the same drag & drop group
+// list as Kulinarik-Typen (order, collapse state, "X Gruppen" count) - see
+// reconcileMealCategoriesGroup below.
+export const MEAL_CATEGORIES_GROUP_ID = 'g-speisekategorien';
+export const MEAL_CATEGORIES_GROUP_NAME = 'Speisekategorien';
+
+/**
+ * Makes sure the Speisekategorien group always exists inside a saved
+ * `buttonIconGroups.groups` structure, appending an empty one if missing
+ * (e.g. the first time an admin opens the grouped Button-Icons tab after this
+ * feature shipped, or after the group was dissolved via its group-level
+ * delete button - same recovery behavior as reconcileCuisineTypeGroup).
+ * @param {Array<{id:string,name:string,rowKeys:Array}>} groups
+ * @returns {Array<{id:string,name:string,rowKeys:Array}>} the same array
+ *   reference if nothing changed, otherwise a new array with the group appended.
+ */
+export function reconcileMealCategoriesGroup(groups) {
+  if (groups.some((g) => g.id === MEAL_CATEGORIES_GROUP_ID)) return groups;
+  return [...groups, { id: MEAL_CATEGORIES_GROUP_ID, name: MEAL_CATEGORIES_GROUP_NAME, rowKeys: [] }];
+}
+
 export function reconcileButtonIconGroups(groups, hiddenRowKeys) {
   const rowsByKey = new Map(mergeButtonIconRowDefs().map((r) => [r.key, r]));
   const placed = new Set(hiddenRowKeys);
