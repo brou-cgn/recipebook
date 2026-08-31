@@ -711,19 +711,14 @@
 .bia-catimg-typeahead { position: relative; flex: 1; min-width: 0; }
 .bia-catimg-typeahead .bia-row-name-input { width: 100%; }
 
-.bia-catimg-categories { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; align-items: center; min-height: 28px; }
+/* Non-editing Speisekategorien row: same grid as Kulinarik-Typen (.bia-row-content),
+   so the image sits in the "Hellmodus normal" slot column and the name lines up
+   with the shared header. .bia-drag-handle-placeholder reserves the handle column
+   without offering drag/reorder, which these rows don't support. */
+.bia-drag-handle-placeholder { width: 34px; height: 1px; }
 
-.bia-catimg-badge {
-  display: inline-block;
-  background: #402C1C;
-  color: #fff;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.bia-catimg-empty { font-size: 12.5px; color: #a5a096; font-style: italic; }
+.bia-catimg-row-name { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
+.bia-catimg-row-name .bia-row-name-static { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .bia-catimg-edit-btn { flex-shrink: 0; }
 
@@ -760,5 +755,4 @@
 [data-theme="dark"] .bia-catimg-preview { background: #202226; border-color: #3a3d42; }
 [data-theme="dark"] .bia-catimg-preview-btn { border-color: #3a3d42; }
 [data-theme="dark"] .bia-catimg-preview-btn:hover { border-color: #6f757e; }
-[data-theme="dark"] .bia-catimg-empty { color: #7d838c; }
 [data-theme="dark"] .bia-catimg-uploading { color: #7d838c; }

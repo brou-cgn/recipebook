@@ -387,38 +387,41 @@ function CategoryImageRow({
     reset();
   };
 
-  return (
-    <div className={`bia-catimg-row-wrap${offset < 0 ? ' bia-swipe-active' : ''}`}>
-      <div className="swipe-delete-background" aria-hidden={!swipeVisible}>
-        {swipeVisible && (
+  // Editing (picking which Speisekategorien this image belongs to) needs the
+  // full row width for the checkbox list, so it keeps its own wide layout
+  // instead of the Kulinarik-Typ column grid used below.
+  if (isEditing) {
+    return (
+      <div className={`bia-catimg-row-wrap${offset < 0 ? ' bia-swipe-active' : ''}`}>
+        <div className="swipe-delete-background" aria-hidden={!swipeVisible}>
+          {swipeVisible && (
+            <button
+              type="button"
+              className="swipe-delete-action"
+              onClick={handleSwipeDeleteClick}
+              aria-label={`${rowName} entfernen`}
+            >
+              <span className="swipe-delete-icon-text">🗑</span>
+            </button>
+          )}
+        </div>
+        <div className="bia-catimg-row delete-row-hover-target" style={swipeContentStyle} {...handlers}>
           <button
             type="button"
-            className="swipe-delete-action"
-            onClick={handleSwipeDeleteClick}
-            aria-label={`${rowName} entfernen`}
+            className="bia-catimg-preview bia-catimg-preview-btn"
+            onClick={() => onImageClick(img.id)}
+            title={`Bild für ${rowName} hochladen/ändern`}
+            aria-label={`Bild für ${rowName} hochladen/ändern`}
           >
-            <span className="swipe-delete-icon-text">🗑</span>
+            {img.image ? (
+              <img src={img.image} alt="" />
+            ) : isUploading ? (
+              <span className="bia-catimg-uploading">…</span>
+            ) : (
+              <span className="bia-catimg-preview-plus" aria-hidden="true">+</span>
+            )}
           </button>
-        )}
-      </div>
-      <div className="bia-catimg-row delete-row-hover-target" style={swipeContentStyle} {...handlers}>
-        <button
-          type="button"
-          className="bia-catimg-preview bia-catimg-preview-btn"
-          onClick={() => onImageClick(img.id)}
-          title={`Bild für ${rowName} hochladen/ändern`}
-          aria-label={`Bild für ${rowName} hochladen/ändern`}
-        >
-          {img.image ? (
-            <img src={img.image} alt="" />
-          ) : isUploading ? (
-            <span className="bia-catimg-uploading">…</span>
-          ) : (
-            <span className="bia-catimg-preview-plus" aria-hidden="true">+</span>
-          )}
-        </button>
 
-        {isEditing ? (
           <div className="bia-catimg-edit">
             <div className="bia-catimg-checkboxes">
               {mealCategories.map((category) => {
@@ -457,31 +460,65 @@ function CategoryImageRow({
               </button>
             </div>
           </div>
-        ) : (
-          <>
-            <div className="bia-catimg-categories">
-              {img.categories.length > 0 ? (
-                img.categories.map((cat) => (
-                  <span key={cat} className="bia-catimg-badge">{cat}</span>
-                ))
-              ) : (
-                <span className="bia-catimg-empty">Keine Kategorien zugeordnet</span>
-              )}
-            </div>
-            <button
-              type="button"
-              className="bia-btn-tertiary bia-catimg-edit-btn"
-              onClick={() => onStartEdit(img.id)}
-              title="Kategorien bearbeiten"
-            >
-              Bearbeiten
-            </button>
-          </>
-        )}
+        </div>
+      </div>
+    );
+  }
 
-        {!isEditing && (
-          <DeleteRowButton itemName={rowName} onClick={onDelete} className="bia-row-delete-btn" />
+  // Same column grid as the Kulinarik-Typen rows above (SortableIconRow):
+  // name column, then the Hellmodus/Dunkelmodus slot columns. A category
+  // image only ever has one variant, so it sits in the "Hellmodus normal"
+  // slot and the other three are shown disabled, exactly like a Kulinarik-Typ
+  // row without an "aktiv" state.
+  return (
+    <div className={`bia-row bia-catimg-row-wrap${offset < 0 ? ' bia-swipe-active' : ''}`}>
+      <div className="swipe-delete-background" aria-hidden={!swipeVisible}>
+        {swipeVisible && (
+          <button
+            type="button"
+            className="swipe-delete-action"
+            onClick={handleSwipeDeleteClick}
+            aria-label={`${rowName} entfernen`}
+          >
+            <span className="swipe-delete-icon-text">🗑</span>
+          </button>
         )}
+      </div>
+      <div className="bia-row-content delete-row-hover-target" style={swipeContentStyle} {...handlers}>
+        <span className="bia-drag-handle-placeholder" aria-hidden="true" />
+
+        <div className="bia-row-name bia-catimg-row-name">
+          <span className="bia-row-name-static" title={rowName}>{rowName}</span>
+          <button
+            type="button"
+            className="bia-btn-tertiary bia-catimg-edit-btn"
+            onClick={() => onStartEdit(img.id)}
+            title="Kategorien bearbeiten"
+          >
+            Bearbeiten
+          </button>
+        </div>
+
+        <div className="bia-slot-col">
+          <VariantSlot
+            mode="light"
+            value={img.image || (isUploading ? '…' : '')}
+            label={`${rowName} – Bild hochladen/ändern`}
+            onClick={() => onImageClick(img.id)}
+          />
+        </div>
+        <div className="bia-slot-col">
+          <VariantSlot mode="light" value={null} disabled label={`${rowName} – für Speisekategorien nicht verfügbar`} />
+        </div>
+        <div className="bia-col-sep" aria-hidden="true">│</div>
+        <div className="bia-slot-col">
+          <VariantSlot mode="dark" value={null} disabled label={`${rowName} – für Speisekategorien nicht verfügbar`} />
+        </div>
+        <div className="bia-slot-col">
+          <VariantSlot mode="dark" value={null} disabled label={`${rowName} – für Speisekategorien nicht verfügbar`} />
+        </div>
+
+        <DeleteRowButton itemName={rowName} onClick={onDelete} className="bia-row-delete-btn" />
       </div>
     </div>
   );
