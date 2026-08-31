@@ -2411,6 +2411,8 @@ function App() {
           allUsers={allUsers}
           events={events}
           guestProfiles={guestProfiles}
+          allGuestProfiles={allGuestProfiles}
+          allGuestProfilesLoaded={allGuestProfilesLoaded}
           customDrinks={customDrinks}
           customDrinksLoaded={customDrinksLoaded}
         />

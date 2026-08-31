@@ -508,7 +508,7 @@ function SortableDrinkItem({ id, displayName, isFavorite, onRemove, swipeDeleteI
   );
 }
 
-function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEvents = [], guestProfiles = [], customDrinks: sharedCustomDrinks = [], customDrinksLoaded }) {
+function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEvents = [], guestProfiles = [], allGuestProfiles = [], allGuestProfilesLoaded = false, customDrinks: sharedCustomDrinks = [], customDrinksLoaded }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [menuDate, setMenuDate] = useState('');
@@ -554,8 +554,12 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
   const [preparingNewEvent, setPreparingNewEvent] = useState(false);
   // Guests from the Event module that can be tagged as pills in the
   // description field (see the "menuDescription" form-group below); also
-  // subscribed once at App level.
-  const guests = guestProfiles;
+  // subscribed once at App level. Menus (unlike guest profiles) are shared
+  // across all editors, so a menu's descriptionGuestIds may reference guest
+  // profiles owned by a different user. Admins can read every user's guest
+  // profiles (see GuestManagementPage), so fall back to allGuestProfiles for
+  // them instead of just the current user's own guestProfiles.
+  const guests = (currentUser?.isAdmin && allGuestProfilesLoaded) ? allGuestProfiles : guestProfiles;
   const [descriptionGuestIds, setDescriptionGuestIds] = useState([]);
   const [guestSearchQuery, setGuestSearchQuery] = useState('');
   // Set while linking to an existing event whose guest list conflicts with

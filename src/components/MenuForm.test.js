@@ -194,6 +194,44 @@ describe('MenuForm - description field guest pills', () => {
     fireEvent.click(screen.getByText('Rückgängig'));
     expect(screen.getByText('Ben Beispiel')).toBeInTheDocument();
   });
+
+  test('admins resolve guest pill names from allGuestProfiles when the guest belongs to another user', () => {
+    const otherUsersGuest = { id: 'guest-3', vorname: 'Clara', nachname: 'Fremd' };
+    render(
+      <MenuForm
+        menu={{ id: 'menu-1', descriptionGuestIds: ['guest-3'] }}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={{ id: 'user-1', isAdmin: true }}
+        guestProfiles={guests}
+        allGuestProfiles={[...guests, otherUsersGuest]}
+        allGuestProfilesLoaded
+        customDrinks={customDrinks}
+      />
+    );
+
+    expect(screen.getByText('Clara Fremd')).toBeInTheDocument();
+    expect(screen.queryByText('Unbenannter Gast')).not.toBeInTheDocument();
+  });
+
+  test('non-admins still see "Unbenannter Gast" for a pill they cannot resolve', () => {
+    render(
+      <MenuForm
+        menu={{ id: 'menu-1', descriptionGuestIds: ['guest-3'] }}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+        guestProfiles={guests}
+        allGuestProfiles={[]}
+        allGuestProfilesLoaded={false}
+        customDrinks={customDrinks}
+      />
+    );
+
+    expect(screen.getByText('Unbenannter Gast')).toBeInTheDocument();
+  });
 });
 
 describe('MenuForm - Drinks section manual drink selection', () => {
