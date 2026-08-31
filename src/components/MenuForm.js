@@ -1769,7 +1769,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
               <input
                 type="text"
                 className="typeahead-input menu-description-guest-search-input"
-                placeholder="Gast suchen und als Pille hinzufügen..."
+                placeholder="Suche Gäste und füge sie hinzu"
                 value={guestSearchQuery}
                 onChange={(e) => setGuestSearchQuery(e.target.value)}
               />
