@@ -101,6 +101,15 @@ service cloud.firestore {
       allow create, update, delete: if isModeratorOrAdmin();
     }
 
+    // Marker doc bumped by onNutritionReferenceChanged (Cloud Function) whenever the
+    // nutritionReferences collection changes, watched live by NutritionReferenceContext
+    // so open tabs/devices refetch. Same public-read reasoning as nutritionReferences
+    // above (share-link viewers); writes happen server-side via the Admin SDK only.
+    match /appConfig/nutritionReferences {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Common terms collection (e.g. grouped ingredient adjectives)
     // Public read is required so unauthenticated share-link viewers can use ingredient matching.
     match /commonTerms/{termId} {

@@ -16,6 +16,14 @@
         {"fieldPath": "importStatus", "order": "ASCENDING"},
         {"fieldPath": "importHeartbeatAt", "order": "ASCENDING"}
       ]
+    },
+    {
+      "collectionGroup": "cuisineProposals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "released", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
     }
   ],
   "fieldOverrides": [
