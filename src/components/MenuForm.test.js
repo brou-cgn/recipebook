@@ -9,6 +9,7 @@ const mockSubscribeToEvent = jest.fn();
 const mockSubscribeToGuestProfiles = jest.fn();
 const mockSaveCustomDrink = jest.fn();
 const mockCalculateEventDrinks = jest.fn();
+const mockGetEvent = jest.fn();
 const mockUpdateMenu = jest.fn();
 
 jest.mock('../utils/userFavorites', () => ({
@@ -59,6 +60,7 @@ jest.mock('../utils/eventsFirestore', () => ({
   subscribeToGuestProfiles: (...args) => mockSubscribeToGuestProfiles(...args),
   saveCustomDrink: (...args) => mockSaveCustomDrink(...args),
   calculateEventDrinks: (...args) => mockCalculateEventDrinks(...args),
+  getEvent: (...args) => mockGetEvent(...args),
 }));
 
 jest.mock('../utils/menuFirestore', () => ({
@@ -154,6 +156,7 @@ beforeEach(() => {
   });
   mockSaveCustomDrink.mockResolvedValue('drink-new-mojito');
   mockUpdateMenu.mockResolvedValue();
+  mockGetEvent.mockResolvedValue(null);
 });
 
 describe('MenuForm - description field guest pills', () => {
@@ -304,6 +307,38 @@ describe('MenuForm - Drinks section manual drink selection', () => {
       expect(capturedEventFormProps).not.toBeNull();
     });
     expect(capturedEventFormProps.initialEvent.selectedGuestIds).toEqual(['guest-1']);
+  });
+
+  test('re-syncs the menu\'s guest pills to whatever the new event was actually saved with', async () => {
+    // The embedded EventForm was seeded with guest-1, but the user could add
+    // guest-2 there (via its own "Gäste verwalten") before saving - the menu
+    // needs to end up with the event's actual final list, not the seed.
+    mockGetEvent.mockResolvedValue({ id: 'event-new', selectedGuestIds: ['guest-1', 'guest-2'] });
+
+    render(
+      <MenuForm
+        menu={{ id: 'menu-1', name: 'Testmenü', sections: [] }}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
+    fireEvent.click(await screen.findByText('Anna Adler'));
+
+    fireEvent.click(screen.getByText('Neue Kalkulation erstellen'));
+    await waitFor(() => expect(capturedEventFormProps).not.toBeNull());
+
+    await act(async () => {
+      await capturedEventFormProps.onSaved('event-new');
+    });
+
+    expect(mockGetEvent).toHaveBeenCalledWith('user-1', 'event-new');
+    expect(mockUpdateMenu).toHaveBeenCalledWith('menu-1', { descriptionGuestIds: ['guest-1', 'guest-2'] });
+    expect(await screen.findByText('Ben Beispiel')).toBeInTheDocument();
   });
 
   test('adds the predefined Mineralwasser drink to both the new event and the menu\'s Drinks section when missing', async () => {
@@ -675,6 +710,10 @@ describe('MenuForm - linking an existing event merges guests', () => {
     fireEvent.click(screen.getByText('Bestehende Kalkulation verknüpfen'));
     fireEvent.click(await screen.findByText('Sommerfest'));
 
+    // Both the menu (Anna) and the event (guest-2) already have guests, so
+    // linking asks which list to keep - pick "Alle Gäste" to merge both.
+    fireEvent.click(await screen.findByText('Alle Gäste'));
+
     expect(await screen.findByText('Anna Adler')).toBeInTheDocument();
     expect(screen.getByText('Ben Beispiel')).toBeInTheDocument();
   });
@@ -731,10 +770,166 @@ describe('MenuForm - linking an existing event merges guests', () => {
     fireEvent.click(screen.getByText('Bestehende Kalkulation verknüpfen'));
     fireEvent.click(await screen.findByText('Sommerfest'));
 
+    // Both sides already have guests - pick "Alle Gäste" to merge both.
+    fireEvent.click(await screen.findByText('Alle Gäste'));
+
     await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalled());
     const [event, eventId] = mockCalculateEventDrinks.mock.calls[0];
     expect(eventId).toBe('event-9');
     expect(event.selectedGuestIds).toEqual(expect.arrayContaining(['guest-1', 'guest-2']));
+  });
+
+  test('adopts the event\'s guests onto the menu with no prompt when only the event has guests', async () => {
+    mockSubscribeToEvents.mockImplementation((uid, callback) => {
+      callback([{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 1, children: 0 }, selectedGuestIds: ['guest-2'] }]);
+      return () => {};
+    });
+
+    render(
+      <MenuForm
+        menu={null}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Bestehende Kalkulation verknüpfen'));
+    fireEvent.click(await screen.findByText('Sommerfest'));
+
+    expect(screen.queryByText('Gästelisten zusammenführen')).not.toBeInTheDocument();
+    expect(await screen.findByText('Ben Beispiel')).toBeInTheDocument();
+    // The event already had exactly what it needs - no push back to it.
+    expect(mockCalculateEventDrinks).not.toHaveBeenCalled();
+  });
+
+  test('pushes the menu\'s guests onto the event with no prompt when only the menu has guests', async () => {
+    mockSubscribeToEvents.mockImplementation((uid, callback) => {
+      callback([{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 0, children: 0 }, selectedGuestIds: [] }]);
+      return () => {};
+    });
+
+    render(
+      <MenuForm
+        menu={null}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
+    fireEvent.click(await screen.findByText('Anna Adler'));
+
+    fireEvent.click(screen.getByText('Bestehende Kalkulation verknüpfen'));
+    fireEvent.click(await screen.findByText('Sommerfest'));
+
+    expect(screen.queryByText('Gästelisten zusammenführen')).not.toBeInTheDocument();
+    await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalled());
+    const [event, eventId] = mockCalculateEventDrinks.mock.calls[0];
+    expect(eventId).toBe('event-9');
+    expect(event.selectedGuestIds).toEqual(['guest-1']);
+  });
+
+  test('asks which list to keep when both sides already have guests, and "Gäste vom Event" discards the menu\'s own', async () => {
+    mockSubscribeToEvents.mockImplementation((uid, callback) => {
+      callback([{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 1, children: 0 }, selectedGuestIds: ['guest-2'] }]);
+      return () => {};
+    });
+
+    render(
+      <MenuForm
+        menu={null}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
+    fireEvent.click(await screen.findByText('Anna Adler'));
+
+    fireEvent.click(screen.getByText('Bestehende Kalkulation verknüpfen'));
+    fireEvent.click(await screen.findByText('Sommerfest'));
+
+    expect(await screen.findByText('Gästelisten zusammenführen')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Gäste vom Event'));
+
+    // The menu now shows the event's guest (Ben), Anna is gone, and since
+    // the event's own list didn't change, nothing gets pushed back to it.
+    expect(await screen.findByText('Ben Beispiel')).toBeInTheDocument();
+    expect(screen.queryByText('Anna Adler')).not.toBeInTheDocument();
+    expect(mockCalculateEventDrinks).not.toHaveBeenCalled();
+  });
+
+  test('asks which list to keep when both sides already have guests, and "Gäste vom Menü" pushes the menu\'s list onto the event', async () => {
+    mockSubscribeToEvents.mockImplementation((uid, callback) => {
+      callback([{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 1, children: 0 }, selectedGuestIds: ['guest-2'] }]);
+      return () => {};
+    });
+
+    render(
+      <MenuForm
+        menu={null}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
+    fireEvent.click(await screen.findByText('Anna Adler'));
+
+    fireEvent.click(screen.getByText('Bestehende Kalkulation verknüpfen'));
+    fireEvent.click(await screen.findByText('Sommerfest'));
+
+    fireEvent.click(await screen.findByText('Gäste vom Menü'));
+
+    expect(await screen.findByText('Anna Adler')).toBeInTheDocument();
+    expect(screen.queryByText('Ben Beispiel')).not.toBeInTheDocument();
+    await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalled());
+    const [event, eventId] = mockCalculateEventDrinks.mock.calls[0];
+    expect(eventId).toBe('event-9');
+    expect(event.selectedGuestIds).toEqual(['guest-1']);
+  });
+
+  test('cancelling the conflict dialog leaves the menu unlinked', async () => {
+    mockSubscribeToEvents.mockImplementation((uid, callback) => {
+      callback([{ id: 'event-9', eventName: 'Sommerfest', date: '2025-07-01', durationHours: 4, guests: { adults: 1, children: 0 }, selectedGuestIds: ['guest-2'] }]);
+      return () => {};
+    });
+
+    render(
+      <MenuForm
+        menu={null}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
+    fireEvent.click(await screen.findByText('Anna Adler'));
+
+    fireEvent.click(screen.getByText('Bestehende Kalkulation verknüpfen'));
+    fireEvent.click(await screen.findByText('Sommerfest'));
+
+    fireEvent.click(await screen.findByText('Abbrechen'));
+
+    expect(screen.queryByText('Gästelisten zusammenführen')).not.toBeInTheDocument();
+    // Still on the link picker, nothing persisted.
+    expect(await screen.findByText('Sommerfest')).toBeInTheDocument();
+    expect(mockUpdateMenu).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ eventId: 'event-9' }));
+    expect(mockCalculateEventDrinks).not.toHaveBeenCalled();
   });
 });
 

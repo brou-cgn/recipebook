@@ -8,9 +8,10 @@ import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage, 
 import { uploadMenuGridImage, uploadMenuGridImageDark, deleteMenuGridImage, deleteMenuGridImageDark, isStorageUrl } from '../utils/storageUtils';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getButtonIcons } from '../utils/customLists';
 import { getCategoryImages } from '../utils/categoryImages';
-import { subscribeToEvent, subscribeToEvents, subscribeToCustomDrinks, subscribeToAllCustomDrinks, subscribeToGuestProfiles, saveCustomDrink, calculateEventDrinks } from '../utils/eventsFirestore';
+import { getEvent, subscribeToEvent, subscribeToEvents, subscribeToCustomDrinks, subscribeToAllCustomDrinks, subscribeToGuestProfiles, saveCustomDrink, calculateEventDrinks } from '../utils/eventsFirestore';
 import { updateMenu } from '../utils/menuFirestore';
 import { getGuestDisplayName, computeGuestPreferenceMultipliers } from '../utils/guestPreferences';
+import { pushGuestIdsToLinkedEvent, resolveGuestLinkChoice } from '../utils/guestLinkSync';
 import { mergePredefinedDrinks, getDrinkParentCategoryId, categoryHasOwnBudget } from '../utils/drinkCategories';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { encodeRecipeLink, decodeRecipeLink } from '../utils/recipeLinks';
@@ -20,6 +21,7 @@ import EventForm from './EventForm';
 import DrinkManagementPage from './DrinkManagementPage';
 import DeleteRowButton from './DeleteRowButton';
 import UndoSnackbar from './UndoSnackbar';
+import GuestLinkConflictDialog from './GuestLinkConflictDialog';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import {
@@ -553,6 +555,9 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [guests, setGuests] = useState([]);
   const [descriptionGuestIds, setDescriptionGuestIds] = useState([]);
   const [guestSearchQuery, setGuestSearchQuery] = useState('');
+  // Set while linking to an existing event whose guest list conflicts with
+  // this menu's own (both non-empty) - see handleLinkEvent/applyGuestLinkChoice.
+  const [guestLinkConflict, setGuestLinkConflict] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -913,31 +918,19 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   // Immediately mirrors a guest-pill add/remove into the linked event, so the
   // two lists never depend on the menu's own "Speichern" being clicked
   // afterwards (mirrors how the pill itself disappears/appears immediately).
-  // `targetEventId`/`eventDoc` are passed explicitly rather than read from
-  // `eventId`/`linkedEvent` state, since right after linking a new event
-  // those haven't propagated/loaded yet.
-  const pushGuestsToEvent = async (targetEventId, nextGuestIds, eventDoc) => {
-    if (!targetEventId || !eventDoc) return;
-    try {
-      const { id: _eventDocId, berechnung: _berechnung, ...eventFields } = eventDoc;
-      const allEventDrinks = mergePredefinedDrinks(linkedEventCustomDrinks);
-      const targetDriverGuestIds = (eventDoc.driverGuestIds || []).filter((id) => nextGuestIds.includes(id));
-      const selectedGuestObjs = guests.filter((guest) => nextGuestIds.includes(guest.id));
-      const guestNamesById = selectedGuestObjs.reduce((acc, guest) => {
-        acc[guest.id] = getGuestDisplayName(guest) || 'Unbenannter Gast';
-        return acc;
-      }, {});
-      const guestPreferenceMultipliers = computeGuestPreferenceMultipliers(selectedGuestObjs, allEventDrinks, targetDriverGuestIds);
-      await calculateEventDrinks({
-        ...eventFields,
-        selectedGuestIds: nextGuestIds,
-        driverGuestIds: targetDriverGuestIds,
-        guestNamesById,
-        guestPreferenceMultipliers,
-      }, targetEventId);
-    } catch (err) {
-      console.error('[MenuForm] Fehler beim Synchronisieren der Event-Gäste:', err);
-    }
+  // `targetEventId`/`targetOwnerId`/`eventDoc` are passed explicitly rather
+  // than read from `eventId`/`eventOwnerId`/`linkedEvent` state, since right
+  // after linking a new event those haven't propagated/loaded yet.
+  const pushGuestsToEvent = (targetEventId, targetOwnerId, nextGuestIds, eventDoc) => {
+    if (!targetEventId || !targetOwnerId) return;
+    pushGuestIdsToLinkedEvent({
+      ownerId: targetOwnerId,
+      eventId: targetEventId,
+      guestIds: nextGuestIds,
+      guests,
+      customDrinks: linkedEventCustomDrinks,
+      eventDoc,
+    });
   };
 
   // Persists the menu <-> event link on the menu document itself right away,
@@ -953,21 +946,48 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     });
   };
 
-  const handleLinkEvent = (id) => {
+  const completeLinkEvent = (id, finalMenuGuestIds, eventPushGuestIds, targetEvent) => {
     setEventId(id);
     setEventOwnerId(currentUser.id);
+    setDescriptionGuestIds(finalMenuGuestIds);
     setFormSubView('main');
     persistEventLink(id, currentUser.id);
-    // Linking to an existing event merges the guest lists on both sides
-    // (union) so no guest already present on either side is lost, and pushes
-    // the merge to the event right away.
+    if (eventPushGuestIds) {
+      pushGuestsToEvent(id, currentUser.id, eventPushGuestIds, targetEvent);
+    }
+  };
+
+  // Linking to an existing event: if only one side already has guests, that
+  // list simply wins on both sides. If BOTH sides already have guests, ask
+  // the user which list to keep (see GuestLinkConflictDialog / applyGuestLinkChoice).
+  const handleLinkEvent = (id) => {
     const targetEvent = availableEvents.find((event) => event.id === id);
     const eventGuestIds = Array.isArray(targetEvent?.selectedGuestIds) ? targetEvent.selectedGuestIds : [];
-    if (eventGuestIds.length > 0) {
-      const merged = [...descriptionGuestIds, ...eventGuestIds.filter((guestId) => !descriptionGuestIds.includes(guestId))];
-      setDescriptionGuestIds(merged);
-      pushGuestsToEvent(id, merged, targetEvent);
+    const menuGuestIds = descriptionGuestIds;
+
+    if (eventGuestIds.length > 0 && menuGuestIds.length > 0) {
+      setGuestLinkConflict({ eventId: id, targetEvent, eventGuestIds, menuGuestIds });
+      return;
     }
+    if (eventGuestIds.length > 0) {
+      // Only the event has guests - adopt them onto the menu.
+      completeLinkEvent(id, eventGuestIds, null, targetEvent);
+    } else if (menuGuestIds.length > 0) {
+      // Only the menu has guests - push them onto the event.
+      completeLinkEvent(id, menuGuestIds, menuGuestIds, targetEvent);
+    } else {
+      completeLinkEvent(id, [], null, targetEvent);
+    }
+  };
+
+  const applyGuestLinkChoice = (choice) => {
+    if (!guestLinkConflict) return;
+    const { eventId: targetEventId, targetEvent, eventGuestIds, menuGuestIds } = guestLinkConflict;
+    const resolved = resolveGuestLinkChoice(choice, eventGuestIds, menuGuestIds);
+    // 'event' keeps the event's list as-is, so nothing needs pushing back to it.
+    const eventPushGuestIds = choice === 'event' ? null : resolved.eventGuestIds;
+    completeLinkEvent(targetEventId, resolved.menuGuestIds, eventPushGuestIds, targetEvent);
+    setGuestLinkConflict(null);
   };
 
   const handleUnlinkEvent = () => {
@@ -1419,7 +1439,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     const next = [...descriptionGuestIds, guestId];
     setDescriptionGuestIds(next);
     if (eventId && linkedEvent && eventOwnerId === currentUser?.id) {
-      pushGuestsToEvent(eventId, next, linkedEvent);
+      pushGuestsToEvent(eventId, eventOwnerId, next, linkedEvent);
     }
     setGuestSearchQuery('');
   };
@@ -1429,7 +1449,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     const canSyncToEvent = eventId && linkedEvent && eventOwnerId === currentUser?.id;
     const next = descriptionGuestIds.filter((id) => id !== guestId);
     setDescriptionGuestIds(next);
-    if (canSyncToEvent) pushGuestsToEvent(eventId, next, linkedEvent);
+    if (canSyncToEvent) pushGuestsToEvent(eventId, eventOwnerId, next, linkedEvent);
     notifyDeleted({
       id: `description-guest:${guestId}`,
       name: displayName || 'Gast',
@@ -1448,7 +1468,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
           restored = nextIds;
           return nextIds;
         });
-        if (canSyncToEvent && restored) pushGuestsToEvent(eventId, restored, linkedEvent);
+        if (canSyncToEvent && restored) pushGuestsToEvent(eventId, eventOwnerId, restored, linkedEvent);
       },
     });
   };
@@ -1607,11 +1627,21 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
         recipes={recipes}
         initialEvent={{ eventName: name.trim(), date: menuDate, customDrinkIds: newEventDrinkIds, selectedGuestIds: descriptionGuestIds }}
         onCancel={() => setFormSubView('main')}
-        onSaved={(newEventId) => {
+        onSaved={async (newEventId) => {
           setEventId(newEventId);
           setEventOwnerId(currentUser.id);
           setFormSubView('main');
           persistEventLink(newEventId, currentUser.id);
+          // The embedded EventForm was seeded with this menu's guests, but
+          // its own "Gäste verwalten" may have changed the list further
+          // before the event was created - re-read the event as actually
+          // saved so the menu ends up with the same final guest list.
+          const createdEvent = await getEvent(currentUser.id, newEventId);
+          const finalGuestIds = Array.isArray(createdEvent?.selectedGuestIds)
+            ? createdEvent.selectedGuestIds
+            : descriptionGuestIds;
+          setDescriptionGuestIds(finalGuestIds);
+          if (menu?.id) updateMenu(menu.id, { descriptionGuestIds: finalGuestIds });
         }}
         onManageDrinks={() => setFormSubView('manageDrinks')}
       />
@@ -1657,6 +1687,14 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
               </div>
             ))}
           </div>
+        )}
+        {guestLinkConflict && (
+          <GuestLinkConflictDialog
+            eventGuestCount={guestLinkConflict.eventGuestIds.length}
+            menuGuestCount={guestLinkConflict.menuGuestIds.length}
+            onChoose={applyGuestLinkChoice}
+            onCancel={() => setGuestLinkConflict(null)}
+          />
         )}
       </div>
     );
