@@ -969,6 +969,52 @@ function ButtonIconsAdminTab() {
     });
   };
 
+  // Mirror of handleConvertCategoryImageToRow above: converts a row into a
+  // Speisekategorien image (triggered by dragging a row into the
+  // Speisekategorien group - see handleDragEnd below). Only rows that already
+  // carry a delete affordance (cuisineType or custom rows - see the `def.cuisineType
+  // || def.custom` check on DeleteRowButton in SortableIconRow) are eligible;
+  // permanent app-button rows have no delete UI at all, so they must stay
+  // undroppable here too instead of silently disappearing from their group.
+  // A category image only means something once linked to a Speisekategorie,
+  // so it lands straight in the category-picker (like clicking an existing
+  // image's name) rather than as an unusable, unlinked image.
+  const handleConvertRowToCategoryImage = async (sourceGroupId, rowKey, destIndex) => {
+    const sourceGroup = data.groups.find((g) => g.id === sourceGroupId);
+    if (!sourceGroup) return;
+    const rowIdx = sourceGroup.rowKeys.findIndex((r) => r.key === rowKey);
+    if (rowIdx === -1) return;
+    const def = rowDefsByKey.get(rowKey);
+    if (!def || !(def.cuisineType || def.custom)) return;
+
+    const value = icons[rowKey];
+    const image = isBase64Image(value) ? value : '';
+
+    persistData({
+      ...data,
+      groups: data.groups.map((g) => (g.id === sourceGroupId ? { ...g, rowKeys: g.rowKeys.filter((r) => r.key !== rowKey) } : g)),
+      hiddenRowKeys: [...data.hiddenRowKeys, rowKey],
+    });
+
+    try {
+      const newImage = await addCategoryImage(image, [], categoryImages.length);
+      setCategoryImages((prev) => {
+        const insertAt = destIndex === undefined ? prev.length : Math.min(destIndex, prev.length);
+        const next = [...prev.slice(0, insertAt), newImage, ...prev.slice(insertAt)];
+        if (insertAt < prev.length) {
+          reorderCategoryImages(next.map((i) => i.id)).catch((error) => {
+            console.error('Error ordering converted category image:', error);
+          });
+        }
+        return next;
+      });
+      setEditingCategoryImageId(newImage.id);
+      setSelectedCategories([]);
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
   // ---- drag & drop (groups reorder, rows reorder within/across groups)
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -1045,6 +1091,22 @@ function ButtonIconsAdminTab() {
       const sourceIndex = sourceGroup.rowKeys.findIndex((r) => r.key === active.id);
       if (sourceIndex === -1) return;
 
+      // Speisekategorien is not a real icon-row group (its content lives in the
+      // categoryImages collection, not rowKeys), so a row dropped anywhere in
+      // it - its header, empty-state drop zone, or on top of one of its image
+      // rows - converts into a category image instead of joining rowKeys (see
+      // handleConvertRowToCategoryImage).
+      const overGroupId = resolveOverGroupId(over);
+      if (overGroupId === MEAL_CATEGORIES_GROUP_ID) {
+        let destCatIndex = categoryImages.length;
+        if (over.data.current?.type === 'catimg') {
+          const idx = categoryImages.findIndex((img) => img.id === over.id);
+          if (idx !== -1) destCatIndex = idx;
+        }
+        handleConvertRowToCategoryImage(sourceGroupId, active.id, destCatIndex);
+        return;
+      }
+
       let destGroupId = null;
       let destIndex = -1;
       if (over.data.current?.type === 'row') {
@@ -1057,11 +1119,6 @@ function ButtonIconsAdminTab() {
         destIndex = destGroup ? destGroup.rowKeys.length : -1;
       }
       if (!destGroupId || destIndex === -1) return;
-      // Speisekategorien is not a real icon-row group (its content lives in the
-      // categoryImages collection, not rowKeys) - it never renders row drop
-      // targets itself, but its group container is still a valid drop target,
-      // so reject a row dropped there directly instead of silently orphaning it.
-      if (destGroupId === MEAL_CATEGORIES_GROUP_ID) return;
 
       if (sourceGroupId === destGroupId) {
         if (sourceIndex === destIndex) return;
