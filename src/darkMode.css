@@ -1961,6 +1961,45 @@
   border-color: #555;
 }
 
+/* ---- Unified "Einheiten" table ---- */
+[data-theme="dark"] .ut-card {
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .ut-header-row {
+  background: #2a2a2a;
+  color: #ccc;
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .ut-row {
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .ut-row-content {
+  background: #1e1e1e;
+}
+
+[data-theme="dark"] .ut-new-row {
+  background: #262626;
+}
+
+[data-theme="dark"] .ut-drag-handle {
+  color: #999;
+}
+
+[data-theme="dark"] .ut-cell-input,
+[data-theme="dark"] .ut-cell-select {
+  background: #1e1e1e;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .ut-cell-input:disabled {
+  background: #2a2a2a;
+  color: #777;
+}
+
 /* ---- FAQ items ---- */
 [data-theme="dark"] .faq-item {
   background: #1e1e1e;

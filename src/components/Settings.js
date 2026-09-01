@@ -15,6 +15,10 @@ import SeasonMatrixTab from './SeasonMatrixTab';
 import NutritionReferenceTab from './NutritionReferenceTab';
 import DrinkWeightsTab from './DrinkWeightsTab';
 import ButtonIconsAdminTab from './ButtonIconsAdminTab';
+import DeleteRowButton from './DeleteRowButton';
+import UndoSnackbar from './UndoSnackbar';
+import useUndoableDelete from '../hooks/useUndoableDelete';
+import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import {
   DndContext,
   closestCenter,
@@ -123,31 +127,127 @@ function SortableListItem({
   );
 }
 
-function SortablePortionUnitItem({ id, unit, onRemove }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
+// Unified "Einheiten" table (Maßeinheiten, Portionseinheiten, Gebindeeinheiten,
+// Getränkeeinheiten) - see UnitTableRow/NewUnitRow below. Storage stays split
+// across lists.units (flat strings) and lists.{portion,package,drink}Units
+// ({id, singular, plural}) so every other part of the app that already reads
+// those four lists keeps working unchanged; only the Settings UI merges them
+// into one table with a per-row "Art" column.
+const UNIT_ROW_TYPE_OPTIONS = [
+  { value: 'unit', label: 'Maßeinheit' },
+  { value: 'portion', label: 'Portionseinheit' },
+  { value: 'package', label: 'Gebindeeinheit' },
+  { value: 'drink', label: 'Getränkeeinheit' },
+];
+
+function slugifyUnitId(value) {
+  return value.toLowerCase().replace(/\s+/g, '-');
+}
+
+function UnitTableRow({ row, isDeleteVisible, onDeleteVisibleChange, onFieldChange, onTypeChange, onDelete }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: row.key });
+  const { offset, isDeleteVisible: swipeVisible, reset, handlers } = useSwipeToDelete({
+    isDeleteVisible,
+    onDeleteVisibleChange,
+  });
 
   const style = getSortableItemStyle(transform, transition, isDragging);
+  const contentStyle = {
+    transform: `translateX(${offset}px)`,
+    transition: isDragging ? transition : 'transform 0.15s ease',
+  };
+  const rowLabel = row.singular || 'Einheit';
+
+  const handleSwipeDeleteClick = () => {
+    onDelete();
+    reset();
+  };
 
   return (
-    <div ref={setNodeRef} style={style} className={`list-item ${isDragging ? 'dragging' : ''}`}>
-      <button
-        type="button"
-        className="drag-handle"
-        {...attributes}
-        {...listeners}
-        aria-label="Verschieben"
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`ut-row${isDragging ? ' ut-dragging' : ''}${offset < 0 ? ' ut-swipe-active' : ''}`}
+    >
+      <div className="swipe-delete-background" aria-hidden={!swipeVisible}>
+        {swipeVisible && (
+          <button
+            type="button"
+            className="swipe-delete-action"
+            onClick={handleSwipeDeleteClick}
+            aria-label={`${rowLabel} entfernen`}
+          >
+            <span className="swipe-delete-icon-text">🗑</span>
+          </button>
+        )}
+      </div>
+      <div className="ut-row-content delete-row-hover-target" style={contentStyle} {...handlers}>
+        <button type="button" className="ut-drag-handle" {...attributes} {...listeners} aria-label={`${rowLabel} verschieben`}>⠿</button>
+        <input
+          type="text"
+          className="ut-cell-input"
+          value={row.singular}
+          onChange={(e) => onFieldChange(row, 'singular', e.target.value)}
+          aria-label={`Name (Singular) – ${rowLabel}`}
+        />
+        <input
+          type="text"
+          className="ut-cell-input"
+          value={row.plural}
+          onChange={(e) => onFieldChange(row, 'plural', e.target.value)}
+          disabled={row.type === 'unit'}
+          placeholder={row.type === 'unit' ? '–' : ''}
+          aria-label={`Name (Plural) – ${rowLabel}`}
+        />
+        <select
+          className="ut-cell-select"
+          value={row.type}
+          onChange={(e) => onTypeChange(row, e.target.value)}
+          aria-label={`Art – ${rowLabel}`}
+        >
+          {UNIT_ROW_TYPE_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+        <DeleteRowButton itemName={rowLabel} onClick={onDelete} className="ut-row-delete-btn" />
+      </div>
+    </div>
+  );
+}
+
+function NewUnitRow({ type, singular, plural, onTypeChange, onSingularChange, onPluralChange, onAdd }) {
+  return (
+    <div className="ut-new-row">
+      <input
+        type="text"
+        className="ut-cell-input"
+        value={singular}
+        onChange={(e) => onSingularChange(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && onAdd()}
+        placeholder="Singular (z.B. Flasche)"
+        aria-label="Neue Einheit – Singular"
+      />
+      <input
+        type="text"
+        className="ut-cell-input"
+        value={plural}
+        onChange={(e) => onPluralChange(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && onAdd()}
+        placeholder={type === 'unit' ? '– (nicht benötigt)' : 'Plural (z.B. Flaschen)'}
+        disabled={type === 'unit'}
+        aria-label="Neue Einheit – Plural"
+      />
+      <select
+        className="ut-cell-select"
+        value={type}
+        onChange={(e) => onTypeChange(e.target.value)}
+        aria-label="Neue Einheit – Art"
       >
-        ⋮⋮
-      </button>
-      <span>{unit.singular} / {unit.plural}</span>
-      <button className="remove-btn" onClick={onRemove} title="Entfernen">×</button>
+        {UNIT_ROW_TYPE_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+      <button type="button" className="ut-add-btn" onClick={onAdd}>Hinzufügen</button>
     </div>
   );
 }
@@ -183,14 +283,12 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   });
   const [newCuisine, setNewCuisine] = useState('');
   const [newCategory, setNewCategory] = useState('');
-  const [newUnit, setNewUnit] = useState('');
   const [newCustomUnit, setNewCustomUnit] = useState('');
-  const [newPortionSingular, setNewPortionSingular] = useState('');
-  const [newPortionPlural, setNewPortionPlural] = useState('');
-  const [newPackageSingular, setNewPackageSingular] = useState('');
-  const [newPackagePlural, setNewPackagePlural] = useState('');
-  const [newDrinkUnitSingular, setNewDrinkUnitSingular] = useState('');
-  const [newDrinkUnitPlural, setNewDrinkUnitPlural] = useState('');
+  const [newUnitRowType, setNewUnitRowType] = useState('unit');
+  const [newUnitRowSingular, setNewUnitRowSingular] = useState('');
+  const [newUnitRowPlural, setNewUnitRowPlural] = useState('');
+  const [unitRowDeleteVisibleKey, setUnitRowDeleteVisibleKey] = useState(null);
+  const unitRowUndo = useUndoableDelete();
   const [newConversionIngredient, setNewConversionIngredient] = useState('');
   const [newConversionUnit, setNewConversionUnit] = useState('');
   const [newConversionGrams, setNewConversionGrams] = useState('');
@@ -810,99 +908,112 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     });
   };
 
-  const addUnit = () => {
-    if (newUnit.trim() && !lists.units.includes(newUnit.trim())) {
-      setLists({
-        ...lists,
-        units: [...lists.units, newUnit.trim()]
+  // Unified "Einheiten" table rows - see UnitTableRow/NewUnitRow.
+  const unitRows = [
+    ...lists.units.map((value, index) => ({ key: `unit:${index}`, type: 'unit', singular: value, plural: '', index })),
+    ...lists.portionUnits.map((u) => ({ key: `portion:${u.id}`, type: 'portion', singular: u.singular, plural: u.plural, id: u.id })),
+    ...lists.packageUnits.map((u) => ({ key: `package:${u.id}`, type: 'package', singular: u.singular, plural: u.plural, id: u.id })),
+    ...lists.drinkUnits.map((u) => ({ key: `drink:${u.id}`, type: 'drink', singular: u.singular, plural: u.plural, id: u.id })),
+  ];
+
+  const addUnitRow = () => {
+    const singular = newUnitRowSingular.trim();
+    if (!singular) return;
+
+    if (newUnitRowType === 'unit') {
+      if (lists.units.includes(singular)) return;
+      setLists({ ...lists, units: [...lists.units, singular] });
+      setNewUnitRowSingular('');
+      setNewUnitRowPlural('');
+      return;
+    }
+
+    const plural = newUnitRowPlural.trim();
+    if (!plural) return;
+    const key = `${newUnitRowType}Units`;
+    const newId = slugifyUnitId(singular);
+    if (lists[key].some(u => u.id === newId)) return;
+    setLists({ ...lists, [key]: [...lists[key], { id: newId, singular, plural }] });
+    setNewUnitRowSingular('');
+    setNewUnitRowPlural('');
+  };
+
+  const updateUnitRowText = (row, field, value) => {
+    if (row.type === 'unit') {
+      if (field !== 'singular') return;
+      setLists((prev) => {
+        const units = prev.units.slice();
+        units[row.index] = value;
+        return { ...prev, units };
       });
-      setNewUnit('');
+      return;
     }
+    const key = `${row.type}Units`;
+    setLists((prev) => ({
+      ...prev,
+      [key]: prev[key].map(u => (u.id === row.id ? { ...u, [field]: value } : u))
+    }));
   };
 
-  const removeUnit = (unit) => {
-    setLists({
-      ...lists,
-      units: lists.units.filter(u => u !== unit)
+  const changeUnitRowType = (row, newType) => {
+    if (newType === row.type) return;
+
+    if (newType === 'unit') {
+      if (lists.units.includes(row.singular)) return;
+      setLists((prev) => {
+        const sourceKey = `${row.type}Units`;
+        return {
+          ...prev,
+          [sourceKey]: prev[sourceKey].filter(u => u.id !== row.id),
+          units: [...prev.units, row.singular]
+        };
+      });
+      return;
+    }
+
+    const targetKey = `${newType}Units`;
+    const newId = slugifyUnitId(row.singular);
+    if (lists[targetKey].some(u => u.id === newId)) return;
+    const plural = row.plural || row.singular;
+
+    setLists((prev) => {
+      const next = { ...prev, [targetKey]: [...prev[targetKey], { id: newId, singular: row.singular, plural }] };
+      if (row.type === 'unit') {
+        next.units = prev.units.filter((_, i) => i !== row.index);
+      } else {
+        const sourceKey = `${row.type}Units`;
+        next[sourceKey] = prev[sourceKey].filter(u => u.id !== row.id);
+      }
+      return next;
     });
   };
 
-  const addPortionUnit = () => {
-    if (newPortionSingular.trim() && newPortionPlural.trim()) {
-      const newId = newPortionSingular.toLowerCase().replace(/\s+/g, '-');
-      const exists = lists.portionUnits.some(pu => pu.id === newId);
-      
-      if (!exists) {
-        setLists({
-          ...lists,
-          portionUnits: [...lists.portionUnits, {
-            id: newId,
-            singular: newPortionSingular.trim(),
-            plural: newPortionPlural.trim()
-          }]
-        });
-        setNewPortionSingular('');
-        setNewPortionPlural('');
-      }
-    }
-  };
+  const removeUnitRow = (row) => {
+    const key = row.type === 'unit' ? 'units' : `${row.type}Units`;
+    const removedIndex = row.type === 'unit' ? row.index : lists[key].findIndex(u => u.id === row.id);
 
-  const removePortionUnit = (unitId) => {
-    setLists({
-      ...lists,
-      portionUnits: lists.portionUnits.filter(pu => pu.id !== unitId)
+    setLists((prev) => {
+      if (row.type === 'unit') {
+        return { ...prev, units: prev.units.filter((_, i) => i !== row.index) };
+      }
+      return { ...prev, [key]: prev[key].filter(u => u.id !== row.id) };
     });
-  };
 
-  const addPackageUnit = () => {
-    if (newPackageSingular.trim() && newPackagePlural.trim()) {
-      const newId = newPackageSingular.toLowerCase().replace(/\s+/g, '-');
-      const exists = lists.packageUnits.some(pu => pu.id === newId);
-      if (!exists) {
-        setLists({
-          ...lists,
-          packageUnits: [...lists.packageUnits, {
-            id: newId,
-            singular: newPackageSingular.trim(),
-            plural: newPackagePlural.trim()
-          }]
+    unitRowUndo.notifyDeleted({
+      id: row.key,
+      name: row.singular || 'Einheit',
+      undo: () => {
+        setLists((prev) => {
+          if (row.type === 'unit') {
+            const units = prev.units.slice();
+            units.splice(Math.min(removedIndex, units.length), 0, row.singular);
+            return { ...prev, units };
+          }
+          const arr = prev[key].slice();
+          arr.splice(Math.min(removedIndex, arr.length), 0, { id: row.id, singular: row.singular, plural: row.plural });
+          return { ...prev, [key]: arr };
         });
-        setNewPackageSingular('');
-        setNewPackagePlural('');
       }
-    }
-  };
-
-  const removePackageUnit = (unitId) => {
-    setLists({
-      ...lists,
-      packageUnits: lists.packageUnits.filter(u => u.id !== unitId)
-    });
-  };
-
-  const addDrinkUnit = () => {
-    if (newDrinkUnitSingular.trim() && newDrinkUnitPlural.trim()) {
-      const newId = newDrinkUnitSingular.toLowerCase().replace(/\s+/g, '-');
-      const exists = lists.drinkUnits.some(u => u.id === newId);
-      if (!exists) {
-        setLists({
-          ...lists,
-          drinkUnits: [...lists.drinkUnits, {
-            id: newId,
-            singular: newDrinkUnitSingular.trim(),
-            plural: newDrinkUnitPlural.trim()
-          }]
-        });
-        setNewDrinkUnitSingular('');
-        setNewDrinkUnitPlural('');
-      }
-    }
-  };
-
-  const removeDrinkUnit = (unitId) => {
-    setLists({
-      ...lists,
-      drinkUnits: lists.drinkUnits.filter(u => u.id !== unitId)
     });
   };
 
@@ -1009,60 +1120,32 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     }
   };
 
-  const handleDragEndUnits = (event) => {
+  // Rows can only be reordered within their own "Art" - the four lists remain
+  // separate arrays under the hood, so a cross-type drag would have no sound
+  // meaning (use the Art column to move a row between types instead).
+  const handleDragEndUnitRows = (event) => {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setLists((prevLists) => {
-        const oldIndex = prevLists.units.indexOf(active.id);
-        const newIndex = prevLists.units.indexOf(over.id);
-        return {
-          ...prevLists,
-          units: arrayMove(prevLists.units, oldIndex, newIndex)
-        };
-      });
-    }
-  };
+    if (!over || active.id === over.id) return;
+    const activeKey = String(active.id);
+    const overKey = String(over.id);
+    const activeType = activeKey.slice(0, activeKey.indexOf(':'));
+    const overType = overKey.slice(0, overKey.indexOf(':'));
+    if (activeType !== overType) return;
 
-  const handleDragEndPortionUnits = (event) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setLists((prevLists) => {
-        const oldIndex = prevLists.portionUnits.findIndex(u => u.id === active.id);
-        const newIndex = prevLists.portionUnits.findIndex(u => u.id === over.id);
-        return {
-          ...prevLists,
-          portionUnits: arrayMove(prevLists.portionUnits, oldIndex, newIndex)
-        };
-      });
-    }
-  };
-
-  const handleDragEndPackageUnits = (event) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setLists((prevLists) => {
-        const oldIndex = prevLists.packageUnits.findIndex(u => u.id === active.id);
-        const newIndex = prevLists.packageUnits.findIndex(u => u.id === over.id);
-        return {
-          ...prevLists,
-          packageUnits: arrayMove(prevLists.packageUnits, oldIndex, newIndex)
-        };
-      });
-    }
-  };
-
-  const handleDragEndDrinkUnits = (event) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setLists((prevLists) => {
-        const oldIndex = prevLists.drinkUnits.findIndex(u => u.id === active.id);
-        const newIndex = prevLists.drinkUnits.findIndex(u => u.id === over.id);
-        return {
-          ...prevLists,
-          drinkUnits: arrayMove(prevLists.drinkUnits, oldIndex, newIndex)
-        };
-      });
-    }
+    setLists((prevLists) => {
+      if (activeType === 'unit') {
+        const oldIndex = parseInt(activeKey.slice(activeKey.indexOf(':') + 1), 10);
+        const newIndex = parseInt(overKey.slice(overKey.indexOf(':') + 1), 10);
+        return { ...prevLists, units: arrayMove(prevLists.units, oldIndex, newIndex) };
+      }
+      const listKey = `${activeType}Units`;
+      const activeId = activeKey.slice(activeKey.indexOf(':') + 1);
+      const overId = overKey.slice(overKey.indexOf(':') + 1);
+      const oldIndex = prevLists[listKey].findIndex(u => u.id === activeId);
+      const newIndex = prevLists[listKey].findIndex(u => u.id === overId);
+      if (oldIndex === -1 || newIndex === -1) return prevLists;
+      return { ...prevLists, [listKey]: arrayMove(prevLists[listKey], oldIndex, newIndex) };
+    });
   };
 
   // Favicon handlers
@@ -2174,122 +2257,46 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
         </div>
 
         <div className="settings-section">
-          <h3>Maßeinheiten</h3>
-          <div className="list-input">
-            <input
-              type="text"
-              value={newUnit}
-              onChange={(e) => setNewUnit(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && addUnit()}
-              placeholder="Neue Einheit hinzufügen..."
-            />
-            <button onClick={addUnit}>Hinzufügen</button>
-          </div>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndUnits}>
-            <SortableContext items={lists.units} strategy={verticalListSortingStrategy}>
-              <div className="list-items">
-                {lists.units.map((unit) => (
-                  <SortableListItem key={unit} id={unit} label={unit} onRemove={() => removeUnit(unit)} />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
-        </div>
-
-        <div className="settings-section">
-          <h3>Portionseinheiten</h3>
+          <h3>Einheiten</h3>
           <p className="section-description">
-            Definieren Sie benutzerdefinierte Portionseinheiten mit Singular- und Pluralformen (z.B. Pizza/Pizzen, Drink/Drinks).
+            Maßeinheiten, Portionseinheiten, Gebindeeinheiten und Getränkeeinheiten in einer Tabelle.
+            Die Spalte „Art" legt fest, wofür eine Einheit zur Auswahl steht; eine bestehende Zeile lässt sich
+            dort jederzeit einem anderen Typ zuordnen.
           </p>
-          <div className="list-input portion-unit-input">
-            <input
-              type="text"
-              value={newPortionSingular}
-              onChange={(e) => setNewPortionSingular(e.target.value)}
-              placeholder="Singular (z.B. Pizza)"
-            />
-            <input
-              type="text"
-              value={newPortionPlural}
-              onChange={(e) => setNewPortionPlural(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && addPortionUnit()}
-              placeholder="Plural (z.B. Pizzen)"
-            />
-            <button onClick={addPortionUnit}>Hinzufügen</button>
-          </div>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndPortionUnits}>
-            <SortableContext items={lists.portionUnits.map(u => u.id)} strategy={verticalListSortingStrategy}>
-              <div className="list-items">
-                {lists.portionUnits.map((unit) => (
-                  <SortablePortionUnitItem key={unit.id} id={unit.id} unit={unit} onRemove={() => removePortionUnit(unit.id)} />
+          <div className="ut-card">
+            <div className="ut-header-row">
+              <span className="ut-header-handle" aria-hidden="true" />
+              <span>Name (Singular)</span>
+              <span>Name (Plural)</span>
+              <span>Art</span>
+              <span className="ut-header-spacer" aria-hidden="true" />
+            </div>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndUnitRows}>
+              <SortableContext items={unitRows.map(r => r.key)} strategy={verticalListSortingStrategy}>
+                {unitRows.map((row) => (
+                  <UnitTableRow
+                    key={row.key}
+                    row={row}
+                    isDeleteVisible={unitRowDeleteVisibleKey === row.key}
+                    onDeleteVisibleChange={(visible) => setUnitRowDeleteVisibleKey(visible ? row.key : null)}
+                    onFieldChange={updateUnitRowText}
+                    onTypeChange={changeUnitRowType}
+                    onDelete={() => removeUnitRow(row)}
+                  />
                 ))}
-              </div>
-            </SortableContext>
-          </DndContext>
-        </div>
-
-        <div className="settings-section">
-          <h3>Gebindeeinheiten</h3>
-          <p className="section-description">
-            Definieren Sie die verfügbaren Gebindeeinheiten für Getränke mit Singular- und Pluralformen (z.B. Flasche/Flaschen, Dose/Dosen).
-          </p>
-          <div className="list-input portion-unit-input">
-            <input
-              type="text"
-              value={newPackageSingular}
-              onChange={(e) => setNewPackageSingular(e.target.value)}
-              placeholder="Singular (z.B. Flasche)"
+              </SortableContext>
+            </DndContext>
+            <NewUnitRow
+              type={newUnitRowType}
+              singular={newUnitRowSingular}
+              plural={newUnitRowPlural}
+              onTypeChange={setNewUnitRowType}
+              onSingularChange={setNewUnitRowSingular}
+              onPluralChange={setNewUnitRowPlural}
+              onAdd={addUnitRow}
             />
-            <input
-              type="text"
-              value={newPackagePlural}
-              onChange={(e) => setNewPackagePlural(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && addPackageUnit()}
-              placeholder="Plural (z.B. Flaschen)"
-            />
-            <button onClick={addPackageUnit}>Hinzufügen</button>
           </div>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndPackageUnits}>
-            <SortableContext items={lists.packageUnits.map(u => u.id)} strategy={verticalListSortingStrategy}>
-              <div className="list-items">
-                {lists.packageUnits.map((unit) => (
-                  <SortablePortionUnitItem key={unit.id} id={unit.id} unit={unit} onRemove={() => removePackageUnit(unit.id)} />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
-        </div>
-
-        <div className="settings-section">
-          <h3>Getränkeeinheiten</h3>
-          <p className="section-description">
-            Definieren Sie die verfügbaren Einheiten für Getränke mit Singular- und Pluralformen (z.B. Glas/Gläser, Flasche/Flaschen).
-          </p>
-          <div className="list-input portion-unit-input">
-            <input
-              type="text"
-              value={newDrinkUnitSingular}
-              onChange={(e) => setNewDrinkUnitSingular(e.target.value)}
-              placeholder="Singular (z.B. Glas)"
-            />
-            <input
-              type="text"
-              value={newDrinkUnitPlural}
-              onChange={(e) => setNewDrinkUnitPlural(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && addDrinkUnit()}
-              placeholder="Plural (z.B. Gläser)"
-            />
-            <button onClick={addDrinkUnit}>Hinzufügen</button>
-          </div>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndDrinkUnits}>
-            <SortableContext items={lists.drinkUnits.map(u => u.id)} strategy={verticalListSortingStrategy}>
-              <div className="list-items">
-                {lists.drinkUnits.map((unit) => (
-                  <SortablePortionUnitItem key={unit.id} id={unit.id} unit={unit} onRemove={() => removeDrinkUnit(unit.id)} />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
+          <UndoSnackbar itemName={unitRowUndo.pendingName} onUndo={unitRowUndo.undo} />
         </div>
 
         <div className="settings-section">

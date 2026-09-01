@@ -341,6 +341,153 @@
   z-index: 1000;
 }
 
+/* Unified "Einheiten" table (Maßeinheiten/Portionseinheiten/Gebindeeinheiten/
+   Getränkeeinheiten). Delete uses the shared DeleteRowButton + swipe-to-delete
+   base from DeleteRowButton.css (desktop button, mobile left-swipe - see
+   CLAUDE.md). */
+.ut-card {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.ut-header-row,
+.ut-row-content {
+  display: grid;
+  grid-template-columns: 32px minmax(110px, 1fr) minmax(110px, 1fr) 190px 28px;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.ut-header-row {
+  background: #f5f5f5;
+  font-weight: 600;
+  color: #333;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.ut-header-handle,
+.ut-header-spacer {
+  visibility: hidden;
+}
+
+.ut-row {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid #eee;
+}
+
+.ut-row:last-child {
+  border-bottom: none;
+}
+
+.ut-row.ut-dragging {
+  opacity: 0.5;
+  z-index: 10;
+}
+
+.ut-row-content {
+  position: relative;
+  z-index: 1;
+  background: #fff;
+}
+
+.ut-drag-handle {
+  background: transparent;
+  border: none;
+  color: #999;
+  cursor: grab;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: pan-y;
+}
+
+.ut-drag-handle:active {
+  cursor: grabbing;
+}
+
+.ut-cell-input,
+.ut-cell-select {
+  width: 100%;
+  min-width: 0;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: #fff;
+}
+
+.ut-cell-input:focus,
+.ut-cell-select:focus {
+  outline: none;
+  border-color: #402C1C;
+}
+
+.ut-cell-input:disabled {
+  background: #f5f5f5;
+  color: #aaa;
+  cursor: not-allowed;
+}
+
+/* Desktop-only delete button - mobile uses the left-swipe gesture instead
+   (see CLAUDE.md: Löschaktionen). */
+.ut-row-delete-btn {
+  display: none;
+}
+@media (min-width: 721px) {
+  .ut-row-delete-btn {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 720px) {
+  .ut-header-row,
+  .ut-row-content {
+    grid-template-columns: 28px minmax(90px, 1fr) minmax(90px, 1fr) 140px;
+  }
+}
+
+.ut-new-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  background: #f9f9f9;
+}
+
+.ut-new-row .ut-cell-input {
+  flex: 1;
+  min-width: 140px;
+}
+
+.ut-new-row .ut-cell-select {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.ut-add-btn {
+  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.ut-add-btn:hover {
+  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
+}
+
 .settings-actions {
   display: flex;
   gap: 1rem;
