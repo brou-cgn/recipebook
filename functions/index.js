@@ -759,6 +759,7 @@ function buildRecipeFieldsFromResult(aiResult, authorId = '') {
     schwierigkeit: aiResult.difficulty || 3,
     speisekategorie: aiResult.category || '',
     ...(authorId ? {authorId} : {}),
+    ...(aiResult.sourceUrl ? {sourceUrl: aiResult.sourceUrl} : {}),
   };
 }
 
