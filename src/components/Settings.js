@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, renameCuisineTypeIcon, deleteCuisineTypeIcon, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getButtonIconsOrder, saveButtonIconsOrder, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT, PRINT_FORMAT_LAYOUT_VERSION, selectPrintFormat } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, renameCuisineTypeIcon, deleteCuisineTypeIcon, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getButtonIconsOrder, saveButtonIconsOrder, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT, PRINT_FORMAT_LAYOUT_VERSION, selectPrintFormat } from '../utils/customLists';
 import { getOnboardingTestmodeActive, saveOnboardingTestmodeActive } from '../utils/onboardingSettings';
 import PrintFormatEditor from './PrintFormatEditor';
 import PrintPreview from './PrintPreview';
@@ -221,18 +221,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [appLogoImageUrl, setAppLogoImageUrl] = useState(null);
   const [uploadingAppLogo, setUploadingAppLogo] = useState(false);
 
-  // Timeline bubble icon state
-  const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
-  const [uploadingTimelineBubbleIcon, setUploadingTimelineBubbleIcon] = useState(false);
-
-  // Timeline menu bubble icon state
-  const [timelineMenuBubbleIcon, setTimelineMenuBubbleIcon] = useState(null);
-  const [uploadingTimelineMenuBubbleIcon, setUploadingTimelineMenuBubbleIcon] = useState(false);
-
-  // Timeline cook event bubble icon state
-  const [timelineCookEventBubbleIcon, setTimelineCookEventBubbleIcon] = useState(null);
-  const [uploadingTimelineCookEventBubbleIcon, setUploadingTimelineCookEventBubbleIcon] = useState(false);
-
   // Timeline cook event default image state
   const [timelineCookEventDefaultImage, setTimelineCookEventDefaultImage] = useState(null);
   const [uploadingTimelineCookEventDefaultImage, setUploadingTimelineCookEventDefaultImage] = useState(false);
@@ -319,9 +307,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       const faviconTxt = await getFaviconText();
       const appLogoImg = await getAppLogoImage();
       const appLogoUrl = await getAppLogoImageUrl();
-      const timelineIcon = await getTimelineBubbleIcon();
-      const timelineMenuIcon = await getTimelineMenuBubbleIcon();
-      const timelineCookEventIcon = await getTimelineCookEventBubbleIcon();
       const timelineCookEventImg = await getTimelineCookEventDefaultImage();
       const aiRecipePrompt = await getAIRecipePrompt();
       const sortSettings = await getSortSettings();
@@ -339,9 +324,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       setFaviconText(faviconTxt);
       setAppLogoImage(appLogoImg);
       setAppLogoImageUrl(appLogoUrl);
-      setTimelineBubbleIcon(timelineIcon);
-      setTimelineMenuBubbleIcon(timelineMenuIcon);
-      setTimelineCookEventBubbleIcon(timelineCookEventIcon);
       setTimelineCookEventDefaultImage(timelineCookEventImg);
       setAiPrompt(aiRecipePrompt);
       setTrendingDays(sortSettings.trendingDays);
@@ -601,9 +583,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       }
 
       // Button icons are now saved incrementally (auto-save after each change)
-      saveTimelineBubbleIcon(timelineBubbleIcon);
-      saveTimelineMenuBubbleIcon(timelineMenuBubbleIcon);
-      saveTimelineCookEventBubbleIcon(timelineCookEventBubbleIcon);
       saveTimelineCookEventDefaultImage(timelineCookEventDefaultImage);
       saveTileSizePreference(tileSize);
       saveDarkModePreference(darkMode);
@@ -1111,72 +1090,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     setAppLogoImage(null);
   };
 
-  // Timeline bubble icon handlers
-  const handleTimelineBubbleIconUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setUploadingTimelineBubbleIcon(true);
-
-    try {
-      const base64 = await fileToBase64(file);
-      const compressedBase64 = await compressImage(base64);
-      setTimelineBubbleIcon(compressedBase64);
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      setUploadingTimelineBubbleIcon(false);
-    }
-  };
-
-  const handleRemoveTimelineBubbleIcon = () => {
-    setTimelineBubbleIcon(null);
-  };
-
-  // Timeline menu bubble icon handlers
-  const handleTimelineMenuBubbleIconUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setUploadingTimelineMenuBubbleIcon(true);
-
-    try {
-      const base64 = await fileToBase64(file);
-      const compressedBase64 = await compressImage(base64);
-      setTimelineMenuBubbleIcon(compressedBase64);
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      setUploadingTimelineMenuBubbleIcon(false);
-    }
-  };
-
-  const handleRemoveTimelineMenuBubbleIcon = () => {
-    setTimelineMenuBubbleIcon(null);
-  };
-
-  // Timeline cook event bubble icon handlers
-  const handleTimelineCookEventBubbleIconUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setUploadingTimelineCookEventBubbleIcon(true);
-
-    try {
-      const base64 = await fileToBase64(file);
-      const compressedBase64 = await compressImage(base64);
-      setTimelineCookEventBubbleIcon(compressedBase64);
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      setUploadingTimelineCookEventBubbleIcon(false);
-    }
-  };
-
-  const handleRemoveTimelineCookEventBubbleIcon = () => {
-    setTimelineCookEventBubbleIcon(null);
-  };
-
   // Timeline cook event default image handlers
   const handleTimelineCookEventDefaultImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -1203,12 +1116,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     const val = e.target.valueAsNumber;
     if (!isNaN(val) && val >= 0 && val <= 100) setter(val);
   };
-
-  const timelineBubbleIconRows = [
-    { label: 'Zeitleisten-Icon (Rezepte)', icon: timelineBubbleIcon, uploading: uploadingTimelineBubbleIcon, onChange: handleTimelineBubbleIconUpload, onRemove: handleRemoveTimelineBubbleIcon, fileId: 'timelineBubbleIconFile' },
-    { label: 'Zeitleisten-Icon (Menüs)', icon: timelineMenuBubbleIcon, uploading: uploadingTimelineMenuBubbleIcon, onChange: handleTimelineMenuBubbleIconUpload, onRemove: handleRemoveTimelineMenuBubbleIcon, fileId: 'timelineMenuBubbleIconFile' },
-    { label: 'Zeitleisten-Icon (Kochereignisse)', icon: timelineCookEventBubbleIcon, uploading: uploadingTimelineCookEventBubbleIcon, onChange: handleTimelineCookEventBubbleIconUpload, onRemove: handleRemoveTimelineCookEventBubbleIcon, fileId: 'timelineCookEventBubbleIconFile' },
-  ];
 
   const isFullWidthTab = ['users', 'saisonmatrix', 'naehrwerte', 'getraenkegewichte', 'buttonIconsV2'].includes(activeTab);
 
@@ -1467,69 +1374,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   <em>Hinweis: Bei PWA-Icons werden transparente Bereiche ggf. rund/abgerundet angezeigt. 
                   Vermeiden Sie zu große transparente Ränder für optimale Skalierung.</em>
                 </p>
-              </div>
-            </div>
-
-            <div className="settings-section">
-              <h3>Zeitleisten-Icons</h3>
-              <p className="section-description">
-                Icons für die Sprechblasen in der Zeitleiste (Rezepte, Menüs, Kochereignisse).
-                Unterstützte Formate: PNG, JPG, SVG, max. 5MB.
-              </p>
-              <div className="dark-icon-config">
-                <div className="dark-icon-header-row">
-                  <span className="dark-icon-col-handle" aria-hidden="true"></span>
-                  <span className="dark-icon-col-label">Element</span>
-                  <span className="dark-icon-col-normal">Icon</span>
-                  <span className="dark-icon-col-dark">Dunkel-Variante</span>
-                </div>
-                {timelineBubbleIconRows.map(({ label, icon, uploading, onChange, onRemove, fileId }) => (
-                  <div className="dark-icon-row" key={fileId}>
-                    <span className="dark-icon-col-label">{label}</span>
-                    <div className="dark-icon-col-normal">
-                      <div className="dark-icon-input-group">
-                        {icon ? (
-                          <>
-                            <span className="dark-icon-image-info">Bild</span>
-                            <button
-                              type="button"
-                              className="reset-icon-btn"
-                              onClick={onRemove}
-                              title="Bild entfernen"
-                            >
-                              ×
-                            </button>
-                          </>
-                        ) : null}
-                        <label
-                          htmlFor={fileId}
-                          className="upload-icon-btn"
-                          title="Bild hochladen"
-                        >
-                          {uploading ? '...' : 'Foto'}
-                        </label>
-                        <input
-                          type="file"
-                          id={fileId}
-                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
-                          onChange={onChange}
-                          style={{ display: 'none' }}
-                          disabled={uploading}
-                        />
-                        <div className="dark-icon-preview">
-                          {icon ? (
-                            <img src={icon} alt={label} className="icon-image" />
-                          ) : (
-                            <span className="dark-icon-fallback">–</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="dark-icon-col-dark">
-                      <span className="dark-icon-fallback" style={{ padding: '0.25rem 0.4rem' }}>–</span>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
 
