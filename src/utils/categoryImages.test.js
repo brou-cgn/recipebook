@@ -8,6 +8,8 @@ import {
   getImageForCategories,
   isCategoryAssigned,
   getAlreadyAssignedCategories,
+  renameMealCategoryInImages,
+  removeMealCategoryFromImages,
   _resetMigrationFlag
 } from './categoryImages';
 
@@ -462,8 +464,83 @@ describe('categoryImages', () => {
       });
       
       const assigned = await getAlreadyAssignedCategories(['Appetizer', 'Salad'], 'test-id');
-      
+
       expect(assigned).toEqual([]);
+    });
+  });
+
+  describe('renameMealCategoryInImages', () => {
+    test('renames the category within an assigned image, preserving other categories', async () => {
+      const image = { id: 'img-1', image: 'data:image/png;base64,abc', categories: ['Hauptgericht', 'Vorspeise'] };
+      const mockDocs = [{ id: image.id, data: () => ({ image: image.image, categories: image.categories }) }];
+
+      getDocs.mockResolvedValue({ empty: false, forEach: (callback) => mockDocs.forEach(callback) });
+      getDoc.mockResolvedValue({ exists: () => true, data: () => ({ image: image.image, categories: image.categories }) });
+
+      await renameMealCategoryInImages('Hauptgericht', 'Hauptgang');
+
+      const calls = setDoc.mock.calls;
+      expect(calls[calls.length - 1][1]).toEqual({
+        image: image.image,
+        categories: ['Hauptgang', 'Vorspeise']
+      });
+    });
+
+    test('does nothing when no image has the old category', async () => {
+      getDocs.mockResolvedValue({ empty: true, forEach: jest.fn() });
+
+      await renameMealCategoryInImages('Nichtvorhanden', 'Neu');
+
+      expect(setDoc).not.toHaveBeenCalled();
+    });
+
+    test('merges into the existing category instead of duplicating when the new name is already assigned', async () => {
+      const image = { id: 'img-1', image: 'data:image/png;base64,abc', categories: ['Hauptgericht', 'Hauptgang'] };
+      const mockDocs = [{ id: image.id, data: () => ({ image: image.image, categories: image.categories }) }];
+
+      getDocs.mockResolvedValue({ empty: false, forEach: (callback) => mockDocs.forEach(callback) });
+      getDoc.mockResolvedValue({ exists: () => true, data: () => ({ image: image.image, categories: image.categories }) });
+
+      await renameMealCategoryInImages('Hauptgericht', 'Hauptgang');
+
+      const calls = setDoc.mock.calls;
+      expect(calls[calls.length - 1][1]).toEqual({
+        image: image.image,
+        categories: ['Hauptgang']
+      });
+    });
+
+    test('does nothing when old and new name are the same', async () => {
+      await renameMealCategoryInImages('Hauptgericht', 'Hauptgericht');
+
+      expect(getDocs).not.toHaveBeenCalled();
+      expect(setDoc).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('removeMealCategoryFromImages', () => {
+    test('removes the category from an assigned image', async () => {
+      const image = { id: 'img-1', image: 'data:image/png;base64,abc', categories: ['Hauptgericht', 'Vorspeise'] };
+      const mockDocs = [{ id: image.id, data: () => ({ image: image.image, categories: image.categories }) }];
+
+      getDocs.mockResolvedValue({ empty: false, forEach: (callback) => mockDocs.forEach(callback) });
+      getDoc.mockResolvedValue({ exists: () => true, data: () => ({ image: image.image, categories: image.categories }) });
+
+      await removeMealCategoryFromImages('Hauptgericht');
+
+      const calls = setDoc.mock.calls;
+      expect(calls[calls.length - 1][1]).toEqual({
+        image: image.image,
+        categories: ['Vorspeise']
+      });
+    });
+
+    test('does nothing when no image has the category', async () => {
+      getDocs.mockResolvedValue({ empty: true, forEach: jest.fn() });
+
+      await removeMealCategoryFromImages('Nichtvorhanden');
+
+      expect(setDoc).not.toHaveBeenCalled();
     });
   });
 });

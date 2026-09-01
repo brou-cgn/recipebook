@@ -324,3 +324,47 @@ export async function getAlreadyAssignedCategories(categories, excludeImageId = 
   }
   return assigned;
 }
+
+/**
+ * Carries a meal category's assigned image over to its new name, so renaming a
+ * meal category in "Listen & Kategorien" doesn't orphan the image configured
+ * for it in "Bilder & Icons" (mirrors renameCuisineTypeIcon for cuisine types).
+ * @param {string} oldName
+ * @param {string} newName
+ * @returns {Promise<void>}
+ */
+export async function renameMealCategoryInImages(oldName, newName) {
+  if (!oldName || !newName || oldName === newName) return;
+  try {
+    const images = await getCategoryImages();
+    const affected = images.filter(img => img.categories.includes(oldName));
+    await Promise.all(affected.map((img) => {
+      const categories = img.categories.includes(newName)
+        ? img.categories.filter(c => c !== oldName)
+        : img.categories.map(c => (c === oldName ? newName : c));
+      return updateCategoryImage(img.id, { categories });
+    }));
+  } catch (error) {
+    console.error('Error renaming meal category in category images:', error);
+  }
+}
+
+/**
+ * Removes a meal category from any image it is assigned to, called when the
+ * meal category itself is removed in "Listen & Kategorien" (mirrors
+ * deleteCuisineTypeIcon for cuisine types).
+ * @param {string} categoryName
+ * @returns {Promise<void>}
+ */
+export async function removeMealCategoryFromImages(categoryName) {
+  if (!categoryName) return;
+  try {
+    const images = await getCategoryImages();
+    const affected = images.filter(img => img.categories.includes(categoryName));
+    await Promise.all(affected.map((img) =>
+      updateCategoryImage(img.id, { categories: img.categories.filter(c => c !== categoryName) })
+    ));
+  } catch (error) {
+    console.error('Error removing meal category from category images:', error);
+  }
+}
