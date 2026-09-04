@@ -481,7 +481,7 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
 
 export { computeIngredientAmountG, resolveIngredientNutritionByStatus };
 
-function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, isStale = false, onEnsureIngredientIDs, nutritionReferenceRows = [], onReloadNutritionReferences = null, retryAutoCalculateToken = 0, onOpenLinkedRecipe = null, autoCalcIcon = null, manualSaveIcon = null, portionUnits = [] }) {
+function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, onEnsureIngredientIDs, nutritionReferenceRows = [], onReloadNutritionReferences = null, retryAutoCalculateToken = 0, onOpenLinkedRecipe = null, autoCalcIcon = null, manualSaveIcon = null, portionUnits = [] }) {
   const resolvedAutoCalcIcon = normalizeNutritionEmptyIcon(autoCalcIcon);
   const resolvedManualSaveIcon = normalizeNutritionSaveManualAmountIcon(manualSaveIcon);
   const [kalorien, setKalorien] = useState('');
@@ -1577,11 +1577,6 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
         </div>
 
         <div className="nutrition-modal-body">
-          {isStale && (
-            <div className="nutrition-stale-warning">
-              ⚠️ Die Nährwertetabelle wurde seit der letzten Berechnung aktualisiert. Bitte Nährwerte neu berechnen.
-            </div>
-          )}
           <table className="nutrition-values-table">
             <colgroup>
               <col className="nutrition-values-table__col nutrition-values-table__col--label" />
