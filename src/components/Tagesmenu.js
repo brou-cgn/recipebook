@@ -188,22 +188,19 @@ function Tagesmenu({
     );
   }, [recipes, selectedList]);
 
+  // Only categories actually present in the current Swipestapel (the selected
+  // list's recipes still available for swiping), not across all interactive
+  // lists — otherwise the filter would offer categories with no cards to show.
   const availableMealCategories = useMemo(() => {
-    const interactiveListIds = new Set(interactiveLists.map((list) => list.id));
-    const interactiveListRecipeIds = new Set(
-      interactiveLists.flatMap((list) => Array.isArray(list.recipeIds) ? list.recipeIds : [])
-    );
     const categories = new Set();
 
-    recipes.forEach((recipe) => {
-      if (!interactiveListIds.has(recipe.groupId) && !interactiveListRecipeIds.has(recipe.id)) {
-        return;
-      }
+    allListRecipes.forEach((recipe) => {
+      if (!isRecipeAvailableForStack(currentUserSwipeDocs[recipe.id])) return;
       getRecipeMealCategories(recipe).forEach((category) => categories.add(category));
     });
 
     return Array.from(categories).sort((a, b) => a.localeCompare(b, 'de'));
-  }, [interactiveLists, recipes]);
+  }, [allListRecipes, currentUserSwipeDocs]);
 
   const stackRecipes = useMemo(() => {
     return allListRecipes.filter((recipe) => matchesMealCategoryFilter(recipe, selectedCategoryFilter));
