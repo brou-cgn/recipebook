@@ -10,7 +10,7 @@ import { getCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePref
 import { isBase64Image } from '../utils/imageUtils';
 import { encodeRecipeLink, containsHashForTypeahead, decodeRecipeLink } from '../utils/recipeLinks';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
-import { parseIngredientPartsSync, sumRecipeIngredientAmountsInMl, scaleIngredient, decimalToFraction } from '../utils/ingredientUtils';
+import { parseIngredientPartsSync, computeRecipeDrinkEinheitsgroesse, scaleIngredient, decimalToFraction } from '../utils/ingredientUtils';
 import { updateRecipe } from '../utils/recipeFirestore';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 
@@ -283,16 +283,15 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
   const handleNameRecipeSelect = (selectedRecipe) => {
     // Getränk aus einem Rezept: Kategorie immer Longdrinks, Einheitsgröße als
     // Summe der Zutatenmengen (in l) geteilt durch die Rezeptportionen,
-    // Einheit immer "Drink".
-    const totalMl = sumRecipeIngredientAmountsInMl(selectedRecipe.ingredients);
-    const portionen = selectedRecipe.portionen || 4;
+    // aufgerundet auf die nächsten 10 ml, Einheit immer "Drink".
+    const einheitsgroesse = computeRecipeDrinkEinheitsgroesse(selectedRecipe.ingredients, selectedRecipe.portionen);
     setForm((f) => ({
       ...f,
       name: encodeRecipeLink(selectedRecipe.id, selectedRecipe.title),
       kategorie: 'longdrinks',
       einheiten: [{
         ...emptyEinheit(),
-        einheitsgroesse: totalMl > 0 ? totalMl / 1000 / portionen : 0.5,
+        einheitsgroesse,
         einheit: 'Drink',
       }],
     }));
