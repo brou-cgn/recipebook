@@ -848,12 +848,14 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
     const existing = userCustomDrinks.find((drink) => decodeRecipeLink(drink.name)?.recipeId === recipeId);
     if (existing) return existing.id;
     // Getränke aus einem Rezept: Kategorie immer Longdrinks, Einheitsgröße als
-    // Summe der Zutatenmengen (in l), Einheit immer "Drink".
+    // Summe der Zutatenmengen (in l) geteilt durch die Rezeptportionen,
+    // Einheit immer "Drink".
     const totalMl = sumRecipeIngredientAmountsInMl(recipe.ingredients);
+    const portionen = recipe.portionen || 4;
     return saveCustomDrink(currentUser.id, {
       name: encodeRecipeLink(recipe.id, recipe.title),
       kategorie: 'longdrinks',
-      einheiten: [{ einheitsgroesse: totalMl > 0 ? totalMl / 1000 : 0.5, einheit: 'Drink' }],
+      einheiten: [{ einheitsgroesse: totalMl > 0 ? totalMl / 1000 / portionen : 0.5, einheit: 'Drink' }],
     });
   };
 

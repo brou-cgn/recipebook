@@ -282,15 +282,17 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
 
   const handleNameRecipeSelect = (selectedRecipe) => {
     // Getränk aus einem Rezept: Kategorie immer Longdrinks, Einheitsgröße als
-    // Summe der Zutatenmengen (in l), Einheit immer "Drink".
+    // Summe der Zutatenmengen (in l) geteilt durch die Rezeptportionen,
+    // Einheit immer "Drink".
     const totalMl = sumRecipeIngredientAmountsInMl(selectedRecipe.ingredients);
+    const portionen = selectedRecipe.portionen || 4;
     setForm((f) => ({
       ...f,
       name: encodeRecipeLink(selectedRecipe.id, selectedRecipe.title),
       kategorie: 'longdrinks',
       einheiten: [{
         ...emptyEinheit(),
-        einheitsgroesse: totalMl > 0 ? totalMl / 1000 : 0.5,
+        einheitsgroesse: totalMl > 0 ? totalMl / 1000 / portionen : 0.5,
         einheit: 'Drink',
       }],
     }));
