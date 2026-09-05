@@ -430,6 +430,24 @@ export function sumRecipeIngredientAmountsInMl(ingredients) {
 }
 
 /**
+ * Computes the Einheitsgröße (in liters) for a Getränk created from a Rezept:
+ * the recipe's total ingredient volume divided by its portions (i.e. the
+ * amount for a single drink/portion, not the recipe total), rounded up to
+ * the nearest 10 ml. Falls back to 0.5 l if the recipe has no summable
+ * volume ingredients.
+ * @param {Array<string|{type: string, text: string, includedInCalculation?: boolean}>} ingredients
+ * @param {number} portionen - Number of portions/drinks the recipe yields
+ * @returns {number} Einheitsgröße in liters
+ */
+export function computeRecipeDrinkEinheitsgroesse(ingredients, portionen) {
+  const totalMl = sumRecipeIngredientAmountsInMl(ingredients);
+  if (totalMl <= 0) return 0.5;
+  const perPortionMl = totalMl / (portionen || 4);
+  const roundedMl = Math.ceil(perPortionMl / 10) * 10;
+  return roundedMl / 1000;
+}
+
+/**
  * Combines duplicate ingredients by summing their amounts.
  * Ingredients with the same name and unit (case-insensitive) are merged.
  * Example: ["100 g Zucker", "50 g Zucker"] => ["150 g Zucker"]

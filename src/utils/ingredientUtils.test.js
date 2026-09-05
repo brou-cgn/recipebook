@@ -1,4 +1,4 @@
-import { formatIngredientSpacing, formatIngredients, scaleIngredient, combineIngredients, isWaterIngredient, convertIngredientUnits, parseIngredientParts, decimalToFraction, formatIngredientAsFraction, isSaltAndPepperCombination, expandSaltAndPepperIngredients } from './ingredientUtils';
+import { formatIngredientSpacing, formatIngredients, scaleIngredient, combineIngredients, isWaterIngredient, convertIngredientUnits, parseIngredientParts, decimalToFraction, formatIngredientAsFraction, isSaltAndPepperCombination, expandSaltAndPepperIngredients, computeRecipeDrinkEinheitsgroesse } from './ingredientUtils';
 
 async function hasRangeAmountMaxSupport() {
   const parsedRange = await parseIngredientParts('3-4 EL Öl');
@@ -842,5 +842,34 @@ describe('expandSaltAndPepperIngredients', () => {
   test('handles non-array input gracefully', () => {
     expect(expandSaltAndPepperIngredients(null)).toBe(null);
     expect(expandSaltAndPepperIngredients(undefined)).toBe(undefined);
+  });
+});
+
+describe('computeRecipeDrinkEinheitsgroesse', () => {
+  test('divides the recipe total by its portions and rounds up to the nearest 10 ml', () => {
+    const ingredients = [
+      { type: 'ingredient', text: '90 ml Gin' },
+      { type: 'ingredient', text: '30 ml Basilikumsirup' },
+      { type: 'ingredient', text: '45 ml Zitronensaft' },
+      { type: 'ingredient', text: '30 ml Holunderblütenlikör' },
+      { type: 'ingredient', text: '180 ml Prosecco' },
+    ];
+    // Total 375 ml / 2 portions = 187.5 ml -> rounded up to 190 ml
+    expect(computeRecipeDrinkEinheitsgroesse(ingredients, 2)).toBeCloseTo(0.19);
+  });
+
+  test('does not round up when the per-portion amount already lands on a 10 ml step', () => {
+    const ingredients = [{ type: 'ingredient', text: '100 ml Rum' }];
+    expect(computeRecipeDrinkEinheitsgroesse(ingredients, 2)).toBeCloseTo(0.05);
+  });
+
+  test('falls back to 4 portions when none is given', () => {
+    const ingredients = [{ type: 'ingredient', text: '200 ml Saft' }];
+    expect(computeRecipeDrinkEinheitsgroesse(ingredients, undefined)).toBeCloseTo(0.05);
+  });
+
+  test('falls back to 0.5 l when there is no summable volume', () => {
+    expect(computeRecipeDrinkEinheitsgroesse([], 2)).toBe(0.5);
+    expect(computeRecipeDrinkEinheitsgroesse([{ type: 'ingredient', text: '3 Eier' }], 2)).toBe(0.5);
   });
 });
