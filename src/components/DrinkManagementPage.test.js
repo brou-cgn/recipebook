@@ -624,6 +624,7 @@ describe('DrinkManagementPage', () => {
           id: 'r1',
           title: 'Mojito',
           speisekategorie: ['Drinks'],
+          portionen: 2,
           ingredients: [
             { type: 'ingredient', text: '50 ml Rum' },
             { type: 'ingredient', text: '2 EL Zucker', includedInCalculation: false },
@@ -643,6 +644,7 @@ describe('DrinkManagementPage', () => {
           id: 'r1',
           title: 'Lemon Basil Olive Oil Spritz',
           speisekategorie: ['Drinks'],
+          portionen: 2,
           ingredients: [
             { type: 'ingredient', text: '90 ml Gin' },
             { type: 'ingredient', text: '30 ml #recipe:r2:Basilikumsirup' },
@@ -667,10 +669,12 @@ describe('DrinkManagementPage', () => {
 
         fireEvent.click(screen.getByText('Mojito'));
 
+        // Recipe amounts are stated for the recipe's 2 portions; the Getränk
+        // form shows them per single drink/portion (÷ 2).
         expect(screen.getByText('Rum')).toBeInTheDocument();
-        expect(screen.getByText('50 ml')).toBeInTheDocument();
+        expect(screen.getByText('25 ml')).toBeInTheDocument();
         expect(screen.getByText('Zucker')).toBeInTheDocument();
-        expect(screen.getByText('2 EL')).toBeInTheDocument();
+        expect(screen.getByText('1 EL')).toBeInTheDocument();
         // Headings are not rendered as ingredient rows
         expect(screen.queryByText('Deko')).not.toBeInTheDocument();
       });
@@ -686,8 +690,10 @@ describe('DrinkManagementPage', () => {
 
         fireEvent.click(screen.getByText('Lemon Basil Olive Oil Spritz'));
 
+        // Recipe amounts are stated for the recipe's 2 portions; the Getränk
+        // form shows them per single drink/portion (÷ 2).
         expect(screen.getByText('Basilikumsirup')).toBeInTheDocument();
-        expect(screen.getByText('30 ml')).toBeInTheDocument();
+        expect(screen.getByText('15 ml')).toBeInTheDocument();
         expect(screen.queryByText(/#recipe:/)).not.toBeInTheDocument();
       });
 

@@ -10,7 +10,7 @@ import { getCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePref
 import { isBase64Image } from '../utils/imageUtils';
 import { encodeRecipeLink, containsHashForTypeahead, decodeRecipeLink } from '../utils/recipeLinks';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
-import { parseIngredientPartsSync, sumRecipeIngredientAmountsInMl } from '../utils/ingredientUtils';
+import { parseIngredientPartsSync, sumRecipeIngredientAmountsInMl, scaleIngredient, decimalToFraction } from '../utils/ingredientUtils';
 import { updateRecipe } from '../utils/recipeFirestore';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 
@@ -640,40 +640,53 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
             <div className="events-form-field">
               <span>Zutaten von „{nameDrinkDisplay.displayName}"</span>
               <ul className="drink-recipe-ingredient-list">
-                {nameDrinkDisplay.ingredients.map((rawItem, idx) => {
-                  const item = typeof rawItem === 'string' ? { type: 'ingredient', text: rawItem } : rawItem;
-                  if (item.type === 'heading') return null;
-                  const recipeLink = decodeRecipeLink(item.text);
-                  let name;
-                  let amountLabel;
-                  if (recipeLink) {
-                    const linkedRecipe = recipes.find((r) => r.id === recipeLink.recipeId);
-                    name = linkedRecipe ? linkedRecipe.title : recipeLink.recipeName;
-                    amountLabel = recipeLink.quantityPrefix || null;
-                  } else {
-                    const parsed = parseIngredientPartsSync(item.text);
-                    name = parsed.name;
-                    amountLabel = parsed.amount != null
-                      ? `${parsed.amount}${parsed.amountMax != null ? `–${parsed.amountMax}` : ''}${parsed.unit ? ` ${parsed.unit}` : ''}`
-                      : null;
-                  }
-                  const included = item.includedInCalculation !== false;
-                  return (
-                    <li key={idx} className="drink-recipe-ingredient-row">
-                      <span className="drink-recipe-ingredient-name">{name}</span>
-                      {amountLabel && <span className="drink-recipe-ingredient-amount">{amountLabel}</span>}
-                      <label className="drink-recipe-ingredient-toggle">
-                        <input
-                          type="checkbox"
-                          checked={included}
-                          onChange={() => handleToggleIngredientIncluded(idx)}
-                          aria-label={`${name} in Kalkulation berücksichtigen`}
-                        />
-                        <span className="drink-recipe-ingredient-toggle-slider" aria-hidden="true" />
-                      </label>
-                    </li>
-                  );
-                })}
+                {(() => {
+                  // Zutatenmengen sind im Rezept auf Basis der Rezeptportionen
+                  // angegeben (z. B. 2 Drinks) — hier je Portion/Drink anzeigen.
+                  const portionen = nameDrinkDisplay.recipe.portionen || 4;
+                  const perPortion = (value) => {
+                    const scaled = value / portionen;
+                    if (scaled % 1 === 0) return scaled.toString();
+                    const fraction = decimalToFraction(scaled);
+                    return fraction !== null ? fraction : scaled.toFixed(1);
+                  };
+                  return nameDrinkDisplay.ingredients.map((rawItem, idx) => {
+                    const item = typeof rawItem === 'string' ? { type: 'ingredient', text: rawItem } : rawItem;
+                    if (item.type === 'heading') return null;
+                    const recipeLink = decodeRecipeLink(item.text);
+                    let name;
+                    let amountLabel;
+                    if (recipeLink) {
+                      const linkedRecipe = recipes.find((r) => r.id === recipeLink.recipeId);
+                      name = linkedRecipe ? linkedRecipe.title : recipeLink.recipeName;
+                      amountLabel = recipeLink.quantityPrefix
+                        ? scaleIngredient(recipeLink.quantityPrefix, 1 / portionen)
+                        : null;
+                    } else {
+                      const parsed = parseIngredientPartsSync(item.text);
+                      name = parsed.name;
+                      amountLabel = parsed.amount != null
+                        ? `${perPortion(parsed.amount)}${parsed.amountMax != null ? `–${perPortion(parsed.amountMax)}` : ''}${parsed.unit ? ` ${parsed.unit}` : ''}`
+                        : null;
+                    }
+                    const included = item.includedInCalculation !== false;
+                    return (
+                      <li key={idx} className="drink-recipe-ingredient-row">
+                        <span className="drink-recipe-ingredient-name">{name}</span>
+                        {amountLabel && <span className="drink-recipe-ingredient-amount">{amountLabel}</span>}
+                        <label className="drink-recipe-ingredient-toggle">
+                          <input
+                            type="checkbox"
+                            checked={included}
+                            onChange={() => handleToggleIngredientIncluded(idx)}
+                            aria-label={`${name} in Kalkulation berücksichtigen`}
+                          />
+                          <span className="drink-recipe-ingredient-toggle-slider" aria-hidden="true" />
+                        </label>
+                      </li>
+                    );
+                  });
+                })()}
               </ul>
             </div>
           )}
