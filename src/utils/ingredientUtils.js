@@ -364,12 +364,41 @@ export async function parseIngredientParts(ingredient) {
   return { amount: null, unit: null, name: str };
 }
 
+// German adjective declension endings (nominativ/akkusativ/dativ, all genders).
+const ADJECTIVE_DECLENSION_SUFFIXES = ['er', 'en', 'em', 'es', 'e'];
+
+/**
+ * Expands a German adjective (given in any one declined or base form) into
+ * all of its common declined forms, by stripping a recognized ending (if
+ * present) and reattaching every standard suffix. This lets an adjective
+ * added to the Temperatur/Zustand/Größe lists in den Einstellungen (in
+ * whichever single form someone happened to type) match an ingredient name
+ * regardless of which form actually appears there - e.g. entering just
+ * "riesig" also covers "riesige", "riesigem", "riesiger", etc.
+ * @param {string} word
+ * @returns {string[]} Lowercased declined forms, including the bare stem
+ */
+function declinedAdjectiveForms(word) {
+  const lower = String(word || '').toLowerCase();
+  let stem = lower;
+  for (const suffix of ADJECTIVE_DECLENSION_SUFFIXES) {
+    if (lower.length - suffix.length >= 2 && lower.endsWith(suffix)) {
+      stem = lower.slice(0, lower.length - suffix.length);
+      break;
+    }
+  }
+  return ['', ...ADJECTIVE_DECLENSION_SUFFIXES].map((suffix) => stem + suffix);
+}
+
 /**
  * Loads the words to strip from ingredient names before a Bring! export:
- * the "Temperatur"/"Zustand"/"Größe" adjective groups and the configured
- * "ignorierte Begriffe" list (see AppCallsPage settings). The "protected"
- * adjective group is intentionally excluded — those words are part of an
- * ingredient's actual name (e.g. "weiß" in "Weißkohl") and must stay.
+ * the "Temperatur"/"Zustand"/"Größe" adjective groups (expanded to every
+ * declined form, see declinedAdjectiveForms) and the configured
+ * "ignorierte Begriffe" list (see AppCallsPage settings) - those are taken
+ * as-is, not declined, since they're not adjectives (e.g. "optional").
+ * The "protected" adjective group is intentionally excluded - those words
+ * are part of an ingredient's actual name (e.g. "weiß" in "Weißkohl") and
+ * must stay.
  * @returns {Promise<Set<string>>} Lowercased words to remove
  */
 export async function loadBringStrippedWords() {
@@ -378,14 +407,16 @@ export async function loadBringStrippedWords() {
     getCommonAdjectives(),
     getIgnoredTerms(),
   ]);
-  return new Set(
-    [
-      ...commonAdjectives.temperature,
-      ...commonAdjectives.state,
-      ...commonAdjectives.sizing,
-      ...ignoredTerms,
-    ].map((word) => word.toLowerCase())
-  );
+  const words = new Set();
+  for (const adjective of [
+    ...commonAdjectives.temperature,
+    ...commonAdjectives.state,
+    ...commonAdjectives.sizing,
+  ]) {
+    declinedAdjectiveForms(adjective).forEach((form) => words.add(form));
+  }
+  ignoredTerms.forEach((term) => words.add(String(term).toLowerCase()));
+  return words;
 }
 
 /**
@@ -414,6 +445,10 @@ export async function loadBringStrippedWords() {
  *   it is loaded on demand.
  * @returns {Promise<string>}
  */
+// Leading/trailing punctuation to ignore when matching a name word against
+// strippedWords, so e.g. "kleine," (followed by a comma) still matches "kleine".
+const WORD_PUNCTUATION_REGEX = /^[,.;:()]+|[,.;:()]+$/g;
+
 export async function formatIngredientForBringExport(ingredient, { strippedWords } = {}) {
   if (!ingredient || typeof ingredient !== 'string') return ingredient;
 
@@ -422,7 +457,10 @@ export async function formatIngredientForBringExport(ingredient, { strippedWords
   const { amount, amountMax, unit, name } = parseIngredientPartsSync(str);
 
   const nameWords = name.split(/\s+/).filter(Boolean);
-  const filteredWords = nameWords.filter((word) => !words.has(word.toLowerCase()));
+  const filteredWords = nameWords.filter((word) => {
+    const bareWord = word.replace(WORD_PUNCTUATION_REGEX, '');
+    return !words.has(bareWord.toLowerCase());
+  });
   // Never strip a name down to nothing - keep the original words in that case.
   const cleanedName = (filteredWords.length > 0 ? filteredWords : nameWords).join(' ');
 

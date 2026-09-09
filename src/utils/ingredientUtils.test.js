@@ -674,6 +674,18 @@ describe('formatIngredientForBringExport', () => {
   test('falls back to loading configured words when none are provided', async () => {
     expect(await formatIngredientForBringExport('3 kleine Zwiebeln')).toBe('3 Zwiebeln');
   });
+
+  test('strips a declined form not literally listed in the defaults (dative "-em")', async () => {
+    // DEFAULT_COMMON_ADJECTIVES only lists e/er/es/en forms, not the dative
+    // "-em" form - this only passes because loadBringStrippedWords expands
+    // every configured adjective into all declined forms.
+    expect(await formatIngredientForBringExport('mit kleinem Messer')).toBe('mit Messer');
+    expect(await formatIngredientForBringExport('mit warmem Wasser übergießen')).toBe('mit Wasser übergießen');
+  });
+
+  test('ignores trailing punctuation when matching a stripped word', async () => {
+    expect(await formatIngredientForBringExport('3 kleine, feine Zwiebeln', { strippedWords })).toBe('3 feine Zwiebeln');
+  });
 });
 
 describe('convertIngredientUnits with Teelöffel/Esslöffel normalization', () => {
