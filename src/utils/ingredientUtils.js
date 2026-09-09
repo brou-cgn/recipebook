@@ -277,29 +277,23 @@ export function parseIngredientPartsSync(ingredient) {
     return { amount, amountMax, unit: null, name: m[3] };
   }
 
-  // Match: number unit name (e.g. "200 g Mehl", "2EL Öl")
+  // Match: number (incl. mixed numbers) unit name
+  // e.g. "200 g Mehl", "2EL Öl", "3 1/2 kg Zucker"
   const withUnitRegex = new RegExp(
-    `^(\\d+\\/\\d+|\\d+(?:[.,]\\d+)?)\\s*(${unitsPattern})\\s+(.+)$`,
+    `^(${QUANTITY_PATTERN})\\s*(${unitsPattern})\\s+(.+)$`,
     'i'
   );
   m = str.match(withUnitRegex);
   if (m) {
-    const raw = m[1];
-    const amount = raw.includes('/')
-      ? parseFloat(raw.split('/')[0]) / parseFloat(raw.split('/')[1])
-      : parseFloat(raw.replace(',', '.'));
-    return { amount, unit: m[2], name: m[3] };
+    return { amount: parseQuantityString(m[1]), unit: m[2], name: m[3] };
   }
 
-  // Match: number name without unit (e.g. "3 Eier")
-  const noUnitRegex = /^(\d+\/\d+|\d+(?:[.,]\d+)?)\s+(.+)$/;
+  // Match: number (incl. mixed numbers) name without unit
+  // e.g. "3 Eier", "3 1/2 Tassen Mehl"
+  const noUnitRegex = new RegExp(`^(${QUANTITY_PATTERN})\\s+(.+)$`);
   m = str.match(noUnitRegex);
   if (m) {
-    const raw = m[1];
-    const amount = raw.includes('/')
-      ? parseFloat(raw.split('/')[0]) / parseFloat(raw.split('/')[1])
-      : parseFloat(raw.replace(',', '.'));
-    return { amount, unit: null, name: m[2] };
+    return { amount: parseQuantityString(m[1]), unit: null, name: m[2] };
   }
 
   // No leading number found
@@ -350,30 +344,51 @@ export async function parseIngredientParts(ingredient) {
     return { amount, amountMax, unit: null, name: m[3] };
   }
 
+  // Match: number (incl. mixed numbers) unit name, e.g. "3 1/2 kg Zucker"
   const withUnitRegex = new RegExp(
-    `^(\\d+\\/\\d+|\\d+(?:[.,]\\d+)?)\\s*(${unitsPattern})\\s+(.+)$`,
+    `^(${QUANTITY_PATTERN})\\s*(${unitsPattern})\\s+(.+)$`,
     'i'
   );
   m = str.match(withUnitRegex);
   if (m) {
-    const raw = m[1];
-    const amount = raw.includes('/')
-      ? parseFloat(raw.split('/')[0]) / parseFloat(raw.split('/')[1])
-      : parseFloat(raw.replace(',', '.'));
-    return { amount, unit: m[2], name: m[3] };
+    return { amount: parseQuantityString(m[1]), unit: m[2], name: m[3] };
   }
 
-  const noUnitRegex = /^(\d+\/\d+|\d+(?:[.,]\d+)?)\s+(.+)$/;
+  // Match: number (incl. mixed numbers) name without unit
+  const noUnitRegex = new RegExp(`^(${QUANTITY_PATTERN})\\s+(.+)$`);
   m = str.match(noUnitRegex);
   if (m) {
-    const raw = m[1];
-    const amount = raw.includes('/')
-      ? parseFloat(raw.split('/')[0]) / parseFloat(raw.split('/')[1])
-      : parseFloat(raw.replace(',', '.'));
-    return { amount, unit: null, name: m[2] };
+    return { amount: parseQuantityString(m[1]), unit: null, name: m[2] };
   }
 
   return { amount: null, unit: null, name: str };
+}
+
+/**
+ * Reformats an ingredient line so external parsers (e.g. Bring!'s own
+ * ingredient recognition) can split it into amount/unit/name correctly.
+ * Those parsers only recognize a single leading number token, so a fraction
+ * or mixed number like "3 1/2 kg Zucker" gets misparsed as amount "3" with
+ * "1/2 kg Zucker" swallowed into the name/description field. This rewrites
+ * the amount as a single decimal token (e.g. "3.5 kg Zucker").
+ * Lines without a "/" are returned unchanged — those already parse fine, so
+ * leaving them untouched avoids reformatting (e.g. spacing) that isn't needed.
+ * @param {string} ingredient - The ingredient string to reformat
+ * @returns {Promise<string>}
+ */
+export async function formatIngredientForBringExport(ingredient) {
+  if (!ingredient || typeof ingredient !== 'string' || !ingredient.includes('/')) {
+    return ingredient;
+  }
+  const { amount, amountMax, unit, name } = await parseIngredientParts(ingredient);
+  if (amount == null) return ingredient;
+
+  const asDecimal = (value) => String(Math.round(value * 100) / 100);
+  const amountStr = amountMax != null
+    ? `${asDecimal(amount)}-${asDecimal(amountMax)}`
+    : asDecimal(amount);
+
+  return [amountStr, unit, name].filter(Boolean).join(' ');
 }
 
 /**
