@@ -632,8 +632,12 @@ export function expandSaltAndPepperIngredients(ingredients) {
 }
 
 /**
- * Scales the numeric amounts in an ingredient string by a given multiplier.
+ * Scales the leading amount of an ingredient string by a given multiplier.
+ * Only the quantity at the start of the string is scaled (single value,
+ * fraction, mixed number, or range) — numbers that are part of the
+ * ingredient name itself (e.g. "Typ 550", "Type 405") are left untouched.
  * Example: scaleIngredient("200 g Mehl", 2) => "400 g Mehl"
+ * Example: scaleIngredient("3-4 EL Weizenmehl Typ 550", 2) => "6-8 EL Weizenmehl Typ 550"
  * @param {string} ingredient - The ingredient string to scale
  * @param {number} multiplier - The scaling factor
  * @returns {string} - The scaled ingredient string
@@ -641,46 +645,29 @@ export function expandSaltAndPepperIngredients(ingredients) {
 export function scaleIngredient(ingredient, multiplier) {
   if (!ingredient || typeof ingredient !== 'string' || multiplier === 1) return ingredient;
 
-  // Pass 1: Bereichsmengen erkennen und beide Grenzen skalieren
-  // Beispiele: "3-4 Eier" × 2 → "6-8 Eier", "100-200 g Mehl" × 2 → "200-400 g Mehl"
-  const rangeRegex = /(^|\s)(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)/g;
-  const scaledRange = ingredient.replace(rangeRegex, (match, prefix, lo, hi) => {
-    const loVal = parseFloat(lo.replace(',', '.')) * multiplier;
-    const hiVal = parseFloat(hi.replace(',', '.')) * multiplier;
-    const fmt = (v) => {
-      if (v % 1 === 0) return v.toString();
-      const fraction = decimalToFraction(v);
-      return fraction !== null ? fraction : v.toFixed(1);
-    };
-    return `${prefix}${fmt(loVal)}-${fmt(hiVal)}`;
-  });
+  const fmt = (v) => {
+    if (v % 1 === 0) return v.toString();
+    const fraction = decimalToFraction(v);
+    return fraction !== null ? fraction : v.toFixed(1);
+  };
 
-  // Wenn ein Bereich ersetzt wurde: früh zurückgeben (kein zweiter Durchlauf)
-  if (scaledRange !== ingredient) return scaledRange;
+  const leadingWhitespace = ingredient.match(/^\s*/)[0];
+  const rest = ingredient.slice(leadingWhitespace.length);
 
-  // Pass 2: normale Einzelmengen (bisherige Logik unverändert)
-  const regex = /(?:^|\s)(\d+\/\d+|\d+(?:[.,]\d+)?)\s*([a-zA-Z]+)?/g;
+  // Bereichsmenge am Anfang, z. B. "3-4 Eier", "3 3/4-5 EL Öl"
+  const rangeMatch = rest.match(new RegExp(`^(${QUANTITY_PATTERN})\\s*[-–]\\s*(${QUANTITY_PATTERN})`));
+  if (rangeMatch) {
+    const loVal = parseQuantityString(rangeMatch[1]) * multiplier;
+    const hiVal = parseQuantityString(rangeMatch[2]) * multiplier;
+    return leadingWhitespace + `${fmt(loVal)}-${fmt(hiVal)}` + rest.slice(rangeMatch[0].length);
+  }
 
-  return ingredient.replace(regex, (match, number, unit) => {
-    const leadingSpace = match.startsWith(' ') ? ' ' : '';
+  // Einzelmenge am Anfang, z. B. "200 g Mehl", "1/2 TL Salz", "1 1/2 EL Öl"
+  const singleMatch = rest.match(new RegExp(`^${QUANTITY_PATTERN}`));
+  if (singleMatch) {
+    const scaled = parseQuantityString(singleMatch[0]) * multiplier;
+    return leadingWhitespace + fmt(scaled) + rest.slice(singleMatch[0].length);
+  }
 
-    let value;
-    if (number.includes('/')) {
-      const [num, denom] = number.split('/');
-      value = parseFloat(num) / parseFloat(denom);
-    } else {
-      value = parseFloat(number.replace(',', '.'));
-    }
-
-    const scaled = value * multiplier;
-    let formatted;
-    if (scaled % 1 === 0) {
-      formatted = scaled.toString();
-    } else {
-      const fraction = decimalToFraction(scaled);
-      formatted = fraction !== null ? fraction : scaled.toFixed(1);
-    }
-
-    return leadingSpace + (unit ? `${formatted} ${unit}` : formatted);
-  });
+  return ingredient;
 }
