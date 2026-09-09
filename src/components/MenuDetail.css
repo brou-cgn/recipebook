@@ -83,8 +83,7 @@
   object-fit: contain;
 }
 
-/* Einheitlicher Stil für Icon-Buttons ohne Rahmen (Shopping-List und URL-Kopieren) */
-.shopping-list-trigger-button,
+/* Einheitlicher Stil für Icon-Button ohne Rahmen (URL-Kopieren) */
 .share-copy-url-button {
   background: transparent;
   border: none;
@@ -105,18 +104,18 @@
   white-space: nowrap;
 }
 
-.shopping-list-trigger-button:hover,
 .share-copy-url-button:hover {
   background: transparent;
   border: none;
 }
 
-.shopping-list-icon-img,
 .copy-link-icon-img {
   width: 1.5rem;
   height: 1.5rem;
   object-fit: contain;
 }
+
+/* .shopping-list-trigger-button / .shopping-list-icon-img: see App.css — shared with RecipeDetail, kept in the eagerly-loaded App.css so it's not order-dependent between the two lazy chunks. */
 
 /* Rechtsbündiger Button zum Öffnen des mit dem Menü verknüpften Events */
 .open-event-button {
