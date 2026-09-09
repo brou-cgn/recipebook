@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { isBase64Image } from '../utils/imageUtils';
-import { formatIngredientForBringExport } from '../utils/ingredientUtils';
+import { formatIngredientForBringExport, loadBringStrippedWords } from '../utils/ingredientUtils';
 import './ShoppingListModal.css';
 
 function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hideBringButton, bringButtonIcon, accentTheme }) {
@@ -81,12 +81,16 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
       }
       // Only export unchecked (open) items. The items in listItems are already
       // plain ingredient strings (recipe links are resolved by the frontend
-      // before they are passed to this modal as the `items` prop). Mixed
-      // numbers ("3 1/2 kg Zucker") are rewritten to decimals so Bring!'s own
-      // parser splits amount/unit/name correctly instead of dumping the
-      // fractional part into the name.
+      // before they are passed to this modal as the `items` prop). Each item is
+      // reformatted for Bring!: mixed numbers ("3 1/2 kg Zucker") are rewritten
+      // to decimals so Bring!'s own parser splits amount/unit/name correctly,
+      // and configured adjectives/ignored terms (e.g. "kleine", "optional")
+      // are stripped from the name so they aren't sent along.
+      const strippedWords = await loadBringStrippedWords();
       const uncheckedItems = await Promise.all(
-        currentItems.filter((i) => !i.checked).map((i) => formatIngredientForBringExport(i.text))
+        currentItems
+          .filter((i) => !i.checked)
+          .map((i) => formatIngredientForBringExport(i.text, { strippedWords }))
       );
       const saveRes = await fetch('/bring-export', {
         method: 'POST',

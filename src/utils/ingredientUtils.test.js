@@ -617,30 +617,62 @@ describe('parseIngredientParts mixed numbers without a range', () => {
 });
 
 describe('formatIngredientForBringExport', () => {
+  // Explicit strippedWords keeps these tests independent of the Firestore
+  // fallback (Settings-configured Temperatur/Zustand/Größe adjectives + ignorierte Begriffe).
+  const strippedWords = new Set(['kleine', 'klein', 'kalte', 'kalt', 'frische', 'optional']);
+
   test('rewrites a mixed number as a decimal so Bring! parses it correctly', async () => {
-    expect(await formatIngredientForBringExport('3 1/2 kg Zucker')).toBe('3.5 kg Zucker');
+    expect(await formatIngredientForBringExport('3 1/2 kg Zucker', { strippedWords })).toBe('3.5 kg Zucker');
   });
 
   test('rewrites a simple fraction as a decimal', async () => {
-    expect(await formatIngredientForBringExport('1/2 TL Salz')).toBe('0.5 TL Salz');
+    expect(await formatIngredientForBringExport('1/2 TL Salz', { strippedWords })).toBe('0.5 TL Salz');
   });
 
   test('leaves plain integer amounts untouched, incl. spacing', async () => {
-    expect(await formatIngredientForBringExport('200 g Mehl')).toBe('200 g Mehl');
-    expect(await formatIngredientForBringExport('100ml Milch')).toBe('100ml Milch');
+    expect(await formatIngredientForBringExport('200 g Mehl', { strippedWords })).toBe('200 g Mehl');
+    expect(await formatIngredientForBringExport('100ml Milch', { strippedWords })).toBe('100ml Milch');
   });
 
   test('reformats a mixed-number range as a decimal range', async () => {
-    expect(await formatIngredientForBringExport('1 1/2-2 TL Salz')).toBe('1.5-2 TL Salz');
+    expect(await formatIngredientForBringExport('1 1/2-2 TL Salz', { strippedWords })).toBe('1.5-2 TL Salz');
   });
 
   test('leaves ingredients without a leading quantity unchanged', async () => {
-    expect(await formatIngredientForBringExport('Salz')).toBe('Salz');
+    expect(await formatIngredientForBringExport('Salz', { strippedWords })).toBe('Salz');
   });
 
   test('passes through non-string input unchanged', async () => {
-    expect(await formatIngredientForBringExport('')).toBe('');
-    expect(await formatIngredientForBringExport(null)).toBe(null);
+    expect(await formatIngredientForBringExport('', { strippedWords })).toBe('');
+    expect(await formatIngredientForBringExport(null, { strippedWords })).toBe(null);
+  });
+
+  test('strips a sizing adjective from the name', async () => {
+    expect(await formatIngredientForBringExport('3 kleine Zwiebeln', { strippedWords })).toBe('3 Zwiebeln');
+  });
+
+  test('strips a temperature adjective without touching amount/unit spacing', async () => {
+    expect(await formatIngredientForBringExport('200g kalte Butter', { strippedWords })).toBe('200g Butter');
+  });
+
+  test('strips a configured ignored term from an ingredient without a unit', async () => {
+    expect(await formatIngredientForBringExport('1 Ei optional', { strippedWords })).toBe('1 Ei');
+  });
+
+  test('strips an adjective from an ingredient without a leading quantity', async () => {
+    expect(await formatIngredientForBringExport('frische Petersilie', { strippedWords })).toBe('Petersilie');
+  });
+
+  test('combines fraction rewriting with adjective stripping', async () => {
+    expect(await formatIngredientForBringExport('3 1/2 kg kalte Zucker', { strippedWords })).toBe('3.5 kg Zucker');
+  });
+
+  test('never strips a name down to nothing', async () => {
+    expect(await formatIngredientForBringExport('2 kleine', { strippedWords: new Set(['kleine']) })).toBe('2 kleine');
+  });
+
+  test('falls back to loading configured words when none are provided', async () => {
+    expect(await formatIngredientForBringExport('3 kleine Zwiebeln')).toBe('3 Zwiebeln');
   });
 });
 
