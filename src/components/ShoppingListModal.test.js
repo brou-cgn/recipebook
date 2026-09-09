@@ -2,14 +2,15 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ShoppingListModal from './ShoppingListModal';
+import { getCommonAdjectives, getIgnoredTerms } from '../utils/customLists';
 
 // The Bring! export loads the configured Temperatur/Zustand/Größe adjectives
 // and ignorierte Begriffe via customLists.js (Firestore). Stub them here so
 // these tests don't depend on (slow, offline-in-CI) Firestore round-trips.
 jest.mock('../utils/customLists', () => ({
   ...jest.requireActual('../utils/customLists'),
-  getCommonAdjectives: jest.fn().mockResolvedValue({ temperature: [], state: [], sizing: [], protected: [] }),
-  getIgnoredTerms: jest.fn().mockResolvedValue([]),
+  getCommonAdjectives: jest.fn(),
+  getIgnoredTerms: jest.fn(),
 }));
 
 describe('ShoppingListModal', () => {
@@ -18,6 +19,11 @@ describe('ShoppingListModal', () => {
 
   beforeEach(() => {
     mockOnClose.mockClear();
+    // react-scripts' Jest config runs with resetMocks: true, which strips any
+    // mockResolvedValue set inside the jest.mock factory above after every
+    // test - re-arm it here so it survives that reset.
+    getCommonAdjectives.mockResolvedValue({ temperature: [], state: [], sizing: [], protected: [] });
+    getIgnoredTerms.mockResolvedValue([]);
   });
 
   test('renders with title and items', () => {
