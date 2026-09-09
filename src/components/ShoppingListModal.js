@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { isBase64Image } from '../utils/imageUtils';
-import { formatIngredientForBringExport, loadBringStrippedWords } from '../utils/ingredientUtils';
+import { formatIngredientForBringExport, loadBringStrippedWords, getRecognizedUnits } from '../utils/ingredientUtils';
 import './ShoppingListModal.css';
 
 function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hideBringButton, bringButtonIcon, accentTheme }) {
@@ -11,11 +11,23 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
   const [editText, setEditText] = useState('');
   const [bringLoading, setBringLoading] = useState(false);
   const closeButtonRef = useRef(null);
+  const bringStrippedWordsRef = useRef(null);
 
   useEffect(() => {
     if (closeButtonRef.current) {
       closeButtonRef.current.focus();
     }
+  }, []);
+
+  useEffect(() => {
+    // Kick off the Firestore reads for the Bring!-export word list and warm
+    // the units cache as soon as the shopping list opens, so clicking
+    // "Bring!" doesn't have to wait on them. iOS/Android only open the
+    // installed app for a deeplink when the navigation happens inside the
+    // click's user-gesture window; any noticeable delay here makes them
+    // fall back to a plain web navigation (Bring!'s "get the app" page).
+    bringStrippedWordsRef.current = loadBringStrippedWords();
+    getRecognizedUnits();
   }, []);
 
   useEffect(() => {
@@ -85,8 +97,10 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
       // reformatted for Bring!: mixed numbers ("3 1/2 kg Zucker") are rewritten
       // to decimals so Bring!'s own parser splits amount/unit/name correctly,
       // and configured adjectives/ignored terms (e.g. "kleine", "optional")
-      // are stripped from the name so they aren't sent along.
-      const strippedWords = await loadBringStrippedWords();
+      // are stripped from the name so they aren't sent along. Reuse the
+      // in-flight/resolved promise from the mount effect instead of starting
+      // a fresh Firestore read here (see comment there).
+      const strippedWords = await (bringStrippedWordsRef.current || loadBringStrippedWords());
       const uncheckedItems = await Promise.all(
         currentItems
           .filter((i) => !i.checked)
