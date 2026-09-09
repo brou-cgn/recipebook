@@ -1,4 +1,4 @@
-import { formatIngredientSpacing, formatIngredients, scaleIngredient, combineIngredients, isWaterIngredient, convertIngredientUnits, parseIngredientParts, decimalToFraction, formatIngredientAsFraction, isSaltAndPepperCombination, expandSaltAndPepperIngredients, computeRecipeDrinkEinheitsgroesse } from './ingredientUtils';
+import { formatIngredientSpacing, formatIngredients, scaleIngredient, combineIngredients, isWaterIngredient, convertIngredientUnits, parseIngredientParts, parseIngredientPartsSync, formatIngredientForBringExport, decimalToFraction, formatIngredientAsFraction, isSaltAndPepperCombination, expandSaltAndPepperIngredients, computeRecipeDrinkEinheitsgroesse } from './ingredientUtils';
 
 async function hasRangeAmountMaxSupport() {
   const parsedRange = await parseIngredientParts('3-4 EL Öl');
@@ -589,6 +589,58 @@ describe('parseIngredientParts range amounts', () => {
     expect(result.amountMax).toBe(4);
     expect(result.unit).toBeNull();
     expect(result.name).toBe('Eier');
+  });
+});
+
+describe('parseIngredientParts mixed numbers without a range', () => {
+  test('parses mixed number with unit: "3 1/2 kg Zucker"', async () => {
+    const result = await parseIngredientParts('3 1/2 kg Zucker');
+    expect(result.amount).toBeCloseTo(3.5);
+    expect(result.amountMax).toBeUndefined();
+    expect(result.unit).toBe('kg');
+    expect(result.name).toBe('Zucker');
+  });
+
+  test('parses mixed number without unit: "1 1/2 Tassen Mehl"', async () => {
+    const result = await parseIngredientParts('1 1/2 Tassen Mehl');
+    expect(result.amount).toBeCloseTo(1.5);
+    expect(result.unit).toBe('Tassen');
+    expect(result.name).toBe('Mehl');
+  });
+
+  test('sync variant matches async behavior for mixed numbers', () => {
+    const result = parseIngredientPartsSync('3 1/2 kg Zucker');
+    expect(result.amount).toBeCloseTo(3.5);
+    expect(result.unit).toBe('kg');
+    expect(result.name).toBe('Zucker');
+  });
+});
+
+describe('formatIngredientForBringExport', () => {
+  test('rewrites a mixed number as a decimal so Bring! parses it correctly', async () => {
+    expect(await formatIngredientForBringExport('3 1/2 kg Zucker')).toBe('3.5 kg Zucker');
+  });
+
+  test('rewrites a simple fraction as a decimal', async () => {
+    expect(await formatIngredientForBringExport('1/2 TL Salz')).toBe('0.5 TL Salz');
+  });
+
+  test('leaves plain integer amounts untouched, incl. spacing', async () => {
+    expect(await formatIngredientForBringExport('200 g Mehl')).toBe('200 g Mehl');
+    expect(await formatIngredientForBringExport('100ml Milch')).toBe('100ml Milch');
+  });
+
+  test('reformats a mixed-number range as a decimal range', async () => {
+    expect(await formatIngredientForBringExport('1 1/2-2 TL Salz')).toBe('1.5-2 TL Salz');
+  });
+
+  test('leaves ingredients without a leading quantity unchanged', async () => {
+    expect(await formatIngredientForBringExport('Salz')).toBe('Salz');
+  });
+
+  test('passes through non-string input unchanged', async () => {
+    expect(await formatIngredientForBringExport('')).toBe('');
+    expect(await formatIngredientForBringExport(null)).toBe(null);
   });
 });
 
