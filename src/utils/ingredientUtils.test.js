@@ -263,6 +263,16 @@ describe('scaleIngredient', () => {
   test('formats fractional range bounds', () => {
     expect(scaleIngredient('3-4 Eier', 0.5)).toBe('1 1/2-2 Eier');
   });
+
+  test('does not scale numbers that are part of the ingredient name (e.g. flour type)', () => {
+    expect(scaleIngredient('3-4 Esslöffel Weizenmehl Typ 550', 2)).toBe('6-8 Esslöffel Weizenmehl Typ 550');
+    expect(scaleIngredient('400 g Mehl Type 405', 2)).toBe('800 g Mehl Type 405');
+    expect(scaleIngredient('2 Eier Größe M', 2)).toBe('4 Eier Größe M');
+  });
+
+  test('scales mixed numbers (whole + fraction) at the start correctly', () => {
+    expect(scaleIngredient('1 1/2 EL Öl', 2)).toBe('3 EL Öl');
+  });
 });
 
 describe('combineIngredients', () => {
