@@ -121,6 +121,54 @@
   object-fit: contain;
 }
 
+/*
+ * Standardized "shopping list" trigger button, shared by RecipeDetail and
+ * MenuDetail. Both views are lazy-loaded (see App.js), so each view's own
+ * CSS chunk only reaches the page once that view has been opened — a
+ * definition living only in RecipeDetail.css or MenuDetail.css would render
+ * incorrectly until the other view happened to load first. Defined here in
+ * the eagerly-loaded App.css instead so it's correct from the very first
+ * render, regardless of which view opens first. Do not duplicate this rule
+ * in RecipeDetail.css / MenuDetail.css again.
+ */
+.shopping-list-trigger-button {
+  width: 48px !important;
+  height: 48px !important;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  background: #fff !important;
+  border: 1px solid #f0f0f0 !important;
+  border-radius: 12px;
+
+  cursor: pointer;
+  line-height: 1;
+  font-size: 1.4rem;
+
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+}
+
+.shopping-list-trigger-button:active {
+  transform: scale(1.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  opacity: 0.2;
+}
+
+.shopping-list-icon-img {
+  width: 1.4rem;
+  height: 1.4rem;
+  vertical-align: middle;
+  object-fit: contain;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .App .startseite-fab-button,
   .App .kueche-fab-button,

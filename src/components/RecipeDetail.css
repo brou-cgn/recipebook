@@ -362,43 +362,7 @@ button.private-badge-button:active {
   object-fit: contain;
 }
 
-.shopping-list-trigger-button {
-  width: 48px !important;
-  height: 48px !important;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-
-  background: #fff !important;
-  border: 1px solid #f0f0f0 !important; 
-  border-radius: 12px;
-
-  cursor: pointer;
-  line-height: 1;
-  font-size: 1.4rem;
-
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    transform 0.15s ease;
-}
-
-.shopping-list-trigger-button:active {
-  transform: scale(1.1);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-  opacity: 0.2;
-}
-
-.shopping-list-icon-img {
-  width: 1.4rem;
-  height: 1.4rem;
-  vertical-align: middle;
-  object-fit: contain;
-}
+/* .shopping-list-trigger-button / .shopping-list-icon-img: see App.css — shared with MenuDetail, kept in the eagerly-loaded App.css so it's not order-dependent between the two lazy chunks. */
 
 .edit-button {
   height: 48px;
