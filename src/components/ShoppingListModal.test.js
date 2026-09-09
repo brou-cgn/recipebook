@@ -3,6 +3,15 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ShoppingListModal from './ShoppingListModal';
 
+// The Bring! export loads the configured Temperatur/Zustand/Größe adjectives
+// and ignorierte Begriffe via customLists.js (Firestore). Stub them here so
+// these tests don't depend on (slow, offline-in-CI) Firestore round-trips.
+jest.mock('../utils/customLists', () => ({
+  ...jest.requireActual('../utils/customLists'),
+  getCommonAdjectives: jest.fn().mockResolvedValue({ temperature: [], state: [], sizing: [], protected: [] }),
+  getIgnoredTerms: jest.fn().mockResolvedValue([]),
+}));
+
 describe('ShoppingListModal', () => {
   const mockItems = ['200g Mehl', '3 Eier', '100ml Milch'];
   const mockOnClose = jest.fn();
@@ -78,6 +87,13 @@ describe('ShoppingListModal', () => {
       });
       delete window.location;
       window.location = { href: '', origin: 'http://localhost' };
+
+      // CRA's jest config resets mock implementations before every test
+      // (resetMocks: true), so the defaults set in the jest.mock() factory
+      // above don't survive past the first test. Re-arm them here.
+      const { getCommonAdjectives, getIgnoredTerms } = require('../utils/customLists');
+      getCommonAdjectives.mockResolvedValue({ temperature: [], state: [], sizing: [], protected: [] });
+      getIgnoredTerms.mockResolvedValue([]);
     });
 
     afterEach(() => {
@@ -192,6 +208,31 @@ describe('ShoppingListModal', () => {
         const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
         // First item (200g Mehl) is checked, so only the other two should appear
         expect(body.items).toEqual(['3 Eier', '100ml Milch']);
+      });
+    });
+
+    test('strips configured Temperatur/Zustand/Größe adjectives and ignorierte Begriffe before exporting', async () => {
+      const { getCommonAdjectives, getIgnoredTerms } = require('../utils/customLists');
+      getCommonAdjectives.mockResolvedValueOnce({
+        temperature: [], state: [], sizing: ['kleine'], protected: [],
+      });
+      getIgnoredTerms.mockResolvedValueOnce(['optional']);
+
+      render(
+        <ShoppingListModal
+          items={['3 kleine Zwiebeln', '1 Ei optional']}
+          title="Test Rezept"
+          onClose={mockOnClose}
+          shareId="test-share-id-123"
+        />
+      );
+
+      const bringBtn = screen.getByTitle('Einkaufsliste an Bring! übergeben');
+      fireEvent.click(bringBtn);
+
+      await waitFor(() => {
+        const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+        expect(body.items).toEqual(['3 Zwiebeln', '1 Ei']);
       });
     });
 

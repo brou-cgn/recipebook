@@ -365,30 +365,81 @@ export async function parseIngredientParts(ingredient) {
 }
 
 /**
- * Reformats an ingredient line so external parsers (e.g. Bring!'s own
- * ingredient recognition) can split it into amount/unit/name correctly.
- * Those parsers only recognize a single leading number token, so a fraction
- * or mixed number like "3 1/2 kg Zucker" gets misparsed as amount "3" with
- * "1/2 kg Zucker" swallowed into the name/description field. This rewrites
- * the amount as a single decimal token (e.g. "3.5 kg Zucker").
- * Lines without a "/" are returned unchanged — those already parse fine, so
- * leaving them untouched avoids reformatting (e.g. spacing) that isn't needed.
+ * Loads the words to strip from ingredient names before a Bring! export:
+ * the "Temperatur"/"Zustand"/"Größe" adjective groups and the configured
+ * "ignorierte Begriffe" list (see AppCallsPage settings). The "protected"
+ * adjective group is intentionally excluded — those words are part of an
+ * ingredient's actual name (e.g. "weiß" in "Weißkohl") and must stay.
+ * @returns {Promise<Set<string>>} Lowercased words to remove
+ */
+export async function loadBringStrippedWords() {
+  const { getCommonAdjectives, getIgnoredTerms } = await import('./customLists');
+  const [commonAdjectives, ignoredTerms] = await Promise.all([
+    getCommonAdjectives(),
+    getIgnoredTerms(),
+  ]);
+  return new Set(
+    [
+      ...commonAdjectives.temperature,
+      ...commonAdjectives.state,
+      ...commonAdjectives.sizing,
+      ...ignoredTerms,
+    ].map((word) => word.toLowerCase())
+  );
+}
+
+/**
+ * Reformats an ingredient line for export to external shopping-list apps
+ * (currently Bring!):
+ * - Strips descriptive words that don't belong on a shopping list — the
+ *   standardized "Temperatur"/"Zustand"/"Größe" adjectives and the
+ *   configured "ignorierte Begriffe" (e.g. "3 kleine Zwiebeln" -> "3 Zwiebeln",
+ *   "kalte Butter" -> "Butter").
+ * - Rewrites a fraction or mixed number amount as a single decimal token.
+ *   Bring!'s own parser only recognizes one leading number token, so
+ *   "3 1/2 kg Zucker" gets misparsed as amount "3" with "1/2 kg Zucker"
+ *   swallowed into the name; this rewrites it to "3.5 kg Zucker".
+ * Lines that need neither change (no matching words, no "/") are returned
+ * byte-for-byte unchanged, including their original spacing.
+ * Uses the sync unit parser (the static default unit list) rather than the
+ * Firestore-backed one — this runs per ingredient on every export, and unit
+ * recognition here only decides where the name starts, so it doesn't need
+ * custom units. The only Firestore-backed data used is the adjective/ignored
+ * term list, which is the actual point of this function.
  * @param {string} ingredient - The ingredient string to reformat
+ * @param {Object} [options]
+ * @param {Set<string>} [options.strippedWords] - Pre-built lowercase set of
+ *   words to remove from the name. Pass this when formatting many
+ *   ingredients at once to avoid loading the settings repeatedly; omitted,
+ *   it is loaded on demand.
  * @returns {Promise<string>}
  */
-export async function formatIngredientForBringExport(ingredient) {
-  if (!ingredient || typeof ingredient !== 'string' || !ingredient.includes('/')) {
-    return ingredient;
+export async function formatIngredientForBringExport(ingredient, { strippedWords } = {}) {
+  if (!ingredient || typeof ingredient !== 'string') return ingredient;
+
+  const words = strippedWords || await loadBringStrippedWords();
+  const str = ingredient.trim();
+  const { amount, amountMax, unit, name } = parseIngredientPartsSync(str);
+
+  const nameWords = name.split(/\s+/).filter(Boolean);
+  const filteredWords = nameWords.filter((word) => !words.has(word.toLowerCase()));
+  // Never strip a name down to nothing - keep the original words in that case.
+  const cleanedName = (filteredWords.length > 0 ? filteredWords : nameWords).join(' ');
+
+  if (amount == null) {
+    return cleanedName || str;
   }
-  const { amount, amountMax, unit, name } = await parseIngredientParts(ingredient);
-  if (amount == null) return ingredient;
 
-  const asDecimal = (value) => String(Math.round(value * 100) / 100);
-  const amountStr = amountMax != null
-    ? `${asDecimal(amount)}-${asDecimal(amountMax)}`
-    : asDecimal(amount);
+  if (str.includes('/')) {
+    const asDecimal = (value) => String(Math.round(value * 100) / 100);
+    const amountStr = amountMax != null
+      ? `${asDecimal(amount)}-${asDecimal(amountMax)}`
+      : asDecimal(amount);
+    return [amountStr, unit, cleanedName].filter(Boolean).join(' ');
+  }
 
-  return [amountStr, unit, name].filter(Boolean).join(' ');
+  const prefix = str.slice(0, str.length - name.length);
+  return `${prefix}${cleanedName}`;
 }
 
 /**
