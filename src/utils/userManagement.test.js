@@ -51,6 +51,7 @@ jest.mock("firebase/auth", () => ({
   EmailAuthProvider: { credential: jest.fn(() => ({})) },
   sendPasswordResetEmail: jest.fn(async () => {}),
   onAuthStateChanged: jest.fn(() => jest.fn()),
+  deleteUser: jest.fn(),
 }));
 
 jest.mock("firebase/firestore", () => ({
@@ -112,7 +113,7 @@ const VALID_PASSWORD = "SecurePass12!";
 
 // Helper to set up mock implementations (called in beforeEach)
 const setupMocks = () => {
-  const { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, signInAnonymously } = require("firebase/auth");
+  const { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, signInAnonymously, deleteUser } = require("firebase/auth");
 
   createUserWithEmailAndPassword.mockImplementation(async (_auth, email, password) => {
     const normEmail = email.toLowerCase().trim();
@@ -124,6 +125,11 @@ const setupMocks = () => {
     const uid = "uid-" + (++_uidCounter);
     _authStore[normEmail] = { uid, password };
     return { user: { uid } };
+  });
+
+  deleteUser.mockImplementation(async (user) => {
+    const entry = Object.entries(_authStore).find(([, record]) => record.uid === user.uid);
+    if (entry) delete _authStore[entry[0]];
   });
 
   signInWithEmailAndPassword.mockImplementation(async (_auth, email, password) => {
@@ -253,6 +259,40 @@ describe("User Management Utilities", () => {
       const result = await registerUser({ vorname: "User2", nachname: "Test", email: "  duplicate@example.com  ", password: "AnotherPass12!" });
       expect(result.success).toBe(false);
       expect(result.message).toContain("bereits registriert");
+    });
+
+    test("should roll back the Auth account when Firestore profile creation fails, so retrying works", async () => {
+      const { httpsCallable } = require("firebase/functions");
+      httpsCallable.mockImplementation((_functions, fnName) => {
+        if (fnName === "createUserProfile") {
+          return jest.fn(async () => {
+            const err = new Error("internal");
+            err.code = "internal";
+            throw err;
+          });
+        }
+        return jest.fn(async () => ({ data: {} }));
+      });
+
+      const failedResult = await registerUser({
+        vorname: "Max",
+        nachname: "Mustermann",
+        email: "max@example.com",
+        password: VALID_PASSWORD
+      });
+      expect(failedResult.success).toBe(false);
+
+      // Without rollback, the Auth account would linger and this would fail
+      // with "auth/email-already-in-use" even though no Firestore profile
+      // (and thus no usable account) was ever created.
+      setupMocks();
+      const retryResult = await registerUser({
+        vorname: "Max",
+        nachname: "Mustermann",
+        email: "max@example.com",
+        password: VALID_PASSWORD
+      });
+      expect(retryResult.success).toBe(true);
     });
   });
 
