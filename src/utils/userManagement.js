@@ -13,7 +13,8 @@ import {
   reauthenticateWithCredential,
   EmailAuthProvider,
   sendPasswordResetEmail as firebaseSendPasswordResetEmail,
-  onAuthStateChanged
+  onAuthStateChanged,
+  deleteUser as firebaseDeleteAuthUser
 } from 'firebase/auth';
 import {
   doc,
@@ -126,13 +127,15 @@ export const registerUser = async (userData) => {
     return { success: false, message: 'Alle Felder müssen ausgefüllt werden.' };
   }
   
+  let authUser = null;
   try {
     // Create Firebase Auth user (the new user is now signed in after this call)
-    await createUserWithEmailAndPassword(
+    const userCredential = await createUserWithEmailAndPassword(
       auth,
       email.toLowerCase().trim(),
       password
     );
+    authUser = userCredential.user;
 
     // Delegate Firestore profile creation to the Cloud Function so that
     // first-user / admin detection is handled atomically server-side,
@@ -154,7 +157,20 @@ export const registerUser = async (userData) => {
     };
   } catch (error) {
     console.error('Registration error:', error);
-    
+
+    // If the Auth account was created but the Firestore profile step failed
+    // (network drop, rate limit, cold start...), the account would otherwise be
+    // stranded: no Firestore document, yet permanently blocking every future
+    // registration attempt for this email with auth/email-already-in-use. Roll
+    // the Auth account back so registration can be retried cleanly.
+    if (authUser) {
+      try {
+        await firebaseDeleteAuthUser(authUser);
+      } catch (rollbackError) {
+        console.error('Failed to roll back orphaned auth user after registration failure:', rollbackError);
+      }
+    }
+
     // Handle specific Firebase Auth errors
     if (error.code === 'auth/email-already-in-use') {
       return { success: false, message: 'Diese E-Mail-Adresse ist bereits registriert.' };
