@@ -6735,6 +6735,12 @@ exports.recipeImportPage = onRequest(
 exports.createUserProfile = onCall(
     {
       maxInstances: 10,
+      // Without this, Cloud Run requires a Google IAM access token to invoke
+      // the service at all, rejecting the Firebase Auth ID token the callable
+      // SDK actually sends with a 401 ("access token could not be verified")
+      // before request.auth is ever checked below. Every other onCall/onRequest
+      // function in this file sets this for the same reason.
+      invoker: 'public',
     },
     async (request) => {
       // Must be called by an authenticated user
