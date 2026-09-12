@@ -6735,11 +6735,15 @@ exports.recipeImportPage = onRequest(
 exports.createUserProfile = onCall(
     {
       maxInstances: 10,
-      // Without this, Cloud Run requires a Google IAM access token to invoke
-      // the service at all, rejecting the Firebase Auth ID token the callable
-      // SDK actually sends with a 401 ("access token could not be verified")
-      // before request.auth is ever checked below. Every other onCall/onRequest
-      // function in this file sets this for the same reason.
+      // Grants the Cloud Run "allUsers" invoker role so the callable SDK's
+      // Firebase Auth ID token reaches request.auth below instead of being
+      // rejected by Cloud Run's own IAM check first. Every other onCall/
+      // onRequest function in this file sets this for the same reason.
+      // Note: this alone is not sufficient if Identity-Aware Proxy (IAP) is
+      // also enabled on the underlying Cloud Run service - IAP enforces its
+      // own token check ahead of the IAM invoker check regardless of this
+      // setting, and must be disabled separately (Cloud Run console -> this
+      // service -> Security tab).
       invoker: 'public',
     },
     async (request) => {
