@@ -8,7 +8,7 @@ import ImportProgressDialog from './ImportProgressDialog';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 import { setWebImportPin } from '../utils/webImportPin';
 
-const RECIPE_IMPORT_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/0b14acff0be64d8b96b00a8871ccca32';
+const RECIPE_IMPORT_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/a9f137c8c6a04a97a8c611d3181d73fd';
 const SHORTCUT_PIN_PATTERN = /^\d{4,8}$/;
 
 /**
