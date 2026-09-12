@@ -83,6 +83,18 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools@13.35.1
 
+      # ONE-OFF: createUserProfile was missing the Cloud Run "allUsers" invoker
+      # binding even after redeploying it with invoker:'public' set - firebase
+      # deploy's "Successful update operation" did not re-apply the IAM policy
+      # on an existing function. Deleting it here forces the next deploy step
+      # to go through the create path instead, which does set the invoker
+      # binding correctly (matching every other public callable in this repo).
+      # Remove this step again once that is confirmed fixed.
+      - name: One-off - delete createUserProfile to force IAM invoker fix on recreate
+        run: firebase functions:delete createUserProfile --region us-central1 --project broubook --force || true
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
       - name: Deploy to Firebase (Hosting, Functions, Firestore Rules)
         run: |
           max_attempts=3
