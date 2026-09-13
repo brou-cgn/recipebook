@@ -570,6 +570,38 @@ describe('ConsumptionForm', () => {
     expect(screen.queryByText(/Unterdeckung:/)).not.toBeInTheDocument();
   });
 
+  it('blendet die Unterdeckungs-Warnung aus, sobald der Verbrauch eingetragen (gesperrt) wurde', async () => {
+    const einheiten = [
+      { einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 },
+    ];
+    const ergebnis = [
+      {
+        kategorie: 'drink2:0',
+        drinkId: 'drink2',
+        drinkLabel: 'Cola',
+        isCustomDrink: true,
+        einheitIdx: 0,
+        literMitPuffer: 12.7,
+        gebinde: 'Kasten',
+        gebindeGroesseLiter: 0.33,
+        einheiten,
+      },
+    ];
+    const event = { ...makeEvent(ergebnis), status: 'eingekauft', einkaufGesperrt: { 'drink2:0': '1' } };
+
+    render(
+      <ConsumptionForm event={event} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'user1' }} />
+    );
+
+    expect(screen.getByText(/Unterdeckung:/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Verbrauch bearbeiten' }));
+    fireEvent.change(screen.getByLabelText('Übrig (Flasche)'), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verbrauchte Menge sperren' }));
+
+    expect(screen.queryByText(/Unterdeckung:/)).not.toBeInTheDocument();
+  });
+
   it('sperrt die Verbraucht/Uebrig-Menge analog zur Eingekauft-Sperre und friert die Eingabe ein', async () => {
     const einheiten = [
       { einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 },

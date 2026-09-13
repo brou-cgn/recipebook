@@ -656,7 +656,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
                   )}
                 </div>
               </div>
-              {rowStatus === 'unterdeckung' && (
+              {rowStatus === 'unterdeckung' && !verbrauchGroupLocked && (
                 <p className="events-warning-text events-consumption-underdeckung-warning">
                   Unterdeckung: {formatLiterShort(totalLiter)} l eingekauft, aber {formatLiterShort(bedarfLiter)} l kalkuliert.
                 </p>
