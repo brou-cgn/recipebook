@@ -22,6 +22,7 @@ import ShoppingListModal from './ShoppingListModal';
 import LockToggleButton from './LockToggleButton';
 import LockIcon from './icons/LockIcon';
 import UnlockIcon from './icons/UnlockIcon';
+import WarningIcon from './icons/WarningIcon';
 import ShoppingCartIcon from './icons/ShoppingCartIcon';
 import CupIcon from './icons/CupIcon';
 import ChevronRightIcon from './icons/ChevronRightIcon';
@@ -577,7 +578,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
                   <LockStateIcon state={lockState} />
                   {verbrauchFehlt && (
                     <span className="events-consumption-missing-usage" title="Verbrauch fehlt" aria-label="Verbrauch fehlt">
-                      ⚠️
+                      <WarningIcon size={16} color="#c9a227" />
                     </span>
                   )}
                 </div>

@@ -539,8 +539,8 @@
 }
 
 .events-consumption-missing-usage {
-  font-size: 15px;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
   flex-shrink: 0;
   cursor: default;
 }
