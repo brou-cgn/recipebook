@@ -970,22 +970,24 @@ function ButtonIconsAdminTab() {
   };
 
   // Mirror of handleConvertCategoryImageToRow above: converts a row into a
-  // Speisekategorien image (triggered by dragging a row into the
-  // Speisekategorien group - see handleDragEnd below). Only rows that already
-  // carry a delete affordance (cuisineType or custom rows - see the `def.cuisineType
-  // || def.custom` check on DeleteRowButton in SortableIconRow) are eligible;
-  // permanent app-button rows have no delete UI at all, so they must stay
-  // undroppable here too instead of silently disappearing from their group.
-  // A category image only means something once linked to a Speisekategorie,
-  // so it lands straight in the category-picker (like clicking an existing
-  // image's name) rather than as an unusable, unlinked image.
+  // Speisekategorien image (triggered by dragging any row - including a
+  // permanent app-button row with no delete button of its own - into the
+  // Speisekategorien group; see handleDragEnd below). A category image only
+  // means something once linked to a Speisekategorie, so it lands straight in
+  // the category-picker (like clicking an existing image's name) rather than
+  // as an unusable, unlinked image. Since this removes the row from its group
+  // without the usual DeleteRowButton confirmation-free-but-undoable pattern,
+  // it goes through the same undo snackbar as handleDeleteRow (see
+  // useUndoableDelete) so an accidental drop of a non-deletable row is still
+  // recoverable within the 6s window.
   const handleConvertRowToCategoryImage = async (sourceGroupId, rowKey, destIndex) => {
     const sourceGroup = data.groups.find((g) => g.id === sourceGroupId);
     if (!sourceGroup) return;
     const rowIdx = sourceGroup.rowKeys.findIndex((r) => r.key === rowKey);
     if (rowIdx === -1) return;
+    const removedEntry = sourceGroup.rowKeys[rowIdx];
     const def = rowDefsByKey.get(rowKey);
-    if (!def || !(def.cuisineType || def.custom)) return;
+    const label = removedEntry.label || def?.label || rowKey;
 
     const value = icons[rowKey];
     const image = isBase64Image(value) ? value : '';
@@ -996,23 +998,50 @@ function ButtonIconsAdminTab() {
       hiddenRowKeys: [...data.hiddenRowKeys, rowKey],
     });
 
+    let newImage;
     try {
-      const newImage = await addCategoryImage(image, [], categoryImages.length);
-      setCategoryImages((prev) => {
-        const insertAt = destIndex === undefined ? prev.length : Math.min(destIndex, prev.length);
-        const next = [...prev.slice(0, insertAt), newImage, ...prev.slice(insertAt)];
-        if (insertAt < prev.length) {
-          reorderCategoryImages(next.map((i) => i.id)).catch((error) => {
-            console.error('Error ordering converted category image:', error);
-          });
-        }
-        return next;
-      });
-      setEditingCategoryImageId(newImage.id);
-      setSelectedCategories([]);
+      newImage = await addCategoryImage(image, [], categoryImages.length);
     } catch (error) {
       alert(error.message);
+      return;
     }
+
+    setCategoryImages((prev) => {
+      const insertAt = destIndex === undefined ? prev.length : Math.min(destIndex, prev.length);
+      const next = [...prev.slice(0, insertAt), newImage, ...prev.slice(insertAt)];
+      if (insertAt < prev.length) {
+        reorderCategoryImages(next.map((i) => i.id)).catch((error) => {
+          console.error('Error ordering converted category image:', error);
+        });
+      }
+      return next;
+    });
+    setEditingCategoryImageId(newImage.id);
+    setSelectedCategories([]);
+
+    undo.notifyDeleted({
+      id: `rowToCatimg:${rowKey}`,
+      name: label,
+      undo: () => {
+        removeCategoryImage(newImage.id).catch((error) => {
+          console.error('Error removing converted category image:', error);
+        });
+        setCategoryImages((prev) => prev.filter((img) => img.id !== newImage.id));
+        setEditingCategoryImageId((current) => (current === newImage.id ? null : current));
+
+        setData((current) => {
+          const gIdx = current.groups.findIndex((g) => g.id === sourceGroupId);
+          const groups = gIdx > -1
+            ? current.groups.map((g, i) => (i === gIdx
+              ? { ...g, rowKeys: [...g.rowKeys.slice(0, rowIdx), removedEntry, ...g.rowKeys.slice(rowIdx)] }
+              : g))
+            : current.groups;
+          const restored = { groups, hiddenRowKeys: current.hiddenRowKeys.filter((k) => k !== rowKey) };
+          saveButtonIconGroups(restored).catch((error) => console.error('Error saving button icon groups:', error));
+          return restored;
+        });
+      },
+    });
   };
 
   // ---- drag & drop (groups reorder, rows reorder within/across groups)
