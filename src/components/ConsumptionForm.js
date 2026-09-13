@@ -127,6 +127,44 @@ function getGroupCascadeUnits(group) {
   });
 }
 
+// Baut eine Lookup-Map (kategorie -> Kaskaden-Einheit) ueber alle Getraenke-Gruppen,
+// damit Einheitsgroesse/Gebindegroesse pro Zeile ohne wiederholte Gruppen-Iteration
+// nachgeschlagen werden koennen.
+function buildCascadeUnitsByKey(drinkGroups) {
+  const map = {};
+  drinkGroups.forEach((group) => {
+    getGroupCascadeUnits(group).forEach((unit) => {
+      map[unit.key] = unit;
+    });
+  });
+  return map;
+}
+
+// Gesamtzahl der eingekauften Einzel-Einheiten (z.B. Flaschen) einer Zeile --
+// Grundlage fuer die Umrechnung zwischen "Übrig" und "Getrunken". Bei Gebinden
+// (z.B. Kasten) wird die in Gebinden eingegebene "Eingekauft"-Menge auf
+// Einzel-Einheiten hochgerechnet, ohne Gebinde ist "Eingekauft" bereits die
+// Einzel-Einheit selbst.
+function getRowTotalEinheiten(unit, eingekauftValue) {
+  const eingekauft = parseFractionQuantity(eingekauftValue);
+  if (!Number.isFinite(eingekauft)) return null;
+  const hatGebinde = Number.isFinite(unit?.einheitsgroesseLiter) && unit.einheitsgroesseLiter > 0
+    && Number.isFinite(unit?.gebindeGroesseLiter) && unit.gebindeGroesseLiter > 0;
+  return hatGebinde ? eingekauft * (unit.gebindeGroesseLiter / unit.einheitsgroesseLiter) : eingekauft;
+}
+
+// Ab einer Einheitsgroesse von 2l (z.B. 2l-/5l-Kanister) sind "Übrig"/"Getrunken"
+// auch als Dezimalzahl mit einer Nachkommastelle erfassbar, darunter (Flaschen,
+// Dosen, ...) nur als ganze Einheiten.
+function isDecimalConsumptionAllowed(unit) {
+  return Number.isFinite(unit?.einheitsgroesseLiter) && unit.einheitsgroesseLiter >= 2;
+}
+
+function roundConsumptionValue(value, unit) {
+  const rounded = isDecimalConsumptionAllowed(unit) ? Math.round(value * 10) / 10 : Math.round(value);
+  return Math.max(0, rounded);
+}
+
 // Ermittelt den kalkulierten Liter-Bedarf einer Getraenke-Gruppe (identisch fuer alle Zeilen der Gruppe).
 function getGroupBedarfLiter(group) {
   const row = group.rows[0];
@@ -275,6 +313,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
   const drinkGroups = groupKategorienByDrink(kategorien, recipes);
   const { prefillMap, warnings: prefillWarnings } = getCascadePrefill(drinkGroups);
   const [values, setValues] = useState(() => {
+    const cascadeUnitsByKey = buildCascadeUnitsByKey(drinkGroups);
     const initial = {};
     kategorien.forEach((row) => {
       const lockedEinkauf = event.einkaufGesperrt?.[row.kategorie];
@@ -286,10 +325,14 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
         const prefillValue = prefillMap[row.kategorie];
         eingekauft = prefillValue !== undefined && prefillValue !== null ? formatQuantityFraction(prefillValue) : '';
       }
-      initial[row.kategorie] = {
-        eingekauft,
-        uebrig: lockedVerbrauch !== undefined ? lockedVerbrauch : '',
-      };
+      const uebrig = lockedVerbrauch !== undefined ? lockedVerbrauch : '';
+      const unit = cascadeUnitsByKey[row.kategorie];
+      const totalEinheiten = getRowTotalEinheiten(unit, eingekauft);
+      const uebrigNum = Number(uebrig);
+      const getrunken = uebrig !== '' && Number.isFinite(totalEinheiten) && Number.isFinite(uebrigNum)
+        ? String(roundConsumptionValue(totalEinheiten - uebrigNum, unit))
+        : '';
+      initial[row.kategorie] = { eingekauft, uebrig, getrunken };
     });
     return initial;
   });
@@ -442,6 +485,39 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
     }));
   };
 
+  // "Übrig" und "Getrunken" sind zwei Eingabewege fuer denselben Sachverhalt --
+  // wird eines der beiden Felder bearbeitet, wird das jeweils andere anhand der
+  // eingekauften Gesamtmenge (in Einzel-Einheiten) automatisch nachgefuehrt.
+  // Ist die eingekaufte Menge nicht bekannt, bleibt das jeweils andere Feld
+  // unveraendert.
+  const updateUebrig = (kategorie, unit, rawValue) => {
+    setValues((prev) => {
+      if (rawValue === '') {
+        return { ...prev, [kategorie]: { ...prev[kategorie], uebrig: '', getrunken: '' } };
+      }
+      const totalEinheiten = getRowTotalEinheiten(unit, prev[kategorie]?.eingekauft);
+      const parsed = Number(rawValue);
+      const getrunken = Number.isFinite(totalEinheiten) && Number.isFinite(parsed)
+        ? String(roundConsumptionValue(totalEinheiten - parsed, unit))
+        : (prev[kategorie]?.getrunken ?? '');
+      return { ...prev, [kategorie]: { ...prev[kategorie], uebrig: rawValue, getrunken } };
+    });
+  };
+
+  const updateGetrunken = (kategorie, unit, rawValue) => {
+    setValues((prev) => {
+      if (rawValue === '') {
+        return { ...prev, [kategorie]: { ...prev[kategorie], uebrig: '', getrunken: '' } };
+      }
+      const totalEinheiten = getRowTotalEinheiten(unit, prev[kategorie]?.eingekauft);
+      const parsed = Number(rawValue);
+      const uebrig = Number.isFinite(totalEinheiten) && Number.isFinite(parsed)
+        ? String(roundConsumptionValue(totalEinheiten - parsed, unit))
+        : (prev[kategorie]?.uebrig ?? '');
+      return { ...prev, [kategorie]: { ...prev[kategorie], getrunken: rawValue, uebrig } };
+    });
+  };
+
   const allGroupsLockedIn = (lockedSet) =>
     drinkGroups.length > 0 && drinkGroups.every((group) => group.rows.every((row) => lockedSet.has(row.kategorie)));
 
@@ -472,12 +548,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
   // Verbrauchsberechnung. Rueckumrechnung ueber dasselbe Groessenverhaeltnis
   // wie bei der Einkaufs-Kaskade.
   const buildGebindePayload = () => {
-    const cascadeUnitsByKey = {};
-    drinkGroups.forEach((group) => {
-      getGroupCascadeUnits(group).forEach((unit) => {
-        cascadeUnitsByKey[unit.key] = unit;
-      });
-    });
+    const cascadeUnitsByKey = buildCascadeUnitsByKey(drinkGroups);
     const gebinde = {};
     Object.entries(values).forEach(([kategorie, { eingekauft, uebrig }]) => {
       const uebrigEinheiten = Number(uebrig) || 0;
@@ -543,6 +614,8 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
     e.preventDefault();
     runSubmitConsumption();
   };
+
+  const cascadeUnitsByKey = buildCascadeUnitsByKey(drinkGroups);
 
   return (
     <div className="events-page-container">
@@ -666,15 +739,22 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
                 <div className="events-consumption-detail">
                   {group.rows.map((row, idx) => {
                     const inputId = `${row.kategorie}-uebrig`;
-                    const label = getRowConsumptionUnit(row) ? `Übrig (${getRowConsumptionUnit(row)})` : 'Übrig';
+                    const getrunkenInputId = `${row.kategorie}-getrunken`;
+                    const consumptionUnit = getRowConsumptionUnit(row);
+                    const uebrigLabel = consumptionUnit ? `Übrig (${consumptionUnit})` : 'Übrig';
+                    const getrunkenLabel = consumptionUnit ? `Getrunken (${consumptionUnit})` : 'Getrunken';
+                    const unit = cascadeUnitsByKey[row.kategorie];
+                    const stepAttr = isDecimalConsumptionAllowed(unit) ? '0.1' : '1';
+                    const totalEinheiten = getRowTotalEinheiten(unit, values[row.kategorie].eingekauft);
+                    const getrunkenDisabled = verbrauchGroupLocked || !Number.isFinite(totalEinheiten);
                     return (
                       <div className="events-form-row" key={row.kategorie}>
-                        {getRowUnitSubtitle(row, getRowConsumptionUnit(row)) && (
-                          <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row, getRowConsumptionUnit(row))}</span>
+                        {getRowUnitSubtitle(row, consumptionUnit) && (
+                          <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row, consumptionUnit)}</span>
                         )}
                         <div className="events-form-field">
                           <span className="events-form-field-label-row">
-                            <label htmlFor={inputId}>{label}</label>
+                            <label htmlFor={inputId}>{uebrigLabel}</label>
                             {idx === 0 && (
                               <LockToggleButton
                                 locked={verbrauchGroupLocked}
@@ -691,9 +771,25 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
                             id={inputId}
                             type="number"
                             min="0"
+                            step={stepAttr}
                             value={values[row.kategorie].uebrig}
-                            onChange={(e) => updateValue(row.kategorie, 'uebrig', e.target.value)}
+                            onChange={(e) => updateUebrig(row.kategorie, unit, e.target.value)}
                             disabled={verbrauchGroupLocked}
+                          />
+                        </div>
+                        <div className="events-form-field">
+                          <span className="events-form-field-label-row">
+                            <label htmlFor={getrunkenInputId}>{getrunkenLabel}</label>
+                          </span>
+                          <input
+                            id={getrunkenInputId}
+                            type="number"
+                            min="0"
+                            step={stepAttr}
+                            value={values[row.kategorie].getrunken}
+                            onChange={(e) => updateGetrunken(row.kategorie, unit, e.target.value)}
+                            disabled={getrunkenDisabled}
+                            title={!Number.isFinite(totalEinheiten) ? 'Erfordert eine eingetragene Eingekauft-Menge' : undefined}
                           />
                         </div>
                       </div>

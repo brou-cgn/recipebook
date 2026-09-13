@@ -745,6 +745,99 @@ describe('ConsumptionForm', () => {
     expect(screen.getByText('11,88 l')).toBeInTheDocument();
   });
 
+  it('berechnet "Getrunken" automatisch aus Eingekauft minus Übrig und umgekehrt', () => {
+    const einheiten = [
+      { einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 },
+    ];
+    const ergebnis = [
+      {
+        kategorie: 'drink2:0',
+        drinkId: 'drink2',
+        drinkLabel: 'Cola',
+        isCustomDrink: true,
+        einheitIdx: 0,
+        literMitPuffer: 12.7,
+        gebinde: 'Kasten',
+        gebindeGroesseLiter: 0.33,
+        einheiten,
+      },
+    ];
+    // 2 Kasten x 24 Flaschen/Kasten = 48 Flaschen insgesamt eingekauft.
+    const event = { ...makeEvent(ergebnis), einkaufGesperrt: { 'drink2:0': '2' } };
+
+    render(<ConsumptionForm event={event} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Verbrauch bearbeiten' }));
+
+    const uebrigInput = screen.getByLabelText('Übrig (Flasche)');
+    const getrunkenInput = screen.getByLabelText('Getrunken (Flasche)');
+
+    fireEvent.change(uebrigInput, { target: { value: '40' } });
+    expect(getrunkenInput).toHaveValue(8);
+
+    fireEvent.change(getrunkenInput, { target: { value: '10' } });
+    expect(uebrigInput).toHaveValue(38);
+  });
+
+  it('erlaubt bei Einheitsgrößen ab 2 Litern Dezimalwerte mit einer Nachkommastelle für Übrig und Getrunken', () => {
+    const einheiten = [
+      { einheitsgroesse: 5, einheit: 'Kanister', gebindeinheit: '', einheitenProGebinde: '' },
+    ];
+    const ergebnis = [
+      {
+        kategorie: 'drink6:0',
+        drinkId: 'drink6',
+        drinkLabel: 'Sirup',
+        isCustomDrink: true,
+        einheitIdx: 0,
+        literMitPuffer: 12,
+        gebinde: null,
+        gebindeGroesseLiter: 5,
+        einheiten,
+      },
+    ];
+    const event = { ...makeEvent(ergebnis), einkaufGesperrt: { 'drink6:0': '3' } };
+
+    render(<ConsumptionForm event={event} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Verbrauch bearbeiten' }));
+
+    const uebrigInput = screen.getByLabelText('Übrig (Kanister)');
+    const getrunkenInput = screen.getByLabelText('Getrunken (Kanister)');
+    expect(uebrigInput).toHaveAttribute('step', '0.1');
+    expect(getrunkenInput).toHaveAttribute('step', '0.1');
+
+    fireEvent.change(getrunkenInput, { target: { value: '1.5' } });
+    expect(uebrigInput).toHaveValue(1.5);
+  });
+
+  it('erfasst Übrig/Getrunken nur in ganzen Einheiten, wenn die Einheitsgröße unter 2 Litern liegt', () => {
+    const einheiten = [
+      { einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 },
+    ];
+    const ergebnis = [
+      {
+        kategorie: 'drink2:0',
+        drinkId: 'drink2',
+        drinkLabel: 'Cola',
+        isCustomDrink: true,
+        einheitIdx: 0,
+        literMitPuffer: 12.7,
+        gebinde: 'Kasten',
+        gebindeGroesseLiter: 0.33,
+        einheiten,
+      },
+    ];
+    const event = { ...makeEvent(ergebnis), einkaufGesperrt: { 'drink2:0': '2' } };
+
+    render(<ConsumptionForm event={event} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Verbrauch bearbeiten' }));
+
+    expect(screen.getByLabelText('Übrig (Flasche)')).toHaveAttribute('step', '1');
+    expect(screen.getByLabelText('Getrunken (Flasche)')).toHaveAttribute('step', '1');
+  });
+
   it('zeigt das Warn-Icon "Verbrauch fehlt", wenn das Eventdatum vergangen und Verbrauch/Uebrig noch nicht gesperrt ist', () => {
     const einheiten = [
       { einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 },
