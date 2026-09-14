@@ -107,7 +107,7 @@ const SORT_STORAGE_KEY = 'recipebook_active_sort';
 const LONG_PRESS_DELAY_MS = 500;
 const LONG_PRESS_CLICK_SUPPRESSION_MS = 500;
 
-function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly = false, onShowFavoritesOnlyChange, privateLists, onAddToPrivateList, onRemoveFromPrivateList, publicGroupId, onMoveRecipeToPublic, cookDatesMap = new Map(), seasonMatrixEntries = [] }) {
+function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly = false, onShowFavoritesOnlyChange, privateLists, onAddToPrivateList, onRemoveFromPrivateList, publicGroupId, onMoveRecipeToPublic, cookDatesMap = new Map(), seasonMatrixEntries = [] }) {
   const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnlyProp || showSeasonalOnly || (activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
@@ -122,6 +122,9 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const filterLongPressed = useRef(false);
   const filterLongPressJustFired = useRef(false);
   const filterButtonRef = useRef(null);
+  const addLongPressTimer = useRef(null);
+  const addLongPressed = useRef(false);
+  const addLongPressJustFired = useRef(false);
   const [activeSort, setActiveSort] = useState(
     () => sessionStorage.getItem(SORT_STORAGE_KEY) || 'alphabetical'
   );
@@ -263,6 +266,53 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     onOpenSearch?.();
   };
 
+  // Longpress on the main "Rezept hinzufügen" button opens the Tutorial
+  // form instead - same touchstart/touchend/click pattern as the filter
+  // button above (touchend handles both press lengths and preventDefault()s
+  // to suppress the click that would otherwise follow; the click handler is
+  // the fallback for non-touch input).
+  const handleAddTouchStart = () => {
+    setAddPressed(true);
+    addLongPressed.current = false;
+    addLongPressTimer.current = setTimeout(() => {
+      addLongPressed.current = true;
+    }, LONG_PRESS_DELAY_MS);
+  };
+
+  const handleAddTouchEnd = (e) => {
+    setAddPressed(false);
+    if (addLongPressTimer.current) {
+      clearTimeout(addLongPressTimer.current);
+      addLongPressTimer.current = null;
+    }
+    e.preventDefault();
+    if (addLongPressed.current) {
+      addLongPressed.current = false;
+      addLongPressJustFired.current = true;
+      setTimeout(() => { addLongPressJustFired.current = false; }, LONG_PRESS_CLICK_SUPPRESSION_MS);
+      onAddTutorial?.();
+    } else {
+      onAddRecipe();
+    }
+  };
+
+  const handleAddTouchCancel = () => {
+    setAddPressed(false);
+    if (addLongPressTimer.current) {
+      clearTimeout(addLongPressTimer.current);
+      addLongPressTimer.current = null;
+    }
+    addLongPressed.current = false;
+  };
+
+  const handleAddClick = () => {
+    if (addLongPressJustFired.current) {
+      addLongPressJustFired.current = false;
+      return;
+    }
+    onAddRecipe();
+  };
+
   // Generate dynamic heading based on filters
   const getHeading = () => {
     if (activePrivateListName) {
@@ -361,15 +411,15 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                   {!activePrivateListId && (
                     <button
                       className={`add-icon-button ${addPressed ? 'pressed' : ''}`}
-                      onClick={() => onAddRecipe()}
-                      onTouchStart={() => setAddPressed(true)}
-                      onTouchEnd={() => setAddPressed(false)}
-                      onTouchCancel={() => setAddPressed(false)}
+                      onClick={handleAddClick}
+                      onTouchStart={handleAddTouchStart}
+                      onTouchEnd={handleAddTouchEnd}
+                      onTouchCancel={handleAddTouchCancel}
                       onMouseDown={() => setAddPressed(true)}
                       onMouseUp={() => setAddPressed(false)}
                       onMouseLeave={() => setAddPressed(false)}
-                      title="Rezept hinzufügen"
-                      aria-label="Rezept hinzufügen"
+                      title="Rezept hinzufügen (lang drücken für Tutorial)"
+                      aria-label="Rezept hinzufügen (lang drücken für Tutorial)"
                     >
                       {isBase64Image(getEffectiveIcon(buttonIcons, 'addRecipe', isDarkMode)) ? (
                         <img src={getEffectiveIcon(buttonIcons, 'addRecipe', isDarkMode)} alt="Rezept hinzufügen" className="button-icon-image" draggable="false" />

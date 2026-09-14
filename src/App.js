@@ -36,6 +36,7 @@ import { getOnboardingTestmodeActive, shouldShowOnboardingOverlay } from './util
 import { applyFaviconSettings } from './utils/faviconUtils';
 import { applyTileSizePreference, applyDarkModePreference, getCustomLists, expandCuisineSelection, getInspirationListSettings } from './utils/customLists';
 import { logRecipeCall } from './utils/recipeCallsFirestore';
+import { addTutorial } from './utils/tutorialsFirestore';
 import { deleteRecipeThumbnail } from './utils/storageUtils';
 import { deleteField, serverTimestamp } from 'firebase/firestore';
 import { getSeasonMatrixOnce } from './utils/seasonMatrix';
@@ -85,6 +86,7 @@ import { resolveRecipeGroupContext, resolveImportGroupContext } from './utils/re
 // CPUs/networks (e.g. iPhone on cellular).
 const RecipeDetail = lazy(() => import('./components/RecipeDetail'));
 const RecipeForm = lazy(() => import('./components/RecipeForm'));
+const TutorialForm = lazy(() => import('./components/TutorialForm'));
 const Settings = lazy(() => import('./components/Settings'));
 const MenuList = lazy(() => import('./components/MenuList'));
 const MenuDetail = lazy(() => import('./components/MenuDetail'));
@@ -355,6 +357,7 @@ function App() {
   const [recipes, setRecipes] = useState([]);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isTutorialFormOpen, setIsTutorialFormOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [pendingReviewRecipes, setPendingReviewRecipes] = useState([]);
   const [isCreatingVersion, setIsCreatingVersion] = useState(false);
@@ -575,6 +578,7 @@ function App() {
   const bottomNavBehavior = useMemo(() => getBottomNavBehavior(currentView), [currentView]);
   const showBottomNav = Boolean(currentUser?.startseite)
     && !isFormOpen
+    && !isTutorialFormOpen
     && !isMenuFormOpen
     && !isPrivateListSettingsTabOpen
     && !selectedRecipe
@@ -1131,6 +1135,19 @@ function App() {
     setIsFormOpen(true);
   };
 
+  const handleAddTutorial = () => {
+    setIsTutorialFormOpen(true);
+  };
+
+  const handleCancelTutorialForm = () => {
+    setIsTutorialFormOpen(false);
+  };
+
+  const handleSaveTutorial = async (tutorialData) => {
+    await addTutorial({ ...tutorialData, createdBy: currentUser?.id });
+    setIsTutorialFormOpen(false);
+  };
+
   const handleEditRecipe = (recipe) => {
     setActiveGroupId(null);
     setEditingRecipe(recipe);
@@ -1174,6 +1191,7 @@ function App() {
     const isIdleRecipesOverview =
       currentView === 'recipes' &&
       !isFormOpen &&
+      !isTutorialFormOpen &&
       !selectedRecipe &&
       !selectedMenu &&
       !isSettingsOpen;
@@ -1192,7 +1210,7 @@ function App() {
     }
     wasIdleRecipesOverviewRef.current = isIdleRecipesOverview;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentView, isFormOpen, selectedRecipe, selectedMenu, isSettingsOpen, pendingReviewRecipes]);
+  }, [currentView, isFormOpen, isTutorialFormOpen, selectedRecipe, selectedMenu, isSettingsOpen, pendingReviewRecipes]);
 
   const handleCreateVersion = (recipe) => {
     setEditingRecipe(recipe);
@@ -2367,6 +2385,14 @@ function App() {
           menuPortionCount={selectedMenu ? (selectedMenu.portionCounts?.[selectedRecipe?.id] ?? null) : null}
           onPortionCountChange={selectedMenu ? handleMenuPortionCountChange : undefined}
         />
+        ) : isTutorialFormOpen ? (
+        // Tutorial form - opened via longpress on the "Rezept hinzufügen"
+        // button (see RecipeList.js); shown with priority just like the
+        // recipe form it mirrors.
+        <TutorialForm
+          onSave={handleSaveTutorial}
+          onCancel={handleCancelTutorialForm}
+        />
         ) : isFormOpen ? (
         // Recipe form - shown with priority over menu/recipe detail
         <RecipeForm
@@ -2586,6 +2612,7 @@ function App() {
               )}
               onSelectRecipe={handleSelectRecipe}
               onAddRecipe={handleAddRecipe}
+              onAddTutorial={handleAddTutorial}
               categoryFilter={categoryFilter}
               onCategoryFilterChange={handleCategoryFilterChange}
               currentUser={currentUser}
