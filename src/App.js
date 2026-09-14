@@ -36,7 +36,7 @@ import { getOnboardingTestmodeActive, shouldShowOnboardingOverlay } from './util
 import { applyFaviconSettings } from './utils/faviconUtils';
 import { applyTileSizePreference, applyDarkModePreference, getCustomLists, expandCuisineSelection, getInspirationListSettings } from './utils/customLists';
 import { logRecipeCall } from './utils/recipeCallsFirestore';
-import { addTutorial } from './utils/tutorialsFirestore';
+import { addTutorial, subscribeToTutorials } from './utils/tutorialsFirestore';
 import { deleteRecipeThumbnail } from './utils/storageUtils';
 import { deleteField, serverTimestamp } from 'firebase/firestore';
 import { getSeasonMatrixOnce } from './utils/seasonMatrix';
@@ -358,6 +358,7 @@ function App() {
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isTutorialFormOpen, setIsTutorialFormOpen] = useState(false);
+  const [tutorials, setTutorials] = useState([]);
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [pendingReviewRecipes, setPendingReviewRecipes] = useState([]);
   const [isCreatingVersion, setIsCreatingVersion] = useState(false);
@@ -938,6 +939,16 @@ function App() {
 
     return () => unsubscribe();
   }, [currentUser, userGroupIds]);
+
+  // Set up real-time listener for tutorials (linked technique videos) -
+  // a flat, app-wide collection like faqs, not scoped per group.
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const unsubscribe = subscribeToTutorials(setTutorials);
+
+    return () => unsubscribe();
+  }, [currentUser]);
 
   // Migrate old global favorites to user-specific favorites (one-time migration)
   useEffect(() => {
@@ -2613,6 +2624,7 @@ function App() {
               onSelectRecipe={handleSelectRecipe}
               onAddRecipe={handleAddRecipe}
               onAddTutorial={handleAddTutorial}
+              tutorials={tutorials}
               categoryFilter={categoryFilter}
               onCategoryFilterChange={handleCategoryFilterChange}
               currentUser={currentUser}

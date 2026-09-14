@@ -9,6 +9,31 @@ import SortCarousel from './SortCarousel';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
 import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
 import RecipeCard from './RecipeCard';
+import TutorialCard from './TutorialCard';
+import useUndoableDelete from '../hooks/useUndoableDelete';
+import { deleteTutorial } from '../utils/tutorialsFirestore';
+import './UndoSnackbar.css';
+
+const TUTORIAL_WEAVE_INTERVAL = 4;
+
+// Mixes tutorial rows into the recipe feed - one every TUTORIAL_WEAVE_INTERVAL
+// recipes, cycling through whatever tutorials are available. Exported so the
+// interspersing rule itself is unit-testable independent of the component.
+export function weaveTutorialsIntoGroups(recipeGroups, tutorials) {
+  if (!tutorials || tutorials.length === 0) {
+    return recipeGroups.map((group) => ({ type: 'recipe', group }));
+  }
+  const entries = [];
+  let tutorialIndex = 0;
+  recipeGroups.forEach((group, i) => {
+    entries.push({ type: 'recipe', group });
+    if ((i + 1) % TUTORIAL_WEAVE_INTERVAL === 0) {
+      entries.push({ type: 'tutorial', tutorial: tutorials[tutorialIndex % tutorials.length] });
+      tutorialIndex += 1;
+    }
+  });
+  return entries;
+}
 
 export function isNewRecipe(recipe, sortSettings) {
   if (!recipe?.createdAt && !recipe?.publishedAt) return false;
@@ -107,7 +132,26 @@ const SORT_STORAGE_KEY = 'recipebook_active_sort';
 const LONG_PRESS_DELAY_MS = 500;
 const LONG_PRESS_CLICK_SUPPRESSION_MS = 500;
 
-function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly = false, onShowFavoritesOnlyChange, privateLists, onAddToPrivateList, onRemoveFromPrivateList, publicGroupId, onMoveRecipeToPublic, cookDatesMap = new Map(), seasonMatrixEntries = [] }) {
+function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, tutorials = [], categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly = false, onShowFavoritesOnlyChange, privateLists, onAddToPrivateList, onRemoveFromPrivateList, publicGroupId, onMoveRecipeToPublic, cookDatesMap = new Map(), seasonMatrixEntries = [] }) {
+  const { banners: tutorialDeleteBanners, pendingKeys: pendingTutorialDeleteKeys, scheduleDelete: scheduleTutorialDelete, undoDelete: undoTutorialDelete } = useUndoableDelete();
+  const visibleTutorials = useMemo(
+    () => tutorials.filter((t) => !pendingTutorialDeleteKeys.has(t.id)),
+    [tutorials, pendingTutorialDeleteKeys]
+  );
+  const handleDeleteTutorial = (tutorial) => {
+    scheduleTutorialDelete({
+      key: tutorial.id,
+      message: `„${tutorial.title}" gelöscht.`,
+      onConfirm: async () => {
+        try {
+          await deleteTutorial(tutorial.id);
+        } catch (err) {
+          console.error('Error deleting tutorial:', err);
+        }
+      },
+      onUndo: () => {},
+    });
+  };
   const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnlyProp || showSeasonalOnly || (activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
@@ -468,7 +512,27 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, categ
         </div>
       ) : (
         <div className="recipe-grid">
-          {recipeGroups.map(group => {
+          {(
+            // Tutorials are only woven into the plain, unfiltered "Kochbuch"
+            // view - mixing them into a filtered or private-list result feels
+            // off-topic, and they're global content that doesn't belong to
+            // any one private list.
+            !activePrivateListId && !hasActiveFilters
+              ? weaveTutorialsIntoGroups(recipeGroups, visibleTutorials)
+              : recipeGroups.map((group) => ({ type: 'recipe', group }))
+          ).map((entry) => {
+            if (entry.type === 'tutorial') {
+              return (
+                <TutorialCard
+                  key={`tutorial-${entry.tutorial.id}`}
+                  tutorial={entry.tutorial}
+                  canManage={userCanEdit}
+                  onDelete={handleDeleteTutorial}
+                  swipeDeleteIcon={getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode)}
+                />
+              );
+            }
+            const group = entry.group;
             // Sort versions to get the one that should be displayed first
             const sortedVersions = sortRecipeVersions(group.allRecipes, currentUser?.id, (userId, recipeId) => favoriteIds.includes(recipeId), recipes);
             const recipe = sortedVersions[0] || group.primaryRecipe;
@@ -496,6 +560,15 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, categ
           })}
         </div>
       )}
+
+      {tutorialDeleteBanners.map((banner) => (
+        <div key={banner.id} className="undo-snackbar" role="status">
+          <span className="undo-snackbar-message">{banner.message}</span>
+          <button type="button" className="undo-snackbar-action" onClick={() => undoTutorialDelete(banner.id)}>
+            Rückgängig
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

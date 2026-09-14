@@ -1,0 +1,115 @@
+/* Compact row card for a linked technique video - deliberately much
+   shorter than .recipe-card (see RecipeCard/RecipeList.css): a small
+   left-side thumbnail instead of a full-width image on top. Mixed into
+   .recipe-grid by RecipeList.js.
+
+   Desktop tutorial display hasn't been designed yet, so these stay
+   mobile-only for now (matching the one direction that WAS decided) rather
+   than guessing at an ad hoc desktop treatment. */
+.tutorial-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 769px) {
+  .tutorial-card {
+    display: none;
+  }
+}
+
+.tutorial-card-content {
+  position: relative;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.7rem;
+  border-radius: 12px;
+  background: #FFFBF6;
+  box-shadow: 0 0 0 1.5px rgba(223, 122, 0, 0.45), 0 4px 14px rgba(223, 122, 0, 0.16);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s ease;
+}
+
+.tutorial-card-thumb {
+  position: relative;
+  width: 84px;
+  height: 60px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: #F5F2EF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(62, 43, 28, 0.32);
+}
+
+.tutorial-card-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tutorial-card-play-circle {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tutorial-card-body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tutorial-card-text {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.tutorial-card-text .kulinarik-tag {
+  align-self: flex-start;
+  font-size: 0.64rem;
+  padding: 0.05rem 0.45rem;
+}
+
+.tutorial-card-text h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tutorial-card-delete-btn {
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .tutorial-card-content {
+  background: #2a2620;
+  box-shadow: 0 0 0 1.5px rgba(223, 122, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .tutorial-card-thumb {
+  background: #3a352c;
+}
+
+[data-theme="dark"] .tutorial-card-text h3 {
+  color: #e8e8e8;
+}
