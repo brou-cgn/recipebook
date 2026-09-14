@@ -1,0 +1,13 @@
+/* TutorialForm reuses RecipeForm.css for everything (container, header,
+   form-group inputs, save/cancel buttons, .recipe-form-cuisine-pill) - see
+   TutorialForm.js. The only thing that doesn't fit as-is is the cuisine
+   picker's scrolling two-row carousel layout, which is sized for a long,
+   variable list of cuisines. Technik-Kategorie is a fixed 5-item list, so it
+   reads better as a simple wrapping row instead of a cramped scroll area. */
+.tutorial-category-grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0 4px;
+}

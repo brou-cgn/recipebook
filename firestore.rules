@@ -123,6 +123,15 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Tutorials collection - kuratierte Links zu Zubereitungstechnik-Videos.
+    // Gleiche Berechtigung wie recipes: jeder mit Bearbeitungsrecht darf
+    // welche anlegen/löschen (siehe RecipeList.js: gleicher Button wie
+    // "Rezept hinzufügen", per Longpress).
+    match /tutorials/{tutorialId} {
+      allow read: if isAnyUser();
+      allow create, update, delete: if isEditOrAdmin();
+    }
+
     // Groups collection
     match /groups/{groupId} {
       allow read: if isAnyUser();
