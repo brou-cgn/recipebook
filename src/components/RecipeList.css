@@ -310,6 +310,63 @@
 
 
 /* =========================================================
+   6b. Tutorial Card
+   ========================================================= */
+
+.tutorial-card-thumb {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #3E2B1C;
+  border-radius: 12px 12px 0 0;
+}
+
+.tutorial-card-play-icon {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 2.5rem;
+}
+
+.tutorial-card-badge {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+
+  background: rgba(0, 0, 0, 0.45);
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.tutorial-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0 -0.5rem 0.75rem -0.5rem;
+  padding: 0 0.5rem;
+  border-radius: 8px;
+}
+
+.tutorial-card-header h3 {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+
+/* =========================================================
    7. Card Badges
    ========================================================= */
 
@@ -424,6 +481,36 @@
   margin-left: auto;
   flex-shrink: 0;
   white-space: nowrap;
+}
+
+.undo-snackbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #f0c5bf;
+  border-radius: 8px;
+  background: #fff5f4;
+  color: #8b2d21;
+  font-size: 0.9rem;
+}
+
+.undo-snackbar-btn {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: #a33a26;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.15rem 0.3rem;
+  cursor: pointer;
+}
+
+.undo-snackbar-btn:hover,
+.undo-snackbar-btn:focus-visible {
+  text-decoration: underline;
 }
 
 

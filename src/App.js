@@ -36,7 +36,7 @@ import { getOnboardingTestmodeActive, shouldShowOnboardingOverlay } from './util
 import { applyFaviconSettings } from './utils/faviconUtils';
 import { applyTileSizePreference, applyDarkModePreference, getCustomLists, expandCuisineSelection, getInspirationListSettings } from './utils/customLists';
 import { logRecipeCall } from './utils/recipeCallsFirestore';
-import { addTutorial } from './utils/tutorialsFirestore';
+import { addTutorial, subscribeToTutorials, deleteTutorial } from './utils/tutorialsFirestore';
 import { deleteRecipeThumbnail } from './utils/storageUtils';
 import { deleteField, serverTimestamp } from 'firebase/firestore';
 import { getSeasonMatrixOnce } from './utils/seasonMatrix';
@@ -378,6 +378,7 @@ function App() {
   const [publicGroupId, setPublicGroupId] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [recipesLoaded, setRecipesLoaded] = useState(false);
+  const [tutorials, setTutorials] = useState([]);
   // Events module data (Events, guest profiles, custom drinks): subscribed once here,
   // same as recipes/menus/groups above, so navigating into/out of the Events area
   // doesn't tear down and re-create these listeners (and refetch) on every visit.
@@ -939,6 +940,16 @@ function App() {
     return () => unsubscribe();
   }, [currentUser, userGroupIds]);
 
+  // Set up real-time listener for tutorials (flat, app-wide collection - see
+  // utils/tutorialsFirestore.js), so they can be mixed into the recipe overview.
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const unsubscribe = subscribeToTutorials(setTutorials);
+
+    return () => unsubscribe();
+  }, [currentUser]);
+
   // Migrate old global favorites to user-specific favorites (one-time migration)
   useEffect(() => {
     if (currentUser && recipesLoaded && recipes.length > 0) {
@@ -1146,6 +1157,10 @@ function App() {
   const handleSaveTutorial = async (tutorialData) => {
     await addTutorial({ ...tutorialData, createdBy: currentUser?.id });
     setIsTutorialFormOpen(false);
+  };
+
+  const handleDeleteTutorial = async (tutorialId) => {
+    await deleteTutorial(tutorialId);
   };
 
   const handleEditRecipe = (recipe) => {
@@ -2613,6 +2628,8 @@ function App() {
               onSelectRecipe={handleSelectRecipe}
               onAddRecipe={handleAddRecipe}
               onAddTutorial={handleAddTutorial}
+              tutorials={tutorials}
+              onDeleteTutorial={handleDeleteTutorial}
               categoryFilter={categoryFilter}
               onCategoryFilterChange={handleCategoryFilterChange}
               currentUser={currentUser}
