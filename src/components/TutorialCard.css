@@ -34,8 +34,8 @@
 
 .tutorial-card-thumb {
   position: relative;
-  width: 84px;
-  height: 60px;
+  width: 96px;
+  height: 72px;
   border-radius: 8px;
   flex-shrink: 0;
   overflow: hidden;
@@ -55,8 +55,8 @@
 }
 
 .tutorial-card-play-circle {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.92);
   display: flex;
@@ -89,7 +89,7 @@
 
 .tutorial-card-text h3 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: #333;
   overflow: hidden;
