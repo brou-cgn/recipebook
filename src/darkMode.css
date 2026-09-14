@@ -379,6 +379,14 @@
   border-color: #3A342F;
 }
 
+[data-theme="dark"] .tutorial-card-thumb {
+  background: #17110b;
+}
+
+[data-theme="dark"] .tutorial-card-header h3 {
+  color: #e8e8e8;
+}
+
 [data-theme="dark"] .recipe-tile {
   background: #1e1e1e;
 }

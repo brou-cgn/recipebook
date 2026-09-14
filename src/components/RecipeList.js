@@ -9,6 +9,8 @@ import SortCarousel from './SortCarousel';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
 import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
 import RecipeCard from './RecipeCard';
+import TutorialCard from './TutorialCard';
+import useUndoableDelete from '../hooks/useUndoableDelete';
 
 export function isNewRecipe(recipe, sortSettings) {
   if (!recipe?.createdAt && !recipe?.publishedAt) return false;
@@ -107,7 +109,7 @@ const SORT_STORAGE_KEY = 'recipebook_active_sort';
 const LONG_PRESS_DELAY_MS = 500;
 const LONG_PRESS_CLICK_SUPPRESSION_MS = 500;
 
-function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly = false, onShowFavoritesOnlyChange, privateLists, onAddToPrivateList, onRemoveFromPrivateList, publicGroupId, onMoveRecipeToPublic, cookDatesMap = new Map(), seasonMatrixEntries = [] }) {
+function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, tutorials = [], onDeleteTutorial, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly = false, onShowFavoritesOnlyChange, privateLists, onAddToPrivateList, onRemoveFromPrivateList, publicGroupId, onMoveRecipeToPublic, cookDatesMap = new Map(), seasonMatrixEntries = [] }) {
   const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnlyProp || showSeasonalOnly || (activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
@@ -116,6 +118,18 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, categ
     activeFilters.selectedPrivateLists?.length > 0
   )));
   const showFavoritesOnly = showFavoritesOnlyProp ?? false;
+  // Tutorials are a flat, unfiltered app-wide list (no kulinarik/category/author
+  // metadata to filter on), so they only mix into the feed on the plain,
+  // unfiltered "Kochbuch" view - any active recipe filter hides them, but the
+  // search term still applies (matched against the tutorial title below).
+  const showTutorials = !categoryFilter && !activePrivateListId && !showFavoritesOnly && !showSeasonalOnly && !(activeFilters && (
+    activeFilters.selectedGroup ||
+    activeFilters.selectedCuisines?.length > 0 ||
+    activeFilters.selectedCategories?.length > 0 ||
+    activeFilters.selectedAuthors?.length > 0 ||
+    activeFilters.selectedPrivateLists?.length > 0
+  ));
+  const { banners: tutorialDeleteBanners, pendingKeys: pendingTutorialDeleteKeys, scheduleDelete: scheduleTutorialDelete, undoDelete: undoTutorialDelete } = useUndoableDelete();
   const [addPressed, setAddPressed] = useState(false);
   const [filterPressed, setFilterPressed] = useState(false);
   const filterLongPressTimer = useRef(null);
@@ -330,6 +344,25 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, categ
   // Group recipes by parent first
   const allRecipeGroups = groupRecipesByParent(recipes);
 
+  // Tutorials wrapped into the same "group" shape as recipes (primaryRecipe +
+  // allRecipes + versionCount) so they can be sorted and rendered alongside
+  // recipe groups below without recipe-versioning logic having to know about them.
+  const tutorialGroups = useMemo(() => {
+    if (!showTutorials) return [];
+    let list = tutorials.filter(t => !pendingTutorialDeleteKeys.has(t.id));
+    if (searchTerm && searchTerm.trim()) {
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      list = list.filter(t => t.title?.toLowerCase().includes(lowerSearchTerm));
+    }
+    return list.map(t => ({
+      isTutorial: true,
+      tutorial: t,
+      primaryRecipe: { title: t.title, createdAt: t.createdAt },
+      allRecipes: [],
+      versionCount: 1,
+    }));
+  }, [tutorials, showTutorials, searchTerm, pendingTutorialDeleteKeys]);
+
   // Filter and sort recipe groups with memoization for performance
   const recipeGroups = useMemo(() => {
     // Filter groups based on favorites if enabled
@@ -342,15 +375,32 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, categ
       const lowerSearchTerm = searchTerm.toLowerCase();
       filteredGroups = filteredGroups.filter(group => {
         // Search in any recipe title within the group
-        return group.allRecipes.some(recipe => 
+        return group.allRecipes.some(recipe =>
           recipe.title?.toLowerCase().includes(lowerSearchTerm)
         );
       });
     }
 
+    const combinedGroups = [...filteredGroups, ...tutorialGroups];
+
     // Sort groups based on active sort option
-    return sortRecipeGroups(filteredGroups, activeSort, sortSettings, viewCounts, { favoriteIds, cookDatesMap, seasonMatrixEntries });
-  }, [allRecipeGroups, showFavoritesOnly, favoriteIds, searchTerm, activeSort, sortSettings, viewCounts, cookDatesMap, seasonMatrixEntries]);
+    return sortRecipeGroups(combinedGroups, activeSort, sortSettings, viewCounts, { favoriteIds, cookDatesMap, seasonMatrixEntries });
+  }, [allRecipeGroups, tutorialGroups, showFavoritesOnly, favoriteIds, searchTerm, activeSort, sortSettings, viewCounts, cookDatesMap, seasonMatrixEntries]);
+
+  const handleDeleteTutorial = (tutorial) => {
+    scheduleTutorialDelete({
+      key: tutorial.id,
+      message: `"${tutorial.title}" gelöscht.`,
+      onConfirm: async () => {
+        try {
+          await onDeleteTutorial?.(tutorial.id);
+        } catch (err) {
+          console.error('Error deleting tutorial:', err);
+        }
+      },
+      onUndo: () => {},
+    });
+  };
 
   const handleRecipeClick = (group) => {
     // Select the recipe that is at the top according to current sorting order
@@ -469,6 +519,16 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, categ
       ) : (
         <div className="recipe-grid">
           {recipeGroups.map(group => {
+            if (group.isTutorial) {
+              return (
+                <TutorialCard
+                  key={`tutorial-${group.tutorial.id}`}
+                  tutorial={group.tutorial}
+                  canDelete={userCanEdit}
+                  onDelete={handleDeleteTutorial}
+                />
+              );
+            }
             // Sort versions to get the one that should be displayed first
             const sortedVersions = sortRecipeVersions(group.allRecipes, currentUser?.id, (userId, recipeId) => favoriteIds.includes(recipeId), recipes);
             const recipe = sortedVersions[0] || group.primaryRecipe;
@@ -496,6 +556,15 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, categ
           })}
         </div>
       )}
+
+      {tutorialDeleteBanners.map((banner) => (
+        <div key={banner.id} className="undo-snackbar" role="status">
+          <span>{banner.message}</span>
+          <button type="button" className="undo-snackbar-btn" onClick={() => undoTutorialDelete(banner.id)}>
+            Rückgängig
+          </button>
+        </div>
+      ))}
     </div>
   );
 }
