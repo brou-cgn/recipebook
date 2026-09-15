@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './RecipeForm.css';
 import './TutorialForm.css';
 import SavingOverlay from './SavingOverlay';
 import { isBase64Image } from '../utils/imageUtils';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { TUTORIAL_CATEGORIES } from '../utils/tutorialsFirestore';
+import { extractYouTubeVideoId, getYouTubeThumbnailUrl } from '../utils/youtubeUtils';
+
+const clamp01 = (n) => Math.min(1, Math.max(0, n));
 
 // "Neues Tutorial" - same anatomy as RecipeForm (header/actions, form card,
 // mobile FABs) but without ingredients/steps/portions/cook time, plus a
@@ -21,9 +24,59 @@ function TutorialForm({ onSave, onCancel }) {
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
 
+  // Vorschau-Zuschnitt: YouTubes Standbild kommt für nicht-16:9-Videos mit
+  // eingebrannten Weichzeichner-Balken (Pillarboxing). zoom/pos erlauben es,
+  // den sichtbaren Ausschnitt des Thumbnails frei zu verschieben/zoomen, statt
+  // den ganzen (gepaddeten) Frame zu zeigen. pos ist 0..1 normiert auf den bei
+  // aktuellem Zoom verfügbaren Verschiebespielraum - siehe TutorialCard.js für
+  // die identische Render-Formel.
+  const [thumbZoom, setThumbZoom] = useState(1);
+  const [thumbPosX, setThumbPosX] = useState(0.5);
+  const [thumbPosY, setThumbPosY] = useState(0.5);
+  const cropBoxRef = useRef(null);
+  const dragStateRef = useRef(null);
+
+  const videoId = extractYouTubeVideoId(videoUrl);
+  const thumbnailUrl = getYouTubeThumbnailUrl(videoId);
+
   useEffect(() => {
     getButtonIcons().then(setButtonIcons).catch(() => {});
   }, []);
+
+  // Neues Video -> alter Zuschnitt passt nicht mehr, auf Mitte/kein Zoom zurücksetzen.
+  useEffect(() => {
+    setThumbZoom(1);
+    setThumbPosX(0.5);
+    setThumbPosY(0.5);
+  }, [videoId]);
+
+  const handleCropPointerDown = (e) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragStateRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startPosX: thumbPosX,
+      startPosY: thumbPosY
+    };
+  };
+
+  const handleCropPointerMove = (e) => {
+    const drag = dragStateRef.current;
+    const box = cropBoxRef.current;
+    if (!drag || !box) return;
+    const rect = box.getBoundingClientRect();
+    const panRangeX = (thumbZoom - 1) * rect.width;
+    const panRangeY = (thumbZoom - 1) * rect.height;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    setThumbPosX(clamp01(drag.startPosX - (panRangeX > 0 ? dx / panRangeX : 0)));
+    setThumbPosY(clamp01(drag.startPosY - (panRangeY > 0 ? dy / panRangeY : 0)));
+  };
+
+  const handleCropPointerUp = (e) => {
+    dragStateRef.current = null;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* noop */ }
+  };
 
   useEffect(() => {
     const handler = () => setIsDarkMode(getDarkModePreference());
@@ -39,7 +92,12 @@ function TutorialForm({ onSave, onCancel }) {
     setIsSaving(true);
     setError('');
     try {
-      await onSave({ title: title.trim(), videoUrl: videoUrl.trim(), category });
+      await onSave({
+        title: title.trim(),
+        videoUrl: videoUrl.trim(),
+        category,
+        ...(videoId ? { thumbZoom, thumbPosX, thumbPosY } : {})
+      });
     } catch (err) {
       console.error('Error saving tutorial:', err);
       setError('Das Tutorial konnte nicht gespeichert werden. Bitte versuche es erneut.');
@@ -95,6 +153,44 @@ function TutorialForm({ onSave, onCancel }) {
             required
           />
         </div>
+
+        {thumbnailUrl && (
+          <div className="form-group">
+            <label>Vorschaubild zuschneiden</label>
+            <div
+              className="tutorial-thumb-crop-box"
+              ref={cropBoxRef}
+              onPointerDown={handleCropPointerDown}
+              onPointerMove={handleCropPointerMove}
+              onPointerUp={handleCropPointerUp}
+              onPointerCancel={handleCropPointerUp}
+            >
+              <img
+                src={thumbnailUrl}
+                alt="Vorschau-Zuschnitt"
+                draggable="false"
+                className="tutorial-thumb-crop-image"
+                style={{
+                  width: `${thumbZoom * 100}%`,
+                  height: `${thumbZoom * 100}%`,
+                  left: `${-(thumbZoom - 1) * 100 * thumbPosX}%`,
+                  top: `${-(thumbZoom - 1) * 100 * thumbPosY}%`
+                }}
+              />
+            </div>
+            <input
+              type="range"
+              min="1"
+              max="2.5"
+              step="0.05"
+              value={thumbZoom}
+              onChange={(e) => setThumbZoom(parseFloat(e.target.value))}
+              className="tutorial-thumb-zoom-slider"
+              aria-label="Vorschaubild zoomen"
+            />
+            <p className="tutorial-thumb-crop-hint">Ziehen zum Verschieben, Regler zum Zoomen</p>
+          </div>
+        )}
 
         <div className="form-group">
           <label>Technik-Kategorie</label>

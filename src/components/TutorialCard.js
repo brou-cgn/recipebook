@@ -68,6 +68,9 @@ function TutorialCard({ tutorial }) {
   const [thumbFailed, setThumbFailed] = useState(false);
   const videoId = extractYouTubeVideoId(tutorial.videoUrl);
   const thumbnailUrl = getYouTubeThumbnailUrl(videoId);
+  const thumbZoom = tutorial.thumbZoom || 1;
+  const thumbPosX = tutorial.thumbPosX ?? 0.5;
+  const thumbPosY = tutorial.thumbPosY ?? 0.5;
 
   const handleClick = (e) => {
     if (videoId) {
@@ -96,6 +99,12 @@ function TutorialCard({ tutorial }) {
               className="tutorial-card-thumb-image"
               draggable="false"
               onError={() => setThumbFailed(true)}
+              style={{
+                width: `${thumbZoom * 100}%`,
+                height: `${thumbZoom * 100}%`,
+                left: `${-(thumbZoom - 1) * 100 * thumbPosX}%`,
+                top: `${-(thumbZoom - 1) * 100 * thumbPosY}%`
+              }}
             />
           ) : (
             <CategoryIcon category={tutorial.category} />
