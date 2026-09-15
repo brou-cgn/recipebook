@@ -10,6 +10,7 @@
   background: transparent;
   box-shadow: none;
   transition: opacity 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .trending-card:active {

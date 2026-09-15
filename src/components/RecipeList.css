@@ -266,6 +266,7 @@
 
   cursor: pointer;
   transition: all 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .recipe-card:hover {
