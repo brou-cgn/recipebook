@@ -59,7 +59,7 @@ function TutorialForm({ onSave, onCancel }) {
     <div className="recipe-form-container">
       <div className="recipe-form-header">
         <div className="recipe-form-header-title">
-          <h2>Neues Tutorial</h2>
+          <h2>Neues Tutorial hinzufügen</h2>
         </div>
         <div className="recipe-form-header-actions">
           <button type="button" className="recipe-form-header-cancel" onClick={onCancel}>
