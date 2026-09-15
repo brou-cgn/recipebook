@@ -32,6 +32,12 @@ export function weaveTutorialsIntoGroups(recipeGroups, tutorials) {
       tutorialIndex += 1;
     }
   });
+  // If there are more distinct tutorials than the weave produced slots for,
+  // the cycle above never reaches the tail ones - append them at the end so
+  // every tutorial still gets shown at least once.
+  for (let i = tutorialIndex; i < tutorials.length; i += 1) {
+    entries.push({ type: 'tutorial', tutorial: tutorials[i] });
+  }
   return entries;
 }
 
@@ -513,11 +519,11 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, tutor
       ) : (
         <div className="recipe-grid">
           {(
-            // Tutorials are only woven into the plain, unfiltered "Kochbuch"
-            // view - mixing them into a filtered or private-list result feels
-            // off-topic, and they're global content that doesn't belong to
-            // any one private list.
-            !activePrivateListId && !hasActiveFilters
+            // Tutorials are woven into the "Kochbuch" view whether or not
+            // filters are active, so they stay discoverable in a filtered
+            // result too - only private lists exclude them, since they're
+            // global content that doesn't belong to any one private list.
+            !activePrivateListId
               ? weaveTutorialsIntoGroups(recipeGroups, visibleTutorials)
               : recipeGroups.map((group) => ({ type: 'recipe', group }))
           ).map((entry) => {
