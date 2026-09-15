@@ -32,12 +32,6 @@ export function weaveTutorialsIntoGroups(recipeGroups, tutorials) {
       tutorialIndex += 1;
     }
   });
-  // If there are more distinct tutorials than the weave produced slots for,
-  // the cycle above never reaches the tail ones - append them at the end so
-  // every tutorial still gets shown at least once.
-  for (let i = tutorialIndex; i < tutorials.length; i += 1) {
-    entries.push({ type: 'tutorial', tutorial: tutorials[i] });
-  }
   return entries;
 }
 
