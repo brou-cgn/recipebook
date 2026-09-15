@@ -16,3 +16,11 @@ export function getYouTubeThumbnailUrl(videoId) {
   if (!videoId) return null;
   return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 }
+
+// YouTube's 4 auto-generated scene thumbnails (0.jpg-3.jpg) - different
+// moments in the video, but only 120x90 (vs. hqdefault's 480x360), so they
+// look softer once zoomed in TutorialForm's crop editor.
+export function getYouTubeFrameUrls(videoId) {
+  if (!videoId) return [];
+  return [0, 1, 2, 3].map((n) => `https://img.youtube.com/vi/${videoId}/${n}.jpg`);
+}

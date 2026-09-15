@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './TutorialCard.css';
 import TutorialVideoModal from './TutorialVideoModal';
 import { TUTORIAL_CATEGORIES } from '../utils/tutorialsFirestore';
-import { extractYouTubeVideoId, getYouTubeThumbnailUrl } from '../utils/youtubeUtils';
+import { extractYouTubeVideoId, getYouTubeThumbnailUrl, getYouTubeFrameUrls } from '../utils/youtubeUtils';
 
 const CATEGORY_LABELS = TUTORIAL_CATEGORIES.reduce((map, c) => {
   map[c.id] = c.label;
@@ -67,7 +67,9 @@ function TutorialCard({ tutorial }) {
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [thumbFailed, setThumbFailed] = useState(false);
   const videoId = extractYouTubeVideoId(tutorial.videoUrl);
-  const thumbnailUrl = getYouTubeThumbnailUrl(videoId);
+  const thumbnailUrl = tutorial.thumbFrame != null
+    ? getYouTubeFrameUrls(videoId)[tutorial.thumbFrame]
+    : getYouTubeThumbnailUrl(videoId);
   const thumbZoom = tutorial.thumbZoom || 1;
   const thumbPosX = tutorial.thumbPosX ?? 0.5;
   const thumbPosY = tutorial.thumbPosY ?? 0.5;
