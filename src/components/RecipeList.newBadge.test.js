@@ -125,6 +125,21 @@ describe('weaveTutorialsIntoGroups helper', () => {
       expect(entry.tutorial.id).toBe('t-1');
     });
   });
+
+  // Regression test for a bug that shipped and got reverted twice (v2.1.19 ->
+  // v2.1.20): a "tail append" used to dump every tutorial the 4-per-slot
+  // cycle didn't reach onto the end of the list, producing a stack of
+  // tutorial cards with no recipe between them whenever a filtered/searched
+  // result had fewer than TUTORIAL_WEAVE_INTERVAL (4) matches.
+  test('does not append leftover tutorials when there are fewer insertion points than tutorials', () => {
+    const recipeGroups = Array.from({ length: 3 }, (_, i) => ({ primaryRecipe: { id: `r-${i}` } }));
+    const tutorials = [{ id: 't-1' }, { id: 't-2' }, { id: 't-3' }, { id: 't-4' }, { id: 't-5' }];
+
+    const entries = weaveTutorialsIntoGroups(recipeGroups, tutorials);
+    const tutorialEntries = entries.filter((entry) => entry.type === 'tutorial');
+
+    expect(tutorialEntries).toHaveLength(0);
+  });
 });
 
 // ─── Integration tests: "Neu" badge in RecipeList ────────────────────────────
