@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './TutorialVideoModal.css';
+import { getYouTubeThumbnailUrl } from '../utils/youtubeUtils';
 
 // Inline YouTube playback for a tutorial, opened from TutorialCard instead of
 // navigating away to youtube.com. Same overlay/dialog anatomy as
@@ -12,6 +13,16 @@ function TutorialVideoModal({ videoId, title, onClose }) {
   const isClosingRef = useRef(false);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  // The YouTube iframe is only created once the user taps play, not just from
+  // opening the modal. iOS's WKWebView can crash - and silently relaunch the
+  // whole standalone app, which reads as "the app restarted" - when a YouTube
+  // embed is torn down, even one that never actually started playing (e.g.
+  // YouTube's own "watch on YouTube" fallback card for a Short/restricted
+  // video, which never enters a playing state at all). Not creating the
+  // iframe until playback is requested means there's nothing to tear down on
+  // close for the common open-then-close-without-playing case.
+  const [isPlaying, setIsPlaying] = useState(false);
+  const thumbnailUrl = getYouTubeThumbnailUrl(videoId);
 
   useEffect(() => {
     if (closeButtonRef.current) {
@@ -19,16 +30,28 @@ function TutorialVideoModal({ videoId, title, onClose }) {
     }
   }, []);
 
-  // iOS crashes the WebView if a playing YouTube iframe is ripped out of the
-  // DOM while still active. Clear its src to stop playback first, and only
-  // unmount (call onClose) once that has taken effect.
+  // When an iframe was created (playback was started), clear its src and
+  // wait for that navigation to actually finish - not just a fixed delay -
+  // before unmounting, since tearing the iframe out mid-navigation is what
+  // could crash the WebView in the first place. The timeout is only a
+  // fallback in case 'load' never fires.
   const requestClose = () => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
-    if (iframeRef.current) {
-      iframeRef.current.src = 'about:blank';
+    const iframe = iframeRef.current;
+    if (!iframe) {
+      onCloseRef.current();
+      return;
     }
-    setTimeout(() => onCloseRef.current(), 50);
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      onCloseRef.current();
+    };
+    iframe.addEventListener('load', finish, { once: true });
+    iframe.src = 'about:blank';
+    setTimeout(finish, 300);
   };
 
   useEffect(() => {
@@ -83,13 +106,31 @@ function TutorialVideoModal({ videoId, title, onClose }) {
           </button>
         </div>
         <div className="tutorial-video-modal-player">
-          <iframe
-            ref={iframeRef}
-            src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`}
-            title={title}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-          />
+          {isPlaying ? (
+            <iframe
+              ref={iframeRef}
+              src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`}
+              title={title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          ) : (
+            <button
+              type="button"
+              className="tutorial-video-modal-facade"
+              onClick={() => setIsPlaying(true)}
+              aria-label={`Video „${title}“ abspielen`}
+            >
+              {thumbnailUrl && (
+                <img src={thumbnailUrl} alt="" className="tutorial-video-modal-facade-image" />
+              )}
+              <span className="tutorial-video-modal-facade-play">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 7L17 12L9 17V7Z" fill="#DF7A00" />
+                </svg>
+              </span>
+            </button>
+          )}
         </div>
       </div>
     </div>
