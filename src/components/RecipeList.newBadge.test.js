@@ -125,6 +125,16 @@ describe('weaveTutorialsIntoGroups helper', () => {
       expect(entry.tutorial.id).toBe('t-1');
     });
   });
+
+  test('still shows every tutorial at least once when there are more tutorials than insertion points', () => {
+    const recipeGroups = Array.from({ length: 8 }, (_, i) => ({ primaryRecipe: { id: `r-${i}` } }));
+    const tutorials = Array.from({ length: 5 }, (_, i) => ({ id: `t-${i}` }));
+
+    const entries = weaveTutorialsIntoGroups(recipeGroups, tutorials);
+    const tutorialIds = entries.filter((entry) => entry.type === 'tutorial').map((entry) => entry.tutorial.id);
+
+    expect(tutorialIds).toEqual(['t-0', 't-1', 't-2', 't-3', 't-4']);
+  });
 });
 
 // ─── Integration tests: "Neu" badge in RecipeList ────────────────────────────
