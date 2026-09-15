@@ -11,3 +11,48 @@
   gap: 8px;
   padding: 8px 0 4px;
 }
+
+/* Zuschnitt-Editor fürs Kartenvorschaubild - gleiche 4:3-Formel wie
+   .tutorial-card-thumb in TutorialCard.css, nur größer zum Bedienen. */
+.tutorial-thumb-crop-box {
+  position: relative;
+  width: 100%;
+  max-width: 280px;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #F5F2EF;
+  touch-action: none;
+  cursor: grab;
+}
+
+.tutorial-thumb-crop-box:active {
+  cursor: grabbing;
+}
+
+.tutorial-thumb-crop-image {
+  position: absolute;
+  max-width: none;
+  user-select: none;
+  pointer-events: none;
+}
+
+.tutorial-thumb-zoom-slider {
+  width: 100%;
+  max-width: 280px;
+  margin-top: 8px;
+}
+
+.tutorial-thumb-crop-hint {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: rgba(62, 43, 28, 0.6);
+}
+
+[data-theme="dark"] .tutorial-thumb-crop-box {
+  background: #3a352c;
+}
+
+[data-theme="dark"] .tutorial-thumb-crop-hint {
+  color: rgba(255, 255, 255, 0.5);
+}
