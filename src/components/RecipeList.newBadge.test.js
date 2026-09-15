@@ -140,6 +140,27 @@ describe('weaveTutorialsIntoGroups helper', () => {
 
     expect(tutorialEntries).toHaveLength(0);
   });
+
+  // Regression test for the actual root cause of the "Tuile shown many times"
+  // report: with a single tutorial cycled across many weave slots, every
+  // entry's tutorial.id is identical, so a React key built only from
+  // tutorial.id collided across all of them. That let React misattribute
+  // which DOM node belongs to which slot while data streamed in across
+  // multiple renders (slow/mobile connections), scrambling the order visibly
+  // even though this function's own output was always correctly interleaved.
+  // Each entry now carries a `slot` (its insertion index) so the render can
+  // build a key that stays unique even when the same tutorial repeats.
+  test('gives each tutorial entry a unique slot even when the same tutorial repeats', () => {
+    const recipeGroups = Array.from({ length: 40 }, (_, i) => ({ primaryRecipe: { id: `r-${i}` } }));
+    const tutorials = [{ id: 't-1' }];
+
+    const entries = weaveTutorialsIntoGroups(recipeGroups, tutorials);
+    const tutorialEntries = entries.filter((entry) => entry.type === 'tutorial');
+
+    const slots = tutorialEntries.map((entry) => entry.slot);
+    expect(slots).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(new Set(slots).size).toBe(slots.length);
+  });
 });
 
 // ─── Integration tests: "Neu" badge in RecipeList ────────────────────────────

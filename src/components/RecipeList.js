@@ -28,7 +28,12 @@ export function weaveTutorialsIntoGroups(recipeGroups, tutorials) {
   recipeGroups.forEach((group, i) => {
     entries.push({ type: 'recipe', group });
     if ((i + 1) % TUTORIAL_WEAVE_INTERVAL === 0) {
-      entries.push({ type: 'tutorial', tutorial: tutorials[tutorialIndex % tutorials.length] });
+      // slot is this insertion's position in the weave, not the tutorial's
+      // own id - with a small tutorial pool the same document gets reused
+      // across many slots, and a key built only from tutorial.id would then
+      // collide across all of them, letting React misattribute which DOM
+      // node belongs to which slot while data streams in across renders.
+      entries.push({ type: 'tutorial', tutorial: tutorials[tutorialIndex % tutorials.length], slot: tutorialIndex });
       tutorialIndex += 1;
     }
   });
@@ -524,7 +529,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, tutor
             if (entry.type === 'tutorial') {
               return (
                 <TutorialCard
-                  key={`tutorial-${entry.tutorial.id}`}
+                  key={`tutorial-slot-${entry.slot}`}
                   tutorial={entry.tutorial}
                   canManage={userCanEdit}
                   onDelete={handleDeleteTutorial}
