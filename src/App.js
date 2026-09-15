@@ -36,7 +36,7 @@ import { getOnboardingTestmodeActive, shouldShowOnboardingOverlay } from './util
 import { applyFaviconSettings } from './utils/faviconUtils';
 import { applyTileSizePreference, applyDarkModePreference, getCustomLists, expandCuisineSelection, getInspirationListSettings } from './utils/customLists';
 import { logRecipeCall } from './utils/recipeCallsFirestore';
-import { addTutorial, subscribeToTutorials, deleteTutorial } from './utils/tutorialsFirestore';
+import { addTutorial, subscribeToTutorials } from './utils/tutorialsFirestore';
 import { deleteRecipeThumbnail } from './utils/storageUtils';
 import { deleteField, serverTimestamp } from 'firebase/firestore';
 import { getSeasonMatrixOnce } from './utils/seasonMatrix';
@@ -358,6 +358,7 @@ function App() {
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isTutorialFormOpen, setIsTutorialFormOpen] = useState(false);
+  const [tutorials, setTutorials] = useState([]);
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [pendingReviewRecipes, setPendingReviewRecipes] = useState([]);
   const [isCreatingVersion, setIsCreatingVersion] = useState(false);
@@ -378,7 +379,6 @@ function App() {
   const [publicGroupId, setPublicGroupId] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [recipesLoaded, setRecipesLoaded] = useState(false);
-  const [tutorials, setTutorials] = useState([]);
   // Events module data (Events, guest profiles, custom drinks): subscribed once here,
   // same as recipes/menus/groups above, so navigating into/out of the Events area
   // doesn't tear down and re-create these listeners (and refetch) on every visit.
@@ -940,8 +940,8 @@ function App() {
     return () => unsubscribe();
   }, [currentUser, userGroupIds]);
 
-  // Set up real-time listener for tutorials (flat, app-wide collection - see
-  // utils/tutorialsFirestore.js), so they can be mixed into the recipe overview.
+  // Set up real-time listener for tutorials (linked technique videos) -
+  // a flat, app-wide collection like faqs, not scoped per group.
   useEffect(() => {
     if (!currentUser) return;
 
@@ -1157,10 +1157,6 @@ function App() {
   const handleSaveTutorial = async (tutorialData) => {
     await addTutorial({ ...tutorialData, createdBy: currentUser?.id });
     setIsTutorialFormOpen(false);
-  };
-
-  const handleDeleteTutorial = async (tutorialId) => {
-    await deleteTutorial(tutorialId);
   };
 
   const handleEditRecipe = (recipe) => {
@@ -2629,7 +2625,6 @@ function App() {
               onAddRecipe={handleAddRecipe}
               onAddTutorial={handleAddTutorial}
               tutorials={tutorials}
-              onDeleteTutorial={handleDeleteTutorial}
               categoryFilter={categoryFilter}
               onCategoryFilterChange={handleCategoryFilterChange}
               currentUser={currentUser}
