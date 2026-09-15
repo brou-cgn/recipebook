@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import './TutorialCard.css';
-import DeleteRowButton from './DeleteRowButton';
 import TutorialVideoModal from './TutorialVideoModal';
-import useSwipeToDelete from '../hooks/useSwipeToDelete';
-import { isBase64Image } from '../utils/imageUtils';
 import { TUTORIAL_CATEGORIES } from '../utils/tutorialsFirestore';
 import { extractYouTubeVideoId, getYouTubeThumbnailUrl } from '../utils/youtubeUtils';
 
@@ -59,27 +56,20 @@ function CategoryIcon({ category }) {
 // (RecipeList.js). Deliberately much shorter than RecipeCard - a small
 // 84x60 thumbnail on the left instead of a full-width image on top - so it
 // reads as "a different kind of tile" while scrolling past recipe cards.
-// Desktop delete affordance is DeleteRowButton; mobile uses the shared
-// swipe-to-delete gesture (see CLAUDE.md).
+// Display-only - no delete affordance lives here.
 //
 // YouTube links get a real thumbnail (img.youtube.com, no API key needed)
 // and play inline via TutorialVideoModal instead of leaving the app. Any
 // other video source (Instagram, TikTok, …) falls back to the previous
 // behavior - a plain external link - since those platforms don't offer an
 // unauthenticated thumbnail/embed the same way.
-function TutorialCard({ tutorial, canManage, onDelete, swipeDeleteIcon }) {
-  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ disabled: !canManage });
+function TutorialCard({ tutorial }) {
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [thumbFailed, setThumbFailed] = useState(false);
   const videoId = extractYouTubeVideoId(tutorial.videoUrl);
   const thumbnailUrl = getYouTubeThumbnailUrl(videoId);
 
   const handleClick = (e) => {
-    if (isDeleteVisible) {
-      e.preventDefault();
-      reset();
-      return;
-    }
     if (videoId) {
       e.preventDefault();
       setIsPlayerOpen(true);
@@ -92,31 +82,11 @@ function TutorialCard({ tutorial, canManage, onDelete, swipeDeleteIcon }) {
     : { href: tutorial.videoUrl, target: '_blank', rel: 'noopener noreferrer' };
 
   return (
-    <div className={`tutorial-card${offset < 0 ? ' swipe-delete-active' : ''}`}>
-      {canManage && (
-        <div className="swipe-delete-background" aria-hidden={!isDeleteVisible}>
-          {isDeleteVisible && (
-            <button
-              type="button"
-              className="swipe-delete-action"
-              onClick={() => { onDelete(tutorial); reset(); }}
-              aria-label={`${tutorial.title} entfernen`}
-            >
-              {isBase64Image(swipeDeleteIcon) ? (
-                <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
-              ) : (
-                <span className="swipe-delete-icon-text">{swipeDeleteIcon || '🗑'}</span>
-              )}
-            </button>
-          )}
-        </div>
-      )}
+    <div className="tutorial-card">
       <ContentTag
         className="tutorial-card-content"
-        style={{ transform: `translateX(${offset}px)` }}
         onClick={handleClick}
         {...contentTagProps}
-        {...handlers}
       >
         <div className="tutorial-card-thumb">
           {thumbnailUrl && !thumbFailed ? (
@@ -136,18 +106,11 @@ function TutorialCard({ tutorial, canManage, onDelete, swipeDeleteIcon }) {
             </span>
           </div>
         </div>
-        <div className="tutorial-card-body delete-row-hover-target">
+        <div className="tutorial-card-body">
           <div className="tutorial-card-text">
             <span className="kulinarik-tag">{CATEGORY_LABELS[tutorial.category] || 'Tutorial'}</span>
             <h3>{tutorial.title}</h3>
           </div>
-          {canManage && (
-            <DeleteRowButton
-              itemName={tutorial.title}
-              className="tutorial-card-delete-btn"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(tutorial); }}
-            />
-          )}
         </div>
       </ContentTag>
       {isPlayerOpen && (

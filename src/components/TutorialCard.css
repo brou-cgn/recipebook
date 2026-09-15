@@ -27,14 +27,13 @@
   padding: 0.7rem;
   border: none;
   border-radius: 12px;
-  background: #FFFBF6;
-  box-shadow: 0 0 0 1.5px rgba(223, 122, 0, 0.45), 0 4px 14px rgba(223, 122, 0, 0.16);
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   text-decoration: none;
   text-align: left;
   font: inherit;
   color: inherit;
   cursor: pointer;
-  transition: transform 0.15s ease;
 }
 
 .tutorial-card-thumb {
@@ -108,13 +107,9 @@
   white-space: nowrap;
 }
 
-.tutorial-card-delete-btn {
-  flex-shrink: 0;
-}
-
 [data-theme="dark"] .tutorial-card-content {
-  background: #2a2620;
-  box-shadow: 0 0 0 1.5px rgba(223, 122, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.3);
+  background: #1e1e1e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 [data-theme="dark"] .tutorial-card-thumb {
