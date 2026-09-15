@@ -10,9 +10,6 @@ import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
 import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
 import RecipeCard from './RecipeCard';
 import TutorialCard from './TutorialCard';
-import useUndoableDelete from '../hooks/useUndoableDelete';
-import { deleteTutorial } from '../utils/tutorialsFirestore';
-import './UndoSnackbar.css';
 
 const TUTORIAL_WEAVE_INTERVAL = 4;
 
@@ -138,25 +135,6 @@ const LONG_PRESS_DELAY_MS = 500;
 const LONG_PRESS_CLICK_SUPPRESSION_MS = 500;
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, tutorials = [], categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly = false, onShowFavoritesOnlyChange, privateLists, onAddToPrivateList, onRemoveFromPrivateList, publicGroupId, onMoveRecipeToPublic, cookDatesMap = new Map(), seasonMatrixEntries = [] }) {
-  const { banners: tutorialDeleteBanners, pendingKeys: pendingTutorialDeleteKeys, scheduleDelete: scheduleTutorialDelete, undoDelete: undoTutorialDelete } = useUndoableDelete();
-  const visibleTutorials = useMemo(
-    () => tutorials.filter((t) => !pendingTutorialDeleteKeys.has(t.id)),
-    [tutorials, pendingTutorialDeleteKeys]
-  );
-  const handleDeleteTutorial = (tutorial) => {
-    scheduleTutorialDelete({
-      key: tutorial.id,
-      message: `„${tutorial.title}" gelöscht.`,
-      onConfirm: async () => {
-        try {
-          await deleteTutorial(tutorial.id);
-        } catch (err) {
-          console.error('Error deleting tutorial:', err);
-        }
-      },
-      onUndo: () => {},
-    });
-  };
   const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnlyProp || showSeasonalOnly || (activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
@@ -523,7 +501,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, tutor
             // result too - only private lists exclude them, since they're
             // global content that doesn't belong to any one private list.
             !activePrivateListId
-              ? weaveTutorialsIntoGroups(recipeGroups, visibleTutorials)
+              ? weaveTutorialsIntoGroups(recipeGroups, tutorials)
               : recipeGroups.map((group) => ({ type: 'recipe', group }))
           ).map((entry) => {
             if (entry.type === 'tutorial') {
@@ -531,9 +509,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, tutor
                 <TutorialCard
                   key={`tutorial-slot-${entry.slot}`}
                   tutorial={entry.tutorial}
-                  canManage={userCanEdit}
-                  onDelete={handleDeleteTutorial}
-                  swipeDeleteIcon={getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode)}
                 />
               );
             }
@@ -565,15 +540,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, tutor
           })}
         </div>
       )}
-
-      {tutorialDeleteBanners.map((banner) => (
-        <div key={banner.id} className="undo-snackbar" role="status">
-          <span className="undo-snackbar-message">{banner.message}</span>
-          <button type="button" className="undo-snackbar-action" onClick={() => undoTutorialDelete(banner.id)}>
-            Rückgängig
-          </button>
-        </div>
-      ))}
     </div>
   );
 }
