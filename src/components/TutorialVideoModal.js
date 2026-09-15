@@ -8,6 +8,10 @@ import './TutorialVideoModal.css';
 // video should not scroll away mid-playback.
 function TutorialVideoModal({ videoId, title, onClose }) {
   const closeButtonRef = useRef(null);
+  const iframeRef = useRef(null);
+  const isClosingRef = useRef(false);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (closeButtonRef.current) {
@@ -15,15 +19,28 @@ function TutorialVideoModal({ videoId, title, onClose }) {
     }
   }, []);
 
+  // iOS crashes the WebView if a playing YouTube iframe is ripped out of the
+  // DOM while still active. Clear its src to stop playback first, and only
+  // unmount (call onClose) once that has taken effect.
+  const requestClose = () => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+    if (iframeRef.current) {
+      iframeRef.current.src = 'about:blank';
+    }
+    setTimeout(() => onCloseRef.current(), 50);
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        onClose();
+        requestClose();
       }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const scrollY = window.scrollY;
@@ -45,7 +62,7 @@ function TutorialVideoModal({ videoId, title, onClose }) {
   }, []);
 
   return (
-    <div className="tutorial-video-modal-overlay" onClick={onClose}>
+    <div className="tutorial-video-modal-overlay" onClick={requestClose}>
       <div
         className="tutorial-video-modal"
         onClick={(e) => e.stopPropagation()}
@@ -59,7 +76,7 @@ function TutorialVideoModal({ videoId, title, onClose }) {
             ref={closeButtonRef}
             type="button"
             className="tutorial-video-modal-close"
-            onClick={onClose}
+            onClick={requestClose}
             aria-label="Schließen"
           >
             ×
@@ -67,6 +84,7 @@ function TutorialVideoModal({ videoId, title, onClose }) {
         </div>
         <div className="tutorial-video-modal-player">
           <iframe
+            ref={iframeRef}
             src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`}
             title={title}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
