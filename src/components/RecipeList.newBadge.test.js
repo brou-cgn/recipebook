@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import RecipeList, { isNewRecipe } from './RecipeList';
+import RecipeList, { isNewRecipe, weaveTutorialsIntoGroups } from './RecipeList';
 import * as userFavorites from '../utils/userFavorites';
 import * as recipeRatings from '../utils/recipeRatings';
 
@@ -109,6 +109,21 @@ describe('isNewRecipe helper', () => {
     const recentPublishedAt = new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString();
     const recipe = { publishedAt: recentPublishedAt };
     expect(isNewRecipe(recipe, { newRecipeDays: 30 })).toBe(true);
+  });
+});
+
+describe('weaveTutorialsIntoGroups helper', () => {
+  test('cycles through tutorials when there are more insertion points than tutorials', () => {
+    const recipeGroups = Array.from({ length: 12 }, (_, i) => ({ primaryRecipe: { id: `r-${i}` } }));
+    const tutorials = [{ id: 't-1' }];
+
+    const entries = weaveTutorialsIntoGroups(recipeGroups, tutorials);
+    const tutorialEntries = entries.filter((entry) => entry.type === 'tutorial');
+
+    expect(tutorialEntries).toHaveLength(3);
+    tutorialEntries.forEach((entry) => {
+      expect(entry.tutorial.id).toBe('t-1');
+    });
   });
 });
 
