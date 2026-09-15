@@ -1,0 +1,97 @@
+/* Tutorial Video Modal Styles - inline YouTube playback, opened from
+   TutorialCard.js. Same overlay pattern as RatingModal.css. */
+.tutorial-video-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.tutorial-video-modal {
+  background: #FFFBF6;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  width: 100%;
+  max-width: min(95vw, 720px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tutorial-video-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1.1rem;
+  border-bottom: 2px solid #f0f0f0;
+  flex-shrink: 0;
+}
+
+.tutorial-video-modal-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tutorial-video-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #666;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.tutorial-video-modal-close:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #1a1a1a;
+}
+
+.tutorial-video-modal-player {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 */
+  background: #000;
+}
+
+.tutorial-video-modal-player iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+[data-theme="dark"] .tutorial-video-modal {
+  background: #2a2620;
+}
+
+[data-theme="dark"] .tutorial-video-modal-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .tutorial-video-modal-title {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .tutorial-video-modal-close {
+  color: #bbb;
+}
+
+[data-theme="dark"] .tutorial-video-modal-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
