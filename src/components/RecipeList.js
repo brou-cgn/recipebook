@@ -514,10 +514,12 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, tutor
         <div className="recipe-grid">
           {(
             // Tutorials are woven into the "Kochbuch" view whether or not
-            // filters are active, so they stay discoverable in a filtered
-            // result too - only private lists exclude them, since they're
-            // global content that doesn't belong to any one private list.
-            !activePrivateListId
+            // non-text filters are active, so they stay discoverable in a
+            // filtered result too. During an active text search they're
+            // left out instead: weaving still cycles through all tutorials
+            // by position in the (now much shorter) result list, so the
+            // same tutorial would otherwise repeat several times.
+            !activePrivateListId && !(searchTerm && searchTerm.trim())
               ? weaveTutorialsIntoGroups(recipeGroups, visibleTutorials)
               : recipeGroups.map((group) => ({ type: 'recipe', group }))
           ).map((entry) => {
