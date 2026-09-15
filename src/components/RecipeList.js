@@ -17,8 +17,10 @@ import './UndoSnackbar.css';
 const TUTORIAL_WEAVE_INTERVAL = 4;
 
 // Mixes tutorial rows into the recipe feed - one every TUTORIAL_WEAVE_INTERVAL
-// recipes, cycling through whatever tutorials are available. Exported so the
-// interspersing rule itself is unit-testable independent of the component.
+// recipes, working through whatever tutorials are available. Each tutorial is
+// shown at most once per feed instead of repeating once the pool is exhausted.
+// Exported so the interspersing rule itself is unit-testable independent of
+// the component.
 export function weaveTutorialsIntoGroups(recipeGroups, tutorials) {
   if (!tutorials || tutorials.length === 0) {
     return recipeGroups.map((group) => ({ type: 'recipe', group }));
@@ -27,8 +29,8 @@ export function weaveTutorialsIntoGroups(recipeGroups, tutorials) {
   let tutorialIndex = 0;
   recipeGroups.forEach((group, i) => {
     entries.push({ type: 'recipe', group });
-    if ((i + 1) % TUTORIAL_WEAVE_INTERVAL === 0) {
-      entries.push({ type: 'tutorial', tutorial: tutorials[tutorialIndex % tutorials.length] });
+    if ((i + 1) % TUTORIAL_WEAVE_INTERVAL === 0 && tutorialIndex < tutorials.length) {
+      entries.push({ type: 'tutorial', tutorial: tutorials[tutorialIndex] });
       tutorialIndex += 1;
     }
   });
