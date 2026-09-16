@@ -1026,6 +1026,16 @@ describe("User Management Utilities", () => {
         expect(ROLE_PERMISSIONS_DEFAULT[role].onboardingTestmode).toBe(false);
       });
     });
+    test("should have addTutorial/editTutorial enabled for admin", () => {
+      expect(ROLE_PERMISSIONS_DEFAULT[ROLES.ADMIN].addTutorial).toBe(true);
+      expect(ROLE_PERMISSIONS_DEFAULT[ROLES.ADMIN].editTutorial).toBe(true);
+    });
+    test("should have addTutorial/editTutorial disabled for non-admin roles", () => {
+      [ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].forEach((role) => {
+        expect(ROLE_PERMISSIONS_DEFAULT[role].addTutorial).toBe(false);
+        expect(ROLE_PERMISSIONS_DEFAULT[role].editTutorial).toBe(false);
+      });
+    });
     test("should include all assignable roles", () => {
       [ROLES.ADMIN, ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].forEach((role) => {
         expect(ROLE_PERMISSIONS_DEFAULT).toHaveProperty(role);
