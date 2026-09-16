@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './TutorialVideoModal.css';
 import { getYouTubeThumbnailUrl } from '../utils/youtubeUtils';
-import { markCloseStart, markPagehideFired, markCloseDone } from '../utils/tutorialVideoCloseDebug';
+import { markCloseStart, markPagehideFired, markCloseDone, logInteraction } from '../utils/tutorialVideoCloseDebug';
 
 // Inline YouTube playback for a tutorial, opened from TutorialCard instead of
 // navigating away to youtube.com. Same overlay/dialog anatomy as
@@ -26,6 +26,7 @@ function TutorialVideoModal({ videoId, title, onClose }) {
   const thumbnailUrl = getYouTubeThumbnailUrl(videoId);
 
   useEffect(() => {
+    logInteraction('open');
     if (closeButtonRef.current) {
       closeButtonRef.current.focus();
     }
@@ -46,9 +47,11 @@ function TutorialVideoModal({ videoId, title, onClose }) {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
     const iframe = iframeRef.current;
+    logInteraction('closeRequested');
     markCloseStart({ hadIframe: !!iframe, isPlaying });
     if (!iframe) {
       markCloseDone();
+      logInteraction('closeCompleted');
       onCloseRef.current();
       return;
     }
@@ -57,6 +60,7 @@ function TutorialVideoModal({ videoId, title, onClose }) {
       if (settled) return;
       settled = true;
       markCloseDone();
+      logInteraction('closeCompleted');
       onCloseRef.current();
     };
     iframe.addEventListener('load', finish, { once: true });
@@ -134,7 +138,10 @@ function TutorialVideoModal({ videoId, title, onClose }) {
             <button
               type="button"
               className="tutorial-video-modal-facade"
-              onClick={() => setIsPlaying(true)}
+              onClick={() => {
+                logInteraction('play');
+                setIsPlaying(true);
+              }}
               aria-label={`Video „${title}“ abspielen`}
             >
               {thumbnailUrl && (

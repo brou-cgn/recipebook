@@ -14,6 +14,7 @@
  *   - reloadMarker: object|null       (which of the 3 known reload() call sites fired, if any)
  *   - errorLog: array|null            (last few uncaught errors/rejections before the reload)
  *   - abruptTermination: object|null  (heartbeat/pagehide evidence of an OS-level process kill - see crashDiagnostics.js)
+ *   - interactionLog: array|null      (open/play/closeRequested/closeCompleted timestamps for the tutorial video modal, to correlate with abruptTermination)
  *   - navigationType: string          (performance navigation type, e.g. 'reload')
  *   - appVersion: string
  *   - userAgent: string
@@ -33,6 +34,7 @@ export async function logReloadDebugEvent(user, data) {
       reloadMarker: data.reloadMarker || null,
       errorLog: data.errorLog || null,
       abruptTermination: data.abruptTermination || null,
+      interactionLog: data.interactionLog || null,
       navigationType: data.navigationType || 'unbekannt',
       appVersion: process.env.REACT_APP_VERSION || '',
       userAgent: navigator.userAgent,
