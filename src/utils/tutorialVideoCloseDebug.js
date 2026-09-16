@@ -47,6 +47,40 @@ export function markCloseDone() {
   }
 }
 
+// Unconditional interaction log (unlike markCloseStart/markCloseDone above,
+// which only leave a trace when the close sequence didn't finish). Needed
+// because a captured restart with staleClose: null is ambiguous - it looks
+// identical whether the user tapped X right before the restart or never
+// touched the modal at all in that session. Logging every open/play/close
+// with a timestamp lets the next boot check whether a 'closeRequested' entry
+// actually lines up with the last heartbeat before an abrupt termination, or
+// whether the restart was unrelated to the modal entirely.
+const INTERACTION_LOG_KEY = 'tutorialVideoInteractionLog';
+const MAX_INTERACTION_ENTRIES = 10;
+
+export function logInteraction(event) {
+  try {
+    const raw = localStorage.getItem(INTERACTION_LOG_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    list.push({ event, ts: Date.now() });
+    while (list.length > MAX_INTERACTION_ENTRIES) list.shift();
+    localStorage.setItem(INTERACTION_LOG_KEY, JSON.stringify(list));
+  } catch {
+    // best-effort
+  }
+}
+
+export function checkForInteractionLog() {
+  try {
+    const raw = localStorage.getItem(INTERACTION_LOG_KEY);
+    if (!raw) return null;
+    localStorage.removeItem(INTERACTION_LOG_KEY);
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 // Call once, early, on app startup. Returns the breadcrumb left behind by an
 // unfinished close (i.e. the process died mid-close) or null if the last
 // close completed normally / nothing to report.

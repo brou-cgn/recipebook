@@ -6,7 +6,7 @@ import App from './App';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import reportWebVitals from './reportWebVitals';
 import { markSwUpdateReload } from './utils/swUpdateReloadFlag';
-import { checkForStaleClose, renderDebugBanner } from './utils/tutorialVideoCloseDebug';
+import { checkForStaleClose, checkForInteractionLog, renderDebugBanner } from './utils/tutorialVideoCloseDebug';
 import {
   installGlobalErrorLogger,
   checkForUncaughtErrorLog,
@@ -42,6 +42,15 @@ if (staleClose) {
   renderDebugBanner('Tutorial-Video-Debug: Schließen kam nicht durch.', staleClose);
 }
 
+// Unconditional log of every open/play/close on the tutorial video modal -
+// unlike staleClose above, this doesn't require the close to have been
+// interrupted. A captured restart with staleClose: null is ambiguous (looks
+// identical whether the user touched the modal at all), so this lets us
+// check whether a 'closeRequested' timestamp actually lines up with
+// abruptTermination's last heartbeat, or whether the restart was unrelated
+// to the modal entirely.
+const interactionLog = checkForInteractionLog();
+
 const reloadMarker = checkForReloadMarker();
 if (reloadMarker) {
   renderDebugBanner('Reload-Debug: dieser Reload-Pfad hat gefeuert.', reloadMarker);
@@ -74,7 +83,8 @@ if (staleClose || reloadMarker || errorLog || abruptTermination || isUnexplained
     reloadMarker,
     errorLog,
     abruptTermination,
-    navigationType
+    navigationType,
+    interactionLog
   };
 }
 
