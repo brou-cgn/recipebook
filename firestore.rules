@@ -340,6 +340,16 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // Temporary debug log for the iPhone app-restart investigation (see
+    // utils/debugReloadEventsFirestore.js). Read restricted to admins since
+    // entries can include error messages/user agents; remove this collection
+    // and its rule once the bug is understood.
+    match /debugReloadEvents/{eventId} {
+      allow read: if isAdmin();
+      allow create: if isAnyUser();
+      allow update, delete: if isAdmin();
+    }
+
     // Cook dates collection - global tracking of when users cooked recipes
     match /cookDates/{cookDateId} {
       allow read: if isAnyUser();

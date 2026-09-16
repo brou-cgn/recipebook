@@ -36,6 +36,7 @@ import { getOnboardingTestmodeActive, shouldShowOnboardingOverlay } from './util
 import { applyFaviconSettings } from './utils/faviconUtils';
 import { applyTileSizePreference, applyDarkModePreference, getCustomLists, expandCuisineSelection, getInspirationListSettings } from './utils/customLists';
 import { logRecipeCall } from './utils/recipeCallsFirestore';
+import { logReloadDebugEvent } from './utils/debugReloadEventsFirestore';
 import { addTutorial, subscribeToTutorials } from './utils/tutorialsFirestore';
 import { deleteRecipeThumbnail } from './utils/storageUtils';
 import { deleteField, serverTimestamp } from 'firebase/firestore';
@@ -721,6 +722,17 @@ function App() {
         setAllUsers(users);
       };
       loadUsers();
+    }
+  }, [currentUser]);
+
+  // Temporary: ship the app-restart debug data index.js collected from
+  // localStorage (if any) to Firestore once we have an authenticated user -
+  // the write requires auth, which isn't available yet at boot time. See
+  // utils/debugReloadEventsFirestore.js.
+  useEffect(() => {
+    if (currentUser && window.__pendingDebugReloadEvent) {
+      logReloadDebugEvent(currentUser, window.__pendingDebugReloadEvent);
+      window.__pendingDebugReloadEvent = null;
     }
   }, [currentUser]);
 

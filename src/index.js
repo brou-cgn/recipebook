@@ -48,6 +48,13 @@ if (errorLog) {
   renderDebugBanner('Crash-Debug: unbehandelte Fehler vor Neustart (Verlauf).', errorLog);
 }
 
+// Stash whatever was collected for App.js to write to Firestore once auth is
+// ready (the debugReloadEvents write requires an authenticated user, which
+// isn't available yet this early in boot). See utils/debugReloadEventsFirestore.js.
+if (staleClose || reloadMarker || errorLog) {
+  window.__pendingDebugReloadEvent = { staleClose, reloadMarker, errorLog };
+}
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
