@@ -8,7 +8,7 @@
 
 ### 1️⃣ Leere Seite / Weiße Seite
 
-**Problem:** GitHub Pages zeigt nur weiße Seite  
+**Problem:** Die App zeigt nur eine weiße Seite  
 **Ursache:** Firebase Secrets fehlen  
 **Lösung:**
 
@@ -114,7 +114,7 @@ console.log(firebase.apps.length > 0 ? 'Connected' : 'Not initialized')
 
 ### Checkliste: Ist alles konfiguriert?
 
-- [ ] GitHub Pages aktiviert? (Settings → Pages → Source: "GitHub Actions")
+- [ ] Letzter Lauf von „Deploy to Firebase Hosting" grün? (Actions-Tab)
 - [ ] Alle 7 Firebase Secrets in GitHub? (Settings → Secrets → Actions)
 - [ ] Firebase Authentication aktiviert? (Email/Password)
 - [ ] Firestore Database erstellt?
@@ -125,7 +125,7 @@ console.log(firebase.apps.length > 0 ? 'Connected' : 'Not initialized')
 
 ## 📱 URLs & Links
 
-- **Live App:** https://brou-cgn.github.io/recipebook
+- **Live App:** https://broubook.web.app
 - **GitHub Repo:** https://github.com/brou-cgn/recipebook
 - **Firebase Console:** https://console.firebase.google.com/
 

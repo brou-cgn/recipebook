@@ -133,11 +133,13 @@ Administrators can manage users through the Settings menu:
 
 ## 🌐 Live Demo
 
-The app is live and available at: **[https://brou-cgn.github.io/recipebook](https://brou-cgn.github.io/recipebook)**
+The app is live and available at: **[https://broubook.web.app](https://broubook.web.app)**
 
 ## 📦 Deployment
 
-This application is automatically deployed to GitHub Pages when changes are pushed to the `main` branch.
+This application is deployed to **Firebase Hosting**. A merge into `main` triggers the version bump, and a successful bump triggers the deploy — no manual step involved.
+
+👉 **[DEPLOYMENT.md](DEPLOYMENT.md)** — the deploy chain, required secrets, rollback
 
 **⚠️ WICHTIG:** Für das Deployment müssen Firebase Secrets als GitHub Actions Secrets konfiguriert werden.  
 👉 **[GitHub Secrets Setup Anleitung](GITHUB_SECRETS_SETUP.md)** - Schritt-für-Schritt Anleitung zur Behebung der leeren Seite
@@ -152,10 +154,9 @@ This application is automatically deployed to GitHub Pages when changes are push
 - **[ZUGRIFFSPROBLEME_ANALYSE.md](ZUGRIFFSPROBLEME_ANALYSE.md)** - 🔍 **Technische Analyse**: Fehlerbehebung und Diagnostik (für Entwickler/Admins)
 
 ### 📋 Deployment & Setup:
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - 🇩🇪 Die Deploy-Kette, benötigte Secrets, Rollback (Deutsch)
 - **[GITHUB_SECRETS_SETUP.md](GITHUB_SECRETS_SETUP.md)** - 🔒 Anleitung zum Einrichten der GitHub Secrets (ERFORDERLICH)
-- **[PUBLIKATION.md](PUBLIKATION.md)** - 🇩🇪 Vollständiger Leitfaden für die Veröffentlichung (Deutsch, für Laien verständlich)
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** - 🇩🇪 Technische Deployment-Details (Deutsch)
-- **[VERÖFFENTLICHUNG.md](VERÖFFENTLICHUNG.md)** - 🇩🇪 Zusammenfassung der durchgeführten Schritte
+- **[FIREBASE_SETUP.md](FIREBASE_SETUP.md)** - 🔥 Firebase-Projekt von Grund auf einrichten
 
 ## Getting Started
 
@@ -584,13 +585,9 @@ The project uses a GitHub Actions workflow to verify compatibility with multiple
 | React App | any (currently tested with Node 18, 20, 22) |
 | Firebase Functions | Node 20 (exact) |
 
-### Running the Compatibility Workflow
+### Running the Compatibility Check
 
-**Manual trigger** – go to [Actions → Test Node.js Compatibility](https://github.com/brou-cgn/recipebook/actions/workflows/test-node-update.yml) and click *Run workflow*. You can optionally specify a Node.js version to focus on.
-
-**Automatic trigger** – the workflow runs automatically on:
-- Pull requests targeting `main`
-- Pushes to branches named `node-update/**` or `upgrade/**`
+The former *Test Node.js Compatibility* workflow was removed in September 2026: it had been disabled since March and failed on `npm outdated` / `npm audit` findings — a permanent state in a create-react-app project and not something a pull request should be blocked on. Tests and build are covered by the CI workflow; the compatibility check runs locally when a Node upgrade is actually on the table.
 
 ### Local Compatibility Check
 

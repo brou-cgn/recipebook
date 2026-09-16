@@ -59,7 +59,7 @@ Fügen Sie **alle 7 Secrets** einzeln hinzu:
 Nachdem alle Secrets hinzugefügt wurden:
 
 1. Gehen Sie zu **Actions** in Ihrem Repository
-2. Wählen Sie den Workflow **"Deploy to GitHub Pages"**
+2. Wählen Sie den Workflow **"Deploy to Firebase Hosting"**
 3. Klicken Sie auf **Run workflow** → **Run workflow**
 
 Oder pushen Sie einfach eine Änderung zum `main`-Branch:
@@ -71,7 +71,7 @@ git push origin main
 ### 4. Überprüfung
 
 Nach erfolgreichem Deployment (grüner Haken ✅ bei Actions):
-- Öffnen Sie **https://brou-cgn.github.io/recipebook/**
+- Öffnen Sie **https://broubook.web.app/**
 - Die Web-App sollte nun korrekt geladen werden
 - Sie sollten die Login-Seite sehen
 

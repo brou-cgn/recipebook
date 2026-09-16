@@ -1,5 +1,12 @@
 # Technische Analyse: Zugriffsprobleme RecipeBook
 
+> **⚠️ Historisches Dokument.** Diese Analyse stammt vom 14. Februar 2026 und
+> beschreibt den Betrieb auf GitHub Pages. Seit März 2026 läuft die App auf
+> Firebase Hosting (<https://broubook.web.app>); alle Pages-spezifischen
+> Fehlerbilder und Lösungswege unten sind damit gegenstandslos. Aktuell gültig
+> sind [DEPLOYMENT.md](DEPLOYMENT.md) und
+> [ZUGRIFF_SCHNELLHILFE.md](ZUGRIFF_SCHNELLHILFE.md).
+
 ## 🔍 Übersicht
 
 Dieses Dokument analysiert potenzielle Zugriffsprobleme beim RecipeBook-System und deren technische Ursachen. Es richtet sich an Entwickler und technisch versierte Administratoren.

@@ -137,31 +137,6 @@ test.beforeEach(() => {
 });
 
 test(
-    'allows preflight for allowed origin and returns strict CORS headers',
-    async () => {
-      const req = {
-        method: 'OPTIONS',
-        headers: {origin: 'https://brou-cgn.github.io'},
-      };
-      const res = createRes();
-
-      await bringRecipeExport(req, res);
-
-      assert.equal(res.statusCode, 204);
-      assert.equal(
-          res.headers['Access-Control-Allow-Origin'],
-          'https://brou-cgn.github.io',
-      );
-      assert.equal(
-          res.headers['Access-Control-Allow-Methods'],
-          'GET, POST, OPTIONS',
-      );
-      assert.equal(res.headers['Access-Control-Allow-Headers'], 'Content-Type');
-      assert.equal(res.headers.Vary, 'Origin');
-    },
-);
-
-test(
     'allows preflight for broubook.web.app and returns strict CORS headers',
     async () => {
       const req = {
