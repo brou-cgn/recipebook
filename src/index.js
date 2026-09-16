@@ -6,7 +6,7 @@ import App from './App';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import reportWebVitals from './reportWebVitals';
 import { markSwUpdateReload } from './utils/swUpdateReloadFlag';
-import { checkForStaleClose, checkForInteractionLog, renderDebugBanner } from './utils/tutorialVideoCloseDebug';
+import { checkForStaleClose, checkForInteractionLog } from './utils/tutorialVideoCloseDebug';
 import {
   installGlobalErrorLogger,
   checkForUncaughtErrorLog,
@@ -31,16 +31,15 @@ import {
 // runs, so the next boot can see how recently it was alive and whether a
 // 'pagehide' fired before the gap. Every reload that isn't explained by a
 // known marker also gets logged now (not just the ones with a known cause),
-// per explicit request to document *all* restarts.
+// per explicit request to document *all* restarts. Findings go to Firestore
+// (see debugReloadEventsFirestore.js / App.js) rather than an on-screen
+// banner - a red banner on every involuntary restart was itself disruptive.
 // Remove all of this once the bug is understood.
 const abruptTermination = checkForAbruptTermination();
 installGlobalErrorLogger();
 installLifecycleHeartbeat();
 
 const staleClose = checkForStaleClose();
-if (staleClose) {
-  renderDebugBanner('Tutorial-Video-Debug: Schließen kam nicht durch.', staleClose);
-}
 
 // Unconditional log of every open/play/close on the tutorial video modal -
 // unlike staleClose above, this doesn't require the close to have been
@@ -52,24 +51,10 @@ if (staleClose) {
 const interactionLog = checkForInteractionLog();
 
 const reloadMarker = checkForReloadMarker();
-if (reloadMarker) {
-  renderDebugBanner('Reload-Debug: dieser Reload-Pfad hat gefeuert.', reloadMarker);
-}
-
 const errorLog = checkForUncaughtErrorLog();
-if (errorLog) {
-  renderDebugBanner('Crash-Debug: unbehandelte Fehler vor Neustart (Verlauf).', errorLog);
-}
-
-if (abruptTermination && !abruptTermination.hadCleanPagehide) {
-  renderDebugBanner('Reload-Debug: App lief bis kurz vor Neustart, kein pagehide.', abruptTermination);
-}
 
 const navigationType = performance.getEntriesByType('navigation')[0]?.type || 'unbekannt';
 const isUnexplainedReload = navigationType === 'reload' && !staleClose && !reloadMarker;
-if (isUnexplainedReload && !errorLog && !abruptTermination) {
-  renderDebugBanner('Reload-Debug: Reload ohne jede bekannte Ursache.', { navigationType });
-}
 
 // Stash whatever was collected for App.js to write to Firestore once auth is
 // ready (the debugReloadEvents write requires an authenticated user, which
