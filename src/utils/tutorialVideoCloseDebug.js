@@ -60,3 +60,28 @@ export function checkForStaleClose() {
     return null;
   }
 }
+
+// window.alert() at boot time (no user gesture behind it) can be silently
+// suppressed by iOS/WebKit's anti-abuse heuristics - which is exactly what
+// happened on first try, so this renders a plain DOM banner instead. Inserted
+// directly via the DOM API (not through React state) so it shows up even if
+// something about React's own boot is implicated in the restart.
+export function renderStaleCloseBanner(data) {
+  try {
+    const nav = performance.getEntriesByType('navigation')[0];
+    const banner = document.createElement('div');
+    banner.textContent =
+      `Tutorial-Video-Debug: Schließen kam nicht durch.\n` +
+      `${JSON.stringify(data, null, 2)}\n` +
+      `navigation.type: ${nav ? nav.type : 'unbekannt'}`;
+    banner.style.cssText =
+      'position:fixed;top:0;left:0;right:0;z-index:999999;' +
+      'background:#a33a26;color:#fff;font:12px/1.4 monospace;' +
+      'padding:12px;white-space:pre-wrap;word-break:break-word;' +
+      'max-height:60vh;overflow:auto;';
+    banner.addEventListener('click', () => banner.remove());
+    document.body.appendChild(banner);
+  } catch {
+    // best-effort
+  }
+}
