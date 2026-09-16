@@ -11,6 +11,7 @@ import {
   collection,
   doc,
   addDoc,
+  updateDoc,
   deleteDoc,
   onSnapshot,
   serverTimestamp,
@@ -68,6 +69,31 @@ export const addTutorial = async (tutorialData) => {
   const docRef = await addDoc(collection(db, 'tutorials'), data);
 
   return { id: docRef.id, ...data };
+};
+
+/**
+ * Update an existing tutorial.
+ * Only the fields the form owns are written - createdAt/createdBy stay as
+ * they were. Crop values are always sent (even as null) so that clearing a
+ * crop in the edit form actually removes it from the document instead of
+ * leaving the previous value behind.
+ * @param {string} tutorialId - ID of the tutorial to update.
+ * @param {Object} tutorialData - { title, videoUrl, category, thumbFrame, thumbZoom, thumbPosX, thumbPosY }
+ * @returns {Promise<void>}
+ */
+export const updateTutorial = async (tutorialId, tutorialData) => {
+  const data = {
+    title: tutorialData.title,
+    videoUrl: tutorialData.videoUrl,
+    category: tutorialData.category,
+    thumbFrame: tutorialData.thumbFrame ?? null,
+    thumbZoom: tutorialData.thumbZoom ?? null,
+    thumbPosX: tutorialData.thumbPosX ?? null,
+    thumbPosY: tutorialData.thumbPosY ?? null,
+    updatedAt: serverTimestamp()
+  };
+
+  await updateDoc(doc(db, 'tutorials', tutorialId), data);
 };
 
 /**

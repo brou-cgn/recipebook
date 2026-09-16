@@ -134,7 +134,7 @@ const SORT_STORAGE_KEY = 'recipebook_active_sort';
 const LONG_PRESS_DELAY_MS = 500;
 const LONG_PRESS_CLICK_SUPPRESSION_MS = 500;
 
-function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, tutorials = [], categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly = false, onShowFavoritesOnlyChange, privateLists, onAddToPrivateList, onRemoveFromPrivateList, publicGroupId, onMoveRecipeToPublic, cookDatesMap = new Map(), seasonMatrixEntries = [] }) {
+function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEditTutorial, tutorials = [], categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly = false, onShowFavoritesOnlyChange, privateLists, onAddToPrivateList, onRemoveFromPrivateList, publicGroupId, onMoveRecipeToPublic, cookDatesMap = new Map(), seasonMatrixEntries = [] }) {
   const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnlyProp || showSeasonalOnly || (activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
@@ -509,6 +509,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, tutor
                 <TutorialCard
                   key={`tutorial-slot-${entry.slot}`}
                   tutorial={entry.tutorial}
+                  onEdit={onEditTutorial}
                 />
               );
             }
