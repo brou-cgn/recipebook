@@ -22,3 +22,15 @@ Die Touch-Gesten-Logik ist zentralisiert, nicht mehr pro Liste dupliziert:
 
 Neue Lösch-UIs (Desktop wie Mobile) sollen diese beiden Hooks wiederverwenden
 statt eigene Swipe-/Undo-Logik zu implementieren.
+
+## Tests
+`npm run test:ci` ist der Lauf, den die CI macht (`.github/workflows/ci.yml`,
+läuft bei jedem PR und Push auf `main`). Er führt alles aus **außer** den
+Suites in `scripts/quarantined-tests.js` — 22 Suites, die schon rot waren,
+als der Test-Workflow im März 2026 abgeschaltet wurde.
+
+Wer eine dieser Suites repariert, streicht ihre Zeile dort. Neue Einträge nur
+mit Datum und Grund: eine Quarantäne, die still wächst, ist dasselbe wie gar
+keine CI.
+
+`npm test` führt weiterhin alles aus, inklusive der roten Suites.

@@ -14,7 +14,6 @@ import { getAuth } from 'firebase/auth';
 import { getFunctions } from 'firebase/functions';
 import { getStorage } from 'firebase/storage';
 import { getMessaging, isSupported as isMessagingSupported } from 'firebase/messaging';
-import { markReloadTriggered } from './utils/crashDiagnostics';
 
 // Firestore's multi-tab persistence (`persistentMultipleTabManager`) mirrors
 // small amounts of cross-tab coordination state (active query targets,
@@ -90,7 +89,6 @@ function handleFirestoreQuotaCrash(event) {
   } catch {
     // ignore - worst case we retry the recovery once more
   }
-  markReloadTriggered('firebase.handleFirestoreQuotaCrash', { message });
   window.location.reload();
 }
 
