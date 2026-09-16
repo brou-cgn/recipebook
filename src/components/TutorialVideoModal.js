@@ -148,7 +148,7 @@ function TutorialVideoModal({ videoId, title, onClose }) {
                 <img src={thumbnailUrl} alt="" className="tutorial-video-modal-facade-image" />
               )}
               <span className="tutorial-video-modal-facade-play">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
                   <path d="M9 7L17 12L9 17V7Z" fill="#DF7A00" />
                 </svg>
               </span>

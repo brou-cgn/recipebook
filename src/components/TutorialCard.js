@@ -113,7 +113,7 @@ function TutorialCard({ tutorial }) {
           )}
           <div className="tutorial-card-play">
             <span className="tutorial-card-play-circle">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 7L17 12L9 17V7Z" fill="#DF7A00" /></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 7L17 12L9 17V7Z" fill="#DF7A00" /></svg>
             </span>
           </div>
         </div>
