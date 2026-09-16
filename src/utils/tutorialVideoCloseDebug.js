@@ -65,20 +65,24 @@ export function checkForStaleClose() {
 // suppressed by iOS/WebKit's anti-abuse heuristics - which is exactly what
 // happened on first try, so this renders a plain DOM banner instead. Inserted
 // directly via the DOM API (not through React state) so it shows up even if
-// something about React's own boot is implicated in the restart.
-export function renderStaleCloseBanner(data) {
+// something about React's own boot is implicated in the restart. Stacks
+// (rather than replaces) if called more than once, so an unrelated
+// crashDiagnostics.js banner can appear alongside this one.
+export function renderDebugBanner(title, data) {
   try {
     const nav = performance.getEntriesByType('navigation')[0];
+    const existing = document.querySelectorAll('.debug-crash-banner').length;
     const banner = document.createElement('div');
+    banner.className = 'debug-crash-banner';
     banner.textContent =
-      `Tutorial-Video-Debug: Schließen kam nicht durch.\n` +
+      `${title}\n` +
       `${JSON.stringify(data, null, 2)}\n` +
       `navigation.type: ${nav ? nav.type : 'unbekannt'}`;
     banner.style.cssText =
-      'position:fixed;top:0;left:0;right:0;z-index:999999;' +
+      `position:fixed;top:${existing * 33}vh;left:0;right:0;z-index:999999;` +
       'background:#a33a26;color:#fff;font:12px/1.4 monospace;' +
       'padding:12px;white-space:pre-wrap;word-break:break-word;' +
-      'max-height:60vh;overflow:auto;';
+      'max-height:30vh;overflow:auto;border-bottom:2px solid #fff;';
     banner.addEventListener('click', () => banner.remove());
     document.body.appendChild(banner);
   } catch {

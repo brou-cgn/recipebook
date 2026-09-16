@@ -6,18 +6,30 @@ import App from './App';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import reportWebVitals from './reportWebVitals';
 import { markSwUpdateReload } from './utils/swUpdateReloadFlag';
-import { checkForStaleClose, renderStaleCloseBanner } from './utils/tutorialVideoCloseDebug';
+import { checkForStaleClose, renderDebugBanner } from './utils/tutorialVideoCloseDebug';
+import { installGlobalErrorLogger, checkForLastUncaughtError } from './utils/crashDiagnostics';
 
-// Temporary diagnostic for the "app restarts on iPhone when closing the
-// tutorial video dialog" report - see utils/tutorialVideoCloseDebug.js. If
-// the previous session left an unfinished close breadcrumb behind, that
-// breadcrumb only survives a real page reload/app relaunch, so surface it
-// as a DOM banner (window.alert() at boot has no user gesture behind it and
-// was silently swallowed by iOS on the first attempt). Remove once the bug
-// is confirmed fixed.
+// Temporary diagnostics for the "app resets to the start view instantly on
+// iPhone when closing the tutorial video dialog" report - see
+// utils/tutorialVideoCloseDebug.js and utils/crashDiagnostics.js. The
+// tutorial-video-specific breadcrumb never showed anything, which rules out
+// a crash *during* that component's own close logic, so this also logs any
+// uncaught error/rejection anywhere in the app the instant it happens -
+// which would explain an *instant* reset with no trace in the narrower
+// breadcrumb. Both survive a real page reload (unlike in-memory state), and
+// are surfaced as a DOM banner rather than alert() - alert() at boot has no
+// user gesture behind it and was silently swallowed by iOS on first try.
+// Remove all of this once the bug is confirmed fixed.
+installGlobalErrorLogger();
+
 const staleClose = checkForStaleClose();
 if (staleClose) {
-  renderStaleCloseBanner(staleClose);
+  renderDebugBanner('Tutorial-Video-Debug: Schließen kam nicht durch.', staleClose);
+}
+
+const lastUncaughtError = checkForLastUncaughtError();
+if (lastUncaughtError) {
+  renderDebugBanner('Crash-Debug: unbehandelter Fehler vor Neustart.', lastUncaughtError);
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
