@@ -119,8 +119,8 @@ function TutorialCard({ tutorial }) {
         </div>
         <div className="tutorial-card-body">
           <div className="tutorial-card-text">
-            <span className="kulinarik-tag">{CATEGORY_LABELS[tutorial.category] || 'Tutorial'}</span>
             <h3>{tutorial.title}</h3>
+            <span className="kulinarik-tag">{CATEGORY_LABELS[tutorial.category] || 'Tutorial'}</span>
           </div>
         </div>
       </ContentTag>
