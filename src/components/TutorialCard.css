@@ -40,6 +40,9 @@
   color: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  /* Wie die Buttons in RecipeList.css: kein 300-ms-Warten auf einen
+     Doppeltipp, das sonst auch den Longpress verzögert. */
+  touch-action: manipulation;
 }
 
 .tutorial-card-thumb {
