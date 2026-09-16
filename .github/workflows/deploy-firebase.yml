@@ -24,7 +24,18 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          max_attempts=3
+          for attempt in $(seq 1 "$max_attempts"); do
+            echo "npm ci attempt $attempt/$max_attempts"
+            if npm ci; then
+              exit 0
+            fi
+            if [ "$attempt" -lt "$max_attempts" ]; then
+              sleep $((attempt * 10))
+            fi
+          done
+          exit 1
         env:
           npm_config_fetch_retries: 5
           npm_config_fetch_retry_mintimeout: 10000
