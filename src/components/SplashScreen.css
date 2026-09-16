@@ -102,9 +102,11 @@
   }
 }
 
-/* Reload forced by a freshly activated service worker update: the tagline
-   already played its entrance once moments ago, so skip it here instead of
-   visibly re-flashing it. See src/utils/swUpdateReloadFlag.js. */
+/* A reload the user didn't ask for (a freshly activated service worker
+   update, or iOS restoring the app after killing it in the background): the
+   tagline already played its entrance once moments ago, so skip it here
+   instead of visibly re-flashing it. See src/utils/swUpdateReloadFlag.js
+   and src/utils/navigationType.js. */
 .splash-screen--instant .splash-screen__logo,
 .splash-screen--instant .splash-screen__tagline,
 .splash-screen--instant .splash-screen__hairline {
