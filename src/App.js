@@ -36,8 +36,14 @@ import { getOnboardingTestmodeActive, shouldShowOnboardingOverlay } from './util
 import { applyFaviconSettings } from './utils/faviconUtils';
 import { applyTileSizePreference, applyDarkModePreference, getCustomLists, expandCuisineSelection, getInspirationListSettings } from './utils/customLists';
 import { logRecipeCall } from './utils/recipeCallsFirestore';
-import { logReloadDebugEvent } from './utils/debugReloadEventsFirestore';
 import { isRecoveryNavigation } from './utils/navigationType';
+import {
+  readRecoverySnapshot,
+  saveSessionSnapshot,
+  clearSessionSnapshot,
+  trackSessionScroll,
+  restoreScrollPosition,
+} from './utils/sessionRestore';
 import { addTutorial, subscribeToTutorials } from './utils/tutorialsFirestore';
 import { deleteRecipeThumbnail } from './utils/storageUtils';
 import { deleteField, serverTimestamp } from 'firebase/firestore';
@@ -334,18 +340,26 @@ function applyRolePermissionsToUser(user, permissionsMap = {}) {
   };
 }
 
+// Where the previous session left off, if this page load is an involuntary
+// restart (iOS discarding the tab / killing the WebKit process) rather than a
+// deliberate app open. Read once at module scope, before the first render, so
+// the initial view can be derived from it instead of flashing the default
+// first. Null on a normal open. See utils/sessionRestore.js.
+const recoverySnapshot = readRecoverySnapshot();
+
 /**
  * Determines the initial top-level view after authentication state is known
  * and role permissions have been applied to the user object.
  *
- * A restart the user didn't ask for (see isRecoveryNavigation()) always
- * lands on the recipe overview, even for users whose Startseite preference
- * would otherwise show the curated landing page - that page is meant to be
- * arrived at deliberately, not to replace whatever the user was doing right
- * before an involuntary reload.
+ * A restart the user didn't ask for (see isRecoveryNavigation()) returns to
+ * whatever the user was last looking at, and falls back to the recipe
+ * overview when that can't be restored - even for users whose Startseite
+ * preference would otherwise show the curated landing page. That page is
+ * meant to be arrived at deliberately, not to replace whatever the user was
+ * doing right before an involuntary reload.
  */
 function getInitialViewForUser(user) {
-  if (isRecoveryNavigation()) return 'recipes';
+  if (isRecoveryNavigation()) return recoverySnapshot?.view || 'recipes';
   return user?.startseite ? 'startseite' : 'recipes';
 }
 
@@ -736,15 +750,62 @@ function App() {
     }
   }, [currentUser]);
 
-  // Temporary: ship the app-restart debug data index.js collected from
-  // localStorage (if any) to Firestore once we have an authenticated user -
-  // the write requires auth, which isn't available yet at boot time. See
-  // utils/debugReloadEventsFirestore.js.
+  // Finish restoring an involuntary restart (see utils/sessionRestore.js):
+  // getInitialViewForUser() already put us in the right view at first render,
+  // this reopens the recipe that was on screen and restores the scroll
+  // position. Waits for recipesLoaded because the recipe is stored by id and
+  // has to be resolved against the list the user is actually allowed to see -
+  // an id that no longer resolves (deleted, access revoked) simply leaves the
+  // view as it is. Runs at most once per app start.
+  const recoveryRestoredRef = useRef(false);
+  const cancelRecoveryScrollRef = useRef(null);
   useEffect(() => {
-    if (currentUser && window.__pendingDebugReloadEvent) {
-      logReloadDebugEvent(currentUser, window.__pendingDebugReloadEvent);
-      window.__pendingDebugReloadEvent = null;
+    if (recoveryRestoredRef.current || !recoverySnapshot) return;
+    if (!currentUser || !recipesLoaded) return;
+    recoveryRestoredRef.current = true;
+
+    const { recipeId, scrollY } = recoverySnapshot;
+    if (recipeId) {
+      const recipe = recipes.find((r) => r.id === recipeId);
+      if (recipe) setSelectedRecipe(recipe);
     }
+    // Not a plain scrollTo: the view being restored is code-split, so the
+    // Suspense fallback is still on screen at this point and the document is
+    // nowhere near its final height. restoreScrollPosition keeps trying
+    // while it grows - see utils/sessionRestore.js. Its canceller is kept in
+    // a ref rather than returned as this effect's cleanup: the effect re-runs
+    // on every recipes update (Firestore pushes several right after boot),
+    // and a cleanup would abort the restore that's still in progress.
+    cancelRecoveryScrollRef.current = restoreScrollPosition(scrollY);
+  }, [currentUser, recipesLoaded, recipes]);
+
+  useEffect(() => () => {
+    if (cancelRecoveryScrollRef.current) cancelRecoveryScrollRef.current();
+  }, []);
+
+  // Record where the user is, so the next involuntary restart can return
+  // here. Kept in a ref so the scroll listener below doesn't have to be
+  // re-registered on every navigation.
+  const sessionStateRef = useRef({ view: 'recipes', recipeId: null });
+  sessionStateRef.current = {
+    view: currentView,
+    recipeId: selectedRecipe?.id || null,
+  };
+
+  useEffect(() => {
+    if (!currentUser) return undefined;
+    // rAF so the scroll position read here is the one *after* this
+    // navigation's own scroll changes have been applied, not the outgoing
+    // view's.
+    const frame = requestAnimationFrame(() => {
+      saveSessionSnapshot({ ...sessionStateRef.current, scrollY: window.scrollY });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [currentUser, currentView, selectedRecipe]);
+
+  useEffect(() => {
+    if (!currentUser) return undefined;
+    return trackSessionScroll(() => sessionStateRef.current);
   }, [currentUser]);
 
   useEffect(() => {
@@ -2068,6 +2129,10 @@ function App() {
   };
 
   const handleLogout = async () => {
+    // Drop the "where the user was" snapshot: after a deliberate logout there
+    // is nothing to return to, and the next person on this device shouldn't
+    // be dropped into the previous one's recipe.
+    clearSessionSnapshot();
     await logoutUser();
     // User state will be updated by onAuthStateChange observer
     setRequiresPasswordChange(false);

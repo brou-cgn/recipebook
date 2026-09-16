@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './TutorialVideoModal.css';
 import { getYouTubeThumbnailUrl } from '../utils/youtubeUtils';
-import { markCloseStart, markPagehideFired, markCloseDone, logInteraction } from '../utils/tutorialVideoCloseDebug';
 
 // Inline YouTube playback for a tutorial, opened from TutorialCard instead of
 // navigating away to youtube.com. Same overlay/dialog anatomy as
@@ -15,18 +14,18 @@ function TutorialVideoModal({ videoId, title, onClose }) {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   // The YouTube iframe is only created once the user taps play, not just from
-  // opening the modal. iOS's WKWebView can crash - and silently relaunch the
-  // whole standalone app, which reads as "the app restarted" - when a YouTube
-  // embed is torn down, even one that never actually started playing (e.g.
-  // YouTube's own "watch on YouTube" fallback card for a Short/restricted
-  // video, which never enters a playing state at all). Not creating the
-  // iframe until playback is requested means there's nothing to tear down on
-  // close for the common open-then-close-without-playing case.
+  // opening the modal: an embed is expensive (third-party frame, its own
+  // player runtime) and most opens are a look at the thumbnail followed by a
+  // close. Keeping it out of the DOM until playback is requested means the
+  // common open-then-close-without-playing case costs nothing and has
+  // nothing to tear down. This started out as a suspected fix for the iPhone
+  // app-restart reports; diagnostics later showed a restart after an open
+  // that never reached playback, so the embed was not the cause - the
+  // facade is kept on its own merits.
   const [isPlaying, setIsPlaying] = useState(false);
   const thumbnailUrl = getYouTubeThumbnailUrl(videoId);
 
   useEffect(() => {
-    logInteraction('open');
     if (closeButtonRef.current) {
       closeButtonRef.current.focus();
     }
@@ -37,21 +36,11 @@ function TutorialVideoModal({ videoId, title, onClose }) {
   // before unmounting, since tearing the iframe out mid-navigation is what
   // could crash the WebView in the first place. The timeout is only a
   // fallback in case 'load' never fires.
-  //
-  // markCloseStart/markCloseDone are a temporary diagnostic breadcrumb (see
-  // utils/tutorialVideoCloseDebug.js) for the still-unresolved iPhone
-  // "app restarts on close" report - they persist through a real
-  // crash/relaunch so the next app start can tell us how far the close
-  // sequence actually got.
   const requestClose = () => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
     const iframe = iframeRef.current;
-    logInteraction('closeRequested');
-    markCloseStart({ hadIframe: !!iframe, isPlaying });
     if (!iframe) {
-      markCloseDone();
-      logInteraction('closeCompleted');
       onCloseRef.current();
       return;
     }
@@ -59,20 +48,12 @@ function TutorialVideoModal({ videoId, title, onClose }) {
     const finish = () => {
       if (settled) return;
       settled = true;
-      markCloseDone();
-      logInteraction('closeCompleted');
       onCloseRef.current();
     };
     iframe.addEventListener('load', finish, { once: true });
     iframe.src = 'about:blank';
     setTimeout(finish, 300);
   };
-
-  useEffect(() => {
-    const handlePagehide = () => markPagehideFired();
-    window.addEventListener('pagehide', handlePagehide);
-    return () => window.removeEventListener('pagehide', handlePagehide);
-  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -138,10 +119,7 @@ function TutorialVideoModal({ videoId, title, onClose }) {
             <button
               type="button"
               className="tutorial-video-modal-facade"
-              onClick={() => {
-                logInteraction('play');
-                setIsPlaying(true);
-              }}
+              onClick={() => setIsPlaying(true)}
               aria-label={`Video „${title}“ abspielen`}
             >
               {thumbnailUrl && (
