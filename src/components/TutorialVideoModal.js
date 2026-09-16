@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './TutorialVideoModal.css';
 import { getYouTubeThumbnailUrl } from '../utils/youtubeUtils';
+import { markCloseStart, markPagehideFired, markCloseDone } from '../utils/tutorialVideoCloseDebug';
 
 // Inline YouTube playback for a tutorial, opened from TutorialCard instead of
 // navigating away to youtube.com. Same overlay/dialog anatomy as
@@ -35,11 +36,19 @@ function TutorialVideoModal({ videoId, title, onClose }) {
   // before unmounting, since tearing the iframe out mid-navigation is what
   // could crash the WebView in the first place. The timeout is only a
   // fallback in case 'load' never fires.
+  //
+  // markCloseStart/markCloseDone are a temporary diagnostic breadcrumb (see
+  // utils/tutorialVideoCloseDebug.js) for the still-unresolved iPhone
+  // "app restarts on close" report - they persist through a real
+  // crash/relaunch so the next app start can tell us how far the close
+  // sequence actually got.
   const requestClose = () => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
     const iframe = iframeRef.current;
+    markCloseStart({ hadIframe: !!iframe, isPlaying });
     if (!iframe) {
+      markCloseDone();
       onCloseRef.current();
       return;
     }
@@ -47,12 +56,19 @@ function TutorialVideoModal({ videoId, title, onClose }) {
     const finish = () => {
       if (settled) return;
       settled = true;
+      markCloseDone();
       onCloseRef.current();
     };
     iframe.addEventListener('load', finish, { once: true });
     iframe.src = 'about:blank';
     setTimeout(finish, 300);
   };
+
+  useEffect(() => {
+    const handlePagehide = () => markPagehideFired();
+    window.addEventListener('pagehide', handlePagehide);
+    return () => window.removeEventListener('pagehide', handlePagehide);
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
