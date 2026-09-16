@@ -13,10 +13,16 @@ const clamp01 = (n) => Math.min(1, Math.max(0, n));
 // mobile FABs) but without ingredients/steps/portions/cook time, plus a
 // Video-URL field. See CLAUDE.md / the RecipeBook design canvas for why the
 // long-press-on-add-recipe entry point exists.
-function TutorialForm({ onSave, onCancel }) {
-  const [title, setTitle] = useState('');
-  const [videoUrl, setVideoUrl] = useState('');
-  const [category, setCategory] = useState(TUTORIAL_CATEGORIES[0].id);
+//
+// Doubles as the edit form: with a `tutorial` prop the fields start out
+// filled with that document's values and the heading switches to
+// "Tutorial bearbeiten" - reached by long-pressing a TutorialCard, the same
+// gesture that opens this form empty from the add button.
+function TutorialForm({ onSave, onCancel, tutorial = null }) {
+  const isEditing = Boolean(tutorial);
+  const [title, setTitle] = useState(tutorial?.title || '');
+  const [videoUrl, setVideoUrl] = useState(tutorial?.videoUrl || '');
+  const [category, setCategory] = useState(tutorial?.category || TUTORIAL_CATEGORIES[0].id);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [savePressed, setSavePressed] = useState(false);
@@ -30,12 +36,13 @@ function TutorialForm({ onSave, onCancel }) {
   // den ganzen (gepaddeten) Frame zu zeigen. pos ist 0..1 normiert auf den bei
   // aktuellem Zoom verfügbaren Verschiebespielraum - siehe TutorialCard.js für
   // die identische Render-Formel.
-  const [thumbFrame, setThumbFrame] = useState(null);
-  const [thumbZoom, setThumbZoom] = useState(1);
-  const [thumbPosX, setThumbPosX] = useState(0.5);
-  const [thumbPosY, setThumbPosY] = useState(0.5);
+  const [thumbFrame, setThumbFrame] = useState(tutorial?.thumbFrame ?? null);
+  const [thumbZoom, setThumbZoom] = useState(tutorial?.thumbZoom || 1);
+  const [thumbPosX, setThumbPosX] = useState(tutorial?.thumbPosX ?? 0.5);
+  const [thumbPosY, setThumbPosY] = useState(tutorial?.thumbPosY ?? 0.5);
   const cropBoxRef = useRef(null);
   const dragStateRef = useRef(null);
+  const skipInitialThumbReset = useRef(true);
 
   const videoId = extractYouTubeVideoId(videoUrl);
   const frameUrls = getYouTubeFrameUrls(videoId);
@@ -46,7 +53,13 @@ function TutorialForm({ onSave, onCancel }) {
   }, []);
 
   // Neues Video -> alte Frame-/Zuschnittwahl passt nicht mehr, zurücksetzen.
+  // Beim Bearbeiten läuft dieser Effekt auch direkt beim Mounten - dort darf
+  // er den aus dem Dokument geladenen Zuschnitt nicht wegwerfen.
   useEffect(() => {
+    if (skipInitialThumbReset.current) {
+      skipInitialThumbReset.current = false;
+      return;
+    }
     setThumbFrame(null);
     setThumbZoom(1);
     setThumbPosX(0.5);
@@ -120,7 +133,7 @@ function TutorialForm({ onSave, onCancel }) {
     <div className="recipe-form-container">
       <div className="recipe-form-header">
         <div className="recipe-form-header-title">
-          <h2>Neues Tutorial hinzufügen</h2>
+          <h2>{isEditing ? 'Tutorial bearbeiten' : 'Neues Tutorial hinzufügen'}</h2>
         </div>
         <div className="recipe-form-header-actions">
           <button type="button" className="recipe-form-header-cancel" onClick={onCancel}>
@@ -241,7 +254,7 @@ function TutorialForm({ onSave, onCancel }) {
         onMouseUp={() => setCancelPressed(false)}
         onMouseLeave={() => setCancelPressed(false)}
         title="Abbrechen"
-        aria-label="Tutorial-Erstellung abbrechen"
+        aria-label={isEditing ? 'Tutorial-Bearbeitung abbrechen' : 'Tutorial-Erstellung abbrechen'}
       >
         {renderIcon('closeButtonDefaultImg', 'Abbrechen')}
       </button>

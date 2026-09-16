@@ -44,7 +44,7 @@ import {
   trackSessionScroll,
   restoreScrollPosition,
 } from './utils/sessionRestore';
-import { addTutorial, subscribeToTutorials } from './utils/tutorialsFirestore';
+import { addTutorial, updateTutorial, subscribeToTutorials } from './utils/tutorialsFirestore';
 import { deleteRecipeThumbnail } from './utils/storageUtils';
 import { deleteField, serverTimestamp } from 'firebase/firestore';
 import { getSeasonMatrixOnce } from './utils/seasonMatrix';
@@ -381,6 +381,7 @@ function App() {
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isTutorialFormOpen, setIsTutorialFormOpen] = useState(false);
+  const [editingTutorial, setEditingTutorial] = useState(null);
   const [tutorials, setTutorials] = useState([]);
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [pendingReviewRecipes, setPendingReviewRecipes] = useState([]);
@@ -1231,16 +1232,31 @@ function App() {
   };
 
   const handleAddTutorial = () => {
+    setEditingTutorial(null);
+    setIsTutorialFormOpen(true);
+  };
+
+  // Longpress auf einer Tutorialkarte (TutorialCard.js) - öffnet dasselbe
+  // Formular, nur mit den Daten des Tutorials und der Überschrift
+  // "Tutorial bearbeiten".
+  const handleEditTutorial = (tutorial) => {
+    setEditingTutorial(tutorial);
     setIsTutorialFormOpen(true);
   };
 
   const handleCancelTutorialForm = () => {
     setIsTutorialFormOpen(false);
+    setEditingTutorial(null);
   };
 
   const handleSaveTutorial = async (tutorialData) => {
-    await addTutorial({ ...tutorialData, createdBy: currentUser?.id });
+    if (editingTutorial) {
+      await updateTutorial(editingTutorial.id, tutorialData);
+    } else {
+      await addTutorial({ ...tutorialData, createdBy: currentUser?.id });
+    }
     setIsTutorialFormOpen(false);
+    setEditingTutorial(null);
   };
 
   const handleEditRecipe = (recipe) => {
@@ -2489,9 +2505,12 @@ function App() {
         />
         ) : isTutorialFormOpen ? (
         // Tutorial form - opened via longpress on the "Rezept hinzufügen"
-        // button (see RecipeList.js); shown with priority just like the
-        // recipe form it mirrors.
+        // button (see RecipeList.js) for a new tutorial, or via longpress on
+        // a TutorialCard to edit an existing one; shown with priority just
+        // like the recipe form it mirrors.
         <TutorialForm
+          key={editingTutorial?.id || 'new'}
+          tutorial={editingTutorial}
           onSave={handleSaveTutorial}
           onCancel={handleCancelTutorialForm}
         />
@@ -2715,6 +2734,7 @@ function App() {
               onSelectRecipe={handleSelectRecipe}
               onAddRecipe={handleAddRecipe}
               onAddTutorial={handleAddTutorial}
+              onEditTutorial={handleEditTutorial}
               tutorials={tutorials}
               categoryFilter={categoryFilter}
               onCategoryFilterChange={handleCategoryFilterChange}
