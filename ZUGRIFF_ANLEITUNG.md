@@ -11,7 +11,7 @@ Diese Anleitung erklärt verständlich, wie Sie auf das RecipeBook-System zugrei
 ### Option 1: Als registrierter Benutzer 👤
 
 1. **App öffnen:**
-   - Gehen Sie zu: **https://brou-cgn.github.io/recipebook**
+   - Gehen Sie zu: **https://broubook.web.app**
    - Warten Sie, bis die Seite vollständig geladen ist
 
 2. **Anmelden:**
@@ -24,7 +24,7 @@ Diese Anleitung erklärt verständlich, wie Sie auf das RecipeBook-System zugrei
 ### Option 2: Als Gast 🚶
    
 1. **App öffnen:**
-   - Gehen Sie zu: **https://brou-cgn.github.io/recipebook**
+   - Gehen Sie zu: **https://broubook.web.app**
 
 2. **Als Gast anmelden:**
    - Klicken Sie auf **"Als Gast anmelden"**
@@ -34,7 +34,7 @@ Diese Anleitung erklärt verständlich, wie Sie auf das RecipeBook-System zugrei
 ### Option 3: Neu registrieren 📝
 
 1. **App öffnen:**
-   - Gehen Sie zu: **https://brou-cgn.github.io/recipebook**
+   - Gehen Sie zu: **https://broubook.web.app**
 
 2. **Registrierung starten:**
    - Klicken Sie auf **"Jetzt registrieren"**
@@ -74,7 +74,7 @@ Wenn Sie die App nicht erreichen oder sich nicht anmelden können, folgen Sie di
    - Funktioniert nicht? → Problem mit Ihrer Internetverbindung
 
 2. ✅ **Richtige URL verwenden**
-   - URL muss exakt sein: `https://brou-cgn.github.io/recipebook`
+   - URL muss exakt sein: `https://broubook.web.app`
    - **Mit** `https://` am Anfang
    - **Ohne** Leerzeichen
    - **Klein** geschrieben: `recipebook` (nicht `RecipeBook`)
@@ -90,9 +90,10 @@ Wenn Sie die App nicht erreichen oder sich nicht anmelden können, folgen Sie di
      - Microsoft Edge
      - Safari (auf Mac/iOS)
 
-5. ✅ **24 Stunden warten**
-   - Bei ersten Deployment kann es bis zu 24 Stunden dauern
-   - GitHub Pages muss die Seite erst aktivieren
+5. ✅ **Ein paar Minuten warten**
+   - Nach einem Deployment dauert es 1-2 Minuten, bis die neue Version
+     ausgeliefert wird
+   - Danach hilft ein harter Reload (Strg+F5 / Cmd+Shift+R)
 
 **Immer noch leere Seite?**
 → Siehe Abschnitt "Für Administratoren" weiter unten
@@ -361,7 +362,7 @@ Als Administrator können Sie:
    
    a) Gehen Sie zu **Actions** in Ihrem Repository
    
-   b) Wählen Sie **"Deploy to GitHub Pages"**
+   b) Wählen Sie **"Deploy to Firebase Hosting"**
    
    c) Klicken Sie auf **"Run workflow"** → **"Run workflow"**
    
@@ -369,7 +370,7 @@ Als Administrator können Sie:
    
    e) ✅ Grüner Haken = Erfolgreich
    
-   f) Öffnen Sie: https://brou-cgn.github.io/recipebook
+   f) Öffnen Sie: https://broubook.web.app
 
 4. **Überprüfung:**
    - Seite sollte nun laden
@@ -450,37 +451,33 @@ Als Administrator können Sie:
 
 ---
 
-#### 🔧 GitHub Pages aktivieren
+#### 🔧 404-Fehler auf der App-URL
 
-**Problem:** 404-Fehler auf GitHub Pages URL
+**Problem:** Die Adresse liefert „Seite nicht gefunden"
 
 **Lösung:**
 
-1. **Repository-Einstellungen öffnen:**
-   - Gehen Sie zu: https://github.com/brou-cgn/recipebook
-   - Klicken Sie auf **Settings**
+1. **Adresse prüfen:**
+   - Korrekt ist ausschließlich: https://broubook.web.app
+   - Die alte Adresse `brou-cgn.github.io/recipebook` ist seit März 2026
+     abgeschaltet
 
-2. **Pages konfigurieren:**
-   - Links im Menü: **Pages** auswählen
-   - Unter "Build and deployment":
-   - **Source:** Wählen Sie **"GitHub Actions"**
-   - **NICHT** "Deploy from a branch"
-
-3. **Speichern:**
-   - Einstellung wird automatisch gespeichert
-   - Grüne Bestätigung erscheint
-
-4. **Deployment auslösen:**
+2. **Letztes Deployment prüfen:**
    - **Actions** Tab öffnen
-   - **"Deploy to GitHub Pages"** auswählen
+   - Letzter Lauf von **"Deploy to Firebase Hosting"** muss grün sein
+   - Rot? → Log öffnen, der fehlgeschlagene Schritt nennt die Ursache
+
+3. **Deployment neu auslösen:**
+   - **Actions** Tab öffnen
+   - **"Deploy to Firebase Hosting"** auswählen
    - **"Run workflow"** klicken
 
-5. **Warten:**
+4. **Warten:**
    - 1-2 Minuten warten
    - Grüner Haken ✅ = Erfolgreich
 
-6. **App öffnen:**
-   - https://brou-cgn.github.io/recipebook
+5. **App öffnen:**
+   - https://broubook.web.app
    - Sollte jetzt funktionieren!
 
 ---
@@ -491,7 +488,7 @@ Die RecipeBook-App kann wie eine normale App installiert werden!
 
 ### Android (Chrome):
 
-1. **App öffnen:** https://brou-cgn.github.io/recipebook
+1. **App öffnen:** https://broubook.web.app
 2. **Menü öffnen:** Tippen Sie auf **⋮** (drei Punkte oben rechts)
 3. **Installieren:** Wählen Sie **"Zum Startbildschirm hinzufügen"**
 4. **Bestätigen:** Tippen Sie auf **"Hinzufügen"**
@@ -499,7 +496,7 @@ Die RecipeBook-App kann wie eine normale App installiert werden!
 
 ### iOS (Safari):
 
-1. **App öffnen:** https://brou-cgn.github.io/recipebook
+1. **App öffnen:** https://broubook.web.app
 2. **Teilen-Menü:** Tippen Sie auf das **Teilen-Symbol** (Viereck mit Pfeil)
 3. **Zum Home:** Scrollen und wählen Sie **"Zum Home-Bildschirm"**
 4. **Bestätigen:** Tippen Sie auf **"Hinzufügen"**
@@ -507,7 +504,7 @@ Die RecipeBook-App kann wie eine normale App installiert werden!
 
 ### Desktop (Chrome/Edge):
 
-1. **App öffnen:** https://brou-cgn.github.io/recipebook
+1. **App öffnen:** https://broubook.web.app
 2. **Install-Icon:** Klicken Sie auf das **⊕** oder **🖥️** Symbol in der Adressleiste
 3. **Installieren:** Klicken Sie auf **"Installieren"**
 4. **Fertig!** App öffnet sich in eigenem Fenster
@@ -557,8 +554,8 @@ Für **Administratoren**, die das System zum ersten Mal einrichten:
   - Alle 7 REACT_APP_FIREBASE_* Secrets hinzugefügt
   - Werte aus Firebase kopiert
 
-- [ ] **GitHub Pages aktiviert**
-  - Settings → Pages → Source: "GitHub Actions"
+- [ ] **Firebase Hosting erreichbar**
+  - https://broubook.web.app lädt den Login-Bildschirm
 
 - [ ] **Deployment erfolgreich**
   - Actions → Grüner Haken ✅

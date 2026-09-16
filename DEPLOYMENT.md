@@ -1,206 +1,110 @@
-# Deployment-Anleitung / Deployment Guide
+# Deployment
 
-## 🌐 Web-Veröffentlichung über GitHub Pages
+Die App läuft auf **Firebase Hosting**: <https://broubook.web.app>
 
-Diese Anwendung wird automatisch auf GitHub Pages veröffentlicht, sobald Änderungen in den `main`-Branch gepusht werden.
+> Bis März 2026 lief das Deployment über GitHub Pages
+> (`https://brou-cgn.github.io/recipebook`). Dieser Pfad ist abgeschaltet, der
+> Workflow gelöscht. Ältere Dokumente im Repository, die noch die
+> `github.io`-Adresse nennen, beschreiben diesen abgelösten Stand.
 
-### Live-URL
-Die Anwendung ist verfügbar unter:
-**https://brou-cgn.github.io/recipebook**
+## Die Kette
 
----
+Ein Deployment wird nicht von Hand angestoßen, sondern fällt am Ende der
+normalen Arbeit heraus:
 
-## 📋 Einrichtungsschritte (Erstmalige Konfiguration)
+```
+Pull Request
+    └─> CI  (.github/workflows/ci.yml)
+        Tests + Build. Das einzige Tor vor der Produktion.
+            │
+        Merge auf main
+            └─> Auto Version Bump  (.github/workflows/version-bump.yml)
+                Bestimmt patch/minor/major aus den Commit-Titeln,
+                schreibt package.json, pusht Commit + Tag.
+                    │
+                └─> Deploy to Firebase Hosting  (.github/workflows/deploy-firebase.yml)
+                    Baut mit der frischen Versionsnummer und deployt
+                    Hosting, Functions, Firestore Rules & Indexes.
+```
 
-### 1. GitHub Pages in den Repository-Einstellungen aktivieren
+### Warum der Deploy am Version Bump hängt und nicht am Merge
 
-1. Gehe zu deinem GitHub Repository: `https://github.com/brou-cgn/recipebook`
-2. Klicke auf **Settings** (Einstellungen)
-3. Navigiere im linken Menü zu **Pages**
-4. Unter "Build and deployment":
-   - **Source**: Wähle "GitHub Actions"
-   - Die Konfiguration wird automatisch erkannt
+Der Bump schreibt die neue Versionsnummer in die `package.json` und pusht sie
+als eigenen Commit. `REACT_APP_VERSION` wird beim Build daraus gelesen. Hinge
+der Deploy direkt am Merge, ginge die App mit der *alten* Versionsnummer live.
 
-### 2. Firebase Secrets konfigurieren (WICHTIG!)
+Aus demselben Grund checkt der Deploy-Workflow `main` aus und nicht den
+auslösenden Commit: der auslösende Commit ist der Merge, die Version steht im
+Bump-Commit darüber.
 
-Die Anwendung benötigt Firebase-Zugangsdaten für die Authentifizierung und Datenbank. Diese müssen als GitHub Secrets hinterlegt werden:
+### Was das für die Testabdeckung heißt
 
-1. Gehe zu **Settings** → **Secrets and variables** → **Actions**
-2. Klicke auf **New repository secret**
-3. Füge folgende Secrets hinzu (Werte aus deiner Firebase Console):
-   - `REACT_APP_FIREBASE_API_KEY`
-   - `REACT_APP_FIREBASE_AUTH_DOMAIN`
-   - `REACT_APP_FIREBASE_PROJECT_ID`
-   - `REACT_APP_FIREBASE_STORAGE_BUCKET`
-   - `REACT_APP_FIREBASE_MESSAGING_SENDER_ID`
-   - `REACT_APP_FIREBASE_APP_ID`
-   - `REACT_APP_FIREBASE_MEASUREMENT_ID`
-   - `REACT_APP_FIREBASE_VAPID_KEY`
+Getestet wird im Pull Request. Danach prüft nichts mehr nach. **Wer direkt auf
+`main` pusht, umgeht die Tests und deployt ungeprüft** – `main` sollte sich
+ausschließlich durch gemergte Pull Requests bewegen.
 
-**Wo finde ich diese Werte?**
-1. Gehe zu [Firebase Console](https://console.firebase.google.com/)
-2. Wähle dein Projekt aus
-3. Klicke auf das Zahnrad-Symbol → **Projekteinstellungen**
-4. Scrolle zu "Deine Apps" und wähle deine Web-App
-5. Die Konfigurationswerte findest du unter "Firebase SDK snippet" → "Config"
+## Manuell deployen
 
-### 3. Workflow-Berechtigung überprüfen
+Actions → *Deploy to Firebase Hosting* → *Run workflow*. Baut und deployt den
+aktuellen Stand von `main`, ohne die Version zu erhöhen. Gedacht für den Fall,
+dass ein automatischer Deploy fehlgeschlagen ist.
 
-1. Gehe zu **Settings** → **Actions** → **General**
-2. Scrolle zu "Workflow permissions"
-3. Stelle sicher, dass folgende Option aktiviert ist:
-   - ✅ "Read and write permissions" ODER
-   - ✅ "Read repository contents and packages permissions" mit zusätzlicher Pages-Berechtigung
+Zwei Deploys können sich nie überholen: der Workflow läuft in der
+Concurrency-Gruppe `firebase-deploy` und bricht laufende Deploys **nicht** ab.
+Ein mitten im `firebase deploy` abgebrochener Lauf hinterlässt Hosting,
+Functions und Rules in unterschiedlichen Ständen.
 
-### 4. Deployment starten
+## Benötigte Secrets
 
-Das Deployment startet automatisch bei jedem Push zum `main`-Branch.
+Settings → Secrets and variables → Actions:
 
-#### Manuelles Deployment auslösen:
-1. Gehe zu **Actions** in deinem Repository
-2. Wähle den Workflow "Deploy to GitHub Pages"
-3. Klicke auf **Run workflow** → **Run workflow**
+| Secret | Zweck |
+|---|---|
+| `FIREBASE_TOKEN` | Authentifiziert die Firebase CLI im Deploy |
+| `REACT_APP_FIREBASE_API_KEY` | Firebase-Client-Konfiguration im Build |
+| `REACT_APP_FIREBASE_AUTH_DOMAIN` | " |
+| `REACT_APP_FIREBASE_PROJECT_ID` | " |
+| `REACT_APP_FIREBASE_STORAGE_BUCKET` | " |
+| `REACT_APP_FIREBASE_MESSAGING_SENDER_ID` | " |
+| `REACT_APP_FIREBASE_APP_ID` | " |
+| `REACT_APP_FIREBASE_MEASUREMENT_ID` | " |
+| `REACT_APP_FIREBASE_VAPID_KEY` | Web-Push-Benachrichtigungen |
 
----
+Fehlt eines der `REACT_APP_*`-Secrets, baut der Workflow trotzdem durch – die
+App zeigt dann eine leere Seite, weil die Firebase-Initialisierung im Browser
+fehlschlägt. Das ist der häufigste Grund für „deployed, aber weiß".
 
-## 🚀 Deployment-Prozess
+Details zum Anlegen: [GITHUB_SECRETS_SETUP.md](GITHUB_SECRETS_SETUP.md)
 
-### Automatischer Ablauf
+## Wenn ein Deploy fehlschlägt
 
-Jedes Mal, wenn Code in den `main`-Branch gepusht wird:
+Der Workflow wiederholt sich **nur** bei bekannter Flakiness der Firebase-APIs
+(HTTP 503, Timeouts beim Ausrollen von Functions, „Failed to list functions").
+Jeder inhaltliche Fehler bricht sofort ab, statt dreimal dasselbe zu versuchen.
 
-1. **Build-Job**:
-   - Checkout des Codes
-   - Installation der Node.js-Dependencies (`npm ci`)
-   - Build der React-Anwendung (`npm run build`)
-   - Upload des Build-Artefakts
+| Meldung im Log | Bedeutung |
+|---|---|
+| `Can't release to … is the current active version` | Derselbe Build ist bereits live. Wird als Erfolg gewertet. |
+| `HTTP Error: 503` / `timed out after` | Firebase-seitig. Wird bis zu 3× wiederholt. |
+| Fehler im Build-Schritt | Echter Fehler im Code. Deploy findet nicht statt, die alte Version bleibt live. |
 
-2. **Deploy-Job**:
-   - Deployment des Build-Artefakts zu GitHub Pages
-   - Die Anwendung wird unter der Live-URL verfügbar
+Ein fehlgeschlagener Deploy nimmt nichts zurück: die zuletzt erfolgreich
+ausgerollte Version bleibt unverändert online.
 
-### Deployment-Status überprüfen
+## Rollback
 
-1. Gehe zu **Actions** in deinem Repository
-2. Sieh dir die laufenden/abgeschlossenen Workflows an
-3. Klicke auf einen Workflow-Run für Details
-4. Grüner Haken ✅ = Erfolgreiches Deployment
-5. Rotes X ❌ = Fehler (Details in den Logs)
+Firebase Console → Hosting → Release-Historie → *Rollback* auf einen früheren
+Release. Das betrifft ausschließlich Hosting. Functions und Firestore Rules
+müssen über einen Revert-Commit und den normalen Weg zurückgerollt werden.
 
----
-
-## 🔧 Lokales Testen des Production Builds
-
-Bevor du Änderungen pushst, kannst du den Production Build lokal testen:
+## Lokal bauen und prüfen
 
 ```bash
-# Build erstellen
+npm ci
+npm run test:ci    # der Lauf, den auch die CI macht
 npm run build
-
-# Build-Ordner lokal bereitstellen (serve muss installiert sein)
 npx serve -s build
 ```
 
-Die Anwendung ist dann unter `http://localhost:3000` (oder einem anderen Port) verfügbar.
-
----
-
-## 📝 Wichtige Konfigurationsdateien
-
-### package.json
-- **homepage**: Definiert die Base-URL für GitHub Pages
-  ```json
-  "homepage": "https://brou-cgn.github.io/recipebook"
-  ```
-
-### .github/workflows/deploy.yml
-- GitHub Actions Workflow für automatisches Deployment
-- Wird bei Push zu `main` oder manuell ausgelöst
-- Führt Build und Deployment aus
-
----
-
-## 🛠️ Troubleshooting
-
-### Problem: Leere Seite / Blank Page
-**Ursache**: Firebase-Konfiguration fehlt
-**Lösung**: 
-- Überprüfe, ob alle Firebase Secrets in GitHub Actions konfiguriert sind (siehe Schritt 2 oben)
-- Alle 7 REACT_APP_FIREBASE_* Secrets müssen gesetzt sein
-- Nach dem Hinzufügen der Secrets muss das Deployment erneut ausgelöst werden
-
-### Problem: Deployment schlägt fehl
-**Lösung**: 
-- Überprüfe die Workflow-Logs unter **Actions**
-- Stelle sicher, dass `npm run build` lokal funktioniert
-- Prüfe, ob alle Dependencies korrekt installiert sind
-
-### Problem: Seite zeigt 404-Fehler
-**Lösung**:
-- Überprüfe, ob GitHub Pages aktiviert ist (Settings → Pages)
-- Stelle sicher, dass "Source" auf "GitHub Actions" gesetzt ist
-- Warte einige Minuten nach dem Deployment
-
-### Problem: Assets werden nicht geladen (CSS/JS)
-**Lösung**:
-- Überprüfe die `homepage`-Einstellung in `package.json`
-- Stelle sicher, dass sie mit deiner GitHub Pages URL übereinstimmt
-
-### Problem: PWA funktioniert nicht offline
-**Lösung**:
-- Service Worker benötigt HTTPS (GitHub Pages bietet dies automatisch)
-- Lösche Browser-Cache und lade die Seite neu
-- Überprüfe, ob der Service Worker in den Browser DevTools registriert ist
-
----
-
-## 🔄 Updates veröffentlichen
-
-Um eine neue Version zu veröffentlichen:
-
-```bash
-# Änderungen committen
-git add .
-git commit -m "Deine Commit-Nachricht"
-
-# Zum main-Branch pushen
-git push origin main
-```
-
-Das Deployment startet automatisch und die Änderungen sind innerhalb weniger Minuten live.
-
----
-
-## 📱 PWA-Features
-
-Die veröffentlichte Anwendung unterstützt Progressive Web App Features:
-
-- ✅ **Installierbar**: Nutzer können die App auf ihrem Gerät installieren
-- ✅ **Offline-Funktionalität**: Funktioniert offline nach der ersten Nutzung
-- ✅ **Service Worker**: Automatisches Caching für bessere Performance
-- ✅ **HTTPS**: Sicher über GitHub Pages
-- ✅ **Responsive**: Optimiert für mobile Geräte und Desktop
-
----
-
-## 🌍 Alternative Deployment-Optionen
-
-Falls GitHub Pages nicht ausreicht, kannst du auch andere Plattformen nutzen:
-
-- **Vercel**: Automatisches Deployment bei Git Push
-- **Netlify**: Ähnlich wie Vercel mit zusätzlichen Features
-- **Firebase Hosting**: Google's Hosting-Lösung
-- **Cloudflare Pages**: Schnelles CDN-basiertes Hosting
-
----
-
-## 📞 Support
-
-Bei Problemen oder Fragen:
-1. Überprüfe die GitHub Actions Logs
-2. Siehe dir die Deployment-Dokumentation an
-3. Erstelle ein Issue im Repository
-
----
-
-**Viel Erfolg mit deiner Web-Veröffentlichung! 🎉**
+Warum `test:ci` und nicht `npm test`: eine Liste bekannt roter Suites liegt in
+`scripts/quarantined-tests.js`. Siehe den Kopf der Datei.

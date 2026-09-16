@@ -1,27 +1,66 @@
 name: Deploy to Firebase Hosting
 
+# Der einzige Deploy-Pfad des Projekts. Die Kette:
+#
+#   Pull Request  ->  CI (Tests + Build, ci.yml)
+#   Merge auf main ->  Auto Version Bump (version-bump.yml)
+#   Bump erfolgreich -> dieser Workflow
+#
+# Warum am Version Bump und nicht direkt am Merge: der Bump schreibt die neue
+# Versionsnummer in die package.json und pusht sie als eigenen Commit. Erst
+# danach kann hier REACT_APP_VERSION korrekt gesetzt werden. Haengt man den
+# Deploy an den Merge, geht die alte Version live.
+#
+# Aus demselben Grund wird `main` ausgecheckt und nicht der ausloesende SHA:
+# der ausloesende SHA ist der Merge-Commit, die Version steht im Bump-Commit
+# darueber.
+#
+# Getestet wird im Pull Request, nicht hier. Wer direkt auf main pusht,
+# umgeht damit die Tests und deployt ungeprueft - main sollte sich
+# ausschliesslich durch gemergte Pull Requests bewegen.
+
 on:
+  workflow_run:
+    workflows: ["Auto Version Bump"]
+    types:
+      - completed
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# Deploys duerfen sich nie ueberholen und laufende Deploys nie abgebrochen
+# werden: ein mitten im `firebase deploy` gekillter Lauf hinterlaesst Hosting,
+# Functions und Rules in unterschiedlichen Staenden.
+concurrency:
+  group: firebase-deploy
+  cancel-in-progress: false
+
 jobs:
-  build:
+  deploy:
+    # Ein fehlgeschlagener Version Bump heisst: main ist nicht in dem Zustand,
+    # den wir ausliefern wollten.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           ref: main
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: 'npm'
+
+      - name: Read version
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
         run: |
@@ -41,9 +80,12 @@ jobs:
           npm_config_fetch_retry_mintimeout: 10000
           npm_config_fetch_retry_maxtimeout: 60000
 
+      # CI=false, weil create-react-app Warnungen als Fehler behandelt, sobald
+      # CI gesetzt ist - das Projekt traegt bestehende no-unused-vars-Warnungen.
       - name: Build
         env:
           CI: false
+          REACT_APP_VERSION: ${{ steps.version.outputs.version }}
           REACT_APP_FIREBASE_API_KEY: ${{ secrets.REACT_APP_FIREBASE_API_KEY }}
           REACT_APP_FIREBASE_AUTH_DOMAIN: ${{ secrets.REACT_APP_FIREBASE_AUTH_DOMAIN }}
           REACT_APP_FIREBASE_PROJECT_ID: ${{ secrets.REACT_APP_FIREBASE_PROJECT_ID }}
@@ -52,37 +94,7 @@ jobs:
           REACT_APP_FIREBASE_APP_ID: ${{ secrets.REACT_APP_FIREBASE_APP_ID }}
           REACT_APP_FIREBASE_MEASUREMENT_ID: ${{ secrets.REACT_APP_FIREBASE_MEASUREMENT_ID }}
           REACT_APP_FIREBASE_VAPID_KEY: ${{ secrets.REACT_APP_FIREBASE_VAPID_KEY }}
-        run: |
-          REACT_APP_VERSION=$(node -p "require('./package.json').version") npm run build
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: build
-          path: ./build
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          ref: main
-
-      - name: Download artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: build
-          path: ./build
-
-      - name: Setup Node.js for Functions
-        uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: functions/package-lock.json
+        run: npm run build
 
       - name: Install Functions dependencies
         run: npm ci
@@ -94,12 +106,13 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools@13.35.1
 
-      - name: Deploy to Firebase (Hosting, Functions, Firestore Rules)
+      # Die Wiederholungen fangen ausschliesslich bekannte Flakiness der
+      # Firebase-APIs ab (503, Timeouts, "Failed to list functions"). Ein
+      # inhaltlicher Fehler bricht sofort ab, statt dreimal dasselbe zu
+      # versuchen.
+      - name: Deploy (Hosting, Functions, Firestore Rules & Indexes)
         run: |
           max_attempts=3
-          migration_retry_attempted=false
-          migration_function="onNutritionReferenceChanged"
-          migration_region="europe-west10"
           firebase_project="broubook"
           for attempt in $(seq 1 "$max_attempts"); do
             echo "Firebase deploy attempt $attempt/$max_attempts"
@@ -113,28 +126,12 @@ jobs:
               exit 0
             fi
 
+            # Erneuter Deploy desselben Builds: Hosting lehnt ab, weil die
+            # Version bereits aktiv ist. Das ist der gewuenschte Zustand.
             if echo "$deploy_output" | grep -Fq "Can't release to" \
               && echo "$deploy_output" | grep -Fq "is the current active version."; then
               echo "Hosting release version is already active. Treating deploy as successful."
               exit 0
-            fi
-
-            if [ "$migration_retry_attempted" = "false" ] \
-              && echo "$deploy_output" | grep -Fq "$migration_function" \
-              && echo "$deploy_output" | grep -Fq "$migration_region" \
-              && echo "$deploy_output" | grep -Fq "HTTPS function to a background triggered function is not allowed"; then
-              echo "Detected trigger migration conflict for $migration_function. Deleting legacy function and retrying deploy..."
-              set +e
-              delete_output=$(firebase functions:delete "$migration_function" --region "$migration_region" --project "$firebase_project" --force 2>&1)
-              delete_exit_code=$?
-              set -e
-              echo "$delete_output"
-              if [ "$delete_exit_code" -ne 0 ]; then
-                echo "Failed to delete legacy function $migration_function before retry (exit code: $delete_exit_code). See output above for details."
-                exit "$delete_exit_code"
-              fi
-              migration_retry_attempted=true
-              continue
             fi
 
             if echo "$deploy_output" | grep -Fiq "Failed to list functions"; then
@@ -145,27 +142,13 @@ jobs:
               fi
             fi
 
-            if echo "$deploy_output" | grep -Eiq "Failed to make request to .*serviceusage\.googleapis\.com"; then
+            if echo "$deploy_output" | grep -Eiq "Failed to make request to .*serviceusage\.googleapis\.com|HTTP Error: 503|Service Unavailable"; then
               if [ "$attempt" -lt "$max_attempts" ]; then
                 case "$attempt" in
                   1) sleep_seconds=10 ;;
-                  2) sleep_seconds=20 ;;
-                  *) sleep_seconds=40 ;;
+                  *) sleep_seconds=20 ;;
                 esac
-                echo "Firebase Service Usage API request failed. Retrying in ${sleep_seconds}s..."
-                sleep "$sleep_seconds"
-                continue
-              fi
-            fi
-
-            if echo "$deploy_output" | grep -Eiq "HTTP Error: 503|Service Unavailable"; then
-              if [ "$attempt" -lt "$max_attempts" ]; then
-                case "$attempt" in
-                  1) sleep_seconds=10 ;;
-                  2) sleep_seconds=20 ;;
-                  *) sleep_seconds=40 ;;
-                esac
-                echo "Firebase API returned 503. Retrying in ${sleep_seconds}s..."
+                echo "Transient Firebase API error. Retrying in ${sleep_seconds}s..."
                 sleep "$sleep_seconds"
                 continue
               fi
@@ -181,5 +164,17 @@ jobs:
 
             exit "$deploy_exit_code"
           done
+          exit 1
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Firebase Deploy"
+            echo ""
+            echo "- **Version**: v${{ steps.version.outputs.version }}"
+            echo "- **Ausgeloest durch**: ${{ github.event_name }}"
+            echo "- **Live**: https://broubook.web.app"
+          } >> $GITHUB_STEP_SUMMARY

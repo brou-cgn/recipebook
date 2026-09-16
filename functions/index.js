@@ -61,7 +61,6 @@ const STORAGE_BUCKET = 'broubook.firebasestorage.app';
  * Localhost origins are included for local development.
  */
 const ALLOWED_ORIGINS = [
-  'https://brou-cgn.github.io',
   'https://broubook.web.app',
   'https://broubook.firebaseapp.com',
   'http://localhost:3000',
@@ -5708,7 +5707,7 @@ exports.sendGroupInvitationEmail = onCall(
         throw new HttpsError('unavailable', 'E-Mail-Versand ist momentan nicht konfiguriert.');
       }
 
-      const registrationUrl = 'https://brou-cgn.github.io/recipebook/';
+      const registrationUrl = 'https://broubook.web.app/';
 
       const transporter = nodemailer.createTransport({
         host: smtpHostVal,
@@ -6874,7 +6873,7 @@ const SHARE_ID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f
 const MAX_SHARED_RECIPE_IDS = 100;
 
 /** Fallback OG image URL used when no recipe thumbnail and no custom app logo exist. */
-const STATIC_FALLBACK_LOGO_URL = 'https://brou-cgn.github.io/recipebook/logo512.png';
+const STATIC_FALLBACK_LOGO_URL = 'https://broubook.web.app/logo512.png';
 
 /**
  * Escapes HTML special characters to prevent XSS in generated HTML.

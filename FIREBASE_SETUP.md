@@ -156,9 +156,9 @@ service cloud.firestore {
 
 ## Schritt 8: Für Produktion vorbereiten
 
-### Umgebungsvariablen für GitHub Pages
+### Umgebungsvariablen für das Deployment
 
-Wenn Sie die App auf GitHub Pages deployen:
+Der Build läuft in GitHub Actions und deployt auf Firebase Hosting:
 
 1. Gehen Sie zu Ihren GitHub Repository-Einstellungen
 2. Navigieren Sie zu **Settings → Secrets and variables → Actions**
@@ -336,7 +336,7 @@ Nachdem Sie Firebase erfolgreich eingerichtet haben, folgen hier die wichtigsten
 - **Caching**: Bilder und statische Assets werden gecacht
 - **Lazy Loading**: Erwägen Sie Lazy Loading für große Bilddateien
 
-### 7. Deployment auf GitHub Pages
+### 7. Deployment auf Firebase Hosting
 
 #### Umgebungsvariablen in GitHub Actions
 Falls noch nicht geschehen:
@@ -351,16 +351,18 @@ Falls noch nicht geschehen:
 4. Wiederholen Sie dies für alle 7 Umgebungsvariablen
 
 #### GitHub Actions Workflow überprüfen
-- Ihr Repository sollte bereits einen Workflow für GitHub Pages haben
+- Der Deploy läuft über `.github/workflows/deploy-firebase.yml` und wird
+  automatisch nach jedem Version Bump auf `main` ausgelöst
 - Überprüfen Sie unter **Actions** ob Deployments erfolgreich sind
 - Bei Fehlern prüfen Sie die Logs
+- Die vollständige Kette ist in [DEPLOYMENT.md](DEPLOYMENT.md) beschrieben
 
 #### Eigene Domain einrichten (optional)
-1. In GitHub: **Settings → Pages → Custom domain**
+1. In der Firebase Console: **Hosting → Eigene Domain hinzufügen**
 2. Geben Sie Ihre Domain ein (z.B. `rezepte.ihredomain.de`)
-3. Konfigurieren Sie DNS bei Ihrem Domain-Anbieter:
-   - CNAME-Eintrag auf `[username].github.io`
-4. Aktivieren Sie HTTPS (empfohlen)
+3. Konfigurieren Sie die von Firebase angezeigten DNS-Einträge bei Ihrem
+   Domain-Anbieter
+4. Firebase stellt das TLS-Zertifikat automatisch aus
 
 ### 8. Erweiterte Funktionen nutzen
 
@@ -456,7 +458,7 @@ Falls Sie Google Analytics aktiviert haben:
 - [ ] Daten erscheinen in Firebase Console
 - [ ] Weitere Benutzer registriert und Berechtigungen zugewiesen
 - [ ] GitHub Actions Secrets konfiguriert (für Deployment)
-- [ ] App auf GitHub Pages deployed
+- [ ] App auf Firebase Hosting deployed (https://broubook.web.app)
 - [ ] PWA auf Mobilgerät installiert und getestet
 - [ ] Offline-Funktionalität getestet
 - [ ] Backup-Strategie festgelegt
@@ -466,8 +468,7 @@ Falls Sie Google Analytics aktiviert haben:
 ## Weiterführende Dokumentation
 
 - **[README.md](README.md)** - Allgemeine Projektinformationen
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Technische Deployment-Details
-- **[PUBLIKATION.md](PUBLIKATION.md)** - Veröffentlichungs-Leitfaden
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Die Deploy-Kette, benötigte Secrets, Rollback
 
 ---
 

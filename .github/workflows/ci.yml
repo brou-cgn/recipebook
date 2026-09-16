@@ -1,11 +1,9 @@
 name: CI
 
-# Guards the test suite on every pull request into main. Deliberately separate
-# from "Test Node.js Compatibility" (test-node-update.yml): that workflow
-# answers "does a new Node version still work", and fails on `npm outdated` /
-# `npm audit` findings - a permanent state in a create-react-app project and
-# not something a pull request should be blocked on. This one answers the only
-# question that matters per change: do the tests still pass and does it build.
+# Guards the test suite on every pull request into main, and is the only gate
+# before a merge reaches production: a merge triggers Auto Version Bump, and
+# a successful bump triggers the Firebase deploy. Nothing checks main again on
+# the way out, so a red check here is the last chance to stop a bad release.
 #
 # Runs `npm run test:ci`, not `npm test`: a list of known-failing suites is
 # quarantined in scripts/quarantined-tests.js, so that the 110 suites that do
