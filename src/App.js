@@ -413,7 +413,10 @@ function App() {
   // splash screen keeps rendering (with the --exiting class) for the duration of
   // its fade/scale-out transition instead of being unmounted mid-animation. See
   // SPLASH_EXIT_DURATION_MS below and splash-screen--exiting in SplashScreen.css.
-  const [splashDismissed, setSplashDismissed] = useState(false);
+  // Starts already dismissed on a recovery navigation (see
+  // utils/navigationType.js) so that this second splash mount - and its
+  // ~380ms exit fade - never shows at all, not just skips its entrance.
+  const [splashDismissed, setSplashDismissed] = useState(isRecoveryNavigation);
   const [currentUser, setCurrentUser] = useState(null);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
   const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
@@ -2259,8 +2262,11 @@ function App() {
   // false right into the "still loading startseite data" branch further
   // down). See splash-screen-logo-in / splash-screen-fade-up in
   // SplashScreen.css for the animations this avoids re-triggering.
+  // On a recovery navigation (see utils/navigationType.js), skip it
+  // entirely instead - there's nothing to avoid re-triggering since it
+  // never shows in the first place.
   if (authLoading) {
-    return (
+    return isRecoveryNavigation() ? <></> : (
       <>
         <SplashScreen />
       </>
