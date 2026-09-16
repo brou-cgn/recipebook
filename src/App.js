@@ -337,6 +337,8 @@ function applyRolePermissionsToUser(user, permissionsMap = {}) {
     startseite: rolePerms.startseite ?? false,
     kuecheFab: rolePerms.kuecheFab ?? false,
     onboardingTestmode: rolePerms.onboardingTestmode ?? false,
+    addTutorial: rolePerms.addTutorial ?? false,
+    editTutorial: rolePerms.editTutorial ?? false,
   };
 }
 

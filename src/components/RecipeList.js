@@ -298,6 +298,14 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEdi
   // button above (touchend handles both press lengths and preventDefault()s
   // to suppress the click that would otherwise follow; the click handler is
   // the fallback for non-touch input).
+  //
+  // Der Longpress-Einstieg haengt an der Rollenberechtigung "Tutorial
+  // anlegen" (UserManagement.js, "Funktionen nach Berechtigung"). Fehlt sie,
+  // bleibt der Button ein reiner "Rezept hinzufügen"-Button: langes Druecken
+  // legt dann genauso ein Rezept an wie kurzes.
+  const canAddTutorial = !!currentUser?.addTutorial;
+  const canEditTutorial = !!currentUser?.editTutorial;
+
   const handleAddTouchStart = () => {
     setAddPressed(true);
     addLongPressed.current = false;
@@ -313,12 +321,13 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEdi
       addLongPressTimer.current = null;
     }
     e.preventDefault();
-    if (addLongPressed.current) {
+    if (addLongPressed.current && canAddTutorial) {
       addLongPressed.current = false;
       addLongPressJustFired.current = true;
       setTimeout(() => { addLongPressJustFired.current = false; }, LONG_PRESS_CLICK_SUPPRESSION_MS);
       onAddTutorial?.();
     } else {
+      addLongPressed.current = false;
       onAddRecipe();
     }
   };
@@ -445,8 +454,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEdi
                       onMouseDown={() => setAddPressed(true)}
                       onMouseUp={() => setAddPressed(false)}
                       onMouseLeave={() => setAddPressed(false)}
-                      title="Rezept hinzufügen (lang drücken für Tutorial)"
-                      aria-label="Rezept hinzufügen (lang drücken für Tutorial)"
+                      title={canAddTutorial ? 'Rezept hinzufügen (lang drücken für Tutorial)' : 'Rezept hinzufügen'}
+                      aria-label={canAddTutorial ? 'Rezept hinzufügen (lang drücken für Tutorial)' : 'Rezept hinzufügen'}
                     >
                       {isBase64Image(getEffectiveIcon(buttonIcons, 'addRecipe', isDarkMode)) ? (
                         <img src={getEffectiveIcon(buttonIcons, 'addRecipe', isDarkMode)} alt="Rezept hinzufügen" className="button-icon-image" draggable="false" />
@@ -509,7 +518,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEdi
                 <TutorialCard
                   key={`tutorial-slot-${entry.slot}`}
                   tutorial={entry.tutorial}
-                  onEdit={onEditTutorial}
+                  onEdit={canEditTutorial ? onEditTutorial : undefined}
                 />
               );
             }
