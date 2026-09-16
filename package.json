@@ -32,6 +32,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:ci": "node scripts/test-ci.js",
     "eject": "react-scripts eject"
   },
   "devDependencies": {

@@ -1,0 +1,60 @@
+name: CI
+
+# Guards the test suite on every change to main. Deliberately separate from
+# "Test Node.js Compatibility" (test-node-update.yml): that workflow answers
+# "does a new Node version still work", and fails on `npm outdated` / `npm
+# audit` findings - a permanent state in a create-react-app project and not
+# something a pull request should be blocked on. This one answers the only
+# question that matters per change: do the tests still pass and does it build.
+#
+# Runs `npm run test:ci`, not `npm test`: a list of known-failing suites is
+# quarantined in scripts/quarantined-tests.js, so that the 110 suites that do
+# pass are protected today instead of after a repair marathon. Working that
+# list down is the point - see the file's header.
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+# A rapid series of pushes should leave one running check, not a queue of
+# doomed ones - the previous attempt at CI here produced mostly "cancelled"
+# runs because merges outran them.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests & Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test:ci
+
+      # CI=false because create-react-app treats warnings as errors when CI is
+      # set, and the project carries pre-existing no-unused-vars warnings. Same
+      # setting the deploy workflow uses - this step checks that it compiles,
+      # not that it is warning-free.
+      - name: Build
+        env:
+          CI: false
+        run: npm run build
