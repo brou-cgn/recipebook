@@ -8,6 +8,9 @@ import { extractYouTubeVideoId, getYouTubeThumbnailUrl, getYouTubeFrameUrls } fr
 // RecipeList.js, so both gestures feel identical.
 const LONG_PRESS_DELAY_MS = 500;
 const LONG_PRESS_CLICK_SUPPRESSION_MS = 500;
+// Ein Finger liegt nie ganz still. Unterhalb dieser Strecke gilt der Druck
+// weiter als Longpress, darüber als Scrollversuch.
+const LONG_PRESS_MOVE_TOLERANCE_PX = 10;
 
 const CATEGORY_LABELS = TUTORIAL_CATEGORIES.reduce((map, c) => {
   map[c.id] = c.label;
@@ -77,7 +80,7 @@ function TutorialCard({ tutorial, onEdit }) {
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [thumbFailed, setThumbFailed] = useState(false);
   const longPressTimer = useRef(null);
-  const longPressed = useRef(false);
+  const pressOrigin = useRef(null);
   const longPressJustFired = useRef(false);
   const videoId = extractYouTubeVideoId(tutorial.videoUrl);
   const thumbnailUrl = tutorial.thumbFrame != null
@@ -92,32 +95,42 @@ function TutorialCard({ tutorial, onEdit }) {
   const cancelLongPress = () => {
     clearTimeout(longPressTimer.current);
     longPressTimer.current = null;
-    longPressed.current = false;
+    pressOrigin.current = null;
   };
 
-  // Pointer events cover touch and mouse in one go. The press is only
-  // classified as "long" here; onEdit fires on release - same order as the
-  // touchstart/touchend long press in RecipeList.js. The click that follows
-  // the release is swallowed by the flag in handleClick, since neither
-  // pointerup nor contextmenu can suppress it.
+  // Pointer events cover touch and mouse in one go.
+  //
+  // onEdit feuert beim Ablauf des Timers, nicht erst beim Loslassen: auf dem
+  // Touchscreen übernimmt der Browser die Geste, sobald er sie für Scrollen
+  // hält, und schickt dann pointercancel statt pointerup - ein Longpress, der
+  // aufs Loslassen wartet, geht dabei verloren. Gehalten und ausgelöst zu
+  // haben, ist ohnehin das, was man von einem Longpress erwartet.
+  //
+  // Der Klick, der nach dem Loslassen noch folgt, wird über das Flag in
+  // handleClick geschluckt - weder pointerup noch contextmenu können ihn
+  // verhindern.
   const handlePointerDown = (e) => {
     if (!onEdit) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    longPressed.current = false;
+    pressOrigin.current = { x: e.clientX, y: e.clientY };
     clearTimeout(longPressTimer.current);
     longPressTimer.current = setTimeout(() => {
       longPressTimer.current = null;
-      longPressed.current = true;
+      pressOrigin.current = null;
+      longPressJustFired.current = true;
+      setTimeout(() => { longPressJustFired.current = false; }, LONG_PRESS_CLICK_SUPPRESSION_MS);
+      onEdit(tutorial);
     }, LONG_PRESS_DELAY_MS);
   };
 
-  const handlePointerUp = () => {
-    const wasLongPress = longPressed.current;
-    cancelLongPress();
-    if (!wasLongPress || !onEdit) return;
-    longPressJustFired.current = true;
-    setTimeout(() => { longPressJustFired.current = false; }, LONG_PRESS_CLICK_SUPPRESSION_MS);
-    onEdit(tutorial);
+  // Wandert der Finger weiter als die Toleranz, war es ein Scrollversuch.
+  const handlePointerMove = (e) => {
+    const origin = pressOrigin.current;
+    if (!origin) return;
+    if (Math.abs(e.clientX - origin.x) > LONG_PRESS_MOVE_TOLERANCE_PX
+      || Math.abs(e.clientY - origin.y) > LONG_PRESS_MOVE_TOLERANCE_PX) {
+      cancelLongPress();
+    }
   };
 
   const handleClick = (e) => {
@@ -143,7 +156,8 @@ function TutorialCard({ tutorial, onEdit }) {
         className="tutorial-card-content"
         onClick={handleClick}
         onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
+        onPointerMove={handlePointerMove}
+        onPointerUp={cancelLongPress}
         onPointerCancel={cancelLongPress}
         onPointerLeave={cancelLongPress}
         onContextMenu={onEdit ? (e) => e.preventDefault() : undefined}
