@@ -245,7 +245,7 @@ function TutorialForm({ onSave, onCancel, tutorial = null }) {
 
       <button
         type="button"
-        className={`cancel-fab-button recipe-form-mobile-only ${cancelPressed ? 'pressed' : ''}`}
+        className={`cancel-fab-button ${cancelPressed ? 'pressed' : ''}`}
         onClick={onCancel}
         onTouchStart={() => setCancelPressed(true)}
         onTouchEnd={() => setCancelPressed(false)}
@@ -260,7 +260,7 @@ function TutorialForm({ onSave, onCancel, tutorial = null }) {
       </button>
       <button
         type="button"
-        className={`save-fab-button recipe-form-mobile-only ${savePressed ? 'pressed' : ''}`}
+        className={`save-fab-button ${savePressed ? 'pressed' : ''}`}
         onClick={handleSave}
         disabled={!canSave}
         onTouchStart={() => setSavePressed(true)}
