@@ -1,5 +1,24 @@
 name: Auto Version Bump
 
+# Tags each merge to main as v<x.y.z>, with the bump type derived from the
+# commit subjects since the previous tag.
+#
+# This workflow used to also commit the new number into package.json and push
+# that commit to main. It cannot any more: the branch ruleset on main requires
+# every change to arrive via a pull request with a passing check, and
+# github-actions[bot] cannot be exempted from it - it is not an installable
+# GitHub App, so it does not appear in a ruleset's bypass list at all.
+#
+# Rather than work around that (a personal access token would, until it
+# silently expires a year later), the tag is now the only release marker.
+# It always was one - this workflow created the same tag alongside the commit
+# before. Pushing a tag is not a branch update, so the ruleset does not apply.
+# scripts/appVersion.js reads the version back out of it for the build.
+#
+# Side effect worth having: the old "push changes" step needed three retries
+# with a fetch/reset/re-apply loop, because a commit racing other merges to
+# main conflicts. A tag cannot conflict with anything, so that is all gone.
+
 on:
   push:
     branches:
@@ -16,63 +35,50 @@ jobs:
     outputs:
       version: ${{ steps.bump.outputs.new_version }}
       bump_type: ${{ steps.determine-bump.outputs.bump_type }}
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          # Full history and tags: the bump type comes from the commits since
+          # the previous tag, and the version itself from the tag.
           fetch-depth: 0
+          fetch-tags: true
           token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '24'
-      
+
       - name: Configure Git
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-      
-      - name: Get last version tag
-        id: get-last-tag
-        run: |
-          # Get the last version tag (if any)
-          LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" 2>/dev/null || echo "")
-          if [ -z "$LAST_TAG" ]; then
-            echo "No previous version tag found"
-            echo "last_tag=" >> $GITHUB_OUTPUT
-          else
-            echo "Last version tag: $LAST_TAG"
-            echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
-          fi
-      
+
       - name: Get commits since last tag
         id: get-commits
         run: |
-          LAST_TAG="${{ steps.get-last-tag.outputs.last_tag }}"
+          LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" 2>/dev/null || echo "")
           if [ -z "$LAST_TAG" ]; then
-            # No tags yet, get all commits
+            echo "No previous version tag found - considering all commits"
             COMMITS=$(git log --pretty=format:"%s" --no-merges)
           else
-            # Get commits since last tag
-            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s" --no-merges)
+            echo "Last version tag: $LAST_TAG"
+            COMMITS=$(git log "${LAST_TAG}..HEAD" --pretty=format:"%s" --no-merges)
           fi
-          
-          # Check if there are any commits
+
           if [ -z "$COMMITS" ]; then
-            echo "No new commits found"
+            echo "No new commits since the last tag"
             echo "has_commits=false" >> $GITHUB_OUTPUT
           else
             echo "has_commits=true" >> $GITHUB_OUTPUT
             echo "Commits since last tag:"
             echo "$COMMITS"
           fi
-          
-          # Save commits to file for next step
+
           echo "$COMMITS" > /tmp/commits.txt
-      
+
       - name: Determine version bump type
         id: determine-bump
         run: |
@@ -81,19 +87,16 @@ jobs:
             echo "bump_type=patch" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
+
           COMMITS=$(cat /tmp/commits.txt)
           BUMP_TYPE="patch"
-          
-          # Check for BREAKING CHANGE (major)
+
           if echo "$COMMITS" | grep -qi "BREAKING CHANGE\|^[a-z]*!:"; then
             BUMP_TYPE="major"
             echo "🚨 BREAKING CHANGE detected - MAJOR version bump"
-          # Check for feat: (minor)
           elif echo "$COMMITS" | grep -qi "^feat\|^feature"; then
             BUMP_TYPE="minor"
             echo "✨ New feature detected - MINOR version bump"
-          # Check for fix: (patch)
           elif echo "$COMMITS" | grep -qi "^fix\|^bugfix\|^patch\|^perf\|^refactor\|^docs\|^chore"; then
             BUMP_TYPE="patch"
             echo "🐛 Fix/patch detected - PATCH version bump"
@@ -101,83 +104,33 @@ jobs:
             BUMP_TYPE="patch"
             echo "ℹ️  No conventional commit found - defaulting to PATCH"
           fi
-          
+
           echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
-      
-      - name: Bump version
+
+      - name: Determine new version
         id: bump
         run: |
           BUMP_TYPE="${{ steps.determine-bump.outputs.bump_type }}"
-          
-          # Read current version from package.json
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          CURRENT_VERSION=$(node scripts/appVersion.js current)
+          NEW_VERSION=$(node scripts/appVersion.js next "$BUMP_TYPE")
           echo "Current version: $CURRENT_VERSION"
-          
-          # Bump version using npm version
-          # The --no-git-tag-version flag prevents npm from creating a tag (we'll do it manually)
-          npm version $BUMP_TYPE --no-git-tag-version
-          
-          # Read new version
-          NEW_VERSION=$(node -p "require('./package.json').version")
           echo "New version: $NEW_VERSION"
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          
-          echo "✅ Version will be bumped from $CURRENT_VERSION to $NEW_VERSION"
-      
-      - name: Push changes
+
+      - name: Create and push tag
         run: |
-          BUMP_TYPE="${{ steps.determine-bump.outputs.bump_type }}"
-          
-          for i in 1 2 3; do
-            # Abort any in-progress rebase from a previous failed attempt
-            git rebase --abort 2>/dev/null || true
-            
-            # Fetch and reset to the latest remote state to avoid rebase conflicts
-            if ! git fetch origin ${{ github.ref_name }}; then
-              echo "Fetch failed on attempt $i, waiting..."
-              sleep 5
-              continue
-            fi
-            git reset --hard origin/${{ github.ref_name }}
-            
-            # Re-apply the version bump on top of the latest remote state
-            if ! npm version $BUMP_TYPE --no-git-tag-version; then
-              echo "npm version failed (BUMP_TYPE=$BUMP_TYPE), aborting"
-              exit 1
-            fi
-            NEW_VERSION=$(node -p "require('./package.json').version")
-            
-            # Skip if this tag already exists on the remote (handles reruns)
-            if git ls-remote --tags origin "refs/tags/v$NEW_VERSION" | grep -q .; then
-              echo "✅ Tag v$NEW_VERSION already exists on remote, nothing to push"
-              exit 0
-            fi
-            
-            # Commit the version change
-            git add package.json
-            if [ -f "package-lock.json" ]; then
-              git add package-lock.json
-            fi
-            git commit -m "chore: bump version to v$NEW_VERSION [skip ci]"
-            
-            # Remove any local tag from a previous attempt and recreate
-            git tag -d "v$NEW_VERSION" 2>/dev/null || true
-            git tag "v$NEW_VERSION"
-            
-            # Push commit and tag
-            if git push origin HEAD:${{ github.ref_name }} && git push origin --tags; then
-              echo "✅ Successfully pushed version v$NEW_VERSION"
-              exit 0
-            fi
-            
-            echo "Retry $i failed, waiting..."
-            sleep 5
-          done
-          echo "All retries failed, push unsuccessful."
-          exit 1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
+          NEW_VERSION="${{ steps.bump.outputs.new_version }}"
+
+          # Reruns and repeated dispatches must not fail on an existing tag.
+          if git ls-remote --tags origin "refs/tags/v$NEW_VERSION" | grep -q .; then
+            echo "✅ Tag v$NEW_VERSION already exists on the remote, nothing to do"
+            exit 0
+          fi
+
+          git tag "v$NEW_VERSION"
+          git push origin "v$NEW_VERSION"
+          echo "✅ Pushed tag v$NEW_VERSION"
+
       - name: Create version summary
         run: |
           echo "## 🎉 Version Bump Summary" >> $GITHUB_STEP_SUMMARY

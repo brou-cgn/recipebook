@@ -34,3 +34,17 @@ mit Datum und Grund: eine Quarantäne, die still wächst, ist dasselbe wie gar
 keine CI.
 
 `npm test` führt weiterhin alles aus, inklusive der roten Suites.
+
+## Versionsnummer
+Die Version der App ist das neueste `v*`-Git-Tag, **nicht** das `version`-Feld
+in `package.json` — das bleibt eingefroren und dient nur als Startwert, falls
+noch kein Tag existiert. `scripts/appVersion.js` liest sie aus (`current`) und
+berechnet die nächste (`next patch|minor|major`).
+
+Grund: Das Ruleset auf `main` lässt Änderungen nur über PRs mit grünem Check
+zu, und `github-actions[bot]` kann davon nicht ausgenommen werden (keine
+installierbare App, taucht in der Bypass-Liste nicht auf). Ein Versions-Commit
+auf `main` ist damit unmöglich, ein Tag-Push dagegen unberührt.
+
+Also: niemals `package.json` bumpen, um eine Release-Version zu setzen —
+`version-bump.yml` setzt das Tag bei jedem Merge auf `main` automatisch.
