@@ -10,10 +10,11 @@
  * Firebase console.
  *
  * Data model: debugReloadEvents/{eventId}
- *   - staleClose: object|null   (see tutorialVideoCloseDebug.js)
- *   - reloadMarker: object|null (which of the 3 known reload() call sites fired, if any)
- *   - errorLog: array|null      (last few uncaught errors/rejections before the reload)
- *   - navigationType: string    (performance navigation type, e.g. 'reload')
+ *   - staleClose: object|null         (see tutorialVideoCloseDebug.js)
+ *   - reloadMarker: object|null       (which of the 3 known reload() call sites fired, if any)
+ *   - errorLog: array|null            (last few uncaught errors/rejections before the reload)
+ *   - abruptTermination: object|null  (heartbeat/pagehide evidence of an OS-level process kill - see crashDiagnostics.js)
+ *   - navigationType: string          (performance navigation type, e.g. 'reload')
  *   - appVersion: string
  *   - userAgent: string
  *   - userId, userEmail: string
@@ -27,12 +28,12 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 export async function logReloadDebugEvent(user, data) {
   if (!user || !user.id) return;
   try {
-    const nav = performance.getEntriesByType('navigation')[0];
     await addDoc(collection(db, 'debugReloadEvents'), {
       staleClose: data.staleClose || null,
       reloadMarker: data.reloadMarker || null,
       errorLog: data.errorLog || null,
-      navigationType: nav ? nav.type : 'unbekannt',
+      abruptTermination: data.abruptTermination || null,
+      navigationType: data.navigationType || 'unbekannt',
       appVersion: process.env.REACT_APP_VERSION || '',
       userAgent: navigator.userAgent,
       userId: user.id,

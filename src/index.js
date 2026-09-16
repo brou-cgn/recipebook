@@ -11,27 +11,31 @@ import {
   installGlobalErrorLogger,
   checkForUncaughtErrorLog,
   checkForReloadMarker,
-  markReloadTriggered
+  markReloadTriggered,
+  checkForAbruptTermination,
+  installLifecycleHeartbeat
 } from './utils/crashDiagnostics';
 
 // Temporary diagnostics for the still-unresolved "app resets to the start
 // view on iPhone" report - see utils/tutorialVideoCloseDebug.js and
 // utils/crashDiagnostics.js. The tutorial-video-specific breadcrumb never
 // showed anything, ruling out a crash *during* that component's own close
-// logic. A first broader attempt (log the single latest uncaught
-// error/rejection) found an unhandledrejection about service-worker.js
-// failing to load right as navigation.type was 'reload' - but that's only a
-// correlation, and risked being a side effect of the reload (an in-flight
-// fetch aborted by the navigation) rather than its cause. This now marks,
-// definitively, which of the exactly three window.location.reload() call
-// sites in this codebase actually fired (see markReloadTriggered() calls in
-// serviceWorkerRegistration.js, firebase.js, and below), plus a rolling log
-// (not a single overwritten entry) of every uncaught error/rejection for
-// context. Both survive a real page reload (unlike in-memory state), and are
-// surfaced as a DOM banner rather than alert() - alert() at boot has no user
-// gesture behind it and was silently swallowed by iOS on first try.
+// logic, and neither did any of the 3 known reload() call sites nor any
+// uncaught error - a reproduction came back with zero trace in any of them.
+// That combination (navigation.type 'reload', but nothing our own JS could
+// have logged) is the signature of iOS killing the WebKit content process
+// directly: the entire JS context, including every listener below, is torn
+// down before any of them get a chance to run - there's no JS-observable
+// event for that at all. checkForAbruptTermination()/installLifecycleHeartbeat()
+// try to catch it indirectly via a timestamp that's kept fresh while the app
+// runs, so the next boot can see how recently it was alive and whether a
+// 'pagehide' fired before the gap. Every reload that isn't explained by a
+// known marker also gets logged now (not just the ones with a known cause),
+// per explicit request to document *all* restarts.
 // Remove all of this once the bug is understood.
+const abruptTermination = checkForAbruptTermination();
 installGlobalErrorLogger();
+installLifecycleHeartbeat();
 
 const staleClose = checkForStaleClose();
 if (staleClose) {
@@ -48,11 +52,30 @@ if (errorLog) {
   renderDebugBanner('Crash-Debug: unbehandelte Fehler vor Neustart (Verlauf).', errorLog);
 }
 
+if (abruptTermination && !abruptTermination.hadCleanPagehide) {
+  renderDebugBanner('Reload-Debug: App lief bis kurz vor Neustart, kein pagehide.', abruptTermination);
+}
+
+const navigationType = performance.getEntriesByType('navigation')[0]?.type || 'unbekannt';
+const isUnexplainedReload = navigationType === 'reload' && !staleClose && !reloadMarker;
+if (isUnexplainedReload && !errorLog && !abruptTermination) {
+  renderDebugBanner('Reload-Debug: Reload ohne jede bekannte Ursache.', { navigationType });
+}
+
 // Stash whatever was collected for App.js to write to Firestore once auth is
 // ready (the debugReloadEvents write requires an authenticated user, which
-// isn't available yet this early in boot). See utils/debugReloadEventsFirestore.js.
-if (staleClose || reloadMarker || errorLog) {
-  window.__pendingDebugReloadEvent = { staleClose, reloadMarker, errorLog };
+// isn't available yet this early in boot). Every restart gets documented,
+// not just ones matching a known cause - an unexplained 'reload' with no
+// trace anywhere is itself the most useful data point right now.
+// See utils/debugReloadEventsFirestore.js.
+if (staleClose || reloadMarker || errorLog || abruptTermination || isUnexplainedReload) {
+  window.__pendingDebugReloadEvent = {
+    staleClose,
+    reloadMarker,
+    errorLog,
+    abruptTermination,
+    navigationType
+  };
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
