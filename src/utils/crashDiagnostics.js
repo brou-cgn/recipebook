@@ -82,3 +82,65 @@ export function checkForReloadMarker() {
     return null;
   }
 }
+
+// Third piece, added after a reproduction with NO trace at all in any of the
+// above (no stale close, no reload marker, no logged error): if the WebKit
+// content process is killed by iOS directly (out-of-memory jetsam or an
+// actual WebKit crash), the entire JS context - including all the listeners
+// above - is torn down before any of them get a chance to run. There is no
+// JS-observable event for this at all; the only way to catch it indirectly
+// is a heartbeat that keeps overwriting a timestamp while the app is alive,
+// so the next boot can see how recently it was still running and whether a
+// 'pagehide' (a graceful unload, however brief) fired before the gap.
+const HEARTBEAT_KEY = 'lifecycleHeartbeatDebug';
+const PAGEHIDE_KEY = 'lastPagehideDebug';
+const HEARTBEAT_INTERVAL_MS = 5000;
+// Only meaningful if the leftover heartbeat is recent - i.e. the app was
+// actively running moments before this fresh boot, not just "last used
+// yesterday" staleness from a normal new visit.
+const RECENT_HEARTBEAT_THRESHOLD_MS = 30000;
+
+// Call once, early, BEFORE installLifecycleHeartbeat() re-arms these keys
+// for the current session - reads and clears whatever the previous session
+// left behind.
+export function checkForAbruptTermination() {
+  try {
+    const heartbeatRaw = localStorage.getItem(HEARTBEAT_KEY);
+    const pagehideRaw = localStorage.getItem(PAGEHIDE_KEY);
+    localStorage.removeItem(HEARTBEAT_KEY);
+    localStorage.removeItem(PAGEHIDE_KEY);
+    if (!heartbeatRaw) return null;
+    const heartbeat = JSON.parse(heartbeatRaw);
+    if (Date.now() - heartbeat.ts > RECENT_HEARTBEAT_THRESHOLD_MS) return null;
+    const pagehide = pagehideRaw ? JSON.parse(pagehideRaw) : null;
+    const hadCleanPagehide = !!pagehide && pagehide.ts >= heartbeat.ts - 500;
+    return { heartbeat, pagehide, hadCleanPagehide };
+  } catch {
+    return null;
+  }
+}
+
+export function installLifecycleHeartbeat() {
+  const beat = () => {
+    try {
+      localStorage.setItem(
+        HEARTBEAT_KEY,
+        JSON.stringify({ ts: Date.now(), path: window.location.pathname })
+      );
+    } catch {
+      // best-effort
+    }
+  };
+  beat();
+  setInterval(beat, HEARTBEAT_INTERVAL_MS);
+  window.addEventListener('pagehide', () => {
+    try {
+      localStorage.setItem(
+        PAGEHIDE_KEY,
+        JSON.stringify({ ts: Date.now(), path: window.location.pathname })
+      );
+    } catch {
+      // best-effort
+    }
+  });
+}
