@@ -6,9 +6,11 @@
    Desktop tutorial display hasn't been designed yet, so these stay
    mobile-only for now (matching the one direction that WAS decided) rather
    than guessing at an ad hoc desktop treatment. */
+/* Kein overflow: hidden hier. Der Wrapper hat exakt die Groesse und den
+   Radius von .tutorial-card-content - ein Clipping haette also genau den
+   Schatten weggeschnitten, den die Karte (wie .recipe-card) tragen soll. */
 .tutorial-card {
   position: relative;
-  overflow: hidden;
   border-radius: 12px;
   grid-column: 1 / -1;
 }
