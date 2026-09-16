@@ -37,6 +37,7 @@ import { applyFaviconSettings } from './utils/faviconUtils';
 import { applyTileSizePreference, applyDarkModePreference, getCustomLists, expandCuisineSelection, getInspirationListSettings } from './utils/customLists';
 import { logRecipeCall } from './utils/recipeCallsFirestore';
 import { logReloadDebugEvent } from './utils/debugReloadEventsFirestore';
+import { isRecoveryNavigation } from './utils/navigationType';
 import { addTutorial, subscribeToTutorials } from './utils/tutorialsFirestore';
 import { deleteRecipeThumbnail } from './utils/storageUtils';
 import { deleteField, serverTimestamp } from 'firebase/firestore';
@@ -336,8 +337,15 @@ function applyRolePermissionsToUser(user, permissionsMap = {}) {
 /**
  * Determines the initial top-level view after authentication state is known
  * and role permissions have been applied to the user object.
+ *
+ * A restart the user didn't ask for (see isRecoveryNavigation()) always
+ * lands on the recipe overview, even for users whose Startseite preference
+ * would otherwise show the curated landing page - that page is meant to be
+ * arrived at deliberately, not to replace whatever the user was doing right
+ * before an involuntary reload.
  */
 function getInitialViewForUser(user) {
+  if (isRecoveryNavigation()) return 'recipes';
   return user?.startseite ? 'startseite' : 'recipes';
 }
 
