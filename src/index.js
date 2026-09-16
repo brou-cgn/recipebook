@@ -6,19 +6,18 @@ import App from './App';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import reportWebVitals from './reportWebVitals';
 import { markSwUpdateReload } from './utils/swUpdateReloadFlag';
-import { checkForStaleClose } from './utils/tutorialVideoCloseDebug';
+import { checkForStaleClose, renderStaleCloseBanner } from './utils/tutorialVideoCloseDebug';
 
 // Temporary diagnostic for the "app restarts on iPhone when closing the
 // tutorial video dialog" report - see utils/tutorialVideoCloseDebug.js. If
 // the previous session left an unfinished close breadcrumb behind, that
 // breadcrumb only survives a real page reload/app relaunch, so surface it
-// loudly (alert, not console.log) since there's no way to attach a debugger
-// on the reporter's phone. Remove once the bug is confirmed fixed.
+// as a DOM banner (window.alert() at boot has no user gesture behind it and
+// was silently swallowed by iOS on the first attempt). Remove once the bug
+// is confirmed fixed.
 const staleClose = checkForStaleClose();
 if (staleClose) {
-  window.alert(
-    `Tutorial-Video-Debug: letztes Schließen kam nicht durch.\n${JSON.stringify(staleClose, null, 2)}`
-  );
+  renderStaleCloseBanner(staleClose);
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
