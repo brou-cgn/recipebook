@@ -5,7 +5,7 @@ import SavingOverlay from './SavingOverlay';
 import { isBase64Image } from '../utils/imageUtils';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { TUTORIAL_CATEGORIES } from '../utils/tutorialsFirestore';
-import { extractYouTubeVideoId, getYouTubeThumbnailUrl } from '../utils/youtubeUtils';
+import { extractYouTubeVideoId, getYouTubeThumbnailUrl, getYouTubeFrameUrls } from '../utils/youtubeUtils';
 
 const clamp01 = (n) => Math.min(1, Math.max(0, n));
 
@@ -30,6 +30,7 @@ function TutorialForm({ onSave, onCancel }) {
   // den ganzen (gepaddeten) Frame zu zeigen. pos ist 0..1 normiert auf den bei
   // aktuellem Zoom verfügbaren Verschiebespielraum - siehe TutorialCard.js für
   // die identische Render-Formel.
+  const [thumbFrame, setThumbFrame] = useState(null);
   const [thumbZoom, setThumbZoom] = useState(1);
   const [thumbPosX, setThumbPosX] = useState(0.5);
   const [thumbPosY, setThumbPosY] = useState(0.5);
@@ -37,14 +38,16 @@ function TutorialForm({ onSave, onCancel }) {
   const dragStateRef = useRef(null);
 
   const videoId = extractYouTubeVideoId(videoUrl);
-  const thumbnailUrl = getYouTubeThumbnailUrl(videoId);
+  const frameUrls = getYouTubeFrameUrls(videoId);
+  const cropSourceUrl = thumbFrame !== null ? frameUrls[thumbFrame] : getYouTubeThumbnailUrl(videoId);
 
   useEffect(() => {
     getButtonIcons().then(setButtonIcons).catch(() => {});
   }, []);
 
-  // Neues Video -> alter Zuschnitt passt nicht mehr, auf Mitte/kein Zoom zurücksetzen.
+  // Neues Video -> alte Frame-/Zuschnittwahl passt nicht mehr, zurücksetzen.
   useEffect(() => {
+    setThumbFrame(null);
     setThumbZoom(1);
     setThumbPosX(0.5);
     setThumbPosY(0.5);
@@ -96,7 +99,7 @@ function TutorialForm({ onSave, onCancel }) {
         title: title.trim(),
         videoUrl: videoUrl.trim(),
         category,
-        ...(videoId ? { thumbZoom, thumbPosX, thumbPosY } : {})
+        ...(videoId ? { thumbFrame, thumbZoom, thumbPosX, thumbPosY } : {})
       });
     } catch (err) {
       console.error('Error saving tutorial:', err);
@@ -154,9 +157,23 @@ function TutorialForm({ onSave, onCancel }) {
           />
         </div>
 
-        {thumbnailUrl && (
+        {cropSourceUrl && (
           <div className="form-group">
             <label>Vorschaubild zuschneiden</label>
+            <div className="tutorial-thumb-frame-picker">
+              {frameUrls.map((url, index) => (
+                <button
+                  key={url}
+                  type="button"
+                  className={`tutorial-thumb-frame-option${thumbFrame === index ? ' active' : ''}`}
+                  onClick={() => setThumbFrame(index)}
+                  aria-label={`Szene ${index + 1} als Vorschaubasis wählen`}
+                  aria-pressed={thumbFrame === index}
+                >
+                  <img src={url} alt="" draggable="false" />
+                </button>
+              ))}
+            </div>
             <div
               className="tutorial-thumb-crop-box"
               ref={cropBoxRef}
@@ -166,7 +183,7 @@ function TutorialForm({ onSave, onCancel }) {
               onPointerCancel={handleCropPointerUp}
             >
               <img
-                src={thumbnailUrl}
+                src={cropSourceUrl}
                 alt="Vorschau-Zuschnitt"
                 draggable="false"
                 className="tutorial-thumb-crop-image"
@@ -188,7 +205,7 @@ function TutorialForm({ onSave, onCancel }) {
               className="tutorial-thumb-zoom-slider"
               aria-label="Vorschaubild zoomen"
             />
-            <p className="tutorial-thumb-crop-hint">Ziehen zum Verschieben, Regler zum Zoomen</p>
+            <p className="tutorial-thumb-crop-hint">Szene wählen, dann ziehen zum Verschieben und Regler zum Zoomen</p>
           </div>
         )}
 

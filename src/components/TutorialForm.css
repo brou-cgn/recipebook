@@ -12,6 +12,41 @@
   padding: 8px 0 4px;
 }
 
+/* Auswahl unter YouTubes 4 Auto-Szenenbildern (0.jpg-3.jpg) als Basis für
+   den Crop-Editor darunter - andere Momente im Video, nicht nur ein anderer
+   Zuschnitt desselben Frames. */
+.tutorial-thumb-frame-picker {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.tutorial-thumb-frame-option {
+  flex: 1;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  background: #F5F2EF;
+  cursor: pointer;
+}
+
+.tutorial-thumb-frame-option img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.tutorial-thumb-frame-option.active {
+  border-color: #DF7A00;
+}
+
+[data-theme="dark"] .tutorial-thumb-frame-option {
+  background: #3a352c;
+}
+
 /* Zuschnitt-Editor fürs Kartenvorschaubild - gleiche 4:3-Formel wie
    .tutorial-card-thumb in TutorialCard.css, nur größer zum Bedienen. */
 .tutorial-thumb-crop-box {

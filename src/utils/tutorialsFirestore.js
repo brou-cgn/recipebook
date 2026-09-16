@@ -49,7 +49,7 @@ export const subscribeToTutorials = (callback) => {
 
 /**
  * Add a new tutorial to Firestore.
- * @param {Object} tutorialData - { title, videoUrl, category, createdBy, thumbZoom, thumbPosX, thumbPosY }
+ * @param {Object} tutorialData - { title, videoUrl, category, createdBy, thumbFrame, thumbZoom, thumbPosX, thumbPosY }
  * @returns {Promise<Object>} The created tutorial, including its Firestore ID.
  */
 export const addTutorial = async (tutorialData) => {
@@ -58,6 +58,7 @@ export const addTutorial = async (tutorialData) => {
     videoUrl: tutorialData.videoUrl,
     category: tutorialData.category,
     createdBy: tutorialData.createdBy,
+    thumbFrame: tutorialData.thumbFrame,
     thumbZoom: tutorialData.thumbZoom,
     thumbPosX: tutorialData.thumbPosX,
     thumbPosY: tutorialData.thumbPosY,
