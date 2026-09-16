@@ -274,6 +274,13 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
+/* Kein will-change: transform hier. Die Regel greift pro Rezeptkarte, und
+   die Karte animiert ihren Transform auf .recipe-card, nicht hier - der Hint
+   beschleunigte also nichts, zwang WebKit aber, fuer jede Karte dauerhaft
+   eine eigene Compositing-Ebene samt Textur vorzuhalten. Bei einer langen,
+   nicht virtualisierten Liste summiert sich das zu mehreren hundert MB
+   Rasterspeicher und bringt den WebKit-Prozess auf iOS in den Bereich, in
+   dem das System ihn beendet. */
 .recipe-image {
   position: relative;
   width: 100%;
@@ -283,7 +290,6 @@
 
   background: #f0f0f0;
   border-radius: 12px 12px 0 0;
-  will-change: transform;
 }
 
 .recipe-image img {

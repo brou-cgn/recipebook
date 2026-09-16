@@ -1,12 +1,15 @@
 /* ===== RecipeImageCarousel ===== */
 
+/* Ebenfalls ohne will-change: transform - siehe .recipe-image in
+   RecipeList.css. Der Container selbst wird nie transformiert (gescrollt
+   wird .ric-track), der Hint kostete nur eine zweite Compositing-Ebene pro
+   Karte. */
 .recipe-image-carousel {
   position: relative;
   width: 100%;
   height: 100%;
   overflow: hidden;
   background: #f0f0f0;
-  will-change: transform;
 }
 
 /* Film-strip track */

@@ -5,11 +5,13 @@ import { getYouTubeThumbnailUrl } from '../utils/youtubeUtils';
 // Inline YouTube playback for a tutorial, opened from TutorialCard instead of
 // navigating away to youtube.com. Same overlay/dialog anatomy as
 // RatingModal.js (escape-to-close, click-outside-to-close, focus the close
-// button on open) plus a scroll lock like NutritionModal.js, since a
-// video should not scroll away mid-playback.
+// button on open) plus a scroll lock, since a video should not scroll away
+// mid-playback - but deliberately NOT the position:fixed variant used in
+// NutritionModal.js; see the scroll-lock effect below for why.
 function TutorialVideoModal({ videoId, title, onClose }) {
   const closeButtonRef = useRef(null);
   const iframeRef = useRef(null);
+  const overlayRef = useRef(null);
   const isClosingRef = useRef(false);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -66,27 +68,47 @@ function TutorialVideoModal({ videoId, title, onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Scroll-Lock ohne Eingriff ins Layout.
+  //
+  // Vorher wurde hier der uebliche position:fixed-Trick verwendet: body auf
+  // fixed, negatives top, beim Schliessen zurueck plus window.scrollTo(). Der
+  // funktioniert, ist an dieser Stelle aber teuer erkauft. Dieser Dialog wird
+  // - anders als jeder andere Dialog der App - mitten aus der vollstaendig
+  // gerenderten Rezepteliste heraus geoeffnet (TutorialCard steckt im Grid).
+  // body auf fixed zu setzen und wieder zurueck erzwingt zweimal ein
+  // komplettes Re-Layout und Neuzeichnen dieses sehr langen Dokuments -
+  // einmal beim Oeffnen, einmal beim Schliessen. Genau in diesem Moment
+  // wurden die unfreiwilligen App-Neustarts auf dem iPhone beobachtet.
+  //
+  // Stattdessen: overflow:hidden (deckt Mausrad und Tastatur ab) und ein
+  // nicht-passiver touchmove-Handler auf dem Overlay, der das Wegscrollen per
+  // Geste unterbindet. Das Dokument bleibt dabei unangetastet, es gibt nichts
+  // neu zu layouten. Der Handler muss nativ registriert werden - React haengt
+  // touchmove am Root passiv ein, dort wirkt preventDefault() nicht.
+  //
+  // Beruehrungen innerhalb des YouTube-iframes erreichen uns nicht (cross
+  // origin, die Events verlassen das iframe nicht), der Player laesst sich
+  // also weiterhin normal bedienen.
   useEffect(() => {
-    const scrollY = window.scrollY;
     const prevOverflow = document.body.style.overflow;
-    const prevPosition = document.body.style.position;
-    const prevTop = document.body.style.top;
-    const prevWidth = document.body.style.width;
     document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = '100%';
+
+    const overlay = overlayRef.current;
+    const blockTouchScroll = (e) => e.preventDefault();
+    if (overlay) {
+      overlay.addEventListener('touchmove', blockTouchScroll, { passive: false });
+    }
+
     return () => {
       document.body.style.overflow = prevOverflow;
-      document.body.style.position = prevPosition;
-      document.body.style.top = prevTop;
-      document.body.style.width = prevWidth;
-      window.scrollTo(0, scrollY);
+      if (overlay) {
+        overlay.removeEventListener('touchmove', blockTouchScroll);
+      }
     };
   }, []);
 
   return (
-    <div className="tutorial-video-modal-overlay" onClick={requestClose}>
+    <div className="tutorial-video-modal-overlay" ref={overlayRef} onClick={requestClose}>
       <div
         className="tutorial-video-modal"
         onClick={(e) => e.stopPropagation()}
