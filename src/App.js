@@ -2513,6 +2513,8 @@ function App() {
         <TutorialForm
           key={editingTutorial?.id || 'new'}
           tutorial={editingTutorial}
+          nutritionReferenceRows={nutritionReferenceRows}
+          mealCategories={mealCategories}
           onSave={handleSaveTutorial}
           onCancel={handleCancelTutorialForm}
         />

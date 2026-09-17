@@ -20,6 +20,13 @@ import {
 } from 'firebase/firestore';
 import { removeUndefinedFields } from './firestoreUtils';
 
+// Mehrfachfelder am Tutorial werden immer als Array normalisiert: alte
+// Dokumente haben die Felder gar nicht, und ein fehlendes Feld soll sich wie
+// eine leere Auswahl verhalten, nicht wie `undefined` durch die UI wandern.
+const toStringArray = (value) => (
+  Array.isArray(value) ? value.filter((entry) => typeof entry === 'string' && entry.trim() !== '') : []
+);
+
 export const TUTORIAL_CATEGORIES = [
   { id: 'schneiden', label: 'Schneidetechniken' },
   { id: 'sauce', label: 'Saucen & Fonds' },
@@ -50,7 +57,7 @@ export const subscribeToTutorials = (callback) => {
 
 /**
  * Add a new tutorial to Firestore.
- * @param {Object} tutorialData - { title, videoUrl, category, createdBy, thumbFrame, thumbZoom, thumbPosX, thumbPosY }
+ * @param {Object} tutorialData - { title, videoUrl, category, ingredientIDs, speisekategorie, createdBy, thumbFrame, thumbZoom, thumbPosX, thumbPosY }
  * @returns {Promise<Object>} The created tutorial, including its Firestore ID.
  */
 export const addTutorial = async (tutorialData) => {
@@ -58,6 +65,8 @@ export const addTutorial = async (tutorialData) => {
     title: tutorialData.title,
     videoUrl: tutorialData.videoUrl,
     category: tutorialData.category,
+    ingredientIDs: toStringArray(tutorialData.ingredientIDs),
+    speisekategorie: toStringArray(tutorialData.speisekategorie),
     createdBy: tutorialData.createdBy,
     thumbFrame: tutorialData.thumbFrame,
     thumbZoom: tutorialData.thumbZoom,
@@ -76,9 +85,10 @@ export const addTutorial = async (tutorialData) => {
  * Only the fields the form owns are written - createdAt/createdBy stay as
  * they were. Crop values are always sent (even as null) so that clearing a
  * crop in the edit form actually removes it from the document instead of
- * leaving the previous value behind.
+ * leaving the previous value behind; aus demselben Grund gehen die beiden
+ * Mehrfachfelder auch als leeres Array raus, wenn alle Pillen abgewählt sind.
  * @param {string} tutorialId - ID of the tutorial to update.
- * @param {Object} tutorialData - { title, videoUrl, category, thumbFrame, thumbZoom, thumbPosX, thumbPosY }
+ * @param {Object} tutorialData - { title, videoUrl, category, ingredientIDs, speisekategorie, thumbFrame, thumbZoom, thumbPosX, thumbPosY }
  * @returns {Promise<void>}
  */
 export const updateTutorial = async (tutorialId, tutorialData) => {
@@ -86,6 +96,8 @@ export const updateTutorial = async (tutorialId, tutorialData) => {
     title: tutorialData.title,
     videoUrl: tutorialData.videoUrl,
     category: tutorialData.category,
+    ingredientIDs: toStringArray(tutorialData.ingredientIDs),
+    speisekategorie: toStringArray(tutorialData.speisekategorie),
     thumbFrame: tutorialData.thumbFrame ?? null,
     thumbZoom: tutorialData.thumbZoom ?? null,
     thumbPosX: tutorialData.thumbPosX ?? null,

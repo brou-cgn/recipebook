@@ -91,3 +91,47 @@
 [data-theme="dark"] .tutorial-thumb-crop-hint {
   color: rgba(255, 255, 255, 0.5);
 }
+
+/* Pillenfelder der beiden Mehrfachauswahlen (Zutaten, Speisekategorie).
+   Auswahlverfahren und Layout kommen aus dem Suchdialog: zwei unabhaengig
+   laufende Reihen in einem horizontal scrollenden Band, die Reihen aus
+   utils/pillCarousel.js. Gleiche Werte wie .mobile-search-cuisine-grid, nur
+   ohne dessen seitliches Overlay-Padding - im Formular sitzen die Pillen
+   buendig unter ihrem Label. Die Pillen selbst bleiben die der RecipeForm
+   (.recipe-form-cuisine-pill), optisch identisch zu denen des Suchdialogs. */
+.tutorial-pill-carousel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+.tutorial-pill-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+/* Jede Reihe scrollt ihre Pillen unabhaengig von der anderen - so muessen
+   sie sich nicht in Spalten ausrichten und der Abstand bleibt gleichmaessig,
+   auch wenn die Pillen unterschiedlich breit sind. */
+.tutorial-pill-carousel-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.tutorial-pill-hint {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: rgba(62, 43, 28, 0.6);
+}
+
+[data-theme="dark"] .tutorial-pill-hint {
+  color: rgba(255, 255, 255, 0.5);
+}
