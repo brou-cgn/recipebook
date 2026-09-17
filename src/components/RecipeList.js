@@ -37,6 +37,36 @@ export function weaveTutorialsIntoGroups(recipeGroups, tutorials) {
   return entries;
 }
 
+// Der Speisekategorie-Filter gilt auch fuer die eingewobenen Tutorials: ein
+// Tutorial mit zugeordneter Speisekategorie erscheint nur, solange gar kein
+// Speisekategorie-Filter aktiv ist oder mindestens eine seiner Kategorien im
+// Filter steckt. Tutorials ohne Zuordnung bleiben immer sichtbar - sie sind
+// generisches Technikwissen und gehoeren zu keiner Kategorie.
+// Beide Filterquellen (die einzelne Kategorie der Kochbuch-Ansicht und die
+// Mehrfachauswahl aus der Suche) wirken wie bei den Rezepten additiv: sind
+// beide gesetzt, muss das Tutorial zu jeder von ihnen passen.
+export function filterTutorialsByMealCategory(tutorials, categoryFilter, selectedCategories) {
+  const activeSelections = [];
+  if (categoryFilter) {
+    activeSelections.push([categoryFilter]);
+  }
+  if (selectedCategories && selectedCategories.length > 0) {
+    activeSelections.push(selectedCategories);
+  }
+  if (activeSelections.length === 0) {
+    return tutorials || [];
+  }
+  return (tutorials || []).filter((tutorial) => {
+    const assigned = Array.isArray(tutorial?.speisekategorie)
+      ? tutorial.speisekategorie
+      : tutorial?.speisekategorie
+        ? [tutorial.speisekategorie]
+        : [];
+    if (assigned.length === 0) return true;
+    return activeSelections.every((selection) => selection.some((category) => assigned.includes(category)));
+  });
+}
+
 export function isNewRecipe(recipe, sortSettings) {
   if (!recipe?.createdAt && !recipe?.publishedAt) return false;
   const days = sortSettings?.newRecipeDays ?? DEFAULT_NEW_RECIPE_DAYS;
@@ -396,6 +426,12 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEdi
     onSelectRecipe(topRecipe);
   };
 
+  const selectedMealCategories = activeFilters?.selectedCategories;
+  const visibleTutorials = useMemo(
+    () => filterTutorialsByMealCategory(tutorials, categoryFilter, selectedMealCategories),
+    [tutorials, categoryFilter, selectedMealCategories]
+  );
+
   // Helper function to get author name
   const getAuthorName = (authorId) => {
     if (!authorId) return null;
@@ -509,8 +545,10 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEdi
             // filters are active, so they stay discoverable in a filtered
             // result too - only private lists exclude them, since they're
             // global content that doesn't belong to any one private list.
+            // Ausnahme ist der Speisekategorie-Filter: passt ein Tutorial mit
+            // zugeordneter Kategorie nicht dazu, faellt es aus dem Weave raus.
             !activePrivateListId
-              ? weaveTutorialsIntoGroups(recipeGroups, tutorials)
+              ? weaveTutorialsIntoGroups(recipeGroups, visibleTutorials)
               : recipeGroups.map((group) => ({ type: 'recipe', group }))
           ).map((entry) => {
             if (entry.type === 'tutorial') {
