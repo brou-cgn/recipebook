@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import './RecipeForm.css';
 import './TutorialForm.css';
 import SavingOverlay from './SavingOverlay';
@@ -9,6 +9,11 @@ import { extractYouTubeVideoId, getYouTubeThumbnailUrl, getYouTubeFrameUrls } fr
 
 const clamp01 = (n) => Math.min(1, Math.max(0, n));
 
+// Obergrenze fuer die gleichzeitig gerenderten Zutatenpillen. Die
+// Nutritionsreferenz umfasst mehrere hundert Eintraege; mehr als das passt
+// weder auf den Schirm noch in ein sinnvolles Scrollfeld.
+const INGREDIENT_PILL_LIMIT = 40;
+
 // "Neues Tutorial" - same anatomy as RecipeForm (header/actions, form card,
 // mobile FABs) but without ingredients/steps/portions/cook time, plus a
 // Video-URL field. See CLAUDE.md / the RecipeBook design canvas for why the
@@ -18,11 +23,23 @@ const clamp01 = (n) => Math.min(1, Math.max(0, n));
 // filled with that document's values and the heading switches to
 // "Tutorial bearbeiten" - reached by long-pressing a TutorialCard, the same
 // gesture that opens this form empty from the add button.
-function TutorialForm({ onSave, onCancel, tutorial = null }) {
+function TutorialForm({ onSave, onCancel, tutorial = null, nutritionReferenceRows = [], mealCategories = [] }) {
   const isEditing = Boolean(tutorial);
   const [title, setTitle] = useState(tutorial?.title || '');
   const [videoUrl, setVideoUrl] = useState(tutorial?.videoUrl || '');
   const [category, setCategory] = useState(tutorial?.category || TUTORIAL_CATEGORIES[0].id);
+  // Zutaten und Speisekategorien sind Mehrfachauswahlen - ein Technikvideo
+  // gehoert selten zu genau einer Zutat oder genau einem Gang. Gespeichert
+  // werden die IngredientIDs (Dokument-IDs aus nutritionReferences) bzw. die
+  // Kategorienamen, exakt wie das Rezept sie in `speisekategorie` fuehrt, damit
+  // sich Tutorial und Rezept spaeter ueber dieselben Werte finden lassen.
+  const [ingredientIDs, setIngredientIDs] = useState(() => (
+    Array.isArray(tutorial?.ingredientIDs) ? tutorial.ingredientIDs : []
+  ));
+  const [speisekategorie, setSpeisekategorie] = useState(() => (
+    Array.isArray(tutorial?.speisekategorie) ? tutorial.speisekategorie : []
+  ));
+  const [ingredientSearch, setIngredientSearch] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [savePressed, setSavePressed] = useState(false);
@@ -100,6 +117,72 @@ function TutorialForm({ onSave, onCancel, tutorial = null }) {
     return () => window.removeEventListener('darkModeChange', handler);
   }, []);
 
+  // nutritionReferences ist die groesste Liste der App - alle Zutaten als
+  // Pillen zu rendern waere unbedienbar. Deshalb: Suchfeld davor, und ohne
+  // Suchbegriff nur ein Anriss der Liste, dessen Umfang die Zeile darunter
+  // offenlegt. Bereits gewaehlte Zutaten stehen immer oben und bleiben auch
+  // sichtbar, wenn der aktuelle Suchbegriff sie nicht mehr trifft - sonst
+  // koennte man eine Auswahl nicht mehr aufheben, ohne die Suche zu leeren.
+  const ingredientOptions = useMemo(() => {
+    const seen = new Set();
+    return nutritionReferenceRows.reduce((options, row) => {
+      const id = String(row?.ingredientID || row?.id || '').trim();
+      if (!id || seen.has(id)) return options;
+      seen.add(id);
+      options.push({
+        id,
+        label: String(row?.name || row?.displayName || id).trim() || id,
+        synonyms: Array.isArray(row?.synonyms) ? row.synonyms : []
+      });
+      return options;
+    }, []);
+  }, [nutritionReferenceRows]);
+
+  const ingredientLabelById = useMemo(() => (
+    ingredientOptions.reduce((map, option) => {
+      map[option.id] = option.label;
+      return map;
+    }, {})
+  ), [ingredientOptions]);
+
+  const selectedIngredientPills = useMemo(() => (
+    ingredientIDs.map((id) => ({ id, label: ingredientLabelById[id] || id }))
+  ), [ingredientIDs, ingredientLabelById]);
+
+  const matchingIngredientOptions = useMemo(() => {
+    const term = ingredientSearch.trim().toLowerCase();
+    const unselected = ingredientOptions.filter((option) => !ingredientIDs.includes(option.id));
+    if (!term) return unselected;
+    return unselected.filter((option) => (
+      option.label.toLowerCase().includes(term)
+      || option.id.toLowerCase().includes(term)
+      || option.synonyms.some((synonym) => String(synonym).toLowerCase().includes(term))
+    ));
+  }, [ingredientOptions, ingredientIDs, ingredientSearch]);
+
+  const visibleIngredientOptions = matchingIngredientOptions.slice(0, INGREDIENT_PILL_LIMIT);
+  const hiddenIngredientCount = matchingIngredientOptions.length - visibleIngredientOptions.length;
+
+  // Gewaehlte Speisekategorien nach vorn, damit die Auswahl nicht in einer
+  // langen Pillenreihe untergeht - dasselbe Verhalten wie in der RecipeForm.
+  const orderedMealCategoryPills = useMemo(() => {
+    const active = mealCategories.filter((name) => speisekategorie.includes(name));
+    const inactive = mealCategories.filter((name) => !speisekategorie.includes(name));
+    return [...active, ...inactive];
+  }, [mealCategories, speisekategorie]);
+
+  const toggleIngredientID = (id) => {
+    setIngredientIDs((prev) => (
+      prev.includes(id) ? prev.filter((entry) => entry !== id) : [...prev, id]
+    ));
+  };
+
+  const toggleSpeisekategorie = (name) => {
+    setSpeisekategorie((prev) => (
+      prev.includes(name) ? prev.filter((entry) => entry !== name) : [...prev, name]
+    ));
+  };
+
   const canSave = title.trim().length > 0 && videoUrl.trim().length > 0 && !isSaving;
 
   const handleSave = async (e) => {
@@ -112,6 +195,8 @@ function TutorialForm({ onSave, onCancel, tutorial = null }) {
         title: title.trim(),
         videoUrl: videoUrl.trim(),
         category,
+        ingredientIDs,
+        speisekategorie,
         ...(videoId ? { thumbFrame, thumbZoom, thumbPosX, thumbPosY } : {})
       });
     } catch (err) {
@@ -236,6 +321,75 @@ function TutorialForm({ onSave, onCancel, tutorial = null }) {
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="tutorial-ingredient-search">Zutaten (Mehrfachauswahl möglich)</label>
+          <input
+            id="tutorial-ingredient-search"
+            type="text"
+            value={ingredientSearch}
+            onChange={(e) => setIngredientSearch(e.target.value)}
+            placeholder="Zutat suchen, z. B. Zwiebel"
+            autoComplete="off"
+          />
+          <div className="tutorial-pill-grid tutorial-ingredient-grid">
+            {selectedIngredientPills.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className="recipe-form-cuisine-pill active"
+                onClick={() => toggleIngredientID(option.id)}
+                aria-pressed="true"
+                title="Auswahl aufheben"
+              >
+                {option.label}
+              </button>
+            ))}
+            {visibleIngredientOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className="recipe-form-cuisine-pill"
+                onClick={() => toggleIngredientID(option.id)}
+                aria-pressed="false"
+                title={`${option.label} auswählen`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          {ingredientOptions.length === 0 ? (
+            <p className="tutorial-pill-hint">Keine Zutaten verfügbar.</p>
+          ) : hiddenIngredientCount > 0 ? (
+            <p className="tutorial-pill-hint">
+              {`Noch ${hiddenIngredientCount} weitere Treffer – Suche eingrenzen`}
+            </p>
+          ) : matchingIngredientOptions.length === 0 && ingredientSearch.trim() !== '' ? (
+            <p className="tutorial-pill-hint">Keine passende Zutat gefunden.</p>
+          ) : null}
+        </div>
+
+        <div className="form-group">
+          <label>Speisekategorie (Mehrfachauswahl möglich)</label>
+          {orderedMealCategoryPills.length > 0 ? (
+            <div className="tutorial-pill-grid">
+              {orderedMealCategoryPills.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  className={`recipe-form-cuisine-pill${speisekategorie.includes(name) ? ' active' : ''}`}
+                  onClick={() => toggleSpeisekategorie(name)}
+                  aria-pressed={speisekategorie.includes(name)}
+                  title={speisekategorie.includes(name) ? 'Auswahl aufheben' : `${name} auswählen`}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="tutorial-pill-hint">Keine Speisekategorien verfügbar.</p>
+          )}
         </div>
 
         {error && <p className="ai-ocr-limit-info">{error}</p>}

@@ -91,3 +91,33 @@
 [data-theme="dark"] .tutorial-thumb-crop-hint {
   color: rgba(255, 255, 255, 0.5);
 }
+
+/* Pillenreihen der beiden Mehrfachauswahlen (Zutaten, Speisekategorie).
+   Gleiche Pillen wie in der RecipeForm (.recipe-form-cuisine-pill), aber als
+   umbrechende Reihe statt als Karussell. Die Zutatenliste kommt aus
+   nutritionReferences und kann trotz Suchfilter lang werden - deshalb dort
+   eine Maximalhoehe mit eigenem Scrollbereich, damit die Speichern-Leiste
+   nicht weggeschoben wird. */
+.tutorial-pill-grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0 4px;
+}
+
+.tutorial-ingredient-grid {
+  max-height: 168px;
+  overflow-y: auto;
+  align-content: flex-start;
+}
+
+.tutorial-pill-hint {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: rgba(62, 43, 28, 0.6);
+}
+
+[data-theme="dark"] .tutorial-pill-hint {
+  color: rgba(255, 255, 255, 0.5);
+}
