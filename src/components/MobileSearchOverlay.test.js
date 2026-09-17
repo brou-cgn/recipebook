@@ -356,6 +356,56 @@ describe('MobileSearchOverlay – seasonal filter pill', () => {
   });
 });
 
+describe('MobileSearchOverlay – Inhaltsart-Pillen "Rezepte"/"Tutorials"', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  test('zeigt beide Pillen standardmaessig aktiv', () => {
+    renderOverlay();
+    expect(screen.getByRole('button', { name: 'Rezepte' })).toHaveClass('active');
+    expect(screen.getByRole('button', { name: 'Tutorials' })).toHaveClass('active');
+  });
+
+  test('meldet das Umschalten nach oben', () => {
+    const onRecipesToggle = jest.fn();
+    const onTutorialsToggle = jest.fn();
+    renderOverlay({ onRecipesToggle, onTutorialsToggle });
+
+    const recipesPill = screen.getByRole('button', { name: 'Rezepte' });
+    fireEvent.click(recipesPill);
+    expect(onRecipesToggle).toHaveBeenCalledWith(false);
+    expect(recipesPill).not.toHaveClass('active');
+
+    const tutorialsPill = screen.getByRole('button', { name: 'Tutorials' });
+    fireEvent.click(tutorialsPill);
+    expect(onTutorialsToggle).toHaveBeenCalledWith(false);
+    expect(tutorialsPill).not.toHaveClass('active');
+  });
+
+  test('blendet die Rezept-Kacheln aus, wenn die Rezepte-Pille aus ist', async () => {
+    renderOverlay({
+      recipes: [{ id: '1', title: 'Sushi' }],
+      cuisineTypes: [],
+      cuisineGroups: [],
+    });
+    expect(screen.getByText('Sushi')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rezepte' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Sushi')).not.toBeInTheDocument();
+      expect(screen.getByText('Rezepte sind ausgeblendet')).toBeInTheDocument();
+    });
+  });
+
+  test('uebernimmt die Werte der Eltern-Komponente beim Oeffnen', () => {
+    renderOverlay({ showRecipes: false, showTutorials: true });
+    expect(screen.getByRole('button', { name: 'Rezepte' })).not.toHaveClass('active');
+    expect(screen.getByRole('button', { name: 'Tutorials' })).toHaveClass('active');
+  });
+});
+
 describe('MobileSearchOverlay – author pills filtered by search term', () => {
   const mockAuthors = [
     { id: 'u1', name: 'Alice' },

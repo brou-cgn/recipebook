@@ -164,8 +164,8 @@ const SORT_STORAGE_KEY = 'recipebook_active_sort';
 const LONG_PRESS_DELAY_MS = 500;
 const LONG_PRESS_CLICK_SUPPRESSION_MS = 500;
 
-function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEditTutorial, tutorials = [], categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly = false, onShowFavoritesOnlyChange, privateLists, onAddToPrivateList, onRemoveFromPrivateList, publicGroupId, onMoveRecipeToPublic, cookDatesMap = new Map(), seasonMatrixEntries = [] }) {
-  const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnlyProp || showSeasonalOnly || (activeFilters && (
+function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEditTutorial, tutorials = [], categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly = false, showRecipes = true, showTutorials = true, onShowFavoritesOnlyChange, privateLists, onAddToPrivateList, onRemoveFromPrivateList, publicGroupId, onMoveRecipeToPublic, cookDatesMap = new Map(), seasonMatrixEntries = [] }) {
+  const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnlyProp || showSeasonalOnly || !showRecipes || !showTutorials || (activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
     activeFilters.selectedCategories?.length > 0 ||
@@ -432,6 +432,23 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEdi
     [tutorials, categoryFilter, selectedMealCategories]
   );
 
+  // Die Pillen "Rezepte" und "Tutorials" (Suchoverlay bzw. Filter-Sidebar)
+  // schalten die beiden Inhaltsarten des Feeds einzeln ab. Beide sind
+  // standardmaessig aktiv, der Feed sieht dann aus wie bisher.
+  // Tutorials are woven into the "Kochbuch" view whether or not filters are
+  // active, so they stay discoverable in a filtered result too - only private
+  // lists exclude them, since they're global content that doesn't belong to
+  // any one private list.
+  const feedEntries = useMemo(() => {
+    const tutorialEntries = (showTutorials && !activePrivateListId) ? visibleTutorials : [];
+    if (!showRecipes) {
+      // Ohne Rezepte gibt es nichts, worin die Tutorials eingewoben werden
+      // koennten - sie bilden den Feed dann allein.
+      return tutorialEntries.map((tutorial, index) => ({ type: 'tutorial', tutorial, slot: index }));
+    }
+    return weaveTutorialsIntoGroups(recipeGroups, tutorialEntries);
+  }, [recipeGroups, visibleTutorials, showRecipes, showTutorials, activePrivateListId]);
+
   // Helper function to get author name
   const getAuthorName = (authorId) => {
     if (!authorId) return null;
@@ -527,30 +544,32 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEdi
         </div>
       </div>
       
-      {recipeGroups.length === 0 ? (
+      {feedEntries.length === 0 ? (
         <div className="empty-state">
-          <p>{searchTerm && searchTerm.trim() ? 'Keine Rezepte gefunden!' : showFavoritesOnly ? 'Keine favorisierten Rezepte!' : 'Noch keine Rezepte!'}</p>
+          <p>
+            {!showRecipes && !showTutorials
+              ? 'Nichts ausgewählt!'
+              : !showRecipes
+                ? 'Keine Tutorials!'
+                : searchTerm && searchTerm.trim() ? 'Keine Rezepte gefunden!' : showFavoritesOnly ? 'Keine favorisierten Rezepte!' : 'Noch keine Rezepte!'}
+          </p>
           <p className="empty-hint">
-            {searchTerm && searchTerm.trim()
-              ? `Für "${searchTerm.trim()}" wurden keine passenden Rezepte gefunden.`
-              : showFavoritesOnly 
-                ? 'Markieren Sie Rezepte als Favoriten, um sie schnell zu finden' 
-                : 'Das kannst du ändern, lege direkt ein Rezept an.'}
+            {!showRecipes && !showTutorials
+              ? 'Aktiviere die Pille „Rezepte“ oder „Tutorials“, um wieder Inhalte zu sehen.'
+              : !showRecipes
+                ? 'Aktiviere die Pille „Rezepte“, um wieder Rezepte zu sehen.'
+                : searchTerm && searchTerm.trim()
+                  ? `Für "${searchTerm.trim()}" wurden keine passenden Rezepte gefunden.`
+                  : showFavoritesOnly
+                    ? 'Markieren Sie Rezepte als Favoriten, um sie schnell zu finden'
+                    : 'Das kannst du ändern, lege direkt ein Rezept an.'}
           </p>
         </div>
       ) : (
         <div className="recipe-grid">
-          {(
-            // Tutorials are woven into the "Kochbuch" view whether or not
-            // filters are active, so they stay discoverable in a filtered
-            // result too - only private lists exclude them, since they're
-            // global content that doesn't belong to any one private list.
-            // Ausnahme ist der Speisekategorie-Filter: passt ein Tutorial mit
-            // zugeordneter Kategorie nicht dazu, faellt es aus dem Weave raus.
-            !activePrivateListId
-              ? weaveTutorialsIntoGroups(recipeGroups, visibleTutorials)
-              : recipeGroups.map((group) => ({ type: 'recipe', group }))
-          ).map((entry) => {
+          {/* Ausnahme beim Weave ist der Speisekategorie-Filter: passt ein
+              Tutorial mit zugeordneter Kategorie nicht dazu, faellt es raus. */}
+          {feedEntries.map((entry) => {
             if (entry.type === 'tutorial') {
               return (
                 <TutorialCard

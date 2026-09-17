@@ -448,6 +448,11 @@ function App() {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [showSeasonalOnly, setShowSeasonalOnly] = useState(false);
+  // Inhaltsart-Pillen der Kochbuch-Ansicht: beide standardmaessig aktiv.
+  // Deaktivieren blendet die jeweilige Kachelart (Rezepte bzw. eingewobene
+  // Tutorials) aus dem Feed aus.
+  const [showRecipes, setShowRecipes] = useState(true);
+  const [showTutorials, setShowTutorials] = useState(true);
   const [cuisineGroups, setCuisineGroups] = useState([]);
   const [cuisineTypes, setCuisineTypes] = useState([]);
   const [mealCategories, setMealCategories] = useState([]);
@@ -1722,6 +1727,8 @@ function App() {
     });
     setShowFavoritesOnly(false);
     setShowSeasonalOnly(false);
+    setShowRecipes(true);
+    setShowTutorials(true);
     handleClearSearch();
   };
 
@@ -2705,6 +2712,10 @@ function App() {
             onFavoritesToggle={setShowFavoritesOnly}
             showSeasonalOnly={showSeasonalOnly}
             onSeasonalToggle={setShowSeasonalOnly}
+            showRecipes={showRecipes}
+            onRecipesToggle={setShowRecipes}
+            showTutorials={showTutorials}
+            onTutorialsToggle={setShowTutorials}
             cuisineTypes={overlayCuisineTypes}
             cuisineGroups={overlayCuisineGroups}
             selectedCuisines={recipeFilters.selectedCuisines}
@@ -2753,6 +2764,8 @@ function App() {
               onClearAllFilters={handleClearAllFilters}
               showFavoritesOnly={showFavoritesOnly}
               showSeasonalOnly={showSeasonalOnly}
+              showRecipes={showRecipes}
+              showTutorials={showTutorials}
               onShowFavoritesOnlyChange={setShowFavoritesOnly}
               privateLists={privateListsForUser}
               onAddToPrivateList={handleAddRecipeToPrivateList}
@@ -2803,6 +2816,10 @@ function App() {
           showSeasonalOnly={showSeasonalOnly}
           onFavoritesToggle={setShowFavoritesOnly}
           onSeasonalToggle={setShowSeasonalOnly}
+          showRecipes={showRecipes}
+          showTutorials={showTutorials}
+          onRecipesToggle={setShowRecipes}
+          onTutorialsToggle={setShowTutorials}
           seasonMatrixEntries={seasonMatrixEntries}
           cuisineTypes={overlayCuisineTypes}
           cuisineGroups={overlayCuisineGroups}

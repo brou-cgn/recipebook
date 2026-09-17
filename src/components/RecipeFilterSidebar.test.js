@@ -39,6 +39,32 @@ describe('RecipeFilterSidebar', () => {
     expect(screen.getByRole('button', { name: /Saisonal/i })).toBeInTheDocument();
   });
 
+  test('renders the Rezepte/Tutorials content toggles, both active by default', () => {
+    renderSidebar();
+    const recipesPill = screen.getByRole('button', { name: 'Rezepte' });
+    const tutorialsPill = screen.getByRole('button', { name: 'Tutorials' });
+    expect(recipesPill).toHaveClass('active');
+    expect(tutorialsPill).toHaveClass('active');
+  });
+
+  test('calls onRecipesToggle/onTutorialsToggle with the inverted value', () => {
+    const onRecipesToggle = jest.fn();
+    const onTutorialsToggle = jest.fn();
+    renderSidebar({ onRecipesToggle, onTutorialsToggle });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rezepte' }));
+    expect(onRecipesToggle).toHaveBeenCalledWith(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tutorials' }));
+    expect(onTutorialsToggle).toHaveBeenCalledWith(false);
+  });
+
+  test('marks a deactivated content pill as an active filter', () => {
+    renderSidebar({ showTutorials: false });
+    expect(screen.getByRole('button', { name: 'Tutorials' })).not.toHaveClass('active');
+    expect(screen.getByRole('button', { name: /Filter zurücksetzen/i })).toBeInTheDocument();
+  });
+
   test('only shows categories/cuisines with at least one matching recipe', () => {
     renderSidebar();
     expect(screen.getByText('Hauptgericht')).toBeInTheDocument();
