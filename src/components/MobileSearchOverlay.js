@@ -5,6 +5,7 @@ import { getUserFavorites } from '../utils/userFavorites';
 import { expandCuisineSelection } from '../utils/customLists';
 import { hasHauptsaisonIngredient } from '../utils/recipeSortIndex';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
+import { splitIntoTwoRows, reorderActiveFirst } from '../utils/pillCarousel';
 
 const DEBOUNCE_DELAY_MS = 200;
 // Delay in ms before auto-focusing the input – gives the slide-up animation
@@ -31,26 +32,6 @@ function incrementCuisineUsage(cuisineName) {
   } catch (e) {
     // ignore storage errors
   }
-}
-
-/**
- * Splits a pill list into two independent rows (first half / second half) so
- * the two-row carousel doesn't have to align pill columns – each row wraps
- * its own content and keeps a uniform gap regardless of neighboring pill
- * widths. Row membership is derived from the stable (unfiltered-by-selection)
- * pill list so a pill never jumps rows just because it becomes active –
- * that would force React to unmount/remount it and drop focus mid-click.
- */
-function splitIntoTwoRows(items) {
-  const half = Math.ceil(items.length / 2);
-  return [items.slice(0, half), items.slice(half)];
-}
-
-/** Reorders a row's pills so active (selected) ones come first, without changing row membership. */
-function reorderActiveFirst(items, selected) {
-  const active = items.filter((name) => selected.includes(name));
-  const inactive = items.filter((name) => !selected.includes(name));
-  return [...active, ...inactive];
 }
 
 /**

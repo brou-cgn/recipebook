@@ -6,12 +6,13 @@ import { isBase64Image } from '../utils/imageUtils';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { TUTORIAL_CATEGORIES } from '../utils/tutorialsFirestore';
 import { extractYouTubeVideoId, getYouTubeThumbnailUrl, getYouTubeFrameUrls } from '../utils/youtubeUtils';
+import { splitIntoTwoRows, reorderActiveFirst } from '../utils/pillCarousel';
 
 const clamp01 = (n) => Math.min(1, Math.max(0, n));
 
 // Obergrenze fuer die gleichzeitig gerenderten Zutatenpillen. Die
-// Nutritionsreferenz umfasst mehrere hundert Eintraege; mehr als das passt
-// weder auf den Schirm noch in ein sinnvolles Scrollfeld.
+// Nutritionsreferenz umfasst mehrere hundert Eintraege; so viele Pillen in
+// ein zweireihiges Karussell zu haengen, hiesse minutenlang zu wischen.
 const INGREDIENT_PILL_LIMIT = 40;
 
 // "Neues Tutorial" - same anatomy as RecipeForm (header/actions, form card,
@@ -138,38 +139,57 @@ function TutorialForm({ onSave, onCancel, tutorial = null, nutritionReferenceRow
     }, []);
   }, [nutritionReferenceRows]);
 
-  const ingredientLabelById = useMemo(() => (
-    ingredientOptions.reduce((map, option) => {
-      map[option.id] = option.label;
-      return map;
-    }, {})
-  ), [ingredientOptions]);
-
-  const selectedIngredientPills = useMemo(() => (
-    ingredientIDs.map((id) => ({ id, label: ingredientLabelById[id] || id }))
-  ), [ingredientIDs, ingredientLabelById]);
-
+  // Der Suchbegriff grenzt die Zutaten ein, eine gewaehlte Zutat bleibt aber
+  // in jedem Fall in der Liste. Im Suchdialog darf eine aktive Pille aus der
+  // Trefferliste fallen - dort ist sie ein Filter, den die Leiste darueber
+  // weiter anzeigt und der sich jederzeit zuruecksetzen laesst. Hier ist sie
+  // eingegebener Inhalt: verschwaende sie mit dem Suchbegriff, waere die
+  // Auswahl weder sichtbar noch aufhebbar.
   const matchingIngredientOptions = useMemo(() => {
     const term = ingredientSearch.trim().toLowerCase();
-    const unselected = ingredientOptions.filter((option) => !ingredientIDs.includes(option.id));
-    if (!term) return unselected;
-    return unselected.filter((option) => (
-      option.label.toLowerCase().includes(term)
+    if (!term) return ingredientOptions;
+    return ingredientOptions.filter((option) => (
+      ingredientIDs.includes(option.id)
+      || option.label.toLowerCase().includes(term)
       || option.id.toLowerCase().includes(term)
       || option.synonyms.some((synonym) => String(synonym).toLowerCase().includes(term))
     ));
   }, [ingredientOptions, ingredientIDs, ingredientSearch]);
 
-  const visibleIngredientOptions = matchingIngredientOptions.slice(0, INGREDIENT_PILL_LIMIT);
+  const visibleIngredientOptions = useMemo(
+    () => matchingIngredientOptions.slice(0, INGREDIENT_PILL_LIMIT),
+    [matchingIngredientOptions]
+  );
   const hiddenIngredientCount = matchingIngredientOptions.length - visibleIngredientOptions.length;
 
-  // Gewaehlte Speisekategorien nach vorn, damit die Auswahl nicht in einer
-  // langen Pillenreihe untergeht - dasselbe Verhalten wie in der RecipeForm.
-  const orderedMealCategoryPills = useMemo(() => {
-    const active = mealCategories.filter((name) => speisekategorie.includes(name));
-    const inactive = mealCategories.filter((name) => !speisekategorie.includes(name));
-    return [...active, ...inactive];
-  }, [mealCategories, speisekategorie]);
+  // Beide Pillenfelder laufen im Auswahlverfahren des Suchdialogs: zwei
+  // Reihen mit fester Zugehoerigkeit, darin die gewaehlten Pillen vorn -
+  // siehe utils/pillCarousel.js.
+  const [ingredientRow1Base, ingredientRow2Base] = useMemo(
+    () => splitIntoTwoRows(visibleIngredientOptions),
+    [visibleIngredientOptions]
+  );
+  const ingredientPillsRow1 = useMemo(
+    () => reorderActiveFirst(ingredientRow1Base, ingredientIDs, (option) => option.id),
+    [ingredientRow1Base, ingredientIDs]
+  );
+  const ingredientPillsRow2 = useMemo(
+    () => reorderActiveFirst(ingredientRow2Base, ingredientIDs, (option) => option.id),
+    [ingredientRow2Base, ingredientIDs]
+  );
+
+  const [mealCategoryRow1Base, mealCategoryRow2Base] = useMemo(
+    () => splitIntoTwoRows(mealCategories),
+    [mealCategories]
+  );
+  const mealCategoryPillsRow1 = useMemo(
+    () => reorderActiveFirst(mealCategoryRow1Base, speisekategorie),
+    [mealCategoryRow1Base, speisekategorie]
+  );
+  const mealCategoryPillsRow2 = useMemo(
+    () => reorderActiveFirst(mealCategoryRow2Base, speisekategorie),
+    [mealCategoryRow2Base, speisekategorie]
+  );
 
   const toggleIngredientID = (id) => {
     setIngredientIDs((prev) => (
@@ -333,32 +353,26 @@ function TutorialForm({ onSave, onCancel, tutorial = null, nutritionReferenceRow
             placeholder="Zutat suchen, z. B. Zwiebel"
             autoComplete="off"
           />
-          <div className="tutorial-pill-grid tutorial-ingredient-grid">
-            {selectedIngredientPills.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className="recipe-form-cuisine-pill active"
-                onClick={() => toggleIngredientID(option.id)}
-                aria-pressed="true"
-                title="Auswahl aufheben"
-              >
-                {option.label}
-              </button>
-            ))}
-            {visibleIngredientOptions.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className="recipe-form-cuisine-pill"
-                onClick={() => toggleIngredientID(option.id)}
-                aria-pressed="false"
-                title={`${option.label} auswählen`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
+          {visibleIngredientOptions.length > 0 && (
+            <div className="tutorial-pill-carousel">
+              {[ingredientPillsRow1, ingredientPillsRow2].filter((row) => row.length > 0).map((row, rowIndex) => (
+                <div className="tutorial-pill-carousel-row" key={rowIndex}>
+                  {row.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={`recipe-form-cuisine-pill${ingredientIDs.includes(option.id) ? ' active' : ''}`}
+                      onClick={() => toggleIngredientID(option.id)}
+                      aria-pressed={ingredientIDs.includes(option.id)}
+                      title={ingredientIDs.includes(option.id) ? 'Auswahl aufheben' : `${option.label} auswählen`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
           {ingredientOptions.length === 0 ? (
             <p className="tutorial-pill-hint">Keine Zutaten verfügbar.</p>
           ) : hiddenIngredientCount > 0 ? (
@@ -372,19 +386,23 @@ function TutorialForm({ onSave, onCancel, tutorial = null, nutritionReferenceRow
 
         <div className="form-group">
           <label>Speisekategorie (Mehrfachauswahl möglich)</label>
-          {orderedMealCategoryPills.length > 0 ? (
-            <div className="tutorial-pill-grid">
-              {orderedMealCategoryPills.map((name) => (
-                <button
-                  key={name}
-                  type="button"
-                  className={`recipe-form-cuisine-pill${speisekategorie.includes(name) ? ' active' : ''}`}
-                  onClick={() => toggleSpeisekategorie(name)}
-                  aria-pressed={speisekategorie.includes(name)}
-                  title={speisekategorie.includes(name) ? 'Auswahl aufheben' : `${name} auswählen`}
-                >
-                  {name}
-                </button>
+          {mealCategories.length > 0 ? (
+            <div className="tutorial-pill-carousel">
+              {[mealCategoryPillsRow1, mealCategoryPillsRow2].filter((row) => row.length > 0).map((row, rowIndex) => (
+                <div className="tutorial-pill-carousel-row" key={rowIndex}>
+                  {row.map((name) => (
+                    <button
+                      key={name}
+                      type="button"
+                      className={`recipe-form-cuisine-pill${speisekategorie.includes(name) ? ' active' : ''}`}
+                      onClick={() => toggleSpeisekategorie(name)}
+                      aria-pressed={speisekategorie.includes(name)}
+                      title={speisekategorie.includes(name) ? 'Auswahl aufheben' : `${name} auswählen`}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
               ))}
             </div>
           ) : (

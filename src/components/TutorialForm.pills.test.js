@@ -81,6 +81,46 @@ describe('TutorialForm Mehrfachauswahlen', () => {
     expect(screen.queryByRole('button', { name: 'Zwiebel' })).not.toBeInTheDocument();
   });
 
+  // Auswahlverfahren des Suchdialogs: zwei Reihen mit fester Zugehoerigkeit,
+  // darin die gewaehlten Pillen vorn.
+  test('rendert beide Pillenfelder als zweireihiges Karussell', () => {
+    const { container } = renderForm();
+
+    const carousels = container.querySelectorAll('.tutorial-pill-carousel');
+    expect(carousels).toHaveLength(2);
+    carousels.forEach((carousel) => {
+      expect(carousel.querySelectorAll('.tutorial-pill-carousel-row')).toHaveLength(2);
+    });
+  });
+
+  test('sortiert gewaehlte Pillen innerhalb ihrer Reihe nach vorn', () => {
+    const { container } = renderForm();
+
+    // Speisekategorien: ['Vorspeisen', 'Hauptspeisen'] | ['Desserts']
+    fireEvent.click(screen.getByRole('button', { name: 'Hauptspeisen' }));
+
+    const categoryCarousel = container.querySelectorAll('.tutorial-pill-carousel')[1];
+    const firstRow = categoryCarousel.querySelectorAll('.tutorial-pill-carousel-row')[0];
+    const labels = Array.from(firstRow.querySelectorAll('button')).map((b) => b.textContent);
+
+    expect(labels).toEqual(['Hauptspeisen', 'Vorspeisen']);
+  });
+
+  test('eine Pille wechselt beim Auswaehlen nicht die Reihe', () => {
+    const { container } = renderForm();
+
+    const rowOf = (name) => {
+      const rows = Array.from(container.querySelectorAll('.tutorial-pill-carousel-row'));
+      return rows.findIndex((row) => (
+        Array.from(row.querySelectorAll('button')).some((b) => b.textContent === name)
+      ));
+    };
+
+    const before = rowOf('Desserts');
+    fireEvent.click(screen.getByRole('button', { name: 'Desserts' }));
+    expect(rowOf('Desserts')).toBe(before);
+  });
+
   test('gewaehlte Zutaten bleiben sichtbar, wenn die Suche sie nicht mehr trifft', () => {
     renderForm();
 
