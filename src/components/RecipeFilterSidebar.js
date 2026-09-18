@@ -16,8 +16,9 @@ function getStoredCollapsed() {
 /**
  * Persistent left-hand navigation for the recipe overview on larger screens.
  * Mirrors every filter offered by MobileSearchOverlay's bottom sheet (search,
- * Favoriten/Saisonal toggles, Speisekategorien, Kulinariktypen, Autoren and
- * private Listen) so desktop users get the same filtering capabilities.
+ * Favoriten/Saisonal toggles, Rezepte/Tutorials content toggles,
+ * Speisekategorien, Kulinariktypen, Autoren and private Listen) so desktop
+ * users get the same filtering capabilities.
  * Collapsible so it can be tucked away on desktop when not needed.
  */
 function RecipeFilterSidebar({
@@ -29,6 +30,10 @@ function RecipeFilterSidebar({
   onFavoritesToggle,
   showSeasonalOnly = false,
   onSeasonalToggle,
+  showRecipes = true,
+  onRecipesToggle,
+  showTutorials = true,
+  onTutorialsToggle,
   cuisineTypes = [],
   cuisineGroups = [],
   selectedCuisines = [],
@@ -162,6 +167,8 @@ function RecipeFilterSidebar({
     searchTerm?.trim() ||
     showFavoritesOnly ||
     showSeasonalOnly ||
+    !showRecipes ||
+    !showTutorials ||
     selectedCuisines.length > 0 ||
     selectedCategories.length > 0 ||
     selectedAuthors.length > 0 ||
@@ -267,6 +274,24 @@ function RecipeFilterSidebar({
               aria-pressed={showSeasonalOnly}
             >
               Saisonal
+            </button>
+            <button
+              type="button"
+              className={`recipe-filter-sidebar-pill recipe-filter-sidebar-pill--quick${showRecipes ? ' active' : ''}`}
+              onClick={() => onRecipesToggle?.(!showRecipes)}
+              aria-pressed={showRecipes}
+              title={showRecipes ? 'Rezepte ausblenden' : 'Rezepte einblenden'}
+            >
+              Rezepte
+            </button>
+            <button
+              type="button"
+              className={`recipe-filter-sidebar-pill recipe-filter-sidebar-pill--quick${showTutorials ? ' active' : ''}`}
+              onClick={() => onTutorialsToggle?.(!showTutorials)}
+              aria-pressed={showTutorials}
+              title={showTutorials ? 'Tutorials ausblenden' : 'Tutorials einblenden'}
+            >
+              Tutorials
             </button>
           </div>
 

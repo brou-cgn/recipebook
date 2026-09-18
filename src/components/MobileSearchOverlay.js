@@ -67,12 +67,15 @@ function computeTopCuisineTypes(recipes, cuisineTypes) {
   return computeAllSortedCuisineTypes(recipes, cuisineTypes).slice(0, MAX_CUISINE_TYPE_PILLS);
 }
 
-function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearch, onClearSearch, currentUser, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly: showSeasonalOnlyProp, onFavoritesToggle, onSeasonalToggle, seasonMatrixEntries = [], cuisineTypes, cuisineGroups, onCuisineFilterChange, selectedCuisines: selectedCuisinesProp, mealCategories, onMealCategoryFilterChange, selectedCategories: selectedCategoriesProp, availableAuthors, onAuthorFilterChange, selectedAuthors: selectedAuthorsProp, privateLists, onPrivateListFilterChange, selectedPrivateLists: selectedPrivateListsProp, searchTerm: searchTermProp, showPrivateListFilters = true }) {
+function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearch, onClearSearch, currentUser, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly: showSeasonalOnlyProp, showRecipes: showRecipesProp, showTutorials: showTutorialsProp, onFavoritesToggle, onSeasonalToggle, onRecipesToggle, onTutorialsToggle, seasonMatrixEntries = [], cuisineTypes, cuisineGroups, onCuisineFilterChange, selectedCuisines: selectedCuisinesProp, mealCategories, onMealCategoryFilterChange, selectedCategories: selectedCategoriesProp, availableAuthors, onAuthorFilterChange, selectedAuthors: selectedAuthorsProp, privateLists, onPrivateListFilterChange, selectedPrivateLists: selectedPrivateListsProp, searchTerm: searchTermProp, showPrivateListFilters = true }) {
   const { rows: nutritionReferenceRows } = useNutritionReference();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [showSeasonalOnly, setShowSeasonalOnly] = useState(false);
+  // Inhaltsart-Pillen: beide standardmaessig aktiv, also alles sichtbar.
+  const [showRecipes, setShowRecipes] = useState(true);
+  const [showTutorials, setShowTutorials] = useState(true);
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [selectedCuisines, setSelectedCuisines] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -114,6 +117,8 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
       setDebouncedTerm(initial);
       setShowFavoritesOnly(showFavoritesOnlyProp ?? false);
       setShowSeasonalOnly(showSeasonalOnlyProp ?? false);
+      setShowRecipes(showRecipesProp ?? true);
+      setShowTutorials(showTutorialsProp ?? true);
       setSelectedCuisines(selectedCuisinesPropRef.current ?? []);
       setSelectedCategories(selectedCategoriesPropRef.current ?? []);
       setSelectedAuthors(selectedAuthorsPropRef.current ?? []);
@@ -123,7 +128,7 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
       }, FOCUS_DELAY_MS);
       return () => clearTimeout(timer);
     }
-  }, [isOpen, showFavoritesOnlyProp, showSeasonalOnlyProp, showPrivateListFilters, searchTermProp]);
+  }, [isOpen, showFavoritesOnlyProp, showSeasonalOnlyProp, showRecipesProp, showTutorialsProp, showPrivateListFilters, searchTermProp]);
 
   // Debounce search term
   useEffect(() => {
@@ -171,6 +176,9 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
   }, [isOpen]);
 
   const baseRecipes = useMemo(() => {
+    // Die Rezepte-Pille blendet die Rezept-Kacheln komplett aus - das
+    // Overlay listet ohnehin nur Rezepte, keine Tutorials.
+    if (!showRecipes) return [];
     let list = recipes || [];
     if (showFavoritesOnly) {
       list = list.filter((r) => favoriteIds.includes(r.id));
@@ -206,7 +214,7 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
       );
     }
     return list;
-  }, [recipes, showFavoritesOnly, showSeasonalOnly, favoriteIds, selectedCuisines, cuisineGroups, selectedCategories, selectedAuthors, selectedPrivateLists, privateLists, showPrivateListFilters, seasonMatrixEntries, nutritionReferenceRows]);
+  }, [recipes, showRecipes, showFavoritesOnly, showSeasonalOnly, favoriteIds, selectedCuisines, cuisineGroups, selectedCategories, selectedAuthors, selectedPrivateLists, privateLists, showPrivateListFilters, seasonMatrixEntries, nutritionReferenceRows]);
 
   const filteredRecipes = fuzzyFilter(
     baseRecipes,
@@ -449,15 +457,18 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
       >
         {/* Tiles carousel – displayed at the top of the panel */}
         <div className="mobile-search-results" role="listbox" aria-label="Suchergebnisse">
-          {debouncedTerm && filteredRecipes.length === 0 && (
+          {!showRecipes && (
+            <p className="mobile-search-no-results">Rezepte sind ausgeblendet</p>
+          )}
+          {showRecipes && debouncedTerm && filteredRecipes.length === 0 && (
             <p className="mobile-search-no-results">
               {showFavoritesOnly ? 'Kein Favorit gefunden' : 'Keine Rezepte gefunden'}
             </p>
           )}
-          {!debouncedTerm && filteredRecipes.length === 0 && showFavoritesOnly && (
+          {showRecipes && !debouncedTerm && filteredRecipes.length === 0 && showFavoritesOnly && (
             <p className="mobile-search-no-results">Keine favorisierten Rezepte</p>
           )}
-          {!debouncedTerm && filteredRecipes.length === 0 && (selectedCuisines.length > 0 || selectedCategories.length > 0) && !showFavoritesOnly && (
+          {showRecipes && !debouncedTerm && filteredRecipes.length === 0 && (selectedCuisines.length > 0 || selectedCategories.length > 0) && !showFavoritesOnly && (
             <p className="mobile-search-no-results">Keine Rezepte für diese Filterauswahl</p>
           )}
           {filteredRecipes.length > 0 && (
@@ -515,6 +526,30 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
             title={showSeasonalOnly ? 'Alle Rezepte anzeigen' : 'Nur saisonale Rezepte anzeigen'}
           >
             Saisonal
+          </button>
+          <button
+            className={`mobile-search-filter-pill${showRecipes ? ' active' : ''}`}
+            onClick={() => {
+              const newValue = !showRecipes;
+              setShowRecipes(newValue);
+              onRecipesToggle?.(newValue);
+            }}
+            aria-pressed={showRecipes}
+            title={showRecipes ? 'Rezepte ausblenden' : 'Rezepte einblenden'}
+          >
+            Rezepte
+          </button>
+          <button
+            className={`mobile-search-filter-pill${showTutorials ? ' active' : ''}`}
+            onClick={() => {
+              const newValue = !showTutorials;
+              setShowTutorials(newValue);
+              onTutorialsToggle?.(newValue);
+            }}
+            aria-pressed={showTutorials}
+            title={showTutorials ? 'Tutorials ausblenden' : 'Tutorials einblenden'}
+          >
+            Tutorials
           </button>
         </div>
 
