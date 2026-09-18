@@ -238,14 +238,31 @@
 
 /* ─── Favorites filter row (standalone, below carousel) ────────────────── */
 
+/* Favoriten, Saisonal, Rezepte und Tutorials bleiben immer in einer Zeile:
+   statt umzubrechen scrollt die Zeile horizontal wie die Pillenkarussells
+   darunter. */
 .mobile-search-favorites-row {
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
   padding: 8px 12px 8px;
   flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.mobile-search-favorites-row::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-search-favorites-row .mobile-search-filter-pill {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
 }
 
 /* ─── Speisekategorien / Kulinariktypen two-row carousel (below favorites filter) ─ */
