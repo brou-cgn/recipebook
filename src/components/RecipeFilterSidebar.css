@@ -145,10 +145,25 @@
   gap: 0.55rem;
 }
 
+/* Die Schnellfilter (Favoriten, Saisonal, Rezepte, Tutorials) stehen immer in
+   einer einzigen Zeile. Passen sie nicht in die Sidebar-Breite, wird die Zeile
+   zum horizontalen Karussell - analog zu den Pillenkarussells im mobilen
+   Suchoverlay. */
 .recipe-filter-sidebar-quickfilters {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 0.6rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.recipe-filter-sidebar-quickfilters::-webkit-scrollbar {
+  display: none;
 }
 
 .recipe-filter-sidebar-pill {
@@ -168,9 +183,10 @@
 }
 
 .recipe-filter-sidebar-pill--quick {
-  justify-content: flex-start;
-  width: 100%;
+  justify-content: center;
+  flex: 0 0 auto;
   padding: 11px 18px;
+  scroll-snap-align: start;
 }
 
 .recipe-filter-sidebar-pill:hover {
