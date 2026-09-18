@@ -148,7 +148,9 @@
 /* Die Schnellfilter (Favoriten, Saisonal, Rezepte, Tutorials) stehen immer in
    einer einzigen Zeile. Passen sie nicht in die Sidebar-Breite, wird die Zeile
    zum horizontalen Karussell - analog zu den Pillenkarussells im mobilen
-   Suchoverlay. */
+   Suchoverlay. Wie dort tragen die Pillen kein scroll-snap-align: mit
+   Snap-Ziel schnappt der Browser beim Aufbau sofort auf die erste Pille,
+   statt die Zeile links buendig stehen zu lassen. */
 .recipe-filter-sidebar-quickfilters {
   display: flex;
   flex-direction: row;
@@ -186,7 +188,6 @@
   justify-content: center;
   flex: 0 0 auto;
   padding: 11px 18px;
-  scroll-snap-align: start;
 }
 
 .recipe-filter-sidebar-pill:hover {
