@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 
 let bringRecipeExport;
 
-function loadFunction() {
+function loadFunction(firestoreImpl) {
   delete require.cache[require.resolve('./index')];
 
   const Module = require('module');
@@ -49,7 +49,7 @@ function loadFunction() {
     }
 
     if (request === 'firebase-admin') {
-      const firestoreFactory = () => ({
+      const firestoreFactory = firestoreImpl || (() => ({
         collection: () => ({
           where: () => ({
             limit: () => ({
@@ -61,7 +61,7 @@ function loadFunction() {
             set: async () => {},
           }),
         }),
-      });
+      }));
       firestoreFactory.FieldValue = {
         serverTimestamp: () => ({seconds: 0, nanos: 0}),
       };
@@ -240,4 +240,79 @@ test('allows request without origin header', async () => {
 
   assert.equal(res.statusCode, 400);
   assert.equal(res.body, 'Missing shareId or items');
+});
+
+// Firestore stub that serves one recipe for any shareId lookup, so the GET
+// fallback path renders real ingredient lines.
+function recipeFirestore(ingredients) {
+  return () => ({
+    collection: (name) => ({
+      where: () => ({
+        limit: () => ({
+          get: async () => (name === 'recipes' ? {
+            empty: false,
+            docs: [{data: () => ({title: 'Kuchen', ingredients})}],
+          } : {empty: true, docs: []}),
+        }),
+      }),
+      doc: () => ({
+        get: async () => ({exists: false, data: () => ({})}),
+        set: async () => {},
+      }),
+    }),
+  });
+}
+
+test('moves parentheses into the Menge/Beschreibung part of the line', async () => {
+  loadFunction(recipeFirestore([
+    '200 g Mehl (Type 405)',
+    '1 Zwiebel (klein), gewürfelt',
+    '2 Dosen Tomaten (geschält) (400 g)',
+  ]));
+  const req = {method: 'GET', headers: {}, query: {shareId: 'abc'}};
+  const res = createRes();
+
+  await bringRecipeExport(req, res);
+
+  assert.equal(res.statusCode, 200);
+  const jsonLd = JSON.parse(
+      res.body.match(
+          /<script type="application\/ld\+json">(.*?)<\/script>/s,
+      )[1],
+  );
+  assert.deepEqual(jsonLd.recipeIngredient, [
+    '200 g Mehl, Type 405',
+    '1 Zwiebel, gewürfelt, klein',
+    '2 Dosen Tomaten, geschält, 400 g',
+  ]);
+});
+
+test('leaves lines without parentheses byte-for-byte unchanged', async () => {
+  loadFunction(recipeFirestore(['200 g  Mehl', '1 Zwiebel, gewürfelt']));
+  const req = {method: 'GET', headers: {}, query: {shareId: 'abc'}};
+  const res = createRes();
+
+  await bringRecipeExport(req, res);
+
+  const jsonLd = JSON.parse(
+      res.body.match(
+          /<script type="application\/ld\+json">(.*?)<\/script>/s,
+      )[1],
+  );
+  assert.deepEqual(jsonLd.recipeIngredient, ['200 g  Mehl', '1 Zwiebel, gewürfelt']);
+});
+
+test('leaves a line that is nothing but a parenthesis untouched', async () => {
+  loadFunction(recipeFirestore(['(nach Belieben)']));
+  const req = {method: 'GET', headers: {}, query: {shareId: 'abc'}};
+  const res = createRes();
+
+  await bringRecipeExport(req, res);
+
+  const jsonLd = JSON.parse(
+      res.body.match(
+          /<script type="application\/ld\+json">(.*?)<\/script>/s,
+      )[1],
+  );
+  assert.deepEqual(jsonLd.recipeIngredient, ['(nach Belieben)']);
 });

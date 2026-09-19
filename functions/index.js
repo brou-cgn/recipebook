@@ -5181,13 +5181,53 @@ const resolveIngredients = async (db, rawIngredients) => {
   return result;
 };
 
+// A single parenthetical group, e.g. "(Type 405)" in "200 g Mehl (Type 405)".
+const PARENTHETICAL_REGEX = /\(([^()]*)\)/g;
+
+/**
+ * Moves everything in parentheses out of the ingredient name and appends it as
+ * a comma-separated suffix: "200 g Mehl (Type 405)" -> "200 g Mehl, Type 405".
+ * Bring! parses that suffix into its "Menge/Beschreibung" field, whereas a
+ * parenthesis left in place becomes part of the item name.
+ * The client already does this (and additionally strips the configured
+ * adjectives/ignored terms) before POSTing an Einkaufsliste; this covers the
+ * fallback paths that render a recipe's or menu's ingredients directly. Lines
+ * without parentheses are returned unchanged, so running it twice is a no-op.
+ * @param {string} ingredient
+ * @return {string}
+ */
+const moveParentheticalsToSpec = (ingredient) => {
+  const str = String(ingredient);
+  // Cheap guard so lines without parentheses keep their exact spacing.
+  if (!str.includes('(')) return str;
+
+  const specs = [];
+  const base = str
+      .replace(PARENTHETICAL_REGEX, (_match, content) => {
+        const trimmed = content.trim();
+        if (trimmed) specs.push(trimmed);
+        return ' ';
+      })
+      // Removing a group can leave double spaces or a space before punctuation
+      // ("Zwiebel (klein), gewürfelt" -> "Zwiebel , gewürfelt").
+      .replace(/\s+/g, ' ')
+      .replace(/\s+([,.;:])/g, '$1')
+      .trim();
+
+  // A line that is nothing but a parenthetical has no name left to keep.
+  if (!base) return str;
+  return specs.length > 0 ? `${base}, ${specs.join(', ')}` : base;
+};
+
 /**
  * Helper to build and send the Bring!-compatible HTML response.
+ * Ingredient lines are normalized with moveParentheticalsToSpec first.
  * @param {object} res - Express response object
  * @param {string} title
- * @param {string[]} recipeIngredients
+ * @param {string[]} rawIngredients
  */
-const sendBringHtml = (res, title, recipeIngredients) => {
+const sendBringHtml = (res, title, rawIngredients) => {
+  const recipeIngredients = rawIngredients.map(moveParentheticalsToSpec);
   const escape = (s) => String(s)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')

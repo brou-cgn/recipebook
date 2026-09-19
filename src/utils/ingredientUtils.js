@@ -430,8 +430,14 @@ export async function loadBringStrippedWords() {
  *   Bring!'s own parser only recognizes one leading number token, so
  *   "3 1/2 kg Zucker" gets misparsed as amount "3" with "1/2 kg Zucker"
  *   swallowed into the name; this rewrites it to "3.5 kg Zucker".
- * Lines that need neither change (no matching words, no "/") are returned
- * byte-for-byte unchanged, including their original spacing.
+ * - Moves everything in parentheses out of the item name and appends it as a
+ *   comma-separated suffix, which is what Bring! puts into its
+ *   "Menge/Beschreibung" field ("200 g Mehl (Type 405)" -> "200 g Mehl,
+ *   Type 405"). Without this the parenthesis ends up as part of the item name
+ *   and Bring! creates a separate custom item for it.
+ * Lines that need none of these changes (no matching words, no "/", no
+ * parentheses) are returned byte-for-byte unchanged, including their original
+ * spacing.
  * Uses the sync unit parser (the static default unit list) rather than the
  * Firestore-backed one — this runs per ingredient on every export, and unit
  * recognition here only decides where the name starts, so it doesn't need
@@ -449,11 +455,67 @@ export async function loadBringStrippedWords() {
 // strippedWords, so e.g. "kleine," (followed by a comma) still matches "kleine".
 const WORD_PUNCTUATION_REGEX = /^[,.;:()]+|[,.;:()]+$/g;
 
+// A single parenthetical group, e.g. "(Type 405)" in "200 g Mehl (Type 405)".
+const PARENTHETICAL_REGEX = /\(([^()]*)\)/g;
+
+/**
+ * Splits an ingredient line into the line without its parenthetical groups and
+ * the contents of those groups, so the parentheticals can be handed to Bring!
+ * as the "Menge/Beschreibung" part instead of ending up inside the item name:
+ * "200 g Mehl (Type 405)" -> { base: '200 g Mehl', specs: ['Type 405'] }.
+ * Unbalanced parentheses don't match and are left inside the base line.
+ * @param {string} line
+ * @returns {{base: string, specs: string[]}}
+ */
+export function splitIngredientParentheticals(line) {
+  const specs = [];
+  const base = String(line)
+    .replace(PARENTHETICAL_REGEX, (_match, content) => {
+      const trimmed = content.trim();
+      if (trimmed) specs.push(trimmed);
+      return ' ';
+    })
+    // Removing a group can leave double spaces or a space before punctuation
+    // ("Zwiebel (klein), gewürfelt" -> "Zwiebel , gewürfelt").
+    .replace(/\s+/g, ' ')
+    .replace(/\s+([,.;:])/g, '$1')
+    .trim();
+  return { base, specs };
+}
+
+/**
+ * Removes the stripped words from a free-text fragment. Unlike the ingredient
+ * name, a fragment may legitimately end up empty (e.g. "(optional)"), in which
+ * case the caller drops it.
+ * @param {string} text
+ * @param {Set<string>} words
+ * @returns {string}
+ */
+function removeStrippedWords(text, words) {
+  return text
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((word) => !words.has(word.replace(WORD_PUNCTUATION_REGEX, '').toLowerCase()))
+    .join(' ')
+    .replace(/^[,;:]+|[,;:]+$/g, '')
+    .trim();
+}
+
 export async function formatIngredientForBringExport(ingredient, { strippedWords } = {}) {
   if (!ingredient || typeof ingredient !== 'string') return ingredient;
 
   const words = strippedWords || await loadBringStrippedWords();
-  const str = ingredient.trim();
+  const trimmed = ingredient.trim();
+  const { base, specs } = splitIngredientParentheticals(trimmed);
+  // A line that is nothing but a parenthetical has no name left to keep -
+  // leave it untouched rather than exporting an empty item.
+  const hasBase = base.length > 0;
+  const str = hasBase ? base : trimmed;
+  const specSuffix = hasBase
+    ? specs.map((spec) => removeStrippedWords(spec, words)).filter(Boolean)
+    : [];
+  const withSpec = (line) => (specSuffix.length > 0 ? `${line}, ${specSuffix.join(', ')}` : line);
+
   const { amount, amountMax, unit, name } = parseIngredientPartsSync(str);
 
   const nameWords = name.split(/\s+/).filter(Boolean);
@@ -465,7 +527,7 @@ export async function formatIngredientForBringExport(ingredient, { strippedWords
   const cleanedName = (filteredWords.length > 0 ? filteredWords : nameWords).join(' ');
 
   if (amount == null) {
-    return cleanedName || str;
+    return withSpec(cleanedName || str);
   }
 
   if (str.includes('/')) {
@@ -473,11 +535,11 @@ export async function formatIngredientForBringExport(ingredient, { strippedWords
     const amountStr = amountMax != null
       ? `${asDecimal(amount)}-${asDecimal(amountMax)}`
       : asDecimal(amount);
-    return [amountStr, unit, cleanedName].filter(Boolean).join(' ');
+    return withSpec([amountStr, unit, cleanedName].filter(Boolean).join(' '));
   }
 
   const prefix = str.slice(0, str.length - name.length);
-  return `${prefix}${cleanedName}`;
+  return withSpec(`${prefix}${cleanedName}`);
 }
 
 /**
