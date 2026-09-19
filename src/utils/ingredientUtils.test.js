@@ -686,6 +686,44 @@ describe('formatIngredientForBringExport', () => {
   test('ignores trailing punctuation when matching a stripped word', async () => {
     expect(await formatIngredientForBringExport('3 kleine, feine Zwiebeln', { strippedWords })).toBe('3 feine Zwiebeln');
   });
+
+  test('moves a trailing parenthesis into the Menge/Beschreibung suffix', async () => {
+    expect(await formatIngredientForBringExport('200 g Mehl (Type 405)', { strippedWords })).toBe('200 g Mehl, Type 405');
+  });
+
+  test('moves a parenthesis in the middle of the name to the end', async () => {
+    expect(await formatIngredientForBringExport('1 Dose Tomaten (geschält) ganz', { strippedWords })).toBe('1 Dose Tomaten ganz, geschält');
+  });
+
+  test('moves a leading parenthesis out of the name', async () => {
+    expect(await formatIngredientForBringExport('(ca. 500 g) Kürbis', { strippedWords })).toBe('Kürbis, ca. 500 g');
+  });
+
+  test('appends several parentheses as one comma-separated suffix', async () => {
+    expect(await formatIngredientForBringExport('2 Dosen Tomaten (geschält) (400 g)', { strippedWords }))
+      .toBe('2 Dosen Tomaten, geschält, 400 g');
+  });
+
+  test('drops a parenthesis that only contains stripped words', async () => {
+    expect(await formatIngredientForBringExport('1 Ei (optional)', { strippedWords })).toBe('1 Ei');
+    expect(await formatIngredientForBringExport('200 g Butter (kalt)', { strippedWords })).toBe('200 g Butter');
+  });
+
+  test('keeps the comma of the remaining line intact', async () => {
+    expect(await formatIngredientForBringExport('1 Zwiebel (klein), gewürfelt', { strippedWords })).toBe('1 Zwiebel, gewürfelt');
+  });
+
+  test('combines parenthesis extraction with fraction rewriting', async () => {
+    expect(await formatIngredientForBringExport('1 1/2 TL Salz (gehäuft)', { strippedWords })).toBe('1.5 TL Salz, gehäuft');
+  });
+
+  test('leaves a line that is nothing but a parenthesis untouched', async () => {
+    expect(await formatIngredientForBringExport('(nach Belieben)', { strippedWords })).toBe('(nach Belieben)');
+  });
+
+  test('leaves an unbalanced parenthesis inside the name', async () => {
+    expect(await formatIngredientForBringExport('200 g Mehl (Type 405', { strippedWords })).toBe('200 g Mehl (Type 405');
+  });
 });
 
 describe('convertIngredientUnits with Teelöffel/Esslöffel normalization', () => {
