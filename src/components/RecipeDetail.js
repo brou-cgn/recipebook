@@ -31,6 +31,7 @@ import CookDateModal from './CookDateModal';
 import { getAllCookDates } from '../utils/recipeCookDates';
 import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { calculateRecipeSortIndexBreakdown } from '../utils/recipeSortIndex';
+import { evaluateLowCarbTag } from '../utils/lowCarb';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import {
   INGREDIENT_MATCH_CREATE_NEW_OPTION,
@@ -760,9 +761,23 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     }
   };
 
+  /**
+   * Works out whether the low-carb tag has to be added or removed now that the
+   * nutrition figures have changed, and returns the fields to persist. Returns
+   * only { naehrwerte } when the tag stays as it is, so recipes that are
+   * unaffected are not rewritten.
+   */
+  const withLowCarbTag = (naehrwerte) => {
+    const lowCarb = evaluateLowCarbTag({ ...recipe, naehrwerte });
+    return lowCarb.changed
+      ? { naehrwerte, kulinarik: lowCarb.kulinarik }
+      : { naehrwerte };
+  };
+
   const handleSaveNutrition = async (naehrwerte) => {
-    await updateRecipe(recipe.id, { naehrwerte });
-    setSelectedRecipe(prev => ({ ...prev, naehrwerte }));
+    const updates = withLowCarbTag(naehrwerte);
+    await updateRecipe(recipe.id, updates);
+    setSelectedRecipe(prev => ({ ...prev, ...updates }));
   };
 
   const runAutoCalculateAndSave = async (ingredientsInput, ingredientIDMatchingLog = []) => {
@@ -833,8 +848,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       ingredientIDMatchingLoggedAt: ingredientIDMatchingLog.length > 0 ? Date.now() : null,
     };
     try {
-      await updateRecipe(recipe.id, { naehrwerte: final });
-      setSelectedRecipe(prev => ({ ...prev, naehrwerte: final }));
+      const updates = withLowCarbTag(final);
+      await updateRecipe(recipe.id, updates);
+      setSelectedRecipe(prev => ({ ...prev, ...updates }));
     } catch (err) {
       console.error('Could not persist nutrition data:', err);
     }

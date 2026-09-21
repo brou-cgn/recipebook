@@ -16,6 +16,7 @@ const sharp = require('sharp');
 const cheerio = require('cheerio');
 const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 const {requireShortcutPin} = require('./webImportPin');
+const {evaluateLowCarbTag} = require('./lowCarb');
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -8386,26 +8387,38 @@ async function runNutritionRecalcForFlaggedRecipesCore({triggeredBy = 'schedule'
           });
         });
 
+        const updatedNaehrwerte = {
+          ...(recipeData.naehrwerte || {}),
+          ...calcResult.naehrwerte,
+          calcPending: false,
+          calcCompletedAt: Date.now(),
+          calcError: null,
+          calcNotIncluded: notIncluded.length > 0 ? notIncluded : null,
+          calcFoundCount: calcResult.foundCount,
+          calcTotalCount: calcResult.totalCount + skippedRecipeLinkIngredients.length,
+          calcYieldGrams: recipeData?.naehrwerte?.calcYieldGrams ?? null,
+          calcYieldFactor: recipeData?.naehrwerte?.calcYieldFactor ?? null,
+          calcFinalWeightGrams: calcResult.calcFinalWeightGrams ?? null,
+          calcPer100g: calcResult.calcPer100g ?? null,
+        };
+
+        // The nutrition figures have just changed, so the low-carb verdict may
+        // have changed with them. Judged on the values about to be written, in
+        // the same set() - no second read, no second write.
+        const lowCarb = evaluateLowCarbTag({
+          ...recipeData,
+          naehrwerte: updatedNaehrwerte,
+        });
+
         await recipeDoc.ref.set({
-          naehrwerte: {
-            ...(recipeData.naehrwerte || {}),
-            ...calcResult.naehrwerte,
-            calcPending: false,
-            calcCompletedAt: Date.now(),
-            calcError: null,
-            calcNotIncluded: notIncluded.length > 0 ? notIncluded : null,
-            calcFoundCount: calcResult.foundCount,
-            calcTotalCount: calcResult.totalCount + skippedRecipeLinkIngredients.length,
-            calcYieldGrams: recipeData?.naehrwerte?.calcYieldGrams ?? null,
-            calcYieldFactor: recipeData?.naehrwerte?.calcYieldFactor ?? null,
-            calcFinalWeightGrams: calcResult.calcFinalWeightGrams ?? null,
-            calcPer100g: calcResult.calcPer100g ?? null,
-          },
+          naehrwerte: updatedNaehrwerte,
+          ...(lowCarb.changed ? {kulinarik: lowCarb.kulinarik} : {}),
         }, {merge: true});
 
         report.updatedRecipes.push({
           recipeId: recipeDoc.id,
           title: recipeTitle,
+          ...(lowCarb.changed ? {lowCarbAction: lowCarb.action} : {}),
         });
       } catch (error) {
         const errorMessage = error?.message || 'Unbekannter Fehler';
