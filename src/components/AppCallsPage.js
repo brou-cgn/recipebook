@@ -433,6 +433,8 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [assigningIngredientIdRecipeId, setAssigningIngredientIdRecipeId] = useState(null);
   const [refreshingNutritionReferenceCache, setRefreshingNutritionReferenceCache] = useState(false);
   const [runningNutritionRecalcJob, setRunningNutritionRecalcJob] = useState(false);
+  const [runningLowCarbFullTagging, setRunningLowCarbFullTagging] = useState(false);
+  const [lowCarbTaggingFeedback, setLowCarbTaggingFeedback] = useState(null);
   const [nutritionReferenceCacheFeedback, setNutritionReferenceCacheFeedback] = useState(null);
   const [openIngredientInfoIndex, setOpenIngredientInfoIndex] = useState(null);
 
@@ -528,6 +530,32 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       });
     } finally {
       setRunningNutritionRecalcJob(false);
+    }
+  };
+
+  const handleRunLowCarbFullTagging = async () => {
+    setLowCarbTaggingFeedback(null);
+    setRunningLowCarbFullTagging(true);
+    try {
+      const runFullTagging = httpsCallable(functions, 'runLowCarbFullTagging');
+      const result = await runFullTagging({});
+      const data = result?.data || {};
+
+      setLowCarbTaggingFeedback({
+        type: 'success',
+        message: typeof data.message === 'string' && data.message.trim()
+          ? data.message
+          : 'Low-Carb-Vollversorgung abgeschlossen.',
+      });
+    } catch (error) {
+      setLowCarbTaggingFeedback({
+        type: 'error',
+        message: error?.message
+          ? `Fehler bei der Low-Carb-Vollversorgung: ${error.message}`
+          : 'Fehler bei der Low-Carb-Vollversorgung.',
+      });
+    } finally {
+      setRunningLowCarbFullTagging(false);
     }
   };
 
@@ -1688,6 +1716,36 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
           </>
         ) : effectiveActiveTab === 'kulinariktypen' ? (
           <>
+            {/* Low-Carb-Vollversorgung */}
+            <div className="settings-section">
+              <h3>Low Carb</h3>
+              <p className="app-calls-info-text">
+                Prüft alle Rezepte anhand ihrer gespeicherten Nährwerte und setzt oder entfernt den
+                Kulinariktyp „Low Carb". Einmalig für den Bestand nötig – neu angelegte und geänderte
+                Rezepte werden bereits bei jeder Nährwertberechnung automatisch mitgeprüft.
+                Rezepte mit unvollständigen Nährwerten werden übersprungen und behalten ihren Tag.
+                Mehrfaches Ausführen ist unschädlich: ein Rezept mit korrektem Tag wird nicht geschrieben.
+              </p>
+              <div className="app-calls-action-row">
+                <button
+                  type="button"
+                  className="app-calls-share-btn"
+                  onClick={handleRunLowCarbFullTagging}
+                  disabled={runningLowCarbFullTagging}
+                >
+                  {runningLowCarbFullTagging ? 'Prüfung läuft…' : 'Low Carb für alle Rezepte prüfen'}
+                </button>
+                {lowCarbTaggingFeedback?.message ? (
+                  <span
+                    className={`app-calls-feedback${lowCarbTaggingFeedback.type === 'error' ? ' is-error' : ''}`}
+                    role={lowCarbTaggingFeedback.type === 'error' ? 'alert' : 'status'}
+                  >
+                    {lowCarbTaggingFeedback.message}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+
             {/* Offene Vorschläge section */}
             <div className="settings-section">
               <h3>Offene Vorschläge</h3>

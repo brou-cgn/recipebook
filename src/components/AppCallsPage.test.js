@@ -1942,6 +1942,77 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
     );
   });
 
+  test('starts the low-carb full tagging run and shows the summary it returns', async () => {
+    const runFullTagging = jest.fn(() => Promise.resolve({
+      data: {
+        completed: true,
+        total: 241,
+        added: 55,
+        removed: 0,
+        unchanged: 121,
+        skipped: 65,
+        message: '241 Rezepte geprüft: 55 neu als Low Carb getaggt, 0 Tag entfernt, '
+          + '121 unverändert, 65 übersprungen (unvollständige Nährwerte).',
+      },
+    }));
+    mockHttpsCallable.mockImplementation((_functions, fnName) => {
+      if (fnName === 'runLowCarbFullTagging') return runFullTagging;
+      return jest.fn();
+    });
+
+    render(<AppCallsPage currentUser={adminUser} recipes={[]} onUpdateRecipe={jest.fn()} />);
+
+    fireEvent.click(await screen.findByText('Kulinariktypen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Low Carb für alle Rezepte prüfen' }));
+
+    await waitFor(() => {
+      expect(mockHttpsCallable).toHaveBeenCalledWith({}, 'runLowCarbFullTagging');
+      expect(runFullTagging).toHaveBeenCalledWith({});
+    });
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      '241 Rezepte geprüft: 55 neu als Low Carb getaggt'
+    );
+  });
+
+  test('moderator can start the low-carb full tagging run', async () => {
+    const runFullTagging = jest.fn(() => Promise.resolve({
+      data: { completed: true, message: '10 Rezepte geprüft: 2 neu als Low Carb getaggt.' },
+    }));
+    mockHttpsCallable.mockImplementation((_functions, fnName) => {
+      if (fnName === 'runLowCarbFullTagging') return runFullTagging;
+      return jest.fn();
+    });
+
+    render(<AppCallsPage currentUser={moderatorUser} recipes={[]} onUpdateRecipe={jest.fn()} />);
+
+    fireEvent.click(await screen.findByText('Kulinariktypen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Low Carb für alle Rezepte prüfen' }));
+
+    await waitFor(() => {
+      expect(runFullTagging).toHaveBeenCalledWith({});
+    });
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      '10 Rezepte geprüft: 2 neu als Low Carb getaggt.'
+    );
+  });
+
+  test('shows an error message when the low-carb full tagging run fails', async () => {
+    const runFullTagging = jest.fn(() => Promise.reject(new Error('Cloud Function nicht erreichbar')));
+    mockHttpsCallable.mockImplementation((_functions, fnName) => {
+      if (fnName === 'runLowCarbFullTagging') return runFullTagging;
+      return jest.fn();
+    });
+
+    render(<AppCallsPage currentUser={adminUser} recipes={[]} onUpdateRecipe={jest.fn()} />);
+
+    fireEvent.click(await screen.findByText('Kulinariktypen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Low Carb für alle Rezepte prüfen' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Fehler bei der Low-Carb-Vollversorgung: Cloud Function nicht erreichbar'
+    );
+  });
+
   test('lists recipes with missing ingredient IDs', async () => {
     const recipes = [
       {

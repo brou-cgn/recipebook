@@ -1,26 +1,28 @@
 /**
- * Diagnostic: how would the low-carb classification change if the carbohydrate
- * basis were switched from brutto to netto?
+ * Diagnostic: how would the low-carb classification change under a different
+ * carbohydrate basis, a different portion cap, or both?
  *
  * Usage:
- *   node scripts/compareLowCarbBasis.js           (full listing)
- *   node scripts/compareLowCarbBasis.js --quiet   (summary only)
- *   node scripts/compareLowCarbBasis.js --csv     (one CSV row per recipe)
+ *   node scripts/compareLowCarbBasis.js            (brutto vs. netto, full listing)
+ *   node scripts/compareLowCarbBasis.js --quiet    (summary only)
+ *   node scripts/compareLowCarbBasis.js --csv      (one CSV row per recipe)
+ *   node scripts/compareLowCarbBasis.js --matrix   (both bases x 40/35/30 g cap)
  *
  * Prerequisites:
  *   - Set GOOGLE_APPLICATION_CREDENTIALS to your Firebase service account JSON
  *   - Or run with Application Default Credentials
  *
  * This script NEVER writes. There is no --apply flag and no Firestore write
- * anywhere in it; it reads the recipes collection and reports. Switching the
- * basis for real means editing LOW_CARB_CARB_BASIS in both functions/lowCarb.js
- * and src/utils/lowCarb.js and then running scripts/migrateRecipeLowCarbTag.js.
+ * anywhere in it; it reads the recipes collection and reports. Switching basis
+ * or cap for real means editing the constants in both functions/lowCarb.js and
+ * src/utils/lowCarb.js and then running scripts/migrateRecipeLowCarbTag.js.
  *
- * Both verdicts come from the real implementation rather than from arithmetic
- * repeated here: functions/lowCarb.js is loaded twice, once unmodified and once
- * with LOW_CARB_CARB_BASIS rewritten to 'netto'. Only that one constant differs
- * between the two, so any difference in the result is caused by the basis and
- * by nothing else.
+ * Every verdict comes from the real implementation rather than from arithmetic
+ * repeated here: functions/lowCarb.js is compiled once per variant, with
+ * LOW_CARB_CARB_BASIS and LOW_CARB_MAX_CARBS_PER_PORTION_G rewritten in the
+ * source. Only those constants differ between the variants, so any difference
+ * in the result is caused by them and by nothing else. The energy-share
+ * threshold is left alone throughout.
  */
 
 const fs = require('fs');
@@ -30,41 +32,68 @@ const admin = require('firebase-admin');
 
 const LOW_CARB_SOURCE_PATH = path.join(__dirname, '..', 'functions', 'lowCarb.js');
 
+const BASIS_PATTERN = /const LOW_CARB_CARB_BASIS = '(?:brutto|netto)';/;
+const CAP_PATTERN = /const LOW_CARB_MAX_CARBS_PER_PORTION_G = \d+(?:\.\d+)?;/;
+
+/** Portion caps the matrix mode walks through, in grams. */
+const MATRIX_CAPS = [40, 35, 30];
+
+/** Bases the matrix mode walks through. */
+const MATRIX_BASES = ['brutto', 'netto'];
+
 /**
- * Compiles functions/lowCarb.js with LOW_CARB_CARB_BASIS forced to one value.
+ * Compiles functions/lowCarb.js with the basis - and optionally the portion
+ * cap - forced to a given value. The file on disk is never touched.
  *
  * @param {string} basis - Either 'brutto' or 'netto'.
- * @return {Object} The module's exports, with that basis in effect.
+ * @param {number|null} capGrams - Portion cap in grams, or null to keep the
+ *   value the source file carries.
+ * @return {Object} The module's exports, with those values in effect.
  */
-function loadLowCarbWithBasis(basis) {
+function loadLowCarbWith(basis, capGrams = null) {
   const source = fs.readFileSync(LOW_CARB_SOURCE_PATH, 'utf8');
-  const pattern = /const LOW_CARB_CARB_BASIS = '(?:brutto|netto)';/;
 
-  if (!pattern.test(source)) {
+  if (!BASIS_PATTERN.test(source)) {
     throw new Error(
         `LOW_CARB_CARB_BASIS nicht in ${LOW_CARB_SOURCE_PATH} gefunden - ` +
         'wurde die Konstante umbenannt? Dieses Skript muss dann angepasst werden.'
     );
   }
+  if (capGrams != null && !CAP_PATTERN.test(source)) {
+    throw new Error(
+        `LOW_CARB_MAX_CARBS_PER_PORTION_G nicht in ${LOW_CARB_SOURCE_PATH} gefunden - ` +
+        'wurde die Konstante umbenannt? Dieses Skript muss dann angepasst werden.'
+    );
+  }
 
-  const patched = source.replace(pattern, `const LOW_CARB_CARB_BASIS = '${basis}';`);
-  const compiled = new Module(`${LOW_CARB_SOURCE_PATH}#${basis}`, null);
+  let patched = source.replace(BASIS_PATTERN, `const LOW_CARB_CARB_BASIS = '${basis}';`);
+  if (capGrams != null) {
+    patched = patched.replace(
+        CAP_PATTERN,
+        `const LOW_CARB_MAX_CARBS_PER_PORTION_G = ${capGrams};`
+    );
+  }
+
+  const label = `${basis}#${capGrams == null ? 'default' : capGrams}`;
+  const compiled = new Module(`${LOW_CARB_SOURCE_PATH}#${label}`, null);
   compiled.filename = LOW_CARB_SOURCE_PATH;
   compiled.paths = Module._nodeModulePaths(path.dirname(LOW_CARB_SOURCE_PATH));
   compiled._compile(patched, LOW_CARB_SOURCE_PATH);
 
-  if (compiled.exports.LOW_CARB_CARB_BASIS !== basis) {
+  const exports = compiled.exports;
+  if (exports.LOW_CARB_CARB_BASIS !== basis) {
     throw new Error(`Basis ${basis} konnte nicht gesetzt werden.`);
   }
-  return compiled.exports;
+  if (capGrams != null && exports.LOW_CARB_MAX_CARBS_PER_PORTION_G !== capGrams) {
+    throw new Error(`Portionsgrenze ${capGrams} g konnte nicht gesetzt werden.`);
+  }
+  return exports;
 }
-
-const brutto = loadLowCarbWithBasis('brutto');
-const netto = loadLowCarbWithBasis('netto');
 
 const args = process.argv.slice(2);
 const QUIET = args.includes('--quiet');
 const CSV = args.includes('--csv');
+const MATRIX = args.includes('--matrix');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -82,7 +111,7 @@ function fmt(value, digits = 1) {
 }
 
 /**
- * Describes what a recipe's tag does under one basis, ignoring what the
+ * Describes what a recipe's tag does under one variant, ignoring what the
  * recipe currently carries: the question here is what the rules say, not what
  * an earlier migration happened to write.
  *
@@ -126,9 +155,76 @@ async function* iterateRecipes(pageSize = 300) {
 }
 
 /**
- * Runs both bases over every recipe and reports the difference.
+ * Runs both bases over every recipe and reports the difference. The portion
+ * cap stays at whatever functions/lowCarb.js carries.
+ */
+/**
+ * Reads the basis and portion cap that functions/lowCarb.js currently carries,
+ * rather than assuming them - the whole point of this script is that they are
+ * about to change.
+ *
+ * @return {{basis: string, cap: number}} The live setting.
+ */
+function readLiveSettings() {
+  const source = fs.readFileSync(LOW_CARB_SOURCE_PATH, 'utf8');
+  const basisMatch = BASIS_PATTERN.exec(source);
+  const capMatch = CAP_PATTERN.exec(source);
+  if (!basisMatch || !capMatch) {
+    throw new Error(
+        `Konstanten nicht in ${LOW_CARB_SOURCE_PATH} gefunden - ` +
+        'wurden sie umbenannt? Dieses Skript muss dann angepasst werden.'
+    );
+  }
+  return {
+    basis: basisMatch[0].includes(`'netto'`) ? 'netto' : 'brutto',
+    cap: Number(capMatch[0].match(/=\s*([\d.]+);/)[1]),
+  };
+}
+
+/**
+ * Whether a recipe currently carries the low-carb tag in Firestore. This is a
+ * different question from whether it qualifies: the tag is only ever written
+ * when something runs over the recipe, so a qualifying recipe that nothing has
+ * touched carries no tag at all.
+ *
+ * @param {Object} lowCarbModule - Any loaded variant of the module.
+ * @param {Object} data - Recipe document data.
+ * @return {boolean} Whether the tag is present.
+ */
+function carriesLowCarbTag(lowCarbModule, data) {
+  const tag = lowCarbModule.LOW_CARB_TAG.toLowerCase();
+  return lowCarbModule
+      .normalizeKulinarik(data && data.kulinarik)
+      .some((entry) => entry.trim().toLowerCase() === tag);
+}
+
+/**
+ * Prints how the tags actually stored in Firestore compare with what the live
+ * rules say. A large "berechtigt, aber ohne Tag" number means the rules were
+ * never applied to those recipes, not that the rules disagree.
+ *
+ * @param {Object} tagState - Counters collected during the run.
+ * @param {string} label - The setting these verdicts were reached under.
+ */
+function printTagState(tagState, label) {
+  console.log(`\n--- Ist-Zustand in Firestore (Regeln: ${label}) ---`);
+  console.log(`Tragen den Tag aktuell:      ${tagState.tagged}`);
+  console.log(`Berechtigt und getaggt:      ${tagState.taggedAndQualifies}`);
+  console.log(`Berechtigt, aber ohne Tag:   ${tagState.qualifiesNotTagged}  ` +
+      '(Regel nie auf sie angewendet)');
+  console.log(`Getaggt, aber nicht mehr berechtigt: ${tagState.taggedNotQualifies}`);
+}
+
+/**
+ * Runs both bases over every recipe and reports the difference. The portion
+ * cap stays at whatever functions/lowCarb.js carries.
  */
 async function compareLowCarbBasis() {
+  const brutto = loadLowCarbWith('brutto');
+  const netto = loadLowCarbWith('netto');
+  const live = readLiveSettings();
+  const liveModule = live.basis === 'netto' ? netto : brutto;
+
   console.log('Low-Carb-Basisvergleich - brutto vs. netto (DRY RUN, es wird nichts geschrieben)');
   console.log(
       `Schwellen: Energieanteil < ${brutto.LOW_CARB_MAX_ENERGY_PERCENT} % ` +
@@ -136,19 +232,17 @@ async function compareLowCarbBasis() {
   );
 
   const stats = {
-    total: 0,
-    skipped: 0,
-    failed: 0,
-    bothYes: 0,
-    bothNo: 0,
-    onlyNetto: 0,
-    onlyBrutto: 0,
+    total: 0, skipped: 0, failed: 0,
+    bothYes: 0, bothNo: 0, onlyNetto: 0, onlyBrutto: 0,
+  };
+  const tagState = {
+    tagged: 0, taggedAndQualifies: 0, qualifiesNotTagged: 0, taggedNotQualifies: 0,
   };
   const flipped = [];
 
   if (CSV) {
     console.log([
-      'recipeId', 'title', 'portionen', 'basisSource',
+      'recipeId', 'title', 'portionen', 'basisSource', 'hatTagAktuell',
       'energyPct_brutto', 'carbsPerPortion_brutto', 'verdict_brutto',
       'energyPct_netto', 'carbsPerPortion_netto', 'verdict_netto',
       'kippt',
@@ -163,6 +257,15 @@ async function compareLowCarbBasis() {
     try {
       const b = brutto.isLowCarb(data);
       const n = netto.isLowCarb(data);
+      const hasTag = carriesLowCarbTag(brutto, data);
+      const liveVerdict = live.basis === 'netto' ? n : b;
+
+      if (hasTag) tagState.tagged += 1;
+      if (!liveVerdict.skipped) {
+        if (liveVerdict.qualifies && hasTag) tagState.taggedAndQualifies += 1;
+        else if (liveVerdict.qualifies && !hasTag) tagState.qualifiesNotTagged += 1;
+        else if (!liveVerdict.qualifies && hasTag) tagState.taggedNotQualifies += 1;
+      }
 
       if (b.skipped || n.skipped) {
         stats.skipped += 1;
@@ -180,7 +283,7 @@ async function compareLowCarbBasis() {
 
       if (CSV) {
         console.log([
-          doc.id, title, b.portionen, b.basisSource,
+          doc.id, title, b.portionen, b.basisSource, String(hasTag),
           fmt(b.energyPercent, 2), fmt(b.carbsPerPortionG, 2), verdict(b),
           fmt(n.energyPercent, 2), fmt(n.carbsPerPortionG, 2), verdict(n),
           b.skipped || n.skipped ? '' : String(b.qualifies !== n.qualifies),
@@ -221,6 +324,8 @@ async function compareLowCarbBasis() {
       (judged > 0 ? `  (${(flipCount / judged * 100).toFixed(1)} % der bewertbaren)` : '')
   );
 
+  printTagState(tagState, `${live.basis}, ${liveModule.LOW_CARB_MAX_CARBS_PER_PORTION_G} g`);
+
   if (flipped.length > 0 && !CSV) {
     console.log('\n--- Rezepte, bei denen die Basis das Ergebnis umdreht ---');
     for (const entry of flipped) {
@@ -237,7 +342,154 @@ async function compareLowCarbBasis() {
   console.log('\nDRY RUN - es wurde nichts geschrieben.');
 }
 
-compareLowCarbBasis().catch((err) => {
-  console.error('Basisvergleich fehlgeschlagen:', err);
+/**
+ * Runs every combination of basis and portion cap over the whole stock and
+ * reports how many recipes each one tags, plus who moves relative to the
+ * setting that is live today.
+ */
+async function matrixLowCarb() {
+  const live = readLiveSettings();
+  const baselineKey = `${live.basis}/${live.cap}`;
+
+  const variants = [];
+  for (const basis of MATRIX_BASES) {
+    for (const cap of MATRIX_CAPS) {
+      variants.push({basis, cap, key: `${basis}/${cap}`, mod: loadLowCarbWith(basis, cap)});
+    }
+  }
+  const anyModule = variants[0].mod;
+
+  console.log('Low-Carb-Schwellenmatrix (DRY RUN, es wird nichts geschrieben)');
+  console.log(
+      `Energieanteil-Schwelle unveraendert: < ${anyModule.LOW_CARB_MAX_ENERGY_PERCENT} %`
+  );
+  console.log(`Heutige Einstellung: ${live.basis}, ${live.cap} g\n`);
+
+  const counts = {};
+  const gained = {};
+  const lost = {};
+  for (const v of variants) {
+    counts[v.key] = 0;
+    gained[v.key] = [];
+    lost[v.key] = [];
+  }
+
+  const stats = {total: 0, judged: 0, skipped: 0, failed: 0};
+  const tagState = {
+    tagged: 0, taggedAndQualifies: 0, qualifiesNotTagged: 0, taggedNotQualifies: 0,
+  };
+  const baselineHasVariant = variants.some((v) => v.key === baselineKey);
+
+  for await (const doc of iterateRecipes()) {
+    stats.total += 1;
+    const data = doc.data() || {};
+    const title = String(data.title || doc.id);
+
+    try {
+      const hasTag = carriesLowCarbTag(anyModule, data);
+      if (hasTag) tagState.tagged += 1;
+
+      const evaluations = {};
+      let skipped = false;
+      for (const v of variants) {
+        const evaluation = v.mod.isLowCarb(data);
+        if (evaluation.skipped) skipped = true;
+        evaluations[v.key] = evaluation;
+      }
+
+      if (skipped) {
+        stats.skipped += 1;
+        continue;
+      }
+      stats.judged += 1;
+
+      for (const v of variants) {
+        if (evaluations[v.key].qualifies) counts[v.key] += 1;
+      }
+
+      if (!baselineHasVariant) continue;
+      const baseQualifies = evaluations[baselineKey].qualifies;
+
+      if (baseQualifies && hasTag) tagState.taggedAndQualifies += 1;
+      else if (baseQualifies && !hasTag) tagState.qualifiesNotTagged += 1;
+      else if (!baseQualifies && hasTag) tagState.taggedNotQualifies += 1;
+
+      for (const v of variants) {
+        if (v.key === baselineKey) continue;
+        const now = evaluations[v.key].qualifies;
+        const entry = {title, id: doc.id, evaluation: evaluations[v.key]};
+        if (now && !baseQualifies) gained[v.key].push(entry);
+        else if (!now && baseQualifies) lost[v.key].push(entry);
+      }
+    } catch (error) {
+      // One bad recipe must not take the run down with it.
+      stats.failed += 1;
+      console.error(`  [FEHLER] ${doc.id}: ${error?.message || error}`);
+    }
+  }
+
+  console.log(`Rezepte gesamt: ${stats.total}   Bewertbar: ${stats.judged}   ` +
+      `Uebersprungen: ${stats.skipped}`);
+  if (stats.failed > 0) console.log(`Fehler: ${stats.failed}`);
+
+  console.log(`\n--- Rezepte mit Low-Carb-Tag (von ${stats.judged} bewertbaren) ---`);
+  console.log(`${'Basis'.padEnd(10)}${MATRIX_CAPS.map((c) => `${c} g`.padStart(8)).join('')}`);
+  for (const basis of MATRIX_BASES) {
+    const row = MATRIX_CAPS
+        .map((cap) => String(counts[`${basis}/${cap}`]).padStart(8))
+        .join('');
+    console.log(`${basis.padEnd(10)}${row}`);
+  }
+
+  if (baselineHasVariant) {
+    printTagState(tagState, `${live.basis}, ${live.cap} g`);
+
+    console.log(
+        `\n--- Differenz zur heutigen Einstellung (${live.basis}, ${live.cap} g ` +
+        `-> ${counts[baselineKey]} Rezepte) ---`
+    );
+    for (const v of variants) {
+      if (v.key === baselineKey) continue;
+      console.log(
+          `  ${v.key.padEnd(14)} ${String(counts[v.key]).padStart(4)} Rezepte   ` +
+          `(+${gained[v.key].length} neu / -${lost[v.key].length} weg)`
+      );
+    }
+
+    if (!QUIET) {
+      for (const v of variants) {
+        if (v.key === baselineKey) continue;
+        if (gained[v.key].length === 0 && lost[v.key].length === 0) continue;
+        console.log(`\n--- ${v.key} g gegenueber heute ---`);
+        for (const entry of lost[v.key]) {
+          console.log(
+              `  [-] ${entry.title} (${entry.id}): ` +
+              `${fmt(entry.evaluation.energyPercent, 2)} % Energie aus KH, ` +
+              `${fmt(entry.evaluation.carbsPerPortionG, 2)} g KH/Portion`
+          );
+        }
+        for (const entry of gained[v.key]) {
+          console.log(
+              `  [+] ${entry.title} (${entry.id}): ` +
+              `${fmt(entry.evaluation.energyPercent, 2)} % Energie aus KH, ` +
+              `${fmt(entry.evaluation.carbsPerPortionG, 2)} g KH/Portion`
+          );
+        }
+      }
+    }
+  } else {
+    console.log(
+        `\nHinweis: die heutige Einstellung (${baselineKey}) ist keine der ` +
+        'verglichenen Varianten - die Differenzen entfallen.'
+    );
+  }
+
+  console.log('\nDRY RUN - es wurde nichts geschrieben.');
+}
+
+const run = MATRIX ? matrixLowCarb : compareLowCarbBasis;
+
+run().catch((err) => {
+  console.error(MATRIX ? 'Schwellenmatrix fehlgeschlagen:' : 'Basisvergleich fehlgeschlagen:', err);
   process.exit(1);
 });

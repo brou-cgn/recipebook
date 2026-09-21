@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 let manualHandler;
+let lowCarbHandler;
 let mockDbState;
 let sentMails;
 
@@ -14,6 +15,7 @@ function createDocSnapshot(id, data, onSet) {
     data: () => data,
     ref: {
       set: async (payload, options) => onSet(payload, options),
+      update: async (payload) => onSet(payload, { merge: true }),
     },
   };
 }
@@ -195,6 +197,7 @@ function loadHandlers() {
   };
 
   manualHandler = require('./index').runNutritionRecalcForFlaggedRecipes;
+  lowCarbHandler = require('./index').runLowCarbFullTagging;
   Module._load = originalLoad;
 }
 
@@ -433,4 +436,82 @@ test('summary mail stays quiet about recipes whose tag did not move', async () =
   assert.match(text, /Low Carb entfernt: 0/);
   // The recipe is still listed as recalculated, just without a tag note.
   assert.match(text, /- Tomatensuppe \(r1\)\n/);
+});
+
+test('low-carb full tagging adds, removes and skips, and reports the counters', async () => {
+  mockDbState.recipes.lowcarb = {
+    title: 'Brokkoli mit Butter',
+    portionen: 2,
+    kulinarik: ['Deutsch'],
+    naehrwerte: { kalorien: 400, kohlenhydrate: 10, ballaststoffe: 4 },
+  };
+  mockDbState.recipes.highcarb = {
+    title: 'Nudelauflauf',
+    portionen: 2,
+    kulinarik: ['Italienisch', 'Low Carb'],
+    naehrwerte: { kalorien: 500, kohlenhydrate: 80 },
+  };
+
+  const result = await lowCarbHandler({ auth: { uid: 'admin-1' }, data: {} });
+
+  assert.equal(result.completed, true);
+  assert.equal(result.total, 3);
+  assert.equal(result.added, 1);
+  assert.equal(result.removed, 1);
+  // r1 carries no kcal/carbs at all, so it is skipped rather than guessed at.
+  assert.equal(result.skipped, 1);
+  assert.equal(result.failed, 0);
+  assert.equal(result.written, 2);
+
+  assert.deepEqual(mockDbState.recipes.lowcarb.kulinarik, ['Deutsch', 'Low Carb']);
+  assert.deepEqual(mockDbState.recipes.highcarb.kulinarik, ['Italienisch']);
+});
+
+test('low-carb full tagging leaves a recipe whose tag is already correct untouched', async () => {
+  mockDbState.recipes.lowcarb = {
+    title: 'Brokkoli mit Butter',
+    portionen: 2,
+    kulinarik: ['Deutsch', 'Low Carb'],
+    naehrwerte: { kalorien: 400, kohlenhydrate: 10 },
+  };
+
+  const result = await lowCarbHandler({ auth: { uid: 'admin-1' }, data: {} });
+
+  assert.equal(result.added, 0);
+  assert.equal(result.removed, 0);
+  assert.equal(result.unchanged, 1);
+  assert.equal(result.written, 0);
+  assert.deepEqual(mockDbState.recipes.lowcarb.kulinarik, ['Deutsch', 'Low Carb']);
+});
+
+test('low-carb full tagging never skips a recipe that is merely untagged', async () => {
+  mockDbState.recipes.lowcarb = {
+    title: 'Salat',
+    portionen: 1,
+    naehrwerte: { kalorien: 200, kohlenhydrate: 5 },
+  };
+
+  const result = await lowCarbHandler({ auth: { uid: 'admin-1' }, data: {} });
+
+  assert.equal(result.added, 1);
+  assert.deepEqual(mockDbState.recipes.lowcarb.kulinarik, ['Low Carb']);
+});
+
+test('low-carb full tagging rejects unauthenticated callers', async () => {
+  await assert.rejects(
+      lowCarbHandler({ data: {} }),
+      (err) => err.code === 'unauthenticated'
+  );
+});
+
+test('low-carb full tagging rejects callers without admin or moderator role', async () => {
+  await assert.rejects(
+      lowCarbHandler({ auth: { uid: 'user-1' }, data: {} }),
+      (err) => err.code === 'permission-denied'
+  );
+});
+
+test('low-carb full tagging may be started by a moderator', async () => {
+  const result = await lowCarbHandler({ auth: { uid: 'moderator-1' }, data: {} });
+  assert.equal(result.completed, true);
 });
