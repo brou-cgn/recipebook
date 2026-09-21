@@ -8172,11 +8172,31 @@ function escapeNutritionRecalcHtml(value) {
       .replace(/'/g, '&#39;');
 }
 
+/**
+ * Wording for a recipe whose "Low Carb" tag the recalc changed. Returns null
+ * for recipes the recalc left tagged as they were, so they read unchanged in
+ * the report.
+ *
+ * @param {string|undefined} action - The action evaluateLowCarbTag reported.
+ * @return {string|null} The label, or null when there is nothing to say.
+ */
+function nutritionRecalcLowCarbLabel(action) {
+  if (action === 'added') return 'Low Carb ergänzt';
+  if (action === 'removed') return 'Low Carb entfernt';
+  // 'unchanged' only reaches the report when a duplicate tag was cleaned up.
+  if (action === 'unchanged') return 'Low Carb bereinigt';
+  return null;
+}
+
 function buildNutritionRecalcSummaryMail(report, runAt) {
   const updatedCount = report.updatedRecipes.length;
   const failedCount = report.failedRecipes.length;
   const skippedCount = report.skippedRecipes.length;
   const totalAffected = report.affectedRecipeCount;
+  const lowCarbAddedCount = report.updatedRecipes
+      .filter((entry) => entry.lowCarbAction === 'added').length;
+  const lowCarbRemovedCount = report.updatedRecipes
+      .filter((entry) => entry.lowCarbAction === 'removed').length;
   const status = failedCount === 0 && !report.fatalError ? '✅ Erfolgreich' : '⚠️ Mit Fehlern';
   const subject = `[RecipeBook] Nährwert-Recalc ${status} (${runAt})`;
 
@@ -8188,13 +8208,16 @@ function buildNutritionRecalcSummaryMail(report, runAt) {
   text += `Übersprungen: ${skippedCount}\n`;
   text += `Fehlgeschlagen: ${failedCount}\n`;
   text += `recalc zurückgesetzt: ${report.resetRecalcCount}\n`;
+  text += `Low Carb ergänzt: ${lowCarbAddedCount}\n`;
+  text += `Low Carb entfernt: ${lowCarbRemovedCount}\n`;
   if (report.fatalError) {
     text += `\nFataler Fehler: ${report.fatalError}\n`;
   }
   if (updatedCount > 0) {
     text += `\nAktualisierte Rezepte:\n`;
     report.updatedRecipes.forEach((entry) => {
-      text += `- ${entry.title} (${entry.recipeId})\n`;
+      const lowCarbLabel = nutritionRecalcLowCarbLabel(entry.lowCarbAction);
+      text += `- ${entry.title} (${entry.recipeId})${lowCarbLabel ? ` – ${lowCarbLabel}` : ''}\n`;
     });
   }
   if (failedCount > 0) {
@@ -8219,9 +8242,15 @@ function buildNutritionRecalcSummaryMail(report, runAt) {
       <p><strong>Übersprungen:</strong> ${skippedCount}</p>
       <p><strong>Fehlgeschlagen:</strong> ${failedCount}</p>
       <p><strong>recalc zurückgesetzt:</strong> ${report.resetRecalcCount}</p>
+      <p><strong>Low Carb ergänzt:</strong> ${lowCarbAddedCount}</p>
+      <p><strong>Low Carb entfernt:</strong> ${lowCarbRemovedCount}</p>
       ${report.fatalError ? `<p style="color:#c62828"><strong>Fataler Fehler:</strong> ${escapeNutritionRecalcHtml(report.fatalError)}</p>` : ''}
       <h3>Aktualisierte Rezepte</h3>
-      ${htmlList(report.updatedRecipes, (entry) => `${escapeNutritionRecalcHtml(entry.title)} (${escapeNutritionRecalcHtml(entry.recipeId)})`)}
+      ${htmlList(report.updatedRecipes, (entry) => {
+    const lowCarbLabel = nutritionRecalcLowCarbLabel(entry.lowCarbAction);
+    return `${escapeNutritionRecalcHtml(entry.title)} (${escapeNutritionRecalcHtml(entry.recipeId)})` +
+      (lowCarbLabel ? ` &ndash; <strong>${escapeNutritionRecalcHtml(lowCarbLabel)}</strong>` : '');
+  })}
       <h3>Fehlgeschlagene Rezepte</h3>
       ${htmlList(report.failedRecipes, (entry) => `${escapeNutritionRecalcHtml(entry.title)} (${escapeNutritionRecalcHtml(entry.recipeId)}): ${escapeNutritionRecalcHtml(entry.error)}`)}
     </div>

@@ -388,3 +388,49 @@ test('manual recalc job leaves an unreadable recipe alone instead of untagging i
   // And the run really did reach this recipe, rather than filtering it out earlier.
   assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, 1);
 });
+
+test('summary mail reports the low carb changes, not just the recalc', async () => {
+  mockDbState.recipes.r1.kulinarik = ['Italienische Küche'];
+
+  await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  assert.equal(sentMails.length, 1);
+  const { text, html } = sentMails[0];
+
+  // The counters an admin skims first.
+  assert.match(text, /Low Carb ergänzt: 1/);
+  assert.match(text, /Low Carb entfernt: 0/);
+  assert.match(html, /<strong>Low Carb ergänzt:<\/strong> 1/);
+
+  // And the recipe itself is named with what happened to it.
+  assert.match(text, /- Tomatensuppe \(r1\) – Low Carb ergänzt/);
+  assert.match(html, /Tomatensuppe \(r1\).*Low Carb ergänzt/);
+});
+
+test('summary mail names a recipe that lost the tag', async () => {
+  mockDbState.nutritionReferences.tomate.kalorien = 100;
+  mockDbState.nutritionReferences.tomate.kohlenhydrate = 50;
+  mockDbState.recipes.r1.kulinarik = ['Italienische Küche', 'Low Carb'];
+
+  await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  const { text } = sentMails[0];
+  assert.match(text, /Low Carb ergänzt: 0/);
+  assert.match(text, /Low Carb entfernt: 1/);
+  assert.match(text, /- Tomatensuppe \(r1\) – Low Carb entfernt/);
+});
+
+test('summary mail stays quiet about recipes whose tag did not move', async () => {
+  mockDbState.recipes.r1.kulinarik = ['Italienische Küche', 'Low Carb'];
+
+  await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  const { text } = sentMails[0];
+  assert.match(text, /Low Carb ergänzt: 0/);
+  assert.match(text, /Low Carb entfernt: 0/);
+  // The recipe is still listed as recalculated, just without a tag note.
+  assert.match(text, /- Tomatensuppe \(r1\)\n/);
+});
