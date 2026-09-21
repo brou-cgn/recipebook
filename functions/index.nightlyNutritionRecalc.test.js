@@ -133,6 +133,9 @@ function loadHandlers() {
                   id,
                   recipe,
                   async (payload) => {
+                    if (Object.prototype.hasOwnProperty.call(payload, 'kulinarik')) {
+                      recipe.kulinarik = payload.kulinarik;
+                    }
                     if (payload.naehrwerte) {
                       recipe.naehrwerte = payload.naehrwerte;
                       if (recipe.failCalculationWrite) {
@@ -338,4 +341,50 @@ test('manual recalc job preserves yield fields and stores per-100g values', asyn
     ballaststoffe: 0,
     salz: 0,
   });
+});
+
+test('manual recalc job tags a qualifying recipe as low carb', async () => {
+  mockDbState.recipes.r1.kulinarik = ['Italienische Küche'];
+
+  await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  // The tag is appended; the cuisine type that was already there survives.
+  assert.deepEqual(mockDbState.recipes.r1.kulinarik, ['Italienische Küche', 'Low Carb']);
+});
+
+test('manual recalc job drops the tag once a recipe stops qualifying', async () => {
+  mockDbState.nutritionReferences.tomate.kalorien = 100;
+  mockDbState.nutritionReferences.tomate.kohlenhydrate = 50;
+  mockDbState.recipes.r1.kulinarik = ['Italienische Küche', 'Low Carb'];
+
+  await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  assert.deepEqual(mockDbState.recipes.r1.kulinarik, ['Italienische Küche']);
+});
+
+test('manual recalc job leaves kulinarik alone when the verdict has not changed', async () => {
+  mockDbState.recipes.r1.kulinarik = ['Italienische Küche', 'Low Carb'];
+
+  await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  // Still qualifying and already tagged - no duplicate, no rewrite.
+  assert.deepEqual(mockDbState.recipes.r1.kulinarik, ['Italienische Küche', 'Low Carb']);
+});
+
+test('manual recalc job leaves an unreadable recipe alone instead of untagging it', async () => {
+  // Zero calories means the verdict cannot be reached at all. Such a recipe is
+  // skipped - which has to be visibly different from "does not qualify", so the
+  // tag it already carries must survive.
+  mockDbState.nutritionReferences.tomate.kalorien = 0;
+  mockDbState.recipes.r1.kulinarik = ['Italienische Küche', 'Low Carb'];
+
+  await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  assert.deepEqual(mockDbState.recipes.r1.kulinarik, ['Italienische Küche', 'Low Carb']);
+  // And the run really did reach this recipe, rather than filtering it out earlier.
+  assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, 1);
 });
