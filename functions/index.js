@@ -8541,6 +8541,128 @@ exports.nightlyNutritionRecalc = onSchedule(
 );
 
 /**
+ * Applies the low-carb rules to every recipe in the collection - the one-time
+ * full pass that gives the tag to the recipes nothing has touched since the
+ * rules were introduced.
+ *
+ * Unlike the nutrition recalc this reads the stored values and does no
+ * arithmetic of its own beyond evaluateLowCarbTag: no external lookups, no
+ * recalculation, no e-mail. That makes it cheap enough to run inside the
+ * request and hand the numbers straight back to the caller.
+ *
+ * Idempotent: a recipe whose tag is already correct produces no write at all,
+ * so a second run touches nothing.
+ *
+ * @return {Promise<Object>} Counters describing what happened.
+ */
+async function runLowCarbFullTaggingCore() {
+  const db = admin.firestore();
+  const stats = {
+    total: 0, added: 0, removed: 0, unchanged: 0, skipped: 0, failed: 0, written: 0,
+  };
+
+  const recipesSnapshot = await db.collection('recipes').get();
+  // docs.length rather than snapshot.size: the same number, but read off the
+  // array this function iterates anyway.
+  stats.total = recipesSnapshot.docs.length;
+
+  // Only the recipes that actually need a write are collected. Everything else
+  // never reaches a batch, which is what keeps repeated runs free of writes.
+  const pendingWrites = [];
+
+  for (const recipeDoc of recipesSnapshot.docs) {
+    try {
+      const result = evaluateLowCarbTag(recipeDoc.data() || {});
+
+      if (result.action === 'skipped') stats.skipped += 1;
+      else if (result.action === 'added') stats.added += 1;
+      else if (result.action === 'removed') stats.removed += 1;
+      else stats.unchanged += 1;
+
+      if (result.changed) {
+        pendingWrites.push({ref: recipeDoc.ref, kulinarik: result.kulinarik});
+      }
+    } catch (error) {
+      // One bad recipe must not take the run down with it.
+      stats.failed += 1;
+      console.error(
+          `runLowCarbFullTagging: ${recipeDoc.id}: ${error?.message || error}`,
+      );
+    }
+  }
+
+  // Firestore allows 500 operations per batch. That is a hard limit, not a
+  // guideline - one more and the whole commit is rejected.
+  const BATCH_SIZE = 500;
+  for (let i = 0; i < pendingWrites.length; i += BATCH_SIZE) {
+    const chunk = pendingWrites.slice(i, i + BATCH_SIZE);
+    const batch = db.batch();
+    chunk.forEach(({ref, kulinarik}) => batch.update(ref, {kulinarik}));
+
+    try {
+      await batch.commit();
+      stats.written += chunk.length;
+    } catch (error) {
+      // A failed batch is reported and the run carries on with the next one,
+      // rather than leaving the remaining recipes untouched.
+      stats.failed += chunk.length;
+      console.error(
+          `runLowCarbFullTagging: batch ${Math.floor(i / BATCH_SIZE) + 1} failed: ` +
+          `${error?.message || error}`,
+      );
+    }
+  }
+
+  return stats;
+}
+
+/**
+ * Callable Cloud Function: the one-time low-carb full pass, startable from the
+ * Kuechenbetrieb page so that it needs no local checkout, no service account
+ * key and no terminal.
+ *
+ * Runs synchronously and returns its counters rather than mailing them: the
+ * pass is one collection read plus the batched writes for the recipes that
+ * actually change, so the caller can simply wait for it.
+ */
+exports.runLowCarbFullTagging = onCall(
+    {
+      timeoutSeconds: 300,
+      maxInstances: 1,
+      invoker: 'public',
+    },
+    async (request) => {
+      const callerUid = request.auth?.uid;
+      if (!callerUid) {
+        throw new HttpsError('unauthenticated', 'Authentication required.');
+      }
+
+      const callerDoc = await admin.firestore().doc(`users/${callerUid}`).get();
+      const callerData = callerDoc.exists ? (callerDoc.data() || {}) : {};
+      const canRunFullTagging = (
+        callerData.role === 'admin' ||
+        callerData.role === 'moderator' ||
+        callerData.isAdmin === true
+      );
+      if (!canRunFullTagging) {
+        throw new HttpsError('permission-denied', 'Admin or moderator role required.');
+      }
+
+      const stats = await runLowCarbFullTaggingCore();
+      console.log(`runLowCarbFullTagging: triggered by ${callerUid}`, stats);
+
+      return {
+        completed: true,
+        ...stats,
+        message:
+          `${stats.total} Rezepte geprüft: ${stats.added} neu als Low Carb getaggt, ` +
+          `${stats.removed} Tag entfernt, ${stats.unchanged} unverändert, ` +
+          `${stats.skipped} übersprungen (unvollständige Nährwerte).`,
+      };
+    }
+);
+
+/**
  * Scheduled Cloud Function: run daily AI recipe importer self-tests and send
  * a summary e-mail to all admin users.
  *
