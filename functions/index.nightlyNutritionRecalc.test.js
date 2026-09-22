@@ -515,3 +515,107 @@ test('low-carb full tagging may be started by a moderator', async () => {
   const result = await lowCarbHandler({ auth: { uid: 'moderator-1' }, data: {} });
   assert.equal(result.completed, true);
 });
+
+test('low-carb full tagging mails the recipe list, not just the counters', async () => {
+  mockDbState.recipes.lowcarb = {
+    title: 'Brokkoli mit Butter',
+    portionen: 2,
+    kulinarik: ['Deutsch'],
+    naehrwerte: { kalorien: 400, kohlenhydrate: 10 },
+  };
+  mockDbState.recipes.highcarb = {
+    title: 'Nudelauflauf',
+    portionen: 2,
+    kulinarik: ['Italienisch', 'Low Carb'],
+    naehrwerte: { kalorien: 500, kohlenhydrate: 80 },
+  };
+
+  const result = await lowCarbHandler({ auth: { uid: 'admin-1' }, data: {} });
+
+  assert.equal(result.mailed, true);
+  assert.match(result.message, /per E-Mail verschickt/);
+  assert.equal(sentMails.length, 1);
+
+  const { subject, text, html } = sentMails[0];
+  assert.match(subject, /Low-Carb-Klassifikation/);
+
+  // Each recipe is named, in the section that matches what happened to it.
+  assert.match(text, /Neu als Low Carb getaggt \(1\):/);
+  assert.match(text, /- Brokkoli mit Butter \(lowcarb\):/);
+  assert.match(text, /Tag entfernt \(1\):/);
+  assert.match(text, /- Nudelauflauf \(highcarb\):/);
+  assert.match(text, /Übersprungen \(1\):/);
+  assert.match(text, /- Tomatensuppe \(r1\): unvollständige Nährwerte/);
+
+  // And the numbers the verdict rested on travel with it.
+  assert.match(text, /10\.0 % Energie aus KH, 5\.0 g KH\/Portion \(2 Portion\(en\), Basis: total\)/);
+  assert.match(html, /Brokkoli mit Butter/);
+});
+
+test('low-carb full tagging reports which basis the verdicts rested on', async () => {
+  // Unambiguous: per-100-g values plus a final weight.
+  mockDbState.recipes.per100 = {
+    title: 'Mit 100-g-Werten',
+    portionen: 4,
+    kulinarik: [],
+    naehrwerte: {
+      kalorien: 99999,
+      kohlenhydrate: 99999,
+      calcFinalWeightGrams: 800,
+      calcPer100g: { kalorien: 200, kohlenhydrate: 5 },
+    },
+  };
+  // Ambiguous: stored totals only.
+  mockDbState.recipes.totalsOnly = {
+    title: 'Nur Gesamtwerte',
+    portionen: 2,
+    kulinarik: [],
+    naehrwerte: { kalorien: 400, kohlenhydrate: 10 },
+  };
+
+  const result = await lowCarbHandler({ auth: { uid: 'admin-1' }, data: {} });
+
+  // r1 is skipped and therefore counts towards neither basis.
+  assert.deepEqual(result.basisCounts, { per100g: 1, total: 1 });
+
+  const { text } = sentMails[0];
+  assert.match(text, /Rechengrundlage: 1 x 100-g-Werte, 1 x Gesamtwerte/);
+  assert.match(text, /1 von 2 bewerteten Rezepten wurden auf Basis der gespeicherten Gesamtwerte/);
+});
+
+test('low-carb full tagging keeps the per-recipe lists out of the response', async () => {
+  mockDbState.recipes.lowcarb = {
+    title: 'Brokkoli mit Butter',
+    portionen: 2,
+    kulinarik: [],
+    naehrwerte: { kalorien: 400, kohlenhydrate: 10 },
+  };
+
+  const result = await lowCarbHandler({ auth: { uid: 'admin-1' }, data: {} });
+
+  assert.equal(result.added, 1);
+  assert.equal(result.addedRecipes, undefined);
+  assert.equal(result.skippedRecipes, undefined);
+  assert.equal(result.removedRecipes, undefined);
+  assert.equal(result.failedRecipes, undefined);
+});
+
+test('low-carb full tagging still tags when the mail cannot be sent', async () => {
+  mockDbState.adminUsers = [];
+  mockDbState.recipes.lowcarb = {
+    title: 'Brokkoli mit Butter',
+    portionen: 2,
+    kulinarik: ['Deutsch'],
+    naehrwerte: { kalorien: 400, kohlenhydrate: 10 },
+  };
+
+  const result = await lowCarbHandler({ auth: { uid: 'admin-1' }, data: {} });
+
+  // The tagging is the point of the call; the mail is a report about it.
+  assert.equal(result.completed, true);
+  assert.equal(result.written, 1);
+  assert.equal(result.mailed, false);
+  assert.doesNotMatch(result.message, /per E-Mail/);
+  assert.deepEqual(mockDbState.recipes.lowcarb.kulinarik, ['Deutsch', 'Low Carb']);
+  assert.equal(sentMails.length, 0);
+});

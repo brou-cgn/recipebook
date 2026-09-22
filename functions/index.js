@@ -8259,7 +8259,19 @@ function buildNutritionRecalcSummaryMail(report, runAt) {
   return {subject, text, html};
 }
 
-async function sendNutritionRecalcSummary(report) {
+/**
+ * Mails a report to every admin user. Shared by the nutrition recalc and the
+ * low-carb full pass, so the admin lookup, the SMTP guard and the transporter
+ * exist once rather than once per job.
+ *
+ * @param {Object} mail - The message.
+ * @param {string} mail.subject - Subject line.
+ * @param {string} mail.text - Plain-text body.
+ * @param {string} mail.html - HTML body.
+ * @param {string} mail.logLabel - Job name for the console messages.
+ * @return {Promise<boolean>} Whether a mail was actually sent.
+ */
+async function sendAdminReportMail({subject, text, html, logLabel}) {
   const db = admin.firestore();
   const usersSnapshot = await db.collection('users').where('isAdmin', '==', true).get();
   const adminEmails = [];
@@ -8269,8 +8281,8 @@ async function sendNutritionRecalcSummary(report) {
   });
 
   if (adminEmails.length === 0) {
-    console.log('runNutritionRecalcForFlaggedRecipes: no admin emails found, skipping email');
-    return;
+    console.log(`${logLabel}: no admin emails found, skipping email`);
+    return false;
   }
 
   const smtpHostVal = smtpHost.value();
@@ -8279,8 +8291,8 @@ async function sendNutritionRecalcSummary(report) {
   const smtpPasswordVal = smtpPassword.value();
   const smtpFromVal = smtpFrom.value();
   if (!smtpHostVal || !smtpUserVal || !smtpPasswordVal || !smtpFromVal) {
-    console.warn('runNutritionRecalcForFlaggedRecipes: SMTP not fully configured – skipping email');
-    return;
+    console.warn(`${logLabel}: SMTP not fully configured – skipping email`);
+    return false;
   }
 
   const smtpPortNum = parseInt(smtpPortVal || '587', 10);
@@ -8291,14 +8303,24 @@ async function sendNutritionRecalcSummary(report) {
     auth: {user: smtpUserVal, pass: smtpPasswordVal},
   });
 
-  const runAt = new Date(report.finishedAt || Date.now()).toLocaleString('de-DE', {timeZone: 'Europe/Berlin'});
-  const mailContent = buildNutritionRecalcSummaryMail(report, runAt);
   await transporter.sendMail({
     from: smtpFromVal,
     bcc: adminEmails.join(', '),
+    subject,
+    text,
+    html,
+  });
+  return true;
+}
+
+async function sendNutritionRecalcSummary(report) {
+  const runAt = new Date(report.finishedAt || Date.now()).toLocaleString('de-DE', {timeZone: 'Europe/Berlin'});
+  const mailContent = buildNutritionRecalcSummaryMail(report, runAt);
+  await sendAdminReportMail({
     subject: mailContent.subject,
     text: mailContent.text,
     html: mailContent.html,
+    logLabel: 'runNutritionRecalcForFlaggedRecipes',
   });
 }
 
@@ -8555,10 +8577,185 @@ exports.nightlyNutritionRecalc = onSchedule(
  *
  * @return {Promise<Object>} Counters describing what happened.
  */
+/**
+ * How many recipes each section of the low-carb report mail lists before it
+ * falls back to a count. A mailbox is not a database export; on a large
+ * collection the "skipped" section alone would otherwise run into thousands
+ * of lines.
+ */
+const LOW_CARB_MAIL_LIST_LIMIT = 100;
+
+/**
+ * @param {number|null} value - A number for the report.
+ * @param {number} digits - Decimal places.
+ * @return {string} The formatted number, or a dash when there is none.
+ */
+function formatLowCarbNumber(value, digits = 1) {
+  return typeof value === 'number' && Number.isFinite(value) ?
+    value.toFixed(digits) :
+    '-';
+}
+
+/**
+ * The numbers a verdict rested on, as one readable phrase.
+ *
+ * @param {Object} entry - A report entry.
+ * @return {string} e.g. "12.0 % Energie aus KH, 30.0 g KH/Portion (2 Portionen, Basis: per100g)".
+ */
+function formatLowCarbEntryNumbers(entry) {
+  return `${formatLowCarbNumber(entry.energyPercent)} % Energie aus KH, ` +
+    `${formatLowCarbNumber(entry.carbsPerPortionG)} g KH/Portion ` +
+    `(${entry.portionen} Portion(en), Basis: ${entry.basisSource})`;
+}
+
+/**
+ * Builds the report mail for the low-carb full pass.
+ *
+ * @param {Object} report - What runLowCarbFullTaggingCore returned, plus
+ *   triggeredBy and finishedAt.
+ * @param {string} runAt - Localised timestamp for the header.
+ * @return {{subject: string, text: string, html: string}} The message.
+ */
+function buildLowCarbTaggingMail(report, runAt) {
+  const status = report.failed === 0 ? '✅ Erfolgreich' : '⚠️ Mit Fehlern';
+  const subject = `[RecipeBook] Low-Carb-Klassifikation ${status} (${runAt})`;
+
+  const judged = report.basisCounts.per100g + report.basisCounts.total;
+  const basisNote = report.basisCounts.total > 0 ?
+    `${report.basisCounts.total} von ${judged} bewerteten Rezepten wurden auf Basis der ` +
+    'gespeicherten Gesamtwerte beurteilt statt auf Basis der eindeutigen 100-g-Werte. ' +
+    'Bei diesen hängt das Ergebnis davon ab, welcher Schreibweg die Nährwerte zuletzt ' +
+    'gesetzt hat – ein hoher Anteil ist ein Grund, die Werte stichprobenartig zu prüfen.' :
+    'Alle bewerteten Rezepte wurden auf Basis der eindeutigen 100-g-Werte beurteilt.';
+
+  const textSection = (heading, entries, formatter) => {
+    if (!entries || entries.length === 0) return '';
+    const shown = entries.slice(0, LOW_CARB_MAIL_LIST_LIMIT);
+    let out = `\n${heading} (${entries.length}):\n`;
+    shown.forEach((entry) => {
+      out += `- ${formatter(entry)}\n`;
+    });
+    if (entries.length > shown.length) {
+      out += `- ... und ${entries.length - shown.length} weitere\n`;
+    }
+    return out;
+  };
+
+  let text = `Low-Carb-Klassifikation\n`;
+  text += `Ausgeführt: ${runAt}\n`;
+  text += `Ausgelöst von: ${report.triggeredBy}\n`;
+  text += `Rezepte gesamt: ${report.total}\n`;
+  text += `Neu Low Carb: ${report.added}\n`;
+  text += `Tag entfernt: ${report.removed}\n`;
+  text += `Unverändert: ${report.unchanged}\n`;
+  text += `Übersprungen: ${report.skipped} (unvollständige Nährwerte)\n`;
+  text += `Geschrieben: ${report.written}\n`;
+  text += `Fehler: ${report.failed}\n`;
+  text += `\nRechengrundlage: ${report.basisCounts.per100g} x 100-g-Werte, `;
+  text += `${report.basisCounts.total} x Gesamtwerte\n${basisNote}\n`;
+
+  text += textSection(
+      'Neu als Low Carb getaggt',
+      report.addedRecipes,
+      (entry) => `${entry.title} (${entry.recipeId}): ${formatLowCarbEntryNumbers(entry)}`
+  );
+  text += textSection(
+      'Tag entfernt',
+      report.removedRecipes,
+      (entry) => `${entry.title} (${entry.recipeId}): ${formatLowCarbEntryNumbers(entry)}`
+  );
+  text += textSection(
+      'Übersprungen',
+      report.skippedRecipes,
+      (entry) => `${entry.title} (${entry.recipeId}): ${entry.reason}`
+  );
+  text += textSection(
+      'Fehler',
+      report.failedRecipes,
+      (entry) => `${entry.recipeId}: ${entry.error}`
+  );
+
+  const htmlSection = (heading, entries, formatter) => {
+    if (!entries || entries.length === 0) return '';
+    const shown = entries.slice(0, LOW_CARB_MAIL_LIST_LIMIT);
+    const items = shown.map((entry) => `<li>${formatter(entry)}</li>`).join('');
+    const more = entries.length > shown.length ?
+      `<li>... und ${entries.length - shown.length} weitere</li>` :
+      '';
+    return `<h3>${escapeNutritionRecalcHtml(heading)} (${entries.length})</h3><ul>${items}${more}</ul>`;
+  };
+
+  const htmlRecipe = (entry) =>
+    `<strong>${escapeNutritionRecalcHtml(entry.title)}</strong> ` +
+    `(${escapeNutritionRecalcHtml(entry.recipeId)})<br>` +
+    `<small>${escapeNutritionRecalcHtml(formatLowCarbEntryNumbers(entry))}</small>`;
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:760px">
+      <h2>Low-Carb-Klassifikation</h2>
+      <p><strong>Ausgeführt:</strong> ${escapeNutritionRecalcHtml(runAt)}</p>
+      <p><strong>Ausgelöst von:</strong> ${escapeNutritionRecalcHtml(report.triggeredBy)}</p>
+      <p><strong>Rezepte gesamt:</strong> ${report.total}</p>
+      <p><strong>Neu Low Carb:</strong> ${report.added}</p>
+      <p><strong>Tag entfernt:</strong> ${report.removed}</p>
+      <p><strong>Unverändert:</strong> ${report.unchanged}</p>
+      <p><strong>Übersprungen:</strong> ${report.skipped} (unvollständige Nährwerte)</p>
+      <p><strong>Geschrieben:</strong> ${report.written}</p>
+      <p><strong>Fehler:</strong> ${report.failed}</p>
+      <p style="background:#f5f5f5;padding:12px;border-radius:6px">
+        <strong>Rechengrundlage:</strong>
+        ${report.basisCounts.per100g} x 100-g-Werte, ${report.basisCounts.total} x Gesamtwerte<br>
+        <small>${escapeNutritionRecalcHtml(basisNote)}</small>
+      </p>
+      ${htmlSection('Neu als Low Carb getaggt', report.addedRecipes, htmlRecipe)}
+      ${htmlSection('Tag entfernt', report.removedRecipes, htmlRecipe)}
+      ${htmlSection('Übersprungen', report.skippedRecipes, (entry) =>
+    `${escapeNutritionRecalcHtml(entry.title)} ` +
+        `(${escapeNutritionRecalcHtml(entry.recipeId)}): ${escapeNutritionRecalcHtml(entry.reason)}`)}
+      ${htmlSection('Fehler', report.failedRecipes, (entry) =>
+    `${escapeNutritionRecalcHtml(entry.recipeId)}: ${escapeNutritionRecalcHtml(entry.error)}`)}
+    </div>
+  `;
+
+  return {subject, text, html};
+}
+
+/**
+ * Mails the low-carb report to the admins.
+ *
+ * @param {Object} report - runLowCarbFullTaggingCore's result plus
+ *   triggeredBy and finishedAt.
+ * @return {Promise<boolean>} Whether a mail was actually sent.
+ */
+async function sendLowCarbTaggingSummary(report) {
+  const runAt = new Date(report.finishedAt || Date.now())
+      .toLocaleString('de-DE', {timeZone: 'Europe/Berlin'});
+  const mailContent = buildLowCarbTaggingMail(report, runAt);
+  return sendAdminReportMail({
+    subject: mailContent.subject,
+    text: mailContent.text,
+    html: mailContent.html,
+    logLabel: 'runLowCarbFullTagging',
+  });
+}
+
 async function runLowCarbFullTaggingCore() {
   const db = admin.firestore();
   const stats = {
     total: 0, added: 0, removed: 0, unchanged: 0, skipped: 0, failed: 0, written: 0,
+  };
+
+  // Per-recipe detail for the report mail. Counters alone say how many recipes
+  // moved; only these say which ones, and on what numbers the verdict rested.
+  const detail = {
+    addedRecipes: [],
+    removedRecipes: [],
+    skippedRecipes: [],
+    failedRecipes: [],
+    // How many verdicts rested on the unambiguous per-100-g values and how
+    // many on the stored totals, whose meaning differs between the write
+    // paths. A high 'total' share is the signal to look closer.
+    basisCounts: {per100g: 0, total: 0},
   };
 
   const recipesSnapshot = await db.collection('recipes').get();
@@ -8572,12 +8769,35 @@ async function runLowCarbFullTaggingCore() {
 
   for (const recipeDoc of recipesSnapshot.docs) {
     try {
-      const result = evaluateLowCarbTag(recipeDoc.data() || {});
+      const recipeData = recipeDoc.data() || {};
+      const result = evaluateLowCarbTag(recipeData);
+      const entry = {
+        recipeId: recipeDoc.id,
+        title: String(recipeData.title || recipeDoc.id),
+        energyPercent: result.energyPercent,
+        carbsPerPortionG: result.carbsPerPortionG,
+        basisSource: result.basisSource,
+        portionen: result.portionen,
+      };
 
-      if (result.action === 'skipped') stats.skipped += 1;
-      else if (result.action === 'added') stats.added += 1;
-      else if (result.action === 'removed') stats.removed += 1;
-      else stats.unchanged += 1;
+      if (result.action === 'skipped') {
+        stats.skipped += 1;
+        detail.skippedRecipes.push({...entry, reason: result.reason});
+      } else {
+        // Only recipes that were actually judged say anything about the basis.
+        if (result.basisSource === 'per100g') detail.basisCounts.per100g += 1;
+        else detail.basisCounts.total += 1;
+
+        if (result.action === 'added') {
+          stats.added += 1;
+          detail.addedRecipes.push(entry);
+        } else if (result.action === 'removed') {
+          stats.removed += 1;
+          detail.removedRecipes.push(entry);
+        } else {
+          stats.unchanged += 1;
+        }
+      }
 
       if (result.changed) {
         pendingWrites.push({ref: recipeDoc.ref, kulinarik: result.kulinarik});
@@ -8585,8 +8805,10 @@ async function runLowCarbFullTaggingCore() {
     } catch (error) {
       // One bad recipe must not take the run down with it.
       stats.failed += 1;
+      const errorMessage = error?.message || String(error);
+      detail.failedRecipes.push({recipeId: recipeDoc.id, error: errorMessage});
       console.error(
-          `runLowCarbFullTagging: ${recipeDoc.id}: ${error?.message || error}`,
+          `runLowCarbFullTagging: ${recipeDoc.id}: ${errorMessage}`,
       );
     }
   }
@@ -8606,14 +8828,19 @@ async function runLowCarbFullTaggingCore() {
       // A failed batch is reported and the run carries on with the next one,
       // rather than leaving the remaining recipes untouched.
       stats.failed += chunk.length;
+      const errorMessage = error?.message || String(error);
+      detail.failedRecipes.push({
+        recipeId: `Batch ${Math.floor(i / BATCH_SIZE) + 1} (${chunk.length} Rezepte)`,
+        error: errorMessage,
+      });
       console.error(
           `runLowCarbFullTagging: batch ${Math.floor(i / BATCH_SIZE) + 1} failed: ` +
-          `${error?.message || error}`,
+          `${errorMessage}`,
       );
     }
   }
 
-  return stats;
+  return {...stats, ...detail};
 }
 
 /**
@@ -8629,6 +8856,7 @@ exports.runLowCarbFullTagging = onCall(
     {
       timeoutSeconds: 300,
       maxInstances: 1,
+      secrets: [smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom],
       invoker: 'public',
     },
     async (request) => {
@@ -8648,16 +8876,38 @@ exports.runLowCarbFullTagging = onCall(
         throw new HttpsError('permission-denied', 'Admin or moderator role required.');
       }
 
-      const stats = await runLowCarbFullTaggingCore();
+      const report = await runLowCarbFullTaggingCore();
+      const {
+        addedRecipes, removedRecipes, skippedRecipes, failedRecipes, basisCounts, ...stats
+      } = report;
       console.log(`runLowCarbFullTagging: triggered by ${callerUid}`, stats);
+
+      // The per-recipe lists go into the mail, not into the response: the page
+      // shows the counters, and a few thousand entries have no business
+      // crossing the wire to a browser.
+      let mailed = false;
+      try {
+        mailed = await sendLowCarbTaggingSummary({
+          ...report,
+          triggeredBy: callerData.email || callerUid,
+          finishedAt: Date.now(),
+        });
+      } catch (mailError) {
+        // The tagging already happened and is the point of the call. A mail
+        // that cannot be sent is worth logging, not worth failing over.
+        console.error('runLowCarbFullTagging: could not send summary email', mailError);
+      }
 
       return {
         completed: true,
         ...stats,
+        basisCounts,
+        mailed,
         message:
           `${stats.total} Rezepte geprüft: ${stats.added} neu als Low Carb getaggt, ` +
           `${stats.removed} Tag entfernt, ${stats.unchanged} unverändert, ` +
-          `${stats.skipped} übersprungen (unvollständige Nährwerte).`,
+          `${stats.skipped} übersprungen (unvollständige Nährwerte).` +
+          (mailed ? ' Die Rezeptliste wurde per E-Mail verschickt.' : ''),
       };
     }
 );
