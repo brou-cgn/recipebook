@@ -7,6 +7,7 @@
  *   node scripts/compareLowCarbBasis.js --quiet    (summary only)
  *   node scripts/compareLowCarbBasis.js --csv      (one CSV row per recipe)
  *   node scripts/compareLowCarbBasis.js --matrix   (both bases x 40/35/30 g cap)
+ *   node scripts/compareLowCarbBasis.js --zucker   (sugar profile of the tagged recipes)
  *
  * Prerequisites:
  *   - Set GOOGLE_APPLICATION_CREDENTIALS to your Firebase service account JSON
@@ -40,6 +41,12 @@ const MATRIX_CAPS = [40, 35, 30];
 
 /** Bases the matrix mode walks through. */
 const MATRIX_BASES = ['brutto', 'netto'];
+
+/** Candidate sugar caps per portion, in grams, for the sugar mode. */
+const SUGAR_G_THRESHOLDS = [5, 7.5, 10, 12.5, 15];
+
+/** Candidate caps for sugar as a share of carbohydrates, in percent. */
+const SUGAR_SHARE_THRESHOLDS = [50, 66, 75, 90];
 
 /**
  * Compiles functions/lowCarb.js with the basis - and optionally the portion
@@ -94,6 +101,7 @@ const args = process.argv.slice(2);
 const QUIET = args.includes('--quiet');
 const CSV = args.includes('--csv');
 const MATRIX = args.includes('--matrix');
+const ZUCKER = args.includes('--zucker');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -487,9 +495,176 @@ async function matrixLowCarb() {
   console.log('\nDRY RUN - es wurde nichts geschrieben.');
 }
 
-const run = MATRIX ? matrixLowCarb : compareLowCarbBasis;
+/**
+ * Returns a nutrition record in which sugar stands where carbohydrates
+ * normally stand.
+ *
+ * The point is to get sugar per portion without repeating any of the basis
+ * resolution - which of calcPer100g and the stored totals applies, how the
+ * final weight and the portion count enter into it. Handing this record to
+ * isLowCarb makes it answer that question for sugar, using the very code that
+ * answers it for carbohydrates. carbsPerPortionG then holds sugar per portion
+ * and energyPercent the share of energy sugar supplies.
+ *
+ * Fibre is dropped rather than carried over: subtracting it from sugar would
+ * mean nothing, and without it brutto and netto give the same answer.
+ *
+ * @param {Object|null} naehrwerte - The recipe's stored nutrition record.
+ * @return {Object} The same record with sugar in place of carbohydrates.
+ */
+function withSugarAsCarbohydrates(naehrwerte) {
+  const record = naehrwerte && typeof naehrwerte === 'object' ? naehrwerte : {};
+
+  const swapSugarIn = (source) => {
+    const copy = {...source};
+    delete copy.ballaststoffe;
+    const sugar = source.zucker;
+    if (sugar === null || sugar === undefined || sugar === '') {
+      // No sugar figure: leave no carbohydrate value either, so that
+      // isLowCarb reports the recipe as unjudgeable instead of reading the
+      // real carbohydrates as if they were sugar.
+      delete copy.kohlenhydrate;
+    } else {
+      copy.kohlenhydrate = sugar;
+    }
+    return copy;
+  };
+
+  const swapped = swapSugarIn(record);
+  if (record.calcPer100g && typeof record.calcPer100g === 'object') {
+    swapped.calcPer100g = swapSugarIn(record.calcPer100g);
+  }
+  return swapped;
+}
+
+/**
+ * Profiles the sugar in the recipes the live rules currently tag as low carb.
+ *
+ * The energy-share rule is blind to a fat-heavy dessert: cream inflates the
+ * denominator and pushes the carbohydrate share down, so a sweet dish can pass
+ * comfortably while carrying almost nothing but sugar. This mode makes that
+ * visible and shows what a sugar limit would cut, so the threshold can be
+ * picked off the stock rather than guessed.
+ */
+async function sugarAnalysis() {
+  const live = readLiveSettings();
+  const liveModule = loadLowCarbWith(live.basis);
+  const sugarModule = loadLowCarbWith('brutto');
+
+  console.log('Low-Carb-Zuckerprofil (DRY RUN, es wird nichts geschrieben)');
+  console.log(`Heutige Einstellung: ${live.basis}, ${live.cap} g\n`);
+
+  const tagged = [];
+  const stats = {total: 0, qualifying: 0, withoutSugar: 0, mixedBasis: 0, failed: 0};
+
+  for await (const doc of iterateRecipes()) {
+    stats.total += 1;
+    const data = doc.data() || {};
+
+    try {
+      const carbVerdict = liveModule.isLowCarb(data);
+      if (carbVerdict.skipped || !carbVerdict.qualifies) continue;
+      stats.qualifying += 1;
+
+      const sugarVerdict = sugarModule.isLowCarb({
+        ...data,
+        naehrwerte: withSugarAsCarbohydrates(data.naehrwerte),
+      });
+
+      if (sugarVerdict.skipped) stats.withoutSugar += 1;
+
+      // A share only means something when both figures were read off the same
+      // basis; otherwise it would divide a per-100-g number by a total.
+      const comparable =
+        !sugarVerdict.skipped &&
+        sugarVerdict.basisSource === carbVerdict.basisSource &&
+        carbVerdict.carbsPerPortionG > 0;
+      if (!sugarVerdict.skipped && !comparable) stats.mixedBasis += 1;
+
+      tagged.push({
+        title: String(data.title || doc.id),
+        id: doc.id,
+        carbsPerPortionG: carbVerdict.carbsPerPortionG,
+        sugarPerPortionG: sugarVerdict.skipped ? null : sugarVerdict.carbsPerPortionG,
+        sugarEnergyPercent: sugarVerdict.skipped ? null : sugarVerdict.energyPercent,
+        sugarSharePercent: comparable ?
+          (sugarVerdict.carbsPerPortionG / carbVerdict.carbsPerPortionG) * 100 :
+          null,
+      });
+    } catch (error) {
+      // One bad recipe must not take the run down with it.
+      stats.failed += 1;
+      console.error(`  [FEHLER] ${doc.id}: ${error?.message || error}`);
+    }
+  }
+
+  console.log(`Rezepte gesamt: ${stats.total}   Aktuell Low Carb: ${stats.qualifying}`);
+  if (stats.withoutSugar > 0) {
+    console.log(`Ohne Zuckerangabe: ${stats.withoutSugar}  (von keiner Zuckerregel erfassbar)`);
+  }
+  if (stats.mixedBasis > 0) {
+    console.log(`Uneinheitliche Basis: ${stats.mixedBasis}  (Anteil nicht berechenbar)`);
+  }
+  if (stats.failed > 0) console.log(`Fehler: ${stats.failed}`);
+
+  // Highest sugar share first: that is where the sweets collect, and the gap
+  // between them and the rest is what a threshold has to land in.
+  const sorted = [...tagged].sort((a, b) => {
+    if (a.sugarSharePercent == null) return 1;
+    if (b.sugarSharePercent == null) return -1;
+    return b.sugarSharePercent - a.sugarSharePercent;
+  });
+
+  if (!QUIET && sorted.length > 0) {
+    console.log('\n--- Aktuell getaggte Rezepte nach Zuckeranteil ---');
+    console.log(
+        `${'Anteil'.padStart(7)}${'Zucker/P.'.padStart(12)}${'KH/P.'.padStart(10)}` +
+        `${'Zucker-kcal%'.padStart(14)}  Rezept`
+    );
+    for (const entry of sorted) {
+      console.log(
+          `${(entry.sugarSharePercent == null ? '-' : entry.sugarSharePercent.toFixed(0) + ' %').padStart(7)}` +
+          `${(entry.sugarPerPortionG == null ? '-' : entry.sugarPerPortionG.toFixed(1) + ' g').padStart(12)}` +
+          `${(entry.carbsPerPortionG.toFixed(1) + ' g').padStart(10)}` +
+          `${(entry.sugarEnergyPercent == null ? '-' : entry.sugarEnergyPercent.toFixed(1) + ' %').padStart(14)}` +
+          `  ${entry.title} (${entry.id})`
+      );
+    }
+  }
+
+  const measurable = tagged.filter((entry) => entry.sugarPerPortionG != null);
+  const shareable = tagged.filter((entry) => entry.sugarSharePercent != null);
+
+  console.log(`\n--- Wirkung einer Zuckergrenze pro Portion (${measurable.length} mit Zuckerangabe) ---`);
+  for (const limit of SUGAR_G_THRESHOLDS) {
+    const out = measurable.filter((entry) => entry.sugarPerPortionG > limit);
+    console.log(
+        `  Zucker <= ${String(limit).padStart(4)} g:  ` +
+        `${String(measurable.length - out.length).padStart(4)} bleiben, ` +
+        `${String(out.length).padStart(4)} fallen weg`
+    );
+  }
+
+  console.log(`\n--- Wirkung einer Zuckeranteil-Grenze (${shareable.length} berechenbar) ---`);
+  for (const limit of SUGAR_SHARE_THRESHOLDS) {
+    const out = shareable.filter((entry) => entry.sugarSharePercent > limit);
+    console.log(
+        `  Anteil <= ${String(limit).padStart(3)} %:  ` +
+        `${String(shareable.length - out.length).padStart(4)} bleiben, ` +
+        `${String(out.length).padStart(4)} fallen weg`
+    );
+  }
+
+  console.log('\nDRY RUN - es wurde nichts geschrieben.');
+}
+
+const run = ZUCKER ? sugarAnalysis : MATRIX ? matrixLowCarb : compareLowCarbBasis;
+
+const runLabel = ZUCKER ?
+  'Zuckerprofil fehlgeschlagen:' :
+  MATRIX ? 'Schwellenmatrix fehlgeschlagen:' : 'Basisvergleich fehlgeschlagen:';
 
 run().catch((err) => {
-  console.error(MATRIX ? 'Schwellenmatrix fehlgeschlagen:' : 'Basisvergleich fehlgeschlagen:', err);
+  console.error(runLabel, err);
   process.exit(1);
 });
