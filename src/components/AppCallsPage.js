@@ -1725,6 +1725,8 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                 Rezepte werden bereits bei jeder Nährwertberechnung automatisch mitgeprüft.
                 Rezepte mit unvollständigen Nährwerten werden übersprungen und behalten ihren Tag.
                 Mehrfaches Ausführen ist unschädlich: ein Rezept mit korrektem Tag wird nicht geschrieben.
+                Die Zahlen erscheinen direkt hier; welche Rezepte betroffen sind und auf welcher
+                Rechengrundlage sie beurteilt wurden, geht zusätzlich per E-Mail an alle Admins.
               </p>
               <div className="app-calls-action-row">
                 <button
