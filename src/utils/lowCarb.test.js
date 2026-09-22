@@ -5,6 +5,7 @@ import {
   LOW_CARB_MAX_SUGAR_PER_PORTION_G,
   LOW_CARB_MAX_SUGAR_SHARE_PERCENT,
   LOW_CARB_SKIP_REASON,
+  LOW_CARB_DRINK_REASON,
   isLowCarb,
   applyLowCarbTag,
   evaluateLowCarbTag,
@@ -329,5 +330,73 @@ describe('isLowCarb - the sugar rule', () => {
 
     expect(result.sugarSharePercent).toBe(30);
     expect(result.sugarSharePercent).toBeLessThanOrEqual(100);
+  });
+});
+
+describe('isLowCarb - drinks', () => {
+  // Figures that would sail through all three rules.
+  const passingNutrition = { kalorien: 400, kohlenhydrate: 5 };
+
+  it('never qualifies a drink, whatever its figures say', () => {
+    expect(isLowCarb({ portionen: 1, naehrwerte: passingNutrition }).qualifies).toBe(true);
+
+    const drink = isLowCarb({
+      portionen: 1,
+      speisekategorie: ['Drinks'],
+      naehrwerte: passingNutrition,
+    });
+    expect(drink.qualifies).toBe(false);
+    expect(drink.skipped).toBe(false);
+    expect(drink.reason).toBe(LOW_CARB_DRINK_REASON);
+  });
+
+  it('takes the tag off a drink that already carries one', () => {
+    const result = evaluateLowCarbTag({
+      portionen: 1,
+      speisekategorie: ['Drinks'],
+      kulinarik: ['Italienisch', LOW_CARB_TAG],
+      naehrwerte: passingNutrition,
+    });
+
+    expect(result.action).toBe('removed');
+    expect(result.changed).toBe(true);
+    expect(result.kulinarik).toEqual(['Italienisch']);
+  });
+
+  it.each([
+    ['Drinks'],
+    ['  drinks  '],
+    [['Vorspeise', 'DRINKS']],
+  ])('recognises %p as a drink', (speisekategorie) => {
+    const result = isLowCarb({ portionen: 1, speisekategorie, naehrwerte: passingNutrition });
+
+    expect(result.qualifies).toBe(false);
+    expect(result.reason).toBe(LOW_CARB_DRINK_REASON);
+  });
+
+  it('takes the tag off a drink even when the nutrition cannot be read', () => {
+    // Unreadable nutrition normally means "skip and leave the tag alone". For
+    // a drink there is nothing to read anyway - the exclusion is categorical.
+    const result = evaluateLowCarbTag({
+      portionen: 1,
+      speisekategorie: ['Drinks'],
+      kulinarik: [LOW_CARB_TAG],
+      naehrwerte: {},
+    });
+
+    expect(result.skipped).toBe(false);
+    expect(result.action).toBe('removed');
+    expect(result.kulinarik).toEqual([]);
+  });
+
+  it('leaves the verdict alone for other Speisekategorien', () => {
+    const result = isLowCarb({
+      portionen: 1,
+      speisekategorie: ['Hauptgericht', 'Vorspeise'],
+      naehrwerte: passingNutrition,
+    });
+
+    expect(result.qualifies).toBe(true);
+    expect(result.reason).toBeNull();
   });
 });

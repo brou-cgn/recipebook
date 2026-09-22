@@ -12,6 +12,7 @@ const {
   LOW_CARB_MAX_SUGAR_PER_PORTION_G,
   LOW_CARB_MAX_SUGAR_SHARE_PERCENT,
   LOW_CARB_SKIP_REASON,
+  LOW_CARB_DRINK_REASON,
   isLowCarb,
   applyLowCarbTag,
   evaluateLowCarbTag,
@@ -227,6 +228,73 @@ test('the sugar share is measured against the carbohydrates as stored', () => {
 
   assert.equal(result.sugarSharePercent, 30);
   assert.ok(result.sugarSharePercent <= 100);
+});
+
+test('a drink never qualifies, whatever its figures say', () => {
+  // Figures that would sail through all three rules.
+  const nutrition = {kalorien: 400, kohlenhydrate: 5};
+
+  assert.equal(isLowCarb({portionen: 1, naehrwerte: nutrition}).qualifies, true);
+
+  const drink = isLowCarb({
+    portionen: 1,
+    speisekategorie: ['Drinks'],
+    naehrwerte: nutrition,
+  });
+  assert.equal(drink.qualifies, false);
+  assert.equal(drink.skipped, false);
+  assert.equal(drink.reason, LOW_CARB_DRINK_REASON);
+});
+
+test('a drink loses a tag it already carries', () => {
+  const result = evaluateLowCarbTag({
+    portionen: 1,
+    speisekategorie: ['Drinks'],
+    kulinarik: ['Italienisch', LOW_CARB_TAG],
+    naehrwerte: {kalorien: 400, kohlenhydrate: 5},
+  });
+
+  assert.equal(result.action, 'removed');
+  assert.equal(result.changed, true);
+  assert.deepEqual(result.kulinarik, ['Italienisch']);
+});
+
+test('a drink is recognised from a plain string, and case and padding are ignored', () => {
+  for (const speisekategorie of ['Drinks', '  drinks  ', ['Vorspeise', 'DRINKS']]) {
+    const result = isLowCarb({
+      portionen: 1,
+      speisekategorie,
+      naehrwerte: {kalorien: 400, kohlenhydrate: 5},
+    });
+    assert.equal(result.qualifies, false, `nicht als Getränk erkannt: ${JSON.stringify(speisekategorie)}`);
+    assert.equal(result.reason, LOW_CARB_DRINK_REASON);
+  }
+});
+
+test('a drink loses its tag even when the nutrition cannot be read', () => {
+  // Unreadable nutrition normally means "skip and leave the tag alone". For a
+  // drink there is nothing to read anyway - the exclusion is categorical.
+  const result = evaluateLowCarbTag({
+    portionen: 1,
+    speisekategorie: ['Drinks'],
+    kulinarik: [LOW_CARB_TAG],
+    naehrwerte: {},
+  });
+
+  assert.equal(result.skipped, false);
+  assert.equal(result.action, 'removed');
+  assert.deepEqual(result.kulinarik, []);
+});
+
+test('other Speisekategorien leave the verdict alone', () => {
+  const result = isLowCarb({
+    portionen: 1,
+    speisekategorie: ['Hauptgericht', 'Vorspeise'],
+    naehrwerte: {kalorien: 400, kohlenhydrate: 5},
+  });
+
+  assert.equal(result.qualifies, true);
+  assert.equal(result.reason, null);
 });
 
 // The client cannot import from functions/ (separate deploy unit), so the

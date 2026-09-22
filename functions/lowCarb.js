@@ -7,6 +7,9 @@
  *   2. a single portion carries at most LOW_CARB_MAX_CARBS_PER_PORTION_G, and
  *   3. the recipe is not a sweet - see the sugar rule below.
  *
+ * Drinks are outside all of this: a recipe carrying the "Drinks"
+ * Speisekategorie never gets the tag, whatever its figures say.
+ *
  * Rule 1 is a ratio and therefore immune to the question of whether the
  * stored values mean "whole recipe", "per portion" or "per 100 g". Rule 2 is
  * not, which is why resolveNutritionBasis below goes to some length to put
@@ -62,6 +65,17 @@ const KCAL_PER_CARB_GRAM = 4;
 
 /** Reason logged for recipes that cannot be judged at all. */
 const LOW_CARB_SKIP_REASON = 'unvollständige Nährwerte';
+
+/**
+ * Speisekategorie that marks a recipe as a drink. Same spelling and the same
+ * case-insensitive comparison the menu uses (see recipeHasDrinksCategory in
+ * src/components/MenuForm.js), so a recipe counts as a drink in exactly one
+ * place across the app.
+ */
+const LOW_CARB_DRINKS_CATEGORY = 'Drinks';
+
+/** Reason logged for drinks, which the tag does not apply to at all. */
+const LOW_CARB_DRINK_REASON = 'Getränk';
 
 /**
  * @param {*} value - Raw field value.
@@ -176,6 +190,36 @@ function resolvePortionen(recipe) {
 }
 
 /**
+ * Normalises a field that holds a list of free-text strings but is still a
+ * plain string on older recipes - kulinarik and speisekategorie both.
+ *
+ * @param {*} value - Raw field value.
+ * @return {string[]} The entries it holds, blanks dropped.
+ */
+function normalizeTagList(value) {
+  if (Array.isArray(value)) {
+    return value
+        .filter((entry) => entry !== null && entry !== undefined)
+        .map((entry) => String(entry))
+        .filter((entry) => entry.trim() !== '');
+  }
+  if (typeof value === 'string' && value.trim() !== '') {
+    return [value];
+  }
+  return [];
+}
+
+/**
+ * @param {Object|null} recipe - Recipe document data.
+ * @return {boolean} Whether the recipe is a drink.
+ */
+function isDrink(recipe) {
+  const drinks = LOW_CARB_DRINKS_CATEGORY.toLowerCase();
+  return normalizeTagList(recipe && recipe.speisekategorie)
+      .some((entry) => entry.trim().toLowerCase() === drinks);
+}
+
+/**
  * Judges a single recipe against the low-carb rules. Pure - it reads nothing
  * but the object handed to it and writes nothing at all.
  *
@@ -185,10 +229,31 @@ function resolvePortionen(recipe) {
  *   basisSource, portionen}` - the verdict, with the numbers it was reached on
  *   so callers can log them. `skipped` marks a recipe whose nutrition could
  *   not be read at all; the sugar figures are null where no sugar is stored.
+ *   A drink comes back with `qualifies: false` and LOW_CARB_DRINK_REASON as
+ *   its reason, without being skipped.
  */
 function isLowCarb(recipe) {
   const basis = resolveNutritionBasis(recipe && recipe.naehrwerte);
   const portionen = resolvePortionen(recipe);
+
+  // A drink is not a dish the tag has anything to say about, so it is settled
+  // before the figures are looked at. Deliberately not 'skipped': skipping
+  // leaves an existing tag in place, and a drink that carries one today is
+  // meant to lose it.
+  if (isDrink(recipe)) {
+    return {
+      qualifies: false,
+      skipped: false,
+      reason: LOW_CARB_DRINK_REASON,
+      energyPercent: null,
+      carbsPerPortionG: null,
+      sugarPerPortionG: null,
+      sugarSharePercent: null,
+      sugarDisqualifies: false,
+      basisSource: basis.source,
+      portionen,
+    };
+  }
 
   const incomplete = {
     qualifies: false,
@@ -262,16 +327,7 @@ function isLowCarb(recipe) {
  * @return {string[]} The tags it holds.
  */
 function normalizeKulinarik(kulinarik) {
-  if (Array.isArray(kulinarik)) {
-    return kulinarik
-        .filter((entry) => entry !== null && entry !== undefined)
-        .map((entry) => String(entry))
-        .filter((entry) => entry.trim() !== '');
-  }
-  if (typeof kulinarik === 'string' && kulinarik.trim() !== '') {
-    return [kulinarik];
-  }
-  return [];
+  return normalizeTagList(kulinarik);
 }
 
 /**
@@ -361,6 +417,8 @@ module.exports = {
   LOW_CARB_MAX_SUGAR_SHARE_PERCENT,
   LOW_CARB_CARB_BASIS,
   LOW_CARB_SKIP_REASON,
+  LOW_CARB_DRINKS_CATEGORY,
+  LOW_CARB_DRINK_REASON,
   KCAL_PER_CARB_GRAM,
   isLowCarb,
   applyLowCarbTag,
