@@ -518,6 +518,10 @@ function withSugarAsCarbohydrates(naehrwerte) {
   const swapSugarIn = (source) => {
     const copy = {...source};
     delete copy.ballaststoffe;
+    // The sugar rule must not fire on this record: here sugar stands in for
+    // the carbohydrates, so leaving it in place as well would have isLowCarb
+    // judge a value against itself.
+    delete copy.zucker;
     const sugar = source.zucker;
     if (sugar === null || sugar === undefined || sugar === '') {
       // No sugar figure: leave no carbohydrate value either, so that
