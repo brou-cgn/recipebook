@@ -9,7 +9,10 @@ const {
   LOW_CARB_TAG,
   LOW_CARB_MAX_ENERGY_PERCENT,
   LOW_CARB_MAX_CARBS_PER_PORTION_G,
+  LOW_CARB_MAX_SUGAR_PER_PORTION_G,
+  LOW_CARB_MAX_SUGAR_SHARE_PERCENT,
   LOW_CARB_SKIP_REASON,
+  LOW_CARB_DRINK_REASON,
   isLowCarb,
   applyLowCarbTag,
   evaluateLowCarbTag,
@@ -151,6 +154,147 @@ test('evaluateLowCarbTag reports the action the migration log needs', () => {
   assert.equal(skipped.action, 'skipped');
   assert.equal(skipped.changed, false);
   assert.equal(skipped.kulinarik, null);
+});
+
+test('the sugar rule rejects a fat-heavy sweet the other two rules let through', () => {
+  // A vanilla cream: 130 g portions, 350 kcal per 100 g, of which fat supplies
+  // 82 %. Its carbohydrate share sits at 13 % and a portion carries 15 g, so
+  // rules 1 and 2 pass comfortably - but 98 % of those carbohydrates is sugar.
+  const result = isLowCarb({
+    portionen: 4,
+    naehrwerte: {
+      calcFinalWeightGrams: 519,
+      calcPer100g: {kalorien: 350, kohlenhydrate: 11.6, zucker: 11.4, ballaststoffe: 0.1},
+    },
+  });
+
+  assert.ok(result.energyPercent < LOW_CARB_MAX_ENERGY_PERCENT);
+  assert.ok(result.carbsPerPortionG <= LOW_CARB_MAX_CARBS_PER_PORTION_G);
+  assert.equal(result.sugarDisqualifies, true);
+  assert.equal(result.qualifies, false);
+});
+
+test('a small amount of sugar is not condemned by its share', () => {
+  // A tomato topping: 83 % of its carbohydrate is sugar, well past the share
+  // bound, but there are only five grams of it per portion.
+  const result = isLowCarb(withTotals({kalorien: 1200, kohlenhydrate: 24, zucker: 20}, 4));
+
+  assert.ok(result.sugarSharePercent > LOW_CARB_MAX_SUGAR_SHARE_PERCENT);
+  assert.equal(result.sugarPerPortionG, 5);
+  assert.equal(result.sugarDisqualifies, false);
+  assert.equal(result.qualifies, true);
+});
+
+test('a moderate share is not condemned by the amount', () => {
+  // A salad carrying strawberries: twelve grams of sugar per portion, but they
+  // sit inside an ordinary carbohydrate load rather than being all of it.
+  const result = isLowCarb(withTotals({kalorien: 1400, kohlenhydrate: 77, zucker: 48}, 4));
+
+  assert.equal(result.sugarPerPortionG, 12);
+  assert.ok(result.sugarSharePercent < LOW_CARB_MAX_SUGAR_SHARE_PERCENT);
+  assert.equal(result.sugarDisqualifies, false);
+  assert.equal(result.qualifies, true);
+});
+
+test('both sugar bounds are exclusive', () => {
+  // Exactly 10 g and exactly 75 %: neither bound is crossed, so the rule holds
+  // its peace.
+  const atBound = isLowCarb(withTotals({kalorien: 600, kohlenhydrate: 13.3333333, zucker: 10}));
+  assert.equal(atBound.sugarPerPortionG, LOW_CARB_MAX_SUGAR_PER_PORTION_G);
+  assert.equal(Math.round(atBound.sugarSharePercent), LOW_CARB_MAX_SUGAR_SHARE_PERCENT);
+  assert.equal(atBound.sugarDisqualifies, false);
+  assert.equal(atBound.qualifies, true);
+
+  const past = isLowCarb(withTotals({kalorien: 600, kohlenhydrate: 13.2894737, zucker: 10.1}));
+  assert.equal(past.sugarDisqualifies, true);
+  assert.equal(past.qualifies, false);
+});
+
+test('without a sugar figure the rule does not apply', () => {
+  const result = isLowCarb(withTotals({kalorien: 400, kohlenhydrate: 10}));
+
+  assert.equal(result.sugarPerPortionG, null);
+  assert.equal(result.sugarSharePercent, null);
+  assert.equal(result.sugarDisqualifies, false);
+  assert.equal(result.qualifies, true);
+});
+
+test('the sugar share is measured against the carbohydrates as stored', () => {
+  // Fibre belongs to the divisor. Taking it out while leaving the sugar whole
+  // would report 120 % here.
+  const result = isLowCarb(withTotals({
+    kalorien: 400, kohlenhydrate: 20, ballaststoffe: 15, zucker: 6,
+  }));
+
+  assert.equal(result.sugarSharePercent, 30);
+  assert.ok(result.sugarSharePercent <= 100);
+});
+
+test('a drink never qualifies, whatever its figures say', () => {
+  // Figures that would sail through all three rules.
+  const nutrition = {kalorien: 400, kohlenhydrate: 5};
+
+  assert.equal(isLowCarb({portionen: 1, naehrwerte: nutrition}).qualifies, true);
+
+  const drink = isLowCarb({
+    portionen: 1,
+    speisekategorie: ['Drinks'],
+    naehrwerte: nutrition,
+  });
+  assert.equal(drink.qualifies, false);
+  assert.equal(drink.skipped, false);
+  assert.equal(drink.reason, LOW_CARB_DRINK_REASON);
+});
+
+test('a drink loses a tag it already carries', () => {
+  const result = evaluateLowCarbTag({
+    portionen: 1,
+    speisekategorie: ['Drinks'],
+    kulinarik: ['Italienisch', LOW_CARB_TAG],
+    naehrwerte: {kalorien: 400, kohlenhydrate: 5},
+  });
+
+  assert.equal(result.action, 'removed');
+  assert.equal(result.changed, true);
+  assert.deepEqual(result.kulinarik, ['Italienisch']);
+});
+
+test('a drink is recognised from a plain string, and case and padding are ignored', () => {
+  for (const speisekategorie of ['Drinks', '  drinks  ', ['Vorspeise', 'DRINKS']]) {
+    const result = isLowCarb({
+      portionen: 1,
+      speisekategorie,
+      naehrwerte: {kalorien: 400, kohlenhydrate: 5},
+    });
+    assert.equal(result.qualifies, false, `nicht als Getränk erkannt: ${JSON.stringify(speisekategorie)}`);
+    assert.equal(result.reason, LOW_CARB_DRINK_REASON);
+  }
+});
+
+test('a drink loses its tag even when the nutrition cannot be read', () => {
+  // Unreadable nutrition normally means "skip and leave the tag alone". For a
+  // drink there is nothing to read anyway - the exclusion is categorical.
+  const result = evaluateLowCarbTag({
+    portionen: 1,
+    speisekategorie: ['Drinks'],
+    kulinarik: [LOW_CARB_TAG],
+    naehrwerte: {},
+  });
+
+  assert.equal(result.skipped, false);
+  assert.equal(result.action, 'removed');
+  assert.deepEqual(result.kulinarik, []);
+});
+
+test('other Speisekategorien leave the verdict alone', () => {
+  const result = isLowCarb({
+    portionen: 1,
+    speisekategorie: ['Hauptgericht', 'Vorspeise'],
+    naehrwerte: {kalorien: 400, kohlenhydrate: 5},
+  });
+
+  assert.equal(result.qualifies, true);
+  assert.equal(result.reason, null);
 });
 
 // The client cannot import from functions/ (separate deploy unit), so the

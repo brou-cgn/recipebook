@@ -2,7 +2,10 @@ import {
   LOW_CARB_TAG,
   LOW_CARB_MAX_ENERGY_PERCENT,
   LOW_CARB_MAX_CARBS_PER_PORTION_G,
+  LOW_CARB_MAX_SUGAR_PER_PORTION_G,
+  LOW_CARB_MAX_SUGAR_SHARE_PERCENT,
   LOW_CARB_SKIP_REASON,
+  LOW_CARB_DRINK_REASON,
   isLowCarb,
   applyLowCarbTag,
   evaluateLowCarbTag,
@@ -243,5 +246,157 @@ describe('evaluateLowCarbTag', () => {
     });
     expect(result.action).toBe('skipped');
     expect(result.changed).toBe(false);
+  });
+});
+
+describe('isLowCarb - the sugar rule', () => {
+  it('rejects a fat-heavy sweet the other two rules let through', () => {
+    // A vanilla cream: 130 g portions, 350 kcal per 100 g, of which fat
+    // supplies 82 %. Its carbohydrate share sits at 13 % and a portion carries
+    // 15 g, so rules 1 and 2 pass comfortably - but 98 % of those
+    // carbohydrates is sugar.
+    const result = isLowCarb({
+      portionen: 4,
+      naehrwerte: {
+        calcFinalWeightGrams: 519,
+        calcPer100g: { kalorien: 350, kohlenhydrate: 11.6, zucker: 11.4, ballaststoffe: 0.1 },
+      },
+    });
+
+    expect(result.energyPercent).toBeLessThan(LOW_CARB_MAX_ENERGY_PERCENT);
+    expect(result.carbsPerPortionG).toBeLessThanOrEqual(LOW_CARB_MAX_CARBS_PER_PORTION_G);
+    expect(result.sugarSharePercent).toBeCloseTo(98.28, 1);
+    expect(result.sugarDisqualifies).toBe(true);
+    expect(result.qualifies).toBe(false);
+  });
+
+  it('does not condemn a small amount of sugar for its share', () => {
+    // A tomato topping: 83 % of its carbohydrate is sugar, well past the share
+    // bound, but there are only five grams of it per portion.
+    const result = isLowCarb(
+      recipeWithTotals({ kalorien: 1200, kohlenhydrate: 24, zucker: 20 }, 4)
+    );
+
+    expect(result.sugarSharePercent).toBeGreaterThan(LOW_CARB_MAX_SUGAR_SHARE_PERCENT);
+    expect(result.sugarPerPortionG).toBe(5);
+    expect(result.sugarDisqualifies).toBe(false);
+    expect(result.qualifies).toBe(true);
+  });
+
+  it('does not condemn a moderate share for its amount', () => {
+    // A salad carrying strawberries: twelve grams of sugar per portion, but
+    // they sit inside an ordinary carbohydrate load rather than being all of it.
+    const result = isLowCarb(
+      recipeWithTotals({ kalorien: 1400, kohlenhydrate: 77, zucker: 48 }, 4)
+    );
+
+    expect(result.sugarPerPortionG).toBe(12);
+    expect(result.sugarSharePercent).toBeLessThan(LOW_CARB_MAX_SUGAR_SHARE_PERCENT);
+    expect(result.sugarDisqualifies).toBe(false);
+    expect(result.qualifies).toBe(true);
+  });
+
+  it('treats both sugar bounds as exclusive', () => {
+    const atBound = isLowCarb(
+      recipeWithTotals({ kalorien: 600, kohlenhydrate: 13.3333333, zucker: 10 })
+    );
+    expect(atBound.sugarPerPortionG).toBe(LOW_CARB_MAX_SUGAR_PER_PORTION_G);
+    expect(Math.round(atBound.sugarSharePercent)).toBe(LOW_CARB_MAX_SUGAR_SHARE_PERCENT);
+    expect(atBound.sugarDisqualifies).toBe(false);
+    expect(atBound.qualifies).toBe(true);
+
+    const past = isLowCarb(
+      recipeWithTotals({ kalorien: 600, kohlenhydrate: 13.2894737, zucker: 10.1 })
+    );
+    expect(past.sugarDisqualifies).toBe(true);
+    expect(past.qualifies).toBe(false);
+  });
+
+  it('does not apply where no sugar is stored', () => {
+    const result = isLowCarb(recipeWithTotals({ kalorien: 400, kohlenhydrate: 10 }));
+
+    expect(result.sugarPerPortionG).toBeNull();
+    expect(result.sugarSharePercent).toBeNull();
+    expect(result.sugarDisqualifies).toBe(false);
+    expect(result.qualifies).toBe(true);
+  });
+
+  it('measures the share against the carbohydrates as stored', () => {
+    // Fibre belongs to the divisor. Taking it out while leaving the sugar
+    // whole would report 120 % here.
+    const result = isLowCarb(
+      recipeWithTotals({ kalorien: 400, kohlenhydrate: 20, ballaststoffe: 15, zucker: 6 })
+    );
+
+    expect(result.sugarSharePercent).toBe(30);
+    expect(result.sugarSharePercent).toBeLessThanOrEqual(100);
+  });
+});
+
+describe('isLowCarb - drinks', () => {
+  // Figures that would sail through all three rules.
+  const passingNutrition = { kalorien: 400, kohlenhydrate: 5 };
+
+  it('never qualifies a drink, whatever its figures say', () => {
+    expect(isLowCarb({ portionen: 1, naehrwerte: passingNutrition }).qualifies).toBe(true);
+
+    const drink = isLowCarb({
+      portionen: 1,
+      speisekategorie: ['Drinks'],
+      naehrwerte: passingNutrition,
+    });
+    expect(drink.qualifies).toBe(false);
+    expect(drink.skipped).toBe(false);
+    expect(drink.reason).toBe(LOW_CARB_DRINK_REASON);
+  });
+
+  it('takes the tag off a drink that already carries one', () => {
+    const result = evaluateLowCarbTag({
+      portionen: 1,
+      speisekategorie: ['Drinks'],
+      kulinarik: ['Italienisch', LOW_CARB_TAG],
+      naehrwerte: passingNutrition,
+    });
+
+    expect(result.action).toBe('removed');
+    expect(result.changed).toBe(true);
+    expect(result.kulinarik).toEqual(['Italienisch']);
+  });
+
+  it.each([
+    ['Drinks'],
+    ['  drinks  '],
+    [['Vorspeise', 'DRINKS']],
+  ])('recognises %p as a drink', (speisekategorie) => {
+    const result = isLowCarb({ portionen: 1, speisekategorie, naehrwerte: passingNutrition });
+
+    expect(result.qualifies).toBe(false);
+    expect(result.reason).toBe(LOW_CARB_DRINK_REASON);
+  });
+
+  it('takes the tag off a drink even when the nutrition cannot be read', () => {
+    // Unreadable nutrition normally means "skip and leave the tag alone". For
+    // a drink there is nothing to read anyway - the exclusion is categorical.
+    const result = evaluateLowCarbTag({
+      portionen: 1,
+      speisekategorie: ['Drinks'],
+      kulinarik: [LOW_CARB_TAG],
+      naehrwerte: {},
+    });
+
+    expect(result.skipped).toBe(false);
+    expect(result.action).toBe('removed');
+    expect(result.kulinarik).toEqual([]);
+  });
+
+  it('leaves the verdict alone for other Speisekategorien', () => {
+    const result = isLowCarb({
+      portionen: 1,
+      speisekategorie: ['Hauptgericht', 'Vorspeise'],
+      naehrwerte: passingNutrition,
+    });
+
+    expect(result.qualifies).toBe(true);
+    expect(result.reason).toBeNull();
   });
 });

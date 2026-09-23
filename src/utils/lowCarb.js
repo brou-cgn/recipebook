@@ -1,15 +1,26 @@
 /**
  * Low-carb classification for recipes.
  *
- * Two rules decide, both have to hold:
+ * Three rules decide, all of them have to hold:
  *   1. the share of energy coming from carbohydrates stays below
- *      LOW_CARB_MAX_ENERGY_PERCENT, and
- *   2. a single portion carries at most LOW_CARB_MAX_CARBS_PER_PORTION_G.
+ *      LOW_CARB_MAX_ENERGY_PERCENT,
+ *   2. a single portion carries at most LOW_CARB_MAX_CARBS_PER_PORTION_G, and
+ *   3. the recipe is not a sweet - see the sugar rule below.
+ *
+ * Drinks are outside all of this: a recipe carrying the "Drinks"
+ * Speisekategorie never gets the tag, whatever its figures say.
  *
  * Rule 1 is a ratio and therefore immune to the question of whether the
  * stored values mean "whole recipe", "per portion" or "per 100 g". Rule 2 is
  * not, which is why resolveNutritionBasis below goes to some length to put
  * both numbers on one defined footing before anything is compared.
+ *
+ * Rule 3 exists because rules 1 and 2 are blind to a fat-heavy dessert. Cream
+ * inflates the energy denominator and pushes the carbohydrate share down, so a
+ * sweet clears rule 1 with room to spare while carrying almost nothing but
+ * sugar, and clears rule 2 because its carbohydrates are low in absolute terms
+ * as well. No threshold on those two catches it; only looking at the sugar
+ * does.
  *
  * Mirrored - deliberately - from functions/lowCarb.js. The functions/ directory
  * is deployed on its own (see firebase.json), so importing across from there
@@ -33,11 +44,38 @@ export const LOW_CARB_MAX_CARBS_PER_PORTION_G = 40;
  */
 export const LOW_CARB_CARB_BASIS = 'brutto';
 
+/**
+ * Sugar in a single portion, in grams, from which on the share below can
+ * disqualify a recipe. Below this amount the share is not consulted at all:
+ * a tomato topping carrying two grams of carbohydrate, nearly all of it
+ * sugar, is not a sweet.
+ */
+export const LOW_CARB_MAX_SUGAR_PER_PORTION_G = 10;
+
+/**
+ * Upper bound (inclusive) for sugar as a share of total carbohydrates, in
+ * percent. Measured against the carbohydrates as stored, never against the
+ * figure LOW_CARB_CARB_BASIS produces - subtracting fibre from the divisor
+ * while leaving the sugar whole would invent shares above 100 %.
+ */
+export const LOW_CARB_MAX_SUGAR_SHARE_PERCENT = 75;
+
 /** Physiological fuel value of one gram of carbohydrate, in kcal. */
 export const KCAL_PER_CARB_GRAM = 4;
 
 /** Reason logged for recipes that cannot be judged at all. */
 export const LOW_CARB_SKIP_REASON = 'unvollständige Nährwerte';
+
+/**
+ * Speisekategorie that marks a recipe as a drink. Same spelling and the same
+ * case-insensitive comparison the menu uses (see recipeHasDrinksCategory in
+ * src/components/MenuForm.js), so a recipe counts as a drink in exactly one
+ * place across the app.
+ */
+export const LOW_CARB_DRINKS_CATEGORY = 'Drinks';
+
+/** Reason logged for drinks, which the tag does not apply to at all. */
+export const LOW_CARB_DRINK_REASON = 'Getränk';
 
 /**
  * @param {*} value - Raw field value.
@@ -85,9 +123,12 @@ function applyCarbBasis(carbs, fibre) {
  * the whole recipe.
  *
  * @param {Object|null} naehrwerte - The recipe's stored nutrition record.
- * @return {Object} `{source, kalorien, kohlenhydrate, totalCarbsG}` - where
- *   source is 'per100g' or 'total', kalorien and kohlenhydrate share one unit
- *   and are null when missing, and totalCarbsG covers the whole recipe.
+ * @return {Object} `{source, kalorien, kohlenhydrate, kohlenhydrateBrutto,
+ *   zucker, totalCarbsG, totalSugarG}` - where source is 'per100g' or 'total',
+ *   kalorien, kohlenhydrate, kohlenhydrateBrutto and zucker share one unit and
+ *   are null when missing, and the two total* figures cover the whole recipe.
+ *   kohlenhydrateBrutto is the carbohydrate value before LOW_CARB_CARB_BASIS
+ *   is applied; zucker never has fibre subtracted from it.
  */
 function resolveNutritionBasis(naehrwerte) {
   const record = naehrwerte && typeof naehrwerte === 'object' ? naehrwerte : {};
@@ -106,11 +147,17 @@ function resolveNutritionBasis(naehrwerte) {
     const rawCarbsPer100g = toFiniteNumber(per100g.kohlenhydrate);
     if (kcalPer100g != null && rawCarbsPer100g != null) {
       const carbsPer100g = applyCarbBasis(rawCarbsPer100g, per100g.ballaststoffe);
+      const sugarPer100g = toFiniteNumber(per100g.zucker);
       return {
         source: 'per100g',
         kalorien: kcalPer100g,
         kohlenhydrate: carbsPer100g,
+        kohlenhydrateBrutto: rawCarbsPer100g,
+        zucker: sugarPer100g,
         totalCarbsG: (carbsPer100g * finalWeightGrams) / 100,
+        totalSugarG: sugarPer100g == null ?
+          null :
+          (sugarPer100g * finalWeightGrams) / 100,
       };
     }
   }
@@ -121,11 +168,16 @@ function resolveNutritionBasis(naehrwerte) {
     null :
     applyCarbBasis(rawCarbs, record.ballaststoffe);
 
+  const zucker = toFiniteNumber(record.zucker);
+
   return {
     source: 'total',
     kalorien,
     kohlenhydrate,
+    kohlenhydrateBrutto: rawCarbs,
+    zucker,
     totalCarbsG: kohlenhydrate,
+    totalSugarG: zucker,
   };
 }
 
@@ -138,18 +190,70 @@ function resolvePortionen(recipe) {
 }
 
 /**
+ * Normalises a field that holds a list of free-text strings but is still a
+ * plain string on older recipes - kulinarik and speisekategorie both.
+ *
+ * @param {*} value - Raw field value.
+ * @return {string[]} The entries it holds, blanks dropped.
+ */
+function normalizeTagList(value) {
+  if (Array.isArray(value)) {
+    return value
+        .filter((entry) => entry !== null && entry !== undefined)
+        .map((entry) => String(entry))
+        .filter((entry) => entry.trim() !== '');
+  }
+  if (typeof value === 'string' && value.trim() !== '') {
+    return [value];
+  }
+  return [];
+}
+
+/**
+ * @param {Object|null} recipe - Recipe document data.
+ * @return {boolean} Whether the recipe is a drink.
+ */
+function isDrink(recipe) {
+  const drinks = LOW_CARB_DRINKS_CATEGORY.toLowerCase();
+  return normalizeTagList(recipe && recipe.speisekategorie)
+      .some((entry) => entry.trim().toLowerCase() === drinks);
+}
+
+/**
  * Judges a single recipe against the low-carb rules. Pure - it reads nothing
  * but the object handed to it and writes nothing at all.
  *
  * @param {Object|null} recipe - Recipe document data.
  * @return {Object} `{qualifies, skipped, reason, energyPercent,
- *   carbsPerPortionG, basisSource, portionen}` - the verdict, with the numbers
- *   it was reached on so callers can log them. `skipped` marks a recipe whose
- *   nutrition could not be read at all.
+ *   carbsPerPortionG, sugarPerPortionG, sugarSharePercent, sugarDisqualifies,
+ *   basisSource, portionen}` - the verdict, with the numbers it was reached on
+ *   so callers can log them. `skipped` marks a recipe whose nutrition could
+ *   not be read at all; the sugar figures are null where no sugar is stored.
+ *   A drink comes back with `qualifies: false` and LOW_CARB_DRINK_REASON as
+ *   its reason, without being skipped.
  */
 export function isLowCarb(recipe) {
   const basis = resolveNutritionBasis(recipe && recipe.naehrwerte);
   const portionen = resolvePortionen(recipe);
+
+  // A drink is not a dish the tag has anything to say about, so it is settled
+  // before the figures are looked at. Deliberately not 'skipped': skipping
+  // leaves an existing tag in place, and a drink that carries one today is
+  // meant to lose it.
+  if (isDrink(recipe)) {
+    return {
+      qualifies: false,
+      skipped: false,
+      reason: LOW_CARB_DRINK_REASON,
+      energyPercent: null,
+      carbsPerPortionG: null,
+      sugarPerPortionG: null,
+      sugarSharePercent: null,
+      sugarDisqualifies: false,
+      basisSource: basis.source,
+      portionen,
+    };
+  }
 
   const incomplete = {
     qualifies: false,
@@ -157,6 +261,9 @@ export function isLowCarb(recipe) {
     reason: LOW_CARB_SKIP_REASON,
     energyPercent: null,
     carbsPerPortionG: null,
+    sugarPerPortionG: null,
+    sugarSharePercent: null,
+    sugarDisqualifies: false,
     basisSource: basis.source,
     portionen,
   };
@@ -171,9 +278,32 @@ export function isLowCarb(recipe) {
     ((basis.kohlenhydrate * KCAL_PER_CARB_GRAM) / basis.kalorien) * 100;
   const carbsPerPortionG = basis.totalCarbsG / portionen;
 
+  const sugarPerPortionG =
+    basis.totalSugarG == null ? null : basis.totalSugarG / portionen;
+  const sugarSharePercent =
+    basis.zucker == null ||
+    basis.kohlenhydrateBrutto == null ||
+    basis.kohlenhydrateBrutto <= 0 ?
+      null :
+      (basis.zucker / basis.kohlenhydrateBrutto) * 100;
+
+  // A dish whose carbohydrates are essentially sugar, in an amount that
+  // matters, is a sweet. Both halves are needed: the share on its own would
+  // condemn the tomato topping mentioned above, and the amount on its own
+  // would condemn a fruit-bearing salad whose sugar sits inside an otherwise
+  // ordinary carbohydrate load. Where no sugar figure is stored the rule
+  // simply does not apply - the recipe is then judged on rules 1 and 2, as it
+  // was before this rule existed, rather than guessed at.
+  const sugarDisqualifies =
+    sugarPerPortionG != null &&
+    sugarSharePercent != null &&
+    sugarPerPortionG > LOW_CARB_MAX_SUGAR_PER_PORTION_G &&
+    sugarSharePercent > LOW_CARB_MAX_SUGAR_SHARE_PERCENT;
+
   const qualifies =
     energyPercent < LOW_CARB_MAX_ENERGY_PERCENT &&
-    carbsPerPortionG <= LOW_CARB_MAX_CARBS_PER_PORTION_G;
+    carbsPerPortionG <= LOW_CARB_MAX_CARBS_PER_PORTION_G &&
+    !sugarDisqualifies;
 
   return {
     qualifies,
@@ -181,6 +311,9 @@ export function isLowCarb(recipe) {
     reason: null,
     energyPercent,
     carbsPerPortionG,
+    sugarPerPortionG,
+    sugarSharePercent,
+    sugarDisqualifies,
     basisSource: basis.source,
     portionen,
   };
@@ -194,16 +327,7 @@ export function isLowCarb(recipe) {
  * @return {string[]} The tags it holds.
  */
 export function normalizeKulinarik(kulinarik) {
-  if (Array.isArray(kulinarik)) {
-    return kulinarik
-        .filter((entry) => entry !== null && entry !== undefined)
-        .map((entry) => String(entry))
-        .filter((entry) => entry.trim() !== '');
-  }
-  if (typeof kulinarik === 'string' && kulinarik.trim() !== '') {
-    return [kulinarik];
-  }
-  return [];
+  return normalizeTagList(kulinarik);
 }
 
 /**
