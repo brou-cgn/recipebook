@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useLongPress } from '../utils/useLongPress';
-import { useAcceleratingLongPress } from '../hooks/useAcceleratingLongPress';
+import { useAcceleratingLongPress, stepToNextMultiple } from '../hooks/useAcceleratingLongPress';
 import './RecipeDetail.css';
 import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe, canDeleteRecipes, canViewRecipeIndex, isCurrentUserAdmin } from '../utils/userManagement';
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
@@ -1403,21 +1403,24 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     return formatIngredientAsFraction(scaled);
   };
 
-  const currentServings = (recipe.portionen || 4) * servingMultiplier;
+  // Rounded because servingMultiplier is a fraction (newServings / basePortions);
+  // for a basePortions that doesn't divide evenly, the round trip through
+  // that fraction can leave floating-point noise like 9.999999999999998.
+  const currentServings = Math.round((recipe.portionen || 4) * servingMultiplier);
 
   const currentServingsRef = useRef(currentServings);
   useEffect(() => {
     currentServingsRef.current = currentServings;
   }, [currentServings]);
 
-  const applyServingDelta = useCallback((delta) => {
+  const applyServingStep = useCallback((direction, stepSize) => {
     const basePortions = recipe.portionen || 4;
-    const newServings = Math.max(1, currentServingsRef.current + delta);
+    const newServings = Math.max(1, stepToNextMultiple(currentServingsRef.current, direction, stepSize));
     setServingMultiplier(newServings / basePortions);
     if (onPortionCountChange) onPortionCountChange(recipe.id, newServings);
   }, [recipe.portionen, recipe.id, onPortionCountChange]);
 
-  const servingLongPress = useAcceleratingLongPress(applyServingDelta);
+  const servingLongPress = useAcceleratingLongPress(applyServingStep);
 
   const handleShoppingListClick = () => {
     if (linkedRecipes.length > 0) {
@@ -2094,7 +2097,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                           servingLongPress.triggeredRef.current = false;
                           return;
                         }
-                        applyServingDelta(-1);
+                        applyServingStep(-1, 1);
                       }}
                       onMouseDown={() => servingLongPress.start(-1)}
                       onMouseUp={servingLongPress.end}
@@ -2116,7 +2119,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                           servingLongPress.triggeredRef.current = false;
                           return;
                         }
-                        applyServingDelta(1);
+                        applyServingStep(1, 1);
                       }}
                       onMouseDown={() => servingLongPress.start(1)}
                       onMouseUp={servingLongPress.end}
@@ -2714,7 +2717,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                           servingLongPress.triggeredRef.current = false;
                           return;
                         }
-                        applyServingDelta(-1);
+                        applyServingStep(-1, 1);
                       }}
                       onMouseDown={() => servingLongPress.start(-1)}
                       onMouseUp={servingLongPress.end}
@@ -2736,7 +2739,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                           servingLongPress.triggeredRef.current = false;
                           return;
                         }
-                        applyServingDelta(1);
+                        applyServingStep(1, 1);
                       }}
                       onMouseDown={() => servingLongPress.start(1)}
                       onMouseUp={servingLongPress.end}
