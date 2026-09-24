@@ -462,6 +462,20 @@
   color: #c08060;
 }
 
+[data-theme="dark"] .recipe-link-button {
+  color: #DF7A00;
+  text-decoration-color: rgba(223, 122, 0, 0.45);
+}
+
+[data-theme="dark"] .recipe-link-button:hover {
+  color: #f0951c;
+  text-decoration-color: rgba(240, 149, 28, 0.6);
+}
+
+[data-theme="dark"] .recipe-link-button:focus-visible {
+  outline-color: #DF7A00;
+}
+
 [data-theme="dark"] .instruction-step-number {
   background: #2a2a2a;
   color: #e8e8e8;
