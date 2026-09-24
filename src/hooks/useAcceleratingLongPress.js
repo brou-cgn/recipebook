@@ -4,14 +4,12 @@ export const LONGPRESS_INITIAL_DELAY_MS = 500;
 export const LONGPRESS_TICK_MS = 150;
 
 // Step size used once the hold has lasted at least `afterMs`, checked
-// longest-first so the escalation is 1 -> 2 -> 5 -> 10 -> 20 -> 50 -> 100.
+// longest-first so the escalation is 1 -> 5 -> 10 -> 50 -> 100.
 export const LONGPRESS_STEP_THRESHOLDS = [
-  { afterMs: 9000, step: 100 },
-  { afterMs: 7000, step: 50 },
-  { afterMs: 5000, step: 20 },
-  { afterMs: 3500, step: 10 },
-  { afterMs: 2000, step: 5 },
-  { afterMs: 1000, step: 2 },
+  { afterMs: 6000, step: 100 },
+  { afterMs: 4500, step: 50 },
+  { afterMs: 3000, step: 10 },
+  { afterMs: 1500, step: 5 },
   { afterMs: 0, step: 1 },
 ];
 
