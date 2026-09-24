@@ -1,9 +1,9 @@
 import React from 'react';
 import { render, fireEvent, act, screen } from '@testing-library/react';
-import { useAcceleratingLongPress } from './useAcceleratingLongPress';
+import { useAcceleratingLongPress, stepToNextMultiple } from './useAcceleratingLongPress';
 
-function Harness({ onStep }) {
-  const longPress = useAcceleratingLongPress(onStep);
+function Harness({ onTick }) {
+  const longPress = useAcceleratingLongPress(onTick);
   return (
     <button
       aria-label="stepper"
@@ -16,6 +16,35 @@ function Harness({ onStep }) {
   );
 }
 
+describe('stepToNextMultiple', () => {
+  test('increments to the next higher multiple when off-grid', () => {
+    expect(stepToNextMultiple(23, 1, 10)).toBe(30);
+    expect(stepToNextMultiple(4, 1, 5)).toBe(5);
+    expect(stepToNextMultiple(5, 1, 2)).toBe(6);
+  });
+
+  test('increments by a full step when already on-grid', () => {
+    expect(stepToNextMultiple(20, 1, 10)).toBe(30);
+    expect(stepToNextMultiple(10, 1, 5)).toBe(15);
+  });
+
+  test('decrements to the next lower multiple when off-grid', () => {
+    expect(stepToNextMultiple(23, -1, 10)).toBe(20);
+    expect(stepToNextMultiple(7, -1, 5)).toBe(5);
+    expect(stepToNextMultiple(5, -1, 2)).toBe(4);
+  });
+
+  test('decrements by a full step when already on-grid', () => {
+    expect(stepToNextMultiple(20, -1, 10)).toBe(10);
+    expect(stepToNextMultiple(10, -1, 5)).toBe(5);
+  });
+
+  test('step size 1 behaves like a plain +/-1', () => {
+    expect(stepToNextMultiple(7, 1, 1)).toBe(8);
+    expect(stepToNextMultiple(7, -1, 1)).toBe(6);
+  });
+});
+
 describe('useAcceleratingLongPress', () => {
   beforeEach(() => {
     jest.useFakeTimers();
@@ -26,106 +55,130 @@ describe('useAcceleratingLongPress', () => {
   });
 
   test('does not fire before the initial delay', () => {
-    const onStep = jest.fn();
-    render(<Harness onStep={onStep} />);
+    const onTick = jest.fn();
+    render(<Harness onTick={onTick} />);
     const btn = screen.getByLabelText('stepper');
 
     fireEvent.mouseDown(btn);
     act(() => { jest.advanceTimersByTime(400); });
     fireEvent.mouseUp(btn);
 
-    expect(onStep).not.toHaveBeenCalled();
+    expect(onTick).not.toHaveBeenCalled();
   });
 
-  test('first repeat tick after the initial delay steps by 1', () => {
-    const onStep = jest.fn();
-    render(<Harness onStep={onStep} />);
+  test('first repeat tick after the initial delay uses step 1', () => {
+    const onTick = jest.fn();
+    render(<Harness onTick={onTick} />);
     const btn = screen.getByLabelText('stepper');
 
     fireEvent.mouseDown(btn);
     act(() => { jest.advanceTimersByTime(650); }); // 500ms delay + first 150ms tick
     fireEvent.mouseUp(btn);
 
-    expect(onStep).toHaveBeenCalledWith(1);
+    expect(onTick).toHaveBeenCalledWith(1, 1);
   });
 
-  test('escalates to 10er steps once the hold reaches 2s', () => {
-    const onStep = jest.fn();
-    render(<Harness onStep={onStep} />);
+  test('escalates to step 2 once the hold reaches 1s', () => {
+    const onTick = jest.fn();
+    render(<Harness onTick={onTick} />);
     const btn = screen.getByLabelText('stepper');
 
     fireEvent.mouseDown(btn);
-    act(() => { jest.advanceTimersByTime(2000); });
+    act(() => { jest.advanceTimersByTime(1100); }); // a bit past the 1s threshold
     fireEvent.mouseUp(btn);
 
-    expect(onStep).toHaveBeenLastCalledWith(10);
+    expect(onTick).toHaveBeenLastCalledWith(1, 2);
   });
 
-  test('escalates to 20er steps once the hold reaches 4s', () => {
-    const onStep = jest.fn();
-    render(<Harness onStep={onStep} />);
+  test('escalates to step 5 once the hold reaches 2s', () => {
+    const onTick = jest.fn();
+    render(<Harness onTick={onTick} />);
     const btn = screen.getByLabelText('stepper');
 
     fireEvent.mouseDown(btn);
-    act(() => { jest.advanceTimersByTime(4200); }); // a bit past the 4s threshold so a tick lands after it
+    act(() => { jest.advanceTimersByTime(2100); });
     fireEvent.mouseUp(btn);
 
-    expect(onStep).toHaveBeenLastCalledWith(20);
+    expect(onTick).toHaveBeenLastCalledWith(1, 5);
   });
 
-  test('escalates to 50er steps once the hold reaches 6s', () => {
-    const onStep = jest.fn();
-    render(<Harness onStep={onStep} />);
+  test('escalates to step 10 once the hold reaches 3.5s', () => {
+    const onTick = jest.fn();
+    render(<Harness onTick={onTick} />);
     const btn = screen.getByLabelText('stepper');
 
     fireEvent.mouseDown(btn);
-    act(() => { jest.advanceTimersByTime(6200); }); // a bit past the 6s threshold so a tick lands after it
+    act(() => { jest.advanceTimersByTime(3600); });
     fireEvent.mouseUp(btn);
 
-    expect(onStep).toHaveBeenLastCalledWith(50);
+    expect(onTick).toHaveBeenLastCalledWith(1, 10);
   });
 
-  test('escalates to 100er steps once the hold reaches 9s', () => {
-    const onStep = jest.fn();
-    render(<Harness onStep={onStep} />);
+  test('escalates to step 20 once the hold reaches 5s', () => {
+    const onTick = jest.fn();
+    render(<Harness onTick={onTick} />);
     const btn = screen.getByLabelText('stepper');
 
     fireEvent.mouseDown(btn);
-    act(() => { jest.advanceTimersByTime(9200); }); // a bit past the 9s threshold so a tick lands after it
+    act(() => { jest.advanceTimersByTime(5100); });
     fireEvent.mouseUp(btn);
 
-    expect(onStep).toHaveBeenLastCalledWith(100);
+    expect(onTick).toHaveBeenLastCalledWith(1, 20);
   });
 
-  test('releasing and pressing again restarts escalation from 1er steps', () => {
-    const onStep = jest.fn();
-    render(<Harness onStep={onStep} />);
+  test('escalates to step 50 once the hold reaches 7s', () => {
+    const onTick = jest.fn();
+    render(<Harness onTick={onTick} />);
     const btn = screen.getByLabelText('stepper');
 
     fireEvent.mouseDown(btn);
-    act(() => { jest.advanceTimersByTime(4000); }); // escalated to 20er
+    act(() => { jest.advanceTimersByTime(7100); });
     fireEvent.mouseUp(btn);
-    onStep.mockClear();
+
+    expect(onTick).toHaveBeenLastCalledWith(1, 50);
+  });
+
+  test('escalates to step 100 once the hold reaches 9s', () => {
+    const onTick = jest.fn();
+    render(<Harness onTick={onTick} />);
+    const btn = screen.getByLabelText('stepper');
+
+    fireEvent.mouseDown(btn);
+    act(() => { jest.advanceTimersByTime(9100); });
+    fireEvent.mouseUp(btn);
+
+    expect(onTick).toHaveBeenLastCalledWith(1, 100);
+  });
+
+  test('releasing and pressing again restarts escalation from step 1', () => {
+    const onTick = jest.fn();
+    render(<Harness onTick={onTick} />);
+    const btn = screen.getByLabelText('stepper');
+
+    fireEvent.mouseDown(btn);
+    act(() => { jest.advanceTimersByTime(5100); }); // escalated to step 20
+    fireEvent.mouseUp(btn);
+    onTick.mockClear();
 
     fireEvent.mouseDown(btn);
     act(() => { jest.advanceTimersByTime(650); });
     fireEvent.mouseUp(btn);
 
-    expect(onStep).toHaveBeenCalledWith(1);
+    expect(onTick).toHaveBeenCalledWith(1, 1);
   });
 
   test('stops firing once released', () => {
-    const onStep = jest.fn();
-    render(<Harness onStep={onStep} />);
+    const onTick = jest.fn();
+    render(<Harness onTick={onTick} />);
     const btn = screen.getByLabelText('stepper');
 
     fireEvent.mouseDown(btn);
     act(() => { jest.advanceTimersByTime(650); });
     fireEvent.mouseUp(btn);
-    const callsAtRelease = onStep.mock.calls.length;
+    const callsAtRelease = onTick.mock.calls.length;
 
     act(() => { jest.advanceTimersByTime(1000); });
 
-    expect(onStep.mock.calls.length).toBe(callsAtRelease);
+    expect(onTick.mock.calls.length).toBe(callsAtRelease);
   });
 });

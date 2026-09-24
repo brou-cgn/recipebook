@@ -462,6 +462,39 @@ describe('RecipeDetail - Accelerating longpress on serving stepper', () => {
 
     expect(getServingCount(container)).toBe(1);
   });
+
+  test('holding long enough to reach the 10er tier lands on a multiple of 10', () => {
+    const { container } = renderRecipe();
+    const incrementButton = screen.getAllByRole('button').find(btn => btn.textContent === '+');
+
+    fireEvent.mouseDown(incrementButton);
+    act(() => { jest.advanceTimersByTime(3600); }); // last tick before this lands exactly in the 10er window
+    fireEvent.mouseUp(incrementButton);
+
+    expect(getServingCount(container) % 10).toBe(0);
+  });
+
+  test('reaching a serving count that is not a clean fraction of the base portions still shows a whole number', () => {
+    // 3 base portions means intermediate multipliers like 10/3 are not exact
+    // in floating point - the displayed count must not show that drift.
+    const oddBaseRecipe = { ...mockRecipe, id: 'recipe-serving-lp-odd', portionen: 3 };
+    const { container } = render(
+      <RecipeDetail
+        recipe={oddBaseRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+    const incrementButton = screen.getAllByRole('button').find(btn => btn.textContent === '+');
+
+    for (let i = 0; i < 7; i++) {
+      fireEvent.click(incrementButton); // 3 -> 10
+    }
+
+    expect(container.querySelector('.serving-display').textContent).toMatch(/^10\s/);
+  });
 });
 
 describe('RecipeDetail - Rating Stars Color', () => {
