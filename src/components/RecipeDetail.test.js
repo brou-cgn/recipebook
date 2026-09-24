@@ -385,6 +385,85 @@ describe('RecipeDetail - Portion Controller', () => {
   });
 });
 
+describe('RecipeDetail - Accelerating longpress on serving stepper', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  const mockRecipe = {
+    id: 'recipe-serving-lp',
+    title: 'Serving LP Recipe',
+    authorId: 'user-1',
+    portionen: 4,
+    ingredients: ['200g Mehl'],
+    steps: ['Step 1'],
+  };
+
+  const currentUser = { id: 'user-1' };
+
+  const renderRecipe = () => render(
+    <RecipeDetail
+      recipe={mockRecipe}
+      onBack={() => {}}
+      onEdit={() => {}}
+      onDelete={() => {}}
+      currentUser={currentUser}
+    />
+  );
+
+  const getServingCount = (container) =>
+    parseInt(container.querySelector('.serving-display').textContent, 10);
+
+  test('a plain click still steps by 1', () => {
+    const { container } = renderRecipe();
+    const incrementButton = screen.getAllByRole('button').find(btn => btn.textContent === '+');
+
+    fireEvent.click(incrementButton);
+
+    expect(getServingCount(container)).toBe(5);
+  });
+
+  test('holding the button advances by more than one plain click would', () => {
+    const { container } = renderRecipe();
+    const incrementButton = screen.getAllByRole('button').find(btn => btn.textContent === '+');
+
+    fireEvent.mouseDown(incrementButton);
+    act(() => { jest.advanceTimersByTime(4000); });
+    fireEvent.mouseUp(incrementButton);
+
+    expect(getServingCount(container)).toBeGreaterThan(5);
+  });
+
+  test('the click that ends a long press does not additionally apply a single step', () => {
+    const { container } = renderRecipe();
+    const incrementButton = screen.getAllByRole('button').find(btn => btn.textContent === '+');
+
+    fireEvent.mouseDown(incrementButton);
+    act(() => { jest.advanceTimersByTime(650); });
+    fireEvent.mouseUp(incrementButton);
+    const afterHold = getServingCount(container);
+
+    fireEvent.click(incrementButton);
+
+    expect(getServingCount(container)).toBe(afterHold);
+  });
+
+  test('holding the minus button never drops servings below 1', () => {
+    const { container } = renderRecipe();
+    const decrementButton = screen.getAllByRole('button').find(btn => btn.textContent === '-');
+
+    fireEvent.mouseDown(decrementButton);
+    act(() => { jest.advanceTimersByTime(9000); });
+    fireEvent.mouseUp(decrementButton);
+
+    expect(getServingCount(container)).toBe(1);
+  });
+});
+
 describe('RecipeDetail - Rating Stars Color', () => {
   const mockRecipe = {
     id: 'recipe-1',

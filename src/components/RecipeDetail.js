@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useLongPress } from '../utils/useLongPress';
+import { useAcceleratingLongPress } from '../hooks/useAcceleratingLongPress';
 import './RecipeDetail.css';
 import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe, canDeleteRecipes, canViewRecipeIndex, isCurrentUserAdmin } from '../utils/userManagement';
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
@@ -1404,6 +1405,20 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
   const currentServings = (recipe.portionen || 4) * servingMultiplier;
 
+  const currentServingsRef = useRef(currentServings);
+  useEffect(() => {
+    currentServingsRef.current = currentServings;
+  }, [currentServings]);
+
+  const applyServingDelta = useCallback((delta) => {
+    const basePortions = recipe.portionen || 4;
+    const newServings = Math.max(1, currentServingsRef.current + delta);
+    setServingMultiplier(newServings / basePortions);
+    if (onPortionCountChange) onPortionCountChange(recipe.id, newServings);
+  }, [recipe.portionen, recipe.id, onPortionCountChange]);
+
+  const servingLongPress = useAcceleratingLongPress(applyServingDelta);
+
   const handleShoppingListClick = () => {
     if (linkedRecipes.length > 0) {
       setLinkedPortionCounts({});
@@ -2072,16 +2087,21 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 <h2>Zutaten für</h2>
                 {recipe.portionen && (
                   <div className="serving-control">
-                    <button 
+                    <button
                       className="serving-btn"
                       onClick={() => {
-                        const basePortions = recipe.portionen || 4;
-                        const newServings = currentServings - 1;
-                        if (newServings >= 1) {
-                          setServingMultiplier(newServings / basePortions);
-                          if (onPortionCountChange) onPortionCountChange(recipe.id, newServings);
+                        if (servingLongPress.triggeredRef.current) {
+                          servingLongPress.triggeredRef.current = false;
+                          return;
                         }
+                        applyServingDelta(-1);
                       }}
+                      onMouseDown={() => servingLongPress.start(-1)}
+                      onMouseUp={servingLongPress.end}
+                      onMouseLeave={servingLongPress.end}
+                      onTouchStart={() => servingLongPress.start(-1)}
+                      onTouchEnd={servingLongPress.end}
+                      onTouchCancel={servingLongPress.end}
                       disabled={currentServings <= 1}
                     >
                       -
@@ -2089,14 +2109,21 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     <span className="serving-display">
                       {currentServings} {portionLabel}
                     </span>
-                    <button 
+                    <button
                       className="serving-btn"
                       onClick={() => {
-                        const basePortions = recipe.portionen || 4;
-                        const newServings = currentServings + 1;
-                        setServingMultiplier(newServings / basePortions);
-                        if (onPortionCountChange) onPortionCountChange(recipe.id, newServings);
+                        if (servingLongPress.triggeredRef.current) {
+                          servingLongPress.triggeredRef.current = false;
+                          return;
+                        }
+                        applyServingDelta(1);
                       }}
+                      onMouseDown={() => servingLongPress.start(1)}
+                      onMouseUp={servingLongPress.end}
+                      onMouseLeave={servingLongPress.end}
+                      onTouchStart={() => servingLongPress.start(1)}
+                      onTouchEnd={servingLongPress.end}
+                      onTouchCancel={servingLongPress.end}
                     >
                       +
                     </button>
@@ -2680,16 +2707,21 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 <h2>Zutaten für</h2>
                 {recipe.portionen && (
                   <div className="serving-control">
-                    <button 
+                    <button
                       className="serving-btn"
                       onClick={() => {
-                        const basePortions = recipe.portionen || 4;
-                        const newServings = currentServings - 1;
-                        if (newServings >= 1) {
-                          setServingMultiplier(newServings / basePortions);
-                          if (onPortionCountChange) onPortionCountChange(recipe.id, newServings);
+                        if (servingLongPress.triggeredRef.current) {
+                          servingLongPress.triggeredRef.current = false;
+                          return;
                         }
+                        applyServingDelta(-1);
                       }}
+                      onMouseDown={() => servingLongPress.start(-1)}
+                      onMouseUp={servingLongPress.end}
+                      onMouseLeave={servingLongPress.end}
+                      onTouchStart={() => servingLongPress.start(-1)}
+                      onTouchEnd={servingLongPress.end}
+                      onTouchCancel={servingLongPress.end}
                       disabled={currentServings <= 1}
                     >
                       -
@@ -2697,14 +2729,21 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     <span className="serving-display">
                       {currentServings} {portionLabel}
                     </span>
-                    <button 
+                    <button
                       className="serving-btn"
                       onClick={() => {
-                        const basePortions = recipe.portionen || 4;
-                        const newServings = currentServings + 1;
-                        setServingMultiplier(newServings / basePortions);
-                        if (onPortionCountChange) onPortionCountChange(recipe.id, newServings);
+                        if (servingLongPress.triggeredRef.current) {
+                          servingLongPress.triggeredRef.current = false;
+                          return;
+                        }
+                        applyServingDelta(1);
                       }}
+                      onMouseDown={() => servingLongPress.start(1)}
+                      onMouseUp={servingLongPress.end}
+                      onMouseLeave={servingLongPress.end}
+                      onTouchStart={() => servingLongPress.start(1)}
+                      onTouchEnd={servingLongPress.end}
+                      onTouchCancel={servingLongPress.end}
                     >
                       +
                     </button>
