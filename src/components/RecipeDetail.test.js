@@ -468,7 +468,7 @@ describe('RecipeDetail - Accelerating longpress on serving stepper', () => {
     const incrementButton = screen.getAllByRole('button').find(btn => btn.textContent === '+');
 
     fireEvent.mouseDown(incrementButton);
-    act(() => { jest.advanceTimersByTime(3600); }); // last tick before this lands exactly in the 10er window
+    act(() => { jest.advanceTimersByTime(3600); }); // within the 10er window (3000-4500ms)
     fireEvent.mouseUp(incrementButton);
 
     expect(getServingCount(container) % 10).toBe(0);
