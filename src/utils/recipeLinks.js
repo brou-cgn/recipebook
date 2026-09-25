@@ -29,7 +29,12 @@ export const decodeRecipeLink = (ingredient) => {
   if (match) {
     const quantityPrefix = match[1].trim();
     return {
-      recipeId: match[2],
+      // Firestore document IDs never contain whitespace, so stray spaces here
+      // (e.g. from a manually typed/pasted link, or text accidentally
+      // reflowed when copied through another app) can only be corruption -
+      // stripping them lets the id still match its recipe instead of quietly
+      // failing to resolve.
+      recipeId: match[2].replace(/\s+/g, ''),
       recipeName: match[3],
       quantityPrefix: quantityPrefix || null
     };

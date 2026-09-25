@@ -1092,6 +1092,46 @@ describe('RecipeDetail - Recipe Links', () => {
 
     alertSpy.mockRestore();
   });
+
+  test('opens the linked recipe even when a stray space was accidentally saved inside its id', () => {
+    // Reproduces a real production case: the stored ingredient had
+    // "#recipe:v8 mgO7PhlKeozoCf2f4y:Bruschetta Vedure al Forno" (space
+    // after "v8") while the recipe's actual id has no space. Without
+    // stripping that whitespace, allRecipes.find() never matches and the
+    // click looked identical to a dangling reference.
+    const recipeWithSpaceInLinkId = {
+      id: 'recipe-main',
+      title: 'Hauptrezept',
+      authorId: 'user-1',
+      portionen: 4,
+      ingredients: ['4 Stück #recipe:v8 mgO7PhlKeozoCf2f4y:Bruschetta Vedure al Forno'],
+      steps: ['Step 1'],
+    };
+    const bruschetta = {
+      id: 'v8mgO7PhlKeozoCf2f4y',
+      title: 'Bruschetta Vedure al Forno',
+      authorId: 'user-1',
+      portionen: 4,
+      ingredients: ['1 Aubergine'],
+      steps: ['Step 1'],
+    };
+
+    render(
+      <RecipeDetail
+        recipe={recipeWithSpaceInLinkId}
+        allRecipes={[bruschetta]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    const linkButton = screen.getByRole('button', { name: /Bruschetta Vedure al Forno/i });
+    fireEvent.click(linkButton);
+
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Bruschetta Vedure al Forno');
+  });
 });
 
 describe('RecipeDetail - Creation Date Display', () => {
