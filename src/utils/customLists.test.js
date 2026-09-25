@@ -13,7 +13,7 @@ jest.mock('firebase/firestore', () => ({
   updateDoc: jest.fn(),
   deleteDoc: jest.fn(),
   deleteField: jest.fn(() => ({ _methodName: 'FieldValue.delete' })),
-  collection: jest.fn((db, name) => ({ id: name })),
+  collection: jest.fn((db, ...segments) => ({ id: segments.join('/') })),
   writeBatch: jest.fn(),
   serverTimestamp: jest.fn(() => ({ _methodName: 'FieldValue.serverTimestamp' })),
 }));
@@ -52,6 +52,9 @@ import {
   saveCommonAdjectives,
   getIgnoredTerms,
   saveIgnoredTerms,
+  saveAIRecipePrompt,
+  getAIRecipePromptHistory,
+  resetAIRecipePrompt,
 } from './customLists';
 import { getDoc, getDocs, updateDoc, setDoc, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
 
@@ -208,6 +211,94 @@ describe('getSettings – AI prompt (read-only, no client-side migration)', () =
 
     expect(settings.aiRecipePrompt).toBe(DEFAULT_AI_RECIPE_PROMPT);
     expect(mockUpdateDoc).not.toHaveBeenCalled();
+  });
+});
+
+describe('saveAIRecipePrompt / getAIRecipePromptHistory – versioning', () => {
+  test('archives the previous prompt before overwriting it with a different one', async () => {
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ aiRecipePrompt: 'ALTE VERSION' }),
+    });
+
+    await saveAIRecipePrompt('NEUE VERSION', 'admin-1');
+
+    expect(setDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        prompt: 'ALTE VERSION',
+        archivedBy: 'admin-1',
+      })
+    );
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      { aiRecipePrompt: 'NEUE VERSION' }
+    );
+  });
+
+  test('does not archive anything when no prompt was previously set', async () => {
+    mockGetDoc.mockResolvedValue({ exists: () => false, data: () => ({}) });
+
+    await saveAIRecipePrompt('ERSTE VERSION', 'admin-1');
+
+    expect(setDoc).not.toHaveBeenCalled();
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      { aiRecipePrompt: 'ERSTE VERSION' }
+    );
+  });
+
+  test('does not archive when the saved prompt is unchanged', async () => {
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ aiRecipePrompt: 'GLEICHE VERSION' }),
+    });
+
+    await saveAIRecipePrompt('GLEICHE VERSION', 'admin-1');
+
+    expect(setDoc).not.toHaveBeenCalled();
+  });
+
+  test('resetAIRecipePrompt archives the replaced prompt and passes the acting user through', async () => {
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ aiRecipePrompt: 'ANGEPASSTE VERSION' }),
+    });
+
+    const result = await resetAIRecipePrompt('admin-2');
+
+    expect(result).toBe(DEFAULT_AI_RECIPE_PROMPT);
+    expect(setDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ prompt: 'ANGEPASSTE VERSION', archivedBy: 'admin-2' })
+    );
+  });
+
+  test('getAIRecipePromptHistory returns entries newest first and respects the limit', async () => {
+    getDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({ id: 'a', data: () => ({ prompt: 'v1', archivedAt: { toMillis: () => 1000 }, archivedBy: 'admin-1' }) });
+        cb({ id: 'b', data: () => ({ prompt: 'v2', archivedAt: { toMillis: () => 3000 }, archivedBy: 'admin-2' }) });
+        cb({ id: 'c', data: () => ({ prompt: 'v3', archivedAt: { toMillis: () => 2000 }, archivedBy: null }) });
+      },
+    });
+
+    const history = await getAIRecipePromptHistory(2);
+
+    expect(history).toEqual([
+      { id: 'b', prompt: 'v2', archivedAt: { toMillis: expect.any(Function) }, archivedBy: 'admin-2' },
+      { id: 'c', prompt: 'v3', archivedAt: { toMillis: expect.any(Function) }, archivedBy: null },
+    ]);
+  });
+
+  test('getAIRecipePromptHistory returns an empty array when Firestore read fails', async () => {
+    getDocs.mockRejectedValueOnce(new Error('Network error'));
+
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const history = await getAIRecipePromptHistory();
+    errorSpy.mockRestore();
+
+    expect(history).toEqual([]);
   });
 });
 

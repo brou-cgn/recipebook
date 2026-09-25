@@ -261,6 +261,32 @@ BEISPIEL GUTE EXTRAKTION:
 
 Extrahiere nun alle sichtbaren Informationen aus dem Bild genau nach diesem Schema.`;
 
+/**
+ * Gemini responseSchema enforcing the JSON shape the DEFAULT_AI_RECIPE_PROMPT
+ * (and callGeminiAPI/callGeminiTextAPI/callGeminiMultiImageAPI's downstream
+ * parsing) actually require, independent of whatever prose an admin edits
+ * into the Firestore-configurable prompt text. Only the fields the app can't
+ * function without are `required` - everything else keeps the same
+ * optional/fallback handling the parsing code already has.
+ */
+const RECIPE_EXTRACTION_RESPONSE_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    titel: {type: 'STRING'},
+    portionen: {type: 'INTEGER', nullable: true},
+    zubereitungszeit: {type: 'INTEGER', nullable: true},
+    kochzeit: {type: 'INTEGER', nullable: true},
+    schwierigkeit: {type: 'INTEGER', nullable: true},
+    kulinarik: {type: 'STRING', nullable: true},
+    kategorie: {type: 'STRING', nullable: true},
+    tags: {type: 'ARRAY', items: {type: 'STRING'}},
+    zutaten: {type: 'ARRAY', items: {type: 'STRING'}},
+    zubereitung: {type: 'ARRAY', items: {type: 'STRING'}},
+    notizen: {type: 'STRING', nullable: true},
+  },
+  required: ['titel', 'zutaten', 'zubereitung'],
+};
+
 // In-memory cache for the AI recipe extraction prompt, shared across warm
 // invocations of the same Cloud Functions instance. TTL keeps changes made
 // in Settings visible within a few minutes without a Firestore read on
@@ -313,6 +339,20 @@ async function getRecipeExtractionPrompt() {
       !aiRecipePrompt.includes('ergänze KEINE zusätzlichen Arbeitsschritte')
     ) {
       console.warn('AI prompt in Firestore is outdated or missing placeholders – migrating to DEFAULT_AI_RECIPE_PROMPT');
+      // Archive the outdated prompt before overwriting it, so it isn't lost if it
+      // was actually an intentional custom prompt that happened to miss a keyword
+      // check (see src/utils/customLists.js: saveAIRecipePrompt for the matching
+      // client-side history, and getAIRecipePromptHistory to restore a version).
+      // Best-effort: a failure here must not block recipe extraction.
+      try {
+        await db.collection('settings').doc('app').collection('aiPromptHistory').add({
+          prompt: aiRecipePrompt,
+          archivedAt: admin.firestore.FieldValue.serverTimestamp(),
+          archivedBy: 'system-migration',
+        });
+      } catch (historyError) {
+        console.error('Failed to archive outdated aiRecipePrompt before migration:', historyError);
+      }
       aiRecipePrompt = DEFAULT_AI_RECIPE_PROMPT;
       await db.collection('settings').doc('app').update({aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT});
       console.log('Successfully migrated aiRecipePrompt in Firestore to default version');
@@ -604,6 +644,8 @@ async function callGeminiAPI(base64Data, mimeType, lang, apiKey, cuisineTypes, m
       topK: 32,
       topP: 1,
       maxOutputTokens: 8192, // Erhöht von 2048 für vollständige Rezepte mit Zubereitungsschritten
+      responseMimeType: 'application/json',
+      responseSchema: RECIPE_EXTRACTION_RESPONSE_SCHEMA,
     },
   };
 
@@ -1412,6 +1454,8 @@ async function callGeminiTextAPI(rawHtml, lang, apiKey, cuisineTypes, mealCatego
       topK: 32,
       topP: 1,
       maxOutputTokens: 8192,
+      responseMimeType: 'application/json',
+      responseSchema: RECIPE_EXTRACTION_RESPONSE_SCHEMA,
     },
   };
 
@@ -9461,6 +9505,8 @@ async function callGeminiMultiImageAPI(imageInputs, lang, apiKey, cuisineTypes, 
       topK: 32,
       topP: 1,
       maxOutputTokens: 8192,
+      responseMimeType: 'application/json',
+      responseSchema: RECIPE_EXTRACTION_RESPONSE_SCHEMA,
     },
   };
 

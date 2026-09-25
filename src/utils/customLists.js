@@ -2285,6 +2285,9 @@ export async function saveTimelineCookEventDefaultImage(imageBase64) {
   }
 }
 
+const AI_PROMPT_HISTORY_COLLECTION_PATH = ['settings', 'app', 'aiPromptHistory'];
+const AI_PROMPT_HISTORY_MAX_ENTRIES = 15;
+
 /**
  * Get the AI recipe extraction prompt from Firestore or return default
  * @returns {Promise<string>} Promise resolving to AI prompt
@@ -2295,18 +2298,37 @@ export async function getAIRecipePrompt() {
 }
 
 /**
- * Save the AI recipe extraction prompt to Firestore
+ * Save the AI recipe extraction prompt to Firestore. Before overwriting,
+ * archives whatever prompt was live into the aiPromptHistory subcollection
+ * so an admin edit (or the server's own outdated-prompt migration, see
+ * functions/index.js: getRecipeExtractionPrompt) can be inspected and
+ * restored later via getAIRecipePromptHistory() - there was previously no
+ * way to recover a prompt version once it was replaced.
  * @param {string} prompt - AI recipe extraction prompt
+ * @param {string} [userId] - Id of the user making the change, for the history entry
  * @returns {Promise<void>}
  */
-export async function saveAIRecipePrompt(prompt) {
+export async function saveAIRecipePrompt(prompt, userId) {
   try {
     const settingsRef = doc(db, 'settings', 'app');
-    await updateDoc(settingsRef, { aiRecipePrompt: prompt || DEFAULT_AI_RECIPE_PROMPT });
+    const nextPrompt = prompt || DEFAULT_AI_RECIPE_PROMPT;
+
+    const currentSnap = await getDoc(settingsRef);
+    const currentPrompt = currentSnap.exists() ? currentSnap.data().aiRecipePrompt : null;
+    if (currentPrompt && currentPrompt !== nextPrompt) {
+      const historyCollection = collection(db, ...AI_PROMPT_HISTORY_COLLECTION_PATH);
+      await setDoc(doc(historyCollection), {
+        prompt: currentPrompt,
+        archivedAt: serverTimestamp(),
+        archivedBy: userId || null,
+      });
+    }
+
+    await updateDoc(settingsRef, { aiRecipePrompt: nextPrompt });
 
     // Update cache
     if (settingsCache) {
-      settingsCache.aiRecipePrompt = prompt || DEFAULT_AI_RECIPE_PROMPT;
+      settingsCache.aiRecipePrompt = nextPrompt;
     }
   } catch (error) {
     console.error('Error saving AI recipe prompt:', error);
@@ -2315,11 +2337,40 @@ export async function saveAIRecipePrompt(prompt) {
 }
 
 /**
+ * List past versions of the AI recipe prompt, most recently archived first,
+ * so an admin can review or restore an earlier version in Settings.
+ * @param {number} [maxEntries]
+ * @returns {Promise<Array<{id: string, prompt: string, archivedAt: *, archivedBy: string|null}>>}
+ */
+export async function getAIRecipePromptHistory(maxEntries = AI_PROMPT_HISTORY_MAX_ENTRIES) {
+  try {
+    const historyCollection = collection(db, ...AI_PROMPT_HISTORY_COLLECTION_PATH);
+    const snapshot = await getDocs(historyCollection);
+    const entries = [];
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data() || {};
+      entries.push({
+        id: docSnap.id,
+        prompt: data.prompt || '',
+        archivedAt: data.archivedAt || null,
+        archivedBy: data.archivedBy || null,
+      });
+    });
+    entries.sort((a, b) => (b.archivedAt?.toMillis?.() || 0) - (a.archivedAt?.toMillis?.() || 0));
+    return entries.slice(0, maxEntries);
+  } catch (error) {
+    console.error('Error loading AI recipe prompt history:', error);
+    return [];
+  }
+}
+
+/**
  * Reset AI recipe prompt to default
+ * @param {string} [userId] - Id of the user performing the reset, for the history entry
  * @returns {Promise<string>} Promise resolving to default prompt
  */
-export async function resetAIRecipePrompt() {
-  await saveAIRecipePrompt(DEFAULT_AI_RECIPE_PROMPT);
+export async function resetAIRecipePrompt(userId) {
+  await saveAIRecipePrompt(DEFAULT_AI_RECIPE_PROMPT, userId);
   return DEFAULT_AI_RECIPE_PROMPT;
 }
 

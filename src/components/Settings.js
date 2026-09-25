@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, renameCuisineTypeIcon, deleteCuisineTypeIcon, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getButtonIconsOrder, saveButtonIconsOrder, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT, PRINT_FORMAT_LAYOUT_VERSION, selectPrintFormat } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, renameCuisineTypeIcon, deleteCuisineTypeIcon, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getButtonIconsOrder, saveButtonIconsOrder, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, getAIRecipePromptHistory, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT, PRINT_FORMAT_LAYOUT_VERSION, selectPrintFormat } from '../utils/customLists';
 import { getOnboardingTestmodeActive, saveOnboardingTestmodeActive } from '../utils/onboardingSettings';
 import { renameMealCategoryInImages, removeMealCategoryFromImages } from '../utils/categoryImages';
 import PrintFormatEditor from './PrintFormatEditor';
@@ -326,6 +326,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
 
   // AI recipe prompt state
   const [aiPrompt, setAiPrompt] = useState(DEFAULT_AI_RECIPE_PROMPT);
+  const [aiPromptHistory, setAiPromptHistory] = useState([]);
 
   // FAQ state
   const [faqs, setFaqs] = useState([]);
@@ -408,6 +409,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       const appLogoUrl = await getAppLogoImageUrl();
       const timelineCookEventImg = await getTimelineCookEventDefaultImage();
       const aiRecipePrompt = await getAIRecipePrompt();
+      const aiRecipePromptHistory = await getAIRecipePromptHistory();
       const sortSettings = await getSortSettings();
       const statusValidity = await getStatusValiditySettings();
       const groupThresholds = await getGroupStatusThresholds();
@@ -425,6 +427,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       setAppLogoImageUrl(appLogoUrl);
       setTimelineCookEventDefaultImage(timelineCookEventImg);
       setAiPrompt(aiRecipePrompt);
+      setAiPromptHistory(aiRecipePromptHistory);
       setTrendingDays(sortSettings.trendingDays);
       setTrendingMinViews(sortSettings.trendingMinViews);
       setNewRecipeDays(sortSettings.newRecipeDays);
@@ -2331,7 +2334,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   className="save-button"
                   onClick={async () => {
                     try {
-                      await saveAIRecipePrompt(aiPrompt);
+                      await saveAIRecipePrompt(aiPrompt, currentUser?.id);
+                      setAiPromptHistory(await getAIRecipePromptHistory());
                       alert('KI-Prompt erfolgreich gespeichert!');
                     } catch (e) {
                       alert('Fehler beim Speichern: ' + e.message);
@@ -2345,8 +2349,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   onClick={async () => {
                     if (window.confirm('Möchten Sie den KI-Prompt wirklich auf den Standard zurücksetzen?')) {
                       try {
-                        const defaultPrompt = await resetAIRecipePrompt();
+                        const defaultPrompt = await resetAIRecipePrompt(currentUser?.id);
                         setAiPrompt(defaultPrompt);
+                        setAiPromptHistory(await getAIRecipePromptHistory());
                         alert('KI-Prompt auf Standard zurückgesetzt!');
                       } catch (e) {
                         alert('Fehler beim Zurücksetzen: ' + e.message);
@@ -2357,6 +2362,38 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   Auf Standard zurücksetzen
                 </button>
               </div>
+              {aiPromptHistory.length > 0 && (
+                <div className="prompt-history">
+                  <h3 className="prompt-history-title">Frühere Versionen</h3>
+                  <p className="prompt-help-text">
+                    Wiederhergestellte Versionen werden in das Textfeld oben geladen, aber erst mit „Speichern“ aktiv.
+                  </p>
+                  <ul className="prompt-history-list">
+                    {aiPromptHistory.map((entry) => {
+                      const changedByLabel = entry.archivedBy === 'system-migration'
+                        ? 'Automatische Migration (Server)'
+                        : allUsers.find((u) => u.id === entry.archivedBy)?.email || entry.archivedBy || 'Unbekannt';
+                      const changedAtLabel = entry.archivedAt?.toDate
+                        ? entry.archivedAt.toDate().toLocaleString('de-DE')
+                        : 'Unbekanntes Datum';
+                      return (
+                        <li key={entry.id} className="prompt-history-entry">
+                          <span className="prompt-history-meta">
+                            {changedAtLabel} · {changedByLabel}
+                          </span>
+                          <button
+                            type="button"
+                            className="prompt-history-restore-button"
+                            onClick={() => setAiPrompt(entry.prompt)}
+                          >
+                            In Textfeld laden
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
             </div>
           </>
         ) : activeTab === 'faq' ? (
