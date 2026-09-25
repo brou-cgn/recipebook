@@ -62,7 +62,7 @@ describe('NutritionModal composition table recipe links', () => {
     expect(linkedRecipeButton).toBeInTheDocument();
 
     fireEvent.click(linkedRecipeButton);
-    expect(onOpenLinkedRecipe).toHaveBeenCalledWith('abc');
+    expect(onOpenLinkedRecipe).toHaveBeenCalledWith('abc', 'Linsen Dal');
   });
 
   describe('NutritionModal header add icon', () => {
