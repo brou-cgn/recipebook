@@ -1517,7 +1517,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
         <button
           type="button"
           className="nutrition-composition-recipe-link"
-          onClick={() => onOpenLinkedRecipe?.(recipeLink.recipeId)}
+          onClick={() => onOpenLinkedRecipe?.(recipeLink.recipeId, displayName)}
           title={`Öffne Rezept: ${displayName}`}
         >
           {displayName}

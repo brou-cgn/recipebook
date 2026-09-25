@@ -1057,6 +1057,41 @@ describe('RecipeDetail - Recipe Links', () => {
 
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Pizzateig');
   });
+
+  test('clicking a recipe link whose target no longer exists shows an explanatory alert instead of doing nothing', () => {
+    const recipeWithDanglingLink = {
+      id: 'recipe-main',
+      title: 'Hauptrezept',
+      authorId: 'user-1',
+      portionen: 4,
+      // "recipe-deleted" is not in allRecipes below - the recipe it once
+      // pointed to was deleted (or recreated under a new id).
+      ingredients: ['#recipe:recipe-deleted:Alte Sauce', '200g Mehl'],
+      steps: ['Step 1'],
+    };
+
+    const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+
+    render(
+      <RecipeDetail
+        recipe={recipeWithDanglingLink}
+        allRecipes={[mockLinkedRecipe]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    const linkButton = screen.getByRole('button', { name: /Alte Sauce/i });
+    fireEvent.click(linkButton);
+
+    expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Alte Sauce'));
+    // Must not have navigated anywhere - the title stays on the current recipe.
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Hauptrezept');
+
+    alertSpy.mockRestore();
+  });
 });
 
 describe('RecipeDetail - Creation Date Display', () => {
