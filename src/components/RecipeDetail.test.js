@@ -926,6 +926,137 @@ describe('RecipeDetail - Recipe Links', () => {
     fireEvent.click(decrementBtn);
     expect(screen.getByText('0')).toBeInTheDocument();
   });
+
+  test('opens linked recipe when it is the first ingredient', () => {
+    const recipeWithLinkFirst = {
+      id: 'recipe-main',
+      title: 'Hauptrezept',
+      authorId: 'user-1',
+      portionen: 4,
+      ingredients: ['#recipe:recipe-linked:Pizzateig', '200g Mehl'],
+      steps: ['Step 1'],
+    };
+
+    render(
+      <RecipeDetail
+        recipe={recipeWithLinkFirst}
+        allRecipes={[mockLinkedRecipe]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Hauptrezept');
+    const linkButton = screen.getByRole('button', { name: /Pizzateig/i });
+    fireEvent.click(linkButton);
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Pizzateig');
+  });
+
+  test('opens linked recipe when it is the second ingredient', () => {
+    const recipeWithLinkSecond = {
+      id: 'recipe-main',
+      title: 'Hauptrezept',
+      authorId: 'user-1',
+      portionen: 4,
+      ingredients: ['200g Mehl', '#recipe:recipe-linked:Pizzateig'],
+      steps: ['Step 1'],
+    };
+
+    render(
+      <RecipeDetail
+        recipe={recipeWithLinkSecond}
+        allRecipes={[mockLinkedRecipe]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Hauptrezept');
+    const linkButton = screen.getByRole('button', { name: /Pizzateig/i });
+    fireEvent.click(linkButton);
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Pizzateig');
+  });
+
+  test('opens linked recipe when it is first under a heading', () => {
+    const recipeWithHeadingThenLink = {
+      id: 'recipe-main',
+      title: 'Hauptrezept',
+      authorId: 'user-1',
+      portionen: 4,
+      ingredients: [
+        { type: 'heading', text: 'Teig' },
+        '#recipe:recipe-linked:Pizzateig',
+        '200g Mehl',
+      ],
+      steps: ['Step 1'],
+    };
+
+    render(
+      <RecipeDetail
+        recipe={recipeWithHeadingThenLink}
+        allRecipes={[mockLinkedRecipe]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Hauptrezept');
+    const linkButton = screen.getByRole('button', { name: /Pizzateig/i });
+    fireEvent.click(linkButton);
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Pizzateig');
+  });
+
+  test('a fresh Firestore snapshot of the same parent recipe does not revert navigation into a linked recipe', () => {
+    const recipeWithLinkFirst = {
+      id: 'recipe-main',
+      title: 'Hauptrezept',
+      authorId: 'user-1',
+      portionen: 4,
+      ingredients: ['#recipe:recipe-linked:Pizzateig', '200g Mehl'],
+      steps: ['Step 1'],
+    };
+
+    const { rerender } = render(
+      <RecipeDetail
+        recipe={recipeWithLinkFirst}
+        allRecipes={[mockLinkedRecipe]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    const linkButton = screen.getByRole('button', { name: /Pizzateig/i });
+    fireEvent.click(linkButton);
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Pizzateig');
+
+    // Simulate what App.js does on every Firestore onSnapshot: it re-derives
+    // its own selectedRecipe from a brand-new `recipes` array via
+    // `recipes.find(r => r.id === selectedRecipe.id)`, which is a NEW object
+    // reference (Firestore always maps fresh objects) even though nothing
+    // about "recipe-main" changed. That new reference flows down as a new
+    // `recipe` prop here.
+    const freshSnapshotOfSameRecipe = { ...recipeWithLinkFirst };
+    rerender(
+      <RecipeDetail
+        recipe={freshSnapshotOfSameRecipe}
+        allRecipes={[mockLinkedRecipe]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Pizzateig');
+  });
 });
 
 describe('RecipeDetail - Creation Date Display', () => {
