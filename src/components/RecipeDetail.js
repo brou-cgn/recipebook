@@ -1907,7 +1907,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setSelectedRecipe({ ...recipe });
   };
 
-  const handleRecipeLinkClick = (recipeId) => {
+  const handleRecipeLinkClick = (recipeId, displayName) => {
     const linkedRecipe = allRecipes.find(r => r.id === recipeId);
     if (linkedRecipe) {
       // Push current recipe to navigation stack
@@ -1922,6 +1922,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       if (contentRef.current) {
         contentRef.current.scrollTop = 0;
       }
+    } else {
+      // The button still shows the name stored at link-creation time (see
+      // renderIngredient's displayName fallback), so a stale reference - e.g.
+      // the linked recipe was deleted and re-created under a new ID - looks
+      // exactly like a working link but silently did nothing on click.
+      // Surface that instead of leaving the tap unexplained.
+      alert(`„${displayName}" konnte nicht geöffnet werden. Das verlinkte Rezept existiert unter dieser Verknüpfung nicht mehr (z. B. gelöscht und neu angelegt). Bitte die Zutat neu verlinken.`);
     }
   };
 
@@ -1978,7 +1985,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           {scaledQuantity && <span>{scaledQuantity} </span>}
           <button
             className="recipe-link-button"
-            onClick={() => handleRecipeLinkClick(recipeLink.recipeId)}
+            onClick={() => handleRecipeLinkClick(recipeLink.recipeId, displayName)}
             title={`Öffne Rezept: ${displayName}`}
           >
             {displayName}
