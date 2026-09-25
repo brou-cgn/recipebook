@@ -1992,9 +1992,7 @@ button.private-badge-button:active {
 
 /* Recipe link styles */
 .ingredient-with-link {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
+  /* Keep default list-item display so the bullet marker still shows */
 }
 
 .recipe-link-button {
