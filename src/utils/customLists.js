@@ -1168,25 +1168,12 @@ export async function getSettings() {
         }
       }
 
-      let aiRecipePrompt = settings.aiRecipePrompt || DEFAULT_AI_RECIPE_PROMPT;
-
-      // Migration: if the stored prompt is missing required placeholders or outdated rules, reset to default
-      const needsMigration =
-        !aiRecipePrompt.includes('{{CUISINE_TYPES}}') ||
-        !aiRecipePrompt.includes('{{MEAL_CATEGORIES}}') ||
-        !aiRecipePrompt.includes('imperiale') ||
-        !aiRecipePrompt.includes('ergänze KEINE zusätzlichen Arbeitsschritte');
-
-      if (needsMigration) {
-        console.warn(
-          'AI prompt in Firestore is outdated or missing placeholders – migrating to DEFAULT_AI_RECIPE_PROMPT'
-        );
-        aiRecipePrompt = DEFAULT_AI_RECIPE_PROMPT;
-        // Asynchronously update Firestore (fire-and-forget, does not block getSettings)
-        updateDoc(doc(db, 'settings', 'app'), { aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }).catch(
-          (err) => console.error('Failed to migrate aiRecipePrompt in Firestore:', err)
-        );
-      }
+      // Placeholder/rule validation and migration of an outdated prompt happen
+      // server-side only (functions/index.js: getRecipeExtractionPrompt) - that is
+      // the single source of truth actually sent to Gemini. The client only reads
+      // for display/editing in Settings and must not race the server's migration
+      // by writing its own DEFAULT_AI_RECIPE_PROMPT back to Firestore.
+      const aiRecipePrompt = settings.aiRecipePrompt || DEFAULT_AI_RECIPE_PROMPT;
 
       // Load button icons from the buttonIcons collection.
       // settingsCache has not been set yet at this point, so getButtonIcons() fetches from Firestore.
