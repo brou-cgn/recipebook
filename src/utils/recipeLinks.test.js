@@ -75,6 +75,19 @@ describe('recipeLinks utilities', () => {
       });
     });
 
+    test('strips stray whitespace accidentally embedded inside the recipe id', () => {
+      // Firestore ids never contain whitespace - a space that ends up inside
+      // one (e.g. from a manually typed/pasted link, or text reflowed while
+      // copying through another app) must not stop the id from matching its
+      // recipe.
+      const result = decodeRecipeLink('4 Stück #recipe:v8 mgO7PhlKeozoCf2f4y:Bruschetta Vedure al Forno');
+      expect(result).toEqual({
+        recipeId: 'v8mgO7PhlKeozoCf2f4y',
+        recipeName: 'Bruschetta Vedure al Forno',
+        quantityPrefix: '4 Stück'
+      });
+    });
+
     test('returns null for invalid format', () => {
       expect(decodeRecipeLink('regular ingredient')).toBeNull();
       expect(decodeRecipeLink('#notarecipe')).toBeNull();
