@@ -377,9 +377,28 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     return () => unsubscribe();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Update selected recipe when initial recipe changes
+  // Update selected recipe when initial recipe changes.
+  // Firestore's onSnapshot hands the parent a brand-new object for every
+  // recipe on every snapshot (even when nothing changed), so `initialRecipe`
+  // can get a new identity shortly after mount purely from that cache-then-
+  // server round-trip. While the user has navigated into a linked sub-recipe
+  // (see handleRecipeLinkClick) that must not yank the view back to this
+  // top-level recipe - only a genuine recipe switch (different id) should
+  // reset the navigation stack. Without this guard, tapping a linked recipe
+  // right after opening the page - most likely for a link in the very first
+  // ingredient line, since that's the one users reach first - gets silently
+  // reverted the moment that snapshot settles.
+  const initialRecipeIdRef = useRef(initialRecipe.id);
   useEffect(() => {
+    const isGenuinelyDifferentRecipe = initialRecipe.id !== initialRecipeIdRef.current;
+    initialRecipeIdRef.current = initialRecipe.id;
+
+    if (!isGenuinelyDifferentRecipe && recipeNavigationStack.length > 0) {
+      return;
+    }
+
     setSelectedRecipe(initialRecipe);
+    setRecipeNavigationStack([]);
     setCarouselIndex(0);
     // Initialize serving multiplier from menu portion count if provided
     if (menuPortionCount != null && initialRecipe.portionen) {
