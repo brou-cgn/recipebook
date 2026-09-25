@@ -86,7 +86,12 @@ beforeEach(() => {
   clearButtonIconsLocalStorageCache();
 });
 
-describe('getSettings – AI prompt migration', () => {
+describe('getSettings – AI prompt (read-only, no client-side migration)', () => {
+  // Validating and migrating an outdated prompt is server-only responsibility now
+  // (functions/index.js: getRecipeExtractionPrompt) - the client must never write
+  // its own DEFAULT_AI_RECIPE_PROMPT back to Firestore, or it races the server's
+  // migration and can silently overwrite an intentional server-side prompt update.
+
   test('keeps a valid prompt that already contains both placeholders', async () => {
     const validPrompt = 'Use {{CUISINE_TYPES}} and {{MEAL_CATEGORIES}} here with imperiale conversion and ergänze KEINE zusätzlichen Arbeitsschritte rule.';
     mockGetDoc.mockResolvedValue({
@@ -100,83 +105,59 @@ describe('getSettings – AI prompt migration', () => {
     expect(mockUpdateDoc).not.toHaveBeenCalled();
   });
 
-  test('migrates a prompt that is missing {{CUISINE_TYPES}}', async () => {
+  test('keeps a stored prompt missing {{CUISINE_TYPES}} as-is, without writing to Firestore', async () => {
     const oldPrompt = 'A prompt with only {{MEAL_CATEGORIES}} but no cuisine placeholder';
     mockGetDoc.mockResolvedValue({
       exists: () => true,
       data: () => ({ aiRecipePrompt: oldPrompt }),
     });
-    mockUpdateDoc.mockResolvedValue(undefined);
 
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const settings = await getSettings();
-    warnSpy.mockRestore();
 
-    expect(settings.aiRecipePrompt).toBe(DEFAULT_AI_RECIPE_PROMPT);
-    expect(mockUpdateDoc).toHaveBeenCalledWith(
-      expect.anything(),
-      { aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }
-    );
+    expect(settings.aiRecipePrompt).toBe(oldPrompt);
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
   });
 
-  test('migrates a prompt that is missing {{MEAL_CATEGORIES}}', async () => {
+  test('keeps a stored prompt missing {{MEAL_CATEGORIES}} as-is, without writing to Firestore', async () => {
     const oldPrompt = 'A prompt with only {{CUISINE_TYPES}} but no meal categories';
     mockGetDoc.mockResolvedValue({
       exists: () => true,
       data: () => ({ aiRecipePrompt: oldPrompt }),
     });
-    mockUpdateDoc.mockResolvedValue(undefined);
 
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const settings = await getSettings();
-    warnSpy.mockRestore();
 
-    expect(settings.aiRecipePrompt).toBe(DEFAULT_AI_RECIPE_PROMPT);
-    expect(mockUpdateDoc).toHaveBeenCalledWith(
-      expect.anything(),
-      { aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }
-    );
+    expect(settings.aiRecipePrompt).toBe(oldPrompt);
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
   });
 
-  test('migrates when stored prompt is missing both placeholders', async () => {
+  test('keeps a stored prompt missing both placeholders as-is, without writing to Firestore', async () => {
     const oldPrompt = 'An old prompt with no placeholders at all';
     mockGetDoc.mockResolvedValue({
       exists: () => true,
       data: () => ({ aiRecipePrompt: oldPrompt }),
     });
-    mockUpdateDoc.mockResolvedValue(undefined);
 
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const settings = await getSettings();
-    warnSpy.mockRestore();
 
-    expect(settings.aiRecipePrompt).toBe(DEFAULT_AI_RECIPE_PROMPT);
-    expect(mockUpdateDoc).toHaveBeenCalledWith(
-      expect.anything(),
-      { aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }
-    );
+    expect(settings.aiRecipePrompt).toBe(oldPrompt);
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
   });
 
-  test('migrates when stored prompt is missing imperial conversion rule keyword', async () => {
+  test('keeps a stored prompt missing the imperial conversion rule keyword as-is, without writing to Firestore', async () => {
     const oldPrompt = 'Use {{CUISINE_TYPES}} and {{MEAL_CATEGORIES}} here.';
     mockGetDoc.mockResolvedValue({
       exists: () => true,
       data: () => ({ aiRecipePrompt: oldPrompt }),
     });
-    mockUpdateDoc.mockResolvedValue(undefined);
 
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const settings = await getSettings();
-    warnSpy.mockRestore();
 
-    expect(settings.aiRecipePrompt).toBe(DEFAULT_AI_RECIPE_PROMPT);
-    expect(mockUpdateDoc).toHaveBeenCalledWith(
-      expect.anything(),
-      { aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }
-    );
+    expect(settings.aiRecipePrompt).toBe(oldPrompt);
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
   });
 
-  test('does not migrate a prompt that has both placeholders but is missing fraction-to-decimal rule', async () => {
+  test('keeps a prompt that has both placeholders but is missing the fraction-to-decimal rule', async () => {
     const promptWithoutFractionRule =
       'Use {{CUISINE_TYPES}} and {{MEAL_CATEGORIES}} here with imperiale conversion and ergänze KEINE zusätzlichen Arbeitsschritte rule but no fraction rule';
     mockGetDoc.mockResolvedValue({
@@ -190,23 +171,17 @@ describe('getSettings – AI prompt migration', () => {
     expect(mockUpdateDoc).not.toHaveBeenCalled();
   });
 
-  test('migrates when stored prompt is missing the steps anti-hallucination rule', async () => {
+  test('keeps a stored prompt missing the steps anti-hallucination rule as-is, without writing to Firestore', async () => {
     const oldPrompt = 'Use {{CUISINE_TYPES}} and {{MEAL_CATEGORIES}} here with imperiale conversion but no steps rule.';
     mockGetDoc.mockResolvedValue({
       exists: () => true,
       data: () => ({ aiRecipePrompt: oldPrompt }),
     });
-    mockUpdateDoc.mockResolvedValue(undefined);
 
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const settings = await getSettings();
-    warnSpy.mockRestore();
 
-    expect(settings.aiRecipePrompt).toBe(DEFAULT_AI_RECIPE_PROMPT);
-    expect(mockUpdateDoc).toHaveBeenCalledWith(
-      expect.anything(),
-      { aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }
-    );
+    expect(settings.aiRecipePrompt).toBe(oldPrompt);
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
   });
 
   test('falls back to default without a Firestore write when aiRecipePrompt is absent', async () => {
