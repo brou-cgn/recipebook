@@ -2024,12 +2024,6 @@ button.private-badge-button:active {
   border-radius: 3px;
 }
 
-@media (max-width: 480px) {
-  .recipe-link-button {
-    font-size: 0.9rem;
-  }
-}
-
 /* Draft checkbox styling - admin only - unified design */
 .draft-checkbox-container {
   display: flex;
