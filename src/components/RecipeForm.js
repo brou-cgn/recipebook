@@ -8,6 +8,7 @@ import { addCuisineProposal } from '../utils/cuisineProposalsFirestore';
 import { getUsers, isCurrentUserAdmin, getUserAiOcrScanCount } from '../utils/userManagement';
 import { getImageForCategories } from '../utils/categoryImages';
 import { formatIngredientSpacing, expandSaltAndPepperIngredients } from '../utils/ingredientUtils';
+import { rephraseRecipeSteps } from '../utils/aiOcrService';
 import { encodeRecipeLink, decodeRecipeLink, containsHashForTypeahead } from '../utils/recipeLinks';
 import { getAutoAssignedIngredients } from '../utils/ingredientIdMatching';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
@@ -408,6 +409,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [sourceUrl, setSourceUrl] = useState('');
   const [ingredients, setIngredients] = useState([{ type: 'ingredient', text: '' }]);
   const [steps, setSteps] = useState([{ type: 'step', text: '' }]);
+  const [rephrasingSteps, setRephrasingSteps] = useState(false);
   const [imageError, setImageError] = useState(false); // eslint-disable-line no-unused-vars
   const [uploadingImage, setUploadingImage] = useState(false);
   const [authorId, setAuthorId] = useState('');
@@ -892,6 +894,46 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     setSteps(cleaned);
   };
 
+  // Indices of steps eligible for AI rephrasing: actual step rows with text,
+  // excluding headings and the author's flagged signature sentence (see
+  // isAuthorSignature in handleSubmit) - that sentence is the author's own
+  // words and must not be rewritten.
+  const rephrasableStepIndices = steps
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => item.type === 'step' && item.text.trim() !== '' && !item.isAuthorSignature)
+    .map(({ index }) => index);
+
+  const handleRephraseSteps = async () => {
+    if (rephrasableStepIndices.length === 0 || rephrasingSteps) return;
+
+    setRephrasingSteps(true);
+    try {
+      const originalTexts = rephrasableStepIndices.map((index) => steps[index].text);
+      const rephrasedTexts = await rephraseRecipeSteps(originalTexts);
+
+      if (!Array.isArray(rephrasedTexts) || rephrasedTexts.length !== rephrasableStepIndices.length) {
+        throw new Error('Die KI hat eine unerwartete Anzahl an Schritten zurückgegeben.');
+      }
+
+      const newSteps = [...steps];
+      rephrasableStepIndices.forEach((stepIndex, i) => {
+        newSteps[stepIndex] = { ...newSteps[stepIndex], text: rephrasedTexts[i] };
+      });
+      setSteps(newSteps);
+    } catch (error) {
+      const code = error?.code?.replace(/^functions\//, '');
+      if (code === 'resource-exhausted') {
+        alert(error.message || 'Tageslimit für das Umformulieren erreicht. Versuche es morgen erneut.');
+      } else if (code === 'unauthenticated') {
+        alert('Bitte melde dich an, um Zubereitungsschritte umformulieren zu lassen.');
+      } else {
+        alert('Fehler beim Umformulieren der Zubereitungsschritte: ' + error.message);
+      }
+    } finally {
+      setRephrasingSteps(false);
+    }
+  };
+
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1066,14 +1108,20 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
 
       // Append signature sentence as last step for new recipes (not edits/versions),
       // including reviewing a pending import (isTemp) — those are new recipes too.
+      // Flagged isAuthorSignature so features that rewrite step text (e.g. the
+      // "Zubereitungsschritte umformulieren" button) can recognize and skip it.
       const signatureSatz = ((!recipe && !isCreatingVersion) || recipe?.isTemp) ? currentUser?.signatureSatz?.trim() : '';
       if (signatureSatz) {
-        filteredSteps.push({ type: 'step', text: signatureSatz });
+        filteredSteps.push({ type: 'step', text: signatureSatz, isAuthorSignature: true });
       }
 
+      // Keep object format when headings OR a flagged signature step are present
+      // (mirrors hasIngredientIds above) - otherwise mapping down to plain
+      // strings for backward compatibility would silently drop isAuthorSignature.
       const hasStepHeadings = filteredSteps.some(item => item.type === 'heading');
-      const stepsToSave = hasStepHeadings 
-        ? filteredSteps 
+      const hasAuthorSignatureStep = filteredSteps.some(item => item.isAuthorSignature === true);
+      const stepsToSave = hasStepHeadings || hasAuthorSignatureStep
+        ? filteredSteps
         : filteredSteps.map(item => item.text);
 
       const recipeData = {
@@ -1742,16 +1790,29 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         <div className="form-section">
           <div className="section-header">
             <h3>Zubereitungsschritte</h3>
-            {steps.some(s => containsEmojis(s.text)) && (
-              <button
-                type="button"
-                className="emoji-remove-btn-small"
-                onClick={handleRemoveEmojisFromSteps}
-                title="Emojis aus allen Schritten entfernen"
-              >
-                Emojis entfernen
-              </button>
-            )}
+            <div className="section-header-actions">
+              {rephrasableStepIndices.length > 0 && (
+                <button
+                  type="button"
+                  className="rephrase-steps-btn"
+                  onClick={handleRephraseSteps}
+                  disabled={rephrasingSteps}
+                  title="Zubereitungsschritte per KI umformulieren (beschreibend, Du-Form, Coach-Ton)"
+                >
+                  {rephrasingSteps ? 'Formuliere um…' : 'Umformulieren'}
+                </button>
+              )}
+              {steps.some(s => containsEmojis(s.text)) && (
+                <button
+                  type="button"
+                  className="emoji-remove-btn-small"
+                  onClick={handleRemoveEmojisFromSteps}
+                  title="Emojis aus allen Schritten entfernen"
+                >
+                  Emojis entfernen
+                </button>
+              )}
+            </div>
           </div>
           <DndContext
             sensors={sensors}

@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { useSensor, TouchSensor } from '@dnd-kit/core';
 import RecipeForm from './RecipeForm';
+import { rephraseRecipeSteps } from '../utils/aiOcrService';
 
 // Mock the utility modules
 jest.mock('../utils/emojiUtils', () => ({
@@ -116,6 +117,10 @@ jest.mock('../utils/recipeLinks', () => ({
 
 jest.mock('../utils/cuisineProposalsFirestore', () => ({
   addCuisineProposal: jest.fn(() => Promise.resolve('proposal-id-1')),
+}));
+
+jest.mock('../utils/aiOcrService', () => ({
+  rephraseRecipeSteps: jest.fn(),
 }));
 
 jest.mock('../contexts/NutritionReferenceContext', () => ({
@@ -3324,9 +3329,15 @@ describe('RecipeForm - Signature Sentence', () => {
 
     fireEvent.submit(document.querySelector('.recipe-form'));
 
+    // Object format (not plain strings) once a signature step is present -
+    // it carries isAuthorSignature so it can be recognized and skipped by
+    // features that rewrite step text (e.g. "Zubereitungsschritte umformulieren").
     await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({
-        steps: ['Erster Schritt', 'Guten Appetit!'],
+        steps: [
+          { type: 'step', text: 'Erster Schritt' },
+          { type: 'step', text: 'Guten Appetit!', isAuthorSignature: true },
+        ],
       })
     ));
   });
@@ -3447,9 +3458,158 @@ describe('RecipeForm - Signature Sentence', () => {
 
     await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({
-        steps: ['Importierter Schritt', 'Guten Appetit!'],
+        steps: [
+          { type: 'step', text: 'Importierter Schritt' },
+          { type: 'step', text: 'Guten Appetit!', isAuthorSignature: true },
+        ],
       })
     ));
+  });
+
+  test('does not rephrase the flagged signature step, and preserves object format on re-save', async () => {
+    const userWithSignature = {
+      id: 'user-1',
+      vorname: 'John',
+      nachname: 'Doe',
+      email: 'john@example.com',
+      isAdmin: false,
+      role: 'edit',
+      signatureSatz: 'Guten Appetit!',
+    };
+
+    const recipeWithFlaggedSignature = {
+      id: 'recipe-1',
+      title: 'Existing Recipe',
+      ingredients: ['Zutat 1'],
+      steps: [
+        { type: 'step', text: 'Bestehender Schritt' },
+        { type: 'step', text: 'Guten Appetit!', isAuthorSignature: true },
+      ],
+      authorId: 'user-1',
+      speisekategorie: ['Main Course'],
+    };
+
+    render(
+      <RecipeForm
+        recipe={recipeWithFlaggedSignature}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={userWithSignature}
+      />
+    );
+
+    fireEvent.submit(document.querySelector('.recipe-form'));
+
+    // Editing an existing recipe never re-appends a signature step (see
+    // "does not append signature sentence when editing existing recipe"
+    // above) - this only confirms that a signature step already flagged in
+    // stored data survives a resave unchanged, object format included.
+    await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        steps: [
+          { type: 'step', text: 'Bestehender Schritt' },
+          { type: 'step', text: 'Guten Appetit!', isAuthorSignature: true },
+        ],
+      })
+    ));
+  });
+});
+
+describe('RecipeForm - Rephrase Steps Button', () => {
+  const mockOnSave = jest.fn();
+  const mockOnCancel = jest.fn();
+  const mockUser = { id: 'user-1', vorname: 'Test', nachname: 'User' };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('is hidden when there is no step text to rephrase', () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+      />
+    );
+
+    expect(screen.queryByTitle(/Zubereitungsschritte per KI umformulieren/)).not.toBeInTheDocument();
+  });
+
+  test('appears once a step has text, and only sends non-empty, non-signature step texts', async () => {
+    rephraseRecipeSteps.mockResolvedValue(['Schneide die Zwiebel fein.', 'Brate sie glasig an.']);
+
+    const recipeWithSignature = {
+      id: 'recipe-1',
+      title: 'Zwiebelsuppe',
+      ingredients: ['1 Zwiebel'],
+      steps: [
+        { type: 'step', text: 'Zwiebel schneiden' },
+        { type: 'step', text: 'Anbraten' },
+        { type: 'step', text: 'Guten Appetit!', isAuthorSignature: true },
+      ],
+      authorId: 'user-1',
+      speisekategorie: ['Main Course'],
+    };
+
+    render(
+      <RecipeForm
+        recipe={recipeWithSignature}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+      />
+    );
+
+    const rephraseButton = screen.getByTitle(/Zubereitungsschritte per KI umformulieren/);
+    fireEvent.click(rephraseButton);
+
+    await waitFor(() => expect(rephraseRecipeSteps).toHaveBeenCalledWith([
+      'Zwiebel schneiden',
+      'Anbraten',
+    ]));
+
+    // Rephrased texts land back on the two rewritten steps, in order; the
+    // flagged signature step is untouched.
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Schneide die Zwiebel fein.')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Brate sie glasig an.')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Guten Appetit!')).toBeInTheDocument();
+    });
+  });
+
+  test('shows a quota message on resource-exhausted and leaves steps unchanged', async () => {
+    const quotaError = Object.assign(new Error('Tageslimit für das Umformulieren erreicht (40/40).'), {
+      code: 'functions/resource-exhausted',
+    });
+    rephraseRecipeSteps.mockRejectedValue(quotaError);
+    const alertMock = jest.spyOn(window, 'alert').mockImplementation(() => {});
+
+    const recipeWithStep = {
+      id: 'recipe-1',
+      title: 'Zwiebelsuppe',
+      ingredients: ['1 Zwiebel'],
+      steps: [{ type: 'step', text: 'Zwiebel schneiden' }],
+      authorId: 'user-1',
+      speisekategorie: ['Main Course'],
+    };
+
+    render(
+      <RecipeForm
+        recipe={recipeWithStep}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+      />
+    );
+
+    fireEvent.click(screen.getByTitle(/Zubereitungsschritte per KI umformulieren/));
+
+    await waitFor(() => expect(alertMock).toHaveBeenCalledWith(quotaError.message));
+    expect(screen.getByDisplayValue('Zwiebel schneiden')).toBeInTheDocument();
+
+    alertMock.mockRestore();
   });
 });
 

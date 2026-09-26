@@ -81,6 +81,19 @@ const RATE_LIMITS = {
 };
 
 /**
+ * Rate limit for rephraseRecipeSteps - a separate daily quota from the AI
+ * photo/web/video scan limits above. A text-only rephrase call is far
+ * cheaper and faster than an image/video scan, so it gets its own (higher)
+ * budget instead of eating into a user's daily scan quota.
+ */
+const RATE_LIMITS_REPHRASE = {
+  admin: 1000,
+  moderator: 100,
+  authenticated: 40,
+  guest: 10,
+};
+
+/**
  * Maximum number of account registrations allowed per IP address per hour.
  */
 const REGISTRATION_RATE_LIMIT = 5;
@@ -185,6 +198,19 @@ const COMMON_PASSWORDS = [
 ];
 
 /**
+ * Shared style + step-boundary rules for the "zubereitung" field, reused by
+ * DEFAULT_AI_RECIPE_PROMPT (full recipe extraction, below) and
+ * RECIPE_STEP_REPHRASE_PROMPT (rephraseRecipeSteps, which only rewrites
+ * already-extracted steps). These two constants must stay in sync with the
+ * identical copies in src/utils/customLists.js - extracted into one place so
+ * that a future style change (like the Coach-Ton rewrite) only has to touch
+ * two files (server + client prompt copy), not three.
+ */
+const RECIPE_STEP_STYLE_RULE = `Schreibe jeden Schritt beschreibend, in der Du-Form und in einem motivierenden, energiegeladenen Coach-Ton (z.B. "Schneide den Guanciale in kleine Würfel und brate ihn an, bis er richtig knusprig ist." statt nur "Guanciale würfeln, braten").`;
+
+const RECIPE_STEP_BOUNDARY_RULE = `Jeder Eintrag ist EIN in sich abgeschlossener Arbeitsschritt. Ein Schritt bleibt EIN Array-Element, solange die einzelnen Handlungen unmittelbar aufeinander folgen (keine Wartezeit dazwischen) UND auf dasselbe unmittelbare Zwischenziel hinarbeiten (z.B. "Mehl und Eier auf eine Arbeitsfläche geben und 10 Minuten zu einem glatten Teig verkneten" ist EIN Schritt). Ein NEUER Schritt beginnt, sobald: (a) eine Ruhe- oder Wartezeit dazwischenliegt (z.B. Teig ruhen lassen, marinieren, backen), (b) ein anderer Rezeptbestandteil beginnt (z.B. von der Teig- zur Füllungszubereitung), oder (c) zwei unterschiedliche, parallel laufende Handlungsstränge vorliegen (z.B. Fleisch in einer Pfanne anbraten UND gleichzeitig Nudeln in einem anderen Topf kochen – das sind zwei Schritte, auch wenn sie gleichzeitig passieren). Fasse NIEMALS zwei Schritte, die eines dieser Kriterien für einen Bruch erfüllen, in einem Array-Element zusammen.`;
+
+/**
  * Default AI recipe extraction prompt (must stay in sync with src/utils/customLists.js)
  */
 const DEFAULT_AI_RECIPE_PROMPT = `Analysiere dieses Rezeptbild und extrahiere alle Informationen als strukturiertes JSON. Extrahiere nur das Rezept, ignoriere Kommentare, Likes, UI‑Text. Erfinde keine Zutaten/Mengen/Temperaturen/Zubereitungsschritte.
@@ -215,7 +241,7 @@ Bitte gib das Ergebnis im folgenden JSON-Format zurück:
 WICHTIGE REGELN:
 1. Mengenangaben: Verwende immer das Format "Zahl Einheit Zutat" (z.B. "500 g Mehl", "2 Esslöffel Olivenöl", "1 Prise Salz")
 2. Zahlen: portionen, zubereitungszeit, kochzeit und schwierigkeit müssen reine Zahlen sein (kein Text!)
-3. Zubereitungsschritte: Schreibe jeden Schritt beschreibend, in der Du-Form und in einem motivierenden, energiegeladenen Coach-Ton (z.B. "Schneide den Guanciale in kleine Würfel und brate ihn an, bis er richtig knusprig ist." statt nur "Guanciale würfeln, braten"). Übernimm NUR Schritte, die tatsächlich in der Quelle beschrieben oder eindeutig erkennbar sind – ergänze KEINE zusätzlichen Arbeitsschritte, Zeiten, Temperaturen oder Reihenfolgen aus allgemeinem Kochwissen, auch wenn sie plausibel wirken. Wenn die Quelle nur eine Zutatenliste ohne Zubereitungsanleitung enthält, lasse "zubereitung" als leeres Array – erfinde KEINE Schritte anhand der Zutaten.
+3. Zubereitungsschritte: ${RECIPE_STEP_STYLE_RULE} Übernimm NUR Schritte, die tatsächlich in der Quelle beschrieben oder eindeutig erkennbar sind – ergänze KEINE zusätzlichen Arbeitsschritte, Zeiten, Temperaturen oder Reihenfolgen aus allgemeinem Kochwissen, auch wenn sie plausibel wirken. Wenn die Quelle nur eine Zutatenliste ohne Zubereitungsanleitung enthält, lasse "zubereitung" als leeres Array – erfinde KEINE Schritte anhand der Zutaten.
 4. Fehlende Informationen: Wenn eine Information nicht lesbar oder nicht vorhanden ist, verwende null oder lasse das Array leer
 5. Einheiten: Standardisiere Einheiten (g statt Gramm, ml statt Milliliter). Verwende IMMER "Esslöffel" statt "EL" und "Teelöffel" statt "TL" – schreibe die Einheit NIE als Abkürzung (z.B. "2 Esslöffel Olivenöl", "1 Teelöffel Salz"). Wandle Brüche in Dezimalzahlen um (z.B. "1/2" wird zu "0,5", "1 1/2" wird zu "1,5"). WICHTIG: Rechne ALLE imperialen Einheiten in metrische Einheiten um! Verwende folgende Umrechnungen: 1 cup (Flüssigkeit) = 240 ml, 1 cup (Mehl) = 130 g, 1 cup (Zucker) = 200 g, 1 cup (Butter) = 227 g, 1 oz = 28 g, 1 lb = 454 g, 1 fl oz = 30 ml, 1 quart = 946 ml, 1 pint = 473 ml, 1 gallon = 3785 ml, 1 stick Butter = 113 g. Für cups: verwende das jeweils passende Gewicht abhängig von der Zutat (z.B. "1 cup flour" = "130 g Mehl", "1 cup milk" = "240 ml Milch"). Runde die Ergebnisse auf sinnvolle Werte (z.B. 454 g → 450 g, 227 g → 225 g).
 6. Tags: Füge nur Tags hinzu, die explizit im Rezept erwähnt werden oder eindeutig aus den Zutaten ableitbar sind
@@ -227,7 +253,7 @@ Wenn keine tierischen Produkte enthalten sind (z.B. Butter, Fleisch, Fisch, Eier
 **Verfügbare Speisekategorien:**
 {{MEAL_CATEGORIES}}
 Wenn das Rezept zu keiner dieser Kategorien passt, wähle die nächstliegende oder lasse das Feld leer. Mehrfachauswahlen sind möglich
-8. Schritt-Grenzen: Das Feld "zubereitung" MUSS immer ein JSON-Array von Strings sein, in dem jeder Eintrag EIN in sich abgeschlossener Arbeitsschritt ist. Ein Schritt bleibt EIN Array-Element, solange die einzelnen Handlungen unmittelbar aufeinander folgen (keine Wartezeit dazwischen) UND auf dasselbe unmittelbare Zwischenziel hinarbeiten (z.B. "Mehl und Eier auf eine Arbeitsfläche geben und 10 Minuten zu einem glatten Teig verkneten" ist EIN Schritt). Ein NEUER Schritt beginnt, sobald: (a) eine Ruhe- oder Wartezeit dazwischenliegt (z.B. Teig ruhen lassen, marinieren, backen), (b) ein anderer Rezeptbestandteil beginnt (z.B. von der Teig- zur Füllungszubereitung), oder (c) zwei unterschiedliche, parallel laufende Handlungsstränge vorliegen (z.B. Fleisch in einer Pfanne anbraten UND gleichzeitig Nudeln in einem anderen Topf kochen – das sind zwei Schritte, auch wenn sie gleichzeitig passieren). Fasse NIEMALS zwei Schritte, die eines dieser Kriterien für einen Bruch erfüllen, in einem Array-Element zusammen. Mindestens 1 Schritt muss vorhanden sein, wenn Zubereitungsinformationen erkennbar sind.
+8. Schritt-Grenzen: Das Feld "zubereitung" MUSS immer ein JSON-Array von Strings sein. ${RECIPE_STEP_BOUNDARY_RULE} Mindestens 1 Schritt muss vorhanden sein, wenn Zubereitungsinformationen erkennbar sind.
 
 BEISPIEL GUTE EXTRAKTION:
 {
@@ -260,6 +286,23 @@ BEISPIEL GUTE EXTRAKTION:
 }
 
 Extrahiere nun alle sichtbaren Informationen aus dem Bild genau nach diesem Schema.`;
+
+/**
+ * Prompt for rephraseRecipeSteps: rewrites already-extracted steps in place
+ * (used from the recipe edit form, not the import pipeline). Deliberately
+ * NOT Firestore-configurable like DEFAULT_AI_RECIPE_PROMPT - this only ever
+ * needs the style + step-boundary rules, not the full extraction prompt's
+ * title/ingredients/cuisine logic, and giving it its own admin-editable
+ * override would be a second knob for the same two rules with no clear use
+ * case.
+ */
+const RECIPE_STEP_REPHRASE_PROMPT = `Du bekommst eine Liste von Zubereitungsschritten eines Rezepts als JSON-Array von Strings. Formuliere JEDEN Schritt inhaltlich unverändert um, ohne neue Informationen zu erfinden oder vorhandene zu entfernen.
+
+${RECIPE_STEP_STYLE_RULE}
+
+${RECIPE_STEP_BOUNDARY_RULE} Das bedeutet hier konkret: Du darfst Schritte NICHT zusammenlegen oder aufteilen – die Anzahl der Elemente im Ergebnis-Array MUSS exakt der Anzahl der Elemente im Eingabe-Array entsprechen, in identischer Reihenfolge.
+
+Gib ausschließlich das JSON-Array der umformulierten Schritte zurück, keine Erklärungen, keinen zusätzlichen Text.`;
 
 /**
  * Gemini responseSchema enforcing the JSON shape the DEFAULT_AI_RECIPE_PROMPT
@@ -461,6 +504,59 @@ async function checkRateLimit(userId, isAuthenticated, isAdmin = false, isModera
   } catch (error) {
     console.error('Rate limit check error:', error);
     // On error, allow the request (fail open)
+    return {allowed: true, remaining: limit, limit};
+  }
+}
+
+/**
+ * Same day-counter pattern as checkRateLimit above, but against the separate
+ * aiRephraseLimits collection/quota (see RATE_LIMITS_REPHRASE).
+ * @param {string} userId - User ID
+ * @param {boolean} isAuthenticated - Whether user is authenticated
+ * @param {boolean} isAdmin - Whether user is an admin
+ * @param {boolean} isModerator - Whether user is a moderator
+ * @returns {Promise<{allowed: boolean, remaining: number, limit: number}>}
+ */
+async function checkRephraseRateLimit(userId, isAuthenticated, isAdmin = false, isModerator = false) {
+  const db = admin.firestore();
+  const today = new Date().toLocaleDateString('sv-SE', {timeZone: 'Europe/Berlin'});
+  const docRef = db.collection('aiRephraseLimits').doc(`${userId}_${today}`);
+
+  const limit = isAdmin ? RATE_LIMITS_REPHRASE.admin
+    : isModerator ? RATE_LIMITS_REPHRASE.moderator
+    : isAuthenticated ? RATE_LIMITS_REPHRASE.authenticated
+    : RATE_LIMITS_REPHRASE.guest;
+
+  try {
+    const result = await db.runTransaction(async (transaction) => {
+      const doc = await transaction.get(docRef);
+
+      if (!doc.exists) {
+        transaction.set(docRef, {
+          userId: userId,
+          date: today,
+          count: 1,
+          isAuthenticated: isAuthenticated,
+          isAdmin: isAdmin,
+          isModerator: isModerator,
+        });
+        return {allowed: true, remaining: limit - 1, limit};
+      }
+
+      const data = doc.data();
+      if (data.count >= limit) {
+        return {allowed: false, remaining: 0, limit};
+      }
+
+      transaction.update(docRef, {
+        count: admin.firestore.FieldValue.increment(1),
+      });
+      return {allowed: true, remaining: limit - data.count - 1, limit};
+    });
+
+    return result;
+  } catch (error) {
+    console.error('Rephrase rate limit check error:', error);
     return {allowed: true, remaining: limit, limit};
   }
 }
@@ -1191,6 +1287,135 @@ exports.scanRecipeWithAI = onCall(
         console.error(`AI Scan failed for user ${userId}:`, error);
         if (jobId) await failImportJob(jobId, error);
         throw error;
+      }
+    }
+);
+
+/**
+ * Rewrites an array of already-extracted recipe steps in place (Coach-Ton /
+ * Du-Form style), without re-extracting title/ingredients/etc. Used by the
+ * "Zubereitungsschritte umformulieren" button in RecipeForm.js so an author
+ * can apply the current step style to an older recipe after the fact.
+ *
+ * Separate, smaller rate limit than scanRecipeWithAI (see
+ * RATE_LIMITS_REPHRASE) since a text-only rephrase is much cheaper than an
+ * image/video scan.
+ */
+exports.rephraseRecipeSteps = onCall(
+    {
+      secrets: [geminiApiKey],
+      maxInstances: 10,
+      memory: '256MiB',
+      timeoutSeconds: 30,
+    },
+    async (request) => {
+      const {steps} = request.data;
+
+      const auth = request.auth;
+      if (!auth) {
+        throw new HttpsError(
+            'unauthenticated',
+            'You must be logged in to rephrase recipe steps'
+        );
+      }
+
+      if (
+        !Array.isArray(steps) ||
+        steps.length === 0 ||
+        !steps.every((step) => typeof step === 'string' && step.trim() !== '')
+      ) {
+        throw new HttpsError('invalid-argument', 'steps must be a non-empty array of non-empty strings');
+      }
+
+      const userId = auth.uid;
+      const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
+      const isAdmin = auth.token.admin === true;
+      const isModerator = !isAdmin && await isModeratorUser(userId);
+
+      const rateLimitResult = await checkRephraseRateLimit(userId, isAuthenticated, isAdmin, isModerator);
+      if (!rateLimitResult.allowed) {
+        throw new HttpsError(
+            'resource-exhausted',
+            `Tageslimit für das Umformulieren erreicht (${rateLimitResult.limit}/${rateLimitResult.limit}). Versuche es morgen erneut.`
+        );
+      }
+
+      const apiKey = geminiApiKey.value();
+      if (!apiKey) {
+        console.error('GEMINI_API_KEY secret not configured');
+        throw new HttpsError(
+            'failed-precondition',
+            'AI service not configured. Please contact administrator.'
+        );
+      }
+
+      const requestBody = {
+        contents: [
+          {
+            parts: [
+              {text: RECIPE_STEP_REPHRASE_PROMPT + '\n\nEingabe-Array:\n' + JSON.stringify(steps)},
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.4,
+          responseMimeType: 'application/json',
+          responseSchema: {type: 'ARRAY', items: {type: 'STRING'}},
+        },
+      };
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Gemini API error (rephrase steps):', errorData);
+          const errorMessage = errorData.error?.message || response.statusText;
+          if (response.status === 429) {
+            throw new HttpsError(
+                'resource-exhausted',
+                'Die KI-API ist momentan ausgelastet. Bitte versuche es in einigen Minuten erneut.'
+            );
+          } else if (response.status === 503 || response.status === 502) {
+            throw new HttpsError('unavailable', `Gemini API error: ${errorMessage}`);
+          }
+          throw new HttpsError('internal', `Gemini API error: ${errorMessage}`);
+        }
+
+        const data = await response.json();
+        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!textResponse) {
+          throw new HttpsError('internal', 'No response from Gemini API');
+        }
+
+        const rephrasedSteps = JSON.parse(textResponse);
+        if (!Array.isArray(rephrasedSteps) || rephrasedSteps.length !== steps.length) {
+          throw new HttpsError(
+              'internal',
+              'Die KI hat eine unerwartete Anzahl an Schritten zurückgegeben.'
+          );
+        }
+
+        return {
+          steps: rephrasedSteps,
+          remainingRephrasings: rateLimitResult.remaining,
+          dailyLimit: rateLimitResult.limit,
+        };
+      } catch (error) {
+        if (error instanceof HttpsError) {
+          throw error;
+        }
+        console.error(`Rephrase steps failed for user ${userId}:`, error);
+        if (error.message?.includes('JSON')) {
+          throw new HttpsError('internal', 'Failed to parse rephrased steps.');
+        }
+        throw new HttpsError('internal', 'Failed to rephrase steps: ' + error.message);
       }
     }
 );
