@@ -1207,6 +1207,34 @@
   padding: 0.4rem 0.75rem;
 }
 
+.section-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rephrase-steps-btn {
+  background: #7c4dff;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.rephrase-steps-btn:hover:not(:disabled) {
+  background: #651fff;
+  transform: translateY(-1px);
+}
+
+.rephrase-steps-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 480px) {
   .recipe-form {
     padding: 1rem;

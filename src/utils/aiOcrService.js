@@ -585,6 +585,22 @@ export async function compareOcrMethods(imageBase64, language = 'de') {
   return results;
 }
 
+/**
+ * Rewrite an array of already-extracted recipe step texts (Coach-Ton / Du-Form
+ * style) via the rephraseRecipeSteps Cloud Function. Unlike scanRecipesWithAI/
+ * processHtmlWithGemini above, this is a single, non-retrying call - a
+ * text-only rephrase is fast and reliable enough that the retry/progress-
+ * simulation machinery for image OCR isn't needed here.
+ * @param {string[]} stepTexts - Non-empty step texts, in order (exclude
+ *   heading rows and the author's signature sentence before calling this)
+ * @returns {Promise<string[]>} Rephrased step texts, same length and order
+ */
+export async function rephraseRecipeSteps(stepTexts) {
+  const rephraseRecipeStepsCallable = httpsCallable(functions, 'rephraseRecipeSteps');
+  const result = await rephraseRecipeStepsCallable({ steps: stepTexts });
+  return result.data.steps;
+}
+
 // Export configuration for testing purposes
 export const __testing__ = {
   getRecipeExtractionPrompt
