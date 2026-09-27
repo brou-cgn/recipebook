@@ -554,6 +554,13 @@
   position: relative;
   overflow: visible;
   min-width: 0;
+  /* Same radius as .recipe-card, which sits directly on top of this wrapper
+     at an identical size: without it, the wrapper's square corners (its own
+     background, painted independently of the card's) show through behind
+     the card's rounded ones — most visible in dark mode, where the two get
+     distinct background colors (see darkMode.css). overflow stays visible
+     so the swipe-reveal "add to list" button isn't clipped. */
+  border-radius: 12px;
 }
 
 .recipe-card-list-reveal-button {
