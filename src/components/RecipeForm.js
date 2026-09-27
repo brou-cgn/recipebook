@@ -1797,7 +1797,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                   className="rephrase-steps-btn"
                   onClick={handleRephraseSteps}
                   disabled={rephrasingSteps}
-                  title="Zubereitungsschritte per KI umformulieren (beschreibend, Du-Form, Coach-Ton)"
+                  title="Zubereitungsschritte per KI umformulieren (beschreibend, Du-Form, energiegeladen aber sachlich)"
                 >
                   {rephrasingSteps ? 'Formuliere um…' : 'Umformulieren'}
                 </button>
