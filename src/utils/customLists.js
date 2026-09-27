@@ -660,7 +660,7 @@ export function applyDarkModePreference(mode) {
 // so a future style change only needs updating in two files, not three: this
 // client copy plus functions/index.js, which also reuses these two rules for
 // its separate rephraseRecipeSteps prompt).
-const RECIPE_STEP_STYLE_RULE = `Schreibe jeden Schritt beschreibend, in der Du-Form und in einem motivierenden, energiegeladenen Coach-Ton (z.B. "Schneide den Guanciale in kleine Würfel und brate ihn an, bis er richtig knusprig ist." statt nur "Guanciale würfeln, braten").`;
+const RECIPE_STEP_STYLE_RULE = `Schreibe jeden Schritt beschreibend, in der Du-Form und in einem energiegeladenen, aber sachlichen Du-Ton: Energie gehört in die Handlungsbeschreibung (z.B. "Schneide den Guanciale in Würfel und brate ihn an, bis er knusprig ist.", "Jetzt geht's ans Ausrollen!"), NICHT in lobende Superlative für das Ergebnis oder die Zutat selbst (kein "wunderbar", "perfekt", "super", "wohlverdient") und NICHT in angehängte Motivationssätze am Schrittende (kein "– du schaffst das!").`;
 
 const RECIPE_STEP_BOUNDARY_RULE = `Jeder Eintrag ist EIN in sich abgeschlossener Arbeitsschritt. Ein Schritt bleibt EIN Array-Element, solange die einzelnen Handlungen unmittelbar aufeinander folgen (keine Wartezeit dazwischen) UND auf dasselbe unmittelbare Zwischenziel hinarbeiten (z.B. "Mehl und Eier auf eine Arbeitsfläche geben und 10 Minuten zu einem glatten Teig verkneten" ist EIN Schritt). Ein NEUER Schritt beginnt, sobald: (a) eine Ruhe- oder Wartezeit dazwischenliegt (z.B. Teig ruhen lassen, marinieren, backen), (b) ein anderer Rezeptbestandteil beginnt (z.B. von der Teig- zur Füllungszubereitung), oder (c) zwei unterschiedliche, parallel laufende Handlungsstränge vorliegen (z.B. Fleisch in einer Pfanne anbraten UND gleichzeitig Nudeln in einem anderen Topf kochen – das sind zwei Schritte, auch wenn sie gleichzeitig passieren). Fasse NIEMALS zwei Schritte, die eines dieser Kriterien für einen Bruch erfüllen, in einem Array-Element zusammen.`;
 
@@ -726,12 +726,12 @@ BEISPIEL GUTE EXTRAKTION:
   ],
   "zubereitung": [
     "Bring reichlich Wasser in einem großen Topf zum Kochen und salze es großzügig – das ist deine Basis für alles Weitere.",
-    "Schneide den Guanciale in kleine Würfel und brate ihn bei mittlerer Hitze an, bis er richtig knusprig ist.",
+    "Schneide den Guanciale in kleine Würfel und brate ihn bei mittlerer Hitze an, bis er knusprig ist.",
     "Verrühr währenddessen das Eigelb mit dem geriebenen Pecorino und reichlich schwarzem Pfeffer.",
     "Koch die Spaghetti nach Packungsanweisung bissfest.",
     "Gieß die Pasta ab und fang dabei etwas Nudelwasser auf – das brauchst du gleich noch.",
     "Gib die Pasta zum Guanciale und nimm die Pfanne von der Hitze.",
-    "Rühr die Ei-Käse-Mischung unter und mach sie mit dem Nudelwasser schön cremig.",
+    "Rühr die Ei-Käse-Mischung unter und mach sie mit dem Nudelwasser cremig.",
     "Serviere sofort, mit extra Pecorino und Pfeffer obendrauf."
   ],
   "notizen": "Wichtig: Die Pfanne muss von der Hitze genommen werden, bevor die Eier hinzugefügt werden, sonst stocken sie."

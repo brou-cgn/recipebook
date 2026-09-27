@@ -586,8 +586,9 @@ export async function compareOcrMethods(imageBase64, language = 'de') {
 }
 
 /**
- * Rewrite an array of already-extracted recipe step texts (Coach-Ton / Du-Form
- * style) via the rephraseRecipeSteps Cloud Function. Unlike scanRecipesWithAI/
+ * Rewrite an array of already-extracted recipe step texts (beschreibend,
+ * Du-Form, energiegeladener aber sachlicher Ton) via the rephraseRecipeSteps
+ * Cloud Function. Unlike scanRecipesWithAI/
  * processHtmlWithGemini above, this is a single, non-retrying call - a
  * text-only rephrase is fast and reliable enough that the retry/progress-
  * simulation machinery for image OCR isn't needed here.
