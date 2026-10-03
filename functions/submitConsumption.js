@@ -2,6 +2,27 @@ const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
 
 /**
+ * Liter pro Gebinde (z.B. Sixpack) einer Ergebniszeile. row.gebindeGroesseLiter
+ * enthaelt bei Custom-Drinks nur die Groesse einer Einzel-Einheit (z.B. 0,33 l
+ * Flasche); die Gebindegroesse ergibt sich erst aus einheitsgroesse *
+ * einheitenProGebinde der gewaehlten Einheit -- analog zur Client-Berechnung in
+ * ConsumptionForm (getGroupCascadeUnits).
+ * @param {object} row Zeile aus event.berechnung.ergebnis.
+ * @return {number} Liter pro Gebinde, 0 wenn unbekannt.
+ */
+function gebindeLiterProRow(row) {
+  const einheit = Array.isArray(row.einheiten) && row.einheitIdx !== undefined ?
+    row.einheiten[row.einheitIdx] : null;
+  const einheitsgroesse = Number(einheit?.einheitsgroesse);
+  if (Number.isFinite(einheitsgroesse) && einheitsgroesse > 0) {
+    const proGebinde = Number(einheit.einheitenProGebinde);
+    return einheitsgroesse * (Number.isFinite(proGebinde) && proGebinde > 0 ? proGebinde : 1);
+  }
+  return Number.isFinite(row.gebindeGroesseLiter) && row.gebindeGroesseLiter > 0 ?
+    row.gebindeGroesseLiter : 0;
+}
+
+/**
  * Rechnet aus "eingekauft minus uebrig" (in Gebinden) den tatsaechlichen
  * Verbrauch in Litern pro Kategorie. Die Gebindegroesse je Kategorie kommt
  * aus der Event-Berechnung (event.berechnung.ergebnis[].gebindeGroesseLiter),
@@ -13,8 +34,9 @@ const admin = require('firebase-admin');
 function gebindeZuLiter(gebinde, event) {
   const gebindeLiterAusBerechnung = {};
   (event?.berechnung?.ergebnis || []).forEach((row) => {
-    if (row.kategorie && Number.isFinite(row.gebindeGroesseLiter) && row.gebindeGroesseLiter > 0) {
-      gebindeLiterAusBerechnung[row.kategorie] = row.gebindeGroesseLiter;
+    const gebindeLiter = gebindeLiterProRow(row);
+    if (row.kategorie && gebindeLiter > 0) {
+      gebindeLiterAusBerechnung[row.kategorie] = gebindeLiter;
     }
   });
 

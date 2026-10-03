@@ -31,6 +31,21 @@ test('gebindeZuLiter faellt fuer Custom-Drinks auf die Gebindegroesse aus der Ev
   assert.equal(result.customDrink1, 6);
 });
 
+test('gebindeZuLiter nutzt die Gebindegroesse (Einheitsgroesse * Einheiten pro Gebinde), nicht die Einzel-Einheit', () => {
+  // Peroni 0,0%: 330 ml, Sixpack. 3/4 Gebinde eingekauft, 4 von 4,5 Flaschen uebrig.
+  const gebinde = {peroni: {eingekauft: 0.75, uebrig: (4 * 0.33) / 1.98}};
+  const event = {
+    berechnung: {
+      ergebnis: [{
+        kategorie: 'peroni', isCustomDrink: true, einheitIdx: 0, gebindeGroesseLiter: 0.33,
+        einheiten: [{einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Sixpack', einheitenProGebinde: 6}],
+      }],
+    },
+  };
+  const result = _internal.gebindeZuLiter(gebinde, event);
+  assert.ok(Math.abs(result.peroni - 0.165) < 1e-9);
+});
+
 test('gebindeZuLiter ueberspringt Kategorien ohne bekannte Gebindegroesse', () => {
   const gebinde = {unbekannt: {eingekauft: 3, uebrig: 1}};
   const result = _internal.gebindeZuLiter(gebinde, {});
