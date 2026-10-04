@@ -2568,6 +2568,23 @@ export async function getPrintFormats() {
 }
 
 /**
+ * Loads the print formats for the settings editor straight from Firestore.
+ * Unlike getPrintFormats() this bypasses the settings cache and does NOT swallow
+ * errors: a failed read throws, so the editor never mistakes the built-in defaults
+ * for the stored formats and overwrites them on save.
+ *
+ * @returns {Promise<{formats: Array, usingDefaults: boolean}>}
+ */
+export async function loadPrintFormatsForEditing() {
+  const snap = await getDoc(doc(db, 'settings', 'app'));
+  const stored = snap.exists() ? snap.data().printFormats : null;
+  const usingDefaults = !Array.isArray(stored) || stored.length === 0;
+  const formats = (usingDefaults ? DEFAULT_PRINT_FORMATS : stored).map(migrateFormat);
+  if (settingsCache && !usingDefaults) settingsCache.printFormats = stored;
+  return { formats, usingDefaults };
+}
+
+/**
  * Save print format configurations to Firestore.
  *
  * Validates first (throws PrintFormatValidationError). Before the first save of a

@@ -100,3 +100,26 @@ describe('savePrintFormats', () => {
     await expect(savePrintFormats([createPrintFormat()])).rejects.toThrow('offline');
   });
 });
+
+describe('loadPrintFormatsForEditing', () => {
+  const { loadPrintFormatsForEditing } = require('./customLists');
+
+  test('returns the stored formats migrated to v3', async () => {
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ printFormats: [legacyV2] }) });
+    const { formats, usingDefaults } = await loadPrintFormatsForEditing();
+    expect(usingDefaults).toBe(false);
+    expect(formats[0].layoutVersion).toBe(3);
+  });
+
+  test('flags defaults when nothing is stored', async () => {
+    getDoc.mockResolvedValue({ exists: () => false, data: () => ({}) });
+    const { formats, usingDefaults } = await loadPrintFormatsForEditing();
+    expect(usingDefaults).toBe(true);
+    expect(formats).toHaveLength(1);
+  });
+
+  test('throws on a failed read instead of returning defaults', async () => {
+    getDoc.mockRejectedValue(new Error('offline'));
+    await expect(loadPrintFormatsForEditing()).rejects.toThrow('offline');
+  });
+});

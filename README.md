@@ -442,6 +442,11 @@ Once installed, RecipeBook works completely offline thanks to:
 - Firestore offline persistence (IndexedDB)
 - PWA architecture with Workbox
 
+## Druck-Layouts
+
+Rezepte lassen sich mit frei gestaltbaren Druckformaten drucken (Einstellungen → Drucklayout).
+Aufbau, Datenmodell und Migration: siehe [DRUCKLAYOUT.md](DRUCKLAYOUT.md).
+
 ## Technology Stack
 
 - **React 19**: Modern UI library
