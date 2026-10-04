@@ -6,7 +6,6 @@ import {
   DEFAULT_PRINT_ELEMENTS_LANDSCAPE,
   mergePrintElementsWithDefaults,
   PRINT_FONT_OPTIONS,
-  PRINT_IMAGE_COLUMNS_OPTIONS,
   PRINT_ROTATION_OPTIONS,
   PRINT_ASPECT_RATIO_OPTIONS,
   PRINT_TEXT_ALIGN_H_OPTIONS,
@@ -14,13 +13,17 @@ import {
   DEFAULT_PRINT_PAGE_WIDTH_CM,
   DEFAULT_PRINT_PAGE_HEIGHT_CM,
 } from '../utils/customLists';
+import {
+  clamp,
+  computeSnap,
+  effectiveDimensions,
+  rotationCssOffset,
+  MIN_ELEMENT_W,
+  MIN_ELEMENT_H,
+} from '../utils/printLayout';
 
-// Minimum element size in percent of page
-const MIN_W = 5;
-const MIN_H = 3;
-
-// Snap threshold in percent of page (e.g. 2 = snap within 2% of page size)
-const SNAP_THRESHOLD = 2;
+const MIN_W = MIN_ELEMENT_W;
+const MIN_H = MIN_ELEMENT_H;
 
 // Minimum mouse movement (in percent of page) before a mousedown becomes a drag
 const DRAG_THRESHOLD = 0.5;
@@ -33,121 +36,6 @@ function getDefaultElements(orientation) {
   return orientation === 'landscape'
     ? DEFAULT_PRINT_ELEMENTS_LANDSCAPE
     : DEFAULT_PRINT_ELEMENTS_PORTRAIT;
-}
-
-/**
- * Clamp a value between min and max.
- */
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
-
-/**
- * Returns the effective bounding-box dimensions of an element,
- * swapping w and h for 90° / 270° rotations.
- */
-function effectiveDimensions(el) {
-  const rotation = el.rotation || 0;
-  const swapped = rotation === 90 || rotation === 270;
-  return { effW: swapped ? el.h : el.w, effH: swapped ? el.w : el.h };
-}
-
-/**
- * Returns the CSS left/top visual offset (in % of page width) to compensate
- * for CSS rotate() rotating around the element center. This ensures the
- * top-left corner of the rotated visual bounding box aligns with (el.x, el.y).
- *
- * Supported rotation values: 0, 90, 180, 270.
- * For 0° and 180°, no offset is needed (dx=0, dy=0).
- * For 90° and 270°, the visual bounding box is h×w instead of w×h, so
- * cssLeft = x + (h-w)/2 and cssTop = y + (w-h)/2.
- */
-function rotationCssOffset(el) {
-  const r = el.rotation || 0;
-  if (r === 90 || r === 270) {
-    return { dx: (el.h - el.w) / 2, dy: (el.w - el.h) / 2 };
-  }
-  return { dx: 0, dy: 0 };
-}
-
-/**
- * Compute snap guides and adjusted position for a dragged element.
- * Returns { x, y, guides: { h: number[], v: number[] } }
- * guides.h = horizontal guide lines (y% on page)
- * guides.v = vertical guide lines (x% on page)
- */
-function computeSnap(el, rawX, rawY, allElements) {
-  const others = allElements.filter((o) => o.id !== el.id && o.visible !== false);
-
-  const { effW, effH } = effectiveDimensions(el);
-
-  // Candidate snap points for the current element (left, center, right edges)
-  const elCenterX = rawX + effW / 2;
-  const elRightX  = rawX + effW;
-  const elCenterY = rawY + effH / 2;
-  const elBottomY = rawY + effH;
-
-  let snappedX = rawX;
-  let snappedY = rawY;
-  const hGuides = [];
-  const vGuides = [];
-
-  // Collect snap targets from other elements
-  const xTargets = []; // [{ src: 'left'|'center'|'right', val }]
-  const yTargets = [];
-  others.forEach((o) => {
-    const { effW: oW, effH: oH } = effectiveDimensions(o);
-    xTargets.push({ val: o.x });
-    xTargets.push({ val: o.x + oW / 2 });
-    xTargets.push({ val: o.x + oW });
-    yTargets.push({ val: o.y });
-    yTargets.push({ val: o.y + oH / 2 });
-    yTargets.push({ val: o.y + oH });
-  });
-
-  // Try to snap horizontal (x) for left/center/right edges
-  const xEdges = [
-    { pos: rawX,        offset: 0         },
-    { pos: elCenterX,   offset: -effW / 2 },
-    { pos: elRightX,    offset: -effW     },
-  ];
-  let bestXDist = SNAP_THRESHOLD;
-  xEdges.forEach(({ pos, offset }) => {
-    xTargets.forEach(({ val }) => {
-      const dist = Math.abs(pos - val);
-      if (dist < bestXDist) {
-        bestXDist = dist;
-        snappedX = val + offset;
-        vGuides.length = 0;
-        vGuides.push(val);
-      } else if (dist === bestXDist) {
-        vGuides.push(val);
-      }
-    });
-  });
-
-  // Try to snap vertical (y) for top/center/bottom edges
-  const yEdges = [
-    { pos: rawY,        offset: 0         },
-    { pos: elCenterY,   offset: -effH / 2 },
-    { pos: elBottomY,   offset: -effH     },
-  ];
-  let bestYDist = SNAP_THRESHOLD;
-  yEdges.forEach(({ pos, offset }) => {
-    yTargets.forEach(({ val }) => {
-      const dist = Math.abs(pos - val);
-      if (dist < bestYDist) {
-        bestYDist = dist;
-        snappedY = val + offset;
-        hGuides.length = 0;
-        hGuides.push(val);
-      } else if (dist === bestYDist) {
-        hGuides.push(val);
-      }
-    });
-  });
-
-  return { x: snappedX, y: snappedY, guides: { h: hGuides, v: vGuides } };
 }
 
 /**
@@ -171,7 +59,6 @@ export default function PrintFormatEditor({ format, onChange }) {
 
   const orientation = format?.orientation || 'portrait';
   const fontFamily = format?.fontFamily || "Georgia, 'Times New Roman', serif";
-  const imageColumns = format?.imageColumns || 'auto';
 
   // Page dimensions in cm (default: DIN A4)
   const pageWidthCm = format?.pageWidthCm ?? (orientation === 'landscape' ? DEFAULT_PRINT_PAGE_HEIGHT_CM : DEFAULT_PRINT_PAGE_WIDTH_CM);
@@ -478,22 +365,6 @@ export default function PrintFormatEditor({ format, onChange }) {
             onChange={(e) => updateFormat({ fontFamily: e.target.value })}
           >
             {PRINT_FONT_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Image columns */}
-        <div className="pfe-toolbar-group">
-          <span className="pfe-toolbar-label">Bildspalten:</span>
-          <select
-            className="pfe-select"
-            value={imageColumns}
-            onChange={(e) => updateFormat({ imageColumns: e.target.value })}
-          >
-            {PRINT_IMAGE_COLUMNS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
