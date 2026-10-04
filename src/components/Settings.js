@@ -4,7 +4,7 @@ import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, 
 import { getOnboardingTestmodeActive, saveOnboardingTestmodeActive } from '../utils/onboardingSettings';
 import { renameMealCategoryInImages, removeMealCategoryFromImages } from '../utils/categoryImages';
 import PrintFormatEditor from './PrintFormatEditor';
-import PrintPreview from './PrintPreview';
+import PrintPage from './PrintPage';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
 import { isCurrentUserAdmin, ROLES, getRolePermissions, canManageSeasonMatrix, canManageDrinkWeights } from '../utils/userManagement';
 import UserManagement from './UserManagement';
@@ -1689,7 +1689,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                             </span>
                           )}
                         </div>
-                        <PrintPreview recipe={previewRecipe} format={fmt} />
+                        <PrintPage recipe={previewRecipe} format={fmt} />
                       </div>
                     );
                   })()}

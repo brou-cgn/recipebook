@@ -25,8 +25,9 @@ import NutritionModal from './NutritionModal';
 import IngredientIDSelect from './IngredientIDSelect';
 import ShoppingListModal from './ShoppingListModal';
 import RatingModal from './RatingModal';
-import { rotationCssOffset } from '../utils/printLayout';
-import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getEffectiveCuisineIcon, getDarkModePreference, DEFAULT_PRINT_FORMATS, selectPrintFormat, mergePrintElementsWithDefaults, getAlarmSoundPreference } from '../utils/customLists';
+import { getRecipeImages } from '../utils/printRecipe';
+import { printRecipe } from './printRunner';
+import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getEffectiveCuisineIcon, getDarkModePreference, DEFAULT_PRINT_FORMATS, selectPrintFormat, getAlarmSoundPreference } from '../utils/customLists';
 import { playAlarmPattern } from '../utils/alarmAudioUtils';
 import RecipeRating from './RecipeRating';
 import CookDateModal from './CookDateModal';
@@ -1208,212 +1209,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   };
 
   const handlePrint = () => {
-    const allImages = Array.isArray(recipe.images) && recipe.images.length > 0
-      ? recipe.images
-      : (recipe.image ? [recipe.image] : []);
-    const imageCount = allImages.length;
-    const format = selectPrintFormat(printFormats, imageCount);
-
-    const root = document.documentElement;
-    const fontFamily = format?.fontFamily || "Georgia, 'Times New Roman', serif";
-    const orientation = format?.orientation || 'portrait';
-    // Default to DIN A4 (21.0 × 29.7 cm) when no explicit dimensions are configured
-    const pageWidthCm  = format?.pageWidthCm  ?? (orientation === 'landscape' ? 29.7 : 21.0);
-    const pageHeightCm = format?.pageHeightCm ?? (orientation === 'landscape' ? 21.0 : 29.7);
-    const imageColumns = format?.imageColumns || 'auto';
-
-    root.style.setProperty('--print-font-family', fontFamily);
-
-    // Inject a @page size rule with explicit dimensions in cm
-    let pageStyle = document.getElementById('print-page-format');
-    if (!pageStyle) {
-      pageStyle = document.createElement('style');
-      pageStyle.id = 'print-page-format';
-      document.head.appendChild(pageStyle);
-    }
-    pageStyle.textContent = `@page { size: ${pageWidthCm}cm ${pageHeightCm}cm; }`;
-
-    // Inject image column override when a fixed column count is configured
-    let columnStyle = document.getElementById('print-image-columns');
-    if (!columnStyle) {
-      columnStyle = document.createElement('style');
-      columnStyle.id = 'print-image-columns';
-      document.head.appendChild(columnStyle);
-    }
-    if (imageColumns !== 'auto') {
-      const colCount = parseInt(imageColumns, 10);
-      const cols = Array.from({ length: colCount }, () => '1fr').join(' ');
-      columnStyle.textContent = `@media print { .carousel-track, .carousel-track[data-image-count] { grid-template-columns: ${cols} !important; } }`;
-    } else {
-      columnStyle.textContent = '';
-    }
-
-    // WYSIWYG element positioning: inject absolute-position CSS when the format has
-    // an `elements` array (new-style format from PrintFormatEditor).
-    const ELEMENT_SELECTOR_MAP = {
-      title:              '.recipe-title-row',
-      images:             '.recipe-section--images',
-      authorDate:         '.author-date-caption',
-      metadata:           '.recipe-metadata',
-      ingredients:        '.recipe-section--ingredients',
-      steps:              '.recipe-section--steps',
-      ingredientsHeading: '.recipe-ingredients-heading',
-      stepsHeading:       '.recipe-steps-heading',
-      photo1:             '.recipe-photo-1',
-      photo2:             '.recipe-photo-2',
-      photo3:             '.recipe-photo-3',
-      photo4:             '.recipe-photo-4',
-    };
-
-    // Elements that are hidden by default and need display:block when shown in WYSIWYG
-    const WYSIWYG_HIDDEN_ELEMENTS = new Set([
-      'ingredientsHeading', 'stepsHeading', 'photo1', 'photo2', 'photo3', 'photo4',
-    ]);
-
-    let elemStyle = document.getElementById('print-element-positions');
-    if (!elemStyle) {
-      elemStyle = document.createElement('style');
-      elemStyle.id = 'print-element-positions';
-      document.head.appendChild(elemStyle);
-    }
-
-    // Toggle the WYSIWYG layout class on the content container
-    const contentEl = contentRef.current;
-    const useWysiwyg = format?.elements && format.elements.length > 0;
-    if (contentEl) {
-      if (useWysiwyg) {
-        contentEl.classList.add('print-wysiwyg-layout');
-      } else {
-        contentEl.classList.remove('print-wysiwyg-layout');
-      }
-    }
-
-    if (useWysiwyg) {
-      // Merge stored elements with defaults so all known IDs are present
-      const mergedElements = mergePrintElementsWithDefaults(format?.elements, orientation);
-
-      // Image element IDs – these do not receive text formatting rules
-      const WYSIWYG_IMAGE_ELEMENT_IDS = new Set(['photo1', 'photo2', 'photo3', 'photo4']);
-      
-      const rules = mergedElements.map((el) => {
-        const selector = ELEMENT_SELECTOR_MAP[el.id];
-        if (!selector) return '';
-        if (el.visible === false) {
-          return `@media print { ${selector} { display: none !important; } }`;
-        }
-        const displayRule = WYSIWYG_HIDDEN_ELEMENTS.has(el.id)
-          ? 'display: block !important;\n    '
-          : '';
-
-        // Per-element text formatting (not for image elements)
-        const isImageEl = WYSIWYG_IMAGE_ELEMENT_IDS.has(el.id);
-        const textRules = [];
-        if (!isImageEl) {
-          if (el.fontSizeScale && el.fontSizeScale !== 1) {
-            textRules.push(`font-size: ${el.fontSizeScale}em !important;`);
-          }
-          if (el.fontBold) textRules.push('font-weight: bold !important;');
-          if (el.fontItalic) textRules.push('font-style: italic !important;');
-          if (el.fontUnderline) textRules.push('text-decoration: underline !important;');
-          if (el.fontColor) textRules.push(`color: ${el.fontColor} !important;`);
-        }
-        const rotationRule = el.rotation ? `transform: rotate(${el.rotation}deg) !important;` : '';
-
-        // Compensate for CSS rotate() rotating around element center (same as PrintPreview / PrintFormatEditor)
-        const { dx: rotDx, dy: rotDy } = rotationCssOffset(el);
-        const scaleY = pageWidthCm / pageHeightCm;
-
-        const cssLeft = el.x + rotDx;
-        const cssTop = (el.y + rotDy) * scaleY;
-        const cssWidth = el.w;
-        const cssHeight = el.h * scaleY;
-        
-        return `@media print {
-  ${selector} {
-    ${displayRule}position: absolute !important;
-    left: ${cssLeft.toFixed(2)}% !important;
-    top: ${cssTop.toFixed(2)}% !important;
-    width: ${cssWidth.toFixed(2)}% !important;
-    height: ${cssHeight.toFixed(2)}% !important;
-    overflow: hidden !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    box-sizing: border-box !important;
-    ${rotationRule}
-    ${textRules.join('\n    ')}
-  }
-}`;
-      });
-
-      // In WYSIWYG mode, always hide the combined images carousel; individual photo elements are used instead
-      rules.push('@media print { .recipe-section--images { display: none !important; } }');
-
-      // When the separate heading elements are visible, hide the duplicated headings
-      // inside their respective sections so they do not appear twice
-      const ingredientsHeadingEl = mergedElements.find((e) => e.id === 'ingredientsHeading');
-      if (ingredientsHeadingEl && ingredientsHeadingEl.visible !== false) {
-        rules.push('@media print { .recipe-section--ingredients .section-header { display: none !important; } }');
-      }
-      const stepsHeadingEl = mergedElements.find((e) => e.id === 'stepsHeading');
-      if (stepsHeadingEl && stepsHeadingEl.visible !== false) {
-        rules.push('@media print { .recipe-section--steps > h2 { display: none !important; } }');
-      }
-
-      elemStyle.textContent = rules.join('\n');
-    } else {
-      // Legacy format: fall back to flex-order approach
-      const elementOrder = format?.elementOrder || ['images', 'ingredients', 'steps'];
-      const imageWidth = format?.imageWidth != null ? format.imageWidth : 100;
-      const imageAlign = format?.imageAlign || 'center';
-      const alignSelfMap = { left: 'flex-start', center: 'center', right: 'flex-end' };
-      root.style.setProperty('--print-images-order', String(elementOrder.indexOf('images') + 1));
-      root.style.setProperty('--print-ingredients-order', String(elementOrder.indexOf('ingredients') + 1));
-      root.style.setProperty('--print-steps-order', String(elementOrder.indexOf('steps') + 1));
-      root.style.setProperty('--print-image-width', `${imageWidth}%`);
-      root.style.setProperty('--print-image-align-self', alignSelfMap[imageAlign] || 'center');
-      elemStyle.textContent = '';
-    }
-
-    // Clean up CSS variables and the injected styles after printing
-    const cleanup = () => {
-      root.style.removeProperty('--print-font-family');
-      root.style.removeProperty('--print-images-order');
-      root.style.removeProperty('--print-ingredients-order');
-      root.style.removeProperty('--print-steps-order');
-      root.style.removeProperty('--print-image-width');
-      root.style.removeProperty('--print-image-align-self');
-      if (contentEl) contentEl.classList.remove('print-wysiwyg-layout');
-      if (pageStyle.parentNode) pageStyle.parentNode.removeChild(pageStyle);
-      if (columnStyle.parentNode) columnStyle.parentNode.removeChild(columnStyle);
-      if (elemStyle.parentNode) elemStyle.parentNode.removeChild(elemStyle);
-    };
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    if (isIOS) {
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        alert('Bitte erlaube Popups für diese Seite, um das Rezept zu drucken.');
-        cleanup();
-        return;
-      }
-      const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
-        .map(el => el.outerHTML)
-        .join('\n');
-      const bodyHtml = contentRef.current ? contentRef.current.outerHTML : '';
-      printWindow.document.write('<html><head>' + styles + '</head><body>' + bodyHtml + '</body></html>');
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
-      cleanup();
-    } else {
-      // afterprint fires when the print dialog closes (including cancellation in most browsers)
-      window.addEventListener('afterprint', cleanup, { once: true });
-      // Fallback: clean up after a timeout in case afterprint does not fire (e.g. some older browsers)
-      const cleanupTimeout = setTimeout(cleanup, 30000);
-      window.addEventListener('afterprint', () => clearTimeout(cleanupTimeout), { once: true });
-
-      window.print();
-    }
+    const format = selectPrintFormat(printFormats, getRecipeImages(recipe).length);
+    printRecipe({
+      recipe,
+      format,
+      servings: currentServings,
+      authorName,
+      portionLabel,
+    });
   };
 
   const scaleIngredient = (ingredient) => {
@@ -2282,15 +2085,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               carouselLengthRef.current = orderedImages.length;
               return (
                 <>
-                  {/* Individual photo wrappers for WYSIWYG print positioning.
-                      Hidden on screen; each one is shown only when the corresponding
-                      'photoN' print element is active. */}
-                  {orderedImages.slice(0, 4).map((img, idx) => (
-                    <div key={idx} className={`recipe-photo-wysiwyg recipe-photo-${idx + 1}`} aria-hidden="true">
-                      <img src={img.url} alt={recipe.title} />
-                    </div>
-                  ))}
-
                 <div
                   className="recipe-detail-image recipe-section--images"
                 >
@@ -2726,14 +2520,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               )}
             </div>
 
-            {/* Ingredients heading – separate element for WYSIWYG print positioning.
-                Hidden on screen; shown only when the 'ingredientsHeading' print element
-                is active.  When shown, the duplicate heading inside the section is hidden
-                via dynamically injected CSS. */}
-            <div className="recipe-ingredients-heading" aria-hidden="true">
-              <h2>Zutaten</h2>
-            </div>
-
             <section className="recipe-section recipe-section--ingredients">
               <div className="section-header">
                 <h2>Zutaten für</h2>
@@ -2788,12 +2574,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 ) || <li>Keine Zutaten aufgelistet</li>}
               </ul>
             </section>
-
-            {/* Steps heading – separate element for WYSIWYG print positioning.
-                Hidden on screen; shown only when the 'stepsHeading' print element is active. */}
-            <div className="recipe-steps-heading" aria-hidden="true">
-              <h2>Zubereitung</h2>
-            </div>
 
             <section className="recipe-section recipe-section--steps">
               <h2>Zubereitungsschritte</h2>
