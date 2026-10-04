@@ -25,6 +25,7 @@ import NutritionModal from './NutritionModal';
 import IngredientIDSelect from './IngredientIDSelect';
 import ShoppingListModal from './ShoppingListModal';
 import RatingModal from './RatingModal';
+import { rotationCssOffset } from '../utils/printLayout';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getEffectiveCuisineIcon, getDarkModePreference, DEFAULT_PRINT_FORMATS, selectPrintFormat, mergePrintElementsWithDefaults, getAlarmSoundPreference } from '../utils/customLists';
 import { playAlarmPattern } from '../utils/alarmAudioUtils';
 import RecipeRating from './RecipeRating';
@@ -1319,9 +1320,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         const rotationRule = el.rotation ? `transform: rotate(${el.rotation}deg) !important;` : '';
 
         // Compensate for CSS rotate() rotating around element center (same as PrintPreview / PrintFormatEditor)
-        const rotR = el.rotation || 0;
-        const rotDx = (rotR === 90 || rotR === 270) ? (el.h - el.w) / 2 : 0;
-        const rotDy = (rotR === 90 || rotR === 270) ? (el.w - el.h) / 2 : 0;
+        const { dx: rotDx, dy: rotDy } = rotationCssOffset(el);
         const scaleY = pageWidthCm / pageHeightCm;
 
         const cssLeft = el.x + rotDx;

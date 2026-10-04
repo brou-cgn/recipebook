@@ -4,6 +4,7 @@
 import { db } from '../firebase';
 import { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField, collection, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { normalizeNutritionReferenceId } from './nutritionReferenceUtils';
+import { DEFAULT_PRINT_FORMATS, migrateFormat, validatePrintFormats, PrintFormatValidationError } from './printFormats';
 import { getDefaultButtonIconGroups, reconcileButtonIconGroups, reconcileCuisineTypeGroup, reconcileMealCategoriesGroup, cuisineTypeIconKey } from './buttonIconRows';
 
 export const DEFAULT_CUISINE_TYPES = [
@@ -229,189 +230,21 @@ export const DEFAULT_CONVERSION_TABLE = [
 export const DEFAULT_SLOGAN = 'Unsere besten Momente';
 export const DEFAULT_FAVICON_TEXT = 'brouBook';
 
-/**
- * Default print format configuration constants
- */
-export const DEFAULT_PRINT_FONT_FAMILY = "Georgia, 'Times New Roman', serif";
-export const DEFAULT_PRINT_ORIENTATION = 'portrait';
-export const DEFAULT_PRINT_ELEMENT_ORDER = ['images', 'ingredients', 'steps'];
-
-/** Available font options for print formats */
-export const PRINT_FONT_OPTIONS = [
-  { label: 'Georgia (Serif)', value: "Georgia, 'Times New Roman', serif" },
-  { label: 'Times New Roman (Serif)', value: "'Times New Roman', Times, serif" },
-  { label: 'Arial (Sans-Serif)', value: "Arial, Helvetica, sans-serif" },
-  { label: 'Helvetica (Sans-Serif)', value: "Helvetica, Arial, sans-serif" },
-  { label: 'Verdana (Sans-Serif)', value: "Verdana, Geneva, sans-serif" },
-  { label: 'Courier New (Monospace)', value: "'Courier New', Courier, monospace" },
-];
-
-/** Available image alignment options for print formats */
-export const PRINT_IMAGE_ALIGN_OPTIONS = [
-  { label: 'Zentriert', value: 'center' },
-  { label: 'Linksbündig', value: 'left' },
-  { label: 'Rechtsbündig', value: 'right' },
-];
-
-/** Available image column layout options for print formats */
-export const PRINT_IMAGE_COLUMNS_OPTIONS = [
-  { label: 'Automatisch (nach Anzahl)', value: 'auto' },
-  { label: '1 Spalte', value: '1' },
-  { label: '2 Spalten', value: '2' },
-];
-
-/**
- * All elements that can be placed on a print format page.
- * Each entry has:
- *   id {string}     - Unique element identifier (matches CSS selector keys)
- *   label {string}  - Human-readable label shown in the editor
- *   color {string}  - Background color used in the WYSIWYG preview
- */
-export const PRINT_FORMAT_ELEMENTS = [
-  { id: 'title',              label: 'Titel',                   color: '#d4e8f7', isImage: false },
-  { id: 'authorDate',         label: 'Autor & Datum',            color: '#d4f0e8', isImage: false },
-  { id: 'metadata',           label: 'Kulinarik / Zeit / Infos', color: '#f0e8d4', isImage: false },
-  { id: 'ingredients',        label: 'Zutaten',                  color: '#e8d4f0', isImage: false },
-  { id: 'steps',              label: 'Zubereitungsschritte',     color: '#f7d4d4', isImage: false },
-  { id: 'ingredientsHeading', label: 'Überschrift Zutaten',      color: '#c8b0e0', isImage: false },
-  { id: 'stepsHeading',       label: 'Überschrift Zubereitung',  color: '#e8b0b0', isImage: false },
-  { id: 'photo1',             label: 'Foto 1',                   color: '#fdd8a0', isImage: true  },
-  { id: 'photo2',             label: 'Foto 2',                   color: '#fdc880', isImage: true  },
-  { id: 'photo3',             label: 'Foto 3',                   color: '#fdb860', isImage: true  },
-  { id: 'photo4',             label: 'Foto 4',                   color: '#fd9840', isImage: true  },
-];
-
-/** Available rotation options for print format elements */
-export const PRINT_ROTATION_OPTIONS = [
-  { label: '0°',   value: 0   },
-  { label: '90°',  value: 90  },
-  { label: '180°', value: 180 },
-  { label: '270°', value: 270 },
-];
-
-/** Available aspect ratio options for image elements in print formats */
-export const PRINT_ASPECT_RATIO_OPTIONS = [
-  { label: 'Original',          value: 'none' },
-  { label: 'Quadrat (1:1)',     value: '1/1'  },
-  { label: '3:2',               value: '3/2'  },
-  { label: '4:3',               value: '4/3'  },
-  { label: '16:9',              value: '16/9' },
-  { label: '2:3 (Hochformat)',  value: '2/3'  },
-  { label: '3:4 (Hochformat)',  value: '3/4'  },
-];
-
-/** Available horizontal text alignment options for print format text elements */
-export const PRINT_TEXT_ALIGN_H_OPTIONS = [
-  { label: 'Links',     value: 'left'    },
-  { label: 'Mitte',     value: 'center'  },
-  { label: 'Rechts',    value: 'right'   },
-  { label: 'Blocksatz', value: 'justify' },
-];
-
-/** Available vertical text alignment options for print format text elements */
-export const PRINT_TEXT_ALIGN_V_OPTIONS = [
-  { label: 'Oben',  value: 'top'    },
-  { label: 'Mitte', value: 'middle' },
-  { label: 'Unten', value: 'bottom' },
-];
-
-/** Default page width in cm for portrait orientation (DIN A4) */
-export const DEFAULT_PRINT_PAGE_WIDTH_CM = 21.0;
-/** Default page height in cm for portrait orientation (DIN A4) */
-export const DEFAULT_PRINT_PAGE_HEIGHT_CM = 29.7;
-
-/**
- * Layout version for print format elements.
- * v1 (no layoutVersion field): x, w as % of page width; y, h as % of page height.
- * v2 (layoutVersion: 2):       x, y, w, h ALL as % of page width.
- *   This is required because the CSS padding-bottom trick renders all percentage
- *   values (including top/height) relative to the container WIDTH, not its height.
- */
-export const PRINT_FORMAT_LAYOUT_VERSION = 2;
-
-/**
- * Default element positions for a portrait A4 page.
- * ALL coordinates (x, y, w, h) are expressed as % of page WIDTH.
- * For A4 portrait (21 × 29.7 cm): max reachable y+h ≈ 141.4% of page width.
- */
-export const DEFAULT_PRINT_ELEMENTS_PORTRAIT = [
-  { id: 'title',              x: 2,  y: 1.4,  w: 96, h: 9.9,  visible: true  },
-  { id: 'photo1',             x: 2,  y: 12.7, w: 96, h: 39.6, visible: true  },
-  { id: 'authorDate',         x: 2,  y: 53.7, w: 96, h: 7.1,  visible: true  },
-  { id: 'metadata',           x: 2,  y: 62.2, w: 96, h: 11.3, visible: true  },
-  { id: 'ingredients',        x: 2,  y: 75.0, w: 45, h: 56.6, visible: true  },
-  { id: 'steps',              x: 51, y: 75.0, w: 47, h: 56.6, visible: true  },
-  { id: 'ingredientsHeading', x: 2,  y: 75.0, w: 45, h: 7.1,  visible: false },
-  { id: 'stepsHeading',       x: 51, y: 75.0, w: 47, h: 7.1,  visible: false },
-  { id: 'photo2',             x: 2,  y: 12.7, w: 45, h: 39.6, visible: false },
-  { id: 'photo3',             x: 51, y: 12.7, w: 45, h: 39.6, visible: false },
-  { id: 'photo4',             x: 51, y: 53.7, w: 45, h: 19.8, visible: false },
-];
-
-/**
- * Default element positions for a landscape A4 page.
- * ALL coordinates (x, y, w, h) are expressed as % of page WIDTH.
- * For A4 landscape (29.7 × 21 cm): max reachable y+h ≈ 70.7% of page width.
- */
-export const DEFAULT_PRINT_ELEMENTS_LANDSCAPE = [
-  { id: 'title',              x: 2,  y: 0.7,  w: 96, h: 7.1,  visible: true  },
-  { id: 'photo1',             x: 2,  y: 8.5,  w: 45, h: 56.6, visible: true  },
-  { id: 'authorDate',         x: 51, y: 8.5,  w: 47, h: 4.9,  visible: true  },
-  { id: 'metadata',           x: 51, y: 14.1, w: 47, h: 7.1,  visible: true  },
-  { id: 'ingredients',        x: 51, y: 21.9, w: 47, h: 21.2, visible: true  },
-  { id: 'steps',              x: 51, y: 43.8, w: 47, h: 21.2, visible: true  },
-  { id: 'ingredientsHeading', x: 51, y: 21.9, w: 47, h: 4.9,  visible: false },
-  { id: 'stepsHeading',       x: 51, y: 43.8, w: 47, h: 4.9,  visible: false },
-  { id: 'photo2',             x: 2,  y: 8.5,  w: 20, h: 28.3, visible: false },
-  { id: 'photo3',             x: 24, y: 8.5,  w: 20, h: 28.3, visible: false },
-  { id: 'photo4',             x: 2,  y: 37.5, w: 20, h: 28.3, visible: false },
-];
-
-/**
- * Merges stored print-format elements with the defaults, ensuring all known element IDs
- * are present. Used by both the editor preview and the live print handler.
- */
-export function mergePrintElementsWithDefaults(elements, orientation) {
-  const defaults = orientation === 'landscape'
-    ? DEFAULT_PRINT_ELEMENTS_LANDSCAPE
-    : DEFAULT_PRINT_ELEMENTS_PORTRAIT;
-  return PRINT_FORMAT_ELEMENTS.map((def) => {
-    const existing = elements && elements.find((e) => e.id === def.id);
-    if (existing) return existing;
-    const fallback = defaults.find((d) => d.id === def.id);
-    return fallback
-      ? { ...fallback }
-      : { id: def.id, x: 2, y: 2, w: 50, h: 10, visible: false };
-  });
-}
-
-/**
- * Default print formats.  Each format can have:
- *   id {string}            - Unique identifier
- *   name {string}          - Display name in settings
- *   maxPhotos {number|null}- Max photo count this format applies to (null = catch-all)
- *   orientation {string}   - 'portrait' | 'landscape'
- *   fontFamily {string}    - CSS font-family string
- *   layoutVersion {number} - Element coordinate version (see PRINT_FORMAT_LAYOUT_VERSION)
- *   elements {Array}       - WYSIWYG element positions: [{id, x, y, w, h, visible}]
- *                            Since layoutVersion 2: x, y, w, h are ALL % of page width.
- *   elementOrder {string[]}- (legacy) Ordered array of 'images', 'ingredients', 'steps'
- *   imageWidth {number}    - (legacy) Image section width as a percentage of the page
- *   imageAlign {string}    - (legacy) Alignment: 'left' | 'center' | 'right'
- *   imageColumns {string}  - Number of image columns: 'auto' | '1' | '2'
- */
-export const DEFAULT_PRINT_FORMATS = [
-  {
-    id: 'default',
-    name: 'Standard',
-    maxPhotos: null,
-    orientation: 'portrait',
-    fontFamily: "Georgia, 'Times New Roman', serif",
-    imageColumns: 'auto',
-    layoutVersion: PRINT_FORMAT_LAYOUT_VERSION,
-    elements: DEFAULT_PRINT_ELEMENTS_PORTRAIT,
-  },
-];
+// Print format constants, element registry and format logic live in
+// printElements.js / printLayout.js / printFormats.js; re-exported here so
+// existing imports from customLists keep working.
+export * from './printElements';
+export {
+  PRINT_FORMAT_LAYOUT_VERSION,
+  DEFAULT_PRINT_FORMATS,
+  selectPrintFormat,
+  migrateFormatToV2,
+  migrateFormat,
+  validatePrintFormats,
+  PrintFormatValidationError,
+  createPrintFormat,
+  duplicatePrintFormat,
+} from './printFormats';
 
 /**
  * Default cuisine groups – each entry defines a parent type with its child types.
@@ -1237,6 +1070,7 @@ export async function getSettings() {
         inspirationTargetListName: settings.inspirationTargetListName ?? DEFAULT_INSPIRATION_TARGET_LIST_NAME,
         inspirationTargetListDescription: settings.inspirationTargetListDescription ?? DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION,
         printFormats: settings.printFormats || DEFAULT_PRINT_FORMATS,
+        printFormatsBackup: settings.printFormatsBackup,
         buttonIconGroups: settings.buttonIconGroups,
         // Image data from settings/images
         faviconImage: imagesData.faviconImage || null,
@@ -2722,36 +2556,6 @@ export async function saveInspirationListSettings({ inspirationListName, inspira
 }
 
 /**
- * Migrates a print format from layoutVersion 1 (y/h as % of page height) to
- * layoutVersion 2 (all coordinates as % of page width).
- *
- * In v1, element y and h values were stored as percentage of the page HEIGHT.
- * In v2, ALL coordinates (x, y, w, h) are stored as percentage of the page WIDTH.
- * CSS percentage values for top/height inside a padding-bottom aspect-ratio container
- * are relative to the container WIDTH, so all coordinates must use the same base.
- *
- * @param {Object} format - A print format object (may be v1 or v2)
- * @returns {Object} A new format object in v2 layout
- */
-export function migrateFormatToV2(format) {
-  if ((format.layoutVersion || 1) >= PRINT_FORMAT_LAYOUT_VERSION) {
-    return format; // Already up to date
-  }
-  const orientation = format.orientation || 'portrait';
-  const pageWidthCm = format.pageWidthCm ?? (orientation === 'landscape' ? DEFAULT_PRINT_PAGE_HEIGHT_CM : DEFAULT_PRINT_PAGE_WIDTH_CM);
-  const pageHeightCm = format.pageHeightCm ?? (orientation === 'landscape' ? DEFAULT_PRINT_PAGE_WIDTH_CM : DEFAULT_PRINT_PAGE_HEIGHT_CM);
-  const ratio = pageHeightCm / pageWidthCm;
-
-  const migratedElements = (format.elements || []).map((el) => ({
-    ...el,
-    y: parseFloat((el.y * ratio).toFixed(2)),
-    h: parseFloat((el.h * ratio).toFixed(2)),
-  }));
-
-  return { ...format, elements: migratedElements, layoutVersion: PRINT_FORMAT_LAYOUT_VERSION };
-}
-
-/**
  * Get print format configurations from Firestore or return defaults.
  * @returns {Promise<Array>} Promise resolving to array of print format objects
  */
@@ -2760,22 +2564,42 @@ export async function getPrintFormats() {
   const formats = settings.printFormats && settings.printFormats.length > 0
     ? settings.printFormats
     : DEFAULT_PRINT_FORMATS;
-  return formats.map(migrateFormatToV2);
+  return formats.map(migrateFormat);
 }
 
 /**
  * Save print format configurations to Firestore.
+ *
+ * Validates first (throws PrintFormatValidationError). Before the first save of a
+ * pre-v3 configuration the previous formats are kept in `printFormatsBackup`
+ * so the migration can be rolled back; an existing backup is never overwritten.
+ *
  * @param {Array} printFormats - Array of print format objects
  * @returns {Promise<void>}
  */
 export async function savePrintFormats(printFormats) {
+  const errors = validatePrintFormats(printFormats);
+  if (errors.length > 0) {
+    throw new PrintFormatValidationError(errors);
+  }
   try {
     const settingsRef = doc(db, 'settings', 'app');
-    await updateDoc(settingsRef, { printFormats });
+    const update = { printFormats };
+
+    const current = await getSettings();
+    const stored = current?.printFormats;
+    const needsBackup = Array.isArray(stored) && stored.length > 0
+      && stored.some((f) => (f?.layoutVersion || 1) < 3)
+      && !current.printFormatsBackup;
+    if (needsBackup) {
+      update.printFormatsBackup = stored;
+    }
+    await updateDoc(settingsRef, update);
 
     // Update cache
     if (settingsCache) {
       settingsCache.printFormats = printFormats;
+      if (update.printFormatsBackup) settingsCache.printFormatsBackup = update.printFormatsBackup;
     }
   } catch (error) {
     console.error('Error saving print formats:', error);
@@ -2783,35 +2607,3 @@ export async function savePrintFormats(printFormats) {
   }
 }
 
-/**
- * Select the best matching print format for a given image count.
- *
- * Formats with a maxPhotos value act as thresholds: they apply when
- * imageCount <= maxPhotos.  Among all matching threshold formats the one
- * with the **lowest** maxPhotos wins (most specific match).  Formats with
- * maxPhotos === null act as catch-all fallbacks and are only used when no
- * threshold format matches.
- *
- * @param {Array} printFormats - Array of print format objects (may be empty)
- * @param {number} imageCount  - Number of images in the recipe
- * @returns {Object} The selected print format object
- */
-export function selectPrintFormat(printFormats, imageCount) {
-  const formats = printFormats && printFormats.length > 0 ? printFormats : DEFAULT_PRINT_FORMATS;
-  const count = imageCount || 0;
-
-  // Collect threshold formats that cover the current image count
-  const withThreshold = formats.filter(
-    (f) => f.maxPhotos !== null && f.maxPhotos !== undefined && f.maxPhotos >= count
-  );
-
-  if (withThreshold.length > 0) {
-    // Pick the most specific (lowest threshold that still covers count)
-    withThreshold.sort((a, b) => a.maxPhotos - b.maxPhotos);
-    return withThreshold[0];
-  }
-
-  // Fall back to catch-all format (maxPhotos === null / undefined)
-  const catchAll = formats.find((f) => f.maxPhotos === null || f.maxPhotos === undefined);
-  return catchAll || DEFAULT_PRINT_FORMATS[0];
-}
