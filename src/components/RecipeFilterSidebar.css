@@ -157,6 +157,10 @@
   flex-wrap: nowrap;
   align-items: center;
   gap: 0.6rem;
+  /* Nicht schrumpfen: Wegen overflow-y: hidden ist min-height sonst 0 und die
+     Zeile wird in der Flex-Spalte der Sidebar bei geringer Fensterhoehe
+     abgeschnitten bzw. ganz ausgeblendet. Stattdessen scrollt die Sidebar. */
+  flex-shrink: 0;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
