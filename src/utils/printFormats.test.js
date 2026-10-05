@@ -255,3 +255,63 @@ describe('validatePrintFormats', () => {
     expect(err.errors).toBe(errors);
   });
 });
+
+describe('flow (template) formats', () => {
+  const { createFlowFormat, convertToFlowFormat } = require('./printFormats');
+  const { FLOW_STYLE_DEFAULTS } = require('./printTemplates');
+
+  test('createFlowFormat builds a valid, complete flow format', () => {
+    const f = createFlowFormat('card', 'landscape', 'Quer');
+    expect(f).toMatchObject({ layoutType: 'flow', template: 'card', name: 'Quer', orientation: 'landscape', pageWidthCm: 29.7, layoutVersion: 3 });
+    expect(f.elements).toBeUndefined();
+    expect(f.style.photoPosition).toBe('left');
+    expect(validatePrintFormats([f])).toEqual([]);
+  });
+
+  test('migration keeps flow formats flow, normalises style and drops elements', () => {
+    const out = migrateFormat({
+      id: 'x', layoutType: 'flow', template: 'nope', elements: [{ id: 'title' }],
+      style: { baseSize: 'xxl', accent: 'red', marginCm: 99, photoCount: 9, show: { photos: false } },
+      overrides: { title: { fontBold: true, fontSizeScale: 9, evil: 1 }, ghost: { fontBold: true } },
+    });
+    expect(out.layoutType).toBe('flow');
+    expect(out.template).toBe('classic');
+    expect(out.elements).toBeUndefined();
+    expect(out.style.baseSize).toBe(FLOW_STYLE_DEFAULTS.baseSize);
+    expect(out.style.accent).toBe(FLOW_STYLE_DEFAULTS.accent);
+    expect(out.style.marginCm).toBe(5);
+    expect(out.style.photoCount).toBe(4);
+    expect(out.style.show.photos).toBe(false);
+    expect(out.style.show.title).toBe(true);
+    expect(out.overrides).toEqual({ title: { fontBold: true, fontSizeScale: 2 } });
+  });
+
+  test.each([
+    ['fresh', () => createFlowFormat('photo')],
+    ['empty flow', () => ({ layoutType: 'flow' })],
+    ['garbage style', () => ({ layoutType: 'flow', style: 'x', overrides: [] })],
+  ])('flow migration is idempotent: %s', (_, make) => {
+    const once = migrateFormat(make());
+    expect(migrateFormat(once)).toEqual(once);
+  });
+
+  test('flow formats are selected like any other format', () => {
+    const flow = { ...createFlowFormat('classic'), maxPhotos: 2 };
+    expect(selectPrintFormat([flow, fmt('all', null)], 1)).toBe(flow);
+  });
+
+  test('page margin must be within 0..5 cm', () => {
+    const f = createFlowFormat('classic');
+    expect(validatePrintFormats([{ ...f, style: { ...f.style, marginCm: 9 } }]).some((e) => e.field === 'margin')).toBe(true);
+    expect(validatePrintFormats([{ ...f, style: { ...f.style, marginCm: 0 } }])).toEqual([]);
+  });
+
+  test('convertToFlowFormat keeps identity and page size and drops positioned layout', () => {
+    const free = { ...createPrintFormat('landscape'), name: 'Alt', maxPhotos: 3, migrationNotes: ['legacy-layout-replaced'] };
+    const flow = convertToFlowFormat(free);
+    expect(flow).toMatchObject({ id: free.id, name: 'Alt', maxPhotos: 3, layoutType: 'flow', pageWidthCm: 29.7, pageHeightCm: 21 });
+    expect(flow.elements).toBeUndefined();
+    expect(flow.migrationNotes).toBeUndefined();
+    expect(flow.style).toBeDefined();
+  });
+});
