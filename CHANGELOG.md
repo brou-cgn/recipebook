@@ -14,6 +14,9 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Zugriffsbeschränkung für Entwurfs-Rezepte: Nur Administratoren und Autoren können Rezepte im Entwurfstatus (isPrivate) sehen
 
 ### Geändert
+- Druck-Layouts neu aufgebaut: Vorschau und Druck nutzen jetzt denselben Renderer, der Druck entspricht der Vorschau. Admin-Elemente (Index, Entwurf) erscheinen nicht mehr im Druck, das Foto-Seitenverhältnis gilt auch im Druck, Kulinarik und Portionen gehören zu den Metadaten.
+- Druckformate: Löschen mit „Rückgängig", Duplizieren, Prüfung beim Speichern (z. B. doppelte Fotoanzahl), Warnung bei ungespeicherten Änderungen. Der Editor lässt sich per Tastatur und Touch bedienen und zeigt in der Vorschau, wenn Inhalt abgeschnitten wird.
+- Datenmodell der Druckformate auf Version 3 (abwärtskompatibel, Sicherung des alten Stands in `printFormatsBackup`)
 - GitHub Actions Workflow erweitert um automatisches Version-Bumping
 
 ### Sicherheit

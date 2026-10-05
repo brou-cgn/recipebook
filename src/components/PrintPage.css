@@ -9,6 +9,10 @@
   margin-top: 1rem;
 }
 
+.ppv-root--embedded {
+  margin-top: 0;
+}
+
 .ppv-overflow-warning {
   margin: 0 0 0.5rem;
   padding: 0.4rem 0.6rem;

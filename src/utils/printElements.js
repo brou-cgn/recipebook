@@ -16,7 +16,6 @@ export const DEFAULT_PRINT_PAGE_WIDTH_CM = 21.0;
 export const DEFAULT_PRINT_PAGE_HEIGHT_CM = 29.7;
 
 export const DEFAULT_PRINT_FONT_FAMILY = "Georgia, 'Times New Roman', serif";
-export const DEFAULT_PRINT_ORIENTATION = 'portrait';
 
 /** Available font options for print formats */
 export const PRINT_FONT_OPTIONS = [

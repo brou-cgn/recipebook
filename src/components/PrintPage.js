@@ -22,6 +22,7 @@ const CM_TO_PX = 96 / 2.54;
  *   portionLabel {string}  e.g. "Portionen"
  *   mode         {'preview'|'print'} preview: scaled, placeholders, overflow badges
  *   onOverflow   {(ids: string[]) => void} preview only: ids of clipped elements
+ *   embedded     {boolean} preview only: no outer margin and no summary line (used under the editor boxes)
  */
 export default function PrintPage({
   recipe,
@@ -31,6 +32,7 @@ export default function PrintPage({
   portionLabel,
   mode = 'preview',
   onOverflow,
+  embedded = false,
 }) {
   const wrapperRef = useRef(null);
   const elementRefs = useRef({});
@@ -132,8 +134,8 @@ export default function PrintPage({
 
   const labels = overflowIds.map((id) => getPrintElementDef(id)?.label || id);
   return (
-    <div className="ppv-root">
-      {labels.length > 0 && (
+    <div className={`ppv-root${embedded ? ' ppv-root--embedded' : ''}`}>
+      {!embedded && labels.length > 0 && (
         <p className="ppv-overflow-warning" role="status">
           Inhalt zu lang, wird abgeschnitten: {labels.join(', ')}
         </p>
