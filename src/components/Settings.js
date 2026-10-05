@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, renameCuisineTypeIcon, deleteCuisineTypeIcon, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getButtonIconsOrder, saveButtonIconsOrder, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, getAIRecipePromptHistory, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT, PRINT_FORMAT_LAYOUT_VERSION, selectPrintFormat } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, renameCuisineTypeIcon, deleteCuisineTypeIcon, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getButtonIconsOrder, saveButtonIconsOrder, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, getAIRecipePromptHistory, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION } from '../utils/customLists';
 import { getOnboardingTestmodeActive, saveOnboardingTestmodeActive } from '../utils/onboardingSettings';
 import { renameMealCategoryInImages, removeMealCategoryFromImages } from '../utils/categoryImages';
-import PrintFormatEditor from './PrintFormatEditor';
-import PrintPreview from './PrintPreview';
+import PrintFormatsSettings from './PrintFormatsSettings';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
 import { isCurrentUserAdmin, ROLES, getRolePermissions, canManageSeasonMatrix, canManageDrinkWeights } from '../utils/userManagement';
 import UserManagement from './UserManagement';
@@ -377,12 +376,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const inspirationListDescriptionRef = useRef(null);
   const inspirationTargetListDescriptionRef = useRef(null);
 
-  // Print format settings
-  const [printFormats, setPrintFormats] = useState(DEFAULT_PRINT_FORMATS);
-  const [savingPrintFormats, setSavingPrintFormats] = useState(false);
-  // ID of the recipe currently selected for the print format preview ('' = none)
-  const [printPreviewRecipeId, setPrintPreviewRecipeId] = useState('');
-
   // Role permissions state (for abortCalc and editLists permission checks)
   const [rolePermissions, setRolePermissions] = useState(null);
   const [onboardingTestmodeActive, setOnboardingTestmodeActive] = useState(false);
@@ -447,8 +440,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       setInspirationTargetListName(inspirationSettings.inspirationTargetListName);
       setInspirationTargetListDescription(inspirationSettings.inspirationTargetListDescription);
       setOnboardingTestmodeActive(onboardingTestmode);
-      const formats = await getPrintFormats();
-      setPrintFormats(formats && formats.length > 0 ? formats : DEFAULT_PRINT_FORMATS);
     };
     loadSettings();
   }, []);
@@ -1557,185 +1548,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
             <div className="settings-tab-header">
               <h2>Drucklayout</h2>
             </div>
-            <div className="settings-section">
-              <p className="section-description">
-                Konfigurieren Sie das Drucklayout für Rezepte. Platzieren Sie die Elemente per Drag &amp; Drop
-                frei auf der Seite und passen Sie ihre Größe durch Ziehen an den Rändern an.
-                Die Anzahl der Fotos bestimmt, welches Format angewendet wird.
-              </p>
-
-              {/* ── Preview recipe selector ─────────────────────────────── */}
-              {allRecipes.length > 0 && (
-                <div className="print-preview-selector">
-                  <label htmlFor="print-preview-recipe" className="print-preview-label">
-                    Vorschau-Rezept:
-                  </label>
-                  <select
-                    id="print-preview-recipe"
-                    className="pfe-select"
-                    value={printPreviewRecipeId}
-                    onChange={(e) => setPrintPreviewRecipeId(e.target.value)}
-                  >
-                    <option value="">– kein Vorschau-Rezept –</option>
-                    {[...allRecipes]
-                      .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'de'))
-                      .map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.title}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              )}
-
-              {printFormats.map((fmt, fmtIdx) => (
-                <div key={fmt.id} className="print-format-item">
-                  <div className="print-format-header">
-                    <input
-                      type="text"
-                      className="print-format-name-input"
-                      value={fmt.name}
-                      placeholder="Formatname"
-                      onChange={(e) => {
-                        const updated = printFormats.map((f, i) =>
-                          i === fmtIdx ? { ...f, name: e.target.value } : f
-                        );
-                        setPrintFormats(updated);
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="faq-delete-btn"
-                      title="Format löschen"
-                      onClick={() => {
-                        if (printFormats.length <= 1) {
-                          alert('Es muss mindestens ein Druckformat vorhanden sein.');
-                          return;
-                        }
-                        const isCatchAll = fmt.maxPhotos === null || fmt.maxPhotos === undefined;
-                        const remainingCatchAlls = printFormats.filter(
-                          (f, i) => i !== fmtIdx && (f.maxPhotos === null || f.maxPhotos === undefined)
-                        );
-                        if (isCatchAll && remainingCatchAlls.length === 0) {
-                          alert('Mindestens ein Format ohne Fotobegrenzung (Standardformat) muss vorhanden sein.');
-                          return;
-                        }
-                        if (window.confirm('Dieses Druckformat wirklich löschen?')) {
-                          setPrintFormats(printFormats.filter((_, i) => i !== fmtIdx));
-                        }
-                      }}
-                    >
-                      Löschen
-                    </button>
-                  </div>
-
-                  {/* Max photos threshold */}
-                  <div className="sort-settings-field" style={{ marginBottom: '0.75rem' }}>
-                    <label>Maximale Fotoanzahl:</label>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder="Unbegrenzt"
-                      value={fmt.maxPhotos != null ? fmt.maxPhotos : ''}
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        const val = raw === '' ? null : parseInt(raw, 10);
-                        const updated = printFormats.map((f, i) =>
-                          i === fmtIdx ? { ...f, maxPhotos: isNaN(val) ? null : val } : f
-                        );
-                        setPrintFormats(updated);
-                      }}
-                    />
-                    <span className="sort-settings-hint">
-                      Dieses Format wird verwendet, wenn die Anzahl der Fotos ≤ diesem Wert ist. Leer = gilt für alle.
-                    </span>
-                  </div>
-
-                  {/* WYSIWYG editor */}
-                  <PrintFormatEditor
-                    format={fmt}
-                    onChange={(updatedFmt) => {
-                      const updated = printFormats.map((f, i) =>
-                        i === fmtIdx ? updatedFmt : f
-                      );
-                      setPrintFormats(updated);
-                    }}
-                  />
-
-                  {/* Print format preview */}
-                  {printPreviewRecipeId && (() => {
-                    const previewRecipe = allRecipes.find((r) => r.id === printPreviewRecipeId);
-                    if (!previewRecipe) return null;
-                    const allImages =
-                      Array.isArray(previewRecipe.images) && previewRecipe.images.length > 0
-                        ? previewRecipe.images
-                        : previewRecipe.image
-                        ? [{ url: previewRecipe.image }]
-                        : [];
-                    const imageCount = allImages.length;
-                    const applicableFormat = selectPrintFormat(printFormats, imageCount);
-                    const isApplicable = applicableFormat?.id === fmt.id;
-                    return (
-                      <div className="print-preview-container">
-                        <div className="print-preview-header">
-                          <span className="print-preview-title">Vorschau: {previewRecipe.title}</span>
-                          {isApplicable ? (
-                            <span className="print-preview-badge print-preview-badge--active">
-                              Aktives Format für dieses Rezept
-                            </span>
-                          ) : (
-                            <span className="print-preview-badge print-preview-badge--inactive">
-                              Nicht aktiv für dieses Rezept
-                            </span>
-                          )}
-                        </div>
-                        <PrintPreview recipe={previewRecipe} format={fmt} />
-                      </div>
-                    );
-                  })()}
-                </div>
-              ))}
-
-              <div className="print-format-actions">
-                <button
-                  type="button"
-                  className="save-button"
-                  onClick={() => {
-                    const newFormat = {
-                      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `format-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                      name: `Format ${printFormats.length + 1}`,
-                      maxPhotos: null,
-                      orientation: 'portrait',
-                      fontFamily: "Georgia, 'Times New Roman', serif",
-                      imageColumns: 'auto',
-                      layoutVersion: PRINT_FORMAT_LAYOUT_VERSION,
-                      elements: DEFAULT_PRINT_ELEMENTS_PORTRAIT,
-                    };
-                    setPrintFormats([...printFormats, newFormat]);
-                  }}
-                >
-                  + Neues Format hinzufügen
-                </button>
-                <button
-                  type="button"
-                  className="save-button"
-                  disabled={savingPrintFormats}
-                  onClick={async () => {
-                    setSavingPrintFormats(true);
-                    try {
-                      await savePrintFormats(printFormats);
-                      alert('Druckformate gespeichert!');
-                    } catch (err) {
-                      alert('Fehler beim Speichern der Druckformate: ' + err.message);
-                    } finally {
-                      setSavingPrintFormats(false);
-                    }
-                  }}
-                >
-                  {savingPrintFormats ? 'Speichern...' : 'Druckformate speichern'}
-                </button>
-              </div>
-            </div>
+            <PrintFormatsSettings allRecipes={allRecipes} allUsers={allUsers} />
           </>
         ) : activeTab === 'tagesmenu' ? (
           <>

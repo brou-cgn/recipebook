@@ -2372,3 +2372,58 @@
   color: #666;
   border: 1px solid #ddd;
 }
+
+/* Print format header row: name, duplicate and delete (swipe on mobile) */
+.pf-header-row {
+  position: relative;
+  overflow: hidden;
+}
+
+.pf-header-row.pf-swipe-active .swipe-delete-background {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pf-header-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #fdfaf6;
+}
+
+.pf-duplicate-btn {
+  margin-left: 0;
+}
+
+.pf-delete-btn {
+  display: none;
+  margin-top: 0;
+}
+
+@media (min-width: 721px) {
+  .pf-delete-btn {
+    display: inline-flex;
+  }
+}
+
+.pf-error {
+  margin: 0.25rem 0 0.75rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  background: #fdecea;
+  color: #a33a26;
+  font-size: 0.85rem;
+}
+
+.pf-free-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pf-switch-btn {
+  margin-left: 0;
+}

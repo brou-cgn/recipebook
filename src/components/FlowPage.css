@@ -1,0 +1,189 @@
+/* ===== FlowPage – Fließlayout (Vorlagen) ===== */
+
+.ppf-scaler {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #e9e5df;
+  outline: 1.5px solid #bbb;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+}
+
+.ppf-sheet {
+  box-sizing: border-box;
+  background: #fff;
+  color: #000;
+  line-height: 1.4;
+  --ppf-gap: 1em;
+}
+
+.ppf-sheet--preview {
+  position: relative;
+  transform-origin: top left;
+}
+
+.ppf-sheet--print {
+  break-inside: auto;
+}
+
+.ppf-content > * + * {
+  margin-top: var(--ppf-gap);
+}
+
+.ppf-block {
+  position: relative;
+  border-radius: 4px;
+}
+
+/* Header blocks follow the title alignment (a per-element override wins as inline style). */
+.ppf-block--title,
+.ppf-block--authorDate,
+.ppf-block--metadata {
+  text-align: var(--ppf-title-align, center);
+}
+
+.ppf-block--title + .ppf-block--authorDate,
+.ppf-header-info > * + * {
+  margin-top: calc(var(--ppf-gap) * 0.4);
+}
+
+/* ── Photos ───────────────────────────────────────────────────────────────── */
+.ppf-photos--top {
+  width: var(--ppf-top, 100%);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ppf-photo-grid {
+  display: grid;
+  gap: 0.5em;
+}
+
+.ppf-photo {
+  min-width: 0;
+  break-inside: avoid;
+}
+
+.ppf-block--photos .ppv-el-image {
+  height: auto;
+}
+
+.ppf-header {
+  display: grid;
+  align-items: start;
+  gap: calc(var(--ppf-gap) * 1.2);
+}
+
+.ppf-header--left {
+  grid-template-columns: var(--ppf-side, 40%) minmax(0, 1fr);
+}
+
+.ppf-header--right {
+  grid-template-columns: minmax(0, 1fr) var(--ppf-side, 40%);
+}
+
+.ppf-header--right .ppf-photos {
+  order: 2;
+}
+
+.ppf-header-info {
+  min-width: 0;
+}
+
+/* ── Body: ingredients and steps ─────────────────────────────────────────── */
+.ppf-body {
+  display: grid;
+  gap: calc(var(--ppf-gap) * 1.5);
+  align-items: start;
+}
+
+.ppf-body--two {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+}
+
+.ppf-body--one {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ppf-block--tint {
+  padding: 0.8em 1em;
+  background: color-mix(in srgb, var(--ppf-accent) 8%, #fff);
+  border-radius: 6px;
+}
+
+/* ── Styles driven by options ────────────────────────────────────────────── */
+.ppf-content .ppv-el-section-heading {
+  border-bottom: 2px solid var(--ppf-accent);
+}
+
+.ppf-content[data-heading='bar'] .ppv-el-section-heading {
+  border-bottom: none;
+  border-left: 5px solid var(--ppf-accent);
+  padding: 0.1em 0 0.1em 0.5em;
+}
+
+.ppf-content[data-heading='plain'] .ppv-el-section-heading {
+  border-bottom: none;
+  padding-bottom: 0;
+  color: var(--ppf-accent);
+}
+
+.ppf-content .ppv-el-metadata {
+  border-color: var(--ppf-accent);
+}
+
+.ppf-content[data-meta='plain'] .ppv-el-metadata {
+  border: none;
+  padding: 0;
+}
+
+.ppf-block--title .ppv-el-title {
+  line-height: 1.2;
+}
+
+.ppf-content .ppv-el-list li {
+  break-inside: avoid;
+}
+
+.ppf-content .ppv-el-section-heading {
+  break-after: avoid;
+}
+
+/* ── Preview interaction ──────────────────────────────────────────────────── */
+.ppf-sheet--interactive .ppf-block {
+  cursor: pointer;
+}
+
+.ppf-sheet--interactive .ppf-block:hover {
+  outline: 2px dashed rgba(90, 62, 43, 0.45);
+  outline-offset: 3px;
+}
+
+.ppf-sheet--interactive .ppf-block:focus-visible {
+  outline: 2px solid #5a3e2b;
+  outline-offset: 3px;
+}
+
+.ppf-block--selected,
+.ppf-sheet--interactive .ppf-block--selected:hover {
+  outline: 2px solid #1a73e8;
+  outline-offset: 3px;
+}
+
+.ppf-page-break {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 2px dashed #a33a26;
+  pointer-events: none;
+}
+
+.ppf-page-break span {
+  position: absolute;
+  right: 0.5cm;
+  top: 0.1cm;
+  padding: 0 0.3cm;
+  background: #fff;
+  color: #a33a26;
+  font: 12px sans-serif;
+}

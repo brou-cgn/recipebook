@@ -501,3 +501,54 @@
     gap: 0.6rem 1rem;
   }
 }
+
+/* ── Page stack: real print rendering under the draggable boxes ──────────── */
+.pfe-page-stack {
+  position: relative;
+  width: 100%;
+}
+
+.pfe-page-content {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.pfe-page-stack .pfe-page {
+  z-index: 1;
+}
+
+.pfe-page--overlay {
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+}
+
+.pfe-page--overlay .pfe-element {
+  background: transparent;
+  border: 1.5px dashed rgba(0, 0, 0, 0.35);
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.pfe-page--overlay .pfe-element--selected {
+  border-style: solid;
+}
+
+.pfe-page--overlay .pfe-element-label {
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 0 0 3px 0;
+}
+
+/* Pointer events: no browser panning while dragging on touch screens */
+.pfe-element,
+.pfe-resize-handle {
+  touch-action: none;
+}
+
+.pfe-element:focus-visible {
+  outline: 2px solid #5a3e2b;
+  outline-offset: 1px;
+  z-index: 25;
+}
