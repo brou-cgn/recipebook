@@ -1,5 +1,5 @@
 import { printRecipe } from './printRunner';
-import { createPrintFormat } from '../utils/printFormats';
+import { createPrintFormat, createFlowFormat } from '../utils/printFormats';
 
 const recipe = { id: 'r', title: 'Testrezept', portionen: 2, ingredients: ['1 Ei'], steps: ['Kochen'] };
 
@@ -39,8 +39,18 @@ describe('printRecipe', () => {
     expect(printSpy).toHaveBeenCalledTimes(1);
     expect(seenDuringPrint.root).not.toBeNull();
     expect(seenDuringPrint.title).toBe('Testrezept');
-    expect(seenDuringPrint.pageRule).toBe('@page { size: 21cm 29.7cm; margin: 0; }');
+    expect(seenDuringPrint.pageRule).toBe('@page { size: 21cm 29.7cm; margin: 0cm; }');
     expect(seenDuringPrint.bodyClass).toBe(true);
+  });
+
+  test('template formats print with their page margin and a content width reduced by it', async () => {
+    const format = createFlowFormat('classic');
+    format.style = { ...format.style, marginCm: 2 };
+    await printRecipe({ recipe, format });
+    expect(seenDuringPrint.pageRule).toBe('@page { size: 21cm 29.7cm; margin: 2cm; }');
+    expect(seenDuringPrint.root.querySelector('.ppf-sheet').style.width).toBe('17cm');
+    expect(seenDuringPrint.title).toBe('Testrezept');
+    window.dispatchEvent(new Event('afterprint'));
   });
 
   test('uses the format page size (landscape)', async () => {

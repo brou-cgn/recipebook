@@ -88,6 +88,18 @@ export function elementBorderStyle(el) {
   };
 }
 
+/** Text formatting (size factor, B/I/U, colour, horizontal alignment) of an element or override. */
+export function elementTextStyle(el) {
+  const style = {};
+  if (el.fontSizeScale && el.fontSizeScale !== 1) style.fontSize = `${el.fontSizeScale}em`;
+  if (el.fontBold) style.fontWeight = 'bold';
+  if (el.fontItalic) style.fontStyle = 'italic';
+  if (el.fontUnderline) style.textDecoration = 'underline';
+  if (el.fontColor) style.color = el.fontColor;
+  if (el.textAlignH) style.textAlign = el.textAlignH;
+  return style;
+}
+
 /**
  * Inline style for a positioned element (position, rotation, text formatting,
  * alignment, border). Used by the print renderer and the editor so both agree.
@@ -99,14 +111,9 @@ export function elementStyle(el, page) {
     top: `${box.top}%`,
     width: `${box.width}%`,
     height: `${box.height}%`,
+    ...elementTextStyle(el),
   };
   if (el.rotation) style.transform = `rotate(${el.rotation}deg)`;
-  if (el.fontSizeScale && el.fontSizeScale !== 1) style.fontSize = `${el.fontSizeScale}em`;
-  if (el.fontBold) style.fontWeight = 'bold';
-  if (el.fontItalic) style.fontStyle = 'italic';
-  if (el.fontUnderline) style.textDecoration = 'underline';
-  if (el.fontColor) style.color = el.fontColor;
-  if (el.textAlignH) style.textAlign = el.textAlignH;
   if (el.textAlignV && el.textAlignV !== 'top') {
     style.display = 'flex';
     style.flexDirection = 'column';

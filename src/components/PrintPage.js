@@ -1,10 +1,10 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './PrintPage.css';
 import { mergePrintElementsWithDefaults, getPrintElementDef, DEFAULT_PRINT_FONT_FAMILY } from '../utils/printElements';
 import { elementStyle, getPageSize } from '../utils/printLayout';
 import { PRINT_ELEMENT_RENDERERS } from './printElementRenderers';
-
-const CM_TO_PX = 96 / 2.54;
+import FlowPage from './FlowPage';
+import usePreviewScale, { CM_TO_PX } from './usePreviewScale';
 
 /**
  * PrintPage – the one renderer for a recipe on a print format page. Used by the
@@ -24,7 +24,7 @@ const CM_TO_PX = 96 / 2.54;
  *   onOverflow   {(ids: string[]) => void} preview only: ids of clipped elements
  *   embedded     {boolean} preview only: no outer margin and no summary line (used under the editor boxes)
  */
-export default function PrintPage({
+function FreePage({
   recipe,
   format,
   servings,
@@ -34,14 +34,13 @@ export default function PrintPage({
   onOverflow,
   embedded = false,
 }) {
-  const wrapperRef = useRef(null);
   const elementRefs = useRef({});
-  const [scale, setScale] = useState(0.4);
   const [overflowIds, setOverflowIds] = useState([]);
 
   const orientation = format?.orientation || 'portrait';
   const fontFamily = format?.fontFamily || DEFAULT_PRINT_FONT_FAMILY;
   const page = getPageSize(format);
+  const { wrapperRef, scale } = usePreviewScale(page.widthCm, mode === 'preview');
   const elements = useMemo(
     () => mergePrintElementsWithDefaults(format?.elements, orientation),
     [format?.elements, orientation],
@@ -56,22 +55,6 @@ export default function PrintPage({
     showIngredientsHeading: visible('ingredientsHeading'),
     showStepsHeading: visible('stepsHeading'),
   };
-
-  // Preview scale: fit the page width into the wrapper.
-  useLayoutEffect(() => {
-    if (mode !== 'preview') return undefined;
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return undefined;
-    const update = () => {
-      const w = wrapper.clientWidth;
-      if (w > 0) setScale(w / (page.widthCm * CM_TO_PX));
-    };
-    update();
-    if (typeof ResizeObserver === 'undefined') return undefined;
-    const ro = new ResizeObserver(update);
-    ro.observe(wrapper);
-    return () => ro.disconnect();
-  }, [mode, page.widthCm]);
 
   // Preview: detect text elements whose content is clipped by their box.
   const measureKey = `${recipe?.id}|${effectiveServings}|${JSON.stringify(elements)}|${fontFamily}|${page.widthCm}x${page.heightCm}`;
@@ -149,4 +132,12 @@ export default function PrintPage({
       </div>
     </div>
   );
+}
+
+/**
+ * Entry point: template-based (flow) formats and free (positioned) formats share
+ * the props and the preview/print modes.
+ */
+export default function PrintPage(props) {
+  return props.format?.layoutType === 'flow' ? <FlowPage {...props} /> : <FreePage {...props} />;
 }

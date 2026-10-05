@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import PrintFormatsSettings from './PrintFormatsSettings';
-import { createPrintFormat } from '../utils/printFormats';
+import { createPrintFormat, createFlowFormat } from '../utils/printFormats';
 
 jest.mock('../utils/customLists', () => {
   const actual = jest.requireActual('../utils/customLists');
@@ -13,6 +13,15 @@ jest.mock('./PrintFormatEditor', () => function FakeEditor({ format, onChange, p
     <div data-testid="editor">
       <button type="button" onClick={() => onChange({ ...format, fontFamily: 'Arial, sans-serif' })}>edit {format.name}</button>
       {previewRecipe && <span>preview {previewRecipe.title}</span>}
+    </div>
+  );
+});
+
+jest.mock('./TemplateFormatEditor', () => function FakeTemplateEditor({ format, onChange }) {
+  return (
+    <div data-testid="template-editor">
+      <span>template {format.template}</span>
+      <button type="button" onClick={() => onChange({ ...format, template: 'minimal' })}>template edit {format.name}</button>
     </div>
   );
 });
@@ -64,6 +73,47 @@ describe('loading', () => {
     fireEvent.click(screen.getByText('Erneut laden'));
     expect(await screen.findAllByTestId('print-format-item')).toHaveLength(2);
     console.error.mockRestore();
+  });
+});
+
+describe('layout types', () => {
+  const flowFmt = (id, name, maxPhotos) => ({ ...createFlowFormat('card'), id, name, maxPhotos });
+
+  test('template formats use the template editor, free formats the positioning editor with an expert hint', async () => {
+    await renderLoaded({}, [flowFmt('f', 'Vorlage', 1), fmt('all', 'Frei', null)]);
+    expect(within(items()[0]).getByTestId('template-editor')).toBeInTheDocument();
+    expect(within(items()[0]).queryByTestId('editor')).toBeNull();
+    expect(within(items()[0]).queryByText(/Expertenmodus/)).toBeNull();
+    expect(within(items()[1]).getByTestId('editor')).toBeInTheDocument();
+    expect(within(items()[1]).getByText(/Expertenmodus/)).toBeInTheDocument();
+  });
+
+  test('a new format is template based (classic)', async () => {
+    await renderLoaded();
+    fireEvent.click(screen.getByText('+ Neues Format hinzufügen'));
+    const last = items()[items().length - 1];
+    expect(within(last).getByText('template classic')).toBeInTheDocument();
+  });
+
+  test('switching a free layout to a template asks first and keeps name, limit and page', async () => {
+    const confirm = jest.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+    await renderLoaded();
+    fireEvent.click(within(items()[0]).getByText('Auf Vorlage umstellen'));
+    expect(within(items()[0]).getByTestId('editor')).toBeInTheDocument(); // cancelled
+    fireEvent.click(within(items()[0]).getByText('Auf Vorlage umstellen'));
+    expect(confirm).toHaveBeenCalledTimes(2);
+    expect(within(items()[0]).getByTestId('template-editor')).toBeInTheDocument();
+    expect(within(items()[0]).getByLabelText('Formatname')).toHaveValue('Ein Foto');
+    expect(within(items()[0]).getByLabelText('Maximale Fotoanzahl:')).toHaveValue(1);
+  });
+
+  test('template edits are saved with the formats', async () => {
+    await renderLoaded({}, [flowFmt('f', 'Vorlage', null)]);
+    fireEvent.click(screen.getByText('template edit Vorlage'));
+    loadPrintFormatsForEditing.mockResolvedValue({ formats: [flowFmt('f', 'Vorlage', null)], usingDefaults: false });
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(savePrintFormats).toHaveBeenCalled());
+    expect(savePrintFormats.mock.calls[0][0][0]).toMatchObject({ layoutType: 'flow', template: 'minimal' });
   });
 });
 

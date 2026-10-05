@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PrintFormatEditor from './PrintFormatEditor';
+import TemplateFormatEditor from './TemplateFormatEditor';
 import DeleteRowButton from './DeleteRowButton';
 import UndoSnackbar from './UndoSnackbar';
 import useUndoableDelete from '../hooks/useUndoableDelete';
@@ -11,7 +12,8 @@ import {
   PrintFormatValidationError,
   validatePrintFormats,
   selectPrintFormat,
-  createPrintFormat,
+  createFlowFormat,
+  convertToFlowFormat,
   duplicatePrintFormat,
 } from '../utils/customLists';
 import { getRecipeImages } from '../utils/printRecipe';
@@ -120,7 +122,7 @@ export default function PrintFormatsSettings({ allRecipes = [], allUsers = [] })
   };
 
   const addFormat = () => {
-    setFormats((prev) => [...prev, createPrintFormat('portrait', `Format ${prev.length + 1}`)]);
+    setFormats((prev) => [...prev, createFlowFormat('classic', 'portrait', `Format ${prev.length + 1}`)]);
   };
 
   const duplicateFormat = (index) => {
@@ -129,6 +131,11 @@ export default function PrintFormatsSettings({ allRecipes = [], allUsers = [] })
       next.splice(index + 1, 0, duplicatePrintFormat(prev[index]));
       return next;
     });
+  };
+
+  const switchToTemplate = (index) => {
+    if (!window.confirm('Das freie Layout wird durch eine Vorlage ersetzt. Name, Fotolimit und Seitengröße bleiben erhalten. Fortfahren?')) return;
+    updateFormat(index, convertToFlowFormat(formats[index]));
   };
 
   const save = async () => {
@@ -242,12 +249,29 @@ export default function PrintFormatsSettings({ allRecipes = [], allUsers = [] })
             </div>
           )}
 
-          <PrintFormatEditor
-            format={fmt}
-            onChange={(next) => updateFormat(index, next)}
-            previewRecipe={previewRecipe}
-            authorName={previewAuthor}
-          />
+          {fmt.layoutType === 'flow' ? (
+            <TemplateFormatEditor
+              format={fmt}
+              onChange={(next) => updateFormat(index, next)}
+              previewRecipe={previewRecipe}
+              authorName={previewAuthor}
+            />
+          ) : (
+            <>
+              <p className="pfe-hint pf-free-hint">
+                Freies Layout (Expertenmodus): Elemente werden von Hand platziert und Text wird bei zu langem Inhalt abgeschnitten.{' '}
+                <button type="button" className="pfe-reset-btn pf-switch-btn" onClick={() => switchToTemplate(index)}>
+                  Auf Vorlage umstellen
+                </button>
+              </p>
+              <PrintFormatEditor
+                format={fmt}
+                onChange={(next) => updateFormat(index, next)}
+                previewRecipe={previewRecipe}
+                authorName={previewAuthor}
+              />
+            </>
+          )}
         </div>
       ))}
 

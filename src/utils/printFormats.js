@@ -7,6 +7,8 @@
  *   v3: v2 coordinates, legacy fields (elementOrder, imageWidth, imageAlign,
  *       imageColumns) removed, page size and orientation always explicit and
  *       consistent. Additive on top of v2, so older clients still render it.
+ *       Optional `layoutType: 'flow'` formats (printTemplates.js) carry `template`,
+ *       `style` and `overrides` instead of positioned `elements`.
  */
 import {
   DEFAULT_PRINT_FONT_FAMILY,
@@ -16,6 +18,16 @@ import {
   getDefaultPrintElements,
 } from './printElements';
 import { clamp, effectiveDimensions, getMaxY, getPageSize, MIN_ELEMENT_H, MIN_ELEMENT_W } from './printLayout';
+import {
+  buildFlowFormat,
+  convertToFlowFormat,
+  normalizeFlowOverrides,
+  normalizeFlowStyle,
+  DEFAULT_TEMPLATE_ID,
+  getTemplate,
+  MIN_MARGIN_CM,
+  MAX_MARGIN_CM,
+} from './printTemplates';
 
 export const PRINT_FORMAT_LAYOUT_VERSION = 3;
 
@@ -110,6 +122,29 @@ export function normalizeElement(el, page, fallback) {
   return out;
 }
 
+/** Flow formats: no positioned elements; style and overrides are normalised. */
+function migrateFlowFormat(v2, { orientation, page }) {
+  const style = normalizeFlowStyle(v2.style);
+  const out = { ...v2 };
+  LEGACY_FIELDS.forEach((f) => delete out[f]);
+  delete out.elements;
+  delete out.migrationNotes;
+  return Object.assign(out, {
+    id: typeof v2.id === 'string' && v2.id ? v2.id : generateFormatId(),
+    name: typeof v2.name === 'string' ? v2.name : 'Standard',
+    maxPhotos: isFiniteNumber(v2.maxPhotos) ? v2.maxPhotos : null,
+    layoutType: 'flow',
+    template: getTemplate(v2.template).id,
+    orientation,
+    fontFamily: style.fontFamily,
+    pageWidthCm: page.widthCm,
+    pageHeightCm: page.heightCm,
+    layoutVersion: PRINT_FORMAT_LAYOUT_VERSION,
+    style,
+    overrides: normalizeFlowOverrides(v2.overrides),
+  });
+}
+
 /**
  * Migrates any stored format (v1, v2, legacy, defective) to v3.
  * Pure and idempotent: migrateFormat(migrateFormat(x)) deep-equals migrateFormat(x).
@@ -130,6 +165,10 @@ export function migrateFormat(input) {
     pageWidthCm: hasSizes ? clamp(v2.pageWidthCm, MIN_PAGE_CM, MAX_PAGE_CM) : undefined,
     pageHeightCm: hasSizes ? clamp(v2.pageHeightCm, MIN_PAGE_CM, MAX_PAGE_CM) : undefined,
   });
+
+  if (base.layoutType === 'flow') {
+    return migrateFlowFormat(v2, { orientation, page });
+  }
 
   const defaults = getDefaultPrintElements(orientation);
   const notes = Array.isArray(base.migrationNotes) ? [...base.migrationNotes] : [];
@@ -183,6 +222,14 @@ export function createPrintFormat(orientation = 'portrait', name = 'Neues Format
   };
 }
 
+/** New template-based (flow) format; this is what the settings create by default. */
+export function createFlowFormat(templateId = DEFAULT_TEMPLATE_ID, orientation = 'portrait', name = 'Neues Format') {
+  return buildFlowFormat({ id: generateFormatId(), name, templateId, orientation });
+}
+
+/** Converts a free-layout format to a template-based one (name, photo limit and page size are kept). */
+export { convertToFlowFormat };
+
 /** Deep copy with a new id, "<name> Kopie" and no photo threshold (no conflicts). */
 export function duplicatePrintFormat(format) {
   const copy = JSON.parse(JSON.stringify(format));
@@ -228,6 +275,12 @@ export function validatePrintFormats(formats) {
     const { widthCm, heightCm } = getPageSize(f);
     const badSize = [widthCm, heightCm].some((v) => !isFiniteNumber(v) || v < MIN_PAGE_CM || v > MAX_PAGE_CM);
     if (badSize) add(i, 'pageSize', `Die Seitengröße muss zwischen ${MIN_PAGE_CM} und ${MAX_PAGE_CM} cm liegen.`);
+    if (f.layoutType === 'flow') {
+      const margin = f.style?.marginCm;
+      if (margin !== undefined && (!isFiniteNumber(margin) || margin < MIN_MARGIN_CM || margin > MAX_MARGIN_CM)) {
+        add(i, 'margin', `Der Seitenrand muss zwischen ${MIN_MARGIN_CM} und ${MAX_MARGIN_CM} cm liegen.`);
+      }
+    }
     if (JSON.stringify(f).length > MAX_FORMAT_BYTES) {
       add(i, 'size', 'Das Format ist zu groß zum Speichern.');
     }

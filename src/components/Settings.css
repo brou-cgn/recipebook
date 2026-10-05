@@ -2416,3 +2416,14 @@
   color: #a33a26;
   font-size: 0.85rem;
 }
+
+.pf-free-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pf-switch-btn {
+  margin-left: 0;
+}

@@ -4,6 +4,15 @@ Rezepte werden über frei gestaltbare **Druckformate** gedruckt. Die Formate lie
 Firestore (`settings/app.printFormats`) und gelten für alle Nutzer. Bearbeitet werden sie in
 den Einstellungen im Tab **Drucklayout**.
 
+## Zwei Layouttypen
+
+| Typ | `layoutType` | Wofür |
+|---|---|---|
+| **Vorlage (Fließlayout)** | `'flow'` | Standard für neue Formate. Der Inhalt fließt von oben nach unten wie in Word und läuft bei langen Rezepten auf die nächste Seite. Bedienung: Vorlage wählen, wenige Regler, Elemente in der Vorschau anklicken und formatieren. |
+| **Freies Layout** (Expertenmodus) | fehlt / `'free'` | Elemente werden von Hand in cm platziert. Text wird abgeschnitten, wenn er nicht passt. Bestehende Formate bleiben so; „Auf Vorlage umstellen" konvertiert sie. |
+
+Beide werden von `PrintPage` gerendert (`FlowPage` für Vorlagen) und gedruckt.
+
 ## Bausteine
 
 | Datei | Aufgabe |
@@ -17,6 +26,9 @@ den Einstellungen im Tab **Drucklayout**.
 | `src/components/printRunner.js` | Druckablauf (`#print-root`, `@page`, `window.print()`, Aufräumen) |
 | `src/components/PrintFormatEditor.js` + `printEditor/` | WYSIWYG-Editor |
 | `src/components/PrintFormatsSettings.js` | Formatliste, Speichern, Löschen mit Rückgängig |
+| `src/utils/printTemplates.js` | Vorlagen, Stiloptionen, Normalisierung, Konvertierung |
+| `src/components/FlowPage.js` | Renderer für Vorlagen (Fließlayout, Seitenumbruch-Markierung) |
+| `src/components/TemplateFormatEditor.js` + `templateEditor/` | Vorlagen-Galerie, Stilregler, schwebende Formatleiste |
 
 `customLists.js` re-exportiert die Print-Namen aus Kompatibilitätsgründen.
 
@@ -51,6 +63,28 @@ zu v2 (gleiche Koordinaten), ältere App-Versionen zeigen es weiter korrekt an.
 **Validierung** (`validatePrintFormats`, blockiert das Speichern): mindestens ein Format
 ohne `maxPhotos`, Name nicht leer, `maxPhotos` eindeutig und ganzzahlig ≥ 0, Seitenmaße
 5–200 cm, Format ≤ 8 KB.
+
+## Vorlagen (Fließlayout)
+
+```js
+{ layoutType: 'flow', template: 'classic',
+  style: { fontFamily, baseSize, accent, spacing, headingStyle, titleAlign, metadataStyle,
+           photoPosition, photoSize, photoAspect, photoCount, columns, tintIngredients,
+           marginCm, show: { title, authorDate, metadata, photos, ingredients, steps } },
+  overrides: { title: { fontSizeScale, fontBold, fontItalic, fontUnderline, fontColor, textAlignH } } }
+```
+
+* `style` ist immer vollständig (beim Anwenden einer Vorlage werden alle Werte geschrieben), `overrides` enthält nur
+  Abweichungen einzelner Elemente. Eine Vorlage anzuwenden setzt beides zurück (mit Rückfrage, wenn es Änderungen gibt).
+* Die Normalisierung (`normalizeFlowStyle`, `normalizeFlowOverrides`) korrigiert unbekannte oder ungültige Werte beim Lesen.
+* Der **Seitenrand** wird im Druck als `@page margin` gesetzt (`printRunner`), die Inhaltsbreite ist Seitenbreite minus Ränder.
+  Der Browser bricht die Seiten um; Listeneinträge und Überschriften werden nicht getrennt.
+* Die Vorschau markiert die Seitenumbrüche nur **ungefähr** (sie rechnet mit der Inhaltshöhe, der Browser entscheidet beim Druck).
+* **Klick in der Vorschau:** `FlowPage` zeichnet jedes Element mit `data-flow-el`; `TemplateFormatEditor` positioniert die
+  Formatleiste (`FloatingToolbar`) am angeklickten Element.
+
+**Neue Vorlage:** Eintrag in `PRINT_TEMPLATES` (`printTemplates.js`) mit den abweichenden Stilwerten. Ein Test prüft, dass jede
+Vorlage gültig ist und sich von den anderen unterscheidet.
 
 ## Druckablauf
 

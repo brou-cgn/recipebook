@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import PrintPage from './PrintPage';
 import { getPageSize } from '../utils/printLayout';
+import { getFormatMarginCm } from '../utils/printTemplates';
 
 const ROOT_ID = 'print-root';
 const PAGE_STYLE_ID = 'print-page-format';
@@ -32,7 +33,7 @@ const isIOS = () =>
  * Prints a recipe on a print format.
  *
  * Renders <PrintPage mode="print"> into a detached #print-root container, sets a
- * single @page rule (size in cm), waits for fonts and images and opens the print
+ * single @page rule (size and margin in cm), waits for fonts and images and opens the print
  * dialog. Everything is removed again afterwards; the on-screen UI is never touched.
  *
  * @param {object} options
@@ -59,7 +60,7 @@ export async function printRecipe({ recipe, format, servings, authorName, portio
   const { widthCm, heightCm } = getPageSize(format);
   const pageStyle = document.createElement('style');
   pageStyle.id = PAGE_STYLE_ID;
-  pageStyle.textContent = `@page { size: ${widthCm}cm ${heightCm}cm; margin: 0; }`;
+  pageStyle.textContent = `@page { size: ${widthCm}cm ${heightCm}cm; margin: ${getFormatMarginCm(format)}cm; }`;
   document.head.appendChild(pageStyle);
   document.body.classList.add(BODY_CLASS);
 
