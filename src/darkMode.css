@@ -4413,12 +4413,12 @@
 }
 
 /* ---- Cooking mode landscape: navigation buttons ---- */
-[data-theme="dark"] .cooking-mode-landscape .step-nav-prev {
+[data-theme="dark"] .cooking-mode-active .step-nav-prev {
   background: #2a2a2a;
   color: #e8e8e8;
 }
 
-[data-theme="dark"] .cooking-mode-landscape .step-nav-btn:disabled {
+[data-theme="dark"] .cooking-mode-active .step-nav-btn:disabled {
   background: #2a2a2a;
   color: #666;
 }
@@ -4430,4 +4430,18 @@
 [data-theme="dark"] .cooking-mode-landscape .step-card,
 [data-theme="dark"] .cooking-mode-landscape .step-card.active {
   box-shadow: none;
+}
+
+/* ---- Cooking mode portrait ---- */
+[data-theme="dark"] .recipe-detail-content.cooking-mode-active:not(.cooking-mode-landscape) {
+  background: #121212;
+}
+
+[data-theme="dark"] .cooking-mode-active:not(.cooking-mode-landscape) .step-card {
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .cooking-mode-active:not(.cooking-mode-landscape) .cooking-mode-ingredients .section-header,
+[data-theme="dark"] .cooking-mode-active:not(.cooking-mode-landscape) .step-nav {
+  background: #1e1e1e;
 }
