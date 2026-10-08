@@ -581,6 +581,8 @@ export const DEFAULT_BUTTON_ICONS = {
   // Icon shown when the recipe uses the default category image, or when the
   // displayed image has a bright corner (light mode)
   cookingModeDefaultImg: '♨',
+  // Beenden-Button der Kochmodus-Seitenlasche (leer = Standard-Symbol "Tür mit Pfeil")
+  cookingModeExit: '',
   importRecipe: 'Import',
   scanImage: 'Scan',
   webImport: 'Web',
@@ -659,6 +661,7 @@ export const DEFAULT_BUTTON_ICONS = {
   cookingModeDark: '',
   // Dark mode variant for the default category image icon
   cookingModeDefaultImgDark: '',
+  cookingModeExitDark: '',
   importRecipeDark: '',
   scanImageDark: '',
   webImportDark: '',
