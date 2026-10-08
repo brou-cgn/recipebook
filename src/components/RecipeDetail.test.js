@@ -700,7 +700,7 @@ describe('RecipeDetail - Cooking Mode', () => {
     fireEvent.click(staticIcon);
     
     // Check that the cooking mode indicator appears
-    expect(screen.getByText('Kochmodus aktiv')).toBeInTheDocument();
+    expect(screen.getByText('Kochmodus')).toBeInTheDocument();
     
     // In cooking mode, the image should be hidden, so overlay button should not be present
     const overlayButton = document.querySelector('.overlay-cooking-mode');
@@ -730,14 +730,14 @@ describe('RecipeDetail - Cooking Mode', () => {
     fireEvent.click(staticIcon);
 
     // Verify it's active
-    expect(screen.getByText('Kochmodus aktiv')).toBeInTheDocument();
+    expect(screen.getByText('Kochmodus')).toBeInTheDocument();
 
-    // Find and click the exit button (×) in the indicator
+    // Find and click the exit button (icon) in the indicator
     const exitButton = document.querySelector('.cooking-mode-exit');
     fireEvent.click(exitButton);
 
     // Verify cooking mode is deactivated
-    expect(screen.queryByText('Kochmodus aktiv')).not.toBeInTheDocument();
+    expect(screen.queryByText('Kochmodus')).not.toBeInTheDocument();
     
     // Verify the static icon is shown again (not the button)
     const staticIconAfter = document.querySelector('.overlay-cooking-mode-static');

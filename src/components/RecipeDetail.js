@@ -1815,16 +1815,15 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               title="Kochmodus beenden"
               aria-label="Kochmodus beenden"
             >
-              ×
+              <span className="cooking-mode-icon">
+                {isBase64Image(cookingModeIcon) ? (
+                  <img src={cookingModeIcon} alt="" className="cooking-mode-icon-img" />
+                ) : (
+                  cookingModeIcon
+                )}
+              </span>
             </button>
-            <span className="cooking-mode-text">Kochmodus aktiv</span>
-            <span className="cooking-mode-icon">
-              {isBase64Image(cookingModeIcon) ? (
-                <img src={cookingModeIcon} alt="Kochmodus" className="cooking-mode-icon-img" />
-              ) : (
-                cookingModeIcon
-              )}
-            </span>
+            <span className="cooking-mode-text">Kochmodus</span>
           </div>
         </div>
       )}
