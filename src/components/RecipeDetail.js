@@ -1809,6 +1809,15 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       {cookingMode && !isMobileLandscape && (
         <div className="cooking-mode-indicator">
           <div className="cooking-mode-content">
+            <button
+              className="cooking-mode-exit"
+              onClick={toggleCookingMode}
+              title="Kochmodus beenden"
+              aria-label="Kochmodus beenden"
+            >
+              ×
+            </button>
+            <span className="cooking-mode-text">Kochmodus aktiv</span>
             <span className="cooking-mode-icon">
               {isBase64Image(cookingModeIcon) ? (
                 <img src={cookingModeIcon} alt="Kochmodus" className="cooking-mode-icon-img" />
@@ -1816,14 +1825,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 cookingModeIcon
               )}
             </span>
-            <span className="cooking-mode-text">Kochmodus aktiv</span>
-            <button 
-              className="cooking-mode-exit"
-              onClick={toggleCookingMode}
-              title="Kochmodus beenden"
-            >
-              ×
-            </button>
           </div>
         </div>
       )}

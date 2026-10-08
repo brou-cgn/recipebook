@@ -5,38 +5,38 @@
   position: relative;
 }
 
+/* Seitenlasche am rechten Rand: Schließen-Button, Hinweis (senkrecht), Icon */
 .cooking-mode-indicator {
   position: fixed;
-  top: 0;
-  left: 0;
+  top: 38dvh;
   right: 0;
-  background: linear-gradient(135deg, #45a049 0%, #4CAF50 100%);
+  width: 48px;
+  background: #2f6e2a;
   color: white;
-  padding: 0.75rem 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  padding: 4px 0 14px;
+  border-radius: 16px 0 0 16px;
+  box-shadow: -2px 2px 8px rgba(47, 110, 42, 0.25);
   z-index: 1000;
-  animation: slideDown 0.3s ease-out;
+  animation: slideInSide 0.3s ease-out;
   -webkit-tap-highlight-color: transparent;
 }
 
-@keyframes slideDown {
+@keyframes slideInSide {
   from {
-    transform: translateY(-100%);
+    transform: translateX(100%);
     opacity: 0;
   }
   to {
-    transform: translateY(0);
+    transform: translateX(0);
     opacity: 1;
   }
 }
 
 .cooking-mode-content {
-  max-width: 800px;
-  margin: 0 auto;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
+  gap: 8px;
 }
 
 .cooking-mode-icon {
@@ -53,18 +53,20 @@
 }
 
 .cooking-mode-text {
-  font-weight: 700;
-  font-size: 1rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  letter-spacing: 0.06em;
+  writing-mode: vertical-rl;
 }
 
 .cooking-mode-exit {
-  background: rgba(255, 255, 255, 0.2);
+  background: transparent;
   color: white;
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  width: 32px;
-  height: 32px;
+  border: 0;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  font-size: 1.2rem;
+  font-size: 1.6rem;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -1524,18 +1526,6 @@ button.private-badge-button:active {
     padding-bottom: 5rem;
   }
 
-  .cooking-mode-indicator {
-    padding: 0.625rem 0.75rem;
-  }
-
-  .cooking-mode-text {
-    font-size: 0.9rem;
-  }
-
-  .cooking-mode-icon {
-    font-size: 1.25rem;
-  }
-
   /* Remove hover effects on mobile/touch for difficulty stars */
   @media (hover: none) {
     .difficulty-stars .star:hover {
@@ -1551,7 +1541,7 @@ button.private-badge-button:active {
 
 .recipe-detail-content.cooking-mode-active {
   padding: 0;
-  padding-top: 3.5rem; /* Account for fixed cooking-mode-indicator */
+  padding-top: 0; /* Kochmodus-Hinweis sitzt als Seitenlasche, kein Platz oben nötig */
   margin-top: 0;
   display: flex;
   flex-direction: column;
@@ -1799,7 +1789,7 @@ button.private-badge-button:active {
     right: 0;
     bottom: 0;
     height: auto;
-    padding-top: 3.5rem; /* Platz für die Kochmodus-Leiste */
+    padding-top: env(safe-area-inset-top, 0px); /* Kochmodus-Hinweis ist eine Seitenlasche */
   }
 }
 
