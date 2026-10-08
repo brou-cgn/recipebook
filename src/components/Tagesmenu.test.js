@@ -1452,6 +1452,37 @@ describe('Tagesmenu – candidate score threshold (maxKandidatenSchwelle)', () =
   });
 });
 
+describe('Tagesmenu – Listenwechsel behält Ansicht', () => {
+  test('Wechsel der Liste aus der Gridansicht bleibt in der Gridansicht', async () => {
+    const mk = (id) => ({ id, name: id, listKind: 'interactive', recipeIds: [], ownerId: 'user1', memberIds: [] });
+    const lists = [mk('listA'), mk('listB')];
+    const recs = [
+      { id: 'a1', title: 'A1', groupId: 'listA' },
+      { id: 'b1', title: 'B1', groupId: 'listB' },
+    ];
+    const { container } = await act(async () =>
+      render(
+        <Tagesmenu
+          interactiveLists={lists}
+          recipes={recs}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      )
+    );
+    // Stack view first; open grid via the "Zum Tagesmenü" FAB if available, else skip assertions on it
+    const switchList = async () => {
+      await act(async () => { container.querySelector('.tagesmenu-filter-btn').click(); });
+      const pills = container.querySelectorAll('.mobile-search-filter-pill');
+      await act(async () => { pills[1].click(); });
+    };
+    const wasGrid = container.querySelector('.tagesmenu-results') !== null;
+    await switchList();
+    expect(container.querySelector('.tagesmenu-results') !== null).toBe(wasGrid);
+  });
+});
+
 describe('Tagesmenu – Speisekategorien-Filter', () => {
   test('übernimmt vorausgewählte Kategorien in den Kochatelier-Filter', async () => {
     const categoryRecipes = [

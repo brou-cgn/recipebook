@@ -229,6 +229,8 @@ function Tagesmenu({
   }, [stackRecipes, currentUserSwipeDocs]);
 
   const prevListIdRef = useRef(selectedListId);
+  const keepGridOnListSwitchRef = useRef(false);
+  const [gridCarriedOver, setGridCarriedOver] = useState(false);
   useEffect(() => {
     if (prevListIdRef.current !== selectedListId) {
       prevListIdRef.current = selectedListId;
@@ -240,7 +242,11 @@ function Tagesmenu({
       setAllMembersFlagsLoaded(false);
       setFlagsLoaded(false);
       setThresholdCrossedAtIndex(null);
-      setForceShowResults(false);
+      // Stay in the grid view when the list is switched from within the grid
+      // (only if the new list has gemeinsame Kandidaten – otherwise the stack is shown)
+      setForceShowResults(keepGridOnListSwitchRef.current);
+      setGridCarriedOver(keepGridOnListSwitchRef.current);
+      keepGridOnListSwitchRef.current = false;
       setShowMeineAuswahl(false);
       setContextMenuRecipeId(null);
       // Reload the global threshold setting to ensure it is not lost during list switches
@@ -854,7 +860,8 @@ function Tagesmenu({
   }, [thresholdMet, hasSwiped, currentIndex, thresholdCrossedAtIndex]);
 
   const allSwiped =
-    (forceShowResults && allListRecipes.length > 0) ||
+    (forceShowResults && allListRecipes.length > 0 &&
+      (!gridCarriedOver || gemeinsameKandidaten.length > 0)) ||
     (allListRecipes.length > 0 &&
     (listRecipes.length === 0 ||
       currentIndex >= listRecipes.length ||
@@ -1636,7 +1643,12 @@ function Tagesmenu({
         onClose={() => setIsFilterOpen(false)}
         interactiveLists={interactiveLists}
         selectedListId={selectedListId}
-        onSelectList={(id) => setSelectedListId(id)}
+        onSelectList={(id) => {
+          if (id !== selectedListId) {
+            keepGridOnListSwitchRef.current = allSwiped || showMeineAuswahl;
+          }
+          setSelectedListId(id);
+        }}
         categoryOptions={availableMealCategories}
         selectedCategories={selectedCategoryFilter}
         onSelectCategory={handleSelectedCategoryFilterChange}
