@@ -109,7 +109,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [cookingModeDefaultImgLightIcon, setCookingModeDefaultImgLightIcon] = useState('♨');
   const [closeButtonIcon, setCloseButtonIcon] = useState('×');
   // Icon used for the close button over bright recipe images: always the
-  // light-mode "Schließen (Allgemein)" icon, regardless of app dark/light mode.
+  // light-mode default-image close icon (like the cooking mode button),
+  // regardless of app dark/light mode.
   const [closeButtonBrightImgIcon, setCloseButtonBrightImgIcon] = useState('×');
   const [closeButtonDefaultImgIcon, setCloseButtonDefaultImgIcon] = useState('×');
   // Whether to use alt icons due to bright image corners
@@ -203,7 +204,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setCookingModeDefaultImgIcon(eff('cookingModeDefaultImg') || eff('cookingMode') || '♨');
       setCookingModeDefaultImgLightIcon(effLight('cookingModeDefaultImg') || effLight('cookingMode') || '♨');
       setCloseButtonIcon(eff('closeButton') || '×');
-      setCloseButtonBrightImgIcon(getEffectiveIcon(icons, 'closeButton', false) || '×');
+      setCloseButtonBrightImgIcon(effLight('closeButtonDefaultImg') || effLight('closeButton') || '×');
       setCloseButtonDefaultImgIcon(eff('closeButtonDefaultImg') || eff('closeButton') || '×');
       setCopyLinkIcon(eff('copyLink') || 'Link');
       setNutritionEmptyIcon(normalizeNutritionEmptyIcon(eff('nutritionEmpty')));
@@ -253,7 +254,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setCookingModeDefaultImgIcon(eff('cookingModeDefaultImg') || eff('cookingMode') || '♨');
     setCookingModeDefaultImgLightIcon(effLight('cookingModeDefaultImg') || effLight('cookingMode') || '♨');
     setCloseButtonIcon(eff('closeButton') || '×');
-    setCloseButtonBrightImgIcon(getEffectiveIcon(allButtonIcons, 'closeButton', false) || '×');
+    setCloseButtonBrightImgIcon(effLight('closeButtonDefaultImg') || effLight('closeButton') || '×');
     setCloseButtonDefaultImgIcon(eff('closeButtonDefaultImg') || eff('closeButton') || '×');
     setCopyLinkIcon(eff('copyLink') || 'Link');
     setNutritionEmptyIcon(normalizeNutritionEmptyIcon(eff('nutritionEmpty')));
@@ -2162,7 +2163,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         title="Zurück"
                       >
                         {/* Use default-category-image icon when the displayed image is a category image,
-                            otherwise use the "Schließen (Allgemein)" light-mode icon for bright corners
+                            otherwise use the light-mode default-image icon for bright corners
                             (regardless of app dark/light mode), or the normal icon */}
                         {(() => {
                           const icon = isDefaultCategoryImage
