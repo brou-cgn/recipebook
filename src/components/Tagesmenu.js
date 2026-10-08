@@ -1170,7 +1170,7 @@ function Tagesmenu({
   const readyToRender = flagsLoaded && maxKandidatenSchwelleLoaded && allMembersFlagsLoaded;
 
   return (
-    <div className={`tagesmenu-container${(allSwiped || showMeineAuswahl || showAllLists) ? ' tagesmenu-container--results' : ''}`}>
+    <div className={`tagesmenu-container${(allSwiped || showMeineAuswahl || showAllLists || (gridCarriedOver && !readyToRender)) ? ' tagesmenu-container--results' : ''}`}>
       {showAllLists ? (
         <div className="tagesmenu-results">
           <div className="tagesmenu-results-page-header">
@@ -1237,7 +1237,15 @@ function Tagesmenu({
           <p>Diese Liste enthält noch keine Rezepte.</p>
         </div>
       ) : !readyToRender ? (
-        null
+        // Switching lists from within the grid: keep the page header on screen
+        // while the new list's data loads so only the tiles below change.
+        gridCarriedOver && !showMeineAuswahl ? (
+          <div className="tagesmenu-results">
+            <div className="tagesmenu-results-page-header">
+              <h2 className="tagesmenu-results-page-title">Kochatelier</h2>
+            </div>
+          </div>
+        ) : null
       ) : showMeineAuswahl ? (
         <div className="tagesmenu-meine-auswahl">
           <div className="tagesmenu-results-page-header">
