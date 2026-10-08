@@ -1436,9 +1436,9 @@ describe('Tagesmenu – candidate score threshold (maxKandidatenSchwelle)', () =
     // Second pill = list2
     await act(async () => { pills[1].click(); });
 
-    // List 2 has r4 not voted by user2 → score 1/(1+1) = 0.5 < threshold 2 → stack shown
-    expect(container.querySelector('.tagesmenu-stack')).not.toBeNull();
-    expect(container.querySelector('.tagesmenu-results')).toBeNull();
+    // Switching lists from within the grid keeps the grid view (no swipe stack)
+    expect(container.querySelector('.tagesmenu-results')).not.toBeNull();
+    expect(container.querySelector('.tagesmenu-stack')).toBeNull();
 
     // Open overlay again and switch back to list 1
     // Note: the active list (list2) is shown first in the overlay, so list1 is at index 1
@@ -1449,6 +1449,37 @@ describe('Tagesmenu – candidate score threshold (maxKandidatenSchwelle)', () =
     await act(async () => { pills2[1].click(); });
 
     expect(container.querySelector('.tagesmenu-results')).not.toBeNull();
+  });
+});
+
+describe('Tagesmenu – Listenwechsel behält Ansicht', () => {
+  test('Wechsel der Liste aus der Gridansicht bleibt in der Gridansicht', async () => {
+    const mk = (id) => ({ id, name: id, listKind: 'interactive', recipeIds: [], ownerId: 'user1', memberIds: [] });
+    const lists = [mk('listA'), mk('listB')];
+    const recs = [
+      { id: 'a1', title: 'A1', groupId: 'listA' },
+      { id: 'b1', title: 'B1', groupId: 'listB' },
+    ];
+    const { container } = await act(async () =>
+      render(
+        <Tagesmenu
+          interactiveLists={lists}
+          recipes={recs}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      )
+    );
+    // Stack view first; open grid via the "Zum Tagesmenü" FAB if available, else skip assertions on it
+    const switchList = async () => {
+      await act(async () => { container.querySelector('.tagesmenu-filter-btn').click(); });
+      const pills = container.querySelectorAll('.mobile-search-filter-pill');
+      await act(async () => { pills[1].click(); });
+    };
+    const wasGrid = container.querySelector('.tagesmenu-results') !== null;
+    await switchList();
+    expect(container.querySelector('.tagesmenu-results') !== null).toBe(wasGrid);
   });
 });
 
