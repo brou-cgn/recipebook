@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import './BottomNavigation.css';
 import { DEFAULT_BUTTON_ICONS, getButtonIcons, getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
@@ -176,7 +176,9 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect, badgeCounts })
     return () => window.removeEventListener('darkModeChange', handler);
   }, []);
 
-  useEffect(() => {
+  // Layout effect: centering must happen before the first paint, otherwise the
+  // freshly mounted pill is briefly shown at scroll position 0 and then jumps.
+  useLayoutEffect(() => {
     const rail = railRef.current;
 
     const centerOn = (key, behavior) => {
