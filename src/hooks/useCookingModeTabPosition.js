@@ -19,7 +19,7 @@ const readStored = (userId) => {
  * Vertikale Position der Kochmodus-Seitenlasche, je Anwender gespeichert
  * (Anteil der Viewport-Höhe, 0–1, für die Oberkante der Lasche).
  *
- * Gibt `top` (Anteil), `tabRef` für die Lasche sowie Props für den Griff zurück:
+ * Gibt `top` (Anteil), `tabRef` für die Lasche sowie Props für die gesamte Lasche (außer Buttons) zurück:
  * Ziehen per Pointer (Maus/Touch) und Pfeil hoch/runter per Tastatur.
  */
 export default function useCookingModeTabPosition(userId) {
@@ -48,6 +48,8 @@ export default function useCookingModeTabPosition(userId) {
   }, [userId]);
 
   const onPointerDown = (e) => {
+    // Buttons (z. B. „Kochmodus beenden“) bleiben normal klickbar und starten kein Ziehen
+    if (e.target.closest?.('button')) return;
     e.currentTarget.setPointerCapture?.(e.pointerId);
     drag.current = { startY: e.clientY, startTop: topRef.current };
   };
