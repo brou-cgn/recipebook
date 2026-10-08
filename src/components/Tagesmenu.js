@@ -95,6 +95,11 @@ function Tagesmenu({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  // "Alle Listen" mode: Gemeinsame Kandidaten of every interactive list at once
+  // (activated by tapping the active list pill in the filter dialog while in the grid).
+  const [showAllLists, setShowAllLists] = useState(false);
+  const [allListsFlagDocs, setAllListsFlagDocs] = useState({});
+  const [allListsLoaded, setAllListsLoaded] = useState(false);
   const [internalSelectedCategoryFilter, setInternalSelectedCategoryFilter] = useState([]);
   const selectedCategoryFilter = Array.isArray(selectedCategories)
     ? selectedCategories
@@ -674,6 +679,60 @@ function Tagesmenu({
     return pool.slice(0, maxKandidatenSchwelle);
   }, [allListRecipes, listMemberIds, allMembersFlagDocs, currentUser?.id, maxKandidatenSchwelle]);
 
+  // "Alle Listen": load member flag docs of every multi-member list once the mode is entered.
+  useEffect(() => {
+    if (!showAllLists) return undefined;
+    let cancelled = false;
+    setAllListsLoaded(false);
+    Promise.all(
+      interactiveLists.map(async (list) => {
+        const memberIds = Array.isArray(list.memberIds) ? list.memberIds : [];
+        const allIds = list.ownerId ? [...new Set([list.ownerId, ...memberIds])] : memberIds;
+        if (allIds.length <= 1) return [list.id, { memberIds: allIds, docs: {} }];
+        try {
+          return [list.id, { memberIds: allIds, docs: await getAllMembersSwipeFlagDocsForList(list.id, allIds) }];
+        } catch (_) {
+          return [list.id, { memberIds: allIds, docs: {} }];
+        }
+      })
+    ).then((entries) => {
+      if (cancelled) return;
+      setAllListsFlagDocs(Object.fromEntries(entries));
+      setAllListsLoaded(true);
+    });
+    return () => { cancelled = true; };
+  }, [showAllLists, interactiveLists]);
+
+  // Gemeinsame Kandidaten across all lists (same rule as per list, capped per list).
+  // Each entry remembers its list so opening a recipe returns to the right one.
+  const allListsKandidaten = useMemo(() => {
+    if (!showAllLists || maxKandidatenSchwelle === null) return [];
+    const seen = new Set();
+    const result = [];
+    interactiveLists.forEach((list) => {
+      const entry = allListsFlagDocs[list.id];
+      if (!entry || entry.memberIds.length <= 1) return;
+      const groupRecipeIds = Array.isArray(list.recipeIds) ? list.recipeIds : [];
+      recipes
+        .filter((r) => r.groupId === list.id || groupRecipeIds.includes(r.id))
+        .filter((r) => {
+          const ownDoc = entry.docs[currentUser?.id]?.[r.id];
+          if (!ownDoc || ownDoc.explicitFlag === null) return false;
+          return entry.memberIds.some((uid) => {
+            const doc = entry.docs[uid]?.[r.id];
+            return doc && doc.explicitFlag !== null && doc.flag === 'kandidat' && !doc.isExpired && doc.expiresAtMillis !== null;
+          });
+        })
+        .slice(0, maxKandidatenSchwelle)
+        .forEach((r) => {
+          if (seen.has(r.id)) return;
+          seen.add(r.id);
+          result.push({ recipe: r, listId: list.id });
+        });
+    });
+    return result;
+  }, [showAllLists, interactiveLists, allListsFlagDocs, recipes, currentUser?.id, maxKandidatenSchwelle]);
+
   // Recipes permanently archived by group consensus: group status is 'archiv' AND all members
   // have voted. Stored as a Set for O(1) lookup during render.
   const permanentlyArchivedRecipeIds = useMemo(() => {
@@ -883,9 +942,9 @@ function Tagesmenu({
     listRecipes.length > currentIndex;
 
   // Tell the parent which list/view the recipe was opened from, so closing it returns there
-  const handleOpenRecipe = (recipe) => {
-    const view = showMeineAuswahl ? 'auswahl' : allSwiped ? 'results' : 'stack';
-    onSelectRecipe(recipe, { listId: selectedListId, view });
+  const handleOpenRecipe = (recipe, listIdOverride) => {
+    const view = showMeineAuswahl ? 'auswahl' : (allSwiped || showAllLists) ? 'results' : 'stack';
+    onSelectRecipe(recipe, { listId: listIdOverride ?? selectedListId, view });
   };
 
   console.log('allSwiped check:', {
@@ -1060,8 +1119,68 @@ function Tagesmenu({
   const readyToRender = flagsLoaded && maxKandidatenSchwelleLoaded && allMembersFlagsLoaded;
 
   return (
-    <div className={`tagesmenu-container${(allSwiped || showMeineAuswahl) ? ' tagesmenu-container--results' : ''}`}>
-      {allListRecipes.length === 0 ? (
+    <div className={`tagesmenu-container${(allSwiped || showMeineAuswahl || showAllLists) ? ' tagesmenu-container--results' : ''}`}>
+      {showAllLists ? (
+        <div className="tagesmenu-results">
+          <div className="tagesmenu-results-page-header">
+            <h2 className="tagesmenu-results-page-title">Kochatelier – alle Listen</h2>
+          </div>
+          {!allListsLoaded || !maxKandidatenSchwelleLoaded ? null : allListsKandidaten.length === 0 ? (
+            <div className="tagesmenu-empty">
+              <p>Keine gemeinsamen Kandidaten in deinen Listen.</p>
+            </div>
+          ) : (
+            <div className="tagesmenu-results-group tagesmenu-results-group--gemeinsame-kandidaten">
+              <div
+                className={`tagesmenu-results-tiles ${
+                  allListsKandidaten.length <= 6 ? 'tagesmenu-results-tiles--2col' : 'tagesmenu-results-tiles--3col'
+                }`}
+              >
+                {allListsKandidaten.map(({ recipe, listId }) => {
+                  const allImages =
+                    Array.isArray(recipe.images) && recipe.images.length > 0
+                      ? recipe.images
+                      : recipe.image
+                      ? [{ url: recipe.image, isDefault: true }]
+                      : [];
+                  const orderedImages = [
+                    ...allImages.filter((img) => img.isDefault),
+                    ...allImages.filter((img) => !img.isDefault),
+                  ];
+                  const authorName = getAuthorName(recipe.authorId);
+                  return (
+                    <div
+                      key={recipe.id}
+                      role="button"
+                      tabIndex={0}
+                      className="tagesmenu-results-tile"
+                      onClick={() => handleOpenRecipe(recipe, listId)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleOpenRecipe(recipe, listId);
+                        }
+                      }}
+                    >
+                      <div className="tagesmenu-results-tile-image">
+                        {orderedImages.length > 0 ? (
+                          <img src={orderedImages[0].url} alt={recipe.title} />
+                        ) : (
+                          <span></span>
+                        )}
+                      </div>
+                      <p className="tagesmenu-results-tile-name">{recipe.title}</p>
+                      {authorName && (
+                        <p className="tagesmenu-results-tile-author">{authorName}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : allListRecipes.length === 0 ? (
         <div className="tagesmenu-empty">
           <span className="tagesmenu-empty-icon"></span>
           <p>Diese Liste enthält noch keine Rezepte.</p>
@@ -1623,7 +1742,7 @@ function Tagesmenu({
       )}
 
       {/* "Zurück zum Swipestapel" FAB button – bottom right, shown in the grid while the stack still has cards */}
-      {readyToRender && allSwiped && canReturnToStack && (
+      {readyToRender && allSwiped && canReturnToStack && !showAllLists && (
         <button
           className="tagesmenu-zurueck-zum-stapel-btn"
           onClick={() => setForceShowResults(false)}
@@ -1642,13 +1761,19 @@ function Tagesmenu({
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
         interactiveLists={interactiveLists}
-        selectedListId={selectedListId}
+        selectedListId={showAllLists ? null : selectedListId}
         onSelectList={(id) => {
           if (id !== selectedListId) {
-            keepGridOnListSwitchRef.current = allSwiped || showMeineAuswahl;
+            keepGridOnListSwitchRef.current = allSwiped || showMeineAuswahl || showAllLists;
           }
+          setShowAllLists(false);
           setSelectedListId(id);
         }}
+        onClearListFilter={
+          allSwiped && !showMeineAuswahl && !showAllLists && listMemberIds.length > 1
+            ? () => setShowAllLists(true)
+            : undefined
+        }
         categoryOptions={availableMealCategories}
         selectedCategories={selectedCategoryFilter}
         onSelectCategory={handleSelectedCategoryFilterChange}
