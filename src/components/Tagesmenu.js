@@ -168,6 +168,9 @@ function Tagesmenu({
   // Configurable "Zum Tagesmenü" button icon loaded from settings
   const [zumTagesMenuIcon, setZumTagesMenuIcon] = useState(DEFAULT_BUTTON_ICONS.tagesmenuZumTagesMenu);
 
+  // Configurable "Zurück zum Swipestapel" button icon loaded from settings
+  const [zurueckZumStapelIcon, setZurueckZumStapelIcon] = useState(DEFAULT_BUTTON_ICONS.tagesmenuZurueckZumStapel);
+
   // Configurable "Meine Auswahl" button icon loaded from settings
   const [meineAuswahlIcon, setMeineAuswahlIcon] = useState(DEFAULT_BUTTON_ICONS.tagesmenuMeineAuswahl);
   // Configurable menu icon shown on the top-right corner of the Tagesmenü tile
@@ -273,6 +276,7 @@ function Tagesmenu({
     setFilterButtonIcon(eff('filterButton'));
     setZumTagesMenuIcon(eff('tagesmenuZumTagesMenu'));
     setMeineAuswahlIcon(eff('tagesmenuMeineAuswahl'));
+    setZurueckZumStapelIcon(eff('tagesmenuZurueckZumStapel'));
     setKachelMenuIcon(eff('tagesmenuKachelMenu'));
     setKachelMenuAltIcon(getKachelMenuAltIconValue(eff));
   }, [allButtonIcons, isDarkMode]);
@@ -858,6 +862,18 @@ function Tagesmenu({
       (thresholdMet && !hasSwiped) ||
       // Threshold was crossed mid-session by a swipe and the extra last card has been swiped
       (thresholdCrossedAtIndex !== null && currentIndex > thresholdCrossedAtIndex)));
+
+  // The grid was reached manually (via "Zum Tagesmenü") and the stack still has
+  // cards left to swipe → offer a way back. Not offered when the stack ended by
+  // itself (threshold reached), since leaving forceShowResults would not reopen it.
+  const stackEndedByThreshold =
+    (thresholdMet && !hasSwiped) ||
+    (thresholdCrossedAtIndex !== null && currentIndex > thresholdCrossedAtIndex);
+  const canReturnToStack =
+    forceShowResults &&
+    !showMeineAuswahl &&
+    !stackEndedByThreshold &&
+    listRecipes.length > currentIndex;
 
   // Tell the parent which list/view the recipe was opened from, so closing it returns there
   const handleOpenRecipe = (recipe) => {
@@ -1596,6 +1612,22 @@ function Tagesmenu({
             <img src={zumTagesMenuIcon} alt="Zum Tagesmenü" className="button-icon-image" draggable="false" />
           ) : (
             <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{zumTagesMenuIcon}</span>
+          )}
+        </button>
+      )}
+
+      {/* "Zurück zum Swipestapel" FAB button – bottom right, shown in the grid while the stack still has cards */}
+      {readyToRender && allSwiped && canReturnToStack && (
+        <button
+          className="tagesmenu-zurueck-zum-stapel-btn"
+          onClick={() => setForceShowResults(false)}
+          aria-label="Zurück zum Swipestapel"
+          title="Zurück zum Swipestapel"
+        >
+          {isBase64Image(zurueckZumStapelIcon) ? (
+            <img src={zurueckZumStapelIcon} alt="Zurück zum Swipestapel" className="button-icon-image" draggable="false" />
+          ) : (
+            <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{zurueckZumStapelIcon}</span>
           )}
         </button>
       )}

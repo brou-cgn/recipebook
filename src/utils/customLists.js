@@ -618,6 +618,7 @@ export const DEFAULT_BUTTON_ICONS = {
   privateBadge: '🔒',
   tagesmenuZumTagesMenu: 'Menü',
   tagesmenuMeineAuswahl: 'Liste',
+  tagesmenuZurueckZumStapel: 'Stapel',
   tagesmenuKachelMenu: '⋯',
   // Alt icon shown when the tile image is dark (low luminance)
   tagesmenuKachelMenuAlt: '⋯',
@@ -694,6 +695,7 @@ export const DEFAULT_BUTTON_ICONS = {
   privateBadgeDark: '',
   tagesmenuZumTagesMenuDark: '',
   tagesmenuMeineAuswahlDark: '',
+  tagesmenuZurueckZumStapelDark: '',
   tagesmenuKachelMenuDark: '',
   tagesmenuKachelMenuAltDark: '',
   timelineMenuDefaultImgDark: '',

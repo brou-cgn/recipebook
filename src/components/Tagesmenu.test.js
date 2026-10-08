@@ -1016,6 +1016,27 @@ describe('Tagesmenu – completion tile view', () => {
     });
     expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
   });
+
+  test('grid reached via restoreState shows "Zurück zum Swipestapel" and returns to the stack', async () => {
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[list]}
+          recipes={recipes}
+          allUsers={[]}
+          onSelectRecipe={jest.fn()}
+          currentUser={currentUser}
+          restoreState={{ listId: 'list1', view: 'results' }}
+        />
+      );
+    });
+    const btn = document.querySelector('.tagesmenu-zurueck-zum-stapel-btn');
+    expect(btn).not.toBeNull();
+    expect(btn.getAttribute('aria-label')).toBe('Zurück zum Swipestapel');
+    act(() => { btn.click(); });
+    expect(document.querySelector('.tagesmenu-results')).toBeNull();
+    expect(document.querySelector('.tagesmenu-zurueck-zum-stapel-btn')).toBeNull();
+  });
 });
 
 describe('Tagesmenu – pre-existing active flags', () => {

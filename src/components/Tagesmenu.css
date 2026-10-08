@@ -672,7 +672,8 @@
 
 
 
-.tagesmenu-zum-tagesMenu-btn {
+.tagesmenu-zum-tagesMenu-btn,
+.tagesmenu-zurueck-zum-stapel-btn {
   position: fixed;
   bottom: 20px;
   right: 20px;
@@ -699,13 +700,15 @@
               box-shadow 0.15s ease;
 }
 
-.tagesmenu-zum-tagesMenu-btn:active {
+.tagesmenu-zum-tagesMenu-btn:active,
+.tagesmenu-zurueck-zum-stapel-btn:active {
   transform: scale(1.15);
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
   outline: none;
 }
 
-.tagesmenu-zum-tagesMenu-btn .button-icon-image {
+.tagesmenu-zum-tagesMenu-btn .button-icon-image,
+.tagesmenu-zurueck-zum-stapel-btn .button-icon-image {
   width: 1.4rem;
   height: 1.4rem;
   object-fit: contain;
