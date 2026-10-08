@@ -1436,9 +1436,9 @@ describe('Tagesmenu – candidate score threshold (maxKandidatenSchwelle)', () =
     // Second pill = list2
     await act(async () => { pills[1].click(); });
 
-    // Switching lists from within the grid keeps the grid view (no swipe stack)
-    expect(container.querySelector('.tagesmenu-results')).not.toBeNull();
-    expect(container.querySelector('.tagesmenu-stack')).toBeNull();
+    // List 2 has r4 not voted by user2 → score 1/(1+1) = 0.5 < threshold 2 → stack shown
+    expect(container.querySelector('.tagesmenu-stack')).not.toBeNull();
+    expect(container.querySelector('.tagesmenu-results')).toBeNull();
 
     // Open overlay again and switch back to list 1
     // Note: the active list (list2) is shown first in the overlay, so list1 is at index 1

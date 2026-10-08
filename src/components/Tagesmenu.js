@@ -230,6 +230,7 @@ function Tagesmenu({
 
   const prevListIdRef = useRef(selectedListId);
   const keepGridOnListSwitchRef = useRef(false);
+  const [gridCarriedOver, setGridCarriedOver] = useState(false);
   useEffect(() => {
     if (prevListIdRef.current !== selectedListId) {
       prevListIdRef.current = selectedListId;
@@ -242,7 +243,9 @@ function Tagesmenu({
       setFlagsLoaded(false);
       setThresholdCrossedAtIndex(null);
       // Stay in the grid view when the list is switched from within the grid
+      // (only if the new list has gemeinsame Kandidaten – otherwise the stack is shown)
       setForceShowResults(keepGridOnListSwitchRef.current);
+      setGridCarriedOver(keepGridOnListSwitchRef.current);
       keepGridOnListSwitchRef.current = false;
       setShowMeineAuswahl(false);
       setContextMenuRecipeId(null);
@@ -857,7 +860,8 @@ function Tagesmenu({
   }, [thresholdMet, hasSwiped, currentIndex, thresholdCrossedAtIndex]);
 
   const allSwiped =
-    (forceShowResults && allListRecipes.length > 0) ||
+    (forceShowResults && allListRecipes.length > 0 &&
+      (!gridCarriedOver || gemeinsameKandidaten.length > 0)) ||
     (allListRecipes.length > 0 &&
     (listRecipes.length === 0 ||
       currentIndex >= listRecipes.length ||
