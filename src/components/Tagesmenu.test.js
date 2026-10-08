@@ -995,7 +995,26 @@ describe('Tagesmenu – completion tile view', () => {
     act(() => { firstTile.click(); });
 
     expect(onSelectRecipe).toHaveBeenCalledTimes(1);
-    expect(onSelectRecipe).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }));
+    expect(onSelectRecipe).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'r1' }),
+      { listId: 'list1', view: 'results' }
+    );
+  });
+
+  test('restoreState reopens the results grid of the given list', async () => {
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[list]}
+          recipes={recipes}
+          allUsers={[]}
+          onSelectRecipe={jest.fn()}
+          currentUser={currentUser}
+          restoreState={{ listId: 'list1', view: 'results' }}
+        />
+      );
+    });
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
   });
 });
 

@@ -80,10 +80,20 @@ function Tagesmenu({
   currentUser,
   selectedCategories,
   onSelectedCategoriesChange,
+  restoreState,
+  onRestoreStateConsumed,
 }) {
+  // Restore list + view (stack / results grid / Meine Auswahl) after returning from a recipe
+  const restoredListId = restoreState && interactiveLists.some((l) => l.id === restoreState.listId)
+    ? restoreState.listId
+    : null;
   const [selectedListId, setSelectedListId] = useState(
-    interactiveLists.length > 0 ? interactiveLists[0].id : null
+    restoredListId ?? (interactiveLists.length > 0 ? interactiveLists[0].id : null)
   );
+  useEffect(() => {
+    onRestoreStateConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [internalSelectedCategoryFilter, setInternalSelectedCategoryFilter] = useState([]);
   const selectedCategoryFilter = Array.isArray(selectedCategories)
@@ -170,10 +180,14 @@ function Tagesmenu({
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
 
   // When true, jump directly to the results view (used by the "Zum Tagesmenü" button)
-  const [forceShowResults, setForceShowResults] = useState(false);
+  const [forceShowResults, setForceShowResults] = useState(
+    restoredListId !== null && restoreState.view === 'results'
+  );
 
   // When true, show the dedicated "Meine Auswahl" view (own groups: Kandidat, Für später, Archiviert)
-  const [showMeineAuswahl, setShowMeineAuswahl] = useState(false);
+  const [showMeineAuswahl, setShowMeineAuswahl] = useState(
+    restoredListId !== null && restoreState.view === 'auswahl'
+  );
   const [contextMenuRecipeId, setContextMenuRecipeId] = useState(null);
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [cookDatesMap, setCookDatesMap] = useState(new Map());
@@ -845,6 +859,12 @@ function Tagesmenu({
       // Threshold was crossed mid-session by a swipe and the extra last card has been swiped
       (thresholdCrossedAtIndex !== null && currentIndex > thresholdCrossedAtIndex)));
 
+  // Tell the parent which list/view the recipe was opened from, so closing it returns there
+  const handleOpenRecipe = (recipe) => {
+    const view = showMeineAuswahl ? 'auswahl' : allSwiped ? 'results' : 'stack';
+    onSelectRecipe(recipe, { listId: selectedListId, view });
+  };
+
   console.log('allSwiped check:', {
     allListRecipesLength: allListRecipes.length,
     listRecipesLength: listRecipes.length,
@@ -1067,11 +1087,11 @@ function Tagesmenu({
                         role="button"
                         tabIndex={0}
                         className="tagesmenu-results-tile"
-                        onClick={() => onSelectRecipe(recipe)}
+                        onClick={() => handleOpenRecipe(recipe)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            onSelectRecipe(recipe);
+                            handleOpenRecipe(recipe);
                           }
                         }}
                       >
@@ -1165,11 +1185,11 @@ function Tagesmenu({
                   role="button"
                   tabIndex={0}
                   className="tagesmenu-results-tile"
-                  onClick={() => onSelectRecipe(recipe)}
+                  onClick={() => handleOpenRecipe(recipe)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-                      onSelectRecipe(recipe);
+                      handleOpenRecipe(recipe);
                     }
                   }}
                 >
@@ -1286,11 +1306,11 @@ function Tagesmenu({
                         role="button"
                         tabIndex={0}
                         className="tagesmenu-results-tile"
-                        onClick={() => onSelectRecipe(recipe)}
+                        onClick={() => handleOpenRecipe(recipe)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            onSelectRecipe(recipe);
+                            handleOpenRecipe(recipe);
                           }
                         }}
                       >
@@ -1409,7 +1429,7 @@ function Tagesmenu({
                 onTransitionEnd={isTop ? handleTransitionEnd : undefined}
                 onClick={
                   isTop && cardPhase === 'idle' && dragOffset.x === 0 && dragOffset.y === 0
-                    ? () => onSelectRecipe(recipe)
+                    ? () => handleOpenRecipe(recipe)
                     : undefined
                 }
               >
@@ -1450,7 +1470,7 @@ function Tagesmenu({
                     <img
                       src={orderedImages[0].url}
                       alt={recipe.title}
-                      onClick={isTop && cardPhase === 'idle' ? () => onSelectRecipe(recipe) : undefined}
+                      onClick={isTop && cardPhase === 'idle' ? () => handleOpenRecipe(recipe) : undefined}
                     />
                   </div>
                 ) : (
