@@ -443,6 +443,10 @@ function Tagesmenu({
   useEffect(() => {
     groupThresholdsRef.current = groupThresholds;
   }, [groupThresholds]);
+  const allMembersFlagsRef = useRef(allMembersFlags);
+  useEffect(() => {
+    allMembersFlagsRef.current = allMembersFlags;
+  }, [allMembersFlags]);
 
   // Refs that mirror frequently-changing state so handleTransitionEnd (useCallback)
   // can always read the latest values without being re-created on every render.
@@ -580,12 +584,59 @@ function Tagesmenu({
         const flag = flagMap[swipe.direction];
         if (flag && currentUser?.id && swipe.list?.id) {
           const userName = [currentUser?.vorname, currentUser?.nachname].filter(Boolean).join(' ').trim();
-          setRecipeSwipeFlag(currentUser.id, swipe.list.id, swipe.recipe.id, flag, {
+          const swipeListId = swipe.list.id;
+          const swipeMemberIds = listMemberIdsRef.current;
+          Promise.resolve(setRecipeSwipeFlag(currentUser.id, swipeListId, swipe.recipe.id, flag, {
             userName,
             recipeTitle: swipe.recipe.title || '',
-            memberIds: listMemberIdsRef.current,
+            memberIds: swipeMemberIds,
             thresholds: groupThresholdsRef.current,
-          });
+          })).then(() => {
+            // Authoritative reload of the calculated flags (incl. real expiry dates)
+            if (selectedListRef.current?.id !== swipeListId || swipeMemberIds.length === 0) return;
+            return getAllMembersSwipeFlagDocsForList(swipeListId, swipeMemberIds)
+              .then((flagDocs) => {
+                if (selectedListRef.current?.id === swipeListId) setAllMembersFlagDocs(flagDocs);
+              });
+          }).catch(() => {});
+
+          // Optimistically update allMembersFlagDocs so the Gemeinsame-Kandidaten grid
+          // reflects the swipe immediately (it is derived from calculatedFlag docs).
+          const nextExplicitFlags = {
+            ...allMembersFlagsRef.current,
+            [currentUser.id]: {
+              ...(allMembersFlagsRef.current[currentUser.id] || {}),
+              [swipe.recipe.id]: flag,
+            },
+          };
+          const calculatedFlag = computeCalculatedRecipeSwipeFlag(
+            swipeMemberIds, nextExplicitFlags, swipe.recipe.id, groupThresholdsRef.current
+          );
+          if (calculatedFlag) {
+            // Placeholder expiry (replaced by the reload above); only needs to be non-null/future.
+            const placeholderExpiresAtMillis = Date.now() + 24 * 60 * 60 * 1000;
+            setAllMembersFlagDocs((prev) => {
+              const next = { ...prev };
+              const recipeId = swipe.recipe.id;
+              const uids = new Set([...swipeMemberIds, currentUser.id]);
+              uids.forEach((uid) => {
+                const existing = next[uid]?.[recipeId];
+                // Other members without a swipe doc have none; only update existing docs + own doc.
+                if (!existing && uid !== currentUser.id) return;
+                next[uid] = {
+                  ...(next[uid] || {}),
+                  [recipeId]: {
+                    flag: calculatedFlag,
+                    explicitFlag: uid === currentUser.id ? flag : (existing?.explicitFlag ?? null),
+                    expiresAt: existing?.expiresAt ?? null,
+                    expiresAtMillis: placeholderExpiresAtMillis,
+                    isExpired: false,
+                  },
+                };
+              });
+              return next;
+            });
+          }
           // Keep allMembersFlags in sync with the current user's new swipe
           setAllMembersFlags((prev) => ({
             ...prev,

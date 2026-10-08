@@ -831,6 +831,7 @@ describe('Tagesmenu – swipe stack prioritization', () => {
     finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
     swipeLeft(document.querySelector('.tagesmenu-card-top'));
     finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
+    await act(async () => {}); // let the authoritative flag-doc reload settle
 
     const gemeinsameGroup = document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
     expect(gemeinsameGroup).not.toBeNull();
@@ -1884,6 +1885,7 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
     swipeCardUp();
     swipeCardUp();
     swipeCardUp();
+    await act(async () => {}); // let the authoritative flag-doc reload settle
 
     expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
     const gemeinsameGroup = document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
@@ -1927,6 +1929,7 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
     swipeCardUp();
     swipeCardUp();
     swipeCardUp();
+    await act(async () => {}); // let the authoritative flag-doc reload settle
 
     expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
     const gemeinsameGroup = document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
@@ -1973,6 +1976,7 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
     swipeCardUp();
     swipeCardUp();
     swipeCardUp();
+    await act(async () => {}); // let the authoritative flag-doc reload settle
 
     expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
     const gemeinsameGroup = document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
@@ -2065,6 +2069,7 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
     });
 
     swipeCardUp();
+    await act(async () => {}); // let the authoritative flag-doc reload settle
 
     expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
     const gemeinsameGroup = document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
