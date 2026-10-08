@@ -105,6 +105,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const { top: cookingTabTop, tabRef: cookingTabRef, handleProps: cookingTabHandleProps } = useCookingModeTabPosition(currentUser?.id);
   const [cookingModeIcon, setCookingModeIcon] = useState('♨');
+  const [cookingModeExitIcon, setCookingModeExitIcon] = useState('');
   const [cookingModeDefaultImgIcon, setCookingModeDefaultImgIcon] = useState('♨');
   // Light-mode variant of the default-category-image icon, forced regardless of the
   // app's current dark mode setting - bright recipe images always show this one.
@@ -203,6 +204,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       const eff = (key) => getEffectiveIcon(icons, key, currentDarkMode);
       const effLight = (key) => getEffectiveIcon(icons, key, false);
       setCookingModeIcon(eff('cookingMode') || '♨');
+      setCookingModeExitIcon(eff('cookingModeExit') || '');
       setCookingModeDefaultImgIcon(eff('cookingModeDefaultImg') || eff('cookingMode') || '♨');
       setCookingModeDefaultImgLightIcon(effLight('cookingModeDefaultImg') || effLight('cookingMode') || '♨');
       setCloseButtonIcon(eff('closeButton') || '×');
@@ -253,6 +255,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     const eff = (key) => getEffectiveIcon(allButtonIcons, key, isDarkMode);
     const effLight = (key) => getEffectiveIcon(allButtonIcons, key, false);
     setCookingModeIcon(eff('cookingMode') || '♨');
+    setCookingModeExitIcon(eff('cookingModeExit') || '');
     setCookingModeDefaultImgIcon(eff('cookingModeDefaultImg') || eff('cookingMode') || '♨');
     setCookingModeDefaultImgLightIcon(effLight('cookingModeDefaultImg') || effLight('cookingMode') || '♨');
     setCloseButtonIcon(eff('closeButton') || '×');
@@ -1825,11 +1828,17 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               title="Kochmodus beenden"
               aria-label="Kochmodus beenden"
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3" />
-                <path d="M16 8l4 4-4 4" />
-                <path d="M20 12H9" />
-              </svg>
+              {isBase64Image(cookingModeExitIcon) ? (
+                <img src={cookingModeExitIcon} alt="" className="cooking-mode-exit-img" />
+              ) : cookingModeExitIcon ? (
+                <span className="cooking-mode-exit-text">{cookingModeExitIcon}</span>
+              ) : (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3" />
+                  <path d="M16 8l4 4-4 4" />
+                  <path d="M20 12H9" />
+                </svg>
+              )}
             </button>
             <span className="cooking-mode-text">Kochmodus</span>
           </div>

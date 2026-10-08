@@ -10,6 +10,7 @@
 export const DARK_MODE_ICON_ROWS = [
   { key: 'cookingMode', label: 'Kochmodus-Button' },
   { key: 'cookingModeDefaultImg', label: 'Kochmodus-Button (Standard-Kategoriebild)' },
+  { key: 'cookingModeExit', label: 'Kochmodus beenden (Seitenlasche)' },
   { key: 'importRecipe', label: 'Import-Button' },
   { key: 'scanImage', label: 'Bild-scannen-Button' },
   { key: 'webImport', label: 'Web-Import-Button' },
@@ -107,7 +108,7 @@ export function mergeButtonIconRowDefs() {
 // Button-Icons admin tab. Purely organisational - editable/reorderable by
 // admins afterwards via `buttonIconGroups` (see customLists.js).
 const BUTTON_ICON_GROUP_DEFS = [
-  { id: 'g-kochmodus', name: 'Kochmodus', keys: ['cookingMode', 'cookingModeDefaultImg'] },
+  { id: 'g-kochmodus', name: 'Kochmodus', keys: ['cookingMode', 'cookingModeDefaultImg', 'cookingModeExit'] },
   { id: 'g-trend-kacheln', name: 'Trend-Kacheln', keys: ['trendingDifficultyIcon', 'trendingTimeIcon'] },
   { id: 'g-import', name: 'Import & Erfassung', keys: ['importRecipe', 'scanImage', 'webImport'] },
   { id: 'g-allgemein', name: 'Allgemeine Aktionen', keys: ['closeButton', 'closeButtonDefaultImg', 'filterButton', 'addRecipe', 'editRecipe', 'saveRecipe', 'copyLink'] },

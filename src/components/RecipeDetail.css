@@ -83,6 +83,17 @@
   line-height: 1;
 }
 
+.cooking-mode-exit-img {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+}
+
+.cooking-mode-exit-text {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
 /*.cooking-mode-exit:hover {
   background: rgba(255, 255, 255, 0.3);
   border-color: white;
