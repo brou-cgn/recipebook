@@ -1264,7 +1264,7 @@ function Tagesmenu({
             return (
               <div key={flag} className="tagesmenu-results-group">
                 <h3 className="tagesmenu-results-group-title">{label}</h3>
-                <div className="tagesmenu-results-tiles">
+                <div className={`tagesmenu-results-tiles ${group.length <= 6 ? 'tagesmenu-results-tiles--2col' : 'tagesmenu-results-tiles--3col'}`}>
                   {group.map((recipe) => {
                     const allImages =
                       Array.isArray(recipe.images) && recipe.images.length > 0
@@ -1277,11 +1277,6 @@ function Tagesmenu({
                       ...allImages.filter((img) => !img.isDefault),
                     ];
                     const authorName = getAuthorName(recipe.authorId);
-                    const kulinarikTags = Array.isArray(recipe.kulinarik)
-                      ? recipe.kulinarik
-                      : recipe.kulinarik
-                      ? [recipe.kulinarik]
-                      : [];
                     return (
                       <div
                         key={recipe.id}
@@ -1340,13 +1335,6 @@ function Tagesmenu({
                         {authorName && (
                           <p className="tagesmenu-results-tile-author">{authorName}</p>
                         )}
-                        {kulinarikTags.length > 0 && (
-                          <div className="tagesmenu-results-tile-kulinarik">
-                            {kulinarikTags.slice(0, 2).map((k) => (
-                              <span key={k} className="tagesmenu-results-tile-kulinarik-tag">{k}</span>
-                            ))}
-                          </div>
-                        )}
                       </div>
                     );
                   })}
@@ -1375,11 +1363,6 @@ function Tagesmenu({
                 ...allImages.filter((img) => !img.isDefault),
               ];
               const authorName = getAuthorName(recipe.authorId);
-              const kulinarikTags = Array.isArray(recipe.kulinarik)
-                ? recipe.kulinarik
-                : recipe.kulinarik
-                ? [recipe.kulinarik]
-                : [];
               return (
                 <div
                   key={recipe.id}
@@ -1437,13 +1420,6 @@ function Tagesmenu({
                   {authorName && (
                     <p className="tagesmenu-results-tile-author">{authorName}</p>
                   )}
-                  {kulinarikTags.length > 0 && (
-                    <div className="tagesmenu-results-tile-kulinarik">
-                      {kulinarikTags.slice(0, 2).map((k) => (
-                        <span key={k} className="tagesmenu-results-tile-kulinarik-tag">{k}</span>
-                      ))}
-                    </div>
-                  )}
                 </div>
               );
             };
@@ -1482,7 +1458,7 @@ function Tagesmenu({
             return (
               <div key={flag} className="tagesmenu-results-group">
                 <h3 className="tagesmenu-results-group-title">{label}</h3>
-                <div className="tagesmenu-results-tiles">
+                <div className={`tagesmenu-results-tiles ${group.length <= 6 ? 'tagesmenu-results-tiles--2col' : 'tagesmenu-results-tiles--3col'}`}>
                   {group.map((recipe) => {
                     const allImages =
                       Array.isArray(recipe.images) && recipe.images.length > 0
@@ -1495,11 +1471,6 @@ function Tagesmenu({
                       ...allImages.filter((img) => !img.isDefault),
                     ];
                     const authorName = getAuthorName(recipe.authorId);
-                    const kulinarikTags = Array.isArray(recipe.kulinarik)
-                      ? recipe.kulinarik
-                      : recipe.kulinarik
-                      ? [recipe.kulinarik]
-                      : [];
                     return (
                       <div
                         key={recipe.id}
@@ -1554,13 +1525,6 @@ function Tagesmenu({
                         <p className="tagesmenu-results-tile-name">{recipe.title}</p>
                         {authorName && (
                           <p className="tagesmenu-results-tile-author">{authorName}</p>
-                        )}
-                        {kulinarikTags.length > 0 && (
-                          <div className="tagesmenu-results-tile-kulinarik">
-                            {kulinarikTags.slice(0, 2).map((k) => (
-                              <span key={k} className="tagesmenu-results-tile-kulinarik-tag">{k}</span>
-                            ))}
-                          </div>
                         )}
                       </div>
                     );
