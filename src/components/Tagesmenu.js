@@ -1174,7 +1174,7 @@ function Tagesmenu({
       {showAllLists ? (
         <div className="tagesmenu-results">
           <div className="tagesmenu-results-page-header">
-            <h2 className="tagesmenu-results-page-title">Kochatelier – alle Listen</h2>
+            <h2 className="tagesmenu-results-page-title">Kochatelier</h2>
           </div>
           {!allListsLoaded || !maxKandidatenSchwelleLoaded ? null : allListsKandidaten.length === 0 ? (
             <div className="tagesmenu-empty">
