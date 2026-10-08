@@ -448,18 +448,17 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setIsDefaultCategoryImage(isCatImage);
   }, [selectedRecipe.images, selectedRecipe.image, carouselIndex, categoryImageSet]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keep header visible on mobile; hide in landscape mode to maximize cooking space
+  // Hide the app header in mobile landscape and in cooking mode on phones/tablets to maximize cooking space
   useEffect(() => {
     if (!onHeaderVisibilityChange) return;
 
-    // Hide header in mobile landscape mode, show otherwise
-    onHeaderVisibilityChange(!isMobileLandscape);
+    onHeaderVisibilityChange(!(isMobileLandscape || (cookingMode && (isMobile || isTablet))));
 
     return () => {
       // Show header again when leaving detail view
       onHeaderVisibilityChange(true);
     };
-  }, [isMobileLandscape, onHeaderVisibilityChange]);
+  }, [isMobileLandscape, cookingMode, isMobile, isTablet, onHeaderVisibilityChange]);
 
   // Cooking mode: Wake Lock API integration
   useEffect(() => {

@@ -1790,6 +1790,19 @@ button.private-badge-button:active {
   background: #f9f9f9;
 }
 
+/* Mobile: Kochmodus füllt den Viewport; der App-Header ist ausgeblendet und nimmt keinen Platz ein */
+@media (max-width: 768px) {
+  .recipe-detail-content.cooking-mode-active:not(.cooking-mode-landscape) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: auto;
+    padding-top: 3.5rem; /* Platz für die Kochmodus-Leiste */
+  }
+}
+
 /* Sektion löst sich auf: Fortschritt, Karussell und Navigation werden direkte Flex-Kinder */
 .cooking-mode-active:not(.cooking-mode-landscape) .cooking-mode-steps {
   display: contents;
@@ -1847,7 +1860,7 @@ button.private-badge-button:active {
   flex: 0 0 auto;
   height: min(34dvh, 280px);
   margin-top: 0.75rem;
-  padding: 0 1.25rem 1rem;
+  padding: 0 1.25rem calc(1rem + env(safe-area-inset-bottom, 0px));
   border-radius: 22px 22px 0 0;
   box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.06);
 }
@@ -1865,13 +1878,6 @@ button.private-badge-button:active {
 .cooking-mode-active:not(.cooking-mode-landscape) .cooking-mode-ingredients .ingredients-list {
   padding-left: 1.1rem;
   font-size: 1rem;
-}
-
-.cooking-mode-active:not(.cooking-mode-landscape) .step-nav {
-  order: 4;
-  flex: none;
-  padding: 0.5rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
-  background: white;
 }
 
 
@@ -2022,13 +2028,10 @@ button.private-badge-button:active {
   display: none;
 }
 
-.cooking-mode-active .step-nav {
-  display: flex;
-  gap: 0.6rem;
-}
-
 .cooking-mode-landscape .step-nav {
   grid-row: 3;
+  display: flex;
+  gap: 0.6rem;
 }
 
 .cooking-mode-active .step-nav-btn {
