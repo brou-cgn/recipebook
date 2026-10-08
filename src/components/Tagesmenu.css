@@ -362,6 +362,10 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+/* Only the content animates in – the page header stays put when switching lists */
+.tagesmenu-results > :not(.tagesmenu-results-page-header) {
   animation: tagesmenu-results-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
