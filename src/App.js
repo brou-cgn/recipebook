@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, Suspense, lazy } from 'react';
 import './App.css';
 import RecipeList from './components/RecipeList';
 import RecipeFilterSidebar from './components/RecipeFilterSidebar';
@@ -1222,18 +1222,13 @@ function App() {
   // calls setSelectedRecipe(null) while simultaneously opening the form, and we
   // must not clear the saved position in that case so it can still be restored
   // once the user fully returns to the recipe list.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!selectedRecipe && !isFormOpen && shouldRestoreRecipeListScrollRef.current) {
       shouldRestoreRecipeListScrollRef.current = false;
-      const savedPosition = recipeListScrollPositionRef.current;
-      // Double rAF ensures the RecipeList has fully re-rendered before
-      // the scroll position is restored (one frame for React to commit the
-      // DOM, a second for the browser to apply layout).
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          window.scrollTo(0, savedPosition);
-        });
-      });
+      // Synchronous, before the browser paints: the overview stays mounted
+      // behind the detail view (see isRecipeOverviewBase), so its full height
+      // is already in the DOM and there is no intermediate frame at scroll 0.
+      window.scrollTo(0, recipeListScrollPositionRef.current);
     }
   }, [selectedRecipe, isFormOpen]);
 
@@ -2473,6 +2468,92 @@ function App() {
     );
   }
 
+  // Die Rezeptübersicht bleibt gemountet, solange ein Rezept darüber geöffnet
+  // ist (dann nur per display:none ausgeblendet). Ein Neuaufbau beim Zurück-
+  // navigieren ließ die Liste kurz oben starten, zur gemerkten Position springen
+  // und alle Bilder neu laden (Zucken).
+  const isRecipeOverviewBase = !isSettingsOpen && !isTutorialFormOpen && !isFormOpen
+    && !selectedMenu && !isMenuFormOpen
+    && !['appCalls', 'meineKuechenstars', 'events', 'tagesmenu', 'atelierCategorySelection',
+      'kueche', 'groups', 'menus', 'startseite'].includes(currentView);
+  const recipeOverviewElement = (
+    <div className="recipe-overview-layout">
+      <RecipeFilterSidebar
+        recipes={overlayRecipes}
+        currentUser={currentUser}
+        searchTerm={searchTerm}
+        onSearchChange={handleSearchChange}
+        showFavoritesOnly={showFavoritesOnly}
+        onFavoritesToggle={setShowFavoritesOnly}
+        showSeasonalOnly={showSeasonalOnly}
+        onSeasonalToggle={setShowSeasonalOnly}
+        showRecipes={showRecipes}
+        onRecipesToggle={setShowRecipes}
+        showTutorials={showTutorials}
+        onTutorialsToggle={setShowTutorials}
+        cuisineTypes={overlayCuisineTypes}
+        cuisineGroups={overlayCuisineGroups}
+        selectedCuisines={recipeFilters.selectedCuisines}
+        onCuisineFilterChange={handleCuisineFilterChangeFromSearch}
+        mealCategories={overlayMealCategories}
+        selectedCategories={recipeFilters.selectedCategories}
+        onMealCategoryFilterChange={handleMealCategoryFilterChangeFromSearch}
+        availableAuthors={overlayAvailableAuthors}
+        selectedAuthors={recipeFilters.selectedAuthors}
+        onAuthorFilterChange={handleAuthorFilterChangeFromSearch}
+        privateLists={isPrivateListSearchContext ? [] : privateListsForSearch}
+        selectedPrivateLists={isPrivateListSearchContext ? [] : recipeFilters.selectedPrivateLists}
+        onPrivateListFilterChange={isPrivateListSearchContext ? emptyPrivateListFilterHandler : handlePrivateListFilterChangeFromSearch}
+        showPrivateListFilters={!isPrivateListSearchContext}
+        onClearAllFilters={handleClearAllFilters}
+        onAddRecipe={handleAddRecipe}
+        activePrivateListId={recipeFilters.selectedGroup || (recipeFilters.selectedPrivateLists.length === 1 ? recipeFilters.selectedPrivateLists[0] : null)}
+      />
+      <div className="recipe-overview-main">
+        <RecipeList
+          recipes={(isSeasonalRecipesView ? seasonalTaggedRecipes : recipes).filter(recipe =>
+            matchesCategoryFilter(recipe, categoryFilter) &&
+            matchesDraftFilter(recipe, recipeFilters.showDrafts) &&
+            matchesCuisineFilter(recipe, recipeFilters.selectedCuisines, cuisineGroups) &&
+            matchesMealCategoryFilter(recipe, recipeFilters.selectedCategories) &&
+            matchesAuthorFilter(recipe, recipeFilters.selectedAuthors) &&
+            matchesGroupFilter(recipe, recipeFilters.selectedGroup, groups) &&
+            matchesPrivateListsFilter(recipe, recipeFilters.selectedPrivateLists, groups) &&
+            matchesSeasonalFilter(recipe, showSeasonalOnly, seasonMatrixEntries, nutritionReferenceRows)
+          )}
+          onSelectRecipe={handleSelectRecipe}
+          onAddRecipe={handleAddRecipe}
+          onAddTutorial={handleAddTutorial}
+          onEditTutorial={handleEditTutorial}
+          tutorials={tutorials}
+          categoryFilter={categoryFilter}
+          onCategoryFilterChange={handleCategoryFilterChange}
+          currentUser={currentUser}
+          searchTerm={searchTerm}
+          onOpenSearch={handleOpenSearch}
+          onClearSearch={handleClearSearch}
+          activePrivateListName={isSeasonalRecipesView ? 'Saisonale Rezepte' : activePrivateListName}
+          activePrivateListId={recipeFilters.selectedGroup || (recipeFilters.selectedPrivateLists.length === 1 ? recipeFilters.selectedPrivateLists[0] : null)}
+          activeFilters={recipeFilters}
+          onClearCuisineFilter={handleClearCuisineFilter}
+          onClearAllFilters={handleClearAllFilters}
+          showFavoritesOnly={showFavoritesOnly}
+          showSeasonalOnly={showSeasonalOnly}
+          showRecipes={showRecipes}
+          showTutorials={showTutorials}
+          onShowFavoritesOnlyChange={setShowFavoritesOnly}
+          privateLists={privateListsForUser}
+          onAddToPrivateList={handleAddRecipeToPrivateList}
+          onRemoveFromPrivateList={handleRemoveRecipeFromPrivateList}
+          publicGroupId={publicGroupId}
+          onMoveRecipeToPublic={handleMoveRecipeToPublic}
+          cookDatesMap={cookDatesMap}
+          seasonMatrixEntries={seasonMatrixEntries}
+        />
+      </div>
+    </div>
+  );
+
   return (
     <>
       {!splashDismissed && <SplashScreen exiting={initialStartseiteReady} />}
@@ -2498,6 +2579,11 @@ function App() {
           onProfileUpdated={(updatedUser) => setCurrentUser(prev => ({ ...prev, ...updatedUser }))}
         />
         <Suspense fallback={<ViewLoadingFallback />}>
+        {isRecipeOverviewBase && (
+          <div style={{ display: selectedRecipe ? 'none' : 'contents' }}>
+            {recipeOverviewElement}
+          </div>
+        )}
         {isSettingsOpen ? (
           <Settings onBack={handleCloseSettings} currentUser={currentUser} allUsers={allUsers} allRecipes={recipes} onUpdateRecipe={(id, updates) => updateRecipeInFirestore(id, updates)} />
         ) : selectedRecipe ? (
@@ -2708,84 +2794,7 @@ function App() {
         />
         ) : currentView === 'startseite' ? (
         <Startseite currentUser={currentUser} onViewChange={handleViewChange} onSelectRecipe={handleSelectRecipe} recipes={recipes} groups={groups} groupsLoading={groupsLoading} onCreateInspirationList={handleCreateInspirationList} onSelectExistingInspirationList={handleSelectExistingInspirationList} onAssignEverydayClassicsList={handleAssignEverydayClassicsList} onOpenPrivateListRecipes={handleOpenPrivateListRecipes} onOpenSeasonalRecipes={handleOpenSeasonalRecipes} onAddRecipe={handleAddRecipe} onCarouselsLoadedChange={handleStartseiteCarouselsLoadedChange} />
-        ) : (
-        // Recipe views
-        <div className="recipe-overview-layout">
-          <RecipeFilterSidebar
-            recipes={overlayRecipes}
-            currentUser={currentUser}
-            searchTerm={searchTerm}
-            onSearchChange={handleSearchChange}
-            showFavoritesOnly={showFavoritesOnly}
-            onFavoritesToggle={setShowFavoritesOnly}
-            showSeasonalOnly={showSeasonalOnly}
-            onSeasonalToggle={setShowSeasonalOnly}
-            showRecipes={showRecipes}
-            onRecipesToggle={setShowRecipes}
-            showTutorials={showTutorials}
-            onTutorialsToggle={setShowTutorials}
-            cuisineTypes={overlayCuisineTypes}
-            cuisineGroups={overlayCuisineGroups}
-            selectedCuisines={recipeFilters.selectedCuisines}
-            onCuisineFilterChange={handleCuisineFilterChangeFromSearch}
-            mealCategories={overlayMealCategories}
-            selectedCategories={recipeFilters.selectedCategories}
-            onMealCategoryFilterChange={handleMealCategoryFilterChangeFromSearch}
-            availableAuthors={overlayAvailableAuthors}
-            selectedAuthors={recipeFilters.selectedAuthors}
-            onAuthorFilterChange={handleAuthorFilterChangeFromSearch}
-            privateLists={isPrivateListSearchContext ? [] : privateListsForSearch}
-            selectedPrivateLists={isPrivateListSearchContext ? [] : recipeFilters.selectedPrivateLists}
-            onPrivateListFilterChange={isPrivateListSearchContext ? emptyPrivateListFilterHandler : handlePrivateListFilterChangeFromSearch}
-            showPrivateListFilters={!isPrivateListSearchContext}
-            onClearAllFilters={handleClearAllFilters}
-            onAddRecipe={handleAddRecipe}
-            activePrivateListId={recipeFilters.selectedGroup || (recipeFilters.selectedPrivateLists.length === 1 ? recipeFilters.selectedPrivateLists[0] : null)}
-          />
-          <div className="recipe-overview-main">
-            <RecipeList
-              recipes={(isSeasonalRecipesView ? seasonalTaggedRecipes : recipes).filter(recipe =>
-                matchesCategoryFilter(recipe, categoryFilter) &&
-                matchesDraftFilter(recipe, recipeFilters.showDrafts) &&
-                matchesCuisineFilter(recipe, recipeFilters.selectedCuisines, cuisineGroups) &&
-                matchesMealCategoryFilter(recipe, recipeFilters.selectedCategories) &&
-                matchesAuthorFilter(recipe, recipeFilters.selectedAuthors) &&
-                matchesGroupFilter(recipe, recipeFilters.selectedGroup, groups) &&
-                matchesPrivateListsFilter(recipe, recipeFilters.selectedPrivateLists, groups) &&
-                matchesSeasonalFilter(recipe, showSeasonalOnly, seasonMatrixEntries, nutritionReferenceRows)
-              )}
-              onSelectRecipe={handleSelectRecipe}
-              onAddRecipe={handleAddRecipe}
-              onAddTutorial={handleAddTutorial}
-              onEditTutorial={handleEditTutorial}
-              tutorials={tutorials}
-              categoryFilter={categoryFilter}
-              onCategoryFilterChange={handleCategoryFilterChange}
-              currentUser={currentUser}
-              searchTerm={searchTerm}
-              onOpenSearch={handleOpenSearch}
-              onClearSearch={handleClearSearch}
-              activePrivateListName={isSeasonalRecipesView ? 'Saisonale Rezepte' : activePrivateListName}
-              activePrivateListId={recipeFilters.selectedGroup || (recipeFilters.selectedPrivateLists.length === 1 ? recipeFilters.selectedPrivateLists[0] : null)}
-              activeFilters={recipeFilters}
-              onClearCuisineFilter={handleClearCuisineFilter}
-              onClearAllFilters={handleClearAllFilters}
-              showFavoritesOnly={showFavoritesOnly}
-              showSeasonalOnly={showSeasonalOnly}
-              showRecipes={showRecipes}
-              showTutorials={showTutorials}
-              onShowFavoritesOnlyChange={setShowFavoritesOnly}
-              privateLists={privateListsForUser}
-              onAddToPrivateList={handleAddRecipeToPrivateList}
-              onRemoveFromPrivateList={handleRemoveRecipeFromPrivateList}
-              publicGroupId={publicGroupId}
-              onMoveRecipeToPublic={handleMoveRecipeToPublic}
-              cookDatesMap={cookDatesMap}
-              seasonMatrixEntries={seasonMatrixEntries}
-            />
-          </div>
-        </div>
-        )}
+        ) : null}
         </Suspense>
         {requiresPasswordChange && currentUser && (
           <Suspense fallback={null}>
