@@ -4411,3 +4411,18 @@
   background: #1f2b27;
   color: #9fc4b7;
 }
+
+/* ---- Cooking mode landscape: navigation buttons ---- */
+[data-theme="dark"] .cooking-mode-landscape .step-nav-prev {
+  background: #2a2a2a;
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .cooking-mode-landscape .step-nav-btn:disabled {
+  background: #2a2a2a;
+  color: #666;
+}
+
+[data-theme="dark"] .cooking-mode-landscape .cooking-mode-ingredients {
+  border-right-color: #3d3d3d;
+}

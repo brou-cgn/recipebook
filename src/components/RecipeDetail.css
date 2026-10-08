@@ -1797,37 +1797,103 @@ button.private-badge-button:active {
   padding-top: env(safe-area-inset-top, 8px); /* Push content below status bar / notch */
 }
 
-/* Left column: scrollable ingredients list */
+/* Left column: scrollable ingredients list with portion control */
 .cooking-mode-landscape .cooking-mode-ingredients {
-  flex: 0 0 40%;
-  width: 40%;
+  flex: 0 0 38%;
+  width: 38%;
+  max-width: 340px;
   min-height: 0;
   overflow-y: auto;
   border-bottom: none;
   border-right: 1px solid #e8e8e8;
-  padding: 1rem;
+  padding: 0.75rem 1rem 0.75rem 1.25rem;
 }
 
-/* Right column: step carousel with dots on the far right */
+.cooking-mode-landscape .cooking-mode-ingredients .section-header {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.cooking-mode-landscape .cooking-mode-ingredients .section-header h2 {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #888;
+}
+
+.cooking-mode-landscape .cooking-mode-ingredients .serving-control {
+  justify-content: space-between;
+  padding: 2px;
+  border-radius: 12px;
+}
+
+.cooking-mode-landscape .cooking-mode-ingredients .serving-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  font-size: 1.4rem;
+}
+
+.cooking-mode-landscape .cooking-mode-ingredients .serving-display {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.cooking-mode-landscape .cooking-mode-ingredients .ingredients-list {
+  padding-left: 1.1rem;
+  font-size: 0.95rem;
+}
+
+/* Right column: grid = progress bar (top) / step (middle) / navigation (bottom) */
 .cooking-mode-landscape .cooking-mode-steps {
   flex: 1;
   min-width: 0;
   min-height: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: row;
+  padding: 0.75rem 1.25rem 0.75rem 1.5rem;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0.6rem;
   overflow: hidden;
+  background: #f9f9f9;
 }
 
-/* Vertical carousel in landscape */
-.cooking-mode-landscape .step-carousel {
+/* Progress segments replace the vertical dots */
+.cooking-mode-landscape .step-dots {
+  grid-row: 1;
+  display: flex;
+  flex-direction: row;
+  justify-content: stretch;
+  align-items: center;
+  gap: 4px;
+  padding: 0.6rem 0;
+}
+
+.cooking-mode-landscape .step-dot,
+.cooking-mode-landscape .step-dot.active {
   flex: 1;
+  width: auto;
+  height: 6px;
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.cooking-mode-landscape .step-dot:hover {
+  transform: none;
+}
+
+/* Vertical carousel: one step per page */
+.cooking-mode-landscape .step-carousel {
+  grid-row: 2;
   min-height: 0;
   flex-direction: column;
   overflow-x: hidden;
   overflow-y: auto;
   scroll-snap-type: y mandatory;
-  padding: 0.5rem;
+  padding: 0;
   gap: 0;
 }
 
@@ -1838,27 +1904,59 @@ button.private-badge-button:active {
   max-width: none;
   scroll-snap-align: start;
   box-sizing: border-box;
-  padding: 1.5rem;
-  font-size: 1rem;
+  padding: 1rem 1.25rem 3.25rem;
+  font-size: clamp(1.15rem, 4.2vh, 1.6rem);
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-y: auto;
 }
 
-/* Vertical dots on the right edge of the step column */
-.cooking-mode-landscape .step-dots {
-  flex-direction: column;
-  justify-content: center;
-  flex-shrink: 0;
-  padding: 0.2rem 0.1rem;
-  gap: 0.35rem;
+.cooking-mode-landscape .step-card:not(.active) {
+  transform: none;
 }
 
-.cooking-mode-landscape .step-dot {
-  width: 6px;
-  height: 6px;
+.cooking-mode-landscape .step-content {
+  padding-bottom: 0;
 }
 
-.cooking-mode-landscape .step-dot.active {
-  width: 8px;
-  height: 8px;
+/* Large previous / next buttons */
+.step-nav {
+  display: none;
+}
+
+.cooking-mode-landscape .step-nav {
+  grid-row: 3;
+  display: flex;
+  gap: 0.6rem;
+}
+
+.cooking-mode-landscape .step-nav-btn {
+  height: 56px;
+  border: none;
+  border-radius: 14px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.cooking-mode-landscape .step-nav-prev {
+  flex: 0 0 80px;
+  background: #e8e8e8;
+  color: #402C1C;
+  font-size: 1.8rem;
+}
+
+.cooking-mode-landscape .step-nav-next {
+  flex: 1;
+  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
+  color: white;
+}
+
+.cooking-mode-landscape .step-nav-btn:disabled {
+  background: #d1d1d6;
+  color: #888;
+  cursor: not-allowed;
 }
 
 
