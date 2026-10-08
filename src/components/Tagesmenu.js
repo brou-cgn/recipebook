@@ -1054,11 +1054,16 @@ function Tagesmenu({
     1
   );
 
-  const handleKachelMenuItemClick = useCallback(async (item, recipeId = null) => {
-    const targetListId = selectedListId;
+  // `listIdOverride` is set by tiles in the "Alle Listen" view, where the tile's
+  // list differs from `selectedListId`; local per-list state is then left alone
+  // and the cross-list flag docs are reloaded afterwards.
+  const handleKachelMenuItemClick = useCallback(async (item, recipeId = null, listIdOverride = null) => {
+    const targetListId = listIdOverride ?? selectedListId;
+    const isSelectedList = targetListId === selectedListId;
     const targetRecipeId = recipeId ?? contextMenuRecipeId;
-    const targetRecipe = allListRecipes.find((recipe) => recipe.id === targetRecipeId);
-    const interactiveTargetListId = selectedList?.targetListId;
+    const targetRecipe = (isSelectedList ? allListRecipes : recipes).find((recipe) => recipe.id === targetRecipeId);
+    const targetList = interactiveLists.find((l) => l.id === targetListId) ?? selectedList;
+    const interactiveTargetListId = targetList?.targetListId;
     const assignToTargetConfig = TAGESMENU_ASSIGN_TO_TARGET_LIST_ITEMS[item];
     setContextMenuRecipeId(null);
 
@@ -1067,24 +1072,26 @@ function Tagesmenu({
       targetListId &&
       targetRecipeId
     ) {
-      setSwipeResults((prev) => ({ ...prev, [targetRecipeId]: 'archiv' }));
-      setCurrentUserSwipeDocs((prev) => ({
-        ...prev,
-        [targetRecipeId]: {
-          ...(prev[targetRecipeId] || {}),
-          calculatedFlag: 'archiv',
-          calculatedExpiresAt: null,
-          calculatedExpiresAtMillis: null,
-        },
-      }));
-      setAllMembersFlags((prev) => Object.fromEntries(
-        Object.entries(prev).map(([userId, userFlags]) => {
-          if (userFlags?.[targetRecipeId] === undefined) {
-            return [userId, userFlags];
-          }
-          return [userId, { ...userFlags, [targetRecipeId]: 'archiv' }];
-        })
-      ));
+      if (isSelectedList) {
+        setSwipeResults((prev) => ({ ...prev, [targetRecipeId]: 'archiv' }));
+        setCurrentUserSwipeDocs((prev) => ({
+          ...prev,
+          [targetRecipeId]: {
+            ...(prev[targetRecipeId] || {}),
+            calculatedFlag: 'archiv',
+            calculatedExpiresAt: null,
+            calculatedExpiresAtMillis: null,
+          },
+        }));
+        setAllMembersFlags((prev) => Object.fromEntries(
+          Object.entries(prev).map(([userId, userFlags]) => {
+            if (userFlags?.[targetRecipeId] === undefined) {
+              return [userId, userFlags];
+            }
+            return [userId, { ...userFlags, [targetRecipeId]: 'archiv' }];
+          })
+        ));
+      }
       await bulkUpdateSwipeFlagsByListAndRecipe(targetListId, targetRecipeId, 'archiv');
     }
 
@@ -1093,7 +1100,7 @@ function Tagesmenu({
       targetListId &&
       targetRecipeId
     ) {
-      setSwipeResults((prev) => ({ ...prev, [targetRecipeId]: 'geparkt' }));
+      if (isSelectedList) setSwipeResults((prev) => ({ ...prev, [targetRecipeId]: 'geparkt' }));
       let calculatedExpiresAt = null;
       let calculatedExpiresAtMillis = null;
       try {
@@ -1106,23 +1113,25 @@ function Tagesmenu({
       } catch (error) {
         console.error('Failed to load geparkt validity settings for local menu update:', error);
       }
-      setCurrentUserSwipeDocs((prev) => ({
-        ...prev,
-        [targetRecipeId]: {
-          ...(prev[targetRecipeId] || {}),
-          calculatedFlag: 'geparkt',
-          calculatedExpiresAt,
-          calculatedExpiresAtMillis,
-        },
-      }));
-      setAllMembersFlags((prev) => Object.fromEntries(
-        Object.entries(prev).map(([userId, userFlags]) => {
-          if (userFlags?.[targetRecipeId] === undefined) {
-            return [userId, userFlags];
-          }
-          return [userId, { ...userFlags, [targetRecipeId]: 'geparkt' }];
-        })
-      ));
+      if (isSelectedList) {
+        setCurrentUserSwipeDocs((prev) => ({
+          ...prev,
+          [targetRecipeId]: {
+            ...(prev[targetRecipeId] || {}),
+            calculatedFlag: 'geparkt',
+            calculatedExpiresAt,
+            calculatedExpiresAtMillis,
+          },
+        }));
+        setAllMembersFlags((prev) => Object.fromEntries(
+          Object.entries(prev).map(([userId, userFlags]) => {
+            if (userFlags?.[targetRecipeId] === undefined) {
+              return [userId, userFlags];
+            }
+            return [userId, { ...userFlags, [targetRecipeId]: 'geparkt' }];
+          })
+        ));
+      }
       await bulkUpdateSwipeFlagsByListAndRecipe(targetListId, targetRecipeId, 'geparkt');
     }
 
@@ -1154,9 +1163,23 @@ function Tagesmenu({
         console.error('Failed to assign recipe to target list from Tagesmenü:', err);
       }
     }
+
+    // "Alle Listen": reload this list's flag docs so the tile reflects the change
+    if (listIdOverride && targetList) {
+      const memberIds = Array.isArray(targetList.memberIds) ? targetList.memberIds : [];
+      const allIds = targetList.ownerId ? [...new Set([targetList.ownerId, ...memberIds])] : memberIds;
+      try {
+        const docs = await getAllMembersSwipeFlagDocsForList(targetListId, allIds);
+        setAllListsFlagDocs((prev) => ({ ...prev, [targetListId]: { memberIds: allIds, docs } }));
+      } catch (err) {
+        console.error('Failed to refresh flag docs after Kachel menu action:', err);
+      }
+    }
   }, [
     selectedListId,
     selectedList,
+    interactiveLists,
+    recipes,
     allListRecipes,
     currentUser,
     contextMenuRecipeId
@@ -1199,6 +1222,7 @@ function Tagesmenu({
                     ...allImages.filter((img) => !img.isDefault),
                   ];
                   const authorName = getAuthorName(recipe.authorId);
+                  const tileList = interactiveLists.find((l) => l.id === listId);
                   return (
                     <div
                       key={recipe.id}
@@ -1213,6 +1237,37 @@ function Tagesmenu({
                         }
                       }}
                     >
+                      {tileList?.targetListId && tileList.targetListId !== listId && (
+                        <div
+                          className="tagesmenu-kachel-menu-wrapper"
+                          onPointerDown={(e) => e.stopPropagation()}
+                        >
+                          <span className="tagesmenu-kachel-context-icon" aria-hidden="true">
+                            {renderKachelContextIcon(orderedImages)}
+                          </span>
+                          <select
+                            onChange={(e) => {
+                              const item = e.target.value;
+                              if (item) {
+                                handleKachelMenuItemClick(item, recipe.id, listId);
+                                e.target.value = '';
+                              }
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              try { e.target.showPicker(); } catch (_) {}
+                            }}
+                            value=""
+                            className="tagesmenu-kachel-context-select"
+                            aria-label="Kachel-Kontextmenü öffnen"
+                          >
+                            <option value="" disabled>{KACHEL_MENU_PROMPT_LABEL}</option>
+                            {TAGESMENU_KACHEL_MENU_ITEMS.map((item) => (
+                              <option key={item} value={item}>{item}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                       <div className="tagesmenu-results-tile-image">
                         {orderedImages.length > 0 ? (
                           <img src={orderedImages[0].url} alt={recipe.title} />
