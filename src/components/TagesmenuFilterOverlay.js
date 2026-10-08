@@ -18,6 +18,7 @@ const FOCUS_DELAY_MS = 120;
  * @param {Array}    props.interactiveLists - The available interactive lists
  * @param {string}   props.selectedListId   - The currently selected list id
  * @param {Function} props.onSelectList     - Called with a list id when a pill is tapped
+ * @param {Function} [props.onClearListFilter] - If set, tapping the active pill calls this (show all lists)
  * @param {Array}    props.categoryOptions   - Available meal categories
  * @param {Array}    props.selectedCategories - The currently selected meal categories
  * @param {Function} props.onSelectCategory  - Called with new categories array when toggled
@@ -28,6 +29,7 @@ function TagesmenuFilterOverlay({
   interactiveLists,
   selectedListId,
   onSelectList,
+  onClearListFilter,
   categoryOptions = [],
   selectedCategories = [],
   onSelectCategory,
@@ -105,7 +107,12 @@ function TagesmenuFilterOverlay({
   }, [interactiveLists, selectedListId, debouncedTerm]);
 
   const handleListPillClick = (listId) => {
-    onSelectList(listId);
+    // Tapping the active pill lifts the list filter (all lists) when the parent supports it
+    if (listId === selectedListId && onClearListFilter) {
+      onClearListFilter();
+    } else {
+      onSelectList(listId);
+    }
     onClose();
   };
 
@@ -179,7 +186,7 @@ function TagesmenuFilterOverlay({
                 className={`mobile-search-filter-pill mobile-search-cuisine-pill${list.id === selectedListId ? ' active' : ''}`}
                 onClick={() => handleListPillClick(list.id)}
                 aria-pressed={list.id === selectedListId}
-                title={list.id === selectedListId ? 'Aktive Liste' : `Zu ${list.name} wechseln`}
+                title={list.id === selectedListId ? (onClearListFilter ? 'Listenfilter aufheben' : 'Aktive Liste') :`Zu ${list.name} wechseln`}
               >
                 {list.name}
               </button>
