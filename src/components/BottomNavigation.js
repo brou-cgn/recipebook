@@ -154,6 +154,7 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect, badgeCounts })
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const railRef = useRef(null);
   const wasPillModeRef = useRef(false);
+  const hasMountedRef = useRef(false);
 
   const isPillMode = PILL_TAB_KEYS.includes(activeKey);
 
@@ -191,6 +192,7 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect, badgeCounts })
     };
 
     if (!isPillMode) {
+      hasMountedRef.current = true;
       // Reset the rail back to Festtafel the instant the pill closes (rather
       // than only correcting it on the next open) so it can never be caught
       // showing a stale scroll position while fading back in.
@@ -204,7 +206,16 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect, badgeCounts })
     // The pill carousel always opens centered on Festtafel; once open, the
     // already-active tab takes over centering (see below) on every further change.
     const justOpened = !wasPillModeRef.current;
+    const isInitialMount = !hasMountedRef.current;
+    hasMountedRef.current = true;
     wasPillModeRef.current = true;
+
+    // Remounted while already in pill mode (e.g. returning from a recipe detail,
+    // which unmounts the nav): start directly on the active tab, no rotation.
+    if (isInitialMount) {
+      centerOn(activeKey, 'auto');
+      return;
+    }
 
     if (justOpened) {
       centerOn(PILL_DEFAULT_CENTER_KEY, 'auto');

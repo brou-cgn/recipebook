@@ -103,7 +103,7 @@ describe('BottomNavigation icon rendering', () => {
     expect(pill.getByLabelText('Chefkoch')).toBeInTheDocument();
   });
 
-  test('pill centers on Festtafel when it first opens, then centers the active tab afterwards', async () => {
+  test('pill mounted in pill mode starts directly on the active tab without animation, then animates tab switches', async () => {
     const allTabs = [
       { key: 'home', label: 'Küche' },
       { key: 'recipes', label: 'Kochbuch' },
@@ -129,15 +129,15 @@ describe('BottomNavigation icon rendering', () => {
     window.HTMLElement.prototype.scrollTo = scrollToMock;
 
     try {
-      // Opening the pill on "Kochbuch" (recipes) should still center Festtafel first...
+      // Mounting straight into pill mode (e.g. returning from a recipe detail)
+      // must start on the active tab without any rotation from Festtafel...
       const { rerender } = render(
         <BottomNavigation tabs={allTabs} activeKey="recipes" isVisible onSelect={() => {}} />
       );
 
       await waitFor(() => expect(getButtonIcons).toHaveBeenCalled());
-      expect(scrollToMock).toHaveBeenNthCalledWith(1, { left: 100, behavior: 'auto' });
-      // ...then animate onto the actually active tab (Kochbuch), same as any other switch.
-      expect(scrollToMock).toHaveBeenLastCalledWith({ left: 0, behavior: 'smooth' });
+      expect(scrollToMock).toHaveBeenCalledTimes(1);
+      expect(scrollToMock).toHaveBeenCalledWith({ left: 0, behavior: 'auto' });
 
       // Selecting a different pill tab afterwards centers that active tab instead.
       rerender(
