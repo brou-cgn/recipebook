@@ -4437,8 +4437,14 @@
   background: #121212;
 }
 
-[data-theme="dark"] .cooking-mode-active:not(.cooking-mode-landscape) .step-card {
-  border-color: #3d3d3d;
+[data-theme="dark"] .cooking-mode-active:not(.cooking-mode-landscape) .step-card,
+[data-theme="dark"] .cooking-mode-active:not(.cooking-mode-landscape) .step-card.active {
+  border-color: transparent;
+}
+
+/* ---- Cooking mode landscape: kein weißer Hintergrund ---- */
+[data-theme="dark"] .cooking-mode-landscape .cooking-mode-steps {
+  background: #121212;
 }
 
 [data-theme="dark"] .cooking-mode-active:not(.cooking-mode-landscape) .cooking-mode-ingredients .section-header {
