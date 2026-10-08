@@ -1915,6 +1915,13 @@ button.private-badge-button:active {
   transform: none;
 }
 
+/* Karte füllt das Karussell exakt aus: ein Schatten würde an dessen Rand
+   eckig abgeschnitten und in den Ecken als dunkles Rechteck sichtbar */
+.cooking-mode-landscape .step-card,
+.cooking-mode-landscape .step-card.active {
+  box-shadow: none;
+}
+
 .cooking-mode-landscape .step-content {
   padding-bottom: 0;
 }
