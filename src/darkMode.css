@@ -4441,7 +4441,6 @@
   border-color: #3d3d3d;
 }
 
-[data-theme="dark"] .cooking-mode-active:not(.cooking-mode-landscape) .cooking-mode-ingredients .section-header,
-[data-theme="dark"] .cooking-mode-active:not(.cooking-mode-landscape) .step-nav {
+[data-theme="dark"] .cooking-mode-active:not(.cooking-mode-landscape) .cooking-mode-ingredients .section-header {
   background: #1e1e1e;
 }
