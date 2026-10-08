@@ -65,7 +65,8 @@
   .App .events-add-fab-button,
   .App .tagesmenu-filter-btn,
   .App .tagesmenu-meine-auswahl-btn,
-  .App .tagesmenu-zum-tagesMenu-btn {
+  .App .tagesmenu-zum-tagesMenu-btn,
+  .App .tagesmenu-zurueck-zum-stapel-btn {
     bottom: calc(20px + env(safe-area-inset-bottom, 0px));
     transition:
       transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -187,7 +188,8 @@
   .App .sort-carousel,
   .App .tagesmenu-filter-btn,
   .App .tagesmenu-meine-auswahl-btn,
-  .App .tagesmenu-zum-tagesMenu-btn {
+  .App .tagesmenu-zum-tagesMenu-btn,
+  .App .tagesmenu-zurueck-zum-stapel-btn {
     transition: none;
   }
 }
