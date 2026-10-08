@@ -1813,6 +1813,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           className="cooking-mode-indicator"
           ref={cookingTabRef}
           style={{ top: `${cookingTabTop * 100}%` }}
+          role="group"
+          aria-label="Kochmodus – mit Pfeiltasten verschieben"
+          tabIndex={0}
+          {...cookingTabHandleProps}
         >
           <div className="cooking-mode-content">
             <button
@@ -1828,24 +1832,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               </svg>
             </button>
             <span className="cooking-mode-text">Kochmodus</span>
-            <div
-              className="cooking-mode-drag-handle"
-              role="slider"
-              tabIndex={0}
-              aria-label="Position des Kochmodus-Hinweises verschieben"
-              aria-orientation="vertical"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.round(cookingTabTop * 100)}
-              title="Zum Verschieben ziehen"
-              {...cookingTabHandleProps}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
-                <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
-                <circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" />
-              </svg>
-            </div>
           </div>
         </div>
       )}

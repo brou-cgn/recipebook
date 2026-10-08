@@ -18,6 +18,13 @@
   z-index: 1000;
   animation: slideInSide 0.3s ease-out;
   -webkit-tap-highlight-color: transparent;
+  cursor: grab;
+  touch-action: none; /* Ziehen verschiebt die Lasche statt die Seite zu scrollen */
+  user-select: none;
+}
+
+.cooking-mode-indicator:active {
+  cursor: grabbing;
 }
 
 @keyframes slideInSide {
@@ -49,27 +56,6 @@
   width: 1.5rem;
   height: 1.5rem;
   object-fit: contain;
-}
-
-.cooking-mode-drag-handle {
-  width: 44px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: grab;
-  touch-action: none;
-  opacity: 0.85;
-  border-radius: 8px;
-}
-
-.cooking-mode-drag-handle:active {
-  cursor: grabbing;
-}
-
-.cooking-mode-drag-handle:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: -2px;
 }
 
 .cooking-mode-text {
