@@ -1265,10 +1265,9 @@ function Tagesmenu({
 
             // "Gemeinsame Kandidaten" group: use pre-computed useMemo value
             if (gemeinsameKandidaten.length === 0) return null;
+            // Fixed grid: 2 columns x 3 rows up to 6 candidates, 3 columns x 3 rows from 7 on
             const tilesColumnClass =
-              gemeinsameKandidaten.length <= 2
-                ? 'tagesmenu-results-tiles--1col'
-                : gemeinsameKandidaten.length <= 6
+              gemeinsameKandidaten.length <= 6
                 ? 'tagesmenu-results-tiles--2col'
                 : 'tagesmenu-results-tiles--3col';
             return (

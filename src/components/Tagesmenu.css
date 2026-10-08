@@ -412,10 +412,6 @@
   gap: 0.6rem;
 }
 
-.tagesmenu-results-tiles--1col {
-  grid-template-columns: 1fr;
-}
-
 .tagesmenu-results-tiles--2col {
   grid-template-columns: repeat(2, 1fr);
 }
@@ -424,31 +420,14 @@
   grid-template-columns: repeat(3, 1fr);
 }
 
-/* The gemeinsame-kandidaten group fills remaining vertical space */
+/* The gemeinsame-kandidaten group: tiles keep their natural height (no stretching to the viewport) */
 .tagesmenu-results-group--gemeinsame-kandidaten {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
   padding-bottom: 1.5rem;
 }
 
 .tagesmenu-results-group--gemeinsame-kandidaten .tagesmenu-results-tiles {
-  flex: 1;
-  align-content: stretch;
-  grid-auto-rows: 1fr;
-}
-
-/* Compact layout for 1-2 tiles (1-column): tiles shrink to fit content and don't fill the viewport */
-.tagesmenu-results-group--gemeinsame-kandidaten .tagesmenu-results-tiles--1col {
-  flex: 0 0 auto;
   align-content: start;
   grid-auto-rows: auto;
-}
-
-/* Reduced image aspect-ratio for compact 1-column tiles so both fit on screen without scrolling */
-.tagesmenu-results-group--gemeinsame-kandidaten .tagesmenu-results-tiles--1col .tagesmenu-results-tile-image {
-  aspect-ratio: 16/9;
 }
 
 .tagesmenu-results-tile {
