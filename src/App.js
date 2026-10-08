@@ -1193,7 +1193,13 @@ function App() {
     return () => clearTimeout(timer);
   }, [initialStartseiteReady, splashDismissed]);
 
-  const handleSelectRecipe = (recipe) => {
+  // Remembers which Kochatelier list/view a recipe was opened from (null for other origins)
+  const [atelierRestoreState, setAtelierRestoreState] = useState(null);
+
+  const handleSelectRecipe = (recipe, atelierOrigin) => {
+    setAtelierRestoreState(
+      atelierOrigin && typeof atelierOrigin === 'object' && atelierOrigin.listId ? atelierOrigin : null
+    );
     // Save scroll position when opening a recipe from the recipe list (not from a menu)
     if (!selectedMenu) {
       recipeListScrollPositionRef.current = window.scrollY;
@@ -2628,6 +2634,8 @@ function App() {
           currentUser={currentUser}
           selectedCategories={atelierSelectedCategories}
           onSelectedCategoriesChange={setAtelierSelectedCategories}
+          restoreState={atelierRestoreState}
+          onRestoreStateConsumed={() => setAtelierRestoreState(null)}
         />
         ) : currentView === 'atelierCategorySelection' ? (
         <AtelierCategorySelectionPage
