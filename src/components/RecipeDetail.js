@@ -5,6 +5,7 @@ import './RecipeDetail.css';
 import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe, canDeleteRecipes, canViewRecipeIndex, isCurrentUserAdmin } from '../utils/userManagement';
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
+import useCookingModeTabPosition from '../hooks/useCookingModeTabPosition';
 import { isBase64Image } from '../utils/imageUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { updateRecipe, enableRecipeSharing, disableRecipeSharing, resetRecipeThumbnail } from '../utils/recipeFirestore';
@@ -102,6 +103,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [cuisineIcons, setCuisineIcons] = useState({});
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
+  const { top: cookingTabTop, tabRef: cookingTabRef, handleProps: cookingTabHandleProps } = useCookingModeTabPosition(currentUser?.id);
   const [cookingModeIcon, setCookingModeIcon] = useState('♨');
   const [cookingModeDefaultImgIcon, setCookingModeDefaultImgIcon] = useState('♨');
   // Light-mode variant of the default-category-image icon, forced regardless of the
@@ -1807,7 +1809,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   return (
     <div className={`recipe-detail-container${cookingMode ? ' cooking-mode-container' : ''}`}>
       {cookingMode && !isMobileLandscape && (
-        <div className="cooking-mode-indicator">
+        <div
+          className="cooking-mode-indicator"
+          ref={cookingTabRef}
+          style={{ top: `${cookingTabTop * 100}%` }}
+        >
           <div className="cooking-mode-content">
             <button
               className="cooking-mode-exit"
@@ -1815,15 +1821,31 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               title="Kochmodus beenden"
               aria-label="Kochmodus beenden"
             >
-              <span className="cooking-mode-icon">
-                {isBase64Image(cookingModeIcon) ? (
-                  <img src={cookingModeIcon} alt="" className="cooking-mode-icon-img" />
-                ) : (
-                  cookingModeIcon
-                )}
-              </span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3" />
+                <path d="M16 8l4 4-4 4" />
+                <path d="M20 12H9" />
+              </svg>
             </button>
             <span className="cooking-mode-text">Kochmodus</span>
+            <div
+              className="cooking-mode-drag-handle"
+              role="slider"
+              tabIndex={0}
+              aria-label="Position des Kochmodus-Hinweises verschieben"
+              aria-orientation="vertical"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(cookingTabTop * 100)}
+              title="Zum Verschieben ziehen"
+              {...cookingTabHandleProps}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
+                <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
+                <circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" />
+              </svg>
+            </div>
           </div>
         </div>
       )}
