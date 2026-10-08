@@ -2065,6 +2065,26 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   />
                 ))}
               </div>
+
+              {/* Landscape: große Navigationsbuttons (per CSS nur im Querformat sichtbar) */}
+              <div className="step-nav">
+                <button
+                  className="step-nav-btn step-nav-prev"
+                  onClick={() => setCurrentStepIndex(prev => Math.max(0, prev - 1))}
+                  disabled={currentStepIndex <= 0}
+                  aria-label="Vorheriger Schritt"
+                >
+                  ‹
+                </button>
+                <button
+                  className="step-nav-btn step-nav-next"
+                  onClick={() => setCurrentStepIndex(prev => Math.min(totalSteps - 1, prev + 1))}
+                  disabled={currentStepIndex >= totalSteps - 1}
+                  aria-label="Nächster Schritt"
+                >
+                  Nächster Schritt ›
+                </button>
+              </div>
             </section>
           </>
         ) : (
