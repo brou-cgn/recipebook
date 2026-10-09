@@ -34,3 +34,18 @@ mit Datum und Grund: eine Quarantäne, die still wächst, ist dasselbe wie gar
 keine CI.
 
 `npm test` führt weiterhin alles aus, inklusive der roten Suites.
+
+## Tech-Check (Analyse-Dashboard)
+Die App-Analyse vom 08.10.2026 liegt als Dashboard „RecipeBook Tech-Check“:
+https://claude.ai/artifact/JixF4kfoeW7kxmwCqbgCfM
+
+Jede Änderung, die einen Befund daraus ganz oder teilweise umsetzt, aktualisiert
+das Dashboard im selben Arbeitsgang – nicht erst auf Nachfrage:
+- Datensatz `findings`: `status` (offen / teilweise / behoben) und `umsetzung`
+  (was, welcher PR, Datum) setzen.
+- Aufwand vs. Nutzen neu bewerten: Bei „teilweise“ beschreiben `nutzen` und
+  `aufwand` (1–5) nur noch den verbleibenden Rest, mit Begründung in
+  `umsetzung`. Behobene Befunde blendet die Matrix aus.
+- Datensatz `umsetzungen`: den PR mit Datum und Befund-IDs eintragen.
+- Bei der Umsetzung neu entdeckte Probleme als eigenen Befund aufnehmen
+  (nächste freie ID im Kapitel, mit Schwere, Konfidenz, Nutzen, Aufwand).
