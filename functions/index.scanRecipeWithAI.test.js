@@ -7,7 +7,11 @@
  *
  *  - Unauthenticated callers must be rejected with code "unauthenticated".
  *  - Authenticated callers with valid input must receive a structured recipe.
+ *  - Callers below the edit role (incl. anonymous guests) must be rejected
+ *    with code "permission-denied" (Tech-Check S4).
  *  - Rate-limit exhaustion must be signalled with code "resource-exhausted".
+ *  - A failing role lookup or rate-limit check must refuse the request with
+ *    code "unavailable" instead of letting it through (fail closed).
  *  - Invalid image data must be rejected with code "invalid-argument".
  *  - An unsupported language must be rejected with code "invalid-argument".
  *  - A missing Gemini API key must be signalled with code "failed-precondition".
@@ -62,6 +66,10 @@ let rateLimitCount;
 let settingsData;
 let geminiSecretValue;
 let fetchResponses; // stack of Response-like objects popped by the mock fetch
+// uid -> role of users/{uid}; a uid missing here has no user document
+let userRoles;
+let userLookupFails;
+let rateLimitFails;
 
 // ---------------------------------------------------------------------------
 // Module loader with stubbed dependencies
@@ -169,11 +177,19 @@ function loadFunction() {
             }),
           };
         },
-        doc: () => ({
-          get: async () => ({exists: false, data: () => ({})}),
+        // Top-level doc() is used by requireAiCaller for users/{uid}
+        doc: (path) => ({
+          get: async () => {
+            if (userLookupFails) throw new Error('firestore unavailable');
+            const uid = path.replace(/^users\//, '');
+            return uid in userRoles
+              ? {exists: true, data: () => ({role: userRoles[uid]})}
+              : {exists: false, data: () => ({})};
+          },
         }),
         // Transaction used exclusively by checkRateLimit
         runTransaction: async (fn) => {
+          if (rateLimitFails) throw new Error('transaction aborted');
           const snap =
             rateLimitCount === null
               ? {exists: false, data: () => ({})}
@@ -240,6 +256,9 @@ test.beforeEach(() => {
   rateLimitCount = null; // no scans today → first scan allowed
   settingsData = {app: {aiRecipePrompt: TEST_PROMPT}};
   fetchResponses = [];
+  userRoles = {'user-123': 'edit', 'user-456': 'edit', 'admin-1': 'admin'};
+  userLookupFails = false;
+  rateLimitFails = false;
 
   // Default mock fetch: returns a successful Gemini response
   global.fetch = async (url) => {
@@ -298,10 +317,12 @@ test('returns structured recipe for authenticated user with valid image', async 
 });
 
 test('returns structured recipe for admin user', async () => {
+  // Admin status comes from users/{uid}.role, not from a custom claim
+  // (the project never sets one).
   const result = await scanRecipeWithAI({
     auth: {
       uid: 'admin-1',
-      token: {firebase: {sign_in_provider: 'password'}, admin: true},
+      token: {firebase: {sign_in_provider: 'password'}},
     },
     data: {imageBase64: VALID_IMAGE, language: 'de'},
   });
@@ -311,8 +332,60 @@ test('returns structured recipe for admin user', async () => {
 });
 
 // ---------------------------------------------------------------------------
+// Role gate (Tech-Check S4)
+// ---------------------------------------------------------------------------
+
+test('rejects anonymous guest without user document', async () => {
+  await assert.rejects(
+    () =>
+      scanRecipeWithAI({
+        auth: {uid: 'anon-1', token: {firebase: {sign_in_provider: 'anonymous'}}},
+        data: {imageBase64: VALID_IMAGE},
+      }),
+    (err) => err.code === 'permission-denied',
+  );
+  assert.equal(rateLimitCount, null, 'a refused caller must not touch the quota');
+});
+
+test('rejects member with read role', async () => {
+  userRoles['reader-1'] = 'read';
+  await assert.rejects(
+    () =>
+      scanRecipeWithAI({
+        auth: {uid: 'reader-1', token: {firebase: {sign_in_provider: 'password'}}},
+        data: {imageBase64: VALID_IMAGE},
+      }),
+    (err) => err.code === 'permission-denied',
+  );
+});
+
+test('refuses request when the role lookup fails (fail closed)', async () => {
+  userLookupFails = true;
+  await assert.rejects(
+    () =>
+      scanRecipeWithAI({
+        auth: {uid: 'user-123', token: {firebase: {sign_in_provider: 'password'}}},
+        data: {imageBase64: VALID_IMAGE},
+      }),
+    (err) => err.code === 'unavailable',
+  );
+});
+
+// ---------------------------------------------------------------------------
 // Rate limiting
 // ---------------------------------------------------------------------------
+
+test('refuses request when the rate-limit check fails (fail closed)', async () => {
+  rateLimitFails = true;
+  await assert.rejects(
+    () =>
+      scanRecipeWithAI({
+        auth: {uid: 'user-123', token: {firebase: {sign_in_provider: 'password'}}},
+        data: {imageBase64: VALID_IMAGE},
+      }),
+    (err) => err.code === 'unavailable',
+  );
+});
 
 test('rejects request when daily scan limit is exhausted', async () => {
   // Authenticated users are capped at 20 scans per day

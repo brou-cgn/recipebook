@@ -441,18 +441,49 @@ function getRateLimit(isAdmin, isAuthenticated, isModerator = false) {
 }
 
 /**
- * Look up whether the given user has the 'moderator' role in Firestore.
- * @param {string} userId
- * @returns {Promise<boolean>}
+ * Roles that may call the Gemini-backed scan/import callables. Every AI import
+ * ends in a new recipe, and firestore.rules only lets edit, moderator and admin
+ * create recipes - anyone below that could only burn quota, not save a result.
+ * Anonymous guests have no role (or 'guest') and are refused as well, so a
+ * fresh anonymous login no longer hands out a fresh daily quota.
  */
-async function isModeratorUser(userId) {
+const AI_ALLOWED_ROLES = ['edit', 'moderator', 'admin'];
+
+/**
+ * Resolve the caller of an AI callable from their users/{uid} role and refuse
+ * anyone below the edit role. Fails closed: if the role cannot be read, the
+ * request is refused instead of let through.
+ * @param {object} auth - request.auth of the callable (already checked non-null)
+ * @returns {Promise<{userId: string, isAuthenticated: boolean, isAdmin: boolean, isModerator: boolean}>}
+ */
+async function requireAiCaller(auth) {
+  const userId = auth.uid;
+  let role = null;
   try {
     const doc = await admin.firestore().doc(`users/${userId}`).get();
-    return doc.exists && doc.data()?.role === 'moderator';
+    role = doc.exists ? doc.data()?.role : null;
   } catch (err) {
-    console.error(`isModeratorUser: failed to look up role for ${userId}:`, err);
-    return false;
+    console.error(`requireAiCaller: failed to look up role for ${userId}:`, err);
+    throw new HttpsError(
+        'unavailable',
+        'Die Berechtigung für KI-Funktionen konnte nicht geprüft werden. Bitte versuche es gleich noch einmal.',
+    );
   }
+  if (!AI_ALLOWED_ROLES.includes(role)) {
+    throw new HttpsError(
+        'permission-denied',
+        'KI-Funktionen sind erst ab der Rolle „Bearbeiten“ verfügbar.',
+    );
+  }
+  // role is the source of truth (as in firestore.rules); the admin custom claim
+  // is never set by this project but is still honoured if it ever is.
+  const isAdmin = role === 'admin' || auth.token.admin === true;
+  return {
+    userId,
+    isAuthenticated: auth.token.firebase?.sign_in_provider !== 'anonymous',
+    isAdmin,
+    isModerator: !isAdmin && role === 'moderator',
+  };
 }
 
 /**
@@ -503,8 +534,11 @@ async function checkRateLimit(userId, isAuthenticated, isAdmin = false, isModera
     return result;
   } catch (error) {
     console.error('Rate limit check error:', error);
-    // On error, allow the request (fail open)
-    return {allowed: true, remaining: limit, limit};
+    // Fail closed: an unchecked request has no cost ceiling.
+    throw new HttpsError(
+        'unavailable',
+        'Das KI-Tageslimit konnte nicht geprüft werden. Bitte versuche es gleich noch einmal.',
+    );
   }
 }
 
@@ -557,7 +591,11 @@ async function checkRephraseRateLimit(userId, isAuthenticated, isAdmin = false, 
     return result;
   } catch (error) {
     console.error('Rephrase rate limit check error:', error);
-    return {allowed: true, remaining: limit, limit};
+    // Fail closed, same as checkRateLimit.
+    throw new HttpsError(
+        'unavailable',
+        'Das KI-Tageslimit konnte nicht geprüft werden. Bitte versuche es gleich noch einmal.',
+    );
   }
 }
 
@@ -1238,10 +1276,7 @@ exports.scanRecipeWithAI = onCall(
         );
       }
 
-      const userId = auth.uid;
-      const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
-      const isAdmin = auth.token.admin === true;
-      const isModerator = !isAdmin && await isModeratorUser(userId);
+      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth);
 
       console.log(`AI Scan request from user ${userId} (authenticated: ${isAuthenticated}, admin: ${isAdmin})`);
 
@@ -1328,10 +1363,7 @@ exports.rephraseRecipeSteps = onCall(
         throw new HttpsError('invalid-argument', 'steps must be a non-empty array of non-empty strings');
       }
 
-      const userId = auth.uid;
-      const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
-      const isAdmin = auth.token.admin === true;
-      const isModerator = !isAdmin && await isModeratorUser(userId);
+      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth);
 
       const rateLimitResult = await checkRephraseRateLimit(userId, isAuthenticated, isAdmin, isModerator);
       if (!rateLimitResult.allowed) {
@@ -1551,10 +1583,7 @@ exports.scanRecipesWithAI = onCall(
         throw new HttpsError('unauthenticated', 'You must be logged in to use AI recipe scanning');
       }
 
-      const userId = auth.uid;
-      const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
-      const isAdmin = auth.token.admin === true;
-      const isModerator = !isAdmin && await isModeratorUser(userId);
+      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth);
 
       if (!Array.isArray(images) || images.length === 0) {
         throw new HttpsError('invalid-argument', 'images must be a non-empty array');
@@ -1869,10 +1898,7 @@ exports.processHtmlWithAI = onCall(
         );
       }
 
-      const userId = auth.uid;
-      const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
-      const isAdmin = auth.token.admin === true;
-      const isModerator = !isAdmin && await isModeratorUser(userId);
+      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth);
 
       console.log(`HTML processing request from user ${userId}`);
 
@@ -2359,10 +2385,7 @@ exports.scrapeInstagramReel = onCall(
         );
       }
 
-      const userId = auth.uid;
-      const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
-      const isAdmin = auth.token.admin === true;
-      const isModerator = !isAdmin && await isModeratorUser(userId);
+      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth);
 
       console.log(`Instagram scrape request from user ${userId} for URL: ${url}`);
 
@@ -2456,10 +2479,7 @@ exports.fetchRecipeHtml = onCall(
         );
       }
 
-      const userId = auth.uid;
-      const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
-      const isAdmin = auth.token.admin === true;
-      const isModerator = !isAdmin && await isModeratorUser(userId);
+      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth);
 
       // Validate URL (includes SSRF guard for private/internal hosts)
       if (!url || typeof url !== 'string') {
@@ -2555,10 +2575,7 @@ exports.captureWebsiteScreenshot = onCall(
         );
       }
 
-      const userId = auth.uid;
-      const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
-      const isAdmin = auth.token.admin === true;
-      const isModerator = !isAdmin && await isModeratorUser(userId);
+      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth);
 
       console.log(`Screenshot request from user ${userId} for URL: ${url}`);
 
@@ -3583,11 +3600,7 @@ exports.importRecipeCallable = onCall(
         );
       }
 
-      const userId = auth.uid;
-      const isAuthenticated =
-        auth.token.firebase?.sign_in_provider !== 'anonymous';
-      const isAdmin = auth.token.admin === true;
-      const isModerator = !isAdmin && await isModeratorUser(userId);
+      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth);
 
       if (!url || typeof url !== 'string') {
         throw new HttpsError('invalid-argument', 'URL must be a non-empty string');
