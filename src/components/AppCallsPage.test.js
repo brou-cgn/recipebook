@@ -1774,6 +1774,40 @@ describe('AppCallsPage – Benjamin Rousselli filter', () => {
     expect(screen.getByText('Mustermann')).toBeInTheDocument();
   });
 
+  test('moderator sees no e-mail addresses, even from legacy log entries', async () => {
+    const { getAppCalls } = require('../utils/appCallsFirestore');
+    getAppCalls.mockResolvedValue([{ ...otherCall, userId: 'u-max', userEmail: 'legacy@example.com' }]);
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={{ id: 'mod-1', role: 'moderator', isAdmin: false, appCalls: true, appCallsMenu: true }}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+        allUsers={[{ id: 'u-max', vorname: 'Max', nachname: 'Mustermann' }]}
+      />
+    );
+
+    expect(await screen.findByText('Mustermann')).toBeInTheDocument();
+    expect(screen.queryByText('legacy@example.com')).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'E-Mail' })).not.toBeInTheDocument();
+  });
+
+  test('admin sees the e-mail address resolved from the user profiles', async () => {
+    const { getAppCalls } = require('../utils/appCallsFirestore');
+    getAppCalls.mockResolvedValue([{ ...otherCall, userId: 'u-max', userEmail: undefined }]);
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+        allUsers={[{ id: 'u-max', vorname: 'Max', nachname: 'Mustermann', email: 'max@example.com' }]}
+      />
+    );
+
+    expect(await screen.findByText('max@example.com')).toBeInTheDocument();
+  });
+
   test('stats show filtered count when filter is active', async () => {
     render(
       <AppCallsPage

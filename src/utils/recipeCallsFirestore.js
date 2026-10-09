@@ -41,7 +41,7 @@ export const logRecipeCall = async (user, recipe) => {
       userVorname: user.vorname || '',
       userNachname: user.nachname || '',
       // No e-mail here: every member can read recipeCalls (trending), so
-      // AppCallsPage resolves it from the admin-only appCalls instead.
+      // AppCallsPage shows it to admins from the user profiles instead.
       isGuest: user.isGuest === true,
       timestamp: serverTimestamp()
     });

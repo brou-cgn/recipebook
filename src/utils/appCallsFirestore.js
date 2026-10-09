@@ -23,7 +23,7 @@ import {
 
 /**
  * Log an app call (session start) to Firestore
- * @param {Object} user - User object with id, vorname, nachname, email, isGuest
+ * @param {Object} user - User object with id, vorname, nachname, isGuest
  * @returns {Promise<void>}
  */
 export const logAppCall = async (user) => {
@@ -33,7 +33,7 @@ export const logAppCall = async (user) => {
       userId: user.id,
       userVorname: user.vorname || '',
       userNachname: user.nachname || '',
-      userEmail: user.email || '',
+      // No e-mail: AppCallsPage shows it to admins from the user profiles.
       isGuest: user.isGuest === true,
       timestamp: serverTimestamp()
     });

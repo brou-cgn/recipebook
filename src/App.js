@@ -2683,6 +2683,7 @@ function App() {
           activeTab={appCallsActiveTab}
           onActiveTabChange={setAppCallsActiveTab}
           visibleTabs={appCallsVisibleTabs}
+          allUsers={allUsers}
         />
         ) : currentView === 'meineKuechenstars' ? (
         <MeineKuechenstarsPage
