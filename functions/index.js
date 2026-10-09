@@ -6296,6 +6296,67 @@ exports.syncPublicProfile = onDocumentWritten(
 );
 
 /**
+ * Remove userEmail from every recipeCalls document, in batches.
+ * recipeCalls is readable by all members (trending), so it must not hold
+ * e-mail addresses; logRecipeCall stopped writing the field, this clears
+ * entries logged before that. Idempotent: a second run finds nothing.
+ * @param {FirebaseFirestore.Firestore} db - Firestore instance
+ * @return {Promise<number>} Number of documents updated
+ */
+async function stripRecipeCallEmailsCore(db) {
+  const BATCH_SIZE = 450;
+  let updated = 0;
+  // An inequality on the field matches exactly the documents that still
+  // have it (Firestore skips documents where the field is missing).
+  for (;;) {
+    const snapshot = await db.collection('recipeCalls')
+        .where('userEmail', '>=', '')
+        .limit(BATCH_SIZE)
+        .get();
+    if (snapshot.empty) break;
+    const batch = db.batch();
+    snapshot.docs.forEach((docSnap) => {
+      batch.update(docSnap.ref, {userEmail: admin.firestore.FieldValue.delete()});
+    });
+    await batch.commit();
+    updated += snapshot.size;
+  }
+  return updated;
+}
+
+/**
+ * Callable (admin only): one-time cleanup of e-mail addresses in recipeCalls.
+ * Triggered from the "Rezeptaufrufe" tab of the Küchenbetrieb page.
+ */
+exports.stripRecipeCallEmails = onCall(
+    {
+      timeoutSeconds: 300,
+      maxInstances: 1,
+      invoker: 'public',
+    },
+    async (request) => {
+      const callerUid = request.auth?.uid;
+      if (!callerUid) {
+        throw new HttpsError('unauthenticated', 'Authentication required.');
+      }
+      const callerDoc = await admin.firestore().doc(`users/${callerUid}`).get();
+      const callerData = callerDoc.exists ? (callerDoc.data() || {}) : {};
+      if (callerData.role !== 'admin' && callerData.isAdmin !== true) {
+        throw new HttpsError('permission-denied', 'Admin role required.');
+      }
+
+      const updated = await stripRecipeCallEmailsCore(admin.firestore());
+      console.log(`stripRecipeCallEmails: triggered by ${callerUid}, updated ${updated}`);
+      return {
+        updated,
+        message: updated === 0 ?
+          'Keine E-Mail-Adressen mehr in den Rezeptaufrufen gefunden.' :
+          `E-Mail-Adressen aus ${updated} Rezeptaufruf${updated === 1 ? '' : 'en'} entfernt.`,
+      };
+    },
+);
+
+/**
  * Cloud Function: Set a user's password (admin only)
  * Allows an admin to set a temporary password for another user via Firebase Admin SDK.
  *

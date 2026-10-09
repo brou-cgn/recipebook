@@ -442,6 +442,8 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [runningNutritionRecalcJob, setRunningNutritionRecalcJob] = useState(false);
   const [runningLowCarbFullTagging, setRunningLowCarbFullTagging] = useState(false);
   const [lowCarbTaggingFeedback, setLowCarbTaggingFeedback] = useState(null);
+  const [strippingRecipeCallEmails, setStrippingRecipeCallEmails] = useState(false);
+  const [stripEmailsFeedback, setStripEmailsFeedback] = useState(null);
   const [nutritionReferenceCacheFeedback, setNutritionReferenceCacheFeedback] = useState(null);
   const [openIngredientInfoIndex, setOpenIngredientInfoIndex] = useState(null);
 
@@ -537,6 +539,28 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       });
     } finally {
       setRunningNutritionRecalcJob(false);
+    }
+  };
+
+  const handleStripRecipeCallEmails = async () => {
+    setStripEmailsFeedback(null);
+    setStrippingRecipeCallEmails(true);
+    try {
+      const stripEmails = httpsCallable(functions, 'stripRecipeCallEmails');
+      const result = await stripEmails({});
+      setStripEmailsFeedback({
+        type: 'success',
+        message: result?.data?.message || 'Bereinigung abgeschlossen.',
+      });
+    } catch (error) {
+      setStripEmailsFeedback({
+        type: 'error',
+        message: error?.message
+          ? `Fehler bei der Bereinigung: ${error.message}`
+          : 'Fehler bei der Bereinigung.',
+      });
+    } finally {
+      setStrippingRecipeCallEmails(false);
     }
   };
 
@@ -1409,6 +1433,35 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               Hier werden alle Rezeptaufrufe mit den zugehörigen Anwendern und Rezepten protokolliert.
               Diese Übersicht ermöglicht die Auswertung, welche Rezepte wie häufig aufgerufen werden.
             </p>
+            {(currentUser?.role === 'admin' || currentUser?.isAdmin === true) && (
+              <div className="settings-section">
+                <h3>Datenschutz-Bereinigung</h3>
+                <p className="app-calls-info-text">
+                  Ältere Rezeptaufrufe enthalten noch die E-Mail-Adresse des Anwenders. Weil alle
+                  Mitglieder die Rezeptaufrufe für „Im Trend“ lesen können, entfernt diese einmalige
+                  Bereinigung die Adressen. Hier in der Übersicht bleiben sie sichtbar, sie werden aus
+                  den App-Aufrufen ergänzt. Mehrfaches Ausführen ist unschädlich.
+                </p>
+                <div className="app-calls-action-row">
+                  <button
+                    type="button"
+                    className="app-calls-share-btn"
+                    onClick={handleStripRecipeCallEmails}
+                    disabled={strippingRecipeCallEmails}
+                  >
+                    {strippingRecipeCallEmails ? 'Bereinigung läuft…' : 'E-Mail-Adressen aus Rezeptaufrufen entfernen'}
+                  </button>
+                  {stripEmailsFeedback?.message ? (
+                    <span
+                      className={`app-calls-feedback${stripEmailsFeedback.type === 'error' ? ' is-error' : ''}`}
+                      role={stripEmailsFeedback.type === 'error' ? 'alert' : 'status'}
+                    >
+                      {stripEmailsFeedback.message}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            )}
             {loading ? (
               <div className="app-calls-empty">Laden...</div>
             ) : recipeCalls.length === 0 ? (
