@@ -34,3 +34,10 @@ mit Datum und Grund: eine Quarantäne, die still wächst, ist dasselbe wie gar
 keine CI.
 
 `npm test` führt weiterhin alles aus, inklusive der roten Suites.
+
+## Handover
+Zu Beginn einer Session: Wenn `docs/handover/<branch>.md` existiert
+(`/` im Branchnamen durch `__` ersetzt), diese Datei zuerst lesen — sie enthält
+den Arbeitsstand der vorherigen Session. Geschrieben wird sie mit dem Skill
+`handover` (`.claude/skills/handover/SKILL.md`). Dort steht flüchtiger Stand,
+hier in `CLAUDE.md` nur dauerhafte Regeln.
