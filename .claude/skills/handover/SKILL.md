@@ -100,7 +100,7 @@ Leere Abschnitte weglassen statt „keine" hineinzuschreiben.
   sie neu diskutieren — genau das soll das Handover verhindern.
 - **Kurskorrekturen festhalten.** Wenn sich im Laufe der Session das
   Verständnis des Problems geändert hat, gehört das explizit rein
-  (Beispiel: Abschnitt „Kurskorrektur" in der älteren `HANDOVER.md` im Root).
+  (Beispiel: Abschnitt „Kurskorrektur" in `docs/handover/claude__audio-recipe-extraction-a0fnkg.md`).
 - **Keine Secrets**: keine API-Keys, PINs, Tokens, Service-Account-Daten,
   keine E-Mail-Adressen — auch nicht als Beispiel.
 - **Keine Emojis** (siehe `NO_EMOJIS_POLICY.md`).
