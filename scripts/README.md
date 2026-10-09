@@ -39,6 +39,15 @@ One-time migration for `nutritionReferences`: sets `approvedAt` for entries with
 node scripts/migrateNutritionReferenceApprovedAt.js [--dry-run]
 ```
 
+## migrateStripRecipeCallEmails.js
+
+One-time cleanup for `recipeCalls`: removes the `userEmail` field from entries logged before `logRecipeCall` stopped writing it. Every registered member can read `recipeCalls` (for "Im Trend"), so it must not contain e-mail addresses. Admins still see them on the statistics page, resolved from `appCalls`.
+
+**Usage:**
+```bash
+node scripts/migrateStripRecipeCallEmails.js [--dry-run]
+```
+
 ## audit-functions-invoker.sh
 
 Auditiert Gen2 Functions, zugehörige Cloud-Run-Services und `roles/run.invoker` Bindings.
