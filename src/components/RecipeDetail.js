@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useLongPress } from '../utils/useLongPress';
 import { useAcceleratingLongPress, stepToNextMultiple } from '../hooks/useAcceleratingLongPress';
+import './DeleteFabButton.css';
 import './RecipeDetail.css';
 import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe, canDeleteRecipes, canViewRecipeIndex, isCurrentUserAdmin } from '../utils/userManagement';
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
