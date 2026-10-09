@@ -6296,20 +6296,22 @@ exports.syncPublicProfile = onDocumentWritten(
 );
 
 /**
- * Remove userEmail from every recipeCalls document, in batches.
- * recipeCalls is readable by all members (trending), so it must not hold
- * e-mail addresses; logRecipeCall stopped writing the field, this clears
- * entries logged before that. Idempotent: a second run finds nothing.
+ * Remove userEmail from every document of a call-log collection, in batches.
+ * The call logs (appCalls, recipeCalls) no longer store e-mail addresses -
+ * admins see them on the statistics page from the user profiles - so this
+ * clears entries logged before that change. Idempotent: a second run finds
+ * nothing.
  * @param {FirebaseFirestore.Firestore} db - Firestore instance
+ * @param {string} collectionName - 'appCalls' or 'recipeCalls'
  * @return {Promise<number>} Number of documents updated
  */
-async function stripRecipeCallEmailsCore(db) {
+async function stripLogEmailsCore(db, collectionName) {
   const BATCH_SIZE = 450;
   let updated = 0;
   // An inequality on the field matches exactly the documents that still
   // have it (Firestore skips documents where the field is missing).
   for (;;) {
-    const snapshot = await db.collection('recipeCalls')
+    const snapshot = await db.collection(collectionName)
         .where('userEmail', '>=', '')
         .limit(BATCH_SIZE)
         .get();
@@ -6325,10 +6327,11 @@ async function stripRecipeCallEmailsCore(db) {
 }
 
 /**
- * Callable (admin only): one-time cleanup of e-mail addresses in recipeCalls.
- * Triggered from the "Rezeptaufrufe" tab of the Küchenbetrieb page.
+ * Callable (admin only): one-time cleanup of e-mail addresses in appCalls
+ * and recipeCalls. Triggered from the "Rezeptaufrufe" tab of the
+ * Küchenbetrieb page.
  */
-exports.stripRecipeCallEmails = onCall(
+exports.stripCallLogEmails = onCall(
     {
       timeoutSeconds: 300,
       maxInstances: 1,
@@ -6345,13 +6348,21 @@ exports.stripRecipeCallEmails = onCall(
         throw new HttpsError('permission-denied', 'Admin role required.');
       }
 
-      const updated = await stripRecipeCallEmailsCore(admin.firestore());
-      console.log(`stripRecipeCallEmails: triggered by ${callerUid}, updated ${updated}`);
+      const db = admin.firestore();
+      const appCalls = await stripLogEmailsCore(db, 'appCalls');
+      const recipeCalls = await stripLogEmailsCore(db, 'recipeCalls');
+      console.log(
+          `stripCallLogEmails: triggered by ${callerUid}, ` +
+          `appCalls ${appCalls}, recipeCalls ${recipeCalls}`,
+      );
+      const total = appCalls + recipeCalls;
       return {
-        updated,
-        message: updated === 0 ?
-          'Keine E-Mail-Adressen mehr in den Rezeptaufrufen gefunden.' :
-          `E-Mail-Adressen aus ${updated} Rezeptaufruf${updated === 1 ? '' : 'en'} entfernt.`,
+        appCalls,
+        recipeCalls,
+        message: total === 0 ?
+          'Keine E-Mail-Adressen mehr in den Aufruf-Protokollen gefunden.' :
+          `E-Mail-Adressen entfernt: ${appCalls} App-Aufruf${appCalls === 1 ? '' : 'e'}, ` +
+          `${recipeCalls} Rezeptaufruf${recipeCalls === 1 ? '' : 'e'}.`,
       };
     },
 );

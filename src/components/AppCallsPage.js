@@ -187,7 +187,7 @@ const KUECHE_FAB_TAB_ORDER = [
   KUECHENBETRIEB_TABS.KULINARIKTYPEN,
 ];
 
-function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSelectRecipe, activeTab: activeTabProp, onActiveTabChange, visibleTabs }) {
+function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSelectRecipe, activeTab: activeTabProp, onActiveTabChange, visibleTabs, allUsers = [] }) {
   const [appCalls, setAppCalls] = useState([]);
   const [recipeCalls, setRecipeCalls] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -271,14 +271,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     const loadData = async () => {
       const [fetchedAppCalls, fetchedRecipeCalls] = await Promise.all([getAppCalls(), getRecipeCalls()]);
       setAppCalls(fetchedAppCalls);
-      // recipeCalls no longer store the e-mail (members can read that
-      // collection for "Im Trend"); resolve it from the admin-only appCalls.
-      const emailByUserId = new Map(
-        fetchedAppCalls.filter((c) => c.userId && c.userEmail).map((c) => [c.userId, c.userEmail])
-      );
-      setRecipeCalls(fetchedRecipeCalls.map((c) => (
-        c.userEmail ? c : { ...c, userEmail: emailByUserId.get(c.userId) || '' }
-      )));
+      setRecipeCalls(fetchedRecipeCalls);
       setLoading(false);
     };
     loadData();
@@ -397,6 +390,16 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       : appCalls,
     [appCalls, filterBenjaminRousselli]
   );
+
+  // The call logs store no e-mail addresses. Admins see them resolved from
+  // the full user profiles (allUsers carries e-mails only for admins - see
+  // getUsers in userManagement.js); everyone else sees no e-mail column.
+  const canSeeEmails = currentUser?.role === 'admin' || currentUser?.isAdmin === true;
+  const emailByUserId = useMemo(
+    () => new Map((allUsers || []).filter((u) => u?.id && u.email).map((u) => [u.id, u.email])),
+    [allUsers]
+  );
+  const getCallEmail = (call) => emailByUserId.get(call.userId) || '';
 
   const restrictedVisibleTabs = currentUser?.kuecheFab && Array.isArray(visibleTabs)
     ? KUECHE_FAB_TAB_ORDER.filter((tabId) => visibleTabs.includes(tabId))
@@ -546,7 +549,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     setStripEmailsFeedback(null);
     setStrippingRecipeCallEmails(true);
     try {
-      const stripEmails = httpsCallable(functions, 'stripRecipeCallEmails');
+      const stripEmails = httpsCallable(functions, 'stripCallLogEmails');
       const result = await stripEmails({});
       setStripEmailsFeedback({
         type: 'success',
@@ -1377,7 +1380,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                         <th>Datum &amp; Uhrzeit</th>
                         <th>Vorname</th>
                         <th>Nachname</th>
-                        <th className="app-calls-col-desktop">E-Mail</th>
+                        {canSeeEmails && <th className="app-calls-col-desktop">E-Mail</th>}
                         <th className="app-calls-col-desktop">Art</th>
                         <th className="app-calls-col-mobile">Info</th>
                       </tr>
@@ -1393,7 +1396,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                             </td>
                             <td>{call.userVorname}</td>
                             <td>{call.userNachname}</td>
-                            <td className="app-calls-col-desktop">{call.userEmail}</td>
+                            {canSeeEmails && <td className="app-calls-col-desktop">{getCallEmail(call)}</td>}
                             <td className="app-calls-col-desktop">{call.isGuest ? 'Gast' : 'Angemeldet'}</td>
                             <td className="app-calls-col-mobile">
                               <button
@@ -1410,7 +1413,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                             <tr className="app-calls-detail-row">
                               <td colSpan={6}>
                                 <div className="app-calls-detail-content">
-                                  <span><strong>E-Mail:</strong> {call.userEmail || '–'}</span>
+                                  {canSeeEmails && <span><strong>E-Mail:</strong> {getCallEmail(call) || '–'}</span>}
                                   <span><strong>Art:</strong> {call.isGuest ? 'Gast' : 'Angemeldet'}</span>
                                 </div>
                               </td>
@@ -1433,14 +1436,14 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               Hier werden alle Rezeptaufrufe mit den zugehörigen Anwendern und Rezepten protokolliert.
               Diese Übersicht ermöglicht die Auswertung, welche Rezepte wie häufig aufgerufen werden.
             </p>
-            {(currentUser?.role === 'admin' || currentUser?.isAdmin === true) && (
+            {canSeeEmails && (
               <div className="settings-section">
                 <h3>Datenschutz-Bereinigung</h3>
                 <p className="app-calls-info-text">
-                  Ältere Rezeptaufrufe enthalten noch die E-Mail-Adresse des Anwenders. Weil alle
-                  Mitglieder die Rezeptaufrufe für „Im Trend“ lesen können, entfernt diese einmalige
-                  Bereinigung die Adressen. Hier in der Übersicht bleiben sie sichtbar, sie werden aus
-                  den App-Aufrufen ergänzt. Mehrfaches Ausführen ist unschädlich.
+                  Ältere App- und Rezeptaufrufe enthalten noch die E-Mail-Adresse des Anwenders.
+                  Diese einmalige Bereinigung entfernt sie aus beiden Protokollen; neue Einträge
+                  speichern keine Adresse mehr. Admins sehen die Adresse hier weiterhin, sie wird aus
+                  den Nutzerprofilen ergänzt. Mehrfaches Ausführen ist unschädlich.
                 </p>
                 <div className="app-calls-action-row">
                   <button
@@ -1449,7 +1452,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                     onClick={handleStripRecipeCallEmails}
                     disabled={strippingRecipeCallEmails}
                   >
-                    {strippingRecipeCallEmails ? 'Bereinigung läuft…' : 'E-Mail-Adressen aus Rezeptaufrufen entfernen'}
+                    {strippingRecipeCallEmails ? 'Bereinigung läuft…' : 'E-Mail-Adressen aus Aufruf-Protokollen entfernen'}
                   </button>
                   {stripEmailsFeedback?.message ? (
                     <span
@@ -1476,7 +1479,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                         <th>Rezept</th>
                         <th>Vorname</th>
                         <th>Nachname</th>
-                        <th className="app-calls-col-desktop">E-Mail</th>
+                        {canSeeEmails && <th className="app-calls-col-desktop">E-Mail</th>}
                         <th className="app-calls-col-desktop">Art</th>
                         <th className="app-calls-col-mobile">Info</th>
                       </tr>
@@ -1493,7 +1496,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                             <td>{call.recipeTitle}</td>
                             <td>{call.userVorname}</td>
                             <td>{call.userNachname}</td>
-                            <td className="app-calls-col-desktop">{call.userEmail}</td>
+                            {canSeeEmails && <td className="app-calls-col-desktop">{getCallEmail(call)}</td>}
                             <td className="app-calls-col-desktop">{call.isGuest ? 'Gast' : 'Angemeldet'}</td>
                             <td className="app-calls-col-mobile">
                               <button
@@ -1510,7 +1513,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                             <tr className="app-calls-detail-row">
                               <td colSpan={7}>
                                 <div className="app-calls-detail-content">
-                                  <span><strong>E-Mail:</strong> {call.userEmail || '–'}</span>
+                                  {canSeeEmails && <span><strong>E-Mail:</strong> {getCallEmail(call) || '–'}</span>}
                                   <span><strong>Art:</strong> {call.isGuest ? 'Gast' : 'Angemeldet'}</span>
                                 </div>
                               </td>
