@@ -23,7 +23,8 @@ import {
   collection,
   getDocs,
   updateDoc,
-  deleteDoc
+  deleteDoc,
+  writeBatch
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { logAppCall } from './appCallsFirestore';
@@ -47,7 +48,12 @@ let currentUserCache = null;
  */
 export const getUsers = async () => {
   try {
-    const usersRef = collection(db, 'users');
+    // Full profiles (e-mail, role, flags) are readable only by admins - see
+    // firestore.rules. Everyone else gets the public subset (vorname,
+    // nachname, versteckt, recipe_count) mirrored by the syncPublicProfile
+    // Cloud Function.
+    const isAdminUser = currentUserCache?.isAdmin === true || currentUserCache?.role === ROLES.ADMIN;
+    const usersRef = collection(db, isAdminUser ? 'users' : 'publicProfiles');
     const snapshot = await getDocs(usersRef);
     const users = [];
     snapshot.forEach((doc) => {
@@ -57,6 +63,42 @@ export const getUsers = async () => {
   } catch (error) {
     console.error('Error getting users:', error);
     return [];
+  }
+};
+
+// Keep in sync with PUBLIC_PROFILE_FIELDS in functions/index.js.
+const PUBLIC_PROFILE_FIELDS = ['vorname', 'nachname', 'versteckt', 'recipe_count'];
+
+/**
+ * Backfill publicProfiles/{uid} for users that have none yet. The
+ * syncPublicProfile Cloud Function keeps the collection current, but only
+ * fires on writes - users who existed before it was deployed have no public
+ * profile until their document changes. Admins call this with the full user
+ * list they already loaded, so other users see those names right away.
+ * @param {Array<Object>} users - Full user documents (admin view of getUsers)
+ * @returns {Promise<number>} Number of profiles written
+ */
+export const ensurePublicProfiles = async (users) => {
+  if (!Array.isArray(users) || users.length === 0) return 0;
+  try {
+    const existing = await getDocs(collection(db, 'publicProfiles'));
+    const existingIds = new Set(existing.docs.map((d) => d.id));
+    const missing = users.filter((u) => u?.id && !existingIds.has(u.id));
+    for (let i = 0; i < missing.length; i += 400) {
+      const batch = writeBatch(db);
+      missing.slice(i, i + 400).forEach((u) => {
+        const profile = {};
+        PUBLIC_PROFILE_FIELDS.forEach((field) => {
+          if (u[field] !== undefined) profile[field] = u[field];
+        });
+        batch.set(doc(db, 'publicProfiles', u.id), profile);
+      });
+      await batch.commit();
+    }
+    return missing.length;
+  } catch (error) {
+    console.error('Error backfilling public profiles:', error);
+    return 0;
   }
 };
 
@@ -852,10 +894,9 @@ export const updateUserName = async (userId, vorname, nachname) => {
   }
 
   try {
-    const users = await getUsers();
-    
-    // Find the user
-    const user = users.find(u => u.id === userId);
+    // Read the one profile directly: getUsers() only returns public profiles
+    // for non-admins, and a user renaming themselves may not have one yet.
+    const user = await getUserProfile(userId);
     if (!user) {
       return {
         success: false,
@@ -1061,10 +1102,8 @@ export const changePassword = async (userId, newPassword, currentPassword) => {
  */
 export const updateUserHidden = async (userId, versteckt) => {
   try {
-    const users = await getUsers();
-
-    // Find the user
-    const user = users.find(u => u.id === userId);
+    // See updateUserName: read the single profile instead of getUsers().
+    const user = await getUserProfile(userId);
     if (!user) {
       return {
         success: false,
