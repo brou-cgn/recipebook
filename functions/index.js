@@ -6257,6 +6257,44 @@ exports.notifyAdminsOnUserRegistration = onDocumentCreated(
     },
 );
 
+// Fields of users/{uid} that other users may see (author names, member
+// pickers). Everything else - e-mail, FCM tokens, role, feature flags - stays
+// in users/{uid}, which firestore.rules restricts to its owner and admins.
+const PUBLIC_PROFILE_FIELDS = ['vorname', 'nachname', 'versteckt', 'recipe_count'];
+
+/**
+ * Pick the public subset of a user document for publicProfiles/{uid}.
+ * @param {Object} data - users/{uid} document data
+ * @return {Object} Public profile fields (missing ones omitted)
+ */
+function toPublicProfile(data) {
+  const profile = {};
+  for (const field of PUBLIC_PROFILE_FIELDS) {
+    if (data[field] !== undefined) profile[field] = data[field];
+  }
+  return profile;
+}
+
+/**
+ * Firestore Trigger: Mirror the public part of users/{uid} into
+ * publicProfiles/{uid} on every create, update and delete.
+ */
+exports.syncPublicProfile = onDocumentWritten(
+    'users/{userId}',
+    async (event) => {
+      const ref = admin.firestore().collection('publicProfiles').doc(event.params.userId);
+      const after = event.data?.after;
+      if (!after || !after.exists) {
+        await ref.delete();
+        return;
+      }
+      // Written on every change, not only when a public field changed: users
+      // that predate this function get their public profile on their next
+      // write (e.g. the FCM token saved at login).
+      await ref.set(toPublicProfile(after.data()));
+    },
+);
+
 /**
  * Cloud Function: Set a user's password (admin only)
  * Allows an admin to set a temporary password for another user via Firebase Admin SDK.

@@ -33,6 +33,29 @@ service cloud.firestore {
       return isAuthenticated() && userRole() == 'admin';
     }
 
+    function isAnonymous() {
+      return isAuthenticated() && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    // A registered user with a real profile document. Unlike isAnyUser() this
+    // excludes anonymous guests and authenticated users without a /users doc,
+    // so personal data (activity logs, cook dates) is not handed to anyone who
+    // merely clicked "Als Gast anmelden" or opened a share link.
+    function isMember() {
+      return isAuthenticated() && !isAnonymous()
+             && userRole() in ['read', 'comment', 'edit', 'moderator', 'admin'];
+    }
+
+    // Mirrors the client-side appCalls feature flag (rolePermissions/{role}.appCalls,
+    // default true only for admins - see ROLE_PERMISSIONS_DEFAULT in userManagement.js).
+    function canSeeAppCalls() {
+      return isAdmin() || (
+        isMember()
+        && exists(/databases/$(database)/documents/rolePermissions/$(userRole()))
+        && get(/databases/$(database)/documents/rolePermissions/$(userRole())).data.get('appCalls', false) == true
+      );
+    }
+
     // Recipes collection
     match /recipes/{recipeId} {
       // Unauthenticated share-link access is handled via Cloud Functions
@@ -160,12 +183,17 @@ service cloud.firestore {
 
     // Users collection
     match /users/{userId} {
-      allow read: if isAnyUser();
+      // Full profiles (e-mail, FCM tokens, feature flags) are private to their
+      // owner and admins. Everyone else reads names via /publicProfiles below.
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       // Authenticated users may create only their own document and may not
       // self-assign elevated privileges (isAdmin or any role above 'read').
       // The first-user / admin-bootstrap is handled atomically by the
       // createUserProfile Cloud Function (Admin SDK bypasses these rules).
+      // Anonymous guests may not create one: that would turn a one-click
+      // guest session into a 'read' member.
       allow create: if isAuthenticated()
+                    && !isAnonymous()
                     && request.auth.uid == userId
                     && !('isAdmin' in request.resource.data)
                     && request.resource.data.role == 'read';
@@ -177,6 +205,15 @@ service cloud.firestore {
                         && !request.resource.data.diff(resource.data).affectedKeys()
                              .hasAny(['role', 'isAdmin']));
       allow delete: if isAdmin();
+    }
+
+    // Public part of a user profile (vorname, nachname, versteckt, recipe_count):
+    // what other users need to show author names and member pickers. Written
+    // only by the syncPublicProfile Cloud Function (Admin SDK) and by admins
+    // backfilling missing entries (see ensurePublicProfiles in userManagement.js).
+    match /publicProfiles/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
     // Webimport-PIN (gehashter PIN + Lockout-Zähler). Ausschließlich über die
@@ -327,22 +364,25 @@ service cloud.firestore {
     }
 
     // App calls audit log collection
+    // Holds name and e-mail per session, so only admins and roles granted the
+    // appCalls feature may read it. Everyone may only log their own session.
     match /appCalls/{callId} {
-      allow read: if isAnyUser();
-      allow create: if isAnyUser();
+      allow read: if canSeeAppCalls();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAdmin();
     }
 
-    // Recipe calls audit log collection
+    // Recipe calls audit log collection. Read by members for "Im Trend";
+    // guests and share-link visitors get nothing.
     match /recipeCalls/{callId} {
-      allow read: if isAnyUser();
-      allow create: if isAnyUser();
+      allow read: if isMember();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAdmin();
     }
 
     // Cook dates collection - global tracking of when users cooked recipes
     match /cookDates/{cookDateId} {
-      allow read: if isAnyUser();
+      allow read: if isMember();
       allow create: if isAnyUser() && request.resource.data.userId == request.auth.uid;
       allow delete: if (isAuthenticated() && resource.data.userId == request.auth.uid)
                     || isEditOrAdmin();

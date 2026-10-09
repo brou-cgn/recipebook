@@ -71,10 +71,18 @@ describe('logRecipeCall', () => {
         userId: 'user-1',
         userVorname: 'Max',
         userNachname: 'Mustermann',
-        userEmail: 'max@example.com',
         isGuest: false
       })
     );
+  });
+
+  it('does not store the e-mail address (recipeCalls is readable by all members)', async () => {
+    mockAddDoc.mockResolvedValue({ id: 'new-call-id' });
+    const user = { id: 'user-1', vorname: 'Max', email: 'max@example.com' };
+
+    await logRecipeCall(user, { id: 'recipe-1', title: 'Spaghetti Bolognese' });
+
+    expect(mockAddDoc.mock.calls[0][1]).not.toHaveProperty('userEmail');
   });
 
   it('marks guest users correctly', async () => {
@@ -102,7 +110,6 @@ describe('logRecipeCall', () => {
       expect.objectContaining({
         userVorname: '',
         userNachname: '',
-        userEmail: '',
         isGuest: false
       })
     );

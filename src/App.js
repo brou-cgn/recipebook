@@ -20,7 +20,8 @@ import {
   getRolePermissions,
   ROLE_PERMISSIONS_DEFAULT,
   saveFcmToken,
-  updateUserProfile
+  updateUserProfile,
+  ensurePublicProfiles
 } from './utils/userManagement';
 import {
   requestNotificationPermission,
@@ -753,6 +754,12 @@ function App() {
       const loadUsers = async () => {
         const users = await getUsers();
         setAllUsers(users);
+        // Admins see full profiles: fill in public profiles for users that
+        // predate the syncPublicProfile Cloud Function, so other users see
+        // their names (see ensurePublicProfiles in userManagement.js).
+        if (currentUser.isAdmin || currentUser.role === 'admin') {
+          ensurePublicProfiles(users);
+        }
       };
       loadUsers();
     }

@@ -40,7 +40,8 @@ export const logRecipeCall = async (user, recipe) => {
       userId: user.id,
       userVorname: user.vorname || '',
       userNachname: user.nachname || '',
-      userEmail: user.email || '',
+      // No e-mail here: every member can read recipeCalls (trending), so
+      // AppCallsPage resolves it from the admin-only appCalls instead.
       isGuest: user.isGuest === true,
       timestamp: serverTimestamp()
     });

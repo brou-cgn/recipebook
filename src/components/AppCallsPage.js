@@ -271,7 +271,14 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     const loadData = async () => {
       const [fetchedAppCalls, fetchedRecipeCalls] = await Promise.all([getAppCalls(), getRecipeCalls()]);
       setAppCalls(fetchedAppCalls);
-      setRecipeCalls(fetchedRecipeCalls);
+      // recipeCalls no longer store the e-mail (members can read that
+      // collection for "Im Trend"); resolve it from the admin-only appCalls.
+      const emailByUserId = new Map(
+        fetchedAppCalls.filter((c) => c.userId && c.userEmail).map((c) => [c.userId, c.userEmail])
+      );
+      setRecipeCalls(fetchedRecipeCalls.map((c) => (
+        c.userEmail ? c : { ...c, userEmail: emailByUserId.get(c.userId) || '' }
+      )));
       setLoading(false);
     };
     loadData();
