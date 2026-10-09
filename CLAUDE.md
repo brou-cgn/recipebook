@@ -35,9 +35,30 @@ keine CI.
 
 `npm test` führt weiterhin alles aus, inklusive der roten Suites.
 
-## Handover
-Zu Beginn einer Session: Wenn `docs/handover/<branch>.md` existiert
-(`/` im Branchnamen durch `__` ersetzt), diese Datei zuerst lesen — sie enthält
-den Arbeitsstand der vorherigen Session. Geschrieben wird sie mit dem Skill
-`handover` (`.claude/skills/handover/SKILL.md`). Dort steht flüchtiger Stand,
-hier in `CLAUDE.md` nur dauerhafte Regeln.
+## Vorhaben-Tracker
+Größere Vorhaben, die über mehrere Sessions laufen, haben genau einen Tracker,
+der festhält, was erledigt und was offen ist. Zu Beginn einer Arbeit an einem
+solchen Vorhaben den Tracker lesen – nicht auf alte Chats verlassen.
+Gepflegt wird nur an einer Stelle; alles Abgeleitete (Zähler, Fortschritt,
+„Als Nächstes") berechnet der Tracker selbst.
+
+Aktive Tracker:
+
+### Tech-Check (Analyse-Dashboard)
+Die App-Analyse vom 08.10.2026 liegt als Dashboard „RecipeBook Tech-Check“:
+https://claude.ai/artifact/JixF4kfoeW7kxmwCqbgCfM
+
+Jede Änderung, die einen Befund daraus ganz oder teilweise umsetzt, aktualisiert
+das Dashboard im selben Arbeitsgang – nicht erst auf Nachfrage:
+- Datensatz `findings`: `status` (offen / teilweise / behoben) und `umsetzung`
+  (was, welcher PR, Datum) setzen.
+- Bei „teilweise“ den verbleibenden Rest neu bewerten: `schwere`, `nutzen` und
+  `aufwand` (1–5) beschreiben nur noch den Rest, Begründung in `umsetzung`.
+  `schwere_ursprung` bleibt unverändert (Einstufung aus der Analyse).
+- Datensatz `umsetzungen`: den PR mit Datum und Befund-IDs eintragen.
+- Bei der Umsetzung neu entdeckte Probleme als eigenen Befund aufnehmen
+  (nächste freie ID im Kapitel, mit Schwere, Konfidenz, Nutzen, Aufwand;
+  `schwere_ursprung` = `schwere`).
+- Roadmap, Kacheln, Kernaussage und Umsetzungsstand nicht von Hand pflegen –
+  sie werden aus `findings` und `umsetzungen` berechnet. Die Roadmap selbst
+  nur ändern, wenn sich die Planung (Phasen, Zuordnung) ändert.
