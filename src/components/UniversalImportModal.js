@@ -64,7 +64,7 @@ function UniversalImportModal({ onCancel, initialImages = [], initialText = '', 
       <div className="universal-import-modal">
         <div className="universal-import-header">
           <h2>Universeller Import</h2>
-          <button className="close-button" onClick={onCancel}>×</button>
+          <button className="app-close-button" onClick={onCancel} aria-label="Import schließen" title="Import schließen">×</button>
         </div>
 
         <div className="universal-import-content">

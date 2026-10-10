@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import './PortionSelector.css';
 import './EventsPage.css';
 import {
   submitConsumption,

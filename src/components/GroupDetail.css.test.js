@@ -24,3 +24,18 @@ describe('GroupDetail FAB position CSS', () => {
     expect(deleteFabPositionRule).toContain('left: 20px !important;');
   });
 });
+
+describe('GroupDetail delete FAB base styles', () => {
+  // RecipeDetail/MenuDetail are lazy-loaded; GroupDetail must not depend on
+  // their CSS for the delete FAB, or it renders unstyled until one is opened.
+  it('imports the shared DeleteFabButton.css itself', () => {
+    const source = fs.readFileSync(path.join(__dirname, 'GroupDetail.js'), 'utf8');
+    expect(source).toContain("import './DeleteFabButton.css';");
+  });
+
+  it('shared stylesheet sizes the FAB and its icon', () => {
+    const css = fs.readFileSync(path.join(__dirname, 'DeleteFabButton.css'), 'utf8');
+    expect(css).toMatch(/\.delete-fab-button\s*\{[^}]*position:\s*fixed;[^}]*width:\s*44px;/);
+    expect(css).toMatch(/\.delete-fab-button \.button-icon-image\s*\{[^}]*width:\s*1\.4rem;/);
+  });
+});
