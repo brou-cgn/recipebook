@@ -139,7 +139,11 @@ export function buildRecipeFromAiResult(aiResult, authorId = '', sourceUrl = '')
     return numMatch ? parseInt(numMatch[0], 10) : 0;
   };
 
-  const kulinarikFromCuisine = aiResult.cuisine ? [aiResult.cuisine] : [];
+  // The Cloud Functions map the AI cuisine onto the configured types and send
+  // all matches as `cuisines`; `cuisine` alone is the first one (older shape).
+  const kulinarikFromCuisine = Array.isArray(aiResult.cuisines) && aiResult.cuisines.length > 0
+    ? aiResult.cuisines
+    : (aiResult.cuisine ? [aiResult.cuisine] : []);
   const kulinarikFromTags = extractKulinarikFromTags(aiResult.tags || []);
   const kulinarikSet = new Set(kulinarikFromCuisine);
   kulinarikFromTags.forEach(k => kulinarikSet.add(k));

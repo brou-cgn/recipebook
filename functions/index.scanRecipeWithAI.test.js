@@ -316,6 +316,27 @@ test('returns structured recipe for authenticated user with valid image', async 
   assert.ok(typeof result.dailyLimit === 'number', 'dailyLimit should be a number');
 });
 
+test('maps the AI cuisine onto the configured cuisine type', async () => {
+  const auth = {
+    uid: 'user-123',
+    token: {firebase: {sign_in_provider: 'password'}, admin: false},
+  };
+
+  // No list sent by the caller (Shortcut jobs): settings/app has none in this
+  // mock either, so the default list applies - "Deutsch" -> "Deutsche Küche".
+  const fromDefaults = await scanRecipeWithAI({auth, data: {imageBase64: VALID_IMAGE, language: 'de'}});
+  assert.equal(fromDefaults.cuisine, 'Deutsche Küche');
+  assert.deepEqual(fromDefaults.cuisines, ['Deutsche Küche']);
+
+  // A value without a configured counterpart is dropped, not passed through.
+  const unmatched = await scanRecipeWithAI({
+    auth,
+    data: {imageBase64: VALID_IMAGE, language: 'de', cuisineTypes: ['Italienische Küche']},
+  });
+  assert.equal(unmatched.cuisine, '');
+  assert.deepEqual(unmatched.cuisines, []);
+});
+
 test('returns structured recipe for admin user', async () => {
   // Admin status comes from users/{uid}.role, not from a custom claim
   // (the project never sets one).

@@ -1,4 +1,5 @@
 import {
+  buildRecipeFromAiResult,
   parseOcrText,
   parseOcrTextWithValidation,
   parseOcrTextWithClassification,
@@ -1298,5 +1299,22 @@ Zubereitung
       expect(KULINARIK_TAG_KEYWORDS).toHaveProperty('vegetarisch', 'Vegetarisch');
       expect(KULINARIK_TAG_KEYWORDS).toHaveProperty('vegan', 'Vegan');
     });
+  });
+});
+
+describe('buildRecipeFromAiResult – kulinarik', () => {
+  test('takes all mapped cuisines from the Cloud Function result', () => {
+    const recipe = buildRecipeFromAiResult({
+      title: 'Pasta',
+      cuisine: 'Italienische Küche',
+      cuisines: ['Italienische Küche', 'Vegetarisch'],
+      tags: ['vegan'],
+    });
+    expect(recipe.kulinarik).toEqual(['Italienische Küche', 'Vegetarisch', 'Vegan']);
+  });
+
+  test('falls back to the single cuisine field', () => {
+    expect(buildRecipeFromAiResult({cuisine: 'Deutsche Küche'}).kulinarik).toEqual(['Deutsche Küche']);
+    expect(buildRecipeFromAiResult({cuisine: '', cuisines: []}).kulinarik).toEqual([]);
   });
 });
