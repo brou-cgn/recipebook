@@ -427,6 +427,9 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [newCuisineInput, setNewCuisineInput] = useState('');
   const [newCuisineLoading, setNewCuisineLoading] = useState(false);
   const [newCuisineDuplicateHint, setNewCuisineDuplicateHint] = useState(false);
+  // Cuisines the import recognized but the list doesn't have yet - offered as
+  // "Neu: …?" pills; a click creates the type via handleNewCuisinePillClick.
+  const [kulinarikVorschlag, setKulinarikVorschlag] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
@@ -466,6 +469,11 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     if (!term) return allTypes;
     return allTypes.filter((name) => name.toLowerCase().includes(term));
   }, [customLists.cuisineTypes, newCuisineInput]);
+
+  const visibleCuisineSuggestions = useMemo(() => {
+    const known = (customLists.cuisineTypes || []).map((t) => t.toLowerCase());
+    return kulinarikVorschlag.filter((name) => !known.includes(name.toLowerCase()));
+  }, [kulinarikVorschlag, customLists.cuisineTypes]);
 
   const orderedCuisinePills = useMemo(() => {
     const active = visibleCuisinePills.filter((name) => kulinarik.includes(name));
@@ -581,6 +589,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       } else {
         setKulinarik([]);
       }
+      setKulinarikVorschlag(Array.isArray(recipe.kulinarikVorschlag) ? recipe.kulinarikVorschlag : []);
       setSchwierigkeit(recipe.schwierigkeit || 3);
       setKochdauer(recipe.kochdauer ?? '');
       // Handle both old string format and new array format for speisekategorie
@@ -723,6 +732,11 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     } finally {
       setNewCuisineLoading(false);
     }
+  };
+
+  const handleCuisineSuggestionClick = (name) => {
+    setKulinarikVorschlag((prev) => prev.filter((s) => s !== name));
+    handleNewCuisinePillClick(name);
   };
 
   const handleMealCategoryPillToggle = (name) => {
@@ -1223,6 +1237,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     } else {
       setKulinarik([]);
     }
+    setKulinarikVorschlag(Array.isArray(importedRecipe.kulinarikVorschlag) ? importedRecipe.kulinarikVorschlag : []);
     
     setSchwierigkeit(importedRecipe.schwierigkeit || 3);
     setKochdauer(importedRecipe.kochdauer ?? '');
@@ -1659,7 +1674,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
 
         <div className="form-group">
           <label>Kulinarik (Mehrfachauswahl möglich)</label>
-          {(orderedCuisinePills.length > 0 || newCuisineInput.trim()) && (
+          {(orderedCuisinePills.length > 0 || visibleCuisineSuggestions.length > 0 || newCuisineInput.trim()) && (
             <div className="recipe-form-cuisine-grid">
               {orderedCuisinePills.map((name) => (
                 <button
@@ -1671,6 +1686,18 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                   title={kulinarik.includes(name) ? 'Auswahl aufheben' : `${name} auswählen`}
                 >
                   {name}
+                </button>
+              ))}
+              {visibleCuisineSuggestions.map((name) => (
+                <button
+                  key={`suggestion-${name}`}
+                  type="button"
+                  className="recipe-form-cuisine-pill recipe-form-cuisine-pill--new"
+                  onClick={() => handleCuisineSuggestionClick(name)}
+                  disabled={newCuisineLoading}
+                  title={`Beim Import erkannt: „${name}" als neuen Kulinariktyp anlegen und auswählen`}
+                >
+                  {`Neu: ${name}?`}
                 </button>
               ))}
               {newCuisineInput.trim() &&

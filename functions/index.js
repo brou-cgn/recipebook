@@ -17,7 +17,7 @@ const cheerio = require('cheerio');
 const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 const {requireShortcutPin} = require('./webImportPin');
 const {evaluateLowCarbTag} = require('./lowCarb');
-const {normalizeCuisines} = require('./cuisineNormalization');
+const {normalizeCuisines, suggestNewCuisines} = require('./cuisineNormalization');
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -479,18 +479,18 @@ async function resolveImportLists(cuisineTypes, mealCategories) {
 
 /**
  * AI result cuisine fields mapped onto the configured cuisine types:
- * `cuisine` (first match, string - the shape existing consumers expect) and
- * `cuisines` (all matches, e.g. ["Italienische Küche", "Vegetarisch"]).
+ * `cuisine` (first match, string - the shape existing consumers expect),
+ * `cuisines` (all matches, e.g. ["Italienische Küche", "Vegetarisch"]) and
+ * `cuisineSuggestions` (values without a configured type, offered in the
+ * import review as a new type - never created automatically).
  * @param {string|string[]|null|undefined} raw - kulinarik as returned by Gemini
  * @param {string[]} cuisineTypes
- * @return {{cuisine: string, cuisines: string[]}}
+ * @return {{cuisine: string, cuisines: string[], cuisineSuggestions: string[]}}
  */
 function cuisineFields(raw, cuisineTypes) {
   const cuisines = normalizeCuisines(raw, cuisineTypes);
-  if (raw && cuisines.length === 0) {
-    console.log(`Import: cuisine "${raw}" matches no configured cuisine type - dropped`);
-  }
-  return {cuisine: cuisines[0] || '', cuisines};
+  const cuisineSuggestions = suggestNewCuisines(raw, cuisineTypes);
+  return {cuisine: cuisines[0] || '', cuisines, cuisineSuggestions};
 }
 
 /**
@@ -996,6 +996,9 @@ function buildRecipeFieldsFromResult(aiResult, authorId = '') {
   const kulinarikSet = new Set(kulinarikFromCuisine);
   kulinarikFromTags.forEach((k) => kulinarikSet.add(k));
 
+  const suggestions = Array.isArray(aiResult.cuisineSuggestions) ? aiResult.cuisineSuggestions : [];
+  const kulinarikVorschlag = suggestions.filter((s) => !kulinarikSet.has(s));
+
   return {
     title: aiResult.title || '',
     ingredients: aiResult.ingredients || [],
@@ -1003,6 +1006,7 @@ function buildRecipeFieldsFromResult(aiResult, authorId = '') {
     portionen: aiResult.servings || 4,
     kochdauer: parseTime(aiResult.prepTime) || parseTime(aiResult.cookTime) || 30,
     kulinarik: [...kulinarikSet],
+    ...(kulinarikVorschlag.length > 0 ? {kulinarikVorschlag} : {}),
     schwierigkeit: aiResult.difficulty || 3,
     speisekategorie: aiResult.category || '',
     ...(authorId ? {authorId} : {}),
@@ -1620,6 +1624,10 @@ function mergePhotoAiResultsServer(results) {
   merged.cuisine = merged.cuisine || validResults.find((r) => r.cuisine)?.cuisine;
   if (!merged.cuisines?.length) {
     merged.cuisines = validResults.find((r) => r.cuisines?.length)?.cuisines;
+  }
+  if (!merged.cuisines?.length && !merged.cuisineSuggestions?.length) {
+    merged.cuisineSuggestions =
+      validResults.find((r) => r.cuisineSuggestions?.length)?.cuisineSuggestions;
   }
   merged.category = merged.category || validResults.find((r) => r.category)?.category;
 
@@ -6803,17 +6811,18 @@ exports.addRecipeViaAPI = onRequest(
       }
 
       // Map kulinarik onto the configured cuisine types ("Deutsch" ->
-      // "Deutsche Küche"); unknown values are dropped instead of being stored
-      // as a look-alike cuisine type no filter finds.
+      // "Deutsche Küche"); unknown values are not stored as a look-alike
+      // cuisine type no filter finds, but offered in the review as a new one.
       if (recipeData.kulinarik) {
         const {cuisineTypes} = await getConfiguredImportLists();
         const kulinarik = normalizeCuisines(recipeData.kulinarik, cuisineTypes);
+        const kulinarikVorschlag = suggestNewCuisines(recipeData.kulinarik, cuisineTypes);
         if (kulinarik.length > 0) {
           recipeData.kulinarik = kulinarik;
         } else {
-          console.log(`addRecipeViaAPI: kulinarik ${JSON.stringify(recipeData.kulinarik)} matches no configured cuisine type - dropped`);
           delete recipeData.kulinarik;
         }
+        if (kulinarikVorschlag.length > 0) recipeData.kulinarikVorschlag = kulinarikVorschlag;
       }
 
       // --- Save to Firestore ---
@@ -9790,6 +9799,10 @@ function mergeUniversalAiResultsServer(results) {
   merged.cuisine = merged.cuisine || validResults.find((r) => r.cuisine)?.cuisine;
   if (!merged.cuisines?.length) {
     merged.cuisines = validResults.find((r) => r.cuisines?.length)?.cuisines;
+  }
+  if (!merged.cuisines?.length && !merged.cuisineSuggestions?.length) {
+    merged.cuisineSuggestions =
+      validResults.find((r) => r.cuisineSuggestions?.length)?.cuisineSuggestions;
   }
   merged.category = merged.category || validResults.find((r) => r.category)?.category;
 
