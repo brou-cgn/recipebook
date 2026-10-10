@@ -77,6 +77,9 @@ function mergeUniversalAiResults(results) {
   merged.cookTime = merged.cookTime || validResults.find(r => r.cookTime)?.cookTime;
   merged.difficulty = merged.difficulty || validResults.find(r => r.difficulty)?.difficulty;
   merged.cuisine = merged.cuisine || validResults.find(r => r.cuisine)?.cuisine;
+  if (!merged.cuisines?.length) {
+    merged.cuisines = validResults.find(r => r.cuisines?.length)?.cuisines;
+  }
   merged.category = merged.category || validResults.find(r => r.category)?.category;
 
   return merged;

@@ -17,6 +17,7 @@ const cheerio = require('cheerio');
 const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 const {requireShortcutPin} = require('./webImportPin');
 const {evaluateLowCarbTag} = require('./lowCarb');
+const {normalizeCuisines} = require('./cuisineNormalization');
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -426,6 +427,72 @@ async function getRecipeExtractionPrompt() {
   }
 }
 
+// Configured cuisine types / meal categories from settings/app, cached like
+// the prompt above. Imports used to rely on the caller sending these lists -
+// Shortcut jobs and the Instagram Shortcut never did, so Gemini got a
+// hard-coded "Italienisch/Deutsch" list instead of "Italienische Küche" etc.
+let importListsCache = null;
+let importListsCacheExpiry = 0;
+
+/**
+ * Load cuisineTypes/mealCategories from settings/app (fallback: defaults).
+ * @return {Promise<{cuisineTypes: string[], mealCategories: string[]}>}
+ */
+async function getConfiguredImportLists() {
+  if (importListsCache && Date.now() < importListsCacheExpiry) {
+    return importListsCache;
+  }
+  let data = {};
+  try {
+    const settingsDoc = await admin.firestore().collection('settings').doc('app').get();
+    data = settingsDoc.exists ? (settingsDoc.data() || {}) : {};
+  } catch (err) {
+    console.error('getConfiguredImportLists: could not read settings/app, using defaults:', err);
+  }
+  const lists = {
+    cuisineTypes: Array.isArray(data.cuisineTypes) && data.cuisineTypes.length > 0 ?
+      data.cuisineTypes : FALLBACK_CUISINE_TYPES,
+    mealCategories: Array.isArray(data.mealCategories) && data.mealCategories.length > 0 ?
+      data.mealCategories : FALLBACK_MEAL_CATEGORIES,
+  };
+  importListsCache = lists;
+  importListsCacheExpiry = Date.now() + RECIPE_EXTRACTION_PROMPT_CACHE_TTL_MS;
+  return lists;
+}
+
+/**
+ * Use the lists the caller sent if present, otherwise the configured ones.
+ * @param {string[]|undefined} cuisineTypes
+ * @param {string[]|undefined} mealCategories
+ * @return {Promise<{cuisineTypes: string[], mealCategories: string[]}>}
+ */
+async function resolveImportLists(cuisineTypes, mealCategories) {
+  const hasCuisines = Array.isArray(cuisineTypes) && cuisineTypes.length > 0;
+  const hasCategories = Array.isArray(mealCategories) && mealCategories.length > 0;
+  if (hasCuisines && hasCategories) return {cuisineTypes, mealCategories};
+  const configured = await getConfiguredImportLists();
+  return {
+    cuisineTypes: hasCuisines ? cuisineTypes : configured.cuisineTypes,
+    mealCategories: hasCategories ? mealCategories : configured.mealCategories,
+  };
+}
+
+/**
+ * AI result cuisine fields mapped onto the configured cuisine types:
+ * `cuisine` (first match, string - the shape existing consumers expect) and
+ * `cuisines` (all matches, e.g. ["Italienische Küche", "Vegetarisch"]).
+ * @param {string|string[]|null|undefined} raw - kulinarik as returned by Gemini
+ * @param {string[]} cuisineTypes
+ * @return {{cuisine: string, cuisines: string[]}}
+ */
+function cuisineFields(raw, cuisineTypes) {
+  const cuisines = normalizeCuisines(raw, cuisineTypes);
+  if (raw && cuisines.length === 0) {
+    console.log(`Import: cuisine "${raw}" matches no configured cuisine type - dropped`);
+  }
+  return {cuisine: cuisines[0] || '', cuisines};
+}
+
 /**
  * Get the appropriate rate limit for a user based on their role
  * @param {boolean} isAdmin - Whether user is an admin
@@ -730,6 +797,7 @@ function normalizeIngredientUnits(ingredients) {
  */
 async function callGeminiAPI(base64Data, mimeType, lang, apiKey, cuisineTypes, mealCategories) {
   let prompt = await getRecipeExtractionPrompt();
+  ({cuisineTypes, mealCategories} = await resolveImportLists(cuisineTypes, mealCategories));
 
   // Warn if expected placeholders are missing from the prompt
   if (!prompt.includes('{{CUISINE_TYPES}}')) {
@@ -844,7 +912,7 @@ async function callGeminiAPI(base64Data, mimeType, lang, apiKey, cuisineTypes, m
         prepTime: recipeData.zubereitungszeit || '',
         cookTime: recipeData.kochzeit || '',
         difficulty: recipeData.schwierigkeit || 0,
-        cuisine: recipeData.kulinarik || '',
+        ...cuisineFields(recipeData.kulinarik, cuisineTypes),
         category: recipeData.kategorie || '',
         tags: recipeData.tags || [],
         ingredients: normalizeIngredientUnits(recipeData.zutaten || []),
@@ -861,7 +929,7 @@ async function callGeminiAPI(base64Data, mimeType, lang, apiKey, cuisineTypes, m
         prepTime: recipeData.prepTime || '',
         cookTime: recipeData.cookTime || '',
         difficulty: recipeData.difficulty || 0,
-        cuisine: recipeData.cuisine || '',
+        ...cuisineFields(recipeData.cuisine, cuisineTypes),
         category: recipeData.category || '',
         tags: recipeData.tags || [],
         ingredients: normalizeIngredientUnits(recipeData.ingredients || []),
@@ -923,7 +991,9 @@ function buildRecipeFieldsFromResult(aiResult, authorId = '') {
     if (canonical && !result.includes(canonical)) result.push(canonical);
     return result;
   }, []);
-  const kulinarikSet = new Set(aiResult.cuisine ? [aiResult.cuisine] : []);
+  const kulinarikFromCuisine = Array.isArray(aiResult.cuisines) && aiResult.cuisines.length > 0 ?
+    aiResult.cuisines : (aiResult.cuisine ? [aiResult.cuisine] : []);
+  const kulinarikSet = new Set(kulinarikFromCuisine);
   kulinarikFromTags.forEach((k) => kulinarikSet.add(k));
 
   return {
@@ -1548,6 +1618,9 @@ function mergePhotoAiResultsServer(results) {
   merged.cookTime = merged.cookTime || validResults.find((r) => r.cookTime)?.cookTime;
   merged.difficulty = merged.difficulty || validResults.find((r) => r.difficulty)?.difficulty;
   merged.cuisine = merged.cuisine || validResults.find((r) => r.cuisine)?.cuisine;
+  if (!merged.cuisines?.length) {
+    merged.cuisines = validResults.find((r) => r.cuisines?.length)?.cuisines;
+  }
   merged.category = merged.category || validResults.find((r) => r.category)?.category;
 
   return merged;
@@ -1658,6 +1731,7 @@ exports.scanRecipesWithAI = onCall(
 async function callGeminiTextAPI(rawHtml, lang, apiKey, cuisineTypes, mealCategories) {
   // Load the configured prompt from Firestore (like callGeminiAPI does)
   let prompt = await getRecipeExtractionPrompt();
+  ({cuisineTypes, mealCategories} = await resolveImportLists(cuisineTypes, mealCategories));
 
   // Warn if expected placeholders are missing from the prompt
   if (!prompt.includes('{{CUISINE_TYPES}}')) {
@@ -1766,7 +1840,7 @@ async function callGeminiTextAPI(rawHtml, lang, apiKey, cuisineTypes, mealCatego
       prepTime: recipeData.zubereitungszeit || recipeData.prepTime || '',
       cookTime: recipeData.kochzeit || recipeData.cookTime || '',
       difficulty: recipeData.schwierigkeit || recipeData.difficulty || 0,
-      cuisine: recipeData.kulinarik || recipeData.cuisine || '',
+      ...cuisineFields(recipeData.kulinarik || recipeData.cuisine, cuisineTypes),
       category: recipeData.kategorie || recipeData.category || '',
       tags: recipeData.tags || [],
       ingredients: normalizeIngredientUnits(recipeData.zutaten || recipeData.ingredients || []),
@@ -6728,6 +6802,20 @@ exports.addRecipeViaAPI = onRequest(
         return;
       }
 
+      // Map kulinarik onto the configured cuisine types ("Deutsch" ->
+      // "Deutsche Küche"); unknown values are dropped instead of being stored
+      // as a look-alike cuisine type no filter finds.
+      if (recipeData.kulinarik) {
+        const {cuisineTypes} = await getConfiguredImportLists();
+        const kulinarik = normalizeCuisines(recipeData.kulinarik, cuisineTypes);
+        if (kulinarik.length > 0) {
+          recipeData.kulinarik = kulinarik;
+        } else {
+          console.log(`addRecipeViaAPI: kulinarik ${JSON.stringify(recipeData.kulinarik)} matches no configured cuisine type - dropped`);
+          delete recipeData.kulinarik;
+        }
+      }
+
       // --- Save to Firestore ---
       try {
         const now = admin.firestore.FieldValue.serverTimestamp();
@@ -9700,6 +9788,9 @@ function mergeUniversalAiResultsServer(results) {
   merged.cookTime = merged.cookTime || validResults.find((r) => r.cookTime)?.cookTime;
   merged.difficulty = merged.difficulty || validResults.find((r) => r.difficulty)?.difficulty;
   merged.cuisine = merged.cuisine || validResults.find((r) => r.cuisine)?.cuisine;
+  if (!merged.cuisines?.length) {
+    merged.cuisines = validResults.find((r) => r.cuisines?.length)?.cuisines;
+  }
   merged.category = merged.category || validResults.find((r) => r.category)?.category;
 
   return merged;
@@ -9800,6 +9891,7 @@ async function runImportFromUniversalSource(source, {apiKey} = {}) {
  */
 async function callGeminiMultiImageAPI(imageInputs, lang, apiKey, cuisineTypes, mealCategories) {
   let prompt = await getRecipeExtractionPrompt();
+  ({cuisineTypes, mealCategories} = await resolveImportLists(cuisineTypes, mealCategories));
 
   if (Array.isArray(cuisineTypes) && cuisineTypes.length > 0) {
     const cuisineList = cuisineTypes.map((c) => `- ${c}`).join('\n');
@@ -9910,7 +10002,7 @@ async function callGeminiMultiImageAPI(imageInputs, lang, apiKey, cuisineTypes, 
         prepTime: recipeData.zubereitungszeit || '',
         cookTime: recipeData.kochzeit || '',
         difficulty: recipeData.schwierigkeit || 0,
-        cuisine: recipeData.kulinarik || '',
+        ...cuisineFields(recipeData.kulinarik, cuisineTypes),
         category: recipeData.kategorie || '',
         tags: recipeData.tags || [],
         ingredients: normalizeIngredientUnits(recipeData.zutaten || []),
@@ -9927,7 +10019,7 @@ async function callGeminiMultiImageAPI(imageInputs, lang, apiKey, cuisineTypes, 
       prepTime: recipeData.prepTime || '',
       cookTime: recipeData.cookTime || '',
       difficulty: recipeData.difficulty || 0,
-      cuisine: recipeData.cuisine || '',
+      ...cuisineFields(recipeData.cuisine, cuisineTypes),
       category: recipeData.category || '',
       tags: recipeData.tags || [],
       ingredients: normalizeIngredientUnits(recipeData.ingredients || []),
