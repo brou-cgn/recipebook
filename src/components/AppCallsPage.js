@@ -187,7 +187,7 @@ function CuisineProposalRow({ name, deleteIcon, onDiscard, children }) {
   };
 
   return (
-    <div className={`cuisine-proposal-row${isDeleteVisible ? ' swipe-delete-active' : ''}`}>
+    <div className={`cuisine-proposal-row${isDeleteVisible ? ' swipe-delete-active' : ''}${offset < 0 && !isDeleteVisible ? ' is-swiping' : ''}`}>
       <div className="swipe-delete-background" aria-hidden={!isDeleteVisible && offset === 0}>
         <button
           type="button"

@@ -625,10 +625,17 @@
   border-radius: 10px;
 }
 
+/* The red reveal is only shown while a swipe is in progress or the delete
+   action is open - never at rest. Relying on the opaque content row to cover
+   it is not enough: iOS Safari painted it over the row content. */
 .cuisine-proposal-row .swipe-delete-background {
+  border-radius: 10px;
+}
+
+.cuisine-proposal-row.is-swiping .swipe-delete-background,
+.cuisine-proposal-row.swipe-delete-active .swipe-delete-background {
   opacity: 1;
   pointer-events: auto;
-  border-radius: 10px;
 }
 
 .cuisine-proposal-row-content {
