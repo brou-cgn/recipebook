@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useLongPress } from '../utils/useLongPress';
 import { useAcceleratingLongPress, stepToNextMultiple } from '../hooks/useAcceleratingLongPress';
 import './DeleteFabButton.css';
+import './PortionSelector.css';
 import './RecipeDetail.css';
 import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe, canDeleteRecipes, canViewRecipeIndex, isCurrentUserAdmin } from '../utils/userManagement';
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
@@ -2478,7 +2479,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               {/* Draft status - only visible to admins when activated */}
               {recipe.isPrivate && isCurrentUserAdmin() && (
                 <div className="metadata-item draft-checkbox-container">
-                  <span className="metadata-label draft-label">Entwurf:</span>
+                  <span className="metadata-label">Entwurf:</span>
                   <label className="draft-checkbox-wrapper">
                     <input
                       type="checkbox"
