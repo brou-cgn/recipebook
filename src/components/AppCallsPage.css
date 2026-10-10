@@ -610,6 +610,125 @@
   background: #e0e0e0;
 }
 
+/* Offene Vorschläge: one row per proposal (replaces the former table, which
+   overflowed on phones). Desktop shows the DeleteRowButton at the right edge,
+   mobile reveals the delete action via left-swipe (useSwipeToDelete). */
+.cuisine-proposal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cuisine-proposal-row {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.cuisine-proposal-row .swipe-delete-background {
+  opacity: 1;
+  pointer-events: auto;
+  border-radius: 10px;
+}
+
+.cuisine-proposal-row-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 10px;
+}
+
+.cuisine-proposal-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.cuisine-proposal-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.cuisine-proposal-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.cuisine-proposal-group {
+  font-size: 13px;
+  color: #666;
+}
+
+.cuisine-proposal-delete-btn {
+  margin-left: auto;
+}
+
+.cuisine-proposal-error {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border: 1px solid #f0c5bf;
+  border-radius: 8px;
+  background: #fff5f4;
+  color: #8b2d21;
+  font-size: 14px;
+}
+
+.cuisine-proposal-undo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #2b2018;
+  color: #fff;
+  font-size: 14px;
+}
+
+.cuisine-proposal-undo-btn {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: #ffb4a3;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.cuisine-proposal-undo-btn:hover,
+.cuisine-proposal-undo-btn:focus-visible {
+  color: #ffd4c8;
+}
+
+@media (max-width: 768px) {
+  .delete-row-button.cuisine-proposal-delete-btn {
+    display: none;
+  }
+
+  .cuisine-proposal-actions {
+    width: 100%;
+  }
+}
+
+@media (min-width: 769px) {
+  .cuisine-proposal-row .swipe-delete-background {
+    display: none;
+  }
+}
+
 .cuisine-proposal-no-group {
   color: #bbb;
 }
