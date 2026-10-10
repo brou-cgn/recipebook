@@ -26,11 +26,26 @@ export default function useUndoableDelete(timeoutMs = UNDO_TIMEOUT_MS) {
   const lastCompatIdRef = useRef(null);
   const lastCompatNameRef = useRef(null);
 
+  // Leaving the view (unmount) or the page (pagehide: tab closed, app sent to
+  // background on iOS) before the undo window ends commits the pending deletes
+  // instead of dropping them - otherwise the item silently comes back later
+  // although the user saw it disappear and never pressed "Rückgängig".
   useEffect(() => {
     const entries = entriesRef.current;
-    return () => {
+    const flushPending = () => {
+      const pending = Array.from(entries.values());
       entries.forEach(({ timeoutId }) => clearTimeout(timeoutId));
       entries.clear();
+      pending.forEach(({ onConfirm }) => onConfirm());
+      return pending.length > 0;
+    };
+    const handlePageHide = () => {
+      if (flushPending()) setBanners([]);
+    };
+    window.addEventListener('pagehide', handlePageHide);
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide);
+      flushPending();
     };
   }, []);
 
@@ -42,7 +57,7 @@ export default function useUndoableDelete(timeoutMs = UNDO_TIMEOUT_MS) {
       setBanners((prev) => prev.filter((banner) => banner.id !== id));
       onConfirm();
     }, timeoutMs);
-    entriesRef.current.set(id, { key, timeoutId, onUndo });
+    entriesRef.current.set(id, { key, timeoutId, onConfirm, onUndo });
     setBanners((prev) => [...prev, { id, key, message }]);
   }, [timeoutMs]);
 
