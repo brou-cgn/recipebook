@@ -148,6 +148,11 @@ export function buildRecipeFromAiResult(aiResult, authorId = '', sourceUrl = '')
   const kulinarikSet = new Set(kulinarikFromCuisine);
   kulinarikFromTags.forEach(k => kulinarikSet.add(k));
 
+  // Cuisines without a configured type: offered in the review form as
+  // "Neu: …?" pills, never added to the list automatically.
+  const kulinarikVorschlag = (Array.isArray(aiResult.cuisineSuggestions) ? aiResult.cuisineSuggestions : [])
+    .filter(s => !kulinarikSet.has(s));
+
   return {
     title: aiResult.title || '',
     ingredients: aiResult.ingredients || [],
@@ -155,6 +160,7 @@ export function buildRecipeFromAiResult(aiResult, authorId = '', sourceUrl = '')
     portionen: aiResult.servings || 4,
     kochdauer: parseTime(aiResult.prepTime) || parseTime(aiResult.cookTime) || 30,
     kulinarik: [...kulinarikSet],
+    ...(kulinarikVorschlag.length > 0 ? { kulinarikVorschlag } : {}),
     schwierigkeit: aiResult.difficulty || 3,
     speisekategorie: aiResult.category || '',
     ...(authorId ? { authorId } : {}),

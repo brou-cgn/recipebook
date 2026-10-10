@@ -1313,6 +1313,13 @@ describe('buildRecipeFromAiResult – kulinarik', () => {
     expect(recipe.kulinarik).toEqual(['Italienische Küche', 'Vegetarisch', 'Vegan']);
   });
 
+  test('passes unknown cuisines on as kulinarikVorschlag', () => {
+    const recipe = buildRecipeFromAiResult({ cuisineSuggestions: ['Griechische Küche'] });
+    expect(recipe.kulinarik).toEqual([]);
+    expect(recipe.kulinarikVorschlag).toEqual(['Griechische Küche']);
+    expect(buildRecipeFromAiResult({ cuisine: 'Deutsche Küche' })).not.toHaveProperty('kulinarikVorschlag');
+  });
+
   test('falls back to the single cuisine field', () => {
     expect(buildRecipeFromAiResult({cuisine: 'Deutsche Küche'}).kulinarik).toEqual(['Deutsche Küche']);
     expect(buildRecipeFromAiResult({cuisine: '', cuisines: []}).kulinarik).toEqual([]);

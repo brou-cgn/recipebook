@@ -327,14 +327,17 @@ test('maps the AI cuisine onto the configured cuisine type', async () => {
   const fromDefaults = await scanRecipeWithAI({auth, data: {imageBase64: VALID_IMAGE, language: 'de'}});
   assert.equal(fromDefaults.cuisine, 'Deutsche Küche');
   assert.deepEqual(fromDefaults.cuisines, ['Deutsche Küche']);
+  assert.deepEqual(fromDefaults.cuisineSuggestions, []);
 
-  // A value without a configured counterpart is dropped, not passed through.
+  // A value without a configured counterpart is not stored, only offered as
+  // a new type in the list's style.
   const unmatched = await scanRecipeWithAI({
     auth,
     data: {imageBase64: VALID_IMAGE, language: 'de', cuisineTypes: ['Italienische Küche']},
   });
   assert.equal(unmatched.cuisine, '');
   assert.deepEqual(unmatched.cuisines, []);
+  assert.deepEqual(unmatched.cuisineSuggestions, ['Deutsche Küche']);
 });
 
 test('returns structured recipe for admin user', async () => {

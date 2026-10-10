@@ -939,6 +939,55 @@ describe('RecipeForm - Multi-Select Fields', () => {
     );
   });
 
+  test('import review offers unknown cuisines as "Neu: …?" pills that create the type on click', async () => {
+    const { addCuisineProposal } = require('../utils/cuisineProposalsFirestore');
+    const { saveCustomLists } = require('../utils/customLists');
+    saveCustomLists.mockClear();
+    addCuisineProposal.mockClear();
+
+    const tempRecipe = {
+      id: 'temp-1',
+      title: 'Moussaka',
+      isTemp: true,
+      ingredients: ['1 Aubergine'],
+      steps: ['Schichten.'],
+      kulinarik: [],
+      kulinarikVorschlag: ['Griechische Küche', 'Thai'],
+    };
+
+    render(
+      <RecipeForm
+        recipe={tempRecipe}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={{ id: 'user-1', vorname: 'R', nachname: 'U', email: 'u@example.com', isAdmin: false, role: 'edit' }}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Italian' })).toBeInTheDocument());
+
+    // Nothing is created up front - only offered
+    expect(saveCustomLists).not.toHaveBeenCalled();
+    const suggestion = screen.getByRole('button', { name: 'Neu: Griechische Küche?' });
+    // A suggestion that already exists in the list is not offered again
+    expect(screen.queryByRole('button', { name: 'Neu: Thai?' })).not.toBeInTheDocument();
+
+    fireEvent.click(suggestion);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Griechische Küche' })).toHaveAttribute('aria-pressed', 'true');
+    });
+    expect(screen.queryByRole('button', { name: 'Neu: Griechische Küche?' })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(saveCustomLists).toHaveBeenCalledWith(
+        expect.objectContaining({ cuisineTypes: expect.arrayContaining(['Griechische Küche']) })
+      );
+    });
+    expect(addCuisineProposal).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Griechische Küche', source: 'recipe_form' })
+    );
+  });
+
   test('new cuisine pill activates type even when addCuisineProposal fails', async () => {
     const { addCuisineProposal } = require('../utils/cuisineProposalsFirestore');
     addCuisineProposal.mockRejectedValueOnce(new Error('Firestore unavailable'));

@@ -1396,7 +1396,8 @@ function App() {
             ...updates,
             ...importGroupUpdates,
             ...(shouldClearThumbnail ? { imageThumbnail: deleteField() } : {}),
-            ...(editingRecipe.isTemp ? { isTemp: deleteField() } : {}),
+            // kulinarikVorschlag only serves the import review (RecipeForm)
+            ...(editingRecipe.isTemp ? { isTemp: deleteField(), kulinarikVorschlag: deleteField() } : {}),
           },
           editingRecipe.authorId
         );

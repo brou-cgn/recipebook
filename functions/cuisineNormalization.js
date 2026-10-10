@@ -85,9 +85,22 @@ function matchCuisineType(raw, cuisineTypes) {
 }
 
 /**
- * Normalize raw cuisine input (string, comma/slash separated string, or
- * array, possibly nested) onto configured cuisine types. Unknown values are
- * dropped, duplicates removed, order kept.
+ * Split raw cuisine input (string, comma/slash separated string, or array,
+ * possibly nested) into single trimmed values.
+ * @param {string|string[]|null|undefined} raw
+ * @return {string[]}
+ */
+function splitCuisineValues(raw) {
+  return (Array.isArray(raw) ? raw.flat(Infinity) : [raw])
+      .filter((v) => v !== null && v !== undefined)
+      .flatMap((v) => String(v).split(/[,;/]|\s+und\s+|\s*&\s*/i))
+      .map((v) => v.trim())
+      .filter(Boolean);
+}
+
+/**
+ * Normalize raw cuisine input onto configured cuisine types. Unknown values
+ * are dropped (see suggestNewCuisines), duplicates removed, order kept.
  * @param {string|string[]|null|undefined} raw
  * @param {string[]} cuisineTypes
  * @return {string[]}
@@ -96,13 +109,34 @@ function normalizeCuisines(raw, cuisineTypes) {
   if (!Array.isArray(cuisineTypes) || cuisineTypes.length === 0) {
     return [];
   }
-  const values = (Array.isArray(raw) ? raw.flat(Infinity) : [raw])
-      .filter((v) => v !== null && v !== undefined)
-      .flatMap((v) => String(v).split(/[,;/]|\s+und\s+|\s*&\s*/i));
   const result = [];
-  values.forEach((v) => {
+  splitCuisineValues(raw).forEach((v) => {
     const match = matchCuisineType(v, cuisineTypes);
     if (match && !result.includes(match)) result.push(match);
+  });
+  return result;
+}
+
+/**
+ * The values normalizeCuisines drops, as candidates for a new cuisine type:
+ * the import review offers them as "Neu: …?" pills instead of the import
+ * creating a type on its own. Written in the list's style - if most
+ * configured types read "… Küche", "Griechisch" becomes "Griechische Küche".
+ * @param {string|string[]|null|undefined} raw
+ * @param {string[]} cuisineTypes
+ * @return {string[]}
+ */
+function suggestNewCuisines(raw, cuisineTypes) {
+  const types = Array.isArray(cuisineTypes) ? cuisineTypes : [];
+  const kuecheStyle = types.filter((t) => /\sKüche$/.test(t)).length > types.length / 2;
+  const result = [];
+  splitCuisineValues(raw).forEach((v) => {
+    if (v.length < 3 || v.length > 40) return;
+    if (types.length > 0 && matchCuisineType(v, types)) return;
+    let name = v.charAt(0).toUpperCase() + v.slice(1);
+    if (kuecheStyle && /(.{3}isch|tsch)$/i.test(name)) name = `${name}e Küche`;
+    const known = [...types, ...result].some((t) => cuisineKey(t) === cuisineKey(name));
+    if (!known) result.push(name);
   });
   return result;
 }
@@ -111,4 +145,5 @@ module.exports = {
   cuisineKey,
   matchCuisineType,
   normalizeCuisines,
+  suggestNewCuisines,
 };

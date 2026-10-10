@@ -3,7 +3,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const {cuisineKey, matchCuisineType, normalizeCuisines} = require('./cuisineNormalization');
+const {
+  cuisineKey, matchCuisineType, normalizeCuisines, suggestNewCuisines,
+} = require('./cuisineNormalization');
 
 const TYPES = [
   'Deutsche Küche', 'Französische Küche', 'Italienische Küche', 'Österreichische Küche',
@@ -61,4 +63,22 @@ test('normalizeCuisines splits, maps, dedupes and drops unknowns', () => {
   assert.deepEqual(normalizeCuisines('Asiatisch', TYPES), []);
   assert.deepEqual(normalizeCuisines(null, TYPES), []);
   assert.deepEqual(normalizeCuisines('Deutsch', []), []);
+});
+
+test('suggestNewCuisines offers dropped values in the list style', () => {
+  assert.deepEqual(suggestNewCuisines('Griechisch', TYPES), ['Griechische Küche']);
+  assert.deepEqual(
+      suggestNewCuisines('Italienisch, asiatisch, Asiatische Küche', TYPES),
+      ['Asiatische Küche'],
+  );
+  assert.deepEqual(suggestNewCuisines('Deutsch', TYPES), []);
+  assert.deepEqual(suggestNewCuisines(null, TYPES), []);
+  // Short-form list: no "Küche" appended
+  assert.deepEqual(suggestNewCuisines('Griechisch', ['Italienisch', 'Deutsch']), ['Griechisch']);
+});
+
+test('suggestNewCuisines turns "Deutsch" into the long form, but not nouns', () => {
+  const longForm = ['Italienische Küche', 'Französische Küche'];
+  assert.deepEqual(suggestNewCuisines('Deutsch', longForm), ['Deutsche Küche']);
+  assert.deepEqual(suggestNewCuisines('Fisch', longForm), ['Fisch']);
 });

@@ -80,6 +80,9 @@ function mergeUniversalAiResults(results) {
   if (!merged.cuisines?.length) {
     merged.cuisines = validResults.find(r => r.cuisines?.length)?.cuisines;
   }
+  if (!merged.cuisines?.length && !merged.cuisineSuggestions?.length) {
+    merged.cuisineSuggestions = validResults.find(r => r.cuisineSuggestions?.length)?.cuisineSuggestions;
+  }
   merged.category = merged.category || validResults.find(r => r.category)?.category;
 
   return merged;
