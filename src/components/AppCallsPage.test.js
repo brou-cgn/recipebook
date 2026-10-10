@@ -479,6 +479,27 @@ describe('AppCallsPage – Offene Vorschläge: Fehler, Duplikate, Verwerfen', ()
     }));
   });
 
+  test('mobile: left-swipe reveals the delete action and discards after the undo window', async () => {
+    const { discardCuisineProposal } = require('../utils/cuisineProposalsFirestore');
+
+    await renderKulinarikTab();
+    const name = await screen.findByText('Deutsch', { selector: '.cuisine-proposal-name' });
+    const content = name.closest('.cuisine-proposal-row-content');
+    fireEvent.touchStart(content, { touches: [{ clientX: 300, clientY: 10 }] });
+    fireEvent.touchMove(content, { touches: [{ clientX: 200, clientY: 12 }] });
+    fireEvent.touchEnd(content);
+
+    const swipeAction = document.querySelector('.cuisine-proposal-row .swipe-delete-action');
+    expect(swipeAction.closest('.cuisine-proposal-row')).toHaveClass('swipe-delete-active');
+    jest.useFakeTimers();
+    fireEvent.click(swipeAction);
+    expect(screen.queryByText('Deutsch', { selector: '.cuisine-proposal-name' })).not.toBeInTheDocument();
+    jest.advanceTimersByTime(6000);
+    jest.useRealTimers();
+
+    await waitFor(() => expect(discardCuisineProposal).toHaveBeenCalledWith('p1'));
+  });
+
   test('Rückgängig restores a discarded proposal without deleting it', async () => {
     const { discardCuisineProposal } = require('../utils/cuisineProposalsFirestore');
 
