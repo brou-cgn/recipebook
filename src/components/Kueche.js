@@ -20,6 +20,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import { getCuisineProposals } from '../utils/cuisineProposalsFirestore';
 import { getKuechenbetriebFabConfig } from '../utils/kuechenbetriebTabs';
+import { isFuerDichEntdecktList } from '../utils/fuerDichEntdeckt';
 
 function getLastSixMonthsRecipeCounts(recipes) {
   const now = new Date();
@@ -384,7 +385,7 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
             setShowPersonalData(false);
             if (onProfileUpdated) onProfileUpdated(updatedUser);
           }}
-          privateLists={groups.filter(g => g.type === 'private' && (g.ownerId === currentUser?.id || (Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id))))}
+          privateLists={groups.filter(g => g.type === 'private' && !isFuerDichEntdecktList(g) && (g.ownerId === currentUser?.id || (Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id))))}
         />
       ) : (
         <>

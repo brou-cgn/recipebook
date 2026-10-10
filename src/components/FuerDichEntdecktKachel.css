@@ -1,0 +1,121 @@
+/* =========================================================
+   FuerDichEntdecktKachel – Startseiten-Kachel "Für dich entdeckt"
+   ========================================================= */
+
+.fuer-dich-entdeckt-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 200px;
+  padding: 0;
+  border: none;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #e8e8e8;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fuer-dich-entdeckt-card:focus-visible {
+  outline: 3px solid #DF7A00;
+  outline-offset: 2px;
+}
+
+@media (min-width: 768px) {
+  .fuer-dich-entdeckt-card {
+    height: 260px;
+  }
+}
+
+.fuer-dich-entdeckt-card--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: auto;
+  min-height: 120px;
+  padding: 1.25rem;
+  background: #f0f0f0;
+  cursor: default;
+}
+
+.fuer-dich-entdeckt-empty-text {
+  margin: 0;
+  color: #666;
+  font-style: italic;
+  text-align: center;
+}
+
+/* Collage: großes Bild links, bis zu zwei kleine rechts */
+.fuer-dich-entdeckt-collage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  gap: 2px;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.fuer-dich-entdeckt-collage--1 {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.fuer-dich-entdeckt-collage--2 {
+  grid-template-rows: 1fr;
+}
+
+.fuer-dich-entdeckt-collage-cell {
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  background: #d8d8d8;
+}
+
+.fuer-dich-entdeckt-collage--3 .fuer-dich-entdeckt-collage-cell:first-child {
+  grid-row: 1 / span 2;
+}
+
+.fuer-dich-entdeckt-collage-cell img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fuer-dich-entdeckt-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.75rem 1rem 0.875rem;
+  background: rgba(30, 20, 12, 0.72);
+}
+
+.fuer-dich-entdeckt-title {
+  color: #fff;
+  font-size: 1.375rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.fuer-dich-entdeckt-meta {
+  color: #efe6dc;
+  font-size: 0.8125rem;
+}
+
+[data-theme="dark"] .fuer-dich-entdeckt-card--empty {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .fuer-dich-entdeckt-empty-text {
+  color: #aaa;
+}
+
+[data-theme="dark"] .fuer-dich-entdeckt-collage-cell {
+  background: #3d3d3d;
+}
