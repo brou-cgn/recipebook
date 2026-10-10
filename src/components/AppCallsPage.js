@@ -32,6 +32,9 @@ import {
   DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION,
 } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+import DeleteRowButton from './DeleteRowButton';
+import useSwipeToDelete from '../hooks/useSwipeToDelete';
+import useUndoableDelete from '../hooks/useUndoableDelete';
 import { enableRecipeSharing } from '../utils/recipeFirestore';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import NutritionModal from './NutritionModal';
@@ -58,6 +61,7 @@ import {
   getCuisineProposals,
   updateCuisineProposal,
   releaseCuisineProposal,
+  discardCuisineProposal,
 } from '../utils/cuisineProposalsFirestore';
 import {
   INGREDIENT_MATCH_CREATE_NEW_OPTION,
@@ -171,6 +175,54 @@ function CuisineTypeListItem({ label, onRemove, onRename }) {
   );
 }
 
+// One open cuisine proposal. Desktop: DeleteRowButton at the right edge;
+// mobile: left-swipe reveals the delete action (see CLAUDE.md, Löschaktionen).
+function CuisineProposalRow({ name, deleteIcon, onDiscard, children }) {
+  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete();
+
+  const handleSwipeDeleteClick = (e) => {
+    e.stopPropagation();
+    onDiscard();
+    reset();
+  };
+
+  return (
+    <div className={`cuisine-proposal-row${isDeleteVisible ? ' swipe-delete-active' : ''}${offset < 0 && !isDeleteVisible ? ' is-swiping' : ''}`}>
+      <div className="swipe-delete-background" aria-hidden={!isDeleteVisible && offset === 0}>
+        <button
+          type="button"
+          className="swipe-delete-action"
+          onClick={handleSwipeDeleteClick}
+          aria-label={`${name} entfernen`}
+          tabIndex={isDeleteVisible ? 0 : -1}
+        >
+          {isBase64Image(deleteIcon) ? (
+            <img src={deleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
+          ) : (
+            <span className="swipe-delete-icon-text">{deleteIcon}</span>
+          )}
+        </button>
+      </div>
+      <div
+        className="cuisine-proposal-row-content delete-row-hover-target"
+        style={{ transform: `translateX(${offset}px)`, transition: 'transform 0.15s ease' }}
+        onClick={isDeleteVisible ? () => reset() : undefined}
+        {...handlers}
+      >
+        {children}
+        <DeleteRowButton
+          className="cuisine-proposal-delete-btn"
+          itemName={name}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDiscard();
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 const APP_CALLS_TAB_ORDER = [
   KUECHENBETRIEB_TABS.APP,
   KUECHENBETRIEB_TABS.RECIPE,
@@ -230,6 +282,13 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [editingName, setEditingName] = useState('');
   const [editingGroup, setEditingGroup] = useState('');
   const [releasingId, setReleasingId] = useState(null);
+  const [proposalError, setProposalError] = useState('');
+  const {
+    banners: proposalDeleteBanners,
+    pendingKeys: pendingProposalDeleteKeys,
+    scheduleDelete: scheduleProposalDelete,
+    undoDelete: undoProposalDelete,
+  } = useUndoableDelete();
 
   // Cuisine list management state
   const [newCuisineTypeName, setNewCuisineTypeName] = useState('');
@@ -870,12 +929,42 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     }
   };
 
+  const describeProposalError = (err) => (
+    err?.code === 'permission-denied'
+      ? 'Keine Berechtigung (Firestore-Regeln).'
+      : (err?.message || 'Unbekannter Fehler.')
+  );
+
+  // Proposals with the same name (case-insensitive) are handled together, so a
+  // duplicate document can't keep a released/discarded type in the list.
+  const proposalNameKey = (name) => `cuisine-proposal:${(name || '').trim().toLowerCase()}`;
+  const getSameNameProposals = (proposal) =>
+    cuisineProposals.filter(p => proposalNameKey(p.name) === proposalNameKey(proposal.name));
+
   const handleRelease = async (proposal) => {
     setReleasingId(proposal.id);
+    setProposalError('');
+    const releasedIds = new Set();
     try {
-      // Mark proposal as released in Firestore
-      await releaseCuisineProposal(proposal.id);
+      // Mark proposal (and same-name duplicates) as released in Firestore
+      for (const p of getSameNameProposals(proposal)) {
+        await releaseCuisineProposal(p.id);
+        releasedIds.add(p.id);
+      }
+    } catch (err) {
+      console.error('Error releasing cuisine proposal:', err);
+      setProposalError(`„${proposal.name}" konnte nicht freigegeben werden: ${describeProposalError(err)}`);
+    }
+    // Remove released proposals from local state – independent of the list update below
+    if (releasedIds.size > 0) {
+      setCuisineProposals(prev => prev.filter(p => !releasedIds.has(p.id)));
+    }
+    if (!releasedIds.has(proposal.id)) {
+      setReleasingId(null);
+      return;
+    }
 
+    try {
       // The name originally added to cuisineTypes (may differ if the proposal was renamed)
       const originalName = proposal.originalName || proposal.name;
       const wasRenamed = originalName.toLowerCase() !== proposal.name.toLowerCase();
@@ -902,10 +991,11 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       if (proposal.groupName) {
         updatedGroups = updatedGroups.map(g => {
           if (g.name !== proposal.groupName) return g;
+          const children = g.children || [];
           // Replace originalName with new name (or just add if not present)
           const filteredChildren = wasRenamed
-            ? g.children.filter(c => c.toLowerCase() !== originalName.toLowerCase())
-            : g.children;
+            ? children.filter(c => c.toLowerCase() !== originalName.toLowerCase())
+            : children;
           return !filteredChildren.some(c => c.toLowerCase() === proposal.name.toLowerCase())
             ? { ...g, children: [...filteredChildren, proposal.name] }
             : { ...g, children: filteredChildren };
@@ -914,7 +1004,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         // Update originalName → new name inside any group children
         updatedGroups = updatedGroups.map(g => ({
           ...g,
-          children: g.children.map(c =>
+          children: (g.children || []).map(c =>
             c.toLowerCase() === originalName.toLowerCase() ? proposal.name : c
           ),
         }));
@@ -922,6 +1012,8 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
 
       await saveCustomLists({ cuisineTypes: updatedTypes, cuisineGroups: updatedGroups });
       clearSettingsCache();
+      setCuisineTypes(updatedTypes);
+      setCuisineGroups(updatedGroups);
 
       // Propagate rename to all recipes that reference the original name
       if (wasRenamed && onUpdateRecipe) {
@@ -935,15 +1027,64 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
           await onUpdateRecipe(recipe.id, { kulinarik: updatedKulinarik });
         }
       }
-
-      // Remove released proposal from local state
-      setCuisineProposals(prev => prev.filter(p => p.id !== proposal.id));
     } catch (err) {
-      console.error('Error releasing cuisine proposal:', err);
+      console.error('Error updating cuisine lists after release:', err);
+      setProposalError(`„${proposal.name}" wurde freigegeben, aber die Kulinarik-Liste konnte nicht aktualisiert werden: ${describeProposalError(err)}`);
     } finally {
       setReleasingId(null);
     }
   };
+
+  // Verwerfen: the row disappears at once; the proposal document is deleted and
+  // the type removed from the cuisine lists (RecipeForm added it there when the
+  // proposal was created) only after the 6 s undo window.
+  const handleDiscard = (proposal) => {
+    setProposalError('');
+    if (editingProposalId === proposal.id) handleCancelEdit();
+    scheduleProposalDelete({
+      key: proposalNameKey(proposal.name),
+      message: `„${proposal.name}" verworfen.`,
+      onConfirm: async () => {
+        const discarded = getSameNameProposals(proposal);
+        const discardedIds = new Set(discarded.map(p => p.id));
+        setCuisineProposals(prev => prev.filter(p => !discardedIds.has(p.id)));
+        try {
+          for (const p of discarded) {
+            await discardCuisineProposal(p.id);
+          }
+        } catch (err) {
+          console.error('Error discarding cuisine proposal:', err);
+          setProposalError(`„${proposal.name}" konnte nicht verworfen werden: ${describeProposalError(err)}`);
+          getCuisineProposals().then(setCuisineProposals).catch(() => {});
+          return;
+        }
+        try {
+          const names = new Set(
+            discarded.flatMap(p => [p.name, p.originalName]).filter(Boolean).map(n => n.toLowerCase())
+          );
+          const lists = await getCustomLists();
+          const updatedTypes = lists.cuisineTypes.filter(t => !names.has(t.toLowerCase()));
+          const updatedGroups = (lists.cuisineGroups || []).map(g => ({
+            ...g,
+            children: (g.children || []).filter(c => !names.has(c.toLowerCase())),
+          }));
+          await saveCustomLists({ cuisineTypes: updatedTypes, cuisineGroups: updatedGroups });
+          clearSettingsCache();
+          setCuisineTypes(updatedTypes);
+          setCuisineGroups(updatedGroups);
+        } catch (err) {
+          console.error('Error updating cuisine lists after discard:', err);
+          setProposalError(`„${proposal.name}" wurde verworfen, aber die Kulinarik-Liste konnte nicht aktualisiert werden: ${describeProposalError(err)}`);
+        }
+      },
+      onUndo: () => {},
+    });
+  };
+
+  const visibleCuisineProposals = cuisineProposals.filter(
+    p => !pendingProposalDeleteKeys.has(proposalNameKey(p.name))
+  );
+  const proposalSwipeDeleteIcon = getEffectiveIcon(allButtonIcons, 'swipeDelete', isDarkMode) || '🗑';
 
   const renderSourceBadge = (source) => {
     if (source === 'recipe_form') {
@@ -1815,107 +1956,107 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
             <div className="settings-section">
               <h3>Offene Vorschläge</h3>
               <p className="app-calls-info-text">
-                Hier können neue Kulinariktypen bestehenden Kulinarikgruppen zugeordnet, bearbeitet und freigegeben werden.
-                Freigegebene Kulinariktypen werden in der Hauptliste ergänzt und erscheinen nicht mehr hier.
+                Hier können neue Kulinariktypen bestehenden Kulinarikgruppen zugeordnet, bearbeitet, freigegeben oder verworfen werden.
+                Freigegebene Kulinariktypen werden in der Hauptliste ergänzt und erscheinen nicht mehr hier;
+                verworfene werden auch aus der Hauptliste entfernt.
               </p>
-              {cuisineProposals.length === 0 ? (
+              {proposalError && (
+                <div className="cuisine-proposal-error" role="alert">{proposalError}</div>
+              )}
+              {visibleCuisineProposals.length === 0 ? (
                 <div className="app-calls-empty">Keine offenen Kulinariktypen vorhanden.</div>
               ) : (
-                <div className="app-calls-table-container">
-                  <table className="app-calls-table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Gruppe</th>
-                        <th>Quelle</th>
-                        <th>Aktionen</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {cuisineProposals.map(proposal => (
-                        <tr key={proposal.id}>
-                          {editingProposalId === proposal.id ? (
-                            <>
-                              <td>
-                                <input
-                                  type="text"
-                                  className="cuisine-proposal-edit-input"
-                                  value={editingName}
-                                  onChange={(e) => setEditingName(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleSaveEdit(proposal.id);
-                                    if (e.key === 'Escape') handleCancelEdit();
-                                  }}
-                                  aria-label="Kulinariktyp Name bearbeiten"
-                                  autoFocus
-                                />
-                              </td>
-                              <td>
-                                <select
-                                  className="cuisine-proposal-group-select"
-                                  value={editingGroup}
-                                  onChange={(e) => setEditingGroup(e.target.value)}
-                                  aria-label="Kulinarikgruppe bearbeiten"
-                                >
-                                  <option value="">Keine Gruppe</option>
-                                  {cuisineGroups.map(g => (
-                                    <option key={g.name} value={g.name}>{g.name}</option>
-                                  ))}
-                                </select>
-                              </td>
-                              <td>
-                                {renderSourceBadge(proposal.source)}
-                              </td>
-                              <td className="cuisine-proposal-actions">
-                                <button
-                                  className="app-calls-share-btn"
-                                  onClick={() => handleSaveEdit(proposal.id)}
-                                  disabled={!editingName.trim()}
-                                >
-                                  Speichern
-                                </button>
-                                <button
-                                  className="cuisine-proposal-cancel-btn"
-                                  onClick={handleCancelEdit}
-                                >
-                                  Abbrechen
-                                </button>
-                              </td>
-                            </>
-                          ) : (
-                            <>
-                              <td>{proposal.name}</td>
-                              <td>{proposal.groupName || <span className="cuisine-proposal-no-group">–</span>}</td>
-                              <td>
-                                {renderSourceBadge(proposal.source)}
-                              </td>
-                              <td className="cuisine-proposal-actions">
-                                <button
-                                  className="cuisine-proposal-edit-btn"
-                                  onClick={() => handleStartEdit(proposal)}
-                                  title="Kulinariktyp bearbeiten"
-                                >
-                                  Bearbeiten
-                                </button>
-                                <button
-                                  className="cuisine-proposal-release-btn"
-                                  onClick={() => handleRelease(proposal)}
-                                  disabled={releasingId === proposal.id}
-                                  title="Kulinariktyp freigeben"
-                                >
-                                  {releasingId === proposal.id ? 'Wird freigegeben…' : '✓ Freigeben'}
-                                </button>
-                              </td>
-                            </>
-                          )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="cuisine-proposal-list">
+                  {visibleCuisineProposals.map(proposal => (
+                    <CuisineProposalRow
+                      key={proposal.id}
+                      name={proposal.name}
+                      deleteIcon={proposalSwipeDeleteIcon}
+                      onDiscard={() => handleDiscard(proposal)}
+                    >
+                      {editingProposalId === proposal.id ? (
+                        <div className="cuisine-proposal-main">
+                          <input
+                            type="text"
+                            className="cuisine-proposal-edit-input"
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveEdit(proposal.id);
+                              if (e.key === 'Escape') handleCancelEdit();
+                            }}
+                            aria-label="Kulinariktyp Name bearbeiten"
+                            autoFocus
+                          />
+                          <select
+                            className="cuisine-proposal-group-select"
+                            value={editingGroup}
+                            onChange={(e) => setEditingGroup(e.target.value)}
+                            aria-label="Kulinarikgruppe bearbeiten"
+                          >
+                            <option value="">Keine Gruppe</option>
+                            {cuisineGroups.map(g => (
+                              <option key={g.name} value={g.name}>{g.name}</option>
+                            ))}
+                          </select>
+                          <div className="cuisine-proposal-actions">
+                            <button
+                              className="app-calls-share-btn"
+                              onClick={() => handleSaveEdit(proposal.id)}
+                              disabled={!editingName.trim()}
+                            >
+                              Speichern
+                            </button>
+                            <button
+                              className="cuisine-proposal-cancel-btn"
+                              onClick={handleCancelEdit}
+                            >
+                              Abbrechen
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="cuisine-proposal-main">
+                          <div className="cuisine-proposal-info">
+                            <span className="cuisine-proposal-name">{proposal.name}</span>
+                            <span className="cuisine-proposal-group">
+                              {proposal.groupName || <span className="cuisine-proposal-no-group">Keine Gruppe</span>}
+                            </span>
+                            {renderSourceBadge(proposal.source)}
+                          </div>
+                          <div className="cuisine-proposal-actions">
+                            <button
+                              className="cuisine-proposal-edit-btn"
+                              onClick={() => handleStartEdit(proposal)}
+                              title="Kulinariktyp bearbeiten"
+                            >
+                              Bearbeiten
+                            </button>
+                            <button
+                              className="cuisine-proposal-release-btn"
+                              onClick={() => handleRelease(proposal)}
+                              disabled={releasingId === proposal.id}
+                              title="Kulinariktyp freigeben"
+                            >
+                              {releasingId === proposal.id ? 'Wird freigegeben…' : '✓ Freigeben'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </CuisineProposalRow>
+                  ))}
                 </div>
               )}
+              {proposalDeleteBanners.map((banner) => (
+                <div key={banner.id} className="cuisine-proposal-undo" role="status">
+                  <span>{banner.message}</span>
+                  <button type="button" className="cuisine-proposal-undo-btn" onClick={() => undoProposalDelete(banner.id)}>
+                    Rückgängig
+                  </button>
+                </div>
+              ))}
               <div className="app-calls-stats">
-                Gesamt: <strong>{cuisineProposals.length}</strong> {cuisineProposals.length === 1 ? 'offener Kulinariktyp' : 'offene Kulinariktypen'}
+                Gesamt: <strong>{visibleCuisineProposals.length}</strong> {visibleCuisineProposals.length === 1 ? 'offener Kulinariktyp' : 'offene Kulinariktypen'}
               </div>
             </div>
 

@@ -456,12 +456,13 @@ service cloud.firestore {
                     && request.resource.data.createdBy == request.auth.uid
                     && request.resource.data.released == false;
 
-      // Users can edit their own proposals; admins can edit any
+      // Users can edit their own proposals; moderators and admins can edit,
+      // release and discard (delete) any. Restricting this to role 'admin'
+      // locked out moderators who reach the Küchenbetrieb page through the
+      // configurable appCalls permission.
       allow update: if (isEditOrAdmin() && resource.data.createdBy == request.auth.uid)
-                    || isAdmin();
-
-      // Only admins can delete proposals
-      allow delete: if isAdmin();
+                    || isModeratorOrAdmin();
+      allow delete: if isModeratorOrAdmin();
     }
 
   }

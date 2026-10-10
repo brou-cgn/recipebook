@@ -1,6 +1,6 @@
 /**
  * Cuisine Proposals Firestore Utilities
- * Handles creation, editing, and release of user-proposed cuisine types.
+ * Handles creation, editing, release and discarding of user-proposed cuisine types.
  *
  * Data model: cuisineProposals/{proposalId}
  *   - name:         string  – proposed cuisine type name (may be edited before release)
@@ -18,6 +18,7 @@ import {
   addDoc,
   getDocs,
   updateDoc,
+  deleteDoc,
   doc,
   query,
   where,
@@ -87,4 +88,15 @@ export const updateCuisineProposal = async (id, updates) => {
 export const releaseCuisineProposal = async (id) => {
   const ref = doc(db, 'cuisineProposals', id);
   await updateDoc(ref, { released: true });
+};
+
+/**
+ * Discard (verwerfen) a cuisine proposal by deleting its document.
+ * The caller is responsible for also removing the name from the main
+ * cuisineTypes list (RecipeForm adds it there when the proposal is created).
+ * @param {string} id - Document ID
+ * @returns {Promise<void>}
+ */
+export const discardCuisineProposal = async (id) => {
+  await deleteDoc(doc(db, 'cuisineProposals', id));
 };

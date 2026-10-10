@@ -19,6 +19,8 @@ Die Touch-Gesten-Logik ist zentralisiert, nicht mehr pro Liste dupliziert:
   die Zeile verschwindet sofort aus der Ansicht, die eigentliche Mutation
   (Firestore-Delete bzw. Entfernen aus dem lokalen Array) läuft erst nach
   Ablauf des Undo-Fensters — oder wird bei Klick auf „Rückgängig" verworfen.
+  Wird die Ansicht vorher verlassen (Unmount oder `pagehide`), läuft die
+  Mutation sofort; `onConfirm` muss also auch nach dem Unmount sicher sein.
 
 Neue Lösch-UIs (Desktop wie Mobile) sollen diese beiden Hooks wiederverwenden
 statt eigene Swipe-/Undo-Logik zu implementieren.

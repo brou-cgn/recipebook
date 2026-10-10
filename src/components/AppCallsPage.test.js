@@ -126,6 +126,7 @@ jest.mock('../utils/cuisineProposalsFirestore', () => ({
   addCuisineProposal: jest.fn(() => Promise.resolve('new-id')),
   updateCuisineProposal: jest.fn(() => Promise.resolve()),
   releaseCuisineProposal: jest.fn(() => Promise.resolve()),
+  discardCuisineProposal: jest.fn(() => Promise.resolve()),
 }));
 
 const adminUser = {
@@ -382,6 +383,136 @@ describe('AppCallsPage – Kulinariktypen release with rename', () => {
         cuisineTypes: expect.arrayContaining(['Spanisch', 'Mexikanisch']),
       })
     ));
+  });
+});
+
+describe('AppCallsPage – Offene Vorschläge: Fehler, Duplikate, Verwerfen', () => {
+  const renderKulinarikTab = async () => {
+    render(
+      <AppCallsPage onBack={jest.fn()} currentUser={adminUser} recipes={[]} onUpdateRecipe={jest.fn()} />
+    );
+    fireEvent.click(await screen.findByText('Kulinariktypen'));
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useRealTimers();
+    mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
+    const { getCustomLists, saveCustomLists, getButtonIcons, getInspirationListSettings } = require('../utils/customLists');
+    getButtonIcons.mockResolvedValue({});
+    getCustomLists.mockResolvedValue({
+      cuisineTypes: ['Spanisch', 'Deutsch'],
+      cuisineGroups: [{ name: 'Europäisch', children: ['Spanisch', 'Deutsch'] }],
+    });
+    saveCustomLists.mockResolvedValue();
+    getInspirationListSettings.mockResolvedValue({
+      inspirationListName: 'Inspirationen',
+      inspirationListDescription: 'Interaktive Liste',
+      inspirationTargetListName: 'Für jeden Tag',
+      inspirationTargetListDescription: 'Klassische Liste',
+    });
+    const { getAppCalls } = require('../utils/appCallsFirestore');
+    getAppCalls.mockResolvedValue([]);
+    const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecipeCalls.mockResolvedValue([]);
+    const { getCuisineProposals, releaseCuisineProposal, discardCuisineProposal } = require('../utils/cuisineProposalsFirestore');
+    getCuisineProposals.mockResolvedValue([
+      { id: 'p1', name: 'Deutsch', originalName: 'Deutsch', groupName: null, released: false, source: 'recipe_form' },
+    ]);
+    releaseCuisineProposal.mockResolvedValue();
+    discardCuisineProposal.mockResolvedValue();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  test('a failed release shows an error and keeps the proposal', async () => {
+    const { releaseCuisineProposal } = require('../utils/cuisineProposalsFirestore');
+    const { saveCustomLists } = require('../utils/customLists');
+    releaseCuisineProposal.mockRejectedValueOnce(Object.assign(new Error('denied'), { code: 'permission-denied' }));
+
+    await renderKulinarikTab();
+    fireEvent.click(await screen.findByTitle('Kulinariktyp freigeben'));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('„Deutsch" konnte nicht freigegeben werden: Keine Berechtigung');
+    expect(screen.getByText('Deutsch', { selector: '.cuisine-proposal-name' })).toBeInTheDocument();
+    expect(saveCustomLists).not.toHaveBeenCalled();
+  });
+
+  test('releasing a proposal also releases same-name duplicates and removes them from the list', async () => {
+    const { getCuisineProposals, releaseCuisineProposal } = require('../utils/cuisineProposalsFirestore');
+    getCuisineProposals.mockResolvedValue([
+      { id: 'p1', name: 'Deutsch', originalName: 'Deutsch', groupName: null, released: false, source: 'recipe_form' },
+      { id: 'p2', name: 'deutsch', originalName: 'deutsch', groupName: null, released: false, source: 'recipe_form' },
+    ]);
+
+    await renderKulinarikTab();
+    await waitFor(() => expect(screen.getAllByTitle('Kulinariktyp freigeben')).toHaveLength(2));
+    fireEvent.click(screen.getAllByTitle('Kulinariktyp freigeben')[0]);
+
+    await waitFor(() => expect(screen.getByText('Keine offenen Kulinariktypen vorhanden.')).toBeInTheDocument());
+    expect(releaseCuisineProposal).toHaveBeenCalledWith('p1');
+    expect(releaseCuisineProposal).toHaveBeenCalledWith('p2');
+  });
+
+  test('discarding hides the row at once and deletes it after the undo window', async () => {
+    const { discardCuisineProposal } = require('../utils/cuisineProposalsFirestore');
+    const { saveCustomLists } = require('../utils/customLists');
+
+    await renderKulinarikTab();
+    const deleteButton = await screen.findByRole('button', { name: 'Deutsch entfernen' });
+    jest.useFakeTimers();
+    fireEvent.click(deleteButton);
+
+    expect(screen.queryByText('Deutsch', { selector: '.cuisine-proposal-name' })).not.toBeInTheDocument();
+    expect(screen.getByText('„Deutsch" verworfen.')).toBeInTheDocument();
+    expect(discardCuisineProposal).not.toHaveBeenCalled();
+
+    jest.advanceTimersByTime(6000);
+    jest.useRealTimers();
+
+    await waitFor(() => expect(discardCuisineProposal).toHaveBeenCalledWith('p1'));
+    await waitFor(() => expect(saveCustomLists).toHaveBeenCalledWith({
+      cuisineTypes: ['Spanisch'],
+      cuisineGroups: [{ name: 'Europäisch', children: ['Spanisch'] }],
+    }));
+  });
+
+  test('mobile: left-swipe reveals the delete action and discards after the undo window', async () => {
+    const { discardCuisineProposal } = require('../utils/cuisineProposalsFirestore');
+
+    await renderKulinarikTab();
+    const name = await screen.findByText('Deutsch', { selector: '.cuisine-proposal-name' });
+    const content = name.closest('.cuisine-proposal-row-content');
+    fireEvent.touchStart(content, { touches: [{ clientX: 300, clientY: 10 }] });
+    fireEvent.touchMove(content, { touches: [{ clientX: 200, clientY: 12 }] });
+    fireEvent.touchEnd(content);
+
+    const swipeAction = document.querySelector('.cuisine-proposal-row .swipe-delete-action');
+    expect(swipeAction.closest('.cuisine-proposal-row')).toHaveClass('swipe-delete-active');
+    jest.useFakeTimers();
+    fireEvent.click(swipeAction);
+    expect(screen.queryByText('Deutsch', { selector: '.cuisine-proposal-name' })).not.toBeInTheDocument();
+    jest.advanceTimersByTime(6000);
+    jest.useRealTimers();
+
+    await waitFor(() => expect(discardCuisineProposal).toHaveBeenCalledWith('p1'));
+  });
+
+  test('Rückgängig restores a discarded proposal without deleting it', async () => {
+    const { discardCuisineProposal } = require('../utils/cuisineProposalsFirestore');
+
+    await renderKulinarikTab();
+    const deleteButton = await screen.findByRole('button', { name: 'Deutsch entfernen' });
+    jest.useFakeTimers();
+    fireEvent.click(deleteButton);
+    fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+    jest.advanceTimersByTime(6000);
+    jest.useRealTimers();
+
+    expect(screen.getByText('Deutsch', { selector: '.cuisine-proposal-name' })).toBeInTheDocument();
+    expect(discardCuisineProposal).not.toHaveBeenCalled();
   });
 });
 
