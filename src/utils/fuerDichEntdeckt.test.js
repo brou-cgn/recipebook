@@ -4,6 +4,7 @@ import {
   findFuerDichEntdecktList,
   getFuerDichEntdecktListId,
   isFuerDichEntdecktList,
+  isThemeInPeriod,
   planFuerDichEntdecktSync,
   syncFuerDichEntdecktList,
 } from './fuerDichEntdeckt';
@@ -98,5 +99,24 @@ describe('fuerDichEntdeckt', () => {
     await syncFuerDichEntdecktList([ownList], { ...user, defaultEverydayClassicsListId: 'neu' });
     expect(updateGroup).toHaveBeenCalledWith('fuerDichEntdeckt_u1', { targetListId: 'neu' });
     expect(setDoc).not.toHaveBeenCalled();
+  });
+});
+
+describe('isThemeInPeriod', () => {
+  const d = (iso) => new Date(`${iso}T12:00:00`);
+  it('zeigt ohne Zeitraum immer an', () => {
+    expect(isThemeInPeriod({}, d('2026-07-01'))).toBe(true);
+    expect(isThemeInPeriod(null, d('2026-07-01'))).toBe(true);
+  });
+  it('begrenzt auf den Zeitraum, auch über den Jahreswechsel', () => {
+    const l = { themePeriodStart: '09-01', themePeriodEnd: '11-30' };
+    expect(isThemeInPeriod(l, d('2026-10-11'))).toBe(true);
+    expect(isThemeInPeriod(l, d('2026-12-01'))).toBe(false);
+    const wrap = { themePeriodStart: '12-15', themePeriodEnd: '01-06' };
+    expect(isThemeInPeriod(wrap, d('2027-01-02'))).toBe(true);
+    expect(isThemeInPeriod(wrap, d('2026-07-01'))).toBe(false);
+  });
+  it('blendet unvollständige Zeiträume aus', () => {
+    expect(isThemeInPeriod({ themePeriodStart: '09-01', themePeriodEnd: '' }, d('2026-10-11'))).toBe(false);
   });
 });

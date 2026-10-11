@@ -7,7 +7,8 @@
  *   rubrik       -> kleine Rubrik über dem Titel (themeLabel), z. B. "Saison"
  *   beschreibung -> Thementitel auf der Kachel (Listenbeschreibung)
  *   recipeIds    -> relevante Rezepte, aus denen gezogen wird
- *   periodStart / periodEnd -> jährlicher Zeitraum als 'MM-DD' (beide
+ *   periodStart / periodEnd -> jährlicher Zeitraum, in dem das Thema den
+ *     Nutzern angezeigt wird (nicht: wann Rezepte zugewiesen werden), 'MM-DD' (beide
  *     inklusive; Start > Ende läuft über den Jahreswechsel; beide leer =
  *     ganzjährig)
  *   isActive     -> false nimmt das Thema aus der Rotation

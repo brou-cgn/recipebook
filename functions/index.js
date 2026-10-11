@@ -10493,8 +10493,9 @@ exports.refreshDiscoverTopicRuleMatches = onSchedule(
  * Weekly rotation of the personal "Für dich entdeckt" lists: every list whose
  * last rotation is a week old (or that never had one, or whose topic has run
  * out) loses all its recipes and gets up to 5 from a topic drawn from the
- * admin-maintained `discoverTopics` that is relevant today (period). Without
- * a relevant topic the lists stay as they are. Runs daily so that new lists
+ * admin-maintained `discoverTopics` (the topic's period is independent of
+ * this; it is copied to the list for the client, which shows the tile only
+ * inside it). Without a usable topic the lists stay as they are. Runs daily so that new lists
  * and a missed run are caught up within a day; `rotatedAt` keeps it to once
  * a week.
  */
@@ -10517,7 +10518,7 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
 
       const activeTopics = getActiveTopics(topics, recipes);
       if (activeTopics.length === 0) {
-        console.log('rotateFuerDichEntdecktLists: no relevant topic, lists unchanged');
+        console.log('rotateFuerDichEntdecktLists: no usable topic (inactive or without visible recipes), lists unchanged');
         return;
       }
 
@@ -10537,6 +10538,8 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
           description: topic.beschreibung || '',
           themeLabel: topic.rubrik || '',
           themeId: topic.id,
+          themePeriodStart: topic.periodStart || '',
+          themePeriodEnd: topic.periodEnd || '',
           rotatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
       }
