@@ -13,6 +13,7 @@ import { getAllCookDates } from '../utils/recipeCookDates';
 import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { sortRecipeGroups } from './RecipeList';
 import ShoppingListModal from './ShoppingListModal';
+import { isFuerDichEntdecktList } from '../utils/fuerDichEntdeckt';
 import GroupEditDialog from './GroupEditDialog';
 import RecipeCard from './RecipeCard';
 import SortCarousel from './SortCarousel';
@@ -300,6 +301,8 @@ function GroupDetail({
   if (!group) return null;
 
   const isOwner = group.ownerId === currentUser?.id;
+  // Systemliste "Für dich entdeckt": weder manuell befüllbar noch konfigurierbar
+  const isSystemList = isFuerDichEntdecktList(group);
   const isPublic = group.type === 'public';
   const isMember = (group.memberIds || []).includes(currentUser?.id);
 
@@ -517,7 +520,7 @@ function GroupDetail({
               )}
             </button>
           )}
-          {!isPublic && (
+          {!isPublic && !isSystemList && (
             <button
               className="list-settings-trigger-button"
               onClick={() => handleTabChange(activeTab === TAB_SETTINGS ? TAB_RECIPES : TAB_SETTINGS)}
@@ -566,7 +569,7 @@ function GroupDetail({
           {!isPublic && currentUser?.sortCarousel && (
             <SortCarousel activeSort={activeSort} onSortChange={setActiveSort} />
           )}
-          {onAddRecipe && (isOwner || isMember) && !showPortionSelector && !showShoppingListModal && (
+          {onAddRecipe && !isSystemList && (isOwner || isMember) && !showPortionSelector && !showShoppingListModal && (
             <button
               className={`add-icon-button ${addPressed ? 'pressed' : ''}`}
               onClick={() => onAddRecipe(group.id)}
@@ -617,7 +620,7 @@ function GroupDetail({
         </div>
       )}
 
-      {!isPublic && activeTab === TAB_SETTINGS && (
+      {!isPublic && !isSystemList && activeTab === TAB_SETTINGS && (
         <>
           <div className="group-detail-section group-info-section">
             <h3>Listeneinstellungen</h3>
@@ -797,7 +800,7 @@ function GroupDetail({
         </div>
       )}
 
-      {isOwner && !isPublic && activeTab === TAB_SETTINGS && !showPortionSelector && !showShoppingListModal && (
+      {isOwner && !isPublic && !isSystemList && activeTab === TAB_SETTINGS && !showPortionSelector && !showShoppingListModal && (
         <>
           <button
             className={`delete-fab-button at-publish-position${deleteFabPressed ? ' pressed' : ''}`}
