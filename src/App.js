@@ -76,7 +76,7 @@ import {
   addRecipeToGroup as addRecipeToGroupInFirestore,
   removeRecipeFromGroup as removeRecipeFromGroupInFirestore
 } from './utils/groupFirestore';
-import { filterFuerDichEntdecktGroups, planFuerDichEntdecktSync, syncFuerDichEntdecktList } from './utils/fuerDichEntdeckt';
+import { filterFuerDichEntdecktGroups, isFuerDichEntdecktList, planFuerDichEntdecktSync, syncFuerDichEntdecktList } from './utils/fuerDichEntdeckt';
 import {
   subscribeToEvents,
   subscribeToAllEvents,
@@ -599,6 +599,13 @@ function App() {
   const privateListsForUser = useMemo(() => groups.filter(
     g => g.type === 'private' && (g.ownerId === currentUser?.id || (Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id)))
   ), [groups, currentUser?.id]);
+
+  // Listen, in die der Anwender manuell Rezepte legen darf (Rechtsswipe, Rezeptformular).
+  // "Für dich entdeckt" wird ausschließlich systemseitig befüllt.
+  const manuallyAssignableLists = useMemo(
+    () => privateListsForUser.filter((g) => !isFuerDichEntdecktList(g)),
+    [privateListsForUser]
+  );
 
   // Name of the currently selected private list filter (if any).
   // Falls back to the single selectedPrivateList from the search overlay when no group filter is set.
@@ -2570,7 +2577,7 @@ function App() {
           showRecipes={showRecipes}
           showTutorials={showTutorials}
           onShowFavoritesOnlyChange={setShowFavoritesOnly}
-          privateLists={privateListsForUser}
+          privateLists={manuallyAssignableLists}
           onAddToPrivateList={handleAddRecipeToPrivateList}
           onRemoveFromPrivateList={handleRemoveRecipeFromPrivateList}
           publicGroupId={publicGroupId}
@@ -2658,7 +2665,7 @@ function App() {
           activeGroupId={activeGroupId}
           groups={groups}
           publicGroupId={publicGroupId}
-          privateLists={groups.filter(g => g.type === 'private' && (g.ownerId === currentUser?.id || (Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id))))}
+          privateLists={manuallyAssignableLists}
           initialWebImportUrl={webimportDeeplink}
           initialWebImportAuthorId={webimportAuthorId}
           onSelectTempRecipe={handleReviewTempRecipe}
