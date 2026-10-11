@@ -1,5 +1,6 @@
 import {
   isValidMonthDay, toMonthDay, formatMonthDay, formatPeriod, validateTopic, sortTopics,
+  normalizeRecipeRule, formatRecipeRule,
 } from './discoverTopics';
 
 jest.mock('../firebase', () => ({ db: {} }));
@@ -45,5 +46,14 @@ describe('discoverTopics', () => {
       { id: 'c', rubrik: 'Frühling', periodStart: '03-01' },
     ]);
     expect(sorted.map((t) => t.id)).toEqual(['c', 'b', 'a']);
+  });
+
+  test('dateScope defaults to all and is shown only with a date condition', () => {
+    expect(normalizeRecipeRule({}).dateScope).toBe('all');
+    expect(normalizeRecipeRule({ dateScope: 'own' }).dateScope).toBe('own');
+    expect(normalizeRecipeRule({ dateScope: 'x' }).dateScope).toBe('all');
+    expect(formatRecipeRule({ lastCooked: { minDays: 365, maxDays: 365 }, dateScope: 'own' }))
+      .toBe('gekocht vor genau 365 Tagen (nur eigene)');
+    expect(formatRecipeRule({ cuisines: { include: ['Thai'] }, dateScope: 'own' })).toBe('Küche: Thai');
   });
 });

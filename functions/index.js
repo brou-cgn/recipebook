@@ -17,7 +17,7 @@ const cheerio = require('cheerio');
 const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 const {requireShortcutPin} = require('./webImportPin');
 const {evaluateLowCarbTag} = require('./lowCarb');
-const {isRotationDue, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleMatches, mergeRuleMatches, explainTopicExclusion, isVisibleToUser, pickTopic, pickRecipeIds, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
+const {isRotationDue, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleResult, recipeAvailableToUser, mergeRuleMatches, explainTopicExclusion, isVisibleToUser, pickTopic, pickRecipeIds, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
 const {normalizeCuisines, suggestNewCuisines} = require('./cuisineNormalization');
 
 // Initialize Firebase Admin
@@ -10436,6 +10436,7 @@ const applyTopicRules = async (db, topicDocs, recipes) => {
   const updates = new Map();
   if (topicDocs.length === 0) return updates;
   const lastCookedByRecipe = new Map();
+  const lastCookedByUser = new Map(); // recipeId -> userId -> latest cook date (ms)
   const needsCookDates = topicDocs.some((d) => {
     const {lastCooked} = normalizeRecipeRule(d.data().recipeRule);
     return lastCooked.minDays !== null || lastCooked.maxDays !== null;
@@ -10443,10 +10444,14 @@ const applyTopicRules = async (db, topicDocs, recipes) => {
   if (needsCookDates) {
     const cookSnap = await db.collection('cookDates').get();
     cookSnap.docs.forEach((d) => {
-      const {recipeId, date} = d.data();
+      const {recipeId, userId, date} = d.data();
       const ms = date && typeof date.toMillis === 'function' ? date.toMillis() : null;
-      if (recipeId && ms !== null && ms > (lastCookedByRecipe.get(recipeId) ?? -Infinity)) {
-        lastCookedByRecipe.set(recipeId, ms);
+      if (!recipeId || ms === null) return;
+      if (ms > (lastCookedByRecipe.get(recipeId) ?? -Infinity)) lastCookedByRecipe.set(recipeId, ms);
+      if (userId) {
+        const perUser = lastCookedByUser.get(recipeId) || new Map();
+        if (ms > (perUser.get(userId) ?? -Infinity)) perUser.set(userId, ms);
+        lastCookedByUser.set(recipeId, perUser);
       }
     });
   }
@@ -10454,18 +10459,25 @@ const applyTopicRules = async (db, topicDocs, recipes) => {
   for (const d of topicDocs) {
     const topic = d.data();
     const ruled = hasRecipeRule(topic.recipeRule);
-    const matches = ruled ? computeRuleMatches(topic.recipeRule, recipes, lastCookedByRecipe, now) : [];
+    const {matches, owners} = ruled ?
+      computeRuleResult(topic.recipeRule, recipes, lastCookedByRecipe, now, lastCookedByUser) :
+      {matches: [], owners: {}};
     const merged = mergeRuleMatches(topic, matches);
+    // Scope 'own': who qualifies for each rule-added recipe (hand-picked ones are for everybody).
+    const autoRecipeOwners = Object.fromEntries(
+        merged.autoRecipeIds.filter((id) => owners[id]).map((id) => [id, owners[id]]));
     const update = {
       recipeIds: merged.recipeIds,
       autoRecipeIds: merged.autoRecipeIds,
+      autoRecipeOwners: Object.keys(autoRecipeOwners).length > 0 ?
+        autoRecipeOwners : admin.firestore.FieldValue.delete(),
       ruleMatchedFor: ruled ? ruleKey(topic.recipeRule) : admin.firestore.FieldValue.delete(),
       ruleMatchedAt: ruled ? admin.firestore.FieldValue.serverTimestamp() : admin.firestore.FieldValue.delete(),
       // legacy field of an earlier version (matches were stored separately)
       ruleRecipeIds: admin.firestore.FieldValue.delete(),
     };
     await d.ref.update(update);
-    updates.set(d.id, {...update, matchCount: matches.length, added: merged.autoRecipeIds.length});
+    updates.set(d.id, {...update, ownersMap: autoRecipeOwners, matchCount: matches.length, added: merged.autoRecipeIds.length});
   }
   return updates;
 };
@@ -10546,6 +10558,7 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
           const topic = topics.find((t) => t.id === id);
           topic.recipeIds = u.recipeIds;
           topic.autoRecipeIds = u.autoRecipeIds;
+          topic.autoRecipeOwners = u.ownersMap;
         });
       }
 
@@ -10579,7 +10592,8 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
             .map((t) => ({
               ...t,
               usableRecipeIds: t.usableRecipeIds.filter((id) =>
-                isVisibleToUser(recipesById.get(id), user, groupsById)),
+                isVisibleToUser(recipesById.get(id), user, groupsById) &&
+                recipeAvailableToUser(t, id, user.id)),
             }))
             .filter((t) => t.usableRecipeIds.length > 0);
         const topic = pickTopic(candidates, list.themeId || null);

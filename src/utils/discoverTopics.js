@@ -18,6 +18,9 @@
  *     created / lastCooked: { minDays, maxDays } = Alter in Tagen (inklusive;
  *       gleiche Werte = "genau vor n Tagen"; null = offen)
  *     dateMode: 'all' | 'any' – gelten beide Datumsbedingungen oder eine
+ *     dateScope: 'all' | 'own' – Datumsbedingungen für alle Aktionen oder nur
+ *       die eigenen: alle Treffer bleiben im Thema, ausgespielt werden sie aber
+ *       nur an Nutzer, die das Rezept erstellt bzw. gekocht haben
  *     Die Auswertung passiert im Rotationsjob (functions/).
  */
 
@@ -88,6 +91,7 @@ export const emptyRecipeRule = () => ({
   created: { minDays: null, maxDays: null },
   lastCooked: { minDays: null, maxDays: null },
   dateMode: 'all',
+  dateScope: 'all',
 });
 
 /** Bereinigte Kopie der Regel (getrimmt, ohne Duplikate, Tage als Zahl oder null). */
@@ -98,6 +102,7 @@ export const normalizeRecipeRule = (rule) => ({
   created: cleanRange(rule?.created),
   lastCooked: cleanRange(rule?.lastCooked),
   dateMode: rule?.dateMode === 'any' ? 'any' : 'all',
+  dateScope: rule?.dateScope === 'own' ? 'own' : 'all',
 });
 
 const filterActive = (f) => f.include.length > 0 || f.exclude.length > 0;
@@ -129,11 +134,12 @@ export const formatRecipeRule = (rule) => {
     rangeActive(r.created) ? describeRange('erstellt', r.created) : '',
     rangeActive(r.lastCooked) ? describeRange('gekocht', r.lastCooked) : '',
   ].filter(Boolean).join(r.dateMode === 'any' ? ' oder ' : ' und ');
+  const ownScope = dates && r.dateScope === 'own' ? ' (nur eigene)' : '';
   return [
     ...describeFilter('Zutat', r.ingredientIds),
     ...describeFilter('Kategorie', r.mealCategories),
     ...describeFilter('Küche', r.cuisines),
-    dates,
+    `${dates}${ownScope}`,
   ].filter(Boolean).join(' · ');
 };
 

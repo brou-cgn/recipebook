@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  matchesRecipeRule, computeRuleMatches, ruleKey,
+  matchesRecipeRule, computeRuleMatches, computeRuleResult, recipeAvailableToUser, ruleKey,
   isRotationDue, isTopicInPeriod, getActiveTopics, pickTopic, pickRecipeIds,
   ROTATION_INTERVAL_MS,
 } = require('./fuerDichEntdecktRotation');
@@ -240,4 +240,44 @@ test('rule matching is insensitive to Unicode composition (decomposed umlauts)',
   const rule = {cuisines: {include: ['Weihnachtliche Küche']}};
   const r = {id: 'x', kulinarik: ['Weihnachtliche Küche']};
   assert.deepEqual(computeRuleMatches(rule, [r], new Map(), NOW), ['x']);
+});
+
+test('scope "own": every user is judged by their own cook dates and authorship', () => {
+  const rule = {lastCooked: {minDays: 365, maxDays: 365}, dateScope: 'own'};
+  const r = recipe({id: 'a', authorId: 'anna'});
+  // anna cooked a year ago, ben yesterday; globally the latest date (yesterday) would miss
+  const cooked = new Map([['a', new Map([['anna', NOW - 365 * DAY], ['ben', NOW - DAY]])]]);
+  const res = computeRuleResult(rule, [r], new Map([['a', NOW - DAY]]), NOW, cooked);
+  assert.deepEqual(res, {matches: ['a'], owners: {a: ['anna']}});
+  // scope "all" keeps the global behaviour
+  assert.deepEqual(computeRuleMatches({...rule, dateScope: 'all'}, [r], new Map([['a', NOW - DAY]]), NOW), []);
+});
+
+test('scope "own": "created" needs authorship, dateMode any combines per user', () => {
+  const rule = {
+    created: {minDays: 365, maxDays: 365}, lastCooked: {minDays: 365, maxDays: 365},
+    dateMode: 'any', dateScope: 'own',
+  };
+  const r = recipe({id: 'a', authorId: 'anna'}); // created 2025-10-11 = exactly a year ago
+  const cooked = new Map([['a', new Map([['ben', NOW - 365 * DAY], ['cara', NOW - DAY]])]]);
+  assert.deepEqual(computeRuleResult(rule, [r], new Map(), NOW, cooked).owners, {a: ['anna', 'ben']});
+  const strict = computeRuleResult({...rule, dateMode: 'all'}, [r], new Map(), NOW, cooked);
+  assert.deepEqual(strict.matches, []); // nobody satisfies both
+});
+
+test('scope "own" without a date range behaves like "all"', () => {
+  const rule = {ingredientIds: {include: ['Spargel']}, dateScope: 'own'};
+  assert.deepEqual(computeRuleResult(rule, [recipe({id: 'a'})], new Map(), NOW),
+      {matches: ['a'], owners: {}});
+});
+
+test('recipeAvailableToUser hands rule-added recipes only to their owners', () => {
+  const topic = {
+    recipeRule: {lastCooked: {minDays: 1}, dateScope: 'own'},
+    recipeIds: ['hand', 'a'], autoRecipeIds: ['a'], autoRecipeOwners: {a: ['anna']},
+  };
+  assert.equal(recipeAvailableToUser(topic, 'hand', 'ben'), true);
+  assert.equal(recipeAvailableToUser(topic, 'a', 'anna'), true);
+  assert.equal(recipeAvailableToUser(topic, 'a', 'ben'), false);
+  assert.equal(recipeAvailableToUser({...topic, recipeRule: {lastCooked: {minDays: 1}}}, 'a', 'ben'), true);
 });
