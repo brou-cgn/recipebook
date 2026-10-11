@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import DiscoverTopicsTab from './DiscoverTopicsTab';
 import * as topicsApi from '../utils/discoverTopics';
+import { getCustomLists } from '../utils/customLists';
 
 jest.mock('../utils/discoverTopics', () => ({
   ...jest.requireActual('../utils/discoverTopics'),
@@ -10,6 +11,9 @@ jest.mock('../utils/discoverTopics', () => ({
   deleteDiscoverTopic: jest.fn(),
 }));
 jest.mock('../firebase', () => ({ db: {} }));
+jest.mock('../utils/customLists', () => ({
+  getCustomLists: jest.fn(),
+}));
 
 const admin = { id: 'u1', role: 'admin', isAdmin: true, vorname: 'Ada', nachname: 'A' };
 const recipes = [{ id: 'r1', title: 'Kürbissuppe' }, { id: 'r2', title: 'Risotto' }];
@@ -19,6 +23,7 @@ const topic = {
 };
 
 const setup = (topics = [topic], user = admin) => {
+  getCustomLists.mockResolvedValue({ cuisineTypes: ['Weihnachtliche Küche'], mealCategories: ['Salate', 'Desserts'] });
   topicsApi.saveDiscoverTopic.mockResolvedValue('new');
   topicsApi.deleteDiscoverTopic.mockResolvedValue();
   topicsApi.subscribeToDiscoverTopics.mockImplementation((cb) => { cb(topics); return () => {}; });
@@ -33,14 +38,50 @@ test('non-admins get no list and no subscription', () => {
   expect(topicsApi.subscribeToDiscoverTopics).not.toHaveBeenCalled();
 });
 
-test('shows the four columns for each topic', () => {
+test('shows the columns for each topic', () => {
   setup();
-  ['Rubrik', 'Beschreibung', 'Relevante Rezepte', 'Zeitraum'].forEach((h) => {
+  ['Rubrik', 'Beschreibung', 'Relevante Rezepte', 'Zeitraum', 'Anzeige-Dauer', 'Rezepte-Regel'].forEach((h) => {
     expect(screen.getByRole('columnheader', { name: h })).toBeInTheDocument();
   });
   expect(screen.getByText('Kürbis-Zeit')).toBeInTheDocument();
   expect(screen.getByText('1 Rezept')).toBeInTheDocument();
   expect(screen.getByText('15. September – 30. November')).toBeInTheDocument();
+  expect(screen.getByText('7 Tage')).toBeInTheDocument();
+});
+
+test('shows display days and a summary of the rule', () => {
+  setup([{
+    ...topic,
+    displayDays: 14,
+    recipeRule: { ingredientIds: { include: ['Spargel'] }, lastCooked: { minDays: 365, maxDays: 365 } },
+  }]);
+  expect(screen.getByText('14 Tage')).toBeInTheDocument();
+  expect(screen.getByText('Zutat: Spargel · gekocht vor genau 365 Tagen')).toBeInTheDocument();
+});
+
+test('saves display days and rule from the editor', async () => {
+  setup([]);
+  fireEvent.click(screen.getByText('Thema hinzufügen'));
+  fireEvent.change(screen.getByLabelText('Rubrik'), { target: { value: 'Saison' } });
+  fireEvent.change(screen.getByLabelText(/Beschreibung/), { target: { value: 'Spargelzeit' } });
+  fireEvent.change(screen.getByLabelText(/Anzeige-Dauer/), { target: { value: '10' } });
+  const ingredient = screen.getByLabelText('Zutat (ingredientID) einschließen');
+  fireEvent.change(ingredient, { target: { value: 'Spargel' } });
+  fireEvent.keyDown(ingredient, { key: 'Enter' });
+  fireEvent.change(screen.getByLabelText('Zuletzt gekocht: mindestens Tage'), { target: { value: '180' } });
+  fireEvent.click(screen.getByText('Speichern'));
+
+  await waitFor(() => expect(topicsApi.saveDiscoverTopic).toHaveBeenCalled());
+  const saved = topicsApi.saveDiscoverTopic.mock.calls[0][0];
+  expect(saved.displayDays).toBe('10');
+  expect(saved.recipeRule.ingredientIds.include).toEqual(['Spargel']);
+  expect(saved.recipeRule.lastCooked.minDays).toBe('180');
+});
+
+test('rejects a min larger than max in a rule range', () => {
+  const rule = { lastCooked: { minDays: 400, maxDays: 180 } };
+  expect(topicsApi.validateTopic({ rubrik: 'a', beschreibung: 'b', recipeRule: rule })).toMatch(/Zuletzt gekocht/);
+  expect(topicsApi.validateTopic({ rubrik: 'a', beschreibung: 'b', displayDays: 0 })).toMatch(/Anzeige-Dauer/);
 });
 
 test('creates a topic with recipes and period', async () => {
