@@ -17,8 +17,14 @@ const RECIPES_PER_ROTATION = 5;
 // Run is daily; a half-day tolerance keeps "every 7 days" from drifting to 8.
 const ROTATION_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000 - 12 * 60 * 60 * 1000;
 
-// Current theme. Matched case-insensitively against the title and ingredients.
-const THEME_TERMS = ['kürbis', 'hokkaido', 'butternut'];
+// Current theme. `terms` are matched case-insensitively against the title and
+// ingredients; `label` (small caption above the title) and `title` are shown
+// on the Startseiten tile and written to the list as themeLabel / description.
+const THEME = {
+  label: 'Saison',
+  title: 'Kürbis-Zeit',
+  terms: ['kürbis', 'hokkaido', 'butternut'],
+};
 
 const toMillis = (value) => {
   if (!value) return null;
@@ -35,7 +41,7 @@ const isRotationDue = (list, now = Date.now()) => {
 
 const matchesTheme = (text) => {
   const lower = String(text || '').toLowerCase();
-  return THEME_TERMS.some((term) => lower.includes(term));
+  return THEME.terms.some((term) => lower.includes(term));
 };
 
 const ingredientText = (item) => {
@@ -101,6 +107,7 @@ const pickRecipeIds = (recipes, previousIds = [], random = Math.random) => {
 module.exports = {
   SYSTEM_KEY,
   RECIPES_PER_ROTATION,
+  THEME,
   ROTATION_INTERVAL_MS,
   isRotationDue,
   isPubliclyVisible,

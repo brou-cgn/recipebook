@@ -37,4 +37,23 @@ describe('FuerDichEntdecktKachel', () => {
     expect(container.querySelectorAll('.fuer-dich-entdeckt-collage-cell')).toHaveLength(3);
     expect(screen.getByText('4 Rezepte')).toBeInTheDocument();
   });
+
+  test('zeigt Rubrik über dem Titel und den Monat in der Meta-Zeile', () => {
+    const recipes = [{ id: 'r1', title: 'Kürbis-Curry', image: 'a.jpg' }];
+    const themed = {
+      ...list,
+      description: 'Kürbis-Zeit',
+      themeLabel: 'Saison',
+      rotatedAt: { toDate: () => new Date(2026, 9, 11) },
+    };
+    render(<FuerDichEntdecktKachel list={themed} recipes={recipes} />);
+    expect(screen.getByText('Saison')).toHaveClass('fuer-dich-entdeckt-eyebrow');
+    expect(screen.getByText('Kürbis-Zeit')).toBeInTheDocument();
+    expect(screen.getByText('1 Rezept · Oktober 2026')).toBeInTheDocument();
+  });
+
+  test('ohne themeLabel keine Rubrik', () => {
+    const { container } = render(<FuerDichEntdecktKachel list={list} recipes={[{ id: 'r1', title: 'x' }]} />);
+    expect(container.querySelector('.fuer-dich-entdeckt-eyebrow')).toBeNull();
+  });
 });

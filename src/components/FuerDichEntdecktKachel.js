@@ -10,12 +10,20 @@ const getRecipeImageUrl = (recipe) => (
     : recipe.image || null
 );
 
+const formatMonthYear = (value) => {
+  const date = typeof value?.toDate === 'function' ? value.toDate() : value;
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+};
+
 /**
  * FuerDichEntdecktKachel – Startseiten-Kachel "Für dich entdeckt".
  *
  * Einstieg in den Swipestapel der persönlichen Liste "Für dich entdeckt"
  * (siehe utils/fuerDichEntdeckt.js), ähnlich den Rückblicken der Fotos-App.
- * Die Beschreibung der Liste dient als Thementitel; solange die Liste leer ist,
+ * Die Beschreibung der Liste dient als Thementitel, `themeLabel` als kleine
+ * Rubrik darüber (z. B. "Saison"), der Monat von `rotatedAt` ergänzt die
+ * Meta-Zeile ("5 Rezepte · Oktober 2026"); solange die Liste leer ist,
  * zeigt die Kachel einen Hinweis und ist nicht antippbar.
  *
  * Props:
@@ -33,7 +41,10 @@ function FuerDichEntdecktKachel({ list, recipes = [], onOpen }) {
     imageUrl: getRecipeImageUrl(recipe),
   }));
   const themeTitle = (typeof list.description === 'string' && list.description.trim()) || 'Rezepte zu wechselnden Themen';
-  const meta = count === 1 ? '1 Rezept' : `${count} Rezepte`;
+  const themeLabel = (typeof list.themeLabel === 'string' && list.themeLabel.trim()) || '';
+  const countText = count === 1 ? '1 Rezept' : `${count} Rezepte`;
+  const monthYear = formatMonthYear(list.rotatedAt);
+  const meta = monthYear ? `${countText} · ${monthYear}` : countText;
 
   return (
     <section className="startseite-trending-section fuer-dich-entdeckt">
@@ -51,7 +62,7 @@ function FuerDichEntdecktKachel({ list, recipes = [], onOpen }) {
           type="button"
           className="fuer-dich-entdeckt-card"
           onClick={() => onOpen?.(list.id)}
-          aria-label={`${themeTitle}, ${meta} – Swipestapel öffnen`}
+          aria-label={`${themeTitle}, ${countText} – Swipestapel öffnen`}
         >
           <span className={`fuer-dich-entdeckt-collage fuer-dich-entdeckt-collage--${collage.length}`} aria-hidden="true">
             {collage.map((item) => (
@@ -61,6 +72,7 @@ function FuerDichEntdecktKachel({ list, recipes = [], onOpen }) {
             ))}
           </span>
           <span className="fuer-dich-entdeckt-caption">
+            {themeLabel && <span className="fuer-dich-entdeckt-eyebrow">{themeLabel}</span>}
             <span className="fuer-dich-entdeckt-title">{themeTitle}</span>
             <span className="fuer-dich-entdeckt-meta">{meta}</span>
           </span>

@@ -17,7 +17,7 @@ const cheerio = require('cheerio');
 const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 const {requireShortcutPin} = require('./webImportPin');
 const {evaluateLowCarbTag} = require('./lowCarb');
-const {isRotationDue, pickRecipeIds, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
+const {isRotationDue, pickRecipeIds, THEME: FUER_DICH_THEME, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
 const {normalizeCuisines, suggestNewCuisines} = require('./cuisineNormalization');
 
 // Initialize Firebase Admin
@@ -10452,6 +10452,8 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
         const recipeIds = pickRecipeIds(recipes, previousIds);
         await listDoc.ref.update({
           recipeIds,
+          description: FUER_DICH_THEME.title,
+          themeLabel: FUER_DICH_THEME.label,
           rotatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
       }
