@@ -19,6 +19,7 @@ const assert = require('node:assert/strict');
 let dailyAiImporterTest;
 let settingsData;
 let usersData;
+let userDocWrites;
 let sentMails;
 let geminiSecretValue;
 let webApiKeySecretValue;
@@ -128,7 +129,12 @@ function loadFunction() {
             doc: () => ({get: async () => ({exists: false, data: () => ({})})}),
           };
         },
-        doc: () => ({get: async () => ({exists: false, data: () => ({})})}),
+        doc: (path) => ({
+          get: async () => ({exists: false, data: () => ({})}),
+          set: async (data, opts) => {
+            userDocWrites.push({path, data, opts});
+          },
+        }),
       });
 
       return {
@@ -153,6 +159,7 @@ test.beforeEach(() => {
   settingsData = {app: {aiRecipePrompt: 'Extrahiere das Rezept als JSON.'}};
   usersData = [{isAdmin: true, email: 'admin@example.com'}];
   sentMails = [];
+  userDocWrites = [];
   callableResponses = {
     fetchRecipeHtml: () => callableResponse(200, {result: {html:
       '<!DOCTYPE html><html lang="de"><head><title>Testrezept: Rührei</title></head><body>' +
@@ -195,6 +202,15 @@ test('happy path: sends a summary email reporting all 4 tests passed', async () 
   assert.match(mail.text, /fetchRecipeHtml \(öffentliche Schnittstelle\)/);
   assert.match(mail.text, /processHtmlWithAI \(öffentliche Schnittstelle\)/);
   assert.match(mail.text, /scanRecipeWithAI \(öffentliche Schnittstelle\)/);
+});
+
+test('provisions the test user with role edit so the role-gated AI callables accept it', async () => {
+  await dailyAiImporterTest({});
+  assert.equal(userDocWrites.length, 1);
+  assert.equal(userDocWrites[0].path, 'users/nightly-ai-importer-test');
+  assert.equal(userDocWrites[0].data.role, 'edit');
+  assert.equal(userDocWrites[0].data.isAdmin, false);
+  assert.deepEqual(userDocWrites[0].opts, {merge: true});
 });
 
 test('fetch+extraction is a connected chain: a failed fetch also fails the extraction test with a clear reason', async () => {
