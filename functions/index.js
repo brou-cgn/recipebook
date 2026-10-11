@@ -10432,7 +10432,10 @@ exports.aggregateRecipeRating = require('./recipeRatingAggregation').aggregateRe
  */
 exports.rotateFuerDichEntdecktLists = onSchedule(
     {
-      schedule: '0 4 * * *',
+      // TEMPORARY one-off catch-up: every 15 minutes until the lists carry
+      // their topic. A run only writes lists that are due, so repeats are
+      // harmless. Revert to '0 4 * * *' right after the first rotation.
+      schedule: '*/15 * * * *',
       timeZone: 'Europe/Berlin',
       timeoutSeconds: 300,
       maxInstances: 1,
