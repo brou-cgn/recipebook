@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import DiscoverTopicsTab from './DiscoverTopicsTab';
 import * as topicsApi from '../utils/discoverTopics';
+import { useOptionalNutritionReference } from '../contexts/NutritionReferenceContext';
 import { getCustomLists } from '../utils/customLists';
 
 jest.mock('../utils/discoverTopics', () => ({
@@ -11,6 +12,9 @@ jest.mock('../utils/discoverTopics', () => ({
   deleteDiscoverTopic: jest.fn(),
 }));
 jest.mock('../firebase', () => ({ db: {} }));
+jest.mock('../contexts/NutritionReferenceContext', () => ({
+  useOptionalNutritionReference: jest.fn(),
+}));
 jest.mock('../utils/customLists', () => ({
   getCustomLists: jest.fn(),
 }));
@@ -23,6 +27,7 @@ const topic = {
 };
 
 const setup = (topics = [topic], user = admin) => {
+  useOptionalNutritionReference.mockReturnValue({ rows: [{ ingredientID: 'Spargel', displayName: 'Spargel, weiß' }, { ingredientID: 'Tomate' }] });
   getCustomLists.mockResolvedValue({ cuisineTypes: ['Weihnachtliche Küche'], mealCategories: ['Salate', 'Desserts'] });
   topicsApi.saveDiscoverTopic.mockResolvedValue('new');
   topicsApi.deleteDiscoverTopic.mockResolvedValue();
@@ -66,8 +71,8 @@ test('saves display days and rule from the editor', async () => {
   fireEvent.change(screen.getByLabelText(/Beschreibung/), { target: { value: 'Spargelzeit' } });
   fireEvent.change(screen.getByLabelText(/Anzeige-Dauer/), { target: { value: '10' } });
   const ingredient = screen.getByLabelText('Zutat (ingredientID) einschließen');
-  fireEvent.change(ingredient, { target: { value: 'Spargel' } });
-  fireEvent.keyDown(ingredient, { key: 'Enter' });
+  fireEvent.change(ingredient, { target: { value: 'spargl' } });
+  fireEvent.click(screen.getByRole('button', { name: /Spargel/ }));
   fireEvent.change(screen.getByLabelText('Zuletzt gekocht: mindestens Tage'), { target: { value: '180' } });
   fireEvent.click(screen.getByText('Speichern'));
 
@@ -127,4 +132,16 @@ test('delete hides the row at once, deletes after 6 s, undo keeps it', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Saison entfernen' }));
   act(() => { jest.advanceTimersByTime(6000); });
   expect(topicsApi.deleteDiscoverTopic).toHaveBeenCalledWith('t1');
+});
+
+test('ingredient typeahead only adds IDs from the reference, not free text', () => {
+  setup([]);
+  fireEvent.click(screen.getByText('Thema hinzufügen'));
+  const ingredient = screen.getByLabelText('Zutat (ingredientID) einschließen');
+  fireEvent.change(ingredient, { target: { value: 'qqqq' } });
+  fireEvent.keyDown(ingredient, { key: 'Enter' });
+  expect(screen.queryByRole('button', { name: 'qqqq entfernen' })).not.toBeInTheDocument();
+  fireEvent.change(ingredient, { target: { value: 'tomat' } });
+  fireEvent.keyDown(ingredient, { key: 'Enter' });
+  expect(screen.getByRole('button', { name: 'Tomate entfernen' })).toBeInTheDocument();
 });

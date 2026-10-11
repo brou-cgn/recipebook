@@ -6,6 +6,8 @@ import DeleteRowButton from './DeleteRowButton';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import { getCustomLists } from '../utils/customLists';
+import { useOptionalNutritionReference } from '../contexts/NutritionReferenceContext';
+import { searchIngredientIds } from '../utils/ingredientIdMatching';
 import {
   MONTH_NAMES,
   deleteDiscoverTopic,
@@ -71,12 +73,28 @@ function MonthDayInput({ label, value, onChange }) {
 }
 
 // Ein-/Ausschlussliste der Rezepte-Regel. Mit `options` Auswahl aus einer Liste, sonst Freitext.
-function RuleValues({ label, values, options, onChange }) {
+function RuleValues({ label, values, options, searchRows, onChange }) {
   const [draft, setDraft] = useState('');
+  const [active, setActive] = useState(0);
+  // Typeahead nur, wenn eine Zutaten-Referenz geladen ist; sonst Freitext.
+  const suggestions = useMemo(
+    () => (searchRows?.length ? searchIngredientIds(draft, searchRows).filter((m) => !values.includes(m.ingredientID)) : []),
+    [draft, searchRows, values]
+  );
   const add = (value) => {
     const v = String(value || '').trim();
     if (v && !values.some((x) => x.toLowerCase() === v.toLowerCase())) onChange([...values, v]);
     setDraft('');
+    setActive(0);
+  };
+  const onKeyDown = (e) => {
+    if (e.key === 'ArrowDown' && suggestions.length) { e.preventDefault(); setActive((a) => Math.min(a + 1, suggestions.length - 1)); }
+    else if (e.key === 'ArrowUp' && suggestions.length) { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
+    else if (e.key === 'Escape') setDraft('');
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (searchRows?.length) { if (suggestions[active]) add(suggestions[active].ingredientID); } else add(draft);
+    }
   };
   return (
     <div className="dtt-rule-values">
@@ -94,21 +112,41 @@ function RuleValues({ label, values, options, onChange }) {
           {options.filter((o) => !values.includes(o)).map((o) => <option key={o} value={o}>{o}</option>)}
         </select>
       ) : (
-        <input
-          type="text"
-          aria-label={label}
-          value={draft}
-          placeholder="+ hinzufügen (Enter)"
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(draft); } }}
-          onBlur={() => add(draft)}
-        />
+        <>
+          <input
+            type="text"
+            aria-label={label}
+            value={draft}
+            placeholder={searchRows?.length ? 'Zutat suchen …' : '+ hinzufügen (Enter)'}
+            autoComplete="off"
+            onChange={(e) => { setDraft(e.target.value); setActive(0); }}
+            onKeyDown={onKeyDown}
+            onBlur={() => { if (!searchRows?.length) add(draft); }}
+          />
+          {suggestions.length > 0 && (
+            <ul className="dtt-matches" role="listbox" aria-label={`${label}: Vorschläge`}>
+              {suggestions.map((m, i) => (
+                <li key={m.ingredientID} role="option" aria-selected={i === active}>
+                  <button
+                    type="button"
+                    className={i === active ? 'dtt-match-active' : undefined}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => add(m.ingredientID)}
+                  >
+                    {m.ingredientID}
+                    {m.displayName && m.displayName !== m.ingredientID && <em className="dtt-match-sub"> {m.displayName}</em>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </div>
   );
 }
 
-function RuleFilter({ title, filter, options, onChange }) {
+function RuleFilter({ title, filter, options, searchRows, onChange }) {
   return (
     <div className="dtt-rule-filter">
       <span className="dtt-label">{title}</span>
@@ -118,6 +156,7 @@ function RuleFilter({ title, filter, options, onChange }) {
           label={`${title} einschließen`}
           values={filter.include}
           options={options}
+          searchRows={searchRows}
           onChange={(include) => onChange({ ...filter, include })}
         />
         <span className="dtt-rule-tag">Ausschließen</span>
@@ -125,6 +164,7 @@ function RuleFilter({ title, filter, options, onChange }) {
           label={`${title} ausschließen`}
           values={filter.exclude}
           options={options}
+          searchRows={searchRows}
           onChange={(exclude) => onChange({ ...filter, exclude })}
         />
       </div>
@@ -203,7 +243,7 @@ function TopicRow({ topic, recipeTitles, onEdit, onDelete }) {
   );
 }
 
-function TopicEditor({ initial, allRecipes, cuisineOptions, categoryOptions, onSave, onCancel, saving, error }) {
+function TopicEditor({ initial, allRecipes, cuisineOptions, categoryOptions, ingredientRows, onSave, onCancel, saving, error }) {
   const [form, setForm] = useState(initial);
   const [search, setSearch] = useState('');
   const set = (patch) => setForm((prev) => ({ ...prev, ...patch }));
@@ -321,9 +361,9 @@ function TopicEditor({ initial, allRecipes, cuisineOptions, categoryOptions, onS
         <legend className="dtt-label">Rezepte-Regel</legend>
         <p className="dtt-hint">
           Wählt zusätzlich zu den Rezepten oben weitere Rezepte aus. Verschiedene Kriterien gelten zusammen (UND);
-          mehrere Werte beim Einschließen gelten als ODER. Zutaten werden über die ingredientID angegeben.
+          mehrere Werte beim Einschließen gelten als ODER. Zutaten suchst du per Tippen (unscharf, auch mit Tippfehlern) aus der Zutaten-Referenz.
         </p>
-        <RuleFilter title="Zutat (ingredientID)" filter={rule.ingredientIds}
+        <RuleFilter title="Zutat (ingredientID)" filter={rule.ingredientIds} searchRows={ingredientRows}
           onChange={(ingredientIds) => setRule({ ingredientIds })} />
         <RuleFilter title="Speisekategorie" filter={rule.mealCategories} options={categoryOptions}
           onChange={(mealCategories) => setRule({ mealCategories })} />
@@ -374,6 +414,7 @@ function DiscoverTopicsTab({ currentUser, allRecipes = [] }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [listOptions, setListOptions] = useState({ cuisines: [], categories: [] });
+  const nutritionRef = useOptionalNutritionReference();
   const { banners, pendingKeys, scheduleDelete, undoDelete } = useUndoableDelete();
 
   useEffect(() => {
@@ -454,6 +495,7 @@ function DiscoverTopicsTab({ currentUser, allRecipes = [] }) {
           allRecipes={allRecipes}
           cuisineOptions={listOptions.cuisines}
           categoryOptions={listOptions.categories}
+          ingredientRows={nutritionRef?.rows}
           saving={saving}
           error={error}
           onSave={handleSave}

@@ -78,3 +78,6 @@
   .dtt-rule-pair { grid-template-columns: 1fr; }
   .dtt-rule-tag { padding-top: 0; }
 }
+
+.dtt-matches .dtt-match-active { background: rgba(0, 0, 0, 0.07); }
+.dtt-match-sub { font-style: normal; font-size: 0.8rem; color: var(--text-secondary, #6b665c); }
