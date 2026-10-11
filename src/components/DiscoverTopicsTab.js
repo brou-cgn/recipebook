@@ -379,6 +379,17 @@ function TopicEditor({ initial, allRecipes, cuisineOptions, categoryOptions, ing
             <option value="any">es genügt eines von beiden</option>
           </select>
         </label>
+        <label className="dtt-field">
+          <span className="dtt-label">Gilt für</span>
+          <select value={rule.dateScope} onChange={(e) => setRule({ dateScope: e.target.value })}>
+            <option value="all">Aktionen aller Nutzer</option>
+            <option value="own">nur eigene Aktionen (Erstellt / Gekocht)</option>
+          </select>
+        </label>
+        <p className="dtt-hint">
+          „Nur eigene": Alle Treffer bleiben im Thema, ausgespielt werden sie aber nur an Nutzer, die das Rezept
+          selbst erstellt bzw. gekocht haben. Von Hand ausgewählte Rezepte bekommen weiterhin alle.
+        </p>
         <p className="dtt-hint">
           Gleiche Werte bei „mindestens" und „höchstens" bedeuten „genau vor n Tagen" (z. B. 365 = vor einem Jahr).
           Nie gekochte Rezepte erfüllen keine Bedingung bei „Zuletzt gekocht".

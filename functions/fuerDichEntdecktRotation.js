@@ -126,6 +126,11 @@ const cleanRange = (range) => {
  *     fails a lastCooked bound.
  *   dateMode: 'all' (default) = both date conditions must hold, 'any' = one
  *     is enough ("cooked or created exactly a year ago").
+ *   dateScope: 'all' (default) = the date conditions look at anybody's
+ *     actions; 'own' = every user is judged by their own: "created" needs
+ *     recipe.authorId === user, "lastCooked" uses that user's cook dates. All
+ *     recipes stay in the topic, but only the users who qualify get them
+ *     handed out (see recipeAvailableToUser).
  */
 const normalizeRecipeRule = (rule) => ({
   ingredientIds: cleanFilter(rule && rule.ingredientIds),
@@ -134,6 +139,7 @@ const normalizeRecipeRule = (rule) => ({
   created: cleanRange(rule && rule.created),
   lastCooked: cleanRange(rule && rule.lastCooked),
   dateMode: rule && rule.dateMode === 'any' ? 'any' : 'all',
+  dateScope: rule && rule.dateScope === 'own' ? 'own' : 'all',
 });
 
 const filterActive = (f) => f.include.length > 0 || f.exclude.length > 0;
@@ -171,6 +177,32 @@ const inAgeRange = (range, thenMs, now) => {
     (range.maxDays === null || age <= range.maxDays);
 };
 
+/** Ingredient / category / cuisine criteria - independent of any user. */
+const matchesContentFilters = (recipe, r) =>
+  passesFilter(r.ingredientIds, recipeIngredientIds(recipe)) &&
+  passesFilter(r.mealCategories, toList(recipe.speisekategorie)) &&
+  passesFilter(r.cuisines, toList(recipe.kulinarik));
+
+/**
+ * Date criteria for one recipe. `createdOk` lets the caller veto the "created"
+ * condition (scope 'own': the user must be the author).
+ */
+const matchesDateCriteria = (recipe, r, lastCookedMs, now, createdOk = true) => {
+  const checks = [];
+  if (rangeActive(r.created)) {
+    checks.push(createdOk && inAgeRange(r.created, toMillis(recipe.createdAt), now));
+  }
+  if (rangeActive(r.lastCooked)) checks.push(inAgeRange(r.lastCooked, lastCookedMs, now));
+  if (checks.length === 0) return true;
+  return r.dateMode === 'any' ? checks.some(Boolean) : checks.every(Boolean);
+};
+
+/** Whether the rule's date conditions are judged per user (needs a date range to matter). */
+const isOwnScoped = (rule) => {
+  const r = normalizeRecipeRule(rule);
+  return r.dateScope === 'own' && (rangeActive(r.created) || rangeActive(r.lastCooked));
+};
+
 /**
  * Whether a recipe satisfies a topic's rule. Different criteria combine with
  * AND (date criteria per `dateMode`). An empty rule matches nothing, so a
@@ -183,15 +215,25 @@ const inAgeRange = (range, thenMs, now) => {
 const matchesRecipeRule = (recipe, rule, lastCookedMs = null, now = Date.now()) => {
   if (!hasRecipeRule(rule)) return false;
   const r = normalizeRecipeRule(rule);
-  if (!passesFilter(r.ingredientIds, recipeIngredientIds(recipe))) return false;
-  if (!passesFilter(r.mealCategories, toList(recipe.speisekategorie))) return false;
-  if (!passesFilter(r.cuisines, toList(recipe.kulinarik))) return false;
+  return matchesContentFilters(recipe, r) && matchesDateCriteria(recipe, r, lastCookedMs, now);
+};
 
-  const checks = [];
-  if (rangeActive(r.created)) checks.push(inAgeRange(r.created, toMillis(recipe.createdAt), now));
-  if (rangeActive(r.lastCooked)) checks.push(inAgeRange(r.lastCooked, lastCookedMs, now));
-  if (checks.length === 0) return true;
-  return r.dateMode === 'any' ? checks.some(Boolean) : checks.every(Boolean);
+/**
+ * Scope 'own': the users for whom a recipe satisfies the rule - the author
+ * counts for "created", each cook-date owner for "lastCooked".
+ * @param {Object} recipe
+ * @param {Object} rule - raw `recipeRule`
+ * @param {Map<string, number>} lastCookedByUser - userId -> latest cook date (ms) of this recipe
+ * @param {number} [now]
+ * @return {string[]}
+ */
+const ruleOwnersOfRecipe = (recipe, rule, lastCookedByUser = new Map(), now = Date.now()) => {
+  const r = normalizeRecipeRule(rule);
+  if (!hasRecipeRule(rule) || !matchesContentFilters(recipe, r)) return [];
+  const candidates = new Set(lastCookedByUser.keys());
+  if (recipe.authorId) candidates.add(recipe.authorId);
+  return [...candidates].filter((userId) => matchesDateCriteria(
+      recipe, r, lastCookedByUser.get(userId) ?? null, now, recipe.authorId === userId));
 };
 
 /**
@@ -218,18 +260,54 @@ const ruleKey = (rule) => JSON.stringify(normalizeRecipeRule(rule));
 
 /**
  * Nightly rule search: IDs of all recipes matching the rule (visibility is
- * irrelevant here, see isAssignable / isVisibleToUser).
+ * irrelevant here, see isAssignable / isVisibleToUser). With scope 'own' a
+ * recipe matches when at least one user qualifies; computeRuleResult also
+ * returns those users per recipe (`owners`, see ruleOwnersOfRecipe).
  * @param {Object} rule - raw `recipeRule`
  * @param {Array<Object>} recipes
  * @param {Map<string, number>} lastCookedByRecipe - recipeId -> latest cook date (ms)
  * @param {number} [now]
+ * @param {Map<string, Map<string, number>>} [lastCookedByUser] - recipeId -> userId -> latest cook date (ms)
  * @return {string[]}
  */
-const computeRuleMatches = (rule, recipes, lastCookedByRecipe = new Map(), now = Date.now()) =>
-  recipes
-      .filter(isAssignable)
-      .filter((r) => matchesRecipeRule(r, rule, lastCookedByRecipe.get(r.id) ?? null, now))
-      .map((r) => r.id);
+const computeRuleMatches = (rule, recipes, lastCookedByRecipe = new Map(), now = Date.now(),
+    lastCookedByUser = new Map()) =>
+  computeRuleResult(rule, recipes, lastCookedByRecipe, now, lastCookedByUser).matches;
+
+const computeRuleResult = (rule, recipes, lastCookedByRecipe = new Map(), now = Date.now(),
+    lastCookedByUser = new Map()) => {
+  const assignable = recipes.filter(isAssignable);
+  if (!isOwnScoped(rule)) {
+    return {
+      matches: assignable
+          .filter((r) => matchesRecipeRule(r, rule, lastCookedByRecipe.get(r.id) ?? null, now))
+          .map((r) => r.id),
+      owners: {},
+    };
+  }
+  const owners = {};
+  assignable.forEach((r) => {
+    const users = ruleOwnersOfRecipe(r, rule, lastCookedByUser.get(r.id) || new Map(), now);
+    if (users.length > 0) owners[r.id] = users.sort();
+  });
+  return {matches: Object.keys(owners), owners};
+};
+
+/**
+ * Whether a topic's recipe may be handed to this user. Hand-picked recipes (and
+ * every recipe of a rule with scope 'all') are for everybody; a recipe the rule
+ * added under scope 'own' only goes to the users in `autoRecipeOwners`.
+ * @param {Object} topic
+ * @param {string} recipeId
+ * @param {string} userId
+ */
+const recipeAvailableToUser = (topic, recipeId, userId) => {
+  if (!isOwnScoped(topic.recipeRule)) return true;
+  const auto = Array.isArray(topic.autoRecipeIds) ? topic.autoRecipeIds : [];
+  if (!auto.includes(recipeId)) return true;
+  const owners = topic.autoRecipeOwners && topic.autoRecipeOwners[recipeId];
+  return Array.isArray(owners) && owners.includes(userId);
+};
 
 /**
  * Topics that may be rotated in right now: enabled, in period, with at least
@@ -355,6 +433,10 @@ module.exports = {
   matchesRecipeRule,
   ruleKey,
   computeRuleMatches,
+  computeRuleResult,
+  isOwnScoped,
+  ruleOwnersOfRecipe,
+  recipeAvailableToUser,
   mergeRuleMatches,
   getActiveTopics,
   explainTopicExclusion,
