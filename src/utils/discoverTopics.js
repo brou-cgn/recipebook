@@ -6,7 +6,8 @@
  * aktuell relevantes Thema und befüllt damit die persönlichen Listen:
  *   rubrik       -> kleine Rubrik über dem Titel (themeLabel), z. B. "Saison"
  *   beschreibung -> Thementitel auf der Kachel (Listenbeschreibung)
- *   recipeIds    -> relevante Rezepte, aus denen gezogen wird
+ *   recipeIds    -> relevante Rezepte, aus denen gezogen wird; die nächtliche
+ *     Regelsuche trägt Treffer hier ein (autoRecipeIds merkt, welche)
  *   periodStart / periodEnd -> jährlicher Zeitraum als 'MM-DD' (beide
  *     inklusive; Start > Ende läuft über den Jahreswechsel; beide leer =
  *     ganzjährig)
@@ -134,19 +135,6 @@ export const formatRecipeRule = (rule) => {
     ...describeFilter('Küche', r.cuisines),
     dates,
   ].filter(Boolean).join(' · ');
-};
-
-/**
- * Regeltreffer der nächtlichen Suche (ruleRecipeIds) für die Listenansicht,
- * z. B. "+ 3 per Regel"; '' ohne Regel. Ohne gespeicherte Treffer läuft die
- * Suche noch nicht für diese Regel (sie wird nachts um 03:30 bzw. bei der
- * nächsten Rotation berechnet).
- */
-export const formatRuleMatches = (topic) => {
-  if (!hasRecipeRule(topic?.recipeRule)) return '';
-  if (!Array.isArray(topic.ruleRecipeIds)) return 'Regel: noch nicht berechnet';
-  const n = topic.ruleRecipeIds.length;
-  return n === 0 ? 'Regel: keine Treffer' : `+ ${n} per Regel`;
 };
 
 /** Anzeige-Dauer für die Listenansicht, z. B. "7 Tage". */

@@ -15,7 +15,6 @@ import {
   formatDisplayDays,
   formatPeriod,
   formatRecipeRule,
-  formatRuleMatches,
   normalizeRecipeRule,
   saveDiscoverTopic,
   sortTopics,
@@ -230,7 +229,6 @@ function TopicRow({ topic, recipeTitles, onEdit, onDelete }) {
           title={recipeTitles.join(', ')}
         >
           {recipeCount === 0 ? '—' : recipeCount === 1 ? '1 Rezept' : `${recipeCount} Rezepte`}
-          {formatRuleMatches(topic) && <small className="dtt-rule-matches">{formatRuleMatches(topic)}</small>}
         </span>
         <span className="dtt-cell dtt-cell-zeitraum" data-label="Zeitraum">{formatPeriod(topic)}</span>
         <span className="dtt-cell dtt-cell-dauer" data-label="Anzeige-Dauer">{formatDisplayDays(topic)}</span>

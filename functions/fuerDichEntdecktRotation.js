@@ -14,10 +14,10 @@
  * `displayDays` of a topic sets how long it stays on a list (default 7 days).
  * `recipeRule` additionally selects recipes by ingredientID, meal category,
  * cuisine, creation date and last cook date (see matchesRecipeRule); rule
- * matches are added to the topic's hand-picked recipeIds. The search runs nightly at 03:30
- * (refreshDiscoverTopicRuleMatches in index.js) and stores `ruleRecipeIds` and
- * `ruleMatchedFor` on the topic; the rotation at 04:00 reads them and evaluates
- * rules whose matches are missing or stale itself.
+ * matches are written into the topic's `recipeIds` like hand-picked recipes (see
+ * mergeRuleMatches; `autoRecipeIds` marks the ones the rule added). The search runs
+ * nightly at 03:30 (refreshDiscoverTopicRuleMatches in index.js, stores
+ * `ruleMatchedFor`); the rotation at 04:00 re-runs it for rules changed since.
  * `rotatedAt` on the list document is the clock: a list without it (freshly
  * created) is rotated on the next run, otherwise once the topic's display
  * duration has passed. A list without `themeId` is also due, so a list rotated by an
@@ -194,6 +194,25 @@ const matchesRecipeRule = (recipe, rule, lastCookedMs = null, now = Date.now()) 
   return r.dateMode === 'any' ? checks.some(Boolean) : checks.every(Boolean);
 };
 
+/**
+ * Writes the rule matches into the topic's `recipeIds`, like hand-picked
+ * recipes. `autoRecipeIds` remembers which entries the rule added (and did not
+ * already exist as hand-picked), so a later run can drop those that no longer
+ * match without touching the hand-picked ones. An empty `matches` list (rule
+ * removed) removes all earlier automatic entries.
+ * @param {Object} topic
+ * @param {string[]} matches - recipe IDs matching the rule now
+ * @return {{recipeIds: string[], autoRecipeIds: string[]}}
+ */
+const mergeRuleMatches = (topic, matches) => {
+  const previousAuto = new Set(Array.isArray(topic.autoRecipeIds) ? topic.autoRecipeIds : []);
+  const manual = (Array.isArray(topic.recipeIds) ? topic.recipeIds : [])
+      .filter((id) => !previousAuto.has(id));
+  const manualSet = new Set(manual);
+  const added = [...new Set(matches)].filter((id) => !manualSet.has(id));
+  return {recipeIds: [...manual, ...added], autoRecipeIds: added};
+};
+
 /** Stable key of a rule; stored next to its matches to detect stale results. */
 const ruleKey = (rule) => JSON.stringify(normalizeRecipeRule(rule));
 
@@ -216,30 +235,24 @@ const computeRuleMatches = (rule, recipes, lastCookedByRecipe = new Map(), now =
  * Topics that may be rotated in right now: enabled, in period, with at least
  * one recipe assigned to them (visibility is NOT checked here - it depends on
  * the user, see isVisibleToUser). Each result carries the usable recipe IDs:
- * the hand-picked ones plus those matching the topic's `recipeRule`.
+ * the topic's `recipeIds` (hand-picked plus those the rule added).
  */
 const getActiveTopics = (topics, recipes, now = Date.now()) => {
   const visible = new Set(recipes.filter(isAssignable).map((r) => r.id));
   return (topics || [])
       .filter((topic) => topic && topic.isActive !== false && isTopicInPeriod(topic, now))
       .map((topic) => {
+        // Rule matches are already part of recipeIds (see mergeRuleMatches).
         const picked = (Array.isArray(topic.recipeIds) ? topic.recipeIds : [])
             .filter((id) => visible.has(id));
-        // Rule matches come from the nightly search (computeRuleMatches); they only
-        // count while they were computed for the rule as it is now.
-        const matched = hasRecipeRule(topic.recipeRule) &&
-          topic.ruleMatchedFor === ruleKey(topic.recipeRule) &&
-          Array.isArray(topic.ruleRecipeIds) ?
-          topic.ruleRecipeIds.filter((id) => visible.has(id)) : [];
-        return {...topic, usableRecipeIds: [...new Set([...picked, ...matched])]};
+        return {...topic, usableRecipeIds: [...new Set(picked)]};
       })
       .filter((topic) => topic.usableRecipeIds.length > 0);
 };
 
 /**
- * Why a topic is not part of the rotation (for the log): inactive, no recipe
- * selection, hand-picked/rule recipes not publicly visible, or rule matches
- * missing/stale. Call only for topics that getActiveTopics dropped.
+ * Why a topic is not part of the rotation (for the log): inactive, outside its
+ * period, no recipes, or recipes that do not exist / are pending imports. Call only for topics that getActiveTopics dropped.
  */
 const explainTopicExclusion = (topic, recipes, now = Date.now()) => {
   if (topic.isActive === false) return 'inactive';
@@ -252,12 +265,7 @@ const explainTopicExclusion = (topic, recipes, now = Date.now()) => {
   if (picked.length > 0) {
     parts.push(`${picked.filter((id) => visible.has(id)).length}/${picked.length} hand-picked recipes exist`);
   }
-  if (ruled) {
-    const stored = Array.isArray(topic.ruleRecipeIds) ? topic.ruleRecipeIds : [];
-    const current = topic.ruleMatchedFor === ruleKey(topic.recipeRule);
-    parts.push(`rule matches: ${current ? stored.filter((id) => visible.has(id)).length : 0}` +
-      `${current ? '' : ' (stale)'}`);
-  }
+  if (ruled) parts.push('rule set, but no matching recipe');
   return parts.join(', ');
 };
 
@@ -347,6 +355,7 @@ module.exports = {
   matchesRecipeRule,
   ruleKey,
   computeRuleMatches,
+  mergeRuleMatches,
   getActiveTopics,
   explainTopicExclusion,
   pickTopic,
