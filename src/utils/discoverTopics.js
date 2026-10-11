@@ -136,6 +136,19 @@ export const formatRecipeRule = (rule) => {
   ].filter(Boolean).join(' · ');
 };
 
+/**
+ * Regeltreffer der nächtlichen Suche (ruleRecipeIds) für die Listenansicht,
+ * z. B. "+ 3 per Regel"; '' ohne Regel. Ohne gespeicherte Treffer läuft die
+ * Suche noch nicht für diese Regel (sie wird nachts um 03:30 bzw. bei der
+ * nächsten Rotation berechnet).
+ */
+export const formatRuleMatches = (topic) => {
+  if (!hasRecipeRule(topic?.recipeRule)) return '';
+  if (!Array.isArray(topic.ruleRecipeIds)) return 'Regel: noch nicht berechnet';
+  const n = topic.ruleRecipeIds.length;
+  return n === 0 ? 'Regel: keine Treffer' : `+ ${n} per Regel`;
+};
+
 /** Anzeige-Dauer für die Listenansicht, z. B. "7 Tage". */
 export const formatDisplayDays = (topic) => {
   const days = Number(topic?.displayDays);
