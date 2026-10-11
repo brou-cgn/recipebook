@@ -104,6 +104,12 @@ service cloud.firestore {
       allow create, update, delete: if isModeratorOrAdmin();
     }
 
+    // Themen der Kachel "Für dich entdeckt" (src/utils/discoverTopics.js).
+    // Nur Admins pflegen sie; der Rotationsjob liest per Admin SDK.
+    match /discoverTopics/{topicId} {
+      allow read, create, update, delete: if isAdmin();
+    }
+
     // Getraenke-Gewichtungsmatrizen (Erwachsene + Kinder) fuer die Event-
     // Getraenkekalkulation. Dokument-ID = Kategorie-ID (siehe
     // functions/drinkRates.js DRINK_WEIGHTS / CHILDREN_DRINK_WEIGHTS).

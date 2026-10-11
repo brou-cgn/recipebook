@@ -16,7 +16,9 @@
  * - Die Liste startet leer (ohne recipeIds); befüllt wird sie serverseitig
  *   durch die Cloud Function `rotateFuerDichEntdecktLists`
  *   (functions/fuerDichEntdecktRotation.js): wöchentlich werden alle
- *   Rezepte entfernt und 5 neue zum aktuellen Thema (derzeit Kürbis) gesetzt.
+ *   Rezepte entfernt und bis zu 5 neue gesetzt, gezogen aus einem Thema der
+ *   Admin-Liste `discoverTopics` (utils/discoverTopics.js), dessen Zeitraum
+ *   heute gilt.
  */
 
 import { db } from '../firebase';

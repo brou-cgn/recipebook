@@ -17,7 +17,7 @@ const cheerio = require('cheerio');
 const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 const {requireShortcutPin} = require('./webImportPin');
 const {evaluateLowCarbTag} = require('./lowCarb');
-const {isRotationDue, pickRecipeIds, THEME: FUER_DICH_THEME, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
+const {isRotationDue, getActiveTopics, pickTopic, pickRecipeIds, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
 const {normalizeCuisines, suggestNewCuisines} = require('./cuisineNormalization');
 
 // Initialize Firebase Admin
@@ -10423,9 +10423,12 @@ exports.aggregateRecipeRating = require('./recipeRatingAggregation').aggregateRe
 
 /**
  * Weekly rotation of the personal "Für dich entdeckt" lists: every list whose
- * last rotation is a week old (or that never had one) loses all its recipes
- * and gets 5 new ones for the current theme. Runs daily so that new lists and
- * a missed run are caught up within a day; `rotatedAt` keeps it to once a week.
+ * last rotation is a week old (or that never had one, or whose topic has run
+ * out) loses all its recipes and gets up to 5 from a topic drawn from the
+ * admin-maintained `discoverTopics` that is relevant today (period). Without
+ * a relevant topic the lists stay as they are. Runs daily so that new lists
+ * and a missed run are caught up within a day; `rotatedAt` keeps it to once
+ * a week.
  */
 exports.rotateFuerDichEntdecktLists = onSchedule(
     {
@@ -10436,24 +10439,35 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
     },
     async () => {
       const db = admin.firestore();
-      const listsSnap = await db.collection('groups')
-          .where('systemKey', '==', FUER_DICH_ENTDECKT_KEY).get();
-      const dueLists = listsSnap.docs.filter((d) => isRotationDue(d.data()));
+      const [listsSnap, topicsSnap, recipesSnap] = await Promise.all([
+        db.collection('groups').where('systemKey', '==', FUER_DICH_ENTDECKT_KEY).get(),
+        db.collection('discoverTopics').get(),
+        db.collection('recipes').get(),
+      ]);
+      const recipes = recipesSnap.docs.map((d) => ({id: d.id, ...d.data()}));
+      const topics = topicsSnap.docs.map((d) => ({id: d.id, ...d.data()}));
+      const activeTopics = getActiveTopics(topics, recipes);
+      if (activeTopics.length === 0) {
+        console.log('rotateFuerDichEntdecktLists: no relevant topic, lists unchanged');
+        return;
+      }
+
+      const now = Date.now();
+      const dueLists = listsSnap.docs
+          .filter((d) => isRotationDue(d.data(), now, activeTopics));
       if (dueLists.length === 0) {
         console.log('rotateFuerDichEntdecktLists: no list due');
         return;
       }
 
-      const recipesSnap = await db.collection('recipes').get();
-      const recipes = recipesSnap.docs.map((d) => ({id: d.id, ...d.data()}));
-
       for (const listDoc of dueLists) {
-        const previousIds = listDoc.data().recipeIds || [];
-        const recipeIds = pickRecipeIds(recipes, previousIds);
+        const list = listDoc.data();
+        const topic = pickTopic(activeTopics, list.themeId || null);
         await listDoc.ref.update({
-          recipeIds,
-          description: FUER_DICH_THEME.title,
-          themeLabel: FUER_DICH_THEME.label,
+          recipeIds: pickRecipeIds(topic.usableRecipeIds, list.recipeIds || []),
+          description: topic.beschreibung || '',
+          themeLabel: topic.rubrik || '',
+          themeId: topic.id,
           rotatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
       }
