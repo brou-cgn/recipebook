@@ -16,7 +16,8 @@
  * cuisine, creation date and last cook date (see matchesRecipeRule); rule
  * matches are added to the topic's hand-picked recipeIds. The search runs nightly at 03:30
  * (refreshDiscoverTopicRuleMatches in index.js) and stores `ruleRecipeIds` and
- * `ruleMatchedFor` on the topic; the rotation at 04:00 only reads them.
+ * `ruleMatchedFor` on the topic; the rotation at 04:00 reads them and evaluates
+ * rules whose matches are missing or stale itself.
  * `rotatedAt` on the list document is the clock: a list without it (freshly
  * created) is rotated on the next run, otherwise once the topic's display
  * duration has passed. A list without `themeId` is also due, so a list rotated by an
@@ -195,7 +196,8 @@ const matchesRecipeRule = (recipe, rule, lastCookedMs = null, now = Date.now()) 
 const ruleKey = (rule) => JSON.stringify(normalizeRecipeRule(rule));
 
 /**
- * Nightly rule search: IDs of all publicly visible recipes matching the rule.
+ * Nightly rule search: IDs of all recipes matching the rule (visibility is
+ * irrelevant here, see isAssignable / isVisibleToUser).
  * @param {Object} rule - raw `recipeRule`
  * @param {Array<Object>} recipes
  * @param {Map<string, number>} lastCookedByRecipe - recipeId -> latest cook date (ms)
@@ -204,18 +206,18 @@ const ruleKey = (rule) => JSON.stringify(normalizeRecipeRule(rule));
  */
 const computeRuleMatches = (rule, recipes, lastCookedByRecipe = new Map(), now = Date.now()) =>
   recipes
-      .filter(isPubliclyVisible)
+      .filter(isAssignable)
       .filter((r) => matchesRecipeRule(r, rule, lastCookedByRecipe.get(r.id) ?? null, now))
       .map((r) => r.id);
 
 /**
- * Topics that may be rotated in right now: in period, with at least one
- * recipe that every user may see. Each result carries the usable recipe IDs:
+ * Topics that may be rotated in right now: enabled, in period, with at least
+ * one recipe assigned to them (visibility is NOT checked here - it depends on
+ * the user, see isVisibleToUser). Each result carries the usable recipe IDs:
  * the hand-picked ones plus those matching the topic's `recipeRule`.
  */
 const getActiveTopics = (topics, recipes, now = Date.now()) => {
-  const visibleRecipes = recipes.filter(isPubliclyVisible);
-  const visible = new Set(visibleRecipes.map((r) => r.id));
+  const visible = new Set(recipes.filter(isAssignable).map((r) => r.id));
   return (topics || [])
       .filter((topic) => topic && topic.isActive !== false && isTopicInPeriod(topic, now))
       .map((topic) => {
@@ -230,6 +232,31 @@ const getActiveTopics = (topics, recipes, now = Date.now()) => {
         return {...topic, usableRecipeIds: [...new Set([...picked, ...matched])]};
       })
       .filter((topic) => topic.usableRecipeIds.length > 0);
+};
+
+/**
+ * Why a topic is not part of the rotation (for the log): inactive, no recipe
+ * selection, hand-picked/rule recipes not publicly visible, or rule matches
+ * missing/stale. Call only for topics that getActiveTopics dropped.
+ */
+const explainTopicExclusion = (topic, recipes, now = Date.now()) => {
+  if (topic.isActive === false) return 'inactive';
+  if (!isTopicInPeriod(topic, now)) return `outside period ${topic.periodStart || '?'}..${topic.periodEnd || '?'}`;
+  const visible = new Set(recipes.filter(isAssignable).map((r) => r.id));
+  const picked = Array.isArray(topic.recipeIds) ? topic.recipeIds : [];
+  const ruled = hasRecipeRule(topic.recipeRule);
+  if (picked.length === 0 && !ruled) return 'no recipeIds and no recipeRule';
+  const parts = [];
+  if (picked.length > 0) {
+    parts.push(`${picked.filter((id) => visible.has(id)).length}/${picked.length} hand-picked recipes exist`);
+  }
+  if (ruled) {
+    const stored = Array.isArray(topic.ruleRecipeIds) ? topic.ruleRecipeIds : [];
+    const current = topic.ruleMatchedFor === ruleKey(topic.recipeRule);
+    parts.push(`rule matches: ${current ? stored.filter((id) => visible.has(id)).length : 0}` +
+      `${current ? '' : ' (stale)'}`);
+  }
+  return parts.join(', ');
 };
 
 /**
@@ -251,13 +278,30 @@ const ingredientText = (item) => {
 };
 
 /**
- * Recipes every user may see: no pending import, not private, not locked
- * to a group unless published to the public list / living in a public group.
+ * Recipes that may be assigned to a topic: everything except pending imports.
+ * Public/private/group status is deliberately ignored here.
  */
-const isPubliclyVisible = (recipe) => {
-  if (!recipe || recipe.isTemp || recipe.isPrivate) return false;
-  return !recipe.groupId || recipe.publishedToPublic === true ||
-    recipe.groupType === 'public';
+const isAssignable = (recipe) => Boolean(recipe) && !recipe.isTemp;
+
+/**
+ * Whether one user may see a recipe - same rules as the client
+ * (subscribeToRecipes in src/utils/recipeFirestore.js): a recipe locked to a
+ * group is visible to the group's members and to everybody once it is
+ * published or lives in a public group; drafts (`isPrivate`) only to their
+ * author and admins.
+ * @param {Object} recipe
+ * @param {{id: string, isAdmin?: boolean}} user
+ * @param {Map<string, {type: string, memberIds: string[]}>} groupsById
+ */
+const isVisibleToUser = (recipe, user, groupsById = new Map()) => {
+  if (!isAssignable(recipe)) return false;
+  if (recipe.groupId && !recipe.publishedToPublic && !user.isAdmin) {
+    const group = groupsById.get(recipe.groupId);
+    const member = Boolean(group) && Array.isArray(group.memberIds) && group.memberIds.includes(user.id);
+    const publicGroup = (group && group.type === 'public') || recipe.groupType === 'public';
+    if (!member && !publicGroup) return false;
+  }
+  return !recipe.isPrivate || Boolean(user.isAdmin) || recipe.authorId === user.id;
 };
 
 const shuffle = (items, random) => {
@@ -291,7 +335,8 @@ module.exports = {
   RECIPES_PER_ROTATION,
   ROTATION_INTERVAL_MS,
   isRotationDue,
-  isPubliclyVisible,
+  isAssignable,
+  isVisibleToUser,
   isTopicInPeriod,
   getDisplayDays,
   DEFAULT_DISPLAY_DAYS,
@@ -301,6 +346,7 @@ module.exports = {
   ruleKey,
   computeRuleMatches,
   getActiveTopics,
+  explainTopicExclusion,
   pickTopic,
   pickRecipeIds,
 };
