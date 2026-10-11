@@ -15,6 +15,7 @@ import SeasonMatrixTab from './SeasonMatrixTab';
 import NutritionReferenceTab from './NutritionReferenceTab';
 import DrinkWeightsTab from './DrinkWeightsTab';
 import ButtonIconsAdminTab from './ButtonIconsAdminTab';
+import DiscoverTopicsTab from './DiscoverTopicsTab';
 import DeleteRowButton from './DeleteRowButton';
 import UndoSnackbar from './UndoSnackbar';
 import useUndoableDelete from '../hooks/useUndoableDelete';
@@ -1201,7 +1202,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     if (!isNaN(val) && val >= 0 && val <= 100) setter(val);
   };
 
-  const isFullWidthTab = ['users', 'saisonmatrix', 'naehrwerte', 'getraenkegewichte', 'buttonIconsV2'].includes(activeTab);
+  const isFullWidthTab = ['users', 'saisonmatrix', 'naehrwerte', 'getraenkegewichte', 'buttonIconsV2', 'entdeckt'].includes(activeTab);
 
   return (
     <div className="settings-container">
@@ -1252,6 +1253,14 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     onClick={() => setActiveTab('tagesmenu')}
                   >
                     Kochatelier
+                  </button>
+                )}
+                {isAdmin && (
+                  <button
+                    className={`tab-button ${activeTab === 'entdeckt' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('entdeckt')}
+                  >
+                    Für dich entdeckt
                   </button>
                 )}
                 {isAdmin && (
@@ -2444,6 +2453,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
           </>
         ) : activeTab === 'buttonIconsV2' ? (
           <ButtonIconsAdminTab />
+        ) : activeTab === 'entdeckt' ? (
+          <DiscoverTopicsTab currentUser={currentUser} allRecipes={allRecipes} />
         ) : activeTab === 'saisonmatrix' ? (
           <SeasonMatrixTab currentUser={currentUser} />
         ) : activeTab === 'naehrwerte' ? (
