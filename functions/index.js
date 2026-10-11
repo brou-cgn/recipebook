@@ -17,7 +17,7 @@ const cheerio = require('cheerio');
 const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 const {requireShortcutPin} = require('./webImportPin');
 const {evaluateLowCarbTag} = require('./lowCarb');
-const {isRotationDue, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleMatches, explainTopicExclusion, pickTopic, pickRecipeIds, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
+const {isRotationDue, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleMatches, explainTopicExclusion, isVisibleToUser, pickTopic, pickRecipeIds, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
 const {normalizeCuisines, suggestNewCuisines} = require('./cuisineNormalization');
 
 // Initialize Firebase Admin
@@ -10427,12 +10427,7 @@ exports.aggregateRecipeRating = require('./recipeRatingAggregation').aggregateRe
  * rule looks at them. Shared by the nightly search and the rotation.
  * @return {Promise<Map<string, string[]>>} topic id -> matching recipe IDs
  */
-const loadPublicGroupIds = async (db) => {
-  const snap = await db.collection('groups').where('type', '==', 'public').get();
-  return new Set(snap.docs.map((d) => d.id));
-};
-
-const computeTopicRuleMatches = async (db, topics, recipes, publicGroupIds) => {
+const computeTopicRuleMatches = async (db, topics, recipes) => {
   const result = new Map();
   if (topics.length === 0) return result;
   const lastCookedByRecipe = new Map();
@@ -10452,7 +10447,7 @@ const computeTopicRuleMatches = async (db, topics, recipes, publicGroupIds) => {
   }
   const now = Date.now();
   for (const t of topics) {
-    result.set(t.id, computeRuleMatches(t.recipeRule, recipes, lastCookedByRecipe, now, publicGroupIds));
+    result.set(t.id, computeRuleMatches(t.recipeRule, recipes, lastCookedByRecipe, now));
   }
   return result;
 };
@@ -10493,10 +10488,9 @@ exports.refreshDiscoverTopicRuleMatches = onSchedule(
 
       const recipesSnap = await db.collection('recipes').get();
       const recipes = recipesSnap.docs.map((d) => ({id: d.id, ...d.data()}));
-      const publicGroupIds = await loadPublicGroupIds(db);
 
       const matches = await computeTopicRuleMatches(
-          db, ruleTopics.map((d) => ({id: d.id, ...d.data()})), recipes, publicGroupIds);
+          db, ruleTopics.map((d) => ({id: d.id, ...d.data()})), recipes);
       for (const d of ruleTopics) {
         const rule = d.data().recipeRule;
         await d.ref.update({
@@ -10507,7 +10501,7 @@ exports.refreshDiscoverTopicRuleMatches = onSchedule(
       }
       ruleTopics.forEach((d) => console.log(
           `refreshDiscoverTopicRuleMatches: topic ${d.id}: ${matches.get(d.id).length} match(es) of ` +
-          `${recipes.length} recipes (${publicGroupIds.size} public group(s))`));
+          `${recipes.length} recipes`));
       console.log(`refreshDiscoverTopicRuleMatches: updated ${ruleTopics.length} topic(s)`);
     }
 );
@@ -10530,12 +10524,13 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
     },
     async () => {
       const db = admin.firestore();
-      const [listsSnap, topicsSnap, recipesSnap, publicGroupIds] = await Promise.all([
+      const [listsSnap, topicsSnap, recipesSnap, groupsSnap] = await Promise.all([
         db.collection('groups').where('systemKey', '==', FUER_DICH_ENTDECKT_KEY).get(),
         db.collection('discoverTopics').get(),
         db.collection('recipes').get(),
-        loadPublicGroupIds(db),
+        db.collection('groups').get(),
       ]);
+      const groupsById = new Map(groupsSnap.docs.map((d) => [d.id, d.data()]));
       const recipes = recipesSnap.docs.map((d) => ({id: d.id, ...d.data()}));
       const topics = topicsSnap.docs.map((d) => ({id: d.id, ...d.data()}));
 
@@ -10547,7 +10542,7 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
       });
       if (staleTopics.length > 0) {
         const matches = await computeTopicRuleMatches(
-            db, staleTopics.map((d) => ({id: d.id, ...d.data()})), recipes, publicGroupIds);
+            db, staleTopics.map((d) => ({id: d.id, ...d.data()})), recipes);
         for (const d of staleTopics) {
           const rule = d.data().recipeRule;
           const topic = topics.find((t) => t.id === d.id);
@@ -10561,11 +10556,11 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
         }
       }
 
-      const activeTopics = getActiveTopics(topics, recipes, Date.now(), publicGroupIds);
+      const activeTopics = getActiveTopics(topics, recipes);
       topics
           .filter((t) => !activeTopics.some((a) => a.id === t.id))
           .forEach((t) => console.log(
-              `rotateFuerDichEntdecktLists: topic ${t.id} skipped: ${explainTopicExclusion(t, recipes, publicGroupIds)}`));
+              `rotateFuerDichEntdecktLists: topic ${t.id} skipped: ${explainTopicExclusion(t, recipes)}`));
       if (activeTopics.length === 0) {
         console.log('rotateFuerDichEntdecktLists: no relevant topic, lists unchanged');
         return;
@@ -10579,9 +10574,26 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
         return;
       }
 
+      const recipesById = new Map(recipes.map((r) => [r.id, r]));
+      let rotated = 0;
       for (const listDoc of dueLists) {
         const list = listDoc.data();
-        const topic = pickTopic(activeTopics, list.themeId || null);
+        // Visibility depends on the list's owner: only topics with at least one
+        // recipe the owner may see take part, and only such recipes are drawn.
+        const userDoc = await db.collection('users').doc(list.ownerId).get();
+        const user = {id: list.ownerId, isAdmin: userDoc.exists && userDoc.data().role === 'admin'};
+        const candidates = activeTopics
+            .map((t) => ({
+              ...t,
+              usableRecipeIds: t.usableRecipeIds.filter((id) =>
+                isVisibleToUser(recipesById.get(id), user, groupsById)),
+            }))
+            .filter((t) => t.usableRecipeIds.length > 0);
+        const topic = pickTopic(candidates, list.themeId || null);
+        if (!topic) {
+          console.log(`rotateFuerDichEntdecktLists: list ${listDoc.id}: no topic with recipes visible to the owner`);
+          continue;
+        }
         await listDoc.ref.update({
           recipeIds: pickRecipeIds(topic.usableRecipeIds, list.recipeIds || []),
           description: topic.beschreibung || '',
@@ -10589,7 +10601,8 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
           themeId: topic.id,
           rotatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
+        rotated++;
       }
-      console.log(`rotateFuerDichEntdecktLists: rotated ${dueLists.length} list(s)`);
+      console.log(`rotateFuerDichEntdecktLists: rotated ${rotated}/${dueLists.length} list(s)`);
     }
 );

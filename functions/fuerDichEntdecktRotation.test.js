@@ -74,9 +74,10 @@ const recipes = [
   {id: 'b', title: 'Kürbisrisotto'},
   {id: 'priv', title: 'Privat', isPrivate: true},
   {id: 'grp', title: 'Gruppe', groupId: 'g1'},
+  {id: 'tmp', title: 'Import', isTemp: true},
 ];
 
-test('active topics: in period, enabled, with usable recipes only', () => {
+test('active topics: in period, enabled, with assigned recipes (visibility ignored)', () => {
   const now = on('2026-10-11');
   const topics = [
     {id: 'ok', recipeIds: ['a', 'priv', 'gone'], periodStart: '09-01', periodEnd: '11-30'},
@@ -84,12 +85,13 @@ test('active topics: in period, enabled, with usable recipes only', () => {
     {id: 'summer', recipeIds: ['a'], periodStart: '06-01', periodEnd: '08-31'},
     {id: 'off', recipeIds: ['a'], isActive: false},
     {id: 'onlyPrivate', recipeIds: ['priv', 'grp']},
+    {id: 'onlyTemp', recipeIds: ['tmp']},
     {id: 'empty', recipeIds: []},
     {id: 'missing'},
   ];
   const active = getActiveTopics(topics, recipes, now);
-  assert.deepEqual(active.map((t) => t.id), ['ok', 'allYear']);
-  assert.deepEqual(active[0].usableRecipeIds, ['a']);
+  assert.deepEqual(active.map((t) => t.id), ['ok', 'allYear', 'onlyPrivate']);
+  assert.deepEqual(active[0].usableRecipeIds, ['a', 'priv']);
 });
 
 test('pickTopic avoids the previous topic when there is a choice', () => {
@@ -179,14 +181,14 @@ test('an empty rule matches nothing', () => {
   assert.equal(matchesRecipeRule(recipe(), undefined, null, NOW), false);
 });
 
-test('computeRuleMatches only returns publicly visible recipes', () => {
-  const recipes = [recipe({id: 'a'}), recipe({id: 'b', isPrivate: true})];
-  assert.deepEqual(computeRuleMatches({ingredientIds: {include: ['Spargel']}}, recipes, new Map(), NOW), ['a']);
+test('computeRuleMatches ignores visibility but not pending imports', () => {
+  const recipes = [recipe({id: 'a'}), recipe({id: 'b', isPrivate: true}), recipe({id: 'c', groupId: 'g1'}), recipe({id: 'd', isTemp: true})];
+  assert.deepEqual(computeRuleMatches({ingredientIds: {include: ['Spargel']}}, recipes, new Map(), NOW), ['a', 'b', 'c']);
 });
 
 test('getActiveTopics merges stored rule matches, but only for the current rule', () => {
   const rule = {ingredientIds: {include: ['Spargel']}};
-  const recipes = [{id: 'a'}, {id: 'b'}, {id: 'c', isPrivate: true}];
+  const recipes = [{id: 'a'}, {id: 'b'}, {id: 'c', isTemp: true}];
   const topic = {id: 't', recipeIds: ['a'], recipeRule: rule, ruleRecipeIds: ['b', 'c'], ruleMatchedFor: ruleKey(rule)};
   assert.deepEqual(getActiveTopics([topic], recipes, NOW)[0].usableRecipeIds, ['a', 'b']);
   const stale = {...topic, recipeRule: {ingredientIds: {include: ['Tomate']}}};
@@ -199,17 +201,26 @@ test('explainTopicExclusion names the reason', () => {
   const {explainTopicExclusion} = require('./fuerDichEntdecktRotation');
   assert.equal(explainTopicExclusion({isActive: false}, recipes), 'inactive');
   assert.equal(explainTopicExclusion({recipeIds: []}, recipes), 'no recipeIds and no recipeRule');
-  assert.match(explainTopicExclusion({recipeIds: ['priv', 'grp']}, recipes), /0\/2 hand-picked/);
+  assert.match(explainTopicExclusion({recipeIds: ['tmp', 'gone']}, recipes), /0\/2 hand-picked/);
   const rule = {cuisines: {include: ['italienisch']}};
-  assert.match(explainTopicExclusion({recipeRule: rule, ruleRecipeIds: ['a']}, recipes), /0 usable \(stale\)/);
+  assert.match(explainTopicExclusion({recipeRule: rule, ruleRecipeIds: ['a']}, recipes), /rule matches: 0 \(stale\)/);
 });
 
-test('recipes of a public group count as visible even without groupType', () => {
-  const rs = [{id: 'p', groupId: 'pub'}, {id: 'g', groupId: 'priv'}];
-  const topic = {id: 't', recipeIds: ['p', 'g']};
-  assert.deepEqual(getActiveTopics([topic], rs, NOW)[0]?.usableRecipeIds, undefined);
-  assert.deepEqual(getActiveTopics([topic], rs, NOW, new Set(['pub']))[0].usableRecipeIds, ['p']);
-  const {computeRuleMatches} = require('./fuerDichEntdecktRotation');
-  const rule = {created: {minDays: 0}};
-  assert.deepEqual(computeRuleMatches(rule, [{id: 'p', groupId: 'pub', createdAt: NOW}], new Map(), NOW, new Set(['pub'])), ['p']);
+test('isVisibleToUser mirrors the client: group members, public groups, drafts', () => {
+  const {isVisibleToUser} = require('./fuerDichEntdecktRotation');
+  const groups = new Map([
+    ['mine', {type: 'private', memberIds: ['u1']}],
+    ['other', {type: 'private', memberIds: ['u2']}],
+    ['pub', {type: 'public', memberIds: []}],
+  ]);
+  const u1 = {id: 'u1'};
+  assert.equal(isVisibleToUser({id: 'r', groupId: 'mine'}, u1, groups), true);
+  assert.equal(isVisibleToUser({id: 'r', groupId: 'other'}, u1, groups), false);
+  assert.equal(isVisibleToUser({id: 'r', groupId: 'other'}, {id: 'u1', isAdmin: true}, groups), true);
+  assert.equal(isVisibleToUser({id: 'r', groupId: 'other', publishedToPublic: true}, u1, groups), true);
+  assert.equal(isVisibleToUser({id: 'r', groupId: 'pub'}, u1, groups), true);
+  assert.equal(isVisibleToUser({id: 'r'}, u1, groups), true);
+  assert.equal(isVisibleToUser({id: 'r', isPrivate: true}, u1, groups), false);
+  assert.equal(isVisibleToUser({id: 'r', isPrivate: true, authorId: 'u1'}, u1, groups), true);
+  assert.equal(isVisibleToUser({id: 'r', isTemp: true}, u1, groups), false);
 });
