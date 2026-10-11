@@ -10429,7 +10429,7 @@ exports.aggregateRecipeRating = require('./recipeRatingAggregation').aggregateRe
  */
 exports.rotateFuerDichEntdecktLists = onSchedule(
     {
-      schedule: '0 4 * * *',
+      schedule: '30 9 * * *',
       timeZone: 'Europe/Berlin',
       timeoutSeconds: 300,
       maxInstances: 1,
