@@ -5,7 +5,7 @@ const {
 } = require('./fuerDichEntdecktRotation');
 
 const DAY = 24 * 60 * 60 * 1000;
-const list = (rotatedAt) => ({systemKey: 'fuerDichEntdeckt', rotatedAt});
+const list = (rotatedAt) => ({systemKey: 'fuerDichEntdeckt', themeLabel: 'Saison', rotatedAt});
 
 test('rotation is due for a new list and after a week, not before', () => {
   const now = 100 * DAY;
@@ -13,6 +13,13 @@ test('rotation is due for a new list and after a week, not before', () => {
   assert.equal(isRotationDue(list(now - 6 * DAY), now), false);
   assert.equal(isRotationDue(list(now - ROTATION_INTERVAL_MS), now), true);
   assert.equal(isRotationDue({name: 'Andere Liste'}, now), false);
+});
+
+test('a list without themeLabel is due even if rotated recently', () => {
+  const now = 100 * DAY;
+  const old = {systemKey: 'fuerDichEntdeckt', rotatedAt: now - DAY};
+  assert.equal(isRotationDue(old, now), true);
+  assert.equal(isRotationDue({...old, themeLabel: 'Saison'}, now), false);
 });
 
 test('rotatedAt may be a Firestore Timestamp', () => {
