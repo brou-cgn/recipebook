@@ -17,6 +17,7 @@ const cheerio = require('cheerio');
 const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 const {requireShortcutPin} = require('./webImportPin');
 const {evaluateLowCarbTag} = require('./lowCarb');
+const {isRotationDue, pickRecipeIds, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
 const {normalizeCuisines, suggestNewCuisines} = require('./cuisineNormalization');
 
 // Initialize Firebase Admin
@@ -10419,3 +10420,41 @@ exports.setWebImportPin = require('./webImportPin').setWebImportPin;
 // Server-seitige Aggregation von ratingAvg/ratingCount auf recipes/{recipeId}
 // aus der ratings-Subcollection (ersetzt den bisherigen offenen Client-Write).
 exports.aggregateRecipeRating = require('./recipeRatingAggregation').aggregateRecipeRating;
+
+/**
+ * Weekly rotation of the personal "Für dich entdeckt" lists: every list whose
+ * last rotation is a week old (or that never had one) loses all its recipes
+ * and gets 5 new ones for the current theme. Runs daily so that new lists and
+ * a missed run are caught up within a day; `rotatedAt` keeps it to once a week.
+ */
+exports.rotateFuerDichEntdecktLists = onSchedule(
+    {
+      schedule: '0 4 * * *',
+      timeZone: 'Europe/Berlin',
+      timeoutSeconds: 300,
+      maxInstances: 1,
+    },
+    async () => {
+      const db = admin.firestore();
+      const listsSnap = await db.collection('groups')
+          .where('systemKey', '==', FUER_DICH_ENTDECKT_KEY).get();
+      const dueLists = listsSnap.docs.filter((d) => isRotationDue(d.data()));
+      if (dueLists.length === 0) {
+        console.log('rotateFuerDichEntdecktLists: no list due');
+        return;
+      }
+
+      const recipesSnap = await db.collection('recipes').get();
+      const recipes = recipesSnap.docs.map((d) => ({id: d.id, ...d.data()}));
+
+      for (const listDoc of dueLists) {
+        const previousIds = listDoc.data().recipeIds || [];
+        const recipeIds = pickRecipeIds(recipes, previousIds);
+        await listDoc.ref.update({
+          recipeIds,
+          rotatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+      console.log(`rotateFuerDichEntdecktLists: rotated ${dueLists.length} list(s)`);
+    }
+);

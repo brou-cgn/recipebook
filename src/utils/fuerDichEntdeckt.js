@@ -13,8 +13,10 @@
  *   zieht die Liste beim nächsten Abgleich nach.
  * - Ohne Berechtigung wird die Liste aus allen Ansichten ausgeblendet
  *   (nicht gelöscht) – Kachel und Liste hängen an derselben Einstellung.
- * - Die Liste startet leer (ohne recipeIds); befüllt wird sie später über
- *   die Themen-Logik.
+ * - Die Liste startet leer (ohne recipeIds); befüllt wird sie serverseitig
+ *   durch die Cloud Function `rotateFuerDichEntdecktLists`
+ *   (functions/fuerDichEntdecktRotation.js): wöchentlich werden alle
+ *   Rezepte entfernt und 5 neue zum aktuellen Thema (derzeit Kürbis) gesetzt.
  */
 
 import { db } from '../firebase';
