@@ -264,8 +264,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [abortingCalcId, setAbortingCalcId] = useState(null);
   const [selectedNutritionRecipeId, setSelectedNutritionRecipeId] = useState(null);
   const [retryAutoCalculateToken, setRetryAutoCalculateToken] = useState(0);
-  const [expandedAppCallId, setExpandedAppCallId] = useState(null);
-  const [expandedRecipeCallId, setExpandedRecipeCallId] = useState(null);
   const [now, setNow] = useState(() => Date.now());
   const [filterBenjaminRousselli, setFilterBenjaminRousselli] = useState(true);
   const [filterNutritionCalculations, setFilterNutritionCalculations] = useState(true);
@@ -1523,7 +1521,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                         <th>Nachname</th>
                         {canSeeEmails && <th className="app-calls-col-desktop">E-Mail</th>}
                         <th className="app-calls-col-desktop">Art</th>
-                        <th className="app-calls-col-mobile">Info</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1539,27 +1536,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                             <td>{call.userNachname}</td>
                             {canSeeEmails && <td className="app-calls-col-desktop">{getCallEmail(call)}</td>}
                             <td className="app-calls-col-desktop">{call.isGuest ? 'Gast' : 'Angemeldet'}</td>
-                            <td className="app-calls-col-mobile">
-                              <button
-                                className={`app-calls-info-btn${expandedAppCallId === call.id ? ' active' : ''}`}
-                                onClick={() => setExpandedAppCallId(expandedAppCallId === call.id ? null : call.id)}
-                                aria-label="Details anzeigen"
-                                title="Details anzeigen"
-                              >
-                                ⓘ
-                              </button>
-                            </td>
                           </tr>
-                          {expandedAppCallId === call.id && (
-                            <tr className="app-calls-detail-row">
-                              <td colSpan={6}>
-                                <div className="app-calls-detail-content">
-                                  {canSeeEmails && <span><strong>E-Mail:</strong> {getCallEmail(call) || '–'}</span>}
-                                  <span><strong>Art:</strong> {call.isGuest ? 'Gast' : 'Angemeldet'}</span>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
                         </React.Fragment>
                       ))}
                     </tbody>
@@ -1622,7 +1599,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                         <th>Nachname</th>
                         {canSeeEmails && <th className="app-calls-col-desktop">E-Mail</th>}
                         <th className="app-calls-col-desktop">Art</th>
-                        <th className="app-calls-col-mobile">Info</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1639,27 +1615,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                             <td>{call.userNachname}</td>
                             {canSeeEmails && <td className="app-calls-col-desktop">{getCallEmail(call)}</td>}
                             <td className="app-calls-col-desktop">{call.isGuest ? 'Gast' : 'Angemeldet'}</td>
-                            <td className="app-calls-col-mobile">
-                              <button
-                                className={`app-calls-info-btn${expandedRecipeCallId === call.id ? ' active' : ''}`}
-                                onClick={() => setExpandedRecipeCallId(expandedRecipeCallId === call.id ? null : call.id)}
-                                aria-label="Details anzeigen"
-                                title="Details anzeigen"
-                              >
-                                ⓘ
-                              </button>
-                            </td>
                           </tr>
-                          {expandedRecipeCallId === call.id && (
-                            <tr className="app-calls-detail-row">
-                              <td colSpan={7}>
-                                <div className="app-calls-detail-content">
-                                  {canSeeEmails && <span><strong>E-Mail:</strong> {getCallEmail(call) || '–'}</span>}
-                                  <span><strong>Art:</strong> {call.isGuest ? 'Gast' : 'Angemeldet'}</span>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
                         </React.Fragment>
                       ))}
                     </tbody>
