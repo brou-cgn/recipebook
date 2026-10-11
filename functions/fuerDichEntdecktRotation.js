@@ -6,7 +6,8 @@
  * removed and RECIPES_PER_ROTATION new ones for the current theme assigned.
  * `rotatedAt` on the list document is the clock: a list without it (freshly
  * created) is rotated on the next run, otherwise once ROTATION_INTERVAL_MS
- * has passed.
+ * has passed. A list without `themeLabel` is also due, so a list rotated by an
+ * older version picks up the theme fields on the next run.
  *
  * Pure functions only - the scheduled function in index.js does the I/O.
  */
@@ -35,6 +36,9 @@ const toMillis = (value) => {
 
 const isRotationDue = (list, now = Date.now()) => {
   if (!list || list.systemKey !== SYSTEM_KEY) return false;
+  // Lists rotated before the theme fields existed get them on the next run
+  // instead of waiting out the week.
+  if (!list.themeLabel) return true;
   const last = toMillis(list.rotatedAt);
   return last === null || now - last >= ROTATION_INTERVAL_MS;
 };
