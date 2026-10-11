@@ -308,3 +308,8 @@ export function useNutritionReference() {
 
   return context;
 }
+
+/** Wie useNutritionReference, liefert ohne Provider aber null statt zu werfen. */
+export function useOptionalNutritionReference() {
+  return useContext(NutritionReferenceContext);
+}

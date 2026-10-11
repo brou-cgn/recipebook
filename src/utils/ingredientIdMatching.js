@@ -916,3 +916,51 @@ export function buildPendingNutritionReferenceDraft(ingredientText, nutritionRef
     possibleUnits: unit ? [String(unit).trim()].filter(Boolean) : [],
   };
 }
+
+/**
+ * Fuzzy-Typeahead über die Zutaten-Referenz: findet ingredientIDs zu einer
+ * (unvollständigen oder leicht falsch geschriebenen) Eingabe. Geprüft werden
+ * ID, Anzeigename und Synonyme; Umlaute/Groß-Kleinschreibung sind egal.
+ * Rangfolge: exakt > Präfix > Teilstring > Tippfehler-Ähnlichkeit (je Wort).
+ * @returns {Array<{ingredientID: string, displayName: string, score: number}>}
+ */
+export function searchIngredientIds(query, nutritionReferenceRows = [], limit = 8) {
+  const q = normalizeNutritionReferenceId(query);
+  if (!q) return [];
+
+  const scoreToken = (token) => {
+    if (!token) return 0;
+    if (token === q) return 1;
+    if (token.startsWith(q)) return 0.95;
+    if (token.split(/[\s,_-]+/).some((word) => word.startsWith(q))) return 0.9;
+    if (q.length >= 2 && token.includes(q)) return 0.8;
+    const words = [token, ...token.split(/[\s,_-]+/)];
+    const best = words.reduce((max, word) => {
+      // Präfix gleicher Länge vergleichen, damit "spargl" zu "spargel" passt.
+      const part = word.slice(0, Math.max(q.length, 1));
+      return Math.max(max, similarityFromNormalized(q, word), similarityFromNormalized(q, part));
+    }, 0);
+    return best >= 0.6 ? best * 0.75 : 0;
+  };
+
+  const seen = new Set();
+  return nutritionReferenceRows
+    .map((row) => {
+      const ingredientID = String(row?.ingredientID || row?.id || '').trim();
+      if (!ingredientID || seen.has(ingredientID)) return null;
+      seen.add(ingredientID);
+      const displayName = String(row?.displayName || row?.Anzeigename || row?.name || ingredientID).trim();
+      const tokens = [
+        ingredientID,
+        displayName,
+        ...(Array.isArray(row?.synonyms) ? row.synonyms : []),
+      ].map((t) => normalizeNutritionReferenceId(t));
+      const score = tokens.reduce((max, t) => Math.max(max, scoreToken(t)), 0);
+      return score > 0 ? { ingredientID, displayName, score } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score
+      || a.ingredientID.length - b.ingredientID.length
+      || a.ingredientID.localeCompare(b.ingredientID, 'de', { sensitivity: 'base' }))
+    .slice(0, limit);
+}

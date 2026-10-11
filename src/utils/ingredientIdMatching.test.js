@@ -8,6 +8,7 @@ jest.mock('firebase/firestore', () => ({
 }));
 
 import {
+  searchIngredientIds,
   getIngredientIdSuggestions,
   parseIngredientNameAndUnit,
   getAutoAssignedIngredients,
@@ -863,5 +864,35 @@ describe('normalizeIngredientNameForIdMatching with adjectives', () => {
       expect(buildPendingNutritionReferenceDraft('')).toBeNull();
       expect(buildPendingNutritionReferenceDraft('   ')).toBeNull();
     });
+  });
+});
+
+describe('searchIngredientIds (fuzzy typeahead)', () => {
+  const rows = [
+    { ingredientID: 'Spargel', displayName: 'Spargel, weiß', synonyms: ['Stangenspargel'] },
+    { ingredientID: 'Spargel grün', displayName: 'Grüner Spargel' },
+    { ingredientID: 'Süßkartoffel', displayName: 'Süßkartoffel' },
+    { ingredientID: 'Tomate', displayName: 'Tomate' },
+  ];
+
+  test('prefix and exact matches rank first', () => {
+    const ids = searchIngredientIds('sparg', rows).map((m) => m.ingredientID);
+    expect(ids.slice(0, 2)).toEqual(['Spargel', 'Spargel grün']);
+    expect(searchIngredientIds('Tomate', rows)[0].ingredientID).toBe('Tomate');
+  });
+
+  test('tolerates typos and umlaut spelling', () => {
+    expect(searchIngredientIds('spargl', rows)[0].ingredientID).toBe('Spargel');
+    expect(searchIngredientIds('suesskartoffel', rows)[0].ingredientID).toBe('Süßkartoffel');
+  });
+
+  test('finds by synonym and by inner word', () => {
+    expect(searchIngredientIds('stangen', rows)[0].ingredientID).toBe('Spargel');
+    expect(searchIngredientIds('grün', rows)[0].ingredientID).toBe('Spargel grün');
+  });
+
+  test('empty or unrelated queries return nothing', () => {
+    expect(searchIngredientIds('', rows)).toEqual([]);
+    expect(searchIngredientIds('xyzqw', rows)).toEqual([]);
   });
 });
