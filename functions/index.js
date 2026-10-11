@@ -8237,9 +8237,10 @@ const IMPORTER_TEST_MIN_STEPS = 2;
 /**
  * Fixed UID used only to mint a throwaway Firebase Auth identity for the
  * nightly importer test. signInWithCustomToken provisions this user on first
- * use, so no manual Firebase Console setup is required. It never gets an
- * admin/moderator role, so it exercises the same "authenticated" rate-limit
- * tier as a regular logged-in user.
+ * use; its users/{uid} profile (role 'edit', the minimum for the AI callables)
+ * is written by mintImporterTestIdToken, so no manual Firebase Console setup is
+ * required. It never gets an admin/moderator role, so it exercises the same
+ * "authenticated" rate-limit tier as a regular logged-in user.
  */
 const AI_IMPORTER_TEST_UID = 'nightly-ai-importer-test';
 
@@ -8263,6 +8264,16 @@ async function mintImporterTestIdToken(webApiKey) {
   if (!webApiKey) {
     throw new Error('WEB_API_KEY-Secret ist nicht konfiguriert');
   }
+  // The AI callables read the role from users/{uid} (requireAiCaller) and
+  // refuse anyone below 'edit'. The throwaway test user has no profile of its
+  // own, so provision one - merge keeps this idempotent across nightly runs.
+  await admin.firestore().doc(`users/${AI_IMPORTER_TEST_UID}`).set({
+    vorname: 'Nightly',
+    nachname: 'Importer-Test',
+    role: 'edit',
+    isAdmin: false,
+    isTestAccount: true,
+  }, {merge: true});
   const customToken = await admin.auth().createCustomToken(AI_IMPORTER_TEST_UID);
   const response = await fetch(
       `https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${webApiKey}`,
