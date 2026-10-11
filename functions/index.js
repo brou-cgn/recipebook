@@ -17,7 +17,7 @@ const cheerio = require('cheerio');
 const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 const {requireShortcutPin} = require('./webImportPin');
 const {evaluateLowCarbTag} = require('./lowCarb');
-const {isRotationDue, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleMatches, explainTopicExclusion, isVisibleToUser, pickTopic, pickRecipeIds, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
+const {isRotationDue, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleMatches, mergeRuleMatches, explainTopicExclusion, isVisibleToUser, pickTopic, pickRecipeIds, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
 const {normalizeCuisines, suggestNewCuisines} = require('./cuisineNormalization');
 
 // Initialize Firebase Admin
@@ -10422,17 +10422,22 @@ exports.setWebImportPin = require('./webImportPin').setWebImportPin;
 exports.aggregateRecipeRating = require('./recipeRatingAggregation').aggregateRecipeRating;
 
 /**
- * Rule search for the given topic docs: recipe IDs matching each topic's
- * `recipeRule` (publicly visible recipes only). Loads cook dates only when a
- * rule looks at them. Shared by the nightly search and the rotation.
- * @return {Promise<Map<string, string[]>>} topic id -> matching recipe IDs
+ * Applies the topics' `recipeRule`s: the matching recipes (visibility is
+ * irrelevant, pending imports aside) are written into the topic's `recipeIds`
+ * like hand-picked ones; `autoRecipeIds` records which entries the rule added so
+ * that stale ones are dropped later (mergeRuleMatches). Topics without a rule
+ * lose their earlier automatic entries. Loads cook dates only when a rule looks
+ * at them. Shared by the nightly search and the rotation.
+ * @param {Array<FirebaseFirestore.QueryDocumentSnapshot>} topicDocs
+ * @param {Array<Object>} recipes
+ * @return {Promise<Map<string, Object>>} topic id -> fields written to the topic
  */
-const computeTopicRuleMatches = async (db, topics, recipes) => {
-  const result = new Map();
-  if (topics.length === 0) return result;
+const applyTopicRules = async (db, topicDocs, recipes) => {
+  const updates = new Map();
+  if (topicDocs.length === 0) return updates;
   const lastCookedByRecipe = new Map();
-  const needsCookDates = topics.some((t) => {
-    const {lastCooked} = normalizeRecipeRule(t.recipeRule);
+  const needsCookDates = topicDocs.some((d) => {
+    const {lastCooked} = normalizeRecipeRule(d.data().recipeRule);
     return lastCooked.minDays !== null || lastCooked.maxDays !== null;
   });
   if (needsCookDates) {
@@ -10446,18 +10451,31 @@ const computeTopicRuleMatches = async (db, topics, recipes) => {
     });
   }
   const now = Date.now();
-  for (const t of topics) {
-    result.set(t.id, computeRuleMatches(t.recipeRule, recipes, lastCookedByRecipe, now));
+  for (const d of topicDocs) {
+    const topic = d.data();
+    const ruled = hasRecipeRule(topic.recipeRule);
+    const matches = ruled ? computeRuleMatches(topic.recipeRule, recipes, lastCookedByRecipe, now) : [];
+    const merged = mergeRuleMatches(topic, matches);
+    const update = {
+      recipeIds: merged.recipeIds,
+      autoRecipeIds: merged.autoRecipeIds,
+      ruleMatchedFor: ruled ? ruleKey(topic.recipeRule) : admin.firestore.FieldValue.delete(),
+      ruleMatchedAt: ruled ? admin.firestore.FieldValue.serverTimestamp() : admin.firestore.FieldValue.delete(),
+      // legacy field of an earlier version (matches were stored separately)
+      ruleRecipeIds: admin.firestore.FieldValue.delete(),
+    };
+    await d.ref.update(update);
+    updates.set(d.id, {...update, matchCount: matches.length, added: merged.autoRecipeIds.length});
   }
-  return result;
+  return updates;
 };
 
 /**
  * Nightly rule search for the "Für dich entdeckt" topics (03:30, before the
- * rotation at 04:00): for every topic with a `recipeRule` the publicly visible
- * recipes matching it are stored as `ruleRecipeIds` on the topic, together
- * with `ruleMatchedFor` (the rule they were computed for) and `ruleMatchedAt`.
- * Topics whose rule was removed lose their stored matches.
+ * rotation at 04:00): recipes matching a topic's `recipeRule` are added to its
+ * `recipeIds` like hand-picked ones (see applyTopicRules). The topic's period is
+ * irrelevant here - it only decides in rotateFuerDichEntdecktLists when the
+ * topic is handed out.
  */
 exports.refreshDiscoverTopicRuleMatches = onSchedule(
     {
@@ -10469,40 +10487,20 @@ exports.refreshDiscoverTopicRuleMatches = onSchedule(
     async () => {
       const db = admin.firestore();
       const topicsSnap = await db.collection('discoverTopics').get();
-      const ruleTopics = topicsSnap.docs.filter((d) => hasRecipeRule(d.data().recipeRule));
-      const staleTopics = topicsSnap.docs.filter((d) =>
-        !hasRecipeRule(d.data().recipeRule) && d.data().ruleRecipeIds !== undefined);
-      if (ruleTopics.length === 0 && staleTopics.length === 0) {
+      const docs = topicsSnap.docs.filter((d) =>
+        hasRecipeRule(d.data().recipeRule) || d.data().autoRecipeIds !== undefined ||
+        d.data().ruleRecipeIds !== undefined);
+      if (docs.length === 0) {
         console.log('refreshDiscoverTopicRuleMatches: no topic with a rule');
         return;
       }
-
-      for (const d of staleTopics) {
-        await d.ref.update({
-          ruleRecipeIds: admin.firestore.FieldValue.delete(),
-          ruleMatchedFor: admin.firestore.FieldValue.delete(),
-          ruleMatchedAt: admin.firestore.FieldValue.delete(),
-        });
-      }
-      if (ruleTopics.length === 0) return;
-
       const recipesSnap = await db.collection('recipes').get();
       const recipes = recipesSnap.docs.map((d) => ({id: d.id, ...d.data()}));
-
-      const matches = await computeTopicRuleMatches(
-          db, ruleTopics.map((d) => ({id: d.id, ...d.data()})), recipes);
-      for (const d of ruleTopics) {
-        const rule = d.data().recipeRule;
-        await d.ref.update({
-          ruleRecipeIds: matches.get(d.id),
-          ruleMatchedFor: ruleKey(rule),
-          ruleMatchedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-      }
-      ruleTopics.forEach((d) => console.log(
-          `refreshDiscoverTopicRuleMatches: topic ${d.id}: ${matches.get(d.id).length} match(es) of ` +
-          `${recipes.length} recipes`));
-      console.log(`refreshDiscoverTopicRuleMatches: updated ${ruleTopics.length} topic(s)`);
+      const updates = await applyTopicRules(db, docs, recipes);
+      updates.forEach((u, id) => console.log(
+          `refreshDiscoverTopicRuleMatches: topic ${id}: ${u.matchCount} match(es) of ` +
+          `${recipes.length} recipes, ${u.added} added to recipeIds`));
+      console.log(`refreshDiscoverTopicRuleMatches: updated ${docs.length} topic(s)`);
     }
 );
 
@@ -10534,26 +10532,21 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
       const recipes = recipesSnap.docs.map((d) => ({id: d.id, ...d.data()}));
       const topics = topicsSnap.docs.map((d) => ({id: d.id, ...d.data()}));
 
-      // A rule created or changed after the nightly search (03:30) has no
-      // current matches yet - evaluate it now instead of leaving the topic empty.
-      const staleTopics = topicsSnap.docs.filter((d) => {
+      // A rule created or changed after the nightly search (03:30) has not been
+      // applied yet - do it now instead of leaving the topic without its recipes.
+      const staleDocs = topicsSnap.docs.filter((d) => {
         const t = d.data();
-        return hasRecipeRule(t.recipeRule) && t.ruleMatchedFor !== ruleKey(t.recipeRule);
+        return hasRecipeRule(t.recipeRule) ?
+          t.ruleMatchedFor !== ruleKey(t.recipeRule) :
+          t.autoRecipeIds !== undefined || t.ruleRecipeIds !== undefined;
       });
-      if (staleTopics.length > 0) {
-        const matches = await computeTopicRuleMatches(
-            db, staleTopics.map((d) => ({id: d.id, ...d.data()})), recipes);
-        for (const d of staleTopics) {
-          const rule = d.data().recipeRule;
-          const topic = topics.find((t) => t.id === d.id);
-          topic.ruleRecipeIds = matches.get(d.id);
-          topic.ruleMatchedFor = ruleKey(rule);
-          await d.ref.update({
-            ruleRecipeIds: topic.ruleRecipeIds,
-            ruleMatchedFor: topic.ruleMatchedFor,
-            ruleMatchedAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-        }
+      if (staleDocs.length > 0) {
+        const updates = await applyTopicRules(db, staleDocs, recipes);
+        updates.forEach((u, id) => {
+          const topic = topics.find((t) => t.id === id);
+          topic.recipeIds = u.recipeIds;
+          topic.autoRecipeIds = u.autoRecipeIds;
+        });
       }
 
       const activeTopics = getActiveTopics(topics, recipes);

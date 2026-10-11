@@ -186,15 +186,26 @@ test('computeRuleMatches ignores visibility but not pending imports', () => {
   assert.deepEqual(computeRuleMatches({ingredientIds: {include: ['Spargel']}}, recipes, new Map(), NOW), ['a', 'b', 'c']);
 });
 
-test('getActiveTopics merges stored rule matches, but only for the current rule', () => {
-  const rule = {ingredientIds: {include: ['Spargel']}};
-  const recipes = [{id: 'a'}, {id: 'b'}, {id: 'c', isTemp: true}];
-  const topic = {id: 't', recipeIds: ['a'], recipeRule: rule, ruleRecipeIds: ['b', 'c'], ruleMatchedFor: ruleKey(rule)};
-  assert.deepEqual(getActiveTopics([topic], recipes, NOW)[0].usableRecipeIds, ['a', 'b']);
-  const stale = {...topic, recipeRule: {ingredientIds: {include: ['Tomate']}}};
-  assert.deepEqual(getActiveTopics([stale], recipes, NOW)[0].usableRecipeIds, ['a']);
-  const removed = {...topic, recipeRule: undefined};
-  assert.deepEqual(getActiveTopics([removed], recipes, NOW)[0].usableRecipeIds, ['a']);
+test('mergeRuleMatches adds matches like hand-picked recipes and drops stale ones', () => {
+  const {mergeRuleMatches} = require('./fuerDichEntdecktRotation');
+  // first run: hand-picked h, rule finds a, b (b is also hand-picked -> not "auto")
+  let t = {recipeIds: ['h', 'b']};
+  let r = mergeRuleMatches(t, ['a', 'b']);
+  assert.deepEqual(r, {recipeIds: ['h', 'b', 'a'], autoRecipeIds: ['a']});
+  // next run: a no longer matches, c does; hand-picked untouched
+  t = {...r};
+  r = mergeRuleMatches(t, ['c', 'b']);
+  assert.deepEqual(r, {recipeIds: ['h', 'b', 'c'], autoRecipeIds: ['c']});
+  // rule removed: all automatic entries go
+  r = mergeRuleMatches({...r}, []);
+  assert.deepEqual(r, {recipeIds: ['h', 'b'], autoRecipeIds: []});
+  assert.deepEqual(mergeRuleMatches({}, ['x']), {recipeIds: ['x'], autoRecipeIds: ['x']});
+});
+
+test('getActiveTopics uses recipeIds only (rule matches live there)', () => {
+  const recipes = [{id: 'a'}, {id: 'c', isTemp: true}];
+  const topic = {id: 't', recipeIds: ['a', 'c', 'gone'], autoRecipeIds: ['a']};
+  assert.deepEqual(getActiveTopics([topic], recipes, NOW)[0].usableRecipeIds, ['a']);
 });
 
 test('explainTopicExclusion names the reason', () => {
@@ -203,7 +214,7 @@ test('explainTopicExclusion names the reason', () => {
   assert.equal(explainTopicExclusion({recipeIds: []}, recipes), 'no recipeIds and no recipeRule');
   assert.match(explainTopicExclusion({recipeIds: ['tmp', 'gone']}, recipes), /0\/2 hand-picked/);
   const rule = {cuisines: {include: ['italienisch']}};
-  assert.match(explainTopicExclusion({recipeRule: rule, ruleRecipeIds: ['a']}, recipes), /rule matches: 0 \(stale\)/);
+  assert.match(explainTopicExclusion({recipeRule: rule, recipeIds: []}, recipes), /rule set, but no matching recipe/);
 });
 
 test('isVisibleToUser mirrors the client: group members, public groups, drafts', () => {
@@ -223,4 +234,10 @@ test('isVisibleToUser mirrors the client: group members, public groups, drafts',
   assert.equal(isVisibleToUser({id: 'r', isPrivate: true}, u1, groups), false);
   assert.equal(isVisibleToUser({id: 'r', isPrivate: true, authorId: 'u1'}, u1, groups), true);
   assert.equal(isVisibleToUser({id: 'r', isTemp: true}, u1, groups), false);
+});
+
+test('rule matching is insensitive to Unicode composition (decomposed umlauts)', () => {
+  const rule = {cuisines: {include: ['Weihnachtliche Küche']}};
+  const r = {id: 'x', kulinarik: ['Weihnachtliche Küche']};
+  assert.deepEqual(computeRuleMatches(rule, [r], new Map(), NOW), ['x']);
 });

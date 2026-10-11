@@ -6,7 +6,8 @@
  * aktuell relevantes Thema und befüllt damit die persönlichen Listen:
  *   rubrik       -> kleine Rubrik über dem Titel (themeLabel), z. B. "Saison"
  *   beschreibung -> Thementitel auf der Kachel (Listenbeschreibung)
- *   recipeIds    -> relevante Rezepte, aus denen gezogen wird
+ *   recipeIds    -> relevante Rezepte, aus denen gezogen wird; die nächtliche
+ *     Regelsuche trägt Treffer hier ein (autoRecipeIds merkt, welche)
  *   periodStart / periodEnd -> jährlicher Zeitraum als 'MM-DD' (beide
  *     inklusive; Start > Ende läuft über den Jahreswechsel; beide leer =
  *     ganzjährig)
