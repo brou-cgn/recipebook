@@ -203,3 +203,13 @@ test('explainTopicExclusion names the reason', () => {
   const rule = {cuisines: {include: ['italienisch']}};
   assert.match(explainTopicExclusion({recipeRule: rule, ruleRecipeIds: ['a']}, recipes), /0 usable \(stale\)/);
 });
+
+test('recipes of a public group count as visible even without groupType', () => {
+  const rs = [{id: 'p', groupId: 'pub'}, {id: 'g', groupId: 'priv'}];
+  const topic = {id: 't', recipeIds: ['p', 'g']};
+  assert.deepEqual(getActiveTopics([topic], rs, NOW)[0]?.usableRecipeIds, undefined);
+  assert.deepEqual(getActiveTopics([topic], rs, NOW, new Set(['pub']))[0].usableRecipeIds, ['p']);
+  const {computeRuleMatches} = require('./fuerDichEntdecktRotation');
+  const rule = {created: {minDays: 0}};
+  assert.deepEqual(computeRuleMatches(rule, [{id: 'p', groupId: 'pub', createdAt: NOW}], new Map(), NOW, new Set(['pub'])), ['p']);
+});

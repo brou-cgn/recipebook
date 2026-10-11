@@ -10427,7 +10427,12 @@ exports.aggregateRecipeRating = require('./recipeRatingAggregation').aggregateRe
  * rule looks at them. Shared by the nightly search and the rotation.
  * @return {Promise<Map<string, string[]>>} topic id -> matching recipe IDs
  */
-const computeTopicRuleMatches = async (db, topics, recipes) => {
+const loadPublicGroupIds = async (db) => {
+  const snap = await db.collection('groups').where('type', '==', 'public').get();
+  return new Set(snap.docs.map((d) => d.id));
+};
+
+const computeTopicRuleMatches = async (db, topics, recipes, publicGroupIds) => {
   const result = new Map();
   if (topics.length === 0) return result;
   const lastCookedByRecipe = new Map();
@@ -10447,7 +10452,7 @@ const computeTopicRuleMatches = async (db, topics, recipes) => {
   }
   const now = Date.now();
   for (const t of topics) {
-    result.set(t.id, computeRuleMatches(t.recipeRule, recipes, lastCookedByRecipe, now));
+    result.set(t.id, computeRuleMatches(t.recipeRule, recipes, lastCookedByRecipe, now, publicGroupIds));
   }
   return result;
 };
@@ -10488,9 +10493,10 @@ exports.refreshDiscoverTopicRuleMatches = onSchedule(
 
       const recipesSnap = await db.collection('recipes').get();
       const recipes = recipesSnap.docs.map((d) => ({id: d.id, ...d.data()}));
+      const publicGroupIds = await loadPublicGroupIds(db);
 
       const matches = await computeTopicRuleMatches(
-          db, ruleTopics.map((d) => ({id: d.id, ...d.data()})), recipes);
+          db, ruleTopics.map((d) => ({id: d.id, ...d.data()})), recipes, publicGroupIds);
       for (const d of ruleTopics) {
         const rule = d.data().recipeRule;
         await d.ref.update({
@@ -10499,6 +10505,9 @@ exports.refreshDiscoverTopicRuleMatches = onSchedule(
           ruleMatchedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
       }
+      ruleTopics.forEach((d) => console.log(
+          `refreshDiscoverTopicRuleMatches: topic ${d.id}: ${matches.get(d.id).length} match(es) of ` +
+          `${recipes.length} recipes (${publicGroupIds.size} public group(s))`));
       console.log(`refreshDiscoverTopicRuleMatches: updated ${ruleTopics.length} topic(s)`);
     }
 );
@@ -10521,10 +10530,11 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
     },
     async () => {
       const db = admin.firestore();
-      const [listsSnap, topicsSnap, recipesSnap] = await Promise.all([
+      const [listsSnap, topicsSnap, recipesSnap, publicGroupIds] = await Promise.all([
         db.collection('groups').where('systemKey', '==', FUER_DICH_ENTDECKT_KEY).get(),
         db.collection('discoverTopics').get(),
         db.collection('recipes').get(),
+        loadPublicGroupIds(db),
       ]);
       const recipes = recipesSnap.docs.map((d) => ({id: d.id, ...d.data()}));
       const topics = topicsSnap.docs.map((d) => ({id: d.id, ...d.data()}));
@@ -10537,7 +10547,7 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
       });
       if (staleTopics.length > 0) {
         const matches = await computeTopicRuleMatches(
-            db, staleTopics.map((d) => ({id: d.id, ...d.data()})), recipes);
+            db, staleTopics.map((d) => ({id: d.id, ...d.data()})), recipes, publicGroupIds);
         for (const d of staleTopics) {
           const rule = d.data().recipeRule;
           const topic = topics.find((t) => t.id === d.id);
@@ -10551,11 +10561,11 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
         }
       }
 
-      const activeTopics = getActiveTopics(topics, recipes);
+      const activeTopics = getActiveTopics(topics, recipes, Date.now(), publicGroupIds);
       topics
           .filter((t) => !activeTopics.some((a) => a.id === t.id))
           .forEach((t) => console.log(
-              `rotateFuerDichEntdecktLists: topic ${t.id} skipped: ${explainTopicExclusion(t, recipes)}`));
+              `rotateFuerDichEntdecktLists: topic ${t.id} skipped: ${explainTopicExclusion(t, recipes, publicGroupIds)}`));
       if (activeTopics.length === 0) {
         console.log('rotateFuerDichEntdecktLists: no relevant topic, lists unchanged');
         return;

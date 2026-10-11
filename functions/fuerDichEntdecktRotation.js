@@ -203,9 +203,10 @@ const ruleKey = (rule) => JSON.stringify(normalizeRecipeRule(rule));
  * @param {number} [now]
  * @return {string[]}
  */
-const computeRuleMatches = (rule, recipes, lastCookedByRecipe = new Map(), now = Date.now()) =>
+const computeRuleMatches = (rule, recipes, lastCookedByRecipe = new Map(), now = Date.now(),
+    publicGroupIds = new Set()) =>
   recipes
-      .filter(isPubliclyVisible)
+      .filter((r) => isPubliclyVisible(r, publicGroupIds))
       .filter((r) => matchesRecipeRule(r, rule, lastCookedByRecipe.get(r.id) ?? null, now))
       .map((r) => r.id);
 
@@ -214,8 +215,8 @@ const computeRuleMatches = (rule, recipes, lastCookedByRecipe = new Map(), now =
  * recipe that every user may see. Each result carries the usable recipe IDs:
  * the hand-picked ones plus those matching the topic's `recipeRule`.
  */
-const getActiveTopics = (topics, recipes, now = Date.now()) => {
-  const visibleRecipes = recipes.filter(isPubliclyVisible);
+const getActiveTopics = (topics, recipes, now = Date.now(), publicGroupIds = new Set()) => {
+  const visibleRecipes = recipes.filter((r) => isPubliclyVisible(r, publicGroupIds));
   const visible = new Set(visibleRecipes.map((r) => r.id));
   return (topics || [])
       .filter((topic) => topic && topic.isActive !== false && isTopicInPeriod(topic, now))
@@ -238,9 +239,10 @@ const getActiveTopics = (topics, recipes, now = Date.now()) => {
  * selection, hand-picked/rule recipes not publicly visible, or rule matches
  * missing/stale. Call only for topics that getActiveTopics dropped.
  */
-const explainTopicExclusion = (topic, recipes) => {
+const explainTopicExclusion = (topic, recipes, publicGroupIds = new Set(), now = Date.now()) => {
   if (topic.isActive === false) return 'inactive';
-  const visible = new Set(recipes.filter(isPubliclyVisible).map((r) => r.id));
+  if (!isTopicInPeriod(topic, now)) return `outside period ${topic.periodStart || '?'}..${topic.periodEnd || '?'}`;
+  const visible = new Set(recipes.filter((r) => isPubliclyVisible(r, publicGroupIds)).map((r) => r.id));
   const picked = Array.isArray(topic.recipeIds) ? topic.recipeIds : [];
   const ruled = hasRecipeRule(topic.recipeRule);
   if (picked.length === 0 && !ruled) return 'no recipeIds and no recipeRule';
@@ -277,12 +279,15 @@ const ingredientText = (item) => {
 
 /**
  * Recipes every user may see: no pending import, not private, not locked
- * to a group unless published to the public list / living in a public group.
+ * to a group unless published to the public list / living in a public group
+ * (`publicGroupIds` = IDs of all groups with type 'public').
  */
-const isPubliclyVisible = (recipe) => {
+const isPubliclyVisible = (recipe, publicGroupIds = new Set()) => {
   if (!recipe || recipe.isTemp || recipe.isPrivate) return false;
+  // Same rule as the client (recipeFirestore.js): recipes of a public group are
+  // visible even if they carry no groupType / publishedToPublic (older recipes).
   return !recipe.groupId || recipe.publishedToPublic === true ||
-    recipe.groupType === 'public';
+    recipe.groupType === 'public' || publicGroupIds.has(recipe.groupId);
 };
 
 const shuffle = (items, random) => {
