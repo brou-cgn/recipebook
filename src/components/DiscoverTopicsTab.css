@@ -19,7 +19,7 @@
 .dtt-head,
 .dtt-row-content {
   display: grid;
-  grid-template-columns: 1fr 1.6fr 1fr 1.3fr 28px;
+  grid-template-columns: 0.9fr 1.3fr 0.8fr 1.1fr 0.7fr 1.6fr 28px;
   gap: 0.75rem;
   align-items: center;
   padding: 0.7rem 0.9rem;
@@ -62,4 +62,19 @@
   .dtt-cell::before { content: attr(data-label) ': '; font-size: 0.75rem; color: var(--text-secondary, #6b665c); }
   .dtt-cell-rubrik { font-weight: 600; }
   .dtt-row-content .dtt-delete { display: none; }
+}
+
+/* ---- Rezepte-Regel ---- */
+.dtt-rule { border: 1px solid var(--border-color, #e4dfd3); border-radius: 8px; padding: 0.75rem; margin: 0; }
+.dtt-rule legend { padding: 0 0.3rem; }
+.dtt-rule-filter,
+.dtt-rule-range { display: grid; gap: 0.3rem; }
+.dtt-rule-pair { display: grid; grid-template-columns: 7rem 1fr; gap: 0.3rem 0.75rem; align-items: start; }
+.dtt-rule-tag { font-size: 0.75rem; color: var(--text-secondary, #6b665c); padding-top: 0.5rem; }
+.dtt-rule-values { display: grid; gap: 0.35rem; }
+.dtt-rule-range label { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.dtt-rule-range input { width: 5rem; }
+@media (max-width: 720px) {
+  .dtt-rule-pair { grid-template-columns: 1fr; }
+  .dtt-rule-tag { padding-top: 0; }
 }

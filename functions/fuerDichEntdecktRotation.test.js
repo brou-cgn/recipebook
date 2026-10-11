@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
+  matchesRecipeRule, computeRuleMatches, ruleKey,
   isRotationDue, isTopicInPeriod, getActiveTopics, pickTopic, pickRecipeIds,
   ROTATION_INTERVAL_MS,
 } = require('./fuerDichEntdecktRotation');
@@ -120,4 +121,76 @@ test('reuses last week\'s recipes when too few new ones exist', () => {
 
 test('fewer than 5 candidates gives all of them, duplicates removed', () => {
   assert.deepEqual(pickRecipeIds(['a', 'a', 'b'], [], () => 0.5).sort(), ['a', 'b']);
+});
+
+// ---- displayDays ----
+test('displayDays of the list\'s topic sets the rotation interval', () => {
+  const now = 100 * DAY;
+  const l = list(now - 2 * DAY);
+  assert.equal(isRotationDue(l, now, [{id: 't1', displayDays: 3}]), false);
+  assert.equal(isRotationDue(l, now, [{id: 't1', displayDays: 2}]), true);
+  assert.equal(isRotationDue(l, now, [{id: 't1', displayDays: 1}]), true);
+  assert.equal(isRotationDue(list(now - 6 * DAY), now, [{id: 't1'}]), false);
+  assert.equal(isRotationDue(list(now - 7 * DAY), now, [{id: 't1', displayDays: 'x'}]), true);
+});
+
+// ---- recipeRule ----
+const NOW = on('2026-10-11');
+const recipe = (extra = {}) => ({
+  id: 'r', ingredients: [{ingredientID: 'Spargel', text: 'Spargel'}, 'Salz'],
+  speisekategorie: ['Salate'], kulinarik: 'Weihnachtliche Küche',
+  createdAt: {toMillis: () => on('2025-10-11')}, ...extra,
+});
+
+test('rule: ingredient include/exclude, case-insensitive', () => {
+  assert.equal(matchesRecipeRule(recipe(), {ingredientIds: {include: ['spargel']}}, null, NOW), true);
+  assert.equal(matchesRecipeRule(recipe(), {ingredientIds: {include: ['Tomate']}}, null, NOW), false);
+  assert.equal(matchesRecipeRule(recipe(), {ingredientIds: {exclude: ['Spargel']}}, null, NOW), false);
+  assert.equal(matchesRecipeRule(recipe(), {ingredientIds: {exclude: ['Tomate']}}, null, NOW), true);
+});
+
+test('rule: criteria combine with AND', () => {
+  const rule = {ingredientIds: {include: ['Spargel']}, mealCategories: {include: ['Salate']}};
+  assert.equal(matchesRecipeRule(recipe(), rule, null, NOW), true);
+  assert.equal(matchesRecipeRule(recipe({speisekategorie: ['Desserts']}), rule, null, NOW), false);
+  const dessert = {mealCategories: {include: ['Desserts']}, cuisines: {include: ['Weihnachtliche Küche']}};
+  assert.equal(matchesRecipeRule(recipe({speisekategorie: 'Desserts'}), dessert, null, NOW), true);
+  assert.equal(matchesRecipeRule(recipe(), dessert, null, NOW), false);
+});
+
+test('rule: not cooked for more than 180 and less than 400 days', () => {
+  const rule = {lastCooked: {minDays: 181, maxDays: 399}};
+  assert.equal(matchesRecipeRule(recipe(), rule, NOW - 200 * DAY, NOW), true);
+  assert.equal(matchesRecipeRule(recipe(), rule, NOW - 100 * DAY, NOW), false);
+  assert.equal(matchesRecipeRule(recipe(), rule, NOW - 500 * DAY, NOW), false);
+  assert.equal(matchesRecipeRule(recipe(), rule, null, NOW), false);
+});
+
+test('rule: exactly a year ago, cooked or created', () => {
+  const rule = {created: {minDays: 365, maxDays: 365}, lastCooked: {minDays: 365, maxDays: 365}, dateMode: 'any'};
+  assert.equal(matchesRecipeRule(recipe(), rule, null, NOW), true); // created 2025-10-11
+  assert.equal(matchesRecipeRule(recipe({createdAt: null}), rule, on('2025-10-11'), NOW), true);
+  assert.equal(matchesRecipeRule(recipe({createdAt: null}), rule, on('2025-10-12'), NOW), false);
+  assert.equal(matchesRecipeRule(recipe(), {...rule, dateMode: 'all'}, null, NOW), false);
+});
+
+test('an empty rule matches nothing', () => {
+  assert.equal(matchesRecipeRule(recipe(), {}, null, NOW), false);
+  assert.equal(matchesRecipeRule(recipe(), undefined, null, NOW), false);
+});
+
+test('computeRuleMatches only returns publicly visible recipes', () => {
+  const recipes = [recipe({id: 'a'}), recipe({id: 'b', isPrivate: true})];
+  assert.deepEqual(computeRuleMatches({ingredientIds: {include: ['Spargel']}}, recipes, new Map(), NOW), ['a']);
+});
+
+test('getActiveTopics merges stored rule matches, but only for the current rule', () => {
+  const rule = {ingredientIds: {include: ['Spargel']}};
+  const recipes = [{id: 'a'}, {id: 'b'}, {id: 'c', isPrivate: true}];
+  const topic = {id: 't', recipeIds: ['a'], recipeRule: rule, ruleRecipeIds: ['b', 'c'], ruleMatchedFor: ruleKey(rule)};
+  assert.deepEqual(getActiveTopics([topic], recipes, NOW)[0].usableRecipeIds, ['a', 'b']);
+  const stale = {...topic, recipeRule: {ingredientIds: {include: ['Tomate']}}};
+  assert.deepEqual(getActiveTopics([stale], recipes, NOW)[0].usableRecipeIds, ['a']);
+  const removed = {...topic, recipeRule: undefined};
+  assert.deepEqual(getActiveTopics([removed], recipes, NOW)[0].usableRecipeIds, ['a']);
 });

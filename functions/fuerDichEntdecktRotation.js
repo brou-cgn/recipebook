@@ -11,9 +11,15 @@
  * optional yearly period (periodStart / periodEnd as 'MM-DD'; may wrap over
  * New Year; both empty = all year). Only topics whose period contains today
  * and that have at least one usable recipe take part in the rotation.
+ * `displayDays` of a topic sets how long it stays on a list (default 7 days).
+ * `recipeRule` additionally selects recipes by ingredientID, meal category,
+ * cuisine, creation date and last cook date (see matchesRecipeRule); rule
+ * matches are added to the topic's hand-picked recipeIds. The search runs nightly at 03:30
+ * (refreshDiscoverTopicRuleMatches in index.js) and stores `ruleRecipeIds` and
+ * `ruleMatchedFor` on the topic; the rotation at 04:00 only reads them.
  * `rotatedAt` on the list document is the clock: a list without it (freshly
- * created) is rotated on the next run, otherwise once ROTATION_INTERVAL_MS
- * has passed. A list without `themeId` is also due, so a list rotated by an
+ * created) is rotated on the next run, otherwise once the topic's display
+ * duration has passed. A list without `themeId` is also due, so a list rotated by an
  * older version switches to the topics on the next run.
  *
  * Pure functions only - the scheduled function in index.js does the I/O.
@@ -23,7 +29,16 @@ const SYSTEM_KEY = 'fuerDichEntdeckt';
 const RECIPES_PER_ROTATION = 5;
 
 // Run is daily; a half-day tolerance keeps "every 7 days" from drifting to 8.
-const ROTATION_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000 - 12 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_DISPLAY_DAYS = 7;
+const RUN_TOLERANCE_MS = 12 * 60 * 60 * 1000;
+const ROTATION_INTERVAL_MS = DEFAULT_DISPLAY_DAYS * DAY_MS - RUN_TOLERANCE_MS;
+
+/** Display duration in whole days (>= 1); anything else falls back to 7. */
+const getDisplayDays = (topic) => {
+  const days = Number(topic && topic.displayDays);
+  return Number.isInteger(days) && days >= 1 ? days : DEFAULT_DISPLAY_DAYS;
+};
 
 const TIME_ZONE = 'Europe/Berlin';
 
@@ -48,7 +63,10 @@ const isRotationDue = (list, now = Date.now(), activeTopics = null) => {
   if (!list.themeId) return true;
   if (activeTopics && !activeTopics.some((topic) => topic.id === list.themeId)) return true;
   const last = toMillis(list.rotatedAt);
-  return last === null || now - last >= ROTATION_INTERVAL_MS;
+  if (last === null) return true;
+  const topic = activeTopics && activeTopics.find((t) => t.id === list.themeId);
+  const interval = topic ? getDisplayDays(topic) * DAY_MS - RUN_TOLERANCE_MS : ROTATION_INTERVAL_MS;
+  return now - last >= interval;
 };
 
 /** 'MM-DD' of the given moment in the app's time zone. */
@@ -79,19 +97,138 @@ const isTopicInPeriod = (topic, now = Date.now()) => {
     today >= start || today <= end;
 };
 
+const norm = (value) => String(value || '').trim().toLowerCase();
+
+const toList = (value) => (Array.isArray(value) ? value : value ? [value] : [])
+    .map(norm).filter(Boolean);
+
+const cleanFilter = (filter) => ({
+  include: toList(filter && filter.include),
+  exclude: toList(filter && filter.exclude),
+});
+
+const cleanRange = (range) => {
+  const num = (v) => (v === '' || v === null || v === undefined || !Number.isFinite(Number(v)) ?
+    null : Math.max(0, Math.floor(Number(v))));
+  return {minDays: num(range && range.minDays), maxDays: num(range && range.maxDays)};
+};
+
+/**
+ * Normalised copy of a topic's `recipeRule`:
+ *   ingredientIds / mealCategories / cuisines: {include: [], exclude: []}
+ *     include = recipe has at least one of them, exclude = recipe has none
+ *   created / lastCooked: {minDays, maxDays} = age in whole calendar days,
+ *     both bounds inclusive, either may be null (open); minDays === maxDays
+ *     is "exactly that many days ago". A recipe never cooked has no age and
+ *     fails a lastCooked bound.
+ *   dateMode: 'all' (default) = both date conditions must hold, 'any' = one
+ *     is enough ("cooked or created exactly a year ago").
+ */
+const normalizeRecipeRule = (rule) => ({
+  ingredientIds: cleanFilter(rule && rule.ingredientIds),
+  mealCategories: cleanFilter(rule && rule.mealCategories),
+  cuisines: cleanFilter(rule && rule.cuisines),
+  created: cleanRange(rule && rule.created),
+  lastCooked: cleanRange(rule && rule.lastCooked),
+  dateMode: rule && rule.dateMode === 'any' ? 'any' : 'all',
+});
+
+const filterActive = (f) => f.include.length > 0 || f.exclude.length > 0;
+const rangeActive = (r) => r.minDays !== null || r.maxDays !== null;
+
+const hasRecipeRule = (rule) => {
+  const r = normalizeRecipeRule(rule);
+  return filterActive(r.ingredientIds) || filterActive(r.mealCategories) ||
+    filterActive(r.cuisines) || rangeActive(r.created) || rangeActive(r.lastCooked);
+};
+
+const recipeIngredientIds = (recipe) => (Array.isArray(recipe.ingredients) ? recipe.ingredients : [])
+    .map((item) => (item && typeof item === 'object' ? norm(item.ingredientID || item.ingredientId) : ''))
+    .filter(Boolean);
+
+const passesFilter = (filter, values) => {
+  const set = new Set(values);
+  if (filter.include.length > 0 && !filter.include.some((v) => set.has(v))) return false;
+  return !filter.exclude.some((v) => set.has(v));
+};
+
+/** Calendar day number (days since epoch) of a moment in the app's time zone. */
+const dayNumber = (ms) => {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date(ms));
+  const get = (type) => Number(parts.find((p) => p.type === type).value);
+  return Math.round(Date.UTC(get('year'), get('month') - 1, get('day')) / DAY_MS);
+};
+
+const inAgeRange = (range, thenMs, now) => {
+  if (thenMs === null) return false;
+  const age = dayNumber(now) - dayNumber(thenMs);
+  return (range.minDays === null || age >= range.minDays) &&
+    (range.maxDays === null || age <= range.maxDays);
+};
+
+/**
+ * Whether a recipe satisfies a topic's rule. Different criteria combine with
+ * AND (date criteria per `dateMode`). An empty rule matches nothing, so a
+ * topic without rule only uses its hand-picked recipes.
+ * @param {Object} recipe
+ * @param {Object} rule - raw `recipeRule`
+ * @param {number|null} lastCookedMs - latest cook date of the recipe, if any
+ * @param {number} [now]
+ */
+const matchesRecipeRule = (recipe, rule, lastCookedMs = null, now = Date.now()) => {
+  if (!hasRecipeRule(rule)) return false;
+  const r = normalizeRecipeRule(rule);
+  if (!passesFilter(r.ingredientIds, recipeIngredientIds(recipe))) return false;
+  if (!passesFilter(r.mealCategories, toList(recipe.speisekategorie))) return false;
+  if (!passesFilter(r.cuisines, toList(recipe.kulinarik))) return false;
+
+  const checks = [];
+  if (rangeActive(r.created)) checks.push(inAgeRange(r.created, toMillis(recipe.createdAt), now));
+  if (rangeActive(r.lastCooked)) checks.push(inAgeRange(r.lastCooked, lastCookedMs, now));
+  if (checks.length === 0) return true;
+  return r.dateMode === 'any' ? checks.some(Boolean) : checks.every(Boolean);
+};
+
+/** Stable key of a rule; stored next to its matches to detect stale results. */
+const ruleKey = (rule) => JSON.stringify(normalizeRecipeRule(rule));
+
+/**
+ * Nightly rule search: IDs of all publicly visible recipes matching the rule.
+ * @param {Object} rule - raw `recipeRule`
+ * @param {Array<Object>} recipes
+ * @param {Map<string, number>} lastCookedByRecipe - recipeId -> latest cook date (ms)
+ * @param {number} [now]
+ * @return {string[]}
+ */
+const computeRuleMatches = (rule, recipes, lastCookedByRecipe = new Map(), now = Date.now()) =>
+  recipes
+      .filter(isPubliclyVisible)
+      .filter((r) => matchesRecipeRule(r, rule, lastCookedByRecipe.get(r.id) ?? null, now))
+      .map((r) => r.id);
+
 /**
  * Topics that may be rotated in right now: in period, with at least one
- * recipe that every user may see. Each result carries the usable recipe IDs.
+ * recipe that every user may see. Each result carries the usable recipe IDs:
+ * the hand-picked ones plus those matching the topic's `recipeRule`.
  */
 const getActiveTopics = (topics, recipes, now = Date.now()) => {
-  const visible = new Set(recipes.filter(isPubliclyVisible).map((r) => r.id));
+  const visibleRecipes = recipes.filter(isPubliclyVisible);
+  const visible = new Set(visibleRecipes.map((r) => r.id));
   return (topics || [])
       .filter((topic) => topic && topic.isActive !== false && isTopicInPeriod(topic, now))
-      .map((topic) => ({
-        ...topic,
-        usableRecipeIds: (Array.isArray(topic.recipeIds) ? topic.recipeIds : [])
-            .filter((id) => visible.has(id)),
-      }))
+      .map((topic) => {
+        const picked = (Array.isArray(topic.recipeIds) ? topic.recipeIds : [])
+            .filter((id) => visible.has(id));
+        // Rule matches come from the nightly search (computeRuleMatches); they only
+        // count while they were computed for the rule as it is now.
+        const matched = hasRecipeRule(topic.recipeRule) &&
+          topic.ruleMatchedFor === ruleKey(topic.recipeRule) &&
+          Array.isArray(topic.ruleRecipeIds) ?
+          topic.ruleRecipeIds.filter((id) => visible.has(id)) : [];
+        return {...topic, usableRecipeIds: [...new Set([...picked, ...matched])]};
+      })
       .filter((topic) => topic.usableRecipeIds.length > 0);
 };
 
@@ -156,6 +293,13 @@ module.exports = {
   isRotationDue,
   isPubliclyVisible,
   isTopicInPeriod,
+  getDisplayDays,
+  DEFAULT_DISPLAY_DAYS,
+  normalizeRecipeRule,
+  hasRecipeRule,
+  matchesRecipeRule,
+  ruleKey,
+  computeRuleMatches,
   getActiveTopics,
   pickTopic,
   pickRecipeIds,

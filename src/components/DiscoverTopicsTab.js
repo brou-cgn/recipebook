@@ -5,10 +5,15 @@ import './UndoSnackbar.css';
 import DeleteRowButton from './DeleteRowButton';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import useUndoableDelete from '../hooks/useUndoableDelete';
+import { getCustomLists } from '../utils/customLists';
 import {
   MONTH_NAMES,
   deleteDiscoverTopic,
+  emptyRecipeRule,
+  formatDisplayDays,
   formatPeriod,
+  formatRecipeRule,
+  normalizeRecipeRule,
   saveDiscoverTopic,
   sortTopics,
   subscribeToDiscoverTopics,
@@ -24,6 +29,8 @@ const emptyForm = () => ({
   periodStart: '',
   periodEnd: '',
   isActive: true,
+  displayDays: '',
+  recipeRule: emptyRecipeRule(),
 });
 
 const splitMonthDay = (value) => {
@@ -59,6 +66,89 @@ function MonthDayInput({ label, value, onChange }) {
           <option key={name} value={index + 1}>{name}</option>
         ))}
       </select>
+    </div>
+  );
+}
+
+// Ein-/Ausschlussliste der Rezepte-Regel. Mit `options` Auswahl aus einer Liste, sonst Freitext.
+function RuleValues({ label, values, options, onChange }) {
+  const [draft, setDraft] = useState('');
+  const add = (value) => {
+    const v = String(value || '').trim();
+    if (v && !values.some((x) => x.toLowerCase() === v.toLowerCase())) onChange([...values, v]);
+    setDraft('');
+  };
+  return (
+    <div className="dtt-rule-values">
+      <ul className="dtt-chips">
+        {values.map((v) => (
+          <li key={v} className="dtt-chip delete-row-hover-target">
+            <span>{v}</span>
+            <DeleteRowButton itemName={v} onClick={() => onChange(values.filter((x) => x !== v))} />
+          </li>
+        ))}
+      </ul>
+      {options ? (
+        <select aria-label={label} value="" onChange={(e) => add(e.target.value)}>
+          <option value="">+ hinzufügen</option>
+          {options.filter((o) => !values.includes(o)).map((o) => <option key={o} value={o}>{o}</option>)}
+        </select>
+      ) : (
+        <input
+          type="text"
+          aria-label={label}
+          value={draft}
+          placeholder="+ hinzufügen (Enter)"
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(draft); } }}
+          onBlur={() => add(draft)}
+        />
+      )}
+    </div>
+  );
+}
+
+function RuleFilter({ title, filter, options, onChange }) {
+  return (
+    <div className="dtt-rule-filter">
+      <span className="dtt-label">{title}</span>
+      <div className="dtt-rule-pair">
+        <span className="dtt-rule-tag">Einschließen</span>
+        <RuleValues
+          label={`${title} einschließen`}
+          values={filter.include}
+          options={options}
+          onChange={(include) => onChange({ ...filter, include })}
+        />
+        <span className="dtt-rule-tag">Ausschließen</span>
+        <RuleValues
+          label={`${title} ausschließen`}
+          values={filter.exclude}
+          options={options}
+          onChange={(exclude) => onChange({ ...filter, exclude })}
+        />
+      </div>
+    </div>
+  );
+}
+
+function RuleRange({ title, range, onChange }) {
+  const set = (key) => (e) => onChange({ ...range, [key]: e.target.value === '' ? null : e.target.value });
+  return (
+    <div className="dtt-rule-range">
+      <span className="dtt-label">{title}</span>
+      <label>
+        vor mindestens
+        <input type="number" min="0" inputMode="numeric" aria-label={`${title}: mindestens Tage`}
+          value={range.minDays ?? ''} onChange={set('minDays')} />
+        Tagen
+      </label>
+      <label>
+        und höchstens
+        <input type="number" min="0" inputMode="numeric" aria-label={`${title}: höchstens Tage`}
+          value={range.maxDays ?? ''} onChange={set('maxDays')} />
+        Tagen
+      </label>
     </div>
   );
 }
@@ -101,6 +191,8 @@ function TopicRow({ topic, recipeTitles, onEdit, onDelete }) {
           {recipeCount === 0 ? '—' : recipeCount === 1 ? '1 Rezept' : `${recipeCount} Rezepte`}
         </span>
         <span className="dtt-cell dtt-cell-zeitraum" data-label="Zeitraum">{formatPeriod(topic)}</span>
+        <span className="dtt-cell dtt-cell-dauer" data-label="Anzeige-Dauer">{formatDisplayDays(topic)}</span>
+        <span className="dtt-cell dtt-cell-regel" data-label="Rezepte-Regel">{formatRecipeRule(topic.recipeRule)}</span>
         <DeleteRowButton
           itemName={name}
           className="dtt-delete"
@@ -111,11 +203,13 @@ function TopicRow({ topic, recipeTitles, onEdit, onDelete }) {
   );
 }
 
-function TopicEditor({ initial, allRecipes, onSave, onCancel, saving, error }) {
+function TopicEditor({ initial, allRecipes, cuisineOptions, categoryOptions, onSave, onCancel, saving, error }) {
   const [form, setForm] = useState(initial);
   const [search, setSearch] = useState('');
   const set = (patch) => setForm((prev) => ({ ...prev, ...patch }));
   const allYear = !form.periodStart && !form.periodEnd;
+  const rule = normalizeRecipeRule(form.recipeRule);
+  const setRule = (patch) => set({ recipeRule: { ...rule, ...patch } });
 
   const recipesById = useMemo(() => new Map(allRecipes.map((r) => [r.id, r])), [allRecipes]);
   const selected = form.recipeIds.map((id) => ({ id, title: recipesById.get(id)?.title || 'Unbekanntes Rezept' }));
@@ -179,6 +273,19 @@ function TopicEditor({ initial, allRecipes, onSave, onCancel, saving, error }) {
         )}
       </div>
 
+      <label className="dtt-field">
+        <span className="dtt-label">Anzeige-Dauer (in Tagen)</span>
+        <input
+          type="number"
+          min="1"
+          inputMode="numeric"
+          value={form.displayDays ?? ''}
+          placeholder="7"
+          onChange={(e) => set({ displayDays: e.target.value })}
+        />
+        <p className="dtt-hint">Wie lange das Thema auf einer Liste bleibt, bevor neu gezogen wird. Leer = 7 Tage.</p>
+      </label>
+
       <div className="dtt-field">
         <span className="dtt-label">Relevante Rezepte</span>
         {selected.length > 0 && (
@@ -210,6 +317,34 @@ function TopicEditor({ initial, allRecipes, onSave, onCancel, saving, error }) {
         <p className="dtt-hint">Nur Rezepte, die alle Nutzer sehen dürfen (nicht privat, nicht gruppengebunden), kommen in die Rotation.</p>
       </div>
 
+      <fieldset className="dtt-field dtt-rule">
+        <legend className="dtt-label">Rezepte-Regel</legend>
+        <p className="dtt-hint">
+          Wählt zusätzlich zu den Rezepten oben weitere Rezepte aus. Verschiedene Kriterien gelten zusammen (UND);
+          mehrere Werte beim Einschließen gelten als ODER. Zutaten werden über die ingredientID angegeben.
+        </p>
+        <RuleFilter title="Zutat (ingredientID)" filter={rule.ingredientIds}
+          onChange={(ingredientIds) => setRule({ ingredientIds })} />
+        <RuleFilter title="Speisekategorie" filter={rule.mealCategories} options={categoryOptions}
+          onChange={(mealCategories) => setRule({ mealCategories })} />
+        <RuleFilter title="Kulinariktyp" filter={rule.cuisines} options={cuisineOptions}
+          onChange={(cuisines) => setRule({ cuisines })} />
+        <RuleRange title="Erstellt" range={rule.created} onChange={(created) => setRule({ created })} />
+        <RuleRange title="Zuletzt gekocht" range={rule.lastCooked}
+          onChange={(lastCooked) => setRule({ lastCooked })} />
+        <label className="dtt-field">
+          <span className="dtt-label">Erstellt und Zuletzt gekocht</span>
+          <select value={rule.dateMode} onChange={(e) => setRule({ dateMode: e.target.value })}>
+            <option value="all">müssen beide zutreffen</option>
+            <option value="any">es genügt eines von beiden</option>
+          </select>
+        </label>
+        <p className="dtt-hint">
+          Gleiche Werte bei „mindestens" und „höchstens" bedeuten „genau vor n Tagen" (z. B. 365 = vor einem Jahr).
+          Nie gekochte Rezepte erfüllen keine Bedingung bei „Zuletzt gekocht".
+        </p>
+      </fieldset>
+
       <label className="dtt-check">
         <input type="checkbox" checked={form.isActive} onChange={(e) => set({ isActive: e.target.checked })} />
         In der Rotation verwenden
@@ -229,7 +364,7 @@ function TopicEditor({ initial, allRecipes, onSave, onCancel, saving, error }) {
 /**
  * DiscoverTopicsTab – Admin-Liste der Themen für die Kachel "Für dich
  * entdeckt" (Einstellungen). Spalten: Rubrik, Beschreibung, Relevante
- * Rezepte, Zeitraum. Der Rotationsjob zieht daraus die aktuell relevanten
+ * Rezepte, Zeitraum, Anzeige-Dauer, Rezepte-Regel. Der Rotationsjob zieht daraus die aktuell relevanten
  * Themen (siehe utils/discoverTopics.js).
  */
 function DiscoverTopicsTab({ currentUser, allRecipes = [] }) {
@@ -238,11 +373,23 @@ function DiscoverTopicsTab({ currentUser, allRecipes = [] }) {
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [listOptions, setListOptions] = useState({ cuisines: [], categories: [] });
   const { banners, pendingKeys, scheduleDelete, undoDelete } = useUndoableDelete();
 
   useEffect(() => {
     if (!isAdmin) return undefined;
     return subscribeToDiscoverTopics(setTopics);
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin) return undefined;
+    let cancelled = false;
+    getCustomLists()
+      .then((lists) => {
+        if (!cancelled) setListOptions({ cuisines: lists?.cuisineTypes || [], categories: lists?.mealCategories || [] });
+      })
+      .catch((e) => console.warn('Custom lists for discover rules not loaded:', e));
+    return () => { cancelled = true; };
   }, [isAdmin]);
 
   const recipesById = useMemo(() => new Map(allRecipes.map((r) => [r.id, r])), [allRecipes]);
@@ -288,7 +435,7 @@ function DiscoverTopicsTab({ currentUser, allRecipes = [] }) {
 
   const openEditor = (topic) => {
     setError('');
-    setEditing(topic ? { ...emptyForm(), ...topic } : emptyForm());
+    setEditing(topic ? { ...emptyForm(), ...topic, recipeRule: normalizeRecipeRule(topic.recipeRule) } : emptyForm());
   };
 
   return (
@@ -296,7 +443,8 @@ function DiscoverTopicsTab({ currentUser, allRecipes = [] }) {
       <h3>Für dich entdeckt</h3>
       <p className="dtt-intro">
         Themen für die Startseiten-Kachel. Der wöchentliche Rotationsjob wählt unter den Themen, deren
-        Zeitraum heute gilt, eines aus und füllt die Listen mit bis zu 5 der zugehörigen Rezepte.
+        Zeitraum heute gilt, eines aus und füllt die Listen mit bis zu 5 der zugehörigen Rezepte
+        (von Hand gewählt oder per Rezepte-Regel). Das Thema bleibt so viele Tage, wie die Anzeige-Dauer vorgibt.
         Ist kein Thema relevant, bleiben die Listen unverändert.
       </p>
 
@@ -304,6 +452,8 @@ function DiscoverTopicsTab({ currentUser, allRecipes = [] }) {
         <TopicEditor
           initial={editing}
           allRecipes={allRecipes}
+          cuisineOptions={listOptions.cuisines}
+          categoryOptions={listOptions.categories}
           saving={saving}
           error={error}
           onSave={handleSave}
@@ -321,6 +471,8 @@ function DiscoverTopicsTab({ currentUser, allRecipes = [] }) {
           <span role="columnheader">Beschreibung</span>
           <span role="columnheader">Relevante Rezepte</span>
           <span role="columnheader">Zeitraum</span>
+          <span role="columnheader">Anzeige-Dauer</span>
+          <span role="columnheader">Rezepte-Regel</span>
           <span aria-hidden="true" />
         </div>
         {visibleTopics.length === 0 && <p className="dtt-empty">Noch keine Themen angelegt.</p>}
