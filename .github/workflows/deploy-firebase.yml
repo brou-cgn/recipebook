@@ -107,7 +107,8 @@ jobs:
         run: npm install -g firebase-tools@13.35.1
 
       # Die Wiederholungen fangen ausschliesslich bekannte Flakiness der
-      # Firebase-APIs ab (503, Timeouts, "Failed to list functions"). Ein
+      # Firebase-APIs ab (503, Timeouts, IAM-Policy-Lesefehler,
+      # "Failed to list functions"). Ein
       # inhaltlicher Fehler bricht sofort ab, statt dreimal dasselbe zu
       # versuchen.
       - name: Deploy (Hosting, Functions, Firestore Rules & Indexes)
@@ -137,6 +138,14 @@ jobs:
             if echo "$deploy_output" | grep -Fiq "Failed to list functions"; then
               if [ "$attempt" -lt "$max_attempts" ]; then
                 echo "Firebase failed to list functions (transient API error). Retrying in 15s..."
+                sleep 15
+                continue
+              fi
+            fi
+
+            if echo "$deploy_output" | grep -Fq "Failed to get the IAM Policy on the Service "; then
+              if [ "$attempt" -lt "$max_attempts" ]; then
+                echo "Cloud Run IAM policy read failed. Retrying in 15s..."
                 sleep 15
                 continue
               fi
