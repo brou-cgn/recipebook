@@ -17,7 +17,7 @@ const cheerio = require('cheerio');
 const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 const {requireShortcutPin} = require('./webImportPin');
 const {evaluateLowCarbTag} = require('./lowCarb');
-const {isRotationDue, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleMatches, pickTopic, pickRecipeIds, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
+const {isRotationDue, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleMatches, explainTopicExclusion, pickTopic, pickRecipeIds, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
 const {normalizeCuisines, suggestNewCuisines} = require('./cuisineNormalization');
 
 // Initialize Firebase Admin
@@ -10422,6 +10422,37 @@ exports.setWebImportPin = require('./webImportPin').setWebImportPin;
 exports.aggregateRecipeRating = require('./recipeRatingAggregation').aggregateRecipeRating;
 
 /**
+ * Rule search for the given topic docs: recipe IDs matching each topic's
+ * `recipeRule` (publicly visible recipes only). Loads cook dates only when a
+ * rule looks at them. Shared by the nightly search and the rotation.
+ * @return {Promise<Map<string, string[]>>} topic id -> matching recipe IDs
+ */
+const computeTopicRuleMatches = async (db, topics, recipes) => {
+  const result = new Map();
+  if (topics.length === 0) return result;
+  const lastCookedByRecipe = new Map();
+  const needsCookDates = topics.some((t) => {
+    const {lastCooked} = normalizeRecipeRule(t.recipeRule);
+    return lastCooked.minDays !== null || lastCooked.maxDays !== null;
+  });
+  if (needsCookDates) {
+    const cookSnap = await db.collection('cookDates').get();
+    cookSnap.docs.forEach((d) => {
+      const {recipeId, date} = d.data();
+      const ms = date && typeof date.toMillis === 'function' ? date.toMillis() : null;
+      if (recipeId && ms !== null && ms > (lastCookedByRecipe.get(recipeId) ?? -Infinity)) {
+        lastCookedByRecipe.set(recipeId, ms);
+      }
+    });
+  }
+  const now = Date.now();
+  for (const t of topics) {
+    result.set(t.id, computeRuleMatches(t.recipeRule, recipes, lastCookedByRecipe, now));
+  }
+  return result;
+};
+
+/**
  * Nightly rule search for the "Für dich entdeckt" topics (03:30, before the
  * rotation at 04:00): for every topic with a `recipeRule` the publicly visible
  * recipes matching it are stored as `ruleRecipeIds` on the topic, together
@@ -10458,29 +10489,12 @@ exports.refreshDiscoverTopicRuleMatches = onSchedule(
       const recipesSnap = await db.collection('recipes').get();
       const recipes = recipesSnap.docs.map((d) => ({id: d.id, ...d.data()}));
 
-      // Latest cook date per recipe - only needed when a rule looks at it.
-      const lastCookedByRecipe = new Map();
-      const needsCookDates = ruleTopics.some((d) => {
-        const {lastCooked} = normalizeRecipeRule(d.data().recipeRule);
-        return lastCooked.minDays !== null || lastCooked.maxDays !== null;
-      });
-      if (needsCookDates) {
-        const cookSnap = await db.collection('cookDates').get();
-        cookSnap.docs.forEach((d) => {
-          const {recipeId, date} = d.data();
-          const ms = date && typeof date.toMillis === 'function' ? date.toMillis() : null;
-          if (recipeId && ms !== null && ms > (lastCookedByRecipe.get(recipeId) ?? -Infinity)) {
-            lastCookedByRecipe.set(recipeId, ms);
-          }
-        });
-      }
-
-      const now = Date.now();
+      const matches = await computeTopicRuleMatches(
+          db, ruleTopics.map((d) => ({id: d.id, ...d.data()})), recipes);
       for (const d of ruleTopics) {
         const rule = d.data().recipeRule;
-        const ids = computeRuleMatches(rule, recipes, lastCookedByRecipe, now);
         await d.ref.update({
-          ruleRecipeIds: ids,
+          ruleRecipeIds: matches.get(d.id),
           ruleMatchedFor: ruleKey(rule),
           ruleMatchedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
@@ -10516,7 +10530,33 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
       const recipes = recipesSnap.docs.map((d) => ({id: d.id, ...d.data()}));
       const topics = topicsSnap.docs.map((d) => ({id: d.id, ...d.data()}));
 
+      // A rule created or changed after the nightly search (03:30) has no
+      // current matches yet - evaluate it now instead of leaving the topic empty.
+      const staleTopics = topicsSnap.docs.filter((d) => {
+        const t = d.data();
+        return hasRecipeRule(t.recipeRule) && t.ruleMatchedFor !== ruleKey(t.recipeRule);
+      });
+      if (staleTopics.length > 0) {
+        const matches = await computeTopicRuleMatches(
+            db, staleTopics.map((d) => ({id: d.id, ...d.data()})), recipes);
+        for (const d of staleTopics) {
+          const rule = d.data().recipeRule;
+          const topic = topics.find((t) => t.id === d.id);
+          topic.ruleRecipeIds = matches.get(d.id);
+          topic.ruleMatchedFor = ruleKey(rule);
+          await d.ref.update({
+            ruleRecipeIds: topic.ruleRecipeIds,
+            ruleMatchedFor: topic.ruleMatchedFor,
+            ruleMatchedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+      }
+
       const activeTopics = getActiveTopics(topics, recipes);
+      topics
+          .filter((t) => !activeTopics.some((a) => a.id === t.id))
+          .forEach((t) => console.log(
+              `rotateFuerDichEntdecktLists: topic ${t.id} skipped: ${explainTopicExclusion(t, recipes)}`));
       if (activeTopics.length === 0) {
         console.log('rotateFuerDichEntdecktLists: no usable topic (inactive or without visible recipes), lists unchanged');
         return;

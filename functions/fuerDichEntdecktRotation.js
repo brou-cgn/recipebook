@@ -17,7 +17,8 @@
  * cuisine, creation date and last cook date (see matchesRecipeRule); rule
  * matches are added to the topic's hand-picked recipeIds. The search runs nightly at 03:30
  * (refreshDiscoverTopicRuleMatches in index.js) and stores `ruleRecipeIds` and
- * `ruleMatchedFor` on the topic; the rotation at 04:00 only reads them.
+ * `ruleMatchedFor` on the topic; the rotation at 04:00 reads them and evaluates
+ * rules whose matches are missing or stale itself.
  * `rotatedAt` on the list document is the clock: a list without it (freshly
  * created) is rotated on the next run, otherwise once the topic's display
  * duration has passed. A list without `themeId` is also due, so a list rotated by an
@@ -236,6 +237,30 @@ const getActiveTopics = (topics, recipes, now = Date.now()) => {
 };
 
 /**
+ * Why a topic is not part of the rotation (for the log): inactive, no recipe
+ * selection, hand-picked/rule recipes not publicly visible, or rule matches
+ * missing/stale. Call only for topics that getActiveTopics dropped.
+ */
+const explainTopicExclusion = (topic, recipes) => {
+  if (topic.isActive === false) return 'inactive';
+  const visible = new Set(recipes.filter(isPubliclyVisible).map((r) => r.id));
+  const picked = Array.isArray(topic.recipeIds) ? topic.recipeIds : [];
+  const ruled = hasRecipeRule(topic.recipeRule);
+  if (picked.length === 0 && !ruled) return 'no recipeIds and no recipeRule';
+  const parts = [];
+  if (picked.length > 0) {
+    parts.push(`${picked.filter((id) => visible.has(id)).length}/${picked.length} hand-picked recipes visible`);
+  }
+  if (ruled) {
+    const stored = Array.isArray(topic.ruleRecipeIds) ? topic.ruleRecipeIds : [];
+    const current = topic.ruleMatchedFor === ruleKey(topic.recipeRule);
+    parts.push(`rule matches: ${current ? stored.filter((id) => visible.has(id)).length : 0} usable` +
+      `${current ? '' : ' (stale)'}`);
+  }
+  return parts.join(', ');
+};
+
+/**
  * Draws one topic at random. The list's previous topic is skipped when there
  * is an alternative, so consecutive weeks differ.
  * @return {Object|null}
@@ -304,6 +329,7 @@ module.exports = {
   ruleKey,
   computeRuleMatches,
   getActiveTopics,
+  explainTopicExclusion,
   pickTopic,
   pickRecipeIds,
 };

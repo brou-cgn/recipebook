@@ -194,3 +194,12 @@ test('getActiveTopics merges stored rule matches, but only for the current rule'
   const removed = {...topic, recipeRule: undefined};
   assert.deepEqual(getActiveTopics([removed], recipes, NOW)[0].usableRecipeIds, ['a']);
 });
+
+test('explainTopicExclusion names the reason', () => {
+  const {explainTopicExclusion} = require('./fuerDichEntdecktRotation');
+  assert.equal(explainTopicExclusion({isActive: false}, recipes), 'inactive');
+  assert.equal(explainTopicExclusion({recipeIds: []}, recipes), 'no recipeIds and no recipeRule');
+  assert.match(explainTopicExclusion({recipeIds: ['priv', 'grp']}, recipes), /0\/2 hand-picked/);
+  const rule = {cuisines: {include: ['italienisch']}};
+  assert.match(explainTopicExclusion({recipeRule: rule, ruleRecipeIds: ['a']}, recipes), /0 usable \(stale\)/);
+});
