@@ -419,51 +419,8 @@
   outline: none;
 }
 
-/* Mobile info button for E-Mail / Art columns */
-.app-calls-col-mobile {
-  display: none;
-}
-
 .app-calls-col-desktop {
   display: table-cell;
-}
-
-.app-calls-info-btn {
-  background: none;
-  border: 1.5px solid #aaa;
-  border-radius: 50%;
-  width: 26px;
-  height: 26px;
-  font-size: 15px;
-  cursor: pointer;
-  color: #555;
-  line-height: 1;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.app-calls-info-btn:hover,
-.app-calls-info-btn.active {
-  background: #d32f2f;
-  color: white;
-  border-color: #d32f2f;
-}
-
-.app-calls-detail-row td {
-  background: #fafafa;
-  border-bottom: 1px solid #eee;
-}
-
-.app-calls-detail-content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 6px 4px;
-  font-size: 13px;
-  color: #444;
 }
 
 @media (max-width: 768px) {
@@ -491,10 +448,6 @@
   .app-calls-table th,
   .app-calls-table td {
     padding: 8px 6px;
-  }
-
-  .app-calls-col-mobile {
-    display: table-cell;
   }
 
   .app-calls-col-desktop {
