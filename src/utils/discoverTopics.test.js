@@ -1,5 +1,5 @@
 import {
-  isValidMonthDay, toMonthDay, formatMonthDay, formatPeriod, validateTopic, sortTopics,
+  isValidMonthDay, toMonthDay, formatMonthDay, formatPeriod, validateTopic, sortTopics, formatRuleMatches,
 } from './discoverTopics';
 
 jest.mock('../firebase', () => ({ db: {} }));
@@ -45,5 +45,15 @@ describe('discoverTopics', () => {
       { id: 'c', rubrik: 'Frühling', periodStart: '03-01' },
     ]);
     expect(sorted.map((t) => t.id)).toEqual(['c', 'b', 'a']);
+  });
+});
+
+describe('formatRuleMatches', () => {
+  const rule = { cuisines: { include: ['Weihnachtliche Küche'] } };
+  it('ist leer ohne Regel', () => expect(formatRuleMatches({})).toBe(''));
+  it('meldet fehlende Berechnung, keine und mehrere Treffer', () => {
+    expect(formatRuleMatches({ recipeRule: rule })).toBe('Regel: noch nicht berechnet');
+    expect(formatRuleMatches({ recipeRule: rule, ruleRecipeIds: [] })).toBe('Regel: keine Treffer');
+    expect(formatRuleMatches({ recipeRule: rule, ruleRecipeIds: ['a', 'b'] })).toBe('+ 2 per Regel');
   });
 });

@@ -224,3 +224,9 @@ test('isVisibleToUser mirrors the client: group members, public groups, drafts',
   assert.equal(isVisibleToUser({id: 'r', isPrivate: true, authorId: 'u1'}, u1, groups), true);
   assert.equal(isVisibleToUser({id: 'r', isTemp: true}, u1, groups), false);
 });
+
+test('rule matching is insensitive to Unicode composition (decomposed umlauts)', () => {
+  const rule = {cuisines: {include: ['Weihnachtliche Küche']}};
+  const r = {id: 'x', kulinarik: ['Weihnachtliche Küche']};
+  assert.deepEqual(computeRuleMatches(rule, [r], new Map(), NOW), ['x']);
+});

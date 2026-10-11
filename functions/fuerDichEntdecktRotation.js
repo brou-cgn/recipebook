@@ -98,7 +98,9 @@ const isTopicInPeriod = (topic, now = Date.now()) => {
     today >= start || today <= end;
 };
 
-const norm = (value) => String(value || '').trim().toLowerCase();
+// NFC: "ü" typed on macOS/iOS or imported can be a decomposed u + U+0308,
+// which would not equal the composed character from the settings lists.
+const norm = (value) => String(value || '').normalize('NFC').trim().toLowerCase();
 
 const toList = (value) => (Array.isArray(value) ? value : value ? [value] : [])
     .map(norm).filter(Boolean);
