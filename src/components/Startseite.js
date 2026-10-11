@@ -5,6 +5,8 @@ import { getAllCookDates } from '../utils/recipeCookDates';
 import { getUserFavorites } from '../utils/userFavorites';
 import TrendingCard from './TrendingCard';
 import StartseitenKarussell from './StartseitenKarussell';
+import FuerDichEntdecktKachel from './FuerDichEntdecktKachel';
+import { findFuerDichEntdecktList, isFuerDichEntdecktList } from '../utils/fuerDichEntdeckt';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, DEFAULT_MAX_KANDIDATEN_SCHWELLE, getAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT } from '../utils/customLists';
 import { getAllMembersSwipeFlagDocsForList } from '../utils/recipeSwipeFlags';
 import { isBase64Image } from '../utils/imageUtils';
@@ -22,7 +24,7 @@ const ALLTAGSKLASSIKER_TOP = 10;
 const KOCHIDEEN_KARUSSELL_MAX = 6;
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 
-function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], groupsLoading = false, onCreateInspirationList, onSelectExistingInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes, onOpenSeasonalRecipes, onAddRecipe, onCarouselsLoadedChange }) {
+function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], groupsLoading = false, onCreateInspirationList, onSelectExistingInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes, onOpenSeasonalRecipes, onOpenInteractiveList, onAddRecipe, onCarouselsLoadedChange }) {
   const { rows: nutritionReferenceRows } = useNutritionReference();
   const nutritionReferenceIndex = useMemo(
     () => buildNutritionReferenceIndex(nutritionReferenceRows),
@@ -115,7 +117,8 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   }, [groups, currentUser?.defaultWebImportListId]);
 
   const privateListsForCurrentUser = useMemo(() => (
-    groups.filter(g => g.type === 'private' && (g.ownerId === currentUser?.id || (Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id))))
+    // "Für dich entdeckt" ist eine Systemliste und steht in den Auswahl-Dialogen nicht zur Wahl
+    groups.filter(g => g.type === 'private' && !isFuerDichEntdecktList(g) && (g.ownerId === currentUser?.id || (Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id))))
   ), [groups, currentUser?.id]);
 
   const interactiveListsForCurrentUser = useMemo(() => (
@@ -197,6 +200,19 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
       (r) => r.groupId === defaultWebImportList.id || groupRecipeIds.includes(r.id)
     );
   }, [recipes, defaultWebImportList]);
+
+  // Persönliche Liste "Für dich entdeckt" – Kachel nur mit Berechtigung
+  const fuerDichEntdecktList = useMemo(() => (
+    currentUser?.fuerDichEntdeckt ? findFuerDichEntdecktList(groups, currentUser.id) : null
+  ), [groups, currentUser?.fuerDichEntdeckt, currentUser?.id]);
+
+  const fuerDichEntdecktRecipes = useMemo(() => {
+    if (!fuerDichEntdecktList) return [];
+    const groupRecipeIds = Array.isArray(fuerDichEntdecktList.recipeIds) ? fuerDichEntdecktList.recipeIds : [];
+    return recipes.filter(
+      (r) => r.groupId === fuerDichEntdecktList.id || groupRecipeIds.includes(r.id)
+    );
+  }, [recipes, fuerDichEntdecktList]);
 
   const allAlltagsklassikerRecipes = useMemo(() => {
     if (!defaultEverydayClassicsList) return [];
@@ -569,6 +585,11 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
           </div>
         </div>
       )}
+      <FuerDichEntdecktKachel
+        list={fuerDichEntdecktList}
+        recipes={fuerDichEntdecktRecipes}
+        onOpen={onOpenInteractiveList}
+      />
       <StartseitenKarussell
         title="Meine Kochideen"
         items={gemeinsameKandidaten.slice(0, KOCHIDEEN_KARUSSELL_MAX)}

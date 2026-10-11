@@ -76,6 +76,7 @@ import {
   addRecipeToGroup as addRecipeToGroupInFirestore,
   removeRecipeFromGroup as removeRecipeFromGroupInFirestore
 } from './utils/groupFirestore';
+import { filterFuerDichEntdecktGroups, planFuerDichEntdecktSync, syncFuerDichEntdecktList } from './utils/fuerDichEntdeckt';
 import {
   subscribeToEvents,
   subscribeToAllEvents,
@@ -340,6 +341,7 @@ function applyRolePermissionsToUser(user, permissionsMap = {}) {
     onboardingTestmode: rolePerms.onboardingTestmode ?? false,
     addTutorial: rolePerms.addTutorial ?? false,
     editTutorial: rolePerms.editTutorial ?? false,
+    fuerDichEntdeckt: rolePerms.fuerDichEntdeckt ?? false,
   };
 }
 
@@ -1104,12 +1106,25 @@ function App() {
     if (!currentUser) return;
 
     const unsubscribe = subscribeToGroups(currentUser.id, (groupsFromFirestore) => {
-      setGroups(groupsFromFirestore);
+      // "Für dich entdeckt" hängt an derselben Berechtigung wie die Startseiten-Kachel
+      setGroups(filterFuerDichEntdecktGroups(groupsFromFirestore, currentUser.fuerDichEntdeckt));
       setGroupsLoading(false);
     });
 
     return () => unsubscribe();
   }, [currentUser]);
+
+  // Persönliche Liste "Für dich entdeckt" anlegen bzw. ihre Zielliste mit der
+  // Alltagsklassiker-Liste aus den Einstellungen abgleichen (nur mit Berechtigung).
+  const fuerDichEntdecktSyncRef = useRef(false);
+  useEffect(() => {
+    if (groupsLoading || !currentUser?.fuerDichEntdeckt || fuerDichEntdecktSyncRef.current) return;
+    if (planFuerDichEntdecktSync(groups, currentUser).action === 'none') return;
+    fuerDichEntdecktSyncRef.current = true;
+    syncFuerDichEntdecktList(groups, currentUser)
+      .catch((error) => console.error('Fehler beim Anlegen der Liste "Für dich entdeckt":', error))
+      .finally(() => { fuerDichEntdecktSyncRef.current = false; });
+  }, [groups, groupsLoading, currentUser]);
 
   // Set up real-time listener for the current user's events from Firestore.
   useEffect(() => {
@@ -1690,6 +1705,11 @@ function App() {
     setIsBottomNavVisible(getBottomNavBehavior(atelierView) !== 'hidden');
     handleViewChange(atelierView);
     window.scrollTo(0, 0);
+  };
+
+  const handleOpenInteractiveList = (listId) => {
+    setAtelierRestoreState(listId ? { listId } : null);
+    handleOpenAtelier();
   };
 
   const handleOpenAtelierCategorySelection = () => {
@@ -2802,7 +2822,7 @@ function App() {
           allUsers={allUsers}
         />
         ) : currentView === 'startseite' ? (
-        <Startseite currentUser={currentUser} onViewChange={handleViewChange} onSelectRecipe={handleSelectRecipe} recipes={recipes} groups={groups} groupsLoading={groupsLoading} onCreateInspirationList={handleCreateInspirationList} onSelectExistingInspirationList={handleSelectExistingInspirationList} onAssignEverydayClassicsList={handleAssignEverydayClassicsList} onOpenPrivateListRecipes={handleOpenPrivateListRecipes} onOpenSeasonalRecipes={handleOpenSeasonalRecipes} onAddRecipe={handleAddRecipe} onCarouselsLoadedChange={handleStartseiteCarouselsLoadedChange} />
+        <Startseite currentUser={currentUser} onViewChange={handleViewChange} onSelectRecipe={handleSelectRecipe} recipes={recipes} groups={groups} groupsLoading={groupsLoading} onCreateInspirationList={handleCreateInspirationList} onSelectExistingInspirationList={handleSelectExistingInspirationList} onAssignEverydayClassicsList={handleAssignEverydayClassicsList} onOpenPrivateListRecipes={handleOpenPrivateListRecipes} onOpenSeasonalRecipes={handleOpenSeasonalRecipes} onOpenInteractiveList={handleOpenInteractiveList} onAddRecipe={handleAddRecipe} onCarouselsLoadedChange={handleStartseiteCarouselsLoadedChange} />
         ) : null}
         </Suspense>
         {requiresPasswordChange && currentUser && (

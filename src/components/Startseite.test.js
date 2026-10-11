@@ -1222,3 +1222,60 @@ describe('Startseite', () => {
     });
   });
 });
+
+describe('Startseite – Kachel "Für dich entdeckt"', () => {
+  const fuerDichList = {
+    id: 'fuerDichEntdeckt_u1',
+    type: 'private',
+    listKind: 'interactive',
+    systemKey: 'fuerDichEntdeckt',
+    ownerId: 'u1',
+    memberIds: ['u1'],
+    name: 'Für dich entdeckt',
+    recipeIds: ['r1'],
+  };
+
+  test('steht mit Berechtigung direkt über "Meine Kochideen" und öffnet den Swipestapel', async () => {
+    const onOpenInteractiveList = jest.fn();
+    const { container } = render(
+      <Startseite
+        currentUser={{ id: 'u1', fuerDichEntdeckt: true }}
+        recipes={mockRecipes}
+        groups={[fuerDichList]}
+        onOpenInteractiveList={onOpenInteractiveList}
+      />
+    );
+    await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
+    const sectionTitles = Array.from(container.querySelectorAll('.startseite-section-title')).map((title) => title.textContent);
+    expect(sectionTitles.indexOf('Für dich entdeckt')).toBe(sectionTitles.indexOf('Meine Kochideen') - 1);
+
+    fireEvent.click(screen.getByRole('button', { name: /Swipestapel öffnen/ }));
+    expect(onOpenInteractiveList).toHaveBeenCalledWith('fuerDichEntdeckt_u1');
+  });
+
+  test('ist ohne Berechtigung ausgeblendet', async () => {
+    render(
+      <Startseite currentUser={{ id: 'u1', fuerDichEntdeckt: false }} recipes={mockRecipes} groups={[fuerDichList]} />
+    );
+    await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
+    expect(screen.queryByRole('heading', { name: 'Für dich entdeckt' })).not.toBeInTheDocument();
+  });
+
+  test('bietet die Systemliste nicht als Alltagsklassiker-Liste an', async () => {
+    const regular = { id: 'g1', type: 'private', ownerId: 'u1', memberIds: ['u1'], name: 'Familienrezepte' };
+    render(
+      <Startseite
+        currentUser={{ id: 'u1', fuerDichEntdeckt: true }}
+        recipes={mockRecipes}
+        groups={[fuerDichList, regular]}
+        onAssignEverydayClassicsList={jest.fn()}
+      />
+    );
+    await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
+    const assignButton = screen.queryByRole('button', { name: /Alltagsklassiker/ });
+    if (!assignButton) return;
+    fireEvent.click(assignButton);
+    expect(await screen.findByRole('button', { name: 'Familienrezepte' })).toBeInTheDocument();
+    expect(screen.queryAllByRole('button', { name: 'Für dich entdeckt' })).toHaveLength(0);
+  });
+});

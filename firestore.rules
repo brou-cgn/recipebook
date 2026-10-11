@@ -157,8 +157,19 @@ service cloud.firestore {
 
     // Groups collection
     match /groups/{groupId} {
+      // Persönliche Systemliste "Für dich entdeckt" (src/utils/fuerDichEntdeckt.js):
+      // feste ID fuerDichEntdeckt_<uid>; jeder Nutzer darf seine eigene anlegen und
+      // pflegen – auch Rollen ohne Bearbeitungsrecht. Löschen bleibt Editoren vorbehalten.
+      function isOwnFuerDichEntdecktList() {
+        return isMember()
+          && groupId == 'fuerDichEntdeckt_' + request.auth.uid
+          && request.resource.data.ownerId == request.auth.uid
+          && request.resource.data.type == 'private'
+          && request.resource.data.systemKey == 'fuerDichEntdeckt';
+      }
       allow read: if isAnyUser();
-      allow create, update, delete: if isEditOrAdmin();
+      allow create, update: if isEditOrAdmin() || isOwnFuerDichEntdecktList();
+      allow delete: if isEditOrAdmin();
     }
 
     // Shopping lists collection

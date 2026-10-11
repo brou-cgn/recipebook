@@ -11,6 +11,7 @@ import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
 import { isBase64Image } from '../utils/imageUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import TagesmenuFilterOverlay from './TagesmenuFilterOverlay';
+import { isFuerDichEntdecktList } from '../utils/fuerDichEntdeckt';
 
 /**
  * Tagesmenü page – shows recipe cards as a swipeable Tinder-style stack.
@@ -87,8 +88,11 @@ function Tagesmenu({
   const restoredListId = restoreState && interactiveLists.some((l) => l.id === restoreState.listId)
     ? restoreState.listId
     : null;
+  // "Für dich entdeckt" wird nur über ihre Startseiten-Kachel direkt geöffnet
+  // (restoreState); beim normalen Einstieg hat eine reguläre Liste Vorrang.
+  const defaultList = interactiveLists.find((l) => !isFuerDichEntdecktList(l)) ?? interactiveLists[0] ?? null;
   const [selectedListId, setSelectedListId] = useState(
-    restoredListId ?? (interactiveLists.length > 0 ? interactiveLists[0].id : null)
+    restoredListId ?? (defaultList ? defaultList.id : null)
   );
   useEffect(() => {
     onRestoreStateConsumed?.();
