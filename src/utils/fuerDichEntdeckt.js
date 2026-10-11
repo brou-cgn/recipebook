@@ -17,8 +17,8 @@
  *   durch die Cloud Function `rotateFuerDichEntdecktLists`
  *   (functions/fuerDichEntdecktRotation.js): wöchentlich werden alle
  *   Rezepte entfernt und bis zu 5 neue gesetzt, gezogen aus einem Thema der
- *   Admin-Liste `discoverTopics` (utils/discoverTopics.js). Der Zeitraum des
- *   Themas begrenzt nur, wann die Kachel angezeigt wird (isThemeInPeriod).
+ *   Admin-Liste `discoverTopics` (utils/discoverTopics.js), dessen Zeitraum
+ *   heute gilt.
  */
 
 import { db } from '../firebase';
@@ -40,23 +40,6 @@ export const isFuerDichEntdecktList = (group) =>
 export const findFuerDichEntdecktList = (groups, userId) => {
   if (!userId || !Array.isArray(groups)) return null;
   return groups.find((g) => isFuerDichEntdecktList(g) && g.ownerId === userId) || null;
-};
-
-const MONTH_DAY = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
-
-/**
- * Ob das aktuelle Thema der Liste heute ausgespielt werden darf. Der Zeitraum
- * (`themePeriodStart` / `themePeriodEnd`, 'MM-DD', inklusive, Start > Ende läuft
- * über den Jahreswechsel) kopiert die Rotation vom Thema auf die Liste; er
- * begrenzt nur die Anzeige, nicht das Befüllen. Beide leer/fehlend = immer.
- */
-export const isThemeInPeriod = (list, now = new Date()) => {
-  const start = list?.themePeriodStart || '';
-  const end = list?.themePeriodEnd || '';
-  if (!start && !end) return true;
-  if (!MONTH_DAY.test(start) || !MONTH_DAY.test(end)) return false;
-  const today = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  return start <= end ? today >= start && today <= end : today >= start || today <= end;
 };
 
 /**

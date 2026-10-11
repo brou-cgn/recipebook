@@ -76,7 +76,7 @@ const recipes = [
   {id: 'grp', title: 'Gruppe', groupId: 'g1'},
 ];
 
-test('active topics: enabled with usable recipes, regardless of period', () => {
+test('active topics: in period, enabled, with usable recipes only', () => {
   const now = on('2026-10-11');
   const topics = [
     {id: 'ok', recipeIds: ['a', 'priv', 'gone'], periodStart: '09-01', periodEnd: '11-30'},
@@ -88,7 +88,7 @@ test('active topics: enabled with usable recipes, regardless of period', () => {
     {id: 'missing'},
   ];
   const active = getActiveTopics(topics, recipes, now);
-  assert.deepEqual(active.map((t) => t.id), ['ok', 'allYear', 'summer']);
+  assert.deepEqual(active.map((t) => t.id), ['ok', 'allYear']);
   assert.deepEqual(active[0].usableRecipeIds, ['a']);
 });
 

@@ -6,7 +6,7 @@ import { getUserFavorites } from '../utils/userFavorites';
 import TrendingCard from './TrendingCard';
 import StartseitenKarussell from './StartseitenKarussell';
 import FuerDichEntdecktKachel from './FuerDichEntdecktKachel';
-import { findFuerDichEntdecktList, isFuerDichEntdecktList, isThemeInPeriod } from '../utils/fuerDichEntdeckt';
+import { findFuerDichEntdecktList, isFuerDichEntdecktList } from '../utils/fuerDichEntdeckt';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, DEFAULT_MAX_KANDIDATEN_SCHWELLE, getAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT } from '../utils/customLists';
 import { getAllMembersSwipeFlagDocsForList } from '../utils/recipeSwipeFlags';
 import { isBase64Image } from '../utils/imageUtils';
@@ -586,7 +586,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         </div>
       )}
       <FuerDichEntdecktKachel
-        list={isThemeInPeriod(fuerDichEntdecktList) ? fuerDichEntdecktList : null}
+        list={fuerDichEntdecktList}
         recipes={fuerDichEntdecktRecipes}
         onOpen={onOpenInteractiveList}
       />

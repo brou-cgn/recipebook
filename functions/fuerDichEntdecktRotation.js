@@ -9,9 +9,8 @@
  * see src/utils/discoverTopics.js): rubrik (-> themeLabel), beschreibung
  * (-> list description / tile title), relevante Rezepte (recipeIds) and an
  * optional yearly period (periodStart / periodEnd as 'MM-DD'; may wrap over
- * New Year; both empty = all year). The period only limits when a topic is
- * shown to users (client); recipes are assigned regardless of it. Every enabled
- * topic with at least one usable recipe takes part in the rotation.
+ * New Year; both empty = all year). Only topics whose period contains today
+ * and that have at least one usable recipe take part in the rotation.
  * `displayDays` of a topic sets how long it stays on a list (default 7 days).
  * `recipeRule` additionally selects recipes by ingredientID, meal category,
  * cuisine, creation date and last cook date (see matchesRecipeRule); rule
@@ -211,17 +210,15 @@ const computeRuleMatches = (rule, recipes, lastCookedByRecipe = new Map(), now =
       .map((r) => r.id);
 
 /**
- * Topics that may be rotated in: enabled, with at least one recipe that every
- * user may see. The yearly period does NOT take part here - it only limits
- * when the topic is shown to users (the list carries it as themePeriodStart /
- * themePeriodEnd, the client checks it). Each result carries the usable recipe IDs:
+ * Topics that may be rotated in right now: in period, with at least one
+ * recipe that every user may see. Each result carries the usable recipe IDs:
  * the hand-picked ones plus those matching the topic's `recipeRule`.
  */
 const getActiveTopics = (topics, recipes, now = Date.now()) => {
   const visibleRecipes = recipes.filter(isPubliclyVisible);
   const visible = new Set(visibleRecipes.map((r) => r.id));
   return (topics || [])
-      .filter((topic) => topic && topic.isActive !== false)
+      .filter((topic) => topic && topic.isActive !== false && isTopicInPeriod(topic, now))
       .map((topic) => {
         const picked = (Array.isArray(topic.recipeIds) ? topic.recipeIds : [])
             .filter((id) => visible.has(id));
