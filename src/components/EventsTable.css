@@ -1,0 +1,39 @@
+.events-table-container {
+  overflow-x: auto;
+}
+
+.events-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.events-table th,
+.events-table td {
+  padding: 8px 16px;
+  text-align: left;
+  border-bottom: 1px solid #f2f2f2;
+}
+
+.events-table th {
+  background: transparent;
+  color: #8a8a8a;
+  font-weight: 500;
+  font-size: 13px;
+  border-bottom: 1px solid #eee;
+}
+
+.events-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.events-table th.events-table-amount,
+.events-table td.events-table-amount {
+  text-align: right;
+}
+
+@media (max-width: 600px) {
+  .events-table {
+    font-size: 16px;
+  }
+}
