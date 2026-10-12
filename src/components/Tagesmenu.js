@@ -1327,6 +1327,7 @@ function Tagesmenu({
             { label: 'Für später', flag: 'geparkt' },
             { label: 'Archiviert', flag: 'archiv' },
           ].map(({ label, flag }) => {
+            if (flag === 'kandidat' && isFuerDichEntdecktList(selectedList)) return null;
             const group = allListRecipes.filter((r) => {
               const combinedFlag = swipeResults[r.id] ?? activeFlags[r.id];
               return combinedFlag === flag;
@@ -1420,7 +1421,7 @@ function Tagesmenu({
             <h2 className="tagesmenu-results-page-title">Kochatelier</h2>
           </div>
           {/* Group status section – only shown for lists with multiple members */}
-          {listMemberIds.length > 1 && (() => {
+          {(listMemberIds.length > 1 || isFuerDichEntdecktList(selectedList)) && (() => {
             // Helper to render a recipe tile (reused across groups)
             const renderTile = (recipe) => {
               const allImages =
@@ -1495,19 +1496,24 @@ function Tagesmenu({
               );
             };
 
-            // "Gemeinsame Kandidaten" group: use pre-computed useMemo value
-            if (gemeinsameKandidaten.length === 0) return null;
+            // "Gemeinsame Kandidaten" group: use pre-computed useMemo value.
+            // "Für dich entdeckt" is a private single-member list, so there is no group
+            // consensus – the grid shows the user's own Kandidat swipes instead.
+            const kandidatenGrid = listMemberIds.length > 1
+              ? gemeinsameKandidaten
+              : allListRecipes.filter((r) => (swipeResults[r.id] ?? activeFlags[r.id]) === 'kandidat');
+            if (kandidatenGrid.length === 0) return null;
             // Fixed grid: 2 columns x 3 rows up to 6 candidates, 3 columns x 3 rows from 7 on
             const tilesColumnClass =
-              gemeinsameKandidaten.length <= 6
+              kandidatenGrid.length <= 6
                 ? 'tagesmenu-results-tiles--2col'
                 : 'tagesmenu-results-tiles--3col';
             return (
               <>
-                {gemeinsameKandidaten.length > 0 && (
+                {kandidatenGrid.length > 0 && (
                   <div className="tagesmenu-results-group tagesmenu-results-group--gemeinsame-kandidaten">
                     <div className={`tagesmenu-results-tiles ${tilesColumnClass}`}>
-                      {gemeinsameKandidaten.map(renderTile)}
+                      {kandidatenGrid.map(renderTile)}
                     </div>
                   </div>
                 )}
