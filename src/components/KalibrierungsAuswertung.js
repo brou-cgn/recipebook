@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import './KalibrierungsAuswertung.css';
 import { getKalibrierungsSnapshotsOnce } from '../utils/drinkWeightsFirestore';
 import { aggregateCalibration, MIN_EVENTS_FOR_TREND } from '../utils/kalibrierungsAuswertung';
 import { getDrinkCategoryLabel } from '../utils/drinkCategories';
@@ -41,32 +42,32 @@ function KalibrierungsAuswertung() {
       {rows.length === 0 ? (
         <p className="section-description">Noch keine auswertbaren Daten.</p>
       ) : (
-        <div className="events-table-container">
-          <table className="events-table">
+        <div className="kalibrierung-table-container">
+          <table className="kalibrierung-table">
             <thead>
               <tr>
                 <th>Kategorie</th>
-                <th className="events-table-amount">Events</th>
-                <th className="events-table-amount">Soll (l)</th>
-                <th className="events-table-amount">Ist (l)</th>
-                <th className="events-table-amount">Abweichung</th>
-                <th className="events-table-amount">Median</th>
+                <th className="kalibrierung-table-amount">Events</th>
+                <th className="kalibrierung-table-amount">Soll (l)</th>
+                <th className="kalibrierung-table-amount">Ist (l)</th>
+                <th className="kalibrierung-table-amount">Abweichung</th>
+                <th className="kalibrierung-table-amount">Median</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.kategorie}>
                   <td>{getDrinkCategoryLabel(row.kategorie)}</td>
-                  <td className="events-table-amount">{row.events}</td>
-                  <td className="events-table-amount">{formatLiter(row.sollLiter)}</td>
-                  <td className="events-table-amount">{formatLiter(row.istLiter)}</td>
-                  <td className="events-table-amount">
+                  <td className="kalibrierung-table-amount">{row.events}</td>
+                  <td className="kalibrierung-table-amount">{formatLiter(row.sollLiter)}</td>
+                  <td className="kalibrierung-table-amount">{formatLiter(row.istLiter)}</td>
+                  <td className="kalibrierung-table-amount">
                     {formatPercent(row.abweichung)}
                     {!row.belastbar && (
                       <span title={`Weniger als ${MIN_EVENTS_FOR_TREND} Events – noch nicht belastbar`}> ⚠</span>
                     )}
                   </td>
-                  <td className="events-table-amount">{formatPercent(row.medianAbweichung)}</td>
+                  <td className="kalibrierung-table-amount">{formatPercent(row.medianAbweichung)}</td>
                 </tr>
               ))}
             </tbody>
