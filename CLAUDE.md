@@ -1,3 +1,9 @@
+# Projektregeln
+
+Die verbindlichen Regeln für alle Agenten (Claude, Copilot, Codex u. a.) stehen in
+**`AGENTS.md`** — dort ergänzen, nicht hier. Diese Datei enthält nur, was
+zusätzlich Claude-spezifisch oder ein laufendes Vorhaben ist.
+
 ## Löschaktionen
 Jede Löschaktion nutzt die Komponente `DeleteRowButton` — niemals ein eigenes ×,
 keinen gefüllten Kreisbutton, kein Icon im Eingabefeld.
@@ -5,7 +11,7 @@ keinen gefüllten Kreisbutton, kein Icon im Eingabefeld.
 immer am rechten Zeilenrand; Tooltip + aria-label „<Name> entfernen".
 Löschen wirkt sofort + Snackbar „Rückgängig" (6 s, Wiederherstellung an alten Index) —
 kein Bestätigungsdialog außer beim Löschen eines ganzen Rezepts mit Inhalt.
-Spezifikation: design_handoff_pillenkarussell/Löschen Einheitlich.dc.html
+Spezifikation: design_handoff_pillenkarussell/Löschen Einheitlich.dc.html (liegt nicht im Repo; die Kernregeln stehen oben und in `AGENTS.md`)
 
 Diese Spezifikation gilt nur für Desktop. Auf Mobile gilt stattdessen die
 Linksswipe-Geste als Löschalternative — analog zur aktuell z. B. beim
@@ -28,7 +34,7 @@ statt eigene Swipe-/Undo-Logik zu implementieren.
 ## Tests
 `npm run test:ci` ist der Lauf, den die CI macht (`.github/workflows/ci.yml`,
 läuft bei jedem PR und Push auf `main`). Er führt alles aus **außer** den
-Suites in `scripts/quarantined-tests.js` — 22 Suites, die schon rot waren,
+Suites in `scripts/quarantined-tests.js` — 19 Suites (ursprünglich 22), die schon rot waren,
 als der Test-Workflow im März 2026 abgeschaltet wurde.
 
 Wer eine dieser Suites repariert, streicht ihre Zeile dort. Neue Einträge nur

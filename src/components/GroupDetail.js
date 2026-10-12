@@ -410,14 +410,8 @@ function GroupDetail({
 
       if (hasEmail) {
         try {
-          const inviteResult = await sendGroupInvitation(emailTrimmed);
-          if (inviteResult.alreadyRegistered) {
-            setAddMemberSuccess(`${emailTrimmed} ist bereits registriert und wurde zur Liste hinzugefügt.`);
-          } else if (inviteResult.alreadyInvited) {
-            setAddMemberSuccess(`Einladung an ${emailTrimmed} wurde gespeichert. Eine Einladungs-E-Mail wurde bereits früher versandt.`);
-          } else {
-            setAddMemberSuccess(`Einladung an ${emailTrimmed} wurde gespeichert und eine Einladungs-E-Mail versendet.`);
-          }
+          await sendGroupInvitation(emailTrimmed);
+          setAddMemberSuccess(`Einladung an ${emailTrimmed} wurde gespeichert. Falls die Adresse noch nicht eingeladen oder registriert ist, wird eine Einladungs-E-Mail versendet.`);
         } catch (inviteErr) {
           console.error('Error sending invitation email:', inviteErr);
           setAddMemberSuccess(`Einladung an ${emailTrimmed} wurde gespeichert, aber die Einladungs-E-Mail konnte nicht versendet werden.`);
