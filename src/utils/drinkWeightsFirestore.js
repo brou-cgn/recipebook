@@ -89,3 +89,17 @@ export const setDrinkWeightEntry = (categoryId, data, updatedBy) =>
  */
 export const setChildrenDrinkWeightEntry = (categoryId, data, updatedBy) =>
   setCollectionEntry(CHILDREN_DRINK_WEIGHTS_COLLECTION, categoryId, data, updatedBy);
+
+/**
+ * Load all calibration snapshots (actual vs. calculated consumption per
+ * finished event). Admin-only per firestore.rules; returns [] on failure.
+ */
+export const getKalibrierungsSnapshotsOnce = async () => {
+  try {
+    const snapshot = await getDocs(collection(db, 'kalibrierungsSnapshots'));
+    return snapshot.docs.map((d) => ({ eventId: d.id, ...d.data() }));
+  } catch (error) {
+    console.error('Error loading kalibrierungsSnapshots:', error);
+    return [];
+  }
+};
