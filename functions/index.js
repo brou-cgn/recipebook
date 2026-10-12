@@ -10517,13 +10517,102 @@ exports.refreshDiscoverTopicRuleMatches = onSchedule(
 );
 
 /**
+ * Loads what a rotation needs: topics (with stale rule matches refreshed),
+ * recipes, groups for the visibility check and the topics relevant today.
+ * Shared by the weekly rotation and the rotation of a freshly created list.
+ * @return {Promise<{recipes: Array<Object>, recipesById: Map, groupsById: Map, activeTopics: Array<Object>}>}
+ */
+const loadFuerDichEntdecktRotationContext = async (db) => {
+  const [topicsSnap, recipesSnap, groupsSnap] = await Promise.all([
+    db.collection('discoverTopics').get(),
+    db.collection('recipes').get(),
+    db.collection('groups').get(),
+  ]);
+  const groupsById = new Map(groupsSnap.docs.map((d) => [d.id, d.data()]));
+  const recipes = recipesSnap.docs.map((d) => ({id: d.id, ...d.data()}));
+  const topics = topicsSnap.docs.map((d) => ({id: d.id, ...d.data()}));
+
+  // A rule created or changed after the nightly search (03:30) has not been
+  // applied yet - do it now instead of leaving the topic without its recipes.
+  const staleDocs = topicsSnap.docs.filter((d) => {
+    const t = d.data();
+    return hasRecipeRule(t.recipeRule) ?
+      t.ruleMatchedFor !== ruleKey(t.recipeRule) :
+      t.autoRecipeIds !== undefined || t.ruleRecipeIds !== undefined;
+  });
+  if (staleDocs.length > 0) {
+    const updates = await applyTopicRules(db, staleDocs, recipes);
+    updates.forEach((u, id) => {
+      const topic = topics.find((t) => t.id === id);
+      topic.recipeIds = u.recipeIds;
+      topic.autoRecipeIds = u.autoRecipeIds;
+      topic.autoRecipeOwners = u.ownersMap;
+    });
+  }
+
+  const activeTopics = getActiveTopics(topics, recipes);
+  topics
+      .filter((t) => !activeTopics.some((a) => a.id === t.id))
+      .forEach((t) => console.log(
+          `rotateFuerDichEntdecktLists: topic ${t.id} skipped: ${explainTopicExclusion(t, recipes)}`));
+  return {
+    recipes,
+    recipesById: new Map(recipes.map((r) => [r.id, r])),
+    groupsById,
+    activeTopics,
+  };
+};
+
+/**
+ * Rotates ONE "Für dich entdeckt" list: draws a topic that has at least one
+ * recipe the list's owner may see and is available to them, and replaces the
+ * list's recipes with up to 5 of it (valid 'kandidat' recipes stay).
+ * Every list draws on its own, so different users usually get different
+ * topics, and a topic without recipes for this owner is simply not a candidate.
+ * @return {Promise<boolean>} whether the list was rotated
+ */
+const rotateFuerDichEntdecktList = async (db, listDoc, context, now = Date.now()) => {
+  const {recipesById, groupsById, activeTopics} = context;
+  const list = listDoc.data();
+  // Visibility depends on the list's owner: only topics with at least one
+  // recipe the owner may see take part, and only such recipes are drawn.
+  const userDoc = await db.collection('users').doc(list.ownerId).get();
+  const user = {id: list.ownerId, isAdmin: userDoc.exists && userDoc.data().role === 'admin'};
+  const candidates = activeTopics
+      .map((t) => ({
+        ...t,
+        usableRecipeIds: t.usableRecipeIds.filter((id) =>
+          isVisibleToUser(recipesById.get(id), user, groupsById) &&
+          recipeAvailableToUser(t, id, user.id)),
+      }))
+      .filter((t) => t.usableRecipeIds.length > 0);
+  const topic = pickTopic(candidates, list.themeId || null);
+  if (!topic) {
+    console.log(`rotateFuerDichEntdecktLists: list ${listDoc.id}: no topic with recipes visible to the owner`);
+    return false;
+  }
+  // Recipes with a still valid 'kandidat' swipe flag of this list stay.
+  const flagsSnap = await db.collection('recipeSwipeFlags')
+      .where('listID', '==', listDoc.id).where('flag', '==', 'kandidat').get();
+  const protectedIds = getProtectedRecipeIds(flagsSnap.docs.map((d) => d.data()), now);
+  await listDoc.ref.update({
+    recipeIds: pickRotationRecipeIds(topic.usableRecipeIds, list.recipeIds || [], protectedIds),
+    description: topic.beschreibung || '',
+    themeLabel: topic.rubrik || '',
+    themeId: topic.id,
+    rotatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  return true;
+};
+
+/**
  * Weekly rotation of the personal "Für dich entdeckt" lists: every list whose
  * last rotation is a week old (or that never had one, or whose topic has run
  * out) loses all its recipes and gets up to 5 from a topic drawn from the
  * admin-maintained `discoverTopics` that is relevant today (period). Without
- * a relevant topic the lists stay as they are. Runs daily so that new lists
- * and a missed run are caught up within a day; `rotatedAt` keeps it to once
- * a week.
+ * a relevant topic the lists stay as they are. Runs daily so that a missed run
+ * is caught up within a day; `rotatedAt` keeps it to once a week. A new list is
+ * filled right away by fillNewFuerDichEntdecktList; this run is its fallback.
  */
 exports.rotateFuerDichEntdecktLists = onSchedule(
     {
@@ -10534,86 +10623,55 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
     },
     async () => {
       const db = admin.firestore();
-      const [listsSnap, topicsSnap, recipesSnap, groupsSnap] = await Promise.all([
-        db.collection('groups').where('systemKey', '==', FUER_DICH_ENTDECKT_KEY).get(),
-        db.collection('discoverTopics').get(),
-        db.collection('recipes').get(),
-        db.collection('groups').get(),
-      ]);
-      const groupsById = new Map(groupsSnap.docs.map((d) => [d.id, d.data()]));
-      const recipes = recipesSnap.docs.map((d) => ({id: d.id, ...d.data()}));
-      const topics = topicsSnap.docs.map((d) => ({id: d.id, ...d.data()}));
-
-      // A rule created or changed after the nightly search (03:30) has not been
-      // applied yet - do it now instead of leaving the topic without its recipes.
-      const staleDocs = topicsSnap.docs.filter((d) => {
-        const t = d.data();
-        return hasRecipeRule(t.recipeRule) ?
-          t.ruleMatchedFor !== ruleKey(t.recipeRule) :
-          t.autoRecipeIds !== undefined || t.ruleRecipeIds !== undefined;
-      });
-      if (staleDocs.length > 0) {
-        const updates = await applyTopicRules(db, staleDocs, recipes);
-        updates.forEach((u, id) => {
-          const topic = topics.find((t) => t.id === id);
-          topic.recipeIds = u.recipeIds;
-          topic.autoRecipeIds = u.autoRecipeIds;
-          topic.autoRecipeOwners = u.ownersMap;
-        });
-      }
-
-      const activeTopics = getActiveTopics(topics, recipes);
-      topics
-          .filter((t) => !activeTopics.some((a) => a.id === t.id))
-          .forEach((t) => console.log(
-              `rotateFuerDichEntdecktLists: topic ${t.id} skipped: ${explainTopicExclusion(t, recipes)}`));
-      if (activeTopics.length === 0) {
+      const listsSnap = await db.collection('groups')
+          .where('systemKey', '==', FUER_DICH_ENTDECKT_KEY).get();
+      const context = await loadFuerDichEntdecktRotationContext(db);
+      if (context.activeTopics.length === 0) {
         console.log('rotateFuerDichEntdecktLists: no relevant topic, lists unchanged');
         return;
       }
 
       const now = Date.now();
       const dueLists = listsSnap.docs
-          .filter((d) => isRotationDue(d.data(), now, activeTopics));
+          .filter((d) => isRotationDue(d.data(), now, context.activeTopics));
       if (dueLists.length === 0) {
         console.log('rotateFuerDichEntdecktLists: no list due');
         return;
       }
 
-      const recipesById = new Map(recipes.map((r) => [r.id, r]));
       let rotated = 0;
       for (const listDoc of dueLists) {
-        const list = listDoc.data();
-        // Visibility depends on the list's owner: only topics with at least one
-        // recipe the owner may see take part, and only such recipes are drawn.
-        const userDoc = await db.collection('users').doc(list.ownerId).get();
-        const user = {id: list.ownerId, isAdmin: userDoc.exists && userDoc.data().role === 'admin'};
-        const candidates = activeTopics
-            .map((t) => ({
-              ...t,
-              usableRecipeIds: t.usableRecipeIds.filter((id) =>
-                isVisibleToUser(recipesById.get(id), user, groupsById) &&
-                recipeAvailableToUser(t, id, user.id)),
-            }))
-            .filter((t) => t.usableRecipeIds.length > 0);
-        const topic = pickTopic(candidates, list.themeId || null);
-        if (!topic) {
-          console.log(`rotateFuerDichEntdecktLists: list ${listDoc.id}: no topic with recipes visible to the owner`);
-          continue;
-        }
-        // Recipes with a still valid 'kandidat' swipe flag of this list stay.
-        const flagsSnap = await db.collection('recipeSwipeFlags')
-            .where('listID', '==', listDoc.id).where('flag', '==', 'kandidat').get();
-        const protectedIds = getProtectedRecipeIds(flagsSnap.docs.map((d) => d.data()), now);
-        await listDoc.ref.update({
-          recipeIds: pickRotationRecipeIds(topic.usableRecipeIds, list.recipeIds || [], protectedIds),
-          description: topic.beschreibung || '',
-          themeLabel: topic.rubrik || '',
-          themeId: topic.id,
-          rotatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-        rotated++;
+        if (await rotateFuerDichEntdecktList(db, listDoc, context, now)) rotated++;
       }
       console.log(`rotateFuerDichEntdecktLists: rotated ${rotated}/${dueLists.length} list(s)`);
+    }
+);
+
+/**
+ * Fills a freshly created "Für dich entdeckt" list right away, so that a new
+ * user (the client creates the list on the first start with the permission)
+ * sees recipes in the tile instead of waiting for the 04:00 run. If no topic
+ * fits the owner, the list stays empty and the daily run retries it.
+ */
+exports.fillNewFuerDichEntdecktList = onDocumentCreated(
+    {
+      document: 'groups/{groupId}',
+      region: 'us-central1',
+      timeoutSeconds: 120,
+    },
+    async (event) => {
+      const data = event.data ? event.data.data() : null;
+      if (!data || data.systemKey !== FUER_DICH_ENTDECKT_KEY || !data.ownerId) return;
+      const db = admin.firestore();
+      const context = await loadFuerDichEntdecktRotationContext(db);
+      if (context.activeTopics.length === 0) {
+        console.log(`fillNewFuerDichEntdecktList: list ${event.params.groupId}: no relevant topic`);
+        return;
+      }
+      // Re-read: the client may have written recipeIds/rotatedAt since the event.
+      const listDoc = await db.collection('groups').doc(event.params.groupId).get();
+      if (!listDoc.exists || !isRotationDue(listDoc.data(), Date.now(), context.activeTopics)) return;
+      const filled = await rotateFuerDichEntdecktList(db, listDoc, context);
+      console.log(`fillNewFuerDichEntdecktList: list ${event.params.groupId}: ${filled ? 'filled' : 'left empty'}`);
     }
 );
