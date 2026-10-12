@@ -6050,15 +6050,47 @@ function escapeHtml(str) {
       .replace(/'/g, '&#39;');
 }
 
+/** Maximum invitation calls per sender and day (UTC). */
+const INVITATION_DAILY_LIMIT = 20;
+
+/**
+ * Count one invitation call against the sender's daily limit and refuse the
+ * call when the limit is used up. Counts every call (also for registered or
+ * already invited addresses) so the limit cannot be bypassed by probing.
+ * @param {string} uid - UID of the sender
+ * @return {Promise<void>}
+ */
+async function consumeInvitationQuota(uid) {
+  const db = admin.firestore();
+  const day = new Date().toISOString().slice(0, 10);
+  const ref = db.collection('invitationLimits').doc(`${uid}_${day}`);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const count = snap.exists ? (snap.data().count || 0) : 0;
+    if (count >= INVITATION_DAILY_LIMIT) {
+      throw new HttpsError(
+          'resource-exhausted',
+          'Das Tageslimit für Einladungen ist erreicht. Bitte versuche es morgen erneut.'
+      );
+    }
+    tx.set(ref, {uid, day, count: count + 1});
+  });
+}
+
 /**
  * Cloud Function: Send an invitation email to a new email address added to a private list.
  * Checks whether the address is already registered or has already received an invitation.
  * If neither, sends an invitation email and records the sent invitation in Firestore.
  *
+ * Only callers with the edit role or higher may invite, each sender is limited
+ * to INVITATION_DAILY_LIMIT calls per day, and the response is identical whether
+ * the address is registered, already invited or newly invited - so the function
+ * neither works as a spam relay nor reveals which addresses are registered.
+ *
  * Input data:
  * - email: The email address to invite
  *
- * Returns: { success: boolean, alreadyRegistered: boolean, alreadyInvited: boolean }
+ * Returns: { success: true }
  */
 exports.sendGroupInvitationEmail = onCall(
     {
@@ -6074,11 +6106,23 @@ exports.sendGroupInvitationEmail = onCall(
         );
       }
 
+      await requireAiCaller(callerAuth).catch((err) => {
+        if (err.code === 'permission-denied') {
+          throw new HttpsError(
+              'permission-denied',
+              'Einladungen sind erst ab der Rolle „Bearbeiten“ möglich.'
+          );
+        }
+        throw err;
+      });
+
       const {email} = request.data;
 
       if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
         throw new HttpsError('invalid-argument', 'Ungültige E-Mail-Adresse.');
       }
+
+      await consumeInvitationQuota(callerAuth.uid);
 
       const normalizedEmail = email.trim().toLowerCase();
       const db = admin.firestore();
@@ -6086,8 +6130,8 @@ exports.sendGroupInvitationEmail = onCall(
       // Check if the email address is already registered as a user
       try {
         await admin.auth().getUserByEmail(normalizedEmail);
-        // User exists – no invitation needed
-        return {success: true, alreadyRegistered: true, alreadyInvited: false};
+        // User exists – no invitation needed; answer exactly like a sent invitation
+        return {success: true};
       } catch (authError) {
         if (authError.code !== 'auth/user-not-found') {
           console.error('sendGroupInvitationEmail: error checking Firebase Auth:', authError);
@@ -6100,7 +6144,7 @@ exports.sendGroupInvitationEmail = onCall(
       const invitationRef = db.collection('invitations').doc(normalizedEmail);
       const invitationSnap = await invitationRef.get();
       if (invitationSnap.exists) {
-        return {success: true, alreadyRegistered: false, alreadyInvited: true};
+        return {success: true};
       }
 
       // Send the invitation email
@@ -6166,7 +6210,7 @@ exports.sendGroupInvitationEmail = onCall(
         sentBy: callerAuth.uid,
       });
 
-      return {success: true, alreadyRegistered: false, alreadyInvited: false};
+      return {success: true};
     },
 );
 
