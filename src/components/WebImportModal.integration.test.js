@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../test-utils';
 import RecipeForm from './RecipeForm';
 
 // Mock all utility modules
@@ -28,6 +29,10 @@ jest.mock('../utils/customLists', () => ({
     scanImage: '📷',
     webImport: '🌐'
   }),
+  getEffectiveIcon: (icons, key) => (icons && icons[key]) || '',
+  getDarkModePreference: () => false,
+  DEFAULT_BUTTON_ICONS: {},
+  saveCustomLists: () => Promise.resolve(),
 }));
 
 jest.mock('../utils/userManagement', () => ({
@@ -50,6 +55,7 @@ jest.mock('../utils/categoryImages', () => ({
 }));
 
 jest.mock('../utils/ingredientUtils', () => ({
+  ...jest.requireActual('../utils/ingredientUtils'),
   formatIngredients: (ingredients) => ingredients,
   formatIngredientSpacing: (text) => text,
 }));
@@ -60,6 +66,7 @@ jest.mock('../utils/storageUtils', () => ({
 }));
 
 jest.mock('../utils/recipeLinks', () => ({
+  ...jest.requireActual('../utils/recipeLinks'),
   encodeRecipeLink: jest.fn((id, title) => `#${id}-${title}`),
   startsWithHash: (text) => text.startsWith('#'),
 }));
@@ -100,28 +107,12 @@ jest.mock('@dnd-kit/utilities', () => ({
 
 // Mock WebImportModal component
 jest.mock('./WebImportModal', () => {
-  return function MockWebImportModal({ onImport, onCancel, initialUrl }) {
+  return function MockWebImportModal({ onImported, onCancel, initialUrl }) {
     return (
       <div data-testid="web-import-modal">
         <h2>Rezept von Website importieren</h2>
         {initialUrl && <span data-testid="initial-url">{initialUrl}</span>}
-        <button
-          onClick={() => {
-            // Simulate the import with test data
-            onImport({
-              title: 'Test Web Recipe',
-              ingredients: ['100g flour', '2 eggs'],
-              steps: ['Mix ingredients', 'Bake at 180°C'],
-              portionen: 4,
-              kochdauer: 30,
-              kulinarik: ['Italian'],
-              schwierigkeit: 3,
-              speisekategorie: ['Main Course'],
-            });
-          }}
-        >
-          Übernehmen
-        </button>
+        <button onClick={() => onImported()}>Übernehmen</button>
         <button onClick={onCancel}>Abbrechen</button>
       </div>
     );
@@ -147,7 +138,7 @@ describe('WebImportModal Integration - Dialog Close on Apply', () => {
       webimport: true, // Enable webimport feature
     };
 
-    render(
+    renderWithProviders(
       <RecipeForm
         recipe={null}
         onSave={mockOnSave}
@@ -174,13 +165,11 @@ describe('WebImportModal Integration - Dialog Close on Apply', () => {
     const uebernehmenButton = screen.getByText('Übernehmen');
     fireEvent.click(uebernehmenButton);
 
-    // Verify the modal is closed (should not be in the document anymore)
+    // The modal saves the imported recipe itself; the form then closes via onCancel
     await waitFor(() => {
       expect(screen.queryByTestId('web-import-modal')).not.toBeInTheDocument();
     });
-
-    // Verify the form was populated with the imported data
-    expect(screen.getByDisplayValue('Test Web Recipe')).toBeInTheDocument();
+    expect(mockOnCancel).toHaveBeenCalledTimes(1);
   });
 
   test('WebImportModal closes when "Abbrechen" button is clicked', async () => {
@@ -194,7 +183,7 @@ describe('WebImportModal Integration - Dialog Close on Apply', () => {
       webimport: true,
     };
 
-    render(
+    renderWithProviders(
       <RecipeForm
         recipe={null}
         onSave={mockOnSave}
@@ -248,7 +237,7 @@ describe('WebImportModal Integration - initialWebImportUrl deeplink', () => {
   });
 
   test('WebImportModal opens automatically when initialWebImportUrl is provided', async () => {
-    render(
+    renderWithProviders(
       <RecipeForm
         recipe={null}
         onSave={mockOnSave}
@@ -267,7 +256,7 @@ describe('WebImportModal Integration - initialWebImportUrl deeplink', () => {
   test('WebImportModal receives initialUrl prop when opened via initialWebImportUrl', async () => {
     const testUrl = 'https://www.chefkoch.de/rezepte/123';
 
-    render(
+    renderWithProviders(
       <RecipeForm
         recipe={null}
         onSave={mockOnSave}
@@ -288,7 +277,7 @@ describe('WebImportModal Integration - initialWebImportUrl deeplink', () => {
   test('WebImportModal does not open automatically when recipe is being edited', async () => {
     const existingRecipe = { id: 'recipe-1', title: 'Existing Recipe' };
 
-    render(
+    renderWithProviders(
       <RecipeForm
         recipe={existingRecipe}
         onSave={mockOnSave}
@@ -308,7 +297,7 @@ describe('WebImportModal Integration - initialWebImportUrl deeplink', () => {
   });
 
   test('WebImportModal does not open automatically when initialWebImportUrl is empty', async () => {
-    render(
+    renderWithProviders(
       <RecipeForm
         recipe={null}
         onSave={mockOnSave}

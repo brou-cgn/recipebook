@@ -28,7 +28,7 @@ statt eigene Swipe-/Undo-Logik zu implementieren.
 ## Tests
 `npm run test:ci` ist der Lauf, den die CI macht (`.github/workflows/ci.yml`,
 läuft bei jedem PR und Push auf `main`). Er führt alles aus **außer** den
-Suites in `scripts/quarantined-tests.js` — 22 Suites, die schon rot waren,
+Suites in `scripts/quarantined-tests.js` — 19 Suites (ursprünglich 22), die schon rot waren,
 als der Test-Workflow im März 2026 abgeschaltet wurde.
 
 Wer eine dieser Suites repariert, streicht ihre Zeile dort. Neue Einträge nur

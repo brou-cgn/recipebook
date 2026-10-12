@@ -6,7 +6,8 @@
  * --------------------
  * The test workflow was switched off on 2026-03-18, the same evening it was
  * introduced, because the suite was already red. Six months and ~1300
- * commits later it is still red - 141 failing tests across the 22 suites
+ * commits later it is still red - 141 failing tests across 22 suites (19 left
+ * after 2026-10-12, when the three Nutrition-Provider suites were repaired)
  * below - while the other 110 suites (3055 tests) pass.
  *
  * Repairing all 141 before turning CI back on would mean no protection at
@@ -58,11 +59,8 @@ module.exports = [
   'src/components/GuestManagementPage.test.js',
   'src/components/MenuDetail.test.js',
   'src/components/MenuForm.test.js',
-  'src/components/RecipeDetail.cooking-mode-layout.test.js',
   'src/components/RecipeDetail.test.js',
-  'src/components/RecipeDetail.timer.test.js',
   'src/components/RecipeForm.test.js',
   'src/components/Tagesmenu.test.js',
-  'src/components/WebImportModal.integration.test.js',
   'src/utils/nutritionReferenceImportExport.test.js',
 ];

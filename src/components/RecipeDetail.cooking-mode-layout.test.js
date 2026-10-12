@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { screen, fireEvent, act } from '@testing-library/react';
+import { renderWithProviders } from '../test-utils';
 import RecipeDetail from './RecipeDetail';
 
 // Mock the utility modules
@@ -91,21 +92,21 @@ jest.mock('../utils/recipeLinks', () => ({
 }));
 
 jest.mock('../utils/recipeCookDates', () => ({
-  setCookDate: jest.fn(() => Promise.resolve(true)),
-  getAllCookDates: jest.fn(() => Promise.resolve([])),
-  deleteCookDate: jest.fn(() => Promise.resolve()),
+  setCookDate: () => Promise.resolve(true),
+  getAllCookDates: () => Promise.resolve([]),
+  deleteCookDate: () => Promise.resolve(),
 }));
 
 jest.mock('../utils/recipeRatings', () => ({
-  getUserRating: jest.fn(() => Promise.resolve(null)),
-  getUserRatingData: jest.fn(() => Promise.resolve(null)),
-  rateRecipe: jest.fn(() => Promise.resolve()),
-  getAllRatings: jest.fn(() => Promise.resolve([])),
-  getAverageRating: jest.fn(() => Promise.resolve({ average: 0, count: 0 })),
-  deleteRating: jest.fn(() => Promise.resolve()),
-  subscribeToRatingSummary: jest.fn(() => () => {}),
-  getGuestId: jest.fn(() => 'guest-id'),
-  getRaterKey: jest.fn(() => 'rater-key'),
+  getUserRating: () => Promise.resolve(null),
+  getUserRatingData: () => Promise.resolve(null),
+  rateRecipe: () => Promise.resolve(),
+  getAllRatings: () => Promise.resolve([]),
+  getAverageRating: () => Promise.resolve({ average: 0, count: 0 }),
+  deleteRating: () => Promise.resolve(),
+  subscribeToRatingSummary: () => () => {},
+  getGuestId: () => 'guest-id',
+  getRaterKey: () => 'rater-key',
 }));
 
 jest.mock('./RecipeRating', () => () => <div data-testid="recipe-rating-mock" />);
@@ -192,7 +193,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
   test('step counter is positioned at bottom right inside step container', () => {
     setMockWindowWidth(400);
 
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -224,7 +225,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
   test('step text is left-aligned', () => {
     setMockWindowWidth(400);
 
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -250,7 +251,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
   test('step counter updates when navigating between steps', () => {
     setMockWindowWidth(400);
 
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -281,7 +282,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
   test('progress indicator dots are displayed and clickable', () => {
     setMockWindowWidth(400);
 
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -320,7 +321,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
   test('keyboard navigation with arrow keys', () => {
     setMockWindowWidth(400);
 
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -356,7 +357,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
   test('auto-activates card on scroll/swipe', async () => {
     setMockWindowWidth(400);
 
-    const { findByText } = render(
+    const { findByText } = renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -407,7 +408,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
   test('"Heute gekocht" button appears only on the last step card', () => {
     setMockWindowWidth(400);
 
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -437,7 +438,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
   test('"Heute gekocht" button opens CookDateModal', () => {
     setMockWindowWidth(400);
 
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -466,7 +467,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
   test('"Heute gekocht" button is not shown when user is not logged in', () => {
     setMockWindowWidth(400);
 
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -487,7 +488,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
   test('CookDateModal opened from cooking mode last step has prefillToday=true', () => {
     setMockWindowWidth(400);
 
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -514,7 +515,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
   test('CookDateModal opened from recipe detail view has prefillToday=false', () => {
     setMockWindowWidth(400);
 
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -537,7 +538,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
     test('auto-activates cooking mode when rotating to landscape on mobile', () => {
       setLandscapeMode();
 
-      render(
+      renderWithProviders(
         <RecipeDetail
           recipe={mockRecipe}
           onBack={() => {}}
@@ -556,7 +557,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
     test('adds cooking-mode-landscape class when in landscape and cooking mode is active', () => {
       setLandscapeMode();
 
-      render(
+      renderWithProviders(
         <RecipeDetail
           recipe={mockRecipe}
           onBack={() => {}}
@@ -575,7 +576,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
     test('does not add cooking-mode-landscape class in portrait mode', () => {
       setPortraitMode();
 
-      render(
+      renderWithProviders(
         <RecipeDetail
           recipe={mockRecipe}
           onBack={() => {}}
@@ -597,7 +598,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
     test('cooking mode banner is not shown in landscape mode', () => {
       setLandscapeMode();
 
-      render(
+      renderWithProviders(
         <RecipeDetail
           recipe={mockRecipe}
           onBack={() => {}}
@@ -615,7 +616,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
       setLandscapeMode();
       const onHeaderVisibilityChange = jest.fn();
 
-      render(
+      renderWithProviders(
         <RecipeDetail
           recipe={mockRecipe}
           onBack={() => {}}
@@ -634,7 +635,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
     test('landscape cooking mode shows both ingredients and steps sections', () => {
       setLandscapeMode();
 
-      render(
+      renderWithProviders(
         <RecipeDetail
           recipe={mockRecipe}
           onBack={() => {}}
@@ -652,7 +653,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
     test('landscape cooking mode step cards are rendered correctly', () => {
       setLandscapeMode();
 
-      render(
+      renderWithProviders(
         <RecipeDetail
           recipe={mockRecipe}
           onBack={() => {}}
@@ -671,7 +672,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
     test('ArrowUp navigates to previous step in landscape mode', () => {
       setLandscapeMode();
 
-      render(
+      renderWithProviders(
         <RecipeDetail
           recipe={mockRecipe}
           onBack={() => {}}
@@ -696,7 +697,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
     test('ArrowDown navigates to next step in landscape mode', () => {
       setLandscapeMode();
 
-      render(
+      renderWithProviders(
         <RecipeDetail
           recipe={mockRecipe}
           onBack={() => {}}
@@ -718,7 +719,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
     test('landscape cooking mode shows step dots for navigation', () => {
       setLandscapeMode();
 
-      render(
+      renderWithProviders(
         <RecipeDetail
           recipe={mockRecipe}
           onBack={() => {}}
@@ -737,7 +738,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
     test('deactivates cooking mode after rotating back to portrait', async () => {
       setPortraitMode();
 
-      render(
+      renderWithProviders(
         <RecipeDetail
           recipe={mockRecipe}
           onBack={() => {}}
