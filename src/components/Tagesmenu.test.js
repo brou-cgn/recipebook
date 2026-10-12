@@ -2461,6 +2461,21 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     };
   });
 
+  test('"Für dich entdeckt" zeigt das Kandidaten-Grid auch als Einzelliste', async () => {
+    await act(async () => {
+      renderMenuWithListOverrides(recipes, { systemKey: 'fuerDichEntdeckt', memberIds: [] });
+    });
+    [swipeUp, swipeUp, swipeUp].forEach((swipeFn) => {
+      const topCard = document.querySelector('.tagesmenu-card-top');
+      swipeFn(topCard);
+      finishSwipeAnimation(topCard);
+    });
+
+    const grid = document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
+    expect(grid).not.toBeNull();
+    expect(grid.querySelectorAll('.tagesmenu-results-tile')).toHaveLength(3);
+  });
+
   test('zeigt das Select-Overlay nur in den Kandidaten-Kacheln mit allen Aktionen', async () => {
     await act(async () => { renderMenu(); });
 
