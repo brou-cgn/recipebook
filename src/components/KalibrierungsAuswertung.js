@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import './EventsTable.css';
 import { getKalibrierungsSnapshotsOnce } from '../utils/drinkWeightsFirestore';
 import { aggregateCalibration, MIN_EVENTS_FOR_TREND } from '../utils/kalibrierungsAuswertung';
 import { getDrinkCategoryLabel } from '../utils/drinkCategories';

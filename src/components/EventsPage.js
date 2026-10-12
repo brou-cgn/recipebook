@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './EventsPage.css';
+import './EventsTable.css';
 import { deleteEvent, getEvent } from '../utils/eventsFirestore';
 import { CATEGORY_LABELS, EVENT_TYPE_LABELS } from './EventForm';
 import EventForm from './EventForm';
