@@ -2870,3 +2870,36 @@ describe('Tagesmenu – Zutatenliste: Rezeptlinks zeigen Rezeptnamen an', () => 
     expect(topCard).not.toHaveTextContent('#recipe:sauce1');
   });
 });
+
+describe('Tagesmenu – Bewegung reduzieren', () => {
+  const originalMatchMedia = window.matchMedia;
+
+  beforeEach(() => {
+    window.matchMedia = jest.fn(() => ({
+      matches: true,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+    }));
+  });
+
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
+  });
+
+  test('Swipe schließt ohne transitionend ab und speichert das Flag', async () => {
+    const { setRecipeSwipeFlag } = require('../utils/recipeSwipeFlags');
+    setRecipeSwipeFlag.mockClear();
+    await act(async () => { renderMenu(); });
+
+    const topCard = document.querySelector('.tagesmenu-card-top');
+    expect(topCard.style.transition).toBe('none');
+
+    swipeLeft(topCard);
+
+    // Kein finishSwipeAnimation: ohne Transition feuert kein transitionend
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 2');
+    expect(setRecipeSwipeFlag).toHaveBeenCalledWith(
+      'user1', 'list1', 'r1', 'archiv', expect.any(Object)
+    );
+  });
+});
