@@ -56,4 +56,14 @@ describe('FuerDichEntdecktKachel', () => {
     const { container } = render(<FuerDichEntdecktKachel list={list} recipes={[{ id: 'r1', title: 'x' }]} />);
     expect(container.querySelector('.fuer-dich-entdeckt-eyebrow')).toBeNull();
   });
+
+  test('themeImage ersetzt die Rezeptbild-Collage', () => {
+    const recipes = ['1', '2', '3'].map((id) => ({ id, title: id, image: `${id}.jpg` }));
+    const { container } = render(
+      <FuerDichEntdecktKachel list={{ ...list, themeImage: 'https://x/thema.jpg' }} recipes={recipes} />
+    );
+    const imgs = container.querySelectorAll('.fuer-dich-entdeckt-collage img');
+    expect(imgs).toHaveLength(1);
+    expect(imgs[0]).toHaveAttribute('src', 'https://x/thema.jpg');
+  });
 });

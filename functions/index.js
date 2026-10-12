@@ -10643,6 +10643,7 @@ const rotateFuerDichEntdecktList = async (db, listDoc, context, now = Date.now()
     recipeIds: pickRotationRecipeIds(topic.usableRecipeIds, list.recipeIds || [], protectedIds),
     description: topic.beschreibung || '',
     themeLabel: topic.rubrik || '',
+    themeImage: topic.imageUrl || '',
     themeId: topic.id,
     rotatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
