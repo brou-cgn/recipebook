@@ -17,7 +17,7 @@ const cheerio = require('cheerio');
 const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 const {requireShortcutPin} = require('./webImportPin');
 const {evaluateLowCarbTag} = require('./lowCarb');
-const {isRotationDue, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleResult, recipeAvailableToUser, mergeRuleMatches, explainTopicExclusion, isVisibleToUser, pickTopic, pickRecipeIds, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
+const {isRotationDue, getProtectedRecipeIds, pickRotationRecipeIds, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleResult, recipeAvailableToUser, mergeRuleMatches, explainTopicExclusion, isVisibleToUser, pickTopic, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
 const {normalizeCuisines, suggestNewCuisines} = require('./cuisineNormalization');
 
 // Initialize Firebase Admin
@@ -10601,8 +10601,12 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
           console.log(`rotateFuerDichEntdecktLists: list ${listDoc.id}: no topic with recipes visible to the owner`);
           continue;
         }
+        // Recipes with a still valid 'kandidat' swipe flag of this list stay.
+        const flagsSnap = await db.collection('recipeSwipeFlags')
+            .where('listID', '==', listDoc.id).where('flag', '==', 'kandidat').get();
+        const protectedIds = getProtectedRecipeIds(flagsSnap.docs.map((d) => d.data()), now);
         await listDoc.ref.update({
-          recipeIds: pickRecipeIds(topic.usableRecipeIds, list.recipeIds || []),
+          recipeIds: pickRotationRecipeIds(topic.usableRecipeIds, list.recipeIds || [], protectedIds),
           description: topic.beschreibung || '',
           themeLabel: topic.rubrik || '',
           themeId: topic.id,
