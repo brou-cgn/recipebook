@@ -8,6 +8,7 @@ import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe, canDeleteR
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
 import useCookingModeTabPosition from '../hooks/useCookingModeTabPosition';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import { isBase64Image } from '../utils/imageUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { updateRecipe, enableRecipeSharing, disableRecipeSharing, resetRecipeThumbnail } from '../utils/recipeFirestore';
@@ -86,6 +87,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   );
   const [recipeNavigationStack, setRecipeNavigationStack] = useState([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const reducedMotion = usePrefersReducedMotion();
   const [shareUrlCopied, setShareUrlCopied] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [publishLoading, setPublishLoading] = useState(false);
@@ -1606,12 +1608,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     if (currentCard && currentCard.scrollIntoView) {
       if (isMobileLandscape) {
         // Vertical carousel in landscape: scroll to the card vertically
-        currentCard.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+        currentCard.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start', inline: 'nearest' });
       } else {
-        currentCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        currentCard.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'nearest', inline: 'center' });
       }
     }
-  }, [currentStepIndex, cookingMode, isMobileLandscape]);
+  }, [currentStepIndex, cookingMode, isMobileLandscape, reducedMotion]);
 
   // Auto-activate card on swipe/scroll
   useEffect(() => {

@@ -2575,3 +2575,14 @@ button.private-badge-button:active {
 }
 
 /* Print layout: see PrintPage.css (the print renders <PrintPage> into #print-root; everything else is hidden). */
+
+/* Bewegung reduzieren: Schrittwechsel im Kochmodus ohne Scroll-/Skalierungsanimation */
+@media (prefers-reduced-motion: reduce) {
+  .step-carousel {
+    scroll-behavior: auto;
+  }
+
+  .step-card {
+    transition: none;
+  }
+}

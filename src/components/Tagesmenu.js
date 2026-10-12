@@ -12,6 +12,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import TagesmenuFilterOverlay from './TagesmenuFilterOverlay';
 import { isFuerDichEntdecktList } from '../utils/fuerDichEntdeckt';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 /**
  * Tagesmenü page – shows recipe cards as a swipeable Tinder-style stack.
@@ -412,6 +413,7 @@ function Tagesmenu({
   // cardPhase: 'idle' | 'dragging' | 'snap' | 'flying'
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [cardPhase, setCardPhase] = useState('idle');
+  const reducedMotion = usePrefersReducedMotion();
 
   // Suppresses background-card CSS transitions for exactly one render cycle
   // immediately after a swipe completes, preventing them from animating
@@ -673,6 +675,16 @@ function Tagesmenu({
       setCardPhase('idle');
     }
   }, [cardPhase, currentUser]);
+
+  // Ohne Transition feuert kein transitionend: bei „Bewegung reduzieren" die
+  // Fly-/Snap-Phase sofort abschließen, sonst bliebe die Karte hängen und der
+  // Swipe würde nicht gespeichert.
+  useEffect(() => {
+    if (!reducedMotion) return;
+    if (cardPhase === 'flying' || cardPhase === 'snap') {
+      handleTransitionEnd({ propertyName: 'transform' });
+    }
+  }, [reducedMotion, cardPhase, handleTransitionEnd]);
 
   // ---- Derived values -------------------------------------------------
 
@@ -1617,7 +1629,9 @@ function Tagesmenu({
             if (isTop) {
               const rotate = dragOffset.x * 0.08;
               const transition =
-                cardPhase === 'flying'
+                reducedMotion
+                  ? 'none'
+                  : cardPhase === 'flying'
                   ? 'transform 0.4s ease-in, opacity 0.4s ease-in'
                   : cardPhase === 'snap'
                   ? 'transform 0.3s ease'
@@ -1635,7 +1649,7 @@ function Tagesmenu({
               const translateY = depth * 10 * (1 - dragProgress);
               cardStyle = {
                 transform: `scale(${scale}) translateY(${translateY}px)`,
-                transition: cardPhase === 'dragging' || cardPhase === 'flying' || justSwiped ? 'none' : 'transform 0.3s ease',
+                transition: reducedMotion || cardPhase === 'dragging' || cardPhase === 'flying' || justSwiped ? 'none' : 'transform 0.3s ease',
                 zIndex: 10 - depth,
               };
             }
