@@ -1,5 +1,5 @@
 import React from 'react';
-import { screen, fireEvent, act } from '@testing-library/react';
+import { screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { renderWithProviders } from '../test-utils';
 import RecipeDetail from './RecipeDetail';
 
@@ -397,12 +397,11 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
     // Trigger scroll event
     fireEvent.scroll(carousel);
 
-    // Wait for debounce timeout (100ms)
-    await new Promise(resolve => setTimeout(resolve, 150));
-
-    // Second card should now be active
-    expect(stepCards[1]).toHaveClass('active');
-    expect(stepCards[0]).not.toHaveClass('active');
+    // Wait for the debounced scroll update to activate the second card
+    await waitFor(() => {
+      expect(stepCards[1]).toHaveClass('active');
+      expect(stepCards[0]).not.toHaveClass('active');
+    });
   });
 
   test('"Heute gekocht" button appears only on the last step card', () => {
