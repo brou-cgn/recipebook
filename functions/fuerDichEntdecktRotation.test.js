@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const {
   matchesRecipeRule, computeRuleMatches, computeRuleResult, recipeAvailableToUser, ruleKey,
   isRotationDue, isTopicInPeriod, getActiveTopics, pickTopic, pickRecipeIds,
+  getProtectedRecipeIds, pickRotationRecipeIds,
   ROTATION_INTERVAL_MS,
 } = require('./fuerDichEntdecktRotation');
 
@@ -280,4 +281,35 @@ test('recipeAvailableToUser hands rule-added recipes only to their owners', () =
   assert.equal(recipeAvailableToUser(topic, 'a', 'anna'), true);
   assert.equal(recipeAvailableToUser(topic, 'a', 'ben'), false);
   assert.equal(recipeAvailableToUser({...topic, recipeRule: {lastCooked: {minDays: 1}}}, 'a', 'ben'), true);
+});
+
+test('getProtectedRecipeIds: only kandidat docs whose validity has not run out', () => {
+  const now = Date.now();
+  const ts = (ms) => ({toMillis: () => ms});
+  const ids = getProtectedRecipeIds([
+    {recipeID: 'a', flag: 'kandidat', expiresAt: ts(now + DAY)},
+    {recipeID: 'b', flag: 'kandidat', expiresAt: ts(now - 1)},
+    {recipeID: 'c', flag: 'kandidat', expiresAt: null},
+    {recipeID: 'd', flag: 'archiv', expiresAt: ts(now + DAY)},
+    {recipeID: 'e', flag: null, expiresAt: null},
+  ], now);
+  assert.deepEqual(ids.sort(), ['a', 'c']);
+});
+
+test('pickRotationRecipeIds: protected recipes stay, free slots are filled', () => {
+  const candidates = ['p', 'q', 'r', 's', 't', 'u', 'v'];
+  const picked = pickRotationRecipeIds(candidates, ['x', 'y'], ['x'], () => 0.5);
+  assert.equal(picked.length, 5);
+  assert.equal(picked[0], 'x');
+  assert.ok(!picked.includes('y'));
+});
+
+test('pickRotationRecipeIds: more than 5 protected recipes are all kept, nothing new', () => {
+  const prev = ['a', 'b', 'c', 'd', 'e', 'f'];
+  assert.deepEqual(pickRotationRecipeIds(['p', 'q'], prev, prev, () => 0.5), prev);
+});
+
+test('pickRotationRecipeIds: protected id that is not on the list is ignored', () => {
+  const picked = pickRotationRecipeIds(['p', 'q'], ['a'], ['zzz'], () => 0.5);
+  assert.ok(!picked.includes('zzz'));
 });

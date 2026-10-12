@@ -23,6 +23,10 @@
  * duration has passed. A list without `themeId` is also due, so a list rotated by an
  * older version switches to the topics on the next run.
  *
+ * Recipes with a still valid recipeSwipeFlags 'kandidat' of the list (flag
+ * 'kandidat', expiresAt in the future or empty) are not removed by the rotation
+ * (getProtectedRecipeIds / pickRotationRecipeIds); they take slots of the 5.
+ *
  * Pure functions only - the scheduled function in index.js does the I/O.
  */
 
@@ -418,8 +422,49 @@ const pickRecipeIds = (candidateIds, previousIds = [], random = Math.random) => 
   return [...fresh, ...repeat].slice(0, RECIPES_PER_ROTATION);
 };
 
+/**
+ * Recipe IDs a rotation must not remove from a list: those with a
+ * recipeSwipeFlags document of this list that has flag 'kandidat' and whose
+ * validity (expiresAt) has not run out. No expiresAt = never expires, so the
+ * recipe stays until the document is deleted or its flag changes.
+ * @param {Array<Object>} flagDocs - recipeSwipeFlags data of ONE list
+ * @param {number} [now]
+ * @return {string[]}
+ */
+const getProtectedRecipeIds = (flagDocs, now = Date.now()) => {
+  const ids = new Set();
+  (flagDocs || []).forEach((data) => {
+    if (!data || data.flag !== 'kandidat' || !data.recipeID) return;
+    const expiresAt = toMillis(data.expiresAt);
+    if (expiresAt !== null && expiresAt <= now) return;
+    ids.add(data.recipeID);
+  });
+  return [...ids];
+};
+
+/**
+ * Recipe IDs of a rotation: protected recipes stay (even beyond the usual
+ * RECIPES_PER_ROTATION), the remaining slots are filled with new picks.
+ * @param {string[]} candidateIds - the topic's usable recipe IDs
+ * @param {string[]} previousIds - the list's current recipeIds
+ * @param {string[]} protectedIds - from getProtectedRecipeIds
+ * @param {function(): number} [random]
+ * @return {string[]}
+ */
+const pickRotationRecipeIds = (candidateIds, previousIds = [], protectedIds = [], random = Math.random) => {
+  const previous = new Set(previousIds);
+  const kept = [...new Set(protectedIds)].filter((id) => previous.has(id));
+  const slots = Math.max(0, RECIPES_PER_ROTATION - kept.length);
+  const keptSet = new Set(kept);
+  const picked = pickRecipeIds(candidateIds.filter((id) => !keptSet.has(id)), previousIds, random)
+      .slice(0, slots);
+  return [...kept, ...picked];
+};
+
 module.exports = {
   SYSTEM_KEY,
+  getProtectedRecipeIds,
+  pickRotationRecipeIds,
   RECIPES_PER_ROTATION,
   ROTATION_INTERVAL_MS,
   isRotationDue,

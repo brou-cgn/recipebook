@@ -16,7 +16,8 @@
  * - Die Liste startet leer (ohne recipeIds); befüllt wird sie serverseitig
  *   durch die Cloud Function `rotateFuerDichEntdecktLists`
  *   (functions/fuerDichEntdecktRotation.js): wöchentlich werden alle
- *   Rezepte entfernt und bis zu 5 neue gesetzt, gezogen aus einem Thema der
+ *   Rezepte entfernt (außer solche mit gültigem 'kandidat'-Swipe-Flag dieser
+ *   Liste) und bis zu 5 Plätze mit neuen gefüllt, gezogen aus einem Thema der
  *   Admin-Liste `discoverTopics` (utils/discoverTopics.js), dessen Zeitraum
  *   heute gilt.
  */
