@@ -247,11 +247,12 @@ export const getGroup = async (groupId) => {
 
 /**
  * Send an invitation email to a new email address added to a private list.
- * The Cloud Function checks whether the address is already registered or has
- * already received an invitation. An invitation is only sent once per address.
+ * The Cloud Function sends the mail only once per address and only to
+ * unregistered addresses, but always answers the same way so the registration
+ * status of an address is not revealed. Requires the edit role; limited per day.
  *
  * @param {string} email - The email address to invite
- * @returns {Promise<{success: boolean, alreadyRegistered: boolean, alreadyInvited: boolean}>}
+ * @returns {Promise<{success: boolean}>}
  */
 export const sendGroupInvitation = async (email) => {
   const sendInvitation = httpsCallable(functions, 'sendGroupInvitationEmail');

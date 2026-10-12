@@ -40,7 +40,7 @@ jest.mock('../utils/customLists', () => ({
 
 // Mock groupFirestore so LIST_KIND_OPTIONS is available without Firebase
 jest.mock('../utils/groupFirestore', () => ({
-  sendGroupInvitation: jest.fn().mockResolvedValue({ alreadyRegistered: false, alreadyInvited: false }),
+  sendGroupInvitation: jest.fn().mockResolvedValue({ success: true }),
   LIST_KIND_OPTIONS: [
     { value: 'interactive', label: 'Interaktive Liste' },
     { value: 'classic', label: 'Klassische Sammlung' },
