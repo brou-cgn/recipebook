@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, fireEvent, act } from '@testing-library/react';
+import { fireEvent, act } from '@testing-library/react';
+import { renderWithProviders } from '../test-utils';
 import RecipeDetail from './RecipeDetail';
 
 jest.mock('../utils/imageUtils', () => ({
@@ -130,7 +131,7 @@ afterEach(() => {
 
 describe('RecipeDetail - Step Timer', () => {
   test('renders timer start button for time mention in step text', () => {
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -148,7 +149,7 @@ describe('RecipeDetail - Step Timer', () => {
   });
 
   test('step with no time mention has no timer button', () => {
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -169,7 +170,7 @@ describe('RecipeDetail - Step Timer', () => {
   });
 
   test('clicking timer start button shows countdown and stop button', () => {
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -194,7 +195,7 @@ describe('RecipeDetail - Step Timer', () => {
   });
 
   test('timer counts down after 1 second', () => {
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -214,7 +215,7 @@ describe('RecipeDetail - Step Timer', () => {
   });
 
   test('progress bar is shown while timer is running', () => {
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -236,7 +237,7 @@ describe('RecipeDetail - Step Timer', () => {
   });
 
   test('stop button resets the timer and shows start button again', () => {
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -262,7 +263,7 @@ describe('RecipeDetail - Step Timer', () => {
   });
 
   test('stop button removes the timer display', () => {
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -284,7 +285,7 @@ describe('RecipeDetail - Step Timer', () => {
   });
 
   test('timer shows checkmark when finished', () => {
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -306,7 +307,7 @@ describe('RecipeDetail - Step Timer', () => {
   });
 
   test('timer syncs to correct time after page becomes visible (background sync)', () => {
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -335,7 +336,7 @@ describe('RecipeDetail - Step Timer', () => {
   });
 
   test('timer shows finished and triggers alarm when timer completes in background', () => {
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -374,7 +375,7 @@ describe('RecipeDetail - Step Timer', () => {
       steps: ['2 Stunden einweichen.'],
     };
 
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={recipeWithHours}
         onBack={() => {}}
@@ -396,7 +397,7 @@ describe('RecipeDetail - Step Timer', () => {
 
 describe('RecipeDetail - Alarm Modal', () => {
   const renderWithTimer = () => {
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -466,7 +467,7 @@ describe('RecipeDetail - Edit FAB Long Press', () => {
   test('short click on edit FAB calls onEdit', () => {
     const onEdit = jest.fn();
     const onCreateVersion = jest.fn();
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={recipe}
         onBack={() => {}}
@@ -489,7 +490,7 @@ describe('RecipeDetail - Edit FAB Long Press', () => {
   test('long press on edit FAB calls onCreateVersion', () => {
     const onEdit = jest.fn();
     const onCreateVersion = jest.fn();
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={recipe}
         onBack={() => {}}
@@ -511,7 +512,7 @@ describe('RecipeDetail - Edit FAB Long Press', () => {
 
   test('long press on edit FAB does not call onCreateVersion if onCreateVersion is not provided', () => {
     const onEdit = jest.fn();
-    render(
+    renderWithProviders(
       <RecipeDetail
         recipe={recipe}
         onBack={() => {}}
