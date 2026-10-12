@@ -11,6 +11,7 @@
  *   periodStart / periodEnd -> jährlicher Zeitraum als 'MM-DD' (beide
  *     inklusive; Start > Ende läuft über den Jahreswechsel; beide leer =
  *     ganzjährig)
+ *   imageUrl     -> optionales Kachelbild (Storage-URL); leer = Collage aus Rezeptbildern
  *   isActive     -> false nimmt das Thema aus der Rotation
  *   displayDays  -> Anzeige-Dauer in Tagen (leer = 7)
  *   recipeRule   -> Regel, die zusätzlich zu recipeIds Rezepte auswählt:
@@ -204,6 +205,7 @@ export const subscribeToDiscoverTopics = (callback) =>
 const toDocData = (topic, updatedBy) => removeUndefinedFields({
   rubrik: String(topic.rubrik).trim(),
   beschreibung: String(topic.beschreibung).trim(),
+  imageUrl: String(topic.imageUrl || '').trim(),
   recipeIds: [...new Set(topic.recipeIds || [])],
   periodStart: topic.periodStart || '',
   periodEnd: topic.periodEnd || '',

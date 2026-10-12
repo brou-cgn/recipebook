@@ -6,6 +6,7 @@ import DeleteRowButton from './DeleteRowButton';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import { getCustomLists } from '../utils/customLists';
+import { uploadDiscoverTopicImage } from '../utils/storageUtils';
 import { useOptionalNutritionReference } from '../contexts/NutritionReferenceContext';
 import { searchIngredientIds } from '../utils/ingredientIdMatching';
 import {
@@ -27,6 +28,7 @@ const emptyForm = () => ({
   id: '',
   rubrik: '',
   beschreibung: '',
+  imageUrl: '',
   recipeIds: [],
   periodStart: '',
   periodEnd: '',
@@ -246,6 +248,8 @@ function TopicRow({ topic, recipeTitles, onEdit, onDelete }) {
 function TopicEditor({ initial, allRecipes, cuisineOptions, categoryOptions, ingredientRows, onSave, onCancel, saving, error }) {
   const [form, setForm] = useState(initial);
   const [search, setSearch] = useState('');
+  const [imageBusy, setImageBusy] = useState(false);
+  const [imageError, setImageError] = useState('');
   const set = (patch) => setForm((prev) => ({ ...prev, ...patch }));
   const allYear = !form.periodStart && !form.periodEnd;
   const rule = normalizeRecipeRule(form.recipeRule);
@@ -261,6 +265,21 @@ function TopicEditor({ initial, allRecipes, cuisineOptions, categoryOptions, ing
       .filter((r) => !form.recipeIds.includes(r.id) && String(r.title || '').toLowerCase().includes(needle))
       .slice(0, 8);
   }, [allRecipes, form.recipeIds, search]);
+
+  const handleImageChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setImageBusy(true);
+    setImageError('');
+    try {
+      set({ imageUrl: await uploadDiscoverTopicImage(file) });
+    } catch (err) {
+      setImageError(err.message || 'Das Bild konnte nicht hochgeladen werden.');
+    } finally {
+      setImageBusy(false);
+    }
+  };
 
   const addRecipe = (id) => { set({ recipeIds: [...form.recipeIds, id] }); setSearch(''); };
   const removeRecipe = (id) => set({ recipeIds: form.recipeIds.filter((rid) => rid !== id) });
@@ -289,6 +308,26 @@ function TopicEditor({ initial, allRecipes, cuisineOptions, categoryOptions, ing
           onChange={(e) => set({ beschreibung: e.target.value })}
         />
       </label>
+
+      <div className="dtt-field">
+        <span className="dtt-label">Kachelbild (optional)</span>
+        {form.imageUrl && (
+          <div className="dtt-image-preview delete-row-hover-target">
+            <img src={form.imageUrl} alt="Vorschau Kachelbild" />
+            <DeleteRowButton itemName="Kachelbild" onClick={() => set({ imageUrl: '' })} />
+          </div>
+        )}
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          aria-label="Kachelbild hochladen"
+          disabled={imageBusy}
+          onChange={handleImageChange}
+        />
+        {imageBusy && <p className="dtt-hint">Bild wird hochgeladen…</p>}
+        {imageError && <div className="message error">{imageError}</div>}
+        <p className="dtt-hint">Wird statt der Rezeptbild-Collage auf der Kachel gezeigt. Ohne Bild bleibt die Collage.</p>
+      </div>
 
       <div className="dtt-field">
         <span className="dtt-label">Zeitraum (gilt jedes Jahr)</span>

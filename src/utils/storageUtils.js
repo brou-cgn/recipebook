@@ -5,6 +5,7 @@
 
 import { storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { fileToBase64, compressImage } from './imageUtils';
 
 /**
  * Generate a unique filename for recipe images
@@ -98,6 +99,30 @@ export async function uploadRecipeThumbnail(thumbnailBlob) {
   } catch (error) {
     console.error('Error uploading recipe thumbnail to Firebase Storage:', error);
     throw new Error('Failed to upload thumbnail. Please try again.');
+  }
+}
+
+/**
+ * Upload a topic image for the "Für dich entdeckt" tile (stored under `thumbnails/`).
+ * The image is scaled down and re-encoded as JPEG before upload.
+ *
+ * @param {File} file - The image file chosen by the admin.
+ * @returns {Promise<string>} Download URL of the uploaded image.
+ */
+export async function uploadDiscoverTopicImage(file) {
+  const base64 = await fileToBase64(file);
+  const compressed = await compressImage(base64, 1200, 800, 0.8);
+  const blob = await (await fetch(compressed)).blob();
+  try {
+    const filename = `discover-topic-${Date.now()}-${Math.random().toString(36).substring(2, 15)}.jpg`;
+    const snapshot = await uploadBytes(ref(storage, `thumbnails/${filename}`), blob, {
+      contentType: 'image/jpeg',
+      cacheControl: 'public, max-age=31536000',
+    });
+    return await getDownloadURL(snapshot.ref);
+  } catch (error) {
+    console.error('Error uploading discover topic image to Firebase Storage:', error);
+    throw new Error('Das Bild konnte nicht hochgeladen werden.');
   }
 }
 

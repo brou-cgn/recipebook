@@ -6,7 +6,7 @@
  * removed and RECIPES_PER_ROTATION new ones for a current theme assigned.
  *
  * Themes are maintained by admins in Settings (collection `discoverTopics`,
- * see src/utils/discoverTopics.js): rubrik (-> themeLabel), beschreibung
+ * see src/utils/discoverTopics.js): rubrik (-> themeLabel), imageUrl (-> themeImage, optional), beschreibung
  * (-> list description / tile title), relevante Rezepte (recipeIds) and an
  * optional yearly period (periodStart / periodEnd as 'MM-DD'; may wrap over
  * New Year; both empty = all year). Only topics whose period contains today
