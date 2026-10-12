@@ -2476,6 +2476,30 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     expect(grid.querySelectorAll('.tagesmenu-results-tile')).toHaveLength(3);
   });
 
+  test('blendet das Menü "Erzähl, wie war es?" aus, wenn das Rezept schon in der Zielliste liegt', async () => {
+    const targetList = { id: 'target1', name: 'Alltagsklassiker', recipeIds: ['r1'] };
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[{ ...list, targetListId: 'target1' }]}
+          groups={[targetList]}
+          recipes={recipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+    swipeAllCardsToResults();
+
+    const tiles = Array.from(document.querySelectorAll('.tagesmenu-results-tile'));
+    const withMenu = tiles.filter((t) => t.querySelector('.tagesmenu-kachel-context-select'));
+    expect(tiles).toHaveLength(3);
+    expect(withMenu).toHaveLength(2);
+    const r1Tile = tiles.find((t) => t.textContent.includes('Rezept 1'));
+    expect(r1Tile.querySelector('.tagesmenu-kachel-context-select')).toBeNull();
+  });
+
   test('zeigt das Select-Overlay nur in den Kandidaten-Kacheln mit allen Aktionen', async () => {
     await act(async () => { renderMenu(); });
 

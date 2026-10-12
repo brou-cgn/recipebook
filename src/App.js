@@ -2750,6 +2750,7 @@ function App() {
         ) : currentView === 'tagesmenu' ? (
         <Tagesmenu
           interactiveLists={interactiveLists}
+          groups={groups}
           recipes={recipes}
           allUsers={allUsers}
           onSelectRecipe={handleSelectRecipe}
