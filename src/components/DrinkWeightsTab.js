@@ -9,6 +9,7 @@ import {
 import { DEFAULT_DRINK_WEIGHTS, DEFAULT_CHILDREN_DRINK_WEIGHTS, DRINK_WEIGHT_CATEGORY_ORDER } from '../utils/drinkWeightsDefaults';
 import { getDrinkCategoryLabel } from '../utils/drinkCategories';
 import { canManageDrinkWeights } from '../utils/userManagement';
+import KalibrierungsAuswertung from './KalibrierungsAuswertung';
 
 const NUMBER_FIELDS = ['basis', 'winter', 'sommer', 'nachmittag'];
 
@@ -281,6 +282,8 @@ function DrinkWeightsTab({ currentUser }) {
           onSave={setChildrenDrinkWeightEntry}
           currentUser={currentUser}
         />
+
+        {currentUser?.isAdmin === true && <KalibrierungsAuswertung />}
       </div>
     </>
   );
