@@ -16,6 +16,7 @@ import NutritionReferenceTab from './NutritionReferenceTab';
 import DrinkWeightsTab from './DrinkWeightsTab';
 import ButtonIconsAdminTab from './ButtonIconsAdminTab';
 import DiscoverTopicsTab from './DiscoverTopicsTab';
+import { downloadRecipesKeywordCsv } from '../utils/recipeKeywordsCsv';
 import DeleteRowButton from './DeleteRowButton';
 import UndoSnackbar from './UndoSnackbar';
 import useUndoableDelete from '../hooks/useUndoableDelete';
@@ -1544,6 +1545,23 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div className="settings-section">
+              <h3>Rezepte als CSV exportieren</h3>
+              <p className="section-description">
+                Exportiert alle Rezepte ({allRecipes.length}) als Excel-taugliche CSV (Semikolon, UTF-8)
+                mit Vorschlägen für Themenschlagwörter in den Spalten Anlass, Saison, Aufwand,
+                Ernährung und Hauptzutat. Die Spalte ID dient als Schlüssel für den späteren Reimport.
+              </p>
+              <button
+                type="button"
+                className="reset-button"
+                disabled={allRecipes.length === 0}
+                onClick={() => downloadRecipesKeywordCsv(allRecipes)}
+              >
+                CSV exportieren
+              </button>
             </div>
 
             <div className="settings-actions">
