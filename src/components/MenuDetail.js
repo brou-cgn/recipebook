@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { defaultIcon } from '../utils/defaultButtonIcons';
 import StarIcon from './icons/StarIcon';
 import TrashIcon from './icons/TrashIcon';
 import { useLongPress } from '../utils/useLongPress';
@@ -49,12 +50,12 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
   const [closeButtonIcon, setCloseButtonIcon] = useState('×');
   const [copyLinkIcon, setCopyLinkIcon] = useState('Link');
-  const [openEventIcon, setOpenEventIcon] = useState('📅');
+  const [openEventIcon, setOpenEventIcon] = useState(defaultIcon('calendar'));
   const [shoppingListIcon, setShoppingListIcon] = useState('Einkauf');
   const [bringButtonIcon, setBringButtonIcon] = useState('Bring');
   const [favoritesButtonIcon, setFavoritesButtonIcon] = useState('☆');
   const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('');
-  const [privateBadgeIcon, setPrivateBadgeIcon] = useState('🔒');
+  const [privateBadgeIcon, setPrivateBadgeIcon] = useState(defaultIcon('lock'));
   const [editMenuIcon, setEditMenuIcon] = useState('Edit');
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [deleteMenuIcon, setDeleteMenuIcon] = useState('');
@@ -100,12 +101,12 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     const eff = (key) => getEffectiveIcon(allButtonIcons, key, isDarkMode);
     setCloseButtonIcon(eff('closeButtonDefaultImg') || eff('closeButton') || '×');
     setCopyLinkIcon(eff('copyLink') || 'Link');
-    setOpenEventIcon(eff('nutritionEmpty') || '📅');
+    setOpenEventIcon(eff('nutritionEmpty') || defaultIcon('calendar'));
     setShoppingListIcon(eff('shoppingList') || 'Einkauf');
     setBringButtonIcon(eff('bringButton') || 'Bring');
     setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
     setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive'));
-    setPrivateBadgeIcon(eff('privateBadge') || '🔒');
+    setPrivateBadgeIcon(eff('privateBadge') || defaultIcon('lock'));
     setEditMenuIcon(eff('editRecipe') || 'Edit');
     setDeleteMenuIcon(eff('deleteRecipe'));
   }, [allButtonIcons, isDarkMode]);
