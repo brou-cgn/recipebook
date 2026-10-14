@@ -167,6 +167,98 @@ async function resolveShortcutUserId(email) {
 }
 
 /**
+ * Shared authentication for all Shortcut endpoints: validates the X-Api-Key
+ * header against SHORTCUT_API_KEY (timing-safe), resolves X-User-Email to a
+ * uid and checks the user's role. Writes the error response itself and
+ * returns null on failure; the caller just has to `return`.
+ * @param {object} req - Express request
+ * @param {object} res - Express response
+ * @param {string} fnName - endpoint name, used in log messages
+ * @param {{allowShortcutUser?: boolean, allowIsAdmin?: boolean}} [opts]
+ *   allowShortcutUser (default true): users flagged isShortcutUser pass without edit role
+ *   allowIsAdmin (default false): users with the legacy isAdmin flag pass
+ * @return {Promise<{userId: string, userData: object, db: object}|null>}
+ */
+async function authenticateShortcutRequest(req, res, fnName, {allowShortcutUser = true, allowIsAdmin = false} = {}) {
+  const apiKeyHeader = req.headers['x-api-key'];
+  const userEmail = req.headers['x-user-email'];
+  if (!apiKeyHeader || !userEmail) {
+    res.status(401).json({
+      success: false,
+      error: 'Missing authentication headers',
+      requiredHeaders: ['X-Api-Key', 'X-User-Email'],
+    });
+    return null;
+  }
+
+  const validApiKey = shortcutApiKey.value();
+  if (!validApiKey) {
+    console.error(`${fnName}: SHORTCUT_API_KEY secret is not set`);
+    res.status(500).json({
+      success: false,
+      error: 'Server misconfiguration: SHORTCUT_API_KEY secret is not set',
+    });
+    return null;
+  }
+
+  let isValidKey = false;
+  try {
+    isValidKey = crypto.timingSafeEqual(Buffer.from(apiKeyHeader), Buffer.from(validApiKey));
+  } catch (_) {
+    isValidKey = false;
+  }
+  if (!isValidKey) {
+    console.warn(`${fnName}: invalid API key attempt`);
+    res.status(401).json({success: false, error: 'Invalid API key'});
+    return null;
+  }
+
+  const userId = await resolveShortcutUserId(userEmail);
+  const db = admin.firestore();
+  try {
+    const userDoc = userId ? await db.collection('users').doc(userId).get() : null;
+    if (!userId || !userDoc.exists) {
+      res.status(403).json({success: false, error: 'Access denied'});
+      return null;
+    }
+    const userData = userDoc.data();
+    const role = userData?.role;
+    const hasRole = role === 'edit' || role === 'admin' || role === 'moderator';
+    const hasFlag = (allowShortcutUser && userData?.isShortcutUser === true) ||
+      (allowIsAdmin && !!userData?.isAdmin);
+    if (!hasRole && !hasFlag) {
+      res.status(403).json({success: false, error: 'Insufficient permissions'});
+      return null;
+    }
+    return {userId, userData, db};
+  } catch (err) {
+    console.error(`${fnName}: error validating user:`, err);
+    res.status(500).json({success: false, error: 'Failed to validate user'});
+    return null;
+  }
+}
+
+/**
+ * Webimport-PIN check for Shortcut endpoints (no-op if the user never set a
+ * PIN). Writes the error response itself.
+ * @param {object} res - Express response
+ * @param {string} userId
+ * @param {*} pin - PIN as sent by the Shortcut (body field or query param)
+ * @return {Promise<boolean>} true if the request may proceed
+ */
+async function enforceShortcutPin(res, userId, pin) {
+  try {
+    await requireShortcutPin(userId, pin);
+    return true;
+  } catch (pinErr) {
+    const status = pinErr.code === 'resource-exhausted' ? 429 :
+      pinErr.code === 'invalid-argument' ? 400 : 403;
+    res.status(status).json({success: false, error: pinErr.message || 'PIN erforderlich.'});
+    return false;
+  }
+}
+
+/**
  * Input validation constants
  */
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20 MB in bytes (Gemini API limit)
@@ -3787,65 +3879,10 @@ exports.importRecipeShortcut = onRequest(
         return;
       }
 
-      // Authentication via SHORTCUT_API_KEY + user email
-      const apiKeyHeader = req.headers['x-api-key'];
-      const userEmail = req.headers['x-user-email'];
-
-      if (!apiKeyHeader || !userEmail) {
-        res.status(401).json({
-          success: false,
-          error: 'Missing authentication headers',
-          requiredHeaders: ['X-Api-Key', 'X-User-Email'],
-        });
-        return;
-      }
-
-      const validApiKey = shortcutApiKey.value();
-      if (!validApiKey) {
-        console.error('importRecipeShortcut: SHORTCUT_API_KEY secret is not set');
-        res.status(500).json({
-          success: false,
-          error: 'Server misconfiguration: SHORTCUT_API_KEY secret is not set',
-        });
-        return;
-      }
-
-      let isValidKey = false;
-      try {
-        isValidKey = crypto.timingSafeEqual(
-            Buffer.from(apiKeyHeader),
-            Buffer.from(validApiKey),
-        );
-      } catch (_) {
-        isValidKey = false;
-      }
-      if (!isValidKey) {
-        console.warn('importRecipeShortcut: invalid API key attempt');
-        res.status(401).json({success: false, error: 'Invalid API key'});
-        return;
-      }
-
-      // Resolve the email to a Firebase uid, then validate role in Firestore
-      const userId = await resolveShortcutUserId(userEmail);
-      const db = admin.firestore();
-      try {
-        const userDoc = userId ? await db.collection('users').doc(userId).get() : null;
-        if (!userId || !userDoc.exists) {
-          res.status(403).json({success: false, error: 'Access denied'});
-          return;
-        }
-        const userData = userDoc.data();
-        const role = userData?.role;
-        const isShortcutUser = userData?.isShortcutUser === true;
-        if (role !== 'edit' && role !== 'admin' && role !== 'moderator' && !isShortcutUser) {
-          res.status(403).json({success: false, error: 'Insufficient permissions'});
-          return;
-        }
-      } catch (err) {
-        console.error('importRecipeShortcut: error validating user:', err);
-        res.status(500).json({success: false, error: 'Failed to validate user'});
-        return;
-      }
+      // Shortcut authentication: API key + user email + role (see authenticateShortcutRequest)
+      const auth = await authenticateShortcutRequest(req, res, 'importRecipeShortcut');
+      if (!auth) return;
+      const {userId} = auth;
 
       // Parse JSON body
       let body = req.body;
@@ -3871,14 +3908,7 @@ exports.importRecipeShortcut = onRequest(
       // Webimport-PIN: no-op if the target user never set one; otherwise the
       // Shortcut must send a matching `pin` field with every request (it has
       // no interactive session to stay "unlocked" like the in-app modals).
-      try {
-        await requireShortcutPin(userId, pin);
-      } catch (pinErr) {
-        const status = pinErr.code === 'resource-exhausted' ? 429 :
-          pinErr.code === 'invalid-argument' ? 400 : 403;
-        res.status(status).json({success: false, error: pinErr.message || 'PIN erforderlich.'});
-        return;
-      }
+      if (!(await enforceShortcutPin(res, userId, pin))) return;
 
       // SSRF guard
       try {
@@ -4065,65 +4095,10 @@ exports.scanRecipePhotoShortcut = onRequest(
         return;
       }
 
-      // Authentication via SHORTCUT_API_KEY + user email
-      const apiKeyHeader = req.headers['x-api-key'];
-      const userEmail = req.headers['x-user-email'];
-
-      if (!apiKeyHeader || !userEmail) {
-        res.status(401).json({
-          success: false,
-          error: 'Missing authentication headers',
-          requiredHeaders: ['X-Api-Key', 'X-User-Email'],
-        });
-        return;
-      }
-
-      const validApiKey = shortcutApiKey.value();
-      if (!validApiKey) {
-        console.error('scanRecipePhotoShortcut: SHORTCUT_API_KEY secret is not set');
-        res.status(500).json({
-          success: false,
-          error: 'Server misconfiguration: SHORTCUT_API_KEY secret is not set',
-        });
-        return;
-      }
-
-      let isValidKey = false;
-      try {
-        isValidKey = crypto.timingSafeEqual(
-            Buffer.from(apiKeyHeader),
-            Buffer.from(validApiKey),
-        );
-      } catch (_) {
-        isValidKey = false;
-      }
-      if (!isValidKey) {
-        console.warn('scanRecipePhotoShortcut: invalid API key attempt');
-        res.status(401).json({success: false, error: 'Invalid API key'});
-        return;
-      }
-
-      // Resolve the email to a Firebase uid, then validate role in Firestore
-      const userId = await resolveShortcutUserId(userEmail);
-      const db = admin.firestore();
-      try {
-        const userDoc = userId ? await db.collection('users').doc(userId).get() : null;
-        if (!userId || !userDoc.exists) {
-          res.status(403).json({success: false, error: 'Access denied'});
-          return;
-        }
-        const userData = userDoc.data();
-        const role = userData?.role;
-        const isShortcutUser = userData?.isShortcutUser === true;
-        if (role !== 'edit' && role !== 'admin' && role !== 'moderator' && !isShortcutUser) {
-          res.status(403).json({success: false, error: 'Insufficient permissions'});
-          return;
-        }
-      } catch (err) {
-        console.error('scanRecipePhotoShortcut: error validating user:', err);
-        res.status(500).json({success: false, error: 'Failed to validate user'});
-        return;
-      }
+      // Shortcut authentication: API key + user email + role (see authenticateShortcutRequest)
+      const auth = await authenticateShortcutRequest(req, res, 'scanRecipePhotoShortcut');
+      if (!auth) return;
+      const {userId, db} = auth;
 
       // Parse JSON body
       let body = req.body;
@@ -4261,14 +4236,7 @@ exports.scanRecipePhotoShortcut = onRequest(
       // Webimport-PIN: no-op if the target user never set one; otherwise the
       // Shortcut must send a matching `pin` field with every request (it has
       // no interactive session to stay "unlocked" like the in-app modals).
-      try {
-        await requireShortcutPin(userId, pin);
-      } catch (pinErr) {
-        const status = pinErr.code === 'resource-exhausted' ? 429 :
-          pinErr.code === 'invalid-argument' ? 400 : 403;
-        res.status(status).json({success: false, error: pinErr.message || 'PIN erforderlich.'});
-        return;
-      }
+      if (!(await enforceShortcutPin(res, userId, pin))) return;
 
       console.log(`scanRecipePhotoShortcut: import queued by user ${userId} for ${images.length} image(s)`);
 
@@ -4351,62 +4319,10 @@ exports.getVideoUploadUrl = onRequest(
         return;
       }
 
-      const apiKeyHeader = req.headers['x-api-key'];
-      const userEmail = req.headers['x-user-email'];
-      if (!apiKeyHeader || !userEmail) {
-        res.status(401).json({
-          success: false,
-          error: 'Missing authentication headers',
-          requiredHeaders: ['X-Api-Key', 'X-User-Email'],
-        });
-        return;
-      }
-
-      const validApiKey = shortcutApiKey.value();
-      if (!validApiKey) {
-        console.error('getVideoUploadUrl: SHORTCUT_API_KEY secret is not set');
-        res.status(500).json({
-          success: false,
-          error: 'Server misconfiguration: SHORTCUT_API_KEY secret is not set',
-        });
-        return;
-      }
-
-      let isValidKey = false;
-      try {
-        isValidKey = crypto.timingSafeEqual(
-            Buffer.from(apiKeyHeader),
-            Buffer.from(validApiKey),
-        );
-      } catch (_) {
-        isValidKey = false;
-      }
-      if (!isValidKey) {
-        console.warn('getVideoUploadUrl: invalid API key attempt');
-        res.status(401).json({success: false, error: 'Invalid API key'});
-        return;
-      }
-
-      const userId = await resolveShortcutUserId(userEmail);
-      const db = admin.firestore();
-      try {
-        const userDoc = userId ? await db.collection('users').doc(userId).get() : null;
-        if (!userId || !userDoc.exists) {
-          res.status(403).json({success: false, error: 'Access denied'});
-          return;
-        }
-        const userData = userDoc.data();
-        const role = userData?.role;
-        const isShortcutUser = userData?.isShortcutUser === true;
-        if (role !== 'edit' && role !== 'admin' && role !== 'moderator' && !isShortcutUser) {
-          res.status(403).json({success: false, error: 'Insufficient permissions'});
-          return;
-        }
-      } catch (err) {
-        console.error('getVideoUploadUrl: error validating user:', err);
-        res.status(500).json({success: false, error: 'Failed to validate user'});
-        return;
-      }
+      // Shortcut authentication: API key + user email + role (see authenticateShortcutRequest)
+      const auth = await authenticateShortcutRequest(req, res, 'getVideoUploadUrl');
+      if (!auth) return;
+      const {userId, db} = auth;
 
       let body = req.body;
       if (!body || (typeof body === 'object' && Object.keys(body).length === 0)) {
@@ -4426,14 +4342,7 @@ exports.getVideoUploadUrl = onRequest(
       const extension = audioOnly ? 'm4a' : 'mp4';
       const contentType = audioOnly ? 'audio/mp4' : 'video/mp4';
 
-      try {
-        await requireShortcutPin(userId, pin);
-      } catch (pinErr) {
-        const status = pinErr.code === 'resource-exhausted' ? 429 :
-          pinErr.code === 'invalid-argument' ? 400 : 403;
-        res.status(status).json({success: false, error: pinErr.message || 'PIN erforderlich.'});
-        return;
-      }
+      if (!(await enforceShortcutPin(res, userId, pin))) return;
 
       try {
         const jobRef = db.collection('recipes').doc();
@@ -4612,62 +4521,10 @@ exports.scrapeInstagramReelShortcut = onRequest(
         return;
       }
 
-      const apiKeyHeader = req.headers['x-api-key'];
-      const userEmail = req.headers['x-user-email'];
-      if (!apiKeyHeader || !userEmail) {
-        res.status(401).json({
-          success: false,
-          error: 'Missing authentication headers',
-          requiredHeaders: ['X-Api-Key', 'X-User-Email'],
-        });
-        return;
-      }
-
-      const validApiKey = shortcutApiKey.value();
-      if (!validApiKey) {
-        console.error('scrapeInstagramReelShortcut: SHORTCUT_API_KEY secret is not set');
-        res.status(500).json({
-          success: false,
-          error: 'Server misconfiguration: SHORTCUT_API_KEY secret is not set',
-        });
-        return;
-      }
-
-      let isValidKey = false;
-      try {
-        isValidKey = crypto.timingSafeEqual(
-            Buffer.from(apiKeyHeader),
-            Buffer.from(validApiKey),
-        );
-      } catch (_) {
-        isValidKey = false;
-      }
-      if (!isValidKey) {
-        console.warn('scrapeInstagramReelShortcut: invalid API key attempt');
-        res.status(401).json({success: false, error: 'Invalid API key'});
-        return;
-      }
-
-      const userId = await resolveShortcutUserId(userEmail);
-      const db = admin.firestore();
-      try {
-        const userDoc = userId ? await db.collection('users').doc(userId).get() : null;
-        if (!userId || !userDoc.exists) {
-          res.status(403).json({success: false, error: 'Access denied'});
-          return;
-        }
-        const userData = userDoc.data();
-        const role = userData?.role;
-        const isShortcutUser = userData?.isShortcutUser === true;
-        if (role !== 'edit' && role !== 'admin' && role !== 'moderator' && !isShortcutUser) {
-          res.status(403).json({success: false, error: 'Insufficient permissions'});
-          return;
-        }
-      } catch (err) {
-        console.error('scrapeInstagramReelShortcut: error validating user:', err);
-        res.status(500).json({success: false, error: 'Failed to validate user'});
-        return;
-      }
+      // Shortcut authentication: API key + user email + role (see authenticateShortcutRequest)
+      const auth = await authenticateShortcutRequest(req, res, 'scrapeInstagramReelShortcut');
+      if (!auth) return;
+      const {userId, db} = auth;
 
       let body = req.body;
       if (!body || (typeof body === 'object' && Object.keys(body).length === 0)) {
@@ -4693,14 +4550,7 @@ exports.scrapeInstagramReelShortcut = onRequest(
         return;
       }
 
-      try {
-        await requireShortcutPin(userId, pin);
-      } catch (pinErr) {
-        const status = pinErr.code === 'resource-exhausted' ? 429 :
-          pinErr.code === 'invalid-argument' ? 400 : 403;
-        res.status(status).json({success: false, error: pinErr.message || 'PIN erforderlich.'});
-        return;
-      }
+      if (!(await enforceShortcutPin(res, userId, pin))) return;
 
       const apiKey = geminiApiKey.value();
       if (!apiKey) {
@@ -6767,60 +6617,11 @@ exports.addRecipeViaAPI = onRequest(
         return;
       }
 
-      // --- Authentication via API Key ---
-      const apiKey = req.headers['x-api-key'];
-      const userEmail = req.headers['x-user-email'];
-
-      if (!apiKey || !userEmail) {
-        res.status(401).json({
-          success: false,
-          error: 'Missing authentication headers',
-          requiredHeaders: ['X-Api-Key', 'X-User-Email'],
-        });
-        return;
-      }
-
-      const validApiKey = shortcutApiKey.value();
-      if (!validApiKey) {
-        console.error('addRecipeViaAPI: SHORTCUT_API_KEY secret is not set');
-        res.status(500).json({success: false, error: 'Server misconfiguration: SHORTCUT_API_KEY secret is not set'});
-        return;
-      }
-
-      let isValidKey = false;
-      try {
-        isValidKey = crypto.timingSafeEqual(Buffer.from(apiKey), Buffer.from(validApiKey));
-      } catch (_) {
-        isValidKey = false;
-      }
-      if (!isValidKey) {
-        console.warn('addRecipeViaAPI: invalid API key attempt');
-        res.status(401).json({success: false, error: 'Invalid API key'});
-        return;
-      }
-
-      // --- Resolve email to uid, then validate user exists and has required role ---
-      const userId = await resolveShortcutUserId(userEmail);
-      const db = admin.firestore();
-      let defaultWebImportListId = null;
-      try {
-        const userDoc = userId ? await db.collection('users').doc(userId).get() : null;
-        if (!userId || !userDoc.exists) {
-          res.status(403).json({success: false, error: 'Access denied'});
-          return;
-        }
-        const userData = userDoc.data();
-        const role = userData?.role;
-        if (role !== 'edit' && role !== 'admin' && role !== 'moderator') {
-          res.status(403).json({success: false, error: 'Insufficient permissions'});
-          return;
-        }
-        defaultWebImportListId = userData?.defaultWebImportListId || null;
-      } catch (err) {
-        console.error('addRecipeViaAPI: error validating user:', err);
-        res.status(500).json({success: false, error: 'Failed to validate user'});
-        return;
-      }
+      // Shortcut authentication: API key + user email + role (see authenticateShortcutRequest)
+      const auth = await authenticateShortcutRequest(req, res, 'addRecipeViaAPI', {allowShortcutUser: false});
+      if (!auth) return;
+      const {userId, userData, db} = auth;
+      const defaultWebImportListId = userData?.defaultWebImportListId || null;
 
       // --- Parse body ---
       let body = req.body;
@@ -6837,14 +6638,7 @@ exports.addRecipeViaAPI = onRequest(
       // Webimport-PIN: no-op if the target user never set one; otherwise the
       // Shortcut must send a matching `pin` field with every request (it has
       // no interactive session to stay "unlocked" like the in-app modals).
-      try {
-        await requireShortcutPin(userId, body?.pin);
-      } catch (pinErr) {
-        const status = pinErr.code === 'resource-exhausted' ? 429 :
-          pinErr.code === 'invalid-argument' ? 400 : 403;
-        res.status(status).json({success: false, error: pinErr.message || 'PIN erforderlich.'});
-        return;
-      }
+      if (!(await enforceShortcutPin(res, userId, body?.pin))) return;
 
       // --- Validate & normalise ---
       let recipeData;
@@ -6991,69 +6785,15 @@ exports.getRecipeOptionsShortcut = onRequest(
         return;
       }
 
-      // --- Authentication via API Key (same scheme as addRecipeViaAPI) ---
-      const apiKey = req.headers['x-api-key'];
-      const userEmail = req.headers['x-user-email'];
-
-      if (!apiKey || !userEmail) {
-        res.status(401).json({
-          success: false,
-          error: 'Missing authentication headers',
-          requiredHeaders: ['X-Api-Key', 'X-User-Email'],
-        });
-        return;
-      }
-
-      const validApiKey = shortcutApiKey.value();
-      if (!validApiKey) {
-        console.error('getRecipeOptionsShortcut: SHORTCUT_API_KEY secret is not set');
-        res.status(500).json({success: false, error: 'Server misconfiguration: SHORTCUT_API_KEY secret is not set'});
-        return;
-      }
-
-      let isValidKey = false;
-      try {
-        isValidKey = crypto.timingSafeEqual(Buffer.from(apiKey), Buffer.from(validApiKey));
-      } catch (_) {
-        isValidKey = false;
-      }
-      if (!isValidKey) {
-        console.warn('getRecipeOptionsShortcut: invalid API key attempt');
-        res.status(401).json({success: false, error: 'Invalid API key'});
-        return;
-      }
-
-      // --- Resolve email to uid, then validate user exists and has required role ---
-      const userId = await resolveShortcutUserId(userEmail);
-      const db = admin.firestore();
-      try {
-        const userDoc = userId ? await db.collection('users').doc(userId).get() : null;
-        if (!userId || !userDoc.exists) {
-          res.status(403).json({success: false, error: 'Access denied'});
-          return;
-        }
-        const role = userDoc.data()?.role;
-        if (role !== 'edit' && role !== 'admin' && role !== 'moderator') {
-          res.status(403).json({success: false, error: 'Insufficient permissions'});
-          return;
-        }
-      } catch (err) {
-        console.error('getRecipeOptionsShortcut: error validating user:', err);
-        res.status(500).json({success: false, error: 'Failed to validate user'});
-        return;
-      }
+      // Shortcut authentication: API key + user email + role (see authenticateShortcutRequest)
+      const auth = await authenticateShortcutRequest(req, res, 'getRecipeOptionsShortcut', {allowShortcutUser: false});
+      if (!auth) return;
+      const {userId, db} = auth;
 
       // Webimport-PIN: no-op if the target user never set one; otherwise the
       // Shortcut must send a matching `pin` query param with every request (it
       // has no interactive session to stay "unlocked" like the in-app modals).
-      try {
-        await requireShortcutPin(userId, req.query?.pin);
-      } catch (pinErr) {
-        const status = pinErr.code === 'resource-exhausted' ? 429 :
-          pinErr.code === 'invalid-argument' ? 400 : 403;
-        res.status(status).json({success: false, error: pinErr.message || 'PIN erforderlich.'});
-        return;
-      }
+      if (!(await enforceShortcutPin(res, userId, req.query?.pin))) return;
 
       // --- Read configured lists from settings/app, fall back to defaults ---
       try {
@@ -7118,63 +6858,10 @@ exports.createRecipeImportFromText = onRequest(
         return;
       }
 
-      // --- Authentication via API Key ---
-      const apiKey = req.headers['x-api-key'];
-      const userEmail = req.headers['x-user-email'];
-
-      if (!apiKey || !userEmail) {
-        res.status(401).json({
-          success: false,
-          error: 'Missing authentication headers',
-          required: ['X-Api-Key', 'X-User-Email'],
-        });
-        return;
-      }
-
-      const validApiKey = shortcutApiKey.value();
-      if (!validApiKey) {
-        console.error('createRecipeImportFromText: SHORTCUT_API_KEY secret is not set');
-        res.status(500).json({success: false, error: 'Server misconfiguration: SHORTCUT_API_KEY secret is not set'});
-        return;
-      }
-      let isValidKey = false;
-      try {
-        isValidKey = crypto.timingSafeEqual(Buffer.from(apiKey), Buffer.from(validApiKey));
-      } catch (_) {
-        isValidKey = false;
-      }
-      if (!isValidKey) {
-        console.warn('createRecipeImportFromText: invalid API key attempt');
-        res.status(401).json({success: false, error: 'Invalid API key'});
-        return;
-      }
-
-      // --- Resolve email to uid, then validate user exists and has required role ---
-      const userId = await resolveShortcutUserId(userEmail);
-      const db = admin.firestore();
-      let userData;
-      try {
-        const userDoc = userId ? await db.collection('users').doc(userId).get() : null;
-        if (!userId || !userDoc.exists) {
-          res.status(403).json({success: false, error: 'Access denied'});
-          return;
-        }
-        userData = userDoc.data();
-      } catch (err) {
-        console.error('createRecipeImportFromText: error validating user:', err);
-        res.status(500).json({success: false, error: 'Failed to validate user'});
-        return;
-      }
-
-      const userRole = userData.role || '';
-      const isShortcutUser = userData.isShortcutUser === true;
-      if (userRole !== 'edit' && userRole !== 'admin' && userRole !== 'moderator' && !userData.isAdmin && !isShortcutUser) {
-        res.status(403).json({
-          success: false,
-          error: 'Insufficient permissions.',
-        });
-        return;
-      }
+      // Shortcut authentication: API key + user email + role (see authenticateShortcutRequest)
+      const auth = await authenticateShortcutRequest(req, res, 'createRecipeImportFromText', {allowIsAdmin: true});
+      if (!auth) return;
+      const {userId, db} = auth;
 
       // --- Parse body ---
       let body = req.body;
@@ -7193,6 +6880,10 @@ exports.createRecipeImportFromText = onRequest(
         res.status(400).json({success: false, error: 'rawText darf nicht leer sein'});
         return;
       }
+
+      // Webimport-PIN: no-op if the target user never set one (same rule as
+      // every other Shortcut endpoint).
+      if (!(await enforceShortcutPin(res, userId, body?.pin))) return;
 
       // --- Save to Firestore imports collection with TTL ---
       try {
