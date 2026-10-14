@@ -1,4 +1,5 @@
 import React from 'react';
+import { defaultIcon } from '../utils/defaultButtonIcons';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import RecipeDetail from './RecipeDetail';
 import * as ingredientIdMatching from '../utils/ingredientIdMatching';
@@ -2320,7 +2321,7 @@ describe('RecipeDetail - Source URL Metadata Icon', () => {
     jest.restoreAllMocks();
   });
 
-  test('falls back to default 🔗 icon when no custom recipeSourceLink icon is configured', () => {
+  test('falls back to default link icon when no custom recipeSourceLink icon is configured', () => {
     const importedRecipe = { ...baseRecipe, sourceUrl: 'https://example.com/original-recipe' };
 
     render(
@@ -2333,7 +2334,7 @@ describe('RecipeDetail - Source URL Metadata Icon', () => {
       />
     );
 
-    expect(screen.getByTitle('Rezeptquelle öffnen')).toHaveTextContent('🔗');
+    expect(screen.getByTitle('Rezeptquelle öffnen')).toHaveTextContent(defaultIcon('link'));
   });
 });
 
@@ -3516,7 +3517,7 @@ describe('RecipeDetail - Nutrition manual save icon', () => {
     expect(saveBtn).toHaveTextContent('🌙💽');
   });
 
-  test('falls back to default 💾 icon when no custom saveRecipe icon is configured', async () => {
+  test('falls back to default save icon when no custom saveRecipe icon is configured', async () => {
     await act(async () => {
       render(
         <RecipeDetail
@@ -3533,7 +3534,7 @@ describe('RecipeDetail - Nutrition manual save icon', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Zusammensetzung anzeigen' }));
 
     const saveBtn = screen.getByRole('button', { name: 'Menge für Eier speichern' });
-    expect(saveBtn).toHaveTextContent('💾');
+    expect(saveBtn).toHaveTextContent(defaultIcon('save'));
   });
 });
 

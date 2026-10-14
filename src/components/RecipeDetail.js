@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { defaultIcon } from '../utils/defaultButtonIcons';
 import StarIcon from './icons/StarIcon';
 import TrashIcon from './icons/TrashIcon';
 import { useLongPress } from '../utils/useLongPress';
@@ -110,12 +111,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const { top: cookingTabTop, tabRef: cookingTabRef, handleProps: cookingTabHandleProps } = useCookingModeTabPosition(currentUser?.id);
-  const [cookingModeIcon, setCookingModeIcon] = useState('♨');
+  const [cookingModeIcon, setCookingModeIcon] = useState(defaultIcon('steam'));
   const [cookingModeExitIcon, setCookingModeExitIcon] = useState('');
-  const [cookingModeDefaultImgIcon, setCookingModeDefaultImgIcon] = useState('♨');
+  const [cookingModeDefaultImgIcon, setCookingModeDefaultImgIcon] = useState(defaultIcon('steam'));
   // Light-mode variant of the default-category-image icon, forced regardless of the
   // app's current dark mode setting - bright recipe images always show this one.
-  const [cookingModeDefaultImgLightIcon, setCookingModeDefaultImgLightIcon] = useState('♨');
+  const [cookingModeDefaultImgLightIcon, setCookingModeDefaultImgLightIcon] = useState(defaultIcon('steam'));
   const [closeButtonIcon, setCloseButtonIcon] = useState('×');
   // Icon used for the close button over bright recipe images: always the
   // light-mode default-image close icon (like the cooking mode button),
@@ -138,7 +139,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [nutritionEmptyIcon, setNutritionEmptyIcon] = useState(normalizeNutritionEmptyIcon());
   const [nutritionFilledIcon, setNutritionFilledIcon] = useState('Nähr.');
   const [nutritionRecalcIcon, setNutritionRecalcIcon] = useState('↻');
-  const [nutritionManualSaveIcon, setNutritionManualSaveIcon] = useState('💾');
+  const [nutritionManualSaveIcon, setNutritionManualSaveIcon] = useState(defaultIcon('save'));
   const [showNutritionModal, setShowNutritionModal] = useState(false);
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -147,7 +148,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
   const [shoppingListIcon, setShoppingListIcon] = useState('Einkauf');
   const [bringButtonIcon, setBringButtonIcon] = useState('Bring');
-  const [timerStartIcon, setTimerStartIcon] = useState('▶');
+  const [timerStartIcon, setTimerStartIcon] = useState(defaultIcon('play'));
   const [timerStopIcon, setTimerStopIcon] = useState('■');
   const [cookDateIcon, setCookDateIcon] = useState('Datum');
   const [printRecipeIcon, setPrintRecipeIcon] = useState('⎙');
@@ -156,12 +157,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [newVersionIcon, setNewVersionIcon] = useState('Version');
   const [favoritesButtonIcon, setFavoritesButtonIcon] = useState('☆');
   const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('');
-  const [privateBadgeIcon, setPrivateBadgeIcon] = useState('🔒');
+  const [privateBadgeIcon, setPrivateBadgeIcon] = useState(defaultIcon('lock'));
   const [newVersionFabPressed, setNewVersionFabPressed] = useState(false);
   const [deleteRecipeIcon, setDeleteRecipeIcon] = useState('');
   const [deleteFabPressed, setDeleteFabPressed] = useState(false);
-  const [resetThumbnailIcon, setResetThumbnailIcon] = useState('📷');
-  const [sourceUrlIcon, setSourceUrlIcon] = useState('🔗');
+  const [resetThumbnailIcon, setResetThumbnailIcon] = useState(defaultIcon('camera'));
+  const [sourceUrlIcon, setSourceUrlIcon] = useState(defaultIcon('link'));
   const [resetThumbnailFabPressed, setResetThumbnailFabPressed] = useState(false);
   const [resetThumbnailLoading, setResetThumbnailLoading] = useState(false);
   const [conversionTable, setConversionTable] = useState([]);
@@ -209,10 +210,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       const currentDarkMode = getDarkModePreference();
       const eff = (key) => getEffectiveIcon(icons, key, currentDarkMode);
       const effLight = (key) => getEffectiveIcon(icons, key, false);
-      setCookingModeIcon(eff('cookingMode') || '♨');
+      setCookingModeIcon(eff('cookingMode') || defaultIcon('steam'));
       setCookingModeExitIcon(eff('cookingModeExit') || '');
-      setCookingModeDefaultImgIcon(eff('cookingModeDefaultImg') || eff('cookingMode') || '♨');
-      setCookingModeDefaultImgLightIcon(effLight('cookingModeDefaultImg') || effLight('cookingMode') || '♨');
+      setCookingModeDefaultImgIcon(eff('cookingModeDefaultImg') || eff('cookingMode') || defaultIcon('steam'));
+      setCookingModeDefaultImgLightIcon(effLight('cookingModeDefaultImg') || effLight('cookingMode') || defaultIcon('steam'));
       setCloseButtonIcon(eff('closeButton') || '×');
       setCloseButtonBrightImgIcon(effLight('closeButtonDefaultImg') || effLight('closeButton') || '×');
       setCloseButtonDefaultImgIcon(eff('closeButtonDefaultImg') || eff('closeButton') || '×');
@@ -220,10 +221,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setNutritionEmptyIcon(normalizeNutritionEmptyIcon(eff('nutritionEmpty')));
       setNutritionFilledIcon(eff('nutritionFilled') || 'Nähr.');
       setNutritionRecalcIcon(eff('nutritionRecalc') || '↻');
-      setNutritionManualSaveIcon(eff('saveRecipe') || '💾');
+      setNutritionManualSaveIcon(eff('saveRecipe') || defaultIcon('save'));
       setShoppingListIcon(eff('shoppingList') || 'Einkauf');
       setBringButtonIcon(eff('bringButton') || 'Bring');
-      setTimerStartIcon(eff('timerStart') || '▶');
+      setTimerStartIcon(eff('timerStart') || defaultIcon('play'));
       setTimerStopIcon(eff('timerStop') || '■');
       setCookDateIcon(eff('cookDate') || 'Datum');
       setPrintRecipeIcon(eff('printRecipe') || '⎙');
@@ -231,10 +232,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setNewVersionIcon(eff('newVersion') || 'Version');
       setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
       setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive'));
-      setPrivateBadgeIcon(eff('privateBadge') || '🔒');
+      setPrivateBadgeIcon(eff('privateBadge') || defaultIcon('lock'));
       setDeleteRecipeIcon(eff('deleteRecipe'));
-      setResetThumbnailIcon(eff('resetThumbnail') || '📷');
-      setSourceUrlIcon(eff('recipeSourceLink') || '🔗');
+      setResetThumbnailIcon(eff('resetThumbnail') || defaultIcon('camera'));
+      setSourceUrlIcon(eff('recipeSourceLink') || defaultIcon('link'));
       setAllButtonIcons(icons);
       setPortionUnits(lists.portionUnits || []);
       setCuisineIcons(lists.cuisineIcons || {});
@@ -260,10 +261,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   useEffect(() => {
     const eff = (key) => getEffectiveIcon(allButtonIcons, key, isDarkMode);
     const effLight = (key) => getEffectiveIcon(allButtonIcons, key, false);
-    setCookingModeIcon(eff('cookingMode') || '♨');
+    setCookingModeIcon(eff('cookingMode') || defaultIcon('steam'));
     setCookingModeExitIcon(eff('cookingModeExit') || '');
-    setCookingModeDefaultImgIcon(eff('cookingModeDefaultImg') || eff('cookingMode') || '♨');
-    setCookingModeDefaultImgLightIcon(effLight('cookingModeDefaultImg') || effLight('cookingMode') || '♨');
+    setCookingModeDefaultImgIcon(eff('cookingModeDefaultImg') || eff('cookingMode') || defaultIcon('steam'));
+    setCookingModeDefaultImgLightIcon(effLight('cookingModeDefaultImg') || effLight('cookingMode') || defaultIcon('steam'));
     setCloseButtonIcon(eff('closeButton') || '×');
     setCloseButtonBrightImgIcon(effLight('closeButtonDefaultImg') || effLight('closeButton') || '×');
     setCloseButtonDefaultImgIcon(eff('closeButtonDefaultImg') || eff('closeButton') || '×');
@@ -271,10 +272,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setNutritionEmptyIcon(normalizeNutritionEmptyIcon(eff('nutritionEmpty')));
     setNutritionFilledIcon(eff('nutritionFilled') || 'Nähr.');
     setNutritionRecalcIcon(eff('nutritionRecalc') || '↻');
-    setNutritionManualSaveIcon(eff('saveRecipe') || '💾');
+    setNutritionManualSaveIcon(eff('saveRecipe') || defaultIcon('save'));
     setShoppingListIcon(eff('shoppingList') || 'Einkauf');
     setBringButtonIcon(eff('bringButton') || 'Bring');
-    setTimerStartIcon(eff('timerStart') || '▶');
+    setTimerStartIcon(eff('timerStart') || defaultIcon('play'));
     setTimerStopIcon(eff('timerStop') || '■');
     setCookDateIcon(eff('cookDate') || 'Datum');
     setPrintRecipeIcon(eff('printRecipe') || '⎙');
@@ -282,10 +283,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setNewVersionIcon(eff('newVersion') || 'Version');
     setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
     setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive'));
-    setPrivateBadgeIcon(eff('privateBadge') || '🔒');
+    setPrivateBadgeIcon(eff('privateBadge') || defaultIcon('lock'));
     setDeleteRecipeIcon(eff('deleteRecipe'));
-    setResetThumbnailIcon(eff('resetThumbnail') || '📷');
-    setSourceUrlIcon(eff('recipeSourceLink') || '🔗');
+    setResetThumbnailIcon(eff('resetThumbnail') || defaultIcon('camera'));
+    setSourceUrlIcon(eff('recipeSourceLink') || defaultIcon('link'));
   }, [allButtonIcons, isDarkMode]);
 
   // Listen for dark mode changes
@@ -1329,7 +1330,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setAlarmRunning(true);
 
     if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('⏰ Timer abgelaufen!', { body: label, icon: '/favicon.ico' });
+      new Notification('Timer abgelaufen!', { body: label, icon: '/favicon.ico' });
     }
   }*/
 
@@ -1376,7 +1377,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     }
   
     if ('Notification' in window && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
-      new Notification('⏰ Timer abgelaufen!', {
+      new Notification('Timer abgelaufen!', {
         body: label,
         icon: '/favicon.ico'
       });

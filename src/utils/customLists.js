@@ -2,6 +2,7 @@
  * Default configuration values for customizable lists
  */
 import { db } from '../firebase';
+import { defaultIcon, DEFAULT_ICON_NAMES } from './defaultButtonIcons';
 import { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField, collection, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { normalizeNutritionReferenceId } from './nutritionReferenceUtils';
 import { DEFAULT_PRINT_FORMATS, migrateFormat, validatePrintFormats, PrintFormatValidationError } from './printFormats';
@@ -575,12 +576,12 @@ BEISPIEL GUTE EXTRAKTION:
 
 Extrahiere nun alle sichtbaren Informationen aus dem Bild genau nach diesem Schema.`;
 
-// Default button icons (emoji icons)
+// Default button icons (Text-Labels bzw. SVG-Symbole als data:-URI)
 export const DEFAULT_BUTTON_ICONS = {
-  cookingMode: '♨',
+  cookingMode: defaultIcon('steam'),
   // Icon shown when the recipe uses the default category image, or when the
   // displayed image has a bright corner (light mode)
-  cookingModeDefaultImg: '♨',
+  cookingModeDefaultImg: defaultIcon('steam'),
   // Beenden-Button der Kochmodus-Seitenlasche (leer = Standard-Symbol "Tür mit Pfeil")
   cookingModeExit: '',
   importRecipe: 'Import',
@@ -589,26 +590,26 @@ export const DEFAULT_BUTTON_ICONS = {
   closeButton: '×',
   // Icon shown when the recipe uses the default category image (light mode)
   closeButtonDefaultImg: '×',
-  filterButton: '⚙',
+  filterButton: defaultIcon('gear'),
   filterButtonActive: '▼',
   copyLink: 'Link',
   nutritionEmpty: '+',
   nutritionFilled: 'Nähr.',
   nutritionRecalc: '↻',
-  ratingHeartEmpty: '♡',
-  ratingHeartEmptyModal: '♡',
-  ratingHeartFilled: '♥',
+  ratingHeartEmpty: defaultIcon('heart'),
+  ratingHeartEmptyModal: defaultIcon('heart'),
+  ratingHeartFilled: defaultIcon('heartFilled'),
   shoppingList: 'Einkauf',
-  listSettings: '⚙',
-  listSettingsActive: '✎',
+  listSettings: defaultIcon('gear'),
+  listSettingsActive: defaultIcon('pencil'),
   bringButton: 'Bring',
-  timerStart: '▶',
+  timerStart: defaultIcon('play'),
   timerStop: '■',
   cookDate: 'Datum',
   addRecipe: '+',
   editRecipe: 'Edit',
   addPrivateRecipe: 'Privat',
-  addGroupMember: '👤+',
+  addGroupMember: defaultIcon('userPlus'),
   addRecipeToList: '+',
   saveRecipe: 'Speich.',
   swipeRight: '✓',
@@ -617,7 +618,7 @@ export const DEFAULT_BUTTON_ICONS = {
   swipeDelete: '',
   menuFavoritesButton: '☆',
   menuFavoritesButtonActive: '',
-  privateBadge: '🔒',
+  privateBadge: defaultIcon('lock'),
   tagesmenuZumTagesMenu: 'Menü',
   tagesmenuMeineAuswahl: 'Liste',
   tagesmenuZurueckZumStapel: 'Stapel',
@@ -634,17 +635,17 @@ export const DEFAULT_BUTTON_ICONS = {
   deleteRecipe: '',
   printRecipe: '⎙',
   addSection: '+',
-  addIngredient: '🥕',
-  addStep: '📝',
-  resetThumbnail: '📷',
-  recipeSourceLink: '🔗',
-  recipeCardSwipeRight: '📋',
-  addImage: '🖼',
+  addIngredient: defaultIcon('carrot'),
+  addStep: defaultIcon('note'),
+  resetThumbnail: defaultIcon('camera'),
+  recipeSourceLink: defaultIcon('link'),
+  recipeCardSwipeRight: defaultIcon('clipboard'),
+  addImage: defaultIcon('image'),
   trendingDifficultyIcon: '',
-  trendingTimeIcon: '⏱',
+  trendingTimeIcon: defaultIcon('timer'),
   kuecheFab: '+',
-  eventsDrinksFab: '🍹',
-  eventsGuestsFab: '👥',
+  eventsDrinksFab: defaultIcon('cup'),
+  eventsGuestsFab: defaultIcon('people'),
   bottomNavHome: '',
   bottomNavRecipes: '',
   bottomNavMenus: '',
@@ -729,6 +730,11 @@ export const DEFAULT_BUTTON_ICONS = {
   bottomNavAtelierActiveDark: '',
   bottomNavChefActiveDark: '',
 };
+
+// Dunkelmodus-Defaults der SVG-Symbole (Stricheinfärbung für dunklen Hintergrund)
+Object.entries(DEFAULT_ICON_NAMES).forEach(([key, name]) => {
+  if (key in DEFAULT_BUTTON_ICONS) DEFAULT_BUTTON_ICONS[`${key}Dark`] = defaultIcon(name, true);
+});
 
 /**
  * Returns the effective icon for a given key, respecting dark mode.
