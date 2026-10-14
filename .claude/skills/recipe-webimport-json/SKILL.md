@@ -44,7 +44,7 @@ Endpoint selbst aufrufen, um die aktuellen Listen zu holen.
 
 Verwende im Output immer die **kanonischen deutschen Feldnamen** aus der
 linken Spalte (nicht die Aliase) — das ist konsistent mit dem
-Beispiel-JSON in `APPLE_SHORTCUT_SETUP.md` und leichter lesbar für den
+Beispiel-JSON in `docs/setup/apple-shortcut.md` und leichter lesbar für den
 Nutzer.
 
 **Wichtig:** Es gibt kein eigenes `description`/`beschreibung`-Feld im
@@ -113,7 +113,7 @@ unabhängig vom Importweg gleich aussieht.
    `GET https://us-central1-<PROJECT-ID>.cloudfunctions.net/getRecipeOptionsShortcut`
    auf (Headers `X-Api-Key`, `X-User-Email`; falls ein Webimport-PIN bekannt
    ist, zusätzlich als Query-Parameter `?pin=<PIN>` anhängen — siehe
-   `APPLE_SHORTCUT_SETUP.md`). Die Antwort liefert `cuisineTypes` und
+   `docs/setup/apple-shortcut.md`). Die Antwort liefert `cuisineTypes` und
    `mealCategories` als aktuell in der App konfigurierte Arrays — das ist
    ein reiner Lesezugriff (siehe Hinweis oben) und liefert die
    tatsächlichen Werte, auch wenn der Nutzer seine Listen in den

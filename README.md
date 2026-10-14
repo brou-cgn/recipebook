@@ -139,24 +139,24 @@ The app is live and available at: **[https://broubook.web.app](https://broubook.
 
 This application is deployed to **Firebase Hosting**. A merge into `main` triggers the version bump, and a successful bump triggers the deploy — no manual step involved.
 
-👉 **[DEPLOYMENT.md](DEPLOYMENT.md)** — the deploy chain, required secrets, rollback
+👉 **[Deployment](docs/setup/deployment.md)** — the deploy chain, required secrets, rollback
 
 **⚠️ WICHTIG:** Für das Deployment müssen Firebase Secrets als GitHub Actions Secrets konfiguriert werden.  
-👉 **[GitHub Secrets Setup Anleitung](GITHUB_SECRETS_SETUP.md)** - Schritt-für-Schritt Anleitung zur Behebung der leeren Seite
+👉 **[GitHub Secrets Setup Anleitung](docs/setup/deployment.md)** - Schritt-für-Schritt Anleitung zur Behebung der leeren Seite
 
 ### ❓ FAQ:
-- **[FAQ.md](FAQ.md)** - 🇩🇪 Häufig gestellte Fragen zur App-Nutzung (Rezepte, Menüs, Küchenseite, Profil, Listen, Kochmodus)
-- **[SAISONMATRIX_KONZEPT.md](SAISONMATRIX_KONZEPT.md)** - 🇩🇪 Fachliches & technisches Konzept für die saisonale Rezeptbewertung
+- **[public/FAQ.md](public/FAQ.md)** - 🇩🇪 Häufig gestellte Fragen zur App-Nutzung (Rezepte, Menüs, Küchenseite, Profil, Listen, Kochmodus)
+- **[Saisonmatrix-Konzept](docs/features/saisonmatrix.md)** - 🇩🇪 Fachliches & technisches Konzept für die saisonale Rezeptbewertung
 
 ### 📚 Zugriffsanleitungen:
-- **[ZUGRIFF_SCHNELLHILFE.md](ZUGRIFF_SCHNELLHILFE.md)** - 🚨 **Schnellhilfe**: Top 5 Probleme & Sofortlösungen (START HIER!)
-- **[ZUGRIFF_ANLEITUNG.md](ZUGRIFF_ANLEITUNG.md)** - 📖 **Benutzer-Anleitung**: Wie Sie auf das System zugreifen (für Nicht-Techniker)
-- **[ZUGRIFFSPROBLEME_ANALYSE.md](ZUGRIFFSPROBLEME_ANALYSE.md)** - 🔍 **Technische Analyse**: Fehlerbehebung und Diagnostik (für Entwickler/Admins)
+- **[Zugriff: Schnellhilfe](docs/user/zugriff.md)** - 🚨 **Schnellhilfe**: Top 5 Probleme & Sofortlösungen (START HIER!)
+- **[Zugriff: Anleitung](docs/user/zugriff.md)** - 📖 **Benutzer-Anleitung**: Wie Sie auf das System zugreifen (für Nicht-Techniker)
+- **[Zugriff: Analyse](docs/architecture/security.md)** - 🔍 **Technische Analyse**: Fehlerbehebung und Diagnostik (für Entwickler/Admins)
 
 ### 📋 Deployment & Setup:
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** - 🇩🇪 Die Deploy-Kette, benötigte Secrets, Rollback (Deutsch)
-- **[GITHUB_SECRETS_SETUP.md](GITHUB_SECRETS_SETUP.md)** - 🔒 Anleitung zum Einrichten der GitHub Secrets (ERFORDERLICH)
-- **[FIREBASE_SETUP.md](FIREBASE_SETUP.md)** - 🔥 Firebase-Projekt von Grund auf einrichten
+- **[Deployment](docs/setup/deployment.md)** - 🇩🇪 Die Deploy-Kette, benötigte Secrets, Rollback (Deutsch)
+- **[GitHub Secrets](docs/setup/deployment.md)** - 🔒 Anleitung zum Einrichten der GitHub Secrets (ERFORDERLICH)
+- **[Firebase Setup](docs/setup/firebase.md)** - 🔥 Firebase-Projekt von Grund auf einrichten
 
 ## Getting Started
 
@@ -170,7 +170,7 @@ This application is deployed to **Firebase Hosting**. A merge into `main` trigge
 
 Before running the application, you need to set up Firebase. Follow the detailed guide:
 
-📘 **[Firebase Setup Guide (German)](FIREBASE_SETUP.md)**
+📘 **[Firebase Setup Guide (German)](docs/setup/firebase.md)**
 
 Quick setup:
 1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
@@ -359,10 +359,10 @@ For developers interested in the OCR implementation:
 - **Parser**: Smart recipe parser with section detection and metadata extraction
 
 Detailed documentation:
-- [OCR Service API Documentation](OCR_SERVICE.md)
-- [OCR Scan Modal Component Documentation](OCR_SCAN_MODAL.md)
-- [AI OCR Platforms Analysis](AI_OCR_PLATTFORMEN_ANALYSE.md) - Analysis of AI-enhanced OCR options
-- [AI OCR Integration Guide](AI_OCR_INTEGRATION.md) - How to integrate AI OCR
+- [OCR Service API Documentation](docs/features/import-ocr.md)
+- [OCR Scan Modal Component Documentation](docs/features/import-ocr.md)
+- [AI OCR Platforms Analysis](docs/archive/AI_OCR_PLATTFORMEN_ANALYSE.md) - Analysis of AI-enhanced OCR options
+- [AI OCR Integration Guide](docs/features/import-ocr.md) - How to integrate AI OCR
 
 ### AI-Enhanced OCR (Optional)
 
@@ -372,7 +372,7 @@ For significantly improved OCR accuracy, the app supports AI-powered OCR through
 - **Handwriting support**: Better recognition of handwritten recipes
 - **Free tier**: ~10,000+ requests/month
 
-See [AI OCR Analysis](AI_OCR_PLATTFORMEN_ANALYSE.md) for details and [Integration Guide](AI_OCR_INTEGRATION.md) for implementation.
+See [AI OCR Analysis](docs/archive/AI_OCR_PLATTFORMEN_ANALYSE.md) for details and [Integration Guide](docs/features/import-ocr.md) for implementation.
 
 ### Troubleshooting
 
@@ -445,7 +445,7 @@ Once installed, RecipeBook works completely offline thanks to:
 ## Druck-Layouts
 
 Rezepte lassen sich mit frei gestaltbaren Druckformaten drucken (Einstellungen → Drucklayout).
-Aufbau, Datenmodell und Migration: siehe [DRUCKLAYOUT.md](DRUCKLAYOUT.md).
+Aufbau, Datenmodell und Migration: siehe [Drucklayout](docs/features/druck.md).
 
 ## Technology Stack
 
@@ -511,7 +511,7 @@ RecipeBook uses Firebase for cloud storage, authentication, and offline function
 
 ### Setting Up Your Own Firebase Project
 
-For detailed instructions on setting up Firebase, see **[FIREBASE_SETUP.md](FIREBASE_SETUP.md)** (German).
+For detailed instructions on setting up Firebase, see **[Firebase Setup](docs/setup/firebase.md)** (German).
 
 ### Key Firebase Features Used
 
@@ -548,7 +548,7 @@ REACT_APP_FIREBASE_PROJECT_ID=your_project_id
 
 Nach dem initialen Setup muss die CORS-Konfiguration auf den Firebase Storage Bucket angewendet werden, damit Bilder korrekt geladen und Menüs gespeichert werden können.
 
-**Siehe:** [CORS_FIX_ANLEITUNG.md](CORS_FIX_ANLEITUNG.md) für detaillierte Anweisungen.
+**Siehe:** [CORS-Fix](docs/setup/firebase.md) für detaillierte Anweisungen.
 
 **Kurzversion:**
 ```bash

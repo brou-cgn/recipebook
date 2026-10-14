@@ -4007,7 +4007,7 @@ async function compressPhotoForImportJob(base64Data, maxBase64Length) {
 
 /**
  * Cloud Function: Queue up to MAX_SHORTCUT_PHOTO_IMAGES Shortcut-provided
- * recipe photos for AI OCR import (see APPLE_SHORTCUT_SETUP.md).
+ * recipe photos for AI OCR import (see docs/setup/apple-shortcut.md).
  * Authenticates via SHORTCUT_API_KEY (same mechanism as importRecipeShortcut
  * / addRecipeViaAPI). processShortcutImportJob (Firestore trigger, further
  * below) already knows how to run a 'photo' importSource
@@ -4145,7 +4145,7 @@ exports.scanRecipePhotoShortcut = onRequest(
       // supports adding items one at a time by hand — it has no way to bind
       // a whole list *variable* (e.g. the "Fotos" list built up via "Zu
       // Variable hinzufügen" in a loop) as the array's content in one go.
-      // The documented workaround (see APPLE_SHORTCUT_SETUP.md) is to build
+      // The documented workaround (see docs/setup/apple-shortcut.md) is to build
       // a JSON-array-shaped string by hand (Shortcuts has no dedicated
       // "Encode JSON" action) via "Text kombinieren" with separator `","`,
       // wrapped in a `[` / `]` Text action, and send that as a single Text
@@ -4179,7 +4179,7 @@ exports.scanRecipePhotoShortcut = onRequest(
           res.status(400).json({
             success: false,
             error: 'Field "images" was a string but not valid JSON. Build it as ' +
-              '["photo1","photo2"] (see APPLE_SHORTCUT_SETUP.md) instead of a native array field.',
+              '["photo1","photo2"] (see docs/setup/apple-shortcut.md) instead of a native array field.',
             parseError: parseError.message,
             receivedPreview: preview,
           });
@@ -4301,7 +4301,7 @@ const VIDEO_IMPORT_STORAGE_PREFIX = 'pending-video-imports';
 
 /**
  * Cloud Function: Issue a signed upload URL for a Shortcut-provided Reel
- * video (see APPLE_SHORTCUT_SETUP.md). This exists because Instagram's
+ * video (see docs/setup/apple-shortcut.md). This exists because Instagram's
  * anti-bot detection blocks our Puppeteer scraper (scrapeInstagramReel) from
  * a meaningful share of requests — a video the user already saved to their
  * own device sidesteps that entirely, at the cost of one extra manual step

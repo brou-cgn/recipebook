@@ -1,5 +1,5 @@
 /**
- * Erzwingt die Regel "Keine Emojis im UI-Code" (AGENTS.md, NO_EMOJIS_POLICY.md).
+ * Erzwingt die Regel "Keine Emojis im UI-Code" (AGENTS.md).
  *
  * Bestehende Funde stehen als Baseline unten: je Datei die erlaubte Anzahl.
  * Die Baseline darf nur sinken. Wer Emojis aus einer Datei entfernt, senkt

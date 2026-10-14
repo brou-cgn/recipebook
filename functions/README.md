@@ -228,7 +228,7 @@ X-User-Email: <registrierte E-Mail-Adresse>
 
 #### Apple Shortcut – Example Setup
 
-See [APPLE_SHORTCUT_SETUP.md](../APPLE_SHORTCUT_SETUP.md) for a full step-by-step guide.
+See [APPLE_SHORTCUT_SETUP.md](../docs/setup/apple-shortcut.md) for a full step-by-step guide.
 
 1. **Generate an API key** once: `openssl rand -hex 32`
 2. **Store the key** as a Firebase Secret: `firebase functions:secrets:set SHORTCUT_API_KEY`

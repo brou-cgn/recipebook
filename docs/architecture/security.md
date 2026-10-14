@@ -1,13 +1,191 @@
-# Technische Analyse: Zugriffsprobleme RecipeBook
+# Firestore Security Rules
+
+This file documents the security rules for the Firestore database that enforce access control for all collections.
+
+## Roles
+
+| Role | Description |
+|------|-------------|
+| `admin` | Full access to everything |
+| `edit` | Can create and edit own content |
+| `comment` | Currently equivalent to `read` |
+| `read` | Read-only access |
+| `guest` | Not logged in (no Firebase Auth) |
+
+## Helper Functions
+
+The following helper functions are defined in `firestore.rules`:
+
+- `isAuthenticated()` – Returns `true` if the user is logged in
+- `getUserData()` – Returns the current user's document from `/users/{uid}`
+- `isAdmin()` – Returns `true` if the user has the `admin` role
+- `isEdit()` – Returns `true` if the user has the `edit` role (or is admin)
+- `isAuthor(authorId)` – Returns `true` if the current user is the document's author
+- `isGroupMember(groupId)` – Returns `true` if the current user is a member of the group
+- `isGroupOwner(groupId)` – Returns `true` if the current user is the owner of the group
+- `isPublicGroup(groupId)` – Returns `true` if the group type is `public`
+- `isPrivateGroup(groupId)` – Returns `true` if the group type is `private`
+
+## Permission Concept per Collection
+
+### Recipes (`/recipes/{recipeId}`)
+
+> **Important:** Every recipe must have a `groupId`. Recipes without a `groupId` cannot be created or read (except via share link).
+
+| Operation | Who |
+|-----------|-----|
+| Read (share link) | Anyone, including guests |
+| Read (public group, non-draft) | All authenticated users |
+| Read (public group, draft) | `admin` only |
+| Read (private group, non-draft) | `admin` (always), or authenticated group member |
+| Read (private group, draft) | `admin` only |
+| Create | `admin`, `edit` (groupId required) |
+| Update | `admin` (all), `edit` (own) |
+| Delete | `admin` only |
+
+### Menus (`/menus/{menuId}`)
+
+| Operation | Who |
+|-----------|-----|
+| Read (share link) | Anyone, including guests |
+| Read (non-draft) | All authenticated users |
+| Read (draft) | `admin` (all), `edit` (own) |
+| Create | `admin`, `edit` |
+| Update | `admin` (all), `edit` (own) |
+| Delete | `admin` (all), `edit` (own) |
+
+### Groups (`/groups/{groupId}`)
+
+| Operation | Who |
+|-----------|-----|
+| Read (public group) | `admin` only |
+| Read (private group) | `admin` (all), `edit` + `read` (member or owner) |
+| Create | `admin` always, `edit` (private groups only) |
+| Update | `admin` (all), `edit` + `read` (own groups) |
+| Delete | `admin` (all), `edit` (own = group owner) |
+
+### Users (`/users/{userId}`)
+
+| Operation | Who |
+|-----------|-----|
+| Read | All authenticated users |
+| Create | `admin` or guest (for self-registration) |
+| Update | `admin` (all), any authenticated user (own profile) |
+| Delete | `admin` only |
+
+### Favorites & Menu Favorites (subcollections)
+
+- `/users/{userId}/favorites/{favoriteId}` – Read/Write: authenticated user (own only)
+- `/users/{userId}/menuFavorites/{favoriteId}` – Read/Write: authenticated user (own only)
+
+### Settings (`/settings/{settingId}`)
+
+| Operation | Who |
+|-----------|-----|
+| Read | All authenticated users |
+| Create / Delete | `admin` only |
+| Update (any field) | `admin` only |
+| Update (list fields: cuisineTypes, cuisineGroups, cuisineIcons, mealCategories, units, portionUnits, conversionTable, customUnits in `settings/app`) | `admin`, `edit`, `moderator` |
+| Update (Kochatelier fields: inspirationListName, inspirationListDescription, inspirationTargetListName, inspirationTargetListDescription in `settings/app`) | `admin`, `moderator` |
+
+### Custom Lists (`/customLists/{listId}`)
+
+| Operation | Who |
+|-----------|-----|
+| Read | Anyone (public) |
+| Create / Update / Delete | `admin` only |
+
+### FAQs (`/faqs/{faqId}`)
+
+| Operation | Who |
+|-----------|-----|
+| Read | All authenticated users |
+| Create / Update / Delete | `admin` only |
+
+### Shopping Lists (`/shoppingLists/{listId}`)
+
+| Operation | Who |
+|-----------|-----|
+| Read | All authenticated users |
+| Create | `admin`, `edit` |
+| Update | `admin` (all), `edit` (own) |
+| Delete | `admin` only |
+
+### Category Images (`/categoryImages/{imageId}`)
+
+| Operation | Who |
+|-----------|-----|
+| Read | All authenticated users |
+| Create / Update / Delete | `admin` only |
+
+### AI Scan Limits (`/aiScanLimits/{limitId}`)
+
+| Operation | Who |
+|-----------|-----|
+| Read | `admin`, `edit` |
+| Create / Update / Delete | `admin` only |
+
+### Calibration Snapshots (`/kalibrierungsSnapshots/{eventId}`)
+
+Actual vs. calculated drink consumption per finished event (shown on the "Eventplanung" tile).
+
+| Operation | Who |
+|-----------|-----|
+| Read | `admin`, and every role with the `eventplanung` role permission (`rolePermissions/{role}.eventplanung`, `canSeeEventplanung()`) |
+| Create / Update / Delete | nobody on the client (written by the `submitConsumption` Cloud Function) |
+
+## Deployment
+
+To deploy these security rules to Firebase:
+
+1. Make sure you have the Firebase CLI installed:
+   ```bash
+   npm install -g firebase-tools
+   ```
+
+2. Login to Firebase:
+   ```bash
+   firebase login
+   ```
+
+3. Initialize Firebase in the project (if not already done):
+   ```bash
+   firebase init
+   ```
+   Select Firestore when prompted and use the existing `firestore.rules` file.
+
+4. Deploy the security rules:
+   ```bash
+   firebase deploy --only firestore:rules
+   ```
+
+## Testing
+
+You can test the security rules locally using the Firebase Emulator:
+
+```bash
+firebase emulators:start
+```
+
+## Important Notes
+
+- These rules work in conjunction with the client-side filtering implemented in the application
+- Client-side filtering provides immediate UX feedback
+- Server-side rules (Firestore) provide the actual security enforcement
+- Both layers are necessary for proper security and user experience
+
+## Technische Analyse: Zugriffsprobleme RecipeBook
+
+_Quelle: `ZUGRIFFSPROBLEME_ANALYSE.md` (zusammengeführt)._
 
 > **⚠️ Historisches Dokument.** Diese Analyse stammt vom 14. Februar 2026 und
 > beschreibt den Betrieb auf GitHub Pages. Seit März 2026 läuft die App auf
 > Firebase Hosting (<https://broubook.web.app>); alle Pages-spezifischen
 > Fehlerbilder und Lösungswege unten sind damit gegenstandslos. Aktuell gültig
-> sind [DEPLOYMENT.md](DEPLOYMENT.md) und
-> [ZUGRIFF_SCHNELLHILFE.md](ZUGRIFF_SCHNELLHILFE.md).
+> sind [DEPLOYMENT.md](../setup/deployment.md) und
+> [ZUGRIFF_SCHNELLHILFE.md](../user/zugriff.md).
 
-## 🔍 Übersicht
+### 🔍 Übersicht
 
 Dieses Dokument analysiert potenzielle Zugriffsprobleme beim RecipeBook-System und deren technische Ursachen. Es richtet sich an Entwickler und technisch versierte Administratoren.
 
@@ -17,9 +195,9 @@ Dieses Dokument analysiert potenzielle Zugriffsprobleme beim RecipeBook-System u
 
 ---
 
-## 1. Systemarchitektur-Übersicht
+### 1. Systemarchitektur-Übersicht
 
-### 1.1 Hauptkomponenten
+#### 1.1 Hauptkomponenten
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -43,7 +221,7 @@ Dieses Dokument analysiert potenzielle Zugriffsprobleme beim RecipeBook-System u
 └─────────────────────────────────────────────────┘
 ```
 
-### 1.2 Authentifizierungsfluss
+#### 1.2 Authentifizierungsfluss
 
 1. **Benutzer öffnet App** → Lädt von GitHub Pages
 2. **Firebase Auth prüft Session** → Validiert gespeicherte Anmeldung
@@ -52,11 +230,11 @@ Dieses Dokument analysiert potenzielle Zugriffsprobleme beim RecipeBook-System u
 
 ---
 
-## 2. Identifizierte Problemkategorien
+### 2. Identifizierte Problemkategorien
 
-### 2.1 ❌ Deployment-bezogene Probleme
+#### 2.1 ❌ Deployment-bezogene Probleme
 
-#### Problem A1: Leere Seite nach Deployment
+##### Problem A1: Leere Seite nach Deployment
 **Symptom:** GitHub Pages zeigt leere weiße Seite  
 **Ursache:** Firebase-Umgebungsvariablen fehlen in GitHub Actions  
 **Technische Details:**
@@ -73,7 +251,7 @@ if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
 
 **Lösung:** Siehe `GITHUB_SECRETS_SETUP.md`
 
-#### Problem A2: 404-Fehler auf GitHub Pages
+##### Problem A2: 404-Fehler auf GitHub Pages
 **Symptom:** Seite nicht erreichbar  
 **Ursache:** GitHub Pages nicht korrekt konfiguriert  
 **Lösung:**
@@ -82,9 +260,9 @@ if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
 
 ---
 
-### 2.2 🔐 Firebase Authentication Probleme
+#### 2.2 🔐 Firebase Authentication Probleme
 
-#### Problem B1: Login funktioniert nicht
+##### Problem B1: Login funktioniert nicht
 **Symptome:**
 - "Anmeldung fehlgeschlagen" Fehlermeldung
 - Benutzer wird nicht angemeldet
@@ -132,7 +310,7 @@ export async function loginUser(email, password) {
 }
 ```
 
-#### Problem B2: Registrierung schlägt fehl
+##### Problem B2: Registrierung schlägt fehl
 **Symptome:**
 - Neuer Benutzer kann nicht erstellt werden
 - Fehlermeldung bei Registrierung
@@ -153,7 +331,7 @@ export async function loginUser(email, password) {
 3. **Passwort-Anforderungen nicht erfüllt**
    - **Mindestlänge:** 6 Zeichen (Firebase Standard)
 
-#### Problem B3: Erster Benutzer wird nicht als Admin erstellt
+##### Problem B3: Erster Benutzer wird nicht als Admin erstellt
 **Symptom:** Erster Benutzer hat nur "Lesen"-Rechte  
 **Ursache:** Logik-Fehler in Registrierung  
 **Code-Referenz:** `src/utils/userManagement.js`
@@ -178,9 +356,9 @@ export async function registerUser(userData) {
 
 ---
 
-### 2.3 🔒 Berechtigungsprobleme
+#### 2.3 🔒 Berechtigungsprobleme
 
-#### Problem C1: Benutzer kann keine Rezepte erstellen
+##### Problem C1: Benutzer kann keine Rezepte erstellen
 **Symptom:** "Rezept hinzufügen"-Button nicht sichtbar oder funktionslos  
 **Ursache:** Unzureichende Benutzerberechtigungen
 
@@ -211,7 +389,7 @@ export function hasPermission(user, requiredPermission) {
 2. Einstellungen → Benutzerverwaltung
 3. Berechtigung ändern: 🔐-Symbol → "Bearbeiten" auswählen
 
-#### Problem C2: Gastmodus-Beschränkungen
+##### Problem C2: Gastmodus-Beschränkungen
 **Symptom:** Als Gast sehr eingeschränkte Funktionen  
 **Erklärung:** Beabsichtigtes Verhalten
 
@@ -223,9 +401,9 @@ export function hasPermission(user, requiredPermission) {
 
 ---
 
-### 2.4 🌐 Netzwerk- und Offline-Probleme
+#### 2.4 🌐 Netzwerk- und Offline-Probleme
 
-#### Problem D1: Daten werden nicht geladen
+##### Problem D1: Daten werden nicht geladen
 **Symptom:** Rezeptliste bleibt leer, trotz Anmeldung  
 **Ursachen:**
 
@@ -255,7 +433,7 @@ console.log('Firebase Config:', {
 });
 ```
 
-#### Problem D2: Offline-Synchronisation schlägt fehl
+##### Problem D2: Offline-Synchronisation schlägt fehl
 **Symptom:** Offline erstellte Rezepte werden nicht synchronisiert  
 **Ursache:** IndexedDB Persistence nicht aktiviert oder Browser unterstützt es nicht
 
@@ -277,9 +455,9 @@ enableIndexedDbPersistence(db).catch((err) => {
 
 ---
 
-### 2.5 🗄️ Firestore Security Rules Probleme
+#### 2.5 🗄️ Firestore Security Rules Probleme
 
-#### Problem E1: "Missing or insufficient permissions"
+##### Problem E1: "Missing or insufficient permissions"
 **Symptom:** Fehler beim Lesen/Schreiben von Daten  
 **Ursache:** Firestore Security Rules zu restriktiv oder falsch konfiguriert
 
@@ -339,7 +517,7 @@ service cloud.firestore {
 > - Solche Regeln öffnen Ihre Datenbank für **jeden weltweit** – auch ohne Anmeldung.
 > - Angreifer können damit beliebige Nutzer-Dokumente anlegen, einschließlich Admin-Accounts.
 >
-> Nutzen Sie ausschließlich die authentifizierungsbasierten Rules aus der Datei [`firestore.rules`](firestore.rules) im Repository.
+> Nutzen Sie ausschließlich die authentifizierungsbasierten Rules aus der Datei [`firestore.rules`](../../firestore.rules) im Repository.
 
 Die sichere Konfiguration für die `users`-Collection verhindert, dass Clients das `isAdmin`-Feld oder eine privilegierte Rolle selbst setzen können. Die Erkennung des ersten Administrators erfolgt atomisch durch die `createUserProfile` Cloud Function:
 ```javascript
@@ -354,9 +532,9 @@ match /users/{userId} {
   allow delete: if false; // Nur Admins via Admin SDK
 }
 ```
-Die vollständigen, produktionsreifen Regeln befinden sich in [`firestore.rules`](firestore.rules). Weitere Dokumentation: [FIRESTORE_RULES.md](FIRESTORE_RULES.md)
+Die vollständigen, produktionsreifen Regeln befinden sich in [`firestore.rules`](../../firestore.rules). Weitere Dokumentation: [FIRESTORE_RULES.md](#)
 
-#### Problem E2: Erste Registrierung unmöglich
+##### Problem E2: Erste Registrierung unmöglich
 **Symptom:** Registrierung schlägt fehl mit Permission Error  
 **Ursache:** Security Rules erlauben kein CREATE ohne Authentication
 
@@ -369,11 +547,11 @@ Die vollständigen, produktionsreifen Regeln befinden sich in [`firestore.rules`
 
 ---
 
-## 3. Diagnostik-Werkzeuge
+### 3. Diagnostik-Werkzeuge
 
-### 3.1 Browser Developer Tools
+#### 3.1 Browser Developer Tools
 
-#### Console-Überprüfung
+##### Console-Überprüfung
 ```javascript
 // Öffne Browser Console (F12)
 
@@ -388,7 +566,7 @@ console.log('Current User:', user ? JSON.parse(user) : 'Not logged in');
 console.log('API Key configured:', process.env.REACT_APP_FIREBASE_API_KEY ? 'Yes' : 'No');
 ```
 
-#### Network-Überprüfung
+##### Network-Überprüfung
 1. Browser DevTools öffnen (F12)
 2. Network Tab auswählen
 3. Filter: `firestore` oder `googleapis`
@@ -397,7 +575,7 @@ console.log('API Key configured:', process.env.REACT_APP_FIREBASE_API_KEY ? 'Yes
    - Status Codes (200 = OK, 401 = Unauthorized, 403 = Forbidden)
    - Response Bodies für Fehlerdetails
 
-#### Application/Storage Überprüfung
+##### Application/Storage Überprüfung
 1. DevTools → Application Tab
 2. **Session Storage:**
    - Prüfe `currentUser` Eintrag
@@ -408,14 +586,14 @@ console.log('API Key configured:', process.env.REACT_APP_FIREBASE_API_KEY ? 'Yes
    - Status: Activated/Running?
    - Cached Resources vorhanden?
 
-### 3.2 Firebase Console Diagnostik
+#### 3.2 Firebase Console Diagnostik
 
-#### Authentication-Check
+##### Authentication-Check
 1. Firebase Console → Authentication
 2. Sign-in method: Email/Password aktiviert? ✅
 3. Users: Registrierte Benutzer sichtbar? (Bei Custom Auth: Nein)
 
-#### Firestore-Check
+##### Firestore-Check
 1. Firebase Console → Firestore Database
 2. Collections prüfen:
    - `users`: Benutzereinträge vorhanden?
@@ -433,7 +611,7 @@ console.log('API Key configured:', process.env.REACT_APP_FIREBASE_API_KEY ? 'Yes
    }
    ```
 
-#### Rules Testing
+##### Rules Testing
 Firebase Console → Firestore → Rules → Rules Playground
 
 **Test Read:**
@@ -450,7 +628,7 @@ Auth: Unauthenticated
 Operation: create
 ```
 
-### 3.3 GitHub Actions Logs
+#### 3.3 GitHub Actions Logs
 
 **Deployment-Fehler diagnostizieren:**
 
@@ -464,7 +642,7 @@ Operation: create
 
 **Secret-Überprüfung:**
 ```yaml
-# .github/workflows/deploy.yml
+## .github/workflows/deploy.yml
 env:
   REACT_APP_FIREBASE_API_KEY: ${{ secrets.REACT_APP_FIREBASE_API_KEY }}
   # ... alle 7 Secrets müssen hier sein
@@ -474,7 +652,7 @@ Settings → Secrets → Actions → Alle 7 REACT_APP_FIREBASE_* vorhanden?
 
 ---
 
-## 4. Lösungsmatrix
+### 4. Lösungsmatrix
 
 | Problem | Symptom | Schnelltest | Lösung |
 |---------|---------|-------------|--------|
@@ -489,9 +667,9 @@ Settings → Secrets → Actions → Alle 7 REACT_APP_FIREBASE_* vorhanden?
 
 ---
 
-## 5. Präventive Maßnahmen
+### 5. Präventive Maßnahmen
 
-### 5.1 Deployment-Checkliste
+#### 5.1 Deployment-Checkliste
 
 Vor jedem Deployment prüfen:
 
@@ -503,7 +681,7 @@ Vor jedem Deployment prüfen:
 - [ ] Firebase Console: Firestore erstellt
 - [ ] Firestore Security Rules published
 
-### 5.2 Firebase-Setup-Checkliste
+#### 5.2 Firebase-Setup-Checkliste
 
 Bei neuem Firebase-Projekt:
 
@@ -515,7 +693,7 @@ Bei neuem Firebase-Projekt:
 - [ ] Umgebungsvariablen kopiert (lokal + GitHub)
 - [ ] Standort gewählt (z.B. europe-west3)
 
-### 5.3 Benutzer-Onboarding-Checkliste
+#### 5.3 Benutzer-Onboarding-Checkliste
 
 Neuer Benutzer:
 
@@ -525,7 +703,7 @@ Neuer Benutzer:
 - [ ] Admin vergibt Berechtigungen über Benutzerverwaltung
 - [ ] Gast-Zugang: "Als Gast anmelden" nutzen (temporär)
 
-### 5.4 Monitoring und Wartung
+#### 5.4 Monitoring und Wartung
 
 Regelmäßige Checks (empfohlen: monatlich):
 
@@ -537,9 +715,9 @@ Regelmäßige Checks (empfohlen: monatlich):
 
 ---
 
-## 6. Kritische Sicherheitshinweise
+### 6. Kritische Sicherheitshinweise
 
-### 6.1 Custom Authentication System
+#### 6.1 Custom Authentication System
 
 ⚠️ **Wichtig:** RecipeBook nutzt ein **Custom Authentication System** anstelle von Firebase Authentication:
 
@@ -570,13 +748,13 @@ await createUserWithEmailAndPassword(auth, email, password);
 await signInWithEmailAndPassword(auth, email, password);
 ```
 
-### 6.2 Firestore Security Rules
+#### 6.2 Firestore Security Rules
 
 > 🚨 **SICHERHEITSWARNUNG:** Verwenden Sie **niemals** Regeln wie `allow read, write: if true`, `allow create: if true` oder `allow read: if true` ohne Authentifizierungsprüfung. Solche Regeln geben jedem – auch nicht angemeldeten Personen – vollen Zugriff auf alle Daten.
 
-**Korrekte Vorgehensweise:** Verwenden Sie die in [`firestore.rules`](firestore.rules) hinterlegten, authentifizierungsbasierten Rules und deployen Sie diese mit `firebase deploy --only firestore:rules`. Details: [FIRESTORE_RULES.md](FIRESTORE_RULES.md)
+**Korrekte Vorgehensweise:** Verwenden Sie die in [`firestore.rules`](../../firestore.rules) hinterlegten, authentifizierungsbasierten Rules und deployen Sie diese mit `firebase deploy --only firestore:rules`. Details: [FIRESTORE_RULES.md](#)
 
-### 6.3 Umgebungsvariablen
+#### 6.3 Umgebungsvariablen
 
 ✅ **Richtig:**
 - `.env.local` in `.gitignore`
@@ -590,46 +768,46 @@ await signInWithEmailAndPassword(auth, email, password);
 
 ---
 
-## 7. Zusammenfassung: Top 5 Probleme & Lösungen
+### 7. Zusammenfassung: Top 5 Probleme & Lösungen
 
-### #1: Leere Seite nach Deployment 🏆
+#### #1: Leere Seite nach Deployment 🏆
 **Häufigkeit:** ⭐⭐⭐⭐⭐  
 **Lösung:** `GITHUB_SECRETS_SETUP.md` befolgen
 
-### #2: Login funktioniert nicht 🔐
+#### #2: Login funktioniert nicht 🔐
 **Häufigkeit:** ⭐⭐⭐⭐  
 **Lösung:** Firebase Console → Authentication → Email/Password aktivieren
 
-### #3: Keine Berechtigung zum Erstellen 📝
+#### #3: Keine Berechtigung zum Erstellen 📝
 **Häufigkeit:** ⭐⭐⭐  
 **Lösung:** Admin muss Berechtigung auf "edit" setzen
 
-### #4: Erste Registrierung schlägt fehl ⚠️
+#### #4: Erste Registrierung schlägt fehl ⚠️
 **Häufigkeit:** ⭐⭐  
-**Lösung:** Firebase Authentication aktivieren und sichere Rules aus [`firestore.rules`](firestore.rules) deployen
+**Lösung:** Firebase Authentication aktivieren und sichere Rules aus [`firestore.rules`](../../firestore.rules) deployen
 
-### #5: Daten werden nicht geladen 🌐
+#### #5: Daten werden nicht geladen 🌐
 **Häufigkeit:** ⭐⭐  
 **Lösung:** Firestore Rules + Internetverbindung prüfen
 
 ---
 
-## 8. Referenzen und weiterführende Links
+### 8. Referenzen und weiterführende Links
 
-### Interne Dokumentation
-- [README.md](README.md) - Allgemeine Projektübersicht
-- [FIREBASE_SETUP.md](FIREBASE_SETUP.md) - Firebase-Einrichtung (Deutsch)
-- [GITHUB_SECRETS_SETUP.md](GITHUB_SECRETS_SETUP.md) - GitHub Secrets konfigurieren
-- [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment-Details
-- [ZUGRIFF_ANLEITUNG.md](ZUGRIFF_ANLEITUNG.md) - Benutzer-Anleitung (nicht-technisch)
+#### Interne Dokumentation
+- [README.md](../../README.md) - Allgemeine Projektübersicht
+- [FIREBASE_SETUP.md](../setup/firebase.md) - Firebase-Einrichtung (Deutsch)
+- [GITHUB_SECRETS_SETUP.md](../setup/deployment.md) - GitHub Secrets konfigurieren
+- [DEPLOYMENT.md](../setup/deployment.md) - Deployment-Details
+- [ZUGRIFF_ANLEITUNG.md](../user/zugriff.md) - Benutzer-Anleitung (nicht-technisch)
 
-### Externe Ressourcen
+#### Externe Ressourcen
 - [Firebase Documentation](https://firebase.google.com/docs)
 - [Firestore Security Rules](https://firebase.google.com/docs/firestore/security/get-started)
 - [GitHub Pages Documentation](https://docs.github.com/en/pages)
 - [React Environment Variables](https://create-react-app.dev/docs/adding-custom-environment-variables/)
 
-### Code-Referenzen
+#### Code-Referenzen
 - `src/firebase.js` - Firebase-Initialisierung
 - `src/utils/userManagement.js` - Authentifizierung
 - `src/utils/recipeFirestore.js` - Rezept-Datenbankoperationen
@@ -637,36 +815,36 @@ await signInWithEmailAndPassword(auth, email, password);
 
 ---
 
-## Anhang A: Debugging-Befehle
+### Anhang A: Debugging-Befehle
 
-### Lokale Entwicklung
+#### Lokale Entwicklung
 ```bash
-# Dependencies installieren
+## Dependencies installieren
 npm install
 
-# Entwicklungsserver starten
+## Entwicklungsserver starten
 npm start
 
-# Production Build erstellen
+## Production Build erstellen
 npm run build
 
-# Build lokal testen
+## Build lokal testen
 npx serve -s build
 ```
 
-### Git/GitHub
+#### Git/GitHub
 ```bash
-# Status prüfen
+## Status prüfen
 git status
 
-# Letzte Commits anzeigen
+## Letzte Commits anzeigen
 git log --oneline -10
 
-# Deployment-Status (GitHub Actions)
-# → Repository → Actions Tab im Browser
+## Deployment-Status (GitHub Actions)
+## → Repository → Actions Tab im Browser
 ```
 
-### Browser Console
+#### Browser Console
 ```javascript
 // Session-Daten anzeigen
 console.log(sessionStorage.getItem('currentUser'));
