@@ -116,7 +116,7 @@ function GuestManagementPage({
   const closeIcon = getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode) || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode);
 
   // Admin: always browse all users' guest profiles instead of just the current user's own.
-  const isAdmin = currentUser?.isAdmin === true;
+  const isAdmin = currentUser?.role === 'admin';
   const allProfilesLoading = !allGuestProfilesLoaded;
   const [allUsers, setAllUsers] = useState([]);
 

@@ -215,11 +215,11 @@ test.beforeEach(() => {
         naehrwerte: { calcCompletedAt: 1700000000000 },
       },
     },
-    adminUsers: [{ email: 'admin@example.com', isAdmin: true }],
+    adminUsers: [{ email: 'admin@example.com', role: 'admin' }],
     userById: {
-      'admin-1': { role: 'admin', isAdmin: true },
-      'moderator-1': { role: 'moderator', isAdmin: false },
-      'user-1': { role: 'user', isAdmin: false },
+      'admin-1': { role: 'admin' },
+      'moderator-1': { role: 'moderator' },
+      'user-1': { role: 'user' },
     },
   };
 

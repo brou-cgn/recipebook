@@ -174,12 +174,11 @@ async function resolveShortcutUserId(email) {
  * @param {object} req - Express request
  * @param {object} res - Express response
  * @param {string} fnName - endpoint name, used in log messages
- * @param {{allowShortcutUser?: boolean, allowIsAdmin?: boolean}} [opts]
+ * @param {{allowShortcutUser?: boolean}} [opts]
  *   allowShortcutUser (default true): users flagged isShortcutUser pass without edit role
- *   allowIsAdmin (default false): users with the legacy isAdmin flag pass
  * @return {Promise<{userId: string, userData: object, db: object}|null>}
  */
-async function authenticateShortcutRequest(req, res, fnName, {allowShortcutUser = true, allowIsAdmin = false} = {}) {
+async function authenticateShortcutRequest(req, res, fnName, {allowShortcutUser = true} = {}) {
   const apiKeyHeader = req.headers['x-api-key'];
   const userEmail = req.headers['x-user-email'];
   if (!apiKeyHeader || !userEmail) {
@@ -224,8 +223,7 @@ async function authenticateShortcutRequest(req, res, fnName, {allowShortcutUser 
     const userData = userDoc.data();
     const role = userData?.role;
     const hasRole = role === 'edit' || role === 'admin' || role === 'moderator';
-    const hasFlag = (allowShortcutUser && userData?.isShortcutUser === true) ||
-      (allowIsAdmin && !!userData?.isAdmin);
+    const hasFlag = allowShortcutUser && userData?.isShortcutUser === true;
     if (!hasRole && !hasFlag) {
       res.status(403).json({success: false, error: 'Insufficient permissions'});
       return null;
@@ -635,9 +633,8 @@ async function requireAiCaller(auth) {
         'KI-Funktionen sind erst ab der Rolle „Bearbeiten“ verfügbar.',
     );
   }
-  // role is the source of truth (as in firestore.rules); the admin custom claim
-  // is never set by this project but is still honoured if it ever is.
-  const isAdmin = role === 'admin' || auth.token.admin === true;
+  // role is the only source of truth for admin status (as in firestore.rules).
+  const isAdmin = role === 'admin';
   return {
     userId,
     isAuthenticated: auth.token.firebase?.sign_in_provider !== 'anonymous',
@@ -6155,7 +6152,7 @@ exports.notifyAdminsOnUserRegistration = onDocumentCreated(
       }
 
       // Skip notifications for the very first user (the initial admin)
-      if (newUser.isAdmin) {
+      if (newUser.role === 'admin') {
         console.log('notifyAdminsOnUserRegistration: first user is admin, skipping self-notification');
         return;
       }
@@ -6173,7 +6170,7 @@ exports.notifyAdminsOnUserRegistration = onDocumentCreated(
 
       // Fetch all admin users from Firestore
       const db = admin.firestore();
-      const usersSnapshot = await db.collection('users').where('isAdmin', '==', true).get();
+      const usersSnapshot = await db.collection('users').where('role', '==', 'admin').get();
 
       if (usersSnapshot.empty) {
         console.log('notifyAdminsOnUserRegistration: no admin users found');
@@ -6334,7 +6331,7 @@ exports.stripCallLogEmails = onCall(
       }
       const callerDoc = await admin.firestore().doc(`users/${callerUid}`).get();
       const callerData = callerDoc.exists ? (callerDoc.data() || {}) : {};
-      if (callerData.role !== 'admin' && callerData.isAdmin !== true) {
+      if (callerData.role !== 'admin') {
         throw new HttpsError('permission-denied', 'Admin role required.');
       }
 
@@ -6409,7 +6406,7 @@ exports.setUserPassword = onCall(
       // Verify that the calling user is an admin by checking Firestore
       const db = admin.firestore();
       const callerDoc = await db.collection('users').doc(auth.uid).get();
-      if (!callerDoc.exists || !callerDoc.data().isAdmin) {
+      if (!callerDoc.exists || callerDoc.data().role !== 'admin') {
         throw new HttpsError(
             'permission-denied',
             'Nur Administratoren können Passwörter zurücksetzen.'
@@ -6859,7 +6856,7 @@ exports.createRecipeImportFromText = onRequest(
       }
 
       // Shortcut authentication: API key + user email + role (see authenticateShortcutRequest)
-      const auth = await authenticateShortcutRequest(req, res, 'createRecipeImportFromText', {allowIsAdmin: true});
+      const auth = await authenticateShortcutRequest(req, res, 'createRecipeImportFromText');
       if (!auth) return;
       const {userId, db} = auth;
 
@@ -7092,7 +7089,6 @@ exports.createUserProfile = onCall(
             vorname: vorname.trim(),
             nachname: nachname.trim(),
             email: email.toLowerCase().trim(),
-            isAdmin: first,
             role: first ? 'admin' : 'read',
             fotoscan: false,
             createdAt: new Date().toISOString(),
@@ -8034,7 +8030,6 @@ async function mintImporterTestIdToken(webApiKey) {
     vorname: 'Nightly',
     nachname: 'Importer-Test',
     role: 'edit',
-    isAdmin: false,
     isTestAccount: true,
   }, {merge: true});
   const customToken = await admin.auth().createCustomToken(AI_IMPORTER_TEST_UID);
@@ -8538,7 +8533,7 @@ function buildNutritionRecalcSummaryMail(report, runAt) {
  */
 async function sendAdminReportMail({subject, text, html, logLabel}) {
   const db = admin.firestore();
-  const usersSnapshot = await db.collection('users').where('isAdmin', '==', true).get();
+  const usersSnapshot = await db.collection('users').where('role', '==', 'admin').get();
   const adminEmails = [];
   usersSnapshot.forEach((doc) => {
     const data = doc.data();
@@ -8797,8 +8792,7 @@ exports.runNutritionRecalcForFlaggedRecipes = onCall(
       const callerData = callerDoc.exists ? (callerDoc.data() || {}) : {};
       const canRunManualRecalc = (
         callerData.role === 'admin' ||
-        callerData.role === 'moderator' ||
-        callerData.isAdmin === true
+        callerData.role === 'moderator'
       );
       if (!canRunManualRecalc) {
         throw new HttpsError('permission-denied', 'Admin or moderator role required.');
@@ -9134,8 +9128,7 @@ exports.runLowCarbFullTagging = onCall(
       const callerData = callerDoc.exists ? (callerDoc.data() || {}) : {};
       const canRunFullTagging = (
         callerData.role === 'admin' ||
-        callerData.role === 'moderator' ||
-        callerData.isAdmin === true
+        callerData.role === 'moderator'
       );
       if (!canRunFullTagging) {
         throw new HttpsError('permission-denied', 'Admin or moderator role required.');
@@ -9239,7 +9232,7 @@ exports.dailyAiImporterTest = onSchedule(
       // Collect admin e-mail addresses from Firestore
       const db = admin.firestore();
       const usersSnapshot = await db
-          .collection('users').where('isAdmin', '==', true).get();
+          .collection('users').where('role', '==', 'admin').get();
       const adminEmails = [];
       usersSnapshot.forEach((doc) => {
         const data = doc.data();

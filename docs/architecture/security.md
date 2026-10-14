@@ -479,12 +479,11 @@ service cloud.firestore {
       allow create, update, delete: if isSignedIn();
     }
     
-    // Benutzer – nur eigenes Dokument, kein Admin-Flag client-seitig setzbar
+    // Benutzer – nur eigenes Dokument, keine Rolle client-seitig setzbar
     match /users/{userId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn()
                     && request.auth.uid == userId
-                    && !('isAdmin' in request.resource.data)
                     && request.resource.data.role == 'read';
       allow update: if isSignedIn() && request.auth.uid == userId;
     }
@@ -519,14 +518,13 @@ service cloud.firestore {
 >
 > Nutzen Sie ausschließlich die authentifizierungsbasierten Rules aus der Datei [`firestore.rules`](../../firestore.rules) im Repository.
 
-Die sichere Konfiguration für die `users`-Collection verhindert, dass Clients das `isAdmin`-Feld oder eine privilegierte Rolle selbst setzen können. Die Erkennung des ersten Administrators erfolgt atomisch durch die `createUserProfile` Cloud Function:
+Die sichere Konfiguration für die `users`-Collection verhindert, dass Clients eine privilegierte Rolle selbst setzen können. Admin ist ausschließlich `role == 'admin'`; ein separates `isAdmin`-Feld gibt es nicht mehr. Die Erkennung des ersten Administrators erfolgt atomisch durch die `createUserProfile` Cloud Function:
 ```javascript
 // Sichere Rules – Feldwerte auf client-seitig erstellten Dokumenten einschränken
 match /users/{userId} {
   allow read: if request.auth != null;
   allow create: if request.auth != null
                 && request.auth.uid == userId
-                && !('isAdmin' in request.resource.data)
                 && request.resource.data.role == 'read';
   allow update: if request.auth != null && request.auth.uid == userId;
   allow delete: if false; // Nur Admins via Admin SDK

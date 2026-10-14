@@ -926,7 +926,7 @@ describe('DrinkManagementPage', () => {
     test('an admin keeps full edit access to another user\'s drink instead of the add-units form', () => {
       render(
         <DrinkManagementPage
-          currentUser={{ id: 'u1', isAdmin: true }}
+          currentUser={{ id: 'u1', role: 'admin' }}
           customDrinks={otherUsersDrinks}
         />
       );

@@ -157,7 +157,7 @@ test.beforeEach(() => {
   geminiSecretValue = 'test-gemini-api-key';
   webApiKeySecretValue = 'test-web-api-key';
   settingsData = {app: {aiRecipePrompt: 'Extrahiere das Rezept als JSON.'}};
-  usersData = [{isAdmin: true, email: 'admin@example.com'}];
+  usersData = [{role: 'admin', email: 'admin@example.com'}];
   sentMails = [];
   userDocWrites = [];
   callableResponses = {
@@ -209,7 +209,7 @@ test('provisions the test user with role edit so the role-gated AI callables acc
   assert.equal(userDocWrites.length, 1);
   assert.equal(userDocWrites[0].path, 'users/nightly-ai-importer-test');
   assert.equal(userDocWrites[0].data.role, 'edit');
-  assert.equal(userDocWrites[0].data.isAdmin, false);
+  assert.equal('isAdmin' in userDocWrites[0].data, false);
   assert.deepEqual(userDocWrites[0].opts, {merge: true});
 });
 

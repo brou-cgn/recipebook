@@ -330,7 +330,7 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
   });
 
   describe('admin cross-user guest visibility', () => {
-    const adminUser = { id: 'admin1', isAdmin: true };
+    const adminUser = { id: 'admin1', role: 'admin' };
 
     test('non-admins do not see the "Meine Gäste"/"Alle Anwender" toggle', () => {
       renderGuestManagementPage();

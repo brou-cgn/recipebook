@@ -19,7 +19,7 @@ jest.mock('../utils/customLists', () => ({
   getCustomLists: jest.fn(),
 }));
 
-const admin = { id: 'u1', role: 'admin', isAdmin: true, vorname: 'Ada', nachname: 'A' };
+const admin = { id: 'u1', role: 'admin', vorname: 'Ada', nachname: 'A' };
 const recipes = [{ id: 'r1', title: 'Kürbissuppe' }, { id: 'r2', title: 'Risotto' }];
 const topic = {
   id: 't1', rubrik: 'Saison', beschreibung: 'Kürbis-Zeit',

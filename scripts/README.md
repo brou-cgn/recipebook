@@ -39,6 +39,17 @@ One-time migration for `nutritionReferences`: sets `approvedAt` for entries with
 node scripts/migrateNutritionReferenceApprovedAt.js [--dry-run]
 ```
 
+## migrateRemoveIsAdmin.js
+
+One-time migration: removes the legacy `isAdmin` field from all `users` documents. `role == 'admin'` is the only admin marker. Must run **before** deploying the functions and rules that no longer read `isAdmin`. Users with `isAdmin: true` but another role are listed; they are only promoted with `--promote-legacy-admins`.
+
+**Usage:**
+```bash
+node scripts/migrateRemoveIsAdmin.js                 # dry run
+node scripts/migrateRemoveIsAdmin.js --apply         # remove the field
+node scripts/migrateRemoveIsAdmin.js --apply --promote-legacy-admins
+```
+
 ## audit-functions-invoker.sh
 
 Auditiert Gen2 Functions, zugehörige Cloud-Run-Services und `roles/run.invoker` Bindings.

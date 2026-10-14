@@ -459,7 +459,7 @@ function TopicEditor({ initial, allRecipes, cuisineOptions, categoryOptions, ing
  * Themen (siehe utils/discoverTopics.js).
  */
 function DiscoverTopicsTab({ currentUser, allRecipes = [] }) {
-  const isAdmin = currentUser?.isAdmin === true || currentUser?.role === 'admin';
+  const isAdmin = currentUser?.role === 'admin';
   const [topics, setTopics] = useState([]);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);

@@ -134,7 +134,6 @@ const adminUser = {
   vorname: 'Admin',
   nachname: 'User',
   email: 'admin@example.com',
-  isAdmin: true,
   role: 'admin',
   appCalls: true,
 };
@@ -144,7 +143,6 @@ const moderatorUser = {
   vorname: 'Moderator',
   nachname: 'User',
   email: 'moderator@example.com',
-  isAdmin: false,
   role: 'moderator',
   appCalls: true,
 };
@@ -1792,7 +1790,6 @@ describe('AppCallsPage – Kochateliereinstellungen tab', () => {
       vorname: 'Edit',
       nachname: 'User',
       email: 'edit@example.com',
-      isAdmin: false,
       role: 'edit',
       appCalls: true,
     };
@@ -1911,7 +1908,7 @@ describe('AppCallsPage – Benjamin Rousselli filter', () => {
     render(
       <AppCallsPage
         onBack={jest.fn()}
-        currentUser={{ id: 'mod-1', role: 'moderator', isAdmin: false, appCalls: true, appCallsMenu: true }}
+        currentUser={{ id: 'mod-1', role: 'moderator', appCalls: true, appCallsMenu: true }}
         recipes={[]}
         onUpdateRecipe={jest.fn()}
         allUsers={[{ id: 'u-max', vorname: 'Max', nachname: 'Mustermann' }]}

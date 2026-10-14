@@ -561,7 +561,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
   // profiles owned by a different user. Admins can read every user's guest
   // profiles (see GuestManagementPage), so fall back to allGuestProfiles for
   // them instead of just the current user's own guestProfiles.
-  const guests = (currentUser?.isAdmin && allGuestProfilesLoaded) ? allGuestProfiles : guestProfiles;
+  const guests = (currentUser?.role === 'admin' && allGuestProfilesLoaded) ? allGuestProfiles : guestProfiles;
   const [descriptionGuestIds, setDescriptionGuestIds] = useState([]);
   const [guestSearchQuery, setGuestSearchQuery] = useState('');
   // Set while linking to an existing event whose guest list conflicts with

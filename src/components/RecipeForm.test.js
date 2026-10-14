@@ -77,8 +77,8 @@ jest.mock('../utils/customLists', () => ({
 
 jest.mock('../utils/userManagement', () => ({
   getUsers: () => Promise.resolve([
-    { id: 'admin-1', vorname: 'Admin', nachname: 'User', email: 'admin@example.com', isAdmin: true, role: 'admin' },
-    { id: 'user-1', vorname: 'Regular', nachname: 'User', email: 'user@example.com', isAdmin: false, role: 'edit' },
+    { id: 'admin-1', vorname: 'Admin', nachname: 'User', email: 'admin@example.com', role: 'admin' },
+    { id: 'user-1', vorname: 'Regular', nachname: 'User', email: 'user@example.com', role: 'edit' },
   ]),
   isCurrentUserAdmin: jest.fn(() => false),
   getUserAiOcrScanCount: jest.fn(() => Promise.resolve(0)),
@@ -180,7 +180,6 @@ describe('RecipeForm - Author Field', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -203,7 +202,6 @@ describe('RecipeForm - Author Field', () => {
       vorname: 'Admin',
       nachname: 'User',
       email: 'admin@example.com',
-      isAdmin: true,
       role: 'admin',
     };
 
@@ -233,7 +231,6 @@ describe('RecipeForm - Author Field', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -256,7 +253,6 @@ describe('RecipeForm - Author Field', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -301,7 +297,6 @@ describe('RecipeForm - Author Field', () => {
       vorname: 'Admin',
       nachname: 'User',
       email: 'admin@example.com',
-      isAdmin: true,
       role: 'admin',
     };
 
@@ -351,7 +346,6 @@ describe('RecipeForm - Author Field', () => {
       vorname: 'Admin',
       nachname: 'User',
       email: 'admin@example.com',
-      isAdmin: true,
       role: 'admin',
     };
 
@@ -397,7 +391,6 @@ describe('RecipeForm - Author Field', () => {
       vorname: 'Admin',
       nachname: 'User',
       email: 'admin@example.com',
-      isAdmin: true,
       role: 'admin',
     };
 
@@ -450,7 +443,6 @@ describe('RecipeForm - Difficulty Field', () => {
     vorname: 'Regular',
     nachname: 'User',
     email: 'user@example.com',
-    isAdmin: false,
     role: 'edit',
   };
 
@@ -491,7 +483,6 @@ describe('RecipeForm - Multi-Select Fields', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -521,7 +512,6 @@ describe('RecipeForm - Multi-Select Fields', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -545,7 +535,6 @@ describe('RecipeForm - Multi-Select Fields', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -573,7 +562,6 @@ describe('RecipeForm - Multi-Select Fields', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -610,7 +598,6 @@ describe('RecipeForm - Multi-Select Fields', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -660,7 +647,6 @@ describe('RecipeForm - Multi-Select Fields', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -714,7 +700,6 @@ describe('RecipeForm - Multi-Select Fields', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -753,7 +738,6 @@ describe('RecipeForm - Multi-Select Fields', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -801,7 +785,6 @@ describe('RecipeForm - Multi-Select Fields', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -845,7 +828,6 @@ describe('RecipeForm - Multi-Select Fields', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -887,7 +869,6 @@ describe('RecipeForm - Multi-Select Fields', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -960,7 +941,7 @@ describe('RecipeForm - Multi-Select Fields', () => {
         recipe={tempRecipe}
         onSave={mockOnSave}
         onCancel={mockOnCancel}
-        currentUser={{ id: 'user-1', vorname: 'R', nachname: 'U', email: 'u@example.com', isAdmin: false, role: 'edit' }}
+        currentUser={{ id: 'user-1', vorname: 'R', nachname: 'U', email: 'u@example.com', role: 'edit' }}
       />
     );
 
@@ -997,7 +978,6 @@ describe('RecipeForm - Multi-Select Fields', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -1037,7 +1017,6 @@ describe('RecipeForm - Multi-Select Fields', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -1081,7 +1060,6 @@ describe('RecipeForm - Multi-Select Fields', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -1125,7 +1103,6 @@ describe('RecipeForm - Category Image Integration', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -1182,7 +1159,6 @@ describe('RecipeForm - Category Image Integration', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -1237,7 +1213,6 @@ describe('RecipeForm - Category Image Integration', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -1291,7 +1266,6 @@ describe('RecipeForm - Category Image Integration', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -1337,7 +1311,6 @@ describe('RecipeForm - OCR Scan Integration', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
       fotoscan: true,
     };
@@ -1370,7 +1343,6 @@ describe('RecipeForm - OCR Scan Integration', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -1415,7 +1387,6 @@ describe('RecipeForm - OCR Scan Integration', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
       fotoscan: true,
     };
@@ -1446,7 +1417,6 @@ describe('RecipeForm - OCR Scan Integration', () => {
       vorname: 'Admin',
       nachname: 'User',
       email: 'admin@example.com',
-      isAdmin: true,
       role: 'admin',
       fotoscan: true,
       recipeImport: true,
@@ -1481,7 +1451,6 @@ describe('RecipeForm - Fotoscan Feature', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
       fotoscan: true,
     };
@@ -1512,7 +1481,6 @@ describe('RecipeForm - Fotoscan Feature', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
       fotoscan: false,
     };
@@ -1541,7 +1509,6 @@ describe('RecipeForm - Fotoscan Feature', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
       // fotoscan field is not set (undefined)
     };
@@ -1566,7 +1533,6 @@ describe('RecipeForm - Fotoscan Feature', () => {
       vorname: 'Admin',
       nachname: 'User',
       email: 'admin@example.com',
-      isAdmin: true,
       role: 'admin',
       fotoscan: false,
       recipeImport: true,
@@ -1601,7 +1567,6 @@ describe('RecipeForm - Import Button Authorization', () => {
       vorname: 'Admin',
       nachname: 'User',
       email: 'admin@example.com',
-      isAdmin: true,
       role: 'admin',
       recipeImport: true,
     };
@@ -1627,7 +1592,6 @@ describe('RecipeForm - Import Button Authorization', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
       recipeImport: false,
     };
@@ -1646,8 +1610,8 @@ describe('RecipeForm - Import Button Authorization', () => {
     expect(importButton).not.toBeInTheDocument();
   });
 
-  test('hides import button when isAdmin is undefined', () => {
-    const userWithoutAdminFlag = {
+  test('hides import button when recipeImport is undefined', () => {
+    const userWithoutImportFlag = {
       id: 'user-1',
       vorname: 'Regular',
       nachname: 'User',
@@ -1661,7 +1625,7 @@ describe('RecipeForm - Import Button Authorization', () => {
         recipe={null}
         onSave={mockOnSave}
         onCancel={mockOnCancel}
-        currentUser={userWithoutAdminFlag}
+        currentUser={userWithoutImportFlag}
       />
     );
 
@@ -1676,7 +1640,6 @@ describe('RecipeForm - Import Button Authorization', () => {
       vorname: 'Admin',
       nachname: 'User',
       email: 'admin@example.com',
-      isAdmin: true,
       role: 'admin',
       recipeImport: true,
     };
@@ -1715,7 +1678,6 @@ describe('RecipeForm - Import Button Authorization', () => {
       vorname: 'Admin',
       nachname: 'User',
       email: 'admin@example.com',
-      isAdmin: true,
       role: 'admin',
       recipeImport: true,
     };
@@ -1755,7 +1717,6 @@ describe('RecipeForm - Import Button Authorization', () => {
       vorname: 'Admin',
       nachname: 'User',
       email: 'admin@example.com',
-      isAdmin: true,
       role: 'admin',
       recipeImport: true,
     };
@@ -1792,7 +1753,6 @@ describe('RecipeForm - Ingredient Formatting', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -1850,7 +1810,6 @@ describe('RecipeForm - Ingredient Formatting', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -1895,7 +1854,6 @@ describe('RecipeForm - Ingredient Formatting', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -1944,7 +1902,6 @@ describe('RecipeForm - Ingredient Formatting', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -1992,7 +1949,6 @@ describe('RecipeForm - Ingredient Formatting', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -2046,7 +2002,6 @@ describe('RecipeForm - Swipe Delete', () => {
     vorname: 'Regular',
     nachname: 'User',
     email: 'user@example.com',
-    isAdmin: false,
     role: 'edit',
   };
 
@@ -2318,7 +2273,6 @@ describe('RecipeForm - Drag and Drop', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -2345,7 +2299,6 @@ describe('RecipeForm - Drag and Drop', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -2372,7 +2325,6 @@ describe('RecipeForm - Drag and Drop', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -2428,7 +2380,6 @@ describe('RecipeForm - Drag and Drop', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -2484,7 +2435,6 @@ describe('RecipeForm - Drag and Drop', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -2518,7 +2468,6 @@ describe('RecipeForm - Drag and Drop', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -2551,7 +2500,6 @@ describe('RecipeForm - Drag and Drop', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -2584,7 +2532,6 @@ describe('RecipeForm - Drag and Drop', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -2611,7 +2558,6 @@ describe('RecipeForm - Drag and Drop', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -2640,7 +2586,6 @@ describe('RecipeForm - Drag and Drop', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -2669,7 +2614,6 @@ describe('RecipeForm - Drag and Drop', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -2702,7 +2646,6 @@ describe('RecipeForm - Heading Functionality', () => {
     vorname: 'Test',
     nachname: 'User',
     email: 'test@example.com',
-    isAdmin: false,
     role: 'edit',
   };
 
@@ -2960,7 +2903,6 @@ describe('RecipeForm - Private Checkbox', () => {
       vorname: 'Admin',
       nachname: 'User',
       email: 'admin@example.com',
-      isAdmin: true,
       role: 'admin',
     };
 
@@ -2993,7 +2935,6 @@ describe('RecipeForm - Private Checkbox', () => {
       vorname: 'Regular',
       nachname: 'User',
       email: 'user@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -3019,7 +2960,6 @@ describe('RecipeForm - Private Checkbox', () => {
       vorname: 'Admin',
       nachname: 'User',
       email: 'admin@example.com',
-      isAdmin: true,
       role: 'admin',
     };
 
@@ -3062,7 +3002,6 @@ describe('RecipeForm - Private Checkbox', () => {
       vorname: 'Admin',
       nachname: 'User',
       email: 'admin@example.com',
-      isAdmin: true,
       role: 'admin',
     };
 
@@ -3117,7 +3056,6 @@ describe('RecipeForm - Private Checkbox', () => {
       vorname: 'Admin',
       nachname: 'User',
       email: 'admin@example.com',
-      isAdmin: true,
       role: 'admin',
     };
 
@@ -3167,7 +3105,6 @@ describe('RecipeForm - AI OCR Limit', () => {
     vorname: 'Regular',
     nachname: 'User',
     email: 'user@example.com',
-    isAdmin: false,
     role: 'edit',
     webimport: true,
     fotoscan: true,
@@ -3346,7 +3283,6 @@ describe('RecipeForm - Signature Sentence', () => {
       vorname: 'John',
       nachname: 'Doe',
       email: 'john@example.com',
-      isAdmin: false,
       role: 'edit',
       signatureSatz: 'Guten Appetit!',
     };
@@ -3397,7 +3333,6 @@ describe('RecipeForm - Signature Sentence', () => {
       vorname: 'John',
       nachname: 'Doe',
       email: 'john@example.com',
-      isAdmin: false,
       role: 'edit',
       signatureSatz: 'Guten Appetit!',
     };
@@ -3435,7 +3370,6 @@ describe('RecipeForm - Signature Sentence', () => {
       vorname: 'John',
       nachname: 'Doe',
       email: 'john@example.com',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -3479,7 +3413,6 @@ describe('RecipeForm - Signature Sentence', () => {
       vorname: 'John',
       nachname: 'Doe',
       email: 'john@example.com',
-      isAdmin: false,
       role: 'edit',
       signatureSatz: 'Guten Appetit!',
     };
@@ -3521,7 +3454,6 @@ describe('RecipeForm - Signature Sentence', () => {
       vorname: 'John',
       nachname: 'Doe',
       email: 'john@example.com',
-      isAdmin: false,
       role: 'edit',
       signatureSatz: 'Guten Appetit!',
     };
@@ -3947,7 +3879,6 @@ describe('RecipeForm - Saving Loading State', () => {
     vorname: 'Regular',
     nachname: 'User',
     email: 'user@example.com',
-    isAdmin: false,
     role: 'edit',
   };
 

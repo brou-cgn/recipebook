@@ -669,14 +669,14 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     const checkAiOcrLimit = async () => {
       if (currentUser?.id) {
         // Mirrors the server-side RATE_LIMITS tiers in functions/index.js
-        const limit = currentUser.isAdmin ? 1000 : currentUser.role === 'moderator' ? 50 : 20;
+        const limit = currentUser.role === 'admin' ? 1000 : currentUser.role === 'moderator' ? 50 : 20;
         const count = await getUserAiOcrScanCount(currentUser.id);
         setAiOcrDailyLimit(limit);
         setAiOcrLimitReached(count >= limit);
       }
     };
     checkAiOcrLimit();
-  }, [currentUser?.id, currentUser?.isAdmin, currentUser?.role]);
+  }, [currentUser?.id, currentUser?.role]);
 
   useEffect(() => {
     setImageError(false);
@@ -1580,7 +1580,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
           </div>
         )}
 
-        {currentUser?.isAdmin && (
+        {currentUser?.role === 'admin' && (
           <div className="form-group">
             <label htmlFor="author">Autor</label>
             <select
