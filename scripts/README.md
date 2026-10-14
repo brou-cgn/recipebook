@@ -15,7 +15,7 @@ node scripts/updateRecipeCreationDates.js
 - Firebase service account key (`serviceAccountKey.json`) in the root directory
 - `ImportDatum.csv` file in the root directory
 
-See [IMPORTDATUM_GUIDE.md](../IMPORTDATUM_GUIDE.md) for detailed instructions.
+See [IMPORTDATUM_GUIDE.md](../docs/archive/IMPORTDATUM_GUIDE.md) for detailed instructions.
 
 ## csvParser.js
 

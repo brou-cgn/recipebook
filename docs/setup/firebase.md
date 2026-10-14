@@ -355,7 +355,7 @@ Falls noch nicht geschehen:
   automatisch nach jedem Version Bump auf `main` ausgelöst
 - Überprüfen Sie unter **Actions** ob Deployments erfolgreich sind
 - Bei Fehlern prüfen Sie die Logs
-- Die vollständige Kette ist in [DEPLOYMENT.md](DEPLOYMENT.md) beschrieben
+- Die vollständige Kette ist in [DEPLOYMENT.md](deployment.md) beschrieben
 
 #### Eigene Domain einrichten (optional)
 1. In der Firebase Console: **Hosting → Eigene Domain hinzufügen**
@@ -467,9 +467,263 @@ Falls Sie Google Analytics aktiviert haben:
 
 ## Weiterführende Dokumentation
 
-- **[README.md](README.md)** - Allgemeine Projektinformationen
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Die Deploy-Kette, benötigte Secrets, Rollback
+- **[README.md](../../README.md)** - Allgemeine Projektinformationen
+- **[DEPLOYMENT.md](deployment.md)** - Die Deploy-Kette, benötigte Secrets, Rollback
 
 ---
 
 **Bei weiteren Fragen erstellen Sie bitte ein Issue im Repository! 💬**
+
+## CORS-Fehler Behebung für Firebase Storage
+
+_Quelle: `CORS_FIX_ANLEITUNG.md` (zusammengeführt)._
+
+### Problem
+CORS-Fehler beim Speichern von Menüs und Laden von Bildern aus Firebase Storage.
+
+### Lösung
+
+#### 1. CORS-Konfiguration auf Firebase Storage anwenden
+
+Die CORS-Konfiguration muss mit dem Google Cloud SDK auf deinen Firebase Storage Bucket angewendet werden.
+
+##### Installation des Google Cloud SDK
+
+**Mac (mit Homebrew):**
+```bash
+brew install google-cloud-sdk
+```
+
+**Windows:**
+Lade den Installer herunter: https://cloud.google.com/sdk/docs/install#windows
+
+**Linux:**
+```bash
+curl https://sdk.cloud.google.com | bash
+exec -l $SHELL
+```
+
+##### CORS-Konfiguration anwenden
+
+1. **Authentifizieren:**
+   ```bash
+   gcloud auth login
+   ```
+
+2. **Projekt setzen:**
+   ```bash
+   gcloud config set project [DEIN-PROJEKT-ID]
+   ```
+
+   Ersetze `[DEIN-PROJEKT-ID]` mit deiner Firebase Project ID (z.B. `broubook`)
+
+3. **CORS-Konfiguration anwenden:**
+   ```bash
+   gsutil cors set storage-cors.json gs://[DEIN-PROJEKT-ID].appspot.com
+   ```
+
+   Oder wenn dein Bucket einen anderen Namen hat:
+   ```bash
+   gsutil cors set storage-cors.json gs://broubook.firebasestorage.app
+   ```
+
+4. **CORS-Konfiguration überprüfen:**
+   ```bash
+   gsutil cors get gs://[DEIN-PROJEKT-ID].appspot.com
+   ```
+
+#### 2. Firebase Storage Rules deployen
+
+Deploye die neuen Storage Security Rules:
+
+```bash
+firebase deploy --only storage
+```
+
+#### 3. Firestore Rules deployen (falls noch nicht geschehen)
+
+```bash
+firebase deploy --only firestore
+```
+
+#### 4. Testen
+
+1. Öffne deine App: `https://[DEIN-PROJEKT-ID].web.app`
+2. Versuche ein Menü zu speichern
+3. Die CORS-Fehler sollten nicht mehr auftreten
+
+### Troubleshooting
+
+#### Fehler: "gsutil: command not found"
+
+Das Google Cloud SDK ist nicht korrekt installiert oder nicht im PATH.
+
+**Lösung:**
+- Mac: `source ~/google-cloud-sdk/path.bash.inc`
+- Linux: Führe `exec -l $SHELL` nach der Installation aus
+- Windows: Starte die Command Prompt neu
+
+#### Fehler: "AccessDeniedException: 403"
+
+Du hast keine Berechtigung für den Storage Bucket.
+
+**Lösung:**
+1. Stelle sicher, dass du der Owner des Firebase-Projekts bist
+2. Gehe zur Google Cloud Console: https://console.cloud.google.com/
+3. Wähle dein Projekt aus
+4. Gehe zu "IAM & Admin" → "IAM"
+5. Stelle sicher, dass dein Account die Rolle "Storage Admin" hat
+
+#### Bucket-Name herausfinden
+
+Falls du nicht sicher bist, wie dein Storage Bucket heißt:
+
+1. Gehe zur Firebase Console: https://console.firebase.google.com/
+2. Wähle dein Projekt
+3. Gehe zu "Storage"
+4. Der Bucket-Name steht oben (z.B. `broubook.appspot.com` oder `broubook.firebasestorage.app`)
+
+### Weitere Informationen
+
+- [Firebase Storage CORS Dokumentation](https://firebase.google.com/docs/storage/web/download-files#cors_configuration)
+- [Google Cloud SDK Installation](https://cloud.google.com/sdk/docs/install)
+- [gsutil CORS Kommando](https://cloud.google.com/storage/docs/gsutil/commands/cors)
+
+## Puppeteer Installation für Webimport
+
+_Quelle: `PUPPETEER_INSTALLATION.md` (zusammengeführt)._
+
+### Schnellstart
+
+Um die Webimport-Screenshot-Funktion zu aktivieren, muss Puppeteer installiert werden:
+
+```bash
+## Im Hauptverzeichnis
+cd functions
+npm install puppeteer@^21.0.0
+cd ..
+firebase deploy --only functions:captureWebsiteScreenshot
+```
+
+### Cloud Functions Anpassungen
+
+Die Cloud Function `captureWebsiteScreenshot` in `functions/index.js` ist bereits vorbereitet.
+
+Nach der Puppeteer-Installation:
+
+1. Öffne `functions/index.js`
+2. Navigiere zur `captureWebsiteScreenshot` Funktion
+3. Entkommentiere den Puppeteer-Code (markiert mit `// Future implementation would look like:`)
+4. Entferne die Fehler-Meldung über die fehlende Puppeteer-Installation
+
+#### Beispiel-Code (bereits in der Funktion vorhanden):
+
+```javascript
+const puppeteer = require('puppeteer');
+
+try {
+  const browser = await puppeteer.launch({
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1280, height: 800 });
+  
+  await page.goto(url, { 
+    waitUntil: 'networkidle0',
+    timeout: 30000 
+  });
+
+  const screenshot = await page.screenshot({ 
+    encoding: 'base64',
+    fullPage: true 
+  });
+
+  await browser.close();
+
+  console.log(`Screenshot captured successfully for user ${userId}`);
+  
+  return {
+    screenshot: `data:image/png;base64,${screenshot}`,
+    url: url,
+    timestamp: new Date().toISOString()
+  };
+} catch (error) {
+  // Error handling...
+}
+```
+
+### Ressourcen-Empfehlungen
+
+Für Puppeteer benötigt die Cloud Function mehr Ressourcen:
+
+```javascript
+exports.captureWebsiteScreenshot = onCall({
+  maxInstances: 10,
+  memory: '2GiB',      // Erhöht von 1GiB
+  timeoutSeconds: 60,  // Bleibt bei 60s
+}, ...)
+```
+
+### Alternative: Externe Screenshot-Services
+
+Falls Puppeteer zu ressourcenintensiv ist, könnten auch externe Services verwendet werden:
+
+- **ScreenshotAPI**: https://screenshotapi.net/
+- **Urlbox**: https://urlbox.io/
+- **Screenshot One**: https://screenshotone.com/
+
+Diese Services würden die `captureWebsiteScreenshot` Funktion vereinfachen und die Kosten möglicherweise reduzieren.
+
+### Kosten
+
+Beachten Sie:
+- Puppeteer benötigt mehr Memory (2GB statt 1GB)
+- Längere Ausführungszeit (10-15s pro Screenshot)
+- Firebase bietet ein kostenloses Kontingent, danach Pay-as-you-go
+
+Mit den aktuellen Rate Limits (20 Scans/Tag für authentifizierte Benutzer) sollten die Kosten minimal sein.
+
+### Testing
+
+Nach der Installation testen Sie mit:
+
+1. Melden Sie sich als Benutzer mit Webimport-Berechtigung an
+2. Öffnen Sie "Neues Rezept hinzufügen"
+3. Klicken Sie auf den Webimport-Button (🌐)
+4. Geben Sie eine Test-URL ein (z.B. https://www.chefkoch.de/rezepte/...)
+5. Überprüfen Sie, ob der Screenshot erfasst und analysiert wird
+
+### Troubleshooting
+
+#### "Error: Failed to launch the browser process"
+
+Puppeteer benötigt bestimmte Systemabhängigkeiten. In Cloud Functions sind diese normalerweise vorhanden.
+
+Falls Probleme auftreten:
+```javascript
+args: [
+  '--no-sandbox',
+  '--disable-setuid-sandbox',
+  '--disable-dev-shm-usage',
+  '--disable-gpu'
+]
+```
+
+#### "Timeout exceeded"
+
+Erhöhen Sie den Timeout:
+```javascript
+await page.goto(url, { 
+  waitUntil: 'networkidle0',
+  timeout: 60000  // 60 Sekunden
+});
+```
+
+#### Memory Errors
+
+Erhöhen Sie das Memory-Limit in der Cloud Function Konfiguration:
+```javascript
+memory: '4GiB'
+```

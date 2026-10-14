@@ -1,4 +1,8 @@
-# 📖 RecipeBook Zugriff - Schritt-für-Schritt-Anleitung
+# Zugriff
+
+## 📖 RecipeBook Zugriff - Schritt-für-Schritt-Anleitung
+
+_Quelle: `ZUGRIFF_ANLEITUNG.md` (zusammengeführt)._
 
 **Für Benutzer und Nicht-Techniker**
 
@@ -6,9 +10,9 @@ Diese Anleitung erklärt verständlich, wie Sie auf das RecipeBook-System zugrei
 
 ---
 
-## 🎯 Schnellstart: Zugang zur App
+### 🎯 Schnellstart: Zugang zur App
 
-### Option 1: Als registrierter Benutzer 👤
+#### Option 1: Als registrierter Benutzer 👤
 
 1. **App öffnen:**
    - Gehen Sie zu: **https://broubook.web.app**
@@ -21,7 +25,7 @@ Diese Anleitung erklärt verständlich, wie Sie auf das RecipeBook-System zugrei
 
 3. **Fertig!** Sie sehen nun Ihre Rezepte
 
-### Option 2: Als Gast 🚶
+#### Option 2: Als Gast 🚶
    
 1. **App öffnen:**
    - Gehen Sie zu: **https://broubook.web.app**
@@ -31,7 +35,7 @@ Diese Anleitung erklärt verständlich, wie Sie auf das RecipeBook-System zugrei
    
 3. **Fertig!** Sie können Rezepte ansehen (aber nicht erstellen/bearbeiten)
 
-### Option 3: Neu registrieren 📝
+#### Option 3: Neu registrieren 📝
 
 1. **App öffnen:**
    - Gehen Sie zu: **https://broubook.web.app**
@@ -56,11 +60,11 @@ Diese Anleitung erklärt verständlich, wie Sie auf das RecipeBook-System zugrei
 
 ---
 
-## ❓ Probleme beim Zugriff?
+### ❓ Probleme beim Zugriff?
 
 Wenn Sie die App nicht erreichen oder sich nicht anmelden können, folgen Sie dieser Checkliste:
 
-### Problem 1: "Seite kann nicht angezeigt werden" oder leere Seite
+#### Problem 1: "Seite kann nicht angezeigt werden" oder leere Seite
 
 **Was Sie sehen:**
 - Weiße/leere Seite
@@ -100,7 +104,7 @@ Wenn Sie die App nicht erreichen oder sich nicht anmelden können, folgen Sie di
 
 ---
 
-### Problem 2: "Anmeldung fehlgeschlagen"
+#### Problem 2: "Anmeldung fehlgeschlagen"
 
 **Was Sie sehen:**
 - Fehlermeldung beim Login: "Anmeldung fehlgeschlagen"
@@ -139,7 +143,7 @@ Wenn Sie die App nicht erreichen oder sich nicht anmelden können, folgen Sie di
 
 ---
 
-### Problem 3: "Ich kann keine Rezepte erstellen"
+#### Problem 3: "Ich kann keine Rezepte erstellen"
 
 **Was Sie sehen:**
 - Button "+ Rezept hinzufügen" ist nicht sichtbar
@@ -183,7 +187,7 @@ Wenn Sie die App nicht erreichen oder sich nicht anmelden können, folgen Sie di
 
 ---
 
-### Problem 4: "Registrierung funktioniert nicht"
+#### Problem 4: "Registrierung funktioniert nicht"
 
 **Was Sie sehen:**
 - Fehler beim Absenden des Registrierungsformulars
@@ -216,7 +220,7 @@ Wenn Sie die App nicht erreichen oder sich nicht anmelden können, folgen Sie di
 
 ---
 
-### Problem 5: "Rezepte werden nicht angezeigt"
+#### Problem 5: "Rezepte werden nicht angezeigt"
 
 **Was Sie sehen:**
 - Leere Rezeptliste
@@ -252,9 +256,9 @@ Wenn Sie die App nicht erreichen oder sich nicht anmelden können, folgen Sie di
 
 ---
 
-## 👑 Für Administratoren
+### 👑 Für Administratoren
 
-### Benutzerverwaltung
+#### Benutzerverwaltung
 
 Als Administrator können Sie:
 - ✅ Berechtigungen zuweisen
@@ -298,9 +302,9 @@ Als Administrator können Sie:
 
 ---
 
-### Technische Probleme beheben (für Admins/Techniker)
+#### Technische Probleme beheben (für Admins/Techniker)
 
-#### 🔧 Leere Seite beheben (GitHub/Firebase)
+##### 🔧 Leere Seite beheben (GitHub/Firebase)
 
 **Problem:** Die deployed App zeigt nur eine leere Seite
 
@@ -377,11 +381,11 @@ Als Administrator können Sie:
    - Login-Bildschirm sollte erscheinen
    - Keine leere Seite mehr!
 
-**📋 Detaillierte Anleitung:** Siehe [GITHUB_SECRETS_SETUP.md](GITHUB_SECRETS_SETUP.md)
+**📋 Detaillierte Anleitung:** Siehe [GITHUB_SECRETS_SETUP.md](../setup/deployment.md)
 
 ---
 
-#### 🔧 Firebase Authentication aktivieren
+##### 🔧 Firebase Authentication aktivieren
 
 **Problem:** Login funktioniert nicht, Fehler "operation-not-allowed"
 
@@ -411,7 +415,7 @@ Als Administrator können Sie:
 
 ---
 
-#### 🔧 Firestore Database einrichten
+##### 🔧 Firestore Database einrichten
 
 **Problem:** "Missing or insufficient permissions" Fehler
 
@@ -433,14 +437,14 @@ Als Administrator können Sie:
    
    a) In Firestore Database → **Rules** Tab
    
-   b) **Kopieren Sie die sicheren Rules aus der Datei [`firestore.rules`](firestore.rules) im Repository.**
+   b) **Kopieren Sie die sicheren Rules aus der Datei [`firestore.rules`](../../firestore.rules) im Repository.**
 
    > 🚨 **SICHERHEITSWARNUNG:** Verwenden Sie **NIEMALS** die Regel `allow read, write: if true`.
    > - Diese Regel öffnet Ihre **gesamte Datenbank** für alle Personen weltweit – auch ohne Anmeldung.
    > - Jeder kann damit alle Daten lesen, ändern oder löschen, einschließlich Benutzerkonten und Admin-Zugänge.
    > - Sie darf weder in Produktion noch in öffentlich zugänglichen Umgebungen eingesetzt werden.
    >
-   > Nutzen Sie ausschließlich die sicheren Rules aus der Datei [`firestore.rules`](firestore.rules). Weitere Informationen: [FIRESTORE_RULES.md](FIRESTORE_RULES.md)
+   > Nutzen Sie ausschließlich die sicheren Rules aus der Datei [`firestore.rules`](../../firestore.rules). Weitere Informationen: [FIRESTORE_RULES.md](../architecture/security.md)
 
    c) **"Publish"** (Veröffentlichen) klicken
 
@@ -451,7 +455,7 @@ Als Administrator können Sie:
 
 ---
 
-#### 🔧 404-Fehler auf der App-URL
+##### 🔧 404-Fehler auf der App-URL
 
 **Problem:** Die Adresse liefert „Seite nicht gefunden"
 
@@ -482,11 +486,11 @@ Als Administrator können Sie:
 
 ---
 
-## 📱 Mobile/Tablet: App installieren
+### 📱 Mobile/Tablet: App installieren
 
 Die RecipeBook-App kann wie eine normale App installiert werden!
 
-### Android (Chrome):
+#### Android (Chrome):
 
 1. **App öffnen:** https://broubook.web.app
 2. **Menü öffnen:** Tippen Sie auf **⋮** (drei Punkte oben rechts)
@@ -494,7 +498,7 @@ Die RecipeBook-App kann wie eine normale App installiert werden!
 4. **Bestätigen:** Tippen Sie auf **"Hinzufügen"**
 5. **Fertig!** App-Icon erscheint auf Ihrem Startbildschirm
 
-### iOS (Safari):
+#### iOS (Safari):
 
 1. **App öffnen:** https://broubook.web.app
 2. **Teilen-Menü:** Tippen Sie auf das **Teilen-Symbol** (Viereck mit Pfeil)
@@ -502,7 +506,7 @@ Die RecipeBook-App kann wie eine normale App installiert werden!
 4. **Bestätigen:** Tippen Sie auf **"Hinzufügen"**
 5. **Fertig!** App-Icon erscheint auf Ihrem Home-Bildschirm
 
-### Desktop (Chrome/Edge):
+#### Desktop (Chrome/Edge):
 
 1. **App öffnen:** https://broubook.web.app
 2. **Install-Icon:** Klicken Sie auf das **⊕** oder **🖥️** Symbol in der Adressleiste
@@ -517,24 +521,24 @@ Die RecipeBook-App kann wie eine normale App installiert werden!
 
 ---
 
-## 🆘 Hilfe benötigt?
+### 🆘 Hilfe benötigt?
 
-### Weitere Dokumentation:
+#### Weitere Dokumentation:
 
-- **[README.md](README.md)** - Allgemeine Infos zur App
-- **[FIREBASE_SETUP.md](FIREBASE_SETUP.md)** - Firebase einrichten (technisch)
-- **[GITHUB_SECRETS_SETUP.md](GITHUB_SECRETS_SETUP.md)** - Secrets konfigurieren
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Deployment-Infos (technisch)
-- **[ZUGRIFFSPROBLEME_ANALYSE.md](ZUGRIFFSPROBLEME_ANALYSE.md)** - Technische Analyse
+- **[README.md](../../README.md)** - Allgemeine Infos zur App
+- **[FIREBASE_SETUP.md](../setup/firebase.md)** - Firebase einrichten (technisch)
+- **[GITHUB_SECRETS_SETUP.md](../setup/deployment.md)** - Secrets konfigurieren
+- **[DEPLOYMENT.md](../setup/deployment.md)** - Deployment-Infos (technisch)
+- **[ZUGRIFFSPROBLEME_ANALYSE.md](../architecture/security.md)** - Technische Analyse
 
-### Kontakt:
+#### Kontakt:
 
 - **Issue erstellen:** https://github.com/brou-cgn/recipebook/issues
 - **Administrator fragen:** Kontaktieren Sie den System-Admin
 
 ---
 
-## ✅ Checkliste: Erstmalige Einrichtung
+### ✅ Checkliste: Erstmalige Einrichtung
 
 Für **Administratoren**, die das System zum ersten Mal einrichten:
 
@@ -577,24 +581,24 @@ Für **Administratoren**, die das System zum ersten Mal einrichten:
 
 ---
 
-## 💡 Tipps & Tricks
+### 💡 Tipps & Tricks
 
-### Offline-Nutzung:
+#### Offline-Nutzung:
 - ✅ App funktioniert ohne Internet (nach erstem Laden)
 - ✅ Änderungen werden gespeichert
 - ✅ Synchronisiert automatisch bei Verbindung
 
-### Passwort-Sicherheit:
+#### Passwort-Sicherheit:
 - ✅ Mindestens 8 Zeichen empfohlen
 - ✅ Groß- und Kleinbuchstaben mischen
 - ✅ Zahlen und Sonderzeichen verwenden
 
-### Performance:
+#### Performance:
 - ✅ Als App installieren (schneller)
 - ✅ Nur ein Browser-Tab öffnen
 - ✅ Nicht im Inkognito-Modus (limitiert Offline-Funktion)
 
-### Mehrere Geräte:
+#### Mehrere Geräte:
 - ✅ Gleicher Account auf mehreren Geräten nutzbar
 - ✅ Automatische Synchronisation
 - ✅ Offline-Änderungen werden gemergt
@@ -604,3 +608,175 @@ Für **Administratoren**, die das System zum ersten Mal einrichten:
 **Viel Erfolg mit RecipeBook! 🍳👨‍🍳👩‍🍳**
 
 *Letzte Aktualisierung: 14. Februar 2026*
+
+## 🚨 RecipeBook Zugriff - Schnellhilfe
+
+_Quelle: `ZUGRIFF_SCHNELLHILFE.md` (zusammengeführt)._
+
+**Kurzübersicht der häufigsten Zugriffsprobleme und Sofortlösungen**
+
+---
+
+### 🎯 Top 5 Probleme & Schnelllösungen
+
+#### 1️⃣ Leere Seite / Weiße Seite
+
+**Problem:** Die App zeigt nur eine weiße Seite  
+**Ursache:** Firebase Secrets fehlen  
+**Lösung:**
+
+1. Firebase Console → Projekt → Einstellungen → Config kopieren
+2. GitHub Repository → Settings → Secrets → Actions
+3. Alle 7 `REACT_APP_FIREBASE_*` Secrets hinzufügen
+4. Actions → Deploy workflow neu starten
+
+**📖 Details:** [GITHUB_SECRETS_SETUP.md](../setup/deployment.md)
+
+---
+
+#### 2️⃣ Login funktioniert nicht
+
+**Problem:** "Anmeldung fehlgeschlagen"  
+**Ursache:** Firebase Authentication nicht aktiviert  
+**Lösung:**
+
+1. Firebase Console → Authentication
+2. "Get started" klicken
+3. Sign-in method → Email/Password → Enable
+4. Save → Fertig!
+
+**📖 Details:** [ZUGRIFF_ANLEITUNG.md](#problem-2-anmeldung-fehlgeschlagen)
+
+---
+
+#### 3️⃣ Kann keine Rezepte erstellen
+
+**Problem:** "+ Rezept hinzufügen" Button fehlt  
+**Ursache:** Berechtigung nur "Lesen"  
+**Lösung:**
+
+1. Administrator kontaktieren
+2. Admin: Einstellungen → Benutzerverwaltung
+3. 🔐 neben Benutzername → "Bearbeiten" auswählen
+4. Bestätigen
+
+**Berechtigungen:**
+- 🚶 Gast - nur ansehen
+- 👁️ Lesen - nur ansehen
+- 💬 Kommentieren - ansehen + kommentieren
+- ✏️ Bearbeiten - ansehen + erstellen + eigene bearbeiten
+- 👑 Administrator - alles
+
+**📖 Details:** [ZUGRIFF_ANLEITUNG.md](#problem-3-ich-kann-keine-rezepte-erstellen)
+
+---
+
+#### 4️⃣ Registrierung schlägt fehl
+
+**Problem:** Fehler bei Registrierung  
+**Ursache:** Firestore Rules zu restriktiv ODER Passwort zu kurz  
+**Lösung:**
+
+**Benutzer:**
+1. Passwort mindestens 6 Zeichen
+2. Alle Felder ausfüllen
+3. Beide Passwort-Felder identisch
+
+**Administrator:**
+1. Firebase Authentication aktivieren (Email/Password)
+2. Sichere Rules aus [`firestore.rules`](../../firestore.rules) in Firebase Console → Firestore → Rules eintragen
+3. Publish
+
+> 🚨 **SICHERHEITSWARNUNG:** Verwenden Sie **NIEMALS** `allow create: if true` oder `allow read, write: if true` in den Firestore Rules. Diese Regeln geben jedem weltweit vollen Zugriff auf Ihre Datenbank. Nutzen Sie ausschließlich die authentifizierungsbasierten Rules aus [`firestore.rules`](../../firestore.rules).
+
+**📖 Details:** [ZUGRIFFSPROBLEME_ANALYSE.md](../architecture/security.md#problem-e2-erste-registrierung-unmöglich)
+
+---
+
+#### 5️⃣ Rezepte werden nicht angezeigt
+
+**Problem:** Leere Liste trotz Anmeldung  
+**Ursache:** Keine Internetverbindung ODER Firestore Rules ODER keine Daten  
+**Lösung:**
+
+1. **Internetverbindung prüfen** (beim ersten Besuch erforderlich!)
+2. **Angemeldet?** Oben rechts sollte Name stehen
+3. **Firestore Rules:** Sichere Rules aus [`firestore.rules`](../../firestore.rules) deployen (Firebase Auth erforderlich):
+```javascript
+match /recipes/{recipeId} {
+  allow read: if request.auth != null;
+}
+```
+4. **Gibt es Rezepte?** Erste erstellen (als Admin/Editor)
+
+**📖 Details:** [ZUGRIFF_ANLEITUNG.md](#problem-5-rezepte-werden-nicht-angezeigt)
+
+---
+
+### 🛠️ Diagnose-Werkzeuge
+
+#### Browser Console (F12)
+
+```javascript
+// Benutzer-Status prüfen
+JSON.parse(sessionStorage.getItem('currentUser'))
+
+// Firebase-Status
+console.log(firebase.apps.length > 0 ? 'Connected' : 'Not initialized')
+```
+
+#### Checkliste: Ist alles konfiguriert?
+
+- [ ] Letzter Lauf von „Deploy to Firebase Hosting" grün? (Actions-Tab)
+- [ ] Alle 7 Firebase Secrets in GitHub? (Settings → Secrets → Actions)
+- [ ] Firebase Authentication aktiviert? (Email/Password)
+- [ ] Firestore Database erstellt?
+- [ ] Firestore Rules konfiguriert?
+- [ ] Mindestens ein Benutzer registriert?
+
+---
+
+### 📱 URLs & Links
+
+- **Live App:** https://broubook.web.app
+- **GitHub Repo:** https://github.com/brou-cgn/recipebook
+- **Firebase Console:** https://console.firebase.google.com/
+
+---
+
+### 📚 Vollständige Dokumentation
+
+#### Für Benutzer (nicht-technisch):
+- **[ZUGRIFF_ANLEITUNG.md](#)** - Komplette Anleitung mit allen Problemen
+
+#### Für Admins/Entwickler (technisch):
+- **[ZUGRIFFSPROBLEME_ANALYSE.md](../architecture/security.md)** - Technische Analyse
+- **[FIREBASE_SETUP.md](../setup/firebase.md)** - Firebase einrichten
+- **[GITHUB_SECRETS_SETUP.md](../setup/deployment.md)** - Secrets konfigurieren
+- **[DEPLOYMENT.md](../setup/deployment.md)** - Deployment-Details
+
+---
+
+### 🆘 Notfall-Kontakt
+
+**Problem nicht gelöst?**
+
+1. 📖 Vollständige Anleitung lesen: [ZUGRIFF_ANLEITUNG.md](#)
+2. 🔍 Technische Analyse checken: [ZUGRIFFSPROBLEME_ANALYSE.md](../architecture/security.md)
+3. 💬 GitHub Issue erstellen: https://github.com/brou-cgn/recipebook/issues
+4. 👨‍💻 Administrator kontaktieren
+
+---
+
+### ⚡ Sofort-Tipps
+
+- ✅ **Browser aktualisieren:** Strg+F5 (Windows) / Cmd+Shift+R (Mac)
+- ✅ **Anderen Browser testen:** Chrome, Firefox, Edge, Safari
+- ✅ **Inkognito-Modus vermeiden:** Limitiert Offline-Funktion
+- ✅ **Nur ein Tab öffnen:** Für IndexedDB-Persistence
+- ✅ **Als App installieren:** Schneller und zuverlässiger
+
+---
+
+**Letzte Aktualisierung:** 14. Februar 2026  
+**Viel Erfolg! 🍳**

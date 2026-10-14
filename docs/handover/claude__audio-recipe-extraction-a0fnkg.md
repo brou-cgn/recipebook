@@ -1,7 +1,7 @@
 # Handover: Audio-/Video-Rezeptextraktion aus Instagram-Reels
 
 Zusammenfassung der Session `claude/audio-recipe-extraction-a0fnkg`. Für die konkrete
-Kurzbefehl-Konfiguration siehe `APPLE_SHORTCUT_SETUP.md`.
+Kurzbefehl-Konfiguration siehe `docs/setup/apple-shortcut.md`.
 
 ## Ziel
 

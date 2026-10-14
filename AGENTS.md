@@ -7,7 +7,7 @@ erzwungen — wo das gilt, steht die Datei dabei.
 ## Architektur
 - Frontend: React 19 mit Create React App (`react-scripts`), PWA mit Service Worker.
 - Backend: Firebase (Firestore, Auth, Storage, Cloud Functions in `functions/`).
-- Zugriffsregeln: `firestore.rules`, `storage.rules`; Dokumentation in `FIRESTORE_RULES.md`.
+- Zugriffsregeln: `firestore.rules`, `storage.rules`; Dokumentation in `docs/architecture/security.md`.
 - Rollen: `admin`, `edit`, `comment`, `read`, `guest`. Jedes Rezept hat eine `groupId`.
 - Firestore-Zugriffe liegen in `src/utils/*Firestore.js`, nicht in Komponenten.
 
@@ -19,7 +19,7 @@ erzwungen — wo das gilt, steht die Datei dabei.
 ## Sicherheit
 - Jede Cloud Function prüft Authentifizierung und Rolle serverseitig, nicht nur im Client.
   KI-Functions erst ab Rolle `edit`; Limit-Prüfungen schlagen geschlossen fehl (fail closed).
-- Neue Collections brauchen Regeln in `firestore.rules` und einen Eintrag in `FIRESTORE_RULES.md`.
+- Neue Collections brauchen Regeln in `firestore.rules` und einen Eintrag in `docs/architecture/security.md`.
 - Gäste (nicht angemeldet) lesen nur per Freigabe-Link.
 - Keine Secrets im Repo.
 
