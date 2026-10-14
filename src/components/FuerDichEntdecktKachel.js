@@ -27,12 +27,12 @@ const formatMonthYear = (value) => {
  * zeigt die Kachel einen Hinweis und ist nicht antippbar.
  *
  * Props:
- *   list     {Object}   die Liste "Für dich entdeckt"; `themeImage` (optional) ersetzt
- *                       die Rezeptbild-Collage
+ *   list       {Object}   die Liste "Für dich entdeckt"
+ *   themeImage {string}   optionales Bild des aktuellen Themas; ersetzt die Rezeptbild-Collage
  *   recipes  {Array}    Rezepte der Liste
  *   onOpen   {Function} (listId) => void – öffnet den Swipestapel
  */
-function FuerDichEntdecktKachel({ list, recipes = [], onOpen }) {
+function FuerDichEntdecktKachel({ list, recipes = [], themeImage = '', onOpen }) {
   if (!list) return null;
 
   const count = recipes.length;
@@ -42,7 +42,6 @@ function FuerDichEntdecktKachel({ list, recipes = [], onOpen }) {
     imageUrl: getRecipeImageUrl(recipe),
   }));
   const themeTitle = (typeof list.description === 'string' && list.description.trim()) || 'Rezepte zu wechselnden Themen';
-  const themeImage = (typeof list.themeImage === 'string' && list.themeImage.trim()) || '';
   const themeLabel = (typeof list.themeLabel === 'string' && list.themeLabel.trim()) || '';
   const countText = count === 1 ? '1 Rezept' : `${count} Rezepte`;
   const monthYear = formatMonthYear(list.rotatedAt);

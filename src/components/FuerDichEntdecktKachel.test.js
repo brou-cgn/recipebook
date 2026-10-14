@@ -60,7 +60,7 @@ describe('FuerDichEntdecktKachel', () => {
   test('themeImage ersetzt die Rezeptbild-Collage', () => {
     const recipes = ['1', '2', '3'].map((id) => ({ id, title: id, image: `${id}.jpg` }));
     const { container } = render(
-      <FuerDichEntdecktKachel list={{ ...list, themeImage: 'https://x/thema.jpg' }} recipes={recipes} />
+      <FuerDichEntdecktKachel list={list} recipes={recipes} themeImage="https://x/thema.jpg" />
     );
     const imgs = container.querySelectorAll('.fuer-dich-entdeckt-collage img');
     expect(imgs).toHaveLength(1);
