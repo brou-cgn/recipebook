@@ -55,7 +55,7 @@ Die App-Version wird **automatisch bei jedem Deployment** erhöht. Der Workflow 
    - `feat:`, `feature:` → **MINOR** Version
    - `fix:`, `bugfix:`, `patch:`, `perf:`, `refactor:`, `docs:`, `chore:` → **PATCH** Version
    - Andere Commits → **PATCH** Version (Standard)
-4. **Automatisches Update** - `package.json` wird aktualisiert, committed und getaggt
+4. **Automatischer Tag** - Die neue Version wird als Git-Tag `vX.Y.Z` angelegt. Es gibt keinen Commit auf `main` mehr (ein Branch-Ruleset mit Pflicht-PR würde ihn blockieren). Die Version in `package.json` wird nicht mehr gepflegt; der Deploy liest den jüngsten Tag.
 5. **Deployment** - Die neue Version wird deployed
 
 #### Beispiel-Commits
@@ -88,19 +88,9 @@ Wenn mehrere Commits seit der letzten Version vorhanden sind, gilt:
 
 Falls du die Version manuell setzen möchtest (z.B. für Hotfixes):
 
-1. Öffne die Datei `package.json`
-2. Aktualisiere das `version` Feld entsprechend der Art der Änderung
-3. Committe die Änderung mit einer aussagekräftigen Commit-Message
-4. Pushe zum `main` Branch - das Deployment erfolgt automatisch
+1. Lege auf dem gewünschten Commit von `main` einen Tag an, z. B. `git tag v2.30.0 && git push origin v2.30.0` (Tags fallen nicht unter das Branch-Ruleset)
+2. Der nächste automatische Bump zählt von diesem Tag aus weiter
 
-**Beispiel:**
-```json
-{
-  "name": "recipebook",
-  "version": "0.2.0",
-  ...
-}
-```
 
 ### Lokale Versionierung (Entwicklung)
 
