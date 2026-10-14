@@ -7452,22 +7452,6 @@ const MAX_SHARED_RECIPE_IDS = 100;
 const STATIC_FALLBACK_LOGO_URL = 'https://broubook.web.app/logo512.png';
 
 /**
- * Escapes HTML special characters to prevent XSS in generated HTML.
- * @param {*} text - Value to escape
- * @return {string} Escaped string safe for use in HTML attributes and text
- */
-function escapeHtml(text) {
-  const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
-  };
-  return String(text).replace(/[&<>"']/g, (m) => map[m]);
-}
-
-/**
  * Generates a thumbnail from a Base64 image using sharp.
  * Resizes to at most 1200×630 px (preserving aspect ratio) and re-encodes as
  * JPEG with reduced quality so the result stays well under 100 KB.
