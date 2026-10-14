@@ -21,6 +21,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - GitHub Actions Workflow erweitert um automatisches Version-Bumping
 
 ### Sicherheit
+- Shortcut-Endpunkte: Authentifizierung (API-Key, Rolle, Webimport-PIN) läuft jetzt über gemeinsame Helper statt sieben Kopien. `createRecipeImportFromText` prüft damit auch die Webimport-PIN (vorher als einziger Endpunkt nicht).
 - Rezepte mit `isPrivate: true` werden nun gefiltert und sind nur für Administratoren und die jeweiligen Autoren sichtbar
 
 ## [0.1.1] - 2026-02-17
