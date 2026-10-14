@@ -7,8 +7,8 @@ import { isBase64Image } from '../utils/imageUtils';
 /**
  * Eventplanung: Soll-vs.-Ist-Auswertung des Getraenkeverbrauchs ueber alle
  * abgeschlossenen Events. Sichtbarkeit ueber die Rollenberechtigung
- * `eventplanung`; die Snapshots selbst sind per firestore.rules nur fuer
- * Admins lesbar.
+ * `eventplanung`; dieselbe Berechtigung schaltet in firestore.rules
+ * (canSeeEventplanung) den Lesezugriff auf die Snapshots frei.
  */
 function EventplanungPage({ onBack, currentUser }) {
   const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.closeButtonDefaultImg);

@@ -283,7 +283,7 @@ function DrinkWeightsTab({ currentUser }) {
           currentUser={currentUser}
         />
 
-        {currentUser?.isAdmin === true && <KalibrierungsAuswertung />}
+        {currentUser?.eventplanung && <KalibrierungsAuswertung />}
       </div>
     </>
   );

@@ -12,7 +12,7 @@ const formatPercent = (n) => {
 };
 
 /**
- * Admin-Ansicht "Soll vs. Ist": zeigt pro Kategorie, wie stark der tatsaechliche
+ * Ansicht "Soll vs. Ist": zeigt pro Kategorie, wie stark der tatsaechliche
  * Verbrauch vom berechneten Bedarf abwich. Nur lesend, aendert keine Gewichte.
  */
 function KalibrierungsAuswertung() {

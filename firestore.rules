@@ -56,6 +56,16 @@ service cloud.firestore {
       );
     }
 
+    // Mirrors the client-side eventplanung feature flag (rolePermissions/{role}.eventplanung,
+    // default true only for admins - see ROLE_PERMISSIONS_DEFAULT in userManagement.js).
+    function canSeeEventplanung() {
+      return isAdmin() || (
+        isMember()
+        && exists(/databases/$(database)/documents/rolePermissions/$(userRole()))
+        && get(/databases/$(database)/documents/rolePermissions/$(userRole())).data.get('eventplanung', false) == true
+      );
+    }
+
     // Recipes collection
     match /recipes/{recipeId} {
       // Unauthenticated share-link access is handled via Cloud Functions
@@ -307,9 +317,10 @@ service cloud.firestore {
     // fuer eine spaetere Kalibrierung von DRINK_WEIGHTS/BASE_RATE_PER_PERSON_PER_HOUR
     // (Phase 1, reines Sammeln -- siehe Konzept "Sammlung von Ist-Bedarfsdaten").
     // Nur ueber submitConsumption Cloud Function beschreibbar (Admin SDK bypasst
-    // diese Regeln); Lesezugriff ist Admins fuer die spaetere Auswertung vorbehalten.
+    // diese Regeln); Lesezugriff haben Admins sowie alle Rollen mit der Berechtigung
+    // 'eventplanung' (Kachel "Eventplanung" auf Chefkoch & mehr).
     match /kalibrierungsSnapshots/{eventId} {
-      allow read: if isAdmin();
+      allow read: if canSeeEventplanung();
       allow write: if false;
     }
 

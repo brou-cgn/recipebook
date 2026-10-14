@@ -92,7 +92,8 @@ export const setChildrenDrinkWeightEntry = (categoryId, data, updatedBy) =>
 
 /**
  * Load all calibration snapshots (actual vs. calculated consumption per
- * finished event). Admin-only per firestore.rules; returns [] on failure.
+ * finished event). Readable per firestore.rules for admins and roles with the
+ * eventplanung permission; returns [] on failure.
  */
 export const getKalibrierungsSnapshotsOnce = async () => {
   try {
