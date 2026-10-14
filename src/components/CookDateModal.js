@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import PencilIcon from './icons/PencilIcon';
+import SteamIcon from './icons/SteamIcon';
 import './CookDateModal.css';
 import { setCookDate, deleteCookDate, subscribeCookDates } from '../utils/recipeCookDates';
 import { isBase64Image } from '../utils/imageUtils';
@@ -120,7 +122,7 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
                       <span className="cook-date-timeline-marker-emoji">{timelineCookEventBubbleIcon}</span>
                     )
                   ) : (
-                    <span className="cook-date-timeline-marker-emoji">♨</span>
+                    <span className="cook-date-timeline-marker-emoji"><SteamIcon /></span>
                   )}
                 </div>
                 <div className="cook-date-timeline-card">
@@ -157,7 +159,7 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
                       <span className="cook-date-timeline-marker-emoji">{timelineBubbleIcon}</span>
                     )
                   ) : (
-                    <span className="cook-date-timeline-marker-emoji">✎</span>
+                    <span className="cook-date-timeline-marker-emoji"><PencilIcon /></span>
                   )}
                 </div>
                 <div className="cook-date-timeline-card">

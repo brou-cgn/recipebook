@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import TrashIcon from './icons/TrashIcon';
 import { useLongPress } from '../utils/useLongPress';
 import './DeleteFabButton.css';
 import './PortionSelector.css';
@@ -813,7 +814,7 @@ function GroupDetail({
             {isBase64Image(deleteGroupIcon) ? (
               <img src={deleteGroupIcon} alt="Löschen" className="button-icon-image" draggable="false" />
             ) : (
-              deleteGroupIcon
+              deleteGroupIcon || <TrashIcon />
             )}
           </button>
           <button

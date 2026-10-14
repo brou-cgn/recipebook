@@ -279,7 +279,7 @@ describe('MobileSearchOverlay – cuisine pills stay active when favorites toggl
     expect(cuisinePill).toHaveClass('active');
 
     // Now toggle favorites on
-    const favoritesPill = screen.getByText('★ Favoriten');
+    const favoritesPill = screen.getByText('Favoriten');
     fireEvent.click(favoritesPill);
     expect(favoritesPill).toHaveClass('active');
 
@@ -299,7 +299,7 @@ describe('MobileSearchOverlay – cuisine pills stay active when favorites toggl
     expect(itaPill).toHaveClass('active');
 
     // Toggle favorites
-    const favoritesPill = screen.getByText('★ Favoriten');
+    const favoritesPill = screen.getByText('Favoriten');
     fireEvent.click(favoritesPill);
 
     // Both cuisine pills should still be active
@@ -315,7 +315,7 @@ describe('MobileSearchOverlay – seasonal filter pill', () => {
 
   test('shows the "Saisonal" pill next to favorites', () => {
     renderOverlay();
-    expect(screen.getByText('★ Favoriten')).toBeInTheDocument();
+    expect(screen.getByText('Favoriten')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Saisonal' })).toBeInTheDocument();
   });
 

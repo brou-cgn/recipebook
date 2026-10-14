@@ -45,7 +45,7 @@ describe('PrintPage content', () => {
     expect(el(container, 'metadata')).toHaveTextContent('Italienisch');
     expect(el(container, 'metadata')).toHaveTextContent('25 Min.');
     expect(el(container, 'metadata')).toHaveTextContent('2 Portionen');
-    expect(el(container, 'metadata')).toHaveTextContent('★★★☆☆');
+    expect(el(container, 'metadata')).toHaveTextContent('Schwierigkeit 3/5');
     expect(el(container, 'ingredients')).toHaveTextContent('200 g Tomaten');
     expect(el(container, 'steps')).toHaveTextContent('Servieren');
     // hidden by default

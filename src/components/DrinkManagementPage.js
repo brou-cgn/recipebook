@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import TrashIcon from './icons/TrashIcon';
 import './EventsPage.css';
 import { saveCustomDrink, deleteCustomDrink } from '../utils/eventsFirestore';
 import OverviewAddFab from './OverviewAddFab';
@@ -115,7 +116,7 @@ function DrinkRow({ drink, displayName, isForeign, canManage, canAddUnits, onEdi
               {isBase64Image(swipeDeleteIcon) ? (
                 <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
               ) : (
-                <span className="swipe-delete-icon-text">{swipeDeleteIcon || '🗑'}</span>
+                <span className="swipe-delete-icon-text">{swipeDeleteIcon || <TrashIcon />}</span>
               )}
             </button>
           )}
@@ -770,7 +771,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
     );
   }
 
-  const swipeDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode) || '🗑';
+  const swipeDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode);
   const closeIcon = getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode) || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode);
 
   return (

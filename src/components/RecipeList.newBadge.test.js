@@ -276,7 +276,7 @@ describe('RecipeList - Neu badge', () => {
       expect(screen.getByText('Neu')).toBeInTheDocument();
     });
 
-    const starElements = screen.getAllByText('★');
+    const starElements = screen.getAllByTestId('star-icon').map(i => i.parentElement);
     expect(starElements.some(el => el.classList.contains('recipe-favorite-badge'))).toBe(true);
     expect(screen.getByText('Neu')).toBeInTheDocument();
   });

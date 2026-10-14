@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import TrashIcon from './icons/TrashIcon';
 import './Settings.css';
 import './AppCallsPage.css';
 import { httpsCallable } from 'firebase/functions';
@@ -199,7 +200,7 @@ function CuisineProposalRow({ name, deleteIcon, onDiscard, children }) {
           {isBase64Image(deleteIcon) ? (
             <img src={deleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
           ) : (
-            <span className="swipe-delete-icon-text">{deleteIcon}</span>
+            <span className="swipe-delete-icon-text">{deleteIcon || <TrashIcon />}</span>
           )}
         </button>
       </div>
@@ -1082,7 +1083,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const visibleCuisineProposals = cuisineProposals.filter(
     p => !pendingProposalDeleteKeys.has(proposalNameKey(p.name))
   );
-  const proposalSwipeDeleteIcon = getEffectiveIcon(allButtonIcons, 'swipeDelete', isDarkMode) || '🗑';
+  const proposalSwipeDeleteIcon = getEffectiveIcon(allButtonIcons, 'swipeDelete', isDarkMode);
 
   const renderSourceBadge = (source) => {
     if (source === 'recipe_form') {

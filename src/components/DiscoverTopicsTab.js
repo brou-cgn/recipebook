@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import TrashIcon from './icons/TrashIcon';
 import './DiscoverTopicsTab.css';
 import './DeleteRowButton.css';
 import './UndoSnackbar.css';
@@ -210,7 +211,7 @@ function TopicRow({ topic, recipeTitles, onEdit, onDelete }) {
             onClick={() => { onDelete(topic); reset(); }}
             aria-label={`${name} entfernen`}
           >
-            <span className="swipe-delete-icon-text">🗑</span>
+            <span className="swipe-delete-icon-text"><TrashIcon /></span>
           </button>
         )}
       </div>

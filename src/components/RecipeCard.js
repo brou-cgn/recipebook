@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import StarIcon from './icons/StarIcon';
 import './RecipeList.css';
 import RecipeImageCarousel from './RecipeImageCarousel';
 import RecipeRating from './RecipeRating';
@@ -219,7 +220,7 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
                 favoriteActiveIcon
               )
             ) : (
-              '★'
+              <StarIcon />
             )}
           </div>
         )}

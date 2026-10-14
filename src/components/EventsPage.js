@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import TrashIcon from './icons/TrashIcon';
 import './EventsPage.css';
 import './EventsTable.css';
 import { deleteEvent, getEvent } from '../utils/eventsFirestore';
@@ -140,7 +141,7 @@ function EventCard({ event, ownerName, canManage, onSelect, onDelete, swipeDelet
               {isBase64Image(swipeDeleteIcon) ? (
                 <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
               ) : (
-                <span className="swipe-delete-icon-text">{swipeDeleteIcon || '🗑'}</span>
+                <span className="swipe-delete-icon-text">{swipeDeleteIcon || <TrashIcon />}</span>
               )}
             </button>
           )}
@@ -300,7 +301,7 @@ function EventsPage({
   };
   const editEventIcon = getEffectiveIcon(buttonIcons, 'editRecipe', isDarkMode);
   const eventsCloseIcon = getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode) || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode);
-  const swipeDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode) || '🗑';
+  const swipeDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode);
   const drinksFabIcon = getEffectiveIcon(buttonIcons, 'eventsDrinksFab', isDarkMode);
   const guestsFabIcon = getEffectiveIcon(buttonIcons, 'eventsGuestsFab', isDarkMode);
 

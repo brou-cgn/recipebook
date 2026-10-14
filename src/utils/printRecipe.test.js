@@ -53,12 +53,12 @@ describe('buildMetadataItems', () => {
     expect(items[0].text).toBe('Italienisch, Pasta');
     expect(items[1].text).toBe('30 Min.');
     expect(items[2].text).toBe('4 Portionen');
-    expect(items[3].text).toBe('★★☆☆☆');
+    expect(items[3].text).toBe('Schwierigkeit 2/5');
     expect(getCuisineList({ kulinarik: 'Thai' })).toEqual(['Thai']);
   });
   test('omits missing values and clamps stars', () => {
     expect(buildMetadataItems({}, {})).toEqual([]);
-    expect(buildMetadataItems({ schwierigkeit: 9 }, {})[0].text).toBe('★★★★★');
+    expect(buildMetadataItems({ schwierigkeit: 9 }, {})[0].text).toBe('Schwierigkeit 5/5');
     expect(buildMetadataItems({ kochzeit: 15 }, {})[0].text).toBe('15 Min.');
   });
   test('portion label defaults to Portionen', () => {

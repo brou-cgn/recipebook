@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import StarIcon from './icons/StarIcon';
+import TrashIcon from './icons/TrashIcon';
 import './MenuForm.css';
 import './EventsPage.css';
 import { getUserFavorites } from '../utils/userFavorites';
@@ -276,7 +278,7 @@ function SortableSection({
                         <span className="recipe-name">
                           {recipe.title}
                         </span>
-                        {isFavorite && <span className="favorite-indicator">★</span>}
+                        {isFavorite && <span className="favorite-indicator"><StarIcon /></span>}
                       </div>
                     );
                   });
@@ -314,7 +316,7 @@ function SortableSection({
                           onClick={() => onAddRecipeToDrinksSection(sectionIndex, option.id)}
                         >
                           <span className="recipe-name">{option.recipe.title}</span>
-                          {isFavorite && <span className="favorite-indicator">★</span>}
+                          {isFavorite && <span className="favorite-indicator"><StarIcon /></span>}
                         </div>
                       );
                     }
@@ -403,7 +405,7 @@ function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex, sw
             {isBase64Image(swipeDeleteIcon) ? (
               <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
             ) : (
-              <span className="swipe-delete-icon-text">{swipeDeleteIcon || '🗑'}</span>
+              <span className="swipe-delete-icon-text">{swipeDeleteIcon || <TrashIcon />}</span>
             )}
           </button>
         )}
@@ -420,7 +422,7 @@ function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex, sw
         </button>
         <span className="recipe-name" {...handlers}>
           {recipe.title}
-          {isFavorite && <span className="favorite-indicator">★</span>}
+          {isFavorite && <span className="favorite-indicator"><StarIcon /></span>}
         </span>
         <DeleteRowButton
           itemName={recipe.title}
@@ -479,7 +481,7 @@ function SortableDrinkItem({ id, displayName, isFavorite, onRemove, swipeDeleteI
             {isBase64Image(swipeDeleteIcon) ? (
               <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
             ) : (
-              <span className="swipe-delete-icon-text">{swipeDeleteIcon || '🗑'}</span>
+              <span className="swipe-delete-icon-text">{swipeDeleteIcon || <TrashIcon />}</span>
             )}
           </button>
         )}
@@ -496,7 +498,7 @@ function SortableDrinkItem({ id, displayName, isFavorite, onRemove, swipeDeleteI
         </button>
         <span className="recipe-name" {...handlers}>
           {displayName}
-          {isFavorite && <span className="favorite-indicator">★</span>}
+          {isFavorite && <span className="favorite-indicator"><StarIcon /></span>}
         </span>
         <DeleteRowButton
           itemName={displayName}
@@ -2004,7 +2006,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
                   favoriteIds={favoriteIds}
                   searchQueries={searchQueries}
                   closeIcon={getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode) || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode)}
-                  swipeDeleteIcon={getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode) || '🗑'}
+                  swipeDeleteIcon={getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode)}
                   onRemoveSection={handleRemoveSection}
                   onDragEndRecipes={handleDragEndRecipes}
                   onRemoveRecipeFromSection={handleRemoveRecipeFromSection}

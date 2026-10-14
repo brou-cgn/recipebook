@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import StarIcon from './icons/StarIcon';
 import './MenuFilterSidebar.css';
 
 const COLLAPSED_STORAGE_KEY = 'menuFilterSidebar_collapsed';
@@ -71,7 +72,7 @@ function MenuFilterSidebar({ onAddMenu, showFavoritesOnly = false, onFavoritesTo
             aria-pressed={showFavoritesOnly}
             title={showFavoritesOnly ? 'Alle Festtafeln anzeigen' : 'Nur Favoriten anzeigen'}
           >
-            ★ Favoriten
+            <StarIcon /> Favoriten
           </button>
         </div>
       )}
