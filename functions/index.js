@@ -7271,12 +7271,19 @@ exports.recipeImportPage = onRequest(
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;');
 
+      // JSON.stringify does not escape '<', so a text containing "</script>"
+      // would break out of the JSON-LD block (Tech-Check F6). \u003c is the
+      // same character for JSON parsers but inert for the HTML parser;
+      // U+2028/2029 are escaped for older script parsers.
       const jsonLd = JSON.stringify({
         '@context': 'https://schema.org',
         '@type': 'Recipe',
         'name': title,
         'description': rawText,
-      });
+      })
+          .replace(/</g, '\\u003c')
+          .replace(/\u2028/g, '\\u2028')
+          .replace(/\u2029/g, '\\u2029');
 
       const html = `<!DOCTYPE html>
 <html lang="de">

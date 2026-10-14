@@ -91,14 +91,18 @@ service cloud.firestore {
       match /ratings/{raterKey} {
         allow read: if true;
         // Authenticated users may create and update their own rating (keyed by UID).
-        // Unauthenticated guests may only CREATE a rating under a guest_ key; they
-        // cannot UPDATE to prevent iterative manipulation of existing guest ratings.
-        allow create: if (request.auth != null && raterKey == request.auth.uid)
-                      || raterKey.matches('guest_[a-zA-Z0-9\\-]+');
+        // Guests may only CREATE a rating under a guest_ key and must be signed in
+        // (anonymous login counts); without auth a script could shift the averages
+        // at will (Tech-Check S9). They cannot UPDATE, to prevent iterative
+        // manipulation of existing guest ratings.
+        allow create: if request.auth != null
+                      && (raterKey == request.auth.uid
+                          || raterKey.matches('guest_[a-zA-Z0-9\\-]+'));
         allow update: if request.auth != null && raterKey == request.auth.uid;
-        allow delete: if (request.auth != null && raterKey == request.auth.uid)
-                      || raterKey.matches('guest_[a-zA-Z0-9\\-]+')
-                      || isEditOrAdmin();
+        allow delete: if request.auth != null
+                      && (raterKey == request.auth.uid
+                          || raterKey.matches('guest_[a-zA-Z0-9\\-]+')
+                          || isEditOrAdmin());
       }
     }
 
