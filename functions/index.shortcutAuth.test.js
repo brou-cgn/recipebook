@@ -17,6 +17,10 @@ function loadFunctions({userData, pinDoc = null}) {
 
   const db = {
     collection: (name) => ({
+      add: async (data) => {
+        saved.push({name, id: 'new', data});
+        return {id: 'new'};
+      },
       doc: (id) => ({
         get: async () => ({exists: name === 'users', data: () => userData}),
         set: async (data) => saved.push({name, id, data}),
@@ -148,4 +152,27 @@ test('Shortcut-Auth: addRecipeViaAPI akzeptiert isShortcutUser nicht', async () 
   const res = makeRes();
   await mod.addRecipeViaAPI(makeReq({body: {}}), res);
   assert.equal(res.statusCode, 403);
+});
+
+const RECIPE_BODY = {title: 'Test', ingredients: ['1 Ei'], steps: ['Braten']};
+
+test('addRecipeViaAPI: Rezept ohne Speisekategorie -> 400, nichts gespeichert', async () => {
+  for (const extra of [{}, {speisekategorie: '  '}, {category: ''}]) {
+    const {mod, saved} = loadFunctions({userData: {role: 'edit'}});
+    const res = makeRes();
+    await mod.addRecipeViaAPI(makeReq({body: {...RECIPE_BODY, ...extra}}), res);
+    assert.equal(res.statusCode, 400);
+    assert.match(res.body.error, /speisekategorie/);
+    assert.equal(saved.length, 0, 'es darf kein Rezept gespeichert werden');
+  }
+});
+
+test('addRecipeViaAPI: Speisekategorie (auch als category/kategorie) wird akzeptiert', async () => {
+  for (const extra of [{speisekategorie: 'Hauptgericht'}, {category: 'Dessert'}, {kategorie: 'Snacks'}]) {
+    const {mod, saved} = loadFunctions({userData: {role: 'edit'}});
+    const res = makeRes();
+    await mod.addRecipeViaAPI(makeReq({body: {...RECIPE_BODY, ...extra}}), res);
+    assert.notEqual(res.statusCode, 400, JSON.stringify(res.body));
+    assert.ok(saved.some((s) => s.name === 'recipes'), 'Rezept wurde gespeichert');
+  }
 });

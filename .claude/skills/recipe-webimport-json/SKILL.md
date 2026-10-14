@@ -37,7 +37,7 @@ Endpoint selbst aufrufen, um die aktuellen Listen zu holen.
 | `portionen` | `servings`, `portions` | number | – |
 | `kochdauer` | `cookTime`, `prepTime`, `zubereitungszeit` | number (Minuten) | – |
 | `schwierigkeit` | `difficulty` | number (1–5) | – |
-| `speisekategorie` | `category`, `kategorie` | string | – |
+| `speisekategorie` | `category`, `kategorie` | string | ✅ |
 | `kulinarik` | `cuisine`, `kulinarisch` | string \| string[] | – |
 | `tags` | – | string[] (oder komma-getrennter String) | – |
 | `notizen` | `notes` | string | – |

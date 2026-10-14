@@ -6454,6 +6454,8 @@ exports.setUserPassword = onCall(
  * Required: title (or titel)
  * Required: at least one entry in ingredients (or zutaten)
  * Required: at least one entry in steps (or zubereitung)
+ * Required: speisekategorie (or category / kategorie) - a recipe without a
+ *           meal category is never saved (same rule as RecipeForm.js)
  *
  * @param {object} body - Raw request body
  * @returns {object} Normalised recipe object ready for Firestore
@@ -6517,7 +6519,13 @@ function validateAndNormaliseRecipeInput(body) {
     );
   }
   const schwierigkeit = rawSchwierigkeit || undefined;
-  const speisekategorie = (body.speisekategorie || body.category || body.kategorie || '').toString().trim() || undefined;
+  const speisekategorie = (body.speisekategorie || body.category || body.kategorie || '').toString().trim();
+  if (!speisekategorie) {
+    throw Object.assign(
+        new Error('speisekategorie (category) fehlt'),
+        {code: 400},
+    );
+  }
 
   // kulinarik: accept string or array
   let kulinarik;
@@ -6543,7 +6551,7 @@ function validateAndNormaliseRecipeInput(body) {
   if (portionen !== undefined) recipe.portionen = portionen;
   if (kochdauer !== undefined) recipe.kochdauer = kochdauer;
   if (schwierigkeit !== undefined) recipe.schwierigkeit = schwierigkeit;
-  if (speisekategorie !== undefined) recipe.speisekategorie = speisekategorie;
+  recipe.speisekategorie = speisekategorie;
   if (kulinarik !== undefined && kulinarik.length > 0) recipe.kulinarik = kulinarik;
   if (tags !== undefined && tags.length > 0) recipe.tags = tags;
   if (notizen !== undefined) recipe.notizen = notizen;
@@ -6568,7 +6576,7 @@ function validateAndNormaliseRecipeInput(body) {
  *   portionen / servings    {number}   Optional – number of servings
  *   kochdauer / cookTime    {number}   Optional – cooking time in minutes
  *   schwierigkeit/difficulty{number}   Optional – difficulty 1–5
- *   speisekategorie/category{string}   Optional – meal category
+ *   speisekategorie/category{string}   Required – meal category
  *   kulinarik / cuisine     {string|string[]} Optional – cuisine type(s)
  *   tags                    {string[]} Optional – tags
  *   notizen / notes         {string}   Optional – additional notes
