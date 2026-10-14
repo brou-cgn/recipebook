@@ -110,6 +110,7 @@ const GroupList = lazy(() => import('./components/GroupList'));
 const GroupDetail = lazy(() => import('./components/GroupDetail'));
 const AppCallsPage = lazy(() => import('./components/AppCallsPage'));
 const MeineKuechenstarsPage = lazy(() => import('./components/MeineKuechenstarsPage'));
+const EventplanungPage = lazy(() => import('./components/EventplanungPage'));
 const EventsPage = lazy(() => import('./components/EventsPage'));
 const Tagesmenu = lazy(() => import('./components/Tagesmenu'));
 const UniversalImportModal = lazy(() => import('./components/UniversalImportModal'));
@@ -342,6 +343,7 @@ function applyRolePermissionsToUser(user, permissionsMap = {}) {
     addTutorial: rolePerms.addTutorial ?? false,
     editTutorial: rolePerms.editTutorial ?? false,
     fuerDichEntdeckt: rolePerms.fuerDichEntdeckt ?? false,
+    eventplanung: rolePerms.eventplanung ?? false,
   };
 }
 
@@ -372,7 +374,7 @@ function getBottomNavActiveKey(currentView) {
   if (currentView === 'startseite') return 'home';
   if (currentView === 'menus') return 'menus';
   if (currentView === 'tagesmenu' || currentView === 'atelierCategorySelection' || currentView === 'groups') return 'atelier';
-  if (currentView === 'kueche' || currentView === 'appCalls' || currentView === 'meineKuechenstars') return 'chef';
+  if (currentView === 'kueche' || currentView === 'appCalls' || currentView === 'meineKuechenstars' || currentView === 'eventplanung') return 'chef';
   return 'recipes';
 }
 
@@ -2509,7 +2511,7 @@ function App() {
   // und alle Bilder neu laden (Zucken).
   const isRecipeOverviewBase = !isSettingsOpen && !isTutorialFormOpen && !isFormOpen
     && !selectedMenu && !isMenuFormOpen
-    && !['appCalls', 'meineKuechenstars', 'events', 'tagesmenu', 'atelierCategorySelection',
+    && !['appCalls', 'meineKuechenstars', 'eventplanung', 'events', 'tagesmenu', 'atelierCategorySelection',
       'kueche', 'groups', 'menus', 'startseite'].includes(currentView);
   const recipeOverviewElement = (
     <div className="recipe-overview-layout">
@@ -2718,6 +2720,11 @@ function App() {
           onBack={() => handleViewChange('kueche')}
           currentUser={currentUser}
           recipes={recipes}
+        />
+        ) : currentView === 'eventplanung' ? (
+        <EventplanungPage
+          onBack={() => handleViewChange('kueche')}
+          currentUser={currentUser}
         />
         ) : currentView === 'events' ? (
         <EventsPage

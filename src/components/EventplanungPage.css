@@ -1,0 +1,33 @@
+.eventplanung-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.eventplanung-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.eventplanung-header h2 {
+  margin: 0;
+  color: #2F5D50;
+  font-size: 28px;
+  text-align: left;
+}
+
+.eventplanung-content {
+  background: white;
+  border-radius: 10px;
+  padding: 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.eventplanung-empty {
+  color: #999;
+  text-align: center;
+  padding: 40px 0;
+  font-size: 15px;
+}

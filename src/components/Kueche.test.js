@@ -935,4 +935,37 @@ describe('Kueche', () => {
       activeTab: 'missingIngredientIDs',
     });
   });
+  test('Eventplanung tile is shown with the eventplanung permission and opens the eventplanung view', () => {
+    const onViewChange = jest.fn();
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={[]}
+        currentUser={{ id: 'user-1', eventplanung: true }}
+        onViewChange={onViewChange}
+      />
+    );
+
+    const tile = screen.getByTestId('eventplanung-tile');
+    expect(tile).toHaveClass('kueche-tile--eventplanung');
+    expect(within(tile).getByText('Eventplanung')).toBeInTheDocument();
+    fireEvent.click(tile);
+    expect(onViewChange).toHaveBeenCalledWith('eventplanung');
+  });
+
+  test('Eventplanung tile is hidden without the eventplanung permission', () => {
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={[]}
+        currentUser={{ id: 'user-1', isAdmin: true }}
+      />
+    );
+
+    expect(screen.queryByTestId('eventplanung-tile')).not.toBeInTheDocument();
+  });
 });
