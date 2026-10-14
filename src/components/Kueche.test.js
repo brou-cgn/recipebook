@@ -935,7 +935,7 @@ describe('Kueche', () => {
       activeTab: 'missingIngredientIDs',
     });
   });
-  test('Eventplanung tile is shown for admins and opens the eventplanung view', () => {
+  test('Eventplanung tile is shown with the eventplanung permission and opens the eventplanung view', () => {
     const onViewChange = jest.fn();
     render(
       <Kueche
@@ -943,7 +943,7 @@ describe('Kueche', () => {
         menus={[]}
         onSelectRecipe={() => {}}
         allUsers={[]}
-        currentUser={{ id: 'user-1', isAdmin: true }}
+        currentUser={{ id: 'user-1', eventplanung: true }}
         onViewChange={onViewChange}
       />
     );
@@ -955,14 +955,14 @@ describe('Kueche', () => {
     expect(onViewChange).toHaveBeenCalledWith('eventplanung');
   });
 
-  test('Eventplanung tile is hidden for non-admins', () => {
+  test('Eventplanung tile is hidden without the eventplanung permission', () => {
     render(
       <Kueche
         recipes={[]}
         menus={[]}
         onSelectRecipe={() => {}}
         allUsers={[]}
-        currentUser={{ id: 'user-1' }}
+        currentUser={{ id: 'user-1', isAdmin: true }}
       />
     );
 

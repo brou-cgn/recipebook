@@ -472,7 +472,7 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
               </div>
             </div>
           )}
-          {currentUser?.isAdmin === true && (
+          {currentUser?.eventplanung && (
             <div
               className="kueche-tile kueche-tile--eventplanung"
               data-testid="eventplanung-tile"

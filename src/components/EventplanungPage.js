@@ -6,8 +6,9 @@ import { isBase64Image } from '../utils/imageUtils';
 
 /**
  * Eventplanung: Soll-vs.-Ist-Auswertung des Getraenkeverbrauchs ueber alle
- * abgeschlossenen Events. Die Snapshots sind nur fuer Admins lesbar
- * (firestore.rules), die Seite ist deshalb Admin-only.
+ * abgeschlossenen Events. Sichtbarkeit ueber die Rollenberechtigung
+ * `eventplanung`; die Snapshots selbst sind per firestore.rules nur fuer
+ * Admins lesbar.
  */
 function EventplanungPage({ onBack, currentUser }) {
   const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.closeButtonDefaultImg);
@@ -52,10 +53,10 @@ function EventplanungPage({ onBack, currentUser }) {
         )}
       </div>
       <div className="eventplanung-content">
-        {currentUser?.isAdmin === true ? (
+        {currentUser?.eventplanung ? (
           <KalibrierungsAuswertung />
         ) : (
-          <div className="eventplanung-empty">Dieser Bereich ist nur für Admins verfügbar.</div>
+          <div className="eventplanung-empty">Dieser Bereich ist für deine Rolle nicht freigeschaltet.</div>
         )}
       </div>
     </div>
