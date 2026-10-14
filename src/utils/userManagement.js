@@ -1311,9 +1311,9 @@ export const setBackgroundUpdatesEnabled = async (userId, enabled) => {
  * (utils/fuerDichEntdeckt.js). Für alle Rollen standardmäßig aus.
  *
  * eventplanung steuert die Kachel "Eventplanung" auf Chefkoch & mehr (Soll-vs.-Ist-
- * Auswertung der Getränkeverbräuche). Standardmäßig nur für Admins an. Die zugrunde
- * liegenden kalibrierungsSnapshots sind per firestore.rules weiterhin nur für Admins
- * lesbar; für andere Rollen bleibt die Auswertung daher leer.
+ * Auswertung der Getränkeverbräuche). Standardmäßig nur für Admins an. Dieselbe
+ * Berechtigung steuert in firestore.rules (canSeeEventplanung) den Lesezugriff auf
+ * die zugrunde liegenden kalibrierungsSnapshots.
  */
 export const ROLE_PERMISSIONS_DEFAULT = {
   [ROLES.ADMIN]: { settingsAccess: true, fotoscan: true, webimport: true, appCalls: true, appCallsMenu: true, recipeImport: true, deleteRating: true, abortCalc: true, sortCarousel: true, editLists: true, tagesmenuTestmode: true, themeToggle: true, printRecipe: true, recipeIndex: true, startseite: false, kuecheFab: false, onboardingTestmode: true, addTutorial: true, editTutorial: true, fuerDichEntdeckt: false, eventplanung: true },

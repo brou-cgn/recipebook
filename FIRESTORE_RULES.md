@@ -125,6 +125,15 @@ The following helper functions are defined in `firestore.rules`:
 | Read | `admin`, `edit` |
 | Create / Update / Delete | `admin` only |
 
+### Calibration Snapshots (`/kalibrierungsSnapshots/{eventId}`)
+
+Actual vs. calculated drink consumption per finished event (shown on the "Eventplanung" tile).
+
+| Operation | Who |
+|-----------|-----|
+| Read | `admin`, and every role with the `eventplanung` role permission (`rolePermissions/{role}.eventplanung`, `canSeeEventplanung()`) |
+| Create / Update / Delete | nobody on the client (written by the `submitConsumption` Cloud Function) |
+
 ## Deployment
 
 To deploy these security rules to Firebase:
