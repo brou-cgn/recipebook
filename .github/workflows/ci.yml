@@ -52,13 +52,10 @@ jobs:
       - name: Run tests
         run: npm run test:ci
 
-      # CI=false because create-react-app treats warnings as errors when CI is
-      # set, and the project carries pre-existing no-unused-vars warnings. Same
-      # setting the Firebase deploy workflow uses - this step checks that it
-      # compiles, not that it is warning-free.
+      # Vite build (Tech-Check B1). Fails on broken imports - e.g. a name that a
+      # module does not export - which the former create-react-app build only
+      # reported as a warning.
       - name: Build
-        env:
-          CI: false
         run: npm run build
 
   # Cloud Functions haben ein eigenes package.json und wurden bis Tech-Check F1

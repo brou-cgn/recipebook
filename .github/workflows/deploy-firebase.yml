@@ -89,11 +89,10 @@ jobs:
           npm_config_fetch_retry_mintimeout: 10000
           npm_config_fetch_retry_maxtimeout: 60000
 
-      # CI=false, weil create-react-app Warnungen als Fehler behandelt, sobald
-      # CI gesetzt ist - das Projekt traegt bestehende no-unused-vars-Warnungen.
+      # Vite-Build (Tech-Check B1). Die Variablen heissen weiter REACT_APP_*,
+      # vite.config.mjs reicht genau dieses Praefix in den Client-Code durch.
       - name: Build
         env:
-          CI: false
           REACT_APP_VERSION: ${{ steps.version.outputs.version }}
           REACT_APP_FIREBASE_API_KEY: ${{ secrets.REACT_APP_FIREBASE_API_KEY }}
           REACT_APP_FIREBASE_AUTH_DOMAIN: ${{ secrets.REACT_APP_FIREBASE_AUTH_DOMAIN }}

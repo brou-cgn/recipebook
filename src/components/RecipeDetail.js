@@ -34,7 +34,8 @@ import ShoppingListModal from './ShoppingListModal';
 import RatingModal from './RatingModal';
 import { getRecipeImages } from '../utils/printRecipe';
 import { printRecipe } from './printRunner';
-import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getEffectiveCuisineIcon, getDarkModePreference, DEFAULT_PRINT_FORMATS, selectPrintFormat, getAlarmSoundPreference } from '../utils/customLists';
+import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getEffectiveCuisineIcon, getDarkModePreference, DEFAULT_PRINT_FORMATS, selectPrintFormat, getAlarmSoundPreference, getCustomLists, getButtonIcons, getTimelineBubbleIcon, getTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, getPrintFormats, addMissingConversionEntries } from '../utils/customLists';
+import { getCategoryImages } from '../utils/categoryImages';
 import { playAlarmPattern } from '../utils/alarmAudioUtils';
 import RecipeRating from './RecipeRating';
 import CookDateModal from './CookDateModal';
@@ -194,8 +195,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
   useEffect(() => {
     const loadSettings = async () => {
-      const { getCustomLists, getButtonIcons, getTimelineBubbleIcon, getTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, getPrintFormats } = require('../utils/customLists');
-      const { getCategoryImages } = require('../utils/categoryImages');
       const [lists, icons, catImages] = await Promise.all([
         getCustomLists(),
         getButtonIcons(),
@@ -1159,7 +1158,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     const { converted, missing } = convertIngredientUnits(ingredients, conversionTable);
     if (missing.length > 0 && !missingSavedRef.current) {
       missingSavedRef.current = true;
-      const { addMissingConversionEntries } = require('../utils/customLists');
       addMissingConversionEntries(missing, conversionTable).catch(console.error);
     }
     return combineIngredients(converted);

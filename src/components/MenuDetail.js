@@ -13,7 +13,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import { enableMenuSharing, disableMenuSharing } from '../utils/menuFirestore';
 import { scaleIngredient, combineIngredients, convertIngredientUnits, isWaterIngredient } from '../utils/ingredientUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
-import { getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
+import { getDarkModePreference, getEffectiveIcon, getButtonIcons, getCustomLists, addMissingConversionEntries } from '../utils/customLists';
 import { subscribeToEvent, subscribeToCustomDrinks, getAllCustomDrinks, subscribeToGuestProfiles } from '../utils/eventsFirestore';
 import { mergePredefinedDrinks } from '../utils/drinkCategories';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
@@ -87,7 +87,6 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   // Load close button icon from settings
   useEffect(() => {
     const loadButtonIcons = async () => {
-      const { getButtonIcons, getCustomLists } = require('../utils/customLists');
       const [icons, lists] = await Promise.all([getButtonIcons(), getCustomLists()]);
       setAllButtonIcons(icons);
       setConversionTable(lists.conversionTable || []);
@@ -544,7 +543,6 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     const { converted, missing } = convertIngredientUnits(ingredients, conversionTable);
     if (missing.length > 0 && !missingSavedRef.current) {
       missingSavedRef.current = true;
-      const { addMissingConversionEntries } = require('../utils/customLists');
       addMissingConversionEntries(missing, conversionTable).catch(console.error);
     }
     return combineIngredients(converted);

@@ -74,7 +74,10 @@ describe('GroupCreateDialog', () => {
   describe('validation', () => {
     it('shows error if name is empty on submit', async () => {
       renderDialog();
-      fireEvent.click(screen.getByText('Liste erstellen'));
+      // Formular direkt absenden: jsdom prüft seit Jest 29 (jsdom 20) wie ein
+      // echter Browser die `required`-Felder und blockiert sonst den Klick,
+      // bevor die eigene Validierung des Dialogs läuft.
+      fireEvent.submit(screen.getByText('Liste erstellen').closest('form'));
       await waitFor(() => {
         expect(screen.getByText('Bitte gib einen Listennamen ein.')).toBeInTheDocument();
       });
@@ -83,7 +86,10 @@ describe('GroupCreateDialog', () => {
     it('shows error if list kind is not selected on submit', async () => {
       renderDialog();
       fireEvent.change(screen.getByLabelText('Listenname *'), { target: { value: 'Meine Liste' } });
-      fireEvent.click(screen.getByText('Liste erstellen'));
+      // Formular direkt absenden: jsdom prüft seit Jest 29 (jsdom 20) wie ein
+      // echter Browser die `required`-Felder und blockiert sonst den Klick,
+      // bevor die eigene Validierung des Dialogs läuft.
+      fireEvent.submit(screen.getByText('Liste erstellen').closest('form'));
       await waitFor(() => {
         expect(screen.getByText('Bitte wähle eine Art der Liste aus.')).toBeInTheDocument();
       });

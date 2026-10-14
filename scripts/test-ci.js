@@ -4,11 +4,11 @@
  * in quarantined-tests.js, non-interactively, failing the build on the first
  * red test.
  *
- * Exists as a script rather than a flag in package.json because
- * create-react-app only forwards a fixed set of Jest options from
- * package.json ("jest" key), and testPathIgnorePatterns is not one of them -
- * it has to be passed on the command line, and 22 paths do not belong in a
- * one-line npm script.
+ * Exists as a script rather than a flag in package.json because the
+ * quarantine is passed to Jest as testPathIgnorePatterns on the command line,
+ * and that many paths do not belong in a one-line npm script. (Originally
+ * also because create-react-app did not forward that option from
+ * package.json; Jest now runs standalone, see jest.config.js.)
  *
  * Also prints what it skipped. A quarantine nobody sees is a quarantine
  * nobody clears.
@@ -32,11 +32,11 @@ if (quarantined.length > 0) {
   console.log('');
 }
 
-const reactScripts = path.join('node_modules', '.bin', 'react-scripts');
+const jest = path.join('node_modules', '.bin', 'jest');
 const result = spawnSync(
-  reactScripts,
+  jest,
   [
-    'test',
+    '--ci',
     '--watchAll=false',
     '--passWithNoTests',
     ...patterns.map((pattern) => `--testPathIgnorePatterns=${pattern}`),

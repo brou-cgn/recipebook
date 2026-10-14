@@ -165,7 +165,10 @@ describe('Login Component', () => {
 
     const resetEmailInput = screen.getByLabelText(/E-Mail-Adresse/i);
     fireEvent.change(resetEmailInput, { target: { value: 'invalid' } });
-    fireEvent.click(screen.getByRole('button', { name: /E-Mail senden/i }));
+    // Formular direkt absenden: jsdom prüft seit Jest 29 (jsdom 20) wie ein
+    // echter Browser type="email" und blockiert sonst den Klick, bevor
+    // onResetPassword überhaupt aufgerufen wird.
+    fireEvent.submit(screen.getByRole('button', { name: /E-Mail senden/i }).closest('form'));
 
     await waitFor(() => {
       expect(screen.getByText(/Ungültige E-Mail-Adresse/i)).toBeInTheDocument();

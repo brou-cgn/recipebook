@@ -8,6 +8,36 @@ nur in Klammern.
 Immer auf einem **Preview-Deploy** und einem **echten Gerät** mit installierter
 PWA testen, nicht nur im Dev-Server oder in der DevTools-Emulation.
 
+## Kurzfassung für den Release (11 Nutzer)
+
+Bei einem kleinen, persönlich erreichbaren Nutzerkreis reicht diese Abnahme;
+die ausführliche Liste unten bleibt die Referenz.
+
+1. **Vorher:** Nutzer informieren, dass ein Update ansteht und Probleme gemeldet werden sollen.
+2. **Eigener Test auf einem Preview-Kanal**, auf dem eigenen Handy mit installierter PWA:
+   Update von der alten Version (Abschnitt 1), Start ohne Netz (2), Test-Push (3).
+3. **Zeitpunkt:** Release, wenn du danach erreichbar bist.
+4. **Danach:** Bei den Nutzern nachfragen, vor allem nach Push-Benachrichtigungen.
+
+## Bereits automatisch geprüft (Chromium, 14.10.2026)
+
+Vor dem Merge im Browser mit dem gebauten Stand geprüft – ersetzt nicht den
+Test auf einem echten iPhone/Android-Gerät, deckt aber die Mechanik ab:
+
+- [x] Alte CRA-Version installiert → neue Vite-Version deployt → beim nächsten
+      Öffnen übernimmt der neue Service-Worker automatisch, die App lädt einmal neu
+      und zeigt die neue Version. Alte Dateien sind danach aus dem Cache entfernt.
+- [x] Service-Worker liegt weiter unter `/service-worker.js`, Precache: `index.html`
+      plus alle gebündelten JS/CSS-Dateien (wie bisher, ohne Dateien aus `public/`).
+- [x] Start ohne Netz und Deep-Link ohne Netz zeigen die App.
+- [x] `/firebase-messaging-sw.js` und `manifest.json` (inkl. `share_target`) werden unverändert ausgeliefert.
+- [x] Alle `REACT_APP_*`-Werte landen im Build (Namen unverändert, GitHub-Secrets bleiben gültig).
+- [x] Tests: identisches Ergebnis wie vorher, auch in den Quarantäne-Suites (3.736 Tests, dieselben 101 rot).
+- [x] Bauzeit 38,7 s → 2,5 s; `npm audit` 108 → 46 Meldungen (davon 2 in Laufzeit-Abhängigkeiten, beide aus dem Firebase-SDK).
+
+Offen bleiben die Punkte, die nur ein echtes Gerät zeigt: Installation auf
+iOS/Android, Push-Zustellung, Teilen aus einer anderen App.
+
 ## Hintergrund
 
 Die App ist eine installierte Web-App (PWA). Auf dem Handy liegt eine Kopie der
