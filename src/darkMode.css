@@ -844,7 +844,8 @@
   border-top-color: #3d3d3d;
 }
 
-[data-theme="dark"] .section-description {
+[data-theme="dark"] .section-description,
+[data-theme="dark"] .kalibrierung-description {
   color: #aaa;
 }
 

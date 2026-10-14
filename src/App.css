@@ -16,7 +16,8 @@
 @media (max-width: 768px) {
   .App .startseite-container,
   .App .app-calls-container,
-  .App .meine-kuechenstars-container {
+  .App .meine-kuechenstars-container,
+  .App .eventplanung-container {
     padding-bottom: calc(20px + var(--bottom-spacing, 0px));
   }
 
