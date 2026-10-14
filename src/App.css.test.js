@@ -40,6 +40,7 @@ describe('App CSS FAB bottom offset selectors', () => {
     expect(mobileBlock).toContain('.App .kueche-container,');
     expect(mobileBlock).toContain('.App .app-calls-container,');
     expect(mobileBlock).toContain('.App .meine-kuechenstars-container');
+    expect(mobileBlock).toContain('.App .eventplanung-container');
     expect(mobileBlock).toContain('.App .settings-container');
     expect(mobileBlock).toContain('.App .personal-data-page');
     expect(mobileBlock).toContain('padding-bottom: calc(20px + var(--bottom-spacing, 0px));');

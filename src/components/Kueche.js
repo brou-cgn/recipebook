@@ -21,6 +21,8 @@ import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import { getCuisineProposals } from '../utils/cuisineProposalsFirestore';
 import { getKuechenbetriebFabConfig } from '../utils/kuechenbetriebTabs';
 import { isFuerDichEntdecktList } from '../utils/fuerDichEntdeckt';
+import { getKalibrierungsSnapshotsOnce } from '../utils/drinkWeightsFirestore';
+import { countSnapshotsByMonth } from '../utils/kalibrierungsAuswertung';
 
 function getLastSixMonthsRecipeCounts(recipes) {
   const now = new Date();
@@ -164,6 +166,28 @@ function RecipeBarChart({ recipes }) {
   );
 }
 
+function EventCalibrationBarChart({ snapshots }) {
+  const now = new Date();
+  const monthlyData = countSnapshotsByMonth(snapshots, 6, now);
+  const maxCount = Math.max(...monthlyData.map(m => m.count), 1);
+
+  return (
+    <div className="kueche-bar-chart" data-testid="eventplanung-bar-chart" aria-hidden="true">
+      {monthlyData.map((m, i) => {
+        const isCurrentMonth = m.year === now.getFullYear() && m.month === now.getMonth();
+        const heightPercent = Math.max(MIN_BAR_HEIGHT_PERCENT, Math.round((m.count / maxCount) * 100));
+        return (
+          <div
+            key={i}
+            className={`kueche-bar-chart__bar${isCurrentMonth ? ' kueche-bar-chart__bar--eventplanung' : ''}`}
+            style={{ height: `${heightPercent}%` }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated, onViewChange, openPersonalData, onPersonalDataOpened, onPersonalDataVisibilityChange }) {
   const { rows: nutritionReferenceRows } = useNutritionReference();
   const [showTimeline, setShowTimeline] = useState(false);
@@ -183,6 +207,7 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   const [isDarkMode, setIsDarkMode] = useState(() => getDarkModePreference());
   const [fabPressed, setFabPressed] = useState(false);
   const [cuisineProposals, setCuisineProposals] = useState([]);
+  const [kalibrierungsSnapshots, setKalibrierungsSnapshots] = useState([]);
   const personalDataVisibilityChangeRef = React.useRef(onPersonalDataVisibilityChange);
 
   useEffect(() => {
@@ -267,6 +292,18 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
     }).catch(() => {
       setCuisineProposals([]);
     });
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser?.eventplanung) {
+      setKalibrierungsSnapshots([]);
+      return;
+    }
+    let active = true;
+    getKalibrierungsSnapshotsOnce()
+      .then((data) => { if (active) setKalibrierungsSnapshots(data || []); })
+      .catch(() => {});
+    return () => { active = false; };
   }, [currentUser]);
 
   const filteredRecipes = useMemo(
@@ -463,9 +500,11 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
                 <h3>Eventplanung</h3>
                 <div className="kueche-tile-meta">
                   <span className="meta-text">
-                    <span>Soll vs. Ist</span>
+                    <strong>{kalibrierungsSnapshots.length}</strong>
+                    <span>Events</span>
                   </span>
                 </div>
+                <EventCalibrationBarChart snapshots={kalibrierungsSnapshots} />
               </div>
             </div>
           )}

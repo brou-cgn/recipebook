@@ -14,7 +14,33 @@ const median = (values) => {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 };
 
-const isPositiveNumber = (v) => typeof v === 'number' && Number.isFinite(v) && v > 0;
+const toDate = (value) => {
+  if (!value) return null;
+  const date = typeof value.toDate === 'function' ? value.toDate() : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+/**
+ * Zaehlt Snapshots (= zur Kalibrierung verfuegbare Events) je Monat ueber die
+ * letzten `monthCount` Monate inkl. des laufenden. Basis ist `erstelltAm`.
+ * @return {Object[]} [{ year, month, count }], aeltester Monat zuerst.
+ */
+export const countSnapshotsByMonth = (snapshots, monthCount = 6, now = new Date()) => {
+  const months = [];
+  for (let i = monthCount - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({ year: d.getFullYear(), month: d.getMonth(), count: 0 });
+  }
+  (snapshots || []).forEach((snapshot) => {
+    const date = toDate(snapshot?.erstelltAm);
+    if (!date) return;
+    const entry = months.find((m) => m.year === date.getFullYear() && m.month === date.getMonth());
+    if (entry) entry.count++;
+  });
+  return months;
+};
+
+const isPositiveNumber =(v) => typeof v === 'number' && Number.isFinite(v) && v > 0;
 const isNonNegativeNumber = (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0;
 
 /**
