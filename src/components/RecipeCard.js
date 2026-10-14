@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { defaultIcon } from '../utils/defaultButtonIcons';
 import StarIcon from './icons/StarIcon';
 import './RecipeList.css';
 import RecipeImageCarousel from './RecipeImageCarousel';
@@ -177,9 +178,12 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
       {privateLists && privateLists.length > 0 && (
         <div className="recipe-card-list-reveal-button" aria-label="Zu Liste hinzufügen">
           <span className="recipe-card-list-reveal-icon" aria-hidden="true">
-            {swipeRightIcon && isBase64Image(swipeRightIcon)
-              ? <img src={swipeRightIcon} alt="" className="button-icon-image" draggable="false" />
-              : (swipeRightIcon || '📋')}
+            {(() => {
+              const icon = swipeRightIcon || defaultIcon('clipboard');
+              return isBase64Image(icon)
+                ? <img src={icon} alt="" className="button-icon-image" draggable="false" />
+                : icon;
+            })()}
           </span>
           <select
             onChange={handleNativeSelectChange}

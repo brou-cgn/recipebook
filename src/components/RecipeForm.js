@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { defaultIcon } from '../utils/defaultButtonIcons';
 import StarIcon from './icons/StarIcon';
 import TrashIcon from './icons/TrashIcon';
 import './RecipeForm.css';
@@ -1326,7 +1327,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     setTypeaheadIngredientIndex(null);
   };
 
-  const addIngredientIcon = getEffectiveIcon(buttonIcons, 'addIngredient', isDarkMode) || '🥕';
+  const addIngredientIcon = getEffectiveIcon(buttonIcons, 'addIngredient', isDarkMode) || defaultIcon('carrot');
   const addStepIcon = addIngredientIcon;
   const swipeDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode);
 

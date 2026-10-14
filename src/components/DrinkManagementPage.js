@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { defaultIcon } from '../utils/defaultButtonIcons';
 import TrashIcon from './icons/TrashIcon';
 import './EventsPage.css';
 import { saveCustomDrink, deleteCustomDrink } from '../utils/eventsFirestore';
@@ -731,11 +732,12 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
           aria-label={isAddUnitsMode ? 'Einheiten speichern' : editId ? 'Getränk aktualisieren' : 'Getränk speichern'}
           title={isAddUnitsMode ? 'Einheiten speichern' : editId ? 'Getränk aktualisieren' : 'Getränk speichern'}
         >
-          {isBase64Image(getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)) ? (
-            <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt="Speichern" className="button-icon-image" draggable="false" />
-          ) : (
-            getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode) || '💾'
-          )}
+          {(() => {
+            const saveIcon = getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode) || defaultIcon('save');
+            return isBase64Image(saveIcon)
+              ? <img src={saveIcon} alt="Speichern" className="button-icon-image" draggable="false" />
+              : saveIcon;
+          })()}
         </button>
         {/* Cancel FAB button - positioned at bottom-left, mobile only */}
         <button
