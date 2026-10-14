@@ -1,12 +1,13 @@
 import {
   isValidMonthDay, toMonthDay, formatMonthDay, formatPeriod, validateTopic, sortTopics,
-  normalizeRecipeRule, formatRecipeRule,
+  normalizeRecipeRule, formatRecipeRule, getDiscoverTopicImage,
 } from './discoverTopics';
+import { getDoc } from 'firebase/firestore';
 
 jest.mock('../firebase', () => ({ db: {} }));
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(), doc: jest.fn(), addDoc: jest.fn(), setDoc: jest.fn(),
-  deleteDoc: jest.fn(), onSnapshot: jest.fn(), serverTimestamp: jest.fn(),
+  deleteDoc: jest.fn(), getDoc: jest.fn(), onSnapshot: jest.fn(), serverTimestamp: jest.fn(),
 }));
 
 describe('discoverTopics', () => {
@@ -55,5 +56,20 @@ describe('discoverTopics', () => {
     expect(formatRecipeRule({ lastCooked: { minDays: 365, maxDays: 365 }, dateScope: 'own' }))
       .toBe('gekocht vor genau 365 Tagen (nur eigene)');
     expect(formatRecipeRule({ cuisines: { include: ['Thai'] }, dateScope: 'own' })).toBe('Küche: Thai');
+  });
+
+  describe('getDiscoverTopicImage', () => {
+    test('liefert die getrimmte URL des Themas', async () => {
+      getDoc.mockResolvedValueOnce({ exists: () => true, data: () => ({ imageUrl: ' https://x/a.jpg ' }) });
+      await expect(getDiscoverTopicImage('t1')).resolves.toBe('https://x/a.jpg');
+    });
+
+    test('leer ohne ID, ohne Dokument oder bei Fehler', async () => {
+      await expect(getDiscoverTopicImage('')).resolves.toBe('');
+      getDoc.mockResolvedValueOnce({ exists: () => false });
+      await expect(getDiscoverTopicImage('t1')).resolves.toBe('');
+      getDoc.mockRejectedValueOnce({ code: 'permission-denied' });
+      await expect(getDiscoverTopicImage('t1')).resolves.toBe('');
+    });
   });
 });

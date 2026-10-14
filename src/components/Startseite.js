@@ -6,6 +6,7 @@ import { getUserFavorites } from '../utils/userFavorites';
 import TrendingCard from './TrendingCard';
 import StartseitenKarussell from './StartseitenKarussell';
 import FuerDichEntdecktKachel from './FuerDichEntdecktKachel';
+import { getDiscoverTopicImage } from '../utils/discoverTopics';
 import { findFuerDichEntdecktList, isFuerDichEntdecktList } from '../utils/fuerDichEntdeckt';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, DEFAULT_MAX_KANDIDATEN_SCHWELLE, getAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT } from '../utils/customLists';
 import { getAllMembersSwipeFlagDocsForList } from '../utils/recipeSwipeFlags';
@@ -205,6 +206,18 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   const fuerDichEntdecktList = useMemo(() => (
     currentUser?.fuerDichEntdeckt ? findFuerDichEntdecktList(groups, currentUser.id) : null
   ), [groups, currentUser?.fuerDichEntdeckt, currentUser?.id]);
+
+  const fuerDichEntdecktThemeId = fuerDichEntdecktList?.themeId || '';
+  const [fuerDichEntdecktImage, setFuerDichEntdecktImage] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    setFuerDichEntdecktImage('');
+    if (!fuerDichEntdecktThemeId) return undefined;
+    getDiscoverTopicImage(fuerDichEntdecktThemeId).then((url) => {
+      if (!cancelled) setFuerDichEntdecktImage(url);
+    });
+    return () => { cancelled = true; };
+  }, [fuerDichEntdecktThemeId]);
 
   const fuerDichEntdecktRecipes = useMemo(() => {
     if (!fuerDichEntdecktList) return [];
@@ -588,6 +601,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
       <FuerDichEntdecktKachel
         list={fuerDichEntdecktList}
         recipes={fuerDichEntdecktRecipes}
+        themeImage={fuerDichEntdecktImage}
         onOpen={onOpenInteractiveList}
       />
       <StartseitenKarussell

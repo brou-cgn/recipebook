@@ -106,8 +106,11 @@ service cloud.firestore {
 
     // Themen der Kachel "Für dich entdeckt" (src/utils/discoverTopics.js).
     // Nur Admins pflegen sie; der Rotationsjob liest per Admin SDK.
+    // Angemeldete Nutzer dürfen einzelne Themen lesen (get), damit die Kachel das
+    // Kachelbild des aktuellen Themas laden kann; Auflisten bleibt Admins vorbehalten.
     match /discoverTopics/{topicId} {
-      allow read, create, update, delete: if isAdmin();
+      allow get: if isAnyUser();
+      allow list, create, update, delete: if isAdmin();
     }
 
     // Getraenke-Gewichtungsmatrizen (Erwachsene + Kinder) fuer die Event-

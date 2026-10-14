@@ -32,6 +32,7 @@ import {
   addDoc,
   setDoc,
   deleteDoc,
+  getDoc,
   onSnapshot,
   serverTimestamp,
 } from 'firebase/firestore';
@@ -227,6 +228,19 @@ export const saveDiscoverTopic = async (topic, updatedBy) => {
   }
   const ref = await addDoc(collection(db, COLLECTION), { ...data, createdAt: serverTimestamp() });
   return ref.id;
+};
+
+/** Kachelbild eines Themas (Einzel-Lesezugriff); '' ohne Bild oder bei Fehlern. */
+export const getDiscoverTopicImage = async (topicId) => {
+  if (!topicId) return '';
+  try {
+    const snap = await getDoc(doc(db, COLLECTION, topicId));
+    const url = snap.exists() ? snap.data().imageUrl : '';
+    return typeof url === 'string' ? url.trim() : '';
+  } catch (error) {
+    console.warn('Discover topic image not loaded:', error?.code || error);
+    return '';
+  }
 };
 
 export const deleteDiscoverTopic = (id) => deleteDoc(doc(db, COLLECTION, id));
