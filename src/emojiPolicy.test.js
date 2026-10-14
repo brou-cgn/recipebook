@@ -12,7 +12,6 @@ const SRC = __dirname;
 const EMOJI = /\p{Extended_Pictographic}/gu;
 
 const BASELINE = {
-  'components/AppCallsPage.js': 3,
   'components/ButtonIconsAdminTab.js': 1,
   'components/DrinkManagementPage.js': 1,
   'components/KalibrierungsAuswertung.js': 1,
@@ -21,7 +20,6 @@ const BASELINE = {
   'components/NutritionReferenceTab.js': 2,
   'components/RecipeCard.js': 1,
   'components/RecipeForm.js': 1,
-  'components/Settings.js': 4,
   'components/printEditor/ElementPropsPanel.js': 6,
   'components/templateEditor/FloatingToolbar.js': 1,
 };

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { defaultIcon } from '../utils/defaultButtonIcons';
+import PencilIcon from './icons/PencilIcon';
 import TrashIcon from './icons/TrashIcon';
 import './Settings.css';
 import './AppCallsPage.css';
@@ -169,7 +171,7 @@ function CuisineTypeListItem({ label, onRemove, onRename }) {
         <span>{label}</span>
       )}
       {onRename && !isEditing && (
-        <button className="edit-btn" onClick={handleEditStart} title="Umbenennen">✎</button>
+        <button className="edit-btn" onClick={handleEditStart} title="Umbenennen"><PencilIcon /></button>
       )}
       <button className="remove-btn" onClick={onRemove} title="Entfernen">×</button>
     </div>
@@ -256,7 +258,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   };
   const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.closeButtonDefaultImg);
   const [nutritionEmptyIcon, setNutritionEmptyIcon] = useState(normalizeNutritionEmptyIcon());
-  const [nutritionManualSaveIcon, setNutritionManualSaveIcon] = useState(DEFAULT_BUTTON_ICONS.saveRecipe || '💾');
+  const [nutritionManualSaveIcon, setNutritionManualSaveIcon] = useState(DEFAULT_BUTTON_ICONS.saveRecipe || defaultIcon('save'));
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [creatingShareIds, setCreatingShareIds] = useState({});
@@ -418,7 +420,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       DEFAULT_BUTTON_ICONS.closeButtonDefaultImg
     );
     setNutritionEmptyIcon(normalizeNutritionEmptyIcon(getEffectiveIcon(allButtonIcons, 'nutritionEmpty', isDarkMode)));
-    setNutritionManualSaveIcon(getEffectiveIcon(allButtonIcons, 'saveRecipe', isDarkMode) || DEFAULT_BUTTON_ICONS.saveRecipe || '💾');
+    setNutritionManualSaveIcon(getEffectiveIcon(allButtonIcons, 'saveRecipe', isDarkMode) || DEFAULT_BUTTON_ICONS.saveRecipe || defaultIcon('save'));
   }, [allButtonIcons, isDarkMode]);
 
   useEffect(() => {
