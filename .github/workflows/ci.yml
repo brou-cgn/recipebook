@@ -60,3 +60,38 @@ jobs:
         env:
           CI: false
         run: npm run build
+
+  # Cloud Functions haben ein eigenes package.json und wurden bis Tech-Check F1
+  # (2026-10-14) von keiner CI berührt. Tests laufen über functions/test-ci.js
+  # (Quarantäne in functions/quarantined-tests.js), Lint mit eslint:recommended.
+  functions:
+    name: Functions Tests & Lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: functions
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+
+      # --ignore-scripts + Skip: puppeteer/sharp-Downloads werden für die Tests nicht gebraucht.
+      - name: Install dependencies
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+        run: npm ci --ignore-scripts
+
+      - name: Lint
+        run: npm run lint:ci
+
+      - name: Run tests
+        run: npm run test:ci

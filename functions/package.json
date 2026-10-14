@@ -23,6 +23,9 @@
   "private": true,
   "scripts": {
     "lint": "eslint .",
+    "lint:ci": "eslint . --no-eslintrc -c .eslintrc.ci.js",
+    "test": "node --test",
+    "test:ci": "node test-ci.js",
     "serve": "firebase emulators:start --only functions",
     "shell": "firebase functions:shell",
     "start": "npm run shell",
