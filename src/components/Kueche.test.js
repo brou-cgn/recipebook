@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import Kueche from './Kueche';
+import { getKalibrierungsSnapshotsOnce } from '../utils/drinkWeightsFirestore';
 
 const DEFAULT_MENU_IMAGE = 'data:image/png;base64,defaultmenuimage';
 let mockNutritionReferenceStateHolder = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
@@ -50,6 +51,10 @@ jest.mock('../utils/userManagement', () => ({
   updateUserProfile: jest.fn(() => Promise.resolve({ success: true, message: 'Profil erfolgreich aktualisiert.' })),
 }));
 
+jest.mock('../utils/drinkWeightsFirestore', () => ({
+  getKalibrierungsSnapshotsOnce: jest.fn(),
+}));
+
 jest.mock('../utils/cuisineProposalsFirestore', () => ({
   getCuisineProposals: jest.fn(() => Promise.resolve([])),
 }));
@@ -60,6 +65,10 @@ jest.mock('../contexts/NutritionReferenceContext', () => ({
 
 describe('Kueche', () => {
   beforeEach(() => {
+    getKalibrierungsSnapshotsOnce.mockResolvedValue([
+      { eventId: 'e1', erstelltAm: new Date() },
+      { eventId: 'e2', erstelltAm: new Date() },
+    ]);
     const { getAppCalls } = require('../utils/appCallsFirestore');
     getAppCalls.mockResolvedValue([]);
     const { getRecipeCalls, getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
@@ -953,6 +962,23 @@ describe('Kueche', () => {
     expect(within(tile).getByText('Eventplanung')).toBeInTheDocument();
     fireEvent.click(tile);
     expect(onViewChange).toHaveBeenCalledWith('eventplanung');
+  });
+
+  test('Eventplanung tile shows the calibration event count and a monthly bar chart', async () => {
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={[]}
+        currentUser={{ id: 'user-1', eventplanung: true }}
+      />
+    );
+
+    const tile = screen.getByTestId('eventplanung-tile');
+    expect(await within(tile).findByText('2')).toBeInTheDocument();
+    expect(within(tile).getByText('Events')).toBeInTheDocument();
+    expect(within(tile).getByTestId('eventplanung-bar-chart').children).toHaveLength(6);
   });
 
   test('Eventplanung tile is hidden without the eventplanung permission', () => {
