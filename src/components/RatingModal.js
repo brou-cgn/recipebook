@@ -127,7 +127,7 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
   const renderHeartIcon = (filled) => {
     const icon = filled ? heartFilledIcon : heartEmptyIcon;
     if (isBase64Image(icon)) {
-      return <img src={icon} alt={filled ? '♥' : '♡'} className="rating-heart-img" />;
+      return <img src={icon} alt={filled ? 'Herz gefüllt' : 'Herz leer'} className="rating-heart-img" />;
     }
     return icon;
   };

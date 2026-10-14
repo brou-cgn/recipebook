@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import StarIcon from './icons/StarIcon';
+import TrashIcon from './icons/TrashIcon';
 import './RecipeForm.css';
 import { removeEmojis, containsEmojis } from '../utils/emojiUtils';
 import { fileToBase64, isBase64Image, analyzeImageBrightness, generateThumbnailBlob } from '../utils/imageUtils';
@@ -155,7 +157,7 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
               {isBase64Image(swipeDeleteIcon) ? (
                 <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
               ) : (
-                <span className="swipe-delete-icon-text">{swipeDeleteIcon || '🗑'}</span>
+                <span className="swipe-delete-icon-text">{swipeDeleteIcon || <TrashIcon />}</span>
               )}
             </button>
           )}
@@ -334,7 +336,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
               {isBase64Image(swipeDeleteIcon) ? (
                 <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
               ) : (
-                <span className="swipe-delete-icon-text">{swipeDeleteIcon || '🗑'}</span>
+                <span className="swipe-delete-icon-text">{swipeDeleteIcon || <TrashIcon />}</span>
               )}
             </button>
           )}
@@ -1326,7 +1328,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
 
   const addIngredientIcon = getEffectiveIcon(buttonIcons, 'addIngredient', isDarkMode) || '🥕';
   const addStepIcon = addIngredientIcon;
-  const swipeDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode) || '🗑';
+  const swipeDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode);
 
   return (
     <div className="recipe-form-container">
@@ -1556,11 +1558,11 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                         onClick={() => handleSetDefaultImage(img.url)}
                         title="Als Standardbild festlegen"
                       >
-                        ★ Standard
+                        <StarIcon /> Standard
                       </button>
                     )}
                     {img.isDefault && (
-                      <span className="default-image-badge">★ Standard</span>
+                      <span className="default-image-badge"><StarIcon /> Standard</span>
                     )}
                     <button
                       type="button"
@@ -1747,7 +1749,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                 className={`star ${schwierigkeit >= level ? 'filled' : 'empty'}`}
                 onClick={() => setSchwierigkeit(level)}
               >
-                {schwierigkeit >= level ? '★' : '☆'}
+                <StarIcon filled={schwierigkeit >= level} />
               </span>
             ))}
           </div>

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import StarIcon from './icons/StarIcon';
+import TrashIcon from './icons/TrashIcon';
 import { useLongPress } from '../utils/useLongPress';
 import './DeleteFabButton.css';
 import './PortionSelector.css';
@@ -51,11 +53,11 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   const [shoppingListIcon, setShoppingListIcon] = useState('Einkauf');
   const [bringButtonIcon, setBringButtonIcon] = useState('Bring');
   const [favoritesButtonIcon, setFavoritesButtonIcon] = useState('☆');
-  const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('★');
+  const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('');
   const [privateBadgeIcon, setPrivateBadgeIcon] = useState('🔒');
   const [editMenuIcon, setEditMenuIcon] = useState('Edit');
   const [editFabPressed, setEditFabPressed] = useState(false);
-  const [deleteMenuIcon, setDeleteMenuIcon] = useState('🗑');
+  const [deleteMenuIcon, setDeleteMenuIcon] = useState('');
   const [deleteFabPressed, setDeleteFabPressed] = useState(false);
   const [publishLoading, setPublishLoading] = useState(false);
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(() => window.innerWidth <= MOBILE_TABLET_BREAKPOINT);
@@ -103,10 +105,10 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     setShoppingListIcon(eff('shoppingList') || 'Einkauf');
     setBringButtonIcon(eff('bringButton') || 'Bring');
     setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
-    setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
+    setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive'));
     setPrivateBadgeIcon(eff('privateBadge') || '🔒');
     setEditMenuIcon(eff('editRecipe') || 'Edit');
-    setDeleteMenuIcon(eff('deleteRecipe') || '🗑');
+    setDeleteMenuIcon(eff('deleteRecipe'));
   }, [allButtonIcons, isDarkMode]);
 
   // Listen for dark mode changes
@@ -609,7 +611,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
               isBase64Image(favoritesButtonActiveIcon) ? (
                 <img src={favoritesButtonActiveIcon} alt="Favorit aktiv" className="button-icon-image" draggable="false" />
               ) : (
-                favoritesButtonActiveIcon
+                favoritesButtonActiveIcon || <StarIcon />
               )
             ) : (
               isBase64Image(favoritesButtonIcon) ? (
@@ -858,7 +860,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
           {isBase64Image(deleteMenuIcon) ? (
             <img src={deleteMenuIcon} alt="Löschen" className="button-icon-image" draggable="false" />
           ) : (
-            deleteMenuIcon
+            deleteMenuIcon || <TrashIcon />
           )}
         </button>
       )}

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import TrashIcon from './icons/TrashIcon';
 import PrintFormatEditor from './PrintFormatEditor';
 import TemplateFormatEditor from './TemplateFormatEditor';
 import DeleteRowButton from './DeleteRowButton';
@@ -33,7 +34,7 @@ function FormatHeader({ format, canDelete, deleteHint, onNameChange, onDuplicate
             onClick={() => { onDelete(); reset(); }}
             aria-label={`${label} entfernen`}
           >
-            <span className="swipe-delete-icon-text">🗑</span>
+            <span className="swipe-delete-icon-text"><TrashIcon /></span>
           </button>
         )}
       </div>

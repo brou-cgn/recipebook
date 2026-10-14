@@ -539,8 +539,8 @@ describe('RecipeDetail - Rating Stars Color', () => {
     expect(filledStars.length).toBe(3);
     expect(emptyStars.length).toBe(2);
     
-    // Check that the stars contain the correct Unicode characters
-    expect(difficultyStars.textContent).toBe('★★★☆☆');
+    // Check that five star icons are rendered
+    expect(difficultyStars.querySelectorAll('svg').length).toBe(5);
   });
 
   test('difficulty stars have correct CSS class for orange color', () => {

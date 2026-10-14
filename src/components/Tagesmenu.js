@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import StarIcon from './icons/StarIcon';
 import './Tagesmenu.css';
 import { getSwipeFlagDocsByRecipeForUser, isRecipeAvailableForStack, getAllMembersSwipeFlags, getAllMembersSwipeFlagDocsForList, computeGroupRecipeStatus, computeCalculatedRecipeSwipeFlag, computeNegativeProjection, setRecipeSwipeFlag, bulkUpdateSwipeFlagsByListAndRecipe, deleteSwipeFlagsByListAndRecipe } from '../utils/recipeSwipeFlags';
 import { getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getMaxKandidatenSchwelle, getStatusValiditySettings } from '../utils/customLists';
@@ -1719,7 +1720,7 @@ function Tagesmenu({
                   >
                     {isBase64Image(swipeIcons.swipeUp)
                       ? <img src={swipeIcons.swipeUp} alt="" className="tagesmenu-swipe-badge-img" />
-                      : swipeIcons.swipeUp}
+                      : (swipeIcons.swipeUp || <StarIcon />)}
                   </div>
                 )}
 

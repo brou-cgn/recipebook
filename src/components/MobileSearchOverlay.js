@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import StarIcon from './icons/StarIcon';
 import './MobileSearchOverlay.css';
 import { fuzzyFilter } from '../utils/fuzzySearch';
 import { getUserFavorites } from '../utils/userFavorites';
@@ -513,7 +514,7 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
             aria-pressed={showFavoritesOnly}
             title={showFavoritesOnly ? 'Alle Rezepte anzeigen' : 'Nur Favoriten anzeigen'}
           >
-            ★ Favoriten
+            <StarIcon /> Favoriten
           </button>
           <button
             className={`mobile-search-filter-pill${showSeasonalOnly ? ' active' : ''}`}

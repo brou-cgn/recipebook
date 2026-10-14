@@ -64,7 +64,7 @@ export function buildMetadataItems(recipe, { servings, portionLabel } = {}) {
   const difficulty = Number(recipe?.schwierigkeit);
   if (difficulty > 0) {
     const level = Math.min(5, Math.max(0, Math.round(difficulty)));
-    items.push({ key: 'difficulty', text: `${'★'.repeat(level)}${'☆'.repeat(5 - level)}` });
+    items.push({ key: 'difficulty', text: `Schwierigkeit ${level}/5` });
   }
   return items;
 }

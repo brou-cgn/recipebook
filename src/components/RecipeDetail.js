@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import StarIcon from './icons/StarIcon';
+import TrashIcon from './icons/TrashIcon';
 import { useLongPress } from '../utils/useLongPress';
 import { useAcceleratingLongPress, stepToNextMultiple } from '../hooks/useAcceleratingLongPress';
 import './DeleteFabButton.css';
@@ -153,10 +155,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [newVersionIcon, setNewVersionIcon] = useState('Version');
   const [favoritesButtonIcon, setFavoritesButtonIcon] = useState('☆');
-  const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('★');
+  const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('');
   const [privateBadgeIcon, setPrivateBadgeIcon] = useState('🔒');
   const [newVersionFabPressed, setNewVersionFabPressed] = useState(false);
-  const [deleteRecipeIcon, setDeleteRecipeIcon] = useState('🗑');
+  const [deleteRecipeIcon, setDeleteRecipeIcon] = useState('');
   const [deleteFabPressed, setDeleteFabPressed] = useState(false);
   const [resetThumbnailIcon, setResetThumbnailIcon] = useState('📷');
   const [sourceUrlIcon, setSourceUrlIcon] = useState('🔗');
@@ -228,9 +230,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setEditRecipeIcon(eff('editRecipe') || 'Edit');
       setNewVersionIcon(eff('newVersion') || 'Version');
       setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
-      setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
+      setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive'));
       setPrivateBadgeIcon(eff('privateBadge') || '🔒');
-      setDeleteRecipeIcon(eff('deleteRecipe') || '🗑');
+      setDeleteRecipeIcon(eff('deleteRecipe'));
       setResetThumbnailIcon(eff('resetThumbnail') || '📷');
       setSourceUrlIcon(eff('recipeSourceLink') || '🔗');
       setAllButtonIcons(icons);
@@ -279,9 +281,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setEditRecipeIcon(eff('editRecipe') || 'Edit');
     setNewVersionIcon(eff('newVersion') || 'Version');
     setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
-    setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
+    setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive'));
     setPrivateBadgeIcon(eff('privateBadge') || '🔒');
-    setDeleteRecipeIcon(eff('deleteRecipe') || '🗑');
+    setDeleteRecipeIcon(eff('deleteRecipe'));
     setResetThumbnailIcon(eff('resetThumbnail') || '📷');
     setSourceUrlIcon(eff('recipeSourceLink') || '🔗');
   }, [allButtonIcons, isDarkMode]);
@@ -2235,7 +2237,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     isBase64Image(favoritesButtonActiveIcon) ? (
                       <img src={favoritesButtonActiveIcon} alt="Favorit aktiv" className="button-icon-image" draggable="false" />
                     ) : (
-                      favoritesButtonActiveIcon
+                      favoritesButtonActiveIcon || <StarIcon />
                     )
                   ) : (
                     isBase64Image(favoritesButtonIcon) ? (
@@ -2456,7 +2458,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         key={level}
                         className={`star ${recipe.schwierigkeit >= level ? 'filled' : 'empty'}`}
                       >
-                        {recipe.schwierigkeit >= level ? '★' : '☆'}
+                        <StarIcon filled={recipe.schwierigkeit >= level} />
                       </span>
                     ))}
                   </span>
@@ -2983,7 +2985,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           {isBase64Image(deleteRecipeIcon) ? (
             <img src={deleteRecipeIcon} alt="Löschen" className="button-icon-image" draggable="false" />
           ) : (
-            deleteRecipeIcon
+            deleteRecipeIcon || <TrashIcon />
           )}
         </button>
       )}

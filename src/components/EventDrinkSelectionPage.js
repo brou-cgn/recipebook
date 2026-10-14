@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import TrashIcon from './icons/TrashIcon';
 import './EventsPage.css';
 import UnitChip from './UnitChip';
 import { getEffectiveIcon, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
@@ -175,7 +176,7 @@ function DrinkRow({
             {isBase64Image(swipeDeleteIcon) ? (
               <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
             ) : (
-              <span className="swipe-delete-icon-text">{swipeDeleteIcon || '🗑'}</span>
+              <span className="swipe-delete-icon-text">{swipeDeleteIcon || <TrashIcon />}</span>
             )}
           </button>
         )}
@@ -259,7 +260,7 @@ function EventDrinkSelectionPage({
   currentUserId,
 }) {
   const effectiveButtonIcons = buttonIcons || DEFAULT_BUTTON_ICONS;
-  const swipeDeleteIcon = getEffectiveIcon(effectiveButtonIcons, 'swipeDelete', isDarkMode) || '🗑';
+  const swipeDeleteIcon = getEffectiveIcon(effectiveButtonIcons, 'swipeDelete', isDarkMode);
   const [customDrinkIds, setCustomDrinkIds] = useState(initialCustomDrinkIds ?? []);
   const [drinkDistributionFactors, setDrinkDistributionFactors] = useState(
     initialDrinkDistributionFactors ?? {},

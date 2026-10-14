@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import PencilIcon from './icons/PencilIcon';
 import { isBase64Image } from '../utils/imageUtils';
 import { formatIngredientForBringExport, loadBringStrippedWords, getRecognizedUnits } from '../utils/ingredientUtils';
 import './ShoppingListModal.css';
@@ -197,7 +198,7 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
                       disabled={item.checked}
                       title="Bearbeiten"
                     >
-                      ✎
+                      <PencilIcon />
                     </button>
                   )}
                 </li>

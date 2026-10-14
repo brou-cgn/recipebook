@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import StarIcon from './icons/StarIcon';
 import { canEditRecipes } from '../utils/userManagement';
 import './RecipeFilterSidebar.css';
 
@@ -265,7 +266,7 @@ function RecipeFilterSidebar({
               onClick={() => onFavoritesToggle?.(!showFavoritesOnly)}
               aria-pressed={showFavoritesOnly}
             >
-              ★ Favoriten
+              <StarIcon /> Favoriten
             </button>
             <button
               type="button"

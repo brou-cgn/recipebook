@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import TrashIcon from './icons/TrashIcon';
 import './EventsPage.css';
 import OverviewAddFab from './OverviewAddFab';
 import DeleteRowButton from './DeleteRowButton';
@@ -65,7 +66,7 @@ function GuestCard({ fullName, deleteIcon, onOpenEdit, onDelete, children }) {
           {isBase64Image(deleteIcon) ? (
             <img src={deleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
           ) : (
-            <span className="swipe-delete-icon-text">{deleteIcon}</span>
+            <span className="swipe-delete-icon-text">{deleteIcon || <TrashIcon />}</span>
           )}
         </button>
       </div>
@@ -628,7 +629,7 @@ function GuestManagementPage({
             {sortedAllProfiles.map((profile) => {
               const fullName = getGuestDisplayName(profile);
               const ownerName = getOwnerFirstName(profile.ownerId);
-              const guestDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode) || '🗑';
+              const guestDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode);
               return (
                 <GuestCard
                   key={`${profile.ownerId}_${profile.id}`}
@@ -671,7 +672,7 @@ function GuestManagementPage({
               ? profile.bevorzugteKategorien.map(getDrinkCategoryLabel)
               : [];
             const preferredSummary = [...preferredDrinkNames, ...preferredCategoryNames];
-            const guestDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode) || '🗑';
+            const guestDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode);
             return (
               <GuestCard
                 key={profile.id}

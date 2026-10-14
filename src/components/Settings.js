@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import TrashIcon from './icons/TrashIcon';
 import './Settings.css';
 import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, renameCuisineTypeIcon, deleteCuisineTypeIcon, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getButtonIconsOrder, saveButtonIconsOrder, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, getAIRecipePromptHistory, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION } from '../utils/customLists';
 import { getOnboardingTestmodeActive, saveOnboardingTestmodeActive } from '../utils/onboardingSettings';
@@ -179,7 +180,7 @@ function UnitTableRow({ row, isDeleteVisible, onDeleteVisibleChange, onFieldChan
             onClick={handleSwipeDeleteClick}
             aria-label={`${rowLabel} entfernen`}
           >
-            <span className="swipe-delete-icon-text">🗑</span>
+            <span className="swipe-delete-icon-text"><TrashIcon /></span>
           </button>
         )}
       </div>

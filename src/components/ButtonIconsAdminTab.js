@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import TrashIcon from './icons/TrashIcon';
 import { createPortal } from 'react-dom';
 import './ButtonIconsAdminTab.css';
 import {
@@ -145,7 +146,7 @@ function SortableIconRow({
             onClick={handleSwipeDeleteClick}
             aria-label={`${label} entfernen`}
           >
-            <span className="swipe-delete-icon-text">🗑</span>
+            <span className="swipe-delete-icon-text"><TrashIcon /></span>
           </button>
         )}
       </div>
@@ -421,7 +422,7 @@ function CategoryImageRow({
               onClick={handleSwipeDeleteClick}
               aria-label={`${rowName} entfernen`}
             >
-              <span className="swipe-delete-icon-text">🗑</span>
+              <span className="swipe-delete-icon-text"><TrashIcon /></span>
             </button>
           )}
         </div>
@@ -500,7 +501,7 @@ function CategoryImageRow({
             onClick={handleSwipeDeleteClick}
             aria-label={`${rowName} entfernen`}
           >
-            <span className="swipe-delete-icon-text">🗑</span>
+            <span className="swipe-delete-icon-text"><TrashIcon /></span>
           </button>
         )}
       </div>

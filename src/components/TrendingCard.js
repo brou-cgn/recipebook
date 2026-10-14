@@ -1,4 +1,5 @@
 import React from 'react';
+import StarIcon from './icons/StarIcon';
 import { isBase64Image } from '../utils/imageUtils';
 import './TrendingCard.css';
 
@@ -10,7 +11,7 @@ function renderDifficultyStars(level) {
           key={i}
           className={`trending-card-star ${level >= i ? 'filled' : 'empty'}`}
         >
-          {level >= i ? '★' : '☆'}
+          <StarIcon filled={level >= i} />
         </span>
       ))}
     </span>
@@ -45,11 +46,11 @@ function TrendingCard({ recipe, onSelectRecipe, difficultyIcon = null, timeIcon 
         <div className="trending-card-meta">
           {recipe.schwierigkeit && (
             <span className="trending-card-meta-left">
-              {difficultyIcon && (
+              {difficultyIcon !== null && difficultyIcon !== undefined && (
                 isBase64Image(difficultyIcon) ? (
                   <img src={difficultyIcon} alt="" className="trending-card-meta-icon-img" />
                 ) : (
-                  <span className="trending-card-meta-icon">{difficultyIcon}</span>
+                  <span className="trending-card-meta-icon">{difficultyIcon || <StarIcon />}</span>
                 )
               )}
               {renderDifficultyStars(recipe.schwierigkeit)}
