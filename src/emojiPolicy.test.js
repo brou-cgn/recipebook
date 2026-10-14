@@ -13,13 +13,9 @@ const EMOJI = /\p{Extended_Pictographic}/gu;
 
 const BASELINE = {
   'components/ButtonIconsAdminTab.js': 1,
-  'components/DrinkManagementPage.js': 1,
   'components/KalibrierungsAuswertung.js': 1,
-  'components/MenuDetail.js': 4,
   'components/NutritionModal.js': 1,
   'components/NutritionReferenceTab.js': 2,
-  'components/RecipeCard.js': 1,
-  'components/RecipeForm.js': 1,
   'components/printEditor/ElementPropsPanel.js': 6,
   'components/templateEditor/FloatingToolbar.js': 1,
 };
