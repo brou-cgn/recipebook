@@ -24,7 +24,7 @@
  * How to work the list down
  * -------------------------
  * 1. Pick a suite and run it on its own:
- *      npx react-scripts test --watchAll=false --testPathPattern="RecipeList"
+ *      npx jest --testPathPattern="RecipeList"
  * 2. Fix it - or delete tests that assert on exact CSS strings, which break
  *    on any reformatting without catching a single behavioural regression.
  * 3. Delete its line here. CI will keep it honest from then on.

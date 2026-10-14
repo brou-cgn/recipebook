@@ -106,7 +106,10 @@ describe('GroupEditDialog', () => {
 
     it('shows error if list kind is not selected on submit', async () => {
       renderDialog({ group: { ...mockClassicGroup, listKind: '' } });
-      fireEvent.click(screen.getByText('Speichern'));
+      // Formular direkt absenden: jsdom prüft seit Jest 29 (jsdom 20) wie ein
+      // echter Browser die `required`-Felder und blockiert sonst den Klick,
+      // bevor die eigene Validierung des Dialogs läuft.
+      fireEvent.submit(screen.getByText('Speichern').closest('form'));
       await waitFor(() => {
         expect(screen.getByText('Bitte wähle eine Art der Liste aus.')).toBeInTheDocument();
       });

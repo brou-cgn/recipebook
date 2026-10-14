@@ -5,7 +5,10 @@ verweisen hierher. Regeln, die sich prüfen lassen, werden per Test oder Lint
 erzwungen — wo das gilt, steht die Datei dabei.
 
 ## Architektur
-- Frontend: React 19 mit Create React App (`react-scripts`), PWA mit Service Worker.
+- Frontend: React 19, gebaut mit Vite (`vite.config.mjs`), PWA mit Service Worker
+  (`src/service-worker.js`, eingebunden über `vite-plugin-pwa`). Tests mit Jest (`jest.config.js`).
+- Umgebungsvariablen heißen `REACT_APP_*` und werden als `process.env.REACT_APP_*` gelesen;
+  `vite.config.mjs` setzt sie beim Build ein. Kein `import.meta.env` im App-Code (Jest kennt es nicht).
 - Backend: Firebase (Firestore, Auth, Storage, Cloud Functions in `functions/`).
 - Zugriffsregeln: `firestore.rules`, `storage.rules`; Dokumentation in `docs/architecture/security.md`.
 - Rollen: `admin`, `edit`, `comment`, `read`, `guest`. Jedes Rezept hat eine `groupId`.

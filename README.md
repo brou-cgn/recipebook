@@ -450,7 +450,8 @@ Aufbau, Datenmodell und Migration: siehe [Drucklayout](docs/features/druck.md).
 ## Technology Stack
 
 - **React 19**: Modern UI library
-- **Create React App**: Build tooling and configuration
+- **Vite**: Build tooling (`vite.config.mjs`), with `vite-plugin-pwa` for the service worker
+- **Jest**: Test runner (`jest.config.js`)
 - **Firebase**: Backend infrastructure
   - **Firestore**: NoSQL cloud database with offline support
   - **Firebase Authentication**: User management and authentication
@@ -480,10 +481,11 @@ You can edit or delete these and add your own recipes.
 
 ### Available Scripts
 
-- `npm start` - Run development server
-- `npm run build` - Create production build
-- `npm test` - Run tests
-- `npm run eject` - Eject from Create React App (one-way operation)
+- `npm start` - Run development server (Vite, http://localhost:3000)
+- `npm run build` - Create production build in `build/`
+- `npm run preview` - Serve the production build locally (service worker active)
+- `npm test` - Run all tests, including quarantined suites
+- `npm run test:ci` - Run the tests the way CI does
 
 ### Project Structure
 
