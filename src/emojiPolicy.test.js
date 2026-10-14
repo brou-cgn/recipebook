@@ -12,22 +12,16 @@ const SRC = __dirname;
 const EMOJI = /\p{Extended_Pictographic}/gu;
 
 const BASELINE = {
-  'components/AppCallsPage.js': 2,
   'components/ButtonIconsAdminTab.js': 1,
   'components/DrinkManagementPage.js': 1,
-  'components/GroupDetail.js': 3,
   'components/KalibrierungsAuswertung.js': 1,
   'components/MenuDetail.js': 4,
   'components/NutritionModal.js': 1,
   'components/NutritionReferenceTab.js': 2,
   'components/RecipeCard.js': 1,
-  'components/RecipeDetail.js': 26,
   'components/RecipeForm.js': 1,
-  'components/Settings.js': 3,
   'components/printEditor/ElementPropsPanel.js': 6,
   'components/templateEditor/FloatingToolbar.js': 1,
-  'utils/customLists.js': 17,
-  'utils/nutritionIconUtils.js': 1,
 };
 
 function sourceFiles(dir) {

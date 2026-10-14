@@ -879,7 +879,7 @@ describe('getSettings – settings/images document split', () => {
 
     expect(settings.faviconImage).toBeNull();
     expect(settings.appLogoImage).toBeNull();
-    expect(settings.buttonIcons).toEqual(expect.objectContaining({ cookingMode: '♨' }));
+    expect(settings.buttonIcons).toEqual(expect.objectContaining({ cookingMode: DEFAULT_BUTTON_ICONS.cookingMode }));
   });
 
   test('migrates image fields from settings/app to settings/images', async () => {
@@ -909,7 +909,7 @@ describe('getSettings – settings/images document split', () => {
     // Image data should appear in the returned settings
     expect(settings.faviconImage).toBe(faviconBase64);
     // buttonIcons migrated from settings/app → collection; getDocs returns empty → DEFAULT_BUTTON_ICONS used
-    expect(settings.buttonIcons).toEqual(expect.objectContaining({ cookingMode: '♨' }));
+    expect(settings.buttonIcons).toEqual(expect.objectContaining({ cookingMode: DEFAULT_BUTTON_ICONS.cookingMode }));
 
     // setDoc should have been called to create settings/images with faviconImage only
     // (buttonIcons is no longer stored in settings/images)

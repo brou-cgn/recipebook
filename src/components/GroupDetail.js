@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { defaultIcon } from '../utils/defaultButtonIcons';
 import TrashIcon from './icons/TrashIcon';
 import { useLongPress } from '../utils/useLongPress';
 import './DeleteFabButton.css';
@@ -22,7 +23,7 @@ import SortCarousel from './SortCarousel';
 const DEFAULT_PORTIONS = 4;
 const TAB_RECIPES = 'rezepte';
 const TAB_SETTINGS = 'einstellungen';
-const DEFAULT_LIST_SETTINGS_ICON = '⚙';
+const DEFAULT_LIST_SETTINGS_ICON = defaultIcon('gear');
 const PRIVATE_LIST_SORT_STORAGE_KEY_PREFIX = 'recipebook_private_list';
 const resolveListSettingsActiveIcon = (icons, isDarkMode) => (
   getEffectiveIcon(icons, 'listSettingsActive', isDarkMode)
@@ -84,7 +85,7 @@ function GroupDetail({
   const [shoppingListIcon, setShoppingListIcon] = useState(DEFAULT_BUTTON_ICONS.shoppingList || 'Einkauf');
   const [listSettingsIcon, setListSettingsIcon] = useState(DEFAULT_BUTTON_ICONS.listSettings || DEFAULT_LIST_SETTINGS_ICON);
   const [listSettingsActiveIcon, setListSettingsActiveIcon] = useState(resolveListSettingsActiveIcon(DEFAULT_BUTTON_ICONS, getDarkModePreference()));
-  const [addMemberIcon, setAddMemberIcon] = useState(DEFAULT_BUTTON_ICONS.addGroupMember || '👤+');
+  const [addMemberIcon, setAddMemberIcon] = useState(DEFAULT_BUTTON_ICONS.addGroupMember || defaultIcon('userPlus'));
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [addPressed, setAddPressed] = useState(false);
@@ -136,7 +137,7 @@ function GroupDetail({
     setShoppingListIcon(getEffectiveIcon(allButtonIcons, 'shoppingList', isDarkMode) || DEFAULT_BUTTON_ICONS.shoppingList || 'Einkauf');
     setListSettingsIcon(getEffectiveIcon(allButtonIcons, 'listSettings', isDarkMode) || DEFAULT_BUTTON_ICONS.listSettings || DEFAULT_LIST_SETTINGS_ICON);
     setListSettingsActiveIcon(resolveListSettingsActiveIcon(allButtonIcons, isDarkMode));
-    setAddMemberIcon(getEffectiveIcon(allButtonIcons, 'addGroupMember', isDarkMode) || DEFAULT_BUTTON_ICONS.addGroupMember || '👤+');
+    setAddMemberIcon(getEffectiveIcon(allButtonIcons, 'addGroupMember', isDarkMode) || DEFAULT_BUTTON_ICONS.addGroupMember || defaultIcon('userPlus'));
   }, [allButtonIcons, isDarkMode]);
 
   useEffect(() => {

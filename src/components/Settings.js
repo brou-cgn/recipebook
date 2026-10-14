@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import StarIcon from './icons/StarIcon';
+import { defaultIcon } from '../utils/defaultButtonIcons';
+import PencilIcon from './icons/PencilIcon';
 import TrashIcon from './icons/TrashIcon';
 import './Settings.css';
 import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, renameCuisineTypeIcon, deleteCuisineTypeIcon, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getButtonIconsOrder, saveButtonIconsOrder, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, getAIRecipePromptHistory, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION } from '../utils/customLists';
@@ -119,11 +122,11 @@ function SortableListItem({
       )}
       {placeholderColumn && !isEditing && (
         <div className="list-item-icon-group">
-          <span className="list-item-column-placeholder" title={placeholderColumnTitle} aria-label={`${placeholderColumnTitle} (${label})`}>🖼</span>
+          <span className="list-item-column-placeholder" title={placeholderColumnTitle} aria-label={`${placeholderColumnTitle} (${label})`}><img src={defaultIcon('image')} alt="" width="16" height="16" /></span>
         </div>
       )}
       {onRename && !isEditing && (
-        <button className="edit-btn" onClick={handleEditStart} title="Umbenennen">✎</button>
+        <button className="edit-btn" onClick={handleEditStart} title="Umbenennen"><PencilIcon /></button>
       )}
       <button className="remove-btn" onClick={onRemove} title="Entfernen">×</button>
     </div>
@@ -1590,7 +1593,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               </p>
               <div className="sort-settings-grid">
                 <div className="sort-settings-group">
-                  <h4>⭐ Kandidat</h4>
+                  <h4><StarIcon /> Kandidat</h4>
                   <div className="sort-settings-field">
                     <label htmlFor="statusValidityDaysKandidat">Gültigkeitsdauer (Tage):</label>
                     <input
@@ -1668,7 +1671,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               </p>
               <div className="sort-settings-grid">
                 <div className="sort-settings-group">
-                  <h4>⭐ Kandidat</h4>
+                  <h4><StarIcon /> Kandidat</h4>
                   <div className="sort-settings-field">
                     <label htmlFor="groupThresholdKandidatMinKandidat">Minimum Kandidaten-Swipes (%):</label>
                     <input

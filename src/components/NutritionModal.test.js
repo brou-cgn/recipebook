@@ -13,7 +13,7 @@ import NutritionModal, {
   resolveLinkedRecipeNutrition,
 } from './NutritionModal';
 import { hasMeaningfulGeneratedNutrition } from '../utils/nutritionStatusResolver';
-import { DEFAULT_ADD_NUTRITION_ICON } from '../utils/nutritionIconUtils';
+import { DEFAULT_ADD_NUTRITION_ICON, DEFAULT_SAVE_MANUAL_AMOUNT_ICON } from '../utils/nutritionIconUtils';
 
 jest.mock('../firebase', () => ({
   functions: {},
@@ -1879,7 +1879,7 @@ describe('NutritionModal manual save icon', () => {
     },
   };
 
-  it('renders default 💾 emoji when no manualSaveIcon prop is provided', () => {
+  it('renders default save icon image when no manualSaveIcon prop is provided', () => {
     render(
       <NutritionModal
         recipe={baseRecipeWithNoAmountG}
@@ -1889,7 +1889,7 @@ describe('NutritionModal manual save icon', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Zusammensetzung anzeigen' }));
     const saveBtn = screen.getByRole('button', { name: 'Menge für Eier speichern' });
-    expect(saveBtn).toHaveTextContent('💾');
+    expect(saveBtn.querySelector('img')).toHaveAttribute('src', DEFAULT_SAVE_MANUAL_AMOUNT_ICON);
   });
 
   it('renders custom text icon when manualSaveIcon prop is provided', () => {
