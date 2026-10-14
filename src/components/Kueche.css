@@ -47,11 +47,11 @@
 }
 
 .kueche-tile.kueche-tile--meine-kuechenstars {
-  border-left-color: #2C4A7A;
+  border-left-color: #556B2F;
 }
 
 .kueche-tile--meine-kuechenstars .kueche-tile-content h3 {
-  color: #2C4A7A;
+  color: #556B2F;
 }
 
 .kueche-tile.kueche-tile--eventplanung {
@@ -176,7 +176,7 @@
 }
 
 .kueche-bar-chart__bar--meine-kuechenstars {
-  background-color: #2C4A7A;
+  background-color: #556B2F;
 }
 
 .kueche-tile--meine-kuechenstars .kueche-tile-meta .meta-text span {
