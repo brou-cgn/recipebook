@@ -486,6 +486,28 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
               </div>
             </div>
           )}
+          {currentUser?.eventplanung && (
+            <div
+              className="kueche-tile kueche-tile--eventplanung"
+              data-testid="eventplanung-tile"
+              onClick={() => onViewChange && onViewChange('eventplanung')}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onViewChange && onViewChange('eventplanung'); } }}
+              role="button"
+              tabIndex={0}
+              aria-label="Eventplanung Soll-vs.-Ist-Auswertung öffnen"
+            >
+              <div className="kueche-tile-content">
+                <h3>Eventplanung</h3>
+                <div className="kueche-tile-meta">
+                  <span className="meta-text">
+                    <strong>{kalibrierungsSnapshots.length}</strong>
+                    <span>Events</span>
+                  </span>
+                </div>
+                <EventCalibrationBarChart snapshots={kalibrierungsSnapshots} />
+              </div>
+            </div>
+          )}
           {currentUser && (
             <div
               className="kueche-tile kueche-tile--meine-kuechenstars"
@@ -506,28 +528,6 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
                   </div>
                 )}
                 <RecipeCallsBarChart recipeCalls={ownRecipeCalls} />
-              </div>
-            </div>
-          )}
-          {currentUser?.eventplanung && (
-            <div
-              className="kueche-tile kueche-tile--eventplanung"
-              data-testid="eventplanung-tile"
-              onClick={() => onViewChange && onViewChange('eventplanung')}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onViewChange && onViewChange('eventplanung'); } }}
-              role="button"
-              tabIndex={0}
-              aria-label="Eventplanung Soll-vs.-Ist-Auswertung öffnen"
-            >
-              <div className="kueche-tile-content">
-                <h3>Eventplanung</h3>
-                <div className="kueche-tile-meta">
-                  <span className="meta-text">
-                    <strong>{kalibrierungsSnapshots.length}</strong>
-                    <span>Events</span>
-                  </span>
-                </div>
-                <EventCalibrationBarChart snapshots={kalibrierungsSnapshots} />
               </div>
             </div>
           )}
