@@ -54,6 +54,14 @@
   color: #2F5D50;
 }
 
+.kueche-tile.kueche-tile--eventplanung {
+  border-left-color: #2F5D50;
+}
+
+.kueche-tile--eventplanung .kueche-tile-content h3 {
+  color: #2F5D50;
+}
+
 .kueche-tile:hover {
   transform: translateY(-4px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
@@ -86,7 +94,8 @@
 .kueche-tile--mise-en-place .kueche-tile-meta,
 .kueche-tile--meinkochbuch .kueche-tile-meta,
 .kueche-tile--appaufrufe .kueche-tile-meta,
-.kueche-tile--meine-kuechenstars .kueche-tile-meta {
+.kueche-tile--meine-kuechenstars .kueche-tile-meta,
+.kueche-tile--eventplanung .kueche-tile-meta {
   position: absolute;
   bottom: 10px;
   margin-top: 0;
@@ -123,7 +132,8 @@
 .kueche-tile--meinkochbuch .kueche-tile-meta .meta-text,
 .kueche-tile--mise-en-place .kueche-tile-meta .meta-text,
 .kueche-tile--appaufrufe .kueche-tile-meta .meta-text,
-.kueche-tile--meine-kuechenstars .kueche-tile-meta .meta-text {
+.kueche-tile--meine-kuechenstars .kueche-tile-meta .meta-text,
+.kueche-tile--eventplanung .kueche-tile-meta .meta-text {
   margin-bottom: 6px;
 }
 

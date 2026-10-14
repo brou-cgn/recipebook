@@ -1878,6 +1878,19 @@
   background: #121212;
 }
 
+/* ---- Eventplanung Page ---- */
+[data-theme="dark"] .eventplanung-container {
+  background: #121212;
+}
+
+[data-theme="dark"] .eventplanung-content {
+  background: #1e1e1e;
+}
+
+[data-theme="dark"] .eventplanung-empty {
+  color: #777;
+}
+
 /* ---- Share Page ---- */
 [data-theme="dark"] .share-page {
   background: #121212;
