@@ -52,7 +52,7 @@ export const getUsers = async () => {
     // firestore.rules. Everyone else gets the public subset (vorname,
     // nachname, versteckt, recipe_count) mirrored by the syncPublicProfile
     // Cloud Function.
-    const isAdminUser = currentUserCache?.isAdmin === true || currentUserCache?.role === ROLES.ADMIN;
+    const isAdminUser = currentUserCache?.role === ROLES.ADMIN;
     const usersRef = collection(db, isAdminUser ? 'users' : 'publicProfiles');
     const snapshot = await getDocs(usersRef);
     const users = [];
@@ -347,7 +347,6 @@ export const onAuthStateChange = (callback) => {
           vorname: 'Gast',
           nachname: '',
           email: 'guest@local',
-          isAdmin: false,
           role: ROLES.GUEST,
           isGuest: true,
           createdAt: new Date().toISOString()
@@ -404,48 +403,7 @@ export const onAuthStateChange = (callback) => {
  */
 export const isCurrentUserAdmin = () => {
   const currentUser = getCurrentUser();
-  return currentUser ? currentUser.isAdmin === true : false;
-};
-
-/**
- * Update user's admin status
- * @param {string} userId - ID of user to update
- * @param {boolean} isAdmin - New admin status
- * @returns {Promise<Object>} Promise resolving to { success: boolean, message: string }
- */
-export const updateUserAdminStatus = async (userId, isAdmin) => {
-  try {
-    // If removing admin status, check if there's at least one other admin
-    if (!isAdmin) {
-      const users = await getUsers();
-      const adminUsers = users.filter(u => u.isAdmin);
-      if (adminUsers.length === 1 && adminUsers[0].id === userId) {
-        return {
-          success: false,
-          message: 'Es muss mindestens ein Administrator vorhanden sein.'
-        };
-      }
-    }
-    
-    // Update user in Firestore
-    await updateDoc(doc(db, 'users', userId), { isAdmin });
-    
-    // Update cache if it's the current user
-    if (currentUserCache && currentUserCache.id === userId) {
-      currentUserCache = { ...currentUserCache, isAdmin };
-    }
-    
-    return {
-      success: true,
-      message: 'Admin-Status erfolgreich aktualisiert.'
-    };
-  } catch (error) {
-    console.error('Error updating admin status:', error);
-    return {
-      success: false,
-      message: 'Fehler beim Aktualisieren des Admin-Status.'
-    };
-  }
+  return currentUser ? currentUser.role === ROLES.ADMIN : false;
 };
 
 /**
@@ -454,7 +412,7 @@ export const updateUserAdminStatus = async (userId, isAdmin) => {
  */
 export const getAdminCount = async () => {
   const users = await getUsers();
-  return users.filter(u => u.isAdmin).length;
+  return users.filter(u => u.role === ROLES.ADMIN).length;
 };
 
 /**
@@ -471,7 +429,6 @@ export const loginAsGuest = async () => {
       vorname: 'Gast',
       nachname: '',
       email: 'guest@local',
-      isAdmin: false,
       role: ROLES.GUEST,
       isGuest: true,
       createdAt: new Date().toISOString()
@@ -521,8 +478,8 @@ export const updateUserRole = async (userId, role) => {
     }
     
     // If changing from admin role, check if there's at least one other admin
-    if (user.isAdmin && role !== ROLES.ADMIN) {
-      const adminUsers = users.filter(u => u.isAdmin);
+    if (user.role === ROLES.ADMIN && role !== ROLES.ADMIN) {
+      const adminUsers = users.filter(u => u.role === ROLES.ADMIN);
       if (adminUsers.length === 1) {
         return {
           success: false,
@@ -532,10 +489,7 @@ export const updateUserRole = async (userId, role) => {
     }
     
     // Update user in Firestore
-    const updateData = {
-      role,
-      isAdmin: role === ROLES.ADMIN
-    };
+    const updateData = { role };
     await updateDoc(doc(db, 'users', userId), updateData);
     
     // Update cache if it's the current user
@@ -578,8 +532,8 @@ export const deleteUser = async (userId) => {
     }
     
     // If deleting an admin, check if there's at least one other admin
-    if (user.isAdmin) {
-      const adminUsers = users.filter(u => u.isAdmin);
+    if (user.role === ROLES.ADMIN) {
+      const adminUsers = users.filter(u => u.role === ROLES.ADMIN);
       if (adminUsers.length === 1) {
         return {
           success: false,

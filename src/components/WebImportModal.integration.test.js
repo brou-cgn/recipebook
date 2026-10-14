@@ -37,7 +37,7 @@ jest.mock('../utils/customLists', () => ({
 
 jest.mock('../utils/userManagement', () => ({
   getUsers: () => Promise.resolve([
-    { id: 'admin-1', vorname: 'Admin', nachname: 'User', email: 'admin@example.com', isAdmin: true, role: 'admin' },
+    { id: 'admin-1', vorname: 'Admin', nachname: 'User', email: 'admin@example.com', role: 'admin' },
   ]),
   isCurrentUserAdmin: jest.fn(() => false),
   getUserAiOcrScanCount: jest.fn(() => Promise.resolve(0)),
@@ -133,7 +133,6 @@ describe('WebImportModal Integration - Dialog Close on Apply', () => {
       vorname: 'Admin',
       nachname: 'User',
       email: 'admin@example.com',
-      isAdmin: true,
       role: 'admin',
       webimport: true, // Enable webimport feature
     };
@@ -178,7 +177,6 @@ describe('WebImportModal Integration - Dialog Close on Apply', () => {
       vorname: 'Admin',
       nachname: 'User',
       email: 'admin@example.com',
-      isAdmin: true,
       role: 'admin',
       webimport: true,
     };
@@ -227,7 +225,6 @@ describe('WebImportModal Integration - initialWebImportUrl deeplink', () => {
     vorname: 'Admin',
     nachname: 'User',
     email: 'admin@example.com',
-    isAdmin: true,
     role: 'admin',
     webimport: true,
   };

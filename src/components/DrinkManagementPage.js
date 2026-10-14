@@ -165,7 +165,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
   const [isPredefined, setIsPredefined] = useState(false);
   const [isAddUnitsMode, setIsAddUnitsMode] = useState(false);
   const [addUnitsDrink, setAddUnitsDrink] = useState(null);
-  const isAdmin = currentUser?.isAdmin === true;
+  const isAdmin = currentUser?.role === 'admin';
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');

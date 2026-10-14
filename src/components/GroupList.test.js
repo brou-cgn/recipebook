@@ -15,8 +15,8 @@ jest.mock('../utils/imageUtils', () => ({
   isBase64Image: jest.fn().mockReturnValue(false),
 }));
 
-const mockCurrentUser = { id: 'user1', vorname: 'Anna', nachname: 'Müller', isAdmin: false };
-const mockAdminUser = { id: 'admin1', vorname: 'Admin', nachname: 'User', isAdmin: true };
+const mockCurrentUser = { id: 'user1', vorname: 'Anna', nachname: 'Müller' };
+const mockAdminUser = { id: 'admin1', vorname: 'Admin', nachname: 'User', role: 'admin' };
 const mockAllUsers = [
   { id: 'user1', vorname: 'Anna', nachname: 'Müller' },
   { id: 'user2', vorname: 'Ben', nachname: 'Schmidt' }

@@ -80,7 +80,6 @@ import {
   logoutUser,
   getCurrentUser,
   isCurrentUserAdmin,
-  updateUserAdminStatus,
   getAdminCount,
   loginAsGuest,
   updateUserRole,
@@ -185,7 +184,6 @@ const setupMocks = () => {
           vorname: vorname,
           nachname: nachname,
           email: normEmail,
-          isAdmin: isAdmin,
           role: isAdmin ? "admin" : "read",
           createdAt: new Date().toISOString(),
           fotoscan: false,
@@ -215,7 +213,7 @@ describe("User Management Utilities", () => {
         password: VALID_PASSWORD
       });
       expect(result.success).toBe(true);
-      expect(result.user.isAdmin).toBe(true);
+      expect(result.user.role).toBe(ROLES.ADMIN);
       expect(result.user.vorname).toBe("Max");
       expect(result.user.nachname).toBe("Mustermann");
       expect(result.user.email).toBe("max@example.com");
@@ -225,7 +223,7 @@ describe("User Management Utilities", () => {
       await registerUser({ vorname: "First", nachname: "User", email: "first@example.com", password: VALID_PASSWORD });
       const result = await registerUser({ vorname: "Second", nachname: "User", email: "second@example.com", password: VALID_PASSWORD });
       expect(result.success).toBe(true);
-      expect(result.user.isAdmin).toBe(false);
+      expect('isAdmin' in result.user).toBe(false);
     });
 
     test("should not allow duplicate email", async () => {
@@ -375,46 +373,6 @@ describe("User Management Utilities", () => {
     });
   });
 
-  describe("updateUserAdminStatus", () => {
-    let adminUser, regularUser;
-
-    beforeEach(async () => {
-      adminUser = (await registerUser({ vorname: "Admin", nachname: "User", email: "admin@example.com", password: VALID_PASSWORD })).user;
-      regularUser = (await registerUser({ vorname: "Regular", nachname: "User", email: "regular@example.com", password: VALID_PASSWORD })).user;
-    });
-
-    test("should promote regular user to admin", async () => {
-      const result = await updateUserAdminStatus(regularUser.id, true);
-      expect(result.success).toBe(true);
-      const users = await getUsers();
-      const updatedUser = users.find(u => u.id === regularUser.id);
-      expect(updatedUser.isAdmin).toBe(true);
-    });
-
-    test("should demote admin to regular user when there are multiple admins", async () => {
-      await updateUserAdminStatus(regularUser.id, true);
-      const result = await updateUserAdminStatus(adminUser.id, false);
-      expect(result.success).toBe(true);
-      const users = await getUsers();
-      expect(users.find(u => u.id === adminUser.id).isAdmin).toBe(false);
-    });
-
-    test("should not allow removing the last admin", async () => {
-      const result = await updateUserAdminStatus(adminUser.id, false);
-      expect(result.success).toBe(false);
-      expect(result.message).toContain("mindestens ein Administrator");
-      const users = await getUsers();
-      expect(users.find(u => u.id === adminUser.id).isAdmin).toBe(true);
-    });
-
-    test("should update current user if they are the one being modified", async () => {
-      await loginUser("admin@example.com", VALID_PASSWORD);
-      await updateUserAdminStatus(regularUser.id, true);
-      await updateUserAdminStatus(adminUser.id, false);
-      expect(getCurrentUser().isAdmin).toBe(false);
-    });
-  });
-
   describe("getAdminCount", () => {
     test("should return 0 when no users exist", async () => {
       expect(await getAdminCount()).toBe(0);
@@ -428,7 +386,7 @@ describe("User Management Utilities", () => {
     test("should return correct count when multiple admins exist", async () => {
       await registerUser({ vorname: "Admin1", nachname: "User", email: "admin1@example.com", password: VALID_PASSWORD });
       const user2 = (await registerUser({ vorname: "User2", nachname: "Name", email: "user2@example.com", password: VALID_PASSWORD })).user;
-      await updateUserAdminStatus(user2.id, true);
+      await updateUserRole(user2.id, ROLES.ADMIN);
       expect(await getAdminCount()).toBe(2);
     });
   });
@@ -452,7 +410,7 @@ describe("User Management Utilities", () => {
       expect(result.success).toBe(true);
       expect(result.user.role).toBe(ROLES.GUEST);
       expect(result.user.isGuest).toBe(true);
-      expect(result.user.isAdmin).toBe(false);
+      expect('isAdmin' in result.user).toBe(false);
     });
 
     test("should set guest as current user", async () => {
@@ -484,7 +442,7 @@ describe("User Management Utilities", () => {
       const users = await getUsers();
       const updatedUser = users.find(u => u.id === regularUser.id);
       expect(updatedUser.role).toBe(ROLES.EDIT);
-      expect(updatedUser.isAdmin).toBe(false);
+      expect('isAdmin' in updatedUser).toBe(false);
     });
 
     test("should update user role to admin", async () => {
@@ -493,7 +451,7 @@ describe("User Management Utilities", () => {
       const users = await getUsers();
       const updatedUser = users.find(u => u.id === regularUser.id);
       expect(updatedUser.role).toBe(ROLES.ADMIN);
-      expect(updatedUser.isAdmin).toBe(true);
+      expect('isAdmin' in updatedUser).toBe(false);
     });
 
     test("should not allow removing last admin", async () => {
@@ -501,7 +459,7 @@ describe("User Management Utilities", () => {
       expect(result.success).toBe(false);
       expect(result.message).toContain("mindestens ein Administrator");
       const users = await getUsers();
-      expect(users.find(u => u.id === adminUser.id).isAdmin).toBe(true);
+      expect(users.find(u => u.id === adminUser.id).role).toBe(ROLES.ADMIN);
     });
 
     test("should reject invalid role", async () => {
@@ -516,7 +474,7 @@ describe("User Management Utilities", () => {
       await updateUserRole(adminUser.id, ROLES.READ);
       const currentUser = getCurrentUser();
       expect(currentUser.role).toBe(ROLES.READ);
-      expect(currentUser.isAdmin).toBe(false);
+      expect('isAdmin' in currentUser).toBe(false);
     });
   });
 
@@ -560,35 +518,35 @@ describe("User Management Utilities", () => {
   });
 
   describe("canEditRecipes", () => {
-    test("should return true for admin users", () => { expect(canEditRecipes({ role: ROLES.ADMIN, isAdmin: true })).toBe(true); });
-    test("should return true for moderator users", () => { expect(canEditRecipes({ role: ROLES.MODERATOR, isAdmin: false })).toBe(true); });
-    test("should return true for edit users", () => { expect(canEditRecipes({ role: ROLES.EDIT, isAdmin: false })).toBe(true); });
-    test("should return false for read users", () => { expect(canEditRecipes({ role: ROLES.READ, isAdmin: false })).toBe(false); });
-    test("should return false for guest users", () => { expect(canEditRecipes({ role: ROLES.GUEST, isAdmin: false })).toBe(false); });
+    test("should return true for admin users", () => { expect(canEditRecipes({ role: ROLES.ADMIN })).toBe(true); });
+    test("should return true for moderator users", () => { expect(canEditRecipes({ role: ROLES.MODERATOR })).toBe(true); });
+    test("should return true for edit users", () => { expect(canEditRecipes({ role: ROLES.EDIT })).toBe(true); });
+    test("should return false for read users", () => { expect(canEditRecipes({ role: ROLES.READ })).toBe(false); });
+    test("should return false for guest users", () => { expect(canEditRecipes({ role: ROLES.GUEST })).toBe(false); });
     test("should return false for null user", () => { expect(canEditRecipes(null)).toBe(false); });
   });
 
   describe("canDeleteRecipes", () => {
-    test("should return true for admin users", () => { expect(canDeleteRecipes({ role: ROLES.ADMIN, isAdmin: true })).toBe(true); });
-    test("should return false for moderator users", () => { expect(canDeleteRecipes({ role: ROLES.MODERATOR, isAdmin: false })).toBe(false); });
-    test("should return false for edit users", () => { expect(canDeleteRecipes({ role: ROLES.EDIT, isAdmin: false })).toBe(false); });
-    test("should return false for read users", () => { expect(canDeleteRecipes({ role: ROLES.READ, isAdmin: false })).toBe(false); });
+    test("should return true for admin users", () => { expect(canDeleteRecipes({ role: ROLES.ADMIN })).toBe(true); });
+    test("should return false for moderator users", () => { expect(canDeleteRecipes({ role: ROLES.MODERATOR })).toBe(false); });
+    test("should return false for edit users", () => { expect(canDeleteRecipes({ role: ROLES.EDIT })).toBe(false); });
+    test("should return false for read users", () => { expect(canDeleteRecipes({ role: ROLES.READ })).toBe(false); });
     test("should return false for null user", () => { expect(canDeleteRecipes(null)).toBe(false); });
   });
 
   describe("canManageSeasonMatrix", () => {
-    test("should return true for admin users", () => { expect(canManageSeasonMatrix({ role: ROLES.ADMIN, isAdmin: true })).toBe(true); });
-    test("should return true for moderator users", () => { expect(canManageSeasonMatrix({ role: ROLES.MODERATOR, isAdmin: false })).toBe(true); });
-    test("should return false for edit users", () => { expect(canManageSeasonMatrix({ role: ROLES.EDIT, isAdmin: false })).toBe(false); });
-    test("should return false for read users", () => { expect(canManageSeasonMatrix({ role: ROLES.READ, isAdmin: false })).toBe(false); });
+    test("should return true for admin users", () => { expect(canManageSeasonMatrix({ role: ROLES.ADMIN })).toBe(true); });
+    test("should return true for moderator users", () => { expect(canManageSeasonMatrix({ role: ROLES.MODERATOR })).toBe(true); });
+    test("should return false for edit users", () => { expect(canManageSeasonMatrix({ role: ROLES.EDIT })).toBe(false); });
+    test("should return false for read users", () => { expect(canManageSeasonMatrix({ role: ROLES.READ })).toBe(false); });
     test("should return false for null user", () => { expect(canManageSeasonMatrix(null)).toBe(false); });
   });
 
   describe("canViewRecipeIndex", () => {
-    test("should return true for admin users", () => { expect(canViewRecipeIndex({ role: ROLES.ADMIN, isAdmin: true })).toBe(true); });
-    test("should return true for moderator users", () => { expect(canViewRecipeIndex({ role: ROLES.MODERATOR, isAdmin: false })).toBe(true); });
-    test("should return false for edit users", () => { expect(canViewRecipeIndex({ role: ROLES.EDIT, isAdmin: false })).toBe(false); });
-    test("should return false for read users", () => { expect(canViewRecipeIndex({ role: ROLES.READ, isAdmin: false })).toBe(false); });
+    test("should return true for admin users", () => { expect(canViewRecipeIndex({ role: ROLES.ADMIN })).toBe(true); });
+    test("should return true for moderator users", () => { expect(canViewRecipeIndex({ role: ROLES.MODERATOR })).toBe(true); });
+    test("should return false for edit users", () => { expect(canViewRecipeIndex({ role: ROLES.EDIT })).toBe(false); });
+    test("should return false for read users", () => { expect(canViewRecipeIndex({ role: ROLES.READ })).toBe(false); });
     test("should honor explicit recipeIndex flag when present", () => { expect(canViewRecipeIndex({ role: ROLES.MODERATOR, recipeIndex: false })).toBe(false); });
     test("should allow explicit recipeIndex permission for lower roles", () => { expect(canViewRecipeIndex({ role: ROLES.READ, recipeIndex: true })).toBe(true); });
     test("should return false for null user", () => { expect(canViewRecipeIndex(null)).toBe(false); });
@@ -766,8 +724,8 @@ describe("User Management Utilities", () => {
   });
 
   describe("canDeleteRecipe", () => {
-    const adminUser = { id: "admin-1", role: ROLES.ADMIN, isAdmin: true };
-    const editUser = { id: "edit-1", role: ROLES.EDIT, isAdmin: false };
+    const adminUser = { id: "admin-1", role: ROLES.ADMIN };
+    const editUser = { id: "edit-1", role: ROLES.EDIT };
     const recipe = { id: "1", title: "Test Recipe", authorId: editUser.id };
 
     test("should allow admin to delete any recipe", () => { expect(canDeleteRecipe(adminUser, recipe)).toBe(true); });

@@ -123,7 +123,7 @@ const Header = forwardRef(function Header({
   }, [currentUser]);
 
   const visibleFaqs = faqs.filter(faq => {
-    if (faq.adminOnly && !currentUser?.isAdmin) return false;
+    if (faq.adminOnly && !currentUser?.role === 'admin') return false;
     if (isMobile && faq.showOnMobile === false) return false;
     if (!isMobile && faq.showOnDesktop === false) return false;
     return true;
@@ -407,7 +407,7 @@ const Header = forwardRef(function Header({
                       )}
                     </div>
                   )}
-                  {onSettingsClick && (currentUser?.isAdmin || currentUser?.settingsAccess) && (
+                  {onSettingsClick && (currentUser?.role === 'admin' || currentUser?.settingsAccess) && (
                     <div className="menu-section">
                       <div className="menu-section-title">Verwaltung</div>
                       <button className="menu-item" onClick={() => {
@@ -437,7 +437,7 @@ const Header = forwardRef(function Header({
                       >
                         {currentUser.vorname} {currentUser.nachname}
                       </button>
-                      {currentUser.isAdmin && (
+                      {currentUser.role === 'admin' && (
                         <span className="admin-badge">Admin</span>
                       )}
                     </div>

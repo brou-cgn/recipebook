@@ -319,7 +319,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [kochatelierSettingsFeedback, setKochatelierSettingsFeedback] = useState('');
   const inspirationDescriptionRef = useRef(null);
   const targetDescriptionRef = useRef(null);
-  const canManageKochatelierSettings = currentUser?.role === 'admin' || currentUser?.role === 'moderator' || currentUser?.isAdmin === true;
+  const canManageKochatelierSettings = currentUser?.role === 'admin' || currentUser?.role === 'moderator';
 
   const resizeTextarea = useCallback((textarea) => {
     if (!textarea) return;
@@ -454,7 +454,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   // The call logs store no e-mail addresses. Admins see them resolved from
   // the full user profiles (allUsers carries e-mails only for admins - see
   // getUsers in userManagement.js); everyone else sees no e-mail column.
-  const canSeeEmails = currentUser?.role === 'admin' || currentUser?.isAdmin === true;
+  const canSeeEmails = currentUser?.role === 'admin';
   const emailByUserId = useMemo(
     () => new Map((allUsers || []).filter((u) => u?.id && u.email).map((u) => [u.id, u.email])),
     [allUsers]

@@ -195,7 +195,7 @@ function EventsPage({
   const [selectedEventOwnerId, setSelectedEventOwnerId] = useState(currentUser?.id ?? null);
   const [fallbackEvent, setFallbackEvent] = useState(null); // used right after calculation, before onSnapshot syncs
   // Admins always see every user's events instead of just their own.
-  const isAdmin = currentUser?.isAdmin === true;
+  const isAdmin = currentUser?.role === 'admin';
   const allEventsLoading = !allEventsLoaded;
   const [allUsers, setAllUsers] = useState([]);
   const { banners: deleteBanners, pendingKeys: pendingDeleteKeys, scheduleDelete, undoDelete } = useUndoableDelete();

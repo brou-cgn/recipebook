@@ -769,7 +769,7 @@ function App() {
         // Admins see full profiles: fill in public profiles for users that
         // predate the syncPublicProfile Cloud Function, so other users see
         // their names (see ensurePublicProfiles in userManagement.js).
-        if (currentUser.isAdmin || currentUser.role === 'admin') {
+        if (currentUser.role === 'admin') {
           ensurePublicProfiles(users);
         }
       };
@@ -1044,7 +1044,7 @@ function App() {
 
     const unsubscribe = subscribeToRecipes(
       currentUser.id,
-      currentUser.isAdmin || false,
+      currentUser.role === 'admin',
       (recipesFromFirestore) => {
         setRecipes(recipesFromFirestore);
         setRecipesLoaded(true);
@@ -1095,7 +1095,7 @@ function App() {
   // permits for admins (a non-admin may update only their own doc) - so this
   // must stay admin-gated, otherwise every other user hits a permission error.
   useEffect(() => {
-    if (currentUser?.isAdmin && recipesLoaded && !recipeCountsInitialized.current) {
+    if (currentUser?.role === 'admin' && recipesLoaded && !recipeCountsInitialized.current) {
       recipeCountsInitialized.current = true;
       initializeRecipeCounts().catch((err) => {
         console.error('Error initializing recipe counts:', err);
@@ -1157,13 +1157,13 @@ function App() {
 
   // Admins additionally see every user's events (see EventsPage's admin view).
   useEffect(() => {
-    if (!currentUser?.isAdmin) return undefined;
+    if (currentUser?.role !== 'admin') return undefined;
     const unsubscribe = subscribeToAllEvents((eventsFromFirestore) => {
       setAllEvents(eventsFromFirestore);
       setAllEventsLoaded(true);
     });
     return () => unsubscribe();
-  }, [currentUser?.isAdmin]);
+  }, [currentUser?.role]);
 
   // Set up real-time listener for the current user's guest profiles from Firestore.
   useEffect(() => {
@@ -1177,13 +1177,13 @@ function App() {
 
   // Admins additionally see every user's guest profiles.
   useEffect(() => {
-    if (!currentUser?.isAdmin) return undefined;
+    if (currentUser?.role !== 'admin') return undefined;
     const unsubscribe = subscribeToAllGuestProfiles((profilesFromFirestore) => {
       setAllGuestProfiles(profilesFromFirestore);
       setAllGuestProfilesLoaded(true);
     });
     return () => unsubscribe();
-  }, [currentUser?.isAdmin]);
+  }, [currentUser?.role]);
 
   // Set up real-time listener for the shared custom-drinks library (every user's
   // drinks, merged), used across the Events module (EventForm, GuestManagementPage,

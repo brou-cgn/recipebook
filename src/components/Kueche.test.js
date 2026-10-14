@@ -988,7 +988,7 @@ describe('Kueche', () => {
         menus={[]}
         onSelectRecipe={() => {}}
         allUsers={[]}
-        currentUser={{ id: 'user-1', isAdmin: true }}
+        currentUser={{ id: 'user-1', role: 'admin' }}
       />
     );
 

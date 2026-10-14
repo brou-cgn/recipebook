@@ -1844,7 +1844,6 @@ describe('RecipeDetail - Draft Badge', () => {
       id: 'user-1',
       vorname: 'Admin',
       nachname: 'User',
-      isAdmin: true,
       role: 'admin',
     };
 
@@ -1891,7 +1890,6 @@ describe('RecipeDetail - Draft Badge', () => {
       id: 'user-2',
       vorname: 'Regular',
       nachname: 'User',
-      isAdmin: false,
       role: 'edit',
     };
 
@@ -1932,7 +1930,6 @@ describe('RecipeDetail - Draft Badge', () => {
       id: 'user-1',
       vorname: 'Admin',
       nachname: 'User',
-      isAdmin: true,
       role: 'admin',
     };
 
@@ -1973,7 +1970,6 @@ describe('RecipeDetail - Draft Badge', () => {
       id: 'user-1',
       vorname: 'Admin',
       nachname: 'User',
-      isAdmin: true,
       role: 'admin',
     };
 

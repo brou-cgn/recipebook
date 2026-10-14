@@ -224,7 +224,7 @@ service cloud.firestore {
       // owner and admins. Everyone else reads names via /publicProfiles below.
       allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       // Authenticated users may create only their own document and may not
-      // self-assign elevated privileges (isAdmin or any role above 'read').
+      // self-assign elevated privileges (any role above 'read').
       // The first-user / admin-bootstrap is handled atomically by the
       // createUserProfile Cloud Function (Admin SDK bypasses these rules).
       // Anonymous guests may not create one: that would turn a one-click
@@ -232,15 +232,14 @@ service cloud.firestore {
       allow create: if isAuthenticated()
                     && !isAnonymous()
                     && request.auth.uid == userId
-                    && !('isAdmin' in request.resource.data)
                     && request.resource.data.role == 'read';
       // Admins may update any field. Authenticated users may update only their own
-      // document, but may NOT change privilege fields (role, isAdmin).
+      // document, but may NOT change the privilege field (role).
       allow update: if isAdmin()
                     || (isAuthenticated()
                         && request.auth.uid == userId
                         && !request.resource.data.diff(resource.data).affectedKeys()
-                             .hasAny(['role', 'isAdmin']));
+                             .hasAny(['role']));
       allow delete: if isAdmin();
     }
 

@@ -522,7 +522,7 @@ describe('EventsPage', () => {
   });
 
   describe('admin cross-user event visibility', () => {
-    const adminUser = { id: 'admin1', isAdmin: true };
+    const adminUser = { id: 'admin1', role: 'admin' };
 
     test('non-admins do not see events from other users, even if allEvents is populated', () => {
       render(

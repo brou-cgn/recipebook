@@ -203,7 +203,7 @@ describe('MenuForm - description field guest pills', () => {
         recipes={recipes}
         onSave={jest.fn()}
         onCancel={jest.fn()}
-        currentUser={{ id: 'user-1', isAdmin: true }}
+        currentUser={{ id: 'user-1', role: 'admin' }}
         guestProfiles={guests}
         allGuestProfiles={[...guests, otherUsersGuest]}
         allGuestProfilesLoaded

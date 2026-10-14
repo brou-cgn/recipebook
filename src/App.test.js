@@ -9,7 +9,6 @@ const setupLoggedInUser = () => {
     vorname: 'Test',
     nachname: 'User',
     email: 'test@example.com',
-    isAdmin: true,
     role: 'admin',
     requiresPasswordChange: false
   };

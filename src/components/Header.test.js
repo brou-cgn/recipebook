@@ -28,8 +28,7 @@ const mockCurrentUser = {
   id: '1',
   vorname: 'Test',
   nachname: 'User',
-  email: 'test@example.com',
-  isAdmin: false
+  email: 'test@example.com'
 };
 
 describe('Header - Hamburger Menu Visibility', () => {
@@ -354,7 +353,7 @@ describe('Header - Einstellungen permission', () => {
     render(
       <Header
         currentView="recipes"
-        currentUser={{ ...mockCurrentUser, isAdmin: true, settingsAccess: false }}
+        currentUser={{ ...mockCurrentUser, role: 'admin', settingsAccess: false }}
         onViewChange={() => {}}
         onLogout={() => {}}
         onSettingsClick={() => {}}

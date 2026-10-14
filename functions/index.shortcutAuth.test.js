@@ -134,8 +134,8 @@ test('Shortcut-Auth: Rolle read -> 403', async () => {
   assert.equal(res.statusCode, 403);
 });
 
-test('Shortcut-Auth: createRecipeImportFromText akzeptiert isShortcutUser und isAdmin (unverändert)', async () => {
-  for (const userData of [{role: 'read', isShortcutUser: true}, {role: 'read', isAdmin: true}]) {
+test('Shortcut-Auth: createRecipeImportFromText akzeptiert isShortcutUser und Rolle admin', async () => {
+  for (const userData of [{role: 'read', isShortcutUser: true}, {role: 'admin'}]) {
     const {mod} = loadFunctions({userData});
     const res = makeRes();
     await mod.createRecipeImportFromText(makeReq(), res);
