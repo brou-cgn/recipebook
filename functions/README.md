@@ -169,7 +169,7 @@ X-User-Email: <registrierte E-Mail-Adresse>
 | `portionen` | `servings`, `portions` | number | – | Number of servings |
 | `kochdauer` | `cookTime`, `prepTime`, `zubereitungszeit` | number | – | Cooking time in minutes |
 | `schwierigkeit` | `difficulty` | number (1–5) | – | Difficulty level; must be 1–5 if provided |
-| `speisekategorie` | `category`, `kategorie` | string | ✅ | Meal category (a recipe without one is rejected with 400) |
+| `speisekategorie` | `category`, `kategorie` | string | – | Meal category |
 | `kulinarik` | `cuisine`, `kulinarisch` | string \| string[] | – | Cuisine type(s) |
 | `tags` | – | string \| string[] | – | Tags (comma-separated string or array) |
 | `notizen` | `notes` | string | – | Additional notes |
