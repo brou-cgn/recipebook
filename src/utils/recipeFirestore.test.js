@@ -631,3 +631,73 @@ describe('Recipe Firestore - Share Functionality', () => {
     });
   });
 });
+
+describe('anonymous guests', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAuth = { currentUser: { uid: 'guest-1', isAnonymous: true } };
+  });
+
+  afterEach(() => {
+    mockAuth = { currentUser: { uid: 'user-1' } };
+  });
+
+  test('loadGuestRecipes loads via the Cloud Function and drops pending imports', async () => {
+    const callable = jest.fn().mockResolvedValue({
+      data: { recipes: [{ id: 'a', title: 'A' }, { id: 'b', title: 'B', isTemp: true }] }
+    });
+    mockHttpsCallable.mockReturnValue(callable);
+    const { loadGuestRecipes } = require('./recipeFirestore');
+
+    const result = await new Promise((resolve) => loadGuestRecipes(resolve));
+
+    expect(mockHttpsCallable).toHaveBeenCalledWith(expect.anything(), 'getGuestRecipes');
+    expect(result).toEqual([{ id: 'a', title: 'A' }]);
+    expect(mockOnSnapshot).not.toHaveBeenCalled();
+  });
+
+  test('loadGuestRecipes returns an empty list when the function fails', async () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockHttpsCallable.mockReturnValue(jest.fn().mockRejectedValue(new Error('boom')));
+    const { loadGuestRecipes } = require('./recipeFirestore');
+
+    const result = await new Promise((resolve) => loadGuestRecipes(resolve));
+
+    expect(result).toEqual([]);
+    spy.mockRestore();
+  });
+
+  test('loadGuestRecipes ignores a response arriving after cancel', async () => {
+    let resolveCall;
+    mockHttpsCallable.mockReturnValue(() => new Promise((resolve) => { resolveCall = resolve; }));
+    const { loadGuestRecipes } = require('./recipeFirestore');
+    const callback = jest.fn();
+
+    const cancel = loadGuestRecipes(callback);
+    cancel();
+    resolveCall({ data: { recipes: [{ id: 'a' }] } });
+    await Promise.resolve();
+
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  test('getRecipeByShareId uses the Cloud Function for a guest instead of querying Firestore', async () => {
+    mockHttpsCallable.mockReturnValue(jest.fn().mockResolvedValue({ data: { recipe: { id: 'r1' } } }));
+    const { getRecipeByShareId } = require('./recipeFirestore');
+
+    const recipe = await getRecipeByShareId('share-1');
+
+    expect(recipe).toEqual({ id: 'r1' });
+    expect(mockGetDocs).not.toHaveBeenCalled();
+  });
+
+  test('getRecipesByIds uses the Cloud Function for a guest with a shareId', async () => {
+    mockHttpsCallable.mockReturnValue(jest.fn().mockResolvedValue({ data: { recipes: [{ id: 'r1' }] } }));
+    const { getRecipesByIds } = require('./recipeFirestore');
+
+    const recipes = await getRecipesByIds(['r1'], { shareId: 'share-1' });
+
+    expect(recipes).toEqual([{ id: 'r1' }]);
+    expect(mockGetDoc).not.toHaveBeenCalled();
+  });
+});
