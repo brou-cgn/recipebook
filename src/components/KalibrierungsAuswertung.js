@@ -33,14 +33,14 @@ function KalibrierungsAuswertung() {
   return (
     <div className="drink-weights-calibration">
       <h3>Soll vs. Ist (Kalibrierung)</h3>
-      <p className="section-description">
+      <p className="kalibrierung-description">
         Vergleicht den berechneten Bedarf (ohne Puffer) mit dem tatsächlichen Verbrauch
         abgeschlossener Events. Basis: {snapshots.length} {snapshots.length === 1 ? 'Event' : 'Events'}.
         Die Werte sind erst ab {MIN_EVENTS_FOR_TREND} Events je Kategorie aussagekräftig und
         ändern keine Gewichte.
       </p>
       {rows.length === 0 ? (
-        <p className="section-description">Noch keine auswertbaren Daten.</p>
+        <p className="kalibrierung-description">Noch keine auswertbaren Daten.</p>
       ) : (
         <div className="kalibrierung-table-container">
           <table className="kalibrierung-table">
