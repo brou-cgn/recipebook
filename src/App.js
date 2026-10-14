@@ -53,6 +53,7 @@ import { hasHauptsaisonIngredient } from './utils/recipeSortIndex';
 import { getAllCookDatesForUser } from './utils/recipeCookDates';
 import {
   subscribeToRecipes,
+  loadGuestRecipes,
   addRecipe as addRecipeToFirestore,
   updateRecipe as updateRecipeInFirestore,
   deleteRecipe as deleteRecipeFromFirestore,
@@ -1031,6 +1032,15 @@ function App() {
   // Re-subscribes when userGroupIds changes so group-scoped recipe visibility stays current.
   useEffect(() => {
     if (!currentUser) return;
+
+    // Anonymous guests may not read /recipes directly (firestore.rules); the
+    // server hands them only the recipes they may see. No seeding, no live updates.
+    if (currentUser.isGuest) {
+      return loadGuestRecipes((recipesForGuest) => {
+        setRecipes(recipesForGuest);
+        setRecipesLoaded(true);
+      });
+    }
 
     const unsubscribe = subscribeToRecipes(
       currentUser.id,

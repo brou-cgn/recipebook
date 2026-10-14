@@ -6899,7 +6899,6 @@ exports.addRecipeViaAPI = onRequest(
           authorId: userId,
           createdAt: now,
           updatedAt: now,
-          isPrivate: false,
           shareId,
           // Same pending-review treatment as the other Shortcut import paths
           // (see scrapeInstagramReelShortcut above) — the recipe only leaves
@@ -7884,6 +7883,43 @@ exports.getSharedRecipesByIds = onCall(
           .filter((snap) => snap.exists)
           .map((snap) => ({id: snap.id, ...snap.data()}));
 
+      return {recipes};
+    },
+);
+
+/**
+ * Cloud Function: recipes for anonymous guests.
+ *
+ * Anonymous guests may not read /recipes directly (see firestore.rules): the
+ * rules cannot express "public, not a draft, not locked to a list", so a guest
+ * client would otherwise have to download every recipe and filter in the
+ * browser. The filter runs here instead (isVisibleToUser, the same rule the
+ * client and the Für-dich-entdeckt rotation use) and only visible recipes
+ * leave the server. Registered members keep reading Firestore directly.
+ */
+exports.getGuestRecipes = onCall(
+    {region: 'us-central1', cors: ALLOWED_ORIGINS},
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Anmeldung erforderlich');
+      }
+      if (request.auth.token?.firebase?.sign_in_provider !== 'anonymous') {
+        throw new HttpsError('permission-denied', 'Nur für Gäste');
+      }
+
+      const db = admin.firestore();
+      const [recipeSnap, groupSnap] = await Promise.all([
+        db.collection('recipes').get(),
+        db.collection('groups').where('type', '==', 'public').get(),
+      ]);
+      const groupsById = new Map(
+          groupSnap.docs.map((d) => [d.id, {type: 'public', memberIds: []}]),
+      );
+      const guest = {id: request.auth.uid, isAdmin: false};
+
+      const recipes = recipeSnap.docs
+          .map((d) => ({id: d.id, ...d.data()}))
+          .filter((recipe) => isVisibleToUser(recipe, guest, groupsById));
       return {recipes};
     },
 );

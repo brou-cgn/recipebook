@@ -68,10 +68,13 @@ service cloud.firestore {
 
     // Recipes collection
     match /recipes/{recipeId} {
-      // Unauthenticated share-link access is handled via Cloud Functions
-      // getSharedRecipeByShareId/getSharedMenuByShareId/getSharedRecipesByIds.
-      allow get: if isAnyUser() || !resource.data.isPrivate;
-      allow list: if isAnyUser() || resource.data.shareId != null;
+      // Direct reads are for signed-in users with a profile only. Anonymous
+      // guests and signed-out visitors get recipes through Cloud Functions that
+      // apply the visibility filter server-side: getGuestRecipes (guest list),
+      // getSharedRecipeByShareId/getSharedRecipesByIds (share links). The rules
+      // cannot express "public, no draft, not list-locked", and a shareId clause
+      // here would let anyone enumerate every shared recipe with a range query.
+      allow get, list: if isAnyUser() && !isAnonymous();
       allow create, delete: if isEditOrAdmin();
       // ratingAvg/ratingCount are written exclusively by the aggregateRecipeRating
       // Cloud Function (Admin SDK bypasses these rules) in response to changes in

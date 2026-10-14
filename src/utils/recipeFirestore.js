@@ -24,6 +24,37 @@ import { removeUndefinedFields } from './firestoreUtils';
 import { deleteRecipeImage } from './storageUtils';
 
 /**
+ * Signed-out visitors and anonymous guests may not read /recipes directly
+ * (firestore.rules); they go through Cloud Functions instead.
+ */
+const isUnauthenticatedOrGuest = () => !auth.currentUser || auth.currentUser.isAnonymous;
+
+/**
+ * Load the recipes an anonymous guest may see. The filtering (public, no
+ * draft, no list-locked recipe) happens server-side in getGuestRecipes, so
+ * the guest's browser never receives other recipes. No live updates: the
+ * list is fetched once.
+ * @param {Function} callback - Receives the recipes array
+ * @returns {Function} Cancel function (drops a late response)
+ */
+export const loadGuestRecipes = (callback) => {
+  let cancelled = false;
+  httpsCallable(functions, 'getGuestRecipes')()
+    .then((result) => {
+      if (cancelled) return;
+      const recipes = Array.isArray(result?.data?.recipes) ? result.data.recipes : [];
+      callback(recipes.filter((recipe) => !recipe.isTemp));
+    })
+    .catch((error) => {
+      console.error('Error loading guest recipes:', error);
+      if (!cancelled) callback([]);
+    });
+  return () => {
+    cancelled = true;
+  };
+};
+
+/**
  * Set up real-time listener for recipes
  * Filters private (draft) recipes to only show to admins and recipe authors.
  * Filters group recipes to only show to members of that group.
@@ -260,7 +291,7 @@ export const deleteRecipe = async (recipeId) => {
 export const getRecipesByIds = async (recipeIds, { shareId } = {}) => {
   if (!recipeIds || recipeIds.length === 0) return [];
   try {
-    if (!auth.currentUser && shareId) {
+    if (isUnauthenticatedOrGuest() && shareId) {
       const getSharedRecipes = httpsCallable(functions, 'getSharedRecipesByIds');
       const result = await getSharedRecipes({ shareId, recipeIds });
       return Array.isArray(result?.data?.recipes) ? result.data.recipes : [];
@@ -284,7 +315,7 @@ export const getRecipesByIds = async (recipeIds, { shareId } = {}) => {
  */
 export const getRecipeByShareId = async (shareId) => {
   try {
-    if (!auth.currentUser) {
+    if (isUnauthenticatedOrGuest()) {
       const getSharedRecipe = httpsCallable(functions, 'getSharedRecipeByShareId');
       const result = await getSharedRecipe({ shareId });
       return result?.data?.recipe || null;
