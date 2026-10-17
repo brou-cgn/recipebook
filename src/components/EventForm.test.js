@@ -388,7 +388,7 @@ describe('EventForm', () => {
     expect(event.startTime).toBe('14:00');
   });
 
-  test('omits startTime from event when not provided', async () => {
+  test('defaults startTime to the current full hour when not provided', async () => {
     const onSaved = jest.fn();
     render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
@@ -397,7 +397,7 @@ describe('EventForm', () => {
 
     await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
     const [event] = mockCalculateEventDrinks.mock.calls[0];
-    expect(event.startTime).toBeUndefined();
+    expect(event.startTime).toMatch(/^\d{2}:00$/);
   });
 
 

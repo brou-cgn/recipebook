@@ -16,6 +16,10 @@ jest.mock('../utils/imageUtils', () => ({
   analyzeImageBrightness: jest.fn(() => Promise.resolve({ isBright: false })),
 }));
 
+// Das Modul wird per import() nachgeladen und dabei kopiert: jest.spyOn sieht der
+// Code dann nicht. Tests ändern Icons deshalb über diese Variable.
+let mockButtonIconOverrides = {};
+
 jest.mock('../utils/customLists', () => ({
   getCustomLists: () => Promise.resolve({
     cuisineTypes: ['Italian', 'Thai', 'Chinese'],
@@ -36,7 +40,8 @@ jest.mock('../utils/customLists', () => ({
     addImage: '🖼',
     addIngredient: '🥕',
     addStep: '📝',
-    swipeDelete: '🗑'
+    swipeDelete: '🗑',
+    ...mockButtonIconOverrides,
   }),
   DEFAULT_BUTTON_ICONS: {
     cookingMode: '👨‍🍳',
@@ -502,8 +507,9 @@ describe('RecipeForm - Multi-Select Fields', () => {
 
     const speisekategorieLabel = screen.getByText('Speisekategorie (Mehrfachauswahl möglich)');
     const kulinarikHeading = screen.getByText('Kulinarik (Mehrfachauswahl möglich)');
-    expect(speisekategorieLabel.compareDocumentPosition(kulinarikSearch) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(kulinarikSearch.compareDocumentPosition(kulinarikHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Reihenfolge: Speisekategorie, Kulinarik-Überschrift, dann das gemeinsame Suchfeld.
+    expect(speisekategorieLabel.compareDocumentPosition(kulinarikHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(kulinarikHeading.compareDocumentPosition(kulinarikSearch) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   test('Speisekategorie field is a multi-select dropdown', () => {
@@ -2044,7 +2050,7 @@ describe('RecipeForm - Swipe Delete', () => {
     fireEvent.click(deleteButton);
 
     await waitFor(() => expect(screen.getAllByPlaceholderText(/Zutat/)).toHaveLength(1));
-    expect(screen.getByText('„Milch" entfernt')).toBeInTheDocument();
+    expect(screen.getByText('Zutat gelöscht.')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Zutat 1')).toHaveValue('Mehl');
   });
 
@@ -2089,7 +2095,7 @@ describe('RecipeForm - Swipe Delete', () => {
     fireEvent.click(deleteButton);
 
     await waitFor(() => expect(screen.getAllByPlaceholderText(/Schritt/)).toHaveLength(1));
-    expect(screen.getByText('„Mischen" entfernt')).toBeInTheDocument();
+    expect(screen.getByText('Schritt gelöscht.')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Schritt 1')).toHaveValue('Backen');
   });
 
@@ -2151,7 +2157,7 @@ describe('RecipeForm - Swipe Delete', () => {
       swipeLeft(screen.getByPlaceholderText('Zutat 2'));
       fireEvent.click(await screen.findByRole('button', { name: 'Zutat löschen' }));
 
-      expect(screen.getByText('„Mehl" entfernt')).toBeInTheDocument();
+      expect(screen.getByText('Zutat gelöscht.')).toBeInTheDocument();
 
       swipeLeft(screen.getByPlaceholderText('Zutat 1'));
       fireEvent.click(await screen.findByRole('button', { name: 'Zutat löschen' }));
@@ -2169,7 +2175,7 @@ describe('RecipeForm - Swipe Delete', () => {
       });
 
       await waitFor(() => {
-        expect(screen.queryByText('„Milch" entfernt')).not.toBeInTheDocument();
+        expect(screen.queryByText('Zutat gelöscht.')).not.toBeInTheDocument();
       });
     } finally {
       jest.useRealTimers();
@@ -2202,10 +2208,7 @@ describe('RecipeForm - Swipe Delete', () => {
   });
 
   test('uses configurable swipe delete icon from settings', async () => {
-    const customLists = require('../utils/customLists');
-    const iconSpy = jest.spyOn(customLists, 'getButtonIcons').mockResolvedValueOnce({
-      swipeDelete: 'DEL',
-    });
+    mockButtonIconOverrides = { swipeDelete: 'DEL' };
 
     try {
       render(
@@ -2224,7 +2227,7 @@ describe('RecipeForm - Swipe Delete', () => {
         expect(screen.getByRole('button', { name: 'Zutat löschen' })).toHaveTextContent('DEL');
       });
     } finally {
-      iconSpy.mockRestore();
+      mockButtonIconOverrides = {};
     }
   });
 });
@@ -3956,7 +3959,7 @@ describe('RecipeForm - Saving Loading State', () => {
 
     await fillRequiredFields();
 
-    const fabButton = screen.getByRole('button', { name: /Rezept speichern/i });
+    const fabButton = document.querySelector('.save-fab-button');
     expect(fabButton).not.toBeDisabled();
 
     fireEvent.submit(document.querySelector('.recipe-form'));

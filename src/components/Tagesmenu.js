@@ -14,6 +14,7 @@ import { decodeRecipeLink } from '../utils/recipeLinks';
 import TagesmenuFilterOverlay from './TagesmenuFilterOverlay';
 import { isFuerDichEntdecktList } from '../utils/fuerDichEntdeckt';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import { useOptionalNutritionReference } from '../contexts/NutritionReferenceContext';
 
 /**
  * Tagesmenü page – shows recipe cards as a swipeable Tinder-style stack.
@@ -74,6 +75,8 @@ function matchesMealCategoryFilter(recipe, selectedCategories) {
 function getKachelMenuAltIconValue(eff) {
   return eff('tagesmenuKachelMenuAlt') || eff('tagesmenuKachelMenu');
 }
+
+const EMPTY_ROWS = [];
 
 function Tagesmenu({
   interactiveLists,
@@ -207,6 +210,7 @@ function Tagesmenu({
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [cookDatesMap, setCookDatesMap] = useState(new Map());
   const [seasonMatrixEntries, setSeasonMatrixEntries] = useState([]);
+  const nutritionReferenceRows = useOptionalNutritionReference()?.rows ?? EMPTY_ROWS;
 
   // All recipes belonging to the selected list, regardless of active flags
   const allListRecipes = useMemo(() => {
@@ -861,6 +865,7 @@ function Tagesmenu({
       isFavorite: favoriteIdSet.has(recipe?.id),
       lastCookDateMs: cookDatesMap.get(recipe?.id) ?? null,
       seasonMatrixEntries,
+      nutritionReferenceRows,
       recipe: recipe || {},
       currentMonth,
     });
@@ -897,6 +902,7 @@ function Tagesmenu({
     favoriteIds,
     cookDatesMap,
     seasonMatrixEntries,
+    nutritionReferenceRows,
   ]);
 
   useEffect(() => {

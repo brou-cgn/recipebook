@@ -18,8 +18,8 @@ describe('nutritionReferenceImportExport', () => {
     ]);
 
     expect(csv.charCodeAt(0)).toBe(0xFEFF);
-    expect(csv).toContain('ingredientID;Anzeigename;nutritionFamily;seasonalFamily;category;Status;seasonRelevant;nutritionRelevant;isFresh;isSpice;isProcessed;synonyms;possibleUnits;defaultAmountG');
-    expect(csv).toContain('dummy-tomate;;Gemüse;Fruchtgemüse;Nachtschatten;Prüfung ausstehend;true;false;;;;Tomate|Paradeiser;"g;kg;ml";100');
+    expect(csv).toContain('ingredientID;Anzeigename;nutritionFamily;seasonalFamily;category;Status;seasonRelevant;nutritionRelevant;isFresh;isSpice;isProcessed;isDefaultVariant;synonyms;possibleUnits;defaultAmountG');
+    expect(csv).toContain('dummy-tomate;;Gemüse;Fruchtgemüse;Nachtschatten;Prüfung ausstehend;true;false;;;;;Tomate|Paradeiser;"g;kg;ml";100');
   });
 
   test('exports rows with empty possibleUnits', () => {
@@ -30,7 +30,7 @@ describe('nutritionReferenceImportExport', () => {
       },
     ]);
 
-    expect(csv).toContain('dummy-tomate;;;;;;;;;;;Tomate;;');
+    expect(csv).toContain('dummy-tomate;;;;;;;;;;;;Tomate;;');
     expect(csv).not.toContain('g;kg;ml');
   });
 

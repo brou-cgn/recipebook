@@ -604,11 +604,8 @@ describe('Recipe Firestore - Share Functionality', () => {
 
   describe('enableRecipeSharing', () => {
     beforeEach(() => {
-      // Polyfill crypto.randomUUID for the test environment
-      if (!global.crypto) global.crypto = {};
-      if (!global.crypto.randomUUID) {
-        global.crypto.randomUUID = jest.fn(() => 'mock-uuid-1234-5678-abcd-efghijklmnop');
-      }
+      // setupTests.js stellt ein echtes crypto.randomUUID bereit; hier ein fester Wert.
+      jest.spyOn(global.crypto, 'randomUUID').mockReturnValue('mock-uuid-1234-5678-abcd-efghijklmnop');
     });
 
     it('should call updateDoc with a shareId and return it', async () => {

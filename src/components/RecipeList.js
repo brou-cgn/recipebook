@@ -8,6 +8,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import SortCarousel from './SortCarousel';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
 import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
+import { useOptionalNutritionReference } from '../contexts/NutritionReferenceContext';
 import RecipeCard from './RecipeCard';
 import TutorialCard from './TutorialCard';
 
@@ -135,7 +136,7 @@ export function sortRecipeGroups(groups, sortType, sortSettings, viewCounts, ind
     });
     return filtered;
   } else if (sortType === 'index') {
-    const { favoriteIds = [], cookDatesMap = new Map(), seasonMatrixEntries = [] } = indexSortOptions;
+    const { favoriteIds = [], cookDatesMap = new Map(), seasonMatrixEntries = [], nutritionReferenceRows = [] } = indexSortOptions;
     const currentMonth = new Date().getMonth() + 1;
     // Pre-calculate each recipe's score once to avoid repeated work in the comparator
     const scoreCache = new Map();
@@ -146,6 +147,7 @@ export function sortRecipeGroups(groups, sortType, sortSettings, viewCounts, ind
         isFavorite: favoriteIds.includes(recipe.id),
         lastCookDateMs: cookDatesMap.get(recipe.id) ?? null,
         seasonMatrixEntries,
+        nutritionReferenceRows,
         recipe,
         currentMonth,
       }));
@@ -164,7 +166,10 @@ const SORT_STORAGE_KEY = 'recipebook_active_sort';
 const LONG_PRESS_DELAY_MS = 500;
 const LONG_PRESS_CLICK_SUPPRESSION_MS = 500;
 
+const EMPTY_ROWS = [];
+
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEditTutorial, tutorials = [], categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly = false, showRecipes = true, showTutorials = true, onShowFavoritesOnlyChange, privateLists, onAddToPrivateList, onRemoveFromPrivateList, publicGroupId, onMoveRecipeToPublic, cookDatesMap = new Map(), seasonMatrixEntries = [] }) {
+  const nutritionReferenceRows = useOptionalNutritionReference()?.rows ?? EMPTY_ROWS;
   const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnlyProp || showSeasonalOnly || !showRecipes || !showTutorials || (activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
@@ -415,8 +420,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEdi
     }
 
     // Sort groups based on active sort option
-    return sortRecipeGroups(filteredGroups, activeSort, sortSettings, viewCounts, { favoriteIds, cookDatesMap, seasonMatrixEntries });
-  }, [allRecipeGroups, showFavoritesOnly, favoriteIds, searchTerm, activeSort, sortSettings, viewCounts, cookDatesMap, seasonMatrixEntries]);
+    return sortRecipeGroups(filteredGroups, activeSort, sortSettings, viewCounts, { favoriteIds, cookDatesMap, seasonMatrixEntries, nutritionReferenceRows });
+  }, [allRecipeGroups, showFavoritesOnly, favoriteIds, searchTerm, activeSort, sortSettings, viewCounts, cookDatesMap, seasonMatrixEntries, nutritionReferenceRows]);
 
   const handleRecipeClick = (group) => {
     // Select the recipe that is at the top according to current sorting order

@@ -235,6 +235,7 @@ jest.mock('./utils/userManagement', () => ({
     callback(null);
     return () => {};
   },
+  canEditRecipes: () => false,
   canEditMenu: jest.fn(() => false),
   canDeleteMenu: jest.fn(() => false),
   getRolePermissions: jest.fn(() => Promise.resolve({})),
@@ -391,7 +392,7 @@ describe('App authentication view handling', () => {
     expect(await screen.findByTestId('login-view')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'switch-register' }));
-    expect(screen.getByTestId('register-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('register-view')).toBeInTheDocument();
 
     await act(async () => {
       mockAuthStateCallback({
@@ -748,7 +749,7 @@ describe('App authentication view handling', () => {
     expect(mockTagesmenuProps.mock.lastCall[0].selectedCategories).toEqual(['Dessert']);
   });
 
-  test('bottom spacing custom property follows bottom navigation visibility', async () => {
+  test('bottom spacing custom property stays at the nav height while scrolling', async () => {
     render(<App />);
     expect(await screen.findByTestId('login-view')).toBeInTheDocument();
 
@@ -778,9 +779,10 @@ describe('App authentication view handling', () => {
       window.dispatchEvent(new Event('scroll'));
     });
 
-    expect(nav).toHaveAttribute('data-visible', 'false');
-    expect(app.style.getPropertyValue('--bottom-nav-offset')).toBe('0px');
-    expect(app.style.getPropertyValue('--bottom-spacing')).toBe('0px');
+    // Die Navigation blendet sich nicht mehr beim Scrollen aus (nur ansichtsabhängig).
+    expect(nav).toHaveAttribute('data-visible', 'true');
+    expect(app.style.getPropertyValue('--bottom-nav-offset')).toBe('var(--bottom-nav-height)');
+    expect(app.style.getPropertyValue('--bottom-spacing')).toBe('calc(var(--bottom-nav-height) + 16px)');
 
     localStorage.setItem('atelierOnboardingSeen', 'true');
     fireEvent.click(within(nav).getByRole('button', { name: 'Atelier' }));

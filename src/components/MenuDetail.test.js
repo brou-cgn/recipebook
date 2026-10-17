@@ -599,7 +599,7 @@ describe('MenuDetail - Shopping List with Linked Recipes', () => {
     const items = await openShoppingList(menuWith2Pizzas, recipes);
     const texts = items.map((el) => el.textContent);
     // 2 pizzas × 0.5 Teil = 1 Teil out of 8 = 0.125 → 500 g × 0.125 = 62.5 g
-    expect(texts).toContain('62.5 g Mehl');
+    expect(texts).toContain('62 1/2 g Mehl');
   });
 
   test('6 pizzas each using 2 Teile Pizzateig gives correct Mehl (main bug scenario)', async () => {
@@ -664,7 +664,7 @@ describe('MenuDetail - Shopping List with Linked Recipes', () => {
     const items = await openShoppingList(menuSingle, recipes);
     const texts = items.map((el) => el.textContent);
     // 1 Teil (default) out of 8 = 0.125 → 500 g × 0.125 = 62.5 g
-    expect(texts).toContain('62.5 g Mehl');
+    expect(texts).toContain('62 1/2 g Mehl');
   });
 
   test('recipe with 0 portions contributes no ingredients to the shopping list', async () => {
