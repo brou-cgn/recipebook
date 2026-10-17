@@ -361,7 +361,9 @@ Das Rezept landet automatisch in deiner **Inspirationssammlung**-Liste (die unte
 | 401 | Fehlender oder ungültiger API Key / User Email Header |
 | 403 | E-Mail-Adresse unbekannt oder fehlende Berechtigung (Rolle muss `edit`, `admin` oder `moderator` sein) – aus Enumeration-Schutz gibt es hierfür bewusst nur eine generische Fehlermeldung |
 | 405 | Falsche HTTP-Methode (nur POST erlaubt) |
+| 429 | Nur bei `importRecipeShortcut`, `scanRecipePhotoShortcut` und `scrapeInstagramReelShortcut`: KI-Tageslimit erreicht (gleicher Zähler wie in der App, Reset um 0 Uhr MEZ) |
 | 500 | Fehler beim Speichern in Firestore oder fehlendes SHORTCUT_API_KEY Secret |
+| 503 | Nur bei den drei KI-Endpunkten: Tageszähler konnte nicht geprüft werden – später erneut versuchen (fail closed) |
 
 ---
 

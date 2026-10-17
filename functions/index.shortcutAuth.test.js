@@ -7,8 +7,10 @@ const API_KEY = 'test-secret';
 const PIN_HASH_DOC = {salt: 'abc', hash: 'x', failedAttempts: 0};
 
 // Lädt index.js mit gemocktem Firebase. `userData` ist das Nutzerdokument,
-// `pinDoc` das Sicherheitsdokument (null = Nutzer hat keinen PIN gesetzt).
-function loadFunctions({userData, pinDoc = null}) {
+// `pinDoc` das Sicherheitsdokument (null = Nutzer hat keinen PIN gesetzt),
+// `scanCount` der heutige Stand des KI-Tageszählers (null = noch kein Scan heute),
+// `limitCheckFails` lässt die Transaktion des Tageszählers scheitern.
+function loadFunctions({userData, pinDoc = null, scanCount = null, limitCheckFails = false}) {
   delete require.cache[require.resolve('./index')];
   delete require.cache[require.resolve('./webImportPin')];
   const Module = require('module');
@@ -16,6 +18,14 @@ function loadFunctions({userData, pinDoc = null}) {
   const saved = [];
 
   const db = {
+    runTransaction: async (fn) => {
+      if (limitCheckFails) throw new Error('firestore down');
+      return fn({
+        get: async () => ({exists: scanCount !== null, data: () => ({count: scanCount})}),
+        set: () => {},
+        update: () => {},
+      });
+    },
     collection: (name) => ({
       doc: (id) => ({
         get: async () => ({exists: name === 'users', data: () => userData}),
@@ -48,7 +58,7 @@ function loadFunctions({userData, pinDoc = null}) {
     }
     if (request === 'firebase-admin') {
       const firestore = () => db;
-      firestore.FieldValue = {serverTimestamp: () => ({})};
+      firestore.FieldValue = {serverTimestamp: () => ({}), increment: (n) => n};
       return {
         initializeApp: () => {},
         firestore,
@@ -148,4 +158,55 @@ test('Shortcut-Auth: addRecipeViaAPI akzeptiert isShortcutUser nicht', async () 
   const res = makeRes();
   await mod.addRecipeViaAPI(makeReq({body: {}}), res);
   assert.equal(res.statusCode, 403);
+});
+
+const IMPORT_BODY = {url: 'https://example.com/rezept'};
+const REEL_BODY = {url: 'https://www.instagram.com/reel/abc123/'};
+
+test('KI-Limit: importRecipeShortcut legt Job an, solange das Tageslimit nicht erreicht ist', async () => {
+  const {mod, saved} = loadFunctions({userData: {role: 'edit'}, scanCount: 19});
+  const res = makeRes();
+  await mod.importRecipeShortcut(makeReq({body: IMPORT_BODY}), res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(saved.length, 1);
+});
+
+test('KI-Limit: importRecipeShortcut -> 429 bei erreichtem Tageslimit, kein Job', async () => {
+  const {mod, saved} = loadFunctions({userData: {role: 'edit'}, scanCount: 20});
+  const res = makeRes();
+  await mod.importRecipeShortcut(makeReq({body: IMPORT_BODY}), res);
+  assert.equal(res.statusCode, 429);
+  assert.equal(saved.length, 0, 'es darf kein Import gespeichert werden');
+});
+
+test('KI-Limit: Admin hat ein höheres Tageslimit als edit', async () => {
+  const {mod} = loadFunctions({userData: {role: 'admin'}, scanCount: 20});
+  const res = makeRes();
+  await mod.importRecipeShortcut(makeReq({body: IMPORT_BODY}), res);
+  assert.equal(res.statusCode, 200);
+});
+
+test('KI-Limit: scrapeInstagramReelShortcut -> 429 bei erreichtem Tageslimit, ohne zu scrapen', async () => {
+  const {mod, saved} = loadFunctions({userData: {role: 'edit'}, scanCount: 20});
+  const res = makeRes();
+  await mod.scrapeInstagramReelShortcut(makeReq({body: REEL_BODY}), res);
+  assert.equal(res.statusCode, 429);
+  assert.equal(saved.length, 0);
+});
+
+test('KI-Limit: Zähler nicht prüfbar -> 503 (fail closed), kein Job', async () => {
+  const {mod, saved} = loadFunctions({userData: {role: 'edit'}, limitCheckFails: true});
+  const res = makeRes();
+  await mod.importRecipeShortcut(makeReq({body: IMPORT_BODY}), res);
+  assert.equal(res.statusCode, 503);
+  assert.equal(saved.length, 0);
+});
+
+test('KI-Limit: falscher API-Key verbraucht kein Kontingent (401 vor Limit-Prüfung)', async () => {
+  const {mod} = loadFunctions({userData: {role: 'edit'}, scanCount: 20});
+  const res = makeRes();
+  const req = makeReq({body: IMPORT_BODY});
+  req.headers['x-api-key'] = 'falsch';
+  await mod.importRecipeShortcut(req, res);
+  assert.equal(res.statusCode, 401);
 });

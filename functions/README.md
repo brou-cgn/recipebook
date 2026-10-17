@@ -462,6 +462,12 @@ Rate limits are enforced using Firestore:
 - Authenticated users: 20 scans per day
 - Guest/anonymous users: 5 scans per day
 
+The Gemini-backed Shortcut endpoints (`importRecipeShortcut`, `scanRecipePhotoShortcut`,
+`scrapeInstagramReelShortcut`) share this counter with the in-app callables (see
+`enforceShortcutAiLimit` in `index.js`) and answer `429` once the daily limit is reached
+(`503` if the counter cannot be checked). Shortcut users count as authenticated; the tier
+follows their `users/{uid}.role`.
+
 ### Setting Admin Custom Claims
 
 To give a user admin privileges and higher rate limits, set a custom claim using the Firebase Admin SDK:
