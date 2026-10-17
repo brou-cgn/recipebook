@@ -27,12 +27,16 @@ class FakeResponse {
 function makeCaches() {
   const store = new Map();
   const cache = {
-    match: (key) => Promise.resolve(store.has(key) ? new FakeResponse(store.get(key)) : undefined),
+    match: (key) => {
+      const path = typeof key === 'string' ? key : new URL(key.url).pathname;
+      return Promise.resolve(store.has(path) ? new FakeResponse(store.get(path)) : undefined);
+    },
     put: (key, response) => {
       store.set(key, response.body);
       return Promise.resolve();
     },
-    delete: (key) => Promise.resolve(store.delete(key)),
+    delete: (key) => Promise.resolve(store.delete(typeof key === 'string' ? key : new URL(key.url).pathname)),
+    keys: () => Promise.resolve([...store.keys()].map((key) => ({ url: `https://example.test${key}` }))),
   };
   return { store, caches: { open: () => Promise.resolve(cache) } };
 }
@@ -136,8 +140,10 @@ describe('notificationclick', () => {
     await click(listeners, { type: 'import_ready', recipeId: 'abc123' });
 
     expect(JSON.parse(storedAtFocus)).toEqual({ recipeId: 'abc123', at: expect.any(Number) });
-    const log = JSON.parse(store.get('/__push-handoff/log'));
-    expect(log.map((e) => e.step)).toEqual(['Tipp empfangen', 'Tipp weitergegeben']);
+    const steps = [...store.entries()]
+      .filter(([key]) => key.startsWith('/__push-handoff/log/'))
+      .map(([, body]) => JSON.parse(body).step);
+    expect(steps).toEqual(['Tipp empfangen', 'Tipp weitergegeben']);
   });
 
   test('Andere Benachrichtigungen legen nichts ab', async () => {

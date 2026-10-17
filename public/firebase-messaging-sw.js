@@ -141,28 +141,21 @@ function buildNotificationTargetUrl(data) {
 // Persönliche Daten → Hintergrundaktualisierung.
 const PUSH_HANDOFF_CACHE = 'recipebook-push-handoff';
 const PUSH_HANDOFF_PENDING_KEY = '/__push-handoff/pending-review-import';
-const PUSH_HANDOFF_LOG_KEY = '/__push-handoff/log';
-const PUSH_HANDOFF_LOG_MAX = 40;
+// Jeder Protokolleintrag unter einem eigenen Schlüssel: Worker und App
+// schreiben oft in derselben Sekunde, ein gemeinsamer Eintrag
+// (lesen, anhängen, schreiben) verlor dabei Schritte. Gekürzt wird beim Lesen.
+const PUSH_HANDOFF_LOG_PREFIX = '/__push-handoff/log/';
 // Wie lange der Worker beim Tipp höchstens auf das Ablegen wartet, bevor er
 // die App nach vorn holt.
 const PUSH_HANDOFF_WRITE_WAIT_MS = 500;
-
-async function readHandoffJson(cache, key, fallback) {
-  try {
-    const response = await cache.match(key);
-    return response ? await response.json() : fallback;
-  } catch (err) {
-    return fallback;
-  }
-}
 
 async function appendPushLog(step, detail) {
   try {
     if (typeof caches === 'undefined') return;
     const cache = await caches.open(PUSH_HANDOFF_CACHE);
-    const log = await readHandoffJson(cache, PUSH_HANDOFF_LOG_KEY, []);
-    log.push({at: Date.now(), by: 'sw', step, detail: detail || ''});
-    await cache.put(PUSH_HANDOFF_LOG_KEY, new Response(JSON.stringify(log.slice(-PUSH_HANDOFF_LOG_MAX))));
+    const at = Date.now();
+    const key = `${PUSH_HANDOFF_LOG_PREFIX}${at}-sw-${Math.random().toString(36).slice(2, 8)}`;
+    await cache.put(key, new Response(JSON.stringify({at, by: 'sw', step, detail: detail || ''})));
   } catch (err) {
     // Protokoll ist Diagnose, nie ein Grund für einen Fehler
   }
