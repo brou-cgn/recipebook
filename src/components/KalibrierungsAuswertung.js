@@ -64,7 +64,7 @@ function KalibrierungsAuswertung() {
                   <td className="kalibrierung-table-amount">
                     {formatPercent(row.abweichung)}
                     {!row.belastbar && (
-                      <span title={`Weniger als ${MIN_EVENTS_FOR_TREND} Events – noch nicht belastbar`}> ⚠</span>
+                      <span title={`Weniger als ${MIN_EVENTS_FOR_TREND} Events – noch nicht belastbar`}> (!)</span>
                     )}
                   </td>
                   <td className="kalibrierung-table-amount">{formatPercent(row.medianAbweichung)}</td>

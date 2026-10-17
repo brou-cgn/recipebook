@@ -67,7 +67,7 @@ const FloatingToolbar = forwardRef(function FloatingToolbar(
           {btn('fontBold', 'B', 'Fett', 'tfe-tb-bold')}
           {btn('fontItalic', 'I', 'Kursiv', 'tfe-tb-italic')}
           {btn('fontUnderline', 'U', 'Unterstrichen', 'tfe-tb-underline')}
-          {[['left', '⇤', 'Linksbündig'], ['center', '↔', 'Zentriert'], ['right', '⇥', 'Rechtsbündig']].map(([value, text, title]) => (
+          {[['left', '⇤', 'Linksbündig'], ['center', '⇔', 'Zentriert'], ['right', '⇥', 'Rechtsbündig']].map(([value, text, title]) => (
             <button key={value} type="button" className={`tfe-tb-btn${override.textAlignH === value ? ' tfe-tb-btn--active' : ''}`}
               aria-pressed={override.textAlignH === value} title={title} aria-label={title}
               onClick={() => onOverride({ textAlignH: value })}>{text}</button>

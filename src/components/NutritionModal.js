@@ -1825,7 +1825,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                                   className="nutrition-accept-ingredient-btn"
                                   onClick={() => handleAcceptIngredient(item.ingredient)}
                                   title="Als gefunden markieren (von der Neuberechnung ausschließen)"
-                                >✔</button>
+                                >✓</button>
                               </div>
                               {(item.changeLog || reformulations[item.ingredient]?.changeLog)?.length > 0 && (
                                 <details className="nutrition-change-log">

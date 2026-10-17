@@ -28,8 +28,8 @@ erzwungen — wo das gilt, steht die Datei dabei.
 
 ## UI-Regeln
 - **Keine Emojis im UI-Code.** Alternativen: Text-Label, HTML-Entity, CSS-Klasse, Icon-Bibliothek.
-  Erzwungen durch `src/emojiPolicy.test.js`. Bestehende Funde stehen als Baseline im Test und
-  werden nur weniger, nie mehr. Wer eine Datei bereinigt, senkt dort die Baseline.
+  Erzwungen durch `src/emojiPolicy.test.js` (Baseline leer: jedes Emoji in einer Quelldatei
+  lässt den Test rot werden).
 - **Löschaktionen**: ausschließlich `DeleteRowButton` (kein eigenes ×, kein gefüllter Kreis,
   kein Icon im Eingabefeld). 28 × 28 px, Radius 999, transparent; Rot `#a33a26` auf 12 % Fläche
   erst bei Hover/Fokus; am rechten Zeilenrand; Tooltip und `aria-label` „<Name> entfernen".

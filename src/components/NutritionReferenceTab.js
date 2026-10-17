@@ -1003,7 +1003,7 @@ function NutritionReferenceTab({ currentUser }) {
                       onClick={() => refreshRowFromOpenFoodFacts(row)}
                       disabled={refreshingRowId === row.id}
                     >
-                      {refreshingRowId === row.id ? '⏳' : '🤖 Nährwerte abrufen'}
+                      {refreshingRowId === row.id ? '…' : 'Nährwerte abrufen'}
                     </button>
                     <button className="remove-btn" onClick={() => removeRow(row.id)} title="Entfernen">×</button>
                   </td>

@@ -648,7 +648,7 @@ describe('NutritionReferenceTab', () => {
 
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '🤖 Nährwerte abrufen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nährwerte abrufen' }));
 
     await waitFor(() => {
       expect(mockHttpsCallable).toHaveBeenCalledWith(expect.any(Object), 'generateNutritionFromReference');
@@ -729,7 +729,7 @@ describe('NutritionReferenceTab', () => {
     renderTab({ id: 'u1', role: 'moderator' });
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '🤖 Nährwerte abrufen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nährwerte abrufen' }));
 
     await waitFor(() => {
       expect(mockSetDoc).toHaveBeenCalledTimes(2);
@@ -797,7 +797,7 @@ describe('NutritionReferenceTab', () => {
     renderTab({ id: 'u1', role: 'moderator' });
     expect(await screen.findByDisplayValue('dummy-hafer')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '🤖 Nährwerte abrufen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nährwerte abrufen' }));
 
     await waitFor(() => {
       expect(mockSetDoc).toHaveBeenCalledTimes(1);
@@ -820,7 +820,7 @@ describe('NutritionReferenceTab', () => {
 
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '🤖 Nährwerte abrufen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nährwerte abrufen' }));
 
     expect(await screen.findByText('Abruf fehlgeschlagen.')).toBeInTheDocument();
     expect(mockSetDoc.mock.calls[0][1]).toEqual({ AI_Gemini_Error: 'Abruf fehlgeschlagen.' });
@@ -854,9 +854,9 @@ describe('NutritionReferenceTab', () => {
     renderTab({ id: 'u1', role: 'moderator' });
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
 
-    const btn = screen.getByRole('button', { name: '🤖 Nährwerte abrufen' });
+    const btn = screen.getByRole('button', { name: 'Nährwerte abrufen' });
     expect(btn).toBeEnabled();
-    fireEvent.click(screen.getByRole('button', { name: '🤖 Nährwerte abrufen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nährwerte abrufen' }));
 
     await waitFor(() => {
       expect(mockCallFn).toHaveBeenCalled();

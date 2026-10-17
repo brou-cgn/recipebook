@@ -15,8 +15,8 @@ const BORDER_SIDES = [
 ];
 
 const ALIGN_ROWS = [
-  [['y', 'start', '⬆ Oben', 'Oben bündig'], ['y', 'center', '↕ Mitte', 'Vertikal mittig'], ['y', 'end', '⬇ Unten', 'Unten bündig']],
-  [['x', 'start', '⬅ Links', 'Links bündig'], ['x', 'center', '↔ Mitte', 'Horizontal mittig'], ['x', 'end', '➡ Rechts', 'Rechts bündig']],
+  [['y', 'start', '↑ Oben', 'Oben bündig'], ['y', 'center', '↑↓ Mitte', 'Vertikal mittig'], ['y', 'end', '↓ Unten', 'Unten bündig']],
+  [['x', 'start', '← Links', 'Links bündig'], ['x', 'center', '←→ Mitte', 'Horizontal mittig'], ['x', 'end', '→ Rechts', 'Rechts bündig']],
 ];
 
 function ChoiceButtons({ options, value, onChange }) {
