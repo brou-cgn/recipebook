@@ -257,6 +257,33 @@ async function enforceShortcutPin(res, userId, pin) {
 }
 
 /**
+ * Daily Gemini quota for the Gemini-backed Shortcut endpoints. Shares the
+ * aiScanLimits counter with the in-app callables (see checkRateLimit), so the
+ * Shortcut is not a second way past the per-user daily limit. Writes the error
+ * response itself; call it after authentication and PIN so unauthenticated
+ * requests never consume quota.
+ * @param {object} res - Express response
+ * @param {{userId: string, userData: object}} auth - result of authenticateShortcutRequest
+ * @return {Promise<boolean>} true if the request may proceed
+ */
+async function enforceShortcutAiLimit(res, {userId, userData}) {
+  const role = userData?.role;
+  const isAdmin = role === 'admin';
+  try {
+    const rateLimit = await checkRateLimit(userId, true, isAdmin, !isAdmin && role === 'moderator');
+    if (rateLimit.allowed) return true;
+    res.status(429).json({
+      success: false,
+      error: `Tageslimit für KI-Importe erreicht (${rateLimit.limit}/${rateLimit.limit}). Versuche es morgen erneut.`,
+    });
+  } catch (err) {
+    // checkRateLimit fails closed: without a checked counter there is no cost ceiling.
+    res.status(503).json({success: false, error: err.message});
+  }
+  return false;
+}
+
+/**
  * Input validation constants
  */
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20 MB in bytes (Gemini API limit)
@@ -3924,6 +3951,8 @@ exports.importRecipeShortcut = onRequest(
         return;
       }
 
+      if (!(await enforceShortcutAiLimit(res, auth))) return;
+
       console.log(`importRecipeShortcut: import queued by user ${userId} for URL: ${url}`);
 
       // Queue the job and respond immediately instead of running the whole
@@ -4234,6 +4263,8 @@ exports.scanRecipePhotoShortcut = onRequest(
       // Shortcut must send a matching `pin` field with every request (it has
       // no interactive session to stay "unlocked" like the in-app modals).
       if (!(await enforceShortcutPin(res, userId, pin))) return;
+
+      if (!(await enforceShortcutAiLimit(res, auth))) return;
 
       console.log(`scanRecipePhotoShortcut: import queued by user ${userId} for ${images.length} image(s)`);
 
@@ -4557,6 +4588,8 @@ exports.scrapeInstagramReelShortcut = onRequest(
         });
         return;
       }
+
+      if (!(await enforceShortcutAiLimit(res, auth))) return;
 
       console.log(`scrapeInstagramReelShortcut: sync scrape requested by user ${userId} for URL: ${url}`);
 
