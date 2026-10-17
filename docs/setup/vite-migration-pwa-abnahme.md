@@ -47,7 +47,7 @@ Durch den Betreiber auf dem eigenen Handy mit installierter PWA:
 - [x] Abschnitt 5: nach dem Update weiter angemeldet.
 - [x] Abschnitt 2: Offline-Start geprüft; Rezeptbilder offline nicht sichtbar (keine Regression, M7).
 - [ ] Nicht einzeln geprüft: Logo/Startbild, Abschnitt 4 (Installation, Teilen).
-- [ ] Notausgang-Service-Worker nicht vorhanden (Tech-Check M9).
+- [ ] Notausgang-Service-Worker war zum Zeitpunkt der Abnahme nicht vorhanden (Tech-Check M9, danach umgesetzt).
 
 Befund B1 wurde vom Betreiber trotz dieser Restpunkte als behoben abgenommen.
 
@@ -131,6 +131,8 @@ Ein Zurückrollen auf die alte Version reicht nicht, wenn Geräte die fehlerhaft
 Kopie schon haben. Vor dem Release einen „Notausgang“ vorbereiten: eine Version
 des Service-Workers, die sich auf den Geräten selbst deregistriert und den
 Cache leert.
+
+Umgesetzt (Tech-Check M9): `docs/setup/notausgang-service-worker.md`.
 
 ## Rollen
 
