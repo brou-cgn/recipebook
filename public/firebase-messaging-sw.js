@@ -104,20 +104,36 @@ function buildNotificationTargetUrl(data) {
     return `/?eventReminder=${encodeURIComponent(data.eventId)}`;
   }
   if (data?.type === 'import_ready' || data?.type === 'import_failed') {
-    return '/?reviewImport=1';
+    return `/?reviewImport=${encodeURIComponent(data.recipeId || '1')}`;
   }
   return '/';
 }
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = buildNotificationTargetUrl(event.notification.data);
+  const data = event.notification.data;
+  const targetUrl = buildNotificationTargetUrl(data);
+  const isImportNotification =
+    data?.type === 'import_ready' || data?.type === 'import_failed';
 
   event.waitUntil(
       clients.matchAll({type: 'window', includeUncontrolled: true}).then(
-          (clientList) => {
+          async (clientList) => {
             for (const client of clientList) {
               if (client.url && 'focus' in client) {
+                // Eine laufende App (auch eine im Hintergrund pausierte
+                // installierte PWA) nicht neu laden: WindowClient.navigate()
+                // wird auf iOS nicht zuverlässig ausgeführt, die App käme
+                // dann nur nach vorn und bliebe in ihrer letzten Ansicht.
+                // Stattdessen die Ziel-ID direkt an die Seite schicken
+                // (App.js: Nachricht REVIEW_IMPORT).
+                if (isImportNotification) {
+                  client.postMessage({
+                    type: 'REVIEW_IMPORT',
+                    recipeId: data.recipeId || '',
+                  });
+                  return client.focus();
+                }
                 if ('navigate' in client) {
                   return client.navigate(targetUrl).then((c) => c.focus());
                 }

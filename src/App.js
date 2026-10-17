@@ -1010,7 +1010,21 @@ function App() {
     if (!pendingReviewImport) return;
     if (!currentUser) return; // wait for login
     if (pendingReviewRecipes.length === 0) return; // wait for the queue to load
-    handleNavigateToRecipesOverview();
+    // The notification carries the id of the finished import; open exactly that
+    // recipe. Falls back to the first pending one (flag '1' from older
+    // notifications, or a recipe that is no longer waiting for review).
+    // A form that is already open (a notification tapped while editing) is not
+    // replaced, that would throw away unsaved input; the auto-review effect
+    // below picks the pending import up once the user is back on the overview.
+    if (!isFormOpen) {
+      const targetRecipe = pendingReviewRecipes.find((r) => r.id === pendingReviewImport);
+      if (targetRecipe) {
+        handleViewChange('recipes');
+        handleReviewTempRecipe(targetRecipe);
+      } else {
+        handleNavigateToRecipesOverview();
+      }
+    }
     setPendingReviewImport(null);
     try {
       sessionStorage.removeItem(PENDING_REVIEW_IMPORT_STORAGE_KEY);
@@ -1019,6 +1033,27 @@ function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, pendingReviewImport, pendingReviewRecipes]);
+
+  // Tapping a background-import notification while the app is already running
+  // (e.g. an installed PWA paused in the background): the service worker does
+  // not reload the page, it posts the id here instead (see
+  // public/firebase-messaging-sw.js). A cold start still arrives as
+  // ?reviewImport=<id>, handled when the state above is initialised.
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return undefined;
+    const handleServiceWorkerMessage = (event) => {
+      if (event.data?.type !== 'REVIEW_IMPORT') return;
+      const recipeId = event.data.recipeId || '1';
+      try {
+        sessionStorage.setItem(PENDING_REVIEW_IMPORT_STORAGE_KEY, recipeId);
+      } catch {
+        // Ignore storage errors
+      }
+      setPendingReviewImport(recipeId);
+    };
+    navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+  }, []);
 
   // Ensure the system-wide public group exists and store its ID
   useEffect(() => {
