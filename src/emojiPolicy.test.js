@@ -11,14 +11,7 @@ const path = require('path');
 const SRC = __dirname;
 const EMOJI = /\p{Extended_Pictographic}/gu;
 
-const BASELINE = {
-  'components/ButtonIconsAdminTab.js': 1,
-  'components/KalibrierungsAuswertung.js': 1,
-  'components/NutritionModal.js': 1,
-  'components/NutritionReferenceTab.js': 2,
-  'components/printEditor/ElementPropsPanel.js': 6,
-  'components/templateEditor/FloatingToolbar.js': 1,
-};
+const BASELINE = {};
 
 function sourceFiles(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

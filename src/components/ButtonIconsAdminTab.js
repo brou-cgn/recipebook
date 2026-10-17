@@ -582,7 +582,7 @@ function SortableGroupSection({
       <div className="bia-group-header">
         <button type="button" className="bia-drag-handle" {...attributes} {...listeners} aria-label={`${group.name} verschieben`}>⠿</button>
         <button type="button" className="bia-chevron" onClick={onToggle} aria-label={isOpen ? `${group.name} einklappen` : `${group.name} ausklappen`}>
-          {isOpen ? '▼' : '▶'}
+          {isOpen ? '▼' : '▸'}
         </button>
         <input
           className="bia-group-name"
