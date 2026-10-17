@@ -28,6 +28,14 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      killswitch:
+        description: >-
+          Notausgang (Tech-Check M9): statt des regulären Service-Workers wird
+          eine Version ausgeliefert, die sich auf den Geräten abmeldet und die
+          Zwischenspeicher leert. Verfahren: docs/setup/notausgang-service-worker.md
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -103,6 +111,11 @@ jobs:
           REACT_APP_FIREBASE_MEASUREMENT_ID: ${{ secrets.REACT_APP_FIREBASE_MEASUREMENT_ID }}
           REACT_APP_FIREBASE_VAPID_KEY: ${{ secrets.REACT_APP_FIREBASE_VAPID_KEY }}
         run: npm run build
+
+      # Nur bei manuellem Start mit gesetztem Haken (siehe on.workflow_dispatch).
+      - name: Notausgang statt Service-Worker
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.killswitch }}
+        run: node scripts/apply-killswitch.js
 
       - name: Install Functions dependencies
         run: npm ci

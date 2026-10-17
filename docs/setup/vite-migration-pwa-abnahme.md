@@ -38,6 +38,19 @@ Test auf einem echten iPhone/Android-Gerät, deckt aber die Mechanik ab:
 Offen bleiben die Punkte, die nur ein echtes Gerät zeigt: Installation auf
 iOS/Android, Push-Zustellung, Teilen aus einer anderen App.
 
+## Abnahme am Gerät (17.10.2026, nach dem Live-Gang am 14.10.)
+
+Durch den Betreiber auf dem eigenen Handy mit installierter PWA:
+
+- [x] Abschnitt 1: Update der installierten Version fehlerfrei.
+- [x] Abschnitt 3: Push-Nachricht in allen drei Zuständen (App offen, Hintergrund, geschlossen) zugestellt; Tipp öffnet die App (nicht das konkrete Rezept, siehe Tech-Check M8).
+- [x] Abschnitt 5: nach dem Update weiter angemeldet.
+- [x] Abschnitt 2: Offline-Start geprüft; Rezeptbilder offline nicht sichtbar (keine Regression, M7).
+- [ ] Nicht einzeln geprüft: Logo/Startbild, Abschnitt 4 (Installation, Teilen).
+- [ ] Notausgang-Service-Worker war zum Zeitpunkt der Abnahme nicht vorhanden (Tech-Check M9, danach umgesetzt).
+
+Befund B1 wurde vom Betreiber trotz dieser Restpunkte als behoben abgenommen.
+
 ## Hintergrund
 
 Die App ist eine installierte Web-App (PWA). Auf dem Handy liegt eine Kopie der
@@ -66,7 +79,7 @@ Hotfix beheben, weil die defekte Kopie auf den Geräten liegt.
 
 - [ ] Flugmodus an, App starten: Die Rezeptliste erscheint.
 - [ ] Ein einzelnes Rezept direkt öffnen (Deep-Link), ohne Umweg über die Startseite.
-- [ ] Rezeptbilder sind weiter sichtbar (`StaleWhileRevalidate`-Routen).
+- [ ] Rezeptbilder offline: **nicht erfüllt, keine Regression.** Bilder liegen in Firebase Storage (fremde Domain), die `StaleWhileRevalidate`-Route greift nur für eigene `.png`-Dateien; unter CRA war es identisch (Tech-Check M7).
 - [ ] Der Zwischenspeicher wächst nicht unbegrenzt (`ExpirationPlugin` aktiv).
 
 ## 3. Benachrichtigungen
@@ -118,6 +131,8 @@ Ein Zurückrollen auf die alte Version reicht nicht, wenn Geräte die fehlerhaft
 Kopie schon haben. Vor dem Release einen „Notausgang“ vorbereiten: eine Version
 des Service-Workers, die sich auf den Geräten selbst deregistriert und den
 Cache leert.
+
+Umgesetzt (Tech-Check M9): `docs/setup/notausgang-service-worker.md`.
 
 ## Rollen
 
