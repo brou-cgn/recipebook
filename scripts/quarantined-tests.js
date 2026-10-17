@@ -6,9 +6,10 @@
  * --------------------
  * The test workflow was switched off on 2026-03-18, the same evening it was
  * introduced, because the suite was already red. Six months and ~1300
- * commits later it is still red - 141 failing tests across 22 suites (19 left
- * after 2026-10-12, when the three Nutrition-Provider suites were repaired)
- * below - while the other 110 suites (3055 tests) pass.
+ * commits later it was still red - 141 failing tests across 22 suites. After
+ * the repairs of 2026-10-12 (three Nutrition-Provider suites) and 2026-10-17
+ * (mocks, stale queries; Tech-Check T2/T4/T6) 5 suites remain below: four CSS
+ * string suites (to be deleted, T3) and App.test.js.
  *
  * Repairing all 141 before turning CI back on would mean no protection at
  * all in the meantime, and the failures are not one problem but many: stale
@@ -43,17 +44,8 @@ module.exports = [
   'src/components/EventsPage.css.test.js',
   'src/components/RecipeForm.css.test.js',
 
-  // Incomplete jest.mock factories - the module is mocked but a function the
-  // component calls (canEditRecipes, getCommonAdjectives, ...) is missing
-  // from the factory, so it arrives as undefined.
-  'src/components/RecipeList.test.js',
-
   // Stale DOM queries and assertions: the UI moved on, the tests did not.
-  'src/App.auth.test.js',
+  // App.test.js logs in via localStorage.currentUser, but the app uses Firebase
+  // auth now (see App.auth.test.js): needs a rewrite or deletion, not a patch.
   'src/App.test.js',
-  'src/components/EventForm.test.js',
-  'src/components/MenuDetail.test.js',
-  'src/components/MenuForm.test.js',
-  'src/components/RecipeDetail.test.js',
-  'src/components/RecipeForm.test.js',
 ];

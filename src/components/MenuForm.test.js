@@ -158,7 +158,7 @@ describe('MenuForm - description field guest pills', () => {
       />
     );
 
-    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    const guestSearchInput = screen.getByPlaceholderText('Suche Gäste und füge sie hinzu');
     fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
 
     fireEvent.click(await screen.findByText('Anna Adler'));
@@ -182,7 +182,7 @@ describe('MenuForm - description field guest pills', () => {
       />
     );
 
-    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    const guestSearchInput = screen.getByPlaceholderText('Suche Gäste und füge sie hinzu');
     fireEvent.change(guestSearchInput, { target: { value: 'Ben' } });
     fireEvent.click(await screen.findByText('Ben Beispiel'));
 
@@ -332,7 +332,7 @@ describe('MenuForm - Drinks section manual drink selection', () => {
       />
     );
 
-    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    const guestSearchInput = screen.getByPlaceholderText('Suche Gäste und füge sie hinzu');
     fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
     fireEvent.click(await screen.findByText('Anna Adler'));
 
@@ -362,7 +362,7 @@ describe('MenuForm - Drinks section manual drink selection', () => {
       />
     );
 
-    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    const guestSearchInput = screen.getByPlaceholderText('Suche Gäste und füge sie hinzu');
     fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
     fireEvent.click(await screen.findByText('Anna Adler'));
 
@@ -466,8 +466,8 @@ describe('MenuForm - Drinks section manual drink selection', () => {
     await waitFor(() => {
       expect(mockSaveCustomDrink).toHaveBeenCalledWith('user-1', {
         name: '#recipe:recipe-2:Mojito',
-        kategorie: null,
-        einheiten: [{ einheitsgroesse: 0.5 }],
+        kategorie: 'longdrinks',
+        einheiten: [{ einheitsgroesse: 0.5, einheit: 'Drink' }],
       });
     });
 
@@ -748,7 +748,7 @@ describe('MenuForm - linking an existing event merges guests', () => {
     );
 
     // Tag guest-1 on the menu before linking, so the merge shouldn't drop it.
-    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    const guestSearchInput = screen.getByPlaceholderText('Suche Gäste und füge sie hinzu');
     fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
     fireEvent.click(await screen.findByText('Anna Adler'));
 
@@ -804,7 +804,7 @@ describe('MenuForm - linking an existing event merges guests', () => {
       />
     );
 
-    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    const guestSearchInput = screen.getByPlaceholderText('Suche Gäste und füge sie hinzu');
     fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
     fireEvent.click(await screen.findByText('Anna Adler'));
 
@@ -857,7 +857,7 @@ describe('MenuForm - linking an existing event merges guests', () => {
       />
     );
 
-    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    const guestSearchInput = screen.getByPlaceholderText('Suche Gäste und füge sie hinzu');
     fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
     fireEvent.click(await screen.findByText('Anna Adler'));
 
@@ -885,7 +885,7 @@ describe('MenuForm - linking an existing event merges guests', () => {
       />
     );
 
-    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    const guestSearchInput = screen.getByPlaceholderText('Suche Gäste und füge sie hinzu');
     fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
     fireEvent.click(await screen.findByText('Anna Adler'));
 
@@ -916,7 +916,7 @@ describe('MenuForm - linking an existing event merges guests', () => {
       />
     );
 
-    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    const guestSearchInput = screen.getByPlaceholderText('Suche Gäste und füge sie hinzu');
     fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
     fireEvent.click(await screen.findByText('Anna Adler'));
 
@@ -947,7 +947,7 @@ describe('MenuForm - linking an existing event merges guests', () => {
       />
     );
 
-    const guestSearchInput = screen.getByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    const guestSearchInput = screen.getByPlaceholderText('Suche Gäste und füge sie hinzu');
     fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
     fireEvent.click(await screen.findByText('Anna Adler'));
 
@@ -1023,7 +1023,7 @@ describe('MenuForm - immediate guest sync with a linked event', () => {
       />
     );
 
-    const guestSearchInput = await screen.findByPlaceholderText('Gast suchen und als Pille hinzufügen...');
+    const guestSearchInput = await screen.findByPlaceholderText('Suche Gäste und füge sie hinzu');
     fireEvent.change(guestSearchInput, { target: { value: 'Anna' } });
     fireEvent.click(await screen.findByText('Anna Adler'));
 

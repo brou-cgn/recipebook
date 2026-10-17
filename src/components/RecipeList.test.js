@@ -419,8 +419,9 @@ describe('RecipeList - Version Count Display', () => {
     );
 
     // Wait for users to load
+    // Die Karte zeigt nur den Vornamen des Autors.
     await waitFor(() => {
-      expect(screen.getByText('Test User')).toBeInTheDocument();
+      expect(document.querySelector('.recipe-author')).toHaveTextContent('Test');
     });
   });
 
