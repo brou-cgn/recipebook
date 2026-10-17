@@ -42,6 +42,7 @@ erzwungen — wo das gilt, steht die Datei dabei.
   `onConfirm` muss nach dem Unmount sicher sein).
 
 ## Tests
+- Vor dem Commit `npm run lint:ci` (ESLint für `src/`, bricht nur bei Fehlern ab; `npm run lint` zeigt zusätzlich ~270 Warnungen als Altbestand).
 - Vor dem Commit `npm run test:ci` ausführen. Das ist der Lauf der CI
   (`.github/workflows/ci.yml`, jeder PR gegen `main`). `npm test` läuft zusätzlich über die
   Quarantäne.
