@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, act, cleanup } from '@testing-library/react';
+import { render, screen, act, cleanup, fireEvent } from '@testing-library/react';
 import App from './App';
 
 let mockAuthStateCallback;
@@ -257,6 +257,11 @@ jest.mock('./utils/pushNotifications', () => ({
   notifyPrivateListMembers: () => Promise.resolve(),
 }));
 
+const mockReconnectFirestore = jest.fn();
+jest.mock('./utils/firestoreReconnect', () => ({
+  reconnectFirestore: (...args) => mockReconnectFirestore(...args),
+}));
+
 jest.mock('./utils/pushTapHandoff', () => ({
   appendPushLog: () => Promise.resolve(),
   takePendingReviewImport: (...args) => mockTakePendingReviewImport(...args),
@@ -357,6 +362,8 @@ describe('Push-Tipp öffnet das Prüf-Rezept', () => {
     mockEmitTempRecipes = null;
     mockTakePendingReviewImport.mockReset();
     mockTakePendingReviewImport.mockResolvedValue(null);
+    mockReconnectFirestore.mockReset();
+    mockReconnectFirestore.mockResolvedValue(undefined);
     mockGetRolePermissions.mockResolvedValue({});
     mockGetOnboardingTestmodeActive.mockResolvedValue(false);
     mockSubscribeToRecipes.mockImplementation(() => () => {});
@@ -454,5 +461,34 @@ describe('Push-Tipp öffnet das Prüf-Rezept', () => {
     });
 
     expect(screen.getByTestId('recipe-form-view')).toHaveAttribute('data-recipe-id', 'b');
+  });
+
+  test('Rezept noch unterwegs: sofort in die Übersicht, Hinweis, Verbindung neu aufbauen, kein anderes Rezept', async () => {
+    await loginWithQueue([tempRecipe('a', 'Älteres Rezept')]);
+    fireEvent.click(screen.getByText('go-groups'));
+    expect(screen.getByTestId('header')).toHaveAttribute('data-current-view', 'groups');
+
+    await tapNotification('b');
+
+    expect(screen.getByTestId('header')).toHaveAttribute('data-current-view', 'recipes');
+    expect(screen.queryByTestId('recipe-form-view')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Rezept wird geöffnet');
+    expect(mockReconnectFirestore).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      mockEmitTempRecipes([tempRecipe('a', 'Älteres Rezept'), tempRecipe('b', 'Neues Rezept')]);
+    });
+
+    expect(screen.getByTestId('recipe-form-view')).toHaveAttribute('data-recipe-id', 'b');
+    expect(screen.queryByText('Rezept wird geöffnet …')).not.toBeInTheDocument();
+  });
+
+  test('Rezept liegt schon vor: kein Neuaufbau der Verbindung', async () => {
+    await loginWithQueue([tempRecipe('b', 'Neues Rezept')]);
+
+    await tapNotification('b');
+
+    expect(screen.getByTestId('recipe-form-view')).toHaveAttribute('data-recipe-id', 'b');
+    expect(mockReconnectFirestore).not.toHaveBeenCalled();
   });
 });

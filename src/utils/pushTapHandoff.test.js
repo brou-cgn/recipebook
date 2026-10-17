@@ -26,12 +26,16 @@ let store;
 beforeEach(() => {
   store = new Map();
   const cache = {
-    match: (key) => Promise.resolve(store.has(key) ? new FakeResponse(store.get(key)) : undefined),
+    match: (key) => {
+      const path = typeof key === 'string' ? key : new URL(key.url).pathname;
+      return Promise.resolve(store.has(path) ? new FakeResponse(store.get(path)) : undefined);
+    },
     put: (key, response) => {
       store.set(key, response.body);
       return Promise.resolve();
     },
-    delete: (key) => Promise.resolve(store.delete(key)),
+    delete: (key) => Promise.resolve(store.delete(typeof key === 'string' ? key : new URL(key.url).pathname)),
+    keys: () => Promise.resolve([...store.keys()].map((key) => ({ url: `https://example.test${key}` }))),
   };
   global.caches = { open: () => Promise.resolve(cache) };
   global.Response = FakeResponse;
@@ -79,13 +83,26 @@ describe('Protokoll', () => {
     await expect(readPushLog()).resolves.toEqual([]);
   });
 
+  test('Einträge von Worker und App gleichzeitig gehen nicht verloren', async () => {
+    store.set('/__push-handoff/log/1000-sw-abc', JSON.stringify({ at: 1000, by: 'sw', step: 'Tipp weitergegeben', detail: '' }));
+    await Promise.all([
+      appendPushLog('App erhält Tipp (Nachricht)', 'r1'),
+      appendPushLog('Prüf-Rezept geöffnet', 'r1'),
+    ]);
+
+    const steps = (await readPushLog()).map((e) => e.step);
+    expect(steps).toHaveLength(3);
+    expect(steps[0]).toBe('Tipp weitergegeben');
+    expect(steps).toEqual(expect.arrayContaining(['App erhält Tipp (Nachricht)', 'Prüf-Rezept geöffnet']));
+  });
+
   test('behält nur die letzten 40 Einträge', async () => {
     for (let i = 0; i < 45; i += 1) {
-      // eslint-disable-next-line no-await-in-loop
-      await appendPushLog(`Schritt ${i}`);
+      store.set(`/__push-handoff/log/${1000 + i}-app-x`, JSON.stringify({ at: 1000 + i, by: 'app', step: `Schritt ${i}`, detail: '' }));
     }
     const log = await readPushLog();
     expect(log).toHaveLength(40);
     expect(log[0].step).toBe('Schritt 5');
+    expect([...store.keys()].filter((key) => key.startsWith('/__push-handoff/log/'))).toHaveLength(40);
   });
 });

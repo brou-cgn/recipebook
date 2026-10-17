@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, Suspense, lazy } from 'react';
 import './App.css';
+import './components/UndoSnackbar.css';
 import RecipeList from './components/RecipeList';
 import RecipeFilterSidebar from './components/RecipeFilterSidebar';
 import Header from './components/Header';
@@ -30,6 +31,7 @@ import {
   notifyPrivateListMembers
 } from './utils/pushNotifications';
 import { appendPushLog, takePendingReviewImport } from './utils/pushTapHandoff';
+import { reconnectFirestore } from './utils/firestoreReconnect';
 import { 
   toggleFavorite,
   migrateGlobalFavorites
@@ -133,7 +135,7 @@ const PENDING_EVENT_REMINDER_STORAGE_KEY = 'pendingEventReminderId';
 const PENDING_REVIEW_IMPORT_STORAGE_KEY = 'pendingReviewImportFlag';
 // How long a tapped import notification waits for its recipe to arrive in the
 // review queue before falling back to the first pending one.
-const REVIEW_IMPORT_WAIT_MS = 15000;
+const REVIEW_IMPORT_WAIT_MS = 30000;
 const ATELIER_ONBOARDING_KEY = 'atelierOnboardingSeen';
 const BOTTOM_NAV_TABS = [
   { key: 'home', label: 'Küche', view: 'startseite' },
@@ -488,6 +490,9 @@ function App() {
   const handledTempReviewIdsRef = useRef(new Set());
   // Logs "waiting for the form to close" only once per tapped notification.
   const reviewImportWaitingForFormRef = useRef(false);
+  // The tapped notification already moved the app to the recipe overview
+  // while its recipe is still on the way (see the review-import effect).
+  const reviewImportParkedRef = useRef(null);
   // Set when the app was (re)started from a tapped notification's URL.
   const reviewImportFromUrlRef = useRef(null);
   // Tracks whether the previous render was already sitting idle on the
@@ -1045,9 +1050,23 @@ function App() {
     // notifications, or a recipe that still hasn't shown up once the wait
     // above is over).
     const targetRecipe = pendingReviewRecipes.find((r) => r.id === pendingReviewImport);
-    if (!targetRecipe) {
-      if (pendingReviewImport !== '1' && !reviewImportWaitExpired) return; // wait for the listener
-      if (pendingReviewImport === '1' && pendingReviewRecipes.length === 0) return; // wait for the queue to load
+    const waitingForRecipe = !targetRecipe && (
+      (pendingReviewImport !== '1' && !reviewImportWaitExpired) || // wait for the listener
+      (pendingReviewImport === '1' && pendingReviewRecipes.length === 0) // wait for the queue to load
+    );
+    if (waitingForRecipe) {
+      // Don't leave the user on whatever page the app was paused on: go to
+      // the recipe overview right away (the banner says the recipe is coming)
+      // and force Firestore to reconnect instead of waiting for it to notice
+      // that its connection died in the background. A form with input of its
+      // own is left alone, see below.
+      if (reviewImportParkedRef.current !== pendingReviewImport) {
+        reviewImportParkedRef.current = pendingReviewImport;
+        appendPushLog('Warte auf Rezept, Verbindung neu aufbauen', pendingReviewImport);
+        reconnectFirestore();
+        if (!isFormOpen) handleViewChange('recipes');
+      }
+      return;
     }
     // An open form is only replaced when it is itself the review of another
     // pending import (the auto-review below opens those on its own, so this is
@@ -1073,6 +1092,7 @@ function App() {
       );
       handleNavigateToRecipesOverview();
     }
+    reviewImportParkedRef.current = null;
     setPendingReviewImport(null);
     try {
       sessionStorage.removeItem(PENDING_REVIEW_IMPORT_STORAGE_KEY);
@@ -1472,7 +1492,8 @@ function App() {
     // import finishing mid-browse would yank them into the add-recipe form.
     // The next time they actually (re-)enter the overview, this fires again
     // and picks up whatever is pending then.
-    if (isIdleRecipesOverview && !wasIdleRecipesOverviewRef.current) {
+    // While a tapped notification waits for its recipe, it decides what opens.
+    if (isIdleRecipesOverview && !wasIdleRecipesOverviewRef.current && !pendingReviewImport) {
       const nextPending = pendingReviewRecipes.find((r) => !handledIds.has(r.id));
       if (nextPending) {
         handleReviewTempRecipe(nextPending);
@@ -2718,6 +2739,17 @@ function App() {
     <RecipeImportQueueProvider userId={currentUser?.id}>
       <AppNutritionRowsSync onRows={setNutritionReferenceRows} />
       <AppReviewRecipesSync onReviewRecipes={setPendingReviewRecipes} />
+      {pendingReviewImport && currentUser && (
+        // A tapped "Rezept bereit zur Prüfung" notification whose recipe is
+        // still on its way (see the review-import effect).
+        <div className="undo-snackbar" role="status">
+          <span className="undo-snackbar-message">
+            {isFormOpen && !editingRecipe?.isTemp
+              ? 'Prüf-Rezept öffnet sich nach dem Schließen des Formulars'
+              : 'Rezept wird geöffnet …'}
+          </span>
+        </div>
+      )}
       <div className="App" style={appBottomNavStyle}>
         <Header
           ref={headerRef}
