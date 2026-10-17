@@ -4,6 +4,7 @@
 
 let mockMessagingPromise = Promise.resolve({});
 let mockShowNotification;
+let mockUpdate;
 
 // Mock firebase module
 jest.mock('../firebase', () => ({
@@ -37,6 +38,8 @@ import {
   requestNotificationPermission,
   setupForegroundMessageListener,
   notifyPrivateListMembers,
+  registerMessagingServiceWorker,
+  getMessagingServiceWorkerVersion,
 } from './pushNotifications';
 
 const { isMessagingSupported: mockIsSupported } = jest.requireMock('../firebase');
@@ -46,6 +49,7 @@ describe('pushNotifications', () => {
     jest.clearAllMocks();
     mockMessagingPromise = Promise.resolve({});
     mockShowNotification = jest.fn();
+    mockUpdate = jest.fn().mockResolvedValue(undefined);
 
     // Default: messaging is supported
     mockIsSupported.mockResolvedValue(true);
@@ -64,6 +68,7 @@ describe('pushNotifications', () => {
           active: { postMessage: jest.fn() },
           installing: null,
           waiting: null,
+          update: mockUpdate,
         }),
         ready: Promise.resolve({
           active: { postMessage: jest.fn() },
@@ -82,6 +87,56 @@ describe('pushNotifications', () => {
 
   afterEach(() => {
     process.env.REACT_APP_FIREBASE_VAPID_KEY = 'test-vapid-key';
+  });
+
+  describe('Mitteilungs-Worker aktuell halten', () => {
+    // jsdom has no MessageChannel; port2 delivers straight to port1.
+    beforeEach(() => {
+      global.MessageChannel = class {
+        constructor() {
+          this.port1 = {};
+          this.port2 = { postMessage: (data) => this.port1.onmessage?.({ data }) };
+        }
+      };
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      delete global.MessageChannel;
+    });
+
+    it('sucht bei jeder Registrierung nach einer neueren Fassung', async () => {
+      await registerMessagingServiceWorker();
+
+      expect(mockUpdate).toHaveBeenCalled();
+    });
+
+    it('meldet die Version des laufenden Workers', async () => {
+      const worker = {
+        postMessage: jest.fn((message, [port]) => {
+          if (message.type === 'GET_MESSAGING_SW_VERSION') port.postMessage({ version: 'v2.23.25' });
+        }),
+      };
+      global.navigator.serviceWorker.getRegistration.mockResolvedValue({ active: worker });
+
+      await expect(getMessagingServiceWorkerVersion()).resolves.toBe('v2.23.25');
+    });
+
+    it('eine ältere Fassung antwortet nicht: null', async () => {
+      jest.useFakeTimers();
+      global.navigator.serviceWorker.getRegistration.mockResolvedValue({ active: { postMessage: jest.fn() } });
+
+      const version = getMessagingServiceWorkerVersion();
+      await Promise.resolve();
+      await Promise.resolve();
+      jest.advanceTimersByTime(2000);
+
+      await expect(version).resolves.toBeNull();
+    });
+
+    it('ohne Registrierung: none', async () => {
+      await expect(getMessagingServiceWorkerVersion()).resolves.toBe('none');
+    });
   });
 
   describe('requestNotificationPermission', () => {

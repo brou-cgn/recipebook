@@ -3,7 +3,7 @@ import './PersonalDataPage.css';
 import { updateUserProfile, changePassword, saveFcmToken, setBackgroundUpdatesEnabled } from '../utils/userManagement';
 import { ALARM_SOUNDS, getAlarmSoundPreference, saveAlarmSoundPreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference } from '../utils/customLists';
 import { previewAlarmSound } from '../utils/alarmAudioUtils';
-import { requestNotificationPermission } from '../utils/pushNotifications';
+import { requestNotificationPermission, getMessagingServiceWorkerVersion } from '../utils/pushNotifications';
 import { readPushLog, clearPushLog } from '../utils/pushTapHandoff';
 import { setWebImportPin, clearWebImportPin } from '../utils/webImportPin';
 import DeleteRowButton from './DeleteRowButton';
@@ -135,13 +135,20 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   // Diagnose für den Tipp auf „Rezept bereit zur Prüfung" (Tech-Check M8):
   // null = ausgeblendet.
   const [pushLog, setPushLog] = useState(null);
+  const [messagingSwVersion, setMessagingSwVersion] = useState(undefined);
   const handleTogglePushLog = async () => {
     if (pushLog !== null) {
       setPushLog(null);
       return;
     }
+    setMessagingSwVersion(undefined);
     setPushLog(await readPushLog());
+    setMessagingSwVersion(await getMessagingServiceWorkerVersion().catch(() => null));
   };
+  const messagingSwVersionLabel = messagingSwVersion === undefined ? 'wird geprüft…' :
+    messagingSwVersion === 'none' ? 'nicht registriert' :
+    messagingSwVersion === null ? 'ältere Fassung (meldet keine Version)' :
+    messagingSwVersion;
   const handleClearPushLog = async () => {
     await clearPushLog();
     setPushLog([]);
@@ -643,6 +650,9 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           </button>
           {pushLog !== null && (
             <>
+              <p className="personal-data-password-hint">
+                App {process.env.REACT_APP_VERSION || '–'} · Mitteilungs-Worker {messagingSwVersionLabel}
+              </p>
               {pushLog.length === 0 ? (
                 <p className="personal-data-password-hint">Noch keine Einträge.</p>
               ) : (

@@ -48,6 +48,7 @@ function loadServiceWorker(windowClients, { caches } = {}) {
       listeners[type] = fn;
     },
     registration: { showNotification: jest.fn() },
+    skipWaiting: jest.fn(),
   };
   vm.runInNewContext(SW_SOURCE, {
     self,
@@ -57,7 +58,7 @@ function loadServiceWorker(windowClients, { caches } = {}) {
     setTimeout,
     ...(caches ? { caches, Response: FakeResponse } : {}),
   });
-  return { listeners, clients };
+  return { listeners, clients, self };
 }
 
 function makeClient(overrides = {}) {
@@ -156,5 +157,24 @@ describe('notificationclick', () => {
 
     expect(client.navigate).toHaveBeenCalledWith('/?eventReminder=e1');
     expect(client.postMessage).not.toHaveBeenCalled();
+  });
+});
+
+describe('Aktualisierung und Version', () => {
+  test('eine neue Fassung wartet nicht, sondern übernimmt sofort', () => {
+    const { listeners, self } = loadServiceWorker([]);
+
+    listeners.install({});
+
+    expect(self.skipWaiting).toHaveBeenCalled();
+  });
+
+  test('meldet ihre Version auf Anfrage', () => {
+    const { listeners } = loadServiceWorker([]);
+    const port = { postMessage: jest.fn() };
+
+    listeners.message({ data: { type: 'GET_MESSAGING_SW_VERSION' }, ports: [port] });
+
+    expect(port.postMessage).toHaveBeenCalledWith({ version: '__MESSAGING_SW_VERSION__' });
   });
 });

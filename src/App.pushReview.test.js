@@ -253,6 +253,7 @@ const { subscribeToGroups: mockSubscribeToGroups } = jest.requireMock('./utils/g
 jest.mock('./utils/pushNotifications', () => ({
   requestNotificationPermission: () => Promise.resolve('default'),
   setupForegroundMessageListener: () => () => {},
+  updateMessagingServiceWorker: () => Promise.resolve(),
   notifyPrivateListMembers: () => Promise.resolve(),
 }));
 

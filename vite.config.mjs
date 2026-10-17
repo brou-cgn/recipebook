@@ -11,6 +11,7 @@
  *   process.env.REACT_APP_* gelesen. So bleiben GitHub-Secrets, .env.local und
  *   die Jest-Tests unverändert. Vite ersetzt die Ausdrücke beim Build.
  */
+import path from 'node:path';
 import { defineConfig, loadEnv, transformWithOxc } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -24,6 +25,27 @@ const jsxInJs = {
     if (!/[\\/]src[\\/].*\.js$/.test(id) || id.includes('node_modules')) return null;
     return transformWithOxc(code, id, { lang: 'jsx', jsx: { runtime: 'automatic' } });
   },
+};
+
+// public/firebase-messaging-sw.js wird unverändert kopiert. Dieses Plugin
+// setzt danach die App-Version ein: Die Datei ändert sich so mit jedem Deploy
+// (sonst prüft der Browser zwar, findet aber nichts Neues), und die App kann
+// die Fassung auf dem Gerät anzeigen (Tech-Check M8).
+const messagingSwVersion = (version) => {
+  let outDir;
+  return {
+    name: 'recipebook:messaging-sw-version',
+    apply: 'build',
+    configResolved(config) {
+      outDir = path.resolve(config.root, config.build.outDir);
+    },
+    async closeBundle() {
+      const { readFile, writeFile } = await import('node:fs/promises');
+      const file = path.join(outDir, 'firebase-messaging-sw.js');
+      const source = await readFile(file, 'utf8');
+      await writeFile(file, source.replace('__MESSAGING_SW_VERSION__', version));
+    },
+  };
 };
 
 export default defineConfig(({ mode }) => {
@@ -43,6 +65,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       jsxInJs,
+      messagingSwVersion(env.REACT_APP_VERSION || 'dev'),
       react(),
       VitePWA({
         strategies: 'injectManifest',

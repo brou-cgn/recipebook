@@ -26,6 +26,7 @@ import {
 import {
   requestNotificationPermission,
   setupForegroundMessageListener,
+  updateMessagingServiceWorker,
   notifyPrivateListMembers
 } from './utils/pushNotifications';
 import { appendPushLog, takePendingReviewImport } from './utils/pushTapHandoff';
@@ -915,6 +916,9 @@ function App() {
   useEffect(() => {
     if (!currentUser?.id || currentUser.isGuest) return;
     let foregroundUnsubscribe = () => {};
+    const handleVisibleAgain = () => {
+      if (document.visibilityState === 'visible') updateMessagingServiceWorker();
+    };
     const initPush = async () => {
       try {
         const token = await requestNotificationPermission();
@@ -922,13 +926,17 @@ function App() {
           await saveFcmToken(currentUser.id, token);
         }
         foregroundUnsubscribe = setupForegroundMessageListener();
+        document.addEventListener('visibilitychange', handleVisibleAgain);
       } catch (err) {
         // Push notifications are optional – never break the main app
         console.warn('pushNotifications: init failed', err);
       }
     };
     initPush();
-    return () => foregroundUnsubscribe();
+    return () => {
+      foregroundUnsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibleAgain);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id]);
 
