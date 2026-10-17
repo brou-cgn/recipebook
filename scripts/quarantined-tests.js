@@ -47,20 +47,13 @@ module.exports = [
   // component calls (canEditRecipes, getCommonAdjectives, ...) is missing
   // from the factory, so it arrives as undefined.
   'src/components/RecipeList.test.js',
-  'src/utils/userManagement.test.js',
 
   // Stale DOM queries and assertions: the UI moved on, the tests did not.
   'src/App.auth.test.js',
   'src/App.test.js',
-  'src/components/ConsumptionForm.test.js',
-  'src/components/DrinkManagementPage.test.js',
   'src/components/EventForm.test.js',
-  'src/components/GroupDetail.test.js',
-  'src/components/GuestManagementPage.test.js',
   'src/components/MenuDetail.test.js',
   'src/components/MenuForm.test.js',
   'src/components/RecipeDetail.test.js',
   'src/components/RecipeForm.test.js',
-  'src/components/Tagesmenu.test.js',
-  'src/utils/nutritionReferenceImportExport.test.js',
 ];

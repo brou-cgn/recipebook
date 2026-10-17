@@ -14,6 +14,8 @@ const mockSortSettings = {
 
 // Mock customLists utility so it resolves quickly in tests
 jest.mock('../utils/customLists', () => ({
+  getCommonAdjectives: () => Promise.resolve({ temperature: [], state: [], sizing: [] }),
+  getIgnoredTerms: () => Promise.resolve([]),
   getButtonIcons: () => Promise.resolve({
     listSettings: '⚙',
     listSettingsActive: '✎',

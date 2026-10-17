@@ -8,6 +8,7 @@ let _firestoreStore = {};  // "collection/docId" -> data
 let _uidCounter = 0;
 
 const resetFirebaseState = () => {
+  require("../firebase").auth.currentUser = null;
   _authStore = {};
   _firestoreStore = {};
   _uidCounter = 0;
@@ -139,6 +140,7 @@ const setupMocks = () => {
       err.code = "auth/invalid-credential";
       throw err;
     }
+    require("../firebase").auth.currentUser = { uid: record.uid, email: normEmail };
     return { user: { uid: record.uid } };
   });
 
@@ -160,7 +162,11 @@ const setupMocks = () => {
   setDoc.mockImplementation(async (ref, data) => {
     _firestoreStore[ref._key] = { ...data };
   });
-  getDocs.mockImplementation(async (ref) => makeCollectionSnapshot(ref._col));
+  // Nicht-Admins lesen publicProfiles (von der Cloud Function gespiegelt). Der
+  // Fake spiegelt hier nichts, sondern liefert dieselben Dokumente wie users.
+  getDocs.mockImplementation(async (ref) =>
+    makeCollectionSnapshot(ref._col === "publicProfiles" ? "users" : ref._col)
+  );
   updateDoc.mockImplementation(async (ref, data) => {
     if (_firestoreStore[ref._key]) {
       _firestoreStore[ref._key] = { ..._firestoreStore[ref._key], ...data };
@@ -191,6 +197,18 @@ const setupMocks = () => {
         };
         _firestoreStore["users/" + uid] = userData;
         return { data: { user: userData } };
+      });
+    }
+    if (fnName === "setUserPassword") {
+      return jest.fn(async ({ targetUserId }) => {
+        const key = "users/" + targetUserId;
+        if (!_firestoreStore[key]) {
+          const err = new Error("not-found");
+          err.code = "functions/not-found";
+          throw err;
+        }
+        _firestoreStore[key] = { ..._firestoreStore[key], requiresPasswordChange: true };
+        return { data: {} };
       });
     }
     return jest.fn(async () => ({ data: {} }));
@@ -698,7 +716,7 @@ describe("User Management Utilities", () => {
       await loginUser("test@example.com", VALID_PASSWORD);
       const result = await changePassword("non-existent-id", "NewPassword12!");
       expect(result.success).toBe(false);
-      expect(result.message).toContain("nicht gefunden");
+      expect(result.message).toContain("IDs stimmen nicht überein");
     });
   });
 

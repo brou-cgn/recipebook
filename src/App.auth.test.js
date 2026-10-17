@@ -235,6 +235,7 @@ jest.mock('./utils/userManagement', () => ({
     callback(null);
     return () => {};
   },
+  canEditRecipes: () => false,
   canEditMenu: jest.fn(() => false),
   canDeleteMenu: jest.fn(() => false),
   getRolePermissions: jest.fn(() => Promise.resolve({})),

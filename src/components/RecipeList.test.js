@@ -6,12 +6,15 @@ import { DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 
 // Mock the user management utility
 jest.mock('../utils/userManagement', () => ({
-  canEditRecipes: jest.fn(() => true),
+  canEditRecipes: () => true,
   getUsers: jest.fn(() => Promise.resolve([])),
 }));
 
 // Mock the custom lists utility
 jest.mock('../utils/customLists', () => ({
+  getCommonAdjectives: () => Promise.resolve({ temperature: [], state: [], sizing: [] }),
+  getIgnoredTerms: () => Promise.resolve([]),
+  getAvailableUnits: () => Promise.resolve([]),
   getCustomLists: () => Promise.resolve({
     mealCategories: ['Appetizer', 'Main Course', 'Dessert']
   }),
