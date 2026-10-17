@@ -27,6 +27,13 @@ jest.mock('../utils/alarmAudioUtils', () => ({
 
 jest.mock('../utils/pushNotifications', () => ({
   requestNotificationPermission: jest.fn(),
+  getMessagingServiceWorkerVersion: () => mockGetMessagingServiceWorkerVersion(),
+}));
+
+const mockGetMessagingServiceWorkerVersion = jest.fn();
+jest.mock('../utils/pushTapHandoff', () => ({
+  readPushLog: () => Promise.resolve([]),
+  clearPushLog: () => Promise.resolve(),
 }));
 
 beforeAll(() => {
@@ -733,5 +740,15 @@ describe('PersonalDataPage - PWA-Mitteilungen', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
     expect(screen.queryByText(/iOS 16\.4\+/i)).not.toBeInTheDocument();
+  });
+
+  test('Protokoll Push-Tipps zeigt, welche Fassung des Mitteilungs-Workers läuft', async () => {
+    mockGetMessagingServiceWorkerVersion.mockResolvedValue(null);
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    fireEvent.click(screen.getByText('Protokoll Push-Tipps'));
+
+    expect(await screen.findByText(/Mitteilungs-Worker ältere Fassung/)).toBeInTheDocument();
+    expect(screen.getByText('Noch keine Einträge.')).toBeInTheDocument();
   });
 });

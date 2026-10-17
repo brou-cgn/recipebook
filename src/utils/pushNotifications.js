@@ -32,6 +32,11 @@ export const registerMessagingServiceWorker = async () => {
       '/firebase-messaging-sw.js',
       { scope: MESSAGING_SW_SCOPE }
     );
+    // register() never looks for a newer script once this URL is registered,
+    // and this worker's scope is never navigated to, so the browser itself
+    // only checks on a push or tap (at most once a day, and that event still
+    // runs the old code). Check on every start instead.
+    registration.update?.().catch(() => {});
 
     // Give the service worker time to activate, then send the config
     await navigator.serviceWorker.ready;
@@ -48,6 +53,43 @@ export const registerMessagingServiceWorker = async () => {
     console.warn('pushNotifications: service worker registration failed', err);
     return null;
   }
+};
+
+/**
+ * Look for a newer FCM service worker, e.g. when the app comes back from the
+ * background (see registerMessagingServiceWorker for why this is needed).
+ */
+export const updateMessagingServiceWorker = async () => {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const registration = await navigator.serviceWorker.getRegistration(MESSAGING_SW_SCOPE);
+    await registration?.update();
+  } catch {
+    // Offline or not registered yet: the next start checks again
+  }
+};
+
+/**
+ * Version of the FCM service worker running on this device.
+ *
+ * @returns {Promise<string|null>} The version, 'none' when no worker is
+ *   registered, or null when the worker doesn't answer (a version from before
+ *   it could report one).
+ */
+export const getMessagingServiceWorkerVersion = async () => {
+  if (!('serviceWorker' in navigator)) return 'none';
+  const registration = await navigator.serviceWorker.getRegistration(MESSAGING_SW_SCOPE).catch(() => null);
+  const worker = registration?.active;
+  if (!worker) return 'none';
+  return new Promise((resolve) => {
+    const channel = new MessageChannel();
+    const timer = setTimeout(() => resolve(null), 2000);
+    channel.port1.onmessage = (event) => {
+      clearTimeout(timer);
+      resolve(event.data?.version || null);
+    };
+    worker.postMessage({ type: 'GET_MESSAGING_SW_VERSION' }, [channel.port2]);
+  });
 };
 
 /**

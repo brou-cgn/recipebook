@@ -13,6 +13,12 @@
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
+// Version des Workers, beim Build durch die App-Version ersetzt
+// (vite.config.mjs, Plugin recipebook:messaging-sw-version). Dadurch ändert
+// sich die Datei mit jedem Deploy, und die App kann anzeigen, welche Fassung
+// auf dem Gerät läuft (Persönliche Daten → Protokoll Push-Tipps).
+const MESSAGING_SW_VERSION = '__MESSAGING_SW_VERSION__';
+
 let messaging = null;
 const shownNotifications = new Set();
 const NOTIFICATION_DEDUP_WINDOW_MS = 5000;
@@ -95,7 +101,20 @@ try {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'FIREBASE_CONFIG') {
     initFirebase(event.data.config);
+  } else if (event.data && event.data.type === 'GET_MESSAGING_SW_VERSION') {
+    event.ports?.[0]?.postMessage({version: MESSAGING_SW_VERSION});
   }
+});
+
+// ── Updates sofort übernehmen ─────────────────────────────────────────────────
+// Dieser Worker steuert keine Seite (eigener Scope), eine neue Fassung muss auf
+// nichts warten. skipWaiting macht das unabhängig vom Browser verbindlich.
+self.addEventListener('install', () => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(appendPushLog('Worker aktiv', MESSAGING_SW_VERSION));
 });
 
 // ── Notification click – bring the app to the foreground ──────────────────────
