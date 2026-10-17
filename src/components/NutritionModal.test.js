@@ -1349,7 +1349,6 @@ describe('NutritionModal UI layout', () => {
     portionen: 4,
     naehrwerte: {
       kalorien: 1024,
-      protein: 48,
       fett: 56.4,
       kohlenhydrate: 108,
       zucker: 48.4,
