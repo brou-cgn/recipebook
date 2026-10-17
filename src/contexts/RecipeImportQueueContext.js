@@ -329,11 +329,18 @@ export function RecipeImportQueueProvider({ userId, children }) {
   // the existing restart/dismiss actions); jobs without an importSource
   // can't be rebuilt at all. Jobs still legitimately being worked on by
   // another live tab keep a fresh heartbeat and are skipped.
+  // Shortcut jobs are left to the server: their Cloud Function never refreshes
+  // the heartbeat while it runs (recoverStuckImportJobs is their recovery), so
+  // a slow one, or a stale offline-cache copy of one that already finished,
+  // looked orphaned here. The restart then put a finished recipe back to
+  // 'queued' and analysed it a second time, right after its "bereit zur
+  // Prüfung" push had gone out, and tapping that push found no recipe to open.
   useEffect(() => {
     const now = Date.now();
     tempRecipes.forEach((tempRecipe) => {
       if (!isPendingImport(tempRecipe) || tempRecipe.importStatus === 'error') return;
       if (!tempRecipe.importSource) return;
+      if (tempRecipe.importOrigin === 'shortcut') return;
       if (queueRef.current.some((job) => job.id === tempRecipe.id)) return;
       const heartbeat = tempRecipe.importHeartbeatAt || 0;
       if (now - heartbeat < STALE_JOB_MS) return;

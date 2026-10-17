@@ -15,6 +15,9 @@ import { isMessagingSupported, firebaseConfig, functions } from '../firebase';
 /** Env-var: Web-push VAPID key generated in the Firebase Console */
 const getVapidKey = () => process.env.REACT_APP_FIREBASE_VAPID_KEY;
 
+/** Scope of the FCM service worker (public/firebase-messaging-sw.js) */
+const MESSAGING_SW_SCOPE = '/firebase-cloud-messaging-push-scope';
+
 /**
  * Register the FCM service worker and forward the Firebase config so the SW
  * can initialise Firebase Messaging for background notifications.
@@ -26,7 +29,7 @@ export const registerMessagingServiceWorker = async () => {
   try {
     const registration = await navigator.serviceWorker.register(
       '/firebase-messaging-sw.js',
-      { scope: '/firebase-cloud-messaging-push-scope' }
+      { scope: MESSAGING_SW_SCOPE }
     );
 
     // Give the service worker time to activate, then send the config
@@ -129,15 +132,22 @@ export const setupForegroundMessageListener = () => {
             const title = payload.data?.title || payload.notification?.title || 'RecipeBook';
             const body = payload.data?.body || payload.notification?.body || '';
             if (Notification.permission === 'granted') {
-              navigator.serviceWorker.ready.then((registration) => {
-                registration.showNotification(title, {
-                  body,
-                  icon: payload.data?.icon || '/logo192.png',
-                  badge: payload.data?.badge || '/favicon.ico',
-                  tag: notificationId || 'default',
-                  data: payload.data || {},
+              // Show it through the messaging service worker, not
+              // navigator.serviceWorker.ready (the app's Workbox worker): a
+              // tap is handled by the worker that showed the notification,
+              // and only firebase-messaging-sw.js has a notificationclick
+              // handler that opens the target (e.g. the import to review).
+              navigator.serviceWorker.getRegistration(MESSAGING_SW_SCOPE)
+                .then((registration) => registration || navigator.serviceWorker.ready)
+                .then((registration) => {
+                  registration.showNotification(title, {
+                    body,
+                    icon: payload.data?.icon || '/logo192.png',
+                    badge: payload.data?.badge || '/favicon.ico',
+                    tag: notificationId || 'default',
+                    data: payload.data || {},
+                  });
                 });
-              });
             }
           });
         });

@@ -129,6 +129,9 @@ const PENDING_WEBIMPORT_URL_STORAGE_KEY = 'pendingWebimportUrl';
 const PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY = 'pendingWebimportAuthor';
 const PENDING_EVENT_REMINDER_STORAGE_KEY = 'pendingEventReminderId';
 const PENDING_REVIEW_IMPORT_STORAGE_KEY = 'pendingReviewImportFlag';
+// How long a tapped import notification waits for its recipe to arrive in the
+// review queue before falling back to the first pending one.
+const REVIEW_IMPORT_WAIT_MS = 15000;
 const ATELIER_ONBOARDING_KEY = 'atelierOnboardingSeen';
 const BOTTOM_NAV_TABS = [
   { key: 'home', label: 'Küche', view: 'startseite' },
@@ -1003,21 +1006,38 @@ function App() {
     setCurrentView('events');
   }, [currentUser, pendingEventReminderId]);
 
+  // A tap on a background-import push notification usually lands on an app
+  // that was paused in the background: its review queue is the state from
+  // before the pause (or from the offline cache), and the Firestore listener
+  // needs a moment to deliver the finished import. Wait that long for the tapped recipe instead of falling back to
+  // whatever else happens to be pending.
+  const [reviewImportWaitExpired, setReviewImportWaitExpired] = useState(false);
+  useEffect(() => {
+    setReviewImportWaitExpired(false);
+    if (!pendingReviewImport || !currentUser) return undefined;
+    const timer = setTimeout(() => setReviewImportWaitExpired(true), REVIEW_IMPORT_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, [currentUser?.id, pendingReviewImport]);
+
   // Once currentUser and the pending-review queue are loaded, jump straight
   // to the recipe review triggered by tapping a background-import-ready push
   // notification (see public/firebase-messaging-sw.js).
   useEffect(() => {
     if (!pendingReviewImport) return;
     if (!currentUser) return; // wait for login
-    if (pendingReviewRecipes.length === 0) return; // wait for the queue to load
     // The notification carries the id of the finished import; open exactly that
     // recipe. Falls back to the first pending one (flag '1' from older
-    // notifications, or a recipe that is no longer waiting for review).
+    // notifications, or a recipe that still hasn't shown up once the wait
+    // above is over).
+    const targetRecipe = pendingReviewRecipes.find((r) => r.id === pendingReviewImport);
+    if (!targetRecipe) {
+      if (pendingReviewImport !== '1' && !reviewImportWaitExpired) return; // wait for the listener
+      if (pendingReviewImport === '1' && pendingReviewRecipes.length === 0) return; // wait for the queue to load
+    }
     // A form that is already open (a notification tapped while editing) is not
     // replaced, that would throw away unsaved input; the auto-review effect
     // below picks the pending import up once the user is back on the overview.
     if (!isFormOpen) {
-      const targetRecipe = pendingReviewRecipes.find((r) => r.id === pendingReviewImport);
       if (targetRecipe) {
         handleViewChange('recipes');
         handleReviewTempRecipe(targetRecipe);
@@ -1032,7 +1052,7 @@ function App() {
       // Ignore storage errors
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, pendingReviewImport, pendingReviewRecipes]);
+  }, [currentUser, pendingReviewImport, pendingReviewRecipes, reviewImportWaitExpired]);
 
   // Tapping a background-import notification while the app is already running
   // (e.g. an installed PWA paused in the background): the service worker does
