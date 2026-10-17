@@ -69,6 +69,8 @@ describe('pushNotifications', () => {
           active: { postMessage: jest.fn() },
           showNotification: mockShowNotification,
         }),
+        // No messaging registration found: falls back to `ready`
+        getRegistration: jest.fn().mockResolvedValue(undefined),
       },
       writable: true,
       configurable: true,
@@ -192,6 +194,31 @@ describe('pushNotifications', () => {
   });
 
   describe('setupForegroundMessageListener', () => {
+    it('shows the notification through the messaging service worker so a tap reaches its click handler', async () => {
+      const NotificationMock = jest.fn();
+      NotificationMock.permission = 'granted';
+      global.Notification = NotificationMock;
+      const messagingShowNotification = jest.fn();
+      global.navigator.serviceWorker.getRegistration.mockResolvedValue({
+        showNotification: messagingShowNotification,
+      });
+
+      setupForegroundMessageListener();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const onMessageHandler = mockOnMessage.mock.calls[0][1];
+      onMessageHandler({
+        data: { type: 'import_ready', title: 'Rezept bereit zur Prüfung', recipeId: 'r1', notificationId: 'import-r1' },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(global.navigator.serviceWorker.getRegistration).toHaveBeenCalledWith('/firebase-cloud-messaging-push-scope');
+      expect(messagingShowNotification).toHaveBeenCalledWith('Rezept bereit zur Prüfung', expect.objectContaining({
+        data: expect.objectContaining({ type: 'import_ready', recipeId: 'r1' }),
+      }));
+      expect(mockShowNotification).not.toHaveBeenCalled();
+    });
+
     it('displays notification via service worker using payload.data', async () => {
       const NotificationMock = jest.fn();
       NotificationMock.permission = 'granted';
@@ -211,7 +238,7 @@ describe('pushNotifications', () => {
         data: { title: 'Data Title', body: 'Data Body', notificationId: 'test-id-1' },
         notification: { title: 'Notification Title', body: 'Notification Body' },
       });
-      await global.navigator.serviceWorker.ready;
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(NotificationMock).not.toHaveBeenCalled();
       expect(mockShowNotification).toHaveBeenCalledWith('Data Title', {
@@ -240,7 +267,7 @@ describe('pushNotifications', () => {
       onMessageHandler({
         data: { title: 'Hidden Title', body: 'Hidden Body', notificationId: 'hidden-id' },
       });
-      await global.navigator.serviceWorker.ready;
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(NotificationMock).not.toHaveBeenCalled();
       expect(mockShowNotification).toHaveBeenCalledWith('Hidden Title', {
