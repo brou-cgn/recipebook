@@ -69,6 +69,9 @@ function initFirebase(config) {
         data: payload.data || {},
       };
       self.registration.showNotification(notificationTitle, notificationOptions);
+      if (payload.data?.type === 'import_ready' || payload.data?.type === 'import_failed') {
+        appendPushLog('Mitteilung angezeigt (App im Hintergrund)', `Rezept ${payload.data.recipeId || '–'}`);
+      }
     });
   } catch (err) {
     console.error('[firebase-messaging-sw] initFirebase failed', err);
@@ -109,6 +112,59 @@ function buildNotificationTargetUrl(data) {
   return '/';
 }
 
+// ── Übergabe an die Seite über Cache Storage ──────────────────────────────────
+// Der Tipp auf „Rezept bereit zur Prüfung" muss die Rezept-ID an die App
+// bringen. postMessage, URL beim Öffnen und Fokus hängen davon ab, wie iOS die
+// pausierte PWA behandelt; keiner dieser Wege ist am Gerät belegt. Deshalb legt
+// der Worker die ID zusätzlich hier ab, und die App liest sie, sobald sie
+// sichtbar wird (src/utils/pushTapHandoff.js, gleiche Namen).
+// Dort steht auch ein kurzes Protokoll der Schritte, sichtbar unter
+// Persönliche Daten → Hintergrundaktualisierung.
+const PUSH_HANDOFF_CACHE = 'recipebook-push-handoff';
+const PUSH_HANDOFF_PENDING_KEY = '/__push-handoff/pending-review-import';
+const PUSH_HANDOFF_LOG_KEY = '/__push-handoff/log';
+const PUSH_HANDOFF_LOG_MAX = 40;
+// Wie lange der Worker beim Tipp höchstens auf das Ablegen wartet, bevor er
+// die App nach vorn holt.
+const PUSH_HANDOFF_WRITE_WAIT_MS = 500;
+
+async function readHandoffJson(cache, key, fallback) {
+  try {
+    const response = await cache.match(key);
+    return response ? await response.json() : fallback;
+  } catch (err) {
+    return fallback;
+  }
+}
+
+async function appendPushLog(step, detail) {
+  try {
+    if (typeof caches === 'undefined') return;
+    const cache = await caches.open(PUSH_HANDOFF_CACHE);
+    const log = await readHandoffJson(cache, PUSH_HANDOFF_LOG_KEY, []);
+    log.push({at: Date.now(), by: 'sw', step, detail: detail || ''});
+    await cache.put(PUSH_HANDOFF_LOG_KEY, new Response(JSON.stringify(log.slice(-PUSH_HANDOFF_LOG_MAX))));
+  } catch (err) {
+    // Protokoll ist Diagnose, nie ein Grund für einen Fehler
+  }
+}
+
+async function storePendingReviewImport(recipeId) {
+  if (typeof caches === 'undefined') return;
+  const cache = await caches.open(PUSH_HANDOFF_CACHE);
+  await cache.put(
+      PUSH_HANDOFF_PENDING_KEY,
+      new Response(JSON.stringify({recipeId, at: Date.now()})),
+  );
+}
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise.catch(() => {}),
+    new Promise((resolve) => setTimeout(resolve, ms)),
+  ]);
+}
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const data = event.notification.data;
@@ -116,34 +172,49 @@ self.addEventListener('notificationclick', (event) => {
   const isImportNotification =
     data?.type === 'import_ready' || data?.type === 'import_failed';
 
-  event.waitUntil(
-      clients.matchAll({type: 'window', includeUncontrolled: true}).then(
-          async (clientList) => {
-            for (const client of clientList) {
-              if (client.url && 'focus' in client) {
-                // Eine laufende App (auch eine im Hintergrund pausierte
-                // installierte PWA) nicht neu laden: WindowClient.navigate()
-                // wird auf iOS nicht zuverlässig ausgeführt, die App käme
-                // dann nur nach vorn und bliebe in ihrer letzten Ansicht.
-                // Stattdessen die Ziel-ID direkt an die Seite schicken
-                // (App.js: Nachricht REVIEW_IMPORT).
-                if (isImportNotification) {
-                  client.postMessage({
-                    type: 'REVIEW_IMPORT',
-                    recipeId: data.recipeId || '',
-                  });
-                  return client.focus();
-                }
-                if ('navigate' in client) {
-                  return client.navigate(targetUrl).then((c) => c.focus());
-                }
-                return client.focus();
-              }
-            }
-            if (clients.openWindow) {
-              return clients.openWindow(targetUrl);
-            }
-          },
-      ),
-  );
+  event.waitUntil((async () => {
+    if (isImportNotification) {
+      await withTimeout(
+          Promise.all([
+            storePendingReviewImport(data.recipeId || '1'),
+            appendPushLog('Tipp empfangen', `Rezept ${data.recipeId || '–'}`),
+          ]),
+          PUSH_HANDOFF_WRITE_WAIT_MS,
+      );
+    }
+    const clientList = await clients.matchAll({type: 'window', includeUncontrolled: true});
+    const client = clientList.find((c) => c.url && 'focus' in c);
+    let outcome;
+    if (client) {
+      if (isImportNotification) {
+        // Eine laufende App (auch eine im Hintergrund pausierte installierte
+        // PWA) nicht neu laden: WindowClient.navigate() wird auf iOS nicht
+        // zuverlässig ausgeführt, die App käme dann nur nach vorn und bliebe
+        // in ihrer letzten Ansicht. Stattdessen die Ziel-ID direkt an die
+        // Seite schicken (App.js: Nachricht REVIEW_IMPORT); die Ablage oben
+        // greift, falls die Nachricht nicht ankommt.
+        client.postMessage({
+          type: 'REVIEW_IMPORT',
+          recipeId: data.recipeId || '',
+        });
+        outcome = client.focus();
+      } else if ('navigate' in client) {
+        outcome = client.navigate(targetUrl).then((c) => c.focus());
+      } else {
+        outcome = client.focus();
+      }
+    } else if (clients.openWindow) {
+      outcome = clients.openWindow(targetUrl);
+    }
+    if (!isImportNotification) return outcome;
+    let result = client ?
+      `${clientList.length} Fenster, Nachricht + Fokus (${client.visibilityState || '?'})` :
+      `kein Fenster, öffne ${targetUrl}`;
+    try {
+      await outcome;
+    } catch (err) {
+      result += ` – Fehler: ${err && err.message ? err.message : err}`;
+    }
+    await appendPushLog('Tipp weitergegeben', result);
+  })());
 });

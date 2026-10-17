@@ -28,6 +28,7 @@ import {
   setupForegroundMessageListener,
   notifyPrivateListMembers
 } from './utils/pushNotifications';
+import { appendPushLog, takePendingReviewImport } from './utils/pushTapHandoff';
 import { 
   toggleFavorite,
   migrateGlobalFavorites
@@ -484,6 +485,10 @@ function App() {
   // listener yet, so they can still briefly linger in pendingReviewRecipes —
   // see the auto-review effect below.
   const handledTempReviewIdsRef = useRef(new Set());
+  // Logs "waiting for the form to close" only once per tapped notification.
+  const reviewImportWaitingForFormRef = useRef(false);
+  // Set when the app was (re)started from a tapped notification's URL.
+  const reviewImportFromUrlRef = useRef(null);
   // Tracks whether the previous render was already sitting idle on the
   // recipe overview (no form/detail/menu/settings open) — see the auto-review
   // effect below, which only acts on the transition into that state.
@@ -589,6 +594,7 @@ function App() {
         '',
         window.location.pathname + (remainingSearch ? '?' + remainingSearch : '') + window.location.hash
       );
+      reviewImportFromUrlRef.current = reviewImportFlag;
       return reviewImportFlag;
     }
     try {
@@ -1009,8 +1015,9 @@ function App() {
   // A tap on a background-import push notification usually lands on an app
   // that was paused in the background: its review queue is the state from
   // before the pause (or from the offline cache), and the Firestore listener
-  // needs a moment to deliver the finished import. Wait that long for the tapped recipe instead of falling back to
-  // whatever else happens to be pending.
+  // needs a moment to deliver the finished import. Wait that long for the
+  // tapped recipe instead of falling back to whatever else happens to be
+  // pending.
   const [reviewImportWaitExpired, setReviewImportWaitExpired] = useState(false);
   useEffect(() => {
     setReviewImportWaitExpired(false);
@@ -1034,16 +1041,29 @@ function App() {
       if (pendingReviewImport !== '1' && !reviewImportWaitExpired) return; // wait for the listener
       if (pendingReviewImport === '1' && pendingReviewRecipes.length === 0) return; // wait for the queue to load
     }
-    // A form that is already open (a notification tapped while editing) is not
-    // replaced, that would throw away unsaved input; the auto-review effect
-    // below picks the pending import up once the user is back on the overview.
-    if (!isFormOpen) {
-      if (targetRecipe) {
-        handleViewChange('recipes');
-        handleReviewTempRecipe(targetRecipe);
-      } else {
-        handleNavigateToRecipesOverview();
+    // An open form is only replaced when it is itself the review of another
+    // pending import (the auto-review below opens those on its own, so this is
+    // the usual case) — that recipe stays in the queue. Any other form
+    // (a new recipe, an edit) keeps its unsaved input: the tap waits until it
+    // is closed (isFormOpen is a dependency).
+    if (isFormOpen && !editingRecipe?.isTemp) {
+      if (!reviewImportWaitingForFormRef.current) {
+        reviewImportWaitingForFormRef.current = true;
+        appendPushLog('Warte auf Schließen des Formulars', editingRecipe?.title || 'neues Rezept');
       }
+      return;
+    }
+    reviewImportWaitingForFormRef.current = false;
+    if (targetRecipe) {
+      appendPushLog('Prüf-Rezept geöffnet', `${targetRecipe.id} – ${targetRecipe.title || ''}`);
+      handleViewChange('recipes');
+      handleReviewTempRecipe(targetRecipe);
+    } else {
+      appendPushLog(
+        'Rezept nicht im Prüf-Stapel, Rückfall',
+        `${pendingReviewImport}; wartend: ${pendingReviewRecipes.map((r) => r.id).join(', ') || 'keins'}`
+      );
+      handleNavigateToRecipesOverview();
     }
     setPendingReviewImport(null);
     try {
@@ -1052,18 +1072,17 @@ function App() {
       // Ignore storage errors
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, pendingReviewImport, pendingReviewRecipes, reviewImportWaitExpired]);
+  }, [currentUser, pendingReviewImport, pendingReviewRecipes, reviewImportWaitExpired, isFormOpen]);
 
   // Tapping a background-import notification while the app is already running
-  // (e.g. an installed PWA paused in the background): the service worker does
-  // not reload the page, it posts the id here instead (see
-  // public/firebase-messaging-sw.js). A cold start still arrives as
-  // ?reviewImport=<id>, handled when the state above is initialised.
+  // (e.g. an installed PWA paused in the background) reaches the page two
+  // ways, whichever iOS delivers: the service worker posts the id
+  // (REVIEW_IMPORT), and it also leaves it in Cache Storage, read here once
+  // the page is visible again (src/utils/pushTapHandoff.js). A cold start
+  // arrives as ?reviewImport=<id>, handled when the state above is initialised.
   useEffect(() => {
-    if (!('serviceWorker' in navigator)) return undefined;
-    const handleServiceWorkerMessage = (event) => {
-      if (event.data?.type !== 'REVIEW_IMPORT') return;
-      const recipeId = event.data.recipeId || '1';
+    const acceptReviewImport = (recipeId, via) => {
+      appendPushLog(`App erhält Tipp (${via})`, recipeId);
       try {
         sessionStorage.setItem(PENDING_REVIEW_IMPORT_STORAGE_KEY, recipeId);
       } catch {
@@ -1071,8 +1090,36 @@ function App() {
       }
       setPendingReviewImport(recipeId);
     };
-    navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
-    return () => navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+    const checkHandoff = () => {
+      if (document.visibilityState === 'hidden') return;
+      takePendingReviewImport().then((recipeId) => {
+        if (recipeId) acceptReviewImport(recipeId, 'Ablage');
+      });
+    };
+    const handleServiceWorkerMessage = (event) => {
+      if (event.data?.type !== 'REVIEW_IMPORT') return;
+      // Same tap as the stored handoff: consume it so it doesn't fire again.
+      takePendingReviewImport();
+      acceptReviewImport(event.data.recipeId || '1', 'Nachricht');
+    };
+    if (reviewImportFromUrlRef.current) {
+      appendPushLog('App erhält Tipp (Start-URL)', reviewImportFromUrlRef.current);
+      // The URL already carries this tap; drop its stored copy.
+      takePendingReviewImport();
+    } else {
+      checkHandoff();
+    }
+    document.addEventListener('visibilitychange', checkHandoff);
+    window.addEventListener('focus', checkHandoff);
+    window.addEventListener('pageshow', checkHandoff);
+    const container = 'serviceWorker' in navigator ? navigator.serviceWorker : null;
+    container?.addEventListener('message', handleServiceWorkerMessage);
+    return () => {
+      document.removeEventListener('visibilitychange', checkHandoff);
+      window.removeEventListener('focus', checkHandoff);
+      window.removeEventListener('pageshow', checkHandoff);
+      container?.removeEventListener('message', handleServiceWorkerMessage);
+    };
   }, []);
 
   // Ensure the system-wide public group exists and store its ID

@@ -4,12 +4,17 @@ import { updateUserProfile, changePassword, saveFcmToken, setBackgroundUpdatesEn
 import { ALARM_SOUNDS, getAlarmSoundPreference, saveAlarmSoundPreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference } from '../utils/customLists';
 import { previewAlarmSound } from '../utils/alarmAudioUtils';
 import { requestNotificationPermission } from '../utils/pushNotifications';
+import { readPushLog, clearPushLog } from '../utils/pushTapHandoff';
 import { setWebImportPin, clearWebImportPin } from '../utils/webImportPin';
 import DeleteRowButton from './DeleteRowButton';
 import UndoSnackbar from './UndoSnackbar';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 
 const PIN_PATTERN = /^\d{4,8}$/;
+
+const formatPushLogTime = (at) => new Date(at).toLocaleString('de-DE', {
+  day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+});
 
 const NO_LIST_OPTION = { id: '', name: '– Keine Vorauswahl –' };
 
@@ -125,6 +130,21 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
     } finally {
       setTogglingBackgroundUpdates(false);
     }
+  };
+
+  // Diagnose für den Tipp auf „Rezept bereit zur Prüfung" (Tech-Check M8):
+  // null = ausgeblendet.
+  const [pushLog, setPushLog] = useState(null);
+  const handleTogglePushLog = async () => {
+    if (pushLog !== null) {
+      setPushLog(null);
+      return;
+    }
+    setPushLog(await readPushLog());
+  };
+  const handleClearPushLog = async () => {
+    await clearPushLog();
+    setPushLog([]);
   };
 
   const handleWebImportListSelect = async (listId) => {
@@ -609,6 +629,41 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
             {backgroundUpdatesMessage}
           </p>
         )}
+        <div className="preferences-group">
+          <button
+            type="button"
+            className="settings-row"
+            onClick={handleTogglePushLog}
+            aria-expanded={pushLog !== null}
+          >
+            <span className="settings-row-label">Protokoll Push-Tipps</span>
+            <span className="settings-row-right">
+              <span className="settings-row-value">{pushLog !== null ? 'Ausblenden' : 'Anzeigen'}</span>
+            </span>
+          </button>
+          {pushLog !== null && (
+            <>
+              {pushLog.length === 0 ? (
+                <p className="personal-data-password-hint">Noch keine Einträge.</p>
+              ) : (
+                <ol className="push-tap-log">
+                  {[...pushLog].reverse().map((entry, index) => (
+                    <li key={`${entry.at}-${index}`}>
+                      <span className="push-tap-log-time">{formatPushLogTime(entry.at)}</span>
+                      {entry.by === 'sw' ? 'Worker' : 'App'}: {entry.step}
+                      {entry.detail ? ` – ${entry.detail}` : ''}
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {pushLog.length > 0 && (
+                <button type="button" className="settings-row" onClick={handleClearPushLog}>
+                  <span className="settings-row-label">Protokoll leeren</span>
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </section>
 
       <div className="personal-data-section-divider" />

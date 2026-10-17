@@ -354,3 +354,23 @@
   background: #fff3cd;
   color: #856404;
 }
+
+/* Diagnose: Protokoll der letzten Push-Tipps (src/utils/pushTapHandoff.js) */
+.push-tap-log {
+  margin: 0.4rem 0 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.push-tap-log li {
+  padding: 0.25rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  overflow-wrap: anywhere;
+}
+
+.push-tap-log-time {
+  font-variant-numeric: tabular-nums;
+  margin-right: 0.4rem;
+}

@@ -11,6 +11,7 @@
 import { getToken, onMessage } from 'firebase/messaging';
 import { httpsCallable } from 'firebase/functions';
 import { isMessagingSupported, firebaseConfig, functions } from '../firebase';
+import { appendPushLog } from './pushTapHandoff';
 
 /** Env-var: Web-push VAPID key generated in the Firebase Console */
 const getVapidKey = () => process.env.REACT_APP_FIREBASE_VAPID_KEY;
@@ -140,6 +141,12 @@ export const setupForegroundMessageListener = () => {
               navigator.serviceWorker.getRegistration(MESSAGING_SW_SCOPE)
                 .then((registration) => registration || navigator.serviceWorker.ready)
                 .then((registration) => {
+                  if (payload.data?.type === 'import_ready' || payload.data?.type === 'import_failed') {
+                    appendPushLog(
+                      'Mitteilung angezeigt (App offen)',
+                      `Rezept ${payload.data.recipeId || '–'}, Worker ${registration.scope || '?'}`
+                    );
+                  }
                   registration.showNotification(title, {
                     body,
                     icon: payload.data?.icon || '/logo192.png',
