@@ -6,9 +6,11 @@
  * --------------------
  * The test workflow was switched off on 2026-03-18, the same evening it was
  * introduced, because the suite was already red. Six months and ~1300
- * commits later it is still red - 141 failing tests across 22 suites (19 left
- * after 2026-10-12, when the three Nutrition-Provider suites were repaired)
- * below - while the other 110 suites (3055 tests) pass.
+ * commits later it was still red - 141 failing tests across 22 suites. All were
+ * repaired or, where they only asserted exact CSS strings or a removed
+ * localStorage login (App.css/AppCallsPage.css/EventsPage.css/RecipeForm.css,
+ * App.test.js), deleted by 2026-10-17 (Tech-Check T2-T4, T6). The list is empty;
+ * it stays as the place for any future, dated exception.
  *
  * Repairing all 141 before turning CI back on would mean no protection at
  * all in the meantime, and the failures are not one problem but many: stale
@@ -32,35 +34,4 @@
  * Nothing may be added to this list without a dated reason. A quarantine
  * that silently grows is the same as having no CI at all.
  */
-module.exports = [
-  // Disabled on 2026-09-16, red since before the workflow was switched off.
-  // Grouped by the dominant failure cause; see scripts/test-ci.js.
-
-  // Assert on exact CSS strings ("bottom: calc(16px + env(...))"). Break on
-  // any reformatting. Candidates for deletion rather than repair.
-  'src/App.css.test.js',
-  'src/components/AppCallsPage.css.test.js',
-  'src/components/EventsPage.css.test.js',
-  'src/components/RecipeForm.css.test.js',
-
-  // Incomplete jest.mock factories - the module is mocked but a function the
-  // component calls (canEditRecipes, getCommonAdjectives, ...) is missing
-  // from the factory, so it arrives as undefined.
-  'src/components/RecipeList.test.js',
-  'src/utils/userManagement.test.js',
-
-  // Stale DOM queries and assertions: the UI moved on, the tests did not.
-  'src/App.auth.test.js',
-  'src/App.test.js',
-  'src/components/ConsumptionForm.test.js',
-  'src/components/DrinkManagementPage.test.js',
-  'src/components/EventForm.test.js',
-  'src/components/GroupDetail.test.js',
-  'src/components/GuestManagementPage.test.js',
-  'src/components/MenuDetail.test.js',
-  'src/components/MenuForm.test.js',
-  'src/components/RecipeDetail.test.js',
-  'src/components/RecipeForm.test.js',
-  'src/components/Tagesmenu.test.js',
-  'src/utils/nutritionReferenceImportExport.test.js',
-];
+module.exports = [];

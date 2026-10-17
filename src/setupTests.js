@@ -18,3 +18,11 @@ process.env.REACT_APP_FIREBASE_STORAGE_BUCKET = 'test.firebasestorage.app';
 process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID = '123456789';
 process.env.REACT_APP_FIREBASE_APP_ID = 'test-app-id';
 process.env.REACT_APP_FIREBASE_MEASUREMENT_ID = 'test-measurement-id';
+
+// Unter jsdom 16 (Jest 27) gab es kein globales `crypto`; config/jest/polyfills.js
+// stellt diesen Ausgangszustand her. Code, der crypto.randomUUID() ruft, braucht
+// aber eine Implementierung: Wir liefern sie hier zentral, solange ein Test kein
+// eigenes crypto setzt (faqFirestore.test.js überschreibt es weiterhin selbst).
+if (!globalThis.crypto) {
+  globalThis.crypto = { randomUUID: () => require('crypto').randomUUID() };
+}

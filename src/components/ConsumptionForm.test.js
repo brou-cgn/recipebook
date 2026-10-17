@@ -25,6 +25,9 @@ jest.mock('../utils/customLists', () => {
   return {
     ...actual,
     getCustomLists: (...args) => mockGetCustomLists(...args),
+    // Ohne Mock läuft getButtonIcons gegen Firestore und lehnt offline ab; dann
+    // werden die Einheitenlisten (Plural!) im selben Promise.all nie gesetzt.
+    getButtonIcons: () => Promise.resolve({}),
   };
 });
 

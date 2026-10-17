@@ -347,7 +347,7 @@ describe('RecipeDetail - Portion Controller', () => {
     );
 
     // Initial state: 200g for 4 portions
-    expect(screen.getByText(/200.*g/)).toBeInTheDocument();
+    expect(screen.getByText('200 g Ingredient 1')).toBeInTheDocument();
 
     // Increment to 8 portions (double)
     const incrementButton = screen.getAllByRole('button').find(btn => btn.textContent === '+');
@@ -357,7 +357,7 @@ describe('RecipeDetail - Portion Controller', () => {
     fireEvent.click(incrementButton); // 8 portions
 
     // Should now be 400g (200 * 2)
-    expect(screen.getByText(/400.*g/)).toBeInTheDocument();
+    expect(screen.getByText('400 g Ingredient 1')).toBeInTheDocument();
   });
 
   test('serving control is placed inside section-header next to "Zutaten für" heading', () => {
@@ -1169,7 +1169,7 @@ describe('RecipeDetail - Creation Date Display', () => {
     );
 
     // Check that the creation date is displayed with label in German format (D.M.YYYY or DD.MM.YYYY)
-    expect(screen.getByText('Erstellt am: 15.1.2024')).toBeInTheDocument();
+    expect(document.querySelector('.author-date-caption')).toHaveTextContent('erstellt am 15.1.2024');
   });
 
   test('displays author and creation date together', () => {
@@ -1194,8 +1194,8 @@ describe('RecipeDetail - Creation Date Display', () => {
     );
 
     // Check that both author and date are displayed
-    expect(screen.getByText(/Autor: Another/)).toBeInTheDocument();
-    expect(screen.getByText('Erstellt am: 20.2.2024')).toBeInTheDocument();
+    expect(document.querySelector('.author-name')).toHaveTextContent('Another');
+    expect(document.querySelector('.author-date-caption')).toHaveTextContent('erstellt am 20.2.2024');
   });
 
   test('does not display creation date when not available', () => {
@@ -1220,10 +1220,10 @@ describe('RecipeDetail - Creation Date Display', () => {
     );
 
     // Check that author is still displayed
-    expect(screen.getByText(/Autor: Test/)).toBeInTheDocument();
-    
-    // Creation date should not be in the document (no specific date text)
-    expect(screen.queryByText(/\d{2}\.\d{2}\.\d{4}/)).not.toBeInTheDocument();
+    expect(document.querySelector('.author-name')).toHaveTextContent('Test');
+
+    // Creation date should not be in the document
+    expect(document.querySelector('.creation-date')).not.toBeInTheDocument();
   });
 
   test('handles Firestore Timestamp objects', () => {
@@ -1252,7 +1252,7 @@ describe('RecipeDetail - Creation Date Display', () => {
     );
 
     // Check that the creation date is displayed correctly with label
-    expect(screen.getByText('Erstellt am: 10.3.2024')).toBeInTheDocument();
+    expect(document.querySelector('.author-date-caption')).toHaveTextContent('erstellt am 10.3.2024');
   });
 
   test('handles Date objects', () => {
@@ -1277,7 +1277,7 @@ describe('RecipeDetail - Creation Date Display', () => {
     );
 
     // Check that the creation date is displayed correctly with label
-    expect(screen.getByText('Erstellt am: 5.4.2024')).toBeInTheDocument();
+    expect(document.querySelector('.author-date-caption')).toHaveTextContent('erstellt am 5.4.2024');
   });
 });
 
@@ -1527,6 +1527,8 @@ describe('RecipeDetail - Brightness-based alt icon switching', () => {
     // Mobile viewport so overlay buttons are rendered
     global.innerWidth = 400;
     global.dispatchEvent(new Event('resize'));
+    // Beobachtet, ob eine Canvas-Analyse angestoßen wird (restoreAllMocks räumt auf).
+    jest.spyOn(document, 'createElement');
   });
 
   afterEach(() => {
@@ -2160,7 +2162,8 @@ describe('RecipeDetail - Share Button Visibility', () => {
     );
 
     fireEvent.click(screen.getByTitle('Share-Link kopieren'));
-    await screen.findByText(/Kopiert!/);
+    // Rückmeldung ist jetzt ein Häkchen im Button statt des Texts „Kopiert!“.
+    await waitFor(() => expect(screen.getByTitle('Share-Link kopieren')).toHaveTextContent('✓'));
     expect(clipboardMock).toHaveBeenCalledWith(expect.stringContaining('some-share-id'));
 
     Object.defineProperty(navigator, 'share', { value: originalShare, configurable: true });
@@ -3155,7 +3158,7 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
     );
 
     fireEvent.click(screen.getByLabelText('Nährwerte anzeigen'));
-    fireEvent.click(await screen.findByRole('button', { name: 'Automatisch berechnen (OpenFoodFacts)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Nährwerte automatisch berechnen' }));
 
     expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('ingredientID für 1 Tomate'), { target: { value: 'tomate' } });

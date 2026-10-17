@@ -98,6 +98,15 @@ jest.mock('../utils/recipeCookDates', () => ({
   getAllCookDates: jest.fn(() => Promise.resolve([])),
 }));
 
+// Saison-Matching läuft über ingredientID + Referenztabelle (seasonalFamily == Matrix-Name).
+jest.mock('../contexts/NutritionReferenceContext', () => ({
+  useOptionalNutritionReference: () => ({
+    rows: [
+      { ingredientID: 'spargel', seasonRelevant: true, seasonalFamily: 'Spargel' },
+    ],
+  }),
+}));
+
 jest.mock('../utils/seasonMatrix', () => ({
   subscribeToSeasonMatrix: (callback) => {
     callback(mockSeasonMatrixEntries);
@@ -488,7 +497,7 @@ describe('Tagesmenu – swipe stack prioritization', () => {
       },
       {
         ...makeRecipe('r2', 'Rezept 2'),
-        ingredients: [{ type: 'ingredient', text: '500g Spargel' }],
+        ingredients: [{ type: 'ingredient', text: '500g Spargel', ingredientID: 'spargel' }],
       },
     ];
 

@@ -821,7 +821,7 @@ describe('DrinkManagementPage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Craft-Bier löschen' }));
 
       await waitFor(() => {
-        expect(screen.getByRole('status')).toHaveTextContent('„Craft-Bier" entfernt');
+        expect(screen.getByRole('status')).toHaveTextContent('"Craft-Bier" gelöscht.');
       });
     });
 

@@ -302,7 +302,7 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
         ],
       });
 
-      fireEvent.click(screen.getByRole('button', { name: 'Anna Adler löschen' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Anna Adler entfernen' }));
 
       expect(screen.queryByText('Anna Adler')).not.toBeInTheDocument();
       expect(mockDeleteGuestProfile).not.toHaveBeenCalled();
@@ -392,7 +392,7 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
           ],
         });
 
-        fireEvent.click(await screen.findByRole('button', { name: 'Ben Beispiel löschen' }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Ben Beispiel entfernen' }));
 
         await act(async () => {
           jest.advanceTimersByTime(6000);
