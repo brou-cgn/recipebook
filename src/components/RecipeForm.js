@@ -409,6 +409,9 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [schwierigkeit, setSchwierigkeit] = useState(0);
   const [kochdauer, setKochdauer] = useState('');
   const [speisekategorie, setSpeisekategorie] = useState([]);
+  // Set by a failed save attempt; the message disappears as soon as a category is picked.
+  const [categoryMissing, setCategoryMissing] = useState(false);
+  const categoryGroupRef = useRef(null);
   const [sourceUrl, setSourceUrl] = useState('');
   const [ingredients, setIngredients] = useState([{ type: 'ingredient', text: '' }]);
   const [steps, setSteps] = useState([{ type: 'step', text: '' }]);
@@ -1039,6 +1042,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     setImage(urlToDefault);
   };
 
+  const showCategoryError = categoryMissing && speisekategorie.length === 0;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -1050,7 +1055,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     }
 
     if (speisekategorie.length === 0) {
-      alert('Bitte wählen Sie mindestens eine Speisekategorie aus');
+      setCategoryMissing(true);
+      categoryGroupRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
       return;
     }
 
@@ -1638,7 +1644,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
           </div>
         </div>
 
-        <div className="form-group">
+        <div className="form-group" ref={categoryGroupRef}>
           <label htmlFor="speisekategorie">Speisekategorie (Mehrfachauswahl möglich)</label>
           <div className="recipe-form-mobile-only">
             {orderedMealCategoryPills.length > 0 && (
@@ -1661,6 +1667,9 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
           <select
             id="speisekategorie"
             className="recipe-form-desktop-only"
+            aria-required="true"
+            aria-invalid={showCategoryError}
+            aria-describedby={showCategoryError ? 'speisekategorie-error' : undefined}
             multiple
             value={speisekategorie}
             onChange={(e) => {
@@ -1673,6 +1682,11 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               <option key={category} value={category}>{category}</option>
             ))}
           </select>
+          {showCategoryError && (
+            <p id="speisekategorie-error" className="recipe-form-field-error" role="alert">
+              Bitte wählen Sie mindestens eine Speisekategorie aus.
+            </p>
+          )}
         </div>
 
         <div className="form-group">

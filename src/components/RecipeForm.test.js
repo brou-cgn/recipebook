@@ -855,8 +855,17 @@ describe('RecipeForm - Multi-Select Fields', () => {
     // Submit form without selecting a category
     fireEvent.submit(document.querySelector('.recipe-form'));
 
-    expect(alertMock).toHaveBeenCalledWith('Bitte wählen Sie mindestens eine Speisekategorie aus');
+    expect(alertMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Bitte wählen Sie mindestens eine Speisekategorie aus');
+    expect(screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)')).toHaveAttribute('aria-invalid', 'true');
     expect(mockOnSave).not.toHaveBeenCalled();
+
+    // The message disappears once a category is picked
+    const select = screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)');
+    await waitFor(() => expect(select.options.length).toBeGreaterThan(0));
+    select.options[0].selected = true;
+    fireEvent.change(select);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
     alertMock.mockRestore();
   });
@@ -1290,7 +1299,7 @@ describe('RecipeForm - Category Image Integration', () => {
 
     // Category validation should block the save before getImageForCategories is called
     expect(getImageForCategories).not.toHaveBeenCalled();
-    expect(alertMock).toHaveBeenCalledWith('Bitte wählen Sie mindestens eine Speisekategorie aus');
+    expect(screen.getByRole('alert')).toHaveTextContent('Bitte wählen Sie mindestens eine Speisekategorie aus');
     expect(mockOnSave).not.toHaveBeenCalled();
 
     alertMock.mockRestore();

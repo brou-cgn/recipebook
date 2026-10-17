@@ -1478,3 +1478,9 @@
 }
 
 /* Saving overlay - see SavingOverlay.css (shared with menus/events) */
+
+.recipe-form-field-error {
+  margin: 6px 0 0;
+  font-size: 0.875rem;
+  color: #a33a26;
+}
