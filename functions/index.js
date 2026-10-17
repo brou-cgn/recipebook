@@ -17,6 +17,7 @@ const cheerio = require('cheerio');
 const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 const {requireShortcutPin} = require('./webImportPin');
 const {evaluateLowCarbTag} = require('./lowCarb');
+const {countNewRecipes, sendFuerDichEntdecktPush} = require('./fuerDichEntdecktPush');
 const {isRotationDue, getProtectedRecipeIds, pickRotationRecipeIds, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleResult, recipeAvailableToUser, mergeRuleMatches, explainTopicExclusion, isVisibleToUser, pickTopic, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
 const {normalizeCuisines, suggestNewCuisines} = require('./cuisineNormalization');
 
@@ -10357,9 +10358,12 @@ const loadFuerDichEntdecktRotationContext = async (db) => {
  * list's recipes with up to 5 of it (valid 'kandidat' recipes stay).
  * Every list draws on its own, so different users usually get different
  * topics, and a topic without recipes for this owner is simply not a candidate.
+ * With `notify` the owner gets a push for the recipes that are new on the list
+ * (see sendFuerDichEntdecktPush); the first fill of a brand-new list passes
+ * false, the user is in the app at that moment.
  * @return {Promise<boolean>} whether the list was rotated
  */
-const rotateFuerDichEntdecktList = async (db, listDoc, context, now = Date.now()) => {
+const rotateFuerDichEntdecktList = async (db, listDoc, context, now = Date.now(), notify = true) => {
   const {recipesById, groupsById, activeTopics} = context;
   const list = listDoc.data();
   // Visibility depends on the list's owner: only topics with at least one
@@ -10383,13 +10387,21 @@ const rotateFuerDichEntdecktList = async (db, listDoc, context, now = Date.now()
   const flagsSnap = await db.collection('recipeSwipeFlags')
       .where('listID', '==', listDoc.id).where('flag', '==', 'kandidat').get();
   const protectedIds = getProtectedRecipeIds(flagsSnap.docs.map((d) => d.data()), now);
+  const recipeIds = pickRotationRecipeIds(topic.usableRecipeIds, list.recipeIds || [], protectedIds);
   await listDoc.ref.update({
-    recipeIds: pickRotationRecipeIds(topic.usableRecipeIds, list.recipeIds || [], protectedIds),
+    recipeIds,
     description: topic.beschreibung || '',
     themeLabel: topic.rubrik || '',
     themeId: topic.id,
     rotatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
+  if (notify) {
+    await sendFuerDichEntdecktPush(admin, db, list.ownerId, {
+      listId: listDoc.id,
+      label: topic.beschreibung || topic.rubrik || '',
+      newCount: countNewRecipes(list.recipeIds, recipeIds),
+    });
+  }
   return true;
 };
 
@@ -10459,7 +10471,7 @@ exports.fillNewFuerDichEntdecktList = onDocumentCreated(
       // Re-read: the client may have written recipeIds/rotatedAt since the event.
       const listDoc = await db.collection('groups').doc(event.params.groupId).get();
       if (!listDoc.exists || !isRotationDue(listDoc.data(), Date.now(), context.activeTopics)) return;
-      const filled = await rotateFuerDichEntdecktList(db, listDoc, context);
+      const filled = await rotateFuerDichEntdecktList(db, listDoc, context, Date.now(), false);
       console.log(`fillNewFuerDichEntdecktList: list ${event.params.groupId}: ${filled ? 'filled' : 'left empty'}`);
     }
 );
