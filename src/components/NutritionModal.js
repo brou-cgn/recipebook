@@ -1831,7 +1831,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                                 <details className="nutrition-change-log">
                                   <summary>Änderungsprotokoll</summary>
                                   <ul className="nutrition-change-log-list">
-                                    {(item.changeLog || reformulations[item.ingredient]?.changeLog).map((entry, j) => (
+                                    {(item.changeLog || reformulations[item.ingredient]?.changeLog || []).map((entry, j) => (
                                       <li key={j}>
                                         {new Date(entry.timestamp).toLocaleString('de-DE')}:{' '}
                                         „{entry.from}" → „{entry.to}"

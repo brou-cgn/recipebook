@@ -49,6 +49,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # ESLint für src/ (Tech-Check B2): react-hooks/rules-of-hooks, no-undef u. a.
+      # Nur Fehler brechen ab; Warnungen (npm run lint) sind der sichtbare Altbestand.
+      - name: Lint
+        run: npm run lint:ci
+
       - name: Run tests
         run: npm run test:ci
 
