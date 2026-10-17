@@ -192,7 +192,6 @@ export default function FlowPage({
   return (
     <div className={`ppv-root${embedded ? ' ppv-root--embedded' : ''}`}>
       <div className="ppf-scaler" ref={wrapperRef} style={{ height: `${sheetPx * scale}px` }}>
-        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
         <div
           className={`ppf-sheet ppf-sheet--preview${interactive ? ' ppf-sheet--interactive' : ''}`}
           style={{
