@@ -12,7 +12,32 @@ const SW_SOURCE = fs.readFileSync(
   'utf8'
 );
 
-function loadServiceWorker(windowClients) {
+// Minimal Cache Storage (one shared store for all cache names is enough here)
+// and Response, as the service worker uses them for the handoff to the page.
+class FakeResponse {
+  constructor(body) {
+    this.body = body;
+  }
+
+  json() {
+    return Promise.resolve(JSON.parse(this.body));
+  }
+}
+
+function makeCaches() {
+  const store = new Map();
+  const cache = {
+    match: (key) => Promise.resolve(store.has(key) ? new FakeResponse(store.get(key)) : undefined),
+    put: (key, response) => {
+      store.set(key, response.body);
+      return Promise.resolve();
+    },
+    delete: (key) => Promise.resolve(store.delete(key)),
+  };
+  return { store, caches: { open: () => Promise.resolve(cache) } };
+}
+
+function loadServiceWorker(windowClients, { caches } = {}) {
   const listeners = {};
   const clients = {
     matchAll: jest.fn(() => Promise.resolve(windowClients)),
@@ -29,6 +54,8 @@ function loadServiceWorker(windowClients) {
     clients,
     importScripts: () => {},
     console: { warn: () => {}, error: () => {} },
+    setTimeout,
+    ...(caches ? { caches, Response: FakeResponse } : {}),
   });
   return { listeners, clients };
 }
@@ -92,6 +119,33 @@ describe('notificationclick', () => {
     await click(listeners, { type: 'import_ready' });
 
     expect(clients.openWindow).toHaveBeenCalledWith('/?reviewImport=1');
+  });
+
+  test('Import-Tipp legt die Rezept-ID für die App ab, bevor er sie nach vorn holt', async () => {
+    const { store, caches } = makeCaches();
+    let storedAtFocus;
+    const client = makeClient({
+      focus: jest.fn(() => {
+        storedAtFocus = store.get('/__push-handoff/pending-review-import');
+        return Promise.resolve();
+      }),
+    });
+    const { listeners } = loadServiceWorker([client], { caches });
+
+    await click(listeners, { type: 'import_ready', recipeId: 'abc123' });
+
+    expect(JSON.parse(storedAtFocus)).toEqual({ recipeId: 'abc123', at: expect.any(Number) });
+    const log = JSON.parse(store.get('/__push-handoff/log'));
+    expect(log.map((e) => e.step)).toEqual(['Tipp empfangen', 'Tipp weitergegeben']);
+  });
+
+  test('Andere Benachrichtigungen legen nichts ab', async () => {
+    const { store, caches } = makeCaches();
+    const { listeners } = loadServiceWorker([makeClient()], { caches });
+
+    await click(listeners, { type: 'consumption_reminder', eventId: 'e1' });
+
+    expect(store.size).toBe(0);
   });
 
   test('Andere Benachrichtigungen navigieren weiter per URL', async () => {
