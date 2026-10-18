@@ -118,6 +118,35 @@ export async function loadNetwork(uid) {
   };
 }
 
+/**
+ * Beobachtet die eigenen ausgehenden Beziehungen.
+ * @param {string} uid
+ * @param {(statuses: Object<string, string>) => void} onChange - followeeId -> 'pending' | 'accepted'
+ * @param {() => void} [onError]
+ * @return {() => void} Abmelden
+ */
+export function subscribeMyFollows(uid, onChange, onError) {
+  return onSnapshot(
+    query(collection(db, 'follows'), where('followerId', '==', uid), limit(MAX_ROWS)),
+    (snap) => {
+      const statuses = {};
+      snap.docs.forEach((d) => { statuses[d.data().followeeId] = d.data().status; });
+      onChange(statuses);
+    },
+    (err) => {
+      console.error('Eigene Follows nicht lesbar:', err);
+      if (onError) onError(err);
+    },
+  );
+}
+
+/** Stellt eine Follow-Anfrage (Callable requestFollow). */
+export async function requestToFollow(followeeId) {
+  const fn = httpsCallable(functions, 'requestFollow');
+  const result = await fn({ followeeId });
+  return result.data;
+}
+
 /** @param {'accept'|'decline'|'block'|'unblock'} action */
 export async function respondToFollow(followerId, action) {
   const fn = httpsCallable(functions, 'respondFollow');

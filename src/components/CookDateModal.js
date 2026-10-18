@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import FollowButton from './FollowButton';
 import PencilIcon from './icons/PencilIcon';
 import SteamIcon from './icons/SteamIcon';
 import './CookDateModal.css';
@@ -93,7 +94,7 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
     <div className="cook-date-modal-overlay" onClick={onClose}>
       <div className="cook-date-modal" onClick={(e) => e.stopPropagation()}>
         <div className="cook-date-modal-header">
-          <h2 className="cook-date-modal-title">Kochbuch</h2>
+          <h2 className="cook-date-modal-title">Kochtagebuch</h2>
           <button className="cook-date-modal-close" onClick={onClose} aria-label="Schließen">×</button>
         </div>
         <div className="cook-date-modal-body">
@@ -134,7 +135,12 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
                   <div className="cook-date-timeline-card-info">
                     <span className="cook-date-timeline-label">Gekocht am</span>
                     <span className="cook-date-timeline-date">{formatDate(cd.date)}</span>
-                    <span className="cook-date-timeline-recipe-title">{getUserName(cd.userId)}</span>
+                    <span className="cook-date-timeline-recipe-title">
+                      {getUserName(cd.userId)}
+                      {allUsers.some((u) => u.id === cd.userId) && (
+                        <FollowButton userId={cd.userId} name={getUserName(cd.userId)} />
+                      )}
+                    </span>
                   </div>
                   {canDeleteCookDates && (
                     <button

@@ -91,6 +91,7 @@ import {
   subscribeToAllCustomDrinks
 } from './utils/eventsFirestore';
 import { NutritionReferenceProvider, useNutritionReference } from './contexts/NutritionReferenceContext';
+import { FollowProvider } from './contexts/FollowContext';
 import { RecipeImportQueueProvider, useRecipeImportQueue } from './contexts/RecipeImportQueueContext';
 import { updateAppBadge } from './utils/appBadge';
 import { resolveRecipeGroupContext, resolveImportGroupContext } from './utils/recipeGroupContext';
@@ -2748,6 +2749,7 @@ function App() {
       {!splashDismissed && <SplashScreen exiting={initialStartseiteReady} />}
       <NutritionReferenceProvider enabled={!!currentUser}>
     <RecipeImportQueueProvider userId={currentUser?.id}>
+    <FollowProvider userId={currentUser?.id} enabled={Boolean(currentUser?.follow) && !currentUser?.isGuest}>
       <AppNutritionRowsSync onRows={setNutritionReferenceRows} />
       <AppReviewRecipesSync onReviewRecipes={setPendingReviewRecipes} />
       {pendingReviewImport && currentUser && (
@@ -3086,6 +3088,7 @@ function App() {
           </Suspense>
         )}
       </div>
+    </FollowProvider>
     </RecipeImportQueueProvider>
     </NutritionReferenceProvider>
     </>

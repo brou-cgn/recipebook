@@ -1,0 +1,20 @@
+.follow-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: 0.25rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #2f5d62;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.follow-button:hover,
+.follow-button:focus-visible {
+  background: rgba(47, 93, 98, 0.12);
+}
