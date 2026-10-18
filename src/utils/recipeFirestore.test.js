@@ -61,6 +61,7 @@ jest.mock('./firestoreUtils', () => ({
 
 import {
   subscribeToRecipes,
+  filterVisibleRecipes,
   getRecipes,
   addRecipe,
   updateRecipe,
@@ -96,86 +97,21 @@ describe('Recipe Firestore - Draft Recipe Filtering', () => {
   });
 
   describe('subscribeToRecipes', () => {
-    it('should filter out private recipes for non-admin users who are not the author', (done) => {
+    it('delivers every recipe except pending imports (isTemp)', (done) => {
       const mockRecipes = [
         { id: '1', title: 'Public Recipe', isPrivate: false, authorId: 'user1' },
-        { id: '2', title: 'Private Recipe by User1', isPrivate: true, authorId: 'user1' },
-        { id: '3', title: 'Private Recipe by User2', isPrivate: true, authorId: 'user2' },
-        { id: '4', title: 'Another Public Recipe', isPrivate: false, authorId: 'user2' }
+        { id: '2', title: 'Private Recipe', isPrivate: true, authorId: 'user2' },
+        { id: '3', title: 'Pending Import', isTemp: true, authorId: 'user1' },
+        { id: '4', title: 'Group Recipe', groupId: 'group1', authorId: 'user2' }
       ];
 
       mockOnSnapshot.mockImplementation((ref, successCallback) => {
         successCallback(createMockSnapshot(mockRecipes));
-        return jest.fn(); // unsubscribe function
+        return jest.fn();
       });
 
-      // Test as non-admin user1
-      subscribeToRecipes('user1', false, (recipes) => {
-        expect(recipes).toHaveLength(3);
+      subscribeToRecipes((recipes) => {
         expect(recipes.map(r => r.id)).toEqual(['1', '2', '4']);
-        expect(recipes.find(r => r.id === '3')).toBeUndefined();
-        done();
-      });
-    });
-
-    it('should show all recipes to admin users', (done) => {
-      const mockRecipes = [
-        { id: '1', title: 'Public Recipe', isPrivate: false, authorId: 'user1' },
-        { id: '2', title: 'Private Recipe by User1', isPrivate: true, authorId: 'user1' },
-        { id: '3', title: 'Private Recipe by User2', isPrivate: true, authorId: 'user2' },
-        { id: '4', title: 'Private Recipe by User3', isPrivate: true, authorId: 'user3' }
-      ];
-
-      mockOnSnapshot.mockImplementation((ref, successCallback) => {
-        successCallback(createMockSnapshot(mockRecipes));
-        return jest.fn();
-      });
-
-      // Test as admin user1
-      subscribeToRecipes('user1', true, (recipes) => {
-        expect(recipes).toHaveLength(4);
-        expect(recipes.map(r => r.id)).toEqual(['1', '2', '3', '4']);
-        done();
-      });
-    });
-
-    it('should show private recipes to their authors even if not admin', (done) => {
-      const mockRecipes = [
-        { id: '1', title: 'Public Recipe', isPrivate: false, authorId: 'user1' },
-        { id: '2', title: 'My Private Recipe', isPrivate: true, authorId: 'user2' },
-        { id: '3', title: 'Other Private Recipe', isPrivate: true, authorId: 'user3' }
-      ];
-
-      mockOnSnapshot.mockImplementation((ref, successCallback) => {
-        successCallback(createMockSnapshot(mockRecipes));
-        return jest.fn();
-      });
-
-      // Test as non-admin user2
-      subscribeToRecipes('user2', false, (recipes) => {
-        expect(recipes).toHaveLength(2);
-        expect(recipes.map(r => r.id)).toEqual(['1', '2']);
-        expect(recipes.find(r => r.id === '3')).toBeUndefined();
-        done();
-      });
-    });
-
-    it('should show all public recipes to non-admin users', (done) => {
-      const mockRecipes = [
-        { id: '1', title: 'Public Recipe 1', isPrivate: false, authorId: 'user1' },
-        { id: '2', title: 'Public Recipe 2', isPrivate: false, authorId: 'user2' },
-        { id: '3', title: 'Public Recipe 3', isPrivate: false, authorId: 'user3' }
-      ];
-
-      mockOnSnapshot.mockImplementation((ref, successCallback) => {
-        successCallback(createMockSnapshot(mockRecipes));
-        return jest.fn();
-      });
-
-      // Test as non-admin user1
-      subscribeToRecipes('user1', false, (recipes) => {
-        expect(recipes).toHaveLength(3);
-        expect(recipes.map(r => r.id)).toEqual(['1', '2', '3']);
         done();
       });
     });
@@ -188,67 +124,87 @@ describe('Recipe Firestore - Draft Recipe Filtering', () => {
 
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      subscribeToRecipes('user1', false, (recipes) => {
+      subscribeToRecipes((recipes) => {
         expect(recipes).toEqual([]);
         expect(consoleSpy).toHaveBeenCalledWith('Error subscribing to recipes:', expect.any(Error));
         consoleSpy.mockRestore();
         done();
       });
     });
+  });
 
-    it('should hide group recipes from users not in the group', (done) => {
-      const mockRecipes = [
-        { id: '1', title: 'Public Recipe', isPrivate: false, authorId: 'user2' },
-        { id: '2', title: 'Group Recipe', isPrivate: false, groupId: 'group1', authorId: 'user2' }
+  describe('filterVisibleRecipes', () => {
+    it('should filter out private recipes for non-admin users who are not the author', () => {
+      const recipes = [
+        { id: '1', title: 'Public Recipe', isPrivate: false, authorId: 'user1' },
+        { id: '2', title: 'Private Recipe by User1', isPrivate: true, authorId: 'user1' },
+        { id: '3', title: 'Private Recipe by User2', isPrivate: true, authorId: 'user2' },
+        { id: '4', title: 'Another Public Recipe', isPrivate: false, authorId: 'user2' }
       ];
 
-      mockOnSnapshot.mockImplementation((ref, successCallback) => {
-        successCallback(createMockSnapshot(mockRecipes));
-        return jest.fn();
-      });
-
-      // user1 is NOT in group1
-      subscribeToRecipes('user1', false, (recipes) => {
-        expect(recipes).toHaveLength(1);
-        expect(recipes[0].id).toBe('1');
-        done();
-      }, []);
+      const visible = filterVisibleRecipes(recipes, { userId: 'user1', isAdmin: false });
+      expect(visible.map(r => r.id)).toEqual(['1', '2', '4']);
     });
 
-    it('should show group recipes to users who are members of the group', (done) => {
-      const mockRecipes = [
-        { id: '1', title: 'Public Recipe', isPrivate: false, authorId: 'user2' },
-        { id: '2', title: 'Group Recipe', isPrivate: false, groupId: 'group1', authorId: 'user2' }
+    it('should show all recipes to admin users', () => {
+      const recipes = [
+        { id: '1', title: 'Public Recipe', isPrivate: false, authorId: 'user1' },
+        { id: '2', title: 'Private Recipe by User2', isPrivate: true, authorId: 'user2' },
+        { id: '3', title: 'Private Recipe by User3', isPrivate: true, authorId: 'user3' }
       ];
 
-      mockOnSnapshot.mockImplementation((ref, successCallback) => {
-        successCallback(createMockSnapshot(mockRecipes));
-        return jest.fn();
-      });
-
-      // user1 IS in group1
-      subscribeToRecipes('user1', false, (recipes) => {
-        expect(recipes).toHaveLength(2);
-        done();
-      }, ['group1']);
+      const visible = filterVisibleRecipes(recipes, { userId: 'user1', isAdmin: true });
+      expect(visible.map(r => r.id)).toEqual(['1', '2', '3']);
     });
 
-    it('should show all group recipes to admin users regardless of membership', (done) => {
-      const mockRecipes = [
+    it('should show private recipes to their authors even if not admin', () => {
+      const recipes = [
+        { id: '1', title: 'Public Recipe', isPrivate: false, authorId: 'user1' },
+        { id: '2', title: 'My Private Recipe', isPrivate: true, authorId: 'user2' },
+        { id: '3', title: 'Other Private Recipe', isPrivate: true, authorId: 'user3' }
+      ];
+
+      const visible = filterVisibleRecipes(recipes, { userId: 'user2', isAdmin: false });
+      expect(visible.map(r => r.id)).toEqual(['1', '2']);
+    });
+
+    it('should hide group recipes from users not in the group', () => {
+      const recipes = [
         { id: '1', title: 'Public Recipe', isPrivate: false, authorId: 'user2' },
         { id: '2', title: 'Group Recipe', isPrivate: false, groupId: 'group1', authorId: 'user2' }
       ];
 
-      mockOnSnapshot.mockImplementation((ref, successCallback) => {
-        successCallback(createMockSnapshot(mockRecipes));
-        return jest.fn();
-      });
+      const visible = filterVisibleRecipes(recipes, { userId: 'user1', isAdmin: false, userGroupIds: [] });
+      expect(visible.map(r => r.id)).toEqual(['1']);
+    });
 
-      // admin user not in any group
-      subscribeToRecipes('admin', true, (recipes) => {
-        expect(recipes).toHaveLength(2);
-        done();
-      }, []);
+    it('should show group recipes to users who are members of the group', () => {
+      const recipes = [
+        { id: '1', title: 'Public Recipe', isPrivate: false, authorId: 'user2' },
+        { id: '2', title: 'Group Recipe', isPrivate: false, groupId: 'group1', authorId: 'user2' }
+      ];
+
+      const visible = filterVisibleRecipes(recipes, { userId: 'user1', isAdmin: false, userGroupIds: ['group1'] });
+      expect(visible).toHaveLength(2);
+    });
+
+    it('should show group recipes published to the public list to everyone', () => {
+      const recipes = [
+        { id: '1', title: 'Published Group Recipe', groupId: 'group1', publishedToPublic: true, authorId: 'user2' }
+      ];
+
+      const visible = filterVisibleRecipes(recipes, { userId: 'user1', isAdmin: false, userGroupIds: [] });
+      expect(visible).toHaveLength(1);
+    });
+
+    it('should show all group recipes to admin users regardless of membership', () => {
+      const recipes = [
+        { id: '1', title: 'Public Recipe', isPrivate: false, authorId: 'user2' },
+        { id: '2', title: 'Group Recipe', isPrivate: false, groupId: 'group1', authorId: 'user2' }
+      ];
+
+      const visible = filterVisibleRecipes(recipes, { userId: 'admin', isAdmin: true, userGroupIds: [] });
+      expect(visible).toHaveLength(2);
     });
   });
 
@@ -430,6 +386,27 @@ describe('Recipe Firestore - Recipe Count', () => {
       await initializeRecipeCounts();
 
       expect(mockUpdateDoc).toHaveBeenCalledWith('users/user1', { recipe_count: 0 });
+    });
+
+    it('writes only users whose recipe_count differs and returns their number', async () => {
+      const mockRecipes = [
+        { id: 'r1', authorId: 'user1' },
+        { id: 'r2', authorId: 'user2' }
+      ];
+      const mockUsers = [
+        { id: 'user1', recipe_count: 1 },
+        { id: 'user2', recipe_count: 5 },
+        { id: 'user3', recipe_count: 0 }
+      ];
+
+      mockGetDocs
+        .mockResolvedValueOnce(createMockSnapshot(mockRecipes))
+        .mockResolvedValueOnce(createMockSnapshot(mockUsers));
+
+      await expect(initializeRecipeCounts()).resolves.toBe(1);
+
+      expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
+      expect(mockUpdateDoc).toHaveBeenCalledWith('users/user2', { recipe_count: 1 });
     });
 
     it('should throw on Firestore error', async () => {

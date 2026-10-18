@@ -303,12 +303,12 @@ jest.mock('./utils/storageUtils', () => ({
 
 jest.mock('./utils/recipeFirestore', () => ({
   subscribeToRecipes: jest.fn(() => () => {}),
+  filterVisibleRecipes: (recipes) => recipes,
   subscribeToTempRecipes: jest.fn(() => () => {}),
   addRecipe: jest.fn(),
   updateRecipe: jest.fn(),
   deleteRecipe: jest.fn(),
   seedSampleRecipes: () => Promise.resolve(),
-  initializeRecipeCounts: () => Promise.resolve(),
   enableRecipeSharing: () => Promise.resolve(),
 }));
 
@@ -435,6 +435,41 @@ describe('App authentication view handling', () => {
     expect(await screen.findByTestId('startseite-view')).toBeInTheDocument();
     expect(screen.queryByTestId('recipe-list-view')).not.toBeInTheDocument();
     expect(mockRecipeListRender).not.toHaveBeenCalled();
+  });
+
+  test('subscribes to recipes once per login, even when groups and role permissions change', async () => {
+    let groupsCallback;
+    mockSubscribeToGroups.mockImplementation((_userId, callback) => {
+      groupsCallback = callback;
+      return () => {};
+    });
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true } });
+
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-once',
+        vorname: 'Ein',
+        nachname: 'Mal',
+        email: 'once@example.com',
+        role: 'user',
+      });
+    });
+    expect(await screen.findByTestId('startseite-view')).toBeInTheDocument();
+
+    await act(async () => {
+      groupsCallback([{ id: 'group-1', type: 'private', ownerId: 'user-once', memberIds: [] }]);
+    });
+    await act(async () => {
+      groupsCallback([
+        { id: 'group-1', type: 'private', ownerId: 'user-once', memberIds: [] },
+        { id: 'group-2', type: 'private', ownerId: 'other', memberIds: ['user-once'] },
+      ]);
+    });
+
+    expect(mockSubscribeToRecipes).toHaveBeenCalledTimes(1);
   });
 
   test('recipes navigation stays on recipe list even when startseite is enabled', async () => {
@@ -705,7 +740,7 @@ describe('App authentication view handling', () => {
       ]);
       return () => {};
     });
-    mockSubscribeToRecipes.mockImplementation((_userId, _isAdmin, callback) => {
+    mockSubscribeToRecipes.mockImplementation((callback) => {
       callback([
         { id: 'recipe-1', title: 'Tiramisu', groupId: 'interactive-1', speisekategorie: ['Dessert'] },
         { id: 'recipe-2', title: 'Suppe', groupId: 'interactive-1', speisekategorie: ['Suppen'] },

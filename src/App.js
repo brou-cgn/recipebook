@@ -57,12 +57,12 @@ import { hasHauptsaisonIngredient } from './utils/recipeSortIndex';
 import { getAllCookDatesForUser } from './utils/recipeCookDates';
 import {
   subscribeToRecipes,
+  filterVisibleRecipes,
   loadGuestRecipes,
   addRecipe as addRecipeToFirestore,
   updateRecipe as updateRecipeInFirestore,
   deleteRecipe as deleteRecipeFromFirestore,
   seedSampleRecipes,
-  initializeRecipeCounts,
   enableRecipeSharing
 } from './utils/recipeFirestore';
 import {
@@ -392,7 +392,8 @@ function getBottomNavBehavior(currentView) {
 }
 
 function App() {
-  const [recipes, setRecipes] = useState([]);
+  // Every recipe from the listener; what the user may see is `recipes` below
+  const [allRecipes, setAllRecipes] = useState([]);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isTutorialFormOpen, setIsTutorialFormOpen] = useState(false);
@@ -480,7 +481,7 @@ function App() {
     selectedPrivateLists: [],
     selectedGroup: ''
   });
-  const recipeCountsInitialized = useRef(false);
+  const favoritesMigrationCheckedFor = useRef(null);
   const recipeListScrollPositionRef = useRef(0);
   const shouldRestoreRecipeListScrollRef = useRef(false);
   // Ids of temp-review recipes whose confirm/discard has already been kicked
@@ -612,6 +613,19 @@ function App() {
 
   // IDs of groups the current user belongs to – used to filter group-scoped recipes
   const userGroupIds = useMemo(() => groups.map((g) => g.id), [groups]);
+
+  // Recipes the current user may see. Filtered here rather than in the
+  // listener, so a change of groups or role re-filters the loaded recipes
+  // instead of re-subscribing to the whole collection (Tech-Check K1).
+  // Guests get an already filtered list from getGuestRecipes.
+  const currentUserId = currentUser?.id;
+  const isGuestUser = !!currentUser?.isGuest;
+  const isAdminUser = currentUser?.role === 'admin';
+  const recipes = useMemo(() => (
+    isGuestUser
+      ? allRecipes
+      : filterVisibleRecipes(allRecipes, { userId: currentUserId, isAdmin: isAdminUser, userGroupIds })
+  ), [allRecipes, isGuestUser, currentUserId, isAdminUser, userGroupIds]);
 
   // Private lists the current user can manage recipes in
   const privateListsForUser = useMemo(() => groups.filter(
@@ -1159,36 +1173,33 @@ function App() {
   }, [currentUser]);
 
   // Set up real-time listener for recipes from Firestore.
-  // Re-subscribes when userGroupIds changes so group-scoped recipe visibility stays current.
+  // Subscribes once per signed-in user: the query reads the whole collection,
+  // so every re-subscription can cost a full read. Visibility is applied in
+  // the `recipes` memo above.
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUserId) return;
 
     // Anonymous guests may not read /recipes directly (firestore.rules); the
     // server hands them only the recipes they may see. No seeding, no live updates.
-    if (currentUser.isGuest) {
+    if (isGuestUser) {
       return loadGuestRecipes((recipesForGuest) => {
-        setRecipes(recipesForGuest);
+        setAllRecipes(recipesForGuest);
         setRecipesLoaded(true);
       });
     }
 
-    const unsubscribe = subscribeToRecipes(
-      currentUser.id,
-      currentUser.role === 'admin',
-      (recipesFromFirestore) => {
-        setRecipes(recipesFromFirestore);
-        setRecipesLoaded(true);
-        
-        // Seed sample recipes if collection is empty (only for first user)
-        if (recipesFromFirestore.length === 0 && currentUser) {
-          seedSampleRecipes(currentUser.id);
-        }
-      },
-      userGroupIds
-    );
+    const unsubscribe = subscribeToRecipes((recipesFromFirestore) => {
+      setAllRecipes(recipesFromFirestore);
+      setRecipesLoaded(true);
+
+      // Seed sample recipes if collection is empty (only for first user)
+      if (recipesFromFirestore.length === 0) {
+        seedSampleRecipes(currentUserId);
+      }
+    });
 
     return () => unsubscribe();
-  }, [currentUser, userGroupIds]);
+  }, [currentUserId, isGuestUser]);
 
   // Set up real-time listener for tutorials (linked technique videos) -
   // a flat, app-wide collection like faqs, not scoped per group.
@@ -1200,12 +1211,16 @@ function App() {
     return () => unsubscribe();
   }, [currentUser]);
 
-  // Migrate old global favorites to user-specific favorites (one-time migration)
+  // Migrate old global favorites to user-specific favorites (one-time migration).
+  // Once per user and session: the check reads the user document, and
+  // `recipes` changes on every recipe update and favorite toggle.
   useEffect(() => {
-    if (currentUser && recipesLoaded && recipes.length > 0) {
-      migrateGlobalFavorites(currentUser.id, recipes);
+    if (currentUserId && recipesLoaded && recipes.length > 0
+        && favoritesMigrationCheckedFor.current !== currentUserId) {
+      favoritesMigrationCheckedFor.current = currentUserId;
+      migrateGlobalFavorites(currentUserId, recipes);
     }
-  }, [currentUser, recipesLoaded, recipes]);
+  }, [currentUserId, recipesLoaded, recipes]);
 
   // Keep selectedRecipe in sync with Firestore updates (e.g. background nutrition calculation)
   // selectedRecipe is intentionally omitted from deps to avoid infinite loops:
@@ -1219,20 +1234,6 @@ function App() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipes]);
-
-  // Initialize recipe counts for all users once after recipes are loaded.
-  // Writes recipe_count onto every user document, which firestore.rules only
-  // permits for admins (a non-admin may update only their own doc) - so this
-  // must stay admin-gated, otherwise every other user hits a permission error.
-  useEffect(() => {
-    if (currentUser?.role === 'admin' && recipesLoaded && !recipeCountsInitialized.current) {
-      recipeCountsInitialized.current = true;
-      initializeRecipeCounts().catch((err) => {
-        console.error('Error initializing recipe counts:', err);
-        recipeCountsInitialized.current = false;
-      });
-    }
-  }, [currentUser, recipesLoaded]);
 
   // Set up real-time listener for menus from Firestore
   useEffect(() => {
@@ -1741,7 +1742,7 @@ function App() {
       await toggleFavorite(currentUser.id, recipeId);
       
       // Trigger a re-render by updating state
-      setRecipes([...recipes]);
+      setAllRecipes((prev) => [...prev]);
       
       // Update selectedRecipe to trigger re-render if it's the one being toggled
       if (selectedRecipe && selectedRecipe.id === recipeId) {
