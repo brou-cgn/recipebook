@@ -561,9 +561,9 @@
     font-size: 0.8rem;
   }
 
+  /* Stays 44 × 44 px on mobile (minimum touch target); only the padding
+     shrinks so the 20 px lines keep their look. */
   .hamburger-btn {
-    width: 40px;
-    height: 40px;
     padding: 0.5rem;
   }
 
