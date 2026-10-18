@@ -30,6 +30,14 @@
   border-left-color: #1A1A1A;
 }
 
+.kueche-tile.kueche-tile--netzwerk {
+  border-left-color: #2F5D62;
+}
+
+.kueche-tile--netzwerk .kueche-tile-content h3 {
+  color: #2F5D62;
+}
+
 .kueche-tile.kueche-tile--mise-en-place {
   border-left-color: #5A2A4A;
 }
@@ -91,6 +99,7 @@
   margin-top: 0;
 }
 
+.kueche-tile--netzwerk .kueche-tile-meta,
 .kueche-tile--mise-en-place .kueche-tile-meta,
 .kueche-tile--meinkochbuch .kueche-tile-meta,
 .kueche-tile--appaufrufe .kueche-tile-meta,

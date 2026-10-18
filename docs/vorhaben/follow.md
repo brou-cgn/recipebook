@@ -1,7 +1,7 @@
 # Vorhaben: Follow (Vernetzung zwischen Mitgliedern)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 18.10.2026.
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 18.10.2026 (PR 3 in Arbeit).
 
 **Ziel:** Aktivitäten anderer Mitglieder inspirieren. Wer jemandem folgt (mit Bestätigung des
 Gefolgten), sieht in „Für dich entdeckt" zusätzlich Rezepte, die diese Person zuletzt gekocht
@@ -43,14 +43,16 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 |---|---|---|
 | 1 | Rules-Tests (Emulator, CI-Job), `cookDates` validieren, `security.md` korrigieren, dieses Dokument | PR #3461 gemergt und deployt (18.10.2026), CI grün inkl. neuem Job „Firestore Rules" |
 | 2 | `follows`, `requestFollow`/`respondFollow`, Rules mit Tests, Flag `follow`, Inbox, Sperrfrist, Blockieren, Tageslimit | PR #3462 gemergt und deployt (18.10.2026, Deploy-Lauf 1842 erfolgreich), CI grün (Function-Tests 16, Rules-Tests 8 neu) |
-| 2b | Push bei neuer Anfrage (`functions/followPush.js`, gemeinsamer Helfer `sendDataPush` in `fuerDichEntdecktPush.js`) | Branch `claude/follow-pr2b-push` (Function-Tests +8) |
-| 3 | Netzwerk-Seite, Badge am Tab „Chefkoch" | offen |
+| 2b | Push bei neuer Anfrage (`functions/followPush.js`, gemeinsamer Helfer `sendDataPush` in `fuerDichEntdecktPush.js`) | PR #3464 gemergt (18.10.2026) |
+| 3 | Netzwerk-Seite (`NetworkPage.js`, Kachel „Netzwerk" unter Chefkoch), Badge am Tab „Chefkoch", Aktion `unblock` + `users/{uid}/followBlocks` | Branch `claude/follow-pr3-netzwerk` (Function-Tests +2, Rules-Test +1, Komponententests 6) |
 | 4 | Folgen-Icon (Rezeptkarte, Kochtagebuch), Profilseite | offen |
 | 5 | Themenregel `scopes` (Admin-UI `DiscoverTopicsTab.js`, Nachtlauf, Rotation), privates Attributionsdokument | offen |
 | 6 | Namensanzeige auf Karte und im Stapel | offen |
 
 Nach jedem PR: Tech-Check-Dashboard aktualisieren (Befunde und `umsetzungen`, siehe `CLAUDE.md`),
 Tabelle hier nachziehen.
+
+Umsetzungsnotizen PR 3: Entsperren (`unblock` in `respondFollow`) hebt nur eine dauerhafte Blockade auf, keine laufende Sperrfrist nach Ablehnung (die ist für den Gefolgten unsichtbar). Dafür führt `block` eine lesbare Liste `users/{uid}/followBlocks/{followerId}` (nur Eigentümer lesbar, nur Function schreibt), weil `followCooldowns` bewusst unlesbar bleibt. Die Seite hängt als Kachel „Netzwerk" in `Kueche.js` (nur mit Flag `follow`); das Badge am Tab `chef` kommt aus `useFollowRequestCount` in `App.js`. „Ich folge" zeigt auch noch offene Anfragen („Angefragt"), die man dort zurückziehen kann. Namen kommen aus `publicProfiles`, versteckte Mitglieder erscheinen als „Ein Mitglied".
 
 Umsetzungsnotizen PR 2: Das Tageslimit liegt bei 20 Anfragen je Absender und Tag (UTC), die Sperrfrist
 nach Ablehnung bei 30 Tagen, Blockieren ist dauerhaft (`functions/follow.js`). Eine abgelehnte oder
@@ -59,10 +61,9 @@ aus `users/{uid}/followInbox` verschwindet. Ein Entsperren fehlt noch (siehe Off
 
 ## Offen
 
-- Verwaiste Inbox-Zeilen: Zieht der Anfragende zurück (Client löscht `follows`), bleibt die Zeile in `users/{uid}/followInbox` stehen. Netzwerk-Seite und Badge (PR 3) müssen die Inbox gegen das `follows`-Dokument prüfen, oder eine Function räumt auf. Der Push dedupliziert darüber (kein zweiter Push, solange die Zeile steht).
-- Tippen auf den Push öffnet die Startseite; der Sprung in die Netzwerk-Seite kommt mit PR 3 (`follow_request` in `src/service-worker.js`/`firebase-messaging-sw.js`).
-
-- Entsperren blockierter Personen: ohne Aktion bleibt die Sperre ewig. Gehört in PR 3 (Netzwerk-Seite) und braucht eine Aktion `unblock` in `respondFollow`.
+- Verwaiste Inbox-Zeilen: Zieht der Anfragende zurück (Client löscht `follows`), bleibt die Zeile in `users/{uid}/followInbox` stehen. PR 3 löst das clientseitig (`openRequestIds` in `followFirestore.js` zählt nur Inbox-Zeilen mit offener `pending`-Beziehung, Seite und Badge nutzen es). Die Zeile selbst bleibt liegen, der Push dedupliziert darüber (kein zweiter Push, solange sie steht); eine aufräumende Function ist nicht nötig, solange das Tageslimit gilt.
+- Tippen auf den Push öffnet die Startseite; der Sprung in die Netzwerk-Seite (`follow_request` in `src/service-worker.js`/`firebase-messaging-sw.js`, Übergabe wie `pushTapHandoff.js`) ist noch nicht gebaut. Eigener kleiner PR, gehört zu PR 3 nur lose.
+- Netzwerk-Seite: Mobil fehlt die Linksswipe-Geste für „nicht mehr folgen" / „Follower entfernen" (`useSwipeToDelete`); aktuell nur `DeleteRowButton` mit Undo-Snackbar. Nachziehen, bevor Follow ausgerollt wird.
 
 - Zustimmungsdialog im Kochtagebuch (in der Skizze ohne).
 - Datenschutzerklärung um Follow und proaktive Ausspielung ergänzen, vor dem Rollout (Text liefert Claude, Freigabe beim Eigentümer).

@@ -16,6 +16,9 @@
  *   30 Tage Sperrfrist, nach Blockieren dauerhaft. Eine neue Anfrage in dieser
  *   Zeit sieht für den Anfragenden aus wie eine normale, landet aber nicht in
  *   der Inbox. Nur serverseitig lesbar.
+ * - users/{followeeId}/followBlocks/{followerId}: Liste der von ihm Blockierten (nur er
+ *   liest), damit er sie in der Netzwerk-Seite wieder freigeben kann. Der Cooldown
+ *   selbst bleibt unlesbar.
  * - followLimits/{uid}_{day}: Zähler der Anfragen pro Absender und Tag.
  */
 
@@ -28,7 +31,7 @@ const DECLINE_COOLDOWN_DAYS = 30;
 /** Rollen, die Mitglieder sind (keine anonymen Gäste). */
 const MEMBER_ROLES = ['read', 'comment', 'edit', 'moderator', 'admin'];
 
-const RESPOND_ACTIONS = ['accept', 'decline', 'block'];
+const RESPOND_ACTIONS = ['accept', 'decline', 'block', 'unblock'];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -170,8 +173,10 @@ const requestFollow = async (admin, db, HttpsError, {auth, followeeId, onNewRequ
  * - decline: still. Die Inbox-Zeile verschwindet, das follows-Dokument bleibt
  *   'pending'; 30 Tage Sperrfrist für neue Anfragen.
  * - block: follows-Dokument und Inbox-Zeile werden gelöscht (auch bei einer
- *   bestehenden Beziehung), dauerhafte Sperre.
- * @return {Promise<{status: string}>} 'accepted' | 'declined' | 'blocked'
+ *   bestehenden Beziehung), dauerhafte Sperre; die Person steht danach in followBlocks.
+ * - unblock: hebt eine dauerhafte Sperre auf. Danach kann die Person wieder
+ *   anfragen; es entsteht keine Beziehung.
+ * @return {Promise<{status: string}>} 'accepted' | 'declined' | 'blocked' | 'unblocked'
  */
 const respondFollow = async (admin, db, HttpsError, {auth, followerId, action, nowMs = Date.now()}) => {
   if (!auth) fail(HttpsError, 'unauthenticated', 'Du musst angemeldet sein.');
@@ -190,7 +195,19 @@ const respondFollow = async (admin, db, HttpsError, {auth, followerId, action, n
   const followRef = db.doc(`follows/${id}`);
   const inboxRef = db.doc(`users/${followeeId}/followInbox/${followerId}`);
   const cooldownRef = db.doc(`followCooldowns/${id}`);
+  const blockRef = db.doc(`users/${followeeId}/followBlocks/${followerId}`);
   const FieldValue = admin.firestore.FieldValue;
+
+  if (action === 'unblock') {
+    return db.runTransaction(async (tx) => {
+      const cooldownSnap = await tx.get(cooldownRef);
+      // Eine laufende Sperrfrist nach Ablehnung bleibt: sie ist keine Blockade
+      // und für den Gefolgten nicht sichtbar.
+      if (cooldownSnap.exists && cooldownSnap.data().blocked === true) tx.delete(cooldownRef);
+      tx.delete(blockRef);
+      return {status: 'unblocked'};
+    });
+  }
 
   return db.runTransaction(async (tx) => {
     const followSnap = await tx.get(followRef);
@@ -226,6 +243,7 @@ const respondFollow = async (admin, db, HttpsError, {auth, followerId, action, n
     tx.delete(followRef);
     tx.delete(inboxRef);
     tx.set(cooldownRef, {blocked: true, createdAt: FieldValue.serverTimestamp()});
+    tx.set(blockRef, {followerId, createdAt: FieldValue.serverTimestamp()});
     return {status: 'blocked'};
   });
 };

@@ -194,6 +194,28 @@ test('Blockieren löscht die Beziehung und sperrt dauerhaft', async () => {
   assert.equal(db.store.has('users/ben/followInbox/anna'), false);
 });
 
+test('Blockieren legt einen Eintrag in followBlocks an, Entsperren nimmt Sperre und Eintrag weg', async () => {
+  const db = makeDb(baseSeed());
+  await request(db, 'anna', 'ben');
+  await respond(db, 'ben', 'anna', 'block');
+  assert.ok(db.store.has('users/ben/followBlocks/anna'));
+  assert.deepEqual(await respond(db, 'ben', 'anna', 'unblock'), {status: 'unblocked'});
+  assert.equal(db.store.has('users/ben/followBlocks/anna'), false);
+  assert.equal(db.store.has('followCooldowns/anna_ben'), false);
+  // Anna kann wieder anfragen und landet in Bens Inbox
+  db.store.delete('follows/anna_ben');
+  await request(db, 'anna', 'ben');
+  assert.ok(db.store.has('users/ben/followInbox/anna'));
+});
+
+test('Entsperren hebt eine Sperrfrist nach Ablehnung nicht auf', async () => {
+  const db = makeDb(baseSeed());
+  await request(db, 'anna', 'ben');
+  await respond(db, 'ben', 'anna', 'decline');
+  await respond(db, 'ben', 'anna', 'unblock');
+  assert.ok(db.store.has('followCooldowns/anna_ben'));
+});
+
 test('Ablehnen einer bereits angenommenen Beziehung ist nicht möglich', async () => {
   const db = makeDb(baseSeed());
   await request(db, 'anna', 'ben');

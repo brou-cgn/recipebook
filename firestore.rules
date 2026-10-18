@@ -466,6 +466,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Von ihm blockierte Personen, damit er sie wieder freigeben kann (Entsperren
+    // läuft über respondFollow). Der Cooldown selbst bleibt unlesbar.
+    match /users/{userId}/followBlocks/{followerId} {
+      allow read: if isMember() && request.auth.uid == userId;
+      allow write: if false;
+    }
+
     // Sperrfristen/Blockaden und Tageszähler: nur serverseitig, auch nicht lesbar,
     // damit niemand Ablehnung oder Blockade erkennen kann.
     match /followCooldowns/{id} {

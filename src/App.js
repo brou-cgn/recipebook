@@ -41,6 +41,7 @@ import { getOnboardingTestmodeActive, shouldShowOnboardingOverlay } from './util
 import { applyFaviconSettings } from './utils/faviconUtils';
 import { applyTileSizePreference, applyDarkModePreference, getCustomLists, expandCuisineSelection, getInspirationListSettings } from './utils/customLists';
 import { logRecipeCall } from './utils/recipeCallsFirestore';
+import useFollowRequestCount from './hooks/useFollowRequestCount';
 import { isRecoveryNavigation } from './utils/navigationType';
 import {
   readRecoverySnapshot,
@@ -667,9 +668,13 @@ function App() {
     () => BOTTOM_NAV_TABS.filter((tab) => tab.view !== 'startseite' || currentUser?.startseite),
     [currentUser?.startseite]
   );
+  const followRequestCount = useFollowRequestCount(
+    currentUser?.id,
+    Boolean(currentUser?.follow) && !currentUser?.isGuest,
+  );
   const bottomNavBadgeCounts = useMemo(
-    () => ({ recipes: pendingReviewRecipes.length }),
-    [pendingReviewRecipes.length]
+    () => ({ recipes: pendingReviewRecipes.length, chef: followRequestCount }),
+    [pendingReviewRecipes.length, followRequestCount]
   );
 
   // Mirrors the pending-review-imports count onto the installed app's home
@@ -2934,6 +2939,7 @@ function App() {
         />
         ) : currentView === 'kueche' ? (
         <Kueche
+          followRequestCount={followRequestCount}
           recipes={recipes}
           menus={menus}
           groups={groups}
