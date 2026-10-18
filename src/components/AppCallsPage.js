@@ -38,6 +38,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import DeleteRowButton from './DeleteRowButton';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import useUndoableDelete from '../hooks/useUndoableDelete';
+import UndoSnackbar from './UndoSnackbar';
 import { enableRecipeSharing } from '../utils/recipeFirestore';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import NutritionModal from './NutritionModal';
@@ -155,7 +156,7 @@ function CuisineTypeListItem({ label, onRemove, onRename }) {
   };
 
   return (
-    <div className="list-item">
+    <div className="list-item delete-row-hover-target">
       {isEditing ? (
         <input
           type="text"
@@ -173,7 +174,7 @@ function CuisineTypeListItem({ label, onRemove, onRename }) {
       {onRename && !isEditing && (
         <button className="edit-btn" onClick={handleEditStart} title="Umbenennen"><PencilIcon /></button>
       )}
-      <button className="remove-btn" onClick={onRemove} title="Entfernen">×</button>
+      <DeleteRowButton itemName={label} onClick={onRemove} />
     </div>
   );
 }
@@ -292,6 +293,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   } = useUndoableDelete();
 
   // Cuisine list management state
+  const cuisineListUndo = useUndoableDelete();
+  const cuisineListsRef = useRef({ types: [], groups: [] });
+  cuisineListsRef.current = { types: cuisineTypes, groups: cuisineGroups };
   const [newCuisineTypeName, setNewCuisineTypeName] = useState('');
   const [newCuisineGroupName, setNewCuisineGroupName] = useState('');
   const [commonAdjectives, setCommonAdjectives] = useState(getEmptyCommonAdjectiveGroups);
@@ -1113,7 +1117,18 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     await saveCuisineLists(updated, cuisineGroups);
   };
 
+  // Applies an undo against the lists as they are now (not as they were when the
+  // row was removed), so edits made during the undo window are kept.
+  const restoreCuisineLists = async (mutate) => {
+    const next = mutate(cuisineListsRef.current);
+    setCuisineTypes(next.types);
+    setCuisineGroups(next.groups);
+    await saveCuisineLists(next.types, next.groups);
+  };
+
   const handleRemoveCuisineType = async (typeLabel) => {
+    const typeIndex = cuisineTypes.indexOf(typeLabel);
+    const memberOf = cuisineGroups.filter(g => g.children.includes(typeLabel)).map(g => g.name);
     const updatedTypes = cuisineTypes.filter(t => t !== typeLabel);
     const updatedGroups = cuisineGroups.map(g => ({
       ...g,
@@ -1121,6 +1136,22 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     }));
     setCuisineTypes(updatedTypes);
     setCuisineGroups(updatedGroups);
+    cuisineListUndo.notifyDeleted({
+      id: `type:${typeLabel}`,
+      name: typeLabel,
+      undo: () => restoreCuisineLists(({ types, groups }) => {
+        const nextTypes = types.slice();
+        if (!nextTypes.includes(typeLabel)) nextTypes.splice(Math.min(typeIndex, nextTypes.length), 0, typeLabel);
+        return {
+          types: nextTypes,
+          groups: groups.map(g =>
+            memberOf.includes(g.name) && !g.children.includes(typeLabel)
+              ? { ...g, children: [...g.children, typeLabel] }
+              : g
+          ),
+        };
+      }),
+    });
     await saveCuisineLists(updatedTypes, updatedGroups);
   };
 
@@ -1148,8 +1179,23 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   };
 
   const handleRemoveCuisineGroup = async (groupName) => {
+    const groupIndex = cuisineGroups.findIndex(g => g.name === groupName);
+    const removed = cuisineGroups[groupIndex];
     const updated = cuisineGroups.filter(g => g.name !== groupName);
     setCuisineGroups(updated);
+    if (removed) {
+      cuisineListUndo.notifyDeleted({
+        id: `group:${groupName}`,
+        name: groupName,
+        undo: () => restoreCuisineLists(({ types, groups }) => {
+          const nextGroups = groups.slice();
+          if (!nextGroups.some(g => g.name === groupName)) {
+            nextGroups.splice(Math.min(groupIndex, nextGroups.length), 0, removed);
+          }
+          return { types, groups: nextGroups };
+        }),
+      });
+    }
     await saveCuisineLists(cuisineTypes, updated);
   };
 
@@ -1164,12 +1210,28 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   };
 
   const handleRemoveChildFromGroup = async (groupName, childName) => {
+    const childIndex = (cuisineGroups.find(g => g.name === groupName)?.children || []).indexOf(childName);
     const updated = cuisineGroups.map(g =>
       g.name === groupName
         ? { ...g, children: g.children.filter(c => c !== childName) }
         : g
     );
     setCuisineGroups(updated);
+    if (childIndex >= 0) {
+      cuisineListUndo.notifyDeleted({
+        id: `group-child:${groupName}:${childName}`,
+        name: childName,
+        undo: () => restoreCuisineLists(({ types, groups }) => ({
+          types,
+          groups: groups.map(g => {
+            if (g.name !== groupName || g.children.includes(childName)) return g;
+            const children = g.children.slice();
+            children.splice(Math.min(childIndex, children.length), 0, childName);
+            return { ...g, children };
+          }),
+        })),
+      });
+    }
     await saveCuisineLists(cuisineTypes, updated);
   };
 
@@ -1911,6 +1973,8 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               </div>
             </div>
 
+            <UndoSnackbar itemName={cuisineListUndo.pendingName} onUndo={cuisineListUndo.undo} />
+
             {/* Offene Vorschläge section */}
             <div className="settings-section">
               <h3>Offene Vorschläge</h3>
@@ -2074,22 +2138,17 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                     <div key={group.name} className="cuisine-group-item">
                       <div className="cuisine-group-header">
                         <strong>{group.name}</strong>
-                        <button
-                          className="remove-btn"
-                          onClick={() => handleRemoveCuisineGroup(group.name)}
-                          title="Gruppe entfernen"
-                        >×</button>
+                        <DeleteRowButton itemName={group.name} onClick={() => handleRemoveCuisineGroup(group.name)} />
                       </div>
                       <div className="cuisine-group-children">
                         {group.children.map(child => (
                           <span key={child} className="cuisine-group-child-tag">
                             {child}
-                            <button
-                              className="remove-child-btn"
+                            <DeleteRowButton
+                              itemName={`${child} aus ${group.name}`}
+                              className="cuisine-group-child-delete"
                               onClick={() => handleRemoveChildFromGroup(group.name, child)}
-                              title="Untertyp entfernen"
-                              aria-label={`${child} aus Gruppe entfernen`}
-                            >×</button>
+                            />
                           </span>
                         ))}
                         <select
@@ -2139,6 +2198,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                       <div key={adjective} className="list-item">
                         <span>{adjective}</span>
                         <button
+                          // eslint-disable-next-line no-restricted-syntax -- D4: noch auf DeleteRowButton + Undo umstellen
                           className="remove-btn"
                           onClick={() => handleRemoveCommonAdjective(group, adjective)}
                           title="Entfernen"
@@ -2186,6 +2246,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                     <div key={term} className="list-item">
                       <span>{term}</span>
                       <button
+                        // eslint-disable-next-line no-restricted-syntax -- D4: noch auf DeleteRowButton + Undo umstellen
                         className="remove-btn"
                         onClick={() => handleRemoveIgnoredTerm(term)}
                         title="Entfernen"
@@ -2231,6 +2292,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                         <div key={unit} className="list-item">
                           <span>{unit}</span>
                           <button
+                            // eslint-disable-next-line no-restricted-syntax -- D4: noch auf DeleteRowButton + Undo umstellen
                             className="remove-btn"
                             onClick={() => handleRemoveCommonUnit(group, unit)}
                             title="Entfernen"

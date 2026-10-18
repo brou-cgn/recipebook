@@ -97,7 +97,7 @@ function SortableListItem({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={`list-item ${isDragging ? 'dragging' : ''}`}>
+    <div ref={setNodeRef} style={style} className={`list-item delete-row-hover-target ${isDragging ? 'dragging' : ''}`}>
       <button
         type="button"
         className="drag-handle"
@@ -128,7 +128,7 @@ function SortableListItem({
       {onRename && !isEditing && (
         <button className="edit-btn" onClick={handleEditStart} title="Umbenennen"><PencilIcon /></button>
       )}
-      <button className="remove-btn" onClick={onRemove} title="Entfernen">×</button>
+      <DeleteRowButton itemName={label} onClick={onRemove} />
     </div>
   );
 }
@@ -295,6 +295,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [newUnitRowPlural, setNewUnitRowPlural] = useState('');
   const [unitRowDeleteVisibleKey, setUnitRowDeleteVisibleKey] = useState(null);
   const unitRowUndo = useUndoableDelete();
+  const listUndo = useUndoableDelete();
   const [newConversionIngredient, setNewConversionIngredient] = useState('');
   const [newConversionUnit, setNewConversionUnit] = useState('');
   const [newConversionGrams, setNewConversionGrams] = useState('');
@@ -780,6 +781,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   };
 
   const removeCuisine = (cuisine) => {
+    const index = lists.cuisineTypes.indexOf(cuisine);
+    const wasPendingDelete = pendingCuisineDeletes.includes(cuisine);
+    const memberOf = (lists.cuisineGroups || []).filter(g => g.children.includes(cuisine)).map(g => g.name);
     setLists(prev => ({
       ...prev,
       cuisineTypes: prev.cuisineTypes.filter(c => c !== cuisine),
@@ -789,6 +793,26 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       })),
     }));
     setPendingCuisineDeletes(prev => prev.includes(cuisine) ? prev : [...prev, cuisine]);
+    listUndo.notifyDeleted({
+      id: `cuisine:${cuisine}`,
+      name: cuisine,
+      undo: () => {
+        setLists(prev => {
+          const cuisineTypes = prev.cuisineTypes.slice();
+          if (!cuisineTypes.includes(cuisine)) cuisineTypes.splice(Math.min(index, cuisineTypes.length), 0, cuisine);
+          return {
+            ...prev,
+            cuisineTypes,
+            cuisineGroups: (prev.cuisineGroups || []).map(g =>
+              memberOf.includes(g.name) && !g.children.includes(cuisine)
+                ? { ...g, children: [...g.children, cuisine] }
+                : g
+            ),
+          };
+        });
+        if (!wasPendingDelete) setPendingCuisineDeletes(prev => prev.filter(d => d !== cuisine));
+      },
+    });
   };
 
   const renameCuisine = (oldName, newName) => {
@@ -840,10 +864,27 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   };
 
   const removeCuisineGroup = (groupName) => {
+    const groups = lists.cuisineGroups || [];
+    const index = groups.findIndex(g => g.name === groupName);
+    const removed = groups[index];
     setLists(prev => ({
       ...prev,
       cuisineGroups: (prev.cuisineGroups || []).filter(g => g.name !== groupName)
     }));
+    if (!removed) return;
+    listUndo.notifyDeleted({
+      id: `group:${groupName}`,
+      name: groupName,
+      undo: () => {
+        setLists(prev => {
+          const cuisineGroups = (prev.cuisineGroups || []).slice();
+          if (!cuisineGroups.some(g => g.name === groupName)) {
+            cuisineGroups.splice(Math.min(index, cuisineGroups.length), 0, removed);
+          }
+          return { ...prev, cuisineGroups };
+        });
+      },
+    });
   };
 
   const addChildToGroup = (groupName, childName) => {
@@ -858,6 +899,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   };
 
   const removeChildFromGroup = (groupName, childName) => {
+    const group = (lists.cuisineGroups || []).find(g => g.name === groupName);
+    const index = group ? group.children.indexOf(childName) : -1;
     setLists(prev => ({
       ...prev,
       cuisineGroups: (prev.cuisineGroups || []).map(g =>
@@ -866,14 +909,44 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
           : g
       )
     }));
+    if (index < 0) return;
+    listUndo.notifyDeleted({
+      id: `group-child:${groupName}:${childName}`,
+      name: childName,
+      undo: () => {
+        setLists(prev => ({
+          ...prev,
+          cuisineGroups: (prev.cuisineGroups || []).map(g => {
+            if (g.name !== groupName || g.children.includes(childName)) return g;
+            const children = g.children.slice();
+            children.splice(Math.min(index, children.length), 0, childName);
+            return { ...g, children };
+          }),
+        }));
+      },
+    });
   };
 
   const removeCategory = (category) => {
+    const index = lists.mealCategories.indexOf(category);
+    const wasPendingDelete = pendingCategoryDeletes.includes(category);
     setLists({
       ...lists,
       mealCategories: lists.mealCategories.filter(c => c !== category)
     });
     setPendingCategoryDeletes(prev => prev.includes(category) ? prev : [...prev, category]);
+    listUndo.notifyDeleted({
+      id: `category:${category}`,
+      name: category,
+      undo: () => {
+        setLists(prev => {
+          const mealCategories = prev.mealCategories.slice();
+          if (!mealCategories.includes(category)) mealCategories.splice(Math.min(index, mealCategories.length), 0, category);
+          return { ...prev, mealCategories };
+        });
+        if (!wasPendingDelete) setPendingCategoryDeletes(prev => prev.filter(d => d !== category));
+      },
+    });
   };
 
   const renameCategory = (oldName, newName) => {
@@ -1028,9 +1101,25 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   };
 
   const removeConversionEntry = (id) => {
+    const index = lists.conversionTable.findIndex(e => e.id === id);
+    const removed = lists.conversionTable[index];
     setLists({
       ...lists,
       conversionTable: lists.conversionTable.filter(e => e.id !== id)
+    });
+    if (!removed) return;
+    listUndo.notifyDeleted({
+      id: `conversion:${id}`,
+      name: `${removed.ingredient} (${removed.unit})`,
+      undo: () => {
+        setLists(prev => {
+          const conversionTable = (prev.conversionTable || []).slice();
+          if (!conversionTable.some(e => e.id === id)) {
+            conversionTable.splice(Math.min(index, conversionTable.length), 0, removed);
+          }
+          return { ...prev, conversionTable };
+        });
+      },
     });
   };
 
@@ -1896,18 +1985,17 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               <div key={group.name} className="cuisine-group-item">
                 <div className="cuisine-group-header">
                   <strong>{group.name}</strong>
-                  <button className="remove-btn" onClick={() => removeCuisineGroup(group.name)} title="Gruppe entfernen">×</button>
+                  <DeleteRowButton itemName={group.name} onClick={() => removeCuisineGroup(group.name)} />
                 </div>
                 <div className="cuisine-group-children">
                   {group.children.map(child => (
                     <span key={child} className="cuisine-group-child-tag">
                       {child}
-                      <button
-                        className="remove-child-btn"
+                      <DeleteRowButton
+                        itemName={`${child} aus ${group.name}`}
+                        className="cuisine-group-child-delete"
                         onClick={() => removeChildFromGroup(group.name, child)}
-                        title="Untertyp entfernen"
-                        aria-label={`${child} aus Gruppe entfernen`}
-                      >×</button>
+                      />
                     </span>
                   ))}
                   <select
@@ -1995,6 +2083,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
             />
           </div>
           <UndoSnackbar itemName={unitRowUndo.pendingName} onUndo={unitRowUndo.undo} />
+          <UndoSnackbar itemName={listUndo.pendingName} onUndo={listUndo.undo} />
         </div>
 
         <div className="settings-section">
@@ -2055,7 +2144,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                       />
                     </td>
                     <td>
-                      <button className="remove-btn" onClick={() => removeConversionEntry(entry.id)} title="Entfernen">×</button>
+                      <DeleteRowButton itemName={`${entry.ingredient} (${entry.unit})`} onClick={() => removeConversionEntry(entry.id)} />
                     </td>
                   </tr>
                   );

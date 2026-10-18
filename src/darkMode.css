@@ -2394,14 +2394,6 @@
   color: #e8e8e8;
 }
 
-[data-theme="dark"] .remove-child-btn {
-  color: #999;
-}
-
-[data-theme="dark"] .remove-child-btn:hover {
-  color: #f08080;
-}
-
 [data-theme="dark"] .cuisine-group-add-child {
   background: #2a2a2a;
   border-color: #555;

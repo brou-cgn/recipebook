@@ -83,6 +83,41 @@ describe('NutritionReferenceTab', () => {
     expect(screen.getByText(/Nur Admins und Moderatoren/i)).toBeInTheDocument();
   });
 
+  test('removing a row hides it at once and deletes it after the undo window', async () => {
+    renderTab({ id: 'u1', role: 'moderator' });
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+
+    jest.useFakeTimers();
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Tomate entfernen' }));
+      expect(screen.queryByDisplayValue('dummy-tomate')).not.toBeInTheDocument();
+      expect(screen.getByText(/„Tomate" entfernt/)).toBeInTheDocument();
+      expect(mockDeleteDoc).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(6000);
+    } finally {
+      jest.useRealTimers();
+    }
+    await waitFor(() => expect(mockDeleteDoc).toHaveBeenCalledTimes(1));
+    expect(mockDoc).toHaveBeenCalledWith(expect.anything(), 'nutritionReferences', 'tomate');
+  });
+
+  test('Rückgängig brings a removed row back without deleting it', async () => {
+    renderTab({ id: 'u1', role: 'moderator' });
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+
+    jest.useFakeTimers();
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Tomate entfernen' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+      jest.advanceTimersByTime(6000);
+    } finally {
+      jest.useRealTimers();
+    }
+    expect(screen.getByDisplayValue('dummy-tomate')).toBeInTheDocument();
+    expect(mockDeleteDoc).not.toHaveBeenCalled();
+  });
+
   test('loads rows and allows adding a nutrition reference', async () => {
     renderTab({ id: 'u1', role: 'moderator' });
 

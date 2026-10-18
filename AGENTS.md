@@ -33,6 +33,7 @@ erzwungen — wo das gilt, steht die Datei dabei.
 - **Löschaktionen**: ausschließlich `DeleteRowButton` (kein eigenes ×, kein gefüllter Kreis,
   kein Icon im Eingabefeld). 28 × 28 px, Radius 999, transparent; Rot `#a33a26` auf 12 % Fläche
   erst bei Hover/Fokus; am rechten Zeilenrand; Tooltip und `aria-label` „<Name> entfernen".
+  ESLint (`no-restricted-syntax`) lehnt die Klassen `remove-btn` / `remove-child-btn` ab.
 - Löschen wirkt sofort mit Snackbar „Rückgängig" (6 s, Wiederherstellung am alten Index).
   Kein Bestätigungsdialog, außer beim Löschen eines ganzen Rezepts mit Inhalt.
 - Die Desktop-Spezifikation gilt nur für Desktop. Mobil gilt die Linksswipe-Geste.

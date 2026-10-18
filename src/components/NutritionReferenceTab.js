@@ -3,6 +3,9 @@ import { deleteDoc, deleteField, doc, serverTimestamp, setDoc } from 'firebase/f
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../firebase';
 import { ROLES } from '../utils/userManagement';
+import DeleteRowButton from './DeleteRowButton';
+import UndoSnackbar from './UndoSnackbar';
+import useUndoableDelete from '../hooks/useUndoableDelete';
 import { clearNutritionReferenceCache, useNutritionReference } from '../contexts/NutritionReferenceContext';
 import {
   NUTRITION_REFERENCE_APPROVED_STATUS,
@@ -89,6 +92,7 @@ const getStatusOptionLabel = (status) => (status || EMPTY_STATUS_DISPLAY_LABEL);
 const DEFAULT_HEADER_ROW_HEIGHT = 32;
 const formatConfidenceValue = (value) => (value == null ? '—' : `${value}%`);
 const getIngredientID = (row) => String(row?.ingredientID || row?.id || '').trim();
+const getRowDisplayName = (row) => String(row?.displayName || '').trim() || getIngredientID(row);
 const normalizeEditableNumber = (value) => {
   if (value == null) return '';
   if (typeof value === 'string' && value.trim() === '') return '';
@@ -137,6 +141,7 @@ function NutritionReferenceTab({ currentUser }) {
   const canManage = currentUser?.role === ROLES.ADMIN || currentUser?.role === ROLES.MODERATOR;
   const { rows: cachedRows, loading, reload } = useNutritionReference();
   const [rows, setRows] = useState([]);
+  const { banners: rowDeleteBanners, pendingKeys: pendingRowDeleteKeys, scheduleDelete: scheduleRowDelete, undoDelete: undoRowDelete } = useUndoableDelete();
   const [newIngredientID, setNewIngredientID] = useState('');
   const [newDisplayName, setNewDisplayName] = useState('');
   const [newNutritionFamily, setNewNutritionFamily] = useState('');
@@ -498,9 +503,18 @@ function NutritionReferenceTab({ currentUser }) {
     setActionMessage(`Eintrag ${ingredientID} hinzugefügt.`);
   };
 
-  const removeRow = async (id) => {
-    await deleteDoc(doc(db, 'nutritionReferences', id));
-    await reload();
+  // Row disappears at once; the Firestore delete runs after the undo window
+  // (or immediately when the tab is left, see useUndoableDelete).
+  const removeRow = (row) => {
+    scheduleRowDelete({
+      key: row.id,
+      message: getRowDisplayName(row),
+      onConfirm: async () => {
+        await deleteDoc(doc(db, 'nutritionReferences', row.id));
+        await reload();
+      },
+      onUndo: () => {},
+    });
   };
 
   const refreshRowFromOpenFoodFacts = async (row) => {
@@ -667,7 +681,7 @@ function NutritionReferenceTab({ currentUser }) {
       </div>
     );
   }
-  const visibleRows = rows.filter((row) => {
+  const visibleRows = rows.filter((row) => !pendingRowDeleteKeys.has(row.id)).filter((row) => {
     return Object.entries(normalizedColumnFilters).every(([field, filterValue]) => {
       const value = String(getRowFilterValue(row, field));
       if (filterValue === EMPTY_STATUS_FILTER_VALUE) {
@@ -1005,7 +1019,7 @@ function NutritionReferenceTab({ currentUser }) {
                     >
                       {refreshingRowId === row.id ? '…' : 'Nährwerte abrufen'}
                     </button>
-                    <button className="remove-btn" onClick={() => removeRow(row.id)} title="Entfernen">×</button>
+                    <DeleteRowButton itemName={getRowDisplayName(row)} onClick={() => removeRow(row)} />
                   </td>
                   </tr>
                 );
@@ -1151,6 +1165,12 @@ function NutritionReferenceTab({ currentUser }) {
         </div>
       )}
       </div>
+      {rowDeleteBanners.length > 0 && (
+        <UndoSnackbar
+          itemName={rowDeleteBanners[rowDeleteBanners.length - 1].message}
+          onUndo={() => undoRowDelete(rowDeleteBanners[rowDeleteBanners.length - 1].id)}
+        />
+      )}
     </>
   );
 }
