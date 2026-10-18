@@ -459,7 +459,9 @@ test('generateNutritionFromReference is registered with cors and invoker:public 
   const Module = require('module');
   const originalLoad = Module._load;
 
-  let capturedOpts = null;
+  // Options per registered handler, so the test can look up exactly
+  // generateNutritionFromReference instead of whichever onCall came last.
+  const optsByHandler = new Map();
 
   Module._load = function(request, parent, isMain, ...args) {
     if (request === 'firebase-functions/v2/https') {
@@ -472,11 +474,7 @@ test('generateNutritionFromReference is registered with cors and invoker:public 
       return {
         onCall: (opts, handler) => {
           if (typeof opts === 'object' && opts !== null && typeof handler === 'function') {
-            // Capture the opts of the LAST onCall registration that has cors defined
-            // (generateNutritionFromReference is the one we care about for this test)
-            if (opts.cors !== undefined) {
-              capturedOpts = opts;
-            }
+            optsByHandler.set(handler, opts);
           }
           return handler;
         },
@@ -523,10 +521,11 @@ test('generateNutritionFromReference is registered with cors and invoker:public 
     return originalLoad.call(this, request, parent, isMain, ...args);
   };
 
-  require('./index');
+  const index = require('./index');
   Module._load = originalLoad;
 
-  assert.ok(capturedOpts !== null, 'onCall with cors option was not registered');
+  const capturedOpts = optsByHandler.get(index.generateNutritionFromReference);
+  assert.ok(capturedOpts, 'generateNutritionFromReference was not registered via onCall with options');
   assert.ok(
       Array.isArray(capturedOpts.cors) && capturedOpts.cors.length > 0,
       'cors option should be a non-empty array of allowed origins'
