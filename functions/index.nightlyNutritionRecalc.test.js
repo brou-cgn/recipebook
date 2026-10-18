@@ -244,6 +244,24 @@ test('manual recalc job updates impacted recipes, resets recalc flags and sends 
   assert.equal(sentMails.length, 1);
 });
 
+test('recalc report mail carries the Firestore usage section, even when Monitoring is unavailable', async () => {
+  // The firebase-admin mock has no credential, so the usage lookup fails;
+  // the mail must still go out and say why the numbers are missing.
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  try {
+    await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  assert.equal(sentMails.length, 1);
+  const { text, html } = sentMails[0];
+  assert.match(text, /Firestore-Nutzung \(letzte 7 Tage, UTC\)\nNicht verfügbar:/);
+  assert.match(html, /<h3>Firestore-Nutzung \(letzte 7 Tage, UTC\)<\/h3>/);
+});
+
 test('manual recalc job keeps recalc flag when recalculation fails', async () => {
   mockDbState.recipes.r1.failCalculationWrite = true;
 

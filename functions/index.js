@@ -20,6 +20,7 @@ const {evaluateLowCarbTag} = require('./lowCarb');
 const {countNewRecipes, sendFuerDichEntdecktPush} = require('./fuerDichEntdecktPush');
 const {isRotationDue, getProtectedRecipeIds, pickRotationRecipeIds, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleResult, recipeAvailableToUser, mergeRuleMatches, explainTopicExclusion, isVisibleToUser, pickTopic, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
 const {normalizeCuisines, suggestNewCuisines} = require('./cuisineNormalization');
+const {fetchFirestoreDailyUsage, buildFirestoreUsageSection} = require('./firestoreUsage');
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -8460,7 +8461,7 @@ function nutritionRecalcLowCarbLabel(action) {
   return null;
 }
 
-function buildNutritionRecalcSummaryMail(report, runAt) {
+function buildNutritionRecalcSummaryMail(report, runAt, usageSection = null) {
   const updatedCount = report.updatedRecipes.length;
   const failedCount = report.failedRecipes.length;
   const skippedCount = report.skippedRecipes.length;
@@ -8498,6 +8499,9 @@ function buildNutritionRecalcSummaryMail(report, runAt) {
       text += `- ${entry.title} (${entry.recipeId}): ${entry.error}\n`;
     });
   }
+  if (usageSection) {
+    text += usageSection.text;
+  }
 
   const htmlList = (entries, formatter) => {
     if (!entries || entries.length === 0) return '<p>Keine</p>';
@@ -8525,6 +8529,7 @@ function buildNutritionRecalcSummaryMail(report, runAt) {
   })}
       <h3>Fehlgeschlagene Rezepte</h3>
       ${htmlList(report.failedRecipes, (entry) => `${escapeNutritionRecalcHtml(entry.title)} (${escapeNutritionRecalcHtml(entry.recipeId)}): ${escapeNutritionRecalcHtml(entry.error)}`)}
+      ${usageSection ? usageSection.html : ''}
     </div>
   `;
 
@@ -8585,9 +8590,29 @@ async function sendAdminReportMail({subject, text, html, logLabel}) {
   return true;
 }
 
+/**
+ * Firestore-Nutzung für den Recalc-Bericht. Schlägt nie fehl: ohne
+ * Monitoring-Berechtigung oder bei einem Fehler steht ein Hinweis im Bericht.
+ *
+ * @return {Promise<{text: string, html: string}>}
+ */
+async function loadFirestoreUsageSection() {
+  try {
+    const rows = await fetchFirestoreDailyUsage({
+      projectId: process.env.GCLOUD_PROJECT || admin.app().options.projectId,
+      getAccessToken: () => admin.credential.applicationDefault().getAccessToken(),
+    });
+    return buildFirestoreUsageSection({rows});
+  } catch (error) {
+    console.warn('loadFirestoreUsageSection: Firestore-Nutzung nicht verfügbar:', error.message);
+    return buildFirestoreUsageSection({error: error.message});
+  }
+}
+
 async function sendNutritionRecalcSummary(report) {
   const runAt = new Date(report.finishedAt || Date.now()).toLocaleString('de-DE', {timeZone: 'Europe/Berlin'});
-  const mailContent = buildNutritionRecalcSummaryMail(report, runAt);
+  const usageSection = await loadFirestoreUsageSection();
+  const mailContent = buildNutritionRecalcSummaryMail(report, runAt, usageSection);
   await sendAdminReportMail({
     subject: mailContent.subject,
     text: mailContent.text,
