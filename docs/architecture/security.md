@@ -46,6 +46,9 @@ Quelle ist immer `firestore.rules`; diese Tabelle gibt den Stand vom 18.10.2026 
 | `appCalls` | Rollen mit Berechtigung `appCalls`, Admin | Anlegen: eigene Sitzung; Ändern/Löschen: Admin |
 | `recipeCalls` | Mitglieder | Anlegen: eigene Sitzung; Ändern/Löschen: Admin |
 | `cookDates` | Mitglieder (**jedes Mitglied liest alle Einträge**) | Anlegen: eigene `userId`, nur die Felder `userId`, `recipeId`, `date` (nicht in der Zukunft), `createdAt`; Löschen: Eigentümer, `edit`+; kein Ändern |
+| `follows` | Beteiligte (Follower, Gefolgter), nur Mitglieder | Löschen: beide Seiten; Anlegen/Ändern: niemand (nur Callables `requestFollow`, `respondFollow`) |
+| `users/{uid}/followInbox` | Eigentümer (offene Anfragen an ihn) | niemand (nur Cloud Function) |
+| `followCooldowns`, `followLimits` | niemand | niemand (nur Cloud Function) |
 | `recipeSwipeFlags` | Eigentümer, Mitglieder derselben Liste | Eigentümer; Listenmitglieder nur `calculatedFlag`, `calculatedExpiresAt` |
 | `aiScanLimits` | `edit`+ | Admin |
 | `jobRequests`, `invitations` | niemand (nur Cloud Functions) | niemand |

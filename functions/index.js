@@ -21,6 +21,7 @@ const {countNewRecipes, sendFuerDichEntdecktPush} = require('./fuerDichEntdecktP
 const {isRotationDue, getProtectedRecipeIds, pickRotationRecipeIds, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleResult, recipeAvailableToUser, mergeRuleMatches, explainTopicExclusion, isVisibleToUser, pickTopic, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
 const {normalizeCuisines, suggestNewCuisines} = require('./cuisineNormalization');
 const {fetchFirestoreDailyUsage, buildFirestoreUsageSection} = require('./firestoreUsage');
+const follow = require('./follow');
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -10509,4 +10510,31 @@ exports.fillNewFuerDichEntdecktList = onDocumentCreated(
       const filled = await rotateFuerDichEntdecktList(db, listDoc, context, Date.now(), false);
       console.log(`fillNewFuerDichEntdecktList: list ${event.params.groupId}: ${filled ? 'filled' : 'left empty'}`);
     }
+);
+
+/**
+ * Cloud Function: Follow-Anfrage an ein anderes Mitglied (Vorhaben Follow, PR 2).
+ * Prüft Rolle und Flag `follow` beider Seiten, Tageslimit und Sperren; Details
+ * in follow.js. Input: { followeeId }. Returns: { status: 'pending' | 'accepted' }.
+ */
+exports.requestFollow = onCall(
+    {maxInstances: 10, invoker: 'public'},
+    (request) => follow.requestFollow(admin, admin.firestore(), HttpsError, {
+      auth: request.auth,
+      followeeId: request.data?.followeeId,
+    }),
+);
+
+/**
+ * Cloud Function: Antwort auf eine Follow-Anfrage (annehmen, still ablehnen,
+ * blockieren). Input: { followerId, action: 'accept' | 'decline' | 'block' }.
+ * Returns: { status: 'accepted' | 'declined' | 'blocked' }.
+ */
+exports.respondFollow = onCall(
+    {maxInstances: 10, invoker: 'public'},
+    (request) => follow.respondFollow(admin, admin.firestore(), HttpsError, {
+      auth: request.auth,
+      followerId: request.data?.followerId,
+      action: request.data?.action,
+    }),
 );

@@ -32,13 +32,18 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | Ablehnen | Still, der Anfragende sieht weiter „Angefragt". Zusätzlich Blockieren im MVP. |
 | Rules vorab | Eigener Schritt vor dem Feature (Phase 0). |
 | Deployment | Workflow beim Merge, kein Staging. Reihenfolge Rules, dann Functions, dann Client. |
+| Sperrfrist und Rate-Limit | Beides zusätzlich zum Blockieren: 30 Tage Sperrfrist nach Ablehnung und Rate-Limit pro Absender (18.10.2026). |
+| Push bei neuer Anfrage | Im MVP (18.10.2026), nutzt `backgroundUpdatesEnabled`. Rate-Limit und Sperrfrist werden vor dem Push gebaut und getestet, weil Push sonst ein Spam-Kanal ist. |
+| Abgelehnte Anfrage | Bleibt dauerhaft „Angefragt", der Name bleibt ein Link auf das Profil (18.10.2026). |
+| Plätze für Gefolgte | Eigenes „Für dich entdeckt"-Thema, z. B. „Deine Community kocht" (`scopes: ['followed']`, `lastCooked`, Zeitfenster 30 Tage). Das Thema bringt seine Plätze wie jedes andere mit (18.10.2026). Wie die Rotation Plätze auf Themen verteilt, wird zu Beginn von PR 5 geprüft. |
 
 ## Stand der Umsetzung
 
 | PR | Inhalt | Stand |
 |---|---|---|
-| 1 | Rules-Tests (Emulator, CI-Job), `cookDates` validieren, `security.md` korrigieren, dieses Dokument | PR #3461 offen (Branch `claude/firestore-rules-tests`) |
-| 2 | `follows`, Callables, Rules mit Tests, Flag `follow`, Sperren | offen |
+| 1 | Rules-Tests (Emulator, CI-Job), `cookDates` validieren, `security.md` korrigieren, dieses Dokument | PR #3461 gemergt und deployt (18.10.2026), CI grün inkl. neuem Job „Firestore Rules" |
+| 2 | `follows`, `requestFollow`/`respondFollow`, Rules mit Tests, Flag `follow`, Inbox, Sperrfrist, Blockieren, Tageslimit | PR #3462 offen (Branch `claude/follow-pr2-requests`; Function-Tests 16, Rules-Tests 8 neu) |
+| 2b | Push bei neuer Anfrage (nach dem Muster von `fuerDichEntdecktPush.js`) | offen, baut auf PR 2 |
 | 3 | Netzwerk-Seite, Badge am Tab „Chefkoch" | offen |
 | 4 | Folgen-Icon (Rezeptkarte, Kochtagebuch), Profilseite | offen |
 | 5 | Themenregel `scopes` (Admin-UI `DiscoverTopicsTab.js`, Nachtlauf, Rotation), privates Attributionsdokument | offen |
@@ -47,14 +52,18 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 Nach jedem PR: Tech-Check-Dashboard aktualisieren (Befunde und `umsetzungen`, siehe `CLAUDE.md`),
 Tabelle hier nachziehen.
 
+Umsetzungsnotizen PR 2: Das Tageslimit liegt bei 20 Anfragen je Absender und Tag (UTC), die Sperrfrist
+nach Ablehnung bei 30 Tagen, Blockieren ist dauerhaft (`functions/follow.js`). Eine abgelehnte oder
+blockierte Anfrage bleibt für den Anfragenden `pending`; der Gefolgte sieht sie nicht mehr, weil sie
+aus `users/{uid}/followInbox` verschwindet. Ein Entsperren fehlt noch (siehe Offen).
+
 ## Offen
 
-- Sperrfrist (30 Tage) und Rate-Limit pro Absender: zusätzlich zum Blockieren oder ersetzt es sie?
-- Push bei neuer Anfrage im MVP oder später (nutzt `backgroundUpdatesEnabled`)?
-- Abgelehnte Anfrage bleibt dauerhaft „Angefragt" und der Name dauerhaft ein Link. Akzeptabel?
+- Entsperren blockierter Personen: ohne Aktion bleibt die Sperre ewig. Gehört in PR 3 (Netzwerk-Seite) und braucht eine Aktion `unblock` in `respondFollow`.
+
 - Zustimmungsdialog im Kochtagebuch (in der Skizze ohne).
 - Datenschutzerklärung um Follow und proaktive Ausspielung ergänzen, vor dem Rollout (Text liefert Claude, Freigabe beim Eigentümer).
-- Wie viele Plätze bekommen Gefolgte in der Liste (aktuell 5 Plätze, Themen ersetzt oder ergänzt)?
+- Verhalten des Themas „Deine Community kocht" ohne Flag `follow` oder ohne Gefolgte (Vorschlag: ausblenden), Platzverteilung in der Rotation (PR 5).
 
 ## Bekannte Risiken und Voraussetzungen
 

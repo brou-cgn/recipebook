@@ -447,6 +447,34 @@ service cloud.firestore {
                     || isEditOrAdmin();
     }
 
+    // Follow (Vorhaben docs/vorhaben/follow.md): Anfragen und Antworten laufen
+    // ausschließlich über die Callables requestFollow/respondFollow (Admin SDK).
+    // Lesen dürfen nur die Beteiligten; löschen beide Seiten (Anfrage zurückziehen,
+    // nicht mehr folgen, Follower entfernen). Kein Client-Schreiben, sonst könnte
+    // sich jeder selbst als akzeptiert eintragen.
+    match /follows/{followId} {
+      allow read, delete: if isMember()
+                          && (resource.data.followerId == request.auth.uid
+                              || resource.data.followeeId == request.auth.uid);
+      allow create, update: if false;
+    }
+
+    // Offene Anfragen aus Sicht des Gefolgten. Eine still abgelehnte Anfrage steht
+    // hier nicht mehr, im follows-Dokument bleibt sie 'pending'.
+    match /users/{userId}/followInbox/{followerId} {
+      allow read: if isMember() && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    // Sperrfristen/Blockaden und Tageszähler: nur serverseitig, auch nicht lesbar,
+    // damit niemand Ablehnung oder Blockade erkennen kann.
+    match /followCooldowns/{id} {
+      allow read, write: if false;
+    }
+    match /followLimits/{id} {
+      allow read, write: if false;
+    }
+
     // Recipe swipe flags collection - tracks user swipe actions (kandidat, geparkt, archiv) for Tagesmenü
     match /recipeSwipeFlags/{flagId} {
       // Returns true when the requesting user is the owner or a member of the given interactive list.

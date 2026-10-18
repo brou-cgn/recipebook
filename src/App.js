@@ -352,6 +352,7 @@ function applyRolePermissionsToUser(user, permissionsMap = {}) {
     addTutorial: rolePerms.addTutorial ?? false,
     editTutorial: rolePerms.editTutorial ?? false,
     fuerDichEntdeckt: rolePerms.fuerDichEntdeckt ?? false,
+    follow: rolePerms.follow ?? false,
     eventplanung: rolePerms.eventplanung ?? false,
   };
 }
