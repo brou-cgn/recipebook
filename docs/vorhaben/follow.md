@@ -42,7 +42,7 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | PR | Inhalt | Stand |
 |---|---|---|
 | 1 | Rules-Tests (Emulator, CI-Job), `cookDates` validieren, `security.md` korrigieren, dieses Dokument | PR #3461 gemergt und deployt (18.10.2026), CI grün inkl. neuem Job „Firestore Rules" |
-| 2 | `follows`, `requestFollow`/`respondFollow`, Rules mit Tests, Flag `follow`, Inbox, Sperrfrist, Blockieren, Tageslimit | PR #3462 offen (Branch `claude/follow-pr2-requests`; Function-Tests 16, Rules-Tests 8 neu) |
+| 2 | `follows`, `requestFollow`/`respondFollow`, Rules mit Tests, Flag `follow`, Inbox, Sperrfrist, Blockieren, Tageslimit | PR #3462 gemergt (18.10.2026), CI grün; Deploy von Rules und Functions beim Merge ausgelöst, Ergebnis noch nicht geprüft (Function-Tests 16, Rules-Tests 8 neu) |
 | 2b | Push bei neuer Anfrage (nach dem Muster von `fuerDichEntdecktPush.js`) | offen, baut auf PR 2 |
 | 3 | Netzwerk-Seite, Badge am Tab „Chefkoch" | offen |
 | 4 | Folgen-Icon (Rezeptkarte, Kochtagebuch), Profilseite | offen |
