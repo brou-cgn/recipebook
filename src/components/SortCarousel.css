@@ -16,14 +16,18 @@
        padding below re-creates that 1rem gap for the pill at each end,
        while pills mid-scroll can bleed all the way to the screen edge. */
     width: calc(100% + 2rem);
-    margin: 0 -1rem;
     min-width: 0;
     overflow-x: auto;
     scroll-snap-type: x proximity;
     scrollbar-width: none;
     -ms-overflow-style: none;
     -webkit-overflow-scrolling: touch;
-    padding: 0.15rem 1rem;
+    /* The vertical padding leaves room for each pill's enlarged tap area
+       (see .sort-carousel-item::before) – overflow-x: auto clips anything
+       outside the padding box, including hit-testing. The negative margin
+       cancels the extra padding so the layout keeps its previous height. */
+    padding: 0.55rem 1rem;
+    margin: -0.4rem -1rem;
   }
 
   .sort-carousel::-webkit-scrollbar {
@@ -34,6 +38,7 @@
 /* ─── Items ─────────────────────────────────────────────────────────────────── */
 
 .sort-carousel-item {
+  position: relative;
   flex: 0 0 auto;
   scroll-snap-align: center;
 
@@ -53,6 +58,14 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Invisible tap area: the pill stays ~31 px tall visually, but touches
+   within 8 px above and below it still hit it (≥ 44 px, Apple HIG). */
+.sort-carousel-item::before {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
 }
 
 .sort-carousel-item:active {
