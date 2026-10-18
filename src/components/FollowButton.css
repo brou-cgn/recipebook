@@ -18,3 +18,14 @@
 .follow-button:focus-visible {
   background: rgba(47, 93, 98, 0.12);
 }
+
+.follow-name-link {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}

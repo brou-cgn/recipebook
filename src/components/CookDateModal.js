@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import FollowButton from './FollowButton';
+import FollowName from './FollowName';
 import PencilIcon from './icons/PencilIcon';
 import SteamIcon from './icons/SteamIcon';
 import './CookDateModal.css';
@@ -136,7 +137,7 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
                     <span className="cook-date-timeline-label">Gekocht am</span>
                     <span className="cook-date-timeline-date">{formatDate(cd.date)}</span>
                     <span className="cook-date-timeline-recipe-title">
-                      {getUserName(cd.userId)}
+                      <FollowName userId={cd.userId} name={getUserName(cd.userId)} />
                       {allUsers.some((u) => u.id === cd.userId) && (
                         <FollowButton userId={cd.userId} name={getUserName(cd.userId)} />
                       )}
