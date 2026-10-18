@@ -1,7 +1,7 @@
 # Vorhaben: Follow (Vernetzung zwischen Mitgliedern)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 18.10.2026 (PR 3 und 4a in Arbeit).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 18.10.2026 (PR 4a offen, 4b in Arbeit).
 
 **Ziel:** Aktivitäten anderer Mitglieder inspirieren. Wer jemandem folgt (mit Bestätigung des
 Gefolgten), sieht in „Für dich entdeckt" zusätzlich Rezepte, die diese Person zuletzt gekocht
@@ -44,14 +44,16 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | 1 | Rules-Tests (Emulator, CI-Job), `cookDates` validieren, `security.md` korrigieren, dieses Dokument | PR #3461 gemergt und deployt (18.10.2026), CI grün inkl. neuem Job „Firestore Rules" |
 | 2 | `follows`, `requestFollow`/`respondFollow`, Rules mit Tests, Flag `follow`, Inbox, Sperrfrist, Blockieren, Tageslimit | PR #3462 gemergt und deployt (18.10.2026, Deploy-Lauf 1842 erfolgreich), CI grün (Function-Tests 16, Rules-Tests 8 neu) |
 | 2b | Push bei neuer Anfrage (`functions/followPush.js`, gemeinsamer Helfer `sendDataPush` in `fuerDichEntdecktPush.js`) | PR #3464 gemergt (18.10.2026) |
-| 3 | Netzwerk-Seite (`NetworkPage.js`, Kachel „Netzwerk" unter Chefkoch), Badge am Tab „Chefkoch", Aktion `unblock` + `users/{uid}/followBlocks` | Branch `claude/follow-pr3-netzwerk` (Function-Tests +2, Rules-Test +1, Komponententests 6) |
-| 4a | Folgen-Icon (`FollowButton`, `FollowContext`) am Autor im Rezeptdetail und im Kochtagebuch (Dialog heißt jetzt „Kochtagebuch"), Anfrage mit Snackbar „Rückgängig" | Branch `claude/follow-pr4-folgen-icon`, gestapelt auf PR 3 (Komponententests +6) |
-| 4b | Profilseite (Status-Karte, Rezepte der Person), Name wird ab „angefragt" zum Link auf das Profil | offen |
+| 3 | Netzwerk-Seite (`NetworkPage.js`, Kachel „Netzwerk" unter Chefkoch), Badge am Tab „Chefkoch", Aktion `unblock` + `users/{uid}/followBlocks` | PR #3466 gemergt (18.10.2026), Function-Tests +2, Rules-Test +1, Komponententests 10 |
+| 4a | Folgen-Icon (`FollowButton`, `FollowContext`) am Autor im Rezeptdetail und im Kochtagebuch (Dialog heißt jetzt „Kochtagebuch"), Anfrage mit Snackbar „Rückgängig" | PR #3467 offen (Komponententests +6) |
+| 4b | Profilseite (`MemberProfilePage`: Status-Karte, Rezepte der Person), Name wird ab „angefragt" zum Link (`FollowName`) | Branch `claude/follow-pr4b-profil`, gestapelt auf 4a (Komponententests +8) |
 | 5 | Themenregel `scopes` (Admin-UI `DiscoverTopicsTab.js`, Nachtlauf, Rotation), privates Attributionsdokument | offen |
 | 6 | Namensanzeige auf Karte und im Stapel | offen |
 
 Nach jedem PR: Tech-Check-Dashboard aktualisieren (Befunde und `umsetzungen`, siehe `CLAUDE.md`),
 Tabelle hier nachziehen.
+
+Umsetzungsnotizen PR 4b: Das Profil ist eine Ansicht in `App.js` (State `profileUserId`, liegt vor dem Rezeptdetail wie Einstellungen; „Zurück" führt zum Rezeptdetail zurück). Geöffnet wird es über `openProfile` aus dem `FollowProvider`. `FollowName` ist ab „angefragt" ein Link, sonst Text. Die Rezepte der Person kommen aus dem schon sichtbarkeitsgefilterten `recipes`-Array, es gibt keine eigene Abfrage. Die Status-Karte kennt drei Zustände (kein Follow: „Folgen"; angefragt: „Anfrage zurückziehen"; angenommen: „Nicht mehr folgen"), Zurückziehen und Beenden laufen mit Undo-Fenster wie in der Netzwerk-Seite. Nicht gebaut: Profilaufruf aus dem Netzwerk-Tab (Namen dort sind noch Text), Profil im Rezeptlisten-Kontext (nur Rezeptdetail und Kochtagebuch).
 
 Umsetzungsnotizen PR 4a: Der Zustand der eigenen Follows liegt im `FollowProvider` (`src/contexts/FollowContext.js`, in `App.js` um die Hauptansicht gelegt, Snapshot auf `follows` mit `followerId == uid`). Ohne Provider oder ohne Flag rendert `FollowButton` nichts, bestehende Tests bleiben unberührt. Ob die andere Person Follow nutzt, weiß der Client nicht (kein Feld in `publicProfiles`); die Function antwortet dann mit „nicht erreichbar", das erscheint in der Snackbar. „Rückgängig" löscht das `follows`-Dokument sofort (anders als bei Listenzeilen läuft die Anfrage schon, ein verzögertes Senden wäre unnatürlich). Name als Link und Profil folgen mit 4b; bis dahin bleibt der Name Text.
 
