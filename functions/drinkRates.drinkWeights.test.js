@@ -242,9 +242,10 @@ test('calculate liefert Gesamtgetraenkebedarf = totalBeverage fuer alle DRINK_WE
   );
 });
 
-test('calculate speichert guestPreferenceMultipliers in praeferenzFaktor, beeinflusst aber nicht die Verteilung', () => {
-  // Neue Logik (5-Schritt): guestPreferenceMultipliers werden im praeferenzFaktor-Feld
-  // gespeichert, beeinflussen aber die proportionale Verteilung nicht mehr.
+test('calculate ignoriert guestPreferenceMultipliers im Alt-Format (ohne perGuest)', () => {
+  // Präferenzen wirken nur noch über guestPreferenceMultipliers.perGuest. Das
+  // Alt-Format {kategorie: faktor} ändert die Verteilung nicht, und
+  // praeferenzFaktor im Ergebnis ist immer null (wird nirgends gelesen).
   const result = _internal.calculate(
       {
         eventName: 'Test',
@@ -270,8 +271,7 @@ test('calculate speichert guestPreferenceMultipliers in praeferenzFaktor, beeinf
 
   assert.ok(bier, 'bier vorhanden');
   assert.ok(wasser, 'wasser vorhanden');
-  // praeferenzFaktor wird weiterhin im Ergebnis gespeichert
-  assert.equal(bier.praeferenzFaktor, 0, 'bier praeferenzFaktor ist 0');
+  assert.equal(bier.praeferenzFaktor, null, 'bier praeferenzFaktor ist null');
   // Die Verteilung basiert nur auf DRINK_WEIGHTS -- prefMult=0 aendert nichts am Budget
   assert.equal(
       bier.literOhnePuffer,
