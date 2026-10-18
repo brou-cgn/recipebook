@@ -1,7 +1,7 @@
 # Vorhaben: Follow (Vernetzung zwischen Mitgliedern)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 18.10.2026.
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 18.10.2026 (Phase 0 erledigt, als Nächstes PR 2).
 
 **Ziel:** Aktivitäten anderer Mitglieder inspirieren. Wer jemandem folgt (mit Bestätigung des
 Gefolgten), sieht in „Für dich entdeckt" zusätzlich Rezepte, die diese Person zuletzt gekocht
@@ -37,7 +37,7 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 
 | PR | Inhalt | Stand |
 |---|---|---|
-| 1 | Rules-Tests (Emulator, CI-Job), `cookDates` validieren, `security.md` korrigieren, dieses Dokument | PR #3461 offen (Branch `claude/firestore-rules-tests`) |
+| 1 | Rules-Tests (Emulator, CI-Job), `cookDates` validieren, `security.md` korrigieren, dieses Dokument | gemergt und deployt am 18.10.2026 (PR #3460, #3461), CI grün. Tech-Check: S17 behoben, S16 und S18 neu und offen |
 | 2 | `follows`, Callables, Rules mit Tests, Flag `follow`, Sperren | offen |
 | 3 | Netzwerk-Seite, Badge am Tab „Chefkoch" | offen |
 | 4 | Folgen-Icon (Rezeptkarte, Kochtagebuch), Profilseite | offen |
