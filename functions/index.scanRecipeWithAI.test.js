@@ -237,16 +237,6 @@ function okResponse(body) {
   };
 }
 
-function errorResponse(status, body) {
-  return {
-    ok: false,
-    status,
-    statusText: String(status),
-    json: async () => body,
-    text: async () => JSON.stringify(body),
-  };
-}
-
 // ---------------------------------------------------------------------------
 // Test lifecycle
 // ---------------------------------------------------------------------------
