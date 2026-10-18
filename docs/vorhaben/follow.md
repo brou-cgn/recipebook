@@ -1,7 +1,7 @@
 # Vorhaben: Follow (Vernetzung zwischen Mitgliedern)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 18.10.2026 (PR 4a/4b gemergt, PR 5 in Arbeit).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 18.10.2026 (PR 4a/4b/5 gemergt).
 
 **Ziel:** Aktivitäten anderer Mitglieder inspirieren. Wer jemandem folgt (mit Bestätigung des
 Gefolgten), sieht in „Für dich entdeckt" zusätzlich Rezepte, die diese Person zuletzt gekocht
@@ -47,7 +47,7 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | 3 | Netzwerk-Seite (`NetworkPage.js`, Kachel „Netzwerk" unter Chefkoch), Badge am Tab „Chefkoch", Aktion `unblock` + `users/{uid}/followBlocks` | PR #3466 gemergt (18.10.2026), Function-Tests +2, Rules-Test +1, Komponententests 10 |
 | 4a | Folgen-Icon (`FollowButton`, `FollowContext`) am Autor im Rezeptdetail und im Kochtagebuch (Dialog heißt jetzt „Kochtagebuch"), Anfrage mit Snackbar „Rückgängig" | PR #3467 gemergt (Komponententests +6) |
 | 4b | Profilseite (`MemberProfilePage`: Status-Karte, Rezepte der Person), Name wird ab „angefragt" zum Link (`FollowName`) | PR #3469 gemergt (Komponententests +8) |
-| 5 | Themenregel `scopes` (Admin-UI `DiscoverTopicsTab.js`, Nachtlauf, Rotation), privates Attributionsdokument | Branch `claude/follow-pr5-scopes` (Function-Tests +4, Komponententests +2, Rules-Test +1), noch kein PR |
+| 5 | Themenregel `scopes` (Admin-UI `DiscoverTopicsTab.js`, Nachtlauf, Rotation), privates Attributionsdokument | PR #3470 gemergt (Function-Tests +4, Komponententests +2, Rules-Test +1) |
 | 6 | Namensanzeige auf Karte und im Stapel (liest `users/{uid}/fuerDichEntdeckt/current`) | offen |
 
 Nach jedem PR: Tech-Check-Dashboard aktualisieren (Befunde und `umsetzungen`, siehe `CLAUDE.md`),
