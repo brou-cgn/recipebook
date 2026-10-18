@@ -39,6 +39,7 @@ import { getCategoryImages } from '../utils/categoryImages';
 import { playAlarmPattern } from '../utils/alarmAudioUtils';
 import RecipeRating from './RecipeRating';
 import CookDateModal from './CookDateModal';
+import FollowButton from './FollowButton';
 import { getAllCookDates } from '../utils/recipeCookDates';
 import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { calculateRecipeSortIndexBreakdown } from '../utils/recipeSortIndex';
@@ -2407,7 +2408,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             {(authorName || formattedCreatedAt) && (
               <div className="author-date-caption">
                 {authorName && (
-                  <>{'Von '}<span className="author-name">{authorName}</span></>
+                  <>{'Von '}<span className="author-name">{authorName}</span><FollowButton userId={recipe.authorId} name={authorName} /></>
                 )}
                 {formattedCreatedAt && (
                   <span className="creation-date">{authorName ? ' erstellt am ' : 'Erstellt am '}{formattedCreatedAt}</span>
