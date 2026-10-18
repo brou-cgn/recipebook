@@ -134,6 +134,14 @@ Actual vs. calculated drink consumption per finished event (shown on the "Eventp
 | Read | `admin`, and every role with the `eventplanung` role permission (`rolePermissions/{role}.eventplanung`, `canSeeEventplanung()`) |
 | Create / Update / Delete | nobody on the client (written by the `submitConsumption` Cloud Function) |
 
+### Job Requests (`/jobRequests/{requestId}`)
+
+Queue for background jobs that must not run after a callable has answered (Cloud Run throttles that work and may stop it). Today only the manual nutrition recalc: `runNutritionRecalcForFlaggedRecipes` (admin/moderator, checked server-side) creates the request, the `processNutritionRecalcRequest` trigger runs it and deletes it.
+
+| Operation | Who |
+|-----------|-----|
+| Read / Create / Update / Delete | nobody on the client (Cloud Functions only) |
+
 ## Deployment
 
 To deploy these security rules to Firebase:

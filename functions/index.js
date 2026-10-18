@@ -8605,7 +8605,7 @@ async function loadFirestoreUsageSection() {
     return buildFirestoreUsageSection({rows});
   } catch (error) {
     console.warn('loadFirestoreUsageSection: Firestore-Nutzung nicht verfügbar:', error.message);
-    return buildFirestoreUsageSection({error: error.message});
+    return buildFirestoreUsageSection({error: error.message, status: error.status});
   }
 }
 
@@ -8835,14 +8835,46 @@ exports.runNutritionRecalcForFlaggedRecipes = onCall(
         throw new HttpsError('permission-denied', 'Admin or moderator role required.');
       }
 
-      void runNutritionRecalcForFlaggedRecipesCore({triggeredBy: `manual:${callerUid}`})
-          .catch((err) => console.error('runNutritionRecalcForFlaggedRecipes: background job error', err));
+      // Nur den Auftrag anlegen: Arbeit nach der Antwort eines Callables
+      // drosselt Cloud Run fast auf null und darf sie jederzeit beenden.
+      // processNutritionRecalcRequest führt ihn mit voller Laufzeit aus.
+      await admin.firestore().collection('jobRequests').add({
+        type: 'nutritionRecalc',
+        triggeredBy: `manual:${callerUid}`,
+        requestedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
 
       return {
         started: true,
         message: 'Recalc-Job gestartet. Ergebnis wird per E-Mail gesendet.',
       };
     }
+);
+
+/**
+ * Führt einen manuell angeforderten Nährwert-Recalc aus (Auftrag aus
+ * runNutritionRecalcForFlaggedRecipes). Der Trigger wartet bis zum Ende des
+ * Jobs und behält dadurch die volle Rechenzeit, wie der Nachtlauf. Der
+ * Auftrag wird danach gelöscht; Ergebnis und Fehler stehen in der Mail.
+ */
+exports.processNutritionRecalcRequest = onDocumentCreated(
+    {
+      document: 'jobRequests/{requestId}',
+      timeoutSeconds: 540,
+      maxInstances: 1,
+      secrets: [geminiApiKey, smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom],
+    },
+    async (event) => {
+      const data = event.data ? event.data.data() : null;
+      if (!data || data.type !== 'nutritionRecalc') return;
+      try {
+        await runNutritionRecalcForFlaggedRecipesCore({triggeredBy: data.triggeredBy || 'manual'});
+      } finally {
+        await event.data.ref.delete().catch((err) => {
+          console.error('processNutritionRecalcRequest: could not delete job request', err);
+        });
+      }
+    },
 );
 
 exports.nightlyNutritionRecalc = onSchedule(
