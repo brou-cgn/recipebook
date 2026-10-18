@@ -18,7 +18,7 @@ const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 const {requireShortcutPin} = require('./webImportPin');
 const {evaluateLowCarbTag} = require('./lowCarb');
 const {countNewRecipes, sendFuerDichEntdecktPush} = require('./fuerDichEntdecktPush');
-const {isRotationDue, getProtectedRecipeIds, pickRotationRecipeIds, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleResult, recipeAvailableToUser, mergeRuleMatches, explainTopicExclusion, isVisibleToUser, pickTopic, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
+const {isRotationDue, getProtectedRecipeIds, pickRotationRecipeIds, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleResult, recipeAvailableToUser, usesFollowedScope, buildAttribution, mergeRuleMatches, explainTopicExclusion, isVisibleToUser, pickTopic, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
 const {normalizeCuisines, suggestNewCuisines} = require('./cuisineNormalization');
 const {fetchFirestoreDailyUsage, buildFirestoreUsageSection} = require('./firestoreUsage');
 const follow = require('./follow');
@@ -10285,25 +10285,30 @@ const applyTopicRules = async (db, topicDocs, recipes) => {
   for (const d of topicDocs) {
     const topic = d.data();
     const ruled = hasRecipeRule(topic.recipeRule);
-    const {matches, owners} = ruled ?
+    const {matches, owners, actors} = ruled ?
       computeRuleResult(topic.recipeRule, recipes, lastCookedByRecipe, now, lastCookedByUser) :
-      {matches: [], owners: {}};
+      {matches: [], owners: {}, actors: {}};
     const merged = mergeRuleMatches(topic, matches);
     // Scope 'own': who qualifies for each rule-added recipe (hand-picked ones are for everybody).
     const autoRecipeOwners = Object.fromEntries(
         merged.autoRecipeIds.filter((id) => owners[id]).map((id) => [id, owners[id]]));
+    // Scopes 'own' / 'followed': what each actor did last (kind + time), for the attribution.
+    const autoRecipeActors = Object.fromEntries(
+        merged.autoRecipeIds.filter((id) => actors[id]).map((id) => [id, actors[id]]));
     const update = {
       recipeIds: merged.recipeIds,
       autoRecipeIds: merged.autoRecipeIds,
       autoRecipeOwners: Object.keys(autoRecipeOwners).length > 0 ?
         autoRecipeOwners : admin.firestore.FieldValue.delete(),
+      autoRecipeActors: Object.keys(autoRecipeActors).length > 0 ?
+        autoRecipeActors : admin.firestore.FieldValue.delete(),
       ruleMatchedFor: ruled ? ruleKey(topic.recipeRule) : admin.firestore.FieldValue.delete(),
       ruleMatchedAt: ruled ? admin.firestore.FieldValue.serverTimestamp() : admin.firestore.FieldValue.delete(),
       // legacy field of an earlier version (matches were stored separately)
       ruleRecipeIds: admin.firestore.FieldValue.delete(),
     };
     await d.ref.update(update);
-    updates.set(d.id, {...update, ownersMap: autoRecipeOwners, matchCount: matches.length, added: merged.autoRecipeIds.length});
+    updates.set(d.id, {...update, ownersMap: autoRecipeOwners, actorsMap: autoRecipeActors, matchCount: matches.length, added: merged.autoRecipeIds.length});
   }
   return updates;
 };
@@ -10373,6 +10378,7 @@ const loadFuerDichEntdecktRotationContext = async (db) => {
       topic.recipeIds = u.recipeIds;
       topic.autoRecipeIds = u.autoRecipeIds;
       topic.autoRecipeOwners = u.ownersMap;
+      topic.autoRecipeActors = u.actorsMap;
     });
   }
 
@@ -10407,12 +10413,20 @@ const rotateFuerDichEntdecktList = async (db, listDoc, context, now = Date.now()
   // recipe the owner may see take part, and only such recipes are drawn.
   const userDoc = await db.collection('users').doc(list.ownerId).get();
   const user = {id: list.ownerId, isAdmin: userDoc.exists && userDoc.data().role === 'admin'};
+  // Topics with scope 'followed' hand out what the owner's accepted follows did.
+  const followedUsed = activeTopics.some((t) => usesFollowedScope(t.recipeRule));
+  const followedIds = new Set();
+  if (followedUsed) {
+    const followsSnap = await db.collection('follows')
+        .where('followerId', '==', list.ownerId).where('status', '==', 'accepted').get();
+    followsSnap.docs.forEach((d) => followedIds.add(d.data().followeeId));
+  }
   const candidates = activeTopics
       .map((t) => ({
         ...t,
         usableRecipeIds: t.usableRecipeIds.filter((id) =>
           isVisibleToUser(recipesById.get(id), user, groupsById) &&
-          recipeAvailableToUser(t, id, user.id)),
+          recipeAvailableToUser(t, id, user.id, followedIds)),
       }))
       .filter((t) => t.usableRecipeIds.length > 0);
   const topic = pickTopic(candidates, list.themeId || null);
@@ -10432,6 +10446,15 @@ const rotateFuerDichEntdecktList = async (db, listDoc, context, now = Date.now()
     themeId: topic.id,
     rotatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
+  if (followedUsed) {
+    // Private to the owner (rules: read by owner only, written by functions only).
+    await db.doc(`users/${list.ownerId}/fuerDichEntdeckt/current`).set({
+      listId: listDoc.id,
+      themeId: topic.id,
+      recipes: buildAttribution(topic, recipeIds, followedIds),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
   if (notify) {
     await sendFuerDichEntdecktPush(admin, db, list.ownerId, {
       listId: listDoc.id,

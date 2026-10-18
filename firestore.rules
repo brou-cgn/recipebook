@@ -473,6 +473,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Wer hinter den Rezepten der Liste "Für dich entdeckt" steht (nur Tag, höchstens
+    // 3 Akteure je Rezept). Privat: Die Namen der Gefolgten sieht nur der Eigentümer.
+    match /users/{userId}/fuerDichEntdeckt/{docId} {
+      allow read: if isMember() && request.auth.uid == userId;
+      allow write: if false;
+    }
+
     // Sperrfristen/Blockaden und Tageszähler: nur serverseitig, auch nicht lesbar,
     // damit niemand Ablehnung oder Blockade erkennen kann.
     match /followCooldowns/{id} {

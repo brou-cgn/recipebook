@@ -87,6 +87,16 @@ test('followBlocks: nur der Eigentümer liest, niemand schreibt', async () => {
   await assertFails(as.user(env, 'other').doc('users/other/followBlocks/zoe').set({ followerId: 'zoe' }));
 });
 
+test('fuerDichEntdeckt/current: nur der Eigentümer liest, niemand schreibt', async () => {
+  await seed(env, async (db) => {
+    await db.doc('users/other/fuerDichEntdeckt/current').set({ recipes: {} });
+  });
+  await assertSucceeds(as.user(env, 'other').doc('users/other/fuerDichEntdeckt/current').get());
+  await assertFails(as.user(env, 'reader').doc('users/other/fuerDichEntdeckt/current').get());
+  await assertFails(as.user(env, 'other').doc('users/other/fuerDichEntdeckt/current').set({ recipes: {} }));
+  await assertFails(as.user(env, 'other').doc('users/other/fuerDichEntdeckt/current').delete());
+});
+
 test('followCooldowns und followLimits: weder lesen noch schreiben', async () => {
   for (const uid of ['reader', 'other', 'admin']) {
     await assertFails(as.user(env, uid).doc('followCooldowns/reader_other').get());

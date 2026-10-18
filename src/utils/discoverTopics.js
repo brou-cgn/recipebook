@@ -19,9 +19,12 @@
  *     created / lastCooked: { minDays, maxDays } = Alter in Tagen (inklusive;
  *       gleiche Werte = "genau vor n Tagen"; null = offen)
  *     dateMode: 'all' | 'any' – gelten beide Datumsbedingungen oder eine
- *     dateScope: 'all' | 'own' – Datumsbedingungen für alle Aktionen oder nur
- *       die eigenen: alle Treffer bleiben im Thema, ausgespielt werden sie aber
- *       nur an Nutzer, die das Rezept erstellt bzw. gekocht haben
+ *     scopes: ['all'] | ['own'] | ['followed'] | ['own', 'followed'] –
+ *       Datumsbedingungen für alle Aktionen oder nur die eigenen bzw. die der
+ *       Gefolgten: alle Treffer bleiben im Thema, ausgespielt werden sie aber
+ *       nur an Nutzer, die das Rezept erstellt bzw. gekocht haben (own) oder
+ *       einer Person folgen, die es getan hat (followed). 'all' schließt die
+ *       anderen aus; früheres `dateScope: 'own'` gilt als ['own']
  *     Die Auswertung passiert im Rotationsjob (functions/).
  */
 
@@ -86,6 +89,22 @@ const toDays = (value) => {
 };
 const cleanRange = (range) => ({ minDays: toDays(range?.minDays), maxDays: toDays(range?.maxDays) });
 
+export const RULE_SCOPES = ['own', 'followed'];
+
+const cleanScopes = (rule) => {
+  const raw = Array.isArray(rule?.scopes) ? rule.scopes : rule?.dateScope === 'own' ? ['own'] : [];
+  const picked = RULE_SCOPES.filter((scope) => raw.includes(scope));
+  return picked.length > 0 ? picked : ['all'];
+};
+
+/** Schaltet einen Bereich um: 'all' schließt 'own'/'followed' aus; leer fällt auf 'all' zurück. */
+export const toggleScope = (scopes, value) => {
+  if (value === 'all') return ['all'];
+  const set = new Set(scopes.filter((s) => s !== 'all'));
+  if (set.has(value)) set.delete(value); else set.add(value);
+  return cleanScopes({ scopes: [...set] });
+};
+
 export const emptyRecipeRule = () => ({
   ingredientIds: { include: [], exclude: [] },
   mealCategories: { include: [], exclude: [] },
@@ -93,7 +112,7 @@ export const emptyRecipeRule = () => ({
   created: { minDays: null, maxDays: null },
   lastCooked: { minDays: null, maxDays: null },
   dateMode: 'all',
-  dateScope: 'all',
+  scopes: ['all'],
 });
 
 /** Bereinigte Kopie der Regel (getrimmt, ohne Duplikate, Tage als Zahl oder null). */
@@ -104,7 +123,7 @@ export const normalizeRecipeRule = (rule) => ({
   created: cleanRange(rule?.created),
   lastCooked: cleanRange(rule?.lastCooked),
   dateMode: rule?.dateMode === 'any' ? 'any' : 'all',
-  dateScope: rule?.dateScope === 'own' ? 'own' : 'all',
+  scopes: cleanScopes(rule),
 });
 
 const filterActive = (f) => f.include.length > 0 || f.exclude.length > 0;
@@ -136,7 +155,8 @@ export const formatRecipeRule = (rule) => {
     rangeActive(r.created) ? describeRange('erstellt', r.created) : '',
     rangeActive(r.lastCooked) ? describeRange('gekocht', r.lastCooked) : '',
   ].filter(Boolean).join(r.dateMode === 'any' ? ' oder ' : ' und ');
-  const ownScope = dates && r.dateScope === 'own' ? ' (nur eigene)' : '';
+  const ownScope = dates && !r.scopes.includes('all') ?
+    ` (${r.scopes.map((s) => (s === 'own' ? 'eigene' : 'Gefolgte')).join(' + ')})` : '';
   return [
     ...describeFilter('Zutat', r.ingredientIds),
     ...describeFilter('Kategorie', r.mealCategories),
