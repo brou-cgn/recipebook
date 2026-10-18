@@ -32,12 +32,16 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | Ablehnen | Still, der Anfragende sieht weiter „Angefragt". Zusätzlich Blockieren im MVP. |
 | Rules vorab | Eigener Schritt vor dem Feature (Phase 0). |
 | Deployment | Workflow beim Merge, kein Staging. Reihenfolge Rules, dann Functions, dann Client. |
+| Sperrfrist und Rate-Limit | Beides zusätzlich zum Blockieren: 30 Tage Sperrfrist nach Ablehnung und Rate-Limit pro Absender (18.10.2026). |
+| Push bei neuer Anfrage | Im MVP (18.10.2026), nutzt `backgroundUpdatesEnabled`. Rate-Limit und Sperrfrist werden vor dem Push gebaut und getestet, weil Push sonst ein Spam-Kanal ist. |
+| Abgelehnte Anfrage | Bleibt dauerhaft „Angefragt", der Name bleibt ein Link auf das Profil (18.10.2026). |
+| Plätze für Gefolgte | Eigenes „Für dich entdeckt"-Thema, z. B. „Deine Community kocht" (`scopes: ['followed']`, `lastCooked`, Zeitfenster 30 Tage). Das Thema bringt seine Plätze wie jedes andere mit (18.10.2026). Wie die Rotation Plätze auf Themen verteilt, wird zu Beginn von PR 5 geprüft. |
 
 ## Stand der Umsetzung
 
 | PR | Inhalt | Stand |
 |---|---|---|
-| 1 | Rules-Tests (Emulator, CI-Job), `cookDates` validieren, `security.md` korrigieren, dieses Dokument | PR #3461 offen (Branch `claude/firestore-rules-tests`) |
+| 1 | Rules-Tests (Emulator, CI-Job), `cookDates` validieren, `security.md` korrigieren, dieses Dokument | PR #3461 gemergt und deployt (18.10.2026), CI grün inkl. neuem Job „Firestore Rules" |
 | 2 | `follows`, Callables, Rules mit Tests, Flag `follow`, Sperren | offen |
 | 3 | Netzwerk-Seite, Badge am Tab „Chefkoch" | offen |
 | 4 | Folgen-Icon (Rezeptkarte, Kochtagebuch), Profilseite | offen |
@@ -49,12 +53,9 @@ Tabelle hier nachziehen.
 
 ## Offen
 
-- Sperrfrist (30 Tage) und Rate-Limit pro Absender: zusätzlich zum Blockieren oder ersetzt es sie?
-- Push bei neuer Anfrage im MVP oder später (nutzt `backgroundUpdatesEnabled`)?
-- Abgelehnte Anfrage bleibt dauerhaft „Angefragt" und der Name dauerhaft ein Link. Akzeptabel?
 - Zustimmungsdialog im Kochtagebuch (in der Skizze ohne).
 - Datenschutzerklärung um Follow und proaktive Ausspielung ergänzen, vor dem Rollout (Text liefert Claude, Freigabe beim Eigentümer).
-- Wie viele Plätze bekommen Gefolgte in der Liste (aktuell 5 Plätze, Themen ersetzt oder ergänzt)?
+- Verhalten des Themas „Deine Community kocht" ohne Flag `follow` oder ohne Gefolgte (Vorschlag: ausblenden), Platzverteilung in der Rotation (PR 5).
 
 ## Bekannte Risiken und Voraussetzungen
 
