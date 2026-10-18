@@ -221,3 +221,45 @@ test('isCooldownActive', () => {
   assert.equal(follow.isCooldownActive({until: {toMillis: () => NOW}}, NOW), false);
   assert.equal(follow.isCooldownActive({blocked: false}, NOW), false);
 });
+
+test('onNewRequest läuft einmal bei einer neuen, sichtbaren Anfrage', async () => {
+  const db = makeDb(baseSeed());
+  const calls = [];
+  const onNewRequest = async (info) => calls.push(info);
+  await request(db, 'anna', 'ben', {onNewRequest});
+  assert.deepEqual(calls, [{followerId: 'anna', followeeId: 'ben'}]);
+  // wiederholter Aufruf mit bestehender Anfrage: kein zweiter Push
+  await request(db, 'anna', 'ben', {onNewRequest});
+  assert.equal(calls.length, 1);
+});
+
+test('onNewRequest bleibt aus bei Sperre und bei noch stehender Inbox-Zeile', async () => {
+  const db = makeDb(baseSeed());
+  const calls = [];
+  const onNewRequest = async (info) => calls.push(info);
+  await request(db, 'anna', 'ben', {onNewRequest});
+  // Anfragende zieht zurück und fragt neu an, die alte Inbox-Zeile steht noch
+  db.store.delete('follows/anna_ben');
+  await request(db, 'anna', 'ben', {onNewRequest});
+  assert.equal(calls.length, 1);
+  // Sperre (Ablehnung): Anfrage sieht normal aus, löst aber nichts aus
+  await respond(db, 'ben', 'anna', 'decline');
+  db.store.delete('follows/anna_ben');
+  await request(db, 'anna', 'ben', {onNewRequest, nowMs: NOW + DAY});
+  assert.equal(calls.length, 1);
+});
+
+test('Fehler im Push ändern die Antwort nicht', async () => {
+  const db = makeDb(baseSeed());
+  const original = console.error;
+  console.error = () => {};
+  try {
+    const result = await request(db, 'anna', 'ben', {
+      onNewRequest: async () => { throw new Error('fcm down'); },
+    });
+    assert.deepEqual(result, {status: 'pending'});
+    assert.ok(db.store.has('users/ben/followInbox/anna'));
+  } finally {
+    console.error = original;
+  }
+});

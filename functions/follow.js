@@ -98,10 +98,13 @@ const isCooldownActive = (cooldown, nowMs) => {
  * @param {Object} params
  * @param {{uid: string, token?: Object}} params.auth - request.auth des Callables
  * @param {*} params.followeeId - UID der Person, der gefolgt werden soll
+ * @param {Function} [params.onNewRequest] - wird nach dem Anlegen mit {followerId, followeeId}
+ *   aufgerufen, wenn die Anfrage in der Inbox des Gefolgten gelandet ist (Push).
+ *   Best-effort: ein Fehler hier ändert die Antwort nicht.
  * @param {number} [params.nowMs]
  * @return {Promise<{status: string}>} 'pending' oder, bei bestehender Beziehung, deren Status
  */
-const requestFollow = async (admin, db, HttpsError, {auth, followeeId, nowMs = Date.now()}) => {
+const requestFollow = async (admin, db, HttpsError, {auth, followeeId, onNewRequest, nowMs = Date.now()}) => {
   if (!auth) fail(HttpsError, 'unauthenticated', 'Du musst angemeldet sein.');
   if (auth.token?.firebase?.sign_in_provider === 'anonymous') {
     fail(HttpsError, 'permission-denied', 'Gäste können niemandem folgen.');
@@ -129,9 +132,10 @@ const requestFollow = async (admin, db, HttpsError, {auth, followeeId, nowMs = D
 
   const followRef = db.doc(`follows/${id}`);
   const inboxRef = db.doc(`users/${followeeId}/followInbox/${followerId}`);
-  return db.runTransaction(async (tx) => {
+  const result = await db.runTransaction(async (tx) => {
     const existing = await tx.get(followRef);
-    if (existing.exists) return {status: existing.data().status};
+    const inboxExisting = await tx.get(inboxRef);
+    if (existing.exists) return {status: existing.data().status, notify: false};
     tx.set(followRef, {
       followerId,
       followeeId,
@@ -145,8 +149,19 @@ const requestFollow = async (admin, db, HttpsError, {auth, followeeId, nowMs = D
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
     }
-    return {status: 'pending'};
+    // Push nur, wenn die Anfrage neu in der Inbox steht: Wer zurückzieht und neu
+    // anfragt, solange die alte Inbox-Zeile noch da ist, löst keinen zweiten Push aus.
+    return {status: 'pending', notify: !silent && !inboxExisting.exists};
   });
+
+  if (result.notify && typeof onNewRequest === 'function') {
+    try {
+      await onNewRequest({followerId, followeeId});
+    } catch (err) {
+      console.error('requestFollow: Benachrichtigung fehlgeschlagen:', err);
+    }
+  }
+  return {status: result.status};
 };
 
 /**
