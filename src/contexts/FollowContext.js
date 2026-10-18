@@ -4,12 +4,12 @@ import '../components/UndoSnackbar.css';
 
 // Eigene ausgehende Follows (Vorhaben docs/vorhaben/follow.md, PR 4). Ohne Provider
 // oder ohne Freischaltung ist `enabled` false: Folgen-Buttons rendern dann nichts.
-const INERT = { enabled: false, userId: null, statusOf: () => null, request: async () => {} };
+const INERT = { enabled: false, userId: null, statusOf: () => null, request: async () => {}, openProfile: null };
 const FollowContext = createContext(INERT);
 
 const NOTICE_MS = 6000;
 
-export function FollowProvider({ userId, enabled, children }) {
+export function FollowProvider({ userId, enabled, onOpenProfile, children }) {
   const active = Boolean(userId && enabled);
   const [statuses, setStatuses] = useState({});
   const [notice, setNotice] = useState(null);
@@ -56,7 +56,8 @@ export function FollowProvider({ userId, enabled, children }) {
     userId,
     statusOf: (id) => statuses[id] || null,
     request,
-  }), [active, userId, statuses, request]);
+    openProfile: onOpenProfile || null,
+  }), [active, userId, statuses, request, onOpenProfile]);
 
   return (
     <FollowContext.Provider value={value}>

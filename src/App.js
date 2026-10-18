@@ -92,6 +92,7 @@ import {
 } from './utils/eventsFirestore';
 import { NutritionReferenceProvider, useNutritionReference } from './contexts/NutritionReferenceContext';
 import { FollowProvider } from './contexts/FollowContext';
+import MemberProfilePage from './components/MemberProfilePage';
 import { RecipeImportQueueProvider, useRecipeImportQueue } from './contexts/RecipeImportQueueContext';
 import { updateAppBadge } from './utils/appBadge';
 import { resolveRecipeGroupContext, resolveImportGroupContext } from './utils/recipeGroupContext';
@@ -418,6 +419,7 @@ function App() {
   const [groups, setGroups] = useState([]);
   const [groupsLoading, setGroupsLoading] = useState(true);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [profileUserId, setProfileUserId] = useState(null);
   const [activeGroupId, setActiveGroupId] = useState(null);
   const [isPrivateListSettingsTabOpen, setIsPrivateListSettingsTabOpen] = useState(false);
   const [publicGroupId, setPublicGroupId] = useState(null);
@@ -2749,7 +2751,7 @@ function App() {
       {!splashDismissed && <SplashScreen exiting={initialStartseiteReady} />}
       <NutritionReferenceProvider enabled={!!currentUser}>
     <RecipeImportQueueProvider userId={currentUser?.id}>
-    <FollowProvider userId={currentUser?.id} enabled={Boolean(currentUser?.follow) && !currentUser?.isGuest}>
+    <FollowProvider userId={currentUser?.id} enabled={Boolean(currentUser?.follow) && !currentUser?.isGuest} onOpenProfile={setProfileUserId}>
       <AppNutritionRowsSync onRows={setNutritionReferenceRows} />
       <AppReviewRecipesSync onReviewRecipes={setPendingReviewRecipes} />
       {pendingReviewImport && currentUser && (
@@ -2788,6 +2790,17 @@ function App() {
         )}
         {isSettingsOpen ? (
           <Settings onBack={handleCloseSettings} currentUser={currentUser} allUsers={allUsers} allRecipes={recipes} onUpdateRecipe={(id, updates) => updateRecipeInFirestore(id, updates)} />
+        ) : profileUserId ? (
+          <MemberProfilePage
+            userId={profileUserId}
+            name={allUsers.find((u) => u.id === profileUserId)?.vorname || 'Mitglied'}
+            recipes={recipes}
+            onBack={() => setProfileUserId(null)}
+            onSelectRecipe={(recipe) => {
+              setProfileUserId(null);
+              handleSelectRecipe(recipe);
+            }}
+          />
         ) : selectedRecipe ? (
         // Recipe detail view - shown regardless of currentView
         <RecipeDetail
