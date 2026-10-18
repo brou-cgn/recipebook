@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import './Kueche.css';
 import RecipeTimeline from './RecipeTimeline';
 import PersonalDataPage from './PersonalDataPage';
+import NetworkPage from './NetworkPage';
 import {
   getTimelineBubbleIcon,
   getTimelineMenuBubbleIcon,
@@ -188,7 +189,7 @@ function EventCalibrationBarChart({ snapshots }) {
   );
 }
 
-function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated, onViewChange, openPersonalData, onPersonalDataOpened, onPersonalDataVisibilityChange }) {
+function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated, onViewChange, openPersonalData, onPersonalDataOpened, onPersonalDataVisibilityChange }) {
   const { rows: nutritionReferenceRows } = useNutritionReference();
   const [showTimeline, setShowTimeline] = useState(false);
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
@@ -197,6 +198,8 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   const [categoryImages, setCategoryImages] = useState([]);
   const [timelineCookEventDefaultImage, setTimelineCookEventDefaultImage] = useState(null);
   const [showPersonalData, setShowPersonalData] = useState(false);
+  const [showNetwork, setShowNetwork] = useState(false);
+  const canUseFollow = Boolean(currentUser?.follow) && !currentUser?.isGuest;
   const [appCalls, setAppCalls] = useState([]);
   const [recipeCalls, setRecipeCalls] = useState([]);
   const [cookDates, setCookDates] = useState([]);
@@ -414,7 +417,9 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
 
   return (
     <div className="kueche-container">
-      {showPersonalData ? (
+      {showNetwork ? (
+        <NetworkPage currentUser={currentUser} onBack={() => setShowNetwork(false)} />
+      ) : showPersonalData ? (
         <PersonalDataPage
           currentUser={currentUser}
           onBack={() => setShowPersonalData(false)}
@@ -446,6 +451,27 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
               )}
             </div>
           </div>
+          {canUseFollow && (
+            <div
+              className="kueche-tile kueche-tile--netzwerk"
+              data-testid="netzwerk-tile"
+              onClick={() => setShowNetwork(true)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowNetwork(true); } }}
+              role="button"
+              tabIndex={0}
+              aria-label="Netzwerk öffnen"
+            >
+              <div className="kueche-tile-content">
+                <h3>Netzwerk</h3>
+                <div className="kueche-tile-meta">
+                  <span className="meta-text">
+                    <strong>{followRequestCount}</strong>
+                    <span>{followRequestCount === 1 ? 'offene Anfrage' : 'offene Anfragen'}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
           <div
             className="kueche-tile kueche-tile--mise-en-place"
             data-testid="mise-en-place-tile"
