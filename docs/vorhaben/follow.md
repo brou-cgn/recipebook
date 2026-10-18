@@ -42,8 +42,8 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | PR | Inhalt | Stand |
 |---|---|---|
 | 1 | Rules-Tests (Emulator, CI-Job), `cookDates` validieren, `security.md` korrigieren, dieses Dokument | PR #3461 gemergt und deployt (18.10.2026), CI grün inkl. neuem Job „Firestore Rules" |
-| 2 | `follows`, `requestFollow`/`respondFollow`, Rules mit Tests, Flag `follow`, Inbox, Sperrfrist, Blockieren, Tageslimit | PR #3462 gemergt (18.10.2026), CI grün; Deploy von Rules und Functions beim Merge ausgelöst, Ergebnis noch nicht geprüft (Function-Tests 16, Rules-Tests 8 neu) |
-| 2b | Push bei neuer Anfrage (nach dem Muster von `fuerDichEntdecktPush.js`) | offen, baut auf PR 2 |
+| 2 | `follows`, `requestFollow`/`respondFollow`, Rules mit Tests, Flag `follow`, Inbox, Sperrfrist, Blockieren, Tageslimit | PR #3462 gemergt und deployt (18.10.2026, Deploy-Lauf 1842 erfolgreich), CI grün (Function-Tests 16, Rules-Tests 8 neu) |
+| 2b | Push bei neuer Anfrage (`functions/followPush.js`, gemeinsamer Helfer `sendDataPush` in `fuerDichEntdecktPush.js`) | Branch `claude/follow-pr2b-push` (Function-Tests +8) |
 | 3 | Netzwerk-Seite, Badge am Tab „Chefkoch" | offen |
 | 4 | Folgen-Icon (Rezeptkarte, Kochtagebuch), Profilseite | offen |
 | 5 | Themenregel `scopes` (Admin-UI `DiscoverTopicsTab.js`, Nachtlauf, Rotation), privates Attributionsdokument | offen |
@@ -58,6 +58,9 @@ blockierte Anfrage bleibt für den Anfragenden `pending`; der Gefolgte sieht sie
 aus `users/{uid}/followInbox` verschwindet. Ein Entsperren fehlt noch (siehe Offen).
 
 ## Offen
+
+- Verwaiste Inbox-Zeilen: Zieht der Anfragende zurück (Client löscht `follows`), bleibt die Zeile in `users/{uid}/followInbox` stehen. Netzwerk-Seite und Badge (PR 3) müssen die Inbox gegen das `follows`-Dokument prüfen, oder eine Function räumt auf. Der Push dedupliziert darüber (kein zweiter Push, solange die Zeile steht).
+- Tippen auf den Push öffnet die Startseite; der Sprung in die Netzwerk-Seite kommt mit PR 3 (`follow_request` in `src/service-worker.js`/`firebase-messaging-sw.js`).
 
 - Entsperren blockierter Personen: ohne Aktion bleibt die Sperre ewig. Gehört in PR 3 (Netzwerk-Seite) und braucht eine Aktion `unblock` in `respondFollow`.
 

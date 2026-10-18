@@ -22,6 +22,7 @@ const {isRotationDue, getProtectedRecipeIds, pickRotationRecipeIds, getActiveTop
 const {normalizeCuisines, suggestNewCuisines} = require('./cuisineNormalization');
 const {fetchFirestoreDailyUsage, buildFirestoreUsageSection} = require('./firestoreUsage');
 const follow = require('./follow');
+const {sendFollowRequestPush} = require('./followPush');
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -10515,13 +10516,15 @@ exports.fillNewFuerDichEntdecktList = onDocumentCreated(
 /**
  * Cloud Function: Follow-Anfrage an ein anderes Mitglied (Vorhaben Follow, PR 2).
  * Prüft Rolle und Flag `follow` beider Seiten, Tageslimit und Sperren; Details
- * in follow.js. Input: { followeeId }. Returns: { status: 'pending' | 'accepted' }.
+ * in follow.js. Bei einer neuen, dem Gefolgten gezeigten Anfrage geht ein Push raus
+ * (followPush.js). Input: { followeeId }. Returns: { status: 'pending' | 'accepted' }.
  */
 exports.requestFollow = onCall(
     {maxInstances: 10, invoker: 'public'},
     (request) => follow.requestFollow(admin, admin.firestore(), HttpsError, {
       auth: request.auth,
       followeeId: request.data?.followeeId,
+      onNewRequest: (info) => sendFollowRequestPush(admin, admin.firestore(), info),
     }),
 );
 

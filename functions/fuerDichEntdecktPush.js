@@ -34,16 +34,20 @@ const buildPushText = ({listId, label, newCount}) => {
 };
 
 /**
+ * Sends one data-only FCM message to all devices of a user who opted in
+ * (users/{uid}.backgroundUpdatesEnabled) and has at least one saved token.
+ * Stale tokens are removed. Best-effort: never throws.
  * @param {Object} admin - firebase-admin
  * @param {Object} db - admin.firestore()
- * @param {string} ownerId - owner of the list
- * @param {Object} info - see buildPushText (listId, label, newCount)
+ * @param {string} userId - recipient
+ * @param {{title: string, body: string, notificationId: string, data?: Object}} message
+ *   `data` carries the type and any further string fields of the push payload
+ * @param {string} logPrefix - log line prefix on failure (no user data, see AGENTS.md)
  * @return {Promise<number>} number of messages sent
  */
-const sendFuerDichEntdecktPush = async (admin, db, ownerId, info) => {
-  if (!ownerId || !(info.newCount > 0)) return 0;
+const sendDataPush = async (admin, db, userId, {title, body, notificationId, data}, logPrefix) => {
   try {
-    const userRef = db.collection('users').doc(ownerId);
+    const userRef = db.collection('users').doc(userId);
     const userSnap = await userRef.get();
     if (!userSnap.exists) return 0;
     const userData = userSnap.data();
@@ -51,16 +55,14 @@ const sendFuerDichEntdecktPush = async (admin, db, ownerId, info) => {
     const tokens = Array.isArray(userData.fcmTokens) ? userData.fcmTokens.filter(Boolean) : [];
     if (tokens.length === 0) return 0;
 
-    const {title, body, notificationId} = buildPushText(info);
     const response = await admin.messaging().sendEachForMulticast({
       tokens,
       data: {
-        type: 'fuer_dich_entdeckt',
+        ...data,
         title,
         body,
         icon: '/logo192.png',
         badge: '/favicon.ico',
-        listId: info.listId,
         notificationId,
       },
       apns: {
@@ -85,10 +87,26 @@ const sendFuerDichEntdecktPush = async (admin, db, ownerId, info) => {
     }
     return response.successCount || 0;
   } catch (err) {
-    // No user data in the log (AGENTS.md), only the list.
-    console.error(`sendFuerDichEntdecktPush: failed for list ${info.listId}:`, err);
+    console.error(logPrefix, err);
     return 0;
   }
 };
 
-module.exports = {countNewRecipes, buildPushText, sendFuerDichEntdecktPush};
+/**
+ * @param {Object} admin - firebase-admin
+ * @param {Object} db - admin.firestore()
+ * @param {string} ownerId - owner of the list
+ * @param {Object} info - see buildPushText (listId, label, newCount)
+ * @return {Promise<number>} number of messages sent
+ */
+const sendFuerDichEntdecktPush = async (admin, db, ownerId, info) => {
+  if (!ownerId || !(info.newCount > 0)) return 0;
+  const {title, body, notificationId} = buildPushText(info);
+  return sendDataPush(
+      admin, db, ownerId,
+      {title, body, notificationId, data: {type: 'fuer_dich_entdeckt', listId: info.listId}},
+      `sendFuerDichEntdecktPush: failed for list ${info.listId}:`,
+  );
+};
+
+module.exports = {countNewRecipes, buildPushText, sendDataPush, sendFuerDichEntdecktPush};
