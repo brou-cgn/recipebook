@@ -6052,7 +6052,6 @@ exports.sendGroupInvitationEmail = onCall(
         },
       });
 
-      const safeEmail = escapeHtml(normalizedEmail);
       const safeUrl = escapeHtml(registrationUrl);
 
       const mailOptions = {
@@ -7180,27 +7179,6 @@ const MAX_SHARED_RECIPE_IDS = 100;
 const STATIC_FALLBACK_LOGO_URL = 'https://broubook.web.app/logo512.png';
 
 /**
- * Generates a thumbnail from a Base64 image using sharp.
- * Resizes to at most 1200×630 px (preserving aspect ratio) and re-encodes as
- * JPEG with reduced quality so the result stays well under 100 KB.
- *
- * @param {string} base64Image - Full data-URL, e.g. "data:image/jpeg;base64,…"
- * @return {Promise<string>} data-URL of the generated JPEG thumbnail
- */
-async function generateThumbnail(base64Image) {
-  const matches = base64Image.match(/^data:image\/\w+;base64,(.+)$/s);
-  if (!matches) {
-    throw new Error('generateThumbnail: invalid base64 image format');
-  }
-  const imageBuffer = Buffer.from(matches[1], 'base64');
-  const thumbnailBuffer = await sharp(imageBuffer)
-      .resize(1200, 630, {fit: 'inside', withoutEnlargement: true})
-      .jpeg({quality: 80})
-      .toBuffer();
-  return `data:image/jpeg;base64,${thumbnailBuffer.toString('base64')}`;
-}
-
-/**
  * Decode a recipe reference from ingredient text.
  * Format: [quantity] #recipe:{recipeId}:{recipeName}
  * Returns null if text is not a recipe link.
@@ -7875,7 +7853,7 @@ exports.backfillRecipeThumbnails = onCall(
         const data = doc.data();
 
         // Build images list from the `images` array or from the legacy `image` field
-        let images = Array.isArray(data.images) && data.images.length > 0
+        const images = Array.isArray(data.images) && data.images.length > 0
           ? data.images
           : (data.image ? [{url: data.image, isDefault: true}] : []);
 
