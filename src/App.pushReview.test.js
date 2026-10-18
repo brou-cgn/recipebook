@@ -316,6 +316,7 @@ jest.mock('./utils/storageUtils', () => ({
 
 jest.mock('./utils/recipeFirestore', () => ({
   subscribeToRecipes: jest.fn(() => () => {}),
+  filterVisibleRecipes: (recipes) => recipes,
   subscribeToTempRecipes: (userId, callback) => {
     mockEmitTempRecipes = callback;
     return () => {};
@@ -324,7 +325,6 @@ jest.mock('./utils/recipeFirestore', () => ({
   updateRecipe: jest.fn(),
   deleteRecipe: jest.fn(),
   seedSampleRecipes: () => Promise.resolve(),
-  initializeRecipeCounts: () => Promise.resolve(),
   enableRecipeSharing: () => Promise.resolve(),
 }));
 

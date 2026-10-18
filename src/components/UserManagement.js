@@ -16,6 +16,7 @@ import {
   ROLE_PERMISSIONS_DEFAULT,
   updateRolePermission
 } from '../utils/userManagement';
+import { initializeRecipeCounts } from '../utils/recipeFirestore';
 
 const ROLE_PERMISSION_COLUMNS = [
   { key: 'settingsAccess', label: 'Einstellungen', name: 'Einstellungen' },
@@ -55,6 +56,7 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
   const [adminCount, setAdminCount] = useState(0);
   const [aiOcrScanCounts, setAiOcrScanCounts] = useState({});
   const [rolePermissions, setRolePermissions] = useState(null);
+  const [recalculatingRecipeCounts, setRecalculatingRecipeCounts] = useState(false);
   // Track whether users have been loaded from Firestore at least once
   const firestoreLoadedRef = useRef(false);
 
@@ -87,6 +89,27 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
       counts[user.id] = await getUserAiOcrScanCount(user.id);
     }));
     setAiOcrScanCounts(counts);
+  };
+
+  // Counts are kept current on every recipe add/delete; this repairs drift.
+  // Reads all recipes and users, so it runs only on request.
+  const handleRecalculateRecipeCounts = async () => {
+    setRecalculatingRecipeCounts(true);
+    try {
+      const corrected = await initializeRecipeCounts();
+      await loadUsers();
+      setMessage({
+        text: corrected === 0
+          ? 'Alle Rezeptzähler stimmen.'
+          : `${corrected} Rezeptzähler korrigiert.`,
+        type: 'success'
+      });
+    } catch {
+      setMessage({ text: 'Rezeptzähler konnten nicht neu berechnet werden.', type: 'error' });
+    } finally {
+      setRecalculatingRecipeCounts(false);
+    }
+    setTimeout(() => setMessage({ text: '', type: '' }), 3000);
   };
 
   const loadRolePermissions = async () => {
@@ -391,6 +414,16 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
           <div className="stat-item">
             <button className="action-btn" onClick={loadUsers} title="KI-OCR Zähler aktualisieren">
               ↻ KI-OCR Zähler aktualisieren
+            </button>
+          </div>
+          <div className="stat-item">
+            <button
+              className="action-btn"
+              onClick={handleRecalculateRecipeCounts}
+              disabled={recalculatingRecipeCounts}
+              title="Rezeptanzahl je Benutzer aus allen Rezepten neu berechnen"
+            >
+              {recalculatingRecipeCounts ? 'Berechnung läuft…' : 'Rezeptzähler neu berechnen'}
             </button>
           </div>
         </div>

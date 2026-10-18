@@ -55,16 +55,41 @@ export const loadGuestRecipes = (callback) => {
 };
 
 /**
- * Set up real-time listener for recipes
- * Filters private (draft) recipes to only show to admins and recipe authors.
- * Filters group recipes to only show to members of that group.
- * @param {string} userId - Current user ID (to filter private recipes)
- * @param {boolean} isAdmin - Whether current user is an admin
+ * Decide which recipes the current user may see. Private (draft) recipes are
+ * shown only to admins and their authors; group recipes only to members of
+ * that group (and admins), unless published to the public list.
+ * Kept separate from the listener so a change of the user's groups re-filters
+ * the recipes already loaded instead of re-subscribing to the collection.
+ * @param {Array} recipes - Recipes as delivered by subscribeToRecipes
+ * @param {Object} options
+ * @param {string} options.userId - Current user ID
+ * @param {boolean} options.isAdmin - Whether current user is an admin
+ * @param {string[]} [options.userGroupIds=[]] - IDs of groups the current user belongs to
+ * @param {string[]} [options.publicGroupIds=[]] - IDs of groups visible to everyone
+ * @returns {Array} The visible recipes, in their original order
+ */
+export const filterVisibleRecipes = (recipes, { userId, isAdmin, userGroupIds = [], publicGroupIds = [] }) =>
+  recipes.filter((recipe) => {
+    // Group recipes are only visible to group members (and admins),
+    // unless the recipe has been published to the public list.
+    if (recipe.groupId && !recipe.publishedToPublic) {
+      if (!isAdmin && !userGroupIds.includes(recipe.groupId) && !publicGroupIds.includes(recipe.groupId)) {
+        return false;
+      }
+    }
+
+    // Include recipe if it's public OR if it's private and (user is admin OR recipe author)
+    return !recipe.isPrivate || isAdmin || recipe.authorId === userId;
+  });
+
+/**
+ * Set up real-time listener for recipes.
+ * Delivers every recipe except pending background imports (isTemp); which of
+ * them the user may see is decided by filterVisibleRecipes.
  * @param {Function} callback - Callback function that receives recipes array
- * @param {string[]} [userGroupIds=[]] - IDs of groups the current user belongs to
  * @returns {Function} Unsubscribe function
  */
-export const subscribeToRecipes = (userId, isAdmin, callback, userGroupIds = [], publicGroupIds = []) => {
+export const subscribeToRecipes = (callback) => {
   const recipesRef = collection(db, 'recipes');
 
   return onSnapshot(recipesRef, (snapshot) => {
@@ -82,18 +107,7 @@ export const subscribeToRecipes = (userId, isAdmin, callback, userGroupIds = [],
         return;
       }
 
-      // Group recipes are only visible to group members (and admins),
-      // unless the recipe has been published to the public list.
-      if (recipe.groupId && !recipe.publishedToPublic) {
-        if (!isAdmin && !userGroupIds.includes(recipe.groupId) && !publicGroupIds.includes(recipe.groupId)) {
-          return;
-        }
-      }
-
-      // Include recipe if it's public OR if it's private and (user is admin OR recipe author)
-      if (!recipe.isPrivate || isAdmin || recipe.authorId === userId) {
-        recipes.push(recipe);
-      }
+      recipes.push(recipe);
     });
     callback(recipes);
   }, (error) => {
@@ -379,10 +393,12 @@ export const resetRecipeThumbnail = async (recipeId) => {
 };
 
 /**
- * Initialize recipe_count field for all users based on existing recipes.
- * Counts recipes per authorId and sets the recipe_count field on each user document.
- * Safe to run multiple times as it sets (not increments) the count.
- * @returns {Promise<void>}
+ * Recalculate the recipe_count field for all users from the existing recipes.
+ * addRecipe/updateRecipe/deleteRecipe keep the counts current, so this is
+ * only a manual repair (Benutzerverwaltung) for counts that have drifted.
+ * Reads the whole recipes and users collections; writes only users whose
+ * count differs. Safe to run multiple times as it sets (not increments) the count.
+ * @returns {Promise<number>} Number of user documents corrected
  */
 export const initializeRecipeCounts = async () => {
   try {
@@ -403,14 +419,18 @@ export const initializeRecipeCounts = async () => {
     const usersRef = collection(db, 'users');
     const usersSnap = await getDocs(usersRef);
 
-    // Update recipe_count for each user
+    // Update recipe_count only where it differs, so unchanged users trigger
+    // no write (and no syncPublicProfile run)
     const updates = [];
     usersSnap.forEach((userDoc) => {
       const count = countsByAuthor[userDoc.id] || 0;
-      updates.push(updateDoc(doc(db, 'users', userDoc.id), { recipe_count: count }));
+      if (userDoc.data().recipe_count !== count) {
+        updates.push(updateDoc(doc(db, 'users', userDoc.id), { recipe_count: count }));
+      }
     });
 
     await Promise.all(updates);
+    return updates.length;
   } catch (error) {
     console.error('Error initializing recipe counts:', error);
     throw error;

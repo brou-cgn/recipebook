@@ -31,12 +31,12 @@ jest.mock('./utils/userManagement', () => ({
 // Mock Firebase-dependent utilities
 jest.mock('./utils/recipeFirestore', () => ({
   subscribeToRecipes: jest.fn(() => () => {}),
+  filterVisibleRecipes: (recipes) => recipes,
   subscribeToTempRecipes: jest.fn(() => () => {}),
   addRecipe: jest.fn(),
   updateRecipe: jest.fn(),
   deleteRecipe: jest.fn(),
   seedSampleRecipes: jest.fn(),
-  initializeRecipeCounts: jest.fn(),
   enableRecipeSharing: jest.fn(),
 }));
 
