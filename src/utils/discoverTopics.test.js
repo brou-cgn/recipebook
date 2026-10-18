@@ -1,6 +1,6 @@
 import {
   isValidMonthDay, toMonthDay, formatMonthDay, formatPeriod, validateTopic, sortTopics,
-  normalizeRecipeRule, formatRecipeRule, getDiscoverTopicImage,
+  normalizeRecipeRule, formatRecipeRule, toggleScope, getDiscoverTopicImage,
 } from './discoverTopics';
 import { getDoc } from 'firebase/firestore';
 
@@ -49,13 +49,25 @@ describe('discoverTopics', () => {
     expect(sorted.map((t) => t.id)).toEqual(['c', 'b', 'a']);
   });
 
-  test('dateScope defaults to all and is shown only with a date condition', () => {
-    expect(normalizeRecipeRule({}).dateScope).toBe('all');
-    expect(normalizeRecipeRule({ dateScope: 'own' }).dateScope).toBe('own');
-    expect(normalizeRecipeRule({ dateScope: 'x' }).dateScope).toBe('all');
+  test('scopes default to all, migrate dateScope and show only with a date condition', () => {
+    expect(normalizeRecipeRule({}).scopes).toEqual(['all']);
+    expect(normalizeRecipeRule({ dateScope: 'own' }).scopes).toEqual(['own']);
+    expect(normalizeRecipeRule({ dateScope: 'x' }).scopes).toEqual(['all']);
+    expect(normalizeRecipeRule({ scopes: ['followed', 'own', 'x'] }).scopes).toEqual(['own', 'followed']);
+    expect(normalizeRecipeRule({ scopes: ['all', 'own'] }).scopes).toEqual(['own']);
     expect(formatRecipeRule({ lastCooked: { minDays: 365, maxDays: 365 }, dateScope: 'own' }))
-      .toBe('gekocht vor genau 365 Tagen (nur eigene)');
-    expect(formatRecipeRule({ cuisines: { include: ['Thai'] }, dateScope: 'own' })).toBe('Küche: Thai');
+      .toBe('gekocht vor genau 365 Tagen (eigene)');
+    expect(formatRecipeRule({ lastCooked: { minDays: 0, maxDays: 30 }, scopes: ['own', 'followed'] }))
+      .toBe('gekocht vor 0–30 Tagen (eigene + Gefolgte)');
+    expect(formatRecipeRule({ cuisines: { include: ['Thai'] }, scopes: ['followed'] })).toBe('Küche: Thai');
+  });
+
+  test('toggleScope: all is exclusive, own and followed combine, empty falls back to all', () => {
+    expect(toggleScope(['all'], 'followed')).toEqual(['followed']);
+    expect(toggleScope(['followed'], 'own')).toEqual(['own', 'followed']);
+    expect(toggleScope(['own', 'followed'], 'own')).toEqual(['followed']);
+    expect(toggleScope(['followed'], 'followed')).toEqual(['all']);
+    expect(toggleScope(['own'], 'all')).toEqual(['all']);
   });
 
   describe('getDiscoverTopicImage', () => {

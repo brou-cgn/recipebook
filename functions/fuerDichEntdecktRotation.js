@@ -120,6 +120,16 @@ const cleanRange = (range) => {
   return {minDays: num(range && range.minDays), maxDays: num(range && range.maxDays)};
 };
 
+const SCOPES = ['own', 'followed'];
+const MAX_ATTRIBUTION_ACTORS = 3;
+
+const normalizeScopes = (rule) => {
+  const raw = rule && Array.isArray(rule.scopes) ? rule.scopes :
+    rule && rule.dateScope === 'own' ? ['own'] : [];
+  const picked = SCOPES.filter((scope) => raw.includes(scope));
+  return picked.length > 0 ? picked : ['all'];
+};
+
 /**
  * Normalised copy of a topic's `recipeRule`:
  *   ingredientIds / mealCategories / cuisines: {include: [], exclude: []}
@@ -130,11 +140,13 @@ const cleanRange = (range) => {
  *     fails a lastCooked bound.
  *   dateMode: 'all' (default) = both date conditions must hold, 'any' = one
  *     is enough ("cooked or created exactly a year ago").
- *   dateScope: 'all' (default) = the date conditions look at anybody's
- *     actions; 'own' = every user is judged by their own: "created" needs
- *     recipe.authorId === user, "lastCooked" uses that user's cook dates. All
- *     recipes stay in the topic, but only the users who qualify get them
- *     handed out (see recipeAvailableToUser).
+ *   scopes: ['all'] (default, exclusive) = the date conditions look at
+ *     anybody's actions. 'own' and 'followed' can be combined: every user is
+ *     judged by the actor's own actions - "created" needs recipe.authorId ===
+ *     actor, "lastCooked" uses that actor's cook dates. All recipes stay in
+ *     the topic, but only users who are the actor ('own') or follow the actor
+ *     ('followed', accepted follow) get them handed out (see
+ *     recipeAvailableToUser). Legacy `dateScope: 'own'` reads as ['own'].
  */
 const normalizeRecipeRule = (rule) => ({
   ingredientIds: cleanFilter(rule && rule.ingredientIds),
@@ -143,7 +155,7 @@ const normalizeRecipeRule = (rule) => ({
   created: cleanRange(rule && rule.created),
   lastCooked: cleanRange(rule && rule.lastCooked),
   dateMode: rule && rule.dateMode === 'any' ? 'any' : 'all',
-  dateScope: rule && rule.dateScope === 'own' ? 'own' : 'all',
+  scopes: normalizeScopes(rule),
 });
 
 const filterActive = (f) => f.include.length > 0 || f.exclude.length > 0;
@@ -201,11 +213,14 @@ const matchesDateCriteria = (recipe, r, lastCookedMs, now, createdOk = true) => 
   return r.dateMode === 'any' ? checks.some(Boolean) : checks.every(Boolean);
 };
 
-/** Whether the rule's date conditions are judged per user (needs a date range to matter). */
-const isOwnScoped = (rule) => {
+/** Whether the rule's date conditions are judged per actor (needs a date range to matter). */
+const isActorScoped = (rule) => {
   const r = normalizeRecipeRule(rule);
-  return r.dateScope === 'own' && (rangeActive(r.created) || rangeActive(r.lastCooked));
+  return !r.scopes.includes('all') && (rangeActive(r.created) || rangeActive(r.lastCooked));
 };
+
+/** Whether recipes of the rule are also handed out to the followers of the actors. */
+const usesFollowedScope = (rule) => isActorScoped(rule) && normalizeRecipeRule(rule).scopes.includes('followed');
 
 /**
  * Whether a recipe satisfies a topic's rule. Different criteria combine with
@@ -223,22 +238,41 @@ const matchesRecipeRule = (recipe, rule, lastCookedMs = null, now = Date.now()) 
 };
 
 /**
- * Scope 'own': the users for whom a recipe satisfies the rule - the author
- * counts for "created", each cook-date owner for "lastCooked".
+ * Scopes 'own' / 'followed': the actors for whom a recipe satisfies the rule -
+ * the author counts for "created", each cook-date owner for "lastCooked". Each
+ * actor carries their most recent qualifying action ({kind, ms}).
  * @param {Object} recipe
  * @param {Object} rule - raw `recipeRule`
  * @param {Map<string, number>} lastCookedByUser - userId -> latest cook date (ms) of this recipe
  * @param {number} [now]
- * @return {string[]}
+ * @return {Object<string, {kind: string, ms: number}>} userId -> action
  */
-const ruleOwnersOfRecipe = (recipe, rule, lastCookedByUser = new Map(), now = Date.now()) => {
+const ruleActorsOfRecipe = (recipe, rule, lastCookedByUser = new Map(), now = Date.now()) => {
   const r = normalizeRecipeRule(rule);
-  if (!hasRecipeRule(rule) || !matchesContentFilters(recipe, r)) return [];
+  const actors = {};
+  if (!hasRecipeRule(rule) || !matchesContentFilters(recipe, r)) return actors;
   const candidates = new Set(lastCookedByUser.keys());
   if (recipe.authorId) candidates.add(recipe.authorId);
-  return [...candidates].filter((userId) => matchesDateCriteria(
-      recipe, r, lastCookedByUser.get(userId) ?? null, now, recipe.authorId === userId));
+  const createdMs = toMillis(recipe.createdAt);
+  candidates.forEach((userId) => {
+    const isAuthor = recipe.authorId === userId;
+    const cookedMs = lastCookedByUser.get(userId) ?? null;
+    if (!matchesDateCriteria(recipe, r, cookedMs, now, isAuthor)) return;
+    const actions = [];
+    if (rangeActive(r.lastCooked) && inAgeRange(r.lastCooked, cookedMs, now)) {
+      actions.push({kind: 'cooked', ms: cookedMs});
+    }
+    if (isAuthor && rangeActive(r.created) && inAgeRange(r.created, createdMs, now)) {
+      actions.push({kind: 'created', ms: createdMs});
+    }
+    if (actions.length > 0) actors[userId] = actions.sort((a, b) => b.ms - a.ms)[0];
+  });
+  return actors;
 };
+
+/** The user IDs of ruleActorsOfRecipe. */
+const ruleOwnersOfRecipe = (recipe, rule, lastCookedByUser = new Map(), now = Date.now()) =>
+  Object.keys(ruleActorsOfRecipe(recipe, rule, lastCookedByUser, now));
 
 /**
  * Writes the rule matches into the topic's `recipeIds`, like hand-picked
@@ -264,9 +298,10 @@ const ruleKey = (rule) => JSON.stringify(normalizeRecipeRule(rule));
 
 /**
  * Nightly rule search: IDs of all recipes matching the rule (visibility is
- * irrelevant here, see isAssignable / isVisibleToUser). With scope 'own' a
- * recipe matches when at least one user qualifies; computeRuleResult also
- * returns those users per recipe (`owners`, see ruleOwnersOfRecipe).
+ * irrelevant here, see isAssignable / isVisibleToUser). With scope 'own' or
+ * 'followed' a recipe matches when at least one actor qualifies;
+ * computeRuleResult also returns those users per recipe (`owners`) and their
+ * actions (`actors`, see ruleActorsOfRecipe).
  * @param {Object} rule - raw `recipeRule`
  * @param {Array<Object>} recipes
  * @param {Map<string, number>} lastCookedByRecipe - recipeId -> latest cook date (ms)
@@ -281,36 +316,78 @@ const computeRuleMatches = (rule, recipes, lastCookedByRecipe = new Map(), now =
 const computeRuleResult = (rule, recipes, lastCookedByRecipe = new Map(), now = Date.now(),
     lastCookedByUser = new Map()) => {
   const assignable = recipes.filter(isAssignable);
-  if (!isOwnScoped(rule)) {
+  if (!isActorScoped(rule)) {
     return {
       matches: assignable
           .filter((r) => matchesRecipeRule(r, rule, lastCookedByRecipe.get(r.id) ?? null, now))
           .map((r) => r.id),
       owners: {},
+      actors: {},
     };
   }
   const owners = {};
+  const actors = {};
   assignable.forEach((r) => {
-    const users = ruleOwnersOfRecipe(r, rule, lastCookedByUser.get(r.id) || new Map(), now);
-    if (users.length > 0) owners[r.id] = users.sort();
+    const found = ruleActorsOfRecipe(r, rule, lastCookedByUser.get(r.id) || new Map(), now);
+    const users = Object.keys(found);
+    if (users.length === 0) return;
+    owners[r.id] = users.sort();
+    actors[r.id] = found;
   });
-  return {matches: Object.keys(owners), owners};
+  return {matches: Object.keys(owners), owners, actors};
 };
 
 /**
  * Whether a topic's recipe may be handed to this user. Hand-picked recipes (and
  * every recipe of a rule with scope 'all') are for everybody; a recipe the rule
- * added under scope 'own' only goes to the users in `autoRecipeOwners`.
+ * added under scope 'own' only goes to the users in `autoRecipeOwners`, under
+ * 'followed' also to those who follow one of them.
  * @param {Object} topic
  * @param {string} recipeId
  * @param {string} userId
+ * @param {Set<string>} [followedIds] - users this user follows (accepted)
  */
-const recipeAvailableToUser = (topic, recipeId, userId) => {
-  if (!isOwnScoped(topic.recipeRule)) return true;
+const recipeAvailableToUser = (topic, recipeId, userId, followedIds = new Set()) => {
+  if (!isActorScoped(topic.recipeRule)) return true;
   const auto = Array.isArray(topic.autoRecipeIds) ? topic.autoRecipeIds : [];
   if (!auto.includes(recipeId)) return true;
   const owners = topic.autoRecipeOwners && topic.autoRecipeOwners[recipeId];
-  return Array.isArray(owners) && owners.includes(userId);
+  if (!Array.isArray(owners)) return false;
+  const {scopes} = normalizeRecipeRule(topic.recipeRule);
+  if (scopes.includes('own') && owners.includes(userId)) return true;
+  return scopes.includes('followed') && owners.some((id) => id !== userId && followedIds.has(id));
+};
+
+/** Calendar day ('YYYY-MM-DD') of a moment in the app's time zone. */
+const dayKey = (ms) => new Intl.DateTimeFormat('en-CA', {
+  timeZone: TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+}).format(new Date(ms));
+
+/**
+ * Who stands behind the recipes of a list under a 'followed' topic (private
+ * attribution document of the list's owner): per recipe the followed actors,
+ * newest first, at most 3, with the day only. Recipes without followed actors
+ * are left out.
+ * @param {Object} topic - with `autoRecipeIds` and `autoRecipeActors`
+ * @param {string[]} recipeIds - the list's recipes
+ * @param {Set<string>} followedIds
+ * @return {Object<string, Array<{userId: string, kind: string, day: string}>>}
+ */
+const buildAttribution = (topic, recipeIds, followedIds) => {
+  const result = {};
+  if (!usesFollowedScope(topic.recipeRule)) return result;
+  const auto = new Set(Array.isArray(topic.autoRecipeIds) ? topic.autoRecipeIds : []);
+  recipeIds.forEach((id) => {
+    const actors = auto.has(id) && topic.autoRecipeActors && topic.autoRecipeActors[id];
+    if (!actors) return;
+    const list = Object.entries(actors)
+        .filter(([userId, a]) => followedIds.has(userId) && a && Number.isFinite(a.ms))
+        .sort((a, b) => b[1].ms - a[1].ms)
+        .slice(0, MAX_ATTRIBUTION_ACTORS)
+        .map(([userId, a]) => ({userId, kind: a.kind, day: dayKey(a.ms)}));
+    if (list.length > 0) result[id] = list;
+  });
+  return result;
 };
 
 /**
@@ -473,8 +550,11 @@ module.exports = {
   ruleKey,
   computeRuleMatches,
   computeRuleResult,
-  isOwnScoped,
+  isActorScoped,
+  usesFollowedScope,
+  ruleActorsOfRecipe,
   ruleOwnersOfRecipe,
+  buildAttribution,
   recipeAvailableToUser,
   mergeRuleMatches,
   getActiveTopics,

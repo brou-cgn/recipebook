@@ -1,7 +1,7 @@
 # Vorhaben: Follow (Vernetzung zwischen Mitgliedern)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 18.10.2026 (PR 4a offen, 4b in Arbeit).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 18.10.2026 (PR 4a/4b gemergt, PR 5 in Arbeit).
 
 **Ziel:** Aktivitäten anderer Mitglieder inspirieren. Wer jemandem folgt (mit Bestätigung des
 Gefolgten), sieht in „Für dich entdeckt" zusätzlich Rezepte, die diese Person zuletzt gekocht
@@ -45,13 +45,15 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | 2 | `follows`, `requestFollow`/`respondFollow`, Rules mit Tests, Flag `follow`, Inbox, Sperrfrist, Blockieren, Tageslimit | PR #3462 gemergt und deployt (18.10.2026, Deploy-Lauf 1842 erfolgreich), CI grün (Function-Tests 16, Rules-Tests 8 neu) |
 | 2b | Push bei neuer Anfrage (`functions/followPush.js`, gemeinsamer Helfer `sendDataPush` in `fuerDichEntdecktPush.js`) | PR #3464 gemergt (18.10.2026) |
 | 3 | Netzwerk-Seite (`NetworkPage.js`, Kachel „Netzwerk" unter Chefkoch), Badge am Tab „Chefkoch", Aktion `unblock` + `users/{uid}/followBlocks` | PR #3466 gemergt (18.10.2026), Function-Tests +2, Rules-Test +1, Komponententests 10 |
-| 4a | Folgen-Icon (`FollowButton`, `FollowContext`) am Autor im Rezeptdetail und im Kochtagebuch (Dialog heißt jetzt „Kochtagebuch"), Anfrage mit Snackbar „Rückgängig" | PR #3467 offen (Komponententests +6) |
-| 4b | Profilseite (`MemberProfilePage`: Status-Karte, Rezepte der Person), Name wird ab „angefragt" zum Link (`FollowName`) | Branch `claude/follow-pr4b-profil`, gestapelt auf 4a (Komponententests +8) |
-| 5 | Themenregel `scopes` (Admin-UI `DiscoverTopicsTab.js`, Nachtlauf, Rotation), privates Attributionsdokument | offen |
-| 6 | Namensanzeige auf Karte und im Stapel | offen |
+| 4a | Folgen-Icon (`FollowButton`, `FollowContext`) am Autor im Rezeptdetail und im Kochtagebuch (Dialog heißt jetzt „Kochtagebuch"), Anfrage mit Snackbar „Rückgängig" | PR #3467 gemergt (Komponententests +6) |
+| 4b | Profilseite (`MemberProfilePage`: Status-Karte, Rezepte der Person), Name wird ab „angefragt" zum Link (`FollowName`) | PR #3469 gemergt (Komponententests +8) |
+| 5 | Themenregel `scopes` (Admin-UI `DiscoverTopicsTab.js`, Nachtlauf, Rotation), privates Attributionsdokument | Branch `claude/follow-pr5-scopes` (Function-Tests +4, Komponententests +2, Rules-Test +1), noch kein PR |
+| 6 | Namensanzeige auf Karte und im Stapel (liest `users/{uid}/fuerDichEntdeckt/current`) | offen |
 
 Nach jedem PR: Tech-Check-Dashboard aktualisieren (Befunde und `umsetzungen`, siehe `CLAUDE.md`),
 Tabelle hier nachziehen.
+
+Umsetzungsnotizen PR 5: `recipeRule.dateScope` wird zu `scopes` (`['all']` exklusiv; `own` und `followed` kombinierbar; altes `dateScope: 'own'` liest als `['own']`, `ruleKey` ändert sich dadurch einmalig, Regeln werden beim nächsten Lauf neu angewendet). Der Nachtlauf speichert neben `autoRecipeOwners` neu `autoRecipeActors` (`recipeId -> userId -> {kind: 'cooked'|'created', ms}`, jeweils die jüngste qualifizierende Handlung) am Thema; das ist für Mitglieder lesbar wie `autoRecipeOwners` und `cookDates`. Die Rotation lädt die akzeptierten Follows des Listenbesitzers nur, wenn ein aktives Thema `followed` nutzt (`usesFollowedScope`), und schreibt dann `users/{uid}/fuerDichEntdeckt/current` (`listId`, `themeId`, `recipes: {recipeId: [{userId, kind, day}]}`, höchstens 3 Akteure, nur Tag `YYYY-MM-DD`). Rules: nur Eigentümer lesbar, nie schreibbar. Verhalten ohne Flag oder ohne Gefolgte: Das Thema hat für die Liste keine nutzbaren Rezepte und ist damit kein Kandidat (also ausgeblendet). Platzverteilung: `pickTopic` zieht pro Liste genau ein Thema zufällig unter den Kandidaten und füllt bis zu 5 Plätze daraus; ein Thema bringt seine Plätze also selbst mit, es gibt keine Mischung mehrerer Themen. Nicht gebaut: eigenes Thema „Deine Community kocht" (Admin legt es an: `scopes: ['followed']`, `lastCooked`, 0–30 Tage), Anzeige der Namen (PR 6). Reihenfolge beim Deployment: Rules, dann Functions, dann Client.
 
 Umsetzungsnotizen PR 4b: Das Profil ist eine Ansicht in `App.js` (State `profileUserId`, liegt vor dem Rezeptdetail wie Einstellungen; „Zurück" führt zum Rezeptdetail zurück). Geöffnet wird es über `openProfile` aus dem `FollowProvider`. `FollowName` ist ab „angefragt" ein Link, sonst Text. Die Rezepte der Person kommen aus dem schon sichtbarkeitsgefilterten `recipes`-Array, es gibt keine eigene Abfrage. Die Status-Karte kennt drei Zustände (kein Follow: „Folgen"; angefragt: „Anfrage zurückziehen"; angenommen: „Nicht mehr folgen"), Zurückziehen und Beenden laufen mit Undo-Fenster wie in der Netzwerk-Seite. Nicht gebaut: Profilaufruf aus dem Netzwerk-Tab (Namen dort sind noch Text), Profil im Rezeptlisten-Kontext (nur Rezeptdetail und Kochtagebuch).
 

@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  matchesRecipeRule, computeRuleMatches, computeRuleResult, recipeAvailableToUser,
+  matchesRecipeRule, computeRuleMatches, computeRuleResult, recipeAvailableToUser, ruleActorsOfRecipe, buildAttribution, normalizeRecipeRule,
   isRotationDue, isTopicInPeriod, getActiveTopics, pickTopic, pickRecipeIds,
   getProtectedRecipeIds, pickRotationRecipeIds,
   ROTATION_INTERVAL_MS,
@@ -249,7 +249,7 @@ test('scope "own": every user is judged by their own cook dates and authorship',
   // anna cooked a year ago, ben yesterday; globally the latest date (yesterday) would miss
   const cooked = new Map([['a', new Map([['anna', NOW - 365 * DAY], ['ben', NOW - DAY]])]]);
   const res = computeRuleResult(rule, [r], new Map([['a', NOW - DAY]]), NOW, cooked);
-  assert.deepEqual(res, {matches: ['a'], owners: {a: ['anna']}});
+  assert.deepEqual(res, {matches: ['a'], owners: {a: ['anna']}, actors: {a: {anna: {kind: 'cooked', ms: NOW - 365 * DAY}}}});
   // scope "all" keeps the global behaviour
   assert.deepEqual(computeRuleMatches({...rule, dateScope: 'all'}, [r], new Map([['a', NOW - DAY]]), NOW), []);
 });
@@ -269,7 +269,7 @@ test('scope "own": "created" needs authorship, dateMode any combines per user', 
 test('scope "own" without a date range behaves like "all"', () => {
   const rule = {ingredientIds: {include: ['Spargel']}, dateScope: 'own'};
   assert.deepEqual(computeRuleResult(rule, [recipe({id: 'a'})], new Map(), NOW),
-      {matches: ['a'], owners: {}});
+      {matches: ['a'], owners: {}, actors: {}});
 });
 
 test('recipeAvailableToUser hands rule-added recipes only to their owners', () => {
@@ -281,6 +281,69 @@ test('recipeAvailableToUser hands rule-added recipes only to their owners', () =
   assert.equal(recipeAvailableToUser(topic, 'a', 'anna'), true);
   assert.equal(recipeAvailableToUser(topic, 'a', 'ben'), false);
   assert.equal(recipeAvailableToUser({...topic, recipeRule: {lastCooked: {minDays: 1}}}, 'a', 'ben'), true);
+});
+
+test('scopes: legacy dateScope "own" still reads as own', () => {
+  assert.deepEqual(normalizeRecipeRule({dateScope: 'own'}).scopes, ['own']);
+  assert.deepEqual(normalizeRecipeRule({scopes: ['followed', 'own']}).scopes, ['own', 'followed']);
+  assert.deepEqual(normalizeRecipeRule({scopes: ['all', 'followed']}).scopes, ['followed']);
+  assert.deepEqual(normalizeRecipeRule({}).scopes, ['all']);
+});
+
+test('scope "followed": recipe goes to followers of the actor, not to strangers or the actor alone', () => {
+  const topic = {
+    recipeRule: {lastCooked: {minDays: 1}, scopes: ['followed']},
+    recipeIds: ['hand', 'a'], autoRecipeIds: ['a'], autoRecipeOwners: {a: ['anna']},
+  };
+  const follows = new Set(['anna']);
+  assert.equal(recipeAvailableToUser(topic, 'hand', 'ben', follows), true);
+  assert.equal(recipeAvailableToUser(topic, 'a', 'ben', follows), true);
+  assert.equal(recipeAvailableToUser(topic, 'a', 'ben', new Set()), false);
+  assert.equal(recipeAvailableToUser(topic, 'a', 'ben'), false);
+  // own is not part of 'followed': anna herself gets nothing, even if she follows herself
+  assert.equal(recipeAvailableToUser(topic, 'a', 'anna', new Set(['anna'])), false);
+  const both = {...topic, recipeRule: {lastCooked: {minDays: 1}, scopes: ['own', 'followed']}};
+  assert.equal(recipeAvailableToUser(both, 'a', 'anna'), true);
+  assert.equal(recipeAvailableToUser(both, 'a', 'ben', follows), true);
+  assert.equal(recipeAvailableToUser(both, 'a', 'cara', follows), true);
+  assert.equal(recipeAvailableToUser(both, 'a', 'cara'), false);
+});
+
+test('ruleActorsOfRecipe: most recent qualifying action decides kind and time', () => {
+  const rule = {
+    created: {minDays: 0, maxDays: 400}, lastCooked: {minDays: 0, maxDays: 400}, dateMode: 'any',
+    scopes: ['followed'],
+  };
+  const r = recipe({id: 'a', authorId: 'anna'}); // created 2025-10-11
+  const cooked = new Map([['anna', NOW - 10 * DAY], ['ben', NOW - 3 * DAY]]);
+  assert.deepEqual(ruleActorsOfRecipe(r, rule, cooked, NOW), {
+    anna: {kind: 'cooked', ms: NOW - 10 * DAY},
+    ben: {kind: 'cooked', ms: NOW - 3 * DAY},
+  });
+  // author did not cook: falls back to creation
+  const created = ruleActorsOfRecipe(r, rule, new Map(), NOW);
+  assert.equal(created.anna.kind, 'created');
+});
+
+test('buildAttribution: only followed actors, newest first, at most 3, day only', () => {
+  const topic = {
+    recipeRule: {lastCooked: {minDays: 1}, scopes: ['followed']},
+    autoRecipeIds: ['a', 'b'],
+    autoRecipeActors: {
+      a: {
+        u1: {kind: 'cooked', ms: NOW - 5 * DAY}, u2: {kind: 'created', ms: NOW - 1 * DAY},
+        u3: {kind: 'cooked', ms: NOW - 3 * DAY}, u4: {kind: 'cooked', ms: NOW - 2 * DAY},
+        stranger: {kind: 'cooked', ms: NOW},
+      },
+      b: {stranger: {kind: 'cooked', ms: NOW}},
+    },
+  };
+  const result = buildAttribution(topic, ['a', 'b', 'hand'], new Set(['u1', 'u2', 'u3', 'u4']));
+  assert.deepEqual(Object.keys(result), ['a']);
+  assert.deepEqual(result.a.map((x) => x.userId), ['u2', 'u4', 'u3']);
+  assert.match(result.a[0].day, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(result.a[0].kind, 'created');
+  assert.deepEqual(buildAttribution({...topic, recipeRule: {lastCooked: {minDays: 1}}}, ['a'], new Set(['u1'])), {});
 });
 
 test('getProtectedRecipeIds: only kandidat docs whose validity has not run out', () => {
