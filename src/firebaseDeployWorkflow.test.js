@@ -10,6 +10,7 @@ const deployScript = workflow.jobs.deploy.steps.find(
   (step) => step.name === 'Deploy (Hosting, Functions, Firestore Rules & Indexes)'
 ).run;
 const iamReadFailure = 'Failed to get the IAM Policy on the Service projects/example/locations/us-central1/services/sharerecipe';
+const readinessFailure = 'Could not create or update Cloud Run service recipeimportpage. Provisioning revision instances to receive traffic. Resource readiness deadline exceeded.';
 
 function runDeploy(responses) {
   return spawnSync('bash', ['-e', '-o', 'pipefail', '-c', `
@@ -32,6 +33,15 @@ function runDeploy(responses) {
 describe('Firebase deploy workflow retries', () => {
   test('retries a Cloud Run IAM policy read failure and completes the deploy', () => {
     const result = runDeploy([iamReadFailure, 'Deploy complete!']);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('Firebase deploy attempt 2/3');
+    expect(result.stdout.match(/firebase invoked/g)).toHaveLength(2);
+    expect(result.stderr).toContain('sleep 15');
+  });
+
+  test('retries a Cloud Run resource readiness deadline and completes the deploy', () => {
+    const result = runDeploy([readinessFailure, 'Deploy complete!']);
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('Firebase deploy attempt 2/3');

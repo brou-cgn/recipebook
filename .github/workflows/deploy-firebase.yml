@@ -184,9 +184,9 @@ jobs:
               fi
             fi
 
-            if echo "$deploy_output" | grep -Eiq "timed out after"; then
+            if echo "$deploy_output" | grep -Eiq "timed out after|Resource readiness deadline exceeded"; then
               if [ "$attempt" -lt "$max_attempts" ]; then
-                echo "A Cloud Functions deploy task timed out. Retrying in 15s..."
+                echo "A Cloud Functions deployment timed out or exceeded its readiness deadline. Retrying in 15s..."
                 sleep 15
                 continue
               fi
