@@ -39,6 +39,7 @@ const ROLE_PERMISSION_COLUMNS = [
   { key: 'addTutorial', label: 'Tutorial anlegen', name: 'Tutorial anlegen (Longpress)' },
   { key: 'editTutorial', label: 'Tutorial bearbeiten', name: 'Tutorial bearbeiten (Longpress)' },
   { key: 'fuerDichEntdeckt', label: 'Für dich entdeckt', name: 'Für dich entdeckt (Startseiten-Kachel)' },
+  { key: 'follow', label: 'Follow', name: 'Follow (Mitgliedern folgen)' },
   { key: 'eventplanung', label: 'Eventplanung', name: 'Eventplanung (Kachel Chefkoch & mehr)' },
 ];
 

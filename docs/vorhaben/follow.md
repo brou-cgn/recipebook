@@ -42,7 +42,8 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | PR | Inhalt | Stand |
 |---|---|---|
 | 1 | Rules-Tests (Emulator, CI-Job), `cookDates` validieren, `security.md` korrigieren, dieses Dokument | PR #3461 gemergt und deployt (18.10.2026), CI grün inkl. neuem Job „Firestore Rules" |
-| 2 | `follows`, Callables, Rules mit Tests, Flag `follow`, Sperren | offen |
+| 2 | `follows`, `requestFollow`/`respondFollow`, Rules mit Tests, Flag `follow`, Inbox, Sperrfrist, Blockieren, Tageslimit | Branch `claude/follow-pr2-requests`, noch kein PR (Function-Tests 16, Rules-Tests 8 neu) |
+| 2b | Push bei neuer Anfrage (nach dem Muster von `fuerDichEntdecktPush.js`) | offen, baut auf PR 2 |
 | 3 | Netzwerk-Seite, Badge am Tab „Chefkoch" | offen |
 | 4 | Folgen-Icon (Rezeptkarte, Kochtagebuch), Profilseite | offen |
 | 5 | Themenregel `scopes` (Admin-UI `DiscoverTopicsTab.js`, Nachtlauf, Rotation), privates Attributionsdokument | offen |
@@ -51,7 +52,14 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 Nach jedem PR: Tech-Check-Dashboard aktualisieren (Befunde und `umsetzungen`, siehe `CLAUDE.md`),
 Tabelle hier nachziehen.
 
+Umsetzungsnotizen PR 2: Das Tageslimit liegt bei 20 Anfragen je Absender und Tag (UTC), die Sperrfrist
+nach Ablehnung bei 30 Tagen, Blockieren ist dauerhaft (`functions/follow.js`). Eine abgelehnte oder
+blockierte Anfrage bleibt für den Anfragenden `pending`; der Gefolgte sieht sie nicht mehr, weil sie
+aus `users/{uid}/followInbox` verschwindet. Ein Entsperren fehlt noch (siehe Offen).
+
 ## Offen
+
+- Entsperren blockierter Personen: ohne Aktion bleibt die Sperre ewig. Gehört in PR 3 (Netzwerk-Seite) und braucht eine Aktion `unblock` in `respondFollow`.
 
 - Zustimmungsdialog im Kochtagebuch (in der Skizze ohne).
 - Datenschutzerklärung um Follow und proaktive Ausspielung ergänzen, vor dem Rollout (Text liefert Claude, Freigabe beim Eigentümer).
