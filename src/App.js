@@ -93,6 +93,7 @@ import { NutritionReferenceProvider, useNutritionReference } from './contexts/Nu
 import { RecipeImportQueueProvider, useRecipeImportQueue } from './contexts/RecipeImportQueueContext';
 import { updateAppBadge } from './utils/appBadge';
 import { resolveRecipeGroupContext, resolveImportGroupContext } from './utils/recipeGroupContext';
+import { openRecipeWithTransition } from './utils/recipeViewTransition';
 
 // Lazily loaded: everything below is a secondary view/overlay that isn't
 // needed for the initial "recipes" screen. Splitting these out of the main
@@ -1369,15 +1370,18 @@ function App() {
   const [atelierRestoreState, setAtelierRestoreState] = useState(null);
 
   const handleSelectRecipe = (recipe, atelierOrigin) => {
-    setAtelierRestoreState(
-      atelierOrigin && typeof atelierOrigin === 'object' && atelierOrigin.listId ? atelierOrigin : null
-    );
     // Save scroll position when opening a recipe from the recipe list (not from a menu)
     if (!selectedMenu) {
       recipeListScrollPositionRef.current = window.scrollY;
       shouldRestoreRecipeListScrollRef.current = true;
     }
-    setSelectedRecipe(recipe);
+    // Opened from a card: its image morphs into the detail image (V3)
+    openRecipeWithTransition(() => {
+      setAtelierRestoreState(
+        atelierOrigin && typeof atelierOrigin === 'object' && atelierOrigin.listId ? atelierOrigin : null
+      );
+      setSelectedRecipe(recipe);
+    });
     if (recipe && currentUser) {
       logRecipeCall(currentUser, recipe);
     }

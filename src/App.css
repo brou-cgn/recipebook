@@ -194,3 +194,29 @@
     transition: none;
   }
 }
+
+/* Übergang Karte → Rezeptdetail (src/utils/recipeViewTransition.js) */
+::view-transition-group(recipe-hero) {
+  animation-duration: 320ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
+}
+
+::view-transition-old(recipe-hero),
+::view-transition-new(recipe-hero) {
+  /* Kartenbild und Detailbild haben unterschiedliche Seitenverhältnisse */
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
+  }
+}
