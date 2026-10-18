@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  matchesRecipeRule, computeRuleMatches, computeRuleResult, recipeAvailableToUser, ruleKey,
+  matchesRecipeRule, computeRuleMatches, computeRuleResult, recipeAvailableToUser,
   isRotationDue, isTopicInPeriod, getActiveTopics, pickTopic, pickRecipeIds,
   getProtectedRecipeIds, pickRotationRecipeIds,
   ROTATION_INTERVAL_MS,

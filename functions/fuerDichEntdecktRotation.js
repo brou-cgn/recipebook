@@ -363,12 +363,6 @@ const pickTopic = (activeTopics, previousTopicId = null, random = Math.random) =
   return pool[Math.floor(random() * pool.length)];
 };
 
-const ingredientText = (item) => {
-  if (typeof item === 'string') return item;
-  if (!item || typeof item !== 'object' || item.type === 'heading') return '';
-  return [item.name, item.text, item.ingredient].filter(Boolean).join(' ');
-};
-
 /**
  * Recipes that may be assigned to a topic: everything except pending imports.
  * Public/private/group status is deliberately ignored here.

@@ -91,19 +91,6 @@ function normalizePufferProzent(value) {
   return Number.isFinite(parsedValue) ? parsedValue : 0;
 }
 
-/**
- * Clamp value to [0, 1], fallback 1 for invalid values.
- * @param {number} value Candidate multiplier.
- * @return {number}
- */
-function normalizeMultiplier(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return 1;
-  if (n < 0) return 0;
-  if (n > 1) return 1;
-  return n;
-}
-
 const MIN_DISTRIBUTION_FACTOR = 0.1;
 const MAX_DISTRIBUTION_FACTOR = 2.0;
 
