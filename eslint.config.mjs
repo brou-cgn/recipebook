@@ -24,6 +24,11 @@ export default [
       'no-empty': ['error', { allowEmptyCatch: true }],
       'no-irregular-whitespace': ['error', { skipStrings: true, skipTemplates: true, skipRegExps: true }],
       'react/jsx-uses-vars': 'error',
+      // Löschaktionen: ausschließlich DeleteRowButton (AGENTS.md), keine eigenen ×-Knöpfe.
+      'no-restricted-syntax': ['error', {
+        selector: "JSXAttribute[name.name='className'][value.value=/(^|\\s)(remove-btn|remove-child-btn)(\\s|$)/]",
+        message: 'Eigener Löschknopf: DeleteRowButton + useUndoableDelete verwenden (AGENTS.md, Löschaktionen).',
+      }],
       'react/jsx-uses-react': 'off',
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',

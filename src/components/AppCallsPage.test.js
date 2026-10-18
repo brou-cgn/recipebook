@@ -459,7 +459,9 @@ describe('AppCallsPage – Offene Vorschläge: Fehler, Duplikate, Verwerfen', ()
     const { saveCustomLists } = require('../utils/customLists');
 
     await renderKulinarikTab();
-    const deleteButton = await screen.findByRole('button', { name: 'Deutsch entfernen' });
+    await screen.findAllByRole('button', { name: 'Deutsch entfernen' });
+    const deleteButton = within(document.querySelector('.cuisine-proposal-list'))
+      .getByRole('button', { name: 'Deutsch entfernen' });
     jest.useFakeTimers();
     fireEvent.click(deleteButton);
 
@@ -502,7 +504,9 @@ describe('AppCallsPage – Offene Vorschläge: Fehler, Duplikate, Verwerfen', ()
     const { discardCuisineProposal } = require('../utils/cuisineProposalsFirestore');
 
     await renderKulinarikTab();
-    const deleteButton = await screen.findByRole('button', { name: 'Deutsch entfernen' });
+    await screen.findAllByRole('button', { name: 'Deutsch entfernen' });
+    const deleteButton = within(document.querySelector('.cuisine-proposal-list'))
+      .getByRole('button', { name: 'Deutsch entfernen' });
     jest.useFakeTimers();
     fireEvent.click(deleteButton);
     fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
@@ -617,14 +621,40 @@ describe('AppCallsPage – Kulinariktypen & Gruppen management', () => {
     fireEvent.click(await screen.findByText('Kulinariktypen'));
 
     await screen.findAllByText('Spanisch');
-    const removeButtons = screen.getAllByTitle('Entfernen');
-    fireEvent.click(removeButtons[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Spanisch entfernen' }));
 
     await waitFor(() => expect(saveCustomLists).toHaveBeenCalled());
     const savedArg = saveCustomLists.mock.calls[0][0];
     expect(savedArg.cuisineTypes).not.toContain('Spanisch');
     expect(savedArg.cuisineTypes).toContain('Italienisch');
     expect(clearSettingsCache).toHaveBeenCalledTimes(1);
+  });
+
+  test('Rückgängig puts a removed cuisineType back at its old position and saves again', async () => {
+    const { saveCustomLists } = require('../utils/customLists');
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Kulinariktypen'));
+    await screen.findAllByText('Spanisch');
+    const typesBefore = Array.from(document.querySelectorAll('.list-item > span')).map((el) => el.textContent);
+    const index = typesBefore.indexOf('Spanisch');
+    expect(index).toBeGreaterThanOrEqual(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Spanisch entfernen' }));
+    await waitFor(() => expect(saveCustomLists).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+
+    await waitFor(() => expect(saveCustomLists).toHaveBeenCalledTimes(2));
+    const restored = saveCustomLists.mock.calls[1][0].cuisineTypes;
+    expect(restored.indexOf('Spanisch')).toBe(index);
   });
 
   test('adding a new cuisineGroup saves it', async () => {

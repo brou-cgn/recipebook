@@ -2171,18 +2171,9 @@
   color: #402C1C;
 }
 
-.remove-child-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #888;
-  font-size: 0.75rem;
-  padding: 0 2px;
-  line-height: 1;
-}
-
-.remove-child-btn:hover {
-  color: #c0392b;
+/* DeleteRowButton inside a chip: keeps the 28px hit target without growing the chip. */
+.cuisine-group-child-tag .cuisine-group-child-delete {
+  margin: -6px -6px -6px 0;
 }
 
 .cuisine-group-add-child {
