@@ -400,6 +400,14 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Aufträge für Hintergrundjobs (z. B. manueller Nährwert-Recalc). Nur
+    // Cloud Functions lesen und schreiben sie (Admin SDK umgeht die Rules):
+    // runNutritionRecalcForFlaggedRecipes legt an, processNutritionRecalcRequest
+    // arbeitet ab und löscht.
+    match /jobRequests/{requestId} {
+      allow read, write: if false;
+    }
+
     // App calls audit log collection
     // Holds name and e-mail per session, so only admins and roles granted the
     // appCalls feature may read it. Everyone may only log their own session.

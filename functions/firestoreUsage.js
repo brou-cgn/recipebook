@@ -53,7 +53,18 @@ async function fetchDailySums({projectId, accessToken, fetchImpl}, metricType, s
       },
   );
   if (!response.ok) {
-    throw new Error(`Cloud Monitoring antwortete mit HTTP ${response.status}`);
+    // Googles eigene Meldung sagt, ob die Rolle oder die API fehlt.
+    let detail = '';
+    try {
+      const errorBody = await response.json();
+      detail = errorBody && errorBody.error && errorBody.error.message ?
+        ` (${String(errorBody.error.message).slice(0, 300)})` : '';
+    } catch (_err) {
+      // Kein JSON: nur der Statuscode.
+    }
+    const error = new Error(`Cloud Monitoring antwortete mit HTTP ${response.status}${detail}`);
+    error.status = response.status;
+    throw error;
   }
   const body = await response.json();
   const sums = new Map();
@@ -131,14 +142,19 @@ function escapeHtml(value) {
 /**
  * Abschnitt für den Recalc-Bericht.
  *
- * @param {{rows?: Array, error?: string}} usage - Ergebnis oder Fehlertext
+ * @param {{rows?: Array, error?: string, status?: number}} usage - Ergebnis
+ *   oder Fehlertext; status ist der HTTP-Status einer abgelehnten Abfrage
  * @return {{text: string, html: string}}
  */
 function buildFirestoreUsageSection(usage) {
   const heading = 'Firestore-Nutzung (letzte 7 Tage, UTC)';
   if (!usage || usage.error || !Array.isArray(usage.rows) || usage.rows.length === 0) {
     const reason = (usage && usage.error) || 'keine Daten';
-    const hint = `Nicht verfügbar: ${reason}. Das Dienstkonto der Functions braucht die Rolle Monitoring-Betrachter (roles/monitoring.viewer).`;
+    // Der Rollenhinweis nur, wo er passt: 403 heißt fehlende Berechtigung
+    // oder nicht aktivierte Cloud Monitoring API.
+    const hint = `Nicht verfügbar: ${reason}.` + (usage && usage.status === 403 ?
+      ' Das Dienstkonto der Functions braucht die Rolle Monitoring-Betrachter (roles/monitoring.viewer), und die Cloud Monitoring API muss im Projekt aktiviert sein.' :
+      '');
     return {
       text: `\n${heading}\n${hint}\n`,
       html: `<h3>${heading}</h3><p>${escapeHtml(hint)}</p>`,

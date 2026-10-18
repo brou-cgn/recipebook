@@ -56,15 +56,23 @@ test('fetchFirestoreDailyUsage sums per UTC day, newest first, missing days as 0
   assert.equal(calls[0].options.headers.Authorization, 'Bearer token-1');
 });
 
-test('fetchFirestoreDailyUsage throws on an HTTP error (e.g. missing permission)', async () => {
+test('fetchFirestoreDailyUsage throws on an HTTP error with Google\'s message and the status', async () => {
   await assert.rejects(
       fetchFirestoreDailyUsage({
         projectId: 'demo-project',
         getAccessToken: async () => ({access_token: 'token-1'}),
         now: NOW,
-        fetchImpl: async () => ({ok: false, status: 403, json: async () => ({})}),
+        fetchImpl: async () => ({
+          ok: false,
+          status: 403,
+          json: async () => ({error: {message: 'Cloud Monitoring API has not been used in project demo-project'}}),
+        }),
       }),
-      /HTTP 403/,
+      (error) => {
+        assert.equal(error.status, 403);
+        assert.match(error.message, /HTTP 403 \(Cloud Monitoring API has not been used/);
+        return true;
+      },
   );
 });
 
@@ -88,10 +96,18 @@ test('buildFirestoreUsageSection shows peak, average and free-tier share', () =>
   assert.match(section.html, /2\.000 \(10 %\)/);
 });
 
-test('buildFirestoreUsageSection explains a failure instead of numbers', () => {
-  const section = buildFirestoreUsageSection({error: 'Cloud Monitoring antwortete mit HTTP 403'});
+test('buildFirestoreUsageSection names role and API only for a 403', () => {
+  const section = buildFirestoreUsageSection({error: 'Cloud Monitoring antwortete mit HTTP 403', status: 403});
 
-  assert.match(section.text, /Nicht verfügbar: Cloud Monitoring antwortete mit HTTP 403/);
+  assert.match(section.text, /Nicht verfügbar: Cloud Monitoring antwortete mit HTTP 403\./);
   assert.match(section.text, /roles\/monitoring\.viewer/);
+  assert.match(section.text, /Cloud Monitoring API/);
   assert.match(section.html, /Nicht verfügbar/);
+});
+
+test('buildFirestoreUsageSection gives only the reason for other failures (e.g. timeout)', () => {
+  const section = buildFirestoreUsageSection({error: 'The operation was aborted due to timeout'});
+
+  assert.match(section.text, /Nicht verfügbar: The operation was aborted due to timeout\./);
+  assert.doesNotMatch(section.text, /Monitoring-Betrachter/);
 });

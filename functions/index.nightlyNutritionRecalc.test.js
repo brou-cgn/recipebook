@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 let manualHandler;
+let requestHandler;
 let lowCarbHandler;
 let mockDbState;
 let sentMails;
@@ -162,6 +163,14 @@ function loadHandlers() {
               }),
             };
           }
+          if (name === 'jobRequests') {
+            return {
+              add: async (payload) => {
+                mockDbState.jobRequests.push(payload);
+                return { id: `job-${mockDbState.jobRequests.length}` };
+              },
+            };
+          }
           return { get: async () => ({ docs: [] }) };
         },
         doc: (path) => ({
@@ -197,8 +206,22 @@ function loadHandlers() {
   };
 
   manualHandler = require('./index').runNutritionRecalcForFlaggedRecipes;
+  requestHandler = require('./index').processNutritionRecalcRequest;
   lowCarbHandler = require('./index').runLowCarbFullTagging;
   Module._load = originalLoad;
+}
+
+// Runs the queued manual-recalc requests the way the Firestore trigger would.
+async function runQueuedJobRequests() {
+  const queued = mockDbState.jobRequests.splice(0);
+  for (const payload of queued) {
+    await requestHandler({
+      data: {
+        data: () => payload,
+        ref: { delete: async () => { mockDbState.deletedJobRequests += 1; } },
+      },
+    });
+  }
 }
 
 test.beforeEach(() => {
@@ -216,6 +239,8 @@ test.beforeEach(() => {
       },
     },
     adminUsers: [{ email: 'admin@example.com', role: 'admin' }],
+    jobRequests: [],
+    deletedJobRequests: 0,
     userById: {
       'admin-1': { role: 'admin' },
       'moderator-1': { role: 'moderator' },
@@ -237,11 +262,42 @@ test('manual recalc job updates impacted recipes, resets recalc flags and sends 
     message: 'Recalc-Job gestartet. Ergebnis wird per E-Mail gesendet.',
   });
 
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await runQueuedJobRequests();
 
   assert.equal(mockDbState.nutritionReferences.tomate.recalc, false);
   assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, 1);
   assert.equal(sentMails.length, 1);
+});
+
+test('manual recalc only queues a job request; the trigger runs it and deletes the request', async () => {
+  await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
+
+  // Nothing runs after the callable has answered.
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.equal(sentMails.length, 0);
+  assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, undefined);
+  assert.equal(mockDbState.jobRequests.length, 1);
+  assert.equal(mockDbState.jobRequests[0].type, 'nutritionRecalc');
+  assert.equal(mockDbState.jobRequests[0].triggeredBy, 'manual:admin-1');
+
+  await runQueuedJobRequests();
+
+  assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, 1);
+  assert.equal(sentMails.length, 1);
+  assert.match(sentMails[0].text, /Trigger: manual:admin-1/);
+  assert.equal(mockDbState.deletedJobRequests, 1);
+});
+
+test('job request trigger ignores requests of other types', async () => {
+  await requestHandler({
+    data: {
+      data: () => ({ type: 'somethingElse' }),
+      ref: { delete: async () => { mockDbState.deletedJobRequests += 1; } },
+    },
+  });
+
+  assert.equal(sentMails.length, 0);
+  assert.equal(mockDbState.deletedJobRequests, 0);
 });
 
 test('recalc report mail carries the Firestore usage section, even when Monitoring is unavailable', async () => {
@@ -251,7 +307,7 @@ test('recalc report mail carries the Firestore usage section, even when Monitori
   console.warn = () => {};
   try {
     await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await runQueuedJobRequests();
   } finally {
     console.warn = originalWarn;
   }
@@ -259,6 +315,7 @@ test('recalc report mail carries the Firestore usage section, even when Monitori
   assert.equal(sentMails.length, 1);
   const { text, html } = sentMails[0];
   assert.match(text, /Firestore-Nutzung \(letzte 7 Tage, UTC\)\nNicht verfügbar:/);
+  assert.doesNotMatch(text, /Monitoring-Betrachter/);
   assert.match(html, /<h3>Firestore-Nutzung \(letzte 7 Tage, UTC\)<\/h3>/);
 });
 
@@ -275,7 +332,7 @@ test('manual recalc job keeps recalc flag when recalculation fails', async () =>
     message: 'Recalc-Job gestartet. Ergebnis wird per E-Mail gesendet.',
   });
 
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await runQueuedJobRequests();
 
   assert.equal(mockDbState.nutritionReferences.tomate.recalc, true);
   assert.equal(mockDbState.recipes.r1.naehrwerte.calcError, 'Simulierter Schreibfehler');
@@ -311,7 +368,7 @@ test('manual recalc job skips recipe whose calcCompletedAt is after recalcDate',
   mockDbState.recipes.r1.naehrwerte = { calcCompletedAt };
 
   await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await runQueuedJobRequests();
 
   // Recipe was not affected because calcCompletedAt > recalcDate
   assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, undefined);
@@ -325,7 +382,7 @@ test('manual recalc job recalculates recipe whose calcCompletedAt is before reca
   mockDbState.recipes.r1.naehrwerte = { calcCompletedAt };
 
   await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await runQueuedJobRequests();
 
   assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, 1);
   assert.equal(sentMails.length, 1);
@@ -336,7 +393,7 @@ test('manual recalc job skips recipe with no calcCompletedAt', async () => {
   mockDbState.recipes.r1.naehrwerte = {}; // no calcCompletedAt
 
   await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await runQueuedJobRequests();
 
   assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, undefined);
   assert.equal(sentMails.length, 1);
@@ -349,7 +406,7 @@ test('manual recalc job preserves yield fields and stores per-100g values', asyn
   };
 
   await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await runQueuedJobRequests();
 
   assert.equal(mockDbState.recipes.r1.naehrwerte.calcYieldGrams, 80);
   assert.equal(mockDbState.recipes.r1.naehrwerte.calcFinalWeightGrams, 80);
@@ -368,7 +425,7 @@ test('manual recalc job tags a qualifying recipe as low carb', async () => {
   mockDbState.recipes.r1.kulinarik = ['Italienische Küche'];
 
   await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await runQueuedJobRequests();
 
   // The tag is appended; the cuisine type that was already there survives.
   assert.deepEqual(mockDbState.recipes.r1.kulinarik, ['Italienische Küche', 'Low Carb']);
@@ -380,7 +437,7 @@ test('manual recalc job drops the tag once a recipe stops qualifying', async () 
   mockDbState.recipes.r1.kulinarik = ['Italienische Küche', 'Low Carb'];
 
   await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await runQueuedJobRequests();
 
   assert.deepEqual(mockDbState.recipes.r1.kulinarik, ['Italienische Küche']);
 });
@@ -389,7 +446,7 @@ test('manual recalc job leaves kulinarik alone when the verdict has not changed'
   mockDbState.recipes.r1.kulinarik = ['Italienische Küche', 'Low Carb'];
 
   await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await runQueuedJobRequests();
 
   // Still qualifying and already tagged - no duplicate, no rewrite.
   assert.deepEqual(mockDbState.recipes.r1.kulinarik, ['Italienische Küche', 'Low Carb']);
@@ -403,7 +460,7 @@ test('manual recalc job leaves an unreadable recipe alone instead of untagging i
   mockDbState.recipes.r1.kulinarik = ['Italienische Küche', 'Low Carb'];
 
   await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await runQueuedJobRequests();
 
   assert.deepEqual(mockDbState.recipes.r1.kulinarik, ['Italienische Küche', 'Low Carb']);
   // And the run really did reach this recipe, rather than filtering it out earlier.
@@ -414,7 +471,7 @@ test('summary mail reports the low carb changes, not just the recalc', async () 
   mockDbState.recipes.r1.kulinarik = ['Italienische Küche'];
 
   await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await runQueuedJobRequests();
 
   assert.equal(sentMails.length, 1);
   const { text, html } = sentMails[0];
@@ -435,7 +492,7 @@ test('summary mail names a recipe that lost the tag', async () => {
   mockDbState.recipes.r1.kulinarik = ['Italienische Küche', 'Low Carb'];
 
   await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await runQueuedJobRequests();
 
   const { text } = sentMails[0];
   assert.match(text, /Low Carb ergänzt: 0/);
@@ -447,7 +504,7 @@ test('summary mail stays quiet about recipes whose tag did not move', async () =
   mockDbState.recipes.r1.kulinarik = ['Italienische Küche', 'Low Carb'];
 
   await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await runQueuedJobRequests();
 
   const { text } = sentMails[0];
   assert.match(text, /Low Carb ergänzt: 0/);
