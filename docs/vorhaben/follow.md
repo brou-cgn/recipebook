@@ -37,7 +37,7 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 
 | PR | Inhalt | Stand |
 |---|---|---|
-| 1 | Rules-Tests (Emulator, CI-Job), `cookDates` validieren, `security.md` korrigieren, dieses Dokument | Branch `claude/firestore-rules-tests` gepusht, noch kein PR |
+| 1 | Rules-Tests (Emulator, CI-Job), `cookDates` validieren, `security.md` korrigieren, dieses Dokument | PR #3461 offen (Branch `claude/firestore-rules-tests`) |
 | 2 | `follows`, Callables, Rules mit Tests, Flag `follow`, Sperren | offen |
 | 3 | Netzwerk-Seite, Badge am Tab „Chefkoch" | offen |
 | 4 | Folgen-Icon (Rezeptkarte, Kochtagebuch), Profilseite | offen |
