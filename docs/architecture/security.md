@@ -2,145 +2,78 @@
 
 This file documents the security rules for the Firestore database that enforce access control for all collections.
 
-## Roles
+## Rollen
 
-| Role | Description |
-|------|-------------|
-| `admin` | Full access to everything |
-| `edit` | Can create and edit own content |
-| `comment` | Currently equivalent to `read` |
-| `read` | Read-only access |
-| `guest` | Not logged in (no Firebase Auth) |
+| Rolle | Beschreibung |
+|-------|--------------|
+| `admin` | Voller Zugriff |
+| `moderator` | Wie `edit`, zusätzlich Stammdaten (Saisonmatrix, Nährwert-Referenzen, Getränkegewichte, Kochatelier-Texte, Cuisine-Vorschläge) |
+| `edit` | Darf Rezepte, Menüs, Einkaufslisten, Tutorials anlegen und ändern |
+| `comment` | Aktuell wie `read` |
+| `read` | Lesen, eigene Daten (Favoriten, Kochdaten, Events) pflegen |
+| Gast | Anonyme Anmeldung („Als Gast anmelden"): kein `users`-Dokument, kein direkter Zugriff auf `recipes`; Rezepte kommen über Cloud Functions mit Serverfilter |
 
-## Helper Functions
+„Mitglied" (`isMember()`) heißt: angemeldet, nicht anonym, Rolle `read` oder höher.
 
-The following helper functions are defined in `firestore.rules`:
+## Hilfsfunktionen in `firestore.rules`
 
-- `isAuthenticated()` – Returns `true` if the user is logged in
-- `getUserData()` – Returns the current user's document from `/users/{uid}`
-- `isAdmin()` – Returns `true` if the user has the `admin` role
-- `isEdit()` – Returns `true` if the user has the `edit` role (or is admin)
-- `isAuthor(authorId)` – Returns `true` if the current user is the document's author
-- `isGroupMember(groupId)` – Returns `true` if the current user is a member of the group
-- `isGroupOwner(groupId)` – Returns `true` if the current user is the owner of the group
-- `isPublicGroup(groupId)` – Returns `true` if the group type is `public`
-- `isPrivateGroup(groupId)` – Returns `true` if the group type is `private`
+`isAuthenticated()`, `userRole()`, `isAnyUser()` (angemeldet mit Rolle, oder noch ohne Profil, **schließt anonyme Gäste ein**), `isEditOrAdmin()`, `isModeratorOrAdmin()`, `isAdmin()`, `isAnonymous()`, `isMember()`, `canSeeAppCalls()`, `canSeeEventplanung()` (beide prüfen `rolePermissions/{rolle}`).
 
-## Permission Concept per Collection
+## Zugriff pro Collection
 
-### Recipes (`/recipes/{recipeId}`)
+Quelle ist immer `firestore.rules`; diese Tabelle gibt den Stand vom 18.10.2026 wieder und wird durch `rules-tests/` abgesichert (siehe unten).
 
-> **Important:** Every recipe must have a `groupId`. Recipes without a `groupId` cannot be created or read (except via share link).
+| Collection | Lesen | Schreiben |
+|------------|-------|-----------|
+| `recipes` | Mitglieder und Nutzer ohne Profil (nicht anonym). **Sichtbarkeit (Entwurf, Gruppe) wird nur im Client gefiltert.** | Anlegen/Löschen/Ändern: `edit`, `moderator`, `admin` |
+| `recipes/{id}/ratings` | alle (öffentlich) | Anlegen: angemeldet, eigener Schlüssel oder `guest_…`; Ändern: nur eigener Schlüssel; Löschen: eigener, Gast-Schlüssel, Editoren |
+| `menus` | `isAnyUser()` oder Freigabelink (`shareId`) | `edit`, `moderator`, `admin` |
+| `groups` | `isAnyUser()` (**schließt Gäste ein**) | `edit`+; jedes Mitglied seine eigene Liste „Für dich entdeckt"; Löschen nur `edit`+ |
+| `shoppingLists`, `tutorials` | `isAnyUser()` | `edit`+ |
+| `seasonMatrix`, `drinkWeights`, `drinkWeightsChildren` | `isAnyUser()` | `moderator`, `admin` |
+| `discoverTopics` | einzelne Themen `isAnyUser()`, Auflisten nur Admin | Admin |
+| `faqs`, `categoryImages`, `rolePermissions`, `appSettings` | `isAnyUser()` | Admin |
+| `settings` | `isAnyUser()`; `settings/app` und `settings/images` auch öffentlich | Admin; `edit`+ nur bestimmte Listenfelder, `moderator` zusätzlich Kochatelier-Texte |
+| `nutritionReferences`, `commonTerms`, `buttonIcons`, `customLists`, `appConfig/nutritionReferences` | öffentlich (Freigabelink-Betrachter brauchen sie) | `moderator`/`admin` (Icons, Listen: Admin; `appConfig`: nur Cloud Function) |
+| `users/{uid}` | Eigentümer, Admin | Eigentümer ändert alles außer `role`; Anlegen nur mit `role == 'read'`, nicht anonym; Löschen Admin |
+| `publicProfiles/{uid}` | angemeldet (**schließt Gäste ein**) | Admin und `syncPublicProfile` (Cloud Function) |
+| `users/{uid}/favorites`, `menuFavorites`, `erfahrungswerte`, `guestProfiles` | Eigentümer | Eigentümer (`erfahrungswerte`, `guestProfiles`: nur Cloud Function) |
+| `users/{uid}/events` | Eigentümer, Admin | Eigentümer, Admin |
+| `users/{uid}/customDrinks` | `isAnyUser()` | Eigentümer, Admin |
+| `users/{uid}/security/webImportPin` | niemand (nur Cloud Function) | niemand |
+| `guests/{uid}/profiles` | Eigentümer, Admin | niemand (nur Cloud Function) |
+| `kalibrierungsSnapshots` | Rollen mit Berechtigung `eventplanung`, Admin | niemand (nur Cloud Function) |
+| `appCalls` | Rollen mit Berechtigung `appCalls`, Admin | Anlegen: eigene Sitzung; Ändern/Löschen: Admin |
+| `recipeCalls` | Mitglieder | Anlegen: eigene Sitzung; Ändern/Löschen: Admin |
+| `cookDates` | Mitglieder (**jedes Mitglied liest alle Einträge**) | Anlegen: eigene `userId`, nur die Felder `userId`, `recipeId`, `date` (nicht in der Zukunft), `createdAt`; Löschen: Eigentümer, `edit`+; kein Ändern |
+| `recipeSwipeFlags` | Eigentümer, Mitglieder derselben Liste | Eigentümer; Listenmitglieder nur `calculatedFlag`, `calculatedExpiresAt` |
+| `aiScanLimits` | `edit`+ | Admin |
+| `jobRequests`, `invitations` | niemand (nur Cloud Functions) | niemand |
+| `failedWebImports` | Admin | Anlegen: `isAnyUser()`; sonst Admin |
+| `cuisineProposals` | `isAnyUser()` | Anlegen: `edit`+ (nicht freigegeben); Ändern: Autor oder `moderator`+; Löschen: `moderator`+ |
+| Collection-Group `events`, `profiles` | Admin | |
+| Collection-Group `customDrinks` | `isAnyUser()` | |
 
-| Operation | Who |
-|-----------|-----|
-| Read (share link) | Anyone, including guests |
-| Read (public group, non-draft) | All authenticated users |
-| Read (public group, draft) | `admin` only |
-| Read (private group, non-draft) | `admin` (always), or authenticated group member |
-| Read (private group, draft) | `admin` only |
-| Create | `admin`, `edit` (groupId required) |
-| Update | `admin` (all), `edit` (own) |
-| Delete | `admin` only |
+## Bekannte Lücken
 
-### Menus (`/menus/{menuId}`)
+Die Tests in `rules-tests/access.test.js` halten diese Zustände fest (sie ersetzen das frühere Skript `scripts/testFirestoreRules.mjs`, dessen Fälle übernommen sind) (Name enthält „BEKANNTE LÜCKE"). Wer eine Lücke schließt, kehrt den Test um.
 
-| Operation | Who |
-|-----------|-----|
-| Read (share link) | Anyone, including guests |
-| Read (non-draft) | All authenticated users |
-| Read (draft) | `admin` (all), `edit` (own) |
-| Create | `admin`, `edit` |
-| Update | `admin` (all), `edit` (own) |
-| Delete | `admin` (all), `edit` (own) |
+1. **`recipes`:** Jedes Mitglied kann auch Entwürfe und Rezepte privater Listen anderer lesen. Regeln filtern keine Abfragen, und der Client lädt die ganze Collection (`subscribeToRecipes`). Schließen geht nur über einen Umbau der Abfragen im Client. Gäste und Abgemeldete lesen `recipes` nicht mehr direkt (PR #3426), das Mitglieder-Rest ist laut Tech-Check S2 eine bewusste Entscheidung des Betreibers vom 14.10.2026.
+2. **`groups`:** Auch anonyme Gäste lesen Listen samt `invitedEmails` (E-Mail-Adressen Eingeladener). Gleicher Grund wie bei `recipes`.
+3. **`publicProfiles`:** Auch anonyme Gäste lesen Vor- und Nachnamen aller Mitglieder. Einschränken auf Mitglieder würde Gästen die Autorennamen nehmen.
+4. **`cookDates`:** Jedes Mitglied liest alle Einträge (gewollt für den Kochbuch-Dialog, aber Datenschutz-relevant). Anonyme Gäste dürfen eigene Einträge anlegen.
 
-### Groups (`/groups/{groupId}`)
+## Tests der Regeln
 
-| Operation | Who |
-|-----------|-----|
-| Read (public group) | `admin` only |
-| Read (private group) | `admin` (all), `edit` + `read` (member or owner) |
-| Create | `admin` always, `edit` (private groups only) |
-| Update | `admin` (all), `edit` + `read` (own groups) |
-| Delete | `admin` (all), `edit` (own = group owner) |
+`rules-tests/` enthält Tests gegen den Firestore-Emulator (`@firebase/rules-unit-testing`). Sie laufen in der CI (Job „Firestore Rules") und lokal:
 
-### Users (`/users/{userId}`)
+```bash
+cd rules-tests
+npm ci
+npm test   # startet den Emulator, braucht Java 21
+```
 
-| Operation | Who |
-|-----------|-----|
-| Read | All authenticated users |
-| Create | `admin` or guest (for self-registration) |
-| Update | `admin` (all), any authenticated user (own profile) |
-| Delete | `admin` only |
-
-### Favorites & Menu Favorites (subcollections)
-
-- `/users/{userId}/favorites/{favoriteId}` – Read/Write: authenticated user (own only)
-- `/users/{userId}/menuFavorites/{favoriteId}` – Read/Write: authenticated user (own only)
-
-### Settings (`/settings/{settingId}`)
-
-| Operation | Who |
-|-----------|-----|
-| Read | All authenticated users |
-| Create / Delete | `admin` only |
-| Update (any field) | `admin` only |
-| Update (list fields: cuisineTypes, cuisineGroups, cuisineIcons, mealCategories, units, portionUnits, conversionTable, customUnits in `settings/app`) | `admin`, `edit`, `moderator` |
-| Update (Kochatelier fields: inspirationListName, inspirationListDescription, inspirationTargetListName, inspirationTargetListDescription in `settings/app`) | `admin`, `moderator` |
-
-### Custom Lists (`/customLists/{listId}`)
-
-| Operation | Who |
-|-----------|-----|
-| Read | Anyone (public) |
-| Create / Update / Delete | `admin` only |
-
-### FAQs (`/faqs/{faqId}`)
-
-| Operation | Who |
-|-----------|-----|
-| Read | All authenticated users |
-| Create / Update / Delete | `admin` only |
-
-### Shopping Lists (`/shoppingLists/{listId}`)
-
-| Operation | Who |
-|-----------|-----|
-| Read | All authenticated users |
-| Create | `admin`, `edit` |
-| Update | `admin` (all), `edit` (own) |
-| Delete | `admin` only |
-
-### Category Images (`/categoryImages/{imageId}`)
-
-| Operation | Who |
-|-----------|-----|
-| Read | All authenticated users |
-| Create / Update / Delete | `admin` only |
-
-### AI Scan Limits (`/aiScanLimits/{limitId}`)
-
-| Operation | Who |
-|-----------|-----|
-| Read | `admin`, `edit` |
-| Create / Update / Delete | `admin` only |
-
-### Calibration Snapshots (`/kalibrierungsSnapshots/{eventId}`)
-
-Actual vs. calculated drink consumption per finished event (shown on the "Eventplanung" tile).
-
-| Operation | Who |
-|-----------|-----|
-| Read | `admin`, and every role with the `eventplanung` role permission (`rolePermissions/{role}.eventplanung`, `canSeeEventplanung()`) |
-| Create / Update / Delete | nobody on the client (written by the `submitConsumption` Cloud Function) |
-
-### Job Requests (`/jobRequests/{requestId}`)
-
-Queue for background jobs that must not run after a callable has answered (Cloud Run throttles that work and may stop it). Today only the manual nutrition recalc: `runNutritionRecalcForFlaggedRecipes` (admin/moderator, checked server-side) creates the request, the `processNutritionRecalcRequest` trigger runs it and deletes it.
-
-| Operation | Who |
-|-----------|-----|
-| Read / Create / Update / Delete | nobody on the client (Cloud Functions only) |
+Neue oder geänderte Regeln brauchen einen Test pro Rolle (nicht angemeldet, anonym, Mitglied, Editor, Admin), jeweils mit Erlaubt- und Verboten-Fall.
 
 ## Deployment
 

@@ -428,7 +428,21 @@ service cloud.firestore {
     // Cook dates collection - global tracking of when users cooked recipes
     match /cookDates/{cookDateId} {
       allow read: if isMember();
-      allow create: if isAnyUser() && request.resource.data.userId == request.auth.uid;
+      // Nur die vier bekannten Felder, ein Datum nicht in der Zukunft: sonst könnte
+      // ein Nutzer beliebige Felder oder Zukunftseinträge anlegen und damit Ansichten
+      // verfälschen, die auf diese Einträge bauen. Gäste (anonym) dürfen weiter
+      // eigene Einträge anlegen, das Lesen bleibt Mitgliedern vorbehalten.
+      allow create: if isAnyUser()
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.keys().hasOnly(['userId', 'recipeId', 'date', 'createdAt'])
+                    && request.resource.data.keys().hasAll(['userId', 'recipeId', 'date'])
+                    && request.resource.data.recipeId is string
+                    && request.resource.data.recipeId.size() > 0
+                    && request.resource.data.recipeId.size() <= 128
+                    && request.resource.data.date is timestamp
+                    && request.resource.data.date <= request.time
+                    && (!('createdAt' in request.resource.data)
+                        || request.resource.data.createdAt is timestamp);
       allow delete: if (isAuthenticated() && resource.data.userId == request.auth.uid)
                     || isEditOrAdmin();
     }

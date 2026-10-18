@@ -98,3 +98,38 @@ jobs:
 
       - name: Run tests
         run: npm run test:ci
+
+  # firestore.rules ist die kritischste Sicherheitsfläche und hatte bis Phase 0 des
+  # Follow-Vorhabens (2026-10-18) keine Tests. Läuft gegen den Firestore-Emulator
+  # (braucht Java 21), siehe rules-tests/ und docs/architecture/security.md.
+  rules:
+    name: Firestore Rules
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: rules-tests
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: rules-tests/package-lock.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run rules tests
+        run: npm test
