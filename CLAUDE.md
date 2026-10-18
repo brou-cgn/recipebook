@@ -69,3 +69,7 @@ das Dashboard im selben Arbeitsgang – nicht erst auf Nachfrage:
 - Roadmap, Kacheln, Kernaussage und Umsetzungsstand nicht von Hand pflegen –
   sie werden aus `findings` und `umsetzungen` berechnet. Die Roadmap selbst
   nur ändern, wenn sich die Planung (Phasen, Zuordnung) ändert.
+
+### Follow-Feature (Vernetzung zwischen Mitgliedern)
+Entscheidungen, PR-Plan und offene Punkte stehen in `docs/vorhaben/follow.md`.
+Jede Änderung daran trägt dort den Stand nach und aktualisiert das Tech-Check-Dashboard.
