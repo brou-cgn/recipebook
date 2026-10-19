@@ -17,6 +17,12 @@ let mockStatusValiditySettings = {
 };
 let mockSeasonMatrixEntries = [];
 
+let mockAttribution = {};
+jest.mock('../utils/fuerDichAttribution', () => ({
+  ...jest.requireActual('../utils/fuerDichAttribution'),
+  useFuerDichAttribution: () => mockAttribution,
+}));
+
 jest.mock('../utils/recipeSwipeFlags', () => {
   const actual = jest.requireActual('../utils/recipeSwipeFlags');
   return {
@@ -2483,6 +2489,29 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     const grid = document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
     expect(grid).not.toBeNull();
     expect(grid.querySelectorAll('.tagesmenu-results-tile')).toHaveLength(3);
+  });
+
+  test('"Für dich entdeckt" nennt auf der Karte, wer das Rezept gekocht hat', async () => {
+    const day = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const yesterday = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+    mockAttribution = { r1: [{ userId: 'u2', kind: 'cooked', day: yesterday }] };
+    try {
+      await act(async () => {
+        render(
+          <Tagesmenu
+            interactiveLists={[{ ...list, systemKey: 'fuerDichEntdeckt', memberIds: [] }]}
+            recipes={recipes}
+            allUsers={[{ id: 'u2', vorname: 'Anna' }]}
+            onSelectRecipe={() => {}}
+            currentUser={currentUser}
+          />
+        );
+      });
+      const lines = [...document.querySelectorAll('.tagesmenu-card-followed')].map((n) => n.textContent);
+      expect(lines).toEqual(['Anna hat das gekocht · gestern']);
+    } finally {
+      mockAttribution = {};
+    }
   });
 
   test('blendet das Menü "Erzähl, wie war es?" aus, wenn das Rezept schon in der Zielliste liegt', async () => {
