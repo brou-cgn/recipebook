@@ -208,6 +208,12 @@
   color: #666666;
 }
 
+.tagesmenu-card-followed {
+  margin: -0.25rem 0 0.5rem;
+  font-size: 0.8125rem;
+  color: #2f5d62;
+}
+
 .tagesmenu-card-kulinarik {
   display: flex;
   flex-wrap: nowrap;

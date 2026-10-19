@@ -1,7 +1,7 @@
 # Vorhaben: Follow (Vernetzung zwischen Mitgliedern)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 18.10.2026 (PR 4a/4b/5 gemergt).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 18.10.2026 (PR 4a/4b/5 gemergt, PR 6 in Arbeit).
 
 **Ziel:** Aktivitäten anderer Mitglieder inspirieren. Wer jemandem folgt (mit Bestätigung des
 Gefolgten), sieht in „Für dich entdeckt" zusätzlich Rezepte, die diese Person zuletzt gekocht
@@ -48,10 +48,12 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | 4a | Folgen-Icon (`FollowButton`, `FollowContext`) am Autor im Rezeptdetail und im Kochtagebuch (Dialog heißt jetzt „Kochtagebuch"), Anfrage mit Snackbar „Rückgängig" | PR #3467 gemergt (Komponententests +6) |
 | 4b | Profilseite (`MemberProfilePage`: Status-Karte, Rezepte der Person), Name wird ab „angefragt" zum Link (`FollowName`) | PR #3469 gemergt (Komponententests +8) |
 | 5 | Themenregel `scopes` (Admin-UI `DiscoverTopicsTab.js`, Nachtlauf, Rotation), privates Attributionsdokument | PR #3470 gemergt (Function-Tests +4, Komponententests +2, Rules-Test +1) |
-| 6 | Namensanzeige auf Karte und im Stapel (liest `users/{uid}/fuerDichEntdeckt/current`) | offen |
+| 6 | Namensanzeige auf Karte und im Stapel (liest `users/{uid}/fuerDichEntdeckt/current`) | Branch `claude/follow-pr6-namen` (Komponententests +1, Util-Tests 5), noch kein PR |
 
 Nach jedem PR: Tech-Check-Dashboard aktualisieren (Befunde und `umsetzungen`, siehe `CLAUDE.md`),
 Tabelle hier nachziehen.
+
+Umsetzungsnotizen PR 6: `src/utils/fuerDichAttribution.js` hört auf das private Dokument (`useFuerDichAttribution`, gilt nur, wenn `listId` und `themeId` zur aktuellen Liste passen, sonst leer) und formuliert den Satz (`describeActors`: „Anna hat das gekocht · gestern", „Anna, Ben und Cara haben das gekocht · diese Woche", gemischt „…, Ben hat es angelegt"; Zeit grob: heute / gestern / diese Woche / letzte Woche / vor n Wochen). Namen kommen aus `allUsers` (Vorname), unbekannte als „Ein Mitglied". Angezeigt in `Tagesmenu.js` auf der Stapelkarte (`tagesmenu-card-followed`) und in den Kandidaten-Kacheln der Ergebnisansicht. Nicht gebaut: Namen als Link aufs Profil (die Karte reagiert auf Tippen und Wischen, `FollowName` im Satz käme mit eigener Klickfläche), Zeile auf der Startseiten-Kachel `FuerDichEntdecktKachel`, Designabgleich mit den drei Stadien der Rezeptkarte (der Entwurf war hier nicht lesbar; Wortlaut und Platzierung sind meine Annahme).
 
 Umsetzungsnotizen PR 5: `recipeRule.dateScope` wird zu `scopes` (`['all']` exklusiv; `own` und `followed` kombinierbar; altes `dateScope: 'own'` liest als `['own']`, `ruleKey` ändert sich dadurch einmalig, Regeln werden beim nächsten Lauf neu angewendet). Der Nachtlauf speichert neben `autoRecipeOwners` neu `autoRecipeActors` (`recipeId -> userId -> {kind: 'cooked'|'created', ms}`, jeweils die jüngste qualifizierende Handlung) am Thema; das ist für Mitglieder lesbar wie `autoRecipeOwners` und `cookDates`. Die Rotation lädt die akzeptierten Follows des Listenbesitzers nur, wenn ein aktives Thema `followed` nutzt (`usesFollowedScope`), und schreibt dann `users/{uid}/fuerDichEntdeckt/current` (`listId`, `themeId`, `recipes: {recipeId: [{userId, kind, day}]}`, höchstens 3 Akteure, nur Tag `YYYY-MM-DD`). Rules: nur Eigentümer lesbar, nie schreibbar. Verhalten ohne Flag oder ohne Gefolgte: Das Thema hat für die Liste keine nutzbaren Rezepte und ist damit kein Kandidat (also ausgeblendet). Platzverteilung: `pickTopic` zieht pro Liste genau ein Thema zufällig unter den Kandidaten und füllt bis zu 5 Plätze daraus; ein Thema bringt seine Plätze also selbst mit, es gibt keine Mischung mehrerer Themen. Nicht gebaut: eigenes Thema „Deine Community kocht" (Admin legt es an: `scopes: ['followed']`, `lastCooked`, 0–30 Tage), Anzeige der Namen (PR 6). Reihenfolge beim Deployment: Rules, dann Functions, dann Client.
 

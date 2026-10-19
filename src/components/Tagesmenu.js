@@ -13,6 +13,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import TagesmenuFilterOverlay from './TagesmenuFilterOverlay';
 import { isFuerDichEntdecktList } from '../utils/fuerDichEntdeckt';
+import { describeActors, useFuerDichAttribution } from '../utils/fuerDichAttribution';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import { useOptionalNutritionReference } from '../contexts/NutritionReferenceContext';
 
@@ -127,6 +128,9 @@ function Tagesmenu({
   }, [onSelectedCategoriesChange]);
 
   const selectedList = interactiveLists.find((l) => l.id === selectedListId) ?? null;
+  // Namen der Gefolgten hinter den Rezepten (nur Liste "Für dich entdeckt", PR 6 Follow).
+  const attributionList = selectedList && isFuerDichEntdecktList(selectedList) ? selectedList : null;
+  const attribution = useFuerDichAttribution(attributionList ? currentUser?.id : null, attributionList);
 
   // Reset swipe index when the user switches lists
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -467,6 +471,8 @@ function Tagesmenu({
     const user = allUsers.find((u) => u.id === authorId);
     return user ? user.vorname : '';
   };
+
+  const getFollowedByText = (recipeId) => describeActors(attribution[recipeId], getAuthorName);
 
   // Returns the display text for an ingredient or step item (string or object format).
   const getItemText = (item) => (typeof item === 'string' ? item : item.text);
@@ -1511,6 +1517,9 @@ function Tagesmenu({
                   {authorName && (
                     <p className="tagesmenu-results-tile-author">{authorName}</p>
                   )}
+                  {getFollowedByText(recipe.id) && (
+                    <p className="tagesmenu-results-tile-author">{getFollowedByText(recipe.id)}</p>
+                  )}
                 </div>
               );
             };
@@ -1748,6 +1757,9 @@ function Tagesmenu({
                   <h2 className="tagesmenu-card-title">{recipe.title}</h2>
                   {authorName && (
                     <p className="tagesmenu-card-author">{authorName}</p>
+                  )}
+                  {getFollowedByText(recipe.id) && (
+                    <p className="tagesmenu-card-followed">{getFollowedByText(recipe.id)}</p>
                   )}
                   {recipe.kulinarik &&
                     (Array.isArray(recipe.kulinarik)
