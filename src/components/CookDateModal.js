@@ -28,7 +28,7 @@ import { isBase64Image } from '../utils/imageUtils';
  * @param {Function} [props.onSaved]                    - Optionally called with the new Date when saved
  * @param {Function} props.onClose                     - Called when the modal should close
  */
-function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, recipeCreatedAt, recipeImage, timelineBubbleIcon = null, timelineCookEventBubbleIcon = null, timelineCookEventDefaultImage = null, canDeleteCookDates = false, prefillToday = false, onSaved, onClose }) {
+function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, recipeCreatedAt, recipeImage, timelineBubbleIcon = null, timelineCookEventBubbleIcon = null, timelineCookEventDefaultImage = null, followButtonIcon, canDeleteCookDates = false, prefillToday = false, onSaved, onClose }) {
   const todayStr = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(prefillToday ? todayStr : '');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -138,11 +138,11 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
                     <span className="cook-date-timeline-date">{formatDate(cd.date)}</span>
                     <span className="cook-date-timeline-recipe-title">
                       <FollowName userId={cd.userId} name={getUserName(cd.userId)} />
-                      {allUsers.some((u) => u.id === cd.userId) && (
-                        <FollowButton userId={cd.userId} name={getUserName(cd.userId)} />
-                      )}
                     </span>
                   </div>
+                  {allUsers.some((u) => u.id === cd.userId) && (
+                    <FollowButton userId={cd.userId} name={getUserName(cd.userId)} variant="round" icon={followButtonIcon} />
+                  )}
                   {canDeleteCookDates && (
                     <button
                       className="cook-date-timeline-delete-btn"

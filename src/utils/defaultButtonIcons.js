@@ -34,7 +34,15 @@ const SHAPES = {
   people: { d: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c0-3.3 2.9-6 6.5-6s6.5 2.7 6.5 6M16 4.3a3.5 3.5 0 0 1 0 6.4M18 14.5c2 .7 3.5 2.6 3.5 5.5' },
   calendar: { d: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4' },
   save: { d: 'M5 3h11l3 3v15H5zM8 3v6h7V3M8 21v-7h8v7' },
+  // Person mit Plus-Badge (Folgen). Das Badge ist in beiden Themes Bernstein.
+  follow: {
+    d: 'M9 11a3.8 3.8 0 1 0 0-7.6 3.8 3.8 0 0 0 0 7.6zM2.5 21c.6-3.8 3.3-6 6.5-6 1.2 0 2.3.3 3.2.8',
+    badge: { cx: 18, cy: 18, r: 5.5, plus: 'M18 15.4v5.2M15.4 18h5.2' },
+  },
 };
+
+const BADGE_FILL = '#D4820A';
+const BADGE_PLUS = '#1A1A18';
 
 /**
  * Liefert ein Standard-Symbol als data:-URI.
@@ -45,9 +53,13 @@ export function defaultIcon(name, dark = false) {
   const shape = SHAPES[name];
   const color = dark ? shape.darkColor || DARK_COLOR : shape.color || LIGHT_COLOR;
   const paint = shape.fill ? `fill="${color}" stroke="${color}"` : `fill="none" stroke="${color}"`;
+  const badge = shape.badge
+    ? `<circle cx="${shape.badge.cx}" cy="${shape.badge.cy}" r="${shape.badge.r}" fill="${BADGE_FILL}" stroke="none"/>` +
+      `<path d="${shape.badge.plus}" fill="none" stroke="${BADGE_PLUS}" stroke-width="1.8"/>`
+    : '';
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" ${paint} ` +
-    `stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${shape.d}"/></svg>`;
+    `stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${shape.d}"/>${badge}</svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
@@ -75,4 +87,5 @@ export const DEFAULT_ICON_NAMES = {
   eventsDrinksFab: 'cup',
   eventsGuestsFab: 'people',
   saveRecipeIcon: 'save',
+  followButton: 'follow',
 };
