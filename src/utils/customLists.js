@@ -606,6 +606,8 @@ export const DEFAULT_BUTTON_ICONS = {
   timerStart: defaultIcon('play'),
   timerStop: '■',
   cookDate: 'Datum',
+  // Folgen-Button (Rezeptdetail, Kochtagebuch)
+  followButton: defaultIcon('follow'),
   addRecipe: '+',
   editRecipe: 'Edit',
   addPrivateRecipe: 'Privat',
@@ -685,6 +687,7 @@ export const DEFAULT_BUTTON_ICONS = {
   timerStartDark: '',
   timerStopDark: '',
   cookDateDark: '',
+  followButtonDark: '',
   addRecipeDark: '',
   editRecipeDark: '',
   addPrivateRecipeDark: '',

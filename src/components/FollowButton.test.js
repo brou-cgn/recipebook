@@ -70,3 +70,21 @@ test('Fehler der Function erscheint in der Snackbar', async () => {
   expect(await screen.findByText('Diese Person ist nicht erreichbar.')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Rückgängig' })).not.toBeInTheDocument();
 });
+
+test('Standard-Symbol ist das Folgen-Icon, Variante setzt die Klasse', () => {
+  const { container } = renderButton({ variant: 'round' });
+  const button = screen.getByRole('button', { name: 'Anna folgen' });
+  expect(button).toHaveClass('follow-button', 'follow-button--round');
+  expect(container.querySelector('img.follow-button-icon-img').getAttribute('src')).toContain('data:image/svg+xml');
+});
+
+test('eingerichtetes Icon (Bild oder Text) ersetzt das Standard-Symbol', () => {
+  const { container, rerender } = renderButton({ icon: 'data:image/png;base64,AAAA' });
+  expect(container.querySelector('img.follow-button-icon-img').getAttribute('src')).toBe('data:image/png;base64,AAAA');
+  rerender(
+    <FollowProvider userId="me" enabled>
+      <FollowButton userId="anna" name="Anna" icon="Folgen" />
+    </FollowProvider>,
+  );
+  expect(screen.getByRole('button', { name: 'Anna folgen' })).toHaveTextContent('Folgen');
+});

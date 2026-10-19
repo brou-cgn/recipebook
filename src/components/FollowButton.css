@@ -2,21 +2,64 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  margin-left: 0.25rem;
+  flex-shrink: 0;
   padding: 0;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: #2f5d62;
-  vertical-align: middle;
+  background: #fff;
+  color: #402c1c;
+  line-height: 1;
   cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease;
 }
 
 .follow-button:hover,
 .follow-button:focus-visible {
-  background: rgba(47, 93, 98, 0.12);
+  background: #fbebd0;
+  border-color: #d4820a;
+}
+
+.follow-button:active {
+  transform: scale(0.96);
+}
+
+.follow-button-icon-img {
+  width: 1.4rem;
+  height: 1.4rem;
+  object-fit: contain;
+}
+
+/* Kachel in der Aktionsleiste: Maße und Rand wie .cook-date-button */
+.follow-button--tile {
+  width: 48px;
+  height: 48px;
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  font-size: 1.4rem;
+}
+
+/* Runder Button im Kochtagebuch; 44 px Tippfläche über das Pseudo-Element */
+.follow-button--round {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  align-self: center;
+  margin: 0 0.6rem 0 0.25rem;
+  border: 1.5px solid #c9c9c3;
+  border-radius: 999px;
+  font-size: 1.1rem;
+}
+
+.follow-button--round::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
+.follow-button--round .follow-button-icon-img {
+  width: 1.2rem;
+  height: 1.2rem;
 }
 
 .follow-name-link {

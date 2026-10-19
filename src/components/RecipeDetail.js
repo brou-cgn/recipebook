@@ -154,6 +154,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [timerStartIcon, setTimerStartIcon] = useState(defaultIcon('play'));
   const [timerStopIcon, setTimerStopIcon] = useState('■');
   const [cookDateIcon, setCookDateIcon] = useState('Datum');
+  const [followButtonIcon, setFollowButtonIcon] = useState(defaultIcon('follow'));
   const [printRecipeIcon, setPrintRecipeIcon] = useState('⎙');
   const [editRecipeIcon, setEditRecipeIcon] = useState('Edit');
   const [editFabPressed, setEditFabPressed] = useState(false);
@@ -228,6 +229,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setTimerStartIcon(eff('timerStart') || defaultIcon('play'));
       setTimerStopIcon(eff('timerStop') || '■');
       setCookDateIcon(eff('cookDate') || 'Datum');
+      setFollowButtonIcon(eff('followButton') || defaultIcon('follow'));
       setPrintRecipeIcon(eff('printRecipe') || '⎙');
       setEditRecipeIcon(eff('editRecipe') || 'Edit');
       setNewVersionIcon(eff('newVersion') || 'Version');
@@ -279,6 +281,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setTimerStartIcon(eff('timerStart') || defaultIcon('play'));
     setTimerStopIcon(eff('timerStop') || '■');
     setCookDateIcon(eff('cookDate') || 'Datum');
+    setFollowButtonIcon(eff('followButton') || defaultIcon('follow'));
     setPrintRecipeIcon(eff('printRecipe') || '⎙');
     setEditRecipeIcon(eff('editRecipe') || 'Edit');
     setNewVersionIcon(eff('newVersion') || 'Version');
@@ -2312,6 +2315,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     )}
                   </button>
                 )}
+                <FollowButton userId={recipe.authorId} name={authorName} icon={followButtonIcon} />
                 <RecipeRating
                   recipeId={recipe.id}
                   ratingAvg={recipe.ratingAvg}
@@ -2409,7 +2413,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             {(authorName || formattedCreatedAt) && (
               <div className="author-date-caption">
                 {authorName && (
-                  <>{'Von '}<FollowName className="author-name" userId={recipe.authorId} name={authorName} /><FollowButton userId={recipe.authorId} name={authorName} /></>
+                  <>{'Von '}<FollowName className="author-name" userId={recipe.authorId} name={authorName} /></>
                 )}
                 {formattedCreatedAt && (
                   <span className="creation-date">{authorName ? ' erstellt am ' : 'Erstellt am '}{formattedCreatedAt}</span>
@@ -2830,6 +2834,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           timelineBubbleIcon={timelineBubbleIcon}
           timelineCookEventBubbleIcon={timelineCookEventBubbleIcon}
           timelineCookEventDefaultImage={timelineCookEventDefaultImage}
+          followButtonIcon={followButtonIcon}
           canDeleteCookDates={currentUser?.deleteRating === true}
           prefillToday={cookDateModalPrefillToday}
           onClose={() => setShowCookDateModal(false)}
