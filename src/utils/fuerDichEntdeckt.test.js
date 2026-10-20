@@ -3,6 +3,7 @@ import {
   filterFuerDichEntdecktGroups,
   findFuerDichEntdecktList,
   getFuerDichEntdecktListId,
+  hideExpiredCarriedRecipes,
   isFuerDichEntdecktList,
   planFuerDichEntdecktSync,
   syncFuerDichEntdecktList,
@@ -98,5 +99,17 @@ describe('fuerDichEntdeckt', () => {
     await syncFuerDichEntdecktList([ownList], { ...user, defaultEverydayClassicsListId: 'neu' });
     expect(updateGroup).toHaveBeenCalledWith('fuerDichEntdeckt_u1', { targetListId: 'neu' });
     expect(setDoc).not.toHaveBeenCalled();
+  });
+
+  it('hideExpiredCarriedRecipes blendet übernommene Rezepte ohne gültiges Kandidat-Flag aus', () => {
+    const recipes = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }];
+    const list = { carriedRecipeIds: ['a', 'b', 'c'] };
+    const docs = {
+      a: { flag: 'kandidat', isExpired: false },
+      b: { flag: 'kandidat', isExpired: true },
+      c: { flag: null, isExpired: false },
+    };
+    expect(hideExpiredCarriedRecipes(list, recipes, docs).map((r) => r.id)).toEqual(['a', 'd']);
+    expect(hideExpiredCarriedRecipes({}, recipes, docs)).toBe(recipes);
   });
 });

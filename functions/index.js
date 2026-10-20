@@ -18,7 +18,7 @@ const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 const {requireShortcutPin} = require('./webImportPin');
 const {evaluateLowCarbTag} = require('./lowCarb');
 const {countNewRecipes, sendFuerDichEntdecktPush} = require('./fuerDichEntdecktPush');
-const {isRotationDue, getProtectedRecipeIds, pickRotationRecipeIds, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleResult, recipeAvailableToUser, usesFollowedScope, buildAttribution, mergeRuleMatches, explainTopicExclusion, isVisibleToUser, pickTopic, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
+const {isRotationDue, getProtectedRecipeIds, pruneExpiredCarriedRecipeIds,pickRotationRecipeIds, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleResult, recipeAvailableToUser, usesFollowedScope, buildAttribution, mergeRuleMatches, explainTopicExclusion, isVisibleToUser, pickTopic, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
 const {normalizeCuisines, suggestNewCuisines} = require('./cuisineNormalization');
 const {fetchFirestoreDailyUsage, buildFirestoreUsageSection} = require('./firestoreUsage');
 const follow = require('./follow');
@@ -10439,8 +10439,12 @@ const rotateFuerDichEntdecktList = async (db, listDoc, context, now = Date.now()
       .where('listID', '==', listDoc.id).where('flag', '==', 'kandidat').get();
   const protectedIds = getProtectedRecipeIds(flagsSnap.docs.map((d) => d.data()), now);
   const recipeIds = pickRotationRecipeIds(topic.usableRecipeIds, list.recipeIds || [], protectedIds);
+  // Kept only for their flag (not part of the new topic): removed again once it expires.
+  const topicIds = new Set(topic.usableRecipeIds);
+  const carriedRecipeIds = recipeIds.filter((id) => protectedIds.includes(id) && !topicIds.has(id));
   await listDoc.ref.update({
     recipeIds,
+    carriedRecipeIds,
     description: topic.beschreibung || '',
     themeLabel: topic.rubrik || '',
     themeId: topic.id,
@@ -10485,6 +10489,15 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
       const db = admin.firestore();
       const listsSnap = await db.collection('groups')
           .where('systemKey', '==', FUER_DICH_ENTDECKT_KEY).get();
+      // Carried-over 'kandidat' recipes whose swipe flag has expired leave the tile.
+      for (const listDoc of listsSnap.docs) {
+        const data = listDoc.data();
+        if (!Array.isArray(data.carriedRecipeIds) || data.carriedRecipeIds.length === 0) continue;
+        const flagsSnap = await db.collection('recipeSwipeFlags')
+            .where('listID', '==', listDoc.id).where('flag', '==', 'kandidat').get();
+        const pruned = pruneExpiredCarriedRecipeIds(data, flagsSnap.docs.map((d) => d.data()));
+        if (pruned) await listDoc.ref.update(pruned);
+      }
       const context = await loadFuerDichEntdecktRotationContext(db);
       if (context.activeTopics.length === 0) {
         console.log('rotateFuerDichEntdecktLists: no relevant topic, lists unchanged');

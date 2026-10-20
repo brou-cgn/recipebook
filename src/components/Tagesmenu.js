@@ -12,7 +12,7 @@ import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
 import { isBase64Image } from '../utils/imageUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import TagesmenuFilterOverlay from './TagesmenuFilterOverlay';
-import { isFuerDichEntdecktList } from '../utils/fuerDichEntdeckt';
+import { isFuerDichEntdecktList, hideExpiredCarriedRecipes } from '../utils/fuerDichEntdeckt';
 import { describeActors, useFuerDichAttribution } from '../utils/fuerDichAttribution';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import { useOptionalNutritionReference } from '../contexts/NutritionReferenceContext';
@@ -220,10 +220,14 @@ function Tagesmenu({
   const allListRecipes = useMemo(() => {
     if (!selectedList) return [];
     const groupRecipeIds = Array.isArray(selectedList.recipeIds) ? selectedList.recipeIds : [];
-    return recipes.filter(
+    const listRecipes = recipes.filter(
       (r) => r.groupId === selectedList.id || groupRecipeIds.includes(r.id)
     );
-  }, [recipes, selectedList]);
+    // Abgelaufene übernommene Kandidaten nicht in Stapel/Grid zeigen (erst nach dem Laden der Flags).
+    return flagsLoaded && isFuerDichEntdecktList(selectedList)
+      ? hideExpiredCarriedRecipes(selectedList, listRecipes, currentUserSwipeDocs)
+      : listRecipes;
+  }, [recipes, selectedList, flagsLoaded, currentUserSwipeDocs]);
 
   // Only categories actually present in the current Swipestapel (the selected
   // list's recipes still available for swiping), not across all interactive
