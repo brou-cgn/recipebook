@@ -26,6 +26,9 @@
  * Recipes with a still valid recipeSwipeFlags 'kandidat' of the list (flag
  * 'kandidat', expiresAt in the future or empty) are not removed by the rotation
  * (getProtectedRecipeIds / pickRotationRecipeIds); they take slots of the 5.
+ * Those kept only for their flag are remembered in the list's `carriedRecipeIds`;
+ * the daily run removes them from the list once the flag has expired
+ * (pruneExpiredCarriedRecipeIds), so they do not fall back into the swipe stack.
  *
  * Pure functions only - the scheduled function in index.js does the I/O.
  */
@@ -532,9 +535,31 @@ const pickRotationRecipeIds = (candidateIds, previousIds = [], protectedIds = []
   return [...kept, ...picked];
 };
 
+/**
+ * Carried-over recipes (kept by a rotation only because of their 'kandidat'
+ * flag, not part of the new topic) whose protection has run out are dropped
+ * from the list completely, instead of falling back into the swipe stack.
+ * @param {Object} list - with `recipeIds` and `carriedRecipeIds`
+ * @param {Array<Object>} flagDocs - recipeSwipeFlags data of ONE list
+ * @param {number} [now]
+ * @return {{recipeIds: string[], carriedRecipeIds: string[]}|null} null = nothing to change
+ */
+const pruneExpiredCarriedRecipeIds = (list, flagDocs, now = Date.now()) => {
+  const carried = Array.isArray(list && list.carriedRecipeIds) ? list.carriedRecipeIds : [];
+  if (carried.length === 0) return null;
+  const stillProtected = new Set(getProtectedRecipeIds(flagDocs, now));
+  const expired = new Set(carried.filter((id) => !stillProtected.has(id)));
+  if (expired.size === 0) return null;
+  return {
+    recipeIds: (list.recipeIds || []).filter((id) => !expired.has(id)),
+    carriedRecipeIds: carried.filter((id) => !expired.has(id)),
+  };
+};
+
 module.exports = {
   SYSTEM_KEY,
   getProtectedRecipeIds,
+  pruneExpiredCarriedRecipeIds,
   pickRotationRecipeIds,
   RECIPES_PER_ROTATION,
   ROTATION_INTERVAL_MS,

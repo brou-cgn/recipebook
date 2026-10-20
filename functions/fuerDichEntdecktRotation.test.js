@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const {
   matchesRecipeRule, computeRuleMatches, computeRuleResult, recipeAvailableToUser, ruleActorsOfRecipe, buildAttribution, normalizeRecipeRule,
   isRotationDue, isTopicInPeriod, getActiveTopics, pickTopic, pickRecipeIds,
-  getProtectedRecipeIds, pickRotationRecipeIds,
+  getProtectedRecipeIds, pickRotationRecipeIds, pruneExpiredCarriedRecipeIds,
   ROTATION_INTERVAL_MS,
 } = require('./fuerDichEntdecktRotation');
 
@@ -375,4 +375,21 @@ test('pickRotationRecipeIds: more than 5 protected recipes are all kept, nothing
 test('pickRotationRecipeIds: protected id that is not on the list is ignored', () => {
   const picked = pickRotationRecipeIds(['p', 'q'], ['a'], ['zzz'], () => 0.5);
   assert.ok(!picked.includes('zzz'));
+});
+
+test('pruneExpiredCarriedRecipeIds: expired carried recipes leave the list, valid ones stay', () => {
+  const now = Date.now();
+  const list = {recipeIds: ['n1', 'old', 'keep'], carriedRecipeIds: ['old', 'keep']};
+  const flags = [
+    {recipeID: 'keep', flag: 'kandidat', expiresAt: new Date(now + 1000)},
+    {recipeID: 'old', flag: 'kandidat', expiresAt: new Date(now - 1000)},
+  ];
+  assert.deepStrictEqual(pruneExpiredCarriedRecipeIds(list, flags, now),
+      {recipeIds: ['n1', 'keep'], carriedRecipeIds: ['keep']});
+});
+
+test('pruneExpiredCarriedRecipeIds: nothing to do without carried or expired recipes', () => {
+  assert.strictEqual(pruneExpiredCarriedRecipeIds({recipeIds: ['a']}, []), null);
+  const flags = [{recipeID: 'a', flag: 'kandidat', expiresAt: null}];
+  assert.strictEqual(pruneExpiredCarriedRecipeIds({recipeIds: ['a'], carriedRecipeIds: ['a']}, flags), null);
 });
