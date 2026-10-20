@@ -44,6 +44,24 @@ export const findFuerDichEntdecktList = (groups, userId) => {
 };
 
 /**
+ * Übernommene Kandidaten (`carriedRecipeIds`, siehe Rotation) ohne gültiges
+ * 'kandidat'-Flag werden sofort ausgeblendet, ohne den täglichen Aufräumlauf
+ * der Cloud Function abzuwarten.
+ * @param {Object|null} list
+ * @param {Array<Object>} recipes
+ * @param {Object} swipeDocs - recipeId → Doc aus getSwipeFlagDocsByRecipeForUser
+ */
+export const hideExpiredCarriedRecipes = (list, recipes, swipeDocs) => {
+  const carried = Array.isArray(list?.carriedRecipeIds) ? list.carriedRecipeIds : [];
+  if (carried.length === 0) return recipes;
+  const expired = new Set(carried.filter((id) => {
+    const d = swipeDocs?.[id];
+    return !(d && d.flag === 'kandidat' && !d.isExpired);
+  }));
+  return expired.size === 0 ? recipes : recipes.filter((r) => !expired.has(r.id));
+};
+
+/**
  * Blendet "Für dich entdeckt"-Listen aus, wenn der Nutzer die Berechtigung
  * nicht hat. Gibt bei Berechtigung das Array unverändert zurück.
  */

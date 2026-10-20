@@ -7,9 +7,9 @@ import TrendingCard from './TrendingCard';
 import StartseitenKarussell from './StartseitenKarussell';
 import FuerDichEntdecktKachel from './FuerDichEntdecktKachel';
 import { getDiscoverTopicImage } from '../utils/discoverTopics';
-import { findFuerDichEntdecktList, isFuerDichEntdecktList } from '../utils/fuerDichEntdeckt';
+import { findFuerDichEntdecktList, isFuerDichEntdecktList, hideExpiredCarriedRecipes } from '../utils/fuerDichEntdeckt';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, DEFAULT_MAX_KANDIDATEN_SCHWELLE, getAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT } from '../utils/customLists';
-import { getAllMembersSwipeFlagDocsForList } from '../utils/recipeSwipeFlags';
+import { getAllMembersSwipeFlagDocsForList, getSwipeFlagDocsByRecipeForUser } from '../utils/recipeSwipeFlags';
 import { isBase64Image } from '../utils/imageUtils';
 import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { calculateRecipeSortIndex, hasHauptsaisonIngredient, buildNutritionReferenceIndex } from '../utils/recipeSortIndex';
@@ -219,13 +219,29 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
     return () => { cancelled = true; };
   }, [fuerDichEntdecktThemeId]);
 
+  // Eigene Swipe-Flags, nur nötig wenn die Liste übernommene Kandidaten trägt.
+  const [fuerDichSwipeDocs, setFuerDichSwipeDocs] = useState(null);
+  const fuerDichHasCarried = (fuerDichEntdecktList?.carriedRecipeIds?.length || 0) > 0;
+  useEffect(() => {
+    let cancelled = false;
+    setFuerDichSwipeDocs(null);
+    if (!fuerDichEntdecktList || !fuerDichHasCarried || !currentUser?.id) return undefined;
+    getSwipeFlagDocsByRecipeForUser(currentUser.id, fuerDichEntdecktList.id).then((docs) => {
+      if (!cancelled) setFuerDichSwipeDocs(docs);
+    });
+    return () => { cancelled = true; };
+  }, [fuerDichEntdecktList?.id, fuerDichHasCarried, currentUser?.id]);
+
   const fuerDichEntdecktRecipes = useMemo(() => {
     if (!fuerDichEntdecktList) return [];
     const groupRecipeIds = Array.isArray(fuerDichEntdecktList.recipeIds) ? fuerDichEntdecktList.recipeIds : [];
-    return recipes.filter(
+    const listRecipes = recipes.filter(
       (r) => r.groupId === fuerDichEntdecktList.id || groupRecipeIds.includes(r.id)
     );
-  }, [recipes, fuerDichEntdecktList]);
+    return fuerDichSwipeDocs
+      ? hideExpiredCarriedRecipes(fuerDichEntdecktList, listRecipes, fuerDichSwipeDocs)
+      : listRecipes;
+  }, [recipes, fuerDichEntdecktList, fuerDichSwipeDocs]);
 
   const allAlltagsklassikerRecipes = useMemo(() => {
     if (!defaultEverydayClassicsList) return [];
