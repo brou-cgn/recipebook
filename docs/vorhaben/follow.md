@@ -48,6 +48,7 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | 4a | Folgen-Icon (`FollowButton`, `FollowContext`) am Autor im Rezeptdetail und im Kochtagebuch (Dialog heißt jetzt „Kochtagebuch"), Anfrage mit Snackbar „Rückgängig" | PR #3467 gemergt (Komponententests +6) |
 | 4b | Profilseite (`MemberProfilePage`: Status-Karte, Rezepte der Person), Name wird ab „angefragt" zum Link (`FollowName`) | PR #3469 gemergt (Komponententests +8) |
 | 4c | Folgen-Button nach Artefakt „Follow-Anfrage im Rezeptdetail“: Kachel in der Aktionsleiste des Rezeptdetails (nicht mehr am Autorennamen), runder Button rechts in der Kochtagebuch-Zeile; einrichtbares Icon `followButton` (+ `followButtonDark`) in den Button-Icons, Darkmode in `darkMode.css`. Zustände „angefragt“/„angenommen“ als Button (Abzeichen Uhr/Haken) bleiben offen: der Button verschwindet weiterhin ab „angefragt“. | 19.10.2026, Branch `claude/quirky-maxwell-07ec2v`, noch kein PR |
+| 4d | Folgen-Button (und `FollowName`) auch auf der Kachel „Erstellt am“ im Kochtagebuch (Autor des Rezepts); bisher nur auf den „Gekocht am“-Kacheln (Komponententests +2) | 20.10.2026, Branch `claude/kochtagebuch-follow-button` |
 | 5 | Themenregel `scopes` (Admin-UI `DiscoverTopicsTab.js`, Nachtlauf, Rotation), privates Attributionsdokument | PR #3470 gemergt (Function-Tests +4, Komponententests +2, Rules-Test +1) |
 | 6 | Namensanzeige auf Karte und im Stapel (liest `users/{uid}/fuerDichEntdeckt/current`) | Branch `claude/follow-pr6-namen` (Komponententests +1, Util-Tests 5), noch kein PR |
 

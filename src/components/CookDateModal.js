@@ -178,8 +178,13 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
                   <div className="cook-date-timeline-card-info">
                     <span className="cook-date-timeline-label">Erstellt am</span>
                     <span className="cook-date-timeline-date">{formatDate(recipeCreatedAt)}</span>
-                    <span className="cook-date-timeline-recipe-title">{getUserName(recipeAuthorId)}</span>
+                    <span className="cook-date-timeline-recipe-title">
+                      <FollowName userId={recipeAuthorId} name={getUserName(recipeAuthorId)} />
+                    </span>
                   </div>
+                  {allUsers.some((u) => u.id === recipeAuthorId) && (
+                    <FollowButton userId={recipeAuthorId} name={getUserName(recipeAuthorId)} variant="round" icon={followButtonIcon} />
+                  )}
                 </div>
               </div>
             )}
