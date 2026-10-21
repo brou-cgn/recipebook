@@ -88,7 +88,6 @@ export const planFuerDichEntdecktSync = (groups, user) => {
       data: {
         type: 'private',
         name: FUER_DICH_ENTDECKT_LIST_NAME,
-        description: '',
         ownerId: user.id,
         memberIds: [user.id],
         memberRoles: {},
@@ -114,7 +113,8 @@ export const syncFuerDichEntdecktList = async (groups, user) => {
   const plan = planFuerDichEntdecktSync(groups, user);
   if (plan.action === 'create') {
     // merge: läuft der Abgleich doppelt, bevor der Snapshot die neue Liste
-    // enthält, bleiben bereits zugeordnete Rezepte (recipeIds) erhalten.
+    // enthält, bleiben bereits zugeordnete Rezepte (recipeIds) erhalten – und
+    // die von der Rotation gesetzte Beschreibung (kein `description` in data).
     await setDoc(doc(db, 'groups', plan.listId), {
       ...plan.data,
       createdAt: serverTimestamp(),

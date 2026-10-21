@@ -6,7 +6,7 @@ import { getUserFavorites } from '../utils/userFavorites';
 import TrendingCard from './TrendingCard';
 import StartseitenKarussell from './StartseitenKarussell';
 import FuerDichEntdecktKachel from './FuerDichEntdecktKachel';
-import { getDiscoverTopicImage } from '../utils/discoverTopics';
+import { getDiscoverTopicInfo } from '../utils/discoverTopics';
 import { findFuerDichEntdecktList, isFuerDichEntdecktList, hideExpiredCarriedRecipes } from '../utils/fuerDichEntdeckt';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, DEFAULT_MAX_KANDIDATEN_SCHWELLE, getAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT } from '../utils/customLists';
 import { getAllMembersSwipeFlagDocsForList, getSwipeFlagDocsByRecipeForUser } from '../utils/recipeSwipeFlags';
@@ -209,12 +209,16 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
 
   const fuerDichEntdecktThemeId = fuerDichEntdecktList?.themeId || '';
   const [fuerDichEntdecktImage, setFuerDichEntdecktImage] = useState('');
+  const [fuerDichEntdecktTitle, setFuerDichEntdecktTitle] = useState('');
   useEffect(() => {
     let cancelled = false;
     setFuerDichEntdecktImage('');
+    setFuerDichEntdecktTitle('');
     if (!fuerDichEntdecktThemeId) return undefined;
-    getDiscoverTopicImage(fuerDichEntdecktThemeId).then((url) => {
-      if (!cancelled) setFuerDichEntdecktImage(url);
+    getDiscoverTopicInfo(fuerDichEntdecktThemeId).then(({ imageUrl, beschreibung }) => {
+      if (cancelled) return;
+      setFuerDichEntdecktImage(imageUrl);
+      setFuerDichEntdecktTitle(beschreibung);
     });
     return () => { cancelled = true; };
   }, [fuerDichEntdecktThemeId]);
@@ -618,6 +622,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         list={fuerDichEntdecktList}
         recipes={fuerDichEntdecktRecipes}
         themeImage={fuerDichEntdecktImage}
+        themeTitle={fuerDichEntdecktTitle}
         onOpen={onOpenInteractiveList}
       />
       <StartseitenKarussell

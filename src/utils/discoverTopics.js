@@ -251,16 +251,23 @@ export const saveDiscoverTopic = async (topic, updatedBy) => {
 };
 
 /** Kachelbild eines Themas (Einzel-Lesezugriff); '' ohne Bild oder bei Fehlern. */
-export const getDiscoverTopicImage = async (topicId) => {
-  if (!topicId) return '';
+export const getDiscoverTopicInfo = async (topicId) => {
+  const empty = { imageUrl: '', beschreibung: '' };
+  if (!topicId) return empty;
   try {
     const snap = await getDoc(doc(db, COLLECTION, topicId));
-    const url = snap.exists() ? snap.data().imageUrl : '';
-    return typeof url === 'string' ? url.trim() : '';
+    if (!snap.exists()) return empty;
+    const { imageUrl, beschreibung } = snap.data();
+    return {
+      imageUrl: typeof imageUrl === 'string' ? imageUrl.trim() : '',
+      beschreibung: typeof beschreibung === 'string' ? beschreibung.trim() : '',
+    };
   } catch (error) {
-    console.warn('Discover topic image not loaded:', error?.code || error);
-    return '';
+    console.warn('Discover topic not loaded:', error?.code || error);
+    return empty;
   }
 };
+
+export const getDiscoverTopicImage = async (topicId) => (await getDiscoverTopicInfo(topicId)).imageUrl;
 
 export const deleteDiscoverTopic = (id) => deleteDoc(doc(db, COLLECTION, id));
