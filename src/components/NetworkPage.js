@@ -1,10 +1,12 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './NetworkPage.css';
 import DeleteRowButton from './DeleteRowButton';
 import UndoSnackbar from './UndoSnackbar';
 import TrashIcon from './icons/TrashIcon';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
+import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
+import { isBase64Image } from '../utils/imageUtils';
 import {
   loadNetwork, respondToFollow, stopFollowing, removeFollower,
 } from '../utils/followFirestore';
@@ -71,6 +73,27 @@ function NetworkPage({ currentUser, onBack }) {
   const [error, setError] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const { banners, pendingKeys, scheduleDelete, undoDelete } = useUndoableDelete();
+  const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
+  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
+  const closeBtnRef = useRef(null);
+
+  useEffect(() => {
+    getButtonIcons().then(setButtonIcons).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => setIsDarkMode(e.detail.isDark);
+    window.addEventListener('darkModeChange', handler);
+    return () => window.removeEventListener('darkModeChange', handler);
+  }, []);
+
+  useEffect(() => {
+    closeBtnRef.current?.blur();
+  }, []);
+
+  const closeIcon = getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)
+    || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode)
+    || DEFAULT_BUTTON_ICONS.closeButtonDefaultImg;
 
   const reload = useCallback(async () => {
     if (!uid) return;
@@ -156,8 +179,23 @@ function NetworkPage({ currentUser, onBack }) {
   return (
     <div className="network-page">
       <div className="network-header">
-        <button type="button" className="network-back" onClick={onBack} aria-label="Zurück">&larr;</button>
-        <h2>Netzwerk</h2>
+        <h2>Mein Netzwerk</h2>
+        {onBack && (
+          <button
+            ref={closeBtnRef}
+            type="button"
+            className="app-close-button"
+            onClick={onBack}
+            aria-label="Mein Netzwerk schließen"
+            title="Mein Netzwerk schließen"
+          >
+            {isBase64Image(closeIcon) ? (
+              <img src={closeIcon} alt="Mein Netzwerk schließen" className="app-close-button-icon-img" />
+            ) : (
+              closeIcon
+            )}
+          </button>
+        )}
       </div>
 
       <div className="network-tabs" role="tablist">
