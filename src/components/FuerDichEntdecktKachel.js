@@ -1,14 +1,9 @@
 import React from 'react';
+import { getRecipeCardImageUrl } from '../utils/imageUtils';
 import './StartseitenKarussell.css';
 import './FuerDichEntdecktKachel.css';
 
 const COLLAGE_MAX = 3;
-
-const getRecipeImageUrl = (recipe) => (
-  Array.isArray(recipe.images) && recipe.images.length > 0
-    ? (recipe.images.find((img) => img.isDefault) || recipe.images[0])?.url || null
-    : recipe.image || null
-);
 
 const formatMonthYear = (value) => {
   const date = typeof value?.toDate === 'function' ? value.toDate() : value;
@@ -40,7 +35,7 @@ function FuerDichEntdecktKachel({ list, recipes = [], themeImage = '', themeTitl
   const collage = recipes.slice(0, COLLAGE_MAX).map((recipe) => ({
     id: recipe.id,
     title: recipe.title,
-    imageUrl: getRecipeImageUrl(recipe),
+    imageUrl: getRecipeCardImageUrl(recipe),
   }));
   const themeTitle = (typeof list.description === 'string' && list.description.trim()) || themeTitleProp.trim() || 'Rezepte zu wechselnden Themen';
   const themeLabel = (typeof list.themeLabel === 'string' && list.themeLabel.trim()) || '';

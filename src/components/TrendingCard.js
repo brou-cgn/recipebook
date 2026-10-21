@@ -1,6 +1,6 @@
 import React from 'react';
 import StarIcon from './icons/StarIcon';
-import { isBase64Image } from '../utils/imageUtils';
+import { isBase64Image, getRecipeCardImageUrl } from '../utils/imageUtils';
 import './TrendingCard.css';
 
 function renderDifficultyStars(level) {
@@ -21,10 +21,7 @@ function renderDifficultyStars(level) {
 function TrendingCard({ recipe, onSelectRecipe, difficultyIcon = null, timeIcon = null }) {
   if (!recipe) return null;
 
-  const imageUrl =
-    Array.isArray(recipe.images) && recipe.images.length > 0
-      ? (recipe.images.find((img) => img.isDefault) || recipe.images[0])?.url || null
-      : recipe.image || null;
+  const imageUrl = getRecipeCardImageUrl(recipe);
 
   const handleClick = () => {
     onSelectRecipe?.(recipe);
@@ -36,7 +33,7 @@ function TrendingCard({ recipe, onSelectRecipe, difficultyIcon = null, timeIcon 
     >
       <div className="trending-card-image">
         {imageUrl ? (
-          <img src={imageUrl} alt={recipe.title} />
+          <img src={imageUrl} alt={recipe.title} loading="lazy" decoding="async" />
         ) : (
           <div className="trending-card-image-placeholder" />
         )}

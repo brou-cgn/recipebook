@@ -506,3 +506,27 @@ describe('imageUtils', () => {
     });
   });
 });
+
+describe('getRecipeCardImageUrl', () => {
+  const { getRecipeCardImageUrl } = require('./imageUtils');
+
+  test('bevorzugt das Vorschaubild des Standardbilds', () => {
+    const recipe = { images: [
+      { url: 'https://x/a.jpg', thumbnailUrl: 'https://x/a-t.jpg' },
+      { url: 'https://x/b.jpg', thumbnailUrl: 'https://x/b-t.jpg', isDefault: true },
+    ] };
+    expect(getRecipeCardImageUrl(recipe)).toBe('https://x/b-t.jpg');
+  });
+
+  test('fällt auf imageThumbnail, dann auf das Original zurück', () => {
+    expect(getRecipeCardImageUrl({ images: [{ url: 'https://x/a.jpg' }], imageThumbnail: 'https://x/t.jpg' })).toBe('https://x/t.jpg');
+    expect(getRecipeCardImageUrl({ images: [{ url: 'https://x/a.jpg' }] })).toBe('https://x/a.jpg');
+    expect(getRecipeCardImageUrl({ image: 'https://x/legacy.jpg' })).toBe('https://x/legacy.jpg');
+  });
+
+  test('lässt Base64-Bilder und fehlende Bilder unverändert', () => {
+    expect(getRecipeCardImageUrl({ image: 'data:image/png;base64,AAA', imageThumbnail: 'https://x/t.jpg' })).toBe('data:image/png;base64,AAA');
+    expect(getRecipeCardImageUrl({})).toBeNull();
+    expect(getRecipeCardImageUrl(null)).toBeNull();
+  });
+});
