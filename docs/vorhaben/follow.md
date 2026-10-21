@@ -1,7 +1,7 @@
 # Vorhaben: Follow (Vernetzung zwischen Mitgliedern)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 21.10.2026 (PR 1 bis 6 gemergt, Netzwerk-Swipe in Arbeit).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 21.10.2026 (PR 1 bis 7 gemergt).
 
 **Ziel:** Aktivitäten anderer Mitglieder inspirieren. Wer jemandem folgt (mit Bestätigung des
 Gefolgten), sieht in „Für dich entdeckt" zusätzlich Rezepte, die diese Person zuletzt gekocht
@@ -51,7 +51,7 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | 4d | Folgen-Button (und `FollowName`) auch auf der Kachel „Erstellt am“ im Kochtagebuch (Autor des Rezepts); bisher nur auf den „Gekocht am“-Kacheln (Komponententests +2) | PR #3475 gemergt (20.10.2026) |
 | 5 | Themenregel `scopes` (Admin-UI `DiscoverTopicsTab.js`, Nachtlauf, Rotation), privates Attributionsdokument | PR #3470 gemergt (Function-Tests +4, Komponententests +2, Rules-Test +1) |
 | 6 | Namensanzeige auf Karte und im Stapel (liest `users/{uid}/fuerDichEntdeckt/current`) | PR #3472 gemergt (Komponententests +1, Util-Tests 5) |
-| 7 | Netzwerk-Seite („Mein Netzwerk“, Kopfzeile wie „Meine Mise en Place“: Titel über der Karte, Schließbutton rechts) mobil: Linksswipe (`useSwipeToDelete`) für „Ich folge“ und „Follower“, Desktop weiter mit `DeleteRowButton` (Komponententests +2) | 21.10.2026, Branch `claude/follow-netzwerk-swipe`, noch kein PR |
+| 7 | Netzwerk-Seite („Mein Netzwerk“, Kopfzeile wie „Meine Mise en Place“: Titel über der Karte, Schließbutton rechts) mobil: Linksswipe (`useSwipeToDelete`) für „Ich folge“ und „Follower“, Desktop weiter mit `DeleteRowButton` (Komponententests +2) | PR #3480 gemergt (21.10.2026) |
 
 Nach jedem PR: Tech-Check-Dashboard aktualisieren (Befunde und `umsetzungen`, siehe `CLAUDE.md`),
 Tabelle hier nachziehen.
@@ -82,7 +82,7 @@ aus `users/{uid}/followInbox` verschwindet. Ein Entsperren fehlt noch (siehe Off
 
 ## Bekannte Risiken und Voraussetzungen
 
-- **S16** (Gruppen mit `invitedEmails` für anonyme Gäste lesbar) und **S18** (`notifyPrivateListMembers` ohne Absenderprüfung): im Tech-Check erfasst, nicht Teil von PR 1. Vor dem Rollout von Follow klären. Stand 21.10.2026: S18 mit `functions/listPushGuard.js` behoben (Mitgliedschaft, `actorId` = eigene UID, Rolle, Tageslimit 300). S16 in zwei Schritten: erst der Client (drei gezielte Abfragen statt ganzer Collection), danach die verschärfte Regel für `groups` (eigener PR, erst nach dem Client-Rollout), damit bereits geladene alte Clients nicht ohne Listen dastehen.
+- **S16** (Gruppen mit `invitedEmails` für anonyme Gäste lesbar) und **S18** (`notifyPrivateListMembers` ohne Absenderprüfung): im Tech-Check erfasst, nicht Teil von PR 1. Beide vor dem Rollout geklärt (21.10.2026). S18 behoben mit `functions/listPushGuard.js` (PR #3481: Mitgliedschaft, `actorId` = eigene UID, Rolle, Tageslimit 300). S16: Client fragt `groups` gezielt ab (PR #3481), die Regel beschränkt das Lesen auf Eigentümer, Mitglieder und Admins (PR #3483; #3482 landete nur in einem Nebenbranch). Rest, bewusst offen: Mitglieder einer Liste sehen deren `invitedEmails` (siehe `docs/architecture/security.md`, Tech-Check S16).
 - Rezept-Sichtbarkeit gilt nur im Client (Tech-Check S2, bewusst so entschieden). Das Datenschutzversprechen im UI darf keinen technischen Schutz behaupten.
 - `follows` nie im `users`-Dokument führen: Nutzer dürfen es bis auf `role` selbst ändern.
 - Neue Felder an `publicProfiles` müssen in `functions/index.js` (`PUBLIC_PROFILE_FIELDS`) und `src/utils/userManagement.js` gleichzeitig ergänzt werden, sonst überschreibt `syncPublicProfile` sie.
