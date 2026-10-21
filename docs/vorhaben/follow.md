@@ -1,7 +1,7 @@
 # Vorhaben: Follow (Vernetzung zwischen Mitgliedern)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 18.10.2026 (PR 4a/4b/5 gemergt, PR 6 in Arbeit).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 21.10.2026 (PR 1 bis 6 gemergt, Netzwerk-Swipe in Arbeit).
 
 **Ziel:** Aktivitäten anderer Mitglieder inspirieren. Wer jemandem folgt (mit Bestätigung des
 Gefolgten), sieht in „Für dich entdeckt" zusätzlich Rezepte, die diese Person zuletzt gekocht
@@ -47,10 +47,11 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | 3 | Netzwerk-Seite (`NetworkPage.js`, Kachel „Netzwerk" unter Chefkoch), Badge am Tab „Chefkoch", Aktion `unblock` + `users/{uid}/followBlocks` | PR #3466 gemergt (18.10.2026), Function-Tests +2, Rules-Test +1, Komponententests 10 |
 | 4a | Folgen-Icon (`FollowButton`, `FollowContext`) am Autor im Rezeptdetail und im Kochtagebuch (Dialog heißt jetzt „Kochtagebuch"), Anfrage mit Snackbar „Rückgängig" | PR #3467 gemergt (Komponententests +6) |
 | 4b | Profilseite (`MemberProfilePage`: Status-Karte, Rezepte der Person), Name wird ab „angefragt" zum Link (`FollowName`) | PR #3469 gemergt (Komponententests +8) |
-| 4c | Folgen-Button nach Artefakt „Follow-Anfrage im Rezeptdetail“: Kachel in der Aktionsleiste des Rezeptdetails (nicht mehr am Autorennamen), runder Button rechts in der Kochtagebuch-Zeile; einrichtbares Icon `followButton` (+ `followButtonDark`) in den Button-Icons, Darkmode in `darkMode.css`. Zustände „angefragt“/„angenommen“ als Button (Abzeichen Uhr/Haken) bleiben offen: der Button verschwindet weiterhin ab „angefragt“. | 19.10.2026, Branch `claude/quirky-maxwell-07ec2v`, noch kein PR |
-| 4d | Folgen-Button (und `FollowName`) auch auf der Kachel „Erstellt am“ im Kochtagebuch (Autor des Rezepts); bisher nur auf den „Gekocht am“-Kacheln (Komponententests +2) | 20.10.2026, Branch `claude/kochtagebuch-follow-button` |
+| 4c | Folgen-Button nach Artefakt „Follow-Anfrage im Rezeptdetail“: Kachel in der Aktionsleiste des Rezeptdetails (nicht mehr am Autorennamen), runder Button rechts in der Kochtagebuch-Zeile; einrichtbares Icon `followButton` (+ `followButtonDark`) in den Button-Icons, Darkmode in `darkMode.css`. Zustände „angefragt“/„angenommen“ als Button (Abzeichen Uhr/Haken) bleiben offen: der Button verschwindet weiterhin ab „angefragt“. | PR #3473 gemergt (19.10.2026) |
+| 4d | Folgen-Button (und `FollowName`) auch auf der Kachel „Erstellt am“ im Kochtagebuch (Autor des Rezepts); bisher nur auf den „Gekocht am“-Kacheln (Komponententests +2) | PR #3475 gemergt (20.10.2026) |
 | 5 | Themenregel `scopes` (Admin-UI `DiscoverTopicsTab.js`, Nachtlauf, Rotation), privates Attributionsdokument | PR #3470 gemergt (Function-Tests +4, Komponententests +2, Rules-Test +1) |
-| 6 | Namensanzeige auf Karte und im Stapel (liest `users/{uid}/fuerDichEntdeckt/current`) | Branch `claude/follow-pr6-namen` (Komponententests +1, Util-Tests 5), noch kein PR |
+| 6 | Namensanzeige auf Karte und im Stapel (liest `users/{uid}/fuerDichEntdeckt/current`) | PR #3472 gemergt (Komponententests +1, Util-Tests 5) |
+| 7 | Netzwerk-Seite („Mein Netzwerk“, Kopfzeile wie „Meine Mise en Place“ mit Schließbutton rechts) mobil: Linksswipe (`useSwipeToDelete`) für „Ich folge“ und „Follower“, Desktop weiter mit `DeleteRowButton` (Komponententests +2) | 21.10.2026, Branch `claude/follow-netzwerk-swipe`, noch kein PR |
 
 Nach jedem PR: Tech-Check-Dashboard aktualisieren (Befunde und `umsetzungen`, siehe `CLAUDE.md`),
 Tabelle hier nachziehen.
@@ -74,7 +75,6 @@ aus `users/{uid}/followInbox` verschwindet. Ein Entsperren fehlt noch (siehe Off
 
 - Verwaiste Inbox-Zeilen: Zieht der Anfragende zurück (Client löscht `follows`), bleibt die Zeile in `users/{uid}/followInbox` stehen. PR 3 löst das clientseitig (`openRequestIds` in `followFirestore.js` zählt nur Inbox-Zeilen mit offener `pending`-Beziehung, Seite und Badge nutzen es). Die Zeile selbst bleibt liegen, der Push dedupliziert darüber (kein zweiter Push, solange sie steht); eine aufräumende Function ist nicht nötig, solange das Tageslimit gilt.
 - Tippen auf den Push öffnet die Startseite; der Sprung in die Netzwerk-Seite (`follow_request` in `src/service-worker.js`/`firebase-messaging-sw.js`, Übergabe wie `pushTapHandoff.js`) ist noch nicht gebaut. Eigener kleiner PR, gehört zu PR 3 nur lose.
-- Netzwerk-Seite: Mobil fehlt die Linksswipe-Geste für „nicht mehr folgen" / „Follower entfernen" (`useSwipeToDelete`); aktuell nur `DeleteRowButton` mit Undo-Snackbar. Nachziehen, bevor Follow ausgerollt wird.
 
 - Zustimmungsdialog im Kochtagebuch (in der Skizze ohne).
 - Datenschutzerklärung um Follow und proaktive Ausspielung ergänzen, vor dem Rollout (Text liefert Claude, Freigabe beim Eigentümer).
