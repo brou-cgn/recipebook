@@ -1,8 +1,10 @@
-/* Kopfzeile steht über der Karte, wie bei „Meine Mise en Place“ über den Kacheln. */
+/* Kopfzeile steht über der Karte, wie bei „Meine Mise en Place“ über den Kacheln.
+   Die Seite liegt in .kueche-container (padding 1.5rem); „Meine Mise en Place“ hat nur 1rem
+   Außenabstand – der negative Rand gleicht die 0,5rem aus, damit Titel und Kartenbreite
+   identisch sitzen. */
 .network-container {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 1rem;
+  margin: -0.5rem;
+  padding: 0;
 }
 
 .network-page {
