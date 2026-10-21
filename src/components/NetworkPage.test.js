@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import NetworkPage from './NetworkPage';
+import { getButtonIcons } from '../utils/customLists';
 import {
   loadNetwork, respondToFollow, stopFollowing, removeFollower,
 } from '../utils/followFirestore';
@@ -10,6 +11,11 @@ jest.mock('../utils/followFirestore', () => ({
   respondToFollow: jest.fn(() => Promise.resolve({ status: 'accepted' })),
   stopFollowing: jest.fn(() => Promise.resolve()),
   removeFollower: jest.fn(() => Promise.resolve()),
+}));
+
+jest.mock('../utils/customLists', () => ({
+  ...jest.requireActual('../utils/customLists'),
+  getButtonIcons: jest.fn(),
 }));
 
 const network = () => ({
@@ -24,6 +30,7 @@ const user = { id: 'me' };
 beforeEach(() => {
   jest.clearAllMocks();
   loadNetwork.mockResolvedValue(network());
+  getButtonIcons.mockResolvedValue({});
 });
 
 test('zeigt offene Anfragen und nimmt eine an', async () => {
@@ -89,4 +96,47 @@ test('Ladefehler wird angezeigt', async () => {
   jest.spyOn(console, 'error').mockImplementation(() => {});
   render(<NetworkPage currentUser={user} onBack={() => {}} />);
   expect(await screen.findByRole('alert')).toHaveTextContent('nicht geladen');
+});
+
+const swipeLeft = (el, dx = -80) => {
+  fireEvent.touchStart(el, { touches: [{ clientX: 200, clientY: 10 }] });
+  fireEvent.touchMove(el, { touches: [{ clientX: 200 + dx, clientY: 10 }] });
+  fireEvent.touchEnd(el);
+};
+
+test('Mobil: Linksswipe legt die Entfernen-Aktion frei und startet das Undo-Fenster', async () => {
+  jest.useFakeTimers();
+  try {
+    render(<NetworkPage currentUser={user} onBack={() => {}} />);
+    await act(async () => { await Promise.resolve(); });
+    fireEvent.click(screen.getByRole('tab', { name: 'Follower' }));
+    const content = screen.getByText('Dora Lenz', { selector: '.network-row-name' }).closest('.network-row-content');
+    swipeLeft(content);
+    const action = content.parentElement.querySelector('.swipe-delete-action');
+    expect(action).toHaveAttribute('tabindex', '0');
+    fireEvent.click(action);
+    expect(screen.queryByText('Dora Lenz', { selector: '.network-row-name' })).not.toBeInTheDocument();
+    expect(removeFollower).not.toHaveBeenCalled();
+    await act(async () => { jest.advanceTimersByTime(6000); });
+    expect(removeFollower).toHaveBeenCalledWith('me', 'dora');
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test('Ein zu kurzer Swipe löst nichts aus', async () => {
+  render(<NetworkPage currentUser={user} onBack={() => {}} />);
+  fireEvent.click(await screen.findByRole('tab', { name: 'Ich folge' }));
+  const content = screen.getByText('Ben Roth', { selector: '.network-row-name' }).closest('.network-row-content');
+  swipeLeft(content, -20);
+  expect(content.parentElement.querySelector('.swipe-delete-action')).toHaveAttribute('tabindex', '-1');
+});
+
+test('Kopfzeile: Titel „Mein Netzwerk“ und Schließbutton rechts', async () => {
+  const onBack = jest.fn();
+  render(<NetworkPage currentUser={user} onBack={onBack} />);
+  await screen.findByText('Anna Berg');
+  expect(screen.getByRole('heading', { level: 2, name: 'Mein Netzwerk' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Mein Netzwerk schließen' }));
+  expect(onBack).toHaveBeenCalled();
 });

@@ -459,10 +459,10 @@ function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSe
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowNetwork(true); } }}
               role="button"
               tabIndex={0}
-              aria-label="Netzwerk öffnen"
+              aria-label="Mein Netzwerk öffnen"
             >
               <div className="kueche-tile-content">
-                <h3>Netzwerk</h3>
+                <h3>Mein Netzwerk</h3>
                 <div className="kueche-tile-meta">
                   <span className="meta-text">
                     <strong>{followRequestCount}</strong>
