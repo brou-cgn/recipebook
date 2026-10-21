@@ -104,6 +104,8 @@ test('followCooldowns und followLimits: weder lesen noch schreiben', async () =>
     await assertFails(as.user(env, uid).doc('followCooldowns/x').set({ blocked: false }));
     await assertFails(as.user(env, uid).doc('followLimits/reader_2026-10-18').get());
     await assertFails(as.user(env, uid).doc('followLimits/reader_2026-10-18').set({ uid: 'reader', count: 0 }));
+    await assertFails(as.user(env, uid).doc('listPushLimits/reader_2026-10-21').get());
+    await assertFails(as.user(env, uid).doc('listPushLimits/reader_2026-10-21').set({ uid: 'reader', count: 0 }));
   }
   await assertFails(as.unauth(env).doc('followCooldowns/reader_other').get());
 });

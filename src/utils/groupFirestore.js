@@ -68,6 +68,22 @@ export const ensurePublicGroup = async () => {
 };
 
 /**
+ * Die drei Abfragen, die zusammen alle für den Nutzer sichtbaren Listen ergeben:
+ * die öffentliche, eigene (ownerId) und solche, in denen er Mitglied ist.
+ * firestore.rules erlaubt das Lesen von groups nur so (Tech-Check S16): Regeln filtern
+ * keine Abfragen, eine ungefilterte Abfrage auf die ganze Collection würde komplett abgewiesen.
+ */
+const visibleGroupQueries = (userId) => {
+  const groupsRef = collection(db, 'groups');
+  const queries = [query(groupsRef, where('type', '==', 'public'))];
+  if (userId) {
+    queries.push(query(groupsRef, where('ownerId', '==', userId)));
+    queries.push(query(groupsRef, where('memberIds', 'array-contains', userId)));
+  }
+  return queries;
+};
+
+/**
  * Set up real-time listener for groups the user belongs to (owner or member)
  * Also includes the public group.
  * @param {string} userId - Current user's ID
@@ -75,26 +91,27 @@ export const ensurePublicGroup = async () => {
  * @returns {Function} Unsubscribe function
  */
 export const subscribeToGroups = (userId, callback) => {
-  const groupsRef = collection(db, 'groups');
+  const queries = visibleGroupQueries(userId);
+  const results = queries.map(() => null);
 
-  return onSnapshot(groupsRef, (snapshot) => {
-    const groups = [];
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      // Include public groups and groups where user is owner or member
-      if (
-        data.type === 'public' ||
-        data.ownerId === userId ||
-        (Array.isArray(data.memberIds) && data.memberIds.includes(userId))
-      ) {
-        groups.push({ id: docSnap.id, ...data });
-      }
-    });
-    callback(groups);
+  // Erst melden, wenn jede Abfrage einmal geantwortet hat, sonst blitzt eine unvollständige Liste auf.
+  const emit = () => {
+    if (results.some((r) => r === null)) return;
+    const merged = new Map();
+    results.forEach((docs) => docs.forEach((g) => merged.set(g.id, g)));
+    callback([...merged.values()]);
+  };
+
+  const unsubscribes = queries.map((q, index) => onSnapshot(q, (snapshot) => {
+    results[index] = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    emit();
   }, (error) => {
     console.error('Error subscribing to groups:', error);
-    callback([]);
-  });
+    results[index] = [];
+    emit();
+  }));
+
+  return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
 };
 
 /**
@@ -104,20 +121,12 @@ export const subscribeToGroups = (userId, callback) => {
  */
 export const getGroups = async (userId) => {
   try {
-    const groupsRef = collection(db, 'groups');
-    const snapshot = await getDocs(groupsRef);
-    const groups = [];
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      if (
-        data.type === 'public' ||
-        data.ownerId === userId ||
-        (Array.isArray(data.memberIds) && data.memberIds.includes(userId))
-      ) {
-        groups.push({ id: docSnap.id, ...data });
-      }
-    });
-    return groups;
+    const snapshots = await Promise.all(visibleGroupQueries(userId).map((q) => getDocs(q)));
+    const merged = new Map();
+    snapshots.forEach((snapshot) => snapshot.forEach((docSnap) => {
+      merged.set(docSnap.id, { id: docSnap.id, ...docSnap.data() });
+    }));
+    return [...merged.values()];
   } catch (error) {
     console.error('Error getting groups:', error);
     return [];

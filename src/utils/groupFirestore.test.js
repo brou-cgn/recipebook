@@ -65,20 +65,50 @@ const createMockSnapshot = (groups) => ({
   }
 });
 
+// Beantwortet eine der drei Sichtbarkeits-Abfragen (type == public, ownerId == uid,
+// memberIds array-contains uid) so, wie Firestore es mit den Regeln täte: nur Treffer.
+const answerFor = (groups, q) => {
+  const [field, op, value] = q[1];
+  const matches = groups.filter((g) => (op === 'array-contains'
+    ? Array.isArray(g[field]) && g[field].includes(value)
+    : g[field] === value));
+  return createMockSnapshot(matches);
+};
+
+const wireQueries = () => {
+  mockCollection.mockReturnValue('groups-ref');
+  mockQuery.mockImplementation((...args) => args);
+  mockWhere.mockImplementation((...args) => args);
+};
+
 describe('groupFirestore - subscribeToGroups', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    wireQueries();
+  });
+
+  const subscribeWith = (groups) => {
+    mockOnSnapshot.mockImplementation((q, successCallback) => {
+      successCallback(answerFor(groups, q));
+      return jest.fn();
+    });
+  };
+
+  it('fragt nie die ganze Collection ab, sondern öffentlich, eigene und Mitgliedschaft (Tech-Check S16)', () => {
+    subscribeWith([]);
+    subscribeToGroups('user1', () => {});
+    expect(mockOnSnapshot.mock.calls.map(([q]) => q[1])).toEqual([
+      ['type', '==', 'public'],
+      ['ownerId', '==', 'user1'],
+      ['memberIds', 'array-contains', 'user1'],
+    ]);
   });
 
   it('should include public groups regardless of user membership', (done) => {
-    const groups = [
+    subscribeWith([
       { id: 'g1', type: 'public', name: PUBLIC_GROUP_NAME, ownerId: null, memberIds: [] },
       { id: 'g2', type: 'private', name: 'Team A', ownerId: 'user2', memberIds: ['user2'] }
-    ];
-    mockOnSnapshot.mockImplementation((_ref, successCallback) => {
-      successCallback(createMockSnapshot(groups));
-      return jest.fn();
-    });
+    ]);
 
     subscribeToGroups('user1', (result) => {
       expect(result).toHaveLength(1);
@@ -87,42 +117,46 @@ describe('groupFirestore - subscribeToGroups', () => {
     });
   });
 
-  it('should include groups where user is owner', (done) => {
-    const groups = [
+  it('should include groups where user is owner or member, without duplicates', (done) => {
+    subscribeWith([
       { id: 'g1', type: 'private', name: 'My Group', ownerId: 'user1', memberIds: ['user1'] },
-      { id: 'g2', type: 'private', name: 'Other Group', ownerId: 'user2', memberIds: ['user2'] }
-    ];
-    mockOnSnapshot.mockImplementation((_ref, successCallback) => {
-      successCallback(createMockSnapshot(groups));
-      return jest.fn();
-    });
+      { id: 'g2', type: 'private', name: 'Team', ownerId: 'user2', memberIds: ['user2', 'user1'] },
+      { id: 'g3', type: 'private', name: 'Other', ownerId: 'user3', memberIds: ['user3'] }
+    ]);
 
     subscribeToGroups('user1', (result) => {
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('g1');
+      expect(result.map((g) => g.id).sort()).toEqual(['g1', 'g2']);
       done();
     });
   });
 
-  it('should include groups where user is a member', (done) => {
-    const groups = [
-      { id: 'g1', type: 'private', name: 'Team', ownerId: 'user2', memberIds: ['user2', 'user1'] },
-      { id: 'g2', type: 'private', name: 'Other', ownerId: 'user3', memberIds: ['user3'] }
-    ];
-    mockOnSnapshot.mockImplementation((_ref, successCallback) => {
-      successCallback(createMockSnapshot(groups));
+  it('meldet erst, wenn alle drei Abfragen geantwortet haben', () => {
+    const callbacks = [];
+    mockOnSnapshot.mockImplementation((_q, successCallback) => {
+      callbacks.push(successCallback);
       return jest.fn();
     });
+    const received = jest.fn();
+    subscribeToGroups('user1', received);
 
-    subscribeToGroups('user1', (result) => {
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('g1');
-      done();
-    });
+    callbacks[0](createMockSnapshot([{ id: 'g1', type: 'public' }]));
+    callbacks[1](createMockSnapshot([]));
+    expect(received).not.toHaveBeenCalled();
+    callbacks[2](createMockSnapshot([]));
+    expect(received).toHaveBeenCalledTimes(1);
+    expect(received.mock.calls[0][0].map((g) => g.id)).toEqual(['g1']);
+  });
+
+  it('beendet alle drei Listener beim Abmelden', () => {
+    const unsubscribes = [jest.fn(), jest.fn(), jest.fn()];
+    let i = 0;
+    mockOnSnapshot.mockImplementation(() => unsubscribes[i++]);
+    subscribeToGroups('user1', () => {})();
+    unsubscribes.forEach((u) => expect(u).toHaveBeenCalledTimes(1));
   });
 
   it('should call callback with empty array on error', (done) => {
-    mockOnSnapshot.mockImplementation((_ref, _successCallback, errorCallback) => {
+    mockOnSnapshot.mockImplementation((_q, _successCallback, errorCallback) => {
       errorCallback(new Error('Firestore error'));
       return jest.fn();
     });
@@ -135,11 +169,25 @@ describe('groupFirestore - subscribeToGroups', () => {
       done();
     });
   });
+
+  it('liefert die übrigen Listen weiter, wenn eine Abfrage fehlschlägt', () => {
+    mockOnSnapshot.mockImplementation((q, successCallback, errorCallback) => {
+      if (q[1][0] === 'memberIds') errorCallback(new Error('denied'));
+      else successCallback(createMockSnapshot(q[1][0] === 'type' ? [{ id: 'g1', type: 'public' }] : []));
+      return jest.fn();
+    });
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+    const received = jest.fn();
+    subscribeToGroups('user1', received);
+    consoleSpy.mockRestore();
+    expect(received).toHaveBeenCalledWith([{ id: 'g1', type: 'public' }]);
+  });
 });
 
 describe('groupFirestore - getGroups', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    wireQueries();
   });
 
   it('should return public and user-relevant groups', async () => {
@@ -148,11 +196,10 @@ describe('groupFirestore - getGroups', () => {
       { id: 'g2', type: 'private', name: 'My Group', ownerId: 'user1', memberIds: ['user1'] },
       { id: 'g3', type: 'private', name: 'Other', ownerId: 'user2', memberIds: ['user2'] }
     ];
-    mockGetDocs.mockResolvedValue(createMockSnapshot(groups));
+    mockGetDocs.mockImplementation(async (q) => answerFor(groups, q));
 
     const result = await getGroups('user1');
-    expect(result).toHaveLength(2);
-    expect(result.map((g) => g.id)).toEqual(['g1', 'g2']);
+    expect(result.map((g) => g.id).sort()).toEqual(['g1', 'g2']);
   });
 
   it('should return empty array on error', async () => {

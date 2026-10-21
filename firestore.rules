@@ -488,6 +488,10 @@ service cloud.firestore {
     match /followLimits/{id} {
       allow read, write: if false;
     }
+    // Tageszähler für notifyPrivateListMembers (functions/listPushGuard.js), nur Admin SDK.
+    match /listPushLimits/{id} {
+      allow read, write: if false;
+    }
 
     // Recipe swipe flags collection - tracks user swipe actions (kandidat, geparkt, archiv) for Tagesmenü
     match /recipeSwipeFlags/{flagId} {
