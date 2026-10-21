@@ -31,6 +31,12 @@ describe('FuerDichEntdecktKachel', () => {
     expect(onOpen).toHaveBeenCalledWith('fuerDichEntdeckt_u1');
   });
 
+  test('nimmt den Thementitel aus themeTitle, wenn die Listenbeschreibung leer ist', () => {
+    const recipes = [{ id: 'r1', title: 'Pilzpfanne', image: 'a.jpg' }];
+    render(<FuerDichEntdecktKachel list={list} recipes={recipes} themeTitle="Pilze im Herbst" />);
+    expect(screen.getByText('Pilze im Herbst')).toBeInTheDocument();
+  });
+
   test('zeigt höchstens drei Bilder in der Collage', () => {
     const recipes = ['1', '2', '3', '4'].map((id) => ({ id, title: id, image: `${id}.jpg` }));
     const { container } = render(<FuerDichEntdecktKachel list={list} recipes={recipes} />);
