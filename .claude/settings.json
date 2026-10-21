@@ -1,5 +1,11 @@
 {
   "permissions": {
-    "allow": ["Bash(git rm:*)"]
+    "allow": [
+      "Bash(git rm:*)",
+      "Bash(npm run test:ci)",
+      "Bash(npm run lint)",
+      "Bash(npm run lint:ci)",
+      "Bash(npm test)"
+    ]
   }
 }
