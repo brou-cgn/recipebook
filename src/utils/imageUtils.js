@@ -687,3 +687,24 @@ export function resizeImageToSize(base64, size) {
     img.src = base64;
   });
 }
+
+const isRemoteImageUrl = (url) => typeof url === 'string' && /^https?:\/\//.test(url);
+
+/**
+ * Bild-URL für kleine Rezeptkacheln: bevorzugt das Vorschaubild (400×300) des
+ * Standardbilds statt des unverkleinerten Originals (bis 5 MB). Fällt auf
+ * `recipe.imageThumbnail` (nur für ein entferntes Standardbild) und dann auf das Original zurück.
+ * @param {Object} recipe
+ * @returns {string|null}
+ */
+export function getRecipeCardImageUrl(recipe) {
+  if (!recipe) return null;
+  const hasImages = Array.isArray(recipe.images) && recipe.images.length > 0;
+  const image = hasImages ? (recipe.images.find((img) => img.isDefault) || recipe.images[0]) : null;
+  const url = hasImages ? image?.url || null : recipe.image || null;
+  if (!url) return null;
+  if (!isRemoteImageUrl(url)) return url;
+  if (isRemoteImageUrl(image?.thumbnailUrl)) return image.thumbnailUrl;
+  if (isRemoteImageUrl(recipe.imageThumbnail)) return recipe.imageThumbnail;
+  return url;
+}
