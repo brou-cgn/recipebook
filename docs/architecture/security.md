@@ -52,11 +52,20 @@ Quelle ist immer `firestore.rules`; diese Tabelle gibt den Stand vom 18.10.2026 
 | `followCooldowns`, `followLimits` | niemand | niemand (nur Cloud Function) |
 | `recipeSwipeFlags` | Eigentümer, Mitglieder derselben Liste | Eigentümer; Listenmitglieder nur `calculatedFlag`, `calculatedExpiresAt` |
 | `aiScanLimits` | `edit`+ | Admin |
+| `aiNutritionLimits`, `aiRephraseLimits` | niemand | niemand (nur Cloud Function) |
 | `jobRequests`, `invitations` | niemand (nur Cloud Functions) | niemand |
 | `failedWebImports` | Admin | Anlegen: `isAnyUser()`; sonst Admin |
 | `cuisineProposals` | `isAnyUser()` | Anlegen: `edit`+ (nicht freigegeben); Ändern: Autor oder `moderator`+; Löschen: `moderator`+ |
 | Collection-Group `events`, `profiles` | Admin | |
 | Collection-Group `customDrinks` | `isAnyUser()` | |
+
+## KI-Functions (Cloud Functions mit Gemini)
+
+Die Prüfung liegt serverseitig in `functions/index.js`, nicht nur in der UI:
+
+- **Rolle ab `edit`** (`requireAiCaller`), sonst `permission-denied`. Schlägt die Rollenabfrage fehl, wird der Aufruf abgelehnt.
+- **Import-Functions** (`scanRecipeWithAI`, `scanRecipesWithAI`, `processHtmlWithAI`, `scrapeInstagramReel`, `importRecipeCallable`, `fetchRecipeHtml`, `captureWebsiteScreenshot`): zusätzlich muss die Rolle in `rolePermissions/{rolle}` mindestens eines von `fotoscan`, `webimport`, `recipeImport` haben (`requireRoleFeature`, wie `applyRolePermissionsToUser` im Client). Admins sind ausgenommen, ebenso das Konto des nächtlichen Importer-Tests. Die drei Flags lassen sich nicht trennen, weil ein Webimport auch einen Screenshot scannt und der Universalimport alle Functions nutzt.
+- **Tageslimits** je Person und Berliner Tag, Zähler nur per Admin SDK: `aiScanLimits` (Scans und Importe, auch für die Kurzbefehl-Endpunkte), `aiRephraseLimits` (Umformulieren), `aiNutritionLimits` (`parseIngredientAmountG`, `calculateNutritionFromOpenFoodFacts`, `generateNutritionFromReference`; Admin 5000, Moderator 1000, Mitglied 500). Ist der Zähler nicht prüfbar, wird der Aufruf abgelehnt.
 
 ## Bekannte Lücken
 

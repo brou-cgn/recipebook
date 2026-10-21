@@ -53,6 +53,13 @@ function loadWrappedFunction() {
 
     if (request === 'firebase-admin') {
       const firestoreFactory = () => ({
+        // requireNutritionCaller: users/{uid} role and the daily quota counter
+        doc: () => ({get: async () => ({exists: true, data: () => ({role: 'edit'})})}),
+        runTransaction: async (fn) => fn({
+          get: async () => ({exists: false, data: () => ({})}),
+          set: () => {},
+          update: () => {},
+        }),
         collection: () => ({
           doc: () => ({
             get: async () => ({
@@ -155,7 +162,7 @@ test('fills OFF and AI fields when missing and keeps manual source priority in c
   };
 
   const result = await wrappedFunction({
-    auth: {uid: 'u1'},
+    auth: {uid: 'u1', token: {firebase: {sign_in_provider: 'password'}}},
     data: {ingredientID: 'tomate'},
   });
 
@@ -195,7 +202,7 @@ test('never changes source for approved status', async () => {
   });
 
   const result = await wrappedFunction({
-    auth: {uid: 'u1'},
+    auth: {uid: 'u1', token: {firebase: {sign_in_provider: 'password'}}},
     data: {ingredientID: 'zutat'},
   });
 
@@ -230,7 +237,7 @@ test('stores ki confidence from Gemini estimate in the confidence field', async 
   const originalFetch = global.fetch;
   global.fetch = async () => ({ok: false});
 
-  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'mehl'}});
+  await wrappedFunction({auth: {uid: 'u1', token: {firebase: {sign_in_provider: 'password'}}}, data: {ingredientID: 'mehl'}});
 
   assert.ok(setCalls.length > 0);
   assert.deepEqual(setCalls[0].payload.confidence, {ki: 'high'});
@@ -261,7 +268,7 @@ test('stores openFoodFacts confidence based on OFF field completeness', async ()
     }),
   });
 
-  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'tomate'}});
+  await wrappedFunction({auth: {uid: 'u1', token: {firebase: {sign_in_provider: 'password'}}}, data: {ingredientID: 'tomate'}});
 
   assert.ok(setCalls.length > 0);
   // 4 of 7 fields present → 4/7 ≈ 0.57
@@ -300,7 +307,7 @@ test('stores dual confidence when both OFF and KI are available', async () => {
     }),
   });
 
-  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'tomate'}});
+  await wrappedFunction({auth: {uid: 'u1', token: {firebase: {sign_in_provider: 'password'}}}, data: {ingredientID: 'tomate'}});
 
   assert.ok(setCalls.length > 0);
   assert.deepEqual(setCalls[0].payload.confidence, {openFoodFacts: 1, ki: 'medium'});
@@ -326,7 +333,7 @@ test('does not overwrite existing confidence fields not updated in this call', a
   const originalFetch = global.fetch;
   global.fetch = async () => ({ok: false});
 
-  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'mehl'}});
+  await wrappedFunction({auth: {uid: 'u1', token: {firebase: {sign_in_provider: 'password'}}}, data: {ingredientID: 'mehl'}});
 
   assert.ok(setCalls.length > 0);
   assert.deepEqual(setCalls[0].payload.confidence, {openFoodFacts: 0.86, ki: 'low'});
@@ -343,7 +350,7 @@ test('advances status from empty string to Prüfung ausstehend', async () => {
   const originalFetch = global.fetch;
   global.fetch = async () => ({ok: false});
 
-  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'zutat'}});
+  await wrappedFunction({auth: {uid: 'u1', token: {firebase: {sign_in_provider: 'password'}}}, data: {ingredientID: 'zutat'}});
 
   assert.ok(setCalls.length > 0);
   assert.equal(setCalls[0].payload.status, 'Prüfung ausstehend');
@@ -365,7 +372,7 @@ test('advances status from Datenerfassung ausstehend to Prüfung ausstehend', as
   const originalFetch = global.fetch;
   global.fetch = async () => ({ok: false});
 
-  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'zutat'}});
+  await wrappedFunction({auth: {uid: 'u1', token: {firebase: {sign_in_provider: 'password'}}}, data: {ingredientID: 'zutat'}});
 
   assert.ok(setCalls.length > 0);
   assert.equal(setCalls[0].payload.status, 'Prüfung ausstehend');
@@ -384,7 +391,7 @@ test('keeps status as Neu when current status is Neu', async () => {
   const originalFetch = global.fetch;
   global.fetch = async () => ({ok: false});
 
-  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'zutat'}});
+  await wrappedFunction({auth: {uid: 'u1', token: {firebase: {sign_in_provider: 'password'}}}, data: {ingredientID: 'zutat'}});
 
   assert.ok(setCalls.length > 0);
   // 'Neu' entries are left untouched: status key must not be present in the
@@ -404,7 +411,7 @@ test('does not update source for Neu entries', async () => {
   const originalFetch = global.fetch;
   global.fetch = async () => ({ok: false});
 
-  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'zutat'}});
+  await wrappedFunction({auth: {uid: 'u1', token: {firebase: {sign_in_provider: 'password'}}}, data: {ingredientID: 'zutat'}});
 
   assert.ok(setCalls.length > 0);
   // 'Neu' entries must not have their source updated.
@@ -424,7 +431,7 @@ test('does not change status for Freigegeben entries', async () => {
   const originalFetch = global.fetch;
   global.fetch = async () => ({ok: false});
 
-  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'zutat'}});
+  await wrappedFunction({auth: {uid: 'u1', token: {firebase: {sign_in_provider: 'password'}}}, data: {ingredientID: 'zutat'}});
 
   assert.ok(setCalls.length > 0);
   assert.equal(Object.hasOwn(setCalls[0].payload, 'status'), false);
@@ -443,7 +450,7 @@ test('keeps status as Prüfung ausstehend when already in that state', async () 
   const originalFetch = global.fetch;
   global.fetch = async () => ({ok: false});
 
-  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'zutat'}});
+  await wrappedFunction({auth: {uid: 'u1', token: {firebase: {sign_in_provider: 'password'}}}, data: {ingredientID: 'zutat'}});
 
   assert.ok(setCalls.length > 0);
   assert.equal(setCalls[0].payload.status, 'Prüfung ausstehend');

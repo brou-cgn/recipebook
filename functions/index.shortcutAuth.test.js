@@ -63,7 +63,7 @@ function loadFunctions({userData, pinDoc = null, scanCount = null, limitCheckFai
         initializeApp: () => {},
         firestore,
         auth: () => ({getUserByEmail: async () => ({uid: 'u1'})}),
-        storage: () => ({bucket: () => ({file: () => ({})})}),
+        storage: () => ({bucket: () => ({file: () => ({getSignedUrl: async () => ['https://upload.example/signed']})})}),
         messaging: () => ({}),
       };
     }
@@ -72,7 +72,10 @@ function loadFunctions({userData, pinDoc = null, scanCount = null, limitCheckFai
     }
     if (request === '@google/generative-ai') return {GoogleGenerativeAI: class {}};
     if (request === 'nodemailer') return {createTransport: () => ({})};
-    if (request === 'sharp') return () => ({});
+    if (request === 'sharp') {
+      const chain = {resize: () => chain, jpeg: () => chain, toBuffer: async () => Buffer.from('jpeg')};
+      return () => chain;
+    }
     return originalLoad.call(this, request, parent, isMain, ...args);
   };
 
@@ -209,4 +212,48 @@ test('KI-Limit: falscher API-Key verbraucht kein Kontingent (401 vor Limit-Prüf
   req.headers['x-api-key'] = 'falsch';
   await mod.importRecipeShortcut(req, res);
   assert.equal(res.statusCode, 401);
+});
+
+const PHOTO_BODY = {images: ['data:image/jpeg;base64,' + 'A'.repeat(200)]};
+
+test('KI-Limit: scanRecipePhotoShortcut legt Job an, solange das Tageslimit nicht erreicht ist', async () => {
+  const {mod, saved} = loadFunctions({userData: {role: 'edit'}, scanCount: 19});
+  const res = makeRes();
+  await mod.scanRecipePhotoShortcut(makeReq({body: PHOTO_BODY}), res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(saved.length, 1);
+});
+
+test('KI-Limit: scanRecipePhotoShortcut -> 429 bei erreichtem Tageslimit, kein Job', async () => {
+  const {mod, saved} = loadFunctions({userData: {role: 'edit'}, scanCount: 20});
+  const res = makeRes();
+  await mod.scanRecipePhotoShortcut(makeReq({body: PHOTO_BODY}), res);
+  assert.equal(res.statusCode, 429);
+  assert.equal(saved.length, 0, 'es darf kein Import gespeichert werden');
+});
+
+test('KI-Limit: getVideoUploadUrl legt Job an und gibt URL aus, solange das Tageslimit nicht erreicht ist', async () => {
+  const {mod, saved} = loadFunctions({userData: {role: 'edit'}, scanCount: 19});
+  const res = makeRes();
+  await mod.getVideoUploadUrl(makeReq({body: {}}), res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.uploadUrl, 'https://upload.example/signed');
+  assert.equal(saved.length, 1);
+});
+
+test('KI-Limit: getVideoUploadUrl -> 429 bei erreichtem Tageslimit, kein Job und keine Upload-URL', async () => {
+  const {mod, saved} = loadFunctions({userData: {role: 'edit'}, scanCount: 20});
+  const res = makeRes();
+  await mod.getVideoUploadUrl(makeReq({body: {}}), res);
+  assert.equal(res.statusCode, 429);
+  assert.equal(res.body.uploadUrl, undefined);
+  assert.equal(saved.length, 0);
+});
+
+test('KI-Limit: getVideoUploadUrl -> 503 (fail closed), wenn der Zähler nicht prüfbar ist', async () => {
+  const {mod, saved} = loadFunctions({userData: {role: 'edit'}, limitCheckFails: true});
+  const res = makeRes();
+  await mod.getVideoUploadUrl(makeReq({body: {}}), res);
+  assert.equal(res.statusCode, 503);
+  assert.equal(saved.length, 0);
 });

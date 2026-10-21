@@ -101,6 +101,21 @@ const RATE_LIMITS_REPHRASE = {
 };
 
 /**
+ * Daily quota for the nutrition callables (parseIngredientAmountG,
+ * calculateNutritionFromOpenFoodFacts, generateNutritionFromReference),
+ * counted in aiNutritionLimits. Separate from the scan quota because one
+ * recipe calculation fires several of these calls (one per linked recipe or
+ * unknown ingredient) and each is cheap. Guests get 0: requireAiCaller
+ * already refuses them, this keeps the table fail-closed if that ever changes.
+ */
+const RATE_LIMITS_NUTRITION = {
+  admin: 5000,
+  moderator: 1000,
+  authenticated: 500,
+  guest: 0,
+};
+
+/**
  * Maximum number of account registrations allowed per IP address per hour.
  */
 const REGISTRATION_RATE_LIMIT = 5;
@@ -640,13 +655,58 @@ function getRateLimit(isAdmin, isAuthenticated, isModerator = false) {
 const AI_ALLOWED_ROLES = ['edit', 'moderator', 'admin'];
 
 /**
+ * Feature flags that open the import callables. The client shows the import
+ * buttons from rolePermissions/{role}: fotoscan (photo scan), webimport (web
+ * import) and recipeImport (universal import, which uses every callable). The
+ * callables cannot tell the three paths apart - a web import also scans a
+ * screenshot - so any one of them is enough.
+ */
+const IMPORT_FEATURES = ['fotoscan', 'webimport', 'recipeImport'];
+
+/**
+ * Throw unless the role holds at least one of the rolePermissions features.
+ * Mirrors the client (App.js applyRolePermissionsToUser): the flag comes from
+ * rolePermissions/{role}, a missing value counts as false. Admins always pass
+ * (their defaults are true and an admin must not be locked out by a stale
+ * flag). The nightly importer test account is exempt: its UID can only be
+ * minted with the Admin SDK. Fails closed if the flags cannot be read.
+ * @param {string} userId - UID of the caller
+ * @param {string} role - role from users/{uid}
+ * @param {string[]} features - accepted feature flags
+ * @returns {Promise<void>}
+ */
+async function requireRoleFeature(userId, role, features) {
+  if (role === 'admin' || userId === AI_IMPORTER_TEST_UID) return;
+  let flags;
+  try {
+    const doc = await admin.firestore().doc(`rolePermissions/${role}`).get();
+    flags = doc.exists ? (doc.data() || {}) : {};
+  } catch (err) {
+    console.error(`requireRoleFeature: failed to read rolePermissions/${role}:`, err);
+    throw new HttpsError(
+        'unavailable',
+        'Die Berechtigung für KI-Funktionen konnte nicht geprüft werden. Bitte versuche es gleich noch einmal.',
+    );
+  }
+  if (!features.some((feature) => flags[feature] === true)) {
+    throw new HttpsError(
+        'permission-denied',
+        'Für diesen Import fehlt deiner Rolle die Berechtigung.',
+    );
+  }
+}
+
+/**
  * Resolve the caller of an AI callable from their users/{uid} role and refuse
  * anyone below the edit role. Fails closed: if the role cannot be read, the
  * request is refused instead of let through.
+ * With `features`, the caller's role must additionally hold at least one of
+ * these rolePermissions flags (see requireRoleFeature).
  * @param {object} auth - request.auth of the callable (already checked non-null)
+ * @param {string[]} [features] - rolePermissions flags of which the role needs one
  * @returns {Promise<{userId: string, isAuthenticated: boolean, isAdmin: boolean, isModerator: boolean}>}
  */
-async function requireAiCaller(auth) {
+async function requireAiCaller(auth, features = null) {
   const userId = auth.uid;
   let role = null;
   try {
@@ -667,6 +727,7 @@ async function requireAiCaller(auth) {
   }
   // role is the only source of truth for admin status (as in firestore.rules).
   const isAdmin = role === 'admin';
+  if (features) await requireRoleFeature(userId, role, features);
   return {
     userId,
     isAuthenticated: auth.token.firebase?.sign_in_provider !== 'anonymous',
@@ -732,26 +793,23 @@ async function checkRateLimit(userId, isAuthenticated, isAdmin = false, isModera
 }
 
 /**
- * Same day-counter pattern as checkRateLimit above, but against the separate
- * aiRephraseLimits collection/quota (see RATE_LIMITS_REPHRASE).
- * @param {string} userId - User ID
- * @param {boolean} isAuthenticated - Whether user is authenticated
- * @param {boolean} isAdmin - Whether user is an admin
- * @param {boolean} isModerator - Whether user is a moderator
+ * Same day-counter pattern as checkRateLimit above, for a quota with its own
+ * collection (one document per user and Berlin day). A limit of 0 or less
+ * refuses without writing a counter.
+ * @param {string} collectionName - Firestore collection holding the counters
+ * @param {number} limit - Calls allowed per day
+ * @param {{userId: string, isAuthenticated: boolean, isAdmin: boolean, isModerator: boolean}} caller
  * @returns {Promise<{allowed: boolean, remaining: number, limit: number}>}
  */
-async function checkRephraseRateLimit(userId, isAuthenticated, isAdmin = false, isModerator = false) {
+async function consumeDailyQuota(collectionName, limit, {userId, isAuthenticated, isAdmin, isModerator}) {
+  if (limit <= 0) return {allowed: false, remaining: 0, limit};
+
   const db = admin.firestore();
   const today = new Date().toLocaleDateString('sv-SE', {timeZone: 'Europe/Berlin'});
-  const docRef = db.collection('aiRephraseLimits').doc(`${userId}_${today}`);
-
-  const limit = isAdmin ? RATE_LIMITS_REPHRASE.admin
-    : isModerator ? RATE_LIMITS_REPHRASE.moderator
-    : isAuthenticated ? RATE_LIMITS_REPHRASE.authenticated
-    : RATE_LIMITS_REPHRASE.guest;
+  const docRef = db.collection(collectionName).doc(`${userId}_${today}`);
 
   try {
-    const result = await db.runTransaction(async (transaction) => {
+    return await db.runTransaction(async (transaction) => {
       const doc = await transaction.get(docRef);
 
       if (!doc.exists) {
@@ -776,14 +834,50 @@ async function checkRephraseRateLimit(userId, isAuthenticated, isAdmin = false, 
       });
       return {allowed: true, remaining: limit - data.count - 1, limit};
     });
-
-    return result;
   } catch (error) {
-    console.error('Rephrase rate limit check error:', error);
+    console.error(`Rate limit check error (${collectionName}):`, error);
     // Fail closed, same as checkRateLimit.
     throw new HttpsError(
         'unavailable',
         'Das KI-Tageslimit konnte nicht geprüft werden. Bitte versuche es gleich noch einmal.',
+    );
+  }
+}
+
+/**
+ * Daily quota of rephraseRecipeSteps: aiRephraseLimits, see RATE_LIMITS_REPHRASE.
+ * @param {string} userId - User ID
+ * @param {boolean} isAuthenticated - Whether user is authenticated
+ * @param {boolean} isAdmin - Whether user is an admin
+ * @param {boolean} isModerator - Whether user is a moderator
+ * @returns {Promise<{allowed: boolean, remaining: number, limit: number}>}
+ */
+function checkRephraseRateLimit(userId, isAuthenticated, isAdmin = false, isModerator = false) {
+  const limit = isAdmin ? RATE_LIMITS_REPHRASE.admin
+    : isModerator ? RATE_LIMITS_REPHRASE.moderator
+    : isAuthenticated ? RATE_LIMITS_REPHRASE.authenticated
+    : RATE_LIMITS_REPHRASE.guest;
+  return consumeDailyQuota('aiRephraseLimits', limit, {userId, isAuthenticated, isAdmin, isModerator});
+}
+
+/**
+ * Gate for the nutrition callables: role from users/{uid} (edit or higher, via
+ * requireAiCaller), then one call from the daily nutrition quota
+ * (aiNutritionLimits, see RATE_LIMITS_NUTRITION). Fails closed.
+ * @param {object} auth - request.auth of the callable (already checked non-null)
+ * @returns {Promise<void>}
+ */
+async function requireNutritionCaller(auth) {
+  const caller = await requireAiCaller(auth);
+  const limit = caller.isAdmin ? RATE_LIMITS_NUTRITION.admin
+    : caller.isModerator ? RATE_LIMITS_NUTRITION.moderator
+    : caller.isAuthenticated ? RATE_LIMITS_NUTRITION.authenticated
+    : RATE_LIMITS_NUTRITION.guest;
+  const result = await consumeDailyQuota('aiNutritionLimits', limit, caller);
+  if (!result.allowed) {
+    throw new HttpsError(
+        'resource-exhausted',
+        `Tageslimit für Nährwert-Berechnungen erreicht (${result.limit}/${result.limit}). Versuche es morgen erneut.`,
     );
   }
 }
@@ -1472,7 +1566,7 @@ exports.scanRecipeWithAI = onCall(
         );
       }
 
-      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth);
+      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth, IMPORT_FEATURES);
 
       console.log(`AI Scan request from user ${userId} (authenticated: ${isAuthenticated}, admin: ${isAdmin})`);
 
@@ -1786,7 +1880,7 @@ exports.scanRecipesWithAI = onCall(
         throw new HttpsError('unauthenticated', 'You must be logged in to use AI recipe scanning');
       }
 
-      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth);
+      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth, IMPORT_FEATURES);
 
       if (!Array.isArray(images) || images.length === 0) {
         throw new HttpsError('invalid-argument', 'images must be a non-empty array');
@@ -2102,7 +2196,7 @@ exports.processHtmlWithAI = onCall(
         );
       }
 
-      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth);
+      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth, IMPORT_FEATURES);
 
       console.log(`HTML processing request from user ${userId}`);
 
@@ -2589,7 +2683,7 @@ exports.scrapeInstagramReel = onCall(
         );
       }
 
-      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth);
+      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth, IMPORT_FEATURES);
 
       console.log(`Instagram scrape request from user ${userId} for URL: ${url}`);
 
@@ -2683,7 +2777,7 @@ exports.fetchRecipeHtml = onCall(
         );
       }
 
-      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth);
+      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth, IMPORT_FEATURES);
 
       // Validate URL (includes SSRF guard for private/internal hosts)
       if (!url || typeof url !== 'string') {
@@ -2779,7 +2873,7 @@ exports.captureWebsiteScreenshot = onCall(
         );
       }
 
-      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth);
+      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth, IMPORT_FEATURES);
 
       console.log(`Screenshot request from user ${userId} for URL: ${url}`);
 
@@ -3804,7 +3898,7 @@ exports.importRecipeCallable = onCall(
         );
       }
 
-      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth);
+      const {userId, isAuthenticated, isAdmin, isModerator} = await requireAiCaller(auth, IMPORT_FEATURES);
 
       if (!url || typeof url !== 'string') {
         throw new HttpsError('invalid-argument', 'URL must be a non-empty string');
@@ -4377,6 +4471,11 @@ exports.getVideoUploadUrl = onRequest(
 
       if (!(await enforceShortcutPin(res, userId, pin))) return;
 
+      // The upload is transcribed with Gemini (processVideoImportUpload), so
+      // issuing the URL counts against the same daily quota as the other
+      // Gemini-backed Shortcut endpoints.
+      if (!(await enforceShortcutAiLimit(res, auth))) return;
+
       try {
         const jobRef = db.collection('recipes').doc();
         const storagePath = `${VIDEO_IMPORT_STORAGE_PREFIX}/${userId}/${jobRef.id}.${extension}`;
@@ -4912,6 +5011,8 @@ exports.parseIngredientAmountG = onCall(
         throw new HttpsError('invalid-argument', 'ingredientText is required');
       }
 
+      await requireNutritionCaller(request.auth);
+
       const {
         normalizeIngredientWithGemini,
         parseIngredientForNutrition,
@@ -5379,6 +5480,8 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
         );
       }
 
+      await requireNutritionCaller(request.auth);
+
       return calculateNutritionFromOpenFoodFactsCore({
         ingredients,
         portionen,
@@ -5531,6 +5634,8 @@ exports.generateNutritionFromReference = onCall(
       if (!ingredientID || typeof ingredientID !== 'string') {
         throw new HttpsError('invalid-argument', 'ingredientID is required');
       }
+
+      await requireNutritionCaller(request.auth);
 
       const {
         generateSearchTermWithGemini,

@@ -69,6 +69,8 @@ let fetchResponses; // stack of Response-like objects popped by the mock fetch
 // uid -> role of users/{uid}; a uid missing here has no user document
 let userRoles;
 let userLookupFails;
+let rolePermissions;
+let rolePermissionsLookupFails;
 let rateLimitFails;
 
 // ---------------------------------------------------------------------------
@@ -180,6 +182,11 @@ function loadFunction() {
         // Top-level doc() is used by requireAiCaller for users/{uid}
         doc: (path) => ({
           get: async () => {
+            if (path.startsWith('rolePermissions/')) {
+              if (rolePermissionsLookupFails) throw new Error('firestore unavailable');
+              const flags = rolePermissions[path.replace(/^rolePermissions\//, '')];
+              return flags ? {exists: true, data: () => flags} : {exists: false, data: () => ({})};
+            }
             if (userLookupFails) throw new Error('firestore unavailable');
             const uid = path.replace(/^users\//, '');
             return uid in userRoles
@@ -248,6 +255,8 @@ test.beforeEach(() => {
   fetchResponses = [];
   userRoles = {'user-123': 'edit', 'user-456': 'edit', 'admin-1': 'admin'};
   userLookupFails = false;
+  rolePermissions = {edit: {fotoscan: true}};
+  rolePermissionsLookupFails = false;
   rateLimitFails = false;
 
   // Default mock fetch: returns a successful Gemini response
@@ -381,6 +390,65 @@ test('refuses request when the role lookup fails (fail closed)', async () => {
         auth: {uid: 'user-123', token: {firebase: {sign_in_provider: 'password'}}},
         data: {imageBase64: VALID_IMAGE},
       }),
+    (err) => err.code === 'unavailable',
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Feature rights (rolePermissions) - the UI hides the import buttons, the
+// callable has to refuse the same callers on its own
+// ---------------------------------------------------------------------------
+
+const EDIT_AUTH = {uid: 'user-123', token: {firebase: {sign_in_provider: 'password'}}};
+
+test('rejects edit role whose rolePermissions hold no import feature', async () => {
+  rolePermissions = {edit: {fotoscan: false, webimport: false, recipeImport: false}};
+  await assert.rejects(
+    () => scanRecipeWithAI({auth: EDIT_AUTH, data: {imageBase64: VALID_IMAGE}}),
+    (err) => err.code === 'permission-denied',
+  );
+  assert.equal(rateLimitCount, null, 'a refused caller must not touch the quota');
+});
+
+test('treats a role without a rolePermissions document as having no import feature', async () => {
+  rolePermissions = {};
+  await assert.rejects(
+    () => scanRecipeWithAI({auth: EDIT_AUTH, data: {imageBase64: VALID_IMAGE}}),
+    (err) => err.code === 'permission-denied',
+  );
+});
+
+test('accepts edit role with only webimport or only recipeImport', async () => {
+  for (const feature of ['webimport', 'recipeImport']) {
+    rolePermissions = {edit: {[feature]: true}};
+    const result = await scanRecipeWithAI({auth: EDIT_AUTH, data: {imageBase64: VALID_IMAGE}});
+    assert.equal(result.title, 'Rührei');
+  }
+});
+
+test('lets an admin through without any rolePermissions flag', async () => {
+  rolePermissions = {};
+  const result = await scanRecipeWithAI({
+    auth: {uid: 'admin-1', token: {firebase: {sign_in_provider: 'password'}}},
+    data: {imageBase64: VALID_IMAGE},
+  });
+  assert.equal(result.title, 'Rührei');
+});
+
+test('exempts the nightly importer test account from the feature check', async () => {
+  rolePermissions = {};
+  userRoles['nightly-ai-importer-test'] = 'edit';
+  const result = await scanRecipeWithAI({
+    auth: {uid: 'nightly-ai-importer-test', token: {firebase: {sign_in_provider: 'custom'}}},
+    data: {imageBase64: VALID_IMAGE},
+  });
+  assert.equal(result.title, 'Rührei');
+});
+
+test('refuses request when the rolePermissions lookup fails (fail closed)', async () => {
+  rolePermissionsLookupFails = true;
+  await assert.rejects(
+    () => scanRecipeWithAI({auth: EDIT_AUTH, data: {imageBase64: VALID_IMAGE}}),
     (err) => err.code === 'unavailable',
   );
 });
