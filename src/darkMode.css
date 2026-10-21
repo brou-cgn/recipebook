@@ -1840,12 +1840,7 @@
   background: #121212;
 }
 
-[data-theme="dark"] .kueche-header h2 {
-  color: #e8e8e8;
-}
-
 [data-theme="dark"] .kueche-tile {
-  background: #1e1e1e;
   border-color: #3d3d3d;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
@@ -1854,23 +1849,11 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
 }
 
-[data-theme="dark"] .kueche-tile--chefkoch .kueche-tile-content h3 {
-  color: #e8e8e8;
-}
-
-[data-theme="dark"] .kueche-tile-description {
-  color: #aaa;
-}
-
 [data-theme="dark"] .kueche-tile-meta {
   color: #aaa;
 }
 
 [data-theme="dark"] .kueche-tile-meta .meta-text strong {
-  color: #e8e8e8;
-}
-
-[data-theme="dark"] .kueche-section-title h3 {
   color: #e8e8e8;
 }
 
@@ -4056,13 +4039,6 @@
 
 /* ---- Startseite ---- */
 [data-theme="dark"] .startseite-fab-button {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
-/* ---- Kueche ---- */
-[data-theme="dark"] .kueche-fab-button {
   background: #2a2a2a;
   color: #e8e8e8;
   border-color: #555;

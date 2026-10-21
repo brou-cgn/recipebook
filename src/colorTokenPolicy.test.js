@@ -46,7 +46,7 @@ const BASELINE = {
   'components/IngredientCatalogSearchModal.css': 9,
   'components/InstagramImportModal.css': 44,
   'components/KalibrierungsAuswertung.css': 5,
-  'components/Kueche.css': 26,
+  'components/Kueche.css': 20,
   'components/Login.css': 55,
   'components/MeineKuechenstarsPage.css': 9,
   'components/MemberProfilePage.css': 15,
