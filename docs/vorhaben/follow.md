@@ -82,7 +82,7 @@ aus `users/{uid}/followInbox` verschwindet. Ein Entsperren fehlt noch (siehe Off
 
 ## Bekannte Risiken und Voraussetzungen
 
-- **S16** (Gruppen mit `invitedEmails` für anonyme Gäste lesbar) und **S18** (`notifyPrivateListMembers` ohne Absenderprüfung): im Tech-Check erfasst, nicht Teil von PR 1. Vor dem Rollout von Follow klären. Stand 21.10.2026: S18 mit `functions/listPushGuard.js` behoben (Mitgliedschaft, `actorId` = eigene UID, Rolle, Tageslimit 300). S16 in zwei Schritten: erst der Client (drei gezielte Abfragen statt ganzer Collection), danach die verschärfte Regel für `groups`, damit bereits geladene alte Clients nicht ohne Listen dastehen.
+- **S16** (Gruppen mit `invitedEmails` für anonyme Gäste lesbar) und **S18** (`notifyPrivateListMembers` ohne Absenderprüfung): im Tech-Check erfasst, nicht Teil von PR 1. Vor dem Rollout von Follow klären. Stand 21.10.2026: S18 mit `functions/listPushGuard.js` behoben (Mitgliedschaft, `actorId` = eigene UID, Rolle, Tageslimit 300). S16 in zwei Schritten: erst der Client (drei gezielte Abfragen statt ganzer Collection), danach die verschärfte Regel für `groups` (eigener PR, erst nach dem Client-Rollout), damit bereits geladene alte Clients nicht ohne Listen dastehen.
 - Rezept-Sichtbarkeit gilt nur im Client (Tech-Check S2, bewusst so entschieden). Das Datenschutzversprechen im UI darf keinen technischen Schutz behaupten.
 - `follows` nie im `users`-Dokument führen: Nutzer dürfen es bis auf `role` selbst ändern.
 - Neue Felder an `publicProfiles` müssen in `functions/index.js` (`PUBLIC_PROFILE_FIELDS`) und `src/utils/userManagement.js` gleichzeitig ergänzt werden, sonst überschreibt `syncPublicProfile` sie.

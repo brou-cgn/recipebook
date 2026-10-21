@@ -1,10 +1,11 @@
 /**
  * Hält fest, wer heute was lesen und schreiben darf. Einträge mit "BEKANNTE LÜCKE"
  * beschreiben Zustände, die nicht gewollt sind, sich aber nicht ohne Umbau des Clients
- * schließen lassen (Regeln filtern keine Abfragen: der Client liest recipes und groups
- * als ganze Collection und filtert selbst). Wer eine Lücke schließt, kehrt den Test um.
+ * schließen lassen (Regeln filtern keine Abfragen: der Client liest recipes als ganze
+ * Collection und filtert selbst). Wer eine Lücke schließt, kehrt den Test um.
  */
 const test = require('node:test');
+const assert = require('node:assert/strict');
 const { setupEnv, seedUsers, seed, as, assertFails, assertSucceeds } = require('./helpers');
 
 let env;
@@ -16,8 +17,9 @@ test.beforeEach(async () => {
     await db.doc('recipes/draft').set({ title: 'Entwurf', authorId: 'editor', isPrivate: true, groupId: 'g1' });
     await db.doc('recipes/open').set({ title: 'Offen', authorId: 'editor', groupId: 'g1', shareId: 'def' });
     await db.doc('groups/g1').set({
-      type: 'private', ownerId: 'editor', memberIds: ['editor'], invitedEmails: ['jemand@example.test'],
+      type: 'private', ownerId: 'editor', memberIds: ['editor', 'reader'], invitedEmails: ['jemand@example.test'],
     });
+    await db.doc('groups/pub').set({ type: 'public', name: 'Öffentlich', ownerId: null, memberIds: [] });
     await db.doc('publicProfiles/other').set({ vorname: 'Other', nachname: 'Test' });
   });
 });
@@ -46,10 +48,40 @@ test('recipes: anlegen nur ab Rolle edit', async () => {
   await assertSucceeds(as.user(env, 'editor').collection('recipes').add(recipe));
 });
 
-test('groups (BEKANNTE LÜCKE): auch anonyme Gäste lesen Listen samt eingeladener E-Mail-Adressen', async () => {
-  const snap = await assertSucceeds(as.anonymous(env).doc('groups/g1').get());
-  if (!snap.data().invitedEmails) throw new Error('Testannahme verletzt: invitedEmails fehlt');
+test('groups (Tech-Check S16): Gäste lesen keine privaten Listen, auch nicht die eingeladenen E-Mail-Adressen', async () => {
+  await assertFails(as.anonymous(env).doc('groups/g1').get());
   await assertFails(as.unauth(env).doc('groups/g1').get());
+  // Auch gezielte Abfragen nach fremden Listen scheitern; nur die öffentliche Gruppe bleibt lesbar.
+  await assertFails(as.anonymous(env).collection('groups').get());
+  await assertFails(as.anonymous(env).collection('groups').where('ownerId', '==', 'editor').get());
+  await assertFails(as.anonymous(env).collection('groups').where('memberIds', 'array-contains', 'editor').get());
+  await assertSucceeds(as.anonymous(env).doc('groups/pub').get());
+  const pub = await assertSucceeds(as.anonymous(env).collection('groups').where('type', '==', 'public').get());
+  if (pub.size !== 1) throw new Error('öffentliche Gruppe nicht gefunden');
+});
+
+test('groups (Tech-Check S16): Eigentümer und Mitglieder lesen ihre Liste, andere Mitglieder nicht', async () => {
+  await assertSucceeds(as.user(env, 'editor').doc('groups/g1').get());
+  await assertSucceeds(as.user(env, 'reader').doc('groups/g1').get());
+  await assertFails(as.user(env, 'other').doc('groups/g1').get());
+  await assertSucceeds(as.user(env, 'admin').doc('groups/g1').get());
+});
+
+test('groups (Tech-Check S16): die drei Abfragen des Clients funktionieren, die ganze Collection nicht', async () => {
+  const ids = async (query) => (await assertSucceeds(query.get())).docs.map((d) => d.id).sort();
+  const reader = as.user(env, 'reader');
+  assert.deepEqual(await ids(reader.collection('groups').where('type', '==', 'public')), ['pub']);
+  assert.deepEqual(await ids(reader.collection('groups').where('ownerId', '==', 'reader')), []);
+  assert.deepEqual(await ids(reader.collection('groups').where('memberIds', 'array-contains', 'reader')), ['g1']);
+  assert.deepEqual(await ids(as.user(env, 'editor').collection('groups').where('ownerId', '==', 'editor')), ['g1']);
+  assert.deepEqual(await ids(as.user(env, 'other').collection('groups').where('memberIds', 'array-contains', 'other')), []);
+  await assertFails(reader.collection('groups').get());
+  await assertFails(reader.collection('groups').where('memberIds', 'array-contains', 'editor').get());
+});
+
+test('groups: Schreiben bleibt wie bisher (Editoren dürfen, Leser nicht)', async () => {
+  await assertSucceeds(as.user(env, 'editor').doc('groups/g1').update({ name: 'Neu' }));
+  await assertFails(as.user(env, 'reader').doc('groups/g1').update({ name: 'Neu' }));
 });
 
 test('publicProfiles (BEKANNTE LÜCKE): auch anonyme Gäste lesen Vor- und Nachnamen aller Mitglieder', async () => {
