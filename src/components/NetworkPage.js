@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import './NetworkPage.css';
 import DeleteRowButton from './DeleteRowButton';
 import UndoSnackbar from './UndoSnackbar';
+import TrashIcon from './icons/TrashIcon';
 import useUndoableDelete from '../hooks/useUndoableDelete';
+import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import {
   loadNetwork, respondToFollow, stopFollowing, removeFollower,
 } from '../utils/followFirestore';
@@ -22,6 +24,44 @@ const EMPTY_TEXT = {
 const EMPTY_NETWORK = { requests: [], following: [], followers: [], blocked: [] };
 
 const withoutId = (rows, id) => rows.filter((row) => row.id !== id);
+
+// Zeile mit Entfernen-Aktion: Desktop zeigt den DeleteRowButton, mobil gilt die
+// Linksswipe-Geste (CLAUDE.md, Löschaktionen). Beide lösen dieselbe Entfernung aus.
+function NetworkRemovableRow({ name, note, onRemove }) {
+  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete();
+
+  const handleSwipeRemove = (e) => {
+    e.stopPropagation();
+    onRemove();
+    reset();
+  };
+
+  return (
+    <li className={`network-row network-row--swipe delete-row-hover-target${isDeleteVisible ? ' swipe-delete-active' : ''}`}>
+      <div className="swipe-delete-background" aria-hidden={!isDeleteVisible && offset === 0}>
+        <button
+          type="button"
+          className="swipe-delete-action"
+          onClick={handleSwipeRemove}
+          aria-label={`${name} entfernen`}
+          tabIndex={isDeleteVisible ? 0 : -1}
+        >
+          <span className="swipe-delete-icon-text"><TrashIcon /></span>
+        </button>
+      </div>
+      <div
+        className="network-row-content"
+        style={{ transform: `translateX(${offset}px)`, transition: 'transform 0.15s ease' }}
+        onClick={() => { if (isDeleteVisible) reset(); }}
+        {...handlers}
+      >
+        <span className="network-row-name">{name}</span>
+        {note && <span className="network-row-note">{note}</span>}
+        <DeleteRowButton className="network-row-delete" itemName={name} onClick={onRemove} />
+      </div>
+    </li>
+  );
+}
 
 function NetworkPage({ currentUser, onBack }) {
   const uid = currentUser?.id;
@@ -93,24 +133,20 @@ function NetworkPage({ currentUser, onBack }) {
   );
 
   const renderFollowing = (row) => (
-    <li key={row.id} className="network-row delete-row-hover-target">
-      <span className="network-row-name">{row.name}</span>
-      {row.status === 'pending' && <span className="network-row-note">Angefragt</span>}
-      <DeleteRowButton
-        itemName={row.name}
-        onClick={() => removeRow('following', row, () => stopFollowing(uid, row.id))}
-      />
-    </li>
+    <NetworkRemovableRow
+      key={row.id}
+      name={row.name}
+      note={row.status === 'pending' ? 'Angefragt' : null}
+      onRemove={() => removeRow('following', row, () => stopFollowing(uid, row.id))}
+    />
   );
 
   const renderFollower = (row) => (
-    <li key={row.id} className="network-row delete-row-hover-target">
-      <span className="network-row-name">{row.name}</span>
-      <DeleteRowButton
-        itemName={row.name}
-        onClick={() => removeRow('followers', row, () => removeFollower(uid, row.id))}
-      />
-    </li>
+    <NetworkRemovableRow
+      key={row.id}
+      name={row.name}
+      onRemove={() => removeRow('followers', row, () => removeFollower(uid, row.id))}
+    />
   );
 
   const renderers = { requests: renderRequest, following: renderFollowing, followers: renderFollower };

@@ -90,3 +90,37 @@ test('Ladefehler wird angezeigt', async () => {
   render(<NetworkPage currentUser={user} onBack={() => {}} />);
   expect(await screen.findByRole('alert')).toHaveTextContent('nicht geladen');
 });
+
+const swipeLeft = (el, dx = -80) => {
+  fireEvent.touchStart(el, { touches: [{ clientX: 200, clientY: 10 }] });
+  fireEvent.touchMove(el, { touches: [{ clientX: 200 + dx, clientY: 10 }] });
+  fireEvent.touchEnd(el);
+};
+
+test('Mobil: Linksswipe legt die Entfernen-Aktion frei und startet das Undo-Fenster', async () => {
+  jest.useFakeTimers();
+  try {
+    render(<NetworkPage currentUser={user} onBack={() => {}} />);
+    await act(async () => { await Promise.resolve(); });
+    fireEvent.click(screen.getByRole('tab', { name: 'Follower' }));
+    const content = screen.getByText('Dora Lenz', { selector: '.network-row-name' }).closest('.network-row-content');
+    swipeLeft(content);
+    const action = content.parentElement.querySelector('.swipe-delete-action');
+    expect(action).toHaveAttribute('tabindex', '0');
+    fireEvent.click(action);
+    expect(screen.queryByText('Dora Lenz', { selector: '.network-row-name' })).not.toBeInTheDocument();
+    expect(removeFollower).not.toHaveBeenCalled();
+    await act(async () => { jest.advanceTimersByTime(6000); });
+    expect(removeFollower).toHaveBeenCalledWith('me', 'dora');
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test('Ein zu kurzer Swipe löst nichts aus', async () => {
+  render(<NetworkPage currentUser={user} onBack={() => {}} />);
+  fireEvent.click(await screen.findByRole('tab', { name: 'Ich folge' }));
+  const content = screen.getByText('Ben Roth', { selector: '.network-row-name' }).closest('.network-row-content');
+  swipeLeft(content, -20);
+  expect(content.parentElement.querySelector('.swipe-delete-action')).toHaveAttribute('tabindex', '-1');
+});
