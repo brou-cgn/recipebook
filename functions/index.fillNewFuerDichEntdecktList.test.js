@@ -67,7 +67,7 @@ test.beforeEach(() => {
   updates = [];
   db = {
     discoverTopics: {
-      kuerbis: {isActive: true, beschreibung: 'Kürbiszeit', rubrik: 'Saison', recipeIds: ['r1', 'r2']},
+      kuerbis: {isActive: true, beschreibung: 'Kürbiszeit', rubrik: 'Saison', imageUrl: 'https://img/kuerbis.jpg', recipeIds: ['r1', 'r2']},
       pilze: {isActive: true, beschreibung: 'Herbstlich', rubrik: 'Saison', recipeIds: ['r3']},
     },
     recipes: {
@@ -88,6 +88,7 @@ test('fills a new list with recipes of a topic and stamps rotatedAt', async () =
   assert.equal(data.themeId, 'kuerbis');
   assert.equal(data.description, 'Kürbiszeit');
   assert.equal(data.themeLabel, 'Saison');
+  assert.equal(data.themeImage, 'https://img/kuerbis.jpg');
   assert.deepEqual([...data.recipeIds].sort(), ['r1', 'r2']);
   assert.equal(data.rotatedAt, serverTimestamp);
 });

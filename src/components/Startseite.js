@@ -6,7 +6,7 @@ import { getUserFavorites } from '../utils/userFavorites';
 import TrendingCard from './TrendingCard';
 import StartseitenKarussell from './StartseitenKarussell';
 import FuerDichEntdecktKachel from './FuerDichEntdecktKachel';
-import { getDiscoverTopicInfo } from '../utils/discoverTopics';
+import { getDiscoverTopicInfo, readCachedDiscoverTopicInfo } from '../utils/discoverTopics';
 import { findFuerDichEntdecktList, isFuerDichEntdecktList, hideExpiredCarriedRecipes } from '../utils/fuerDichEntdeckt';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, DEFAULT_MAX_KANDIDATEN_SCHWELLE, getAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT } from '../utils/customLists';
 import { getAllMembersSwipeFlagDocsForList, getSwipeFlagDocsByRecipeForUser } from '../utils/recipeSwipeFlags';
@@ -208,20 +208,26 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   ), [groups, currentUser?.fuerDichEntdeckt, currentUser?.id]);
 
   const fuerDichEntdecktThemeId = fuerDichEntdecktList?.themeId || '';
-  const [fuerDichEntdecktImage, setFuerDichEntdecktImage] = useState('');
-  const [fuerDichEntdecktTitle, setFuerDichEntdecktTitle] = useState('');
+  // Titel und Bild stehen seit der Rotation an der Liste (themeImage, description) –
+  // das Thema selbst wird nur nachgeladen, wo das fehlt (ältere Listen, leere Beschreibung).
+  const listThemeImage = typeof fuerDichEntdecktList?.themeImage === 'string' ? fuerDichEntdecktList.themeImage : '';
+  const listThemeTitle = typeof fuerDichEntdecktList?.description === 'string' ? fuerDichEntdecktList.description.trim() : '';
+  const [topicInfo, setTopicInfo] = useState(() => ({ id: '', imageUrl: '', beschreibung: '' }));
   useEffect(() => {
     let cancelled = false;
-    setFuerDichEntdecktImage('');
-    setFuerDichEntdecktTitle('');
-    if (!fuerDichEntdecktThemeId) return undefined;
+    if (!fuerDichEntdecktThemeId || (listThemeImage && listThemeTitle)) {
+      setTopicInfo({ id: '', imageUrl: '', beschreibung: '' });
+      return undefined;
+    }
+    const cached = readCachedDiscoverTopicInfo(fuerDichEntdecktThemeId);
+    setTopicInfo({ id: fuerDichEntdecktThemeId, imageUrl: cached?.imageUrl || '', beschreibung: cached?.beschreibung || '' });
     getDiscoverTopicInfo(fuerDichEntdecktThemeId).then(({ imageUrl, beschreibung }) => {
-      if (cancelled) return;
-      setFuerDichEntdecktImage(imageUrl);
-      setFuerDichEntdecktTitle(beschreibung);
+      if (!cancelled) setTopicInfo({ id: fuerDichEntdecktThemeId, imageUrl, beschreibung });
     });
     return () => { cancelled = true; };
-  }, [fuerDichEntdecktThemeId]);
+  }, [fuerDichEntdecktThemeId, listThemeImage, listThemeTitle]);
+  const fuerDichEntdecktImage = listThemeImage || topicInfo.imageUrl;
+  const fuerDichEntdecktTitle = listThemeTitle || topicInfo.beschreibung;
 
   // Eigene Swipe-Flags, nur nötig wenn die Liste übernommene Kandidaten trägt.
   const [fuerDichSwipeDocs, setFuerDichSwipeDocs] = useState(null);
