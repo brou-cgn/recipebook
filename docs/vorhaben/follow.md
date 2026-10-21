@@ -51,7 +51,7 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | 4d | Folgen-Button (und `FollowName`) auch auf der Kachel „Erstellt am“ im Kochtagebuch (Autor des Rezepts); bisher nur auf den „Gekocht am“-Kacheln (Komponententests +2) | PR #3475 gemergt (20.10.2026) |
 | 5 | Themenregel `scopes` (Admin-UI `DiscoverTopicsTab.js`, Nachtlauf, Rotation), privates Attributionsdokument | PR #3470 gemergt (Function-Tests +4, Komponententests +2, Rules-Test +1) |
 | 6 | Namensanzeige auf Karte und im Stapel (liest `users/{uid}/fuerDichEntdeckt/current`) | PR #3472 gemergt (Komponententests +1, Util-Tests 5) |
-| 7 | Netzwerk-Seite („Mein Netzwerk“, Kopfzeile wie „Meine Mise en Place“ mit Schließbutton rechts) mobil: Linksswipe (`useSwipeToDelete`) für „Ich folge“ und „Follower“, Desktop weiter mit `DeleteRowButton` (Komponententests +2) | 21.10.2026, Branch `claude/follow-netzwerk-swipe`, noch kein PR |
+| 7 | Netzwerk-Seite („Mein Netzwerk“, Kopfzeile wie „Meine Mise en Place“: Titel über der Karte, Schließbutton rechts) mobil: Linksswipe (`useSwipeToDelete`) für „Ich folge“ und „Follower“, Desktop weiter mit `DeleteRowButton` (Komponententests +2) | 21.10.2026, Branch `claude/follow-netzwerk-swipe`, noch kein PR |
 
 Nach jedem PR: Tech-Check-Dashboard aktualisieren (Befunde und `umsetzungen`, siehe `CLAUDE.md`),
 Tabelle hier nachziehen.
