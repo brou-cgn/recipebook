@@ -30,6 +30,11 @@ erzwungen — wo das gilt, steht die Datei dabei.
 - **Keine Emojis im UI-Code.** Alternativen: Text-Label, HTML-Entity, CSS-Klasse, Icon-Bibliothek.
   Erzwungen durch `src/emojiPolicy.test.js` (Baseline leer: jedes Emoji in einer Quelldatei
   lässt den Test rot werden).
+- **Farben nur über Tokens.** Komponenten-CSS nutzt `var(--color-…)` aus `src/tokens.css`,
+  keine Hex-Farben; Light und Dark sind dort je Token definiert, ein Eintrag in `darkMode.css`
+  ist dann nicht nötig. Neue Dark-Mode-Regeln in `darkMode.css` nicht ergänzen. Fehlt ein Token,
+  in `tokens.css` mit beiden Werten anlegen. Erzwungen durch `src/colorTokenPolicy.test.js`
+  (Baseline je Datei, darf nur sinken: wer Farben migriert, senkt den Wert).
 - **Löschaktionen**: ausschließlich `DeleteRowButton` (kein eigenes ×, kein gefüllter Kreis,
   kein Icon im Eingabefeld). 28 × 28 px, Radius 999, transparent; Rot `#a33a26` auf 12 % Fläche
   erst bei Hover/Fokus; am rechten Zeilenrand; Tooltip und `aria-label` „<Name> entfernen".
