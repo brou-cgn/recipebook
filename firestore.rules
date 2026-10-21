@@ -410,6 +410,16 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Tageszähler der Nährwert- und Umformulier-Functions (consumeDailyQuota in
+    // functions/index.js). Nur Cloud Functions schreiben sie (Admin SDK umgeht die
+    // Rules); Clients lesen sie nicht.
+    match /aiNutritionLimits/{limitId} {
+      allow read, write: if false;
+    }
+    match /aiRephraseLimits/{limitId} {
+      allow read, write: if false;
+    }
+
     // Aufträge für Hintergrundjobs (z. B. manueller Nährwert-Recalc). Nur
     // Cloud Functions lesen und schreiben sie (Admin SDK umgeht die Rules):
     // runNutritionRecalcForFlaggedRecipes legt an, processNutritionRecalcRequest

@@ -54,6 +54,13 @@ function loadWrappedFunction() {
 
     if (request === 'firebase-admin') {
       const firestoreFactory = () => ({
+        // requireNutritionCaller: users/{uid} role and the daily quota counter
+        doc: () => ({get: async () => ({exists: true, data: () => ({role: 'edit'})})}),
+        runTransaction: async (fn) => fn({
+          get: async () => ({exists: false, data: () => ({})}),
+          set: () => {},
+          update: () => {},
+        }),
         collection: () => ({
           doc: () => ({
             get: firestoreDocGetStub,
@@ -170,7 +177,7 @@ test('continues to next search term after non-404 HTTP errors', async () => {
   };
 
   const response = await wrappedFunction({
-    auth: {uid: 'user-1'},
+    auth: {uid: 'user-1', token: {firebase: {sign_in_provider: 'password'}}},
     data: {
       ingredients: ['1 EL Reis'],
       portionen: 1,
@@ -220,7 +227,7 @@ test('uses Gemini fallback from catch block with extended timeout', async () => 
   };
 
   const response = await wrappedFunction({
-    auth: {uid: 'user-1'},
+    auth: {uid: 'user-1', token: {firebase: {sign_in_provider: 'password'}}},
     data: {
       ingredients: ['1 EL Reis'],
       portionen: 1,
@@ -270,7 +277,7 @@ test('uses extended timeout for Gemini fallback after empty OpenFoodFacts result
   });
 
   const response = await wrappedFunction({
-    auth: {uid: 'user-1'},
+    auth: {uid: 'user-1', token: {firebase: {sign_in_provider: 'password'}}},
     data: {
       ingredients: ['1 EL Reis'],
       portionen: 1,
@@ -311,7 +318,7 @@ test('uses regex fast path for simple ingredients without Gemini normalization c
   loadWrappedFunction();
 
   const response = await wrappedFunction({
-    auth: {uid: 'user-1'},
+    auth: {uid: 'user-1', token: {firebase: {sign_in_provider: 'password'}}},
     data: {
       ingredients: ['80 g Zucker'],
       portionen: 1,
@@ -352,7 +359,7 @@ test('uses Gemini normalization for complex ingredients', async () => {
   loadWrappedFunction();
 
   const response = await wrappedFunction({
-    auth: {uid: 'user-1'},
+    auth: {uid: 'user-1', token: {firebase: {sign_in_provider: 'password'}}},
     data: {
       ingredients: ['2 EL Olivenöl, kaltgepresst, bio'],
       portionen: 1,
@@ -403,7 +410,7 @@ test('cleans parenthetical text from OpenFoodFacts search terms', async () => {
   };
 
   const response = await wrappedFunction({
-    auth: {uid: 'user-1'},
+    auth: {uid: 'user-1', token: {firebase: {sign_in_provider: 'password'}}},
     data: {
       ingredients: ['1 EL Currypulver (nach Geschmack mehr)'],
       portionen: 1,
@@ -454,7 +461,7 @@ test('uses cached nutrition reference matched by normalized synonym', async () =
   loadWrappedFunction();
 
   const response = await wrappedFunction({
-    auth: {uid: 'user-1'},
+    auth: {uid: 'user-1', token: {firebase: {sign_in_provider: 'password'}}},
     data: {
       ingredients: ['100 g Reis'],
       portionen: 1,
@@ -500,7 +507,7 @@ test('uses source-specific cached nutrition values for openfoodfacts references'
   loadWrappedFunction();
 
   const response = await wrappedFunction({
-    auth: {uid: 'user-1'},
+    auth: {uid: 'user-1', token: {firebase: {sign_in_provider: 'password'}}},
     data: {
       ingredients: ['100 g Reis'],
       portionen: 1,
@@ -537,7 +544,7 @@ test('falls back to flat cached nutrition values when no source-specific fields 
   loadWrappedFunction();
 
   const response = await wrappedFunction({
-    auth: {uid: 'user-1'},
+    auth: {uid: 'user-1', token: {firebase: {sign_in_provider: 'password'}}},
     data: {
       ingredients: ['100 g Reis'],
       portionen: 1,
@@ -573,7 +580,7 @@ test('does not replace parsed amount with defaultAmountG when quantity is provid
   loadWrappedFunction();
 
   const response = await wrappedFunction({
-    auth: {uid: 'user-1'},
+    auth: {uid: 'user-1', token: {firebase: {sign_in_provider: 'password'}}},
     data: {
       ingredients: ['10 ml Cointreau'],
       portionen: 1,
@@ -609,7 +616,7 @@ test('uses defaultAmountG from cache when no quantity is provided', async () => 
   loadWrappedFunction();
 
   const response = await wrappedFunction({
-    auth: {uid: 'user-1'},
+    auth: {uid: 'user-1', token: {firebase: {sign_in_provider: 'password'}}},
     data: {
       ingredients: ['Cointreau'],
       portionen: 1,
@@ -659,7 +666,7 @@ test('does not create nutrition reference documents from OpenFoodFacts results',
   });
 
   const response = await wrappedFunction({
-    auth: {uid: 'user-1'},
+    auth: {uid: 'user-1', token: {firebase: {sign_in_provider: 'password'}}},
     data: {
       ingredients: ['100 g Reis'],
       portionen: 1,
@@ -733,7 +740,7 @@ test('calculates per-100g values from summed ingredient amounts by default', asy
   };
 
   const response = await wrappedFunction({
-    auth: {uid: 'user-1'},
+    auth: {uid: 'user-1', token: {firebase: {sign_in_provider: 'password'}}},
     data: {
       ingredients: ['200 g Reis', '100 g Bohnen'],
       portionen: 1,
@@ -784,7 +791,7 @@ test('uses a manually supplied final weight for per-100g values', async () => {
   });
 
   const response = await wrappedFunction({
-    auth: {uid: 'user-1'},
+    auth: {uid: 'user-1', token: {firebase: {sign_in_provider: 'password'}}},
     data: {
       ingredients: ['200 g Reis'],
       portionen: 1,

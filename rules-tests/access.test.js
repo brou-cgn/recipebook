@@ -123,3 +123,11 @@ test('Sammlungen nur für Cloud Functions bleiben für Clients gesperrt', async 
   await assertFails(as.user(env, 'admin').doc('users/admin/security/webImportPin').get());
   await assertFails(as.user(env, 'admin').doc('invitations/jemand@example.test').get());
 });
+
+test('KI-Tageszähler (Nährwerte, Umformulieren) sind für Clients weder les- noch schreibbar', async () => {
+  for (const path of ['aiNutritionLimits/editor_2026-10-21', 'aiRephraseLimits/editor_2026-10-21']) {
+    await assertFails(as.user(env, 'admin').doc(path).get());
+    await assertFails(as.user(env, 'admin').doc(path).set({ userId: 'admin', count: 0 }));
+    await assertFails(as.user(env, 'editor').doc(path).set({ userId: 'editor', count: 0 }));
+  }
+});
