@@ -28,7 +28,7 @@ Quelle ist immer `firestore.rules`; diese Tabelle gibt den Stand vom 18.10.2026 
 | `recipes` | Mitglieder und Nutzer ohne Profil (nicht anonym). **Sichtbarkeit (Entwurf, Gruppe) wird nur im Client gefiltert.** | Anlegen/Löschen/Ändern: `edit`, `moderator`, `admin` |
 | `recipes/{id}/ratings` | alle (öffentlich) | Anlegen: angemeldet, eigener Schlüssel oder `guest_…`; Ändern: nur eigener Schlüssel; Löschen: eigener, Gast-Schlüssel, Editoren |
 | `menus` | `isAnyUser()` oder Freigabelink (`shareId`) | `edit`, `moderator`, `admin` |
-| `groups` | `isAnyUser()` (**schließt Gäste ein**) | `edit`+; jedes Mitglied seine eigene Liste „Für dich entdeckt"; Löschen nur `edit`+ |
+| `groups` | öffentliche Systemgruppe für `isAnyUser()` (Gäste eingeschlossen); private Listen nur Eigentümer, Mitglieder und Admins (Tech-Check S16) | `edit`+; jedes Mitglied seine eigene Liste „Für dich entdeckt"; Löschen nur `edit`+ |
 | `shoppingLists`, `tutorials` | `isAnyUser()` | `edit`+ |
 | `seasonMatrix`, `drinkWeights`, `drinkWeightsChildren` | `isAnyUser()` | `moderator`, `admin` |
 | `discoverTopics` | einzelne Themen `isAnyUser()`, Auflisten nur Admin | Admin |
@@ -63,7 +63,7 @@ Quelle ist immer `firestore.rules`; diese Tabelle gibt den Stand vom 18.10.2026 
 Die Tests in `rules-tests/access.test.js` halten diese Zustände fest (sie ersetzen das frühere Skript `scripts/testFirestoreRules.mjs`, dessen Fälle übernommen sind) (Name enthält „BEKANNTE LÜCKE"). Wer eine Lücke schließt, kehrt den Test um.
 
 1. **`recipes`:** Jedes Mitglied kann auch Entwürfe und Rezepte privater Listen anderer lesen. Regeln filtern keine Abfragen, und der Client lädt die ganze Collection (`subscribeToRecipes`). Schließen geht nur über einen Umbau der Abfragen im Client. Gäste und Abgemeldete lesen `recipes` nicht mehr direkt (PR #3426), das Mitglieder-Rest ist laut Tech-Check S2 eine bewusste Entscheidung des Betreibers vom 14.10.2026.
-2. **`groups`:** Auch anonyme Gäste lesen Listen samt `invitedEmails` (E-Mail-Adressen Eingeladener). Gleicher Grund wie bei `recipes`.
+2. **`groups` (Rest nach S16):** Gäste und fremde Mitglieder lesen private Listen nicht mehr. Mitglieder einer Liste sehen aber weiterhin deren `invitedEmails` (E-Mail-Adressen noch nicht registrierter Eingeladener). Schließen ginge nur durch Verlagern in eine nur per Cloud Function lesbare Collection, samt Umbau von `GroupDetail.js` und dem Registrierungs-Trigger (`functions/index.js`, `invitedEmails`).
 3. **`publicProfiles`:** Auch anonyme Gäste lesen Vor- und Nachnamen aller Mitglieder. Einschränken auf Mitglieder würde Gästen die Autorennamen nehmen.
 4. **`cookDates`:** Jedes Mitglied liest alle Einträge (gewollt für den Kochbuch-Dialog, aber Datenschutz-relevant). Anonyme Gäste dürfen eigene Einträge anlegen.
 
