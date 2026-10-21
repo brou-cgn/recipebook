@@ -251,6 +251,24 @@ export const saveDiscoverTopic = async (topic, updatedBy) => {
 };
 
 /** Kachelbild eines Themas (Einzel-Lesezugriff); '' ohne Bild oder bei Fehlern. */
+const INFO_CACHE_KEY = 'discoverTopicInfo';
+
+/** Zuletzt gesehene Themen-Infos (Titel, Bild) – lässt die Kachel beim nächsten App-Start sofort stehen. */
+export const readCachedDiscoverTopicInfo = (topicId) => {
+  try {
+    const info = JSON.parse(localStorage.getItem(INFO_CACHE_KEY) || '{}')[topicId];
+    return info ? { imageUrl: info.imageUrl || '', beschreibung: info.beschreibung || '' } : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeCachedDiscoverTopicInfo = (topicId, info) => {
+  try {
+    localStorage.setItem(INFO_CACHE_KEY, JSON.stringify({ [topicId]: info }));
+  } catch { /* Cache ist nur Komfort */ }
+};
+
 export const getDiscoverTopicInfo = async (topicId) => {
   const empty = { imageUrl: '', beschreibung: '' };
   if (!topicId) return empty;
@@ -258,10 +276,12 @@ export const getDiscoverTopicInfo = async (topicId) => {
     const snap = await getDoc(doc(db, COLLECTION, topicId));
     if (!snap.exists()) return empty;
     const { imageUrl, beschreibung } = snap.data();
-    return {
+    const info = {
       imageUrl: typeof imageUrl === 'string' ? imageUrl.trim() : '',
       beschreibung: typeof beschreibung === 'string' ? beschreibung.trim() : '',
     };
+    writeCachedDiscoverTopicInfo(topicId, info);
+    return info;
   } catch (error) {
     console.warn('Discover topic not loaded:', error?.code || error);
     return empty;
