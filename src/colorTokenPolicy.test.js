@@ -39,23 +39,22 @@ const BASELINE = {
   'components/GroupCreateDialog.css': 26,
   'components/GroupDetail.css': 49,
   'components/GroupList.css': 26,
-  'components/GuestLinkConflictDialog.css': 11,
+  'components/GuestLinkConflictDialog.css': 2,
   'components/Header.css': 75,
   'components/ImportProgressDialog.css': 21,
   'components/ImportProgressIndicator.css': 7,
-  'components/IngredientCatalogSearchModal.css': 9,
   'components/InstagramImportModal.css': 44,
   'components/KalibrierungsAuswertung.css': 5,
   'components/Kueche.css': 20,
   'components/Login.css': 55,
   'components/MeineKuechenstarsPage.css': 9,
-  'components/MemberProfilePage.css': 15,
+  'components/MemberProfilePage.css': 3,
   'components/MenuDetail.css': 31,
   'components/MenuFilterSidebar.css': 17,
   'components/MenuForm.css': 77,
   'components/MenuList.css': 13,
   'components/MobileSearchOverlay.css': 27,
-  'components/NetworkPage.css': 22,
+  'components/NetworkPage.css': 6,
   'components/NutritionModal.css': 91,
   'components/OcrScanModal.css': 123,
   'components/PasswordChangeModal.css': 12,
@@ -124,5 +123,21 @@ describe('Farb-Token-Richtlinie', () => {
       .filter(([file, n]) => (counts[file] || 0) < n)
       .map(([file, n]) => `${file}: Baseline ${n}, tatsächlich ${counts[file] || 0}`);
     expect(stale).toEqual([]);
+  });
+
+  it('definiert jedes genutzte --color-Token für Light und Dark', () => {
+    const tokens = fs.readFileSync(path.join(SRC, 'tokens.css'), 'utf8');
+    const [light, dark] = tokens.split(/\n\[data-theme="dark"\] \{/);
+    const defined = (block) => new Set(block.match(/--color-[\w-]+(?=\s*:)/g) || []);
+    const lightSet = defined(light);
+    const darkSet = defined(dark);
+    const used = new Set();
+    cssFiles(SRC).forEach((file) => {
+      (fs.readFileSync(file, 'utf8').match(/var\((--color-[\w-]+)/g) || []).forEach((m) =>
+        used.add(m.slice(4))
+      );
+    });
+    const missing = [...used].filter((name) => !lightSet.has(name) || !darkSet.has(name));
+    expect(missing).toEqual([]);
   });
 });
