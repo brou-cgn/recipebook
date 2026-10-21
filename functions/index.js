@@ -23,6 +23,7 @@ const {normalizeCuisines, suggestNewCuisines} = require('./cuisineNormalization'
 const {fetchFirestoreDailyUsage, buildFirestoreUsageSection} = require('./firestoreUsage');
 const follow = require('./follow');
 const {sendFollowRequestPush} = require('./followPush');
+const {authorizeListPush} = require('./listPushGuard');
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -7666,6 +7667,12 @@ exports.notifyPrivateListMembers = onCall(
         // Only send notifications for private lists
         return {success: true, sent: 0};
       }
+
+      // Nur Mitglieder der Liste dürfen Pushes auslösen, und nur als sie selbst
+      // (Tech-Check S18); Tageslimit je Aufrufer.
+      await authorizeListPush(db, HttpsError, {
+        auth: callerAuth, actorId, action, groupData,
+      });
 
       // Collect all member IDs (owner + memberIds), excluding the actor
       const ownerIdEntry = groupData.ownerId ? [groupData.ownerId] : [];
