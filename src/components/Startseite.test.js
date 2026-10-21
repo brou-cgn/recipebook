@@ -42,6 +42,7 @@ jest.mock('../utils/recipeSwipeFlags', () => ({
 }));
 
 jest.mock('../utils/imageUtils', () => ({
+  ...jest.requireActual('../utils/imageUtils'),
   isBase64Image: jest.fn(() => false),
 }));
 
