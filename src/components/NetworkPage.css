@@ -1,9 +1,14 @@
+/* Kopfzeile steht über der Karte, wie bei „Meine Mise en Place“ über den Kacheln. */
+.network-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
 .network-page {
   background: var(--color-surface-card);
   border-radius: 12px;
   padding: 1.5rem;
-  max-width: 600px;
-  margin: 0 auto;
 }
 
 .network-header {

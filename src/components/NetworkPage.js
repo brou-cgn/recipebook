@@ -177,7 +177,7 @@ function NetworkPage({ currentUser, onBack }) {
   const blocked = visible('blocked');
 
   return (
-    <div className="network-page">
+    <div className="network-container">
       <div className="network-header">
         <h2>Mein Netzwerk</h2>
         {onBack && (
@@ -198,51 +198,53 @@ function NetworkPage({ currentUser, onBack }) {
         )}
       </div>
 
-      <div className="network-tabs" role="tablist">
-        {TABS.map((tab) => {
-          const count = tab.key === 'requests' ? network.requests.length : 0;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === tab.key}
-              className={`network-tab${activeTab === tab.key ? ' network-tab--active' : ''}`}
-              onClick={() => setActiveTab(tab.key)}
-            >
-              {tab.label}{count > 0 ? ` (${count})` : ''}
-            </button>
-          );
-        })}
+      <div className="network-page">
+        <div className="network-tabs" role="tablist">
+          {TABS.map((tab) => {
+            const count = tab.key === 'requests' ? network.requests.length : 0;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab.key}
+                className={`network-tab${activeTab === tab.key ? ' network-tab--active' : ''}`}
+                onClick={() => setActiveTab(tab.key)}
+              >
+                {tab.label}{count > 0 ? ` (${count})` : ''}
+              </button>
+            );
+          })}
+        </div>
+
+        {error && <p className="network-error" role="alert">{error}</p>}
+        {loading ? (
+          <p className="network-empty">Wird geladen …</p>
+        ) : (
+          <>
+            {rows.length === 0 ? (
+              <p className="network-empty">{EMPTY_TEXT[activeTab]}</p>
+            ) : (
+              <ul className="network-list">{rows.map(renderers[activeTab])}</ul>
+            )}
+
+            {activeTab === 'requests' && blocked.length > 0 && (
+              <section className="network-blocked">
+                <h3>Blockiert</h3>
+                <ul className="network-list">
+                  {blocked.map((row) => (
+                    <li key={row.id} className="network-row">
+                      <span className="network-row-name">{row.name}</span>
+                      <button type="button" className="network-btn" disabled={busyId === row.id}
+                        onClick={() => respond(row, 'unblock')}>Freigeben</button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </>
+        )}
       </div>
-
-      {error && <p className="network-error" role="alert">{error}</p>}
-      {loading ? (
-        <p className="network-empty">Wird geladen …</p>
-      ) : (
-        <>
-          {rows.length === 0 ? (
-            <p className="network-empty">{EMPTY_TEXT[activeTab]}</p>
-          ) : (
-            <ul className="network-list">{rows.map(renderers[activeTab])}</ul>
-          )}
-
-          {activeTab === 'requests' && blocked.length > 0 && (
-            <section className="network-blocked">
-              <h3>Blockiert</h3>
-              <ul className="network-list">
-                {blocked.map((row) => (
-                  <li key={row.id} className="network-row">
-                    <span className="network-row-name">{row.name}</span>
-                    <button type="button" className="network-btn" disabled={busyId === row.id}
-                      onClick={() => respond(row, 'unblock')}>Freigeben</button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </>
-      )}
 
       <UndoSnackbar
         itemName={lastBanner?.message}
