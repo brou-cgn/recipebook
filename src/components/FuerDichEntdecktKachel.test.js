@@ -72,4 +72,20 @@ describe('FuerDichEntdecktKachel', () => {
     expect(imgs).toHaveLength(1);
     expect(imgs[0]).toHaveAttribute('src', 'https://x/thema.jpg');
   });
+
+  test('übernommene Kandidaten zählen nicht in die Rezeptanzahl', () => {
+    const recipes = [
+      { id: 'r1', title: 'Pilzpfanne', image: 'a.jpg' },
+      { id: 'r2', title: 'Pilzsuppe', image: 'b.jpg' },
+      { id: 'alt', title: 'Altes Thema', image: 'c.jpg' },
+    ];
+    render(<FuerDichEntdecktKachel list={{ ...list, description: 'Pilze', carriedRecipeIds: ['alt'] }} recipes={recipes} />);
+    expect(screen.getByRole('button', { name: 'Pilze, 2 Rezepte – Swipestapel öffnen' })).toBeInTheDocument();
+  });
+
+  test('besteht die Liste nur aus übernommenen Kandidaten, zeigt die Kachel sie weiterhin', () => {
+    const recipes = [{ id: 'alt', title: 'Altes Thema', image: 'c.jpg' }];
+    render(<FuerDichEntdecktKachel list={{ ...list, description: 'Pilze', carriedRecipeIds: ['alt'] }} recipes={recipes} />);
+    expect(screen.getByRole('button', { name: 'Pilze, 1 Rezept – Swipestapel öffnen' })).toBeInTheDocument();
+  });
 });
