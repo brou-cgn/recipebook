@@ -25,14 +25,20 @@ const formatMonthYear = (value) => {
  *   list       {Object}   die Liste "Für dich entdeckt"
  *   themeImage {string}   optionales Bild des aktuellen Themas; ersetzt die Rezeptbild-Collage
  *   themeTitle {string}   Beschreibung des aktuellen Themas; Ersatz, falls `list.description` leer ist
- *   recipes  {Array}    Rezepte der Liste
+ *   recipes  {Array}    Rezepte der Liste (übernommene Kandidaten zählen nicht mit)
  *   onOpen   {Function} (listId) => void – öffnet den Swipestapel
  */
 function FuerDichEntdecktKachel({ list, recipes = [], themeImage = '', themeTitle: themeTitleProp = '', onOpen }) {
   if (!list) return null;
 
-  const count = recipes.length;
-  const collage = recipes.slice(0, COLLAGE_MAX).map((recipe) => ({
+  // Übernommene Kandidaten (carriedRecipeIds) gehören nicht zum aktuellen Thema:
+  // Sie bleiben im Stapel, zählen aber nicht in die Kachel. Besteht die Liste nur
+  // aus ihnen, zeigt die Kachel sie, statt "0 Rezepte" anzuzeigen.
+  const carried = new Set(Array.isArray(list.carriedRecipeIds) ? list.carriedRecipeIds : []);
+  const themeRecipes = recipes.filter((recipe) => !carried.has(recipe.id));
+  const shown = themeRecipes.length > 0 ? themeRecipes : recipes;
+  const count = shown.length;
+  const collage = shown.slice(0, COLLAGE_MAX).map((recipe) => ({
     id: recipe.id,
     title: recipe.title,
     imageUrl: getRecipeCardImageUrl(recipe),
