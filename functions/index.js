@@ -18,7 +18,7 @@ const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 const {requireShortcutPin} = require('./webImportPin');
 const {evaluateLowCarbTag} = require('./lowCarb');
 const {countNewRecipes, sendFuerDichEntdecktPush} = require('./fuerDichEntdecktPush');
-const {isRotationDue, getProtectedRecipeIds, pruneExpiredCarriedRecipeIds,pickRotationRecipeIds, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleResult, recipeAvailableToUser, usesFollowedScope, buildAttribution, mergeRuleMatches, explainTopicExclusion, isVisibleToUser, pickTopic, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
+const {isRotationDue, getProtectedRecipeIds, pruneExpiredCarriedRecipeIds, pruneStaleRecipeIds, pickRotationRecipeIds, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleResult, recipeAvailableToUser, usesFollowedScope, buildAttribution, mergeRuleMatches, explainTopicExclusion, isVisibleToUser, pickTopic, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('./fuerDichEntdecktRotation');
 const {normalizeCuisines, suggestNewCuisines} = require('./cuisineNormalization');
 const {fetchFirestoreDailyUsage, buildFirestoreUsageSection} = require('./firestoreUsage');
 const follow = require('./follow');
@@ -10602,16 +10602,23 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
       const db = admin.firestore();
       const listsSnap = await db.collection('groups')
           .where('systemKey', '==', FUER_DICH_ENTDECKT_KEY).get();
-      // Carried-over 'kandidat' recipes whose swipe flag has expired leave the tile.
+      const context = await loadFuerDichEntdecktRotationContext(db);
+      // Recipes outside the list's topic without a valid 'kandidat' flag leave
+      // the tile (also old carry-overs that predate `carriedRecipeIds`, whose
+      // flag documents may be gone). Unknown topic: only the carried recipes.
       for (const listDoc of listsSnap.docs) {
         const data = listDoc.data();
-        if (!Array.isArray(data.carriedRecipeIds) || data.carriedRecipeIds.length === 0) continue;
+        const topic = context.activeTopics.find((t) => t.id === data.themeId) || null;
+        const hasCarried = Array.isArray(data.carriedRecipeIds) && data.carriedRecipeIds.length > 0;
+        if (!topic && !hasCarried) continue;
         const flagsSnap = await db.collection('recipeSwipeFlags')
             .where('listID', '==', listDoc.id).where('flag', '==', 'kandidat').get();
-        const pruned = pruneExpiredCarriedRecipeIds(data, flagsSnap.docs.map((d) => d.data()));
+        const flagDocs = flagsSnap.docs.map((d) => d.data());
+        const pruned = topic ?
+          pruneStaleRecipeIds(data, topic, flagDocs) :
+          pruneExpiredCarriedRecipeIds(data, flagDocs);
         if (pruned) await listDoc.ref.update(pruned);
       }
-      const context = await loadFuerDichEntdecktRotationContext(db);
       if (context.activeTopics.length === 0) {
         console.log('rotateFuerDichEntdecktLists: no relevant topic, lists unchanged');
         return;

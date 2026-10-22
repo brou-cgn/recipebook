@@ -556,8 +556,36 @@ const pruneExpiredCarriedRecipeIds = (list, flagDocs, now = Date.now()) => {
   };
 };
 
+/**
+ * Cleans up a list against its current topic, independent of
+ * `carriedRecipeIds` (lists rotated before that field existed carry stale
+ * recipes that field does not know, and their swipe flag documents may be gone).
+ * A recipe stays if it belongs to the list's current topic or still has a valid
+ * 'kandidat' flag; everything else leaves the list. `carriedRecipeIds` is
+ * rewritten to the protected recipes outside the topic.
+ * @param {Object} list - with `recipeIds` and optionally `carriedRecipeIds`
+ * @param {Object|null} topic - the list's current topic (`usableRecipeIds`);
+ *   null = unknown, then nothing is removed
+ * @param {Array<Object>} flagDocs - recipeSwipeFlags data of ONE list
+ * @param {number} [now]
+ * @return {{recipeIds: string[], carriedRecipeIds: string[]}|null} null = nothing to change
+ */
+const pruneStaleRecipeIds = (list, topic, flagDocs, now = Date.now()) => {
+  if (!list || !topic || !Array.isArray(topic.usableRecipeIds)) return null;
+  const recipeIds = Array.isArray(list.recipeIds) ? list.recipeIds : [];
+  const topicIds = new Set(topic.usableRecipeIds);
+  const protectedIds = new Set(getProtectedRecipeIds(flagDocs, now));
+  const kept = recipeIds.filter((id) => topicIds.has(id) || protectedIds.has(id));
+  const carried = kept.filter((id) => protectedIds.has(id) && !topicIds.has(id));
+  const oldCarried = Array.isArray(list.carriedRecipeIds) ? list.carriedRecipeIds : [];
+  const same = kept.length === recipeIds.length && carried.length === oldCarried.length &&
+    carried.every((id) => oldCarried.includes(id));
+  return same ? null : {recipeIds: kept, carriedRecipeIds: carried};
+};
+
 module.exports = {
   SYSTEM_KEY,
+  pruneStaleRecipeIds,
   getProtectedRecipeIds,
   pruneExpiredCarriedRecipeIds,
   pickRotationRecipeIds,
