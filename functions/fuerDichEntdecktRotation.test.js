@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const {
   matchesRecipeRule, computeRuleMatches, computeRuleResult, recipeAvailableToUser, ruleActorsOfRecipe, buildAttribution, normalizeRecipeRule,
   isRotationDue, isTopicInPeriod, getActiveTopics, pickTopic, pickRecipeIds,
-  getProtectedRecipeIds, pickRotationRecipeIds, pruneExpiredCarriedRecipeIds,
+  getProtectedRecipeIds, pickRotationRecipeIds, pruneExpiredCarriedRecipeIds, pruneStaleRecipeIds,
   ROTATION_INTERVAL_MS,
 } = require('./fuerDichEntdecktRotation');
 
@@ -392,4 +392,29 @@ test('pruneExpiredCarriedRecipeIds: nothing to do without carried or expired rec
   assert.strictEqual(pruneExpiredCarriedRecipeIds({recipeIds: ['a']}, []), null);
   const flags = [{recipeID: 'a', flag: 'kandidat', expiresAt: null}];
   assert.strictEqual(pruneExpiredCarriedRecipeIds({recipeIds: ['a'], carriedRecipeIds: ['a']}, flags), null);
+});
+
+test('pruneStaleRecipeIds: legacy carry-over without carriedRecipeIds and without flag document leaves', () => {
+  const list = {recipeIds: ['t1', 't2', 'legacy', 'keep']};
+  const topic = {usableRecipeIds: ['t1', 't2', 't3']};
+  const now = Date.now();
+  const flags = [{recipeID: 'keep', flag: 'kandidat', expiresAt: new Date(now + 1000)}];
+  assert.deepStrictEqual(pruneStaleRecipeIds(list, topic, flags, now),
+      {recipeIds: ['t1', 't2', 'keep'], carriedRecipeIds: ['keep']});
+});
+
+test('pruneStaleRecipeIds: expired flag outside the topic leaves, topic recipes stay despite expired flag', () => {
+  const now = Date.now();
+  const list = {recipeIds: ['t1', 'old'], carriedRecipeIds: ['old']};
+  const flags = [
+    {recipeID: 'old', flag: 'kandidat', expiresAt: new Date(now - 1000)},
+    {recipeID: 't1', flag: 'kandidat', expiresAt: new Date(now - 1000)},
+  ];
+  assert.deepStrictEqual(pruneStaleRecipeIds(list, {usableRecipeIds: ['t1']}, flags, now),
+      {recipeIds: ['t1'], carriedRecipeIds: []});
+});
+
+test('pruneStaleRecipeIds: nothing to do when the list matches, or the topic is unknown', () => {
+  assert.strictEqual(pruneStaleRecipeIds({recipeIds: ['t1']}, {usableRecipeIds: ['t1']}, []), null);
+  assert.strictEqual(pruneStaleRecipeIds({recipeIds: ['x']}, null, []), null);
 });
