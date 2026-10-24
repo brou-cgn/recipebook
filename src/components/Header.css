@@ -1,7 +1,8 @@
 .header {
   background: #f5f5f5;
   color: #1a1a1a;
-  padding: 0.75rem 1rem;
+  /* viewport-fit=cover: der Viewport reicht hinter die iOS-Statusleiste */
+  padding: calc(0.75rem + env(safe-area-inset-top, 0px)) 1rem 0.75rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
