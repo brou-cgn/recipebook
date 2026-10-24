@@ -895,6 +895,8 @@ function computeCurrentSeasonStatus(entry, date = new Date()) {
   return CURRENT_SEASON_STATUS.KEINE_SAISON;
 }
 
+const SEASON_MATRIX_BATCH_SIZE = 400;
+
 /**
  * Scheduled Cloud Function: update the `currentSeasonStatus` field on every
  * season matrix entry once per day.
@@ -916,17 +918,21 @@ exports.updateSeasonMatrixStatus = onSchedule(
       }
 
       const today = new Date();
-      const batch = db.batch();
+      // Nur geaenderte Status schreiben; Firestore-Batches sind auf 500 Schreibvorgaenge begrenzt.
+      const changed = snapshot.docs.filter((docSnap) =>
+        docSnap.data().currentSeasonStatus !== computeCurrentSeasonStatus(docSnap.data(), today));
 
-      snapshot.forEach((docSnap) => {
-        const entry = docSnap.data();
-        const status = computeCurrentSeasonStatus(entry, today);
-        batch.update(docSnap.ref, {currentSeasonStatus: status});
-      });
-
-      await batch.commit();
+      for (let i = 0; i < changed.length; i += SEASON_MATRIX_BATCH_SIZE) {
+        const batch = db.batch();
+        changed.slice(i, i + SEASON_MATRIX_BATCH_SIZE).forEach((docSnap) => {
+          batch.update(docSnap.ref, {
+            currentSeasonStatus: computeCurrentSeasonStatus(docSnap.data(), today),
+          });
+        });
+        await batch.commit();
+      }
       console.log(
-          `updateSeasonMatrixStatus: updated ${snapshot.size} entries` +
+          `updateSeasonMatrixStatus: updated ${changed.length} of ${snapshot.size} entries` +
           ` for ${today.toISOString().slice(0, 10)}`,
       );
     },
