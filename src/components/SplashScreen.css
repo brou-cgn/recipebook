@@ -54,7 +54,7 @@
   height: 2px;
   background: rgba(64, 44, 28, 0.08);
   overflow: hidden;
-  margin-bottom: calc(56px + var(--safe-bottom, 0px));
+  margin-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
   animation: splash-screen-fade-in 400ms ease-out 500ms both;
 }
 
