@@ -79,7 +79,7 @@ function loadHandlers() {
       firestoreFactory.FieldValue = {serverTimestamp: () => ({}), increment: (n) => n};
       return {initializeApp: () => {}, firestore: firestoreFactory};
     }
-    if (request === './nutritionNormalization') {
+    if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {
         createNutritionNormalizationUtils: () => ({
           normalizeIngredientWithGemini: async () => null,

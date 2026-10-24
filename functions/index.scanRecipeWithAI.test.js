@@ -122,7 +122,7 @@ function loadFunction() {
     }
 
     // ── Internal helpers ───────────────────────────────────────────────────
-    if (request === './nutritionNormalization') {
+    if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {
         createNutritionNormalizationUtils: () => ({
           parseIngredientForNutrition: () => null,

@@ -84,7 +84,7 @@ function loadWrappedFunction() {
       };
     }
 
-    if (request === './nutritionNormalization') {
+    if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {
         createNutritionNormalizationUtils: createUtilsStub,
       };

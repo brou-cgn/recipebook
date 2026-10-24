@@ -81,7 +81,7 @@ function loadWrappedFunction() {
       };
     }
 
-    if (request === './nutritionNormalization') {
+    if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {createNutritionNormalizationUtils: createUtilsStub};
     }
 
@@ -511,7 +511,7 @@ test('generateNutritionFromReference is registered with cors and invoker:public 
       return {initializeApp: () => {}, firestore: ff};
     }
 
-    if (request === './nutritionNormalization') {
+    if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {createNutritionNormalizationUtils: () => ({
         generateSearchTermWithGemini: async () => '',
         estimateNutritionWithGemini: async () => null,

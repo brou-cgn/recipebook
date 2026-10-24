@@ -53,7 +53,7 @@ function loadFunction() {
     if (request === '@google/genai') {
       return {GoogleGenAI: class {}};
     }
-    if (request === './nutritionNormalization') {
+    if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {
         createNutritionNormalizationUtils: () => ({parseIngredientForNutrition: () => null}),
       };

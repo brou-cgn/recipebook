@@ -58,7 +58,7 @@ test('parseIngredientAmountG is registered with cors and invoker:public options'
       return {initializeApp: () => {}, firestore: ff};
     }
 
-    if (request === './nutritionNormalization') {
+    if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {
         createNutritionNormalizationUtils: () => ({
           normalizeIngredientWithGemini: async () => null,

@@ -106,7 +106,7 @@ function loadFunctionsModule(state = {}) {
       };
     }
 
-    if (request === './nutritionNormalization') {
+    if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {
         createNutritionNormalizationUtils: () => ({
           normalizeIngredientWithGemini: async () => null,

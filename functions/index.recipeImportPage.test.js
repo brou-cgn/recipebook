@@ -50,7 +50,7 @@ function loadHandler(rawText) {
         messaging: () => ({}),
       };
     }
-    if (request === './nutritionNormalization') {
+    if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {createNutritionNormalizationUtils: () => ({})};
     }
     if (request === '@google/genai') return {GoogleGenAI: class {}};

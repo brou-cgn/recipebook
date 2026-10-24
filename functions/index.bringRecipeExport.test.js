@@ -71,7 +71,7 @@ function loadFunction(firestoreImpl) {
       };
     }
 
-    if (request === './nutritionNormalization') {
+    if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {
         createNutritionNormalizationUtils: () => ({
           parseIngredientForNutrition: () => null,

@@ -66,7 +66,7 @@ function loadFunctions({userData, pinDoc = null, scanCount = null, limitCheckFai
         messaging: () => ({}),
       };
     }
-    if (request === './nutritionNormalization') {
+    if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {createNutritionNormalizationUtils: () => ({})};
     }
     if (request === '@google/genai') return {GoogleGenAI: class {}};
