@@ -1324,7 +1324,6 @@
 [data-theme="dark"] .password-change-modal,
 [data-theme="dark"] .group-dialog,
 [data-theme="dark"] .ocr-modal,
-[data-theme="dark"] .instagram-import-modal,
 [data-theme="dark"] .universal-import-modal,
 [data-theme="dark"] .web-import-modal {
   background: #1e1e1e;
@@ -1677,17 +1676,6 @@
 
 [data-theme="dark"] .import-preview h3 {
   color: #e8e8e8;
-}
-
-/* ---- Instagram Import Modal ---- */
-[data-theme="dark"] .instagram-import-content {
-  color: #e8e8e8;
-}
-
-[data-theme="dark"] .instagram-import-instructions {
-  background: #2a2a2a;
-  border-color: #3d3d3d;
-  color: #ccc;
 }
 
 /* ---- Password change ---- */
@@ -3628,85 +3616,6 @@
   background: #2a2a2a;
 }
 
-/* ---- InstagramImportModal additional ---- */
-[data-theme="dark"] .instagram-image-item {
-  background: #2a2a2a;
-}
-
-[data-theme="dark"] .instagram-add-image {
-  background: #1a2a1a;
-  border-color: #4a7a9a;
-  color: #7a9fdf;
-}
-
-[data-theme="dark"] .instagram-add-image:hover {
-  background: #4a7a9a;
-  color: #fff;
-}
-
-[data-theme="dark"] .instagram-progress-bar {
-  background: #2a2a2a;
-}
-
-[data-theme="dark"] .instagram-image-indicator.pending {
-  background: #333;
-  color: #777;
-}
-
-[data-theme="dark"] .instagram-merged-notice {
-  background: #1a2a3a;
-  color: #7aafdf;
-  border-left-color: #7a8fdf;
-}
-
-[data-theme="dark"] .instagram-result-section {
-  background: #2a2a2a;
-}
-
-[data-theme="dark"] .instagram-result-section h4 {
-  color: #e8e8e8;
-  border-bottom-color: #3d3d3d;
-}
-
-[data-theme="dark"] .instagram-error {
-  background: #2a1a1a;
-  border-color: #5a2a2a;
-  color: #f08080;
-}
-
-[data-theme="dark"] .instagram-import-actions {
-  border-top-color: #3d3d3d;
-}
-
-[data-theme="dark"] .instagram-cancel-button {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
-[data-theme="dark"] .instagram-cancel-button:hover {
-  background: #333;
-}
-
-[data-theme="dark"] .instagram-back-button {
-  background: #2a2a2a;
-  color: #7a8fdf;
-  border-color: #7a8fdf;
-}
-
-[data-theme="dark"] .instagram-result-title {
-  color: #e8e8e8;
-  border-bottom-color: #3d3d3d;
-}
-
-[data-theme="dark"] .instagram-result-meta {
-  color: #aaa;
-}
-
-[data-theme="dark"] .instagram-meta-badge {
-  background: #2a2a2a;
-  color: #ccc;
-}
 
 /* ---- PasswordChangeModal additional ---- */
 [data-theme="dark"] .password-change-warning {
