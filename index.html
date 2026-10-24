@@ -36,6 +36,23 @@
       // iOS Safari: Reset zoom after orientation change (Landscape → Portrait)
       // Safari retains the zoom level after auto-zooming on input focus. Temporarily
       // setting maximum-scale=1.0 on the viewport forces Safari to reset the zoom.
+      // iOS-PWA (viewport-fit=cover): Der Layout-Viewport ist nach Kaltstart bzw. Rückkehr
+      // aus dem Hintergrund teils ~47pt zu niedrig (Splash/Bottom-Nav sitzen zu hoch,
+      // darunter ein Streifen), bis iOS ihn neu berechnet. Dasselbe Umschalten des
+      // Viewport-Meta wie unten erzwingt diese Neuberechnung.
+      function relayoutViewport() {
+        var meta = document.querySelector('meta[name="viewport"]');
+        if (!meta || !window.navigator.standalone) return;
+        var prev = meta.content;
+        meta.content = prev + ', maximum-scale=1.0';
+        setTimeout(function() { meta.content = prev; }, 50);
+      }
+      window.addEventListener('load', function() { setTimeout(relayoutViewport, 0); });
+      window.addEventListener('pageshow', function(e) { if (e.persisted) relayoutViewport(); });
+      document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') relayoutViewport();
+      });
+
       window.addEventListener('orientationchange', function() {
         // Wait for the orientation animation to complete before adjusting the viewport
         var ORIENTATION_CHANGE_DELAY = 400;
