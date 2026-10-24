@@ -1,19 +1,11 @@
 /* MobileSearchOverlay – bottom-anchored search panel that slides up from below */
 
-/* ─── Full-screen dimming backdrop ─────────────────────────────────────── */
+/* ─── Full-screen backdrop (transparent, fängt nur Klicks außerhalb ab) ──── */
 
 .mobile-search-overlay {
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: rgba(0, 0, 0, 0.45);
-  /* Fade-in for the backdrop */
-  animation: mso-backdrop-in 0.2s ease both;
-}
-
-@keyframes mso-backdrop-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
 }
 
 /* ─── Search panel (results + input bar) ───────────────────────────────── */

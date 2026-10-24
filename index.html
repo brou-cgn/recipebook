@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#402C1C" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -36,23 +36,6 @@
       // iOS Safari: Reset zoom after orientation change (Landscape → Portrait)
       // Safari retains the zoom level after auto-zooming on input focus. Temporarily
       // setting maximum-scale=1.0 on the viewport forces Safari to reset the zoom.
-      // iOS-PWA (viewport-fit=cover): Der Layout-Viewport ist nach Kaltstart bzw. Rückkehr
-      // aus dem Hintergrund teils ~47pt zu niedrig (Splash/Bottom-Nav sitzen zu hoch,
-      // darunter ein Streifen), bis iOS ihn neu berechnet. Dasselbe Umschalten des
-      // Viewport-Meta wie unten erzwingt diese Neuberechnung.
-      function relayoutViewport() {
-        var meta = document.querySelector('meta[name="viewport"]');
-        if (!meta || !window.navigator.standalone) return;
-        var prev = meta.content;
-        meta.content = prev + ', maximum-scale=1.0';
-        setTimeout(function() { meta.content = prev; }, 50);
-      }
-      window.addEventListener('load', function() { setTimeout(relayoutViewport, 0); });
-      window.addEventListener('pageshow', function(e) { if (e.persisted) relayoutViewport(); });
-      document.addEventListener('visibilitychange', function() {
-        if (document.visibilityState === 'visible') relayoutViewport();
-      });
-
       window.addEventListener('orientationchange', function() {
         // Wait for the orientation animation to complete before adjusting the viewport
         var ORIENTATION_CHANGE_DELAY = 400;

@@ -15,7 +15,7 @@ describe('BottomNavigation CSS sizing', () => {
 
     expect(navRule).toContain('min-height: var(--bottom-nav-min-height, 77px);');
     expect(navRule).toContain('var(--bottom-nav-vertical-padding, 0.4rem)');
-    expect(navRule).toContain('var(--safe-bottom, 0px)');
+    expect(navRule).toContain('env(safe-area-inset-bottom, 0px)');
   });
 
   test('uses larger icon sizing', () => {
