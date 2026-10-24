@@ -7,7 +7,6 @@ import { db } from '../firebase';
 import {
   collection,
   doc,
-  getDocs,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -39,28 +38,6 @@ export const subscribeToFaqs = (callback) => {
     console.error('Error subscribing to FAQs:', error);
     callback([]);
   });
-};
-
-/**
- * Get all FAQs (one-time fetch)
- * @returns {Promise<Array>} Promise resolving to array of FAQs
- */
-export const getFaqs = async () => {
-  try {
-    const faqsRef = query(collection(db, 'faqs'), orderBy('order', 'asc'));
-    const snapshot = await getDocs(faqsRef);
-    const faqs = [];
-    snapshot.forEach((doc) => {
-      faqs.push({
-        id: doc.id,
-        ...doc.data()
-      });
-    });
-    return faqs;
-  } catch (error) {
-    console.error('Error getting FAQs:', error);
-    return [];
-  }
 };
 
 /**
