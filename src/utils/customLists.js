@@ -511,7 +511,7 @@ Bitte gib das Ergebnis im folgenden JSON-Format zurück:
   "zubereitungszeit": Zeit in Minuten als Zahl (nur die Zahl, z.B. 30),
   "kochzeit": Kochzeit in Minuten als Zahl (optional),
   "schwierigkeit": Schwierigkeitsgrad 1-5 (1=sehr einfach, 5=sehr schwer),
-  "kulinarik": "Kulinarische Herkunft (z.B. Italienisch, Asiatisch, Deutsch)",
+  "kulinarik": "Kulinarische Herkunft (z.B. Italienische Küche, Chinesische Küche, Deutsche Küche)",
   "kategorie": "Kategorie (z.B. Hauptgericht, Dessert, Vorspeise, Beilage, Snack)",
   "tags": ["vegetarisch", "vegan", "glutenfrei"], // nur falls explizit erwähnt
   "zutaten": [
@@ -550,7 +550,7 @@ BEISPIEL GUTE EXTRAKTION:
   "portionen": 4,
   "zubereitungszeit": 30,
   "schwierigkeit": 2,
-  "kulinarik": "Italienisch",
+  "kulinarik": "Italienische Küche",
   "kategorie": "Hauptgericht",
   "tags": [],
   "zutaten": [
