@@ -3,6 +3,16 @@ import './SplashScreen.css';
 import { consumeSwUpdateReloadFlag } from '../utils/swUpdateReloadFlag';
 import { isRecoveryNavigation } from '../utils/navigationType';
 
+// iOS-PWA: beim Kaltstart ist der Layout-Viewport kurz kleiner als das Display
+// (vh/dvh/inset liefern dann zu wenig Höhe), bis iOS ihn nachträglich vergrößert.
+// screen.height ist von Anfang an korrekt, daher im Hochformat als feste Höhe nutzen.
+const getInitialHeight = () => {
+  if (typeof window === 'undefined' || !window.navigator?.standalone) return undefined;
+  if (window.innerHeight <= window.innerWidth) return undefined;
+  const { width, height } = window.screen || {};
+  return Math.max(width || 0, height || 0) || undefined;
+};
+
 const SplashScreen = ({ exiting = false }) => {
   // Skip the logo/tagline entrance animations on a reload we forced
   // ourselves (a new service worker version taking over) or one we didn't
@@ -12,11 +22,14 @@ const SplashScreen = ({ exiting = false }) => {
   // continuation.
   const [skipEnterAnimation] = useState(() => consumeSwUpdateReloadFlag() || isRecoveryNavigation());
 
+  const [height] = useState(getInitialHeight);
+
   return (
     <div
       className={`splash-screen${exiting ? ' splash-screen--exiting' : ''}${
         skipEnterAnimation ? ' splash-screen--instant' : ''
       }`}
+      style={height ? { height: `${height}px` } : undefined}
     >
       <div className="splash-screen__content">
         <img
