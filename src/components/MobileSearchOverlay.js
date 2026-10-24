@@ -7,6 +7,7 @@ import { expandCuisineSelection } from '../utils/customLists';
 import { hasHauptsaisonIngredient } from '../utils/recipeSortIndex';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import { splitIntoTwoRows, reorderActiveFirst } from '../utils/pillCarousel';
+import useFadeOutClose from '../hooks/useFadeOutClose';
 
 const DEBOUNCE_DELAY_MS = 200;
 // Delay in ms before auto-focusing the input – gives the slide-up animation
@@ -68,7 +69,8 @@ function computeTopCuisineTypes(recipes, cuisineTypes) {
   return computeAllSortedCuisineTypes(recipes, cuisineTypes).slice(0, MAX_CUISINE_TYPE_PILLS);
 }
 
-function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearch, onClearSearch, currentUser, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly: showSeasonalOnlyProp, showRecipes: showRecipesProp, showTutorials: showTutorialsProp, onFavoritesToggle, onSeasonalToggle, onRecipesToggle, onTutorialsToggle, seasonMatrixEntries = [], cuisineTypes, cuisineGroups, onCuisineFilterChange, selectedCuisines: selectedCuisinesProp, mealCategories, onMealCategoryFilterChange, selectedCategories: selectedCategoriesProp, availableAuthors, onAuthorFilterChange, selectedAuthors: selectedAuthorsProp, privateLists, onPrivateListFilterChange, selectedPrivateLists: selectedPrivateListsProp, searchTerm: searchTermProp, showPrivateListFilters = true }) {
+function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRecipe, onSearch, onClearSearch, currentUser, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly: showSeasonalOnlyProp, showRecipes: showRecipesProp, showTutorials: showTutorialsProp, onFavoritesToggle, onSeasonalToggle, onRecipesToggle, onTutorialsToggle, seasonMatrixEntries = [], cuisineTypes, cuisineGroups, onCuisineFilterChange, selectedCuisines: selectedCuisinesProp, mealCategories, onMealCategoryFilterChange, selectedCategories: selectedCategoriesProp, availableAuthors, onAuthorFilterChange, selectedAuthors: selectedAuthorsProp, privateLists, onPrivateListFilterChange, selectedPrivateLists: selectedPrivateListsProp, searchTerm: searchTermProp, showPrivateListFilters = true }) {
+  const [closing, onClose] = useFadeOutClose(onCloseProp);
   const { rows: nutritionReferenceRows } = useNutritionReference();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
@@ -445,7 +447,7 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
 
   return (
     <div
-      className="mobile-search-overlay"
+      className={`mobile-search-overlay${closing ? ' mobile-search-overlay--closing' : ''}`}
       role="dialog"
       aria-modal="true"
       aria-label="Rezepte suchen"

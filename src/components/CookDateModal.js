@@ -6,6 +6,7 @@ import SteamIcon from './icons/SteamIcon';
 import './CookDateModal.css';
 import { setCookDate, deleteCookDate, subscribeCookDates } from '../utils/recipeCookDates';
 import { isBase64Image } from '../utils/imageUtils';
+import useFadeOutClose from '../hooks/useFadeOutClose';
 
 /**
  * CookDateModal component
@@ -28,7 +29,8 @@ import { isBase64Image } from '../utils/imageUtils';
  * @param {Function} [props.onSaved]                    - Optionally called with the new Date when saved
  * @param {Function} props.onClose                     - Called when the modal should close
  */
-function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, recipeCreatedAt, recipeImage, timelineBubbleIcon = null, timelineCookEventBubbleIcon = null, timelineCookEventDefaultImage = null, followButtonIcon, canDeleteCookDates = false, prefillToday = false, onSaved, onClose }) {
+function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, recipeCreatedAt, recipeImage, timelineBubbleIcon = null, timelineCookEventBubbleIcon = null, timelineCookEventDefaultImage = null, followButtonIcon, canDeleteCookDates = false, prefillToday = false, onSaved, onClose: onCloseProp }) {
+  const [closing, onClose] = useFadeOutClose(onCloseProp);
   const todayStr = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(prefillToday ? todayStr : '');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,7 +94,7 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
   };
 
   return (
-    <div className="cook-date-modal-overlay" onClick={onClose}>
+    <div className={`cook-date-modal-overlay${closing ? ' cook-date-modal-overlay--closing' : ''}`} onClick={onClose}>
       <div className="cook-date-modal" onClick={(e) => e.stopPropagation()}>
         <div className="cook-date-modal-header">
           <h2 className="cook-date-modal-title">Kochtagebuch</h2>

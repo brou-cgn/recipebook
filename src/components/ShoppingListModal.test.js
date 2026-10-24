@@ -49,20 +49,21 @@ describe('ShoppingListModal', () => {
     expect(screen.getByText('1 / 3 erledigt')).toBeInTheDocument();
   });
 
-  test('calls onClose when close button is clicked', () => {
+  test('calls onClose when close button is clicked', async () => {
     render(<ShoppingListModal items={mockItems} title="Test" onClose={mockOnClose} />);
     
     const closeBtn = screen.getByLabelText('Einkaufsliste schließen');
     fireEvent.click(closeBtn);
-    expect(mockOnClose).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('.shopping-list-overlay--closing')).toBeInTheDocument();
+    await waitFor(() => expect(mockOnClose).toHaveBeenCalledTimes(1));
   });
 
-  test('calls onClose when overlay is clicked', () => {
+  test('calls onClose when overlay is clicked', async () => {
     render(<ShoppingListModal items={mockItems} title="Test" onClose={mockOnClose} />);
     
     const overlay = document.querySelector('.shopping-list-overlay');
     fireEvent.click(overlay);
-    expect(mockOnClose).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mockOnClose).toHaveBeenCalledTimes(1));
   });
 
   test('resets checked items when reset button is clicked', () => {
