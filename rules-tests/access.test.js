@@ -48,6 +48,36 @@ test('recipes: anlegen nur ab Rolle edit', async () => {
   await assertSucceeds(as.user(env, 'editor').collection('recipes').add(recipe));
 });
 
+test('recipes (Tech-Check S20): Clients legen keine Shortcut-Import-Jobs an, sonst startet der Trigger Gemini ohne Limit', async () => {
+  const job = {
+    title: 'Rezept-Import', authorId: 'editor', isTemp: true, importStatus: 'queued',
+    importHeartbeatAt: Date.now(), importOrigin: 'shortcut', importSource: { type: 'web', url: 'https://example.test' },
+  };
+  await assertFails(as.user(env, 'editor').collection('recipes').add(job));
+  await assertFails(as.user(env, 'editor').doc('recipes/neu').set(job));
+  await assertFails(as.user(env, 'admin').collection('recipes').add(job));
+  // Die In-App-Import-Queue legt weiter temporäre Jobs ohne das Flag an.
+  const { importOrigin, ...appJob } = job;
+  await assertSucceeds(as.user(env, 'editor').collection('recipes').add(appJob));
+});
+
+test('recipes (Tech-Check S20): das Shortcut-Flag lässt sich nachträglich nicht setzen, ein vorhandenes bleibt bei Updates unberührt', async () => {
+  await seed(env, async (db) => {
+    await db.doc('recipes/appJob').set({ title: 'App', authorId: 'editor', isTemp: true, importStatus: 'error' });
+    await db.doc('recipes/shortcutJob').set({
+      title: 'Rezept-Import', authorId: 'editor', isTemp: true, importStatus: 'queued', importOrigin: 'shortcut',
+    });
+  });
+  const editor = as.user(env, 'editor');
+  await assertFails(editor.doc('recipes/appJob').update({ importOrigin: 'shortcut', importStatus: 'queued' }));
+  await assertFails(editor.doc('recipes/appJob').set({ title: 'App', importOrigin: 'shortcut' }, { merge: true }));
+  // Fertige Shortcut-Imports prüft und speichert die App weiter, auch per vollständigem set().
+  await assertSucceeds(editor.doc('recipes/shortcutJob').update({ title: 'Geprüft', isTemp: false }));
+  await assertSucceeds(editor.doc('recipes/shortcutJob').update({ importOrigin: 'shortcut', importStatus: 'done' }));
+  await assertSucceeds(editor.doc('recipes/shortcutJob').set({ title: 'Geprüft', importOrigin: 'shortcut' }));
+  await assertSucceeds(editor.doc('recipes/appJob').update({ title: 'App 2' }));
+});
+
 test('groups (Tech-Check S16): Gäste lesen keine privaten Listen, auch nicht die eingeladenen E-Mail-Adressen', async () => {
   await assertFails(as.anonymous(env).doc('groups/g1').get());
   await assertFails(as.unauth(env).doc('groups/g1').get());

@@ -25,7 +25,7 @@ Quelle ist immer `firestore.rules`; diese Tabelle gibt den Stand vom 18.10.2026 
 
 | Collection | Lesen | Schreiben |
 |------------|-------|-----------|
-| `recipes` | Mitglieder und Nutzer ohne Profil (nicht anonym). **Sichtbarkeit (Entwurf, Gruppe) wird nur im Client gefiltert.** | Anlegen/Löschen/Ändern: `edit`, `moderator`, `admin` |
+| `recipes` | Mitglieder und Nutzer ohne Profil (nicht anonym). **Sichtbarkeit (Entwurf, Gruppe) wird nur im Client gefiltert.** | Anlegen/Löschen/Ändern: `edit`, `moderator`, `admin`. Das Flag `importOrigin: 'shortcut'` (Import-Jobs der Kurzbefehl-Endpunkte) darf ein Client weder anlegen noch neu setzen (Tech-Check S20); ein vorhandenes bleibt bei Updates unberührt |
 | `recipes/{id}/ratings` | alle (öffentlich) | Anlegen: angemeldet, eigener Schlüssel oder `guest_…`; Ändern: nur eigener Schlüssel; Löschen: eigener, Gast-Schlüssel, Editoren |
 | `menus` | `isAnyUser()` oder Freigabelink (`shareId`) | `edit`, `moderator`, `admin` |
 | `groups` | öffentliche Systemgruppe für `isAnyUser()` (Gäste eingeschlossen); private Listen nur Eigentümer, Mitglieder und Admins (Tech-Check S16) | `edit`+; jedes Mitglied seine eigene Liste „Für dich entdeckt"; Löschen nur `edit`+ |
@@ -75,6 +75,7 @@ Die Tests in `rules-tests/access.test.js` halten diese Zustände fest (sie erset
 2. **`groups` (Rest nach S16):** Gäste und fremde Mitglieder lesen private Listen nicht mehr. Mitglieder einer Liste sehen aber weiterhin deren `invitedEmails` (E-Mail-Adressen noch nicht registrierter Eingeladener). Schließen ginge nur durch Verlagern in eine nur per Cloud Function lesbare Collection, samt Umbau von `GroupDetail.js` und dem Registrierungs-Trigger (`functions/index.js`, `invitedEmails`).
 3. **`publicProfiles`:** Auch anonyme Gäste lesen Vor- und Nachnamen aller Mitglieder. Einschränken auf Mitglieder würde Gästen die Autorennamen nehmen.
 4. **`cookDates`:** Jedes Mitglied liest alle Einträge (gewollt für den Kochbuch-Dialog, aber Datenschutz-relevant). Anonyme Gäste dürfen eigene Einträge anlegen.
+5. **Import-Jobs und KI-Limit (Tech-Check S21):** `recoverStuckImportJobs` führt jedes temporäre Rezept (`isTemp`, `importStatus` queued/processing/error, Heartbeat älter als 5 Minuten) mit Gemini aus, ohne `importOrigin` und ohne Tageslimit. Die In-App-Import-Queue legt solche Dokumente selbst an, die Regeln können sie nicht sperren. Ein Mitglied ab `edit` kann so das Limit der Kurzbefehl-Endpunkte umgehen, gedrosselt auf 20 Jobs je 10-Minuten-Lauf und 3 Versuche je Job. Schließen geht nur über eine Limit-Prüfung im Sweeper.
 
 ## Tests der Regeln
 
