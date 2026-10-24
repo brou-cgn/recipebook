@@ -1560,7 +1560,7 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
       adminUser.id,
     ));
 
-    fireEvent.click(within(geschuetztSection).getByTitle('Entfernen'));
+    fireEvent.click(within(geschuetztSection).getByTitle('weiß entfernen'));
     await waitFor(() => expect(saveCommonAdjectives).toHaveBeenLastCalledWith(
       {
         temperature: ['warm', 'heiß'],
@@ -1642,6 +1642,78 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
       },
       adminUser.id,
     ));
+  });
+
+  describe('AppCallsPage – Standardbegriffe: Löschen mit Rückgängig (D4)', () => {
+    const openTab = async () => {
+      render(
+        <AppCallsPage
+          onBack={jest.fn()}
+          currentUser={adminUser}
+          recipes={[]}
+          onUpdateRecipe={jest.fn()}
+        />
+      );
+      fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
+    };
+
+    beforeEach(() => {
+      const { getCommonAdjectives, getCommonUnits, getIgnoredTerms } = require('../utils/customLists');
+      getCommonAdjectives.mockResolvedValue({ temperature: ['warm', 'heiß'], state: [], sizing: [], protected: [] });
+      getCommonUnits.mockResolvedValue({ volume: ['ml', 'dl', 'l'], kitchenSize: [], weight: [], dimension: [] });
+      getIgnoredTerms.mockResolvedValue(['optional', 'ggf', 'gegebenenfalls']);
+    });
+
+    test('Adjektiv: Entfernen speichert sofort, Rückgängig stellt es an der alten Stelle wieder her', async () => {
+      const { saveCommonAdjectives } = require('../utils/customLists');
+      await openTab();
+
+      fireEvent.click(screen.getByTitle('warm entfernen'));
+      await waitFor(() => expect(saveCommonAdjectives).toHaveBeenLastCalledWith(
+        expect.objectContaining({ temperature: ['heiß'] }),
+        adminUser.id,
+      ));
+
+      fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+      await waitFor(() => expect(saveCommonAdjectives).toHaveBeenLastCalledWith(
+        expect.objectContaining({ temperature: ['warm', 'heiß'] }),
+        adminUser.id,
+      ));
+    });
+
+    test('Ignorierter Begriff: Rückgängig stellt die Reihenfolge wieder her', async () => {
+      const { saveIgnoredTerms } = require('../utils/customLists');
+      await openTab();
+
+      fireEvent.click(screen.getByTitle('ggf entfernen'));
+      await waitFor(() => expect(saveIgnoredTerms).toHaveBeenLastCalledWith(
+        ['optional', 'gegebenenfalls'],
+        adminUser.id,
+      ));
+
+      fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+      await waitFor(() => expect(saveIgnoredTerms).toHaveBeenLastCalledWith(
+        ['optional', 'ggf', 'gegebenenfalls'],
+        adminUser.id,
+      ));
+    });
+
+    test('Einheit: Rückgängig stellt sie an der alten Stelle wieder her', async () => {
+      const { saveCommonUnits } = require('../utils/customLists');
+      await openTab();
+
+      fireEvent.click(screen.getByTitle('dl entfernen'));
+      await waitFor(() => expect(saveCommonUnits).toHaveBeenLastCalledWith(
+        expect.objectContaining({ volume: ['ml', 'l'] }),
+        adminUser.id,
+      ));
+
+      fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+      await waitFor(() => expect(saveCommonUnits).toHaveBeenLastCalledWith(
+        expect.objectContaining({ volume: ['ml', 'dl', 'l'] }),
+        adminUser.id,
+      ));
+    });
   });
 });
 

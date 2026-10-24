@@ -227,6 +227,51 @@ function CuisineProposalRow({ name, deleteIcon, onDiscard, children }) {
   );
 }
 
+// One entry of a standard-terms list (Adjektive, ignorierte Begriffe, Einheiten).
+// Desktop: DeleteRowButton at the right edge; mobile: left-swipe reveals the
+// delete action (see CLAUDE.md, Löschaktionen).
+function StandardTermRow({ label, onRemove }) {
+  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete();
+
+  const handleSwipeDeleteClick = (e) => {
+    e.stopPropagation();
+    onRemove();
+    reset();
+  };
+
+  return (
+    <div className={`standard-term-row${isDeleteVisible ? ' swipe-delete-active' : ''}${offset < 0 && !isDeleteVisible ? ' is-swiping' : ''}`}>
+      <div className="swipe-delete-background" aria-hidden={!isDeleteVisible && offset === 0}>
+        <button
+          type="button"
+          className="swipe-delete-action"
+          onClick={handleSwipeDeleteClick}
+          aria-label={`${label} entfernen`}
+          tabIndex={isDeleteVisible ? 0 : -1}
+        >
+          <span className="swipe-delete-icon-text"><TrashIcon /></span>
+        </button>
+      </div>
+      <div
+        className="list-item standard-term-row-content delete-row-hover-target"
+        style={{ transform: `translateX(${offset}px)`, transition: 'transform 0.15s ease' }}
+        onClick={isDeleteVisible ? () => reset() : undefined}
+        {...handlers}
+      >
+        <span>{label}</span>
+        <DeleteRowButton
+          className="standard-term-delete-btn"
+          itemName={label}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 const APP_CALLS_TAB_ORDER = [
   KUECHENBETRIEB_TABS.APP,
   KUECHENBETRIEB_TABS.RECIPE,
@@ -1253,6 +1298,50 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     })),
   ]), []);
 
+  // Standard terms: the undo handlers run later, so they read the current lists from a ref.
+  const standardTermsUndo = useUndoableDelete();
+  const standardTermsRef = useRef({ adjectives: {}, ignored: [], units: {} });
+  standardTermsRef.current = { adjectives: commonAdjectives, ignored: ignoredTerms, units: commonUnits };
+
+  const persistCommonAdjectives = async (groups) => {
+    setCommonAdjectives(groups);
+    setStandardTermsFeedback('');
+    try {
+      await saveCommonAdjectives(groups, currentUser?.id);
+      await initializeCommonAdjectivesFromFirebase({ forceReload: true });
+      setStandardTermsFeedback('Standard-Adjektivgruppen gespeichert.');
+    } catch (err) {
+      console.error('Error saving common adjectives:', err);
+      setStandardTermsFeedback('Fehler beim Speichern der Standard-Adjektivgruppen.');
+    }
+  };
+
+  const persistIgnoredTerms = async (terms) => {
+    setIgnoredTerms(terms);
+    setStandardTermsFeedback('');
+    try {
+      await saveIgnoredTerms(terms, currentUser?.id);
+      await initializeIgnoredMarkersFromFirebase({ forceReload: true });
+      setStandardTermsFeedback('Ignorierte Begriffe gespeichert.');
+    } catch (err) {
+      console.error('Error saving ignored terms:', err);
+      setStandardTermsFeedback('Fehler beim Speichern der ignorierten Begriffe.');
+    }
+  };
+
+  const persistCommonUnits = async (groups) => {
+    setCommonUnits(groups);
+    setStandardTermsFeedback('');
+    try {
+      await saveCommonUnits(groups, currentUser?.id);
+      await initializeCommonUnitsFromFirebase({ forceReload: true });
+      setStandardTermsFeedback('Einheitengruppen gespeichert.');
+    } catch (err) {
+      console.error('Error saving common units:', err);
+      setStandardTermsFeedback('Fehler beim Speichern der Einheiten.');
+    }
+  };
+
   const handleAddCommonAdjective = async (group, value) => {
     if (!COMMON_ADJECTIVE_GROUPS.includes(group)) return;
     const entry = String(value || '').trim();
@@ -1266,33 +1355,32 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     };
     setCommonAdjectives(updatedGroups);
     setNewCommonAdjective((prev) => ({ ...prev, [group]: '' }));
-    setStandardTermsFeedback('');
-    try {
-      await saveCommonAdjectives(updatedGroups, currentUser?.id);
-      await initializeCommonAdjectivesFromFirebase({ forceReload: true });
-      setStandardTermsFeedback('Standard-Adjektivgruppen gespeichert.');
-    } catch (err) {
-      console.error('Error saving common adjectives:', err);
-      setStandardTermsFeedback('Fehler beim Speichern der Standard-Adjektivgruppen.');
-    }
+    await persistCommonAdjectives(updatedGroups);
   };
 
   const handleRemoveCommonAdjective = async (group, entry) => {
     if (!COMMON_ADJECTIVE_GROUPS.includes(group)) return;
+    const currentEntries = commonAdjectives[group] || [];
+    const entryIndex = currentEntries.indexOf(entry);
     const updatedGroups = {
       ...commonAdjectives,
-      [group]: (commonAdjectives[group] || []).filter((adjective) => adjective !== entry),
+      [group]: currentEntries.filter((adjective) => adjective !== entry),
     };
     setCommonAdjectives(updatedGroups);
-    setStandardTermsFeedback('');
-    try {
-      await saveCommonAdjectives(updatedGroups, currentUser?.id);
-      await initializeCommonAdjectivesFromFirebase({ forceReload: true });
-      setStandardTermsFeedback('Standard-Adjektivgruppen gespeichert.');
-    } catch (err) {
-      console.error('Error saving common adjectives:', err);
-      setStandardTermsFeedback('Fehler beim Speichern der Standard-Adjektivgruppen.');
+    if (entryIndex >= 0) {
+      standardTermsUndo.notifyDeleted({
+        id: `adjective:${group}:${entry}`,
+        name: entry,
+        undo: () => {
+          const latest = standardTermsRef.current.adjectives;
+          const list = (latest[group] || []).slice();
+          if (list.includes(entry)) return;
+          list.splice(Math.min(entryIndex, list.length), 0, entry);
+          persistCommonAdjectives({ ...latest, [group]: list });
+        },
+      });
     }
+    await persistCommonAdjectives(updatedGroups);
   };
 
   const handleAddCommonUnit = async (group, value) => {
@@ -1308,15 +1396,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     };
     setCommonUnits(updatedGroups);
     setNewCommonUnit((prev) => ({ ...prev, [group]: '' }));
-    setStandardTermsFeedback('');
-    try {
-      await saveCommonUnits(updatedGroups, currentUser?.id);
-      await initializeCommonUnitsFromFirebase({ forceReload: true });
-      setStandardTermsFeedback('Einheitengruppen gespeichert.');
-    } catch (err) {
-      console.error('Error saving common units:', err);
-      setStandardTermsFeedback('Fehler beim Speichern der Einheiten.');
-    }
+    await persistCommonUnits(updatedGroups);
   };
 
   const handleAddIgnoredTerm = async (value) => {
@@ -1327,47 +1407,51 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     const updatedTerms = [...ignoredTerms, entry];
     setIgnoredTerms(updatedTerms);
     setNewIgnoredTerm('');
-    setStandardTermsFeedback('');
-    try {
-      await saveIgnoredTerms(updatedTerms, currentUser?.id);
-      await initializeIgnoredMarkersFromFirebase({ forceReload: true });
-      setStandardTermsFeedback('Ignorierte Begriffe gespeichert.');
-    } catch (err) {
-      console.error('Error saving ignored terms:', err);
-      setStandardTermsFeedback('Fehler beim Speichern der ignorierten Begriffe.');
-    }
+    await persistIgnoredTerms(updatedTerms);
   };
 
   const handleRemoveIgnoredTerm = async (entry) => {
+    const entryIndex = ignoredTerms.indexOf(entry);
     const updatedTerms = ignoredTerms.filter((term) => term !== entry);
     setIgnoredTerms(updatedTerms);
-    setStandardTermsFeedback('');
-    try {
-      await saveIgnoredTerms(updatedTerms, currentUser?.id);
-      await initializeIgnoredMarkersFromFirebase({ forceReload: true });
-      setStandardTermsFeedback('Ignorierte Begriffe gespeichert.');
-    } catch (err) {
-      console.error('Error saving ignored terms:', err);
-      setStandardTermsFeedback('Fehler beim Speichern der ignorierten Begriffe.');
+    if (entryIndex >= 0) {
+      standardTermsUndo.notifyDeleted({
+        id: `ignored:${entry}`,
+        name: entry,
+        undo: () => {
+          const list = standardTermsRef.current.ignored.slice();
+          if (list.includes(entry)) return;
+          list.splice(Math.min(entryIndex, list.length), 0, entry);
+          persistIgnoredTerms(list);
+        },
+      });
     }
+    await persistIgnoredTerms(updatedTerms);
   };
 
   const handleRemoveCommonUnit = async (group, value) => {
     if (!COMMON_UNIT_GROUPS.includes(group)) return;
+    const currentEntries = commonUnits[group] || [];
+    const entryIndex = currentEntries.indexOf(value);
     const updatedGroups = {
       ...commonUnits,
-      [group]: (commonUnits[group] || []).filter((unit) => unit !== value),
+      [group]: currentEntries.filter((unit) => unit !== value),
     };
     setCommonUnits(updatedGroups);
-    setStandardTermsFeedback('');
-    try {
-      await saveCommonUnits(updatedGroups, currentUser?.id);
-      await initializeCommonUnitsFromFirebase({ forceReload: true });
-      setStandardTermsFeedback('Einheitengruppen gespeichert.');
-    } catch (err) {
-      console.error('Error saving common units:', err);
-      setStandardTermsFeedback('Fehler beim Speichern der Einheiten.');
+    if (entryIndex >= 0) {
+      standardTermsUndo.notifyDeleted({
+        id: `unit:${group}:${value}`,
+        name: value,
+        undo: () => {
+          const latest = standardTermsRef.current.units;
+          const list = (latest[group] || []).slice();
+          if (list.includes(value)) return;
+          list.splice(Math.min(entryIndex, list.length), 0, value);
+          persistCommonUnits({ ...latest, [group]: list });
+        },
+      });
     }
+    await persistCommonUnits(updatedGroups);
   };
 
   const handleDirectWordSegmentAssign = async (word, segment) => {
@@ -2195,17 +2279,11 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                     <p className="section-description">Noch keine Adjektive vorhanden.</p>
                   ) : (
                     (commonAdjectives[group] || []).map((adjective) => (
-                      <div key={adjective} className="list-item">
-                        <span>{adjective}</span>
-                        <button
-                          // eslint-disable-next-line no-restricted-syntax -- D4: noch auf DeleteRowButton + Undo umstellen
-                          className="remove-btn"
-                          onClick={() => handleRemoveCommonAdjective(group, adjective)}
-                          title="Entfernen"
-                        >
-                          ×
-                        </button>
-                      </div>
+                      <StandardTermRow
+                        key={adjective}
+                        label={adjective}
+                        onRemove={() => handleRemoveCommonAdjective(group, adjective)}
+                      />
                     ))
                   )}
                 </div>
@@ -2243,17 +2321,11 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                   <p className="section-description">Noch keine Begriffe vorhanden.</p>
                 ) : (
                   ignoredTerms.map((term) => (
-                    <div key={term} className="list-item">
-                      <span>{term}</span>
-                      <button
-                        // eslint-disable-next-line no-restricted-syntax -- D4: noch auf DeleteRowButton + Undo umstellen
-                        className="remove-btn"
-                        onClick={() => handleRemoveIgnoredTerm(term)}
-                        title="Entfernen"
-                      >
-                        ×
-                      </button>
-                    </div>
+                    <StandardTermRow
+                      key={term}
+                      label={term}
+                      onRemove={() => handleRemoveIgnoredTerm(term)}
+                    />
                   ))
                 )}
               </div>
@@ -2289,17 +2361,11 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                       <p className="empty-group-hint">Keine Einträge vorhanden</p>
                     ) : (
                       (commonUnits[group] || []).map((unit) => (
-                        <div key={unit} className="list-item">
-                          <span>{unit}</span>
-                          <button
-                            // eslint-disable-next-line no-restricted-syntax -- D4: noch auf DeleteRowButton + Undo umstellen
-                            className="remove-btn"
-                            onClick={() => handleRemoveCommonUnit(group, unit)}
-                            title="Entfernen"
-                          >
-                            ×
-                          </button>
-                        </div>
+                        <StandardTermRow
+                          key={unit}
+                          label={unit}
+                          onRemove={() => handleRemoveCommonUnit(group, unit)}
+                        />
                       ))
                     )}
                   </div>
@@ -2309,6 +2375,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
             {standardTermsFeedback && (
               <p className="app-calls-info-text">{standardTermsFeedback}</p>
             )}
+            <UndoSnackbar itemName={standardTermsUndo.pendingName} onUndo={standardTermsUndo.undo} />
           </>
         ) : (
           <div className="kochatelier-settings-section">
