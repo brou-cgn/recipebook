@@ -858,36 +858,3 @@ export async function importRecipeFromUrl(url, onProgress = null, jobMeta = null
   }
 }
 
-/**
- * Check if a recipe from this URL already exists
- * (Optional feature for duplicate detection)
- * @param {string} url - The URL to check
- * @param {Array} recipes - Array of existing recipes
- * @returns {Array} Array of matching recipes
- */
-export function findRecipesByUrl(url, recipes) {
-  if (!url || !recipes || !Array.isArray(recipes)) {
-    return [];
-  }
-
-  // Normalize URL for comparison (remove trailing slashes, query params, etc.)
-  const normalizeUrl = (urlString) => {
-    try {
-      const urlObj = new URL(urlString);
-      // Use origin + pathname, ignore search params and hash
-      return `${urlObj.origin}${urlObj.pathname}`.replace(/\/$/, '');
-    } catch {
-      return urlString;
-    }
-  };
-
-  const normalizedUrl = normalizeUrl(url);
-
-  return recipes.filter(recipe => {
-    // Check if recipe has a sourceUrl field
-    if (recipe.sourceUrl) {
-      return normalizeUrl(recipe.sourceUrl) === normalizedUrl;
-    }
-    return false;
-  });
-}
