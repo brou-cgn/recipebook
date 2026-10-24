@@ -91,28 +91,6 @@ export const subscribeToMenus = (userId, isAdmin, callback) => {
 };
 
 /**
- * Get all menus (one-time fetch)
- * @returns {Promise<Array>} Promise resolving to array of menus
- */
-export const getMenus = async () => {
-  try {
-    const menusRef = collection(db, 'menus');
-    const snapshot = await getDocs(menusRef);
-    const menus = [];
-    snapshot.forEach((doc) => {
-      menus.push({
-        id: doc.id,
-        ...doc.data()
-      });
-    });
-    return menus;
-  } catch (error) {
-    console.error('Error getting menus:', error);
-    return [];
-  }
-};
-
-/**
  * Add a new menu to Firestore
  * @param {Object} menu - Menu object
  * @param {string} authorId - ID of the user creating the menu

@@ -43,7 +43,6 @@ const BASELINE = {
   'components/Header.css': 75,
   'components/ImportProgressDialog.css': 21,
   'components/ImportProgressIndicator.css': 7,
-  'components/InstagramImportModal.css': 44,
   'components/KalibrierungsAuswertung.css': 5,
   'components/Kueche.css': 20,
   'components/Login.css': 55,

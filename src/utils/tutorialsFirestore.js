@@ -12,7 +12,6 @@ import {
   doc,
   addDoc,
   updateDoc,
-  deleteDoc,
   onSnapshot,
   serverTimestamp,
   query,
@@ -108,11 +107,3 @@ export const updateTutorial = async (tutorialId, tutorialData) => {
   await updateDoc(doc(db, 'tutorials', tutorialId), data);
 };
 
-/**
- * Delete a tutorial from Firestore.
- * @param {string} tutorialId - ID of the tutorial to delete.
- * @returns {Promise<void>}
- */
-export const deleteTutorial = async (tutorialId) => {
-  await deleteDoc(doc(db, 'tutorials', tutorialId));
-};

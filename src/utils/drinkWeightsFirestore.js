@@ -40,16 +40,6 @@ const subscribeToCollection = (collectionName, callback) => {
   });
 };
 
-const getCollectionOnce = async (collectionName) => {
-  try {
-    const snapshot = await getDocs(collection(db, collectionName));
-    return snapshotToMap(snapshot);
-  } catch (error) {
-    console.error(`Error loading ${collectionName}:`, error);
-    return {};
-  }
-};
-
 const setCollectionEntry = async (collectionName, categoryId, data, updatedBy) => {
   const entryRef = doc(db, collectionName, categoryId);
   const payload = removeUndefinedFields({
@@ -65,12 +55,6 @@ export const subscribeToDrinkWeights = (callback) => subscribeToCollection(DRINK
 
 /** Subscribe to the children drink weight matrix in realtime. */
 export const subscribeToChildrenDrinkWeights = (callback) => subscribeToCollection(CHILDREN_DRINK_WEIGHTS_COLLECTION, callback);
-
-/** Load the adults drink weight matrix once (no realtime subscription). */
-export const getDrinkWeightsOnce = () => getCollectionOnce(DRINK_WEIGHTS_COLLECTION);
-
-/** Load the children drink weight matrix once (no realtime subscription). */
-export const getChildrenDrinkWeightsOnce = () => getCollectionOnce(CHILDREN_DRINK_WEIGHTS_COLLECTION);
 
 /**
  * Create or update one category entry of the adults drink weight matrix.
