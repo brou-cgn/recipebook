@@ -66,6 +66,27 @@ service cloud.firestore {
       );
     }
 
+    // importOrigin 'shortcut' markiert Import-Jobs der Kurzbefehl-Endpunkte. Nur diese
+    // legen sie an (Admin-SDK, umgeht die Regeln), nachdem sie das KI-Tageslimit geprüft
+    // haben. processShortcutImportJob startet Gemini für jedes neue Dokument mit dem Flag
+    // ohne eigene Prüfung; ein Client darf es deshalb weder setzen noch auf ein Dokument
+    // schreiben (Tech-Check S20). Ein unverändert stehengebliebenes Flag bleibt erlaubt,
+    // damit die App fertige Shortcut-Imports weiter prüfen und speichern kann.
+    function importOriginOf(data) {
+      return data.get('importOrigin', null);
+    }
+
+    // Nur für create: resource existiert dort noch nicht.
+    function createsShortcutOrigin() {
+      return importOriginOf(request.resource.data) == 'shortcut';
+    }
+
+    // Nur für update: true, wenn das Flag neu gesetzt wird (ein vorhandenes bleibt unberührt).
+    function setsShortcutOrigin() {
+      return importOriginOf(request.resource.data) == 'shortcut'
+          && importOriginOf(resource.data) != 'shortcut';
+    }
+
     // Recipes collection
     match /recipes/{recipeId} {
       // Direct reads are for signed-in users with a profile only. Anonymous
@@ -75,11 +96,12 @@ service cloud.firestore {
       // cannot express "public, no draft, not list-locked", and a shareId clause
       // here would let anyone enumerate every shared recipe with a range query.
       allow get, list: if isAnyUser() && !isAnonymous();
-      allow create, delete: if isEditOrAdmin();
+      allow create: if isEditOrAdmin() && !createsShortcutOrigin();
+      allow delete: if isEditOrAdmin();
       // ratingAvg/ratingCount are written exclusively by the aggregateRecipeRating
       // Cloud Function (Admin SDK bypasses these rules) in response to changes in
       // the ratings subcollection below; no client write path for these fields.
-      allow update: if isEditOrAdmin();
+      allow update: if isEditOrAdmin() && !setsShortcutOrigin();
 
       // Ratings subcollection – anyone (including guests) may read and write their own rating.
       // Guests are identified by a localStorage-generated ID (prefixed 'guest_');
