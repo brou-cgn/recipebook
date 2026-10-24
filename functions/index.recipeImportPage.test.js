@@ -53,7 +53,7 @@ function loadHandler(rawText) {
     if (request === './nutritionNormalization') {
       return {createNutritionNormalizationUtils: () => ({})};
     }
-    if (request === '@google/generative-ai') return {GoogleGenerativeAI: class {}};
+    if (request === '@google/genai') return {GoogleGenAI: class {}};
     if (request === 'nodemailer') return {createTransport: () => ({})};
     if (request === 'sharp') return () => ({});
     return originalLoad.call(this, request, parent, isMain, ...args);

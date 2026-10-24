@@ -5,22 +5,17 @@ const assert = require('node:assert/strict');
 
 const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 
-function createFakeGoogleGenerativeAI(handler) {
-  return class FakeGoogleGenerativeAI {
-    constructor(apiKey) {
+function createFakeGoogleGenAI(handler) {
+  return class FakeGoogleGenAI {
+    constructor({apiKey}) {
       this.apiKey = apiKey;
     }
 
-    getGenerativeModel() {
+    get models() {
       return {
-        generateContent: async (prompt) => {
-          const response = await handler({prompt, apiKey: this.apiKey});
-          return {
-            response: {
-              text: async () => response,
-            },
-          };
-        },
+        generateContent: async ({contents}) => ({
+          text: await handler({prompt: contents, apiKey: this.apiKey}),
+        }),
       };
     }
   };
@@ -40,7 +35,7 @@ async function normalizeWithFallback(utils, ingredientStr) {
 }
 
 test('normalizeIngredientWithGemini returns structured canonical data on success', async () => {
-  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async () => JSON.stringify({
     amount: 2,
     unit: 'EL',
     amountInGrams: 30,
@@ -49,7 +44,7 @@ test('normalizeIngredientWithGemini returns structured canonical data on success
   }));
 
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    GoogleGenAI: FakeGoogleGenAI,
     env: {GEMINI_API_KEY: 'test-key'},
   });
 
@@ -63,12 +58,12 @@ test('normalizeIngredientWithGemini returns structured canonical data on success
 });
 
 test('normalizeIngredientWithGemini falls back to regex parsing when Gemini throws', async () => {
-  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => {
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async () => {
     throw new Error('rate limit');
   });
 
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    GoogleGenAI: FakeGoogleGenAI,
     env: {GEMINI_API_KEY: 'test-key'},
   });
 
@@ -81,10 +76,10 @@ test('normalizeIngredientWithGemini falls back to regex parsing when Gemini thro
 });
 
 test('normalizeIngredientWithGemini falls back to regex parsing on invalid JSON', async () => {
-  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => 'not valid json');
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async () => 'not valid json');
 
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    GoogleGenAI: FakeGoogleGenAI,
     env: {GEMINI_API_KEY: 'test-key'},
   });
 
@@ -121,7 +116,7 @@ test('isSimpleIngredient returns false for ingredients with modifiers', () => {
 });
 
 test('normalizeIngredientWithGemini returns null without an API key', async () => {
-  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async () => JSON.stringify({
     amount: 1,
     unit: 'Prise',
     amountInGrams: 1,
@@ -130,7 +125,7 @@ test('normalizeIngredientWithGemini returns null without an API key', async () =
   }));
 
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    GoogleGenAI: FakeGoogleGenAI,
     env: {},
   });
 
@@ -141,20 +136,20 @@ test('normalizeIngredientWithGemini returns null without an API key', async () =
 
 test('normalizeIngredientWithGemini uses gemini-2.5-flash by default', async () => {
   let modelName;
+  let generationConfig;
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: class FakeGoogleGenerativeAI {
-      getGenerativeModel(config) {
-        modelName = config.model;
+    GoogleGenAI: class FakeGoogleGenAI {
+      get models() {
         return {
-          generateContent: async () => ({
-            response: {
-              text: async () => JSON.stringify({
+          generateContent: async (request) => {
+            modelName = request.model;
+            generationConfig = request.config;
+            return {text: JSON.stringify({
                 amountInGrams: 1,
                 canonicalNameDE: 'Salz',
                 canonicalNameEN: 'salt',
-              }),
-            },
-          }),
+              })};
+          },
         };
       }
     },
@@ -164,6 +159,7 @@ test('normalizeIngredientWithGemini uses gemini-2.5-flash by default', async () 
   await utils.normalizeIngredientWithGemini('1 Prise Salz');
 
   assert.equal(modelName, 'gemini-2.5-flash');
+  assert.deepEqual(generationConfig, {responseMimeType: 'application/json', temperature: 0});
 });
 
 test('normalizeIngredientWithGemini handles typical German ingredient strings', async () => {
@@ -212,7 +208,7 @@ test('normalizeIngredientWithGemini handles typical German ingredient strings', 
     }],
   ]);
 
-  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async ({prompt}) => {
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async ({prompt}) => {
     const ingredient = [...responses.keys()]
         .find((entry) => prompt.includes(JSON.stringify(entry)));
     if (!ingredient) {
@@ -222,7 +218,7 @@ test('normalizeIngredientWithGemini handles typical German ingredient strings', 
   });
 
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    GoogleGenAI: FakeGoogleGenAI,
     env: {GEMINI_API_KEY: 'test-key'},
   });
 
@@ -237,7 +233,7 @@ test('normalizeIngredientWithGemini handles typical German ingredient strings', 
 });
 
 test('estimateNutritionWithGemini returns full nutrition object on valid Gemini JSON', async () => {
-  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async () => JSON.stringify({
     kalorien: 884,
     protein: 0,
     fett: 100,
@@ -248,7 +244,7 @@ test('estimateNutritionWithGemini returns full nutrition object on valid Gemini 
   }));
 
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    GoogleGenAI: FakeGoogleGenAI,
     env: {GEMINI_API_KEY: 'test-key'},
   });
 
@@ -275,10 +271,10 @@ test('estimateNutritionWithGemini returns full nutrition object on valid Gemini 
 });
 
 test('estimateNutritionWithGemini returns null on invalid Gemini JSON', async () => {
-  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => 'not valid json');
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async () => 'not valid json');
 
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    GoogleGenAI: FakeGoogleGenAI,
     env: {GEMINI_API_KEY: 'test-key'},
   });
 
@@ -292,7 +288,7 @@ test('estimateNutritionWithGemini returns null on invalid Gemini JSON', async ()
 });
 
 test('estimateNutritionWithGemini returns null without an API key', async () => {
-  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async () => JSON.stringify({
     kalorien: 364,
     protein: 10,
     fett: 1,
@@ -303,7 +299,7 @@ test('estimateNutritionWithGemini returns null without an API key', async () => 
   }));
 
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    GoogleGenAI: FakeGoogleGenAI,
     env: {},
   });
 
@@ -317,10 +313,10 @@ test('estimateNutritionWithGemini returns null without an API key', async () => 
 });
 
 test('estimateNutritionWithGemini returns null when Gemini returns null', async () => {
-  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => 'null');
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async () => 'null');
 
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    GoogleGenAI: FakeGoogleGenAI,
     env: {GEMINI_API_KEY: 'test-key'},
   });
 
@@ -335,14 +331,15 @@ test('estimateNutritionWithGemini returns null when Gemini returns null', async 
 
 test('estimateNutritionWithGemini uses gemini-2.5-flash by default', async () => {
   let modelName;
+  let generationConfig;
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: class FakeGoogleGenerativeAI {
-      getGenerativeModel(config) {
-        modelName = config.model;
+    GoogleGenAI: class FakeGoogleGenAI {
+      get models() {
         return {
-          generateContent: async () => ({
-            response: {
-              text: async () => JSON.stringify({
+          generateContent: async (request) => {
+            modelName = request.model;
+            generationConfig = request.config;
+            return {text: JSON.stringify({
                 kalorien: 0,
                 protein: 0,
                 fett: 0,
@@ -350,9 +347,8 @@ test('estimateNutritionWithGemini uses gemini-2.5-flash by default', async () =>
                 zucker: 0,
                 ballaststoffe: 0,
                 salz: 0,
-              }),
-            },
-          }),
+              })};
+          },
         };
       }
     },
@@ -366,10 +362,11 @@ test('estimateNutritionWithGemini uses gemini-2.5-flash by default', async () =>
   });
 
   assert.equal(modelName, 'gemini-2.5-flash');
+  assert.deepEqual(generationConfig, {responseMimeType: 'application/json', temperature: 0});
 });
 
 test('estimateNutritionWithGemini maps null nutrient fields to zero', async () => {
-  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async () => JSON.stringify({
     kalorien: 21,
     protein: null,
     fett: 0,
@@ -380,7 +377,7 @@ test('estimateNutritionWithGemini maps null nutrient fields to zero', async () =
   }));
 
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    GoogleGenAI: FakeGoogleGenAI,
     env: {GEMINI_API_KEY: 'test-key'},
   });
 
@@ -410,7 +407,7 @@ test('estimateNutritionWithGemini retries once after timeout and reuses the same
   let createModelCalls = 0;
   let generateContentCalls = 0;
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: class {},
+    GoogleGenAI: class {},
     env: {GEMINI_API_KEY: 'test-key'},
   });
 
@@ -465,12 +462,12 @@ test('estimateNutritionWithGemini retries once after timeout and reuses the same
 });
 
 test('generateSearchTermWithGemini returns search term on success', async () => {
-  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async () => JSON.stringify({
     searchTerm: 'olive oil',
   }));
 
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    GoogleGenAI: FakeGoogleGenAI,
     env: {GEMINI_API_KEY: 'test-key'},
   });
 
@@ -480,10 +477,10 @@ test('generateSearchTermWithGemini returns search term on success', async () => 
 });
 
 test('generateSearchTermWithGemini returns null on invalid JSON', async () => {
-  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => 'not valid json');
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async () => 'not valid json');
 
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    GoogleGenAI: FakeGoogleGenAI,
     env: {GEMINI_API_KEY: 'test-key'},
   });
 
@@ -493,12 +490,12 @@ test('generateSearchTermWithGemini returns null on invalid JSON', async () => {
 });
 
 test('generateSearchTermWithGemini returns null without an API key', async () => {
-  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async () => JSON.stringify({
     searchTerm: 'wheat flour',
   }));
 
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    GoogleGenAI: FakeGoogleGenAI,
     env: {},
   });
 
@@ -508,7 +505,7 @@ test('generateSearchTermWithGemini returns null without an API key', async () =>
 });
 
 test('estimateNutritionWithGemini parses valid confidence field from Gemini response', async () => {
-  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async () => JSON.stringify({
     kalorien: 364,
     protein: 10,
     fett: 1,
@@ -520,7 +517,7 @@ test('estimateNutritionWithGemini parses valid confidence field from Gemini resp
   }));
 
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    GoogleGenAI: FakeGoogleGenAI,
     env: {GEMINI_API_KEY: 'test-key'},
   });
 
@@ -534,7 +531,7 @@ test('estimateNutritionWithGemini parses valid confidence field from Gemini resp
 });
 
 test('estimateNutritionWithGemini normalizes confidence to lowercase', async () => {
-  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async () => JSON.stringify({
     kalorien: 364,
     protein: 10,
     fett: 1,
@@ -546,7 +543,7 @@ test('estimateNutritionWithGemini normalizes confidence to lowercase', async () 
   }));
 
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    GoogleGenAI: FakeGoogleGenAI,
     env: {GEMINI_API_KEY: 'test-key'},
   });
 
@@ -560,7 +557,7 @@ test('estimateNutritionWithGemini normalizes confidence to lowercase', async () 
 });
 
 test('estimateNutritionWithGemini returns null confidence for invalid confidence value', async () => {
-  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async () => JSON.stringify({
     kalorien: 364,
     protein: 10,
     fett: 1,
@@ -572,7 +569,7 @@ test('estimateNutritionWithGemini returns null confidence for invalid confidence
   }));
 
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    GoogleGenAI: FakeGoogleGenAI,
     env: {GEMINI_API_KEY: 'test-key'},
   });
 
@@ -586,7 +583,7 @@ test('estimateNutritionWithGemini returns null confidence for invalid confidence
 });
 
 test('estimateNutritionWithGemini handles partial null nutrient fields with confidence without crashing', async () => {
-  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async () => JSON.stringify({
     kalorien: 52,
     protein: null,
     fett: 0.2,
@@ -598,7 +595,7 @@ test('estimateNutritionWithGemini handles partial null nutrient fields with conf
   }));
 
   const utils = createNutritionNormalizationUtils({
-    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    GoogleGenAI: FakeGoogleGenAI,
     env: {GEMINI_API_KEY: 'test-key'},
   });
 

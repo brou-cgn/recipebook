@@ -73,8 +73,8 @@ function loadFunction() {
       };
     }
 
-    if (request === '@google/generative-ai') {
-      return {GoogleGenerativeAI: class {}};
+    if (request === '@google/genai') {
+      return {GoogleGenAI: class {}};
     }
 
     if (request === './nutritionNormalization') {

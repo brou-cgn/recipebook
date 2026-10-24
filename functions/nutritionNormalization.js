@@ -283,12 +283,36 @@ async function withTimeout(promise, timeoutMs) {
 }
 
 /**
+ * Wraps the @google/genai client in the model shape the helpers below use
+ * (`generateContent(prompt)` -> `{response: {text()}}`), so injected test
+ * models via `options.model` / `options.createModel` keep working.
+ *
+ * @param {Function} GoogleGenAI - Client class from @google/genai
+ * @param {string} apiKey
+ * @param {object} config - generationConfig, e.g. {responseMimeType, temperature}
+ * @return {{generateContent: function(string): Promise<{response: {text: function(): Promise<string>}}>}}
+ */
+function createGenAiModel(GoogleGenAI, apiKey, config) {
+  const client = new GoogleGenAI({apiKey});
+  return {
+    generateContent: async (prompt) => {
+      const response = await client.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config,
+      });
+      return {response: {text: async () => response.text}};
+    },
+  };
+}
+
+/**
  * Creates reusable nutrition normalization helpers.
  *
- * @param {{GoogleGenerativeAI: (Function|undefined), env: (Object|undefined)}} [options]
+ * @param {{GoogleGenAI: (Function|undefined), env: (Object|undefined)}} [options]
  * @return {object}
  */
-function createNutritionNormalizationUtils({GoogleGenerativeAI, env = process.env} = {}) {
+function createNutritionNormalizationUtils({GoogleGenAI, env = process.env} = {}) {
   /**
    * Uses Gemini to normalize a raw ingredient string into a structured object
    * with canonical English food name and amount in grams.
@@ -301,19 +325,16 @@ function createNutritionNormalizationUtils({GoogleGenerativeAI, env = process.en
     if (!ingredientStr || typeof ingredientStr !== 'string') return null;
 
     const apiKey = options.apiKey ?? env.GEMINI_API_KEY;
-    if (!apiKey || !GoogleGenerativeAI) {
+    if (!apiKey || !GoogleGenAI) {
       return null;
     }
 
     const model = options.model || (options.createModel ?
       options.createModel(apiKey) :
-      new GoogleGenerativeAI(apiKey).getGenerativeModel({
-        model: 'gemini-2.5-flash',
-        generationConfig: {
+      createGenAiModel(GoogleGenAI, apiKey, {
           responseMimeType: 'application/json',
           temperature: 0,
-        },
-      }));
+        }));
 
     const result = await withTimeout(
         model.generateContent(buildIngredientNormalizationPrompt(ingredientStr)),
@@ -347,19 +368,16 @@ function createNutritionNormalizationUtils({GoogleGenerativeAI, env = process.en
     }
 
     const apiKey = options.apiKey ?? env.GEMINI_API_KEY;
-    if (!apiKey || !GoogleGenerativeAI) {
+    if (!apiKey || !GoogleGenAI) {
       return null;
     }
 
     const model = options.model || (options.createModel ?
       options.createModel(apiKey) :
-      new GoogleGenerativeAI(apiKey).getGenerativeModel({
-        model: 'gemini-2.5-flash',
-        generationConfig: {
+      createGenAiModel(GoogleGenAI, apiKey, {
           responseMimeType: 'application/json',
           temperature: 0,
-        },
-      }));
+        }));
 
     const maxRetries = options.retries ?? 1;
     const totalAttempts = maxRetries + 1;
@@ -413,14 +431,14 @@ function createNutritionNormalizationUtils({GoogleGenerativeAI, env = process.en
    */
   async function generateSearchTermWithGemini(ingredientID, nutritionFamily, category, options = {}) {
     const apiKey = options.apiKey ?? env.GEMINI_API_KEY;
-    if (!apiKey || !GoogleGenerativeAI) return null;
+    if (!apiKey || !GoogleGenAI) return null;
 
     const model = options.model || (options.createModel ?
       options.createModel(apiKey) :
-      new GoogleGenerativeAI(apiKey).getGenerativeModel({
-        model: 'gemini-2.5-flash',
-        generationConfig: {responseMimeType: 'application/json', temperature: 0},
-      }));
+      createGenAiModel(GoogleGenAI, apiKey, {
+          responseMimeType: 'application/json',
+          temperature: 0,
+        }));
 
     try {
       const result = await withTimeout(

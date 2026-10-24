@@ -70,7 +70,7 @@ function loadFunctions({userData, pinDoc = null, scanCount = null, limitCheckFai
     if (request === './nutritionNormalization') {
       return {createNutritionNormalizationUtils: () => ({})};
     }
-    if (request === '@google/generative-ai') return {GoogleGenerativeAI: class {}};
+    if (request === '@google/genai') return {GoogleGenAI: class {}};
     if (request === 'nodemailer') return {createTransport: () => ({})};
     if (request === 'sharp') {
       const chain = {resize: () => chain, jpeg: () => chain, toBuffer: async () => Buffer.from('jpeg')};
