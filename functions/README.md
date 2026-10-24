@@ -464,7 +464,7 @@ Rate limits are enforced using Firestore:
 
 The Gemini-backed Shortcut endpoints (`importRecipeShortcut`, `scanRecipePhotoShortcut`,
 `scrapeInstagramReelShortcut`) share this counter with the in-app callables (see
-`enforceShortcutAiLimit` in `index.js`) and answer `429` once the daily limit is reached
+`enforceShortcutAiLimit` in `shared/shortcutAuth.js`) and answer `429` once the daily limit is reached
 (`503` if the counter cannot be checked). Shortcut users count as authenticated; the tier
 follows their `users/{uid}.role`.
 
