@@ -4,6 +4,8 @@ import { defaultIcon } from '../utils/defaultButtonIcons';
 import PencilIcon from './icons/PencilIcon';
 import TrashIcon from './icons/TrashIcon';
 import './Settings.css';
+import useInlineRename from '../hooks/useInlineRename';
+import { addCuisineType, removeCuisineType, renameCuisineType, addCuisineGroup, removeCuisineGroup, addChildToGroup, removeChildFromGroup } from '../utils/cuisineListOps';
 import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, renameCuisineTypeIcon, deleteCuisineTypeIcon, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, getAIRecipePromptHistory, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION } from '../utils/customLists';
 import { getOnboardingTestmodeActive, saveOnboardingTestmodeActive } from '../utils/onboardingSettings';
 import { renameMealCategoryInImages, removeMealCategoryFromImages } from '../utils/categoryImages';
@@ -61,8 +63,7 @@ function SortableListItem({
   placeholderColumn,
   placeholderColumnTitle = 'Bild – folgt in Kürze',
 }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(label);
+  const { isEditing, editValue, setEditValue, start, confirm, onKeyDown } = useInlineRename(label, onRename);
 
   const {
     attributes,
@@ -74,27 +75,6 @@ function SortableListItem({
   } = useSortable({ id });
 
   const style = getSortableItemStyle(transform, transition, isDragging);
-
-  const handleEditStart = () => {
-    setEditValue(label);
-    setIsEditing(true);
-  };
-
-  const handleEditConfirm = () => {
-    const trimmed = editValue.trim();
-    if (trimmed && trimmed !== label) {
-      onRename(label, trimmed);
-    }
-    setIsEditing(false);
-  };
-
-  const handleEditKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      handleEditConfirm();
-    } else if (e.key === 'Escape') {
-      setIsEditing(false);
-    }
-  };
 
   return (
     <div ref={setNodeRef} style={style} className={`list-item delete-row-hover-target ${isDragging ? 'dragging' : ''}`}>
@@ -112,8 +92,8 @@ function SortableListItem({
           type="text"
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
-          onBlur={handleEditConfirm}
-          onKeyDown={handleEditKeyDown}
+          onBlur={confirm}
+          onKeyDown={onKeyDown}
           autoFocus
           className="list-item-edit-input"
         />
@@ -126,7 +106,7 @@ function SortableListItem({
         </div>
       )}
       {onRename && !isEditing && (
-        <button className="edit-btn" onClick={handleEditStart} title="Umbenennen"><PencilIcon /></button>
+        <button className="edit-btn" onClick={start} title="Umbenennen"><PencilIcon /></button>
       )}
       <DeleteRowButton itemName={label} onClick={onRemove} />
     </div>
@@ -767,65 +747,43 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     }
   };
 
+  // Cuisine list rules live in utils/cuisineListOps (shared with the App-Aufrufe page).
+  const cuisineState = (l) => ({ types: l.cuisineTypes, groups: l.cuisineGroups || [] });
+  const withCuisineState = (l, st) => ({ ...l, cuisineTypes: st.types, cuisineGroups: st.groups });
+  const applyCuisineState = (st) => setLists(prev => withCuisineState(prev, st));
+  const restoreCuisineState = (restore) => setLists(prev => withCuisineState(prev, restore(cuisineState(prev))));
+
   const addCuisine = () => {
+    const next = addCuisineType(cuisineState(lists), newCuisine);
+    if (!next) return;
     const trimmed = newCuisine.trim();
-    if (trimmed && !lists.cuisineTypes.includes(trimmed)) {
-      setLists({
-        ...lists,
-        cuisineTypes: [...lists.cuisineTypes, trimmed]
-      });
-      setNewCuisine('');
-      // Cancel a pending delete if this type was just re-added with the same name
-      setPendingCuisineDeletes(prev => prev.filter(d => d !== trimmed));
-    }
+    applyCuisineState(next);
+    setNewCuisine('');
+    // Cancel a pending delete if this type was just re-added with the same name
+    setPendingCuisineDeletes(prev => prev.filter(d => d !== trimmed));
   };
 
   const removeCuisine = (cuisine) => {
-    const index = lists.cuisineTypes.indexOf(cuisine);
+    const removal = removeCuisineType(cuisineState(lists), cuisine);
+    if (!removal) return;
     const wasPendingDelete = pendingCuisineDeletes.includes(cuisine);
-    const memberOf = (lists.cuisineGroups || []).filter(g => g.children.includes(cuisine)).map(g => g.name);
-    setLists(prev => ({
-      ...prev,
-      cuisineTypes: prev.cuisineTypes.filter(c => c !== cuisine),
-      cuisineGroups: (prev.cuisineGroups || []).map(g => ({
-        ...g,
-        children: g.children.filter(c => c !== cuisine)
-      })),
-    }));
+    applyCuisineState(removal.state);
     setPendingCuisineDeletes(prev => prev.includes(cuisine) ? prev : [...prev, cuisine]);
     listUndo.notifyDeleted({
       id: `cuisine:${cuisine}`,
       name: cuisine,
       undo: () => {
-        setLists(prev => {
-          const cuisineTypes = prev.cuisineTypes.slice();
-          if (!cuisineTypes.includes(cuisine)) cuisineTypes.splice(Math.min(index, cuisineTypes.length), 0, cuisine);
-          return {
-            ...prev,
-            cuisineTypes,
-            cuisineGroups: (prev.cuisineGroups || []).map(g =>
-              memberOf.includes(g.name) && !g.children.includes(cuisine)
-                ? { ...g, children: [...g.children, cuisine] }
-                : g
-            ),
-          };
-        });
+        restoreCuisineState(removal.restore);
         if (!wasPendingDelete) setPendingCuisineDeletes(prev => prev.filter(d => d !== cuisine));
       },
     });
   };
 
   const renameCuisine = (oldName, newName) => {
+    const next = renameCuisineType(cuisineState(lists), oldName, newName);
+    if (!next) return;
     const trimmed = newName.trim();
-    if (!trimmed || oldName === trimmed) return;
-    setLists(prev => ({
-      ...prev,
-      cuisineTypes: prev.cuisineTypes.map(c => c === oldName ? trimmed : c),
-      cuisineGroups: (prev.cuisineGroups || []).map(g => ({
-        ...g,
-        children: g.children.map(c => c === oldName ? trimmed : c)
-      })),
-    }));
+    applyCuisineState(next);
     setPendingCuisineRenames(prev => {
       const existingIdx = prev.findIndex(r => r.to === oldName);
       if (existingIdx >= 0) {
@@ -851,79 +809,37 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   };
 
   // Cuisine groups management
-  const addCuisineGroup = () => {
-    const name = newGroupName.trim();
-    if (!name) return;
-    const groups = lists.cuisineGroups || [];
-    if (groups.some(g => g.name === name)) return;
-    setLists(prev => ({
-      ...prev,
-      cuisineGroups: [...groups, { name, children: [] }]
-    }));
+  const addCuisineGroupFromInput = () => {
+    const next = addCuisineGroup(cuisineState(lists), newGroupName);
+    if (!next) return;
+    applyCuisineState(next);
     setNewGroupName('');
   };
 
-  const removeCuisineGroup = (groupName) => {
-    const groups = lists.cuisineGroups || [];
-    const index = groups.findIndex(g => g.name === groupName);
-    const removed = groups[index];
-    setLists(prev => ({
-      ...prev,
-      cuisineGroups: (prev.cuisineGroups || []).filter(g => g.name !== groupName)
-    }));
-    if (!removed) return;
+  const removeCuisineGroupByName = (groupName) => {
+    const removal = removeCuisineGroup(cuisineState(lists), groupName);
+    if (!removal) return;
+    applyCuisineState(removal.state);
     listUndo.notifyDeleted({
       id: `group:${groupName}`,
       name: groupName,
-      undo: () => {
-        setLists(prev => {
-          const cuisineGroups = (prev.cuisineGroups || []).slice();
-          if (!cuisineGroups.some(g => g.name === groupName)) {
-            cuisineGroups.splice(Math.min(index, cuisineGroups.length), 0, removed);
-          }
-          return { ...prev, cuisineGroups };
-        });
-      },
+      undo: () => restoreCuisineState(removal.restore),
     });
   };
 
-  const addChildToGroup = (groupName, childName) => {
-    setLists(prev => ({
-      ...prev,
-      cuisineGroups: (prev.cuisineGroups || []).map(g =>
-        g.name === groupName && !g.children.includes(childName)
-          ? { ...g, children: [...g.children, childName] }
-          : g
-      )
-    }));
+  const addChildToGroupByName = (groupName, childName) => {
+    const next = addChildToGroup(cuisineState(lists), groupName, childName);
+    if (next) applyCuisineState(next);
   };
 
-  const removeChildFromGroup = (groupName, childName) => {
-    const group = (lists.cuisineGroups || []).find(g => g.name === groupName);
-    const index = group ? group.children.indexOf(childName) : -1;
-    setLists(prev => ({
-      ...prev,
-      cuisineGroups: (prev.cuisineGroups || []).map(g =>
-        g.name === groupName
-          ? { ...g, children: g.children.filter(c => c !== childName) }
-          : g
-      )
-    }));
-    if (index < 0) return;
+  const removeChildFromGroupByName = (groupName, childName) => {
+    const removal = removeChildFromGroup(cuisineState(lists), groupName, childName);
+    if (!removal) return;
+    applyCuisineState(removal.state);
     listUndo.notifyDeleted({
       id: `group-child:${groupName}:${childName}`,
       name: childName,
-      undo: () => {
-        setLists(prev => ({
-          ...prev,
-          cuisineGroups: (prev.cuisineGroups || []).map(g => {
-            if (g.name !== groupName || g.children.includes(childName)) return g;
-            const children = g.children.slice();
-            children.splice(Math.min(index, children.length), 0, childName);
-            return { ...g, children };
-          }),
-        }));
-      },
+      undo: () => restoreCuisineState(removal.restore),
     });
   };
 
@@ -1975,17 +1891,17 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               type="text"
               value={newGroupName}
               onChange={(e) => setNewGroupName(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && addCuisineGroup()}
+              onKeyPress={(e) => e.key === 'Enter' && addCuisineGroupFromInput()}
               placeholder="Neue Gruppe hinzufügen (z.B. Asiatische Küche)..."
             />
-            <button onClick={addCuisineGroup}>Hinzufügen</button>
+            <button onClick={addCuisineGroupFromInput}>Hinzufügen</button>
           </div>
           <div className="list-items">
             {(lists.cuisineGroups || []).map(group => (
               <div key={group.name} className="cuisine-group-item">
                 <div className="cuisine-group-header">
                   <strong>{group.name}</strong>
-                  <DeleteRowButton itemName={group.name} onClick={() => removeCuisineGroup(group.name)} />
+                  <DeleteRowButton itemName={group.name} onClick={() => removeCuisineGroupByName(group.name)} />
                 </div>
                 <div className="cuisine-group-children">
                   {group.children.map(child => (
@@ -1994,7 +1910,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                       <DeleteRowButton
                         itemName={`${child} aus ${group.name}`}
                         className="cuisine-group-child-delete"
-                        onClick={() => removeChildFromGroup(group.name, child)}
+                        onClick={() => removeChildFromGroupByName(group.name, child)}
                       />
                     </span>
                   ))}
@@ -2002,7 +1918,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     className="cuisine-group-add-child"
                     value=""
                     onChange={(e) => {
-                      if (e.target.value) addChildToGroup(group.name, e.target.value);
+                      if (e.target.value) addChildToGroupByName(group.name, e.target.value);
                     }}
                     aria-label={`Untertyp zu ${group.name} hinzufügen`}
                   >

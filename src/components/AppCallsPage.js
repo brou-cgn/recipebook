@@ -62,6 +62,10 @@ import {
   normalizeNutritionReferenceId,
 } from '../utils/nutritionReferenceUtils';
 import {
+  addCuisineType, removeCuisineType, renameCuisineType, addCuisineGroup, removeCuisineGroup, addChildToGroup, removeChildFromGroup,
+} from '../utils/cuisineListOps';
+import useInlineRename from '../hooks/useInlineRename';
+import {
   getCuisineProposals,
   updateCuisineProposal,
   releaseCuisineProposal,
@@ -134,26 +138,7 @@ const getEmptyCommonAdjectiveGroups = () => COMMON_ADJECTIVE_GROUPS.reduce((acc,
 }, {});
 
 function CuisineTypeListItem({ label, onRemove, onRename }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(label);
-
-  const handleEditStart = () => {
-    setEditValue(label);
-    setIsEditing(true);
-  };
-
-  const handleEditConfirm = () => {
-    const trimmed = editValue.trim();
-    if (trimmed && trimmed !== label && onRename) {
-      onRename(label, trimmed);
-    }
-    setIsEditing(false);
-  };
-
-  const handleEditKeyDown = (e) => {
-    if (e.key === 'Enter') handleEditConfirm();
-    else if (e.key === 'Escape') setIsEditing(false);
-  };
+  const { isEditing, editValue, setEditValue, start, confirm, onKeyDown } = useInlineRename(label, onRename);
 
   return (
     <div className="list-item delete-row-hover-target">
@@ -162,8 +147,8 @@ function CuisineTypeListItem({ label, onRemove, onRename }) {
           type="text"
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
-          onBlur={handleEditConfirm}
-          onKeyDown={handleEditKeyDown}
+          onBlur={confirm}
+          onKeyDown={onKeyDown}
           autoFocus
           className="list-item-edit-input"
           aria-label="Kulinariktyp umbenennen"
@@ -172,7 +157,7 @@ function CuisineTypeListItem({ label, onRemove, onRename }) {
         <span>{label}</span>
       )}
       {onRename && !isEditing && (
-        <button className="edit-btn" onClick={handleEditStart} title="Umbenennen"><PencilIcon /></button>
+        <button className="edit-btn" onClick={start} title="Umbenennen"><PencilIcon /></button>
       )}
       <DeleteRowButton itemName={label} onClick={onRemove} />
     </div>
@@ -1153,131 +1138,65 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     }
   };
 
-  const handleAddCuisineType = async () => {
-    const name = newCuisineTypeName.trim();
-    if (!name || cuisineTypes.some(t => t.toLowerCase() === name.toLowerCase())) return;
-    const updated = [...cuisineTypes, name];
-    setCuisineTypes(updated);
-    setNewCuisineTypeName('');
-    await saveCuisineLists(updated, cuisineGroups);
-  };
-
-  // Applies an undo against the lists as they are now (not as they were when the
-  // row was removed), so edits made during the undo window are kept.
-  const restoreCuisineLists = async (mutate) => {
-    const next = mutate(cuisineListsRef.current);
+  // The rules live in utils/cuisineListOps (shared with Settings); here every
+  // change is saved at once and undo re-saves against the current lists.
+  const applyCuisineState = async (next) => {
     setCuisineTypes(next.types);
     setCuisineGroups(next.groups);
     await saveCuisineLists(next.types, next.groups);
   };
 
-  const handleRemoveCuisineType = async (typeLabel) => {
-    const typeIndex = cuisineTypes.indexOf(typeLabel);
-    const memberOf = cuisineGroups.filter(g => g.children.includes(typeLabel)).map(g => g.name);
-    const updatedTypes = cuisineTypes.filter(t => t !== typeLabel);
-    const updatedGroups = cuisineGroups.map(g => ({
-      ...g,
-      children: g.children.filter(c => c !== typeLabel),
-    }));
-    setCuisineTypes(updatedTypes);
-    setCuisineGroups(updatedGroups);
+  const notifyCuisineDeleted = (id, name, restore) => {
     cuisineListUndo.notifyDeleted({
-      id: `type:${typeLabel}`,
-      name: typeLabel,
-      undo: () => restoreCuisineLists(({ types, groups }) => {
-        const nextTypes = types.slice();
-        if (!nextTypes.includes(typeLabel)) nextTypes.splice(Math.min(typeIndex, nextTypes.length), 0, typeLabel);
-        return {
-          types: nextTypes,
-          groups: groups.map(g =>
-            memberOf.includes(g.name) && !g.children.includes(typeLabel)
-              ? { ...g, children: [...g.children, typeLabel] }
-              : g
-          ),
-        };
-      }),
+      id,
+      name,
+      undo: () => applyCuisineState(restore(cuisineListsRef.current)),
     });
-    await saveCuisineLists(updatedTypes, updatedGroups);
+  };
+
+  const handleAddCuisineType = async () => {
+    const next = addCuisineType({ types: cuisineTypes, groups: cuisineGroups }, newCuisineTypeName);
+    if (!next) return;
+    setNewCuisineTypeName('');
+    await applyCuisineState(next);
+  };
+
+  const handleRemoveCuisineType = async (typeLabel) => {
+    const removal = removeCuisineType({ types: cuisineTypes, groups: cuisineGroups }, typeLabel);
+    if (!removal) return;
+    notifyCuisineDeleted(`type:${typeLabel}`, typeLabel, removal.restore);
+    await applyCuisineState(removal.state);
   };
 
   const handleRenameCuisineType = async (oldLabel, newLabel) => {
-    const trimmed = newLabel.trim();
-    if (!trimmed || trimmed === oldLabel) return;
-    if (cuisineTypes.some(t => t !== oldLabel && t.toLowerCase() === trimmed.toLowerCase())) return;
-    const updatedTypes = cuisineTypes.map(t => t === oldLabel ? trimmed : t);
-    const updatedGroups = cuisineGroups.map(g => ({
-      ...g,
-      children: g.children.map(c => c === oldLabel ? trimmed : c),
-    }));
-    setCuisineTypes(updatedTypes);
-    setCuisineGroups(updatedGroups);
-    await saveCuisineLists(updatedTypes, updatedGroups);
+    const next = renameCuisineType({ types: cuisineTypes, groups: cuisineGroups }, oldLabel, newLabel);
+    if (next) await applyCuisineState(next);
   };
 
   const handleAddCuisineGroup = async () => {
-    const name = newCuisineGroupName.trim();
-    if (!name || cuisineGroups.some(g => g.name === name)) return;
-    const updated = [...cuisineGroups, { name, children: [] }];
-    setCuisineGroups(updated);
+    const next = addCuisineGroup({ types: cuisineTypes, groups: cuisineGroups }, newCuisineGroupName);
+    if (!next) return;
     setNewCuisineGroupName('');
-    await saveCuisineLists(cuisineTypes, updated);
+    await applyCuisineState(next);
   };
 
   const handleRemoveCuisineGroup = async (groupName) => {
-    const groupIndex = cuisineGroups.findIndex(g => g.name === groupName);
-    const removed = cuisineGroups[groupIndex];
-    const updated = cuisineGroups.filter(g => g.name !== groupName);
-    setCuisineGroups(updated);
-    if (removed) {
-      cuisineListUndo.notifyDeleted({
-        id: `group:${groupName}`,
-        name: groupName,
-        undo: () => restoreCuisineLists(({ types, groups }) => {
-          const nextGroups = groups.slice();
-          if (!nextGroups.some(g => g.name === groupName)) {
-            nextGroups.splice(Math.min(groupIndex, nextGroups.length), 0, removed);
-          }
-          return { types, groups: nextGroups };
-        }),
-      });
-    }
-    await saveCuisineLists(cuisineTypes, updated);
+    const removal = removeCuisineGroup({ types: cuisineTypes, groups: cuisineGroups }, groupName);
+    if (!removal) return;
+    notifyCuisineDeleted(`group:${groupName}`, groupName, removal.restore);
+    await applyCuisineState(removal.state);
   };
 
   const handleAddChildToGroup = async (groupName, childName) => {
-    const updated = cuisineGroups.map(g =>
-      g.name === groupName && !g.children.includes(childName)
-        ? { ...g, children: [...g.children, childName] }
-        : g
-    );
-    setCuisineGroups(updated);
-    await saveCuisineLists(cuisineTypes, updated);
+    const next = addChildToGroup({ types: cuisineTypes, groups: cuisineGroups }, groupName, childName);
+    if (next) await applyCuisineState(next);
   };
 
   const handleRemoveChildFromGroup = async (groupName, childName) => {
-    const childIndex = (cuisineGroups.find(g => g.name === groupName)?.children || []).indexOf(childName);
-    const updated = cuisineGroups.map(g =>
-      g.name === groupName
-        ? { ...g, children: g.children.filter(c => c !== childName) }
-        : g
-    );
-    setCuisineGroups(updated);
-    if (childIndex >= 0) {
-      cuisineListUndo.notifyDeleted({
-        id: `group-child:${groupName}:${childName}`,
-        name: childName,
-        undo: () => restoreCuisineLists(({ types, groups }) => ({
-          types,
-          groups: groups.map(g => {
-            if (g.name !== groupName || g.children.includes(childName)) return g;
-            const children = g.children.slice();
-            children.splice(Math.min(childIndex, children.length), 0, childName);
-            return { ...g, children };
-          }),
-        })),
-      });
-    }
-    await saveCuisineLists(cuisineTypes, updated);
+    const removal = removeChildFromGroup({ types: cuisineTypes, groups: cuisineGroups }, groupName, childName);
+    if (!removal) return;
+    notifyCuisineDeleted(`group-child:${groupName}:${childName}`, childName, removal.restore);
+    await applyCuisineState(removal.state);
   };
 
   const ingredientContextSegmentOptions = useMemo(() => ([
