@@ -910,3 +910,36 @@ describe('GroupDetail – longpress on minus button in portion selector', () => 
     expect(screen.getByText('0')).toBeInTheDocument();
   });
 });
+
+describe('GroupDetail – Liste löschen mit App-Dialog (D2)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('fragt im App-Dialog nach und löscht erst nach Bestätigung', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm');
+    const onDeleteGroup = jest.fn().mockResolvedValue(undefined);
+    const { container } = render(<GroupDetail {...defaultProps} onDeleteGroup={onDeleteGroup} />);
+    goToEinstellungen();
+
+    fireEvent.click(container.querySelector('.delete-fab-button'));
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(onDeleteGroup).not.toHaveBeenCalled();
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+    await waitFor(() => expect(onDeleteGroup).toHaveBeenCalledWith(defaultProps.group.id));
+    confirmSpy.mockRestore();
+  });
+
+  it('Abbrechen löscht nichts', () => {
+    const onDeleteGroup = jest.fn().mockResolvedValue(undefined);
+    const { container } = render(<GroupDetail {...defaultProps} onDeleteGroup={onDeleteGroup} />);
+    goToEinstellungen();
+
+    fireEvent.click(container.querySelector('.delete-fab-button'));
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(onDeleteGroup).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+});

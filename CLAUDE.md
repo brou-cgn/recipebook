@@ -10,7 +10,7 @@ keinen gefüllten Kreisbutton, kein Icon im Eingabefeld.
 28 × 28, Radius 999, transparent; Rot (#a33a26) auf 12 % Fläche erst bei Hover/Fokus;
 immer am rechten Zeilenrand; Tooltip + aria-label „<Name> entfernen".
 Löschen wirkt sofort + Snackbar „Rückgängig" (6 s, Wiederherstellung an alten Index) —
-kein Bestätigungsdialog außer beim Löschen eines ganzen Rezepts mit Inhalt.
+kein Bestätigungsdialog außer beim Löschen eines ganzen Rezepts mit Inhalt, einer ganzen Liste oder eines ganzen Menüs (siehe `AGENTS.md`).
 Spezifikation: design_handoff_pillenkarussell/Löschen Einheitlich.dc.html (liegt nicht im Repo; die Kernregeln stehen oben und in `AGENTS.md`)
 
 Diese Spezifikation gilt nur für Desktop. Auf Mobile gilt stattdessen die

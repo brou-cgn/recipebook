@@ -865,3 +865,53 @@ describe('MenuDetail - Longpress on minus button in portion selector', () => {
     expect(screen.getByText('0')).toBeInTheDocument();
   });
 });
+
+describe('MenuDetail - Menü löschen mit App-Dialog (D2)', () => {
+  const setViewportWidth = (width) => {
+    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: width });
+    window.dispatchEvent(new Event('resize'));
+  };
+
+  afterEach(() => {
+    setViewportWidth(1024);
+  });
+
+  const renderMenu = (onDelete) => render(
+    <MenuDetail
+      menu={mockMenu}
+      recipes={[]}
+      onBack={() => {}}
+      onEdit={() => {}}
+      onDelete={onDelete}
+      onSelectRecipe={() => {}}
+      onToggleMenuFavorite={() => Promise.resolve()}
+      currentUser={currentUser}
+      allUsers={[]}
+    />
+  );
+
+  test('fragt im App-Dialog nach und löscht erst nach Bestätigung', () => {
+    const confirmSpy = jest.spyOn(window, 'confirm');
+    setViewportWidth(768);
+    const onDelete = jest.fn();
+    const { container } = renderMenu(onDelete);
+
+    fireEvent.click(container.querySelector('.delete-fab-button'));
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(onDelete).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+    expect(onDelete).toHaveBeenCalledWith(mockMenu.id);
+    confirmSpy.mockRestore();
+  });
+
+  test('Abbrechen löscht nichts', () => {
+    setViewportWidth(768);
+    const onDelete = jest.fn();
+    const { container } = renderMenu(onDelete);
+
+    fireEvent.click(container.querySelector('.delete-fab-button'));
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+});

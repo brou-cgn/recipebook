@@ -17,6 +17,7 @@ import { sortRecipeGroups } from './RecipeList';
 import ShoppingListModal from './ShoppingListModal';
 import { isFuerDichEntdecktList } from '../utils/fuerDichEntdeckt';
 import GroupEditDialog from './GroupEditDialog';
+import ConfirmDialog from './ConfirmDialog';
 import RecipeCard from './RecipeCard';
 import SortCarousel from './SortCarousel';
 
@@ -99,6 +100,7 @@ function GroupDetail({
   const [addMemberSuccess, setAddMemberSuccess] = useState('');
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [deleteFabPressed, setDeleteFabPressed] = useState(false);
   const privateListSortStorageKey = group?.id
@@ -336,8 +338,10 @@ function GroupDetail({
     }
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm(`Liste "${group.name}" wirklich löschen?`)) return;
+  const handleDelete = () => setShowDeleteConfirm(true);
+
+  const handleDeleteConfirmed = async () => {
+    setShowDeleteConfirm(false);
     await onDeleteGroup(group.id);
   };
 
@@ -838,6 +842,14 @@ function GroupDetail({
             )}
           </button>
         </>
+      )}
+      {showDeleteConfirm && (
+        <ConfirmDialog
+          title="Liste löschen"
+          message={`Liste "${group.name}" wirklich löschen?`}
+          onConfirm={handleDeleteConfirmed}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
       )}
       {showEditDialog && (
         <GroupEditDialog

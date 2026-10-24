@@ -22,6 +22,7 @@ import { formatMenuGuestsFliesstext } from '../utils/guestPreferences';
 import { getImageForCategory } from '../utils/categoryImages';
 import ShoppingListModal from './ShoppingListModal';
 import RecipeCard from './RecipeCard';
+import ConfirmDialog from './ConfirmDialog';
 
 const formatEventLiter = (value) => {
   const num = Number(value);
@@ -61,6 +62,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   const [deleteMenuIcon, setDeleteMenuIcon] = useState('');
   const [deleteFabPressed, setDeleteFabPressed] = useState(false);
   const [publishLoading, setPublishLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(() => window.innerWidth <= MOBILE_TABLET_BREAKPOINT);
   const [allButtonIcons, setAllButtonIcons] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
@@ -306,10 +308,11 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     return null;
   }, [menu.menuDate, menu.createdAt]);
 
-  const handleDelete = () => {
-    if (window.confirm(`Möchten Sie "${menu.name}" wirklich löschen?`)) {
-      onDelete(menu.id);
-    }
+  const handleDelete = () => setShowDeleteConfirm(true);
+
+  const handleDeleteConfirmed = () => {
+    setShowDeleteConfirm(false);
+    onDelete(menu.id);
   };
 
   // Edit FAB press handlers
@@ -862,6 +865,14 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
             deleteMenuIcon || <TrashIcon />
           )}
         </button>
+      )}
+      {showDeleteConfirm && (
+        <ConfirmDialog
+          title="Menü löschen"
+          message={`Möchten Sie "${menu.name}" wirklich löschen?`}
+          onConfirm={handleDeleteConfirmed}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
       )}
       {showShoppingListModal && (
         <ShoppingListModal

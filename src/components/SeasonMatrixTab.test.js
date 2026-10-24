@@ -1,10 +1,11 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import SeasonMatrixTab from './SeasonMatrixTab';
 import {
   subscribeToSeasonMatrix,
   addSeasonMatrixEntry,
-  updateSeasonMatrixEntry
+  updateSeasonMatrixEntry,
+  deleteSeasonMatrixEntry
 } from '../utils/seasonMatrix';
 import {
   createSeasonMatrixTemplateCsv,
@@ -192,5 +193,47 @@ describe('SeasonMatrixTab import/export', () => {
         'Max Muster'
       );
     });
+  });
+});
+
+describe('SeasonMatrixTab Löschen mit Rückgängig (D2)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    canManageSeasonMatrix.mockReturnValue(true);
+    subscribeToSeasonMatrix.mockImplementation((callback) => {
+      callback([{ id: 'kartoffel', name: 'Kartoffel' }]);
+      return jest.fn();
+    });
+    deleteSeasonMatrixEntry.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('blendet den Eintrag ohne Rückfrage aus und löscht erst nach 6 s', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm');
+    render(<SeasonMatrixTab currentUser={{ vorname: 'Max', role: 'admin' }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Kartoffel entfernen' }));
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Kartoffel entfernen' })).not.toBeInTheDocument();
+    expect(deleteSeasonMatrixEntry).not.toHaveBeenCalled();
+
+    await act(async () => { jest.advanceTimersByTime(6000); });
+    expect(deleteSeasonMatrixEntry).toHaveBeenCalledWith('kartoffel');
+    confirmSpy.mockRestore();
+  });
+
+  it('Rückgängig verwirft das Löschen', async () => {
+    render(<SeasonMatrixTab currentUser={{ vorname: 'Max', role: 'admin' }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Kartoffel entfernen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+    expect(screen.getByRole('button', { name: 'Kartoffel entfernen' })).toBeInTheDocument();
+
+    await act(async () => { jest.advanceTimersByTime(6000); });
+    expect(deleteSeasonMatrixEntry).not.toHaveBeenCalled();
   });
 });
