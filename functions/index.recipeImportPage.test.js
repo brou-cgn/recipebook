@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 function loadHandler(rawText) {
-  delete require.cache[require.resolve('./index')];
+  require('./testSupport').purgeFunctionsCache();
   const Module = require('module');
   const originalLoad = Module._load;
 

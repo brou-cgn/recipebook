@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 // ─── CORS / invoker configuration test ──────────────────────────────────────
 
 test('parseIngredientAmountG is registered with cors and invoker:public options', () => {
-  delete require.cache[require.resolve('./index')];
+  require('./testSupport').purgeFunctionsCache();
 
   const Module = require('module');
   const originalLoad = Module._load;
