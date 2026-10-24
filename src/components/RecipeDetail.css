@@ -1867,7 +1867,7 @@ button.private-badge-button:active {
   flex: 0 0 auto;
   height: min(34dvh, 280px);
   margin-top: 0.75rem;
-  padding: 0 1.25rem calc(1rem + env(safe-area-inset-bottom, 0px));
+  padding: 0 1.25rem calc(1rem + var(--safe-bottom, 0px));
   border-radius: 22px 22px 0 0;
   box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.06);
 }

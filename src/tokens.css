@@ -5,6 +5,9 @@
    Ein Token mit beiden Werten ersetzt den Eintrag in darkMode.css.
    ============================================================= */
 :root {
+  /* Unterer Safe-Area-Abstand bewusst 0: Navigation und Splash sitzen seit jeher
+     bündig am unteren Displayrand (viewport-fit=cover würde sonst ~34px addieren). */
+  --safe-bottom: 0px;
   --color-bg: #f5f5f5;
   --color-surface: #fff;
   --color-surface-card: #fff;
