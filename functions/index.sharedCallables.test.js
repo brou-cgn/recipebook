@@ -134,7 +134,7 @@ function loadFunctionsModule(state = {}) {
   };
 
   const mod = require('./index');
-  Module._load = originalLoad;
+  // Stubs bleiben aktiv: Handler laden sharp/nodemailer erst beim Aufruf (testSupport setzt zurück).
 
   return {mod, MockHttpsError};
 }

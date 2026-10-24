@@ -6,8 +6,6 @@ const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const {onDocumentCreated, onDocumentWritten} = require('firebase-functions/v2/firestore');
 const {onSchedule} = require('firebase-functions/v2/scheduler');
 const admin = require('firebase-admin');
-const nodemailer = require('nodemailer');
-const sharp = require('sharp');
 const {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom} = require('../shared/secrets');
 const {requireAiCaller} = require('../shared/auth');
 const {escapeHtml} = require('../shared/common');
@@ -185,6 +183,7 @@ exports.sendGroupInvitationEmail = onCall(
 
       const registrationUrl = 'https://broubook.web.app/';
 
+      const nodemailer = require('nodemailer');
       const transporter = nodemailer.createTransport({
         host: smtpHostVal,
         port: parseInt(smtpPortVal || '587', 10),
@@ -368,6 +367,7 @@ exports.notifyAdminsOnUserRegistration = onDocumentCreated(
 
       // The transporter is created per invocation because Firebase secrets
       // are only accessible during function execution, not at module load time.
+      const nodemailer = require('nodemailer');
       const transporter = nodemailer.createTransport({
         host: smtpHostVal,
         port: parseInt(smtpPortVal || '587', 10),
@@ -844,6 +844,7 @@ exports.backfillRecipeThumbnails = onCall(
                     imageBuffer = Buffer.from(arrayBuffer);
                   }
 
+                  const sharp = require('sharp');
                   const thumbnailBuffer = await sharp(imageBuffer)
                       .resize(400, 300, {fit: 'inside', withoutEnlargement: true})
                       .jpeg({quality: 75})

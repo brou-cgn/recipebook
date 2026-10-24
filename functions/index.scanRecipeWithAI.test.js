@@ -227,7 +227,7 @@ function loadFunction() {
   };
 
   scanRecipeWithAI = require('./index').scanRecipeWithAI;
-  Module._load = originalLoad;
+  // Stubs bleiben aktiv: Handler laden sharp/nodemailer erst beim Aufruf (testSupport setzt zurück).
 }
 
 // ---------------------------------------------------------------------------

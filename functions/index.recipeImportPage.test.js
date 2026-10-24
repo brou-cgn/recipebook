@@ -62,7 +62,7 @@ function loadHandler(rawText) {
   try {
     return require('./index').recipeImportPage;
   } finally {
-    Module._load = originalLoad;
+    // Stubs bleiben aktiv: Handler laden sharp/nodemailer erst beim Aufruf (testSupport setzt zurück).
   }
 }
 

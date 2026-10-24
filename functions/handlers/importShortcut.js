@@ -8,9 +8,7 @@ const {onObjectFinalized} = require('firebase-functions/v2/storage');
 const {onSchedule} = require('firebase-functions/v2/scheduler');
 const {defineSecret} = require('firebase-functions/params');
 const admin = require('firebase-admin');
-const nodemailer = require('nodemailer');
 const crypto = require('crypto');
-const sharp = require('sharp');
 const {requireShortcutPin} = require('../webImportPin');
 const {normalizeCuisines, suggestNewCuisines} = require('../cuisineNormalization');
 const {AI_IMPORTER_TEST_UID} = require('../shared/auth');
@@ -526,6 +524,7 @@ async function compressPhotoForImportJob(base64Data, maxBase64Length) {
   const imageBuffer = Buffer.from(base64Data, 'base64');
   let smallestDataUrl = null;
   for (const {width, height, quality} of PHOTO_COMPRESSION_PRESETS) {
+    const sharp = require('sharp');
     const compressedBuffer = await sharp(imageBuffer)
         .resize(width, height, {fit: 'inside', withoutEnlargement: true})
         .jpeg({quality})
@@ -1797,6 +1796,7 @@ async function renderImporterTestRecipeImage() {
     <text x="40" y="405" font-size="20" font-family="sans-serif">3. Eimasse unter Rühren stocken lassen.</text>
     <text x="40" y="435" font-size="20" font-family="sans-serif">4. Sofort servieren.</text>
   </svg>`;
+  const sharp = require('sharp');
   const jpegBuffer = await sharp(Buffer.from(svg)).jpeg().toBuffer();
   return `data:image/jpeg;base64,${jpegBuffer.toString('base64')}`;
 }
@@ -2164,6 +2164,7 @@ exports.dailyAiImporterTest = onSchedule(
       }
 
       const smtpPortNum = parseInt(smtpPortVal || '587', 10);
+      const nodemailer = require('nodemailer');
       const transporter = nodemailer.createTransport({
         host: smtpHostVal,
         port: smtpPortNum,

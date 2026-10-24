@@ -5,7 +5,6 @@
 const {HttpsError} = require('firebase-functions/v2/https');
 const {launchBrowser} = require('../launchBrowser');
 const admin = require('firebase-admin');
-const cheerio = require('cheerio');
 const {transcribeVideoWithGemini, callGeminiTextAPI, callGeminiAPI} = require('./gemini');
 
 /**
@@ -973,6 +972,7 @@ function extractMicrodataInstructions($, $root) {
 function extractMicrodataRecipeCandidateFromHtml(html) {
   let $;
   try {
+    const cheerio = require('cheerio');
     $ = cheerio.load(html);
   } catch {
     return null;

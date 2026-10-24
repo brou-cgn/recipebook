@@ -121,7 +121,7 @@ function loadFunction() {
   };
 
   sendGroupInvitationEmail = require('./index').sendGroupInvitationEmail;
-  Module._load = originalLoad;
+  // Stubs bleiben aktiv: Handler laden sharp/nodemailer erst beim Aufruf (testSupport setzt zurück).
 }
 
 const EDITOR = {uid: 'editor1', token: {firebase: {sign_in_provider: 'password'}}};

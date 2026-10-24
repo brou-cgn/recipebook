@@ -80,7 +80,7 @@ test('parseIngredientAmountG is registered with cors and invoker:public options'
   };
 
   require('./index');
-  Module._load = originalLoad;
+  // Stubs bleiben aktiv: Handler laden sharp/nodemailer erst beim Aufruf (testSupport setzt zurück).
 
   assert.ok(capturedOpts !== null, 'onCall with cors option was not registered for parseIngredientAmountG');
   assert.ok(

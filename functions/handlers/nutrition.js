@@ -5,9 +5,7 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const {onDocumentCreated, onDocumentWritten} = require('firebase-functions/v2/firestore');
 const {onSchedule} = require('firebase-functions/v2/scheduler');
-const {GoogleGenAI} = require('@google/genai');
 const admin = require('firebase-admin');
-const nodemailer = require('nodemailer');
 const {createNutritionNormalizationUtils} = require('../nutritionNormalization');
 const {evaluateLowCarbTag} = require('../lowCarb');
 const {fetchFirestoreDailyUsage, buildFirestoreUsageSection} = require('../firestoreUsage');
@@ -349,7 +347,7 @@ exports.parseIngredientAmountG = onCall(
         normalizeIngredientWithGemini,
         parseIngredientForNutrition,
       } = createNutritionNormalizationUtils({
-        GoogleGenAI,
+        GoogleGenAI: require('@google/genai').GoogleGenAI,
         env: {GEMINI_API_KEY: geminiApiKey.value()},
       });
 
@@ -430,7 +428,7 @@ async function calculateNutritionFromOpenFoodFactsCore({
     normalizeIngredientWithGemini,
     estimateNutritionWithGemini,
   } = createNutritionNormalizationUtils({
-    GoogleGenAI,
+    GoogleGenAI: require('@google/genai').GoogleGenAI,
     env: {GEMINI_API_KEY: geminiApiKey.value()},
   });
 
@@ -848,7 +846,7 @@ exports.generateNutritionFromReference = onCall(
         generateSearchTermWithGemini,
         estimateNutritionWithGemini,
       } = createNutritionNormalizationUtils({
-        GoogleGenAI,
+        GoogleGenAI: require('@google/genai').GoogleGenAI,
         env: {GEMINI_API_KEY: geminiApiKey.value()},
       });
 
@@ -1218,6 +1216,7 @@ async function sendAdminReportMail({subject, text, html, logLabel}) {
   }
 
   const smtpPortNum = parseInt(smtpPortVal || '587', 10);
+  const nodemailer = require('nodemailer');
   const transporter = nodemailer.createTransport({
     host: smtpHostVal,
     port: smtpPortNum,

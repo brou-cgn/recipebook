@@ -5,7 +5,6 @@
 const {onCall, onRequest, HttpsError} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
 const crypto = require('crypto');
-const sharp = require('sharp');
 const {isVisibleToUser} = require('../fuerDichEntdecktRotation');
 const {authorizeListPush} = require('../listPushGuard');
 const {ALLOWED_ORIGINS, escapeHtml} = require('../shared/common');
@@ -514,6 +513,7 @@ exports.shareRecipe = onRequest(
                 recipe.image.match(/^data:image\/\w+;base64,(.+)$/s);
               if (matches) {
                 const imageBuffer = Buffer.from(matches[1], 'base64');
+                const sharp = require('sharp');
                 thumbnailBuffer = await sharp(imageBuffer)
                     .resize(1200, 630, {fit: 'inside', withoutEnlargement: true})
                     .jpeg({quality: 80})
@@ -533,6 +533,7 @@ exports.shareRecipe = onRequest(
               const arrayBuffer = await response.arrayBuffer();
               const imageBuffer = Buffer.from(arrayBuffer);
 
+              const sharp = require('sharp');
               thumbnailBuffer = await sharp(imageBuffer)
                   .resize(1200, 630, {fit: 'inside', withoutEnlargement: true})
                   .jpeg({quality: 80})

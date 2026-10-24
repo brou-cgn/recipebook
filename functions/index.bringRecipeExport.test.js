@@ -105,7 +105,7 @@ function loadFunction(firestoreImpl) {
   };
 
   bringRecipeExport = require('./index').bringRecipeExport;
-  Module._load = originalLoad;
+  // Stubs bleiben aktiv: Handler laden sharp/nodemailer erst beim Aufruf (testSupport setzt zurück).
 }
 
 function createRes() {
