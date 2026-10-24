@@ -5,6 +5,12 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Version-Sprung erzwingen (auto = aus den Commit-Titeln ableiten)'
+        type: choice
+        options: [auto, patch, minor, major]
+        default: auto
 
 permissions:
   contents: write
@@ -75,7 +81,16 @@ jobs:
       
       - name: Determine version bump type
         id: determine-bump
+        env:
+          FORCED_BUMP: ${{ inputs.bump_type }}
         run: |
+          # Manueller Lauf mit festem Sprung (Release-Entscheidung)
+          if [ -n "$FORCED_BUMP" ] && [ "$FORCED_BUMP" != "auto" ]; then
+            echo "Bump erzwungen: $FORCED_BUMP"
+            echo "bump_type=$FORCED_BUMP" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           if [ "${{ steps.get-commits.outputs.has_commits }}" = "false" ]; then
             echo "No commits to analyze, defaulting to patch"
             echo "bump_type=patch" >> $GITHUB_OUTPUT
@@ -120,8 +135,9 @@ jobs:
             git fetch --tags --force origin
 
             # Rerun auf demselben Commit: dort steht schon ein Version-Tag
+            # (ein manuell erzwungener Sprung vergibt trotzdem eine neue Version)
             EXISTING=$(git tag --points-at HEAD --list "v*" | head -n 1)
-            if [ -n "$EXISTING" ]; then
+            if [ -n "$EXISTING" ] && [ "${{ inputs.bump_type || 'auto' }}" = "auto" ]; then
               echo "Commit traegt bereits $EXISTING, nichts zu tun"
               echo "new_version=${EXISTING#v}" >> $GITHUB_OUTPUT
               exit 0

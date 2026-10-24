@@ -50,6 +50,15 @@ erzwungen — wo das gilt, steht die Datei dabei.
   (Mutation erst nach Ablauf des Undo-Fensters oder bei Unmount/`pagehide`;
   `onConfirm` muss nach dem Unmount sicher sein).
 
+## Versionierung
+- Die Version entsteht beim Merge auf `main` als Git-Tag (`.github/workflows/version-bump.yml`),
+  nicht in `package.json`. Der Sprung folgt den Commit-Titeln seit dem letzten Tag.
+- Der **erste** Commit eines PR beginnt mit `feat:` (neue Funktion für Nutzer, Minor),
+  `fix:` (Fehlerbehebung) oder `chore:`/`refactor:`/`docs:` (Patch). Danach der übliche deutsche Titel.
+  Ohne Präfix zählt der PR als Patch. Breaking Change: `feat!:` (Major).
+- Bewusster Release-Sprung ohne passende Commit-Titel: Workflow „Auto Version Bump“ manuell
+  mit `bump_type` starten.
+
 ## Tests
 - Vor dem Commit `npm run lint:ci` (ESLint für `src/`, bricht nur bei Fehlern ab; `npm run lint` zeigt zusätzlich ~270 Warnungen als Altbestand).
 - Vor dem Commit `npm run test:ci` ausführen. Das ist der Lauf der CI
