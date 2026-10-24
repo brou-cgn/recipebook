@@ -52,7 +52,7 @@ Quelle ist immer `firestore.rules`; diese Tabelle gibt den Stand vom 18.10.2026 
 | `followCooldowns`, `followLimits` | niemand | niemand (nur Cloud Function) |
 | `recipeSwipeFlags` | Eigentümer, Mitglieder derselben Liste | Eigentümer; Listenmitglieder nur `calculatedFlag`, `calculatedExpiresAt` |
 | `aiScanLimits` | `edit`+ | Admin |
-| `aiNutritionLimits`, `aiRephraseLimits` | niemand | niemand (nur Cloud Function) |
+| `aiNutritionLimits`, `aiRephraseLimits`, `importSweeperLimits` | niemand | niemand (nur Cloud Function) |
 | `jobRequests`, `invitations` | niemand (nur Cloud Functions) | niemand |
 | `failedWebImports` | Admin | Anlegen: `isAnyUser()`; sonst Admin |
 | `cuisineProposals` | `isAnyUser()` | Anlegen: `edit`+ (nicht freigegeben); Ändern: Autor oder `moderator`+; Löschen: `moderator`+ |
@@ -65,7 +65,7 @@ Die Prüfung liegt serverseitig in `functions/index.js`, nicht nur in der UI:
 
 - **Rolle ab `edit`** (`requireAiCaller`), sonst `permission-denied`. Schlägt die Rollenabfrage fehl, wird der Aufruf abgelehnt.
 - **Import-Functions** (`scanRecipeWithAI`, `scanRecipesWithAI`, `processHtmlWithAI`, `scrapeInstagramReel`, `importRecipeCallable`, `fetchRecipeHtml`, `captureWebsiteScreenshot`): zusätzlich muss die Rolle in `rolePermissions/{rolle}` mindestens eines von `fotoscan`, `webimport`, `recipeImport` haben (`requireRoleFeature`, wie `applyRolePermissionsToUser` im Client). Admins sind ausgenommen, ebenso das Konto des nächtlichen Importer-Tests. Die drei Flags lassen sich nicht trennen, weil ein Webimport auch einen Screenshot scannt und der Universalimport alle Functions nutzt.
-- **Tageslimits** je Person und Berliner Tag, Zähler nur per Admin SDK: `aiScanLimits` (Scans und Importe, auch für die Kurzbefehl-Endpunkte), `aiRephraseLimits` (Umformulieren), `aiNutritionLimits` (`parseIngredientAmountG`, `calculateNutritionFromOpenFoodFacts`, `generateNutritionFromReference`; Admin 5000, Moderator 1000, Mitglied 500). Ist der Zähler nicht prüfbar, wird der Aufruf abgelehnt.
+- **Tageslimits** je Person und Berliner Tag, Zähler nur per Admin SDK: `aiScanLimits` (Scans und Importe, auch für die Kurzbefehl-Endpunkte), `aiRephraseLimits` (Umformulieren), `aiNutritionLimits` (`parseIngredientAmountG`, `calculateNutritionFromOpenFoodFacts`, `generateNutritionFromReference`; Admin 5000, Moderator 1000, Mitglied 500). Ist der Zähler nicht prüfbar, wird der Aufruf abgelehnt. Der Import-Sweeper `recoverStuckImportJobs` hat einen eigenen Zähler `importSweeperLimits` (20 Neustarts je Autor und Tag, Tech-Check S21), damit hängengebliebene App-Imports nicht gegen das Scan-Limit zählen; ist er nicht prüfbar, bleibt der Job liegen und wird im nächsten Lauf erneut geprüft.
 
 ## Bekannte Lücken
 
@@ -75,7 +75,7 @@ Die Tests in `rules-tests/access.test.js` halten diese Zustände fest (sie erset
 2. **`groups` (Rest nach S16):** Gäste und fremde Mitglieder lesen private Listen nicht mehr. Mitglieder einer Liste sehen aber weiterhin deren `invitedEmails` (E-Mail-Adressen noch nicht registrierter Eingeladener). Schließen ginge nur durch Verlagern in eine nur per Cloud Function lesbare Collection, samt Umbau von `GroupDetail.js` und dem Registrierungs-Trigger (`functions/index.js`, `invitedEmails`).
 3. **`publicProfiles`:** Auch anonyme Gäste lesen Vor- und Nachnamen aller Mitglieder. Einschränken auf Mitglieder würde Gästen die Autorennamen nehmen.
 4. **`cookDates`:** Jedes Mitglied liest alle Einträge (gewollt für den Kochbuch-Dialog, aber Datenschutz-relevant). Anonyme Gäste dürfen eigene Einträge anlegen.
-5. **Import-Jobs und KI-Limit (Tech-Check S21):** `recoverStuckImportJobs` führt jedes temporäre Rezept (`isTemp`, `importStatus` queued/processing/error, Heartbeat älter als 5 Minuten) mit Gemini aus, ohne `importOrigin` und ohne Tageslimit. Die In-App-Import-Queue legt solche Dokumente selbst an, die Regeln können sie nicht sperren. Ein Mitglied ab `edit` kann so das Limit der Kurzbefehl-Endpunkte umgehen, gedrosselt auf 20 Jobs je 10-Minuten-Lauf und 3 Versuche je Job. Schließen geht nur über eine Limit-Prüfung im Sweeper.
+5. **Import-Jobs und KI-Limit (Tech-Check S21, begrenzt):** `recoverStuckImportJobs` führt jedes temporäre Rezept (`isTemp`, `importStatus` queued/processing/error, Heartbeat älter als 5 Minuten) mit Gemini aus, ohne Prüfung von `importOrigin`. Die In-App-Import-Queue legt solche Dokumente selbst an, die Regeln können sie nicht sperren. Ein Mitglied ab `edit` kann so weiter Gemini-Läufe anstoßen, aber nur noch bis zum Sweeper-Tageslimit von 20 Neustarts je Autor (vorher rund 2.900 am Tag insgesamt). Dieses Limit ist vom Scan-Limit getrennt: wer es nutzt, umgeht das Scan-Limit nicht mehr unbegrenzt, hat aber zusätzlich zu diesem ein eigenes Budget.
 
 ## Tests der Regeln
 
