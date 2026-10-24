@@ -1091,13 +1091,19 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
       return;
     }
 
-    if (sections[index].recipeIds.length > 0 || (sections[index].drinkIds?.length || 0) > 0) {
-      if (!window.confirm('Dieser Abschnitt enthält Rezepte oder Getränke. Wirklich löschen?')) {
-        return;
-      }
-    }
-
+    const removed = sections[index];
     setSections(sections.filter((_, i) => i !== index));
+    notifyDeleted({
+      id: `section:${index}:${removed.name}`,
+      name: removed.name,
+      undo: () => {
+        setSections((prev) => {
+          const next = [...prev];
+          next.splice(Math.min(index, next.length), 0, removed);
+          return next;
+        });
+      },
+    });
   };
 
   const handleToggleRecipeInSection = (sectionIndex, recipeId) => {

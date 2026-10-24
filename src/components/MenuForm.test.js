@@ -1060,3 +1060,38 @@ describe('MenuForm - recipe drag-and-drop items', () => {
     expect(recipeItemsCall).toEqual(['recipe-1']);
   });
 });
+
+describe('MenuForm - Abschnitt löschen (D2)', () => {
+  test('entfernt einen Abschnitt mit Inhalt ohne Rückfrage und stellt ihn mit Rückgängig an alter Stelle wieder her', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockImplementation(() => false);
+    render(
+      <MenuForm
+        menu={{
+          id: 'menu-1',
+          name: 'Testmenü',
+          sections: [
+            { name: 'Vorspeise', recipeIds: ['recipe-2'], drinkIds: [] },
+            { name: 'Hauptspeise', recipeIds: [], drinkIds: [] },
+          ],
+        }}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
+      />
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Vorspeise' })).toBeInTheDocument();
+    fireEvent.click(screen.getAllByTitle('Abschnitt löschen')[0]);
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.queryByRole('heading', { name: 'Vorspeise' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+    const headings = screen.getAllByRole('heading', { level: 4 }).map((h) => h.textContent);
+    expect(headings.indexOf('Vorspeise')).toBeLessThan(headings.indexOf('Hauptspeise'));
+    confirmSpy.mockRestore();
+  });
+});

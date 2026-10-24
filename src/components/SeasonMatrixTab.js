@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './SeasonMatrixTab.css';
+import './UndoSnackbar.css';
 import {
   subscribeToSeasonMatrix,
   addSeasonMatrixEntry,
@@ -9,6 +10,8 @@ import {
 } from '../utils/seasonMatrix';
 import { createSeasonMatrixTemplateCsv, parseSeasonMatrixImport } from '../utils/seasonMatrixImportExport';
 import { canManageSeasonMatrix } from '../utils/userManagement';
+import DeleteRowButton from './DeleteRowButton';
+import useUndoableDelete from '../hooks/useUndoableDelete';
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
 const REGION_OPTIONS = ['GLOBAL', 'DE', 'AT', 'CH'];
@@ -90,6 +93,7 @@ function SeasonMatrixTab({ currentUser }) {
   const [importResult, setImportResult] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
   const importInputRef = useRef(null);
+  const { banners: deleteBanners, pendingKeys, scheduleDelete, undoDelete } = useUndoableDelete();
 
   useEffect(() => {
     if (!hasSeasonMatrixAccess) return undefined;
@@ -103,6 +107,7 @@ function SeasonMatrixTab({ currentUser }) {
     const needle = searchTerm.trim().toLowerCase();
 
     return entries.filter((entry) => {
+      if (pendingKeys.has(entry.id)) return false;
       if (regionFilter !== 'ALLE' && entry.region !== regionFilter) return false;
       if (statusFilter === 'aktiv' && entry.isActive !== true) return false;
       if (statusFilter === 'inaktiv' && entry.isActive !== false) return false;
@@ -117,7 +122,7 @@ function SeasonMatrixTab({ currentUser }) {
 
       return searchValues.some((value) => value.includes(needle));
     });
-  }, [entries, searchTerm, regionFilter, statusFilter]);
+  }, [entries, pendingKeys, searchTerm, regionFilter, statusFilter]);
 
   if (!hasSeasonMatrixAccess) {
     return (
@@ -228,16 +233,23 @@ function SeasonMatrixTab({ currentUser }) {
     }
   };
 
-  const handleDelete = async (entryId) => {
-    if (!window.confirm('Möchten Sie diesen Saisonmatrix-Eintrag wirklich löschen?')) return;
-
-    try {
-      await deleteSeasonMatrixEntry(entryId);
-      if (editingId === entryId) {
-        resetForm();
-      }
-    } catch (error) {
-      setErrorMessage(`Fehler beim Löschen: ${error.message}`);
+  // Deletes right away from the view; the Firestore delete runs once the
+  // undo window (useUndoableDelete) has passed.
+  const handleDelete = (entry) => {
+    scheduleDelete({
+      key: entry.id,
+      message: `„${entry.name || entry.id}" entfernt`,
+      onConfirm: async () => {
+        try {
+          await deleteSeasonMatrixEntry(entry.id);
+        } catch (error) {
+          setErrorMessage(`Fehler beim Löschen: ${error.message}`);
+        }
+      },
+      onUndo: () => {},
+    });
+    if (editingId === entry.id) {
+      resetForm();
     }
   };
 
@@ -420,7 +432,7 @@ function SeasonMatrixTab({ currentUser }) {
               </tr>
             ) : (
               filteredEntries.map((entry) => (
-                <tr key={entry.id}>
+                <tr key={entry.id} className="delete-row-hover-target">
                   <td>{entry.id}</td>
                   <td>
                     {editingId === entry.id ? (
@@ -546,9 +558,7 @@ function SeasonMatrixTab({ currentUser }) {
                           <button type="button" className="season-matrix-edit-btn" onClick={() => handleEdit(entry)}>
                             Bearbeiten
                           </button>
-                          <button type="button" className="season-matrix-delete-btn" onClick={() => handleDelete(entry.id)}>
-                            Löschen
-                          </button>
+                          <DeleteRowButton itemName={entry.name || entry.id} onClick={() => handleDelete(entry)} />
                         </>
                       )}
                     </div>
@@ -690,6 +700,14 @@ function SeasonMatrixTab({ currentUser }) {
         </div>
       </div>
     </div>
+    {deleteBanners.map((banner) => (
+      <div key={banner.id} className="undo-snackbar" role="status">
+        <span className="undo-snackbar-message">{banner.message}</span>
+        <button type="button" className="undo-snackbar-action" onClick={() => undoDelete(banner.id)}>
+          Rückgängig
+        </button>
+      </div>
+    ))}
     </>
   );
 }
