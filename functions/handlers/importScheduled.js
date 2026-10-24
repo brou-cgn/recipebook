@@ -7,6 +7,7 @@ const {defineSecret} = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const {AI_IMPORTER_TEST_UID} = require('../shared/auth');
 const {escapeHtml} = require('../shared/common');
+const {consumeDailyQuota} = require('../shared/rateLimit');
 const {DEFAULT_AI_RECIPE_PROMPT} = require('../shared/gemini');
 const {finalizeImportJobBackground, failImportJobBackground, isReelImportSource, runImportFromSource} = require('../shared/importJobs');
 const {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom, geminiApiKey} = require('../shared/secrets');
@@ -595,6 +596,18 @@ const MAX_STUCK_IMPORT_JOBS_PER_RUN = 20;
 const MAX_IMPORT_ATTEMPTS = 3;
 
 /**
+ * Daily Gemini budget of the sweeper per author (Tech-Check S21). The sweeper
+ * runs without an auth context and any member from role edit can create a
+ * recipes document that looks like a stuck import, so without its own counter
+ * it was a way past the per-user AI limits. A separate counter on purpose: the
+ * in-app queue creates these documents itself, so a stuck legitimate import
+ * must not eat into (or be blocked by) the interactive aiScanLimits budget.
+ * Generous enough for real recovery, far below the former ~2,900 runs a day.
+ */
+const MAX_SWEEPER_RESTARTS_PER_AUTHOR_PER_DAY = 20;
+const SWEEPER_LIMIT_COLLECTION = 'importSweeperLimits';
+
+/**
  * Scheduled Cloud Function: recover background-import jobs (recipes/{id}
  * with isTemp:true and an importStatus) that got stuck because the client
  * tab that owned them closed, reloaded, or crashed before finishing — the
@@ -634,6 +647,7 @@ exports.recoverStuckImportJobs = onSchedule(
 
       let restarted = 0;
       let abandoned = 0;
+      let skipped = 0;
 
       for (const docSnap of snapshot.docs) {
         const jobId = docSnap.id;
@@ -669,6 +683,27 @@ exports.recoverStuckImportJobs = onSchedule(
           continue;
         }
 
+        // Daily budget per author (S21). Fail closed: if the counter cannot be
+        // checked the job stays untouched and the next run tries again.
+        let quota;
+        try {
+          quota = await consumeDailyQuota(
+              SWEEPER_LIMIT_COLLECTION, MAX_SWEEPER_RESTARTS_PER_AUTHOR_PER_DAY,
+              {userId: authorId, isAuthenticated: true, isAdmin: false, isModerator: false},
+          );
+        } catch (quotaError) {
+          console.error(`recoverStuckImportJobs: Tageslimit für job ${jobId} nicht prüfbar, übersprungen`, quotaError);
+          skipped++;
+          continue;
+        }
+        if (!quota.allowed) {
+          const error = new Error('Tageslimit für automatische Import-Wiederherstellung erreicht. Starte den Import morgen oder manuell neu.');
+          error.code = 'resource-exhausted';
+          await failImportJobBackground(jobId, authorId, error, reelMeta);
+          abandoned++;
+          continue;
+        }
+
         // Claim the job (heartbeat + attempt count) before doing any work,
         // so the next tick 10 minutes from now doesn't pick the same doc
         // again while this attempt is still running.
@@ -696,7 +731,7 @@ exports.recoverStuckImportJobs = onSchedule(
       }
 
       console.log(
-          `recoverStuckImportJobs: geprüft=${snapshot.size} neu gestartet=${restarted} aufgegeben=${abandoned}`,
+          `recoverStuckImportJobs: geprüft=${snapshot.size} neu gestartet=${restarted} aufgegeben=${abandoned} übersprungen=${skipped}`,
       );
     },
 );
