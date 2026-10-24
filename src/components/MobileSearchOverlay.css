@@ -11,6 +11,16 @@
   animation: mso-backdrop-in 0.2s ease both;
 }
 
+/* Dim the area outside the viewport (iOS status-bar strip) like the backdrop:
+   body background blended with the backdrop's rgba(0, 0, 0, 0.45). */
+html.mso-open {
+  background: color-mix(in srgb, #000 45%, #f5f5f5);
+}
+
+html[data-theme="dark"].mso-open {
+  background: color-mix(in srgb, #000 45%, #121212);
+}
+
 @keyframes mso-backdrop-in {
   from { opacity: 0; }
   to   { opacity: 1; }

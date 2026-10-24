@@ -139,6 +139,15 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  // The iOS PWA has no viewport-fit=cover, so the status-bar strip lies outside
+  // the viewport and the fixed backdrop cannot dim it. Tint the canvas instead.
+  useEffect(() => {
+    if (!isOpen) return;
+    const root = document.documentElement;
+    root.classList.add('mso-open');
+    return () => root.classList.remove('mso-open');
+  }, [isOpen]);
+
   // Close on ESC key
   useEffect(() => {
     if (!isOpen) return;
