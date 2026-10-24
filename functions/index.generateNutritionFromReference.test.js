@@ -81,7 +81,7 @@ function loadWrappedFunction() {
       };
     }
 
-    if (request === './nutritionNormalization') {
+    if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {createNutritionNormalizationUtils: createUtilsStub};
     }
 
@@ -111,7 +111,7 @@ function loadWrappedFunction() {
   };
 
   wrappedFunction = require('./index').generateNutritionFromReference;
-  Module._load = originalLoad;
+  // Stubs bleiben aktiv: Handler laden sharp/nodemailer erst beim Aufruf (testSupport setzt zurück).
 }
 
 test.beforeEach(() => {
@@ -511,7 +511,7 @@ test('generateNutritionFromReference is registered with cors and invoker:public 
       return {initializeApp: () => {}, firestore: ff};
     }
 
-    if (request === './nutritionNormalization') {
+    if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {createNutritionNormalizationUtils: () => ({
         generateSearchTermWithGemini: async () => '',
         estimateNutritionWithGemini: async () => null,
@@ -529,7 +529,7 @@ test('generateNutritionFromReference is registered with cors and invoker:public 
   };
 
   const index = require('./index');
-  Module._load = originalLoad;
+  // Stubs bleiben aktiv: Handler laden sharp/nodemailer erst beim Aufruf (testSupport setzt zurück).
 
   const capturedOpts = optsByHandler.get(index.generateNutritionFromReference);
   assert.ok(capturedOpts, 'generateNutritionFromReference was not registered via onCall with options');

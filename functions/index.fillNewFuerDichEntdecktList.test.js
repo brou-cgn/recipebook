@@ -57,7 +57,7 @@ function loadFunction() {
     return originalLoad.call(this, request, parent, isMain, ...args);
   };
   fillNewList = require('./index').fillNewFuerDichEntdecktList;
-  Module._load = originalLoad;
+  // Stubs bleiben aktiv: Handler laden sharp/nodemailer erst beim Aufruf (testSupport setzt zurück).
 }
 
 const newListEvent = (id, data) => ({params: {groupId: id}, data: {data: () => data}});

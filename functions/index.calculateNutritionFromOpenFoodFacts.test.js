@@ -84,7 +84,7 @@ function loadWrappedFunction() {
       };
     }
 
-    if (request === './nutritionNormalization') {
+    if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {
         createNutritionNormalizationUtils: createUtilsStub,
       };
@@ -118,7 +118,7 @@ function loadWrappedFunction() {
   };
 
   wrappedFunction = require('./index').calculateNutritionFromOpenFoodFacts;
-  Module._load = originalLoad;
+  // Stubs bleiben aktiv: Handler laden sharp/nodemailer erst beim Aufruf (testSupport setzt zurück).
 }
 
 test.beforeEach(() => {

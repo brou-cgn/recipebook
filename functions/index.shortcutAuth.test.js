@@ -66,7 +66,7 @@ function loadFunctions({userData, pinDoc = null, scanCount = null, limitCheckFai
         messaging: () => ({}),
       };
     }
-    if (request === './nutritionNormalization') {
+    if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {createNutritionNormalizationUtils: () => ({})};
     }
     if (request === '@google/genai') return {GoogleGenAI: class {}};
@@ -82,7 +82,7 @@ function loadFunctions({userData, pinDoc = null, scanCount = null, limitCheckFai
   try {
     mod = require('./index');
   } finally {
-    Module._load = originalLoad;
+    // Stubs bleiben aktiv: Handler laden sharp/nodemailer erst beim Aufruf (testSupport setzt zurück).
   }
   return {mod, saved};
 }

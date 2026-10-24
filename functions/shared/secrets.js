@@ -13,4 +13,8 @@ const smtpUser = defineSecret('SMTP_USER');
 const smtpPassword = defineSecret('SMTP_PASSWORD');
 const smtpFrom = defineSecret('SMTP_FROM');
 
-module.exports = {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom};
+// Define the Gemini API key as a secret
+// Set with: firebase functions:secrets:set GEMINI_API_KEY
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
+
+module.exports = {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom, geminiApiKey};

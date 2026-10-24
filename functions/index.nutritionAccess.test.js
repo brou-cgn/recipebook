@@ -79,7 +79,7 @@ function loadHandlers() {
       firestoreFactory.FieldValue = {serverTimestamp: () => ({}), increment: (n) => n};
       return {initializeApp: () => {}, firestore: firestoreFactory};
     }
-    if (request === './nutritionNormalization') {
+    if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {
         createNutritionNormalizationUtils: () => ({
           normalizeIngredientWithGemini: async () => null,
@@ -102,7 +102,7 @@ function loadHandlers() {
   };
 
   const mod = require('./index');
-  Module._load = originalLoad;
+  // Stubs bleiben aktiv: Handler laden sharp/nodemailer erst beim Aufruf (testSupport setzt zurück).
   return mod;
 }
 

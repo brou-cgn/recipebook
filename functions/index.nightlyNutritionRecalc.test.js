@@ -67,7 +67,7 @@ function loadHandlers() {
       return { GoogleGenAI: class {} };
     }
 
-    if (request === './nutritionNormalization') {
+    if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {
         createNutritionNormalizationUtils: () => ({
           parseIngredientForNutrition: (text) => ({
@@ -208,7 +208,7 @@ function loadHandlers() {
   manualHandler = require('./index').runNutritionRecalcForFlaggedRecipes;
   requestHandler = require('./index').processNutritionRecalcRequest;
   lowCarbHandler = require('./index').runLowCarbFullTagging;
-  Module._load = originalLoad;
+  // Stubs bleiben aktiv: Handler laden sharp/nodemailer erst beim Aufruf (testSupport setzt zurück).
 }
 
 // Runs the queued manual-recalc requests the way the Firestore trigger would.

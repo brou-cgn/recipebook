@@ -77,7 +77,7 @@ function loadFunction() {
       return {GoogleGenAI: class {}};
     }
 
-    if (request === './nutritionNormalization') {
+    if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {
         createNutritionNormalizationUtils: () => ({
           parseIngredientForNutrition: () => null,
@@ -150,7 +150,7 @@ function loadFunction() {
   };
 
   dailyAiImporterTest = require('./index').dailyAiImporterTest;
-  Module._load = originalLoad;
+  // Stubs bleiben aktiv: Handler laden sharp/nodemailer erst beim Aufruf (testSupport setzt zurück).
 }
 
 test.beforeEach(() => {
