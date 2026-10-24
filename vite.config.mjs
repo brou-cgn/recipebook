@@ -102,7 +102,8 @@ export default defineConfig(({ mode }) => {
       // Ältere iPhones mitnehmen: Vites Standard setzt Safari 16 voraus,
       // CRA übersetzte für ">0.2%, not dead".
       target: ['es2020', 'chrome87', 'edge88', 'firefox78', 'safari14'],
-      sourcemap: true,
+      // Keine Sourcemaps im Deploy: sonst ist der Quellcode öffentlich abrufbar (Tech-Check M5).
+      sourcemap: false,
     },
   };
 });
