@@ -15,7 +15,7 @@ let quotaWrites;
 let handlers;
 
 function loadHandlers() {
-  delete require.cache[require.resolve('./index')];
+  require('./testSupport').purgeFunctionsCache();
 
   const Module = require('module');
   const originalLoad = Module._load;

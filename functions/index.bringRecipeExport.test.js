@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 let bringRecipeExport;
 
 function loadFunction(firestoreImpl) {
-  delete require.cache[require.resolve('./index')];
+  require('./testSupport').purgeFunctionsCache();
 
   const Module = require('module');
   const originalLoad = Module._load;

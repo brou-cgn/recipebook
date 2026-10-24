@@ -11,8 +11,7 @@ const PIN_HASH_DOC = {salt: 'abc', hash: 'x', failedAttempts: 0};
 // `scanCount` der heutige Stand des KI-Tageszählers (null = noch kein Scan heute),
 // `limitCheckFails` lässt die Transaktion des Tageszählers scheitern.
 function loadFunctions({userData, pinDoc = null, scanCount = null, limitCheckFails = false}) {
-  delete require.cache[require.resolve('./index')];
-  delete require.cache[require.resolve('./webImportPin')];
+  require('./testSupport').purgeFunctionsCache();
   const Module = require('module');
   const originalLoad = Module._load;
   const saved = [];
