@@ -2,7 +2,7 @@
  * Automatische Wiederaufnahme verwaister Import-Jobs (RecipeImportQueueContext).
  */
 import React from 'react';
-import { render, act } from '@testing-library/react';
+import { render, act, waitFor } from '@testing-library/react';
 import { RecipeImportQueueProvider } from './RecipeImportQueueContext';
 
 let mockEmitTempRecipes;
@@ -45,11 +45,12 @@ describe('Wiederaufnahme verwaister Import-Jobs', () => {
     render(<RecipeImportQueueProvider userId="u1"><div /></RecipeImportQueueProvider>);
   });
 
-  test('ein im Browser gestarteter Job mit altem Lebenszeichen wird neu gestartet', () => {
+  test('ein im Browser gestarteter Job mit altem Lebenszeichen wird neu gestartet', async () => {
     act(() => mockEmitTempRecipes([staleJob()]));
 
     expect(mockUpdateRecipe).toHaveBeenCalledWith('job1', expect.objectContaining({ importStatus: 'queued' }));
-    expect(mockRunWebImport).toHaveBeenCalled();
+    // Die Runner werden erst beim Start nachgeladen (Tech-Check P2).
+    await waitFor(() => expect(mockRunWebImport).toHaveBeenCalled());
   });
 
   test('ein Kurzbefehl-Job bleibt dem Server überlassen', () => {

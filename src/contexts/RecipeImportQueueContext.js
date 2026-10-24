@@ -7,7 +7,6 @@ import {
   subscribeToTempRecipes,
 } from '../utils/recipeFirestore';
 import { compressImage } from '../utils/imageUtils';
-import { runWebImport, runUniversalImport, runPhotoScanImport } from '../utils/importRunners';
 import { logFailedWebImport } from '../utils/failedWebImportsFirestore';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 
@@ -47,15 +46,20 @@ async function buildImportSourceSnapshot(source) {
 // jobMeta ({jobId, authorId}) is supplied on every attempt, fresh or
 // restarted, so the underlying Cloud Function call can finalize the job
 // directly in Firestore and survive this tab being closed again.
+//
+// Die Runner (und mit ihnen Web-Import, KI-OCR und Parser, ~45 kB) werden erst beim
+// tatsächlichen Start eines Imports nachgeladen, nicht mit dem Start-Bundle (Tech-Check P2).
+const loadRunners = () => import('../utils/importRunners');
+
 function buildRunFromSource(source) {
   if (!source) return null;
   switch (source.type) {
     case 'web':
-      return (onProgress, jobMeta) => runWebImport(source.url, source.authorId, onProgress, jobMeta);
+      return async (onProgress, jobMeta) => (await loadRunners()).runWebImport(source.url, source.authorId, onProgress, jobMeta);
     case 'universal':
-      return (onProgress, jobMeta) => runUniversalImport({ images: source.images, text: source.text, url: source.url }, onProgress, jobMeta);
+      return async (onProgress, jobMeta) => (await loadRunners()).runUniversalImport({ images: source.images, text: source.text, url: source.url }, onProgress, jobMeta);
     case 'photo':
-      return (onProgress, jobMeta) => runPhotoScanImport(source.images, source.language, onProgress, jobMeta);
+      return async (onProgress, jobMeta) => (await loadRunners()).runPhotoScanImport(source.images, source.language, onProgress, jobMeta);
     default:
       return null;
   }
