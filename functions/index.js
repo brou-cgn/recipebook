@@ -8,16 +8,6 @@ const admin = require('firebase-admin');
 // Initialize Firebase Admin
 admin.initializeApp();
 
-// ─── Hybrid Import Architecture ───────────────────────────────────────────────
-// Shared server-side helpers and the consolidated import pipeline that powers
-// both importRecipeCallable (web app) and importRecipeShortcut (Apple Shortcut).
-
-// ─── End of Hybrid Import Architecture ────────────────────────────────────────
-
-// ---------------------------------------------------------------------------
-// Daily AI importer self-test
-// ---------------------------------------------------------------------------
-
 // Getränke-Kalkulation für Events (Menüpunkt "Events" im Hamburger-Menü).
 exports.calculateEventDrinks = require('./calculateEventDrinks').calculateEventDrinks;
 exports.submitConsumption = require('./submitConsumption').submitConsumption;
@@ -25,7 +15,7 @@ exports.reminderConsumption = require('./reminderConsumption').reminderConsumpti
 exports.manageGuestProfile = require('./manageGuestProfile').manageGuestProfile;
 
 // Webimport-PIN: pro Nutzer optionaler PIN-Schutz für den Apple-Kurzbefehl-Import
-// (importRecipeShortcut oben ruft requireShortcutPin() mit jedem Request auf,
+// (importRecipeShortcut in handlers/importShortcut.js ruft requireShortcutPin() mit jedem Request auf,
 // da der Kurzbefehl per API-Key ohne Session arbeitet). In-App-Importe über
 // die eingeloggte Web-App verlangen den PIN nicht.
 exports.setWebImportPin = require('./webImportPin').setWebImportPin;
