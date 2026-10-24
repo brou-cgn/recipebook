@@ -30,4 +30,8 @@ Object.assign(exports, require('./handlers/discover'), require('./handlers/follo
     require('./handlers/admin'),
     require('./handlers/nutrition'),
     require('./handlers/importApp'),
-    require('./handlers/importShortcut'));
+    require('./handlers/importShortcut'),
+    require('./handlers/importPages'),
+    require('./handlers/importVideo'),
+    require('./handlers/importScheduled'),
+    require('./handlers/nutritionRecalc'));

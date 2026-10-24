@@ -57,6 +57,18 @@ erzwungen — wo das gilt, steht die Datei dabei.
 - Tests nicht überspringen oder abschalten, um grün zu werden.
 - Komponententests mit dem Helper `renderWithProviders` (`src/test-utils.js`).
 - Cloud Functions: Tests und Lint in `functions/` (`npm run lint`).
+- Cloud Functions-Aufbau (Tech-Check F2): `functions/index.js` enthält nur Re-Exports. Jede Function
+  liegt in `functions/handlers/<gruppe>.js`; von mehreren Gruppen genutzte Helfer in
+  `functions/shared/<thema>.js` (Secrets, Auth, Rate-Limit, Gemini, Import-Kern usw.). Neue Function:
+  in ein Handler-Modul schreiben und den Namen in `index.exportNames.test.js` eintragen. Bibliotheksdateien
+  im Wurzelordner (z. B. `follow.js`) haben Vorrang vor gleichnamigen Ordnern, deshalb heißen die Ordner
+  `handlers/` und `shared/`.
+  - `shared/*.js` importieren sich nicht zyklisch und nichts aus `handlers/` oder `index.js`
+    (`shared.noCycles.test.js`); jeder destrukturierte Import muss im Zielmodul exportiert sein
+    (`shared.imports.test.js`).
+  - `sharp`, `cheerio`, `nodemailer`, `@google/genai` und `puppeteer-core` erst beim Aufruf per `require`
+    laden, nicht am Dateianfang (Kaltstart).
+  - Function-Tests laden `index.js` mit Stubs über `testSupport.purgeFunctionsCache()`.
 
 ## Arbeitsweise
 - Kleine, thematisch geschlossene PRs. Beschreibung nennt, wie getestet wurde.

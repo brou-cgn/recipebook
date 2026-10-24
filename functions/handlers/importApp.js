@@ -7,7 +7,8 @@ const {launchBrowser} = require('../launchBrowser');
 const {requireAiCaller} = require('../shared/auth');
 const {ALLOWED_ORIGINS} = require('../shared/common');
 const {RECIPE_STEP_STYLE_RULE, RECIPE_STEP_BOUNDARY_RULE, callGeminiAPI, callGeminiTextAPI} = require('../shared/gemini');
-const {assertPublicUrl, MAX_FETCH_HTML_SIZE, validateImageData, finalizeImportJob, failImportJob, BATCH_IMAGE_CONCURRENCY, mergePhotoAiResultsServer, isInstagramUrl, runImportFromInstagram, runImportFromUrl} = require('../shared/importCore');
+const {finalizeImportJob, failImportJob} = require('../shared/importCore');
+const {assertPublicUrl, MAX_FETCH_HTML_SIZE, validateImageData, BATCH_IMAGE_CONCURRENCY, mergePhotoAiResultsServer, isInstagramUrl, runImportFromInstagram, runImportFromUrl} = require('../shared/importSources');
 const {consumeDailyQuota, getRateLimit, checkRateLimit} = require('../shared/rateLimit');
 const {geminiApiKey} = require('../shared/secrets');
 

@@ -17,4 +17,8 @@ const smtpFrom = defineSecret('SMTP_FROM');
 // Set with: firebase functions:secrets:set GEMINI_API_KEY
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
-module.exports = {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom, geminiApiKey};
+// API key for Apple Shortcut / external recipe import
+// Set with: firebase functions:secrets:set SHORTCUT_API_KEY
+const shortcutApiKey = defineSecret('SHORTCUT_API_KEY');
+
+module.exports = {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom, geminiApiKey, shortcutApiKey};
