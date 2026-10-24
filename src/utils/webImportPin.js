@@ -13,7 +13,7 @@
  */
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
-import { getCallableErrorDetails } from './webImportService';
+import { getCallableErrorDetails } from './callableErrors';
 
 /**
  * Set or change the caller's Webimport-PIN.

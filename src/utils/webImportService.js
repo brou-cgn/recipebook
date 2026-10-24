@@ -8,22 +8,9 @@ import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import { recognizeRecipeWithAI, processHtmlWithGemini } from './aiOcrService';
 import { parseOcrText } from './ocrParser';
+import { getCallableErrorDetails } from './callableErrors';
 
-/**
- * Normalize Firebase callable errors so callers can handle both local test
- * stubs and production `functions/...` error codes consistently.
- *
- * @param {Error & {code?: string}} error - Error thrown by a callable function
- * @returns {{code: string, message: string, lowerMessage: string}}
- */
-export function getCallableErrorDetails(error) {
-  const rawCode = error?.code ? String(error.code) : '';
-  const code = rawCode.replace(/^functions\//, '').toLowerCase();
-  const message = error?.message ? String(error.message).trim() : '';
-  const lowerMessage = message.toLowerCase();
-
-  return { code, message, lowerMessage };
-}
+export { getCallableErrorDetails };
 
 const SINGLE_SLASH_PROTOCOL_RE = /^([a-z][a-z0-9+.-]*):\/(?!\/)/i;
 const HAS_PROTOCOL_RE = /^[a-z][a-z0-9+.-]*:\/\//i;
