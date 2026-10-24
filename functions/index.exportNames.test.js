@@ -34,7 +34,6 @@ const EXPECTED_EXPORTS = [
   'getVideoUploadUrl',
   'importRecipeCallable',
   'importRecipeShortcut',
-  'importerTestFixturePage',
   'manageGuestProfile',
   'nightlyImportProtocolCleanup',
   'nightlyNutritionRecalc',

@@ -35,6 +35,8 @@ const IMPORTER_TEST_MIN_STEPS = 2;
  * boundary a real client hits.
  */
 const CALLABLE_BASE_URL = 'https://us-central1-broubook.cloudfunctions.net';
+// Statische Fixture-Seite im Hosting (public/test-assets/importer-fixture.html, Tech-Check F4).
+const IMPORTER_FIXTURE_URL = 'https://broubook.web.app/test-assets/importer-fixture.html';
 
 /**
  * Mint a Firebase ID token for AI_IMPORTER_TEST_UID by creating a custom
@@ -236,7 +238,7 @@ async function runTest(name, fn) {
  * Tests covered:
  * 1. Konfiguration – Gemini API key present + prompt accessible
  * 2. fetchRecipeHtml (öffentliche Schnittstelle) – real HTTP fetch of a
- *    dedicated fixture page (importerTestFixturePage) through the deployed
+ *    static fixture page (importer-fixture.html in Hosting) through the deployed
  *    callable
  * 3. processHtmlWithAI (öffentliche Schnittstelle) – feeds test 2's fetched
  *    HTML into the deployed callable, so fetch + AI extraction are verified
@@ -281,7 +283,7 @@ async function runAllImporterTests(apiKey, webApiKey) {
   let fetchedHtml = null;
   results.push(await runTest('fetchRecipeHtml (öffentliche Schnittstelle)', async () => {
     if (idTokenError) throw new Error(`Kein Test-ID-Token: ${idTokenError}`);
-    const fixtureUrl = `${CALLABLE_BASE_URL}/importerTestFixturePage`;
+    const fixtureUrl = IMPORTER_FIXTURE_URL;
     const result = await callPublicCallable('fetchRecipeHtml', {url: fixtureUrl}, idToken);
     const html = result?.html || '';
     if (!html.includes('Rührei') || html.length < 200) {
