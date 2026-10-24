@@ -1,11 +1,13 @@
 /* MobileSearchOverlay – bottom-anchored search panel that slides up from below */
 
-/* ─── Full-screen backdrop (transparent, fängt nur Klicks außerhalb ab) ──── */
+/* ─── Full-screen backdrop (Hintergrund wird nur weichgezeichnet, nicht abgedunkelt) ─ */
 
 .mobile-search-overlay {
   position: fixed;
   inset: 0;
   z-index: 2000;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 
 /* ─── Search panel (results + input bar) ───────────────────────────────── */
