@@ -1531,44 +1531,6 @@ export async function getAvailableUnits() {
 }
 
 /**
- * Add a custom unit to Firestore
- * @param {string} unit - Unit to add
- * @returns {Promise<void>}
- */
-export async function addCustomUnit(unit) {
-  if (!unit || !unit.trim()) return;
-
-  try {
-    const lists = await getCustomLists();
-    const customUnits = lists.customUnits || [];
-
-    if (!customUnits.some(u => u.toLowerCase() === unit.trim().toLowerCase())) {
-      customUnits.push(unit.trim());
-      await saveCustomLists({ ...lists, customUnits });
-    }
-  } catch (error) {
-    console.error('Error adding custom unit:', error);
-    throw error;
-  }
-}
-
-/**
- * Remove a custom unit from Firestore
- * @param {string} unit - Unit to remove
- * @returns {Promise<void>}
- */
-export async function removeCustomUnit(unit) {
-  try {
-    const lists = await getCustomLists();
-    const customUnits = (lists.customUnits || []).filter(u => u !== unit);
-    await saveCustomLists({ ...lists, customUnits });
-  } catch (error) {
-    console.error('Error removing custom unit:', error);
-    throw error;
-  }
-}
-
-/**
  * Get the header slogan from Firestore or return default
  * @returns {Promise<string>} Promise resolving to header slogan
  */
@@ -2007,36 +1969,12 @@ export async function deleteCuisineTypeIcon(cuisineName) {
 }
 
 /**
- * Reset button icons to defaults
- * @returns {Promise<Object>} Promise resolving to default button icons
- */
-export async function resetButtonIcons() {
-  await saveButtonIcons(DEFAULT_BUTTON_ICONS);
-  return DEFAULT_BUTTON_ICONS;
-}
-
-/**
  * Get the timeline bubble icon from Firestore
  * @returns {Promise<string|null>} Promise resolving to base64 encoded image or null
  */
 export async function getTimelineBubbleIcon() {
   const icons = await getButtonIcons();
   return icons.timelineBubbleIcon || null;
-}
-
-/**
- * Save the timeline bubble icon to the buttonIcons collection, so it shows up
- * in the "Bilder & Icons" admin list alongside every other icon.
- * @param {string|null} imageBase64 - Base64 encoded image or null to remove
- * @returns {Promise<void>}
- */
-export async function saveTimelineBubbleIcon(imageBase64) {
-  try {
-    await saveButtonIcon('timelineBubbleIcon', imageBase64 || '');
-  } catch (error) {
-    console.error('Error saving timeline bubble icon:', error);
-    throw error;
-  }
 }
 
 /**
@@ -2049,71 +1987,12 @@ export async function getTimelineMenuBubbleIcon() {
 }
 
 /**
- * Save the timeline menu bubble icon to the buttonIcons collection, so it shows
- * up in the "Bilder & Icons" admin list alongside every other icon.
- * @param {string|null} imageBase64 - Base64 encoded image or null to remove
- * @returns {Promise<void>}
- */
-export async function saveTimelineMenuBubbleIcon(imageBase64) {
-  try {
-    await saveButtonIcon('timelineMenuBubbleIcon', imageBase64 || '');
-  } catch (error) {
-    console.error('Error saving timeline menu bubble icon:', error);
-    throw error;
-  }
-}
-
-/**
- * Get the default recipe image for the timeline from Firestore
- * @returns {Promise<string|null>} Promise resolving to base64 encoded image or null
- */
-export async function getTimelineRecipeDefaultImage() {
-  const settings = await getSettings();
-  return settings.timelineRecipeDefaultImage || null;
-}
-
-/**
- * Save the default recipe image for the timeline to Firestore (settings/images)
- * @param {string|null} imageBase64 - Base64 encoded image or null to remove
- * @returns {Promise<void>}
- */
-export async function saveTimelineRecipeDefaultImage(imageBase64) {
-  try {
-    const imagesRef = doc(db, 'settings', 'images');
-    await setDoc(imagesRef, { timelineRecipeDefaultImage: imageBase64 || null }, { merge: true });
-
-    // Update cache
-    if (settingsCache) {
-      settingsCache.timelineRecipeDefaultImage = imageBase64 || null;
-    }
-  } catch (error) {
-    console.error('Error saving timeline recipe default image:', error);
-    throw error;
-  }
-}
-
-/**
  * Get the timeline cook event bubble icon from Firestore
  * @returns {Promise<string|null>} Promise resolving to base64 encoded image or null
  */
 export async function getTimelineCookEventBubbleIcon() {
   const icons = await getButtonIcons();
   return icons.timelineCookEventBubbleIcon || null;
-}
-
-/**
- * Save the timeline cook event bubble icon to the buttonIcons collection, so
- * it shows up in the "Bilder & Icons" admin list alongside every other icon.
- * @param {string|null} imageBase64 - Base64 encoded image or null to remove
- * @returns {Promise<void>}
- */
-export async function saveTimelineCookEventBubbleIcon(imageBase64) {
-  try {
-    await saveButtonIcon('timelineCookEventBubbleIcon', imageBase64 || '');
-  } catch (error) {
-    console.error('Error saving timeline cook event bubble icon:', error);
-    throw error;
-  }
 }
 
 /**
@@ -2232,35 +2111,6 @@ export async function getAIRecipePromptHistory(maxEntries = AI_PROMPT_HISTORY_MA
 export async function resetAIRecipePrompt(userId) {
   await saveAIRecipePrompt(DEFAULT_AI_RECIPE_PROMPT, userId);
   return DEFAULT_AI_RECIPE_PROMPT;
-}
-
-/**
- * Get the autoShareOnCreate setting from Firestore
- * @returns {Promise<boolean>} Promise resolving to the setting value
- */
-export async function getAutoShareOnCreate() {
-  const settings = await getSettings();
-  return settings.autoShareOnCreate ?? false;
-}
-
-/**
- * Save the autoShareOnCreate setting to Firestore
- * @param {boolean} value - Whether to auto-share new recipes
- * @returns {Promise<void>}
- */
-export async function saveAutoShareOnCreate(value) {
-  try {
-    const settingsRef = doc(db, 'settings', 'app');
-    await updateDoc(settingsRef, { autoShareOnCreate: value });
-
-    // Update cache
-    if (settingsCache) {
-      settingsCache.autoShareOnCreate = value;
-    }
-  } catch (error) {
-    console.error('Error saving autoShareOnCreate setting:', error);
-    throw error;
-  }
 }
 
 /**

@@ -639,55 +639,6 @@ export async function buildMenuGridImage(imageUrls, options = {}) {
   return result;
 }
 
-/**
- * Resize an image to a specific size (for PWA icons)
- * @param {string} base64 - Base64 encoded image string
- * @param {number} size - Target size in pixels (width and height)
- * @returns {Promise<string>} - Resized base64 PNG image
- */
-export function resizeImageToSize(base64, size) {
-  return new Promise((resolve, reject) => {
-    if (!base64 || !isBase64Image(base64)) {
-      reject(new Error('Invalid base64 image'));
-      return;
-    }
-
-    const img = new Image();
-    
-    img.onload = () => {
-      try {
-        // Create canvas with exact size
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-        
-        const ctx = canvas.getContext('2d');
-        
-        // Draw image centered and scaled to fit
-        const scale = Math.min(size / img.width, size / img.height);
-        const scaledWidth = img.width * scale;
-        const scaledHeight = img.height * scale;
-        const x = (size - scaledWidth) / 2;
-        const y = (size - scaledHeight) / 2;
-        
-        ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
-        
-        // Output as PNG to preserve transparency
-        const resizedBase64 = canvas.toDataURL('image/png');
-        resolve(resizedBase64);
-      } catch (error) {
-        reject(error);
-      }
-    };
-    
-    img.onerror = () => {
-      reject(new Error('Failed to load image'));
-    };
-    
-    img.src = base64;
-  });
-}
-
 const isRemoteImageUrl = (url) => typeof url === 'string' && /^https?:\/\//.test(url);
 
 /**
