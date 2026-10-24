@@ -11,6 +11,7 @@ import { NUTRITION_REFERENCE_APPROVED_STATUS } from '../utils/nutritionReference
 import { isBase64Image } from '../utils/imageUtils';
 import { normalizeNutritionEmptyIcon, normalizeNutritionSaveManualAmountIcon } from '../utils/nutritionIconUtils';
 import './NutritionModal.css';
+import useFadeOutClose from '../hooks/useFadeOutClose';
 
 const CALC_RESULT_STORAGE_KEY_PREFIX = 'nutrition_calc_result_';
 const AMOUNT_G_DECIMALS = 1;
@@ -481,7 +482,8 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
 
 export { computeIngredientAmountG, resolveIngredientNutritionByStatus };
 
-function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, onEnsureIngredientIDs, nutritionReferenceRows = [], onReloadNutritionReferences = null, retryAutoCalculateToken = 0, onOpenLinkedRecipe = null, autoCalcIcon = null, manualSaveIcon = null, portionUnits = [] }) {
+function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [], currentUser, onEnsureIngredientIDs, nutritionReferenceRows = [], onReloadNutritionReferences = null, retryAutoCalculateToken = 0, onOpenLinkedRecipe = null, autoCalcIcon = null, manualSaveIcon = null, portionUnits = [] }) {
+  const [closing, onClose] = useFadeOutClose(onCloseProp);
   const resolvedAutoCalcIcon = normalizeNutritionEmptyIcon(autoCalcIcon);
   const resolvedManualSaveIcon = normalizeNutritionSaveManualAmountIcon(manualSaveIcon);
   const [kalorien, setKalorien] = useState('');
@@ -1541,7 +1543,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
   }, [autoCalcResult, manualAmounts, recipe.portionen]);
 
   return (
-    <div className="nutrition-modal-overlay" onClick={onClose}>
+    <div className={`nutrition-modal-overlay${closing ? ' nutrition-modal-overlay--closing' : ''}`} onClick={onClose}>
       <div
         className="nutrition-modal"
         role="dialog"

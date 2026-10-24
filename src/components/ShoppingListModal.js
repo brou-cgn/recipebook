@@ -3,8 +3,10 @@ import PencilIcon from './icons/PencilIcon';
 import { isBase64Image } from '../utils/imageUtils';
 import { formatIngredientForBringExport, loadBringStrippedWords, getRecognizedUnits } from '../utils/ingredientUtils';
 import './ShoppingListModal.css';
+import useFadeOutClose from '../hooks/useFadeOutClose';
 
-function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hideBringButton, bringButtonIcon, accentTheme }) {
+function ShoppingListModal({ items, title, onClose: onCloseProp, shareId, onEnableSharing, hideBringButton, bringButtonIcon, accentTheme }) {
+  const [closing, onClose] = useFadeOutClose(onCloseProp);
   const [listItems, setListItems] = useState(() =>
     items.map((text, index) => ({ id: index, text, checked: false }))
   );
@@ -131,7 +133,7 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
   };
 
   return (
-    <div className="shopping-list-overlay" onClick={onClose}>
+    <div className={`shopping-list-overlay${closing ? ' shopping-list-overlay--closing' : ''}`} onClick={onClose}>
       <div
         className={`shopping-list-modal${accentTheme === 'event' ? ' shopping-list-modal--event' : ''}`}
         role="dialog"
