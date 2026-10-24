@@ -31,7 +31,7 @@ Bitte gib das Ergebnis im folgenden JSON-Format zurück:
   "zubereitungszeit": Zeit in Minuten als Zahl (nur die Zahl, z.B. 30),
   "kochzeit": Kochzeit in Minuten als Zahl (optional),
   "schwierigkeit": Schwierigkeitsgrad 1-5 (1=sehr einfach, 5=sehr schwer),
-  "kulinarik": "Kulinarische Herkunft (z.B. Italienisch, Asiatisch, Deutsch)",
+  "kulinarik": "Kulinarische Herkunft (z.B. Italienische Küche, Chinesische Küche, Deutsche Küche)",
   "kategorie": "Kategorie (z.B. Hauptgericht, Dessert, Vorspeise, Beilage, Snack)",
   "tags": ["vegetarisch", "vegan", "glutenfrei"], // nur falls explizit erwähnt
   "zutaten": [
@@ -70,7 +70,7 @@ BEISPIEL GUTE EXTRAKTION:
   "portionen": 4,
   "zubereitungszeit": 30,
   "schwierigkeit": 2,
-  "kulinarik": "Italienisch",
+  "kulinarik": "Italienische Küche",
   "kategorie": "Hauptgericht",
   "tags": [],
   "zutaten": [
@@ -430,7 +430,7 @@ async function callGeminiTextAPI(rawHtml, lang, apiKey, cuisineTypes, mealCatego
     prompt = prompt.replaceAll('{{CUISINE_TYPES}}', cuisineList);
   } else {
     // Fallback to default lists if not provided
-    prompt = prompt.replaceAll('{{CUISINE_TYPES}}', '- Italienisch\n- Asiatisch\n- Deutsch\n- Amerikanisch\n- Mediterran\n- Mexikanisch\n- Französisch\n- Japanisch\n- Indisch\n- Griechisch');
+    prompt = prompt.replaceAll('{{CUISINE_TYPES}}', '- Deutsche Küche\n- Französische Küche\n- Italienische Küche\n- Österreichische Küche\n- Schweizer Küche\n- Türkische Küche\n- Chinesische Küche\n- Indische Küche\n- Japanische Küche\n- Orientalische Küche\n- Thailändische Küche\n- Mexikanische Küche\n- US-Amerikanische Küche\n- Vegetarisch\n- Vegan\n- Weihnachtliche Küche');
   }
 
   if (Array.isArray(mealCategories) && mealCategories.length > 0) {
