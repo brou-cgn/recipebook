@@ -117,8 +117,8 @@ function loadFunction() {
     }
 
     // ── Google Generative AI SDK (not used by scanRecipeWithAI directly) ───
-    if (request === '@google/generative-ai') {
-      return {GoogleGenerativeAI: class {}};
+    if (request === '@google/genai') {
+      return {GoogleGenAI: class {}};
     }
 
     // ── Internal helpers ───────────────────────────────────────────────────

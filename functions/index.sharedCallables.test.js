@@ -117,7 +117,7 @@ function loadFunctionsModule(state = {}) {
       };
     }
 
-    if (request === '@google/generative-ai') return {GoogleGenerativeAI: class {}};
+    if (request === '@google/genai') return {GoogleGenAI: class {}};
     if (request === 'nodemailer') return {createTransport: () => ({sendMail: async () => ({})})};
     if (request === 'sharp') {
       const chain = {

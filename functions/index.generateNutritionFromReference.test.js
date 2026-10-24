@@ -85,8 +85,8 @@ function loadWrappedFunction() {
       return {createNutritionNormalizationUtils: createUtilsStub};
     }
 
-    if (request === '@google/generative-ai') {
-      return {GoogleGenerativeAI: class {}};
+    if (request === '@google/genai') {
+      return {GoogleGenAI: class {}};
     }
 
     if (request === 'nodemailer') {
@@ -518,7 +518,7 @@ test('generateNutritionFromReference is registered with cors and invoker:public 
       })};
     }
 
-    if (request === '@google/generative-ai') return {GoogleGenerativeAI: class {}};
+    if (request === '@google/genai') return {GoogleGenAI: class {}};
     if (request === 'nodemailer') return {createTransport: () => ({sendMail: async () => ({})})};
     if (request === 'sharp') {
       const chain = {rotate: () => chain, resize: () => chain, png: () => chain, toBuffer: async () => Buffer.from('')};

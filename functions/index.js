@@ -8,7 +8,8 @@ const {onDocumentCreated, onDocumentWritten} = require('firebase-functions/v2/fi
 const {onObjectFinalized} = require('firebase-functions/v2/storage');
 const {onSchedule} = require('firebase-functions/v2/scheduler');
 const {defineSecret} = require('firebase-functions/params');
-const {GoogleGenerativeAI} = require('@google/generative-ai');
+const {GoogleGenAI} = require('@google/genai');
+const {launchBrowser} = require('./launchBrowser');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
@@ -2300,8 +2301,6 @@ function isReelImportSource(source) {
  * @returns {Promise<Object>} Structured recipe data (same shape as callGeminiAPI), plus sourceUrl
  */
 async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineTypes, mealCategories, steps} = {}) {
-  const puppeteer = require('puppeteer');
-  const chromium = require('@sparticuz/chromium');
 
   // Appends a step to the caller's protocol array (see writeImportProtocolEntry)
   // when one was passed in; a no-op otherwise so this function works standalone.
@@ -2311,18 +2310,7 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
 
   let browser = null;
   try {
-    browser = await puppeteer.launch({
-      args: chromium.args.concat([
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-blink-features=AutomationControlled',
-      ]),
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
-    });
+    browser = await launchBrowser();
 
     const page = await browser.newPage();
 
@@ -2894,25 +2882,12 @@ exports.captureWebsiteScreenshot = onCall(
       }
 
       // Puppeteer implementation:
-      const puppeteer = require('puppeteer');
-      const chromium = require('@sparticuz/chromium');
 
       let browser;
       let hasFragment = false;
       let fragmentHash = '';
       try {
-        browser = await puppeteer.launch({
-          args: chromium.args.concat([
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--disable-blink-features=AutomationControlled',
-          ]),
-          defaultViewport: chromium.defaultViewport,
-          executablePath: await chromium.executablePath(),
-          headless: chromium.headless,
-        });
+        browser = await launchBrowser();
 
         const page = await browser.newPage();
         await page.setViewport({ width: 1280, height: 800 });
@@ -3575,25 +3550,12 @@ async function runImportFromUrl(url, {apiKey, cuisineTypes, mealCategories, sour
 
   // ── Phase 4: Screenshot + Gemini Vision fallback ──────────────────────────
   console.log(`[importRecipe:screenshot:start] host=${hostname}`);
-  const puppeteer = require('puppeteer');
-  const chromium = require('@sparticuz/chromium');
 
   let browser;
   let hasFragment = false;
   let fragmentHash = '';
   try {
-    browser = await puppeteer.launch({
-      args: chromium.args.concat([
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-blink-features=AutomationControlled',
-      ]),
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
-    });
+    browser = await launchBrowser();
 
     const page = await browser.newPage();
     await page.setViewport({width: 1280, height: 800});
@@ -5017,7 +4979,7 @@ exports.parseIngredientAmountG = onCall(
         normalizeIngredientWithGemini,
         parseIngredientForNutrition,
       } = createNutritionNormalizationUtils({
-        GoogleGenerativeAI,
+        GoogleGenAI,
         env: {GEMINI_API_KEY: geminiApiKey.value()},
       });
 
@@ -5098,7 +5060,7 @@ async function calculateNutritionFromOpenFoodFactsCore({
     normalizeIngredientWithGemini,
     estimateNutritionWithGemini,
   } = createNutritionNormalizationUtils({
-    GoogleGenerativeAI,
+    GoogleGenAI,
     env: {GEMINI_API_KEY: geminiApiKey.value()},
   });
 
@@ -5641,7 +5603,7 @@ exports.generateNutritionFromReference = onCall(
         generateSearchTermWithGemini,
         estimateNutritionWithGemini,
       } = createNutritionNormalizationUtils({
-        GoogleGenerativeAI,
+        GoogleGenAI,
         env: {GEMINI_API_KEY: geminiApiKey.value()},
       });
 

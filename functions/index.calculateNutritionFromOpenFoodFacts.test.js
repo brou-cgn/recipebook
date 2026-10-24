@@ -90,9 +90,9 @@ function loadWrappedFunction() {
       };
     }
 
-    if (request === '@google/generative-ai') {
+    if (request === '@google/genai') {
       return {
-        GoogleGenerativeAI: class {},
+        GoogleGenAI: class {},
       };
     }
 

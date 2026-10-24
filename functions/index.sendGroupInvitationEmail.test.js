@@ -50,8 +50,8 @@ function loadFunction() {
     if (request === 'firebase-functions/params') {
       return {defineSecret: () => ({value: () => 'x'})};
     }
-    if (request === '@google/generative-ai') {
-      return {GoogleGenerativeAI: class {}};
+    if (request === '@google/genai') {
+      return {GoogleGenAI: class {}};
     }
     if (request === './nutritionNormalization') {
       return {
