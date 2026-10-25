@@ -17,10 +17,11 @@ describe('followFirestore', () => {
     expect(openRequestIds(new Set(), [{ followerId: 'anna', status: 'pending' }])).toEqual([]);
   });
 
-  test('displayNameFromProfile: Name, anonym bei versteckt oder fehlendem Profil', () => {
+  test('displayNameFromProfile: Name, anonym nur bei fehlendem Profil oder Namen, versteckt zählt nicht', () => {
     expect(displayNameFromProfile({ vorname: 'Anna', nachname: 'Berg' })).toBe('Anna Berg');
     expect(displayNameFromProfile({ vorname: 'Anna' })).toBe('Anna');
-    expect(displayNameFromProfile({ vorname: 'Anna', versteckt: true })).toBe('Ein Mitglied');
+    expect(displayNameFromProfile({ vorname: 'Anna', versteckt: true })).toBe('Anna');
+    expect(displayNameFromProfile({ versteckt: false })).toBe('Ein Mitglied');
     expect(displayNameFromProfile(null)).toBe('Ein Mitglied');
   });
 

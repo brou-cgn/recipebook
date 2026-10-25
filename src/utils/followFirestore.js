@@ -13,9 +13,13 @@ const ANONYMOUS_NAME = 'Ein Mitglied';
 
 export const followDocId = (followerId, followeeId) => `${followerId}_${followeeId}`;
 
-/** Anzeigename aus publicProfiles; versteckte Mitglieder erscheinen anonym. */
+/**
+ * Anzeigename aus publicProfiles. `versteckt` betrifft nur Auswahllisten und
+ * bleibt hier bewusst unberücksichtigt: Wer eine Anfrage stellt oder folgt,
+ * wird mit Namen angezeigt.
+ */
 export const displayNameFromProfile = (profile) => {
-  if (!profile || profile.versteckt === true) return ANONYMOUS_NAME;
+  if (!profile) return ANONYMOUS_NAME;
   const name = [profile.vorname, profile.nachname]
     .filter((part) => typeof part === 'string' && part.trim())
     .join(' ')
