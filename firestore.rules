@@ -407,6 +407,15 @@ service cloud.firestore {
                     );
     }
 
+    // Verlauf des KI-Rezept-Prompts (settings/app/aiPromptHistory). Wird beim Speichern/Zurücksetzen
+    // des Prompts im Client angelegt (nur Admins) und vom Server (Admin SDK) bei Migrationen
+    // befüllt. Einträge sind unveränderlich.
+    match /settings/app/aiPromptHistory/{entryId} {
+      allow read, create: if isAdmin();
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
     // Button icons collection – each document stores one icon (key = iconKey, value = emoji/base64)
     match /buttonIcons/{iconId} {
       allow read: if true;
