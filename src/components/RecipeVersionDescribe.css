@@ -11,65 +11,92 @@
   color: var(--color-text-strong);
 }
 
-.version-describe-intro {
-  margin: 0 0 16px;
+.version-describe-recipe {
+  margin: 0 0 12px;
   color: var(--color-text-muted);
-  line-height: 1.5;
-}
-
-.version-describe-label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 600;
-  color: var(--color-text-body);
+  line-height: 1.4;
 }
 
 .version-describe-field {
-  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: var(--color-surface-input);
+  padding: 4px 8px 8px;
+}
+
+.version-describe-field:focus-within {
+  border-color: var(--color-accent);
 }
 
 .version-describe-textarea {
+  display: block;
   width: 100%;
   box-sizing: border-box;
-  padding: 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background: var(--color-surface-input);
+  padding: 10px 8px;
+  border: none;
+  background: transparent;
   color: var(--color-text);
   font: inherit;
   line-height: 1.5;
-  resize: vertical;
+  resize: none;
 }
 
 .version-describe-textarea:focus {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 1px;
+  outline: none;
+}
+
+.version-describe-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .version-describe-interim {
-  margin: 6px 0 0;
+  flex: 1;
+  min-width: 0;
+  margin: 0 0 0 8px;
   color: var(--color-text-faint);
   font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.version-describe-mic {
+.version-describe-icon-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  padding: 8px 14px;
-  border: 1px solid var(--color-border-strong);
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
   border-radius: 999px;
-  background: transparent;
-  color: var(--color-text-body);
-  font: inherit;
   cursor: pointer;
 }
 
+.version-describe-icon-btn:disabled {
+  cursor: not-allowed;
+}
+
+.version-describe-mic {
+  background: var(--color-surface-raised);
+  color: var(--color-text-body);
+}
+
 .version-describe-mic.listening {
-  border-color: var(--color-bad);
-  color: var(--color-bad-text);
-  background: var(--color-hover-overlay);
+  background: var(--color-bad);
+  color: var(--color-surface-card);
+}
+
+.version-describe-submit {
+  background: var(--color-accent);
+  color: var(--color-surface-card);
+}
+
+.version-describe-submit:disabled {
+  opacity: 0.4;
 }
 
 .version-describe-error {
@@ -101,12 +128,4 @@
   border: 1px solid var(--color-border-strong);
   background: transparent;
   color: var(--color-text-body);
-}
-
-.version-describe-submit {
-  margin-left: auto;
-  border: none;
-  background: var(--color-brand);
-  color: var(--color-surface);
-  font-weight: 600;
 }
