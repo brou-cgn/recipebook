@@ -34,7 +34,7 @@ const BASELINE = {
   'components/EventsPage.css': 151,
   'components/EventsTable.css': 3,
   'components/FlowPage.css': 10,
-  'components/FollowButton.css': 6,
+  'components/FollowButton.css': 4,
   'components/FuerDichEntdecktKachel.css': 11,
   'components/GroupCreateDialog.css': 26,
   'components/GroupDetail.css': 49,

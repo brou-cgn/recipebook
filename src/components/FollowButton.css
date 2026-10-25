@@ -14,14 +14,11 @@
     transform 0.15s ease;
 }
 
-.follow-button:hover,
-.follow-button:focus-visible {
-  background: #fbebd0;
-  border-color: #d4820a;
-}
-
+/* Aktiv-Zustand wie .shopping-list-trigger-button (App.css): leicht größer, abgedunkelt */
 .follow-button:active {
-  transform: scale(0.96);
+  transform: scale(1.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  opacity: 0.2;
 }
 
 .follow-button-icon-img {
