@@ -67,10 +67,11 @@ Rezepts (privat, Liste, öffentlich) bleibt unverändert und gilt auch für „F
 
 ### Wenn ein Konto gelöscht wird
 
-Mit dem Konto werden auch seine Follow-Verbindungen, offenen Anfragen, Sperren und die private
-Zwischenablage für „Für dich entdeckt“ gelöscht. Danach wird nichts mehr von diesem Mitglied
-vorgeschlagen. Rezepte und Kochtagebuch-Einträge sind davon getrennt und folgen den allgemeinen
-Regeln dieser Erklärung zur Löschung von Konten.
+Mit dem Konto werden auch seine Follow-Verbindungen, offenen Anfragen, Sperren, die private
+Zwischenablage für „Für dich entdeckt“ und seine Kochtagebuch-Einträge („Gekocht am“) gelöscht.
+Danach wird nichts mehr von diesem Mitglied vorgeschlagen. Für die Rezepte, die das Mitglied angelegt
+hat, gelten die allgemeinen Regeln dieser Erklärung zur Löschung von Konten (Stand 25.10.2026 noch
+nicht entschieden, siehe `follow.md`).
 
 ### Rechtsgrundlage
 
@@ -87,7 +88,7 @@ indem du den Follower entfernst. Bereits angezeigte Hinweise lassen sich dadurch
    `syncPublicProfile` beim Löschen von `users/{id}`). Gelöscht werden `follows` beider Richtungen,
    die zugehörigen `followCooldowns`, `followLimits` des Mitglieds, `followInbox`, `followBlocks` und
    `fuerDichEntdeckt/current` sowie die Gegenstücke in fremden Postfächern. Grenzen: Rezepte und
-   `cookDates` des Mitglieds bleiben (unabhängig von Follow). Eine Sperrfrist ohne `follows`-Dokument
+   `cookDates` des Mitglieds werden seit PR 10 ebenfalls gelöscht (`functions/accountCleanup.js`), Rezepte bleiben bis zur Entscheidung. Eine Sperrfrist ohne `follows`-Dokument
    (Anfragender hat zurückgezogen) läuft nach höchstens 30 Tagen ab. Konten löscht nur ein Admin, eine
    Selbstlöschung gibt es nicht. Der Text im Abschnitt darf deshalb zusagen, dass die Follow-Verbindungen
    mit dem Konto verschwinden, nicht aber, dass alle Daten des Kontos gelöscht werden.
