@@ -73,16 +73,24 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel }) {
     }
   };
 
+  // Klick neben Pille und Hinweiskarte schließt den Vorschritt.
+  const handleOverlayClick = (e) => {
+    if (isApplying || e.target.closest('.version-describe-pill, .version-describe-note')) return;
+    onCancel();
+  };
+
   const note = error || dictation.error || (isApplying ? 'Wird eingearbeitet …' : dictation.interim);
 
   return (
-    <div className="version-describe-overlay" role="dialog" aria-modal="true" aria-label="Eigene Version erstellen">
+    <div
+      className="version-describe-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Eigene Version erstellen"
+      onClick={handleOverlayClick}
+      onKeyDown={(e) => { if (e.key === 'Escape' && !isApplying) onCancel(); }}
+    >
       <form className="version-describe" onSubmit={handleSubmit}>
-        <div className="version-describe-top">
-          <button type="button" className="version-describe-cancel" onClick={onCancel} disabled={isApplying}>
-            Abbrechen
-          </button>
-        </div>
         {note && (
           <p
             className={`version-describe-note${error || dictation.error ? ' is-error' : ''}`}

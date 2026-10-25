@@ -52,9 +52,17 @@ test('ohne Text überspringt der Pfeil, mit Text sendet er', () => {
   expect(screen.getByRole('button', { name: 'Änderungen einarbeiten' })).toBeEnabled();
 });
 
-test('Abbrechen ruft onCancel', () => {
+test('Klick neben die Pille ruft onCancel, Klick in die Pille nicht', () => {
   const props = setup();
-  fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+  fireEvent.click(screen.getByLabelText('Was war anders?'));
+  expect(props.onCancel).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('dialog'));
+  expect(props.onCancel).toHaveBeenCalledTimes(1);
+});
+
+test('Escape ruft onCancel', () => {
+  const props = setup();
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   expect(props.onCancel).toHaveBeenCalled();
 });
 
