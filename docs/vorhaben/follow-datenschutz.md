@@ -76,9 +76,15 @@ indem du den Follower entfernst. Bereits angezeigte Hinweise lassen sich dadurch
 ## Offene Punkte für die Prüfung
 
 1. **Verantwortlicher, Kontakt, Aufsichtsbehörde:** Stehen schon in der bestehenden Erklärung, hier nicht doppelt.
-2. **Speicherdauer:** Nicht geprüft, ob beim Löschen eines Kontos `follows`, `followInbox`, `followBlocks`,
-   `followCooldowns` und das private Dokument `fuerDichEntdeckt/current` mit entfernt werden. Bevor der Text
-   „wir löschen deine Daten“ sagt, im Code (Konto-Löschung) nachsehen. Bisher steht dazu nichts im Text.
+2. **Speicherdauer / Konto-Löschung (geprüft am 25.10.2026, Ergebnis: Lücke):** Konten löscht nur ein
+   Admin (`deleteUser` in `src/utils/userManagement.js`), eine Selbstlöschung gibt es nicht. Gelöscht wird
+   nur `users/{id}`. Der Firebase-Auth-Account bleibt (laut Code-Kommentar), und es gibt keine
+   Löschfunktion, die Follow-Daten entfernt. Der Trigger `syncPublicProfile` räumt nur `publicProfiles` auf.
+   Übrig bleiben: `follows` in beiden Richtungen, `followCooldowns`, und die Unterseiten
+   `users/{id}/followInbox`, `followBlocks` und `fuerDichEntdeckt/current` (Firestore löscht Unterseiten
+   nicht mit). Zusätzlich bleiben Rezepte und `cookDates` des Mitglieds bestehen, die Follower sehen sie
+   weiter, dann als „Ein Mitglied“. Der Text darf deshalb **nicht** zusagen, dass bei Kontolöschung alle
+   Follow-Daten gelöscht werden. Bis das behoben ist, steht im Entwurf keine Löschzusage.
 3. **Einwilligung:** Der Hinweistext in der Anfragen-Liste entfällt (Entscheidung 25.10.2026). Die
    Einwilligung stützt sich damit allein auf diese Erklärung, ohne dass die Person sie beim Annehmen
    sieht. Ob das als informierte Einwilligung reicht, ist eine Rechtsfrage. Mindestens ein Link auf

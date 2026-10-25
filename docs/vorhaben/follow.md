@@ -77,8 +77,10 @@ aus `users/{uid}/followInbox` verschwindet. Ein Entsperren fehlt noch (siehe Off
 
 - Verwaiste Inbox-Zeilen: Zieht der Anfragende zurück (Client löscht `follows`), bleibt die Zeile in `users/{uid}/followInbox` stehen. PR 3 löst das clientseitig (`openRequestIds` in `followFirestore.js` zählt nur Inbox-Zeilen mit offener `pending`-Beziehung, Seite und Badge nutzen es). Die Zeile selbst bleibt liegen, der Push dedupliziert darüber (kein zweiter Push, solange sie steht); eine aufräumende Function ist nicht nötig, solange das Tageslimit gilt.
 
-- Datenschutzerklärung um Follow und proaktive Ausspielung ergänzen, vor dem Rollout. Entwurf liegt in `docs/vorhaben/follow-datenschutz.md` (25.10.2026), Prüfung und Freigabe beim Eigentümer, Speicherdauer bei Kontolöschung noch ungeprüft. Nennt auch, dass Kochtagebuch-Einträge namentlich an akzeptierte Follower ausgespielt werden, rückwirkend im Zeitfenster des Themas.
+- Datenschutzerklärung um Follow und proaktive Ausspielung ergänzen, vor dem Rollout. Entwurf liegt in `docs/vorhaben/follow-datenschutz.md` (25.10.2026), Prüfung und Freigabe beim Eigentümer. Nennt auch, dass Kochtagebuch-Einträge namentlich an akzeptierte Follower ausgespielt werden, rückwirkend im Zeitfenster des Themas.
 - Verhalten des Themas „Deine Community kocht" ohne Flag `follow` oder ohne Gefolgte (Vorschlag: ausblenden), Platzverteilung in der Rotation (PR 5).
+
+- Kontolöschung räumt Follow-Daten nicht auf (geprüft 25.10.2026): `deleteUser` löscht nur `users/{id}`. `follows`, `followCooldowns` und die Unterseiten `followInbox`, `followBlocks`, `fuerDichEntdeckt/current` bleiben, ebenso Rezepte und `cookDates`, die Follower weiter als „Ein Mitglied“ sehen. Einen Befund im Tech-Check-Dashboard gibt es dazu noch nicht. Vor dem Rollout entscheiden: Aufräumfunktion bei Löschung (Trigger auf `users/{id}`) oder die Datenschutzerklärung sagt es offen.
 
 ## Bekannte Risiken und Voraussetzungen
 
