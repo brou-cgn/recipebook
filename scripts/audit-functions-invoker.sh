@@ -124,6 +124,20 @@ PY
     fi
   done <<< "${members}"
 
+  # Cloud Run kann die Invoker-IAM-Prüfung auch pro Service abschalten; der
+  # Service ist dann öffentlich, obwohl allUsers in der Policy fehlt.
+  iam_disabled="$(gcloud run services describe "${service_name}" \
+    --region "${REGION}" \
+    --project "${PROJECT_ID}" \
+    --format='value(metadata.annotations."run.googleapis.com/invoker-iam-disabled")' 2>/dev/null || true)"
+  echo "  invoker-iam-disabled: ${iam_disabled:--}"
+
+  if [[ "${members}" == *"allUsers"* || "${iam_disabled}" == "true" ]]; then
+    echo "  => öffentlich erreichbar"
+  else
+    echo "  => NICHT öffentlich: Browser-Aufrufe liefern 403"
+  fi
+
   rm -f "${tmp_policy}"
 done
 
