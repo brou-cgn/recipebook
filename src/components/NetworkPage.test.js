@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import NetworkPage from './NetworkPage';
+import { FollowProvider } from '../contexts/FollowContext';
 import { getButtonIcons } from '../utils/customLists';
 import {
   loadNetwork, respondToFollow, stopFollowing, removeFollower,
@@ -11,6 +12,7 @@ jest.mock('../utils/followFirestore', () => ({
   respondToFollow: jest.fn(() => Promise.resolve({ status: 'accepted' })),
   stopFollowing: jest.fn(() => Promise.resolve()),
   removeFollower: jest.fn(() => Promise.resolve()),
+  subscribeMyFollows: jest.fn((uid, onChange) => { onChange({}); return () => {}; }),
 }));
 
 jest.mock('../utils/customLists', () => ({
@@ -139,4 +141,23 @@ test('Kopfzeile: Titel „Mein Netzwerk“ und Schließbutton rechts', async () 
   expect(screen.getByRole('heading', { level: 2, name: 'Mein Netzwerk' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Mein Netzwerk schließen' }));
   expect(onBack).toHaveBeenCalled();
+});
+
+test('Namen in Anfragen, Ich folge und Follower öffnen das Profil, mit Rückweg zur Netzwerk-Seite', async () => {
+  const onOpenProfile = jest.fn();
+  render(
+    <FollowProvider userId="me" enabled onOpenProfile={onOpenProfile}>
+      <NetworkPage currentUser={user} onBack={() => {}} />
+    </FollowProvider>,
+  );
+  fireEvent.click(await screen.findByRole('button', { name: 'Profil von Anna Berg öffnen' }));
+  expect(onOpenProfile).toHaveBeenLastCalledWith('anna', { fromNetwork: true });
+
+  fireEvent.click(screen.getByRole('tab', { name: 'Ich folge' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Profil von Ben Roth öffnen' }));
+  expect(onOpenProfile).toHaveBeenLastCalledWith('ben', { fromNetwork: true });
+
+  fireEvent.click(screen.getByRole('tab', { name: 'Follower' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Profil von Dora Lenz öffnen' }));
+  expect(onOpenProfile).toHaveBeenLastCalledWith('dora', { fromNetwork: true });
 });

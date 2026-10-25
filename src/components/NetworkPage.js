@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './NetworkPage.css';
 import DeleteRowButton from './DeleteRowButton';
 import UndoSnackbar from './UndoSnackbar';
+import FollowName from './FollowName';
 import TrashIcon from './icons/TrashIcon';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
@@ -29,7 +30,7 @@ const withoutId = (rows, id) => rows.filter((row) => row.id !== id);
 
 // Zeile mit Entfernen-Aktion: Desktop zeigt den DeleteRowButton, mobil gilt die
 // Linksswipe-Geste (CLAUDE.md, Löschaktionen). Beide lösen dieselbe Entfernung aus.
-function NetworkRemovableRow({ name, note, onRemove }) {
+function NetworkRemovableRow({ userId, name, note, onRemove }) {
   const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete();
 
   const handleSwipeRemove = (e) => {
@@ -57,7 +58,7 @@ function NetworkRemovableRow({ name, note, onRemove }) {
         onClick={() => { if (isDeleteVisible) reset(); }}
         {...handlers}
       >
-        <span className="network-row-name">{name}</span>
+        <FollowName userId={userId} name={name} className="network-row-name" fromNetwork />
         {note && <span className="network-row-note">{note}</span>}
         <DeleteRowButton className="network-row-delete" itemName={name} onClick={onRemove} />
       </div>
@@ -143,7 +144,7 @@ function NetworkPage({ currentUser, onBack }) {
 
   const renderRequest = (row) => (
     <li key={row.id} className="network-row">
-      <span className="network-row-name">{row.name}</span>
+      <FollowName userId={row.id} name={row.name} className="network-row-name" fromNetwork />
       <div className="network-row-actions">
         <button type="button" className="network-btn network-btn--primary" disabled={busyId === row.id}
           onClick={() => respond(row, 'accept')}>Annehmen</button>
@@ -158,6 +159,7 @@ function NetworkPage({ currentUser, onBack }) {
   const renderFollowing = (row) => (
     <NetworkRemovableRow
       key={row.id}
+      userId={row.id}
       name={row.name}
       note={row.status === 'pending' ? 'Angefragt' : null}
       onRemove={() => removeRow('following', row, () => stopFollowing(uid, row.id))}
@@ -167,6 +169,7 @@ function NetworkPage({ currentUser, onBack }) {
   const renderFollower = (row) => (
     <NetworkRemovableRow
       key={row.id}
+      userId={row.id}
       name={row.name}
       onRemove={() => removeRow('followers', row, () => removeFollower(uid, row.id))}
     />

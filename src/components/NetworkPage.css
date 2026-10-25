@@ -81,6 +81,12 @@
   color: var(--color-text-strong);
 }
 
+.follow-name-link.network-row-name {
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-text-strong);
+}
+
 .network-row-note {
   font-size: 0.85rem;
   color: var(--color-text-soft);

@@ -420,6 +420,8 @@ function App() {
   const [groupsLoading, setGroupsLoading] = useState(true);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [profileUserId, setProfileUserId] = useState(null);
+  // Profil wurde aus der Netzwerk-Seite geöffnet: "Zurück" führt dorthin zurück.
+  const [profileFromNetwork, setProfileFromNetwork] = useState(false);
   const [activeGroupId, setActiveGroupId] = useState(null);
   const [isPrivateListSettingsTabOpen, setIsPrivateListSettingsTabOpen] = useState(false);
   const [publicGroupId, setPublicGroupId] = useState(null);
@@ -2784,7 +2786,10 @@ function App() {
       {!splashDismissed && <SplashScreen exiting={initialStartseiteReady} />}
       <NutritionReferenceProvider enabled={!!currentUser}>
     <RecipeImportQueueProvider userId={currentUser?.id}>
-    <FollowProvider userId={currentUser?.id} enabled={Boolean(currentUser?.follow) && !currentUser?.isGuest} onOpenProfile={setProfileUserId}>
+    <FollowProvider userId={currentUser?.id} enabled={Boolean(currentUser?.follow) && !currentUser?.isGuest} onOpenProfile={(userId, options) => {
+      setProfileUserId(userId);
+      setProfileFromNetwork(Boolean(options?.fromNetwork));
+    }}>
       <AppNutritionRowsSync onRows={setNutritionReferenceRows} />
       <AppReviewRecipesSync onReviewRecipes={setPendingReviewRecipes} />
       {pendingReviewImport && currentUser && (
@@ -2828,9 +2833,14 @@ function App() {
             userId={profileUserId}
             name={allUsers.find((u) => u.id === profileUserId)?.vorname || 'Mitglied'}
             recipes={recipes}
-            onBack={() => setProfileUserId(null)}
+            onBack={() => {
+              setProfileUserId(null);
+              if (profileFromNetwork) setOpenNetworkRequested(true);
+              setProfileFromNetwork(false);
+            }}
             onSelectRecipe={(recipe) => {
               setProfileUserId(null);
+              setProfileFromNetwork(false);
               handleSelectRecipe(recipe);
             }}
           />

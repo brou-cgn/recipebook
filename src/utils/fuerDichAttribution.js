@@ -28,7 +28,41 @@ export const formatActionDay = (day, now = new Date()) => {
   return `vor ${Math.floor(age / 7)} Wochen`;
 };
 
-const joinNames = (names) => (names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} und ${names[names.length - 1]}`);
+/**
+ * Satz für die Rezeptkarte als Bausteine: reiner Text, oder ein Name mit `userId`
+ * (verlinkbar). Unbekannte Mitglieder erscheinen als "Ein Mitglied" ohne `userId`.
+ * @param {Array<{userId: string, kind: string, day: string}>} entries
+ * @param {function(string): string} nameOf - UID -> Name ('' = unbekannt)
+ * @return {Array<{text: string, userId?: string}>} leer ohne Einträge
+ */
+export const describeActorSegments = (entries, nameOf, now = new Date()) => {
+  if (!Array.isArray(entries) || entries.length === 0) return [];
+  const groups = ['cooked', 'created'].map((kind) => ({
+    kind,
+    actors: entries.filter((e) => e.kind === kind).map((e) => {
+      const name = nameOf(e.userId);
+      return name ? { text: name, userId: e.userId } : { text: ANONYMOUS_NAME };
+    }),
+  })).filter((g) => g.actors.length > 0);
+  if (groups.length === 0) return [];
+  const verbs = {
+    cooked: (n) => (n === 1 ? 'hat das gekocht' : 'haben das gekocht'),
+    created: (n) => (n === 1 ? 'hat es angelegt' : 'haben es angelegt'),
+  };
+  const segments = [];
+  groups.forEach((group, groupIndex) => {
+    if (groupIndex > 0) segments.push({ text: ', ' });
+    group.actors.forEach((actor, i) => {
+      if (i > 0) segments.push({ text: i === group.actors.length - 1 ? ' und ' : ', ' });
+      segments.push(actor);
+    });
+    segments.push({ text: ` ${verbs[group.kind](group.actors.length)}` });
+  });
+  const newest = entries.map((e) => e.day).filter(Boolean).sort().pop();
+  const when = formatActionDay(newest, now);
+  if (when) segments.push({ text: ` · ${when}` });
+  return segments;
+};
 
 /**
  * Satz für die Rezeptkarte, z. B. "Anna hat das gekocht · gestern" oder
@@ -39,22 +73,8 @@ const joinNames = (names) => (names.length <= 1 ? names.join('') : `${names.slic
  * @param {function(string): string} nameOf - UID -> Name ('' = unbekannt)
  * @return {string} '' ohne Einträge
  */
-export const describeActors = (entries, nameOf, now = new Date()) => {
-  if (!Array.isArray(entries) || entries.length === 0) return '';
-  const groups = ['cooked', 'created'].map((kind) => {
-    const names = entries.filter((e) => e.kind === kind).map((e) => nameOf(e.userId) || ANONYMOUS_NAME);
-    return { kind, names };
-  }).filter((g) => g.names.length > 0);
-  if (groups.length === 0) return '';
-  const verbs = {
-    cooked: (n) => (n === 1 ? 'hat das gekocht' : 'haben das gekocht'),
-    created: (n) => (n === 1 ? 'hat es angelegt' : 'haben es angelegt'),
-  };
-  const text = groups.map((g) => `${joinNames(g.names)} ${verbs[g.kind](g.names.length)}`).join(', ');
-  const newest = entries.map((e) => e.day).filter(Boolean).sort().pop();
-  const when = formatActionDay(newest, now);
-  return when ? `${text} · ${when}` : text;
-};
+export const describeActors = (entries, nameOf, now = new Date()) =>
+  describeActorSegments(entries, nameOf, now).map((segment) => segment.text).join('');
 
 /**
  * Hört auf das private Attributionsdokument. Gilt nur für die zur aktuellen

@@ -1,4 +1,4 @@
-import { describeActors, formatActionDay } from './fuerDichAttribution';
+import { describeActors, describeActorSegments, formatActionDay } from './fuerDichAttribution';
 
 const NOW = new Date(2026, 9, 19, 12, 0, 0); // 19.10.2026
 const names = { a: 'Anna', b: 'Ben', c: 'Cara' };
@@ -39,5 +39,24 @@ describe('describeActors', () => {
   test('ohne Einträge leer', () => {
     expect(describeActors([], nameOf, NOW)).toBe('');
     expect(describeActors(undefined, nameOf, NOW)).toBe('');
+  });
+});
+
+describe('describeActorSegments', () => {
+  test('Namen tragen die userId, Unbekannte und Text nicht', () => {
+    const segments = describeActorSegments([
+      { userId: 'a', kind: 'cooked', day: '2026-10-14' },
+      { userId: 'b', kind: 'cooked', day: '2026-10-14' },
+      { userId: 'zz', kind: 'created', day: '2026-10-13' },
+    ], nameOf, NOW);
+    expect(segments.filter((s) => s.userId).map((s) => [s.userId, s.text])).toEqual([['a', 'Anna'], ['b', 'Ben']]);
+    expect(segments.find((s) => s.text === 'Ein Mitglied').userId).toBeUndefined();
+    expect(segments.map((s) => s.text).join('')).toBe(
+      'Anna und Ben haben das gekocht, Ein Mitglied hat es angelegt · diese Woche',
+    );
+  });
+
+  test('ohne Einträge leer', () => {
+    expect(describeActorSegments([], nameOf, NOW)).toEqual([]);
   });
 });
