@@ -53,6 +53,7 @@ node scripts/migrateRemoveIsAdmin.js --apply --promote-legacy-admins
 ## audit-functions-invoker.sh
 
 Auditiert Gen2 Functions, zugehörige Cloud-Run-Services und `roles/run.invoker` Bindings.
+Wertet zusätzlich die Annotation `run.googleapis.com/invoker-iam-disabled` aus und meldet je Service, ob er öffentlich erreichbar ist (`allUsers` oder Prüfung abgeschaltet). Services ohne beides liefern bei Browser-Aufrufen 403. Der Hinweis ist zugleich die Warnung, dass Callables auch ohne `allUsers` öffentlich sein können, wenn die Prüfung abgeschaltet ist.
 
 **Usage:**
 ```bash

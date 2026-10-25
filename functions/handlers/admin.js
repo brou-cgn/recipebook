@@ -119,6 +119,9 @@ async function consumeInvitationQuota(uid) {
 exports.sendGroupInvitationEmail = onCall(
     {
       maxInstances: 10,
+      // Ohne allUsers weist Cloud Run Browser-Aufrufe mit 403 ab, bevor request.auth
+      // geprüft wird; die Autorisierung bleibt im Handler (requireAiCaller).
+      invoker: 'public',
       secrets: [smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom],
     },
     async (request) => {
