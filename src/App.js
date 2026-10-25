@@ -82,6 +82,9 @@ import {
   addRecipeToGroup as addRecipeToGroupInFirestore,
   removeRecipeFromGroup as removeRecipeFromGroupInFirestore
 } from './utils/groupFirestore';
+import RecipeVersionDescribe from './components/RecipeVersionDescribe';
+import { applyRecipeVersionChanges } from './utils/aiOcrService';
+import { buildVersionRequest, mergeVersionChanges } from './utils/versionChanges';
 import { filterFuerDichEntdecktGroups, isFuerDichEntdecktList, planFuerDichEntdecktSync, syncFuerDichEntdecktList } from './utils/fuerDichEntdeckt';
 import {
   subscribeToEvents,
@@ -357,6 +360,7 @@ function applyRolePermissionsToUser(user, permissionsMap = {}) {
     fuerDichEntdeckt: rolePerms.fuerDichEntdeckt ?? false,
     follow: rolePerms.follow ?? false,
     eventplanung: rolePerms.eventplanung ?? false,
+    versionDictation: rolePerms.versionDictation ?? false,
   };
 }
 
@@ -407,6 +411,11 @@ function App() {
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [pendingReviewRecipes, setPendingReviewRecipes] = useState([]);
   const [isCreatingVersion, setIsCreatingVersion] = useState(false);
+  // Vorschritt "Änderungen beschreiben" (Berechtigung versionDictation): gilt nur,
+  // solange isFormOpen und isCreatingVersion gesetzt sind; handleCreateVersion
+  // setzt beides bei jedem Start neu, deshalb braucht kein Abbruchpfad einen Reset.
+  const [isDescribingVersion, setIsDescribingVersion] = useState(false);
+  const [versionChangeSummary, setVersionChangeSummary] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [currentView, setCurrentView] = useState('recipes');
   const [groupsOpenedFromStartseite, setGroupsOpenedFromStartseite] = useState(false);
@@ -1555,9 +1564,22 @@ function App() {
   const handleCreateVersion = (recipe) => {
     setEditingRecipe(recipe);
     setIsCreatingVersion(true);
+    setIsDescribingVersion(Boolean(currentUser?.versionDictation));
+    setVersionChangeSummary('');
     setIsFormOpen(true);
     setSelectedRecipe(null);
     // Start the new-version form at the top of the page.
+    window.scrollTo(0, 0);
+  };
+
+  // Beschreibung per KI einarbeiten und das Formular mit dem Ergebnis öffnen.
+  // Wirft bei Fehlern, damit RecipeVersionDescribe die Meldung anzeigen kann.
+  const handleApplyVersionChanges = async (description) => {
+    const original = editingRecipe;
+    const result = await applyRecipeVersionChanges(buildVersionRequest(original), description);
+    setEditingRecipe(mergeVersionChanges(original, result));
+    setVersionChangeSummary(result.summary || '');
+    setIsDescribingVersion(false);
     window.scrollTo(0, 0);
   };
 
@@ -2875,6 +2897,13 @@ function App() {
           onSave={handleSaveTutorial}
           onCancel={handleCancelTutorialForm}
         />
+        ) : isFormOpen && isCreatingVersion && isDescribingVersion ? (
+        <RecipeVersionDescribe
+          recipe={editingRecipe}
+          onApply={handleApplyVersionChanges}
+          onSkip={() => setIsDescribingVersion(false)}
+          onCancel={handleCancelForm}
+        />
         ) : isFormOpen ? (
         // Recipe form - shown with priority over menu/recipe detail
         <RecipeForm
@@ -2884,6 +2913,7 @@ function App() {
           onCancel={handleCancelForm}
           currentUser={currentUser}
           isCreatingVersion={isCreatingVersion}
+          versionChangeSummary={isCreatingVersion ? versionChangeSummary : ''}
           allRecipes={recipes}
           activeGroupId={activeGroupId}
           groups={groups}

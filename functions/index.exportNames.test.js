@@ -14,6 +14,7 @@ const Module = require('module');
 
 const EXPECTED_EXPORTS = [
   'addRecipeViaAPI',
+  'applyRecipeVersionChanges',
   'aggregateRecipeRating',
   'backfillRecipeThumbnails',
   'bringRecipeExport',

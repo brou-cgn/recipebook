@@ -398,7 +398,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
   );
 }
 
-function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCreatingVersion = false, allRecipes = [], activeGroupId = null, groups = [], publicGroupId, privateLists = [], initialWebImportUrl = '', initialWebImportAuthorId = '', onSelectTempRecipe }) {
+function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCreatingVersion = false, versionChangeSummary = '', allRecipes = [], activeGroupId = null, groups = [], publicGroupId, privateLists = [], initialWebImportUrl = '', initialWebImportAuthorId = '', onSelectTempRecipe }) {
   const [title, setTitle] = useState('');
   const [image, setImage] = useState('');
   // Array of { url: string, isDefault: boolean } for multi-image support
@@ -1374,6 +1374,11 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         <div className="version-info-banner">
           <div className="version-info-text">
             <p>Du erstellst eine neue Version von "{recipe?.title}".</p>
+            {versionChangeSummary && (
+              <p className="version-change-summary">
+                Eingearbeitet: {versionChangeSummary} Bitte prüfe Zutaten und Schritte, bevor du speicherst.
+              </p>
+            )}
           </div>
         </div>
       )}

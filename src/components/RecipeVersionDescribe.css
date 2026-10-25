@@ -1,0 +1,112 @@
+.version-describe {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 16px;
+  color: var(--color-text);
+}
+
+.version-describe-title {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  color: var(--color-text-strong);
+}
+
+.version-describe-intro {
+  margin: 0 0 16px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.version-describe-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--color-text-body);
+}
+
+.version-describe-field {
+  position: relative;
+}
+
+.version-describe-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-input);
+  color: var(--color-text);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.version-describe-textarea:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.version-describe-interim {
+  margin: 6px 0 0;
+  color: var(--color-text-faint);
+  font-style: italic;
+}
+
+.version-describe-mic {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-body);
+  font: inherit;
+  cursor: pointer;
+}
+
+.version-describe-mic.listening {
+  border-color: var(--color-bad);
+  color: var(--color-bad-text);
+  background: var(--color-hover-overlay);
+}
+
+.version-describe-error {
+  margin: 8px 0 0;
+  color: var(--color-bad-text);
+}
+
+.version-describe-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.version-describe-actions button {
+  padding: 10px 16px;
+  border-radius: 10px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.version-describe-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.version-describe-cancel,
+.version-describe-skip {
+  border: 1px solid var(--color-border-strong);
+  background: transparent;
+  color: var(--color-text-body);
+}
+
+.version-describe-submit {
+  margin-left: auto;
+  border: none;
+  background: var(--color-brand);
+  color: var(--color-surface);
+  font-weight: 600;
+}
