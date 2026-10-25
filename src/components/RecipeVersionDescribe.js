@@ -14,6 +14,15 @@ function MicIcon() {
   );
 }
 
+function SendIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="12" y1="19" x2="12" y2="5" />
+      <polyline points="5 12 12 5 19 12" />
+    </svg>
+  );
+}
+
 /**
  * Vorschritt von "Eigene Version erstellen" (Berechtigung versionDictation):
  * Die Abwandlung wird frei beschrieben (getippt oder diktiert); danach arbeitet
@@ -57,39 +66,46 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel }) {
       <div className="version-describe-header">
         <h2 className="version-describe-title">Eigene Version erstellen</h2>
       </div>
-      <p className="version-describe-intro">
-        Beschreibe, was du bei „{recipe?.title}“ anders gemacht hast. Die Änderungen werden
-        ins Rezept eingearbeitet, danach kannst du alles noch einmal kontrollieren.
-      </p>
+      <p className="version-describe-recipe">„{recipe?.title}“</p>
 
-      <label className="version-describe-label" htmlFor="version-describe-text">Was war anders?</label>
       <div className="version-describe-field">
         <textarea
           id="version-describe-text"
           className="version-describe-textarea"
           value={text}
           onChange={(e) => setText(e.target.value.slice(0, MAX_LENGTH))}
-          placeholder="z. B. Ich habe Olivenöl statt Butter genommen und die Pfannkuchen 5 Minuten länger gebacken."
-          rows={7}
+          aria-label="Was war anders?"
+          placeholder="Was war anders? z. B. Ich habe Olivenöl statt Butter genommen und die Pfannkuchen 5 Minuten länger gebacken."
+          rows={6}
           disabled={isApplying}
         />
-        {dictation.interim && (
-          <p className="version-describe-interim" aria-live="polite">{dictation.interim}</p>
-        )}
-        {dictation.supported && (
+        <div className="version-describe-toolbar">
+          <p className="version-describe-interim" aria-live="polite">
+            {isApplying ? 'Wird eingearbeitet …' : dictation.interim}
+          </p>
+          {dictation.supported && (
+            <button
+              type="button"
+              className={`version-describe-icon-btn version-describe-mic${dictation.listening ? ' listening' : ''}`}
+              onClick={dictation.listening ? dictation.stop : dictation.start}
+              disabled={isApplying}
+              aria-pressed={dictation.listening}
+              aria-label={dictation.listening ? 'Diktat beenden' : 'Diktat starten'}
+              title={dictation.listening ? 'Diktat beenden' : 'Diktat starten'}
+            >
+              <MicIcon />
+            </button>
+          )}
           <button
-            type="button"
-            className={`version-describe-mic${dictation.listening ? ' listening' : ''}`}
-            onClick={dictation.listening ? dictation.stop : dictation.start}
-            disabled={isApplying}
-            aria-pressed={dictation.listening}
-            aria-label={dictation.listening ? 'Diktat beenden' : 'Diktat starten'}
-            title={dictation.listening ? 'Diktat beenden' : 'Diktat starten'}
+            type="submit"
+            className="version-describe-icon-btn version-describe-submit"
+            disabled={!canSubmit}
+            aria-label="Änderungen einarbeiten"
+            title="Änderungen einarbeiten – danach kannst du alles kontrollieren"
           >
-            <MicIcon />
-            <span>{dictation.listening ? 'Diktat beenden' : 'Diktieren'}</span>
+            <SendIcon />
           </button>
-        )}
+        </div>
       </div>
       {dictation.error && <p className="version-describe-error" role="alert">{dictation.error}</p>}
       {error && <p className="version-describe-error" role="alert">{error}</p>}
@@ -100,9 +116,6 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel }) {
         </button>
         <button type="button" className="version-describe-skip" onClick={onSkip} disabled={isApplying}>
           Ohne Beschreibung weiter
-        </button>
-        <button type="submit" className="version-describe-submit" disabled={!canSubmit}>
-          {isApplying ? 'Wird eingearbeitet …' : 'Änderungen einarbeiten'}
         </button>
       </div>
     </form>
