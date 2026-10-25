@@ -51,8 +51,14 @@ test('sendet eine Data-Nachricht mit Typ follow_request und Vornamen', async () 
   assert.equal(sent[0].data.body, 'Anna möchte dir folgen.');
 });
 
-test('ein versteckter Nutzer oder fehlendes Profil erscheint als "Jemand"', async () => {
-  for (const profile of [{vorname: 'Anna', versteckt: true}, undefined, {}]) {
+test('ein versteckter Nutzer wird mit Namen genannt', async () => {
+  const {admin, db, sent} = fakes({user: optedIn, profile: {vorname: 'Anna', versteckt: true}});
+  await sendFollowRequestPush(admin, db, {followerId: 'anna', followeeId: 'ben'});
+  assert.equal(sent[0].data.body, 'Anna möchte dir folgen.');
+});
+
+test('fehlendes Profil erscheint als "Jemand"', async () => {
+  for (const profile of [undefined, {}]) {
     const {admin, db, sent} = fakes({user: optedIn, profile});
     await sendFollowRequestPush(admin, db, info);
     assert.equal(sent[0].data.body, 'Jemand möchte dir folgen.');
