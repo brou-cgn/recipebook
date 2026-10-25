@@ -1,27 +1,28 @@
+/* Freigestelltes Overlay: Rezept bleibt sichtbar, Eingabe sitzt am unteren Rand. */
+.version-describe-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2300;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(0, 0, 0, 0.35);
+}
+
 .version-describe {
+  width: 100%;
   max-width: 640px;
   margin: 0 auto;
-  padding: 16px;
+  box-sizing: border-box;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
   color: var(--color-text);
-}
-
-.version-describe-title {
-  margin: 0 0 8px;
-  font-size: 1.25rem;
-  color: var(--color-text-strong);
-}
-
-.version-describe-recipe {
-  margin: 0 0 12px;
-  color: var(--color-text-muted);
-  line-height: 1.4;
 }
 
 .version-describe-field {
   border: 1px solid var(--color-border);
   border-radius: 20px;
-  background: var(--color-surface-input);
+  background: var(--color-surface);
   padding: 4px 8px 8px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
 }
 
 .version-describe-field:focus-within {
@@ -100,7 +101,7 @@
 }
 
 .version-describe-error {
-  margin: 8px 0 0;
+  margin: 4px 8px 8px;
   color: var(--color-bad-text);
 }
 
@@ -108,12 +109,12 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 20px;
+  margin: 0 0 10px;
 }
 
 .version-describe-actions button {
-  padding: 10px 16px;
-  border-radius: 10px;
+  padding: 8px 14px;
+  border-radius: 999px;
   font: inherit;
   cursor: pointer;
 }
@@ -126,6 +127,6 @@
 .version-describe-cancel,
 .version-describe-skip {
   border: 1px solid var(--color-border-strong);
-  background: transparent;
+  background: var(--color-surface);
   color: var(--color-text-body);
 }

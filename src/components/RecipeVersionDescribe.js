@@ -62,63 +62,61 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel }) {
   };
 
   return (
-    <form className="version-describe" onSubmit={handleSubmit}>
-      <div className="version-describe-header">
-        <h2 className="version-describe-title">Eigene Version erstellen</h2>
-      </div>
-      <p className="version-describe-recipe">„{recipe?.title}“</p>
-
-      <div className="version-describe-field">
-        <textarea
-          id="version-describe-text"
-          className="version-describe-textarea"
-          value={text}
-          onChange={(e) => setText(e.target.value.slice(0, MAX_LENGTH))}
-          aria-label="Was war anders?"
-          placeholder="Was war anders? z. B. Ich habe Olivenöl statt Butter genommen und die Pfannkuchen 5 Minuten länger gebacken."
-          rows={6}
-          disabled={isApplying}
-        />
-        <div className="version-describe-toolbar">
-          <p className="version-describe-interim" aria-live="polite">
-            {isApplying ? 'Wird eingearbeitet …' : dictation.interim}
-          </p>
-          {dictation.supported && (
-            <button
-              type="button"
-              className={`version-describe-icon-btn version-describe-mic${dictation.listening ? ' listening' : ''}`}
-              onClick={dictation.listening ? dictation.stop : dictation.start}
-              disabled={isApplying}
-              aria-pressed={dictation.listening}
-              aria-label={dictation.listening ? 'Diktat beenden' : 'Diktat starten'}
-              title={dictation.listening ? 'Diktat beenden' : 'Diktat starten'}
-            >
-              <MicIcon />
-            </button>
-          )}
-          <button
-            type="submit"
-            className="version-describe-icon-btn version-describe-submit"
-            disabled={!canSubmit}
-            aria-label="Änderungen einarbeiten"
-            title="Änderungen einarbeiten – danach kannst du alles kontrollieren"
-          >
-            <SendIcon />
+    <div className="version-describe-overlay" role="dialog" aria-modal="true" aria-label="Eigene Version erstellen">
+      <form className="version-describe" onSubmit={handleSubmit}>
+        <div className="version-describe-actions">
+          <button type="button" className="version-describe-cancel" onClick={onCancel} disabled={isApplying}>
+            Abbrechen
+          </button>
+          <button type="button" className="version-describe-skip" onClick={onSkip} disabled={isApplying}>
+            Ohne Beschreibung weiter
           </button>
         </div>
-      </div>
-      {dictation.error && <p className="version-describe-error" role="alert">{dictation.error}</p>}
-      {error && <p className="version-describe-error" role="alert">{error}</p>}
 
-      <div className="version-describe-actions">
-        <button type="button" className="version-describe-cancel" onClick={onCancel} disabled={isApplying}>
-          Abbrechen
-        </button>
-        <button type="button" className="version-describe-skip" onClick={onSkip} disabled={isApplying}>
-          Ohne Beschreibung weiter
-        </button>
-      </div>
-    </form>
+        <div className="version-describe-field">
+          <textarea
+            id="version-describe-text"
+            className="version-describe-textarea"
+            value={text}
+            onChange={(e) => setText(e.target.value.slice(0, MAX_LENGTH))}
+            aria-label="Was war anders?"
+            placeholder={`Was war bei „${recipe?.title}“ anders? z. B. Ich habe Olivenöl statt Butter genommen und die Pfannkuchen 5 Minuten länger gebacken.`}
+            rows={6}
+            disabled={isApplying}
+          />
+          {dictation.error && <p className="version-describe-error" role="alert">{dictation.error}</p>}
+          {error && <p className="version-describe-error" role="alert">{error}</p>}
+          <div className="version-describe-toolbar">
+            <p className="version-describe-interim" aria-live="polite">
+              {isApplying ? 'Wird eingearbeitet …' : dictation.interim}
+            </p>
+            {dictation.supported && (
+              <button
+                type="button"
+                className={`version-describe-icon-btn version-describe-mic${dictation.listening ? ' listening' : ''}`}
+                onClick={dictation.listening ? dictation.stop : dictation.start}
+                disabled={isApplying}
+                aria-pressed={dictation.listening}
+                aria-label={dictation.listening ? 'Diktat beenden' : 'Diktat starten'}
+                title={dictation.listening ? 'Diktat beenden' : 'Diktat starten'}
+              >
+                <MicIcon />
+              </button>
+            )}
+            <button
+              type="submit"
+              className="version-describe-icon-btn version-describe-submit"
+              disabled={!canSubmit}
+              aria-label="Änderungen einarbeiten"
+              title="Änderungen einarbeiten – danach kannst du alles kontrollieren"
+            >
+              <SendIcon />
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
   );
 }
 
