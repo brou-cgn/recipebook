@@ -1,11 +1,19 @@
-/* Freigestelltes Overlay: Rezept bleibt sichtbar, Eingabe sitzt am unteren Rand. */
+/* Freigestelltes Overlay: Rezept bleibt (unscharf) sichtbar, Eingabe sitzt am
+   unteren Rand. Blur wie im Einkaufslisten-Modal (ShoppingListModal.css). */
 .version-describe-overlay {
   position: fixed;
   inset: 0;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  animation: version-describe-overlay-fade-in 0.25s ease-out both;
   z-index: 2300;
   display: flex;
   align-items: flex-end;
-  background: rgba(0, 0, 0, 0.35);
+}
+
+@keyframes version-describe-overlay-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .version-describe {
@@ -17,17 +25,12 @@
   color: var(--color-text);
 }
 
-.version-describe-top {
-  display: flex;
-  margin-bottom: 10px;
-}
-
 .version-describe-note {
   display: inline-block;
   max-width: 100%;
   margin: 0 0 10px;
   padding: 6px 12px;
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--color-surface);
   color: var(--color-text-muted);
   font-style: italic;
@@ -38,8 +41,8 @@
   font-style: normal;
 }
 
-/* Pille wie die Suchpille im Filterdialog (MobileSearchOverlay):
-   Vollradius, min. 48 px hoch, Schatten, wächst mit dem Text. */
+/* Maße der Suchpille im Filterdialog (min. 48 px, Schatten), Ecken wie die
+   Zutaten-Eingabefelder (8 px); wächst mit dem Text. */
 .version-describe-pill {
   display: flex;
   align-items: flex-end;
@@ -47,7 +50,7 @@
   min-height: 48px;
   box-sizing: border-box;
   padding: 6px 6px 6px 16px;
-  border-radius: 9999px;
+  border-radius: 8px;
   background: var(--color-surface);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
@@ -111,19 +114,4 @@
 
 .version-describe-submit:disabled {
   opacity: 0.4;
-}
-
-.version-describe-cancel {
-  padding: 8px 14px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 999px;
-  background: var(--color-surface);
-  color: var(--color-text-body);
-  font: inherit;
-  cursor: pointer;
-}
-
-.version-describe-cancel:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
