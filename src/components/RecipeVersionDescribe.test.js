@@ -26,10 +26,9 @@ afterEach(() => {
 
 test('sendet die getrimmte Beschreibung ab', async () => {
   const props = setup();
-  const submit = screen.getByRole('button', { name: 'Änderungen einarbeiten' });
-  expect(submit).toBeDisabled();
+  expect(screen.queryByRole('button', { name: 'Änderungen einarbeiten' })).not.toBeInTheDocument();
   typeText('  Olivenöl statt Butter  ');
-  fireEvent.click(submit);
+  fireEvent.click(screen.getByRole('button', { name: 'Änderungen einarbeiten' }));
   await waitFor(() => expect(props.onApply).toHaveBeenCalledWith('Olivenöl statt Butter'));
 });
 
@@ -39,8 +38,18 @@ test('zeigt Fehler an und lässt erneut senden oder überspringen', async () => 
   fireEvent.click(screen.getByRole('button', { name: 'Änderungen einarbeiten' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Tageslimit erreicht');
   expect(screen.getByRole('button', { name: 'Änderungen einarbeiten' })).toBeEnabled();
+  typeText('');
   fireEvent.click(screen.getByRole('button', { name: 'Ohne Beschreibung weiter' }));
   expect(props.onSkip).toHaveBeenCalled();
+});
+
+test('ohne Text überspringt der Pfeil, mit Text sendet er', () => {
+  const props = setup();
+  fireEvent.click(screen.getByRole('button', { name: 'Ohne Beschreibung weiter' }));
+  expect(props.onSkip).toHaveBeenCalledTimes(1);
+  typeText('Mehr Salz');
+  expect(screen.queryByRole('button', { name: 'Ohne Beschreibung weiter' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Änderungen einarbeiten' })).toBeEnabled();
 });
 
 test('Abbrechen ruft onCancel', () => {

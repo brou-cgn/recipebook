@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import useSpeechDictation from '../hooks/useSpeechDictation';
 import './RecipeVersionDescribe.css';
 
@@ -14,9 +14,10 @@ function MicIcon() {
   );
 }
 
-function SendIcon() {
+function ArrowIcon({ direction }) {
+  const rotation = direction === 'up' ? 0 : 90;
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: `rotate(${rotation}deg)`, transition: 'transform 0.2s ease' }}>
       <line x1="12" y1="19" x2="12" y2="5" />
       <polyline points="5 12 12 5 19 12" />
     </svg>
@@ -44,8 +45,19 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel }) {
   };
   const dictation = useSpeechDictation({ onText: appendText });
 
+  const textareaRef = useRef(null);
+
+  // Pille wächst mit dem Text (mindestens 2 Zeilen Platz, danach nach Bedarf).
+  useLayoutEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    if (el.scrollHeight > 0) el.style.height = `${el.scrollHeight}px`;
+  }, [text]);
+
   const trimmed = text.trim();
-  const canSubmit = trimmed.length >= 3 && !isApplying;
+  const hasText = trimmed.length > 0;
+  const canSubmit = hasText && !isApplying;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -61,48 +73,52 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel }) {
     }
   };
 
+  const note = error || dictation.error || (isApplying ? 'Wird eingearbeitet …' : dictation.interim);
+
   return (
     <div className="version-describe-overlay" role="dialog" aria-modal="true" aria-label="Eigene Version erstellen">
       <form className="version-describe" onSubmit={handleSubmit}>
-        <div className="version-describe-actions">
+        <div className="version-describe-top">
           <button type="button" className="version-describe-cancel" onClick={onCancel} disabled={isApplying}>
             Abbrechen
           </button>
-          <button type="button" className="version-describe-skip" onClick={onSkip} disabled={isApplying}>
-            Ohne Beschreibung weiter
-          </button>
         </div>
+        {note && (
+          <p
+            className={`version-describe-note${error || dictation.error ? ' is-error' : ''}`}
+            role={error || dictation.error ? 'alert' : undefined}
+            aria-live="polite"
+          >
+            {note}
+          </p>
+        )}
 
-        <div className="version-describe-field">
+        <div className="version-describe-pill">
           <textarea
+            ref={textareaRef}
             id="version-describe-text"
             className="version-describe-textarea"
             value={text}
             onChange={(e) => setText(e.target.value.slice(0, MAX_LENGTH))}
             aria-label="Was war anders?"
-            placeholder={`Was war bei „${recipe?.title}“ anders? z. B. Ich habe Olivenöl statt Butter genommen und die Pfannkuchen 5 Minuten länger gebacken.`}
-            rows={6}
+            placeholder={`Was war bei „${recipe?.title}“ anders?`}
+            rows={2}
             disabled={isApplying}
           />
-          {dictation.error && <p className="version-describe-error" role="alert">{dictation.error}</p>}
-          {error && <p className="version-describe-error" role="alert">{error}</p>}
-          <div className="version-describe-toolbar">
-            <p className="version-describe-interim" aria-live="polite">
-              {isApplying ? 'Wird eingearbeitet …' : dictation.interim}
-            </p>
-            {dictation.supported && (
-              <button
-                type="button"
-                className={`version-describe-icon-btn version-describe-mic${dictation.listening ? ' listening' : ''}`}
-                onClick={dictation.listening ? dictation.stop : dictation.start}
-                disabled={isApplying}
-                aria-pressed={dictation.listening}
-                aria-label={dictation.listening ? 'Diktat beenden' : 'Diktat starten'}
-                title={dictation.listening ? 'Diktat beenden' : 'Diktat starten'}
-              >
-                <MicIcon />
-              </button>
-            )}
+          {dictation.supported && (
+            <button
+              type="button"
+              className={`version-describe-icon-btn version-describe-mic${dictation.listening ? ' listening' : ''}`}
+              onClick={dictation.listening ? dictation.stop : dictation.start}
+              disabled={isApplying}
+              aria-pressed={dictation.listening}
+              aria-label={dictation.listening ? 'Diktat beenden' : 'Diktat starten'}
+              title={dictation.listening ? 'Diktat beenden' : 'Diktat starten'}
+            >
+              <MicIcon />
+            </button>
+          )}
+          {hasText ? (
             <button
               type="submit"
               className="version-describe-icon-btn version-describe-submit"
@@ -110,11 +126,21 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel }) {
               aria-label="Änderungen einarbeiten"
               title="Änderungen einarbeiten – danach kannst du alles kontrollieren"
             >
-              <SendIcon />
+              <ArrowIcon direction="up" />
             </button>
-          </div>
+          ) : (
+            <button
+              type="button"
+              className="version-describe-icon-btn version-describe-submit"
+              onClick={onSkip}
+              disabled={isApplying}
+              aria-label="Ohne Beschreibung weiter"
+              title="Ohne Beschreibung weiter"
+            >
+              <ArrowIcon direction="right" />
+            </button>
+          )}
         </div>
-
       </form>
     </div>
   );
