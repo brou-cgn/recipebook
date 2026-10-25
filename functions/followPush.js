@@ -8,8 +8,8 @@
  *
  * Gesendet wird nur, wenn die Anfrage dem Gefolgten wirklich gezeigt wird (nicht
  * bei stiller Ablehnung oder Blockade) und nur einmal je Paar, solange die
- * Inbox-Zeile besteht. Der Name kommt aus publicProfiles; ein versteckter Nutzer
- * erscheint als "Jemand".
+ * Inbox-Zeile besteht. Der Name kommt aus publicProfiles (auch bei `versteckt`,
+ * das nur Auswahllisten betrifft); ohne Profil oder Vornamen heißt es "Jemand".
  */
 const {sendDataPush} = require('./fuerDichEntdecktPush');
 
@@ -28,7 +28,7 @@ const buildFollowPushText = ({followerId, name}) => ({
 });
 
 /**
- * Vorname aus publicProfiles, außer der Nutzer ist versteckt.
+ * Vorname aus publicProfiles.
  * @return {Promise<string>} Vorname oder leerer String
  */
 const lookupFollowerName = async (db, followerId) => {
@@ -36,7 +36,6 @@ const lookupFollowerName = async (db, followerId) => {
     const snap = await db.doc(`publicProfiles/${followerId}`).get();
     if (!snap.exists) return '';
     const profile = snap.data() || {};
-    if (profile.versteckt === true) return '';
     return typeof profile.vorname === 'string' ? profile.vorname.trim() : '';
   } catch (err) {
     console.error('sendFollowRequestPush: Profil nicht lesbar:', err);
