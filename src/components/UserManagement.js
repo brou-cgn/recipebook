@@ -574,6 +574,11 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
             <p className="modal-warning">
               Sind Sie sicher, dass Sie diesen Benutzer löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.
             </p>
+            <p className="modal-subtitle">
+              Mit dem Benutzer werden auch seine Kochtagebuch-Einträge, seine Follow-Verbindungen und seine nicht
+              öffentlichen Rezepte (Entwürfe und Rezepte nur in privaten Listen) samt Bildern gelöscht. Öffentliche
+              Rezepte bleiben bestehen.
+            </p>
             <div className="modal-actions">
               <button className="btn-cancel" onClick={handleCancelDelete}>
                 Abbrechen

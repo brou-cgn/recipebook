@@ -1,7 +1,7 @@
 # Vorhaben: Follow (Vernetzung zwischen Mitgliedern)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 21.10.2026 (PR 1 bis 7 gemergt).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 25.10.2026 (PR 1 bis 9 gemergt, PR 10 in Arbeit).
 
 **Ziel:** Aktivitäten anderer Mitglieder inspirieren. Wer jemandem folgt (mit Bestätigung des
 Gefolgten), sieht in „Für dich entdeckt" zusätzlich Rezepte, die diese Person zuletzt gekocht
@@ -48,13 +48,14 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | 3 | Netzwerk-Seite (`NetworkPage.js`, Kachel „Netzwerk" unter Chefkoch), Badge am Tab „Chefkoch", Aktion `unblock` + `users/{uid}/followBlocks` | PR #3466 gemergt (18.10.2026), Function-Tests +2, Rules-Test +1, Komponententests 10 |
 | 4a | Folgen-Icon (`FollowButton`, `FollowContext`) am Autor im Rezeptdetail und im Kochtagebuch (Dialog heißt jetzt „Kochtagebuch"), Anfrage mit Snackbar „Rückgängig" | PR #3467 gemergt (Komponententests +6) |
 | 4b | Profilseite (`MemberProfilePage`: Status-Karte, Rezepte der Person), Name wird ab „angefragt" zum Link (`FollowName`) | PR #3469 gemergt (Komponententests +8) |
-| 4c | Folgen-Button nach Artefakt „Follow-Anfrage im Rezeptdetail“: Kachel in der Aktionsleiste des Rezeptdetails (nicht mehr am Autorennamen), runder Button rechts in der Kochtagebuch-Zeile; einrichtbares Icon `followButton` (+ `followButtonDark`) in den Button-Icons, Darkmode in `darkMode.css`. Zustände „angefragt“/„angenommen“ als Button (Abzeichen Uhr/Haken) bleiben offen: der Button verschwindet weiterhin ab „angefragt“. | PR #3473 gemergt (19.10.2026) |
+| 4c | Folgen-Button nach Artefakt „Follow-Anfrage im Rezeptdetail“: Kachel in der Aktionsleiste des Rezeptdetails (nicht mehr am Autorennamen), runder Button rechts in der Kochtagebuch-Zeile; einrichtbares Icon `followButton` (+ `followButtonDark`) in den Button-Icons, Darkmode in `darkMode.css`. Die Zustände „angefragt“/„angenommen“ werden bewusst nicht als Button gezeigt (Entscheidung 25.10.2026): der Button verschwindet ab „angefragt“, der Name wird zum Link. | PR #3473 gemergt (19.10.2026) |
 | 4d | Folgen-Button (und `FollowName`) auch auf der Kachel „Erstellt am“ im Kochtagebuch (Autor des Rezepts); bisher nur auf den „Gekocht am“-Kacheln (Komponententests +2) | PR #3475 gemergt (20.10.2026) |
 | 5 | Themenregel `scopes` (Admin-UI `DiscoverTopicsTab.js`, Nachtlauf, Rotation), privates Attributionsdokument | PR #3470 gemergt (Function-Tests +4, Komponententests +2, Rules-Test +1) |
 | 6 | Namensanzeige auf Karte und im Stapel (liest `users/{uid}/fuerDichEntdeckt/current`) | PR #3472 gemergt (Komponententests +1, Util-Tests 5) |
 | 7 | Netzwerk-Seite („Mein Netzwerk“, Kopfzeile wie „Meine Mise en Place“: Titel über der Karte, Schließbutton rechts) mobil: Linksswipe (`useSwipeToDelete`) für „Ich folge“ und „Follower“, Desktop weiter mit `DeleteRowButton` (Komponententests +2) | PR #3480 gemergt (21.10.2026) |
-| 8 | Push-Tap: Tippen auf „Neue Follow-Anfrage“ öffnet die Netzwerk-Seite (Service-Worker: Kaltstart `/?followNetwork=1`, laufende App Nachricht `OPEN_NETWORK`; `App.js` wechselt zu Chefkoch, `Kueche.js` öffnet die Seite, nur mit Flag `follow`; Tests +3). Ohne Ablage im Cache Storage wie bei `pushTapHandoff.js`, am Gerät (iOS-PWA) noch nicht geprüft | Branch gepusht, PR offen |
-| 9 | Aufräumen bei Kontolöschung (`followCleanup.js`, Aufruf in `syncPublicProfile`), Function-Tests +5 | Branch gepusht, PR offen |
+| 8 | Push-Tap: Tippen auf „Neue Follow-Anfrage“ öffnet die Netzwerk-Seite (Service-Worker: Kaltstart `/?followNetwork=1`, laufende App Nachricht `OPEN_NETWORK`; `App.js` wechselt zu Chefkoch, `Kueche.js` öffnet die Seite, nur mit Flag `follow`; Tests +3). Ohne Ablage im Cache Storage wie bei `pushTapHandoff.js`, am Gerät (iOS-PWA) noch nicht geprüft | PR #3520 gemergt und deployt (25.10.2026) |
+| 9 | Aufräumen bei Kontolöschung (`followCleanup.js`, Aufruf in `syncPublicProfile`), Function-Tests +5 | PR #3520 gemergt und deployt (25.10.2026) |
+| 10 | Profil-Links: Namen in der Netzwerk-Seite (Anfragen, Ich folge, Follower) öffnen das Profil, „Zurück“ führt zur Netzwerk-Seite zurück (`FollowName fromNetwork`, `profileFromNetwork` in `App.js`); der Satz „Anna hat das gekocht“ auf Stapelkarte und Ergebnis-Kachel verlinkt die Namen (`FuerDichAttributionText`, `describeActorSegments`). Komponententests +5; zusätzlich löscht der Trigger bei Kontolöschung die `cookDates` und die nicht öffentlichen Rezepte des Mitglieds (Function-Tests +9), Hinweis im Löschdialog der Benutzerverwaltung | in Arbeit |
 
 Nach jedem PR: Tech-Check-Dashboard aktualisieren (Befunde und `umsetzungen`, siehe `CLAUDE.md`),
 Tabelle hier nachziehen.
@@ -81,7 +82,7 @@ aus `users/{uid}/followInbox` verschwindet. Ein Entsperren fehlt noch (siehe Off
 - Datenschutzerklärung um Follow und proaktive Ausspielung ergänzen, vor dem Rollout. Entwurf liegt in `docs/vorhaben/follow-datenschutz.md` (25.10.2026), Prüfung und Freigabe beim Eigentümer. Nennt auch, dass Kochtagebuch-Einträge namentlich an akzeptierte Follower ausgespielt werden, rückwirkend im Zeitfenster des Themas.
 - Verhalten des Themas „Deine Community kocht" ohne Flag `follow` oder ohne Gefolgte (Vorschlag: ausblenden), Platzverteilung in der Rotation (PR 5).
 
-- Kontolöschung (25.10.2026 behoben): `syncPublicProfile` ruft beim Löschen von `users/{id}` `functions/followCleanup.js` auf und entfernt `follows` beider Richtungen, `followCooldowns`, `followLimits`, die Unterseiten `followInbox`, `followBlocks`, `fuerDichEntdeckt` und die Gegenstücke in fremden Postfächern. Bleibt: Rezepte und `cookDates` (unabhängig von Follow), Sperrfrist ohne `follows`-Dokument (läuft nach 30 Tagen ab), Namen in fremden `fuerDichEntdeckt/current` bis zur nächsten Rotation. Nicht über den Trigger selbst getestet, nur die Logik (Function-Tests +5).
+- Kontolöschung (25.10.2026 behoben): `syncPublicProfile` ruft beim Löschen von `users/{id}` `functions/followCleanup.js` auf und entfernt `follows` beider Richtungen, `followCooldowns`, `followLimits`, die Unterseiten `followInbox`, `followBlocks`, `fuerDichEntdeckt` und die Gegenstücke in fremden Postfächern. Seit PR 10 löscht der Trigger auch die `cookDates` des Mitglieds (`functions/accountCleanup.js`). Ebenfalls gelöscht (Entscheidung 25.10.2026, Tech-Check S23): nur nicht öffentliche Rezepte (Entwürfe, nur in privater Liste) samt Bildern, Bewertungen und fremden `cookDates` darauf. Bleibt: öffentliche Rezepte mit Autorennamen, und Verweise anderer Nutzer auf gelöschte Rezepte (Menüs, Favoriten, Events, abgeleitete Versionen; Verhalten des Clients bei fehlendem Rezept nicht geprüft), Sperrfrist ohne `follows`-Dokument (läuft nach 30 Tagen ab), Namen in fremden `fuerDichEntdeckt/current` bis zur nächsten Rotation. Nicht über den Trigger selbst getestet, nur die Logik (Function-Tests +5).
 
 ## Bekannte Risiken und Voraussetzungen
 

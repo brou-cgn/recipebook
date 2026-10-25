@@ -67,10 +67,12 @@ Rezepts (privat, Liste, öffentlich) bleibt unverändert und gilt auch für „F
 
 ### Wenn ein Konto gelöscht wird
 
-Mit dem Konto werden auch seine Follow-Verbindungen, offenen Anfragen, Sperren und die private
-Zwischenablage für „Für dich entdeckt“ gelöscht. Danach wird nichts mehr von diesem Mitglied
-vorgeschlagen. Rezepte und Kochtagebuch-Einträge sind davon getrennt und folgen den allgemeinen
-Regeln dieser Erklärung zur Löschung von Konten.
+Mit dem Konto werden auch seine Follow-Verbindungen, offenen Anfragen, Sperren, die private
+Zwischenablage für „Für dich entdeckt“ und seine Kochtagebuch-Einträge („Gekocht am“) gelöscht.
+Danach wird nichts mehr von diesem Mitglied vorgeschlagen. Ebenso werden seine nicht öffentlichen Rezepte
+(Entwürfe und Rezepte, die nur in einer privaten Liste liegen) mit ihren Bildern, Bewertungen und den
+Kochtagebuch-Einträgen darauf gelöscht. Öffentliche Rezepte bleiben bestehen und tragen weiter den Namen
+des Autors; für sie gelten die allgemeinen Regeln dieser Erklärung zur Löschung von Konten.
 
 ### Rechtsgrundlage
 
@@ -87,7 +89,7 @@ indem du den Follower entfernst. Bereits angezeigte Hinweise lassen sich dadurch
    `syncPublicProfile` beim Löschen von `users/{id}`). Gelöscht werden `follows` beider Richtungen,
    die zugehörigen `followCooldowns`, `followLimits` des Mitglieds, `followInbox`, `followBlocks` und
    `fuerDichEntdeckt/current` sowie die Gegenstücke in fremden Postfächern. Grenzen: Rezepte und
-   `cookDates` des Mitglieds bleiben (unabhängig von Follow). Eine Sperrfrist ohne `follows`-Dokument
+   `cookDates` des Mitglieds und seine nicht öffentlichen Rezepte werden seit PR 10 ebenfalls gelöscht (`functions/accountCleanup.js`). Öffentliche Rezepte bleiben mit Autorennamen bestehen, ebenso Verweise anderer Nutzer auf gelöschte Rezepte (Menüs, Favoriten, Events, Versionen). Eine Sperrfrist ohne `follows`-Dokument
    (Anfragender hat zurückgezogen) läuft nach höchstens 30 Tagen ab. Konten löscht nur ein Admin, eine
    Selbstlöschung gibt es nicht. Der Text im Abschnitt darf deshalb zusagen, dass die Follow-Verbindungen
    mit dem Konto verschwinden, nicht aber, dass alle Daten des Kontos gelöscht werden.

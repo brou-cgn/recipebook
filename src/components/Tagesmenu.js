@@ -14,6 +14,7 @@ import { decodeRecipeLink } from '../utils/recipeLinks';
 import TagesmenuFilterOverlay from './TagesmenuFilterOverlay';
 import { isFuerDichEntdecktList, hideExpiredCarriedRecipes } from '../utils/fuerDichEntdeckt';
 import { describeActors, useFuerDichAttribution } from '../utils/fuerDichAttribution';
+import FuerDichAttributionText from './FuerDichAttributionText';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import { useOptionalNutritionReference } from '../contexts/NutritionReferenceContext';
 
@@ -1522,7 +1523,9 @@ function Tagesmenu({
                     <p className="tagesmenu-results-tile-author">{authorName}</p>
                   )}
                   {getFollowedByText(recipe.id) && (
-                    <p className="tagesmenu-results-tile-author">{getFollowedByText(recipe.id)}</p>
+                    <p className="tagesmenu-results-tile-author">
+                      <FuerDichAttributionText entries={attribution[recipe.id]} nameOf={getAuthorName} />
+                    </p>
                   )}
                 </div>
               );
@@ -1763,7 +1766,9 @@ function Tagesmenu({
                     <p className="tagesmenu-card-author">{authorName}</p>
                   )}
                   {getFollowedByText(recipe.id) && (
-                    <p className="tagesmenu-card-followed">{getFollowedByText(recipe.id)}</p>
+                    <p className="tagesmenu-card-followed">
+                      <FuerDichAttributionText entries={attribution[recipe.id]} nameOf={getAuthorName} />
+                    </p>
                   )}
                   {recipe.kulinarik &&
                     (Array.isArray(recipe.kulinarik)

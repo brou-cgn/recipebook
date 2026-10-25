@@ -10,6 +10,7 @@ const {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom} = require('../share
 const {requireAiCaller} = require('../shared/auth');
 const {escapeHtml} = require('../shared/common');
 const {cleanupFollowData} = require('../followCleanup');
+const {deleteCookDatesOfUser, deleteNonPublicRecipesOfUser} = require('../accountCleanup');
 
 /**
  * Maximum number of account registrations allowed per IP address per hour.
@@ -442,10 +443,11 @@ function toPublicProfile(data) {
 /**
  * Firestore Trigger: Mirror the public part of users/{uid} into
  * publicProfiles/{uid} on every create, update and delete. On delete it also
- * removes the account's follow data.
+ * removes the account's follow data, cook dates and non-public recipes.
  */
 exports.syncPublicProfile = onDocumentWritten(
-    'users/{userId}',
+    // Löschen eines Kontos räumt Rezepte samt Bildern auf, das kann dauern.
+    {document: 'users/{userId}', timeoutSeconds: 300},
     async (event) => {
       const ref = admin.firestore().collection('publicProfiles').doc(event.params.userId);
       const after = event.data?.after;
@@ -454,6 +456,9 @@ exports.syncPublicProfile = onDocumentWritten(
         // Konto gelöscht: Follow-Daten mit entfernen (followCleanup.js). Hier statt in
         // einem eigenen Trigger, damit es keine zweite Invocation je Nutzer-Write gibt.
         await cleanupFollowData(admin, admin.firestore(), event.params.userId);
+        await deleteCookDatesOfUser(admin.firestore(), event.params.userId);
+        await deleteNonPublicRecipesOfUser(
+            {db: admin.firestore(), bucket: admin.storage().bucket()}, event.params.userId);
         return;
       }
       // Written on every change, not only when a public field changed: users
