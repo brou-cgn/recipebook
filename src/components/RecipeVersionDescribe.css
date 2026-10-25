@@ -13,55 +13,67 @@
   max-width: 640px;
   margin: 0 auto;
   box-sizing: border-box;
-  padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  padding: 12px 24px calc(12px + env(safe-area-inset-bottom, 0px));
   color: var(--color-text);
 }
 
-.version-describe-field {
-  border: 1px solid var(--color-border);
-  border-radius: 20px;
-  background: var(--color-surface);
-  padding: 4px 8px 8px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+.version-describe-top {
+  display: flex;
+  margin-bottom: 10px;
 }
 
-.version-describe-field:focus-within {
-  border-color: var(--color-accent);
+.version-describe-note {
+  display: inline-block;
+  max-width: 100%;
+  margin: 0 0 10px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.version-describe-note.is-error {
+  color: var(--color-bad-text);
+  font-style: normal;
+}
+
+/* Pille wie die Suchpille im Filterdialog (MobileSearchOverlay):
+   Vollradius, min. 48 px hoch, Schatten, wächst mit dem Text. */
+.version-describe-pill {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  min-height: 48px;
+  box-sizing: border-box;
+  padding: 6px 6px 6px 16px;
+  border-radius: 9999px;
+  background: var(--color-surface);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.version-describe-pill:focus-within {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 0;
 }
 
 .version-describe-textarea {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px 8px;
-  border: none;
-  background: transparent;
-  color: var(--color-text);
-  font: inherit;
-  line-height: 1.5;
-  resize: none;
-}
-
-.version-describe-textarea:focus {
-  outline: none;
-}
-
-.version-describe-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.version-describe-interim {
   flex: 1;
   min-width: 0;
-  margin: 0 0 0 8px;
-  color: var(--color-text-faint);
-  font-style: italic;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-height: 40vh;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 7px 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text);
+  /* 16px verhindert den iOS-Autozoom beim Fokus */
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.4;
+  resize: none;
+  overflow-y: auto;
 }
 
 .version-describe-icon-btn {
@@ -69,12 +81,13 @@
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   border: none;
   border-radius: 999px;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .version-describe-icon-btn:disabled {
@@ -100,33 +113,17 @@
   opacity: 0.4;
 }
 
-.version-describe-error {
-  margin: 4px 8px 8px;
-  color: var(--color-bad-text);
-}
-
-.version-describe-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0 0 10px;
-}
-
-.version-describe-actions button {
+.version-describe-cancel {
   padding: 8px 14px;
+  border: 1px solid var(--color-border-strong);
   border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-body);
   font: inherit;
   cursor: pointer;
 }
 
-.version-describe-actions button:disabled {
+.version-describe-cancel:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.version-describe-cancel,
-.version-describe-skip {
-  border: 1px solid var(--color-border-strong);
-  background: var(--color-surface);
-  color: var(--color-text-body);
 }
