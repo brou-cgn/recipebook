@@ -21,6 +21,7 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | Namen auf der Karte | Im MVP. Ablage in `users/{uid}/fuerDichEntdeckt/current` (nur Eigentümer lesbar, nur Cloud Function schreibt), höchstens 3 Akteure je Rezept, nur Tag (angezeigt grob: „gestern", „diese Woche"). Nicht im Listendokument `groups/…` (für jeden lesbar). |
 | Datenmodell | `follows/{followerId}_{followeeId}` mit `status` (`pending`/`accepted`), `createdAt`, `respondedAt`. Anlegen und Antworten über Callables `requestFollow` und `respondFollow` (Rate-Limit, Sperrprüfung). Lesen: Beteiligte. Löschen: beide Seiten. |
 | Rückschau | „Alle gelten": Nach Annahme zählen auch frühere Einträge (begrenzt durch das Zeitfenster des Themas). Der Anfragetext nennt das ausdrücklich. |
+| Zustimmung | Kein Zustimmungsdialog im Kochtagebuch (21.10.2026 offen, am 25.10.2026 entschieden). Die Zustimmung ist das Annehmen der Anfrage, dafür nennt der Hinweistext dort, was sichtbar wird: Name an Follower, gekochte und angelegte Rezepte, auch frühere im Zeitfenster. Dazu die Datenschutzerklärung. Das Risiko bei sensiblen Ernährungsdaten bleibt bis zum Opt-out pro Eintrag (Phase 2) bestehen. |
 | Opt-out pro Eintrag | Keiner im MVP (bewusste Entscheidung, Risiko: sensible Ernährungsdaten). Für Phase 2 vorgemerkt. |
 | Limit pro Person | Keins (Empfehlung war 2, bei Massenimport kann eine Person alle 5 Plätze füllen). |
 | Auffinden | Die Anfrage startet überall, wo Autoren sichtbar sind (Rezeptkarte, Kochtagebuch, Profil). Kein Handle, keine Suche im MVP. |
@@ -76,8 +77,8 @@ aus `users/{uid}/followInbox` verschwindet. Ein Entsperren fehlt noch (siehe Off
 
 - Verwaiste Inbox-Zeilen: Zieht der Anfragende zurück (Client löscht `follows`), bleibt die Zeile in `users/{uid}/followInbox` stehen. PR 3 löst das clientseitig (`openRequestIds` in `followFirestore.js` zählt nur Inbox-Zeilen mit offener `pending`-Beziehung, Seite und Badge nutzen es). Die Zeile selbst bleibt liegen, der Push dedupliziert darüber (kein zweiter Push, solange sie steht); eine aufräumende Function ist nicht nötig, solange das Tageslimit gilt.
 
-- Zustimmungsdialog im Kochtagebuch (in der Skizze ohne).
-- Datenschutzerklärung um Follow und proaktive Ausspielung ergänzen, vor dem Rollout (Text liefert Claude, Freigabe beim Eigentümer).
+- Hinweistext in der Anfragen-Liste (`NetworkPage.js`, `renderRequest`): Die Zeile zeigt bisher nur Name und Buttons. Der Text muss beim Annehmen nennen, was sichtbar wird (siehe Entscheidung „Zustimmung“). Vor dem Rollout.
+- Datenschutzerklärung um Follow und proaktive Ausspielung ergänzen, vor dem Rollout (Text liefert Claude, Freigabe beim Eigentümer). Nennt auch, dass Kochtagebuch-Einträge namentlich an akzeptierte Follower ausgespielt werden, rückwirkend im Zeitfenster des Themas.
 - Verhalten des Themas „Deine Community kocht" ohne Flag `follow` oder ohne Gefolgte (Vorschlag: ausblenden), Platzverteilung in der Rotation (PR 5).
 
 ## Bekannte Risiken und Voraussetzungen
