@@ -11,6 +11,7 @@ const deployScript = workflow.jobs.deploy.steps.find(
 ).run;
 const iamReadFailure = 'Failed to get the IAM Policy on the Service projects/example/locations/us-central1/services/sharerecipe';
 const readinessFailure = 'Could not create or update Cloud Run service recipeimportpage. Provisioning revision instances to receive traffic. Resource readiness deadline exceeded.';
+const quotaFailure = "Error: Request to https://cloudbilling.googleapis.com/v1/projects/example/billingInfo had HTTP Error: 429, Quota exceeded for quota metric 'All requests' and limit 'All requests per minute'";
 
 function runDeploy(responses) {
   return spawnSync('bash', ['-e', '-o', 'pipefail', '-c', `
@@ -47,6 +48,15 @@ describe('Firebase deploy workflow retries', () => {
     expect(result.stdout).toContain('Firebase deploy attempt 2/3');
     expect(result.stdout.match(/firebase invoked/g)).toHaveLength(2);
     expect(result.stderr).toContain('sleep 15');
+  });
+
+  test('retries a Cloud Billing API quota error and completes the deploy', () => {
+    const result = runDeploy([quotaFailure, 'Deploy complete!']);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('Firebase deploy attempt 2/3');
+    expect(result.stdout.match(/firebase invoked/g)).toHaveLength(2);
+    expect(result.stderr).toContain('sleep 10');
   });
 
   test('fails after three persistent IAM policy read failures', () => {
