@@ -2252,7 +2252,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   )}
                 </button>
                 )}
-                {(recipe.isPrivate || !isRecipePublic) && (() => {
+                {(recipe.isPrivate || !isRecipePublic) && currentUser?.id === recipe.authorId && (() => {
                   const badgeIcon = isBase64Image(privateBadgeIcon) ? (
                     <img src={privateBadgeIcon} alt="Privat" className="button-icon-image" draggable="false" />
                   ) : (
