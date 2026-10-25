@@ -2315,9 +2315,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     )}
                   </button>
                 )}
-                {isRecipePublic && !recipe.isPrivate && (
-                  <FollowButton userId={recipe.authorId} name={authorName} icon={followButtonIcon} />
-                )}
+                <FollowButton userId={recipe.authorId} name={authorName} icon={followButtonIcon} />
                 <RecipeRating
                   recipeId={recipe.id}
                   ratingAvg={recipe.ratingAvg}
