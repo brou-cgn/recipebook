@@ -65,6 +65,13 @@ kein technischer Zugriffsschutz: Rezepte und Kochtagebuch-Einträge sind für an
 App im Rahmen der Sichtbarkeit des jeweiligen Rezepts auch ohne Folgen einsehbar. Die Sichtbarkeit eines
 Rezepts (privat, Liste, öffentlich) bleibt unverändert und gilt auch für „Für dich entdeckt“.
 
+### Wenn ein Konto gelöscht wird
+
+Mit dem Konto werden auch seine Follow-Verbindungen, offenen Anfragen, Sperren und die private
+Zwischenablage für „Für dich entdeckt“ gelöscht. Danach wird nichts mehr von diesem Mitglied
+vorgeschlagen. Rezepte und Kochtagebuch-Einträge sind davon getrennt und folgen den allgemeinen
+Regeln dieser Erklärung zur Löschung von Konten.
+
 ### Rechtsgrundlage
 
 Das Annehmen einer Anfrage ist deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO) in die namentliche
@@ -76,15 +83,14 @@ indem du den Follower entfernst. Bereits angezeigte Hinweise lassen sich dadurch
 ## Offene Punkte für die Prüfung
 
 1. **Verantwortlicher, Kontakt, Aufsichtsbehörde:** Stehen schon in der bestehenden Erklärung, hier nicht doppelt.
-2. **Speicherdauer / Konto-Löschung (geprüft am 25.10.2026, Ergebnis: Lücke):** Konten löscht nur ein
-   Admin (`deleteUser` in `src/utils/userManagement.js`), eine Selbstlöschung gibt es nicht. Gelöscht wird
-   nur `users/{id}`. Der Firebase-Auth-Account bleibt (laut Code-Kommentar), und es gibt keine
-   Löschfunktion, die Follow-Daten entfernt. Der Trigger `syncPublicProfile` räumt nur `publicProfiles` auf.
-   Übrig bleiben: `follows` in beiden Richtungen, `followCooldowns`, und die Unterseiten
-   `users/{id}/followInbox`, `followBlocks` und `fuerDichEntdeckt/current` (Firestore löscht Unterseiten
-   nicht mit). Zusätzlich bleiben Rezepte und `cookDates` des Mitglieds bestehen, die Follower sehen sie
-   weiter, dann als „Ein Mitglied“. Der Text darf deshalb **nicht** zusagen, dass bei Kontolöschung alle
-   Follow-Daten gelöscht werden. Bis das behoben ist, steht im Entwurf keine Löschzusage.
+2. **Speicherdauer / Konto-Löschung:** Gelöst am 25.10.2026 (`functions/followCleanup.js`, aufgerufen vom Trigger
+   `syncPublicProfile` beim Löschen von `users/{id}`). Gelöscht werden `follows` beider Richtungen,
+   die zugehörigen `followCooldowns`, `followLimits` des Mitglieds, `followInbox`, `followBlocks` und
+   `fuerDichEntdeckt/current` sowie die Gegenstücke in fremden Postfächern. Grenzen: Rezepte und
+   `cookDates` des Mitglieds bleiben (unabhängig von Follow). Eine Sperrfrist ohne `follows`-Dokument
+   (Anfragender hat zurückgezogen) läuft nach höchstens 30 Tagen ab. Konten löscht nur ein Admin, eine
+   Selbstlöschung gibt es nicht. Der Text im Abschnitt darf deshalb zusagen, dass die Follow-Verbindungen
+   mit dem Konto verschwinden, nicht aber, dass alle Daten des Kontos gelöscht werden.
 3. **Einwilligung:** Der Hinweistext in der Anfragen-Liste entfällt (Entscheidung 25.10.2026). Die
    Einwilligung stützt sich damit allein auf diese Erklärung, ohne dass die Person sie beim Annehmen
    sieht. Ob das als informierte Einwilligung reicht, ist eine Rechtsfrage. Mindestens ein Link auf

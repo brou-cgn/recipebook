@@ -9,6 +9,7 @@ const admin = require('firebase-admin');
 const {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom} = require('../shared/secrets');
 const {requireAiCaller} = require('../shared/auth');
 const {escapeHtml} = require('../shared/common');
+const {cleanupFollowData} = require('../followCleanup');
 
 /**
  * Maximum number of account registrations allowed per IP address per hour.
@@ -440,7 +441,8 @@ function toPublicProfile(data) {
 
 /**
  * Firestore Trigger: Mirror the public part of users/{uid} into
- * publicProfiles/{uid} on every create, update and delete.
+ * publicProfiles/{uid} on every create, update and delete. On delete it also
+ * removes the account's follow data.
  */
 exports.syncPublicProfile = onDocumentWritten(
     'users/{userId}',
@@ -449,6 +451,9 @@ exports.syncPublicProfile = onDocumentWritten(
       const after = event.data?.after;
       if (!after || !after.exists) {
         await ref.delete();
+        // Konto gelöscht: Follow-Daten mit entfernen (followCleanup.js). Hier statt in
+        // einem eigenen Trigger, damit es keine zweite Invocation je Nutzer-Write gibt.
+        await cleanupFollowData(admin, admin.firestore(), event.params.userId);
         return;
       }
       // Written on every change, not only when a public field changed: users

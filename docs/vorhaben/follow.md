@@ -54,6 +54,7 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | 6 | Namensanzeige auf Karte und im Stapel (liest `users/{uid}/fuerDichEntdeckt/current`) | PR #3472 gemergt (Komponententests +1, Util-Tests 5) |
 | 7 | Netzwerk-Seite („Mein Netzwerk“, Kopfzeile wie „Meine Mise en Place“: Titel über der Karte, Schließbutton rechts) mobil: Linksswipe (`useSwipeToDelete`) für „Ich folge“ und „Follower“, Desktop weiter mit `DeleteRowButton` (Komponententests +2) | PR #3480 gemergt (21.10.2026) |
 | 8 | Push-Tap: Tippen auf „Neue Follow-Anfrage“ öffnet die Netzwerk-Seite (Service-Worker: Kaltstart `/?followNetwork=1`, laufende App Nachricht `OPEN_NETWORK`; `App.js` wechselt zu Chefkoch, `Kueche.js` öffnet die Seite, nur mit Flag `follow`; Tests +3). Ohne Ablage im Cache Storage wie bei `pushTapHandoff.js`, am Gerät (iOS-PWA) noch nicht geprüft | Branch gepusht, PR offen |
+| 9 | Aufräumen bei Kontolöschung (`followCleanup.js`, Aufruf in `syncPublicProfile`), Function-Tests +5 | Branch gepusht, PR offen |
 
 Nach jedem PR: Tech-Check-Dashboard aktualisieren (Befunde und `umsetzungen`, siehe `CLAUDE.md`),
 Tabelle hier nachziehen.
@@ -80,7 +81,7 @@ aus `users/{uid}/followInbox` verschwindet. Ein Entsperren fehlt noch (siehe Off
 - Datenschutzerklärung um Follow und proaktive Ausspielung ergänzen, vor dem Rollout. Entwurf liegt in `docs/vorhaben/follow-datenschutz.md` (25.10.2026), Prüfung und Freigabe beim Eigentümer. Nennt auch, dass Kochtagebuch-Einträge namentlich an akzeptierte Follower ausgespielt werden, rückwirkend im Zeitfenster des Themas.
 - Verhalten des Themas „Deine Community kocht" ohne Flag `follow` oder ohne Gefolgte (Vorschlag: ausblenden), Platzverteilung in der Rotation (PR 5).
 
-- Kontolöschung räumt Follow-Daten nicht auf (geprüft 25.10.2026): `deleteUser` löscht nur `users/{id}`. `follows`, `followCooldowns` und die Unterseiten `followInbox`, `followBlocks`, `fuerDichEntdeckt/current` bleiben, ebenso Rezepte und `cookDates`, die Follower weiter als „Ein Mitglied“ sehen. Einen Befund im Tech-Check-Dashboard gibt es dazu noch nicht. Vor dem Rollout entscheiden: Aufräumfunktion bei Löschung (Trigger auf `users/{id}`) oder die Datenschutzerklärung sagt es offen.
+- Kontolöschung (25.10.2026 behoben): `syncPublicProfile` ruft beim Löschen von `users/{id}` `functions/followCleanup.js` auf und entfernt `follows` beider Richtungen, `followCooldowns`, `followLimits`, die Unterseiten `followInbox`, `followBlocks`, `fuerDichEntdeckt` und die Gegenstücke in fremden Postfächern. Bleibt: Rezepte und `cookDates` (unabhängig von Follow), Sperrfrist ohne `follows`-Dokument (läuft nach 30 Tagen ab), Namen in fremden `fuerDichEntdeckt/current` bis zur nächsten Rotation. Nicht über den Trigger selbst getestet, nur die Logik (Function-Tests +5).
 
 ## Bekannte Risiken und Voraussetzungen
 
