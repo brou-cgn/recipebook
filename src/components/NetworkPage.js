@@ -66,6 +66,41 @@ function NetworkRemovableRow({ userId, name, note, onRemove }) {
   );
 }
 
+// Ausklappbarer Hinweis über den Anfragen: Wer „Annehmen“ tippt, willigt in die namentliche
+// Anzeige ein (Datenschutz-Entwurf docs/vorhaben/follow-datenschutz.md). Der Text muss mit
+// diesem Entwurf übereinstimmen, insbesondere Rückwirkung und Zeitfenster.
+function FollowVisibilityInfo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="network-info">
+      <button
+        type="button"
+        className="network-info-toggle"
+        aria-expanded={open}
+        aria-controls="network-info-body"
+        onClick={() => setOpen((v) => !v)}
+      >
+        Was wird sichtbar?
+      </button>
+      {open && (
+        <div id="network-info-body" className="network-info-body">
+          <p>
+            Mit dem Annehmen zeigt die App dieser Person in „Für dich entdeckt“ Rezepte, die du
+            gekocht oder angelegt hast, mit deinem Vornamen und einer groben Zeitangabe
+            („Anna hat das gekocht · gestern“).
+          </p>
+          <ul>
+            <li>Rückwirkend: Es zählen auch frühere Einträge aus dem Zeitfenster der Rubrik (derzeit bis zu 30 Tage).</li>
+            <li>Verwendet werden deine „Gekocht am“-Einträge und deine angelegten Rezepte. Einzelne Einträge lassen sich nicht ausnehmen.</li>
+            <li>Daraus lassen sich Rückschlüsse auf deine Ernährungsgewohnheiten ziehen.</li>
+            <li>Du kannst Follower jederzeit entfernen. Bereits angezeigte Hinweise lassen sich nicht zurückholen.</li>
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NetworkPage({ currentUser, onBack }) {
   const uid = currentUser?.id;
   const [activeTab, setActiveTab] = useState('requests');
@@ -225,6 +260,7 @@ function NetworkPage({ currentUser, onBack }) {
           <p className="network-empty">Wird geladen …</p>
         ) : (
           <>
+            {activeTab === 'requests' && rows.length > 0 && <FollowVisibilityInfo />}
             {rows.length === 0 ? (
               <p className="network-empty">{EMPTY_TEXT[activeTab]}</p>
             ) : (

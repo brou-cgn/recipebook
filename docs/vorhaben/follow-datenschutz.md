@@ -93,10 +93,11 @@ indem du den Follower entfernst. Bereits angezeigte Hinweise lassen sich dadurch
    (Anfragender hat zurückgezogen) läuft nach höchstens 30 Tagen ab. Konten löscht nur ein Admin, eine
    Selbstlöschung gibt es nicht. Der Text im Abschnitt darf deshalb zusagen, dass die Follow-Verbindungen
    mit dem Konto verschwinden, nicht aber, dass alle Daten des Kontos gelöscht werden.
-3. **Einwilligung:** Der Hinweistext in der Anfragen-Liste entfällt (Entscheidung 25.10.2026). Die
-   Einwilligung stützt sich damit allein auf diese Erklärung, ohne dass die Person sie beim Annehmen
-   sieht. Ob das als informierte Einwilligung reicht, ist eine Rechtsfrage. Mindestens ein Link auf
-   diesen Abschnitt neben „Annehmen“ würde den Text sichtbar machen.
+3. **Einwilligung:** Ein dauerhafter Hinweistext in der Anfragen-Liste entfällt (Entscheidung 25.10.2026).
+   Stattdessen steht über den Anfragen der ausklappbare Link „Was wird sichtbar?“ (PR 11) mit einer Kurzfassung
+   dieses Abschnitts (Namensanzeige, Rückwirkung, Ernährungsbezug, Entfernen). Er ist nicht verpflichtend zu öffnen. Ob das als
+   informierte Einwilligung reicht, ist weiter eine Rechtsfrage. Ändert sich der Abschnitt, den Text in
+   `NetworkPage.js` (`FollowVisibilityInfo`) mitziehen.
 4. **Rückwirkung und Zeitfenster:** „derzeit bis zu 30 Tage“ steht so im Text, die Admin-Einstellung des
    Themas kann abweichen. Bei Änderung des Zeitfensters den Text nachziehen.
 5. **Gäste:** Anonyme Gäste können Follow nicht nutzen (`canUseFollow` schließt sie aus). Der Text
