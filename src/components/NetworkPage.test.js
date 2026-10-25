@@ -43,6 +43,26 @@ test('zeigt offene Anfragen und nimmt eine an', async () => {
   expect(loadNetwork).toHaveBeenCalledTimes(2);
 });
 
+test('Anfragen: „Was wird sichtbar?“ klappt den Hinweis auf und zu', async () => {
+  render(<NetworkPage currentUser={user} onBack={() => {}} />);
+  await screen.findByText('Anna Berg');
+  const toggle = screen.getByRole('button', { name: 'Was wird sichtbar?' });
+  expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  expect(screen.queryByText(/Rückwirkend/)).not.toBeInTheDocument();
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByText(/Rückwirkend/)).toBeInTheDocument();
+  fireEvent.click(toggle);
+  expect(screen.queryByText(/Rückwirkend/)).not.toBeInTheDocument();
+});
+
+test('Ohne offene Anfragen gibt es keinen Sichtbarkeits-Hinweis', async () => {
+  loadNetwork.mockResolvedValue({ ...network(), requests: [] });
+  render(<NetworkPage currentUser={user} onBack={() => {}} />);
+  await screen.findByText('Keine offenen Anfragen.');
+  expect(screen.queryByRole('button', { name: 'Was wird sichtbar?' })).not.toBeInTheDocument();
+});
+
 test('Ablehnen und Blockieren rufen respondFollow', async () => {
   render(<NetworkPage currentUser={user} onBack={() => {}} />);
   await screen.findByText('Anna Berg');

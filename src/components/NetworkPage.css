@@ -140,6 +140,35 @@
   margin: 1rem 0;
 }
 
+.network-info {
+  margin: 0.5rem 0 0.75rem;
+}
+
+.network-info-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-text-muted);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.network-info-body {
+  margin-top: 0.5rem;
+  color: var(--color-text-soft);
+  font-size: 0.9rem;
+}
+
+.network-info-body p {
+  margin: 0 0 0.4rem;
+}
+
+.network-info-body ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
 .network-error {
   color: var(--color-bad-text);
   margin: 0.5rem 0;
