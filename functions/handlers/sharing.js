@@ -799,7 +799,9 @@ exports.getGuestRecipes = onCall(
  * Returns: { success: boolean, sent: number }
  */
 exports.notifyPrivateListMembers = onCall(
-    {maxInstances: 10},
+    // Ohne allUsers weist Cloud Run Browser-Aufrufe mit 403 ab, bevor request.auth
+    // geprüft wird; die Autorisierung bleibt im Handler (authorizeListPush).
+    {maxInstances: 10, invoker: 'public'},
     async (request) => {
       const callerAuth = request.auth;
       if (!callerAuth) {
