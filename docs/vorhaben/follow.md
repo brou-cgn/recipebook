@@ -21,6 +21,7 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | Namen auf der Karte | Im MVP. Ablage in `users/{uid}/fuerDichEntdeckt/current` (nur Eigentümer lesbar, nur Cloud Function schreibt), höchstens 3 Akteure je Rezept, nur Tag (angezeigt grob: „gestern", „diese Woche"). Nicht im Listendokument `groups/…` (für jeden lesbar). |
 | Datenmodell | `follows/{followerId}_{followeeId}` mit `status` (`pending`/`accepted`), `createdAt`, `respondedAt`. Anlegen und Antworten über Callables `requestFollow` und `respondFollow` (Rate-Limit, Sperrprüfung). Lesen: Beteiligte. Löschen: beide Seiten. |
 | Rückschau | „Alle gelten": Nach Annahme zählen auch frühere Einträge (begrenzt durch das Zeitfenster des Themas). Der Anfragetext nennt das ausdrücklich. |
+| Zustimmung | Kein Zustimmungsdialog im Kochtagebuch und kein Hinweistext in der Anfragen-Liste (25.10.2026). Die Zustimmung ist das Annehmen der Anfrage, informiert wird nur über die Datenschutzerklärung (Entwurf: `follow-datenschutz.md`). Risiko: Beim Annehmen steht nirgends, was sichtbar wird; ob das als informierte Einwilligung reicht, ist offen. Das Risiko bei sensiblen Ernährungsdaten bleibt bis zum Opt-out pro Eintrag (Phase 2) bestehen. |
 | Opt-out pro Eintrag | Keiner im MVP (bewusste Entscheidung, Risiko: sensible Ernährungsdaten). Für Phase 2 vorgemerkt. |
 | Limit pro Person | Keins (Empfehlung war 2, bei Massenimport kann eine Person alle 5 Plätze füllen). |
 | Auffinden | Die Anfrage startet überall, wo Autoren sichtbar sind (Rezeptkarte, Kochtagebuch, Profil). Kein Handle, keine Suche im MVP. |
@@ -52,6 +53,8 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | 5 | Themenregel `scopes` (Admin-UI `DiscoverTopicsTab.js`, Nachtlauf, Rotation), privates Attributionsdokument | PR #3470 gemergt (Function-Tests +4, Komponententests +2, Rules-Test +1) |
 | 6 | Namensanzeige auf Karte und im Stapel (liest `users/{uid}/fuerDichEntdeckt/current`) | PR #3472 gemergt (Komponententests +1, Util-Tests 5) |
 | 7 | Netzwerk-Seite („Mein Netzwerk“, Kopfzeile wie „Meine Mise en Place“: Titel über der Karte, Schließbutton rechts) mobil: Linksswipe (`useSwipeToDelete`) für „Ich folge“ und „Follower“, Desktop weiter mit `DeleteRowButton` (Komponententests +2) | PR #3480 gemergt (21.10.2026) |
+| 8 | Push-Tap: Tippen auf „Neue Follow-Anfrage“ öffnet die Netzwerk-Seite (Service-Worker: Kaltstart `/?followNetwork=1`, laufende App Nachricht `OPEN_NETWORK`; `App.js` wechselt zu Chefkoch, `Kueche.js` öffnet die Seite, nur mit Flag `follow`; Tests +3). Ohne Ablage im Cache Storage wie bei `pushTapHandoff.js`, am Gerät (iOS-PWA) noch nicht geprüft | Branch gepusht, PR offen |
+| 9 | Aufräumen bei Kontolöschung (`followCleanup.js`, Aufruf in `syncPublicProfile`), Function-Tests +5 | Branch gepusht, PR offen |
 
 Nach jedem PR: Tech-Check-Dashboard aktualisieren (Befunde und `umsetzungen`, siehe `CLAUDE.md`),
 Tabelle hier nachziehen.
@@ -74,11 +77,11 @@ aus `users/{uid}/followInbox` verschwindet. Ein Entsperren fehlt noch (siehe Off
 ## Offen
 
 - Verwaiste Inbox-Zeilen: Zieht der Anfragende zurück (Client löscht `follows`), bleibt die Zeile in `users/{uid}/followInbox` stehen. PR 3 löst das clientseitig (`openRequestIds` in `followFirestore.js` zählt nur Inbox-Zeilen mit offener `pending`-Beziehung, Seite und Badge nutzen es). Die Zeile selbst bleibt liegen, der Push dedupliziert darüber (kein zweiter Push, solange sie steht); eine aufräumende Function ist nicht nötig, solange das Tageslimit gilt.
-- Tippen auf den Push öffnet die Startseite; der Sprung in die Netzwerk-Seite (`follow_request` in `src/service-worker.js`/`firebase-messaging-sw.js`, Übergabe wie `pushTapHandoff.js`) ist noch nicht gebaut. Eigener kleiner PR, gehört zu PR 3 nur lose.
 
-- Zustimmungsdialog im Kochtagebuch (in der Skizze ohne).
-- Datenschutzerklärung um Follow und proaktive Ausspielung ergänzen, vor dem Rollout (Text liefert Claude, Freigabe beim Eigentümer).
+- Datenschutzerklärung um Follow und proaktive Ausspielung ergänzen, vor dem Rollout. Entwurf liegt in `docs/vorhaben/follow-datenschutz.md` (25.10.2026), Prüfung und Freigabe beim Eigentümer. Nennt auch, dass Kochtagebuch-Einträge namentlich an akzeptierte Follower ausgespielt werden, rückwirkend im Zeitfenster des Themas.
 - Verhalten des Themas „Deine Community kocht" ohne Flag `follow` oder ohne Gefolgte (Vorschlag: ausblenden), Platzverteilung in der Rotation (PR 5).
+
+- Kontolöschung (25.10.2026 behoben): `syncPublicProfile` ruft beim Löschen von `users/{id}` `functions/followCleanup.js` auf und entfernt `follows` beider Richtungen, `followCooldowns`, `followLimits`, die Unterseiten `followInbox`, `followBlocks`, `fuerDichEntdeckt` und die Gegenstücke in fremden Postfächern. Bleibt: Rezepte und `cookDates` (unabhängig von Follow), Sperrfrist ohne `follows`-Dokument (läuft nach 30 Tagen ab), Namen in fremden `fuerDichEntdeckt/current` bis zur nächsten Rotation. Nicht über den Trigger selbst getestet, nur die Logik (Function-Tests +5).
 
 ## Bekannte Risiken und Voraussetzungen
 

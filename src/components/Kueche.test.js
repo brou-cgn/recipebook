@@ -63,6 +63,8 @@ jest.mock('../contexts/NutritionReferenceContext', () => ({
   useNutritionReference: () => mockNutritionReferenceStateHolder,
 }));
 
+jest.mock('./NetworkPage', () => () => <div data-testid="network-page" />);
+
 describe('Kueche', () => {
   beforeEach(() => {
     getKalibrierungsSnapshotsOnce.mockResolvedValue([
@@ -993,5 +995,41 @@ describe('Kueche', () => {
     );
 
     expect(screen.queryByTestId('eventplanung-tile')).not.toBeInTheDocument();
+  });
+
+  test('openNetwork opens the network page for users with the follow flag and reports it', () => {
+    const onNetworkOpened = jest.fn();
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={[]}
+        currentUser={{ id: 'user-1', role: 'user', follow: true }}
+        openNetwork
+        onNetworkOpened={onNetworkOpened}
+      />
+    );
+
+    expect(screen.getByTestId('network-page')).toBeInTheDocument();
+    expect(onNetworkOpened).toHaveBeenCalled();
+  });
+
+  test('openNetwork without the follow flag stays on Chefkoch but is still consumed', () => {
+    const onNetworkOpened = jest.fn();
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={[]}
+        currentUser={{ id: 'user-1', role: 'user' }}
+        openNetwork
+        onNetworkOpened={onNetworkOpened}
+      />
+    );
+
+    expect(screen.queryByTestId('network-page')).not.toBeInTheDocument();
+    expect(onNetworkOpened).toHaveBeenCalled();
   });
 });

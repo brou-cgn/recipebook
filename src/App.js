@@ -617,6 +617,22 @@ function App() {
     }
   });
 
+  // A tap on a follow-request push notification opens the network page under
+  // Chefkoch (public/firebase-messaging-sw.js). Cold start: ?followNetwork=1;
+  // running app: the service worker posts OPEN_NETWORK.
+  const [openNetworkRequested, setOpenNetworkRequested] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!urlParams.get('followNetwork')) return false;
+    urlParams.delete('followNetwork');
+    const remainingSearch = urlParams.toString();
+    window.history.replaceState(
+      {},
+      '',
+      window.location.pathname + (remainingSearch ? '?' + remainingSearch : '') + window.location.hash
+    );
+    return true;
+  });
+
   // IDs of groups the current user belongs to – used to filter group-scoped recipes
   const userGroupIds = useMemo(() => groups.map((g) => g.id), [groups]);
 
@@ -1048,6 +1064,23 @@ function App() {
     if (!currentUser) return; // wait for login
     setCurrentView('events');
   }, [currentUser, pendingEventReminderId]);
+
+  useEffect(() => {
+    const container = 'serviceWorker' in navigator ? navigator.serviceWorker : null;
+    const handleMessage = (event) => {
+      if (event.data?.type === 'OPEN_NETWORK') setOpenNetworkRequested(true);
+    };
+    container?.addEventListener('message', handleMessage);
+    return () => container?.removeEventListener('message', handleMessage);
+  }, []);
+
+  // Once the user is loaded, switch to Chefkoch; Kueche opens the network page
+  // and clears the request (onNetworkOpened).
+  useEffect(() => {
+    if (!openNetworkRequested || !currentUser) return;
+    handleViewChange('kueche');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, openNetworkRequested]);
 
   // A tap on a background-import push notification usually lands on an app
   // that was paused in the background: its review queue is the state from
@@ -2966,6 +2999,8 @@ function App() {
           onViewChange={handleViewChange}
           openPersonalData={kuecheOpenPersonalData}
           onPersonalDataOpened={() => setKuecheOpenPersonalData(false)}
+          openNetwork={openNetworkRequested}
+          onNetworkOpened={() => setOpenNetworkRequested(false)}
           onPersonalDataVisibilityChange={setIsKuechePersonalDataOpen}
         />
         ) : currentView === 'groups' ? (

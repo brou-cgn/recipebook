@@ -110,6 +110,26 @@ describe('notificationclick', () => {
     expect(client.postMessage).toHaveBeenCalledWith({ type: 'REVIEW_IMPORT', recipeId: 'abc123' });
   });
 
+  test('Follow-Anfrage, App läuft: Nachricht an die Seite, kein Neuladen', async () => {
+    const client = makeClient();
+    const { listeners, clients } = loadServiceWorker([client]);
+
+    await click(listeners, { type: 'follow_request' });
+
+    expect(client.postMessage).toHaveBeenCalledWith({ type: 'OPEN_NETWORK' });
+    expect(client.focus).toHaveBeenCalled();
+    expect(client.navigate).not.toHaveBeenCalled();
+    expect(clients.openWindow).not.toHaveBeenCalled();
+  });
+
+  test('Follow-Anfrage, App geschlossen: Fenster mit followNetwork öffnen', async () => {
+    const { listeners, clients } = loadServiceWorker([]);
+
+    await click(listeners, { type: 'follow_request' });
+
+    expect(clients.openWindow).toHaveBeenCalledWith('/?followNetwork=1');
+  });
+
   test('Import fertig, App geschlossen: Fenster mit Rezept-ID öffnen', async () => {
     const { listeners, clients } = loadServiceWorker([]);
 
