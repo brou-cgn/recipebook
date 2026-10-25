@@ -2874,12 +2874,6 @@
   border-color: #666;
 }
 
-[data-theme="dark"] .follow-button:hover,
-[data-theme="dark"] .follow-button:focus-visible {
-  background: #402C1C;
-  border-color: #DF7A00;
-}
-
 [data-theme="dark"] .private-badge-button {
   border-color: #555 !important;
 }
