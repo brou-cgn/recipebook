@@ -128,6 +128,9 @@ function buildNotificationTargetUrl(data) {
   if (data?.type === 'import_ready' || data?.type === 'import_failed') {
     return `/?reviewImport=${encodeURIComponent(data.recipeId || '1')}`;
   }
+  if (data?.type === 'follow_request') {
+    return '/?followNetwork=1';
+  }
   return '/';
 }
 
@@ -209,6 +212,11 @@ self.addEventListener('notificationclick', (event) => {
           type: 'REVIEW_IMPORT',
           recipeId: data.recipeId || '',
         });
+        outcome = client.focus();
+      } else if (data?.type === 'follow_request') {
+        // Laufende App nicht neu laden (navigate ist auf iOS unzuverlässig):
+        // Nachricht an die Seite, App.js öffnet die Netzwerk-Seite.
+        client.postMessage({type: 'OPEN_NETWORK'});
         outcome = client.focus();
       } else if ('navigate' in client) {
         outcome = client.navigate(targetUrl).then((c) => c.focus());

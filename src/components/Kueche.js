@@ -189,7 +189,7 @@ function EventCalibrationBarChart({ snapshots }) {
   );
 }
 
-function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated, onViewChange, openPersonalData, onPersonalDataOpened, onPersonalDataVisibilityChange }) {
+function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated, onViewChange, openPersonalData, onPersonalDataOpened, openNetwork, onNetworkOpened, onPersonalDataVisibilityChange }) {
   const { rows: nutritionReferenceRows } = useNutritionReference();
   const [showTimeline, setShowTimeline] = useState(false);
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
@@ -232,6 +232,15 @@ function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSe
     }
     prevOpenPersonalData.current = openPersonalData;
   }, [openPersonalData, onPersonalDataOpened]);
+
+  useEffect(() => {
+    if (!openNetwork) return;
+    if (canUseFollow) {
+      setShowPersonalData(false);
+      setShowNetwork(true);
+    }
+    if (onNetworkOpened) onNetworkOpened();
+  }, [openNetwork, canUseFollow, onNetworkOpened]);
 
   useEffect(() => {
     personalDataVisibilityChangeRef.current = onPersonalDataVisibilityChange;

@@ -52,6 +52,7 @@ Kochtagebuch, Profil). Keine Mockups im Repo.
 | 5 | Themenregel `scopes` (Admin-UI `DiscoverTopicsTab.js`, Nachtlauf, Rotation), privates Attributionsdokument | PR #3470 gemergt (Function-Tests +4, Komponententests +2, Rules-Test +1) |
 | 6 | Namensanzeige auf Karte und im Stapel (liest `users/{uid}/fuerDichEntdeckt/current`) | PR #3472 gemergt (Komponententests +1, Util-Tests 5) |
 | 7 | Netzwerk-Seite („Mein Netzwerk“, Kopfzeile wie „Meine Mise en Place“: Titel über der Karte, Schließbutton rechts) mobil: Linksswipe (`useSwipeToDelete`) für „Ich folge“ und „Follower“, Desktop weiter mit `DeleteRowButton` (Komponententests +2) | PR #3480 gemergt (21.10.2026) |
+| 8 | Push-Tap: Tippen auf „Neue Follow-Anfrage“ öffnet die Netzwerk-Seite (Service-Worker: Kaltstart `/?followNetwork=1`, laufende App Nachricht `OPEN_NETWORK`; `App.js` wechselt zu Chefkoch, `Kueche.js` öffnet die Seite, nur mit Flag `follow`; Tests +3). Ohne Ablage im Cache Storage wie bei `pushTapHandoff.js`, am Gerät (iOS-PWA) noch nicht geprüft | Branch gepusht, PR offen |
 
 Nach jedem PR: Tech-Check-Dashboard aktualisieren (Befunde und `umsetzungen`, siehe `CLAUDE.md`),
 Tabelle hier nachziehen.
@@ -74,7 +75,6 @@ aus `users/{uid}/followInbox` verschwindet. Ein Entsperren fehlt noch (siehe Off
 ## Offen
 
 - Verwaiste Inbox-Zeilen: Zieht der Anfragende zurück (Client löscht `follows`), bleibt die Zeile in `users/{uid}/followInbox` stehen. PR 3 löst das clientseitig (`openRequestIds` in `followFirestore.js` zählt nur Inbox-Zeilen mit offener `pending`-Beziehung, Seite und Badge nutzen es). Die Zeile selbst bleibt liegen, der Push dedupliziert darüber (kein zweiter Push, solange sie steht); eine aufräumende Function ist nicht nötig, solange das Tageslimit gilt.
-- Tippen auf den Push öffnet die Startseite; der Sprung in die Netzwerk-Seite (`follow_request` in `src/service-worker.js`/`firebase-messaging-sw.js`, Übergabe wie `pushTapHandoff.js`) ist noch nicht gebaut. Eigener kleiner PR, gehört zu PR 3 nur lose.
 
 - Zustimmungsdialog im Kochtagebuch (in der Skizze ohne).
 - Datenschutzerklärung um Follow und proaktive Ausspielung ergänzen, vor dem Rollout (Text liefert Claude, Freigabe beim Eigentümer).
