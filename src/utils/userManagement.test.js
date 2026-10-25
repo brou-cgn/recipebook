@@ -973,6 +973,12 @@ describe("User Management Utilities", () => {
         expect(ROLE_PERMISSIONS_DEFAULT[role].webimport).toBe(false);
       });
     });
+    test("should have versionDictation enabled only for admin", () => {
+      expect(ROLE_PERMISSIONS_DEFAULT[ROLES.ADMIN].versionDictation).toBe(true);
+      [ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].forEach((role) => {
+        expect(ROLE_PERMISSIONS_DEFAULT[role].versionDictation).toBe(false);
+      });
+    });
     test("should have sortCarousel enabled for admin", () => { expect(ROLE_PERMISSIONS_DEFAULT[ROLES.ADMIN].sortCarousel).toBe(true); });
     test("should have sortCarousel disabled for non-admin roles", () => {
       [ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].forEach((role) => {

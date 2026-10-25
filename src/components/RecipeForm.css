@@ -1484,3 +1484,7 @@
   font-size: 0.875rem;
   color: #a33a26;
 }
+
+.version-info-text .version-change-summary {
+  margin-top: 0.5rem;
+}

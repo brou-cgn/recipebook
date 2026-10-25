@@ -602,6 +602,19 @@ export async function rephraseRecipeSteps(stepTexts) {
   return result.data.steps;
 }
 
+/**
+ * Arbeitet eine (diktierte) Beschreibung der Abwandlung in ein Rezept ein
+ * (Cloud Function applyRecipeVersionChanges, Berechtigung "versionDictation").
+ * @param {Object} recipeRequest - Ergebnis von buildVersionRequest()
+ * @param {string} description - freie Beschreibung, was anders gemacht wurde
+ * @returns {Promise<{title: string, portionen: ?number, kochdauer: ?number, ingredients: Array, steps: Array, summary: string}>}
+ */
+export async function applyRecipeVersionChanges(recipeRequest, description) {
+  const callable = httpsCallable(functions, 'applyRecipeVersionChanges');
+  const result = await callable({ recipe: recipeRequest, description });
+  return result.data;
+}
+
 // Export configuration for testing purposes
 export const __testing__ = {
   getRecipeExtractionPrompt

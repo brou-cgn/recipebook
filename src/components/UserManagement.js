@@ -41,6 +41,7 @@ const ROLE_PERMISSION_COLUMNS = [
   { key: 'fuerDichEntdeckt', label: 'Für dich entdeckt', name: 'Für dich entdeckt (Startseiten-Kachel)' },
   { key: 'follow', label: 'Follow', name: 'Follow (Mitgliedern folgen)' },
   { key: 'eventplanung', label: 'Eventplanung', name: 'Eventplanung (Kachel Chefkoch & mehr)' },
+  { key: 'versionDictation', label: 'Version diktieren', name: 'Version per Beschreibung/Diktat erstellen' },
 ];
 
 function UserManagement({ onBack, currentUser, allUsers = [] }) {
@@ -279,9 +280,10 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
 
         <div className="role-permissions-section">
           <h3>Funktionen nach Berechtigung</h3>
-          <p className="info-text">Legen Sie hier fest, welche Berechtigungsgruppen Zugriff auf Einstellungen, Fotoscan, Webimport, App-Aufrufe (Daten), App-Aufrufe (Menüpunkt), Rezepteimport, Bewertungs-Löschen, Nährwert-Abbruch, Sortier-Karussell, Listen bearbeiten, Testmodus Tagesmenü, Erscheinungsbild, Rezept drucken, Rezeptindex, Startseite, Küche-FAB, Onboarding-Testmodus, Tutorial anlegen, Tutorial bearbeiten und Für dich entdeckt haben.</p>
+          <p className="info-text">Legen Sie hier fest, welche Berechtigungsgruppen Zugriff auf Einstellungen, Fotoscan, Webimport, App-Aufrufe (Daten), App-Aufrufe (Menüpunkt), Rezepteimport, Bewertungs-Löschen, Nährwert-Abbruch, Sortier-Karussell, Listen bearbeiten, Testmodus Tagesmenü, Erscheinungsbild, Rezept drucken, Rezeptindex, Startseite, Küche-FAB, Onboarding-Testmodus, Tutorial anlegen, Tutorial bearbeiten, Für dich entdeckt und Version diktieren haben.</p>
           <p className="info-text">„Tutorial anlegen“ schaltet den langen Druck auf „Rezept hinzufügen“ frei („Neues Tutorial hinzufügen“), „Tutorial bearbeiten“ den langen Druck auf eine Tutorialkarte. Ohne die Berechtigung bleibt die kurze Geste (Rezept anlegen bzw. Video abspielen) unverändert.</p>
           <p className="info-text">„Für dich entdeckt“ blendet die gleichnamige Kachel auf der Startseite ein und legt für die Nutzer der Rolle eine persönliche interaktive Liste „Für dich entdeckt“ an (Zielliste: ihre Alltagsklassiker-Liste). Ohne die Berechtigung sind Kachel und Liste ausgeblendet.</p>
+          <p className="info-text">„Version diktieren“ schaltet bei „Eigene Version erstellen“ einen Vorschritt frei: Du beschreibst (tippen oder diktieren), was du anders gemacht hast, die KI arbeitet es ins Rezept ein, und du kontrollierst das Ergebnis im Formular.</p>
           <p className="info-text">Damit das Indexfeld im Rezept sichtbar ist, muss die Berechtigung „Rezeptindex“ für die jeweilige Rolle aktiviert sein.</p>
           <div className="role-permissions-table-container">
             <table className="role-permissions-table">

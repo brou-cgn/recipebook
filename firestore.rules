@@ -450,6 +450,9 @@ service cloud.firestore {
     match /aiRephraseLimits/{limitId} {
       allow read, write: if false;
     }
+    match /aiVersionLimits/{limitId} {
+      allow read, write: if false;
+    }
     // Tageszähler des Import-Sweepers recoverStuckImportJobs je Autor (Tech-Check S21).
     match /importSweeperLimits/{limitId} {
       allow read, write: if false;

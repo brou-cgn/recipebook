@@ -34,4 +34,5 @@ Object.assign(exports, require('./handlers/discover'), require('./handlers/follo
     require('./handlers/importPages'),
     require('./handlers/importVideo'),
     require('./handlers/importScheduled'),
-    require('./handlers/nutritionRecalc'));
+    require('./handlers/nutritionRecalc'),
+    require('./handlers/versionChanges'));

@@ -1191,7 +1191,7 @@ export const setBackgroundUpdatesEnabled = async (userId, enabled) => {
 };
 
 /**
- * Default role permissions for settingsAccess, fotoscan, webimport, appCalls, appCallsMenu, recipeImport, deleteRating, abortCalc, sortCarousel, editLists, tagesmenuTestmode, themeToggle, printRecipe, recipeIndex, startseite, kuecheFab, onboardingTestmode, addTutorial, editTutorial, fuerDichEntdeckt and eventplanung features.
+ * Default role permissions for settingsAccess, fotoscan, webimport, appCalls, appCallsMenu, recipeImport, deleteRating, abortCalc, sortCarousel, editLists, tagesmenuTestmode, themeToggle, printRecipe, recipeIndex, startseite, kuecheFab, onboardingTestmode, addTutorial, editTutorial, fuerDichEntdeckt, eventplanung and versionDictation features.
  * Admins get all features enabled by default; printRecipe is enabled for all roles by default; recipeIndex defaults to true for admin/moderator; all other features start with all disabled for non-admin roles.
  *
  * addTutorial/editTutorial steuern die beiden Longpress-Einstiege rund um
@@ -1209,13 +1209,19 @@ export const setBackgroundUpdatesEnabled = async (userId, enabled) => {
  * Auswertung der Getränkeverbräuche). Standardmäßig nur für Admins an. Dieselbe
  * Berechtigung steuert in firestore.rules (canSeeEventplanung) den Lesezugriff auf
  * die zugrunde liegenden kalibrierungsSnapshots.
+ *
+ * versionDictation schaltet bei "Eigene Version erstellen" (fremdes Rezept) den
+ * vorgeschalteten Schritt frei, in dem die Abwandlung frei beschrieben (getippt
+ * oder diktiert) und per KI ins Formular eingearbeitet wird
+ * (Cloud Function applyRecipeVersionChanges prüft dasselbe Flag serverseitig).
+ * Standardmäßig nur für Admins an.
  */
 export const ROLE_PERMISSIONS_DEFAULT = {
-  [ROLES.ADMIN]: { settingsAccess: true, fotoscan: true, webimport: true, appCalls: true, appCallsMenu: true, recipeImport: true, deleteRating: true, abortCalc: true, sortCarousel: true, editLists: true, tagesmenuTestmode: true, themeToggle: true, printRecipe: true, recipeIndex: true, startseite: false, kuecheFab: false, onboardingTestmode: true, addTutorial: true, editTutorial: true, fuerDichEntdeckt: false, follow: false, eventplanung: true },
-  [ROLES.MODERATOR]: { settingsAccess: true, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: true, startseite: false, kuecheFab: false, onboardingTestmode: false, addTutorial: false, editTutorial: false, fuerDichEntdeckt: false, follow: false, eventplanung: false },
-  [ROLES.EDIT]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: false, startseite: false, kuecheFab: false, onboardingTestmode: false, addTutorial: false, editTutorial: false, fuerDichEntdeckt: false, follow: false, eventplanung: false },
-  [ROLES.COMMENT]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: false, startseite: false, kuecheFab: false, onboardingTestmode: false, addTutorial: false, editTutorial: false, fuerDichEntdeckt: false, follow: false, eventplanung: false },
-  [ROLES.READ]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: false, startseite: false, kuecheFab: false, onboardingTestmode: false, addTutorial: false, editTutorial: false, fuerDichEntdeckt: false, follow: false, eventplanung: false },
+  [ROLES.ADMIN]: { settingsAccess: true, fotoscan: true, webimport: true, appCalls: true, appCallsMenu: true, recipeImport: true, deleteRating: true, abortCalc: true, sortCarousel: true, editLists: true, tagesmenuTestmode: true, themeToggle: true, printRecipe: true, recipeIndex: true, startseite: false, kuecheFab: false, onboardingTestmode: true, addTutorial: true, editTutorial: true, fuerDichEntdeckt: false, follow: false, eventplanung: true, versionDictation: true },
+  [ROLES.MODERATOR]: { settingsAccess: true, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: true, startseite: false, kuecheFab: false, onboardingTestmode: false, addTutorial: false, editTutorial: false, fuerDichEntdeckt: false, follow: false, eventplanung: false, versionDictation: false },
+  [ROLES.EDIT]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: false, startseite: false, kuecheFab: false, onboardingTestmode: false, addTutorial: false, editTutorial: false, fuerDichEntdeckt: false, follow: false, eventplanung: false, versionDictation: false },
+  [ROLES.COMMENT]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: false, startseite: false, kuecheFab: false, onboardingTestmode: false, addTutorial: false, editTutorial: false, fuerDichEntdeckt: false, follow: false, eventplanung: false, versionDictation: false },
+  [ROLES.READ]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: false, startseite: false, kuecheFab: false, onboardingTestmode: false, addTutorial: false, editTutorial: false, fuerDichEntdeckt: false, follow: false, eventplanung: false, versionDictation: false },
 };
 
 /**
