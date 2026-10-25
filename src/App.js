@@ -1567,8 +1567,19 @@ function App() {
     setIsDescribingVersion(Boolean(currentUser?.versionDictation));
     setVersionChangeSummary('');
     setIsFormOpen(true);
+    // Mit Beschreibungs-Vorschritt bleibt das Rezept als Hintergrund des
+    // Overlays stehen; ohne ihn öffnet direkt das Formular.
+    if (!currentUser?.versionDictation) {
+      setSelectedRecipe(null);
+      // Start the new-version form at the top of the page.
+      window.scrollTo(0, 0);
+    }
+  };
+
+  // Vorschritt verlassen und das Formular zeigen (Rezept-Detail verschwindet).
+  const handleLeaveVersionDescribe = () => {
+    setIsDescribingVersion(false);
     setSelectedRecipe(null);
-    // Start the new-version form at the top of the page.
     window.scrollTo(0, 0);
   };
 
@@ -1579,8 +1590,7 @@ function App() {
     const result = await applyRecipeVersionChanges(buildVersionRequest(original), description);
     setEditingRecipe(mergeVersionChanges(original, result));
     setVersionChangeSummary(result.summary || '');
-    setIsDescribingVersion(false);
-    window.scrollTo(0, 0);
+    handleLeaveVersionDescribe();
   };
 
   const handleSaveRecipe = async (recipe) => {
@@ -2868,6 +2878,7 @@ function App() {
           />
         ) : selectedRecipe ? (
         // Recipe detail view - shown regardless of currentView
+        <>
         <RecipeDetail
           recipe={selectedRecipe}
           onBack={handleBackFromRecipeDetail}
@@ -2884,6 +2895,15 @@ function App() {
           menuPortionCount={selectedMenu ? (selectedMenu.portionCounts?.[selectedRecipe?.id] ?? null) : null}
           onPortionCountChange={selectedMenu ? handleMenuPortionCountChange : undefined}
         />
+        {isFormOpen && isCreatingVersion && isDescribingVersion && (
+          <RecipeVersionDescribe
+            recipe={editingRecipe}
+            onApply={handleApplyVersionChanges}
+            onSkip={handleLeaveVersionDescribe}
+            onCancel={handleCancelForm}
+          />
+        )}
+        </>
         ) : isTutorialFormOpen ? (
         // Tutorial form - opened via longpress on the "Rezept hinzufügen"
         // button (see RecipeList.js) for a new tutorial, or via longpress on
@@ -2896,13 +2916,6 @@ function App() {
           mealCategories={mealCategories}
           onSave={handleSaveTutorial}
           onCancel={handleCancelTutorialForm}
-        />
-        ) : isFormOpen && isCreatingVersion && isDescribingVersion ? (
-        <RecipeVersionDescribe
-          recipe={editingRecipe}
-          onApply={handleApplyVersionChanges}
-          onSkip={() => setIsDescribingVersion(false)}
-          onCancel={handleCancelForm}
         />
         ) : isFormOpen ? (
         // Recipe form - shown with priority over menu/recipe detail
