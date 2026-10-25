@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if command -v python3 >/dev/null 2>&1; then
+  PYTHON=python3
+else
+  PYTHON=python
+fi
+
 PROJECT_ID="${1:-$(gcloud config get-value project 2>/dev/null || true)}"
 REGION="${2:-us-central1}"
 
@@ -17,14 +23,21 @@ fi
 
 echo "ℹ️ Prüfe Gen2 Functions/Invoker (project=${PROJECT_ID}, region=${REGION})"
 
+# Ältere gcloud-Versionen kennen nur --gen2, neuere nur --v2.
+if gcloud functions list --help 2>/dev/null | grep -q -- '--v2'; then
+  GEN2_FLAG="--v2"
+else
+  GEN2_FLAG="--gen2"
+fi
+
 tmp_functions="$(mktemp)"
 gcloud functions list \
-  --gen2 \
+  "${GEN2_FLAG}" \
   --regions="${REGION}" \
   --project="${PROJECT_ID}" \
   --format=json > "${tmp_functions}"
 
-python - "${tmp_functions}" <<'PY'
+"${PYTHON}" - "${tmp_functions}" <<'PY'
 import json
 import sys
 
@@ -51,7 +64,7 @@ PY
 echo ""
 echo "--- roles/run.invoker je Cloud Run Service ---"
 
-python - "${tmp_functions}" <<'PY' | while IFS=$'\t' read -r function_name service_name; do
+"${PYTHON}" - "${tmp_functions}" <<'PY' | while IFS=$'\t' read -r function_name service_name; do
 import json
 import sys
 
@@ -84,7 +97,7 @@ PY
     continue
   fi
 
-  members="$(python - "${tmp_policy}" <<'PY'
+  members="$("${PYTHON}" - "${tmp_policy}" <<'PY'
 import json
 import sys
 
