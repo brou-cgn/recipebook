@@ -58,6 +58,8 @@ export default function useSpeechDictation({ onText, lang = 'de-DE' }) {
       setInterim(nextInterim);
     };
     recognition.onerror = (event) => {
+      // Vom Nutzer abgebrochen (Stopp/Abbruch) ist kein Fehler.
+      if (event.error === 'aborted') return;
       setError(ERROR_MESSAGES[event.error] || 'Die Spracherkennung ist fehlgeschlagen.');
     };
     recognition.onend = () => {
