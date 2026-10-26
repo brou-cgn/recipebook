@@ -45,6 +45,26 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef,
   const dictation = useSpeechDictation({ onText: appendText });
 
   const textareaRef = useRef(null);
+  const overlayRef = useRef(null);
+
+  // Rezept dahinter bleibt stehen, solange das Textfeld offen ist. Nativ
+  // registriert, weil React touchmove/wheel passiv einhängt (preventDefault
+  // wirkte sonst nicht). Das Textfeld selbst darf weiter scrollen.
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const overlay = overlayRef.current;
+    const block = (e) => {
+      if (!e.target.closest?.('.version-describe-textarea')) e.preventDefault();
+    };
+    overlay?.addEventListener('touchmove', block, { passive: false });
+    overlay?.addEventListener('wheel', block, { passive: false });
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      overlay?.removeEventListener('touchmove', block);
+      overlay?.removeEventListener('wheel', block);
+    };
+  }, []);
 
   // Pille wächst mit dem Text (mindestens 2 Zeilen Platz, danach nach Bedarf).
   useLayoutEffect(() => {
@@ -111,6 +131,7 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef,
 
   return (
     <div
+      ref={overlayRef}
       className="version-describe-overlay"
       role="dialog"
       aria-modal="true"

@@ -159,11 +159,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [editRecipeIcon, setEditRecipeIcon] = useState('Edit');
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [newVersionIcon, setNewVersionIcon] = useState('Version');
+  const [newVersionDescribingIcon, setNewVersionDescribingIcon] = useState(defaultIcon('pencil'));
   const [newVersionWithTextIcon, setNewVersionWithTextIcon] = useState(defaultIcon('check'));
   const [favoritesButtonIcon, setFavoritesButtonIcon] = useState('☆');
   const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('');
   const [privateBadgeIcon, setPrivateBadgeIcon] = useState(defaultIcon('lock'));
-  const versionFabIcon = onVersionDescribeContinue && versionDescribeHasText ? newVersionWithTextIcon : newVersionIcon;
+  // Drei Zustände des Versions-FAB: Start → Beschreibung offen (noch ohne Text) → Text erfasst.
+  const versionFabState = !onVersionDescribeContinue ? 'start' : versionDescribeHasText ? 'text' : 'describing';
+  const versionFabIcons = [
+    { state: 'start', icon: newVersionIcon },
+    { state: 'describing', icon: newVersionDescribingIcon },
+    { state: 'text', icon: newVersionWithTextIcon },
+  ];
   const [newVersionFabPressed, setNewVersionFabPressed] = useState(false);
   const [deleteRecipeIcon, setDeleteRecipeIcon] = useState('');
   const [deleteFabPressed, setDeleteFabPressed] = useState(false);
@@ -235,6 +242,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setPrintRecipeIcon(eff('printRecipe') || '⎙');
       setEditRecipeIcon(eff('editRecipe') || 'Edit');
       setNewVersionIcon(eff('newVersion') || 'Version');
+      setNewVersionDescribingIcon(eff('newVersionDescribing') || defaultIcon('pencil'));
       setNewVersionWithTextIcon(eff('newVersionWithText') || defaultIcon('check'));
       setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
       setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive'));
@@ -288,6 +296,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setPrintRecipeIcon(eff('printRecipe') || '⎙');
     setEditRecipeIcon(eff('editRecipe') || 'Edit');
     setNewVersionIcon(eff('newVersion') || 'Version');
+      setNewVersionDescribingIcon(eff('newVersionDescribing') || defaultIcon('pencil'));
       setNewVersionWithTextIcon(eff('newVersionWithText') || defaultIcon('check'));
     setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
     setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive'));
@@ -2971,11 +2980,21 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           title="Eigene Version erstellen"
           aria-label="Eigene Version erstellen"
         >
-          {isBase64Image(versionFabIcon) ? (
-            <img src={versionFabIcon} alt="Neue Version" className="button-icon-image" draggable="false" />
-          ) : (
-            versionFabIcon
-          )}
+          <span className="new-version-fab-icons">
+            {versionFabIcons.map(({ state, icon }) => (
+              <span
+                key={state}
+                className={`new-version-fab-icon${versionFabState === state ? ' active' : ''}`}
+                aria-hidden="true"
+              >
+                {isBase64Image(icon) ? (
+                  <img src={icon} alt="" className="button-icon-image" draggable="false" />
+                ) : (
+                  icon
+                )}
+              </span>
+            ))}
+          </span>
         </button>
       )}
       {(isMobile || isTablet || isMobileLandscape) && userCanDelete && onDelete && !cookingMode && (
