@@ -417,6 +417,7 @@ function App() {
   const [isDescribingVersion, setIsDescribingVersion] = useState(false);
   // Weiter-Aktion des Beschreibungs-Overlays; wird vom Versionsbutton im Rezept ausgelöst.
   const versionContinueRef = useRef(null);
+  const [versionDescribeHasText, setVersionDescribeHasText] = useState(false);
   const [versionChangeSummary, setVersionChangeSummary] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [currentView, setCurrentView] = useState('recipes');
@@ -2896,6 +2897,7 @@ function App() {
           publicGroupId={publicGroupId}
           menuPortionCount={selectedMenu ? (selectedMenu.portionCounts?.[selectedRecipe?.id] ?? null) : null}
           onPortionCountChange={selectedMenu ? handleMenuPortionCountChange : undefined}
+          versionDescribeHasText={versionDescribeHasText}
           onVersionDescribeContinue={isFormOpen && isCreatingVersion && isDescribingVersion ? () => versionContinueRef.current?.() : undefined}
         />
         {isFormOpen && isCreatingVersion && isDescribingVersion && (
@@ -2905,6 +2907,7 @@ function App() {
             onSkip={handleLeaveVersionDescribe}
             onCancel={handleCancelForm}
             continueRef={versionContinueRef}
+            onHasTextChange={setVersionDescribeHasText}
           />
         )}
         </>
