@@ -30,10 +30,11 @@ const hasVersionFab = () => window.innerWidth <= TABLET_BREAKPOINT || window.inn
  * @param {(description: string) => Promise<void>} props.onApply - wirft bei Fehlern
  * @param {Function} props.onSkip - Formular ohne Beschreibung öffnen
  * @param {Function} props.onCancel
+ * @param {(hasText: boolean) => void} [props.onHasTextChange] - meldet, ob schon Text erfasst ist
  * @param {{current: ?Function}} [props.continueRef] - bekommt die Weiter-Aktion
  *   (ohne Text: onSkip, mit Text: einarbeiten) für den Versionsbutton des Rezepts
  */
-function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef }) {
+function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef, onHasTextChange }) {
   const [text, setText] = useState('');
   const [isApplying, setIsApplying] = useState(false);
   const [error, setError] = useState('');
@@ -55,6 +56,11 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef 
 
   const trimmed = text.trim();
   const hasText = trimmed.length > 0;
+  useEffect(() => {
+    onHasTextChange?.(hasText);
+    return () => onHasTextChange?.(false);
+  }, [hasText]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const canSubmit = hasText && !isApplying;
 
   const [fabVisible, setFabVisible] = useState(hasVersionFab);

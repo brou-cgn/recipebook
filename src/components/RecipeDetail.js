@@ -76,7 +76,7 @@ const mergeUniqueNormalizedValues = (existingValues = [], valuesToAdd = []) => {
 // Regex to detect German time expressions: "10 Minuten", "2 Stunden", "45 Sek"
 const TIME_REGEX_SOURCE = String.raw`(\d+(?:[.,]\d+)?)\s*(Stunden?|h\b|Minuten?|Min\.?|Sekunden?|Sek\.?)`;
 
-function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId, menuPortionCount, onPortionCountChange, onVersionDescribeContinue }) {
+function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId, menuPortionCount, onPortionCountChange, onVersionDescribeContinue, versionDescribeHasText = false }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
   const { rows: nutritionReferenceRows, loading: nutritionReferenceLoading, reload: reloadNutritionReferences } = useNutritionReference();
@@ -159,9 +159,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [editRecipeIcon, setEditRecipeIcon] = useState('Edit');
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [newVersionIcon, setNewVersionIcon] = useState('Version');
+  const [newVersionWithTextIcon, setNewVersionWithTextIcon] = useState(defaultIcon('check'));
   const [favoritesButtonIcon, setFavoritesButtonIcon] = useState('☆');
   const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('');
   const [privateBadgeIcon, setPrivateBadgeIcon] = useState(defaultIcon('lock'));
+  const versionFabIcon = onVersionDescribeContinue && versionDescribeHasText ? newVersionWithTextIcon : newVersionIcon;
   const [newVersionFabPressed, setNewVersionFabPressed] = useState(false);
   const [deleteRecipeIcon, setDeleteRecipeIcon] = useState('');
   const [deleteFabPressed, setDeleteFabPressed] = useState(false);
@@ -233,6 +235,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setPrintRecipeIcon(eff('printRecipe') || '⎙');
       setEditRecipeIcon(eff('editRecipe') || 'Edit');
       setNewVersionIcon(eff('newVersion') || 'Version');
+      setNewVersionWithTextIcon(eff('newVersionWithText') || defaultIcon('check'));
       setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
       setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive'));
       setPrivateBadgeIcon(eff('privateBadge') || defaultIcon('lock'));
@@ -285,6 +288,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setPrintRecipeIcon(eff('printRecipe') || '⎙');
     setEditRecipeIcon(eff('editRecipe') || 'Edit');
     setNewVersionIcon(eff('newVersion') || 'Version');
+      setNewVersionWithTextIcon(eff('newVersionWithText') || defaultIcon('check'));
     setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
     setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive'));
     setPrivateBadgeIcon(eff('privateBadge') || defaultIcon('lock'));
@@ -2967,10 +2971,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           title="Eigene Version erstellen"
           aria-label="Eigene Version erstellen"
         >
-          {isBase64Image(newVersionIcon) ? (
-            <img src={newVersionIcon} alt="Neue Version" className="button-icon-image" draggable="false" />
+          {isBase64Image(versionFabIcon) ? (
+            <img src={versionFabIcon} alt="Neue Version" className="button-icon-image" draggable="false" />
           ) : (
-            newVersionIcon
+            versionFabIcon
           )}
         </button>
       )}
