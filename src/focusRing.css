@@ -1,0 +1,43 @@
+/* =============================================================
+   Einheitlicher Fokusrahmen für alle Eingabefelder: 1 px in Akzentfarbe
+   (Hell wie Dunkel über --color-accent). Maßstab ist das Feld
+   „Was hast du anders gemacht?“ (RecipeVersionDescribe).
+
+   Der Ring ist eine Outline mit negativem Offset und liegt damit exakt
+   über dem 1-px-Rand des Feldes; Maße und Layout ändern sich nicht.
+   !important ist hier gewollt: Es überstimmt die zahlreichen
+   komponentenspezifischen Fokusfarben (darkMode.css, Settings.css,
+   MenuForm.css ...), die sonst jede für sich angefasst werden müssten.
+
+   Farbe: --color-focus-ring, Standard Akzent (Orange). Im Eventmodul ist es
+   die Signalfarbe Grün (--color-events); die Umstellung steht nur im Block
+   unten und gilt für alle Event-Seiten und -Formulare.
+
+   Ausnahmen (zeigen den Ring am umgebenden Container, nicht am Feld):
+   .version-describe-textarea, .menu-description-textarea,
+   .menu-description-guest-search-input.
+   ============================================================= */
+/* Standard (Akzent) steht in tokens.css. Event-Seiten: Listenseite, Formulare (EventForm, Gäste, Getränke,
+   Verbrauch), Eventplanung, Tabelle. */
+.events-page-container,
+.events-form,
+.events-table-container,
+.eventplanung-container {
+  --color-focus-ring: var(--color-events);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]):not(.version-describe-textarea):not(.menu-description-guest-search-input):focus,
+textarea:not(.version-describe-textarea):not(.menu-description-textarea):focus,
+select:focus,
+.version-describe-pill:focus-within,
+.menu-description-field:focus-within {
+  outline: 1px solid var(--color-focus-ring) !important;
+  outline-offset: -1px !important;
+  border-color: var(--color-focus-ring) !important;
+}
+
+/* Der Drag-Handle (Zutaten, Zubereitungsschritte) liegt über dem rechten
+   Feldrand und hat einen eigenen Rand: ohne dies bricht der Fokusrahmen dort ab. */
+.input-wrapper:focus-within .drag-handle {
+  border-color: var(--color-focus-ring);
+}
