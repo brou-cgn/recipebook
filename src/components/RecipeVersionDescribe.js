@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import useSpeechDictation from '../hooks/useSpeechDictation';
 import './RecipeVersionDescribe.css';
 
@@ -14,15 +14,11 @@ function MicIcon() {
   );
 }
 
-function ArrowIcon({ direction }) {
-  const rotation = direction === 'up' ? 0 : 90;
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: `rotate(${rotation}deg)`, transition: 'transform 0.2s ease' }}>
-      <line x1="12" y1="19" x2="12" y2="5" />
-      <polyline points="5 12 12 5 19 12" />
-    </svg>
-  );
-}
+// Gleiche Schwellen wie RecipeDetail: bis dahin zeigt das Rezept den runden
+// "Eigene Version erstellen"-Button (FAB), der hier zugleich "Weiter" ist.
+const TABLET_BREAKPOINT = 768;
+const MOBILE_BREAKPOINT = 480;
+const hasVersionFab = () => window.innerWidth <= TABLET_BREAKPOINT || window.innerHeight <= MOBILE_BREAKPOINT;
 
 /**
  * Vorschritt von "Eigene Version erstellen" (Berechtigung versionDictation):
@@ -34,8 +30,10 @@ function ArrowIcon({ direction }) {
  * @param {(description: string) => Promise<void>} props.onApply - wirft bei Fehlern
  * @param {Function} props.onSkip - Formular ohne Beschreibung öffnen
  * @param {Function} props.onCancel
+ * @param {{current: ?Function}} [props.continueRef] - bekommt die Weiter-Aktion
+ *   (ohne Text: onSkip, mit Text: einarbeiten) für den Versionsbutton des Rezepts
  */
-function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel }) {
+function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef }) {
   const [text, setText] = useState('');
   const [isApplying, setIsApplying] = useState(false);
   const [error, setError] = useState('');
@@ -59,8 +57,14 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel }) {
   const hasText = trimmed.length > 0;
   const canSubmit = hasText && !isApplying;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const [fabVisible, setFabVisible] = useState(hasVersionFab);
+  useEffect(() => {
+    const onResize = () => setFabVisible(hasVersionFab());
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const submit = async () => {
     if (!canSubmit) return;
     dictation.stop();
     setIsApplying(true);
@@ -72,6 +76,24 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel }) {
       setIsApplying(false);
     }
   };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    submit();
+  };
+
+  // "Weiter": ohne Beschreibung überspringen, mit Beschreibung einarbeiten.
+  const proceed = () => {
+    if (isApplying) return;
+    if (hasText) submit();
+    else onSkip();
+  };
+
+  useEffect(() => {
+    if (!continueRef) return undefined;
+    continueRef.current = proceed;
+    return () => { continueRef.current = null; };
+  });
 
   // Klick neben Pille und Hinweiskarte schließt den Vorschritt.
   const handleOverlayClick = (e) => {
@@ -90,7 +112,7 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel }) {
       onClick={handleOverlayClick}
       onKeyDown={(e) => { if (e.key === 'Escape' && !isApplying) onCancel(); }}
     >
-      <form className="version-describe" onSubmit={handleSubmit}>
+      <form className={`version-describe${fabVisible ? ' has-fab' : ''}`} onSubmit={handleSubmit}>
         {note && (
           <p
             className={`version-describe-note${error || dictation.error ? ' is-error' : ''}`}
@@ -126,26 +148,16 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel }) {
               <MicIcon />
             </button>
           )}
-          {hasText ? (
-            <button
-              type="submit"
-              className="version-describe-icon-btn version-describe-submit"
-              disabled={!canSubmit}
-              aria-label="Änderungen einarbeiten"
-              title="Änderungen einarbeiten – danach kannst du alles kontrollieren"
-            >
-              <ArrowIcon direction="up" />
-            </button>
-          ) : (
+          {!fabVisible && (
             <button
               type="button"
-              className="version-describe-icon-btn version-describe-submit"
-              onClick={onSkip}
+              className="version-describe-continue"
+              onClick={proceed}
               disabled={isApplying}
-              aria-label="Ohne Beschreibung weiter"
-              title="Ohne Beschreibung weiter"
+              aria-label="Version erstellen"
+              title={hasText ? 'Änderungen einarbeiten – danach kannst du alles kontrollieren' : 'Ohne Beschreibung weiter'}
             >
-              <ArrowIcon direction="right" />
+              Version erstellen
             </button>
           )}
         </div>

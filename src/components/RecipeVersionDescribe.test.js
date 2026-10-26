@@ -26,30 +26,42 @@ afterEach(() => {
 
 test('sendet die getrimmte Beschreibung ab', async () => {
   const props = setup();
-  expect(screen.queryByRole('button', { name: 'Änderungen einarbeiten' })).not.toBeInTheDocument();
   typeText('  Olivenöl statt Butter  ');
-  fireEvent.click(screen.getByRole('button', { name: 'Änderungen einarbeiten' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Version erstellen' }));
   await waitFor(() => expect(props.onApply).toHaveBeenCalledWith('Olivenöl statt Butter'));
 });
 
 test('zeigt Fehler an und lässt erneut senden oder überspringen', async () => {
   const props = setup({ onApply: jest.fn().mockRejectedValue(new Error('Tageslimit erreicht')) });
   typeText('Olivenöl statt Butter');
-  fireEvent.click(screen.getByRole('button', { name: 'Änderungen einarbeiten' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Version erstellen' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Tageslimit erreicht');
-  expect(screen.getByRole('button', { name: 'Änderungen einarbeiten' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Version erstellen' })).toBeEnabled();
   typeText('');
-  fireEvent.click(screen.getByRole('button', { name: 'Ohne Beschreibung weiter' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Version erstellen' }));
   expect(props.onSkip).toHaveBeenCalled();
 });
 
-test('ohne Text überspringt der Pfeil, mit Text sendet er', () => {
-  const props = setup();
-  fireEvent.click(screen.getByRole('button', { name: 'Ohne Beschreibung weiter' }));
+test('Weiter-Aktion für den Versionsbutton: ohne Text überspringen, mit Text einarbeiten', async () => {
+  const continueRef = { current: null };
+  const props = setup({ continueRef });
+  continueRef.current();
   expect(props.onSkip).toHaveBeenCalledTimes(1);
   typeText('Mehr Salz');
-  expect(screen.queryByRole('button', { name: 'Ohne Beschreibung weiter' })).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Änderungen einarbeiten' })).toBeEnabled();
+  continueRef.current();
+  await waitFor(() => expect(props.onApply).toHaveBeenCalledWith('Mehr Salz'));
+  expect(props.onSkip).toHaveBeenCalledTimes(1);
+});
+
+test('mit Versionsbutton (schmales Fenster) gibt es keinen eigenen Weiter-Button', () => {
+  const original = window.innerWidth;
+  window.innerWidth = 400;
+  try {
+    setup();
+    expect(screen.queryByRole('button', { name: 'Version erstellen' })).not.toBeInTheDocument();
+  } finally {
+    window.innerWidth = original;
+  }
 });
 
 test('Klick neben die Pille ruft onCancel, Klick in die Pille nicht', () => {
