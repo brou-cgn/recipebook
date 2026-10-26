@@ -30,6 +30,7 @@
   max-width: 100%;
   margin: 0 0 10px;
   padding: 6px 12px;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   background: var(--color-surface);
   color: var(--color-text-muted);
@@ -50,9 +51,11 @@
   min-height: 48px;
   box-sizing: border-box;
   padding: 6px 6px 6px 16px;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   background: var(--color-surface);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  /* Rand und Schatten wie der Versionsbutton (.new-version-fab-button), Hell und Dunkel */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .version-describe-pill:focus-within {
@@ -108,11 +111,12 @@
 }
 
 /* Mobil/Tablet: Die Pille endet links neben dem runden Versionsbutton des
-   Rezepts (RecipeDetail, 56 px, rechts 20 px, gleiche Unterkante), der hier
+   Rezepts (RecipeDetail, 56 px, rechts 20 px, gleicher Abstand nach unten), der hier
    zugleich "Weiter" ist. */
 .version-describe.has-fab {
   padding-right: calc(20px + 56px + 12px);
-  padding-bottom: calc(24px + 4px + env(safe-area-inset-bottom, 0px) + var(--bottom-nav-offset, 0px));
+  /* gleicher Abstand zur Unterkante wie der Versionsbutton */
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px) + var(--bottom-nav-offset, 0px));
 }
 
 /* Ohne Versionsbutton (Desktop): Weiter-Button in der Pille. */
