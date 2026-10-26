@@ -415,6 +415,8 @@ function App() {
   // solange isFormOpen und isCreatingVersion gesetzt sind; handleCreateVersion
   // setzt beides bei jedem Start neu, deshalb braucht kein Abbruchpfad einen Reset.
   const [isDescribingVersion, setIsDescribingVersion] = useState(false);
+  // Weiter-Aktion des Beschreibungs-Overlays; wird vom Versionsbutton im Rezept ausgelöst.
+  const versionContinueRef = useRef(null);
   const [versionChangeSummary, setVersionChangeSummary] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [currentView, setCurrentView] = useState('recipes');
@@ -2894,6 +2896,7 @@ function App() {
           publicGroupId={publicGroupId}
           menuPortionCount={selectedMenu ? (selectedMenu.portionCounts?.[selectedRecipe?.id] ?? null) : null}
           onPortionCountChange={selectedMenu ? handleMenuPortionCountChange : undefined}
+          onVersionDescribeContinue={isFormOpen && isCreatingVersion && isDescribingVersion ? () => versionContinueRef.current?.() : undefined}
         />
         {isFormOpen && isCreatingVersion && isDescribingVersion && (
           <RecipeVersionDescribe
@@ -2901,6 +2904,7 @@ function App() {
             onApply={handleApplyVersionChanges}
             onSkip={handleLeaveVersionDescribe}
             onCancel={handleCancelForm}
+            continueRef={versionContinueRef}
           />
         )}
         </>

@@ -107,11 +107,35 @@
   color: var(--color-surface-card);
 }
 
-.version-describe-submit {
-  background: var(--color-accent);
-  color: var(--color-surface-card);
+/* Mobil/Tablet: Die Pille endet links neben dem runden Versionsbutton des
+   Rezepts (RecipeDetail, 56 px, rechts 20 px, gleiche Unterkante), der hier
+   zugleich "Weiter" ist. */
+.version-describe.has-fab {
+  padding-right: calc(20px + 56px + 12px);
+  padding-bottom: calc(24px + 4px + env(safe-area-inset-bottom, 0px) + var(--bottom-nav-offset, 0px));
 }
 
-.version-describe-submit:disabled {
+/* Ohne Versionsbutton (Desktop): Weiter-Button in der Pille. */
+.version-describe-continue {
+  align-self: flex-end;
+  flex: none;
+  height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-accent);
+  color: var(--color-surface-card);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.version-describe-continue:disabled {
   opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Versionsbutton des Rezepts bleibt über dem Blur-Overlay erreichbar. */
+.new-version-fab-button.version-describing {
+  z-index: 2400;
 }
