@@ -140,6 +140,7 @@
 }
 
 /* Versionsbutton des Rezepts bleibt über dem Blur-Overlay erreichbar. */
-.new-version-fab-button.version-describing {
+.new-version-fab-button.version-describing,
+.edit-fab-button.version-describing {
   z-index: 2400;
 }

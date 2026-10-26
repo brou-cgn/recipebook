@@ -510,6 +510,33 @@ describe('RecipeDetail - Edit FAB Long Press', () => {
     expect(onEdit).not.toHaveBeenCalled();
   });
 
+  test('while describing a version the edit FAB acts as version FAB (icons, continue, no edit)', () => {
+    const onEdit = jest.fn();
+    const onCreateVersion = jest.fn();
+    const onVersionDescribeContinue = jest.fn();
+    renderWithProviders(
+      <RecipeDetail
+        recipe={recipe}
+        onBack={() => {}}
+        onEdit={onEdit}
+        onDelete={() => {}}
+        onCreateVersion={onCreateVersion}
+        onVersionDescribeContinue={onVersionDescribeContinue}
+        currentUser={currentUser}
+      />
+    );
+    const fab = document.querySelector('.edit-fab-button');
+    expect(fab).toHaveClass('version-describing');
+    expect(fab.querySelectorAll('.new-version-fab-icon')).toHaveLength(3);
+    fireEvent.mouseDown(fab);
+    act(() => { jest.advanceTimersByTime(600); });
+    fireEvent.mouseUp(fab);
+    fireEvent.click(fab);
+    expect(onVersionDescribeContinue).toHaveBeenCalledTimes(1);
+    expect(onCreateVersion).not.toHaveBeenCalled();
+    expect(onEdit).not.toHaveBeenCalled();
+  });
+
   test('long press on edit FAB does not call onCreateVersion if onCreateVersion is not provided', () => {
     const onEdit = jest.fn();
     renderWithProviders(
