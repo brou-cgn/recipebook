@@ -2485,6 +2485,32 @@ button.private-badge-button:active {
   object-fit: contain;
 }
 
+.new-version-fab-icons {
+  display: grid;
+  place-items: center;
+}
+
+/* Alle drei Icons liegen übereinander; nur das aktive ist sichtbar (sanftes Überblenden). */
+.new-version-fab-icon {
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+}
+
+.new-version-fab-icon.active {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .new-version-fab-icon {
+    transition: none;
+  }
+}
+
 .new-version-fab-button:active {
   background: white;
   outline: none;
