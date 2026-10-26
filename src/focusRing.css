@@ -17,12 +17,8 @@
    .version-describe-textarea, .menu-description-textarea,
    .menu-description-guest-search-input.
    ============================================================= */
-/* Event-Seiten: Listenseite, Formulare (EventForm, Gäste, Getränke,
+/* Standard (Akzent) steht in tokens.css. Event-Seiten: Listenseite, Formulare (EventForm, Gäste, Getränke,
    Verbrauch), Eventplanung, Tabelle. */
-:root {
-  --color-focus-ring: var(--color-accent);
-}
-
 .events-page-container,
 .events-form,
 .events-table-container,
