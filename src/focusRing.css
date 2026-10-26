@@ -16,6 +16,9 @@
    Ausnahmen (zeigen den Ring am umgebenden Container, nicht am Feld):
    .version-describe-textarea, .menu-description-textarea,
    .menu-description-guest-search-input.
+   Ohne Fokusrahmen: die Suchfelder der Rezeptübersicht
+   (.mobile-search-input, .recipe-filter-sidebar-search-input) – sie sitzen
+   bereits in einer eigenen Pille mit Lupe.
    ============================================================= */
 /* Standard (Akzent) steht in tokens.css. Event-Seiten: Listenseite, Formulare (EventForm, Gäste, Getränke,
    Verbrauch), Eventplanung, Tabelle. */
@@ -26,7 +29,7 @@
   --color-focus-ring: var(--color-events);
 }
 
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]):not(.version-describe-textarea):not(.menu-description-guest-search-input):focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]):not(.version-describe-textarea):not(.menu-description-guest-search-input):not(.mobile-search-input):not(.recipe-filter-sidebar-search-input):focus,
 textarea:not(.version-describe-textarea):not(.menu-description-textarea):focus,
 select:focus,
 .version-describe-pill:focus-within,
