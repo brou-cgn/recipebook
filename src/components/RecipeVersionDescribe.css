@@ -106,7 +106,7 @@
 }
 
 .version-describe-mic.listening {
-  background: var(--color-bad);
+  background: var(--color-accent);
   color: var(--color-surface-card);
 }
 

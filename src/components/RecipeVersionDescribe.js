@@ -131,7 +131,7 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef 
             value={text}
             onChange={(e) => setText(e.target.value.slice(0, MAX_LENGTH))}
             aria-label="Was war anders?"
-            placeholder={`Was war bei „${recipe?.title}“ anders?`}
+            placeholder="Was hast du anders gemacht?"
             rows={2}
             disabled={isApplying}
           />
