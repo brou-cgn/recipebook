@@ -705,7 +705,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Edit FAB long press handlers
   const handleEditFabPressStart = () => {
     setEditFabPressed(true);
-    if (userCanCreateVersion && onCreateVersion) {
+    if (userCanCreateVersion && onCreateVersion && !onVersionDescribeContinue) {
       editLongPressTimerRef.current = setTimeout(() => {
         editLongPressTriggeredRef.current = true;
         onCreateVersion(recipe);
@@ -724,6 +724,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const handleEditFabClick = () => {
     if (editLongPressTriggeredRef.current) {
       editLongPressTriggeredRef.current = false;
+      return;
+    }
+    if (onVersionDescribeContinue) {
+      onVersionDescribeContinue();
       return;
     }
     onEdit && onEdit(recipe);
@@ -2947,7 +2951,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       )}
       {(isMobile || isTablet || isMobileLandscape) && userCanDirectlyEdit && onEdit && !cookingMode && !showShoppingListModal && !showPortionSelector && (
         <button
-          className={`edit-fab-button${editFabPressed ? ' pressed' : ''}`}
+          className={`edit-fab-button${editFabPressed ? ' pressed' : ''}${onVersionDescribeContinue ? ' version-describing' : ''}`}
           style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
           onClick={handleEditFabClick}
           onTouchStart={handleEditFabPressStart}
@@ -2956,10 +2960,27 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           onMouseDown={handleEditFabPressStart}
           onMouseUp={handleEditFabPressEnd}
           onMouseLeave={handleEditFabPressEnd}
-          title="Rezept bearbeiten"
-          aria-label="Rezept bearbeiten"
+          title={onVersionDescribeContinue ? 'Eigene Version erstellen' : 'Rezept bearbeiten'}
+          aria-label={onVersionDescribeContinue ? 'Eigene Version erstellen' : 'Rezept bearbeiten'}
         >
-          {isBase64Image(editRecipeIcon) ? (
+          {onVersionDescribeContinue ? (
+            // Versions-Beschreibung offen: gleiche Icon-Zustände wie der Versions-FAB bei fremden Rezepten.
+            <span className="new-version-fab-icons">
+              {versionFabIcons.map(({ state, icon }) => (
+                <span
+                  key={state}
+                  className={`new-version-fab-icon${versionFabState === state ? ' active' : ''}`}
+                  aria-hidden="true"
+                >
+                  {isBase64Image(icon) ? (
+                    <img src={icon} alt="" className="button-icon-image" draggable="false" />
+                  ) : (
+                    icon
+                  )}
+                </span>
+              ))}
+            </span>
+          ) : isBase64Image(editRecipeIcon) ? (
             <img src={editRecipeIcon} alt="Bearbeiten" className="button-icon-image" draggable="false" />
           ) : (
             editRecipeIcon
