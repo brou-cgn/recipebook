@@ -30,6 +30,17 @@ jest.mock('../utils/customLists', () => ({
 
 jest.mock('../utils/imageUtils', () => ({
   isBase64Image: () => false,
+  generateThumbnailBlob: () => Promise.resolve(new Blob(['t'], { type: 'image/jpeg' })),
+}));
+
+const mockUploadDrinkImage = jest.fn();
+const mockUploadDrinkThumbnail = jest.fn();
+const mockDeleteRecipeImage = jest.fn();
+
+jest.mock('../utils/storageUtils', () => ({
+  uploadDrinkImage: (...args) => mockUploadDrinkImage(...args),
+  uploadDrinkThumbnail: (...args) => mockUploadDrinkThumbnail(...args),
+  deleteRecipeImage: (...args) => mockDeleteRecipeImage(...args),
 }));
 
 describe('DrinkManagementPage', () => {
@@ -39,6 +50,10 @@ describe('DrinkManagementPage', () => {
     jest.clearAllMocks();
     mockGetCustomLists.mockResolvedValue({ packageUnits: [] });
     mockUpdateRecipe.mockResolvedValue(undefined);
+    mockUploadDrinkImage.mockResolvedValue('https://x/drinks/orig.jpg');
+    mockUploadDrinkThumbnail.mockResolvedValue('https://x/drinks/thumb.jpg');
+    mockDeleteRecipeImage.mockResolvedValue(undefined);
+    mockSaveCustomDrink.mockResolvedValue('new-id');
   });
 
   test('renders the mobile add FAB even in the empty state and opens the create form', () => {
@@ -934,6 +949,81 @@ describe('DrinkManagementPage', () => {
 
       fireEvent.click(screen.getByText('Papas Wein'));
       expect(screen.getByRole('heading', { level: 2, name: 'Getränk bearbeiten' })).toBeInTheDocument();
+    });
+  });
+
+  describe('Getränkebild', () => {
+    const chooseImage = async () => {
+      const file = new File(['x'], 'bier.png', { type: 'image/png' });
+      const input = document.getElementById('drinkImageFile');
+      await act(async () => {
+        fireEvent.change(input, { target: { files: [file] } });
+      });
+    };
+
+    test('lädt ein Bild hoch, zeigt die Kachel und speichert es am Getränk', async () => {
+      render(<DrinkManagementPage currentUser={currentUser} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+      fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Craft-Bier' } });
+
+      await chooseImage();
+
+      expect(mockUploadDrinkImage).toHaveBeenCalledTimes(1);
+      expect(screen.getByAltText('Getränkebild')).toHaveAttribute('src', 'https://x/drinks/thumb.jpg');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Getränk speichern' }));
+      await waitFor(() => expect(mockSaveCustomDrink).toHaveBeenCalled());
+      expect(mockSaveCustomDrink.mock.calls[0][1].image).toEqual({
+        url: 'https://x/drinks/orig.jpg',
+        thumbnailUrl: 'https://x/drinks/thumb.jpg',
+      });
+    });
+
+    test('Entfernen nutzt DeleteRowButton und löscht die Dateien erst nach dem Speichern', async () => {
+      const drink = {
+        id: 'd1',
+        name: 'Apfelsaft',
+        einheiten: [{ einheitsgroesse: 0.5 }],
+        image: { url: 'https://x/drinks/old.jpg', thumbnailUrl: 'https://x/drinks/old-t.jpg' },
+      };
+      render(<DrinkManagementPage currentUser={currentUser} customDrinks={[drink]} />);
+      fireEvent.click(screen.getByText('Apfelsaft'));
+
+      fireEvent.click(screen.getByRole('button', { name: 'Getränkebild entfernen' }));
+      expect(screen.queryByAltText('Getränkebild')).not.toBeInTheDocument();
+      expect(mockDeleteRecipeImage).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Getränk aktualisieren' }));
+      await waitFor(() => expect(mockSaveCustomDrink).toHaveBeenCalled());
+      expect(mockSaveCustomDrink.mock.calls[0][1].image).toBeNull();
+      await waitFor(() => {
+        expect(mockDeleteRecipeImage).toHaveBeenCalledWith('https://x/drinks/old.jpg');
+        expect(mockDeleteRecipeImage).toHaveBeenCalledWith('https://x/drinks/old-t.jpg');
+      });
+    });
+
+    test('Abbrechen verwirft ein neu hochgeladenes Bild, behält aber das gespeicherte', async () => {
+      render(<DrinkManagementPage currentUser={currentUser} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+      await chooseImage();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Getränkbearbeitung abbrechen' }));
+      await waitFor(() => {
+        expect(mockDeleteRecipeImage).toHaveBeenCalledWith('https://x/drinks/orig.jpg');
+        expect(mockDeleteRecipeImage).toHaveBeenCalledWith('https://x/drinks/thumb.jpg');
+      });
+      expect(mockSaveCustomDrink).not.toHaveBeenCalled();
+    });
+
+    test('zeigt eine Fehlermeldung, wenn der Upload fehlschlägt', async () => {
+      mockUploadDrinkImage.mockRejectedValue(new Error('boom'));
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      render(<DrinkManagementPage currentUser={currentUser} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+      await chooseImage();
+
+      expect(screen.getByText(/Das Bild konnte nicht hochgeladen werden/)).toBeInTheDocument();
+      expect(screen.queryByAltText('Getränkebild')).not.toBeInTheDocument();
     });
   });
 });

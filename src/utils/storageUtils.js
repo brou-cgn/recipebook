@@ -30,11 +30,12 @@ function generateUniqueFilename(file) {
 }
 
 /**
- * Upload a recipe image to Firebase Storage
+ * Validate and upload an image file below the given Storage folder.
  * @param {File} file - The image file to upload
+ * @param {string} folder - Storage folder (e.g. `recipes`, `drinks`)
  * @returns {Promise<string>} - Download URL of the uploaded image
  */
-export async function uploadRecipeImage(file) {
+async function uploadImageToFolder(file, folder) {
   if (!file) {
     throw new Error('No file provided');
   }
@@ -54,20 +55,61 @@ export async function uploadRecipeImage(file) {
   try {
     // Generate unique filename
     const filename = generateUniqueFilename(file);
-    
+
     // Create a reference to the storage location
-    const storageRef = ref(storage, `recipes/${filename}`);
-    
+    const storageRef = ref(storage, `${folder}/${filename}`);
+
     // Upload the file
     const snapshot = await uploadBytes(storageRef, file);
-    
+
     // Get the download URL
     const downloadURL = await getDownloadURL(snapshot.ref);
-    
+
     return downloadURL;
   } catch (error) {
     console.error('Error uploading image to Firebase Storage:', error);
     throw new Error('Failed to upload image. Please try again.');
+  }
+}
+
+/**
+ * Upload a recipe image to Firebase Storage
+ * @param {File} file - The image file to upload
+ * @returns {Promise<string>} - Download URL of the uploaded image
+ */
+export async function uploadRecipeImage(file) {
+  return uploadImageToFolder(file, 'recipes');
+}
+
+/**
+ * Upload a drink image to Firebase Storage (`drinks/` prefix).
+ * @param {File} file - The image file to upload
+ * @returns {Promise<string>} - Download URL of the uploaded image
+ */
+export async function uploadDrinkImage(file) {
+  return uploadImageToFolder(file, 'drinks');
+}
+
+/**
+ * Upload a drink image thumbnail Blob to Firebase Storage (`drinks/` prefix).
+ * @param {Blob} thumbnailBlob - The thumbnail Blob (typically JPEG).
+ * @returns {Promise<string>} Download URL of the uploaded thumbnail.
+ */
+export async function uploadDrinkThumbnail(thumbnailBlob) {
+  if (!thumbnailBlob) {
+    throw new Error('No thumbnail blob provided');
+  }
+
+  try {
+    const filename = `thumb-${Date.now()}-${Math.random().toString(36).substring(2, 15)}.jpg`;
+    const snapshot = await uploadBytes(ref(storage, `drinks/${filename}`), thumbnailBlob, {
+      contentType: 'image/jpeg',
+      cacheControl: 'public, max-age=31536000',
+    });
+    return await getDownloadURL(snapshot.ref);
+  } catch (error) {
+    console.error('Error uploading drink thumbnail to Firebase Storage:', error);
+    throw new Error('Failed to upload thumbnail. Please try again.');
   }
 }
 
