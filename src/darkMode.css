@@ -2918,6 +2918,14 @@
   color: #aaa;
 }
 
+[data-theme="dark"] .version-arrow:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .version-arrow:disabled {
+  color: #f3f1ee;
+}
+
 [data-theme="dark"] .author-date-caption {
   color: #ccc;
 }
