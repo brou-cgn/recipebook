@@ -238,6 +238,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
       return {
         id: drinkId,
         displayName: display.displayName || drinkId,
+        photoUrl: drink?.image?.url || null,
         imageUrl: getDrinkImageUrl(display.recipe) || drinksCategoryImage,
         literMitPuffer: null,
         recipeId: display.recipeId,
@@ -256,6 +257,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
       return {
         id: drinkId,
         displayName: display.displayName || drinkId,
+        photoUrl: drink?.image?.url || null,
         imageUrl: getDrinkImageUrl(display.recipe) || drinksCategoryImage,
         literMitPuffer: ergebnisRow?.literMitPuffer ?? null,
         recipeId: display.recipeId,
@@ -819,7 +821,11 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                         className={`recipe-card drink-card${isExpanded ? ' drink-card-expanded' : ''}`}
                         onClick={() => setExpandedDrinkId(isExpanded ? null : drink.id)}
                       >
-                        {drink.imageUrl && (
+                        {drink.photoUrl ? (
+                          <div className="recipe-image drink-card-photo">
+                            <img src={drink.photoUrl} alt={drink.displayName} />
+                          </div>
+                        ) : drink.imageUrl && (
                           <div className="recipe-image">
                             <img src={drink.imageUrl} alt={drink.displayName} />
                           </div>
