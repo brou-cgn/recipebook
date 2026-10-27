@@ -1431,7 +1431,10 @@
   border-color: #555;
 }
 
-[data-theme="dark"] .group-dialog-field select:focus,
+[data-theme="dark"] .group-dialog-field select:focus {
+  border-color: #b07a40;
+}
+
 [data-theme="dark"] .group-dialog-field textarea:focus {
   border-color: #b07a40;
 }
