@@ -549,3 +549,15 @@ button.private-badge-button:active {
   }
 }
 
+
+/* Eigenes Getränkefoto: vollständig und unbeschnitten in Originalproportion */
+.drink-card .recipe-image.drink-card-photo {
+  height: auto;
+  aspect-ratio: auto;
+}
+
+.drink-card .recipe-image.drink-card-photo img {
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
