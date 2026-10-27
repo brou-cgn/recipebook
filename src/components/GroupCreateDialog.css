@@ -80,7 +80,8 @@
   border-radius: 8px;
   font-size: 1rem;
   font-family: inherit;
-  resize: vertical;
+  resize: none;
+  overflow: hidden;
   transition: border-color 0.2s;
 }
 

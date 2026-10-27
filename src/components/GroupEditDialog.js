@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './GroupCreateDialog.css';
 import { LIST_KIND_OPTIONS } from '../utils/groupFirestore';
 
@@ -24,6 +24,17 @@ function GroupEditDialog({ group, onSave, onCancel, privateLists = [] }) {
   });
   const [targetListId, setTargetListId] = useState(group?.targetListId || '');
   const [newTargetListName, setNewTargetListName] = useState('');
+
+  const descriptionRef = useRef(null);
+
+  // Textarea wächst mit dem Text
+  useEffect(() => {
+    const textarea = descriptionRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [description]);
 
   // Reset target list state when listKind changes away from 'interactive'
   useEffect(() => {
@@ -109,6 +120,7 @@ function GroupEditDialog({ group, onSave, onCancel, privateLists = [] }) {
             <label htmlFor="edit-group-description">Beschreibung (optional)</label>
             <textarea
               id="edit-group-description"
+              ref={descriptionRef}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Notizen, Hinweise oder zusätzliche Infos zur Liste..."
