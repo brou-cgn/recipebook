@@ -66,4 +66,15 @@ describe('GroupList dark mode styles', () => {
     expect(optionRule).toContain('background: #2a2a2a;');
     expect(optionRule).toContain('color: #e8e8e8;');
   });
+
+  test('styles the description textarea in group dialogs for dark mode', () => {
+    const cssPath = path.join(__dirname, '..', 'darkMode.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const rule = getRuleBody(css, '[data-theme="dark"] .group-dialog-field textarea');
+    const focusRule = getRuleBody(css, '[data-theme="dark"] .group-dialog-field textarea:focus');
+
+    expect(rule).toContain('background: #2a2a2a;');
+    expect(rule).toContain('border-color: #555;');
+    expect(focusRule).toContain('border-color: #b07a40;');
+  });
 });

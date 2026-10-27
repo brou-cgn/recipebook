@@ -1425,7 +1425,17 @@
   border-color: #555;
 }
 
+[data-theme="dark"] .group-dialog-field textarea {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
 [data-theme="dark"] .group-dialog-field select:focus {
+  border-color: #b07a40;
+}
+
+[data-theme="dark"] .group-dialog-field textarea:focus {
   border-color: #b07a40;
 }
 
@@ -1831,6 +1841,10 @@
 [data-theme="dark"] .kueche-tile {
   border-color: #3d3d3d;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .kueche-tile.kueche-tile--meinkochbuch {
+  border-left-color: #DF7A00;
 }
 
 [data-theme="dark"] .kueche-tile:hover {
