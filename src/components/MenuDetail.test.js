@@ -457,6 +457,36 @@ describe('MenuDetail - Manually added drinks in the Drinks section', () => {
     expect(drinkCard.className).toContain('recipe-card');
   });
 
+  test('shows the drink\'s own photo in full (original image, not the thumbnail)', async () => {
+    mockGetAllCustomDrinks.mockResolvedValue([
+      {
+        id: 'drink-cola',
+        name: 'Cola',
+        kategorie: 'softdrinks',
+        einheiten: [{ einheitsgroesse: 0.5 }],
+        image: { url: 'https://x/drinks/cola.jpg', thumbnailUrl: 'https://x/drinks/cola-t.jpg' },
+      },
+    ]);
+
+    render(
+      <MenuDetail
+        menu={menuWithManualDrinks}
+        recipes={[]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        currentUser={currentUser}
+        allUsers={[]}
+      />
+    );
+
+    const img = await screen.findByAltText('Cola');
+    expect(img).toHaveAttribute('src', 'https://x/drinks/cola.jpg');
+    expect(img.closest('.recipe-image')).toHaveClass('drink-card-photo');
+  });
+
   test('does not fetch the drink catalog when no drinks were manually added', () => {
     render(
       <MenuDetail
