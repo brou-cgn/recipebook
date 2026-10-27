@@ -2396,34 +2396,32 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               </div>
 
             <div className="recipe-title-row">
-              {hasMultipleVersions && (
-                <button 
-                  className="version-arrow"
-                  onClick={handlePreviousVersion}
-                  disabled={currentVersionIndex === 0}
-                  title="Vorherige Version"
-                >
-                  ←
-                </button>
-              )}
               <h1 className="recipe-title">{recipe.title}</h1>
-              {hasMultipleVersions && (
-                <button 
-                  className="version-arrow"
-                  onClick={handleNextVersion}
-                  disabled={currentVersionIndex === allVersions.length - 1}
-                  title="Nächste Version"
-                >
-                  →
-                </button>
-              )}
             </div>
 
             {hasMultipleVersions && (
               <div className="version-caption-row">
+                <button
+                  className="version-arrow"
+                  onClick={handlePreviousVersion}
+                  disabled={currentVersionIndex === 0}
+                  title="Vorherige Version"
+                  aria-label="Vorherige Version"
+                >
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+                </button>
                 <span className="version-caption">
                   {isRecipeVersion(recipe) ? `Version ${versionNumber}` : 'Original'}
                 </span>
+                <button
+                  className="version-arrow"
+                  onClick={handleNextVersion}
+                  disabled={currentVersionIndex === allVersions.length - 1}
+                  title="Nächste Version"
+                  aria-label="Nächste Version"
+                >
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+                </button>
               </div>
             )}
 

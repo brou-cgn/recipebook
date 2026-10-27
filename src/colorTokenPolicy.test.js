@@ -62,7 +62,7 @@ const BASELINE = {
   'components/PrintFormatEditor.css': 43,
   'components/PrintPage.css': 17,
   'components/RatingModal.css': 29,
-  'components/RecipeDetail.css': 166,
+  'components/RecipeDetail.css': 162,
   'components/RecipeFilterSidebar.css': 25,
   'components/RecipeForm.css': 149,
   'components/RecipeImageCarousel.css': 4,
