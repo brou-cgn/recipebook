@@ -63,6 +63,22 @@ describe('Storage Utilities', () => {
     });
   });
 
+  describe('uploadDrinkImage', () => {
+    it('lädt unter drinks/ hoch und validiert Typ und Größe', async () => {
+      const { uploadDrinkImage } = require('./storageUtils');
+      const { ref, uploadBytes, getDownloadURL } = require('firebase/storage');
+      ref.mockReturnValue({ path: 'drinks/x.jpg' });
+      uploadBytes.mockResolvedValue({ ref: { path: 'drinks/x.jpg' } });
+      getDownloadURL.mockResolvedValue(MOCK_STORAGE_URL);
+
+      await expect(uploadDrinkImage({ size: 10, type: 'application/pdf' })).rejects.toThrow('Invalid file type');
+      await expect(uploadDrinkImage({ size: 6 * 1024 * 1024, type: 'image/png' })).rejects.toThrow('less than 5MB');
+
+      await expect(uploadDrinkImage({ size: 10, type: 'image/png' })).resolves.toBe(MOCK_STORAGE_URL);
+      expect(ref.mock.calls[ref.mock.calls.length - 1][1]).toMatch(/^drinks\/.+\.png$/);
+    });
+  });
+
   describe('uploadRecipeImage', () => {
     let uploadRecipeImage;
     let ref, uploadBytes, getDownloadURL;

@@ -9,7 +9,8 @@ import useUndoableDelete from '../hooks/useUndoableDelete';
 import RecipeTypeahead from './RecipeTypeahead';
 import { DRINK_CATEGORIES, getDrinkCategoryLabel, mergePredefinedDrinks } from '../utils/drinkCategories';
 import { getCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
-import { isBase64Image } from '../utils/imageUtils';
+import { isBase64Image, generateThumbnailBlob } from '../utils/imageUtils';
+import { uploadDrinkImage, uploadDrinkThumbnail, deleteRecipeImage } from '../utils/storageUtils';
 import { encodeRecipeLink, containsHashForTypeahead, decodeRecipeLink } from '../utils/recipeLinks';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { parseIngredientPartsSync, computeRecipeDrinkEinheitsgroesse, scaleIngredient, decimalToFraction } from '../utils/ingredientUtils';
@@ -89,8 +90,19 @@ const emptyEinheit = () => ({
 const emptyForm = () => ({
   name: '',
   kategorie: '',
+  image: null,
   einheiten: [emptyEinheit()],
 });
+
+// Stored drink photo: { url, thumbnailUrl } (thumbnailUrl may be missing).
+const normalizeDrinkImage = (drink) => (drink?.image?.url
+  ? { url: drink.image.url, thumbnailUrl: drink.image.thumbnailUrl || null }
+  : null);
+
+const deleteDrinkImageFiles = (image) => {
+  if (!image) return Promise.resolve();
+  return Promise.all([deleteRecipeImage(image.url), deleteRecipeImage(image.thumbnailUrl)]);
+};
 
 function DrinkRow({ drink, displayName, isForeign, canManage, canAddUnits, onEdit, onAddUnits, onDelete, swipeDeleteIcon }) {
   const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ disabled: drink.predefined || !canManage });
@@ -130,6 +142,15 @@ function DrinkRow({ drink, displayName, isForeign, canManage, canAddUnits, onEdi
         {...handlers}
       >
         <div className="drink-list-item-header delete-row-hover-target">
+          {drink.image?.url && (
+            <img
+              src={drink.image.thumbnailUrl || drink.image.url}
+              alt=""
+              className="drink-list-item-thumb"
+              loading="lazy"
+              draggable="false"
+            />
+          )}
           <h3 className={isForeign ? 'drink-list-item-title--foreign' : undefined}>{displayName}</h3>
           {!drink.predefined && canManage && (
             <DeleteRowButton
@@ -178,6 +199,10 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
   const [cancelPressed, setCancelPressed] = useState(false);
   const { banners: deleteBanners, pendingKeys: pendingDeleteKeys, scheduleDelete, undoDelete } = useUndoableDelete();
   const [showOwnOnly, setShowOwnOnly] = useState(true);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  // Photo stored with the drink when the form was opened; files uploaded
+  // during editing are only discarded/kept once the user saves or cancels.
+  const savedImageRef = useRef(null);
   const formRef = useRef(null);
 
   useEffect(() => {
@@ -220,6 +245,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
     setIsAddUnitsMode(false);
     setAddUnitsDrink(null);
     setForm(emptyForm());
+    savedImageRef.current = null;
     setError('');
     setShowNameTypeahead(false);
     setShowForm(true);
@@ -231,9 +257,11 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
     setIsPredefined(Boolean(drink.predefined));
     setIsAddUnitsMode(false);
     setAddUnitsDrink(null);
+    savedImageRef.current = normalizeDrinkImage(drink);
     setForm({
       name: drink.name || '',
       kategorie: drink.kategorie || '',
+      image: normalizeDrinkImage(drink),
       einheiten:
         Array.isArray(drink.einheiten) && drink.einheiten.length > 0
           ? drink.einheiten.map((e) => ({
@@ -267,9 +295,11 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
         gebindeinheit: e.gebindeinheit || '',
         einheitenProGebinde: e.einheitenProGebinde ?? '',
       }));
+    savedImageRef.current = null;
     setForm({
       name: drink.name || '',
       kategorie: drink.kategorie || '',
+      image: null,
       einheiten: ownEinheiten.length > 0 ? ownEinheiten : [emptyEinheit()],
     });
     setError('');
@@ -304,7 +334,51 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
     setForm((f) => ({ ...f, name: '' }));
   };
 
+  // Files uploaded in this editing session but not (yet) stored with the
+  // drink are orphans: delete them whenever they are replaced or discarded.
+  const discardUnsavedImage = (image) => {
+    if (image && image.url !== savedImageRef.current?.url) {
+      deleteDrinkImageFiles(image).catch(() => {});
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const input = e.target;
+    const file = input.files[0];
+    if (!file) return;
+    setUploadingImage(true);
+    setError('');
+    try {
+      const [url, thumbnailBlob] = await Promise.all([
+        uploadDrinkImage(file),
+        generateThumbnailBlob(file).catch(() => null),
+      ]);
+      let thumbnailUrl = null;
+      if (thumbnailBlob) {
+        try {
+          thumbnailUrl = await uploadDrinkThumbnail(thumbnailBlob);
+        } catch (thumbErr) {
+          console.warn('Drink thumbnail upload failed (non-critical):', thumbErr);
+        }
+      }
+      discardUnsavedImage(form.image);
+      setForm((f) => ({ ...f, image: { url, thumbnailUrl } }));
+    } catch (err) {
+      console.error('Error uploading drink image:', err);
+      setError('Das Bild konnte nicht hochgeladen werden. Erlaubt sind JPEG, PNG, GIF oder WebP bis 5 MB.');
+    } finally {
+      setUploadingImage(false);
+      input.value = '';
+    }
+  };
+
+  const handleRemoveImage = () => {
+    discardUnsavedImage(form.image);
+    setForm((f) => ({ ...f, image: null }));
+  };
+
   const closeForm = () => {
+    discardUnsavedImage(form.image);
     setShowNameTypeahead(false);
     setShowForm(false);
     setIsAddUnitsMode(false);
@@ -401,6 +475,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
     try {
       const payload = {
         ...(isPredefined ? {} : { name: form.name.trim(), kategorie: form.kategorie || null }),
+        image: form.image,
         einheiten: buildEinheitenPayload(),
       };
       const targetOwnerId = editId ? (editOwnerId || currentUser.id) : currentUser.id;
@@ -414,6 +489,10 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
       } else {
         await saveCustomDrink(targetOwnerId, payload, editId || undefined);
       }
+      if (savedImageRef.current && savedImageRef.current.url !== form.image?.url) {
+        deleteDrinkImageFiles(savedImageRef.current).catch(() => {});
+      }
+      savedImageRef.current = form.image;
       setShowForm(false);
     } catch (err) {
       console.error('Error saving custom drink:', err);
@@ -454,10 +533,12 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
             </div>
           ) : (
             <>
-              <label className="events-form-field">
-                <span>Name</span>
+              <div className="events-form-field">
+                <label htmlFor="drinkName" className="drink-field-label">Name</label>
+                <div className="drink-title-image-row">
                 <div className="events-name-input-wrapper">
                   <input
+                    id="drinkName"
                     type="text"
                     value={nameDrinkDisplay.isRecipe ? nameDrinkDisplay.displayName : form.name}
                     onChange={(e) => handleNameChange(e.target.value)}
@@ -480,7 +561,43 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
                     </button>
                   )}
                 </div>
-              </label>
+                <label
+                  htmlFor="drinkImageFile"
+                  className="drink-add-image-btn"
+                  title={uploadingImage ? 'Hochladen...' : 'Bild hinzufügen'}
+                >
+                  {isBase64Image(getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)) ? (
+                    <img src={getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)} alt="Bild hinzufügen" className="drink-add-image-icon-img" />
+                  ) : (
+                    getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)
+                  )}
+                </label>
+                <input
+                  type="file"
+                  id="drinkImageFile"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  style={{ display: 'none' }}
+                  disabled={uploadingImage}
+                />
+                </div>
+              </div>
+
+              {form.image && (
+                <div className="events-form-field">
+                  <span>Getränkebild</span>
+                  <div className="drink-image-tile delete-row-hover-target">
+                    <img
+                      src={form.image.thumbnailUrl || form.image.url}
+                      alt="Getränkebild"
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                    <div className="drink-image-actions">
+                      <DeleteRowButton itemName="Getränkebild" onClick={handleRemoveImage} />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <label className="events-form-field">
                 <span>Getränkekategorie</span>

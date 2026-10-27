@@ -58,6 +58,7 @@ Quelle ist immer `firestore.rules`; diese Tabelle gibt den Stand vom 18.10.2026 
 | `cuisineProposals` | `isAnyUser()` | Anlegen: `edit`+ (nicht freigegeben); Ändern: Autor oder `moderator`+; Löschen: `moderator`+ |
 | Collection-Group `events`, `profiles` | Admin | |
 | Collection-Group `customDrinks` | `isAnyUser()` | |
+| Storage `drinks/` (Getränkebilder, `storage.rules`) | öffentlich | Anlegen: angemeldet, nur Bilder bis 5 MB; Löschen: angemeldet |
 
 ## KI-Functions (Cloud Functions mit Gemini)
 
