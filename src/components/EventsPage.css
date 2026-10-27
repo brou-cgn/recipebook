@@ -2126,6 +2126,7 @@
 .drink-add-image-icon-img {
   width: 2.25rem;
   height: 1.5rem;
+  object-fit: contain;
 }
 
 .drink-image-tile {
