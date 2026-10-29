@@ -451,15 +451,24 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     }
   }, [initialRecipe]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Titel am oberen Rand fixieren, sobald er aus dem Bild gescrollt ist
+  // Titel am oberen Rand fixieren, sobald er aus dem Bild gescrollt ist;
+  // beim Hochscrollen sofort wieder ausblenden
   useEffect(() => {
     const el = titleRef.current;
-    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
-    const observer = new IntersectionObserver(([entry]) => {
-      setShowStickyTitle(!entry.isIntersecting && entry.boundingClientRect.bottom < 0);
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
+    if (!el) return undefined;
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      const titleAbove = el.getBoundingClientRect().bottom < 0;
+      if (y < lastY) {
+        setShowStickyTitle(false);
+      } else if (y > lastY) {
+        setShowStickyTitle(titleAbove);
+      }
+      lastY = y;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, [selectedRecipe?.id, cookingMode]);
 
   // Also reset carousel index whenever the selected recipe changes (e.g. version navigation)
