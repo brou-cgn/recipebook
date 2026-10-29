@@ -99,6 +99,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [publishLoading, setPublishLoading] = useState(false);
   const wakeLockRef = useRef(null);
   const contentRef = useRef(null);
+  const titleRef = useRef(null);
+  const [showStickyTitle, setShowStickyTitle] = useState(false);
   const stepsContainerRef = useRef(null);
   // Tracks whether cooking mode was auto-activated by a landscape rotation
   const landscapeAutoActivatedRef = useRef(false);
@@ -448,6 +450,17 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       contentRef.current.scrollTop = 0;
     }
   }, [initialRecipe]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Titel am oberen Rand fixieren, sobald er aus dem Bild gescrollt ist
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
+    const observer = new IntersectionObserver(([entry]) => {
+      setShowStickyTitle(!entry.isIntersecting && entry.boundingClientRect.bottom < 0);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [selectedRecipe?.id, cookingMode]);
 
   // Also reset carousel index whenever the selected recipe changes (e.g. version navigation)
   useEffect(() => {
@@ -2396,8 +2409,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               </div>
 
             <div className="recipe-title-row">
-              <h1 className="recipe-title">{recipe.title}</h1>
+              <h1 className="recipe-title" ref={titleRef}>{recipe.title}</h1>
             </div>
+            {showStickyTitle && !cookingMode && (
+              <div className="recipe-sticky-title" aria-hidden="true" title={recipe.title}>
+                {recipe.title}
+              </div>
+            )}
 
             {hasMultipleVersions && (
               <div className="version-caption-row">

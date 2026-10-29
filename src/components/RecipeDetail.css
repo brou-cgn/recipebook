@@ -2620,3 +2620,22 @@ button.private-badge-button:active {
     transition: none;
   }
 }
+
+/* Fixierter Kurztitel beim Scrollen: einzeilig, mit … abgekürzt */
+.recipe-sticky-title {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: calc(0.5rem + env(safe-area-inset-top, 0px)) 1rem 0.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  color: #333;
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
