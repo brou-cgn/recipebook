@@ -2628,12 +2628,12 @@ button.private-badge-button:active {
   left: 0;
   right: 0;
   z-index: 90; /* unter dem Header (100) */
-  /* Unten 1.75rem Auslauf: Hintergrund blendet nach unten in volle Transparenz aus */
-  padding: 0.4rem 1rem 1.75rem;
+  /* Unten 3rem Auslauf: Hintergrund blendet nach unten in volle Transparenz aus */
+  padding: 0.4rem 1rem 3rem;
   background: linear-gradient(
     to bottom,
     var(--color-surface-card) 0,
-    var(--color-surface-card) calc(100% - 1.75rem),
+    var(--color-surface-card) calc(100% - 3rem),
     transparent 100%
   );
   color: var(--color-text);
