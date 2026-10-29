@@ -99,6 +99,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [publishLoading, setPublishLoading] = useState(false);
   const wakeLockRef = useRef(null);
   const contentRef = useRef(null);
+  const titleRef = useRef(null);
+  const [showStickyTitle, setShowStickyTitle] = useState(false);
   const stepsContainerRef = useRef(null);
   // Tracks whether cooking mode was auto-activated by a landscape rotation
   const landscapeAutoActivatedRef = useRef(false);
@@ -448,6 +450,26 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       contentRef.current.scrollTop = 0;
     }
   }, [initialRecipe]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Titel am oberen Rand fixieren, sobald er aus dem Bild gescrollt ist;
+  // beim Hochscrollen sofort wieder ausblenden
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el) return undefined;
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      const titleAbove = el.getBoundingClientRect().bottom < 0;
+      if (y < lastY) {
+        setShowStickyTitle(false);
+      } else if (y > lastY) {
+        setShowStickyTitle(titleAbove);
+      }
+      lastY = y;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [selectedRecipe?.id, cookingMode]);
 
   // Also reset carousel index whenever the selected recipe changes (e.g. version navigation)
   useEffect(() => {
@@ -2396,8 +2418,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               </div>
 
             <div className="recipe-title-row">
-              <h1 className="recipe-title">{recipe.title}</h1>
+              <h1 className="recipe-title" ref={titleRef}>{recipe.title}</h1>
             </div>
+            {showStickyTitle && !cookingMode && (
+              <div className="recipe-sticky-title" aria-hidden="true" title={recipe.title}>
+                {recipe.title}
+              </div>
+            )}
 
             {hasMultipleVersions && (
               <div className="version-caption-row">
