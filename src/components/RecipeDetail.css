@@ -2628,9 +2628,14 @@ button.private-badge-button:active {
   left: 0;
   right: 0;
   z-index: 90; /* unter dem Header (100) */
-  padding: 0.4rem 1rem;
-  background: var(--color-surface);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  /* Unten 1.75rem Auslauf: Hintergrund blendet nach unten in volle Transparenz aus */
+  padding: 0.4rem 1rem 1.75rem;
+  background: linear-gradient(
+    to bottom,
+    var(--color-surface-card) 0,
+    var(--color-surface-card) calc(100% - 1.75rem),
+    transparent 100%
+  );
   color: var(--color-text);
   font-size: 1rem;
   font-weight: 600;
