@@ -2420,9 +2420,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             <div className="recipe-title-row">
               <h1 className="recipe-title" ref={titleRef}>{recipe.title}</h1>
             </div>
-            {showStickyTitle && !cookingMode && (
-              <div className="recipe-sticky-title" style={{ top: stickyTitleTop }} aria-hidden="true" title={recipe.title}>
-                {recipe.title}
+            {!cookingMode && (
+              <div
+                className={`recipe-sticky-title${showStickyTitle ? ' recipe-sticky-title--visible' : ''}`}
+                style={{ top: stickyTitleTop }}
+                aria-hidden="true"
+                title={recipe.title}
+              >
+                <span className="recipe-sticky-title__text" data-title={recipe.title} />
               </div>
             )}
 

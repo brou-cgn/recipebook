@@ -2637,10 +2637,43 @@ button.private-badge-button:active {
     transparent 100%
   );
   color: var(--color-text);
-  font-size: 1rem;
+  font-size: 1.25rem;
   font-weight: 600;
+  overflow: hidden;
+  pointer-events: none;
+  /* Aus: unsichtbar; Hintergrund blendet aus, Text schrumpft */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0s linear 0.2s;
+}
+
+.recipe-sticky-title--visible {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.2s ease, visibility 0s;
+}
+
+.recipe-sticky-title__text {
+  display: block;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  pointer-events: none;
+  transform-origin: left center;
+  transform: scale(0.8);
+  transition: transform 0.2s ease;
+}
+
+.recipe-sticky-title__text::before {
+  content: attr(data-title); /* Text nicht doppelt im DOM */
+}
+
+.recipe-sticky-title--visible .recipe-sticky-title__text {
+  transform: scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recipe-sticky-title,
+  .recipe-sticky-title__text {
+    transition: none;
+  }
 }
