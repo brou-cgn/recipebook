@@ -101,6 +101,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const contentRef = useRef(null);
   const titleRef = useRef(null);
   const [showStickyTitle, setShowStickyTitle] = useState(false);
+  const [stickyTitleTop, setStickyTitleTop] = useState(0);
   const stepsContainerRef = useRef(null);
   // Tracks whether cooking mode was auto-activated by a landscape rotation
   const landscapeAutoActivatedRef = useRef(false);
@@ -451,24 +452,23 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     }
   }, [initialRecipe]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Titel am oberen Rand fixieren, sobald er aus dem Bild gescrollt ist;
-  // beim Hochscrollen sofort wieder ausblenden
+  // Titel unterhalb des Headers fixieren, sobald er aus dem Bild gescrollt ist
   useEffect(() => {
     const el = titleRef.current;
     if (!el) return undefined;
-    let lastY = window.scrollY;
-    const onScroll = () => {
-      const y = window.scrollY;
-      const titleAbove = el.getBoundingClientRect().bottom < 0;
-      if (y < lastY) {
-        setShowStickyTitle(false);
-      } else if (y > lastY) {
-        setShowStickyTitle(titleAbove);
-      }
-      lastY = y;
+    const update = () => {
+      const header = document.querySelector('header.header');
+      const headerBottom = header ? Math.max(0, header.getBoundingClientRect().bottom) : 0;
+      setStickyTitleTop(headerBottom);
+      setShowStickyTitle(el.getBoundingClientRect().bottom < headerBottom);
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
   }, [selectedRecipe?.id, cookingMode]);
 
   // Also reset carousel index whenever the selected recipe changes (e.g. version navigation)
@@ -2421,7 +2421,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               <h1 className="recipe-title" ref={titleRef}>{recipe.title}</h1>
             </div>
             {showStickyTitle && !cookingMode && (
-              <div className="recipe-sticky-title" aria-hidden="true" title={recipe.title}>
+              <div className="recipe-sticky-title" style={{ top: stickyTitleTop }} aria-hidden="true" title={recipe.title}>
                 {recipe.title}
               </div>
             )}

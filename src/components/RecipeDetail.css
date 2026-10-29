@@ -2624,11 +2624,11 @@ button.private-badge-button:active {
 /* Fixierter Kurztitel beim Scrollen: einzeilig, mit … abgekürzt */
 .recipe-sticky-title {
   position: fixed;
-  top: 0;
+  top: 0; /* wird per Inline-Style unter den Header gesetzt */
   left: 0;
   right: 0;
-  z-index: 1000;
-  padding: calc(0.5rem + env(safe-area-inset-top, 0px)) 1rem 0.5rem;
+  z-index: 90; /* unter dem Header (100) */
+  padding: 0.4rem 1rem;
   background: var(--color-surface);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
   color: var(--color-text);
