@@ -92,6 +92,7 @@ export const updateFaq = async (faqId, updates) => {
 /**
  * Import FAQs from parsed Markdown content.
  * Entries with a matching sourceId in existingFaqs are updated; others are created.
+ * The order follows the file; FAQs not contained in it are moved behind the imported ones.
  * @param {string} markdownContent - The Markdown string to parse
  * @param {Array} existingFaqs - Currently stored FAQs (used for deduplication by sourceId)
  * @returns {Promise<number>} Total number of entries processed (created + updated)
@@ -140,8 +141,10 @@ export const importFaqsFromMarkdown = async (markdownContent, existingFaqs = [])
   }
   flush();
 
-  const currentFaqCount = existingFaqs.length;
-  let newEntryIndex = 0;
+  // Die Reihenfolge der Markdown-Datei ist maßgeblich: importierte Einträge
+  // bekommen ihre Position aus der Datei, alle übrigen (z. B. von Hand
+  // angelegten) Einträge rücken in ihrer bisherigen Reihenfolge dahinter.
+  const matchedFaqIds = new Set();
 
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
@@ -150,11 +153,13 @@ export const importFaqsFromMarkdown = async (markdownContent, existingFaqs = [])
       : null;
 
     if (existingFaq) {
+      matchedFaqIds.add(existingFaq.id);
       await updateFaq(existingFaq.id, {
         title: entry.title,
         description: entry.description,
         level: entry.level,
-        sourceId: entry.sourceId
+        sourceId: entry.sourceId,
+        order: i
       });
     } else {
       await addFaq({
@@ -162,10 +167,20 @@ export const importFaqsFromMarkdown = async (markdownContent, existingFaqs = [])
         description: entry.description,
         level: entry.level,
         screenshot: null,
-        order: currentFaqCount + newEntryIndex,
+        order: i,
         ...(entry.sourceId ? { sourceId: entry.sourceId } : {})
       });
-      newEntryIndex++;
+    }
+  }
+
+  const remainingFaqs = existingFaqs
+    .filter(f => !matchedFaqIds.has(f.id))
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  for (let j = 0; j < remainingFaqs.length; j++) {
+    const order = entries.length + j;
+    if (remainingFaqs[j].order !== order) {
+      await updateFaq(remainingFaqs[j].id, { order });
     }
   }
 
