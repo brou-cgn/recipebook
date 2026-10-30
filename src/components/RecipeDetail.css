@@ -920,6 +920,18 @@ button.private-badge-button:active {
   border-bottom: none;
   min-width: 0;
   flex: 1;
+  transition: opacity 0.2s ease;
+}
+
+/* Original-Titel blendet aus, während der Sticky-Titel übernimmt */
+.recipe-title--stuck {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recipe-title {
+    transition: none;
+  }
 }
 
 .recipe-metadata {
