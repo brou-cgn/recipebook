@@ -1,5 +1,5 @@
 // Lint für das Frontend (src/) – Tech-Check B2. Functions haben eine eigene
-// Konfiguration (functions/.eslintrc.ci.js). Die CI bricht nur bei Fehlern ab;
+// Konfiguration (functions/eslint.config.js). Die CI bricht nur bei Fehlern ab;
 // Warnungen (z. B. exhaustive-deps) sind der sichtbare Altbestand.
 import js from '@eslint/js';
 import globals from 'globals';
