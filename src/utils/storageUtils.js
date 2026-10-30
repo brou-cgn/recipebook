@@ -401,7 +401,6 @@ export async function deleteMenuGridImage(imageUrl) {
 
     const storageRef = ref(storage, path);
     await deleteObject(storageRef);
-    console.log('[deleteMenuGridImage] Deleted old grid image:', path);
   } catch (error) {
     console.error('Error deleting menu grid image from Firebase Storage:', error);
   }
@@ -433,7 +432,6 @@ export async function deleteMenuGridImageDark(imageUrl) {
 
     const storageRef = ref(storage, path);
     await deleteObject(storageRef);
-    console.log('[deleteMenuGridImageDark] Deleted old dark grid image:', path);
   } catch (error) {
     console.error('Error deleting dark menu grid image from Firebase Storage:', error);
   }

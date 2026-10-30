@@ -300,8 +300,6 @@ function getRecipeDefaultImage(recipe) {
  * @returns {string[]} Array of image URL / base64 strings (length ≤ maxImages).
  */
 export function selectMenuGridImages(sections, recipes, categoryImages = [], maxImages = 6) {
-  const t0 = performance.now();
-  console.log('=== [selectMenuGridImages] START ===');
 
   if (!Array.isArray(sections)) {
     console.warn('[selectMenuGridImages] Invalid sections parameter:', sections);
@@ -312,33 +310,15 @@ export function selectMenuGridImages(sections, recipes, categoryImages = [], max
     return [];
   }
 
-  console.log('[selectMenuGridImages] Input params: sections=%d, recipes=%d, categoryImages=%d, maxImages=%d',
-    sections.length, recipes.length, categoryImages.length, maxImages);
-  console.log('[selectMenuGridImages] Sections structure:', sections.map(s => ({
-    name: s.name,
-    recipeCount: s.recipeIds ? s.recipeIds.length : 0,
-    recipeIds: s.recipeIds,
-  })));
 
   const categoryImageSet = new Set(categoryImages.map(ci => ci.image).filter(Boolean));
-  console.log('[selectMenuGridImages] Category image set size:', categoryImageSet.size);
 
   const isCustomImage = (url) => Boolean(url) && !categoryImageSet.has(url);
-
-  console.log('[selectMenuGridImages] Recipe images overview:');
-  recipes.forEach(r => {
-    const img = getRecipeDefaultImage(r);
-    console.log('  Recipe id=%s name=%s | image=%s | isCustom=%s',
-      r.id, r.name,
-      img ? img.substring(0, 80) : '(none)',
-      img ? isCustomImage(img) : 'n/a');
-  });
 
   const selectedRecipeIds = new Set();
   const selectedImages = [];
 
   // First pass: one image per section, preferring custom images.
-  console.log('[selectMenuGridImages] --- Pass 1: one image per section ---');
   for (const section of sections) {
     if (selectedImages.length >= maxImages) break;
 
@@ -346,7 +326,6 @@ export function selectMenuGridImages(sections, recipes, categoryImages = [], max
       .map(id => recipes.find(r => r.id === id))
       .filter(Boolean);
 
-    console.log('[selectMenuGridImages] Section "%s": %d matching recipes', section.name, sectionRecipes.length);
 
     const withCustomImage = sectionRecipes.filter(r => {
       const img = getRecipeDefaultImage(r);
@@ -358,17 +337,14 @@ export function selectMenuGridImages(sections, recipes, categoryImages = [], max
       return img && !selectedRecipeIds.has(r.id);
     });
 
-    console.log('[selectMenuGridImages]   withCustomImage=%d withAnyImage=%d', withCustomImage.length, withAnyImage.length);
 
     const candidates = withCustomImage.length > 0 ? withCustomImage : withAnyImage;
-    console.log('[selectMenuGridImages]   Using %s candidates', withCustomImage.length > 0 ? 'custom' : 'any');
 
     for (const recipe of candidates) {
       const img = getRecipeDefaultImage(recipe);
       if (img) {
         selectedRecipeIds.add(recipe.id);
         selectedImages.push(img);
-        console.log('[selectMenuGridImages]   Selected recipe id=%s image=%s', recipe.id, img.substring(0, 80));
         break;
       }
     }
@@ -376,7 +352,6 @@ export function selectMenuGridImages(sections, recipes, categoryImages = [], max
 
   // Second pass: fill remaining slots from all menu recipes not yet selected,
   // custom images first.
-  console.log('[selectMenuGridImages] --- Pass 2: fill remaining slots (%d/%d used) ---', selectedImages.length, maxImages);
   const allMenuRecipes = sections
     .flatMap(s => s.recipeIds)
     .map(id => recipes.find(r => r.id === id))
@@ -393,7 +368,6 @@ export function selectMenuGridImages(sections, recipes, categoryImages = [], max
     }),
   ];
 
-  console.log('[selectMenuGridImages]   Remaining candidates:', remaining.length);
 
   for (const recipe of remaining) {
     if (selectedImages.length >= maxImages) break;
@@ -401,14 +375,9 @@ export function selectMenuGridImages(sections, recipes, categoryImages = [], max
     if (img && !selectedRecipeIds.has(recipe.id)) {
       selectedRecipeIds.add(recipe.id);
       selectedImages.push(img);
-      console.log('[selectMenuGridImages]   Added recipe id=%s image=%s', recipe.id, img.substring(0, 80));
     }
   }
 
-  const t1 = performance.now();
-  console.log('[selectMenuGridImages] Final selected images (%d):', selectedImages.length,
-    selectedImages.map((u, i) => `[${i}] ${u.substring(0, 80)}`));
-  console.log('=== [selectMenuGridImages] END (%.1fms) ===', t1 - t0);
   return selectedImages;
 }
 
@@ -493,8 +462,6 @@ export async function convertImageUrlsToBase64(imageUrls) {
  * @returns {Promise<string|null>} Base64 JPEG data-URL or null when no images provided.
  */
 export async function buildMenuGridImage(imageUrls, options = {}) {
-  const t0 = performance.now();
-  console.log('=== [buildMenuGridImage] START ===');
 
   const {
     width = 600,
@@ -507,31 +474,22 @@ export async function buildMenuGridImage(imageUrls, options = {}) {
 
   if (!imageUrls || imageUrls.length === 0) {
     console.warn('[buildMenuGridImage] No image URLs provided, returning null');
-    console.log('=== [buildMenuGridImage] END (aborted) ===');
     return null;
   }
 
   const validUrls = imageUrls.filter(url => typeof url === 'string' && url.length > 0);
   if (validUrls.length === 0) {
     console.warn('[buildMenuGridImage] No valid image URLs provided (all filtered out)');
-    console.log('=== [buildMenuGridImage] END (aborted) ===');
     return null;
   }
 
-  console.log('[buildMenuGridImage] Input URLs (%d total, %d valid):', imageUrls.length, validUrls.length);
-  validUrls.forEach((url, i) => {
-    console.log('  [%d] type=%s url=%s', i, url.startsWith('data:') ? 'base64' : 'remote', url);
-  });
-  console.log('[buildMenuGridImage] Canvas options: width=%d height=%d gap=%d quality=%s', width, height, gap, quality);
 
   // Convert remote Firebase Storage URLs to Base64 to avoid CORS issues.
-  console.log('[buildMenuGridImage] --- Converting remote URLs to Base64 ---');
   const convertedUrls = await convertImageUrlsToBase64(validUrls);
 
   const count = Math.min(convertedUrls.length, 6);
   const urls = convertedUrls.slice(0, count);
   const { cols, rows } = getGridLayout(count);
-  console.log('[buildMenuGridImage] Grid layout: %d images → %dcols × %drows', count, cols, rows);
 
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -550,16 +508,12 @@ export async function buildMenuGridImage(imageUrls, options = {}) {
       }
       const tImg = performance.now();
       const isBase64 = src.startsWith('data:');
-      console.log('[buildMenuGridImage] [%d] Loading %s image: %s', index, isBase64 ? 'base64' : 'remote', src);
       const img = new Image();
       // Set crossOrigin BEFORE setting src to ensure proper CORS handling
       if (!isBase64) {
         img.crossOrigin = 'anonymous';
       }
       img.onload = () => {
-        const elapsed = (performance.now() - tImg).toFixed(1);
-        console.log('[buildMenuGridImage] [%d] ✓ Loaded successfully in %sms: %s (%dx%d)',
-          index, elapsed, src.substring(0, 60), img.width, img.height);
         resolve(img);
       };
       img.onerror = (err) => {
@@ -571,20 +525,16 @@ export async function buildMenuGridImage(imageUrls, options = {}) {
       img.src = src;
     });
 
-  console.log('[buildMenuGridImage] --- Loading %d images ---', urls.length);
   const images = await Promise.all(urls.map((url, i) => loadImage(url, i)));
 
   const loadedCount = images.filter(Boolean).length;
-  console.log('[buildMenuGridImage] Load results: %d/%d images loaded successfully', loadedCount, count);
   if (loadedCount === 0) {
     console.warn('[buildMenuGridImage] No images loaded, returning null');
-    console.log('=== [buildMenuGridImage] END (no images loaded) ===');
     return null;
   }
 
   const cellW = (width - gap * (cols + 1)) / cols;
   const cellH = (height - gap * (rows + 1)) / rows;
-  console.log('[buildMenuGridImage] Cell dimensions: %.1fpx × %.1fpx', cellW, cellH);
 
   for (let i = 0; i < count; i++) {
     const img = images[i];
@@ -607,7 +557,6 @@ export async function buildMenuGridImage(imageUrls, options = {}) {
       // Draw a slightly lighter placeholder for cells where the image failed to load.
       ctx.fillStyle = placeholderColor;
       ctx.fillRect(x, y, cellW, cellH);
-      console.log('[buildMenuGridImage] [%d] Drew placeholder at (%.0f,%.0f)', i, x, y);
       continue;
     }
 
@@ -628,14 +577,9 @@ export async function buildMenuGridImage(imageUrls, options = {}) {
     }
 
     ctx.drawImage(img, srcX, srcY, srcW, srcH, x, y, cellW, cellH);
-    console.log('[buildMenuGridImage] [%d] Drew image at (%.0f,%.0f) size %.0fx%.0f', i, x, y, cellW, cellH);
   }
 
-  console.log('[buildMenuGridImage] Canvas dimensions: %dx%d', canvas.width, canvas.height);
   const result = canvas.toDataURL('image/jpeg', quality);
-  const t1 = performance.now();
-  console.log('[buildMenuGridImage] Generated base64 string (first 100 chars): %s', result.substring(0, 100));
-  console.log('=== [buildMenuGridImage] END (%.1fms) ===', t1 - t0);
   return result;
 }
 

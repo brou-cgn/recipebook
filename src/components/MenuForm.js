@@ -1166,8 +1166,6 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
       return;
     }
 
-    console.log('=== [MenuForm:handleSubmit] START ===');
-    const t0 = performance.now();
 
     if (!name.trim()) {
       alert('Bitte geben Sie einen Menü-Namen ein');
@@ -1182,12 +1180,8 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
       return;
     }
 
-    console.log('[MenuForm:handleSubmit] Sections (%d):', sections.length,
-      sections.map(s => ({ name: s.name, recipeIds: s.recipeIds })));
-    console.log('[MenuForm:handleSubmit] Total recipes across sections:', totalRecipes);
 
     const allRecipeIds = sections.reduce((ids, section) => [...ids, ...section.recipeIds], []);
-    console.log('[MenuForm:handleSubmit] All recipe IDs:', allRecipeIds);
 
     const recipeImageMap = {};
     for (const id of allRecipeIds) {
@@ -1199,7 +1193,6 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
         recipeImageMap[id] = '(recipe not found)';
       }
     }
-    console.log('[MenuForm:handleSubmit] Recipe ID → Image mapping:', recipeImageMap);
 
     setSavingMenu(true);
     try {
@@ -1208,18 +1201,9 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
       let gridImage = null;
       let gridImageDark = null;
       try {
-        console.log('[MenuForm:handleSubmit] Fetching category images...');
-        const tCat = performance.now();
         const categoryImages = await getCategoryImages();
-        console.log('[MenuForm:handleSubmit] getCategoryImages() done in %.1fms → %d images',
-          performance.now() - tCat, categoryImages.length);
 
-        console.log('[MenuForm:handleSubmit] Calling selectMenuGridImages...');
-        const tSel = performance.now();
         const selectedUrls = selectMenuGridImages(sections, recipes, categoryImages);
-        console.log('[MenuForm:handleSubmit] selectMenuGridImages() done in %.1fms → %d URLs',
-          performance.now() - tSel, selectedUrls.length,
-          selectedUrls.map((u, i) => `[${i}] ${u.substring(0, 60)}`));
 
         // Use existing menu ID or generate temporary ID for new menus (shared for both uploads)
         const uploadMenuId = menu?.id || `temp-${Date.now()}`;
@@ -1228,14 +1212,8 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
           // Fetch each source image over the network once and reuse the
           // converted Base64 for both the light and dark variant below,
           // instead of every buildMenuGridImage() call re-fetching them.
-          console.log('[MenuForm:handleSubmit] Converting source images to Base64...');
-          const tConvert = performance.now();
           const convertedUrls = await convertImageUrlsToBase64(selectedUrls);
-          console.log('[MenuForm:handleSubmit] convertImageUrlsToBase64() done in %.1fms',
-            performance.now() - tConvert);
 
-          console.log('[MenuForm:handleSubmit] Calling buildMenuGridImage (light + dark, in parallel)...');
-          const tGrid = performance.now();
           const [gridImageBase64, gridImageDarkBase64] = await Promise.all([
             buildMenuGridImage(convertedUrls, {
               width: 600,
@@ -1252,8 +1230,6 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
               placeholderColor: '#2a2a2a',
             }),
           ]);
-          console.log('[MenuForm:handleSubmit] buildMenuGridImage() done in %.1fms → light: %s, dark: %s',
-            performance.now() - tGrid, Boolean(gridImageBase64), Boolean(gridImageDarkBase64));
 
           // Delete-old+upload-new for the light and dark variants are
           // independent Firebase Storage operations, so run them in parallel
@@ -1271,11 +1247,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
               }
               // Upload grid image to Firebase Storage
               try {
-                console.log('[MenuForm:handleSubmit] Uploading grid image to Firebase Storage...');
-                const tUpload = performance.now();
                 const url = await uploadMenuGridImage(gridImageBase64, uploadMenuId);
-                console.log('[MenuForm:handleSubmit] Grid image uploaded in %.1fms → URL: %s',
-                  performance.now() - tUpload, url.substring(0, 80));
                 return url;
               } catch (uploadErr) {
                 console.error('[MenuForm:handleSubmit] Failed to upload grid image:', uploadErr);
@@ -1295,11 +1267,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
               }
               // Upload dark grid image to Firebase Storage
               try {
-                console.log('[MenuForm:handleSubmit] Uploading dark grid image to Firebase Storage...');
-                const tUploadDark = performance.now();
                 const url = await uploadMenuGridImageDark(gridImageDarkBase64, uploadMenuId);
-                console.log('[MenuForm:handleSubmit] Dark grid image uploaded in %.1fms → URL: %s',
-                  performance.now() - tUploadDark, url.substring(0, 80));
                 return url;
               } catch (uploadErr) {
                 console.error('[MenuForm:handleSubmit] Failed to upload dark grid image:', uploadErr);
@@ -1330,15 +1298,6 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
         eventOwnerId: eventId ? eventOwnerId : null,
       };
 
-      console.log('[MenuForm:handleSubmit] Final menuData:', {
-        id: menuData.id,
-        name: menuData.name,
-        hasImage: Boolean(menuData.image),
-        hasGridImage: Boolean(menuData.gridImage),
-        hasGridImageDark: Boolean(menuData.gridImageDark),
-        sectionsCount: menuData.sections.length,
-        recipeIdsCount: menuData.recipeIds.length,
-      });
 
       // Keep the linked event's drinks in sync with this menu's "Drinks"
       // section: every manually added/removed drink (and every drink recipe)
@@ -1404,7 +1363,6 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
               return acc;
             }, {});
             const guestPreferenceMultipliers = computeGuestPreferenceMultipliers(selectedGuestObjs, allEventDrinks, targetDriverGuestIds);
-            console.log('[MenuForm:handleSubmit] Syncing drinks/guests to linked event and recalculating Getränkeverteilung:', targetDrinkIds, descriptionGuestIds);
             await calculateEventDrinks({
               ...eventFields,
               customDrinkIds: targetDrinkIds,
@@ -1422,7 +1380,6 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
         }
       }
 
-      console.log('=== [MenuForm:handleSubmit] END (%.1fms) ===', performance.now() - t0);
 
       // Await the parent's save (Firestore write + closing the form) so the
       // "saving" state - and the re-entrancy guard at the top of this

@@ -109,7 +109,7 @@ self.addEventListener('message', async (event) => {
     // Store app settings in IndexedDB for service worker access
     try {
       await saveToIndexedDB('appSettings', event.data.settings);
-      console.log('[SW] App settings updated in IndexedDB');
+      console.info('[SW] App settings updated in IndexedDB');
     } catch (error) {
       console.error('[SW] Failed to save app settings:', error);
     }

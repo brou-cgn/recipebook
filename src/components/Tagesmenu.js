@@ -929,42 +929,26 @@ function Tagesmenu({
   // Returns 0 when disabled (null threshold) or when there are no other members,
   // which safely leaves the allSwiped threshold check false.
   const candidateScore = useMemo(() => {
-    console.log('candidateScore calculation triggered');
-    console.log('  maxKandidatenSchwelle:', maxKandidatenSchwelle);
-    console.log('  listMemberIds:', listMemberIds);
-    console.log('  currentUser?.id:', currentUser?.id);
 
     if (maxKandidatenSchwelle === null || listMemberIds.length === 0) {
-      console.log('  Returning 0 (threshold disabled or no members)');
       return 0;
     }
 
     const otherMemberIds = listMemberIds.filter((uid) => uid !== currentUser?.id);
-    console.log('  otherMemberIds:', otherMemberIds);
 
     if (otherMemberIds.length === 0) {
-      console.log('  Returning 0 (no other members)');
       return 0;
     }
 
-    console.log('  allListRecipes.length:', allListRecipes.length);
-    console.log('  allMembersFlags:', allMembersFlags);
-    console.log('  groupStatusByRecipeId:', groupStatusByRecipeId);
 
     const swipedCandidateRecipes = allListRecipes.filter((recipe) => {
       const groupStatus = groupStatusByRecipeId[recipe.id];
       const isCandidate = groupStatus === 'kandidat';
 
-      console.log(`    Recipe ${recipe.id}:`, {
-        title: recipe.title,
-        groupStatus,
-        isCandidate
-      });
 
       return isCandidate;
     });
 
-    console.log('  swipedCandidateRecipes.length:', swipedCandidateRecipes.length);
 
     const score = swipedCandidateRecipes.reduce((sum, recipe) => {
       const swipedCount = otherMemberIds.filter(
@@ -973,17 +957,10 @@ function Tagesmenu({
       const ni = otherMemberIds.length - swipedCount;
       const contribution = 1 / (1 + ni);
 
-      console.log(`    Recipe ${recipe.id} contribution:`, {
-        swipedCount,
-        ni,
-        contribution,
-        runningSum: sum + contribution
-      });
 
       return sum + contribution;
     }, 0);
 
-    console.log('  Final candidateScore:', score);
     return score;
   }, [allListRecipes, listMemberIds, allMembersFlags, maxKandidatenSchwelle, currentUser, groupStatusByRecipeId]);
 
@@ -1043,16 +1020,6 @@ function Tagesmenu({
     onSelectRecipe(recipe, { listId: listIdOverride ?? selectedListId, view });
   };
 
-  console.log('allSwiped check:', {
-    allListRecipesLength: allListRecipes.length,
-    listRecipesLength: listRecipes.length,
-    currentIndex,
-    maxKandidatenSchwelle,
-    candidateScore,
-    thresholdMet,
-    thresholdCrossedAtIndex,
-    allSwiped
-  });
 
   // Keep stableListRecipesRef up-to-date when idle so that during dragging/flying
   // visibleRecipes is derived from a frozen snapshot (preventing background-card reshuffles).

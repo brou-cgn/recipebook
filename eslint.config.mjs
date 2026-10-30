@@ -33,10 +33,14 @@ export default [
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
       'no-unused-vars': ['warn', { args: 'none', ignoreRestSiblings: true, varsIgnorePattern: '^_' }],
+      // Keine Debug-Ausgaben im Produktivcode (Tech-Check T7): sie laufen in jedem Browser
+      // und füllten den Testlauf. Bewusste Meldungen über console.info/warn/error.
+      'no-console': ['error', { allow: ['info', 'warn', 'error'] }],
     },
   },
   {
     files: ['src/**/*.test.{js,jsx}', 'src/setupTests.js', 'src/test-utils/**', 'src/**/__mocks__/**'],
     languageOptions: { globals: { ...globals.jest, ...globals.node } },
+    rules: { 'no-console': 'off' },
   },
 ];

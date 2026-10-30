@@ -902,7 +902,7 @@ describe('getSettings – settings/images document split', () => {
     setDoc.mockResolvedValue(undefined);
     updateDoc.mockResolvedValue(undefined);
 
-    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const logSpy = jest.spyOn(console, 'info').mockImplementation(() => {});
     const settings = await getSettings();
     logSpy.mockRestore();
 
@@ -957,7 +957,7 @@ describe('getSettings – settings/images document split', () => {
     });
     updateDoc.mockResolvedValue(undefined);
 
-    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const logSpy = jest.spyOn(console, 'info').mockImplementation(() => {});
     await getSettings();
     logSpy.mockRestore();
 
