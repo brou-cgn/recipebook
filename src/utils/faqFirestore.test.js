@@ -79,14 +79,39 @@ describe('importFaqsFromMarkdown', () => {
     );
   });
 
-  it('uses existingFaqs length as base order index for new entries', async () => {
+  it('places imported entries first and moves entries not in the file behind them', async () => {
     const md = `### Frage\n\nAntwort\n`;
-    const existingFaqs = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }, { id: 'e' }];
+    const existingFaqs = [{ id: 'b', order: 1 }, { id: 'a', order: 0 }];
     await importFaqsFromMarkdown(md, existingFaqs);
     expect(mockAddDoc).toHaveBeenCalledWith(
       'mock-collection-ref',
-      expect.objectContaining({ order: 5 })
+      expect.objectContaining({ order: 0 })
     );
+    expect(mockUpdateDoc).toHaveBeenCalledWith('mock-doc-ref-a', expect.objectContaining({ order: 1 }));
+    expect(mockUpdateDoc).toHaveBeenCalledWith('mock-doc-ref-b', expect.objectContaining({ order: 2 }));
+  });
+
+  it('reorders existing entries to match their position in the file', async () => {
+    const md = `### Zweite\n<!-- id: faq-2 -->\n\nB\n\n### Erste\n<!-- id: faq-1 -->\n\nA\n`;
+    const existingFaqs = [
+      { id: 'doc-1', sourceId: 'faq-1', order: 0 },
+      { id: 'doc-2', sourceId: 'faq-2', order: 1 }
+    ];
+    await importFaqsFromMarkdown(md, existingFaqs);
+    expect(mockUpdateDoc).toHaveBeenCalledTimes(2);
+    expect(mockUpdateDoc).toHaveBeenCalledWith('mock-doc-ref-doc-2', expect.objectContaining({ order: 0 }));
+    expect(mockUpdateDoc).toHaveBeenCalledWith('mock-doc-ref-doc-1', expect.objectContaining({ order: 1 }));
+  });
+
+  it('does not rewrite entries outside the file whose order is already correct', async () => {
+    const md = `### Frage\n<!-- id: faq-1 -->\n\nAntwort\n`;
+    const existingFaqs = [
+      { id: 'doc-1', sourceId: 'faq-1', order: 0 },
+      { id: 'manual', order: 1 }
+    ];
+    await importFaqsFromMarkdown(md, existingFaqs);
+    expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
+    expect(mockUpdateDoc).toHaveBeenCalledWith('mock-doc-ref-doc-1', expect.anything());
   });
 
   it('ignores # top-level headings and --- dividers', async () => {
@@ -156,7 +181,7 @@ describe('importFaqsFromMarkdown', () => {
 
   it('creates new entry when sourceId does not match any existing FAQ', async () => {
     const md = `### Neue Frage\n<!-- id: faq-new -->\n\nAntwort\n`;
-    const existingFaqs = [{ id: 'x', sourceId: 'faq-001' }];
+    const existingFaqs = [{ id: 'x', sourceId: 'faq-001', order: 1 }];
     const count = await importFaqsFromMarkdown(md, existingFaqs);
     expect(count).toBe(1);
     expect(mockUpdateDoc).not.toHaveBeenCalled();
@@ -168,7 +193,7 @@ describe('importFaqsFromMarkdown', () => {
 
   it('creates new entry (no update) when entry has no id comment (backward compatibility)', async () => {
     const md = `### Frage ohne ID\n\nAntwort\n`;
-    const existingFaqs = [{ id: 'x', sourceId: 'faq-001' }];
+    const existingFaqs = [{ id: 'x', sourceId: 'faq-001', order: 1 }];
     const count = await importFaqsFromMarkdown(md, existingFaqs);
     expect(count).toBe(1);
     expect(mockUpdateDoc).not.toHaveBeenCalled();
@@ -232,5 +257,23 @@ describe('addFaq', () => {
     const result = await addFaq({ title: 'Test', order: 0 });
     expect(result.id).toBe('new-id');
     expect(result.title).toBe('Test');
+  });
+});
+
+describe('public/FAQ.md', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const md = fs.readFileSync(path.join(__dirname, '../../public/FAQ.md'), 'utf8');
+
+  it('keeps the four first-level chapters of the Kochschule', () => {
+    const chapters = md.split('\n').filter(l => l.startsWith('## ')).map(l => l.slice(3));
+    expect(chapters).toEqual(['Be inspired', 'Mise en Place', 'Ran an die Töpfe!', 'Inspire']);
+  });
+
+  it('gives every entry a unique id', () => {
+    const headings = md.split('\n').filter(l => /^##+ /.test(l));
+    const ids = [...md.matchAll(/^<!--\s*id:\s*(\S+)\s*-->$/gm)].map(m => m[1]);
+    expect(ids).toHaveLength(headings.length);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });
