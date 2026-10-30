@@ -329,7 +329,7 @@ async function calculateNutritionFromOpenFoodFactsCore({
 
     const {name} = parsed;
     const referenceId = normalizeNutritionReferenceId(name);
-    let cachedSnapshot = null;
+    let cachedSnapshot;
 
     try {
       if (referenceId) {

@@ -59,7 +59,7 @@ async function requireRoleFeature(userId, role, features) {
  */
 async function requireAiCaller(auth, features = null) {
   const userId = auth.uid;
-  let role = null;
+  let role;
   try {
     const doc = await admin.firestore().doc(`users/${userId}`).get();
     role = doc.exists ? doc.data()?.role : null;
