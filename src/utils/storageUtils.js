@@ -82,27 +82,43 @@ export async function uploadRecipeImage(file) {
 }
 
 /**
- * Upload a drink image to Firebase Storage (`drinks/` prefix).
- * @param {File} file - The image file to upload
- * @returns {Promise<string>} - Download URL of the uploaded image
+ * Storage folder for the drink photos of one member. storage.rules only lets
+ * the owner (request.auth.uid) upload below drinks/{uid}/ (Tech-Check S25).
+ * @param {string} userId - uid of the uploading member
+ * @returns {string} Folder without trailing slash
  */
-export async function uploadDrinkImage(file) {
-  return uploadImageToFolder(file, 'drinks');
+function drinkImageFolder(userId) {
+  if (typeof userId !== 'string' || !userId || userId.includes('/')) {
+    throw new Error('A valid user id is required to upload drink images');
+  }
+  return `drinks/${userId}`;
 }
 
 /**
- * Upload a drink image thumbnail Blob to Firebase Storage (`drinks/` prefix).
+ * Upload a drink image to Firebase Storage (`drinks/{userId}/`).
+ * @param {File} file - The image file to upload
+ * @param {string} userId - uid of the uploading member
+ * @returns {Promise<string>} - Download URL of the uploaded image
+ */
+export async function uploadDrinkImage(file, userId) {
+  return uploadImageToFolder(file, drinkImageFolder(userId));
+}
+
+/**
+ * Upload a drink image thumbnail Blob to Firebase Storage (`drinks/{userId}/`).
  * @param {Blob} thumbnailBlob - The thumbnail Blob (typically JPEG).
+ * @param {string} userId - uid of the uploading member
  * @returns {Promise<string>} Download URL of the uploaded thumbnail.
  */
-export async function uploadDrinkThumbnail(thumbnailBlob) {
+export async function uploadDrinkThumbnail(thumbnailBlob, userId) {
   if (!thumbnailBlob) {
     throw new Error('No thumbnail blob provided');
   }
+  const folder = drinkImageFolder(userId);
 
   try {
     const filename = `thumb-${Date.now()}-${Math.random().toString(36).substring(2, 15)}.jpg`;
-    const snapshot = await uploadBytes(ref(storage, `drinks/${filename}`), thumbnailBlob, {
+    const snapshot = await uploadBytes(ref(storage, `${folder}/${filename}`), thumbnailBlob, {
       contentType: 'image/jpeg',
       cacheControl: 'public, max-age=31536000',
     });
@@ -385,7 +401,6 @@ export async function deleteMenuGridImage(imageUrl) {
 
     const storageRef = ref(storage, path);
     await deleteObject(storageRef);
-    console.log('[deleteMenuGridImage] Deleted old grid image:', path);
   } catch (error) {
     console.error('Error deleting menu grid image from Firebase Storage:', error);
   }
@@ -417,7 +432,6 @@ export async function deleteMenuGridImageDark(imageUrl) {
 
     const storageRef = ref(storage, path);
     await deleteObject(storageRef);
-    console.log('[deleteMenuGridImageDark] Deleted old dark grid image:', path);
   } catch (error) {
     console.error('Error deleting dark menu grid image from Firebase Storage:', error);
   }

@@ -17,12 +17,14 @@ erzwungen — wo das gilt, steht die Datei dabei.
 ## Datenzugriff
 - Nie eine ganze Collection lesen. Abfragen immer mit `where` und `limit`.
 - Aggregierte Daten (Logs, Zähler) nicht pro Aufruf einzeln schreiben und alle lesen.
-- Keine personenbezogenen Daten (E-Mail-Adressen u. Ä.) in Logs oder Protokolle.
+- Keine personenbezogenen Daten (E-Mail-Adressen u. Ä.) in Logs oder Protokolle. In `functions/`
+  erzwungen durch `functions/logPolicy.test.js` (uid oder ID statt Adresse loggen).
 
 ## Sicherheit
 - Jede Cloud Function prüft Authentifizierung und Rolle serverseitig, nicht nur im Client.
   KI-Functions erst ab Rolle `edit`; Limit-Prüfungen schlagen geschlossen fehl (fail closed).
-- Neue Collections brauchen Regeln in `firestore.rules` und einen Eintrag in `docs/architecture/security.md`.
+- Neue Collections brauchen Regeln in `firestore.rules` und einen Eintrag in `docs/architecture/security.md`,
+  neue Storage-Ordner ebenso (`storage.rules`). Erzwungen durch `src/securityDocsPolicy.test.js`.
 - Gäste (nicht angemeldet) lesen nur per Freigabe-Link.
 - Keine Secrets im Repo.
 
@@ -34,7 +36,8 @@ erzwungen — wo das gilt, steht die Datei dabei.
   keine Hex-Farben; Light und Dark sind dort je Token definiert, ein Eintrag in `darkMode.css`
   ist dann nicht nötig. Neue Dark-Mode-Regeln in `darkMode.css` nicht ergänzen. Fehlt ein Token,
   in `tokens.css` mit beiden Werten anlegen. Erzwungen durch `src/colorTokenPolicy.test.js`
-  (Baseline je Datei, darf nur sinken: wer Farben migriert, senkt den Wert).
+  (Baseline je Datei, darf nur sinken: wer Farben migriert, senkt den Wert; für `darkMode.css`
+  zählt die Zahl der Dark-Selektoren).
 - **Löschaktionen**: ausschließlich `DeleteRowButton` (kein eigenes ×, kein gefüllter Kreis,
   kein Icon im Eingabefeld). 28 × 28 px, Radius 999, transparent; Rot `#a33a26` auf 12 % Fläche
   erst bei Hover/Fokus; am rechten Zeilenrand; Tooltip und `aria-label` „<Name> entfernen".
@@ -60,7 +63,7 @@ erzwungen — wo das gilt, steht die Datei dabei.
   mit `bump_type` starten.
 
 ## Tests
-- Vor dem Commit `npm run lint:ci` (ESLint für `src/`, bricht nur bei Fehlern ab; `npm run lint` zeigt zusätzlich ~270 Warnungen als Altbestand).
+- Vor dem Commit `npm run lint:ci` (ESLint für `src/`, bricht nur bei Fehlern ab; `npm run lint` zeigt zusätzlich die Warnungen des Altbestands).
 - Vor dem Commit `npm run test:ci` ausführen. Das ist der Lauf der CI
   (`.github/workflows/ci.yml`, jeder PR gegen `main`). `npm test` läuft zusätzlich über die
   Quarantäne.

@@ -1,9 +1,9 @@
 {
   "name": "recipebook-rules-tests",
   "private": true,
-  "description": "Tests f\u00fcr firestore.rules gegen den Firestore-Emulator",
+  "description": "Tests f\u00fcr firestore.rules und storage.rules gegen die Firebase-Emulatoren",
   "scripts": {
-    "test": "firebase emulators:exec --config ../firebase.json --only firestore --project demo-recipebook \"node --test --test-concurrency=1\""
+    "test": "firebase emulators:exec --config ../firebase.json --only firestore,storage --project demo-recipebook \"node --test --test-concurrency=1\""
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.0",

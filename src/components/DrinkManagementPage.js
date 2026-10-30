@@ -350,13 +350,13 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
     setError('');
     try {
       const [url, thumbnailBlob] = await Promise.all([
-        uploadDrinkImage(file),
+        uploadDrinkImage(file, currentUser?.id),
         generateThumbnailBlob(file).catch(() => null),
       ]);
       let thumbnailUrl = null;
       if (thumbnailBlob) {
         try {
-          thumbnailUrl = await uploadDrinkThumbnail(thumbnailBlob);
+          thumbnailUrl = await uploadDrinkThumbnail(thumbnailBlob, currentUser?.id);
         } catch (thumbErr) {
           console.warn('Drink thumbnail upload failed (non-critical):', thumbErr);
         }

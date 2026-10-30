@@ -40,7 +40,7 @@ async function migrateFromSettingsDoc() {
     if (settingsDoc.exists()) {
       const settings = settingsDoc.data();
       if (settings.categoryImages && Array.isArray(settings.categoryImages) && settings.categoryImages.length > 0) {
-        console.log('Migrating category images from settings/app to categoryImages collection...');
+        console.info('Migrating category images from settings/app to categoryImages collection...');
         const images = settings.categoryImages;
         
         // Save each image to the collection
@@ -54,7 +54,7 @@ async function migrateFromSettingsDoc() {
         // Remove categoryImages from settings/app to free up space
         await updateDoc(doc(db, 'settings', 'app'), { categoryImages: deleteField() });
         
-        console.log('Migration completed successfully');
+        console.info('Migration completed successfully');
         return images;
       }
     }
@@ -77,7 +77,7 @@ async function migrateFromLocalStorage() {
     try {
       const images = JSON.parse(stored);
       if (images && images.length > 0) {
-        console.log('Migrating category images from localStorage to Firestore collection...');
+        console.info('Migrating category images from localStorage to Firestore collection...');
         
         // Save each image to the collection
         for (const image of images) {
@@ -89,7 +89,7 @@ async function migrateFromLocalStorage() {
         
         // Clear from localStorage after successful migration
         localStorage.removeItem(CATEGORY_IMAGES_KEY);
-        console.log('Migration completed successfully');
+        console.info('Migration completed successfully');
         migrationDone = true;
         return images;
       }

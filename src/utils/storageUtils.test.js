@@ -64,18 +64,44 @@ describe('Storage Utilities', () => {
   });
 
   describe('uploadDrinkImage', () => {
-    it('lädt unter drinks/ hoch und validiert Typ und Größe', async () => {
+    it('lädt unter drinks/{uid}/ hoch und validiert Typ und Größe', async () => {
       const { uploadDrinkImage } = require('./storageUtils');
       const { ref, uploadBytes, getDownloadURL } = require('firebase/storage');
-      ref.mockReturnValue({ path: 'drinks/x.jpg' });
-      uploadBytes.mockResolvedValue({ ref: { path: 'drinks/x.jpg' } });
+      ref.mockReturnValue({ path: 'drinks/u1/x.jpg' });
+      uploadBytes.mockResolvedValue({ ref: { path: 'drinks/u1/x.jpg' } });
       getDownloadURL.mockResolvedValue(MOCK_STORAGE_URL);
 
-      await expect(uploadDrinkImage({ size: 10, type: 'application/pdf' })).rejects.toThrow('Invalid file type');
-      await expect(uploadDrinkImage({ size: 6 * 1024 * 1024, type: 'image/png' })).rejects.toThrow('less than 5MB');
+      await expect(uploadDrinkImage({ size: 10, type: 'application/pdf' }, 'u1')).rejects.toThrow('Invalid file type');
+      await expect(uploadDrinkImage({ size: 6 * 1024 * 1024, type: 'image/png' }, 'u1')).rejects.toThrow('less than 5MB');
 
-      await expect(uploadDrinkImage({ size: 10, type: 'image/png' })).resolves.toBe(MOCK_STORAGE_URL);
-      expect(ref.mock.calls[ref.mock.calls.length - 1][1]).toMatch(/^drinks\/.+\.png$/);
+      await expect(uploadDrinkImage({ size: 10, type: 'image/png' }, 'u1')).resolves.toBe(MOCK_STORAGE_URL);
+      expect(ref.mock.calls[ref.mock.calls.length - 1][1]).toMatch(/^drinks\/u1\/[^/]+\.png$/);
+    });
+
+    // storage.rules erlaubt Uploads nur unter der eigenen uid (Tech-Check S25)
+    it('lehnt Uploads ohne gültige Nutzer-ID ab', async () => {
+      const { uploadDrinkImage } = require('./storageUtils');
+      const { uploadBytes } = require('firebase/storage');
+      uploadBytes.mockClear();
+
+      for (const userId of [undefined, '', '../u2']) {
+        await expect(uploadDrinkImage({ size: 10, type: 'image/png' }, userId)).rejects.toThrow('valid user id');
+      }
+      expect(uploadBytes).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('uploadDrinkThumbnail', () => {
+    it('lädt das Vorschaubild unter drinks/{uid}/ hoch', async () => {
+      const { uploadDrinkThumbnail } = require('./storageUtils');
+      const { ref, uploadBytes, getDownloadURL } = require('firebase/storage');
+      ref.mockReturnValue({ path: 'drinks/u1/thumb.jpg' });
+      uploadBytes.mockResolvedValue({ ref: { path: 'drinks/u1/thumb.jpg' } });
+      getDownloadURL.mockResolvedValue(MOCK_STORAGE_URL);
+
+      await expect(uploadDrinkThumbnail(new Blob(['x']), 'u1')).resolves.toBe(MOCK_STORAGE_URL);
+      expect(ref.mock.calls[ref.mock.calls.length - 1][1]).toMatch(/^drinks\/u1\/thumb-[^/]+\.jpg$/);
+      await expect(uploadDrinkThumbnail(new Blob(['x']))).rejects.toThrow('valid user id');
     });
   });
 

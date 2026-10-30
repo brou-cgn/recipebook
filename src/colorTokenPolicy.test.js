@@ -7,7 +7,7 @@
  * Bestehende Funde stehen als Baseline: je Datei die erlaubte Anzahl
  * Hex-Farben. Die Baseline darf nur sinken. Neue CSS-Dateien starten bei 0.
  * Ausgenommen: tokens.css (Definition) und darkMode.css (Altbestand, wird
- * abgebaut).
+ * abgebaut; dort gilt unten eine eigene Baseline für die Dark-Selektoren).
  */
 const fs = require('fs');
 const path = require('path');
@@ -138,5 +138,29 @@ describe('Farb-Token-Richtlinie', () => {
     });
     const missing = [...used].filter((name) => !lightSet.has(name) || !darkSet.has(name));
     expect(missing).toEqual([]);
+  });
+});
+
+// darkMode.css ist Altbestand: neue Dark-Regeln gehören als Token in tokens.css
+// (AGENTS.md). Gezählt werden die [data-theme="dark"]-Selektoren; der Wert darf nur
+// sinken (Tech-Check D5: am 27.10.2026 kamen trotz Regel sieben neue dazu).
+const DARK_MODE_SELECTORS = 1019;
+
+describe('darkMode.css (Altbestand)', () => {
+  const css = fs.readFileSync(path.join(SRC, 'darkMode.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const count = (css.match(/\[data-theme="dark"\]/g) || []).length;
+
+  it('bekommt keine neuen Dark-Selektoren', () => {
+    const violations = count > DARK_MODE_SELECTORS
+      ? [`darkMode.css: ${count} Dark-Selektoren (erlaubt: ${DARK_MODE_SELECTORS}); Farbe als Token in src/tokens.css anlegen`]
+      : [];
+    expect(violations).toEqual([]);
+  });
+
+  it('hält die Baseline aktuell (entfernte Regeln senken den Wert)', () => {
+    const stale = count < DARK_MODE_SELECTORS
+      ? [`darkMode.css: Baseline ${DARK_MODE_SELECTORS}, tatsächlich ${count}`]
+      : [];
+    expect(stale).toEqual([]);
   });
 });

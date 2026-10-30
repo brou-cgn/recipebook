@@ -21,7 +21,7 @@ This file documents the security rules for the Firestore database that enforce a
 
 ## Zugriff pro Collection
 
-Quelle ist immer `firestore.rules`; diese Tabelle gibt den Stand vom 18.10.2026 wieder und wird durch `rules-tests/` abgesichert (siehe unten).
+Quelle ist immer `firestore.rules` bzw. `storage.rules`; diese Tabelle gibt den Stand vom 30.10.2026 wieder und wird durch `rules-tests/` abgesichert (siehe unten). `src/securityDocsPolicy.test.js` prüft, dass jeder `match`-Block beider Regeldateien hier steht (Tech-Check D5).
 
 | Collection | Lesen | Schreiben |
 |------------|-------|-----------|
@@ -34,6 +34,7 @@ Quelle ist immer `firestore.rules`; diese Tabelle gibt den Stand vom 18.10.2026 
 | `discoverTopics` | einzelne Themen `isAnyUser()`, Auflisten nur Admin | Admin |
 | `faqs`, `categoryImages`, `rolePermissions`, `appSettings` | `isAnyUser()` | Admin |
 | `settings` | `isAnyUser()`; `settings/app` und `settings/images` auch öffentlich | Admin; `edit`+ nur bestimmte Listenfelder, `moderator` zusätzlich Kochatelier-Texte |
+| `settings/app/aiPromptHistory` | Admin | Anlegen und Löschen: Admin; Ändern: niemand (Einträge unveränderlich). Die Migration in `functions/shared/gemini.js` schreibt per Admin SDK |
 | `nutritionReferences`, `commonTerms`, `buttonIcons`, `customLists`, `appConfig/nutritionReferences` | öffentlich (Freigabelink-Betrachter brauchen sie) | `moderator`/`admin` (Icons, Listen: Admin; `appConfig`: nur Cloud Function) |
 | `users/{uid}` | Eigentümer, Admin | Eigentümer ändert alles außer `role`; Anlegen nur mit `role == 'read'`, nicht anonym; Löschen Admin |
 | `publicProfiles/{uid}` | angemeldet (**schließt Gäste ein**) | Admin und `syncPublicProfile` (Cloud Function) |
@@ -49,7 +50,8 @@ Quelle ist immer `firestore.rules`; diese Tabelle gibt den Stand vom 18.10.2026 
 | `follows` | Beteiligte (Follower, Gefolgter), nur Mitglieder | Löschen: beide Seiten; Anlegen/Ändern: niemand (nur Callables `requestFollow`, `respondFollow`) |
 | `users/{uid}/followInbox` | Eigentümer (offene Anfragen an ihn) | niemand (nur Cloud Function) |
 | `users/{uid}/followBlocks` | Eigentümer (von ihm blockierte Personen) | niemand (nur Cloud Function) |
-| `followCooldowns`, `followLimits` | niemand | niemand (nur Cloud Function) |
+| `users/{uid}/fuerDichEntdeckt` | Eigentümer, nur Mitglieder | niemand (nur Cloud Function) |
+| `followCooldowns`, `followLimits`, `listPushLimits` | niemand | niemand (nur Cloud Function) |
 | `recipeSwipeFlags` | Eigentümer, Mitglieder derselben Liste | Eigentümer; Listenmitglieder nur `calculatedFlag`, `calculatedExpiresAt` |
 | `aiScanLimits` | `edit`+ | Admin |
 | `aiNutritionLimits`, `aiRephraseLimits`, `aiVersionLimits`, `importSweeperLimits` | niemand | niemand (nur Cloud Function) |
@@ -58,7 +60,11 @@ Quelle ist immer `firestore.rules`; diese Tabelle gibt den Stand vom 18.10.2026 
 | `cuisineProposals` | `isAnyUser()` | Anlegen: `edit`+ (nicht freigegeben); Ändern: Autor oder `moderator`+; Löschen: `moderator`+ |
 | Collection-Group `events`, `profiles` | Admin | |
 | Collection-Group `customDrinks` | `isAnyUser()` | |
-| Storage `drinks/` (Getränkebilder, `storage.rules`) | öffentlich | Anlegen: angemeldet, nur Bilder bis 5 MB; Löschen: angemeldet |
+| Storage `recipes/` (Rezeptbilder, `storage.rules`) | öffentlich | `edit`+ |
+| Storage `thumbnails/` (Vorschaubilder) | öffentlich | `edit`+ |
+| Storage `settings/` (Favicon, App-Logo) | öffentlich | Admin |
+| Storage `drinks/{uid}/` (Getränkebilder) | öffentlich | Anlegen: nur das Mitglied selbst (nicht anonym), nur Bilder bis 5 MB; Löschen: Eigentümer oder Admin (Tech-Check S25) |
+| Storage `drinks/` (Altbestand vor S25, ohne uid im Pfad) | öffentlich | Löschen: Admin; Anlegen: niemand |
 
 ## KI-Functions (Cloud Functions mit Gemini)
 
@@ -81,7 +87,7 @@ Die Tests in `rules-tests/access.test.js` halten diese Zustände fest (sie erset
 
 ## Tests der Regeln
 
-`rules-tests/` enthält Tests gegen den Firestore-Emulator (`@firebase/rules-unit-testing`). Sie laufen in der CI (Job „Firestore Rules") und lokal:
+`rules-tests/` enthält Tests gegen den Firestore- und den Storage-Emulator (`@firebase/rules-unit-testing`; `storage.test.js` für `storage.rules`). Sie laufen in der CI (Job „Firestore Rules") und lokal:
 
 ```bash
 cd rules-tests

@@ -9,6 +9,7 @@ const {isInstagramUrl, BATCH_IMAGE_CONCURRENCY, validateImageData, runImportFrom
 const {callGeminiAPI, callGeminiTextAPI, getRecipeExtractionPrompt, RECIPE_EXTRACTION_RESPONSE_SCHEMA, transcribeVideoWithGemini} = require('./gemini');
 const {resolveImportLists, cuisineFields, normalizeIngredientUnits} = require('./importLists');
 const {geminiApiKey} = require('./secrets');
+const {geminiGenerateContentRequest} = require('./geminiConfig');
 
 /**
  * Push a data-only FCM message to a user's own devices when a fully
@@ -395,12 +396,12 @@ async function callGeminiMultiImageAPI(imageInputs, lang, apiKey, cuisineTypes, 
     },
   };
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const {url, headers: geminiHeaders} = geminiGenerateContentRequest(apiKey);
 
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: geminiHeaders,
       body: JSON.stringify(requestBody),
     });
 

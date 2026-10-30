@@ -224,7 +224,7 @@ exports.sendGroupInvitationEmail = onCall(
 
       try {
         await transporter.sendMail(mailOptions);
-        console.log(`sendGroupInvitationEmail: invitation sent to ${normalizedEmail}`);
+        console.log(`sendGroupInvitationEmail: invitation sent (inviter ${callerAuth.uid})`);
       } catch (mailError) {
         console.error('sendGroupInvitationEmail: error sending email:', mailError);
         throw new HttpsError('internal', 'Fehler beim Versenden der Einladungs-E-Mail.');
@@ -274,7 +274,7 @@ exports.processGroupInvitationsOnUserRegistration = onDocumentCreated(
           .get();
 
       if (groupsSnapshot.empty) {
-        console.log(`processGroupInvitationsOnUserRegistration: no pending group invitations for ${normalizedEmail}`);
+        console.log(`processGroupInvitationsOnUserRegistration: no pending group invitations for user ${userId}`);
         return;
       }
 
@@ -295,7 +295,7 @@ exports.processGroupInvitationsOnUserRegistration = onDocumentCreated(
       });
 
       await batch.commit();
-      console.log(`processGroupInvitationsOnUserRegistration: processed ${groupsSnapshot.size} group(s) for ${normalizedEmail}`);
+      console.log(`processGroupInvitationsOnUserRegistration: processed ${groupsSnapshot.size} group(s) for user ${userId}`);
 
       // Mark the invitation as processed if a corresponding record exists.
       // The 'invitations' collection tracks invitation emails sent to unregistered
@@ -307,7 +307,7 @@ exports.processGroupInvitationsOnUserRegistration = onDocumentCreated(
           processedAt: admin.firestore.FieldValue.serverTimestamp(),
           processedUserId: userId,
         });
-        console.log(`processGroupInvitationsOnUserRegistration: invitation marked as processed for ${normalizedEmail}`);
+        console.log(`processGroupInvitationsOnUserRegistration: invitation marked as processed for user ${userId}`);
       }
     },
 );

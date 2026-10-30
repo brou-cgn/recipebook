@@ -24,6 +24,14 @@ service firebase.storage {
       return isAuthenticated() && getUserRole() == 'admin';
     }
 
+    // A registered member (not an anonymous guest) with a profile role, as
+    // isMember() in firestore.rules
+    function isMember() {
+      return isAuthenticated() &&
+             request.auth.token.firebase.sign_in_provider != 'anonymous' &&
+             getUserRole() in ['read', 'comment', 'edit', 'moderator', 'admin'];
+    }
+
     // Recipe images - require edit permission
     match /recipes/{recipeImage} {
       allow read: if true;  // Public read access
@@ -45,14 +53,23 @@ service firebase.storage {
       allow delete: if hasEditPermission();
     }
 
-    // Drink photos (Getränke im Eventmodul) - every signed-in user maintains their
-    // own drinks, so no edit role is required; only images up to 5 MB are accepted.
-    match /drinks/{drinkImage} {
-      allow read: if true;  // Public read access
-      allow create: if isAuthenticated() &&
+    // Drink photos (Getränke im Eventmodul) - every member maintains their own
+    // drinks, so no edit role is required. Files live below the uploader's uid:
+    // only that member (never an anonymous guest) may upload there, only the
+    // owner or an admin may delete (Tech-Check S25). Images up to 5 MB.
+    match /drinks/{userId}/{drinkImage} {
+      allow read: if true;  // Public read access (also shown in menus)
+      allow create: if isMember() && request.auth.uid == userId &&
                        request.resource.contentType.matches('image/.*') &&
                        request.resource.size < 5 * 1024 * 1024;
-      allow delete: if isAuthenticated();
+      allow delete: if (isMember() && request.auth.uid == userId) || isAdmin();
+    }
+
+    // Drink photos uploaded before S25 directly below drinks/: the uploader is
+    // unknown, so they stay readable and only admins may delete them.
+    match /drinks/{drinkImage} {
+      allow read: if true;  // Public read access
+      allow delete: if isAdmin();
     }
 
     // Default deny all other paths

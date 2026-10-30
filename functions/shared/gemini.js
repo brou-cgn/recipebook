@@ -5,6 +5,7 @@
 const {HttpsError} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
 const {RECIPE_EXTRACTION_PROMPT_CACHE_TTL_MS, resolveImportLists, cuisineFields, normalizeIngredientUnits} = require('./importLists');
+const {geminiGenerateContentRequest} = require('./geminiConfig');
 
 /**
  * Shared style + step-boundary rules for the "zubereitung" field, reused by
@@ -285,14 +286,12 @@ async function callGeminiAPI(base64Data, mimeType, lang, apiKey, cuisineTypes, m
     },
   };
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const {url, headers: geminiHeaders} = geminiGenerateContentRequest(apiKey);
 
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: geminiHeaders,
       body: JSON.stringify(requestBody),
     });
 
@@ -471,12 +470,12 @@ async function callGeminiTextAPI(rawHtml, lang, apiKey, cuisineTypes, mealCatego
     },
   };
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const {url, headers: geminiHeaders} = geminiGenerateContentRequest(apiKey);
 
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: geminiHeaders,
       body: JSON.stringify(requestBody),
     });
 
@@ -600,10 +599,10 @@ async function transcribeVideoWithGemini(videoBuffer, language, apiKey, mimeType
       },
     };
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const {url, headers: geminiHeaders} = geminiGenerateContentRequest(apiKey);
     const response = await fetch(url, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: geminiHeaders,
       body: JSON.stringify(requestBody),
     });
 

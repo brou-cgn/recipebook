@@ -161,7 +161,7 @@ export const migrateGlobalFavorites = async (userId, recipes) => {
       favoriteRecipes: userOldFavorites
     });
     
-    console.log(`Migrated ${userOldFavorites.length} favorites for user ${userId}`);
+    console.info(`Migrated ${userOldFavorites.length} favorites for user ${userId}`);
   } catch (error) {
     console.error('Error migrating favorites:', error);
   }

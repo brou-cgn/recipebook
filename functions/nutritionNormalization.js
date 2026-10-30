@@ -2,6 +2,8 @@
  * Nutrition ingredient normalization helpers.
  */
 
+const {GEMINI_MODEL} = require('./shared/geminiConfig');
+
 /**
  * Parse an ingredient string and return the estimated weight in grams and
  * a clean search name for the OpenFoodFacts API.
@@ -297,7 +299,7 @@ function createGenAiModel(GoogleGenAI, apiKey, config) {
   return {
     generateContent: async (prompt) => {
       const response = await client.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: GEMINI_MODEL,
         contents: prompt,
         config,
       });

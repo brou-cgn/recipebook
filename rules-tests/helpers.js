@@ -13,11 +13,18 @@ const {
 
 const PROJECT_ID = 'demo-recipebook';
 
+const readRules = (file) => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+
 const setupEnv = () => initializeTestEnvironment({
   projectId: PROJECT_ID,
-  firestore: {
-    rules: fs.readFileSync(path.join(__dirname, '..', 'firestore.rules'), 'utf8'),
-  },
+  firestore: { rules: readRules('firestore.rules') },
+});
+
+// storage.rules liest die Rolle per firestore.get, deshalb beide Emulatoren.
+const setupStorageEnv = () => initializeTestEnvironment({
+  projectId: PROJECT_ID,
+  firestore: { rules: readRules('firestore.rules') },
+  storage: { rules: readRules('storage.rules') },
 });
 
 // users/{uid}.role je Testnutzer; 'ohneProfil' hat bewusst kein Dokument.
@@ -50,4 +57,15 @@ const as = {
     .firestore(),
 };
 
-module.exports = { setupEnv, seedUsers, seed, as, assertFails, assertSucceeds, USERS };
+/** Storage-Instanzen je Rolle, analog zu `as`. */
+const storageAs = {
+  unauth: (env) => env.unauthenticatedContext().storage(),
+  user: (env, uid) => env.authenticatedContext(uid).storage(),
+  anonymous: (env, uid = 'gast1') => env
+    .authenticatedContext(uid, { firebase: { sign_in_provider: 'anonymous' } })
+    .storage(),
+};
+
+module.exports = {
+  setupEnv, setupStorageEnv, seedUsers, seed, as, storageAs, assertFails, assertSucceeds, USERS,
+};

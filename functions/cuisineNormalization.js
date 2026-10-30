@@ -37,6 +37,37 @@ const CUISINE_SYNONYMS = {
   veganisch: 'vegan',
   christmas: 'weihnachtlich',
   weihnachten: 'weihnachtlich',
+  korean: 'koreanisch',
+  vietnamese: 'vietnamesisch',
+  indonesian: 'indonesisch',
+  filipino: 'philippinisch',
+  malaysian: 'malaysisch',
+  lebanese: 'libanesisch',
+  persian: 'persisch',
+  israeli: 'israelisch',
+  arabic: 'arabisch',
+  arabian: 'arabisch',
+  moroccan: 'marokkanisch',
+  african: 'afrikanisch',
+  ethiopian: 'äthiopisch',
+  russian: 'russisch',
+  polish: 'polnisch',
+  hungarian: 'ungarisch',
+  portuguese: 'portugiesisch',
+  british: 'britisch',
+  english: 'englisch',
+  irish: 'irisch',
+  scandinavian: 'skandinavisch',
+  nordic: 'nordisch',
+  brazilian: 'brasilianisch',
+  peruvian: 'peruanisch',
+  caribbean: 'karibisch',
+  australian: 'australisch',
+};
+
+// Display spelling for stems whose capitalised form would be wrong.
+const CUISINE_DISPLAY = {
+  usamerikanisch: 'US-Amerikanisch',
 };
 
 /**
@@ -47,12 +78,21 @@ const CUISINE_SYNONYMS = {
  * @return {string}
  */
 function cuisineKey(name) {
-  let key = String(name || '')
+  const key = rawCuisineKey(name);
+  return CUISINE_SYNONYMS[key] || key;
+}
+
+/**
+ * cuisineKey without the synonym step ("Korean cuisine" -> "korean").
+ * @param {string} name
+ * @return {string}
+ */
+function rawCuisineKey(name) {
+  const key = String(name || '')
       .toLowerCase()
       .replace(/\b(küche|kueche|cuisine|kitchen|food|art)\b/g, '')
       .replace(/[^a-zäöüß]/g, '');
-  key = key.replace(/(sch|lich)(e|en|er|es|em)$/, '$1');
-  return CUISINE_SYNONYMS[key] || key;
+  return key.replace(/(sch|lich)(e|en|er|es|em)$/, '$1');
 }
 
 /**
@@ -122,6 +162,8 @@ function normalizeCuisines(raw, cuisineTypes) {
  * the import review offers them as "Neu: …?" pills instead of the import
  * creating a type on its own. Written in the list's style - if most
  * configured types read "… Küche", "Griechisch" becomes "Griechische Küche".
+ * English names from CUISINE_SYNONYMS are suggested in German ("Korean" ->
+ * "Koreanische Küche"), so a click on the pill doesn't add an English type.
  * @param {string|string[]|null|undefined} raw
  * @param {string[]} cuisineTypes
  * @return {string[]}
@@ -133,8 +175,17 @@ function suggestNewCuisines(raw, cuisineTypes) {
   splitCuisineValues(raw).forEach((v) => {
     if (v.length < 3 || v.length > 40) return;
     if (types.length > 0 && matchCuisineType(v, types)) return;
-    let name = v.charAt(0).toUpperCase() + v.slice(1);
-    if (kuecheStyle && /(.{3}isch|tsch)$/i.test(name)) name = `${name}e Küche`;
+    const translated = CUISINE_SYNONYMS[rawCuisineKey(v)];
+    const base = translated ?
+      CUISINE_DISPLAY[translated] || translated.charAt(0).toUpperCase() + translated.slice(1) :
+      v.charAt(0).toUpperCase() + v.slice(1);
+    let name = base;
+    if (kuecheStyle && /(.{3}isch|tsch)$/i.test(base)) {
+      name = `${base}e Küche`;
+    } else if (kuecheStyle && translated) {
+      // known adjective stems: "Mediterrane Küche", "Schweizer Küche"
+      name = /er$/.test(base) ? `${base} Küche` : `${base}e Küche`;
+    }
     const known = [...types, ...result].some((t) => cuisineKey(t) === cuisineKey(name));
     if (!known) result.push(name);
   });

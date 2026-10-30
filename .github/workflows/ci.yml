@@ -5,10 +5,9 @@ name: CI
 # a successful bump triggers the Firebase deploy. Nothing checks main again on
 # the way out, so a red check here is the last chance to stop a bad release.
 #
-# Runs `npm run test:ci`, not `npm test`: a list of known-failing suites is
-# quarantined in scripts/quarantined-tests.js, so that the 110 suites that do
-# pass are protected today instead of after a repair marathon. Working that
-# list down is the point - see the file's header.
+# Runs `npm run test:ci`, not `npm test`: suites listed in
+# scripts/quarantined-tests.js are skipped. The list has been empty since
+# 2026-10-17; a new entry needs a date and a reason - see the file's header.
 #
 # No `push: main` trigger on purpose: main only moves through merged pull
 # requests - which were checked here before the merge - plus the version-bump

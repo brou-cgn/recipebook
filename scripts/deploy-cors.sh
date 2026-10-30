@@ -3,10 +3,10 @@ set -e
 
 echo "🔧 Configuring Firebase Storage CORS..."
 
-# Check if gsutil is installed
-if ! command -v gsutil &> /dev/null
+# gcloud storage replaces gsutil (Tech-Check B4)
+if ! command -v gcloud &> /dev/null
 then
-    echo "❌ gsutil not found. Please install Google Cloud SDK"
+    echo "❌ gcloud not found. Please install Google Cloud SDK"
     echo "   https://cloud.google.com/sdk/docs/install"
     exit 1
 fi
@@ -17,10 +17,10 @@ echo "📦 Bucket: $BUCKET"
 
 # Apply CORS configuration
 echo "⚙️  Applying CORS configuration..."
-gsutil cors set storage-cors.json "$BUCKET"
+gcloud storage buckets update "$BUCKET" --cors-file=storage-cors.json
 
 # Verify
 echo "✅ Verifying configuration..."
-gsutil cors get "$BUCKET"
+gcloud storage buckets describe "$BUCKET" --format="default(cors_config)"
 
 echo "✅ CORS configuration applied successfully!"

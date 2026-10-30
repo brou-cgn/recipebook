@@ -11,6 +11,7 @@ const {finalizeImportJob, failImportJob} = require('../shared/importCore');
 const {assertPublicUrl, MAX_FETCH_HTML_SIZE, validateImageData, BATCH_IMAGE_CONCURRENCY, mergePhotoAiResultsServer, isInstagramUrl, runImportFromInstagram, runImportFromUrl} = require('../shared/importSources');
 const {consumeDailyQuota, getRateLimit, checkRateLimit} = require('../shared/rateLimit');
 const {geminiApiKey} = require('../shared/secrets');
+const {geminiGenerateContentRequest} = require('../shared/geminiConfig');
 
 /**
  * Rate limit for rephraseRecipeSteps - a separate daily quota from the AI
@@ -223,12 +224,12 @@ exports.rephraseRecipeSteps = onCall(
         },
       };
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      const {url, headers: geminiHeaders} = geminiGenerateContentRequest(apiKey);
 
       try {
         const response = await fetch(url, {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: geminiHeaders,
           body: JSON.stringify(requestBody),
         });
 

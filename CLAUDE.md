@@ -33,7 +33,7 @@ statt eigene Swipe-/Undo-Logik zu implementieren.
 
 ## Tests
 `npm run test:ci` ist der Lauf, den die CI macht (`.github/workflows/ci.yml`,
-läuft bei jedem PR und Push auf `main`). Er führt alles aus **außer** den
+läuft bei jedem PR gegen `main`; nach dem Merge prüft keine CI `main` erneut). Er führt alles aus **außer** den
 Suites in `scripts/quarantined-tests.js` — die Liste ist seit dem 17.10.2026 leer (alle
 rot gewesenen Suites repariert oder gelöscht).
 

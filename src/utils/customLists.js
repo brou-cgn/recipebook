@@ -889,7 +889,7 @@ async function migrateButtonIconsToCollection(icons) {
       batch.set(iconRef, { value, updatedAt: serverTimestamp() });
     }
     await batch.commit();
-    console.log('Migrated buttonIcons to buttonIcons collection');
+    console.info('Migrated buttonIcons to buttonIcons collection');
   } catch (error) {
     console.error('Failed to migrate buttonIcons to collection:', error);
   }
@@ -919,7 +919,7 @@ async function migrateCuisineIconsToButtonIcons(legacyCuisineIcons, buttonIcons)
       buttonIcons[targetKey] = value;
     }
     await batch.commit();
-    console.log('Migrated cuisineIcons into the buttonIcons collection');
+    console.info('Migrated cuisineIcons into the buttonIcons collection');
   } catch (error) {
     console.error('Failed to migrate cuisineIcons to buttonIcons collection:', error);
   }
@@ -999,7 +999,7 @@ export async function getSettings() {
           await updateDoc(doc(db, 'settings', 'app'), deleteUpdate);
           // Merge migrated data into imagesData so this load sees it
           Object.assign(imagesData, migratedImageData);
-          console.log('Migrated image fields from settings/app to settings/images:', fieldsFoundInApp);
+          console.info('Migrated image fields from settings/app to settings/images:', fieldsFoundInApp);
         } catch (migrationError) {
           console.error('Failed to migrate image fields to settings/images:', migrationError);
         }
