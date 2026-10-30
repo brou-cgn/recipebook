@@ -65,7 +65,7 @@ async function authenticateShortcutRequest(req, res, fnName, {allowShortcutUser 
     return null;
   }
 
-  let isValidKey = false;
+  let isValidKey;
   try {
     isValidKey = crypto.timingSafeEqual(Buffer.from(apiKeyHeader), Buffer.from(validApiKey));
   } catch (_) {

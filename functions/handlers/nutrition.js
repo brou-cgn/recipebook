@@ -172,7 +172,7 @@ exports.parseIngredientAmountG = onCall(
         env: {GEMINI_API_KEY: geminiApiKey.value()},
       });
 
-      let parsed = null;
+      let parsed;
       try {
         parsed = await normalizeIngredientWithGemini(ingredientText, {timeoutMs: 7000});
       } catch (error) {
@@ -282,7 +282,7 @@ exports.generateNutritionFromReference = onCall(
       const previousSource = String(referenceData.source || '').trim().toLowerCase();
 
       let hasOffValues = hasSourceValues(NUTRITION_SOURCE_SUFFIX_OFF);
-      let hasAiValues = hasSourceValues(NUTRITION_SOURCE_SUFFIX_AI);
+      const hasAiValues = hasSourceValues(NUTRITION_SOURCE_SUFFIX_AI);
 
       // 1. Generate search term with Gemini
       const generatedSearchTerm = await generateSearchTermWithGemini(
@@ -341,7 +341,6 @@ exports.generateNutritionFromReference = onCall(
         if (estimated?.per100g) {
           aiValues = parseNutritionReferenceValues(estimated.per100g);
           if (Object.keys(aiValues).length > 0) {
-            hasAiValues = true;
             kiConfidence = estimated.confidence ?? null;
           } else {
             aiValues = null;
