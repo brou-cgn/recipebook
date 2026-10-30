@@ -77,6 +77,27 @@ test('suggestNewCuisines offers dropped values in the list style', () => {
   assert.deepEqual(suggestNewCuisines('Griechisch', ['Italienisch', 'Deutsch']), ['Griechisch']);
 });
 
+// Tech-Check F14: englische Namen kamen unübersetzt als neuer Küchentyp an.
+test('suggestNewCuisines translates English names into German suggestions', () => {
+  assert.deepEqual(suggestNewCuisines('Korean', TYPES), ['Koreanische Küche']);
+  assert.deepEqual(suggestNewCuisines('Korean cuisine', TYPES), ['Koreanische Küche']);
+  assert.deepEqual(suggestNewCuisines('Mediterranean', TYPES), ['Mediterrane Küche']);
+  assert.deepEqual(suggestNewCuisines('Australian, Vegetarian', TYPES), ['Australische Küche']);
+  assert.deepEqual(suggestNewCuisines('Korean, Koreanisch', TYPES), ['Koreanische Küche']);
+  // Short-form list keeps the short German form
+  assert.deepEqual(suggestNewCuisines('Korean', ['Italienisch', 'Deutsch']), ['Koreanisch']);
+  // Unknown words stay as they are
+  assert.deepEqual(suggestNewCuisines('Fusion', TYPES), ['Fusion']);
+});
+
+test('English names match a configured German type', () => {
+  assert.equal(matchCuisineType('Korean', [...TYPES, 'Koreanische Küche']), 'Koreanische Küche');
+  assert.equal(matchCuisineType('Vietnamese', [...TYPES, 'Vietnamesische Küche']), 'Vietnamesische Küche');
+  const withoutUs = TYPES.filter((t) => !t.startsWith('US'));
+  assert.deepEqual(suggestNewCuisines('American', withoutUs), ['Amerikanische Küche']);
+  assert.deepEqual(suggestNewCuisines('US American', withoutUs), ['US-Amerikanische Küche']);
+});
+
 test('suggestNewCuisines turns "Deutsch" into the long form, but not nouns', () => {
   const longForm = ['Italienische Küche', 'Französische Küche'];
   assert.deepEqual(suggestNewCuisines('Deutsch', longForm), ['Deutsche Küche']);
