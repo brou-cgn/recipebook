@@ -489,45 +489,6 @@ export async function recognizeRecipeWithAI(imageBase64, options = {}) {
 }
 
 /**
- * Get information about available AI OCR providers
- * @returns {Object} Information about each provider
- */
-export function getAiOcrProviders() {
-  return {
-    gemini: {
-      name: 'Google Gemini Vision',
-      available: isAiOcrAvailable('gemini'),
-      model: 'gemini-1.5-flash',
-      features: [
-        'Strukturierte Rezept-Extraktion',
-        'Automatische Kulinarik-Erkennung',
-        'Kategorie- und Tag-Erkennung',
-        'Handschrift-Unterstützung',
-        'Mehrsprachig'
-      ],
-      freeTier: 'Serverbasiert (Rate Limits: 20/Tag für User, 5/Tag für Gäste)',
-      privacy: 'Bilder werden sicher über Firebase Cloud Functions an Google gesendet',
-      speed: 'Schnell (2-5 Sekunden)'
-    },
-    openai: {
-      name: 'OpenAI GPT-4o Vision',
-      available: false, // Not yet implemented with Cloud Functions
-      model: 'gpt-4o',
-      features: [
-        'Höchste OCR-Qualität',
-        'Strukturierte JSON-Ausgabe',
-        'Sehr gutes semantisches Verständnis',
-        'Handschrift-Unterstützung',
-        'Mehrsprachig'
-      ],
-      freeTier: 'Nicht verfügbar',
-      privacy: 'Noch nicht implementiert',
-      speed: 'Schnell (2-5 Sekunden)'
-    }
-  };
-}
-
-/**
  * Compare standard OCR (Tesseract) with AI OCR
  * Useful for A/B testing and quality metrics
  * 

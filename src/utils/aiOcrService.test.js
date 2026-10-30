@@ -6,7 +6,6 @@ import {
   isAiOcrAvailable,
   recognizeRecipeWithGemini,
   recognizeRecipeWithAI,
-  getAiOcrProviders,
   compareOcrMethods,
 } from './aiOcrService';
 import { httpsCallable } from 'firebase/functions';
@@ -63,30 +62,6 @@ describe('AI OCR Service', () => {
 
     test('returns false for openai provider (not yet implemented)', () => {
       expect(isAiOcrAvailable('openai')).toBe(false);
-    });
-  });
-
-  describe('getAiOcrProviders', () => {
-    test('returns information about all providers', () => {
-      const providers = getAiOcrProviders();
-      expect(providers).toHaveProperty('gemini');
-      expect(providers).toHaveProperty('openai');
-    });
-
-    test('includes provider details', () => {
-      const providers = getAiOcrProviders();
-      expect(providers.gemini).toHaveProperty('name');
-      expect(providers.gemini).toHaveProperty('available');
-      expect(providers.gemini).toHaveProperty('features');
-      expect(providers.gemini).toHaveProperty('freeTier');
-    });
-
-    test('reflects availability based on configuration', () => {
-      const providers = getAiOcrProviders();
-      // With Cloud Functions, gemini is always available
-      expect(providers.gemini.available).toBe(true);
-      // OpenAI is not yet implemented
-      expect(providers.openai.available).toBe(false);
     });
   });
 

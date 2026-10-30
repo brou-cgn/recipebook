@@ -10,6 +10,7 @@ const {requireAiCaller} = require('../shared/auth');
 const {RECIPE_STEP_STYLE_RULE} = require('../shared/gemini');
 const {consumeDailyQuota} = require('../shared/rateLimit');
 const {geminiApiKey} = require('../shared/secrets');
+const {geminiGenerateContentRequest} = require('../shared/geminiConfig');
 
 /** Rolle muss diese Funktion in rolePermissions/{rolle} freigeschaltet haben. */
 const VERSION_CHANGES_FEATURE = 'versionDictation';
@@ -189,12 +190,12 @@ exports.applyRecipeVersionChanges = onCall(
         },
       };
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      const {url, headers: geminiHeaders} = geminiGenerateContentRequest(apiKey);
 
       try {
         const response = await fetch(url, {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: geminiHeaders,
           body: JSON.stringify(requestBody),
         });
 
