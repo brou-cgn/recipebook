@@ -256,7 +256,7 @@ Webimport und Scan nutzen eine KI und haben ein Tageslimit. Ist es erreicht, sin
 ### Aus anderen Apps teilen
 <!-- id: faq-teilen-import -->
 
-Hast du die App auf deinem Smartphone installiert, taucht sie im **Teilen-Menü** auf. Teile einen Link, einen Text oder Fotos aus einer anderen App an RecipeBook – der **universelle Import** öffnet sich und macht daraus ein Rezept.
+Hast du die App auf deinem Android-Smartphone installiert, taucht sie im **Teilen-Menü** auf. Auf iPhone und iPad übernimmt das der Kurzbefehl (siehe unten). Teile einen Link, einen Text oder Fotos aus einer anderen App an RecipeBook – der **universelle Import** öffnet sich und macht daraus ein Rezept.
 
 Für Massenimporte gibt es zusätzlich den Import aus einer **CSV-Datei** über **„Rezept importieren"** im Rezeptformular.
 
