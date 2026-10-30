@@ -76,6 +76,9 @@ const mergeUniqueNormalizedValues = (existingValues = [], valuesToAdd = []) => {
 // Regex to detect German time expressions: "10 Minuten", "2 Stunden", "45 Sek"
 const TIME_REGEX_SOURCE = String.raw`(\d+(?:[.,]\d+)?)\s*(Stunden?|h\b|Minuten?|Min\.?|Sekunden?|Sek\.?)`;
 
+// Oberes Padding des Sticky-Titels (0.4rem), muss zu .recipe-sticky-title passen
+const STICKY_TITLE_TOP_PADDING_PX = 6.4;
+
 function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId, menuPortionCount, onPortionCountChange, onVersionDescribeContinue, versionDescribeHasText = false }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
@@ -460,7 +463,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       const header = document.querySelector('header.header');
       const headerBottom = header ? Math.max(0, header.getBoundingClientRect().bottom) : 0;
       setStickyTitleTop(headerBottom);
-      setShowStickyTitle(el.getBoundingClientRect().bottom < headerBottom);
+      // Übergang, sobald der Titel die Textposition des Sticky-Titels erreicht (Oberkante + Padding)
+      setShowStickyTitle(el.getBoundingClientRect().top <= headerBottom + STICKY_TITLE_TOP_PADDING_PX);
     };
     update();
     window.addEventListener('scroll', update, { passive: true });
@@ -2418,7 +2422,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               </div>
 
             <div className="recipe-title-row">
-              <h1 className="recipe-title" ref={titleRef}>{recipe.title}</h1>
+              <h1 className={`recipe-title${showStickyTitle && !cookingMode ? ' recipe-title--stuck' : ''}`} ref={titleRef}>{recipe.title}</h1>
             </div>
             {!cookingMode && (
               <div
