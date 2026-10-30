@@ -1,4 +1,3 @@
-/* eslint-disable require-jsdoc */
 /**
  * Smoke tests for the scanRecipeWithAI callable Cloud Function.
  *
