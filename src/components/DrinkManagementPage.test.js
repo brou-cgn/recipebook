@@ -969,6 +969,9 @@ describe('DrinkManagementPage', () => {
       await chooseImage();
 
       expect(mockUploadDrinkImage).toHaveBeenCalledTimes(1);
+      // Upload unter der eigenen uid (storage.rules, Tech-Check S25)
+      expect(mockUploadDrinkImage.mock.calls[0][1]).toBe('u1');
+      expect(mockUploadDrinkThumbnail.mock.calls[0][1]).toBe('u1');
       expect(screen.getByAltText('Getränkebild')).toHaveAttribute('src', 'https://x/drinks/thumb.jpg');
 
       fireEvent.click(screen.getByRole('button', { name: 'Getränk speichern' }));
