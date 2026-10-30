@@ -33,3 +33,6 @@ yarn-error.log*
 serviceAccountKey.json
 *-firebase-adminsdk-*.json
 firebase-adminsdk-*.json
+
+# Lokale Build-Logs
+.tmp-*.log
