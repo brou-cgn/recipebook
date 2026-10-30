@@ -559,7 +559,7 @@ gcloud auth login
 gcloud config set project [DEIN-PROJEKT-ID]
 
 # CORS-Konfiguration anwenden
-gsutil cors set storage-cors.json gs://[DEIN-PROJEKT-ID].appspot.com
+gcloud storage buckets update gs://[DEIN-PROJEKT-ID].appspot.com --cors-file=storage-cors.json
 
 # Storage Rules deployen
 firebase deploy --only storage
@@ -568,14 +568,14 @@ firebase deploy --only storage
 ### Verify Configuration
 
 ```bash
-gsutil cors get gs://broubook.firebasestorage.app
+gcloud storage buckets describe gs://broubook.firebasestorage.app --format="default(cors_config)"
 ```
 
 ### Troubleshooting
 If images fail to load with CORS errors:
 1. Check browser console for the specific origin in the error message
 2. Add the missing origin to `storage-cors.json`
-3. Reapply the configuration with `gsutil cors set ...`
+3. Reapply the configuration with `gcloud storage buckets update ... --cors-file=storage-cors.json` (or `scripts/deploy-cors.sh`)
 4. Clear browser cache
 
 For development, you can temporarily use `"origin": ["*"]` in `storage-cors.json`.

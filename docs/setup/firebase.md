@@ -519,17 +519,17 @@ exec -l $SHELL
 
 3. **CORS-Konfiguration anwenden:**
    ```bash
-   gsutil cors set storage-cors.json gs://[DEIN-PROJEKT-ID].appspot.com
+   gcloud storage buckets update gs://[DEIN-PROJEKT-ID].appspot.com --cors-file=storage-cors.json
    ```
 
    Oder wenn dein Bucket einen anderen Namen hat:
    ```bash
-   gsutil cors set storage-cors.json gs://broubook.firebasestorage.app
+   gcloud storage buckets update gs://broubook.firebasestorage.app --cors-file=storage-cors.json
    ```
 
 4. **CORS-Konfiguration überprüfen:**
    ```bash
-   gsutil cors get gs://[DEIN-PROJEKT-ID].appspot.com
+   gcloud storage buckets describe gs://[DEIN-PROJEKT-ID].appspot.com --format="default(cors_config)"
    ```
 
 #### 2. Firebase Storage Rules deployen
@@ -554,7 +554,7 @@ firebase deploy --only firestore
 
 ### Troubleshooting
 
-#### Fehler: "gsutil: command not found"
+#### Fehler: "gcloud: command not found"
 
 Das Google Cloud SDK ist nicht korrekt installiert oder nicht im PATH.
 
@@ -587,7 +587,7 @@ Falls du nicht sicher bist, wie dein Storage Bucket heißt:
 
 - [Firebase Storage CORS Dokumentation](https://firebase.google.com/docs/storage/web/download-files#cors_configuration)
 - [Google Cloud SDK Installation](https://cloud.google.com/sdk/docs/install)
-- [gsutil CORS Kommando](https://cloud.google.com/storage/docs/gsutil/commands/cors)
+- [CORS mit gcloud storage einrichten](https://cloud.google.com/storage/docs/using-cors)
 
 ## Puppeteer Installation für Webimport
 
