@@ -1,4 +1,3 @@
-/* eslint-disable require-jsdoc */
 /**
  * Tests for the sendGroupInvitationEmail callable (Tech-Check S6).
  *

@@ -1,4 +1,3 @@
-/* eslint-disable require-jsdoc */
 /**
  * Tests for the nightly AI-importer self-test (dailyAiImporterTest).
  *

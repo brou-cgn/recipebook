@@ -1,5 +1,3 @@
-/* eslint-disable require-jsdoc */
-
 // S5: the import callables check the rolePermissions features (fotoscan,
 // webimport, recipeImport) on the server, not only in the UI. scanRecipeWithAI
 // has its own detailed cases in index.scanRecipeWithAI.test.js; this file makes

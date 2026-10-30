@@ -17,12 +17,14 @@
     "sharp": "^0.35.5"
   },
   "devDependencies": {
-    "eslint": "^10.13.0"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0"
   },
   "private": true,
   "scripts": {
-    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint .",
-    "lint:ci": "ESLINT_USE_FLAT_CONFIG=false eslint .",
+    "lint": "eslint .",
+    "lint:ci": "eslint .",
     "test": "node --test",
     "test:ci": "node test-ci.js",
     "serve": "firebase emulators:start --only functions",

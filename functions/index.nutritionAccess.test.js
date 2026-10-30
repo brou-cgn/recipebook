@@ -1,5 +1,3 @@
-/* eslint-disable require-jsdoc */
-
 // Access control of the three Gemini-backed nutrition callables (S13): role
 // from users/{uid} (edit or higher) and a daily quota in aiNutritionLimits,
 // both failing closed.
