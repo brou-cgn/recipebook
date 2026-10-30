@@ -1,4 +1,3 @@
-/* eslint-disable require-jsdoc */
 /**
  * Tests für updateSeasonMatrixStatus (Tech-Check F7): nur geänderte Status
  * werden geschrieben, in Batches von höchstens 400.

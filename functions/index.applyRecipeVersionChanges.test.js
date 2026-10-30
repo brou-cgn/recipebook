@@ -1,5 +1,3 @@
-/* eslint-disable require-jsdoc */
-
 // applyRecipeVersionChanges: arbeitet eine diktierte Beschreibung in ein Rezept ein.
 // Die Berechtigung "versionDictation" wird serverseitig geprüft, nicht nur im UI.
 

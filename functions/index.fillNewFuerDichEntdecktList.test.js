@@ -1,4 +1,3 @@
-/* eslint-disable require-jsdoc */
 /**
  * Tests for fillNewFuerDichEntdecktList: a freshly created "Für dich entdeckt"
  * list is filled right away (instead of waiting for the 04:00 rotation), each

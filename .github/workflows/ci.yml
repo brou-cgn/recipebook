@@ -37,10 +37,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: 'npm'
@@ -65,7 +65,7 @@ jobs:
   # Cloud Functions haben ein eigenes package.json und wurden bis Tech-Check F1
   # (2026-10-14) von keiner CI berührt. Tests laufen über functions/test-ci.js
   # (Quarantäne in functions/quarantined-tests.js), Lint mit eslint:recommended
-  # über functions/.eslintrc.js – ohne Stilregeln (Tech-Check F11).
+  # über functions/eslint.config.js – ohne Stilregeln (Tech-Check F11).
   functions:
     name: Functions Tests & Lint
     runs-on: ubuntu-latest
@@ -77,10 +77,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -112,17 +112,17 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
           cache-dependency-path: rules-tests/package-lock.json
 
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
