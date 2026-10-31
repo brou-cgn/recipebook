@@ -38,6 +38,8 @@ import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getEffectiveCuisineIcon, getDar
 import { getCategoryImages } from '../utils/categoryImages';
 import { useCookingSession } from '../contexts/CookingSessionContext';
 import CookingAlarmModal from './CookingAlarmModal';
+import CookingAddRecipeSheet from './CookingAddRecipeSheet';
+import { getMenuRecipeIds } from '../utils/menuSections';
 import RecipeRating from './RecipeRating';
 import CookDateModal from './CookDateModal';
 import FollowButton from './FollowButton';
@@ -80,7 +82,7 @@ const TIME_REGEX_SOURCE = String.raw`(\d+(?:[.,]\d+)?)\s*(Stunden?|h\b|Minuten?|
 // Oberes Padding des Sticky-Titels (0.4rem), muss zu .recipe-sticky-title passen
 const STICKY_TITLE_TOP_PADDING_PX = 6.4;
 
-function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId, menuPortionCount, onPortionCountChange, onVersionDescribeContinue, versionDescribeHasText = false }) {
+function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId, menuPortionCount, onPortionCountChange, menu = null, onVersionDescribeContinue, versionDescribeHasText = false }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
   const { rows: nutritionReferenceRows, loading: nutritionReferenceLoading, reload: reloadNutritionReferences } = useNutritionReference();
@@ -205,6 +207,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const cookingSession = useCookingSession();
   const timerRecipeId = selectedRecipe?.id || 'rezept';
   const activeTimers = cookingSession.getTimers(timerRecipeId);
+  // Mehrere Rezepte parallel kochen (Rollen-Flag parallelKochen): nur mit einer Sitzung, die Rezepte öffnen kann
+  const parallelCookingEnabled = Boolean(currentUser?.parallelKochen) && !isSharedView && cookingSession.canOpenRecipes;
+  const [showAddRecipeSheet, setShowAddRecipeSheet] = useState(false);
   const ingredientMatchFromModalRef = useRef(false);
   const [alarmSoundKey] = useState(() => getAlarmSoundPreference());
   const [openIngredientInfoIndex, setOpenIngredientInfoIndex] = useState(null);
@@ -453,6 +458,17 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     }
   }, [initialRecipe]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Kochsitzung: Ein Rezept aus der Sitzung öffnet im Kochmodus, mit seinem Schritt und seinen Portionen
+  useEffect(() => {
+    if (!parallelCookingEnabled) return;
+    const state = cookingSession.getCookingState(initialRecipe.id);
+    if (!state) return;
+    setCookingMode(true);
+    setCurrentStepIndex(state.stepIndex || 0);
+    if (state.servingMultiplier != null) setServingMultiplier(state.servingMultiplier);
+    setShowAddRecipeSheet(false);
+  }, [initialRecipe.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Titel unterhalb des Headers fixieren, sobald er aus dem Bild gescrollt ist
   useEffect(() => {
     const el = titleRef.current;
@@ -582,6 +598,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const hasMultipleVersions = allVersions.length > 1;
 
   const recipe = selectedRecipe;
+
+  // Schritt und Portionen eines Rezepts der Sitzung mitschreiben, damit ein Wechsel sie wiederherstellt.
+  // Nur auf Änderungen der Werte: Beim Wechsel selbst zeigt der erste Render noch die alten Werte.
+  useEffect(() => {
+    if (!parallelCookingEnabled || !cookingMode) return;
+    cookingSession.saveCookingState(recipe.id, { stepIndex: currentStepIndex, servingMultiplier });
+  }, [currentStepIndex, servingMultiplier]); // eslint-disable-line react-hooks/exhaustive-deps
   const {
     ingredientMatchDialog,
     setIngredientMatchDialog,
@@ -1294,8 +1317,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     const basePortions = recipe.portionen || 4;
     const newServings = Math.max(1, stepToNextMultiple(currentServingsRef.current, direction, stepSize));
     setServingMultiplier(newServings / basePortions);
-    if (onPortionCountChange) onPortionCountChange(recipe.id, newServings);
-  }, [recipe.portionen, recipe.id, onPortionCountChange]);
+    // Nur Rezepte der offenen Festtafel schreiben ihre Portionen dorthin, dazugenommene nicht
+    if (onPortionCountChange && (!menu || getMenuRecipeIds(menu).includes(recipe.id))) {
+      onPortionCountChange(recipe.id, newServings);
+    }
+  }, [recipe.portionen, recipe.id, onPortionCountChange, menu]);
 
   const servingLongPress = useAcceleratingLongPress(applyServingStep);
 
@@ -1329,11 +1355,21 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const recipeSourceUrl = recipe.sourceUrl || recipe.importSource?.url;
 
   const toggleCookingMode = () => {
+    // Kochsitzung: Beenden nimmt nur dieses Rezept heraus; gibt es weitere, rückt das nächste fällige nach
+    if (cookingMode && parallelCookingEnabled && cookingSession.isInSession(recipe.id)) {
+      if (cookingSession.leaveSession(recipe.id)) return;
+    }
     setCookingMode(prev => !prev);
     // Reset to first step when entering cooking mode
     if (!cookingMode) {
       setCurrentStepIndex(0);
     }
+  };
+
+  // Weiteres Rezept dazunehmen: dieses parkt mit Schritt und Portionen, das gewählte öffnet im Kochmodus
+  const handleAddRecipeToSession = (nextRecipe) => {
+    setShowAddRecipeSheet(false);
+    cookingSession.addRecipe({ recipe, stepIndex: currentStepIndex, servingMultiplier }, nextRecipe);
   };
 
   // ── Timer helpers ──────────────────────────────────────────────────────────
@@ -1740,6 +1776,25 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         {cookingMode ? (
           // Cooking mode layout
           <>
+            {/* Kochsitzung: Rezeptname und „+ Rezept“ (Rollen-Flag parallelKochen, nur Hochformat) */}
+            {parallelCookingEnabled && !isMobileLandscape && (
+              <div className="cooking-mode-titlebar">
+                <h2 className="cooking-mode-titlebar-title">{recipe.title}</h2>
+                <button
+                  type="button"
+                  className="cooking-mode-add-recipe"
+                  onClick={() => setShowAddRecipeSheet(true)}
+                  aria-label="Weiteres Rezept dazunehmen"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+                    <path d="M12 5v14" />
+                    <path d="M5 12h14" />
+                  </svg>
+                  Rezept
+                </button>
+              </div>
+            )}
+
             {/* Ingredients list */}
             <section className="cooking-mode-ingredients">
               <div className="section-header">
@@ -2725,6 +2780,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             </div>
           </div>
         </div>
+      )}
+      {showAddRecipeSheet && (
+        <CookingAddRecipeSheet
+          currentRecipe={recipe}
+          allRecipes={allRecipes}
+          menu={menu}
+          linkedRecipes={linkedRecipes}
+          excludedIds={cookingSession.sessionRecipeIds}
+          isFull={!cookingSession.canAddRecipe(recipe.id)}
+          onSelect={handleAddRecipeToSession}
+          onClose={() => setShowAddRecipeSheet(false)}
+        />
       )}
       {!cookingSession.isShared && (
         <CookingAlarmModal alarm={cookingSession.alarm} onStop={cookingSession.stopAlarm} />

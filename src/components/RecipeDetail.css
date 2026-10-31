@@ -1908,6 +1908,49 @@ button.private-badge-button:active {
 }
 
 
+/* Kochsitzung (Rollen-Flag parallelKochen): Titelzeile über den Schritten, nur Hochformat */
+.cooking-mode-titlebar {
+  order: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem 1rem 0;
+}
+
+.cooking-mode-titlebar-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cooking-mode-add-recipe {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 44px;
+  padding: 0 0.9rem 0 0.7rem;
+  border: 1.5px solid var(--color-brand);
+  border-radius: 999px;
+  background: var(--color-accent-tint);
+  color: var(--color-brand);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cooking-mode-add-recipe:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
 /* ── Landscape mobile: side-by-side cooking mode layout ───────────────── */
 
 /* Applied via JS when cookingMode && isMobileLandscape */

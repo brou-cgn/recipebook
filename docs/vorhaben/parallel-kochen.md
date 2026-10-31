@@ -1,7 +1,7 @@
 # Vorhaben: Parallel kochen (mehrere Rezepte im Hintergrund, Mobile)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 31.10.2026 (PR 1 als PR #3566 offen, nicht gemergt).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 31.10.2026 (PR 1 gemergt; PR 2 umgesetzt, nicht gemergt).
 
 **Ziel:** Wer mehrere Gerichte gleichzeitig kocht (Beispiel im Entwurf: Rouladen, Rotkohl, Klöße), hält im
 Kochmodus auf dem Handy mehrere Rezepte offen. Rezepte im Hintergrund laufen weiter, samt Timer, und sind mit
@@ -18,6 +18,10 @@ V1–V3 Verschieben, H1–H3 Hervorholen). Gewählt: V3 und H1. Keine Mockups im
 | Hervorholen | H1 „Rezept-Leiste unten“ (31.10.2026): ein Chip je geparktem Rezept (Bild, Name, laufender Timer, sonst Schritt „4 / 5“), sortiert nach dem nächsten fälligen Timer, bald fällige hervorgehoben. Tippen tauscht mit dem Rezept vorn. Im Kochmodus unter dem Zutaten-Sheet (das um die Leistenhöhe kürzer wird), außerhalb des Kochmodus über der Bottom-Navigation (Entwurf V1, Bild 2). |
 | Titelzeile | Der Kochmodus im Hochformat bekommt eine Zeile mit dem Rezeptnamen. Heute fehlt sie; mit mehreren Rezepten wäre sonst unklar, welches vorn ist. |
 | Umfang | Nur Handy im Hochformat. Desktop und Tablet bleiben, wie sie sind. |
+| Obergrenze | Vier Rezepte je Sitzung. Bei vier Rezepten zeigt das Sheet einen Hinweis statt der Liste (31.10.2026: Vorschlag mit dem Auftrag „PR 2 bitte“ übernommen, nicht ausdrücklich bestätigt). |
+| Kochmodus beenden | Nimmt nur das Rezept vorn aus der Sitzung. Gibt es weitere, rückt das nächste fällige nach: abgelaufener Timer zuerst, dann der früheste laufende, sonst das zuletzt dazugenommene. Das letzte Rezept endet wie bisher (31.10.2026, übernommen wie die Obergrenze). |
+| Flag | `parallelKochen` in `src/utils/userManagement.js` und in der Benutzerverwaltung, für alle Rollen aus (31.10.2026). |
+| Zuletzt gekocht | Nicht im Sheet (Abweichung vom Plan, 31.10.2026): `getAllCookDatesForUser` liest alle Kochdaten ohne `limit` (Tech-Check K3). Dafür braucht es eine eigene Abfrage mit `orderBy` und `limit` samt Index. Vorschläge vorerst: Festtafel, verknüpfte Rezepte, Suche. |
 
 Vorgaben aus `AGENTS.md`, die hier greifen: Entfernen eines Rezepts aus der Leiste per Linksswipe
 (`useSwipeToDelete`) mit „Rückgängig“ (`useUndoableDelete`), kein ×. Farben nur über Tokens: das Braun der
@@ -50,8 +54,8 @@ Portionen und der Wake-Lock des Kochmodus liegen noch in `RecipeDetail`.
 
 | PR | Inhalt | Stand |
 |---|---|---|
-| 1 | Kochsitzung `src/contexts/CookingSessionContext.js` über der Hauptansicht: Timer je Rezept (Schlüssel Rezept-ID + Schritt), ein gemeinsamer Alarm-`AudioContext`, Wake-Lock, solange ein Timer läuft. Alarm-Dialog als eigener Baustein `CookingAlarmModal` (erscheint auch ohne offenes Rezept, nennt den Rezeptnamen, listet alle abgelaufenen Timer). Kochmodus, Schritt und Portionen bleiben vorerst in `RecipeDetail` (Abweichung vom Plan, ziehen mit PR 2 um). Ohne Flag. Tests +8. Dashboard: A1 ergänzt, P7 neu (beide bis zum Merge offen) | PR #3566 offen (31.10.2026), nicht gemergt |
-| 2 | Kochmodus, Schritt und Portionen in die Sitzung; Titelzeile und „+ Rezept“-Sheet (V3), hinter einem neuen Rollen-Flag in `src/utils/userManagement.js` (Muster `follow`). Vorschläge: andere Rezepte der Festtafel, aus der das Rezept geöffnet wurde (prüfen, ob `App.js` das Menü dann noch kennt), verknüpfte Rezepte (`linkedRecipes` in `RecipeDetail`), zuletzt gekocht (`src/utils/recipeCookDates.js`). Erster Commit `feat:`. | offen |
+| 1 | Kochsitzung `src/contexts/CookingSessionContext.js` über der Hauptansicht: Timer je Rezept (Schlüssel Rezept-ID + Schritt), ein gemeinsamer Alarm-`AudioContext`, Wake-Lock, solange ein Timer läuft. Alarm-Dialog als eigener Baustein `CookingAlarmModal` (erscheint auch ohne offenes Rezept, nennt den Rezeptnamen, listet alle abgelaufenen Timer). Kochmodus, Schritt und Portionen bleiben vorerst in `RecipeDetail` (Abweichung vom Plan, ziehen mit PR 2 um). Ohne Flag. Tests +8. Dashboard: A1 teilweise, P7 behoben | PR #3566 gemergt (31.10.2026, v2.26.18), Deploy-Lauf 1941 erfolgreich; am Gerät nicht geprüft |
+| 2 | Hinter dem Rollen-Flag `parallelKochen`: Titelzeile mit Rezeptname und „+ Rezept“, Sheet `CookingAddRecipeSheet` (Suche, Vorschläge aus der Festtafel und aus verknüpften Rezepten), Sitzung führt die Rezepte samt Schritt und Portionen, Snackbar „… läuft im Hintergrund“ mit „Zurück“, „Kochmodus beenden“ lässt das nächste nachrücken. Erster Commit `feat:`. Tests +16 | umgesetzt auf Branch `claude/parallel-kochen-pr2`, nicht gemergt |
 | 3 | Rezept-Leiste (H1) im Kochmodus und über der Bottom-Navigation, Entfernen per Linksswipe mit „Rückgängig“, Farben als Tokens. Danach Flag freigeben (eigene Entscheidung). Erster Commit `feat:`. | offen |
 | 4 | Abgelaufener Timer eines geparkten Rezepts: Chip „Fertig“, Benachrichtigung mit Rezeptname, Tippen öffnet den Schritt. Je nach Entscheidung: Auto-Parken beim Schließen, Sitzung übersteht einen Neustart. | offen |
 
@@ -74,15 +78,28 @@ statt `#555`. Baselines in `colorTokenPolicy.test.js` gesenkt (`RecipeDetail.css
 `RecipeDetail` fehl), +4 in `src/contexts/CookingSessionContext.test.js`. Nicht am Gerät geprüft, vor allem nicht
 Ton und Benachrichtigung bei gesperrtem iPhone (iOS-PWA).
 
+Umsetzungsnotizen PR 2: Kochmodus, Schritt und Portionen bleiben State in `RecipeDetail` (sie stecken in vielen
+Effekten). Die Sitzung spiegelt sie stattdessen: Sie führt je Rezept `stepIndex` und `servingMultiplier`
+(`sessionRecipes`), `RecipeDetail` schreibt Änderungen mit und stellt sie beim Öffnen eines Rezepts der Sitzung
+wieder her (dann direkt im Kochmodus). Das gilt auch, wenn man ein geparktes Rezept über das Kochbuch neu öffnet.
+Geöffnet wird über `onOpenRecipe` des Providers: `App.js` setzt `selectedRecipe` auf die aktuelle Fassung aus
+`recipes`, ohne Kartenübergang; als Aufruf gezählt (`logRecipeCall`) wird nur ein neu dazugenommenes Rezept,
+nicht das Hin- und Herwechseln. Die Snackbar ist `UndoSnackbar` mit eigenem Text und „Zurück“ (6 s). `RecipeDetail`
+bekommt die offene Festtafel als Prop `menu` (`selectedMenu`). Daran hängt eine Verhaltensänderung: Portionen
+schreibt nur noch ein Rezept der offenen Festtafel ins Menü. Bisher tat das jedes angezeigte Rezept, auch ein
+verknüpftes; neu dazugenommene sollen dort keine Spuren hinterlassen (`getMenuRecipeIds` in
+`src/utils/menuSections.js`). Ohne Rezept-Leiste (PR 3) kommt man zu einem geparkten Rezept über „Zurück“, über
+„Kochmodus beenden“ beim Rezept vorn (das nächste rückt nach) oder indem man es im Kochbuch neu öffnet; deshalb
+bleibt das Flag bis PR 3 aus. `RecipeDetail.js` 2.850 → 2.917 Zeilen, `useState` 76 → 77 (Tech-Check A1: Sheet und
+Sitzungslogik liegen außerhalb, in `RecipeDetail` nur die Anbindung). Tests: +9 in
+`src/contexts/CookingSessionContext.test.js`, +7 in `src/components/RecipeDetail.parallelCooking.test.js`; `test:ci`
+188 Suites, 3.900 Tests. Nicht am Gerät geprüft.
+
 ## Offen
 
 - **Wischen in der Leiste:** Der Entwurf H1 zeigt „Wischen blättert“, die App-Regel will Linksswipe zum
   Entfernen. Beides auf denselben Chips geht nicht. Vorschlag: kein Blättern per Wischen (bei höchstens drei
   Chips reicht Tippen), Linksswipe entfernt aus der Sitzung.
-- **Obergrenze:** Vorschlag vier Rezepte je Sitzung (eins vorn, drei in der Leiste). Mehr Chips passen nicht
-  ohne Scrollen.
-- **„Kochmodus beenden“ in der Lasche:** Beendet es nur das Rezept vorn (das nächste aus der Leiste rückt nach)
-  oder die ganze Sitzung? Vorschlag: nur das Rezept vorn.
 - **Parken ohne neues Rezept** (V2, Parken-Knopf in der Lasche): nicht gewählt. Wird nötig, wenn man ein Rezept
   parken will, ohne gleich ein anderes zu öffnen.
 - **Auto-Parken beim Schließen:** Wer ein Rezept mit laufendem Timer schließt, parkt es, statt den Timer zu
@@ -93,7 +110,7 @@ Ton und Benachrichtigung bei gesperrtem iPhone (iOS-PWA).
 - **Neustart:** Soll die Sitzung einen Neustart der App überstehen (iOS beendet PWAs im Hintergrund)? Dann
   Sitzung in `localStorage`; die Timer haben schon `endTime`.
 - **Querformat:** Der Kochmodus hat ein eigenes Querformat-Layout; wo die Leiste dort sitzt, ist offen.
-- **Flag:** Name und Zeitpunkt der Freigabe offen.
+- **Freigabe des Flags:** nach PR 3; für wen zuerst, ist offen.
 - **Priorität** gegenüber dem Follow-Feature: offen.
 
 ## Wichtige Stellen im Code
@@ -101,6 +118,8 @@ Ton und Benachrichtigung bei gesperrtem iPhone (iOS-PWA).
 - Kochmodus, Timer, Wake-Lock, Alarm: `src/components/RecipeDetail.js` (`cookingMode`, `startTimer`,
   `activeTimers`, Unmount-Effekt mit `clearInterval`), Layout `src/components/RecipeDetail.css`
   (Hochformat: `.cooking-mode-active:not(.cooking-mode-landscape)`)
+- Kochsitzung (Timer, Alarm, Rezepte der Sitzung, Wechsel): `src/contexts/CookingSessionContext.js`; Sheet:
+  `src/components/CookingAddRecipeSheet.js`; Alarm-Dialog: `src/components/CookingAlarmModal.js`
 - Kochmodus-Lasche: `src/hooks/useCookingModeTabPosition.js`
 - Rezeptdetail ein und aus: `src/App.js` (`selectedRecipe`, `handleSelectRecipe`)
 - Bottom-Navigation: `src/components/BottomNavigation.js`
@@ -108,4 +127,5 @@ Ton und Benachrichtigung bei gesperrtem iPhone (iOS-PWA).
   `src/components/UndoSnackbar.js`
 - Rollen-Flags: `src/utils/userManagement.js`
 - Festtafel: `src/components/MenuDetail.js` (`onSelectRecipe`); Kochdaten: `src/utils/recipeCookDates.js`
-- Tests: `src/components/RecipeDetail.timer.test.js`, `src/components/RecipeDetail.cooking-mode-layout.test.js`
+- Tests: `src/components/RecipeDetail.timer.test.js`, `src/components/RecipeDetail.cooking-mode-layout.test.js`,
+  `src/components/RecipeDetail.parallelCooking.test.js`, `src/contexts/CookingSessionContext.test.js`

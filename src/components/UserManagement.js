@@ -42,6 +42,7 @@ const ROLE_PERMISSION_COLUMNS = [
   { key: 'follow', label: 'Follow', name: 'Follow (Mitgliedern folgen)' },
   { key: 'eventplanung', label: 'Eventplanung', name: 'Eventplanung (Kachel Chefkoch & mehr)' },
   { key: 'versionDictation', label: 'Version diktieren', name: 'Version per Beschreibung/Diktat erstellen' },
+  { key: 'parallelKochen', label: 'Parallel kochen', name: 'Parallel kochen (mehrere Rezepte im Kochmodus)' },
 ];
 
 function UserManagement({ onBack, currentUser, allUsers = [] }) {
