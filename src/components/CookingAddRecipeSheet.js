@@ -1,16 +1,19 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { getMenuRecipeIds } from '../utils/menuSections';
+import { getRecentlyCookedRecipeIds } from '../utils/recipeCookDates';
 import { getRecipeThumbnail } from '../utils/recipeThumbnail';
 import './CookingAddRecipeSheet.css';
 
 /**
  * Bottom-Sheet „Was kochst du dazu?“ im Kochmodus (Vorhaben „Parallel kochen“, Entwurf V3):
  * Suche über die sichtbaren Rezepte und Vorschläge aus der Festtafel, aus der das Rezept
- * geöffnet wurde, sowie aus den verknüpften Rezepten. Die Wahl übergibt das Rezept an
- * onSelect; parken und öffnen übernimmt die Kochsitzung.
+ * geöffnet wurde, aus den verknüpften Rezepten und aus dem, was der Nutzer zuletzt gekocht hat.
+ * Die Wahl übergibt das Rezept an onSelect; parken und öffnen übernimmt die Kochsitzung.
  */
 
 const MAX_RESULTS = 20;
+// „Zuletzt gekocht“ zeigt höchstens so viele Rezepte
+const MAX_RECENT = 5;
 
 const normalize = (text) => (text || '').toLocaleLowerCase('de');
 
@@ -61,12 +64,24 @@ function CookingAddRecipeSheet({
   menu = null,
   linkedRecipes = [],
   excludedIds = [],
+  userId = null,
   isFull = false,
   onSelect,
   onClose,
 }) {
   const [query, setQuery] = useState('');
+  const [recentIds, setRecentIds] = useState([]);
   const trimmedQuery = query.trim();
+
+  // Zuletzt gekocht: begrenzte Abfrage, erst wenn das Sheet offen ist
+  useEffect(() => {
+    if (!userId) return undefined;
+    let cancelled = false;
+    getRecentlyCookedRecipeIds(userId).then((ids) => {
+      if (!cancelled) setRecentIds(ids);
+    });
+    return () => { cancelled = true; };
+  }, [userId]);
 
   // Das Rezept vorn und alle schon in der Sitzung tauchen nicht als Vorschlag auf
   const excluded = useMemo(
@@ -85,6 +100,15 @@ function CookingAddRecipeSheet({
     () => linkedRecipes.filter((r) => !excluded.has(r.id) && !menuSuggestions.some((m) => m.id === r.id)),
     [linkedRecipes, excluded, menuSuggestions]
   );
+
+  // Ohne Rezepte, die schon als Festtafel- oder verknüpfter Vorschlag dastehen
+  const recentSuggestions = useMemo(() => {
+    const shown = new Set([...menuSuggestions, ...linkedSuggestions].map((r) => r.id));
+    return recentIds
+      .map((id) => allRecipes.find((r) => r.id === id))
+      .filter((r) => r && !excluded.has(r.id) && !shown.has(r.id))
+      .slice(0, MAX_RECENT);
+  }, [recentIds, allRecipes, excluded, menuSuggestions, linkedSuggestions]);
 
   const results = useMemo(() => {
     if (!trimmedQuery) return [];
@@ -149,7 +173,8 @@ function CookingAddRecipeSheet({
                     onSelect={onSelect}
                   />
                   <SuggestionSection title="Verknüpfte Rezepte" recipes={linkedSuggestions} onSelect={onSelect} />
-                  {menuSuggestions.length === 0 && linkedSuggestions.length === 0 && (
+                  <SuggestionSection title="Zuletzt gekocht" recipes={recentSuggestions} onSelect={onSelect} />
+                  {menuSuggestions.length === 0 && linkedSuggestions.length === 0 && recentSuggestions.length === 0 && (
                     <p className="add-recipe-sheet-hint">Such nach dem Rezept, das du dazunehmen willst.</p>
                   )}
                 </>

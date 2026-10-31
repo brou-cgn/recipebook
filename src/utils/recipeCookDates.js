@@ -10,7 +10,7 @@
  */
 
 import { db } from '../firebase';
-import { collection, addDoc, query, where, getDocs, onSnapshot, Timestamp, doc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, orderBy, limit, getDocs, onSnapshot, Timestamp, doc, deleteDoc } from 'firebase/firestore';
 
 /**
  * Set the cook date for a recipe for a user.
@@ -99,6 +99,36 @@ export const getAllCookDatesForUser = async (userId) => {
   } catch (error) {
     console.error('Error getting cook dates for user:', error);
     return new Map();
+  }
+};
+
+/**
+ * IDs of the recipes a user cooked most recently, newest first, without duplicates.
+ * Reads at most `maxEntries` cook dates (where + orderBy + limit, see the cookDates
+ * index in firestore.indexes.json), never all of them.
+ * @param {string} userId - User ID
+ * @param {number} [maxEntries=20] - Upper bound of cook dates read
+ * @returns {Promise<string[]>} Recipe IDs; empty on error or without a user
+ */
+export const getRecentlyCookedRecipeIds = async (userId, maxEntries = 20) => {
+  if (!userId) return [];
+  try {
+    const q = query(
+      collection(db, 'cookDates'),
+      where('userId', '==', userId),
+      orderBy('date', 'desc'),
+      limit(maxEntries)
+    );
+    const snapshot = await getDocs(q);
+    const ids = [];
+    snapshot.docs.forEach((docSnap) => {
+      const { recipeId } = docSnap.data();
+      if (recipeId && !ids.includes(recipeId)) ids.push(recipeId);
+    });
+    return ids;
+  } catch (error) {
+    console.error('Error getting recently cooked recipes:', error);
+    return [];
   }
 };
 

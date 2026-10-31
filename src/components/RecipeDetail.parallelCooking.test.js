@@ -57,6 +57,11 @@ jest.mock('../utils/recipeLinks', () => ({
   decodeRecipeLink: () => null,
 }));
 
+jest.mock('../utils/recipeCookDates', () => ({
+  getAllCookDates: () => Promise.resolve([]),
+  getRecentlyCookedRecipeIds: () => Promise.resolve([]),
+}));
+
 const rouladen = {
   id: 'rouladen',
   title: 'Rinderrouladen',
