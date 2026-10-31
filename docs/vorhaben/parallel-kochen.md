@@ -1,7 +1,7 @@
 # Vorhaben: Parallel kochen (mehrere Rezepte im Hintergrund, Mobile)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 31.10.2026 (PR 1 umgesetzt, nicht gemergt).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 31.10.2026 (PR 1 als PR #3566 offen, nicht gemergt).
 
 **Ziel:** Wer mehrere Gerichte gleichzeitig kocht (Beispiel im Entwurf: Rouladen, Rotkohl, Klöße), hält im
 Kochmodus auf dem Handy mehrere Rezepte offen. Rezepte im Hintergrund laufen weiter, samt Timer, und sind mit
@@ -32,7 +32,7 @@ Portionen und der Wake-Lock des Kochmodus liegen noch in `RecipeDetail`.
 - Kochmodus, aktueller Schritt, Portionen und Timer sind lokaler State in `RecipeDetail` (`cookingMode`,
   `currentStepIndex`, `activeTimers`, `timerIntervalsRef`). `App.js` rendert `RecipeDetail` nur, solange
   `selectedRecipe` gesetzt ist. Beim Verlassen räumt der Unmount-Effekt Intervalle und Alarm-`AudioContext` ab:
-  Ein laufender Timer geht verloren, sobald man das Rezept verlässt. Dazu gibt es noch keinen Tech-Check-Befund.
+  Ein laufender Timer geht verloren, sobald man das Rezept verlässt. Im Tech-Check seit 31.10.2026 Befund **P7**.
 - Timer kennen schon ihren Endzeitpunkt (`endTime`, auch beim Abgleich nach `visibilitychange` genutzt). Es fehlt
   nur ein Ort, an dem sie das Rezept überleben.
 - Timer-Schlüssel sind `step_<Index>` ohne Rezept-ID. Mit mehreren Rezepten braucht es Rezept-ID und Schritt.
@@ -50,7 +50,7 @@ Portionen und der Wake-Lock des Kochmodus liegen noch in `RecipeDetail`.
 
 | PR | Inhalt | Stand |
 |---|---|---|
-| 1 | Kochsitzung `src/contexts/CookingSessionContext.js` über der Hauptansicht: Timer je Rezept (Schlüssel Rezept-ID + Schritt), ein gemeinsamer Alarm-`AudioContext`, Wake-Lock, solange ein Timer läuft. Alarm-Dialog als eigener Baustein `CookingAlarmModal` (erscheint auch ohne offenes Rezept, nennt den Rezeptnamen, listet alle abgelaufenen Timer). Kochmodus, Schritt und Portionen bleiben vorerst in `RecipeDetail` (Abweichung vom Plan, ziehen mit PR 2 um). Ohne Flag. Tests +8 | umgesetzt auf Branch `claude/parallel-kochen-tracker`, nicht gemergt |
+| 1 | Kochsitzung `src/contexts/CookingSessionContext.js` über der Hauptansicht: Timer je Rezept (Schlüssel Rezept-ID + Schritt), ein gemeinsamer Alarm-`AudioContext`, Wake-Lock, solange ein Timer läuft. Alarm-Dialog als eigener Baustein `CookingAlarmModal` (erscheint auch ohne offenes Rezept, nennt den Rezeptnamen, listet alle abgelaufenen Timer). Kochmodus, Schritt und Portionen bleiben vorerst in `RecipeDetail` (Abweichung vom Plan, ziehen mit PR 2 um). Ohne Flag. Tests +8. Dashboard: A1 ergänzt, P7 neu (beide bis zum Merge offen) | PR #3566 offen (31.10.2026), nicht gemergt |
 | 2 | Kochmodus, Schritt und Portionen in die Sitzung; Titelzeile und „+ Rezept“-Sheet (V3), hinter einem neuen Rollen-Flag in `src/utils/userManagement.js` (Muster `follow`). Vorschläge: andere Rezepte der Festtafel, aus der das Rezept geöffnet wurde (prüfen, ob `App.js` das Menü dann noch kennt), verknüpfte Rezepte (`linkedRecipes` in `RecipeDetail`), zuletzt gekocht (`src/utils/recipeCookDates.js`). Erster Commit `feat:`. | offen |
 | 3 | Rezept-Leiste (H1) im Kochmodus und über der Bottom-Navigation, Entfernen per Linksswipe mit „Rückgängig“, Farben als Tokens. Danach Flag freigeben (eigene Entscheidung). Erster Commit `feat:`. | offen |
 | 4 | Abgelaufener Timer eines geparkten Rezepts: Chip „Fertig“, Benachrichtigung mit Rezeptname, Tippen öffnet den Schritt. Je nach Entscheidung: Auto-Parken beim Schließen, Sitzung übersteht einen Neustart. | offen |
