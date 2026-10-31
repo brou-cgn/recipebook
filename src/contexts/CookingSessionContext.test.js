@@ -178,19 +178,24 @@ describe('CookingSessionContext – several recipes', () => {
     expect(session.isInSession('fremd')).toBe(false);
   });
 
-  test('holds at most four recipes', () => {
+  test('holds at most six recipes', () => {
     const onOpenRecipe = renderSession();
+    const pudding = { id: 'pudding', title: 'Pudding' };
+    const salat = { id: 'salat', title: 'Salat' };
+    const suppe = { id: 'suppe', title: 'Suppe' };
     act(() => { session.addRecipe({ recipe: rouladen, stepIndex: 0, servingMultiplier: 1 }, rotkohl); });
     act(() => { session.addRecipe({ recipe: rotkohl, stepIndex: 0, servingMultiplier: 1 }, kloesse); });
     act(() => { session.addRecipe({ recipe: kloesse, stepIndex: 0, servingMultiplier: 1 }, bratapfel); });
-    expect(session.canAddRecipe('bratapfel')).toBe(false);
+    act(() => { session.addRecipe({ recipe: bratapfel, stepIndex: 0, servingMultiplier: 1 }, pudding); });
+    act(() => { session.addRecipe({ recipe: pudding, stepIndex: 0, servingMultiplier: 1 }, salat); });
+    expect(session.canAddRecipe('salat')).toBe(false);
 
     let added;
-    act(() => { added = session.addRecipe({ recipe: bratapfel, stepIndex: 0, servingMultiplier: 1 }, spaetzle); });
+    act(() => { added = session.addRecipe({ recipe: salat, stepIndex: 0, servingMultiplier: 1 }, suppe); });
 
     expect(added).toBe(false);
-    expect(session.sessionRecipeIds).toEqual(['rouladen', 'rotkohl', 'kloesse', 'bratapfel']);
-    expect(onOpenRecipe).not.toHaveBeenCalledWith(spaetzle, expect.anything());
+    expect(session.sessionRecipeIds).toEqual(['rouladen', 'rotkohl', 'kloesse', 'bratapfel', 'pudding', 'salat']);
+    expect(onOpenRecipe).not.toHaveBeenCalledWith(suppe, expect.anything());
   });
 
   test('leaving a recipe lets the one with the next due timer move up', () => {

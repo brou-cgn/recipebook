@@ -26,7 +26,7 @@ import UndoSnackbar from '../components/UndoSnackbar';
  * dann die Komponente selbst (isShared ist false), Rezepte wechseln geht nicht.
  */
 
-export const MAX_SESSION_RECIPES = 4;
+export const MAX_SESSION_RECIPES = 6;
 const CookingSessionContext = createContext(null);
 const NO_TIMERS = {};
 const NO_ENTRIES = [];
