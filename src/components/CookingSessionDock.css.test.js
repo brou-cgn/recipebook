@@ -19,7 +19,9 @@ describe('CookingSessionDock CSS', () => {
     expect(getRuleBody(dockCss, '.cooking-dock')).toContain('background: transparent;');
     expect(getRuleBody(dockCss, '.cooking-dock--inline')).not.toContain('border');
     expect(getRuleBody(dockCss, '.cooking-dock--top')).not.toContain('border');
-    expect(getRuleBody(dockCss, '.cooking-dock-chip-main')).toContain('background: var(--color-surface-card);');
+    const chip = getRuleBody(dockCss, '.cooking-dock-chip-main');
+    expect(chip).toContain('background: var(--color-surface);');
+    expect(chip).toContain('border: none;');
   });
 
   test('nutzt nur Farb-Tokens, die tokens.css für Light und Dark definiert', () => {
