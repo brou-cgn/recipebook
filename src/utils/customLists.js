@@ -584,6 +584,8 @@ export const DEFAULT_BUTTON_ICONS = {
   cookingModeDefaultImg: defaultIcon('steam'),
   // Beenden-Button der Kochmodus-Seitenlasche (leer = Standard-Symbol "Tür mit Pfeil")
   cookingModeExit: '',
+  // Kochmodus-Titelzeile: weiteres Rezept dazunehmen (Kochsitzung, Rollen-Flag parallelKochen)
+  cookingAddRecipe: defaultIcon('potPlus'),
   importRecipe: 'Import',
   scanImage: 'Scan',
   webImport: 'Web',
@@ -667,6 +669,7 @@ export const DEFAULT_BUTTON_ICONS = {
   // Dark mode variant for the default category image icon
   cookingModeDefaultImgDark: '',
   cookingModeExitDark: '',
+  cookingAddRecipeDark: '',
   importRecipeDark: '',
   scanImageDark: '',
   webImportDark: '',

@@ -1,7 +1,7 @@
 # Vorhaben: Parallel kochen (mehrere Rezepte im Hintergrund, Mobile)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 31.10.2026 (PR 1 bis 3 gemergt; PR 4 als PR #3570 offen, nicht gemergt).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 31.10.2026 (PR 1 bis 4 gemergt; PR 5, Nacharbeiten nach dem Test am Gerät, als Branch gepusht, noch ohne PR).
 
 **Ziel:** Wer mehrere Gerichte gleichzeitig kocht (Beispiel im Entwurf: Rouladen, Rotkohl, Klöße), hält im
 Kochmodus auf dem Handy mehrere Rezepte offen. Rezepte im Hintergrund laufen weiter, samt Timer, und sind mit
@@ -14,8 +14,8 @@ V1–V3 Verschieben, H1–H3 Hervorholen). Gewählt: V3 und H1. Keine Mockups im
 
 | Thema | Entscheidung |
 |---|---|
-| Verschieben | V3 „Rezept dazunehmen“ (31.10.2026): „+ Rezept“ in der Titelzeile des Kochmodus öffnet ein Bottom-Sheet „Was kochst du dazu?“ mit Suche und Vorschlägen. Das gewählte Rezept kommt im Kochmodus nach vorn, das bisherige parkt von selbst. Snackbar „<Rezept> läuft im Hintergrund weiter“ mit „Zurück“. |
-| Hervorholen | H1 „Rezept-Leiste unten“ (31.10.2026): ein Chip je geparktem Rezept (Bild, Name, laufender Timer, sonst Schritt „4 / 5“), sortiert nach dem nächsten fälligen Timer, bald fällige hervorgehoben. Tippen tauscht mit dem Rezept vorn. Im Kochmodus unter dem Zutaten-Sheet (das um die Leistenhöhe kürzer wird), außerhalb des Kochmodus über der Bottom-Navigation (Entwurf V1, Bild 2). |
+| Verschieben | V3 „Rezept dazunehmen“ (31.10.2026): „+ Rezept“ in der Titelzeile des Kochmodus (seit PR 5 ein Icon-Knopf ohne Text, siehe unten) öffnet ein Bottom-Sheet „Was kochst du dazu?“ mit Suche und Vorschlägen. Das gewählte Rezept kommt im Kochmodus nach vorn, das bisherige parkt von selbst. Snackbar „<Rezept> läuft im Hintergrund weiter“ mit „Zurück“. |
+| Hervorholen | H1 „Rezept-Leiste unten“ (31.10.2026): ein Chip je geparktem Rezept (Bild, Name, laufender Timer, sonst Schritt „4 / 5“), sortiert nach dem nächsten fälligen Timer, bald fällige hervorgehoben. Tippen tauscht mit dem Rezept vorn. Im Kochmodus unter dem Zutaten-Sheet (bis PR 4 wurde das Sheet um die Leistenhöhe kürzer, seit PR 5 gibt das Schritt-Karussell sie ab, siehe unten), außerhalb des Kochmodus über der Bottom-Navigation (Entwurf V1, Bild 2). |
 | Titelzeile | Der Kochmodus im Hochformat bekommt eine Zeile mit dem Rezeptnamen. Heute fehlt sie; mit mehreren Rezepten wäre sonst unklar, welches vorn ist. |
 | Umfang | Nur Handy im Hochformat. Desktop und Tablet bleiben, wie sie sind. |
 | Obergrenze | Vier Rezepte je Sitzung. Bei vier Rezepten zeigt das Sheet einen Hinweis statt der Liste (31.10.2026: Vorschlag mit dem Auftrag „PR 2 bitte“ übernommen, nicht ausdrücklich bestätigt). |
@@ -28,10 +28,13 @@ V1–V3 Verschieben, H1–H3 Hervorholen). Gewählt: V3 und H1. Keine Mockups im
 | Neustart | Die Sitzung übersteht einen Neustart der App: je Nutzer in `localStorage` (Rezept-IDs mit Schritt und Portionen, Timer mit Endzeitpunkt). Abgelaufene Timer melden sich beim Start. Bestätigt am 31.10.2026; meine Annahmen dabei: höchstens 12 Stunden alt, nur mit dem Flag. |
 | „Fertig“ antippen | Öffnet das Rezept an dem Schritt mit dem abgelaufenen Timer statt am zuletzt offenen (31.10.2026). |
 | Zuletzt gekocht | Nicht im Sheet (Abweichung vom Plan, 31.10.2026): `getAllCookDatesForUser` liest alle Kochdaten ohne `limit` (Tech-Check K3). Dafür braucht es eine eigene Abfrage mit `orderBy` und `limit` samt Index. Vorschläge vorerst: Festtafel, verknüpfte Rezepte, Suche. |
+| Farben der Leiste | Im App-Hintergrund statt Braun, in Light und Dark (31.10.2026, nach dem Test am Gerät): Leiste `--color-bg`, Chips als Karten (`--color-surface-card`, Rand `--color-border-subtle`), Text `--color-text-strong` bzw. `--color-text-muted`; bald fällig bleibt orange (`--color-accent`). Die braunen Leisten-Tokens sind entfernt. |
+| Höhen im Kochmodus mit Leiste | Die Leiste geht vom Schritt-Karussell ab, nicht von den Zutaten (31.10.2026, nach dem Test am Gerät): Das Zutaten-Sheet behält dieselbe Listenhöhe wie ohne Leiste, das Karussell wird um die Leistenhöhe kürzer, die Schrift der Schrittkarten dafür kleiner (`clamp(1.25rem, 3.1dvh, 1.6rem)` statt `clamp(1.4rem, 3.6dvh, 1.9rem)`). Gilt nur, solange die Leiste sichtbar ist. Meine Annahme: die ganze Leistenhöhe vom Karussell, nicht nur ein Teil. |
+| Knopf „Rezept dazunehmen“ | Ohne Text, mit eigenem einrichtbarem Icon (31.10.2026): Button-Icon `cookingAddRecipe` mit Dunkelmodus-Variante (Verwaltung: Button-Icons, Gruppe Kochmodus, „Kochmodus: Rezept dazunehmen“). Standard-Symbol: dampfender Topf mit Plus-Badge im Stil des Folgen-Icons. Runder Knopf 44 × 44 px, `aria-label` und Tooltip „Weiteres Rezept dazunehmen“. |
 
 Vorgaben aus `AGENTS.md`, die hier greifen: Entfernen eines Rezepts aus der Leiste per Linksswipe
-(`useSwipeToDelete`) mit „Rückgängig“ (`useUndoableDelete`), kein ×. Farben nur über Tokens: das Braun der
-Leiste und das Orange für „bald fällig“ in `src/tokens.css` mit Light- und Dark-Wert anlegen. Die Suche im
+(`useSwipeToDelete`) mit „Rückgängig“ (`useUndoableDelete`), kein ×. Farben nur über Tokens: Leiste und Chips
+nutzen die App-Tokens aus `src/tokens.css` (seit PR 5, vorher eigene braune Tokens), „bald fällig“ `--color-accent`. Die Suche im
 Sheet arbeitet auf dem schon geladenen `recipes`-Array, „zuletzt gekocht“ nur mit `where` und `limit`.
 
 ## Technische Grundlage (Code gelesen am 31.10.2026, nicht am Gerät geprüft)
@@ -63,7 +66,8 @@ Portionen und der Wake-Lock des Kochmodus liegen noch in `RecipeDetail`.
 | 1 | Kochsitzung `src/contexts/CookingSessionContext.js` über der Hauptansicht: Timer je Rezept (Schlüssel Rezept-ID + Schritt), ein gemeinsamer Alarm-`AudioContext`, Wake-Lock, solange ein Timer läuft. Alarm-Dialog als eigener Baustein `CookingAlarmModal` (erscheint auch ohne offenes Rezept, nennt den Rezeptnamen, listet alle abgelaufenen Timer). Kochmodus, Schritt und Portionen bleiben vorerst in `RecipeDetail` (Abweichung vom Plan, ziehen mit PR 2 um). Ohne Flag. Tests +8. Dashboard: A1 teilweise, P7 behoben | PR #3566 gemergt (31.10.2026, v2.26.18), Deploy-Lauf 1941 erfolgreich; am Gerät nicht geprüft |
 | 2 | Hinter dem Rollen-Flag `parallelKochen`: Titelzeile mit Rezeptname und „+ Rezept“, Sheet `CookingAddRecipeSheet` (Suche, Vorschläge aus der Festtafel und aus verknüpften Rezepten), Sitzung führt die Rezepte samt Schritt und Portionen, Snackbar „… läuft im Hintergrund“ mit „Zurück“, „Kochmodus beenden“ lässt das nächste nachrücken. Erster Commit `feat:`. Tests +16 | PR #3567 gemergt (31.10.2026, v2.27.0), Deploy-Lauf 1942 erfolgreich; am Gerät nicht geprüft |
 | 3 | Rezept-Leiste `CookingSessionDock` (H1): im Kochmodus unter dem Zutaten-Sheet, außerhalb über der Bottom-Navigation (volle Leiste und Pille). Chips nach Dringlichkeit; bald fällige und abgelaufene („Fertig“) orange; Tippen tauscht (das Rezept vorn parkt), Linksswipe entfernt mit „Rückgängig“. Farben als Tokens. Weiter hinter dem Flag. Erster Commit `feat:`. Tests +12; `test:ci` 189 Suites, 3.912 Tests | PR #3569 gemergt (31.10.2026, v2.28.0), Deploy-Lauf 1944 erfolgreich; am Gerät nicht geprüft |
-| 4 | Sitzung übersteht einen Neustart (`localStorage` je Nutzer, höchstens 12 Stunden, nur mit Flag; abgelaufene Timer melden sich beim Start; beim ersten Tippen danach wird der Ton wieder freigeschaltet). Rezept mit laufendem Timer parkt beim Verlassen automatisch. Tippen auf „Fertig“ öffnet den Schritt mit dem abgelaufenen Timer. Erster Commit `feat:`. Tests +11; `test:ci` 189 Suites, 3.923 Tests | PR #3570 offen (31.10.2026), nicht gemergt |
+| 4 | Sitzung übersteht einen Neustart (`localStorage` je Nutzer, höchstens 12 Stunden, nur mit Flag; abgelaufene Timer melden sich beim Start; beim ersten Tippen danach wird der Ton wieder freigeschaltet). Rezept mit laufendem Timer parkt beim Verlassen automatisch. Tippen auf „Fertig“ öffnet den Schritt mit dem abgelaufenen Timer. Erster Commit `feat:`. Tests +11; `test:ci` 189 Suites, 3.923 Tests | PR #3570 gemergt (31.10.2026, v2.29.0), Deploy-Lauf 1945 erfolgreich; am Gerät nicht geprüft |
+| 5 | Nacharbeiten nach dem Test am Gerät: Leiste im App-Hintergrund statt Braun (Light und Dark), mit Leiste behält das Zutaten-Sheet seine Höhe und das Schritt-Karussell gibt sie ab (Schrift dort kleiner), Knopf „Rezept dazunehmen“ ohne Text mit eigenem einrichtbarem Button-Icon `cookingAddRecipe`. Weiter hinter dem Flag. Tests +9 (eine Suite neu); `test:ci` 190 Suites, 3.932 Tests | Branch `claude/parallel-kochen-pr5` gepusht, noch kein PR (31.10.2026); im Browser (Chromium, 390 × 844) geprüft, am Gerät nicht |
 
 Nach jedem PR: Tabelle hier nachziehen. Berührt ein PR einen Tech-Check-Befund (mindestens PR 1: A1),
 das Dashboard nach `CLAUDE.md` aktualisieren.
@@ -135,6 +139,26 @@ Tests: +9 in `src/contexts/CookingSessionContext.test.js`, +2 in
 `src/components/RecipeDetail.parallelCooking.test.js`. Nicht am Gerät geprüft, vor allem nicht das Verhalten der
 iOS-PWA nach einem Neustart.
 
+Umsetzungsnotizen PR 5: Die Leiste (`CookingSessionDock.css`) nutzt nur noch allgemeine Tokens; `--color-cooking-dock`,
+`--color-cooking-dock-chip`, `--color-on-cooking-dock` und `--color-cooking-dock-muted` sind aus `tokens.css` entfernt
+(`--color-on-accent` bleibt für die orangen Chips). Im Kochmodus trennt eine feine Linie (`--color-border-subtle`) die Leiste
+vom Zutaten-Sheet; außerhalb hebt sie sich mit Rand und weicherem Schatten von der Seite ab, weil sie jetzt dieselbe Farbe
+wie der Seitenhintergrund hat. Der weiße Ring um die Vorschaubilder entfällt. Höhen: Mit Leiste ist das Sheet
+`calc(min(34dvh, 280px) - env(safe-area-inset-bottom))` hoch, Innenabstand unten 1rem: genau die Listenhöhe ohne Leiste,
+denn den Abstand zur Home-Leiste übernimmt die Leiste. Das Karussell (`flex: 1`) wird damit um die Leistenhöhe (73 px) kürzer.
+Gemessen in Chromium bei 390 × 844 (ohne safe-area): Karussell 464 → 391 px, Zutaten-Sheet 208 → 280 px, Schrift 30,4 → 25,6 px;
+ein langer erster Schritt (rund 160 Zeichen) passte vorher nicht in die Karte, jetzt schon. Icon: neuer Schlüssel in
+`DARK_MODE_ICON_ROWS` und in der Standardgruppe Kochmodus (`src/utils/buttonIconRows.js`), Standard `defaultIcon('potPlus')` in
+`DEFAULT_BUTTON_ICONS` (Dunkelmodus-Variante über `DEFAULT_ICON_NAMES`). Wer die Gruppen der Button-Icons schon gespeichert
+hat, findet die neue Zeile unter „Sonstiges“ (`reconcileButtonIconGroups`) und kann sie in die Gruppe Kochmodus ziehen.
+`RecipeDetail` leitet das Icon aus den geladenen Button-Icons ab, ohne eigenen State, und blendet es bis zum Laden aus wie die
+anderen einrichtbaren Icons. `RecipeDetail.js` 2.948 → 2.955 Zeilen, `useState` unverändert 77. Tests: +2 in
+`src/components/RecipeDetail.parallelCooking.test.js` (Knopf ohne Text mit Standard-Icon; eingerichtetes Icon), +3 in
+`src/utils/defaultButtonIcons.test.js` (Symbol in Light und Dark, Standardwerte, Zeile in der Gruppe Kochmodus), +2 in
+`src/components/RecipeDetail.css.test.js` (Sheet-Höhe und kleinere Schrift mit Leiste), +2 in der neuen
+`src/components/CookingSessionDock.css.test.js` (App-Hintergrund; nur Tokens, die es in Light und Dark gibt). Geprüft per
+Screenshot des echten DOM mit dem echten CSS (Chromium, Light und Dark, vorher und nachher), nicht am Gerät.
+
 ## Offen
 
 - **Parken ohne neues Rezept** (V2, Parken-Knopf in der Lasche): nicht gewählt. Wird nötig, wenn man ein Rezept
@@ -142,6 +166,11 @@ iOS-PWA nach einem Neustart.
 - **Leiste im Rezeptdetail ohne Kochmodus und in der Festtafel-Detailansicht:** dort fehlt sie, weil es keine
   Bottom-Navigation gibt. Ob sie dort nötig ist, zeigt der Test am Gerät.
 - **Querformat:** Der Kochmodus hat ein eigenes Querformat-Layout; wo die Leiste dort sitzt, ist offen.
+- **Leiste mit drei oder vier Chips:** Name und Schritt passen nicht in die Chips. „Schritt 1 / 3“ bricht in bis zu drei
+  Zeilen um und ragt aus dem Chip, Namen werden zu „K…“ (im Screenshot mit vier Rezepten gesehen, schon vor PR 5). Lösung
+  offen, zum Beispiel ab drei Chips nur Bild und Status, kürzerer Status („1/3“) oder waagerecht scrollen.
+- **Aufteilung der Höhe mit Leiste** (PR 5): Annahme, dass die ganze Leistenhöhe vom Karussell kommt. Ob die Schritte so noch
+  gut lesbar sind, zeigt der Test am Gerät.
 - **Freigabe für andere Rollen:** wann und für wen, offen (der Schalter bleibt bis dahin aus).
 - **Priorität** gegenüber dem Follow-Feature: offen.
 
@@ -159,7 +188,10 @@ iOS-PWA nach einem Neustart.
 - Swipe und Rückgängig: `src/hooks/useSwipeToDelete.js`, `src/hooks/useUndoableDelete.js`,
   `src/components/UndoSnackbar.js`
 - Rollen-Flags: `src/utils/userManagement.js`
+- Einrichtbare Icons (Knopf „Rezept dazunehmen“, `cookingAddRecipe`): `src/utils/buttonIconRows.js` (Zeile und Gruppe),
+  `src/utils/defaultButtonIcons.js` (Standard-Symbol), `src/utils/customLists.js` (`DEFAULT_BUTTON_ICONS`)
 - Festtafel: `src/components/MenuDetail.js` (`onSelectRecipe`); Kochdaten: `src/utils/recipeCookDates.js`
 - Tests: `src/components/RecipeDetail.timer.test.js`, `src/components/RecipeDetail.cooking-mode-layout.test.js`,
   `src/components/RecipeDetail.parallelCooking.test.js`, `src/contexts/CookingSessionContext.test.js`,
-  `src/components/CookingSessionDock.test.js`
+  `src/components/CookingSessionDock.test.js`, `src/components/CookingSessionDock.css.test.js`,
+  `src/components/RecipeDetail.css.test.js`

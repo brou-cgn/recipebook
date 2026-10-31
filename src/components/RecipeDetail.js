@@ -211,6 +211,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Mehrere Rezepte parallel kochen (Rollen-Flag parallelKochen): nur mit einer Sitzung, die Rezepte öffnen kann
   const parallelCookingEnabled = Boolean(currentUser?.parallelKochen) && !isSharedView && cookingSession.canOpenRecipes;
   const [showAddRecipeSheet, setShowAddRecipeSheet] = useState(false);
+  // Einrichtbares Icon des Knopfs „Rezept dazunehmen“ (Button-Icon cookingAddRecipe), abgeleitet statt eigener State
+  const cookingAddRecipeIcon = getEffectiveIcon(allButtonIcons, 'cookingAddRecipe', isDarkMode) || defaultIcon('potPlus', isDarkMode);
   const ingredientMatchFromModalRef = useRef(false);
   const [alarmSoundKey] = useState(() => getAlarmSoundPreference());
   const [openIngredientInfoIndex, setOpenIngredientInfoIndex] = useState(null);
@@ -1795,7 +1797,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         {cookingMode ? (
           // Cooking mode layout
           <>
-            {/* Kochsitzung: Rezeptname und „+ Rezept“ (Rollen-Flag parallelKochen, nur Hochformat) */}
+            {/* Kochsitzung: Rezeptname und Icon-Knopf „Rezept dazunehmen“ (Rollen-Flag parallelKochen, nur Hochformat) */}
             {parallelCookingEnabled && !isMobileLandscape && (
               <div className="cooking-mode-titlebar">
                 <h2 className="cooking-mode-titlebar-title">{recipe.title}</h2>
@@ -1804,12 +1806,17 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   className="cooking-mode-add-recipe"
                   onClick={() => setShowAddRecipeSheet(true)}
                   aria-label="Weiteres Rezept dazunehmen"
+                  title="Weiteres Rezept dazunehmen"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
-                    <path d="M12 5v14" />
-                    <path d="M5 12h14" />
-                  </svg>
-                  Rezept
+                  <span
+                    className="cooking-mode-add-recipe-icon"
+                    aria-hidden="true"
+                    style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
+                  >
+                    {isBase64Image(cookingAddRecipeIcon)
+                      ? <img src={cookingAddRecipeIcon} alt="" className="button-icon-image" />
+                      : cookingAddRecipeIcon}
+                  </span>
                 </button>
               </div>
             )}
