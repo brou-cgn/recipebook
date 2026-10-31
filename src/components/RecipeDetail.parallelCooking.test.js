@@ -134,7 +134,9 @@ function Harness({ user = flaggedUser, menu = null, onPortionCountChange }) {
   );
 }
 
-function enterCookingMode() {
+// Die einrichtbaren Button-Icons laden asynchron; bis dahin sind die Knöpfe unsichtbar (wie die FABs)
+async function enterCookingMode() {
+  await act(async () => {});
   fireEvent.click(document.querySelector('.overlay-cooking-mode-static'));
 }
 
@@ -173,16 +175,16 @@ afterEach(() => {
 });
 
 describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => {
-  test('without the flag the cooking mode has no title bar', () => {
+  test('without the flag the cooking mode has no title bar', async () => {
     renderWithProviders(<Harness user={{ id: 'user-1', vorname: 'Test', nachname: 'User' }} />);
-    enterCookingMode();
+    await enterCookingMode();
     expect(document.querySelector('.cooking-mode-active')).toBeInTheDocument();
     expect(document.querySelector('.cooking-mode-titlebar')).toBeNull();
   });
 
-  test('the title bar names the recipe and the sheet suggests the other recipes of the menu', () => {
+  test('the title bar names the recipe and the sheet suggests the other recipes of the menu', async () => {
     renderWithProviders(<Harness menu={sundayMenu} />);
-    enterCookingMode();
+    await enterCookingMode();
     expect(titleBarTitle()).toBe('Rinderrouladen');
 
     const sheet = openSheet();
@@ -195,9 +197,9 @@ describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => 
     expect(screen.queryByRole('dialog', { name: 'Was kochst du dazu?' })).toBeNull();
   });
 
-  test('the search finds recipes by title and leaves out the current one', () => {
+  test('the search finds recipes by title and leaves out the current one', async () => {
     renderWithProviders(<Harness />);
-    enterCookingMode();
+    await enterCookingMode();
     const sheet = openSheet();
 
     fireEvent.change(within(sheet).getByLabelText('Rezept suchen'), { target: { value: 'klö' } });
@@ -207,9 +209,9 @@ describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => 
     expect(within(sheet).getByText('Kein Rezept gefunden.')).toBeInTheDocument();
   });
 
-  test('adding a recipe parks the current one; „Zurück“ brings it back at its step', () => {
+  test('adding a recipe parks the current one; „Zurück“ brings it back at its step', async () => {
     renderWithProviders(<Harness />);
-    enterCookingMode();
+    await enterCookingMode();
     fireEvent.click(document.querySelectorAll('.step-card')[1]);
     expect(activeStepIndex()).toBe(1);
 
@@ -226,9 +228,9 @@ describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => 
     expect(activeStepIndex()).toBe(1);
   });
 
-  test('ending the cooking mode lets the next recipe move up; the last one ends normally', () => {
+  test('ending the cooking mode lets the next recipe move up; the last one ends normally', async () => {
     renderWithProviders(<Harness />);
-    enterCookingMode();
+    await enterCookingMode();
     addRecipeViaSearch('rotkohl', 'Apfelrotkohl');
     expect(titleBarTitle()).toBe('Apfelrotkohl');
 
@@ -243,8 +245,7 @@ describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => 
   test('the add button has no text, only its own icon (default: pot with plus)', async () => {
     isBase64Image.mockImplementation((value) => typeof value === 'string' && value.startsWith('data:image/'));
     renderWithProviders(<Harness />);
-    await act(async () => {});
-    enterCookingMode();
+    await enterCookingMode();
 
     const button = screen.getByRole('button', { name: 'Weiteres Rezept dazunehmen' });
     expect(button.textContent.trim()).toBe('');
@@ -256,18 +257,17 @@ describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => 
     isBase64Image.mockImplementation((value) => typeof value === 'string' && value.startsWith('data:image/'));
     mockButtonIcons = { cookingAddRecipe: 'data:image/png;base64,QUJD' };
     renderWithProviders(<Harness />);
-    await act(async () => {});
-    enterCookingMode();
+    await enterCookingMode();
 
     const button = screen.getByRole('button', { name: 'Weiteres Rezept dazunehmen' });
     expect(button.querySelector('img')).toHaveAttribute('src', 'data:image/png;base64,QUJD');
-    expect(button.querySelector('.cooking-mode-add-recipe-icon')).toHaveStyle({ visibility: 'visible' });
+    expect(button).toHaveStyle({ visibility: 'visible' });
     expect(button.textContent.trim()).toBe('');
   });
 
-  test('with four recipes the sheet asks to end one first', () => {
+  test('with four recipes the sheet asks to end one first', async () => {
     renderWithProviders(<Harness />);
-    enterCookingMode();
+    await enterCookingMode();
     addRecipeViaSearch('rotkohl', 'Apfelrotkohl');
     addRecipeViaSearch('klö', 'Kartoffelklöße');
     addRecipeViaSearch('brat', 'Bratapfel');
@@ -277,9 +277,9 @@ describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => 
     expect(within(sheet).queryByLabelText('Rezept suchen')).toBeNull();
   });
 
-  test('the dock at the bottom shows the parked recipe; tapping it swaps both recipes', () => {
+  test('the dock at the bottom shows the parked recipe; tapping it swaps both recipes', async () => {
     renderWithProviders(<Harness />);
-    enterCookingMode();
+    await enterCookingMode();
     expect(document.querySelector('.cooking-dock')).toBeNull();
     fireEvent.click(document.querySelectorAll('.step-card')[1]);
     addRecipeViaSearch('rotkohl', 'Apfelrotkohl');
@@ -293,7 +293,7 @@ describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => 
     expect(screen.queryByRole('button', { name: /^Rinderrouladen öffnen/ })).toBeNull();
   });
 
-  test('closing a recipe with a running timer parks it; the dock outside the cooking mode shows it', () => {
+  test('closing a recipe with a running timer parks it; the dock outside the cooking mode shows it', async () => {
     const timedRouladen = { ...rouladen, steps: ['Rouladen flach klopfen.', 'Rouladen anbraten.', 'Zugedeckt 90 Minuten schmoren lassen.'] };
     function CloseHarness({ show }) {
       return (
@@ -313,7 +313,7 @@ describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => 
       );
     }
     const { rerender } = renderWithProviders(<CloseHarness show />);
-    enterCookingMode();
+    await enterCookingMode();
     fireEvent.click(document.querySelector('.step-timer-start-btn'));
 
     rerender(<CloseHarness show={false} />);
@@ -322,7 +322,7 @@ describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => 
     expect(screen.getByText('„Rinderrouladen“ läuft im Hintergrund')).toBeInTheDocument();
   });
 
-  test('closing a recipe without a running timer does not park it', () => {
+  test('closing a recipe without a running timer does not park it', async () => {
     function CloseHarness({ show }) {
       return (
         <CookingSessionProvider onOpenRecipe={() => {}}>
@@ -334,17 +334,17 @@ describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => 
       );
     }
     const { rerender } = renderWithProviders(<CloseHarness show />);
-    enterCookingMode();
+    await enterCookingMode();
 
     rerender(<CloseHarness show={false} />);
 
     expect(screen.queryByRole('navigation', { name: 'Rezepte im Hintergrund' })).toBeNull();
   });
 
-  test('only recipes of the open menu write their portions into it', () => {
+  test('only recipes of the open menu write their portions into it', async () => {
     const onPortionCountChange = jest.fn();
     renderWithProviders(<Harness menu={{ ...sundayMenu, sections: [{ name: 'Hauptgang', recipeIds: ['rouladen'] }] }} onPortionCountChange={onPortionCountChange} />);
-    enterCookingMode();
+    await enterCookingMode();
 
     fireEvent.click(screen.getAllByRole('button', { name: '+' })[0]);
     expect(onPortionCountChange).toHaveBeenCalledWith('rouladen', 5);

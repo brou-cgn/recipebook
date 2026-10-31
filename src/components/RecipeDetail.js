@@ -38,6 +38,7 @@ import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getEffectiveCuisineIcon, getDar
 import { getCategoryImages } from '../utils/categoryImages';
 import { useCookingSession } from '../contexts/CookingSessionContext';
 import CookingAlarmModal from './CookingAlarmModal';
+import CookingAddRecipeButton from './CookingAddRecipeButton';
 import CookingAddRecipeSheet from './CookingAddRecipeSheet';
 import CookingSessionDock from './CookingSessionDock';
 import { getMenuRecipeIds } from '../utils/menuSections';
@@ -1801,23 +1802,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             {parallelCookingEnabled && !isMobileLandscape && (
               <div className="cooking-mode-titlebar">
                 <h2 className="cooking-mode-titlebar-title">{recipe.title}</h2>
-                <button
-                  type="button"
-                  className="cooking-mode-add-recipe"
+                <CookingAddRecipeButton
+                  icon={cookingAddRecipeIcon}
+                  loaded={buttonIconsLoaded}
                   onClick={() => setShowAddRecipeSheet(true)}
-                  aria-label="Weiteres Rezept dazunehmen"
-                  title="Weiteres Rezept dazunehmen"
-                >
-                  <span
-                    className="cooking-mode-add-recipe-icon"
-                    aria-hidden="true"
-                    style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
-                  >
-                    {isBase64Image(cookingAddRecipeIcon)
-                      ? <img src={cookingAddRecipeIcon} alt="" className="button-icon-image" />
-                      : cookingAddRecipeIcon}
-                  </span>
-                </button>
+                />
               </div>
             )}
 

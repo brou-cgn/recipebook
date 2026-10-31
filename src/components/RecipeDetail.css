@@ -1930,41 +1930,7 @@ button.private-badge-button:active {
   white-space: nowrap;
 }
 
-/* Runder Icon-Knopf ohne Text; das Icon ist einrichtbar (Button-Icon cookingAddRecipe) */
-.cooking-mode-add-recipe {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border: 1.5px solid var(--color-brand);
-  border-radius: 999px;
-  background: var(--color-accent-tint);
-  color: var(--color-brand);
-  font-size: 1.25rem;
-  font-weight: 600;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.cooking-mode-add-recipe-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.cooking-mode-add-recipe-icon img {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-}
-
-.cooking-mode-add-recipe:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
-}
+/* Der Knopf „Rezept dazunehmen“ in der Titelzeile hat seine Formatierung in CookingAddRecipeButton.css */
 
 /* Kochsitzung mit Rezept-Leiste: Die Leiste geht vom Schritt-Karussell ab, nicht von den
    Zutaten. Das Zutaten-Sheet behält seine Listenhöhe (den Abstand zur Home-Leiste des

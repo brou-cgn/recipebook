@@ -1,0 +1,68 @@
+/* Knopf „Rezept dazunehmen“ in der Titelzeile des Kochmodus (CookingAddRecipeButton).
+   Formatierung und Animation wie die FAB-Buttons (.edit-fab-button in RecipeDetail.css,
+   .kueche-fab-button in Kueche.css): runde Fläche, Rand, Schatten, Federn beim Drücken,
+   mobil 56 px und leicht durchscheinend. Abweichung: Er sitzt in der Titelzeile statt fest
+   unten rechts. Farben nur über Tokens; Light und Dark kommen aus tokens.css. */
+.cooking-mode-add-recipe {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+  will-change: transform;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 0.15s ease,
+              box-shadow 0.15s ease;
+}
+
+.cooking-mode-add-recipe .button-icon-image {
+  width: 1.4rem;
+  height: 1.4rem;
+  object-fit: contain;
+}
+
+.cooking-mode-add-recipe-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cooking-mode-add-recipe:active {
+  background: var(--color-surface);
+  outline: none;
+}
+
+.cooking-mode-add-recipe.pressed {
+  transform: scale(1.15);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+}
+
+.cooking-mode-add-recipe:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .cooking-mode-add-recipe {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    max-width: 56px;
+    opacity: 0.85;
+  }
+}
