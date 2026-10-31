@@ -15,8 +15,10 @@ describe('CookingSessionDock CSS', () => {
   const dockCss = readCss('CookingSessionDock.css');
   const tokensCss = readCss('../tokens.css');
 
-  test('die Leiste liegt im App-Hintergrund, die Chips sind Karten', () => {
-    expect(getRuleBody(dockCss, '.cooking-dock')).toContain('background: var(--color-bg);');
+  test('der Container ist vollständig transparent (kein Rahmen, kein Hintergrund), die Chips sind Karten', () => {
+    expect(getRuleBody(dockCss, '.cooking-dock')).toContain('background: transparent;');
+    expect(getRuleBody(dockCss, '.cooking-dock--inline')).not.toContain('border');
+    expect(getRuleBody(dockCss, '.cooking-dock--top')).not.toContain('border');
     expect(getRuleBody(dockCss, '.cooking-dock-chip-main')).toContain('background: var(--color-surface-card);');
   });
 

@@ -89,6 +89,24 @@ describe('CookingSessionDock', () => {
     ]);
   });
 
+  test('from three recipes on only „x / y“ is shown, from four on only the picture circle', () => {
+    const extra = { id: 'extra', title: 'Dessert', steps: ['Mischen.', 'Kühlen.'] };
+    renderDock({ currentRecipeId: null });
+    act(() => { session.addRecipe({ recipe: rouladen, stepIndex: 1, servingMultiplier: 1 }, rotkohl); });
+    const nav = () => screen.getByRole('navigation', { name: 'Rezepte im Hintergrund' });
+    const statusTexts = () => Array.from(document.querySelectorAll('.cooking-dock-chip-status')).map((n) => n.textContent);
+
+    expect(nav()).toHaveClass('cooking-dock--full');
+    expect(statusTexts()).toContain('Schritt 1 / 2');
+
+    act(() => { session.addRecipe({ recipe: rotkohl, stepIndex: 0, servingMultiplier: 1 }, kloesse); });
+    expect(nav()).toHaveClass('cooking-dock--compact');
+    expect(statusTexts()).toEqual(expect.arrayContaining(['1 / 2', '2 / 3']));
+
+    act(() => { session.addRecipe({ recipe: kloesse, stepIndex: 0, servingMultiplier: 1 }, extra); });
+    expect(nav()).toHaveClass('cooking-dock--thumb');
+  });
+
   test('sorts by the next due timer and highlights recipes due within five minutes', () => {
     renderDock();
     seedSession();

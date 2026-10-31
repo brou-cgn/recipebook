@@ -313,7 +313,7 @@ describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => 
               onDelete={() => {}}
             />
           )}
-          <CookingSessionDock placement="bar" />
+          <CookingSessionDock placement="top" />
         </CookingSessionProvider>
       );
     }
@@ -334,7 +334,7 @@ describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => 
           {show && (
             <RecipeDetail recipe={rouladen} allRecipes={allRecipes} currentUser={flaggedUser} onBack={() => {}} onEdit={() => {}} onDelete={() => {}} />
           )}
-          <CookingSessionDock placement="bar" />
+          <CookingSessionDock placement="top" />
         </CookingSessionProvider>
       );
     }
