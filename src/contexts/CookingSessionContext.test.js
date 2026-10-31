@@ -264,6 +264,45 @@ describe('CookingSessionContext – several recipes', () => {
     expect(onOpenRecipe.mock.calls.length).toBe(callsBefore);
   });
 
+  test('switching to a recipe whose timer ran out opens that step', () => {
+    renderSession();
+    act(() => { session.addRecipe({ recipe: rotkohl, stepIndex: 0, servingMultiplier: 1 }, kloesse); });
+    act(() => {
+      session.startTimer({ recipeId: 'rotkohl', recipeTitle: 'Apfelrotkohl', stepKey: 'step_1', timerIndex: 0, totalSeconds: 5, label: '5 Sekunden', soundKey: 'radar' });
+    });
+    act(() => { jest.advanceTimersByTime(5000); });
+
+    act(() => { session.switchTo('rotkohl'); });
+
+    expect(session.getCookingState('rotkohl')).toMatchObject({ stepIndex: 1 });
+  });
+
+  test('a recipe left with a running timer parks itself, unless it was taken out on purpose', () => {
+    renderSession();
+    act(() => {
+      session.startTimer({ recipeId: 'kloesse', recipeTitle: 'Kartoffelklöße', stepKey: 'step_3', timerIndex: 0, totalSeconds: 600, label: '10 Minuten', soundKey: 'radar' });
+    });
+
+    let parked;
+    act(() => { parked = session.parkIfTimerRunning({ recipe: kloesse, stepIndex: 3, servingMultiplier: 1 }); });
+    expect(parked).toBe(true);
+    expect(session.getCookingState('kloesse')).toMatchObject({ stepIndex: 3 });
+    expect(screen.getByText('„Kartoffelklöße“ läuft im Hintergrund')).toBeInTheDocument();
+
+    act(() => { session.removeFromSession('kloesse'); });
+    act(() => { parked = session.parkIfTimerRunning({ recipe: kloesse, stepIndex: 3, servingMultiplier: 1 }); });
+    expect(parked).toBe(false);
+    expect(session.isInSession('kloesse')).toBe(false);
+  });
+
+  test('a recipe without a running timer does not park itself', () => {
+    renderSession();
+    let parked;
+    act(() => { parked = session.parkIfTimerRunning({ recipe: kloesse, stepIndex: 0, servingMultiplier: 1 }); });
+    expect(parked).toBe(false);
+    expect(session.sessionRecipeIds).toEqual([]);
+  });
+
   test('without onOpenRecipe the session cannot switch recipes', () => {
     render(
       <CookingSessionProvider>
@@ -271,5 +310,114 @@ describe('CookingSessionContext – several recipes', () => {
       </CookingSessionProvider>
     );
     expect(session.canOpenRecipes).toBe(false);
+  });
+});
+
+describe('CookingSessionContext – after a restart', () => {
+  const rouladen = { id: 'rouladen', title: 'Rinderrouladen' };
+  const rotkohl = { id: 'rotkohl', title: 'Apfelrotkohl' };
+  const recipes = [rouladen, rotkohl];
+  const STORAGE_KEY = 'cookingSession_user-1';
+
+  let session;
+  function SessionProbe() {
+    session = useCookingSession();
+    return null;
+  }
+
+  function persistedTree(userId = 'user-1', list = recipes) {
+    return (
+      <CookingSessionProvider onOpenRecipe={() => {}} persistForUserId={userId} recipes={list}>
+        <SessionProbe />
+      </CookingSessionProvider>
+    );
+  }
+
+  function startTimer(recipe, seconds) {
+    act(() => {
+      session.startTimer({
+        recipeId: recipe.id,
+        recipeTitle: recipe.title,
+        stepKey: 'step_0',
+        timerIndex: 0,
+        totalSeconds: seconds,
+        label: `${seconds} Sekunden`,
+        soundKey: 'radar',
+      });
+    });
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  test('restores the recipes with their step and portions and the running timers', () => {
+    const first = render(persistedTree());
+    act(() => { session.addRecipe({ recipe: rouladen, stepIndex: 2, servingMultiplier: 1.5 }, rotkohl); });
+    startTimer(rouladen, 60);
+    act(() => { jest.advanceTimersByTime(10000); });
+    first.unmount();
+
+    render(persistedTree());
+
+    expect(session.sessionRecipeIds).toEqual(['rouladen', 'rotkohl']);
+    expect(session.getCookingState('rouladen')).toMatchObject({ stepIndex: 2, servingMultiplier: 1.5 });
+    expect(session.getTimers('rouladen').step_0[0]).toMatchObject({ running: true, remainingSeconds: 50 });
+  });
+
+  test('waits for the recipe list before it restores the recipes', () => {
+    const first = render(persistedTree());
+    act(() => { session.addRecipe({ recipe: rouladen, stepIndex: 0, servingMultiplier: 1 }, rotkohl); });
+    first.unmount();
+
+    const { rerender } = render(persistedTree('user-1', []));
+    expect(session.sessionRecipeIds).toEqual([]);
+
+    rerender(persistedTree('user-1', recipes));
+    expect(session.sessionRecipeIds).toEqual(['rouladen', 'rotkohl']);
+  });
+
+  test('a timer that ran out while the app was closed rings on the next start', () => {
+    const first = render(persistedTree());
+    act(() => { session.addRecipe({ recipe: rouladen, stepIndex: 0, servingMultiplier: 1 }, rotkohl); });
+    startTimer(rotkohl, 30);
+    first.unmount();
+
+    jest.setSystemTime(Date.now() + 60000);
+    render(persistedTree());
+
+    expect(screen.getByText('Timer abgelaufen!')).toBeInTheDocument();
+    expect(document.querySelector('.alarm-modal-recipe').textContent).toBe('Apfelrotkohl');
+    expect(session.getTimers('rotkohl').step_0[0]).toMatchObject({ running: false, finished: true });
+  });
+
+  test('forgets a session saved more than twelve hours ago', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      savedAt: Date.now() - 13 * 60 * 60 * 1000,
+      entries: [{ id: 'rouladen', stepIndex: 1, servingMultiplier: null }],
+      timers: {},
+    }));
+
+    render(persistedTree());
+
+    expect(session.sessionRecipeIds).toEqual([]);
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  test('saves nothing without a user to save for', () => {
+    render(persistedTree(null));
+    act(() => { session.addRecipe({ recipe: rouladen, stepIndex: 0, servingMultiplier: 1 }, rotkohl); });
+    startTimer(rouladen, 60);
+    expect(localStorage.length).toBe(0);
+  });
+
+  test('another user on the same device starts with an empty session', () => {
+    const { rerender } = render(persistedTree('user-1'));
+    act(() => { session.addRecipe({ recipe: rouladen, stepIndex: 0, servingMultiplier: 1 }, rotkohl); });
+
+    rerender(persistedTree('user-2'));
+
+    expect(session.sessionRecipeIds).toEqual([]);
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)).entries.map((e) => e.id)).toEqual(['rouladen', 'rotkohl']);
   });
 });

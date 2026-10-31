@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, screen, within } from '@testing-library/react';
 import { renderWithProviders } from '../test-utils';
 import RecipeDetail from './RecipeDetail';
+import CookingSessionDock from './CookingSessionDock';
 import { CookingSessionProvider } from '../contexts/CookingSessionContext';
 
 jest.mock('../utils/imageUtils', () => ({
@@ -254,6 +255,54 @@ describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => 
     expect(activeStepIndex()).toBe(1);
     expect(screen.getByRole('button', { name: 'Apfelrotkohl öffnen, Schritt 1 von 2' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Rinderrouladen öffnen/ })).toBeNull();
+  });
+
+  test('closing a recipe with a running timer parks it; the dock outside the cooking mode shows it', () => {
+    const timedRouladen = { ...rouladen, steps: ['Rouladen flach klopfen.', 'Rouladen anbraten.', 'Zugedeckt 90 Minuten schmoren lassen.'] };
+    function CloseHarness({ show }) {
+      return (
+        <CookingSessionProvider onOpenRecipe={() => {}}>
+          {show && (
+            <RecipeDetail
+              recipe={timedRouladen}
+              allRecipes={allRecipes}
+              currentUser={flaggedUser}
+              onBack={() => {}}
+              onEdit={() => {}}
+              onDelete={() => {}}
+            />
+          )}
+          <CookingSessionDock placement="bar" />
+        </CookingSessionProvider>
+      );
+    }
+    const { rerender } = renderWithProviders(<CloseHarness show />);
+    enterCookingMode();
+    fireEvent.click(document.querySelector('.step-timer-start-btn'));
+
+    rerender(<CloseHarness show={false} />);
+
+    expect(screen.getByRole('button', { name: 'Rinderrouladen öffnen, Timer 1:30:00' })).toBeInTheDocument();
+    expect(screen.getByText('„Rinderrouladen“ läuft im Hintergrund')).toBeInTheDocument();
+  });
+
+  test('closing a recipe without a running timer does not park it', () => {
+    function CloseHarness({ show }) {
+      return (
+        <CookingSessionProvider onOpenRecipe={() => {}}>
+          {show && (
+            <RecipeDetail recipe={rouladen} allRecipes={allRecipes} currentUser={flaggedUser} onBack={() => {}} onEdit={() => {}} onDelete={() => {}} />
+          )}
+          <CookingSessionDock placement="bar" />
+        </CookingSessionProvider>
+      );
+    }
+    const { rerender } = renderWithProviders(<CloseHarness show />);
+    enterCookingMode();
+
+    rerender(<CloseHarness show={false} />);
+
+    expect(screen.queryByRole('navigation', { name: 'Rezepte im Hintergrund' })).toBeNull();
   });
 
   test('only recipes of the open menu write their portions into it', () => {
