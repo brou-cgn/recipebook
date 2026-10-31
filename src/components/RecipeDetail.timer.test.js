@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, act } from '@testing-library/react';
 import { renderWithProviders } from '../test-utils';
 import RecipeDetail from './RecipeDetail';
+import { CookingSessionProvider } from '../contexts/CookingSessionContext';
 
 jest.mock('../utils/imageUtils', () => ({
   isBase64Image: jest.fn(() => false),
@@ -450,6 +451,78 @@ describe('RecipeDetail - Alarm Modal', () => {
     fireEvent.click(document.querySelector('.alarm-modal-stop-btn'));
     expect(clearIntervalSpy).toHaveBeenCalled();
     clearIntervalSpy.mockRestore();
+  });
+});
+
+describe('RecipeDetail - Timer in the cooking session (CookingSessionProvider)', () => {
+  function SessionHarness({ show, recipe = mockRecipe }) {
+    return (
+      <CookingSessionProvider>
+        {show && (
+          <RecipeDetail
+            recipe={recipe}
+            onBack={() => {}}
+            onEdit={() => {}}
+            onDelete={() => {}}
+            currentUser={currentUser}
+          />
+        )}
+      </CookingSessionProvider>
+    );
+  }
+
+  test('timer keeps running while the recipe is closed and shows the remaining time when reopened', () => {
+    const { rerender } = renderWithProviders(<SessionHarness show />);
+    enterCookingMode();
+    fireEvent.click(document.querySelector('.step-timer-start-btn'));
+    act(() => { jest.advanceTimersByTime(5000); });
+    expect(document.querySelector('.step-timer-time').textContent).toBe('09:55');
+
+    rerender(<SessionHarness show={false} />);
+    expect(document.querySelector('.recipe-detail-container')).toBeNull();
+    act(() => { jest.advanceTimersByTime(60000); });
+
+    rerender(<SessionHarness show />);
+    enterCookingMode();
+    expect(document.querySelector('.step-timer-time').textContent).toBe('08:55');
+  });
+
+  test('alarm shows the recipe title even when the recipe is not open', () => {
+    const { rerender } = renderWithProviders(<SessionHarness show />);
+    enterCookingMode();
+    fireEvent.click(document.querySelector('.step-timer-start-btn'));
+    rerender(<SessionHarness show={false} />);
+
+    act(() => { jest.advanceTimersByTime(600 * 1000); });
+
+    expect(document.querySelector('.alarm-modal-overlay')).toBeInTheDocument();
+    expect(document.querySelector('.alarm-modal-recipe').textContent).toBe('Timer Test Recipe');
+    expect(document.querySelector('.alarm-modal-label').textContent).toMatch(/10 Minuten/i);
+
+    fireEvent.click(document.querySelector('.alarm-modal-stop-btn'));
+    expect(document.querySelector('.alarm-modal-overlay')).toBeNull();
+  });
+
+  test('renders the alarm modal only once while the recipe is open', () => {
+    renderWithProviders(<SessionHarness show />);
+    enterCookingMode();
+    fireEvent.click(document.querySelector('.step-timer-start-btn'));
+    act(() => { jest.advanceTimersByTime(600 * 1000); });
+    expect(document.querySelectorAll('.alarm-modal-overlay')).toHaveLength(1);
+  });
+
+  test('timers belong to their recipe, not to the step index', () => {
+    const otherRecipe = { ...mockRecipe, id: 'recipe-other', title: 'Anderes Rezept' };
+    const { rerender } = renderWithProviders(<SessionHarness show />);
+    enterCookingMode();
+    fireEvent.click(document.querySelector('.step-timer-start-btn'));
+
+    rerender(<SessionHarness show={false} />);
+    rerender(<SessionHarness show recipe={otherRecipe} />);
+    enterCookingMode();
+
+    expect(document.querySelector('.step-timer-top-area')).toBeNull();
+    expect(document.querySelector('.step-timer-start-btn')).toBeInTheDocument();
   });
 });
 

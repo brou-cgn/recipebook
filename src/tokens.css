@@ -28,6 +28,9 @@
   --color-accent-tint: #faf3ef;
   --color-hover-overlay: rgba(0, 0, 0, 0.08);
   --color-bad-text: #a33a26;
+  --color-alarm: #e53935;
+  --color-alarm-strong: #b71c1c;
+  --color-on-alarm: #fff;
 }
 
 [data-theme="dark"] {
@@ -54,4 +57,7 @@
   --color-accent-tint: #3a2a1c;
   --color-hover-overlay: rgba(255, 255, 255, 0.1);
   --color-bad-text: #e8806c;
+  --color-alarm: #e53935;
+  --color-alarm-strong: #b71c1c;
+  --color-on-alarm: #fff;
 }

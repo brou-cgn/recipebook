@@ -1,7 +1,7 @@
 # Vorhaben: Parallel kochen (mehrere Rezepte im Hintergrund, Mobile)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 31.10.2026 (Konzept entschieden, noch kein PR).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 31.10.2026 (PR 1 umgesetzt, nicht gemergt).
 
 **Ziel:** Wer mehrere Gerichte gleichzeitig kocht (Beispiel im Entwurf: Rouladen, Rotkohl, Klöße), hält im
 Kochmodus auf dem Handy mehrere Rezepte offen. Rezepte im Hintergrund laufen weiter, samt Timer, und sind mit
@@ -26,6 +26,9 @@ Sheet arbeitet auf dem schon geladenen `recipes`-Array, „zuletzt gekocht“ nu
 
 ## Technische Grundlage (Code gelesen am 31.10.2026, nicht am Gerät geprüft)
 
+Stand nach PR 1: Timer, Alarm und der Wake-Lock für laufende Timer liegen in der Sitzung. Kochmodus, Schritt,
+Portionen und der Wake-Lock des Kochmodus liegen noch in `RecipeDetail`.
+
 - Kochmodus, aktueller Schritt, Portionen und Timer sind lokaler State in `RecipeDetail` (`cookingMode`,
   `currentStepIndex`, `activeTimers`, `timerIntervalsRef`). `App.js` rendert `RecipeDetail` nur, solange
   `selectedRecipe` gesetzt ist. Beim Verlassen räumt der Unmount-Effekt Intervalle und Alarm-`AudioContext` ab:
@@ -47,13 +50,29 @@ Sheet arbeitet auf dem schon geladenen `recipes`-Array, „zuletzt gekocht“ nu
 
 | PR | Inhalt | Stand |
 |---|---|---|
-| 1 | Kochsitzung als Context über der Hauptansicht (Name offen, z. B. `CookingSessionContext`): je Rezept Kochmodus, Schritt, Portionen und Timer (Schlüssel Rezept-ID + Schritt), ein gemeinsamer Alarm-`AudioContext`, Wake-Lock an der Sitzung. `RecipeDetail` liest und schreibt nur noch darüber. Sichtbar ändert sich nur, dass Timer das Verlassen des Rezepts überleben. Tests: `RecipeDetail.timer` und `RecipeDetail.cooking-mode-layout` bleiben grün; neu: Timer läuft nach Verlassen und Wiederöffnen weiter, Alarm kommt auch für ein nicht sichtbares Rezept. Dashboard: A1 teilweise, Timer-Verlust als neuer Befund (behoben). Erster Commit `fix:`, ohne Flag. | offen |
-| 2 | Titelzeile und „+ Rezept“-Sheet (V3), hinter einem neuen Rollen-Flag in `src/utils/userManagement.js` (Muster `follow`). Vorschläge: andere Rezepte der Festtafel, aus der das Rezept geöffnet wurde (prüfen, ob `App.js` das Menü dann noch kennt), verknüpfte Rezepte (`linkedRecipes` in `RecipeDetail`), zuletzt gekocht (`src/utils/recipeCookDates.js`). Erster Commit `feat:`. | offen |
+| 1 | Kochsitzung `src/contexts/CookingSessionContext.js` über der Hauptansicht: Timer je Rezept (Schlüssel Rezept-ID + Schritt), ein gemeinsamer Alarm-`AudioContext`, Wake-Lock, solange ein Timer läuft. Alarm-Dialog als eigener Baustein `CookingAlarmModal` (erscheint auch ohne offenes Rezept, nennt den Rezeptnamen, listet alle abgelaufenen Timer). Kochmodus, Schritt und Portionen bleiben vorerst in `RecipeDetail` (Abweichung vom Plan, ziehen mit PR 2 um). Ohne Flag. Tests +8 | umgesetzt auf Branch `claude/parallel-kochen-tracker`, nicht gemergt |
+| 2 | Kochmodus, Schritt und Portionen in die Sitzung; Titelzeile und „+ Rezept“-Sheet (V3), hinter einem neuen Rollen-Flag in `src/utils/userManagement.js` (Muster `follow`). Vorschläge: andere Rezepte der Festtafel, aus der das Rezept geöffnet wurde (prüfen, ob `App.js` das Menü dann noch kennt), verknüpfte Rezepte (`linkedRecipes` in `RecipeDetail`), zuletzt gekocht (`src/utils/recipeCookDates.js`). Erster Commit `feat:`. | offen |
 | 3 | Rezept-Leiste (H1) im Kochmodus und über der Bottom-Navigation, Entfernen per Linksswipe mit „Rückgängig“, Farben als Tokens. Danach Flag freigeben (eigene Entscheidung). Erster Commit `feat:`. | offen |
 | 4 | Abgelaufener Timer eines geparkten Rezepts: Chip „Fertig“, Benachrichtigung mit Rezeptname, Tippen öffnet den Schritt. Je nach Entscheidung: Auto-Parken beim Schließen, Sitzung übersteht einen Neustart. | offen |
 
 Nach jedem PR: Tabelle hier nachziehen. Berührt ein PR einen Tech-Check-Befund (mindestens PR 1: A1),
 das Dashboard nach `CLAUDE.md` aktualisieren.
+
+Umsetzungsnotizen PR 1: Der Provider sitzt in `App.js` innerhalb von `FollowProvider`. Ein Takt (1 s) rechnet
+die Restzeit aller laufenden Timer aus `endTime`, `visibilitychange` gleicht nach Bildschirmsperre ab.
+`RecipeDetail` holt die Timer über `useCookingSession()`; ohne Provider (Tests, Einbettungen) legt der Hook einen
+lokalen Speicher an, der wie früher mit der Komponente endet, und `RecipeDetail` rendert den Alarm-Dialog dann
+selbst. Neu im Verhalten: Ein Timer läuft nach dem Verlassen des Rezepts weiter, der Alarm kommt auf jeder
+Seite, die Benachrichtigung nennt den Rezeptnamen, mehrere abgelaufene Timer stehen gemeinsam im Dialog (bisher
+ging jeder weitere verloren), und der Bildschirm bleibt wach, solange ein Timer läuft, auch außerhalb des
+Kochmodus. Ein abgelaufener Timer zeigt sein Häkchen am Schritt, bis man ihn zurücksetzt oder die App neu lädt.
+Der Dialog hat ein eigenes Stylesheet (`CookingAlarmModal.css`, Tokens `--color-alarm`, `--color-alarm-strong`,
+`--color-on-alarm`); dadurch minimal anders: Titel `#e53935` statt `#d32f2f`, Beschriftung im hellen Modus `#666`
+statt `#555`. Baselines in `colorTokenPolicy.test.js` gesenkt (`RecipeDetail.css` 162 → 156, `darkMode.css`
+1.019 → 1.017). `RecipeDetail.js` 3.104 → 2.850 Zeilen, `useState` 79 → 76. Tests: +4 in
+`RecipeDetail.timer.test.js` (die zwei zum Weiterlaufen und zum Alarm ohne offenes Rezept schlagen mit dem alten
+`RecipeDetail` fehl), +4 in `src/contexts/CookingSessionContext.test.js`. Nicht am Gerät geprüft, vor allem nicht
+Ton und Benachrichtigung bei gesperrtem iPhone (iOS-PWA).
 
 ## Offen
 

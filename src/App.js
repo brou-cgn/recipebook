@@ -95,6 +95,7 @@ import {
 } from './utils/eventsFirestore';
 import { NutritionReferenceProvider, useNutritionReference } from './contexts/NutritionReferenceContext';
 import { FollowProvider } from './contexts/FollowContext';
+import { CookingSessionProvider } from './contexts/CookingSessionContext';
 import MemberProfilePage from './components/MemberProfilePage';
 import { RecipeImportQueueProvider, useRecipeImportQueue } from './contexts/RecipeImportQueueContext';
 import { updateAppBadge } from './utils/appBadge';
@@ -2825,6 +2826,7 @@ function App() {
       setProfileUserId(userId);
       setProfileFromNetwork(Boolean(options?.fromNetwork));
     }}>
+    <CookingSessionProvider>
       <AppNutritionRowsSync onRows={setNutritionReferenceRows} />
       <AppReviewRecipesSync onReviewRecipes={setPendingReviewRecipes} />
       {pendingReviewImport && currentUser && (
@@ -3196,6 +3198,7 @@ function App() {
           </Suspense>
         )}
       </div>
+    </CookingSessionProvider>
     </FollowProvider>
     </RecipeImportQueueProvider>
     </NutritionReferenceProvider>

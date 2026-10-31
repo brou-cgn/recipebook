@@ -62,7 +62,7 @@ const BASELINE = {
   'components/PrintFormatEditor.css': 43,
   'components/PrintPage.css': 17,
   'components/RatingModal.css': 29,
-  'components/RecipeDetail.css': 162,
+  'components/RecipeDetail.css': 156,
   'components/RecipeFilterSidebar.css': 25,
   'components/RecipeForm.css': 149,
   'components/RecipeImageCarousel.css': 4,
@@ -144,7 +144,7 @@ describe('Farb-Token-Richtlinie', () => {
 // darkMode.css ist Altbestand: neue Dark-Regeln gehören als Token in tokens.css
 // (AGENTS.md). Gezählt werden die [data-theme="dark"]-Selektoren; der Wert darf nur
 // sinken (Tech-Check D5: am 27.10.2026 kamen trotz Regel sieben neue dazu).
-const DARK_MODE_SELECTORS = 1019;
+const DARK_MODE_SELECTORS = 1017;
 
 describe('darkMode.css (Altbestand)', () => {
   const css = fs.readFileSync(path.join(SRC, 'darkMode.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
