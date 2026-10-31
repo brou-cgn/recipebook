@@ -1,7 +1,7 @@
 # Vorhaben: Parallel kochen (mehrere Rezepte im Hintergrund, Mobile)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 31.10.2026 (PR 1 bis 6 gemergt; PR 7, Knopf im FAB-Look, als Branch gepusht, noch ohne PR).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 31.10.2026 (PR 1 bis 7 gemergt; PR 8, Leiste unter dem Header, als Branch gepusht, noch ohne PR).
 
 **Ziel:** Wer mehrere Gerichte gleichzeitig kocht (Beispiel im Entwurf: Rouladen, Rotkohl, Klöße), hält im
 Kochmodus auf dem Handy mehrere Rezepte offen. Rezepte im Hintergrund laufen weiter, samt Timer, und sind mit
@@ -15,7 +15,7 @@ V1–V3 Verschieben, H1–H3 Hervorholen). Gewählt: V3 und H1. Keine Mockups im
 | Thema | Entscheidung |
 |---|---|
 | Verschieben | V3 „Rezept dazunehmen“ (31.10.2026): „+ Rezept“ in der Titelzeile des Kochmodus (seit den Nacharbeiten nach dem Test am Gerät ein Icon-Knopf ohne Text, siehe unten) öffnet ein Bottom-Sheet „Was kochst du dazu?“ mit Suche und Vorschlägen. Das gewählte Rezept kommt im Kochmodus nach vorn, das bisherige parkt von selbst. Snackbar „<Rezept> läuft im Hintergrund weiter“ mit „Zurück“. |
-| Hervorholen | H1 „Rezept-Leiste unten“ (31.10.2026): ein Chip je geparktem Rezept (Bild, Name, laufender Timer, sonst Schritt „4 / 5“), sortiert nach dem nächsten fälligen Timer, bald fällige hervorgehoben. Tippen tauscht mit dem Rezept vorn. Im Kochmodus unter dem Zutaten-Sheet (bis PR 4 wurde das Sheet um die Leistenhöhe kürzer, nach den Nacharbeiten gibt das Schritt-Karussell sie ab, siehe unten), außerhalb des Kochmodus über der Bottom-Navigation (Entwurf V1, Bild 2). |
+| Hervorholen | H1 „Rezept-Leiste unten“ (31.10.2026): ein Chip je geparktem Rezept (Bild, Name, laufender Timer, sonst Schritt „4 / 5“), sortiert nach dem nächsten fälligen Timer, bald fällige hervorgehoben. Tippen tauscht mit dem Rezept vorn. Im Kochmodus unter dem Zutaten-Sheet (bis PR 4 wurde das Sheet um die Leistenhöhe kürzer, nach den Nacharbeiten gibt das Schritt-Karussell sie ab, siehe unten), außerhalb des Kochmodus direkt unter dem Header (seit PR 8; zuvor über der Bottom-Navigation, Entwurf V1, Bild 2). |
 | Titelzeile | Der Kochmodus im Hochformat bekommt eine Zeile mit dem Rezeptnamen. Heute fehlt sie; mit mehreren Rezepten wäre sonst unklar, welches vorn ist. |
 | Umfang | Nur Handy im Hochformat. Desktop und Tablet bleiben, wie sie sind. |
 | Obergrenze | Vier Rezepte je Sitzung. Bei vier Rezepten zeigt das Sheet einen Hinweis statt der Liste (31.10.2026: Vorschlag mit dem Auftrag „PR 2 bitte“ übernommen, nicht ausdrücklich bestätigt). |
@@ -23,7 +23,7 @@ V1–V3 Verschieben, H1–H3 Hervorholen). Gewählt: V3 und H1. Keine Mockups im
 | Flag | `parallelKochen` in `src/utils/userManagement.js` und in der Benutzerverwaltung, für alle Rollen aus (31.10.2026). Bleibt auch für Admins aus; freigeschaltet wird über Benutzerverwaltung → Rollenrechte, danach die App neu laden (Entscheidung 31.10.2026). |
 | Wischen in der Leiste | Tippen holt ein Rezept nach vorn, Linksswipe nimmt es aus der Sitzung (mit „Rückgängig“). Kein Blättern per Wischen (31.10.2026, bestätigt). |
 | Bald fällig | Ab fünf Minuten Restzeit wird der Chip orange, ein abgelaufener Timer zeigt „Fertig“, ebenfalls orange (31.10.2026: Vorschlag umgesetzt, nicht ausdrücklich bestätigt). |
-| Leiste außerhalb des Kochmodus | Überall dort, wo die Bottom-Navigation sichtbar ist: über der vollen Leiste (Küche, Chefkoch) bzw. über der Pille (Kochbuch, Festtafel, Atelier). Im Rezeptdetail ohne Kochmodus und in der Festtafel-Detailansicht gibt es keine Bottom-Navigation und damit keine Leiste (mit PR 3 so gebaut, 31.10.2026). |
+| Leiste außerhalb des Kochmodus | Direkt unter dem Header der Hauptansicht (31.10.2026, nach dem Test am Gerät, PR 8), im Fluss: die Seite darunter rückt nach unten, scrollt aber mit dem Inhalt weg. Vorher (PR 3 bis 7) über der Bottom-Navigation (volle Leiste bzw. Pille), mit `--cooking-dock-space` als Platzhalter für Listen und Knöpfe; beides entfällt. Sichtbar bleibt sie dort, wo die Bottom-Navigation sichtbar ist; im Rezeptdetail ohne Kochmodus und in der Festtafel-Detailansicht gibt es sie weiter nicht. |
 | Automatisch parken | Wer ein Rezept mit laufendem Timer verlässt (schließen, zurück, anderes Rezept), parkt es in der Sitzung, mit Snackbar „… läuft im Hintergrund“ und „Zurück“. Nicht, wenn man es vorher ausdrücklich herausgenommen hat (Kochmodus beenden, aus der Leiste gewischt) (31.10.2026, bestätigt). |
 | Neustart | Die Sitzung übersteht einen Neustart der App: je Nutzer in `localStorage` (Rezept-IDs mit Schritt und Portionen, Timer mit Endzeitpunkt). Abgelaufene Timer melden sich beim Start. Bestätigt am 31.10.2026; meine Annahmen dabei: höchstens 12 Stunden alt, nur mit dem Flag. |
 | „Fertig“ antippen | Öffnet das Rezept an dem Schritt mit dem abgelaufenen Timer statt am zuletzt offenen (31.10.2026). |
@@ -70,6 +70,7 @@ Portionen und der Wake-Lock des Kochmodus liegen noch in `RecipeDetail`.
 | 5 | „Zuletzt gekocht“ im Sheet: begrenzte Abfrage `getRecentlyCookedRecipeIds` samt Index, Abschnitt unter Festtafel und verknüpften Rezepten. Erster Commit `feat:`. Tests +6; `test:ci` 191 Suites, 3.929 Tests | PR #3571 gemergt (31.10.2026, v2.31.0), Deploy-Lauf 1947 erfolgreich; am Gerät nicht geprüft |
 | 6 | Nacharbeiten nach dem Test am Gerät: Leiste im App-Hintergrund statt Braun (Light und Dark), mit Leiste behält das Zutaten-Sheet seine Höhe und das Schritt-Karussell gibt sie ab (Schrift dort kleiner), Knopf „Rezept dazunehmen“ ohne Text mit eigenem einrichtbarem Button-Icon `cookingAddRecipe`. Weiter hinter dem Flag. Tests +9 (eine Suite neu); `test:ci` 190 Suites, 3.932 Tests | PR #3572 gemergt (31.10.2026, v2.30.0), Deploy-Lauf 1946 erfolgreich; im Browser (Chromium, 390 × 844) geprüft, am Gerät nicht |
 | 7 | Nacharbeit zu PR 6: Knopf „Rezept dazunehmen“ in Formatierung und Animation wie die FAB-Buttons (rund mit Rand und Schatten, mobil 56 px, federndes Wachsen beim Drücken), als eigener Baustein `CookingAddRecipeButton`. Weiter hinter dem Flag. Erster Commit `fix:`. Tests +13 (zwei Suiten neu); `test:ci` 194 Suites, 3.951 Tests | Branch `claude/parallel-kochen-pr7` gepusht, noch kein PR (31.10.2026); im Browser (Chromium, 390 × 844) geprüft, am Gerät nicht |
+| 8 | Leiste außerhalb des Kochmodus nach oben: `placement="top"` direkt unter dem Header statt fest über der Bottom-Navigation; `--cooking-dock-space` samt Anteilen in `App.css` entfällt. Weiter hinter dem Flag. Tests: zwei in `CookingSessionDock.test.js` angepasst | Branch `claude/parallel-kochen-dock-oben`, noch kein PR (31.10.2026); am Gerät nicht geprüft |
 
 Nach jedem PR: Tabelle hier nachziehen. Berührt ein PR einen Tech-Check-Befund (mindestens PR 1: A1),
 das Dashboard nach `CLAUDE.md` aktualisieren.
@@ -187,6 +188,8 @@ Schritt-Karussell entsprechend kürzer. Der Knopf ist erst sichtbar, wenn die Bu
 Maus und Touch), +7 in `src/components/CookingAddRecipeButton.css.test.js`. Nicht am Gerät geprüft.
 
 ## Offen
+
+- **Leiste unter dem Header scrollt weg** (PR 8): Sie sitzt im Fluss, nicht sticky. Bei langen Listen ist ein ablaufender Timer dann erst nach dem Hochscrollen sichtbar (der Alarm-Dialog kommt trotzdem). Sticky unter dem Header wäre die Alternative; Höhe des Headers und sein Ausblenden beim Scrollen (`headerVisible`) müssten dann zusammenpassen.
 
 - **Parken ohne neues Rezept** (V2, Parken-Knopf in der Lasche): nicht gewählt. Wird nötig, wenn man ein Rezept
   parken will, ohne gleich ein anderes zu öffnen.

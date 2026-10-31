@@ -21,7 +21,7 @@ function renderDock(props = {}, onOpenRecipe = jest.fn()) {
   const result = render(
     <CookingSessionProvider onOpenRecipe={onOpenRecipe}>
       <SessionProbe />
-      <CookingSessionDock placement="bar" currentRecipeId="kloesse" {...props} />
+      <CookingSessionDock placement="top" currentRecipeId="kloesse" {...props} />
     </CookingSessionProvider>
   );
   return { onOpenRecipe, ...result };
@@ -145,16 +145,11 @@ describe('CookingSessionDock', () => {
     expect(session.isInSession('rouladen')).toBe(true);
   });
 
-  test('the floating dock reserves space at the bottom only while it is shown', () => {
-    const { unmount } = renderDock();
-    const root = document.documentElement;
-    expect(root.style.getPropertyValue('--cooking-dock-space')).toBe('');
-
+  test('the dock under the header sits in the page flow and reserves no space at the bottom', () => {
+    renderDock();
     seedSession();
-    expect(root.style.getPropertyValue('--cooking-dock-space')).toBe('76px');
-
-    unmount();
-    expect(root.style.getPropertyValue('--cooking-dock-space')).toBe('');
+    expect(document.querySelector('.cooking-dock--top')).toBeInTheDocument();
+    expect(document.documentElement.style.getPropertyValue('--cooking-dock-space')).toBe('');
   });
 
   test('the dock inside the cooking mode does not reserve page space', () => {
