@@ -233,6 +233,37 @@ describe('CookingSessionContext – several recipes', () => {
     expect(sortByNextDue(entries, {}).map((e) => e.recipe.id)).toEqual(['bratapfel', 'kloesse', 'rotkohl', 'rouladen']);
   });
 
+  test('swapWith parks the recipe in front with its state and opens the chosen one', () => {
+    const onOpenRecipe = renderSession();
+    act(() => { session.addRecipe({ recipe: rouladen, stepIndex: 0, servingMultiplier: 1 }, rotkohl); });
+
+    act(() => { session.swapWith({ recipe: rotkohl, stepIndex: 1, servingMultiplier: 2 }, 'rouladen'); });
+
+    expect(onOpenRecipe).toHaveBeenLastCalledWith(rouladen, { isNew: false });
+    expect(session.getCookingState('rotkohl')).toMatchObject({ stepIndex: 1, servingMultiplier: 2 });
+  });
+
+  test('swapWith also parks a recipe in front that was not in the session yet', () => {
+    renderSession();
+    act(() => { session.addRecipe({ recipe: rouladen, stepIndex: 0, servingMultiplier: 1 }, rotkohl); });
+
+    act(() => { session.swapWith({ recipe: kloesse, stepIndex: 2, servingMultiplier: 1 }, 'rouladen'); });
+
+    expect(session.sessionRecipeIds).toEqual(['rouladen', 'rotkohl', 'kloesse']);
+    expect(session.getCookingState('kloesse')).toMatchObject({ stepIndex: 2 });
+  });
+
+  test('removeFromSession takes a recipe out without opening another one', () => {
+    const onOpenRecipe = renderSession();
+    act(() => { session.addRecipe({ recipe: rouladen, stepIndex: 0, servingMultiplier: 1 }, rotkohl); });
+    const callsBefore = onOpenRecipe.mock.calls.length;
+
+    act(() => { session.removeFromSession('rouladen'); });
+
+    expect(session.sessionRecipeIds).toEqual(['rotkohl']);
+    expect(onOpenRecipe.mock.calls.length).toBe(callsBefore);
+  });
+
   test('without onOpenRecipe the session cannot switch recipes', () => {
     render(
       <CookingSessionProvider>

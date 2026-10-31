@@ -240,6 +240,22 @@ describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => 
     expect(within(sheet).queryByLabelText('Rezept suchen')).toBeNull();
   });
 
+  test('the dock at the bottom shows the parked recipe; tapping it swaps both recipes', () => {
+    renderWithProviders(<Harness />);
+    enterCookingMode();
+    expect(document.querySelector('.cooking-dock')).toBeNull();
+    fireEvent.click(document.querySelectorAll('.step-card')[1]);
+    addRecipeViaSearch('rotkohl', 'Apfelrotkohl');
+
+    expect(document.querySelector('.cooking-mode-has-dock')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Rinderrouladen öffnen, Schritt 2 von 3' }));
+
+    expect(titleBarTitle()).toBe('Rinderrouladen');
+    expect(activeStepIndex()).toBe(1);
+    expect(screen.getByRole('button', { name: 'Apfelrotkohl öffnen, Schritt 1 von 2' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Rinderrouladen öffnen/ })).toBeNull();
+  });
+
   test('only recipes of the open menu write their portions into it', () => {
     const onPortionCountChange = jest.fn();
     renderWithProviders(<Harness menu={{ ...sundayMenu, sections: [{ name: 'Hauptgang', recipeIds: ['rouladen'] }] }} onPortionCountChange={onPortionCountChange} />);

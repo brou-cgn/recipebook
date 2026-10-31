@@ -1,0 +1,116 @@
+/* Rezept-Leiste der Kochsitzung (CookingSessionDock). Farben nur über Tokens. */
+.cooking-dock {
+  background: var(--color-cooking-dock);
+  color: var(--color-on-cooking-dock);
+}
+
+/* Im Kochmodus: letzte Zeile unter dem Zutaten-Sheet (siehe RecipeDetail.css) */
+.cooking-dock--inline {
+  order: 4;
+  flex: 0 0 auto;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Außerhalb des Kochmodus: fest über der Bottom-Navigation, unter Snackbar und Navigation */
+.cooking-dock--bar,
+.cooking-dock--pill {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  z-index: 1150;
+  padding: 8px;
+  border-radius: 18px;
+  box-shadow: 0 10px 24px rgba(64, 44, 28, 0.35);
+}
+
+.cooking-dock--bar {
+  bottom: calc(var(--bottom-nav-height, 85px) + 8px);
+}
+
+/* Pille: 16px Abstand + 64px Höhe (BottomNavigation.css) + 12px */
+.cooking-dock--pill {
+  bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+}
+
+.cooking-dock-list {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cooking-dock-chip {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 52px;
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.cooking-dock-chip-main {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 0 10px 0 8px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--color-cooking-dock-chip);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cooking-dock-chip--urgent .cooking-dock-chip-main {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.cooking-dock-chip-main:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.cooking-dock-chip-thumb {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--color-surface-raised);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+.cooking-dock-chip-thumb--empty {
+  display: inline-block;
+}
+
+.cooking-dock-chip-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cooking-dock-chip-title {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cooking-dock-chip-status {
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.cooking-dock-chip-status--step {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-cooking-dock-muted);
+}

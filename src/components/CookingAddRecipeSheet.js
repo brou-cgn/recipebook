@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { getMenuRecipeIds } from '../utils/menuSections';
+import { getRecipeThumbnail } from '../utils/recipeThumbnail';
 import './CookingAddRecipeSheet.css';
 
 /**
@@ -11,26 +12,10 @@ import './CookingAddRecipeSheet.css';
 
 const MAX_RESULTS = 20;
 
-const isRemoteUrl = (url) => url?.startsWith('https://') || url?.startsWith('http://');
-
-// Vorschaubild wie auf der Rezeptkarte: Standardbild, bei entfernten Bildern das Thumbnail
-function recipeThumbnail(recipe) {
-  const images = Array.isArray(recipe.images) && recipe.images.length > 0
-    ? recipe.images
-    : recipe.image
-      ? [{ url: recipe.image, isDefault: true }]
-      : [];
-  const main = images.find((img) => img.isDefault) || images[0];
-  if (!main?.url) return '';
-  return recipe.imageThumbnail && isRemoteUrl(recipe.imageThumbnail) && isRemoteUrl(main.url)
-    ? recipe.imageThumbnail
-    : main.url;
-}
-
 const normalize = (text) => (text || '').toLocaleLowerCase('de');
 
 function RecipeRow({ recipe, onSelect }) {
-  const thumbnail = recipeThumbnail(recipe);
+  const thumbnail = getRecipeThumbnail(recipe);
   return (
     <li>
       <button

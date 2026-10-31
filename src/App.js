@@ -7,7 +7,8 @@ import Header from './components/Header';
 import Login from './components/Login';
 import SplashScreen from './components/SplashScreen';
 import MobileSearchOverlay from './components/MobileSearchOverlay';
-import BottomNavigation from './components/BottomNavigation';
+import BottomNavigation, { PILL_TAB_KEYS } from './components/BottomNavigation';
+import CookingSessionDock from './components/CookingSessionDock';
 import {
   loginUser, 
   logoutUser, 
@@ -3179,6 +3180,10 @@ function App() {
           selectedPrivateLists={isPrivateListSearchContext ? [] : recipeFilters.selectedPrivateLists}
           showPrivateListFilters={!isPrivateListSearchContext}
         />
+        {/* Kochsitzung: Rezepte im Hintergrund über der Bottom-Navigation (Rollen-Flag parallelKochen) */}
+        {showBottomNav && isBottomNavVisible && currentUser?.parallelKochen && !currentUser?.isGuest && (
+          <CookingSessionDock placement={PILL_TAB_KEYS.includes(bottomNavActiveKey) ? 'pill' : 'bar'} />
+        )}
         {showBottomNav && (
           <BottomNavigation
             tabs={bottomNavTabs}

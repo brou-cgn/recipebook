@@ -39,6 +39,7 @@ import { getCategoryImages } from '../utils/categoryImages';
 import { useCookingSession } from '../contexts/CookingSessionContext';
 import CookingAlarmModal from './CookingAlarmModal';
 import CookingAddRecipeSheet from './CookingAddRecipeSheet';
+import CookingSessionDock from './CookingSessionDock';
 import { getMenuRecipeIds } from '../utils/menuSections';
 import RecipeRating from './RecipeRating';
 import CookDateModal from './CookDateModal';
@@ -1367,6 +1368,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   };
 
   // Weiteres Rezept dazunehmen: dieses parkt mit Schritt und Portionen, das gewählte öffnet im Kochmodus
+  // Rezept-Leiste unten im Kochmodus, sobald ein anderes Rezept der Sitzung im Hintergrund läuft
+  const showCookingDock = parallelCookingEnabled && !isMobileLandscape
+    && cookingSession.sessionRecipes.some((entry) => entry.recipe.id !== recipe.id);
+
   const handleAddRecipeToSession = (nextRecipe) => {
     setShowAddRecipeSheet(false);
     cookingSession.addRecipe({ recipe, stepIndex: currentStepIndex, servingMultiplier }, nextRecipe);
@@ -1772,7 +1777,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         </div>
       )}
 
-      <div className={`recipe-detail-content ${cookingMode ? 'cooking-mode-active' : ''} ${cookingMode && isMobileLandscape ? 'cooking-mode-landscape' : ''}`} ref={contentRef}>
+      <div className={`recipe-detail-content ${cookingMode ? 'cooking-mode-active' : ''} ${cookingMode && isMobileLandscape ? 'cooking-mode-landscape' : ''}${cookingMode && showCookingDock ? ' cooking-mode-has-dock' : ''}`} ref={contentRef}>
         {cookingMode ? (
           // Cooking mode layout
           <>
@@ -1965,6 +1970,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 </button>
               </div>
             </section>
+
+            {/* Kochsitzung: Rezepte im Hintergrund; Tippen tauscht, dieses Rezept parkt dabei */}
+            {showCookingDock && (
+              <CookingSessionDock
+                placement="inline"
+                currentRecipeId={recipe.id}
+                onSelect={(entry) => cookingSession.swapWith(
+                  { recipe, stepIndex: currentStepIndex, servingMultiplier },
+                  entry.recipe.id
+                )}
+              />
+            )}
           </>
         ) : (
           // Normal mode layout

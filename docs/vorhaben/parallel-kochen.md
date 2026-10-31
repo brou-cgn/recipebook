@@ -1,7 +1,7 @@
 # Vorhaben: Parallel kochen (mehrere Rezepte im Hintergrund, Mobile)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 31.10.2026 (PR 1 gemergt; PR 2 als PR #3567 offen, nicht gemergt).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 31.10.2026 (PR 1 und 2 gemergt; PR 3 umgesetzt, nicht gemergt).
 
 **Ziel:** Wer mehrere Gerichte gleichzeitig kocht (Beispiel im Entwurf: Rouladen, Rotkohl, Klöße), hält im
 Kochmodus auf dem Handy mehrere Rezepte offen. Rezepte im Hintergrund laufen weiter, samt Timer, und sind mit
@@ -20,7 +20,10 @@ V1–V3 Verschieben, H1–H3 Hervorholen). Gewählt: V3 und H1. Keine Mockups im
 | Umfang | Nur Handy im Hochformat. Desktop und Tablet bleiben, wie sie sind. |
 | Obergrenze | Vier Rezepte je Sitzung. Bei vier Rezepten zeigt das Sheet einen Hinweis statt der Liste (31.10.2026: Vorschlag mit dem Auftrag „PR 2 bitte“ übernommen, nicht ausdrücklich bestätigt). |
 | Kochmodus beenden | Nimmt nur das Rezept vorn aus der Sitzung. Gibt es weitere, rückt das nächste fällige nach: abgelaufener Timer zuerst, dann der früheste laufende, sonst das zuletzt dazugenommene. Das letzte Rezept endet wie bisher (31.10.2026, übernommen wie die Obergrenze). |
-| Flag | `parallelKochen` in `src/utils/userManagement.js` und in der Benutzerverwaltung, für alle Rollen aus (31.10.2026). |
+| Flag | `parallelKochen` in `src/utils/userManagement.js` und in der Benutzerverwaltung, für alle Rollen aus (31.10.2026). Bleibt auch für Admins aus; freigeschaltet wird über Benutzerverwaltung → Rollenrechte, danach die App neu laden (Entscheidung 31.10.2026). |
+| Wischen in der Leiste | Tippen holt ein Rezept nach vorn, Linksswipe nimmt es aus der Sitzung (mit „Rückgängig“). Kein Blättern per Wischen (31.10.2026, bestätigt). |
+| Bald fällig | Ab fünf Minuten Restzeit wird der Chip orange, ein abgelaufener Timer zeigt „Fertig“, ebenfalls orange (31.10.2026: Vorschlag umgesetzt, nicht ausdrücklich bestätigt). |
+| Leiste außerhalb des Kochmodus | Überall dort, wo die Bottom-Navigation sichtbar ist: über der vollen Leiste (Küche, Chefkoch) bzw. über der Pille (Kochbuch, Festtafel, Atelier). Im Rezeptdetail ohne Kochmodus und in der Festtafel-Detailansicht gibt es keine Bottom-Navigation und damit keine Leiste (mit PR 3 so gebaut, 31.10.2026). |
 | Zuletzt gekocht | Nicht im Sheet (Abweichung vom Plan, 31.10.2026): `getAllCookDatesForUser` liest alle Kochdaten ohne `limit` (Tech-Check K3). Dafür braucht es eine eigene Abfrage mit `orderBy` und `limit` samt Index. Vorschläge vorerst: Festtafel, verknüpfte Rezepte, Suche. |
 
 Vorgaben aus `AGENTS.md`, die hier greifen: Entfernen eines Rezepts aus der Leiste per Linksswipe
@@ -55,9 +58,9 @@ Portionen und der Wake-Lock des Kochmodus liegen noch in `RecipeDetail`.
 | PR | Inhalt | Stand |
 |---|---|---|
 | 1 | Kochsitzung `src/contexts/CookingSessionContext.js` über der Hauptansicht: Timer je Rezept (Schlüssel Rezept-ID + Schritt), ein gemeinsamer Alarm-`AudioContext`, Wake-Lock, solange ein Timer läuft. Alarm-Dialog als eigener Baustein `CookingAlarmModal` (erscheint auch ohne offenes Rezept, nennt den Rezeptnamen, listet alle abgelaufenen Timer). Kochmodus, Schritt und Portionen bleiben vorerst in `RecipeDetail` (Abweichung vom Plan, ziehen mit PR 2 um). Ohne Flag. Tests +8. Dashboard: A1 teilweise, P7 behoben | PR #3566 gemergt (31.10.2026, v2.26.18), Deploy-Lauf 1941 erfolgreich; am Gerät nicht geprüft |
-| 2 | Hinter dem Rollen-Flag `parallelKochen`: Titelzeile mit Rezeptname und „+ Rezept“, Sheet `CookingAddRecipeSheet` (Suche, Vorschläge aus der Festtafel und aus verknüpften Rezepten), Sitzung führt die Rezepte samt Schritt und Portionen, Snackbar „… läuft im Hintergrund“ mit „Zurück“, „Kochmodus beenden“ lässt das nächste nachrücken. Erster Commit `feat:`. Tests +16 | PR #3567 offen (31.10.2026), nicht gemergt |
-| 3 | Rezept-Leiste (H1) im Kochmodus und über der Bottom-Navigation, Entfernen per Linksswipe mit „Rückgängig“, Farben als Tokens. Danach Flag freigeben (eigene Entscheidung). Erster Commit `feat:`. | offen |
-| 4 | Abgelaufener Timer eines geparkten Rezepts: Chip „Fertig“, Benachrichtigung mit Rezeptname, Tippen öffnet den Schritt. Je nach Entscheidung: Auto-Parken beim Schließen, Sitzung übersteht einen Neustart. | offen |
+| 2 | Hinter dem Rollen-Flag `parallelKochen`: Titelzeile mit Rezeptname und „+ Rezept“, Sheet `CookingAddRecipeSheet` (Suche, Vorschläge aus der Festtafel und aus verknüpften Rezepten), Sitzung führt die Rezepte samt Schritt und Portionen, Snackbar „… läuft im Hintergrund“ mit „Zurück“, „Kochmodus beenden“ lässt das nächste nachrücken. Erster Commit `feat:`. Tests +16 | PR #3567 gemergt (31.10.2026, v2.27.0), Deploy-Lauf 1942 erfolgreich; am Gerät nicht geprüft |
+| 3 | Rezept-Leiste `CookingSessionDock` (H1): im Kochmodus unter dem Zutaten-Sheet, außerhalb über der Bottom-Navigation (volle Leiste und Pille). Chips nach Dringlichkeit; bald fällige und abgelaufene („Fertig“) orange; Tippen tauscht (das Rezept vorn parkt), Linksswipe entfernt mit „Rückgängig“. Farben als Tokens. Weiter hinter dem Flag. Erster Commit `feat:`. Tests +12; `test:ci` 189 Suites, 3.912 Tests | umgesetzt auf Branch `claude/parallel-kochen-pr3`, nicht gemergt |
+| 4 | Tippen auf „Fertig“ öffnet den Schritt mit dem abgelaufenen Timer (heute: den zuletzt offenen Schritt). Je nach Entscheidung: Auto-Parken beim Schließen, Sitzung übersteht einen Neustart. (Chip „Fertig“ und Benachrichtigung mit Rezeptname gibt es seit PR 3 bzw. PR 1.) | offen |
 
 Nach jedem PR: Tabelle hier nachziehen. Berührt ein PR einen Tech-Check-Befund (mindestens PR 1: A1),
 das Dashboard nach `CLAUDE.md` aktualisieren.
@@ -95,22 +98,35 @@ Sitzungslogik liegen außerhalb, in `RecipeDetail` nur die Anbindung). Tests: +9
 `src/contexts/CookingSessionContext.test.js`, +7 in `src/components/RecipeDetail.parallelCooking.test.js`; `test:ci`
 188 Suites, 3.900 Tests. Nicht am Gerät geprüft.
 
+Umsetzungsnotizen PR 3: Die Leiste (`src/components/CookingSessionDock.js`) liest die Sitzung und sortiert mit
+`sortByNextDue`. Im Kochmodus rendert `RecipeDetail` sie als letzte Zeile (`placement="inline"`, ohne das Rezept vorn);
+dann trägt der Inhalt die Klasse `cooking-mode-has-dock`, und das Zutaten-Sheet wird 72 px kürzer. Tippen ruft
+`swapWith` der Sitzung: Das Rezept vorn parkt mit Schritt und Portionen, auch wenn es vorher nicht in der Sitzung
+war (sofern Platz ist). Außerhalb rendert `App.js` sie fest über der Bottom-Navigation (`placement` `bar` bzw.
+`pill`, je nach `PILL_TAB_KEYS` aus `BottomNavigation.js`); solange sie sichtbar ist, setzt sie
+`--cooking-dock-space` (76 px) am Root, das `App.css` beim Innenabstand unten der Listen und bei den schwebenden
+Knöpfen der vollen Leiste einrechnet. Die Eckknöpfe neben der Pille liegen unterhalb der Leiste und bleiben, wo sie
+sind. Entfernen nutzt `useSwipeToDelete` und `useUndoableDelete` wie die Netzwerk-Seite: Der Chip verschwindet
+sofort, `removeFromSession` läuft nach 6 s oder beim Verlassen der Ansicht; Timer des Rezepts laufen weiter. Neue
+Tokens: `--color-cooking-dock`, `--color-cooking-dock-chip`, `--color-on-cooking-dock`,
+`--color-cooking-dock-muted`, `--color-on-accent`. Das Vorschaubild kommt aus `src/utils/recipeThumbnail.js`
+(auch im Sheet). `RecipeDetail.js` 2.917 → 2.934 Zeilen, `useState` unverändert 77. Tests: +8 in
+`src/components/CookingSessionDock.test.js`, +3 in `src/contexts/CookingSessionContext.test.js`, +1 in
+`src/components/RecipeDetail.parallelCooking.test.js`. Nicht am Gerät geprüft, vor allem nicht die Lage über der
+Pille und den Eckknöpfen.
+
 ## Offen
 
-- **Wischen in der Leiste:** Der Entwurf H1 zeigt „Wischen blättert“, die App-Regel will Linksswipe zum
-  Entfernen. Beides auf denselben Chips geht nicht. Vorschlag: kein Blättern per Wischen (bei höchstens drei
-  Chips reicht Tippen), Linksswipe entfernt aus der Sitzung.
 - **Parken ohne neues Rezept** (V2, Parken-Knopf in der Lasche): nicht gewählt. Wird nötig, wenn man ein Rezept
   parken will, ohne gleich ein anderes zu öffnen.
 - **Auto-Parken beim Schließen:** Wer ein Rezept mit laufendem Timer schließt, parkt es, statt den Timer zu
   verlieren. Vorschlag: ja.
-- **Schwelle „bald fällig“:** Vorschlag fünf Minuten.
-- **Leiste außerhalb des Kochmodus:** überall oder nur in Kochbuch, Festtafel und Rezeptdetail? Kollision mit
-  schwebenden Buttons (z. B. `OverviewAddFab`) prüfen.
+- **Leiste im Rezeptdetail ohne Kochmodus und in der Festtafel-Detailansicht:** dort fehlt sie, weil es keine
+  Bottom-Navigation gibt. Ob sie dort nötig ist, zeigt der Test am Gerät.
 - **Neustart:** Soll die Sitzung einen Neustart der App überstehen (iOS beendet PWAs im Hintergrund)? Dann
   Sitzung in `localStorage`; die Timer haben schon `endTime`.
 - **Querformat:** Der Kochmodus hat ein eigenes Querformat-Layout; wo die Leiste dort sitzt, ist offen.
-- **Freigabe des Flags:** nach PR 3; für wen zuerst, ist offen.
+- **Freigabe für andere Rollen:** wann und für wen, offen (der Schalter bleibt bis dahin aus).
 - **Priorität** gegenüber dem Follow-Feature: offen.
 
 ## Wichtige Stellen im Code
@@ -119,7 +135,8 @@ Sitzungslogik liegen außerhalb, in `RecipeDetail` nur die Anbindung). Tests: +9
   `activeTimers`, Unmount-Effekt mit `clearInterval`), Layout `src/components/RecipeDetail.css`
   (Hochformat: `.cooking-mode-active:not(.cooking-mode-landscape)`)
 - Kochsitzung (Timer, Alarm, Rezepte der Sitzung, Wechsel): `src/contexts/CookingSessionContext.js`; Sheet:
-  `src/components/CookingAddRecipeSheet.js`; Alarm-Dialog: `src/components/CookingAlarmModal.js`
+  `src/components/CookingAddRecipeSheet.js`; Leiste: `src/components/CookingSessionDock.js`; Alarm-Dialog:
+  `src/components/CookingAlarmModal.js`
 - Kochmodus-Lasche: `src/hooks/useCookingModeTabPosition.js`
 - Rezeptdetail ein und aus: `src/App.js` (`selectedRecipe`, `handleSelectRecipe`)
 - Bottom-Navigation: `src/components/BottomNavigation.js`
@@ -128,4 +145,5 @@ Sitzungslogik liegen außerhalb, in `RecipeDetail` nur die Anbindung). Tests: +9
 - Rollen-Flags: `src/utils/userManagement.js`
 - Festtafel: `src/components/MenuDetail.js` (`onSelectRecipe`); Kochdaten: `src/utils/recipeCookDates.js`
 - Tests: `src/components/RecipeDetail.timer.test.js`, `src/components/RecipeDetail.cooking-mode-layout.test.js`,
-  `src/components/RecipeDetail.parallelCooking.test.js`, `src/contexts/CookingSessionContext.test.js`
+  `src/components/RecipeDetail.parallelCooking.test.js`, `src/contexts/CookingSessionContext.test.js`,
+  `src/components/CookingSessionDock.test.js`
