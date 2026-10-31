@@ -62,6 +62,11 @@ jest.mock('../utils/recipeLinks', () => ({
   decodeRecipeLink: () => null,
 }));
 
+jest.mock('../utils/recipeCookDates', () => ({
+  getAllCookDates: () => Promise.resolve([]),
+  getRecentlyCookedRecipeIds: () => Promise.resolve([]),
+}));
+
 // Ohne Firestore, damit die Button-Icons fertig laden (wie in RecipeDetail.test.js)
 jest.mock('../utils/categoryImages', () => ({
   getCategoryImages: () => Promise.resolve([]),

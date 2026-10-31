@@ -2826,6 +2826,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           menu={menu}
           linkedRecipes={linkedRecipes}
           excludedIds={cookingSession.sessionRecipeIds}
+          userId={currentUser?.id}
           isFull={!cookingSession.canAddRecipe(recipe.id)}
           onSelect={handleAddRecipeToSession}
           onClose={() => setShowAddRecipeSheet(false)}
