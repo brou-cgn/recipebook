@@ -33,4 +33,10 @@ describe('CookingSessionDock CSS', () => {
     expect(used.length).toBeGreaterThan(0);
     expect(missing).toEqual([]);
   });
+
+  test('in der Bild-Stufe füllt das Bild den Kreis fast, der orange Ring bleibt dünn', () => {
+    const body = getRuleBody(dockCss, '.cooking-dock--thumb .cooking-dock-chip-thumb');
+    expect(body).toContain('width: 48px;');
+    expect(body).toContain('height: 48px;');
+  });
 });
