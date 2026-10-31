@@ -140,7 +140,7 @@ function CookingAddRecipeSheet({
         </div>
         {isFull ? (
           <p className="add-recipe-sheet-hint">
-            Es kochen schon vier Rezepte gleichzeitig. Beende eines im Kochmodus, bevor du ein weiteres dazunimmst.
+            Es kochen schon sechs Rezepte gleichzeitig. Beende eines im Kochmodus, bevor du ein weiteres dazunimmst.
           </p>
         ) : (
           <>

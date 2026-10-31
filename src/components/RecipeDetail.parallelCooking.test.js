@@ -108,7 +108,25 @@ const bratapfel = {
   ingredients: ['4 Äpfel'],
   steps: ['Äpfel füllen und backen.'],
 };
-const allRecipes = [rouladen, rotkohl, kloesse, bratapfel];
+const pudding = {
+  id: 'pudding',
+  title: 'Vanillepudding',
+  authorId: 'user-1',
+  image: 'test-image.jpg',
+  portionen: 4,
+  ingredients: ['1 l Milch'],
+  steps: ['Milch aufkochen.'],
+};
+const salat = {
+  id: 'salat',
+  title: 'Gurkensalat',
+  authorId: 'user-1',
+  image: 'test-image.jpg',
+  portionen: 4,
+  ingredients: ['1 Gurke'],
+  steps: ['Gurke hobeln.'],
+};
+const allRecipes = [rouladen, rotkohl, kloesse, bratapfel, pudding, salat];
 
 const flaggedUser = { id: 'user-1', vorname: 'Test', nachname: 'User', parallelKochen: true };
 const sundayMenu = {
@@ -270,15 +288,17 @@ describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => 
     expect(button.textContent.trim()).toBe('');
   });
 
-  test('with four recipes the sheet asks to end one first', async () => {
+  test('with six recipes the sheet asks to end one first', async () => {
     renderWithProviders(<Harness />);
     await enterCookingMode();
     addRecipeViaSearch('rotkohl', 'Apfelrotkohl');
     addRecipeViaSearch('klö', 'Kartoffelklöße');
     addRecipeViaSearch('brat', 'Bratapfel');
+    addRecipeViaSearch('pudding', 'Vanillepudding');
+    addRecipeViaSearch('gurke', 'Gurkensalat');
 
     const sheet = openSheet();
-    expect(within(sheet).getByText(/Es kochen schon vier Rezepte gleichzeitig/)).toBeInTheDocument();
+    expect(within(sheet).getByText(/Es kochen schon sechs Rezepte gleichzeitig/)).toBeInTheDocument();
     expect(within(sheet).queryByLabelText('Rezept suchen')).toBeNull();
   });
 

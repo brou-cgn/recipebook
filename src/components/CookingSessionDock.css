@@ -113,6 +113,8 @@
 
 .cooking-dock--thumb .cooking-dock-list {
   justify-content: center;
+  /* Bis zu sechs Kreise à 52 px: auf schmalen Handys (360 px) in eine zweite Zeile umbrechen */
+  flex-wrap: wrap;
 }
 
 .cooking-dock--thumb .cooking-dock-chip {
