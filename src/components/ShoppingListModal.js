@@ -4,9 +4,11 @@ import { isBase64Image } from '../utils/imageUtils';
 import { formatIngredientForBringExport, loadBringStrippedWords, getRecognizedUnits } from '../utils/ingredientUtils';
 import './ShoppingListModal.css';
 import useFadeOutClose from '../hooks/useFadeOutClose';
+import useModalScrollLock from '../hooks/useModalScrollLock';
 
 function ShoppingListModal({ items, title, onClose: onCloseProp, shareId, onEnableSharing, hideBringButton, bringButtonIcon, accentTheme }) {
   const [closing, onClose] = useFadeOutClose(onCloseProp);
+  useModalScrollLock();
   const [listItems, setListItems] = useState(() =>
     items.map((text, index) => ({ id: index, text, checked: false }))
   );

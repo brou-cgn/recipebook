@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import MenuDetail from './MenuDetail';
 
 jest.mock('./RecipeCard', () => function MockRecipeCard({ recipe, onClick, isFavorite }) {
@@ -780,7 +780,7 @@ describe('MenuDetail - Edit Button visibility during shopping list planning', ()
     expect(screen.queryByTitle('Menü bearbeiten')).not.toBeInTheDocument();
   });
 
-  test('edit FAB button reappears when portion selector is closed', () => {
+  test('edit FAB button reappears when portion selector is closed', async () => {
     render(
       <MenuDetail
         menu={simpleMenu}
@@ -799,7 +799,8 @@ describe('MenuDetail - Edit Button visibility during shopping list planning', ()
     expect(screen.queryByTitle('Menü bearbeiten')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText('Portionsauswahl schließen'));
-    expect(screen.getByTitle('Menü bearbeiten')).toBeInTheDocument();
+    // Das Overlay blendet aus (useFadeOutClose), bevor es verschwindet
+    await waitFor(() => expect(screen.getByTitle('Menü bearbeiten')).toBeInTheDocument());
   });
 });
 

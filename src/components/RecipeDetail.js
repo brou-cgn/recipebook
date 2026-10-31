@@ -51,6 +51,8 @@ import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { calculateRecipeSortIndexBreakdown } from '../utils/recipeSortIndex';
 import { evaluateLowCarbTag } from '../utils/lowCarb';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
+import useModalScrollLock from '../hooks/useModalScrollLock';
+import useFadeOutClose from '../hooks/useFadeOutClose';
 import {
   INGREDIENT_MATCH_CREATE_NEW_OPTION,
   INGREDIENT_MATCH_IGNORE_OPTION,
@@ -159,6 +161,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showIndexDialog, setShowIndexDialog] = useState(false);
   const [showPortionSelector, setShowPortionSelector] = useState(false);
+  // Wie die Einkaufsliste: Seite dahinter gesperrt, Overlay blendet ein und aus
+  useModalScrollLock(showPortionSelector);
+  const [portionSelectorClosing, closePortionSelector] = useFadeOutClose(() => setShowPortionSelector(false));
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
   const [shoppingListIcon, setShoppingListIcon] = useState('Einkauf');
   const [bringButtonIcon, setBringButtonIcon] = useState('Bring');
@@ -2728,7 +2733,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         />
       )}
       {showPortionSelector && linkedRecipes.length > 0 && (
-        <div className="portion-selector-overlay" onClick={() => setShowPortionSelector(false)}>
+        <div className={`portion-selector-overlay${portionSelectorClosing ? ' portion-selector-overlay--closing' : ''}`} onClick={closePortionSelector}>
           <div
             className="portion-selector-modal"
             role="dialog"
@@ -2740,7 +2745,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               <h2 className="portion-selector-title">Portionen für Einkaufsliste</h2>
               <button
                 className="portion-selector-close"
-                onClick={() => setShowPortionSelector(false)}
+                onClick={closePortionSelector}
                 aria-label="Portionsauswahl schließen"
               >
                 ×

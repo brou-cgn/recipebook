@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { getMenuRecipeIds } from '../utils/menuSections';
 import { getRecentlyCookedRecipeIds } from '../utils/recipeCookDates';
 import { getRecipeThumbnail } from '../utils/recipeThumbnail';
+import useModalScrollLock from '../hooks/useModalScrollLock';
+import useFadeOutClose from '../hooks/useFadeOutClose';
 import './CookingAddRecipeSheet.css';
 
 /**
@@ -67,8 +69,11 @@ function CookingAddRecipeSheet({
   userId = null,
   isFull = false,
   onSelect,
-  onClose,
+  onClose: onCloseProp,
 }) {
+  // Wie die Einkaufsliste: Seite dahinter gesperrt, Overlay blendet aus
+  useModalScrollLock();
+  const [closing, onClose] = useFadeOutClose(onCloseProp);
   const [query, setQuery] = useState('');
   const [recentIds, setRecentIds] = useState([]);
   const trimmedQuery = query.trim();
@@ -122,7 +127,7 @@ function CookingAddRecipeSheet({
   }, [trimmedQuery, allRecipes, excluded]);
 
   return (
-    <div className="add-recipe-sheet-root">
+    <div className={`add-recipe-sheet-root${closing ? ' add-recipe-sheet-root--closing' : ''}`}>
       <button
         type="button"
         className="add-recipe-sheet-scrim"
