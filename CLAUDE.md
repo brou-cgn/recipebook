@@ -73,3 +73,8 @@ das Dashboard im selben Arbeitsgang – nicht erst auf Nachfrage:
 ### Follow-Feature (Vernetzung zwischen Mitgliedern)
 Entscheidungen, PR-Plan und offene Punkte stehen in `docs/vorhaben/follow.md`.
 Jede Änderung daran trägt dort den Stand nach und aktualisiert das Tech-Check-Dashboard.
+
+### Parallel kochen (mehrere Rezepte im Hintergrund, Mobile)
+Entscheidungen, PR-Plan und offene Punkte stehen in `docs/vorhaben/parallel-kochen.md`.
+Jede Änderung daran trägt dort den Stand nach; berührt sie einen Tech-Check-Befund (z. B. A1),
+aktualisiert sie auch das Dashboard.

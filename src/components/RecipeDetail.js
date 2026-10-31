@@ -36,7 +36,8 @@ import { getRecipeImages } from '../utils/printRecipe';
 import { printRecipe } from './printRunner';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getEffectiveCuisineIcon, getDarkModePreference, DEFAULT_PRINT_FORMATS, selectPrintFormat, getAlarmSoundPreference, getCustomLists, getButtonIcons, getTimelineBubbleIcon, getTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, getPrintFormats, addMissingConversionEntries } from '../utils/customLists';
 import { getCategoryImages } from '../utils/categoryImages';
-import { playAlarmPattern } from '../utils/alarmAudioUtils';
+import { useCookingSession } from '../contexts/CookingSessionContext';
+import CookingAlarmModal from './CookingAlarmModal';
 import RecipeRating from './RecipeRating';
 import CookDateModal from './CookDateModal';
 import FollowButton from './FollowButton';
@@ -200,13 +201,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     start: handlePortionMinusPressStart,
     end: handlePortionMinusPressEnd,
   } = useLongPress();
-  const [activeTimers, setActiveTimers] = useState({});
-  const timerIntervalsRef = useRef({});
-  const [alarmRunning, setAlarmRunning] = useState(false);
-  const [alarmLabel, setAlarmLabel] = useState('');
-  const alarmIntervalRef = useRef(null);
-  const alarmCtxRef = useRef(null);
-  const notifyTimerDoneRef = useRef(null);
+  // Schritt-Timer und Alarm liegen in der Kochsitzung, damit sie das Verlassen des Rezepts überleben
+  const cookingSession = useCookingSession();
+  const timerRecipeId = selectedRecipe?.id || 'rezept';
+  const activeTimers = cookingSession.getTimers(timerRecipeId);
   const ingredientMatchFromModalRef = useRef(false);
   const [alarmSoundKey] = useState(() => getAlarmSoundPreference());
   const [openIngredientInfoIndex, setOpenIngredientInfoIndex] = useState(null);
@@ -1357,265 +1355,21 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
 
-  /*function startAlarmLoop(label) {
-    // Only one alarm at a time
-    if (alarmIntervalRef.current) return;
-
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      alarmCtxRef.current = ctx;
-      playRadarPattern(ctx);
-      alarmIntervalRef.current = setInterval(() => {
-        playRadarPattern(ctx);
-      }, 1000);
-    } catch (_) {
-      // Audio API not available – silently ignore
-    }
-
-    setAlarmLabel(label);
-    setAlarmRunning(true);
-
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('Timer abgelaufen!', { body: label, icon: '/favicon.ico' });
-    }
-  }*/
-
-  async function startAlarmLoop(label) {
-    // Nur ein Alarm gleichzeitig
-    if (alarmIntervalRef.current) return;
-  
-    setAlarmLabel(label);
-    setAlarmRunning(true);
-  
-    try {
-      if (!alarmCtxRef.current) {
-        // Fallback: context was not pre-created in startTimer (e.g. in tests / non-iOS).
-        // On iOS this path will likely be blocked by the browser's autoplay policy.
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (!AudioCtx) throw new Error('AudioContext not supported');
-        alarmCtxRef.current = new AudioCtx();
-      }
-  
-      const ctx = alarmCtxRef.current;
-      const soundKey = alarmSoundKey;
-  
-      // Auf manchen Mobilgeräten startet der Context suspended
-      if (ctx.state === 'suspended') {
-        await ctx.resume();
-      }
-  
-      // Sofort einmal abspielen
-      playAlarmPattern(ctx, soundKey);
-  
-      // Dann wiederholen bis OK gedrückt wird
-      alarmIntervalRef.current = setInterval(async () => {
-        try {
-          if (ctx.state === 'suspended') {
-            await ctx.resume();
-          }
-          playAlarmPattern(ctx, soundKey);
-        } catch (_) {
-          // ignorieren
-        }
-      }, 1000);
-    } catch (_) {
-      // Audio API nicht verfügbar – Modal bleibt trotzdem sichtbar
-    }
-  
-    if ('Notification' in window && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
-      new Notification('Timer abgelaufen!', {
-        body: label,
-        icon: '/favicon.ico'
-      });
-    }
-  }
-  
-  /*function stopAlarm() {
-    if (alarmIntervalRef.current) {
-      clearInterval(alarmIntervalRef.current);
-      alarmIntervalRef.current = null;
-    }
-    if (alarmCtxRef.current) {
-      try { alarmCtxRef.current.close(); } catch (_) {}
-      alarmCtxRef.current = null;
-    }
-    setAlarmRunning(false);
-    setAlarmLabel('');
-  }*/
-
-  function stopAlarm() {
-    if (alarmIntervalRef.current) {
-      clearInterval(alarmIntervalRef.current);
-      alarmIntervalRef.current = null;
-    }
-  
-    // Context nicht jedes Mal schließen, sondern behalten.
-    // Das ist stabiler als bei jedem Alarm einen neuen anzulegen.
-    setAlarmRunning(false);
-    setAlarmLabel('');
-  }
-
-  
-  function notifyTimerDone(label) {
-    startAlarmLoop(label);
-  }
-
-  // Keep a ref to notifyTimerDone so the visibilitychange effect can always
-  // access the latest version without needing it in its dependency array.
-  notifyTimerDoneRef.current = notifyTimerDone;
-
-  function requestNotificationPermission() {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }
-
   function startTimer(stepKey, timerIndex, totalSeconds, label) {
-    requestNotificationPermission();
-
-    // Initialize AudioContext here (direct user gesture) so iOS allows audio playback later.
-    if (!alarmCtxRef.current) {
-      try {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (AudioCtx) {
-          alarmCtxRef.current = new AudioCtx();
-        }
-      } catch (e) {
-        console.warn('AudioContext creation failed:', e);
-      }
-    }
-
-    // Resume the context in case iOS suspended it.
-    if (alarmCtxRef.current && alarmCtxRef.current.state === 'suspended') {
-      alarmCtxRef.current.resume().catch(e => console.warn('AudioContext resume failed:', e));
-    }
-
-    const endTime = Date.now() + totalSeconds * 1000;
-    setActiveTimers(prev => ({
-      ...prev,
-      [stepKey]: {
-        ...(prev[stepKey] || {}),
-        [timerIndex]: {
-          totalSeconds,
-          remainingSeconds: totalSeconds,
-          endTime,
-          running: true,
-          finished: false,
-          label,
-        },
-      },
-    }));
-    const intervalKey = `${stepKey}_${timerIndex}`;
-    if (timerIntervalsRef.current[intervalKey]) {
-      clearInterval(timerIntervalsRef.current[intervalKey]);
-    }
-    timerIntervalsRef.current[intervalKey] = setInterval(() => {
-      setActiveTimers(prev => {
-        const stepTimers = prev[stepKey];
-        if (!stepTimers) return prev;
-        const t = stepTimers[timerIndex];
-        if (!t || !t.running) return prev;
-        const next = Math.max(0, Math.round((t.endTime - Date.now()) / 1000));
-        if (next <= 0) {
-          clearInterval(timerIntervalsRef.current[intervalKey]);
-          delete timerIntervalsRef.current[intervalKey];
-          notifyTimerDone(t.label);
-          return {
-            ...prev,
-            [stepKey]: {
-              ...stepTimers,
-              [timerIndex]: { ...t, remainingSeconds: 0, running: false, finished: true },
-            },
-          };
-        }
-        return {
-          ...prev,
-          [stepKey]: {
-            ...stepTimers,
-            [timerIndex]: { ...t, remainingSeconds: next },
-          },
-        };
-      });
-    }, 1000);
-  }
-
-  function stopTimer(stepKey, timerIndex) {
-    const intervalKey = `${stepKey}_${timerIndex}`;
-    clearInterval(timerIntervalsRef.current[intervalKey]);
-    delete timerIntervalsRef.current[intervalKey];
-    setActiveTimers(prev => {
-      const stepTimers = { ...(prev[stepKey] || {}) };
-      delete stepTimers[timerIndex];
-      return { ...prev, [stepKey]: stepTimers };
+    cookingSession.startTimer({
+      recipeId: timerRecipeId,
+      recipeTitle: recipe.title,
+      stepKey,
+      timerIndex,
+      totalSeconds,
+      label,
+      soundKey: alarmSoundKey,
     });
   }
 
-  // Clean up all intervals on unmount
-  /*useEffect(() => {
-    const intervals = timerIntervalsRef.current;
-    return () => {
-      Object.values(intervals).forEach(id => clearInterval(id));
-      if (alarmIntervalRef.current) {
-        clearInterval(alarmIntervalRef.current);
-      }
-      if (alarmCtxRef.current) {
-        try { alarmCtxRef.current.close(); } catch (_) {}
-      }
-    };
-  }, []);*/
-
-  useEffect(() => {
-    const intervals = timerIntervalsRef.current;
-    return () => {
-      Object.values(intervals).forEach(id => clearInterval(id));
-  
-      if (alarmIntervalRef.current) {
-        clearInterval(alarmIntervalRef.current);
-        alarmIntervalRef.current = null;
-      }
-  
-      if (alarmCtxRef.current) {
-        try { alarmCtxRef.current.close(); } catch (_) {}
-        alarmCtxRef.current = null;
-      }
-    };
-  }, []);
-
-  // Sync running timers with actual elapsed time when the page becomes visible again
-  // (handles screen lock, app switching to background, etc.)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState !== 'visible') return;
-      setActiveTimers(prev => {
-        const now = Date.now();
-        let changed = false;
-        const next = {};
-        Object.entries(prev).forEach(([stepKey, stepTimers]) => {
-          next[stepKey] = { ...stepTimers };
-          Object.entries(stepTimers).forEach(([timerIndex, t]) => {
-            if (t.running && t.endTime) {
-              const remaining = Math.max(0, Math.round((t.endTime - now) / 1000));
-              if (remaining <= 0 && !t.finished) {
-                const intervalKey = `${stepKey}_${timerIndex}`;
-                clearInterval(timerIntervalsRef.current[intervalKey]);
-                delete timerIntervalsRef.current[intervalKey];
-                next[stepKey] = { ...next[stepKey], [timerIndex]: { ...t, remainingSeconds: 0, running: false, finished: true } };
-                notifyTimerDoneRef.current(t.label);
-                changed = true;
-              } else if (remaining !== t.remainingSeconds) {
-                next[stepKey] = { ...next[stepKey], [timerIndex]: { ...t, remainingSeconds: remaining } };
-                changed = true;
-              }
-            }
-          });
-        });
-        return changed ? next : prev;
-      });
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
+  function stopTimer(stepKey, timerIndex) {
+    cookingSession.stopTimer(timerRecipeId, stepKey, timerIndex);
+  }
 
   // Get actual step items (filter out headings) - moved before useEffect
   const stepItems = useMemo(() => {
@@ -2972,16 +2726,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           </div>
         </div>
       )}
-      {alarmRunning && (
-        <div className="alarm-modal-overlay">
-          <div className="alarm-modal" role="dialog" aria-modal="true">
-            <h2 className="alarm-modal-title">Timer abgelaufen!</h2>
-            <p className="alarm-modal-label">{alarmLabel}</p>
-            <button className="alarm-modal-stop-btn" onClick={stopAlarm}>
-              OK
-            </button>
-          </div>
-        </div>
+      {!cookingSession.isShared && (
+        <CookingAlarmModal alarm={cookingSession.alarm} onStop={cookingSession.stopAlarm} />
       )}
       {(isMobile || isTablet || isMobileLandscape) && userCanDirectlyEdit && onEdit && !cookingMode && !showShoppingListModal && !showPortionSelector && (
         <button
