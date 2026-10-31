@@ -2686,7 +2686,7 @@ describe('RecipeDetail - Edit Button visibility during shopping list planning', 
     expect(screen.queryByTitle('Rezept bearbeiten')).not.toBeInTheDocument();
   });
 
-  test('edit FAB button reappears when portion selector is closed', () => {
+  test('edit FAB button reappears when portion selector is closed', async () => {
     render(
       <RecipeDetail
         recipe={recipeWithLink}
@@ -2702,7 +2702,8 @@ describe('RecipeDetail - Edit Button visibility during shopping list planning', 
     expect(screen.queryByTitle('Rezept bearbeiten')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText('Portionsauswahl schließen'));
-    expect(screen.getByTitle('Rezept bearbeiten')).toBeInTheDocument();
+    // Das Overlay blendet aus (useFadeOutClose), bevor es verschwindet
+    await waitFor(() => expect(screen.getByTitle('Rezept bearbeiten')).toBeInTheDocument());
   });
 });
 

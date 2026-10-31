@@ -23,6 +23,8 @@ import { getImageForCategory } from '../utils/categoryImages';
 import ShoppingListModal from './ShoppingListModal';
 import RecipeCard from './RecipeCard';
 import ConfirmDialog from './ConfirmDialog';
+import useModalScrollLock from '../hooks/useModalScrollLock';
+import useFadeOutClose from '../hooks/useFadeOutClose';
 
 const formatEventLiter = (value) => {
   const num = Number(value);
@@ -70,6 +72,9 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   const [shareUrlCopied, setShareUrlCopied] = useState(false);
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
   const [showPortionSelector, setShowPortionSelector] = useState(false);
+  // Wie die Einkaufsliste: Seite dahinter gesperrt, Overlay blendet ein und aus
+  useModalScrollLock(showPortionSelector);
+  const [portionSelectorClosing, closePortionSelector] = useFadeOutClose(() => setShowPortionSelector(false));
   const [portionCounts, setPortionCounts] = useState(initialMenu.portionCounts || {});
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
   const [conversionTable, setConversionTable] = useState([]);
@@ -895,7 +900,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
         />
       )}
       {showPortionSelector && (
-        <div className="portion-selector-overlay" onClick={() => setShowPortionSelector(false)}>
+        <div className={`portion-selector-overlay${portionSelectorClosing ? ' portion-selector-overlay--closing' : ''}`} onClick={closePortionSelector}>
           <div
             className="portion-selector-modal"
             role="dialog"
@@ -907,7 +912,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
               <h2 className="portion-selector-title">Portionen für Einkaufsliste</h2>
               <button
                 className="portion-selector-close"
-                onClick={() => setShowPortionSelector(false)}
+                onClick={closePortionSelector}
                 aria-label="Portionsauswahl schließen"
               >
                 ×

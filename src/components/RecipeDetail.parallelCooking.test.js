@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { renderWithProviders } from '../test-utils';
 import RecipeDetail from './RecipeDetail';
 import CookingSessionDock from './CookingSessionDock';
@@ -217,7 +217,8 @@ describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => 
     expect(within(menuSection).queryByRole('button', { name: 'Rinderrouladen dazunehmen' })).toBeNull();
 
     fireEvent.click(within(sheet).getByRole('button', { name: 'Abbrechen' }));
-    expect(screen.queryByRole('dialog', { name: 'Was kochst du dazu?' })).toBeNull();
+    // Das Sheet blendet aus (useFadeOutClose), bevor es verschwindet
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Was kochst du dazu?' })).toBeNull());
   });
 
   test('the search finds recipes by title and leaves out the current one', async () => {

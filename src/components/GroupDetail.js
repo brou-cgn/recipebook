@@ -20,6 +20,8 @@ import GroupEditDialog from './GroupEditDialog';
 import ConfirmDialog from './ConfirmDialog';
 import RecipeCard from './RecipeCard';
 import SortCarousel from './SortCarousel';
+import useModalScrollLock from '../hooks/useModalScrollLock';
+import useFadeOutClose from '../hooks/useFadeOutClose';
 
 const DEFAULT_PORTIONS = 4;
 const TAB_RECIPES = 'rezepte';
@@ -92,6 +94,9 @@ function GroupDetail({
   const [addPressed, setAddPressed] = useState(false);
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
   const [showPortionSelector, setShowPortionSelector] = useState(false);
+  // Wie die Einkaufsliste: Seite dahinter gesperrt, Overlay blendet ein und aus
+  useModalScrollLock(showPortionSelector);
+  const [portionSelectorClosing, closePortionSelector] = useFadeOutClose(() => setShowPortionSelector(false));
   const [portionCounts, setPortionCounts] = useState({});
   const [showAddMember, setShowAddMember] = useState(false);
   const [addMemberIds, setAddMemberIds] = useState([]);
@@ -860,7 +865,7 @@ function GroupDetail({
         />
       )}
       {showPortionSelector && (
-        <div className="portion-selector-overlay" onClick={() => setShowPortionSelector(false)}>
+        <div className={`portion-selector-overlay${portionSelectorClosing ? ' portion-selector-overlay--closing' : ''}`} onClick={closePortionSelector}>
           <div
             className="portion-selector-modal"
             role="dialog"
@@ -872,7 +877,7 @@ function GroupDetail({
               <h2 className="portion-selector-title">Portionen für Einkaufsliste</h2>
               <button
                 className="portion-selector-close"
-                onClick={() => setShowPortionSelector(false)}
+                onClick={closePortionSelector}
                 aria-label="Portionsauswahl schließen"
               >
                 ×

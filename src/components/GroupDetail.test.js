@@ -602,7 +602,7 @@ describe('GroupDetail – FAB visibility when modals are open', () => {
     expect(container.querySelector('.delete-fab-button')).not.toBeInTheDocument();
   });
 
-  it('shows the FABs again after the portion selector is closed', () => {
+  it('shows the FABs again after the portion selector is closed', async () => {
     const { container } = render(<GroupDetail {...defaultProps} recipes={mockRecipes} />);
     goToEinstellungen();
 
@@ -611,7 +611,8 @@ describe('GroupDetail – FAB visibility when modals are open', () => {
 
     fireEvent.click(screen.getByLabelText('Portionsauswahl schließen'));
 
-    expect(container.querySelector('.group-edit-fab-button')).toBeInTheDocument();
+    // Das Overlay blendet aus (useFadeOutClose), bevor es verschwindet
+    await waitFor(() => expect(container.querySelector('.group-edit-fab-button')).toBeInTheDocument());
     expect(container.querySelector('.delete-fab-button')).toBeInTheDocument();
   });
 
@@ -638,7 +639,7 @@ describe('GroupDetail – FAB visibility when modals are open', () => {
     expect(screen.queryByLabelText('Privates Rezept hinzufügen')).not.toBeInTheDocument();
   });
 
-  it('shows the add-recipe FAB again after the portion selector is closed', () => {
+  it('shows the add-recipe FAB again after the portion selector is closed', async () => {
     render(<GroupDetail {...defaultProps} recipes={mockRecipes} onAddRecipe={jest.fn()} />);
 
     fireEvent.click(screen.getByLabelText('Einkaufsliste öffnen'));
@@ -646,7 +647,7 @@ describe('GroupDetail – FAB visibility when modals are open', () => {
 
     fireEvent.click(screen.getByLabelText('Portionsauswahl schließen'));
 
-    expect(screen.getByLabelText('Privates Rezept hinzufügen')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText('Privates Rezept hinzufügen')).toBeInTheDocument());
   });
 
   it('does NOT show the add-recipe FAB when settings view is open', () => {
