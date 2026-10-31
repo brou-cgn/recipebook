@@ -45,7 +45,7 @@
   padding: 0 10px 0 8px;
   border: none;
   border-radius: 14px;
-  background: var(--color-surface);
+  background: transparent;
   color: inherit;
   text-align: left;
   cursor: pointer;
