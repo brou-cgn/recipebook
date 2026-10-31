@@ -97,15 +97,20 @@
 }
 
 @media (max-width: 480px) {
+  /* Oben statt unten verankern: iOS verkleinert den Viewport bei offener
+     Tastatur nicht, ein unten sitzendes Sheet läge bei wenigen Treffern
+     komplett hinter der Tastatur. Höhe begrenzt, damit auch die Liste
+     oberhalb der Tastatur (~45 % der Höhe) bleibt. */
   .ingredient-search-modal-overlay {
-    padding: 0;
-    align-items: flex-end;
+    padding: env(safe-area-inset-top, 0) 0 0;
+    align-items: flex-start;
   }
 
   .ingredient-search-modal {
     width: 100%;
-    max-height: 85vh;
-    border-radius: 12px 12px 0 0;
+    max-height: 42vh;
+    max-height: 42dvh;
+    border-radius: 0 0 12px 12px;
   }
 
   .ingredient-search-modal-item {
