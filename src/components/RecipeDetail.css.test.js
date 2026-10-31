@@ -69,3 +69,42 @@ describe('RecipeDetail CSS desktop close button', () => {
     expect(rule).toContain('margin-left: auto');
   });
 });
+
+describe('RecipeDetail CSS Kochmodus mit Rezept-Leiste (parallel kochen)', () => {
+  const css = fs.readFileSync(path.join(__dirname, 'RecipeDetail.css'), 'utf8');
+  const getRuleBody = (source, selector) => {
+    const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = source.match(new RegExp(`${escapedSelector}\\s*\\{([\\s\\S]*?)\\}`, 'm'));
+    return match ? match[1] : '';
+  };
+  const fontClamp = (rule) => {
+    const match = rule.match(/font-size:\s*clamp\(([\d.]+)rem,\s*([\d.]+)dvh,\s*([\d.]+)rem\)/);
+    return match ? { min: Number(match[1]), preferred: Number(match[2]), max: Number(match[3]) } : null;
+  };
+  const PORTRAIT = '.cooking-mode-active:not(.cooking-mode-landscape)';
+  const WITH_DOCK = '.cooking-mode-active.cooking-mode-has-dock:not(.cooking-mode-landscape)';
+
+  test('das Zutaten-Sheet behält seine Listenhöhe, die Leiste geht vom Schritt-Karussell ab', () => {
+    const sheet = getRuleBody(css, `${PORTRAIT} .cooking-mode-ingredients`);
+    const sheetWithDock = getRuleBody(css, `${WITH_DOCK} .cooking-mode-ingredients`);
+
+    expect(sheet).toContain('height: min(34dvh, 280px);');
+    expect(sheet).toContain('padding: 0 1.25rem calc(1rem + env(safe-area-inset-bottom, 0px));');
+    // Gleiche Listenhöhe wie ohne Leiste: nur der Abstand zur Home-Leiste, den die Leiste übernimmt, fällt weg
+    expect(sheetWithDock).toContain('height: calc(min(34dvh, 280px) - env(safe-area-inset-bottom, 0px));');
+    expect(sheetWithDock).toContain('padding-bottom: 1rem;');
+    // Das Karussell nimmt den Rest und wird damit um die Leistenhöhe kürzer
+    expect(getRuleBody(css, `${PORTRAIT} .step-carousel`)).toContain('flex: 1;');
+  });
+
+  test('die Schrift der Schrittkarten ist mit Leiste etwas kleiner', () => {
+    const base = fontClamp(getRuleBody(css, `${PORTRAIT} .step-card.active`));
+    const withDock = fontClamp(getRuleBody(css, `${WITH_DOCK} .step-card.active`));
+
+    expect(base).not.toBeNull();
+    expect(withDock).not.toBeNull();
+    expect(withDock.min).toBeLessThan(base.min);
+    expect(withDock.preferred).toBeLessThan(base.preferred);
+    expect(withDock.max).toBeLessThan(base.max);
+  });
+});

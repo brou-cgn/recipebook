@@ -32,10 +32,6 @@
   --color-alarm-strong: #b71c1c;
   --color-on-alarm: #fff;
   --color-on-accent: #1a1a1a;
-  --color-cooking-dock: #402c1c;
-  --color-cooking-dock-chip: #5a4434;
-  --color-on-cooking-dock: #fff;
-  --color-cooking-dock-muted: #e8ddd2;
 }
 
 [data-theme="dark"] {
@@ -66,8 +62,4 @@
   --color-alarm-strong: #b71c1c;
   --color-on-alarm: #fff;
   --color-on-accent: #1a1a1a;
-  --color-cooking-dock: #3a2a1c;
-  --color-cooking-dock-chip: #4d3a2a;
-  --color-on-cooking-dock: #f5efe8;
-  --color-cooking-dock-muted: #d9cec3;
 }

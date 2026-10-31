@@ -1930,20 +1930,35 @@ button.private-badge-button:active {
   white-space: nowrap;
 }
 
+/* Runder Icon-Knopf ohne Text; das Icon ist einrichtbar (Button-Icon cookingAddRecipe) */
 .cooking-mode-add-recipe {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  min-height: 44px;
-  padding: 0 0.9rem 0 0.7rem;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   border: 1.5px solid var(--color-brand);
   border-radius: 999px;
   background: var(--color-accent-tint);
   color: var(--color-brand);
-  font-size: 0.9rem;
+  font-size: 1.25rem;
   font-weight: 600;
+  line-height: 1;
   cursor: pointer;
+}
+
+.cooking-mode-add-recipe-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cooking-mode-add-recipe-icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 .cooking-mode-add-recipe:focus-visible {
@@ -1951,11 +1966,18 @@ button.private-badge-button:active {
   outline-offset: 2px;
 }
 
-/* Kochsitzung mit Rezept-Leiste: Das Zutaten-Sheet wird um die Leistenhöhe kürzer,
-   den Abstand zur Home-Leiste des iPhones übernimmt die Rezept-Leiste */
+/* Kochsitzung mit Rezept-Leiste: Die Leiste geht vom Schritt-Karussell ab, nicht von den
+   Zutaten. Das Zutaten-Sheet behält seine Listenhöhe (den Abstand zur Home-Leiste des
+   iPhones übernimmt die Leiste, daher ohne safe-area), das Karussell (flex: 1) wird um die
+   Leistenhöhe kürzer. Damit der Schritt trotzdem passt, wird seine Schrift etwas kleiner. */
 .cooking-mode-active.cooking-mode-has-dock:not(.cooking-mode-landscape) .cooking-mode-ingredients {
-  height: calc(min(34dvh, 280px) - 72px);
-  padding-bottom: 0.75rem;
+  height: calc(min(34dvh, 280px) - env(safe-area-inset-bottom, 0px));
+  padding-bottom: 1rem;
+}
+
+.cooking-mode-active.cooking-mode-has-dock:not(.cooking-mode-landscape) .step-card,
+.cooking-mode-active.cooking-mode-has-dock:not(.cooking-mode-landscape) .step-card.active {
+  font-size: clamp(1.25rem, 3.1dvh, 1.6rem);
 }
 
 /* ── Landscape mobile: side-by-side cooking mode layout ───────────────── */

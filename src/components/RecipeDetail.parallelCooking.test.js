@@ -1,9 +1,14 @@
 import React from 'react';
-import { fireEvent, screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import { renderWithProviders } from '../test-utils';
 import RecipeDetail from './RecipeDetail';
 import CookingSessionDock from './CookingSessionDock';
 import { CookingSessionProvider } from '../contexts/CookingSessionContext';
+import { isBase64Image } from '../utils/imageUtils';
+import { defaultIcon } from '../utils/defaultButtonIcons';
+
+// Eingerichtete Button-Icons (Admin); je Test überschreibbar
+let mockButtonIcons = {};
 
 jest.mock('../utils/imageUtils', () => ({
   isBase64Image: jest.fn(() => false),
@@ -36,7 +41,7 @@ jest.mock('../utils/customLists', () => ({
     mealCategories: [],
     units: [],
   }),
-  getButtonIcons: () => Promise.resolve({}),
+  getButtonIcons: () => Promise.resolve(mockButtonIcons),
   getTimelineBubbleIcon: () => Promise.resolve(null),
   getTimelineCookEventBubbleIcon: () => Promise.resolve(null),
   getTimelineCookEventDefaultImage: () => Promise.resolve(null),
@@ -55,6 +60,11 @@ jest.mock('../utils/customLists', () => ({
 
 jest.mock('../utils/recipeLinks', () => ({
   decodeRecipeLink: () => null,
+}));
+
+// Ohne Firestore, damit die Button-Icons fertig laden (wie in RecipeDetail.test.js)
+jest.mock('../utils/categoryImages', () => ({
+  getCategoryImages: () => Promise.resolve([]),
 }));
 
 const rouladen = {
@@ -159,6 +169,7 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.useRealTimers();
+  mockButtonIcons = {};
 });
 
 describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => {
@@ -227,6 +238,31 @@ describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => 
 
     fireEvent.click(screen.getByRole('button', { name: 'Kochmodus beenden' }));
     expect(document.querySelector('.cooking-mode-active')).toBeNull();
+  });
+
+  test('the add button has no text, only its own icon (default: pot with plus)', async () => {
+    isBase64Image.mockImplementation((value) => typeof value === 'string' && value.startsWith('data:image/'));
+    renderWithProviders(<Harness />);
+    await act(async () => {});
+    enterCookingMode();
+
+    const button = screen.getByRole('button', { name: 'Weiteres Rezept dazunehmen' });
+    expect(button.textContent.trim()).toBe('');
+    expect(button).toHaveAttribute('title', 'Weiteres Rezept dazunehmen');
+    expect(button.querySelector('img')).toHaveAttribute('src', defaultIcon('potPlus'));
+  });
+
+  test('the add button shows the icon configured as button icon cookingAddRecipe', async () => {
+    isBase64Image.mockImplementation((value) => typeof value === 'string' && value.startsWith('data:image/'));
+    mockButtonIcons = { cookingAddRecipe: 'data:image/png;base64,QUJD' };
+    renderWithProviders(<Harness />);
+    await act(async () => {});
+    enterCookingMode();
+
+    const button = screen.getByRole('button', { name: 'Weiteres Rezept dazunehmen' });
+    expect(button.querySelector('img')).toHaveAttribute('src', 'data:image/png;base64,QUJD');
+    expect(button.querySelector('.cooking-mode-add-recipe-icon')).toHaveStyle({ visibility: 'visible' });
+    expect(button.textContent.trim()).toBe('');
   });
 
   test('with four recipes the sheet asks to end one first', () => {

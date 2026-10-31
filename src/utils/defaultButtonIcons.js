@@ -40,6 +40,11 @@ const SHAPES = {
     d: 'M9 11a3.8 3.8 0 1 0 0-7.6 3.8 3.8 0 0 0 0 7.6zM2.5 21c.6-3.8 3.3-6 6.5-6 1.2 0 2.3.3 3.2.8',
     badge: { cx: 18, cy: 18, r: 5.5, plus: 'M18 15.4v5.2M15.4 18h5.2' },
   },
+  // Dampfender Topf mit Plus-Badge (Kochmodus: weiteres Rezept dazunehmen), Badge wie bei Folgen
+  potPlus: {
+    d: 'M4 12.5h12v4.5a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3zM1.8 14h2.2M16 14h2.2M7 9.5c-1-1.2 1-2.3 0-4.5M10.5 9.5c-1-1.2 1-2.3 0-4.5',
+    badge: { cx: 18, cy: 6, r: 5.5, plus: 'M18 3.4v5.2M15.4 6h5.2' },
+  },
 };
 
 const BADGE_FILL = '#D4820A';
@@ -69,6 +74,7 @@ export function defaultIcon(name, dark = false) {
 export const DEFAULT_ICON_NAMES = {
   cookingMode: 'steam',
   cookingModeDefaultImg: 'steam',
+  cookingAddRecipe: 'potPlus',
   filterButton: 'gear',
   ratingHeartEmpty: 'heart',
   ratingHeartEmptyModal: 'heart',
