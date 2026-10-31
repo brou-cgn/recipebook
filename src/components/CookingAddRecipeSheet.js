@@ -152,6 +152,7 @@ function CookingAddRecipeSheet({
               </svg>
               <input
                 type="search"
+                className="add-recipe-sheet-search-input"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Rezept suchen"
