@@ -1,0 +1,190 @@
+/* Bottom-Sheet „Was kochst du dazu?“ (CookingAddRecipeSheet). Farben nur über Tokens.
+   z-index über Kochmodus-Lasche (1000) und Bottom-Navigation (1200), unter dem Alarm (9999). */
+.add-recipe-sheet-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.add-recipe-sheet-scrim {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: rgba(30, 22, 16, 0.5);
+  cursor: pointer;
+}
+
+.add-recipe-sheet {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-height: min(78dvh, 640px);
+  padding: 0.5rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+  border-radius: 24px 24px 0 0;
+  background: var(--color-surface-card);
+  color: var(--color-text);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.18);
+  animation: add-recipe-sheet-in 0.22s ease-out;
+}
+
+@keyframes add-recipe-sheet-in {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .add-recipe-sheet {
+    animation: none;
+  }
+}
+
+.add-recipe-sheet-grabber {
+  width: 40px;
+  height: 5px;
+  margin: 0 auto 0.75rem;
+  border-radius: 3px;
+  background: var(--color-border-strong);
+}
+
+.add-recipe-sheet-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.add-recipe-sheet-heading {
+  flex: 1;
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-text-strong);
+}
+
+.add-recipe-sheet-close {
+  min-height: 44px;
+  padding: 0 0.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-brand);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.add-recipe-sheet-subtitle,
+.add-recipe-sheet-hint {
+  margin: 0.25rem 0 0.9rem;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.add-recipe-sheet-hint {
+  margin-top: 0.75rem;
+}
+
+.add-recipe-sheet-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0 0.85rem;
+  border-radius: 12px;
+  background: var(--color-surface-input);
+  color: var(--color-text-muted);
+}
+
+/* 16px verhindert das automatische Zoomen von iOS beim Fokussieren */
+.add-recipe-sheet-search input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-strong);
+  font-size: 16px;
+  outline: none;
+}
+
+.add-recipe-sheet-body {
+  margin-top: 0.25rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.add-recipe-sheet-section-title {
+  margin: 1rem 0 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.add-recipe-sheet-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.add-recipe-sheet-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 60px;
+  padding: 0.5rem 0.15rem;
+  border: 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.add-recipe-sheet-thumb {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--color-surface-raised);
+}
+
+.add-recipe-sheet-thumb--empty {
+  display: inline-block;
+}
+
+.add-recipe-sheet-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.add-recipe-sheet-plus {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid var(--color-brand);
+  border-radius: 50%;
+  color: var(--color-brand);
+  box-sizing: border-box;
+}
+
+.add-recipe-sheet-row:focus-visible,
+.add-recipe-sheet-close:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}

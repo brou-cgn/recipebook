@@ -92,6 +92,20 @@ export const groupRecipesBySections = (menuSections, allRecipes) => {
 };
 
 /**
+ * All recipe IDs of a menu, in display order: from its sections when it has
+ * any (as MenuDetail shows them), otherwise from the older flat `recipeIds`.
+ * @param {Object|null} menu - Menu object
+ * @returns {Array} Recipe IDs
+ */
+export const getMenuRecipeIds = (menu) => {
+  if (!menu) return [];
+  if (Array.isArray(menu.sections) && menu.sections.length > 0) {
+    return menu.sections.flatMap((section) => section.recipeIds || []);
+  }
+  return menu.recipeIds || [];
+};
+
+/**
  * Reconciles a saved display order (array of composite item keys) against the
  * current set of items: items whose key is in `order` keep that relative
  * order, and any item not yet in `order` (e.g. newly added) is appended at

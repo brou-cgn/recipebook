@@ -362,6 +362,7 @@ function applyRolePermissionsToUser(user, permissionsMap = {}) {
     follow: rolePerms.follow ?? false,
     eventplanung: rolePerms.eventplanung ?? false,
     versionDictation: rolePerms.versionDictation ?? false,
+    parallelKochen: rolePerms.parallelKochen ?? false,
   };
 }
 
@@ -2826,7 +2827,11 @@ function App() {
       setProfileUserId(userId);
       setProfileFromNetwork(Boolean(options?.fromNetwork));
     }}>
-    <CookingSessionProvider>
+    <CookingSessionProvider onOpenRecipe={(recipe, { isNew }) => {
+      // Wechsel innerhalb der Kochsitzung: aktuelle Fassung des Rezepts, kein Kartenübergang
+      setSelectedRecipe(recipes.find((r) => r.id === recipe.id) || recipe);
+      if (isNew && currentUser) logRecipeCall(currentUser, recipe);
+    }}>
       <AppNutritionRowsSync onRows={setNutritionReferenceRows} />
       <AppReviewRecipesSync onReviewRecipes={setPendingReviewRecipes} />
       {pendingReviewImport && currentUser && (
@@ -2899,6 +2904,7 @@ function App() {
           publicGroupId={publicGroupId}
           menuPortionCount={selectedMenu ? (selectedMenu.portionCounts?.[selectedRecipe?.id] ?? null) : null}
           onPortionCountChange={selectedMenu ? handleMenuPortionCountChange : undefined}
+          menu={selectedMenu}
           versionDescribeHasText={versionDescribeHasText}
           onVersionDescribeContinue={isFormOpen && isCreatingVersion && isDescribingVersion ? () => versionContinueRef.current?.() : undefined}
         />
