@@ -292,6 +292,28 @@ function useCookingSessionStore({ enabled, shared, onOpenRecipe }) {
     return true;
   }, [openRecipe]);
 
+  // Tippen auf ein geparktes Rezept: das Rezept vorn parkt (wenn Platz ist), das gewählte öffnet
+  const swapWith = useCallback((current, targetId) => {
+    const target = entriesRef.current.find((e) => e.recipe.id === targetId);
+    if (!target) return false;
+    if (current && current.recipe.id !== targetId) {
+      const parked = { recipe: current.recipe, stepIndex: current.stepIndex, servingMultiplier: current.servingMultiplier };
+      const list = entriesRef.current;
+      const index = list.findIndex((e) => e.recipe.id === parked.recipe.id);
+      if (index >= 0) commitEntries(list.map((e, i) => (i === index ? parked : e)));
+      else if (list.length < MAX_SESSION_RECIPES) commitEntries([...list, parked]);
+    }
+    setNotice(null);
+    openRecipe(target.recipe, false);
+    return true;
+  }, [commitEntries, openRecipe]);
+
+  // Aus der Leiste entfernen: nur aus der Sitzung nehmen, nichts öffnen; seine Timer laufen weiter
+  const removeFromSession = useCallback((recipeId) => {
+    const remaining = entriesRef.current.filter((e) => e.recipe.id !== recipeId);
+    if (remaining.length !== entriesRef.current.length) commitEntries(remaining);
+  }, [commitEntries]);
+
   // Kochmodus eines Rezepts beenden: es verlässt die Sitzung, das nächste fällige rückt nach
   const leaveSession = useCallback((recipeId) => {
     const remaining = entriesRef.current.filter((e) => e.recipe.id !== recipeId);
@@ -368,6 +390,7 @@ function useCookingSessionStore({ enabled, shared, onOpenRecipe }) {
     isShared: shared,
     canOpenRecipes,
     getTimers: (recipeId) => timers[recipeId] || NO_TIMERS,
+    allTimers: timers,
     startTimer,
     stopTimer,
     alarm,
@@ -381,10 +404,12 @@ function useCookingSessionStore({ enabled, shared, onOpenRecipe }) {
     saveCookingState,
     addRecipe,
     switchTo,
+    swapWith,
+    removeFromSession,
     leaveSession,
     notice,
   }), [shared, canOpenRecipes, timers, startTimer, stopTimer, alarm, stopAlarm, entries,
-    saveCookingState, addRecipe, switchTo, leaveSession, notice]);
+    saveCookingState, addRecipe, switchTo, swapWith, removeFromSession, leaveSession, notice]);
 }
 
 export function CookingSessionProvider({ children, onOpenRecipe }) {

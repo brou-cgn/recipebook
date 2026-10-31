@@ -1951,6 +1951,13 @@ button.private-badge-button:active {
   outline-offset: 2px;
 }
 
+/* Kochsitzung mit Rezept-Leiste: Das Zutaten-Sheet wird um die Leistenhöhe kürzer,
+   den Abstand zur Home-Leiste des iPhones übernimmt die Rezept-Leiste */
+.cooking-mode-active.cooking-mode-has-dock:not(.cooking-mode-landscape) .cooking-mode-ingredients {
+  height: calc(min(34dvh, 280px) - 72px);
+  padding-bottom: 0.75rem;
+}
+
 /* ── Landscape mobile: side-by-side cooking mode layout ───────────────── */
 
 /* Applied via JS when cookingMode && isMobileLandscape */

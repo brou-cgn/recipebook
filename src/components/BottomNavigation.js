@@ -98,7 +98,7 @@ const NAV_ICON_KEYS_ACTIVE = {
 };
 
 // Tabs shown in the compact pill/carousel representation instead of the full bar.
-const PILL_TAB_KEYS = ['recipes', 'menus', 'atelier'];
+export const PILL_TAB_KEYS = ['recipes', 'menus', 'atelier'];
 // Tab centered when the pill first opens, before the active tab takes over centering.
 const PILL_DEFAULT_CENTER_KEY = 'menus';
 
