@@ -2,7 +2,7 @@
    Die Leiste liegt im App-Hintergrund, die Chips sind Karten wie im Rest der App
    (Light und Dark kommen aus tokens.css). */
 .cooking-dock {
-  background: var(--color-bg);
+  background: transparent;
   color: var(--color-text-strong);
 }
 
@@ -11,7 +11,6 @@
   order: 4;
   flex: 0 0 auto;
   padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
-  border-top: 1px solid var(--color-border-subtle);
 }
 
 /* Außerhalb des Kochmodus: fest über der Bottom-Navigation, unter Snackbar und Navigation */
@@ -22,9 +21,8 @@
   right: 8px;
   z-index: 1150;
   padding: 8px;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 18px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  border: 0;
+  box-shadow: none;
 }
 
 .cooking-dock--bar {
@@ -117,4 +115,31 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--color-text-muted);
+}
+
+/* Ab 3 Rezepten: Titel aus, nur Schritt „x / y“ bzw. Timer */
+.cooking-dock--compact .cooking-dock-chip-title,
+.cooking-dock--thumb .cooking-dock-chip-title {
+  display: none;
+}
+
+/* Ab 4 Rezepten: nur der Kreis mit dem Rezeptbild */
+.cooking-dock--thumb .cooking-dock-chip-text {
+  display: none;
+}
+
+.cooking-dock--thumb .cooking-dock-list {
+  justify-content: center;
+}
+
+.cooking-dock--thumb .cooking-dock-chip {
+  flex: 0 0 auto;
+  width: 52px;
+  border-radius: 999px;
+}
+
+.cooking-dock--thumb .cooking-dock-chip-main {
+  justify-content: center;
+  padding: 0;
+  border-radius: 999px;
 }

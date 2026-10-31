@@ -51,11 +51,11 @@ function chipStatus(entry, timers) {
   const total = countSteps(entry.recipe);
   const step = Math.min((entry.stepIndex || 0) + 1, Math.max(total, 1));
   return total > 0
-    ? { kind: 'step', text: `Schritt ${step} / ${total}`, urgent: false, label: `Schritt ${step} von ${total}` }
+    ? { kind: 'step', text: `Schritt ${step} / ${total}`, shortText: `${step} / ${total}`, urgent: false, label: `Schritt ${step} von ${total}` }
     : { kind: 'step', text: 'Kocht', urgent: false, label: 'kocht' };
 }
 
-function DockChip({ entry, status, onSelect, onRemove }) {
+function DockChip({ entry, status, compact, onSelect, onRemove }) {
   const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ maxOffset: 64 });
   const { recipe } = entry;
   const thumbnail = getRecipeThumbnail(recipe);
@@ -94,7 +94,7 @@ function DockChip({ entry, status, onSelect, onRemove }) {
         )}
         <span className="cooking-dock-chip-text">
           <span className="cooking-dock-chip-title">{recipe.title}</span>
-          <span className={`cooking-dock-chip-status cooking-dock-chip-status--${status.kind}`}>{status.text}</span>
+          <span className={`cooking-dock-chip-status cooking-dock-chip-status--${status.kind}`}>{compact && status.shortText ? status.shortText : status.text}</span>
         </span>
       </button>
     </li>
@@ -110,6 +110,8 @@ function CookingSessionDock({ placement = 'inline', currentRecipeId = null, onSe
   );
   const visible = entries.length > 0;
   const floating = placement !== 'inline';
+  // Ab 3 Rezepten nur noch Schritt „x / y“ (Timer bleiben), ab 4 nur der Bild-Kreis
+  const density = entries.length >= 4 ? 'thumb' : entries.length === 3 ? 'compact' : 'full';
 
   // Feste Leiste: unten Platz freihalten, damit Listen und schwebende Knöpfe nicht darunter liegen
   useEffect(() => {
@@ -131,13 +133,14 @@ function CookingSessionDock({ placement = 'inline', currentRecipeId = null, onSe
   return (
     <>
       {visible && (
-        <nav className={`cooking-dock cooking-dock--${placement}`} aria-label="Rezepte im Hintergrund">
+        <nav className={`cooking-dock cooking-dock--${placement} cooking-dock--${density}`} aria-label="Rezepte im Hintergrund">
           <ul className="cooking-dock-list">
             {entries.map((entry) => (
               <DockChip
                 key={entry.recipe.id}
                 entry={entry}
                 status={chipStatus(entry, session.allTimers)}
+                compact={density !== 'full'}
                 onSelect={handleSelect}
                 onRemove={handleRemove}
               />
