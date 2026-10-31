@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 // Rezept-Leiste der Kochsitzung (Vorhaben „Parallel kochen“): Sie liegt im App-Hintergrund statt
-// in Braun, die Chips sind Karten wie im Rest der App. Light und Dark kommen aus tokens.css.
+// in Braun, die Chips haben keine Fläche wie im Rest der App. Light und Dark kommen aus tokens.css.
 const readCss = (file) => fs.readFileSync(path.join(__dirname, file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 
 const getRuleBody = (css, selector) => {
@@ -15,12 +15,12 @@ describe('CookingSessionDock CSS', () => {
   const dockCss = readCss('CookingSessionDock.css');
   const tokensCss = readCss('../tokens.css');
 
-  test('der Container ist vollständig transparent (kein Rahmen, kein Hintergrund), die Chips sind Karten', () => {
+  test('der Container ist vollständig transparent (kein Rahmen, kein Hintergrund), die Chips haben keine Fläche', () => {
     expect(getRuleBody(dockCss, '.cooking-dock')).toContain('background: transparent;');
     expect(getRuleBody(dockCss, '.cooking-dock--inline')).not.toContain('border');
     expect(getRuleBody(dockCss, '.cooking-dock--top')).not.toContain('border');
     const chip = getRuleBody(dockCss, '.cooking-dock-chip-main');
-    expect(chip).toContain('background: var(--color-surface);');
+    expect(chip).toContain('background: transparent;');
     expect(chip).toContain('border: none;');
   });
 
