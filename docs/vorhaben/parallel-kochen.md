@@ -1,7 +1,7 @@
 # Vorhaben: Parallel kochen (mehrere Rezepte im Hintergrund, Mobile)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 31.10.2026 (PR 1 bis 4 gemergt; Nacharbeiten aus PR #3572 gemergt; „Zuletzt gekocht“ als PR #3571 offen).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 31.10.2026 (PR 1 bis 6 gemergt; PR 7, Knopf im FAB-Look, als Branch gepusht, noch ohne PR).
 
 **Ziel:** Wer mehrere Gerichte gleichzeitig kocht (Beispiel im Entwurf: Rouladen, Rotkohl, Klöße), hält im
 Kochmodus auf dem Handy mehrere Rezepte offen. Rezepte im Hintergrund laufen weiter, samt Timer, und sind mit
@@ -30,7 +30,7 @@ V1–V3 Verschieben, H1–H3 Hervorholen). Gewählt: V3 und H1. Keine Mockups im
 | Zuletzt gekocht | Erst nicht im Sheet (31.10.2026), weil `getAllCookDatesForUser` alle Kochdaten ohne `limit` liest (Tech-Check K3). Mit PR 5 eigene Abfrage `getRecentlyCookedRecipeIds` (`where` userId, `orderBy` date absteigend, `limit` 20) und Index in `firestore.indexes.json`. Das Sheet zeigt höchstens fünf, ohne das Rezept vorn, die Rezepte der Sitzung und was schon als Festtafel- oder verknüpfter Vorschlag dasteht. |
 | Farben der Leiste | Im App-Hintergrund statt Braun, in Light und Dark (31.10.2026, nach dem Test am Gerät): Leiste `--color-bg`, Chips als Karten (`--color-surface-card`, Rand `--color-border-subtle`), Text `--color-text-strong` bzw. `--color-text-muted`; bald fällig bleibt orange (`--color-accent`). Die braunen Leisten-Tokens sind entfernt. |
 | Höhen im Kochmodus mit Leiste | Die Leiste geht vom Schritt-Karussell ab, nicht von den Zutaten (31.10.2026, nach dem Test am Gerät): Das Zutaten-Sheet behält dieselbe Listenhöhe wie ohne Leiste, das Karussell wird um die Leistenhöhe kürzer, die Schrift der Schrittkarten dafür kleiner (`clamp(1.25rem, 3.1dvh, 1.6rem)` statt `clamp(1.4rem, 3.6dvh, 1.9rem)`). Gilt nur, solange die Leiste sichtbar ist. Meine Annahme: die ganze Leistenhöhe vom Karussell, nicht nur ein Teil. |
-| Knopf „Rezept dazunehmen“ | Ohne Text, mit eigenem einrichtbarem Icon (31.10.2026): Button-Icon `cookingAddRecipe` mit Dunkelmodus-Variante (Verwaltung: Button-Icons, Gruppe Kochmodus, „Kochmodus: Rezept dazunehmen“). Standard-Symbol: dampfender Topf mit Plus-Badge im Stil des Folgen-Icons. Runder Knopf 44 × 44 px, `aria-label` und Tooltip „Weiteres Rezept dazunehmen“. |
+| Knopf „Rezept dazunehmen“ | Ohne Text, mit eigenem einrichtbarem Icon (31.10.2026): Button-Icon `cookingAddRecipe` mit Dunkelmodus-Variante (Verwaltung: Button-Icons, Gruppe Kochmodus, „Kochmodus: Rezept dazunehmen“). Standard-Symbol: dampfender Topf mit Plus-Badge im Stil des Folgen-Icons. `aria-label` und Tooltip „Weiteres Rezept dazunehmen“. Formatierung und Animation wie die FAB-Buttons (31.10.2026, nach dem Test am Gerät; PR 7): rund, Fläche, Rand und Schatten wie `.edit-fab-button`, mobil 56 × 56 px und leicht durchscheinend (Opazität 0,85), 44 × 44 px darüber; beim Drücken wächst er um 15 % mit größerem Schatten und federndem Übergang. Wie die FABs bleibt er unsichtbar, bis die Button-Icons geladen sind. Bis PR 6 war es ein 44-px-Knopf mit getönter Fläche und braunem Rand. |
 
 Vorgaben aus `AGENTS.md`, die hier greifen: Entfernen eines Rezepts aus der Leiste per Linksswipe
 (`useSwipeToDelete`) mit „Rückgängig“ (`useUndoableDelete`), kein ×. Farben nur über Tokens: Leiste und Chips
@@ -67,8 +67,9 @@ Portionen und der Wake-Lock des Kochmodus liegen noch in `RecipeDetail`.
 | 2 | Hinter dem Rollen-Flag `parallelKochen`: Titelzeile mit Rezeptname und „+ Rezept“, Sheet `CookingAddRecipeSheet` (Suche, Vorschläge aus der Festtafel und aus verknüpften Rezepten), Sitzung führt die Rezepte samt Schritt und Portionen, Snackbar „… läuft im Hintergrund“ mit „Zurück“, „Kochmodus beenden“ lässt das nächste nachrücken. Erster Commit `feat:`. Tests +16 | PR #3567 gemergt (31.10.2026, v2.27.0), Deploy-Lauf 1942 erfolgreich; am Gerät nicht geprüft |
 | 3 | Rezept-Leiste `CookingSessionDock` (H1): im Kochmodus unter dem Zutaten-Sheet, außerhalb über der Bottom-Navigation (volle Leiste und Pille). Chips nach Dringlichkeit; bald fällige und abgelaufene („Fertig“) orange; Tippen tauscht (das Rezept vorn parkt), Linksswipe entfernt mit „Rückgängig“. Farben als Tokens. Weiter hinter dem Flag. Erster Commit `feat:`. Tests +12; `test:ci` 189 Suites, 3.912 Tests | PR #3569 gemergt (31.10.2026, v2.28.0), Deploy-Lauf 1944 erfolgreich; am Gerät nicht geprüft |
 | 4 | Sitzung übersteht einen Neustart (`localStorage` je Nutzer, höchstens 12 Stunden, nur mit Flag; abgelaufene Timer melden sich beim Start; beim ersten Tippen danach wird der Ton wieder freigeschaltet). Rezept mit laufendem Timer parkt beim Verlassen automatisch. Tippen auf „Fertig“ öffnet den Schritt mit dem abgelaufenen Timer. Erster Commit `feat:`. Tests +11; `test:ci` 189 Suites, 3.923 Tests | PR #3570 gemergt (31.10.2026, v2.29.0), Deploy-Lauf 1945 erfolgreich; am Gerät nicht geprüft |
-| 5 | „Zuletzt gekocht“ im Sheet: begrenzte Abfrage `getRecentlyCookedRecipeIds` samt Index, Abschnitt unter Festtafel und verknüpften Rezepten. Erster Commit `feat:`. Tests +6; `test:ci` 191 Suites, 3.929 Tests | PR #3571 offen (31.10.2026), nicht gemergt |
-| 6 | Nacharbeiten nach dem Test am Gerät: Leiste im App-Hintergrund statt Braun (Light und Dark), mit Leiste behält das Zutaten-Sheet seine Höhe und das Schritt-Karussell gibt sie ab (Schrift dort kleiner), Knopf „Rezept dazunehmen“ ohne Text mit eigenem einrichtbarem Button-Icon `cookingAddRecipe`. Weiter hinter dem Flag. Tests +9 (eine Suite neu); `test:ci` 190 Suites, 3.932 Tests | PR #3572 gemergt (31.10.2026); im Browser (Chromium, 390 × 844) geprüft, am Gerät nicht |
+| 5 | „Zuletzt gekocht“ im Sheet: begrenzte Abfrage `getRecentlyCookedRecipeIds` samt Index, Abschnitt unter Festtafel und verknüpften Rezepten. Erster Commit `feat:`. Tests +6; `test:ci` 191 Suites, 3.929 Tests | PR #3571 gemergt (31.10.2026, v2.31.0), Deploy-Lauf 1947 erfolgreich; am Gerät nicht geprüft |
+| 6 | Nacharbeiten nach dem Test am Gerät: Leiste im App-Hintergrund statt Braun (Light und Dark), mit Leiste behält das Zutaten-Sheet seine Höhe und das Schritt-Karussell gibt sie ab (Schrift dort kleiner), Knopf „Rezept dazunehmen“ ohne Text mit eigenem einrichtbarem Button-Icon `cookingAddRecipe`. Weiter hinter dem Flag. Tests +9 (eine Suite neu); `test:ci` 190 Suites, 3.932 Tests | PR #3572 gemergt (31.10.2026, v2.30.0), Deploy-Lauf 1946 erfolgreich; im Browser (Chromium, 390 × 844) geprüft, am Gerät nicht |
+| 7 | Nacharbeit zu PR 6: Knopf „Rezept dazunehmen“ in Formatierung und Animation wie die FAB-Buttons (rund mit Rand und Schatten, mobil 56 px, federndes Wachsen beim Drücken), als eigener Baustein `CookingAddRecipeButton`. Weiter hinter dem Flag. Erster Commit `fix:`. Tests +13 (zwei Suiten neu); `test:ci` 194 Suites, 3.951 Tests | Branch `claude/parallel-kochen-pr7` gepusht, noch kein PR (31.10.2026); im Browser (Chromium, 390 × 844) geprüft, am Gerät nicht |
 
 Nach jedem PR: Tabelle hier nachziehen. Berührt ein PR einen Tech-Check-Befund (mindestens PR 1: A1),
 das Dashboard nach `CLAUDE.md` aktualisieren.
@@ -168,6 +169,23 @@ anderen einrichtbaren Icons. `RecipeDetail.js` 2.948 → 2.955 Zeilen, `useState
 `src/components/CookingSessionDock.css.test.js` (App-Hintergrund; nur Tokens, die es in Light und Dark gibt). Geprüft per
 Screenshot des echten DOM mit dem echten CSS (Chromium, Light und Dark, vorher und nachher), nicht am Gerät.
 
+Umsetzungsnotizen PR 7 (Knopf im FAB-Look): Der Wunsch kam nach dem Merge von PR #3572, der Commit dazu lag erst danach auf
+dem Branch und kam deshalb nicht in `main`; er läuft als eigener PR auf der aktuellen `main`. Der Knopf ist ein eigener Baustein
+(`src/components/CookingAddRecipeButton.js` mit `CookingAddRecipeButton.css`); `RecipeDetail` rendert nur noch
+`<CookingAddRecipeButton icon loaded onClick />`. Der Druckzustand (Klasse `pressed` über Touch- und Maus-Ereignisse wie bei den
+FABs) liegt im Baustein, nicht in `RecipeDetail` (Tech-Check A1): `useState` in `RecipeDetail.js` unverändert 77. Die Werte der
+FABs sind nicht geteilt, sondern nachgebaut: `.edit-fab-button` und die anderen FABs in `RecipeDetail.css` bzw.
+`DeleteFabButton.css` wiederholen jeweils den ganzen Block. Der Knopf nutzt dafür die Tokens, die den FAB-Werten entsprechen
+(`--color-surface`, `--color-text`, `--color-border`, wie `.kueche-fab-button`); `CookingAddRecipeButton.css.test.js` hält Form,
+Schatten, Übergang, Druck-Animation, mobile Größe und die Farben in Light und Dark gegen `.edit-fab-button` und `darkMode.css`
+gleich (Gegenprobe: vier absichtliche Abweichungen schlagen fehl). Im Browser gemessen (Chromium, 390 × 844, Light und Dark):
+Größe, Fläche, Rand, Schatten, Opazität, Übergang und der gedrückte Zustand (64 × 64 px, `scale(1.15)`, größerer Schatten)
+stimmen mit dem echten Edit-FAB überein. Folge: Die Titelzeile ist mobil 12 px höher als mit dem 44-px-Knopf, das
+Schritt-Karussell entsprechend kürzer. Der Knopf ist erst sichtbar, wenn die Button-Icons geladen sind; die Tests in
+`RecipeDetail.parallelCooking.test.js` warten dafür in `enterCookingMode()`. Tests: +6 in
+`src/components/CookingAddRecipeButton.test.js` (Icon ohne Text, Text-Icon, unsichtbar bis geladen, Klick, Druck-Animation mit
+Maus und Touch), +7 in `src/components/CookingAddRecipeButton.css.test.js`. Nicht am Gerät geprüft.
+
 ## Offen
 
 - **Parken ohne neues Rezept** (V2, Parken-Knopf in der Lasche): nicht gewählt. Wird nötig, wenn man ein Rezept
@@ -179,7 +197,11 @@ Screenshot des echten DOM mit dem echten CSS (Chromium, Light und Dark, vorher u
   Zeilen um und ragt aus dem Chip, Namen werden zu „K…“ (im Screenshot mit vier Rezepten gesehen, schon vor PR 5). Lösung
   offen, zum Beispiel ab drei Chips nur Bild und Status, kürzerer Status („1/3“) oder waagerecht scrollen.
 - **Aufteilung der Höhe mit Leiste** (Nacharbeiten, PR #3572): Annahme, dass die ganze Leistenhöhe vom Karussell kommt. Ob die Schritte so noch
-  gut lesbar sind, zeigt der Test am Gerät.
+  gut lesbar sind, zeigt der Test am Gerät. Der 56-px-Knopf in der Titelzeile (PR 7, wie die FABs) macht die Zeile mobil 12 px
+  höher; wird das Karussell zu knapp, wäre der 44-px-Knopf die Alternative.
+- **FAB-Formatierung ist mehrfach kopiert:** Jeder FAB wiederholt den ganzen Block (`RecipeDetail.css` dreimal,
+  `DeleteFabButton.css`, `Kueche.css` und weitere); der Knopf in der Titelzeile ist nur ein weiterer Nachbau, durch einen
+  Test gegen `.edit-fab-button` abgesichert. Ein gemeinsamer Baustein wäre eine eigene Aufräumarbeit, nicht Teil dieses Vorhabens.
 - **Freigabe für andere Rollen:** wann und für wen, offen (der Schalter bleibt bis dahin aus).
 - **Priorität** gegenüber dem Follow-Feature: offen.
 
@@ -197,6 +219,7 @@ Screenshot des echten DOM mit dem echten CSS (Chromium, Light und Dark, vorher u
 - Swipe und Rückgängig: `src/hooks/useSwipeToDelete.js`, `src/hooks/useUndoableDelete.js`,
   `src/components/UndoSnackbar.js`
 - Rollen-Flags: `src/utils/userManagement.js`
+- Knopf „Rezept dazunehmen“ (Titelzeile im Kochmodus, FAB-Look): `src/components/CookingAddRecipeButton.js` und `.css`
 - Einrichtbare Icons (Knopf „Rezept dazunehmen“, `cookingAddRecipe`): `src/utils/buttonIconRows.js` (Zeile und Gruppe),
   `src/utils/defaultButtonIcons.js` (Standard-Symbol), `src/utils/customLists.js` (`DEFAULT_BUTTON_ICONS`)
 - Festtafel: `src/components/MenuDetail.js` (`onSelectRecipe`); Kochdaten: `src/utils/recipeCookDates.js`
@@ -205,4 +228,5 @@ Screenshot des echten DOM mit dem echten CSS (Chromium, Light und Dark, vorher u
   `src/components/RecipeDetail.parallelCooking.test.js`, `src/contexts/CookingSessionContext.test.js`,
   `src/components/CookingSessionDock.test.js`, `src/components/CookingAddRecipeSheet.test.js`,
   `src/components/CookingSessionDock.css.test.js`, `src/components/RecipeDetail.css.test.js`,
-  `src/utils/recipeCookDates.test.js`
+  `src/utils/recipeCookDates.test.js`, `src/components/CookingAddRecipeButton.test.js`,
+  `src/components/CookingAddRecipeButton.css.test.js`
