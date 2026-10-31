@@ -77,7 +77,89 @@ function releaseQuietly(sentinel) {
   }
 }
 
-function useCookingSessionStore({ enabled, shared, onOpenRecipe }) {
+const hasRunningTimer = (timers, recipeId) =>
+  Object.values(timers[recipeId] || {}).some((byIndex) => Object.values(byIndex).some((t) => t.running));
+
+// Schritt mit einem abgelaufenen Timer (der früheste, wenn es mehrere gibt)
+function finishedStepIndex(timers, recipeId) {
+  const steps = Object.entries(timers[recipeId] || {})
+    .filter(([, byIndex]) => Object.values(byIndex).some((t) => t.finished))
+    .map(([stepKey]) => Number(stepKey.replace('step_', '')))
+    .filter(Number.isInteger)
+    .sort((a, b) => a - b);
+  return steps.length > 0 ? steps[0] : null;
+}
+
+// ── Speichern über einen Neustart hinweg (localStorage, je Nutzer) ──────────
+const STORAGE_PREFIX = 'cookingSession_';
+// Eine gespeicherte Sitzung gilt höchstens so lange; danach startet die App ohne sie
+const MAX_SAVED_AGE_MS = 12 * 60 * 60 * 1000;
+
+// Gespeichert wird nur, was sich nicht aus den Rezepten ergibt: Timer ohne Restzeit (die folgt aus endTime)
+function timersForStorage(timers) {
+  const out = {};
+  Object.entries(timers).forEach(([recipeId, steps]) => {
+    Object.entries(steps).forEach(([stepKey, byIndex]) => {
+      Object.entries(byIndex).forEach(([timerIndex, t]) => {
+        const stored = { ...t };
+        delete stored.remainingSeconds;
+        out[recipeId] = out[recipeId] || {};
+        out[recipeId][stepKey] = out[recipeId][stepKey] || {};
+        out[recipeId][stepKey][timerIndex] = stored;
+      });
+    });
+  });
+  return out;
+}
+
+function timersFromStorage(raw, now) {
+  const out = {};
+  Object.entries(raw || {}).forEach(([recipeId, steps]) => {
+    Object.entries(steps || {}).forEach(([stepKey, byIndex]) => {
+      Object.entries(byIndex || {}).forEach(([timerIndex, t]) => {
+        if (!t || !Number.isFinite(t.endTime) || !Number.isFinite(t.totalSeconds)) return;
+        out[recipeId] = out[recipeId] || {};
+        out[recipeId][stepKey] = out[recipeId][stepKey] || {};
+        out[recipeId][stepKey][timerIndex] = {
+          ...t,
+          remainingSeconds: t.finished ? 0 : Math.max(0, Math.round((t.endTime - now) / 1000)),
+        };
+      });
+    });
+  });
+  return out;
+}
+
+function readSavedSession(key) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(key) || 'null');
+    if (!saved || typeof saved !== 'object') return null;
+    if (!Number.isFinite(saved.savedAt) || Date.now() - saved.savedAt > MAX_SAVED_AGE_MS) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    return {
+      entries: (Array.isArray(saved.entries) ? saved.entries : []).filter((e) => e && typeof e.id === 'string'),
+      timers: timersFromStorage(saved.timers, Date.now()),
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeSavedSession(key, payload) {
+  try {
+    if (payload.entries.length === 0 && Object.keys(payload.timers).length === 0) {
+      localStorage.removeItem(key);
+    } else {
+      localStorage.setItem(key, JSON.stringify({ ...payload, savedAt: Date.now() }));
+    }
+  } catch (_) {
+    // Speicher voll oder gesperrt (z. B. privater Modus): die Sitzung gilt dann nur bis zum Neustart
+  }
+}
+
+function useCookingSessionStore({ enabled, shared, onOpenRecipe, persistForUserId = null, recipes = null }) {
   const [timers, setTimers] = useState(NO_TIMERS);
   const [alarm, setAlarm] = useState(null);
   const [entries, setEntries] = useState(NO_ENTRIES);
@@ -90,7 +172,15 @@ function useCookingSessionStore({ enabled, shared, onOpenRecipe }) {
   const alarmActiveRef = useRef(false);
   const alarmIntervalRef = useRef(null);
   const alarmCtxRef = useRef(null);
+  // Rezepte, die jemand ausdrücklich herausgenommen hat (beenden, wegwischen): nicht wieder automatisch parken
+  const leftIdsRef = useRef(new Set());
+  const recipesRef = useRef(recipes);
+  const pendingEntriesRef = useRef([]);
+  const restoredKeyRef = useRef(null);
+  const skipNextSaveRef = useRef(false);
+  const lastSavedRef = useRef('');
   onOpenRecipeRef.current = onOpenRecipe;
+  recipesRef.current = recipes;
 
   const commit = useCallback((next) => {
     timersRef.current = next;
@@ -279,37 +369,45 @@ function useCookingSessionStore({ enabled, shared, onOpenRecipe }) {
       list = [...list, { recipe: nextRecipe, stepIndex: 0, servingMultiplier: null }];
     }
     commitEntries(list);
+    leftIdsRef.current.delete(parked.recipe.id);
+    leftIdsRef.current.delete(nextRecipe.id);
     setNotice({ recipe: parked.recipe });
     openRecipe(nextRecipe, true);
     return true;
   }, [commitEntries, openRecipe]);
 
-  const switchTo = useCallback((recipeId) => {
+  // Öffnet ein Rezept der Sitzung; mit abgelaufenem Timer an dessen Schritt statt am zuletzt offenen
+  const openFromSession = useCallback((recipeId) => {
     const entry = entriesRef.current.find((e) => e.recipe.id === recipeId);
     if (!entry) return false;
+    const finishedStep = finishedStepIndex(timersRef.current, recipeId);
+    if (finishedStep !== null && finishedStep !== entry.stepIndex) {
+      commitEntries(entriesRef.current.map((e) => (e.recipe.id === recipeId ? { ...e, stepIndex: finishedStep } : e)));
+    }
     setNotice(null);
     openRecipe(entry.recipe, false);
     return true;
-  }, [openRecipe]);
+  }, [commitEntries, openRecipe]);
+
+  const switchTo = useCallback((recipeId) => openFromSession(recipeId), [openFromSession]);
 
   // Tippen auf ein geparktes Rezept: das Rezept vorn parkt (wenn Platz ist), das gewählte öffnet
   const swapWith = useCallback((current, targetId) => {
-    const target = entriesRef.current.find((e) => e.recipe.id === targetId);
-    if (!target) return false;
+    if (!entriesRef.current.some((e) => e.recipe.id === targetId)) return false;
     if (current && current.recipe.id !== targetId) {
       const parked = { recipe: current.recipe, stepIndex: current.stepIndex, servingMultiplier: current.servingMultiplier };
       const list = entriesRef.current;
       const index = list.findIndex((e) => e.recipe.id === parked.recipe.id);
       if (index >= 0) commitEntries(list.map((e, i) => (i === index ? parked : e)));
       else if (list.length < MAX_SESSION_RECIPES) commitEntries([...list, parked]);
+      leftIdsRef.current.delete(parked.recipe.id);
     }
-    setNotice(null);
-    openRecipe(target.recipe, false);
-    return true;
-  }, [commitEntries, openRecipe]);
+    return openFromSession(targetId);
+  }, [commitEntries, openFromSession]);
 
   // Aus der Leiste entfernen: nur aus der Sitzung nehmen, nichts öffnen; seine Timer laufen weiter
   const removeFromSession = useCallback((recipeId) => {
+    leftIdsRef.current.add(recipeId);
     const remaining = entriesRef.current.filter((e) => e.recipe.id !== recipeId);
     if (remaining.length !== entriesRef.current.length) commitEntries(remaining);
   }, [commitEntries]);
@@ -318,6 +416,7 @@ function useCookingSessionStore({ enabled, shared, onOpenRecipe }) {
   const leaveSession = useCallback((recipeId) => {
     const remaining = entriesRef.current.filter((e) => e.recipe.id !== recipeId);
     if (remaining.length === entriesRef.current.length) return null;
+    leftIdsRef.current.add(recipeId);
     commitEntries(remaining);
     setNotice(null);
     if (remaining.length === 0) return null;
@@ -325,6 +424,98 @@ function useCookingSessionStore({ enabled, shared, onOpenRecipe }) {
     openRecipe(next.recipe, false);
     return next;
   }, [commitEntries, openRecipe]);
+
+  // Wer ein Rezept mit laufendem Timer verlässt, parkt es automatisch (Entscheidung 31.10.2026),
+  // außer er hat es vorher ausdrücklich herausgenommen
+  const parkIfTimerRunning = useCallback((state) => {
+    const recipeId = state.recipe.id;
+    const list = entriesRef.current;
+    if (!hasRunningTimer(timersRef.current, recipeId) || leftIdsRef.current.has(recipeId)) return false;
+    if (list.some((e) => e.recipe.id === recipeId) || list.length >= MAX_SESSION_RECIPES) return false;
+    commitEntries([...list, { recipe: state.recipe, stepIndex: state.stepIndex, servingMultiplier: state.servingMultiplier }]);
+    setNotice({ recipe: state.recipe });
+    return true;
+  }, [commitEntries]);
+
+  // Gespeicherte Rezepte der Sitzung einsetzen, sobald die Rezeptliste sie kennt
+  const resolvePendingEntries = useCallback(() => {
+    const pending = pendingEntriesRef.current;
+    const list = recipesRef.current;
+    if (pending.length === 0 || !Array.isArray(list) || list.length === 0) return;
+    const resolved = [];
+    const stillPending = [];
+    pending.forEach((saved) => {
+      const recipe = list.find((r) => r.id === saved.id);
+      if (recipe) {
+        resolved.push({ recipe, stepIndex: saved.stepIndex || 0, servingMultiplier: saved.servingMultiplier ?? null });
+      } else {
+        stillPending.push(saved);
+      }
+    });
+    pendingEntriesRef.current = stillPending;
+    if (resolved.length === 0) return;
+    const current = entriesRef.current;
+    commitEntries([
+      ...resolved.filter((e) => !current.some((c) => c.recipe.id === e.recipe.id)),
+      ...current,
+    ].slice(0, MAX_SESSION_RECIPES));
+  }, [commitEntries]);
+
+  // Nach einem Neustart: gespeicherte Timer und Rezepte des Nutzers wiederherstellen.
+  // Abgelaufene Timer melden sich dabei sofort (der erste Abgleich).
+  const storageKey = shared && persistForUserId ? `${STORAGE_PREFIX}${persistForUserId}` : null;
+  const lastUserKeyRef = useRef(null);
+  useEffect(() => {
+    restoredKeyRef.current = null;
+    lastSavedRef.current = '';
+    if (!storageKey) return;
+    // Anderer Nutzer auf demselben Gerät: dessen Sitzung bleibt in seinem Speicher, hier beginnt eine eigene
+    if (lastUserKeyRef.current && lastUserKeyRef.current !== storageKey) {
+      commit(NO_TIMERS);
+      commitEntries(NO_ENTRIES);
+      pendingEntriesRef.current = [];
+      leftIdsRef.current = new Set();
+      stopTicking();
+    }
+    lastUserKeyRef.current = storageKey;
+    const saved = readSavedSession(storageKey);
+    if (saved) {
+      if (Object.keys(saved.timers).length > 0) {
+        commit({ ...saved.timers, ...timersRef.current });
+        if (!tickRef.current) tickRef.current = setInterval(() => syncRef.current(), TICK_MS);
+      }
+      pendingEntriesRef.current = saved.entries;
+      resolvePendingEntries();
+      syncRef.current();
+    }
+    restoredKeyRef.current = storageKey;
+    // Der Speicher-Effekt läuft im selben Durchgang noch mit dem alten Zustand: einmal auslassen
+    skipNextSaveRef.current = true;
+  }, [storageKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    resolvePendingEntries();
+  }, [recipes, resolvePendingEntries]);
+
+  // Speichern, sobald sich Rezepte, Schritte oder Timer ändern (nicht bei jeder Sekunde Restzeit)
+  useEffect(() => {
+    if (!storageKey || restoredKeyRef.current !== storageKey) return;
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
+    const payload = {
+      entries: [
+        ...entries.map((e) => ({ id: e.recipe.id, stepIndex: e.stepIndex || 0, servingMultiplier: e.servingMultiplier ?? null })),
+        ...pendingEntriesRef.current,
+      ],
+      timers: timersForStorage(timers),
+    };
+    const signature = JSON.stringify(payload);
+    if (signature === lastSavedRef.current) return;
+    lastSavedRef.current = signature;
+    writeSavedSession(storageKey, payload);
+  }, [storageKey, entries, timers]);
 
   // „läuft im Hintergrund“ nach dem Parken nur kurz zeigen, wie die Rückgängig-Snackbar
   useEffect(() => {
@@ -376,6 +567,31 @@ function useCookingSessionStore({ enabled, shared, onOpenRecipe }) {
     };
   }, [enabled, running]);
 
+  // Nach einem Neustart fehlt der AudioContext, den iOS nur nach einer Geste zulässt:
+  // beim ersten Tippen anlegen, damit ein wiederhergestellter Timer hörbar klingelt
+  useEffect(() => {
+    if (!enabled || !running) return undefined;
+    const primeAudio = () => {
+      try {
+        if (!alarmCtxRef.current) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) alarmCtxRef.current = new AudioCtx();
+        }
+        if (alarmCtxRef.current && alarmCtxRef.current.state === 'suspended') {
+          alarmCtxRef.current.resume().catch(() => {});
+        }
+      } catch (_) {
+        // Audio API nicht verfügbar
+      }
+    };
+    document.addEventListener('touchend', primeAudio, { once: true });
+    document.addEventListener('click', primeAudio, { once: true });
+    return () => {
+      document.removeEventListener('touchend', primeAudio);
+      document.removeEventListener('click', primeAudio);
+    };
+  }, [enabled, running]);
+
   // Takt und Alarm enden mit der Sitzung (Provider bzw. Komponente ohne Provider)
   useEffect(() => () => {
     if (tickRef.current) clearInterval(tickRef.current);
@@ -407,13 +623,19 @@ function useCookingSessionStore({ enabled, shared, onOpenRecipe }) {
     swapWith,
     removeFromSession,
     leaveSession,
+    parkIfTimerRunning,
     notice,
   }), [shared, canOpenRecipes, timers, startTimer, stopTimer, alarm, stopAlarm, entries,
-    saveCookingState, addRecipe, switchTo, swapWith, removeFromSession, leaveSession, notice]);
+    saveCookingState, addRecipe, switchTo, swapWith, removeFromSession, leaveSession, parkIfTimerRunning, notice]);
 }
 
-export function CookingSessionProvider({ children, onOpenRecipe }) {
-  const session = useCookingSessionStore({ enabled: true, shared: true, onOpenRecipe });
+/**
+ * persistForUserId: mit gesetzter Nutzer-ID übersteht die Sitzung einen Neustart (localStorage,
+ * höchstens MAX_SAVED_AGE_MS alt). recipes: die sichtbaren Rezepte, aus denen die gespeicherten
+ * Rezepte der Sitzung nach dem Start wieder aufgelöst werden.
+ */
+export function CookingSessionProvider({ children, onOpenRecipe, persistForUserId = null, recipes = null }) {
+  const session = useCookingSessionStore({ enabled: true, shared: true, onOpenRecipe, persistForUserId, recipes });
   const { notice, switchTo } = session;
   return (
     <CookingSessionContext.Provider value={session}>

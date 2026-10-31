@@ -606,6 +606,20 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     if (!parallelCookingEnabled || !cookingMode) return;
     cookingSession.saveCookingState(recipe.id, { stepIndex: currentStepIndex, servingMultiplier });
   }, [currentStepIndex, servingMultiplier]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Wer ein Rezept mit laufendem Timer verlässt (schließen, zurück, anderes Rezept), parkt es in der
+  // Sitzung. Der letzte Zustand je Rezept steht im Ref, weil der Cleanup erst nach dem neuen Render läuft.
+  const lastCookingStateRef = useRef({});
+  lastCookingStateRef.current[recipe.id] = { recipe, stepIndex: currentStepIndex, servingMultiplier };
+  useEffect(() => {
+    if (!parallelCookingEnabled) return undefined;
+    const recipeId = recipe.id;
+    const { parkIfTimerRunning } = cookingSession;
+    return () => {
+      const last = lastCookingStateRef.current[recipeId];
+      if (last) parkIfTimerRunning(last);
+    };
+  }, [recipe.id, parallelCookingEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
   const {
     ingredientMatchDialog,
     setIngredientMatchDialog,

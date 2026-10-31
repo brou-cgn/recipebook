@@ -2828,11 +2828,15 @@ function App() {
       setProfileUserId(userId);
       setProfileFromNetwork(Boolean(options?.fromNetwork));
     }}>
-    <CookingSessionProvider onOpenRecipe={(recipe, { isNew }) => {
-      // Wechsel innerhalb der Kochsitzung: aktuelle Fassung des Rezepts, kein Kartenübergang
-      setSelectedRecipe(recipes.find((r) => r.id === recipe.id) || recipe);
-      if (isNew && currentUser) logRecipeCall(currentUser, recipe);
-    }}>
+    <CookingSessionProvider
+      persistForUserId={currentUser?.parallelKochen && !currentUser?.isGuest ? currentUser.id : null}
+      recipes={recipes}
+      onOpenRecipe={(recipe, { isNew }) => {
+        // Wechsel innerhalb der Kochsitzung: aktuelle Fassung des Rezepts, kein Kartenübergang
+        setSelectedRecipe(recipes.find((r) => r.id === recipe.id) || recipe);
+        if (isNew && currentUser) logRecipeCall(currentUser, recipe);
+      }}
+    >
       <AppNutritionRowsSync onRows={setNutritionReferenceRows} />
       <AppReviewRecipesSync onReviewRecipes={setPendingReviewRecipes} />
       {pendingReviewImport && currentUser && (

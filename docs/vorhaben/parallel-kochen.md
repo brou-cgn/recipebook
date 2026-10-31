@@ -1,7 +1,7 @@
 # Vorhaben: Parallel kochen (mehrere Rezepte im Hintergrund, Mobile)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 31.10.2026 (PR 1 und 2 gemergt; PR 3 als PR #3569 offen, nicht gemergt).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 31.10.2026 (PR 1 bis 3 gemergt; PR 4 umgesetzt, nicht gemergt).
 
 **Ziel:** Wer mehrere Gerichte gleichzeitig kocht (Beispiel im Entwurf: Rouladen, Rotkohl, Klöße), hält im
 Kochmodus auf dem Handy mehrere Rezepte offen. Rezepte im Hintergrund laufen weiter, samt Timer, und sind mit
@@ -24,6 +24,9 @@ V1–V3 Verschieben, H1–H3 Hervorholen). Gewählt: V3 und H1. Keine Mockups im
 | Wischen in der Leiste | Tippen holt ein Rezept nach vorn, Linksswipe nimmt es aus der Sitzung (mit „Rückgängig“). Kein Blättern per Wischen (31.10.2026, bestätigt). |
 | Bald fällig | Ab fünf Minuten Restzeit wird der Chip orange, ein abgelaufener Timer zeigt „Fertig“, ebenfalls orange (31.10.2026: Vorschlag umgesetzt, nicht ausdrücklich bestätigt). |
 | Leiste außerhalb des Kochmodus | Überall dort, wo die Bottom-Navigation sichtbar ist: über der vollen Leiste (Küche, Chefkoch) bzw. über der Pille (Kochbuch, Festtafel, Atelier). Im Rezeptdetail ohne Kochmodus und in der Festtafel-Detailansicht gibt es keine Bottom-Navigation und damit keine Leiste (mit PR 3 so gebaut, 31.10.2026). |
+| Automatisch parken | Wer ein Rezept mit laufendem Timer verlässt (schließen, zurück, anderes Rezept), parkt es in der Sitzung, mit Snackbar „… läuft im Hintergrund“ und „Zurück“. Nicht, wenn man es vorher ausdrücklich herausgenommen hat (Kochmodus beenden, aus der Leiste gewischt) (31.10.2026, bestätigt). |
+| Neustart | Die Sitzung übersteht einen Neustart der App: je Nutzer in `localStorage` (Rezept-IDs mit Schritt und Portionen, Timer mit Endzeitpunkt). Abgelaufene Timer melden sich beim Start. Bestätigt am 31.10.2026; meine Annahmen dabei: höchstens 12 Stunden alt, nur mit dem Flag. |
+| „Fertig“ antippen | Öffnet das Rezept an dem Schritt mit dem abgelaufenen Timer statt am zuletzt offenen (31.10.2026). |
 | Zuletzt gekocht | Nicht im Sheet (Abweichung vom Plan, 31.10.2026): `getAllCookDatesForUser` liest alle Kochdaten ohne `limit` (Tech-Check K3). Dafür braucht es eine eigene Abfrage mit `orderBy` und `limit` samt Index. Vorschläge vorerst: Festtafel, verknüpfte Rezepte, Suche. |
 
 Vorgaben aus `AGENTS.md`, die hier greifen: Entfernen eines Rezepts aus der Leiste per Linksswipe
@@ -59,8 +62,8 @@ Portionen und der Wake-Lock des Kochmodus liegen noch in `RecipeDetail`.
 |---|---|---|
 | 1 | Kochsitzung `src/contexts/CookingSessionContext.js` über der Hauptansicht: Timer je Rezept (Schlüssel Rezept-ID + Schritt), ein gemeinsamer Alarm-`AudioContext`, Wake-Lock, solange ein Timer läuft. Alarm-Dialog als eigener Baustein `CookingAlarmModal` (erscheint auch ohne offenes Rezept, nennt den Rezeptnamen, listet alle abgelaufenen Timer). Kochmodus, Schritt und Portionen bleiben vorerst in `RecipeDetail` (Abweichung vom Plan, ziehen mit PR 2 um). Ohne Flag. Tests +8. Dashboard: A1 teilweise, P7 behoben | PR #3566 gemergt (31.10.2026, v2.26.18), Deploy-Lauf 1941 erfolgreich; am Gerät nicht geprüft |
 | 2 | Hinter dem Rollen-Flag `parallelKochen`: Titelzeile mit Rezeptname und „+ Rezept“, Sheet `CookingAddRecipeSheet` (Suche, Vorschläge aus der Festtafel und aus verknüpften Rezepten), Sitzung führt die Rezepte samt Schritt und Portionen, Snackbar „… läuft im Hintergrund“ mit „Zurück“, „Kochmodus beenden“ lässt das nächste nachrücken. Erster Commit `feat:`. Tests +16 | PR #3567 gemergt (31.10.2026, v2.27.0), Deploy-Lauf 1942 erfolgreich; am Gerät nicht geprüft |
-| 3 | Rezept-Leiste `CookingSessionDock` (H1): im Kochmodus unter dem Zutaten-Sheet, außerhalb über der Bottom-Navigation (volle Leiste und Pille). Chips nach Dringlichkeit; bald fällige und abgelaufene („Fertig“) orange; Tippen tauscht (das Rezept vorn parkt), Linksswipe entfernt mit „Rückgängig“. Farben als Tokens. Weiter hinter dem Flag. Erster Commit `feat:`. Tests +12; `test:ci` 189 Suites, 3.912 Tests | PR #3569 offen (31.10.2026), nicht gemergt |
-| 4 | Tippen auf „Fertig“ öffnet den Schritt mit dem abgelaufenen Timer (heute: den zuletzt offenen Schritt). Je nach Entscheidung: Auto-Parken beim Schließen, Sitzung übersteht einen Neustart. (Chip „Fertig“ und Benachrichtigung mit Rezeptname gibt es seit PR 3 bzw. PR 1.) | offen |
+| 3 | Rezept-Leiste `CookingSessionDock` (H1): im Kochmodus unter dem Zutaten-Sheet, außerhalb über der Bottom-Navigation (volle Leiste und Pille). Chips nach Dringlichkeit; bald fällige und abgelaufene („Fertig“) orange; Tippen tauscht (das Rezept vorn parkt), Linksswipe entfernt mit „Rückgängig“. Farben als Tokens. Weiter hinter dem Flag. Erster Commit `feat:`. Tests +12; `test:ci` 189 Suites, 3.912 Tests | PR #3569 gemergt (31.10.2026, v2.28.0), Deploy-Lauf 1944 erfolgreich; am Gerät nicht geprüft |
+| 4 | Sitzung übersteht einen Neustart (`localStorage` je Nutzer, höchstens 12 Stunden, nur mit Flag; abgelaufene Timer melden sich beim Start; beim ersten Tippen danach wird der Ton wieder freigeschaltet). Rezept mit laufendem Timer parkt beim Verlassen automatisch. Tippen auf „Fertig“ öffnet den Schritt mit dem abgelaufenen Timer. Erster Commit `feat:`. Tests +11; `test:ci` 189 Suites, 3.923 Tests | umgesetzt auf Branch `claude/parallel-kochen-pr4`, nicht gemergt |
 
 Nach jedem PR: Tabelle hier nachziehen. Berührt ein PR einen Tech-Check-Befund (mindestens PR 1: A1),
 das Dashboard nach `CLAUDE.md` aktualisieren.
@@ -115,16 +118,29 @@ Tokens: `--color-cooking-dock`, `--color-cooking-dock-chip`, `--color-on-cooking
 `src/components/RecipeDetail.parallelCooking.test.js`. Nicht am Gerät geprüft, vor allem nicht die Lage über der
 Pille und den Eckknöpfen.
 
+Umsetzungsnotizen PR 4: `App.js` gibt dem Provider `persistForUserId` (nur mit Flag, nicht für Gäste) und die
+sichtbaren `recipes`. Gespeichert wird unter `cookingSession_<uid>`: die Rezepte als ID mit Schritt und Portionen,
+die Timer ohne Restzeit (die folgt aus `endTime`), dazu `savedAt`. Geschrieben wird nur, wenn sich Rezepte,
+Schritte oder Timer ändern, nicht bei jeder Sekunde. Beim Start werden die Timer sofort eingesetzt und abgeglichen
+(abgelaufene klingeln), die Rezepte erst, sobald die Rezeptliste sie kennt; bis dahin bleiben sie gespeichert.
+Älter als 12 Stunden: verworfen. Ein anderer Nutzer auf demselben Gerät beginnt mit leerer Sitzung, die des
+vorigen bleibt in dessen Speicher. iOS lässt Ton nur nach einer Geste zu: Nach dem Start legt das erste Tippen
+(`touchend`/`click`) den `AudioContext` an, solange ein Timer läuft; vorher bleibt ein Alarm stumm, der Dialog
+kommt trotzdem. Automatisch parken: `RecipeDetail` merkt sich je Rezept den letzten Zustand und ruft beim
+Verlassen (Cleanup bei Rezeptwechsel oder Unmount) `parkIfTimerRunning`. Die Sitzung merkt sich, welche Rezepte
+ausdrücklich herausgenommen wurden (`leaveSession`, `removeFromSession`); diese parken nicht wieder von selbst,
+bis man sie erneut dazunimmt. „Fertig“: `switchTo` und `swapWith` setzen den Schritt auf den frühesten mit
+abgelaufenem Timer, bevor das Rezept öffnet. `RecipeDetail.js` 2.934 → 2.948 Zeilen, `useState` unverändert 77.
+Tests: +9 in `src/contexts/CookingSessionContext.test.js`, +2 in
+`src/components/RecipeDetail.parallelCooking.test.js`. Nicht am Gerät geprüft, vor allem nicht das Verhalten der
+iOS-PWA nach einem Neustart.
+
 ## Offen
 
 - **Parken ohne neues Rezept** (V2, Parken-Knopf in der Lasche): nicht gewählt. Wird nötig, wenn man ein Rezept
   parken will, ohne gleich ein anderes zu öffnen.
-- **Auto-Parken beim Schließen:** Wer ein Rezept mit laufendem Timer schließt, parkt es, statt den Timer zu
-  verlieren. Vorschlag: ja.
 - **Leiste im Rezeptdetail ohne Kochmodus und in der Festtafel-Detailansicht:** dort fehlt sie, weil es keine
   Bottom-Navigation gibt. Ob sie dort nötig ist, zeigt der Test am Gerät.
-- **Neustart:** Soll die Sitzung einen Neustart der App überstehen (iOS beendet PWAs im Hintergrund)? Dann
-  Sitzung in `localStorage`; die Timer haben schon `endTime`.
 - **Querformat:** Der Kochmodus hat ein eigenes Querformat-Layout; wo die Leiste dort sitzt, ist offen.
 - **Freigabe für andere Rollen:** wann und für wen, offen (der Schalter bleibt bis dahin aus).
 - **Priorität** gegenüber dem Follow-Feature: offen.
