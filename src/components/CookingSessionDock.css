@@ -13,25 +13,9 @@
   padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
 }
 
-/* Außerhalb des Kochmodus: fest über der Bottom-Navigation, unter Snackbar und Navigation */
-.cooking-dock--bar,
-.cooking-dock--pill {
-  position: fixed;
-  left: 8px;
-  right: 8px;
-  z-index: 1150;
-  padding: 8px;
-  border: 0;
-  box-shadow: none;
-}
-
-.cooking-dock--bar {
-  bottom: calc(var(--bottom-nav-height, 85px) + 8px);
-}
-
-/* Pille: 16px Abstand + 64px Höhe (BottomNavigation.css) + 12px */
-.cooking-dock--pill {
-  bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+/* Außerhalb des Kochmodus: im Fluss direkt unter dem Header, die Seite darunter rückt nach unten */
+.cooking-dock--top {
+  padding: 8px 12px;
 }
 
 .cooking-dock-list {

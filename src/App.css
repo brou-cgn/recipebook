@@ -18,7 +18,7 @@
   .App .app-calls-container,
   .App .meine-kuechenstars-container,
   .App .eventplanung-container {
-    padding-bottom: calc(20px + var(--bottom-spacing, 0px) + var(--cooking-dock-space, 0px));
+    padding-bottom: calc(20px + var(--bottom-spacing, 0px));
   }
 
   .App .recipe-list-container,
@@ -26,12 +26,12 @@
   .App .group-list-container,
   .App .group-detail-container,
   .App .settings-container {
-    padding-bottom: calc(1rem + var(--bottom-spacing, 0px) + var(--cooking-dock-space, 0px));
+    padding-bottom: calc(1rem + var(--bottom-spacing, 0px));
   }
 
   .App .kueche-container,
   .App .personal-data-page {
-    padding-bottom: calc(1.5rem + var(--bottom-spacing, 0px) + var(--cooking-dock-space, 0px));
+    padding-bottom: calc(1.5rem + var(--bottom-spacing, 0px));
   }
 
   .App .startseite-fab-button,
@@ -43,7 +43,7 @@
   .App .recipe-detail-container .new-version-fab-button,
   .App .recipe-detail-container .delete-fab-button,
   .App .recipe-detail-container .reset-thumbnail-fab-button {
-    bottom: calc(24px + env(safe-area-inset-bottom, 0px) + var(--bottom-nav-offset, 0px) + var(--cooking-dock-space, 0px));
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px) + var(--bottom-nav-offset, 0px));
     transition:
       bottom 250ms ease-in-out,
       transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),

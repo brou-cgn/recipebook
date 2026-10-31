@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useCookingSession, sortByNextDue } from '../contexts/CookingSessionContext';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import useUndoableDelete from '../hooks/useUndoableDelete';
@@ -13,14 +13,12 @@ import './CookingSessionDock.css';
  * Rezept im Hintergrund, nach Dringlichkeit sortiert. Tippen holt das Rezept nach vorn,
  * Linksswipe nimmt es aus der Sitzung (mit „Rückgängig“, CLAUDE.md Löschaktionen).
  *
- * placement: 'inline' unten im Kochmodus (RecipeDetail), 'bar' bzw. 'pill' fest über der
- * vollen Bottom-Navigation bzw. ihrer Pille (App.js).
+ * placement: 'inline' unten im Kochmodus (RecipeDetail), 'top' direkt unter dem Header
+ * der Hauptansicht (App.js); die Seite darunter rückt entsprechend nach unten.
  */
 
 // Ab dieser Restzeit wird ein Chip als bald fällig hervorgehoben
 const DUE_SOON_SECONDS = 5 * 60;
-// Platz, den die feste Leiste unten belegt (Höhe plus Abstand), für Listen und schwebende Knöpfe
-const FLOATING_DOCK_SPACE = '76px';
 
 function formatRemaining(seconds) {
   const h = Math.floor(seconds / 3600);
@@ -109,17 +107,8 @@ function CookingSessionDock({ placement = 'inline', currentRecipeId = null, onSe
     session.allTimers
   );
   const visible = entries.length > 0;
-  const floating = placement !== 'inline';
   // Ab 3 Rezepten nur noch Schritt „x / y“ (Timer bleiben), ab 4 nur der Bild-Kreis
   const density = entries.length >= 4 ? 'thumb' : entries.length === 3 ? 'compact' : 'full';
-
-  // Feste Leiste: unten Platz freihalten, damit Listen und schwebende Knöpfe nicht darunter liegen
-  useEffect(() => {
-    if (!floating || !visible) return undefined;
-    const root = document.documentElement;
-    root.style.setProperty('--cooking-dock-space', FLOATING_DOCK_SPACE);
-    return () => root.style.removeProperty('--cooking-dock-space');
-  }, [floating, visible]);
 
   const handleSelect = onSelect || ((entry) => session.switchTo(entry.recipe.id));
   const handleRemove = (entry) => scheduleDelete({

@@ -18,9 +18,7 @@ describe('CookingSessionDock CSS', () => {
   test('der Container ist vollständig transparent (kein Rahmen, kein Hintergrund), die Chips sind Karten', () => {
     expect(getRuleBody(dockCss, '.cooking-dock')).toContain('background: transparent;');
     expect(getRuleBody(dockCss, '.cooking-dock--inline')).not.toContain('border');
-    const floating = getRuleBody(dockCss, '.cooking-dock--bar,\n.cooking-dock--pill');
-    expect(floating).toContain('border: 0;');
-    expect(floating).toContain('box-shadow: none;');
+    expect(getRuleBody(dockCss, '.cooking-dock--top')).not.toContain('border');
     expect(getRuleBody(dockCss, '.cooking-dock-chip-main')).toContain('background: var(--color-surface-card);');
   });
 
