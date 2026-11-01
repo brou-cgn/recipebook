@@ -1946,6 +1946,67 @@ button.private-badge-button:active {
   font-size: clamp(1.25rem, 3.1dvh, 1.6rem);
 }
 
+/* ── iPad im Querformat mit weiteren Rezepten der Sitzung (Entwurf I4) ───────────────
+   Applied via JS (cooking-mode-split, Rollen-Flag parallelKochen). Zwei Spalten über den
+   ganzen Bildschirm: links das Karussell (CookingSessionCarousel.css), rechts der Kochmodus
+   wie im Hochformat mit Titelzeile, Fortschritt, Schritt-Karussell und Zutaten-Sheet; die
+   Hochformat-Regeln oben gelten weiter, hier kommt nur die Lage im Raster dazu. */
+.recipe-detail-content.cooking-mode-active.cooking-mode-split {
+  --cooking-carousel-width: clamp(360px, 43vw, 560px);
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: auto;
+  display: grid;
+  grid-template-columns: var(--cooking-carousel-width) minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.cooking-mode-split .cooking-carousel {
+  grid-column: 1;
+  grid-row: 1 / -1;
+}
+
+.cooking-mode-split .cooking-mode-titlebar {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.cooking-mode-split .step-dots {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.cooking-mode-split .step-carousel {
+  grid-column: 2;
+  grid-row: 3;
+  min-height: 0;
+}
+
+.cooking-mode-split .cooking-mode-ingredients {
+  grid-column: 2;
+  grid-row: 4;
+}
+
+/* Die Schrittkarte richtet sich nach der Spalte, nicht nach dem Bildschirm (sonst 100vw bzw. höchstens 398 px) */
+.cooking-mode-split .step-card {
+  width: 100%;
+  max-width: none;
+}
+
+/* Die Spalte ist breiter als ein iPhone: Zutaten zweispaltig, damit mehr ohne Scrollen ins Sheet passt */
+.cooking-mode-split .cooking-mode-ingredients .ingredients-list {
+  columns: 2;
+  column-gap: 2rem;
+}
+
+.cooking-mode-split .cooking-mode-ingredients .ingredients-list > li {
+  break-inside: avoid;
+}
+
 /* ── Landscape mobile: side-by-side cooking mode layout ───────────────── */
 
 /* Applied via JS when cookingMode && isMobileLandscape */
