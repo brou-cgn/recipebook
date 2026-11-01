@@ -1654,7 +1654,7 @@ button.private-badge-button:active {
 
 .cooking-mode-steps {
   padding: 2rem 0;
-  background: #f9f9f9;
+  background: var(--color-surface-subtle);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -2126,7 +2126,7 @@ button.private-badge-button:active {
   grid-template-rows: auto minmax(0, 1fr);
   gap: 0.6rem;
   overflow: hidden;
-  background: #f9f9f9;
+  background: var(--color-surface-subtle);
 }
 
 /* Progress segments replace the vertical dots */

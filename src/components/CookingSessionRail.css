@@ -3,12 +3,15 @@
    Displayrand: Beim Drehen ins Querformat schaltet useViewportFitCover viewport-fit=cover ein, Zutaten
    und Schritte halten dann die Kameraseite frei (RecipeDetail.css), unten bleibt die Home-Leiste frei.
    Ohne cover (quer geöffnet ohne Drehen) steht sie innerhalb der Abstände von iOS.
-   Farben nur über Tokens, Light und Dark kommen aus tokens.css: Die Schiene liegt im
-   App-Hintergrund, das Rezept vorn als Lasche in der Farbe der Zutatenspalte
-   (--color-surface-card, Light weiß, Dark wie deren Hintergrund). Links geht sie in die
-   Zutatenspalte über, rechts sitzt sie an der Schrittspalte. Bald fällig und abgelaufen:
-   orange wie in der Leiste. */
+   Farben nur über Tokens, Light und Dark kommen aus tokens.css: Die Schiene liegt links im
+   App-Hintergrund, rechts in der Fläche der Schrittspalte (--color-surface-subtle), damit
+   kein zweites Grau daneben steht. Das Rezept vorn ist eine Lasche in der Farbe der
+   Zutatenspalte (--color-surface-card, Light weiß, Dark wie deren Hintergrund), auf beiden
+   Seiten links rund und rechts gerade: links geht sie in die Zutatenspalte über, rechts
+   sitzt sie gerade am Displayrand und rund zur Schrittspalte hin. Bald fällig und
+   abgelaufen: orange wie in der Leiste. */
 .cooking-rail {
+  --cooking-rail-bg: var(--color-bg);
   flex: 0 0 76px;
   width: 76px;
   min-height: 0;
@@ -16,14 +19,16 @@
   flex-direction: column;
   box-sizing: border-box;
   padding: 10px 0 max(12px, env(safe-area-inset-bottom, 0px)) 6px;
-  background: var(--color-bg);
+  background: var(--cooking-rail-bg);
 }
 
-/* Rechts: hinter Zutaten und Schritten, gespiegelt */
+/* Rechts: hinter Zutaten und Schritten, in der Fläche der Schrittspalte. Nicht gespiegelt:
+   Die Lasche hat dort keine weiße Spalte zum Übergehen, gespiegelt sähe ihre gerade Kante
+   zur Schrittspalte abgeschnitten aus. Sie bleibt zum Displayrand gerade (6 px Abstand zur
+   Schrittspalte wie links zum Rand). */
 .cooking-rail--right {
+  --cooking-rail-bg: var(--color-surface-subtle);
   order: 1;
-  padding-right: 6px;
-  padding-left: 0;
 }
 
 /* Fläche der Liste; der Hinweis auf ein fälliges Rezept außer Sicht liegt darüber */
@@ -78,17 +83,11 @@
   padding: 7px 0 5px;
   border: none;
   border-radius: 18px 0 0 18px;
-  background: var(--color-bg);
+  background: var(--cooking-rail-bg);
   color: var(--color-text-strong);
   font: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-}
-
-/* Rechts gespiegelt: zur Schrittspalte hin gerade, zum Displayrand rund */
-.cooking-rail--right .cooking-rail-item,
-.cooking-rail--right .cooking-rail-button {
-  border-radius: 0 18px 18px 0;
 }
 
 .cooking-rail-button:focus-visible {
