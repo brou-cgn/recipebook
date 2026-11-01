@@ -43,8 +43,8 @@ describe('CookingSessionRail CSS', () => {
     const body = getRuleBody(railCss, '.cooking-rail-item.swipe-delete-active .swipe-delete-background');
     expect(body).toContain('opacity: 1;');
     expect(body).toContain('pointer-events: auto;');
-    // In Ruhe deckt der Knopf sie ab
-    expect(getRuleBody(railCss, '.cooking-rail-button')).toContain('background: var(--color-bg);');
+    // In Ruhe deckt der Knopf sie ab, in der Farbe der Schiene
+    expect(getRuleBody(railCss, '.cooking-rail-button')).toContain('background: var(--cooking-rail-bg);');
   });
 
   test('Kreise und „+“ sind so groß wie die FAB-Buttons mobil, „+“ deckend und unabhängig von der Breite', () => {
@@ -76,13 +76,27 @@ describe('CookingSessionRail CSS', () => {
     expect(getRuleBody(railCss, '.cooking-rail-add')).toContain('flex-shrink: 0;');
   });
 
-  test('rechts steht sie hinter Zutaten und Schritten, gespiegelt: zum Displayrand rund', () => {
+  test('links im App-Hintergrund, rechts in der Fläche der Schrittspalte (kein zweites Grau)', () => {
+    expect(getRuleBody(railCss, '.cooking-rail')).toContain('--cooking-rail-bg: var(--color-bg);');
+    expect(getRuleBody(railCss, '.cooking-rail')).toContain('background: var(--cooking-rail-bg);');
+    expect(getRuleBody(railCss, '.cooking-rail--right')).toContain('--cooking-rail-bg: var(--color-surface-subtle);');
+
+    // Schrittspalte hoch und quer nutzt dasselbe Token, Dark kommt nur noch aus tokens.css
+    const recipeDetailCss = readCss('RecipeDetail.css');
+    expect(getRuleBody(recipeDetailCss, '.cooking-mode-steps')).toContain('background: var(--color-surface-subtle);');
+    expect(getRuleBody(recipeDetailCss, '.cooking-mode-landscape .cooking-mode-steps'))
+      .toContain('background: var(--color-surface-subtle);');
+    expect(readCss('../darkMode.css')).not.toMatch(/\.cooking-mode-steps\s*\{/);
+  });
+
+  test('rechts steht sie hinter Zutaten und Schritten, nicht gespiegelt: Lasche zur Schrittspalte rund', () => {
     const right = getRuleBody(railCss, '.cooking-rail--right');
     expect(right).toContain('order: 1;');
-    expect(right).toContain('padding-left: 0;');
+    // Gleicher Abstand wie links: 6 px zur Inhaltsseite, gerade am Displayrand
+    expect(right).not.toMatch(/padding/);
     expect(getRuleBody(railCss, '.cooking-rail-item')).toContain('border-radius: 18px 0 0 18px;');
-    expect(getRuleBody(railCss, '.cooking-rail--right .cooking-rail-item,\n.cooking-rail--right .cooking-rail-button'))
-      .toContain('border-radius: 0 18px 18px 0;');
+    expect(getRuleBody(railCss, '.cooking-rail-button')).toContain('border-radius: 18px 0 0 18px;');
+    expect(railCss).not.toMatch(/border-radius:\s*0 18px 18px 0/);
   });
 
   test('an der Seite reicht sie bis an den Rand, unten hält sie die Home-Leiste frei', () => {

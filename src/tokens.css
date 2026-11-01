@@ -9,6 +9,7 @@
   --color-surface: #fff;
   --color-surface-card: #fff;
   --color-surface-raised: #f0f0f0;
+  --color-surface-subtle: #f9f9f9;
   --color-text: #333;
   --color-text-strong: #1a1a1a;
   --color-text-muted: #666;
@@ -39,6 +40,7 @@
   --color-surface: #2a2a2a;
   --color-surface-card: #1e1e1e;
   --color-surface-raised: #3d3d3d;
+  --color-surface-subtle: #121212;
   --color-text: #e8e8e8;
   --color-text-strong: #e8e8e8;
   --color-text-muted: #aaa;
