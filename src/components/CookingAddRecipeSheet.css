@@ -56,6 +56,10 @@
   flex-direction: column;
   max-height: min(78dvh, 640px);
   padding: 0.5rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+  /* Im Querformat mit Schiene reicht die Seite bis an den Displayrand (viewport-fit=cover):
+     Inhalt frei von Kamera und Ecken; sonst sind die Werte 0 */
+  padding-left: calc(1rem + env(safe-area-inset-left, 0px));
+  padding-right: calc(1rem + env(safe-area-inset-right, 0px));
   border-radius: 24px 24px 0 0;
   background: var(--color-surface-card);
   color: var(--color-text);
