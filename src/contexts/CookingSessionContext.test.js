@@ -2,10 +2,17 @@ import React from 'react';
 import { render, fireEvent, act, screen } from '@testing-library/react';
 import { CookingSessionProvider, useCookingSession, sortByNextDue } from './CookingSessionContext';
 import { playAlarmPattern } from '../utils/alarmAudioUtils';
+import { cancelTimerPush, scheduleTimerPush, timerAlarmId } from '../utils/timerPush';
 
 jest.mock('../utils/alarmAudioUtils', () => ({
   playAlarmPattern: jest.fn(),
   getAlarmRepeatMs: () => 1000,
+}));
+
+jest.mock('../utils/timerPush', () => ({
+  ...jest.requireActual('../utils/timerPush'),
+  scheduleTimerPush: jest.fn(),
+  cancelTimerPush: jest.fn(),
 }));
 
 function TimerStarter({ recipeId, recipeTitle, seconds, label }) {
@@ -26,6 +33,9 @@ function TimerStarter({ recipeId, recipeTitle, seconds, label }) {
         })}
       >
         {`Start ${recipeTitle}`}
+      </button>
+      <button type="button" onClick={() => session.stopTimer(recipeId, 'step_0', 0)}>
+        {`Stop ${recipeTitle}`}
       </button>
       <span data-testid={`rest-${recipeId}`}>{timer ? String(timer.remainingSeconds) : '-'}</span>
     </div>
@@ -152,6 +162,75 @@ describe('CookingSessionContext', () => {
         tag: 'cooking-timer',
         data: expect.objectContaining({ type: 'cooking_timer' }),
       }));
+    });
+  });
+
+  describe('alarm from the server (push)', () => {
+    const START = new Date('2026-11-01T10:00:00Z').getTime();
+    const alarmId = timerAlarmId('u1', 'rotkohl', 'step_0', 0, START + 30000);
+
+    beforeEach(() => {
+      jest.setSystemTime(START);
+      scheduleTimerPush.mockResolvedValue('scheduled');
+    });
+
+    function renderWithPush(pushForUserId = 'u1') {
+      return render(
+        <CookingSessionProvider pushForUserId={pushForUserId}>
+          <TimerStarter recipeId="rotkohl" recipeTitle="Apfelrotkohl" seconds={30} label="40 Minuten" />
+        </CookingSessionProvider>
+      );
+    }
+
+    test('schedules one push per timer run, at its end time', async () => {
+      renderWithPush();
+      fireEvent.click(screen.getByText('Start Apfelrotkohl'));
+      await act(async () => { jest.advanceTimersByTime(3000); });
+
+      expect(scheduleTimerPush).toHaveBeenCalledTimes(1);
+      expect(scheduleTimerPush).toHaveBeenCalledWith('u1', alarmId, {
+        dueAt: START + 30000,
+        body: 'Apfelrotkohl: 40 Minuten',
+      });
+    });
+
+    test('cancels the push when the timer is stopped', async () => {
+      renderWithPush();
+      fireEvent.click(screen.getByText('Start Apfelrotkohl'));
+      await act(async () => {});
+      fireEvent.click(screen.getByText('Stop Apfelrotkohl'));
+
+      expect(cancelTimerPush).toHaveBeenCalledWith(alarmId);
+    });
+
+    test('cancels the push when the timer rings in the open app', async () => {
+      renderWithPush();
+      fireEvent.click(screen.getByText('Start Apfelrotkohl'));
+      await act(async () => { jest.advanceTimersByTime(29000); });
+      expect(cancelTimerPush).not.toHaveBeenCalled();
+
+      await act(async () => { jest.advanceTimersByTime(1000); });
+      expect(playAlarmPattern).toHaveBeenCalled();
+      expect(cancelTimerPush).toHaveBeenCalledWith(alarmId);
+    });
+
+    test('tries again on the next tick while notifications are not allowed yet', async () => {
+      scheduleTimerPush.mockResolvedValueOnce('not-allowed');
+      renderWithPush();
+      fireEvent.click(screen.getByText('Start Apfelrotkohl'));
+      await act(async () => {});
+      expect(scheduleTimerPush).toHaveBeenCalledTimes(1);
+
+      await act(async () => { jest.advanceTimersByTime(1000); });
+      expect(scheduleTimerPush).toHaveBeenCalledTimes(2);
+    });
+
+    test('schedules nothing without a signed-in member', async () => {
+      renderWithPush(null);
+      fireEvent.click(screen.getByText('Start Apfelrotkohl'));
+      await act(async () => { jest.advanceTimersByTime(3000); });
+
+      expect(scheduleTimerPush).not.toHaveBeenCalled();
     });
   });
 
