@@ -11,6 +11,11 @@
   );
   --bottom-nav-offset: 0px;
   --bottom-spacing: 0px;
+  /* viewport-fit=cover (index.html): Die Seite reicht im Querformat bis an den Displayrand. Normale Seiten
+     bleiben innerhalb der Sicherheitsabstände (Kamera, Ecken); nur die Rezept-Schiene im Kochmodus nicht.
+     Hochkant sind die Werte 0. */
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
 @media (max-width: 768px) {
