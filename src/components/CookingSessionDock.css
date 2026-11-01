@@ -56,6 +56,19 @@
   color: var(--color-on-accent);
 }
 
+/* Nach dem Linksswipe: rote Fläche mit Papierkorb sichtbar und antippbar, wie in den anderen
+   Listen. Ohne diese Regel blieb sie unsichtbar (opacity 0) und ließ Tipps durch. */
+.cooking-dock-chip.swipe-delete-active .swipe-delete-background {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Solange die Fläche offen ist, deckt der Chip sie ab, damit Name und Status nicht auf Rot stehen;
+   in Ruhe bleibt er ohne Fläche */
+.cooking-dock-chip.swipe-delete-active .cooking-dock-chip-main {
+  background: var(--color-bg);
+}
+
 .cooking-dock-chip-main:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: -2px;

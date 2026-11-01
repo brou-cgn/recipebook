@@ -195,7 +195,23 @@ beforeEach(() => {
 afterEach(() => {
   jest.useRealTimers();
   mockButtonIcons = {};
+  Object.defineProperty(window, 'innerHeight', { writable: true, configurable: true, value: 768 });
 });
+
+// Handy im Querformat (iPhone 15): RecipeDetail schaltet den Kochmodus dann von selbst ein
+function setLandscapeViewport() {
+  Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 852 });
+  Object.defineProperty(window, 'innerHeight', { writable: true, configurable: true, value: 393 });
+}
+
+function landscapeTitle() {
+  return document.querySelector('.cooking-mode-landscape-title')?.textContent;
+}
+
+function railItemsOf() {
+  const rail = screen.getByRole('navigation', { name: 'Rezepte am Herd' });
+  return within(rail).getAllByRole('listitem');
+}
 
 describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => {
   test('without the flag the cooking mode has no title bar', async () => {
@@ -379,5 +395,57 @@ describe('RecipeDetail – parallel kochen (Rollen-Flag parallelKochen)', () => 
     onPortionCountChange.mockClear();
     fireEvent.click(screen.getAllByRole('button', { name: '+' })[0]);
     expect(onPortionCountChange).not.toHaveBeenCalled();
+  });
+});
+
+describe('RecipeDetail – parallel kochen im Querformat (Entwurf Q2, Rezept-Schiene)', () => {
+  beforeEach(setLandscapeViewport);
+
+  test('the rail replaces title bar and dock; the ingredients column names the recipe', async () => {
+    renderWithProviders(<Harness />);
+    await act(async () => {});
+
+    const content = document.querySelector('.recipe-detail-content');
+    expect(content).toHaveClass('cooking-mode-landscape');
+    expect(content).toHaveClass('cooking-mode-has-rail');
+    expect(document.querySelector('.cooking-mode-titlebar')).toBeNull();
+    expect(landscapeTitle()).toBe('Rinderrouladen');
+
+    const rail = screen.getByRole('navigation', { name: 'Rezepte am Herd' });
+    expect(within(rail).getByRole('img', { name: 'Rinderrouladen' })).toBeInTheDocument();
+    expect(within(rail).getByRole('button', { name: 'Weiteres Rezept dazunehmen' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Rezepte im Hintergrund' })).toBeNull();
+  });
+
+  test('„+“ in the rail adds a recipe; the order stays and tapping the parked one swaps back at its step', async () => {
+    renderWithProviders(<Harness />);
+    await act(async () => {});
+    fireEvent.click(document.querySelectorAll('.step-card')[1]);
+    addRecipeViaSearch('rotkohl', 'Apfelrotkohl');
+
+    expect(landscapeTitle()).toBe('Apfelrotkohl');
+    let items = railItemsOf();
+    expect(items).toHaveLength(2);
+    expect(within(items[0]).getByRole('button', { name: 'Rinderrouladen öffnen, Schritt 2 von 3' })).toBeInTheDocument();
+    expect(items[1]).toHaveClass('cooking-rail-item--current');
+
+    fireEvent.click(within(items[0]).getByRole('button', { name: 'Rinderrouladen öffnen, Schritt 2 von 3' }));
+
+    expect(landscapeTitle()).toBe('Rinderrouladen');
+    expect(activeStepIndex()).toBe(1);
+    items = railItemsOf();
+    expect(items[0]).toHaveClass('cooking-rail-item--current');
+    expect(within(items[1]).getByRole('button', { name: 'Apfelrotkohl öffnen, Schritt 1 von 2' })).toBeInTheDocument();
+  });
+
+  test('without the flag the landscape cooking mode stays as before', async () => {
+    renderWithProviders(<Harness user={{ ...flaggedUser, parallelKochen: false }} />);
+    await act(async () => {});
+
+    const content = document.querySelector('.recipe-detail-content');
+    expect(content).toHaveClass('cooking-mode-landscape');
+    expect(content).not.toHaveClass('cooking-mode-has-rail');
+    expect(screen.queryByRole('navigation', { name: 'Rezepte am Herd' })).toBeNull();
+    expect(landscapeTitle()).toBeUndefined();
   });
 });

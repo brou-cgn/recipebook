@@ -34,6 +34,16 @@ describe('CookingSessionDock CSS', () => {
     expect(missing).toEqual([]);
   });
 
+  test('nach dem Linksswipe ist die Fläche zum Entfernen sichtbar und antippbar', () => {
+    // Die Grundregel in DeleteRowButton.css blendet sie aus (opacity 0, pointer-events none)
+    const body = getRuleBody(dockCss, '.cooking-dock-chip.swipe-delete-active .swipe-delete-background');
+    expect(body).toContain('opacity: 1;');
+    expect(body).toContain('pointer-events: auto;');
+    // Der Chip deckt sie dabei ab, damit Name und Status nicht auf Rot stehen
+    expect(getRuleBody(dockCss, '.cooking-dock-chip.swipe-delete-active .cooking-dock-chip-main'))
+      .toContain('background: var(--color-bg);');
+  });
+
   test('in der Bild-Stufe füllt das Bild den Kreis fast, der orange Ring bleibt dünn', () => {
     const body = getRuleBody(dockCss, '.cooking-dock--thumb .cooking-dock-chip-thumb');
     expect(body).toContain('width: 48px;');

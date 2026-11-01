@@ -3,6 +3,7 @@ import { useCookingSession, sortByNextDue } from '../contexts/CookingSessionCont
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import { getRecipeThumbnail } from '../utils/recipeThumbnail';
+import { cookingStatus } from '../utils/cookingSessionStatus';
 import UndoSnackbar from './UndoSnackbar';
 import TrashIcon from './icons/TrashIcon';
 import './DeleteRowButton.css';
@@ -16,42 +17,6 @@ import './CookingSessionDock.css';
  * placement: 'inline' unten im Kochmodus (RecipeDetail), 'top' direkt unter dem Header
  * der Hauptansicht (App.js); die Seite darunter rückt entsprechend nach unten.
  */
-
-// Ab dieser Restzeit wird ein Chip als bald fällig hervorgehoben
-const DUE_SOON_SECONDS = 5 * 60;
-
-function formatRemaining(seconds) {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = String(seconds % 60).padStart(2, '0');
-  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
-}
-
-function countSteps(recipe) {
-  return (recipe.steps || []).filter((step) => typeof step === 'string' || step?.type !== 'heading').length;
-}
-
-// Was der Chip zeigt: abgelaufener Timer, sonst der nächste laufende, sonst der Schritt
-function chipStatus(entry, timers) {
-  let finished = false;
-  let next = null;
-  Object.values(timers[entry.recipe.id] || {}).forEach((byIndex) => {
-    Object.values(byIndex).forEach((t) => {
-      if (t.finished) finished = true;
-      else if (t.running && (!next || t.endTime < next.endTime)) next = t;
-    });
-  });
-  if (finished) return { kind: 'finished', text: 'Fertig', urgent: true, label: 'Timer abgelaufen' };
-  if (next) {
-    const time = formatRemaining(next.remainingSeconds);
-    return { kind: 'timer', text: time, urgent: next.remainingSeconds <= DUE_SOON_SECONDS, label: `Timer ${time}` };
-  }
-  const total = countSteps(entry.recipe);
-  const step = Math.min((entry.stepIndex || 0) + 1, Math.max(total, 1));
-  return total > 0
-    ? { kind: 'step', text: `Schritt ${step} / ${total}`, shortText: `${step} / ${total}`, urgent: false, label: `Schritt ${step} von ${total}` }
-    : { kind: 'step', text: 'Kocht', urgent: false, label: 'kocht' };
-}
 
 function DockChip({ entry, status, compact, onSelect, onRemove }) {
   const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ maxOffset: 64 });
@@ -128,7 +93,7 @@ function CookingSessionDock({ placement = 'inline', currentRecipeId = null, onSe
               <DockChip
                 key={entry.recipe.id}
                 entry={entry}
-                status={chipStatus(entry, session.allTimers)}
+                status={cookingStatus(entry, session.allTimers)}
                 compact={density !== 'full'}
                 onSelect={handleSelect}
                 onRemove={handleRemove}

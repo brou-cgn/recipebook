@@ -41,6 +41,7 @@ import CookingAlarmModal from './CookingAlarmModal';
 import CookingAddRecipeButton from './CookingAddRecipeButton';
 import CookingAddRecipeSheet from './CookingAddRecipeSheet';
 import CookingSessionDock from './CookingSessionDock';
+import CookingSessionRail from './CookingSessionRail';
 import { getMenuRecipeIds } from '../utils/menuSections';
 import RecipeRating from './RecipeRating';
 import CookDateModal from './CookDateModal';
@@ -1393,6 +1394,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Rezept-Leiste unten im Kochmodus, sobald ein anderes Rezept der Sitzung im Hintergrund läuft
   const showCookingDock = parallelCookingEnabled && !isMobileLandscape
     && cookingSession.sessionRecipes.some((entry) => entry.recipe.id !== recipe.id);
+  // Im Querformat statt Leiste und Titelzeile: die Rezept-Schiene am linken Rand (Entwurf Q2), immer mit „+“
+  const showCookingRail = parallelCookingEnabled && isMobileLandscape;
+  const swapWithSessionRecipe = (entry) => cookingSession.swapWith(
+    { recipe, stepIndex: currentStepIndex, servingMultiplier },
+    entry.recipe.id
+  );
 
   const handleAddRecipeToSession = (nextRecipe) => {
     setShowAddRecipeSheet(false);
@@ -1799,7 +1806,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         </div>
       )}
 
-      <div className={`recipe-detail-content ${cookingMode ? 'cooking-mode-active' : ''} ${cookingMode && isMobileLandscape ? 'cooking-mode-landscape' : ''}${cookingMode && showCookingDock ? ' cooking-mode-has-dock' : ''}`} ref={contentRef}>
+      <div className={`recipe-detail-content ${cookingMode ? 'cooking-mode-active' : ''} ${cookingMode && isMobileLandscape ? 'cooking-mode-landscape' : ''}${cookingMode && showCookingDock ? ' cooking-mode-has-dock' : ''}${cookingMode && showCookingRail ? ' cooking-mode-has-rail' : ''}`} ref={contentRef}>
         {cookingMode ? (
           // Cooking mode layout
           <>
@@ -1815,8 +1822,21 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               </div>
             )}
 
+            {/* Kochsitzung im Querformat: alle Rezepte am linken Rand; Tippen tauscht, dieses Rezept parkt dabei */}
+            {showCookingRail && (
+              <CookingSessionRail
+                currentRecipe={recipe}
+                currentStepIndex={currentStepIndex}
+                onSelect={swapWithSessionRecipe}
+                onAdd={() => setShowAddRecipeSheet(true)}
+                addIcon={cookingAddRecipeIcon}
+                addIconLoaded={buttonIconsLoaded}
+              />
+            )}
+
             {/* Ingredients list */}
             <section className="cooking-mode-ingredients">
+              {showCookingRail && <h2 className="cooking-mode-landscape-title">{recipe.title}</h2>}
               <div className="section-header">
                 <h2>Zutaten für</h2>
                 {recipe.portionen && (
@@ -1991,10 +2011,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               <CookingSessionDock
                 placement="inline"
                 currentRecipeId={recipe.id}
-                onSelect={(entry) => cookingSession.swapWith(
-                  { recipe, stepIndex: currentStepIndex, servingMultiplier },
-                  entry.recipe.id
-                )}
+                onSelect={swapWithSessionRecipe}
               />
             )}
           </>
