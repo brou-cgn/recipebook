@@ -2830,6 +2830,7 @@ function App() {
     }}>
     <CookingSessionProvider
       persistForUserId={currentUser?.parallelKochen && !currentUser?.isGuest ? currentUser.id : null}
+      syncForUserId={currentUser?.parallelKochen && !currentUser?.isGuest ? currentUser.id : null}
       pushForUserId={currentUser && !currentUser.isGuest ? currentUser.id : null}
       recipes={recipes}
       onOpenRecipe={(recipe, { isNew }) => {

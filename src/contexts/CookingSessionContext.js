@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { playAlarmPattern, getAlarmRepeatMs } from '../utils/alarmAudioUtils';
 import { showLocalNotification } from '../utils/localNotification';
 import { PUSH_NOT_ALLOWED, cancelTimerPush, scheduleTimerPush, timerAlarmId } from '../utils/timerPush';
+import { getCookingDeviceId, saveCookingSession, subscribeCookingSession } from '../utils/cookingSessionFirestore';
 import CookingAlarmModal from '../components/CookingAlarmModal';
 import UndoSnackbar from '../components/UndoSnackbar';
 
@@ -161,8 +162,16 @@ function writeSavedSession(key, payload) {
   }
 }
 
+// Gleiche Rezepte, gleiche Reihenfolge, gleicher Schritt, gleiches Rezept vorn: dann ist nichts zu schreiben
+const SYNC_DEBOUNCE_MS = 600;
+const syncSignature = (recipeList, activeRecipeId) => JSON.stringify({
+  recipes: recipeList.map((r) => ({ id: r.id, stepIndex: r.stepIndex || 0 })),
+  activeRecipeId: activeRecipeId || null,
+});
+
 function useCookingSessionStore({
   enabled, shared, onOpenRecipe, persistForUserId = null, recipes = null, pushForUserId = null,
+  syncForUserId = null,
 }) {
   const [timers, setTimers] = useState(NO_TIMERS);
   const [alarm, setAlarm] = useState(null);
@@ -185,6 +194,13 @@ function useCookingSessionStore({
   const restoredKeyRef = useRef(null);
   const skipNextSaveRef = useRef(false);
   const lastSavedRef = useRef('');
+  // Geräteübergreifend (Firestore): das Rezept vorn gilt für alle Geräte, frontIdRef nur für dieses
+  const [activeId, setActiveId] = useState(null);
+  const activeIdRef = useRef(null);
+  const frontIdRef = useRef(null);
+  const [syncReady, setSyncReady] = useState(false);
+  const lastSyncedRef = useRef('');
+  const openFromSessionRef = useRef(null);
   onOpenRecipeRef.current = onOpenRecipe;
   recipesRef.current = recipes;
 
@@ -378,6 +394,22 @@ function useCookingSessionStore({
     commitEntries(next);
   }, [commitEntries]);
 
+  // Dieses Gerät zeigt das Rezept im Kochmodus vorn (RecipeDetail); gilt dann für alle Geräte
+  const setActiveRecipe = useCallback((recipeId) => {
+    frontIdRef.current = recipeId;
+    activeIdRef.current = recipeId;
+    setActiveId(recipeId);
+  }, []);
+
+  // Das Rezept verlässt den Kochmodus auf diesem Gerät; nur löschen, wenn nicht schon ein anderes vorn steht
+  const clearActiveRecipe = useCallback((recipeId) => {
+    if (frontIdRef.current === recipeId) frontIdRef.current = null;
+    if (activeIdRef.current === recipeId) {
+      activeIdRef.current = null;
+      setActiveId(null);
+    }
+  }, []);
+
   // Nächstes Rezept dazunehmen: das bisherige parkt mit seinem Zustand, das neue öffnet im Kochmodus
   const addRecipe = useCallback((current, nextRecipe) => {
     const parked = { recipe: current.recipe, stepIndex: current.stepIndex, servingMultiplier: current.servingMultiplier };
@@ -409,6 +441,7 @@ function useCookingSessionStore({
     return true;
   }, [commitEntries, openRecipe]);
 
+  openFromSessionRef.current = openFromSession;
   const switchTo = useCallback((recipeId) => openFromSession(recipeId), [openFromSession]);
 
   // Tippen auf ein geparktes Rezept: das Rezept vorn parkt (wenn Platz ist), das gewählte öffnet.
@@ -551,6 +584,78 @@ function useCookingSessionStore({
     writeSavedSession(storageKey, payload);
   }, [storageKey, entries, timers]);
 
+  // ── Abgleich zwischen Geräten (Firestore cookingSessions/{uid}) ─────────────
+  // Die Sitzung des Nutzers liegt als ein Dokument vor. Zuletzt geschrieben gewinnt; das eigene Echo
+  // (gleiche Geräte-Kennung oder noch nicht bestätigt) wird ignoriert. Schreiben erst nach dem ersten
+  // Abruf, sonst überschriebe ein frisch gestartetes Gerät die Sitzung eines anderen.
+  const syncUid = shared && syncForUserId ? syncForUserId : null;
+  useEffect(() => {
+    setSyncReady(false);
+    lastSyncedRef.current = '';
+    if (!syncUid) return undefined;
+    const deviceId = getCookingDeviceId();
+    let first = true;
+    const unsubscribe = subscribeCookingSession(syncUid, (remote) => {
+      const isFirst = first;
+      first = false;
+      if (remote && !remote.hasPendingWrites && remote.deviceId !== deviceId) {
+        const stale = remote.updatedAtMs && Date.now() - remote.updatedAtMs > MAX_SAVED_AGE_MS;
+        if (!stale) {
+          const known = recipesRef.current;
+          const current = entriesRef.current;
+          const resolved = [];
+          const unresolved = [];
+          remote.recipes.slice(0, MAX_SESSION_RECIPES).forEach((saved) => {
+            const local = current.find((e) => e.recipe.id === saved.id);
+            const recipe = local ? local.recipe : (Array.isArray(known) ? known.find((r) => r.id === saved.id) : null);
+            if (recipe) {
+              resolved.push({
+                recipe, stepIndex: saved.stepIndex, servingMultiplier: local ? local.servingMultiplier : null,
+              });
+            } else {
+              unresolved.push({ id: saved.id, stepIndex: saved.stepIndex, servingMultiplier: null });
+            }
+          });
+          lastSyncedRef.current = syncSignature(
+            [...resolved.map((e) => ({ id: e.recipe.id, stepIndex: e.stepIndex })), ...unresolved],
+            remote.activeRecipeId
+          );
+          pendingEntriesRef.current = unresolved;
+          activeIdRef.current = remote.activeRecipeId;
+          setActiveId(remote.activeRecipeId);
+          commitEntries(resolved);
+          // Steht hier gerade ein Rezept vorn und wurde ein anderes Rezept der Sitzung aktiv: mitwechseln.
+          // Ohne offenes Rezept bleibt die Ansicht, wie sie ist.
+          const target = remote.activeRecipeId;
+          if (!isFirst && frontIdRef.current && target && target !== frontIdRef.current
+              && resolved.some((e) => e.recipe.id === target)) {
+            openFromSessionRef.current(target);
+          }
+        }
+      }
+      if (isFirst) setSyncReady(true);
+    });
+    return unsubscribe;
+  }, [syncUid]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!syncUid || !syncReady) return undefined;
+    const listed = [
+      ...entries.map((e) => ({ id: e.recipe.id, stepIndex: e.stepIndex || 0 })),
+      ...pendingEntriesRef.current.map((p) => ({ id: p.id, stepIndex: p.stepIndex || 0 })),
+    ];
+    const signature = syncSignature(listed, activeId);
+    if (signature === lastSyncedRef.current) return undefined;
+    const timeout = setTimeout(() => {
+      lastSyncedRef.current = signature;
+      Promise.resolve(saveCookingSession(syncUid, { recipes: listed, activeRecipeId: activeId })).catch(() => {
+        // Offline oder abgelehnt: beim nächsten Wechsel erneut versuchen
+        lastSyncedRef.current = '';
+      });
+    }, SYNC_DEBOUNCE_MS);
+    return () => clearTimeout(timeout);
+  }, [syncUid, syncReady, entries, activeId]);
+
   // „läuft im Hintergrund“ nach dem Parken nur kurz zeigen, wie die Rückgängig-Snackbar
   useEffect(() => {
     if (!notice) return undefined;
@@ -689,6 +794,9 @@ function useCookingSessionStore({
     canAddRecipe: (currentRecipeId) =>
       entries.length + (entries.some((e) => e.recipe.id === currentRecipeId) ? 0 : 1) < MAX_SESSION_RECIPES,
     saveCookingState,
+    setActiveRecipe,
+    clearActiveRecipe,
+    activeRecipeId: activeId,
     addRecipe,
     switchTo,
     swapWith,
@@ -697,7 +805,8 @@ function useCookingSessionStore({
     parkIfTimerRunning,
     notice,
   }), [shared, canOpenRecipes, timers, startTimer, stopTimer, alarm, stopAlarm, entries,
-    saveCookingState, addRecipe, switchTo, swapWith, removeFromSession, leaveSession, parkIfTimerRunning, notice]);
+    saveCookingState, setActiveRecipe, clearActiveRecipe, activeId, addRecipe, switchTo, swapWith,
+    removeFromSession, leaveSession, parkIfTimerRunning, notice]);
 }
 
 /**
@@ -705,13 +814,16 @@ function useCookingSessionStore({
  * höchstens MAX_SAVED_AGE_MS alt). recipes: die sichtbaren Rezepte, aus denen die gespeicherten
  * Rezepte der Sitzung nach dem Start wieder aufgelöst werden. pushForUserId: mit gesetzter
  * Nutzer-ID kommt zur Endzeit jedes Timers eine Push-Mitteilung vom Server, auch wenn die App
- * dann pausiert ist (utils/timerPush.js, Tech-Check P8).
+ * dann pausiert ist (utils/timerPush.js, Tech-Check P8). syncForUserId: mit gesetzter Nutzer-ID
+ * halten alle Geräte des Nutzers Rezepte, Schritt je Rezept und das Rezept vorn gleich
+ * (utils/cookingSessionFirestore.js); Timer und Portionen bleiben auf dem Gerät.
  */
 export function CookingSessionProvider({
   children, onOpenRecipe, persistForUserId = null, recipes = null, pushForUserId = null,
+  syncForUserId = null,
 }) {
   const session = useCookingSessionStore({
-    enabled: true, shared: true, onOpenRecipe, persistForUserId, recipes, pushForUserId,
+    enabled: true, shared: true, onOpenRecipe, persistForUserId, recipes, pushForUserId, syncForUserId,
   });
   const { notice, switchTo } = session;
   return (

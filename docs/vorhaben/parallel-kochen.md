@@ -1,7 +1,7 @@
 # Vorhaben: Parallel kochen (mehrere Rezepte im Hintergrund, Mobile)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 01.11.2026 (PR 1 bis 9 und die Nacharbeiten gemergt, zuletzt #3582 Querformat Q2 sowie #3584 und #3585 Alarm im Hintergrund; PR 10, iPad im Querformat (Entwurf I4), als Branch gepusht, noch ohne PR).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 01.11.2026 (Abgleich zwischen Geräten als PR 12 in Arbeit; PR 1 bis 9 und die Nacharbeiten gemergt, zuletzt #3582 Querformat Q2 sowie #3584 und #3585 Alarm im Hintergrund; PR 10, iPad im Querformat (Entwurf I4), als Branch gepusht, noch ohne PR).
 
 **Ziel:** Wer mehrere Gerichte gleichzeitig kocht (Beispiel im Entwurf: Rouladen, Rotkohl, Klöße), hält im
 Kochmodus auf dem Handy mehrere Rezepte offen. Rezepte im Hintergrund laufen weiter, samt Timer, und sind mit
@@ -44,6 +44,9 @@ Gewählt: I4 für das Querformat. Keine Mockups im Repo.
 | iPad quer mit nur einem Rezept | Zwei Spalten schon ab dem ersten Rezept; links steht dann „Noch kein weiteres Rezept am Herd“ mit „Rezept dazunehmen“ (01.11.2026, nicht bestätigt). Abweichung von meiner Empfehlung im Entwurfsgespräch (bis zum zweiten Rezept „das normale Querformat“): Beim Umsetzen gesehen, dass das iPad gar kein eigenes Querformat-Layout hat (`cooking-mode-landscape` greift nur bis 480 px Höhe) und dort bisher auch keinen Kochmodus-Knopf. Nebeneffekt: Nichts springt, wenn das zweite Rezept dazukommt oder das letzte geht. |
 | Einstieg auf dem iPad quer | Mit dem Flag zeigt das Rezeptbild auf dem iPad quer den Kochmodus-Knopf (bisher nur bis 768 px Breite); ohne den Zurück-Knopf auf dem Bild, Schließen steht dort in der Kopfzeile (01.11.2026). Ohne Einstieg wäre I4 nicht erreichbar. Tech-Check M12 (neu, teilweise). |
 | Erkennung iPad quer | `src/hooks/useTabletLandscape.js`: Touch-Bildschirm (`pointer: coarse`, ohne `matchMedia` `maxTouchPoints` > 1), breiter als hoch, mindestens 900 × 481 px; folgt dem Drehen. Desktop-Browser zählen nicht, auch nicht in einem breiten Fenster (Maus oder Trackpad). Meine Annahme: Ein iPad mit Magic Keyboard meldet weiter `pointer: coarse`; nicht geprüft. |
+| Abgleich zwischen Geräten | Auftrag 01.11.2026: Rezepte der Sitzung, aktives Rezept und Schritt je Rezept gleich auf allen Geräten des Nutzers. Umsetzung (meine Annahmen, nicht bestätigt): ein Firestore-Dokument `cookingSessions/{uid}` (`recipes` mit ID und Schritt, `activeRecipeId`, `deviceId`, `updatedAt`), Live-Abo, Schreiben gebündelt nach 600 ms und erst nach dem ersten Abruf. Zuletzt geschrieben gewinnt, das Dokument gilt als Ganzes; eigenes Echo wird über die Geräte-Kennung ignoriert. Nur mit dem Flag und für Mitglieder. `localStorage` bleibt als Zwischenspeicher für Timer und für den Start ohne Netz. |
+| Abgleich: was nicht | Timer und Portionen bleiben je Gerät (Timer laufen dort, wo sie gestartet wurden, der Alarm kommt per Push auf dieses Gerät; Portionen waren nicht verlangt). Rezept dort entfernt heißt hier entfernt, die Timer laufen weiter. |
+| Abgleich: Rezept vorn | Wechselt auf Gerät A das Rezept vorn, wechselt Gerät B mit, aber nur, wenn B gerade selbst ein Rezept im Kochmodus vorn hat. Ein Gerät ohne offenes Rezept (z. B. Handy in der Tasche) wird nicht in den Kochmodus gezogen, merkt sich das aktive Rezept aber. Schaltet A den Schritt weiter, zieht B den Schritt des offenen Rezepts nach. Entscheidung 01.11.2026, Vorschlag mit dem Auftrag übernommen, nicht ausdrücklich bestätigt. |
 | Schiene: Details | Meine Annahmen (01.11.2026): Mit dem Flag ist die Schiene im Querformat immer da, auch mit nur einem Rezept, sonst gäbe es dort kein „+“. Ab vier Rezepten kleinere Kreise (30 statt 44 px); sechs passen samt „+“ in 375 px Höhe (iPhone SE quer), auf noch niedrigeren Bildschirmen scrollt die Liste. Ohne Rezeptbild zeigt der Kreis den Anfangsbuchstaben. Bald fällig und „Fertig“ orange wie in der Leiste. „+“ bleibt dort 44 px und deckend: Die FAB-Regel für Bildschirme bis 768 px Breite träfe sonst Handys im Querformat (iOS lässt quer ohne `viewport-fit=cover` links und rechts je 59 px frei, im Screenshot vom Gerät zu sehen; die Seite ist dann 734 px breit). |
 
 Vorgaben aus `AGENTS.md`, die hier greifen: Entfernen eines Rezepts aus der Leiste per Linksswipe
@@ -89,6 +92,8 @@ Portionen und der Wake-Lock des Kochmodus liegen noch in `RecipeDetail`.
 | 9 | Querformat (Entwurf Q2): Rezept-Schiene `CookingSessionRail` am linken Rand statt Leiste und Titelzeile, Rezeptname über den Zutaten; die Status-Anzeige von Leiste und Schiene liegt gemeinsam in `src/utils/cookingSessionStatus.js`. Dazu ein Fehler der Leiste behoben: Nach dem Linksswipe blieb die Fläche zum Entfernen unsichtbar und ließ Tipps durch. Weiter hinter dem Flag. Erster Commit `feat:`. Tests +20 (zwei Suiten neu); `test:ci` 197 Suites, 3.976 Tests | PR #3582 gemergt (01.11.2026); im Browser (Chromium mit dem echten CSS, 734 × 393 und 667 × 375, Light und Dark) geprüft, am Gerät nicht |
 | 10 | iPad im Querformat (Entwurf I4): Karussell `CookingSessionCarousel` in der linken Spalte, rechts der Kochmodus wie im Hochformat; Tausch an Ort und Stelle (`swapWith` mit `inPlace`); Erkennung `useTabletLandscape`; Kochmodus-Knopf auf dem Rezeptbild auch auf dem iPad quer. Weiter hinter dem Flag. Erster Commit `feat:`. Tests +31 (drei Suiten neu); `test:ci` 202 Suites, 4.071 Tests. Dashboard: M12 neu (teilweise) | Branch `claude/parallel-kochen-ipad-quer` gepusht, noch kein PR (01.11.2026); im Browser (Chromium mit dem echten CSS, 1194 × 834, 1133 × 744 und 1376 × 1032, Light und Dark) geprüft, am Gerät nicht |
 | 11 | Leiste oben nur noch auf der Startseite (`currentView === 'startseite'` in `App.js`); in Kochbuch, Festtafel, Atelier und Chefkoch entfällt sie. Weiter hinter dem Flag | noch kein PR (01.11.2026); nicht im Browser geprüft |
+
+| 12 | Abgleich zwischen Geräten: `src/utils/cookingSessionFirestore.js`, Abo und Schreiben in `CookingSessionContext` (`syncForUserId`, `setActiveRecipe`/`clearActiveRecipe`), Schritt-Nachzug und aktives Rezept in `RecipeDetail`, Regeln und `security.md` für `cookingSessions`. Weiter hinter dem Flag. Erster Commit `feat:`. Tests +13 (zwei Suiten neu); `test:ci` 204 Suites, 4.085 Tests | in Arbeit, nicht committet (01.11.2026); Regeln nicht im Emulator geprüft, nicht am Gerät geprüft |
 
 Nach jedem PR: Tabelle hier nachziehen. Berührt ein PR einen Tech-Check-Befund (mindestens PR 1: A1),
 das Dashboard nach `CLAUDE.md` aktualisieren.
@@ -241,6 +246,13 @@ neuen `src/hooks/useTabletLandscape.test.js`, +3 in `src/contexts/CookingSession
 
 ## Offen
 
+- **Abgleich zwischen Geräten** (PR 12): `firestore.rules` für `cookingSessions` nicht im Emulator geprüft (nur durch
+  `securityDocsPolicy.test.js` gedeckt). Zwei Geräte gleichzeitig am Gerät testen: Rezept dazunehmen, Schritt
+  weiterschalten, Rezept vorn wechseln. Offen, ob Portionen und Timer mit synchronisiert werden sollen. Bei gleichzeitiger
+  Änderung auf zwei Geräten gewinnt der spätere Schreibvorgang ganz (kein Zusammenführen je Rezept). Ein Gerät, das das Rezept
+  auf dem Handy im Hintergrund hat, wird bewusst nicht in den Kochmodus gezogen. `RecipeDetail.js` 2.996 → 3.013 Zeilen,
+  `useState` unverändert 77 (am Dashboard für A1 nichts zu ändern).
+
 - **Alarm bei App im Hintergrund** (am Gerät bestätigt, 01.11.2026, Tech-Check P8): Der Timer ist „weitestgehend lautlos,
   wenn die App im Hintergrund ist“. Takt und Ton laufen nur, solange der Browser die Seite ausführt; eine iOS-PWA im
   Hintergrund wird pausiert, der Alarm kam erst beim Zurückkehren (`visibilitychange`).
@@ -306,6 +318,8 @@ neuen `src/hooks/useTabletLandscape.test.js`, +3 in `src/contexts/CookingSession
   `.cooking-mode-has-rail`)
 - Einrichtbare Icons (Knopf „Rezept dazunehmen“, `cookingAddRecipe`): `src/utils/buttonIconRows.js` (Zeile und Gruppe),
   `src/utils/defaultButtonIcons.js` (Standard-Symbol), `src/utils/customLists.js` (`DEFAULT_BUTTON_ICONS`)
+- Abgleich zwischen Geräten: `src/utils/cookingSessionFirestore.js` (Dokument `cookingSessions/{uid}`), Abo und Schreiben im
+  Store von `src/contexts/CookingSessionContext.js`, Tests `CookingSessionContext.sync.test.js`, `cookingSessionFirestore.test.js`
 - Festtafel: `src/components/MenuDetail.js` (`onSelectRecipe`); Kochdaten: `src/utils/recipeCookDates.js`
   (`getRecentlyCookedRecipeIds`, Index in `firestore.indexes.json`)
 - Tests: `src/components/RecipeDetail.timer.test.js`, `src/components/RecipeDetail.cooking-mode-layout.test.js`,

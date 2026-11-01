@@ -626,6 +626,23 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     cookingSession.saveCookingState(recipe.id, { stepIndex: currentStepIndex, servingMultiplier });
   }, [currentStepIndex, servingMultiplier]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Ein anderes Gerät hat den Schritt dieses Rezepts weitergeschaltet: hier nachziehen.
+  // Läuft nur, wenn sich der Schritt in der Sitzung ändert; eigene Änderungen sind dort schon gleich.
+  const sessionStepIndex = parallelCookingEnabled ? cookingSession.getCookingState(recipe.id)?.stepIndex : undefined;
+  useEffect(() => {
+    if (!cookingMode || sessionStepIndex === undefined || sessionStepIndex === currentStepIndex) return;
+    setCurrentStepIndex(sessionStepIndex);
+  }, [sessionStepIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Das Rezept vorn im Kochmodus gilt als aktiv und wird mit den anderen Geräten abgeglichen
+  useEffect(() => {
+    if (!parallelCookingEnabled || !cookingMode) return undefined;
+    const recipeId = recipe.id;
+    const { setActiveRecipe, clearActiveRecipe } = cookingSession;
+    setActiveRecipe(recipeId);
+    return () => clearActiveRecipe(recipeId);
+  }, [recipe.id, cookingMode, parallelCookingEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Wer ein Rezept mit laufendem Timer verlässt (schließen, zurück, anderes Rezept), parkt es in der
   // Sitzung. Der letzte Zustand je Rezept steht im Ref, weil der Cleanup erst nach dem neuen Render läuft.
   const lastCookingStateRef = useRef({});
