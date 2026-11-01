@@ -85,9 +85,9 @@ describe('CookingSessionRail CSS', () => {
       .toContain('border-radius: 0 18px 18px 0;');
   });
 
-  test('bleibt innerhalb der Sicherheitsabstände: kein safe-area-inset, kein viewport-fit', () => {
-    expect(railCss).not.toMatch(/env\(safe-area-inset/);
-    expect(getRuleBody(railCss, '.cooking-rail')).toContain('padding: 10px 0 12px 6px;');
+  test('an der Seite reicht sie bis an den Rand, unten hält sie die Home-Leiste frei', () => {
+    expect(getRuleBody(railCss, '.cooking-rail')).toContain('padding: 10px 0 max(12px, env(safe-area-inset-bottom, 0px)) 6px;');
+    expect(railCss).not.toMatch(/safe-area-inset-(left|right)/);
   });
 
   test('der Hinweis auf ein fälliges Rezept außer Sicht ist orange wie „bald fällig“', () => {
