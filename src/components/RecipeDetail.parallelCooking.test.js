@@ -562,8 +562,6 @@ describe('RecipeDetail – Schiene ohne Abstand zum Displayrand (viewport-fit=co
     expect(content).toHaveClass('cooking-mode-landscape');
     expect(content).toHaveClass('cooking-mode-rail-right');
     expect(screen.getByRole('navigation', { name: 'Rezepte am Herd' })).toHaveClass('cooking-rail--right');
-    // Vorübergehende Diagnose, nur mit cover
-    expect(screen.getByText(/Diagnose Rand/)).toBeInTheDocument();
 
     rotateTo(0, 393, 852);
     expect(viewportContent()).toBe(INITIAL_VIEWPORT);
@@ -578,7 +576,6 @@ describe('RecipeDetail – Schiene ohne Abstand zum Displayrand (viewport-fit=co
 
     expect(screen.getByRole('navigation', { name: 'Rezepte am Herd' })).toHaveClass('cooking-rail--right');
     expect(viewportContent()).toBe(INITIAL_VIEWPORT);
-    expect(screen.queryByText(/Diagnose Rand/)).toBeNull();
 
     // Erst die nächste Drehung (hier von quer nach quer) schaltet um
     rotateTo(-90, 852, 393);
