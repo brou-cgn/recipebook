@@ -2868,8 +2868,9 @@ function App() {
           onChefkochClick={currentUser ? handleChefkochClick : undefined}
           onProfileUpdated={(updatedUser) => setCurrentUser(prev => ({ ...prev, ...updatedUser }))}
         />
-        {/* Kochsitzung: Rezepte im Hintergrund direkt unter dem Header (Rollen-Flag parallelKochen) */}
-        {showBottomNav && isBottomNavVisible && currentUser?.parallelKochen && !currentUser?.isGuest && (
+        {/* Kochsitzung: Rezepte im Hintergrund direkt unter dem Header (Rollen-Flag parallelKochen).
+            Nur auf der Startseite – nicht in Kochbuch, Festtafel, Atelier oder Chefkoch. */}
+        {showBottomNav && isBottomNavVisible && currentView === 'startseite' && currentUser?.parallelKochen && !currentUser?.isGuest && (
           <CookingSessionDock placement="top" />
         )}
         <Suspense fallback={<ViewLoadingFallback />}>
