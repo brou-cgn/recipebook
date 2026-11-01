@@ -19,6 +19,14 @@ import { getCameraSide } from './useLandscapeCameraSide';
  * Rückfall: Steht das Gerät hochkant und `cover` ist noch an (etwa nach dem Drehen im Hintergrund),
  * wird es beim nächsten `resize` oder Zurückkehren in die App entfernt.
  *
+ * Scroll-Versatz: Am Gerät (iPhone, Screenshot der Diagnose-Zeile) stand die Seite nach dem Umschalten
+ * horizontal auf scrollX −59 (genau der Abstand auf der Kameraseite). Gezeichnet wurde bis an den Rand,
+ * Tipps rechnete iOS aber mit dem Versatz um und ordnete sie 59 pt daneben zu (Tipp auf die Schiene → Schritte).
+ * Solange `cover` an ist, wird ein horizontaler Versatz deshalb auf 0 zurückgesetzt: direkt nach dem
+ * Umschalten, mehrmals danach (iOS setzt ihn erst nach dem Drehen, der Zoom-Reset in index.html ändert den
+ * meta viewport nach rund 700 ms noch einmal) und bei jedem `scroll`/`resize`. Die App scrollt nie seitlich,
+ * es geht also nichts verloren. Ob das am Gerät reicht, zeigt die Diagnose-Zeile (`scroll 0`).
+ *
  * Nicht am Gerät geprüft. Danach gilt wieder, was vorher im meta viewport stand.
  */
 const FIT = /^viewport-fit\s*=/i;
@@ -41,7 +49,11 @@ export function withViewportFit(content, value) {
 
 // Zustand für die ganze Seite: welche Ansichten cover wollen (je eine Anmeldung), ob es gerade gesetzt ist,
 // was vorher galt
-const state = { wanted: new Set(), applied: false, before: null, listening: false };
+const state = { wanted: new Set(), applied: false, before: null, listening: false, timers: [] };
+
+// Wann nach dem Umschalten noch einmal nachgesehen wird (ms): nach dem Drehen und nach dem Zoom-Reset
+// in index.html (400 + 300 ms)
+export const SCROLL_RESET_DELAYS = [50, 300, 800, 1200];
 
 function viewportMeta() {
   return typeof document === 'undefined' ? null : document.querySelector('meta[name="viewport"]');
@@ -60,13 +72,34 @@ function setCover(on) {
   state.applied = on;
 }
 
+/** Setzt einen horizontalen Scroll-Versatz auf 0, solange cover an ist (siehe oben) */
+export function resetHorizontalScroll() {
+  if (!state.applied || typeof window === 'undefined') return;
+  const x = window.scrollX || window.pageXOffset || 0;
+  if (x !== 0) window.scrollTo(0, window.scrollY || window.pageYOffset || 0);
+}
+
+function clearScrollTimers() {
+  state.timers.forEach((id) => clearTimeout(id));
+  state.timers = [];
+}
+
+function scheduleScrollReset() {
+  clearScrollTimers();
+  resetHorizontalScroll();
+  state.timers = SCROLL_RESET_DELAYS.map((delay) => setTimeout(resetHorizontalScroll, delay));
+}
+
 function handleOrientationChange() {
   setCover(state.wanted.size > 0 && getCameraSide() !== null);
+  if (state.applied) scheduleScrollReset();
+  else clearScrollTimers();
 }
 
 // Nur Rückfall: hochkant nie cover. Quer wird hier nie eingeschaltet, nur beim Drehen.
 function handleSettled() {
   if (state.applied && getCameraSide() === null) setCover(false);
+  resetHorizontalScroll();
 }
 
 function handleVisibility() {
@@ -77,6 +110,9 @@ function listen() {
   if (state.listening || typeof window === 'undefined') return;
   window.addEventListener('orientationchange', handleOrientationChange);
   window.addEventListener('resize', handleSettled);
+  window.addEventListener('scroll', resetHorizontalScroll, { passive: true });
+  window.visualViewport?.addEventListener('resize', resetHorizontalScroll);
+  window.visualViewport?.addEventListener('scroll', resetHorizontalScroll);
   document.addEventListener('visibilitychange', handleVisibility);
   state.listening = true;
 }
@@ -91,8 +127,12 @@ export function resetViewportCoverForTests() {
   if (state.listening) {
     window.removeEventListener('orientationchange', handleOrientationChange);
     window.removeEventListener('resize', handleSettled);
+    window.removeEventListener('scroll', resetHorizontalScroll);
+    window.visualViewport?.removeEventListener('resize', resetHorizontalScroll);
+    window.visualViewport?.removeEventListener('scroll', resetHorizontalScroll);
     document.removeEventListener('visibilitychange', handleVisibility);
   }
+  clearScrollTimers();
   state.wanted.clear();
   state.applied = false;
   state.before = null;
