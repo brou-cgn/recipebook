@@ -48,6 +48,7 @@ Quelle ist immer `firestore.rules` bzw. `storage.rules`; diese Tabelle gibt den 
 | `recipeCalls` | Mitglieder | Anlegen: eigene Sitzung; Ändern/Löschen: Admin |
 | `cookDates` | Mitglieder (**jedes Mitglied liest alle Einträge**) | Anlegen: eigene `userId`, nur die Felder `userId`, `recipeId`, `date` (nicht in der Zukunft), `createdAt`; Löschen: Eigentümer, `edit`+; kein Ändern |
 | `cookingTimerAlarms` | niemand | Anlegen: Mitglieder, eigene `uid`, ID beginnt mit der uid, nur `uid`, `token` (≤ 4.096 Zeichen), `dueAt` (höchstens 24 h voraus), `body` (≤ 200 Zeichen), `createdAt`; Löschen: Eigentümer, auch ein schon verschickter (nicht mehr vorhandener) Weckruf; kein Ändern. Die Function `sendDueCookingTimerAlarms` sendet nur an Tokens aus `users/{uid}.timerPushTokens` (Tech-Check P8) |
+| `cookingSessions` | Eigentümer (Mitglieder, keine Gäste) | Schreiben: Eigentümer, nur `recipes` (Liste, ≤ 12), `activeRecipeId`, `deviceId` (≤ 64 Zeichen), `updatedAt`; Löschen: Eigentümer. Hält die Kochsitzung (Rezept-IDs, Schritt, vorn stehendes Rezept) zwischen Geräten synchron |
 | `follows` | Beteiligte (Follower, Gefolgter), nur Mitglieder | Löschen: beide Seiten; Anlegen/Ändern: niemand (nur Callables `requestFollow`, `respondFollow`) |
 | `users/{uid}/followInbox` | Eigentümer (offene Anfragen an ihn) | niemand (nur Cloud Function) |
 | `users/{uid}/followBlocks` | Eigentümer (von ihm blockierte Personen) | niemand (nur Cloud Function) |

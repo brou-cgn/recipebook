@@ -531,6 +531,24 @@ service cloud.firestore {
       allow read, update: if false;
     }
 
+    // Kochsitzung über Geräte hinweg (Vorhaben docs/vorhaben/parallel-kochen.md): ein Dokument je
+    // Nutzer mit den Rezepten der Sitzung (ID und Schritt), dem vorn stehenden Rezept und der
+    // Kennung des schreibenden Geräts. Nur der Eigentümer liest und schreibt; Mitglieder, keine Gäste.
+    match /cookingSessions/{userId} {
+      allow read, delete: if isMember() && request.auth.uid == userId;
+      allow create, update: if isMember()
+                    && request.auth.uid == userId
+                    && request.resource.data.keys().hasOnly(['recipes', 'activeRecipeId', 'deviceId', 'updatedAt'])
+                    && request.resource.data.keys().hasAll(['recipes', 'deviceId'])
+                    && request.resource.data.recipes is list
+                    && request.resource.data.recipes.size() <= 12
+                    && (request.resource.data.activeRecipeId == null
+                        || (request.resource.data.activeRecipeId is string
+                            && request.resource.data.activeRecipeId.size() <= 128))
+                    && request.resource.data.deviceId is string
+                    && request.resource.data.deviceId.size() <= 64;
+    }
+
     // Follow (Vorhaben docs/vorhaben/follow.md): Anfragen und Antworten laufen
     // ausschließlich über die Callables requestFollow/respondFollow (Admin SDK).
     // Lesen dürfen nur die Beteiligten; löschen beide Seiten (Anfrage zurückziehen,
