@@ -216,6 +216,15 @@ neuen `src/components/CookingSessionRail.css.test.js`, +3 in `src/components/Rec
 
 ## Offen
 
+- **Alarm bei App im Hintergrund** (am Gerät bestätigt, 01.11.2026, Tech-Check P8): Der Timer ist „weitestgehend lautlos,
+  wenn die App im Hintergrund ist“. Takt und Ton laufen nur, solange der Browser die Seite ausführt; eine iOS-PWA im
+  Hintergrund wird pausiert, der Alarm kommt erst beim Zurückkehren (`visibilitychange`). Dazu ein Fehler: `startAlarm`
+  rief vor dem Ton `new Notification()` auf, das auf Chrome für Android wirft, der Ton startete nie. Behoben auf Branch
+  `claude/alarmtoene-neu` (Commit 020f221, noch kein PR): Ton zuerst, Mitteilung über den Service Worker
+  (`src/utils/localNotification.js`), Tipp holt die App nach vorn. Verlässlich wird es erst mit einem Push vom Server
+  zum Ablaufzeitpunkt (Systemton der Mitteilung, nicht die eigenen Alarmtöne; iPhone nur als installierte App ab
+  iOS 16.4 mit erlaubten Mitteilungen). Noch nicht entschieden: pünktlich per Cloud Tasks oder minütlicher Job, nur das
+  startende Gerät oder alle Geräte des Nutzers.
 - **Leiste unter dem Header scrollt weg** (PR 8): Sie sitzt im Fluss, nicht sticky. Bei langen Listen ist ein ablaufender Timer dann erst nach dem Hochscrollen sichtbar (der Alarm-Dialog kommt trotzdem). Sticky unter dem Header wäre die Alternative; Höhe des Headers und sein Ausblenden beim Scrollen (`headerVisible`) müssten dann zusammenpassen.
 
 - **Parken ohne neues Rezept** (V2, Parken-Knopf in der Lasche): nicht gewählt. Wird nötig, wenn man ein Rezept

@@ -218,6 +218,10 @@ self.addEventListener('notificationclick', (event) => {
         // Nachricht an die Seite, App.js öffnet die Netzwerk-Seite.
         client.postMessage({type: 'OPEN_NETWORK'});
         outcome = client.focus();
+      } else if (data?.type === 'cooking_timer') {
+        // Timer abgelaufen: die App nur nach vorn holen. Ein Neuladen würde die
+        // laufende Kochsitzung samt Alarm-Dialog verwerfen.
+        outcome = client.focus();
       } else if ('navigate' in client) {
         outcome = client.navigate(targetUrl).then((c) => c.focus());
       } else {

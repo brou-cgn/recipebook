@@ -122,6 +122,25 @@ describe('notificationclick', () => {
     expect(clients.openWindow).not.toHaveBeenCalled();
   });
 
+  test('Timer abgelaufen, App läuft: nur nach vorn holen, kein Neuladen', async () => {
+    const client = makeClient();
+    const { listeners, clients } = loadServiceWorker([client]);
+
+    await click(listeners, { type: 'cooking_timer' });
+
+    expect(client.focus).toHaveBeenCalled();
+    expect(client.navigate).not.toHaveBeenCalled();
+    expect(clients.openWindow).not.toHaveBeenCalled();
+  });
+
+  test('Timer abgelaufen, App geschlossen: Startseite öffnen', async () => {
+    const { listeners, clients } = loadServiceWorker([]);
+
+    await click(listeners, { type: 'cooking_timer' });
+
+    expect(clients.openWindow).toHaveBeenCalledWith('/');
+  });
+
   test('Follow-Anfrage, App geschlossen: Fenster mit followNetwork öffnen', async () => {
     const { listeners, clients } = loadServiceWorker([]);
 

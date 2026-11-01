@@ -12,12 +12,10 @@ import { getToken, onMessage } from 'firebase/messaging';
 import { httpsCallable } from 'firebase/functions';
 import { isMessagingSupported, firebaseConfig, functions } from '../firebase';
 import { appendPushLog } from './pushTapHandoff';
+import { MESSAGING_SW_SCOPE } from './localNotification';
 
 /** Env-var: Web-push VAPID key generated in the Firebase Console */
 const getVapidKey = () => process.env.REACT_APP_FIREBASE_VAPID_KEY;
-
-/** Scope of the FCM service worker (public/firebase-messaging-sw.js) */
-const MESSAGING_SW_SCOPE = '/firebase-cloud-messaging-push-scope';
 
 /**
  * Register the FCM service worker and forward the Firebase config so the SW
