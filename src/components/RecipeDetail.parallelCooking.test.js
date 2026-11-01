@@ -139,7 +139,7 @@ const sundayMenu = {
 };
 
 // Spielt App.js nach: Die Kochsitzung öffnet Rezepte, indem sie das angezeigte Rezept wechselt
-function Harness({ user = flaggedUser, menu = null, onPortionCountChange }) {
+function Harness({ user = flaggedUser, menu = null, onPortionCountChange, onHeaderVisibilityChange }) {
   const [current, setCurrent] = React.useState(rouladen);
   return (
     <CookingSessionProvider onOpenRecipe={(recipe) => setCurrent(allRecipes.find((r) => r.id === recipe.id) || recipe)}>
@@ -149,6 +149,7 @@ function Harness({ user = flaggedUser, menu = null, onPortionCountChange }) {
         currentUser={user}
         menu={menu}
         onPortionCountChange={onPortionCountChange}
+        onHeaderVisibilityChange={onHeaderVisibilityChange}
         onBack={() => {}}
         onEdit={() => {}}
         onDelete={() => {}}
@@ -447,5 +448,113 @@ describe('RecipeDetail – parallel kochen im Querformat (Entwurf Q2, Rezept-Sch
     expect(content).not.toHaveClass('cooking-mode-has-rail');
     expect(screen.queryByRole('navigation', { name: 'Rezepte am Herd' })).toBeNull();
     expect(landscapeTitle()).toBeUndefined();
+  });
+});
+
+// iPad Pro 11" quer: Touch-Bildschirm (Finger als Zeiger), breiter als hoch
+function setTabletViewport(width = 1194, height = 834) {
+  Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: width });
+  Object.defineProperty(window, 'innerHeight', { writable: true, configurable: true, value: height });
+  window.matchMedia = jest.fn((query) => ({
+    matches: query === '(pointer: coarse)',
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+  }));
+}
+
+function carouselCards() {
+  const nav = screen.getByRole('navigation', { name: 'Weitere Rezepte am Herd' });
+  return within(nav).queryAllByRole('button', { name: /nach vorn holen/ }).map((b) => b.getAttribute('aria-label'));
+}
+
+describe('RecipeDetail – parallel kochen auf dem iPad quer (Entwurf I4, Karussell)', () => {
+  const originalMatchMedia = window.matchMedia;
+  beforeEach(() => setTabletViewport());
+  afterEach(() => { window.matchMedia = originalMatchMedia; });
+
+  test('the picture offers the cooking mode; it starts with two columns, the carousel still empty', async () => {
+    const onHeaderVisibilityChange = jest.fn();
+    renderWithProviders(<Harness onHeaderVisibilityChange={onHeaderVisibilityChange} />);
+    await act(async () => {});
+    // Bisher ohne Einstieg (Desktop-Ansicht ab 769 px); Schließen bleibt in der Kopfzeile, nicht doppelt auf dem Bild
+    expect(document.querySelector('.overlay-cooking-mode-static')).toBeInTheDocument();
+    expect(document.querySelector('.overlay-back-button')).toBeNull();
+
+    await enterCookingMode();
+
+    expect(document.querySelector('.recipe-detail-content')).toHaveClass('cooking-mode-split');
+    expect(titleBarTitle()).toBe('Rinderrouladen');
+    expect(carouselCards()).toEqual([]);
+    expect(screen.getByText('Noch kein weiteres Rezept am Herd')).toBeInTheDocument();
+    // Die zwei Spalten füllen den Bildschirm: der App-Header blendet aus
+    expect(onHeaderVisibilityChange).toHaveBeenLastCalledWith(false);
+  });
+
+  test('„Rezept dazunehmen“ in the empty carousel adds a recipe; the first one moves into the carousel at its step', async () => {
+    renderWithProviders(<Harness />);
+    await enterCookingMode();
+    fireEvent.click(document.querySelectorAll('.step-card')[1]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rezept dazunehmen' }));
+    const sheet = screen.getByRole('dialog', { name: 'Was kochst du dazu?' });
+    fireEvent.change(within(sheet).getByLabelText('Rezept suchen'), { target: { value: 'rotkohl' } });
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Apfelrotkohl dazunehmen' }));
+
+    expect(titleBarTitle()).toBe('Apfelrotkohl');
+    expect(carouselCards()).toEqual(['Rinderrouladen nach vorn holen, Schritt 2 von 3']);
+    expect(screen.getByRole('button', { name: 'Rinderrouladen nach vorn holen, Schritt 2 von 3' }))
+      .toHaveAccessibleDescription('Rouladen rundherum anbraten.');
+    // Die Leiste gibt es hier nicht, das Karussell übernimmt ihre Aufgabe
+    expect(screen.queryByRole('navigation', { name: 'Rezepte im Hintergrund' })).toBeNull();
+    expect(document.querySelector('.recipe-detail-content')).not.toHaveClass('cooking-mode-has-dock');
+    await act(async () => {});
+  });
+
+  test('tapping a card swaps in place: the recipe in front takes its place, the other cards stay', async () => {
+    renderWithProviders(<Harness />);
+    await enterCookingMode();
+    addRecipeViaSearch('rotkohl', 'Apfelrotkohl');
+    addRecipeViaSearch('klö', 'Kartoffelklöße');
+    expect(carouselCards()).toEqual([
+      'Rinderrouladen nach vorn holen, Schritt 1 von 3',
+      'Apfelrotkohl nach vorn holen, Schritt 1 von 2',
+    ]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rinderrouladen nach vorn holen, Schritt 1 von 3' }));
+
+    expect(titleBarTitle()).toBe('Rinderrouladen');
+    expect(carouselCards()).toEqual([
+      'Kartoffelklöße nach vorn holen, Schritt 1 von 2',
+      'Apfelrotkohl nach vorn holen, Schritt 1 von 2',
+    ]);
+  });
+
+  test('turned upright, the iPad shows the dock again instead of the carousel', async () => {
+    renderWithProviders(<Harness />);
+    await enterCookingMode();
+    addRecipeViaSearch('rotkohl', 'Apfelrotkohl');
+    expect(document.querySelector('.cooking-mode-split')).toBeInTheDocument();
+
+    setTabletViewport(834, 1194);
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+      jest.advanceTimersByTime(150);
+    });
+
+    expect(document.querySelector('.cooking-mode-active')).toBeInTheDocument();
+    expect(document.querySelector('.cooking-mode-split')).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Weitere Rezepte am Herd' })).toBeNull();
+    expect(screen.getByRole('navigation', { name: 'Rezepte im Hintergrund' })).toBeInTheDocument();
+    await act(async () => {});
+  });
+
+  test('without the flag the iPad keeps its view: no cooking mode button on the picture, no carousel', async () => {
+    renderWithProviders(<Harness user={{ ...flaggedUser, parallelKochen: false }} />);
+    await act(async () => {});
+
+    expect(document.querySelector('.overlay-cooking-mode-static')).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Weitere Rezepte am Herd' })).toBeNull();
   });
 });
