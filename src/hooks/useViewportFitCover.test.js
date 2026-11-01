@@ -5,6 +5,7 @@ import useViewportFitCover, {
   isViewportCoverActive,
   readViewportFit,
   resetViewportCoverForTests,
+  SCROLL_RESET_DELAYS,
   withViewportFit,
 } from './useViewportFitCover';
 
@@ -119,6 +120,77 @@ describe('useViewportFitCover', () => {
     rotate(90);
     expect(document.querySelector('meta[name="viewport"]')).toBeNull();
     expect(isViewportCoverActive()).toBe(false);
+  });
+});
+
+describe('Scroll-Versatz mit cover (am Gerät: scrollX −59, Tipps 59 pt daneben)', () => {
+  let scrollTo;
+
+  function setScroll(x, y = 0) {
+    Object.defineProperty(window, 'scrollX', { configurable: true, value: x });
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: y });
+  }
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    setScroll(0);
+    scrollTo = jest.spyOn(window, 'scrollTo').mockImplementation((x, y) => setScroll(x, y));
+  });
+
+  afterEach(() => {
+    scrollTo.mockRestore();
+    setScroll(0);
+  });
+
+  test('setzt einen Versatz direkt beim Umschalten auf 0, senkrecht bleibt die Position', () => {
+    renderHook(() => useViewportFitCover(true));
+    setScroll(-59, 120);
+    rotate(90);
+    expect(scrollTo).toHaveBeenCalledWith(0, 120);
+    expect(window.scrollX).toBe(0);
+  });
+
+  test('auch wenn iOS den Versatz erst nach dem Drehen setzt (bis nach dem Zoom-Reset)', () => {
+    renderHook(() => useViewportFitCover(true));
+    rotate(90);
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    setScroll(-59);
+    jest.advanceTimersByTime(SCROLL_RESET_DELAYS[1]);
+    expect(window.scrollX).toBe(0);
+
+    // Zoom-Reset in index.html nach 400 + 300 ms
+    setScroll(-59);
+    jest.advanceTimersByTime(Math.max(...SCROLL_RESET_DELAYS));
+    expect(window.scrollX).toBe(0);
+  });
+
+  test('bei scroll und resize, solange cover an ist', () => {
+    renderHook(() => useViewportFitCover(true));
+    rotate(90);
+    jest.runAllTimers();
+
+    setScroll(-59);
+    window.dispatchEvent(new Event('scroll'));
+    expect(window.scrollX).toBe(0);
+
+    setScroll(59);
+    window.dispatchEvent(new Event('resize'));
+    expect(window.scrollX).toBe(0);
+  });
+
+  test('ohne cover wird nichts angefasst', () => {
+    renderHook(() => useViewportFitCover(true));
+    setScroll(-59);
+    window.dispatchEvent(new Event('scroll'));
+    window.dispatchEvent(new Event('resize'));
+    rotate(90);
+    rotate(0);
+    setScroll(-59);
+    jest.runAllTimers();
+    window.dispatchEvent(new Event('scroll'));
+    // Nur der eine Aufruf beim Umschalten auf quer
+    expect(scrollTo).toHaveBeenCalledTimes(1);
   });
 });
 
