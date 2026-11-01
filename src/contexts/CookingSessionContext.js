@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { playAlarmPattern, getAlarmRepeatMs } from '../utils/alarmAudioUtils';
 import { showLocalNotification } from '../utils/localNotification';
+import { PUSH_NOT_ALLOWED, cancelTimerPush, scheduleTimerPush, timerAlarmId } from '../utils/timerPush';
 import CookingAlarmModal from '../components/CookingAlarmModal';
 import UndoSnackbar from '../components/UndoSnackbar';
 
@@ -160,7 +161,9 @@ function writeSavedSession(key, payload) {
   }
 }
 
-function useCookingSessionStore({ enabled, shared, onOpenRecipe, persistForUserId = null, recipes = null }) {
+function useCookingSessionStore({
+  enabled, shared, onOpenRecipe, persistForUserId = null, recipes = null, pushForUserId = null,
+}) {
   const [timers, setTimers] = useState(NO_TIMERS);
   const [alarm, setAlarm] = useState(null);
   const [entries, setEntries] = useState(NO_ENTRIES);
@@ -609,6 +612,43 @@ function useCookingSessionStore({ enabled, shared, onOpenRecipe, persistForUserI
     };
   }, [enabled, running]);
 
+  // Weckruf vom Server (Tech-Check P8): Für jeden laufenden Timer liegt einer bereit, damit eine
+  // Push-Mitteilung kommt, auch wenn die App beim Ablauf pausiert ist (iOS im Hintergrund).
+  // Endet ein Timer anders – gestoppt, oder er klingelt hier in der offenen App –, wird sein
+  // Weckruf gelöscht; der Server wartet dafür kurz über die Endzeit hinaus.
+  const pushAlarmIdsRef = useRef(new Set());
+  useEffect(() => {
+    if (!shared || !pushForUserId) return;
+    const now = Date.now();
+    const wanted = new Map();
+    Object.entries(timers).forEach(([recipeId, steps]) => {
+      Object.entries(steps).forEach(([stepKey, byIndex]) => {
+        Object.entries(byIndex).forEach(([timerIndex, t]) => {
+          if (!t.running || !(t.endTime > now)) return;
+          wanted.set(timerAlarmId(pushForUserId, recipeId, stepKey, timerIndex, t.endTime), t);
+        });
+      });
+    });
+    const known = pushAlarmIdsRef.current;
+    wanted.forEach((t, id) => {
+      if (known.has(id)) return;
+      known.add(id);
+      const label = t.label || '';
+      Promise.resolve(scheduleTimerPush(pushForUserId, id, {
+        dueAt: t.endTime,
+        body: t.recipeTitle ? `${t.recipeTitle}: ${label}` : label,
+      })).then((status) => {
+        // Mitteilungen noch nicht erlaubt (z. B. Abfrage offen): beim nächsten Takt erneut versuchen
+        if (status === PUSH_NOT_ALLOWED) known.delete(id);
+      });
+    });
+    known.forEach((id) => {
+      if (wanted.has(id)) return;
+      known.delete(id);
+      cancelTimerPush(id);
+    });
+  }, [shared, pushForUserId, timers]);
+
   // Takt und Alarm enden mit der Sitzung (Provider bzw. Komponente ohne Provider)
   useEffect(() => () => {
     if (tickRef.current) clearInterval(tickRef.current);
@@ -649,10 +689,16 @@ function useCookingSessionStore({ enabled, shared, onOpenRecipe, persistForUserI
 /**
  * persistForUserId: mit gesetzter Nutzer-ID übersteht die Sitzung einen Neustart (localStorage,
  * höchstens MAX_SAVED_AGE_MS alt). recipes: die sichtbaren Rezepte, aus denen die gespeicherten
- * Rezepte der Sitzung nach dem Start wieder aufgelöst werden.
+ * Rezepte der Sitzung nach dem Start wieder aufgelöst werden. pushForUserId: mit gesetzter
+ * Nutzer-ID kommt zur Endzeit jedes Timers eine Push-Mitteilung vom Server, auch wenn die App
+ * dann pausiert ist (utils/timerPush.js, Tech-Check P8).
  */
-export function CookingSessionProvider({ children, onOpenRecipe, persistForUserId = null, recipes = null }) {
-  const session = useCookingSessionStore({ enabled: true, shared: true, onOpenRecipe, persistForUserId, recipes });
+export function CookingSessionProvider({
+  children, onOpenRecipe, persistForUserId = null, recipes = null, pushForUserId = null,
+}) {
+  const session = useCookingSessionStore({
+    enabled: true, shared: true, onOpenRecipe, persistForUserId, recipes, pushForUserId,
+  });
   const { notice, switchTo } = session;
   return (
     <CookingSessionContext.Provider value={session}>

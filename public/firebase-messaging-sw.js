@@ -74,6 +74,13 @@ function initFirebase(config) {
         tag: notificationId || 'default',
         data: payload.data || {},
       };
+      if (payload.data?.type === 'cooking_timer') {
+        // Wie ein Wecker: bleibt stehen, bis man tippt, meldet sich bei jedem Timer neu und
+        // vibriert (Android; iOS spielt den Mitteilungston des Systems)
+        notificationOptions.requireInteraction = true;
+        notificationOptions.renotify = true;
+        notificationOptions.vibrate = [400, 200, 400, 200, 400];
+      }
       self.registration.showNotification(notificationTitle, notificationOptions);
       if (payload.data?.type === 'import_ready' || payload.data?.type === 'import_failed') {
         appendPushLog('Mitteilung angezeigt (App im Hintergrund)', `Rezept ${payload.data.recipeId || '–'}`);
