@@ -83,4 +83,13 @@ describe('CookingSessionCarousel CSS', () => {
       expect(getRuleBody(recipeDetailCss, '.step-card')).toContain('max-width: 398px;');
     });
   });
+
+  test('liegt in derselben Fläche wie die Schrittspalte, keine zwei Grautöne nebeneinander', () => {
+    expect(getRuleBody(carouselCss, '.cooking-carousel')).toContain('background: var(--color-surface-subtle);');
+    expect(getRuleBody(recipeDetailCss, '.cooking-mode-steps')).toContain('background: var(--color-surface-subtle);');
+    // Die Fläche des ganzen Kochmodus hochkant (dahinter) hat im Light-Theme denselben Wert wie das Token
+    expect(lightTokens).toContain('--color-surface-subtle: #f9f9f9;');
+    expect(getRuleBody(recipeDetailCss, '.recipe-detail-content.cooking-mode-active:not(.cooking-mode-landscape)'))
+      .toContain('background: #f9f9f9;');
+  });
 });

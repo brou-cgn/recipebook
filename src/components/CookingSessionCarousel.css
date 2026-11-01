@@ -11,7 +11,8 @@
   flex-direction: column;
   box-sizing: border-box;
   padding: 12px 16px 16px 20px;
-  background: var(--color-bg);
+  /* Dieselbe Fläche wie die Schrittspalte rechts (RecipeDetail.css), sonst stoßen zwei Grautöne aneinander */
+  background: var(--color-surface-subtle);
   border-right: 1px solid var(--color-border-subtle);
 }
 
