@@ -1,7 +1,7 @@
 # Vorhaben: Parallel kochen (mehrere Rezepte im Hintergrund, Mobile)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 01.11.2026 (PR 16 #3599, Schiene rechts im Grau der Schrittspalte und Lasche nicht mehr gespiegelt, als PR offen; PR 15 #3598, Scroll-Versatz mit `cover` auf 0, als PR offen; PR 1 bis 14 und die Nacharbeiten gemergt, zuletzt #3596 `cover` nur beim Drehen, zuletzt #3592 Schiene gegenüber der Kamera, #3593 Schritte nur per Wischen, #3594 `cover` global und dessen Rücknahme #3595).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 01.11.2026 (PR 17 iPad-Feinschliff als Branch `claude/parallel-kochen-ipad-feinschliff`, PR noch nicht angelegt; Header auf dem iPad quer am Gerät sichtbar, nicht reproduziert, siehe Offen; PR 16 #3599, Schiene rechts im Grau der Schrittspalte und Lasche nicht mehr gespiegelt, als PR offen; PR 15 #3598, Scroll-Versatz mit `cover` auf 0, als PR offen; PR 1 bis 14 und die Nacharbeiten gemergt, zuletzt #3596 `cover` nur beim Drehen, zuletzt #3592 Schiene gegenüber der Kamera, #3593 Schritte nur per Wischen, #3594 `cover` global und dessen Rücknahme #3595).
 
 **Ziel:** Wer mehrere Gerichte gleichzeitig kocht (Beispiel im Entwurf: Rouladen, Rotkohl, Klöße), hält im
 Kochmodus auf dem Handy mehrere Rezepte offen. Rezepte im Hintergrund laufen weiter, samt Timer, und sind mit
@@ -104,6 +104,7 @@ Portionen und der Wake-Lock des Kochmodus liegen noch in `RecipeDetail`.
 | 14 | Schiene ohne Abstand zum Displayrand, nur lokal: `useViewportFitCover` schaltet `viewport-fit=cover` nur synchron im `orientationchange` (Rezeptdetail mit Flag auf dem Handy; quer an, hochkant aus, Rückfall bei `resize`/Zurückkehren hochkant); `env()`-Abstände für Zutaten, Schritte, Sheet, Schiene unten, `.App` und Bottom-Navigation (ohne `cover` 0); Zoom-Reset in `index.html` nimmt nur seinen Zusatz zurück; vorübergehende Diagnose `CookingCoverDiagnostics`. Weiter hinter dem Flag. Tests +21 (zwei Suiten neu); `test:ci` 208 Suites, 4.127 Tests | #3596 gemergt (01.11.2026); im Browser (Chromium, echtes CSS, Abstände des iPhone 15 Pro per CDP, 852 × 393) Layout und Hit-Test geprüft; ob iOS beim Umschalten im `orientationchange` die Tipps richtig zuordnet, nur am Gerät prüfbar |
 | 15 | Scroll-Versatz mit `cover` auf 0 (Befund am Gerät: `scroll -59`, Tipps 59 pt daneben): `resetHorizontalScroll` in `useViewportFitCover` beim Umschalten, zeitversetzt danach und bei `scroll`/`resize`. Tests +4, Diagnose-Tests entfernt; `test:ci` 207 Suites, 4.127 Tests | PR #3598 offen (01.11.2026); am Gerät bestätigt (Drehung 90) |
 | 16 | Schiene rechts im Grau der Schrittspalte, Lasche dort nicht mehr gespiegelt (Entwurf A): Token `--color-surface-subtle` für die Schrittspalte (Light #f9f9f9, Dark #121212), zwei Dark-Regeln weniger in `darkMode.css` (Baseline 1.015 → 1.013), Hex-Baseline `RecipeDetail.css` 150 → 148. Erster Commit `fix:`. Tests: `CookingSessionRail.css.test.js` +1, einer angepasst; `test:ci` 208 Suites, 4.132 Tests | PR #3599 offen (01.11.2026); am Gerät nicht geprüft |
+| 17 | Nacharbeiten nach dem Test am iPad quer (Screenshot 01.11.2026): (1) Abschnittsüberschriften im Zutaten-Sheet (z. B. „Der Vorteig“) ragten beim Durchscrollen links 0,4 rem über die fixierte Zeile „Zutaten für“ hinaus, weil `.ingredient-heading` allgemein `margin-left: -1.5rem` hat, die Liste im Kochmodus aber nur 1.1rem eingerückt ist; jetzt im Kochmodus -1.1rem (hoch und quer, also auch Handy). (2) Karussell links im Grau der Schrittspalte (`--color-surface-subtle`) statt `--color-bg`; vorher stießen #f5f5f5 und #f9f9f9 aneinander (Dark beide #121212). Erster Commit `fix:`. Tests +2 (`RecipeDetail.css.test.js`, `CookingSessionCarousel.css.test.js`, beide ohne den Fix rot); `test:ci` 207 Suites, 4.130 Tests | Branch gepusht, PR nicht angelegt; im Browser (Chromium, gebautes CSS, 1080 × 810, DOM aus den Tests) vorher/nachher geprüft, am Gerät nicht |
 
 Nach jedem PR: Tabelle hier nachziehen. Berührt ein PR einen Tech-Check-Befund (mindestens PR 1: A1),
 das Dashboard nach `CLAUDE.md` aktualisieren.
@@ -304,6 +305,13 @@ rot), in `CookingSessionRail.test.js` +4/-1, in `CookingSessionRail.css.test.js`
   fixiert, der App-Header bleibt sichtbar, und die Schrittkarte ist höchstens 398 px breit. Vorschlag aus dem Entwurfsgespräch:
   hochkant der iPhone-Hochkantmodus 1:1 mit Leiste, über den ganzen Bildschirm. Nicht entschieden. Ebenso offen: Kochmodus auf
   dem iPad quer ohne Flag und am Desktop (gewollt oder Lücke?).
+- **Header auf dem iPad quer sichtbar** (Screenshot 01.11.2026, nach Deploy 1974): Der App-Header lag über dem Kochmodus und
+  verdeckte die Titelzeile rechts (mit dem „+“ zum Dazunehmen) und den Anfang des Karussells. Nicht reproduziert: Mit einem
+  Header-Zustand wie in `App.js` (nicht memoisierter Handler) bleibt `visible` nach Einstieg, Dazunehmen und Tausch `false`
+  (Test), und das gebaute CSS blendet `.header.header-hidden` ab 769 px per `display: none` aus (Chromium, 1080 × 810). Split-Layout
+  und Ausblenden hängen an derselben Bedingung (`cookingMode && showCookingCarousel`). Vermutung, nicht belegt: Das iPad lief
+  mit einem Stand vor #3592 (Service Worker), in dem `transform: none !important` ab 769 px das Ausblenden aufhob. Nächster
+  Schritt: Version im Menü prüfen (v…), App neu laden; bleibt der Header, Diagnose am Gerät.
 - **Karussell am Gerät** (PR 10): Linksswipe auf den breiten Karten, Einrasten beim Scrollen, Pille für fällige Rezepte und die
   Erkennung (iPad mit Magic Keyboard) nicht am Gerät geprüft.
 

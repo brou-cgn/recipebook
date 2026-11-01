@@ -160,3 +160,21 @@ describe('RecipeDetail CSS Querformat: Schritte nur per Wischen', () => {
     expect(css).toMatch(/\.cooking-mode-landscape \.cooking-mode-steps \{[^}]*grid-template-rows: auto minmax\(0, 1fr\);/);
   });
 });
+
+describe('RecipeDetail CSS – Abschnittsüberschriften im Zutaten-Sheet des Kochmodus', () => {
+  const css = fs.readFileSync(path.join(__dirname, 'RecipeDetail.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rule = (selector) => {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = css.match(new RegExp(`(?:^|\\})\\s*${escaped}\\s*\\{([\\s\\S]*?)\\}`, 'm'));
+    return match ? match[1] : '';
+  };
+
+  test('stehen bündig mit der Liste und ragen nicht links über die Zeile „Zutaten für“ hinaus', () => {
+    const indent = (selector) => rule(selector).match(/padding-left:\s*([\d.]+)rem/)[1];
+    const heading = rule('.cooking-mode-active .cooking-mode-ingredients .ingredient-heading').match(/margin-left:\s*-([\d.]+)rem/);
+
+    expect(heading).not.toBeNull();
+    expect(heading[1]).toBe(indent('.cooking-mode-active:not(.cooking-mode-landscape) .cooking-mode-ingredients .ingredients-list'));
+    expect(heading[1]).toBe(indent('.cooking-mode-landscape .cooking-mode-ingredients .ingredients-list'));
+  });
+});

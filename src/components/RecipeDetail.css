@@ -1907,6 +1907,13 @@ button.private-badge-button:active {
   font-size: 1rem;
 }
 
+/* Abschnittsüberschriften (z. B. „Der Vorteig“) bündig mit der Liste: Die allgemeine Regel zieht sie um
+   1.5rem nach links, die Liste im Kochmodus ist aber nur 1.1rem eingerückt. Sonst ragen sie links über die
+   fixierte Zeile „Zutaten für“ hinaus, wenn die Liste darunter durchscrollt (hoch und quer). */
+.cooking-mode-active .cooking-mode-ingredients .ingredient-heading {
+  margin-left: -1.1rem;
+}
+
 
 /* Kochsitzung (Rollen-Flag parallelKochen): Titelzeile über den Schritten, nur Hochformat */
 .cooking-mode-titlebar {
