@@ -5,6 +5,7 @@ import { CookingSessionProvider, useCookingSession } from '../contexts/CookingSe
 
 jest.mock('../utils/alarmAudioUtils', () => ({
   playAlarmPattern: jest.fn(),
+  getAlarmRepeatMs: () => 1000,
 }));
 
 const rouladen = { id: 'rouladen', title: 'Rinderrouladen', steps: ['Klopfen.', 'Anbraten.', { type: 'heading', text: 'Sauce' }, 'Schmoren.'] };

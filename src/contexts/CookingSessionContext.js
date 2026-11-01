@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { playAlarmPattern } from '../utils/alarmAudioUtils';
+import { playAlarmPattern, getAlarmRepeatMs } from '../utils/alarmAudioUtils';
 import CookingAlarmModal from '../components/CookingAlarmModal';
 import UndoSnackbar from '../components/UndoSnackbar';
 
@@ -225,7 +225,7 @@ function useCookingSessionStore({ enabled, shared, onOpenRecipe, persistForUserI
         } catch (_) {
           // ignorieren
         }
-      }, 1000);
+      }, getAlarmRepeatMs(soundKey));
     } catch (_) {
       // Audio API nicht verfügbar – der Dialog bleibt trotzdem sichtbar
     }

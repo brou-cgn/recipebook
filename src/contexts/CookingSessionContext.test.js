@@ -5,6 +5,7 @@ import { playAlarmPattern } from '../utils/alarmAudioUtils';
 
 jest.mock('../utils/alarmAudioUtils', () => ({
   playAlarmPattern: jest.fn(),
+  getAlarmRepeatMs: () => 1000,
 }));
 
 function TimerStarter({ recipeId, recipeTitle, seconds, label }) {

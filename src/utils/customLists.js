@@ -7,6 +7,7 @@ import { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField, collec
 import { normalizeNutritionReferenceId } from './nutritionReferenceUtils';
 import { DEFAULT_PRINT_FORMATS, migrateFormat, validatePrintFormats, PrintFormatValidationError } from './printFormats';
 import { getDefaultButtonIconGroups, reconcileButtonIconGroups, reconcileCuisineTypeGroup, reconcileMealCategoriesGroup, cuisineTypeIconKey } from './buttonIconRows';
+import { ALARM_SOUND_DEFINITIONS, DEFAULT_ALARM_SOUND, normalizeAlarmSoundKey } from './alarmSounds';
 
 export const DEFAULT_CUISINE_TYPES = [
   'Deutsche Küche',
@@ -375,26 +376,22 @@ export function applyTileSizePreference(size) {
 const ALARM_SOUND_KEY = 'alarmSoundPreference';
 
 /** Default alarm sound identifier */
-export const DEFAULT_ALARM_SOUND = 'radar';
+export { DEFAULT_ALARM_SOUND };
 
 /**
  * Available alarm sounds for the cooking-mode timer.
  * Each entry has a `key` (stored in localStorage) and a display `label`.
+ * Die Klänge selbst stehen in `alarmSounds.js`.
  */
-export const ALARM_SOUNDS = [
-  { key: 'radar',   label: 'Radar' },
-  { key: 'chime',   label: 'Glockenspiel' },
-  { key: 'beep',    label: 'Piepton' },
-  { key: 'crystal', label: 'Kristall' },
-  { key: 'alert',   label: 'Alarm' },
-];
+export const ALARM_SOUNDS = ALARM_SOUND_DEFINITIONS.map(({ key, label }) => ({ key, label }));
 
 /**
  * Get the alarm sound preference from localStorage.
- * @returns {string} The stored alarm sound key; defaults to DEFAULT_ALARM_SOUND.
+ * @returns {string} A valid alarm sound key; defaults to DEFAULT_ALARM_SOUND.
  */
 export function getAlarmSoundPreference() {
-  return localStorage.getItem(ALARM_SOUND_KEY) || DEFAULT_ALARM_SOUND;
+  // Alte Schlüssel (bis Oktober 2026) auf den nächstliegenden neuen Ton umsetzen
+  return normalizeAlarmSoundKey(localStorage.getItem(ALARM_SOUND_KEY));
 }
 
 /**
