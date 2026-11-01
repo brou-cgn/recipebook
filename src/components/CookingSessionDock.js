@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useCookingSession, sortByNextDue } from '../contexts/CookingSessionContext';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import useUndoableDelete from '../hooks/useUndoableDelete';
@@ -64,8 +64,34 @@ function DockChip({ entry, status, compact, onSelect, onRemove }) {
   );
 }
 
+/**
+ * Meldet die Höhe der unten liegenden Leiste als CSS-Variable `--cooking-dock-offset`,
+ * damit Hinweise am unteren Rand (UndoSnackbar, z. B. „… läuft im Hintergrund“) oberhalb
+ * der Leiste erscheinen statt sie zu verdecken. Die Höhe schwankt (Umbruch ab 4 Rezepten,
+ * Safe-Area), deshalb wird gemessen statt fest verdrahtet.
+ */
+function useDockOffset(ref, active) {
+  useEffect(() => {
+    const node = ref.current;
+    if (!active || !node) return undefined;
+    const root = document.documentElement;
+    const update = () => root.style.setProperty('--cooking-dock-offset', `${node.offsetHeight}px`);
+    update();
+    let observer = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(update);
+      observer.observe(node);
+    }
+    return () => {
+      if (observer) observer.disconnect();
+      root.style.removeProperty('--cooking-dock-offset');
+    };
+  }, [ref, active]);
+}
+
 function CookingSessionDock({ placement = 'inline', currentRecipeId = null, onSelect }) {
   const session = useCookingSession();
+  const navRef = useRef(null);
   const { banners, pendingKeys, scheduleDelete, undoDelete } = useUndoableDelete();
   const entries = sortByNextDue(
     session.sessionRecipes.filter((e) => e.recipe.id !== currentRecipeId && !pendingKeys.has(e.recipe.id)),
@@ -83,11 +109,12 @@ function CookingSessionDock({ placement = 'inline', currentRecipeId = null, onSe
     onUndo: () => {},
   });
   const lastBanner = banners[banners.length - 1];
+  useDockOffset(navRef, visible && placement === 'inline');
 
   return (
     <>
       {visible && (
-        <nav className={`cooking-dock cooking-dock--${placement} cooking-dock--${density}`} aria-label="Rezepte im Hintergrund">
+        <nav ref={navRef} className={`cooking-dock cooking-dock--${placement} cooking-dock--${density}`} aria-label="Rezepte im Hintergrund">
           <ul className="cooking-dock-list">
             {entries.map((entry) => (
               <DockChip
