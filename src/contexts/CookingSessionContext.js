@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { playAlarmPattern, getAlarmRepeatMs } from '../utils/alarmAudioUtils';
+import { showLocalNotification } from '../utils/localNotification';
 import CookingAlarmModal from '../components/CookingAlarmModal';
 import UndoSnackbar from '../components/UndoSnackbar';
 
@@ -238,16 +239,23 @@ function useCookingSessionStore({ enabled, shared, onOpenRecipe, persistForUserI
   const startAlarm = useCallback((timer) => {
     const item = { recipeTitle: timer.recipeTitle || '', label: timer.label || '' };
     setAlarm((prev) => ({ items: [...(prev ? prev.items : []), item] }));
-    if ('Notification' in window && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
-      new Notification('Timer abgelaufen!', {
+    // Nur ein Ton gleichzeitig; weitere abgelaufene Timer stehen mit im Dialog
+    if (!alarmActiveRef.current) {
+      alarmActiveRef.current = true;
+      playAlarmLoop(timer.soundKey);
+    }
+    // Im Hintergrund zusätzlich eine Mitteilung – nach dem Ton und so, dass sie ihn nie verhindert.
+    // Früher `new Notification()`: Chrome auf Android wirft dabei, der Ton startete dann gar nicht.
+    if (document.visibilityState !== 'visible') {
+      showLocalNotification('Timer abgelaufen!', {
         body: item.recipeTitle ? `${item.recipeTitle}: ${item.label}` : item.label,
-        icon: '/favicon.ico',
+        icon: '/logo192.png',
+        badge: '/favicon.ico',
+        tag: 'cooking-timer',
+        renotify: true,
+        data: { type: 'cooking_timer' },
       });
     }
-    // Nur ein Ton gleichzeitig; weitere abgelaufene Timer stehen mit im Dialog
-    if (alarmActiveRef.current) return;
-    alarmActiveRef.current = true;
-    playAlarmLoop(timer.soundKey);
   }, [playAlarmLoop]);
 
   const stopAlarm = useCallback(() => {

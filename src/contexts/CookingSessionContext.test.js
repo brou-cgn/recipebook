@@ -106,6 +106,55 @@ describe('CookingSessionContext', () => {
     expect(pattern.stop).toHaveBeenCalledTimes(1);
   });
 
+  describe('in the background', () => {
+    const OriginalNotification = window.Notification;
+    let showNotification;
+
+    beforeEach(() => {
+      // Wie Chrome auf Android: new Notification() ist verboten, nur der Service Worker darf
+      function AndroidNotification() {
+        throw new TypeError("Failed to construct 'Notification': Illegal constructor.");
+      }
+      AndroidNotification.permission = 'granted';
+      window.Notification = AndroidNotification;
+      showNotification = jest.fn(() => Promise.resolve());
+      Object.defineProperty(navigator, 'serviceWorker', {
+        configurable: true,
+        value: {
+          getRegistration: jest.fn(() => Promise.resolve({ showNotification })),
+          ready: Promise.resolve({ showNotification }),
+        },
+      });
+      Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    });
+
+    afterEach(() => {
+      // jsdom kennt kein Notification: die Eigenschaft entfernen, nicht auf undefined setzen
+      if (OriginalNotification) window.Notification = OriginalNotification;
+      else delete window.Notification;
+      delete navigator.serviceWorker;
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+    });
+
+    test('still rings when the browser refuses new Notification() (Android Chrome)', () => {
+      renderTwoRecipes();
+      fireEvent.click(screen.getByText('Start Apfelrotkohl'));
+      act(() => { jest.advanceTimersByTime(30000); });
+      expect(playAlarmPattern).toHaveBeenCalled();
+    });
+
+    test('shows the notification through the service worker', async () => {
+      renderTwoRecipes();
+      fireEvent.click(screen.getByText('Start Apfelrotkohl'));
+      await act(async () => { jest.advanceTimersByTime(30000); });
+      expect(showNotification).toHaveBeenCalledWith('Timer abgelaufen!', expect.objectContaining({
+        body: 'Apfelrotkohl: 40 Minuten',
+        tag: 'cooking-timer',
+        data: expect.objectContaining({ type: 'cooking_timer' }),
+      }));
+    });
+  });
+
   test('keeps the screen awake while a timer runs and releases it afterwards', async () => {
     renderTwoRecipes();
     fireEvent.click(screen.getByText('Start Apfelrotkohl'));
