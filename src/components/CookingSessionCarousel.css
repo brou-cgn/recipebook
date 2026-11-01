@@ -1,6 +1,6 @@
 /* Karussell der Kochsitzung im iPad-Querformat (CookingSessionCarousel, Entwurf I4).
-   Farben nur über Tokens, Light und Dark kommen aus tokens.css: Die Spalte liegt im
-   App-Hintergrund, die Karten in der Farbe der Schrittkarte (--color-surface-card).
+   Farben nur über Tokens, Light und Dark kommen aus tokens.css: Die Spalte liegt in der
+   Fläche der Schrittspalte (--color-surface-subtle), die Karten in der Farbe der Schrittkarte (--color-surface-card).
    Bald fällig und abgelaufen: orange wie in Leiste und Schiene. Die Lage in der linken
    Spalte regelt RecipeDetail.css (.cooking-mode-split). */
 .cooking-carousel {
@@ -11,9 +11,9 @@
   flex-direction: column;
   box-sizing: border-box;
   padding: 12px 16px 16px 20px;
-  /* Dieselbe Fläche wie die Schrittspalte rechts (RecipeDetail.css), sonst stoßen zwei Grautöne aneinander */
+  /* Dieselbe Fläche wie die Schrittspalte rechts und der Streifen unter der Statusleiste (RecipeDetail.css),
+     sonst stoßen zwei Grautöne aneinander. Ohne Trennlinie zur Schrittspalte: Die Spalten trennt der Abstand. */
   background: var(--color-surface-subtle);
-  border-right: 1px solid var(--color-border-subtle);
 }
 
 /* Auf einer Höhe mit der Titelzeile rechts (12 px Abstand, 44-px-Knopf) */

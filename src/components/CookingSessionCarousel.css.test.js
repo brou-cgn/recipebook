@@ -86,6 +86,8 @@ describe('CookingSessionCarousel CSS', () => {
 
   test('liegt in derselben Fläche wie die Schrittspalte, keine zwei Grautöne nebeneinander', () => {
     expect(getRuleBody(carouselCss, '.cooking-carousel')).toContain('background: var(--color-surface-subtle);');
+    // Keine Linie in der Displaymitte zwischen Karussell und Rezept vorn
+    expect(getRuleBody(carouselCss, '.cooking-carousel')).not.toMatch(/border(-right)?:/);
     expect(getRuleBody(recipeDetailCss, '.cooking-mode-steps')).toContain('background: var(--color-surface-subtle);');
     // Die Fläche des ganzen Kochmodus hochkant (dahinter) hat im Light-Theme denselben Wert wie das Token
     expect(lightTokens).toContain('--color-surface-subtle: #f9f9f9;');
