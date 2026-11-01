@@ -505,6 +505,32 @@ service cloud.firestore {
                     || isEditOrAdmin();
     }
 
+    // Weckruf für einen Kochmodus-Timer (Tech-Check P8): Die App legt ihn beim Start an,
+    // die Function sendDueCookingTimerAlarms schickt zur Endzeit eine Push-Mitteilung an
+    // das Gerät mit diesem Token, aber nur, wenn er in users/{uid}.timerPushTokens steht.
+    // Die ID beginnt mit der uid, damit niemand die ID eines fremden Weckrufs belegen kann.
+    // Lesen braucht niemand; Löschen auch für schon verschickte (dann nicht mehr vorhandene)
+    // Weckrufe, weil die App nicht weiß, ob der Server schneller war.
+    match /cookingTimerAlarms/{alarmId} {
+      allow create: if isMember()
+                    && alarmId.matches(request.auth.uid + '_.+')
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.keys().hasOnly(['uid', 'token', 'dueAt', 'body', 'createdAt'])
+                    && request.resource.data.keys().hasAll(['uid', 'token', 'dueAt', 'body'])
+                    && request.resource.data.token is string
+                    && request.resource.data.token.size() > 0
+                    && request.resource.data.token.size() <= 4096
+                    && request.resource.data.body is string
+                    && request.resource.data.body.size() <= 200
+                    && request.resource.data.dueAt is timestamp
+                    && request.resource.data.dueAt < request.time + duration.value(24, 'h')
+                    && (!('createdAt' in request.resource.data)
+                        || request.resource.data.createdAt is timestamp);
+      allow delete: if isAuthenticated()
+                    && (resource == null || resource.data.uid == request.auth.uid);
+      allow read, update: if false;
+    }
+
     // Follow (Vorhaben docs/vorhaben/follow.md): Anfragen und Antworten laufen
     // ausschließlich über die Callables requestFollow/respondFollow (Admin SDK).
     // Lesen dürfen nur die Beteiligten; löschen beide Seiten (Anfrage zurückziehen,

@@ -41,7 +41,19 @@ function makeCaches() {
   return { store, caches: { open: () => Promise.resolve(cache) } };
 }
 
-function loadServiceWorker(windowClients, { caches } = {}) {
+// Firebase Messaging im Worker, soweit er es nutzt; hält den Handler von onBackgroundMessage fest
+function makeFirebase() {
+  const handlers = {};
+  const firebase = {
+    apps: [],
+    initializeApp: () => {},
+    app: () => ({ options: {} }),
+    messaging: () => ({ onBackgroundMessage: (fn) => { handlers.background = fn; } }),
+  };
+  return { firebase, handlers };
+}
+
+function loadServiceWorker(windowClients, { caches, firebase } = {}) {
   const listeners = {};
   const clients = {
     matchAll: jest.fn(() => Promise.resolve(windowClients)),
@@ -61,6 +73,7 @@ function loadServiceWorker(windowClients, { caches } = {}) {
     console: { warn: () => {}, error: () => {} },
     setTimeout,
     ...(caches ? { caches, Response: FakeResponse } : {}),
+    ...(firebase ? { firebase } : {}),
   });
   return { listeners, clients, self };
 }
@@ -87,6 +100,41 @@ async function click(listeners, data) {
   });
   await pending;
 }
+
+describe('Mitteilung, während die App im Hintergrund ist', () => {
+  test('Timer abgelaufen: bleibt stehen, meldet sich neu und vibriert', () => {
+    const { firebase, handlers } = makeFirebase();
+    const { self } = loadServiceWorker([], { firebase });
+
+    handlers.background({
+      data: {
+        type: 'cooking_timer',
+        title: 'Timer abgelaufen!',
+        body: 'Apfelrotkohl: 40 Minuten',
+        notificationId: 'timer-a1',
+      },
+    });
+
+    expect(self.registration.showNotification).toHaveBeenCalledWith('Timer abgelaufen!', expect.objectContaining({
+      body: 'Apfelrotkohl: 40 Minuten',
+      tag: 'timer-a1',
+      requireInteraction: true,
+      renotify: true,
+      vibrate: [400, 200, 400, 200, 400],
+    }));
+  });
+
+  test('andere Mitteilungen bleiben, wie sie waren', () => {
+    const { firebase, handlers } = makeFirebase();
+    const { self } = loadServiceWorker([], { firebase });
+
+    handlers.background({ data: { type: 'follow_request', title: 'Neue Anfrage', notificationId: 'f1' } });
+
+    const [, options] = self.registration.showNotification.mock.calls[0];
+    expect(options.requireInteraction).toBeUndefined();
+    expect(options.vibrate).toBeUndefined();
+  });
+});
 
 describe('notificationclick', () => {
   test('Import fertig, App läuft: Rezept-ID an die Seite, kein Neuladen', async () => {

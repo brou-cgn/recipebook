@@ -63,6 +63,7 @@ const EXPECTED_EXPORTS = [
   'scanRecipesWithAI',
   'scrapeInstagramReel',
   'scrapeInstagramReelShortcut',
+  'sendDueCookingTimerAlarms',
   'sendGroupInvitationEmail',
   'setUserPassword',
   'setWebImportPin',
