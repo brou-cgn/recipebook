@@ -92,6 +92,20 @@ describe('CookingSessionContext', () => {
     expect(playAlarmPattern.mock.calls.length).toBe(callsAfterAlarm + 1);
   });
 
+  test('OK silences the ringing pattern at once instead of letting it ring out', () => {
+    const pattern = { stop: jest.fn() };
+    playAlarmPattern.mockReturnValue(pattern);
+    renderTwoRecipes();
+    fireEvent.click(screen.getByText('Start Apfelrotkohl'));
+
+    act(() => { jest.advanceTimersByTime(30000); });
+    expect(playAlarmPattern).toHaveBeenCalled();
+    expect(pattern.stop).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText('OK'));
+    expect(pattern.stop).toHaveBeenCalledTimes(1);
+  });
+
   test('keeps the screen awake while a timer runs and releases it afterwards', async () => {
     renderTwoRecipes();
     fireEvent.click(screen.getByText('Start Apfelrotkohl'));

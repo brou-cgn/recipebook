@@ -171,6 +171,8 @@ function useCookingSessionStore({ enabled, shared, onOpenRecipe, persistForUserI
   const syncRef = useRef(null);
   const alarmActiveRef = useRef(false);
   const alarmIntervalRef = useRef(null);
+  // Das gerade klingende Muster, damit „OK“ es sofort abbrechen kann
+  const alarmPatternRef = useRef(null);
   const alarmCtxRef = useRef(null);
   // Rezepte, die jemand ausdrücklich herausgenommen hat (beenden, wegwischen): nicht wieder automatisch parken
   const leftIdsRef = useRef(new Set());
@@ -214,14 +216,16 @@ function useCookingSessionStore({ enabled, shared, onOpenRecipe, persistForUserI
         await ctx.resume();
       }
       if (!alarmActiveRef.current) return;
-      playAlarmPattern(ctx, soundKey);
+      alarmPatternRef.current = playAlarmPattern(ctx, soundKey);
       // Wiederholen, bis OK gedrückt wird
       alarmIntervalRef.current = setInterval(async () => {
         try {
           if (ctx.state === 'suspended') {
             await ctx.resume();
           }
-          playAlarmPattern(ctx, soundKey);
+          // Während des Wartens kann OK gedrückt worden sein
+          if (!alarmActiveRef.current) return;
+          alarmPatternRef.current = playAlarmPattern(ctx, soundKey);
         } catch (_) {
           // ignorieren
         }
@@ -251,6 +255,11 @@ function useCookingSessionStore({ enabled, shared, onOpenRecipe, persistForUserI
     if (alarmIntervalRef.current) {
       clearInterval(alarmIntervalRef.current);
       alarmIntervalRef.current = null;
+    }
+    // Den gerade klingenden Ton sofort ausblenden, nicht erst ausklingen lassen
+    if (alarmPatternRef.current) {
+      alarmPatternRef.current.stop();
+      alarmPatternRef.current = null;
     }
     // Context nicht schließen, sondern behalten: stabiler, als bei jedem Alarm einen neuen anzulegen.
     setAlarm(null);
