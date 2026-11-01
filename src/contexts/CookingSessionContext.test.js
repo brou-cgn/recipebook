@@ -401,6 +401,39 @@ describe('CookingSessionContext – several recipes', () => {
     expect(session.getCookingState('kloesse')).toMatchObject({ stepIndex: 2 });
   });
 
+  test('swapWith keeps the order of the session: the recipe in front parks at its own place', () => {
+    renderSession();
+    act(() => { session.addRecipe({ recipe: rouladen, stepIndex: 0, servingMultiplier: 1 }, rotkohl); });
+    act(() => { session.addRecipe({ recipe: rotkohl, stepIndex: 0, servingMultiplier: 1 }, kloesse); });
+
+    act(() => { session.swapWith({ recipe: kloesse, stepIndex: 1, servingMultiplier: 1 }, 'rouladen'); });
+
+    expect(session.sessionRecipeIds).toEqual(['rouladen', 'rotkohl', 'kloesse']);
+  });
+
+  test('swapWith in place: the recipe in front takes the place of the chosen one (carousel, I4)', () => {
+    const onOpenRecipe = renderSession();
+    act(() => { session.addRecipe({ recipe: rouladen, stepIndex: 0, servingMultiplier: 1 }, rotkohl); });
+    act(() => { session.addRecipe({ recipe: rotkohl, stepIndex: 0, servingMultiplier: 1 }, kloesse); });
+
+    // Klöße vorn, Rouladen gewählt: Klöße übernehmen den Platz der Rouladen, Rotkohl bleibt stehen
+    act(() => { session.swapWith({ recipe: kloesse, stepIndex: 1, servingMultiplier: 2 }, 'rouladen', { inPlace: true }); });
+
+    expect(onOpenRecipe).toHaveBeenLastCalledWith(rouladen, { isNew: false });
+    expect(session.sessionRecipeIds).toEqual(['kloesse', 'rotkohl', 'rouladen']);
+    expect(session.getCookingState('kloesse')).toMatchObject({ stepIndex: 1, servingMultiplier: 2 });
+  });
+
+  test('swapWith in place parks a recipe in front that was not in the session yet at the chosen place', () => {
+    renderSession();
+    act(() => { session.addRecipe({ recipe: rouladen, stepIndex: 0, servingMultiplier: 1 }, rotkohl); });
+
+    act(() => { session.swapWith({ recipe: kloesse, stepIndex: 2, servingMultiplier: 1 }, 'rouladen', { inPlace: true }); });
+
+    expect(session.sessionRecipeIds).toEqual(['kloesse', 'rotkohl', 'rouladen']);
+    expect(session.getCookingState('kloesse')).toMatchObject({ stepIndex: 2 });
+  });
+
   test('removeFromSession takes a recipe out without opening another one', () => {
     const onOpenRecipe = renderSession();
     act(() => { session.addRecipe({ recipe: rouladen, stepIndex: 0, servingMultiplier: 1 }, rotkohl); });

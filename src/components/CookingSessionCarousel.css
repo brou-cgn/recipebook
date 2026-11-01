@@ -1,0 +1,373 @@
+/* Karussell der Kochsitzung im iPad-Querformat (CookingSessionCarousel, Entwurf I4).
+   Farben nur über Tokens, Light und Dark kommen aus tokens.css: Die Spalte liegt im
+   App-Hintergrund, die Karten in der Farbe der Schrittkarte (--color-surface-card).
+   Bald fällig und abgelaufen: orange wie in Leiste und Schiene. Die Lage in der linken
+   Spalte regelt RecipeDetail.css (.cooking-mode-split). */
+.cooking-carousel {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 12px 16px 16px 20px;
+  background: var(--color-bg);
+  border-right: 1px solid var(--color-border-subtle);
+}
+
+/* Auf einer Höhe mit der Titelzeile rechts (12 px Abstand, 44-px-Knopf) */
+.cooking-carousel-heading {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  margin: 0 0 8px 4px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* Ohne weitere Rezepte: Hinweis und „Rezept dazunehmen“ in einer gestrichelten Fläche,
+   so groß wie eine Karte (die Liste darunter ist dann leer) */
+.cooking-carousel-empty {
+  flex: 0 0 calc((100% - 52px - 12px) / 2);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  box-sizing: border-box;
+  padding: 24px;
+  border: 2px dashed var(--color-border);
+  border-radius: 20px;
+}
+
+.cooking-carousel-empty-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-text-strong);
+}
+
+.cooking-carousel-empty-text {
+  margin: 0 0 8px;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+
+.cooking-carousel-empty-add {
+  min-height: 48px;
+  padding: 0 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  background: var(--color-surface);
+  color: var(--color-brand);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cooking-carousel-empty-add:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Senkrechtes Karussell: scrollt und rastet je Karte ein */
+.cooking-carousel-list {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-snap-type: y mandatory;
+  list-style: none;
+  scrollbar-width: none;
+}
+
+.cooking-carousel-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* Bis zu zwei Karten: je die halbe Höhe, der Schritt hat viel Platz */
+.cooking-carousel-item {
+  position: relative;
+  flex: 0 0 calc((100% - 12px) / 2);
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 20px;
+  scroll-snap-align: start;
+}
+
+/* Deckend, damit die rote Swipe-Fläche dahinter erst beim Wischen sichtbar wird */
+.cooking-carousel-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 18px 20px 24px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: inherit;
+  background: var(--color-surface-card);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cooking-carousel-card:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+/* Bald fällig oder abgelaufen: oranger Rahmen (innen verstärkt, damit nichts verrutscht) */
+.cooking-carousel-item--urgent .cooking-carousel-card {
+  border-color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+/* Nach dem Linksswipe: rote Fläche mit Papierkorb sichtbar und antippbar */
+.cooking-carousel-item.swipe-delete-active .swipe-delete-background {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.cooking-carousel-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.cooking-carousel-thumb {
+  flex: 0 0 52px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--color-surface-raised);
+}
+
+/* Ohne Rezeptbild: Anfangsbuchstabe statt leerer Kreis */
+.cooking-carousel-thumb--initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cooking-carousel-item--urgent .cooking-carousel-head .cooking-carousel-thumb {
+  box-shadow: 0 0 0 2.5px var(--color-accent);
+}
+
+.cooking-carousel-titles {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cooking-carousel-name {
+  overflow: hidden;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--color-text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cooking-carousel-step-number {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cooking-carousel-status {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.cooking-carousel-status--timer {
+  background: var(--color-accent-tint);
+  color: var(--color-brand);
+}
+
+.cooking-carousel-item--urgent .cooking-carousel-status {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.cooking-carousel-clock {
+  flex-shrink: 0;
+}
+
+/* Fortschritt wie die Balken über der Schrittkarte, nur schmaler */
+.cooking-carousel-steps {
+  display: flex;
+  gap: 4px;
+}
+
+.cooking-carousel-steps-dot {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+}
+
+.cooking-carousel-steps-dot--active {
+  background: var(--color-brand);
+}
+
+/* Der Schritt, an dem das Rezept steht: groß genug, um ihn vom Herd aus zu lesen */
+.cooking-carousel-step {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  overflow: hidden;
+  font-size: clamp(1.25rem, 3.1vh, 1.625rem);
+  font-size: clamp(1.25rem, 3.1dvh, 1.625rem);
+  font-weight: 600;
+  line-height: 1.32;
+  color: var(--color-text);
+}
+
+/* Restzeit des Timers am unteren Rand, wie bei der Schrittkarte */
+.cooking-carousel-timer-bar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 5px;
+  background: var(--color-border-subtle);
+}
+
+.cooking-carousel-timer-fill {
+  display: block;
+  height: 100%;
+  background: var(--color-brand);
+  transition: width 1s linear;
+}
+
+.cooking-carousel-item--urgent .cooking-carousel-timer-fill {
+  background: var(--color-accent);
+}
+
+/* Ab drei Karten kompakt: drei passen ganz, die vierte schaut unten heraus */
+.cooking-carousel--compact .cooking-carousel-item {
+  flex-basis: calc((100% - 3 * 12px) / 3.25);
+  border-radius: 18px;
+}
+
+.cooking-carousel--compact .cooking-carousel-card {
+  gap: 10px;
+  padding: 14px 18px 20px;
+}
+
+.cooking-carousel--compact .cooking-carousel-thumb {
+  flex-basis: 40px;
+  width: 40px;
+  height: 40px;
+}
+
+.cooking-carousel--compact .cooking-carousel-name {
+  font-size: 18px;
+}
+
+.cooking-carousel--compact .cooking-carousel-step-number {
+  font-size: 13px;
+}
+
+.cooking-carousel--compact .cooking-carousel-status {
+  padding: 4px 10px;
+  font-size: 16px;
+}
+
+.cooking-carousel--compact .cooking-carousel-step {
+  -webkit-line-clamp: 3;
+  font-size: clamp(1.125rem, 2.5vh, 1.3125rem);
+  font-size: clamp(1.125rem, 2.5dvh, 1.3125rem);
+}
+
+/* Fälliges Rezept außerhalb des sichtbaren Bereichs: Pille am Rand, auf dessen Seite es liegt */
+.cooking-carousel-jump {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 48px);
+  height: 48px;
+  box-sizing: border-box;
+  padding: 0 18px 0 7px;
+  border: none;
+  border-radius: 24px;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cooking-carousel-jump--up {
+  top: 72px;
+  bottom: auto;
+}
+
+.cooking-carousel-jump:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.cooking-carousel-jump .cooking-carousel-thumb {
+  flex-basis: 34px;
+  width: 34px;
+  height: 34px;
+}
+
+.cooking-carousel-jump-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cooking-carousel-timer-fill {
+    transition: none;
+  }
+}

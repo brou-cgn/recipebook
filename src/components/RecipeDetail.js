@@ -42,6 +42,8 @@ import CookingAddRecipeButton from './CookingAddRecipeButton';
 import CookingAddRecipeSheet from './CookingAddRecipeSheet';
 import CookingSessionDock from './CookingSessionDock';
 import CookingSessionRail from './CookingSessionRail';
+import CookingSessionCarousel from './CookingSessionCarousel';
+import useTabletLandscape from '../hooks/useTabletLandscape';
 import { getMenuRecipeIds } from '../utils/menuSections';
 import RecipeRating from './RecipeRating';
 import CookDateModal from './CookDateModal';
@@ -217,6 +219,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const activeTimers = cookingSession.getTimers(timerRecipeId);
   // Mehrere Rezepte parallel kochen (Rollen-Flag parallelKochen): nur mit einer Sitzung, die Rezepte öffnen kann
   const parallelCookingEnabled = Boolean(currentUser?.parallelKochen) && !isSharedView && cookingSession.canOpenRecipes;
+  // Läuft ein anderes Rezept der Sitzung im Hintergrund? Dann die Leiste (Hochformat; auf dem iPad quer das Karussell)
+  const hasParkedRecipes = parallelCookingEnabled
+    && cookingSession.sessionRecipes.some((entry) => entry.recipe.id !== selectedRecipe?.id);
+  // iPad im Querformat (Entwurf I4): links das Karussell mit den weiteren Rezepten, rechts der Kochmodus
+  // wie im Hochformat. Schon mit dem ersten Rezept, damit nichts springt, wenn das zweite dazukommt.
+  const isTabletLandscape = useTabletLandscape();
+  const showCookingCarousel = parallelCookingEnabled && isTabletLandscape && !isMobileLandscape;
   const [showAddRecipeSheet, setShowAddRecipeSheet] = useState(false);
   // Einrichtbares Icon des Knopfs „Rezept dazunehmen“ (Button-Icon cookingAddRecipe), abgeleitet statt eigener State
   const cookingAddRecipeIcon = getEffectiveIcon(allButtonIcons, 'cookingAddRecipe', isDarkMode) || defaultIcon('potPlus', isDarkMode);
@@ -528,16 +537,17 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   }, [selectedRecipe.images, selectedRecipe.image, carouselIndex, categoryImageSet]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Hide the app header in mobile landscape and in cooking mode on phones/tablets to maximize cooking space
+  // (auch auf dem iPad quer mit Karussell: die zwei Spalten füllen den ganzen Bildschirm)
   useEffect(() => {
     if (!onHeaderVisibilityChange) return;
 
-    onHeaderVisibilityChange(!(isMobileLandscape || (cookingMode && (isMobile || isTablet))));
+    onHeaderVisibilityChange(!(isMobileLandscape || (cookingMode && (isMobile || isTablet || showCookingCarousel))));
 
     return () => {
       // Show header again when leaving detail view
       onHeaderVisibilityChange(true);
     };
-  }, [isMobileLandscape, cookingMode, isMobile, isTablet, onHeaderVisibilityChange]);
+  }, [isMobileLandscape, cookingMode, isMobile, isTablet, showCookingCarousel, onHeaderVisibilityChange]);
 
   // Cooking mode: Wake Lock API integration
   useEffect(() => {
@@ -1392,13 +1402,19 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
   // Weiteres Rezept dazunehmen: dieses parkt mit Schritt und Portionen, das gewählte öffnet im Kochmodus
   // Rezept-Leiste unten im Kochmodus, sobald ein anderes Rezept der Sitzung im Hintergrund läuft
-  const showCookingDock = parallelCookingEnabled && !isMobileLandscape
-    && cookingSession.sessionRecipes.some((entry) => entry.recipe.id !== recipe.id);
+  // (auf dem iPad quer übernimmt das Karussell ihre Aufgabe)
+  const showCookingDock = hasParkedRecipes && !isMobileLandscape && !showCookingCarousel;
   // Im Querformat statt Leiste und Titelzeile: die Rezept-Schiene am linken Rand (Entwurf Q2), immer mit „+“
   const showCookingRail = parallelCookingEnabled && isMobileLandscape;
   const swapWithSessionRecipe = (entry) => cookingSession.swapWith(
     { recipe, stepIndex: currentStepIndex, servingMultiplier },
     entry.recipe.id
+  );
+  // Karussell: Dieses Rezept übernimmt den Platz des gewählten, die übrigen Karten bleiben stehen
+  const swapInPlaceWithSessionRecipe = (entry) => cookingSession.swapWith(
+    { recipe, stepIndex: currentStepIndex, servingMultiplier },
+    entry.recipe.id,
+    { inPlace: true }
   );
 
   const handleAddRecipeToSession = (nextRecipe) => {
@@ -1806,7 +1822,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         </div>
       )}
 
-      <div className={`recipe-detail-content ${cookingMode ? 'cooking-mode-active' : ''} ${cookingMode && isMobileLandscape ? 'cooking-mode-landscape' : ''}${cookingMode && showCookingDock ? ' cooking-mode-has-dock' : ''}${cookingMode && showCookingRail ? ' cooking-mode-has-rail' : ''}`} ref={contentRef}>
+      <div className={`recipe-detail-content ${cookingMode ? 'cooking-mode-active' : ''} ${cookingMode && isMobileLandscape ? 'cooking-mode-landscape' : ''}${cookingMode && showCookingDock ? ' cooking-mode-has-dock' : ''}${cookingMode && showCookingRail ? ' cooking-mode-has-rail' : ''}${cookingMode && showCookingCarousel ? ' cooking-mode-split' : ''}`} ref={contentRef}>
         {cookingMode ? (
           // Cooking mode layout
           <>
@@ -1831,6 +1847,15 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 onAdd={() => setShowAddRecipeSheet(true)}
                 addIcon={cookingAddRecipeIcon}
                 addIconLoaded={buttonIconsLoaded}
+              />
+            )}
+
+            {/* iPad quer (Entwurf I4): weitere Rezepte als Karussell in der linken Spalte, mit ihrem aktuellen Schritt */}
+            {showCookingCarousel && (
+              <CookingSessionCarousel
+                currentRecipeId={recipe.id}
+                onSelect={swapInPlaceWithSessionRecipe}
+                onAdd={() => setShowAddRecipeSheet(true)}
               />
             )}
 
@@ -2080,7 +2105,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       </div>
                     </>
                   )}
-                  {(isMobile || isTablet || isMobileLandscape) && (
+                  {/* Auf dem iPad quer gibt es sonst keinen Einstieg in den Kochmodus (Desktop-Ansicht ab 769 px);
+                      mit dem Flag dort nur der Kochmodus-Knopf, Schließen steht in der Kopfzeile */}
+                  {(isMobile || isTablet || isMobileLandscape || showCookingCarousel) && (
                     <div className={`image-overlay-actions${categoryImageSetLoaded ? '' : ' image-overlay-actions--hidden'}`}>
                       <div 
                         className="overlay-cooking-mode-static" 
@@ -2104,7 +2131,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                             : <span>{icon}</span>;
                         })()}
                       </div>
-                      <button 
+                      {(isMobile || isTablet || isMobileLandscape) && (
+                      <button
                         className="overlay-back-button"
                         onClick={handleBackFromLinkedRecipe}
                         title="Zurück"
@@ -2121,6 +2149,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                             : icon;
                         })()}
                       </button>
+                      )}
                     </div>
                   )}
                 </div>
