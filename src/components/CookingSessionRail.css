@@ -1,7 +1,8 @@
 /* Rezept-Schiene der Kochsitzung im Querformat (CookingSessionRail, Entwurf Q2).
-   Sie steht gegenüber der Kamera (cooking-rail--left bzw. --right), innerhalb der Sicherheitsabstände
-   von iOS (ein Umschalten auf viewport-fit=cover zur Laufzeit übernimmt iOS nur halb: versetzte
-   Touch-Bereiche, die Schiene ließ sich nicht mehr antippen).
+   Sie steht gegenüber der Kamera (cooking-rail--left bzw. --right) und reicht dort bis an den
+   Displayrand: Beim Drehen ins Querformat schaltet useViewportFitCover viewport-fit=cover ein, Zutaten
+   und Schritte halten dann die Kameraseite frei (RecipeDetail.css), unten bleibt die Home-Leiste frei.
+   Ohne cover (quer geöffnet ohne Drehen) steht sie innerhalb der Abstände von iOS.
    Farben nur über Tokens, Light und Dark kommen aus tokens.css: Die Schiene liegt im
    App-Hintergrund, das Rezept vorn als Lasche in der Farbe der Zutatenspalte
    (--color-surface-card, Light weiß, Dark wie deren Hintergrund). Links geht sie in die
@@ -14,7 +15,7 @@
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  padding: 10px 0 12px 6px;
+  padding: 10px 0 max(12px, env(safe-area-inset-bottom, 0px)) 6px;
   background: var(--color-bg);
 }
 
@@ -177,7 +178,7 @@
 }
 
 /* „+“ wie die Kreise so groß wie die FAB-Buttons mobil. Fest gesetzt, weil deren Regel nur bis
-   768 px Breite greift und ein Handy quer breiter sein kann (iPhone 15 Pro Max: 874 px);
+   768 px Breite greift und ein Handy quer breiter ist (iPhone 15 mit viewport-fit=cover: 852 px);
    deckend, weil er in der Schiene nicht über Inhalt schwebt. */
 .cooking-rail .cooking-mode-add-recipe {
   width: 56px;

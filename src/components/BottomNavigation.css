@@ -13,6 +13,9 @@
     var(--bottom-nav-vertical-padding, 0.4rem)
     0.5rem
     calc(var(--bottom-nav-vertical-padding, 0.4rem) + env(safe-area-inset-bottom, 0px));
+  /* Mit viewport-fit=cover (useViewportFitCover) links und rechts innerhalb der Abstände; sonst 0 */
+  padding-left: calc(0.5rem + env(safe-area-inset-left, 0px));
+  padding-right: calc(0.5rem + env(safe-area-inset-right, 0px));
   background: #ffffff;
   border-top: 1px solid #E0E0DE;
   opacity: 1;
