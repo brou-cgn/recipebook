@@ -450,38 +450,26 @@ describe('RecipeDetail – parallel kochen im Querformat (Entwurf Q2, Rezept-Sch
     expect(landscapeTitle()).toBeUndefined();
   });
 
-  describe('the rail stands opposite the camera and reaches the edge of the display', () => {
-    const INITIAL_VIEWPORT = 'width=device-width, initial-scale=1';
-
+  describe('the rail stands opposite the camera', () => {
     function setDeviceOrientation(value) {
       Object.defineProperty(window, 'orientation', { configurable: true, writable: true, value });
-    }
-
-    function viewportContent() {
-      return document.querySelector('meta[name="viewport"]').getAttribute('content');
     }
 
     function railNav() {
       return screen.getByRole('navigation', { name: 'Rezepte am Herd' });
     }
 
-    beforeEach(() => {
-      document.head.innerHTML = `<meta name="viewport" content="${INITIAL_VIEWPORT}" />`;
-    });
-
     afterEach(() => {
       delete window.orientation;
-      document.head.innerHTML = '';
     });
 
-    test('turned to the left (camera on the left): the rail moves to the right, the page covers the whole display', async () => {
+    test('turned to the left (camera on the left): the rail moves to the right', async () => {
       setDeviceOrientation(90);
       renderWithProviders(<Harness />);
       await act(async () => {});
 
       expect(document.querySelector('.recipe-detail-content')).toHaveClass('cooking-mode-rail-right');
       expect(railNav()).toHaveClass('cooking-rail--right');
-      expect(viewportContent()).toBe(`${INITIAL_VIEWPORT}, viewport-fit=cover`);
     });
 
     test('turned to the right (camera on the right): the rail stays on the left; it follows a half turn', async () => {
@@ -491,7 +479,6 @@ describe('RecipeDetail – parallel kochen im Querformat (Entwurf Q2, Rezept-Sch
 
       expect(document.querySelector('.recipe-detail-content')).not.toHaveClass('cooking-mode-rail-right');
       expect(railNav()).toHaveClass('cooking-rail--left');
-      expect(viewportContent()).toBe(`${INITIAL_VIEWPORT}, viewport-fit=cover`);
 
       // Von quer nach quer gedreht: kein resize, nur orientationchange
       setDeviceOrientation(90);
@@ -506,14 +493,12 @@ describe('RecipeDetail – parallel kochen im Querformat (Entwurf Q2, Rezept-Sch
 
       expect(railNav()).toHaveClass('cooking-rail--left');
       expect(document.querySelector('.recipe-detail-content')).not.toHaveClass('cooking-mode-rail-right');
-      expect(viewportContent()).toBe(INITIAL_VIEWPORT);
     });
 
-    test('rotating back to portrait ends the cooking mode and gives the safe area back to the page', async () => {
+    test('rotating back to portrait ends the cooking mode', async () => {
       setDeviceOrientation(90);
       renderWithProviders(<Harness />);
       await act(async () => {});
-      expect(viewportContent()).toBe(`${INITIAL_VIEWPORT}, viewport-fit=cover`);
 
       setDeviceOrientation(0);
       Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 393 });
@@ -522,17 +507,15 @@ describe('RecipeDetail – parallel kochen im Querformat (Entwurf Q2, Rezept-Sch
       act(() => { jest.advanceTimersByTime(200); });
 
       expect(screen.queryByRole('navigation', { name: 'Rezepte am Herd' })).toBeNull();
-      expect(viewportContent()).toBe(INITIAL_VIEWPORT);
     });
 
-    test('without the flag the page keeps the safe area, whatever the direction', async () => {
+    test('without the flag the rail stays away, whatever the direction', async () => {
       setDeviceOrientation(90);
       renderWithProviders(<Harness user={{ ...flaggedUser, parallelKochen: false }} />);
       await act(async () => {});
 
       expect(document.querySelector('.recipe-detail-content')).toHaveClass('cooking-mode-landscape');
       expect(document.querySelector('.recipe-detail-content')).not.toHaveClass('cooking-mode-rail-right');
-      expect(viewportContent()).toBe(INITIAL_VIEWPORT);
     });
   });
 });
@@ -642,5 +625,19 @@ describe('RecipeDetail – parallel kochen auf dem iPad quer (Entwurf I4, Karuss
 
     expect(document.querySelector('.overlay-cooking-mode-static')).toBeNull();
     expect(screen.queryByRole('navigation', { name: 'Weitere Rezepte am Herd' })).toBeNull();
+  });
+});
+
+describe('RecipeDetail – Kochmodus quer: Schritte nur per Wischen', () => {
+  beforeEach(setLandscapeViewport);
+
+  test('there are no buttons for the next and the previous step', async () => {
+    renderWithProviders(<Harness />);
+    await act(async () => {});
+
+    expect(document.querySelector('.cooking-mode-landscape')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Nächster Schritt' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Vorheriger Schritt' })).toBeNull();
+    expect(document.querySelector('.step-nav')).toBeNull();
   });
 });

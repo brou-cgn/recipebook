@@ -109,34 +109,11 @@ describe('RecipeDetail CSS Kochmodus mit Rezept-Leiste (parallel kochen)', () =>
   });
 });
 
-describe('RecipeDetail CSS Querformat mit Rezept-Schiene bis an den Displayrand (parallel kochen)', () => {
+describe('RecipeDetail CSS Querformat: Schritte nur per Wischen', () => {
   const css = fs.readFileSync(path.join(__dirname, 'RecipeDetail.css'), 'utf8');
-  const getRuleBody = (source, selector) => {
-    const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const match = source.match(new RegExp(`(?:^|\\})\\s*${escapedSelector}\\s*\\{([\\s\\S]*?)\\}`, 'm'));
-    return match ? match[1] : '';
-  };
-  const RAIL = '.cooking-mode-landscape.cooking-mode-has-rail';
 
-  test('Zutaten und Schritte halten unten die Home-Leiste frei', () => {
-    expect(getRuleBody(css, `${RAIL} .cooking-mode-ingredients,\n${RAIL} .cooking-mode-steps`))
-      .toContain('padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));');
-  });
-
-  test('Schiene links: die Schrittspalte hält rechts den Abstand zur Kamera', () => {
-    expect(getRuleBody(css, `${RAIL}:not(.cooking-mode-rail-right) .cooking-mode-steps`))
-      .toContain('padding-right: calc(1.25rem + env(safe-area-inset-right, 0px));');
-  });
-
-  test('Schiene rechts: die Zutatenspalte hält links den Abstand und wird um ihn breiter', () => {
-    const body = getRuleBody(css, `${RAIL}.cooking-mode-rail-right .cooking-mode-ingredients`);
-    // Gleiche Grundbreite wie mit der Schiene links (34 %, höchstens 300 px), dazu der Abstand
-    const left = getRuleBody(css, `${RAIL} .cooking-mode-ingredients`);
-    expect(left).toContain('flex-basis: 34%;');
-    expect(left).toContain('max-width: 300px;');
-    expect(body).toContain('flex-basis: calc(34% + env(safe-area-inset-left, 0px));');
-    expect(body).toContain('width: calc(34% + env(safe-area-inset-left, 0px));');
-    expect(body).toContain('max-width: calc(300px + env(safe-area-inset-left, 0px));');
-    expect(body).toContain('padding-left: calc(1.25rem + env(safe-area-inset-left, 0px));');
+  test('keine Buttons „Nächster Schritt“ und „Zurück“ mehr', () => {
+    expect(css).not.toContain('.step-nav');
+    expect(css).toMatch(/\.cooking-mode-landscape \.cooking-mode-steps \{[^}]*grid-template-rows: auto minmax\(0, 1fr\);/);
   });
 });

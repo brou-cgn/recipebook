@@ -45,7 +45,6 @@ import CookingSessionRail from './CookingSessionRail';
 import CookingSessionCarousel from './CookingSessionCarousel';
 import useTabletLandscape from '../hooks/useTabletLandscape';
 import useLandscapeCameraSide from '../hooks/useLandscapeCameraSide';
-import useViewportFitCover from '../hooks/useViewportFitCover';
 import { getMenuRecipeIds } from '../utils/menuSections';
 import RecipeRating from './RecipeRating';
 import CookDateModal from './CookDateModal';
@@ -228,12 +227,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // wie im Hochformat. Schon mit dem ersten Rezept, damit nichts springt, wenn das zweite dazukommt.
   const isTabletLandscape = useTabletLandscape();
   const showCookingCarousel = parallelCookingEnabled && isTabletLandscape && !isMobileLandscape;
-  // Handy quer: die Rezept-Schiene steht gegenüber der Kamera (Dynamic Island, Notch) und reicht dort bis an
-  // den Displayrand. Dafür deckt die Seite den ganzen Bildschirm ab (viewport-fit=cover), solange die Schiene
-  // da ist; nur wenn die Drehrichtung bekannt ist, sonst bleibt sie innerhalb der Sicherheitsabstände links.
+  // Handy quer: die Rezept-Schiene steht gegenüber der Kamera (Dynamic Island, Notch); ist die Drehrichtung
+  // unbekannt, bleibt sie links.
   const cameraSide = useLandscapeCameraSide();
   const cookingRailRight = cameraSide === 'left';
-  useViewportFitCover(cookingMode && parallelCookingEnabled && isMobileLandscape && cameraSide !== null);
   const [showAddRecipeSheet, setShowAddRecipeSheet] = useState(false);
   // Einrichtbares Icon des Knopfs „Rezept dazunehmen“ (Button-Icon cookingAddRecipe), abgeleitet statt eigener State
   const cookingAddRecipeIcon = getEffectiveIcon(allButtonIcons, 'cookingAddRecipe', isDarkMode) || defaultIcon('potPlus', isDarkMode);
@@ -2034,26 +2031,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     aria-label={`Gehe zu Schritt ${index + 1}`}
                   />
                 ))}
-              </div>
-
-              {/* Landscape: große Navigationsbuttons (per CSS nur im Querformat sichtbar) */}
-              <div className="step-nav">
-                <button
-                  className="step-nav-btn step-nav-prev"
-                  onClick={() => setCurrentStepIndex(prev => Math.max(0, prev - 1))}
-                  disabled={currentStepIndex <= 0}
-                  aria-label="Vorheriger Schritt"
-                >
-                  ‹
-                </button>
-                <button
-                  className="step-nav-btn step-nav-next"
-                  onClick={() => setCurrentStepIndex(prev => Math.min(totalSteps - 1, prev + 1))}
-                  disabled={currentStepIndex >= totalSteps - 1}
-                  aria-label="Nächster Schritt"
-                >
-                  Nächster Schritt ›
-                </button>
               </div>
             </section>
 

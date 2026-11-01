@@ -2049,29 +2049,6 @@ button.private-badge-button:active {
   max-width: 300px;
 }
 
-/* Die Schiene steht gegenüber der Kamera und reicht dort bis an den Displayrand: Solange sie da ist,
-   deckt die Seite den ganzen Bildschirm ab (viewport-fit=cover, useViewportFitCover). Zutaten und
-   Schritte halten dann die Home-Leiste unten und die Kamera auf ihrer Seite frei; ihre Fläche reicht
-   trotzdem bis an den Rand. Ohne viewport-fit=cover sind die env()-Werte 0, alles wie vorher. */
-.cooking-mode-landscape.cooking-mode-has-rail .cooking-mode-ingredients,
-.cooking-mode-landscape.cooking-mode-has-rail .cooking-mode-steps {
-  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
-}
-
-/* Schiene links, Kamera rechts: die Schrittspalte hält den Abstand */
-.cooking-mode-landscape.cooking-mode-has-rail:not(.cooking-mode-rail-right) .cooking-mode-steps {
-  padding-right: calc(1.25rem + env(safe-area-inset-right, 0px));
-}
-
-/* Schiene rechts, Kamera links: die Zutatenspalte hält ihn und wird um ihn breiter, damit die
-   Zutaten so breit bleiben wie mit der Schiene links */
-.cooking-mode-landscape.cooking-mode-has-rail.cooking-mode-rail-right .cooking-mode-ingredients {
-  flex-basis: calc(34% + env(safe-area-inset-left, 0px));
-  width: calc(34% + env(safe-area-inset-left, 0px));
-  max-width: calc(300px + env(safe-area-inset-left, 0px));
-  padding-left: calc(1.25rem + env(safe-area-inset-left, 0px));
-}
-
 /* Rezeptname über den Zutaten: Ohne Titelzeile wäre im Querformat unklar, welches Rezept vorn ist */
 .cooking-mode-landscape-title {
   margin: 0 0 0.5rem;
@@ -2116,14 +2093,14 @@ button.private-badge-button:active {
   font-size: 0.95rem;
 }
 
-/* Right column: grid = progress bar (top) / step (middle) / navigation (bottom) */
+/* Right column: grid = progress bar (top) / step (below); weiter per Wischen, keine Buttons */
 .cooking-mode-landscape .cooking-mode-steps {
   flex: 1;
   min-width: 0;
   min-height: 0;
   padding: 0.75rem 1.25rem 0.75rem 1.5rem;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 0.6rem;
   overflow: hidden;
   background: #f9f9f9;
@@ -2193,48 +2170,6 @@ button.private-badge-button:active {
 .cooking-mode-landscape .step-content {
   padding-bottom: 0;
 }
-
-/* Large previous / next buttons */
-.step-nav {
-  display: none;
-}
-
-.cooking-mode-landscape .step-nav {
-  grid-row: 3;
-  display: flex;
-  gap: 0.6rem;
-}
-
-.cooking-mode-active .step-nav-btn {
-  height: 56px;
-  border: none;
-  border-radius: 14px;
-  font-size: 1.15rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.cooking-mode-active .step-nav-prev {
-  flex: 0 0 80px;
-  background: #e8e8e8;
-  color: #402C1C;
-  font-size: 1.8rem;
-}
-
-.cooking-mode-active .step-nav-next {
-  flex: 1;
-  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
-  color: white;
-}
-
-.cooking-mode-active .step-nav-btn:disabled {
-  background: #d1d1d6;
-  color: #888;
-  cursor: not-allowed;
-}
-
-
 
 /* Header row inside the step card that holds the start/stop button (right-aligned) */
 .step-timer-header {
