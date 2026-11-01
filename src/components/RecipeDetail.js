@@ -42,7 +42,6 @@ import CookingAddRecipeButton from './CookingAddRecipeButton';
 import CookingAddRecipeSheet from './CookingAddRecipeSheet';
 import CookingSessionDock from './CookingSessionDock';
 import CookingSessionRail from './CookingSessionRail';
-import CookingCoverDiagnostics from './CookingCoverDiagnostics';
 import CookingSessionCarousel from './CookingSessionCarousel';
 import useTabletLandscape from '../hooks/useTabletLandscape';
 import useLandscapeCameraSide from '../hooks/useLandscapeCameraSide';
@@ -2038,9 +2037,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 ))}
               </div>
             </section>
-
-            {/* Vorübergehend: Diagnose für die Schiene ohne Abstand zum Rand (sichtbar nur mit viewport-fit=cover) */}
-            {showCookingRail && <CookingCoverDiagnostics />}
 
             {/* Kochsitzung: Rezepte im Hintergrund; Tippen tauscht, dieses Rezept parkt dabei */}
             {showCookingDock && (

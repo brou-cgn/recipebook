@@ -25,9 +25,9 @@ import { getCameraSide } from './useLandscapeCameraSide';
  * Solange `cover` an ist, wird ein horizontaler Versatz deshalb auf 0 zurückgesetzt: direkt nach dem
  * Umschalten, mehrmals danach (iOS setzt ihn erst nach dem Drehen, der Zoom-Reset in index.html ändert den
  * meta viewport nach rund 700 ms noch einmal) und bei jedem `scroll`/`resize`. Die App scrollt nie seitlich,
- * es geht also nichts verloren. Ob das am Gerät reicht, zeigt die Diagnose-Zeile (`scroll 0`).
+ * es geht also nichts verloren. Am Gerät bestätigt (01.11.2026, Drehung 90): scroll 0, Tipp auf die Schiene kommt an.
  *
- * Nicht am Gerät geprüft. Danach gilt wieder, was vorher im meta viewport stand.
+ * Danach gilt wieder, was vorher im meta viewport stand.
  */
 const FIT = /^viewport-fit\s*=/i;
 
