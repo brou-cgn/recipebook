@@ -98,10 +98,10 @@
   display: none;
 }
 
-/* Bis zu zwei Karten: je die halbe Höhe, der Schritt hat viel Platz */
+/* Bis zu zwei Karten: je die halbe Höhe neben der Zeile „Rezept dazunehmen“ (56 px), der Schritt hat viel Platz */
 .cooking-carousel-item {
   position: relative;
-  flex: 0 0 calc((100% - 12px) / 2);
+  flex: 0 0 calc((100% - 2 * 12px - 56px) / 2);
   min-height: 0;
   overflow: hidden;
   border-radius: 20px;
@@ -280,6 +280,38 @@
 
 .cooking-carousel-item--urgent .cooking-carousel-timer-fill {
   background: var(--color-accent);
+}
+
+/* Platz für ein weiteres Rezept: schmale gestrichelte Zeile unter der letzten Karte, wie der Leerzustand */
+.cooking-carousel-add-item {
+  flex: 0 0 auto;
+  scroll-snap-align: end;
+}
+
+.cooking-carousel-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 16px;
+  border: 2px dashed var(--color-border);
+  border-radius: 18px;
+  background: transparent;
+  color: var(--color-brand);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cooking-carousel-add:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
 }
 
 /* Ab drei Karten kompakt: drei passen ganz, die vierte schaut unten heraus */

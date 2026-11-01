@@ -512,6 +512,30 @@ describe('RecipeDetail – parallel kochen auf dem iPad quer (Entwurf I4, Karuss
     await act(async () => {});
   });
 
+  test('with two recipes the carousel still offers „Rezept dazunehmen“; the third joins the carousel', async () => {
+    renderWithProviders(<Harness />);
+    await enterCookingMode();
+    fireEvent.click(screen.getByRole('button', { name: 'Rezept dazunehmen' }));
+    let sheet = screen.getByRole('dialog', { name: 'Was kochst du dazu?' });
+    fireEvent.change(within(sheet).getByLabelText('Rezept suchen'), { target: { value: 'rotkohl' } });
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Apfelrotkohl dazunehmen' }));
+    expect(carouselCards()).toEqual(['Rinderrouladen nach vorn holen, Schritt 1 von 3']);
+
+    // Rückmeldung am iPad: Ab dem zweiten Rezept fehlte links der Weg zum nächsten
+    const nav = screen.getByRole('navigation', { name: 'Weitere Rezepte am Herd' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Rezept dazunehmen' }));
+    sheet = screen.getByRole('dialog', { name: 'Was kochst du dazu?' });
+    fireEvent.change(within(sheet).getByLabelText('Rezept suchen'), { target: { value: 'klö' } });
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Kartoffelklöße dazunehmen' }));
+
+    expect(titleBarTitle()).toBe('Kartoffelklöße');
+    expect(carouselCards()).toEqual([
+      'Rinderrouladen nach vorn holen, Schritt 1 von 3',
+      'Apfelrotkohl nach vorn holen, Schritt 1 von 2',
+    ]);
+    await act(async () => {});
+  });
+
   test('tapping a card swaps in place: the recipe in front takes its place, the other cards stay', async () => {
     renderWithProviders(<Harness />);
     await enterCookingMode();

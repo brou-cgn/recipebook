@@ -26,6 +26,9 @@ import './CookingSessionCarousel.css';
  *
  * Ohne weitere Rezepte steht die Spalte trotzdem da (sonst spränge das Layout beim zweiten
  * Rezept), mit einem Hinweis und „Rezept dazunehmen“ (onAdd, Sheet „Was kochst du dazu?“).
+ * Mit Karten steht „Rezept dazunehmen“ als schmale Zeile unter der letzten, solange die
+ * Sitzung Platz hat: Wer das erste über das Karussell dazugenommen hat, sucht das nächste
+ * dort und nicht beim „+“ in der Titelzeile (Rückmeldung am iPad, 01.11.2026).
  */
 
 // Ab so vielen Karten kompakt
@@ -38,6 +41,14 @@ function ClockIcon() {
     <svg className="cooking-carousel-clock" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true" focusable="false">
       <circle cx="12" cy="13" r="8" />
       <path d="M12 9v4l2.5 2M9 2h6" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true" focusable="false">
+      <path d="M12 5v14M5 12h14" />
     </svg>
   );
 }
@@ -168,6 +179,7 @@ function CookingSessionCarousel({ currentRecipeId, onSelect, onAdd }) {
   const statuses = items.map((entry) => cookingStatus(entry, session.allTimers));
   const compact = items.length >= COMPACT_FROM;
   const idsKey = items.map((entry) => entry.recipe.id).join('|');
+  const showAddItem = items.length > 0 && Boolean(onAdd) && session.canAddRecipe(currentRecipeId);
 
   useEffect(() => {
     const list = listRef.current;
@@ -187,7 +199,7 @@ function CookingSessionCarousel({ currentRecipeId, onSelect, onAdd }) {
         return next;
       });
     }, { root: list, threshold: [0, VISIBLE_RATIO, 1] });
-    Array.from(list.children).forEach((card) => observer.observe(card));
+    Array.from(list.children).filter((el) => el.dataset.recipeId).forEach((card) => observer.observe(card));
     return () => observer.disconnect();
   }, [idsKey]);
 
@@ -240,6 +252,14 @@ function CookingSessionCarousel({ currentRecipeId, onSelect, onAdd }) {
               onRemove={handleRemove}
             />
           ))}
+          {showAddItem && (
+            <li className="cooking-carousel-add-item">
+              <button type="button" className="cooking-carousel-add" onClick={onAdd}>
+                <PlusIcon />
+                Rezept dazunehmen
+              </button>
+            </li>
+          )}
         </ul>
         {jump && (
           <button

@@ -18,6 +18,8 @@ const rouladen = {
 const rotkohl = { id: 'rotkohl', title: 'Apfelrotkohl', image: 'rotkohl.jpg', steps: ['Rotkohl fein hobeln.', 'Zugedeckt köcheln lassen.'] };
 const kloesse = { id: 'kloesse', title: 'Kartoffelklöße', image: 'kloesse.jpg', steps: ['Kartoffeln kochen.', 'Klöße formen.'] };
 const bratapfel = { id: 'bratapfel', title: 'Bratapfel', steps: ['Äpfel füllen.', 'Backen.'] };
+const pudding = { id: 'pudding', title: 'Vanillepudding', steps: ['Milch aufkochen.'] };
+const salat = { id: 'salat', title: 'Gurkensalat', steps: ['Gurke hobeln.'] };
 
 let session;
 function SessionProbe() {
@@ -148,6 +150,32 @@ describe('CookingSessionCarousel', () => {
     act(() => { jest.advanceTimersByTime(300000); });
     expect(cardOf('Apfelrotkohl')).toHaveAccessibleName('Apfelrotkohl nach vorn holen, Timer abgelaufen');
     expect(within(cardOf('Apfelrotkohl')).getByText('Fertig')).toBeInTheDocument();
+  });
+
+  test('below the cards it still offers „Rezept dazunehmen“ while the session has room', () => {
+    const { onAdd } = renderCarousel();
+    act(() => { session.addRecipe({ recipe: rotkohl, stepIndex: 0, servingMultiplier: 1 }, kloesse); });
+
+    // Eine Karte: die Zeile steht darunter, der Leerzustand ist weg
+    expect(cardNames()).toEqual(['Apfelrotkohl nach vorn holen, Schritt 1 von 2']);
+    expect(screen.queryByText('Noch kein weiteres Rezept am Herd')).toBeNull();
+    const add = within(carousel()).getByRole('button', { name: 'Rezept dazunehmen' });
+    expect(add.closest('li')).toBe(within(carousel()).getAllByRole('listitem').at(-1));
+
+    fireEvent.click(add);
+    expect(onAdd).toHaveBeenCalledTimes(1);
+  });
+
+  test('with six recipes in the session the carousel offers no more', () => {
+    renderCarousel();
+    seedSession();
+    act(() => { session.addRecipe({ recipe: kloesse, stepIndex: 0, servingMultiplier: 1 }, bratapfel); });
+    act(() => { session.addRecipe({ recipe: bratapfel, stepIndex: 0, servingMultiplier: 1 }, pudding); });
+    act(() => { session.addRecipe({ recipe: pudding, stepIndex: 0, servingMultiplier: 1 }, salat); });
+
+    expect(session.sessionRecipes).toHaveLength(6);
+    expect(cardNames()).toHaveLength(5);
+    expect(within(carousel()).queryByRole('button', { name: 'Rezept dazunehmen' })).toBeNull();
   });
 
   test('tapping a card hands the recipe over to swap', () => {

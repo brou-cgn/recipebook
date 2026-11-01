@@ -34,7 +34,9 @@ describe('CookingSessionCarousel CSS', () => {
   });
 
   test('bis zu zwei Karten teilen sich die Höhe, ab drei passen drei ganz und die vierte schaut heraus', () => {
-    expect(getRuleBody(carouselCss, '.cooking-carousel-item')).toContain('flex: 0 0 calc((100% - 12px) / 2);');
+    // Zwei Karten und die Zeile „Rezept dazunehmen“ (56 px) füllen die Spalte genau
+    expect(getRuleBody(carouselCss, '.cooking-carousel-item')).toContain('flex: 0 0 calc((100% - 2 * 12px - 56px) / 2);');
+    expect(getRuleBody(carouselCss, '.cooking-carousel-add')).toContain('min-height: 56px;');
     expect(getRuleBody(carouselCss, '.cooking-carousel--compact .cooking-carousel-item'))
       .toContain('flex-basis: calc((100% - 3 * 12px) / 3.25);');
     expect(getRuleBody(carouselCss, '.cooking-carousel--compact .cooking-carousel-step')).toContain('-webkit-line-clamp: 3;');
