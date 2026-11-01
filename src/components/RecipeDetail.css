@@ -1978,6 +1978,27 @@ button.private-badge-button:active {
   margin-bottom: 0.4rem;
 }
 
+/* Kochsitzung im Querformat (Rollen-Flag parallelKochen, Entwurf Q2): links die Rezept-Schiene
+   (76 px, CookingSessionRail.css). Die Zutatenspalte wird so viel schmaler, dass sie wie ohne
+   Schiene rund 38 % der übrigen Breite hat; die Schrittspalte gibt den Rest ab. */
+.cooking-mode-landscape.cooking-mode-has-rail .cooking-mode-ingredients {
+  flex-basis: 34%;
+  width: 34%;
+  max-width: 300px;
+}
+
+/* Rezeptname über den Zutaten: Ohne Titelzeile wäre im Querformat unklar, welches Rezept vorn ist */
+.cooking-mode-landscape-title {
+  margin: 0 0 0.5rem;
+  overflow: hidden;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .cooking-mode-active .cooking-mode-ingredients .section-header h2 {
   margin: 0;
   font-size: 0.8rem;

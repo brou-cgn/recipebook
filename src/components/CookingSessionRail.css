@@ -1,0 +1,212 @@
+/* Rezept-Schiene der Kochsitzung im Querformat (CookingSessionRail, Entwurf Q2).
+   Farben nur über Tokens, Light und Dark kommen aus tokens.css: Die Schiene liegt im
+   App-Hintergrund, das Rezept vorn als Lasche in der Farbe der Zutatenspalte
+   (--color-surface-card, Light weiß, Dark wie deren Hintergrund), damit beide ineinander
+   übergehen. Bald fällig und abgelaufen: orange wie in der Leiste. */
+.cooking-rail {
+  flex: 0 0 76px;
+  width: 76px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 10px 0 12px 6px;
+  background: var(--color-bg);
+}
+
+/* Scrollt nur, wenn die Höhe nicht reicht (kleine Handys); „+“ bleibt unten stehen */
+.cooking-rail-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+  scrollbar-width: none;
+}
+
+.cooking-rail-list::-webkit-scrollbar {
+  display: none;
+}
+
+.cooking-rail-item {
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 16px 0 0 16px;
+}
+
+/* Deckend, damit die rote Swipe-Fläche dahinter erst beim Wischen sichtbar wird */
+.cooking-rail-button {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 10px 0 8px;
+  border: none;
+  border-radius: 16px 0 0 16px;
+  background: var(--color-bg);
+  color: var(--color-text-strong);
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cooking-rail-button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+/* Das Rezept vorn: Lasche in der Farbe der Zutatenspalte, ohne Knopf */
+.cooking-rail-item--current .cooking-rail-button {
+  background: var(--color-surface-card);
+  cursor: default;
+}
+
+/* Nach dem Linksswipe gleitet das Rezept ganz hinaus; der Papierkorb steht mittig in der Schiene */
+.cooking-rail-item .swipe-delete-background {
+  justify-content: center;
+  padding-right: 0;
+}
+
+.cooking-rail-item.swipe-delete-active .swipe-delete-background {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.cooking-rail-thumb {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--color-surface-raised);
+}
+
+/* Ohne Rezeptbild: Anfangsbuchstabe statt leerer Kreis */
+.cooking-rail-thumb--initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cooking-rail-item--current .cooking-rail-thumb {
+  box-shadow: 0 0 0 2px var(--color-surface-card), 0 0 0 4px var(--color-brand);
+}
+
+.cooking-rail-item--urgent:not(.cooking-rail-item--current) .cooking-rail-thumb {
+  box-shadow: 0 0 0 2.5px var(--color-accent);
+}
+
+.cooking-rail-status {
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cooking-rail-status--step {
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.cooking-rail-item--current .cooking-rail-status {
+  color: var(--color-brand);
+}
+
+.cooking-rail-item--urgent .cooking-rail-status {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.cooking-rail-add {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+}
+
+/* Der Knopf hat den FAB-Look (CookingAddRecipeButton.css). Dessen Regel für schmale Bildschirme
+   (56 px, durchscheinend) träfe auch Handys im Querformat bis 768 px Breite; in der Schiene
+   schwebt er nicht über Inhalt, deshalb fest 44 px und deckend. */
+.cooking-rail .cooking-mode-add-recipe {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  opacity: 1;
+}
+
+/* Ab vier Rezepten: kleinere Kreise und Abstände, sechs Rezepte samt „+“ passen in 375 px Höhe
+   (iPhone SE quer); auf noch niedrigeren Bildschirmen scrollt die Liste */
+.cooking-rail--compact {
+  padding: 6px 0 8px 6px;
+}
+
+.cooking-rail--compact .cooking-rail-list {
+  gap: 1px;
+}
+
+.cooking-rail--compact .cooking-rail-item,
+.cooking-rail--compact .cooking-rail-button {
+  border-radius: 14px 0 0 14px;
+}
+
+.cooking-rail--compact .cooking-rail-button {
+  gap: 2px;
+  padding: 3px 0 1px;
+}
+
+.cooking-rail--compact .cooking-rail-thumb {
+  width: 30px;
+  height: 30px;
+}
+
+.cooking-rail--compact .cooking-rail-thumb--initial {
+  font-size: 14px;
+}
+
+.cooking-rail--compact .cooking-rail-status {
+  padding: 1px 5px;
+  font-size: 10.5px;
+  line-height: 13px;
+}
+
+.cooking-rail--compact .cooking-rail-item--current .cooking-rail-thumb {
+  box-shadow: 0 0 0 1.5px var(--color-surface-card), 0 0 0 3px var(--color-brand);
+}
+
+.cooking-rail--compact .cooking-rail-item--urgent:not(.cooking-rail-item--current) .cooking-rail-thumb {
+  box-shadow: 0 0 0 2px var(--color-accent);
+}
+
+.cooking-rail--compact .cooking-rail-add {
+  padding-top: 6px;
+}
+
+.cooking-rail--compact .cooking-mode-add-recipe {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  max-width: 40px;
+}
