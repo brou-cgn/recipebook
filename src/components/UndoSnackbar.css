@@ -1,7 +1,8 @@
 .undo-snackbar {
   position: fixed;
   left: 50%;
-  bottom: 24px;
+  /* Liegt unten eine Rezept-Leiste (CookingSessionDock), meldet sie ihre Höhe: Hinweis darüber */
+  bottom: calc(24px + var(--cooking-dock-offset, 0px));
   transform: translateX(-50%);
   z-index: 1200;
   display: flex;
