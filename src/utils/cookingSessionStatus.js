@@ -1,6 +1,6 @@
 /**
- * Was Rezept-Leiste (CookingSessionDock) und Rezept-Schiene (CookingSessionRail) der
- * Kochsitzung zu einem Rezept anzeigen (Vorhaben „Parallel kochen“): abgelaufener Timer,
+ * Was Rezept-Leiste (CookingSessionDock), Rezept-Schiene (CookingSessionRail) und Karussell der
+ * Kochsitzung (CookingSessionCarousel) zu einem Rezept anzeigen (Vorhaben „Parallel kochen“): abgelaufener Timer,
  * sonst der nächste laufende, sonst der Schritt.
  */
 
@@ -60,4 +60,26 @@ export function cookingStatus(entry, timers) {
   return total > 0
     ? { kind: 'step', text: `Schritt ${step} / ${total}`, shortText: `${step} / ${total}`, urgent: false, label: `Schritt ${step} von ${total}` }
     : { kind: 'step', text: 'Kocht', urgent: false, label: 'kocht' };
+}
+
+/**
+ * Das dringendste fällige Rezept außerhalb des sichtbaren Bereichs (Karussell auf dem iPad quer,
+ * Rezept-Schiene im Querformat): abgelaufen vor laufend, dann die kürzeste Restzeit.
+ * @param {Array<{ recipe: Object }>} items Einträge in der Reihenfolge der Liste
+ * @param {Array<Object>} statuses cookingStatus je Eintrag
+ * @param {Object<string, 'up'|'down'>} offscreen aus useOffscreenItems
+ * @returns {number} Index des Eintrags, -1 wenn keiner
+ */
+export function pickJumpTarget(items, statuses, offscreen) {
+  let best = -1;
+  items.forEach((entry, index) => {
+    const status = statuses[index];
+    if (!status.urgent || !offscreen[entry.recipe.id]) return;
+    if (best < 0) { best = index; return; }
+    const other = statuses[best];
+    if (status.kind === 'finished' && other.kind !== 'finished') best = index;
+    else if (status.kind === 'timer' && other.kind === 'timer'
+      && status.timer.remainingSeconds < other.timer.remainingSeconds) best = index;
+  });
+  return best;
 }

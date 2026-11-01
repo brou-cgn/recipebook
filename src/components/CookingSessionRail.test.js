@@ -23,7 +23,7 @@ function SessionProbe() {
 function renderRail(props = {}) {
   const onSelect = jest.fn();
   const onAdd = jest.fn();
-  const result = renderWithProviders(
+  const tree = (extra) => (
     <CookingSessionProvider onOpenRecipe={() => {}}>
       <SessionProbe />
       <CookingSessionRail
@@ -33,10 +33,14 @@ function renderRail(props = {}) {
         onAdd={onAdd}
         addIcon="+"
         {...props}
+        {...extra}
       />
     </CookingSessionProvider>
   );
-  return { onSelect, onAdd, ...result };
+  const result = renderWithProviders(tree());
+  // Neue Props, dieselbe Sitzung (der Provider bleibt stehen)
+  const rerenderRail = (extra) => result.rerender(tree(extra));
+  return { onSelect, onAdd, rerenderRail, ...result };
 }
 
 // Sitzung in dieser Reihenfolge: Rouladen (Schritt 2), Rotkohl, Klöße; Klöße sind vorn
@@ -113,7 +117,6 @@ describe('CookingSessionRail', () => {
     ]);
     expect(within(currentItem()).queryByRole('button')).toBeNull();
     expect(within(currentItem()).getByText('1 / 2')).toBeInTheDocument();
-    expect(document.querySelector('.cooking-rail')).not.toHaveClass('cooking-rail--compact');
   });
 
   test('the open recipe shows its live step, not the one stored in the session', () => {
@@ -175,11 +178,24 @@ describe('CookingSessionRail', () => {
     ]);
   });
 
-  test('from four recipes on the circles get smaller so that six fit with „+“', () => {
+  test('stands on the left unless told otherwise; on the right it gets its mirrored class', () => {
+    const { unmount } = renderRail();
+    expect(document.querySelector('.cooking-rail')).toHaveClass('cooking-rail--left');
+    unmount();
+
+    renderRail({ side: 'right' });
+    expect(document.querySelector('.cooking-rail')).toHaveClass('cooking-rail--right');
+    expect(document.querySelector('.cooking-rail')).not.toHaveClass('cooking-rail--left');
+  });
+
+  test('with many recipes the circles keep their size; all stay in one list that scrolls as a carousel', () => {
     renderRail({ currentRecipe: bratapfel });
     seedSession();
 
-    expect(document.querySelector('.cooking-rail')).toHaveClass('cooking-rail--compact');
+    const rail = document.querySelector('.cooking-rail');
+    expect(rail.className).not.toMatch(/compact/);
+    expect(rail.querySelectorAll('.cooking-rail-list > .cooking-rail-item')).toHaveLength(4);
+    expect(within(rail).getByRole('button', { name: 'Weiteres Rezept dazunehmen' }).closest('.cooking-rail-list')).toBeNull();
   });
 
   test('without a picture the circle shows the first letter of the recipe', () => {
@@ -219,5 +235,79 @@ describe('CookingSessionRail', () => {
 
     expect(currentItem().querySelector('.swipe-delete-background')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Kartoffelklöße entfernen' })).toBeNull();
+  });
+
+  describe('as a carousel', () => {
+    const originalObserver = window.IntersectionObserver;
+    const originalScrollIntoView = Element.prototype.scrollIntoView;
+    let reportVisibility;
+
+    function itemOf(title) {
+      return Array.from(document.querySelectorAll('.cooking-rail-item'))
+        .find((item) => item.querySelector(`[title^="${title}"]`));
+    }
+
+    beforeEach(() => {
+      window.IntersectionObserver = class {
+        constructor(callback) {
+          reportVisibility = (element, ratio, below = true) => act(() => {
+            callback([{
+              target: element,
+              intersectionRatio: ratio,
+              boundingClientRect: { top: below ? 400 : -100 },
+              rootBounds: { top: 10 },
+            }]);
+          });
+        }
+        observe() {}
+        disconnect() {}
+      };
+      Element.prototype.scrollIntoView = jest.fn();
+    });
+
+    afterEach(() => {
+      window.IntersectionObserver = originalObserver;
+      Element.prototype.scrollIntoView = originalScrollIntoView;
+    });
+
+    test('keeps the open recipe in view, also when another one comes to the front', () => {
+      const { rerenderRail } = renderRail();
+      seedSession();
+      expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior: 'auto', block: 'nearest' });
+
+      Element.prototype.scrollIntoView.mockClear();
+      rerenderRail({ currentRecipe: rotkohl });
+      expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
+      expect(Element.prototype.scrollIntoView.mock.instances[0]).toBe(currentItem());
+      expect(currentItem().dataset.recipeId).toBe('rotkohl');
+    });
+
+    test('a due recipe out of view gets a hint on its side; tapping it scrolls there, the hint goes once it is visible', () => {
+      renderRail();
+      seedSession();
+      startTimer(rotkohl, 30);
+
+      // Nicht fällig: kein Hinweis, auch wenn außer Sicht
+      reportVisibility(itemOf('Rinderrouladen'), 0);
+      expect(screen.queryByRole('button', { name: /scrollen/ })).toBeNull();
+
+      const item = itemOf('Apfelrotkohl');
+      reportVisibility(item, 0.2);
+      const hint = screen.getByRole('button', { name: 'Zu Apfelrotkohl scrollen, Timer 0:30' });
+      expect(hint).toHaveTextContent('0:30');
+      expect(hint).not.toHaveClass('cooking-rail-jump--up');
+
+      Element.prototype.scrollIntoView.mockClear();
+      fireEvent.click(hint);
+      expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'nearest' });
+      expect(Element.prototype.scrollIntoView.mock.instances[0]).toBe(item);
+
+      reportVisibility(item, 1);
+      expect(screen.queryByRole('button', { name: /scrollen/ })).toBeNull();
+
+      reportVisibility(item, 0, false);
+      expect(screen.getByRole('button', { name: 'Zu Apfelrotkohl scrollen, Timer 0:30' }))
+        .toHaveClass('cooking-rail-jump--up');
+    });
   });
 });

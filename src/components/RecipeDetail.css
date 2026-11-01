@@ -2039,13 +2039,37 @@ button.private-badge-button:active {
   margin-bottom: 0.4rem;
 }
 
-/* Kochsitzung im Querformat (Rollen-Flag parallelKochen, Entwurf Q2): links die Rezept-Schiene
-   (76 px, CookingSessionRail.css). Die Zutatenspalte wird so viel schmaler, dass sie wie ohne
+/* Kochsitzung im Querformat (Rollen-Flag parallelKochen, Entwurf Q2): die Rezept-Schiene
+   (76 px, CookingSessionRail.css) links oder, wenn die Kamera links ist, rechts
+   (cooking-mode-rail-right). Die Zutatenspalte wird so viel schmaler, dass sie wie ohne
    Schiene rund 38 % der übrigen Breite hat; die Schrittspalte gibt den Rest ab. */
 .cooking-mode-landscape.cooking-mode-has-rail .cooking-mode-ingredients {
   flex-basis: 34%;
   width: 34%;
   max-width: 300px;
+}
+
+/* Die Schiene steht gegenüber der Kamera und reicht dort bis an den Displayrand: Solange sie da ist,
+   deckt die Seite den ganzen Bildschirm ab (viewport-fit=cover, useViewportFitCover). Zutaten und
+   Schritte halten dann die Home-Leiste unten und die Kamera auf ihrer Seite frei; ihre Fläche reicht
+   trotzdem bis an den Rand. Ohne viewport-fit=cover sind die env()-Werte 0, alles wie vorher. */
+.cooking-mode-landscape.cooking-mode-has-rail .cooking-mode-ingredients,
+.cooking-mode-landscape.cooking-mode-has-rail .cooking-mode-steps {
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Schiene links, Kamera rechts: die Schrittspalte hält den Abstand */
+.cooking-mode-landscape.cooking-mode-has-rail:not(.cooking-mode-rail-right) .cooking-mode-steps {
+  padding-right: calc(1.25rem + env(safe-area-inset-right, 0px));
+}
+
+/* Schiene rechts, Kamera links: die Zutatenspalte hält ihn und wird um ihn breiter, damit die
+   Zutaten so breit bleiben wie mit der Schiene links */
+.cooking-mode-landscape.cooking-mode-has-rail.cooking-mode-rail-right .cooking-mode-ingredients {
+  flex-basis: calc(34% + env(safe-area-inset-left, 0px));
+  width: calc(34% + env(safe-area-inset-left, 0px));
+  max-width: calc(300px + env(safe-area-inset-left, 0px));
+  padding-left: calc(1.25rem + env(safe-area-inset-left, 0px));
 }
 
 /* Rezeptname über den Zutaten: Ohne Titelzeile wäre im Querformat unklar, welches Rezept vorn ist */

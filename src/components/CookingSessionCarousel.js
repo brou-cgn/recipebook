@@ -1,12 +1,14 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useId, useRef } from 'react';
 import { useCookingSession } from '../contexts/CookingSessionContext';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import useOffscreenItems from '../hooks/useOffscreenItems';
 import { getRecipeThumbnail } from '../utils/recipeThumbnail';
-import { cookingStatus, currentStep } from '../utils/cookingSessionStatus';
+import { cookingStatus, currentStep, pickJumpTarget } from '../utils/cookingSessionStatus';
 import UndoSnackbar from './UndoSnackbar';
 import TrashIcon from './icons/TrashIcon';
+import ArrowVerticalIcon from './icons/ArrowVerticalIcon';
 import './DeleteRowButton.css';
 import './CookingSessionCarousel.css';
 
@@ -38,14 +40,6 @@ function ClockIcon() {
     <svg className="cooking-carousel-clock" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true" focusable="false">
       <circle cx="12" cy="13" r="8" />
       <path d="M12 9v4l2.5 2M9 2h6" />
-    </svg>
-  );
-}
-
-function ArrowIcon({ up }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-      {up ? <path d="M12 19V5M6 11l6-6 6 6" /> : <path d="M12 5v14M6 13l6 6 6-6" />}
     </svg>
   );
 }
@@ -139,28 +133,11 @@ function CarouselCard({ entry, status, onSelect, onRemove }) {
   );
 }
 
-// Das dringendste fällige Rezept außerhalb des sichtbaren Bereichs: abgelaufen vor laufend, dann die kürzeste Restzeit
-function pickJumpTarget(items, statuses, offscreen) {
-  let best = -1;
-  items.forEach((entry, index) => {
-    const status = statuses[index];
-    if (!status.urgent || !offscreen[entry.recipe.id]) return;
-    if (best < 0) { best = index; return; }
-    const other = statuses[best];
-    if (status.kind === 'finished' && other.kind !== 'finished') best = index;
-    else if (status.kind === 'timer' && other.kind === 'timer'
-      && status.timer.remainingSeconds < other.timer.remainingSeconds) best = index;
-  });
-  return best;
-}
-
 function CookingSessionCarousel({ currentRecipeId, onSelect, onAdd }) {
   const session = useCookingSession();
   const reducedMotion = usePrefersReducedMotion();
   const { banners, pendingKeys, scheduleDelete, undoDelete } = useUndoableDelete();
   const listRef = useRef(null);
-  // Rezept-ID -> 'up' | 'down' für Karten, die gerade nicht (genug) zu sehen sind
-  const [offscreen, setOffscreen] = useState({});
 
   const items = session.sessionRecipes.filter(
     (entry) => entry.recipe.id !== currentRecipeId && !pendingKeys.has(entry.recipe.id)
@@ -168,28 +145,8 @@ function CookingSessionCarousel({ currentRecipeId, onSelect, onAdd }) {
   const statuses = items.map((entry) => cookingStatus(entry, session.allTimers));
   const compact = items.length >= COMPACT_FROM;
   const idsKey = items.map((entry) => entry.recipe.id).join('|');
-
-  useEffect(() => {
-    const list = listRef.current;
-    if (!list || typeof IntersectionObserver === 'undefined') return undefined;
-    const observer = new IntersectionObserver((records) => {
-      setOffscreen((prev) => {
-        const next = { ...prev };
-        records.forEach((record) => {
-          const id = record.target.dataset.recipeId;
-          if (record.intersectionRatio >= VISIBLE_RATIO) {
-            delete next[id];
-          } else {
-            const rootTop = record.rootBounds ? record.rootBounds.top : 0;
-            next[id] = record.boundingClientRect.top < rootTop ? 'up' : 'down';
-          }
-        });
-        return next;
-      });
-    }, { root: list, threshold: [0, VISIBLE_RATIO, 1] });
-    Array.from(list.children).forEach((card) => observer.observe(card));
-    return () => observer.disconnect();
-  }, [idsKey]);
+  // Rezept-ID -> 'up' | 'down' für Karten, die gerade nicht (genug) zu sehen sind
+  const offscreen = useOffscreenItems(listRef, idsKey, VISIBLE_RATIO);
 
   const jumpIndex = pickJumpTarget(items, statuses, offscreen);
   const jump = jumpIndex >= 0
@@ -250,7 +207,7 @@ function CookingSessionCarousel({ currentRecipeId, onSelect, onAdd }) {
           >
             <CarouselThumb recipe={jump.entry.recipe} />
             <span className="cooking-carousel-jump-label">{jump.entry.recipe.title} · {jump.status.text}</span>
-            <ArrowIcon up={jump.up} />
+            <ArrowVerticalIcon up={jump.up} />
           </button>
         )}
       </nav>

@@ -44,6 +44,8 @@ import CookingSessionDock from './CookingSessionDock';
 import CookingSessionRail from './CookingSessionRail';
 import CookingSessionCarousel from './CookingSessionCarousel';
 import useTabletLandscape from '../hooks/useTabletLandscape';
+import useLandscapeCameraSide from '../hooks/useLandscapeCameraSide';
+import useViewportFitCover from '../hooks/useViewportFitCover';
 import { getMenuRecipeIds } from '../utils/menuSections';
 import RecipeRating from './RecipeRating';
 import CookDateModal from './CookDateModal';
@@ -226,6 +228,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // wie im Hochformat. Schon mit dem ersten Rezept, damit nichts springt, wenn das zweite dazukommt.
   const isTabletLandscape = useTabletLandscape();
   const showCookingCarousel = parallelCookingEnabled && isTabletLandscape && !isMobileLandscape;
+  // Handy quer: die Rezept-Schiene steht gegenüber der Kamera (Dynamic Island, Notch) und reicht dort bis an
+  // den Displayrand. Dafür deckt die Seite den ganzen Bildschirm ab (viewport-fit=cover), solange die Schiene
+  // da ist; nur wenn die Drehrichtung bekannt ist, sonst bleibt sie innerhalb der Sicherheitsabstände links.
+  const cameraSide = useLandscapeCameraSide();
+  const cookingRailRight = cameraSide === 'left';
+  useViewportFitCover(cookingMode && parallelCookingEnabled && isMobileLandscape && cameraSide !== null);
   const [showAddRecipeSheet, setShowAddRecipeSheet] = useState(false);
   // Einrichtbares Icon des Knopfs „Rezept dazunehmen“ (Button-Icon cookingAddRecipe), abgeleitet statt eigener State
   const cookingAddRecipeIcon = getEffectiveIcon(allButtonIcons, 'cookingAddRecipe', isDarkMode) || defaultIcon('potPlus', isDarkMode);
@@ -1421,7 +1429,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Rezept-Leiste unten im Kochmodus, sobald ein anderes Rezept der Sitzung im Hintergrund läuft
   // (auf dem iPad quer übernimmt das Karussell ihre Aufgabe)
   const showCookingDock = hasParkedRecipes && !isMobileLandscape && !showCookingCarousel;
-  // Im Querformat statt Leiste und Titelzeile: die Rezept-Schiene am linken Rand (Entwurf Q2), immer mit „+“
+  // Im Querformat statt Leiste und Titelzeile: die Rezept-Schiene am Rand gegenüber der Kamera (Entwurf Q2), immer mit „+“
   const showCookingRail = parallelCookingEnabled && isMobileLandscape;
   const swapWithSessionRecipe = (entry) => cookingSession.swapWith(
     { recipe, stepIndex: currentStepIndex, servingMultiplier },
@@ -1839,7 +1847,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         </div>
       )}
 
-      <div className={`recipe-detail-content ${cookingMode ? 'cooking-mode-active' : ''} ${cookingMode && isMobileLandscape ? 'cooking-mode-landscape' : ''}${cookingMode && showCookingDock ? ' cooking-mode-has-dock' : ''}${cookingMode && showCookingRail ? ' cooking-mode-has-rail' : ''}${cookingMode && showCookingCarousel ? ' cooking-mode-split' : ''}`} ref={contentRef}>
+      <div className={`recipe-detail-content ${cookingMode ? 'cooking-mode-active' : ''} ${cookingMode && isMobileLandscape ? 'cooking-mode-landscape' : ''}${cookingMode && showCookingDock ? ' cooking-mode-has-dock' : ''}${cookingMode && showCookingRail ? ' cooking-mode-has-rail' : ''}${cookingMode && showCookingRail && cookingRailRight ? ' cooking-mode-rail-right' : ''}${cookingMode && showCookingCarousel ? ' cooking-mode-split' : ''}`} ref={contentRef}>
         {cookingMode ? (
           // Cooking mode layout
           <>
@@ -1855,11 +1863,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               </div>
             )}
 
-            {/* Kochsitzung im Querformat: alle Rezepte am linken Rand; Tippen tauscht, dieses Rezept parkt dabei */}
+            {/* Kochsitzung im Querformat: alle Rezepte am Rand gegenüber der Kamera; Tippen tauscht, dieses Rezept parkt dabei */}
             {showCookingRail && (
               <CookingSessionRail
                 currentRecipe={recipe}
                 currentStepIndex={currentStepIndex}
+                side={cookingRailRight ? 'right' : 'left'}
                 onSelect={swapWithSessionRecipe}
                 onAdd={() => setShowAddRecipeSheet(true)}
                 addIcon={cookingAddRecipeIcon}

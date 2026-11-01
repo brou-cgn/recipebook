@@ -44,9 +44,11 @@
         setTimeout(function() {
           var meta = document.querySelector('meta[name="viewport"]');
           if (meta) {
-            var prev = meta.content;
-            meta.content = prev + ', maximum-scale=1.0';
-            setTimeout(function() { meta.content = prev; }, ZOOM_RESET_DELAY);
+            var added = ', maximum-scale=1.0';
+            meta.content = meta.content + added;
+            // Only remove our own addition: the cooking mode may toggle viewport-fit meanwhile
+            // (useViewportFitCover), restoring the old content would undo that
+            setTimeout(function() { meta.content = meta.content.replace(added, ''); }, ZOOM_RESET_DELAY);
           }
         }, ORIENTATION_CHANGE_DELAY);
       });
