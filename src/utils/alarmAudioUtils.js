@@ -1,171 +1,148 @@
-function playRadarPattern(ctx) {
-  try {
-    const now = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'square';
-    // Ascending sweep: 800 Hz → 1800 Hz over 0.3s
-    osc.frequency.setValueAtTime(800, now);
-    osc.frequency.linearRampToValueAtTime(1800, now + 0.3);
-    // Descending sweep: 1800 Hz → 800 Hz over 0.2s
-    osc.frequency.linearRampToValueAtTime(800, now + 0.5);
-    gain.gain.setValueAtTime(0.65, now);
-    gain.gain.setValueAtTime(0.65, now + 0.5);
-    gain.gain.linearRampToValueAtTime(0, now + 0.6);
-    osc.start(now);
-    osc.stop(now + 0.6);
+import {
+  SILENCE,
+  envelopeAt,
+  envelopeBreakpoints,
+  getAlarmSoundDefinition,
+  getAlarmSoundDuration,
+  getAlarmSoundLevel,
+  hitTimesOf,
+  voiceHits,
+} from './alarmSounds';
 
-    // Second harmonic for a more piercing sound
-    const osc2 = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.connect(gain2);
-    gain2.connect(ctx.destination);
-    osc2.type = 'square';
-    osc2.frequency.setValueAtTime(1600, now);
-    osc2.frequency.linearRampToValueAtTime(3600, now + 0.3);
-    osc2.frequency.linearRampToValueAtTime(1600, now + 0.5);
-    gain2.gain.setValueAtTime(0.28, now);
-    gain2.gain.setValueAtTime(0.28, now + 0.5);
-    gain2.gain.linearRampToValueAtTime(0, now + 0.6);
-    osc2.start(now);
-    osc2.stop(now + 0.6);
-  } catch (_) {
-    // Audio API not available – silently ignore
-  }
-}
+/**
+ * Vorlauf in s, mit dem ein Muster geplant wird: Ereignisse genau auf `currentTime` können
+ * auf langsamen Geräten schon vorbei sein, wenn der Audio-Thread sie liest (Knacken, fehlender Anschlag).
+ */
+export const PATTERN_START_DELAY = 0.02;
 
-function playChimePattern(ctx) {
-  try {
-    const now = ctx.currentTime;
-    // Gentle bell: sine wave with fast attack and slow exponential decay
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1047, now); // C6
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.7, now + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
-    osc.start(now);
-    osc.stop(now + 0.9);
-    // Higher harmonic for richness
-    const osc2 = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.connect(gain2);
-    gain2.connect(ctx.destination);
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(2093, now); // C7
-    gain2.gain.setValueAtTime(0, now);
-    gain2.gain.linearRampToValueAtTime(0.3, now + 0.02);
-    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
-    osc2.start(now);
-    osc2.stop(now + 0.6);
-  } catch (_) {
-    // Audio API not available – silently ignore
-  }
-}
+/** Ausblendzeit in s, wenn ein laufendes Muster abgebrochen wird (kurz genug für „sofort“, ohne Knacken). */
+export const PATTERN_FADE_OUT = 0.06;
 
-function playBeepPattern(ctx) {
-  try {
-    const now = ctx.currentTime;
-    // Three short square-wave beeps
-    for (let i = 0; i < 3; i++) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(880, now + i * 0.22);
-      gain.gain.setValueAtTime(0.5, now + i * 0.22);
-      gain.gain.setValueAtTime(0.5, now + i * 0.22 + 0.1);
-      gain.gain.linearRampToValueAtTime(0, now + i * 0.22 + 0.13);
-      osc.start(now + i * 0.22);
-      osc.stop(now + i * 0.22 + 0.15);
+/**
+ * Spielt eine Stimme (ein Oszillator + Hüllkurve, auch bei mehreren Anschlägen) eines Alarmtons ab.
+ * Die Hüllkurve fährt an jedem Knickpunkt den Wert aus `envelopeAt` an: aufwärts linear (Anschlag),
+ * abwärts exponentiell (Ausklingen) bzw. linear bei `curve: 'linear'`.
+ * @param {AudioContext} ctx
+ * @param {AudioNode} output - Ziel (Gesamtlautstärke des Musters)
+ * @param {object} voice - siehe Aufbau in `alarmSounds.js`
+ * @param {number} t0 - Startzeit des Musters (Zeitachse des AudioContext)
+ * @returns {OscillatorNode}
+ */
+function playVoice(ctx, output, voice, t0) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = voice.type;
+  voiceHits(voice).forEach((hit) => {
+    const { start, end } = hitTimesOf(voice, hit);
+    osc.frequency.setValueAtTime(voice.freq, t0 + start);
+    if (voice.freqTo) osc.frequency.linearRampToValueAtTime(voice.freqTo, t0 + end);
+  });
+
+  const [first, ...rest] = envelopeBreakpoints(voice);
+  gain.gain.setValueAtTime(SILENCE, t0 + first);
+  let previous = SILENCE;
+  rest.forEach((t) => {
+    const value = envelopeAt(voice, t);
+    if (value >= previous || voice.curve === 'linear') {
+      gain.gain.linearRampToValueAtTime(value, t0 + t);
+    } else {
+      gain.gain.exponentialRampToValueAtTime(Math.max(value, SILENCE), t0 + t);
     }
-  } catch (_) {
-    // Audio API not available – silently ignore
-  }
+    previous = value;
+  });
+
+  osc.connect(gain);
+  gain.connect(output);
+  osc.start(t0 + first);
+  osc.stop(t0 + rest[rest.length - 1] + 0.02);
+  return osc;
 }
 
-function playCrystalPattern(ctx) {
-  try {
-    const now = ctx.currentTime;
-    // High-pitched crystal bell: sine wave with very fast attack, long decay
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(2093, now); // C7
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.5, now + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.1);
-    osc.start(now);
-    osc.stop(now + 1.1);
-    // Sub-tone for body
-    const osc2 = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.connect(gain2);
-    gain2.connect(ctx.destination);
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(1568, now); // G6
-    gain2.gain.setValueAtTime(0, now);
-    gain2.gain.linearRampToValueAtTime(0.25, now + 0.01);
-    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
-    osc2.start(now);
-    osc2.stop(now + 0.7);
-  } catch (_) {
-    // Audio API not available – silently ignore
-  }
-}
-
-function playAlertPattern(ctx) {
-  try {
-    const now = ctx.currentTime;
-    // Two ascending sawtooth tones – urgent feel
-    for (let i = 0; i < 2; i++) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(440 + i * 220, now + i * 0.27);
-      osc.frequency.linearRampToValueAtTime(880 + i * 220, now + i * 0.27 + 0.22);
-      gain.gain.setValueAtTime(0.55, now + i * 0.27);
-      gain.gain.linearRampToValueAtTime(0, now + i * 0.27 + 0.22);
-      osc.start(now + i * 0.27);
-      osc.stop(now + i * 0.27 + 0.25);
-    }
-  } catch (_) {
-    // Audio API not available – silently ignore
-  }
-}
-
+/**
+ * Spielt das Muster eines Alarmtons einmal ab.
+ * Unbekannte und alte Schlüssel spielen den passenden bzw. den Standardton.
+ * @returns {{ stop: () => void } | null} Griff zum sofortigen Abbrechen (kurz ausgeblendet),
+ *   `null`, wenn die Audio API nicht verfügbar ist
+ */
 export function playAlarmPattern(ctx, soundKey) {
-  switch (soundKey) {
-    case 'chime':   playChimePattern(ctx);   break;
-    case 'beep':    playBeepPattern(ctx);    break;
-    case 'crystal': playCrystalPattern(ctx); break;
-    case 'alert':   playAlertPattern(ctx);   break;
-    default:        playRadarPattern(ctx);   break;
+  try {
+    const sound = getAlarmSoundDefinition(soundKey);
+    const level = getAlarmSoundLevel(soundKey);
+    const t0 = ctx.currentTime + PATTERN_START_DELAY;
+    // Gemeinsame Gesamtlautstärke je Muster; darüber lässt es sich auch abbrechen
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(level, t0);
+    master.connect(ctx.destination);
+    const oscillators = sound.voices.map((voice) => playVoice(ctx, master, voice, t0));
+
+    // Nach der letzten Stimme vom Ausgang trennen, damit ein langer Alarm keine Knoten ansammelt
+    let playing = oscillators.length;
+    oscillators.forEach((osc) => {
+      osc.onended = () => {
+        playing -= 1;
+        if (playing === 0) {
+          try { master.disconnect(); } catch (_) { /* schon getrennt */ }
+        }
+      };
+    });
+
+    return {
+      stop() {
+        try {
+          const now = ctx.currentTime;
+          master.gain.cancelScheduledValues(now);
+          master.gain.setValueAtTime(level, now);
+          master.gain.linearRampToValueAtTime(0, now + PATTERN_FADE_OUT);
+          oscillators.forEach((osc) => {
+            // Ältere Safari-Versionen werfen bei einem zweiten stop(); die Ausblendung reicht dann
+            try { osc.stop(now + PATTERN_FADE_OUT); } catch (_) { /* ignorieren */ }
+          });
+        } catch (_) {
+          // Audio API nicht verfügbar – ignorieren
+        }
+      },
+    };
+  } catch (_) {
+    // Audio API nicht verfügbar – ignorieren
+    return null;
   }
 }
 
+/** Abstand in ms, in dem der Alarm das Muster des Tons wiederholt. */
+export function getAlarmRepeatMs(soundKey) {
+  return getAlarmSoundDefinition(soundKey).repeatMs;
+}
+
+// Vorschau in den Einstellungen: ein gemeinsamer AudioContext, immer nur ein Ton zugleich
+let preview = null;
+
+/**
+ * Spielt den Ton einmal zur Vorschau. Eine laufende Vorschau bricht dabei ab, sodass sich beim
+ * Durchtippen der Liste keine Töne überlagern. Der AudioContext wird weiterverwendet und erst
+ * geschlossen, wenn die letzte Vorschau ausgeklungen ist.
+ */
 export async function previewAlarmSound(soundKey) {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
-    const ctx = new AudioCtx();
+    if (preview) {
+      clearTimeout(preview.closeTimer);
+      if (preview.handle) preview.handle.stop();
+    }
+    const ctx = preview && preview.ctx.state !== 'closed' ? preview.ctx : new AudioCtx();
+    const current = { ctx, handle: null, closeTimer: null };
+    preview = current;
     if (ctx.state === 'suspended') {
       await ctx.resume();
     }
-    playAlarmPattern(ctx, soundKey);
-    // Close the temporary context once the longest pattern (crystal: ~1.1 s) has
-    // fully faded out. 1500 ms provides a safe margin across all alarm patterns.
-    setTimeout(() => { try { ctx.close(); } catch (_) {} }, 1500);
+    // Während des Wartens wurde schon der nächste Ton angetippt
+    if (preview !== current) return;
+    current.handle = playAlarmPattern(ctx, soundKey);
+    const closeAfterMs = Math.ceil((PATTERN_START_DELAY + getAlarmSoundDuration(soundKey)) * 1000) + 300;
+    current.closeTimer = setTimeout(() => {
+      if (preview === current) preview = null;
+      try { ctx.close(); } catch (_) { /* ignorieren */ }
+    }, closeAfterMs);
   } catch (_) {
     // Audio API nicht verfügbar – ignorieren
   }
