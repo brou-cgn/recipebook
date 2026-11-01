@@ -1,0 +1,44 @@
+/* Vorübergehende Diagnose im Kochmodus quer (CookingCoverDiagnostics): eine kleine Zeile unten in der
+   Mitte, für Tipps durchlässig. Farben nur über Tokens. */
+.cooking-cover-diagnostics {
+  position: absolute;
+  bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  max-width: 80%;
+  box-sizing: border-box;
+  padding: 3px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface-card);
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.cooking-cover-diagnostics > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Misst die Abstände von iOS, nimmt keinen Platz ein */
+.cooking-cover-diagnostics-probe {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  visibility: hidden;
+  pointer-events: none;
+}

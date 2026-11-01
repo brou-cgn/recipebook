@@ -4,6 +4,7 @@ import { renderWithProviders } from '../test-utils';
 import RecipeDetail from './RecipeDetail';
 import CookingSessionDock from './CookingSessionDock';
 import { CookingSessionProvider } from '../contexts/CookingSessionContext';
+import { resetViewportCoverForTests } from '../hooks/useViewportFitCover';
 import { isBase64Image } from '../utils/imageUtils';
 import { defaultIcon } from '../utils/defaultButtonIcons';
 
@@ -517,6 +518,81 @@ describe('RecipeDetail – parallel kochen im Querformat (Entwurf Q2, Rezept-Sch
       expect(document.querySelector('.recipe-detail-content')).toHaveClass('cooking-mode-landscape');
       expect(document.querySelector('.recipe-detail-content')).not.toHaveClass('cooking-mode-rail-right');
     });
+  });
+});
+
+describe('RecipeDetail – Schiene ohne Abstand zum Displayrand (viewport-fit=cover nur beim Drehen)', () => {
+  const INITIAL_VIEWPORT = 'width=device-width, initial-scale=1';
+
+  function viewportContent() {
+    return document.querySelector('meta[name="viewport"]').getAttribute('content');
+  }
+
+  // Drehen wie auf dem iPhone: window.orientation und orientationchange, dann resize; RecipeDetail entprellt 150 ms
+  function rotateTo(orientation, width, height) {
+    Object.defineProperty(window, 'orientation', { configurable: true, writable: true, value: orientation });
+    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: width });
+    Object.defineProperty(window, 'innerHeight', { writable: true, configurable: true, value: height });
+    act(() => { window.dispatchEvent(new Event('orientationchange')); });
+    act(() => { window.dispatchEvent(new Event('resize')); });
+    act(() => { jest.advanceTimersByTime(200); });
+  }
+
+  beforeEach(() => {
+    document.head.innerHTML = `<meta name="viewport" content="${INITIAL_VIEWPORT}" />`;
+    Object.defineProperty(window, 'orientation', { configurable: true, writable: true, value: 0 });
+    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 393 });
+    Object.defineProperty(window, 'innerHeight', { writable: true, configurable: true, value: 852 });
+  });
+
+  afterEach(() => {
+    resetViewportCoverForTests();
+    delete window.orientation;
+    document.head.innerHTML = '';
+  });
+
+  test('rotated into landscape with a recipe open, the page reaches the edge; rotated back, the safe area returns', async () => {
+    renderWithProviders(<Harness />);
+    await act(async () => {});
+    expect(viewportContent()).toBe(INITIAL_VIEWPORT);
+
+    rotateTo(90, 852, 393);
+    expect(viewportContent()).toBe(`${INITIAL_VIEWPORT}, viewport-fit=cover`);
+    const content = document.querySelector('.recipe-detail-content');
+    expect(content).toHaveClass('cooking-mode-landscape');
+    expect(content).toHaveClass('cooking-mode-rail-right');
+    expect(screen.getByRole('navigation', { name: 'Rezepte am Herd' })).toHaveClass('cooking-rail--right');
+    // Vorübergehende Diagnose, nur mit cover
+    expect(screen.getByText(/Diagnose Rand/)).toBeInTheDocument();
+
+    rotateTo(0, 393, 852);
+    expect(viewportContent()).toBe(INITIAL_VIEWPORT);
+    expect(screen.queryByRole('navigation', { name: 'Rezepte am Herd' })).toBeNull();
+  });
+
+  test('opened in landscape without rotating, nothing switches in between; the rail stays within the safe area', async () => {
+    Object.defineProperty(window, 'orientation', { configurable: true, writable: true, value: 90 });
+    setLandscapeViewport();
+    renderWithProviders(<Harness />);
+    await act(async () => {});
+
+    expect(screen.getByRole('navigation', { name: 'Rezepte am Herd' })).toHaveClass('cooking-rail--right');
+    expect(viewportContent()).toBe(INITIAL_VIEWPORT);
+    expect(screen.queryByText(/Diagnose Rand/)).toBeNull();
+
+    // Erst die nächste Drehung (hier von quer nach quer) schaltet um
+    rotateTo(-90, 852, 393);
+    expect(viewportContent()).toBe(`${INITIAL_VIEWPORT}, viewport-fit=cover`);
+    expect(screen.getByRole('navigation', { name: 'Rezepte am Herd' })).toHaveClass('cooking-rail--left');
+  });
+
+  test('without the flag rotating changes nothing', async () => {
+    renderWithProviders(<Harness user={{ ...flaggedUser, parallelKochen: false }} />);
+    await act(async () => {});
+
+    rotateTo(90, 852, 393);
+    expect(document.querySelector('.recipe-detail-content')).toHaveClass('cooking-mode-landscape');
+    expect(viewportContent()).toBe(INITIAL_VIEWPORT);
   });
 });
 

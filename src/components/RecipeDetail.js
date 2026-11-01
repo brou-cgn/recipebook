@@ -42,9 +42,11 @@ import CookingAddRecipeButton from './CookingAddRecipeButton';
 import CookingAddRecipeSheet from './CookingAddRecipeSheet';
 import CookingSessionDock from './CookingSessionDock';
 import CookingSessionRail from './CookingSessionRail';
+import CookingCoverDiagnostics from './CookingCoverDiagnostics';
 import CookingSessionCarousel from './CookingSessionCarousel';
 import useTabletLandscape from '../hooks/useTabletLandscape';
 import useLandscapeCameraSide from '../hooks/useLandscapeCameraSide';
+import useViewportFitCover from '../hooks/useViewportFitCover';
 import { getMenuRecipeIds } from '../utils/menuSections';
 import RecipeRating from './RecipeRating';
 import CookDateModal from './CookDateModal';
@@ -228,9 +230,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const isTabletLandscape = useTabletLandscape();
   const showCookingCarousel = parallelCookingEnabled && isTabletLandscape && !isMobileLandscape;
   // Handy quer: die Rezept-Schiene steht gegenüber der Kamera (Dynamic Island, Notch); ist die Drehrichtung
-  // unbekannt, bleibt sie links.
+  // unbekannt, bleibt sie links. Ohne Abstand zum Displayrand: Beim Drehen ins Querformat reicht die Seite
+  // bis an den Rand (viewport-fit=cover, nur beim Drehen umgeschaltet, siehe useViewportFitCover).
   const cameraSide = useLandscapeCameraSide();
   const cookingRailRight = cameraSide === 'left';
+  const isPhoneScreen = Math.min(window.screen?.width || 0, window.screen?.height || 0) <= MOBILE_BREAKPOINT;
+  useViewportFitCover(parallelCookingEnabled && isPhoneScreen);
   const [showAddRecipeSheet, setShowAddRecipeSheet] = useState(false);
   // Einrichtbares Icon des Knopfs „Rezept dazunehmen“ (Button-Icon cookingAddRecipe), abgeleitet statt eigener State
   const cookingAddRecipeIcon = getEffectiveIcon(allButtonIcons, 'cookingAddRecipe', isDarkMode) || defaultIcon('potPlus', isDarkMode);
@@ -2033,6 +2038,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 ))}
               </div>
             </section>
+
+            {/* Vorübergehend: Diagnose für die Schiene ohne Abstand zum Rand (sichtbar nur mit viewport-fit=cover) */}
+            {showCookingRail && <CookingCoverDiagnostics />}
 
             {/* Kochsitzung: Rezepte im Hintergrund; Tippen tauscht, dieses Rezept parkt dabei */}
             {showCookingDock && (

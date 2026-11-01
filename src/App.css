@@ -11,6 +11,11 @@
   );
   --bottom-nav-offset: 0px;
   --bottom-spacing: 0px;
+  /* Nur wirksam, solange viewport-fit=cover gilt (useViewportFitCover: nach dem Drehen ins Querformat
+     mit offenem Rezept, bis zum nächsten Drehen). Wird das Rezept quer verlassen, bleiben die übrigen
+     Seiten so innerhalb der Abstände. Ohne cover sind die Werte 0. */
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
 @media (max-width: 768px) {
