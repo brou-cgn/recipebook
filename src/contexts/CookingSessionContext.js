@@ -411,15 +411,29 @@ function useCookingSessionStore({
 
   const switchTo = useCallback((recipeId) => openFromSession(recipeId), [openFromSession]);
 
-  // Tippen auf ein geparktes Rezept: das Rezept vorn parkt (wenn Platz ist), das gewählte öffnet
-  const swapWith = useCallback((current, targetId) => {
+  // Tippen auf ein geparktes Rezept: das Rezept vorn parkt (wenn Platz ist), das gewählte öffnet.
+  // Leiste und Schiene behalten die Reihenfolge (das Rezept vorn parkt an seinem Platz). Mit inPlace
+  // (Karussell im iPad-Querformat, Entwurf I4) übernimmt es stattdessen den Platz des gewählten:
+  // Das Karussell zeigt das Rezept vorn nicht, so bleiben dort alle anderen Karten stehen.
+  const swapWith = useCallback((current, targetId, { inPlace = false } = {}) => {
     if (!entriesRef.current.some((e) => e.recipe.id === targetId)) return false;
     if (current && current.recipe.id !== targetId) {
       const parked = { recipe: current.recipe, stepIndex: current.stepIndex, servingMultiplier: current.servingMultiplier };
       const list = entriesRef.current;
       const index = list.findIndex((e) => e.recipe.id === parked.recipe.id);
-      if (index >= 0) commitEntries(list.map((e, i) => (i === index ? parked : e)));
-      else if (list.length < MAX_SESSION_RECIPES) commitEntries([...list, parked]);
+      const targetIndex = list.findIndex((e) => e.recipe.id === targetId);
+      if (inPlace && index >= 0) {
+        const next = list.slice();
+        next[index] = list[targetIndex];
+        next[targetIndex] = parked;
+        commitEntries(next);
+      } else if (inPlace && list.length < MAX_SESSION_RECIPES) {
+        commitEntries([...list.map((e, i) => (i === targetIndex ? parked : e)), list[targetIndex]]);
+      } else if (index >= 0) {
+        commitEntries(list.map((e, i) => (i === index ? parked : e)));
+      } else if (list.length < MAX_SESSION_RECIPES) {
+        commitEntries([...list, parked]);
+      }
       leftIdsRef.current.delete(parked.recipe.id);
     }
     return openFromSession(targetId);
