@@ -19,6 +19,12 @@
     transform: none !important;
   }
 
+  /* Ausgeblendet (Kochmodus quer, iPad-Karussell): Die Regel oben hebt das Wegschieben auf, und ein Handy
+     quer ist mit viewport-fit=cover breiter als 768 px (iPhone 15: 852 px). Deshalb ganz entfernen. */
+  .header.header-hidden {
+    display: none;
+  }
+
   .search-container {
     flex-direction: row-reverse;
   }
