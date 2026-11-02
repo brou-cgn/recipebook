@@ -165,6 +165,34 @@ describe('CookingSessionCarousel', () => {
 
     expect(cardNames()).toHaveLength(3);
     expect(document.querySelector('.cooking-carousel')).toHaveClass('cooking-carousel--compact');
+    // Quer scrollt das Karussell, die vierte Karte schaut heraus; die Höhe teilen sie sich nur hochkant
+    expect(document.querySelector('.cooking-carousel')).not.toHaveClass('cooking-carousel--fill');
+  });
+
+  describe('upright (Entwurf T1)', () => {
+    test('up to two cards keep half the height each, as in landscape', () => {
+      renderCarousel({ currentRecipeId: 'kloesse', portrait: true });
+      seedSession();
+
+      expect(cardNames()).toHaveLength(2);
+      expect(document.querySelector('.cooking-carousel')).not.toHaveClass('cooking-carousel--fill');
+      expect(document.querySelector('.cooking-carousel')).not.toHaveClass('cooking-carousel--compact');
+    });
+
+    test('from three cards on they share the full height and stay large; compact only from four', () => {
+      renderCarousel({ currentRecipeId: 'pudding', portrait: true });
+      seedSession();
+
+      expect(cardNames()).toHaveLength(3);
+      expect(document.querySelector('.cooking-carousel')).toHaveClass('cooking-carousel--fill');
+      expect(document.querySelector('.cooking-carousel')).not.toHaveClass('cooking-carousel--compact');
+
+      act(() => { session.addRecipe({ recipe: kloesse, stepIndex: 0, servingMultiplier: 1 }, bratapfel); });
+
+      expect(cardNames()).toHaveLength(4);
+      expect(document.querySelector('.cooking-carousel')).toHaveClass('cooking-carousel--fill');
+      expect(document.querySelector('.cooking-carousel')).toHaveClass('cooking-carousel--compact');
+    });
   });
 
   test('without a picture the card shows the first letter of the recipe', () => {
