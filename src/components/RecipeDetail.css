@@ -1953,11 +1953,13 @@ button.private-badge-button:active {
   font-size: clamp(1.25rem, 3.1dvh, 1.6rem);
 }
 
-/* ── iPad im Querformat mit weiteren Rezepten der Sitzung (Entwurf I4) ───────────────
+/* ── iPad mit weiteren Rezepten der Sitzung (Entwürfe I4 quer, T1 hochkant) ─────────
    Applied via JS (cooking-mode-split, Rollen-Flag parallelKochen). Zwei Spalten über den
    ganzen Bildschirm: links das Karussell (CookingSessionCarousel.css), rechts der Kochmodus
    wie im Hochformat mit Titelzeile, Fortschritt, Schritt-Karussell und Zutaten-Sheet; die
-   Hochformat-Regeln oben gelten weiter, hier kommt nur die Lage im Raster dazu. */
+   Hochformat-Regeln oben gelten weiter, hier kommt nur die Lage im Raster dazu.
+   Quer schon mit dem ersten Rezept, hochkant erst ab dem zweiten (sonst .cooking-mode-tablet-full).
+   Die linke Spalte ist hochkant 360 px breit (43vw liegt dort unter der Untergrenze). */
 .recipe-detail-content.cooking-mode-active.cooking-mode-split {
   --cooking-carousel-width: clamp(360px, 43vw, 560px);
   position: fixed;
@@ -2011,6 +2013,44 @@ button.private-badge-button:active {
 }
 
 .cooking-mode-split .cooking-mode-ingredients .ingredients-list > li {
+  break-inside: avoid;
+}
+
+/* iPad mini hochkant (744 px): Die Spalte rechts ist nur so breit wie ein iPhone (384 px), die
+   Zutaten bleiben einspaltig. Schmaler als 800 px ist der Split nur hochkant (quer ab 900 px). */
+@media (max-width: 799px) {
+  .cooking-mode-split .cooking-mode-ingredients .ingredients-list {
+    columns: auto;
+  }
+}
+
+/* ── Tablet hochkant mit nur einem Rezept (Entwurf T1) ──────────────────────────────
+   Applied via JS (cooking-mode-tablet-full, Rollen-Flag parallelKochen). Der Kochmodus wie im
+   Hochformat auf dem iPhone über den ganzen Bildschirm; ab dem zweiten Rezept kommt links das
+   Karussell dazu (.cooking-mode-split). Ab 769 px Breite greift die Handy-Regel oben nicht, die
+   den Kochmodus über den Bildschirm legt; deshalb hier dasselbe. */
+.recipe-detail-content.cooking-mode-active.cooking-mode-tablet-full {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: auto;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Die Schrittkarte füllt die Breite (sonst 100vw bzw. höchstens 398 px), die Zutaten zweispaltig wie im Split */
+.cooking-mode-tablet-full .step-card {
+  width: 100%;
+  max-width: none;
+}
+
+.cooking-mode-tablet-full .cooking-mode-ingredients .ingredients-list {
+  columns: 2;
+  column-gap: 2rem;
+}
+
+.cooking-mode-tablet-full .cooking-mode-ingredients .ingredients-list > li {
   break-inside: avoid;
 }
 

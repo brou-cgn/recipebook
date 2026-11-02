@@ -13,8 +13,8 @@ import './DeleteRowButton.css';
 import './CookingSessionCarousel.css';
 
 /**
- * Karussell der Kochsitzung im iPad-Querformat (Vorhaben „Parallel kochen“, Entwurf I4):
- * die linke Spalte neben dem Kochmodus, der rechts wie im Hochformat läuft. Je weiteres
+ * Karussell der Kochsitzung auf dem Tablet (Vorhaben „Parallel kochen“, Entwürfe I4 quer und
+ * T1 hochkant): die linke Spalte neben dem Kochmodus, der rechts wie im Hochformat läuft. Je weiteres
  * Rezept der Sitzung eine Karte mit Bild, Name, Schritt und Timer und dem Text des Schritts,
  * an dem das Rezept steht. Das Rezept vorn steht nicht darin.
  *
@@ -24,14 +24,23 @@ import './CookingSessionCarousel.css';
  * so bleiben die übrigen Karten stehen. Liegt ein fälliges Rezept außerhalb des sichtbaren
  * Bereichs, zeigt eine Pille, wo es ist; Tippen scrollt hin.
  *
+ * Hochkant (portrait) ist die Spalte hoch genug für alle weiteren Rezepte (höchstens fünf): Ab drei
+ * Karten teilen sie sich die ganze Höhe (fill), nichts scrollt und keine schaut heraus; kompakt
+ * werden sie erst ab vier.
+ *
  * Linksswipe nimmt ein Rezept aus der Sitzung, mit „Rückgängig“ wie Leiste und Schiene.
  *
- * Ohne weitere Rezepte steht die Spalte trotzdem da (sonst spränge das Layout beim zweiten
+ * Ohne weitere Rezepte steht die Spalte quer trotzdem da (sonst spränge das Layout beim zweiten
  * Rezept), mit einem Hinweis und „Rezept dazunehmen“ (onAdd, Sheet „Was kochst du dazu?“).
+ * Hochkant blendet RecipeDetail sie dann aus; den Hinweis sieht man dort nur, solange die letzte
+ * Karte nach dem Linksswipe auf „Rückgängig“ wartet.
  */
 
-// Ab so vielen Karten kompakt
+// Ab so vielen Karten kompakt (quer)
 const COMPACT_FROM = 3;
+// Hochkant: ab so vielen Karten teilen sie sich die ganze Höhe, ab so vielen werden sie kompakt
+const PORTRAIT_FILL_FROM = 3;
+const PORTRAIT_COMPACT_FROM = 4;
 // Ab diesem Anteil gilt eine Karte als sichtbar
 const VISIBLE_RATIO = 0.5;
 
@@ -133,7 +142,7 @@ function CarouselCard({ entry, status, onSelect, onRemove }) {
   );
 }
 
-function CookingSessionCarousel({ currentRecipeId, onSelect, onAdd }) {
+function CookingSessionCarousel({ currentRecipeId, onSelect, onAdd, portrait = false }) {
   const session = useCookingSession();
   const reducedMotion = usePrefersReducedMotion();
   const { banners, pendingKeys, scheduleDelete, undoDelete } = useUndoableDelete();
@@ -143,7 +152,8 @@ function CookingSessionCarousel({ currentRecipeId, onSelect, onAdd }) {
     (entry) => entry.recipe.id !== currentRecipeId && !pendingKeys.has(entry.recipe.id)
   );
   const statuses = items.map((entry) => cookingStatus(entry, session.allTimers));
-  const compact = items.length >= COMPACT_FROM;
+  const compact = items.length >= (portrait ? PORTRAIT_COMPACT_FROM : COMPACT_FROM);
+  const fill = portrait && items.length >= PORTRAIT_FILL_FROM;
   const idsKey = items.map((entry) => entry.recipe.id).join('|');
   // Rezept-ID -> 'up' | 'down' für Karten, die gerade nicht (genug) zu sehen sind
   const offscreen = useOffscreenItems(listRef, idsKey, VISIBLE_RATIO);
@@ -174,7 +184,7 @@ function CookingSessionCarousel({ currentRecipeId, onSelect, onAdd }) {
 
   return (
     <>
-      <nav className={`cooking-carousel${compact ? ' cooking-carousel--compact' : ''}`} aria-label="Weitere Rezepte am Herd">
+      <nav className={`cooking-carousel${compact ? ' cooking-carousel--compact' : ''}${fill ? ' cooking-carousel--fill' : ''}`} aria-label="Weitere Rezepte am Herd">
         <h2 className="cooking-carousel-heading">{heading}</h2>
         {items.length === 0 && (
           <div className="cooking-carousel-empty">
