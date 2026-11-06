@@ -673,7 +673,7 @@ describe('RecipeDetail – parallel kochen auf dem iPad quer (Entwurf I4, Karuss
     ]);
   });
 
-  test('turned upright, the iPad shows the dock again instead of the carousel', async () => {
+  test('turned upright, the iPad keeps the carousel with the same cards (Entwurf T1), not the dock', async () => {
     renderWithProviders(<Harness />);
     await enterCookingMode();
     addRecipeViaSearch('rotkohl', 'Apfelrotkohl');
@@ -686,9 +686,10 @@ describe('RecipeDetail – parallel kochen auf dem iPad quer (Entwurf I4, Karuss
     });
 
     expect(document.querySelector('.cooking-mode-active')).toBeInTheDocument();
-    expect(document.querySelector('.cooking-mode-split')).toBeNull();
-    expect(screen.queryByRole('navigation', { name: 'Weitere Rezepte am Herd' })).toBeNull();
-    expect(screen.getByRole('navigation', { name: 'Rezepte im Hintergrund' })).toBeInTheDocument();
+    expect(document.querySelector('.cooking-mode-split')).toBeInTheDocument();
+    expect(titleBarTitle()).toBe('Apfelrotkohl');
+    expect(carouselCards()).toEqual(['Rinderrouladen nach vorn holen, Schritt 1 von 3']);
+    expect(screen.queryByRole('navigation', { name: 'Rezepte im Hintergrund' })).toBeNull();
     await act(async () => {});
   });
 
@@ -698,6 +699,111 @@ describe('RecipeDetail – parallel kochen auf dem iPad quer (Entwurf I4, Karuss
 
     expect(document.querySelector('.overlay-cooking-mode-static')).toBeNull();
     expect(screen.queryByRole('navigation', { name: 'Weitere Rezepte am Herd' })).toBeNull();
+  });
+});
+
+describe('RecipeDetail – parallel kochen auf dem iPad hochkant (Entwurf T1)', () => {
+  const originalMatchMedia = window.matchMedia;
+  beforeEach(() => setTabletViewport(834, 1194));
+  afterEach(() => { window.matchMedia = originalMatchMedia; });
+
+  test('the picture offers the cooking mode; with one recipe it runs full width, without an empty column', async () => {
+    const onHeaderVisibilityChange = jest.fn();
+    renderWithProviders(<Harness onHeaderVisibilityChange={onHeaderVisibilityChange} />);
+    await act(async () => {});
+    // Bisher ohne Einstieg (Desktop-Ansicht ab 769 px Breite); Schließen bleibt in der Kopfzeile
+    expect(document.querySelector('.overlay-cooking-mode-static')).toBeInTheDocument();
+    expect(document.querySelector('.overlay-back-button')).toBeNull();
+
+    await enterCookingMode();
+
+    const content = document.querySelector('.recipe-detail-content');
+    expect(content).toHaveClass('cooking-mode-tablet-full');
+    expect(content).not.toHaveClass('cooking-mode-split');
+    expect(titleBarTitle()).toBe('Rinderrouladen');
+    expect(screen.queryByRole('navigation', { name: 'Weitere Rezepte am Herd' })).toBeNull();
+    // Der Kochmodus füllt den Bildschirm: der App-Header blendet aus
+    expect(onHeaderVisibilityChange).toHaveBeenLastCalledWith(false);
+  });
+
+  test('with the second recipe the carousel joins on the left, holding the first recipe at its step', async () => {
+    renderWithProviders(<Harness />);
+    await enterCookingMode();
+    fireEvent.click(document.querySelectorAll('.step-card')[1]);
+
+    addRecipeViaSearch('rotkohl', 'Apfelrotkohl');
+
+    const content = document.querySelector('.recipe-detail-content');
+    expect(content).toHaveClass('cooking-mode-split');
+    expect(content).not.toHaveClass('cooking-mode-tablet-full');
+    expect(titleBarTitle()).toBe('Apfelrotkohl');
+    expect(carouselCards()).toEqual(['Rinderrouladen nach vorn holen, Schritt 2 von 3']);
+    // Die Leiste gibt es auch hochkant nicht, das Karussell übernimmt ihre Aufgabe
+    expect(screen.queryByRole('navigation', { name: 'Rezepte im Hintergrund' })).toBeNull();
+    expect(content).not.toHaveClass('cooking-mode-has-dock');
+    await act(async () => {});
+  });
+
+  test('from three further recipes the cards share the full height; compact only from four', async () => {
+    renderWithProviders(<Harness />);
+    await enterCookingMode();
+    addRecipeViaSearch('rotkohl', 'Apfelrotkohl');
+    addRecipeViaSearch('klö', 'Kartoffelklöße');
+    const carouselNav = () => screen.getByRole('navigation', { name: 'Weitere Rezepte am Herd' });
+    expect(carouselCards()).toHaveLength(2);
+    expect(carouselNav()).not.toHaveClass('cooking-carousel--fill');
+
+    addRecipeViaSearch('bratapfel', 'Bratapfel');
+    expect(carouselCards()).toHaveLength(3);
+    expect(carouselNav()).toHaveClass('cooking-carousel--fill');
+    expect(carouselNav()).not.toHaveClass('cooking-carousel--compact');
+
+    addRecipeViaSearch('pudding', 'Vanillepudding');
+    expect(carouselCards()).toHaveLength(4);
+    expect(carouselNav()).toHaveClass('cooking-carousel--fill');
+    expect(carouselNav()).toHaveClass('cooking-carousel--compact');
+    await act(async () => {});
+  });
+
+  test('turned upright with only one recipe, the full width replaces the empty left column', async () => {
+    setTabletViewport(1194, 834);
+    renderWithProviders(<Harness />);
+    await enterCookingMode();
+    expect(document.querySelector('.recipe-detail-content')).toHaveClass('cooking-mode-split');
+    expect(screen.getByText('Noch kein weiteres Rezept am Herd')).toBeInTheDocument();
+
+    setTabletViewport(834, 1194);
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+      jest.advanceTimersByTime(150);
+    });
+
+    const content = document.querySelector('.recipe-detail-content');
+    expect(content).toHaveClass('cooking-mode-active');
+    expect(content).toHaveClass('cooking-mode-tablet-full');
+    expect(content).not.toHaveClass('cooking-mode-split');
+    expect(screen.queryByText('Noch kein weiteres Rezept am Herd')).toBeNull();
+  });
+
+  test('the iPad mini (744 px wide) gets the carousel too instead of the dock', async () => {
+    setTabletViewport(744, 1133);
+    renderWithProviders(<Harness />);
+    await enterCookingMode();
+    expect(document.querySelector('.recipe-detail-content')).toHaveClass('cooking-mode-tablet-full');
+
+    addRecipeViaSearch('rotkohl', 'Apfelrotkohl');
+
+    expect(document.querySelector('.recipe-detail-content')).toHaveClass('cooking-mode-split');
+    expect(carouselCards()).toEqual(['Rinderrouladen nach vorn holen, Schritt 1 von 3']);
+    expect(screen.queryByRole('navigation', { name: 'Rezepte im Hintergrund' })).toBeNull();
+    await act(async () => {});
+  });
+
+  test('without the flag the iPad upright keeps its view: no cooking mode button on the picture', async () => {
+    renderWithProviders(<Harness user={{ ...flaggedUser, parallelKochen: false }} />);
+    await act(async () => {});
+
+    expect(document.querySelector('.overlay-cooking-mode-static')).toBeNull();
   });
 });
 
