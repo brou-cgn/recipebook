@@ -1,4 +1,4 @@
-/* Karussell der Kochsitzung im iPad-Querformat (CookingSessionCarousel, Entwurf I4).
+/* Karussell der Kochsitzung auf dem Tablet (CookingSessionCarousel, Entwürfe I4 quer und T1 hochkant).
    Farben nur über Tokens, Light und Dark kommen aus tokens.css: Die Spalte liegt in der
    Fläche der Schrittspalte (--color-surface-subtle), die Karten in der Farbe der Schrittkarte (--color-surface-card).
    Bald fällig und abgelaufen: orange wie in Leiste und Schiene. Die Lage in der linken
@@ -317,6 +317,14 @@
   -webkit-line-clamp: 3;
   font-size: clamp(1.125rem, 2.5vh, 1.3125rem);
   font-size: clamp(1.125rem, 2.5dvh, 1.3125rem);
+}
+
+/* Hochkant (Entwurf T1): Die Spalte ist hoch genug für alle weiteren Rezepte der Sitzung (höchstens
+   fünf). Ab drei Karten teilen sie sich die ganze Höhe: nichts scrollt, keine schaut heraus. Kompakt
+   werden sie hochkant erst ab vier (CookingSessionCarousel.js); bis zwei bleibt es bei der halben Höhe. */
+.cooking-carousel--fill .cooking-carousel-item,
+.cooking-carousel--fill.cooking-carousel--compact .cooking-carousel-item {
+  flex: 1 1 0;
 }
 
 /* Fälliges Rezept außerhalb des sichtbaren Bereichs: Pille am Rand, auf dessen Seite es liegt */
