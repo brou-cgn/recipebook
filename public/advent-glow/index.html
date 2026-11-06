@@ -160,17 +160,88 @@ fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 
 <script>
 /*
-  Backend hook. Replace this stub with the Firebase implementation
-  (see PROMPT.md). Contract:
+  Backend hook. Contract (unchanged):
     window.rsvpBackend.load()      -> Promise<RSVP|null>   existing reply of this guest
     window.rsvpBackend.save(rsvp)  -> Promise<void>         create or overwrite this guest's reply
   RSVP = { name:string, answer:"yes"|"no", people:number, nonAlcoholic:boolean, note:string }
-  The page waits for window.rsvpBackend to exist (set by a module script below or by this stub).
+  This classic script defines the hook synchronously; both calls wait (promise) until the
+  Firebase module script below has set up the real implementation.
 */
-window.rsvpBackend = window.rsvpBackend || {
-  load: function(){ return Promise.resolve(null); },
-  save: function(r){ console.log("[rsvp stub] would save", r); return Promise.resolve(); }
-};
+(function(){
+  var ready = new Promise(function(resolve, reject){
+    window.__rsvpBackendReady = { resolve: resolve, reject: reject };
+  });
+  function withTimeout(p){
+    return Promise.race([p, new Promise(function(_, reject){
+      setTimeout(function(){ reject(new Error("rsvp backend timeout")); }, 20000);
+    })]);
+  }
+  window.rsvpBackend = {
+    load: function(){ return withTimeout(ready.then(function(b){ return b.load(); })); },
+    save: function(r){ return withTimeout(ready.then(function(b){ return b.save(r); })); }
+  };
+})();
+</script>
+<script type="module">
+/* Firebase backend: anonymous sign-in, one document per guest (id = uid). Config comes from
+   Firebase Hosting's reserved /__/firebase/init.json, so no keys live in this file. */
+var COLLECTION = "rsvps_adventglow_2026";
+var EVENT_ID = "advent-glow-2026";
+var SDK = "https://www.gstatic.com/firebasejs/12.9.0/";
+try {
+  var mods = await Promise.all([
+    import(SDK + "firebase-app.js"),
+    import(SDK + "firebase-auth.js"),
+    import(SDK + "firebase-firestore.js")
+  ]);
+  var app = mods[0], authSdk = mods[1], fs = mods[2];
+  var config = await (await fetch("/__/firebase/init.json", { cache: "no-store" })).json();
+  var fbApp = app.initializeApp(config);
+  var auth = authSdk.getAuth(fbApp);
+  var db = fs.getFirestore(fbApp);
+
+  var uidPromise = null;
+  var currentUid = function(){
+    if (!uidPromise) {
+      uidPromise = (async function(){
+        await auth.authStateReady();
+        if (!auth.currentUser) await authSdk.signInAnonymously(auth);
+        return auth.currentUser.uid;
+      })().catch(function(e){ uidPromise = null; throw e; });
+    }
+    return uidPromise;
+  };
+  var refFor = async function(){ return fs.doc(db, COLLECTION, await currentUid()); };
+
+  window.__rsvpBackendReady.resolve({
+    load: async function(){
+      var snap = await fs.getDoc(await refFor());
+      if (!snap.exists()) return null;
+      var d = snap.data();
+      return { name: d.name, answer: d.answer, people: d.people, nonAlcoholic: !!d.nonAlcoholic, note: d.note || "" };
+    },
+    save: async function(r){
+      var ref = await refFor();
+      var existing = await fs.getDoc(ref);
+      var yes = r.answer === "yes";
+      var data = {
+        name: String(r.name).trim().slice(0, 80),
+        answer: yes ? "yes" : "no",
+        people: yes ? Math.min(8, Math.max(0, Math.floor(Number(r.people) || 0))) : 0,
+        nonAlcoholic: yes && !!r.nonAlcoholic,
+        note: String(r.note || "").trim().slice(0, 500),
+        eventId: EVENT_ID,
+        updatedAt: fs.serverTimestamp(),
+        // setDoc replaces the document: keep the original createdAt on later edits.
+        createdAt: existing.exists() ? existing.data().createdAt : fs.serverTimestamp()
+      };
+      await fs.setDoc(ref, data);
+    }
+  });
+} catch (e) {
+  console.error(e);
+  window.__rsvpBackendReady.reject(e);
+}
 </script>
 <script>
 (function(){
