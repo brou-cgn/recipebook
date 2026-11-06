@@ -40,6 +40,12 @@ describe('CookingSessionCarousel CSS', () => {
     expect(getRuleBody(carouselCss, '.cooking-carousel--compact .cooking-carousel-step')).toContain('-webkit-line-clamp: 3;');
   });
 
+  test('hochkant (Entwurf T1) teilen sich ab drei Karten alle die ganze Höhe, auch kompakt schaut keine heraus', () => {
+    expect(carouselCss).toMatch(
+      /\.cooking-carousel--fill \.cooking-carousel-item,\s*\.cooking-carousel--fill\.cooking-carousel--compact \.cooking-carousel-item\s*\{\s*flex: 1 1 0;\s*\}/
+    );
+  });
+
   test('die rote Fläche zum Entfernen erscheint nach dem Linksswipe und ist antippbar; in Ruhe deckt die Karte sie ab', () => {
     const body = getRuleBody(carouselCss, '.cooking-carousel-item.swipe-delete-active .swipe-delete-background');
     expect(body).toContain('opacity: 1;');
@@ -81,6 +87,30 @@ describe('CookingSessionCarousel CSS', () => {
       expect(card).toContain('max-width: none;');
       // Grundregel: 100vw, höchstens 398 px (Handy)
       expect(getRuleBody(recipeDetailCss, '.step-card')).toContain('max-width: 398px;');
+    });
+
+    test('iPad mini hochkant: in der schmalen Spalte rechts (384 px) stehen die Zutaten einspaltig', () => {
+      expect(recipeDetailCss).toMatch(
+        /@media \(max-width: 799px\) \{\s*\.cooking-mode-split \.cooking-mode-ingredients \.ingredients-list \{\s*columns: auto;\s*\}\s*\}/
+      );
+    });
+  });
+
+  describe('Tablet hochkant mit nur einem Rezept (RecipeDetail.css, cooking-mode-tablet-full)', () => {
+    test('der Kochmodus liegt über dem ganzen Bildschirm, auch ab 769 px Breite (dort greift die Handy-Regel nicht)', () => {
+      const full = getRuleBody(recipeDetailCss, '.recipe-detail-content.cooking-mode-active.cooking-mode-tablet-full');
+      expect(full).toContain('position: fixed;');
+      expect(full).toContain('bottom: 0;');
+      expect(full).toContain('height: auto;');
+      expect(full).toContain('padding-top: env(safe-area-inset-top, 0px);');
+    });
+
+    test('die Schrittkarte füllt die Breite, die Zutaten stehen zweispaltig wie im Split', () => {
+      const card = getRuleBody(recipeDetailCss, '.cooking-mode-tablet-full .step-card');
+      expect(card).toContain('width: 100%;');
+      expect(card).toContain('max-width: none;');
+      expect(getRuleBody(recipeDetailCss, '.cooking-mode-tablet-full .cooking-mode-ingredients .ingredients-list'))
+        .toContain('columns: 2;');
     });
   });
 
