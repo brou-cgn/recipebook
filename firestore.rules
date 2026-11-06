@@ -483,6 +483,46 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // RSVP-Seite "A little Advent Glow" (statisch unter /advent-glow/, kein Teil der App).
+    // Gäste melden sich still anonym an; Dokument-ID = Auth-UID, also genau eine Antwort
+    // pro Gast, die er später ändern kann. Lesen: der Gast nur sein eigenes Dokument,
+    // Auflisten und Löschen nur Admins (Ergebnisseite /advent-glow/ergebnisse/).
+    // Schreiben nur bis zum Anmeldeschluss 13.12.2026 23:59:59 (MEZ = 22:59:59 UTC).
+    match /rsvps_adventglow_2026/{rsvpId} {
+      function rsvpFieldsValid() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['name', 'answer', 'people', 'nonAlcoholic', 'note',
+                                 'eventId', 'createdAt', 'updatedAt'])
+            && d.keys().hasAll(['name', 'answer', 'people', 'nonAlcoholic', 'note',
+                                'eventId', 'createdAt', 'updatedAt'])
+            && d.name is string && d.name.trim().size() >= 1 && d.name.size() <= 80
+            && d.answer in ['yes', 'no']
+            && d.people is int && d.people >= 0 && d.people <= 8
+            && d.nonAlcoholic is bool
+            && d.note is string && d.note.size() <= 500
+            && d.eventId == 'advent-glow-2026'
+            && d.updatedAt == request.time;
+      }
+
+      function rsvpOpen() {
+        return request.time <= timestamp.value('2026-12-13T22:59:59Z');
+      }
+
+      allow get: if isAuthenticated() && (request.auth.uid == rsvpId || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isAuthenticated()
+                    && request.auth.uid == rsvpId
+                    && rsvpOpen()
+                    && rsvpFieldsValid()
+                    && request.resource.data.createdAt == request.time;
+      allow update: if isAuthenticated()
+                    && request.auth.uid == rsvpId
+                    && rsvpOpen()
+                    && rsvpFieldsValid()
+                    && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAdmin();
+    }
+
     // Cook dates collection - global tracking of when users cooked recipes
     match /cookDates/{cookDateId} {
       allow read: if isMember();

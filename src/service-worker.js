@@ -184,6 +184,10 @@ registerRoute(
 
     if (url.pathname.startsWith('/_')) {
       return false;
+    } // Static pages next to the app (RSVP page + results), served by Firebase Hosting: never the app shell.
+
+    if (url.pathname === '/advent-glow' || url.pathname.startsWith('/advent-glow/')) {
+      return false;
     } // If this looks like a URL for a resource, because it contains // a file extension, skip.
 
     if (url.pathname.match(fileExtensionRegexp)) {
