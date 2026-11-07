@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-function loadHandler(rawText) {
+function loadHandler(rawText, extra = {}) {
   require('./testSupport').purgeFunctionsCache();
   const Module = require('module');
   const originalLoad = Module._load;
@@ -11,7 +11,7 @@ function loadHandler(rawText) {
       doc: () => ({
         get: async () => ({
           exists: true,
-          data: () => ({rawText, expiresAt: Date.now() + 60000}),
+          data: () => ({rawText, expiresAt: Date.now() + 60000, ...extra}),
         }),
       }),
     }),
@@ -64,8 +64,8 @@ function loadHandler(rawText) {
   }
 }
 
-async function render(rawText) {
-  const handler = loadHandler(rawText);
+async function render(rawText, extra) {
+  const handler = loadHandler(rawText, extra);
   const out = {headers: {}};
   const res = {
     set: (k, v) => {
@@ -104,4 +104,18 @@ test('recipeImportPage: U+2028/U+2029 werden im JSON-LD escaped', async () => {
   const m = body.match(/<script type="application\/ld\+json">(.*?)<\/script>/s);
   assert.ok(!/[\u2028\u2029]/.test(m[1]), 'rohes Zeilentrennzeichen im JSON-LD');
   assert.equal(JSON.parse(m[1]).description, text);
+});
+
+test('recipeImportPage: mitgegebene Quell-URL steht als url im JSON-LD', async () => {
+  const {body} = await render('Pasta', {sourceUrl: 'https://example.com/pasta'});
+  const m = body.match(/<script type="application\/ld\+json">(.*?)<\/script>/s);
+  assert.equal(JSON.parse(m[1]).url, 'https://example.com/pasta');
+});
+
+test('recipeImportPage: ohne oder mit unsicherer Quell-URL kein url-Feld', async () => {
+  for (const extra of [{}, {sourceUrl: 'javascript:alert(1)'}]) {
+    const {body} = await render('Pasta', extra);
+    const m = body.match(/<script type="application\/ld\+json">(.*?)<\/script>/s);
+    assert.equal(JSON.parse(m[1]).url, undefined);
+  }
 });

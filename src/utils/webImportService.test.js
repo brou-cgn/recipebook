@@ -249,12 +249,13 @@ describe('parseRecipeImportPage', () => {
     });
   });
 
-  function buildHtml({ title = 'Spaghetti Carbonara', rawText = 'Spaghetti Carbonara\nZutaten\n400g Spaghetti', withJsonLd = true } = {}) {
+  function buildHtml({ title = 'Spaghetti Carbonara', rawText = 'Spaghetti Carbonara\nZutaten\n400g Spaghetti', withJsonLd = true, url } = {}) {
     const jsonLd = JSON.stringify({
       '@context': 'https://schema.org',
       '@type': 'Recipe',
       name: title,
       description: rawText,
+      ...(url ? { url } : {}),
     });
     return `<!DOCTYPE html>
 <html lang="de">
@@ -285,6 +286,27 @@ ${withJsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
     expect(result.difficulty).toBe(3);
     expect(result.cuisine).toBe('Italienisch');
     expect(result.category).toBe('Hauptgericht');
+  });
+
+  test('übernimmt die url aus dem JSON-LD als sourceUrl', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: jest.fn().mockResolvedValue(buildHtml({ url: 'https://example.com/carbonara' })),
+    });
+
+    const result = await parseRecipeImportPage('https://example.com/recipeImportPage?token=abc');
+    expect(result.sourceUrl).toBe('https://example.com/carbonara');
+  });
+
+  test('ignoriert fehlende oder nicht-http(s) url im JSON-LD', async () => {
+    for (const url of [undefined, 'javascript:alert(1)']) {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        text: jest.fn().mockResolvedValue(buildHtml({ url })),
+      });
+      const result = await parseRecipeImportPage('https://example.com/recipeImportPage?token=abc');
+      expect(result.sourceUrl).toBeUndefined();
+    }
   });
 
   test('calls AI with text from JSON-LD description', async () => {

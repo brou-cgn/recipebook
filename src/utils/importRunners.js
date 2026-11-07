@@ -29,6 +29,10 @@ const BATCH_CONCURRENCY = 3;
 // jobMeta is threaded through.
 export async function runWebImport(normalizedUrl, authorId, onProgress, jobMeta) {
   let result;
+  // Textimport-Seiten (recipeImportPage?token=…) laufen nach 10 Minuten ab –
+  // als Rezept-Link taugen sie nicht. Dort zählt nur die beim Import
+  // mitgegebene Quelle (result.sourceUrl), sonst bleibt der Link leer.
+  let linkUrl = normalizedUrl;
 
   if (isInstagramUrl(normalizedUrl)) {
     // Instagram path (post, reel, or IGTV) – extract caption and page text with Puppeteer + Gemini
@@ -36,12 +40,13 @@ export async function runWebImport(normalizedUrl, authorId, onProgress, jobMeta)
   } else if (isRecipeImportPageUrl(normalizedUrl)) {
     // Direct HTML parsing path – no screenshot or AI needed
     result = await parseRecipeImportPage(normalizedUrl, onProgress, jobMeta);
+    linkUrl = result.sourceUrl || '';
   } else {
     // Multi-step import: JSON-LD → Text+Gemini → Screenshot+Vision
     result = await importRecipeFromUrl(normalizedUrl, onProgress, jobMeta);
   }
 
-  return buildRecipeFromAiResult(result, authorId, normalizedUrl);
+  return buildRecipeFromAiResult(result, authorId, linkUrl);
 }
 
 function mergeUniversalAiResults(results) {

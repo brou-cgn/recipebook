@@ -404,6 +404,7 @@ export async function parseRecipeImportPage(url, onProgress = null, jobMeta = nu
   // Prefer JSON-LD as it is the most reliable source
   let title = '';
   let rawText = '';
+  let sourceUrl = '';
 
   const jsonLdScript = doc.querySelector('script[type="application/ld+json"]');
   if (jsonLdScript) {
@@ -411,6 +412,11 @@ export async function parseRecipeImportPage(url, onProgress = null, jobMeta = nu
       const jsonLd = JSON.parse(jsonLdScript.textContent);
       title = jsonLd.name || '';
       rawText = jsonLd.description || '';
+      // Optionale Quelle, die beim Textimport mitgegeben wurde – nur
+      // http(s), weil sie später als Link (href) im Rezept steht.
+      if (typeof jsonLd.url === 'string' && /^https?:\/\//i.test(jsonLd.url.trim())) {
+        sourceUrl = jsonLd.url.trim();
+      }
     } catch {
       // fall through to DOM fallback
     }
@@ -465,6 +471,7 @@ export async function parseRecipeImportPage(url, onProgress = null, jobMeta = nu
       cuisine: aiResult.cuisine || null,
       category: aiResult.category || null,
       tags: aiResult.tags || [],
+      ...(sourceUrl ? { sourceUrl } : {}),
     };
   }
 
@@ -523,6 +530,7 @@ export async function parseRecipeImportPage(url, onProgress = null, jobMeta = nu
     cuisine: aiResult.cuisine || null,
     category: aiResult.category || null,
     tags: aiResult.tags || [],
+    ...(sourceUrl ? { sourceUrl } : {}),
   };
 }
 
