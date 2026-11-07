@@ -113,29 +113,29 @@ export async function captureWebsiteScreenshot(url, onProgress = null) {
 
     // Enhance error messages based on Firebase error codes
     if (code === 'unauthenticated') {
-      throw new Error('Sie müssen angemeldet sein, um den Webimport zu verwenden.');
+      throw new Error('Sie müssen angemeldet sein, um den Webimport zu verwenden.', { cause: error });
     } else if (code === 'resource-exhausted') {
-      throw new Error(message || 'Rate-Limit erreicht. Bitte versuchen Sie es später erneut.');
+      throw new Error(message || 'Rate-Limit erreicht. Bitte versuchen Sie es später erneut.', { cause: error });
     } else if (code === 'invalid-argument') {
-      throw new Error(message || 'Ungültige URL angegeben.');
+      throw new Error(message || 'Ungültige URL angegeben.', { cause: error });
     } else if (code === 'failed-precondition') {
-      throw new Error('Webimport-Service nicht konfiguriert. Bitte kontaktieren Sie den Administrator.');
+      throw new Error('Webimport-Service nicht konfiguriert. Bitte kontaktieren Sie den Administrator.', { cause: error });
     } else if (code === 'deadline-exceeded') {
-      throw new Error('Zeitüberschreitung beim Laden der Website. Bitte versuchen Sie es erneut.');
+      throw new Error('Zeitüberschreitung beim Laden der Website. Bitte versuchen Sie es erneut.', { cause: error });
     } else if (code === 'internal') {
       if (
         lowerMessage.includes('name_not_resolved') ||
         lowerMessage.includes('enotfound') ||
         lowerMessage.includes('dns')
       ) {
-        throw new Error('Die Website konnte nicht erreicht werden. Bitte prüfe die URL und versuche es erneut.');
+        throw new Error('Die Website konnte nicht erreicht werden. Bitte prüfe die URL und versuche es erneut.', { cause: error });
       }
-      throw new Error('Fehler beim Erfassen der Website. Bitte versuchen Sie es erneut.');
+      throw new Error('Fehler beim Erfassen der Website. Bitte versuchen Sie es erneut.', { cause: error });
     } else if (message) {
-      throw new Error(message);
+      throw new Error(message, { cause: error });
     }
 
-    throw new Error('Fehler beim Erfassen der Website. Bitte versuchen Sie es erneut.');
+    throw new Error('Fehler beim Erfassen der Website. Bitte versuchen Sie es erneut.', { cause: error });
   }
 }
 
@@ -258,29 +258,28 @@ export async function importInstagramReel(url, onProgress = null, jobMeta = null
     };
   } catch (error) {
     clearInterval(progressInterval);
-    progressInterval = null;
     if (onProgress) onProgress(0);
 
     const { code, message } = getCallableErrorDetails(error);
     if (code === 'unauthenticated') {
-      throw new Error('Bitte melde dich an, um den Instagram-Import zu nutzen.');
+      throw new Error('Bitte melde dich an, um den Instagram-Import zu nutzen.', { cause: error });
     } else if (code === 'resource-exhausted') {
-      throw new Error(message || 'Tageslimit erreicht. Versuche es morgen erneut.');
+      throw new Error(message || 'Tageslimit erreicht. Versuche es morgen erneut.', { cause: error });
     } else if (code === 'not-found') {
       throw new Error(
         message ||
-        'Kein Rezept auf der Instagram-Seite gefunden. Der Beitrag ist möglicherweise privat.',
+        'Kein Rezept auf der Instagram-Seite gefunden. Der Beitrag ist möglicherweise privat.', { cause: error },
       );
     } else if (code === 'invalid-argument') {
-      throw new Error(message || 'Ungültige Instagram-URL.');
+      throw new Error(message || 'Ungültige Instagram-URL.', { cause: error });
     } else if (code === 'deadline-exceeded') {
-      throw new Error('Die Instagram-Seite hat zu lange gebraucht. Bitte versuche es erneut.');
+      throw new Error('Die Instagram-Seite hat zu lange gebraucht. Bitte versuche es erneut.', { cause: error });
     } else if (code === 'internal') {
-      throw new Error('Instagram-Import fehlgeschlagen. Bitte versuche es erneut.');
+      throw new Error('Instagram-Import fehlgeschlagen. Bitte versuche es erneut.', { cause: error });
     } else if (message) {
-      throw new Error(message);
+      throw new Error(message, { cause: error });
     }
-    throw new Error('Instagram-Import fehlgeschlagen. Bitte versuche es erneut.');
+    throw new Error('Instagram-Import fehlgeschlagen. Bitte versuche es erneut.', { cause: error });
   }
 }
 
@@ -384,7 +383,7 @@ export async function parseRecipeImportPage(url, onProgress = null, jobMeta = nu
   try {
     response = await fetch(url);
   } catch (err) {
-    throw new Error('Import-Seite konnte nicht geladen werden. Bitte prüfen Sie Ihre Verbindung.');
+    throw new Error('Import-Seite konnte nicht geladen werden. Bitte prüfen Sie Ihre Verbindung.', { cause: err });
   }
 
   if (!response.ok) {
@@ -455,7 +454,7 @@ export async function parseRecipeImportPage(url, onProgress = null, jobMeta = nu
     } catch (htmlAiError) {
       throw new Error(
         'Die importierte Seite konnte nicht als Rezept verarbeitet werden. ' +
-        (htmlAiError.message || 'Bitte versuche es erneut.'),
+        (htmlAiError.message || 'Bitte versuche es erneut.'), { cause: htmlAiError },
       );
     }
 
@@ -840,29 +839,29 @@ export async function importRecipeFromUrl(url, onProgress = null, jobMeta = null
     const { code, message, lowerMessage } = getCallableErrorDetails(error);
 
     if (code === 'unauthenticated') {
-      throw new Error('Sie müssen angemeldet sein, um den Webimport zu verwenden.');
+      throw new Error('Sie müssen angemeldet sein, um den Webimport zu verwenden.', { cause: error });
     } else if (code === 'resource-exhausted') {
-      throw new Error(message || 'Tageslimit erreicht. Versuche es morgen erneut.');
+      throw new Error(message || 'Tageslimit erreicht. Versuche es morgen erneut.', { cause: error });
     } else if (code === 'invalid-argument') {
-      throw new Error(message || 'Ungültige URL angegeben.');
+      throw new Error(message || 'Ungültige URL angegeben.', { cause: error });
     } else if (code === 'failed-precondition') {
-      throw new Error('Webimport-Service nicht konfiguriert. Bitte kontaktieren Sie den Administrator.');
+      throw new Error('Webimport-Service nicht konfiguriert. Bitte kontaktieren Sie den Administrator.', { cause: error });
     } else if (code === 'deadline-exceeded') {
-      throw new Error('Zeitüberschreitung beim Laden der Website. Bitte versuchen Sie es erneut.');
+      throw new Error('Zeitüberschreitung beim Laden der Website. Bitte versuchen Sie es erneut.', { cause: error });
     } else if (code === 'internal') {
       if (
         lowerMessage.includes('name_not_resolved') ||
         lowerMessage.includes('enotfound') ||
         lowerMessage.includes('dns')
       ) {
-        throw new Error('Die Website konnte nicht erreicht werden. Bitte prüfe die URL und versuche es erneut.');
+        throw new Error('Die Website konnte nicht erreicht werden. Bitte prüfe die URL und versuche es erneut.', { cause: error });
       }
-      throw new Error('Fehler beim Importieren des Rezepts. Bitte versuchen Sie es erneut.');
+      throw new Error('Fehler beim Importieren des Rezepts. Bitte versuchen Sie es erneut.', { cause: error });
     } else if (message) {
-      throw new Error(message);
+      throw new Error(message, { cause: error });
     }
 
-    throw new Error('Fehler beim Importieren des Rezepts. Bitte versuchen Sie es erneut.');
+    throw new Error('Fehler beim Importieren des Rezepts. Bitte versuchen Sie es erneut.', { cause: error });
   }
 }
 
