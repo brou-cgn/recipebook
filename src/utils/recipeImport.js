@@ -61,7 +61,7 @@ export function importFromJSON(jsonString) {
     return parseRecipeData(data);
   } catch (error) {
     if (error.message.includes('JSON')) {
-      throw new Error('Ungültiges JSON-Format. Bitte überprüfen Sie die Eingabe.');
+      throw new Error('Ungültiges JSON-Format. Bitte überprüfen Sie die Eingabe.', { cause: error });
     }
     throw error;
   }

@@ -26,13 +26,13 @@ export async function setWebImportPin(pin) {
   } catch (error) {
     const { code, message } = getCallableErrorDetails(error);
     if (code === 'unauthenticated') {
-      throw new Error('Bitte melde dich an, um einen Webimport-PIN zu setzen.');
+      throw new Error('Bitte melde dich an, um einen Webimport-PIN zu setzen.', { cause: error });
     } else if (code === 'invalid-argument') {
-      throw new Error(message || 'Ungültiger PIN.');
+      throw new Error(message || 'Ungültiger PIN.', { cause: error });
     } else if (message) {
-      throw new Error(message);
+      throw new Error(message, { cause: error });
     }
-    throw new Error('PIN konnte nicht gespeichert werden. Bitte versuche es erneut.');
+    throw new Error('PIN konnte nicht gespeichert werden. Bitte versuche es erneut.', { cause: error });
   }
 }
 
