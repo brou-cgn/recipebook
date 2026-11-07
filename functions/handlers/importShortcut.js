@@ -622,6 +622,54 @@ function normaliseSourceUrl(value) {
 }
 
 /**
+ * Quell-URL aus einem Textimport herauslesen, wenn sie nicht als eigenes
+ * Feld kam. Typischer Fall: Der Kurzbefehl reicht den geteilten Text
+ * unverändert als rawText weiter – etwa das addRecipeViaAPI-JSON, das
+ * Claude erzeugt, mit `url` darin. Reihenfolge:
+ *   1. rawText ist ein JSON-Objekt mit url / sourceUrl / quelle
+ *   2. eine Zeile „Quelle:“, „Source:“, „URL:“, „Link:“ oder „Original:“
+ *   3. genau eine http(s)-Adresse im ganzen Text
+ * Mehrere Adressen ohne Kennzeichnung → keine, statt zu raten.
+ *
+ * @param {string} rawText
+ * @returns {string} bereinigte URL oder ''
+ */
+function extractSourceUrlFromText(rawText) {
+  const safe = (value) => {
+    try {
+      return normaliseSourceUrl(value);
+    } catch {
+      return '';
+    }
+  };
+  const text = String(rawText || '').trim();
+
+  if (text.startsWith('{')) {
+    try {
+      const json = JSON.parse(text);
+      if (json && typeof json === 'object') {
+        const found = safe(json.url ?? json.sourceUrl ?? json.quelle);
+        if (found) return found;
+      }
+    } catch {
+      // kein gültiges JSON – als Freitext weiter
+    }
+  }
+
+  const urlPattern = /https?:\/\/[^\s"'<>()[\]{}]+/gi;
+  const trimEnd = (u) => u.replace(/[.,;:!?]+$/, '');
+
+  const labeled = text.match(/^[\s*\-•]*(?:quelle|source|url|link|original)\s*:?\s*(https?:\/\/\S+)/im);
+  if (labeled) {
+    const found = safe(trimEnd(labeled[1].match(urlPattern)?.[0] || ''));
+    if (found) return found;
+  }
+
+  const all = [...new Set((text.match(urlPattern) || []).map(trimEnd))];
+  return all.length === 1 ? safe(all[0]) : '';
+}
+
+/**
  * Validate and normalise recipe data submitted via the API.
  * Accepts both English (Apple Shortcut / AI output) and German field names.
  *
@@ -993,7 +1041,8 @@ const RECIPE_IMPORT_TTL_MS = 10 * 60 * 1000;
  *   rawText {string} Required – unstructured recipe text
  *   url     {string} Optional – Quelle des Rezepts (http/https, alias sourceUrl).
  *           Wird nicht abgerufen, sondern nur als Link (`sourceUrl`) ins
- *           importierte Rezept übernommen.
+ *           importierte Rezept übernommen. Fehlt das Feld, wird die Quelle
+ *           aus rawText gelesen (siehe extractSourceUrlFromText).
  *
  * Returns:
  *   200 { success: true, importUrl: string }
@@ -1050,7 +1099,7 @@ exports.createRecipeImportFromText = onRequest(
 
       let sourceUrl;
       try {
-        sourceUrl = normaliseSourceUrl(body.url ?? body.sourceUrl);
+        sourceUrl = normaliseSourceUrl(body.url ?? body.sourceUrl) || extractSourceUrlFromText(rawText);
       } catch (err) {
         res.status(err.code || 400).json({success: false, error: err.message});
         return;

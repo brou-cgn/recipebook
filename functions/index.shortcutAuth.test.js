@@ -156,6 +156,37 @@ test('createRecipeImportFromText: ungültige url -> 400, nichts gespeichert', as
   }
 });
 
+test('createRecipeImportFromText: liest url aus geteiltem JSON-Text', async () => {
+  const rawText = JSON.stringify({
+    title: 'Lachs', url: 'https://www.lecker.de/lachs-17533.html', ingredients: ['Lachs'], steps: ['Grillen'],
+  }, null, 2);
+  const {mod, saved} = loadFunctions({userData: {role: 'edit'}});
+  const res = makeRes();
+  await mod.createRecipeImportFromText(makeReq({body: {rawText}}), res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(saved[0].data.sourceUrl, 'https://www.lecker.de/lachs-17533.html');
+});
+
+test('createRecipeImportFromText: liest Quelle aus Freitext', async () => {
+  const cases = [
+    ['Lachs\nZutaten\n- 600 g Lachs\n\nQuelle: https://example.com/lachs.', 'https://example.com/lachs'],
+    ['Lachs, siehe https://example.com/a', 'https://example.com/a'],
+    ['Lachs https://example.com/a und https://example.com/b', undefined],
+    ['Lachs ohne Link', undefined],
+  ];
+  for (const [rawText, expected] of cases) {
+    const {mod, saved} = loadFunctions({userData: {role: 'edit'}});
+    await mod.createRecipeImportFromText(makeReq({body: {rawText}}), makeRes());
+    assert.equal(saved[0].data.sourceUrl, expected, rawText);
+  }
+});
+
+test('createRecipeImportFromText: explizite url hat Vorrang vor dem Text', async () => {
+  const {mod, saved} = loadFunctions({userData: {role: 'edit'}});
+  await mod.createRecipeImportFromText(makeReq({body: {rawText: 'Quelle: https://example.com/text', url: 'https://example.com/feld'}}), makeRes());
+  assert.equal(saved[0].data.sourceUrl, 'https://example.com/feld');
+});
+
 test('Shortcut-Auth: falscher API-Key -> 401', async () => {
   const {mod} = loadFunctions({userData: {role: 'edit'}});
   const res = makeRes();

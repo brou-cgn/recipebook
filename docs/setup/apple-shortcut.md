@@ -446,7 +446,7 @@ Füge eine **„Inhalt von URL laden"** Aktion hinzu:
 
 **Body:** `{ "rawText": "<Rezepttext>", "url": "<Quelle, optional>" }`
 
-`url` (alias `sourceUrl`) ist optional: die Adresse, von der der Text stammt (z. B. der Instagram-Post oder die Website). Sie wird **nicht** abgerufen, sondern nur als Quell-Link ins importierte Rezept übernommen und dort in der Detailansicht angezeigt. Erlaubt sind nur `http(s)`-Adressen; eine ungültige URL beantwortet die Function mit `400`. Ohne `url` bekommt das Rezept keinen Quell-Link (die `importUrl` läuft nach 10 Minuten ab und taugt nicht als Link).
+`url` (alias `sourceUrl`) ist optional: die Adresse, von der der Text stammt (z. B. der Instagram-Post oder die Website). Sie wird **nicht** abgerufen, sondern nur als Quell-Link ins importierte Rezept übernommen und dort in der Detailansicht angezeigt. Erlaubt sind nur `http(s)`-Adressen; eine ungültige URL beantwortet die Function mit `400`. Fehlt `url`, liest die Function die Quelle aus `rawText`: aus einem JSON-Text (Feld `url`/`sourceUrl`/`quelle`, z. B. das von Claude erzeugte addRecipeViaAPI-JSON, das per Teilen weitergereicht wird), aus einer Zeile `Quelle: …` (auch `Source:`, `URL:`, `Link:`, `Original:`) oder – wenn der Text genau eine Adresse enthält – aus dieser. Bei mehreren Adressen ohne Kennzeichnung wird keine übernommen. Ohne Quelle bekommt das Rezept keinen Link (die `importUrl` läuft nach 10 Minuten ab und taugt nicht als Link).
 
 ### Antwort verarbeiten
 
