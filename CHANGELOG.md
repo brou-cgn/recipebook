@@ -11,6 +11,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Automatische Versionierung bei jedem Deployment
 - Commit-basierte Versionserkennung (Conventional Commits)
 - Automatisches Tagging von Versionen
+- Textimport (`createRecipeImportFromText`) und `addRecipeViaAPI`: optionales Feld `url` – die Quelle wird als Link im importierten Rezept angezeigt. Ohne `url` steht dort kein Link mehr auf die nach 10 Minuten ablaufende Import-Seite.
 - Zugriffsbeschränkung für Entwurfs-Rezepte: Nur Administratoren und Autoren können Rezepte im Entwurfstatus (isPrivate) sehen
 
 ### Geändert

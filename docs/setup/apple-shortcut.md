@@ -333,6 +333,7 @@ Füge im Kurzbefehl eine **„Inhalt von URL laden"** Aktion hinzu und konfiguri
 | `kulinarik` | `cuisine`, `kulinarisch` | string \| string[] | – |
 | `tags` | – | string \| string[] | – |
 | `notizen` | `notes` | string | – |
+| `url` | `sourceUrl`, `quelle` | string (http/https) | – (wird als Quell-Link im Rezept angezeigt, nicht abgerufen; ungültige URL → `400`) |
 | `pin` | – | string | nur, wenn Webimport-PIN eingerichtet |
 
 Das Feld `pin` ist nur nötig, wenn du im Hamburger-Menü unter „Kurzbefehl installieren" einen Webimport-PIN vergeben hast – ohne `pin` schlägt der Aufruf dann mit HTTP 403 fehl. Ohne eingerichteten PIN kannst du das Feld einfach weglassen.
@@ -443,7 +444,9 @@ Füge eine **„Inhalt von URL laden"** Aktion hinzu:
 | `X-Api-Key` | `<dein-api-key>` |
 | `X-User-Email` | `<e-mail-adresse-des-service-users>` |
 
-**Body:** `{ "rawText": "<Rezepttext>" }`
+**Body:** `{ "rawText": "<Rezepttext>", "url": "<Quelle, optional>" }`
+
+`url` (alias `sourceUrl`) ist optional: die Adresse, von der der Text stammt (z. B. der Instagram-Post oder die Website). Sie wird **nicht** abgerufen, sondern nur als Quell-Link ins importierte Rezept übernommen und dort in der Detailansicht angezeigt. Erlaubt sind nur `http(s)`-Adressen; eine ungültige URL beantwortet die Function mit `400`. Ohne `url` bekommt das Rezept keinen Quell-Link (die `importUrl` läuft nach 10 Minuten ab und taugt nicht als Link).
 
 ### Antwort verarbeiten
 

@@ -594,6 +594,34 @@ exports.scrapeInstagramReelShortcut = onRequest(
 );
 
 /**
+ * Optionale Quell-URL eines Imports prüfen (Textimport und addRecipeViaAPI). Sie wird nie abgerufen, nur
+ * als Link im Rezept angezeigt – deshalb reicht http/https (kein javascript:
+ * o. Ä. im href) und eine Längengrenze; private Hosts sind hier kein Risiko.
+ *
+ * @param {*} value - Rohwert aus dem Request-Body
+ * @returns {string} bereinigte URL oder '' wenn keine angegeben
+ * @throws {Error} mit code 400 bei ungültiger URL
+ */
+function normaliseSourceUrl(value) {
+  if (value === undefined || value === null) return '';
+  if (typeof value !== 'string') {
+    throw Object.assign(new Error('url muss ein String sein'), {code: 400});
+  }
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  let parsed;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw Object.assign(new Error('url ist keine gültige URL'), {code: 400});
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol) || trimmed.length > 2048) {
+    throw Object.assign(new Error('url muss eine http(s)-Adresse sein (max. 2048 Zeichen)'), {code: 400});
+  }
+  return parsed.toString();
+}
+
+/**
  * Validate and normalise recipe data submitted via the API.
  * Accepts both English (Apple Shortcut / AI output) and German field names.
  *
@@ -685,6 +713,9 @@ function validateAndNormaliseRecipeInput(body) {
 
   const notizen = (body.notizen || body.notes || '').toString().trim() || undefined;
 
+  // Quelle: wird nur als Link (sourceUrl) gespeichert, nie abgerufen.
+  const sourceUrl = normaliseSourceUrl(body.url ?? body.sourceUrl ?? body.quelle);
+
   const recipe = {title, ingredients, steps};
   if (portionen !== undefined) recipe.portionen = portionen;
   if (kochdauer !== undefined) recipe.kochdauer = kochdauer;
@@ -693,6 +724,7 @@ function validateAndNormaliseRecipeInput(body) {
   if (kulinarik !== undefined && kulinarik.length > 0) recipe.kulinarik = kulinarik;
   if (tags !== undefined && tags.length > 0) recipe.tags = tags;
   if (notizen !== undefined) recipe.notizen = notizen;
+  if (sourceUrl) recipe.sourceUrl = sourceUrl;
 
   return recipe;
 }
@@ -718,6 +750,8 @@ function validateAndNormaliseRecipeInput(body) {
  *   kulinarik / cuisine     {string|string[]} Optional – cuisine type(s)
  *   tags                    {string[]} Optional – tags
  *   notizen / notes         {string}   Optional – additional notes
+ *   url / sourceUrl / quelle{string}   Optional – Quelle (http/https), wird als
+ *                            Link im Rezept angezeigt, nicht abgerufen
  *   pin                     {string}   Required only if the target user configured a
  *                            Webimport-PIN (see requireShortcutPin in webImportPin.js) –
  *                            no-op otherwise.
@@ -944,6 +978,7 @@ exports.getRecipeOptionsShortcut = onRequest(
 // TTL for recipe text imports (default: 10 minutes)
 const RECIPE_IMPORT_TTL_MS = 10 * 60 * 1000;
 
+
 /**
  * Cloud Function: Create a temporary recipe import from raw text.
  *
@@ -956,6 +991,9 @@ const RECIPE_IMPORT_TTL_MS = 10 * 60 * 1000;
  *
  * Body (JSON):
  *   rawText {string} Required – unstructured recipe text
+ *   url     {string} Optional – Quelle des Rezepts (http/https, alias sourceUrl).
+ *           Wird nicht abgerufen, sondern nur als Link (`sourceUrl`) ins
+ *           importierte Rezept übernommen.
  *
  * Returns:
  *   200 { success: true, importUrl: string }
@@ -1010,6 +1048,14 @@ exports.createRecipeImportFromText = onRequest(
         return;
       }
 
+      let sourceUrl;
+      try {
+        sourceUrl = normaliseSourceUrl(body.url ?? body.sourceUrl);
+      } catch (err) {
+        res.status(err.code || 400).json({success: false, error: err.message});
+        return;
+      }
+
       // Webimport-PIN: no-op if the target user never set one (same rule as
       // every other Shortcut endpoint).
       if (!(await enforceShortcutPin(res, userId, body?.pin))) return;
@@ -1020,6 +1066,7 @@ exports.createRecipeImportFromText = onRequest(
         const expiresAt = Date.now() + RECIPE_IMPORT_TTL_MS;
         await importRef.set({
           rawText,
+          ...(sourceUrl ? {sourceUrl} : {}),
           userId,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           expiresAt,
