@@ -2024,10 +2024,10 @@ button.private-badge-button:active {
   }
 }
 
-/* ── Tablet hochkant mit nur einem Rezept (Entwurf T1) ──────────────────────────────
-   Applied via JS (cooking-mode-tablet-full, Rollen-Flag parallelKochen). Der Kochmodus wie im
-   Hochformat auf dem iPhone über den ganzen Bildschirm; ab dem zweiten Rezept kommt links das
-   Karussell dazu (.cooking-mode-split). Ab 769 px Breite greift die Handy-Regel oben nicht, die
+/* ── Tablet mit nur einem Rezept (Entwurf T1) ───────────────────────────────────────
+   Applied via JS (cooking-mode-tablet-full): hochkant mit nur einem Rezept, ohne das Rollen-Flag
+   parallelKochen auch quer. Der Kochmodus wie im Hochformat auf dem iPhone über den ganzen
+   Bildschirm; mit dem Flag kommt ab dem zweiten Rezept links das Karussell dazu (.cooking-mode-split). Ab 769 px Breite greift die Handy-Regel oben nicht, die
    den Kochmodus über den Bildschirm legt; deshalb hier dasselbe. */
 .recipe-detail-content.cooking-mode-active.cooking-mode-tablet-full {
   position: fixed;

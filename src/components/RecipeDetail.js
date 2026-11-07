@@ -224,14 +224,16 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Läuft ein anderes Rezept der Sitzung im Hintergrund? Dann die Leiste (Hochformat; auf dem Tablet das Karussell)
   const hasParkedRecipes = parallelCookingEnabled
     && cookingSession.sessionRecipes.some((entry) => entry.recipe.id !== selectedRecipe?.id);
-  // Tablet (iPad) mit dem Flag: Kochmodus über den ganzen Bildschirm, Einstieg über das Rezeptbild.
-  // Links das Karussell mit den weiteren Rezepten, rechts der Kochmodus wie im Hochformat auf dem iPhone.
+  // Tablet (iPad), für alle (Tech-Check M12): Kochmodus über den ganzen Bildschirm, Einstieg über das Rezeptbild;
+  // ohne das gäbe es dort keinen Kochmodus (Desktop-Ansicht ab 769 px Breite). Ohne Flag immer volle Breite.
+  // Mit dem Flag links das Karussell mit den weiteren Rezepten, rechts der Kochmodus wie im Hochformat auf dem iPhone.
   // Quer (Entwurf I4) schon mit dem ersten Rezept, damit nichts springt, wenn das zweite dazukommt.
   // Hochkant (Entwurf T1) erst ab dem zweiten: Eine leere Spalte kostete dort fast die halbe Breite,
   // bis dahin läuft der Kochmodus über die volle Breite.
   const tabletOrientation = useTabletOrientation();
-  const tabletCookingLayout = parallelCookingEnabled && tabletOrientation !== null && !isMobileLandscape;
-  const showCookingCarousel = tabletCookingLayout && (tabletOrientation === 'landscape' || hasParkedRecipes);
+  const tabletCookingLayout = tabletOrientation !== null && !isMobileLandscape;
+  const showCookingCarousel = parallelCookingEnabled && tabletCookingLayout
+    && (tabletOrientation === 'landscape' || hasParkedRecipes);
   const showTabletFullWidth = tabletCookingLayout && !showCookingCarousel;
   // Handy quer: die Rezept-Schiene steht gegenüber der Kamera (Dynamic Island, Notch); ist die Drehrichtung
   // unbekannt, bleibt sie links. Ohne Abstand zum Displayrand: Beim Drehen ins Querformat reicht die Seite
@@ -2120,7 +2122,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     </>
                   )}
                   {/* Auf dem iPad gibt es sonst keinen Einstieg in den Kochmodus (Desktop-Ansicht ab 769 px Breite, quer wie
-                      hochkant); mit dem Flag dort nur der Kochmodus-Knopf, Schließen steht in der Kopfzeile */}
+                      hochkant); dort nur der Kochmodus-Knopf, Schließen steht in der Kopfzeile */}
                   {(isMobile || isTablet || isMobileLandscape || tabletCookingLayout) && (
                     <div className={`image-overlay-actions${categoryImageSetLoaded ? '' : ' image-overlay-actions--hidden'}`}>
                       <div 

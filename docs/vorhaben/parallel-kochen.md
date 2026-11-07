@@ -1,7 +1,7 @@
 # Vorhaben: Parallel kochen (mehrere Rezepte im Hintergrund, Mobile)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 02.11.2026 (PR 18 iPad hochkant, Entwurf T1, als Branch `claude/parallel-kochen-ipad-hochkant` gepusht, noch kein PR; PR 1 bis 17 und die Nacharbeiten gemergt, zuletzt #3601 iPad-Feinschliff, #3599 Schiene rechts im Grau der Schrittspalte, #3598 Scroll-Versatz mit `cover` auf 0; Header auf dem iPad quer war ein alter Stand im Zwischenspeicher, nach Neustart weg).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 07.11.2026 (PR 19 Tablet-Kochmodus ohne Flag auf Branch `claude/adoring-faraday-1g06ld`, noch kein PR; PR 1 bis 18 gemergt, zuletzt #3607 iPad hochkant; Tests am Gerät laut Rückmeldung vom 07.11.2026 erfolgreich, siehe „Offen“).
 
 **Ziel:** Wer mehrere Gerichte gleichzeitig kocht (Beispiel im Entwurf: Rouladen, Rotkohl, Klöße), hält im
 Kochmodus auf dem Handy mehrere Rezepte offen. Rezepte im Hintergrund laufen weiter, samt Timer, und sind mit
@@ -44,7 +44,8 @@ sechs Rezepten). Gewählt: T1. Keine Mockups im Repo.
 | iPad quer | I4 „Karussell links“ (01.11.2026, Auftrag „Setze I4 um“): zwei Spalten über den ganzen Bildschirm. Rechts der Kochmodus wie im Hochformat auf dem iPhone (Titelzeile mit „+“, Fortschritt, Schritt-Karussell, Zutaten-Sheet, Lasche „Kochmodus“), links ein senkrechtes Karussell mit den weiteren Rezepten der Sitzung. Jede Karte zeigt Bild, Name, „Schritt x von y“, Timer und den Text des Schritts, an dem das Rezept steht. Die Leiste entfällt dort, der App-Header blendet aus. Tippen holt ein Rezept nach rechts, Linksswipe nimmt es heraus (mit „Rückgängig“). |
 | Karussell: Details | Im Entwurf vorgeschlagen, mit dem Auftrag übernommen, nicht ausdrücklich bestätigt (01.11.2026): Tausch an Ort und Stelle (das Rezept vorn übernimmt den Platz der angetippten Karte, die übrigen bleiben stehen; `swapWith` mit `inPlace`), sonst feste Reihenfolge wie in der Schiene. Bis zu zwei Karten teilen sich die Höhe (Schritt bis sechs Zeilen), ab drei werden sie kompakt (drei Zeilen; drei Karten ganz, die vierte schaut heraus). Liegt ein bald fälliges oder fertiges Rezept außerhalb des sichtbaren Bereichs, zeigt eine orange Pille am Rand, wo es liegt; Tippen scrollt hin. Zutaten im Sheet zweispaltig. Breite der linken Spalte `clamp(360px, 43vw, 560px)` (im Entwurf 520 von 1194 px). |
 | iPad quer mit nur einem Rezept | Zwei Spalten schon ab dem ersten Rezept; links steht dann „Noch kein weiteres Rezept am Herd“ mit „Rezept dazunehmen“ (01.11.2026, nicht bestätigt). Abweichung von meiner Empfehlung im Entwurfsgespräch (bis zum zweiten Rezept „das normale Querformat“): Beim Umsetzen gesehen, dass das iPad gar kein eigenes Querformat-Layout hat (`cooking-mode-landscape` greift nur bis 480 px Höhe) und dort bisher auch keinen Kochmodus-Knopf. Nebeneffekt: Nichts springt, wenn das zweite Rezept dazukommt oder das letzte geht. |
-| Einstieg auf dem iPad quer | Mit dem Flag zeigt das Rezeptbild auf dem iPad quer den Kochmodus-Knopf (bisher nur bis 768 px Breite); ohne den Zurück-Knopf auf dem Bild, Schließen steht dort in der Kopfzeile (01.11.2026). Ohne Einstieg wäre I4 nicht erreichbar. Seit PR 18 ebenso hochkant (ab 769 px Breite bisher ohne Einstieg). Tech-Check M12 (teilweise; ohne Flag und am Desktop weiter ohne Einstieg). |
+| Einstieg auf dem iPad quer | Mit dem Flag zeigt das Rezeptbild auf dem iPad quer den Kochmodus-Knopf (bisher nur bis 768 px Breite); ohne den Zurück-Knopf auf dem Bild, Schließen steht dort in der Kopfzeile (01.11.2026). Ohne Einstieg wäre I4 nicht erreichbar. Seit PR 18 ebenso hochkant (ab 769 px Breite bisher ohne Einstieg). Seit PR 19 auch ohne Flag (siehe „Tablet ohne Flag“). |
+| Tablet ohne Flag | Entscheidung 07.11.2026 (Variante A, auf Empfehlung): Einstieg über das Rezeptbild, Kochmodus über den ganzen Bildschirm und ausgeblendeter App-Header gelten auf dem Tablet für alle, quer wie hochkant. Ohne Flag immer volle Breite (`cooking-mode-tablet-full`), auch quer; Karussell, Titelzeile und „+“ bleiben hinter dem Flag. Begründung: Ohne das hatte das iPad ab 769 px Breite gar keinen brauchbaren Kochmodus; das ist ein Fehler unabhängig vom Parallelkochen. Der Desktop bleibt ohne Kochmodus (mit der Empfehlung so vorgeschlagen, nicht ausdrücklich bestätigt). Tech-Check M12 damit behoben. |
 | Erkennung iPad quer | `src/hooks/useTabletLandscape.js` (seit PR 18 `useTabletOrientation.js`, siehe „Erkennung Tablet hochkant“): Touch-Bildschirm (`pointer: coarse`, ohne `matchMedia` `maxTouchPoints` > 1), breiter als hoch, mindestens 900 × 481 px; folgt dem Drehen. Desktop-Browser zählen nicht, auch nicht in einem breiten Fenster (Maus oder Trackpad). Meine Annahme: Ein iPad mit Magic Keyboard meldet weiter `pointer: coarse`; nicht geprüft. |
 | iPad hochkant | T1 „Karussell links“ (02.11.2026, Auftrag „Setze T1 um“): dasselbe Layout wie quer (I4), nur schmaler. Links das Karussell (360 px; `clamp(360px, 43vw, 560px)` liegt hochkant an der Untergrenze), rechts der Kochmodus wie auf dem iPhone (474 px auf dem iPad 11"). Beim Drehen bleiben Karten, Reihenfolge und Tausch an Ort und Stelle; Kochmodus-Knopf auf dem Rezeptbild und ausgeblendeter App-Header wie quer. Bis zu zwei Karten je halbe Höhe wie quer; ab drei teilen sie sich die ganze Höhe (`cooking-carousel--fill`), kompakt erst ab vier. Damit passen alle weiteren Rezepte (höchstens fünf) ohne Scrollen, die Pille für fällige Rezepte außer Sicht kommt hochkant nicht vor. Die Leiste entfällt auch hochkant. |
 | iPad hochkant mit nur einem Rezept | Volle Breite statt leerer linker Spalte (02.11.2026; im Entwurfsgespräch vorgeschlagen, mit dem Auftrag übernommen, nicht ausdrücklich bestätigt): Der Kochmodus liegt fixiert über dem Bildschirm, Schrittkarte über die volle Breite, Zutaten zweispaltig (`cooking-mode-tablet-full`). Mit dem zweiten Rezept kommt das Karussell dazu; dabei wechselt ohnehin das Rezept vorn. Abweichung zu quer (dort zwei Spalten ab dem ersten Rezept), weil die leere Spalte hochkant 43 % der Breite kostete. Folge: Wird die letzte Karte per Linksswipe entfernt, steht während der 6 s für „Rückgängig“ links „Noch kein weiteres Rezept am Herd“, danach springt der Kochmodus auf die volle Breite. Dreht man ein iPad mit nur einem Rezept, wechselt es zwischen zwei Spalten (quer) und voller Breite (hochkant). |
@@ -110,7 +111,8 @@ Portionen und der Wake-Lock des Kochmodus liegen noch in `RecipeDetail`.
 | 15 | Scroll-Versatz mit `cover` auf 0 (Befund am Gerät: `scroll -59`, Tipps 59 pt daneben): `resetHorizontalScroll` in `useViewportFitCover` beim Umschalten, zeitversetzt danach und bei `scroll`/`resize`. Tests +4, Diagnose-Tests entfernt; `test:ci` 207 Suites, 4.127 Tests | PR #3598 gemergt (01.11.2026); am Gerät bestätigt (Drehung 90) |
 | 16 | Schiene rechts im Grau der Schrittspalte, Lasche dort nicht mehr gespiegelt (Entwurf A): Token `--color-surface-subtle` für die Schrittspalte (Light #f9f9f9, Dark #121212), zwei Dark-Regeln weniger in `darkMode.css` (Baseline 1.015 → 1.013), Hex-Baseline `RecipeDetail.css` 150 → 148. Erster Commit `fix:`. Tests: `CookingSessionRail.css.test.js` +1, einer angepasst; `test:ci` 208 Suites, 4.132 Tests | PR #3599 gemergt (01.11.2026); am Gerät nicht geprüft |
 | 17 | Nacharbeiten nach dem Test am iPad quer (Screenshot 01.11.2026): (1) Abschnittsüberschriften im Zutaten-Sheet (z. B. „Der Vorteig“) ragten beim Durchscrollen links 0,4 rem über die fixierte Zeile „Zutaten für“ hinaus, weil `.ingredient-heading` allgemein `margin-left: -1.5rem` hat, die Liste im Kochmodus aber nur 1.1rem eingerückt ist; jetzt im Kochmodus -1.1rem (hoch und quer, also auch Handy). (2) Karussell links im Grau der Schrittspalte (`--color-surface-subtle`) statt `--color-bg`; vorher stießen #f5f5f5 und #f9f9f9 aneinander (Dark beide #121212); damit hat auch der Streifen unter der Statusleiste (Abstand `safe-area-inset-top`, Fläche des Kochmodus #f9f9f9) dasselbe Grau wie die Spalte darunter. (3) Keine Trennlinie mehr zwischen Karussell und Rezept vorn (`border-right` entfernt, Auftrag nach dem Test am Gerät). Erster Commit `fix:`. Tests +2 (`RecipeDetail.css.test.js`, `CookingSessionCarousel.css.test.js`, beide ohne den Fix rot); `test:ci` 207 Suites, 4.130 Tests | PR #3600 und #3601 gemergt (01.11.2026); im Browser (Chromium, gebautes CSS, 1080 × 810, Abstand oben 24 px per CDP, DOM aus den Tests) vorher/nachher geprüft, am Gerät nicht |
-| 18 | iPad hochkant (Entwurf T1): Erkennung `useTabletOrientation` (quer und hochkant, hochkant ab 744 px Breite, also mit iPad mini), Karussell links ab dem zweiten Rezept (`cooking-mode-split` wie quer), mit nur einem Rezept volle Breite (`cooking-mode-tablet-full`), Karussell hochkant mit `portrait` (ab drei Karten volle Höhe geteilt, kompakt ab vier), Kochmodus-Knopf auf dem Rezeptbild und ausgeblendeter Header auch hochkant, Schrittkarte nach dem Drehen wieder mittig, Zutaten auf dem iPad mini einspaltig. Weiter hinter dem Flag. Erster Commit `feat:`. Tests +14 (`useTabletOrientation.test.js` +2, `CookingSessionCarousel.test.js` +2, `CookingSessionCarousel.css.test.js` +4, `RecipeDetail.parallelCooking.test.js` +6, einer dort umgeschrieben); `test:ci` 207 Suites, 4.144 Tests | Branch `claude/parallel-kochen-ipad-hochkant` (02.11.2026), noch kein PR; im Browser (Chromium, gebautes CSS, 834 × 1194 und 744 × 1133 mit Abstand oben 24 px per CDP, 1194 × 834 als Gegenprobe quer, DOM aus den Tests, Light und Dark) geprüft, am Gerät nicht |
+| 18 | iPad hochkant (Entwurf T1): Erkennung `useTabletOrientation` (quer und hochkant, hochkant ab 744 px Breite, also mit iPad mini), Karussell links ab dem zweiten Rezept (`cooking-mode-split` wie quer), mit nur einem Rezept volle Breite (`cooking-mode-tablet-full`), Karussell hochkant mit `portrait` (ab drei Karten volle Höhe geteilt, kompakt ab vier), Kochmodus-Knopf auf dem Rezeptbild und ausgeblendeter Header auch hochkant, Schrittkarte nach dem Drehen wieder mittig, Zutaten auf dem iPad mini einspaltig. Weiter hinter dem Flag. Erster Commit `feat:`. Tests +14 (`useTabletOrientation.test.js` +2, `CookingSessionCarousel.test.js` +2, `CookingSessionCarousel.css.test.js` +4, `RecipeDetail.parallelCooking.test.js` +6, einer dort umgeschrieben); `test:ci` 207 Suites, 4.144 Tests | PR #3607 gemergt (02.11.2026); am Gerät laut Rückmeldung vom 07.11.2026 erfolgreich getestet; vorher im Browser (Chromium, gebautes CSS, 834 × 1194 und 744 × 1133 mit Abstand oben 24 px per CDP, 1194 × 834 als Gegenprobe quer, DOM aus den Tests, Light und Dark) geprüft |
+| 19 | Tablet-Kochmodus ohne Flag (Tech-Check M12): `tabletCookingLayout` hängt nicht mehr am Flag, nur noch an `useTabletOrientation` (und nicht Handy quer); `showCookingCarousel` verlangt das Flag jetzt selbst. Ohne Flag also Kochmodus-Knopf auf dem Rezeptbild, Kochmodus fixiert über den ganzen Bildschirm mit voller Breite (quer wie hochkant), App-Header aus; kein Karussell, keine Titelzeile, kein „+“. Erster Commit `fix:`. Tests: in `RecipeDetail.parallelCooking.test.js` die beiden Gegentests „without the flag … no cooking mode button“ (quer, hochkant) durch zwei Tests für das neue Verhalten ersetzt; `test:ci` 207 Suites, 4.146 Tests | Branch `claude/adoring-faraday-1g06ld` (07.11.2026), noch kein PR; nicht im Browser und nicht am Gerät geprüft. Offen am Gerät: iPad quer ohne Flag, Schrittkarte dann über die ganze Breite (bis 1194 px; mit Flag ist sie quer nur die rechte Spalte breit) |
 
 Nach jedem PR: Tabelle hier nachziehen. Berührt ein PR einen Tech-Check-Befund (mindestens PR 1: A1),
 das Dashboard nach `CLAUDE.md` aktualisieren.
@@ -299,65 +301,38 @@ teilweise: Einstieg jetzt auf dem iPad quer und hochkant mit Flag, ohne Flag und
 
 ## Offen
 
-- **iPad hochkant am Gerät** (PR 18): Drehen mit offenem Kochmodus (bleibt das Karussell, steht die Schrittkarte danach mittig?),
-  ein Rezept dazunehmen und das letzte herauswischen (Wechsel zwischen voller Breite und zwei Spalten), Lasche „Kochmodus“,
-  iPad mini. Offen, ob ein Tablet ohne Flag den Einstieg und das Vollbild-Layout auch bekommen soll (Tech-Check M12).
+Am Gerät getestet laut Rückmeldung vom 07.11.2026 („Tests waren erfolgreich“, ohne Einzelaufstellung): iPad hochkant
+(PR 18: Drehen, Wechsel volle Breite/zwei Spalten, Lasche, iPad mini), Schiene am Rand (-90, „+“, Einrasten, Hinweis auf fällige
+Rezepte, Linksswipe, Schritte per Wischen, quer verlassen), Karussell iPad quer (Linksswipe, Einrasten, Pille, Magic Keyboard),
+Schiene PR 9, Aufteilung der Höhe mit Leiste (56-px-Knopf bleibt), Abgleich mit zwei Geräten, Timer-Push bei gesperrtem iPhone
+(Tech-Check P8). Falls einer dieser Punkte doch nicht dabei war, hier wieder aufnehmen.
 
-- **Schiene am Rand am Gerät, Rest** (PR 14/15): Drehung 90 ist bestätigt (Schiene am Rand, Tipps kommen an). Offen: die andere
-  Drehrichtung (-90, Schiene links; steht sie auf der Kameraseite, die zwei Zweige in `getCameraSide` tauschen), „+“ auf der
-  Schiene, Einrasten beim Scrollen, Hinweis auf fällige Rezepte außer Sicht, Linksswipe, Schritte per Wischen, Rezept quer
-  verlassen (übrige App ohne Versatz). Quer geöffnet ohne Drehen bleibt der Abstand bis zum nächsten Drehen (gewollt).
-
+- **iPad quer ohne Flag am Gerät** (PR 19): Kochmodus über die volle Breite, Schrittkarte bis 1194 px breit. Ob das lesbar ist
+  oder eine Höchstbreite braucht, zeigt der Test am Gerät.
 - **Abgleich zwischen Geräten** (PR 12): `firestore.rules` für `cookingSessions` nicht im Emulator geprüft (nur durch
-  `securityDocsPolicy.test.js` gedeckt). Zwei Geräte gleichzeitig am Gerät testen: Rezept dazunehmen, Schritt
-  weiterschalten, Rezept vorn wechseln. Offen, ob Portionen und Timer mit synchronisiert werden sollen. Bei gleichzeitiger
-  Änderung auf zwei Geräten gewinnt der spätere Schreibvorgang ganz (kein Zusammenführen je Rezept). Ein Gerät, das das Rezept
-  auf dem Handy im Hintergrund hat, wird bewusst nicht in den Kochmodus gezogen. `RecipeDetail.js` 2.996 → 3.013 Zeilen,
-  `useState` unverändert 77 (am Dashboard für A1 nichts zu ändern).
-
-- **Alarm bei App im Hintergrund** (am Gerät bestätigt, 01.11.2026, Tech-Check P8): Der Timer ist „weitestgehend lautlos,
-  wenn die App im Hintergrund ist“. Takt und Ton laufen nur, solange der Browser die Seite ausführt; eine iOS-PWA im
-  Hintergrund wird pausiert, der Alarm kam erst beim Zurückkehren (`visibilitychange`).
-  - Teil 1, PR #3584 (gemergt): `startAlarm` rief vor dem Ton `new Notification()` auf, das auf Chrome für Android wirft,
-    der Ton startete nie. Jetzt Ton zuerst, Mitteilung über den Service Worker (`src/utils/localNotification.js`),
-    Tipp holt die App nach vorn.
-  - Teil 2, PR #3585 (gemergt, baute auf #3584 auf): Push vom Server zur Endzeit. Entschieden (01.11.2026, auf
-    Empfehlung): minütlicher Job, der bis zur Endzeit wartet (`sendDueCookingTimerAlarms`, kein Cloud Tasks), und nur
-    das Gerät, auf dem der Timer gestartet wurde (Token in `users/{uid}.timerPushTokens`). Im Hintergrund klingt der
-    Systemton der Mitteilung, nicht die eigenen Alarmtöne; iPhone nur als installierte App ab iOS 16.4 mit erlaubten
-    Mitteilungen. Timer unter einer Minute können sich bis zu einer Minute verspäten.
-  - Offen: Zustellung am Gerät nach dem Deploy prüfen (iPhone gesperrt und App im Hintergrund).
-
-- **iPad hochkant** (PR 10, Tech-Check M12): Die Desktop-Ansicht ab 769 px Breite hat keinen Kochmodus-Knopf. iPad Air und Pro
-  hochkant (820 bzw. 834 px) erreichen den Kochmodus deshalb nur, wenn man ihn quer startet und dann dreht; dort ist er nicht
-  fixiert, der App-Header bleibt sichtbar, und die Schrittkarte ist höchstens 398 px breit. Vorschlag aus dem Entwurfsgespräch:
-  hochkant der iPhone-Hochkantmodus 1:1 mit Leiste, über den ganzen Bildschirm. Nicht entschieden. Ebenso offen: Kochmodus auf
-  dem iPad quer ohne Flag und am Desktop (gewollt oder Lücke?).
-- **Header auf dem iPad quer sichtbar** (Screenshot 01.11.2026, erledigt): Lag am alten Stand im Zwischenspeicher (vor #3592);
-  nach Neustart der App am Gerät weg, Titelzeile mit „+“ sichtbar (zweiter Screenshot, 22:05).
-- **Karussell am Gerät** (PR 10): Linksswipe auf den breiten Karten, Einrasten beim Scrollen, Pille für fällige Rezepte und die
-  Erkennung (iPad mit Magic Keyboard) nicht am Gerät geprüft.
-
-- **Leiste unter dem Header scrollt weg** (PR 8): Sie sitzt im Fluss, nicht sticky. Bei langen Listen ist ein ablaufender Timer dann erst nach dem Hochscrollen sichtbar (der Alarm-Dialog kommt trotzdem). Sticky unter dem Header wäre die Alternative; Höhe des Headers und sein Ausblenden beim Scrollen (`headerVisible`) müssten dann zusammenpassen.
-
-- **Parken ohne neues Rezept** (V2, Parken-Knopf in der Lasche): nicht gewählt. Wird nötig, wenn man ein Rezept
-  parken will, ohne gleich ein anderes zu öffnen.
-- **Leiste im Rezeptdetail ohne Kochmodus und in der Festtafel-Detailansicht:** dort fehlt sie, weil es keine
-  Bottom-Navigation gibt. Ob sie dort nötig ist, zeigt der Test am Gerät.
+  `securityDocsPolicy.test.js` gedeckt). Offen, ob Portionen und Timer mit synchronisiert werden sollen. Bei gleichzeitiger
+  Änderung auf zwei Geräten gewinnt der spätere Schreibvorgang ganz (kein Zusammenführen je Rezept).
+- **Freigabe für andere Rollen:** wann und für wen, offen (der Schalter bleibt bis dahin aus). Nach den erfolgreichen Tests am
+  Gerät der größte verbleibende Punkt.
 - **Zurückdrehen beendet den Kochmodus:** gewollt und per Test festgeschrieben (`RecipeDetail.cooking-mode-layout.test.js`,
   „deactivates cooking mode after rotating back to portrait“), auch wenn der Kochmodus vorher im Hochformat an war. Mit
   mehreren Rezepten landet man danach im Rezeptdetail ohne Leiste; die Sitzung bleibt. Ob das mit Sitzung so bleiben soll, offen.
+- **Priorität** gegenüber dem Follow-Feature: offen.
+
+Zurückgestellt (kein Handlungsbedarf, solange niemand danach fragt):
+
+- **Leiste unter dem Header scrollt weg** (PR 8): Sie sitzt im Fluss, nicht sticky. Bei langen Listen ist ein ablaufender Timer
+  dann erst nach dem Hochscrollen sichtbar (der Alarm-Dialog kommt trotzdem). Sticky unter dem Header wäre die Alternative; Höhe
+  des Headers und sein Ausblenden beim Scrollen (`headerVisible`) müssten dann zusammenpassen.
+- **Parken ohne neues Rezept** (V2, Parken-Knopf in der Lasche): nicht gewählt. Wird nötig, wenn man ein Rezept
+  parken will, ohne gleich ein anderes zu öffnen.
+- **Leiste im Rezeptdetail ohne Kochmodus und in der Festtafel-Detailansicht:** dort fehlt sie, weil es keine
+  Bottom-Navigation gibt.
 - **Sheet „Was kochst du dazu?“ im Querformat:** Bottom-Sheet wie im Hochformat, für 393 px Höhe nicht eigens gestaltet.
-- **Schiene am Gerät** (PR 9): Linksswipe am Rand und die schmalere Schrittspalte nicht am Gerät geprüft (die 30-px-Kreise ab vier
-  Rezepten gibt es seit PR 13 nicht mehr).
-- **Aufteilung der Höhe mit Leiste** (Nacharbeiten, PR #3572): Annahme, dass die ganze Leistenhöhe vom Karussell kommt. Ob die Schritte so noch
-  gut lesbar sind, zeigt der Test am Gerät. Der 56-px-Knopf in der Titelzeile (PR 7, wie die FABs) macht die Zeile mobil 12 px
-  höher; wird das Karussell zu knapp, wäre der 44-px-Knopf die Alternative.
 - **FAB-Formatierung ist mehrfach kopiert:** Jeder FAB wiederholt den ganzen Block (`RecipeDetail.css` dreimal,
   `DeleteFabButton.css`, `Kueche.css` und weitere); der Knopf in der Titelzeile ist nur ein weiterer Nachbau, durch einen
   Test gegen `.edit-fab-button` abgesichert. Ein gemeinsamer Baustein wäre eine eigene Aufräumarbeit, nicht Teil dieses Vorhabens.
-- **Freigabe für andere Rollen:** wann und für wen, offen (der Schalter bleibt bis dahin aus).
-- **Priorität** gegenüber dem Follow-Feature: offen.
+- **Alte Branches:** gut 20 `claude/parallel-kochen-*`-Branches auf dem Remote, alle gemergt oder überholt; aufräumen bei Gelegenheit.
 
 ## Wichtige Stellen im Code
 
