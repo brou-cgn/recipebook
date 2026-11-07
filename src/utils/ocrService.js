@@ -89,7 +89,7 @@ export async function recognizeText(imageBase64, lang = 'eng', onProgress = null
       paragraphs: result.data.paragraphs
     };
   } catch (error) {
-    throw new Error(`OCR recognition failed: ${error.message}`);
+    throw new Error(`OCR recognition failed: ${error.message}`, { cause: error });
   }
 }
 

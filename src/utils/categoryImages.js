@@ -172,7 +172,7 @@ export async function saveCategoryImages(images) {
     }
   } catch (error) {
     if (error.code === 'resource-exhausted') {
-      throw new Error('Speicherplatz voll. Bitte entfernen Sie einige Kategoriebilder oder verwenden Sie kleinere Bilder.');
+      throw new Error('Speicherplatz voll. Bitte entfernen Sie einige Kategoriebilder oder verwenden Sie kleinere Bilder.', { cause: error });
     }
     throw error;
   }
@@ -203,7 +203,7 @@ export async function addCategoryImage(imageBase64, categories = [], order) {
     return newImage;
   } catch (error) {
     if (error.code === 'resource-exhausted') {
-      throw new Error('Speicherplatz voll. Bitte entfernen Sie einige Kategoriebilder oder verwenden Sie kleinere Bilder.');
+      throw new Error('Speicherplatz voll. Bitte entfernen Sie einige Kategoriebilder oder verwenden Sie kleinere Bilder.', { cause: error });
     }
     throw error;
   }
