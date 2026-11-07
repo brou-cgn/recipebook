@@ -49,6 +49,10 @@ exports.recipeImportPage = onRequest(
       }
 
       const rawText = importData.rawText || '';
+      // Optionale Quelle (createRecipeImportFromText `url`); landet als
+      // schema.org `url` im JSON-LD, die App übernimmt sie als sourceUrl.
+      const sourceUrl = typeof importData.sourceUrl === 'string' &&
+        /^https?:\/\//i.test(importData.sourceUrl) ? importData.sourceUrl : '';
 
       // Derive a title from the first non-empty line of the raw text
       const lines = rawText.split('\n').map((l) => l.trim()).filter(Boolean);
@@ -68,6 +72,7 @@ exports.recipeImportPage = onRequest(
         '@type': 'Recipe',
         'name': title,
         'description': rawText,
+        ...(sourceUrl ? {'url': sourceUrl} : {}),
       })
           .replace(/</g, '\\u003c')
           .replace(/\u2028/g, '\\u2028')
