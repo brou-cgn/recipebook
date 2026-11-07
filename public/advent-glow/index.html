@@ -90,7 +90,7 @@ fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 
   <img class="stall" src="stall.png" width="872" height="601" alt="Line drawing of a Christmas market stall with steaming mugs and presents">
 
-  <div class="ticker" aria-hidden="true"><span>Mulled wine · fairy lights · good friends · a warm mug in cold hands · Third Sunday of Advent · Mulled wine · fairy lights · good friends</span></div>
+  <div class="ticker" aria-hidden="true"><span id="ticker-text">Snow on the windows · mulled wine in cold hands · fairy lights and old friends · one more song before midnight · Third Sunday of Advent · Snow on the windows · mulled wine in cold hands · fairy lights and old friends</span></div>
 
 
   <ul class="details">
@@ -212,6 +212,21 @@ try {
     return uidPromise;
   };
   var refFor = async function(){ return fs.doc(db, COLLECTION, await currentUid()); };
+
+  // Ticker text is editable in the app (Einstellungen > Allgemein, appSettings/adventGlow).
+  // The text in the markup stays as fallback when the document is missing or unreadable.
+  (async function(){
+    try {
+      await currentUid();
+      var snap = await fs.getDoc(fs.doc(db, "appSettings", "adventGlow"));
+      var text = snap.exists() ? String(snap.data().tickerText || "").replace(/\s+/g, " ").trim().slice(0, 600) : "";
+      if (!text) return;
+      var span = document.getElementById("ticker-text");
+      span.textContent = text;
+      // Keep the scroll speed roughly constant for longer or shorter texts (default: ~200 chars in 26 s).
+      span.style.animationDuration = Math.max(14, Math.round(text.length * 0.13)) + "s";
+    } catch (e) { console.error(e); }
+  })();
 
   window.__rsvpBackendReady.resolve({
     load: async function(){

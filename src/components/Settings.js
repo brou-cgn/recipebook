@@ -8,6 +8,7 @@ import useInlineRename from '../hooks/useInlineRename';
 import { addCuisineType, removeCuisineType, renameCuisineType, addCuisineGroup, removeCuisineGroup, addChildToGroup, removeChildFromGroup } from '../utils/cuisineListOps';
 import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, renameCuisineTypeIcon, deleteCuisineTypeIcon, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, getAIRecipePromptHistory, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION } from '../utils/customLists';
 import { getOnboardingTestmodeActive, saveOnboardingTestmodeActive } from '../utils/onboardingSettings';
+import { getAdventGlowTickerText, saveAdventGlowTickerText, ADVENT_GLOW_TICKER_MAX_LENGTH } from '../utils/adventGlowSettings';
 import { renameMealCategoryInImages, removeMealCategoryFromImages } from '../utils/categoryImages';
 import PrintFormatsSettings from './PrintFormatsSettings';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
@@ -366,6 +367,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   // Role permissions state (for abortCalc and editLists permission checks)
   const [rolePermissions, setRolePermissions] = useState(null);
   const [onboardingTestmodeActive, setOnboardingTestmodeActive] = useState(false);
+  const [adventGlowTickerText, setAdventGlowTickerText] = useState('');
 
   // Whether the current user can rename cuisine types and meal categories
   const canEditLists = isAdmin || rolePermissions?.[currentUser?.role]?.editLists === true;
@@ -398,6 +400,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       const alltagsklassikerLeertextValue = await getAlltagsklassikerLeertext();
       const inspirationSettings = await getInspirationListSettings();
       const onboardingTestmode = await getOnboardingTestmodeActive();
+      const adventGlowTicker = await getAdventGlowTickerText();
       
       setLists(lists);
       setHeaderSlogan(slogan);
@@ -427,6 +430,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       setInspirationTargetListName(inspirationSettings.inspirationTargetListName);
       setInspirationTargetListDescription(inspirationSettings.inspirationTargetListDescription);
       setOnboardingTestmodeActive(onboardingTestmode);
+      setAdventGlowTickerText(adventGlowTicker);
     };
     loadSettings();
   }, []);
@@ -683,6 +687,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       await saveAlltagsklassikerLeertext(alltagsklassikerLeertext);
       await saveInspirationListSettings({ inspirationListName, inspirationListDescription, inspirationTargetListName, inspirationTargetListDescription });
       await saveOnboardingTestmodeActive(onboardingTestmodeActive);
+      await saveAdventGlowTickerText(adventGlowTickerText);
 
       // Carry cuisine type icons (managed in "Bilder & Icons") over renames, and
       // remove them for deleted cuisine types - mirrors the recipe propagation
@@ -1369,6 +1374,23 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                 />
                 Onboarding-Testmodus aktiv
               </label>
+            </div>
+
+            <div className="settings-section">
+              <h3>Advent Glow – Lauftext</h3>
+              <p className="section-description">
+                Text, der auf der Einladungsseite /advent-glow/ unter der Zeichnung durchläuft. Bleibt das Feld leer, wird der Standardtext gespeichert.
+              </p>
+              <div className="list-input">
+                <textarea
+                  value={adventGlowTickerText}
+                  onChange={(e) => setAdventGlowTickerText(e.target.value)}
+                  maxLength={ADVENT_GLOW_TICKER_MAX_LENGTH}
+                  rows={3}
+                  aria-label="Advent Glow Lauftext"
+                  placeholder="Lauftext eingeben..."
+                />
+              </div>
             </div>
 
             <div className="settings-section">
