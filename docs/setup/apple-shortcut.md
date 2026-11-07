@@ -443,7 +443,9 @@ Füge eine **„Inhalt von URL laden"** Aktion hinzu:
 | `X-Api-Key` | `<dein-api-key>` |
 | `X-User-Email` | `<e-mail-adresse-des-service-users>` |
 
-**Body:** `{ "rawText": "<Rezepttext>" }`
+**Body:** `{ "rawText": "<Rezepttext>", "url": "<Quelle, optional>" }`
+
+`url` (alias `sourceUrl`) ist optional: die Adresse, von der der Text stammt (z. B. der Instagram-Post oder die Website). Sie wird **nicht** abgerufen, sondern nur als Quell-Link ins importierte Rezept übernommen und dort in der Detailansicht angezeigt. Erlaubt sind nur `http(s)`-Adressen; eine ungültige URL beantwortet die Function mit `400`. Ohne `url` bekommt das Rezept keinen Quell-Link (die `importUrl` läuft nach 10 Minuten ab und taugt nicht als Link).
 
 ### Antwort verarbeiten
 
