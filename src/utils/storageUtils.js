@@ -68,7 +68,7 @@ async function uploadImageToFolder(file, folder) {
     return downloadURL;
   } catch (error) {
     console.error('Error uploading image to Firebase Storage:', error);
-    throw new Error('Failed to upload image. Please try again.');
+    throw new Error('Failed to upload image. Please try again.', { cause: error });
   }
 }
 
@@ -125,7 +125,7 @@ export async function uploadDrinkThumbnail(thumbnailBlob, userId) {
     return await getDownloadURL(snapshot.ref);
   } catch (error) {
     console.error('Error uploading drink thumbnail to Firebase Storage:', error);
-    throw new Error('Failed to upload thumbnail. Please try again.');
+    throw new Error('Failed to upload thumbnail. Please try again.', { cause: error });
   }
 }
 
@@ -156,7 +156,7 @@ export async function uploadRecipeThumbnail(thumbnailBlob) {
     return downloadURL;
   } catch (error) {
     console.error('Error uploading recipe thumbnail to Firebase Storage:', error);
-    throw new Error('Failed to upload thumbnail. Please try again.');
+    throw new Error('Failed to upload thumbnail. Please try again.', { cause: error });
   }
 }
 
@@ -180,7 +180,7 @@ export async function uploadDiscoverTopicImage(file) {
     return await getDownloadURL(snapshot.ref);
   } catch (error) {
     console.error('Error uploading discover topic image to Firebase Storage:', error);
-    throw new Error('Das Bild konnte nicht hochgeladen werden.');
+    throw new Error('Das Bild konnte nicht hochgeladen werden.', { cause: error });
   }
 }
 
@@ -294,7 +294,7 @@ export async function uploadAppLogoToStorage(base64Image) {
     return downloadURL;
   } catch (error) {
     console.error('Error uploading app logo to Firebase Storage:', error);
-    throw new Error('Failed to upload app logo. Please try again.');
+    throw new Error('Failed to upload app logo. Please try again.', { cause: error });
   }
 }
 
@@ -344,7 +344,7 @@ export async function uploadMenuGridImage(base64Image, menuId) {
     return downloadURL;
   } catch (error) {
     console.error('Error uploading menu grid image to Firebase Storage:', error);
-    throw new Error('Failed to upload menu grid image. Please try again.');
+    throw new Error('Failed to upload menu grid image. Please try again.', { cause: error });
   }
 }
 
@@ -371,7 +371,7 @@ export async function uploadMenuGridImageDark(base64Image, menuId) {
     return downloadURL;
   } catch (error) {
     console.error('Error uploading dark menu grid image to Firebase Storage:', error);
-    throw new Error('Failed to upload dark menu grid image. Please try again.');
+    throw new Error('Failed to upload dark menu grid image. Please try again.', { cause: error });
   }
 }
 

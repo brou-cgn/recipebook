@@ -1,9 +1,10 @@
 // Lint für das Frontend (src/) – Tech-Check B2. Functions haben eine eigene
 // Konfiguration (functions/eslint.config.js). Die CI bricht nur bei Fehlern ab;
 // Warnungen (z. B. exhaustive-deps) sind der sichtbare Altbestand.
+// eslint-plugin-react entfällt: eslint 10 erkennt JSX-Verwendungen selbst
+// (früher react/jsx-uses-vars), und das Plugin unterstützt eslint 10 nicht.
 import js from '@eslint/js';
 import globals from 'globals';
-import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 
 export default [
@@ -11,25 +12,22 @@ export default [
   js.configs.recommended,
   {
     files: ['src/**/*.{js,jsx}'],
-    plugins: { react, 'react-hooks': reactHooks },
+    plugins: { 'react-hooks': reactHooks },
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
       parserOptions: { ecmaFeatures: { jsx: true } },
       globals: { ...globals.browser, ...globals.serviceworker, process: 'readonly' }, // process.env.REACT_APP_* ersetzt Vite per define
     },
-    settings: { react: { version: 'detect' } },
     linterOptions: { reportUnusedDisableDirectives: 'off' },
     rules: {
       'no-empty': ['error', { allowEmptyCatch: true }],
       'no-irregular-whitespace': ['error', { skipStrings: true, skipTemplates: true, skipRegExps: true }],
-      'react/jsx-uses-vars': 'error',
       // Löschaktionen: ausschließlich DeleteRowButton (AGENTS.md), keine eigenen ×-Knöpfe.
       'no-restricted-syntax': ['error', {
         selector: "JSXAttribute[name.name='className'][value.value=/(^|\\s)(remove-btn|remove-child-btn)(\\s|$)/]",
         message: 'Eigener Löschknopf: DeleteRowButton + useUndoableDelete verwenden (AGENTS.md, Löschaktionen).',
       }],
-      'react/jsx-uses-react': 'off',
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
       'no-unused-vars': ['warn', { args: 'none', ignoreRestSiblings: true, varsIgnorePattern: '^_' }],

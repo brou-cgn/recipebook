@@ -383,31 +383,30 @@ export async function scanRecipesWithAI(images, lang = 'de', onProgress = null, 
     return recipeData;
   } catch (error) {
     clearInterval(progressInterval);
-    progressInterval = null;
     if (onProgress) onProgress(0);
 
     const errorDetails = getCallableErrorDetails(error);
     const { code: errorCode } = errorDetails;
 
     if (errorCode === 'unauthenticated' && !isInvokerAuthFailure(errorDetails)) {
-      throw new Error('Bitte melde dich an, um AI-Scan zu nutzen.');
+      throw new Error('Bitte melde dich an, um AI-Scan zu nutzen.', { cause: error });
     } else if (errorCode === 'permission-denied' || isInvokerAuthFailure(errorDetails)) {
-      throw new Error(INVOKER_ERROR_MESSAGE_OCR);
+      throw new Error(INVOKER_ERROR_MESSAGE_OCR, { cause: error });
     } else if (errorCode === 'resource-exhausted') {
-      throw new Error(error.message || 'Tageslimit erreicht. Versuche es morgen erneut oder nutze Standard-OCR.');
+      throw new Error(error.message || 'Tageslimit erreicht. Versuche es morgen erneut oder nutze Standard-OCR.', { cause: error });
     } else if (errorCode === 'invalid-argument') {
-      throw new Error(error.message || 'Ungültige Bilder.');
+      throw new Error(error.message || 'Ungültige Bilder.', { cause: error });
     } else if (errorCode === 'failed-precondition') {
-      throw new Error('AI-Service nicht konfiguriert. Bitte kontaktiere den Administrator.');
+      throw new Error('AI-Service nicht konfiguriert. Bitte kontaktiere den Administrator.', { cause: error });
     } else if (errorCode === 'unavailable') {
-      throw new Error('Netzwerkfehler. Bitte überprüfe deine Internetverbindung.');
+      throw new Error('Netzwerkfehler. Bitte überprüfe deine Internetverbindung.', { cause: error });
     } else if (errorCode === 'deadline-exceeded') {
-      throw new Error('Zeitüberschreitung. Bitte versuche es erneut.');
+      throw new Error('Zeitüberschreitung. Bitte versuche es erneut.', { cause: error });
     } else if (error.message) {
-      throw new Error(error.message);
+      throw new Error(error.message, { cause: error });
     }
 
-    throw new Error('KI-Bildverarbeitung fehlgeschlagen. Bitte versuche es erneut.');
+    throw new Error('KI-Bildverarbeitung fehlgeschlagen. Bitte versuche es erneut.', { cause: error });
   }
 }
 
