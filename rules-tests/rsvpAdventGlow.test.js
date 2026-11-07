@@ -81,3 +81,11 @@ test('Auflisten: Admin ja, Gast und Mitglied nein; Löschen nur Admin', async ()
   await assertFails(as.user(env, 'editor').doc(`${COL}/gastB`).delete());
   await assertSucceeds(as.user(env, 'admin').doc(`${COL}/gastB`).delete());
 });
+
+test('Lauftext (appSettings/adventGlow): Gast liest, nur Admin schreibt', async () => {
+  await seed(env, (db) => db.doc('appSettings/adventGlow').set({ tickerText: 'Hallo' }));
+  const a = as.anonymous(env, 'gastA');
+  await assertSucceeds(a.doc('appSettings/adventGlow').get());
+  await assertFails(a.doc('appSettings/adventGlow').set({ tickerText: 'gekapert' }));
+  await assertSucceeds(as.user(env, 'admin').doc('appSettings/adventGlow').set({ tickerText: 'Neu' }));
+});
