@@ -24,6 +24,10 @@ function loadFunctions({userData, pinDoc = null, scanCount = null, limitCheckFai
       });
     },
     collection: (name) => ({
+      add: async (data) => {
+        saved.push({name, data});
+        return {id: 'r1'};
+      },
       doc: (id) => ({
         get: async () => ({exists: name === 'users', data: () => userData}),
         set: async (data) => saved.push({name, id, data}),
@@ -277,4 +281,29 @@ test('KI-Limit: getVideoUploadUrl -> 503 (fail closed), wenn der Zähler nicht p
   await mod.getVideoUploadUrl(makeReq({body: {}}), res);
   assert.equal(res.statusCode, 503);
   assert.equal(saved.length, 0);
+});
+
+const API_RECIPE = {title: 'Lachs', ingredients: ['600 g Lachs'], steps: ['Grillen']};
+
+test('addRecipeViaAPI: url wird als sourceUrl im Rezept gespeichert', async () => {
+  for (const key of ['url', 'sourceUrl', 'quelle']) {
+    const {mod, saved} = loadFunctions({userData: {role: 'edit'}});
+    const res = makeRes();
+    await mod.addRecipeViaAPI(makeReq({body: {...API_RECIPE, [key]: 'https://www.lecker.de/lachs-17533.html'}}), res);
+    assert.equal(res.statusCode, 200, key);
+    const recipe = saved.find((e) => e.name === 'recipes').data;
+    assert.equal(recipe.sourceUrl, 'https://www.lecker.de/lachs-17533.html', key);
+  }
+});
+
+test('addRecipeViaAPI: ohne url kein sourceUrl, ungültige url -> 400', async () => {
+  let {mod, saved} = loadFunctions({userData: {role: 'edit'}});
+  await mod.addRecipeViaAPI(makeReq({body: API_RECIPE}), makeRes());
+  assert.equal('sourceUrl' in saved.find((e) => e.name === 'recipes').data, false);
+
+  ({mod, saved} = loadFunctions({userData: {role: 'edit'}}));
+  const res = makeRes();
+  await mod.addRecipeViaAPI(makeReq({body: {...API_RECIPE, url: 'javascript:alert(1)'}}), res);
+  assert.equal(res.statusCode, 400);
+  assert.equal(saved.filter((e) => e.name === 'recipes').length, 0);
 });

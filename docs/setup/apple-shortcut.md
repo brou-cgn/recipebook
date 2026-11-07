@@ -333,6 +333,7 @@ Füge im Kurzbefehl eine **„Inhalt von URL laden"** Aktion hinzu und konfiguri
 | `kulinarik` | `cuisine`, `kulinarisch` | string \| string[] | – |
 | `tags` | – | string \| string[] | – |
 | `notizen` | `notes` | string | – |
+| `url` | `sourceUrl`, `quelle` | string (http/https) | – (wird als Quell-Link im Rezept angezeigt, nicht abgerufen; ungültige URL → `400`) |
 | `pin` | – | string | nur, wenn Webimport-PIN eingerichtet |
 
 Das Feld `pin` ist nur nötig, wenn du im Hamburger-Menü unter „Kurzbefehl installieren" einen Webimport-PIN vergeben hast – ohne `pin` schlägt der Aufruf dann mit HTTP 403 fehl. Ohne eingerichteten PIN kannst du das Feld einfach weglassen.
