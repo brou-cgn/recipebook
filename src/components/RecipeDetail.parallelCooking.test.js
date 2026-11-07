@@ -693,12 +693,23 @@ describe('RecipeDetail – parallel kochen auf dem iPad quer (Entwurf I4, Karuss
     await act(async () => {});
   });
 
-  test('without the flag the iPad keeps its view: no cooking mode button on the picture, no carousel', async () => {
-    renderWithProviders(<Harness user={{ ...flaggedUser, parallelKochen: false }} />);
+  test('without the flag the iPad still gets the cooking mode (Tech-Check M12): full width, no carousel', async () => {
+    const onHeaderVisibilityChange = jest.fn();
+    renderWithProviders(
+      <Harness user={{ ...flaggedUser, parallelKochen: false }} onHeaderVisibilityChange={onHeaderVisibilityChange} />
+    );
     await act(async () => {});
+    expect(document.querySelector('.overlay-cooking-mode-static')).toBeInTheDocument();
+    expect(document.querySelector('.overlay-back-button')).toBeNull();
 
-    expect(document.querySelector('.overlay-cooking-mode-static')).toBeNull();
+    await enterCookingMode();
+
+    const content = document.querySelector('.recipe-detail-content');
+    expect(content).toHaveClass('cooking-mode-tablet-full');
+    expect(content).not.toHaveClass('cooking-mode-split');
     expect(screen.queryByRole('navigation', { name: 'Weitere Rezepte am Herd' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Rezept dazunehmen' })).toBeNull();
+    expect(onHeaderVisibilityChange).toHaveBeenLastCalledWith(false);
   });
 });
 
@@ -785,6 +796,18 @@ describe('RecipeDetail – parallel kochen auf dem iPad hochkant (Entwurf T1)', 
     expect(screen.queryByText('Noch kein weiteres Rezept am Herd')).toBeNull();
   });
 
+  test('without the flag upright: cooking mode button and full width, no carousel, no „+“', async () => {
+    renderWithProviders(<Harness user={{ ...flaggedUser, parallelKochen: false }} />);
+    await act(async () => {});
+    expect(document.querySelector('.overlay-cooking-mode-static')).toBeInTheDocument();
+
+    await enterCookingMode();
+
+    expect(document.querySelector('.recipe-detail-content')).toHaveClass('cooking-mode-tablet-full');
+    expect(screen.queryByRole('navigation', { name: 'Weitere Rezepte am Herd' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Rezept dazunehmen' })).toBeNull();
+  });
+
   test('the iPad mini (744 px wide) gets the carousel too instead of the dock', async () => {
     setTabletViewport(744, 1133);
     renderWithProviders(<Harness />);
@@ -797,13 +820,6 @@ describe('RecipeDetail – parallel kochen auf dem iPad hochkant (Entwurf T1)', 
     expect(carouselCards()).toEqual(['Rinderrouladen nach vorn holen, Schritt 1 von 3']);
     expect(screen.queryByRole('navigation', { name: 'Rezepte im Hintergrund' })).toBeNull();
     await act(async () => {});
-  });
-
-  test('without the flag the iPad upright keeps its view: no cooking mode button on the picture', async () => {
-    renderWithProviders(<Harness user={{ ...flaggedUser, parallelKochen: false }} />);
-    await act(async () => {});
-
-    expect(document.querySelector('.overlay-cooking-mode-static')).toBeNull();
   });
 });
 
