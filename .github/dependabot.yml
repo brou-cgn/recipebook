@@ -35,6 +35,14 @@ updates:
     groups:
       functions-minor-patch:
         update-types: [minor, patch]
+    # firebase-admin ab v13/v14 entfernt die Namespace-API (admin.firestore(),
+    # admin.auth(), admin.messaging() …), die der Functions-Code ~90-mal nutzt.
+    # Zweimal (30.10. und 06.11.2026) per Dependabot gemergt → alle geplanten
+    # Jobs inkl. Mailversand fielen aus. Major erst nach Umstellung auf
+    # modulare Imports (firebase-admin/firestore usw.) wieder freigeben.
+    ignore:
+      - dependency-name: firebase-admin
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: chore
 
