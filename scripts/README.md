@@ -69,3 +69,15 @@ Ergänzt fehlende Invoker-Principal(s), ohne bestehende Bindings zu löschen.
 ```bash
 ./scripts/fix-callable-invoker.sh <PROJECT_ID> [REGION] [FUNCTIONS|all-callables]
 ```
+
+## setup-function-error-alert.sh
+
+Legt in Cloud Monitoring eine Mail-Warnung an, wenn eine Cloud Function mit HTTP 5xx endet
+oder ungefangen abstürzt (Tech-Check F18). Läuft außerhalb des App-Codes, fällt also nicht
+mit aus, wenn z. B. `firebase-admin` kaputt ist. Höchstens eine Mail pro Stunde.
+Einmalig in der Cloud Shell ausführen; erneutes Ausführen aktualisiert die Regel.
+
+**Usage:**
+```bash
+./scripts/setup-function-error-alert.sh <MAIL_ADRESSE> [PROJECT_ID]
+```
