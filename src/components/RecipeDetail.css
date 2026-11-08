@@ -1970,7 +1970,8 @@ button.private-badge-button:active {
   height: auto;
   display: grid;
   grid-template-columns: var(--cooking-carousel-width) minmax(0, 1fr);
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  /* Schritt-Karussell und Zutaten-Sheet teilen sich die Höhe 2 : 1 (siehe Tablet-Höhen unten) */
+  grid-template-rows: auto auto minmax(0, 2fr) minmax(auto, 1fr);
   padding-top: env(safe-area-inset-top, 0px);
 }
 
@@ -2052,6 +2053,29 @@ button.private-badge-button:active {
 
 .cooking-mode-tablet-full .cooking-mode-ingredients .ingredients-list > li {
   break-inside: avoid;
+}
+
+/* ── Tablet-Höhen: Schritte zu Zutaten 2 : 1 (hochkant wie quer, mit und ohne Karussell) ──
+   Auf dem iPhone hat das Zutaten-Sheet eine feste Höhe (min(34dvh, 280px)); auf dem Tablet
+   wäre das nur rund ein Viertel des Bildschirms. Hier teilen sich Schritt-Karussell und Sheet
+   die Höhe, die nach Titelzeile, Fortschritt und ggf. Leiste übrig bleibt: zwei Drittel für den
+   Schritt, ein Drittel für die Zutaten. Im Split übernimmt das das Raster (grid-template-rows oben),
+   bei voller Breite die Flexbox. Die bisherige Höhe bleibt als Untergrenze: Auf dem iPad 11" quer
+   (834 px hoch) wäre ein Drittel sonst kleiner als vorher. Die Selektoren schlagen die Hochformat-
+   und Leisten-Regeln oben. */
+.recipe-detail-content.cooking-mode-active.cooking-mode-split .cooking-mode-ingredients {
+  height: auto;
+  min-height: min(34dvh, 280px);
+}
+
+.cooking-mode-active.cooking-mode-tablet-full .step-carousel {
+  flex: 2 1 0;
+}
+
+.recipe-detail-content.cooking-mode-active.cooking-mode-tablet-full .cooking-mode-ingredients {
+  flex: 1 1 0;
+  height: auto;
+  min-height: min(34dvh, 280px);
 }
 
 /* ── Landscape mobile: side-by-side cooking mode layout ───────────────── */
