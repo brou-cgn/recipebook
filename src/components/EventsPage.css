@@ -390,7 +390,8 @@
 }
 
 .events-drinks-fab-button .button-icon-image,
-.events-guests-fab-button .button-icon-image {
+.events-guests-fab-button .button-icon-image,
+.events-wichtel-fab-button .button-icon-image {
   width: 1.4rem;
   height: 1.4rem;
   object-fit: contain;
@@ -422,8 +423,9 @@
 /* Wichteln-FAB (mobile Events-Übersicht, unten links neben Getränke und Gäste).
    Form, Größe, Schatten und Position teilt er sich mit den beiden FABs oben;
    Farben über Tokens statt darkMode.css: --color-surface/--color-border treffen
-   exakt die Werte der beiden (#fff/#ddd hell, #2a2a2a/#555 dunkel). Die
-   Icon-Farbe ist eigen, weil das Geschenk-Icon ein SVG (currentColor) ist. */
+   exakt die Werte der beiden (#fff/#ddd hell, #2a2a2a/#555 dunkel). Das Icon
+   ist einrichtbar (Button-Icon eventsWichtelFab); die Textfarbe greift nur,
+   wenn dort ein Text/Emoji statt eines Bildes hinterlegt ist. */
 .events-wichtel-fab-button,
 .events-wichtel-fab-button:active {
   background: var(--color-surface);

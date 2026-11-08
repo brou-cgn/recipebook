@@ -9,7 +9,6 @@ import ConsumptionForm from './ConsumptionForm';
 import DrinkManagementPage from './DrinkManagementPage';
 import GuestManagementPage from './GuestManagementPage';
 import WichtelPage from './WichtelPage';
-import GiftIcon from './icons/GiftIcon';
 import OverviewAddFab from './OverviewAddFab';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { DEFAULT_BUTTON_ICONS, getButtonIcons, getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
@@ -307,6 +306,7 @@ function EventsPage({
   const swipeDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode);
   const drinksFabIcon = getEffectiveIcon(buttonIcons, 'eventsDrinksFab', isDarkMode);
   const guestsFabIcon = getEffectiveIcon(buttonIcons, 'eventsGuestsFab', isDarkMode);
+  const wichtelFabIcon = getEffectiveIcon(buttonIcons, 'eventsWichtelFab', isDarkMode);
 
   const handleSelectEvent = (event, ownerId = currentUser?.id) => {
     setOpenedFromMenuLink(false);
@@ -747,7 +747,11 @@ function EventsPage({
           title="Wichteln"
           aria-label="Wichteln"
         >
-          <GiftIcon size={22} />
+          {isBase64Image(wichtelFabIcon) ? (
+            <img src={wichtelFabIcon} alt="Wichteln" className="button-icon-image" draggable="false" />
+          ) : (
+            wichtelFabIcon
+          )}
         </button>
       )}
     </div>
