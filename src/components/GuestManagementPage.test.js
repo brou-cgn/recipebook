@@ -329,6 +329,61 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
     expect(screen.queryByRole('heading', { name: 'Gast bearbeiten' })).not.toBeInTheDocument();
   });
 
+  describe('Sprache für Einladungen', () => {
+    test('neue Gäste haben Deutsch vorausgewählt und speichern es mit', async () => {
+      openNewGuestForm();
+
+      const sprache = screen.getByLabelText('Sprache für Einladungen');
+      expect(sprache).toHaveValue('de');
+      expect(within(sprache).getAllByRole('option').map((option) => option.textContent))
+        .toEqual(['Deutsch', 'Englisch', 'Französisch']);
+
+      fireEvent.change(screen.getByLabelText('Vorname'), { target: { value: 'Lena' } });
+      fireEvent.change(screen.getByLabelText('Nachname'), { target: { value: 'Beispiel' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+      await waitFor(() => {
+        expect(mockSaveGuestProfile).toHaveBeenCalledWith(
+          'u1',
+          expect.objectContaining({ vorname: 'Lena', sprache: 'de' }),
+          undefined,
+        );
+      });
+    });
+
+    test('bestehende Profile ohne Sprache zeigen Deutsch, eine Änderung wird gespeichert', async () => {
+      renderGuestManagementPage({
+        guestProfiles: [
+          { id: 'g1', vorname: 'Anna', nachname: 'Adler', email: 'anna@example.com', präferenzFaktor: 0.5 },
+        ],
+      });
+
+      fireEvent.click(screen.getByText('Anna Adler'));
+      const sprache = screen.getByLabelText('Sprache für Einladungen');
+      expect(sprache).toHaveValue('de');
+
+      fireEvent.change(sprache, { target: { value: 'en' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+      await waitFor(() => {
+        expect(mockSaveGuestProfile).toHaveBeenCalledWith(
+          'u1',
+          expect.objectContaining({ vorname: 'Anna', email: 'anna@example.com', sprache: 'en' }),
+          'g1',
+        );
+      });
+    });
+
+    test('zeigt die gespeicherte Sprache eines Profils', () => {
+      renderGuestManagementPage({
+        guestProfiles: [{ id: 'g1', vorname: 'Chloé', nachname: 'Martin', sprache: 'fr', präferenzFaktor: 0 }],
+      });
+
+      fireEvent.click(screen.getByText('Chloé Martin'));
+      expect(screen.getByLabelText('Sprache für Einladungen')).toHaveValue('fr');
+    });
+  });
+
   describe('admin cross-user guest visibility', () => {
     const adminUser = { id: 'admin1', role: 'admin' };
 

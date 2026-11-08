@@ -11,6 +11,22 @@ export const normalizePreferenceFactor = (value) => {
   return ALLOWED_PREFERENCE_FACTORS.includes(numeric) ? numeric : 0;
 };
 
+/**
+ * Sprachen für Einladungen an Gäste (Wichtel-Mail, Teilen-Text), Feld `sprache` im
+ * Gästeprofil. Dieselbe Liste steht in functions/shared/sprachen.js (Test prüft das).
+ */
+export const GUEST_LANGUAGES = [
+  { id: 'de', label: 'Deutsch' },
+  { id: 'en', label: 'Englisch' },
+  { id: 'fr', label: 'Französisch' },
+];
+
+export const DEFAULT_GUEST_LANGUAGE = 'de';
+
+/** Profile ohne Feld (alle vor der Sprachwahl angelegten) und unbekannte Werte gelten als Deutsch. */
+export const normalizeGuestLanguage = (value) =>
+  (GUEST_LANGUAGES.some((language) => language.id === value) ? value : DEFAULT_GUEST_LANGUAGE);
+
 export const getGuestDisplayName = (guest) => {
   const firstName = typeof guest?.vorname === 'string' ? guest.vorname.trim() : '';
   const lastName = typeof guest?.nachname === 'string' ? guest.nachname.trim() : '';

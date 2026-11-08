@@ -53,3 +53,49 @@ test('validateProfile rejects invalid preference factor', () => {
     });
   });
 });
+
+test('validateProfile: neue Profile ohne Sprache bekommen Deutsch', () => {
+  const profile = _internal.validateProfile({
+    vorname: 'Max',
+    nachname: 'Mustermann',
+    präferenzFaktor: 0,
+  }, {isCreate: true});
+
+  assert.equal(profile.sprache, 'de');
+});
+
+test('validateProfile übernimmt Englisch und Französisch', () => {
+  for (const sprache of ['de', 'en', 'fr']) {
+    const profile = _internal.validateProfile({
+      vorname: 'Max',
+      nachname: 'Mustermann',
+      präferenzFaktor: 0,
+      sprache,
+    }, {isCreate: true});
+    assert.equal(profile.sprache, sprache);
+  }
+});
+
+test('validateProfile: Ändern ohne Sprache lässt die gespeicherte stehen', () => {
+  // Fehlt das Feld (z. B. ältere App-Version), darf der Merge die Sprache nicht überschreiben.
+  const profile = _internal.validateProfile({
+    vorname: 'Max',
+    nachname: 'Mustermann',
+    präferenzFaktor: 0,
+  });
+
+  assert.equal(Object.prototype.hasOwnProperty.call(profile, 'sprache'), false);
+});
+
+test('validateProfile lehnt unbekannte Sprachen ab', () => {
+  for (const sprache of ['es', 'DE', '', 1]) {
+    assert.throws(() => {
+      _internal.validateProfile({
+        vorname: 'Max',
+        nachname: 'Mustermann',
+        präferenzFaktor: 0,
+        sprache,
+      }, {isCreate: true});
+    }, /sprache/);
+  }
+});

@@ -8,7 +8,7 @@ import PencilIcon from './icons/PencilIcon';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import useInlineRename from '../hooks/useInlineRename';
 import { canEditRecipes } from '../utils/userManagement';
-import { getGuestDisplayName } from '../utils/guestPreferences';
+import { getGuestDisplayName, normalizeGuestLanguage } from '../utils/guestPreferences';
 import { DEFAULT_BUTTON_ICONS, getButtonIcons, getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import {
@@ -22,7 +22,9 @@ import {
   listeWichtelRunden,
   loescheWichtelRunde,
   loseWichtelRundeAus,
+  sendeWichtelEinladung,
   setzeWichtelAuslosungZurueck,
+  setzeWichtelAusschluesse,
 } from '../utils/wichtelFirestore';
 import { buildWichtelLink, teileWichtelEinladung } from '../utils/wichtelLinks';
 import { formatBudget } from '../utils/formatBudget';
@@ -31,6 +33,9 @@ const MIN_TEILNEHMER = 3;
 const HINWEIS_DAUER_MS = 3500;
 
 const formatDatum = (ms) => (ms ? new Date(ms).toLocaleDateString('de-DE') : '');
+const formatZeitpunkt = (ms) => (ms
+  ? new Date(ms).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' })
+  : '');
 
 const schluessel = (name) => String(name || '').trim().toLocaleLowerCase('de');
 
@@ -39,6 +44,28 @@ export const teileNamen = (eingabe) => String(eingabe || '')
   .split(/[,;\n]/)
   .map((name) => name.replace(/\s+/g, ' ').trim())
   .filter(Boolean);
+
+const VERSAND_GRUND = {
+  limit: 'Das Tageslimit für Wichtel-Mails ist erreicht.',
+  'nicht-eingerichtet': 'Der Mailversand ist nicht eingerichtet.',
+};
+
+/**
+ * Rückmeldung zum Feld `versand` einer Organisator-Antwort (functions/wichteln.js).
+ * @param {{gesendet?: number, fehlgeschlagen?: number, grund?: string|null}} [versand]
+ * @returns {{art: 'ok'|'fehler', text: string}|null} null: es sollte keine Mail rausgehen
+ */
+export const versandMeldung = (versand) => {
+  const { gesendet = 0, fehlgeschlagen = 0, grund = null } = versand || {};
+  if (fehlgeschlagen === 0) {
+    if (gesendet === 0) return null;
+    return { art: 'ok', text: gesendet === 1 ? 'Einladung per Mail verschickt.' : `${gesendet} Einladungen per Mail verschickt.` };
+  }
+  const wieviele = fehlgeschlagen === 1 ? 'Eine Einladung konnte' : `${fehlgeschlagen} Einladungen konnten`;
+  const raus = gesendet > 0 ? ` (${gesendet} verschickt)` : '';
+  const warum = VERSAND_GRUND[grund] || 'Der Mailversand hat nicht geklappt.';
+  return { art: 'fehler', text: `${wieviele} nicht per Mail verschickt werden${raus}. ${warum} Teile den Link über „Link teilen“.` };
+};
 
 function StatusPille({ status, ausgelostAm }) {
   const ausgelost = status === 'ausgelost';
@@ -109,7 +136,43 @@ function RundenFormular({ initial, titelText, submitLabel, busy, onSubmit, onCan
   );
 }
 
-function TeilnehmerZeile({ teilnehmer, ausgelost, busy, swipeIcon, onRename, onDelete, onShare, linkSichtbar, link }) {
+/**
+ * Wen ein Teilnehmer nicht ziehen soll: Umschalter je anderem Teilnehmer. Einer muss frei
+ * bleiben, sonst könnte er niemanden beschenken.
+ */
+function Ausschluesse({ id, name, andere, ausgeschlossen, busy, onUmschalten }) {
+  const nurNochEiner = andere.filter((gast) => !ausgeschlossen.has(gast.id)).length <= 1;
+  return (
+    <div id={id} className="wichtel-ausschluss" role="group" aria-labelledby={`${id}-titel`}>
+      <span id={`${id}-titel`} className="wichtel-ausschluss-titel">{name} beschenkt nicht:</span>
+      <div className="wichtel-ausschluss-chips">
+        {andere.map((gast) => {
+          const aktiv = ausgeschlossen.has(gast.id);
+          return (
+            <button
+              key={gast.id}
+              type="button"
+              className="wichtel-ausschluss-chip"
+              aria-pressed={aktiv}
+              onClick={() => onUmschalten(gast.id)}
+              disabled={busy || (!aktiv && nurNochEiner)}
+            >
+              {gast.name}
+            </button>
+          );
+        })}
+      </div>
+      {nurNochEiner && (
+        <span className="wichtel-leise">Mindestens einen Gast muss {name} beschenken können.</span>
+      )}
+    </div>
+  );
+}
+
+function TeilnehmerZeile({
+  teilnehmer, andere, gastProfil, ausgelost, busy, swipeIcon, onRename, onDelete, onShare, onSendMail,
+  linkSichtbar, link, ausschlussOffen, onAusschluesseKlappen, onAusschluss,
+}) {
   const rename = useInlineRename(teilnehmer.name, (_alt, neu) => onRename(teilnehmer, neu));
 
   const status = ausgelost && teilnehmer.gezogen
@@ -117,6 +180,15 @@ function TeilnehmerZeile({ teilnehmer, ausgelost, busy, swipeIcon, onRename, onD
     : teilnehmer.geoeffnet
       ? { text: 'Link geöffnet', klasse: '' }
       : { text: 'Link noch nicht geöffnet', klasse: 'wichtel-chip--leise' };
+  const mail = teilnehmer.mail || null;
+  const kannMailen = Boolean(gastProfil?.id && gastProfil.email);
+
+  const ausgeschlossen = new Set(teilnehmer.ausschluesse || []);
+  const ausgeschlosseneNamen = andere.filter((gast) => ausgeschlossen.has(gast.id)).map((gast) => gast.name);
+  // Ausschließen lohnt erst, wenn außer dem Ausgeschlossenen noch jemand bleibt.
+  const ausschliessbar = !ausgelost && andere.length >= 2;
+  const panelOffen = ausschliessbar && ausschlussOffen;
+  const panelId = `wichtel-ausschluesse-${teilnehmer.id}`;
 
   return (
     <WichtelZeile
@@ -154,12 +226,58 @@ function TeilnehmerZeile({ teilnehmer, ausgelost, busy, swipeIcon, onRename, onD
           </button>
         )}
       </div>
+      {!panelOffen && ausgeschlosseneNamen.length > 0 && (
+        <p className="wichtel-ausschluss-info">Beschenkt nicht: {ausgeschlosseneNamen.join(', ')}</p>
+      )}
       <div className="wichtel-teilnehmer-fuss">
-        <span className={`wichtel-chip ${status.klasse}`}>{status.text}</span>
-        <button type="button" className="wichtel-link-btn" onClick={() => onShare(teilnehmer)}>
-          Link teilen
-        </button>
+        <div className="wichtel-teilnehmer-status">
+          <span className={`wichtel-chip ${status.klasse}`}>{status.text}</span>
+          {mail?.status === 'gesendet' && (
+            <span className="wichtel-chip" title={mail.am ? `Zuletzt am ${formatZeitpunkt(mail.am)}` : undefined}>
+              Per Mail verschickt
+            </span>
+          )}
+          {mail?.status === 'fehler' && (
+            <span className="wichtel-chip wichtel-chip--fehler">Mail nicht verschickt</span>
+          )}
+        </div>
+        <div className="wichtel-teilnehmer-knoepfe">
+          {ausschliessbar && (
+            <button
+              type="button"
+              className="wichtel-ausschluss-btn"
+              onClick={onAusschluesseKlappen}
+              aria-expanded={panelOffen}
+              aria-controls={panelOffen ? panelId : undefined}
+            >
+              Ausschlüsse
+            </button>
+          )}
+          {kannMailen && (
+            <button
+              type="button"
+              className="wichtel-link-btn wichtel-link-btn--leise"
+              onClick={() => onSendMail(teilnehmer, gastProfil)}
+              disabled={busy}
+            >
+              {mail ? 'Erneut senden' : 'Per Mail senden'}
+            </button>
+          )}
+          <button type="button" className="wichtel-link-btn" onClick={() => onShare(teilnehmer)}>
+            Link teilen
+          </button>
+        </div>
       </div>
+      {panelOffen && (
+        <Ausschluesse
+          id={panelId}
+          name={teilnehmer.name}
+          andere={andere}
+          ausgeschlossen={ausgeschlossen}
+          busy={busy}
+          onUmschalten={onAusschluss}
+        />
+      )}
       {linkSichtbar && (
         <input
           type="text"
@@ -192,6 +310,7 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
   const [neuerName, setNeuerName] = useState('');
   const [zuruecksetzenFragen, setZuruecksetzenFragen] = useState(false);
   const [sichtbarerLink, setSichtbarerLink] = useState(null);
+  const [ausschlussFuer, setAusschlussFuer] = useState(null);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const offeneRundeIdRef = useRef(null);
@@ -265,6 +384,7 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
     setFehler('');
     setNeuerName('');
     setSichtbarerLink(null);
+    setAusschlussFuer(null);
     setAnsicht('detail');
     try {
       const sicht = await ladeWichtelRunde(rundeId);
@@ -314,10 +434,26 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
     });
   };
 
-  const handleHinzufuegen = async (namen) => {
-    if (!detail || namen.length === 0) return;
-    const sicht = await fuehreAus(() => fuegeWichtelTeilnehmerHinzu(detail.runde.id, namen));
-    if (sicht) setNeuerName('');
+  // Erfolg kurz unten einblenden; was nicht rausging, bleibt als Fehlerzeile stehen.
+  const meldeVersand = (versand) => {
+    const meldung = versandMeldung(versand);
+    if (meldung?.art === 'ok') zeigeHinweis(meldung.text);
+    if (meldung?.art === 'fehler') setFehler(meldung.text);
+  };
+
+  /** @param {Array<{name: string, gastId: string|null}>} eintraege */
+  const handleHinzufuegen = async (eintraege) => {
+    if (!detail || eintraege.length === 0) return;
+    const sicht = await fuehreAus(() => fuegeWichtelTeilnehmerHinzu(detail.runde.id, eintraege));
+    if (sicht) {
+      setNeuerName('');
+      meldeVersand(sicht.versand);
+    }
+  };
+
+  const handleMailSenden = async (teilnehmer, gast) => {
+    const sicht = await fuehreAus(() => sendeWichtelEinladung(detail.runde.id, teilnehmer.id, gast.id));
+    if (sicht) meldeVersand(sicht.versand);
   };
 
   const handleUmbenennen = (teilnehmer, name) => {
@@ -340,9 +476,21 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
     });
   };
 
+  // Schaltet einen Ausschluss um; der Server liefert den neuen Stand zurück.
+  const handleAusschluss = (teilnehmer, gastId) => {
+    const bisher = teilnehmer.ausschluesse || [];
+    const neu = bisher.includes(gastId) ? bisher.filter((id) => id !== gastId) : [...bisher, gastId];
+    fuehreAus(() => setzeWichtelAusschluesse(detail.runde.id, teilnehmer.id, neu));
+  };
+
   const handleTeilen = async (teilnehmer) => {
     const link = buildWichtelLink(detail.runde.id, teilnehmer.token);
-    const ergebnis = await teileWichtelEinladung({ name: teilnehmer.name, titel: detail.runde.titel, link });
+    const ergebnis = await teileWichtelEinladung({
+      name: teilnehmer.name,
+      titel: detail.runde.titel,
+      link,
+      sprache: normalizeGuestLanguage(gastZuTeilnehmer(teilnehmer)?.sprache),
+    });
     if (ergebnis === 'kopiert') {
       zeigeHinweis(`Einladung für ${teilnehmer.name} kopiert.`);
     } else if (ergebnis === 'fehler') {
@@ -371,19 +519,48 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
   const entferntWird = teilnehmer.length !== sichtbareTeilnehmer.length;
   const ausgelost = detail?.runde?.status === 'ausgelost';
 
+  // Eigene Gästeliste: nach ID (verknüpfte Teilnehmer) und nach Anzeigename (eingetippte Namen,
+  // vor der Verknüpfung angelegte Teilnehmer). Bei gleichem Namen zählt der Gast mit E-Mail-Adresse.
+  const gaeste = useMemo(() => {
+    const nachId = new Map();
+    const nachName = new Map();
+    guestProfiles.forEach((gast) => {
+      if (gast?.id) nachId.set(gast.id, gast);
+      const key = schluessel(getGuestDisplayName(gast));
+      if (!key) return;
+      const bisher = nachName.get(key);
+      if (!bisher || (!bisher.email && gast.email)) nachName.set(key, gast);
+    });
+    return { nachId, nachName };
+  }, [guestProfiles]);
+
+  // Ein Gast gehört zu höchstens einem Teilnehmer: Wer schon (ggf. unter anderem Namen) dabei
+  // ist, wird über den Namen kein zweites Mal gefunden.
+  const verknuepfteGaeste = useMemo(() => new Set(teilnehmer.map((t) => t.gastId).filter(Boolean)), [teilnehmer]);
+  const freierGastMitNamen = (name) => {
+    const gast = gaeste.nachName.get(schluessel(name));
+    return gast?.id && !verknuepfteGaeste.has(gast.id) ? gast : null;
+  };
+
+  // Gast eines Teilnehmers: über die gespeicherte Verknüpfung, sonst über den gleichen Namen.
+  const gastZuTeilnehmer = (t) => (t.gastId ? gaeste.nachId.get(t.gastId) || null : freierGastMitNamen(t.name));
+
+  /** Eingetippter Name → Eintrag; gleicher Name wie ein Gast verknüpft ihn (Mail, Sprache). */
+  const mitGast = (name) => ({ name, gastId: freierGastMitNamen(name)?.id || null });
+
   const gaesteVorschlaege = useMemo(() => {
     const vorhanden = new Set(teilnehmer.map((t) => schluessel(t.name)));
     const gesehen = new Set();
     return guestProfiles
-      .map((gast) => getGuestDisplayName(gast))
-      .filter((name) => {
+      .map((gast) => ({ name: getGuestDisplayName(gast), gast }))
+      .filter(({ name, gast }) => {
         const key = schluessel(name);
-        if (!key || vorhanden.has(key) || gesehen.has(key)) return false;
+        if (!key || vorhanden.has(key) || verknuepfteGaeste.has(gast.id) || gesehen.has(key)) return false;
         gesehen.add(key);
         return true;
       })
-      .sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
-  }, [guestProfiles, teilnehmer]);
+      .sort((a, b) => a.name.localeCompare(b.name, 'de', { sensitivity: 'base' }));
+  }, [guestProfiles, teilnehmer, verknuepfteGaeste]);
 
   const renderSchliessen = (label, onClick) => (
     <button className="app-close-button" onClick={onClick} aria-label={label} title={label}>
@@ -490,7 +667,7 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
             <p className="wichtel-erklaerung">
               {ausgelost
                 ? 'Jeder zieht über seinen persönlichen Link sein Los und sieht dort nur das eigene. Auch du siehst nicht, wer wen gezogen hat.'
-                : 'Trag alle ein, die mitmachen, und lose dann aus. Die Links kannst du schon vorher verschicken – dann kann jeder seine Wünsche und Ideen für andere eintragen.'}
+                : 'Trag alle ein, die mitmachen, und lose dann aus. Die Links kannst du schon vorher verschicken – dann kann jeder seine Wünsche und Ideen für andere eintragen. Unter „Ausschlüsse“ legst du fest, wen jemand nicht ziehen soll – bei Paaren für beide. Gäste aus deiner Gästeliste mit E-Mail-Adresse bekommen ihren Link beim Eintragen automatisch per Mail.'}
             </p>
 
             {fehlerZeile}
@@ -508,28 +685,34 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
                     <TeilnehmerZeile
                       key={t.id}
                       teilnehmer={t}
+                      andere={sichtbareTeilnehmer.filter((anderer) => anderer.id !== t.id)}
+                      gastProfil={gastZuTeilnehmer(t)}
                       ausgelost={ausgelost}
                       busy={busy}
                       swipeIcon={swipeIcon}
                       onRename={handleUmbenennen}
                       onDelete={handleTeilnehmerEntfernen}
                       onShare={handleTeilen}
+                      onSendMail={handleMailSenden}
                       linkSichtbar={sichtbarerLink === t.id}
                       link={buildWichtelLink(detail.runde.id, t.token)}
+                      ausschlussOffen={ausschlussFuer === t.id}
+                      onAusschluesseKlappen={() => setAusschlussFuer((offen) => (offen === t.id ? null : t.id))}
+                      onAusschluss={(gastId) => handleAusschluss(t, gastId)}
                     />
                   ))}
                 </ul>
               )}
 
               {ausgelost ? (
-                <p className="wichtel-leise">Teilnehmer ändern geht erst nach dem Zurücksetzen der Auslosung.</p>
+                <p className="wichtel-leise">Teilnehmer und Ausschlüsse ändern geht erst nach dem Zurücksetzen der Auslosung.</p>
               ) : (
                 <>
                   <form
                     className="wichtel-hinzufuegen"
                     onSubmit={(e) => {
                       e.preventDefault();
-                      handleHinzufuegen(teileNamen(neuerName));
+                      handleHinzufuegen(teileNamen(neuerName).map(mitGast));
                     }}
                   >
                     <input
@@ -548,14 +731,15 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
                     <div className="wichtel-vorschlaege">
                       <span className="wichtel-leise">Aus deiner Gästeliste:</span>
                       <div className="wichtel-vorschlaege-chips">
-                        {gaesteVorschlaege.map((name) => (
+                        {gaesteVorschlaege.map(({ name, gast }) => (
                           <button
                             key={name}
                             type="button"
                             className="wichtel-vorschlag"
-                            onClick={() => handleHinzufuegen([name])}
+                            onClick={() => handleHinzufuegen([{ name, gastId: gast.id || null }])}
                             disabled={busy}
                             aria-label={`${name} hinzufügen`}
+                            title={gast.email ? 'Bekommt den Link sofort per Mail' : undefined}
                           >
                             + {name}
                           </button>

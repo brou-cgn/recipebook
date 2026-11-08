@@ -7,8 +7,10 @@ import CloseThinIcon from './icons/CloseThinIcon';
 // See DeleteRowButton.css for the resting/hover/active/focus states — the
 // row it sits in should carry the `delete-row-hover-target` class so the
 // icon can react to the row (not just the button) being hovered.
-function DeleteRowButton({ itemName, onClick, className = '', ...rest }) {
-  const label = `${itemName} entfernen`;
+// Tooltip/aria-label is „<Name> entfernen"; translated pages (the Wichtel
+// participant page) pass the whole text as `label`, since word order differs.
+function DeleteRowButton({ itemName, label: labelText, onClick, className = '', ...rest }) {
+  const label = labelText || `${itemName} entfernen`;
 
   return (
     <button

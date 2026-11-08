@@ -38,8 +38,9 @@ export function seitenName(url) {
  * @param {Object} props
  * @param {string} props.url
  * @param {{bild?: string|null, titel?: string|null, seite?: string|null}|null} [props.vorschau]
+ * @param {string} [props.neuerTabText] - Hinweis für Screenreader in der Sprache der Seite
  */
-function WichtelLinkKarte({ url, vorschau }) {
+function WichtelLinkKarte({ url, vorschau, neuerTabText = '(öffnet in neuem Tab)' }) {
   const [bildFehlt, setBildFehlt] = useState(false);
   const href = sichererLink(url);
   if (!href) return null;
@@ -72,7 +73,7 @@ function WichtelLinkKarte({ url, vorschau }) {
         <span className="wichtel-linkkarte-seite">
           <span className="wichtel-linkkarte-host">{seite}</span>
           <span className="wichtel-linkkarte-pfeil" aria-hidden="true"><ExternalLinkIcon size={12} /></span>
-          <span className="wichtel-linkkarte-sr">(öffnet in neuem Tab)</span>
+          <span className="wichtel-linkkarte-sr">{neuerTabText}</span>
         </span>
       </span>
     </a>
