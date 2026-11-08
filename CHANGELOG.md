@@ -8,6 +8,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 ## [Unreleased]
 
 ### Hinzugefügt
+- Wichteln: Wünsche und Geschenkideen können einen Link haben (z. B. zum Shop); der Eintrag zeigt dazu ein Vorschaubild mit Seitentitel. Ein Link allein genügt, ein eingefügter Teilen-Text („Produkt https://…“) wird erkannt. Die Vorschau holt der Server einmal beim Speichern, abgesichert gegen Abrufe ins interne Netz (Details: `docs/features/wichteln.md`).
 - Wichteln (Events > Wichteln): Runden anlegen, Teilnehmer eintragen, auslosen und persönliche Links verschicken. Über den Link zieht jeder sein Los, sieht die Wünsche seines Wichtelpartners und kann Geschenkideen für andere hinterlassen – die nur sieht, wer diesen Gast gezogen hat. Die Zuordnung kennt nur der Ziehende selbst, auch der Organisator nicht (Details: `docs/features/wichteln.md`).
 - Automatische Versionierung bei jedem Deployment
 - Commit-basierte Versionserkennung (Conventional Commits)

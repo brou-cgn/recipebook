@@ -45,7 +45,12 @@ describe('wichtelFirestore', () => {
     expect(mockCall).toHaveBeenCalledWith({ aktion: 'laden', rundeId: 'r1', token: 'tok' });
 
     await fuegeWichtelEintragHinzu('r1', 'tok', 't2', 'Buch');
-    expect(mockCall).toHaveBeenLastCalledWith({ aktion: 'eintragHinzufuegen', rundeId: 'r1', token: 'tok', ueberId: 't2', text: 'Buch' });
+    expect(mockCall).toHaveBeenLastCalledWith({ aktion: 'eintragHinzufuegen', rundeId: 'r1', token: 'tok', ueberId: 't2', text: 'Buch', url: '' });
+
+    await fuegeWichtelEintragHinzu('r1', 'tok', 't2', '', 'https://shop.example.de/buch');
+    expect(mockCall).toHaveBeenLastCalledWith({
+      aktion: 'eintragHinzufuegen', rundeId: 'r1', token: 'tok', ueberId: 't2', text: '', url: 'https://shop.example.de/buch',
+    });
   });
 
   it('zeigt Server-Meldungen, ersetzt technische durch einen Hinweis', () => {

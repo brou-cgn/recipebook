@@ -119,7 +119,10 @@ const auth = (uid, provider = 'password') => ({uid, token: {firebase: {sign_in_p
 
 const verwalten = (db, uid, daten, extra = {}) =>
   wichteln.verwalten(fakeAdmin, db, FakeHttpsError, {auth: uid ? auth(uid) : null, daten, ...extra});
-const teilnahme = (db, daten) => wichteln.teilnahme(fakeAdmin, db, FakeHttpsError, {daten});
+// Ohne eigenen Ersatz darf kein Test eine Seite abrufen.
+const keinAbruf = async (url) => assert.fail(`unerwarteter Abruf von ${url}`);
+const teilnahme = (db, daten, ladeVorschau = keinAbruf) =>
+  wichteln.teilnahme(fakeAdmin, db, FakeHttpsError, {daten, ladeVorschau});
 
 const rejectsWith = (promise, code) => assert.rejects(promise, (err) => {
   assert.equal(err.code, code, err.message);
@@ -127,12 +130,12 @@ const rejectsWith = (promise, code) => assert.rejects(promise, (err) => {
 });
 
 /** Legt eine Runde mit Teilnehmern an; liefert Runde, Teilnehmer nach Name und Link-Aufrufer. */
-const setupRunde = async (namen = ['Anna', 'Ben', 'Cleo', 'Dana']) => {
+const setupRunde = async (namen = ['Anna', 'Ben', 'Cleo', 'Dana'], {ladeVorschau} = {}) => {
   const db = makeDb(baseSeed());
   const sicht = await verwalten(db, 'orga', {aktion: 'anlegen', titel: 'Advent 2026', budget: '20 €', hinweis: 'Bescherung am 13.12.', namen});
   const rundeId = sicht.runde.id;
   const tn = Object.fromEntries(sicht.teilnehmer.map((t) => [t.name, t]));
-  const als = (name, aktion, daten = {}) => teilnahme(db, {aktion, rundeId, token: tn[name].token, ...daten});
+  const als = (name, aktion, daten = {}) => teilnahme(db, {aktion, rundeId, token: tn[name].token, ...daten}, ladeVorschau);
   return {db, rundeId, sicht, tn, als};
 };
 
@@ -491,6 +494,114 @@ test('Einträge: Prüfungen und Obergrenze', async () => {
     await als('Anna', 'eintragHinzufuegen', {ueberId: tn.Anna.id, text: `Wunsch ${i}`});
   }
   await rejectsWith(als('Anna', 'eintragHinzufuegen', {ueberId: tn.Anna.id, text: 'einer zu viel'}), 'resource-exhausted');
+});
+
+// ---------------------------------------------------------------------------
+// Einträge mit Link
+// ---------------------------------------------------------------------------
+
+/** Vorschau-Ersatz: merkt sich die Abrufe, liefert eine feste Vorschau (oder null). */
+const vorschauErsatz = (ergebnis = (url) => ({bild: 'https://cdn.example.de/bild.jpg', titel: `Titel zu ${url}`, seite: 'example.de'})) => {
+  const abrufe = [];
+  const ladeVorschau = async (url) => {
+    abrufe.push(url);
+    return typeof ergebnis === 'function' ? ergebnis(url) : ergebnis;
+  };
+  return {abrufe, ladeVorschau};
+};
+
+const gespeicherteEintraege = (db, rundeId) => [...db.store.entries()]
+    .filter(([path]) => path.startsWith(`wichtelRunden/${rundeId}/eintraege/`))
+    .map(([, data]) => data);
+
+test('Link zum Wunsch: Vorschau wird beim Speichern geholt, abgelegt und mit ausgeliefert', async () => {
+  const {abrufe, ladeVorschau} = vorschauErsatz();
+  const {db, rundeId, tn, als} = await setupRunde(undefined, {ladeVorschau});
+  const sicht = await als('Anna', 'eintragHinzufuegen', {ueberId: tn.Anna.id, text: 'Ein gutes Messer', url: ' www.example.de/messer '});
+
+  assert.deepEqual(abrufe, ['https://www.example.de/messer']);
+  const vorschau = {bild: 'https://cdn.example.de/bild.jpg', titel: 'Titel zu https://www.example.de/messer', seite: 'example.de'};
+  assert.deepEqual(sicht.meineWuensche.map(({text, url, vorschau: v}) => ({text, url, vorschau: v})),
+      [{text: 'Ein gutes Messer', url: 'https://www.example.de/messer', vorschau}]);
+  const [gespeichert] = gespeicherteEintraege(db, rundeId);
+  assert.equal(gespeichert.url, 'https://www.example.de/messer');
+  assert.deepEqual(gespeichert.vorschau, vorschau);
+
+  // Wer Anna zieht, sieht Link und Vorschau; beim Laden wird nichts erneut abgerufen.
+  await verwalten(db, 'orga', {aktion: 'auslosen', rundeId});
+  const zuordnung = zuordnungen(db, rundeId);
+  const ziehender = Object.values(tn).find((t) => zuordnung[t.id] === tn.Anna.id).name;
+  const partner = await als(ziehender, 'ziehen');
+  assert.deepEqual(partner.los.wuensche.map(({url, vorschau: v}) => ({url, vorschau: v})),
+      [{url: 'https://www.example.de/messer', vorschau}]);
+  assert.equal(abrufe.length, 1);
+});
+
+test('Link zur Geschenkidee: der Empfänger sieht ihn nie, der Ziehende mit Absender', async () => {
+  const {ladeVorschau} = vorschauErsatz();
+  const {db, rundeId, tn, als} = await setupRunde(undefined, {ladeVorschau});
+  await verwalten(db, 'orga', {aktion: 'auslosen', rundeId});
+  const zuordnung = zuordnungen(db, rundeId);
+  const nameVon = Object.fromEntries(Object.values(tn).map((t) => [t.id, t.name]));
+  const ziehender = nameVon[Object.keys(zuordnung).find((geber) => zuordnung[geber] === tn.Anna.id)];
+  const dritter = ['Ben', 'Cleo', 'Dana'].find((name) => name !== ziehender);
+
+  const eigene = await als(dritter, 'eintragHinzufuegen', {ueberId: tn.Anna.id, url: 'https://shop.example.de/IDEE-LINK'});
+  assert.deepEqual(eigene.meineIdeen.map(({text, url, ueberName}) => ({text, url, ueberName})),
+      [{text: '', url: 'https://shop.example.de/IDEE-LINK', ueberName: 'Anna'}]);
+
+  const partner = await als(ziehender, 'ziehen');
+  assert.deepEqual(partner.los.ideen.map(({url, von}) => ({url, von})), [{url: 'https://shop.example.de/IDEE-LINK', von: dritter}]);
+  assert.doesNotMatch(JSON.stringify(await als('Anna', 'ziehen')), /IDEE-LINK/);
+});
+
+test('Link genügt ohne Text; ein Link am Ende des Textes wird zum Link', async () => {
+  const {abrufe, ladeVorschau} = vorschauErsatz();
+  const {tn, als} = await setupRunde(undefined, {ladeVorschau});
+  const sicht = await als('Anna', 'eintragHinzufuegen', {
+    ueberId: tn.Anna.id,
+    text: 'Amazon.de: LEGO 75192 Millennium Falcon https://amzn.eu/d/abc123',
+  });
+  assert.deepEqual(sicht.meineWuensche.map(({text, url}) => ({text, url})),
+      [{text: 'Amazon.de: LEGO 75192 Millennium Falcon', url: 'https://amzn.eu/d/abc123'}]);
+  assert.deepEqual(abrufe, ['https://amzn.eu/d/abc123']);
+
+  // Ein Link mitten im Text bleibt Text.
+  const mitte = await als('Anna', 'eintragHinzufuegen', {ueberId: tn.Ben.id, text: 'So etwas wie https://example.de nur in Blau'});
+  assert.deepEqual(mitte.meineIdeen.map(({text, url}) => ({text, url})), [{text: 'So etwas wie https://example.de nur in Blau', url: null}]);
+  assert.equal(abrufe.length, 1);
+});
+
+test('Ungültige Links und leere Einträge werden abgelehnt, ohne Abruf', async () => {
+  const {abrufe, ladeVorschau} = vorschauErsatz();
+  const {tn, als} = await setupRunde(undefined, {ladeVorschau});
+  for (const url of ['javascript:alert(1)', 'ftp://example.de/x', 'nur Text', 'localhost:3000', 'https://intranet/x']) {
+    await rejectsWith(als('Anna', 'eintragHinzufuegen', {ueberId: tn.Anna.id, text: 'Buch', url}), 'invalid-argument');
+  }
+  await rejectsWith(als('Anna', 'eintragHinzufuegen', {ueberId: tn.Anna.id, text: '  ', url: '  '}), 'invalid-argument');
+  await rejectsWith(als('Anna', 'eintragHinzufuegen', {ueberId: tn.Anna.id, text: '', url: 42}), 'invalid-argument');
+  assert.deepEqual(abrufe, []);
+});
+
+test('Ohne Vorschau wird trotzdem gespeichert; Einträge ohne Link haben weder Link noch Vorschau', async () => {
+  const {ladeVorschau} = vorschauErsatz(null);
+  const {tn, als} = await setupRunde(undefined, {ladeVorschau});
+  await als('Anna', 'eintragHinzufuegen', {ueberId: tn.Anna.id, text: '', url: 'https://example.de/nicht-erreichbar'});
+  const sicht = await als('Anna', 'eintragHinzufuegen', {ueberId: tn.Anna.id, text: 'Wollsocken'});
+  assert.deepEqual(sicht.meineWuensche.map(({text, url, vorschau}) => ({text, url, vorschau})), [
+    {text: '', url: 'https://example.de/nicht-erreichbar', vorschau: null},
+    {text: 'Wollsocken', url: null, vorschau: null},
+  ]);
+});
+
+test('Volles Kontingent: kein Abruf mehr für den Link', async () => {
+  const {abrufe, ladeVorschau} = vorschauErsatz();
+  const {tn, als} = await setupRunde(undefined, {ladeVorschau});
+  for (let i = 0; i < wichteln._internal.MAX_EINTRAEGE_PRO_AUTOR; i++) {
+    await als('Anna', 'eintragHinzufuegen', {ueberId: tn.Anna.id, text: `Wunsch ${i}`});
+  }
+  await rejectsWith(als('Anna', 'eintragHinzufuegen', {ueberId: tn.Anna.id, url: 'https://example.de/x'}), 'resource-exhausted');
+  assert.deepEqual(abrufe, []);
 });
 
 test('Einträge löschen: nur eigene', async () => {

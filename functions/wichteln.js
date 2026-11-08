@@ -16,11 +16,15 @@
  *  - Teilnehmer-IDs sind keine Geheimnisse (sie stehen in Listen für alle Teilnehmer), das
  *    Token schon: es steht nur in der Organisator-Ansicht und im persönlichen Link.
  *
+ * Einträge (Wünsche, Ideen) haben Text und/oder einen Link. Zum Link holt der Server beim
+ * Speichern einmal eine Vorschau (Bild, Titel, Seite; linkVorschau.js) und legt sie mit ab.
+ *
  * Aufbau wie follow.js: reine Funktionen mit (admin, db, HttpsError, params), damit die
  * Tests sie mit einem Firestore-Ersatz aufrufen können.
  */
 
 const crypto = require('crypto');
+const linkVorschau = require('./linkVorschau');
 
 const COLLECTION = 'wichtelRunden';
 const MIN_TEILNEHMER = 3;
@@ -130,6 +134,37 @@ function leseNamen(namen, HttpsError) {
     ergebnis.push(name);
   });
   return ergebnis;
+}
+
+/**
+ * Text und Link eines neuen Eintrags. Einer von beiden genügt. Ohne eigenes Link-Feld
+ * wird ein Link am Ende des Textes (eingefügter Link, Teilen-Text einer Shop-App) zum Link.
+ * @param {object} daten - Eingabe mit text und url
+ * @param {function} HttpsError - Fehlerklasse
+ * @return {{text: string, url: string|null}}
+ */
+function leseEintrag(daten, HttpsError) {
+  // Vor der Verarbeitung kappen: mehr braucht weder Text noch Link.
+  const rohText = typeof daten.text === 'string' ? daten.text.slice(0, LAENGE.text + linkVorschau._internal.MAX_LINK) : '';
+  const rohLink = typeof daten.url === 'string' ? daten.url.trim() : '';
+  let text = rohText;
+  let url;
+  if (rohLink) {
+    url = linkVorschau.normalisiereLink(rohLink);
+    if (!url) {
+      throw new HttpsError('invalid-argument', 'Der Link sieht nicht gültig aus. Bitte füge die ganze Adresse ein, z. B. https://…');
+    }
+  } else {
+    ({text, url} = linkVorschau.trenneLinkAb(rohText));
+  }
+  text = bereinige(text, LAENGE.text);
+  if (!text && !url) throw new HttpsError('invalid-argument', 'Bitte schreib etwas oder füge einen Link ein.');
+  return {text, url};
+}
+
+/** Was von einem Eintrag nach außen geht: Text, Link und Vorschau. */
+function eintragInhalt(e) {
+  return {id: e.id, text: e.text || '', url: e.url || null, vorschau: e.vorschau || null};
 }
 
 function pruefeId(value, HttpsError, code = 'invalid-argument', message = 'Ungültige ID.') {
@@ -487,10 +522,9 @@ async function teilnehmerSicht(db, {rundeId, runde, ich}) {
         los = {
           gezogen: true,
           empfaenger: {id: empfaengerId, name: namen.get(empfaengerId)},
-          wuensche: ueber.filter((e) => e.autorId === empfaengerId).map((e) => ({id: e.id, text: e.text})),
+          wuensche: ueber.filter((e) => e.autorId === empfaengerId).map(eintragInhalt),
           ideen: ueber.filter((e) => e.autorId !== empfaengerId).map((e) => ({
-            id: e.id,
-            text: e.text,
+            ...eintragInhalt(e),
             vonDir: e.autorId === ich.id,
             von: namen.get(e.autorId) || null,
           })),
@@ -508,10 +542,10 @@ async function teilnehmerSicht(db, {rundeId, runde, ich}) {
     },
     ich: {id: ich.id, name: ich.name},
     andere: teilnehmer.filter((t) => t.id !== ich.id).map((t) => ({id: t.id, name: t.name})).sort(nachName),
-    meineWuensche: meine.filter((e) => e.ueberId === ich.id).map((e) => ({id: e.id, text: e.text})),
+    meineWuensche: meine.filter((e) => e.ueberId === ich.id).map(eintragInhalt),
     meineIdeen: meine
         .filter((e) => e.ueberId !== ich.id && namen.has(e.ueberId))
-        .map((e) => ({id: e.id, ueberId: e.ueberId, ueberName: namen.get(e.ueberId), text: e.text})),
+        .map((e) => ({...eintragInhalt(e), ueberId: e.ueberId, ueberName: namen.get(e.ueberId)})),
     los,
   };
 }
@@ -544,10 +578,9 @@ const TEILNAHME = {
     return teilnehmerSicht(db, kontext);
   },
 
-  async eintragHinzufuegen({admin, db, HttpsError, kontext, daten}) {
+  async eintragHinzufuegen({admin, db, HttpsError, kontext, daten, ladeVorschau}) {
     const ueberId = pruefeId(daten.ueberId, HttpsError);
-    const text = bereinige(daten.text, LAENGE.text);
-    if (!text) throw new HttpsError('invalid-argument', 'Bitte schreib etwas.');
+    const {text, url} = leseEintrag(daten, HttpsError);
     const teilnehmer = await ladeTeilnehmer(db, kontext.rundeId);
     if (!teilnehmer.some((t) => t.id === ueberId)) {
       throw new HttpsError('not-found', 'Diesen Gast gibt es in der Runde nicht (mehr).');
@@ -556,10 +589,13 @@ const TEILNAHME = {
     if (meine.length >= MAX_EINTRAEGE_PRO_AUTOR) {
       throw new HttpsError('resource-exhausted', `Du hast schon ${MAX_EINTRAEGE_PRO_AUTOR} Einträge. Lösche zuerst einen.`);
     }
+    // Erst nach allen Prüfungen: der Abruf dauert bis zu 5 s und scheitert nie am Speichern.
+    const vorschau = url ? await ladeVorschau(url) : null;
     await db.collection(eintraegePfad(kontext.rundeId)).doc().set({
       autorId: kontext.ich.id,
       ueberId,
       text,
+      ...(url ? {url, vorschau} : {}),
       erstelltAm: admin.firestore.FieldValue.serverTimestamp(),
     });
     return teilnehmerSicht(db, kontext);
@@ -580,15 +616,15 @@ const TEILNAHME = {
  * @param {object} admin - firebase-admin (für FieldValue)
  * @param {object} db - Firestore
  * @param {function} HttpsError - Fehlerklasse
- * @param {{daten: object}} params
+ * @param {{daten: object, ladeVorschau?: function}} params - ladeVorschau nur für Tests ersetzt
  * @return {Promise<object>}
  */
-async function teilnahme(admin, db, HttpsError, {daten}) {
+async function teilnahme(admin, db, HttpsError, {daten, ladeVorschau = linkVorschau.ladeVorschau}) {
   const eingabe = daten && typeof daten === 'object' ? daten : {};
   const aktion = Object.prototype.hasOwnProperty.call(TEILNAHME, eingabe.aktion) ? TEILNAHME[eingabe.aktion] : null;
   if (!aktion) throw new HttpsError('invalid-argument', 'Unbekannte Aktion.');
   const kontext = await ladeKontext(db, HttpsError, eingabe);
-  return aktion({admin, db, HttpsError, kontext, daten: eingabe});
+  return aktion({admin, db, HttpsError, kontext, daten: eingabe, ladeVorschau});
 }
 
 module.exports = {

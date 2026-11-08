@@ -174,6 +174,12 @@
   font-size: 13px;
 }
 
+/* Link-Vorschau (WichtelLinkKarte) in den Einträgen des Gezogenen: etwas Luft
+   zum Text darüber und zu „von …“ darunter. */
+.wt-eintrag .wichtel-linkkarte {
+  margin: 4px 0 2px;
+}
+
 .wt-ideen-gruppe {
   display: flex;
   flex-direction: column;
