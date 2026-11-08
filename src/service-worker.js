@@ -207,6 +207,7 @@ registerRoute(
   ({ url }) => {
     return url.origin === self.location.origin && 
            url.pathname.endsWith('.png') && 
+           !url.pathname.startsWith('/advent-glow/') && 
            !url.pathname.endsWith('/logo192.png') && 
            !url.pathname.endsWith('/logo512.png');
   },
