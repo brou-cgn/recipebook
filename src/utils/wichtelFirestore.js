@@ -43,6 +43,10 @@ export const benenneWichtelTeilnehmerUm = (rundeId, teilnehmerId, name) =>
 export const entferneWichtelTeilnehmer = (rundeId, teilnehmerId) =>
   rufeVerwalten('teilnehmerEntfernen', { rundeId, teilnehmerId });
 
+/** Wen dieser Teilnehmer nicht ziehen soll (ersetzt die bisherige Liste; nur vor dem Auslosen). */
+export const setzeWichtelAusschluesse = (rundeId, teilnehmerId, ausschluesse) =>
+  rufeVerwalten('ausschluesseSetzen', { rundeId, teilnehmerId, ausschluesse });
+
 export const loseWichtelRundeAus = (rundeId) => rufeVerwalten('auslosen', { rundeId });
 
 export const setzeWichtelAuslosungZurueck = (rundeId) => rufeVerwalten('zuruecksetzen', { rundeId });

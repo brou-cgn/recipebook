@@ -10,6 +10,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 ### Hinzugefügt
 - Wichteln (Events > Wichteln): Runden anlegen, Teilnehmer eintragen, auslosen und persönliche Links verschicken. Über den Link zieht jeder sein Los, sieht die Wünsche seines Wichtelpartners und kann Geschenkideen für andere hinterlassen – die nur sieht, wer diesen Gast gezogen hat. Die Zuordnung kennt nur der Ziehende selbst, auch der Organisator nicht (Details: `docs/features/wichteln.md`).
 - Wichteln: Die persönliche Wichtel-Seite spricht die Sprache des Gasts – Deutsch, Englisch oder Französisch nach der Sprachpräferenz im Gästeprofil; ohne verknüpftes Gästeprofil nach der Browsersprache, sonst Deutsch.
+- Wichteln: Ausschlüsse je Teilnehmer. Der Organisator legt fest, wen jemand nicht ziehen soll (z. B. die eigene Partnerin oder den eigenen Partner, je Richtung). Die Auslosung hält das ein und bleibt ein einziger Kreis; lassen die Ausschlüsse keine Auslosung zu, nennt die App den Grund. Teilnehmer sehen die Ausschlüsse nicht.
 - Automatische Versionierung bei jedem Deployment
 - Commit-basierte Versionserkennung (Conventional Commits)
 - Automatisches Tagging von Versionen

@@ -7,6 +7,7 @@ import LockIcon from './icons/LockIcon';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import { getCallableErrorDetails } from '../utils/callableErrors';
+import { formatBudget } from '../utils/formatBudget';
 import {
   fuegeWichtelEintragHinzu,
   ladeWichtelTeilnahme,
@@ -284,7 +285,7 @@ function WichtelTeilnahmePage({ rundeId, token, gueltig = true, currentUser, onC
         <p className="wt-gruss">{fuelleText(t.gruss, { name: ich.name })}</p>
         {(runde.budget || runde.hinweis) && (
           <div className="wt-eckdaten">
-            {runde.budget && <span className="wt-chip">{fuelleText(t.budget, { budget: runde.budget })}</span>}
+            {runde.budget && <span className="wt-chip">{fuelleText(t.budget, { budget: formatBudget(runde.budget) })}</span>}
             {runde.hinweis && <p className="wt-text">{runde.hinweis}</p>}
           </div>
         )}

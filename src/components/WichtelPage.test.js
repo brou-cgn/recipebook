@@ -11,6 +11,7 @@ const mockAuslosen = jest.fn();
 const mockZuruecksetzen = jest.fn();
 const mockLoeschen = jest.fn();
 const mockUmbenennen = jest.fn();
+const mockAusschluesse = jest.fn();
 const mockTeilen = jest.fn();
 let mockDarfVerwalten = true;
 
@@ -24,6 +25,7 @@ jest.mock('../utils/wichtelFirestore', () => ({
   entferneWichtelTeilnehmer: (...a) => mockEntfernen(...a),
   loseWichtelRundeAus: (...a) => mockAuslosen(...a),
   setzeWichtelAuslosungZurueck: (...a) => mockZuruecksetzen(...a),
+  setzeWichtelAusschluesse: (...a) => mockAusschluesse(...a),
   loescheWichtelRunde: (...a) => mockLoeschen(...a),
   getWichtelFehlertext: (e) => e?.message || 'Fehler',
 }));
@@ -125,6 +127,47 @@ describe('WichtelPage', () => {
     await oeffneRunde(sicht({}, drei.slice(0, 2)));
     expect(screen.getByRole('button', { name: 'Jetzt auslosen' })).toBeDisabled();
     expect(screen.getByText(/mindestens 3 Teilnehmer/)).toBeInTheDocument();
+    // Zu zweit bliebe nach einem Ausschluss niemand zum Beschenken.
+    expect(screen.queryByRole('button', { name: 'Ausschlüsse' })).not.toBeInTheDocument();
+  });
+
+  it('legt je Teilnehmer fest, wen er nicht ziehen soll, und hebt es wieder auf', async () => {
+    await oeffneRunde(sicht({}, drei));
+    const anna = screen.getByText('Anna').closest('li');
+    const chip = (name) => within(within(anna).getByRole('group', { name: 'Anna beschenkt nicht:' }))
+      .getByRole('button', { name });
+
+    fireEvent.click(within(anna).getByRole('button', { name: 'Ausschlüsse' }));
+    expect(within(anna).getByRole('button', { name: 'Ausschlüsse' })).toHaveAttribute('aria-expanded', 'true');
+    expect(chip('Ben')).toHaveAttribute('aria-pressed', 'false');
+    expect(chip('Cleo')).toHaveAttribute('aria-pressed', 'false');
+
+    mockAusschluesse.mockResolvedValue(sicht({}, [tn('t1', 'Anna', { ausschluesse: ['t2'] }), drei[1], drei[2]]));
+    fireEvent.click(chip('Ben'));
+    await waitFor(() => expect(chip('Ben')).toHaveAttribute('aria-pressed', 'true'));
+    expect(mockAusschluesse).toHaveBeenCalledWith('runde1', 't1', ['t2']);
+    // Einen muss Anna noch beschenken können.
+    expect(chip('Cleo')).toBeDisabled();
+    expect(within(anna).getByText('Mindestens einen Gast muss Anna beschenken können.')).toBeInTheDocument();
+
+    // Zugeklappt steht der Ausschluss als Text in der Zeile.
+    fireEvent.click(within(anna).getByRole('button', { name: 'Ausschlüsse' }));
+    expect(within(anna).getByText('Beschenkt nicht: Ben')).toBeInTheDocument();
+    expect(within(anna).queryByRole('group')).not.toBeInTheDocument();
+
+    fireEvent.click(within(anna).getByRole('button', { name: 'Ausschlüsse' }));
+    mockAusschluesse.mockResolvedValue(sicht({}, drei));
+    fireEvent.click(chip('Ben'));
+    await waitFor(() => expect(chip('Ben')).toHaveAttribute('aria-pressed', 'false'));
+    expect(mockAusschluesse).toHaveBeenLastCalledWith('runde1', 't1', []);
+    expect(chip('Cleo')).toBeEnabled();
+  });
+
+  it('zeigt Ausschlüsse nach dem Auslosen nur noch an', async () => {
+    await oeffneRunde(sicht({ status: 'ausgelost' }, [tn('t1', 'Anna', { ausschluesse: ['t2'] }), drei[1], drei[2]]));
+    expect(screen.getByText('Beschenkt nicht: Ben')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ausschlüsse' })).not.toBeInTheDocument();
+    expect(screen.getByText(/Teilnehmer und Ausschlüsse ändern geht erst nach dem Zurücksetzen/)).toBeInTheDocument();
   });
 
   it('lost aus und zeigt danach nur den Status, Löschen ist gesperrt', async () => {

@@ -23,8 +23,10 @@ import {
   loescheWichtelRunde,
   loseWichtelRundeAus,
   setzeWichtelAuslosungZurueck,
+  setzeWichtelAusschluesse,
 } from '../utils/wichtelFirestore';
 import { buildWichtelLink, teileWichtelEinladung } from '../utils/wichtelLinks';
+import { formatBudget } from '../utils/formatBudget';
 
 const MIN_TEILNEHMER = 3;
 const HINWEIS_DAUER_MS = 3500;
@@ -108,7 +110,43 @@ function RundenFormular({ initial, titelText, submitLabel, busy, onSubmit, onCan
   );
 }
 
-function TeilnehmerZeile({ teilnehmer, ausgelost, busy, swipeIcon, onRename, onDelete, onShare, linkSichtbar, link }) {
+/**
+ * Wen ein Teilnehmer nicht ziehen soll: Umschalter je anderem Teilnehmer. Einer muss frei
+ * bleiben, sonst könnte er niemanden beschenken.
+ */
+function Ausschluesse({ id, name, andere, ausgeschlossen, busy, onUmschalten }) {
+  const nurNochEiner = andere.filter((gast) => !ausgeschlossen.has(gast.id)).length <= 1;
+  return (
+    <div id={id} className="wichtel-ausschluss" role="group" aria-labelledby={`${id}-titel`}>
+      <span id={`${id}-titel`} className="wichtel-ausschluss-titel">{name} beschenkt nicht:</span>
+      <div className="wichtel-ausschluss-chips">
+        {andere.map((gast) => {
+          const aktiv = ausgeschlossen.has(gast.id);
+          return (
+            <button
+              key={gast.id}
+              type="button"
+              className="wichtel-ausschluss-chip"
+              aria-pressed={aktiv}
+              onClick={() => onUmschalten(gast.id)}
+              disabled={busy || (!aktiv && nurNochEiner)}
+            >
+              {gast.name}
+            </button>
+          );
+        })}
+      </div>
+      {nurNochEiner && (
+        <span className="wichtel-leise">Mindestens einen Gast muss {name} beschenken können.</span>
+      )}
+    </div>
+  );
+}
+
+function TeilnehmerZeile({
+  teilnehmer, andere, ausgelost, busy, swipeIcon, onRename, onDelete, onShare, linkSichtbar, link,
+  ausschlussOffen, onAusschluesseKlappen, onAusschluss,
+}) {
   const rename = useInlineRename(teilnehmer.name, (_alt, neu) => onRename(teilnehmer, neu));
 
   const status = ausgelost && teilnehmer.gezogen
@@ -116,6 +154,13 @@ function TeilnehmerZeile({ teilnehmer, ausgelost, busy, swipeIcon, onRename, onD
     : teilnehmer.geoeffnet
       ? { text: 'Link geöffnet', klasse: '' }
       : { text: 'Link noch nicht geöffnet', klasse: 'wichtel-chip--leise' };
+
+  const ausgeschlossen = new Set(teilnehmer.ausschluesse || []);
+  const ausgeschlosseneNamen = andere.filter((gast) => ausgeschlossen.has(gast.id)).map((gast) => gast.name);
+  // Ausschließen lohnt erst, wenn außer dem Ausgeschlossenen noch jemand bleibt.
+  const ausschliessbar = !ausgelost && andere.length >= 2;
+  const panelOffen = ausschliessbar && ausschlussOffen;
+  const panelId = `wichtel-ausschluesse-${teilnehmer.id}`;
 
   return (
     <WichtelZeile
@@ -153,12 +198,38 @@ function TeilnehmerZeile({ teilnehmer, ausgelost, busy, swipeIcon, onRename, onD
           </button>
         )}
       </div>
+      {!panelOffen && ausgeschlosseneNamen.length > 0 && (
+        <p className="wichtel-ausschluss-info">Beschenkt nicht: {ausgeschlosseneNamen.join(', ')}</p>
+      )}
       <div className="wichtel-teilnehmer-fuss">
         <span className={`wichtel-chip ${status.klasse}`}>{status.text}</span>
-        <button type="button" className="wichtel-link-btn" onClick={() => onShare(teilnehmer)}>
-          Link teilen
-        </button>
+        <div className="wichtel-teilnehmer-knoepfe">
+          {ausschliessbar && (
+            <button
+              type="button"
+              className="wichtel-ausschluss-btn"
+              onClick={onAusschluesseKlappen}
+              aria-expanded={panelOffen}
+              aria-controls={panelOffen ? panelId : undefined}
+            >
+              Ausschlüsse
+            </button>
+          )}
+          <button type="button" className="wichtel-link-btn" onClick={() => onShare(teilnehmer)}>
+            Link teilen
+          </button>
+        </div>
       </div>
+      {panelOffen && (
+        <Ausschluesse
+          id={panelId}
+          name={teilnehmer.name}
+          andere={andere}
+          ausgeschlossen={ausgeschlossen}
+          busy={busy}
+          onUmschalten={onAusschluss}
+        />
+      )}
       {linkSichtbar && (
         <input
           type="text"
@@ -191,6 +262,7 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
   const [neuerName, setNeuerName] = useState('');
   const [zuruecksetzenFragen, setZuruecksetzenFragen] = useState(false);
   const [sichtbarerLink, setSichtbarerLink] = useState(null);
+  const [ausschlussFuer, setAusschlussFuer] = useState(null);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const offeneRundeIdRef = useRef(null);
@@ -264,6 +336,7 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
     setFehler('');
     setNeuerName('');
     setSichtbarerLink(null);
+    setAusschlussFuer(null);
     setAnsicht('detail');
     try {
       const sicht = await ladeWichtelRunde(rundeId);
@@ -337,6 +410,13 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
       },
       onUndo: () => {},
     });
+  };
+
+  // Schaltet einen Ausschluss um; der Server liefert den neuen Stand zurück.
+  const handleAusschluss = (teilnehmer, gastId) => {
+    const bisher = teilnehmer.ausschluesse || [];
+    const neu = bisher.includes(gastId) ? bisher.filter((id) => id !== gastId) : [...bisher, gastId];
+    fuehreAus(() => setzeWichtelAusschluesse(detail.runde.id, teilnehmer.id, neu));
   };
 
   const handleTeilen = async (teilnehmer) => {
@@ -482,14 +562,14 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
           <>
             <div className="wichtel-kopfdaten">
               <StatusPille status={detail.runde.status} ausgelostAm={detail.runde.ausgelostAm} />
-              {detail.runde.budget && <span className="wichtel-chip">Budget: {detail.runde.budget}</span>}
+              {detail.runde.budget && <span className="wichtel-chip">Budget: {formatBudget(detail.runde.budget)}</span>}
             </div>
             {detail.runde.hinweis && <p className="wichtel-runde-hinweis">{detail.runde.hinweis}</p>}
 
             <p className="wichtel-erklaerung">
               {ausgelost
                 ? 'Jeder zieht über seinen persönlichen Link sein Los und sieht dort nur das eigene. Auch du siehst nicht, wer wen gezogen hat.'
-                : 'Trag alle ein, die mitmachen, und lose dann aus. Die Links kannst du schon vorher verschicken – dann kann jeder seine Wünsche und Ideen für andere eintragen.'}
+                : 'Trag alle ein, die mitmachen, und lose dann aus. Die Links kannst du schon vorher verschicken – dann kann jeder seine Wünsche und Ideen für andere eintragen. Unter „Ausschlüsse“ legst du fest, wen jemand nicht ziehen soll – bei Paaren für beide.'}
             </p>
 
             {fehlerZeile}
@@ -507,6 +587,7 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
                     <TeilnehmerZeile
                       key={t.id}
                       teilnehmer={t}
+                      andere={sichtbareTeilnehmer.filter((anderer) => anderer.id !== t.id)}
                       ausgelost={ausgelost}
                       busy={busy}
                       swipeIcon={swipeIcon}
@@ -515,13 +596,16 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
                       onShare={handleTeilen}
                       linkSichtbar={sichtbarerLink === t.id}
                       link={buildWichtelLink(detail.runde.id, t.token)}
+                      ausschlussOffen={ausschlussFuer === t.id}
+                      onAusschluesseKlappen={() => setAusschlussFuer((offen) => (offen === t.id ? null : t.id))}
+                      onAusschluss={(gastId) => handleAusschluss(t, gastId)}
                     />
                   ))}
                 </ul>
               )}
 
               {ausgelost ? (
-                <p className="wichtel-leise">Teilnehmer ändern geht erst nach dem Zurücksetzen der Auslosung.</p>
+                <p className="wichtel-leise">Teilnehmer und Ausschlüsse ändern geht erst nach dem Zurücksetzen der Auslosung.</p>
               ) : (
                 <>
                   <form
