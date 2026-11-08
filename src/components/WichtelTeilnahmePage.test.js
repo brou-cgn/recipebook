@@ -56,7 +56,7 @@ describe('WichtelTeilnahmePage', () => {
     renderSeite();
     expect(await screen.findByRole('heading', { name: 'Advent 2026' })).toBeInTheDocument();
     expect(screen.getByText('Hallo Anna!')).toBeInTheDocument();
-    expect(screen.getByText('Budget: 20 €')).toBeInTheDocument();
+    expect(screen.getByText('Budget: 20,00 €')).toBeInTheDocument();
     expect(screen.getByText('Bescherung am 13.12.')).toBeInTheDocument();
     expect(screen.getByText(/Noch nicht ausgelost/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Los ziehen' })).not.toBeInTheDocument();
