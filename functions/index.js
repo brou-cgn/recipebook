@@ -36,4 +36,5 @@ Object.assign(exports, require('./handlers/discover'), require('./handlers/follo
     require('./handlers/importScheduled'),
     require('./handlers/nutritionRecalc'),
     require('./handlers/versionChanges'),
-    require('./handlers/cookingTimers'));
+    require('./handlers/cookingTimers'),
+    require('./handlers/wichteln'));

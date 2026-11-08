@@ -102,6 +102,7 @@ import { RecipeImportQueueProvider, useRecipeImportQueue } from './contexts/Reci
 import { updateAppBadge } from './utils/appBadge';
 import { resolveRecipeGroupContext, resolveImportGroupContext } from './utils/recipeGroupContext';
 import { openRecipeWithTransition } from './utils/recipeViewTransition';
+import { parseWichtelLink } from './utils/wichtelLinks';
 
 // Lazily loaded: everything below is a secondary view/overlay that isn't
 // needed for the initial "recipes" screen. Splitting these out of the main
@@ -120,6 +121,7 @@ const PasswordChangeModal = lazy(() => import('./components/PasswordChangeModal'
 const Kueche = lazy(() => import('./components/Kueche'));
 const SharePage = lazy(() => import('./components/SharePage'));
 const MenuSharePage = lazy(() => import('./components/MenuSharePage'));
+const WichtelTeilnahmePage = lazy(() => import('./components/WichtelTeilnahmePage'));
 const GroupList = lazy(() => import('./components/GroupList'));
 const GroupDetail = lazy(() => import('./components/GroupDetail'));
 const AppCallsPage = lazy(() => import('./components/AppCallsPage'));
@@ -780,10 +782,14 @@ function App() {
 
   const [menuSharePageId, setMenuSharePageId] = useState(() => getMenuShareIdFromHash());
 
+  // Persönlicher Wichtel-Link: /wichteln/:rundeId/:token oder #wichteln/... (ohne Login)
+  const [wichtelLink, setWichtelLink] = useState(() => parseWichtelLink(window.location));
+
   useEffect(() => {
     const handleHashChange = () => {
       setSharePageId(getShareIdFromHash());
       setMenuSharePageId(getMenuShareIdFromHash());
+      setWichtelLink(parseWichtelLink(window.location));
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
@@ -2625,6 +2631,36 @@ function App() {
     return isRecoveryNavigation() ? <></> : (
       <>
         <SplashScreen />
+      </>
+    );
+  }
+
+  // Wichtel-Link: Teilnehmerseite, kein Login nötig (das Token im Link ist die Berechtigung)
+  if (wichtelLink) {
+    const handleWichtelClose = () => {
+      if (window.location.pathname.startsWith('/wichteln/')) {
+        window.history.pushState({}, '', '/');
+      } else {
+        window.location.hash = '';
+      }
+      setWichtelLink(null);
+    };
+    return (
+      <>
+        {null}
+        <div className="App" style={appBottomNavStyle}>
+          <Header />
+          <Suspense fallback={<ViewLoadingFallback />}>
+            <WichtelTeilnahmePage
+              key={`${wichtelLink.rundeId}/${wichtelLink.token}`}
+              rundeId={wichtelLink.rundeId}
+              token={wichtelLink.token}
+              gueltig={wichtelLink.gueltig}
+              currentUser={currentUser}
+              onClose={handleWichtelClose}
+            />
+          </Suspense>
+        </div>
       </>
     );
   }

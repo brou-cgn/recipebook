@@ -8,6 +8,8 @@ import EventForm from './EventForm';
 import ConsumptionForm from './ConsumptionForm';
 import DrinkManagementPage from './DrinkManagementPage';
 import GuestManagementPage from './GuestManagementPage';
+import WichtelPage from './WichtelPage';
+import GiftIcon from './icons/GiftIcon';
 import OverviewAddFab from './OverviewAddFab';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { DEFAULT_BUTTON_ICONS, getButtonIcons, getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
@@ -177,6 +179,7 @@ function EventsPage({
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [drinksFabPressed, setDrinksFabPressed] = useState(false);
   const [guestsFabPressed, setGuestsFabPressed] = useState(false);
+  const [wichtelFabPressed, setWichtelFabPressed] = useState(false);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const loading = !eventsLoaded;
@@ -374,6 +377,16 @@ function EventsPage({
         allGuestProfiles={allGuestProfiles}
         allGuestProfilesLoaded={allGuestProfilesLoaded}
         customDrinks={customDrinks}
+      />
+    );
+  }
+
+  if (subView === 'wichteln') {
+    return (
+      <WichtelPage
+        onBack={() => setSubView('list')}
+        currentUser={currentUser}
+        guestProfiles={guestProfiles}
       />
     );
   }
@@ -617,6 +630,11 @@ function EventsPage({
             Gäste verwalten
           </button>
         )}
+        {canEditRecipes(currentUser) && (
+          <button type="button" className="events-manage-link-btn" onClick={() => setSubView('wichteln')}>
+            Wichteln
+          </button>
+        )}
       </div>
 
       {isAdmin ? (
@@ -713,6 +731,23 @@ function EventsPage({
           ) : (
             guestsFabIcon
           )}
+        </button>
+      )}
+      {isMobileView && canEditRecipes(currentUser) && (
+        <button
+          type="button"
+          className={`events-wichtel-fab-button${wichtelFabPressed ? ' pressed' : ''}`}
+          onClick={() => setSubView('wichteln')}
+          onTouchStart={() => setWichtelFabPressed(true)}
+          onTouchEnd={() => setWichtelFabPressed(false)}
+          onTouchCancel={() => setWichtelFabPressed(false)}
+          onMouseDown={() => setWichtelFabPressed(true)}
+          onMouseUp={() => setWichtelFabPressed(false)}
+          onMouseLeave={() => setWichtelFabPressed(false)}
+          title="Wichteln"
+          aria-label="Wichteln"
+        >
+          <GiftIcon size={22} />
         </button>
       )}
     </div>

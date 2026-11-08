@@ -523,6 +523,28 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Wichteln (Events > Wichteln, Teilnehmerseite /wichteln/{rundeId}/{token}).
+    // Runden, Teilnehmer (mit geheimem Link-Token), Zuordnung (wer wen gezogen hat) und
+    // Einträge (Wünsche, Geschenkideen) laufen ausschließlich über die Cloud Functions
+    // wichtelVerwalten und wichtelTeilnahme (Admin SDK, functions/wichteln.js). Kein Client –
+    // auch nicht der Organisator oder ein Admin – liest oder schreibt hier direkt: nur so
+    // bleibt die Zuordnung geheim und Ideen über einen Gast sieht nur, wer ihn gezogen hat.
+    match /wichtelRunden/{rundeId} {
+      allow read, write: if false;
+
+      match /teilnehmer/{teilnehmerId} {
+        allow read, write: if false;
+      }
+
+      match /zuordnungen/{teilnehmerId} {
+        allow read, write: if false;
+      }
+
+      match /eintraege/{eintragId} {
+        allow read, write: if false;
+      }
+    }
+
     // Cook dates collection - global tracking of when users cooked recipes
     match /cookDates/{cookDateId} {
       allow read: if isMember();

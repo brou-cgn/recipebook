@@ -11,6 +11,10 @@ jest.mock('./components/MenuSharePage', () => function MockMenuSharePage({ share
   return <div data-testid="menu-share-page" data-share-id={shareId}>MenuSharePage: {shareId}<button data-testid="menu-share-page-close" onClick={onClose}>Close</button></div>;
 });
 
+jest.mock('./components/WichtelTeilnahmePage', () => function MockWichtelTeilnahmePage({ rundeId, token, gueltig, onClose }) {
+  return <div data-testid="wichtel-page" data-runde={rundeId} data-token={token} data-gueltig={String(gueltig)}>Wichteln<button data-testid="wichtel-page-close" onClick={onClose}>Close</button></div>;
+});
+
 // Mock userManagement so auth resolves immediately with no user
 jest.mock('./utils/userManagement', () => ({
   onAuthStateChange: (callback) => {
@@ -269,6 +273,56 @@ describe('Share URL pathname routing', () => {
 
     expect(pushStateSpy).toHaveBeenCalledWith({}, '', '/');
     expect(screen.queryByTestId('menu-share-page')).not.toBeInTheDocument();
+    pushStateSpy.mockRestore();
+  });
+});
+
+describe('Wichtel-Link routing', () => {
+  const RUNDE = 'AbCdEfGhIj0123456789';
+  const TOKEN = 'abcDEF123_-abcDEF123_-abcDEF1234';
+
+  afterEach(() => {
+    resetLocation();
+    jest.clearAllMocks();
+  });
+
+  const setPath = (pathname, hash = '') => Object.defineProperty(window, 'location', {
+    value: { ...window.location, hash, pathname },
+    writable: true,
+    configurable: true,
+  });
+
+  test('zeigt die Teilnehmerseite für /wichteln/:rundeId/:token ohne Login', async () => {
+    setPath(`/wichteln/${RUNDE}/${TOKEN}`);
+    render(<App />);
+    const seite = await screen.findByTestId('wichtel-page');
+    expect(seite).toHaveAttribute('data-runde', RUNDE);
+    expect(seite).toHaveAttribute('data-token', TOKEN);
+    expect(seite).toHaveAttribute('data-gueltig', 'true');
+  });
+
+  test('zeigt auch einen kaputten Wichtel-Link auf der Teilnehmerseite (als ungültig)', async () => {
+    setPath(`/wichteln/${RUNDE}/abgeschnitten`);
+    render(<App />);
+    expect(await screen.findByTestId('wichtel-page')).toHaveAttribute('data-gueltig', 'false');
+  });
+
+  test('zeigt die Teilnehmerseite auch für #wichteln/…', async () => {
+    setPath('/', `#wichteln/${RUNDE}/${TOKEN}`);
+    render(<App />);
+    expect(await screen.findByTestId('wichtel-page')).toHaveAttribute('data-gueltig', 'true');
+  });
+
+  test('„Zur App“ verlässt den Wichtel-Link', async () => {
+    const pushStateSpy = jest.spyOn(window.history, 'pushState');
+    setPath(`/wichteln/${RUNDE}/${TOKEN}`);
+    render(<App />);
+    const seite = await screen.findByTestId('wichtel-page');
+    act(() => {
+      seite.querySelector('[data-testid="wichtel-page-close"]').click();
+    });
+    expect(pushStateSpy).toHaveBeenCalledWith({}, '', '/');
+    expect(screen.queryByTestId('wichtel-page')).not.toBeInTheDocument();
     pushStateSpy.mockRestore();
   });
 });

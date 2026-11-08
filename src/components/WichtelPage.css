@@ -1,0 +1,334 @@
+/* Events > Wichteln (Organisator). Baut auf EventsPage.css auf (Seitenrahmen,
+   Formular, Buttons, Undo-Snackbar); hier nur das Wichtel-Eigene, ausschließlich
+   mit Farb-Tokens aus tokens.css. */
+
+/* Textfarben mit .wichtel-page davor: darkMode.css färbt im Dunkelmodus pauschal
+   p, span, label und li hell (Spezifität 0-1-1) und würde die Tokens überstimmen. */
+
+.wichtel-page .wichtel-erklaerung {
+  margin: 0 0 16px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.wichtel-page .wichtel-fehler {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--color-bad-tint);
+  color: var(--color-bad-text);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.wichtel-page .wichtel-leise {
+  color: var(--color-text-soft);
+  font-size: 13px;
+}
+
+.wichtel-page .wichtel-leer {
+  margin: 4px 0 12px;
+  color: var(--color-text-soft);
+  font-size: 14px;
+}
+
+/* Liste und Zeilen (Runden wie Teilnehmer) */
+.wichtel-liste {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Runden-Übersicht */
+.wichtel-runde-oeffnen {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wichtel-runde-oeffnen:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.wichtel-page .wichtel-runde-titel {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-text-strong);
+  overflow-wrap: anywhere;
+}
+
+.wichtel-page .wichtel-runde-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.wichtel-page .wichtel-runde-anzahl {
+  color: var(--color-text-muted);
+}
+
+/* Status und Chips */
+.wichtel-page .wichtel-status,
+.wichtel-page .wichtel-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-body);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.wichtel-page .wichtel-status--ausgelost {
+  border-color: var(--color-events);
+  background: var(--color-events);
+  color: var(--color-surface-card);
+}
+
+.wichtel-page .wichtel-chip--ok {
+  border-color: var(--color-ok);
+  color: var(--color-ok);
+}
+
+.wichtel-page .wichtel-chip--leise {
+  border-color: var(--color-border-subtle);
+  color: var(--color-text-soft);
+}
+
+/* Detail */
+.wichtel-detail-titel {
+  overflow-wrap: anywhere;
+}
+
+.wichtel-kopfdaten {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.wichtel-page .wichtel-runde-hinweis {
+  margin: 0 0 12px;
+  color: var(--color-text-body);
+  font-size: 15px;
+}
+
+.wichtel-abschnitt {
+  margin-bottom: 20px;
+}
+
+.wichtel-abschnitt-titel {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-strong);
+}
+
+.wichtel-teilnehmer-kopf {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.wichtel-page .wichtel-teilnehmer-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-strong);
+  overflow-wrap: anywhere;
+}
+
+.wichtel-umbenennen {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  background: var(--color-surface-input);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 16px;
+}
+
+.wichtel-teilnehmer-fuss {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wichtel-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-soft);
+  cursor: pointer;
+}
+
+.wichtel-icon-btn:hover,
+.wichtel-icon-btn:focus-visible {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-strong);
+}
+
+.wichtel-icon-btn:focus-visible,
+.wichtel-link-btn:focus-visible,
+.wichtel-vorschlag:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.wichtel-link-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--color-events);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-events);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.wichtel-link-btn:hover {
+  background: var(--color-events);
+  color: var(--color-surface-card);
+}
+
+.wichtel-link-feld {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface-input);
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+/* Hinzufügen */
+.wichtel-hinzufuegen {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.wichtel-hinzufuegen input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface-input);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 16px;
+}
+
+.wichtel-hinzufuegen .events-primary-btn {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+}
+
+.wichtel-vorschlaege {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wichtel-vorschlaege-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wichtel-vorschlag {
+  padding: 6px 12px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-body);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.wichtel-vorschlag:hover:not(:disabled) {
+  border-style: solid;
+  border-color: var(--color-events);
+  color: var(--color-events);
+}
+
+.wichtel-aktionen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* Formular */
+.wichtel-formular-titel {
+  margin: 0;
+  font-size: 18px;
+  color: var(--color-text-strong);
+}
+
+.wichtel-formular-aktionen {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Kurzer Hinweis unten (z. B. „Einladung kopiert“) */
+.wichtel-hinweis {
+  position: fixed;
+  left: 50%;
+  bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 1200;
+  max-width: calc(100% - 32px);
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--color-text-strong);
+  color: var(--color-surface-card);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+@media (max-width: 768px) {
+  .wichtel-hinweis {
+    bottom: 90px;
+  }
+}
