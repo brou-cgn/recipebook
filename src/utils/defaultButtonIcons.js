@@ -33,6 +33,10 @@ const SHAPES = {
   timer: { d: 'M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 13V9M9 2h6' },
   cup: { d: 'M6 3h12l-1.2 15.2A2 2 0 0 1 14.8 20H9.2a2 2 0 0 1-2-1.8zM7 9h10' },
   people: { d: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c0-3.3 2.9-6 6.5-6s6.5 2.7 6.5 6M16 4.3a3.5 3.5 0 0 1 0 6.4M18 14.5c2 .7 3.5 2.6 3.5 5.5' },
+  // Geschenk (Wichteln): Paket mit Schleife, gleiche Form wie components/icons/GiftIcon.js
+  gift: {
+    d: 'M4 11h16v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9zM3 7.5h18V11H3zM12 7.5V21M12 7.5c-1.2-2.6-4.6-3.6-5.4-1.6-.7 1.7 2.6 1.6 5.4 1.6zm0 0c1.2-2.6 4.6-3.6 5.4-1.6.7 1.7-2.6 1.6-5.4 1.6z',
+  },
   calendar: { d: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4' },
   save: { d: 'M5 3h11l3 3v15H5zM8 3v6h7V3M8 21v-7h8v7' },
   // Person mit Plus-Badge (Folgen). Das Badge ist in beiden Themes Bernstein.
@@ -93,6 +97,7 @@ export const DEFAULT_ICON_NAMES = {
   trendingTimeIcon: 'timer',
   eventsDrinksFab: 'cup',
   eventsGuestsFab: 'people',
+  eventsWichtelFab: 'gift',
   saveRecipeIcon: 'save',
   followButton: 'follow',
 };

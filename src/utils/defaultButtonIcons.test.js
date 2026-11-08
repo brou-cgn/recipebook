@@ -40,3 +40,19 @@ describe('Icon „Rezept dazunehmen“ (Kochmodus, parallel kochen)', () => {
     expect(group.rowKeys.map((r) => r.key)).toContain('cookingAddRecipe');
   });
 });
+
+describe('Icon Wichteln-FAB (Events, Mobile)', () => {
+  test('ist als einrichtbares Button-Icon mit Dunkelmodus-Variante hinterlegt', () => {
+    expect(DEFAULT_BUTTON_ICONS.eventsWichtelFab).toBe(defaultIcon('gift'));
+    expect(DEFAULT_BUTTON_ICONS.eventsWichtelFabDark).toBe(defaultIcon('gift', true));
+  });
+
+  test('steht in der Button-Icons-Verwaltung neben Getränke- und Gäste-FAB', () => {
+    const row = mergeButtonIconRowDefs().find((r) => r.key === 'eventsWichtelFab');
+    expect(row).toMatchObject({ label: 'Events: Wichteln-FAB (Mobile)', darkKey: 'eventsWichtelFabDark' });
+    const group = getDefaultButtonIconGroups().groups.find((g) => g.id === 'g-kueche-events');
+    expect(group.rowKeys.map((r) => r.key)).toEqual(
+      expect.arrayContaining(['eventsDrinksFab', 'eventsGuestsFab', 'eventsWichtelFab'])
+    );
+  });
+});
