@@ -32,6 +32,18 @@
   transition: transform 0.15s ease;
 }
 
+/* Der globale Hover-Ton (.delete-row-hover-target, DeleteRowButton.css) ist
+   halbtransparent. Hier liegt darunter die rote Swipe-Fläche – und auf Touch
+   bleibt :hover nach dem Antippen hängen, die ganze Karte würde rot. Deshalb
+   den Ton auf die deckende Kartenfarbe legen. Spezifität 0-4-0 schlägt auch
+   die Dunkelmodus-Regel ([data-theme] … 0-3-0). */
+.wichtel-zeile .wichtel-zeile-inhalt.delete-row-hover-target:hover,
+.wichtel-zeile .wichtel-zeile-inhalt.delete-row-hover-target:focus-within {
+  background:
+    linear-gradient(var(--color-hover-overlay), var(--color-hover-overlay)),
+    var(--color-surface-card);
+}
+
 .wichtel-zeile-text {
   flex: 1;
   min-width: 0;
