@@ -25,6 +25,7 @@ import {
   setzeWichtelAuslosungZurueck,
 } from '../utils/wichtelFirestore';
 import { buildWichtelLink, teileWichtelEinladung } from '../utils/wichtelLinks';
+import { formatBudget } from '../utils/formatBudget';
 
 const MIN_TEILNEHMER = 3;
 const HINWEIS_DAUER_MS = 3500;
@@ -482,7 +483,7 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
           <>
             <div className="wichtel-kopfdaten">
               <StatusPille status={detail.runde.status} ausgelostAm={detail.runde.ausgelostAm} />
-              {detail.runde.budget && <span className="wichtel-chip">Budget: {detail.runde.budget}</span>}
+              {detail.runde.budget && <span className="wichtel-chip">Budget: {formatBudget(detail.runde.budget)}</span>}
             </div>
             {detail.runde.hinweis && <p className="wichtel-runde-hinweis">{detail.runde.hinweis}</p>}
 
