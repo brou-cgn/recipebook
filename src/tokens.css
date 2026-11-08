@@ -33,6 +33,15 @@
   --color-alarm-strong: #b71c1c;
   --color-on-alarm: #fff;
   --color-on-accent: #1a1a1a;
+  /* Wichteln (Teilnehmerseite): festliches Rot, Gold nur für Deko, Papier für das Los */
+  --color-wichtel: #a8322a;
+  --color-on-wichtel: #fff;
+  --color-wichtel-gold: #b08a3e;
+  --color-wichtel-papier: #fffaf0;
+  --color-wichtel-falz: #f6eddb;
+  --color-wichtel-linie: rgba(176, 138, 62, 0.55);
+  --color-wichtel-schein: rgba(168, 50, 42, 0.22);
+  --color-bad-tint: rgba(163, 58, 38, 0.1);
 }
 
 [data-theme="dark"] {
@@ -64,4 +73,12 @@
   --color-alarm-strong: #b71c1c;
   --color-on-alarm: #fff;
   --color-on-accent: #1a1a1a;
+  --color-wichtel: #e07a6a;
+  --color-on-wichtel: #1a1a1a;
+  --color-wichtel-gold: #d9b36a;
+  --color-wichtel-papier: #2c2620;
+  --color-wichtel-falz: #413729;
+  --color-wichtel-linie: rgba(217, 179, 106, 0.5);
+  --color-wichtel-schein: rgba(224, 122, 106, 0.25);
+  --color-bad-tint: rgba(232, 128, 108, 0.14);
 }

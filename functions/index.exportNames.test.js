@@ -72,6 +72,8 @@ const EXPECTED_EXPORTS = [
   'submitConsumption',
   'syncPublicProfile',
   'updateSeasonMatrixStatus',
+  'wichtelTeilnahme',
+  'wichtelVerwalten',
 ];
 
 function loadIndex() {

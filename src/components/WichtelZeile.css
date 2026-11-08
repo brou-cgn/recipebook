@@ -1,0 +1,59 @@
+/* Listenzeile der Wichtel-Seiten (WichtelZeile.js): Desktop mit DeleteRowButton,
+   mobil mit Linksswipe – gleiches Muster wie die Gäste-Karten in Events.
+   Nur Farb-Tokens aus tokens.css. */
+.wichtel-zeile {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-card);
+}
+
+/* Die rote Fläche erst beim Wischen zeigen: in Ruhe schimmert sie sonst an den
+   runden Ecken der Zeile durch. */
+.wichtel-zeile .swipe-delete-background {
+  border-radius: 10px;
+}
+
+.wichtel-zeile--wischt .swipe-delete-background {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.wichtel-zeile-inhalt {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px 12px 16px;
+  background: var(--color-surface-card);
+  border-radius: 10px;
+  transition: transform 0.15s ease;
+}
+
+.wichtel-zeile-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .delete-row-button.wichtel-zeile-loeschen {
+    display: none;
+  }
+}
+
+@media (min-width: 769px) {
+  .wichtel-zeile .swipe-delete-background {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wichtel-zeile-inhalt {
+    transition: none;
+  }
+}

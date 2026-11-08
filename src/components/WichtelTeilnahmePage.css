@@ -1,0 +1,464 @@
+/* Teilnehmerseite eines Wichtel-Links (/wichteln/{rundeId}/{token}).
+   Festlich, aber in den Farben der App: ausschließlich Tokens aus tokens.css
+   (Rot, Gold und Papier sind eigene --color-wichtel-*-Tokens mit Hell/Dunkel).
+   Gäste öffnen den Link auch auf älteren Handys (Build-Ziel Safari 14): darum
+   keine Farbmischung per CSS-Funktion, kein inset und aspect-ratio nur mit
+   fester Höhe als Rückfall. */
+
+/* Textfarben mit .wt-seite davor: darkMode.css färbt im Dunkelmodus pauschal
+   p, span, label und li hell ([data-theme="dark"] p, Spezifität 0-1-1) und
+   würde die Token-Farben sonst überstimmen. */
+
+.wt-seite {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 24px 16px 104px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--color-text);
+}
+
+.wt-mitte {
+  align-items: center;
+  padding-top: 56px;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+/* Kopf */
+.wt-kopf {
+  text-align: center;
+  padding: 4px 0;
+}
+
+.wt-seite .wt-ueberzeile {
+  margin: 0;
+  color: var(--color-wichtel);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.wt-titel {
+  margin: 4px 0 0;
+  color: var(--color-text-strong);
+  font-size: 28px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.wt-seite .wt-gruss {
+  margin: 6px 0 0;
+  color: var(--color-text-body);
+  font-size: 18px;
+}
+
+.wt-eckdaten {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.wt-seite .wt-chip {
+  display: inline-flex;
+  padding: 4px 12px;
+  border: 1px solid var(--color-wichtel-gold);
+  border-radius: 999px;
+  color: var(--color-text-body);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Bausteine */
+.wt-seite .wt-text {
+  margin: 0;
+  color: var(--color-text-body);
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.wt-mitte-text {
+  text-align: center;
+}
+
+.wt-karte {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 16px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 16px;
+  background: var(--color-surface-card);
+}
+
+.wt-abschnitt-titel {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 19px;
+  overflow-wrap: anywhere;
+}
+
+.wt-unter-titel {
+  margin: 4px 0 0;
+  color: var(--color-text-strong);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.wt-seite .wt-leer {
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: 14px;
+}
+
+.wt-seite .wt-privat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: 13px;
+}
+
+.wt-seite .wt-privat-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.wt-seite .wt-fehler {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--color-bad-tint);
+  color: var(--color-bad-text);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.wt-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wt-seite .wt-eintrag {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 10px;
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.wt-seite .wt-eintrag-text {
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.wt-seite .wt-von {
+  color: var(--color-text-soft);
+  font-size: 13px;
+}
+
+.wt-ideen-gruppe {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Buttons und Formulare */
+.wt-btn {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-wichtel);
+  color: var(--color-on-wichtel);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.wt-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.wt-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.wt-btn:focus-visible,
+.wt-link:focus-visible,
+.wt-formular input:focus-visible,
+.wt-auswahl select:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.wt-btn--gross {
+  align-self: center;
+  padding: 14px 32px;
+  font-size: 17px;
+  box-shadow: 0 6px 16px var(--color-wichtel-schein);
+}
+
+.wt-formular {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wt-formular-zeile {
+  display: flex;
+  gap: 8px;
+}
+
+.wt-formular input,
+.wt-auswahl select {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface-input);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 16px;
+}
+
+.wt-seite .wt-auswahl {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.wt-link {
+  align-self: center;
+  padding: 8px;
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 14px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Das Los: gefalteter Zettel mit Siegel, beim Ziehen klappt er auf */
+.wt-los {
+  position: relative;
+  width: min(270px, 82%);
+  height: 160px;
+  margin: 6px auto 4px;
+  perspective: 900px;
+  animation: wt-schweben 3.4s ease-in-out infinite;
+}
+
+@supports (aspect-ratio: 1 / 1) {
+  .wt-los {
+    height: auto;
+    aspect-ratio: 5 / 3;
+  }
+}
+
+.wt-los--offen {
+  animation: none;
+}
+
+.wt-los--wackelt {
+  animation: wt-wackeln 0.45s ease-in-out infinite;
+}
+
+.wt-los-innen {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform-style: preserve-3d;
+  transform: rotateZ(-2deg) rotateY(0deg);
+  transition: transform 0.85s cubic-bezier(0.2, 0.75, 0.25, 1.15);
+}
+
+.wt-los--offen .wt-los-innen {
+  transform: rotateZ(-2deg) rotateY(180deg);
+}
+
+.wt-los-seite {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid var(--color-wichtel-linie);
+  border-radius: 12px;
+  background: var(--color-wichtel-papier);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.wt-los-vorne {
+  background: linear-gradient(
+    180deg,
+    var(--color-wichtel-falz) 0%,
+    var(--color-wichtel-falz) 50%,
+    var(--color-wichtel-papier) 50%,
+    var(--color-wichtel-papier) 100%
+  );
+}
+
+.wt-los-falz {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: var(--color-wichtel-linie);
+}
+
+.wt-seite .wt-los-siegel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--color-wichtel);
+  color: var(--color-on-wichtel);
+  box-shadow: 0 0 0 5px var(--color-wichtel-schein);
+}
+
+.wt-los-hinten {
+  transform: rotateY(180deg);
+  text-align: center;
+}
+
+.wt-seite .wt-los-ueberzeile {
+  color: var(--color-wichtel);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.wt-los-name {
+  color: var(--color-text-strong);
+  font-size: clamp(24px, 7vw, 34px);
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+/* Funken beim Aufklappen */
+.wt-funken {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.wt-funke {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  background: var(--color-wichtel-gold);
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+  opacity: 0;
+  animation: wt-funke 1.1s ease-out forwards;
+  animation-delay: calc(0.45s + var(--i) * 45ms);
+}
+
+.wt-funke:nth-child(odd) {
+  background: var(--color-wichtel);
+}
+
+/* Beim Ziehen: Text und Wunschliste erst zeigen, wenn der Zettel aufgeklappt ist. */
+.wt-spaeter {
+  animation: wt-einblenden 0.35s ease 0.75s both;
+}
+
+@keyframes wt-einblenden {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes wt-schweben {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes wt-wackeln {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
+}
+
+@keyframes wt-funke {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(calc(var(--i) * 45deg)) translateY(0) scale(0.4);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(calc(var(--i) * 45deg)) translateY(-130px) scale(1.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wt-los,
+  .wt-los--wackelt {
+    animation: none;
+  }
+
+  .wt-los-innen,
+  .wt-btn {
+    transition: none;
+  }
+
+  .wt-funken {
+    display: none;
+  }
+
+  .wt-spaeter {
+    animation: none;
+  }
+}
