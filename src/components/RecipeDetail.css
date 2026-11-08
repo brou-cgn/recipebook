@@ -1970,7 +1970,7 @@ button.private-badge-button:active {
   height: auto;
   display: grid;
   grid-template-columns: var(--cooking-carousel-width) minmax(0, 1fr);
-  /* Schritt-Karussell und Zutaten-Sheet teilen sich die Höhe 2 : 1 (siehe Tablet-Höhen unten) */
+  /* Schritt-Karussell und Zutaten-Sheet teilen sich die Höhe 2 : 1, quer 1 : 1 (siehe Tablet-Höhen unten) */
   grid-template-rows: auto auto minmax(0, 2fr) minmax(auto, 1fr);
   padding-top: env(safe-area-inset-top, 0px);
 }
@@ -2055,7 +2055,7 @@ button.private-badge-button:active {
   break-inside: avoid;
 }
 
-/* ── Tablet-Höhen: Schritte zu Zutaten 2 : 1 (hochkant wie quer, mit und ohne Karussell) ──
+/* ── Tablet-Höhen: Schritte zu Zutaten hochkant 2 : 1, quer 1 : 1 (mit und ohne Karussell) ──
    Auf dem iPhone hat das Zutaten-Sheet eine feste Höhe (min(34dvh, 280px)); auf dem Tablet
    wäre das nur rund ein Viertel des Bildschirms. Hier teilen sich Schritt-Karussell und Sheet
    die Höhe, die nach Titelzeile, Fortschritt und ggf. Leiste übrig bleibt: zwei Drittel für den
@@ -2076,6 +2076,19 @@ button.private-badge-button:active {
   flex: 1 1 0;
   height: auto;
   min-height: min(34dvh, 280px);
+}
+
+/* Tablet quer: Schritte zu Zutaten 1 : 1 (Rückmeldung 08.11.2026 am iPad 13" quer). Die Klassen
+   cooking-mode-split und cooking-mode-tablet-full gibt es nur auf dem Tablet, Handys quer haben
+   cooking-mode-landscape; die Lage reicht deshalb als Unterscheidung. */
+@media (orientation: landscape) {
+  .recipe-detail-content.cooking-mode-active.cooking-mode-split {
+    grid-template-rows: auto auto minmax(0, 1fr) minmax(auto, 1fr);
+  }
+
+  .cooking-mode-active.cooking-mode-tablet-full .step-carousel {
+    flex: 1 1 0;
+  }
 }
 
 /* ── Landscape mobile: side-by-side cooking mode layout ───────────────── */

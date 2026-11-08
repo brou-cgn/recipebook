@@ -114,16 +114,25 @@ describe('CookingSessionCarousel CSS', () => {
     });
   });
 
-  describe('Tablet-Höhen: Schritte zu Zutaten 2 : 1 (hochkant wie quer)', () => {
-    test('im Split teilt das Raster Schritt-Karussell und Zutaten-Sheet 2 : 1', () => {
+  describe('Tablet-Höhen: Schritte zu Zutaten hochkant 2 : 1, quer 1 : 1', () => {
+    test('hochkant teilt im Split das Raster Schritt-Karussell und Zutaten-Sheet 2 : 1', () => {
       const split = getRuleBody(recipeDetailCss, '.recipe-detail-content.cooking-mode-active.cooking-mode-split');
       expect(split).toContain('grid-template-rows: auto auto minmax(0, 2fr) minmax(auto, 1fr);');
     });
 
-    test('bei voller Breite teilt die Flexbox 2 : 1', () => {
+    test('hochkant teilt bei voller Breite die Flexbox 2 : 1', () => {
       expect(getRuleBody(recipeDetailCss, '.cooking-mode-active.cooking-mode-tablet-full .step-carousel'))
         .toContain('flex: 2 1 0;');
       expect(getRuleBody(recipeDetailCss, '.recipe-detail-content.cooking-mode-active.cooking-mode-tablet-full .cooking-mode-ingredients'))
+        .toContain('flex: 1 1 0;');
+    });
+
+    test('quer teilen sich Schritte und Zutaten die Höhe 1 : 1', () => {
+      const landscape = recipeDetailCss.match(/@media \(orientation: landscape\) \{([\s\S]*?\})\s*\}/);
+      expect(landscape).not.toBeNull();
+      expect(getRuleBody(landscape[1], '.recipe-detail-content.cooking-mode-active.cooking-mode-split'))
+        .toContain('grid-template-rows: auto auto minmax(0, 1fr) minmax(auto, 1fr);');
+      expect(getRuleBody(landscape[1], '.cooking-mode-active.cooking-mode-tablet-full .step-carousel'))
         .toContain('flex: 1 1 0;');
     });
 
