@@ -5,6 +5,7 @@ import {
   listeWichtelRunden,
   loseWichtelRundeAus,
   fuegeWichtelEintragHinzu,
+  setzeWichtelAusschluesse,
 } from './wichtelFirestore';
 
 // jest.mock wird vor die Importe gehoben.
@@ -31,6 +32,9 @@ describe('wichtelFirestore', () => {
     mockCall.mockResolvedValue({ data: {} });
     await loseWichtelRundeAus('r1');
     expect(mockCall).toHaveBeenLastCalledWith({ aktion: 'auslosen', rundeId: 'r1' });
+
+    await setzeWichtelAusschluesse('r1', 't1', ['t2']);
+    expect(mockCall).toHaveBeenLastCalledWith({ aktion: 'ausschluesseSetzen', rundeId: 'r1', teilnehmerId: 't1', ausschluesse: ['t2'] });
   });
 
   it('liefert eine leere Liste ohne Runden', async () => {

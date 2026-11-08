@@ -201,9 +201,17 @@
 
 .wichtel-icon-btn:focus-visible,
 .wichtel-link-btn:focus-visible,
-.wichtel-vorschlag:focus-visible {
+.wichtel-vorschlag:focus-visible,
+.wichtel-ausschluss-btn:focus-visible,
+.wichtel-ausschluss-chip:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+}
+
+.wichtel-teilnehmer-knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .wichtel-link-btn {
@@ -232,6 +240,83 @@
   background: var(--color-surface-input);
   color: var(--color-text);
   font-size: 13px;
+}
+
+/* Ausschlüsse: wen ein Teilnehmer nicht ziehen soll */
+.wichtel-ausschluss-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.wichtel-ausschluss-btn:hover,
+.wichtel-ausschluss-btn[aria-expanded='true'] {
+  border-color: var(--color-events);
+  color: var(--color-events);
+}
+
+.wichtel-page .wichtel-ausschluss-info {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.wichtel-ausschluss {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.wichtel-page .wichtel-ausschluss-titel {
+  color: var(--color-text-body);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.wichtel-ausschluss-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Nicht gewählt gestrichelt, gewählt durchgezogen und fett: der Zustand hängt
+   nicht nur an der Farbe. */
+.wichtel-ausschluss-chip {
+  min-height: 32px;
+  padding: 5px 12px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-body);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.wichtel-ausschluss-chip:hover:not(:disabled) {
+  border-style: solid;
+}
+
+.wichtel-ausschluss-chip[aria-pressed='true'] {
+  border-style: solid;
+  border-color: var(--color-bad-text);
+  background: var(--color-bad-tint);
+  color: var(--color-bad-text);
+  font-weight: 600;
+}
+
+.wichtel-ausschluss-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 /* Hinzufügen */
