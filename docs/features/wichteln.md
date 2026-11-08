@@ -39,6 +39,9 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
 - „Deine Wünsche“: sieht nur, wer einen gezogen hat.
 - „Geschenkideen für andere“: Gast wählen, Idee speichern. Sieht nur, wer diesen Gast gezogen hat –
   mit dem eigenen Namen, die Person selbst nie.
+- Zu Wunsch und Idee optional ein Link (z. B. zum Shop); Text oder Link genügt. Der Eintrag zeigt dann
+  eine Vorschau mit Bild, Seitentitel und Seite (siehe „Link-Vorschau“). Ein ins Textfeld eingefügter
+  Link am Ende („Produktname https://…“, wie aus dem Teilen-Menü einer Shop-App) wird zum Link.
 - Eigene Einträge löschen: sofort mit „Rückgängig“ (6 s), mobil per Linksswipe.
 - Sprache: Deutsch, Englisch oder Französisch – nach der Sprachpräferenz im Gästeprofil, mit dem der
   Teilnehmer verknüpft ist (Profile ohne Wahl: Deutsch). Ohne verknüpftes Profil, beim Laden und bei
@@ -82,7 +85,9 @@ wichtelRunden/{rundeId}            ownerId, titel, budget, hinweis, status ('off
                                    oder null), mailStatus ('gesendet'|'fehler'|null), mailAm (letzter
                                    Versuch)
   zuordnungen/{geberId}            empfaengerId, ausgelostAm
-  eintraege/{eintragId}            autorId, ueberId, text, erstelltAm
+  eintraege/{eintragId}            autorId, ueberId, text, erstelltAm,
+                                   url und vorschau {bild, titel, seite} (nur mit Link; vorschau null,
+                                   wenn der Abruf scheiterte)
 
 wichtelMailLimits/{uid}_{JJJJ-MM-TT}   uid, tag, anzahl   (Tageszähler je Organisator, Berliner Tag)
 ```
@@ -111,8 +116,9 @@ Bei `anlegen` und `teilnehmerHinzufuegen` ist jeder Eintrag in `namen` ein Name 
 `limit` (Tageslimit) oder `fehler` (Mailserver, Limit nicht prüfbar).
 
 `wichtelTeilnahme` (ohne Login; `rundeId` + `token`), Feld `aktion`: `laden` (setzt „Link geöffnet“),
-`ziehen`, `eintragHinzufuegen` (`ueberId`, `text` ≤ 300 Zeichen, höchstens 50 Einträge je Teilnehmer),
-`eintragLoeschen` (nur eigene). Falsches Format, unbekannte Runde und falsches Token geben dieselbe
+`ziehen`, `eintragHinzufuegen` (`ueberId`, `text` ≤ 300 Zeichen und/oder `url` ≤ 2000 Zeichen, höchstens
+50 Einträge je Teilnehmer; ohne `https://` wird es ergänzt, andere Schemata sind ungültig),
+`eintragLoeschen` (nur eigene). Einträge gehen mit `url` und `vorschau` (je `null` ohne Link) heraus. Falsches Format, unbekannte Runde und falsches Token geben dieselbe
 Antwort (`not-found`).
 Jede Antwort enthält `ich.sprache`: den Code aus dem verknüpften Gästeprofil
 (`guests/{ownerId}/profiles/{gastId}`, Feld `sprache`; ohne Feld `de`), sonst `null`. Gelesen wird nur
@@ -142,6 +148,27 @@ Oberflächen: `src/components/WichtelPage.js` (Organisator), `src/components/Wic
   Runden-IDs und Fehlercodes des Mailservers, nie die Adresse (Tech-Check S26).
 - **Versand:** SMTP-Secrets `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` (dieselben
   wie für die Listen-Einladung), nodemailer mit kleinem Pool, Function-Timeout 120 s.
+
+## Link-Vorschau
+
+Beim Speichern eines Eintrags mit Link ruft der Server die Seite **einmal** ab (`functions/linkVorschau.js`,
+Tests: `functions/linkVorschau.test.js`) und legt Bild-Adresse, Titel und Seitennamen mit dem Eintrag ab.
+Das Speichern wartet darauf (bis zu 5 s); scheitert der Abruf, wird ohne Vorschau gespeichert und die
+Seite zeigt ein Link-Symbol mit dem Seitennamen. Ein neuer Versuch geht nur über Löschen und neu Anlegen.
+
+- Bild: `og:image`, sonst `twitter:image`, `image_src`, Microdata, JSON-LD, Amazon-Produktbild
+  (`#landingImage`, Amazon hat kein `og:image`). Ein direkter Bild-Link ist selbst das Bild.
+- Titel: `og:title`, sonst `<title>`. Bot-Abwehrseiten („Just a moment…“, „Access Denied“ u. a.)
+  liefern keine Vorschau statt eines falschen Titels.
+- Das Bild lädt der Browser des Betrachters direkt von der Seite des Shops, ohne Referrer: Die Adresse
+  der Teilnehmerseite enthält das geheime Token.
+- Schutz, weil der Abruf ohne Login erreichbar ist: nur GET auf http/https mit Standard-Port, nur
+  öffentliche IP-Adressen (geprüft beim Verbindungsaufbau, also auch nach Weiterleitungen und gegen
+  DNS-Rebinding), höchstens 5 Weiterleitungen, 5 s, 2 MB HTML.
+
+Grenzen: Große Shops (vor allem Amazon) blocken Abrufe aus Rechenzentren oft mit einer Captcha-Seite –
+dann gibt es keine Vorschau. Aus der Entwicklungsumgebung ließ sich das nicht prüfen; getestet mit lokalem
+Server und echten Seiten (pypi.org, jsr.io).
 
 ## Auslosung
 
@@ -177,6 +204,9 @@ Das Token hat 192 Bit (24 Zufallsbytes, base64url).
 - Link erneuern, falls ein Link an die falsche Person ging (heute: Teilnehmer entfernen und neu anlegen,
   nur vor dem Auslosen).
 - Runden werden nicht automatisch gelöscht; der Organisator löscht sie in der Übersicht.
+- Link-Vorschau schon im Formular zeigen (vor dem Speichern) und eine gescheiterte Vorschau später neu holen.
+- Vorschaubilder selbst speichern statt vom Shop zu laden (unabhängig von Shop-Änderungen, kein Abruf
+  des Betrachters beim Shop) – braucht einen Storage-Ordner samt Regeln und Aufräumen.
 - Die Teilnehmerseite (`/wichteln/…`) ist nur deutsch: Ein Gast mit Sprache Englisch oder Französisch
   bekommt Mail und Teilen-Text in seiner Sprache, die Seite hinter dem Link aber auf Deutsch.
 - Keine Benachrichtigung beim Auslosen („Jetzt kannst du dein Los ziehen“) – wer früh eingeladen

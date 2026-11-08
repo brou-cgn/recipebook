@@ -79,6 +79,18 @@ Die Prüfung liegt serverseitig in `functions/index.js`, nicht nur in der UI:
 - **`applyRecipeVersionChanges`** (Beschreibung einer eigenen Version einarbeiten): zusätzlich muss die Rolle `versionDictation` in `rolePermissions/{rolle}` haben (`requireRoleFeature`, Admins ausgenommen). Die Beschreibung und das Rezept werden nicht gespeichert, nur der Tageszähler.
 - **Tageslimits** je Person und Berliner Tag, Zähler nur per Admin SDK: `aiScanLimits` (Scans und Importe, auch für die Kurzbefehl-Endpunkte), `aiRephraseLimits` (Umformulieren), `aiVersionLimits` (`applyRecipeVersionChanges`, Admin 1000, Moderator 100, Mitglied 40), `aiNutritionLimits` (`parseIngredientAmountG`, `calculateNutritionFromOpenFoodFacts`, `generateNutritionFromReference`; Admin 5000, Moderator 1000, Mitglied 500). Ist der Zähler nicht prüfbar, wird der Aufruf abgelehnt. Der Import-Sweeper `recoverStuckImportJobs` hat einen eigenen Zähler `importSweeperLimits` (20 Neustarts je Autor und Tag, Tech-Check S21), damit hängengebliebene App-Imports nicht gegen das Scan-Limit zählen; ist er nicht prüfbar, bleibt der Job liegen und wird im nächsten Lauf erneut geprüft.
 
+## Serverseitige Abrufe fremder Seiten
+
+- **Link-Vorschau** (`functions/linkVorschau.js`, genutzt von `wichtelTeilnahme` beim Speichern eines
+  Eintrags mit Link, also ohne Login erreichbar; Berechtigung ist das Wichtel-Token): nur GET auf http/https
+  mit Standard-Port, keine Zugangsdaten in der Adresse. Erlaubt sind nur öffentliche IP-Adressen; geprüft wird
+  im DNS-Lookup beim Verbindungsaufbau, also für jede Weiterleitung (höchstens 5) und ohne Lücke für
+  DNS-Rebinding. Je Abruf 5 s und 2 MB. Zurück gehen nur Bild-Adresse, Titel und Seitenname. Das Bild lädt
+  der Browser des Betrachters direkt vom Shop, ohne Referrer (die Teilnehmer-URL enthält das Token).
+- **Rezept-Import** (`assertPublicUrl` in `functions/shared/importSources.js`; `fetchRecipeHtml`,
+  `captureWebsiteScreenshot`, `importRecipeCallable`, `importRecipeShortcut`): prüft nur den Hostnamen als
+  Text, nicht die aufgelöste Adresse und nicht die Ziele von Weiterleitungen (Tech-Check S28, offen).
+
 ## Bekannte Lücken
 
 Die Tests in `rules-tests/access.test.js` halten diese Zustände fest (sie ersetzen das frühere Skript `scripts/testFirestoreRules.mjs`, dessen Fälle übernommen sind) (Name enthält „BEKANNTE LÜCKE"). Wer eine Lücke schließt, kehrt den Test um.

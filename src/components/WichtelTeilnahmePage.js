@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './WichtelTeilnahmePage.css';
 import WichtelZeile from './WichtelZeile';
+import WichtelLinkKarte, { seitenName } from './WichtelLinkKarte';
 import UndoSnackbar from './UndoSnackbar';
 import GiftIcon from './icons/GiftIcon';
 import LockIcon from './icons/LockIcon';
@@ -22,6 +23,7 @@ import {
 } from '../utils/wichtelTeilnahmeTexte';
 
 const MAX_TEXT = 300;
+const MAX_LINK = 2000;
 const FEIER_DAUER_MS = 1800;
 const FUNKEN = 8;
 
@@ -34,33 +36,74 @@ function Privat({ children }) {
   );
 }
 
-function EintragFormular({ label, placeholder, buttonText, busy, onSubmit, children }) {
+/**
+ * Text und optional ein Link; einer von beiden genügt. Zum Link holt der Server beim
+ * Speichern die Vorschau, das dauert ein paar Sekunden – daher „Speichert …“.
+ */
+function EintragFormular({ label, placeholder, linkLabel, buttonText, t, busy, onSubmit, children }) {
   const [text, setText] = useState('');
+  const [link, setLink] = useState('');
+  const [sendet, setSendet] = useState(false);
+  const leer = !text.trim() && !link.trim();
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const sauber = text.trim();
-    if (!sauber) return;
-    if (await onSubmit(sauber)) setText('');
+    if (leer || sendet) return;
+    setSendet(true);
+    try {
+      if (await onSubmit({ text: text.trim(), url: link.trim() })) {
+        setText('');
+        setLink('');
+      }
+    } finally {
+      setSendet(false);
+    }
   };
   return (
-    <form className="wt-formular" onSubmit={handleSubmit}>
+    // noValidate: „otto.de/…“ ohne https:// ist erlaubt, der Server ergänzt es.
+    <form className="wt-formular" onSubmit={handleSubmit} noValidate>
       {children}
+      <input
+        type="text"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={placeholder}
+        aria-label={label}
+        maxLength={MAX_TEXT}
+      />
       <div className="wt-formular-zeile">
         <input
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder={placeholder}
-          aria-label={label}
-          maxLength={MAX_TEXT}
+          type="url"
+          inputMode="url"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          value={link}
+          onChange={(e) => setLink(e.target.value)}
+          placeholder={t.linkPlatzhalter}
+          aria-label={linkLabel}
+          maxLength={MAX_LINK}
         />
-        <button type="submit" className="wt-btn" disabled={busy || !text.trim()}>
-          {buttonText}
+        <button type="submit" className="wt-btn" disabled={busy || sendet || leer}>
+          {sendet ? t.speichert : buttonText}
         </button>
       </div>
     </form>
   );
 }
+
+/** Text und Link-Vorschau eines Wunschs oder einer Idee. */
+function EintragInhalt({ eintrag, t }) {
+  return (
+    <>
+      {eintrag.text && <span className="wt-eintrag-text">{eintrag.text}</span>}
+      {eintrag.url && <WichtelLinkKarte url={eintrag.url} vorschau={eintrag.vorschau} neuerTabText={t.neuerTab} />}
+    </>
+  );
+}
+
+/** Name eines Eintrags für „… entfernen“: Text, sonst Titel oder Seite des Links. */
+const beschriftung = (eintrag, t) =>
+  eintrag.text || eintrag.vorschau?.titel || seitenName(eintrag.url) || t.eintrag;
 
 /**
  * Der Zettel: geschlossen mit Siegel, offen mit dem gezogenen Namen.
@@ -312,7 +355,9 @@ function WichtelTeilnahmePage({ rundeId, token, gueltig = true, currentUser, onC
             <p className="wt-leer">{fuelleText(t.keineWuensche, { name: empfaenger.name })}</p>
           ) : (
             <ul className="wt-liste">
-              {los.wuensche.map((w) => <li key={w.id} className="wt-eintrag">{w.text}</li>)}
+              {los.wuensche.map((w) => (
+                <li key={w.id} className="wt-eintrag"><EintragInhalt eintrag={w} t={t} /></li>
+              ))}
             </ul>
           )}
           <h3 className="wt-unter-titel">{t.ideenAnderer}</h3>
@@ -322,7 +367,7 @@ function WichtelTeilnahmePage({ rundeId, token, gueltig = true, currentUser, onC
             <ul className="wt-liste">
               {los.ideen.map((idee) => (
                 <li key={idee.id} className="wt-eintrag">
-                  {idee.text}
+                  <EintragInhalt eintrag={idee} t={t} />
                   <span className="wt-von">
                     {idee.vonDir ? t.vonDir : (idee.von ? fuelleText(t.von, { name: idee.von }) : t.vonGast)}
                   </span>
@@ -342,10 +387,10 @@ function WichtelTeilnahmePage({ rundeId, token, gueltig = true, currentUser, onC
             {meineWuensche.map((w) => (
               <WichtelZeile
                 key={w.id}
-                entfernenLabel={fuelleText(t.wunschEntfernen, { text: w.text })}
+                entfernenLabel={fuelleText(t.wunschEntfernen, { text: beschriftung(w, t) })}
                 onDelete={() => handleLoeschen(w, 'wunsch')}
               >
-                <span className="wt-eintrag-text">{w.text}</span>
+                <EintragInhalt eintrag={w} t={t} />
               </WichtelZeile>
             ))}
           </ul>
@@ -353,9 +398,11 @@ function WichtelTeilnahmePage({ rundeId, token, gueltig = true, currentUser, onC
         <EintragFormular
           label={t.wunschLabel}
           placeholder={t.wunschPlatzhalter}
+          linkLabel={t.wunschLinkLabel}
           buttonText={t.hinzufuegen}
+          t={t}
           busy={busy}
-          onSubmit={(text) => fuehreAus('eintragHinzufuegen', () => fuegeWichtelEintragHinzu(rundeId, token, ich.id, text))}
+          onSubmit={({ text, url }) => fuehreAus('eintragHinzufuegen', () => fuegeWichtelEintragHinzu(rundeId, token, ich.id, text, url))}
         />
       </section>
 
@@ -366,9 +413,11 @@ function WichtelTeilnahmePage({ rundeId, token, gueltig = true, currentUser, onC
           <EintragFormular
             label={t.ideeLabel}
             placeholder={t.ideePlatzhalter}
+            linkLabel={t.ideeLinkLabel}
             buttonText={t.speichern}
+            t={t}
             busy={busy || !ideeFuer}
-            onSubmit={(text) => fuehreAus('eintragHinzufuegen', () => fuegeWichtelEintragHinzu(rundeId, token, ideeFuer, text))}
+            onSubmit={({ text, url }) => fuehreAus('eintragHinzufuegen', () => fuegeWichtelEintragHinzu(rundeId, token, ideeFuer, text, url))}
           >
             <label className="wt-auswahl">
               <span>{t.fuerWen}</span>
@@ -385,10 +434,10 @@ function WichtelTeilnahmePage({ rundeId, token, gueltig = true, currentUser, onC
                 {gruppe.ideen.map((idee) => (
                   <WichtelZeile
                     key={idee.id}
-                    entfernenLabel={fuelleText(t.ideeEntfernen, { text: idee.text })}
+                    entfernenLabel={fuelleText(t.ideeEntfernen, { text: beschriftung(idee, t) })}
                     onDelete={() => handleLoeschen(idee, 'idee')}
                   >
-                    <span className="wt-eintrag-text">{idee.text}</span>
+                    <EintragInhalt eintrag={idee} t={t} />
                   </WichtelZeile>
                 ))}
               </ul>

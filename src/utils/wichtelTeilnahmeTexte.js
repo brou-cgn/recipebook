@@ -62,12 +62,19 @@ const TEXTE = {
     gastWaehlen: 'Gast wählen',
     ideeEntfernen: 'Idee „{text}“ entfernen',
     ideeEntfernt: 'Idee entfernt.',
+    linkPlatzhalter: 'Link (optional)',
+    wunschLinkLabel: 'Link zum Wunsch (optional)',
+    ideeLinkLabel: 'Link zur Geschenkidee (optional)',
+    speichert: 'Speichert …',
+    neuerTab: '(öffnet in neuem Tab)',
+    eintrag: 'Eintrag',
     rueckgaengig: 'Rückgängig',
     zurApp: 'Zur App',
     fehlerAllgemein: 'Das hat nicht geklappt. Bitte prüfe deine Verbindung und versuche es noch einmal.',
     fehlerGeaendert: 'Das hat nicht geklappt: Die Runde wurde inzwischen geändert oder gelöscht. Bitte lade die Seite neu.',
     fehlerKeinLos: 'Für dich liegt gerade kein Los bereit. Vielleicht wurde die Auslosung zurückgesetzt – lade die Seite neu oder frag den Organisator.',
     fehlerZuViele: 'Du hast schon die Höchstzahl an Einträgen. Lösche zuerst einen.',
+    fehlerLinkUngueltig: 'Der Link sieht nicht gültig aus. Bitte füge die ganze Adresse ein, z. B. https://…',
   },
   en: {
     laden: 'Getting your Secret Santa draw…',
@@ -110,12 +117,19 @@ const TEXTE = {
     gastWaehlen: 'Choose a guest',
     ideeEntfernen: 'Remove idea “{text}”',
     ideeEntfernt: 'Idea removed.',
+    linkPlatzhalter: 'Link (optional)',
+    wunschLinkLabel: 'Link for the wish (optional)',
+    ideeLinkLabel: 'Link for the gift idea (optional)',
+    speichert: 'Saving …',
+    neuerTab: '(opens in a new tab)',
+    eintrag: 'entry',
     rueckgaengig: 'Undo',
     zurApp: 'Back to the app',
     fehlerAllgemein: 'That didn’t work. Please check your connection and try again.',
     fehlerGeaendert: 'That didn’t work: this Secret Santa was changed or deleted in the meantime. Please reload the page.',
     fehlerKeinLos: 'There’s no slip ready for you right now. Maybe the draw was reset – reload the page or ask the organizer.',
     fehlerZuViele: 'You’ve reached the maximum number of entries. Delete one first.',
+    fehlerLinkUngueltig: 'That link doesn’t look valid. Please paste the full address, e.g. https://…',
   },
   fr: {
     laden: 'Chargement de ton tirage…',
@@ -159,12 +173,19 @@ const TEXTE = {
     gastWaehlen: 'Choisir un invité',
     ideeEntfernen: `Supprimer l’idée «${NBSP}{text}${NBSP}»`,
     ideeEntfernt: 'Idée supprimée.',
+    linkPlatzhalter: 'Lien (facultatif)',
+    wunschLinkLabel: 'Lien pour le souhait (facultatif)',
+    ideeLinkLabel: 'Lien pour l’idée cadeau (facultatif)',
+    speichert: 'Enregistrement …',
+    neuerTab: '(s’ouvre dans un nouvel onglet)',
+    eintrag: 'entrée',
     rueckgaengig: 'Annuler',
     zurApp: 'Retour à l’application',
     fehlerAllgemein: 'Ça n’a pas marché. Vérifie ta connexion et réessaie.',
     fehlerGeaendert: `Ça n’a pas marché${NBSP}: ce Secret Santa a été modifié ou supprimé entre-temps. Recharge la page.`,
     fehlerKeinLos: 'Aucun papier ne t’attend pour le moment. Le tirage a peut-être été réinitialisé – recharge la page ou demande à l’organisateur.',
     fehlerZuViele: 'Tu as atteint le nombre maximal d’entrées. Supprimes-en une d’abord.',
+    fehlerLinkUngueltig: `Ce lien ne semble pas valide. Colle l’adresse complète, par ex. https://…`,
   },
 };
 
@@ -237,5 +258,7 @@ export function wichtelFehlerSchluessel(error, aktion) {
   if (code === 'not-found') return 'fehlerGeaendert';
   if (code === 'failed-precondition' && aktion === 'ziehen') return 'fehlerKeinLos';
   if (code === 'resource-exhausted' && aktion === 'eintragHinzufuegen') return 'fehlerZuViele';
+  // Vom Formular aus kann nur der Link ungültig sein (leere Einträge verhindert es selbst).
+  if (code === 'invalid-argument' && aktion === 'eintragHinzufuegen') return 'fehlerLinkUngueltig';
   return 'fehlerAllgemein';
 }

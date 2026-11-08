@@ -100,12 +100,14 @@ describe('wichtelFehlerSchluessel', () => {
     expect(wichtelFehlerSchluessel(fehler('functions/not-found'), 'eintragHinzufuegen')).toBe('fehlerGeaendert');
     expect(wichtelFehlerSchluessel(fehler('functions/failed-precondition'), 'ziehen')).toBe('fehlerKeinLos');
     expect(wichtelFehlerSchluessel(fehler('functions/resource-exhausted'), 'eintragHinzufuegen')).toBe('fehlerZuViele');
+    expect(wichtelFehlerSchluessel(fehler('functions/invalid-argument'), 'eintragHinzufuegen')).toBe('fehlerLinkUngueltig');
   });
 
   it('alles andere ist der allgemeine Fehler', () => {
     expect(wichtelFehlerSchluessel(fehler('functions/unavailable'), 'laden')).toBe('fehlerAllgemein');
     expect(wichtelFehlerSchluessel(fehler('functions/failed-precondition'), 'eintragHinzufuegen')).toBe('fehlerAllgemein');
     expect(wichtelFehlerSchluessel(fehler('functions/resource-exhausted'), 'ziehen')).toBe('fehlerAllgemein');
+    expect(wichtelFehlerSchluessel(fehler('functions/invalid-argument'), 'laden')).toBe('fehlerAllgemein');
     expect(wichtelFehlerSchluessel(new Error('offline'), 'ziehen')).toBe('fehlerAllgemein');
     expect(wichtelFehlerSchluessel(undefined, 'laden')).toBe('fehlerAllgemein');
   });

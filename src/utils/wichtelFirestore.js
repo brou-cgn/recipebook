@@ -79,9 +79,12 @@ export const ladeWichtelTeilnahme = (rundeId, token) => rufeTeilnahme('laden', r
 
 export const zieheWichtelLos = (rundeId, token) => rufeTeilnahme('ziehen', rundeId, token);
 
-/** Wunsch (ueberId = eigene ID) oder Geschenkidee für einen anderen Gast. */
-export const fuegeWichtelEintragHinzu = (rundeId, token, ueberId, text) =>
-  rufeTeilnahme('eintragHinzufuegen', rundeId, token, { ueberId, text });
+/**
+ * Wunsch (ueberId = eigene ID) oder Geschenkidee für einen anderen Gast. Text oder Link
+ * genügt; zum Link holt der Server beim Speichern eine Bildvorschau (dauert bis zu 5 s).
+ */
+export const fuegeWichtelEintragHinzu = (rundeId, token, ueberId, text, url = '') =>
+  rufeTeilnahme('eintragHinzufuegen', rundeId, token, { ueberId, text, url });
 
 export const loescheWichtelEintrag = (rundeId, token, eintragId) =>
   rufeTeilnahme('eintragLoeschen', rundeId, token, { eintragId });

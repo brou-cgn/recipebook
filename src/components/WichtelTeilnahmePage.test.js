@@ -105,7 +105,7 @@ describe('WichtelTeilnahmePage', () => {
     fireEvent.change(await screen.findByLabelText('Wunsch hinzufügen'), { target: { value: ' Ein gutes Buch ' } });
     fireEvent.click(screen.getAllByRole('button', { name: 'Hinzufügen' })[0]);
     expect(await screen.findByText('Ein gutes Buch')).toBeInTheDocument();
-    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', 'tok', 't1', 'Ein gutes Buch');
+    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', 'tok', 't1', 'Ein gutes Buch', '');
     expect(screen.getByLabelText('Wunsch hinzufügen')).toHaveValue('');
   });
 
@@ -119,7 +119,7 @@ describe('WichtelTeilnahmePage', () => {
     fireEvent.change(screen.getByLabelText('Für wen?'), { target: { value: 't3' } });
     fireEvent.click(speichern);
     expect(await screen.findByRole('heading', { name: 'Für Cleo' })).toBeInTheDocument();
-    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', 'tok', 't3', 'Gin-Tasting');
+    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', 'tok', 't3', 'Gin-Tasting', '');
   });
 
   it('zieht das Los und zeigt Wünsche und Ideen nur für den Gezogenen', async () => {
@@ -198,6 +198,119 @@ describe('WichtelTeilnahmePage', () => {
 
     await act(async () => { alteAntwort(sicht()); });
     expect(screen.getByText('Buch')).toBeInTheDocument();
+  });
+
+  const VORSCHAU = { bild: 'https://cdn.example.de/messer.jpg', titel: 'Kochmesser 20 cm', seite: 'shop.example.de' };
+
+  it('trägt einen Wunsch mit Link ein und zeigt die Bildvorschau', async () => {
+    mockLaden.mockResolvedValue(sicht());
+    let antworte;
+    mockHinzufuegen.mockImplementation(() => new Promise((resolve) => { antworte = resolve; }));
+    renderSeite();
+    fireEvent.change(await screen.findByLabelText('Wunsch hinzufügen'), { target: { value: 'Ein gutes Messer' } });
+    fireEvent.change(screen.getByLabelText('Link zum Wunsch (optional)'), { target: { value: ' https://shop.example.de/messer ' } });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Hinzufügen' })[0]);
+
+    // Der Server holt die Vorschau: das dauert, der Knopf zeigt es.
+    expect(await screen.findByRole('button', { name: 'Speichert …' })).toBeDisabled();
+    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', 'tok', 't1', 'Ein gutes Messer', 'https://shop.example.de/messer');
+
+    await act(async () => {
+      antworte(sicht({
+        meineWuensche: [{ id: 'e1', text: 'Ein gutes Messer', url: 'https://shop.example.de/messer', vorschau: VORSCHAU }],
+      }));
+    });
+    const link = screen.getByRole('link', { name: /Kochmesser 20 cm/ });
+    expect(link).toHaveAttribute('href', 'https://shop.example.de/messer');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link.getAttribute('rel')).toEqual(expect.stringContaining('noreferrer'));
+    expect(link).toHaveTextContent('shop.example.de');
+    const bild = link.querySelector('img');
+    expect(bild).toHaveAttribute('src', VORSCHAU.bild);
+    expect(bild).toHaveAttribute('referrerpolicy', 'no-referrer');
+    expect(screen.getByText('Ein gutes Messer')).toBeInTheDocument();
+    expect(screen.getByLabelText('Link zum Wunsch (optional)')).toHaveValue('');
+  });
+
+  it('ein Link genügt; Löschen nennt dann den Titel der Seite', async () => {
+    mockLaden.mockResolvedValue(sicht());
+    mockHinzufuegen.mockResolvedValue(sicht({
+      meineIdeen: [{ id: 'e2', ueberId: 't2', ueberName: 'Ben', text: '', url: 'https://shop.example.de/messer', vorschau: VORSCHAU }],
+    }));
+    renderSeite();
+    fireEvent.change(await screen.findByLabelText('Für wen?'), { target: { value: 't2' } });
+    const speichern = screen.getByRole('button', { name: 'Speichern' });
+    expect(speichern).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Link zur Geschenkidee (optional)'), { target: { value: 'shop.example.de/messer' } });
+    fireEvent.click(speichern);
+    expect(await screen.findByRole('button', { name: 'Idee „Kochmesser 20 cm“ entfernen' })).toBeInTheDocument();
+    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', 'tok', 't2', '', 'shop.example.de/messer');
+  });
+
+  it('ohne Vorschaubild oder wenn es nicht lädt: Link-Symbol und Seitenname', async () => {
+    mockLaden.mockResolvedValue(sicht({
+      meineWuensche: [
+        { id: 'e1', text: 'Messer', url: 'https://shop.example.de/messer', vorschau: VORSCHAU },
+        { id: 'e2', text: 'Socken', url: 'https://www.socken.example.de/rot', vorschau: null },
+      ],
+    }));
+    renderSeite();
+    const messer = await screen.findByRole('link', { name: /Kochmesser 20 cm/ });
+    fireEvent.error(messer.querySelector('img'));
+    expect(messer.querySelector('img')).toBeNull();
+    expect(messer.querySelector('svg')).not.toBeNull();
+
+    const socken = screen.getByRole('link', { name: /socken\.example\.de/ });
+    expect(socken.querySelector('img')).toBeNull();
+    expect(socken).toHaveTextContent('socken.example.de');
+    expect(screen.getByRole('button', { name: 'Wunsch „Socken“ entfernen' })).toBeInTheDocument();
+  });
+
+  it('mobil: bei offener Swipe-Aktion schließt ein Tipp auf den Link sie nur', async () => {
+    mockLaden.mockResolvedValue(sicht({
+      meineWuensche: [{ id: 'e1', text: 'Messer', url: 'https://shop.example.de/messer', vorschau: VORSCHAU }],
+    }));
+    renderSeite();
+    const link = await screen.findByRole('link', { name: /Kochmesser 20 cm/ });
+    const zeile = link.closest('.wichtel-zeile-inhalt');
+    const beruehrung = (clientX) => ({ touches: [{ clientX, clientY: 100 }], cancelable: false });
+    fireEvent.touchStart(zeile, beruehrung(200));
+    fireEvent.touchMove(zeile, beruehrung(130));
+    fireEvent.touchEnd(zeile, {});
+    const zeileLi = link.closest('li');
+    await waitFor(() => expect(zeileLi).toHaveClass('swipe-delete-active'));
+
+    // dispatchEvent liefert false, wenn das Öffnen des Links verhindert wurde.
+    expect(fireEvent.click(link)).toBe(false);
+    expect(zeileLi).not.toHaveClass('swipe-delete-active');
+    expect(mockLoeschen).not.toHaveBeenCalled();
+  });
+
+  it('verlinkt nur http- und https-Adressen', async () => {
+    mockLaden.mockResolvedValue(sicht({
+      meineWuensche: [{ id: 'e1', text: 'Trick', url: 'javascript:alert(1)', vorschau: { bild: 'http://x.example.de/a.jpg', titel: 'T' } }],
+    }));
+    renderSeite();
+    expect(await screen.findByText('Trick')).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('der Ziehende sieht Links in Wünschen und Ideen seines Partners', async () => {
+    mockLaden.mockResolvedValue(sicht({
+      runde: { ...sicht().runde, status: 'ausgelost' },
+      los: {
+        gezogen: true,
+        empfaenger: { id: 't2', name: 'Ben' },
+        wuensche: [{ id: 'w1', text: '', url: 'https://shop.example.de/messer', vorschau: VORSCHAU }],
+        ideen: [{ id: 'i1', text: 'Passend dazu', url: 'https://brett.example.de/', vorschau: null, von: 'Cleo', vonDir: false }],
+      },
+    }));
+    renderSeite();
+    const partner = (await screen.findByRole('heading', { name: 'Für Ben' })).closest('section');
+    expect(within(partner).getByRole('link', { name: /Kochmesser 20 cm/ })).toHaveAttribute('href', 'https://shop.example.de/messer');
+    expect(within(partner).getByRole('link', { name: /brett\.example\.de/ })).toBeInTheDocument();
+    expect(within(partner).getByText('Passend dazu')).toBeInTheDocument();
+    expect(within(partner).getByText('von Cleo')).toBeInTheDocument();
   });
 
   it('bietet angemeldeten Nutzern den Weg zurück in die App', async () => {

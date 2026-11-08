@@ -52,8 +52,10 @@ function WichtelZeile({ itemName, entfernenLabel, onDelete, swipeIcon, className
         className={`wichtel-zeile-inhalt${canDelete ? ' delete-row-hover-target' : ''}`}
         style={offset ? { transform: `translateX(${offset}px)` } : undefined}
         onClickCapture={(e) => {
-          // Offene Swipe-Aktion: ein Tipp auf die Zeile schließt sie nur.
+          // Offene Swipe-Aktion: ein Tipp auf die Zeile schließt sie nur – auch auf
+          // einem Link darin (Link-Vorschau), der sonst die Seite öffnen würde.
           if (isDeleteVisible) {
+            e.preventDefault();
             e.stopPropagation();
             reset();
           }
