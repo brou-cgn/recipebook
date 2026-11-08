@@ -72,7 +72,9 @@ test('erstelleLookup: Hostnamen gehen nur durch, wenn alle Adressen erlaubt sind
   assert.equal(einzeln.adresse, '127.0.0.1');
   assert.equal(einzeln.familie, 4);
   const alle = await lookup(() => true, {all: true, family: 4});
-  assert.deepEqual(alle.adresse, [{address: '127.0.0.1', family: 4}]);
+  // Wie oft localhost auftaucht, hängt von /etc/hosts ab (GitHub-Runner: zweimal).
+  assert.ok(alle.adresse.length >= 1);
+  alle.adresse.forEach((a) => assert.deepEqual(a, {address: '127.0.0.1', family: 4}));
 });
 
 test('bildAdresse: absolut, https, nichts aus dem lokalen Netz', () => {
