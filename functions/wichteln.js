@@ -15,6 +15,8 @@
  *    geschrieben haben.
  *  - Teilnehmer-IDs sind keine Geheimnisse (sie stehen in Listen für alle Teilnehmer), das
  *    Token schon: es steht nur in der Organisator-Ansicht und im persönlichen Link.
+ *  - Ausschlüsse (wen ein Teilnehmer nicht ziehen soll) legt der Organisator fest; sie
+ *    stehen am Teilnehmer und gehen nur an den Organisator zurück, nie an Teilnehmer.
  *
  * Aufbau wie follow.js: reine Funktionen mit (admin, db, HttpsError, params), damit die
  * Tests sie mit einem Firestore-Ersatz aufrufen können.
@@ -31,6 +33,12 @@ const MAX_EINTRAEGE_PRO_AUTOR = 50;
 // ihrem vollen Kontingent. Real sind es eine Handvoll.
 const MAX_EINTRAEGE_UEBER = MAX_TEILNEHMER * MAX_EINTRAEGE_PRO_AUTOR;
 const BATCH_GROESSE = 400;
+// Auslosung mit Ausschlüssen: so viele zufällige Kreise werden gezogen und verworfen,
+// bevor gezielt gesucht wird (bei 100 Teilnehmern rund 40 ms), und so viele Schritte
+// darf die gezielte Suche gehen (lösbare Fälle brauchen meist nur einen je Teilnehmer;
+// ein unlösbarer mit 100 Teilnehmern gibt nach rund 0,2 s auf).
+const MAX_VERSUCHE = 2000;
+const MAX_SUCHSCHRITTE = 20000;
 
 const LAENGE = {titel: 80, budget: 40, hinweis: 300, name: 60, text: 300};
 const ORGANISATOR_ROLLEN = new Set(['edit', 'moderator', 'admin']);
@@ -86,28 +94,143 @@ function neuesToken() {
 }
 
 /**
- * Lost einen einzigen Kreis aus: jeder beschenkt genau einen anderen, niemand sich selbst,
- * und (ab drei Teilnehmern) beschenken sich nie zwei gegenseitig. Fisher-Yates mit
- * kryptografischem Zufall, danach beschenkt jeder seinen Nachfolger in der Reihe; damit
- * ist jeder mögliche Kreis gleich wahrscheinlich.
- * @param {string[]} ids - Teilnehmer-IDs (mindestens 3)
- * @param {function(number): number} [randomInt] - liefert eine Zahl in [0, max)
- * @return {Object<string, string>} geberId -> empfaengerId
+ * Fisher-Yates mit dem übergebenen Zufall.
+ * @param {Array} liste - bleibt unverändert
+ * @param {function(number): number} randomInt - liefert eine Zahl in [0, max)
+ * @return {Array} neue, gemischte Liste
  */
-function zieheKreis(ids, randomInt = crypto.randomInt) {
-  if (!Array.isArray(ids) || ids.length < MIN_TEILNEHMER || new Set(ids).size !== ids.length) {
-    throw new Error('zieheKreis braucht mindestens drei verschiedene IDs');
-  }
-  const reihe = [...ids];
+function mische(liste, randomInt) {
+  const reihe = [...liste];
   for (let i = reihe.length - 1; i > 0; i--) {
     const j = randomInt(i + 1);
     [reihe[i], reihe[j]] = [reihe[j], reihe[i]];
   }
+  return reihe;
+}
+
+/** Jeder in der Reihe beschenkt seinen Nachfolger, der Letzte den Ersten. */
+function kreisAus(reihe) {
   const zuordnung = {};
   reihe.forEach((id, i) => {
     zuordnung[id] = reihe[(i + 1) % reihe.length];
   });
   return zuordnung;
+}
+
+/**
+ * @param {Map<string, Iterable<string>>} [ausschluesse] - geberId -> wen er nicht ziehen soll
+ * @return {function(string, string): boolean} ob geber den empfaenger nicht ziehen darf
+ */
+function sperrPruefung(ausschluesse) {
+  const sperren = new Map([...(ausschluesse || [])].map(([geber, ids]) => [geber, new Set(ids)]));
+  return (geber, empfaenger) => Boolean(sperren.get(geber)?.has(empfaenger));
+}
+
+/**
+ * Offensichtliche Sackgasse: jemand darf niemanden ziehen, oder niemand darf ihn ziehen.
+ * Dann gibt es keinen Kreis, und die Suche braucht gar nicht erst zu laufen.
+ * @param {string[]} ids - Teilnehmer-IDs
+ * @param {function(string, string): boolean} gesperrt - aus sperrPruefung
+ * @return {{id: string, art: 'schenkt'|'bekommt'}|null} art 'schenkt': id darf niemanden
+ *     ziehen; 'bekommt': niemand darf id ziehen
+ */
+function findeEngpass(ids, gesperrt) {
+  for (const id of ids) {
+    if (ids.every((anderer) => anderer === id || gesperrt(id, anderer))) return {id, art: 'schenkt'};
+    if (ids.every((anderer) => anderer === id || gesperrt(anderer, id))) return {id, art: 'bekommt'};
+  }
+  return null;
+}
+
+/**
+ * Sucht gezielt einen erlaubten Kreis: verlängert die Reihe Schritt für Schritt und geht
+ * bei einer Sackgasse zurück. Zwei Regeln halten die Suche kurz:
+ *  - Als Nächster kommt zuerst, wer selbst die wenigsten Möglichkeiten hat (bei Gleichstand
+ *    zufällig). So bleiben Eingeschränkte – etwa ein großes Team, das sich nicht selbst
+ *    ziehen darf – nicht für den Schluss übrig.
+ *  - Hat ein noch Freier keinen möglichen Empfänger oder keinen möglichen Geber mehr, wird
+ *    der Zweig sofort verworfen.
+ * Gibt nach MAX_SUCHSCHRITTE auf.
+ * @param {string[]} ids - Teilnehmer-IDs
+ * @param {function(string, string): boolean} gesperrt - aus sperrPruefung
+ * @param {function(number): number} randomInt - liefert eine Zahl in [0, max)
+ * @return {Object<string, string>|null}
+ */
+function sucheKreis(ids, gesperrt, randomInt) {
+  const empfaenger = new Map(ids.map((id) => [
+    id, mische(ids.filter((x) => x !== id && !gesperrt(id, x)), randomInt),
+  ]));
+  const geber = new Map(ids.map((id) => [id, ids.filter((x) => x !== id && !gesperrt(x, id))]));
+  const start = ids[randomInt(ids.length)];
+  const reihe = [start];
+  const frei = new Set(ids.filter((id) => id !== start));
+  // Mögliche Empfänger je Teilnehmer: die Freien, dazu der Start (für den Schluss).
+  const ausgaenge = new Map(ids.map((id) => [id, empfaenger.get(id).length]));
+  // Mögliche Geber je Teilnehmer: die Freien und das aktuelle Ende der Reihe.
+  const eingaenge = new Map(ids.map((id) => [id, geber.get(id).length]));
+  const zaehle = (karte, liste, plus) => liste.forEach((id) => karte.set(id, karte.get(id) + plus));
+  const brauchtGeber = (id) => frei.has(id) || id === start;
+  let schritte = 0;
+
+  /** Hängt naechster an; false, wenn danach ein Freier ohne Empfänger oder Geber dasteht. */
+  const haengeAn = (aktuell, naechster) => {
+    reihe.push(naechster);
+    frei.delete(naechster);
+    zaehle(ausgaenge, geber.get(naechster), -1);
+    zaehle(eingaenge, empfaenger.get(aktuell), -1);
+    return geber.get(naechster).every((id) => !frei.has(id) || ausgaenge.get(id) > 0) &&
+        empfaenger.get(aktuell).every((id) => !brauchtGeber(id) || eingaenge.get(id) > 0);
+  };
+  const nimmZurueck = (aktuell, naechster) => {
+    reihe.pop();
+    frei.add(naechster);
+    zaehle(ausgaenge, geber.get(naechster), 1);
+    zaehle(eingaenge, empfaenger.get(aktuell), 1);
+  };
+  const weiter = (aktuell) => {
+    if (frei.size === 0) return !gesperrt(aktuell, start);
+    const kandidaten = empfaenger.get(aktuell)
+        .filter((id) => frei.has(id))
+        .sort((a, b) => ausgaenge.get(a) - ausgaenge.get(b));
+    for (const naechster of kandidaten) {
+      schritte += 1;
+      if (schritte > MAX_SUCHSCHRITTE) return false;
+      const moeglich = haengeAn(aktuell, naechster);
+      if (moeglich && weiter(naechster)) return true;
+      nimmZurueck(aktuell, naechster);
+    }
+    return false;
+  };
+  return weiter(start) ? kreisAus(reihe) : null;
+}
+
+/**
+ * Lost einen einzigen Kreis aus: jeder beschenkt genau einen anderen, niemand sich selbst,
+ * (ab drei Teilnehmern) beschenken sich nie zwei gegenseitig, und niemand zieht jemanden,
+ * den er nicht ziehen soll.
+ *
+ * Fisher-Yates mit kryptografischem Zufall, danach beschenkt jeder seinen Nachfolger in der
+ * Reihe; verletzt der Kreis einen Ausschluss, wird neu gezogen. Damit ist jeder erlaubte
+ * Kreis gleich wahrscheinlich (ohne Ausschlüsse passt schon der erste). Erst wenn nach
+ * MAX_VERSUCHE keiner passt – bei sehr vielen Ausschlüssen –, sucht sucheKreis gezielt.
+ * @param {string[]} ids - Teilnehmer-IDs (mindestens 3)
+ * @param {object} [optionen]
+ * @param {Map<string, Iterable<string>>} [optionen.ausschluesse] - geberId -> wen er nicht ziehen soll
+ * @param {function(number): number} [optionen.randomInt] - liefert eine Zahl in [0, max)
+ * @return {Object<string, string>|null} geberId -> empfaengerId; null, wenn die Ausschlüsse
+ *     keinen Kreis zulassen
+ */
+function zieheKreis(ids, {ausschluesse, randomInt = crypto.randomInt} = {}) {
+  if (!Array.isArray(ids) || ids.length < MIN_TEILNEHMER || new Set(ids).size !== ids.length) {
+    throw new Error('zieheKreis braucht mindestens drei verschiedene IDs');
+  }
+  const gesperrt = sperrPruefung(ausschluesse);
+  if (findeEngpass(ids, gesperrt)) return null;
+  for (let versuch = 0; versuch < MAX_VERSUCHE; versuch++) {
+    const reihe = mische(ids, randomInt);
+    if (reihe.every((id, i) => !gesperrt(id, reihe[(i + 1) % reihe.length]))) return kreisAus(reihe);
+  }
+  return sucheKreis(ids, gesperrt, randomInt);
 }
 
 /**
@@ -175,6 +298,36 @@ async function ladeEintraege(db, rundeId, feld, wert, limit) {
   return snap.docs.map((doc) => ({id: doc.id, ref: doc.ref, ...doc.data()})).sort(nachErstellung);
 }
 
+/**
+ * Wen ein Teilnehmer nicht ziehen soll: nur andere, noch vorhandene Teilnehmer, ohne Doppelte.
+ * @param {{id: string, ausschluesse?: *}} t - Teilnehmer (ältere ohne Feld: keine Ausschlüsse)
+ * @param {Set<string>} ids - IDs aller Teilnehmer der Runde
+ * @return {string[]}
+ */
+function ausschluesseVon(t, ids) {
+  const liste = Array.isArray(t.ausschluesse) ? t.ausschluesse : [];
+  return [...new Set(liste)].filter((id) => id !== t.id && ids.has(id));
+}
+
+/** @return {Map<string, string[]>} teilnehmerId -> wen er nicht ziehen soll */
+function ausschlussKarte(teilnehmer) {
+  const ids = new Set(teilnehmer.map((t) => t.id));
+  return new Map(teilnehmer.map((t) => [t.id, ausschluesseVon(t, ids)]));
+}
+
+/** Warum die Auslosung mit diesen Ausschlüssen nicht aufgeht – möglichst mit Namen. */
+function meldungOhneKreis(teilnehmer, ausschluesse) {
+  const engpass = findeEngpass(teilnehmer.map((t) => t.id), sperrPruefung(ausschluesse));
+  const name = engpass ? teilnehmer.find((t) => t.id === engpass.id)?.name : null;
+  if (name && engpass.art === 'schenkt') {
+    return `Für „${name}“ sind alle anderen ausgeschlossen – so bliebe niemand zum Beschenken. Nimm dort mindestens einen Ausschluss zurück.`;
+  }
+  if (name) {
+    return `„${name}“ ist bei allen anderen ausgeschlossen – so würde niemand „${name}“ beschenken. Nimm mindestens einen dieser Ausschlüsse zurück.`;
+  }
+  return 'Mit diesen Ausschlüssen ließ sich keine Auslosung finden. Nimm einen oder mehrere Ausschlüsse zurück.';
+}
+
 // ---------------------------------------------------------------------------
 // Organisator
 // ---------------------------------------------------------------------------
@@ -226,11 +379,12 @@ function rundenKopf(rundeId, runde, teilnehmerAnzahl) {
 }
 
 /**
- * Was der Organisator sieht: Runde, Teilnehmer mit Link-Token und Status.
+ * Was der Organisator sieht: Runde, Teilnehmer mit Link-Token, Status und Ausschlüssen.
  * Bewusst ohne Zuordnungen und ohne Einträge.
  */
 async function organisatorSicht(db, rundeId, runde) {
   const teilnehmer = await ladeTeilnehmer(db, rundeId);
+  const ausschluesse = ausschlussKarte(teilnehmer);
   return {
     runde: rundenKopf(rundeId, runde, teilnehmer.length),
     teilnehmer: teilnehmer.map((t) => ({
@@ -239,6 +393,7 @@ async function organisatorSicht(db, rundeId, runde) {
       token: t.token,
       geoeffnet: Boolean(t.geoeffnetAm),
       gezogen: Boolean(t.gezogenAm),
+      ausschluesse: ausschluesse.get(t.id),
     })),
   };
 }
@@ -253,9 +408,9 @@ function leseRundenFelder(daten, HttpsError) {
   };
 }
 
-function pruefeOffen(runde, HttpsError) {
+function pruefeOffen(runde, HttpsError, was = 'Teilnehmer') {
   if (runde.status === 'ausgelost') {
-    throw new HttpsError('failed-precondition', 'Die Runde ist schon ausgelost. Setze die Auslosung zurück, um Teilnehmer zu ändern.');
+    throw new HttpsError('failed-precondition', `Die Runde ist schon ausgelost. Setze die Auslosung zurück, um ${was} zu ändern.`);
   }
 }
 
@@ -274,6 +429,7 @@ async function fuegeTeilnehmerHinzu(admin, db, HttpsError, rundeRef, rundeId, na
     name,
     token: neuesToken(),
     reihenfolge: start + i + 1,
+    ausschluesse: [],
     geoeffnetAm: null,
     gezogenAm: null,
     erstelltAm: jetzt,
@@ -367,11 +523,43 @@ const VERWALTEN = {
     const refs = new Map([...vonIhm, ...ueberIhn].map((e) => [e.id, e.ref]));
     const schritte = [...refs.values()].map((eintragRef) => (batch) => batch.delete(eintragRef));
     schritte.push((batch) => batch.delete(db.doc(`${teilnehmerPfad(daten.rundeId)}/${teilnehmerId}`)));
+    // Wer ihn ausgeschlossen hatte, verliert diesen Ausschluss.
+    teilnehmer
+        .filter((t) => t.id !== teilnehmerId && Array.isArray(t.ausschluesse) && t.ausschluesse.includes(teilnehmerId))
+        .forEach((t) => schritte.push((batch) => batch.update(
+            db.doc(`${teilnehmerPfad(daten.rundeId)}/${t.id}`),
+            {ausschluesse: t.ausschluesse.filter((id) => id !== teilnehmerId)},
+        )));
     schritte.push((batch) => batch.update(ref, {
       teilnehmerAnzahl: teilnehmer.length - 1,
       aktualisiertAm: admin.firestore.FieldValue.serverTimestamp(),
     }));
     await schreibeInBatches(db, schritte);
+    return organisatorSicht(db, daten.rundeId, runde);
+  },
+
+  /**
+   * Ersetzt, wen ein Teilnehmer nicht ziehen soll. Nur vor dem Auslosen. IDs, die es in der
+   * Runde nicht (mehr) gibt, und der Teilnehmer selbst fallen still heraus – etwa aus einer
+   * Ansicht, die ein gerade entferntes Mitglied noch zeigte.
+   */
+  async ausschluesseSetzen({db, HttpsError, uid, daten}) {
+    const {runde} = await ladeEigeneRunde(db, HttpsError, uid, daten.rundeId);
+    pruefeOffen(runde, HttpsError, 'Ausschlüsse');
+    const teilnehmerId = pruefeId(daten.teilnehmerId, HttpsError);
+    if (!Array.isArray(daten.ausschluesse) || daten.ausschluesse.length > MAX_TEILNEHMER) {
+      throw new HttpsError('invalid-argument', 'ausschluesse muss eine Liste von Teilnehmer-IDs sein.');
+    }
+    daten.ausschluesse.forEach((id) => pruefeId(id, HttpsError));
+    const teilnehmer = await ladeTeilnehmer(db, daten.rundeId);
+    if (!teilnehmer.some((t) => t.id === teilnehmerId)) {
+      throw new HttpsError('not-found', 'Diesen Teilnehmer gibt es nicht (mehr).');
+    }
+    const ausschluesse = ausschluesseVon(
+        {id: teilnehmerId, ausschluesse: daten.ausschluesse},
+        new Set(teilnehmer.map((t) => t.id)),
+    );
+    await db.doc(`${teilnehmerPfad(daten.rundeId)}/${teilnehmerId}`).update({ausschluesse});
     return organisatorSicht(db, daten.rundeId, runde);
   },
 
@@ -381,7 +569,9 @@ const VERWALTEN = {
     if (teilnehmer.length < MIN_TEILNEHMER) {
       throw new HttpsError('failed-precondition', `Zum Auslosen braucht es mindestens ${MIN_TEILNEHMER} Teilnehmer.`);
     }
-    const zuordnung = zieheKreis(teilnehmer.map((t) => t.id), randomInt);
+    const ausschluesse = ausschlussKarte(teilnehmer);
+    const zuordnung = zieheKreis(teilnehmer.map((t) => t.id), {ausschluesse, randomInt});
+    if (!zuordnung) throw new HttpsError('failed-precondition', meldungOhneKreis(teilnehmer, ausschluesse));
     const jetzt = admin.firestore.FieldValue.serverTimestamp();
     // Statuswechsel in einer Transaktion: ein doppelter Klick lost nicht zweimal aus.
     const runde = await db.runTransaction(async (tx) => {
@@ -596,5 +786,8 @@ module.exports = {
   teilnahme,
   zieheKreis,
   neuesToken,
-  _internal: {bereinige, leseNamen, MIN_TEILNEHMER, MAX_TEILNEHMER, MAX_EINTRAEGE_PRO_AUTOR, LAENGE, TOKEN_MUSTER},
+  _internal: {
+    bereinige, leseNamen, sucheKreis, sperrPruefung,
+    MIN_TEILNEHMER, MAX_TEILNEHMER, MAX_EINTRAEGE_PRO_AUTOR, LAENGE, TOKEN_MUSTER,
+  },
 };
