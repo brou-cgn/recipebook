@@ -2,6 +2,9 @@ import {
   normalizePreferenceFactor,
   getGuestDisplayName,
   computeGuestPreferenceMultipliers,
+  GUEST_LANGUAGES,
+  DEFAULT_GUEST_LANGUAGE,
+  normalizeGuestLanguage,
 } from './guestPreferences';
 
 describe('guestPreferences', () => {
@@ -183,5 +186,23 @@ describe('guestPreferences', () => {
     expect(guest.preferenceFactor).toBe(0.75);
     expect(guest.preferredDrinkIds).toEqual(expect.arrayContaining(['cola', 'fanta']));
     expect(guest.preferredCategoryIds).toContain('softdrinks');
+  });
+});
+
+describe('Sprache für Einladungen', () => {
+  test('normalizeGuestLanguage: Profile ohne Feld und unbekannte Werte gelten als Deutsch', () => {
+    expect(DEFAULT_GUEST_LANGUAGE).toBe('de');
+    expect(normalizeGuestLanguage(undefined)).toBe('de');
+    expect(normalizeGuestLanguage(null)).toBe('de');
+    expect(normalizeGuestLanguage('es')).toBe('de');
+    expect(normalizeGuestLanguage('EN')).toBe('de');
+    expect(normalizeGuestLanguage('en')).toBe('en');
+    expect(normalizeGuestLanguage('fr')).toBe('fr');
+  });
+
+  test('bietet dieselben Sprachen an wie die Cloud Functions (Mail-Vorlagen)', () => {
+    const { SPRACHEN, STANDARD_SPRACHE } = require('../../functions/shared/sprachen');
+    expect(GUEST_LANGUAGES.map((language) => language.id)).toEqual(SPRACHEN);
+    expect(DEFAULT_GUEST_LANGUAGE).toBe(STANDARD_SPRACHE);
   });
 });

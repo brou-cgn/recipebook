@@ -218,7 +218,7 @@ describe('WichtelTeilnahmePage – Sprache des Gasts', () => {
     const { container } = renderSeite();
     expect(await screen.findByText('Hi Anna!')).toBeInTheDocument();
     expect(screen.getByText('Secret Santa')).toBeInTheDocument();
-    expect(screen.getByText('Budget: 20,00 €')).toBeInTheDocument();
+    expect(screen.getByText('Budget: €20.00')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Your draw' })).toBeInTheDocument();
     expect(screen.getByText(/Names haven’t been drawn yet/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Your wishes' })).toBeInTheDocument();

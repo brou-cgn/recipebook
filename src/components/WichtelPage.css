@@ -115,6 +115,12 @@
   color: var(--color-text-soft);
 }
 
+.wichtel-page .wichtel-chip--fehler {
+  border-color: var(--color-bad-text);
+  background: var(--color-bad-tint);
+  color: var(--color-bad-text);
+}
+
 /* Detail */
 .wichtel-detail-titel {
   overflow-wrap: anywhere;
@@ -179,6 +185,14 @@
   gap: 8px;
 }
 
+/* Link-Status und Mail-Status nebeneinander, links neben den Knöpfen */
+.wichtel-teilnehmer-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
 .wichtel-icon-btn {
   display: inline-flex;
   align-items: center;
@@ -226,9 +240,20 @@
   white-space: nowrap;
 }
 
-.wichtel-link-btn:hover {
+.wichtel-link-btn:hover:not(:disabled) {
   background: var(--color-events);
   color: var(--color-surface-card);
+}
+
+/* Zweiter Button neben „Link teilen“ (Per Mail senden / Erneut senden): leiser */
+.wichtel-link-btn--leise {
+  border-color: var(--color-border-strong);
+  color: var(--color-text-body);
+}
+
+.wichtel-link-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .wichtel-link-feld {

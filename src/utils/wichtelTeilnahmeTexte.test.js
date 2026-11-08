@@ -8,6 +8,7 @@ import {
   wichtelFehlerSchluessel,
   wichtelTexte,
 } from './wichtelTeilnahmeTexte';
+import { DEFAULT_GUEST_LANGUAGE, GUEST_LANGUAGES } from './guestPreferences';
 
 const platzhalter = (text) => new Set([...text.matchAll(/\{(\w+)\}/g)].map((treffer) => treffer[1]));
 const fehler = (code) => Object.assign(new Error('Meldung des Servers'), { code });
@@ -18,6 +19,11 @@ describe('wichtelTeilnahmeTexte – Wörterbuch', () => {
   it('bietet Deutsch, Englisch und Französisch an, Deutsch ist Standard', () => {
     expect(WICHTEL_SPRACHEN).toEqual(['de', 'en', 'fr']);
     expect(STANDARD_SPRACHE).toBe('de');
+  });
+
+  it('deckt jede Sprache ab, die im Gästeprofil wählbar ist', () => {
+    expect([...WICHTEL_SPRACHEN].sort()).toEqual(GUEST_LANGUAGES.map((sprache) => sprache.id).sort());
+    expect(STANDARD_SPRACHE).toBe(DEFAULT_GUEST_LANGUAGE);
   });
 
   it.each(['en', 'fr'])('%s hat genau die Schlüssel des Deutschen, keiner ist leer', (sprache) => {
