@@ -49,6 +49,47 @@ describe('Einladung', () => {
     expect(text).toContain(params.link);
   });
 
+  it('spricht den Gast in seiner Sprache an', () => {
+    const en = buildWichtelEinladung({ ...params, sprache: 'en' });
+    expect(en.split('\n')).toEqual([
+      'Hi Lena,',
+      'Here is your personal Secret Santa link for “Advent 2026”. Use it to draw a name, add your wishes and leave gift ideas for the others:',
+      params.link,
+      'Please don’t share it – this link is just for you.',
+    ]);
+
+    const fr = buildWichtelEinladung({ ...params, sprache: 'fr' });
+    expect(fr).toContain('Bonjour Lena,');
+    expect(fr).toContain('Père Noël secret «\u00A0Advent 2026\u00A0»');
+    expect(fr).toContain(params.link);
+    expect(fr).toContain('ce lien t’est réservé');
+  });
+
+  it('ohne oder mit unbekannter Sprache: Deutsch wie bisher', () => {
+    const deutsch = buildWichtelEinladung(params);
+    expect(deutsch.split('\n')[0]).toBe('Hallo Lena,');
+    expect(buildWichtelEinladung({ ...params, sprache: 'de' })).toBe(deutsch);
+    expect(buildWichtelEinladung({ ...params, sprache: 'es' })).toBe(deutsch);
+    expect(buildWichtelEinladung({ ...params, sprache: null })).toBe(deutsch);
+  });
+
+  it('übersetzt auch den Titel im Teilen-Menü', async () => {
+    navigator.share = jest.fn().mockResolvedValue();
+    await teileWichtelEinladung({ ...params, sprache: 'en' });
+    expect(navigator.share).toHaveBeenCalledWith({
+      title: 'Secret Santa: Advent 2026',
+      text: buildWichtelEinladung({ ...params, sprache: 'en' }),
+    });
+    await teileWichtelEinladung({ ...params, sprache: 'fr' });
+    expect(navigator.share).toHaveBeenLastCalledWith(expect.objectContaining({ title: 'Père Noël secret\u00A0: Advent 2026' }));
+  });
+
+  it('kopiert ohne Teilen-Menü den Text in der Sprache des Gasts', async () => {
+    navigator.clipboard = { writeText: jest.fn().mockResolvedValue() };
+    await expect(teileWichtelEinladung({ ...params, sprache: 'fr' })).resolves.toBe('kopiert');
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(buildWichtelEinladung({ ...params, sprache: 'fr' }));
+  });
+
   it('nutzt das Teilen-Menü, wenn vorhanden', async () => {
     navigator.share = jest.fn().mockResolvedValue();
     await expect(teileWichtelEinladung(params)).resolves.toBe('geteilt');

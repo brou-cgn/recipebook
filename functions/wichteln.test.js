@@ -342,7 +342,7 @@ test('wichtelVerwalten: unbekannte Aktion', async () => {
 
 test('Fremde Runden sind für andere Organisatoren nicht vorhanden', async () => {
   const {db, rundeId} = await setupRunde();
-  for (const aktion of ['laden', 'auslosen', 'loeschen', 'aendern', 'teilnehmerHinzufuegen', 'ausschluesseSetzen']) {
+  for (const aktion of ['laden', 'auslosen', 'loeschen', 'aendern', 'teilnehmerHinzufuegen', 'ausschluesseSetzen', 'einladungSenden']) {
     await rejectsWith(verwalten(db, 'andere', {aktion, rundeId, titel: 'x', namen: ['Eve']}), 'not-found');
   }
   await rejectsWith(verwalten(db, 'orga', {aktion: 'laden', rundeId: '../users/orga'}), 'not-found');
@@ -441,7 +441,8 @@ test('auslosen schreibt einen Kreis und verrät dem Organisator nichts davon', a
   // Die Antwort an den Organisator enthält keine Zuordnung, auch nicht versteckt.
   const json = JSON.stringify(sicht);
   assert.doesNotMatch(json, /empfaenger|zuordnung/i);
-  sicht.teilnehmer.forEach((t) => assert.deepEqual(Object.keys(t).sort(), ['ausschluesse', 'geoeffnet', 'gezogen', 'id', 'name', 'token']));
+  sicht.teilnehmer.forEach((t) => assert.deepEqual(Object.keys(t).sort(),
+      ['ausschluesse', 'gastId', 'geoeffnet', 'gezogen', 'id', 'mail', 'name', 'token']));
 
   await rejectsWith(verwalten(db, 'orga', {aktion: 'auslosen', rundeId}), 'failed-precondition');
   await rejectsWith(verwalten(db, 'orga', {aktion: 'teilnehmerHinzufuegen', rundeId, namen: ['Eve']}), 'failed-precondition');
@@ -725,6 +726,236 @@ test('Bereinigung: Leerraum, Länge, Nicht-Strings', () => {
   assert.equal(bereinige('  a \n\t b  ', 10), 'a b');
   assert.equal(bereinige('abcdef', 3), 'abc');
   assert.equal(bereinige(42, 10), '');
-  assert.deepEqual(leseNamen(['Lena', 'lena', ' Tom ', 7, ''], FakeHttpsError), ['Lena', 'Tom']);
+  assert.deepEqual(leseNamen(['Lena', 'lena', ' Tom ', 7, ''], FakeHttpsError),
+      [{name: 'Lena', gastId: null}, {name: 'Tom', gastId: null}]);
+  assert.deepEqual(leseNamen([{name: ' Anna  M. ', gastId: 'gastAnna0001'}, {name: 'Ben', gastId: null}], FakeHttpsError),
+      [{name: 'Anna M.', gastId: 'gastAnna0001'}, {name: 'Ben', gastId: null}]);
+  assert.throws(() => leseNamen([{name: 'Anna', gastId: '../x'}], FakeHttpsError));
+  assert.throws(() => leseNamen([{name: 'Anna', gastId: 42}], FakeHttpsError));
   assert.throws(() => leseNamen(Array.from({length: 101}, (_, i) => `n${i}`), FakeHttpsError));
+});
+
+// ---------------------------------------------------------------------------
+// Einladung per Mail
+// ---------------------------------------------------------------------------
+
+const {APP_URL, MAX_MAILS_PRO_TAG, berlinerTag} = wichteln._internal;
+const JETZT = Date.UTC(2026, 11, 1, 12);
+
+/** Gästelisten: orga hat Anna (Englisch), Ben (ohne Sprache = Deutsch), Cleo (ohne E-Mail). */
+const mailSeed = () => ({
+  ...baseSeed(),
+  'users/orga': {role: 'edit', vorname: 'Olga'},
+  'guests/orga/profiles/gastAnna0001': {vorname: 'Anna', nachname: 'Muster', email: 'anna@example.com', sprache: 'en'},
+  'guests/orga/profiles/gastBen00001': {vorname: 'Ben', nachname: 'Beispiel', email: 'Ben@Example.com'},
+  'guests/orga/profiles/gastCleo0001': {vorname: 'Cleo', nachname: 'Ohne'},
+  'guests/andere/profiles/gastFremd001': {vorname: 'Eve', nachname: 'Fremd', email: 'eve@example.com'},
+});
+
+/** SMTP-Ersatz: merkt sich Mails; Adressen in `fehlerFuer` lehnt er wie ein Server ab. */
+const makeMailer = ({fehlerFuer = []} = {}) => {
+  const zustand = {gesendet: [], erstellt: 0, geschlossen: 0};
+  zustand.factory = () => {
+    zustand.erstellt += 1;
+    return {
+      senden: async (mail) => {
+        if (fehlerFuer.includes(mail.to)) {
+          throw Object.assign(new Error(`550 5.1.1 <${mail.to}>: Recipient address rejected`),
+              {code: 'EENVELOPE', responseCode: 550, command: 'RCPT TO'});
+        }
+        zustand.gesendet.push(mail);
+        return {};
+      },
+      schliessen: () => {
+        zustand.geschlossen += 1;
+      },
+    };
+  };
+  return zustand;
+};
+
+const setupMailRunde = async (mailer = makeMailer(), seed = mailSeed()) => {
+  const db = makeDb(seed);
+  const extra = {mailer: mailer.factory, jetztMs: JETZT};
+  const sicht = await verwalten(db, 'orga', {aktion: 'anlegen', titel: 'Advent 2026', budget: '20 €', hinweis: 'Bescherung am 13.12.'}, extra);
+  const rundeId = sicht.runde.id;
+  const orga = (daten) => verwalten(db, 'orga', {rundeId, ...daten}, extra);
+  return {db, rundeId, mailer, orga};
+};
+
+const nachName = (sicht) => Object.fromEntries(sicht.teilnehmer.map((t) => [t.name, t]));
+
+const mitStillemLog = async (fn) => {
+  const zeilen = [];
+  const original = console.error;
+  console.error = (...args) => zeilen.push(args.map(String).join(' '));
+  try {
+    return {ergebnis: await fn(), zeilen};
+  } finally {
+    console.error = original;
+  }
+};
+
+test('Gäste mit E-Mail bekommen beim Eintragen ihren Link per Mail, in ihrer Sprache', async () => {
+  const {db, rundeId, mailer, orga} = await setupMailRunde();
+  const sicht = await orga({aktion: 'teilnehmerHinzufuegen', namen: [
+    {name: 'Anna Muster', gastId: 'gastAnna0001'},
+    {name: 'Ben Beispiel', gastId: 'gastBen00001'},
+    {name: 'Cleo Ohne', gastId: 'gastCleo0001'},
+    'Dana',
+  ]});
+
+  assert.deepEqual(sicht.versand, {gesendet: 2, fehlgeschlagen: 0, grund: null});
+  const tn = nachName(sicht);
+  const anna = mailer.gesendet.find((m) => m.to === 'anna@example.com');
+  const ben = mailer.gesendet.find((m) => m.to === 'ben@example.com');
+  assert.equal(mailer.gesendet.length, 2);
+  assert.equal(anna.subject, 'Your Secret Santa link for “Advent 2026”');
+  assert.match(anna.text, /^Hi Anna Muster,\n\nOlga has invited you/);
+  assert.ok(anna.text.includes(`${APP_URL}/wichteln/${rundeId}/${tn['Anna Muster'].token}`), 'Annas eigener Link');
+  assert.equal(ben.subject, 'Dein Wichtel-Link für „Advent 2026“', 'ohne Sprache im Profil: Deutsch');
+  assert.ok(ben.text.includes(`${APP_URL}/wichteln/${rundeId}/${tn['Ben Beispiel'].token}`), 'Bens eigener Link');
+  assert.match(ben.text, /Budget: 20,00\s€\nHinweis: Bescherung am 13\.12\./);
+  assert.equal(mailer.erstellt, 1, 'ein Mailer für alle Mails des Aufrufs');
+  assert.equal(mailer.geschlossen, 1);
+
+  assert.deepEqual([tn['Anna Muster'].gastId, tn['Anna Muster'].mail.status], ['gastAnna0001', 'gesendet']);
+  assert.equal(typeof tn['Anna Muster'].mail.am, 'number');
+  assert.deepEqual([tn['Cleo Ohne'].gastId, tn['Cleo Ohne'].mail], ['gastCleo0001', null], 'ohne Adresse keine Mail');
+  assert.deepEqual([tn.Dana.gastId, tn.Dana.mail], [null, null]);
+
+  // Die Adressen bleiben im Gästeprofil, in der Runde stehen sie nirgends.
+  const runde = JSON.stringify([...db.store.entries()].filter(([path]) => path.startsWith('wichtelRunden/')));
+  assert.doesNotMatch(runde, /@/);
+  // Teilnehmer sehen weder Gast-Verknüpfung noch Mailstatus noch Adressen.
+  const annaSicht = await teilnahme(db, {aktion: 'laden', rundeId, token: tn['Anna Muster'].token});
+  assert.doesNotMatch(JSON.stringify(annaSicht), /gastId|mail|@/i);
+});
+
+test('Ohne Gast mit E-Mail-Adresse wird kein Mailer erzeugt (SMTP-Secrets bleiben ungelesen)', async () => {
+  const {mailer, orga} = await setupMailRunde();
+  const sicht = await orga({aktion: 'teilnehmerHinzufuegen', namen: ['Anna', {name: 'Cleo Ohne', gastId: 'gastCleo0001'}]});
+  assert.deepEqual(sicht.versand, {gesendet: 0, fehlgeschlagen: 0, grund: null});
+  assert.equal(mailer.erstellt, 0);
+});
+
+test('Verknüpft werden nur Gäste aus der eigenen Gästeliste', async () => {
+  const {mailer, orga} = await setupMailRunde();
+  const sicht = await orga({aktion: 'teilnehmerHinzufuegen', namen: [
+    {name: 'Eve Fremd', gastId: 'gastFremd001'},
+    {name: 'Niemand', gastId: 'gibtesnicht1'},
+  ]});
+  assert.deepEqual(sicht.teilnehmer.map((t) => t.gastId), [null, null]);
+  assert.equal(mailer.gesendet.length, 0);
+  await rejectsWith(orga({aktion: 'teilnehmerHinzufuegen', namen: [{name: 'X', gastId: '../../users/orga'}]}), 'invalid-argument');
+});
+
+test('Anlegen mit Gästen verschickt ebenfalls', async () => {
+  const mailer = makeMailer();
+  const db = makeDb(mailSeed());
+  const sicht = await verwalten(db, 'orga', {aktion: 'anlegen', titel: 'Advent', namen: [{name: 'Anna', gastId: 'gastAnna0001'}, 'Ben', 'Cleo']},
+      {mailer: mailer.factory, jetztMs: JETZT});
+  assert.deepEqual(sicht.versand, {gesendet: 1, fehlgeschlagen: 0, grund: null});
+  assert.equal(mailer.gesendet[0].to, 'anna@example.com');
+});
+
+test('Mailversand nicht eingerichtet: Teilnehmer ist angelegt, Mail als nicht verschickt markiert', async () => {
+  const {orga} = await setupMailRunde({factory: () => null});
+  const sicht = await orga({aktion: 'teilnehmerHinzufuegen', namen: [{name: 'Anna', gastId: 'gastAnna0001'}]});
+  assert.deepEqual(sicht.versand, {gesendet: 0, fehlgeschlagen: 1, grund: 'nicht-eingerichtet'});
+  assert.equal(sicht.teilnehmer[0].mail.status, 'fehler');
+});
+
+test('SMTP-Fehler: Status fehler, im Log nur Codes und IDs, keine Adresse', async () => {
+  const {orga} = await setupMailRunde(makeMailer({fehlerFuer: ['anna@example.com']}));
+  const {ergebnis: sicht, zeilen} = await mitStillemLog(() => orga({aktion: 'teilnehmerHinzufuegen', namen: [
+    {name: 'Anna', gastId: 'gastAnna0001'},
+    {name: 'Ben', gastId: 'gastBen00001'},
+  ]}));
+  assert.deepEqual(sicht.versand, {gesendet: 1, fehlgeschlagen: 1, grund: 'fehler'});
+  const tn = nachName(sicht);
+  assert.deepEqual([tn.Anna.mail.status, tn.Ben.mail.status], ['fehler', 'gesendet']);
+  assert.equal(zeilen.length, 1);
+  assert.match(zeilen[0], /EENVELOPE 550 RCPT TO/);
+  assert.ok(zeilen[0].includes(tn.Anna.id));
+  assert.doesNotMatch(zeilen.join('\n'), /@/);
+});
+
+test('Tageslimit je Organisator: was darüber liegt, geht nicht raus', async () => {
+  const seed = mailSeed();
+  seed[`wichtelMailLimits/orga_${berlinerTag(JETZT)}`] = {uid: 'orga', tag: berlinerTag(JETZT), anzahl: MAX_MAILS_PRO_TAG - 1};
+  const {db, mailer, orga} = await setupMailRunde(makeMailer(), seed);
+  const sicht = await orga({aktion: 'teilnehmerHinzufuegen', namen: [
+    {name: 'Anna', gastId: 'gastAnna0001'},
+    {name: 'Ben', gastId: 'gastBen00001'},
+  ]});
+  assert.deepEqual(sicht.versand, {gesendet: 1, fehlgeschlagen: 1, grund: 'limit'});
+  assert.equal(mailer.gesendet.length, 1);
+  assert.equal(db.store.get(`wichtelMailLimits/orga_${berlinerTag(JETZT)}`).anzahl, MAX_MAILS_PRO_TAG);
+
+  // Am nächsten Tag ist wieder Platz.
+  const ben = nachName(sicht).Ben;
+  const ziel = ben.mail.status === 'fehler' ? ben : nachName(sicht).Anna;
+  const morgen = await verwalten(db, 'orga', {aktion: 'einladungSenden', rundeId: sicht.runde.id, teilnehmerId: ziel.id},
+      {mailer: mailer.factory, jetztMs: JETZT + 24 * 60 * 60 * 1000});
+  assert.deepEqual(morgen.versand, {gesendet: 1, fehlgeschlagen: 0, grund: null});
+});
+
+test('Limit nicht prüfbar: keine Mail (schlägt geschlossen fehl)', async () => {
+  const {db, mailer, orga} = await setupMailRunde();
+  db.runTransaction = async () => {
+    throw new Error('offline');
+  };
+  const {ergebnis: sicht} = await mitStillemLog(() => orga({aktion: 'teilnehmerHinzufuegen', namen: [{name: 'Anna', gastId: 'gastAnna0001'}]}));
+  assert.deepEqual(sicht.versand, {gesendet: 0, fehlgeschlagen: 1, grund: 'fehler'});
+  assert.equal(mailer.gesendet.length, 0);
+});
+
+test('einladungSenden: erneut senden, Gast nachträglich verknüpfen, Prüfungen', async () => {
+  const {mailer, orga} = await setupMailRunde();
+  let sicht = await orga({aktion: 'teilnehmerHinzufuegen', namen: ['Anna Muster', 'Ben', {name: 'Cleo', gastId: 'gastCleo0001'}]});
+  const tn = nachName(sicht);
+  assert.equal(mailer.gesendet.length, 0);
+
+  // Ohne Verknüpfung weiß der Server keine Adresse.
+  await rejectsWith(orga({aktion: 'einladungSenden', teilnehmerId: tn['Anna Muster'].id}), 'failed-precondition');
+  // Mit Gast-ID: verknüpfen und senden.
+  sicht = await orga({aktion: 'einladungSenden', teilnehmerId: tn['Anna Muster'].id, gastId: 'gastAnna0001'});
+  assert.deepEqual(sicht.versand, {gesendet: 1, fehlgeschlagen: 0, grund: null});
+  assert.equal(nachName(sicht)['Anna Muster'].gastId, 'gastAnna0001');
+  assert.equal(mailer.gesendet[0].to, 'anna@example.com');
+
+  // Erneut senden geht auch nach dem Auslosen, mit der gespeicherten Verknüpfung.
+  await orga({aktion: 'auslosen'});
+  sicht = await orga({aktion: 'einladungSenden', teilnehmerId: tn['Anna Muster'].id});
+  assert.equal(sicht.versand.gesendet, 1);
+  assert.equal(mailer.gesendet.length, 2);
+
+  await rejectsWith(orga({aktion: 'einladungSenden', teilnehmerId: tn.Cleo.id}), 'failed-precondition');
+  await rejectsWith(orga({aktion: 'einladungSenden', teilnehmerId: tn.Ben.id, gastId: 'gastFremd001'}), 'not-found');
+  await rejectsWith(orga({aktion: 'einladungSenden', teilnehmerId: 'gibtesnicht1'}), 'not-found');
+  await rejectsWith(orga({aktion: 'einladungSenden', teilnehmerId: tn.Ben.id, gastId: 'a/b'}), 'invalid-argument');
+  assert.equal(mailer.gesendet.length, 2);
+});
+
+test('Organisator ohne Vorname: neutrale Einladung', async () => {
+  const seed = mailSeed();
+  seed['users/orga'] = {role: 'edit'};
+  const {mailer, orga} = await setupMailRunde(makeMailer(), seed);
+  await orga({aktion: 'teilnehmerHinzufuegen', namen: [{name: 'Ben', gastId: 'gastBen00001'}]});
+  assert.match(mailer.gesendet[0].text, /^Hallo Ben,\n\ndu bist beim Wichteln „Advent 2026“ dabei\./);
+});
+
+test('Ein Gast ist je Runde nur einmal dabei, auch unter anderem Namen', async () => {
+  const {mailer, orga} = await setupMailRunde();
+  const sicht = await orga({aktion: 'teilnehmerHinzufuegen', namen: [{name: 'Anna M.', gastId: 'gastAnna0001'}, 'Ben']});
+  await rejectsWith(orga({aktion: 'teilnehmerHinzufuegen', namen: [{name: 'Anna Muster', gastId: 'gastAnna0001'}]}), 'already-exists');
+  await rejectsWith(orga({aktion: 'teilnehmerHinzufuegen', namen: [
+    {name: 'Cleo', gastId: 'gastCleo0001'},
+    {name: 'Cleo O.', gastId: 'gastCleo0001'},
+  ]}), 'already-exists');
+  // Erneut senden darf einen anderen Teilnehmer nicht mit einem schon verknüpften Gast verbinden.
+  const ben = nachName(sicht).Ben;
+  await rejectsWith(orga({aktion: 'einladungSenden', teilnehmerId: ben.id, gastId: 'gastAnna0001'}), 'already-exists');
+  assert.equal(mailer.gesendet.length, 1);
 });
