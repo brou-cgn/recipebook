@@ -64,3 +64,15 @@ test('wichtelRunden: niemand schreibt direkt', async () => {
     await assertFails(db.doc(RUNDE).delete());
   }
 });
+
+test('wichtelMailLimits: Tageszähler für Einladungs-Mails nur über Cloud Functions', async () => {
+  await seed(env, async (db) => {
+    await db.doc('wichtelMailLimits/editor_2026-12-01').set({ uid: 'editor', tag: '2026-12-01', anzahl: 3 });
+  });
+  for (const db of Object.values(alle(env))) {
+    await assertFails(db.doc('wichtelMailLimits/editor_2026-12-01').get());
+    await assertFails(db.collection('wichtelMailLimits').where('uid', '==', 'editor').limit(10).get());
+    await assertFails(db.doc('wichtelMailLimits/editor_2026-12-01').set({ uid: 'editor', tag: '2026-12-01', anzahl: 0 }));
+    await assertFails(db.doc('wichtelMailLimits/editor_2026-12-01').delete());
+  }
+});

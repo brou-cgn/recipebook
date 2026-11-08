@@ -545,6 +545,12 @@ service cloud.firestore {
       }
     }
 
+    // Tageszähler für Wichtel-Einladungen per Mail (je Organisator und Berliner Tag,
+    // functions/wichteln.js), nur Admin SDK.
+    match /wichtelMailLimits/{id} {
+      allow read, write: if false;
+    }
+
     // Cook dates collection - global tracking of when users cooked recipes
     match /cookDates/{cookDateId} {
       allow read: if isMember();

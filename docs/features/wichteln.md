@@ -10,19 +10,26 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
 
 1. Runde anlegen: Titel, optional Budget und Hinweis (z. B. „Bescherung am 13.12.“).
 2. Teilnehmer eintragen – mehrere auf einmal mit Komma, oder per Tipp aus der eigenen Gästeliste.
-   Namen sind je Runde eindeutig (Groß-/Kleinschreibung egal).
+   Namen sind je Runde eindeutig (Groß-/Kleinschreibung egal). Ein Gast aus der Gästeliste (per Tipp
+   oder mit genau seinem Namen eingetippt) wird mit dem Teilnehmer verknüpft und ist je Runde nur
+   einmal dabei, auch nach dem Umbenennen.
 3. Optional Ausschlüsse (ab drei Teilnehmern): in der Zeile eines Teilnehmers „Ausschlüsse“ öffnen
    und antippen, wen er nicht ziehen soll. Jeder Tipp speichert sofort. Ein Ausschluss gilt nur in
    eine Richtung – bei Paaren für beide setzen. Einen Gast muss jeder beschenken können, der letzte
    freie lässt sich nicht ausschließen. Zugeklappt steht in der Zeile „Beschenkt nicht: …“.
-4. Links verschicken („Link teilen“: Teilen-Menü des Handys, sonst Kopieren). Das geht schon vor
-   dem Auslosen – dann können alle früh ihre Wünsche eintragen.
+4. Links verschicken. Verknüpfte Gäste mit E-Mail-Adresse bekommen ihren Link beim Eintragen
+   automatisch per Mail, in der Sprache aus ihrem Gästeprofil (siehe „Einladung per Mail“). Für alle
+   anderen „Link teilen“: Teilen-Menü des Handys, sonst Kopieren – der Text ist ebenfalls in der
+   Sprache des Gasts, ohne verknüpften Gast Deutsch. Das geht schon vor dem Auslosen – dann können
+   alle früh ihre Wünsche eintragen.
 5. „Jetzt auslosen“ (ab drei Teilnehmern). Lassen die Ausschlüsse keine Auslosung zu, sagt die App,
    woran es liegt (z. B. „Für „Anna“ sind alle anderen ausgeschlossen“). Danach sind Teilnehmer und
    Ausschlüsse gesperrt; ändern geht erst nach „Auslosung zurücksetzen“ (mit Rückfrage). Links,
    Ausschlüsse, Wünsche und Ideen bleiben dabei erhalten, wer schon gezogen hatte, zieht nach dem
    nächsten Auslosen neu.
-6. Je Teilnehmer sichtbar: „Link noch nicht geöffnet“ / „Link geöffnet“ / „Los gezogen“.
+6. Je Teilnehmer sichtbar: „Link noch nicht geöffnet“ / „Link geöffnet“ / „Los gezogen“, bei Mails
+   zusätzlich „Per Mail verschickt“ oder „Mail nicht verschickt“. „Per Mail senden“ bzw. „Erneut
+   senden“ steht bei jedem Teilnehmer, dessen Gast eine E-Mail-Adresse hat, auch nach dem Auslosen.
 
 **Teilnehmer** (`/wichteln/{rundeId}/{token}`, ohne Login):
 
@@ -44,6 +51,8 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
 | Namen aller Teilnehmer | ja | ja | ja | ja |
 | Persönlicher Link (Token) | ja | nein | nein | ja (zum Verschicken) |
 | Seine Ausschlüsse (wen er nicht ziehen soll) | nein | nein | nein | ja (legt sie fest) |
+| E-Mail-Adresse und Sprache | nein | nein | nein | ja, in der eigenen Gästeliste (nicht in der Runde gespeichert) |
+| Verknüpfter Gast, Mail-Status | nein | nein | nein | ja |
 
 Durchgesetzt wird das serverseitig, nicht in der Oberfläche:
 
@@ -65,10 +74,18 @@ wichtelRunden/{rundeId}            ownerId, titel, budget, hinweis, status ('off
                                    teilnehmerAnzahl, ausgelostAm, erstelltAm, aktualisiertAm
   teilnehmer/{teilnehmerId}        name, token (geheim), reihenfolge, ausschluesse (Teilnehmer-IDs,
                                    die er nicht ziehen soll; fehlt bei älteren = keine), geoeffnetAm,
-                                   gezogenAm, erstelltAm
+                                   gezogenAm, erstelltAm, gastId (→ guests/{ownerId}/profiles/{gastId}
+                                   oder null), mailStatus ('gesendet'|'fehler'|null), mailAm (letzter
+                                   Versuch)
   zuordnungen/{geberId}            empfaengerId, ausgelostAm
   eintraege/{eintragId}            autorId, ueberId, text, erstelltAm
+
+wichtelMailLimits/{uid}_{JJJJ-MM-TT}   uid, tag, anzahl   (Tageszähler je Organisator, Berliner Tag)
 ```
+
+Teilnehmer, die vor der Gast-Verknüpfung angelegt wurden, haben die drei Mail-Felder nicht; das liest
+sich wie `null`. Die Oberfläche ordnet sie über den gleichen Namen einem Gast zu (Sprache beim Teilen,
+„Per Mail senden“); beim ersten Senden wird die Verknüpfung gespeichert.
 
 Ein Wunsch ist ein Eintrag mit `autorId == ueberId`, eine Geschenkidee einer mit `autorId != ueberId`.
 Teilnehmer-IDs sind keine Geheimnisse (sie stehen in der Gästeliste jedes Teilnehmers), das Token schon.
@@ -80,16 +97,42 @@ Feld `aktion`: `liste`, `laden`, `anlegen`, `aendern`, `teilnehmerHinzufuegen`, 
 `teilnehmerEntfernen` (löscht auch seine Einträge und die Ideen über ihn und nimmt ihn aus den
 Ausschlüssen der anderen), `ausschluesseSetzen` (`teilnehmerId`, `ausschluesse`: ersetzt die Liste, nur
 vor dem Auslosen; unbekannte IDs und der Teilnehmer selbst fallen still heraus), `auslosen`,
-`zuruecksetzen`, `loeschen`. Fremde Runden antworten wie nicht vorhandene (`not-found`). Die
-Organisator-Sicht enthält je Teilnehmer `ausschluesse`; Teilnehmer-Antworten enthalten sie nie.
+`zuruecksetzen`, `loeschen`, `einladungSenden` (`teilnehmerId`, optional `gastId` zum Verknüpfen).
+Fremde Runden antworten wie nicht vorhandene (`not-found`). Die Organisator-Sicht enthält je
+Teilnehmer `ausschluesse`, `gastId` und `mail`; Teilnehmer-Antworten enthalten nichts davon.
+
+Bei `anlegen` und `teilnehmerHinzufuegen` ist jeder Eintrag in `namen` ein Name oder
+`{name, gastId}`. Diese beiden und `einladungSenden` antworten zusätzlich mit
+`versand: {gesendet, fehlgeschlagen, grund}`; `grund` ist `nicht-eingerichtet` (SMTP-Secrets fehlen),
+`limit` (Tageslimit) oder `fehler` (Mailserver, Limit nicht prüfbar).
 
 `wichtelTeilnahme` (ohne Login; `rundeId` + `token`), Feld `aktion`: `laden` (setzt „Link geöffnet“),
 `ziehen`, `eintragHinzufuegen` (`ueberId`, `text` ≤ 300 Zeichen, höchstens 50 Einträge je Teilnehmer),
 `eintragLoeschen` (nur eigene). Falsches Format, unbekannte Runde und falsches Token geben dieselbe
 Antwort (`not-found`).
 
-Client: `src/utils/wichtelFirestore.js`, Links: `src/utils/wichtelLinks.js`,
+Client: `src/utils/wichtelFirestore.js`, Links und Teilen-Text: `src/utils/wichtelLinks.js`,
 Oberflächen: `src/components/WichtelPage.js` (Organisator), `src/components/WichtelTeilnahmePage.js`.
+
+## Einladung per Mail
+
+- **Wann:** beim Eintragen eines Teilnehmers, der mit einem Gast mit E-Mail-Adresse verknüpft ist, und
+  auf „Per Mail senden“ / „Erneut senden“. Beim Auslosen geht keine Mail raus; der Link bleibt derselbe.
+- **Sprache:** Feld `sprache` im Gästeprofil (`de`, `en`, `fr`), auswählbar unter Gäste verwalten.
+  Profile ohne das Feld – alle, die vor der Sprachwahl angelegt wurden – gelten als Deutsch; ein
+  Speichern ohne Feld (ältere App-Version) überschreibt eine gesetzte Sprache nicht. Die Liste steht in
+  `functions/shared/sprachen.js` und `src/utils/guestPreferences.js`, ein Test hält beide gleich.
+- **Inhalt** (`functions/wichtelMail.js`, Text und HTML): Anrede mit dem Teilnehmernamen, Vorname des
+  Organisators, Titel, Budget und Hinweis (so, wie der Organisator sie schrieb, nicht übersetzt), der
+  persönliche Link (`https://broubook.web.app/wichteln/…`) und „Bitte nicht weitergeben“. Eingaben stehen
+  im HTML nur escaped.
+- **Empfänger:** nur Adressen aus der Gästeliste des Organisators. Adresse und Sprache liest die Function
+  bei jedem Versand frisch aus dem Gästeprofil; in der Runde stehen nur `gastId` und das Ergebnis.
+- **Grenzen:** höchstens 150 Mails je Organisator und Berliner Tag (`wichtelMailLimits`, jeder Versuch
+  zählt; ist der Zähler nicht prüfbar, geht keine Mail raus). Logs nennen nur Teilnehmer- und
+  Runden-IDs und Fehlercodes des Mailservers, nie die Adresse (Tech-Check S26).
+- **Versand:** SMTP-Secrets `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` (dieselben
+  wie für die Listen-Einladung), nodemailer mit kleinem Pool, Function-Timeout 120 s.
 
 ## Auslosung
 
@@ -125,3 +168,7 @@ Das Token hat 192 Bit (24 Zufallsbytes, base64url).
 - Link erneuern, falls ein Link an die falsche Person ging (heute: Teilnehmer entfernen und neu anlegen,
   nur vor dem Auslosen).
 - Runden werden nicht automatisch gelöscht; der Organisator löscht sie in der Übersicht.
+- Die Teilnehmerseite (`/wichteln/…`) ist nur deutsch: Ein Gast mit Sprache Englisch oder Französisch
+  bekommt Mail und Teilen-Text in seiner Sprache, die Seite hinter dem Link aber auf Deutsch.
+- Keine Benachrichtigung beim Auslosen („Jetzt kannst du dein Los ziehen“) – wer früh eingeladen
+  wurde, muss selbst wieder vorbeischauen oder vom Organisator erinnert werden („Erneut senden“).

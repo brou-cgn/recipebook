@@ -1,5 +1,6 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
+const {SPRACHEN, STANDARD_SPRACHE} = require('./shared/sprachen');
 
 const ALLOWED_ROLES = new Set(['edit', 'moderator', 'admin']);
 const ALLOWED_FACTORS = new Set([0, 0.25, 0.5, 0.75, 1]);
@@ -8,7 +9,24 @@ function getTrimmed(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-function validateProfile(profile) {
+/**
+ * Sprache für Einladungen (Wichtel-Mail, Teilen-Text). Neue Profile ohne Angabe
+ * bekommen Deutsch. Beim Ändern bleibt ein fehlendes Feld weg, damit der Merge den
+ * gespeicherten Wert behält (ein Client ohne Sprachwahl setzt sie nicht zurück);
+ * Profile ganz ohne Feld gelten beim Lesen als Deutsch (normalisiereSprache).
+ * @param {*} value - übergebene Sprache
+ * @param {boolean} isCreate - Neuanlage
+ * @return {string|undefined}
+ */
+function validateSprache(value, isCreate) {
+  if (value === undefined || value === null) return isCreate ? STANDARD_SPRACHE : undefined;
+  if (!SPRACHEN.includes(value)) {
+    throw new HttpsError('invalid-argument', `sprache muss ${SPRACHEN.join(', ')} sein.`);
+  }
+  return value;
+}
+
+function validateProfile(profile, {isCreate = false} = {}) {
   if (!profile || typeof profile !== 'object') {
     throw new HttpsError('invalid-argument', 'profile ist erforderlich.');
   }
@@ -36,6 +54,8 @@ function validateProfile(profile) {
     ? [...new Set(profile['bevorzugteKategorien'].filter((item) => typeof item === 'string' && item.trim()))]
     : [];
 
+  const sprache = validateSprache(profile.sprache, isCreate);
+
   return {
     vorname,
     nachname,
@@ -45,6 +65,7 @@ function validateProfile(profile) {
     bevorzugteGetränke: bevorzugteGetraenke,
     bevorzugteKategorien,
     präferenzFaktor: praeferenzFaktor,
+    ...(sprache ? {sprache} : {}),
   };
 }
 
@@ -103,7 +124,7 @@ exports.manageGuestProfile = onCall({maxInstances: 10}, async (request) => {
     throw new HttpsError('invalid-argument', 'action muss create, update oder delete sein.');
   }
 
-  const validated = validateProfile(profile);
+  const validated = validateProfile(profile, {isCreate: action === 'create'});
 
   if (action === 'update') {
     const id = getTrimmed(profileId);

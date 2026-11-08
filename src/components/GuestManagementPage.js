@@ -9,7 +9,13 @@ import {
   deleteGuestProfile,
 } from '../utils/eventsFirestore';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
-import { getGuestDisplayName, normalizePreferenceFactor } from '../utils/guestPreferences';
+import {
+  DEFAULT_GUEST_LANGUAGE,
+  GUEST_LANGUAGES,
+  getGuestDisplayName,
+  normalizeGuestLanguage,
+  normalizePreferenceFactor,
+} from '../utils/guestPreferences';
 import { DRINK_CATEGORIES, getDrinkCategoryLabel } from '../utils/drinkCategories';
 import { DEFAULT_BUTTON_ICONS, getButtonIcons, getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
@@ -20,6 +26,7 @@ const emptyForm = () => ({
   vorname: '',
   nachname: '',
   email: '',
+  sprache: DEFAULT_GUEST_LANGUAGE,
   kind: false,
   alkoholischeGetraenke: true,
   bevorzugteGetraenke: [],
@@ -190,6 +197,7 @@ function GuestManagementPage({
       vorname: profile.vorname || '',
       nachname: profile.nachname || '',
       email: profile.email || '',
+      sprache: normalizeGuestLanguage(profile.sprache),
       kind: profile.kind === true,
       alkoholischeGetraenke: profile.alkoholischeGetränke !== false,
       bevorzugteGetraenke: Array.isArray(profile.bevorzugteGetränke) ? profile.bevorzugteGetränke : [],
@@ -248,6 +256,7 @@ function GuestManagementPage({
         vorname: form.vorname.trim(),
         nachname: form.nachname.trim(),
         email: form.email.trim(),
+        sprache: normalizeGuestLanguage(form.sprache),
         kind: form.kind === true,
         alkoholischeGetränke: form.alkoholischeGetraenke,
         bevorzugteGetränke: form.bevorzugteGetraenke,
@@ -367,6 +376,18 @@ function GuestManagementPage({
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
               placeholder="name@beispiel.de"
             />
+          </label>
+
+          <label className="events-form-field">
+            <span>Sprache für Einladungen</span>
+            <select
+              value={form.sprache}
+              onChange={(e) => setForm((f) => ({ ...f, sprache: e.target.value }))}
+            >
+              {GUEST_LANGUAGES.map((language) => (
+                <option key={language.id} value={language.id}>{language.label}</option>
+              ))}
+            </select>
           </label>
 
           <label className="events-category-checkbox">
