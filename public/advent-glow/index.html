@@ -83,6 +83,9 @@ fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .foot{padding-inline:56px;text-wrap:balance;text-align:center;font-family:var(--hand);font-size:1.6rem;margin:0;color:var(--ink-soft)}
 .address{padding-inline:56px;text-wrap:balance;text-align:center;font-size:.85rem;font-weight:500;color:var(--ink-soft);margin:-12px 0 0}
 .address .nw{white-space:nowrap}
+.address a{color:inherit;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.address a:hover{text-decoration-color:currentColor}
+.address a:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:4px}
 </style>
 </head>
 <body>
@@ -159,7 +162,7 @@ fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
   <img class="deco twinkle" src="star.png" alt="" style="bottom:4px;left:4%;width:10%;max-width:44px;animation-delay:-2s">
   <img class="deco spin" src="flake.png" alt="" style="bottom:-6px;right:3%;width:13%;max-width:60px;animation-duration:34s">
   <p class="foot">We can't wait to raise a mug with you</p>
-  <p class="address"><span class="nw">* Bernhard-Falk-Straße 39,</span> <span class="nw">50737 Köln</span></p>
+  <p class="address">* <a href="https://www.google.com/maps/search/?api=1&amp;query=Bernhard-Falk-Stra%C3%9Fe%2039%2C%2050737%20K%C3%B6ln" target="_blank" rel="noopener"><span class="nw">Bernhard-Falk-Straße 39,</span> <span class="nw">50737 Köln</span></a></p>
 </main>
 
 <script>
