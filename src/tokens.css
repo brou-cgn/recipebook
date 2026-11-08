@@ -42,6 +42,15 @@
   --color-wichtel-linie: rgba(176, 138, 62, 0.55);
   --color-wichtel-schein: rgba(168, 50, 42, 0.22);
   --color-bad-tint: rgba(163, 58, 38, 0.1);
+  --color-undo-inline-bg: #fff5f4;
+  --color-undo-inline-border: #f0c5bf;
+  --color-undo-inline-text: #8b2d21;
+  --color-undo-inline-action: #a33a26;
+  --color-undo-floating-bg: #2b2018;
+  --color-undo-floating-text: #fff;
+  --color-undo-floating-action: #ffb4a3;
+  --color-undo-floating-action-hover: #ffd4c8;
+  --color-undo-floating-focus: rgba(163, 58, 38, 0.5);
 }
 
 [data-theme="dark"] {
@@ -81,4 +90,13 @@
   --color-wichtel-linie: rgba(217, 179, 106, 0.5);
   --color-wichtel-schein: rgba(224, 122, 106, 0.25);
   --color-bad-tint: rgba(232, 128, 108, 0.14);
+  --color-undo-inline-bg: #2b2018;
+  --color-undo-inline-border: #4a3429;
+  --color-undo-inline-text: #f1e6df;
+  --color-undo-inline-action: #ffb4a3;
+  --color-undo-floating-bg: #2b2018;
+  --color-undo-floating-text: #f1e6df;
+  --color-undo-floating-action: #ffb4a3;
+  --color-undo-floating-action-hover: #ffd4c8;
+  --color-undo-floating-focus: rgba(163, 58, 38, 0.5);
 }

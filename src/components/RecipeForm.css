@@ -998,10 +998,10 @@
   gap: 0.75rem;
   margin: 0.35rem 0 0.5rem;
   padding: 0.5rem 0.7rem;
-  border: 1px solid #f0c5bf;
+  border: 1px solid var(--color-undo-inline-border);
   border-radius: 8px;
-  background: #fff5f4;
-  color: #8b2d21;
+  background: var(--color-undo-inline-bg);
+  color: var(--color-undo-inline-text);
   font-size: 0.9rem;
 }
 
@@ -1009,7 +1009,7 @@
   flex-shrink: 0;
   border: none;
   background: transparent;
-  color: #a33a26;
+  color: var(--color-undo-inline-action);
   font-size: 0.9rem;
   font-weight: 600;
   padding: 0.15rem 0.3rem;
