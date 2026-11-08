@@ -79,7 +79,13 @@ fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .msg{background:var(--sage);border-radius:14px;padding:14px 16px;white-space:pre-wrap;font-weight:500;margin:0;user-select:all;overflow-wrap:anywhere}
 .hint{font-size:.85rem;color:var(--ink-soft);margin:0}
 .link{background:none;border:0;color:var(--ink);font:600 .95rem var(--body);text-decoration:underline;cursor:pointer;padding:4px;align-self:center}
+.row sup{font-size:.6em;vertical-align:super;line-height:0;margin-left:1px}
 .foot{padding-inline:56px;text-wrap:balance;text-align:center;font-family:var(--hand);font-size:1.6rem;margin:0;color:var(--ink-soft)}
+.address{padding-inline:56px;text-wrap:balance;text-align:center;font-size:.85rem;font-weight:500;color:var(--ink-soft);margin:-12px 0 0}
+.address .nw{white-space:nowrap}
+.address a{color:inherit;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.address a:hover{text-decoration-color:currentColor}
+.address a:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:4px}
 </style>
 </head>
 <body>
@@ -97,7 +103,7 @@ fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
     <li class="row" style="--cx:17.6%"><img src="row-people.png" width="762" height="114" alt=""><p>A little Advent Glow</p><img class="deco beat" src="heart.png" alt="" style="top:-92%;left:3%;width:7%;max-width:34px"><img class="deco twinkle" src="star.png" alt="" style="top:-78%;right:14%;width:8%;max-width:36px;animation-delay:-1.4s"></li>
     <li class="row" style="--cx:18.4%"><img src="row-date.png" width="760" height="120" alt=""><p>13. December 2026</p><img class="deco spin" src="flake.png" alt="" style="top:-34%;left:0;width:11%;max-width:50px;animation-duration:22s;animation-direction:reverse"></li>
     <li class="row" style="--cx:18.3%"><img src="row-time.png" width="761" height="140" alt=""><p>Doors open at 4 pm</p><img class="deco beat" src="heart.png" alt="" style="bottom:-6%;right:-3%;width:8%;max-width:38px;animation-delay:-1.1s"></li>
-    <li class="row" style="--cx:18.1%"><img src="row-place.png" width="763" height="121" alt=""><p>Home of Mulled Wine</p></li>
+    <li class="row" style="--cx:18.1%"><img src="row-place.png" width="763" height="121" alt=""><p>Home of Mulled Wine<sup>*</sup></p></li>
   </ul>
 
   <section class="card" id="rsvp" aria-labelledby="rsvp-h">
@@ -156,6 +162,7 @@ fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
   <img class="deco twinkle" src="star.png" alt="" style="bottom:4px;left:4%;width:10%;max-width:44px;animation-delay:-2s">
   <img class="deco spin" src="flake.png" alt="" style="bottom:-6px;right:3%;width:13%;max-width:60px;animation-duration:34s">
   <p class="foot">We can't wait to raise a mug with you</p>
+  <p class="address">* <a href="https://www.google.com/maps/search/?api=1&amp;query=Bernhard-Falk-Stra%C3%9Fe%2039%2C%2050737%20K%C3%B6ln" target="_blank" rel="noopener"><span class="nw">Bernhard-Falk-Straße 39,</span> <span class="nw">50737 Köln</span></a></p>
 </main>
 
 <script>
