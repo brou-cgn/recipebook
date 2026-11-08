@@ -114,6 +114,44 @@ describe('CookingSessionCarousel CSS', () => {
     });
   });
 
+  describe('Tablet-Höhen: Schritte zu Zutaten hochkant 2 : 1, quer 1 : 1', () => {
+    test('hochkant teilt im Split das Raster Schritt-Karussell und Zutaten-Sheet 2 : 1', () => {
+      const split = getRuleBody(recipeDetailCss, '.recipe-detail-content.cooking-mode-active.cooking-mode-split');
+      expect(split).toContain('grid-template-rows: auto auto minmax(0, 2fr) minmax(auto, 1fr);');
+    });
+
+    test('hochkant teilt bei voller Breite die Flexbox 2 : 1', () => {
+      expect(getRuleBody(recipeDetailCss, '.cooking-mode-active.cooking-mode-tablet-full .step-carousel'))
+        .toContain('flex: 2 1 0;');
+      expect(getRuleBody(recipeDetailCss, '.recipe-detail-content.cooking-mode-active.cooking-mode-tablet-full .cooking-mode-ingredients'))
+        .toContain('flex: 1 1 0;');
+    });
+
+    test('quer teilen sich Schritte und Zutaten die Höhe 1 : 1', () => {
+      const landscape = recipeDetailCss.match(/@media \(orientation: landscape\) \{([\s\S]*?\})\s*\}/);
+      expect(landscape).not.toBeNull();
+      expect(getRuleBody(landscape[1], '.recipe-detail-content.cooking-mode-active.cooking-mode-split'))
+        .toContain('grid-template-rows: auto auto minmax(0, 1fr) minmax(auto, 1fr);');
+      expect(getRuleBody(landscape[1], '.cooking-mode-active.cooking-mode-tablet-full .step-carousel'))
+        .toContain('flex: 1 1 0;');
+    });
+
+    test('das Zutaten-Sheet verliert auf dem Tablet die feste Handy-Höhe, behält sie aber als Untergrenze', () => {
+      ['split', 'tablet-full'].forEach((layout) => {
+        expect(getRuleBody(recipeDetailCss, `.recipe-detail-content.cooking-mode-active.cooking-mode-${layout} .cooking-mode-ingredients`))
+          .toContain('height: auto;');
+      });
+      // Nie kleiner als bisher: auf dem iPad 11" quer wäre ein Drittel weniger als die alte Höhe
+      ['split', 'tablet-full'].forEach((layout) => {
+        expect(getRuleBody(recipeDetailCss, `.recipe-detail-content.cooking-mode-active.cooking-mode-${layout} .cooking-mode-ingredients`))
+          .toContain('min-height: min(34dvh, 280px);');
+      });
+      // Die feste Höhe bleibt dem Handy vorbehalten
+      expect(getRuleBody(recipeDetailCss, '.cooking-mode-active:not(.cooking-mode-landscape) .cooking-mode-ingredients'))
+        .toContain('height: min(34dvh, 280px);');
+    });
+  });
+
   test('liegt in derselben Fläche wie die Schrittspalte, keine zwei Grautöne nebeneinander', () => {
     expect(getRuleBody(carouselCss, '.cooking-carousel')).toContain('background: var(--color-surface-subtle);');
     // Keine Linie in der Displaymitte zwischen Karussell und Rezept vorn
