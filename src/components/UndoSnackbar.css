@@ -18,7 +18,9 @@
   animation: undo-snackbar-in 0.16s ease;
 }
 
-.undo-snackbar-message {
+.undo-snackbar-message,
+.undo-snackbar > span {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

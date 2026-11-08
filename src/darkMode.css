@@ -4361,3 +4361,19 @@
 [data-theme="dark"] .cooking-mode-active:not(.cooking-mode-landscape) .cooking-mode-ingredients .section-header {
   background: #1e1e1e;
 }
+
+/* ---- Undo-Hinweis (Inline-/Snackbar-Variante, z. B. Wichtel, Events, Rezeptformular) ---- */
+[data-theme="dark"] .undo-snackbar {
+  background: #2b2018;
+  border-color: #4a3429;
+  color: #f1e6df;
+}
+
+[data-theme="dark"] .undo-snackbar span {
+  color: #f1e6df;
+}
+
+[data-theme="dark"] .undo-snackbar .undo-snackbar-btn,
+[data-theme="dark"] .undo-snackbar .undo-snackbar-action {
+  color: #ffb4a3;
+}
