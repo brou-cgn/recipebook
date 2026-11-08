@@ -12,12 +12,11 @@ jest.mock('../utils/wichtelFirestore', () => ({
   zieheWichtelLos: (...a) => mockZiehen(...a),
   fuegeWichtelEintragHinzu: (...a) => mockHinzufuegen(...a),
   loescheWichtelEintrag: (...a) => mockLoeschen(...a),
-  getWichtelFehlertext: (e, fallback = 'Fehler') => e?.message || fallback,
 }));
 
 const sicht = (over = {}) => ({
   runde: { titel: 'Advent 2026', budget: '20 €', hinweis: 'Bescherung am 13.12.', status: 'offen' },
-  ich: { id: 't1', name: 'Anna' },
+  ich: { id: 't1', name: 'Anna', sprache: 'de' },
   andere: [{ id: 't2', name: 'Ben' }, { id: 't3', name: 'Cleo' }],
   meineWuensche: [],
   meineIdeen: [],
@@ -25,9 +24,43 @@ const sicht = (over = {}) => ({
   ...over,
 });
 
+const gezogenBen = (sprache) => sicht({
+  ich: { id: 't1', name: 'Anna', sprache },
+  runde: { ...sicht().runde, status: 'ausgelost' },
+  los: {
+    gezogen: true,
+    empfaenger: { id: 't2', name: 'Ben' },
+    wuensche: [],
+    ideen: [
+      { id: 'i1', text: 'Kochkurs', von: 'Cleo', vonDir: false },
+      { id: 'i2', text: 'Kaffeebohnen', von: 'Anna', vonDir: true },
+    ],
+  },
+});
+
 const renderSeite = (props = {}) => renderWithProviders(
   <WichtelTeilnahmePage rundeId="runde1" token="tok" {...props} />,
 );
+
+// jsdom meldet en-US; die Seite nimmt ohne Präferenz die Browsersprache.
+let sprachSpies = [];
+const setzeBrowserSprache = (...languages) => {
+  sprachSpies.forEach((spy) => spy.mockRestore());
+  sprachSpies = [
+    jest.spyOn(window.navigator, 'languages', 'get').mockReturnValue(languages),
+    jest.spyOn(window.navigator, 'language', 'get').mockReturnValue(languages[0]),
+  ];
+};
+
+beforeEach(() => {
+  setzeBrowserSprache('de-DE');
+  document.documentElement.setAttribute('lang', 'de');
+});
+
+afterEach(() => {
+  sprachSpies.forEach((spy) => spy.mockRestore());
+  sprachSpies = [];
+});
 
 describe('WichtelTeilnahmePage', () => {
   it('zeigt einen kaputten Link als ungültig, ohne den Server zu fragen', () => {
@@ -43,12 +76,14 @@ describe('WichtelTeilnahmePage', () => {
   });
 
   it('bietet bei Netzwerkfehlern einen neuen Versuch an', async () => {
-    mockLaden.mockRejectedValueOnce(Object.assign(new Error('Keine Verbindung'), { code: 'functions/unavailable' }));
+    mockLaden.mockRejectedValueOnce(Object.assign(new Error('internal'), { code: 'functions/unavailable' }));
     renderSeite();
-    expect(await screen.findByText('Keine Verbindung')).toBeInTheDocument();
+    expect(await screen.findByText(/Bitte prüfe deine Verbindung/)).toBeInTheDocument();
     mockLaden.mockResolvedValue(sicht());
     fireEvent.click(screen.getByRole('button', { name: 'Nochmal versuchen' }));
     expect(await screen.findByText('Hallo Anna!')).toBeInTheDocument();
+    // Der alte Fehler hängt nach dem erfolgreichen Versuch nicht mehr über der Seite.
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('vor der Auslosung: Begrüßung, Eckdaten, kein Los-Knopf', async () => {
@@ -119,7 +154,7 @@ describe('WichtelTeilnahmePage', () => {
     mockZiehen.mockRejectedValue(Object.assign(new Error('Es wurde noch nicht ausgelost.'), { code: 'functions/failed-precondition' }));
     renderSeite();
     fireEvent.click(await screen.findByRole('button', { name: 'Los ziehen' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Es wurde noch nicht ausgelost.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Für dich liegt gerade kein Los bereit.');
     expect(screen.getByRole('button', { name: 'Los ziehen' })).toBeEnabled();
   });
 
@@ -171,5 +206,109 @@ describe('WichtelTeilnahmePage', () => {
     renderSeite({ currentUser: { id: 'u1' }, onClose });
     fireEvent.click(await screen.findByRole('button', { name: 'Zur App' }));
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+// Die Testing Library macht beim Vergleichen aus geschützten Leerzeichen normale.
+const NBSP = ' ';
+
+describe('WichtelTeilnahmePage – Sprache des Gasts', () => {
+  it('zeigt die Seite auf Englisch, wenn das Gästeprofil Englisch vorgibt – auch im deutschen Browser', async () => {
+    mockLaden.mockResolvedValue(sicht({ ich: { id: 't1', name: 'Anna', sprache: 'en' } }));
+    const { container } = renderSeite();
+    expect(await screen.findByText('Hi Anna!')).toBeInTheDocument();
+    expect(screen.getByText('Secret Santa')).toBeInTheDocument();
+    expect(screen.getByText('Budget: €20.00')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Your draw' })).toBeInTheDocument();
+    expect(screen.getByText(/Names haven’t been drawn yet/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Your wishes' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Add a wish')).toHaveAttribute('placeholder', 'What would you like?');
+    expect(screen.getByRole('heading', { name: 'Gift ideas for others' })).toBeInTheDocument();
+    expect(screen.getByLabelText('For whom?')).toHaveDisplayValue('Choose a guest');
+    expect(screen.queryByText(/Hallo|Wünsche|Gast/)).not.toBeInTheDocument();
+    expect(container.querySelector('.wt-seite')).toHaveAttribute('lang', 'en');
+    expect(document.documentElement).toHaveAttribute('lang', 'en');
+  });
+
+  it('Löschen und Rückgängig in der Sprache des Gasts', async () => {
+    mockLaden.mockResolvedValue(sicht({
+      ich: { id: 't1', name: 'Anna', sprache: 'en' },
+      meineWuensche: [{ id: 'e1', text: 'Buch' }],
+      meineIdeen: [{ id: 'e2', ueberId: 't3', ueberName: 'Cleo', text: 'Gin' }],
+    }));
+    renderSeite();
+    expect(await screen.findByRole('heading', { name: 'For Cleo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove idea “Gin”' })).toHaveAttribute('title', 'Remove idea “Gin”');
+    fireEvent.click(screen.getByRole('button', { name: 'Remove wish “Buch”' }));
+    expect(screen.queryByText('Buch')).not.toBeInTheDocument();
+    expect(screen.getByText('Wish removed.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(screen.getByText('Buch')).toBeInTheDocument();
+  });
+
+  it('auf Französisch nach dem Ziehen: Empfänger fett, Ideen mit Absender', async () => {
+    mockLaden.mockResolvedValue(gezogenBen('fr'));
+    const { container } = renderSeite();
+    const titel = await screen.findByRole('heading', { name: 'Pour Ben' });
+    expect(screen.getByText(`Bonjour Anna !`).textContent).toBe(`Bonjour Anna${NBSP}!`);
+    const losText = container.querySelector('.wt-mitte-text');
+    expect(losText).toHaveTextContent('Tu offres un cadeau à Ben. Chut – ça reste entre nous.');
+    expect(within(losText).getByText('Ben').tagName).toBe('STRONG');
+    expect(container.querySelector('.wt-los-ueberzeile')).toHaveTextContent('Tu offres à');
+    const partner = titel.closest('section');
+    expect(within(partner).getByRole('heading', { name: 'Ses souhaits' })).toBeInTheDocument();
+    expect(within(partner).getByText('Ben n’a pas encore noté de souhaits.')).toBeInTheDocument();
+    expect(within(partner).getByText('par Cleo')).toBeInTheDocument();
+    expect(within(partner).getByText('par toi')).toBeInTheDocument();
+    expect(within(partner).getByText('Ces souhaits et idées ne sont visibles que pour toi.')).toBeInTheDocument();
+  });
+
+  it('ohne verknüpftes Gästeprofil gilt die Browsersprache', async () => {
+    setzeBrowserSprache('fr-CH', 'de');
+    mockLaden.mockResolvedValue(sicht({ ich: { id: 't1', name: 'Anna', sprache: null } }));
+    renderSeite();
+    expect(await screen.findByText('Bonjour Anna !')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ajouter' })).toBeInTheDocument();
+  });
+
+  it('die Präferenz aus dem Gästeprofil schlägt die Browsersprache', async () => {
+    setzeBrowserSprache('fr-FR');
+    mockLaden.mockResolvedValue(sicht());
+    renderSeite();
+    expect(await screen.findByText('Hallo Anna!')).toBeInTheDocument();
+    expect(document.documentElement).toHaveAttribute('lang', 'de');
+  });
+
+  it('vor der Antwort und bei kaputtem Link gilt die Browsersprache', () => {
+    setzeBrowserSprache('fr-FR');
+    mockLaden.mockReturnValue(new Promise(() => {}));
+    const { unmount } = renderSeite();
+    expect(screen.getByRole('status')).toHaveTextContent('Chargement de ton tirage…');
+    unmount();
+
+    setzeBrowserSprache('en-GB');
+    renderSeite({ gueltig: false });
+    expect(screen.getByRole('heading', { name: 'Invalid link' })).toBeInTheDocument();
+  });
+
+  it('Fehlermeldungen in der Sprache des Gasts, nicht in der des Servers', async () => {
+    mockLaden.mockResolvedValue(sicht({
+      ich: { id: 't1', name: 'Anna', sprache: 'en' },
+      runde: { ...sicht().runde, status: 'ausgelost' },
+      los: { gezogen: false },
+    }));
+    mockZiehen.mockRejectedValue(Object.assign(new Error('Es wurde noch nicht ausgelost.'), { code: 'functions/failed-precondition' }));
+    renderSeite();
+    fireEvent.click(await screen.findByRole('button', { name: 'Draw a name' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('There’s no slip ready for you right now.');
+  });
+
+  it('stellt die Dokumentsprache beim Verlassen wieder her', async () => {
+    mockLaden.mockResolvedValue(sicht({ ich: { id: 't1', name: 'Anna', sprache: 'fr' } }));
+    const { unmount } = renderSeite();
+    await screen.findByText('Bonjour Anna !');
+    expect(document.documentElement).toHaveAttribute('lang', 'fr');
+    unmount();
+    expect(document.documentElement).toHaveAttribute('lang', 'de');
   });
 });

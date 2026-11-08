@@ -614,7 +614,7 @@ test('Teilnahme vor der Auslosung: eigene Daten, andere Gäste, kein Los', async
   const {db, rundeId, tn, als} = await setupRunde();
   const sicht = await als('Ben', 'laden');
   assert.deepEqual(sicht.runde, {titel: 'Advent 2026', budget: '20 €', hinweis: 'Bescherung am 13.12.', status: 'offen'});
-  assert.deepEqual(sicht.ich, {id: tn.Ben.id, name: 'Ben'});
+  assert.deepEqual(sicht.ich, {id: tn.Ben.id, name: 'Ben', sprache: null});
   assert.deepEqual(sicht.andere.map((t) => t.name), ['Anna', 'Cleo', 'Dana']);
   assert.equal(sicht.los, null);
   assert.ok(db.store.get(`wichtelRunden/${rundeId}/teilnehmer/${tn.Ben.id}`).geoeffnetAm);
@@ -690,6 +690,56 @@ test('Teilnahme-Antworten enthalten keine fremden Tokens', async () => {
     const json = JSON.stringify(await als(name, 'ziehen'));
     Object.values(tn).forEach((t) => assert.ok(!json.includes(t.token), `${name} sieht ein Token`));
   }
+});
+
+/** Verknüpft einen Teilnehmer mit einem Gästeprofil (das Feld setzt sonst der Organisator). */
+const verknuepfeGast = (db, rundeId, teilnehmerId, gastId) => {
+  const pfad = `wichtelRunden/${rundeId}/teilnehmer/${teilnehmerId}`;
+  db.store.set(pfad, {...db.store.get(pfad), gastId});
+};
+
+test('Teilnahme: Sprache aus dem verknüpften Gästeprofil des Organisators', async () => {
+  const {db, rundeId, tn, als} = await setupRunde();
+  db.store.set('guests/orga/profiles/gastAnna00000001', {vorname: 'Anna', email: 'anna@example.org', sprache: 'en'});
+  db.store.set('guests/orga/profiles/gastBen000000001', {vorname: 'Ben'}); // vor der Sprachwahl angelegt
+  db.store.set('guests/andere/profiles/gastCleo00000001', {vorname: 'Cleo', sprache: 'fr'}); // fremder Organisator
+  verknuepfeGast(db, rundeId, tn.Anna.id, 'gastAnna00000001');
+  verknuepfeGast(db, rundeId, tn.Ben.id, 'gastBen000000001');
+  verknuepfeGast(db, rundeId, tn.Cleo.id, 'gastCleo00000001');
+  verknuepfeGast(db, rundeId, tn.Dana.id, '../../users/orga');
+
+  const anna = await als('Anna', 'laden');
+  assert.equal(anna.ich.sprache, 'en');
+  // Aus dem Profil geht nur die Sprache heraus.
+  assert.doesNotMatch(JSON.stringify(anna), /anna@example\.org/);
+  // Profile ohne Feld gelten als Deutsch.
+  assert.equal((await als('Ben', 'laden')).ich.sprache, 'de');
+  // Gelesen wird nur unter den Profilen des Organisators dieser Runde.
+  assert.equal((await als('Cleo', 'laden')).ich.sprache, null);
+  assert.equal((await als('Dana', 'laden')).ich.sprache, null);
+
+  // Jede Antwort trägt die Sprache, nicht nur laden.
+  const nachEintrag = await als('Anna', 'eintragHinzufuegen', {ueberId: tn.Anna.id, text: 'Buch'});
+  assert.equal(nachEintrag.ich.sprache, 'en');
+
+  // Gelöschtes Profil: keine Sprache, die Seite wählt selbst.
+  db.store.delete('guests/orga/profiles/gastAnna00000001');
+  assert.equal((await als('Anna', 'laden')).ich.sprache, null);
+});
+
+test('Teilnahme: ein nicht lesbares Gästeprofil lässt die Seite nicht scheitern', async (t) => {
+  const {db, rundeId, tn, als} = await setupRunde();
+  verknuepfeGast(db, rundeId, tn.Anna.id, 'gastAnna00000001');
+  const doc = db.doc;
+  db.doc = (path) => (path.startsWith('guests/') ? {get: async () => {
+    throw new Error('Firestore nicht erreichbar');
+  }} : doc(path));
+  const fehler = t.mock.method(console, 'error', () => {});
+
+  const sicht = await als('Anna', 'laden');
+  assert.equal(sicht.ich.name, 'Anna');
+  assert.equal(sicht.ich.sprache, null);
+  assert.equal(fehler.mock.callCount(), 1);
 });
 
 test('Einträge: Prüfungen und Obergrenze', async () => {

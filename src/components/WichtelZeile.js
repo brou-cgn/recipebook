@@ -11,15 +11,16 @@ import { isBase64Image } from '../utils/imageUtils';
  * useUndoableDelete.
  *
  * @param {Object} props
- * @param {string} props.itemName - für Tooltip/aria-label „<Name> entfernen“
+ * @param {string} [props.itemName] - für Tooltip/aria-label „<Name> entfernen“
+ * @param {string} [props.entfernenLabel] - ganzer Text statt „<Name> entfernen“ (übersetzte Seiten)
  * @param {Function} [props.onDelete] - ohne: Zeile ohne Löschen
  * @param {string} [props.swipeIcon] - konfiguriertes Swipe-Icon (Text oder Bild)
  * @param {string} [props.className]
  */
-function WichtelZeile({ itemName, onDelete, swipeIcon, className = '', children }) {
+function WichtelZeile({ itemName, entfernenLabel, onDelete, swipeIcon, className = '', children }) {
   const canDelete = typeof onDelete === 'function';
   const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ disabled: !canDelete });
-  const label = `${itemName} entfernen`;
+  const label = entfernenLabel || `${itemName} entfernen`;
 
   return (
     <li
@@ -64,6 +65,7 @@ function WichtelZeile({ itemName, onDelete, swipeIcon, className = '', children 
           <DeleteRowButton
             className="wichtel-zeile-loeschen"
             itemName={itemName}
+            label={label}
             onClick={(e) => {
               e.stopPropagation();
               onDelete();

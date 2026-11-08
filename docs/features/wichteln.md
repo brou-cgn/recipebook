@@ -40,6 +40,10 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
 - „Geschenkideen für andere“: Gast wählen, Idee speichern. Sieht nur, wer diesen Gast gezogen hat –
   mit dem eigenen Namen, die Person selbst nie.
 - Eigene Einträge löschen: sofort mit „Rückgängig“ (6 s), mobil per Linksswipe.
+- Sprache: Deutsch, Englisch oder Französisch – nach der Sprachpräferenz im Gästeprofil, mit dem der
+  Teilnehmer verknüpft ist (Profile ohne Wahl: Deutsch). Ohne verknüpftes Profil, beim Laden und bei
+  einem ungültigen Link gilt die Browsersprache, wenn sie eine der drei ist, sonst Deutsch. Titel, Budget,
+  Hinweis, Namen und Einträge erscheinen so, wie sie eingegeben wurden.
 
 ## Wer sieht was
 
@@ -110,9 +114,14 @@ Bei `anlegen` und `teilnehmerHinzufuegen` ist jeder Eintrag in `namen` ein Name 
 `ziehen`, `eintragHinzufuegen` (`ueberId`, `text` ≤ 300 Zeichen, höchstens 50 Einträge je Teilnehmer),
 `eintragLoeschen` (nur eigene). Falsches Format, unbekannte Runde und falsches Token geben dieselbe
 Antwort (`not-found`).
+Jede Antwort enthält `ich.sprache`: den Code aus dem verknüpften Gästeprofil
+(`guests/{ownerId}/profiles/{gastId}`, Feld `sprache`; ohne Feld `de`), sonst `null`. Gelesen wird nur
+unter den Profilen des Organisators der Runde, und vom Profil verlässt nur dieser Code den Server. Die
+Fehlermeldungen des Servers sind deutsch; die Teilnehmerseite übersetzt nach Fehlercode.
 
 Client: `src/utils/wichtelFirestore.js`, Links und Teilen-Text: `src/utils/wichtelLinks.js`,
-Oberflächen: `src/components/WichtelPage.js` (Organisator), `src/components/WichtelTeilnahmePage.js`.
+Oberflächen: `src/components/WichtelPage.js` (Organisator), `src/components/WichtelTeilnahmePage.js`
+(Texte auf Deutsch, Englisch, Französisch und Wahl der Sprache: `src/utils/wichtelTeilnahmeTexte.js`).
 
 ## Einladung per Mail
 
