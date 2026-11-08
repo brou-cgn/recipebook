@@ -467,14 +467,49 @@ async function ladeKontext(db, HttpsError, daten) {
   return {rundeId, runde: rundeSnap.data(), ich: {id: doc.id, ref: doc.ref, ...doc.data()}};
 }
 
+// Sprachpräferenz im Gästeprofil (Feld `sprache`, z. B. 'en'); Profile ohne Feld gelten als Deutsch.
+const SPRACHCODE = /^[a-z]{2}$/;
+const STANDARD_SPRACHE = 'de';
+
+/**
+ * Sprache der Teilnehmerseite: die Sprachpräferenz aus dem Gästeprofil, mit dem der
+ * Organisator den Teilnehmer verknüpft hat (`gastId`). Gelesen wird nur unter den Profilen
+ * des Organisators der Runde (guests/{ownerId}/profiles), heraus geht nur der Sprachcode.
+ * Ohne verknüpftes Profil null – dann wählt die Seite (Browsersprache, sonst Deutsch).
+ * Ein Lesefehler ergibt ebenfalls null: an der Sprache soll die Seite nicht scheitern.
+ * @param {object} db - Firestore
+ * @param {object} runde - Rundendokument (ownerId)
+ * @param {object} ich - Teilnehmerdokument (gastId)
+ * @return {Promise<string|null>}
+ */
+async function ladeSprache(db, runde, ich) {
+  const {gastId} = ich;
+  if (typeof runde.ownerId !== 'string' || !runde.ownerId ||
+      typeof gastId !== 'string' || !ID_MUSTER.test(gastId)) {
+    return null;
+  }
+  try {
+    const snap = await db.doc(`guests/${runde.ownerId}/profiles/${gastId}`).get();
+    if (!snap.exists) return null;
+    const sprache = snap.data()?.sprache;
+    return typeof sprache === 'string' && SPRACHCODE.test(sprache) ? sprache : STANDARD_SPRACHE;
+  } catch (err) {
+    console.error(`wichtelTeilnahme: Sprache aus Gästeprofil ${gastId} nicht lesbar:`, err);
+    return null;
+  }
+}
+
 /**
  * Was ein Teilnehmer sieht. Die Einträge über den Empfänger werden nur gelesen, wenn er
  * sein Los gezogen hat; über ihn selbst geschriebene Ideen anderer nie.
  */
 async function teilnehmerSicht(db, {rundeId, runde, ich}) {
-  const teilnehmer = await ladeTeilnehmer(db, rundeId);
+  const [teilnehmer, meine, sprache] = await Promise.all([
+    ladeTeilnehmer(db, rundeId),
+    ladeEintraege(db, rundeId, 'autorId', ich.id, MAX_EINTRAEGE_PRO_AUTOR),
+    ladeSprache(db, runde, ich),
+  ]);
   const namen = new Map(teilnehmer.map((t) => [t.id, t.name]));
-  const meine = await ladeEintraege(db, rundeId, 'autorId', ich.id, MAX_EINTRAEGE_PRO_AUTOR);
 
   let los = null;
   if (runde.status === 'ausgelost') {
@@ -506,7 +541,8 @@ async function teilnehmerSicht(db, {rundeId, runde, ich}) {
       hinweis: runde.hinweis || '',
       status: runde.status === 'ausgelost' ? 'ausgelost' : 'offen',
     },
-    ich: {id: ich.id, name: ich.name},
+    // Jede Antwort trägt die Sprache: die Seite ersetzt ihren Stand mit jeder Antwort.
+    ich: {id: ich.id, name: ich.name, sprache},
     andere: teilnehmer.filter((t) => t.id !== ich.id).map((t) => ({id: t.id, name: t.name})).sort(nachName),
     meineWuensche: meine.filter((e) => e.ueberId === ich.id).map((e) => ({id: e.id, text: e.text})),
     meineIdeen: meine
