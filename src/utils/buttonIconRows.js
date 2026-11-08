@@ -70,6 +70,7 @@ export const DARK_MODE_ICON_ROWS = [
   { key: 'kuecheFab', label: 'Küche-FAB-Button' },
   { key: 'eventsDrinksFab', label: 'Events: Getränke-FAB (Mobile)' },
   { key: 'eventsGuestsFab', label: 'Events: Gästeübersicht-FAB (Mobile)' },
+  { key: 'eventsWichtelFab', label: 'Events: Wichteln-FAB (Mobile)' },
   { key: 'bottomNavHome', label: 'Bottom Navigation: Küche' },
   { key: 'bottomNavRecipes', label: 'Bottom Navigation: Kochbuch' },
   { key: 'bottomNavMenus', label: 'Bottom Navigation: Festtafel' },
@@ -122,7 +123,7 @@ const BUTTON_ICON_GROUP_DEFS = [
   { id: 'g-timer', name: 'Timer', keys: ['timerStart', 'timerStop'] },
   { id: 'g-tagesmenu', name: 'Menü & Tagesmenü', keys: ['menuFavoritesButton', 'privateBadge', 'tagesmenuZumTagesMenu', 'tagesmenuMeineAuswahl', 'tagesmenuZurueckZumStapel', 'tagesmenuKachelMenu', 'tagesmenuKachelMenuAlt', 'timelineMenuDefaultImg'] },
   { id: 'g-zeitleiste', name: 'Zeitleiste', keys: ['timelineBubbleIcon', 'timelineMenuBubbleIcon', 'timelineCookEventBubbleIcon'] },
-  { id: 'g-kueche-events', name: 'Küche & Events', keys: ['kuecheFab', 'eventsDrinksFab', 'eventsGuestsFab'] },
+  { id: 'g-kueche-events', name: 'Küche & Events', keys: ['kuecheFab', 'eventsDrinksFab', 'eventsGuestsFab', 'eventsWichtelFab'] },
   { id: 'g-gruppen', name: 'Gruppen', keys: ['addGroupMember'] },
   { id: 'g-bottom-nav', name: 'Bottom Navigation', keys: ['bottomNavHome', 'bottomNavRecipes', 'bottomNavMenus', 'bottomNavAtelier', 'bottomNavChef'] },
 ];
