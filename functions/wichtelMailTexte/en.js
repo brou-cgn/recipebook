@@ -88,4 +88,39 @@ module.exports = {
       hinweis: "Note: {hinweis}",
     },
   },
+
+  erinnerung: {
+    north_pole: {
+      betreff: "📜 The elves are waiting for your wish list, {firstName}",
+      anrede: "Hi {firstName},",
+      intro: "wish lists are piling up in the North Pole workshop – only yours for the Secret Santa " +
+        "“{eventName}” is still missing. ❄️",
+      erklaerung: "Write down a few wishes so your Secret Santa can find just the right gift for you. A keyword " +
+        "or a link to a shop is all it takes. The reindeer are already pawing at the snow.",
+      budget: "🎁 Budget: {budget}",
+      knopf: "Write my wish list",
+      linkErsatz: "If the button gets stuck, this link will help:",
+      geheim: "Top secret: this link is just for you. Not a word to the others!",
+      gruss: "With sparkly greetings from the elves' workshop 🦌",
+      grund: "You're receiving this email because you're taking part in the Secret Santa “{eventName}” and " +
+        "haven't added any wishes yet. Once you add a wish, the reminders stop.",
+    },
+    warm_casual: {
+      betreff: "🎁 No wishes added yet, {firstName}?",
+      anrede: "Hi {firstName},",
+      intro: "a quick reminder about the gift exchange “{eventName}”: you haven't added any wishes yet.",
+      erklaerung: "With a few wishes, the person giving you a gift will find something you'll love much more " +
+        "easily. A keyword or a link to a shop is all it takes.",
+      budget: "Budget: {budget}",
+      knopf: "Add my wishes",
+      linkErsatz: "If the button doesn't work, copy this link into your browser:",
+      geheim: "This link is just for you, please don't share it.",
+      gruss: "Happy wishing!",
+      grund: "You're receiving this email because you're taking part in the gift exchange “{eventName}” and " +
+        "haven't added any wishes yet. Once you add a wish, the reminders stop.",
+    },
+    gemeinsam: {
+      hinweis: "Note: {hinweis}",
+    },
+  },
 };

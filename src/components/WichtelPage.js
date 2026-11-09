@@ -681,7 +681,7 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
             <p className="wichtel-erklaerung">
               {ausgelost
                 ? 'Jeder zieht über seinen persönlichen Link sein Los und sieht dort nur das eigene. Auch du siehst nicht, wer wen gezogen hat.'
-                : 'Trag alle ein, die mitmachen, und lose dann aus. Die Links kannst du schon vorher verschicken – dann kann jeder seine Wünsche und Ideen für andere eintragen. Unter „Ausschlüsse“ legst du fest, wen jemand nicht ziehen soll – bei Paaren für beide. Gäste aus deiner Gästeliste mit E-Mail-Adresse bekommen ihren Link beim Eintragen automatisch per Mail.'}
+                : 'Trag alle ein, die mitmachen, und lose dann aus. Die Links kannst du schon vorher verschicken – dann kann jeder seine Wünsche und Ideen für andere eintragen. Unter „Ausschlüsse“ legst du fest, wen jemand nicht ziehen soll – bei Paaren für beide. Gäste aus deiner Gästeliste mit E-Mail-Adresse bekommen ihren Link beim Eintragen automatisch per Mail – und eine Erinnerung, solange sie noch keine Wünsche eingetragen haben.'}
             </p>
 
             {fehlerZeile}

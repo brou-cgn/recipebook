@@ -93,4 +93,39 @@ module.exports = {
       hinweis: "Remarque : {hinweis}",
     },
   },
+
+  erinnerung: {
+    north_pole: {
+      betreff: "📜 Les lutins attendent ta liste de souhaits, {firstName}",
+      anrede: "Bonjour {firstName},",
+      intro: "les listes de souhaits s'empilent à l'atelier du pôle Nord, mais la tienne pour le Père Noël " +
+        "secret « {eventName} » manque encore. ❄️",
+      erklaerung: "Note quelques souhaits pour que ton Père Noël secret trouve le cadeau qui te fera plaisir. " +
+        "Un mot-clé ou un lien vers une boutique suffit. Les rennes piaffent déjà d'impatience.",
+      budget: "🎁 Budget : {budget}",
+      knopf: "Écrire ma liste de souhaits",
+      linkErsatz: "Si le bouton se coince, ce lien t'aidera :",
+      geheim: "Top secret : ce lien est rien que pour toi. Pas un mot aux autres !",
+      gruss: "Avec des salutations scintillantes de l'atelier des lutins 🦌",
+      grund: "Tu reçois cet e-mail parce que tu participes au Père Noël secret « {eventName} » et que tu " +
+        "n'as pas encore ajouté de souhaits. Dès que tu ajoutes un souhait, les rappels s'arrêtent.",
+    },
+    warm_casual: {
+      betreff: "🎁 Pas encore de souhaits, {firstName} ?",
+      anrede: "Bonjour {firstName},",
+      intro: "petit rappel pour l'échange de cadeaux « {eventName} » : tu n'as pas encore ajouté de souhaits.",
+      erklaerung: "Avec quelques souhaits, la personne qui t'offre un cadeau trouvera bien plus facilement " +
+        "quelque chose qui te plaît. Un mot-clé ou un lien vers une boutique suffit.",
+      budget: "Budget : {budget}",
+      knopf: "Ajouter mes souhaits",
+      linkErsatz: "Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :",
+      geheim: "Ce lien est rien que pour toi, merci de ne pas le partager.",
+      gruss: "Amuse-toi bien !",
+      grund: "Tu reçois cet e-mail parce que tu participes à l'échange de cadeaux « {eventName} » et que tu " +
+        "n'as pas encore ajouté de souhaits. Dès que tu ajoutes un souhait, les rappels s'arrêtent.",
+    },
+    gemeinsam: {
+      hinweis: "Remarque : {hinweis}",
+    },
+  },
 };

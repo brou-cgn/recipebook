@@ -21,7 +21,8 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
    automatisch per Mail, in der Sprache aus ihrem Gästeprofil (siehe „Einladung per Mail“). Für alle
    anderen „Link teilen“: Teilen-Menü des Handys, sonst Kopieren – der Text ist ebenfalls in der
    Sprache des Gasts, ohne verknüpften Gast Deutsch. Das geht schon vor dem Auslosen – dann können
-   alle früh ihre Wünsche eintragen.
+   alle früh ihre Wünsche eintragen. Wer seinen Link per Mail bekam und noch keinen Wunsch eingetragen
+   hat, wird per Mail daran erinnert (siehe „Erinnerung per Mail“).
 5. „Jetzt auslosen“ (ab drei Teilnehmern). Lassen die Ausschlüsse keine Auslosung zu, sagt die App,
    woran es liegt (z. B. „Für „Anna“ sind alle anderen ausgeschlossen“). Danach sind Teilnehmer und
    Ausschlüsse gesperrt; ändern geht erst nach „Auslosung zurücksetzen“ (mit Rückfrage). Links,
@@ -46,6 +47,9 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
   bekommt eine Mail, sobald sein Empfänger Wünsche oder andere Gäste Ideen für ihn eintragen – bis er
   „Geschenk gekauft“ setzt (siehe „Neuigkeiten per Mail“). Der Button „Geschenk gekauft“ in der Mail
   öffnet die Linkseite mit einer Rückfrage ganz oben; erst „Ja, Geschenk gekauft“ setzt den Status.
+- Erinnerung per Mail: Wer seine Einladung per Mail bekommen und noch keinen Wunsch eingetragen hat,
+  wird erinnert – drei Tage nach der Einladung, danach wöchentlich, höchstens dreimal. Der erste eigene
+  Wunsch beendet die Erinnerungen (siehe „Erinnerung per Mail“).
 - Zu Wunsch und Idee optional ein Link (z. B. zum Shop); Text oder Link genügt. Der Eintrag zeigt dann
   eine Vorschau mit Bild, Seitentitel und Seite (siehe „Link-Vorschau“). Ein ins Textfeld eingefügter
   Link am Ende („Produktname https://…“, wie aus dem Teilen-Menü einer Shop-App) wird zum Link.
@@ -68,6 +72,7 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
 | E-Mail-Adresse und Sprache | nein | nein | nein | ja, in der eigenen Gästeliste (nicht in der Runde gespeichert) |
 | Verknüpfter Gast, Mail-Status | nein | nein | nein | ja |
 | Dass es Neues über ihn gibt (Neuigkeiten-Mail, nur die Anzahl) | nein | ja, per Mail | nein | nein |
+| Ob er schon Wünsche eingetragen hat (Erinnerungs-Mail) | ja, per Mail | nein | nein | nein |
 
 Durchgesetzt wird das serverseitig, nicht in der Oberfläche:
 
@@ -95,7 +100,9 @@ wichtelRunden/{rundeId}            ownerId, titel, anlass (Schlüssel oder ''), 
                                    gastId (→ guests/{ownerId}/profiles/{gastId} oder null), mailStatus
                                    ('gesendet'|'fehler'|null), mailAm (letzter Versuch),
                                    neuigkeitenMailAm (letzte Neuigkeiten-Mail), neuigkeitenBis
-                                   (Zeitpunkt des neuesten darin gemeldeten Eintrags; beide fehlen = noch keine)
+                                   (Zeitpunkt des neuesten darin gemeldeten Eintrags; beide fehlen = noch keine),
+                                   erinnerungen (Anzahl verschickter Erinnerungen; fehlt nur bei Teilnehmern
+                                   von vor der Erinnerungs-Mail), erinnerungAm (letzte Erinnerung)
   zuordnungen/{geberId}            empfaengerId, ausgelostAm
   eintraege/{eintragId}            autorId, ueberId, text, erstelltAm,
                                    url und vorschau {bild, titel, seite} (nur mit Link; vorschau null,
@@ -105,6 +112,8 @@ wichtelMailLimits/{uid}_{JJJJ-MM-TT}   uid, tag, anzahl   (Tageszähler je Organ
 wichtelNeuigkeiten/{rundeId}_{geberId}  rundeId, geberId, faelligAm, zaehler (Einträge seit dem
                                         Vormerken), fehlversuche   (vorgemerkte Neuigkeiten-Mail; ohne
                                         Zuordnung, gelöscht nach dem Versand)
+wichtelErinnerungen/{rundeId}_{teilnehmerId}  rundeId, teilnehmerId, faelligAm, fehlversuche   (nächste
+                                        Erinnerung an einen Gast ohne Wünsche; ohne Zuordnung und Adresse)
 ```
 
 Teilnehmer, die vor der Gast-Verknüpfung angelegt wurden, haben die drei Mail-Felder nicht; das liest
@@ -144,6 +153,9 @@ Fehlermeldungen des Servers sind deutsch; die Teilnehmerseite übersetzt nach Fe
 Neuigkeiten-Mails (`versendeNeuigkeiten` in `functions/wichteln.js`). Ihr Button „Geschenk gekauft“
 führt auf den persönlichen Link mit `?gekauft=1`; die Teilnehmerseite nimmt den Parameter sofort aus der
 Adresse und zeigt die Rückfrage.
+
+`wichtelErinnerungenVersenden` (geplant, stündlich von 9 bis 20 Uhr, Zeitzone Europe/Berlin): verschickt
+fällige Erinnerungen an Gäste ohne Wünsche (`versendeErinnerungen` in `functions/wichteln.js`).
 
 Client: `src/utils/wichtelFirestore.js`, Links und Teilen-Text: `src/utils/wichtelLinks.js`,
 Oberflächen: `src/components/WichtelPage.js` (Organisator), `src/components/WichtelTeilnahmePage.js`
@@ -198,6 +210,32 @@ Oberflächen: `src/components/WichtelPage.js` (Organisator), `src/components/Wic
 - **Grenzen:** zählt zum Tageslimit des Organisators (150 Mails). Ist es erreicht, der Mailversand nicht
   eingerichtet oder der Mailserver nicht erreichbar, folgt eine Stunde später ein neuer Versuch; nach drei
   gescheiterten Sendeversuchen entfällt die Mail. Logs nennen nur IDs und Fehlercodes, nie die Adresse.
+
+## Erinnerung per Mail
+
+- **Wer:** Teilnehmer, deren Einladung per Mail zugestellt wurde und die noch keinen eigenen Wunsch
+  eingetragen haben – vor und nach dem Auslosen. Ideen für andere zählen nicht als Wunsch.
+- **Wann:** Jede zugestellte Einladung (auch „Erneut senden“) merkt die erste Erinnerung drei Tage später
+  vor (`wichtelErinnerungen/{rundeId}_{teilnehmerId}`). Danach folgt wöchentlich eine weitere, höchstens drei
+  insgesamt; erneutes Senden der Einladung setzt den Zähler nicht zurück und hält eine Woche Abstand zur
+  letzten Erinnerung. Verschickt wird von der geplanten Function `wichtelErinnerungenVersenden`, stündlich von
+  9 bis 20 Uhr (Berliner Zeit) – nachts geht keine raus, was dann fällig wird, folgt um 9 Uhr.
+- **Wann nicht mehr:** Vor dem Versand wird alles neu geprüft. Die Erinnerung entfällt, sobald der Gast einen
+  Wunsch eingetragen hat, sein Schenker das Geschenk als gekauft markiert hat (dann helfen Wünsche nicht
+  mehr), die Adresse aus dem Gästeprofil entfernt, der Teilnehmer entfernt oder die Runde gelöscht wurde.
+  „Auslosung zurücksetzen“ ändert nichts, Wünsche bleiben dabei ja auch erhalten.
+- **Inhalt** (`baueErinnerungsMail` in `functions/wichtelMail.js`, Texte unter `erinnerung` in
+  `functions/wichtelMailTexte/`): dieselben Varianten (`north_pole`, `warm_casual`) und Sprachen wie die
+  Einladung, derselbe Aufbau (Budget, Hinweis, Button zur Linkseite mit Fallback-Link). Der Text gilt vor und
+  nach dem Auslosen und nennt niemanden aus der Runde.
+- **Wer davon weiß:** nur der Gast selbst. Der Organisator sieht nicht, wer erinnert wird – das verriete, wer
+  noch keine Wünsche hat. In der Runde steht nur der Zähler am Teilnehmer.
+- **Grenzen:** zählt zum Tageslimit des Organisators (150 Mails); Limit, fehlender Mailversand und Fehler
+  verschieben wie bei der Neuigkeiten-Mail um eine Stunde, nach drei gescheiterten Sendeversuchen entfällt die
+  Erinnerung. Logs nennen nur IDs und Fehlercodes.
+- **Übergang:** Teilnehmer, deren Einladung vor der Erinnerungs-Mail (9. 11. 2026) zugestellt wurde, haben
+  noch keinen Vormerker. Er entsteht einmalig, wenn der Organisator die Runde öffnet – fällig drei Tage nach
+  der Einladung, frühestens sofort.
 
 ## Link-Vorschau
 
@@ -263,3 +301,7 @@ Das Token hat 192 Bit (24 Zufallsbytes, base64url).
   die Einträge, die er dort schon gesehen hat (die Seite merkt sich keinen „gesehen“-Stand).
 - Keine Benachrichtigung beim Auslosen („Jetzt kannst du dein Los ziehen“) – wer früh eingeladen
   wurde, muss selbst wieder vorbeischauen oder vom Organisator erinnert werden („Erneut senden“).
+- Die Runde kennt kein Datum der Feier: Erinnerungen an Wünsche enden erst nach dreien, einem Wunsch oder
+  „Geschenk gekauft“ beim Schenker – bei einer Einladung kurz vor der Feier kann die letzte danach kommen.
+- Erinnerungen abbestellen, ohne einen Wunsch einzutragen („Ich wünsche mir nichts“).
+- Button der Erinnerungs-Mail direkt zum Abschnitt „Deine Wünsche“ (heute: Anfang der Linkseite).

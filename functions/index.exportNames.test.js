@@ -72,6 +72,7 @@ const EXPECTED_EXPORTS = [
   'submitConsumption',
   'syncPublicProfile',
   'updateSeasonMatrixStatus',
+  'wichtelErinnerungenVersenden',
   'wichtelNeuigkeitenVersenden',
   'wichtelTeilnahme',
   'wichtelVerwalten',

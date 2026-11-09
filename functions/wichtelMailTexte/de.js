@@ -11,6 +11,10 @@
  *   geteiltes Postfach) und keine Inhalte der Einträge, nur ihre Anzahl. Platzhalter:
  *   {firstName}, {eventName}, {budget}, {hinweis}, {wuensche} und {ideen} (aus `anzahl`).
  *   Je nachdem, was neu ist, gilt `nurWuensche`, `nurIdeen` oder `beides`.
+ *
+ * erinnerung: an einen Gast, der noch keine Wünsche eingetragen hat. Gilt vor und nach dem
+ *   Auslosen gleich und nennt niemanden aus der Runde. Platzhalter: {firstName}, {eventName},
+ *   {budget}, {hinweis}.
  */
 module.exports = {
   einladung: {
@@ -100,6 +104,41 @@ module.exports = {
       },
       // Fallback-Zeile je Button: Beschriftung und Link
       linkZeile: "{label}: {link}",
+      hinweis: "Hinweis: {hinweis}",
+    },
+  },
+
+  erinnerung: {
+    north_pole: {
+      betreff: "📜 Die Wichtel warten auf deinen Wunschzettel, {firstName}",
+      anrede: "Hallo {firstName},",
+      intro: "in der Wichtelwerkstatt am Nordpol stapeln sich schon die Wunschzettel – nur deiner fürs " +
+        "Wichteln „{eventName}“ fehlt noch. ❄️",
+      erklaerung: "Schreib ein paar Wünsche auf, damit dein Wichtel das passende Geschenk für dich findet. " +
+        "Ein Stichwort oder ein Link zum Shop genügt schon. Die Rentiere scharren bereits mit den Hufen.",
+      budget: "🎁 Budget: {budget}",
+      knopf: "Wunschzettel schreiben",
+      linkErsatz: "Falls der Button klemmt, hilft dieser Link:",
+      geheim: "Streng geheim: Dieser Link ist nur für dich. Kein Wort zu den anderen!",
+      gruss: "Mit glitzernden Grüßen aus der Wichtelwerkstatt 🦌",
+      grund: "Du bekommst diese Mail, weil du beim Wichteln „{eventName}“ dabei bist und noch keine Wünsche " +
+        "eingetragen hast. Sobald du einen Wunsch einträgst, kommt keine Erinnerung mehr.",
+    },
+    warm_casual: {
+      betreff: "🎁 Noch keine Wünsche eingetragen, {firstName}?",
+      anrede: "Hallo {firstName},",
+      intro: "kleine Erinnerung zum Wichteln „{eventName}“: Du hast noch keine Wünsche eingetragen.",
+      erklaerung: "Mit ein paar Wünschen findet die Person, die dich beschenkt, viel leichter etwas Passendes. " +
+        "Ein Stichwort oder ein Link zum Shop genügt schon.",
+      budget: "Budget: {budget}",
+      knopf: "Wünsche eintragen",
+      linkErsatz: "Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:",
+      geheim: "Der Link gehört nur dir, bitte gib ihn nicht weiter.",
+      gruss: "Viel Spaß beim Wünschen!",
+      grund: "Du bekommst diese Mail, weil du beim Wichteln „{eventName}“ dabei bist und noch keine Wünsche " +
+        "eingetragen hast. Sobald du einen Wunsch einträgst, kommt keine Erinnerung mehr.",
+    },
+    gemeinsam: {
       hinweis: "Hinweis: {hinweis}",
     },
   },

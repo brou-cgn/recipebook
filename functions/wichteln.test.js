@@ -1452,3 +1452,243 @@ test('Neuigkeiten: Zurücksetzen und Löschen der Runde räumen Vormerker ab; oh
   assert.deepEqual(await r.lauf(), {gesendet: 0, verworfen: 0, verschoben: 0});
   assert.equal(r.versand.erstellt, 0, 'ohne fällige Vormerker wird kein Mailer erzeugt');
 });
+
+// ---------------------------------------------------------------------------
+// Erinnerung per Mail an Gäste ohne Wünsche
+// ---------------------------------------------------------------------------
+
+const {ERINNERUNGEN_COLLECTION, ERINNERUNG_NACH_MS, ERINNERUNG_ABSTAND_MS, MAX_ERINNERUNGEN} = wichteln._internal;
+const TAG = 24 * 60 * MINUTE;
+
+/**
+ * Noch nicht ausgeloste Runde mit vier verknüpften Gästen (Dana ohne Adresse, Anna Englisch,
+ * Cleo Französisch). Anna, Ben und Cleo bekommen ihre Einladung zu JETZT. Die Uhr (jetztMs und
+ * Server-Zeitstempel) stellt `zeit` gemeinsam vor.
+ */
+const setupErinnerung = async ({anlass = 'weihnachten'} = {}) => {
+  const db = makeDb(neuigkeitenSeed());
+  let jetzt = JETZT;
+  db.stelleUhr(jetzt);
+  const einladungen = makeMailer();
+  let rundeId = null;
+  const orga = (daten) => verwalten(db, 'orga', {rundeId, ...daten}, {mailer: einladungen.factory, jetztMs: jetzt});
+  const sicht = await orga({aktion: 'anlegen', titel: 'Advent 2026', anlass, budget: '20 €', hinweis: '', namen: [
+    {name: 'Anna Muster', gastId: 'gastAnna0001'},
+    {name: 'Ben Beispiel', gastId: 'gastBen00001'},
+    {name: 'Cleo Ohne', gastId: 'gastCleo0001'},
+    {name: 'Dana', gastId: 'gastDana0001'},
+  ]});
+  rundeId = sicht.runde.id;
+  const tn = nachName(sicht);
+  const versand = makeMailer();
+  return {
+    db, rundeId, tn, orga, einladungen, versand,
+    zeit: (ms) => {
+      jetzt = ms;
+      db.stelleUhr(ms);
+    },
+    als: (wer, aktion, daten = {}) => teilnahme(db, {aktion, rundeId, token: tn[wer].token, ...daten}, keinAbruf, jetzt),
+    wunsch: (wer, text) => teilnahme(db, {aktion: 'eintragHinzufuegen', rundeId, token: tn[wer].token, ueberId: tn[wer].id, text}, keinAbruf, jetzt),
+    lauf: (mailer = versand) => wichteln.versendeErinnerungen(fakeAdmin, db, {mailer: mailer.factory, jetztMs: jetzt}),
+    vormerker: (wer) => db.store.get(`${ERINNERUNGEN_COLLECTION}/${rundeId}_${tn[wer].id}`),
+    teilnehmerPfad: (wer) => `wichtelRunden/${rundeId}/teilnehmer/${tn[wer].id}`,
+    teilnehmerDoc: (wer) => db.store.get(`wichtelRunden/${rundeId}/teilnehmer/${tn[wer].id}`),
+    an: (adresse) => versand.gesendet.filter((m) => m.to === adresse),
+  };
+};
+
+test('Erinnerung: die zugestellte Einladung merkt sie vor, nach drei Tagen geht sie an Gäste ohne Wunsch', async () => {
+  const r = await setupErinnerung();
+  for (const wer of ['Anna Muster', 'Ben Beispiel', 'Cleo Ohne']) {
+    const v = r.vormerker(wer);
+    assert.deepEqual([v.rundeId, v.teilnehmerId, faelligMs(v), v.fehlversuche], [r.rundeId, r.tn[wer].id, JETZT + ERINNERUNG_NACH_MS, 0], wer);
+    assert.doesNotMatch(JSON.stringify(v), /@|empfaenger/, 'ohne Adresse und ohne Zuordnung');
+    assert.equal(r.teilnehmerDoc(wer).erinnerungen, 0);
+  }
+  assert.equal(r.vormerker('Dana'), undefined, 'ohne Adresse keine Einladung und keine Erinnerung');
+
+  await r.wunsch('Ben Beispiel', 'Ein Buch über Pilze');
+  r.zeit(JETZT + ERINNERUNG_NACH_MS - MINUTE);
+  assert.deepEqual(await r.lauf(), {gesendet: 0, verworfen: 0, verschoben: 0});
+  assert.equal(r.versand.erstellt, 0, 'ohne Fälliges wird kein Mailer erzeugt');
+
+  const jetzt = JETZT + ERINNERUNG_NACH_MS;
+  r.zeit(jetzt);
+  assert.deepEqual(await r.lauf(), {gesendet: 2, verworfen: 1, verschoben: 0});
+  assert.deepEqual(r.versand.gesendet.map((m) => m.to).sort(), ['anna@example.com', 'cleo@example.com']);
+  const [anna] = r.an('anna@example.com');
+  const link = `${APP_URL}/wichteln/${r.rundeId}/${r.tn['Anna Muster'].token}`;
+  assert.equal(anna.subject, '📜 The elves are waiting for your wish list, Anna');
+  assert.ok(anna.text.includes(`\n${link}\n`), 'Annas eigener Link');
+  const ohneLink = [anna.subject, anna.text, anna.html].join('\n').split(link).join('');
+  assert.doesNotMatch(ohneLink, /Ben|Cleo|Dana|Pilze/, 'nennt niemanden sonst aus der Runde');
+  assert.equal(r.an('cleo@example.com')[0].subject, '📜 Les lutins attendent ta liste de souhaits, Cleo');
+  assert.equal(r.versand.geschlossen, 1);
+
+  assert.equal(r.vormerker('Ben Beispiel'), undefined, 'mit Wunsch verworfen');
+  assert.equal(r.teilnehmerDoc('Ben Beispiel').erinnerungen, 0);
+  assert.equal(faelligMs(r.vormerker('Anna Muster')), jetzt + ERINNERUNG_ABSTAND_MS, 'die nächste eine Woche später');
+  assert.equal(r.teilnehmerDoc('Anna Muster').erinnerungen, 1);
+  assert.equal(r.teilnehmerDoc('Anna Muster').erinnerungAm.toMillis(), jetzt);
+  assert.equal(r.db.store.get(`wichtelMailLimits/orga_${berlinerTag(jetzt)}`).anzahl, 2, 'zählt zum Tageslimit des Organisators');
+
+  // Weder der Organisator noch Teilnehmer sehen etwas von den Erinnerungen.
+  const orgaSicht = await r.orga({aktion: 'laden'});
+  const annaSicht = await r.als('Anna Muster', 'laden');
+  assert.doesNotMatch(JSON.stringify([orgaSicht, annaSicht]), /erinnerung/i);
+});
+
+test('Erinnerung: wöchentlich, höchstens dreimal; ein eigener Wunsch beendet sie, eine Idee für andere nicht', async () => {
+  const r = await setupErinnerung({anlass: 'geburtstag'});
+  await r.als('Anna Muster', 'eintragHinzufuegen', {ueberId: r.tn['Ben Beispiel'].id, text: 'Idee für Ben'});
+
+  r.zeit(JETZT + ERINNERUNG_NACH_MS);
+  assert.deepEqual(await r.lauf(), {gesendet: 3, verworfen: 0, verschoben: 0});
+  await r.wunsch('Cleo Ohne', 'Tee');
+  r.zeit(JETZT + ERINNERUNG_NACH_MS + ERINNERUNG_ABSTAND_MS);
+  assert.deepEqual(await r.lauf(), {gesendet: 2, verworfen: 1, verschoben: 0});
+  r.zeit(JETZT + ERINNERUNG_NACH_MS + 2 * ERINNERUNG_ABSTAND_MS);
+  assert.deepEqual(await r.lauf(), {gesendet: 2, verworfen: 0, verschoben: 0});
+  assert.equal(r.vormerker('Anna Muster'), undefined, `nach der ${MAX_ERINNERUNGEN}. Erinnerung ist Schluss`);
+  r.zeit(JETZT + ERINNERUNG_NACH_MS + 3 * ERINNERUNG_ABSTAND_MS);
+  assert.deepEqual(await r.lauf(), {gesendet: 0, verworfen: 0, verschoben: 0});
+
+  assert.equal(r.an('anna@example.com').length, MAX_ERINNERUNGEN, 'Annas Idee für Ben ist kein eigener Wunsch');
+  assert.equal(r.an('ben@example.com').length, MAX_ERINNERUNGEN, 'eine Idee über Ben ist kein Wunsch von Ben');
+  assert.equal(r.an('cleo@example.com').length, 1);
+  assert.equal(r.teilnehmerDoc('Anna Muster').erinnerungen, MAX_ERINNERUNGEN);
+  assert.equal(r.an('ben@example.com')[0].subject, '🎁 Noch keine Wünsche eingetragen, Ben?');
+
+  // Erneutes Senden der Einladung startet keine neue Reihe.
+  await r.orga({aktion: 'einladungSenden', teilnehmerId: r.tn['Anna Muster'].id});
+  r.zeit(JETZT + ERINNERUNG_NACH_MS + 4 * ERINNERUNG_ABSTAND_MS);
+  assert.deepEqual(await r.lauf(), {gesendet: 0, verworfen: 1, verschoben: 0});
+  assert.equal(r.an('anna@example.com').length, MAX_ERINNERUNGEN);
+});
+
+test('Erinnerung: entfällt, sobald der Schenker des Gasts das Geschenk als gekauft markiert hat', async () => {
+  const r = await setupErinnerung();
+  await r.orga({aktion: 'auslosen'});
+  const nameVon = Object.fromEntries(Object.entries(r.tn).map(([name, t]) => [t.id, name]));
+  const schenker = Object.keys(r.tn).find((geber) =>
+    nameVon[r.db.store.get(`wichtelRunden/${r.rundeId}/zuordnungen/${r.tn[geber].id}`).empfaengerId] === 'Anna Muster');
+  await r.als(schenker, 'ziehen');
+  await r.als(schenker, 'geschenkGekauft', {gekauft: true});
+
+  r.zeit(JETZT + ERINNERUNG_NACH_MS);
+  assert.deepEqual(await r.lauf(), {gesendet: 2, verworfen: 1, verschoben: 0});
+  assert.equal(r.an('anna@example.com').length, 0);
+  assert.equal(r.vormerker('Anna Muster'), undefined);
+});
+
+test('Erinnerung: erneutes Senden plant neu, hält aber eine Woche Abstand zur letzten Erinnerung; der Zähler bleibt', async () => {
+  const r = await setupErinnerung();
+  const anna = 'Anna Muster';
+  r.zeit(JETZT + ERINNERUNG_NACH_MS);
+  await r.lauf();
+  assert.equal(r.an('anna@example.com').length, 1);
+
+  const erneut = JETZT + ERINNERUNG_NACH_MS + TAG;
+  r.zeit(erneut);
+  await r.orga({aktion: 'einladungSenden', teilnehmerId: r.tn[anna].id});
+  assert.equal(faelligMs(r.vormerker(anna)), erneut + ERINNERUNG_NACH_MS, 'drei Tage nach der neuen Einladung');
+
+  r.zeit(erneut + ERINNERUNG_NACH_MS);
+  assert.deepEqual(await r.lauf(), {gesendet: 0, verworfen: 0, verschoben: 1});
+  const wochenfrist = JETZT + ERINNERUNG_NACH_MS + ERINNERUNG_ABSTAND_MS;
+  assert.equal(faelligMs(r.vormerker(anna)), wochenfrist, 'eine Woche nach der letzten Erinnerung');
+
+  r.zeit(wochenfrist);
+  assert.deepEqual(await r.lauf(), {gesendet: 3, verworfen: 0, verschoben: 0});
+  assert.equal(r.teilnehmerDoc(anna).erinnerungen, 2, 'erneutes Senden setzt den Zähler nicht zurück');
+});
+
+test('Erinnerung: Tageslimit und fehlender Mailversand verschieben, nach drei Fehlversuchen verworfen, keine Adresse im Log', async () => {
+  const r = await setupErinnerung();
+  await r.wunsch('Anna Muster', 'Wunsch');
+  await r.wunsch('Cleo Ohne', 'Wunsch');
+  const ben = 'Ben Beispiel';
+  let jetzt = JETZT + ERINNERUNG_NACH_MS;
+  r.zeit(jetzt);
+
+  const limitPfad = `wichtelMailLimits/orga_${berlinerTag(jetzt)}`;
+  r.db.store.set(limitPfad, {uid: 'orga', tag: berlinerTag(jetzt), anzahl: MAX_MAILS_PRO_TAG});
+  assert.deepEqual(await r.lauf(), {gesendet: 0, verworfen: 2, verschoben: 1});
+  assert.equal(faelligMs(r.vormerker(ben)), jetzt + NEUER_VERSUCH_MS);
+  assert.equal(r.vormerker(ben).fehlversuche, 0, 'Tageslimit ist kein Fehlversuch');
+  r.db.store.delete(limitPfad);
+
+  jetzt += NEUER_VERSUCH_MS;
+  r.zeit(jetzt);
+  assert.deepEqual(await r.lauf({factory: () => null}), {gesendet: 0, verworfen: 0, verschoben: 1}, 'ohne SMTP');
+  assert.equal(r.vormerker(ben).fehlversuche, 0);
+
+  const kaputt = makeMailer({fehlerFuer: ['ben@example.com']});
+  const {zeilen} = await mitStillemLog(async () => {
+    for (const erwartet of [{verschoben: 1, fehlversuche: 1}, {verschoben: 1, fehlversuche: 2}, {verworfen: 1}]) {
+      jetzt += NEUER_VERSUCH_MS;
+      r.zeit(jetzt);
+      const ergebnis = await r.lauf(kaputt);
+      assert.deepEqual(ergebnis, {gesendet: 0, verworfen: erwartet.verworfen || 0, verschoben: erwartet.verschoben || 0});
+      if (erwartet.fehlversuche) assert.equal(r.vormerker(ben).fehlversuche, erwartet.fehlversuche);
+    }
+  });
+  assert.equal(r.vormerker(ben), undefined);
+  assert.equal(kaputt.gesendet.length, 0);
+  assert.equal(r.teilnehmerDoc(ben).erinnerungen, 0, 'nicht Zugestelltes zählt nicht');
+  assert.ok(zeilen.some((zeile) => zeile.startsWith('wichtelErinnerungenVersenden:') && zeile.includes(r.tn[ben].id)));
+  for (const zeile of zeilen) assert.doesNotMatch(zeile, /@/, 'keine Adresse im Log');
+});
+
+test('Erinnerung: Entfernen und Löschen räumen Vormerker ab, Zurücksetzen nicht; ohne Adresse entfällt sie', async () => {
+  const r = await setupErinnerung();
+  await r.orga({aktion: 'teilnehmerEntfernen', teilnehmerId: r.tn['Cleo Ohne'].id});
+  assert.equal(r.vormerker('Cleo Ohne'), undefined);
+
+  await r.orga({aktion: 'auslosen'});
+  await r.orga({aktion: 'zuruecksetzen'});
+  assert.ok(r.vormerker('Anna Muster'), 'Zurücksetzen behält die Erinnerung, wie die Wünsche');
+
+  // Adresse aus dem Gästeprofil entfernt: die Erinnerung entfällt beim Versand.
+  r.db.store.set('guests/orga/profiles/gastBen00001', {vorname: 'Ben'});
+  r.zeit(JETZT + ERINNERUNG_NACH_MS);
+  assert.deepEqual(await r.lauf(), {gesendet: 1, verworfen: 1, verschoben: 0});
+  assert.equal(r.vormerker('Ben Beispiel'), undefined);
+
+  await r.orga({aktion: 'loeschen'});
+  assert.ok(![...r.db.store.keys()].some((pfad) => pfad.startsWith(`${ERINNERUNGEN_COLLECTION}/`)));
+});
+
+test('Erinnerung: Einladungen von vor dem Update werden beim Öffnen der Runde einmal vorgemerkt', async () => {
+  const r = await setupErinnerung();
+  // Stand vor dem Update: kein Zähler an den Teilnehmern, keine Vormerker.
+  for (const [pfad, daten] of [...r.db.store.entries()]) {
+    if (pfad.startsWith(`${ERINNERUNGEN_COLLECTION}/`)) {
+      r.db.store.delete(pfad);
+    } else if (pfad.startsWith(`wichtelRunden/${r.rundeId}/teilnehmer/`)) {
+      const {erinnerungen: _weg, ...rest} = daten;
+      r.db.store.set(pfad, rest);
+    }
+  }
+  // Annas Einladung ist fünf Tage alt, Cleos ist nie angekommen.
+  r.db.store.set(r.teilnehmerPfad('Anna Muster'), {...r.teilnehmerDoc('Anna Muster'), mailAm: {toMillis: () => JETZT - 5 * TAG}});
+  r.db.store.set(r.teilnehmerPfad('Cleo Ohne'), {...r.teilnehmerDoc('Cleo Ohne'), mailStatus: 'fehler'});
+
+  const jetzt = JETZT + TAG;
+  r.zeit(jetzt);
+  await r.orga({aktion: 'laden'});
+  assert.equal(faelligMs(r.vormerker('Anna Muster')), jetzt, 'überfällig: beim nächsten Lauf');
+  assert.equal(faelligMs(r.vormerker('Ben Beispiel')), r.teilnehmerDoc('Ben Beispiel').mailAm.toMillis() + ERINNERUNG_NACH_MS);
+  assert.equal(r.vormerker('Cleo Ohne'), undefined, 'Einladung nicht zugestellt');
+  assert.equal(r.vormerker('Dana'), undefined, 'nie per Mail eingeladen');
+  assert.equal(r.teilnehmerDoc('Anna Muster').erinnerungen, 0);
+  assert.equal(r.teilnehmerDoc('Cleo Ohne').erinnerungen, undefined);
+
+  // Nur einmal: späteres Öffnen plant nichts neu.
+  r.zeit(jetzt + TAG);
+  await r.orga({aktion: 'laden'});
+  assert.equal(faelligMs(r.vormerker('Anna Muster')), jetzt);
+
+  assert.deepEqual(await r.lauf(), {gesendet: 1, verworfen: 0, verschoben: 0});
+  assert.equal(r.an('anna@example.com').length, 1);
+});

@@ -4,6 +4,8 @@
  *  - Einladung (baueEinladungsMail): persönlicher Link zum Los, beim Eintragen eines Gasts.
  *  - Neuigkeiten (baueNeuigkeitenMail): an den Schenker, wenn sein Empfänger neue Wünsche oder
  *    andere Gäste neue Ideen für ihn eingetragen haben; mit Button „Geschenk gekauft“.
+ *  - Erinnerung (baueErinnerungsMail): an einen Gast, der noch keine Wünsche eingetragen hat;
+ *    gleicher Aufbau wie die Einladung (baueLinkMail).
  *
  * Zwei Varianten je Mail, gewählt nur nach dem Anlass der Runde: north_pole („Post vom Nordpol“)
  * für Weihnachten und Nikolaus, warm_casual für alles andere. Die Sprache kommt aus dem
@@ -138,29 +140,18 @@ function einzeilig(text) {
 }
 
 /**
- * @param {{sprache?: string, anlass?: string, name: string, titel: string, link: string,
- *   budget?: string, hinweis?: string, organisator?: string|null}} params - Teilnehmername,
- *   Rundendaten, persönlicher Link und (optional) Vorname des Organisators
+ * Mail mit einem Button zum persönlichen Link (Einladung, Erinnerung): Anrede, Einleitung,
+ * Erklärung, optional Budget und Hinweis, Button mit Fallback-Link, Geheim-Zeile und Gruß;
+ * darunter klein der Grund.
+ * @param {{sprache: string, t: object, werte: object, link: string, intro: string,
+ *   grund: string, hinweisZeile: string|null}} teile - normalisierte Sprache, Textbausteine der
+ *   Variante (betreff, anrede, erklaerung, budget, knopf, linkErsatz, geheim, gruss), Werte der
+ *   Platzhalter, schon gewählte Bausteine für Einleitung und Grund; ohne Budget entfällt die
+ *   Budgetzeile, ohne `hinweisZeile` die Hinweiszeile
  * @return {{subject: string, text: string, html: string}}
  */
-function baueEinladungsMail({sprache, anlass, name, titel, link, budget = '', hinweis = '', organisator = null}) {
-  const s = normalisiereSprache(sprache);
-  const texte = TEXTE[s].einladung;
-  const t = texte[waehleVariante(anlass)];
-  const gemeinsam = texte.gemeinsam;
-  const von = organisator || null;
-  const werte = {
-    firstName: ersterVorname(name),
-    hostName: von || '',
-    eventName: titel,
-    budget: formatiereBudget(budget, s),
-    hinweis,
-    link,
-  };
+function baueLinkMail({sprache, t, werte, link, intro, grund, hinweisZeile}) {
   const budgetZeile = werte.budget ? t.budget : null;
-  const hinweisZeile = hinweis ? gemeinsam.hinweis : null;
-  const intro = von ? t.intro : t.introOhneHost;
-  const grund = von ? gemeinsam.grund : gemeinsam.grundOhneHost;
 
   const text = [
     fuelle(t.anrede, werte, false),
@@ -176,7 +167,7 @@ function baueEinladungsMail({sprache, anlass, name, titel, link, budget = '', hi
 
   const h = (vorlage) => fuelle(vorlage, werte, true);
   const html = htmlRahmen({
-    sprache: s,
+    sprache,
     titel: h(t.betreff),
     inhalt: [
       absatz(h(t.anrede)),
@@ -193,6 +184,63 @@ function baueEinladungsMail({sprache, anlass, name, titel, link, budget = '', hi
   });
 
   return {subject: einzeilig(fuelle(t.betreff, werte, false)), text, html};
+}
+
+/**
+ * @param {{sprache?: string, anlass?: string, name: string, titel: string, link: string,
+ *   budget?: string, hinweis?: string, organisator?: string|null}} params - Teilnehmername,
+ *   Rundendaten, persönlicher Link und (optional) Vorname des Organisators
+ * @return {{subject: string, text: string, html: string}}
+ */
+function baueEinladungsMail({sprache, anlass, name, titel, link, budget = '', hinweis = '', organisator = null}) {
+  const s = normalisiereSprache(sprache);
+  const texte = TEXTE[s].einladung;
+  const t = texte[waehleVariante(anlass)];
+  const gemeinsam = texte.gemeinsam;
+  const von = organisator || null;
+  return baueLinkMail({
+    sprache: s,
+    t,
+    werte: {
+      firstName: ersterVorname(name),
+      hostName: von || '',
+      eventName: titel,
+      budget: formatiereBudget(budget, s),
+      hinweis,
+      link,
+    },
+    link,
+    intro: von ? t.intro : t.introOhneHost,
+    grund: von ? gemeinsam.grund : gemeinsam.grundOhneHost,
+    hinweisZeile: hinweis ? gemeinsam.hinweis : null,
+  });
+}
+
+/**
+ * Erinnerung an einen Gast, der noch keine Wünsche eingetragen hat. Gleicher Text vor und nach
+ * dem Auslosen; nennt niemanden aus der Runde, auch nicht, wer schon Wünsche hat.
+ * @param {{sprache?: string, anlass?: string, name: string, titel: string, link: string,
+ *   budget?: string, hinweis?: string}} params - Teilnehmername, Rundendaten und persönlicher Link
+ * @return {{subject: string, text: string, html: string}}
+ */
+function baueErinnerungsMail({sprache, anlass, name, titel, link, budget = '', hinweis = ''}) {
+  const s = normalisiereSprache(sprache);
+  const texte = TEXTE[s].erinnerung;
+  const t = texte[waehleVariante(anlass)];
+  return baueLinkMail({
+    sprache: s,
+    t,
+    werte: {
+      firstName: ersterVorname(name),
+      eventName: titel,
+      budget: formatiereBudget(budget, s),
+      hinweis,
+    },
+    link,
+    intro: t.intro,
+    grund: t.grund,
+    hinweisZeile: hinweis ? texte.gemeinsam.hinweis : null,
+  });
 }
 
 /**
@@ -274,5 +322,6 @@ function baueNeuigkeitenMail({
 module.exports = {
   baueEinladungsMail,
   baueNeuigkeitenMail,
+  baueErinnerungsMail,
   _internal: {TEXTE, waehleVariante, ersterVorname, formatiereBudget, fuelle},
 };

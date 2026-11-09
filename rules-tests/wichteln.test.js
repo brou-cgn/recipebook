@@ -88,3 +88,15 @@ test('wichtelNeuigkeiten: vorgemerkte Neuigkeiten-Mails nur über Cloud Function
     await assertFails(db.doc('wichtelNeuigkeiten/runde1_geber1').delete());
   }
 });
+
+test('wichtelErinnerungen: vorgemerkte Erinnerungen nur über Cloud Functions', async () => {
+  await seed(env, async (db) => {
+    await db.doc('wichtelErinnerungen/runde1_teiln1').set({ rundeId: 'runde1', teilnehmerId: 'teiln1', fehlversuche: 0 });
+  });
+  for (const db of Object.values(alle(env))) {
+    await assertFails(db.doc('wichtelErinnerungen/runde1_teiln1').get());
+    await assertFails(db.collection('wichtelErinnerungen').where('rundeId', '==', 'runde1').limit(10).get());
+    await assertFails(db.doc('wichtelErinnerungen/runde1_teiln1').set({ rundeId: 'runde1', teilnehmerId: 'teiln1', fehlversuche: 0 }));
+    await assertFails(db.doc('wichtelErinnerungen/runde1_teiln1').delete());
+  }
+});

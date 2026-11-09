@@ -1,7 +1,7 @@
 /**
  * Wichteln: Organisator-Callable, Teilnehmer-Callable und der geplante Versand der
- * Neuigkeiten-Mails. Logik und Geheimhaltung in ../wichteln.js; alle Daten unter
- * wichtelRunden/ sind für Clients gesperrt.
+ * Neuigkeiten- und Erinnerungs-Mails. Logik und Geheimhaltung in ../wichteln.js; alle Daten
+ * unter wichtelRunden/ sind für Clients gesperrt.
  */
 
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
@@ -14,7 +14,7 @@ const {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom} = require('../share
 const SMTP_SECRETS = [smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom];
 
 /**
- * SMTP-Versand für Wichtel-Mails (Einladungen, Neuigkeiten). Liest die Secrets erst, wenn eine
+ * SMTP-Versand für Wichtel-Mails (Einladungen, Neuigkeiten, Erinnerungen). Liest die Secrets erst, wenn eine
  * Mail rausgehen soll, und lädt nodemailer erst dann (Kaltstart, AGENTS.md). Ein kleiner Pool
  * verschickt alle Mails eines Aufrufs über wenige Verbindungen; kurze Timeouts, damit ein
  * hängender Mailserver den Aufruf nicht bis zum Function-Timeout aufhält.
@@ -100,6 +100,29 @@ exports.wichtelNeuigkeitenVersenden = onSchedule(
       const ergebnis = await wichteln.versendeNeuigkeiten(admin, admin.firestore(), {mailer: smtpMailer});
       if (ergebnis.gesendet || ergebnis.verworfen || ergebnis.verschoben) {
         console.log('wichtelNeuigkeitenVersenden:', JSON.stringify(ergebnis));
+      }
+    },
+);
+
+/**
+ * Stündlich von 9 bis 20 Uhr: fällige Erinnerungen an Gäste verschicken, die noch keinen Wunsch
+ * eingetragen haben (drei Tage nach der Einladung, danach wöchentlich, höchstens dreimal). Nachts
+ * geht keine raus; was dann fällig wird, folgt um 9 Uhr. Ohne fällige Vormerker endet ein Lauf
+ * nach einer Abfrage.
+ */
+exports.wichtelErinnerungenVersenden = onSchedule(
+    {
+      schedule: '0 9-20 * * *',
+      timeZone: 'Europe/Berlin',
+      timeoutSeconds: 300,
+      maxInstances: 1,
+      retryCount: 0,
+      secrets: SMTP_SECRETS,
+    },
+    async () => {
+      const ergebnis = await wichteln.versendeErinnerungen(admin, admin.firestore(), {mailer: smtpMailer});
+      if (ergebnis.gesendet || ergebnis.verworfen || ergebnis.verschoben) {
+        console.log('wichtelErinnerungenVersenden:', JSON.stringify(ergebnis));
       }
     },
 );
