@@ -4,6 +4,8 @@
  *  - Einladung (baueEinladungsMail): persönlicher Link zum Los, beim Eintragen eines Gasts.
  *  - Neuigkeiten (baueNeuigkeitenMail): an den Schenker, wenn sein Empfänger neue Wünsche oder
  *    andere Gäste neue Ideen für ihn eingetragen haben; mit Button „Geschenk gekauft“.
+ *  - Erinnerung (baueErinnerungsMail): an einen Gast, der noch keine Wünsche eingetragen hat;
+ *    gleicher Aufbau wie die Einladung (baueLinkMail).
  *
  * Zwei Varianten je Mail, gewählt nur nach dem Anlass der Runde: north_pole („Post vom Nordpol“)
  * für Weihnachten und Nikolaus, warm_casual für alles andere. Die Sprache kommt aus dem
@@ -12,7 +14,8 @@
  *
  * Alles, was der Organisator eingibt (Name, Titel, Budget, Hinweis, sein Vorname), steht im
  * HTML nur escaped. Budget und Hinweis erscheinen so, wie er sie geschrieben hat; das Budget
- * wird bei einem reinen Betrag in der Schreibweise der Sprache formatiert.
+ * wird bei einem reinen Betrag in der Schreibweise der Sprache formatiert, das Datum der Feier
+ * immer ausgeschrieben („Sonntag, 13. Dezember 2026“).
  */
 
 const {escapeHtml} = require('./shared/common');
@@ -71,6 +74,33 @@ function formatiereBudget(wert, sprache) {
   if (!treffer) return text;
   const zahl = Number(`${treffer[1].replace(/\./g, '')}.${treffer[2] || '0'}`);
   return new Intl.NumberFormat(ZAHLFORMAT[sprache], {style: 'currency', currency: 'EUR'}).format(zahl);
+}
+
+/**
+ * Datum der Feier ausgeschrieben in der Schreibweise der Sprache („Sonntag, 13. Dezember 2026“,
+ * „Sunday 13 December 2026“, „dimanche 13 décembre 2026“). Ohne Datum (oder mit einem, das kein
+ * Kalendertag 'JJJJ-MM-TT' ist) ''.
+ * @param {string} datum - Datum der Runde
+ * @param {string} sprache - normalisierte Sprache
+ * @return {string}
+ */
+function formatiereDatum(datum, sprache) {
+  const treffer = String(datum ?? '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!treffer) return '';
+  const [jahr, monat, tag] = treffer.slice(1).map(Number);
+  return new Intl.DateTimeFormat(ZAHLFORMAT[sprache], {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
+  }).format(new Date(Date.UTC(jahr, monat - 1, tag)));
+}
+
+/**
+ * Datum der Feier und Budget: je eine fett gesetzte Zeile in einem Absatz; fehlt beides, nichts.
+ * @param {object} t - Textbausteine der Variante (datum, budget)
+ * @param {object} werte - Platzhalter (datum und budget schon formatiert)
+ * @return {string[]} Bausteine, leer ohne Datum und Budget
+ */
+function eckdatenZeilen(t, werte) {
+  return [werte.datum ? t.datum : null, werte.budget ? t.budget : null].filter(Boolean);
 }
 
 /**
@@ -138,35 +168,24 @@ function einzeilig(text) {
 }
 
 /**
- * @param {{sprache?: string, anlass?: string, name: string, titel: string, link: string,
- *   budget?: string, hinweis?: string, organisator?: string|null}} params - Teilnehmername,
- *   Rundendaten, persönlicher Link und (optional) Vorname des Organisators
+ * Mail mit einem Button zum persönlichen Link (Einladung, Erinnerung): Anrede, Einleitung,
+ * Erklärung, optional Budget und Hinweis, Button mit Fallback-Link, Geheim-Zeile und Gruß;
+ * darunter klein der Grund.
+ * @param {{sprache: string, t: object, werte: object, link: string, intro: string,
+ *   grund: string, hinweisZeile: string|null}} teile - normalisierte Sprache, Textbausteine der
+ *   Variante (betreff, anrede, erklaerung, datum, budget, knopf, linkErsatz, geheim, gruss), Werte
+ *   der Platzhalter, schon gewählte Bausteine für Einleitung und Grund; ohne Datum oder Budget
+ *   entfällt die Zeile, ohne `hinweisZeile` die Hinweiszeile
  * @return {{subject: string, text: string, html: string}}
  */
-function baueEinladungsMail({sprache, anlass, name, titel, link, budget = '', hinweis = '', organisator = null}) {
-  const s = normalisiereSprache(sprache);
-  const texte = TEXTE[s].einladung;
-  const t = texte[waehleVariante(anlass)];
-  const gemeinsam = texte.gemeinsam;
-  const von = organisator || null;
-  const werte = {
-    firstName: ersterVorname(name),
-    hostName: von || '',
-    eventName: titel,
-    budget: formatiereBudget(budget, s),
-    hinweis,
-    link,
-  };
-  const budgetZeile = werte.budget ? t.budget : null;
-  const hinweisZeile = hinweis ? gemeinsam.hinweis : null;
-  const intro = von ? t.intro : t.introOhneHost;
-  const grund = von ? gemeinsam.grund : gemeinsam.grundOhneHost;
+function baueLinkMail({sprache, t, werte, link, intro, grund, hinweisZeile}) {
+  const eckdaten = eckdatenZeilen(t, werte);
 
   const text = [
     fuelle(t.anrede, werte, false),
     fuelle(intro, werte, false),
     fuelle(t.erklaerung, werte, false),
-    ...(budgetZeile ? [fuelle(budgetZeile, werte, false)] : []),
+    ...(eckdaten.length ? [eckdaten.map((zeile) => fuelle(zeile, werte, false)).join('\n')] : []),
     ...(hinweisZeile ? [fuelle(hinweisZeile, werte, false)] : []),
     `${fuelle(t.linkErsatz, werte, false)}\n${link}`,
     fuelle(t.geheim, werte, false),
@@ -176,13 +195,13 @@ function baueEinladungsMail({sprache, anlass, name, titel, link, budget = '', hi
 
   const h = (vorlage) => fuelle(vorlage, werte, true);
   const html = htmlRahmen({
-    sprache: s,
+    sprache,
     titel: h(t.betreff),
     inhalt: [
       absatz(h(t.anrede)),
       absatz(h(intro)),
       absatz(h(t.erklaerung)),
-      budgetZeile ? absatz(`<strong>${h(budgetZeile)}</strong>`) : '',
+      eckdaten.length ? absatz(eckdaten.map((zeile) => `<strong>${h(zeile)}</strong>`).join('<br>')) : '',
       hinweisZeile ? absatz(h(hinweisZeile), STIL.leise) : '',
       absatz(knopf(link, h(t.knopf)), 'margin:24px 0;'),
       absatz(`${h(t.linkErsatz)}<br>${sichtbarerLink(link)}`, STIL.leise),
@@ -196,17 +215,81 @@ function baueEinladungsMail({sprache, anlass, name, titel, link, budget = '', hi
 }
 
 /**
+ * @param {{sprache?: string, anlass?: string, name: string, titel: string, link: string,
+ *   budget?: string, hinweis?: string, datum?: string, organisator?: string|null}} params -
+ *   Teilnehmername, Rundendaten (datum: Tag der Feier 'JJJJ-MM-TT' oder ''), persönlicher Link und
+ *   (optional) Vorname des Organisators
+ * @return {{subject: string, text: string, html: string}}
+ */
+function baueEinladungsMail({
+  sprache, anlass, name, titel, link, budget = '', hinweis = '', datum = '', organisator = null,
+}) {
+  const s = normalisiereSprache(sprache);
+  const texte = TEXTE[s].einladung;
+  const t = texte[waehleVariante(anlass)];
+  const gemeinsam = texte.gemeinsam;
+  const von = organisator || null;
+  return baueLinkMail({
+    sprache: s,
+    t,
+    werte: {
+      firstName: ersterVorname(name),
+      hostName: von || '',
+      eventName: titel,
+      budget: formatiereBudget(budget, s),
+      datum: formatiereDatum(datum, s),
+      hinweis,
+      link,
+    },
+    link,
+    intro: von ? t.intro : t.introOhneHost,
+    grund: von ? gemeinsam.grund : gemeinsam.grundOhneHost,
+    hinweisZeile: hinweis ? gemeinsam.hinweis : null,
+  });
+}
+
+/**
+ * Erinnerung an einen Gast, der noch keine Wünsche eingetragen hat. Gleicher Text vor und nach
+ * dem Auslosen; nennt niemanden aus der Runde, auch nicht, wer schon Wünsche hat.
+ * @param {{sprache?: string, anlass?: string, name: string, titel: string, link: string,
+ *   budget?: string, hinweis?: string, datum?: string}} params - Teilnehmername, Rundendaten
+ *   (datum wie bei der Einladung) und persönlicher Link
+ * @return {{subject: string, text: string, html: string}}
+ */
+function baueErinnerungsMail({sprache, anlass, name, titel, link, budget = '', hinweis = '', datum = ''}) {
+  const s = normalisiereSprache(sprache);
+  const texte = TEXTE[s].erinnerung;
+  const t = texte[waehleVariante(anlass)];
+  return baueLinkMail({
+    sprache: s,
+    t,
+    werte: {
+      firstName: ersterVorname(name),
+      eventName: titel,
+      budget: formatiereBudget(budget, s),
+      datum: formatiereDatum(datum, s),
+      hinweis,
+    },
+    link,
+    intro: t.intro,
+    grund: t.grund,
+    hinweisZeile: hinweis ? texte.gemeinsam.hinweis : null,
+  });
+}
+
+/**
  * Neuigkeiten für den Schenker: wie viele Wünsche sein Empfänger und wie viele Ideen andere
  * Gäste seit der letzten Mail eingetragen haben. Den Empfänger nennt die Mail nicht, auch
  * keine Inhalte; beides steht hinter dem persönlichen Link.
  * @param {{sprache?: string, anlass?: string, name: string, titel: string, link: string,
- *   linkGekauft: string, wuensche?: number, ideen?: number, budget?: string, hinweis?: string}} params
+ *   linkGekauft: string, wuensche?: number, ideen?: number, budget?: string, hinweis?: string,
+ *   datum?: string}} params
  *   name: Name des Schenkers; linkGekauft: persönlicher Link, der die Rückfrage
  *   „Geschenk gekauft?“ öffnet; wuensche/ideen: Anzahl neuer Einträge (zusammen mindestens 1)
  * @return {{subject: string, text: string, html: string}}
  */
 function baueNeuigkeitenMail({
-  sprache, anlass, name, titel, link, linkGekauft, wuensche = 0, ideen = 0, budget = '', hinweis = '',
+  sprache, anlass, name, titel, link, linkGekauft, wuensche = 0, ideen = 0, budget = '', hinweis = '', datum = '',
 }) {
   if (!(wuensche > 0 || ideen > 0)) throw new Error('baueNeuigkeitenMail braucht mindestens einen neuen Eintrag');
   const s = normalisiereSprache(sprache);
@@ -218,13 +301,14 @@ function baueNeuigkeitenMail({
     firstName: ersterVorname(name),
     eventName: titel,
     budget: formatiereBudget(budget, s),
+    datum: formatiereDatum(datum, s),
     hinweis,
     wuensche: anzahl(g.anzahl.wunsch, wuensche),
     ideen: anzahl(g.anzahl.idee, ideen),
   };
   let neuigkeit = t.nurIdeen;
   if (wuensche > 0) neuigkeit = ideen > 0 ? t.beides : t.nurWuensche;
-  const budgetZeile = werte.budget ? t.budget : null;
+  const eckdaten = eckdatenZeilen(t, werte);
   const hinweisZeile = hinweis ? g.hinweis : null;
 
   const text = [
@@ -232,7 +316,7 @@ function baueNeuigkeitenMail({
     fuelle(t.intro, werte, false),
     fuelle(neuigkeit, werte, false),
     fuelle(t.aufruf, werte, false),
-    ...(budgetZeile ? [fuelle(budgetZeile, werte, false)] : []),
+    ...(eckdaten.length ? [eckdaten.map((zeile) => fuelle(zeile, werte, false)).join('\n')] : []),
     ...(hinweisZeile ? [fuelle(hinweisZeile, werte, false)] : []),
     fuelle(t.gekauftFrage, werte, false),
     [
@@ -255,7 +339,7 @@ function baueNeuigkeitenMail({
       absatz(h(t.intro)),
       absatz(h(neuigkeit)),
       absatz(h(t.aufruf)),
-      budgetZeile ? absatz(`<strong>${h(budgetZeile)}</strong>`) : '',
+      eckdaten.length ? absatz(eckdaten.map((zeile) => `<strong>${h(zeile)}</strong>`).join('<br>')) : '',
       hinweisZeile ? absatz(h(hinweisZeile), STIL.leise) : '',
       absatz(knopf(link, h(t.knopf)), 'margin:24px 0;'),
       absatz(h(t.gekauftFrage)),
@@ -274,5 +358,6 @@ function baueNeuigkeitenMail({
 module.exports = {
   baueEinladungsMail,
   baueNeuigkeitenMail,
-  _internal: {TEXTE, waehleVariante, ersterVorname, formatiereBudget, fuelle},
+  baueErinnerungsMail,
+  _internal: {TEXTE, waehleVariante, ersterVorname, formatiereBudget, formatiereDatum, fuelle},
 };

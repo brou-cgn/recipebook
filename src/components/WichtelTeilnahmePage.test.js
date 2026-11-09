@@ -98,6 +98,28 @@ describe('WichtelTeilnahmePage', () => {
     expect(screen.getByText(/Noch nicht ausgelost/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Los ziehen' })).not.toBeInTheDocument();
     expect(mockLaden).toHaveBeenCalledWith('runde1', 'tok');
+    expect(screen.queryByText(/^Feier/)).not.toBeInTheDocument();
+  });
+
+  it('zeigt das Datum der Feier ausgeschrieben, in der Sprache des Gasts', async () => {
+    const mitDatum = (sprache) => sicht({
+      ich: { id: 't1', name: 'Anna', sprache },
+      runde: { ...sicht().runde, hinweis: '', datum: '2026-12-13' },
+    });
+    mockLaden.mockResolvedValue(mitDatum('de'));
+    const { unmount } = renderSeite();
+    expect(await screen.findByText('Feier: Sonntag, 13. Dezember 2026')).toBeInTheDocument();
+    unmount();
+
+    mockLaden.mockResolvedValue(mitDatum('fr'));
+    const fr = renderSeite();
+    // Gesucht wird mit normalem Leerzeichen; im Text steht das geschützte vor dem Doppelpunkt.
+    expect((await screen.findByText('Fête : dimanche 13 décembre 2026')).textContent).toBe('Fête\u00A0: dimanche 13 décembre 2026');
+    fr.unmount();
+
+    mockLaden.mockResolvedValue(mitDatum('en'));
+    renderSeite();
+    expect(await screen.findByText(/^Party: Sunday,? 13 December 2026$/)).toBeInTheDocument();
   });
 
   it('trägt einen eigenen Wunsch ein', async () => {

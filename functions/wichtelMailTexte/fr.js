@@ -15,6 +15,7 @@ module.exports = {
       erklaerung: "Ton tirage t'attend déjà, bien scellé. Avec ton lien personnel, brise le sceau et découvre " +
         "pour qui tu seras le Père Noël secret cette année. Écris ta liste de souhaits et laisse quelques " +
         "indices aux autres lutins. Les rennes t'en seront très reconnaissants.",
+      datum: "📅 Échange des cadeaux : {datum}",
       budget: "🎁 Budget : {budget}",
       knopf: "Briser le sceau",
       linkErsatz: "Si le bouton se coince, ce lien t'aidera :",
@@ -30,6 +31,7 @@ module.exports = {
         "« {eventName} ».",
       erklaerung: "Avec ton lien personnel, tu tires au sort la personne à qui tu offriras un cadeau. Tu peux " +
         "aussi indiquer tes souhaits et laisser des idées de cadeaux pour les autres.",
+      datum: "Fête : {datum}",
       budget: "Budget : {budget}",
       knopf: "Tirer au sort",
       linkErsatz: "Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :",
@@ -54,6 +56,7 @@ module.exports = {
       beides: "La personne que tu gâtes en secret a ajouté {wuensche} à sa lettre au Père Noël, et les autres " +
         "lutins t'ont envoyé {ideen}.",
       aufruf: "Prends un bon chocolat chaud et jette un œil : le cadeau parfait s'y cache peut-être.",
+      datum: "📅 Échange des cadeaux : {datum}",
       budget: "🎁 Budget : {budget}",
       knopf: "Voir les indices",
       gekauftFrage: "Tu as déjà ton cadeau ? Préviens l'atelier : ensuite, les lutins ne t'enverront plus " +
@@ -73,6 +76,7 @@ module.exports = {
       nurIdeen: "Le groupe a laissé {ideen} pour la personne à qui tu offres un cadeau.",
       beides: "La personne à qui tu offres un cadeau a ajouté {wuensche}, et le groupe a laissé {ideen}.",
       aufruf: "Jette un œil, le cadeau idéal s'y trouve peut-être.",
+      datum: "Fête : {datum}",
       budget: "Budget : {budget}",
       knopf: "Voir les souhaits et idées",
       gekauftFrage: "Tu as déjà un cadeau ? Marque-le comme acheté : ensuite, tu ne recevras plus d'e-mails " +
@@ -90,6 +94,43 @@ module.exports = {
         idee: {eins: "une nouvelle idée cadeau", mehrere: "{anzahl} nouvelles idées cadeaux"},
       },
       linkZeile: "{label} : {link}",
+      hinweis: "Remarque : {hinweis}",
+    },
+  },
+
+  erinnerung: {
+    north_pole: {
+      betreff: "📜 Les lutins attendent ta liste de souhaits, {firstName}",
+      anrede: "Bonjour {firstName},",
+      intro: "les listes de souhaits s'empilent à l'atelier du pôle Nord, mais la tienne pour le Père Noël " +
+        "secret « {eventName} » manque encore. ❄️",
+      erklaerung: "Note quelques souhaits pour que ton Père Noël secret trouve le cadeau qui te fera plaisir. " +
+        "Un mot-clé ou un lien vers une boutique suffit. Les rennes piaffent déjà d'impatience.",
+      datum: "📅 Échange des cadeaux : {datum}",
+      budget: "🎁 Budget : {budget}",
+      knopf: "Écrire ma liste de souhaits",
+      linkErsatz: "Si le bouton se coince, ce lien t'aidera :",
+      geheim: "Top secret : ce lien est rien que pour toi. Pas un mot aux autres !",
+      gruss: "Avec des salutations scintillantes de l'atelier des lutins 🦌",
+      grund: "Tu reçois cet e-mail parce que tu participes au Père Noël secret « {eventName} » et que tu " +
+        "n'as pas encore ajouté de souhaits. Dès que tu ajoutes un souhait, les rappels s'arrêtent.",
+    },
+    warm_casual: {
+      betreff: "🎁 Pas encore de souhaits, {firstName} ?",
+      anrede: "Bonjour {firstName},",
+      intro: "petit rappel pour l'échange de cadeaux « {eventName} » : tu n'as pas encore ajouté de souhaits.",
+      erklaerung: "Avec quelques souhaits, la personne qui t'offre un cadeau trouvera bien plus facilement " +
+        "quelque chose qui te plaît. Un mot-clé ou un lien vers une boutique suffit.",
+      datum: "Fête : {datum}",
+      budget: "Budget : {budget}",
+      knopf: "Ajouter mes souhaits",
+      linkErsatz: "Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :",
+      geheim: "Ce lien est rien que pour toi, merci de ne pas le partager.",
+      gruss: "Amuse-toi bien !",
+      grund: "Tu reçois cet e-mail parce que tu participes à l'échange de cadeaux « {eventName} » et que tu " +
+        "n'as pas encore ajouté de souhaits. Dès que tu ajoutes un souhait, les rappels s'arrêtent.",
+    },
+    gemeinsam: {
       hinweis: "Remarque : {hinweis}",
     },
   },

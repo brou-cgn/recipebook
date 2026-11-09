@@ -557,6 +557,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Vorgemerkte Erinnerungen an Wichtel-Gäste ohne Wünsche (je Runde und Teilnehmer, ohne
+    // Zuordnung und Adresse; functions/wichteln.js, geplante Function wichtelErinnerungenVersenden),
+    // nur Admin SDK.
+    match /wichtelErinnerungen/{id} {
+      allow read, write: if false;
+    }
+
     // Cook dates collection - global tracking of when users cooked recipes
     match /cookDates/{cookDateId} {
       allow read: if isMember();

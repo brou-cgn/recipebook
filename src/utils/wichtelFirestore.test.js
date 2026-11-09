@@ -1,4 +1,5 @@
 import {
+  aendereWichtelRunde,
   getWichtelFehlertext,
   ladeWichtelTeilnahme,
   legeWichtelRundeAn,
@@ -28,7 +29,7 @@ describe('wichtelFirestore', () => {
     mockCall.mockResolvedValue({ data: { runde: { id: 'r1' }, teilnehmer: [] } });
     const result = await legeWichtelRundeAn({ titel: 'Advent', budget: '20 €', hinweis: '' });
     expect(mockHttpsCallable).toHaveBeenCalledWith({}, 'wichtelVerwalten');
-    expect(mockCall).toHaveBeenCalledWith({ aktion: 'anlegen', titel: 'Advent', budget: '20 €', hinweis: '', namen: [] });
+    expect(mockCall).toHaveBeenCalledWith({ aktion: 'anlegen', titel: 'Advent', budget: '20 €', hinweis: '', datum: '', namen: [] });
     expect(result.runde.id).toBe('r1');
 
     mockCall.mockResolvedValue({ data: {} });
@@ -38,6 +39,14 @@ describe('wichtelFirestore', () => {
 
     await setzeWichtelAusschluesse('r1', 't1', ['t2']);
     expect(mockCall).toHaveBeenLastCalledWith({ aktion: 'ausschluesseSetzen', rundeId: 'r1', teilnehmerId: 't1', ausschluesse: ['t2'] });
+
+    // Das Datum geht immer mit: '' löscht es, ein fehlendes Feld ließe der Server stehen.
+    await aendereWichtelRunde('r1', { titel: 'Advent', anlass: '', budget: '', hinweis: '', datum: '2026-12-13' });
+    expect(mockCall).toHaveBeenLastCalledWith({
+      aktion: 'aendern', rundeId: 'r1', titel: 'Advent', anlass: '', budget: '', hinweis: '', datum: '2026-12-13',
+    });
+    await aendereWichtelRunde('r1', { titel: 'Advent', anlass: '', budget: '', hinweis: '' });
+    expect(mockCall).toHaveBeenLastCalledWith(expect.objectContaining({ aktion: 'aendern', datum: '' }));
   });
 
   it('Aufrufe, die Mails verschicken, warten so lange wie die Function', async () => {

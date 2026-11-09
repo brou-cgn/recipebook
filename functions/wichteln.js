@@ -37,6 +37,15 @@
  * höchstens eine je MINDESTABSTAND_MS. Die Mail nennt weder den Empfänger noch Inhalte, nur
  * die Anzahl; die Vormerker (wichtelNeuigkeiten) enthalten keine Zuordnung.
  *
+ * Erinnerung per Mail: Wer seine Einladung per Mail bekommen und noch keinen Wunsch eingetragen
+ * hat, wird daran erinnert – zuerst ERINNERUNG_NACH_MS nach der Einladung, dann je
+ * ERINNERUNG_ABSTAND_MS, höchstens MAX_ERINNERUNGEN-mal. Die Einladung merkt die erste vor
+ * (wichtelErinnerungen), die geplante Function wichtelErinnerungenVersenden verschickt sie
+ * (versendeErinnerungen) und prüft vorher alles neu. Sie entfällt, sobald der Gast einen Wunsch
+ * hat, sein Schenker das Geschenk als gekauft markiert hat oder die Feier (Feld `datum` der Runde,
+ * optional) weniger als ERINNERUNG_VORLAUF_TAGE entfernt ist. Neuigkeiten-Mails enden mit dem
+ * Tag der Feier.
+ *
  * Aufbau wie follow.js: reine Funktionen mit (admin, db, HttpsError, params), damit die
  * Tests sie mit einem Firestore-Ersatz aufrufen können. Den SMTP-Versand reicht der
  * Handler als `mailer` herein (handlers/wichteln.js).
@@ -45,12 +54,14 @@
 const crypto = require('crypto');
 const linkVorschau = require('./linkVorschau');
 const {normalisiereSprache} = require('./shared/sprachen');
-const {baueEinladungsMail, baueNeuigkeitenMail} = require('./wichtelMail');
+const {baueEinladungsMail, baueNeuigkeitenMail, baueErinnerungsMail} = require('./wichtelMail');
 
 const COLLECTION = 'wichtelRunden';
 const MAIL_LIMIT_COLLECTION = 'wichtelMailLimits';
 // Vorgemerkte Neuigkeiten-Mails, je Runde und Schenker ein Dokument {rundeId}_{geberId}
 const NEUIGKEITEN_COLLECTION = 'wichtelNeuigkeiten';
+// Vorgemerkte Erinnerungen an Gäste ohne Wünsche, je Runde und Teilnehmer {rundeId}_{teilnehmerId}
+const ERINNERUNGEN_COLLECTION = 'wichtelErinnerungen';
 // Adresse der App für die Links in Mails (wie ALLOWED_ORIGINS[0] in shared/common.js). Die
 // App selbst baut den Link mit der Adresse, unter der sie läuft (src/utils/wichtelLinks.js).
 const APP_URL = 'https://broubook.web.app';
@@ -80,13 +91,26 @@ const SAMMELFENSTER_MS = 30 * 60 * 1000;
 const MINDESTABSTAND_MS = 24 * 60 * 60 * 1000;
 const NEUER_VERSUCH_MS = 60 * 60 * 1000;
 const MAX_FEHLVERSUCHE = 3;
-// Je Lauf (alle 15 Minuten) höchstens so viele Vormerker, älteste zuerst.
-const MAX_NEUIGKEITEN_PRO_LAUF = 50;
+// Erinnerung an Gäste ohne Wünsche: drei Tage nach der Einladung, danach wöchentlich, höchstens
+// dreimal (bei einer Einladung drei Wochen vor der Feier: nach 3, 10 und 17 Tagen). Wiederholungen
+// und Fehlversuche wie bei der Neuigkeiten-Mail (NEUER_VERSUCH_MS, MAX_FEHLVERSUCHE).
+const ERINNERUNG_NACH_MS = 3 * 24 * 60 * 60 * 1000;
+const ERINNERUNG_ABSTAND_MS = 7 * 24 * 60 * 60 * 1000;
+const MAX_ERINNERUNGEN = 3;
+// Hat die Runde ein Datum der Feier, kommt die letzte Erinnerung spätestens so viele Tage vorher
+// (danach bringt ein neuer Wunsch dem Schenker kaum noch etwas). Neuigkeiten-Mails gehen bis zum
+// Vortag der Feier.
+const ERINNERUNG_VORLAUF_TAGE = 3;
+// Je Lauf einer geplanten Function höchstens so viele Vormerker, älteste zuerst.
+const MAX_VORMERKER_PRO_LAUF = 50;
 // Parameter am persönlichen Link: öffnet die Seite mit der Rückfrage „Geschenk gekauft?“
 // (src/components/WichtelTeilnahmePage.js liest ihn).
 const GEKAUFT_PARAMETER = 'gekauft=1';
 
 const LAENGE = {titel: 80, budget: 40, hinweis: 300, name: 60, text: 300};
+// Datum der Feier (optional): Kalendertag ohne Uhrzeit, wie <input type="date"> ihn liefert.
+const DATUM_MUSTER = /^(\d{4})-(\d{2})-(\d{2})$/;
+const DATUM_JAHRE = {von: 2020, bis: 2100};
 // Anlass der Runde (optional); gleiche Liste wie src/utils/wichtelAnlaesse.js
 const ANLAESSE = new Set(['weihnachten', 'nikolaus', 'silvester', 'ostern', 'geburtstag', 'hochzeit', 'jubilaeum', 'firmenfeier', 'sommerfest', 'abschied', 'einweihung', 'sonstiges']);
 const ORGANISATOR_ROLLEN = new Set(['edit', 'moderator', 'admin']);
@@ -455,6 +479,38 @@ async function ladeEigeneRunde(db, HttpsError, uid, rundeId) {
   return {ref, runde: snap.data()};
 }
 
+/**
+ * @param {*} wert - Eingabe oder gespeicherter Wert
+ * @return {boolean} ob `wert` ein Kalendertag 'JJJJ-MM-TT' zwischen DATUM_JAHRE.von und .bis ist
+ */
+function istDatum(wert) {
+  const treffer = typeof wert === 'string' ? wert.match(DATUM_MUSTER) : null;
+  if (!treffer) return false;
+  const [jahr, monat, tag] = treffer.slice(1).map(Number);
+  const tagDatum = new Date(Date.UTC(jahr, monat - 1, tag));
+  return jahr >= DATUM_JAHRE.von && jahr <= DATUM_JAHRE.bis &&
+    tagDatum.getUTCMonth() === monat - 1 && tagDatum.getUTCDate() === tag;
+}
+
+/** @return {string} Datum der Feier einer Runde oder '' (keins; ältere Runden haben kein Feld) */
+const feierDatum = (runde) => (istDatum(runde?.datum) ? runde.datum : '');
+
+/** @return {string} Kalendertag `tage` Tage vor oder nach `datum` ('JJJJ-MM-TT') */
+function verschiebeTag(datum, tage) {
+  const [jahr, monat, tag] = datum.split('-').map(Number);
+  return new Date(Date.UTC(jahr, monat - 1, tag + tage)).toISOString().slice(0, 10);
+}
+
+/**
+ * Datum der Feier aus der Eingabe: '' oder null löscht es, sonst muss es ein gültiger Kalendertag sein.
+ * @return {string}
+ */
+function leseDatum(wert, HttpsError) {
+  if (wert === null || wert === '') return '';
+  if (!istDatum(wert)) throw new HttpsError('invalid-argument', 'Bitte gib ein gültiges Datum für die Feier an.');
+  return wert;
+}
+
 function rundenKopf(rundeId, runde, teilnehmerAnzahl) {
   return {
     id: rundeId,
@@ -462,6 +518,7 @@ function rundenKopf(rundeId, runde, teilnehmerAnzahl) {
     anlass: ANLAESSE.has(runde.anlass) ? runde.anlass : '',
     budget: runde.budget || '',
     hinweis: runde.hinweis || '',
+    datum: feierDatum(runde),
     status: runde.status === 'ausgelost' ? 'ausgelost' : 'offen',
     teilnehmerAnzahl: typeof teilnehmerAnzahl === 'number' ? teilnehmerAnzahl : (runde.teilnehmerAnzahl || 0),
     erstelltAm: millis(runde.erstelltAm),
@@ -471,10 +528,12 @@ function rundenKopf(rundeId, runde, teilnehmerAnzahl) {
 
 /**
  * Was der Organisator sieht: Runde, Teilnehmer mit Link-Token, Status, Ausschlüssen,
- * verknüpftem Gast und Ergebnis der letzten Mail. Bewusst ohne Zuordnungen und ohne Einträge.
+ * verknüpftem Gast und Ergebnis der letzten Mail. Bewusst ohne Zuordnungen und ohne Einträge –
+ * und ohne Erinnerungen: Wer erinnert wird, hat noch keinen Wunsch, und Wünsche sieht der
+ * Organisator nicht. `geladen`: schon gelesene Teilnehmer (spart den zweiten Lesevorgang).
  */
-async function organisatorSicht(db, rundeId, runde) {
-  const teilnehmer = await ladeTeilnehmer(db, rundeId);
+async function organisatorSicht(db, rundeId, runde, geladen = null) {
+  const teilnehmer = geladen || await ladeTeilnehmer(db, rundeId);
   const ausschluesse = ausschlussKarte(teilnehmer);
   return {
     runde: rundenKopf(rundeId, runde, teilnehmer.length),
@@ -492,6 +551,10 @@ async function organisatorSicht(db, rundeId, runde) {
   };
 }
 
+/**
+ * Felder der Runde aus der Eingabe. `datum` nur, wenn mitgeschickt: Speichert eine ältere
+ * App-Version ohne das Feld, bleibt ein gesetztes Datum erhalten.
+ */
 function leseRundenFelder(daten, HttpsError) {
   const titel = bereinige(daten.titel, LAENGE.titel);
   if (!titel) throw new HttpsError('invalid-argument', 'Bitte gib der Runde einen Titel.');
@@ -500,8 +563,16 @@ function leseRundenFelder(daten, HttpsError) {
     anlass: ANLAESSE.has(daten.anlass) ? daten.anlass : '',
     budget: bereinige(daten.budget, LAENGE.budget),
     hinweis: bereinige(daten.hinweis, LAENGE.hinweis),
+    ...(daten.datum === undefined ? {} : {datum: leseDatum(daten.datum, HttpsError)}),
   };
 }
+
+/** Ab dem Tag der Feier (Berliner Zeit) keine Neuigkeiten-Mails mehr. */
+const feierErreicht = (runde, jetztMs) => Boolean(feierDatum(runde)) && berlinerTag(jetztMs) >= feierDatum(runde);
+
+/** Weniger als ERINNERUNG_VORLAUF_TAGE bis zur Feier (oder schon vorbei): keine Erinnerung mehr. */
+const zuSpaetFuerErinnerung = (runde, jetztMs) => Boolean(feierDatum(runde)) &&
+  berlinerTag(jetztMs) > verschiebeTag(feierDatum(runde), -ERINNERUNG_VORLAUF_TAGE);
 
 function pruefeOffen(runde, HttpsError, was = 'Teilnehmer') {
   if (runde.status === 'ausgelost') {
@@ -570,10 +641,19 @@ function mailFehlerCode(err) {
   return [err?.code, err?.responseCode, err?.command].filter(Boolean).join(' ') || 'unbekannt';
 }
 
+const erinnerungPfad = (rundeId, teilnehmerId) => `${ERINNERUNGEN_COLLECTION}/${rundeId}_${teilnehmerId}`;
+
+/** Vormerker einer Erinnerung (ohne Zuordnung, ohne Adresse). */
+function erinnerungsVormerker(admin, rundeId, teilnehmerId, faelligMs) {
+  return {rundeId, teilnehmerId, faelligAm: admin.firestore.Timestamp.fromMillis(faelligMs), fehlversuche: 0};
+}
+
 /**
  * Verschickt die persönlichen Links an Teilnehmer, deren Gast eine E-Mail-Adresse hat, und
  * merkt sich je Teilnehmer das Ergebnis (mailStatus, mailAm). Wirft nicht: Was nicht
- * rausging, steht als 'fehler' am Teilnehmer und in der Antwort (grund).
+ * rausging, steht als 'fehler' am Teilnehmer und in der Antwort (grund). Jede zugestellte
+ * Einladung merkt die erste Erinnerung vor (ERINNERUNG_NACH_MS ab jetzt, auch beim erneuten
+ * Senden); ob sie nötig ist, prüft erst der Versand.
  * @param {object} ctx - {admin, db, uid, organisatorName, mailer, jetztMs}
  * @param {string} rundeId - Runde
  * @param {object} runde - Rundendaten (titel, anlass, budget, hinweis)
@@ -586,13 +666,14 @@ async function versendeEinladungen(ctx, rundeId, runde, empfaenger) {
   const ergebnis = keinVersand();
   if (empfaenger.length === 0) return ergebnis;
 
+  const jetztMs = ctx.jetztMs ?? Date.now();
   const transport = typeof ctx.mailer === 'function' ? ctx.mailer() : null;
   let erlaubt = 0;
   if (!transport) {
     ergebnis.grund = 'nicht-eingerichtet';
   } else {
     try {
-      erlaubt = await reserviereMails(db, uid, empfaenger.length, ctx.jetztMs ?? Date.now());
+      erlaubt = await reserviereMails(db, uid, empfaenger.length, jetztMs);
       if (erlaubt < empfaenger.length) ergebnis.grund = 'limit';
     } catch (err) {
       // Schlägt geschlossen fehl: ohne prüfbares Limit geht keine Mail raus.
@@ -613,6 +694,7 @@ async function versendeEinladungen(ctx, rundeId, runde, empfaenger) {
         titel: runde.titel || '',
         budget: runde.budget || '',
         hinweis: runde.hinweis || '',
+        datum: feierDatum(runde),
         organisator: ctx.organisatorName,
         link: wichtelLink(rundeId, t.token),
       }),
@@ -633,8 +715,13 @@ async function versendeEinladungen(ctx, rundeId, runde, empfaenger) {
   }
 
   const jetzt = admin.firestore.FieldValue.serverTimestamp();
-  await schreibeInBatches(db, [...status].map(([id, mailStatus]) => (batch) => batch.update(
-      db.doc(`${teilnehmerPfad(rundeId)}/${id}`), {mailStatus, mailAm: jetzt})));
+  const erinnerungMs = jetztMs + ERINNERUNG_NACH_MS;
+  await schreibeInBatches(db, [...status].flatMap(([id, mailStatus]) => [
+    (batch) => batch.update(db.doc(`${teilnehmerPfad(rundeId)}/${id}`), {mailStatus, mailAm: jetzt}),
+    ...(mailStatus === 'gesendet' ?
+      [(batch) => batch.set(db.doc(erinnerungPfad(rundeId, id)), erinnerungsVormerker(admin, rundeId, id, erinnerungMs))] :
+      []),
+  ]));
   status.forEach((mailStatus) => {
     if (mailStatus === 'gesendet') ergebnis.gesendet += 1;
     else ergebnis.fehlgeschlagen += 1;
@@ -692,6 +779,9 @@ async function nimmTeilnehmerAuf(ctx, rundeRef, rundeId, runde, eintraege) {
     geschenkGekauftAm: null,
     mailStatus: null,
     mailAm: null,
+    // Zähler der Erinnerungen; fehlt nur bei Teilnehmern von vor der Erinnerungs-Mail
+    // (Übergang in planeErinnerungen).
+    erinnerungen: 0,
     erstelltAm: jetzt,
   }));
   schritte.push((batch) => batch.update(rundeRef, {
@@ -729,7 +819,7 @@ const vormerkerPfad = (rundeId, geberId) => `${NEUIGKEITEN_COLLECTION}/${rundeId
  * @return {Promise<void>}
  */
 async function merkeNeuigkeitVor(admin, db, {rundeId, runde, autorId, ueberId, jetztMs}) {
-  if (runde.status !== 'ausgelost') return;
+  if (runde.status !== 'ausgelost' || feierErreicht(runde, jetztMs)) return;
   try {
     const zuordnung = await db.collection(zuordnungenPfad(rundeId))
         .where('empfaengerId', '==', ueberId).limit(1).get();
@@ -763,9 +853,12 @@ async function merkeNeuigkeitVor(admin, db, {rundeId, runde, autorId, ueberId, j
   }
 }
 
-/** Vormerker einer Runde löschen (Runde gelöscht oder Auslosung zurückgesetzt). */
-async function loescheVormerker(db, rundeId) {
-  const snap = await db.collection(NEUIGKEITEN_COLLECTION).where('rundeId', '==', rundeId).limit(MAX_TEILNEHMER).get();
+/**
+ * Vormerker einer Runde löschen: Neuigkeiten, wenn die Runde gelöscht oder die Auslosung
+ * zurückgesetzt wird, Erinnerungen nur mit der Runde (Wünsche bleiben beim Zurücksetzen).
+ */
+async function loescheVormerker(db, rundeId, collection = NEUIGKEITEN_COLLECTION) {
+  const snap = await db.collection(collection).where('rundeId', '==', rundeId).limit(MAX_TEILNEHMER).get();
   await schreibeInBatches(db, snap.docs.map((doc) => (batch) => batch.delete(doc.ref)));
 }
 
@@ -796,10 +889,10 @@ async function schliesseVormerkerAb({admin, db}, doc, gelesen, nochmalAmMs) {
  * MAX_FEHLVERSUCHE wird der Vormerker verworfen.
  * @return {Promise<'verschoben'|'verworfen'>}
  */
-async function verschiebeVormerker({admin, jetztMs}, doc, {fehlversuch}) {
+async function verschiebeVormerker({admin, jetztMs, name}, doc, {fehlversuch}) {
   const fehlversuche = (doc.data().fehlversuche || 0) + (fehlversuch ? 1 : 0);
   if (fehlversuche >= MAX_FEHLVERSUCHE) {
-    console.error(`wichtelNeuigkeitenVersenden: Vormerker ${doc.id} nach ${fehlversuche} Fehlversuchen verworfen`);
+    console.error(`${name}: Vormerker ${doc.id} nach ${fehlversuche} Fehlversuchen verworfen`);
     await doc.ref.delete();
     return 'verworfen';
   }
@@ -814,11 +907,11 @@ async function verschiebeVormerker({admin, jetztMs}, doc, {fehlversuch}) {
  * Ein fälliger Vormerker: prüft alles erneut (Runde ausgelost, Los gezogen, nicht gekauft,
  * Zuordnung, Adresse frisch aus dem Gästeprofil), zählt die Einträge über den Empfänger seit
  * der letzten Mail (ohne eigene des Schenkers) und verschickt die Mail.
- * @param {object} ctx - {admin, db, jetztMs, transport}
+ * @param {object} ctx - {admin, db, jetztMs, transport, name}
  * @param {object} doc - Vormerker aus der Abfrage
  * @return {Promise<'gesendet'|'verworfen'|'verschoben'>}
  */
-async function bearbeiteVormerker(ctx, doc) {
+async function bearbeiteNeuigkeit(ctx, doc) {
   const {admin, db, jetztMs, transport} = ctx;
   const {rundeId, geberId, zaehler = 0} = doc.data();
   const verwerfen = async () => {
@@ -838,7 +931,8 @@ async function bearbeiteVormerker(ctx, doc) {
   const runde = rundeSnap.exists ? rundeSnap.data() : null;
   const geber = geberSnap.exists ? geberSnap.data() : null;
   const empfaengerId = zuordnungSnap.exists ? zuordnungSnap.data().empfaengerId : null;
-  if (!runde || runde.status !== 'ausgelost' || !geber || !bekommtNeuigkeiten(geber) || !empfaengerId) {
+  if (!runde || runde.status !== 'ausgelost' || feierErreicht(runde, jetztMs) || !geber ||
+      !bekommtNeuigkeiten(geber) || !empfaengerId) {
     return verwerfen();
   }
 
@@ -871,6 +965,7 @@ async function bearbeiteVormerker(ctx, doc) {
         titel: runde.titel || '',
         budget: runde.budget || '',
         hinweis: runde.hinweis || '',
+        datum: feierDatum(runde),
         link,
         linkGekauft: `${link}?${GEKAUFT_PARAMETER}`,
         wuensche,
@@ -894,34 +989,36 @@ async function bearbeiteVormerker(ctx, doc) {
 }
 
 /**
- * Ein Lauf der geplanten Function wichtelNeuigkeitenVersenden: verschickt fällige
- * Neuigkeiten-Mails, älteste zuerst. Ohne eingerichteten Mailversand bleiben sie liegen und
- * werden eine Stunde später erneut versucht.
+ * Ein Lauf einer geplanten Function: arbeitet fällige Vormerker einer Collection ab, älteste
+ * zuerst. Ohne eingerichteten Mailversand bleiben sie liegen und werden eine Stunde später
+ * erneut versucht; ohne Fälliges entsteht kein Mailer (die SMTP-Secrets bleiben ungelesen).
  * @param {object} admin - firebase-admin (FieldValue, Timestamp)
  * @param {object} db - Firestore
- * @param {{mailer: function, jetztMs?: number}} params - mailer wie bei verwalten
+ * @param {{collection: string, bearbeite: function(object, object): Promise<string>,
+ *   name: string, mailer: function, jetztMs: number}} params - bearbeite: ein Vormerker →
+ *   'gesendet'|'verworfen'|'verschoben'; name: Function-Name für die Logs
  * @return {Promise<{gesendet: number, verworfen: number, verschoben: number}>}
  */
-async function versendeNeuigkeiten(admin, db, {mailer, jetztMs = Date.now()}) {
+async function arbeiteVormerkerAb(admin, db, {collection, bearbeite, name, mailer, jetztMs}) {
   const ergebnis = {gesendet: 0, verworfen: 0, verschoben: 0};
-  const faellig = await db.collection(NEUIGKEITEN_COLLECTION)
+  const faellig = await db.collection(collection)
       .where('faelligAm', '<=', admin.firestore.Timestamp.fromMillis(jetztMs))
       .orderBy('faelligAm')
-      .limit(MAX_NEUIGKEITEN_PRO_LAUF)
+      .limit(MAX_VORMERKER_PRO_LAUF)
       .get();
   if (faellig.empty) return ergebnis;
 
   const transport = typeof mailer === 'function' ? mailer() : null;
-  const ctx = {admin, db, jetztMs, transport};
+  const ctx = {admin, db, jetztMs, transport, name};
   try {
     for (const doc of faellig.docs) {
       let status;
       try {
         status = transport ?
-          await bearbeiteVormerker(ctx, doc) :
+          await bearbeite(ctx, doc) :
           await verschiebeVormerker(ctx, doc, {fehlversuch: false});
       } catch (err) {
-        console.error(`wichtelNeuigkeitenVersenden: Vormerker ${doc.id} nicht bearbeitet:`, err);
+        console.error(`${name}: Vormerker ${doc.id} nicht bearbeitet:`, err);
         status = await verschiebeVormerker(ctx, doc, {fehlversuch: true}).catch(() => 'verschoben');
       }
       ergebnis[status] += 1;
@@ -930,6 +1027,186 @@ async function versendeNeuigkeiten(admin, db, {mailer, jetztMs = Date.now()}) {
     if (transport && typeof transport.schliessen === 'function') transport.schliessen();
   }
   return ergebnis;
+}
+
+/**
+ * Ein Lauf der geplanten Function wichtelNeuigkeitenVersenden: verschickt fällige
+ * Neuigkeiten-Mails (bearbeiteNeuigkeit).
+ * @param {object} admin - firebase-admin (FieldValue, Timestamp)
+ * @param {object} db - Firestore
+ * @param {{mailer: function, jetztMs?: number}} params - mailer wie bei verwalten
+ * @return {Promise<{gesendet: number, verworfen: number, verschoben: number}>}
+ */
+function versendeNeuigkeiten(admin, db, {mailer, jetztMs = Date.now()}) {
+  return arbeiteVormerkerAb(admin, db, {
+    collection: NEUIGKEITEN_COLLECTION,
+    bearbeite: bearbeiteNeuigkeit,
+    name: 'wichtelNeuigkeitenVersenden',
+    mailer,
+    jetztMs,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Erinnerung per Mail (an Gäste ohne Wünsche)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ob der Schenker dieses Gasts das Geschenk schon als gekauft markiert hat. Liest die
+ * Zuordnung nur hier im Server; heraus geht nur ja/nein (und das nirgendwohin).
+ * @param {object} db - Firestore
+ * @param {string} rundeId - Runde (ausgelost)
+ * @param {string} empfaengerId - der Gast, der erinnert werden soll
+ * @return {Promise<boolean>}
+ */
+async function schenkerHatGekauft(db, rundeId, empfaengerId) {
+  const zuordnung = await db.collection(zuordnungenPfad(rundeId))
+      .where('empfaengerId', '==', empfaengerId).limit(1).get();
+  if (zuordnung.empty) return false;
+  const geber = await db.doc(`${teilnehmerPfad(rundeId)}/${zuordnung.docs[0].id}`).get();
+  return geber.exists && Boolean(geber.data().geschenkGekauftAm);
+}
+
+/**
+ * Ein fälliger Erinnerungs-Vormerker: prüft alles erneut und verschickt die Erinnerung. Sie
+ * entfällt (Vormerker gelöscht), wenn die Runde oder der Teilnehmer fehlt, er nicht mehr mit
+ * einem Gast mit Adresse verknüpft ist, schon MAX_ERINNERUNGEN bekam, inzwischen einen Wunsch
+ * hat oder sein Schenker das Geschenk als gekauft markiert hat (dann hilft kein Wunsch mehr).
+ * Liegt die letzte Erinnerung keine ERINNERUNG_ABSTAND_MS zurück (z. B. nach erneutem Senden der
+ * Einladung), wartet sie bis dahin.
+ * @param {object} ctx - {admin, db, jetztMs, transport, name}
+ * @param {object} doc - Vormerker aus der Abfrage
+ * @return {Promise<'gesendet'|'verworfen'|'verschoben'>}
+ */
+async function bearbeiteErinnerung(ctx, doc) {
+  const {admin, db, jetztMs, transport, name} = ctx;
+  const {rundeId, teilnehmerId} = doc.data();
+  const verwerfen = async () => {
+    await doc.ref.delete();
+    return 'verworfen';
+  };
+  if (typeof rundeId !== 'string' || !ID_MUSTER.test(rundeId) ||
+      typeof teilnehmerId !== 'string' || !ID_MUSTER.test(teilnehmerId)) {
+    return verwerfen();
+  }
+  const teilnehmerRef = db.doc(`${teilnehmerPfad(rundeId)}/${teilnehmerId}`);
+  const [rundeSnap, teilnehmerSnap] = await Promise.all([db.doc(rundenPfad(rundeId)).get(), teilnehmerRef.get()]);
+  const runde = rundeSnap.exists ? rundeSnap.data() : null;
+  const t = teilnehmerSnap.exists ? teilnehmerSnap.data() : null;
+  const bisher = typeof t?.erinnerungen === 'number' ? t.erinnerungen : 0;
+  if (!runde || !t || !t.gastId || bisher >= MAX_ERINNERUNGEN || zuSpaetFuerErinnerung(runde, jetztMs)) {
+    return verwerfen();
+  }
+
+  const fruehestens = (millis(t.erinnerungAm) ?? -Infinity) + ERINNERUNG_ABSTAND_MS;
+  if (fruehestens > jetztMs) {
+    await doc.ref.update({faelligAm: admin.firestore.Timestamp.fromMillis(fruehestens)});
+    return 'verschoben';
+  }
+
+  const eigene = await ladeEintraege(db, rundeId, 'autorId', teilnehmerId, MAX_EINTRAEGE_PRO_AUTOR);
+  if (eigene.some((e) => e.ueberId === teilnehmerId)) return verwerfen();
+  if (runde.status === 'ausgelost' && await schenkerHatGekauft(db, rundeId, teilnehmerId)) return verwerfen();
+  const gast = (await ladeGaeste(db, runde.ownerId, [t.gastId])).get(t.gastId);
+  if (!gast?.email) return verwerfen();
+
+  let erlaubt = 0;
+  try {
+    erlaubt = await reserviereMails(db, runde.ownerId, 1, jetztMs);
+  } catch (err) {
+    // Schlägt geschlossen fehl: ohne prüfbares Limit geht keine Mail raus.
+    console.error(`${name}: Mail-Limit von ${runde.ownerId} nicht prüfbar:`, mailFehlerCode(err));
+  }
+  if (erlaubt < 1) return verschiebeVormerker(ctx, doc, {fehlversuch: false});
+
+  try {
+    await transport.senden({
+      to: gast.email,
+      ...baueErinnerungsMail({
+        sprache: gast.sprache,
+        anlass: runde.anlass,
+        name: t.name,
+        titel: runde.titel || '',
+        budget: runde.budget || '',
+        hinweis: runde.hinweis || '',
+        datum: feierDatum(runde),
+        link: wichtelLink(rundeId, t.token),
+      }),
+    });
+  } catch (err) {
+    console.error(`${name}: Mail an Teilnehmer ${teilnehmerId} (Runde ${rundeId}) fehlgeschlagen:`, mailFehlerCode(err));
+    return verschiebeVormerker(ctx, doc, {fehlversuch: true});
+  }
+
+  // Erst der Zähler am Teilnehmer, dann der Vormerker: Scheitert Letzteres, verschiebt der nächste
+  // Lauf ihn über erinnerungAm, statt gleich noch einmal zu erinnern.
+  const anzahl = bisher + 1;
+  await teilnehmerRef.update({erinnerungen: anzahl, erinnerungAm: admin.firestore.Timestamp.fromMillis(jetztMs)});
+  if (anzahl >= MAX_ERINNERUNGEN) {
+    await doc.ref.delete();
+  } else {
+    await doc.ref.update({
+      faelligAm: admin.firestore.Timestamp.fromMillis(jetztMs + ERINNERUNG_ABSTAND_MS),
+      fehlversuche: 0,
+    });
+  }
+  return 'gesendet';
+}
+
+/**
+ * Ein Lauf der geplanten Function wichtelErinnerungenVersenden: verschickt fällige
+ * Erinnerungen an Gäste ohne Wünsche (bearbeiteErinnerung).
+ * @param {object} admin - firebase-admin (FieldValue, Timestamp)
+ * @param {object} db - Firestore
+ * @param {{mailer: function, jetztMs?: number}} params - mailer wie bei verwalten
+ * @return {Promise<{gesendet: number, verworfen: number, verschoben: number}>}
+ */
+function versendeErinnerungen(admin, db, {mailer, jetztMs = Date.now()}) {
+  return arbeiteVormerkerAb(admin, db, {
+    collection: ERINNERUNGEN_COLLECTION,
+    bearbeite: bearbeiteErinnerung,
+    name: 'wichtelErinnerungenVersenden',
+    mailer,
+    jetztMs,
+  });
+}
+
+/**
+ * Merkt Erinnerungen für ausgewählte Teilnehmer (neu) vor: nur, wem die Einladung zugestellt wurde
+ * und wer noch nicht alle MAX_ERINNERUNGEN bekommen hat. Fällig ERINNERUNG_NACH_MS nach der
+ * Einladung und ERINNERUNG_ABSTAND_MS nach der letzten Erinnerung, frühestens jetzt; ob sie dann
+ * noch nötig ist (Wunsch, Datum der Feier …), prüft erst der Versand. Teilnehmer ohne Feld
+ * `erinnerungen` bekommen den Zähler 0. Wirft nicht: am Planen soll die Aktion nicht scheitern.
+ * Gebraucht für
+ *  - den Übergang (Einladungen von vor der Erinnerungs-Mail, 9. 11. 2026, haben weder Zähler noch
+ *    Vormerker; geplant beim Öffnen der Runde durch den Organisator, je Teilnehmer einmal),
+ *  - ein später gelegtes oder gelöschtes Datum der Feier: Erinnerungen, die der Versand wegen des
+ *    alten Datums schon verworfen hat, sind dann wieder möglich.
+ * @param {object} ctx - {admin, db, jetztMs}
+ * @param {string} rundeId - Runde
+ * @param {Array<object>} teilnehmer - aus ladeTeilnehmer
+ * @param {function(object): boolean} auswahl - welche Teilnehmer in Frage kommen
+ * @return {Promise<void>}
+ */
+async function planeErinnerungen({admin, db, jetztMs}, rundeId, teilnehmer, auswahl) {
+  const offen = teilnehmer.filter((t) => t.mailStatus === 'gesendet' && t.gastId &&
+    (typeof t.erinnerungen === 'number' ? t.erinnerungen : 0) < MAX_ERINNERUNGEN && auswahl(t));
+  if (offen.length === 0) return;
+  const jetzt = jetztMs ?? Date.now();
+  try {
+    await schreibeInBatches(db, offen.flatMap((t) => {
+      const faellig = Math.max(jetzt, (millis(t.mailAm) ?? jetzt) + ERINNERUNG_NACH_MS,
+          (millis(t.erinnerungAm) ?? -Infinity) + ERINNERUNG_ABSTAND_MS);
+      return [
+        (batch) => batch.set(db.doc(erinnerungPfad(rundeId, t.id)), erinnerungsVormerker(admin, rundeId, t.id, faellig)),
+        ...(t.erinnerungen === undefined ?
+          [(batch) => batch.update(db.doc(`${teilnehmerPfad(rundeId)}/${t.id}`), {erinnerungen: 0})] :
+          []),
+      ];
+    }));
+  } catch (err) {
+    console.error(`wichtelVerwalten: Erinnerungen in Runde ${rundeId} nicht geplant:`, err);
+  }
 }
 
 const VERWALTEN = {
@@ -942,9 +1219,12 @@ const VERWALTEN = {
     return {runden};
   },
 
-  async laden({db, HttpsError, uid, daten}) {
+  async laden(ctx) {
+    const {db, HttpsError, uid, daten} = ctx;
     const {runde} = await ladeEigeneRunde(db, HttpsError, uid, daten.rundeId);
-    return organisatorSicht(db, daten.rundeId, runde);
+    const teilnehmer = await ladeTeilnehmer(db, daten.rundeId);
+    await planeErinnerungen(ctx, daten.rundeId, teilnehmer, (t) => t.erinnerungen === undefined);
+    return organisatorSicht(db, daten.rundeId, runde, teilnehmer);
   },
 
   async anlegen(ctx) {
@@ -955,6 +1235,7 @@ const VERWALTEN = {
     const ref = db.collection(COLLECTION).doc();
     const runde = {
       ownerId: uid,
+      datum: '',
       ...felder,
       status: 'offen',
       teilnehmerAnzahl: 0,
@@ -969,11 +1250,23 @@ const VERWALTEN = {
     return {...await organisatorSicht(db, ref.id, runde), versand};
   },
 
-  async aendern({admin, db, HttpsError, uid, daten}) {
+  /**
+   * Titel, Anlass, Budget, Hinweis und Datum der Feier ändern – auch nach dem Auslosen. Liegt das
+   * Datum danach später oder fehlt es, werden die Erinnerungen neu vorgemerkt (planeErinnerungen).
+   */
+  async aendern(ctx) {
+    const {admin, db, HttpsError, uid, daten} = ctx;
     const {ref, runde} = await ladeEigeneRunde(db, HttpsError, uid, daten.rundeId);
     const felder = leseRundenFelder(daten, HttpsError);
     await ref.update({...felder, aktualisiertAm: admin.firestore.FieldValue.serverTimestamp()});
-    return organisatorSicht(db, daten.rundeId, {...runde, ...felder});
+    const vorher = feierDatum(runde);
+    const nachher = 'datum' in felder ? felder.datum : vorher;
+    let teilnehmer = null;
+    if (vorher && (!nachher || nachher > vorher)) {
+      teilnehmer = await ladeTeilnehmer(db, daten.rundeId);
+      await planeErinnerungen(ctx, daten.rundeId, teilnehmer, () => true);
+    }
+    return organisatorSicht(db, daten.rundeId, {...runde, ...felder}, teilnehmer);
   },
 
   async teilnehmerHinzufuegen(ctx) {
@@ -1048,6 +1341,7 @@ const VERWALTEN = {
     const refs = new Map([...vonIhm, ...ueberIhn].map((e) => [e.id, e.ref]));
     const schritte = [...refs.values()].map((eintragRef) => (batch) => batch.delete(eintragRef));
     schritte.push((batch) => batch.delete(db.doc(`${teilnehmerPfad(daten.rundeId)}/${teilnehmerId}`)));
+    schritte.push((batch) => batch.delete(db.doc(erinnerungPfad(daten.rundeId, teilnehmerId))));
     // Wer ihn ausgeschlossen hatte, verliert diesen Ausschluss.
     teilnehmer
         .filter((t) => t.id !== teilnehmerId && Array.isArray(t.ausschluesse) && t.ausschluesse.includes(teilnehmerId))
@@ -1146,6 +1440,7 @@ const VERWALTEN = {
     const {ref} = await ladeEigeneRunde(db, HttpsError, uid, daten.rundeId);
     await db.recursiveDelete(ref);
     await loescheVormerker(db, daten.rundeId);
+    await loescheVormerker(db, daten.rundeId, ERINNERUNGEN_COLLECTION);
     return {geloescht: true};
   },
 };
@@ -1157,7 +1452,7 @@ const VERWALTEN = {
  * @param {function} HttpsError - Fehlerklasse
  * @param {{auth: object, daten: object, randomInt?: function, mailer?: function, jetztMs?: number}} params
  *   mailer: liefert {senden(mail), schliessen()} oder null (kein SMTP eingerichtet); wird nur
- *   aufgerufen, wenn eine Mail rausgehen soll. jetztMs: Zeit für das Tageslimit (Tests).
+ *   aufgerufen, wenn eine Mail rausgehen soll. jetztMs: Zeit für Tageslimit und Erinnerungstermine (Tests).
  * @return {Promise<object>}
  */
 async function verwalten(admin, db, HttpsError, {auth, daten, randomInt, mailer, jetztMs}) {
@@ -1258,6 +1553,7 @@ async function teilnehmerSicht(db, {rundeId, runde, ich}) {
       titel: runde.titel || '',
       budget: runde.budget || '',
       hinweis: runde.hinweis || '',
+      datum: feierDatum(runde),
       status: runde.status === 'ausgelost' ? 'ausgelost' : 'offen',
     },
     // Jede Antwort trägt die Sprache: die Seite ersetzt ihren Stand mit jeder Antwort.
@@ -1376,6 +1672,7 @@ module.exports = {
   verwalten,
   teilnahme,
   versendeNeuigkeiten,
+  versendeErinnerungen,
   zieheKreis,
   neuesToken,
   _internal: {
@@ -1383,5 +1680,7 @@ module.exports = {
     MIN_TEILNEHMER, MAX_TEILNEHMER, MAX_EINTRAEGE_PRO_AUTOR, MAX_MAILS_PRO_TAG, LAENGE, TOKEN_MUSTER, APP_URL,
     NEUIGKEITEN_COLLECTION, SAMMELFENSTER_MS, MINDESTABSTAND_MS, NEUER_VERSUCH_MS, MAX_FEHLVERSUCHE,
     GEKAUFT_PARAMETER,
+    ERINNERUNGEN_COLLECTION, ERINNERUNG_NACH_MS, ERINNERUNG_ABSTAND_MS, MAX_ERINNERUNGEN, ERINNERUNG_VORLAUF_TAGE,
+    istDatum, verschiebeTag,
   },
 };

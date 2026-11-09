@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {baueEinladungsMail, baueNeuigkeitenMail, _internal} = require('./wichtelMail');
+const {baueEinladungsMail, baueNeuigkeitenMail, baueErinnerungsMail, _internal} = require('./wichtelMail');
 const {SPRACHEN} = require('./shared/sprachen');
 
 const LINK = 'https://broubook.web.app/wichteln/AbCdEfGhIj0123456789/abcDEF123_-abcDEF123_-abcDEF1234';
@@ -9,6 +9,7 @@ const NBSP = ' ';
 const VARIANTEN = {north_pole: 'weihnachten', warm_casual: 'geburtstag'};
 const LINK_GEKAUFT = `${LINK}?gekauft=1`;
 const neuigkeitenBasis = {name: 'Ben Beispiel', titel: 'Advent 2026', link: LINK, linkGekauft: LINK_GEKAUFT, budget: '50', hinweis: 'Bescherung am 13.12.'};
+const erinnerungBasis = {name: 'Anna Muster', titel: 'Advent 2026', link: LINK, budget: '50', hinweis: 'Bescherung am 13.12.'};
 
 // Betreff und erster Satz je Variante und Sprache, wörtlich aus der Vorgabe.
 const ERWARTET = {
@@ -58,11 +59,12 @@ const schluesselPfade = (baum, praefix = '') => Object.entries(baum).flatMap(([k
 /** Alle Texte eines Textbaums. */
 const alleTexte = (baum) => Object.values(baum).flatMap((wert) => (typeof wert === 'string' ? [wert] : alleTexte(wert)));
 
-test('jede Sprache aus shared/sprachen.js hat beide Mails in beiden Varianten, mit denselben Schlüsseln', () => {
+test('jede Sprache aus shared/sprachen.js hat alle Mails in beiden Varianten, mit denselben Schlüsseln', () => {
+  const mails = ['einladung', 'erinnerung', 'neuigkeiten'];
   assert.deepEqual(Object.keys(_internal.TEXTE).sort(), [...SPRACHEN].sort());
   for (const sprache of SPRACHEN) {
-    assert.deepEqual(Object.keys(_internal.TEXTE[sprache]).sort(), ['einladung', 'neuigkeiten']);
-    for (const mail of ['einladung', 'neuigkeiten']) {
+    assert.deepEqual(Object.keys(_internal.TEXTE[sprache]).sort(), mails);
+    for (const mail of mails) {
       assert.deepEqual(Object.keys(_internal.TEXTE[sprache][mail]).sort(), ['gemeinsam', 'north_pole', 'warm_casual']);
     }
     assert.deepEqual(schluesselPfade(_internal.TEXTE[sprache]), schluesselPfade(_internal.TEXTE.de), sprache);
@@ -128,6 +130,9 @@ test('Französisch: geschütztes Leerzeichen vor : ! ? und in « »', () => {
       texte.push(neu.subject, neu.text, neu.html);
       assert.ok(neu.text.includes(`«${NBSP}Advent 2026${NBSP}»`));
     }
+    const erinnerung = baueErinnerungsMail({...erinnerungBasis, sprache: 'fr', anlass, datum: '2026-12-13'});
+    texte.push(erinnerung.subject, erinnerung.text, erinnerung.html);
+    assert.ok(erinnerung.text.includes(`«${NBSP}Advent 2026${NBSP}»`));
   }
   for (const text of texte) {
     for (const muster of schlecht) assert.doesNotMatch(text, muster, `${muster}: ${text.slice(0, 60)}`);
@@ -266,4 +271,135 @@ test('Neuigkeiten: unbekannte oder fehlende Sprache ergibt Deutsch', () => {
   for (const sprache of [undefined, null, '', 'es', 'EN']) {
     assert.deepEqual(baueNeuigkeitenMail({...neuigkeitenBasis, sprache, wuensche: 1}), deutsch, String(sprache));
   }
+});
+
+// ---------------------------------------------------------------------------
+// Erinnerung an Gäste ohne Wünsche
+// ---------------------------------------------------------------------------
+
+// Betreff, Einleitung (zweiter Absatz) und Button je Variante und Sprache.
+const ERINNERUNG_ERWARTET = {
+  north_pole: {
+    de: {betreff: '📜 Die Wichtel warten auf deinen Wunschzettel, Anna', intro: 'in der Wichtelwerkstatt am Nordpol stapeln sich schon die Wunschzettel – nur deiner fürs Wichteln „Advent 2026“ fehlt noch. ❄️', knopf: 'Wunschzettel schreiben'},
+    en: {betreff: '📜 The elves are waiting for your wish list, Anna', intro: 'wish lists are piling up in the North Pole workshop – only yours for the Secret Santa “Advent 2026” is still missing. ❄️', knopf: 'Write my wish list'},
+    fr: {betreff: '📜 Les lutins attendent ta liste de souhaits, Anna', intro: `les listes de souhaits s'empilent à l'atelier du pôle Nord, mais la tienne pour le Père Noël secret «${NBSP}Advent 2026${NBSP}» manque encore. ❄️`, knopf: 'Écrire ma liste de souhaits'},
+  },
+  warm_casual: {
+    de: {betreff: '🎁 Noch keine Wünsche eingetragen, Anna?', intro: 'kleine Erinnerung zum Wichteln „Advent 2026“: Du hast noch keine Wünsche eingetragen.', knopf: 'Wünsche eintragen'},
+    en: {betreff: '🎁 No wishes added yet, Anna?', intro: 'a quick reminder about the gift exchange “Advent 2026”: you haven\'t added any wishes yet.', knopf: 'Add my wishes'},
+    fr: {betreff: `🎁 Pas encore de souhaits, Anna${NBSP}?`, intro: `petit rappel pour l'échange de cadeaux «${NBSP}Advent 2026${NBSP}»${NBSP}: tu n'as pas encore ajouté de souhaits.`, knopf: 'Ajouter mes souhaits'},
+  },
+};
+
+for (const [variante, anlass] of Object.entries(VARIANTEN)) {
+  for (const sprache of SPRACHEN) {
+    test(`Erinnerung ${variante} / ${sprache}: Betreff, Einleitung, Button und Link`, () => {
+      const soll = ERINNERUNG_ERWARTET[variante][sprache];
+      const mail = baueErinnerungsMail({...erinnerungBasis, anlass, sprache});
+      assert.equal(mail.subject, soll.betreff);
+      assert.equal(mail.text.split('\n\n')[1], soll.intro);
+      assert.ok(mail.text.includes(`:\n${LINK}\n`), 'Link steht als Fallback in einer eigenen Zeile');
+      assert.match(mail.html, new RegExp(`<html lang="${sprache}">`));
+      assert.ok(mail.html.includes(`href="${LINK}" style="display:inline-block;padding:12px 22px;`), 'Button zur Linkseite');
+      assert.ok(mail.html.includes(`>${htmlText(soll.knopf)}</a>`));
+      assert.ok(mail.html.includes(`>${LINK}</a>`), 'Link auch als Text');
+    });
+  }
+}
+
+test('Erinnerung: ganzer Text (Deutsch, herzlich), Hinweis und Grund dezent', () => {
+  const mail = baueErinnerungsMail({...erinnerungBasis, sprache: 'de', anlass: 'geburtstag'});
+  assert.equal(mail.text.replace(/\u00A0/g, ' '), [
+    'Hallo Anna,',
+    'kleine Erinnerung zum Wichteln „Advent 2026“: Du hast noch keine Wünsche eingetragen.',
+    'Mit ein paar Wünschen findet die Person, die dich beschenkt, viel leichter etwas Passendes. Ein Stichwort oder ein Link zum Shop genügt schon.',
+    'Budget: 50,00 €',
+    'Hinweis: Bescherung am 13.12.',
+    `Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:\n${LINK}`,
+    'Der Link gehört nur dir, bitte gib ihn nicht weiter.',
+    'Viel Spaß beim Wünschen!',
+    '-- \nDu bekommst diese Mail, weil du beim Wichteln „Advent 2026“ dabei bist und noch keine Wünsche eingetragen hast. Sobald du einen Wunsch einträgst, kommt keine Erinnerung mehr.',
+  ].join('\n\n'));
+  assert.match(mail.html, /<p style="[^"]*font-size:14px;color:#5f5f5f;">Hinweis: Bescherung am 13\.12\.<\/p>/);
+  assert.match(mail.html, /font-size:12px;color:#7a7a7a;[^>]*>Du bekommst diese Mail, weil du beim Wichteln „Advent 2026“ dabei bist/);
+});
+
+test('Erinnerung: kein {…}-Platzhalter übrig, ohne Budget und Hinweis keine Zeilen dafür', () => {
+  for (const anlass of Object.values(VARIANTEN)) {
+    for (const sprache of SPRACHEN) {
+      for (const extra of [{}, {budget: '', hinweis: ''}]) {
+        const mail = baueErinnerungsMail({...erinnerungBasis, ...extra, anlass, sprache});
+        for (const teil of [mail.subject, mail.text, mail.html]) {
+          assert.doesNotMatch(teil, /\{[^}]*\}/u, `${anlass} / ${sprache}`);
+        }
+      }
+    }
+  }
+  const ohne = baueErinnerungsMail({...erinnerungBasis, budget: '', hinweis: '', sprache: 'de', anlass: 'weihnachten'});
+  assert.doesNotMatch(ohne.text + ohne.html, /Budget|Hinweis:/);
+  const mit = baueErinnerungsMail({...erinnerungBasis, sprache: 'de', anlass: 'weihnachten'});
+  assert.match(mit.text, /\n\n🎁 Budget: 50,00\s€\n\nHinweis: Bescherung am 13\.12\.\n\n/u);
+});
+
+test('Erinnerung: Eingaben des Organisators stehen im HTML nur escaped, der Betreff bleibt einzeilig', () => {
+  const boese = '<script>alert(1)</script>&"\'';
+  for (const anlass of Object.values(VARIANTEN)) {
+    const mail = baueErinnerungsMail({
+      sprache: 'de', anlass, name: `${boese}\r\nBcc: x@example.com`, titel: boese, link: LINK, budget: boese, hinweis: boese,
+    });
+    assert.ok(!mail.html.includes('<script'), 'kein rohes Tag aus Eingaben');
+    assert.ok(mail.html.includes('&lt;script&gt;alert(1)&lt;/script&gt;&amp;&quot;&#39;'));
+    assert.doesNotMatch(mail.subject, /[\r\n]/);
+    assert.ok(mail.text.includes(`„${boese}“`), 'im Textteil bleibt der Titel, wie er ist');
+  }
+});
+
+test('Erinnerung: unbekannte oder fehlende Sprache ergibt Deutsch', () => {
+  for (const anlass of Object.values(VARIANTEN)) {
+    const deutsch = baueErinnerungsMail({...erinnerungBasis, anlass, sprache: 'de'});
+    for (const sprache of [undefined, null, '', 'es', 'EN']) {
+      assert.deepEqual(baueErinnerungsMail({...erinnerungBasis, anlass, sprache}), deutsch, `${anlass} / ${sprache}`);
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Datum der Feier
+// ---------------------------------------------------------------------------
+
+test('Datum der Feier: ausgeschrieben über dem Budget, in allen drei Mails; ohne Datum keine Zeile', () => {
+  const datum = '2026-12-13';
+  const alleMails = (extra) => [
+    baueEinladungsMail({...basis, ...extra}),
+    baueNeuigkeitenMail({...neuigkeitenBasis, wuensche: 1, ...extra}),
+    baueErinnerungsMail({...erinnerungBasis, ...extra}),
+  ];
+  // Englisch britisch; ob ein Komma nach dem Wochentag steht, hängt von der ICU-Version ab.
+  const ZEILE = {
+    weihnachten: {de: /^📅 Bescherung: Sonntag, 13\. Dezember 2026$/, en: /^📅 Gift exchange: Sunday,? 13 December 2026$/, fr: new RegExp(`^📅 Échange des cadeaux${NBSP}: dimanche 13 décembre 2026$`)},
+    geburtstag: {de: /^Feier: Sonntag, 13\. Dezember 2026$/, en: /^Party: Sunday,? 13 December 2026$/, fr: new RegExp(`^Fête${NBSP}: dimanche 13 décembre 2026$`)},
+  };
+  for (const [anlass, jeSprache] of Object.entries(ZEILE)) {
+    for (const [sprache, zeile] of Object.entries(jeSprache)) {
+      for (const mail of alleMails({anlass, sprache, datum})) {
+        const block = mail.text.split('\n\n').find((b) => zeile.test(b.split('\n')[0]));
+        assert.ok(block, `${anlass} / ${sprache}: Datumszeile`);
+        assert.match(block.split('\n')[1], /Budget/, 'direkt darunter das Budget');
+        assert.match(mail.html, /<p style="margin:0 0 16px;"><strong>[^<]*13[^<]*<\/strong><br><strong>[^<]*Budget/);
+      }
+      for (const mail of alleMails({anlass, sprache})) {
+        assert.doesNotMatch(mail.text + mail.html, /Dezember|December|décembre|📅/, `${anlass} / ${sprache}: ohne Datum keine Zeile`);
+      }
+    }
+  }
+  const ohneBudget = baueErinnerungsMail({...erinnerungBasis, sprache: 'de', anlass: 'geburtstag', budget: '', datum});
+  assert.ok(ohneBudget.text.includes('\n\nFeier: Sonntag, 13. Dezember 2026\n\nHinweis:'), 'ohne Budget allein');
+  assert.ok(ohneBudget.html.includes('<p style="margin:0 0 16px;"><strong>Feier: Sonntag, 13. Dezember 2026</strong></p>'));
+});
+
+test('Datum der Feier: nur ein Kalendertag wird ausgeschrieben', () => {
+  const {formatiereDatum} = _internal;
+  assert.equal(formatiereDatum('2027-01-01', 'de'), 'Freitag, 1. Januar 2027');
+  assert.equal(formatiereDatum('2026-12-13', 'fr'), 'dimanche 13 décembre 2026');
+  for (const wert of ['', undefined, null, '13.12.2026', '2026-12-13T10:00']) assert.equal(formatiereDatum(wert, 'de'), '');
 });
