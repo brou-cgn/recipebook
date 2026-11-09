@@ -133,7 +133,7 @@ const rejectsWith = (promise, code) => assert.rejects(promise, (err) => {
 /** Legt eine Runde mit Teilnehmern an; liefert Runde, Teilnehmer nach Name und Link-Aufrufer. */
 const setupRunde = async (namen = ['Anna', 'Ben', 'Cleo', 'Dana'], {ladeVorschau} = {}) => {
   const db = makeDb(baseSeed());
-  const sicht = await verwalten(db, 'orga', {aktion: 'anlegen', titel: 'Advent 2026', budget: '20 €', hinweis: 'Bescherung am 13.12.', namen});
+  const sicht = await verwalten(db, 'orga', {aktion: 'anlegen', titel: 'Advent 2026', anlass: 'weihnachten', budget: '20 €', hinweis: 'Bescherung am 13.12.', namen});
   const rundeId = sicht.runde.id;
   const tn = Object.fromEntries(sicht.teilnehmer.map((t) => [t.name, t]));
   const als = (name, aktion, daten = {}) => teilnahme(db, {aktion, rundeId, token: tn[name].token, ...daten}, ladeVorschau);
@@ -385,9 +385,12 @@ test('anlegen braucht einen Titel', async () => {
   await rejectsWith(verwalten(db, 'orga', {aktion: 'anlegen', titel: 'x', namen: 'Anna'}), 'invalid-argument');
 });
 
-test('aendern übernimmt Titel, Budget und Hinweis', async () => {
-  const {db, rundeId} = await setupRunde();
-  const sicht = await verwalten(db, 'orga', {aktion: 'aendern', rundeId, titel: 'Neu', budget: '', hinweis: 'Bitte einpacken'});
+test('aendern übernimmt Titel, Anlass, Budget und Hinweis', async () => {
+  const {db, rundeId, sicht: anfang} = await setupRunde();
+  assert.equal(anfang.runde.anlass, 'weihnachten');
+  const sicht = await verwalten(db, 'orga', {aktion: 'aendern', rundeId, titel: 'Neu', anlass: 'geburtstag', budget: '', hinweis: 'Bitte einpacken'});
+  assert.equal(sicht.runde.anlass, 'geburtstag');
+  assert.equal(db.store.get(`wichtelRunden/${rundeId}`).anlass, 'geburtstag');
   assert.equal(sicht.runde.titel, 'Neu');
   assert.equal(sicht.runde.budget, '');
   assert.equal(sicht.runde.hinweis, 'Bitte einpacken');
@@ -1119,4 +1122,10 @@ test('Ein Gast ist je Runde nur einmal dabei, auch unter anderem Namen', async (
   const ben = nachName(sicht).Ben;
   await rejectsWith(orga({aktion: 'einladungSenden', teilnehmerId: ben.id, gastId: 'gastAnna0001'}), 'already-exists');
   assert.equal(mailer.gesendet.length, 1);
+});
+
+test('unbekannter Anlass wird zu leer', async () => {
+  const {db, rundeId} = await setupRunde();
+  const sicht = await verwalten(db, 'orga', {aktion: 'aendern', rundeId, titel: 'Neu', anlass: 'Quatsch', budget: '', hinweis: ''});
+  assert.equal(sicht.runde.anlass, '');
 });

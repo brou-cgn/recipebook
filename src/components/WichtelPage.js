@@ -28,6 +28,7 @@ import {
 } from '../utils/wichtelFirestore';
 import { buildWichtelLink, teileWichtelEinladung } from '../utils/wichtelLinks';
 import { formatBudget } from '../utils/formatBudget';
+import { WICHTEL_ANLAESSE, wichtelAnlassLabel } from '../utils/wichtelAnlaesse';
 
 const MIN_TEILNEHMER = 3;
 const HINWEIS_DAUER_MS = 3500;
@@ -78,13 +79,14 @@ function StatusPille({ status, ausgelostAm }) {
 
 function RundenFormular({ initial, titelText, submitLabel, busy, onSubmit, onCancel }) {
   const [titel, setTitel] = useState(initial?.titel || '');
+  const [anlass, setAnlass] = useState(initial?.anlass || '');
   const [budget, setBudget] = useState(initial?.budget || '');
   const [hinweis, setHinweis] = useState(initial?.hinweis || '');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!titel.trim()) return;
-    onSubmit({ titel: titel.trim(), budget: budget.trim(), hinweis: hinweis.trim() });
+    onSubmit({ titel: titel.trim(), anlass, budget: budget.trim(), hinweis: hinweis.trim() });
   };
 
   return (
@@ -101,6 +103,15 @@ function RundenFormular({ initial, titelText, submitLabel, busy, onSubmit, onCan
           required
           autoFocus
         />
+      </label>
+      <label className="events-form-field">
+        <span>Anlass (optional)</span>
+        <select value={anlass} onChange={(e) => setAnlass(e.target.value)}>
+          <option value="">Kein Anlass</option>
+          {WICHTEL_ANLAESSE.map((a) => (
+            <option key={a.key} value={a.key}>{a.label}</option>
+          ))}
+        </select>
       </label>
       <div className="events-form-row">
         <label className="events-form-field">
@@ -660,6 +671,7 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
           <>
             <div className="wichtel-kopfdaten">
               <StatusPille status={detail.runde.status} ausgelostAm={detail.runde.ausgelostAm} />
+              {wichtelAnlassLabel(detail.runde.anlass) && <span className="wichtel-chip">Anlass: {wichtelAnlassLabel(detail.runde.anlass)}</span>}
               {detail.runde.budget && <span className="wichtel-chip">Budget: {formatBudget(detail.runde.budget)}</span>}
             </div>
             {detail.runde.hinweis && <p className="wichtel-runde-hinweis">{detail.runde.hinweis}</p>}
