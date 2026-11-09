@@ -130,7 +130,7 @@ test('Französisch: geschütztes Leerzeichen vor : ! ? und in « »', () => {
       texte.push(neu.subject, neu.text, neu.html);
       assert.ok(neu.text.includes(`«${NBSP}Advent 2026${NBSP}»`));
     }
-    const erinnerung = baueErinnerungsMail({...erinnerungBasis, sprache: 'fr', anlass});
+    const erinnerung = baueErinnerungsMail({...erinnerungBasis, sprache: 'fr', anlass, datum: '2026-12-13'});
     texte.push(erinnerung.subject, erinnerung.text, erinnerung.html);
     assert.ok(erinnerung.text.includes(`«${NBSP}Advent 2026${NBSP}»`));
   }
@@ -361,4 +361,45 @@ test('Erinnerung: unbekannte oder fehlende Sprache ergibt Deutsch', () => {
       assert.deepEqual(baueErinnerungsMail({...erinnerungBasis, anlass, sprache}), deutsch, `${anlass} / ${sprache}`);
     }
   }
+});
+
+// ---------------------------------------------------------------------------
+// Datum der Feier
+// ---------------------------------------------------------------------------
+
+test('Datum der Feier: ausgeschrieben über dem Budget, in allen drei Mails; ohne Datum keine Zeile', () => {
+  const datum = '2026-12-13';
+  const alleMails = (extra) => [
+    baueEinladungsMail({...basis, ...extra}),
+    baueNeuigkeitenMail({...neuigkeitenBasis, wuensche: 1, ...extra}),
+    baueErinnerungsMail({...erinnerungBasis, ...extra}),
+  ];
+  // Englisch britisch; ob ein Komma nach dem Wochentag steht, hängt von der ICU-Version ab.
+  const ZEILE = {
+    weihnachten: {de: /^📅 Bescherung: Sonntag, 13\. Dezember 2026$/, en: /^📅 Gift exchange: Sunday,? 13 December 2026$/, fr: new RegExp(`^📅 Échange des cadeaux${NBSP}: dimanche 13 décembre 2026$`)},
+    geburtstag: {de: /^Feier: Sonntag, 13\. Dezember 2026$/, en: /^Party: Sunday,? 13 December 2026$/, fr: new RegExp(`^Fête${NBSP}: dimanche 13 décembre 2026$`)},
+  };
+  for (const [anlass, jeSprache] of Object.entries(ZEILE)) {
+    for (const [sprache, zeile] of Object.entries(jeSprache)) {
+      for (const mail of alleMails({anlass, sprache, datum})) {
+        const block = mail.text.split('\n\n').find((b) => zeile.test(b.split('\n')[0]));
+        assert.ok(block, `${anlass} / ${sprache}: Datumszeile`);
+        assert.match(block.split('\n')[1], /Budget/, 'direkt darunter das Budget');
+        assert.match(mail.html, /<p style="margin:0 0 16px;"><strong>[^<]*13[^<]*<\/strong><br><strong>[^<]*Budget/);
+      }
+      for (const mail of alleMails({anlass, sprache})) {
+        assert.doesNotMatch(mail.text + mail.html, /Dezember|December|décembre|📅/, `${anlass} / ${sprache}: ohne Datum keine Zeile`);
+      }
+    }
+  }
+  const ohneBudget = baueErinnerungsMail({...erinnerungBasis, sprache: 'de', anlass: 'geburtstag', budget: '', datum});
+  assert.ok(ohneBudget.text.includes('\n\nFeier: Sonntag, 13. Dezember 2026\n\nHinweis:'), 'ohne Budget allein');
+  assert.ok(ohneBudget.html.includes('<p style="margin:0 0 16px;"><strong>Feier: Sonntag, 13. Dezember 2026</strong></p>'));
+});
+
+test('Datum der Feier: nur ein Kalendertag wird ausgeschrieben', () => {
+  const {formatiereDatum} = _internal;
+  assert.equal(formatiereDatum('2027-01-01', 'de'), 'Freitag, 1. Januar 2027');
+  assert.equal(formatiereDatum('2026-12-13', 'fr'), 'dimanche 13 décembre 2026');
+  for (const wert of ['', undefined, null, '13.12.2026', '2026-12-13T10:00']) assert.equal(formatiereDatum(wert, 'de'), '');
 });

@@ -8,7 +8,10 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
 
 **Organisator** (Events > „Wichteln“, mobil der Geschenk-Button unten links; ab Rolle `edit`):
 
-1. Runde anlegen: Titel, optional Anlass (Weihnachten, Nikolaus, Silvester, Ostern, Geburtstag, Hochzeit, Jubiläum, Firmenfeier, Sommerfest, Abschied, Einweihung, Sonstiges), Budget und Hinweis (z. B. „Bescherung am 13.12.“).
+1. Runde anlegen: Titel, optional Anlass (Weihnachten, Nikolaus, Silvester, Ostern, Geburtstag, Hochzeit, Jubiläum, Firmenfeier, Sommerfest, Abschied, Einweihung, Sonstiges), Datum der Feier, Budget und Hinweis (z. B. „Bescherung nach dem Essen“).
+   Alle fünf lassen sich jederzeit ändern („Runde bearbeiten“), auch nach dem Auslosen – etwa ein Datum
+   nachtragen. Das Datum steht in der Runde, in der Übersicht, auf der Teilnehmerseite und in den Mails; es
+   begrenzt die Mails (siehe „Erinnerung per Mail“ und „Neuigkeiten per Mail“).
 2. Teilnehmer eintragen – mehrere auf einmal mit Komma, oder per Tipp aus der eigenen Gästeliste.
    Namen sind je Runde eindeutig (Groß-/Kleinschreibung egal). Ein Gast aus der Gästeliste (per Tipp
    oder mit genau seinem Namen eingetippt) wird mit dem Teilnehmer verknüpft und ist je Runde nur
@@ -48,8 +51,8 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
   „Geschenk gekauft“ setzt (siehe „Neuigkeiten per Mail“). Der Button „Geschenk gekauft“ in der Mail
   öffnet die Linkseite mit einer Rückfrage ganz oben; erst „Ja, Geschenk gekauft“ setzt den Status.
 - Erinnerung per Mail: Wer seine Einladung per Mail bekommen und noch keinen Wunsch eingetragen hat,
-  wird erinnert – drei Tage nach der Einladung, danach wöchentlich, höchstens dreimal. Der erste eigene
-  Wunsch beendet die Erinnerungen (siehe „Erinnerung per Mail“).
+  wird erinnert – drei Tage nach der Einladung, danach wöchentlich, höchstens dreimal, mit Datum der Feier
+  spätestens drei Tage davor. Der erste eigene Wunsch beendet die Erinnerungen (siehe „Erinnerung per Mail“).
 - Zu Wunsch und Idee optional ein Link (z. B. zum Shop); Text oder Link genügt. Der Eintrag zeigt dann
   eine Vorschau mit Bild, Seitentitel und Seite (siehe „Link-Vorschau“). Ein ins Textfeld eingefügter
   Link am Ende („Produktname https://…“, wie aus dem Teilen-Menü einer Shop-App) wird zum Link.
@@ -57,7 +60,8 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
 - Sprache: Deutsch, Englisch oder Französisch – nach der Sprachpräferenz im Gästeprofil, mit dem der
   Teilnehmer verknüpft ist (Profile ohne Wahl: Deutsch). Ohne verknüpftes Profil, beim Laden und bei
   einem ungültigen Link gilt die Browsersprache, wenn sie eine der drei ist, sonst Deutsch. Titel, Budget,
-  Hinweis, Namen und Einträge erscheinen so, wie sie eingegeben wurden.
+  Hinweis, Namen und Einträge erscheinen so, wie sie eingegeben wurden; das Datum der Feier ausgeschrieben in
+  der Sprache der Seite („Sonntag, 13. Dezember 2026“).
 
 ## Wer sieht was
 
@@ -92,7 +96,8 @@ wen beschenkt – der Link darin öffnet aber, wie jeder persönliche Link, die 
 ## Datenmodell
 
 ```
-wichtelRunden/{rundeId}            ownerId, titel, anlass (Schlüssel oder ''), budget, hinweis, status ('offen'|'ausgelost'),
+wichtelRunden/{rundeId}            ownerId, titel, anlass (Schlüssel oder ''), budget, hinweis, datum (Tag der Feier
+                                   'JJJJ-MM-TT' oder ''; fehlt bei älteren = keins), status ('offen'|'ausgelost'),
                                    teilnehmerAnzahl, ausgelostAm, erstelltAm, aktualisiertAm
   teilnehmer/{teilnehmerId}        name, token (geheim), reihenfolge, ausschluesse (Teilnehmer-IDs,
                                    die er nicht ziehen soll; fehlt bei älteren = keine), geoeffnetAm,
@@ -134,6 +139,10 @@ vor dem Auslosen; unbekannte IDs und der Teilnehmer selbst fallen still heraus),
 Fremde Runden antworten wie nicht vorhandene (`not-found`). Die Organisator-Sicht enthält je
 Teilnehmer `ausschluesse`, `gastId` und `mail`; Teilnehmer-Antworten enthalten nichts davon.
 
+`anlegen` und `aendern` (auch nach dem Auslosen) nehmen `titel`, `anlass`, `budget`, `hinweis` und `datum`
+('JJJJ-MM-TT' zwischen 2020 und 2100, '' oder null löscht es; fehlt das Feld, bleibt es bei `aendern`
+unverändert – ältere App-Versionen kennen es nicht). Runden-Antworten enthalten `datum` ('' ohne).
+
 Bei `anlegen` und `teilnehmerHinzufuegen` ist jeder Eintrag in `namen` ein Name oder
 `{name, gastId}`. Diese beiden und `einladungSenden` antworten zusätzlich mit
 `versand: {gesendet, fehlgeschlagen, grund}`; `grund` ist `nicht-eingerichtet` (SMTP-Secrets fehlen),
@@ -173,10 +182,11 @@ Oberflächen: `src/components/WichtelPage.js` (Organisator), `src/components/Wic
   Runde – `north_pole` („Post vom Nordpol“) bei Weihnachten und Nikolaus, `warm_casual` („Herzlich & locker“)
   bei allem anderen und bei Runden ohne Anlass. Die Texte stehen je Sprache in `functions/wichtelMailTexte/`
   (`de.js`, `en.js`, `fr.js`, Schlüssel `einladung`) mit den Platzhaltern `{firstName}` (nur der erste Teil des Teilnehmernamens),
-  `{hostName}` (Vorname des Organisators), `{eventName}`, `{budget}`, `{link}`; im HTML wird jeder Wert escaped.
+  `{hostName}` (Vorname des Organisators), `{eventName}`, `{budget}`, `{datum}`, `{link}`; im HTML wird jeder Wert escaped.
   Das Budget steht bei einem reinen Betrag in der Schreibweise der Sprache („50,00 €“, „€50.00“), sonst so, wie
-  der Organisator es schrieb. Der Link steht im Button und als Fallback-Text. Ohne Budget entfällt die
-  Budgetzeile, ohne Vorname des Organisators gibt es einen neutralen Einladungssatz. Der Hinweis der Runde und
+  der Organisator es schrieb; das Datum der Feier ausgeschrieben („📅 Bescherung: Sonntag, 13. Dezember 2026“,
+  herzlich „Feier: …“), direkt über dem Budget. Der Link steht im Button und als Fallback-Text. Ohne Datum oder
+  Budget entfällt die Zeile, ohne Vorname des Organisators gibt es einen neutralen Einladungssatz. Der Hinweis der Runde und
   die Zeile „Du bekommst diese Mail, weil …“ stehen dezent (klein, grau) unter dem Haupttext.
 - **Empfänger:** nur Adressen aus der Gästeliste des Organisators. Adresse und Sprache liest die Function
   bei jedem Versand frisch aus dem Gästeprofil; in der Runde stehen nur `gastId` und das Ergebnis.
@@ -191,7 +201,8 @@ Oberflächen: `src/components/WichtelPage.js` (Organisator), `src/components/Wic
 - **Wann:** Trägt der Empfänger eines Schenkers einen Wunsch ein oder ein anderer Gast eine Idee für ihn,
   merkt `wichtelTeilnahme` eine Mail an den Schenker vor (`wichtelNeuigkeiten/{rundeId}_{geberId}`) – nur,
   wenn die Runde ausgelost ist, der Schenker sein Los gezogen und „Geschenk gekauft“ nicht gesetzt hat und
-  sein Gästeprofil eine E-Mail-Adresse hat. Eigene Ideen des Schenkers lösen nichts aus.
+  sein Gästeprofil eine E-Mail-Adresse hat. Eigene Ideen des Schenkers lösen nichts aus. Ab dem Tag der Feier
+  (Datum der Runde, Berliner Zeit) wird nichts mehr vorgemerkt, und schon vorgemerkte Mails entfallen.
 - **Bündeln:** Die Mail geht frühestens 30 Minuten nach dem ersten neuen Eintrag raus (mehrere Einträge
   kurz hintereinander ergeben eine Mail) und höchstens einmal am Tag je Schenker. Verschickt wird sie von
   der geplanten Function `wichtelNeuigkeitenVersenden`, die vorher alles neu prüft: Ist inzwischen
@@ -202,7 +213,7 @@ Oberflächen: `src/components/WichtelPage.js` (Organisator), `src/components/Wic
   `functions/wichtelMailTexte/`): dieselben Varianten (`north_pole`, `warm_casual`) und Sprachen wie die
   Einladung. Die Mail nennt nur die Anzahl neuer Wünsche und Ideen, **nie den Empfänger und keine
   Inhalte** (Vorschau auf dem Sperrbildschirm, geteilte Postfächer; die Einträge stehen hinter dem Link).
-  Dazu Budget und Hinweis der Runde, der Button zur Linkseite und der Button „Geschenk gekauft“, beide
+  Dazu Datum der Feier, Budget und Hinweis der Runde, der Button zur Linkseite und der Button „Geschenk gekauft“, beide
   Links auch als Fallback-Text.
 - **„Geschenk gekauft“ aus der Mail:** Der Button öffnet den persönlichen Link mit `?gekauft=1`. Die Seite
   fragt oben nach („Geschenk für … gekauft?“); gesetzt wird der Status erst mit „Ja, Geschenk gekauft“.
@@ -224,9 +235,13 @@ Oberflächen: `src/components/WichtelPage.js` (Organisator), `src/components/Wic
   Wunsch eingetragen hat, sein Schenker das Geschenk als gekauft markiert hat (dann helfen Wünsche nicht
   mehr), die Adresse aus dem Gästeprofil entfernt, der Teilnehmer entfernt oder die Runde gelöscht wurde.
   „Auslosung zurücksetzen“ ändert nichts, Wünsche bleiben dabei ja auch erhalten.
+- **Datum der Feier:** Hat die Runde eins, kommt die letzte Erinnerung spätestens drei Tage vorher (Berliner
+  Kalendertag); was danach fällig wäre, entfällt – liegt die Feier schon bei der ersten zu nah, kommt keine.
+  Wird das Datum später gelegt oder gelöscht, merkt „Runde bearbeiten“ die Erinnerungen neu vor
+  (`planeErinnerungen`), mit einer Woche Abstand zur letzten; ein früheres Datum prüft der Versand.
 - **Inhalt** (`baueErinnerungsMail` in `functions/wichtelMail.js`, Texte unter `erinnerung` in
   `functions/wichtelMailTexte/`): dieselben Varianten (`north_pole`, `warm_casual`) und Sprachen wie die
-  Einladung, derselbe Aufbau (Budget, Hinweis, Button zur Linkseite mit Fallback-Link). Der Text gilt vor und
+  Einladung, derselbe Aufbau (Datum der Feier, Budget, Hinweis, Button zur Linkseite mit Fallback-Link). Der Text gilt vor und
   nach dem Auslosen und nennt niemanden aus der Runde.
 - **Wer davon weiß:** nur der Gast selbst. Der Organisator sieht nicht, wer erinnert wird – das verriete, wer
   noch keine Wünsche hat. In der Runde steht nur der Zähler am Teilnehmer.
@@ -301,7 +316,7 @@ Das Token hat 192 Bit (24 Zufallsbytes, base64url).
   die Einträge, die er dort schon gesehen hat (die Seite merkt sich keinen „gesehen“-Stand).
 - Keine Benachrichtigung beim Auslosen („Jetzt kannst du dein Los ziehen“) – wer früh eingeladen
   wurde, muss selbst wieder vorbeischauen oder vom Organisator erinnert werden („Erneut senden“).
-- Die Runde kennt kein Datum der Feier: Erinnerungen an Wünsche enden erst nach dreien, einem Wunsch oder
-  „Geschenk gekauft“ beim Schenker – bei einer Einladung kurz vor der Feier kann die letzte danach kommen.
+- Ohne Datum der Feier enden Erinnerungen an Wünsche erst nach dreien, einem Wunsch oder „Geschenk gekauft“
+  beim Schenker – bei einer Einladung kurz vor der Feier kann die letzte danach kommen.
 - Erinnerungen abbestellen, ohne einen Wunsch einzutragen („Ich wünsche mir nichts“).
 - Button der Erinnerungs-Mail direkt zum Abschnitt „Deine Wünsche“ (heute: Anfang der Linkseite).

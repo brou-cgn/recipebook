@@ -29,6 +29,7 @@ import {
 import { buildWichtelLink, teileWichtelEinladung } from '../utils/wichtelLinks';
 import { formatBudget } from '../utils/formatBudget';
 import { WICHTEL_ANLAESSE, wichtelAnlassLabel } from '../utils/wichtelAnlaesse';
+import { formatWichtelDatum } from '../utils/wichtelDatum';
 
 const MIN_TEILNEHMER = 3;
 const HINWEIS_DAUER_MS = 3500;
@@ -82,11 +83,12 @@ function RundenFormular({ initial, titelText, submitLabel, busy, onSubmit, onCan
   const [anlass, setAnlass] = useState(initial?.anlass || '');
   const [budget, setBudget] = useState(initial?.budget || '');
   const [hinweis, setHinweis] = useState(initial?.hinweis || '');
+  const [datum, setDatum] = useState(initial?.datum || '');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!titel.trim()) return;
-    onSubmit({ titel: titel.trim(), anlass, budget: budget.trim(), hinweis: hinweis.trim() });
+    onSubmit({ titel: titel.trim(), anlass, budget: budget.trim(), hinweis: hinweis.trim(), datum });
   };
 
   return (
@@ -104,15 +106,28 @@ function RundenFormular({ initial, titelText, submitLabel, busy, onSubmit, onCan
           autoFocus
         />
       </label>
-      <label className="events-form-field">
-        <span>Anlass (optional)</span>
-        <select value={anlass} onChange={(e) => setAnlass(e.target.value)}>
-          <option value="">Kein Anlass</option>
-          {WICHTEL_ANLAESSE.map((a) => (
-            <option key={a.key} value={a.key}>{a.label}</option>
-          ))}
-        </select>
-      </label>
+      <div className="events-form-row">
+        <label className="events-form-field">
+          <span>Anlass (optional)</span>
+          <select value={anlass} onChange={(e) => setAnlass(e.target.value)}>
+            <option value="">Kein Anlass</option>
+            {WICHTEL_ANLAESSE.map((a) => (
+              <option key={a.key} value={a.key}>{a.label}</option>
+            ))}
+          </select>
+        </label>
+        {/* Auch nach dem Auslosen änderbar. Mit Datum enden die Erinnerungs-Mails drei Tage vorher. */}
+        <label className="events-form-field">
+          <span>Datum der Feier (optional)</span>
+          <input
+            type="date"
+            value={datum}
+            onChange={(e) => setDatum(e.target.value)}
+            min="2020-01-01"
+            max="2100-12-31"
+          />
+        </label>
+      </div>
       <div className="events-form-row">
         <label className="events-form-field">
           <span>Budget (optional)</span>
@@ -130,7 +145,7 @@ function RundenFormular({ initial, titelText, submitLabel, busy, onSubmit, onCan
             type="text"
             value={hinweis}
             onChange={(e) => setHinweis(e.target.value)}
-            placeholder="z. B. Bescherung am 13.12. nach dem Essen"
+            placeholder="z. B. Bescherung nach dem Essen"
             maxLength={300}
           />
         </label>
@@ -674,6 +689,9 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
             <div className="wichtel-kopfdaten">
               <StatusPille status={detail.runde.status} ausgelostAm={detail.runde.ausgelostAm} />
               {wichtelAnlassLabel(detail.runde.anlass) && <span className="wichtel-chip">Anlass: {wichtelAnlassLabel(detail.runde.anlass)}</span>}
+              {formatWichtelDatum(detail.runde.datum, 'de', 'kurz') && (
+                <span className="wichtel-chip">Feier: {formatWichtelDatum(detail.runde.datum, 'de', 'kurz')}</span>
+              )}
               {detail.runde.budget && <span className="wichtel-chip">Budget: {formatBudget(detail.runde.budget)}</span>}
             </div>
             {detail.runde.hinweis && <p className="wichtel-runde-hinweis">{detail.runde.hinweis}</p>}
@@ -859,6 +877,9 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
                 <span className="wichtel-runde-titel">{runde.titel}</span>
                 <span className="wichtel-runde-meta">
                   <StatusPille status={runde.status} ausgelostAm={runde.ausgelostAm} />
+                  {formatWichtelDatum(runde.datum, 'de', 'kurz') && (
+                    <span className="wichtel-runde-datum">Feier {formatWichtelDatum(runde.datum, 'de', 'kurz')}</span>
+                  )}
                   <span className="wichtel-runde-anzahl">
                     {runde.teilnehmerAnzahl === 1 ? '1 Teilnehmer' : `${runde.teilnehmerAnzahl} Teilnehmer`}
                   </span>

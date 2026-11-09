@@ -3,18 +3,20 @@
  * north_pole (Weihnachten, Nikolaus) und warm_casual (alle anderen Anlässe).
  *
  * einladung: persönlicher Link zum Los. Platzhalter: {firstName}, {hostName}, {eventName},
- *   {budget}, {link}, {hinweis}. `introOhneHost` gilt, wenn der Organisator keinen Vornamen
+ *   {budget}, {datum} (Tag der Feier, ausgeschrieben), {link}, {hinweis}. `introOhneHost` gilt, wenn der Organisator keinen Vornamen
  *   hinterlegt hat.
  *
  * neuigkeiten: an den Schenker, wenn sein Empfänger Wünsche oder andere Gäste Ideen für ihn
  *   eingetragen haben. Nennt den Empfänger bewusst nicht (Vorschau auf dem Sperrbildschirm,
  *   geteiltes Postfach) und keine Inhalte der Einträge, nur ihre Anzahl. Platzhalter:
- *   {firstName}, {eventName}, {budget}, {hinweis}, {wuensche} und {ideen} (aus `anzahl`).
+ *   {firstName}, {eventName}, {budget}, {datum}, {hinweis}, {wuensche} und {ideen} (aus `anzahl`).
  *   Je nachdem, was neu ist, gilt `nurWuensche`, `nurIdeen` oder `beides`.
  *
  * erinnerung: an einen Gast, der noch keine Wünsche eingetragen hat. Gilt vor und nach dem
  *   Auslosen gleich und nennt niemanden aus der Runde. Platzhalter: {firstName}, {eventName},
- *   {budget}, {hinweis}.
+ *   {budget}, {datum}, {hinweis}.
+ *
+ * Die Zeilen `datum` und `budget` entfallen, wenn die Runde kein Datum bzw. Budget hat.
  */
 module.exports = {
   einladung: {
@@ -28,6 +30,7 @@ module.exports = {
       erklaerung: "Dein Los liegt schon versiegelt bereit. Mit deinem persönlichen Link brichst du das Siegel und " +
         "erfährst, für wen du in diesem Jahr Weihnachtswichtel sein darfst. Schreib deinen Wunschzettel und " +
         "hinterlasse den anderen Wichteln ein paar Hinweise. Die Rentiere wären dir sehr dankbar.",
+      datum: "📅 Bescherung: {datum}",
       budget: "🎁 Budget: {budget}",
       knopf: "Siegel brechen",
       linkErsatz: "Falls der Button klemmt, hilft dieser Link:",
@@ -41,6 +44,7 @@ module.exports = {
       introOhneHost: "schön, dass du dabei bist! Du bist beim Wichteln „{eventName}“ dabei.",
       erklaerung: "Über deinen persönlichen Link ziehst du dein Los und erfährst, wen du beschenken darfst. " +
         "Außerdem kannst du deine Wünsche eintragen und Geschenkideen für die anderen hinterlassen.",
+      datum: "Feier: {datum}",
       budget: "Budget: {budget}",
       knopf: "Los ziehen",
       linkErsatz: "Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:",
@@ -66,6 +70,7 @@ module.exports = {
       beides: "Dein Schützling hat {wuensche} auf den Wunschzettel geschrieben, und aus der Wichtelrunde " +
         "gibt es {ideen}.",
       aufruf: "Schnapp dir einen Becher Kakao und schau nach – vielleicht ist genau das Richtige dabei.",
+      datum: "📅 Bescherung: {datum}",
       budget: "🎁 Budget: {budget}",
       knopf: "Hinweise ansehen",
       gekauftFrage: "Ist dein Geschenk schon besorgt? Dann gib der Werkstatt Bescheid – danach schicken dir " +
@@ -85,6 +90,7 @@ module.exports = {
       nurIdeen: "Für die Person, die du beschenkst, gibt es {ideen} aus der Runde.",
       beides: "Die Person, die du beschenkst, hat {wuensche} eingetragen, und aus der Runde gibt es {ideen}.",
       aufruf: "Schau gern rein – vielleicht ist genau das Richtige dabei.",
+      datum: "Feier: {datum}",
       budget: "Budget: {budget}",
       knopf: "Wünsche und Ideen ansehen",
       gekauftFrage: "Hast du schon ein Geschenk? Dann markiere es als gekauft – danach bekommst du keine " +
@@ -116,6 +122,7 @@ module.exports = {
         "Wichteln „{eventName}“ fehlt noch. ❄️",
       erklaerung: "Schreib ein paar Wünsche auf, damit dein Wichtel das passende Geschenk für dich findet. " +
         "Ein Stichwort oder ein Link zum Shop genügt schon. Die Rentiere scharren bereits mit den Hufen.",
+      datum: "📅 Bescherung: {datum}",
       budget: "🎁 Budget: {budget}",
       knopf: "Wunschzettel schreiben",
       linkErsatz: "Falls der Button klemmt, hilft dieser Link:",
@@ -130,6 +137,7 @@ module.exports = {
       intro: "kleine Erinnerung zum Wichteln „{eventName}“: Du hast noch keine Wünsche eingetragen.",
       erklaerung: "Mit ein paar Wünschen findet die Person, die dich beschenkt, viel leichter etwas Passendes. " +
         "Ein Stichwort oder ein Link zum Shop genügt schon.",
+      datum: "Feier: {datum}",
       budget: "Budget: {budget}",
       knopf: "Wünsche eintragen",
       linkErsatz: "Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:",

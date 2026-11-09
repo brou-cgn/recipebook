@@ -658,7 +658,7 @@ test('Teilnahme: ungültige Links sehen alle gleich aus', async () => {
 test('Teilnahme vor der Auslosung: eigene Daten, andere Gäste, kein Los', async () => {
   const {db, rundeId, tn, als} = await setupRunde();
   const sicht = await als('Ben', 'laden');
-  assert.deepEqual(sicht.runde, {titel: 'Advent 2026', budget: '20 €', hinweis: 'Bescherung am 13.12.', status: 'offen'});
+  assert.deepEqual(sicht.runde, {titel: 'Advent 2026', budget: '20 €', hinweis: 'Bescherung am 13.12.', datum: '', status: 'offen'});
   assert.deepEqual(sicht.ich, {id: tn.Ben.id, name: 'Ben', sprache: null});
   assert.deepEqual(sicht.andere.map((t) => t.name), ['Anna', 'Cleo', 'Dana']);
   assert.equal(sicht.los, null);
@@ -1691,4 +1691,106 @@ test('Erinnerung: Einladungen von vor dem Update werden beim Öffnen der Runde e
 
   assert.deepEqual(await r.lauf(), {gesendet: 1, verworfen: 0, verschoben: 0});
   assert.equal(r.an('anna@example.com').length, 1);
+});
+
+// ---------------------------------------------------------------------------
+// Datum der Feier
+// ---------------------------------------------------------------------------
+
+const {ERINNERUNG_VORLAUF_TAGE, istDatum, verschiebeTag} = wichteln._internal;
+
+test('Datum der Feier: anlegen, ändern – auch nach dem Auslosen –, löschen; ohne Feld bleibt es', async () => {
+  const db = makeDb(baseSeed());
+  const ohne = await verwalten(db, 'orga', {aktion: 'anlegen', titel: 'Ohne Datum', namen: ['Anna', 'Ben', 'Cleo']});
+  assert.equal(ohne.runde.datum, '');
+  const sicht = await verwalten(db, 'orga', {aktion: 'anlegen', titel: 'Advent 2026', datum: '2026-12-13', namen: ['Anna', 'Ben', 'Cleo']});
+  const rundeId = sicht.runde.id;
+  assert.equal(sicht.runde.datum, '2026-12-13');
+  assert.equal(db.store.get(`wichtelRunden/${rundeId}`).datum, '2026-12-13');
+  const liste = await verwalten(db, 'orga', {aktion: 'liste'});
+  assert.deepEqual(liste.runden.map((r) => r.datum).sort(), ['', '2026-12-13']);
+
+  await verwalten(db, 'orga', {aktion: 'auslosen', rundeId});
+  const felder = {aktion: 'aendern', rundeId, titel: 'Advent 2026', anlass: '', budget: '', hinweis: ''};
+  let neu = await verwalten(db, 'orga', {...felder, datum: '2026-12-20'});
+  assert.equal(neu.runde.datum, '2026-12-20', 'nach dem Auslosen änderbar');
+  neu = await verwalten(db, 'orga', felder);
+  assert.equal(neu.runde.datum, '2026-12-20', 'eine ältere App ohne Feld löscht das Datum nicht');
+  const anna = neu.teilnehmer.find((t) => t.name === 'Anna');
+  const teilnehmerSicht = await teilnahme(db, {aktion: 'laden', rundeId, token: anna.token});
+  assert.equal(teilnehmerSicht.runde.datum, '2026-12-20');
+  neu = await verwalten(db, 'orga', {...felder, datum: ''});
+  assert.equal(neu.runde.datum, '');
+  assert.equal(db.store.get(`wichtelRunden/${rundeId}`).datum, '');
+
+  for (const falsch of ['2026-02-30', '13.12.2026', '2026-12-1', 'morgen', 20261213, '1999-12-24', '2026-12-13T18:00']) {
+    await rejectsWith(verwalten(db, 'orga', {...felder, datum: falsch}), 'invalid-argument');
+  }
+  assert.equal(db.store.get(`wichtelRunden/${rundeId}`).datum, '');
+});
+
+test('Datum der Feier: Hilfsfunktionen für Kalendertage', () => {
+  assert.ok(istDatum('2028-02-29'));
+  assert.ok(!istDatum('2027-02-29'));
+  assert.ok(!istDatum(undefined));
+  assert.equal(verschiebeTag('2027-01-02', -ERINNERUNG_VORLAUF_TAGE), '2026-12-30');
+  assert.equal(verschiebeTag('2026-03-29', 1), '2026-03-30', 'Zeitumstellung verschiebt keinen Tag');
+});
+
+test('Erinnerung: die letzte kommt spätestens drei Tage vor der Feier; ein späteres Datum plant neu', async () => {
+  const r = await setupErinnerung();
+  const felder = {aktion: 'aendern', titel: 'Advent 2026', anlass: 'weihnachten', budget: '20 €', hinweis: ''};
+  // JETZT ist der 1.12. – die erste Erinnerung am 4.12. liegt genau drei Tage vor dem 7.12.
+  await r.orga({...felder, datum: '2026-12-07'});
+
+  r.zeit(JETZT + ERINNERUNG_NACH_MS);
+  assert.deepEqual(await r.lauf(), {gesendet: 3, verworfen: 0, verschoben: 0});
+  assert.match(r.an('anna@example.com')[0].text, /\n\n📅 Gift exchange: Monday,? 7 December 2026\n🎁 Budget: €20\.00\n\n/);
+  assert.match(r.an('ben@example.com')[0].text, /📅 Bescherung: Montag, 7\. Dezember 2026/);
+
+  const woche = JETZT + ERINNERUNG_NACH_MS + ERINNERUNG_ABSTAND_MS;
+  r.zeit(woche);
+  assert.deepEqual(await r.lauf(), {gesendet: 0, verworfen: 3, verschoben: 0}, 'am 11.12. ist die Feier vorbei');
+  assert.equal(r.vormerker('Anna Muster'), undefined);
+
+  // Die Feier wird auf den 24.12. verschoben: die Erinnerungen laufen weiter.
+  await r.orga({...felder, datum: '2026-12-24'});
+  assert.equal(faelligMs(r.vormerker('Anna Muster')), woche);
+  assert.equal(r.vormerker('Dana'), undefined, 'ohne zugestellte Einladung nichts');
+  assert.deepEqual(await r.lauf(), {gesendet: 3, verworfen: 0, verschoben: 0});
+  assert.equal(r.teilnehmerDoc('Anna Muster').erinnerungen, 2);
+
+  // Ein früheres Datum plant nichts neu; das prüft der Versand.
+  const vorher = faelligMs(r.vormerker('Anna Muster'));
+  await r.orga({...felder, datum: '2026-12-20'});
+  assert.equal(faelligMs(r.vormerker('Anna Muster')), vorher);
+});
+
+test('Erinnerung: liegt die Feier schon bei der ersten zu nah, kommt keine', async () => {
+  const r = await setupErinnerung();
+  await r.orga({aktion: 'aendern', titel: 'Advent 2026', anlass: '', budget: '', hinweis: '', datum: '2026-12-06'});
+  r.zeit(JETZT + ERINNERUNG_NACH_MS);
+  assert.deepEqual(await r.lauf(), {gesendet: 0, verworfen: 3, verschoben: 0});
+  assert.equal(r.versand.gesendet.length, 0);
+});
+
+test('Neuigkeiten: ab dem Tag der Feier keine mehr, vorher mit Datum in der Mail', async () => {
+  const r = await setupNeuigkeiten();
+  await r.orga({aktion: 'aendern', rundeId: r.rundeId, titel: 'Advent 2026', anlass: 'weihnachten', budget: '20 €', hinweis: '', datum: '2026-12-02'});
+  await r.als(r.schenker, 'ziehen');
+  await r.wunsch(r.empfaenger, 'Am Tag davor');
+  r.zeit(JETZT + SAMMELFENSTER_MS);
+  assert.deepEqual(await r.lauf(), {gesendet: 1, verworfen: 0, verschoben: 0});
+  assert.match(r.versand.gesendet[0].text, /\n\n📅 Bescherung: Mittwoch, 2\. Dezember 2026\n🎁 Budget: 20,00\s€\n\n/u);
+
+  // Vorgemerkt am 1.12., fällig erst am 2.12. (eine Mail am Tag): dann ist Feier, sie entfällt.
+  r.zeit(JETZT + 2 * 60 * MINUTE);
+  await r.idee(r.dritter, r.empfaenger, 'Noch eine Idee');
+  const faellig = faelligMs(r.vormerker());
+  assert.equal(berlinerTag(faellig), '2026-12-02');
+  r.zeit(faellig);
+  assert.deepEqual(await r.lauf(), {gesendet: 0, verworfen: 1, verschoben: 0});
+
+  await r.wunsch(r.empfaenger, 'Am Tag der Feier');
+  assert.equal(r.vormerker(), undefined, 'am Tag der Feier wird nichts mehr vorgemerkt');
 });

@@ -5,6 +5,7 @@ import WichtelPage, { teileNamen, versandMeldung } from './WichtelPage';
 const mockListe = jest.fn();
 const mockLaden = jest.fn();
 const mockAnlegen = jest.fn();
+const mockAendern = jest.fn();
 const mockHinzufuegen = jest.fn();
 const mockEntfernen = jest.fn();
 const mockAuslosen = jest.fn();
@@ -20,7 +21,7 @@ jest.mock('../utils/wichtelFirestore', () => ({
   listeWichtelRunden: (...a) => mockListe(...a),
   ladeWichtelRunde: (...a) => mockLaden(...a),
   legeWichtelRundeAn: (...a) => mockAnlegen(...a),
-  aendereWichtelRunde: jest.fn(),
+  aendereWichtelRunde: (...a) => mockAendern(...a),
   fuegeWichtelTeilnehmerHinzu: (...a) => mockHinzufuegen(...a),
   benenneWichtelTeilnehmerUm: (...a) => mockUmbenennen(...a),
   entferneWichtelTeilnehmer: (...a) => mockEntfernen(...a),
@@ -94,17 +95,54 @@ describe('WichtelPage', () => {
   });
 
   it('legt eine Runde an und öffnet sie', async () => {
-    mockAnlegen.mockResolvedValue(sicht());
+    mockAnlegen.mockResolvedValue(sicht({ datum: '2026-12-13' }));
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Erste Runde anlegen' }));
     fireEvent.change(screen.getByLabelText('Titel'), { target: { value: 'Advent 2026' } });
     fireEvent.change(screen.getByLabelText('Anlass (optional)'), { target: { value: 'weihnachten' } });
+    fireEvent.change(screen.getByLabelText('Datum der Feier (optional)'), { target: { value: '2026-12-13' } });
     fireEvent.change(screen.getByLabelText('Budget (optional)'), { target: { value: '20 €' } });
     fireEvent.click(screen.getByRole('button', { name: 'Runde anlegen' }));
 
     await screen.findByRole('heading', { name: 'Advent 2026' });
-    expect(mockAnlegen).toHaveBeenCalledWith({ titel: 'Advent 2026', anlass: 'weihnachten', budget: '20 €', hinweis: '' });
+    expect(mockAnlegen).toHaveBeenCalledWith({
+      titel: 'Advent 2026', anlass: 'weihnachten', budget: '20 €', hinweis: '', datum: '2026-12-13',
+    });
+    expect(screen.getByText('Feier: So., 13.12.2026')).toBeInTheDocument();
     expect(screen.getByText('Noch niemand eingetragen.')).toBeInTheDocument();
+  });
+
+  it('ohne Datum schickt das Formular ein leeres Datum und zeigt keins', async () => {
+    mockAnlegen.mockResolvedValue(sicht());
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Erste Runde anlegen' }));
+    fireEvent.change(screen.getByLabelText('Titel'), { target: { value: 'Advent 2026' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Runde anlegen' }));
+
+    await screen.findByRole('heading', { name: 'Advent 2026' });
+    expect(mockAnlegen).toHaveBeenCalledWith(expect.objectContaining({ datum: '' }));
+    expect(screen.queryByText(/^Feier/)).not.toBeInTheDocument();
+  });
+
+  it('setzt das Datum der Feier auch nach dem Auslosen und zeigt es in der Übersicht', async () => {
+    const ausgelost = sicht({ status: 'ausgelost', ausgelostAm: 2 }, drei);
+    await oeffneRunde(ausgelost);
+    fireEvent.click(screen.getByRole('button', { name: 'Runde bearbeiten' }));
+    const feld = screen.getByLabelText('Datum der Feier (optional)');
+    expect(feld).toHaveValue('');
+    fireEvent.change(feld, { target: { value: '2026-12-13' } });
+    mockAendern.mockResolvedValue({ ...ausgelost, runde: { ...ausgelost.runde, datum: '2026-12-13' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    expect(await screen.findByText('Feier: So., 13.12.2026')).toBeInTheDocument();
+    expect(mockAendern).toHaveBeenCalledWith('runde1', {
+      titel: 'Advent 2026', anlass: '', budget: '20 €', hinweis: '', datum: '2026-12-13',
+    });
+
+    // In der Übersicht steht das Datum neben dem Status.
+    mockListe.mockResolvedValue([{ ...ausgelost.runde, datum: '2026-12-13' }]);
+    fireEvent.click(screen.getByRole('button', { name: 'Zur Übersicht' }));
+    expect(await screen.findByText('Feier So., 13.12.2026')).toBeInTheDocument();
   });
 
   it('fügt mehrere Namen auf einmal und Gäste aus der Gästeliste hinzu', async () => {

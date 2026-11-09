@@ -28,7 +28,7 @@ const rufeTeilnahme = async (aktion, rundeId, token, daten = {}) => {
 
 // --- Organisator ------------------------------------------------------------
 
-/** @returns {Promise<Array<{id, titel, status, teilnehmerAnzahl, erstelltAm, ausgelostAm}>>} */
+/** @returns {Promise<Array<{id, titel, datum, status, teilnehmerAnzahl, erstelltAm, ausgelostAm}>>} */
 export const listeWichtelRunden = async () => (await rufeVerwalten('liste'))?.runden || [];
 
 /**
@@ -38,12 +38,15 @@ export const listeWichtelRunden = async () => (await rufeVerwalten('liste'))?.ru
  */
 export const ladeWichtelRunde = (rundeId) => rufeVerwalten('laden', { rundeId });
 
-/** namen: wie bei fuegeWichtelTeilnehmerHinzu */
-export const legeWichtelRundeAn = ({ titel, anlass, budget, hinweis, namen = [] }) =>
-  rufeVerwalten('anlegen', { titel, anlass, budget, hinweis, namen }, namen.length > 0 ? MIT_MAILVERSAND : undefined);
+/**
+ * datum: Tag der Feier 'JJJJ-MM-TT' oder '' (keins). namen: wie bei fuegeWichtelTeilnehmerHinzu.
+ */
+export const legeWichtelRundeAn = ({ titel, anlass, budget, hinweis, datum = '', namen = [] }) =>
+  rufeVerwalten('anlegen', { titel, anlass, budget, hinweis, datum, namen }, namen.length > 0 ? MIT_MAILVERSAND : undefined);
 
-export const aendereWichtelRunde = (rundeId, { titel, anlass, budget, hinweis }) =>
-  rufeVerwalten('aendern', { rundeId, titel, anlass, budget, hinweis });
+/** Auch nach dem Auslosen; datum '' löscht das Datum der Feier. */
+export const aendereWichtelRunde = (rundeId, { titel, anlass, budget, hinweis, datum = '' }) =>
+  rufeVerwalten('aendern', { rundeId, titel, anlass, budget, hinweis, datum });
 
 /**
  * @param {string} rundeId

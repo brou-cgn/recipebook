@@ -9,6 +9,7 @@ import useUndoableDelete from '../hooks/useUndoableDelete';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import { getCallableErrorDetails } from '../utils/callableErrors';
 import { formatBudget } from '../utils/formatBudget';
+import { formatWichtelDatum } from '../utils/wichtelDatum';
 import {
   fuegeWichtelEintragHinzu,
   ladeWichtelTeilnahme,
@@ -321,6 +322,7 @@ function WichtelTeilnahmePage({ rundeId, token, gueltig = true, currentUser, onC
   }
 
   const { runde, ich, andere, los } = daten;
+  const feierDatum = formatWichtelDatum(runde.datum, sprache);
   const meineWuensche = sichtbar(daten.meineWuensche);
   const gezogen = Boolean(los?.gezogen);
   const empfaenger = los?.empfaenger;
@@ -349,8 +351,9 @@ function WichtelTeilnahmePage({ rundeId, token, gueltig = true, currentUser, onC
         <p className="wt-ueberzeile">{t.ueberzeile}</p>
         <h1 className="wt-titel">{runde.titel}</h1>
         <p className="wt-gruss">{fuelleText(t.gruss, { name: ich.name })}</p>
-        {(runde.budget || runde.hinweis) && (
+        {(feierDatum || runde.budget || runde.hinweis) && (
           <div className="wt-eckdaten">
+            {feierDatum && <span className="wt-chip">{fuelleText(t.feier, { datum: feierDatum })}</span>}
             {runde.budget && <span className="wt-chip">{fuelleText(t.budget, { budget: formatBudget(runde.budget, sprache) })}</span>}
             {runde.hinweis && <p className="wt-text">{runde.hinweis}</p>}
           </div>
