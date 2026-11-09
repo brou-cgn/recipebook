@@ -14,6 +14,7 @@ import {
   ladeWichtelTeilnahme,
   loescheWichtelEintrag,
   zieheWichtelLos,
+  setzeWichtelGeschenkGekauft,
 } from '../utils/wichtelFirestore';
 import {
   fuelleText,
@@ -376,6 +377,18 @@ function WichtelTeilnahmePage({ rundeId, token, gueltig = true, currentUser, onC
             </ul>
           )}
           <Privat>{t.privatPartner}</Privat>
+          <label className="wt-gekauft">
+            <input
+              type="checkbox"
+              checked={Boolean(los.gekauft)}
+              disabled={busy}
+              onChange={(e) => fuehreAus('geschenkGekauft', () => setzeWichtelGeschenkGekauft(rundeId, token, e.target.checked))}
+            />
+            <span>
+              <span className="wt-gekauft-label">{t.gekauftLabel}</span>
+              <span className="wt-gekauft-hinweis">{t.gekauftHinweis}</span>
+            </span>
+          </label>
         </section>
       )}
 

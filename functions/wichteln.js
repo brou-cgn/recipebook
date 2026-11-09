@@ -460,6 +460,7 @@ async function organisatorSicht(db, rundeId, runde) {
       token: t.token,
       geoeffnet: Boolean(t.geoeffnetAm),
       gezogen: Boolean(t.gezogenAm),
+      gekauft: Boolean(t.geschenkGekauftAm),
       ausschluesse: ausschluesse.get(t.id),
       gastId: t.gastId || null,
       mail: MAIL_STATUS.has(t.mailStatus) ? {status: t.mailStatus, am: millis(t.mailAm)} : null,
@@ -664,6 +665,7 @@ async function nimmTeilnehmerAuf(ctx, rundeRef, rundeId, runde, eintraege) {
     ausschluesse: [],
     geoeffnetAm: null,
     gezogenAm: null,
+    geschenkGekauftAm: null,
     mailStatus: null,
     mailAm: null,
     erstelltAm: jetzt,
@@ -855,7 +857,10 @@ const VERWALTEN = {
         tx.set(db.doc(`${zuordnungenPfad(daten.rundeId)}/${geberId}`), {empfaengerId, ausgelostAm: jetzt});
       });
       teilnehmer.forEach((t) => {
-        if (t.gezogenAm) tx.update(db.doc(`${teilnehmerPfad(daten.rundeId)}/${t.id}`), {gezogenAm: null});
+        // Neue Zuordnung: Los und „Geschenk gekauft“ gelten nicht mehr.
+        if (t.gezogenAm || t.geschenkGekauftAm) {
+          tx.update(db.doc(`${teilnehmerPfad(daten.rundeId)}/${t.id}`), {gezogenAm: null, geschenkGekauftAm: null});
+        }
       });
       tx.update(ref, {status: 'ausgelost', ausgelostAm: jetzt, aktualisiertAm: jetzt});
       return {...aktuell, status: 'ausgelost', ausgelostAm: jetzt};
@@ -873,8 +878,9 @@ const VERWALTEN = {
       ladeTeilnehmer(db, daten.rundeId),
     ]);
     const schritte = zuordnungen.docs.map((doc) => (batch) => batch.delete(doc.ref));
-    teilnehmer.filter((t) => t.gezogenAm).forEach((t) => {
-      schritte.push((batch) => batch.update(db.doc(`${teilnehmerPfad(daten.rundeId)}/${t.id}`), {gezogenAm: null}));
+    teilnehmer.filter((t) => t.gezogenAm || t.geschenkGekauftAm).forEach((t) => {
+      schritte.push((batch) => batch.update(
+          db.doc(`${teilnehmerPfad(daten.rundeId)}/${t.id}`), {gezogenAm: null, geschenkGekauftAm: null}));
     });
     schritte.push((batch) => batch.update(ref, {
       status: 'offen',
@@ -982,6 +988,7 @@ async function teilnehmerSicht(db, {rundeId, runde, ich}) {
         const ueber = await ladeEintraege(db, rundeId, 'ueberId', empfaengerId, MAX_EINTRAEGE_UEBER);
         los = {
           gezogen: true,
+          gekauft: Boolean(ich.geschenkGekauftAm),
           empfaenger: {id: empfaengerId, name: namen.get(empfaengerId)},
           wuensche: ueber.filter((e) => e.autorId === empfaengerId).map(eintragInhalt),
           ideen: ueber.filter((e) => e.autorId !== empfaengerId).map((e) => ({
@@ -1036,6 +1043,25 @@ const TEILNAHME = {
       if (!kontext.ich.geoeffnetAm) felder.geoeffnetAm = jetzt;
       await kontext.ich.ref.update(felder);
       Object.assign(kontext.ich, felder);
+    }
+    return teilnehmerSicht(db, kontext);
+  },
+
+  /**
+   * „Geschenk gekauft“ setzen oder zurücknehmen (`gekauft`: true/false). Nur, wer sein Los
+   * gezogen hat; der Organisator sieht danach den Status, nie für wen.
+   */
+  async geschenkGekauft({admin, db, HttpsError, kontext, daten}) {
+    if (typeof daten.gekauft !== 'boolean') {
+      throw new HttpsError('invalid-argument', 'Bitte gib an, ob das Geschenk gekauft ist.');
+    }
+    if (kontext.runde.status !== 'ausgelost' || !kontext.ich.gezogenAm) {
+      throw new HttpsError('failed-precondition', 'Du kannst das erst markieren, wenn du dein Los gezogen hast.');
+    }
+    if (Boolean(kontext.ich.geschenkGekauftAm) !== daten.gekauft) {
+      const wert = daten.gekauft ? admin.firestore.FieldValue.serverTimestamp() : null;
+      await kontext.ich.ref.update({geschenkGekauftAm: wert});
+      kontext.ich.geschenkGekauftAm = wert;
     }
     return teilnehmerSicht(db, kontext);
   },

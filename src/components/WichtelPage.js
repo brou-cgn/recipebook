@@ -186,7 +186,9 @@ function TeilnehmerZeile({
 }) {
   const rename = useInlineRename(teilnehmer.name, (_alt, neu) => onRename(teilnehmer, neu));
 
-  const status = ausgelost && teilnehmer.gezogen
+  const status = ausgelost && teilnehmer.gekauft
+    ? { text: 'Geschenk gekauft', klasse: 'wichtel-chip--ok' }
+    : ausgelost && teilnehmer.gezogen
     ? { text: 'Los gezogen', klasse: 'wichtel-chip--ok' }
     : teilnehmer.geoeffnet
       ? { text: 'Link geöffnet', klasse: '' }

@@ -6,12 +6,14 @@ const mockLaden = jest.fn();
 const mockZiehen = jest.fn();
 const mockHinzufuegen = jest.fn();
 const mockLoeschen = jest.fn();
+const mockGekauft = jest.fn();
 
 jest.mock('../utils/wichtelFirestore', () => ({
   ladeWichtelTeilnahme: (...a) => mockLaden(...a),
   zieheWichtelLos: (...a) => mockZiehen(...a),
   fuegeWichtelEintragHinzu: (...a) => mockHinzufuegen(...a),
   loescheWichtelEintrag: (...a) => mockLoeschen(...a),
+  setzeWichtelGeschenkGekauft: (...a) => mockGekauft(...a),
 }));
 
 const sicht = (over = {}) => ({
@@ -147,6 +149,24 @@ describe('WichtelTeilnahmePage', () => {
     expect(within(partner).getByText('von Cleo')).toBeInTheDocument();
     expect(within(partner).getByText('von dir')).toBeInTheDocument();
     expect(within(partner).getByText('Nur du siehst diese Wünsche und Ideen.')).toBeInTheDocument();
+  });
+
+  it('markiert „Geschenk gekauft“ und nimmt es wieder zurück', async () => {
+    const mit = (gekauft) => {
+      const basis = gezogenBen('de');
+      return { ...basis, los: { ...basis.los, gekauft } };
+    };
+    mockLaden.mockResolvedValue(mit(false));
+    mockGekauft.mockResolvedValueOnce(mit(true)).mockResolvedValueOnce(mit(false));
+    renderSeite();
+    const box = await screen.findByRole('checkbox', { name: /Ich habe das Geschenk gekauft/ });
+    expect(box).not.toBeChecked();
+    fireEvent.click(box);
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: /Geschenk gekauft/ })).toBeChecked());
+    expect(mockGekauft).toHaveBeenCalledWith('runde1', 'tok', true);
+    fireEvent.click(screen.getByRole('checkbox', { name: /Geschenk gekauft/ }));
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: /Geschenk gekauft/ })).not.toBeChecked());
+    expect(mockGekauft).toHaveBeenLastCalledWith('runde1', 'tok', false);
   });
 
   it('zeigt einen Fehler beim Ziehen an und lässt es erneut versuchen', async () => {
