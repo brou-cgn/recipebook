@@ -180,12 +180,14 @@ describe('WichtelPage', () => {
   it('lost aus und zeigt danach nur den Status, Löschen ist gesperrt', async () => {
     await oeffneRunde(sicht({}, drei));
     mockAuslosen.mockResolvedValue(sicht({ status: 'ausgelost', ausgelostAm: Date.UTC(2026, 10, 10) },
-      [tn('t1', 'Anna', { geoeffnet: true, gezogen: true }), tn('t2', 'Ben', { geoeffnet: true }), tn('t3', 'Cleo')]));
+      [tn('t1', 'Anna', { geoeffnet: true, gezogen: true }), tn('t2', 'Ben', { geoeffnet: true }), tn('t3', 'Cleo'),
+        tn('t4', 'Dana', { geoeffnet: true, gezogen: true, gekauft: true })]));
     fireEvent.click(screen.getByRole('button', { name: 'Jetzt auslosen' }));
 
     await screen.findByText('Ausgelost am 10.11.2026');
     expect(mockAuslosen).toHaveBeenCalledWith('runde1');
     expect(screen.getByText('Los gezogen')).toBeInTheDocument();
+    expect(screen.getByText('Geschenk gekauft')).toBeInTheDocument();
     expect(screen.getByText('Link geöffnet')).toBeInTheDocument();
     expect(screen.getByText('Link noch nicht geöffnet')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Anna entfernen' })).not.toBeInTheDocument();

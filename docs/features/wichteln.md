@@ -27,7 +27,8 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
    Ausschlüsse gesperrt; ändern geht erst nach „Auslosung zurücksetzen“ (mit Rückfrage). Links,
    Ausschlüsse, Wünsche und Ideen bleiben dabei erhalten, wer schon gezogen hatte, zieht nach dem
    nächsten Auslosen neu.
-6. Je Teilnehmer sichtbar: „Link noch nicht geöffnet“ / „Link geöffnet“ / „Los gezogen“, bei Mails
+6. Je Teilnehmer sichtbar: „Link noch nicht geöffnet“ / „Link geöffnet“ / „Los gezogen“ / „Geschenk gekauft“
+   (der Teilnehmer setzt das selbst auf seiner Linkseite; der Organisator sieht nie, für wen), bei Mails
    zusätzlich „Per Mail verschickt“ oder „Mail nicht verschickt“. „Per Mail senden“ bzw. „Erneut
    senden“ steht bei jedem Teilnehmer, dessen Gast eine E-Mail-Adresse hat, auch nach dem Auslosen.
 
@@ -39,6 +40,8 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
 - „Deine Wünsche“: sieht nur, wer einen gezogen hat.
 - „Geschenkideen für andere“: Gast wählen, Idee speichern. Sieht nur, wer diesen Gast gezogen hat –
   mit dem eigenen Namen, die Person selbst nie.
+- „Ich habe das Geschenk gekauft“: Schalter in der Karte des Gezogenen, nur nach dem Ziehen; lässt sich
+  zurücknehmen. Auslosung zurücksetzen und neu auslosen löscht den Status.
 - Zu Wunsch und Idee optional ein Link (z. B. zum Shop); Text oder Link genügt. Der Eintrag zeigt dann
   eine Vorschau mit Bild, Seitentitel und Seite (siehe „Link-Vorschau“). Ein ins Textfeld eingefügter
   Link am Ende („Produktname https://…“, wie aus dem Teilen-Menü einer Shop-App) wird zum Link.
@@ -81,7 +84,7 @@ wichtelRunden/{rundeId}            ownerId, titel, anlass (Schlüssel oder ''), 
                                    teilnehmerAnzahl, ausgelostAm, erstelltAm, aktualisiertAm
   teilnehmer/{teilnehmerId}        name, token (geheim), reihenfolge, ausschluesse (Teilnehmer-IDs,
                                    die er nicht ziehen soll; fehlt bei älteren = keine), geoeffnetAm,
-                                   gezogenAm, erstelltAm, gastId (→ guests/{ownerId}/profiles/{gastId}
+                                   gezogenAm, geschenkGekauftAm (fehlt bei älteren = nein), erstelltAm, gastId (→ guests/{ownerId}/profiles/{gastId}
                                    oder null), mailStatus ('gesendet'|'fehler'|null), mailAm (letzter
                                    Versuch)
   zuordnungen/{geberId}            empfaengerId, ausgelostAm
@@ -118,7 +121,7 @@ Bei `anlegen` und `teilnehmerHinzufuegen` ist jeder Eintrag in `namen` ein Name 
 `wichtelTeilnahme` (ohne Login; `rundeId` + `token`), Feld `aktion`: `laden` (setzt „Link geöffnet“),
 `ziehen`, `eintragHinzufuegen` (`ueberId`, `text` ≤ 300 Zeichen und/oder `url` ≤ 2000 Zeichen, höchstens
 50 Einträge je Teilnehmer; ohne `https://` wird es ergänzt, andere Schemata sind ungültig),
-`eintragLoeschen` (nur eigene). Einträge gehen mit `url` und `vorschau` (je `null` ohne Link) heraus. Falsches Format, unbekannte Runde und falsches Token geben dieselbe
+`geschenkGekauft` (`gekauft`: true/false, nur nach dem Ziehen), `eintragLoeschen` (nur eigene). Einträge gehen mit `url` und `vorschau` (je `null` ohne Link) heraus. Falsches Format, unbekannte Runde und falsches Token geben dieselbe
 Antwort (`not-found`).
 Jede Antwort enthält `ich.sprache`: den Code aus dem verknüpften Gästeprofil
 (`guests/{ownerId}/profiles/{gastId}`, Feld `sprache`; ohne Feld `de`), sonst `null`. Gelesen wird nur

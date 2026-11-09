@@ -37,6 +37,8 @@ const TEXTE = {
     losGezogen: 'Du beschenkst {name}. Psst – das bleibt unter uns.',
     losZiehen: 'Los ziehen',
     losWirdGezogen: 'Wird gezogen …',
+    gekauftLabel: 'Ich habe das Geschenk gekauft',
+    gekauftHinweis: 'Der Organisator sieht nur, dass du es gekauft hast – nicht für wen.',
     fuer: 'Für {name}',
     wuenscheVon: 'Wünsche von {name}',
     keineWuensche: '{name} hat noch keine Wünsche eingetragen.',
@@ -92,6 +94,8 @@ const TEXTE = {
     losGezogen: 'You’re gifting {name}. Shh – that stays between us.',
     losZiehen: 'Draw a name',
     losWirdGezogen: 'Drawing…',
+    gekauftLabel: 'I’ve bought the gift',
+    gekauftHinweis: 'The organiser only sees that you’ve bought it – not for whom.',
     fuer: 'For {name}',
     wuenscheVon: '{name}’s wishes',
     keineWuensche: '{name} hasn’t added any wishes yet.',
@@ -147,6 +151,8 @@ const TEXTE = {
     losGezogen: 'Tu offres un cadeau à {name}. Chut – ça reste entre nous.',
     losZiehen: 'Tirer au sort',
     losWirdGezogen: 'Tirage en cours…',
+    gekauftLabel: 'J’ai acheté le cadeau',
+    gekauftHinweis: 'L’organisateur voit seulement que tu l’as acheté – pas pour qui.',
     fuer: 'Pour {name}',
     // Ohne Namen: „de“ müsste vor Vokalen zu „d’“ werden (d’Anna).
     wuenscheVon: 'Ses souhaits',
@@ -256,7 +262,7 @@ export function wichtelFehlerSchluessel(error, aktion) {
   const { code } = getCallableErrorDetails(error);
   // Runde gelöscht, Teilnehmer entfernt oder der gewählte Gast nicht mehr dabei
   if (code === 'not-found') return 'fehlerGeaendert';
-  if (code === 'failed-precondition' && aktion === 'ziehen') return 'fehlerKeinLos';
+  if (code === 'failed-precondition' && (aktion === 'ziehen' || aktion === 'geschenkGekauft')) return 'fehlerKeinLos';
   if (code === 'resource-exhausted' && aktion === 'eintragHinzufuegen') return 'fehlerZuViele';
   // Vom Formular aus kann nur der Link ungültig sein (leere Einträge verhindert es selbst).
   if (code === 'invalid-argument' && aktion === 'eintragHinzufuegen') return 'fehlerLinkUngueltig';

@@ -79,6 +79,10 @@ export const ladeWichtelTeilnahme = (rundeId, token) => rufeTeilnahme('laden', r
 
 export const zieheWichtelLos = (rundeId, token) => rufeTeilnahme('ziehen', rundeId, token);
 
+/** „Geschenk gekauft“ setzen (true) oder zurücknehmen (false); nur nach dem Ziehen. */
+export const setzeWichtelGeschenkGekauft = (rundeId, token, gekauft) =>
+  rufeTeilnahme('geschenkGekauft', rundeId, token, { gekauft: Boolean(gekauft) });
+
 /**
  * Wunsch (ueberId = eigene ID) oder Geschenkidee für einen anderen Gast. Text oder Link
  * genügt; zum Link holt der Server beim Speichern eine Bildvorschau (dauert bis zu 5 s).

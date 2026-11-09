@@ -448,7 +448,7 @@ test('auslosen schreibt einen Kreis und verrät dem Organisator nichts davon', a
   const json = JSON.stringify(sicht);
   assert.doesNotMatch(json, /empfaenger|zuordnung/i);
   sicht.teilnehmer.forEach((t) => assert.deepEqual(Object.keys(t).sort(),
-      ['ausschluesse', 'gastId', 'geoeffnet', 'gezogen', 'id', 'mail', 'name', 'token']));
+      ['ausschluesse', 'gastId', 'gekauft', 'geoeffnet', 'gezogen', 'id', 'mail', 'name', 'token']));
 
   await rejectsWith(verwalten(db, 'orga', {aktion: 'auslosen', rundeId}), 'failed-precondition');
   await rejectsWith(verwalten(db, 'orga', {aktion: 'teilnehmerHinzufuegen', rundeId, namen: ['Eve']}), 'failed-precondition');
@@ -463,6 +463,29 @@ test('Organisator sieht nur den Status: Link geöffnet und Los gezogen', async (
   const {teilnehmer} = await verwalten(db, 'orga', {aktion: 'laden', rundeId});
   const status = Object.fromEntries(teilnehmer.map((t) => [t.name, [t.geoeffnet, t.gezogen]]));
   assert.deepEqual(status, {Anna: [true, false], Ben: [true, true], Cleo: [false, false], Dana: [false, false]});
+});
+
+test('„Geschenk gekauft“: nur nach dem Ziehen, Organisator sieht den Status, Zurücksetzen löscht ihn', async () => {
+  const {db, rundeId, als} = await setupRunde();
+  await rejectsWith(als('Anna', 'geschenkGekauft', {gekauft: true}), 'failed-precondition');
+  await verwalten(db, 'orga', {aktion: 'auslosen', rundeId});
+  await rejectsWith(als('Anna', 'geschenkGekauft', {gekauft: true}), 'failed-precondition');
+  await als('Anna', 'ziehen');
+  await rejectsWith(als('Anna', 'geschenkGekauft', {gekauft: 'ja'}), 'invalid-argument');
+
+  const sicht = await als('Anna', 'geschenkGekauft', {gekauft: true});
+  assert.equal(sicht.los.gekauft, true);
+  const orga = await verwalten(db, 'orga', {aktion: 'laden', rundeId});
+  assert.deepEqual(
+      Object.fromEntries(orga.teilnehmer.map((t) => [t.name, t.gekauft])),
+      {Anna: true, Ben: false, Cleo: false, Dana: false});
+  assert.doesNotMatch(JSON.stringify(orga), /empfaenger/);
+
+  assert.equal((await als('Anna', 'geschenkGekauft', {gekauft: false})).los.gekauft, false);
+  await als('Anna', 'geschenkGekauft', {gekauft: true});
+  await verwalten(db, 'orga', {aktion: 'zuruecksetzen', rundeId});
+  const danach = await verwalten(db, 'orga', {aktion: 'laden', rundeId});
+  assert.ok(danach.teilnehmer.every((t) => t.gekauft === false && t.gezogen === false));
 });
 
 // ---------------------------------------------------------------------------
