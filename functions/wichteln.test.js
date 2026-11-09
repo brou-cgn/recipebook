@@ -938,10 +938,10 @@ const makeMailer = ({fehlerFuer = []} = {}) => {
   return zustand;
 };
 
-const setupMailRunde = async (mailer = makeMailer(), seed = mailSeed()) => {
+const setupMailRunde = async (mailer = makeMailer(), seed = mailSeed(), anlass = undefined) => {
   const db = makeDb(seed);
   const extra = {mailer: mailer.factory, jetztMs: JETZT};
-  const sicht = await verwalten(db, 'orga', {aktion: 'anlegen', titel: 'Advent 2026', budget: '20 €', hinweis: 'Bescherung am 13.12.'}, extra);
+  const sicht = await verwalten(db, 'orga', {aktion: 'anlegen', titel: 'Advent 2026', anlass, budget: '20 €', hinweis: 'Bescherung am 13.12.'}, extra);
   const rundeId = sicht.runde.id;
   const orga = (daten) => verwalten(db, 'orga', {rundeId, ...daten}, extra);
   return {db, rundeId, mailer, orga};
@@ -974,12 +974,12 @@ test('Gäste mit E-Mail bekommen beim Eintragen ihren Link per Mail, in ihrer Sp
   const anna = mailer.gesendet.find((m) => m.to === 'anna@example.com');
   const ben = mailer.gesendet.find((m) => m.to === 'ben@example.com');
   assert.equal(mailer.gesendet.length, 2);
-  assert.equal(anna.subject, 'Your Secret Santa link for “Advent 2026”');
-  assert.match(anna.text, /^Hi Anna Muster,\n\nOlga has invited you/);
+  assert.equal(anna.subject, '🎁 You\'re invited to a gift exchange, Anna!');
+  assert.match(anna.text, /^Hi Anna,\n\ngreat to have you on board! Olga has invited you/);
   assert.ok(anna.text.includes(`${APP_URL}/wichteln/${rundeId}/${tn['Anna Muster'].token}`), 'Annas eigener Link');
-  assert.equal(ben.subject, 'Dein Wichtel-Link für „Advent 2026“', 'ohne Sprache im Profil: Deutsch');
+  assert.equal(ben.subject, '🎁 Du bist zum Wichteln eingeladen, Ben!', 'ohne Sprache im Profil: Deutsch');
   assert.ok(ben.text.includes(`${APP_URL}/wichteln/${rundeId}/${tn['Ben Beispiel'].token}`), 'Bens eigener Link');
-  assert.match(ben.text, /Budget: 20,00\s€\nHinweis: Bescherung am 13\.12\./);
+  assert.match(ben.text, /Budget: 20,00\s€\n\nHinweis: Bescherung am 13\.12\./);
   assert.equal(mailer.erstellt, 1, 'ein Mailer für alle Mails des Aufrufs');
   assert.equal(mailer.geschlossen, 1);
 
@@ -994,6 +994,14 @@ test('Gäste mit E-Mail bekommen beim Eintragen ihren Link per Mail, in ihrer Sp
   // Teilnehmer sehen weder Gast-Verknüpfung noch Mailstatus noch Adressen.
   const annaSicht = await teilnahme(db, {aktion: 'laden', rundeId, token: tn['Anna Muster'].token});
   assert.doesNotMatch(JSON.stringify(annaSicht), /gastId|mail|@/i);
+});
+
+test('Der Anlass der Runde wählt die Mail-Variante: Weihnachten und Nikolaus Nordpol, sonst herzlich', async () => {
+  for (const [anlass, betreff] of [['weihnachten', /^📜 Ein Brief vom Nordpol für Ben$/], ['nikolaus', /^📜 /], ['geburtstag', /^🎁 Du bist zum Wichteln eingeladen, Ben!$/]]) {
+    const {mailer, orga} = await setupMailRunde(makeMailer(), mailSeed(), anlass);
+    await orga({aktion: 'teilnehmerHinzufuegen', namen: [{name: 'Ben Beispiel', gastId: 'gastBen00001'}]});
+    assert.match(mailer.gesendet[0].subject, betreff, anlass);
+  }
 });
 
 test('Ohne Gast mit E-Mail-Adresse wird kein Mailer erzeugt (SMTP-Secrets bleiben ungelesen)', async () => {
@@ -1107,7 +1115,7 @@ test('Organisator ohne Vorname: neutrale Einladung', async () => {
   seed['users/orga'] = {role: 'edit'};
   const {mailer, orga} = await setupMailRunde(makeMailer(), seed);
   await orga({aktion: 'teilnehmerHinzufuegen', namen: [{name: 'Ben', gastId: 'gastBen00001'}]});
-  assert.match(mailer.gesendet[0].text, /^Hallo Ben,\n\ndu bist beim Wichteln „Advent 2026“ dabei\./);
+  assert.match(mailer.gesendet[0].text, /^Hallo Ben,\n\nschön, dass du dabei bist! Du bist beim Wichteln „Advent 2026“ dabei\./);
 });
 
 test('Ein Gast ist je Runde nur einmal dabei, auch unter anderem Namen', async () => {

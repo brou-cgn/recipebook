@@ -137,10 +137,15 @@ Oberflächen: `src/components/WichtelPage.js` (Organisator), `src/components/Wic
   Profile ohne das Feld – alle, die vor der Sprachwahl angelegt wurden – gelten als Deutsch; ein
   Speichern ohne Feld (ältere App-Version) überschreibt eine gesetzte Sprache nicht. Die Liste steht in
   `functions/shared/sprachen.js` und `src/utils/guestPreferences.js`, ein Test hält beide gleich.
-- **Inhalt** (`functions/wichtelMail.js`, Text und HTML): Anrede mit dem Teilnehmernamen, Vorname des
-  Organisators, Titel, Budget und Hinweis (so, wie der Organisator sie schrieb, nicht übersetzt), der
-  persönliche Link (`https://broubook.web.app/wichteln/…`) und „Bitte nicht weitergeben“. Eingaben stehen
-  im HTML nur escaped.
+- **Inhalt** (`functions/wichtelMail.js`, Text und HTML): zwei Varianten, gewählt nur nach dem Anlass der
+  Runde – `north_pole` („Post vom Nordpol“) bei Weihnachten und Nikolaus, `warm_casual` („Herzlich & locker“)
+  bei allem anderen und bei Runden ohne Anlass. Die Texte stehen je Sprache in `functions/wichtelMailTexte/`
+  (`de.js`, `en.js`, `fr.js`) mit den Platzhaltern `{firstName}` (nur der erste Teil des Teilnehmernamens),
+  `{hostName}` (Vorname des Organisators), `{eventName}`, `{budget}`, `{link}`; im HTML wird jeder Wert escaped.
+  Das Budget steht bei einem reinen Betrag in der Schreibweise der Sprache („50,00 €“, „€50.00“), sonst so, wie
+  der Organisator es schrieb. Der Link steht im Button und als Fallback-Text. Ohne Budget entfällt die
+  Budgetzeile, ohne Vorname des Organisators gibt es einen neutralen Einladungssatz. Der Hinweis der Runde und
+  die Zeile „Du bekommst diese Mail, weil …“ stehen dezent (klein, grau) unter dem Haupttext.
 - **Empfänger:** nur Adressen aus der Gästeliste des Organisators. Adresse und Sprache liest die Function
   bei jedem Versand frisch aus dem Gästeprofil; in der Runde stehen nur `gastId` und das Ergebnis.
 - **Grenzen:** höchstens 150 Mails je Organisator und Berliner Tag (`wichtelMailLimits`, jeder Versuch
