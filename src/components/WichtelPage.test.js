@@ -98,11 +98,12 @@ describe('WichtelPage', () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Erste Runde anlegen' }));
     fireEvent.change(screen.getByLabelText('Titel'), { target: { value: 'Advent 2026' } });
+    fireEvent.change(screen.getByLabelText('Anlass (optional)'), { target: { value: 'weihnachten' } });
     fireEvent.change(screen.getByLabelText('Budget (optional)'), { target: { value: '20 €' } });
     fireEvent.click(screen.getByRole('button', { name: 'Runde anlegen' }));
 
     await screen.findByRole('heading', { name: 'Advent 2026' });
-    expect(mockAnlegen).toHaveBeenCalledWith({ titel: 'Advent 2026', budget: '20 €', hinweis: '' });
+    expect(mockAnlegen).toHaveBeenCalledWith({ titel: 'Advent 2026', anlass: 'weihnachten', budget: '20 €', hinweis: '' });
     expect(screen.getByText('Noch niemand eingetragen.')).toBeInTheDocument();
   });
 
