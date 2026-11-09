@@ -504,3 +504,15 @@
   color: var(--color-text-soft);
   font-size: 13px;
 }
+
+/* Rückfrage nach dem Button „Geschenk gekauft“ der Neuigkeiten-Mail */
+.wt-seite .wt-gekauft-frage {
+  border: 2px solid var(--color-wichtel);
+}
+
+.wt-seite .wt-gekauft-knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}

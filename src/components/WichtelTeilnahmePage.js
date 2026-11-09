@@ -28,6 +28,23 @@ const MAX_LINK = 2000;
 const FEIER_DAUER_MS = 1800;
 const FUNKEN = 8;
 
+// Button „Geschenk gekauft“ der Neuigkeiten-Mail: persönlicher Link mit ?gekauft=1
+// (GEKAUFT_PARAMETER in functions/wichteln.js). Die Seite fragt dann oben nach; gesetzt wird
+// der Status erst per Klick, weil Link-Scanner der Mailprogramme Links auch ungefragt öffnen.
+const GEKAUFT_PARAMETER = 'gekauft';
+
+const gekauftAngefragt = () =>
+  typeof window !== 'undefined' && new URLSearchParams(window.location.search).get(GEKAUFT_PARAMETER) === '1';
+
+/** Nimmt ?gekauft=1 aus der Adresse, damit Neuladen oder Teilen die Rückfrage nicht mitnimmt. */
+function entferneGekauftParameter() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has(GEKAUFT_PARAMETER)) return;
+  params.delete(GEKAUFT_PARAMETER);
+  const rest = params.toString();
+  window.history.replaceState(window.history.state, '', `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`);
+}
+
 function Privat({ children }) {
   return (
     <p className="wt-privat">
@@ -153,6 +170,7 @@ function WichtelTeilnahmePage({ rundeId, token, gueltig = true, currentUser, onC
   const [zieht, setZieht] = useState(false);
   const [feier, setFeier] = useState(false);
   const [ideeFuer, setIdeeFuer] = useState('');
+  const [gekauftFrage, setGekauftFrage] = useState(gekauftAngefragt);
   const reducedMotion = usePrefersReducedMotion();
   const ladeRef = useRef(false);
   const feierTimerRef = useRef(null);
@@ -213,6 +231,10 @@ function WichtelTeilnahmePage({ rundeId, token, gueltig = true, currentUser, onC
   }, [lade]);
 
   useEffect(() => () => clearTimeout(feierTimerRef.current), []);
+
+  useEffect(() => {
+    if (gekauftFrage) entferneGekauftParameter();
+  }, [gekauftFrage]);
 
   // Jede Änderung liefert den ganzen neuen Stand vom Server zurück.
   const aendere = async (aktion) => {
@@ -336,6 +358,32 @@ function WichtelTeilnahmePage({ rundeId, token, gueltig = true, currentUser, onC
       </header>
 
       {fehler && <p className="wt-fehler" role="alert">{t[fehler]}</p>}
+
+      {gekauftFrage && gezogen && empfaenger && (
+        <section className="wt-karte wt-gekauft-frage" aria-live="polite">
+          {los.gekauft ? (
+            <p className="wt-text">{fuelleText(t.gekauftErledigt, { name: empfaenger.name })}</p>
+          ) : (
+            <>
+              <h2 className="wt-abschnitt-titel">{fuelleText(t.gekauftFrage, { name: empfaenger.name })}</h2>
+              <p className="wt-text">{t.gekauftFrageText}</p>
+              <div className="wt-gekauft-knoepfe">
+                <button
+                  type="button"
+                  className="wt-btn"
+                  disabled={busy}
+                  onClick={() => fuehreAus('geschenkGekauft', () => setzeWichtelGeschenkGekauft(rundeId, token, true))}
+                >
+                  {t.gekauftJa}
+                </button>
+                <button type="button" className="wt-link" onClick={() => setGekauftFrage(false)}>
+                  {t.gekauftNichtJetzt}
+                </button>
+              </div>
+            </>
+          )}
+        </section>
+      )}
 
       <section className="wt-karte wt-los-karte" aria-labelledby="wt-los-titel">
         <h2 id="wt-los-titel" className="wt-abschnitt-titel">{t.losTitel}</h2>

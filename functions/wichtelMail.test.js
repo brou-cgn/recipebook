@@ -1,12 +1,14 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {baueEinladungsMail, _internal} = require('./wichtelMail');
+const {baueEinladungsMail, baueNeuigkeitenMail, _internal} = require('./wichtelMail');
 const {SPRACHEN} = require('./shared/sprachen');
 
 const LINK = 'https://broubook.web.app/wichteln/AbCdEfGhIj0123456789/abcDEF123_-abcDEF123_-abcDEF1234';
 const basis = {name: 'Anna Muster', titel: 'Advent 2026', link: LINK, budget: '50', hinweis: 'Bescherung am 13.12.', organisator: 'Ben'};
 const NBSP = ' ';
 const VARIANTEN = {north_pole: 'weihnachten', warm_casual: 'geburtstag'};
+const LINK_GEKAUFT = `${LINK}?gekauft=1`;
+const neuigkeitenBasis = {name: 'Ben Beispiel', titel: 'Advent 2026', link: LINK, linkGekauft: LINK_GEKAUFT, budget: '50', hinweis: 'Bescherung am 13.12.'};
 
 // Betreff und erster Satz je Variante und Sprache, wörtlich aus der Vorgabe.
 const ERWARTET = {
@@ -49,12 +51,21 @@ test('Variante richtet sich nur nach dem Anlass', () => {
   assert.doesNotMatch(baueEinladungsMail({...basis, sprache: 'de'}).subject, /Nordpol/, 'ohne Anlass: warm_casual');
 });
 
-test('jede Sprache aus shared/sprachen.js hat beide Varianten', () => {
+/** Alle Schlüsselpfade eines Textbaums („neuigkeiten.gemeinsam.anzahl.wunsch.eins“), sortiert. */
+const schluesselPfade = (baum, praefix = '') => Object.entries(baum).flatMap(([key, wert]) => (
+  typeof wert === 'string' ? [`${praefix}${key}`] : schluesselPfade(wert, `${praefix}${key}.`))).sort();
+
+/** Alle Texte eines Textbaums. */
+const alleTexte = (baum) => Object.values(baum).flatMap((wert) => (typeof wert === 'string' ? [wert] : alleTexte(wert)));
+
+test('jede Sprache aus shared/sprachen.js hat beide Mails in beiden Varianten, mit denselben Schlüsseln', () => {
   assert.deepEqual(Object.keys(_internal.TEXTE).sort(), [...SPRACHEN].sort());
   for (const sprache of SPRACHEN) {
-    assert.deepEqual(Object.keys(_internal.TEXTE[sprache]).sort(), ['gemeinsam', 'north_pole', 'warm_casual']);
-    assert.deepEqual(Object.keys(_internal.TEXTE[sprache].north_pole).sort(), Object.keys(_internal.TEXTE.de.north_pole).sort());
-    assert.deepEqual(Object.keys(_internal.TEXTE[sprache].warm_casual).sort(), Object.keys(_internal.TEXTE.de.warm_casual).sort());
+    assert.deepEqual(Object.keys(_internal.TEXTE[sprache]).sort(), ['einladung', 'neuigkeiten']);
+    for (const mail of ['einladung', 'neuigkeiten']) {
+      assert.deepEqual(Object.keys(_internal.TEXTE[sprache][mail]).sort(), ['gemeinsam', 'north_pole', 'warm_casual']);
+    }
+    assert.deepEqual(schluesselPfade(_internal.TEXTE[sprache]), schluesselPfade(_internal.TEXTE.de), sprache);
   }
 });
 
@@ -107,12 +118,16 @@ test('nur der Vorname des Empfängers', () => {
 
 test('Französisch: geschütztes Leerzeichen vor : ! ? und in « »', () => {
   const schlecht = [/\S [:!?]/u, /« /u, /«[^\u00A0]/u, / »/u, /[^\u00A0]»/u];
-  const texte = [];
-  for (const block of Object.values(_internal.TEXTE.fr)) texte.push(...Object.values(block));
+  const texte = alleTexte(_internal.TEXTE.fr);
   for (const anlass of Object.values(VARIANTEN)) {
     const mail = baueEinladungsMail({...basis, sprache: 'fr', anlass});
     texte.push(mail.subject, mail.text, mail.html);
     assert.ok(mail.text.includes(`«${NBSP}Advent 2026${NBSP}»`));
+    for (const [wuensche, ideen] of [[2, 0], [0, 1], [1, 3]]) {
+      const neu = baueNeuigkeitenMail({...neuigkeitenBasis, sprache: 'fr', anlass, wuensche, ideen});
+      texte.push(neu.subject, neu.text, neu.html);
+      assert.ok(neu.text.includes(`«${NBSP}Advent 2026${NBSP}»`));
+    }
   }
   for (const text of texte) {
     for (const muster of schlecht) assert.doesNotMatch(text, muster, `${muster}: ${text.slice(0, 60)}`);
@@ -156,4 +171,99 @@ test('Budget wie in der App, in der Schreibweise der Sprache; Freitext bleibt', 
   assert.equal(ohneLeer(formatiereBudget('50', 'fr')), '50,00 €');
   assert.equal(formatiereBudget('ca. 20 bis 25 €', 'en'), 'ca. 20 bis 25 €');
   assert.equal(formatiereBudget('  ', 'de'), '');
+});
+
+// ---------------------------------------------------------------------------
+// Neuigkeiten-Mail an den Schenker
+// ---------------------------------------------------------------------------
+
+// Betreff, Neuigkeits-Satz (2 Wünsche, 1 Idee) und Buttons je Variante und Sprache.
+const NEUIGKEITEN_ERWARTET = {
+  north_pole: {
+    de: {betreff: '📜 Neue Hinweise vom Nordpol für Ben', satz: 'Dein Schützling hat 2 neue Wünsche auf den Wunschzettel geschrieben, und aus der Wichtelrunde gibt es eine neue Geschenkidee.', knopf: 'Hinweise ansehen', gekauft: 'Geschenk ist besorgt'},
+    en: {betreff: '📜 New clues from the North Pole for Ben', satz: 'Your giftee has added 2 new wishes to their letter to Santa, and the other elves have sent you a new gift idea.', knopf: 'View the clues', gekauft: 'I\'ve got the gift'},
+    fr: {betreff: '📜 De nouveaux indices du pôle Nord pour Ben', satz: 'La personne que tu gâtes en secret a ajouté 2 nouveaux souhaits à sa lettre au Père Noël, et les autres lutins t\'ont envoyé une nouvelle idée cadeau.', knopf: 'Voir les indices', gekauft: 'J\'ai le cadeau'},
+  },
+  warm_casual: {
+    de: {betreff: '🎁 Neuigkeiten für dein Wichtelgeschenk, Ben', satz: 'Die Person, die du beschenkst, hat 2 neue Wünsche eingetragen, und aus der Runde gibt es eine neue Geschenkidee.', knopf: 'Wünsche und Ideen ansehen', gekauft: 'Geschenk gekauft'},
+    en: {betreff: '🎁 There\'s news on your gift exchange, Ben', satz: 'The person you\'re giving a gift to has added 2 new wishes, and the group has left a new gift idea.', knopf: 'See wishes and ideas', gekauft: 'Gift bought'},
+    fr: {betreff: `🎁 Du nouveau pour ton échange de cadeaux, Ben${NBSP}!`, satz: 'La personne à qui tu offres un cadeau a ajouté 2 nouveaux souhaits, et le groupe a laissé une nouvelle idée cadeau.', knopf: 'Voir les souhaits et idées', gekauft: 'Cadeau acheté'},
+  },
+};
+
+const htmlText = (text) => text.replace(/&/g, '&amp;').replace(/'/g, '&#39;');
+
+for (const [variante, anlass] of Object.entries(VARIANTEN)) {
+  for (const sprache of SPRACHEN) {
+    test(`Neuigkeiten ${variante} / ${sprache}: Betreff, Neuigkeit, zwei Buttons und Fallback-Links`, () => {
+      const soll = NEUIGKEITEN_ERWARTET[variante][sprache];
+      const mail = baueNeuigkeitenMail({...neuigkeitenBasis, anlass, sprache, wuensche: 2, ideen: 1});
+      assert.equal(mail.subject, soll.betreff);
+      assert.equal(mail.text.split('\n\n')[2], soll.satz);
+      assert.match(mail.html, new RegExp(`<html lang="${sprache}">`));
+      assert.ok(mail.html.includes(`href="${LINK}" style="display:inline-block;padding:12px 22px;`), 'Hauptbutton zur Linkseite');
+      assert.ok(mail.html.includes(`>${htmlText(soll.knopf)}</a>`));
+      assert.ok(mail.html.includes(`href="${LINK_GEKAUFT}" style="display:inline-block;padding:10px 20px;`), 'zweiter Button mit ?gekauft=1');
+      assert.ok(mail.html.includes(`>${htmlText(soll.gekauft)}</a>`));
+      // Fallback: je Button eine Zeile mit Beschriftung und Link, im Text und im HTML
+      const trenner = sprache === 'fr' ? `${NBSP}: ` : ': ';
+      assert.ok(mail.text.includes(`\n${soll.knopf}${trenner}${LINK}\n${soll.gekauft}${trenner}${LINK_GEKAUFT}\n`));
+      assert.ok(mail.html.includes(`>${LINK}</a>`) && mail.html.includes(`>${LINK_GEKAUFT}</a>`));
+    });
+  }
+}
+
+test('Neuigkeiten: Anzahl in Einzahl und Mehrzahl, je nachdem, was neu ist', () => {
+  const satz = (sprache, wuensche, ideen, anlass = 'geburtstag') =>
+    baueNeuigkeitenMail({...neuigkeitenBasis, sprache, anlass, wuensche, ideen}).text.split('\n\n')[2];
+  assert.equal(satz('de', 1, 0), 'Die Person, die du beschenkst, hat einen neuen Wunsch eingetragen.');
+  assert.equal(satz('de', 3, 0), 'Die Person, die du beschenkst, hat 3 neue Wünsche eingetragen.');
+  assert.equal(satz('de', 0, 1), 'Für die Person, die du beschenkst, gibt es eine neue Geschenkidee aus der Runde.');
+  assert.equal(satz('de', 0, 4), 'Für die Person, die du beschenkst, gibt es 4 neue Geschenkideen aus der Runde.');
+  assert.equal(satz('de', 1, 0, 'nikolaus'), 'Dein Schützling hat einen neuen Wunsch auf den Wunschzettel geschrieben.');
+  assert.equal(satz('de', 0, 2, 'weihnachten'), 'Aus der Wichtelrunde gibt es 2 neue Geschenkideen für deinen Schützling.');
+  assert.equal(satz('en', 1, 0), 'The person you\'re giving a gift to has added a new wish.');
+  assert.equal(satz('en', 0, 2), 'The group has left 2 new gift ideas for the person you\'re giving a gift to.');
+  assert.equal(satz('fr', 1, 0), 'La personne à qui tu offres un cadeau a ajouté un nouveau souhait.');
+  assert.equal(satz('fr', 0, 2), 'Le groupe a laissé 2 nouvelles idées cadeaux pour la personne à qui tu offres un cadeau.');
+  assert.throws(() => baueNeuigkeitenMail({...neuigkeitenBasis, wuensche: 0, ideen: 0}), /mindestens einen/);
+});
+
+test('Neuigkeiten: kein {…}-Platzhalter übrig, ohne Budget und Hinweis keine Zeilen dafür', () => {
+  for (const anlass of Object.values(VARIANTEN)) {
+    for (const sprache of SPRACHEN) {
+      for (const [wuensche, ideen] of [[1, 0], [0, 1], [2, 5]]) {
+        for (const extra of [{}, {budget: '', hinweis: ''}]) {
+          const mail = baueNeuigkeitenMail({...neuigkeitenBasis, ...extra, anlass, sprache, wuensche, ideen});
+          for (const teil of [mail.subject, mail.text, mail.html]) {
+            assert.doesNotMatch(teil, /\{[^}]*\}/u, `${anlass} / ${sprache}`);
+          }
+        }
+      }
+    }
+  }
+  const ohne = baueNeuigkeitenMail({...neuigkeitenBasis, budget: '', hinweis: '', sprache: 'de', wuensche: 1});
+  assert.doesNotMatch(ohne.text + ohne.html, /Budget|Hinweis:/);
+  const mit = baueNeuigkeitenMail({...neuigkeitenBasis, sprache: 'de', wuensche: 1});
+  assert.match(mit.text, /\n\nBudget: 50,00\s€\n\nHinweis: Bescherung am 13\.12\.\n\n/u); // Intl setzt ein geschütztes Leerzeichen
+  assert.match(mit.html, /font-size:12px;color:#7a7a7a;[^>]*>Du bekommst diese Mail, weil du beim Wichteln „Advent 2026“ dein Los gezogen hast/);
+});
+
+test('Neuigkeiten: Eingaben des Organisators stehen im HTML nur escaped, der Betreff bleibt einzeilig', () => {
+  const boese = '<script>alert(1)</script>&"\'';
+  for (const anlass of Object.values(VARIANTEN)) {
+    const mail = baueNeuigkeitenMail({
+      ...neuigkeitenBasis, sprache: 'de', anlass, name: `${boese}\r\nBcc: x@example.com`, titel: boese, budget: boese, hinweis: boese, wuensche: 1, ideen: 1,
+    });
+    assert.ok(!mail.html.includes('<script'), 'kein rohes Tag aus Eingaben');
+    assert.ok(mail.html.includes('&lt;script&gt;alert(1)&lt;/script&gt;&amp;&quot;&#39;'));
+    assert.doesNotMatch(mail.subject, /[\r\n]/);
+  }
+});
+
+test('Neuigkeiten: unbekannte oder fehlende Sprache ergibt Deutsch', () => {
+  const deutsch = baueNeuigkeitenMail({...neuigkeitenBasis, sprache: 'de', wuensche: 1});
+  for (const sprache of [undefined, null, '', 'es', 'EN']) {
+    assert.deepEqual(baueNeuigkeitenMail({...neuigkeitenBasis, sprache, wuensche: 1}), deutsch, String(sprache));
+  }
 });

@@ -1,19 +1,23 @@
 /**
- * Wichteln: Organisator-Callable und Teilnehmer-Callable. Logik und Geheimhaltung
- * in ../wichteln.js; alle Daten unter wichtelRunden/ sind für Clients gesperrt.
+ * Wichteln: Organisator-Callable, Teilnehmer-Callable und der geplante Versand der
+ * Neuigkeiten-Mails. Logik und Geheimhaltung in ../wichteln.js; alle Daten unter
+ * wichtelRunden/ sind für Clients gesperrt.
  */
 
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
+const {onSchedule} = require('firebase-functions/v2/scheduler');
 const admin = require('firebase-admin');
 const wichteln = require('../wichteln');
 const {ALLOWED_ORIGINS} = require('../shared/common');
 const {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom} = require('../shared/secrets');
 
+const SMTP_SECRETS = [smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom];
+
 /**
- * SMTP-Versand für Wichtel-Einladungen. Liest die Secrets erst, wenn eine Mail rausgehen
- * soll, und lädt nodemailer erst dann (Kaltstart, AGENTS.md). Ein kleiner Pool verschickt
- * alle Mails eines Aufrufs über wenige Verbindungen; kurze Timeouts, damit ein hängender
- * Mailserver den Aufruf nicht bis zum Function-Timeout aufhält.
+ * SMTP-Versand für Wichtel-Mails (Einladungen, Neuigkeiten). Liest die Secrets erst, wenn eine
+ * Mail rausgehen soll, und lädt nodemailer erst dann (Kaltstart, AGENTS.md). Ein kleiner Pool
+ * verschickt alle Mails eines Aufrufs über wenige Verbindungen; kurze Timeouts, damit ein
+ * hängender Mailserver den Aufruf nicht bis zum Function-Timeout aufhält.
  * @return {{senden: function(object): Promise<object>, schliessen: function(): void}|null}
  *   null, wenn die SMTP-Secrets nicht vollständig sind (Versand nicht eingerichtet)
  */
@@ -23,7 +27,7 @@ function smtpMailer() {
   const pass = smtpPassword.value();
   const from = smtpFrom.value();
   if (!host || !user || !pass || !from) {
-    console.warn('wichtelVerwalten: SMTP secrets not fully configured – no invitation emails');
+    console.warn('wichteln: SMTP secrets not fully configured – no emails');
     return null;
   }
   const port = parseInt(smtpPort.value() || '587', 10);
@@ -58,7 +62,7 @@ exports.wichtelVerwalten = onCall(
       maxInstances: 10,
       invoker: 'public',
       timeoutSeconds: 120,
-      secrets: [smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom],
+      secrets: SMTP_SECRETS,
     },
     (request) => wichteln.verwalten(admin, admin.firestore(), HttpsError, {
       auth: request.auth,
@@ -76,4 +80,26 @@ exports.wichtelTeilnahme = onCall(
     (request) => wichteln.teilnahme(admin, admin.firestore(), HttpsError, {
       daten: request.data,
     }),
+);
+
+/**
+ * Alle 15 Minuten: fällige Neuigkeiten-Mails an Schenker verschicken (neue Wünsche ihres
+ * Empfängers oder neue Ideen anderer Gäste für ihn), gebündelt und höchstens eine am Tag je
+ * Schenker. Ohne fällige Vormerker endet ein Lauf nach einer Abfrage.
+ */
+exports.wichtelNeuigkeitenVersenden = onSchedule(
+    {
+      schedule: '*/15 * * * *',
+      timeZone: 'Europe/Berlin',
+      timeoutSeconds: 300,
+      maxInstances: 1,
+      retryCount: 0,
+      secrets: SMTP_SECRETS,
+    },
+    async () => {
+      const ergebnis = await wichteln.versendeNeuigkeiten(admin, admin.firestore(), {mailer: smtpMailer});
+      if (ergebnis.gesendet || ergebnis.verworfen || ergebnis.verschoben) {
+        console.log('wichtelNeuigkeitenVersenden:', JSON.stringify(ergebnis));
+      }
+    },
 );
