@@ -42,6 +42,10 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
   mit dem eigenen Namen, die Person selbst nie.
 - „Ich habe das Geschenk gekauft“: Schalter in der Karte des Gezogenen, nur nach dem Ziehen; lässt sich
   zurücknehmen. Auslosung zurücksetzen und neu auslosen löscht den Status.
+- Neuigkeiten per Mail: Wer sein Los gezogen hat und mit einem Gast mit E-Mail-Adresse verknüpft ist,
+  bekommt eine Mail, sobald sein Empfänger Wünsche oder andere Gäste Ideen für ihn eintragen – bis er
+  „Geschenk gekauft“ setzt (siehe „Neuigkeiten per Mail“). Der Button „Geschenk gekauft“ in der Mail
+  öffnet die Linkseite mit einer Rückfrage ganz oben; erst „Ja, Geschenk gekauft“ setzt den Status.
 - Zu Wunsch und Idee optional ein Link (z. B. zum Shop); Text oder Link genügt. Der Eintrag zeigt dann
   eine Vorschau mit Bild, Seitentitel und Seite (siehe „Link-Vorschau“). Ein ins Textfeld eingefügter
   Link am Ende („Produktname https://…“, wie aus dem Teilen-Menü einer Shop-App) wird zum Link.
@@ -63,6 +67,7 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
 | Seine Ausschlüsse (wen er nicht ziehen soll) | nein | nein | nein | ja (legt sie fest) |
 | E-Mail-Adresse und Sprache | nein | nein | nein | ja, in der eigenen Gästeliste (nicht in der Runde gespeichert) |
 | Verknüpfter Gast, Mail-Status | nein | nein | nein | ja |
+| Dass es Neues über ihn gibt (Neuigkeiten-Mail, nur die Anzahl) | nein | ja, per Mail | nein | nein |
 
 Durchgesetzt wird das serverseitig, nicht in der Oberfläche:
 
@@ -75,7 +80,9 @@ Bewusste Grenzen: Der Organisator kennt alle Links und könnte einen fremden Lin
 am Verfahren „Organisator verschickt die Links“; die App zeigt ihm die Zuordnung nie. Ebenso kann
 er mit Ausschlüssen die Auslosung so weit einengen, dass nur noch ein Kreis übrig bleibt – dann
 kennt er die Zuordnung, ohne dass die App sie zeigt. Ausschlüsse sind ein Werkzeug des Organisators,
-kein Schutz gegen ihn.
+kein Schutz gegen ihn. Die Neuigkeiten-Mail geht an die Adresse, die der Organisator im Gästeprofil
+pflegt; sie nennt deshalb weder den Empfänger noch Inhalte. Wer sie mitliest, erfährt daraus nicht, wer
+wen beschenkt – der Link darin öffnet aber, wie jeder persönliche Link, die Seite des Schenkers.
 
 ## Datenmodell
 
@@ -84,15 +91,20 @@ wichtelRunden/{rundeId}            ownerId, titel, anlass (Schlüssel oder ''), 
                                    teilnehmerAnzahl, ausgelostAm, erstelltAm, aktualisiertAm
   teilnehmer/{teilnehmerId}        name, token (geheim), reihenfolge, ausschluesse (Teilnehmer-IDs,
                                    die er nicht ziehen soll; fehlt bei älteren = keine), geoeffnetAm,
-                                   gezogenAm, geschenkGekauftAm (fehlt bei älteren = nein), erstelltAm, gastId (→ guests/{ownerId}/profiles/{gastId}
-                                   oder null), mailStatus ('gesendet'|'fehler'|null), mailAm (letzter
-                                   Versuch)
+                                   gezogenAm, geschenkGekauftAm (fehlt bei älteren = nein), erstelltAm,
+                                   gastId (→ guests/{ownerId}/profiles/{gastId} oder null), mailStatus
+                                   ('gesendet'|'fehler'|null), mailAm (letzter Versuch),
+                                   neuigkeitenMailAm (letzte Neuigkeiten-Mail), neuigkeitenBis
+                                   (Zeitpunkt des neuesten darin gemeldeten Eintrags; beide fehlen = noch keine)
   zuordnungen/{geberId}            empfaengerId, ausgelostAm
   eintraege/{eintragId}            autorId, ueberId, text, erstelltAm,
                                    url und vorschau {bild, titel, seite} (nur mit Link; vorschau null,
                                    wenn der Abruf scheiterte)
 
 wichtelMailLimits/{uid}_{JJJJ-MM-TT}   uid, tag, anzahl   (Tageszähler je Organisator, Berliner Tag)
+wichtelNeuigkeiten/{rundeId}_{geberId}  rundeId, geberId, faelligAm, zaehler (Einträge seit dem
+                                        Vormerken), fehlversuche   (vorgemerkte Neuigkeiten-Mail; ohne
+                                        Zuordnung, gelöscht nach dem Versand)
 ```
 
 Teilnehmer, die vor der Gast-Verknüpfung angelegt wurden, haben die drei Mail-Felder nicht; das liest
@@ -128,6 +140,11 @@ Jede Antwort enthält `ich.sprache`: den Code aus dem verknüpften Gästeprofil
 unter den Profilen des Organisators der Runde, und vom Profil verlässt nur dieser Code den Server. Die
 Fehlermeldungen des Servers sind deutsch; die Teilnehmerseite übersetzt nach Fehlercode.
 
+`wichtelNeuigkeitenVersenden` (geplant, alle 15 Minuten, Zeitzone Europe/Berlin): verschickt fällige
+Neuigkeiten-Mails (`versendeNeuigkeiten` in `functions/wichteln.js`). Ihr Button „Geschenk gekauft“
+führt auf den persönlichen Link mit `?gekauft=1`; die Teilnehmerseite nimmt den Parameter sofort aus der
+Adresse und zeigt die Rückfrage.
+
 Client: `src/utils/wichtelFirestore.js`, Links und Teilen-Text: `src/utils/wichtelLinks.js`,
 Oberflächen: `src/components/WichtelPage.js` (Organisator), `src/components/WichtelTeilnahmePage.js`
 (Texte auf Deutsch, Englisch, Französisch und Wahl der Sprache: `src/utils/wichtelTeilnahmeTexte.js`).
@@ -143,7 +160,7 @@ Oberflächen: `src/components/WichtelPage.js` (Organisator), `src/components/Wic
 - **Inhalt** (`functions/wichtelMail.js`, Text und HTML): zwei Varianten, gewählt nur nach dem Anlass der
   Runde – `north_pole` („Post vom Nordpol“) bei Weihnachten und Nikolaus, `warm_casual` („Herzlich & locker“)
   bei allem anderen und bei Runden ohne Anlass. Die Texte stehen je Sprache in `functions/wichtelMailTexte/`
-  (`de.js`, `en.js`, `fr.js`) mit den Platzhaltern `{firstName}` (nur der erste Teil des Teilnehmernamens),
+  (`de.js`, `en.js`, `fr.js`, Schlüssel `einladung`) mit den Platzhaltern `{firstName}` (nur der erste Teil des Teilnehmernamens),
   `{hostName}` (Vorname des Organisators), `{eventName}`, `{budget}`, `{link}`; im HTML wird jeder Wert escaped.
   Das Budget steht bei einem reinen Betrag in der Schreibweise der Sprache („50,00 €“, „€50.00“), sonst so, wie
   der Organisator es schrieb. Der Link steht im Button und als Fallback-Text. Ohne Budget entfällt die
@@ -156,6 +173,31 @@ Oberflächen: `src/components/WichtelPage.js` (Organisator), `src/components/Wic
   Runden-IDs und Fehlercodes des Mailservers, nie die Adresse (Tech-Check S26).
 - **Versand:** SMTP-Secrets `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` (dieselben
   wie für die Listen-Einladung), nodemailer mit kleinem Pool, Function-Timeout 120 s.
+
+## Neuigkeiten per Mail
+
+- **Wann:** Trägt der Empfänger eines Schenkers einen Wunsch ein oder ein anderer Gast eine Idee für ihn,
+  merkt `wichtelTeilnahme` eine Mail an den Schenker vor (`wichtelNeuigkeiten/{rundeId}_{geberId}`) – nur,
+  wenn die Runde ausgelost ist, der Schenker sein Los gezogen und „Geschenk gekauft“ nicht gesetzt hat und
+  sein Gästeprofil eine E-Mail-Adresse hat. Eigene Ideen des Schenkers lösen nichts aus.
+- **Bündeln:** Die Mail geht frühestens 30 Minuten nach dem ersten neuen Eintrag raus (mehrere Einträge
+  kurz hintereinander ergeben eine Mail) und höchstens einmal am Tag je Schenker. Verschickt wird sie von
+  der geplanten Function `wichtelNeuigkeitenVersenden`, die vorher alles neu prüft: Ist inzwischen
+  „Geschenk gekauft“ gesetzt, die Auslosung zurückgesetzt, die Runde gelöscht, die Adresse entfernt oder
+  der Eintrag wieder gelöscht, entfällt die Mail. Gemeldet wird, was seit dem Ziehen und seit dem neuesten
+  Eintrag der letzten Mail dazukam; kommt während des Versands noch etwas dazu, folgt es mit der nächsten.
+- **Inhalt** (`baueNeuigkeitenMail` in `functions/wichtelMail.js`, Texte unter `neuigkeiten` in
+  `functions/wichtelMailTexte/`): dieselben Varianten (`north_pole`, `warm_casual`) und Sprachen wie die
+  Einladung. Die Mail nennt nur die Anzahl neuer Wünsche und Ideen, **nie den Empfänger und keine
+  Inhalte** (Vorschau auf dem Sperrbildschirm, geteilte Postfächer; die Einträge stehen hinter dem Link).
+  Dazu Budget und Hinweis der Runde, der Button zur Linkseite und der Button „Geschenk gekauft“, beide
+  Links auch als Fallback-Text.
+- **„Geschenk gekauft“ aus der Mail:** Der Button öffnet den persönlichen Link mit `?gekauft=1`. Die Seite
+  fragt oben nach („Geschenk für … gekauft?“); gesetzt wird der Status erst mit „Ja, Geschenk gekauft“.
+  Der Link allein setzt bewusst nichts: Link-Scanner der Mailprogramme öffnen Links auch ungefragt.
+- **Grenzen:** zählt zum Tageslimit des Organisators (150 Mails). Ist es erreicht, der Mailversand nicht
+  eingerichtet oder der Mailserver nicht erreichbar, folgt eine Stunde später ein neuer Versuch; nach drei
+  gescheiterten Sendeversuchen entfällt die Mail. Logs nennen nur IDs und Fehlercodes, nie die Adresse.
 
 ## Link-Vorschau
 
@@ -215,7 +257,9 @@ Das Token hat 192 Bit (24 Zufallsbytes, base64url).
 - Link-Vorschau schon im Formular zeigen (vor dem Speichern) und eine gescheiterte Vorschau später neu holen.
 - Vorschaubilder selbst speichern statt vom Shop zu laden (unabhängig von Shop-Änderungen, kein Abruf
   des Betrachters beim Shop) – braucht einen Storage-Ordner samt Regeln und Aufräumen.
-- Die Teilnehmerseite (`/wichteln/…`) ist nur deutsch: Ein Gast mit Sprache Englisch oder Französisch
-  bekommt Mail und Teilen-Text in seiner Sprache, die Seite hinter dem Link aber auf Deutsch.
+- Neuigkeiten-Mail abbestellen, ohne „Geschenk gekauft“ zu setzen (heute nur über den Status oder ohne
+  Adresse im Gästeprofil).
+- Öffnet der Schenker die Linkseite, bevor eine vorgemerkte Neuigkeiten-Mail rausgeht, meldet sie trotzdem
+  die Einträge, die er dort schon gesehen hat (die Seite merkt sich keinen „gesehen“-Stand).
 - Keine Benachrichtigung beim Auslosen („Jetzt kannst du dein Los ziehen“) – wer früh eingeladen
   wurde, muss selbst wieder vorbeischauen oder vom Organisator erinnert werden („Erneut senden“).

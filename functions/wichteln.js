@@ -29,6 +29,14 @@
  * Einträge (Wünsche, Ideen) haben Text und/oder einen Link. Zum Link holt der Server beim
  * Speichern einmal eine Vorschau (Bild, Titel, Seite; linkVorschau.js) und legt sie mit ab.
  *
+ * Neuigkeiten per Mail: Trägt der Empfänger eines Schenkers Wünsche ein oder ein anderer Gast
+ * Ideen für ihn, merkt merkeNeuigkeitVor eine Mail an den Schenker vor – nur, solange er sein
+ * Los gezogen und das Geschenk nicht als gekauft markiert hat, und nur mit E-Mail-Adresse im
+ * verknüpften Gästeprofil. Die geplante Function wichtelNeuigkeitenVersenden schickt sie
+ * gebündelt (versendeNeuigkeiten): frühestens SAMMELFENSTER_MS nach dem ersten neuen Eintrag,
+ * höchstens eine je MINDESTABSTAND_MS. Die Mail nennt weder den Empfänger noch Inhalte, nur
+ * die Anzahl; die Vormerker (wichtelNeuigkeiten) enthalten keine Zuordnung.
+ *
  * Aufbau wie follow.js: reine Funktionen mit (admin, db, HttpsError, params), damit die
  * Tests sie mit einem Firestore-Ersatz aufrufen können. Den SMTP-Versand reicht der
  * Handler als `mailer` herein (handlers/wichteln.js).
@@ -37,10 +45,12 @@
 const crypto = require('crypto');
 const linkVorschau = require('./linkVorschau');
 const {normalisiereSprache} = require('./shared/sprachen');
-const {baueEinladungsMail} = require('./wichtelMail');
+const {baueEinladungsMail, baueNeuigkeitenMail} = require('./wichtelMail');
 
 const COLLECTION = 'wichtelRunden';
 const MAIL_LIMIT_COLLECTION = 'wichtelMailLimits';
+// Vorgemerkte Neuigkeiten-Mails, je Runde und Schenker ein Dokument {rundeId}_{geberId}
+const NEUIGKEITEN_COLLECTION = 'wichtelNeuigkeiten';
 // Adresse der App für die Links in Mails (wie ALLOWED_ORIGINS[0] in shared/common.js). Die
 // App selbst baut den Link mit der Adresse, unter der sie läuft (src/utils/wichtelLinks.js).
 const APP_URL = 'https://broubook.web.app';
@@ -61,6 +71,20 @@ const BATCH_GROESSE = 400;
 // ein unlösbarer mit 100 Teilnehmern gibt nach rund 0,2 s auf).
 const MAX_VERSUCHE = 2000;
 const MAX_SUCHSCHRITTE = 20000;
+
+// Neuigkeiten-Mail: frühestens 30 Minuten nach dem ersten neuen Eintrag (wer mehrere Wünsche
+// hintereinander einträgt, löst eine Mail aus) und höchstens eine am Tag je Schenker. Scheitert
+// der Versand oder ist das Tageslimit erreicht, folgt eine Stunde später ein neuer Versuch;
+// nach MAX_FEHLVERSUCHE gescheiterten Versuchen wird die Mail verworfen.
+const SAMMELFENSTER_MS = 30 * 60 * 1000;
+const MINDESTABSTAND_MS = 24 * 60 * 60 * 1000;
+const NEUER_VERSUCH_MS = 60 * 60 * 1000;
+const MAX_FEHLVERSUCHE = 3;
+// Je Lauf (alle 15 Minuten) höchstens so viele Vormerker, älteste zuerst.
+const MAX_NEUIGKEITEN_PRO_LAUF = 50;
+// Parameter am persönlichen Link: öffnet die Seite mit der Rückfrage „Geschenk gekauft?“
+// (src/components/WichtelTeilnahmePage.js liest ihn).
+const GEKAUFT_PARAMETER = 'gekauft=1';
 
 const LAENGE = {titel: 80, budget: 40, hinweis: 300, name: 60, text: 300};
 // Anlass der Runde (optional); gleiche Liste wie src/utils/wichtelAnlaesse.js
@@ -682,6 +706,232 @@ async function nimmTeilnehmerAuf(ctx, rundeRef, rundeId, runde, eintraege) {
   return versendeEinladungen(ctx, rundeId, runde, empfaenger);
 }
 
+// ---------------------------------------------------------------------------
+// Neuigkeiten per Mail (an den Schenker)
+// ---------------------------------------------------------------------------
+
+/** Wer Neuigkeiten bekommt: Los gezogen, Geschenk nicht als gekauft markiert, Gast verknüpft. */
+function bekommtNeuigkeiten(geber) {
+  return Boolean(geber.gezogenAm) && !geber.geschenkGekauftAm && Boolean(geber.gastId);
+}
+
+const vormerkerPfad = (rundeId, geberId) => `${NEUIGKEITEN_COLLECTION}/${rundeId}_${geberId}`;
+
+/**
+ * Merkt nach einem neuen Eintrag über `ueberId` eine Neuigkeiten-Mail an dessen Schenker vor:
+ * ein Wunsch von `ueberId` selbst oder eine Idee eines anderen Gasts. Eigene Ideen des Schenkers
+ * lösen nichts aus. Kommen vor dem Versand weitere Einträge dazu, bleibt der Termin; der
+ * Vormerker zählt nur hoch (`zaehler`), damit der Versand Einträge erkennt, die während des
+ * Sendens dazukamen. Wirft nicht: am Vormerken soll das Speichern des Eintrags nicht scheitern.
+ * @param {object} admin - firebase-admin (Timestamp)
+ * @param {object} db - Firestore
+ * @param {{rundeId: string, runde: object, autorId: string, ueberId: string, jetztMs: number}} eintrag
+ * @return {Promise<void>}
+ */
+async function merkeNeuigkeitVor(admin, db, {rundeId, runde, autorId, ueberId, jetztMs}) {
+  if (runde.status !== 'ausgelost') return;
+  try {
+    const zuordnung = await db.collection(zuordnungenPfad(rundeId))
+        .where('empfaengerId', '==', ueberId).limit(1).get();
+    if (zuordnung.empty) return;
+    const geberId = zuordnung.docs[0].id;
+    if (geberId === autorId) return;
+    const geberSnap = await db.doc(`${teilnehmerPfad(rundeId)}/${geberId}`).get();
+    const geber = geberSnap.exists ? geberSnap.data() : null;
+    if (!geber || !bekommtNeuigkeiten(geber)) return;
+    const gast = (await ladeGaeste(db, runde.ownerId, [geber.gastId])).get(geber.gastId);
+    if (!gast?.email) return;
+    const ref = db.doc(vormerkerPfad(rundeId, geberId));
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (snap.exists) {
+        tx.update(ref, {zaehler: (snap.data().zaehler || 0) + 1});
+        return;
+      }
+      const letzteMail = millis(geber.neuigkeitenMailAm);
+      const faellig = Math.max(jetztMs + SAMMELFENSTER_MS, letzteMail === null ? 0 : letzteMail + MINDESTABSTAND_MS);
+      tx.set(ref, {
+        rundeId,
+        geberId,
+        faelligAm: admin.firestore.Timestamp.fromMillis(faellig),
+        zaehler: 1,
+        fehlversuche: 0,
+      });
+    });
+  } catch (err) {
+    console.error(`wichtelTeilnahme: Neuigkeit in Runde ${rundeId} nicht vorgemerkt:`, err);
+  }
+}
+
+/** Vormerker einer Runde löschen (Runde gelöscht oder Auslosung zurückgesetzt). */
+async function loescheVormerker(db, rundeId) {
+  const snap = await db.collection(NEUIGKEITEN_COLLECTION).where('rundeId', '==', rundeId).limit(MAX_TEILNEHMER).get();
+  await schreibeInBatches(db, snap.docs.map((doc) => (batch) => batch.delete(doc.ref)));
+}
+
+/**
+ * Schließt einen Vormerker ab: löschen, außer seit dem Lesen kamen Einträge dazu (zaehler
+ * gestiegen). Dann bleibt er mit neuem Termin liegen, und die neuen Einträge gehen mit der
+ * nächsten Mail raus.
+ * @param {object} ctx - {admin, db}
+ * @param {object} doc - gelesener Vormerker
+ * @param {number} gelesen - `zaehler` beim Lesen
+ * @param {number} nochmalAmMs - Termin, falls Einträge dazukamen
+ * @return {Promise<void>}
+ */
+async function schliesseVormerkerAb({admin, db}, doc, gelesen, nochmalAmMs) {
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(doc.ref);
+    if (!snap.exists) return;
+    if ((snap.data().zaehler || 0) === gelesen) {
+      tx.delete(doc.ref);
+    } else {
+      tx.update(doc.ref, {faelligAm: admin.firestore.Timestamp.fromMillis(nochmalAmMs), fehlversuche: 0});
+    }
+  });
+}
+
+/**
+ * Neuer Versuch in NEUER_VERSUCH_MS. Ein gescheiterter Versand zählt als Fehlversuch; nach
+ * MAX_FEHLVERSUCHE wird der Vormerker verworfen.
+ * @return {Promise<'verschoben'|'verworfen'>}
+ */
+async function verschiebeVormerker({admin, jetztMs}, doc, {fehlversuch}) {
+  const fehlversuche = (doc.data().fehlversuche || 0) + (fehlversuch ? 1 : 0);
+  if (fehlversuche >= MAX_FEHLVERSUCHE) {
+    console.error(`wichtelNeuigkeitenVersenden: Vormerker ${doc.id} nach ${fehlversuche} Fehlversuchen verworfen`);
+    await doc.ref.delete();
+    return 'verworfen';
+  }
+  await doc.ref.update({
+    faelligAm: admin.firestore.Timestamp.fromMillis(jetztMs + NEUER_VERSUCH_MS),
+    fehlversuche,
+  });
+  return 'verschoben';
+}
+
+/**
+ * Ein fälliger Vormerker: prüft alles erneut (Runde ausgelost, Los gezogen, nicht gekauft,
+ * Zuordnung, Adresse frisch aus dem Gästeprofil), zählt die Einträge über den Empfänger seit
+ * der letzten Mail (ohne eigene des Schenkers) und verschickt die Mail.
+ * @param {object} ctx - {admin, db, jetztMs, transport}
+ * @param {object} doc - Vormerker aus der Abfrage
+ * @return {Promise<'gesendet'|'verworfen'|'verschoben'>}
+ */
+async function bearbeiteVormerker(ctx, doc) {
+  const {admin, db, jetztMs, transport} = ctx;
+  const {rundeId, geberId, zaehler = 0} = doc.data();
+  const verwerfen = async () => {
+    await schliesseVormerkerAb(ctx, doc, zaehler, jetztMs + SAMMELFENSTER_MS);
+    return 'verworfen';
+  };
+  if (typeof rundeId !== 'string' || !ID_MUSTER.test(rundeId) ||
+      typeof geberId !== 'string' || !ID_MUSTER.test(geberId)) {
+    return verwerfen();
+  }
+  const geberRef = db.doc(`${teilnehmerPfad(rundeId)}/${geberId}`);
+  const [rundeSnap, geberSnap, zuordnungSnap] = await Promise.all([
+    db.doc(rundenPfad(rundeId)).get(),
+    geberRef.get(),
+    db.doc(`${zuordnungenPfad(rundeId)}/${geberId}`).get(),
+  ]);
+  const runde = rundeSnap.exists ? rundeSnap.data() : null;
+  const geber = geberSnap.exists ? geberSnap.data() : null;
+  const empfaengerId = zuordnungSnap.exists ? zuordnungSnap.data().empfaengerId : null;
+  if (!runde || runde.status !== 'ausgelost' || !geber || !bekommtNeuigkeiten(geber) || !empfaengerId) {
+    return verwerfen();
+  }
+
+  // Neu ist, was nach dem Ziehen und nach dem letzten gemeldeten Eintrag entstand.
+  const seit = Math.max(millis(geber.gezogenAm) ?? 0, millis(geber.neuigkeitenBis) ?? 0);
+  const neu = (await ladeEintraege(db, rundeId, 'ueberId', empfaengerId, MAX_EINTRAEGE_UEBER))
+      .filter((e) => e.autorId !== geberId && (millis(e.erstelltAm) ?? 0) > seit);
+  if (neu.length === 0) return verwerfen();
+  const gast = (await ladeGaeste(db, runde.ownerId, [geber.gastId])).get(geber.gastId);
+  if (!gast?.email) return verwerfen();
+
+  let erlaubt = 0;
+  try {
+    erlaubt = await reserviereMails(db, runde.ownerId, 1, jetztMs);
+  } catch (err) {
+    // Schlägt geschlossen fehl: ohne prüfbares Limit geht keine Mail raus.
+    console.error(`wichtelNeuigkeitenVersenden: Mail-Limit von ${runde.ownerId} nicht prüfbar:`, mailFehlerCode(err));
+  }
+  if (erlaubt < 1) return verschiebeVormerker(ctx, doc, {fehlversuch: false});
+
+  const wuensche = neu.filter((e) => e.autorId === empfaengerId).length;
+  const link = wichtelLink(rundeId, geber.token);
+  try {
+    await transport.senden({
+      to: gast.email,
+      ...baueNeuigkeitenMail({
+        sprache: gast.sprache,
+        anlass: runde.anlass,
+        name: geber.name,
+        titel: runde.titel || '',
+        budget: runde.budget || '',
+        hinweis: runde.hinweis || '',
+        link,
+        linkGekauft: `${link}?${GEKAUFT_PARAMETER}`,
+        wuensche,
+        ideen: neu.length - wuensche,
+      }),
+    });
+  } catch (err) {
+    console.error(`wichtelNeuigkeitenVersenden: Mail an Teilnehmer ${geberId} (Runde ${rundeId}) fehlgeschlagen:`,
+        mailFehlerCode(err));
+    return verschiebeVormerker(ctx, doc, {fehlversuch: true});
+  }
+
+  // Erst den Stand des Schenkers, dann den Vormerker: scheitert Letzteres, findet der nächste
+  // Lauf nichts Neues und verwirft ihn, statt dieselben Neuigkeiten noch einmal zu schicken.
+  await geberRef.update({
+    neuigkeitenMailAm: admin.firestore.FieldValue.serverTimestamp(),
+    neuigkeitenBis: neu[neu.length - 1].erstelltAm,
+  });
+  await schliesseVormerkerAb(ctx, doc, zaehler, jetztMs + MINDESTABSTAND_MS);
+  return 'gesendet';
+}
+
+/**
+ * Ein Lauf der geplanten Function wichtelNeuigkeitenVersenden: verschickt fällige
+ * Neuigkeiten-Mails, älteste zuerst. Ohne eingerichteten Mailversand bleiben sie liegen und
+ * werden eine Stunde später erneut versucht.
+ * @param {object} admin - firebase-admin (FieldValue, Timestamp)
+ * @param {object} db - Firestore
+ * @param {{mailer: function, jetztMs?: number}} params - mailer wie bei verwalten
+ * @return {Promise<{gesendet: number, verworfen: number, verschoben: number}>}
+ */
+async function versendeNeuigkeiten(admin, db, {mailer, jetztMs = Date.now()}) {
+  const ergebnis = {gesendet: 0, verworfen: 0, verschoben: 0};
+  const faellig = await db.collection(NEUIGKEITEN_COLLECTION)
+      .where('faelligAm', '<=', admin.firestore.Timestamp.fromMillis(jetztMs))
+      .orderBy('faelligAm')
+      .limit(MAX_NEUIGKEITEN_PRO_LAUF)
+      .get();
+  if (faellig.empty) return ergebnis;
+
+  const transport = typeof mailer === 'function' ? mailer() : null;
+  const ctx = {admin, db, jetztMs, transport};
+  try {
+    for (const doc of faellig.docs) {
+      let status;
+      try {
+        status = transport ?
+          await bearbeiteVormerker(ctx, doc) :
+          await verschiebeVormerker(ctx, doc, {fehlversuch: false});
+      } catch (err) {
+        console.error(`wichtelNeuigkeitenVersenden: Vormerker ${doc.id} nicht bearbeitet:`, err);
+        status = await verschiebeVormerker(ctx, doc, {fehlversuch: true}).catch(() => 'verschoben');
+      }
+      ergebnis[status] += 1;
+    }
+  } finally {
+    if (transport && typeof transport.schliessen === 'function') transport.schliessen();
+  }
+  return ergebnis;
+}
+
 const VERWALTEN = {
   async liste({db, uid}) {
     const snap = await db.collection(COLLECTION).where('ownerId', '==', uid).limit(MAX_RUNDEN).get();
@@ -888,12 +1138,14 @@ const VERWALTEN = {
       aktualisiertAm: admin.firestore.FieldValue.serverTimestamp(),
     }));
     await schreibeInBatches(db, schritte);
+    await loescheVormerker(db, daten.rundeId);
     return organisatorSicht(db, daten.rundeId, {...runde, status: 'offen', ausgelostAm: null});
   },
 
   async loeschen({db, HttpsError, uid, daten}) {
     const {ref} = await ladeEigeneRunde(db, HttpsError, uid, daten.rundeId);
     await db.recursiveDelete(ref);
+    await loescheVormerker(db, daten.rundeId);
     return {geloescht: true};
   },
 };
@@ -1066,7 +1318,7 @@ const TEILNAHME = {
     return teilnehmerSicht(db, kontext);
   },
 
-  async eintragHinzufuegen({admin, db, HttpsError, kontext, daten, ladeVorschau}) {
+  async eintragHinzufuegen({admin, db, HttpsError, kontext, daten, ladeVorschau, jetztMs}) {
     const ueberId = pruefeId(daten.ueberId, HttpsError);
     const {text, url} = leseEintrag(daten, HttpsError);
     const teilnehmer = await ladeTeilnehmer(db, kontext.rundeId);
@@ -1086,7 +1338,11 @@ const TEILNAHME = {
       ...(url ? {url, vorschau} : {}),
       erstelltAm: admin.firestore.FieldValue.serverTimestamp(),
     });
-    return teilnehmerSicht(db, kontext);
+    const [, sicht] = await Promise.all([
+      merkeNeuigkeitVor(admin, db, {...kontext, autorId: kontext.ich.id, ueberId, jetztMs: jetztMs ?? Date.now()}),
+      teilnehmerSicht(db, kontext),
+    ]);
+    return sicht;
   },
 
   async eintragLoeschen({db, HttpsError, kontext, daten}) {
@@ -1104,24 +1360,28 @@ const TEILNAHME = {
  * @param {object} admin - firebase-admin (für FieldValue)
  * @param {object} db - Firestore
  * @param {function} HttpsError - Fehlerklasse
- * @param {{daten: object, ladeVorschau?: function}} params - ladeVorschau nur für Tests ersetzt
+ * @param {{daten: object, ladeVorschau?: function, jetztMs?: number}} params - ladeVorschau und
+ *   jetztMs (Zeit für den Termin einer Neuigkeiten-Mail) nur für Tests ersetzt
  * @return {Promise<object>}
  */
-async function teilnahme(admin, db, HttpsError, {daten, ladeVorschau = linkVorschau.ladeVorschau}) {
+async function teilnahme(admin, db, HttpsError, {daten, ladeVorschau = linkVorschau.ladeVorschau, jetztMs}) {
   const eingabe = daten && typeof daten === 'object' ? daten : {};
   const aktion = Object.prototype.hasOwnProperty.call(TEILNAHME, eingabe.aktion) ? TEILNAHME[eingabe.aktion] : null;
   if (!aktion) throw new HttpsError('invalid-argument', 'Unbekannte Aktion.');
   const kontext = await ladeKontext(db, HttpsError, eingabe);
-  return aktion({admin, db, HttpsError, kontext, daten: eingabe, ladeVorschau});
+  return aktion({admin, db, HttpsError, kontext, daten: eingabe, ladeVorschau, jetztMs});
 }
 
 module.exports = {
   verwalten,
   teilnahme,
+  versendeNeuigkeiten,
   zieheKreis,
   neuesToken,
   _internal: {
     bereinige, leseNamen, sucheKreis, sperrPruefung, berlinerTag,
     MIN_TEILNEHMER, MAX_TEILNEHMER, MAX_EINTRAEGE_PRO_AUTOR, MAX_MAILS_PRO_TAG, LAENGE, TOKEN_MUSTER, APP_URL,
+    NEUIGKEITEN_COLLECTION, SAMMELFENSTER_MS, MINDESTABSTAND_MS, NEUER_VERSUCH_MS, MAX_FEHLVERSUCHE,
+    GEKAUFT_PARAMETER,
   },
 };

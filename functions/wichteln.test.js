@@ -11,12 +11,16 @@ class FakeHttpsError extends Error {
 }
 
 const SERVER_TS = {__serverTimestamp: true};
-const fakeAdmin = {firestore: {FieldValue: {serverTimestamp: () => SERVER_TS}}};
+const fakeAdmin = {firestore: {
+  FieldValue: {serverTimestamp: () => SERVER_TS},
+  Timestamp: {fromMillis: (ms) => ({toMillis: () => ms})},
+}};
 
 /**
  * Firestore-Ersatz mit dem, was wichteln.js braucht: Dokumente nach Pfad, Collection-
- * Abfragen (where ==, limit), Batches, Transaktionen, recursiveDelete. Server-Zeitstempel
- * werden beim Schreiben wie in Firestore zu Zeitstempeln mit fortlaufender Uhr.
+ * Abfragen (where == und <=, orderBy, limit), Batches, Transaktionen, recursiveDelete.
+ * Server-Zeitstempel werden beim Schreiben wie in Firestore zu Zeitstempeln mit fortlaufender
+ * Uhr; stelleUhr(ms) setzt sie vor (für Tests mit Terminen).
  */
 const makeDb = (seed = {}) => {
   const store = new Map(Object.entries(seed));
@@ -55,25 +59,37 @@ const makeDb = (seed = {}) => {
     update: async (data) => write.update(path, data),
     delete: async () => write.delete(path),
   });
-  const query = (collPath, filters = [], max = Infinity) => ({
+  const vergleichswert = (wert) => (wert && typeof wert.toMillis === 'function' ? wert.toMillis() : wert);
+  const passt = (data, [field, op, value]) => (op === '==' ?
+    data[field] === value :
+    data[field] !== undefined && data[field] !== null && vergleichswert(data[field]) <= vergleichswert(value));
+  const query = (collPath, filters = [], max = Infinity, sortFeld = null) => ({
     where: (field, op, value) => {
-      assert.equal(op, '==');
-      return query(collPath, [...filters, [field, value]], max);
+      assert.ok(op === '==' || op === '<=', `Operator ${op}`);
+      return query(collPath, [...filters, [field, op, value]], max, sortFeld);
     },
-    limit: (n) => query(collPath, filters, n),
+    orderBy: (field) => query(collPath, filters, max, field),
+    limit: (n) => query(collPath, filters, n, sortFeld),
     get: async () => {
       const prefix = `${collPath}/`;
       const docs = [...store.keys()]
           .filter((path) => path.startsWith(prefix) && !path.slice(prefix.length).includes('/'))
-          .filter((path) => filters.every(([field, value]) => store.get(path)[field] === value))
+          .filter((path) => filters.every((filter) => passt(store.get(path), filter)))
+          .sort((a, b) => (sortFeld ?
+            vergleichswert(store.get(a)[sortFeld]) - vergleichswert(store.get(b)[sortFeld]) : 0))
           .slice(0, max)
-          .map((path) => ({id: path.split('/').pop(), ref: docRef(path), data: () => ({...store.get(path)})}));
+          // Wie in Firestore: data() liefert den Stand zum Zeitpunkt der Abfrage.
+          .map((path) => [path, {...store.get(path)}])
+          .map(([path, stand]) => ({id: path.split('/').pop(), ref: docRef(path), data: () => ({...stand})}));
       return {docs, empty: docs.length === 0, size: docs.length};
     },
   });
   const db = {
     store,
     reads: 0,
+    stelleUhr: (ms) => {
+      uhr = Math.max(uhr, ms);
+    },
     doc: (path) => docRef(path),
     collection: (path) => ({
       ...query(path),
@@ -122,8 +138,8 @@ const verwalten = (db, uid, daten, extra = {}) =>
   wichteln.verwalten(fakeAdmin, db, FakeHttpsError, {auth: uid ? auth(uid) : null, daten, ...extra});
 // Ohne eigenen Ersatz darf kein Test eine Seite abrufen.
 const keinAbruf = async (url) => assert.fail(`unerwarteter Abruf von ${url}`);
-const teilnahme = (db, daten, ladeVorschau = keinAbruf) =>
-  wichteln.teilnahme(fakeAdmin, db, FakeHttpsError, {daten, ladeVorschau});
+const teilnahme = (db, daten, ladeVorschau = keinAbruf, jetztMs) =>
+  wichteln.teilnahme(fakeAdmin, db, FakeHttpsError, {daten, ladeVorschau, jetztMs});
 
 const rejectsWith = (promise, code) => assert.rejects(promise, (err) => {
   assert.equal(err.code, code, err.message);
@@ -1159,4 +1175,280 @@ test('unbekannter Anlass wird zu leer', async () => {
   const {db, rundeId} = await setupRunde();
   const sicht = await verwalten(db, 'orga', {aktion: 'aendern', rundeId, titel: 'Neu', anlass: 'Quatsch', budget: '', hinweis: ''});
   assert.equal(sicht.runde.anlass, '');
+});
+
+// ---------------------------------------------------------------------------
+// Neuigkeiten per Mail an den Schenker
+// ---------------------------------------------------------------------------
+
+const {NEUIGKEITEN_COLLECTION, SAMMELFENSTER_MS, MINDESTABSTAND_MS, NEUER_VERSUCH_MS} = wichteln._internal;
+const MINUTE = 60 * 1000;
+
+/** Vier Gäste, alle verknüpft; Dana ohne Adresse, Ben ohne Sprache (= Deutsch). */
+const neuigkeitenSeed = () => ({
+  ...baseSeed(),
+  'users/orga': {role: 'edit', vorname: 'Olga'},
+  'guests/orga/profiles/gastAnna0001': {vorname: 'Anna', email: 'anna@example.com', sprache: 'en'},
+  'guests/orga/profiles/gastBen00001': {vorname: 'Ben', email: 'ben@example.com'},
+  'guests/orga/profiles/gastCleo0001': {vorname: 'Cleo', email: 'cleo@example.com', sprache: 'fr'},
+  'guests/orga/profiles/gastDana0001': {vorname: 'Dana'},
+});
+
+/**
+ * Ausgeloste Runde mit vier verknüpften Gästen. `schenker` ist Ben Beispiel, `empfaenger` sein
+ * gezogener Gast, `dritter` ein weiterer Gast, der Ideen für den Empfänger schreibt. Die Uhr
+ * (jetztMs und Server-Zeitstempel) stellt `zeit` gemeinsam vor.
+ */
+const setupNeuigkeiten = async ({anlass = 'weihnachten'} = {}) => {
+  const db = makeDb(neuigkeitenSeed());
+  let jetzt = JETZT;
+  db.stelleUhr(jetzt);
+  const einladungen = makeMailer();
+  const orga = (daten) => verwalten(db, 'orga', daten, {mailer: einladungen.factory, jetztMs: jetzt});
+  const sicht = await orga({aktion: 'anlegen', titel: 'Advent 2026', anlass, budget: '20 €', hinweis: '', namen: [
+    {name: 'Anna Muster', gastId: 'gastAnna0001'},
+    {name: 'Ben Beispiel', gastId: 'gastBen00001'},
+    {name: 'Cleo Ohne', gastId: 'gastCleo0001'},
+    {name: 'Dana', gastId: 'gastDana0001'},
+  ]});
+  const rundeId = sicht.runde.id;
+  await orga({aktion: 'auslosen', rundeId});
+  const tn = nachName(sicht);
+  const nameVon = Object.fromEntries(sicht.teilnehmer.map((t) => [t.id, t.name]));
+  const empfaengerVon = (geber) => nameVon[db.store.get(`wichtelRunden/${rundeId}/zuordnungen/${tn[geber].id}`).empfaengerId];
+  const schenker = 'Ben Beispiel';
+  const empfaenger = empfaengerVon(schenker);
+  const dritter = Object.keys(tn).find((name) => name !== schenker && name !== empfaenger);
+  const versand = makeMailer();
+  return {
+    db, rundeId, tn, orga, schenker, empfaenger, dritter, empfaengerVon, versand,
+    zeit: (ms) => {
+      jetzt = ms;
+      db.stelleUhr(ms);
+    },
+    als: (wer, aktion, daten = {}) => teilnahme(db, {aktion, rundeId, token: tn[wer].token, ...daten}, keinAbruf, jetzt),
+    wunsch: (wer, text) => teilnahme(db, {aktion: 'eintragHinzufuegen', rundeId, token: tn[wer].token, ueberId: tn[wer].id, text}, keinAbruf, jetzt),
+    idee: (wer, fuer, text) => teilnahme(db, {aktion: 'eintragHinzufuegen', rundeId, token: tn[wer].token, ueberId: tn[fuer].id, text}, keinAbruf, jetzt),
+    lauf: (mailer = versand) => wichteln.versendeNeuigkeiten(fakeAdmin, db, {mailer: mailer.factory, jetztMs: jetzt}),
+    vormerker: (geber = schenker) => db.store.get(`${NEUIGKEITEN_COLLECTION}/${rundeId}_${tn[geber].id}`),
+    teilnehmerDoc: (name) => db.store.get(`wichtelRunden/${rundeId}/teilnehmer/${tn[name].id}`),
+  };
+};
+
+const faelligMs = (vormerker) => vormerker.faelligAm.toMillis();
+
+test('Neuigkeiten: vormerken erst nach dem Ziehen, mehrere Einträge ergeben eine Mail ohne Namen und Inhalte', async () => {
+  const r = await setupNeuigkeiten();
+  await r.wunsch(r.empfaenger, 'Vor dem Ziehen des Schenkers');
+  assert.equal(r.vormerker(), undefined, 'ohne gezogenes Los keine Mail');
+
+  await r.als(r.schenker, 'ziehen');
+  r.zeit(JETZT + MINUTE);
+  await r.wunsch(r.empfaenger, 'Ein Buch über Pilze');
+  const erster = r.vormerker();
+  assert.equal(faelligMs(erster), JETZT + MINUTE + SAMMELFENSTER_MS);
+  assert.deepEqual([erster.rundeId, erster.geberId, erster.zaehler, erster.fehlversuche], [r.rundeId, r.tn[r.schenker].id, 1, 0]);
+  assert.doesNotMatch(JSON.stringify(erster), /empfaenger|ueber/i, 'der Vormerker verrät die Zuordnung nicht');
+
+  r.zeit(JETZT + 2 * MINUTE);
+  await r.wunsch(r.empfaenger, 'Wollsocken');
+  await r.idee(r.dritter, r.empfaenger, 'Kinogutschein');
+  await r.idee(r.schenker, r.empfaenger, 'Eigene Idee des Schenkers');
+  await r.wunsch(r.dritter, 'Wunsch eines anderen Gasts für sich selbst');
+  assert.equal(r.vormerker().zaehler, 3, 'eigene Idee des Schenkers zählt nicht');
+  assert.equal(faelligMs(r.vormerker()), faelligMs(erster), 'der Termin bleibt beim ersten Eintrag');
+
+  r.zeit(JETZT + 10 * MINUTE);
+  assert.deepEqual(await r.lauf(), {gesendet: 0, verworfen: 0, verschoben: 0});
+  assert.equal(r.versand.gesendet.length, 0);
+
+  r.zeit(JETZT + 32 * MINUTE);
+  assert.deepEqual(await r.lauf(), {gesendet: 1, verworfen: 0, verschoben: 0});
+  assert.equal(r.versand.gesendet.length, 1);
+  const mail = r.versand.gesendet[0];
+  assert.equal(mail.to, 'ben@example.com');
+  assert.equal(mail.subject, '📜 Neue Hinweise vom Nordpol für Ben');
+  assert.match(mail.text, /Dein Schützling hat 2 neue Wünsche auf den Wunschzettel geschrieben, und aus der Wichtelrunde gibt es eine neue Geschenkidee\./);
+  const link = `${APP_URL}/wichteln/${r.rundeId}/${r.tn[r.schenker].token}`;
+  assert.ok(mail.text.includes(`: ${link}\n`) && mail.text.includes(`: ${link}?gekauft=1\n`), 'beide Links im Text');
+  assert.ok(mail.html.includes(`href="${link}?gekauft=1"`), 'Button „Geschenk gekauft“');
+  const ganz = `${mail.subject}\n${mail.text}\n${mail.html}`;
+  const vorname = r.empfaenger.split(' ')[0];
+  assert.ok(!ganz.includes(vorname), `der Empfänger (${vorname}) steht nicht in der Mail`);
+  for (const inhalt of ['Pilze', 'Wollsocken', 'Kinogutschein']) assert.ok(!ganz.includes(inhalt), inhalt);
+  assert.equal(r.versand.geschlossen, 1);
+
+  assert.equal(r.vormerker(), undefined, 'nach dem Versand gelöscht');
+  const geber = r.teilnehmerDoc(r.schenker);
+  assert.ok(geber.neuigkeitenMailAm.toMillis() >= JETZT + 32 * MINUTE);
+  assert.ok(geber.neuigkeitenBis.toMillis() < JETZT + 32 * MINUTE);
+  const limit = r.db.store.get(`wichtelMailLimits/orga_${berlinerTag(JETZT)}`);
+  assert.equal(limit.anzahl, 4, 'drei Einladungen und eine Neuigkeiten-Mail im Tageslimit des Organisators');
+});
+
+test('Neuigkeiten: höchstens eine Mail am Tag, die nächste nennt nur, was danach kam', async () => {
+  const r = await setupNeuigkeiten({anlass: 'geburtstag'});
+  await r.als(r.schenker, 'ziehen');
+  await r.wunsch(r.empfaenger, 'Erster Wunsch');
+  r.zeit(JETZT + SAMMELFENSTER_MS);
+  await r.lauf();
+  assert.equal(r.versand.gesendet.length, 1);
+  const mailAm = r.teilnehmerDoc(r.schenker).neuigkeitenMailAm.toMillis();
+
+  r.zeit(JETZT + 2 * 60 * MINUTE);
+  await r.idee(r.dritter, r.empfaenger, 'Idee am selben Tag');
+  await r.idee(r.dritter, r.empfaenger, 'Noch eine Idee');
+  assert.equal(faelligMs(r.vormerker()), mailAm + MINDESTABSTAND_MS);
+  r.zeit(JETZT + 5 * 60 * MINUTE);
+  await r.lauf();
+  assert.equal(r.versand.gesendet.length, 1, 'noch keine zweite Mail am selben Tag');
+
+  r.zeit(mailAm + MINDESTABSTAND_MS);
+  assert.deepEqual(await r.lauf(), {gesendet: 1, verworfen: 0, verschoben: 0});
+  const zweite = r.versand.gesendet[1];
+  assert.equal(zweite.subject, '🎁 Neuigkeiten für dein Wichtelgeschenk, Ben');
+  assert.match(zweite.text, /\n\nFür die Person, die du beschenkst, gibt es 2 neue Geschenkideen aus der Runde\.\n\n/);
+});
+
+test('Neuigkeiten: Sprache aus dem Gästeprofil des Schenkers', async () => {
+  const r = await setupNeuigkeiten({anlass: 'geburtstag'});
+  const anna = 'Anna Muster';
+  const ihrEmpfaenger = r.empfaengerVon(anna);
+  await r.als(anna, 'ziehen');
+  await r.wunsch(ihrEmpfaenger, 'Tee');
+  r.zeit(JETZT + SAMMELFENSTER_MS);
+  await r.lauf();
+  const mail = r.versand.gesendet.find((m) => m.to === 'anna@example.com');
+  assert.equal(mail.subject, '🎁 There\'s news on your gift exchange, Anna');
+  assert.match(mail.text, /The person you're giving a gift to has added a new wish\./);
+});
+
+test('Neuigkeiten: „Geschenk gekauft“ stoppt die Mails, Zurücknehmen startet sie wieder', async () => {
+  const r = await setupNeuigkeiten();
+  await r.als(r.schenker, 'ziehen');
+  await r.wunsch(r.empfaenger, 'Wunsch 1');
+  assert.ok(r.vormerker());
+  await r.als(r.schenker, 'geschenkGekauft', {gekauft: true});
+  await r.wunsch(r.empfaenger, 'Wunsch 2');
+  assert.equal(r.vormerker().zaehler, 1, 'nach „gekauft“ zählt kein Eintrag mehr');
+
+  r.zeit(JETZT + SAMMELFENSTER_MS);
+  assert.deepEqual(await r.lauf(), {gesendet: 0, verworfen: 1, verschoben: 0});
+  assert.equal(r.vormerker(), undefined);
+  await r.wunsch(r.empfaenger, 'Wunsch 3');
+  assert.equal(r.vormerker(), undefined);
+
+  await r.als(r.schenker, 'geschenkGekauft', {gekauft: false});
+  await r.wunsch(r.empfaenger, 'Wunsch 4');
+  r.zeit(JETZT + 2 * SAMMELFENSTER_MS);
+  assert.deepEqual(await r.lauf(), {gesendet: 1, verworfen: 0, verschoben: 0});
+  assert.match(r.versand.gesendet[0].text, /hat 4 neue Wünsche/, 'auch die nie gemeldeten Wünsche zählen');
+});
+
+test('Neuigkeiten: kein Vormerker ohne Adresse oder vor dem Auslosen; gelöschter Eintrag ergibt keine Mail', async () => {
+  const r = await setupNeuigkeiten();
+  const dana = 'Dana';
+  await r.als(dana, 'ziehen');
+  await r.wunsch(r.empfaengerVon(dana), 'Für Danas Empfänger');
+  assert.equal(r.vormerker(dana), undefined, 'Danas Gästeprofil hat keine Adresse');
+
+  await r.als(r.schenker, 'ziehen');
+  const sicht = await r.wunsch(r.empfaenger, 'Gleich wieder weg');
+  assert.ok(r.vormerker());
+  await r.als(r.empfaenger, 'eintragLoeschen', {eintragId: sicht.meineWuensche.find((w) => w.text === 'Gleich wieder weg').id});
+  r.zeit(JETZT + SAMMELFENSTER_MS);
+  assert.deepEqual(await r.lauf(), {gesendet: 0, verworfen: 1, verschoben: 0});
+  assert.equal(r.versand.gesendet.length, 0);
+  assert.equal(r.versand.erstellt, 1);
+
+  const offen = await setupRunde();
+  await offen.als('Anna', 'eintragHinzufuegen', {ueberId: offen.tn.Anna.id, text: 'Vor dem Auslosen'});
+  assert.ok(![...offen.db.store.keys()].some((pfad) => pfad.startsWith(`${NEUIGKEITEN_COLLECTION}/`)));
+});
+
+test('Neuigkeiten: Einträge während des Versands gehen mit der nächsten Mail raus', async () => {
+  const r = await setupNeuigkeiten();
+  await r.als(r.schenker, 'ziehen');
+  await r.wunsch(r.empfaenger, 'Vor dem Versand');
+  r.zeit(JETZT + SAMMELFENSTER_MS);
+  const mailer = makeMailer();
+  const factory = mailer.factory;
+  mailer.factory = () => {
+    const transport = factory();
+    return {
+      ...transport,
+      senden: async (mail) => {
+        await r.wunsch(r.empfaenger, 'Während des Versands');
+        return transport.senden(mail);
+      },
+    };
+  };
+  assert.deepEqual(await r.lauf(mailer), {gesendet: 1, verworfen: 0, verschoben: 0});
+  assert.match(mailer.gesendet[0].text, /hat einen neuen Wunsch/);
+  const bleibt = r.vormerker();
+  assert.ok(bleibt, 'der Vormerker bleibt für den späten Eintrag');
+  assert.equal(faelligMs(bleibt), JETZT + SAMMELFENSTER_MS + MINDESTABSTAND_MS);
+
+  r.zeit(faelligMs(bleibt));
+  assert.deepEqual(await r.lauf(), {gesendet: 1, verworfen: 0, verschoben: 0});
+  assert.match(r.versand.gesendet[0].text, /hat einen neuen Wunsch/);
+  assert.equal(r.vormerker(), undefined);
+});
+
+test('Neuigkeiten: Tageslimit, fehlender Mailversand und Fehler verschieben, nach drei Fehlversuchen verworfen', async () => {
+  const r = await setupNeuigkeiten();
+  await r.als(r.schenker, 'ziehen');
+  await r.wunsch(r.empfaenger, 'Wunsch');
+  let jetzt = JETZT + SAMMELFENSTER_MS;
+  r.zeit(jetzt);
+
+  const limitPfad = `wichtelMailLimits/orga_${berlinerTag(jetzt)}`;
+  const vorher = r.db.store.get(limitPfad);
+  r.db.store.set(limitPfad, {...vorher, anzahl: MAX_MAILS_PRO_TAG});
+  assert.deepEqual(await r.lauf(), {gesendet: 0, verworfen: 0, verschoben: 1});
+  assert.equal(faelligMs(r.vormerker()), jetzt + NEUER_VERSUCH_MS);
+  assert.equal(r.vormerker().fehlversuche, 0, 'Tageslimit ist kein Fehlversuch');
+  r.db.store.set(limitPfad, vorher);
+
+  jetzt += NEUER_VERSUCH_MS;
+  r.zeit(jetzt);
+  assert.deepEqual(await r.lauf({factory: () => null}), {gesendet: 0, verworfen: 0, verschoben: 1}, 'ohne SMTP');
+  assert.equal(r.vormerker().fehlversuche, 0);
+
+  const kaputt = makeMailer({fehlerFuer: ['ben@example.com']});
+  const {zeilen} = await mitStillemLog(async () => {
+    for (const erwartet of [{verschoben: 1, fehlversuche: 1}, {verschoben: 1, fehlversuche: 2}, {verworfen: 1}]) {
+      jetzt += NEUER_VERSUCH_MS;
+      r.zeit(jetzt);
+      const ergebnis = await r.lauf(kaputt);
+      assert.equal(ergebnis.verschoben, erwartet.verschoben || 0);
+      assert.equal(ergebnis.verworfen, erwartet.verworfen || 0);
+      if (erwartet.fehlversuche) assert.equal(r.vormerker().fehlversuche, erwartet.fehlversuche);
+    }
+  });
+  assert.equal(r.vormerker(), undefined);
+  assert.equal(kaputt.gesendet.length, 0);
+  assert.ok(zeilen.length >= 3);
+  for (const zeile of zeilen) assert.doesNotMatch(zeile, /@/, 'keine Adresse im Log');
+});
+
+test('Neuigkeiten: Zurücksetzen und Löschen der Runde räumen Vormerker ab; ohne Fälliges keine Verbindung', async () => {
+  const r = await setupNeuigkeiten();
+  await r.als(r.schenker, 'ziehen');
+  await r.wunsch(r.empfaenger, 'Wunsch');
+  assert.ok(r.vormerker());
+  await r.orga({aktion: 'zuruecksetzen', rundeId: r.rundeId});
+  assert.equal(r.vormerker(), undefined);
+
+  await r.orga({aktion: 'auslosen', rundeId: r.rundeId});
+  const neuerSchenker = Object.keys(r.tn).find((name) => name !== 'Dana' && r.empfaengerVon(name) !== 'Dana');
+  await r.als(neuerSchenker, 'ziehen');
+  await r.wunsch(r.empfaengerVon(neuerSchenker), 'Nach dem neuen Auslosen');
+  assert.ok(r.vormerker(neuerSchenker));
+  await r.orga({aktion: 'loeschen', rundeId: r.rundeId});
+  assert.ok(![...r.db.store.keys()].some((pfad) => pfad.startsWith(`${NEUIGKEITEN_COLLECTION}/`)));
+
+  r.zeit(JETZT + MINDESTABSTAND_MS);
+  assert.deepEqual(await r.lauf(), {gesendet: 0, verworfen: 0, verschoben: 0});
+  assert.equal(r.versand.erstellt, 0, 'ohne fällige Vormerker wird kein Mailer erzeugt');
 });

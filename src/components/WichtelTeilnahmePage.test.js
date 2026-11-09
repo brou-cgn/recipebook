@@ -169,6 +169,70 @@ describe('WichtelTeilnahmePage', () => {
     expect(mockGekauft).toHaveBeenLastCalledWith('runde1', 'tok', false);
   });
 
+  describe('Button „Geschenk gekauft“ aus der Neuigkeiten-Mail (?gekauft=1)', () => {
+    const mit = (gekauft) => {
+      const basis = gezogenBen('de');
+      return { ...basis, los: { ...basis.los, gekauft } };
+    };
+    const oeffne = (adresse) => window.history.replaceState({}, '', adresse);
+    afterEach(() => oeffne('/'));
+
+    it('fragt oben nach, setzt den Status erst per Klick und nimmt den Parameter aus der Adresse', async () => {
+      oeffne('/wichteln/runde1/tok?gekauft=1#oben');
+      mockLaden.mockResolvedValue(mit(false));
+      mockGekauft.mockResolvedValue(mit(true));
+      renderSeite();
+      const frage = await screen.findByRole('heading', { name: 'Geschenk für Ben gekauft?' });
+      expect(window.location.pathname + window.location.search + window.location.hash).toBe('/wichteln/runde1/tok#oben');
+      expect(mockGekauft).not.toHaveBeenCalled();
+      const karte = frage.closest('section');
+      fireEvent.click(within(karte).getByRole('button', { name: 'Ja, Geschenk gekauft' }));
+      expect(await within(karte).findByText(/^Erledigt: Dein Geschenk für Ben ist als gekauft markiert\./)).toBeInTheDocument();
+      expect(mockGekauft).toHaveBeenCalledWith('runde1', 'tok', true);
+      expect(screen.getByRole('checkbox', { name: /Ich habe das Geschenk gekauft/ })).toBeChecked();
+    });
+
+    it('„Noch nicht“ blendet die Rückfrage aus, ohne etwas zu ändern', async () => {
+      oeffne('/wichteln/runde1/tok?gekauft=1');
+      mockLaden.mockResolvedValue(mit(false));
+      renderSeite();
+      fireEvent.click(await screen.findByRole('button', { name: 'Noch nicht' }));
+      expect(screen.queryByRole('heading', { name: 'Geschenk für Ben gekauft?' })).not.toBeInTheDocument();
+      expect(mockGekauft).not.toHaveBeenCalled();
+    });
+
+    it('schon gekauft: bestätigt nur; ohne gezogenes Los oder ohne Parameter keine Rückfrage', async () => {
+      oeffne('/wichteln/runde1/tok?gekauft=1');
+      mockLaden.mockResolvedValue(mit(true));
+      const { unmount } = renderSeite();
+      expect(await screen.findByText(/^Erledigt: Dein Geschenk für Ben ist als gekauft markiert\./)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Ja, Geschenk gekauft' })).not.toBeInTheDocument();
+      unmount();
+
+      oeffne('/wichteln/runde1/tok?gekauft=1');
+      mockLaden.mockResolvedValue(sicht({ runde: { ...sicht().runde, status: 'ausgelost' }, los: { gezogen: false } }));
+      const zweite = renderSeite();
+      await screen.findByRole('button', { name: 'Los ziehen' });
+      expect(screen.queryByText(/gekauft\?/)).not.toBeInTheDocument();
+      zweite.unmount();
+
+      oeffne('/wichteln/runde1/tok');
+      mockLaden.mockResolvedValue(mit(false));
+      renderSeite();
+      await screen.findByRole('checkbox', { name: /Ich habe das Geschenk gekauft/ });
+      expect(screen.queryByRole('heading', { name: 'Geschenk für Ben gekauft?' })).not.toBeInTheDocument();
+    });
+
+    it('fragt in der Sprache des Gasts', async () => {
+      oeffne('/wichteln/runde1/tok?gekauft=1');
+      const basis = gezogenBen('fr');
+      mockLaden.mockResolvedValue({ ...basis, los: { ...basis.los, gekauft: false } });
+      renderSeite();
+      expect(await screen.findByRole('heading', { name: 'Tu as acheté le cadeau pour Ben\u00A0?' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Oui, je l’ai acheté' })).toBeInTheDocument();
+    });
+  });
+
   it('zeigt einen Fehler beim Ziehen an und lässt es erneut versuchen', async () => {
     mockLaden.mockResolvedValue(sicht({ runde: { ...sicht().runde, status: 'ausgelost' }, los: { gezogen: false } }));
     mockZiehen.mockRejectedValue(Object.assign(new Error('Es wurde noch nicht ausgelost.'), { code: 'functions/failed-precondition' }));

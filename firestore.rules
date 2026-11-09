@@ -551,6 +551,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Vorgemerkte Neuigkeiten-Mails an Wichtel-Schenker (je Runde und Schenker, ohne Zuordnung;
+    // functions/wichteln.js, geplante Function wichtelNeuigkeitenVersenden), nur Admin SDK.
+    match /wichtelNeuigkeiten/{id} {
+      allow read, write: if false;
+    }
+
     // Cook dates collection - global tracking of when users cooked recipes
     match /cookDates/{cookDateId} {
       allow read: if isMember();

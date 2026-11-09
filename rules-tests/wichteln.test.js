@@ -76,3 +76,15 @@ test('wichtelMailLimits: Tageszähler für Einladungs-Mails nur über Cloud Func
     await assertFails(db.doc('wichtelMailLimits/editor_2026-12-01').delete());
   }
 });
+
+test('wichtelNeuigkeiten: vorgemerkte Neuigkeiten-Mails nur über Cloud Functions', async () => {
+  await seed(env, async (db) => {
+    await db.doc('wichtelNeuigkeiten/runde1_geber1').set({ rundeId: 'runde1', geberId: 'geber1', zaehler: 1, fehlversuche: 0 });
+  });
+  for (const db of Object.values(alle(env))) {
+    await assertFails(db.doc('wichtelNeuigkeiten/runde1_geber1').get());
+    await assertFails(db.collection('wichtelNeuigkeiten').where('rundeId', '==', 'runde1').limit(10).get());
+    await assertFails(db.doc('wichtelNeuigkeiten/runde1_geber1').set({ rundeId: 'runde1', geberId: 'geber1', zaehler: 0 }));
+    await assertFails(db.doc('wichtelNeuigkeiten/runde1_geber1').delete());
+  }
+});

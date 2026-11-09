@@ -1,10 +1,14 @@
 /**
- * Wichtel-Einladung per Mail: Betreff, Text und HTML. Reine Funktionen, damit die Tests die
- * Vorlagen ohne SMTP prüfen können; verschickt wird in wichteln.js.
+ * Wichtel-Mails: Betreff, Text und HTML. Reine Funktionen, damit die Tests die Vorlagen ohne
+ * SMTP prüfen können; verschickt wird in wichteln.js.
+ *  - Einladung (baueEinladungsMail): persönlicher Link zum Los, beim Eintragen eines Gasts.
+ *  - Neuigkeiten (baueNeuigkeitenMail): an den Schenker, wenn sein Empfänger neue Wünsche oder
+ *    andere Gäste neue Ideen für ihn eingetragen haben; mit Button „Geschenk gekauft“.
  *
- * Zwei Varianten, gewählt nur nach dem Anlass der Runde: north_pole („Post vom Nordpol“) für
- * Weihnachten und Nikolaus, warm_casual für alles andere. Die Sprache kommt aus dem Gästeprofil
- * (shared/sprachen.js, Fallback Deutsch). Die Texte stehen in wichtelMailTexte/<sprache>.js.
+ * Zwei Varianten je Mail, gewählt nur nach dem Anlass der Runde: north_pole („Post vom Nordpol“)
+ * für Weihnachten und Nikolaus, warm_casual für alles andere. Die Sprache kommt aus dem
+ * Gästeprofil (shared/sprachen.js, Fallback Deutsch). Die Texte stehen in
+ * wichtelMailTexte/<sprache>.js.
  *
  * Alles, was der Organisator eingibt (Name, Titel, Budget, Hinweis, sein Vorname), steht im
  * HTML nur escaped. Budget und Hinweis erscheinen so, wie er sie geschrieben hat; das Budget
@@ -24,6 +28,17 @@ const TEXTE = {
 const NORDPOL_ANLAESSE = new Set(['weihnachten', 'nikolaus']);
 
 const ZAHLFORMAT = {de: 'de-DE', en: 'en-GB', fr: 'fr-FR'};
+
+// Inline-Styles: Mail-Clients ignorieren Stylesheets weitgehend.
+const STIL = {
+  absatz: 'margin:0 0 16px;',
+  leise: 'margin:0 0 16px;font-size:14px;color:#5f5f5f;',
+  knopf: 'display:inline-block;padding:12px 22px;border-radius:8px;background:#2f5d50;' +
+    'color:#ffffff;font-weight:bold;text-decoration:none;',
+  knopfZweit: 'display:inline-block;padding:10px 20px;border-radius:8px;border:2px solid #2f5d50;' +
+    'background:#ffffff;color:#2f5d50;font-weight:bold;text-decoration:none;',
+  link: 'color:#2f5d50;word-break:break-all;',
+};
 
 /**
  * @param {*} anlass - Anlass-Schlüssel der Runde
@@ -60,16 +75,66 @@ function formatiereBudget(wert, sprache) {
 
 /**
  * Ersetzt {name}-Platzhalter in einem Textbaustein in einem Durchgang (Werte werden nicht
- * erneut durchsucht). Für HTML wird Vorlage und Wert escaped. Unbekannte Platzhalter bleiben
- * stehen; der Test „kein {…} übrig“ fängt sie.
+ * erneut durchsucht). Für HTML wird Vorlage und Wert escaped; Werte aus `roh` sind schon
+ * fertiges HTML (z. B. ein Link) und werden unverändert eingesetzt. Unbekannte Platzhalter
+ * bleiben stehen; der Test „kein {…} übrig“ fängt sie.
  * @param {string} vorlage - Textbaustein
  * @param {object} werte - Platzhalter → Wert
  * @param {boolean} html - HTML-escapen
+ * @param {object} [roh] - Platzhalter → fertiges HTML (nur mit html)
  * @return {string}
  */
-function fuelle(vorlage, werte, html) {
+function fuelle(vorlage, werte, html, roh = {}) {
   const e = html ? escapeHtml : (s) => s;
-  return e(vorlage).replace(/\{(\w+)\}/g, (treffer, key) => (key in werte ? e(String(werte[key])) : treffer));
+  return e(vorlage).replace(/\{(\w+)\}/g, (treffer, key) => {
+    if (html && key in roh) return roh[key];
+    return key in werte ? e(String(werte[key])) : treffer;
+  });
+}
+
+/** @return {string} Absatz mit fertigem HTML-Inhalt */
+function absatz(inhalt, stil = STIL.absatz) {
+  return `<p style="${stil}">${inhalt}</p>`;
+}
+
+/** @return {string} Link als Button (Ziel escaped, Beschriftung schon fertiges HTML) */
+function knopf(link, beschriftung, stil = STIL.knopf) {
+  return `<a href="${escapeHtml(link)}" style="${stil}">${beschriftung}</a>`;
+}
+
+/** @return {string} Link, der seine Adresse zeigt (Fallback unter den Buttons) */
+function sichtbarerLink(link) {
+  return `<a href="${escapeHtml(link)}" style="${STIL.link}">${escapeHtml(link)}</a>`;
+}
+
+/**
+ * Rahmen jeder Wichtel-Mail: weiße Karte mit dem Inhalt, darunter klein und grau der Grund.
+ * @param {{sprache: string, titel: string, inhalt: string[], fuss: string}} teile - fertiges
+ *   HTML; leere Einträge in `inhalt` entfallen
+ * @return {string}
+ */
+function htmlRahmen({sprache, titel, inhalt, fuss}) {
+  return [
+    '<!DOCTYPE html>',
+    `<html lang="${sprache}">`,
+    '<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">',
+    `<title>${titel}</title></head>`,
+    '<body style="margin:0;padding:0;background:#f5f3ef;">',
+    '<div style="max-width:520px;margin:0 auto;padding:24px 16px;font-family:Arial,Helvetica,sans-serif;' +
+      'font-size:16px;line-height:1.5;color:#2b2b2b;">',
+    '<div style="background:#ffffff;border-radius:12px;padding:24px;">',
+    ...inhalt,
+    '</div>',
+    `<p style="margin:16px 0 0;font-size:12px;color:#7a7a7a;text-align:center;">${fuss}</p>`,
+    '</div>',
+    '</body>',
+    '</html>',
+  ].filter(Boolean).join('\n');
+}
+
+/** Betreff einzeilig: ein Zeilenumbruch aus einer Eingabe darf keine Kopfzeile anfangen. */
+function einzeilig(text) {
+  return text.replace(/[\r\n]+/g, ' ');
 }
 
 /**
@@ -80,9 +145,9 @@ function fuelle(vorlage, werte, html) {
  */
 function baueEinladungsMail({sprache, anlass, name, titel, link, budget = '', hinweis = '', organisator = null}) {
   const s = normalisiereSprache(sprache);
-  const variante = waehleVariante(anlass);
-  const t = TEXTE[s][variante];
-  const gemeinsam = TEXTE[s].gemeinsam;
+  const texte = TEXTE[s].einladung;
+  const t = texte[waehleVariante(anlass)];
+  const gemeinsam = texte.gemeinsam;
   const von = organisator || null;
   const werte = {
     firstName: ersterVorname(name),
@@ -97,7 +162,6 @@ function baueEinladungsMail({sprache, anlass, name, titel, link, budget = '', hi
   const intro = von ? t.intro : t.introOhneHost;
   const grund = von ? gemeinsam.grund : gemeinsam.grundOhneHost;
 
-  const betreff = fuelle(t.betreff, werte, false).replace(/[\r\n]+/g, ' ');
   const text = [
     fuelle(t.anrede, werte, false),
     fuelle(intro, werte, false),
@@ -111,38 +175,104 @@ function baueEinladungsMail({sprache, anlass, name, titel, link, budget = '', hi
   ].join('\n\n');
 
   const h = (vorlage) => fuelle(vorlage, werte, true);
-  const e = escapeHtml;
-  const absatz = 'margin:0 0 16px;';
-  const leise = 'margin:0 0 16px;font-size:14px;color:#5f5f5f;';
-  const html = [
-    '<!DOCTYPE html>',
-    `<html lang="${s}">`,
-    '<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">',
-    `<title>${h(t.betreff)}</title></head>`,
-    '<body style="margin:0;padding:0;background:#f5f3ef;">',
-    '<div style="max-width:520px;margin:0 auto;padding:24px 16px;font-family:Arial,Helvetica,sans-serif;' +
-      'font-size:16px;line-height:1.5;color:#2b2b2b;">',
-    '<div style="background:#ffffff;border-radius:12px;padding:24px;">',
-    `<p style="${absatz}">${h(t.anrede)}</p>`,
-    `<p style="${absatz}">${h(intro)}</p>`,
-    `<p style="${absatz}">${h(t.erklaerung)}</p>`,
-    budgetZeile ? `<p style="${absatz}"><strong>${h(budgetZeile)}</strong></p>` : '',
-    hinweisZeile ? `<p style="${leise}">${h(hinweisZeile)}</p>` : '',
-    '<p style="margin:24px 0;">' +
-      `<a href="${e(link)}" style="display:inline-block;padding:12px 22px;border-radius:8px;background:#2f5d50;` +
-      `color:#ffffff;font-weight:bold;text-decoration:none;">${h(t.knopf)}</a></p>`,
-    `<p style="${leise}">${h(t.linkErsatz)}<br>` +
-      `<a href="${e(link)}" style="color:#2f5d50;word-break:break-all;">${e(link)}</a></p>`,
-    `<p style="${leise}">${h(t.geheim)}</p>`,
-    `<p style="${absatz}margin-bottom:0;">${h(t.gruss)}</p>`,
-    '</div>',
-    `<p style="margin:16px 0 0;font-size:12px;color:#7a7a7a;text-align:center;">${h(grund)}</p>`,
-    '</div>',
-    '</body>',
-    '</html>',
-  ].filter(Boolean).join('\n');
+  const html = htmlRahmen({
+    sprache: s,
+    titel: h(t.betreff),
+    inhalt: [
+      absatz(h(t.anrede)),
+      absatz(h(intro)),
+      absatz(h(t.erklaerung)),
+      budgetZeile ? absatz(`<strong>${h(budgetZeile)}</strong>`) : '',
+      hinweisZeile ? absatz(h(hinweisZeile), STIL.leise) : '',
+      absatz(knopf(link, h(t.knopf)), 'margin:24px 0;'),
+      absatz(`${h(t.linkErsatz)}<br>${sichtbarerLink(link)}`, STIL.leise),
+      absatz(h(t.geheim), STIL.leise),
+      absatz(h(t.gruss), `${STIL.absatz}margin-bottom:0;`),
+    ],
+    fuss: h(grund),
+  });
 
-  return {subject: betreff, text, html};
+  return {subject: einzeilig(fuelle(t.betreff, werte, false)), text, html};
 }
 
-module.exports = {baueEinladungsMail, _internal: {TEXTE, waehleVariante, ersterVorname, formatiereBudget, fuelle}};
+/**
+ * Neuigkeiten für den Schenker: wie viele Wünsche sein Empfänger und wie viele Ideen andere
+ * Gäste seit der letzten Mail eingetragen haben. Den Empfänger nennt die Mail nicht, auch
+ * keine Inhalte; beides steht hinter dem persönlichen Link.
+ * @param {{sprache?: string, anlass?: string, name: string, titel: string, link: string,
+ *   linkGekauft: string, wuensche?: number, ideen?: number, budget?: string, hinweis?: string}} params
+ *   name: Name des Schenkers; linkGekauft: persönlicher Link, der die Rückfrage
+ *   „Geschenk gekauft?“ öffnet; wuensche/ideen: Anzahl neuer Einträge (zusammen mindestens 1)
+ * @return {{subject: string, text: string, html: string}}
+ */
+function baueNeuigkeitenMail({
+  sprache, anlass, name, titel, link, linkGekauft, wuensche = 0, ideen = 0, budget = '', hinweis = '',
+}) {
+  if (!(wuensche > 0 || ideen > 0)) throw new Error('baueNeuigkeitenMail braucht mindestens einen neuen Eintrag');
+  const s = normalisiereSprache(sprache);
+  const texte = TEXTE[s].neuigkeiten;
+  const t = texte[waehleVariante(anlass)];
+  const g = texte.gemeinsam;
+  const anzahl = (formen, n) => fuelle(n === 1 ? formen.eins : formen.mehrere, {anzahl: n}, false);
+  const werte = {
+    firstName: ersterVorname(name),
+    eventName: titel,
+    budget: formatiereBudget(budget, s),
+    hinweis,
+    wuensche: anzahl(g.anzahl.wunsch, wuensche),
+    ideen: anzahl(g.anzahl.idee, ideen),
+  };
+  let neuigkeit = t.nurIdeen;
+  if (wuensche > 0) neuigkeit = ideen > 0 ? t.beides : t.nurWuensche;
+  const budgetZeile = werte.budget ? t.budget : null;
+  const hinweisZeile = hinweis ? g.hinweis : null;
+
+  const text = [
+    fuelle(t.anrede, werte, false),
+    fuelle(t.intro, werte, false),
+    fuelle(neuigkeit, werte, false),
+    fuelle(t.aufruf, werte, false),
+    ...(budgetZeile ? [fuelle(budgetZeile, werte, false)] : []),
+    ...(hinweisZeile ? [fuelle(hinweisZeile, werte, false)] : []),
+    fuelle(t.gekauftFrage, werte, false),
+    [
+      fuelle(t.linkErsatz, werte, false),
+      fuelle(g.linkZeile, {label: t.knopf, link}, false),
+      fuelle(g.linkZeile, {label: t.knopfGekauft, link: linkGekauft}, false),
+    ].join('\n'),
+    fuelle(t.geheim, werte, false),
+    fuelle(t.gruss, werte, false),
+    `-- \n${fuelle(t.grund, werte, false)}`,
+  ].join('\n\n');
+
+  const h = (vorlage) => fuelle(vorlage, werte, true);
+  const linkZeile = (label, ziel) => fuelle(g.linkZeile, {label}, true, {link: sichtbarerLink(ziel)});
+  const html = htmlRahmen({
+    sprache: s,
+    titel: h(t.betreff),
+    inhalt: [
+      absatz(h(t.anrede)),
+      absatz(h(t.intro)),
+      absatz(h(neuigkeit)),
+      absatz(h(t.aufruf)),
+      budgetZeile ? absatz(`<strong>${h(budgetZeile)}</strong>`) : '',
+      hinweisZeile ? absatz(h(hinweisZeile), STIL.leise) : '',
+      absatz(knopf(link, h(t.knopf)), 'margin:24px 0;'),
+      absatz(h(t.gekauftFrage)),
+      absatz(knopf(linkGekauft, h(t.knopfGekauft), STIL.knopfZweit), 'margin:0 0 24px;'),
+      absatz(`${h(t.linkErsatz)}<br>${linkZeile(t.knopf, link)}<br>${linkZeile(t.knopfGekauft, linkGekauft)}`,
+          STIL.leise),
+      absatz(h(t.geheim), STIL.leise),
+      absatz(h(t.gruss), `${STIL.absatz}margin-bottom:0;`),
+    ],
+    fuss: h(t.grund),
+  });
+
+  return {subject: einzeilig(fuelle(t.betreff, werte, false)), text, html};
+}
+
+module.exports = {
+  baueEinladungsMail,
+  baueNeuigkeitenMail,
+  _internal: {TEXTE, waehleVariante, ersterVorname, formatiereBudget, fuelle},
+};
