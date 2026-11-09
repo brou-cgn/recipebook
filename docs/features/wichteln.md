@@ -8,7 +8,7 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
 
 **Organisator** (Events > „Wichteln“, mobil der Geschenk-Button unten links; ab Rolle `edit`):
 
-1. Runde anlegen: Titel, optional Budget und Hinweis (z. B. „Bescherung am 13.12.“).
+1. Runde anlegen: Titel, optional Anlass (Weihnachten, Nikolaus, Silvester, Ostern, Geburtstag, Hochzeit, Jubiläum, Firmenfeier, Sommerfest, Abschied, Einweihung, Sonstiges), Budget und Hinweis (z. B. „Bescherung am 13.12.“).
 2. Teilnehmer eintragen – mehrere auf einmal mit Komma, oder per Tipp aus der eigenen Gästeliste.
    Namen sind je Runde eindeutig (Groß-/Kleinschreibung egal). Ein Gast aus der Gästeliste (per Tipp
    oder mit genau seinem Namen eingetippt) wird mit dem Teilnehmer verknüpft und ist je Runde nur
@@ -77,7 +77,7 @@ kein Schutz gegen ihn.
 ## Datenmodell
 
 ```
-wichtelRunden/{rundeId}            ownerId, titel, budget, hinweis, status ('offen'|'ausgelost'),
+wichtelRunden/{rundeId}            ownerId, titel, anlass (Schlüssel oder ''), budget, hinweis, status ('offen'|'ausgelost'),
                                    teilnehmerAnzahl, ausgelostAm, erstelltAm, aktualisiertAm
   teilnehmer/{teilnehmerId}        name, token (geheim), reihenfolge, ausschluesse (Teilnehmer-IDs,
                                    die er nicht ziehen soll; fehlt bei älteren = keine), geoeffnetAm,
