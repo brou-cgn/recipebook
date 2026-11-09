@@ -39,11 +39,11 @@ export const listeWichtelRunden = async () => (await rufeVerwalten('liste'))?.ru
 export const ladeWichtelRunde = (rundeId) => rufeVerwalten('laden', { rundeId });
 
 /** namen: wie bei fuegeWichtelTeilnehmerHinzu */
-export const legeWichtelRundeAn = ({ titel, budget, hinweis, namen = [] }) =>
-  rufeVerwalten('anlegen', { titel, budget, hinweis, namen }, namen.length > 0 ? MIT_MAILVERSAND : undefined);
+export const legeWichtelRundeAn = ({ titel, anlass, budget, hinweis, namen = [] }) =>
+  rufeVerwalten('anlegen', { titel, anlass, budget, hinweis, namen }, namen.length > 0 ? MIT_MAILVERSAND : undefined);
 
-export const aendereWichtelRunde = (rundeId, { titel, budget, hinweis }) =>
-  rufeVerwalten('aendern', { rundeId, titel, budget, hinweis });
+export const aendereWichtelRunde = (rundeId, { titel, anlass, budget, hinweis }) =>
+  rufeVerwalten('aendern', { rundeId, titel, anlass, budget, hinweis });
 
 /**
  * @param {string} rundeId
