@@ -63,6 +63,8 @@ const MAX_VERSUCHE = 2000;
 const MAX_SUCHSCHRITTE = 20000;
 
 const LAENGE = {titel: 80, budget: 40, hinweis: 300, name: 60, text: 300};
+// Anlass der Runde (optional); gleiche Liste wie src/utils/wichtelAnlaesse.js
+const ANLAESSE = new Set(['weihnachten', 'nikolaus', 'silvester', 'ostern', 'geburtstag', 'hochzeit', 'jubilaeum', 'firmenfeier', 'sommerfest', 'abschied', 'einweihung', 'sonstiges']);
 const ORGANISATOR_ROLLEN = new Set(['edit', 'moderator', 'admin']);
 // Ergebnis der letzten Einladungs-Mail je Teilnehmer (Feld mailStatus)
 const MAIL_STATUS = new Set(['gesendet', 'fehler']);
@@ -433,6 +435,7 @@ function rundenKopf(rundeId, runde, teilnehmerAnzahl) {
   return {
     id: rundeId,
     titel: runde.titel || '',
+    anlass: ANLAESSE.has(runde.anlass) ? runde.anlass : '',
     budget: runde.budget || '',
     hinweis: runde.hinweis || '',
     status: runde.status === 'ausgelost' ? 'ausgelost' : 'offen',
@@ -469,6 +472,7 @@ function leseRundenFelder(daten, HttpsError) {
   if (!titel) throw new HttpsError('invalid-argument', 'Bitte gib der Runde einen Titel.');
   return {
     titel,
+    anlass: ANLAESSE.has(daten.anlass) ? daten.anlass : '',
     budget: bereinige(daten.budget, LAENGE.budget),
     hinweis: bereinige(daten.hinweis, LAENGE.hinweis),
   };
