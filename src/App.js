@@ -2615,27 +2615,9 @@ function App() {
     clearSharedDataFromDB();
   };
 
-  // Show splash screen while checking auth. It is always rendered as the
-  // first child of the same top-level fragment across every branch below
-  // (never as the entire return value on its own) so that React keeps
-  // reconciling it at the same tree position instead of unmounting and
-  // remounting it — and replaying its enter animations — when the branch
-  // taken by the rest of the render changes (e.g. authLoading flips to
-  // false right into the "still loading startseite data" branch further
-  // down). See splash-screen-logo-in / splash-screen-fade-up in
-  // SplashScreen.css for the animations this avoids re-triggering.
-  // On a recovery navigation (see utils/navigationType.js), skip it
-  // entirely instead - there's nothing to avoid re-triggering since it
-  // never shows in the first place.
-  if (authLoading) {
-    return isRecoveryNavigation() ? <></> : (
-      <>
-        <SplashScreen />
-      </>
-    );
-  }
-
-  // Wichtel-Link: Teilnehmerseite, kein Login nötig (das Token im Link ist die Berechtigung)
+  // Wichtel-Link: Teilnehmerseite, kein Login nötig (das Token im Link ist die Berechtigung).
+  // Steht bewusst vor dem Splash Screen: Teilnehmer sehen ihn beim Aufruf ihres Links nicht,
+  // die Seite wartet nicht auf die Anmeldeprüfung.
   if (wichtelLink) {
     const handleWichtelClose = () => {
       if (window.location.pathname.startsWith('/wichteln/')) {
@@ -2661,6 +2643,26 @@ function App() {
             />
           </Suspense>
         </div>
+      </>
+    );
+  }
+
+  // Show splash screen while checking auth. It is always rendered as the
+  // first child of the same top-level fragment across every branch below
+  // (never as the entire return value on its own) so that React keeps
+  // reconciling it at the same tree position instead of unmounting and
+  // remounting it — and replaying its enter animations — when the branch
+  // taken by the rest of the render changes (e.g. authLoading flips to
+  // false right into the "still loading startseite data" branch further
+  // down). See splash-screen-logo-in / splash-screen-fade-up in
+  // SplashScreen.css for the animations this avoids re-triggering.
+  // On a recovery navigation (see utils/navigationType.js), skip it
+  // entirely instead - there's nothing to avoid re-triggering since it
+  // never shows in the first place.
+  if (authLoading) {
+    return isRecoveryNavigation() ? <></> : (
+      <>
+        <SplashScreen />
       </>
     );
   }
