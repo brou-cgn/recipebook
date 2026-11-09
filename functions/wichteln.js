@@ -551,7 +551,7 @@ function mailFehlerCode(err) {
  * rausging, steht als 'fehler' am Teilnehmer und in der Antwort (grund).
  * @param {object} ctx - {admin, db, uid, organisatorName, mailer, jetztMs}
  * @param {string} rundeId - Runde
- * @param {object} runde - Rundendaten (titel, budget, hinweis)
+ * @param {object} runde - Rundendaten (titel, anlass, budget, hinweis)
  * @param {Array<{id: string, name: string, token: string, gast: {email: string, sprache: string}}>} empfaenger
  * @return {Promise<{gesendet: number, fehlgeschlagen: number, grund: string|null}>} grund:
  *   'nicht-eingerichtet' (kein SMTP), 'limit' (Tageslimit) oder 'fehler'
@@ -583,6 +583,7 @@ async function versendeEinladungen(ctx, rundeId, runde, empfaenger) {
       to: t.gast.email,
       ...baueEinladungsMail({
         sprache: t.gast.sprache,
+        anlass: runde.anlass,
         name: t.name,
         titel: runde.titel || '',
         budget: runde.budget || '',
