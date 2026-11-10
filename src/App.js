@@ -102,7 +102,7 @@ import { RecipeImportQueueProvider, useRecipeImportQueue } from './contexts/Reci
 import { updateAppBadge } from './utils/appBadge';
 import { resolveRecipeGroupContext, resolveImportGroupContext } from './utils/recipeGroupContext';
 import { openRecipeWithTransition } from './utils/recipeViewTransition';
-import { parseWichtelLink } from './utils/wichtelLinks';
+import { istWichtelSeitenPfad, parseWichtelLink } from './utils/wichtelLinks';
 
 // Lazily loaded: everything below is a secondary view/overlay that isn't
 // needed for the initial "recipes" screen. Splitting these out of the main
@@ -785,6 +785,13 @@ function App() {
   // Persönlicher Wichtel-Link: /wichteln/:rundeId/:token oder #wichteln/... (ohne Login)
   const [wichtelLink, setWichtelLink] = useState(() => parseWichtelLink(window.location));
 
+  // Direktlink /wichteln für Organisatoren: öffnet nach der Anmeldung Events > Wichteln.
+  // Der Pfad bleibt bis dahin in der Adresse (übersteht so ein Neuladen auf der
+  // Anmeldeseite) und wird beim Öffnen auf / zurückgesetzt, siehe Effekt unten.
+  const [wichtelSeiteAngefragt, setWichtelSeiteAngefragt] = useState(
+    () => istWichtelSeitenPfad(window.location.pathname)
+  );
+
   useEffect(() => {
     const handleHashChange = () => {
       setSharePageId(getShareIdFromHash());
@@ -1087,6 +1094,19 @@ function App() {
     if (!currentUser) return; // wait for login
     setCurrentView('events');
   }, [currentUser, pendingEventReminderId]);
+
+  // Direktlink /wichteln: Sobald jemand angemeldet ist, Events öffnen; EventsPage startet
+  // direkt auf der Wichtel-Seite und meldet die Anfrage als erledigt
+  // (onPendingWichtelSeiteHandled). Die Adresse geht zurück auf /, damit ein späteres
+  // Neuladen nicht wieder dort landet (wie bei den anderen Direktlinks der App).
+  useEffect(() => {
+    if (!wichtelSeiteAngefragt) return;
+    if (!currentUser) return; // wait for login
+    if (istWichtelSeitenPfad(window.location.pathname)) {
+      window.history.replaceState({}, '', `/${window.location.search}${window.location.hash}`);
+    }
+    setCurrentView('events');
+  }, [currentUser, wichtelSeiteAngefragt]);
 
   useEffect(() => {
     const container = 'serviceWorker' in navigator ? navigator.serviceWorker : null;
@@ -2738,7 +2758,7 @@ function App() {
         {null}
         <div className="App">
           <Header />
-        {pendingWebimportUrl && (
+        {(pendingWebimportUrl || wichtelSeiteAngefragt) && (
           <div style={{
             background: '#E3F2FD',
             borderLeft: '4px solid #2196F3',
@@ -2748,7 +2768,9 @@ function App() {
             fontSize: '0.95rem',
             color: '#1565C0'
           }}>
-            Bitte melde dich an, um das Rezept zu importieren.
+            {pendingWebimportUrl
+              ? 'Bitte melde dich an, um das Rezept zu importieren.'
+              : 'Bitte melde dich an, um Wichtel-Runden anzulegen und zu verwalten.'}
           </div>
         )}
         {authView === 'login' ? (
@@ -3082,6 +3104,8 @@ function App() {
           pendingEventDetailRequest={pendingEventDetailRequest}
           onPendingEventDetailRequestHandled={() => setPendingEventDetailRequest(null)}
           onCloseLinkedEventDetail={handleCloseLinkedEventDetail}
+          pendingWichtelSeite={wichtelSeiteAngefragt}
+          onPendingWichtelSeiteHandled={() => setWichtelSeiteAngefragt(false)}
         />
         ) : currentView === 'tagesmenu' ? (
         <Tagesmenu

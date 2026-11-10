@@ -173,6 +173,7 @@ function EventsPage({
   guestProfiles = [], guestProfilesLoaded = true, allGuestProfiles = [], allGuestProfilesLoaded = true,
   customDrinks = [], customDrinksLoaded = true,
   pendingEventReminderId, onPendingEventReminderHandled, pendingEventDetailRequest, onPendingEventDetailRequestHandled, onCloseLinkedEventDetail,
+  pendingWichtelSeite = false, onPendingWichtelSeiteHandled,
 }) {
   const [isMobileView, setIsMobileView] = useState(() => window.innerWidth <= 768);
   const [editFabPressed, setEditFabPressed] = useState(false);
@@ -188,8 +189,9 @@ function EventsPage({
   const [subView, setSubView] = useState(() => {
     if (pendingEventDetailRequest?.eventId) return 'detail';
     if (pendingEventReminderId) return 'consumption';
+    if (pendingWichtelSeite) return 'wichteln';
     return 'list';
-  }); // list | new | edit | detail | consumption | drinks | guests
+  }); // list | new | edit | detail | consumption | drinks | guests | wichteln
   // Tracks whether the current detail view was opened via the deep link from a menu's
   // Drinks section, so closing it can return to that menu instead of the events list.
   const [openedFromMenuLink, setOpenedFromMenuLink] = useState(() => !!pendingEventDetailRequest?.eventId);
@@ -252,6 +254,15 @@ function EventsPage({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingEventReminderId, currentUser?.id]);
+
+  // Direktlink /wichteln (App.js): Die Ansicht startet schon auf der Wichtel-Seite (useState
+  // oben), hier wird die Anfrage nur verbraucht. Kommt sie bei bereits offener Seite, wechselt sie.
+  useEffect(() => {
+    if (!pendingWichtelSeite) return;
+    setSubView('wichteln');
+    onPendingWichtelSeiteHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingWichtelSeite]);
 
   // Deep link from a menu's "open linked event" button: jump straight to the event detail.
   useEffect(() => {

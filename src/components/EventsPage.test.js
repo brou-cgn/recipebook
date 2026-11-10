@@ -36,6 +36,15 @@ jest.mock('./GuestManagementPage', () => function MockGuestManagementPage() {
   return <div>GuestManagementPage geöffnet</div>;
 });
 
+jest.mock('./WichtelPage', () => function MockWichtelPage({ onBack }) {
+  return (
+    <div>
+      WichtelPage geöffnet
+      <button type="button" onClick={onBack}>Wichteln schließen</button>
+    </div>
+  );
+});
+
 jest.mock('../utils/userManagement', () => ({
   canEditRecipes: () => true,
   getUsers: () => Promise.resolve([]),
@@ -219,6 +228,58 @@ describe('EventsPage', () => {
     expect(onCloseLinkedEventDetail).toHaveBeenCalledTimes(1);
     // The events overview must not appear after closing back to the menu.
     expect(screen.queryByRole('heading', { name: 'Events' })).toBeNull();
+  });
+
+  test('pendingWichtelSeite (Direktlink /wichteln) öffnet direkt Wichteln, ohne die Event-Übersicht aufblitzen zu lassen', () => {
+    const onPendingWichtelSeiteHandled = jest.fn();
+    let ersterStand = null;
+
+    // Wie App.js: Die Anfrage wird beim Melden sofort gelöscht.
+    function Wrapper() {
+      const [pending, setPending] = React.useState(true);
+      return (
+        <EventsPage
+          currentUser={currentUser}
+          pendingWichtelSeite={pending}
+          onPendingWichtelSeiteHandled={() => {
+            // Läuft im Effekt nach dem ersten Rendern: So sah die Seite von Anfang an aus.
+            if (ersterStand === null) ersterStand = document.body.textContent;
+            onPendingWichtelSeiteHandled();
+            setPending(false);
+          }}
+        />
+      );
+    }
+    render(<Wrapper />);
+
+    expect(ersterStand).toContain('WichtelPage geöffnet');
+    expect(ersterStand).not.toContain('Getränke verwalten');
+    expect(onPendingWichtelSeiteHandled).toHaveBeenCalledTimes(1);
+    // Die Anfrage ist erledigt, die Ansicht bleibt trotzdem auf Wichteln.
+    expect(screen.getByText('WichtelPage geöffnet')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Events' })).toBeNull();
+  });
+
+  test('Schließen der per Direktlink geöffneten Wichtel-Seite führt zur Event-Übersicht', () => {
+    render(
+      <EventsPage
+        currentUser={currentUser}
+        pendingWichtelSeite
+        onPendingWichtelSeiteHandled={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Wichteln schließen' }));
+
+    expect(screen.getByRole('heading', { name: 'Events' })).toBeInTheDocument();
+    expect(screen.queryByText('WichtelPage geöffnet')).toBeNull();
+  });
+
+  test('ohne pendingWichtelSeite startet Events in der Übersicht', () => {
+    render(<EventsPage currentUser={currentUser} />);
+
+    expect(screen.getByRole('heading', { name: 'Events' })).toBeInTheDocument();
+    expect(screen.queryByText('WichtelPage geöffnet')).toBeNull();
   });
 
   test('closing an event opened from the list falls back to the events overview, not onCloseLinkedEventDetail', () => {

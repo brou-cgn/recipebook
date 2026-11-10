@@ -210,6 +210,27 @@ jest.mock('./components/MeineKuechenstarsPage', () => function MockMeineKuechens
   return null;
 });
 
+// Verhält sich beim Direktlink /wichteln wie die echte EventsPage: startet auf Wichteln
+// und meldet die Anfrage als erledigt.
+jest.mock('./components/EventsPage', () => {
+  const React = require('react');
+  return function MockEventsPage({ pendingWichtelSeite, onPendingWichtelSeiteHandled }) {
+    const [startetInWichteln] = React.useState(Boolean(pendingWichtelSeite));
+    React.useEffect(() => {
+      if (pendingWichtelSeite) onPendingWichtelSeiteHandled?.();
+    }, [pendingWichtelSeite, onPendingWichtelSeiteHandled]);
+    return (
+      <div
+        data-testid="events-view"
+        data-start-wichteln={String(startetInWichteln)}
+        data-pending-wichtel={String(Boolean(pendingWichtelSeite))}
+      >
+        Events
+      </div>
+    );
+  };
+});
+
 jest.mock('./components/Tagesmenu', () => function MockTagesmenu(props) {
   mockTagesmenuProps(props);
   return <div data-testid="tagesmenu-view">Tagesmenu</div>;
@@ -1034,6 +1055,46 @@ describe('App authentication view handling', () => {
     expect(recipeForm).toHaveAttribute('data-initial-author', 'user-99');
     expect(sessionStorage.getItem('pendingWebimportUrl')).toBeNull();
     expect(sessionStorage.getItem('pendingWebimportAuthor')).toBeNull();
+  });
+
+  test('Direktlink /wichteln: Anmeldung mit Hinweis, danach direkt Events > Wichteln, Adresse zurück auf /', async () => {
+    const organisator = {
+      id: 'user-10',
+      vorname: 'Wichtel',
+      nachname: 'Orga',
+      email: 'orga@example.com',
+      role: 'edit',
+    };
+    window.history.pushState({}, '', '/wichteln');
+
+    render(<App />);
+
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+    expect(screen.getByText('Bitte melde dich an, um Wichtel-Runden anzulegen und zu verwalten.')).toBeInTheDocument();
+    // Bis zur Anmeldung bleibt der Pfad stehen (übersteht so ein Neuladen der Anmeldeseite).
+    expect(window.location.pathname).toBe('/wichteln');
+
+    await act(async () => {
+      mockAuthStateCallback(organisator);
+    });
+
+    const events = await screen.findByTestId('events-view');
+    expect(events).toHaveAttribute('data-start-wichteln', 'true');
+    await waitFor(() => expect(events).toHaveAttribute('data-pending-wichtel', 'false'));
+    expect(window.location.pathname).toBe('/');
+
+    // Nur einmal: Nach Ab- und erneuter Anmeldung geht es normal weiter.
+    await act(async () => {
+      mockAuthStateCallback(null);
+    });
+    expect(screen.getByTestId('login-view')).toBeInTheDocument();
+    expect(screen.queryByText('Bitte melde dich an, um Wichtel-Runden anzulegen und zu verwalten.')).toBeNull();
+
+    await act(async () => {
+      mockAuthStateCallback(organisator);
+    });
+    expect(await screen.findByTestId('recipe-list-view')).toBeInTheDocument();
+    expect(screen.queryByTestId('events-view')).toBeNull();
   });
 
   test('clicking the Startseite Küche FAB opens appCalls and passes the restricted tab state through', async () => {
