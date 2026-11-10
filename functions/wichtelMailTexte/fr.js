@@ -4,6 +4,12 @@
  * sowie innerhalb der Guillemets.
  */
 module.exports = {
+  // Anzeigename des Absenders (die Adresse bleibt SMTP_FROM). warm_casual ohne Weihnachtsbezug.
+  absender: {
+    north_pole: "Courrier du pôle Nord",
+    warm_casual: "Échange de cadeaux",
+  },
+
   einladung: {
     north_pole: {
       betreff: "📜 Une lettre du pôle Nord pour {firstName}",
@@ -40,8 +46,8 @@ module.exports = {
     },
     gemeinsam: {
       hinweis: "Remarque : {hinweis}",
-      grund: "Tu reçois cet e-mail parce que {hostName} a ajouté ton nom au Père Noël secret.",
-      grundOhneHost: "Tu reçois cet e-mail parce que ton nom a été ajouté au Père Noël secret.",
+      grund: "Tu reçois cet e-mail parce que {hostName} a ajouté ton nom à un échange de cadeaux.",
+      grundOhneHost: "Tu reçois cet e-mail parce que ton nom a été ajouté à un échange de cadeaux.",
     },
   },
 

@@ -19,6 +19,12 @@
  * Die Zeilen `datum` und `budget` entfallen, wenn die Runde kein Datum bzw. Budget hat.
  */
 module.exports = {
+  // Anzeigename des Absenders (die Adresse bleibt SMTP_FROM). warm_casual ohne Weihnachtsbezug.
+  absender: {
+    north_pole: "Wichtelpost vom Nordpol",
+    warm_casual: "Wichtelpost",
+  },
+
   einladung: {
     north_pole: {
       betreff: "📜 Ein Brief vom Nordpol für {firstName}",

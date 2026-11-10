@@ -10,7 +10,8 @@
  * Zwei Varianten je Mail, gewählt nur nach dem Anlass der Runde: north_pole („Post vom Nordpol“)
  * für Weihnachten und Nikolaus, warm_casual für alles andere. Die Sprache kommt aus dem
  * Gästeprofil (shared/sprachen.js, Fallback Deutsch). Die Texte stehen in
- * wichtelMailTexte/<sprache>.js.
+ * wichtelMailTexte/<sprache>.js. Auch der Anzeigename des Absenders hängt von Variante und
+ * Sprache ab (`absenderName` im Ergebnis); die Adresse dahinter bleibt SMTP_FROM.
  *
  * Alles, was der Organisator eingibt (Name, Titel, Budget, Hinweis, sein Vorname), steht im
  * HTML nur escaped. Budget und Hinweis erscheinen so, wie er sie geschrieben hat; das Budget
@@ -49,6 +50,16 @@ const STIL = {
  */
 function waehleVariante(anlass) {
   return NORDPOL_ANLAESSE.has(anlass) ? 'north_pole' : 'warm_casual';
+}
+
+/**
+ * Anzeigename des Absenders („Wichtelpost vom Nordpol“), je Variante und Sprache.
+ * @param {string} sprache - normalisierte Sprache
+ * @param {*} anlass - Anlass-Schlüssel der Runde
+ * @return {string}
+ */
+function absenderName(sprache, anlass) {
+  return TEXTE[sprache].absender[waehleVariante(anlass)];
 }
 
 /**
@@ -219,7 +230,7 @@ function baueLinkMail({sprache, t, werte, link, intro, grund, hinweisZeile}) {
  *   budget?: string, hinweis?: string, datum?: string, organisator?: string|null}} params -
  *   Teilnehmername, Rundendaten (datum: Tag der Feier 'JJJJ-MM-TT' oder ''), persönlicher Link und
  *   (optional) Vorname des Organisators
- * @return {{subject: string, text: string, html: string}}
+ * @return {{subject: string, text: string, html: string, absenderName: string}}
  */
 function baueEinladungsMail({
   sprache, anlass, name, titel, link, budget = '', hinweis = '', datum = '', organisator = null,
@@ -229,7 +240,7 @@ function baueEinladungsMail({
   const t = texte[waehleVariante(anlass)];
   const gemeinsam = texte.gemeinsam;
   const von = organisator || null;
-  return baueLinkMail({
+  const mail = baueLinkMail({
     sprache: s,
     t,
     werte: {
@@ -246,6 +257,7 @@ function baueEinladungsMail({
     grund: von ? gemeinsam.grund : gemeinsam.grundOhneHost,
     hinweisZeile: hinweis ? gemeinsam.hinweis : null,
   });
+  return {...mail, absenderName: absenderName(s, anlass)};
 }
 
 /**
@@ -254,13 +266,13 @@ function baueEinladungsMail({
  * @param {{sprache?: string, anlass?: string, name: string, titel: string, link: string,
  *   budget?: string, hinweis?: string, datum?: string}} params - Teilnehmername, Rundendaten
  *   (datum wie bei der Einladung) und persönlicher Link
- * @return {{subject: string, text: string, html: string}}
+ * @return {{subject: string, text: string, html: string, absenderName: string}}
  */
 function baueErinnerungsMail({sprache, anlass, name, titel, link, budget = '', hinweis = '', datum = ''}) {
   const s = normalisiereSprache(sprache);
   const texte = TEXTE[s].erinnerung;
   const t = texte[waehleVariante(anlass)];
-  return baueLinkMail({
+  const mail = baueLinkMail({
     sprache: s,
     t,
     werte: {
@@ -275,6 +287,7 @@ function baueErinnerungsMail({sprache, anlass, name, titel, link, budget = '', h
     grund: t.grund,
     hinweisZeile: hinweis ? texte.gemeinsam.hinweis : null,
   });
+  return {...mail, absenderName: absenderName(s, anlass)};
 }
 
 /**
@@ -286,7 +299,7 @@ function baueErinnerungsMail({sprache, anlass, name, titel, link, budget = '', h
  *   datum?: string}} params
  *   name: Name des Schenkers; linkGekauft: persönlicher Link, der die Rückfrage
  *   „Geschenk gekauft?“ öffnet; wuensche/ideen: Anzahl neuer Einträge (zusammen mindestens 1)
- * @return {{subject: string, text: string, html: string}}
+ * @return {{subject: string, text: string, html: string, absenderName: string}}
  */
 function baueNeuigkeitenMail({
   sprache, anlass, name, titel, link, linkGekauft, wuensche = 0, ideen = 0, budget = '', hinweis = '', datum = '',
@@ -352,12 +365,27 @@ function baueNeuigkeitenMail({
     fuss: h(t.grund),
   });
 
-  return {subject: einzeilig(fuelle(t.betreff, werte, false)), text, html};
+  return {subject: einzeilig(fuelle(t.betreff, werte, false)), text, html, absenderName: absenderName(s, anlass)};
+}
+
+/**
+ * Absender einer Wichtel-Mail: die Adresse aus SMTP_FROM mit dem Anzeigenamen der Mailvariante
+ * („Wichtelpost vom Nordpol <noreply@…>“). Steht in SMTP_FROM schon ein Name („Name <adresse>“),
+ * zählt nur die Adresse. Ohne Anzeigenamen bleibt SMTP_FROM unverändert.
+ * @param {string} from - Wert von SMTP_FROM
+ * @param {string} [name] - Anzeigename der Mail (`absenderName`)
+ * @return {string|{name: string, address: string}}
+ */
+function absender(from, name) {
+  if (!name) return from;
+  const adresse = (/<([^<>]+)>\s*$/.exec(from)?.[1] ?? from).trim();
+  return {name, address: adresse};
 }
 
 module.exports = {
+  absender,
   baueEinladungsMail,
   baueNeuigkeitenMail,
   baueErinnerungsMail,
-  _internal: {TEXTE, waehleVariante, ersterVorname, formatiereBudget, formatiereDatum, fuelle},
+  _internal: {TEXTE, waehleVariante, absenderName, ersterVorname, formatiereBudget, formatiereDatum, fuelle},
 };

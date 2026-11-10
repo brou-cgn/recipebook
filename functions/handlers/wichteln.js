@@ -8,6 +8,7 @@ const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const {onSchedule} = require('firebase-functions/v2/scheduler');
 const admin = require('firebase-admin');
 const wichteln = require('../wichteln');
+const {absender} = require('../wichtelMail');
 const {ALLOWED_ORIGINS} = require('../shared/common');
 const {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom} = require('../shared/secrets');
 
@@ -44,7 +45,7 @@ function smtpMailer() {
     socketTimeout: 30000,
   });
   return {
-    senden: (mail) => transporter.sendMail({from, ...mail}),
+    senden: ({absenderName, ...mail}) => transporter.sendMail({from: absender(from, absenderName), ...mail}),
     schliessen: () => transporter.close(),
   };
 }
