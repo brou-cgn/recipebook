@@ -12,29 +12,33 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
    Alle fünf lassen sich jederzeit ändern („Runde bearbeiten“), auch nach dem Auslosen – etwa ein Datum
    nachtragen. Das Datum steht in der Runde, in der Übersicht, auf der Teilnehmerseite und in den Mails; es
    begrenzt die Mails (siehe „Erinnerung per Mail“ und „Neuigkeiten per Mail“).
-2. Teilnehmer eintragen – mehrere auf einmal mit Komma, oder per Tipp aus der eigenen Gästeliste.
-   Namen sind je Runde eindeutig (Groß-/Kleinschreibung egal). Ein Gast aus der Gästeliste (per Tipp
-   oder mit genau seinem Namen eingetippt) wird mit dem Teilnehmer verknüpft und ist je Runde nur
-   einmal dabei, auch nach dem Umbenennen.
+2. Teilnehmer eintragen: Vorname, Nachname und optional die E-Mail-Adresse, je Teilnehmer ein Eintrag.
+   Wer noch nicht in der eigenen Gästeliste steht, wird dort im selben Schritt als Gast angelegt
+   (siehe „Neue Gäste aus der Runde“). Beim Tippen in Vor- oder Nachname erscheinen passende Gäste aus
+   der Gästeliste als Pillen; ein Tipp trägt den Gast ein. Ein eingetippter Name, der genau einem Gast
+   entspricht, verknüpft diesen, statt ein zweites Profil anzulegen. Namen sind je Runde eindeutig
+   (Groß-/Kleinschreibung egal). Ein verknüpfter Gast ist je Runde nur einmal dabei, auch nach dem
+   Umbenennen.
 3. Optional Ausschlüsse (ab drei Teilnehmern): in der Zeile eines Teilnehmers „Ausschlüsse“ öffnen
    und antippen, wen er nicht ziehen soll. Jeder Tipp speichert sofort. Ein Ausschluss gilt nur in
    eine Richtung – bei Paaren für beide setzen. Einen Gast muss jeder beschenken können, der letzte
    freie lässt sich nicht ausschließen. Zugeklappt steht in der Zeile „Beschenkt nicht: …“.
-4. Links verschicken. Verknüpfte Gäste mit E-Mail-Adresse bekommen ihren Link beim Eintragen
-   automatisch per Mail, in der Sprache aus ihrem Gästeprofil (siehe „Einladung per Mail“). Für alle
-   anderen „Link teilen“: Teilen-Menü des Handys, sonst Kopieren – der Text ist ebenfalls in der
-   Sprache des Gasts, ohne verknüpften Gast Deutsch. Das geht schon vor dem Auslosen – dann können
-   alle früh ihre Wünsche eintragen. Wer seinen Link per Mail bekam und noch keinen Wunsch eingetragen
-   hat, wird per Mail daran erinnert (siehe „Erinnerung per Mail“).
+4. Vor dem Auslosen geht keine Mail raus, auch nicht von Hand. Teilnehmer, deren Gast eine
+   E-Mail-Adresse hat, zeigen „Mail beim Auslosen“. Gästen ohne Adresse schickt der Organisator den Link
+   selbst: „Link teilen“ öffnet das Teilen-Menü des Handys, sonst wird kopiert – der Text ist in der
+   Sprache des Gasts, ohne verknüpften Gast Deutsch. Das geht schon vor dem Auslosen – dann können sie
+   früh ihre Wünsche eintragen.
 5. „Jetzt auslosen“ (ab drei Teilnehmern). Lassen die Ausschlüsse keine Auslosung zu, sagt die App,
-   woran es liegt (z. B. „Für „Anna“ sind alle anderen ausgeschlossen“). Danach sind Teilnehmer und
-   Ausschlüsse gesperrt; ändern geht erst nach „Auslosung zurücksetzen“ (mit Rückfrage). Links,
-   Ausschlüsse, Wünsche und Ideen bleiben dabei erhalten, wer schon gezogen hatte, zieht nach dem
-   nächsten Auslosen neu.
+   woran es liegt (z. B. „Für „Anna“ sind alle anderen ausgeschlossen“). Mit dem Auslosen bekommt jeder
+   Teilnehmer, dessen Gast eine E-Mail-Adresse hat, seinen Link per Mail, in der Sprache aus seinem
+   Gästeprofil (siehe „Einladung per Mail“); wer danach noch keinen Wunsch eingetragen hat, wird per
+   Mail erinnert (siehe „Erinnerung per Mail“). Danach sind Teilnehmer und Ausschlüsse gesperrt;
+   ändern geht erst nach „Auslosung zurücksetzen“ (mit Rückfrage). Links, Ausschlüsse, Wünsche und
+   Ideen bleiben dabei erhalten, wer schon gezogen hatte, zieht nach dem nächsten Auslosen neu.
 6. Je Teilnehmer sichtbar: „Link noch nicht geöffnet“ / „Link geöffnet“ / „Los gezogen“ / „Geschenk gekauft“
    (der Teilnehmer setzt das selbst auf seiner Linkseite; der Organisator sieht nie, für wen), bei Mails
    zusätzlich „Per Mail verschickt“ oder „Mail nicht verschickt“. „Per Mail senden“ bzw. „Erneut
-   senden“ steht bei jedem Teilnehmer, dessen Gast eine E-Mail-Adresse hat, auch nach dem Auslosen.
+   senden“ steht nach dem Auslosen bei jedem Teilnehmer, dessen Gast eine E-Mail-Adresse hat.
 
 **Teilnehmer** (`/wichteln/{rundeId}/{token}`, ohne Login):
 
@@ -123,7 +127,14 @@ wichtelErinnerungen/{rundeId}_{teilnehmerId}  rundeId, teilnehmerId, faelligAm, 
 
 Teilnehmer, die vor der Gast-Verknüpfung angelegt wurden, haben die drei Mail-Felder nicht; das liest
 sich wie `null`. Die Oberfläche ordnet sie über den gleichen Namen einem Gast zu (Sprache beim Teilen,
-„Per Mail senden“); beim ersten Senden wird die Verknüpfung gespeichert.
+„Per Mail senden“); beim ersten Senden wird die Verknüpfung gespeichert. Die Mail beim Auslosen geht nur
+an gespeichert verknüpfte Teilnehmer.
+
+Neue Gäste aus der Runde stehen in der Gästeliste des Organisators (`guests/{ownerId}/profiles/{gastId}`)
+mit denselben Feldern wie aus „Gäste verwalten“: `id`, `vorname`, `nachname`, `email` ('' ohne), `kind`
+false, `alkoholischeGetränke` true, `bevorzugteGetränke` und `bevorzugteKategorien` [], `präferenzFaktor`
+0.5, `sprache` 'de', `erstellt`, `aktualisiert`, `erstelltVon` (`neuesGastprofil` in
+`functions/wichteln.js`; ein Test prüft, dass `manageGuestProfile.js` es so annimmt).
 
 Ein Wunsch ist ein Eintrag mit `autorId == ueberId`, eine Geschenkidee einer mit `autorId != ueberId`.
 Teilnehmer-IDs sind keine Geheimnisse (sie stehen in der Gästeliste jedes Teilnehmers), das Token schon.
@@ -134,8 +145,9 @@ Teilnehmer-IDs sind keine Geheimnisse (sie stehen in der Gästeliste jedes Teiln
 Feld `aktion`: `liste`, `laden`, `anlegen`, `aendern`, `teilnehmerHinzufuegen`, `teilnehmerUmbenennen`,
 `teilnehmerEntfernen` (löscht auch seine Einträge und die Ideen über ihn und nimmt ihn aus den
 Ausschlüssen der anderen), `ausschluesseSetzen` (`teilnehmerId`, `ausschluesse`: ersetzt die Liste, nur
-vor dem Auslosen; unbekannte IDs und der Teilnehmer selbst fallen still heraus), `auslosen`,
-`zuruecksetzen`, `loeschen`, `einladungSenden` (`teilnehmerId`, optional `gastId` zum Verknüpfen).
+vor dem Auslosen; unbekannte IDs und der Teilnehmer selbst fallen still heraus), `auslosen` (verschickt
+danach die Einladungen), `zuruecksetzen`, `loeschen`, `einladungSenden` (`teilnehmerId`, optional
+`gastId` zum Verknüpfen; erst nach dem Auslosen, vorher `failed-precondition`).
 Fremde Runden antworten wie nicht vorhandene (`not-found`). Die Organisator-Sicht enthält je
 Teilnehmer `ausschluesse`, `gastId` und `mail`; Teilnehmer-Antworten enthalten nichts davon.
 
@@ -143,10 +155,21 @@ Teilnehmer `ausschluesse`, `gastId` und `mail`; Teilnehmer-Antworten enthalten n
 ('JJJJ-MM-TT' zwischen 2020 und 2100, '' oder null löscht es; fehlt das Feld, bleibt es bei `aendern`
 unverändert – ältere App-Versionen kennen es nicht). Runden-Antworten enthalten `datum` ('' ohne).
 
-Bei `anlegen` und `teilnehmerHinzufuegen` ist jeder Eintrag in `namen` ein Name oder
-`{name, gastId}`. Diese beiden und `einladungSenden` antworten zusätzlich mit
+Bei `anlegen` und `teilnehmerHinzufuegen` ist jeder Eintrag in `namen`:
+
+- `{vorname, nachname, email?}` (ohne `gastId`): neuer Gast. Vor- und Nachname sind Pflicht (je höchstens
+  40 Zeichen; der Teilnehmername „Vorname Nachname“ wird auf 60 gekürzt), die Adresse optional. Der Server
+  legt das Gästeprofil im selben Batch wie den Teilnehmer an – scheitert eine Prüfung, entsteht keins.
+- `{name, gastId, email?}`: Gast aus der eigenen Gästeliste. `email` ergänzt eine dort fehlende Adresse;
+  steht eine andere im Profil, antwortet der Server `failed-precondition` und trägt nichts ein.
+- ein Name (ältere App-Versionen): Teilnehmer ohne Gast.
+
+Adressen werden klein geschrieben und wie beim Versand geprüft (eine Adresse, höchstens 254 Zeichen);
+eine ungültige ergibt `invalid-argument` mit dem Namen, nicht der Adresse. Eintragen verschickt keine
+Mail. `auslosen` und `einladungSenden` antworten zusätzlich mit
 `versand: {gesendet, fehlgeschlagen, grund}`; `grund` ist `nicht-eingerichtet` (SMTP-Secrets fehlen),
-`limit` (Tageslimit) oder `fehler` (Mailserver, Limit nicht prüfbar).
+`limit` (Tageslimit) oder `fehler` (Mailserver, Limit oder Gästeliste nicht lesbar). Ein Fehler beim
+Versand macht die Auslosung nicht rückgängig.
 
 `wichtelTeilnahme` (ohne Login; `rundeId` + `token`), Feld `aktion`: `laden` (setzt „Link geöffnet“),
 `ziehen`, `eintragHinzufuegen` (`ueberId`, `text` ≤ 300 Zeichen und/oder `url` ≤ 2000 Zeichen, höchstens
@@ -167,13 +190,38 @@ Adresse und zeigt die Rückfrage.
 fällige Erinnerungen an Gäste ohne Wünsche (`versendeErinnerungen` in `functions/wichteln.js`).
 
 Client: `src/utils/wichtelFirestore.js`, Links und Teilen-Text: `src/utils/wichtelLinks.js`,
-Oberflächen: `src/components/WichtelPage.js` (Organisator), `src/components/WichtelTeilnahmePage.js`
+Oberflächen: `src/components/WichtelPage.js` (Organisator; Eintragen: `WichtelTeilnehmerFormular.js`,
+Typeahead und Adressprüfung: `src/utils/wichtelGaeste.js`), `src/components/WichtelTeilnahmePage.js`
 (Texte auf Deutsch, Englisch, Französisch und Wahl der Sprache: `src/utils/wichtelTeilnahmeTexte.js`).
+
+## Neue Gäste aus der Runde
+
+- **Eintragen:** Vorname und Nachname (Pflicht), E-Mail optional. Ohne passenden Gast legt `wichtelVerwalten`
+  ein Gästeprofil in der Gästeliste des Organisators an und verknüpft es mit dem Teilnehmer; danach steht
+  der Gast unter „Gäste verwalten“ wie jeder andere (Sprache Deutsch, Getränke-Angaben leer). Die App meldet
+  „… ist dabei und steht jetzt auch in deiner Gästeliste.“
+- **Schon in der Gästeliste:** Entspricht „Vorname Nachname“ genau einem Gast (Groß-/Kleinschreibung egal),
+  verknüpft die App diesen. Eine eingetippte Adresse ergänzt eine im Profil fehlende; eine andere
+  gespeicherte überschreibt sie nicht – die App meldet das, geändert wird unter „Gäste verwalten“.
+- **Typeahead:** Beim Tippen in Vor- oder Nachname erscheinen passende Gäste als Pillen („Aus deiner
+  Gästeliste:“), höchstens acht, nach Namen sortiert. Das Feld Vorname sucht im Vornamen, das Feld Nachname
+  im Nachnamen; sind beide ausgefüllt, müssen beide passen. Gesucht wird am Anfang eines Namens oder
+  Namensteils („lena“ findet „Anna-Lena“, „mus“ findet „von Muster“), ohne Rücksicht auf Groß-/Kleinschreibung
+  und Akzente, ß wie ss; der ganze Name im Vornamenfeld („Anna Mu“) findet den Gast ebenfalls. Gäste, die
+  schon dabei sind, erscheinen nicht. Ein Tipp auf die Pille trägt den Gast ein (eine eingetippte Adresse
+  geht wie oben mit).
+- **Adressprüfung:** wie beim Versand (`EMAIL_MUSTER` in `functions/wichteln.js`, dieselbe Regel in
+  `src/utils/wichtelGaeste.js`; ein Test hält beide gleich). Die App prüft vor dem Absenden und zeigt den
+  Fehler am Feld.
 
 ## Einladung per Mail
 
-- **Wann:** beim Eintragen eines Teilnehmers, der mit einem Gast mit E-Mail-Adresse verknüpft ist, und
-  auf „Per Mail senden“ / „Erneut senden“. Beim Auslosen geht keine Mail raus; der Link bleibt derselbe.
+- **Wann:** beim Auslosen an jeden Teilnehmer, der mit einem Gast mit E-Mail-Adresse verknüpft ist und
+  noch keine zugestellte Einladung hat (`ladeZurAuslosungEin`), danach auf „Per Mail senden“ / „Erneut
+  senden“. Vor dem Auslosen geht keine raus, auch nicht von Hand. Nach „Auslosung zurücksetzen“ und neuem
+  Auslosen bekommt nur eine Mail, wer noch keine zugestellte hatte (neu eingetragen oder Versand
+  gescheitert); der Link bleibt derselbe. Runden von vor dieser Regel (10. 11. 2026): Wer seine Einladung
+  schon beim Eintragen bekam, bekommt beim Auslosen keine zweite.
 - **Sprache:** Feld `sprache` im Gästeprofil (`de`, `en`, `fr`), auswählbar unter Gäste verwalten.
   Profile ohne das Feld – alle, die vor der Sprachwahl angelegt wurden – gelten als Deutsch; ein
   Speichern ohne Feld (ältere App-Version) überschreibt eine gesetzte Sprache nicht. Die Liste steht in
@@ -188,8 +236,10 @@ Oberflächen: `src/components/WichtelPage.js` (Organisator), `src/components/Wic
   herzlich „Feier: …“), direkt über dem Budget. Der Link steht im Button und als Fallback-Text. Ohne Datum oder
   Budget entfällt die Zeile, ohne Vorname des Organisators gibt es einen neutralen Einladungssatz. Der Hinweis der Runde und
   die Zeile „Du bekommst diese Mail, weil …“ stehen dezent (klein, grau) unter dem Haupttext.
-- **Empfänger:** nur Adressen aus der Gästeliste des Organisators. Adresse und Sprache liest die Function
-  bei jedem Versand frisch aus dem Gästeprofil; in der Runde stehen nur `gastId` und das Ergebnis.
+- **Empfänger:** nur Adressen aus der Gästeliste des Organisators (auch die beim Eintragen neu angelegter
+  Gäste). Adresse und Sprache liest die Function bei jedem Versand frisch aus dem Gästeprofil – wer vor dem
+  Auslosen die Sprache oder Adresse unter „Gäste verwalten“ ändert, bekommt die Einladung schon so; in der
+  Runde stehen nur `gastId` und das Ergebnis.
 - **Grenzen:** höchstens 150 Mails je Organisator und Berliner Tag (`wichtelMailLimits`, jeder Versuch
   zählt; ist der Zähler nicht prüfbar, geht keine Mail raus). Logs nennen nur Teilnehmer- und
   Runden-IDs und Fehlercodes des Mailservers, nie die Adresse (Tech-Check S26).
@@ -225,7 +275,8 @@ Oberflächen: `src/components/WichtelPage.js` (Organisator), `src/components/Wic
 ## Erinnerung per Mail
 
 - **Wer:** Teilnehmer, deren Einladung per Mail zugestellt wurde und die noch keinen eigenen Wunsch
-  eingetragen haben – vor und nach dem Auslosen. Ideen für andere zählen nicht als Wunsch.
+  eingetragen haben. Da die Einladung mit dem Auslosen kommt, ist das nach dem Auslosen; bei Runden von
+  vor dem 10. 11. 2026 auch davor. Ideen für andere zählen nicht als Wunsch.
 - **Wann:** Jede zugestellte Einladung (auch „Erneut senden“) merkt die erste Erinnerung drei Tage später
   vor (`wichtelErinnerungen/{rundeId}_{teilnehmerId}`). Danach folgt wöchentlich eine weitere, höchstens drei
   insgesamt; erneutes Senden der Einladung setzt den Zähler nicht zurück und hält eine Woche Abstand zur
@@ -314,8 +365,12 @@ Das Token hat 192 Bit (24 Zufallsbytes, base64url).
   Adresse im Gästeprofil).
 - Öffnet der Schenker die Linkseite, bevor eine vorgemerkte Neuigkeiten-Mail rausgeht, meldet sie trotzdem
   die Einträge, die er dort schon gesehen hat (die Seite merkt sich keinen „gesehen“-Stand).
-- Keine Benachrichtigung beim Auslosen („Jetzt kannst du dein Los ziehen“) – wer früh eingeladen
-  wurde, muss selbst wieder vorbeischauen oder vom Organisator erinnert werden („Erneut senden“).
+- Keine Mail nach „Auslosung zurücksetzen“ und neuem Auslosen an Gäste, die ihre Einladung schon haben –
+  wer schon gezogen hatte, erfährt nicht, dass er neu ziehen muss (heute: „Erneut senden“). Ebenso bei
+  Runden von vor dem 10. 11. 2026, deren Gäste ihre Einladung schon beim Eintragen bekamen.
+- Sprache eines neuen Gasts gleich beim Eintragen wählen – heute Deutsch, ändern unter „Gäste verwalten“
+  (vor dem Auslosen, dann kommt schon die Einladung in der richtigen Sprache).
+- Mehrere Teilnehmer auf einmal eintragen (früher kommagetrennt) – heute je Teilnehmer ein Eintrag.
 - Ohne Datum der Feier enden Erinnerungen an Wünsche erst nach dreien, einem Wunsch oder „Geschenk gekauft“
   beim Schenker – bei einer Einladung kurz vor der Feier kann die letzte danach kommen.
 - Erinnerungen abbestellen, ohne einen Wunsch einzutragen („Ich wünsche mir nichts“).

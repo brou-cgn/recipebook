@@ -56,8 +56,8 @@ function smtpMailer() {
  */
 exports.wichtelVerwalten = onCall(
     // invoker public: sonst weist Cloud Run Browser-Aufrufe vor der Auth-Prüfung ab;
-    // die Autorisierung liegt im Handler. 120 s: Beim Eintragen vieler Gäste mit
-    // E-Mail-Adresse gehen alle Einladungen im selben Aufruf raus.
+    // die Autorisierung liegt im Handler. 120 s: Beim Auslosen gehen die Einladungen an
+    // alle Gäste mit E-Mail-Adresse im selben Aufruf raus.
     {
       maxInstances: 10,
       invoker: 'public',
