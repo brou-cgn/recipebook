@@ -254,7 +254,7 @@ function TeilnehmerZeile({
           </button>
         )}
       </div>
-      {!panelOffen && ausgeschlosseneNamen.length > 0 && (
+      {ausgeschlosseneNamen.length > 0 && (
         <p className="wichtel-ausschluss-info">Beschenkt nicht: {ausgeschlosseneNamen.join(', ')}</p>
       )}
       <div className="wichtel-teilnehmer-fuss">
