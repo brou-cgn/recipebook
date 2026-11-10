@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import './EventsPage.css';
 import './WichtelPage.css';
 import OverviewAddFab from './OverviewAddFab';
@@ -6,6 +6,7 @@ import ConfirmDialog from './ConfirmDialog';
 import WichtelZeile from './WichtelZeile';
 import WichtelTeilnehmerFormular from './WichtelTeilnehmerFormular';
 import PencilIcon from './icons/PencilIcon';
+import WarningIcon from './icons/WarningIcon';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import useInlineRename from '../hooks/useInlineRename';
 import { canEditRecipes } from '../utils/userManagement';
@@ -30,7 +31,7 @@ import {
 import { buildWichtelLink, teileWichtelEinladung } from '../utils/wichtelLinks';
 import { formatBudget } from '../utils/formatBudget';
 import { WICHTEL_ANLAESSE, wichtelAnlassLabel } from '../utils/wichtelAnlaesse';
-import { formatWichtelDatum } from '../utils/wichtelDatum';
+import { formatWichtelDatum, heuteAlsWichtelDatum, wichtelAbstandText, wichtelKalenderblatt } from '../utils/wichtelDatum';
 import { istGueltigeEmail } from '../utils/wichtelGaeste';
 
 const MIN_TEILNEHMER = 3;
@@ -74,37 +75,130 @@ function StatusPille({ status, ausgelostAm }) {
   );
 }
 
+const KalenderIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+    strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+    <rect x="3" y="5" width="18" height="16" rx="2" />
+    <path d="M3 10h18M8 3v4M16 3v4" />
+  </svg>
+);
+
+/**
+ * Pflichtfeld „Wann wird gefeiert?“: eine Karte, über der das native Datumsfeld unsichtbar liegt –
+ * ein Tipp öffnet die Datumsauswahl des Geräts. Gesetzt zeigt sie das Kalenderblatt.
+ */
+function DatumsKarte({ datum, onChange, fehler, min }) {
+  const id = useId();
+  const blatt = wichtelKalenderblatt(datum);
+  const zeigePicker = (e) => {
+    try {
+      e.currentTarget.showPicker?.();
+    } catch {
+      // Ohne showPicker (oder ohne Nutzergeste) öffnet der Tipp das Feld wie gewohnt.
+    }
+  };
+  return (
+    <div className="wichtel-datum-feld">
+      <span className="wichtel-feld-kopf">
+        <span id={`${id}-label`}>Wann wird gefeiert?</span>
+        <span className="wichtel-pflicht" aria-hidden="true">*</span>
+      </span>
+      <div className={`wichtel-datum-karte${blatt ? ' wichtel-datum-karte--gesetzt' : ''}${fehler ? ' wichtel-datum-karte--fehler' : ''}`}>
+        {blatt ? (
+          <span className="wichtel-datum-blatt" aria-hidden="true">
+            <span className="wichtel-datum-blatt-monat">{blatt.monat}</span>
+            <span className="wichtel-datum-blatt-tag">{blatt.tag}</span>
+          </span>
+        ) : (
+          <span className="wichtel-datum-symbol" aria-hidden="true"><KalenderIcon /></span>
+        )}
+        <span className="wichtel-datum-text" id={`${id}-text`}>
+          <span className="wichtel-datum-haupt">{blatt ? formatWichtelDatum(datum, 'de') : 'Datum wählen'}</span>
+          <span className="wichtel-datum-unter">
+            {blatt
+              ? <>{wichtelAbstandText(datum)} · <span className="wichtel-datum-aendern">Ändern</span></>
+              : 'Bis 3 Tage vorher erinnern wir alle, die noch nichts eingetragen haben.'}
+          </span>
+        </span>
+        <input
+          type="date"
+          className="wichtel-datum-input"
+          value={datum}
+          onChange={(e) => onChange(e.target.value)}
+          onClick={zeigePicker}
+          min={min}
+          max="2100-12-31"
+          aria-labelledby={`${id}-label`}
+          aria-describedby={fehler ? `${id}-fehler` : `${id}-text`}
+          aria-invalid={fehler || undefined}
+          aria-required="true"
+        />
+      </div>
+      {fehler && (
+        <span className="wichtel-feld-fehler" id={`${id}-fehler`} role="alert">
+          <WarningIcon size={16} /> Bitte ein Datum für die Feier wählen.
+        </span>
+      )}
+    </div>
+  );
+}
+
+const HINWEIS_MAX = 300;
+
 function RundenFormular({ initial, titelText, submitLabel, busy, onSubmit, onCancel }) {
   const [titel, setTitel] = useState(initial?.titel || '');
   const [anlass, setAnlass] = useState(initial?.anlass || '');
   const [budget, setBudget] = useState(initial?.budget || '');
   const [hinweis, setHinweis] = useState(initial?.hinweis || '');
   const [datum, setDatum] = useState(initial?.datum || '');
+  const [versucht, setVersucht] = useState(false);
+  const id = useId();
+  // Neue Runden ab heute; eine bestehende darf ihr (evtl. vergangenes) Datum behalten.
+  const [minDatum] = useState(() => (initial ? '2020-01-01' : heuteAlsWichtelDatum()));
+  const titelFehler = versucht && !titel.trim();
+  const datumFehler = versucht && !datum;
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!titel.trim()) return;
+    if (!titel.trim() || !datum) {
+      setVersucht(true);
+      return;
+    }
     onSubmit({ titel: titel.trim(), anlass, budget: budget.trim(), hinweis: hinweis.trim(), datum });
   };
 
   return (
-    <form className="events-form wichtel-formular" onSubmit={handleSubmit}>
-      <h3 className="wichtel-formular-titel">{titelText}</h3>
-      <label className="events-form-field">
-        <span>Titel</span>
+    <form className="events-form wichtel-formular" onSubmit={handleSubmit} noValidate>
+      {titelText && <h3 className="wichtel-formular-titel">{titelText}</h3>}
+      <div className="events-form-field">
+        <span className="wichtel-feld-kopf">
+          <label htmlFor={`${id}-titel`}>Titel</label>
+          <span className="wichtel-pflicht" aria-hidden="true">*</span>
+        </span>
         <input
+          id={`${id}-titel`}
           type="text"
+          className={titelFehler ? 'wichtel-input--fehler' : undefined}
           value={titel}
           onChange={(e) => setTitel(e.target.value)}
           placeholder="z. B. Weihnachtsfeier 2026"
           maxLength={80}
-          required
+          aria-required="true"
+          aria-invalid={titelFehler || undefined}
+          aria-describedby={titelFehler ? `${id}-titel-fehler` : undefined}
           autoFocus
         />
-      </label>
+        {titelFehler && (
+          <span className="wichtel-feld-fehler" id={`${id}-titel-fehler`} role="alert">
+            <WarningIcon size={16} /> Bitte gib der Runde einen Titel.
+          </span>
+        )}
+      </div>
+      {/* Auch nach dem Auslosen änderbar. Erinnerungs-Mails enden drei Tage vor dem Datum. */}
+      <DatumsKarte datum={datum} onChange={setDatum} fehler={datumFehler} min={minDatum} />
       <div className="events-form-row">
         <label className="events-form-field">
-          <span>Anlass (optional)</span>
+          <span>Anlass</span>
           <select value={anlass} onChange={(e) => setAnlass(e.target.value)}>
             <option value="">Kein Anlass</option>
             {WICHTEL_ANLAESSE.map((a) => (
@@ -112,21 +206,8 @@ function RundenFormular({ initial, titelText, submitLabel, busy, onSubmit, onCan
             ))}
           </select>
         </label>
-        {/* Auch nach dem Auslosen änderbar. Mit Datum enden die Erinnerungs-Mails drei Tage vorher. */}
         <label className="events-form-field">
-          <span>Datum der Feier (optional)</span>
-          <input
-            type="date"
-            value={datum}
-            onChange={(e) => setDatum(e.target.value)}
-            min="2020-01-01"
-            max="2100-12-31"
-          />
-        </label>
-      </div>
-      <div className="events-form-row">
-        <label className="events-form-field">
-          <span>Budget (optional)</span>
+          <span>Budget</span>
           <input
             type="text"
             value={budget}
@@ -135,25 +216,30 @@ function RundenFormular({ initial, titelText, submitLabel, busy, onSubmit, onCan
             maxLength={40}
           />
         </label>
-        <label className="events-form-field">
-          <span>Hinweis (optional)</span>
-          <input
-            type="text"
-            value={hinweis}
-            onChange={(e) => setHinweis(e.target.value)}
-            placeholder="z. B. Bescherung nach dem Essen"
-            maxLength={300}
-          />
-        </label>
+      </div>
+      <div className="events-form-field">
+        <label htmlFor={`${id}-hinweis`}>Hinweis</label>
+        <textarea
+          id={`${id}-hinweis`}
+          className="wichtel-hinweis-feld"
+          rows={4}
+          value={hinweis}
+          onChange={(e) => setHinweis(e.target.value.slice(0, HINWEIS_MAX))}
+          placeholder="z. B. Bescherung nach dem Essen. Bitte nichts Selbstgebackenes – wir haben genug Plätzchen."
+          maxLength={HINWEIS_MAX}
+          aria-describedby={`${id}-zaehler`}
+        />
+        <span className="wichtel-zeichen-zaehler" id={`${id}-zaehler`}>{hinweis.length} / {HINWEIS_MAX}</span>
       </div>
       <div className="wichtel-formular-aktionen">
         <button type="button" className="events-secondary-btn" onClick={onCancel} disabled={busy}>
           Abbrechen
         </button>
-        <button type="submit" className="events-primary-btn" disabled={busy || !titel.trim()}>
+        <button type="submit" className="events-primary-btn" disabled={busy}>
           {submitLabel}
         </button>
       </div>
+      <span className="wichtel-pflicht-legende"><span className="wichtel-pflicht" aria-hidden="true">*</span> Pflichtfeld</span>
     </form>
   );
 }
@@ -658,7 +744,7 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
         {fehlerZeile}
         <RundenFormular
           initial={bearbeiten ? detail.runde : null}
-          titelText={bearbeiten ? detail.runde.titel : 'Worum geht es?'}
+          titelText={bearbeiten ? detail.runde.titel : null}
           submitLabel={bearbeiten ? 'Speichern' : 'Runde anlegen'}
           busy={busy}
           onSubmit={bearbeiten ? handleAendern : handleAnlegen}

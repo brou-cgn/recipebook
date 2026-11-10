@@ -135,6 +135,7 @@
 
 .wichtel-page .wichtel-runde-hinweis {
   margin: 0 0 12px;
+  white-space: pre-line;
   color: var(--color-text-body);
   font-size: 15px;
 }
@@ -457,6 +458,189 @@
   justify-content: flex-end;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+/* Pflichtfelder, Fehler und Datumskarte im Runden-Formular */
+.events-form-field > label:first-child {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.wichtel-feld-kopf {
+  display: inline-flex;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.wichtel-pflicht {
+  color: var(--color-bad-text);
+}
+
+.wichtel-pflicht-legende {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.wichtel-feld-fehler {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-bad-text);
+}
+
+.events-form-field input.wichtel-input--fehler {
+  border: 2px solid var(--color-bad);
+  background: var(--color-bad-tint);
+}
+
+.wichtel-datum-feld {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wichtel-datum-karte {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 56px;
+  padding: 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-card);
+}
+
+.wichtel-datum-karte:focus-within {
+  outline: 2px solid var(--color-events);
+  outline-offset: 2px;
+}
+
+.wichtel-datum-karte--gesetzt {
+  border: 2px solid var(--color-events);
+  background: var(--color-events-tint);
+  padding: 12px;
+}
+
+.wichtel-datum-karte--fehler {
+  border: 2px solid var(--color-bad);
+  background: var(--color-bad-tint);
+  padding: 12px;
+}
+
+.wichtel-datum-symbol,
+.wichtel-datum-blatt {
+  flex: none;
+  width: 52px;
+  height: 56px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.wichtel-datum-symbol {
+  border: 1px dashed var(--color-border-strong);
+  background: var(--color-surface-input);
+  color: var(--color-events);
+}
+
+.wichtel-datum-karte--fehler .wichtel-datum-symbol {
+  color: var(--color-bad-text);
+}
+
+.wichtel-datum-blatt {
+  background: var(--color-events);
+  color: var(--color-on-events);
+}
+
+.wichtel-datum-blatt-monat {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.wichtel-datum-blatt-tag {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.wichtel-datum-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.wichtel-datum-haupt {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-strong);
+}
+
+.wichtel-datum-unter {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.wichtel-datum-aendern {
+  color: var(--color-events);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+/* Das native Datumsfeld liegt unsichtbar über der ganzen Karte: ein Tipp öffnet die Auswahl des Geräts. */
+.wichtel-datum-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.wichtel-datum-input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.wichtel-hinweis-feld {
+  min-height: 104px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 16px;
+  font-family: inherit;
+  line-height: 1.4;
+  resize: vertical;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.wichtel-hinweis-feld:focus {
+  outline: none;
+  border-color: var(--color-events);
+  box-shadow: 0 0 0 3px var(--color-events-tint);
+}
+
+.wichtel-zeichen-zaehler {
+  align-self: flex-end;
+  font-size: 12px;
+  color: var(--color-text-muted);
 }
 
 /* Kurzer Hinweis unten (z. B. „Einladung kopiert“) */

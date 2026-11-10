@@ -134,6 +134,8 @@ const baseSeed = () => ({
 
 const auth = (uid, provider = 'password') => ({uid, token: {firebase: {sign_in_provider: provider}}});
 
+// Neue Runden brauchen ein Datum der Feier; weit genug weg, dass es keine Frist berührt.
+const FEIER = '2099-12-24';
 const verwalten = (db, uid, daten, extra = {}) =>
   wichteln.verwalten(fakeAdmin, db, FakeHttpsError, {auth: uid ? auth(uid) : null, daten, ...extra});
 // Ohne eigenen Ersatz darf kein Test eine Seite abrufen.
@@ -149,7 +151,7 @@ const rejectsWith = (promise, code) => assert.rejects(promise, (err) => {
 /** Legt eine Runde mit Teilnehmern an; liefert Runde, Teilnehmer nach Name und Link-Aufrufer. */
 const setupRunde = async (namen = ['Anna', 'Ben', 'Cleo', 'Dana'], {ladeVorschau} = {}) => {
   const db = makeDb(baseSeed());
-  const sicht = await verwalten(db, 'orga', {aktion: 'anlegen', titel: 'Advent 2026', anlass: 'weihnachten', budget: '20 €', hinweis: 'Bescherung am 13.12.', namen});
+  const sicht = await verwalten(db, 'orga', {aktion: 'anlegen', datum: FEIER, titel: 'Advent 2026', anlass: 'weihnachten', budget: '20 €', hinweis: 'Bescherung am 13.12.', namen});
   const rundeId = sicht.runde.id;
   const tn = Object.fromEntries(sicht.teilnehmer.map((t) => [t.name, t]));
   const als = (name, aktion, daten = {}) => teilnahme(db, {aktion, rundeId, token: tn[name].token, ...daten}, ladeVorschau);
@@ -375,7 +377,7 @@ test('Fremde Runden sind für andere Organisatoren nicht vorhanden', async () =>
 test('anlegen: Runde mit Teilnehmern, eindeutigen Tokens, ohne doppelte Namen', async () => {
   const db = makeDb(baseSeed());
   const sicht = await verwalten(db, 'orga', {
-    aktion: 'anlegen', titel: '  Advent   2026 ', budget: 'ca. 20 €', namen: ['Anna', ' anna ', 'Ben', '', 'Cleo'],
+    aktion: 'anlegen', datum: FEIER, titel: '  Advent   2026 ', budget: 'ca. 20 €', namen: ['Anna', ' anna ', 'Ben', '', 'Cleo'],
   });
   assert.equal(sicht.runde.titel, 'Advent 2026');
   assert.equal(sicht.runde.budget, 'ca. 20 €');
@@ -640,7 +642,7 @@ test('loeschen entfernt die Runde mit allem, die Links sind danach ungültig', a
 
 test('Teilnahme: ungültige Links sehen alle gleich aus', async () => {
   const {db, rundeId, tn} = await setupRunde();
-  const andereRunde = await verwalten(db, 'orga', {aktion: 'anlegen', titel: 'Andere', namen: ['Xaver', 'Yuna', 'Zoe']});
+  const andereRunde = await verwalten(db, 'orga', {aktion: 'anlegen', datum: FEIER, titel: 'Andere', namen: ['Xaver', 'Yuna', 'Zoe']});
   const fremdesToken = andereRunde.teilnehmer[0].token;
   const faelle = [
     {rundeId, token: 'A'.repeat(32)},
@@ -658,7 +660,7 @@ test('Teilnahme: ungültige Links sehen alle gleich aus', async () => {
 test('Teilnahme vor der Auslosung: eigene Daten, andere Gäste, kein Los', async () => {
   const {db, rundeId, tn, als} = await setupRunde();
   const sicht = await als('Ben', 'laden');
-  assert.deepEqual(sicht.runde, {titel: 'Advent 2026', budget: '20 €', hinweis: 'Bescherung am 13.12.', datum: '', status: 'offen'});
+  assert.deepEqual(sicht.runde, {titel: 'Advent 2026', budget: '20 €', hinweis: 'Bescherung am 13.12.', datum: FEIER, status: 'offen'});
   assert.deepEqual(sicht.ich, {id: tn.Ben.id, name: 'Ben', sprache: null});
   assert.deepEqual(sicht.andere.map((t) => t.name), ['Anna', 'Cleo', 'Dana']);
   assert.equal(sicht.los, null);
@@ -994,7 +996,7 @@ const makeMailer = ({fehlerFuer = []} = {}) => {
 const setupMailRunde = async (mailer = makeMailer(), seed = mailSeed(), anlass = undefined) => {
   const db = makeDb(seed);
   const extra = {mailer: mailer.factory, jetztMs: JETZT};
-  const sicht = await verwalten(db, 'orga', {aktion: 'anlegen', titel: 'Advent 2026', anlass, budget: '20 €', hinweis: 'Bescherung am 13.12.'}, extra);
+  const sicht = await verwalten(db, 'orga', {aktion: 'anlegen', datum: FEIER, titel: 'Advent 2026', anlass, budget: '20 €', hinweis: 'Bescherung am 13.12.'}, extra);
   const rundeId = sicht.runde.id;
   const orga = (daten) => verwalten(db, 'orga', {rundeId, ...daten}, extra);
   return {db, rundeId, mailer, orga};
@@ -1092,7 +1094,7 @@ test('Anlegen mit Gästen verschickt auch erst beim Auslosen', async () => {
   const mailer = makeMailer();
   const db = makeDb(mailSeed());
   const extra = {mailer: mailer.factory, jetztMs: JETZT};
-  const sicht = await verwalten(db, 'orga', {aktion: 'anlegen', titel: 'Advent', namen: [{name: 'Anna', gastId: 'gastAnna0001'}, 'Ben', 'Cleo']}, extra);
+  const sicht = await verwalten(db, 'orga', {aktion: 'anlegen', datum: FEIER, titel: 'Advent', namen: [{name: 'Anna', gastId: 'gastAnna0001'}, 'Ben', 'Cleo']}, extra);
   assert.equal(sicht.versand, undefined);
   assert.equal(mailer.erstellt, 0);
   const ausgelost = await verwalten(db, 'orga', {aktion: 'auslosen', rundeId: sicht.runde.id}, extra);
@@ -1382,7 +1384,7 @@ const setupNeuigkeiten = async ({anlass = 'weihnachten'} = {}) => {
   db.stelleUhr(jetzt);
   const einladungen = makeMailer();
   const orga = (daten) => verwalten(db, 'orga', daten, {mailer: einladungen.factory, jetztMs: jetzt});
-  const sicht = await orga({aktion: 'anlegen', titel: 'Advent 2026', anlass, budget: '20 €', hinweis: '', namen: [
+  const sicht = await orga({aktion: 'anlegen', datum: FEIER, titel: 'Advent 2026', anlass, budget: '20 €', hinweis: '', namen: [
     {name: 'Anna Muster', gastId: 'gastAnna0001'},
     {name: 'Ben Beispiel', gastId: 'gastBen00001'},
     {name: 'Cleo Ohne', gastId: 'gastCleo0001'},
@@ -1649,7 +1651,7 @@ const setupErinnerung = async ({anlass = 'weihnachten'} = {}) => {
   const einladungen = makeMailer();
   let rundeId = null;
   const orga = (daten) => verwalten(db, 'orga', {rundeId, ...daten}, {mailer: einladungen.factory, jetztMs: jetzt});
-  const sicht = await orga({aktion: 'anlegen', titel: 'Advent 2026', anlass, budget: '20 €', hinweis: '', namen: [
+  const sicht = await orga({aktion: 'anlegen', datum: FEIER, titel: 'Advent 2026', anlass, budget: '20 €', hinweis: '', namen: [
     {name: 'Anna Muster', gastId: 'gastAnna0001'},
     {name: 'Ben Beispiel', gastId: 'gastBen00001'},
     {name: 'Cleo Ohne', gastId: 'gastCleo0001'},
@@ -1876,8 +1878,12 @@ const {ERINNERUNG_VORLAUF_TAGE, istDatum, verschiebeTag} = wichteln._internal;
 
 test('Datum der Feier: anlegen, ändern – auch nach dem Auslosen –, löschen; ohne Feld bleibt es', async () => {
   const db = makeDb(baseSeed());
-  const ohne = await verwalten(db, 'orga', {aktion: 'anlegen', titel: 'Ohne Datum', namen: ['Anna', 'Ben', 'Cleo']});
-  assert.equal(ohne.runde.datum, '');
+  // Neue Runden brauchen ein Datum.
+  await rejectsWith(verwalten(db, 'orga', {aktion: 'anlegen', titel: 'Ohne Datum'}), 'invalid-argument');
+  await rejectsWith(verwalten(db, 'orga', {aktion: 'anlegen', titel: 'Ohne Datum', datum: ''}), 'invalid-argument');
+  // Ältere Runden haben keins.
+  const ohne = await verwalten(db, 'orga', {aktion: 'anlegen', titel: 'Ohne Datum', datum: FEIER, namen: ['Anna', 'Ben', 'Cleo']});
+  delete db.store.get(`wichtelRunden/${ohne.runde.id}`).datum;
   const sicht = await verwalten(db, 'orga', {aktion: 'anlegen', titel: 'Advent 2026', datum: '2026-12-13', namen: ['Anna', 'Ben', 'Cleo']});
   const rundeId = sicht.runde.id;
   assert.equal(sicht.runde.datum, '2026-12-13');
@@ -1902,6 +1908,15 @@ test('Datum der Feier: anlegen, ändern – auch nach dem Auslosen –, löschen
     await rejectsWith(verwalten(db, 'orga', {...felder, datum: falsch}), 'invalid-argument');
   }
   assert.equal(db.store.get(`wichtelRunden/${rundeId}`).datum, '');
+});
+
+test('Hinweis behält Zeilenumbrüche, aber keine Leerzeilen-Stapel und keine doppelten Leerzeichen', async () => {
+  const db = makeDb(baseSeed());
+  const sicht = await verwalten(db, 'orga', {
+    aktion: 'anlegen', datum: FEIER, titel: 'Advent',
+    hinweis: '  Bescherung   nach dem Essen.\r\n\n\n\nBitte  nichts Selbstgebackenes. \n',
+  });
+  assert.equal(sicht.runde.hinweis, 'Bescherung nach dem Essen.\n\nBitte nichts Selbstgebackenes.');
 });
 
 test('Datum der Feier: Hilfsfunktionen für Kalendertage', () => {
