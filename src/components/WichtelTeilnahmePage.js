@@ -355,7 +355,7 @@ function WichtelTeilnahmePage({ rundeId, token, gueltig = true, currentUser, onC
           <div className="wt-eckdaten">
             {feierDatum && <span className="wt-chip">{fuelleText(t.feier, { datum: feierDatum })}</span>}
             {runde.budget && <span className="wt-chip">{fuelleText(t.budget, { budget: formatBudget(runde.budget, sprache) })}</span>}
-            {runde.hinweis && <p className="wt-text">{runde.hinweis}</p>}
+            {runde.hinweis && <p className="wt-text wt-hinweis-text">{runde.hinweis}</p>}
           </div>
         )}
       </header>

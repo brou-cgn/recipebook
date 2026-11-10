@@ -516,3 +516,7 @@
   align-items: center;
   gap: 8px 16px;
 }
+
+.wt-seite .wt-hinweis-text {
+  white-space: pre-line;
+}

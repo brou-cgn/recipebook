@@ -143,6 +143,21 @@ function bereinige(value, max) {
 }
 
 /**
+ * Wie bereinige, behält aber Zeilenumbrüche (höchstens eine Leerzeile am Stück) – für den Hinweis,
+ * den das Formular mehrzeilig erfasst.
+ */
+function bereinigeMehrzeilig(value, max) {
+  if (typeof value !== 'string') return '';
+  return value
+    .split(/\r\n|\r|\n/)
+    .map((zeile) => zeile.replace(/\s+/g, ' ').trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, max);
+}
+
+/**
  * @param {*} ts - Firestore-Timestamp (oder Platzhalter)
  * @return {number|null} Millisekunden oder null
  */
@@ -606,7 +621,7 @@ function leseRundenFelder(daten, HttpsError) {
     titel,
     anlass: ANLAESSE.has(daten.anlass) ? daten.anlass : '',
     budget: bereinige(daten.budget, LAENGE.budget),
-    hinweis: bereinige(daten.hinweis, LAENGE.hinweis),
+    hinweis: bereinigeMehrzeilig(daten.hinweis, LAENGE.hinweis),
     ...(daten.datum === undefined ? {} : {datum: leseDatum(daten.datum, HttpsError)}),
   };
 }
@@ -1355,12 +1370,13 @@ const VERWALTEN = {
   async anlegen(ctx) {
     const {admin, db, HttpsError, uid, daten} = ctx;
     const felder = leseRundenFelder(daten, HttpsError);
+    // Neue Runden brauchen ein Datum der Feier; ältere ohne Datum lassen sich weiter ändern (aendern).
+    if (!felder.datum) throw new HttpsError('invalid-argument', 'Bitte gib ein Datum für die Feier an.');
     const eintraege = daten.namen === undefined ? [] : leseNamen(daten.namen, HttpsError);
     const jetzt = admin.firestore.FieldValue.serverTimestamp();
     const ref = db.collection(COLLECTION).doc();
     const runde = {
       ownerId: uid,
-      datum: '',
       ...felder,
       status: 'offen',
       teilnehmerAnzahl: 0,

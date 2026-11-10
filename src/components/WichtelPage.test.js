@@ -99,9 +99,9 @@ describe('WichtelPage', () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Erste Runde anlegen' }));
     fireEvent.change(screen.getByLabelText('Titel'), { target: { value: 'Advent 2026' } });
-    fireEvent.change(screen.getByLabelText('Anlass (optional)'), { target: { value: 'weihnachten' } });
-    fireEvent.change(screen.getByLabelText('Datum der Feier (optional)'), { target: { value: '2026-12-13' } });
-    fireEvent.change(screen.getByLabelText('Budget (optional)'), { target: { value: '20 €' } });
+    fireEvent.change(screen.getByLabelText('Anlass'), { target: { value: 'weihnachten' } });
+    fireEvent.change(screen.getByLabelText('Wann wird gefeiert?'), { target: { value: '2026-12-13' } });
+    fireEvent.change(screen.getByLabelText('Budget'), { target: { value: '20 €' } });
     fireEvent.click(screen.getByRole('button', { name: 'Runde anlegen' }));
 
     await screen.findByRole('heading', { name: 'Advent 2026' });
@@ -112,24 +112,59 @@ describe('WichtelPage', () => {
     expect(screen.getByText('Noch niemand eingetragen.')).toBeInTheDocument();
   });
 
-  it('ohne Datum schickt das Formular ein leeres Datum und zeigt keins', async () => {
-    mockAnlegen.mockResolvedValue(sicht());
+  it('ohne Titel und Datum zeigt das Formular beide Fehler und schickt nichts', async () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Erste Runde anlegen' }));
+    expect(screen.queryByText('Worum geht es?')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Runde anlegen' }));
+
+    expect(screen.getByText('Bitte gib der Runde einen Titel.')).toBeInTheDocument();
+    expect(screen.getByText('Bitte ein Datum für die Feier wählen.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Titel')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Wann wird gefeiert?')).toHaveAttribute('aria-invalid', 'true');
+    expect(mockAnlegen).not.toHaveBeenCalled();
+
+    // Nur der Titel reicht nicht.
     fireEvent.change(screen.getByLabelText('Titel'), { target: { value: 'Advent 2026' } });
+    expect(screen.queryByText('Bitte gib der Runde einen Titel.')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Runde anlegen' }));
+    expect(mockAnlegen).not.toHaveBeenCalled();
+
+    // Mit Datum wird die Karte zum Kalenderblatt.
+    fireEvent.change(screen.getByLabelText('Wann wird gefeiert?'), { target: { value: '2026-12-19' } });
+    expect(screen.queryByText('Bitte ein Datum für die Feier wählen.')).not.toBeInTheDocument();
+    expect(screen.getByText('Samstag, 19. Dezember 2026')).toBeInTheDocument();
+    expect(screen.getByText('DEZ')).toBeInTheDocument();
+  });
+
+  it('nimmt einen mehrzeiligen Hinweis an und zählt die Zeichen', async () => {
+    mockAnlegen.mockResolvedValue(sicht({ datum: '2026-12-13' }));
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Erste Runde anlegen' }));
+    const feld = screen.getByLabelText('Hinweis');
+    expect(feld.tagName).toBe('TEXTAREA');
+    fireEvent.change(feld, { target: { value: 'Bescherung nach dem Essen.\nBitte nichts Selbstgebackenes.' } });
+    expect(screen.getByText('57 / 300')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Titel'), { target: { value: 'Advent 2026' } });
+    fireEvent.change(screen.getByLabelText('Wann wird gefeiert?'), { target: { value: '2026-12-13' } });
     fireEvent.click(screen.getByRole('button', { name: 'Runde anlegen' }));
 
     await screen.findByRole('heading', { name: 'Advent 2026' });
-    expect(mockAnlegen).toHaveBeenCalledWith(expect.objectContaining({ datum: '' }));
-    expect(screen.queryByText(/^Feier/)).not.toBeInTheDocument();
+    expect(mockAnlegen).toHaveBeenCalledWith(expect.objectContaining({
+      hinweis: 'Bescherung nach dem Essen.\nBitte nichts Selbstgebackenes.',
+    }));
   });
 
   it('setzt das Datum der Feier auch nach dem Auslosen und zeigt es in der Übersicht', async () => {
     const ausgelost = sicht({ status: 'ausgelost', ausgelostAm: 2 }, drei);
     await oeffneRunde(ausgelost);
     fireEvent.click(screen.getByRole('button', { name: 'Runde bearbeiten' }));
-    const feld = screen.getByLabelText('Datum der Feier (optional)');
+    const feld = screen.getByLabelText('Wann wird gefeiert?');
     expect(feld).toHaveValue('');
+    // Eine ältere Runde ohne Datum braucht beim Speichern eins.
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    expect(screen.getByText('Bitte ein Datum für die Feier wählen.')).toBeInTheDocument();
+    expect(mockAendern).not.toHaveBeenCalled();
     fireEvent.change(feld, { target: { value: '2026-12-13' } });
     mockAendern.mockResolvedValue({ ...ausgelost, runde: { ...ausgelost.runde, datum: '2026-12-13' } });
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
