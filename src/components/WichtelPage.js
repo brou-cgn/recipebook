@@ -30,7 +30,7 @@ import {
 } from '../utils/wichtelFirestore';
 import { buildWichtelLink, teileWichtelEinladung } from '../utils/wichtelLinks';
 import { formatBudget } from '../utils/formatBudget';
-import { WICHTEL_ANLAESSE, wichtelAnlassLabel } from '../utils/wichtelAnlaesse';
+import { WICHTEL_ANLAESSE, wichtelAnlassLabel, vorgeschlagenerWichtelAnlass } from '../utils/wichtelAnlaesse';
 import { formatWichtelDatum, heuteAlsWichtelDatum, wichtelAbstandText, wichtelKalenderblatt } from '../utils/wichtelDatum';
 import { istGueltigeEmail } from '../utils/wichtelGaeste';
 
@@ -147,7 +147,8 @@ const HINWEIS_MAX = 300;
 
 function RundenFormular({ initial, titelText, submitLabel, busy, onSubmit, onCancel }) {
   const [titel, setTitel] = useState(initial?.titel || '');
-  const [anlass, setAnlass] = useState(initial?.anlass || '');
+  // Bestehende Runden behalten ihren Anlass (auch keinen); nur neue bekommen die Saison-Vorauswahl.
+  const [anlass, setAnlass] = useState(() => (initial ? initial.anlass || '' : vorgeschlagenerWichtelAnlass()));
   const [budget, setBudget] = useState(initial?.budget || '');
   const [hinweis, setHinweis] = useState(initial?.hinweis || '');
   const [datum, setDatum] = useState(initial?.datum || '');
