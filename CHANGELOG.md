@@ -8,6 +8,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 ## [Unreleased]
 
 ### Hinzugefügt
+- Wichteln: Direktlink `broubook.web.app/wichteln` öffnet die Seite zum Anlegen und Verwalten von Wichtel-Runden, ohne den Weg über Events. Wer nicht angemeldet ist, sieht zuerst die Anmeldung mit einem Hinweis und landet danach direkt dort.
 - Wichteln: Optionales Datum der Feier je Runde, beim Anlegen oder später über „Runde bearbeiten“ – auch nach dem Auslosen. Es steht in der Runde, in der Übersicht, auf der Teilnehmerseite (Deutsch, Englisch, Französisch) und in Einladung, Erinnerung und Neuigkeiten-Mail. Mit Datum kommt die letzte Erinnerung an Wünsche spätestens drei Tage vor der Feier, Neuigkeiten-Mails enden mit dem Tag der Feier.
 - Wichteln: Erinnerung per Mail an Gäste, die noch keine Wünsche eingetragen haben – drei Tage nach der Einladung, danach wöchentlich, höchstens dreimal, nur tagsüber (9 bis 20 Uhr). Der erste eigene Wunsch beendet sie, ebenso „Geschenk gekauft“ beim Schenker des Gasts. Zwei Varianten (Nordpol für Weihnachten und Nikolaus, sonst herzlich) auf Deutsch, Englisch und Französisch; der Organisator sieht nicht, wer erinnert wird. Für schon verschickte Einladungen startet die Erinnerung, sobald der Organisator die Runde öffnet.
 - Wichteln: Neues optionales Feld „Anlass“ je Runde (Weihnachten, Nikolaus, Silvester, Ostern, Geburtstag, Hochzeit, Jubiläum, Firmenfeier, Sommerfest, Abschied, Einweihung, Sonstiges). Der Anlass erscheint beim Organisator als Chip in der Runde.

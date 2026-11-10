@@ -6,7 +6,8 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
 
 ## Ablauf
 
-**Organisator** (Events > „Wichteln“, mobil der Geschenk-Button unten links; ab Rolle `edit`):
+**Organisator** (Events > „Wichteln“, mobil der Geschenk-Button unten links, oder direkt
+`broubook.web.app/wichteln`, siehe „Direktlink für Organisatoren“; ab Rolle `edit`):
 
 1. Runde anlegen: Titel, optional Anlass (Weihnachten, Nikolaus, Silvester, Ostern, Geburtstag, Hochzeit, Jubiläum, Firmenfeier, Sommerfest, Abschied, Einweihung, Sonstiges), Datum der Feier, Budget und Hinweis (z. B. „Bescherung nach dem Essen“).
    Alle fünf lassen sich jederzeit ändern („Runde bearbeiten“), auch nach dem Auslosen – etwa ein Datum
@@ -66,6 +67,26 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
   einem ungültigen Link gilt die Browsersprache, wenn sie eine der drei ist, sonst Deutsch. Titel, Budget,
   Hinweis, Namen und Einträge erscheinen so, wie sie eingegeben wurden; das Datum der Feier ausgeschrieben in
   der Sprache der Seite („Sonntag, 13. Dezember 2026“).
+
+## Direktlink für Organisatoren
+
+`broubook.web.app/wichteln` öffnet die Wichtel-Seite (Übersicht der eigenen Runden mit „+ Runde“) ohne
+den Weg über Events. Groß-/Kleinschreibung und ein Schrägstrich am Ende sind egal.
+
+- Nicht angemeldet: Zuerst kommt die Anmeldung mit dem Hinweis „Bitte melde dich an, um Wichtel-Runden
+  anzulegen und zu verwalten.“, danach geht es direkt zu Events > Wichteln. Bis dahin bleibt `/wichteln`
+  in der Adresse, ein Neuladen der Anmeldeseite verliert den Link also nicht.
+- Mit dem Öffnen geht die Adresse zurück auf `/` (wie bei den anderen Direktlinks der App): Ein späteres
+  Neuladen öffnet die App normal, eine erneute Anmeldung führt nicht wieder zu Wichteln.
+- Schließen führt wie gewohnt zur Event-Übersicht.
+- Unter Rolle `edit` (auch Gäste und frisch Registrierte, die mit `read` starten) zeigt die Seite nur
+  den Hinweis auf die nötige Rolle; der Server prüft die Rolle ohnehin selbst (`wichtelVerwalten`).
+- Abgrenzung zu den persönlichen Links: Die haben immer Runde und Token dahinter. `/wichteln/` ohne
+  beides gilt nicht als kaputter Teilnehmer-Link.
+
+Code: `istWichtelSeitenPfad` in `src/utils/wichtelLinks.js`, Ablauf in `App.js` (`wichtelSeiteAngefragt`)
+und `EventsPage` (`pendingWichtelSeite`); Tests in `App.auth.test.js`, `App.share.test.js`,
+`EventsPage.test.js` und `wichtelLinks.test.js`.
 
 ## Wer sieht was
 

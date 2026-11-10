@@ -3,11 +3,16 @@
  * (oder #wichteln/{rundeId}/{token}, wie bei den Freigabelinks).
  * Das Token ist die Berechtigung des Teilnehmers; es entsteht serverseitig
  * (functions/wichteln.js, 24 Zufallsbytes als base64url).
+ *
+ * /wichteln ohne Runde und Token ist dagegen der Direktlink für Organisatoren
+ * (istWichtelSeitenPfad): Er öffnet nach der Anmeldung Events > Wichteln.
  */
 import { normalizeGuestLanguage } from './guestPreferences';
 
 const PFAD_PREFIX = '/wichteln/';
 const HASH_PREFIX = '#wichteln/';
+// Groß-/Kleinschreibung egal: In deutschen Texten steht der Link gern als „/Wichteln“.
+const SEITEN_PFAD = /^\/wichteln\/?$/i;
 const RUNDE_ID = /^[A-Za-z0-9]{10,40}$/;
 const TOKEN = /^[A-Za-z0-9_-]{32}$/;
 
@@ -15,6 +20,7 @@ const TOKEN = /^[A-Za-z0-9_-]{32}$/;
  * Erkennt einen Wichtel-Link in Pfad oder Hash. Jede Adresse unter /wichteln/
  * gilt als Wichtel-Link, auch eine kaputte (z. B. abgeschnitten kopiert): dann ist
  * `gueltig` false, damit die Seite „Link ungültig“ zeigt statt der Anmeldung.
+ * Ausnahme: /wichteln/ ohne etwas dahinter ist die Seite der Organisatoren.
  * @param {{pathname?: string, hash?: string}} location
  * @returns {{rundeId: string, token: string, gueltig: boolean}|null}
  */
@@ -24,12 +30,23 @@ export function parseWichtelLink({ pathname = '', hash = '' } = {}) {
   else if (hash.startsWith(HASH_PREFIX)) rest = hash.slice(HASH_PREFIX.length);
   if (rest === null) return null;
   const teile = rest.split('/').filter(Boolean);
+  if (teile.length === 0) return null;
   const [rundeId = '', token = ''] = teile;
   return {
     rundeId,
     token,
     gueltig: teile.length === 2 && RUNDE_ID.test(rundeId) && TOKEN.test(token),
   };
+}
+
+/**
+ * Direktlink zur Wichtel-Seite der Organisatoren (Runden anlegen und verwalten):
+ * broubook.web.app/wichteln, auch mit Schrägstrich am Ende oder großem W.
+ * @param {string} [pathname]
+ * @returns {boolean}
+ */
+export function istWichtelSeitenPfad(pathname = '') {
+  return SEITEN_PFAD.test(pathname);
 }
 
 /**

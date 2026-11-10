@@ -1,4 +1,6 @@
-import { buildWichtelEinladung, buildWichtelLink, parseWichtelLink, teileWichtelEinladung } from './wichtelLinks';
+import {
+  buildWichtelEinladung, buildWichtelLink, istWichtelSeitenPfad, parseWichtelLink, teileWichtelEinladung,
+} from './wichtelLinks';
 
 const RUNDE = 'AbCdEfGhIj0123456789';
 const TOKEN = 'abcDEF123_-abcDEF123_-abcDEF1234';
@@ -27,10 +29,32 @@ describe('parseWichtelLink', () => {
     expect(parseWichtelLink()).toBeNull();
   });
 
+  it('/wichteln/ ohne Runde und Token ist die Organisator-Seite, kein kaputter Link', () => {
+    expect(parseWichtelLink({ pathname: '/wichteln/' })).toBeNull();
+    expect(parseWichtelLink({ pathname: '/', hash: '#wichteln/' })).toBeNull();
+  });
+
   it('liest zurück, was buildWichtelLink baut', () => {
     const link = buildWichtelLink(RUNDE, TOKEN, 'https://broubook.web.app');
     expect(link).toBe(`https://broubook.web.app/wichteln/${RUNDE}/${TOKEN}`);
     expect(parseWichtelLink(new URL(link))).toEqual({ rundeId: RUNDE, token: TOKEN, gueltig: true });
+  });
+});
+
+describe('istWichtelSeitenPfad', () => {
+  it('erkennt den Direktlink /wichteln, auch mit Schrägstrich am Ende oder großem W', () => {
+    expect(istWichtelSeitenPfad('/wichteln')).toBe(true);
+    expect(istWichtelSeitenPfad('/wichteln/')).toBe(true);
+    expect(istWichtelSeitenPfad('/Wichteln')).toBe(true);
+  });
+
+  it('nimmt keine Teilnehmer-Links und keine anderen Adressen', () => {
+    expect(istWichtelSeitenPfad(`/wichteln/${RUNDE}/${TOKEN}`)).toBe(false);
+    expect(istWichtelSeitenPfad(`/wichteln/${RUNDE}`)).toBe(false);
+    expect(istWichtelSeitenPfad('/wichtelnx')).toBe(false);
+    expect(istWichtelSeitenPfad('/events/wichteln')).toBe(false);
+    expect(istWichtelSeitenPfad('/')).toBe(false);
+    expect(istWichtelSeitenPfad()).toBe(false);
   });
 });
 
