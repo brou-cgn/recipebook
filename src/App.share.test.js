@@ -308,12 +308,11 @@ describe('Wichtel-Link routing', () => {
   });
 
   test.each(['/wichteln', '/wichteln/', '/Wichteln'])(
-    '%s ist die Organisator-Seite: Anmeldung mit Hinweis statt Teilnehmerseite',
+    '%s ist die Organisator-Seite: Anmeldung statt Teilnehmerseite',
     async (pfad) => {
       setPath(pfad);
       render(<App />);
-      expect(await screen.findByText('Bitte melde dich an, um Wichtel-Runden anzulegen und zu verwalten.'))
-        .toBeInTheDocument();
+      expect(await screen.findByRole('button', { name: 'Anmelden' })).toBeInTheDocument();
       expect(screen.queryByTestId('wichtel-page')).not.toBeInTheDocument();
     }
   );
