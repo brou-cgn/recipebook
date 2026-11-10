@@ -19,12 +19,13 @@
  *    stehen am Teilnehmer und gehen nur an den Organisator zurück, nie an Teilnehmer.
  *
  * Einladung per Mail: Ein Teilnehmer kann mit einem Gast aus der eigenen Gästeliste des
- * Organisators verknüpft sein (gastId → guests/{ownerId}/profiles/{gastId}). Hat der Gast
- * eine E-Mail-Adresse, geht der persönliche Link beim Eintragen automatisch per Mail raus,
- * in der Sprache aus dem Gästeprofil (wichtelMail.js). Adresse und Sprache werden bei jedem
- * Versand frisch aus dem Gästeprofil gelesen und nie in der Runde gespeichert; Empfänger
- * sind nur Adressen aus der eigenen Gästeliste, je Organisator höchstens MAX_MAILS_PRO_TAG
- * am Tag (gegen Missbrauch als Mail-Relay, vgl. Tech-Check S6).
+ * Organisators verknüpft sein (gastId → guests/{ownerId}/profiles/{gastId}). Wer mit Vor- und
+ * Nachname neu eingetragen wird, bekommt dort im selben Schritt ein Gästeprofil (neuesGastprofil).
+ * Hat der Gast eine E-Mail-Adresse, geht der persönliche Link beim Auslosen automatisch per Mail
+ * raus – nicht schon beim Eintragen –, in der Sprache aus dem Gästeprofil (wichtelMail.js). Adresse
+ * und Sprache werden bei jedem Versand frisch aus dem Gästeprofil gelesen und nie in der Runde
+ * gespeichert; Empfänger sind nur Adressen aus der eigenen Gästeliste, je Organisator höchstens
+ * MAX_MAILS_PRO_TAG am Tag (gegen Missbrauch als Mail-Relay, vgl. Tech-Check S6).
  *
  * Einträge (Wünsche, Ideen) haben Text und/oder einen Link. Zum Link holt der Server beim
  * Speichern einmal eine Vorschau (Bild, Titel, Seite; linkVorschau.js) und legt sie mit ab.
@@ -53,7 +54,7 @@
 
 const crypto = require('crypto');
 const linkVorschau = require('./linkVorschau');
-const {normalisiereSprache} = require('./shared/sprachen');
+const {normalisiereSprache, STANDARD_SPRACHE} = require('./shared/sprachen');
 const {baueEinladungsMail, baueNeuigkeitenMail, baueErinnerungsMail} = require('./wichtelMail');
 
 const COLLECTION = 'wichtelRunden';
@@ -107,7 +108,9 @@ const MAX_VORMERKER_PRO_LAUF = 50;
 // (src/components/WichtelTeilnahmePage.js liest ihn).
 const GEKAUFT_PARAMETER = 'gekauft=1';
 
-const LAENGE = {titel: 80, budget: 40, hinweis: 300, name: 60, text: 300};
+// vorname, nachname: neuer Gast aus der Runde; „Vorname Nachname“ wird als Teilnehmername auf
+// `name` gekürzt (nur bei sehr langen Namen). email: Höchstlänge einer Adresse (RFC 5321).
+const LAENGE = {titel: 80, budget: 40, hinweis: 300, name: 60, text: 300, vorname: 40, nachname: 40, email: 254};
 // Datum der Feier (optional): Kalendertag ohne Uhrzeit, wie <input type="date"> ihn liefert.
 const DATUM_MUSTER = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DATUM_JAHRE = {von: 2020, bis: 2100};
@@ -122,7 +125,8 @@ const ID_MUSTER = /^[A-Za-z0-9]{10,40}$/;
 // 24 Zufallsbytes als base64url = 32 Zeichen (192 Bit).
 const TOKEN_MUSTER = /^[A-Za-z0-9_-]{32}$/;
 // Wie die Prüfung in manageGuestProfile.js, zusätzlich ohne Zeichen, die eine Adressliste
-// trennen oder umschließen (eine Adresse = genau ein Empfänger).
+// trennen oder umschließen (eine Adresse = genau ein Empfänger). Die App prüft beim Eintragen
+// genauso (src/utils/wichtelGaeste.js, ein Test hält beide gleich).
 const EMAIL_MUSTER = /^[^\s@,;<>"]+@[^\s@,;<>"]+\.[^\s@,;<>"]+$/;
 
 const LINK_UNGUELTIG = 'Dieser Wichtel-Link ist ungültig oder die Runde wurde gelöscht.';
@@ -311,12 +315,56 @@ function zieheKreis(ids, {ausschluesse, randomInt = crypto.randomInt} = {}) {
 }
 
 /**
- * Teilnehmer aus der Eingabe: je Eintrag ein Name (String) oder {name, gastId} für einen
- * Gast aus der eigenen Gästeliste. Bereinigt, ohne leere und ohne doppelte Namen
- * (Groß-/Kleinschreibung egal).
- * @param {*} namen - Array aus Strings oder {name, gastId}
+ * E-Mail-Adresse aus der Eingabe, klein geschrieben; '' ohne Angabe.
+ * @param {*} wert - Eingabe
+ * @param {string} name - Teilnehmer, für die Fehlermeldung (die Adresse selbst steht nicht darin)
  * @param {function} HttpsError - Fehlerklasse
- * @return {Array<{name: string, gastId: string|null}>}
+ * @return {string}
+ */
+function leseEmail(wert, name, HttpsError) {
+  const email = typeof wert === 'string' ? wert.trim().toLowerCase() : '';
+  if (email && (email.length > LAENGE.email || !EMAIL_MUSTER.test(email))) {
+    throw new HttpsError('invalid-argument', `Die E-Mail-Adresse für „${name}“ sieht nicht gültig aus.`);
+  }
+  return email;
+}
+
+/**
+ * Ein Eintrag aus `namen`:
+ *  - Name (String): Teilnehmer ohne Gast (ältere App-Versionen)
+ *  - {name, gastId, email?}: Gast aus der eigenen Gästeliste; `email` ergänzt eine dort fehlende Adresse
+ *  - {vorname, nachname, email?} ohne gastId: neuer Gast, bekommt ein Gästeprofil (neuerGast)
+ * @return {{name: string, gastId: string|null, email?: string, neuerGast?: {vorname: string, nachname: string}}|null}
+ *   null ohne Namen
+ */
+function leseTeilnehmerEintrag(roh, HttpsError) {
+  if (roh === null || typeof roh !== 'object') {
+    const name = bereinige(roh, LAENGE.name);
+    return name ? {name, gastId: null} : null;
+  }
+  const gastId = roh.gastId !== undefined && roh.gastId !== null ?
+    pruefeId(roh.gastId, HttpsError, 'invalid-argument', 'Ungültige Gast-ID.') :
+    null;
+  if (!gastId && (roh.vorname !== undefined || roh.nachname !== undefined)) {
+    const vorname = bereinige(roh.vorname, LAENGE.vorname);
+    const nachname = bereinige(roh.nachname, LAENGE.nachname);
+    if (!vorname || !nachname) throw new HttpsError('invalid-argument', 'Bitte gib Vor- und Nachnamen an.');
+    const name = bereinige(`${vorname} ${nachname}`, LAENGE.name);
+    const email = leseEmail(roh.email, name, HttpsError);
+    return {name, gastId: null, ...(email ? {email} : {}), neuerGast: {vorname, nachname}};
+  }
+  const name = bereinige(roh.name, LAENGE.name);
+  if (!name) return null;
+  const email = gastId ? leseEmail(roh.email, name, HttpsError) : '';
+  return {name, gastId, ...(email ? {email} : {})};
+}
+
+/**
+ * Teilnehmer aus der Eingabe (Einträge siehe leseTeilnehmerEintrag). Bereinigt, ohne leere und
+ * ohne doppelte Namen (Groß-/Kleinschreibung egal).
+ * @param {*} namen - Liste der Einträge
+ * @param {function} HttpsError - Fehlerklasse
+ * @return {Array<{name: string, gastId: string|null, email?: string, neuerGast?: object}>}
  */
 function leseNamen(namen, HttpsError) {
   if (!Array.isArray(namen)) throw new HttpsError('invalid-argument', 'namen muss eine Liste sein.');
@@ -326,14 +374,10 @@ function leseNamen(namen, HttpsError) {
   const gesehen = new Set();
   const ergebnis = [];
   namen.forEach((roh) => {
-    const istObjekt = roh !== null && typeof roh === 'object';
-    const gastId = istObjekt && roh.gastId !== undefined && roh.gastId !== null ?
-      pruefeId(roh.gastId, HttpsError, 'invalid-argument', 'Ungültige Gast-ID.') :
-      null;
-    const name = bereinige(istObjekt ? roh.name : roh, LAENGE.name);
-    if (!name || gesehen.has(schluessel(name))) return;
-    gesehen.add(schluessel(name));
-    ergebnis.push({name, gastId});
+    const eintrag = leseTeilnehmerEintrag(roh, HttpsError);
+    if (!eintrag || gesehen.has(schluessel(eintrag.name))) return;
+    gesehen.add(schluessel(eintrag.name));
+    ergebnis.push(eintrag);
   });
   return ergebnis;
 }
@@ -589,25 +633,54 @@ function wichtelLink(rundeId, token) {
   return `${APP_URL}/wichteln/${rundeId}/${token}`;
 }
 
+/** Gästeliste eines Mitglieds (Gästeprofile, sonst nur über manageGuestProfile.js geschrieben). */
+const gaesteProfilePfad = (uid) => `guests/${uid}/profiles`;
+
 /**
  * Gäste zu den IDs aus der eigenen Gästeliste des Organisators. Fremde und gelöschte Gäste
  * fehlen in der Antwort; nur dieser Pfad wird gelesen, nie die Gästeliste eines anderen.
  * @param {object} db - Firestore
  * @param {string} uid - Organisator
  * @param {Array<string|null>} gastIds - geprüfte IDs (pruefeId)
- * @return {Promise<Map<string, {email: string|null, sprache: string}>>}
+ * @return {Promise<Map<string, {email: string|null, gespeichert: string, sprache: string}>>}
+ *   email: Adresse, an die eine Mail gehen darf (sonst null); gespeichert: was im Profil steht ('' = keine)
  */
 async function ladeGaeste(db, uid, gastIds) {
   const ids = [...new Set(gastIds.filter(Boolean))];
-  const snaps = await Promise.all(ids.map((id) => db.doc(`guests/${uid}/profiles/${id}`).get()));
+  const snaps = await Promise.all(ids.map((id) => db.doc(`${gaesteProfilePfad(uid)}/${id}`).get()));
   const gaeste = new Map();
   snaps.forEach((snap, i) => {
     if (!snap.exists) return;
     const daten = snap.data() || {};
     const email = typeof daten.email === 'string' ? daten.email.trim().toLowerCase() : '';
-    gaeste.set(ids[i], {email: EMAIL_MUSTER.test(email) ? email : null, sprache: normalisiereSprache(daten.sprache)});
+    gaeste.set(ids[i], {
+      email: EMAIL_MUSTER.test(email) ? email : null,
+      gespeichert: email,
+      sprache: normalisiereSprache(daten.sprache),
+    });
   });
   return gaeste;
+}
+
+/**
+ * Gästeprofil für einen neu eingetragenen Teilnehmer: Name und Adresse wie eingegeben, alles andere
+ * wie ein leeres Formular unter „Gäste verwalten“ (emptyForm in src/components/GuestManagementPage.js).
+ * Ein Test prüft, dass validateProfile in manageGuestProfile.js es unverändert annimmt.
+ * @param {{vorname: string, nachname: string, email: string}} gast - geprüfte Eingabe
+ * @return {object} Felder ohne id und Zeitstempel
+ */
+function neuesGastprofil({vorname, nachname, email}) {
+  return {
+    vorname,
+    nachname,
+    email,
+    kind: false,
+    alkoholischeGetränke: true,
+    bevorzugteGetränke: [],
+    bevorzugteKategorien: [],
+    präferenzFaktor: 0.5,
+    sprache: STANDARD_SPRACHE,
+  };
 }
 
 /** Berliner Kalendertag als YYYY-MM-DD. */
@@ -730,16 +803,18 @@ async function versendeEinladungen(ctx, rundeId, runde, empfaenger) {
 }
 
 /**
- * Legt Teilnehmer an (Gast-Verknüpfung nur zu Gästen aus der eigenen Gästeliste) und schickt
- * denen mit E-Mail-Adresse ihren Link.
- * @param {object} ctx - Aufrufkontext (admin, db, HttpsError, uid, mailer, ...)
+ * Legt Teilnehmer an (Gast-Verknüpfung nur zu Gästen aus der eigenen Gästeliste). Für einen neuen
+ * Gast (Vor- und Nachname) entsteht in der Gästeliste ein Gästeprofil, im selben Batch wie der
+ * Teilnehmer; einem vorhandenen Gast ohne Adresse wird die mitgeschickte eingetragen, eine andere
+ * gespeicherte überschreibt die Runde nicht. Mails gehen hier keine raus – die Einladung folgt
+ * beim Auslosen (ladeZurAuslosungEin).
+ * @param {object} ctx - Aufrufkontext (admin, db, HttpsError, uid, ...)
  * @param {object} rundeRef - Runde
  * @param {string} rundeId - Runde
- * @param {object} runde - Rundendaten (für die Mail)
- * @param {Array<{name: string, gastId: string|null}>} eintraege - aus leseNamen
- * @return {Promise<{gesendet: number, fehlgeschlagen: number, grund: string|null}>} Versand
+ * @param {Array<{name: string, gastId: string|null, email?: string, neuerGast?: object}>} eintraege - aus leseNamen
+ * @return {Promise<void>}
  */
-async function nimmTeilnehmerAuf(ctx, rundeRef, rundeId, runde, eintraege) {
+async function nimmTeilnehmerAuf(ctx, rundeRef, rundeId, eintraege) {
   const {admin, db, HttpsError, uid} = ctx;
   const vorhanden = await ladeTeilnehmer(db, rundeId);
   const belegt = new Set(vorhanden.map((t) => schluessel(String(t.name))));
@@ -758,17 +833,43 @@ async function nimmTeilnehmerAuf(ctx, rundeRef, rundeId, runde, eintraege) {
     verknuepft.set(e.gastId, e.name);
   });
   const gaeste = await ladeGaeste(db, uid, eintraege.map((e) => e.gastId));
+  // Adresse zu einem Gast aus der Gästeliste: ergänzt eine fehlende; eine andere gespeicherte
+  // bleibt – die pflegt der Organisator unter „Gäste verwalten“.
+  const adresseErgaenzen = eintraege.filter((e) => {
+    const gast = e.email ? gaeste.get(e.gastId) : null;
+    if (!gast || gast.gespeichert === e.email) return false;
+    if (gast.gespeichert) {
+      throw new HttpsError('failed-precondition',
+          `„${e.name}“ steht in deiner Gästeliste mit einer anderen E-Mail-Adresse. Ändern kannst du sie unter „Gäste verwalten“.`);
+    }
+    return true;
+  });
   const jetzt = admin.firestore.FieldValue.serverTimestamp();
   const start = vorhanden.reduce((max, t) => Math.max(max, t.reihenfolge || 0), 0);
   const sammlung = db.collection(teilnehmerPfad(rundeId));
-  const neue = eintraege.map((e, i) => ({
-    ref: sammlung.doc(),
-    name: e.name,
-    token: neuesToken(),
-    gastId: gaeste.has(e.gastId) ? e.gastId : null,
-    reihenfolge: start + i + 1,
+  const profile = db.collection(gaesteProfilePfad(uid));
+  const neue = eintraege.map((e, i) => {
+    const profilRef = e.neuerGast ? profile.doc() : null;
+    return {
+      ref: sammlung.doc(),
+      name: e.name,
+      token: neuesToken(),
+      gastId: profilRef ? profilRef.id : (gaeste.has(e.gastId) ? e.gastId : null),
+      reihenfolge: start + i + 1,
+      profil: profilRef ? {ref: profilRef, felder: neuesGastprofil({...e.neuerGast, email: e.email || ''})} : null,
+    };
+  });
+  // Felder wie bei manageGuestProfile.js (create), damit „Gäste verwalten“ das Profil wie jedes andere zeigt.
+  const schritte = neue.filter((t) => t.profil).map(({profil}) => (batch) => batch.set(profil.ref, {
+    id: profil.ref.id,
+    ...profil.felder,
+    erstellt: jetzt,
+    aktualisiert: jetzt,
+    erstelltVon: uid,
   }));
-  const schritte = neue.map((t) => (batch) => batch.set(t.ref, {
+  adresseErgaenzen.forEach((e) => schritte.push((batch) => batch.update(
+      db.doc(`${gaesteProfilePfad(uid)}/${e.gastId}`), {email: e.email, aktualisiert: jetzt})));
+  neue.forEach((t) => schritte.push((batch) => batch.set(t.ref, {
     name: t.name,
     token: t.token,
     gastId: t.gastId,
@@ -783,17 +884,41 @@ async function nimmTeilnehmerAuf(ctx, rundeRef, rundeId, runde, eintraege) {
     // (Übergang in planeErinnerungen).
     erinnerungen: 0,
     erstelltAm: jetzt,
-  }));
+  })));
   schritte.push((batch) => batch.update(rundeRef, {
     teilnehmerAnzahl: vorhanden.length + neue.length,
     aktualisiertAm: jetzt,
   }));
+  // Bis MAX_TEILNEHMER Teilnehmer samt Gästeprofilen passt das in einen Batch: alles oder nichts.
   await schreibeInBatches(db, schritte);
+}
 
-  const empfaenger = neue
-      .filter((t) => t.gastId && gaeste.get(t.gastId).email)
-      .map((t) => ({id: t.ref.id, name: t.name, token: t.token, gast: gaeste.get(t.gastId)}));
-  return versendeEinladungen(ctx, rundeId, runde, empfaenger);
+/**
+ * Die erste Mail einer Runde: Nach dem Auslosen bekommt jeder Teilnehmer, dessen Gast eine
+ * E-Mail-Adresse hat (frisch aus der Gästeliste), seinen Link – außer, er hat schon eine
+ * zugestellte Einladung (neues Auslosen nach dem Zurücksetzen, Runden von vor dieser Regel).
+ * Wirft nicht: Die Auslosung steht schon, ein Fehler beim Versand steht in der Antwort.
+ * @param {object} ctx - Aufrufkontext (admin, db, uid, organisatorName, mailer, jetztMs)
+ * @param {string} rundeId - Runde
+ * @param {object} runde - Rundendaten (für die Mail)
+ * @param {Array<object>} teilnehmer - aus ladeTeilnehmer
+ * @return {Promise<{gesendet: number, fehlgeschlagen: number, grund: string|null}>}
+ */
+async function ladeZurAuslosungEin(ctx, rundeId, runde, teilnehmer) {
+  const offen = teilnehmer.filter((t) => t.gastId && t.mailStatus !== 'gesendet');
+  if (offen.length === 0) return keinVersand();
+  let empfaenger = null;
+  try {
+    const gaeste = await ladeGaeste(ctx.db, ctx.uid, offen.map((t) => t.gastId));
+    empfaenger = offen
+        .filter((t) => gaeste.get(t.gastId)?.email)
+        .map((t) => ({id: t.id, name: t.name, token: t.token, gast: gaeste.get(t.gastId)}));
+    return await versendeEinladungen(ctx, rundeId, runde, empfaenger);
+  } catch (err) {
+    console.error(`wichtelVerwalten: Einladungen zur Auslosung (Runde ${rundeId}) nicht verschickt:`, mailFehlerCode(err));
+    // Ohne gelesene Gästeliste ist offen, wer eine Adresse hat: dann zählen alle Verknüpften.
+    return {gesendet: 0, fehlgeschlagen: (empfaenger || offen).length, grund: 'fehler'};
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1244,10 +1369,8 @@ const VERWALTEN = {
       aktualisiertAm: jetzt,
     };
     await ref.set(runde);
-    const versand = eintraege.length > 0 ?
-      await nimmTeilnehmerAuf(ctx, ref, ref.id, runde, eintraege) :
-      keinVersand();
-    return {...await organisatorSicht(db, ref.id, runde), versand};
+    if (eintraege.length > 0) await nimmTeilnehmerAuf(ctx, ref, ref.id, eintraege);
+    return organisatorSicht(db, ref.id, runde);
   },
 
   /**
@@ -1275,17 +1398,21 @@ const VERWALTEN = {
     pruefeOffen(runde, HttpsError);
     const eintraege = leseNamen(daten.namen, HttpsError);
     if (eintraege.length === 0) throw new HttpsError('invalid-argument', 'Bitte gib einen Namen ein.');
-    const versand = await nimmTeilnehmerAuf(ctx, ref, daten.rundeId, runde, eintraege);
-    return {...await organisatorSicht(db, daten.rundeId, runde), versand};
+    await nimmTeilnehmerAuf(ctx, ref, daten.rundeId, eintraege);
+    return organisatorSicht(db, daten.rundeId, runde);
   },
 
   /**
-   * Link (erneut) per Mail schicken, auch nach dem Auslosen. Mit `gastId` wird der Teilnehmer
-   * zugleich mit diesem Gast verknüpft (z. B. vor der Gast-Verknüpfung angelegte Teilnehmer).
+   * Link (erneut) per Mail schicken – erst nach dem Auslosen: die erste Mail verschickt `auslosen`.
+   * Mit `gastId` wird der Teilnehmer zugleich mit diesem Gast verknüpft (z. B. vor der
+   * Gast-Verknüpfung angelegte Teilnehmer).
    */
   async einladungSenden(ctx) {
     const {db, HttpsError, uid, daten} = ctx;
     const {runde} = await ladeEigeneRunde(db, HttpsError, uid, daten.rundeId);
+    if (runde.status !== 'ausgelost') {
+      throw new HttpsError('failed-precondition', 'Die Einladungen gehen beim Auslosen per Mail raus.');
+    }
     const teilnehmerId = pruefeId(daten.teilnehmerId, HttpsError);
     const alle = await ladeTeilnehmer(db, daten.rundeId);
     const teilnehmer = alle.find((t) => t.id === teilnehmerId);
@@ -1382,7 +1509,12 @@ const VERWALTEN = {
     return organisatorSicht(db, daten.rundeId, runde);
   },
 
-  async auslosen({admin, db, HttpsError, uid, daten, randomInt}) {
+  /**
+   * Lost aus und verschickt danach die Einladungen per Mail (ladeZurAuslosungEin). Die Antwort
+   * trägt wie einladungSenden `versand`.
+   */
+  async auslosen(ctx) {
+    const {admin, db, HttpsError, uid, daten, randomInt} = ctx;
     const {ref} = await ladeEigeneRunde(db, HttpsError, uid, daten.rundeId);
     const teilnehmer = await ladeTeilnehmer(db, daten.rundeId);
     if (teilnehmer.length < MIN_TEILNEHMER) {
@@ -1409,7 +1541,8 @@ const VERWALTEN = {
       tx.update(ref, {status: 'ausgelost', ausgelostAm: jetzt, aktualisiertAm: jetzt});
       return {...aktuell, status: 'ausgelost', ausgelostAm: jetzt};
     });
-    return organisatorSicht(db, daten.rundeId, runde);
+    const versand = await ladeZurAuslosungEin(ctx, daten.rundeId, runde, teilnehmer);
+    return {...await organisatorSicht(db, daten.rundeId, runde), versand};
   },
 
   async zuruecksetzen({admin, db, HttpsError, uid, daten}) {
@@ -1676,8 +1809,8 @@ module.exports = {
   zieheKreis,
   neuesToken,
   _internal: {
-    bereinige, leseNamen, sucheKreis, sperrPruefung, berlinerTag,
-    MIN_TEILNEHMER, MAX_TEILNEHMER, MAX_EINTRAEGE_PRO_AUTOR, MAX_MAILS_PRO_TAG, LAENGE, TOKEN_MUSTER, APP_URL,
+    bereinige, leseNamen, neuesGastprofil, sucheKreis, sperrPruefung, berlinerTag,
+    MIN_TEILNEHMER, MAX_TEILNEHMER, MAX_EINTRAEGE_PRO_AUTOR, MAX_MAILS_PRO_TAG, LAENGE, TOKEN_MUSTER, EMAIL_MUSTER, APP_URL,
     NEUIGKEITEN_COLLECTION, SAMMELFENSTER_MS, MINDESTABSTAND_MS, NEUER_VERSUCH_MS, MAX_FEHLVERSUCHE,
     GEKAUFT_PARAMETER,
     ERINNERUNGEN_COLLECTION, ERINNERUNG_NACH_MS, ERINNERUNG_ABSTAND_MS, MAX_ERINNERUNGEN, ERINNERUNG_VORLAUF_TAGE,

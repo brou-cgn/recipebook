@@ -33,10 +33,6 @@ describe('wichtelFirestore', () => {
     expect(result.runde.id).toBe('r1');
 
     mockCall.mockResolvedValue({ data: {} });
-    await loseWichtelRundeAus('r1');
-    expect(mockHttpsCallable).toHaveBeenLastCalledWith({}, 'wichtelVerwalten');
-    expect(mockCall).toHaveBeenLastCalledWith({ aktion: 'auslosen', rundeId: 'r1' });
-
     await setzeWichtelAusschluesse('r1', 't1', ['t2']);
     expect(mockCall).toHaveBeenLastCalledWith({ aktion: 'ausschluesseSetzen', rundeId: 'r1', teilnehmerId: 't1', ausschluesse: ['t2'] });
 
@@ -49,15 +45,13 @@ describe('wichtelFirestore', () => {
     expect(mockCall).toHaveBeenLastCalledWith(expect.objectContaining({ aktion: 'aendern', datum: '' }));
   });
 
-  it('Aufrufe, die Mails verschicken, warten so lange wie die Function', async () => {
+  it('Aufrufe, die Mails verschicken (auslosen, einladungSenden), warten so lange wie die Function', async () => {
     mockCall.mockResolvedValue({ data: {} });
     const lang = { timeout: 130000 };
 
-    await fuegeWichtelTeilnehmerHinzu('r1', [{ name: 'Anna Muster', gastId: 'g1' }, 'Ben']);
+    await loseWichtelRundeAus('r1');
     expect(mockHttpsCallable).toHaveBeenLastCalledWith({}, 'wichtelVerwalten', lang);
-    expect(mockCall).toHaveBeenLastCalledWith({
-      aktion: 'teilnehmerHinzufuegen', rundeId: 'r1', namen: [{ name: 'Anna Muster', gastId: 'g1' }, 'Ben'],
-    });
+    expect(mockCall).toHaveBeenLastCalledWith({ aktion: 'auslosen', rundeId: 'r1' });
 
     await sendeWichtelEinladung('r1', 't1', 'g1');
     expect(mockHttpsCallable).toHaveBeenLastCalledWith({}, 'wichtelVerwalten', lang);
@@ -66,8 +60,17 @@ describe('wichtelFirestore', () => {
     await sendeWichtelEinladung('r1', 't1');
     expect(mockCall).toHaveBeenLastCalledWith({ aktion: 'einladungSenden', rundeId: 'r1', teilnehmerId: 't1', gastId: null });
 
+  });
+
+  it('Eintragen verschickt nichts und wartet nicht länger als üblich', async () => {
+    mockCall.mockResolvedValue({ data: {} });
+    const namen = [{ name: 'Anna Muster', gastId: 'g1', email: 'anna@example.com' }, { vorname: 'Lena', nachname: 'Neu' }];
+    await fuegeWichtelTeilnehmerHinzu('r1', namen);
+    expect(mockHttpsCallable).toHaveBeenLastCalledWith({}, 'wichtelVerwalten');
+    expect(mockCall).toHaveBeenLastCalledWith({ aktion: 'teilnehmerHinzufuegen', rundeId: 'r1', namen });
+
     await legeWichtelRundeAn({ titel: 'Advent', namen: [{ name: 'Anna', gastId: 'g1' }] });
-    expect(mockHttpsCallable).toHaveBeenLastCalledWith({}, 'wichtelVerwalten', lang);
+    expect(mockHttpsCallable).toHaveBeenLastCalledWith({}, 'wichtelVerwalten');
   });
 
   it('liefert eine leere Liste ohne Runden', async () => {

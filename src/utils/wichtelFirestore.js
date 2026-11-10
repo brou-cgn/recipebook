@@ -8,8 +8,8 @@ import { httpsCallable } from 'firebase/functions';
 import { functions } from '../firebase';
 import { getCallableErrorDetails } from './callableErrors';
 
-// Aktionen, die Einladungs-Mails verschicken, dürfen so lange dauern wie die Function
-// (120 s, functions/handlers/wichteln.js); Standard im Client wären 70 s.
+// Aktionen, die Einladungs-Mails verschicken (auslosen, einladungSenden), dürfen so lange dauern
+// wie die Function (120 s, functions/handlers/wichteln.js); Standard im Client wären 70 s.
 const MIT_MAILVERSAND = { timeout: 130000 };
 
 const rufeVerwalten = async (aktion, daten = {}, optionen) => {
@@ -33,7 +33,7 @@ export const listeWichtelRunden = async () => (await rufeVerwalten('liste'))?.ru
 
 /**
  * Runde mit Teilnehmern (inkl. Link-Token, Status, verknüpftem Gast und Mailstatus), nie die
- * Zuordnung. Antworten von anlegen, teilnehmerHinzufuegen und einladungSenden tragen zusätzlich
+ * Zuordnung. Antworten von auslosen und einladungSenden tragen zusätzlich
  * `versand: {gesendet, fehlgeschlagen, grund}` (grund: 'nicht-eingerichtet' | 'limit' | 'fehler').
  */
 export const ladeWichtelRunde = (rundeId) => rufeVerwalten('laden', { rundeId });
@@ -42,21 +42,24 @@ export const ladeWichtelRunde = (rundeId) => rufeVerwalten('laden', { rundeId })
  * datum: Tag der Feier 'JJJJ-MM-TT' oder '' (keins). namen: wie bei fuegeWichtelTeilnehmerHinzu.
  */
 export const legeWichtelRundeAn = ({ titel, anlass, budget, hinweis, datum = '', namen = [] }) =>
-  rufeVerwalten('anlegen', { titel, anlass, budget, hinweis, datum, namen }, namen.length > 0 ? MIT_MAILVERSAND : undefined);
+  rufeVerwalten('anlegen', { titel, anlass, budget, hinweis, datum, namen });
 
 /** Auch nach dem Auslosen; datum '' löscht das Datum der Feier. */
 export const aendereWichtelRunde = (rundeId, { titel, anlass, budget, hinweis, datum = '' }) =>
   rufeVerwalten('aendern', { rundeId, titel, anlass, budget, hinweis, datum });
 
 /**
- * @param {string} rundeId
- * @param {Array<string|{name: string, gastId: string|null}>} namen - Namen oder Gäste aus der
- *   eigenen Gästeliste; Gästen mit E-Mail-Adresse schickt der Server ihren Link sofort per Mail.
+ * Teilnehmer eintragen. Je Eintrag:
+ *  - {name, gastId, email?}: Gast aus der eigenen Gästeliste; `email` ergänzt eine dort fehlende Adresse
+ *    (eine andere gespeicherte lehnt der Server ab)
+ *  - {vorname, nachname, email?}: neuer Gast – der Server legt ihn zugleich in der Gästeliste an
+ *  - ein Name (ältere App-Versionen)
+ * Mails gehen dabei keine raus, die Einladung folgt beim Auslosen.
  */
 export const fuegeWichtelTeilnehmerHinzu = (rundeId, namen) =>
-  rufeVerwalten('teilnehmerHinzufuegen', { rundeId, namen }, MIT_MAILVERSAND);
+  rufeVerwalten('teilnehmerHinzufuegen', { rundeId, namen });
 
-/** Link (erneut) per Mail; gastId verknüpft den Teilnehmer dabei mit diesem Gast. */
+/** Link erneut per Mail, erst nach dem Auslosen; gastId verknüpft den Teilnehmer dabei mit diesem Gast. */
 export const sendeWichtelEinladung = (rundeId, teilnehmerId, gastId = null) =>
   rufeVerwalten('einladungSenden', { rundeId, teilnehmerId, gastId }, MIT_MAILVERSAND);
 
@@ -70,7 +73,8 @@ export const entferneWichtelTeilnehmer = (rundeId, teilnehmerId) =>
 export const setzeWichtelAusschluesse = (rundeId, teilnehmerId, ausschluesse) =>
   rufeVerwalten('ausschluesseSetzen', { rundeId, teilnehmerId, ausschluesse });
 
-export const loseWichtelRundeAus = (rundeId) => rufeVerwalten('auslosen', { rundeId });
+/** Lost aus und schickt allen Gästen mit E-Mail-Adresse ihren Link (Antwort mit `versand`). */
+export const loseWichtelRundeAus = (rundeId) => rufeVerwalten('auslosen', { rundeId }, MIT_MAILVERSAND);
 
 export const setzeWichtelAuslosungZurueck = (rundeId) => rufeVerwalten('zuruecksetzen', { rundeId });
 
