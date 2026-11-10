@@ -1,6 +1,6 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { renderWithProviders } from '../test-utils';
-import WichtelPage, { teileNamen, versandMeldung } from './WichtelPage';
+import WichtelPage, { versandMeldung } from './WichtelPage';
 
 const mockListe = jest.fn();
 const mockLaden = jest.fn();
@@ -61,6 +61,13 @@ const sicht = (rundeOver = {}, teilnehmer = []) => ({
 });
 const drei = [tn('t1', 'Anna'), tn('t2', 'Ben'), tn('t3', 'Cleo')];
 
+/** Füllt das Formular „Teilnehmer eintragen“ aus (leere Felder bleiben unberührt). */
+const tippe = ({ vorname, nachname, email } = {}) => {
+  if (vorname !== undefined) fireEvent.change(screen.getByLabelText('Vorname'), { target: { value: vorname } });
+  if (nachname !== undefined) fireEvent.change(screen.getByLabelText('Nachname'), { target: { value: nachname } });
+  if (email !== undefined) fireEvent.change(screen.getByLabelText('E-Mail (optional)'), { target: { value: email } });
+};
+
 const renderPage = (props = {}) => renderWithProviders(
   <WichtelPage currentUser={{ id: 'u1', role: 'edit' }} onBack={jest.fn()} {...props} />,
 );
@@ -76,13 +83,6 @@ const oeffneRunde = async (antwort) => {
 beforeEach(() => {
   mockDarfVerwalten = true;
   mockListe.mockResolvedValue([]);
-});
-
-describe('teileNamen', () => {
-  it('trennt an Komma, Semikolon und Zeilenumbruch', () => {
-    expect(teileNamen(' Anna, Ben;Cleo\nLena & Tom ,, ')).toEqual(['Anna', 'Ben', 'Cleo', 'Lena & Tom']);
-    expect(teileNamen('')).toEqual([]);
-  });
 });
 
 describe('WichtelPage', () => {
@@ -145,27 +145,79 @@ describe('WichtelPage', () => {
     expect(await screen.findByText('Feier So., 13.12.2026')).toBeInTheDocument();
   });
 
-  it('fügt mehrere Namen auf einmal und Gäste aus der Gästeliste hinzu', async () => {
+  it('trägt einen neuen Gast mit Vorname, Nachname und E-Mail ein; der Server legt ihn in der Gästeliste an', async () => {
     await oeffneRunde(sicht());
-    mockHinzufuegen.mockResolvedValue(sicht({}, drei));
-    fireEvent.change(screen.getByLabelText('Teilnehmer hinzufügen'), { target: { value: 'Anna, Ben, Cleo' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
-    await screen.findByText('Cleo');
-    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', [
-      { name: 'Anna', gastId: null }, { name: 'Ben', gastId: null }, { name: 'Cleo', gastId: null },
-    ]);
+    const hinzufuegen = screen.getByRole('button', { name: 'Hinzufügen' });
+    expect(hinzufuegen).toBeDisabled();
+    tippe({ vorname: ' Lena ', email: ' Lena@Example.com ' });
+    expect(hinzufuegen).toBeDisabled(); // ohne Nachname
+    tippe({ nachname: 'Neu  Mann' });
+    expect(hinzufuegen).toBeEnabled();
+
+    mockHinzufuegen.mockResolvedValue(sicht({}, [tn('t1', 'Lena Neu Mann', { gastId: 'gNeu' })]));
+    fireEvent.click(hinzufuegen);
+    expect(await screen.findByText('Lena Neu Mann ist dabei und steht jetzt auch in deiner Gästeliste.')).toBeInTheDocument();
+    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', [{ vorname: 'Lena', nachname: 'Neu Mann', email: 'lena@example.com' }]);
+    // Nach dem Eintragen ist das Formular leer.
+    expect(screen.getByLabelText('Vorname')).toHaveValue('');
+    expect(screen.getByLabelText('Nachname')).toHaveValue('');
+    expect(screen.getByLabelText('E-Mail (optional)')).toHaveValue('');
   });
 
-  it('schlägt Gäste vor, die noch nicht dabei sind', async () => {
+  it('ohne E-Mail-Adresse geht nur der Name mit', async () => {
+    await oeffneRunde(sicht());
+    mockHinzufuegen.mockResolvedValue(sicht({}, [tn('t1', 'Tom Ohne', { gastId: 'gNeu' })]));
+    tippe({ vorname: 'Tom', nachname: 'Ohne' });
+    fireEvent.submit(screen.getByRole('form', { name: 'Teilnehmer eintragen' }));
+    await waitFor(() => expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', [{ vorname: 'Tom', nachname: 'Ohne' }]));
+  });
+
+  it('schickt eine ungültige E-Mail-Adresse nicht ab', async () => {
+    await oeffneRunde(sicht());
+    tippe({ vorname: 'Lena', nachname: 'Neu', email: 'lena@example' });
+    fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Diese E-Mail-Adresse sieht nicht gültig aus.');
+    expect(screen.getByLabelText('E-Mail (optional)')).toHaveAttribute('aria-invalid', 'true');
+    expect(mockHinzufuegen).not.toHaveBeenCalled();
+
+    // Korrigiert: der Hinweis verschwindet beim Tippen.
+    tippe({ email: 'lena@example.com' });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('zeigt Gäste aus der Gästeliste erst beim Tippen, gesucht in Vor- und Nachname', async () => {
+    const gaesteListe = [
+      { id: 'g1', vorname: 'Anna', nachname: 'Muster' },
+      { id: 'g2', vorname: 'Ben', nachname: 'Beispiel', email: 'ben@example.com' },
+      { id: 'g4', vorname: 'Anna-Lena', nachname: 'Berg' },
+      { id: 'g5', vorname: 'Bernd', nachname: 'Andres' },
+    ];
     mockListe.mockResolvedValue([runde()]);
-    mockLaden.mockResolvedValue(sicht({}, [tn('t1', 'Anna Muster')]));
-    renderPage({ guestProfiles: [{ id: 'g1', vorname: 'Anna', nachname: 'Muster' }, { id: 'g2', vorname: 'Ben', nachname: 'Beispiel' }] });
+    mockLaden.mockResolvedValue(sicht({}, [tn('t1', 'Anna Muster', { gastId: 'g1' })]));
+    renderPage({ guestProfiles: gaesteListe });
     fireEvent.click(await screen.findByText('Advent 2026'));
-    await screen.findByText('Aus deiner Gästeliste:');
-    expect(screen.queryByRole('button', { name: 'Anna Muster hinzufügen' })).not.toBeInTheDocument();
-    mockHinzufuegen.mockResolvedValue(sicht({}, [tn('t1', 'Anna Muster'), tn('t2', 'Ben Beispiel')]));
+    await screen.findByLabelText('Vorname');
+    const pillen = () => screen.queryAllByRole('button', { name: / hinzufügen$/ }).map((b) => b.getAttribute('aria-label'));
+    expect(screen.queryByText('Aus deiner Gästeliste:')).not.toBeInTheDocument();
+    expect(pillen()).toEqual([]);
+
+    // Vorname sucht im Vornamen (auch in Doppelnamen), nicht im Nachnamen; Anna Muster ist schon dabei.
+    tippe({ vorname: 'lena' });
+    expect(pillen()).toEqual(['Anna-Lena Berg hinzufügen']);
+    tippe({ vorname: 'an' });
+    expect(pillen()).toEqual(['Anna-Lena Berg hinzufügen']);
+    // Nachname sucht im Nachnamen; beide Felder zusammen müssen passen.
+    tippe({ vorname: '', nachname: 'b' });
+    expect(pillen()).toEqual(['Anna-Lena Berg hinzufügen', 'Ben Beispiel hinzufügen']);
+    tippe({ vorname: 'be', nachname: 'b' });
+    expect(pillen()).toEqual(['Ben Beispiel hinzufügen']);
+    expect(screen.getByRole('button', { name: 'Ben Beispiel hinzufügen' })).toHaveAttribute('title', 'Bekommt den Link beim Auslosen per Mail');
+
+    mockHinzufuegen.mockResolvedValue(sicht({}, [tn('t1', 'Anna Muster', { gastId: 'g1' }), tn('t2', 'Ben Beispiel', { gastId: 'g2' })]));
     fireEvent.click(screen.getByRole('button', { name: 'Ben Beispiel hinzufügen' }));
     await waitFor(() => expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', [{ name: 'Ben Beispiel', gastId: 'g2' }]));
+    await waitFor(() => expect(screen.getByLabelText('Vorname')).toHaveValue(''));
+    expect(pillen()).toEqual([]);
   });
 
   it('lost erst ab drei Teilnehmern aus', async () => {
@@ -232,7 +284,8 @@ describe('WichtelPage', () => {
     expect(screen.getByText('Link geöffnet')).toBeInTheDocument();
     expect(screen.getByText('Link noch nicht geöffnet')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Anna entfernen' })).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Teilnehmer hinzufügen')).not.toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'Teilnehmer eintragen' })).not.toBeInTheDocument();
+    expect(screen.getByText('Ausgelost – jetzt kann jeder sein Los ziehen.')).toBeInTheDocument();
   });
 
   it('Zurücksetzen fragt nach und setzt dann zurück', async () => {
@@ -303,12 +356,14 @@ describe('WichtelPage', () => {
     }
   });
 
-  it('zeigt Server-Fehler an', async () => {
+  it('zeigt Server-Fehler an und behält die Eingabe', async () => {
     await oeffneRunde(sicht({}, drei));
-    mockHinzufuegen.mockRejectedValue(new Error('„Anna“ ist schon dabei.'));
-    fireEvent.change(screen.getByLabelText('Teilnehmer hinzufügen'), { target: { value: 'anna' } });
+    mockHinzufuegen.mockRejectedValue(new Error('„Anna Muster“ ist schon dabei.'));
+    tippe({ vorname: 'Anna', nachname: 'Muster' });
     fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('„Anna“ ist schon dabei.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('„Anna Muster“ ist schon dabei.');
+    expect(screen.getByLabelText('Vorname')).toHaveValue('Anna');
+    expect(screen.getByLabelText('Nachname')).toHaveValue('Muster');
   });
 });
 
@@ -340,48 +395,93 @@ describe('WichtelPage – Einladung per Mail', () => {
     await screen.findByRole('heading', { name: 'Advent 2026' });
   };
 
-  it('verknüpft eingetippte Namen mit Gästen und meldet den Versand', async () => {
+  it('verknüpft einen eingetippten Namen aus der Gästeliste, statt ihn neu anzulegen', async () => {
     await oeffneMitGaesten(sicht(), [anna, cleo]);
-    mockHinzufuegen.mockResolvedValue({
-      ...sicht({}, [tn('t1', 'anna muster', { gastId: 'g1', mail: { status: 'gesendet', am: 1 } }), tn('t2', 'Ben')]),
-      versand: { gesendet: 1, fehlgeschlagen: 0, grund: null },
-    });
-    fireEvent.change(screen.getByLabelText('Teilnehmer hinzufügen'), { target: { value: 'anna muster, Ben' } });
+    mockHinzufuegen.mockResolvedValue(sicht({}, [tn('t1', 'Anna Muster', { gastId: 'g1' })]));
+    tippe({ vorname: 'anna', nachname: 'MUSTER' });
     fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
+    await waitFor(() => expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', [{ name: 'Anna Muster', gastId: 'g1' }]));
+    expect(screen.queryByText(/steht jetzt auch in deiner Gästeliste/)).not.toBeInTheDocument();
 
-    expect(await screen.findByText('Einladung per Mail verschickt.')).toBeInTheDocument();
-    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', [{ name: 'anna muster', gastId: 'g1' }, { name: 'Ben', gastId: null }]);
-    expect(screen.getByText('Per Mail verschickt')).toBeInTheDocument();
+    // Mit Adresse: Sie geht mit; der Server ergänzt sie bei Cleo, die noch keine hat.
+    mockHinzufuegen.mockResolvedValue(sicht({}, [tn('t1', 'Anna Muster', { gastId: 'g1' }), tn('t2', 'Cleo Ohne', { gastId: 'g3' })]));
+    tippe({ vorname: 'Cleo', nachname: 'Ohne', email: 'cleo@example.com' });
+    fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
+    await waitFor(() => expect(mockHinzufuegen).toHaveBeenLastCalledWith('runde1', [
+      { name: 'Cleo Ohne', gastId: 'g3', email: 'cleo@example.com' },
+    ]));
   });
 
-  it('zeigt dauerhaft, was nicht per Mail rausging', async () => {
-    await oeffneMitGaesten(sicht(), [anna]);
-    mockHinzufuegen.mockResolvedValue({
-      ...sicht({}, [tn('t1', 'Anna Muster', { gastId: 'g1', mail: { status: 'fehler', am: 1 } })]),
+  it('nimmt beim Tipp auf eine Pille die eingetippte Adresse mit', async () => {
+    await oeffneMitGaesten(sicht(), [anna, cleo]);
+    tippe({ email: 'cleo@example.com', vorname: 'cl' });
+    mockHinzufuegen.mockResolvedValue(sicht({}, [tn('t1', 'Cleo Ohne', { gastId: 'g3' })]));
+    fireEvent.click(screen.getByRole('button', { name: 'Cleo Ohne hinzufügen' }));
+    await waitFor(() => expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', [
+      { name: 'Cleo Ohne', gastId: 'g3', email: 'cleo@example.com' },
+    ]));
+  });
+
+  it('verschickt vor dem Auslosen nichts: kein Senden-Button, aber „Mail beim Auslosen“', async () => {
+    const teilnehmer = [
+      tn('t1', 'Anna M.', { gastId: 'g1' }),
+      tn('t2', 'Cleo Ohne', { gastId: 'g3' }),
+      tn('t3', 'Ben'),
+      tn('t4', 'Anna Muster'),
+      tn('t5', 'Dora Komma', { gastId: 'g5' }),
+    ];
+    // Eine Adresse, die der Server nicht anschreibt (zwei Empfänger in einer), zählt nicht.
+    const dora = { id: 'g5', vorname: 'Dora', nachname: 'Komma', email: 'a@example.com, b@example.com' };
+    await oeffneMitGaesten(sicht({}, teilnehmer), [anna, cleo, dora]);
+    expect(screen.queryByRole('button', { name: /senden/ })).not.toBeInTheDocument();
+    const zeileVon = (name) => screen.getByText(name).closest('li');
+    expect(within(zeileVon('Anna M.')).getByText('Mail beim Auslosen')).toBeInTheDocument();
+    expect(within(zeileVon('Cleo Ohne')).queryByText('Mail beim Auslosen')).not.toBeInTheDocument();
+    expect(within(zeileVon('Ben')).queryByText('Mail beim Auslosen')).not.toBeInTheDocument();
+    // Nur über den Namen zugeordnet: der Server mailt beim Auslosen nur gespeicherte Verknüpfungen.
+    expect(within(zeileVon('Anna Muster')).queryByText('Mail beim Auslosen')).not.toBeInTheDocument();
+    expect(within(zeileVon('Dora Komma')).queryByText('Mail beim Auslosen')).not.toBeInTheDocument();
+  });
+
+  it('meldet beim Auslosen die verschickten Einladungen', async () => {
+    await oeffneMitGaesten(sicht({}, drei), [anna]);
+    mockAuslosen.mockResolvedValue({
+      ...sicht({ status: 'ausgelost' }, drei),
+      versand: { gesendet: 2, fehlgeschlagen: 0, grund: null },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Jetzt auslosen' }));
+    expect(await screen.findByText('Ausgelost – 2 Einladungen per Mail verschickt.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('zeigt dauerhaft, was beim Auslosen nicht per Mail rausging', async () => {
+    await oeffneMitGaesten(sicht({}, drei), [anna]);
+    mockAuslosen.mockResolvedValue({
+      ...sicht({ status: 'ausgelost' }, [tn('t1', 'Anna Muster', { gastId: 'g1', mail: { status: 'fehler', am: 1 } }), drei[1], drei[2]]),
       versand: { gesendet: 0, fehlgeschlagen: 1, grund: 'nicht-eingerichtet' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Anna Muster hinzufügen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Jetzt auslosen' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Der Mailversand ist nicht eingerichtet.');
-    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', [{ name: 'Anna Muster', gastId: 'g1' }]);
+    expect(screen.getByText('Ausgelost – jetzt kann jeder sein Los ziehen.')).toBeInTheDocument();
     expect(screen.getByText('Mail nicht verschickt')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Erneut senden' })).toBeInTheDocument();
   });
 
-  it('bietet Senden nur für Gäste mit E-Mail-Adresse an und sendet erneut', async () => {
+  it('bietet nach dem Auslosen Senden nur für Gäste mit E-Mail-Adresse an und sendet erneut', async () => {
     const teilnehmer = [
       tn('t1', 'Anna M.', { gastId: 'g1', mail: { status: 'gesendet', am: Date.UTC(2026, 10, 8, 10) } }),
       tn('t2', 'Ben'),
       tn('t3', 'Cleo Ohne'),
     ];
-    await oeffneMitGaesten(sicht({}, teilnehmer), [anna, cleo]);
+    await oeffneMitGaesten(sicht({ status: 'ausgelost' }, teilnehmer), [anna, cleo]);
 
     const zeileVon = (name) => screen.getByText(name).closest('li');
     expect(within(zeileVon('Ben')).queryByRole('button', { name: /senden/ })).not.toBeInTheDocument();
     expect(within(zeileVon('Cleo Ohne')).queryByRole('button', { name: /senden/ })).not.toBeInTheDocument();
-    // Bereits verknüpft: kein zweiter Vorschlag unter dem Namen aus der Gästeliste.
-    expect(screen.queryByRole('button', { name: 'Anna Muster hinzufügen' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Mail beim Auslosen')).not.toBeInTheDocument();
 
-    mockSenden.mockResolvedValue({ ...sicht({}, teilnehmer), versand: { gesendet: 1, fehlgeschlagen: 0, grund: null } });
+    mockSenden.mockResolvedValue({ ...sicht({ status: 'ausgelost' }, teilnehmer), versand: { gesendet: 1, fehlgeschlagen: 0, grund: null } });
     fireEvent.click(within(zeileVon('Anna M.')).getByRole('button', { name: 'Erneut senden' }));
     expect(await screen.findByText('Einladung per Mail verschickt.')).toBeInTheDocument();
     expect(mockSenden).toHaveBeenCalledWith('runde1', 't1', 'g1');
@@ -397,14 +497,21 @@ describe('WichtelPage – Einladung per Mail', () => {
 
   it('ordnet einen schon verknüpften Gast keinem zweiten Teilnehmer über den Namen zu', async () => {
     const teilnehmer = [tn('t1', 'Anna M.', { gastId: 'g1' }), tn('t2', 'Anna Muster'), tn('t3', 'Ben')];
-    await oeffneMitGaesten(sicht({}, teilnehmer), [anna]);
+    await oeffneMitGaesten(sicht({ status: 'ausgelost' }, teilnehmer), [anna]);
     expect(within(screen.getByText('Anna M.').closest('li')).getByRole('button', { name: 'Per Mail senden' })).toBeInTheDocument();
     expect(within(screen.getByText('Anna Muster').closest('li')).queryByRole('button', { name: /senden/ })).not.toBeInTheDocument();
+  });
 
-    mockHinzufuegen.mockResolvedValue(sicht({}, teilnehmer));
-    fireEvent.change(screen.getByLabelText('Teilnehmer hinzufügen'), { target: { value: 'ANNA MUSTER' } });
+  it('schlägt einen schon verknüpften Gast nicht vor; eingetippt prüft der Server', async () => {
+    await oeffneMitGaesten(sicht({}, [tn('t1', 'Anna M.', { gastId: 'g1' }), tn('t2', 'Ben')]), [anna]);
+    tippe({ vorname: 'Anna' });
+    expect(screen.queryByRole('button', { name: 'Anna Muster hinzufügen' })).not.toBeInTheDocument();
+
+    mockHinzufuegen.mockRejectedValue(new Error('„Anna Muster“ ist schon als „Anna M.“ dabei.'));
+    tippe({ nachname: 'Muster' });
     fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
-    await waitFor(() => expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', [{ name: 'ANNA MUSTER', gastId: null }]));
+    expect(await screen.findByRole('alert')).toHaveTextContent('„Anna Muster“ ist schon als „Anna M.“ dabei.');
+    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', [{ name: 'Anna Muster', gastId: 'g1' }]);
   });
 
   it('teilt den Link in der Sprache des Gasts', async () => {

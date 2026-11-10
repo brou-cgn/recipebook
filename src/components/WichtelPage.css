@@ -344,16 +344,40 @@
   cursor: default;
 }
 
-/* Hinzufügen */
+/* Hinzufügen (WichtelTeilnehmerFormular.js): Vorname | Nachname, darunter passende Gäste aus der
+   Gästeliste, dann E-Mail | Hinzufügen. Die Pillen stehen direkt unter den Namensfeldern, damit sie
+   mobil über der Tastatur sichtbar bleiben. */
 .wichtel-hinzufuegen {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 10px;
   margin-bottom: 12px;
 }
 
-.wichtel-hinzufuegen input {
-  flex: 1;
+.wichtel-hinzufuegen-zeile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.wichtel-page .wichtel-feld {
+  display: flex;
+  flex: 1 1 140px;
+  flex-direction: column;
+  gap: 4px;
   min-width: 0;
+}
+
+.wichtel-page .wichtel-feld > span {
+  color: var(--color-text-body);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.wichtel-hinzufuegen input {
+  width: 100%;
+  box-sizing: border-box;
   height: 44px;
   padding: 8px 14px;
   border: 1px solid var(--color-border);
@@ -364,9 +388,25 @@
   font-size: 16px;
 }
 
+.wichtel-hinzufuegen input:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.wichtel-hinzufuegen input[aria-invalid='true'] {
+  border-color: var(--color-bad-text);
+}
+
 .wichtel-hinzufuegen .events-primary-btn {
   flex: 0 0 auto;
+  height: 44px;
   padding: 10px 16px;
+}
+
+.wichtel-page .wichtel-feld-fehler {
+  margin: 0;
+  color: var(--color-bad-text);
+  font-size: 13px;
 }
 
 .wichtel-vorschlaege {

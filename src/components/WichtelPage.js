@@ -4,6 +4,7 @@ import './WichtelPage.css';
 import OverviewAddFab from './OverviewAddFab';
 import ConfirmDialog from './ConfirmDialog';
 import WichtelZeile from './WichtelZeile';
+import WichtelTeilnehmerFormular from './WichtelTeilnehmerFormular';
 import PencilIcon from './icons/PencilIcon';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import useInlineRename from '../hooks/useInlineRename';
@@ -30,6 +31,7 @@ import { buildWichtelLink, teileWichtelEinladung } from '../utils/wichtelLinks';
 import { formatBudget } from '../utils/formatBudget';
 import { WICHTEL_ANLAESSE, wichtelAnlassLabel } from '../utils/wichtelAnlaesse';
 import { formatWichtelDatum } from '../utils/wichtelDatum';
+import { istGueltigeEmail } from '../utils/wichtelGaeste';
 
 const MIN_TEILNEHMER = 3;
 const HINWEIS_DAUER_MS = 3500;
@@ -40,12 +42,6 @@ const formatZeitpunkt = (ms) => (ms
   : '');
 
 const schluessel = (name) => String(name || '').trim().toLocaleLowerCase('de');
-
-/** „Anna, Ben; Cleo“ oder eine Liste mit Zeilenumbrüchen → einzelne Namen. */
-export const teileNamen = (eingabe) => String(eingabe || '')
-  .split(/[,;\n]/)
-  .map((name) => name.replace(/\s+/g, ' ').trim())
-  .filter(Boolean);
 
 const VERSAND_GRUND = {
   limit: 'Das Tageslimit für Wichtel-Mails ist erreicht.',
@@ -209,7 +205,12 @@ function TeilnehmerZeile({
       ? { text: 'Link geöffnet', klasse: '' }
       : { text: 'Link noch nicht geöffnet', klasse: 'wichtel-chip--leise' };
   const mail = teilnehmer.mail || null;
-  const kannMailen = Boolean(gastProfil?.id && gastProfil.email);
+  // Wie der Server: eine gespeicherte, aber unbrauchbare Adresse bekommt keine Mail.
+  const gastMitAdresse = Boolean(gastProfil?.id) && istGueltigeEmail(gastProfil.email);
+  // Die erste Mail verschickt das Auslosen; von Hand (erneut) senden geht erst danach.
+  const kannMailen = ausgelost && gastMitAdresse;
+  // Beim Auslosen bekommt nur eine Mail, wer gespeichert verknüpft ist und noch keine zugestellte hat.
+  const mailFolgt = !ausgelost && gastMitAdresse && Boolean(teilnehmer.gastId) && mail?.status !== 'gesendet';
 
   const ausgeschlossen = new Set(teilnehmer.ausschluesse || []);
   const ausgeschlosseneNamen = andere.filter((gast) => ausgeschlossen.has(gast.id)).map((gast) => gast.name);
@@ -267,6 +268,11 @@ function TeilnehmerZeile({
           )}
           {mail?.status === 'fehler' && (
             <span className="wichtel-chip wichtel-chip--fehler">Mail nicht verschickt</span>
+          )}
+          {mailFolgt && (
+            <span className="wichtel-chip wichtel-chip--leise" title="Der persönliche Link geht beim Auslosen per Mail raus.">
+              Mail beim Auslosen
+            </span>
           )}
         </div>
         <div className="wichtel-teilnehmer-knoepfe">
@@ -335,7 +341,6 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
   const [busy, setBusy] = useState(false);
   const [fehler, setFehler] = useState('');
   const [hinweis, setHinweis] = useState('');
-  const [neuerName, setNeuerName] = useState('');
   const [zuruecksetzenFragen, setZuruecksetzenFragen] = useState(false);
   const [sichtbarerLink, setSichtbarerLink] = useState(null);
   const [ausschlussFuer, setAusschlussFuer] = useState(null);
@@ -410,7 +415,6 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
     setDetail(null);
     setDetailStatus('laden');
     setFehler('');
-    setNeuerName('');
     setSichtbarerLink(null);
     setAusschlussFuer(null);
     setAnsicht('detail');
@@ -469,14 +473,14 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
     if (meldung?.art === 'fehler') setFehler(meldung.text);
   };
 
-  /** @param {Array<{name: string, gastId: string|null}>} eintraege */
-  const handleHinzufuegen = async (eintraege) => {
-    if (!detail || eintraege.length === 0) return;
-    const sicht = await fuehreAus(() => fuegeWichtelTeilnehmerHinzu(detail.runde.id, eintraege));
-    if (sicht) {
-      setNeuerName('');
-      meldeVersand(sicht.versand);
-    }
+  /**
+   * @param {Array<object>} eintraege - siehe fuegeWichtelTeilnehmerHinzu
+   * @param {string} [erfolg] - kurzer Hinweis nach dem Eintragen
+   * @returns {Promise<boolean>} ob eingetragen wurde
+   */
+  const handleHinzufuegen = async (eintraege, erfolg) => {
+    if (!detail || eintraege.length === 0) return false;
+    return Boolean(await fuehreAus(() => fuegeWichtelTeilnehmerHinzu(detail.runde.id, eintraege), erfolg));
   };
 
   const handleMailSenden = async (teilnehmer, gast) => {
@@ -527,10 +531,14 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
     }
   };
 
-  const handleAuslosen = () => fuehreAus(
-    () => loseWichtelRundeAus(detail.runde.id),
-    'Ausgelost – jetzt kann jeder sein Los ziehen.',
-  );
+  // Mit dem Auslosen gehen die Einladungen raus: Erfolg kurz unten, was nicht rausging, bleibt stehen.
+  const handleAuslosen = async () => {
+    const sicht = await fuehreAus(() => loseWichtelRundeAus(detail.runde.id));
+    if (!sicht) return;
+    const meldung = versandMeldung(sicht.versand);
+    if (meldung?.art === 'fehler') setFehler(meldung.text);
+    zeigeHinweis(meldung?.art === 'ok' ? `Ausgelost – ${meldung.text}` : 'Ausgelost – jetzt kann jeder sein Los ziehen.');
+  };
 
   const handleZuruecksetzen = async () => {
     setZuruecksetzenFragen(false);
@@ -573,22 +581,33 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
   // Gast eines Teilnehmers: über die gespeicherte Verknüpfung, sonst über den gleichen Namen.
   const gastZuTeilnehmer = (t) => (t.gastId ? gaeste.nachId.get(t.gastId) || null : freierGastMitNamen(t.name));
 
-  /** Eingetippter Name → Eintrag; gleicher Name wie ein Gast verknüpft ihn (Mail, Sprache). */
-  const mitGast = (name) => ({ name, gastId: freierGastMitNamen(name)?.id || null });
-
+  // Gäste für die Pillen beim Eintragen: noch nicht dabei, je Name einer (der mit E-Mail-Adresse).
   const gaesteVorschlaege = useMemo(() => {
     const vorhanden = new Set(teilnehmer.map((t) => schluessel(t.name)));
-    const gesehen = new Set();
-    return guestProfiles
-      .map((gast) => ({ name: getGuestDisplayName(gast), gast }))
-      .filter(({ name, gast }) => {
-        const key = schluessel(name);
-        if (!key || vorhanden.has(key) || verknuepfteGaeste.has(gast.id) || gesehen.has(key)) return false;
-        gesehen.add(key);
-        return true;
-      })
-      .sort((a, b) => a.name.localeCompare(b.name, 'de', { sensitivity: 'base' }));
-  }, [guestProfiles, teilnehmer, verknuepfteGaeste]);
+    return guestProfiles.filter((gast) => {
+      const key = schluessel(getGuestDisplayName(gast));
+      return Boolean(key && gast?.id) && gaeste.nachName.get(key) === gast
+        && !vorhanden.has(key) && !verknuepfteGaeste.has(gast.id);
+    });
+  }, [guestProfiles, gaeste, teilnehmer, verknuepfteGaeste]);
+
+  /** Gast aus der Gästeliste eintragen; eine eingetippte Adresse ergänzt eine im Profil fehlende. */
+  const handleGastWaehlen = (gast, email = '') => handleHinzufuegen([
+    { name: getGuestDisplayName(gast), gastId: gast.id, ...(email ? { email } : {}) },
+  ]);
+
+  /**
+   * Vorname, Nachname, E-Mail aus dem Formular. Steht der Gast schon in der Gästeliste, wird er
+   * verknüpft statt ein zweites Mal angelegt; sonst legt der Server ihn dort an.
+   */
+  const handleEintragen = ({ vorname, nachname, email }) => {
+    const gast = gaeste.nachName.get(schluessel(`${vorname} ${nachname}`));
+    if (gast?.id) return handleGastWaehlen(gast, email);
+    return handleHinzufuegen(
+      [{ vorname, nachname, ...(email ? { email } : {}) }],
+      `${vorname} ${nachname} ist dabei und steht jetzt auch in deiner Gästeliste.`,
+    );
+  };
 
   const renderSchliessen = (label, onClick) => (
     <button className="app-close-button" onClick={onClick} aria-label={label} title={label}>
@@ -699,7 +718,7 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
             <p className="wichtel-erklaerung">
               {ausgelost
                 ? 'Jeder zieht über seinen persönlichen Link sein Los und sieht dort nur das eigene. Auch du siehst nicht, wer wen gezogen hat.'
-                : 'Trag alle ein, die mitmachen, und lose dann aus. Die Links kannst du schon vorher verschicken – dann kann jeder seine Wünsche und Ideen für andere eintragen. Unter „Ausschlüsse“ legst du fest, wen jemand nicht ziehen soll – bei Paaren für beide. Gäste aus deiner Gästeliste mit E-Mail-Adresse bekommen ihren Link beim Eintragen automatisch per Mail – und eine Erinnerung, solange sie noch keine Wünsche eingetragen haben.'}
+                : 'Trag alle ein, die mitmachen – wer noch nicht in deiner Gästeliste steht, wird dort angelegt. Beim Auslosen bekommt jeder mit E-Mail-Adresse seinen persönlichen Link per Mail und eine Erinnerung, solange er noch keine Wünsche eingetragen hat. Ohne Adresse teilst du den Link selbst über „Link teilen“, auf Wunsch auch schon vorher. Unter „Ausschlüsse“ legst du fest, wen jemand nicht ziehen soll – bei Paaren für beide.'}
             </p>
 
             {fehlerZeile}
@@ -739,47 +758,12 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
               {ausgelost ? (
                 <p className="wichtel-leise">Teilnehmer und Ausschlüsse ändern geht erst nach dem Zurücksetzen der Auslosung.</p>
               ) : (
-                <>
-                  <form
-                    className="wichtel-hinzufuegen"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleHinzufuegen(teileNamen(neuerName).map(mitGast));
-                    }}
-                  >
-                    <input
-                      type="text"
-                      value={neuerName}
-                      onChange={(e) => setNeuerName(e.target.value)}
-                      placeholder="z. B. Anna, Ben, Cleo"
-                      aria-label="Teilnehmer hinzufügen"
-                      maxLength={2000}
-                    />
-                    <button type="submit" className="events-primary-btn" disabled={busy || teileNamen(neuerName).length === 0}>
-                      Hinzufügen
-                    </button>
-                  </form>
-                  {gaesteVorschlaege.length > 0 && (
-                    <div className="wichtel-vorschlaege">
-                      <span className="wichtel-leise">Aus deiner Gästeliste:</span>
-                      <div className="wichtel-vorschlaege-chips">
-                        {gaesteVorschlaege.map(({ name, gast }) => (
-                          <button
-                            key={name}
-                            type="button"
-                            className="wichtel-vorschlag"
-                            onClick={() => handleHinzufuegen([{ name, gastId: gast.id || null }])}
-                            disabled={busy}
-                            aria-label={`${name} hinzufügen`}
-                            title={gast.email ? 'Bekommt den Link sofort per Mail' : undefined}
-                          >
-                            + {name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
+                <WichtelTeilnehmerFormular
+                  kandidaten={gaesteVorschlaege}
+                  busy={busy}
+                  onEintragen={handleEintragen}
+                  onGastWaehlen={handleGastWaehlen}
+                />
               )}
             </section>
 
@@ -815,7 +799,7 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
         {zuruecksetzenFragen && (
           <ConfirmDialog
             title="Auslosung zurücksetzen?"
-            message="Alle bisher gezogenen Lose verfallen; wer schon gezogen hat, zieht nach dem nächsten Auslosen neu. Links, Wünsche und Ideen bleiben erhalten."
+            message="Alle bisher gezogenen Lose verfallen; wer schon gezogen hat, zieht nach dem nächsten Auslosen neu. Links, Wünsche und Ideen bleiben erhalten. Eine Einladungs-Mail bekommt beim nächsten Auslosen nur, wer noch keine hatte."
             confirmLabel="Zurücksetzen"
             onConfirm={handleZuruecksetzen}
             onCancel={() => setZuruecksetzenFragen(false)}
