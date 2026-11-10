@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {baueEinladungsMail, baueNeuigkeitenMail, baueErinnerungsMail, _internal} = require('./wichtelMail');
+const {absender, baueEinladungsMail, baueNeuigkeitenMail, baueErinnerungsMail, _internal} = require('./wichtelMail');
 const {SPRACHEN} = require('./shared/sprachen');
 
 const LINK = 'https://broubook.web.app/wichteln/AbCdEfGhIj0123456789/abcDEF123_-abcDEF123_-abcDEF1234';
@@ -52,6 +52,45 @@ test('Variante richtet sich nur nach dem Anlass', () => {
   assert.doesNotMatch(baueEinladungsMail({...basis, sprache: 'de'}).subject, /Nordpol/, 'ohne Anlass: warm_casual');
 });
 
+// Anzeigename des Absenders je Variante und Sprache; warm_casual ohne Weihnachtsbezug und ohne App-Namen.
+const ABSENDER = {
+  north_pole: {de: 'Wichtelpost vom Nordpol', en: 'Post from the North Pole', fr: 'Courrier du pôle Nord'},
+  warm_casual: {de: 'Wichtelpost', en: 'Gift Exchange', fr: 'Échange de cadeaux'},
+};
+
+test('Absendername: je Variante und Sprache, in allen drei Mails gleich', () => {
+  for (const [variante, anlass] of Object.entries(VARIANTEN)) {
+    for (const sprache of SPRACHEN) {
+      const soll = ABSENDER[variante][sprache];
+      assert.equal(baueEinladungsMail({...basis, anlass, sprache}).absenderName, soll, `Einladung ${variante}/${sprache}`);
+      assert.equal(baueErinnerungsMail({...erinnerungBasis, anlass, sprache}).absenderName, soll, `Erinnerung ${variante}/${sprache}`);
+      assert.equal(baueNeuigkeitenMail({...neuigkeitenBasis, anlass, sprache, wuensche: 1}).absenderName, soll,
+          `Neuigkeiten ${variante}/${sprache}`);
+    }
+  }
+  assert.equal(baueEinladungsMail({...basis, sprache: 'xx'}).absenderName, 'Wichtelpost', 'unbekannte Sprache: Deutsch');
+});
+
+test('warm_casual: kein Weihnachtsbezug in Absender und Einladung, in keiner Sprache', () => {
+  const weihnachtlich = /santa|noël|weihnacht|christmas|nordpol|north pole|pôle|lutin|elf|elves|recipebook/i;
+  for (const sprache of SPRACHEN) {
+    for (const ohne of [false, true]) {
+      const mail = baueEinladungsMail({...basis, organisator: ohne ? null : 'Ben', anlass: 'geburtstag', sprache});
+      assert.doesNotMatch(mail.absenderName, weihnachtlich, sprache);
+      assert.doesNotMatch(mail.text, /santa|noël|weihnacht|christmas|nordpol|north pole|pôle/i, `${sprache} Text`);
+    }
+  }
+});
+
+test('absender: Adresse aus SMTP_FROM, Name aus der Mail', () => {
+  assert.deepEqual(absender('noreply@example.com', 'Wichtelpost'), {name: 'Wichtelpost', address: 'noreply@example.com'});
+  assert.deepEqual(absender('RecipeBook <noreply@example.com>', 'Courrier du pôle Nord'),
+      {name: 'Courrier du pôle Nord', address: 'noreply@example.com'}, 'Name in SMTP_FROM wird ersetzt');
+  assert.deepEqual(absender(' noreply@example.com ', 'Gift Exchange'), {name: 'Gift Exchange', address: 'noreply@example.com'});
+  assert.equal(absender('RecipeBook <noreply@example.com>', ''), 'RecipeBook <noreply@example.com>', 'ohne Name unverändert');
+  assert.equal(absender('noreply@example.com', undefined), 'noreply@example.com');
+});
+
 /** Alle Schlüsselpfade eines Textbaums („neuigkeiten.gemeinsam.anzahl.wunsch.eins“), sortiert. */
 const schluesselPfade = (baum, praefix = '') => Object.entries(baum).flatMap(([key, wert]) => (
   typeof wert === 'string' ? [`${praefix}${key}`] : schluesselPfade(wert, `${praefix}${key}.`))).sort();
@@ -63,7 +102,8 @@ test('jede Sprache aus shared/sprachen.js hat alle Mails in beiden Varianten, mi
   const mails = ['einladung', 'erinnerung', 'neuigkeiten'];
   assert.deepEqual(Object.keys(_internal.TEXTE).sort(), [...SPRACHEN].sort());
   for (const sprache of SPRACHEN) {
-    assert.deepEqual(Object.keys(_internal.TEXTE[sprache]).sort(), mails);
+    assert.deepEqual(Object.keys(_internal.TEXTE[sprache]).sort(), ['absender', ...mails]);
+    assert.deepEqual(Object.keys(_internal.TEXTE[sprache].absender).sort(), ['north_pole', 'warm_casual']);
     for (const mail of mails) {
       assert.deepEqual(Object.keys(_internal.TEXTE[sprache][mail]).sort(), ['gemeinsam', 'north_pole', 'warm_casual']);
     }

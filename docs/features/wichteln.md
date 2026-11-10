@@ -245,6 +245,12 @@ Typeahead und Adressprüfung: `src/utils/wichtelGaeste.js`), `src/components/Wic
   Runden-IDs und Fehlercodes des Mailservers, nie die Adresse (Tech-Check S26).
 - **Versand:** SMTP-Secrets `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` (dieselben
   wie für die Listen-Einladung), nodemailer mit kleinem Pool, Function-Timeout 120 s.
+- **Absender:** Adresse aus `SMTP_FROM`, Anzeigename je Variante und Sprache aus `absender` in
+  `functions/wichtelMailTexte/<sprache>.js` – gilt für Einladung, Erinnerung und Neuigkeiten:
+  `north_pole` „Wichtelpost vom Nordpol“ / „Post from the North Pole“ / „Courrier du pôle Nord“,
+  `warm_casual` „Wichtelpost“ / „Gift Exchange“ / „Échange de cadeaux“ (bewusst ohne Weihnachtsbezug und
+  ohne App-Namen). Ein Name in `SMTP_FROM` („Name <adresse>“) wird für Wichtel-Mails ersetzt; die anderen
+  Mails der App behalten `SMTP_FROM` unverändert.
 
 ## Neuigkeiten per Mail
 

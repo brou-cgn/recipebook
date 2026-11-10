@@ -2,6 +2,12 @@
  * Texte der Wichtel-Mails auf Englisch. Aufbau, Varianten und Platzhalter wie in de.js.
  */
 module.exports = {
+  // Anzeigename des Absenders (die Adresse bleibt SMTP_FROM). warm_casual ohne Weihnachtsbezug.
+  absender: {
+    north_pole: "Post from the North Pole",
+    warm_casual: "Gift Exchange",
+  },
+
   einladung: {
     north_pole: {
       betreff: "📜 A letter from the North Pole for {firstName}",
@@ -36,8 +42,8 @@ module.exports = {
     },
     gemeinsam: {
       hinweis: "Note: {hinweis}",
-      grund: "You're receiving this email because {hostName} signed you up for Secret Santa.",
-      grundOhneHost: "You're receiving this email because you were signed up for Secret Santa.",
+      grund: "You're receiving this email because {hostName} signed you up for a gift exchange.",
+      grundOhneHost: "You're receiving this email because you were signed up for a gift exchange.",
     },
   },
 
