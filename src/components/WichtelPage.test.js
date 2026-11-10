@@ -243,11 +243,13 @@ describe('WichtelPage', () => {
     fireEvent.click(chip('Ben'));
     await waitFor(() => expect(chip('Ben')).toHaveAttribute('aria-pressed', 'true'));
     expect(mockAusschluesse).toHaveBeenCalledWith('runde1', 't1', ['t2']);
+    // Auch bei offenem Panel bleibt der Ausschluss als Text in der Zeile sichtbar.
+    expect(within(anna).getByText('Beschenkt nicht: Ben')).toBeInTheDocument();
     // Einen muss Anna noch beschenken können.
     expect(chip('Cleo')).toBeDisabled();
     expect(within(anna).getByText('Mindestens einen Gast muss Anna beschenken können.')).toBeInTheDocument();
 
-    // Zugeklappt steht der Ausschluss als Text in der Zeile.
+    // Zugeklappt ebenso.
     fireEvent.click(within(anna).getByRole('button', { name: 'Ausschlüsse' }));
     expect(within(anna).getByText('Beschenkt nicht: Ben')).toBeInTheDocument();
     expect(within(anna).queryByRole('group')).not.toBeInTheDocument();
@@ -257,6 +259,7 @@ describe('WichtelPage', () => {
     fireEvent.click(chip('Ben'));
     await waitFor(() => expect(chip('Ben')).toHaveAttribute('aria-pressed', 'false'));
     expect(mockAusschluesse).toHaveBeenLastCalledWith('runde1', 't1', []);
+    expect(within(anna).queryByText(/Beschenkt nicht:/)).not.toBeInTheDocument();
     expect(chip('Cleo')).toBeEnabled();
   });
 
