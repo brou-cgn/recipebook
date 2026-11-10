@@ -17,3 +17,9 @@ export const WICHTEL_ANLAESSE = [
 ];
 
 export const wichtelAnlassLabel = (key) => WICHTEL_ANLAESSE.find((a) => a.key === key)?.label || '';
+
+// Vorauswahl für eine neue Runde: im November und Dezember Weihnachten, sonst keiner.
+export const vorgeschlagenerWichtelAnlass = (heute = new Date()) => {
+  const monat = heute.getMonth();
+  return monat === 10 || monat === 11 ? 'weihnachten' : '';
+};

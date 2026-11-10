@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { WICHTEL_ANLAESSE, wichtelAnlassLabel } from './wichtelAnlaesse';
+import { WICHTEL_ANLAESSE, wichtelAnlassLabel, vorgeschlagenerWichtelAnlass } from './wichtelAnlaesse';
 
 describe('wichtelAnlaesse', () => {
   it('liefert das Label zum Schlüssel, sonst leer', () => {
@@ -15,5 +15,12 @@ describe('wichtelAnlaesse', () => {
     expect(treffer).not.toBeNull();
     const server = treffer[1].split(',').map((s) => s.trim().replace(/'/g, '')).filter(Boolean);
     expect(server).toEqual(WICHTEL_ANLAESSE.map((a) => a.key));
+  });
+
+  it('schlägt im November und Dezember Weihnachten vor, sonst nichts', () => {
+    expect(vorgeschlagenerWichtelAnlass(new Date(2026, 10, 1))).toBe('weihnachten');
+    expect(vorgeschlagenerWichtelAnlass(new Date(2026, 11, 31))).toBe('weihnachten');
+    expect(vorgeschlagenerWichtelAnlass(new Date(2026, 9, 31))).toBe('');
+    expect(vorgeschlagenerWichtelAnlass(new Date(2027, 0, 1))).toBe('');
   });
 });
