@@ -16,6 +16,7 @@ const mockAusschluesse = jest.fn();
 const mockTeilen = jest.fn();
 const mockSenden = jest.fn();
 let mockDarfVerwalten = true;
+let mockIcons = {};
 
 jest.mock('../utils/wichtelFirestore', () => ({
   listeWichtelRunden: (...a) => mockListe(...a),
@@ -45,7 +46,7 @@ jest.mock('../utils/userManagement', () => ({
 jest.mock('../utils/customLists', () => ({
   getButtonIcons: () => Promise.resolve({}),
   DEFAULT_BUTTON_ICONS: {},
-  getEffectiveIcon: () => '',
+  getEffectiveIcon: (_icons, key) => mockIcons[key] || '',
   getDarkModePreference: () => false,
 }));
 
@@ -82,6 +83,7 @@ const oeffneRunde = async (antwort) => {
 
 beforeEach(() => {
   mockDarfVerwalten = true;
+  mockIcons = {};
   mockListe.mockResolvedValue([]);
 });
 
@@ -561,5 +563,78 @@ describe('WichtelPage – Einladung per Mail', () => {
 
     fireEvent.click(within(screen.getByText('Ben').closest('li')).getByRole('button', { name: 'Link teilen' }));
     await waitFor(() => expect(mockTeilen).toHaveBeenLastCalledWith(expect.objectContaining({ name: 'Ben', sprache: 'de' })));
+  });
+});
+
+describe('WichtelPage – Stift öffnet die Gästekarte', () => {
+  const anna = { id: 'g1', vorname: 'Anna', nachname: 'Muster', email: 'anna@example.com' };
+
+  const oeffne = async (antwort, renderGastBearbeiten) => {
+    mockListe.mockResolvedValue([antwort.runde]);
+    mockLaden.mockResolvedValue(antwort);
+    renderPage({ guestProfiles: [anna], renderGastBearbeiten });
+    fireEvent.click(await screen.findByText('Advent 2026'));
+    await screen.findByRole('heading', { name: 'Advent 2026' });
+  };
+
+  it('öffnet für einen Gast aus der Gästeliste die Gästekarte und kehrt zur Runde zurück', async () => {
+    let schliessen;
+    const render = jest.fn((gast, onClose) => {
+      schliessen = onClose;
+      return <div>Gästekarte {gast.vorname}</div>;
+    });
+    await oeffne(sicht({}, [tn('t1', 'Anna Muster', { gastId: 'g1' }), tn('t2', 'Ben')]), render);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Anna Muster bearbeiten' }));
+    expect(screen.getByText('Gästekarte Anna')).toBeInTheDocument();
+    expect(render).toHaveBeenLastCalledWith(anna, expect.any(Function));
+
+    // Name geändert gespeichert: der Teilnehmer zieht nach, die Runde bleibt offen.
+    mockUmbenennen.mockResolvedValue(sicht({}, [tn('t1', 'Anna Beispiel', { gastId: 'g1' }), tn('t2', 'Ben')]));
+    act(() => schliessen({ vorname: 'Anna', nachname: 'Beispiel' }));
+    expect(await screen.findByText('Anna Beispiel')).toBeInTheDocument();
+    expect(mockUmbenennen).toHaveBeenCalledWith('runde1', 't1', 'Anna Beispiel');
+  });
+
+  it('abgebrochen oder ohne Namensänderung wird nichts umbenannt', async () => {
+    let schliessen;
+    await oeffne(sicht({}, [tn('t1', 'Anna Muster', { gastId: 'g1' })]), (gast, onClose) => {
+      schliessen = onClose;
+      return <div>Gästekarte</div>;
+    });
+    mockUmbenennen.mockClear();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Anna Muster bearbeiten' }));
+    act(() => schliessen(null));
+    await screen.findByRole('heading', { name: 'Advent 2026' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Anna Muster bearbeiten' }));
+    act(() => schliessen({ vorname: 'Anna', nachname: 'Muster', email: 'neu@example.com' }));
+    await screen.findByRole('heading', { name: 'Advent 2026' });
+    expect(mockUmbenennen).not.toHaveBeenCalled();
+  });
+
+  it('ohne Eintrag in der Gästeliste bleibt der Stift ein Umbenennen', async () => {
+    const render = jest.fn(() => <div>Gästekarte</div>);
+    await oeffne(sicht({}, [tn('t2', 'Ben')]), render);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ben umbenennen' }));
+    expect(screen.getByRole('textbox', { name: 'Ben umbenennen' })).toBeInTheDocument();
+    expect(render).not.toHaveBeenCalled();
+  });
+});
+
+describe('WichtelPage – einrichtbares Stift-Icon', () => {
+  it('zeigt das unter „Wichteln: Teilnehmer bearbeiten“ eingerichtete Icon', async () => {
+    mockIcons = { wichtelTeilnehmerBearbeiten: 'data:image/png;base64,AAA' };
+    await oeffneRunde(sicht({}, [tn('t2', 'Ben')]));
+    const knopf = screen.getByRole('button', { name: 'Ben umbenennen' });
+    expect(knopf.querySelector('img')).toHaveAttribute('src', 'data:image/png;base64,AAA');
+  });
+
+  it('zeigt ein Text-Icon als Text', async () => {
+    mockIcons = { wichtelTeilnehmerBearbeiten: '✎' };
+    await oeffneRunde(sicht({}, [tn('t2', 'Ben')]));
+    expect(screen.getByRole('button', { name: 'Ben umbenennen' })).toHaveTextContent('✎');
   });
 });

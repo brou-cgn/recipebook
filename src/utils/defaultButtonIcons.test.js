@@ -56,3 +56,17 @@ describe('Icon Wichteln-FAB (Events, Mobile)', () => {
     );
   });
 });
+
+describe('Icon Wichteln: Teilnehmer bearbeiten', () => {
+  test('ist als einrichtbares Button-Icon (Standard: Stift) mit Dunkelmodus-Variante hinterlegt', () => {
+    expect(DEFAULT_BUTTON_ICONS.wichtelTeilnehmerBearbeiten).toBe(defaultIcon('pencil'));
+    expect(DEFAULT_BUTTON_ICONS.wichtelTeilnehmerBearbeitenDark).toBe(defaultIcon('pencil', true));
+  });
+
+  test('steht in der Button-Icons-Verwaltung in der Gruppe Küche & Events', () => {
+    const row = mergeButtonIconRowDefs().find((r) => r.key === 'wichtelTeilnehmerBearbeiten');
+    expect(row).toMatchObject({ label: 'Wichteln: Teilnehmer bearbeiten', darkKey: 'wichtelTeilnehmerBearbeitenDark' });
+    const group = getDefaultButtonIconGroups().groups.find((g) => g.id === 'g-kueche-events');
+    expect(group.rowKeys.map((r) => r.key)).toContain('wichtelTeilnehmerBearbeiten');
+  });
+});

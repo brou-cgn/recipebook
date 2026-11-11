@@ -97,17 +97,34 @@ function GuestCard({ fullName, deleteIcon, onOpenEdit, onDelete, children }) {
   );
 }
 
+function profileToForm(profile) {
+  return {
+    vorname: profile.vorname || '',
+    nachname: profile.nachname || '',
+    email: profile.email || '',
+    sprache: normalizeGuestLanguage(profile.sprache),
+    kind: profile.kind === true,
+    alkoholischeGetraenke: profile.alkoholischeGetränke !== false,
+    bevorzugteGetraenke: Array.isArray(profile.bevorzugteGetränke) ? profile.bevorzugteGetränke : [],
+    bevorzugteKategorien: Array.isArray(profile.bevorzugteKategorien) ? profile.bevorzugteKategorien : [],
+    praeferenzFaktor: normalizePreferenceFactor(profile.präferenzFaktor),
+  };
+}
+
 function GuestManagementPage({
   onBack, currentUser, recipes,
   guestProfiles: profiles = [], guestProfilesLoaded = true,
   allGuestProfiles: allProfiles = [], allGuestProfilesLoaded = true,
   customDrinks = [],
+  // Direkt einen Gast bearbeiten (z. B. aus dem Wichteln): Formular öffnet sofort,
+  // Speichern/Abbrechen meldet sich über onEditClose(gespeicherteDaten | null) zurück.
+  editGuest = null, onEditClose = null,
 }) {
   const loading = !guestProfilesLoaded;
-  const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState(null);
-  const [editOwnerId, setEditOwnerId] = useState(null);
-  const [form, setForm] = useState(emptyForm());
+  const [showForm, setShowForm] = useState(Boolean(editGuest));
+  const [editId, setEditId] = useState(editGuest?.id || null);
+  const [editOwnerId, setEditOwnerId] = useState(editGuest?.ownerId || null);
+  const [form, setForm] = useState(() => (editGuest ? profileToForm(editGuest) : emptyForm()));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [drinkToAdd, setDrinkToAdd] = useState('');
@@ -193,21 +210,16 @@ function GuestManagementPage({
   const openEdit = (profile) => {
     setEditId(profile.id);
     setEditOwnerId(profile.ownerId || null);
-    setForm({
-      vorname: profile.vorname || '',
-      nachname: profile.nachname || '',
-      email: profile.email || '',
-      sprache: normalizeGuestLanguage(profile.sprache),
-      kind: profile.kind === true,
-      alkoholischeGetraenke: profile.alkoholischeGetränke !== false,
-      bevorzugteGetraenke: Array.isArray(profile.bevorzugteGetränke) ? profile.bevorzugteGetränke : [],
-      bevorzugteKategorien: Array.isArray(profile.bevorzugteKategorien) ? profile.bevorzugteKategorien : [],
-      praeferenzFaktor: normalizePreferenceFactor(profile.präferenzFaktor),
-    });
+    setForm(profileToForm(profile));
     setDrinkToAdd('');
     setCategoryToAdd('');
     setError('');
     setShowForm(true);
+  };
+
+  const closeForm = (saved) => {
+    if (onEditClose) onEditClose(saved);
+    else setShowForm(false);
   };
 
   const togglePreferredDrink = (drinkId) => {
@@ -270,7 +282,7 @@ function GuestManagementPage({
       } else {
         await saveGuestProfile(currentUser.id, payload, editId || undefined);
       }
-      setShowForm(false);
+      closeForm(payload);
     } catch (err) {
       console.error('Error saving guest profile:', err);
       setError('Das Gästeprofil konnte nicht gespeichert werden. Bitte versuche es erneut.');
@@ -554,7 +566,7 @@ function GuestManagementPage({
             <button
               type="button"
               className="events-secondary-btn events-save-desktop-only"
-              onClick={() => setShowForm(false)}
+              onClick={() => closeForm(null)}
               disabled={saving}
             >
               Abbrechen
@@ -587,7 +599,7 @@ function GuestManagementPage({
         {/* Cancel FAB button - positioned at bottom-left */}
         <button
           className={`events-cancel-fab-button ${cancelPressed ? 'pressed' : ''}`}
-          onClick={() => setShowForm(false)}
+          onClick={() => closeForm(null)}
           onTouchStart={() => setCancelPressed(true)}
           onTouchEnd={() => setCancelPressed(false)}
           onTouchCancel={() => setCancelPressed(false)}

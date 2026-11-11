@@ -208,6 +208,12 @@
   cursor: pointer;
 }
 
+.wichtel-icon-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
 .wichtel-icon-btn:hover,
 .wichtel-icon-btn:focus-visible {
   background: var(--color-hover-overlay);
