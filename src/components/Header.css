@@ -9,6 +9,14 @@
   transition: transform 0.3s ease-in-out;
 }
 
+/* Der Header ist ein eigener Stapelkontext (z-index 100): das Hamburger-Dropdown
+   darin kann nicht höher als der Header selbst liegen. Seiten-FABs (1101),
+   Bottom-Navigation und Snackbar (1200) würden es sonst überdecken. Solange das
+   Menü offen ist, liegt der ganze Header darüber – unter Sheets/Overlays (ab 1300). */
+.header.header--menu-open {
+  z-index: 1250;
+}
+
 .header-hidden {
   transform: translateY(-100%);
 }

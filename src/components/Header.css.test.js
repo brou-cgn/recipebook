@@ -24,3 +24,14 @@ describe('Header CSS Hamburger-Dropdown', () => {
     expect(rule).not.toMatch(/overflow:\s*hidden/);
   });
 });
+
+// Das Dropdown lebt im Stapelkontext des Headers (z-index 100); ohne Anhebung liegen FABs (1101) darüber.
+describe('Header CSS offenes Menü', () => {
+  const css = fs.readFileSync(path.join(__dirname, 'Header.css'), 'utf8');
+
+  test('offenes Menü hebt den Header über FABs und Bottom-Navigation', () => {
+    const m = css.match(/\.header\.header--menu-open\s*\{\s*z-index:\s*(\d+);/);
+    expect(m).not.toBeNull();
+    expect(Number(m[1])).toBeGreaterThan(1200);
+  });
+});

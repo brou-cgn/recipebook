@@ -296,7 +296,7 @@ const Header = forwardRef(function Header({
 
   return (
     <>
-    <header className={`header ${!visible ? 'header-hidden' : ''}`}> 
+    <header className={`header ${!visible ? 'header-hidden' : ''} ${menuOpen ? 'header--menu-open' : ''}`}> 
       <div className="header-content">
         <div className="header-title">
           {onViewChange ? (
