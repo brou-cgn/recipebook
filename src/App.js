@@ -2758,7 +2758,7 @@ function App() {
         {null}
         <div className="App">
           <Header />
-        {(pendingWebimportUrl || wichtelSeiteAngefragt) && (
+        {pendingWebimportUrl && (
           <div style={{
             background: '#E3F2FD',
             borderLeft: '4px solid #2196F3',
@@ -2768,9 +2768,7 @@ function App() {
             fontSize: '0.95rem',
             color: '#1565C0'
           }}>
-            {pendingWebimportUrl
-              ? 'Bitte melde dich an, um das Rezept zu importieren.'
-              : 'Bitte melde dich an, um Wichtel-Runden anzulegen und zu verwalten.'}
+            Bitte melde dich an, um das Rezept zu importieren.
           </div>
         )}
         {authView === 'login' ? (

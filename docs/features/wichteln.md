@@ -73,8 +73,7 @@ Wichtelpartners und kann Geschenkideen für andere Gäste hinterlassen.
 `broubook.web.app/wichteln` öffnet die Wichtel-Seite (Übersicht der eigenen Runden mit „+ Runde“) ohne
 den Weg über Events. Groß-/Kleinschreibung und ein Schrägstrich am Ende sind egal.
 
-- Nicht angemeldet: Zuerst kommt die Anmeldung mit dem Hinweis „Bitte melde dich an, um Wichtel-Runden
-  anzulegen und zu verwalten.“, danach geht es direkt zu Events > Wichteln. Bis dahin bleibt `/wichteln`
+- Nicht angemeldet: Zuerst kommt die Anmeldung (ohne Hinweis-Banner), danach geht es direkt zu Events > Wichteln. Bis dahin bleibt `/wichteln`
   in der Adresse, ein Neuladen der Anmeldeseite verliert den Link also nicht.
 - Mit dem Öffnen geht die Adresse zurück auf `/` (wie bei den anderen Direktlinks der App): Ein späteres
   Neuladen öffnet die App normal, eine erneute Anmeldung führt nicht wieder zu Wichteln.

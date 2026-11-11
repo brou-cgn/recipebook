@@ -1057,7 +1057,7 @@ describe('App authentication view handling', () => {
     expect(sessionStorage.getItem('pendingWebimportAuthor')).toBeNull();
   });
 
-  test('Direktlink /wichteln: Anmeldung mit Hinweis, danach direkt Events > Wichteln, Adresse zurück auf /', async () => {
+  test('Direktlink /wichteln: Anmeldung, danach direkt Events > Wichteln, Adresse zurück auf /', async () => {
     const organisator = {
       id: 'user-10',
       vorname: 'Wichtel',
@@ -1070,7 +1070,7 @@ describe('App authentication view handling', () => {
     render(<App />);
 
     expect(await screen.findByTestId('login-view')).toBeInTheDocument();
-    expect(screen.getByText('Bitte melde dich an, um Wichtel-Runden anzulegen und zu verwalten.')).toBeInTheDocument();
+    expect(screen.queryByText(/Bitte melde dich an/)).toBeNull();
     // Bis zur Anmeldung bleibt der Pfad stehen (übersteht so ein Neuladen der Anmeldeseite).
     expect(window.location.pathname).toBe('/wichteln');
 
@@ -1088,7 +1088,6 @@ describe('App authentication view handling', () => {
       mockAuthStateCallback(null);
     });
     expect(screen.getByTestId('login-view')).toBeInTheDocument();
-    expect(screen.queryByText('Bitte melde dich an, um Wichtel-Runden anzulegen und zu verwalten.')).toBeNull();
 
     await act(async () => {
       mockAuthStateCallback(organisator);
