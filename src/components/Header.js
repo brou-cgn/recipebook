@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import './Header.css';
 import { getHeaderSlogan, getAppLogoImage } from '../utils/customLists';
 import { subscribeToFaqs } from '../utils/faqFirestore';
@@ -73,6 +73,7 @@ const Header = forwardRef(function Header({
   const [savingShortcutPin, setSavingShortcutPin] = useState(false);
   const [shortcutPinError, setShortcutPinError] = useState(null);
   const menuRef = useRef(null);
+  const dropdownRef = useRef(null);
   const searchRef = useRef(null);
   const {
     jobs: importJobs,
@@ -148,6 +149,34 @@ const Header = forwardRef(function Header({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [menuOpen, searchOpen]);
+
+  // Das Dropdown darf nicht höher sein als der sichtbare Platz zwischen Header und
+  // Bottom-Navigation – sonst sind die unteren Einträge (z. B. Abmelden) auf kleinen
+  // Displays unerreichbar. Die Höhe wird gemessen, weil Header und Bottom-Nav je nach
+  // Gerät (Safe Area, Slogan-Länge) unterschiedlich hoch sind; den Rest scrollt das Menü.
+  useLayoutEffect(() => {
+    if (!menuOpen) return undefined;
+    const updateMaxHeight = () => {
+      const dropdown = dropdownRef.current;
+      if (!dropdown) return;
+      const viewportHeight = window.visualViewport?.height || window.innerHeight;
+      let bottomLimit = viewportHeight;
+      const bottomNav = document.querySelector('.bottom-navigation');
+      if (bottomNav && window.getComputedStyle(bottomNav).display !== 'none') {
+        const navTop = bottomNav.getBoundingClientRect().top;
+        if (navTop > 0 && navTop < bottomLimit) bottomLimit = navTop;
+      }
+      const available = Math.floor(bottomLimit - dropdown.getBoundingClientRect().top - 8);
+      dropdown.style.maxHeight = available > 0 ? `${available}px` : '';
+    };
+    updateMaxHeight();
+    window.addEventListener('resize', updateMaxHeight);
+    window.visualViewport?.addEventListener('resize', updateMaxHeight);
+    return () => {
+      window.removeEventListener('resize', updateMaxHeight);
+      window.visualViewport?.removeEventListener('resize', updateMaxHeight);
+    };
+  }, [menuOpen]);
 
   const toggleMenu = () => {
     setMenuOpen(!menuOpen);
@@ -336,7 +365,7 @@ const Header = forwardRef(function Header({
                 <span className="hamburger-line"></span>
               </button>
               {menuOpen && (
-                <div className="hamburger-dropdown">
+                <div className="hamburger-dropdown" ref={dropdownRef}>
                   {onViewChange && (
                     <div className="menu-section">
                       <div className="menu-section-title">Navigation</div>
