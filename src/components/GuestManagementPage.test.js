@@ -329,6 +329,35 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
     expect(screen.queryByRole('heading', { name: 'Gast bearbeiten' })).not.toBeInTheDocument();
   });
 
+  describe('Direkt bearbeiten (editGuest)', () => {
+    const anna = { id: 'g1', vorname: 'Anna', nachname: 'Adler', email: 'anna@example.com', sprache: 'en' };
+
+    test('öffnet sofort die Gästekarte und meldet das Speichern zurück', async () => {
+      const onEditClose = jest.fn();
+      renderGuestManagementPage({ guestProfiles: [anna], editGuest: anna, onEditClose });
+
+      expect(screen.getByRole('heading', { name: 'Gast bearbeiten' })).toBeInTheDocument();
+      expect(screen.getByLabelText('Vorname')).toHaveValue('Anna');
+      expect(screen.getByLabelText('Sprache für Einladungen')).toHaveValue('en');
+
+      fireEvent.change(screen.getByLabelText('Nachname'), { target: { value: 'Berg' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+      await waitFor(() => expect(onEditClose).toHaveBeenCalledWith(
+        expect.objectContaining({ vorname: 'Anna', nachname: 'Berg' }),
+      ));
+      expect(mockSaveGuestProfile).toHaveBeenCalledWith('u1', expect.objectContaining({ nachname: 'Berg' }), 'g1');
+    });
+
+    test('Abbrechen meldet null zurück', () => {
+      const onEditClose = jest.fn();
+      renderGuestManagementPage({ guestProfiles: [anna], editGuest: anna, onEditClose });
+      fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+      expect(onEditClose).toHaveBeenCalledWith(null);
+      expect(mockSaveGuestProfile).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Sprache für Einladungen', () => {
     test('neue Gäste haben Deutsch vorausgewählt und speichern es mit', async () => {
       openNewGuestForm();

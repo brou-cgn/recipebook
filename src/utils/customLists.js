@@ -650,6 +650,8 @@ export const DEFAULT_BUTTON_ICONS = {
   eventsDrinksFab: defaultIcon('cup'),
   eventsGuestsFab: defaultIcon('people'),
   eventsWichtelFab: defaultIcon('gift'),
+  // Wichteln: Stift am Teilnehmer (öffnet die Gästekarte bzw. benennt um)
+  wichtelTeilnehmerBearbeiten: defaultIcon('pencil'),
   bottomNavHome: '',
   bottomNavRecipes: '',
   bottomNavMenus: '',
@@ -728,6 +730,7 @@ export const DEFAULT_BUTTON_ICONS = {
   eventsDrinksFabDark: '',
   eventsGuestsFabDark: '',
   eventsWichtelFabDark: '',
+  wichtelTeilnehmerBearbeitenDark: '',
   bottomNavHomeDark: '',
   bottomNavRecipesDark: '',
   bottomNavMenusDark: '',
