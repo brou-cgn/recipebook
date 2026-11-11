@@ -563,3 +563,61 @@ describe('WichtelPage – Einladung per Mail', () => {
     await waitFor(() => expect(mockTeilen).toHaveBeenLastCalledWith(expect.objectContaining({ name: 'Ben', sprache: 'de' })));
   });
 });
+
+describe('WichtelPage – Stift öffnet die Gästekarte', () => {
+  const anna = { id: 'g1', vorname: 'Anna', nachname: 'Muster', email: 'anna@example.com' };
+
+  const oeffne = async (antwort, renderGastBearbeiten) => {
+    mockListe.mockResolvedValue([antwort.runde]);
+    mockLaden.mockResolvedValue(antwort);
+    renderPage({ guestProfiles: [anna], renderGastBearbeiten });
+    fireEvent.click(await screen.findByText('Advent 2026'));
+    await screen.findByRole('heading', { name: 'Advent 2026' });
+  };
+
+  it('öffnet für einen Gast aus der Gästeliste die Gästekarte und kehrt zur Runde zurück', async () => {
+    let schliessen;
+    const render = jest.fn((gast, onClose) => {
+      schliessen = onClose;
+      return <div>Gästekarte {gast.vorname}</div>;
+    });
+    await oeffne(sicht({}, [tn('t1', 'Anna Muster', { gastId: 'g1' }), tn('t2', 'Ben')]), render);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Anna Muster bearbeiten' }));
+    expect(screen.getByText('Gästekarte Anna')).toBeInTheDocument();
+    expect(render).toHaveBeenLastCalledWith(anna, expect.any(Function));
+
+    // Name geändert gespeichert: der Teilnehmer zieht nach, die Runde bleibt offen.
+    mockUmbenennen.mockResolvedValue(sicht({}, [tn('t1', 'Anna Beispiel', { gastId: 'g1' }), tn('t2', 'Ben')]));
+    act(() => schliessen({ vorname: 'Anna', nachname: 'Beispiel' }));
+    expect(await screen.findByText('Anna Beispiel')).toBeInTheDocument();
+    expect(mockUmbenennen).toHaveBeenCalledWith('runde1', 't1', 'Anna Beispiel');
+  });
+
+  it('abgebrochen oder ohne Namensänderung wird nichts umbenannt', async () => {
+    let schliessen;
+    await oeffne(sicht({}, [tn('t1', 'Anna Muster', { gastId: 'g1' })]), (gast, onClose) => {
+      schliessen = onClose;
+      return <div>Gästekarte</div>;
+    });
+    mockUmbenennen.mockClear();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Anna Muster bearbeiten' }));
+    act(() => schliessen(null));
+    await screen.findByRole('heading', { name: 'Advent 2026' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Anna Muster bearbeiten' }));
+    act(() => schliessen({ vorname: 'Anna', nachname: 'Muster', email: 'neu@example.com' }));
+    await screen.findByRole('heading', { name: 'Advent 2026' });
+    expect(mockUmbenennen).not.toHaveBeenCalled();
+  });
+
+  it('ohne Eintrag in der Gästeliste bleibt der Stift ein Umbenennen', async () => {
+    const render = jest.fn(() => <div>Gästekarte</div>);
+    await oeffne(sicht({}, [tn('t2', 'Ben')]), render);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ben umbenennen' }));
+    expect(screen.getByRole('textbox', { name: 'Ben umbenennen' })).toBeInTheDocument();
+    expect(render).not.toHaveBeenCalled();
+  });
+});

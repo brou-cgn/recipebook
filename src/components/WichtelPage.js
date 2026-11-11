@@ -279,10 +279,13 @@ function Ausschluesse({ id, name, andere, ausgeschlossen, busy, onUmschalten }) 
 }
 
 function TeilnehmerZeile({
-  teilnehmer, andere, gastProfil, ausgelost, busy, swipeIcon, onRename, onDelete, onShare, onSendMail,
+  teilnehmer, andere, gastProfil, ausgelost, busy, swipeIcon, onRename, onEditGuest, onDelete, onShare, onSendMail,
   linkSichtbar, link, ausschlussOffen, onAusschluesseKlappen, onAusschluss,
 }) {
   const rename = useInlineRename(teilnehmer.name, (_alt, neu) => onRename(teilnehmer, neu));
+  // Steht der Teilnehmer in der Gästeliste, öffnet der Stift seine Gästekarte; sonst wird inline umbenannt.
+  const gastKarte = Boolean(gastProfil?.id && onEditGuest);
+  const stiftLabel = gastKarte ? `${teilnehmer.name} bearbeiten` : `${teilnehmer.name} umbenennen`;
 
   const status = ausgelost && teilnehmer.gekauft
     ? { text: 'Geschenk gekauft', klasse: 'wichtel-chip--ok' }
@@ -333,9 +336,9 @@ function TeilnehmerZeile({
           <button
             type="button"
             className="wichtel-icon-btn"
-            onClick={rename.start}
-            aria-label={`${teilnehmer.name} umbenennen`}
-            title={`${teilnehmer.name} umbenennen`}
+            onClick={gastKarte ? () => onEditGuest(teilnehmer, gastProfil) : rename.start}
+            aria-label={stiftLabel}
+            title={stiftLabel}
             disabled={busy}
           >
             <PencilIcon size={15} />
@@ -418,7 +421,12 @@ function TeilnehmerZeile({
  * persönlichen Links verschicken. Der Organisator sieht nie, wer wen gezogen hat –
  * die Antworten von wichtelVerwalten enthalten die Zuordnung gar nicht.
  */
-function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
+/**
+ * @param {Function} [renderGastBearbeiten] - (gast, onClose) => Element: Gästekarte zum Bearbeiten.
+ *   onClose(gespeicherteDaten | null) kehrt zur Runde zurück. Die Seite bleibt dabei gemountet,
+ *   damit die geöffnete Runde erhalten bleibt.
+ */
+function WichtelPage({ onBack, currentUser, guestProfiles = [], renderGastBearbeiten = null }) {
   const darfVerwalten = canEditRecipes(currentUser);
   const [ansicht, setAnsicht] = useState('liste'); // liste | neu | detail | bearbeiten
   const [runden, setRunden] = useState([]);
@@ -431,6 +439,7 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
   const [zuruecksetzenFragen, setZuruecksetzenFragen] = useState(false);
   const [sichtbarerLink, setSichtbarerLink] = useState(null);
   const [ausschlussFuer, setAusschlussFuer] = useState(null);
+  const [gastInBearbeitung, setGastInBearbeitung] = useState(null); // { teilnehmer, gast }
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const offeneRundeIdRef = useRef(null);
@@ -577,6 +586,15 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
 
   const handleUmbenennen = (teilnehmer, name) => {
     fuehreAus(() => benenneWichtelTeilnehmerUm(detail.runde.id, teilnehmer.id, name));
+  };
+
+  // Gästekarte geschlossen: Hat sich der Name geändert, zieht der Teilnehmer nach.
+  const handleGastBearbeitet = (gespeichert) => {
+    const offen = gastInBearbeitung;
+    setGastInBearbeitung(null);
+    if (!gespeichert || !offen || !detail) return;
+    const neuerName = getGuestDisplayName(gespeichert);
+    if (neuerName && neuerName !== offen.teilnehmer.name) handleUmbenennen(offen.teilnehmer, neuerName);
   };
 
   const handleTeilnehmerEntfernen = (teilnehmer) => {
@@ -735,6 +753,10 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
     );
   }
 
+  if (gastInBearbeitung && renderGastBearbeiten) {
+    return renderGastBearbeiten(gastInBearbeitung.gast, handleGastBearbeitet);
+  }
+
   if (ansicht === 'neu' || (ansicht === 'bearbeiten' && detail)) {
     const bearbeiten = ansicht === 'bearbeiten';
     return (
@@ -829,6 +851,7 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [] }) {
                       busy={busy}
                       swipeIcon={swipeIcon}
                       onRename={handleUmbenennen}
+                      onEditGuest={renderGastBearbeiten ? (tn, gast) => setGastInBearbeitung({ teilnehmer: tn, gast }) : undefined}
                       onDelete={handleTeilnehmerEntfernen}
                       onShare={handleTeilen}
                       onSendMail={handleMailSenden}

@@ -398,6 +398,18 @@ function EventsPage({
         onBack={() => setSubView('list')}
         currentUser={currentUser}
         guestProfiles={guestProfiles}
+        renderGastBearbeiten={(gast, onClose) => (
+          <GuestManagementPage
+            onBack={() => onClose(null)}
+            currentUser={currentUser}
+            recipes={recipes}
+            guestProfiles={guestProfiles}
+            guestProfilesLoaded={guestProfilesLoaded}
+            customDrinks={customDrinks}
+            editGuest={gast}
+            onEditClose={onClose}
+          />
+        )}
       />
     );
   }
