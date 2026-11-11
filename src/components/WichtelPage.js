@@ -279,7 +279,7 @@ function Ausschluesse({ id, name, andere, ausgeschlossen, busy, onUmschalten }) 
 }
 
 function TeilnehmerZeile({
-  teilnehmer, andere, gastProfil, ausgelost, busy, swipeIcon, onRename, onEditGuest, onDelete, onShare, onSendMail,
+  teilnehmer, andere, gastProfil, ausgelost, busy, swipeIcon, stiftIcon, onRename, onEditGuest, onDelete, onShare, onSendMail,
   linkSichtbar, link, ausschlussOffen, onAusschluesseKlappen, onAusschluss,
 }) {
   const rename = useInlineRename(teilnehmer.name, (_alt, neu) => onRename(teilnehmer, neu));
@@ -341,7 +341,11 @@ function TeilnehmerZeile({
             title={stiftLabel}
             disabled={busy}
           >
-            <PencilIcon size={15} />
+            {isBase64Image(stiftIcon) ? (
+              <img src={stiftIcon} alt="" className="wichtel-icon-img" draggable="false" />
+            ) : (
+              stiftIcon || <PencilIcon size={15} />
+            )}
           </button>
         )}
       </div>
@@ -459,6 +463,7 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [], renderGastBearbe
   const closeIcon = getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)
     || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode);
   const swipeIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode);
+  const stiftIcon = getEffectiveIcon(buttonIcons, 'wichtelTeilnehmerBearbeiten', isDarkMode);
 
   const zeigeHinweis = useCallback((text) => {
     setHinweis(text);
@@ -850,6 +855,7 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [], renderGastBearbe
                       ausgelost={ausgelost}
                       busy={busy}
                       swipeIcon={swipeIcon}
+                      stiftIcon={stiftIcon}
                       onRename={handleUmbenennen}
                       onEditGuest={renderGastBearbeiten ? (tn, gast) => setGastInBearbeitung({ teilnehmer: tn, gast }) : undefined}
                       onDelete={handleTeilnehmerEntfernen}

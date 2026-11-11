@@ -98,6 +98,7 @@ export const DEFAULT_ICON_NAMES = {
   eventsDrinksFab: 'cup',
   eventsGuestsFab: 'people',
   eventsWichtelFab: 'gift',
+  wichtelTeilnehmerBearbeiten: 'pencil',
   saveRecipeIcon: 'save',
   followButton: 'follow',
 };

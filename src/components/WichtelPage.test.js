@@ -16,6 +16,7 @@ const mockAusschluesse = jest.fn();
 const mockTeilen = jest.fn();
 const mockSenden = jest.fn();
 let mockDarfVerwalten = true;
+let mockIcons = {};
 
 jest.mock('../utils/wichtelFirestore', () => ({
   listeWichtelRunden: (...a) => mockListe(...a),
@@ -45,7 +46,7 @@ jest.mock('../utils/userManagement', () => ({
 jest.mock('../utils/customLists', () => ({
   getButtonIcons: () => Promise.resolve({}),
   DEFAULT_BUTTON_ICONS: {},
-  getEffectiveIcon: () => '',
+  getEffectiveIcon: (_icons, key) => mockIcons[key] || '',
   getDarkModePreference: () => false,
 }));
 
@@ -82,6 +83,7 @@ const oeffneRunde = async (antwort) => {
 
 beforeEach(() => {
   mockDarfVerwalten = true;
+  mockIcons = {};
   mockListe.mockResolvedValue([]);
 });
 
@@ -619,5 +621,20 @@ describe('WichtelPage – Stift öffnet die Gästekarte', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ben umbenennen' }));
     expect(screen.getByRole('textbox', { name: 'Ben umbenennen' })).toBeInTheDocument();
     expect(render).not.toHaveBeenCalled();
+  });
+});
+
+describe('WichtelPage – einrichtbares Stift-Icon', () => {
+  it('zeigt das unter „Wichteln: Teilnehmer bearbeiten“ eingerichtete Icon', async () => {
+    mockIcons = { wichtelTeilnehmerBearbeiten: 'data:image/png;base64,AAA' };
+    await oeffneRunde(sicht({}, [tn('t2', 'Ben')]));
+    const knopf = screen.getByRole('button', { name: 'Ben umbenennen' });
+    expect(knopf.querySelector('img')).toHaveAttribute('src', 'data:image/png;base64,AAA');
+  });
+
+  it('zeigt ein Text-Icon als Text', async () => {
+    mockIcons = { wichtelTeilnehmerBearbeiten: '✎' };
+    await oeffneRunde(sicht({}, [tn('t2', 'Ben')]));
+    expect(screen.getByRole('button', { name: 'Ben umbenennen' })).toHaveTextContent('✎');
   });
 });
