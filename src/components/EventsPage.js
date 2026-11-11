@@ -408,6 +408,7 @@ function EventsPage({
             customDrinks={customDrinks}
             editGuest={gast}
             onEditClose={onClose}
+            basicFieldsOnly
           />
         )}
       />

@@ -349,6 +349,32 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
       expect(mockSaveGuestProfile).toHaveBeenCalledWith('u1', expect.objectContaining({ nachname: 'Berg' }), 'g1');
     });
 
+    test('basicFieldsOnly zeigt nur Name, E-Mail und Sprache und behält den Rest beim Speichern', async () => {
+      const voll = { ...anna, kind: false, alkoholischeGetränke: false, bevorzugteGetränke: ['d1'], bevorzugteKategorien: ['wein'], präferenzFaktor: 0.75 };
+      const onEditClose = jest.fn();
+      renderGuestManagementPage({ guestProfiles: [voll], editGuest: voll, onEditClose, basicFieldsOnly: true });
+
+      ['Vorname', 'Nachname', 'E-Mail (optional)', 'Sprache für Einladungen'].forEach((label) => {
+        expect(screen.getByLabelText(label)).toBeInTheDocument();
+      });
+      expect(screen.queryByText('Kind')).not.toBeInTheDocument();
+      expect(screen.queryByText('Alkoholische Getränke')).not.toBeInTheDocument();
+      expect(screen.queryByText('Bevorzugte Getränke')).not.toBeInTheDocument();
+      expect(screen.queryByText('Bevorzugte Getränkekategorien')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Präferenzfaktor/)).not.toBeInTheDocument();
+
+      fireEvent.change(screen.getByLabelText('E-Mail (optional)'), { target: { value: 'neu@example.com' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+      await waitFor(() => expect(mockSaveGuestProfile).toHaveBeenCalledWith('u1', expect.objectContaining({
+        email: 'neu@example.com',
+        alkoholischeGetränke: false,
+        bevorzugteGetränke: ['d1'],
+        bevorzugteKategorien: ['wein'],
+        präferenzFaktor: 0.75,
+      }), 'g1'));
+    });
+
     test('Abbrechen meldet null zurück', () => {
       const onEditClose = jest.fn();
       renderGuestManagementPage({ guestProfiles: [anna], editGuest: anna, onEditClose });

@@ -119,6 +119,9 @@ function GuestManagementPage({
   // Direkt einen Gast bearbeiten (z. B. aus dem Wichteln): Formular öffnet sofort,
   // Speichern/Abbrechen meldet sich über onEditClose(gespeicherteDaten | null) zurück.
   editGuest = null, onEditClose = null,
+  // Nur Vorname, Nachname, E-Mail und Sprache zeigen (z. B. aus dem Wichteln).
+  // Ausgeblendete Felder behalten beim Speichern ihren gespeicherten Wert.
+  basicFieldsOnly = false,
 }) {
   const loading = !guestProfilesLoaded;
   const [showForm, setShowForm] = useState(Boolean(editGuest));
@@ -402,163 +405,167 @@ function GuestManagementPage({
             </select>
           </label>
 
-          <label className="events-category-checkbox">
-            <input
-              type="checkbox"
-              role="switch"
-              checked={form.kind}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                setForm((f) => ({
-                  ...f,
-                  kind: checked,
-                  alkoholischeGetraenke: checked ? false : f.alkoholischeGetraenke,
-                }));
-              }}
-            />
-            <span>Kind</span>
-          </label>
+          {!basicFieldsOnly && (
+            <>
+            <label className="events-category-checkbox">
+              <input
+                type="checkbox"
+                role="switch"
+                checked={form.kind}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setForm((f) => ({
+                    ...f,
+                    kind: checked,
+                    alkoholischeGetraenke: checked ? false : f.alkoholischeGetraenke,
+                  }));
+                }}
+              />
+              <span>Kind</span>
+            </label>
 
-          <label className="events-category-checkbox">
-            <input
-              type="checkbox"
-              role="switch"
-              checked={form.alkoholischeGetraenke}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                setForm((f) => ({
-                  ...f,
-                  alkoholischeGetraenke: checked,
-                  kind: checked ? false : f.kind,
-                }));
-              }}
-            />
-            <span>Alkoholische Getränke</span>
-          </label>
+            <label className="events-category-checkbox">
+              <input
+                type="checkbox"
+                role="switch"
+                checked={form.alkoholischeGetraenke}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setForm((f) => ({
+                    ...f,
+                    alkoholischeGetraenke: checked,
+                    kind: checked ? false : f.kind,
+                  }));
+                }}
+              />
+              <span>Alkoholische Getränke</span>
+            </label>
 
-          <div className="events-form-field">
-            <span>Bevorzugte Getränke</span>
-            {form.bevorzugteGetraenke.length > 0 && (
-              <div className="events-preferred-drinks-list">
-                {form.bevorzugteGetraenke.map((drinkId) => {
-                  const drink = availableDrinks.find((d) => d.id === drinkId);
-                  return (
-                    <span key={drinkId} className="events-drink-chip">
-                      {drink ? drink.label : drinkId}
+            <div className="events-form-field">
+              <span>Bevorzugte Getränke</span>
+              {form.bevorzugteGetraenke.length > 0 && (
+                <div className="events-preferred-drinks-list">
+                  {form.bevorzugteGetraenke.map((drinkId) => {
+                    const drink = availableDrinks.find((d) => d.id === drinkId);
+                    return (
+                      <span key={drinkId} className="events-drink-chip">
+                        {drink ? drink.label : drinkId}
+                        <button
+                          type="button"
+                          className="events-drink-chip-remove"
+                          onClick={() => togglePreferredDrink(drinkId)}
+                          aria-label={`${drink ? drink.label : drinkId} entfernen`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="events-drink-selector">
+                <select
+                  value={drinkToAdd}
+                  onChange={(e) => setDrinkToAdd(e.target.value)}
+                  aria-label="Getränk auswählen"
+                >
+                  <option value="">Getränk auswählen …</option>
+                  {availableDrinks
+                    .filter((d) => !form.bevorzugteGetraenke.includes(d.id))
+                    .map((drink) => (
+                      <option key={drink.id} value={drink.id}>{drink.label}</option>
+                    ))}
+                </select>
+                <button
+                  type="button"
+                  className="events-secondary-btn"
+                  onClick={() => {
+                    if (drinkToAdd) {
+                      togglePreferredDrink(drinkToAdd);
+                      setDrinkToAdd('');
+                    }
+                  }}
+                  disabled={!drinkToAdd}
+                >
+                  Hinzufügen
+                </button>
+              </div>
+            </div>
+
+            <div className="events-form-field">
+              <span>Bevorzugte Getränkekategorien</span>
+              {form.bevorzugteKategorien.length > 0 && (
+                <div className="events-preferred-drinks-list">
+                  {form.bevorzugteKategorien.map((catId) => (
+                    <span key={catId} className="events-drink-chip">
+                      {getDrinkCategoryLabel(catId)}
                       <button
                         type="button"
                         className="events-drink-chip-remove"
-                        onClick={() => togglePreferredDrink(drinkId)}
-                        aria-label={`${drink ? drink.label : drinkId} entfernen`}
+                        onClick={() => togglePreferredCategory(catId)}
+                        aria-label={`${getDrinkCategoryLabel(catId)} entfernen`}
                       >
                         ×
                       </button>
                     </span>
-                  );
-                })}
-              </div>
-            )}
-            <div className="events-drink-selector">
-              <select
-                value={drinkToAdd}
-                onChange={(e) => setDrinkToAdd(e.target.value)}
-                aria-label="Getränk auswählen"
-              >
-                <option value="">Getränk auswählen …</option>
-                {availableDrinks
-                  .filter((d) => !form.bevorzugteGetraenke.includes(d.id))
-                  .map((drink) => (
-                    <option key={drink.id} value={drink.id}>{drink.label}</option>
                   ))}
-              </select>
-              <button
-                type="button"
-                className="events-secondary-btn"
-                onClick={() => {
-                  if (drinkToAdd) {
-                    togglePreferredDrink(drinkToAdd);
-                    setDrinkToAdd('');
-                  }
-                }}
-                disabled={!drinkToAdd}
-              >
-                Hinzufügen
-              </button>
-            </div>
-          </div>
-
-          <div className="events-form-field">
-            <span>Bevorzugte Getränkekategorien</span>
-            {form.bevorzugteKategorien.length > 0 && (
-              <div className="events-preferred-drinks-list">
-                {form.bevorzugteKategorien.map((catId) => (
-                  <span key={catId} className="events-drink-chip">
-                    {getDrinkCategoryLabel(catId)}
-                    <button
-                      type="button"
-                      className="events-drink-chip-remove"
-                      onClick={() => togglePreferredCategory(catId)}
-                      aria-label={`${getDrinkCategoryLabel(catId)} entfernen`}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-            <div className="events-drink-selector">
-              <select
-                value={categoryToAdd}
-                onChange={(e) => setCategoryToAdd(e.target.value)}
-                aria-label="Getränkekategorie auswählen"
-              >
-                <option value="">Kategorie auswählen …</option>
-                {DRINK_CATEGORIES.map((cat) =>
-                  cat.subcategories ? (
-                    <optgroup key={cat.id} label={cat.label}>
-                      {!form.bevorzugteKategorien.includes(cat.id) && (
-                        <option value={cat.id}>{cat.label}</option>
-                      )}
-                      {cat.subcategories
-                        .filter((sub) => !form.bevorzugteKategorien.includes(sub.id))
-                        .map((sub) => (
-                          <option key={sub.id} value={sub.id}>{sub.label}</option>
-                        ))}
-                    </optgroup>
-                  ) : (
-                    !form.bevorzugteKategorien.includes(cat.id) && (
-                      <option key={cat.id} value={cat.id}>{cat.label}</option>
+                </div>
+              )}
+              <div className="events-drink-selector">
+                <select
+                  value={categoryToAdd}
+                  onChange={(e) => setCategoryToAdd(e.target.value)}
+                  aria-label="Getränkekategorie auswählen"
+                >
+                  <option value="">Kategorie auswählen …</option>
+                  {DRINK_CATEGORIES.map((cat) =>
+                    cat.subcategories ? (
+                      <optgroup key={cat.id} label={cat.label}>
+                        {!form.bevorzugteKategorien.includes(cat.id) && (
+                          <option value={cat.id}>{cat.label}</option>
+                        )}
+                        {cat.subcategories
+                          .filter((sub) => !form.bevorzugteKategorien.includes(sub.id))
+                          .map((sub) => (
+                            <option key={sub.id} value={sub.id}>{sub.label}</option>
+                          ))}
+                      </optgroup>
+                    ) : (
+                      !form.bevorzugteKategorien.includes(cat.id) && (
+                        <option key={cat.id} value={cat.id}>{cat.label}</option>
+                      )
                     )
-                  )
-                )}
-              </select>
-              <button
-                type="button"
-                className="events-secondary-btn"
-                onClick={() => {
-                  if (categoryToAdd) {
-                    togglePreferredCategory(categoryToAdd);
-                    setCategoryToAdd('');
-                  }
-                }}
-                disabled={!categoryToAdd}
-              >
-                Hinzufügen
-              </button>
+                  )}
+                </select>
+                <button
+                  type="button"
+                  className="events-secondary-btn"
+                  onClick={() => {
+                    if (categoryToAdd) {
+                      togglePreferredCategory(categoryToAdd);
+                      setCategoryToAdd('');
+                    }
+                  }}
+                  disabled={!categoryToAdd}
+                >
+                  Hinzufügen
+                </button>
+              </div>
             </div>
-          </div>
 
-          <label className="events-form-field">
-            <span>Präferenzfaktor: {Number(form.praeferenzFaktor).toFixed(2)} ({getPreferenceLabel(Number(form.praeferenzFaktor))})</span>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.25"
-              value={form.praeferenzFaktor}
-              onChange={(e) => setForm((f) => ({ ...f, praeferenzFaktor: Number(e.target.value) }))}
-            />
-          </label>
+            <label className="events-form-field">
+              <span>Präferenzfaktor: {Number(form.praeferenzFaktor).toFixed(2)} ({getPreferenceLabel(Number(form.praeferenzFaktor))})</span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.25"
+                value={form.praeferenzFaktor}
+                onChange={(e) => setForm((f) => ({ ...f, praeferenzFaktor: Number(e.target.value) }))}
+              />
+            </label>
+            </>
+          )}
 
           {error && <p className="events-error-text">{error}</p>}
 
