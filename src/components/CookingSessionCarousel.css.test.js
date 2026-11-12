@@ -114,6 +114,24 @@ describe('CookingSessionCarousel CSS', () => {
     });
   });
 
+  describe('Zeilenlänge bei voller Breite (RecipeDetail.css, cooking-mode-tablet-full)', () => {
+    const wideBlock = /@media \(min-width: 1300px\) \{([\s\S]*?\})\s*\}/;
+
+    test('ab 1300 px Breite (iPad 13" quer) steht der Schritttext höchstens 36em breit und mittig in der Karte', () => {
+      const wide = recipeDetailCss.match(wideBlock);
+      expect(wide).not.toBeNull();
+      const text = getRuleBody(wide[1], '.cooking-mode-tablet-full .step-content');
+      expect(text).toContain('max-width: 36em;');
+      expect(text).toContain('margin-left: auto;');
+      expect(text).toContain('margin-right: auto;');
+    });
+
+    test('schmalere Tablets (11" und mini quer) behalten die volle Breite, sonst scrollen lange Schritte', () => {
+      const outside = recipeDetailCss.replace(wideBlock, '');
+      expect(outside).not.toMatch(/\.cooking-mode-tablet-full \.step-content\s*\{[^}]*max-width/);
+    });
+  });
+
   describe('Tablet-Höhen: Schritte zu Zutaten hochkant 2 : 1, quer 1 : 1', () => {
     test('hochkant teilt im Split das Raster Schritt-Karussell und Zutaten-Sheet 2 : 1', () => {
       const split = getRuleBody(recipeDetailCss, '.recipe-detail-content.cooking-mode-active.cooking-mode-split');

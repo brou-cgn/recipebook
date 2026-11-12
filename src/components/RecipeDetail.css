@@ -2055,6 +2055,20 @@ button.private-badge-button:active {
   break-inside: avoid;
 }
 
+/* Zeilenlänge (12.11.2026): Ohne Flag füllt die Schrittkarte auch quer die ganze Breite. Gemessen in Chromium
+   mit diesem CSS: iPad mini und 11" quer 71–75 Zeichen pro Zeile, iPad 13" quer 82–84. Ab 1300 px Breite
+   (praktisch nur das iPad 13" quer) steht der Text deshalb höchstens 36em breit (rund 69 Zeichen) und mittig
+   in der Karte. Nicht schmaler und nicht auf kleineren Tablets: Jede zusätzliche Zeile kostet Höhe, quer hat
+   die Karte nur die Hälfte (1 : 1). Auf dem 11" und mini quer brächte jede Begrenzung Schritte um 480 Zeichen
+   zum Scrollen, auf dem 13" passen sie mit 36em weiter. */
+@media (min-width: 1300px) {
+  .cooking-mode-tablet-full .step-content {
+    max-width: 36em;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
 /* ── Tablet-Höhen: Schritte zu Zutaten hochkant 2 : 1, quer 1 : 1 (mit und ohne Karussell) ──
    Auf dem iPhone hat das Zutaten-Sheet eine feste Höhe (min(34dvh, 280px)); auf dem Tablet
    wäre das nur rund ein Viertel des Bildschirms. Hier teilen sich Schritt-Karussell und Sheet
