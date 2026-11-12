@@ -1,7 +1,7 @@
 /**
- * Hosting- und Manifest-Vorgaben (Tech-Check M3, M5, M6, F4).
+ * Hosting- und Manifest-Vorgaben (Tech-Check M3, M5, M6, M13, F4).
  * Liest die Konfigurationsdateien direkt, damit ein späterer Eingriff
- * (Sourcemaps an, Sitemap zurück, Manifest ohne maskable Icon) die CI rot macht.
+ * (Sourcemaps an, Sitemap zurück, Manifest ohne maskable Icon oder mit Hochformat-Sperre) die CI rot macht.
  */
 const fs = require('fs');
 const path = require('path');
@@ -21,6 +21,12 @@ describe('Manifest', () => {
     expect(icon).toBeDefined();
     expect(icon.sizes).toBe('512x512');
     expect(fs.existsSync(path.join(root, 'public', icon.src))).toBe(true);
+  });
+
+  test('sperrt die Ausrichtung nicht, Kochmodus und Tablet brauchen das Querformat (M13)', () => {
+    // "portrait-primary" hielt die installierte App auf Android im Hochformat; iOS ignoriert das Feld.
+    // "natural" wäre ebenso eine Sperre (Handy hochkant, Tablet quer).
+    expect([undefined, 'any']).toContain(manifest.orientation);
   });
 });
 
