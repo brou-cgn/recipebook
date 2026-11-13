@@ -1,7 +1,7 @@
 # Vorhaben: Parallel kochen (mehrere Rezepte im Hintergrund, Mobile)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 12.11.2026 (PR 21 Zeilenlänge im Tablet-Kochmodus und Hochformat-Sperre im Manifest, PR #3654 offen; PR 1 bis 20 gemergt, zuletzt #3621 Zutaten-Sheet auf dem Tablet; Tests am Gerät laut Rückmeldung vom 07.11.2026 erfolgreich, siehe „Offen“).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 13.11.2026 (Entwurf „Feinschliff Tablet“ mit acht Punkten zur Entscheidung, siehe „Offen“; PR 1 bis 21 gemergt, zuletzt #3654 Zeilenlänge im Tablet-Kochmodus und Hochformat-Sperre im Manifest; Tests am Gerät laut Rückmeldung vom 07.11.2026 erfolgreich, siehe „Offen“).
 
 **Ziel:** Wer mehrere Gerichte gleichzeitig kocht (Beispiel im Entwurf: Rouladen, Rotkohl, Klöße), hält im
 Kochmodus auf dem Handy mehrere Rezepte offen. Rezepte im Hintergrund laufen weiter, samt Timer, und sind mit
@@ -14,7 +14,9 @@ Zutatenspalte, Q2 Rezept-Schiene, Q3 Fokus plus Übersicht „Am Herd“). Gewä
 „Multikochmodus iPad“: I1 Schiene mit Namen, I2 zwei Rezepte nebeneinander, I3 Reiter oben, I4 Karussell links).
 Gewählt: I4 für das Querformat. iPad hochkant: https://claude.ai/artifact/X7AEiA9BiMvJX7KUSChSGE (Leinwand
 „Multikochmodus Tablet hochkant“: T1 Karussell links wie quer, T2 Karten oben, T3 Leiste unten wie iPhone, je mit vier und
-sechs Rezepten). Gewählt: T1. Keine Mockups im Repo.
+sechs Rezepten). Gewählt: T1. Feinschliff Tablet: https://claude.ai/artifact/P5ksq55oUYVupSYVE4u88E (Leinwand
+„Multikochmodus Tablet – Feinschliff“, 13.11.2026: heute quer mit Befunden, Feinschliff quer und hochkant, ein Rezept quer,
+Sheet zentriert, Bausteine; Punkte 1 bis 8 unter „Offen“). Entscheidung offen. Keine Mockups im Repo.
 
 ## Entschieden
 
@@ -116,7 +118,7 @@ Portionen und der Wake-Lock des Kochmodus liegen noch in `RecipeDetail`.
 | 18 | iPad hochkant (Entwurf T1): Erkennung `useTabletOrientation` (quer und hochkant, hochkant ab 744 px Breite, also mit iPad mini), Karussell links ab dem zweiten Rezept (`cooking-mode-split` wie quer), mit nur einem Rezept volle Breite (`cooking-mode-tablet-full`), Karussell hochkant mit `portrait` (ab drei Karten volle Höhe geteilt, kompakt ab vier), Kochmodus-Knopf auf dem Rezeptbild und ausgeblendeter Header auch hochkant, Schrittkarte nach dem Drehen wieder mittig, Zutaten auf dem iPad mini einspaltig. Weiter hinter dem Flag. Erster Commit `feat:`. Tests +14 (`useTabletOrientation.test.js` +2, `CookingSessionCarousel.test.js` +2, `CookingSessionCarousel.css.test.js` +4, `RecipeDetail.parallelCooking.test.js` +6, einer dort umgeschrieben); `test:ci` 207 Suites, 4.144 Tests | PR #3607 gemergt (02.11.2026); am Gerät laut Rückmeldung vom 07.11.2026 erfolgreich getestet; vorher im Browser (Chromium, gebautes CSS, 834 × 1194 und 744 × 1133 mit Abstand oben 24 px per CDP, 1194 × 834 als Gegenprobe quer, DOM aus den Tests, Light und Dark) geprüft |
 | 19 | Tablet-Kochmodus ohne Flag (Tech-Check M12): `tabletCookingLayout` hängt nicht mehr am Flag, nur noch an `useTabletOrientation` (und nicht Handy quer); `showCookingCarousel` verlangt das Flag jetzt selbst. Ohne Flag also Kochmodus-Knopf auf dem Rezeptbild, Kochmodus fixiert über den ganzen Bildschirm mit voller Breite (quer wie hochkant), App-Header aus; kein Karussell, keine Titelzeile, kein „+“. Erster Commit `fix:`. Tests: in `RecipeDetail.parallelCooking.test.js` die beiden Gegentests „without the flag … no cooking mode button“ (quer, hochkant) durch zwei Tests für das neue Verhalten ersetzt; `test:ci` 207 Suites, 4.146 Tests | PR #3618 gemergt (07.11.2026); nicht im Browser und nicht am Gerät geprüft. Offen am Gerät: iPad quer ohne Flag, Schrittkarte dann über die ganze Breite (bis 1194 px; mit Flag ist sie quer nur die rechte Spalte breit) |
 | 20 | Zutaten-Sheet auf dem Tablet größer, Schritte zu Zutaten hochkant 2 : 1, quer 1 : 1 (siehe „Höhen im Kochmodus auf dem Tablet“), nur CSS in `RecipeDetail.css`. Hochkant 2 : 1, quer 1 : 1. Gemessen in Chromium mit dem echten CSS (Höhe Zutaten-Sheet vorher → nachher): 834 × 1194 296 → 383 px (Split 365), 744 × 1133 296 → 363, 1024 × 1366 296 → 441 (Split 422), 1366 × 1024 296 → 482 (Split 468), 1194 × 834 296 → 387 (Split 373). Erster Commit `feat:`. Tests +4 (`CookingSessionCarousel.css.test.js`); `test:ci` 208 Suites, 4.156 Tests | PR #3621 gemergt (08.11.2026, Merge 328e7be); am Gerät nicht geprüft |
-| 21 | Zeilenlänge bei voller Breite (siehe „Zeilenlänge im Kochmodus auf dem Tablet“): ab 1300 px Breite `max-width: 36em` für den Schritttext in `cooking-mode-tablet-full`, mittig in der Karte. Dazu, außerhalb des Vorhabens, aber mit Folgen für jedes Querformat: `public/manifest.json` hielt mit `"orientation": "portrait-primary"` die installierte App auf Android im Hochformat (Tech-Check M13), jetzt `"any"`. Erster Commit `fix:`. Tests +3 (`CookingSessionCarousel.css.test.js` +2, `hostingPolicy.test.js` +1; zwei davon ohne die Änderung rot); `test:ci` 217 Suites, 4.313 Tests | PR #3654 offen (12.11.2026); im Browser gemessen (Chromium, echtes CSS, acht iPad-Größen quer und hochkant, mit und ohne Flag), am Gerät nicht geprüft, Android nicht geprüft |
+| 21 | Zeilenlänge bei voller Breite (siehe „Zeilenlänge im Kochmodus auf dem Tablet“): ab 1300 px Breite `max-width: 36em` für den Schritttext in `cooking-mode-tablet-full`, mittig in der Karte. Dazu, außerhalb des Vorhabens, aber mit Folgen für jedes Querformat: `public/manifest.json` hielt mit `"orientation": "portrait-primary"` die installierte App auf Android im Hochformat (Tech-Check M13), jetzt `"any"`. Erster Commit `fix:`. Tests +3 (`CookingSessionCarousel.css.test.js` +2, `hostingPolicy.test.js` +1; zwei davon ohne die Änderung rot); `test:ci` 217 Suites, 4.313 Tests | PR #3654 gemergt (12.11.2026); im Browser gemessen (Chromium, echtes CSS, acht iPad-Größen quer und hochkant, mit und ohne Flag), am Gerät nicht geprüft, Android nicht geprüft |
 
 Nach jedem PR: Tabelle hier nachziehen. Berührt ein PR einen Tech-Check-Befund (mindestens PR 1: A1),
 das Dashboard nach `CLAUDE.md` aktualisieren.
@@ -311,13 +313,37 @@ Rezepte, Linksswipe, Schritte per Wischen, quer verlassen), Karussell iPad quer 
 Schiene PR 9, Aufteilung der Höhe mit Leiste (56-px-Knopf bleibt), Abgleich mit zwei Geräten, Timer-Push bei gesperrtem iPhone
 (Tech-Check P8). Falls einer dieser Punkte doch nicht dabei war, hier wieder aufnehmen.
 
+- **Feinschliff Tablet** (Entwurf 13.11.2026, Leinwand siehe oben; Auftrag „perfektioniere das Multicook-Layout auf dem
+  Tablet“): acht Punkte, einzeln zu entscheiden; alle nur Tablet mit Flag, sofern nicht anders gesagt.
+  (1) Karussell `clamp(360px, 31vw, 440px)` statt `clamp(360px, 43vw, 560px)`: 11" quer 370 | 824 px statt 513 | 681, die
+  Schrittkarte vorn fasst rund 46 statt 38 Zeichen pro Zeile; hochkant auf dem 11" unverändert 360, auf dem 13" hochkant 360
+  statt 440.
+  (2) Titelzeile wie eine Karussell-Karte: Bild 52 px, Name 24 px, „Schritt x von y“, „+“ 56 px (heute 17 px, ohne Bild und
+  Schritt, „+“ 44 px).
+  (3) Timer anderer Schritte des Rezepts vorn als Chip in der Titelzeile, Tippen springt zum Schritt; hochkant in einer eigenen
+  Zeile darunter. Höchstens zwei, fällige zuerst. Logik wie `cookingStatus`, nur je Schritt und ohne den aktuellen.
+  (4) Timer-Knopf in der Schrittkarte 48 px hoch mit Dauer („▶ 5 Min.“), Stopp 44 px, rechts oben, der Text fließt darum
+  herum; Häkchen in dunklerem Grün (#2e7d32, 4,5 : 1).
+  (5) Restzeit im Karussell 28 px statt 16; quer teilen sich bis vier Karten die Höhe wie hochkant (heute bei drei Karten unten
+  65 px leer).
+  (6) Zähler „Schritt x von y“ unten in der Schrittkarte entfällt (steht in der Titelzeile, 4rem Innenabstand unten weniger),
+  Schrift in drei Stufen 30 / 27 / 24 px, gemessen nach dem Rendern. Kapazität 11" quer mit Timer-Knopf geschätzt: rund
+  300 / 390 / 510 Zeichen; vor der Umsetzung im Browser mit dem echten CSS nachmessen.
+  (7) Ein Rezept quer: volle Breite wie hochkant (`cooking-mode-tablet-full`); kehrt „iPad quer mit nur einem Rezept“ um.
+  (8) „Was kochst du dazu?“ auf dem Tablet zentriert statt als Bottom-Sheet über die ganze Breite: 560 px, oben verankert,
+  Inhalt und Weichzeichner wie bisher.
+  Beim Entwurf neu entdeckt, nicht nur auf dem Tablet: zu (3) Ein laufender Timer des Rezepts vorn ist nach dem Weiterblättern
+  nirgends zu sehen (`activeTimers` nur in seiner Schrittkarte; Leiste und Karussell zeigen das Rezept vorn nicht, nur die
+  Schiene im Handy-Querformat). Zu (4) Start 27 × 27 px, Stopp 24 × 24 px (unter 44 px), Häkchen #4caf50 auf #f5f0eb 2,5 : 1,
+  auch auf dem Handy. Ins Tech-Check-Dashboard mit der Umsetzung (Regel in `CLAUDE.md`).
 - **iPad quer ohne Flag am Gerät** (PR 19, PR 21): Kochmodus über die volle Breite. Seit PR 21 auf dem 13" quer höchstens rund
   69 Zeichen pro Zeile, auf dem 11" und mini quer volle Breite (71–75). Am Gerät offen: Liest sich das so? Scrollen auf dem 13"
   im Safari-Tab Schritte um 600 Zeichen (gemessen fehlen 6 px)?
 - **Lange Schritte im Split quer** (mit Flag; gemessen 12.11.2026 in Chromium mit dem echten CSS, Testaufbau ohne Titelzeile,
   mit ihr also eher früher): Die rechte Spalte fasst 38 Zeichen pro Zeile (11") bzw. 45 (13"); ab rund 290 Zeichen (11") bzw.
   450 (13") scrollt die Schrittkarte. Belegt das Risiko aus PR 20 mit Zahlen. Denkbar: kleinere Schrift für lange Schritte,
-  schmaleres Karussell quer oder quer wieder 2 : 1. Am Gerät prüfen, wie oft das bei echten Rezepten vorkommt.
+  schmaleres Karussell quer oder quer wieder 2 : 1. Am Gerät prüfen, wie oft das bei echten Rezepten vorkommt. Vorschlag dazu im
+  Entwurf „Feinschliff Tablet“, Punkte 1 und 6.
 - **Querformat auf Android** (PR 21, Tech-Check M13): Bis PR 21 hielt das Manifest die installierte App auf Android im
   Hochformat, Schiene, Karussell und Tablet-Kochmodus quer waren dort nicht erreichbar. Installierte Apps übernehmen die
   Änderung erst, wenn Chrome sie aktualisiert. Nicht am Gerät geprüft.
