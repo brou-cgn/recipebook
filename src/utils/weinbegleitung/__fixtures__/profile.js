@@ -1,0 +1,98 @@
+/**
+ * Profil-Fixtures für die Tests der Weinbegleitung (keine KI). Die Werte der
+ * Golden-Gerichte G1 bis G7 und E3 stammen aus der Spezifikation im Tracker
+ * docs/vorhaben/weinbegleitung.md; nicht genannte Komponenten sind 0.
+ */
+
+const KOMPONENTEN_NULL = { saeure: 0, suesse: 0, salz: 0, fett: 0, schaerfe: 0, bitter: 0, umami: 0 };
+
+/**
+ * Gespeichertes Profil wie es die Cloud Function schreibt (inkl. Metadaten).
+ * @param {Object} werte - rolle, hauptkomponente, zubereitung, sauce, intensitaet und Komponenten
+ * @returns {Object}
+ */
+export function weinprofil({ rolle, hauptkomponente, zubereitung, sauce, intensitaet, ...komponenten }) {
+  return {
+    rolle,
+    hauptkomponente,
+    zubereitung,
+    sauce,
+    intensitaet,
+    komponenten: { ...KOMPONENTEN_NULL, ...komponenten },
+    konfidenz: 0.9,
+    inputHash: 'fixture',
+    modell: 'fixture',
+    schemaVersion: 1,
+    erstelltAm: 0,
+  };
+}
+
+/**
+ * @param {string} id
+ * @param {Object|undefined} profil
+ * @returns {Object} Rezept mit optionalem weinprofil
+ */
+export const rezept = (id, profil) => (profil ? { id, title: id, weinprofil: profil } : { id, title: id });
+
+export const G1_LACHSTATAR = weinprofil({
+  rolle: 'vorspeise', hauptkomponente: 'fisch_fett', zubereitung: 'roh', sauce: 'zitrus_essig',
+  intensitaet: 2, saeure: 2, fett: 2,
+});
+
+export const G2_SPARGEL_HOLLANDAISE = weinprofil({
+  rolle: 'hauptgericht', hauptkomponente: 'spargel', zubereitung: 'gedaempft_pochiert', sauce: 'sahne_butter_kaese',
+  intensitaet: 2, fett: 2,
+});
+
+export const G3_GARNELEN_CURRY = weinprofil({
+  rolle: 'hauptgericht', hauptkomponente: 'meeresfruechte', zubereitung: 'geschmort', sauce: 'curry_gewuerze',
+  intensitaet: 4, schaerfe: 3, fett: 2, suesse: 1,
+});
+
+export const G4_PILZRISOTTO = weinprofil({
+  rolle: 'hauptgericht', hauptkomponente: 'pilze', zubereitung: 'gebraten', sauce: 'pilz_erdig',
+  intensitaet: 3, fett: 2, umami: 2,
+});
+
+export const G5_RINDERSCHMORBRATEN = weinprofil({
+  rolle: 'hauptgericht', hauptkomponente: 'rind_lamm', zubereitung: 'geschmort', sauce: 'rotwein_jus',
+  intensitaet: 5, fett: 2, salz: 2, umami: 2,
+});
+
+export const G6_SCHOKOLADENMOUSSE = weinprofil({
+  rolle: 'dessert', hauptkomponente: 'dessert_schoko', zubereitung: 'kalt', sauce: 'keine',
+  intensitaet: 4, suesse: 3, fett: 2,
+});
+
+export const G7_APFELSTRUDEL = weinprofil({
+  rolle: 'dessert', hauptkomponente: 'dessert_frucht', zubereitung: 'gebacken', sauce: 'suess_fruchtig',
+  intensitaet: 3, suesse: 2,
+});
+
+export const E3_EXTREM = weinprofil({
+  rolle: 'vorspeise', hauptkomponente: 'gemuese', zubereitung: 'kalt', sauce: 'scharf_chili',
+  intensitaet: 5, schaerfe: 3, saeure: 3, suesse: 2, bitter: 2,
+});
+
+/**
+ * Menü G1 → G5 → G6 (Vorspeise, Hauptgang, Dessert) mit leerer Drinks-Sektion.
+ * @returns {{menu: Object, rezepte: Array<Object>}}
+ */
+export function festmenue() {
+  return {
+    menu: {
+      id: 'menu-1',
+      sections: [
+        { name: 'Vorspeise', recipeIds: ['lachstatar'] },
+        { name: 'Hauptgang', recipeIds: ['schmorbraten'] },
+        { name: 'Dessert', recipeIds: ['mousse'] },
+        { name: 'Drinks', recipeIds: [], drinkIds: [] },
+      ],
+    },
+    rezepte: [
+      rezept('lachstatar', G1_LACHSTATAR),
+      rezept('schmorbraten', G5_RINDERSCHMORBRATEN),
+      rezept('mousse', G6_SCHOKOLADENMOUSSE),
+    ],
+  };
+}

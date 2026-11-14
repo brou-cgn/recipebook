@@ -78,3 +78,8 @@ Jede Änderung daran trägt dort den Stand nach und aktualisiert das Tech-Check-
 Entscheidungen, PR-Plan und offene Punkte stehen in `docs/vorhaben/parallel-kochen.md`.
 Jede Änderung daran trägt dort den Stand nach; berührt sie einen Tech-Check-Befund (z. B. A1),
 aktualisiert sie auch das Dashboard.
+
+### Weinbegleitung (Menüs und Einzelrezepte)
+Entscheidungen, Spezifikation, PR-Plan und offene Punkte stehen in `docs/vorhaben/weinbegleitung.md`.
+Jede Änderung daran trägt dort den Stand nach; berührt sie einen Tech-Check-Befund (z. B. S29, F20),
+aktualisiert sie auch das Dashboard.
