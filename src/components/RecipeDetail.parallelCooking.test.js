@@ -616,7 +616,7 @@ describe('RecipeDetail – parallel kochen auf dem iPad quer (Entwurf I4, Karuss
   beforeEach(() => setTabletViewport());
   afterEach(() => { window.matchMedia = originalMatchMedia; });
 
-  test('the picture offers the cooking mode; it starts with two columns, the carousel still empty', async () => {
+  test('the picture offers the cooking mode; with only one recipe it runs full width (Feinschliff Tablet, Punkt 7)', async () => {
     const onHeaderVisibilityChange = jest.fn();
     renderWithProviders(<Harness onHeaderVisibilityChange={onHeaderVisibilityChange} />);
     await act(async () => {});
@@ -626,25 +626,28 @@ describe('RecipeDetail – parallel kochen auf dem iPad quer (Entwurf I4, Karuss
 
     await enterCookingMode();
 
-    expect(document.querySelector('.recipe-detail-content')).toHaveClass('cooking-mode-split');
+    // Bis PR 25 standen quer schon beim ersten Rezept zwei Spalten, links leer
+    const content = document.querySelector('.recipe-detail-content');
+    expect(content).toHaveClass('cooking-mode-tablet-full');
+    expect(content).not.toHaveClass('cooking-mode-split');
     expect(titleBarTitle()).toBe('Rinderrouladen');
-    expect(carouselCards()).toEqual([]);
-    expect(screen.getByText('Noch kein weiteres Rezept am Herd')).toBeInTheDocument();
-    // Die zwei Spalten füllen den Bildschirm: der App-Header blendet aus
+    expect(screen.queryByRole('navigation', { name: 'Weitere Rezepte am Herd' })).toBeNull();
+    expect(screen.queryByText('Noch kein weiteres Rezept am Herd')).toBeNull();
+    // Der Kochmodus füllt den Bildschirm: der App-Header blendet aus
     expect(onHeaderVisibilityChange).toHaveBeenLastCalledWith(false);
   });
 
-  test('„Rezept dazunehmen“ in the empty carousel adds a recipe; the first one moves into the carousel at its step', async () => {
+  test('„+“ in the title bar adds a recipe; the left column comes with it, the first recipe there at its step', async () => {
     renderWithProviders(<Harness />);
     await enterCookingMode();
     fireEvent.click(document.querySelectorAll('.step-card')[1]);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Rezept dazunehmen' }));
-    const sheet = screen.getByRole('dialog', { name: 'Was kochst du dazu?' });
+    const sheet = openSheet();
     fireEvent.change(within(sheet).getByLabelText('Rezept suchen'), { target: { value: 'rotkohl' } });
     fireEvent.click(within(sheet).getByRole('button', { name: 'Apfelrotkohl dazunehmen' }));
 
     expect(titleBarTitle()).toBe('Apfelrotkohl');
+    expect(document.querySelector('.recipe-detail-content')).toHaveClass('cooking-mode-split');
     expect(carouselCards()).toEqual(['Rinderrouladen nach vorn holen, Schritt 2 von 3']);
     expect(screen.getByRole('button', { name: 'Rinderrouladen nach vorn holen, Schritt 2 von 3' }))
       .toHaveAccessibleDescription('Rouladen rundherum anbraten.');
@@ -776,12 +779,12 @@ describe('RecipeDetail – parallel kochen auf dem iPad hochkant (Entwurf T1)', 
     await act(async () => {});
   });
 
-  test('turned upright with only one recipe, the full width replaces the empty left column', async () => {
+  test('with only one recipe both orientations run full width, turning changes nothing', async () => {
     setTabletViewport(1194, 834);
     renderWithProviders(<Harness />);
     await enterCookingMode();
-    expect(document.querySelector('.recipe-detail-content')).toHaveClass('cooking-mode-split');
-    expect(screen.getByText('Noch kein weiteres Rezept am Herd')).toBeInTheDocument();
+    expect(document.querySelector('.recipe-detail-content')).toHaveClass('cooking-mode-tablet-full');
+    expect(screen.queryByText('Noch kein weiteres Rezept am Herd')).toBeNull();
 
     setTabletViewport(834, 1194);
     act(() => {

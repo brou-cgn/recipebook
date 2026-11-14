@@ -35,9 +35,9 @@ import './CookingSessionCarousel.css';
  *
  * Linksswipe nimmt ein Rezept aus der Sitzung, mit „Rückgängig“ wie Leiste und Schiene.
  *
- * Ohne weitere Rezepte steht die Spalte quer trotzdem da (sonst spränge das Layout beim zweiten
- * Rezept), mit einem Hinweis und „Rezept dazunehmen“ (onAdd, Sheet „Was kochst du dazu?“).
- * Hochkant blendet RecipeDetail sie dann aus; den Hinweis sieht man dort nur, solange die letzte
+ * Ohne weitere Rezepte blendet RecipeDetail die Spalte aus, quer wie hochkant (Feinschliff Tablet,
+ * Punkt 7; quer stand sie bis dahin mit einem Hinweis schon beim ersten Rezept da). Den Hinweis mit
+ * „Rezept dazunehmen“ (onAdd, Sheet „Was kochst du dazu?“) sieht man nur noch, solange die letzte
  * Karte nach dem Linksswipe auf „Rückgängig“ wartet.
  */
 
