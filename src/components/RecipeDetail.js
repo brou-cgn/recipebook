@@ -38,7 +38,8 @@ import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getEffectiveCuisineIcon, getDar
 import { getCategoryImages } from '../utils/categoryImages';
 import { useCookingSession } from '../contexts/CookingSessionContext';
 import CookingAlarmModal from './CookingAlarmModal';
-import CookingAddRecipeButton from './CookingAddRecipeButton';
+import CookingModeTitleBar from './CookingModeTitleBar';
+import { stepTimerChips } from '../utils/cookingSessionStatus';
 import CookingAddRecipeSheet from './CookingAddRecipeSheet';
 import CookingSessionDock from './CookingSessionDock';
 import CookingSessionRail from './CookingSessionRail';
@@ -1869,16 +1870,20 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         {cookingMode ? (
           // Cooking mode layout
           <>
-            {/* Kochsitzung: Rezeptname und Icon-Knopf „Rezept dazunehmen“ (Rollen-Flag parallelKochen, nur Hochformat) */}
+            {/* Kochsitzung: Rezeptname, Timer anderer Schritte und Icon-Knopf „Rezept dazunehmen“ (Rollen-Flag
+                parallelKochen, nicht im Handy-Querformat); auf dem Tablet mit Bild und Schritt (Feinschliff Tablet) */}
             {parallelCookingEnabled && !isMobileLandscape && (
-              <div className="cooking-mode-titlebar">
-                <h2 className="cooking-mode-titlebar-title">{recipe.title}</h2>
-                <CookingAddRecipeButton
-                  icon={cookingAddRecipeIcon}
-                  loaded={buttonIconsLoaded}
-                  onClick={() => setShowAddRecipeSheet(true)}
-                />
-              </div>
+              <CookingModeTitleBar
+                recipe={recipe}
+                tablet={tabletCookingLayout}
+                stepNumber={Math.min(currentStepIndex + 1, totalSteps)}
+                totalSteps={totalSteps}
+                timerChips={stepTimerChips(activeTimers, currentStepIndex)}
+                onJumpToStep={setCurrentStepIndex}
+                addIcon={cookingAddRecipeIcon}
+                addIconLoaded={buttonIconsLoaded}
+                onAdd={() => setShowAddRecipeSheet(true)}
+              />
             )}
 
             {/* Kochsitzung im Querformat: alle Rezepte am Rand gegenüber der Kamera; Tippen tauscht, dieses Rezept parkt dabei */}

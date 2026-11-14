@@ -16,12 +16,12 @@
   background: var(--color-surface-subtle);
 }
 
-/* Auf einer Höhe mit der Titelzeile rechts (12 px Abstand, 44-px-Knopf) */
+/* Auf einer Höhe mit der Titelzeile rechts (12 px Abstand, Bild und Knopf 56 px seit Feinschliff Tablet, Punkt 2) */
 .cooking-carousel-heading {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  min-height: 44px;
+  min-height: 56px;
   margin: 0 0 8px 4px;
   font-size: 13px;
   font-weight: 700;

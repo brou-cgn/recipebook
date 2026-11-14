@@ -83,3 +83,38 @@ export function pickJumpTarget(items, statuses, offscreen) {
   });
   return best;
 }
+
+const STEP_KEY = /^step_(\d+)$/;
+
+/**
+ * Timer anderer Schritte des Rezepts vorn, für die Chips in der Titelzeile des Kochmodus (Feinschliff Tablet,
+ * Punkt 3; Tech-Check P9): Ein Timer steht nur auf der Karte seines Schritts. Wer weiterblättert, während er
+ * läuft, sähe ihn sonst nirgends, denn Leiste und Karussell zeigen das Rezept vorn nicht. Der Timer des
+ * aktuellen Schritts fehlt hier, er steht auf dessen Karte. Abgelaufene zuerst, dann nach Restzeit.
+ * @param {Object} timers Timer des Rezepts vorn (getTimers: stepKey -> timerIndex -> Timer)
+ * @param {number} currentStepIndex der Schritt, der gerade vorn steht
+ * @returns {Array<{ stepIndex: number, kind: 'finished'|'timer', text: string, urgent: boolean, label: string }>}
+ */
+export function stepTimerChips(timers, currentStepIndex) {
+  const chips = [];
+  Object.entries(timers || {}).forEach(([stepKey, byIndex]) => {
+    const match = STEP_KEY.exec(stepKey);
+    if (!match) return;
+    const stepIndex = Number(match[1]);
+    if (stepIndex === currentStepIndex) return;
+    Object.values(byIndex || {}).forEach((t) => {
+      if (!t) return;
+      if (t.finished) {
+        chips.push({ stepIndex, kind: 'finished', text: 'Fertig', urgent: true, label: 'Timer abgelaufen', remaining: -1 });
+      } else if (t.running) {
+        const time = formatRemaining(t.remainingSeconds);
+        chips.push({
+          stepIndex, kind: 'timer', text: time, urgent: t.remainingSeconds <= DUE_SOON_SECONDS, label: `Timer ${time}`, remaining: t.remainingSeconds,
+        });
+      }
+    });
+  });
+  return chips
+    .sort((a, b) => a.remaining - b.remaining || a.stepIndex - b.stepIndex)
+    .map(({ remaining, ...chip }) => chip);
+}

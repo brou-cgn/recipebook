@@ -1,0 +1,192 @@
+/* Titelzeile des Kochmodus (CookingModeTitleBar). Farben nur über Tokens, Light und Dark aus tokens.css.
+   Lage im Kochmodus (Reihenfolge, Abstand, Spalte im Split) regelt RecipeDetail.css.
+   Raster statt Flexbox: Die Timer-Chips stehen je nach Platz neben dem Namen oder in einer eigenen Zeile
+   darunter, und der Knopf „Rezept dazunehmen“ bleibt dabei oben rechts. */
+.cooking-mode-titlebar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "titles add"
+    "chips chips";
+  align-items: center;
+  column-gap: 0.5rem;
+  min-width: 0;
+}
+
+.cooking-mode-titlebar-titles {
+  grid-area: titles;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cooking-mode-titlebar .cooking-mode-add-recipe {
+  grid-area: add;
+}
+
+.cooking-mode-titlebar-title {
+  margin: 0;
+  overflow: hidden;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Tablet (Feinschliff Tablet, Punkt 2): wie eine Karte im Karussell, mit Bild und Schritt */
+.cooking-mode-titlebar--tablet {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "thumb titles add"
+    "chips chips chips";
+  column-gap: 14px;
+}
+
+.cooking-mode-titlebar-thumb {
+  grid-area: thumb;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--color-surface-raised);
+}
+
+.cooking-mode-titlebar-thumb--initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Spans und Überschriften mit zwei Klassen: [data-theme="dark"] span bzw. h2 aus darkMode.css gewinnen sonst
+   (Tech-Check A7) */
+.cooking-mode-titlebar .cooking-mode-titlebar-thumb--initial {
+  color: var(--color-text-muted);
+}
+
+.cooking-mode-titlebar--tablet .cooking-mode-titlebar-title {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.cooking-mode-titlebar .cooking-mode-titlebar-step {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* „+“ auf dem Tablet so groß wie auf dem Handy und wie das Bild links (vorher 44 px über 768 px Breite) */
+.cooking-mode-titlebar--tablet .cooking-mode-add-recipe {
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  max-width: 56px;
+}
+
+/* Timer anderer Schritte (Punkt 3): eigene Zeile unter Name und Knopf. Auf dem Handy kompakt, damit zwei
+   Chips nebeneinander passen (iPhone SE: 343 px); auf dem Tablet so groß wie die Restzeit im Karussell. */
+.cooking-mode-timer-chips {
+  grid-area: chips;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin-top: 8px;
+}
+
+.cooking-mode-titlebar--tablet .cooking-mode-timer-chips {
+  gap: 8px;
+}
+
+/* Tablet quer: neben dem Namen ist Platz, die Chips stehen in derselben Zeile */
+@media (orientation: landscape) {
+  .cooking-mode-titlebar--tablet {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "thumb titles chips add";
+  }
+
+  .cooking-mode-titlebar--tablet .cooking-mode-timer-chips {
+    flex-wrap: nowrap;
+    margin-top: 0;
+  }
+}
+
+.cooking-mode-timer-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 0 9px 0 7px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-accent-tint);
+  color: var(--color-brand);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cooking-mode-titlebar--tablet .cooking-mode-timer-chip {
+  gap: 8px;
+  padding: 0 14px 0 10px;
+}
+
+/* Bald fällig und abgelaufen: orange wie Leiste, Schiene und Karussell */
+.cooking-mode-timer-chip--urgent {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.cooking-mode-timer-chip:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.cooking-mode-timer-chip-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.cooking-mode-titlebar--tablet .cooking-mode-timer-chip-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.cooking-mode-timer-chip .cooking-mode-timer-chip-step {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cooking-mode-timer-chip .cooking-mode-timer-chip-time {
+  color: inherit;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.cooking-mode-titlebar--tablet .cooking-mode-timer-chip .cooking-mode-timer-chip-step {
+  font-size: 14px;
+}
+
+.cooking-mode-titlebar--tablet .cooking-mode-timer-chip .cooking-mode-timer-chip-time {
+  font-size: 22px;
+}
+
+.cooking-mode-timer-chips .cooking-mode-timer-chips-more {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
