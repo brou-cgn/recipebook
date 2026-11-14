@@ -1,7 +1,7 @@
 # Vorhaben: Weinbegleitung (Menüs und Einzelrezepte)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 14.11.2026 (PR 1 gemergt, PR 2 in Arbeit).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 14.11.2026 (PR 1 und 2 gemergt und deployt, PR 3 in Arbeit).
 
 **Ziel:** Zu einem Menü (Festtafel) schlägt die App pro Gang einen passenden Weinstil vor, mit bis zu
 zwei Alternativen, einer kurzen Begründung und einem Quellenlink. Dazu gibt es den Modus „Ein Wein für
@@ -18,7 +18,7 @@ Menüansicht, dazu die Zustände). Keine Mockups im Repo.
 | Thema | Entscheidung |
 |---|---|
 | Architektur | Gericht-Profil `recipes/{id}.weinprofil` schätzt ein Callable per Gemini (nur Werte aus festen Listen, nie Weinnamen), nur bei Bedarf, gecacht über `inputHash`. Wissensbasis statisch und versioniert im Repo (`src/data/weinbegleitung/`), keine Firestore-Collection. Engine als reine Client-Funktion (`src/utils/weinbegleitung/`). Menü: Snapshot `menus/{id}.weinbegleitung`. Einzelrezept: kein Snapshot, die Empfehlung entsteht beim Anzeigen. Anzeigen löst nie einen KI-Aufruf aus. |
-| Design | **Variante B** (14.11.2026). Rezept: Chip „Wein: <Stil>“ in der Metadatenzeile; Antippen öffnet ein Sheet mit Stil, zwei Beispielen, Trinktemperatur, Label, Kennwerten (Körper, Gerbstoff, Süße), „Warum passt das?“ mit Quellenlinks und den Alternativen (nur Anzeige). Menü: Weinzeile direkt unter jeder Gang-Überschrift, aufklappbar mit Gründen und Alternativen (Antippen tauscht und fixiert); darüber eine Zusammenfassung mit Umschalter „Pro Gang“ / „Ein Wein“. Variante A (Karte unter den Schritten, Block in „Drinks“) war am selben Tag kurz gewählt und ist verworfen. |
+| Design | **Variante B** (14.11.2026). Rezept: Chip „Wein: <Stil>“ in eigener Zeile direkt unter der Metadatenzeile (die Metadatenzeile bricht nicht um und ist auf dem Handy voll; Vorschlag vom 14.11.2026 ohne Widerspruch übernommen), auf breiten Bildschirmen öffnet ein mittiges Fenster statt des Bottom-Sheets; Antippen öffnet ein Sheet mit Stil, zwei Beispielen, Trinktemperatur, Label, Kennwerten (Körper, Gerbstoff, Süße), „Warum passt das?“ mit Quellenlinks und den Alternativen (nur Anzeige). Menü: Weinzeile direkt unter jeder Gang-Überschrift, aufklappbar mit Gründen und Alternativen (Antippen tauscht und fixiert); darüber eine Zusammenfassung mit Umschalter „Pro Gang“ / „Ein Wein“. Variante A (Karte unter den Schritten, Block in „Drinks“) war am selben Tag kurz gewählt und ist verworfen. |
 | Rollen ohne Wein | `ROLLEN_OHNE_WEIN` = getraenk, sauce_dip, beilage, gebaeck_kuchen (Einzelrezept: keine Karte). Im Menü zählen nur Getränke nicht mit. |
 | Engine-Startwerte | Wie in der Spezifikation unten. Die Golden-Tests G1 bis G9 und E1 bis E3 sind mit den Startwerten grün, eine Kalibrierung war nicht nötig (Scores in den Umsetzungsnotizen zu PR 1). |
 | R8 als Grund | Abweichung von der Spezifikation: R8 erscheint nur, wenn die Farbe zur Aussage der Regel passt (rot zu `rind_lamm`/`wild`; weiß zu Fisch, Meeresfrüchten, Geflügel, Schwein/Kalb). Sonst stünde „Zu kräftigem Fleisch passt eher Rotwein …“ unter einem Süßwein zum Dessert. |
@@ -85,8 +85,8 @@ Snapshot oder Fixieren beim Einzelrezept.
 | PR | Inhalt | Stand |
 |---|---|---|
 | 1 | Tracker, Wissensbasis (`src/data/weinbegleitung/`), Engine (`src/utils/weinbegleitung/`) mit Tests: Regeln einzeln, Gang-Bildung, Menüfolge, „Ein Wein“, Fixierung, Einzelrezept, Golden G1–G9 und E1–E3, Datenprüfung mit Fingerabdruck. Noch ohne UI. | PR #3660 gemergt (14.11.2026), 129 neue Tests |
-| 2 | Callable `generateWeinprofile` (`functions/handlers/weinbegleitung.js`, Helfer `functions/shared/weinprofil.js`; Gemini, Tageslimit `aiWeinprofilLimits`), Hash-Funktion im Client (`profilHash.js`) mit Konsistenztest gegen die Function, Firestore-Regeln (`weinprofil`, `ratingAvg`, `ratingCount` nur per Function, Tech-Check S29) mit Rules-Tests, `docs/architecture/security.md` | in Arbeit (Branch `claude/intelligent-shannon-t5cts5`); Function-Tests +19, Client-Tests +18, Rules-Tests +1 und erweitert |
-| 3 | Rezeptansicht nach Variante B: Chip und Sheet, „Passenden Wein finden“, „neu einschätzen“, Farb-Tokens für die Weinfarben | offen |
+| 2 | Callable `generateWeinprofile` (`functions/handlers/weinbegleitung.js`, Helfer `functions/shared/weinprofil.js`; Gemini, Tageslimit `aiWeinprofilLimits`), Hash-Funktion im Client (`profilHash.js`) mit Konsistenztest gegen die Function, Firestore-Regeln (`weinprofil`, `ratingAvg`, `ratingCount` nur per Function, Tech-Check S29) mit Rules-Tests, `docs/architecture/security.md` | PR #3661 gemergt und deployt (14.11.2026, v2.69.0, Deploy-Lauf 2034: Function `generateWeinprofile` angelegt, Rules veröffentlicht); Function-Tests +19, Client-Tests +18, Rules-Tests +1 und erweitert |
+| 3 | Rezeptansicht nach Variante B: `src/components/WeinDazu.js` (Chip, Sheet, „Passenden Wein finden“, „Neu einschätzen“, Laden, R11, veraltet), Helfer `anzeige.js` und `weinprofilCallable.js`, Farb-Tokens `--color-wein-*`, Einbindung in `RecipeDetail.js` (3 Zeilen) | in Arbeit (Branch `claude/intelligent-shannon-t5cts5`); Komponententests +15, Util-Tests +8 |
 | 4 | Menü nach Variante B: Weinzeile je Gang, Umschalter, Snapshot über `menuFirestore.js`, Veraltet-Erkennung; `MenuDetail.js` nutzt dann `DRINKS_SECTION_NAME` aus `menuSections.js` | offen |
 | 5 | Freigabe-Seiten (Menü und Rezept), Quellen-Seite unter „Chefkoch & mehr“, `backfillWeinprofile` (Cursor, F20), Feinschliff | offen |
 
@@ -133,6 +133,28 @@ Umsetzungsnotizen PR 2:
 - Nicht gegen die echte Gemini-API geprüft (kein Schlüssel in der Arbeitsumgebung). Das `responseSchema`
   nutzt `enum` mit `format: 'enum'` wie in der API-Dokumentation; nach dem Deploy mit einem Rezept prüfen.
 
+Umsetzungsnotizen PR 3:
+- Zustände: mit gültigem Profil der Chip „Wein: <Stil>“ (auch für Leser und auf Freigabe-Seiten, die
+  RecipeDetail nutzen); R11 als Chip „Hier lieber Bier oder Wasser“; ohne Profil nur ab Rolle edit
+  (`canEditRecipes`) und nie mit `isSharedView` der Knopf „Passenden Wein finden“; Rollen ohne Wein und alle
+  anderen sehen nichts. Veraltet (Hash weicht ab): Bearbeiter sehen „Neu einschätzen“, Leser den Hinweis
+  „Einschätzung veraltet“, im Sheet steht die Änderung als Hinweis. Ohne Web Crypto (z. B. in Jest) bleibt
+  „veraltet“ unbekannt, die Empfehlung wird trotzdem gezeigt.
+- Das Callable liefert das neue Profil zurück, bevor der Live-Listener das Rezept aktualisiert; die Karte nimmt
+  das jüngere von beiden (`neueresProfil`). Fehler aus der Antwort (`fehlerGruende`) und geworfene Fehler
+  erscheinen als Text unter dem Chip (`weinprofilFehlertext`).
+- Sheet: Stil mit Glas in der Weinfarbe, zwei Beispiele, Trinktemperatur, Label, Kennwerte (Körper,
+  Gerbstoff, Süße in Worten), „Warum passt das?“ mit Quellenlinks (neuer Tab), „Zur Auswahl“ mit Empfehlung
+  und bis zu zwei Alternativen (Antippen zeigt deren Details, nichts wird gespeichert). Schließen über Knopf,
+  Hintergrund oder Escape, der Fokus kehrt zum Chip zurück; Scroll-Sperre und Ausblenden wie bei den anderen
+  Sheets (`useModalScrollLock`, `useFadeOutClose`).
+- Ladezustand: Glas füllt sich (CSS-Animation), bei „Bewegung reduzieren“ ohne Animation.
+- Die vier RecipeDetail-Testdateien mocken `userManagement` mit fester Funktionsliste; dort steht jetzt
+  `canEditRecipes: () => false`, damit die neue Zeile die bestehenden Tests nicht berührt.
+- Im Browser geprüft über eine Vorschau-Seite nur mit `WeinDazu` (Vite, Callable und Rolle als Platzhalter):
+  Mobil 390 px und Desktop 1280 px, hell und dunkel, Sheet, Alternative, Laden, Fehler; keine Konsolenfehler.
+  Nicht in der echten App mit Login geprüft.
+
 ## Offen
 
 - **Fachlich gegenlesen (Eigentümer):** Kennwerte, Passungen und Beispiele der zwölf Stile, die Regeltexte,
@@ -145,20 +167,21 @@ Umsetzungsnotizen PR 2:
 - **Beilagen-Gänge:** Eine Sektion nur aus Beilagen oder Saucen (z. B. „Beilagen“) bekommt im Menü einen
   eigenen Wein, weil laut Spezifikation nur Getränke nicht zählen. Sollen solche Sektionen als „kein eigener
   Gang“ gelten?
-- **Variante B, Rezept:** Die Metadatenzeile bricht nicht um (`RecipeDetail.css`, `flex-wrap: nowrap`) und ist
-  auf dem Handy schon voll. Der Chip braucht dort Umbruch oder eine eigene Zeile (in PR 3 klären).
 - **Variante B, Menü:** Zusammenfassung und Umschalter vor dem ersten Gang (Entwurf) oder in der Sektion
   „Drinks“ (Wunsch bei Variante A)? Vorschlag: vor dem ersten Gang.
 - **Variante B, Menü:** Antippen einer Alternative im Modus „Ein Wein“: tauscht den gemeinsamen Stil für alle
   Nicht-Dessert-Gänge (Engine: `gemeinsamerStilId`)? Vorschlag: ja.
-- **Live-Prüfung nach dem Deploy von PR 2:** ein Rezept einschätzen lassen (bis PR 3 nur über die Konsole
-  oder einen kurzen Aufruf), Antwort und gespeichertes Feld `weinprofil` ansehen.
-- **Farb-Tokens** für die Weinfarben (weiß, rosé, rot, süß) mit Werten für hell und dunkel in
-  `src/tokens.css` (PR 3).
+- **Live-Prüfung des Callables:** Seit PR 2 deployt, aber noch nicht gegen die echte Gemini-API geprüft.
+  Spätestens nach dem Deploy von PR 3 mit „Passenden Wein finden“ an einem Rezept prüfen (Antwort, Feld
+  `weinprofil`, zweiter Aufruf überspringt).
+- **Tech-Check S29, Rest:** Beim Anlegen eines Rezepts sind `ratingAvg`, `ratingCount` und `weinprofil` weiter
+  frei. Schließen hieße, den Sammelimport (`handleBulkImportRecipes`) anzupassen; Import-Pfade sind laut
+  Spezifikation tabu. Vorschlag: so lassen (Risiko gering), Entscheidung beim Eigentümer.
 
 ## Wichtige Stellen im Code
 
 - Wissensbasis: `src/data/weinbegleitung/` (`stile.json`, `regeln.json`, `quellen.json`)
+- Rezeptansicht: `src/components/WeinDazu.js` und `.css`, eingebunden in `RecipeDetail.js` nach der Metadatenzeile
 - Engine: `src/utils/weinbegleitung/` (`konstanten.js`, `profilSchema.js`, `wissensbasis.js`, `bewertung.js`,
   `gang.js`, `engine.js`), Tests daneben, Profil-Fixtures in `__fixtures__/profile.js`
 - Andockpunkte: Rezept `src/components/RecipeDetail.js` (Metadatenzeile `recipe-metadata`); Menü
