@@ -1,0 +1,57 @@
+[
+  {
+    "id": "R1",
+    "kurztext": "Gericht und Wein sind ähnlich kräftig, keiner übertönt den anderen.",
+    "quellenIds": ["winefolly"]
+  },
+  {
+    "id": "R2",
+    "kurztext": "Der Wein hat mindestens so viel Säure wie das Gericht und wirkt daneben nicht flach.",
+    "quellenIds": ["winefolly", "wset_l2"]
+  },
+  {
+    "id": "R3",
+    "kurztext": "Der Wein ist mindestens so süß wie das Gericht und schmeckt dadurch nicht sauer oder dünn.",
+    "quellenIds": ["winefolly", "wset_l2", "dwi_asien", "ichkoche"]
+  },
+  {
+    "id": "R4",
+    "kurztext": "Bei Schärfe passen Weine mit wenig Gerbstoff und Alkohol; etwas Süße, Säure oder Perlage mildern sie.",
+    "quellenIds": ["wset_l2", "dwi_asien"]
+  },
+  {
+    "id": "R5",
+    "kurztext": "Zu herzhaften Umami-Noten passt ein fruchtiger Wein mit wenig Gerbstoff.",
+    "quellenIds": ["wset_l2"]
+  },
+  {
+    "id": "R6",
+    "kurztext": "Fett und Salz im Essen lassen Gerbstoff und Säure im Wein weicher wirken.",
+    "quellenIds": ["wset", "winefolly"]
+  },
+  {
+    "id": "R7",
+    "kurztext": "Der Wein richtet sich nach der Sauce, nicht nur nach der Hauptzutat.",
+    "quellenIds": ["winefolly"]
+  },
+  {
+    "id": "R8",
+    "kurztext": "Zu kräftigem Fleisch passt eher Rotwein, zu Fisch und hellem Fleisch eher Weißwein.",
+    "quellenIds": ["winefolly"]
+  },
+  {
+    "id": "R9",
+    "kurztext": "Bitteres im Essen und viel Gerbstoff im Wein verstärken sich gegenseitig.",
+    "quellenIds": ["winefolly_5tips"]
+  },
+  {
+    "id": "R10",
+    "kurztext": "Im Menü steigert sich die Folge: leicht vor kräftig, weiß vor rot, trocken vor süß.",
+    "quellenIds": ["ichkoche", "gwiegastro"]
+  },
+  {
+    "id": "R11",
+    "kurztext": "Passt kein Weinstil, ist Bier oder Wasser die bessere Wahl.",
+    "quellenIds": ["ichkoche"]
+  }
+]

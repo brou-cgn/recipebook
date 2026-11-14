@@ -1,0 +1,242 @@
+[
+  {
+    "id": "schaumwein_trocken",
+    "name": "Schaumwein, trocken",
+    "farbe": "weiss",
+    "suesse": 0,
+    "saeure": 3,
+    "koerper": 1,
+    "tannin": 0,
+    "alkohol": 2,
+    "schaum": true,
+    "beispiele": ["Winzersekt brut", "Crémant", "Champagner"],
+    "temperatur": { "min": 6, "max": 8 },
+    "passung": {
+      "stark": ["hk:meeresfruechte", "hk:fisch_mager", "zb:frittiert"],
+      "gut": ["hk:ei", "hk:kaese_hart", "hk:wurst_schinken", "hk:gefluegel", "sc:zitrus_essig"],
+      "meiden": ["hk:wild", "hk:dessert_schoko", "sc:rotwein_jus"]
+    },
+    "quellenIds": ["dwi_handbuch", "winefolly"],
+    "alkoholfrei": null
+  },
+  {
+    "id": "weiss_leicht_frisch",
+    "name": "Weißwein, leicht und frisch",
+    "farbe": "weiss",
+    "suesse": 0,
+    "saeure": 3,
+    "koerper": 2,
+    "tannin": 0,
+    "alkohol": 1,
+    "schaum": false,
+    "beispiele": ["Riesling trocken", "Grüner Veltliner", "Muscadet"],
+    "temperatur": { "min": 8, "max": 10 },
+    "passung": {
+      "stark": ["hk:fisch_mager", "hk:meeresfruechte", "sc:zitrus_essig", "sc:kraeuter_gruen"],
+      "gut": ["hk:gemuese", "hk:gefluegel", "hk:kaese_frisch", "zb:gedaempft_pochiert", "zb:roh", "zb:frittiert"],
+      "meiden": ["hk:rind_lamm", "hk:wild", "sc:rotwein_jus"]
+    },
+    "quellenIds": ["dwi_handbuch", "winefolly"],
+    "alkoholfrei": null
+  },
+  {
+    "id": "weiss_gruen_aromatisch",
+    "name": "Weißwein, grün und aromatisch",
+    "farbe": "weiss",
+    "suesse": 0,
+    "saeure": 3,
+    "koerper": 2,
+    "tannin": 0,
+    "alkohol": 2,
+    "schaum": false,
+    "beispiele": ["Sauvignon Blanc", "Scheurebe"],
+    "temperatur": { "min": 8, "max": 10 },
+    "passung": {
+      "stark": ["hk:kaese_frisch", "hk:gemuese", "sc:kraeuter_gruen"],
+      "gut": ["hk:fisch_mager", "hk:meeresfruechte", "hk:spargel", "sc:zitrus_essig"],
+      "meiden": ["hk:wild", "hk:dessert_schoko", "sc:rotwein_jus"]
+    },
+    "quellenIds": ["dwi_handbuch", "winefolly"],
+    "alkoholfrei": null
+  },
+  {
+    "id": "weiss_mild_mittel",
+    "name": "Weißwein, mild und mittelkräftig",
+    "farbe": "weiss",
+    "suesse": 0,
+    "saeure": 2,
+    "koerper": 3,
+    "tannin": 0,
+    "alkohol": 2,
+    "schaum": false,
+    "beispiele": ["Silvaner", "Weißburgunder", "Kerner"],
+    "temperatur": { "min": 8, "max": 10 },
+    "passung": {
+      "stark": ["hk:spargel", "hk:gefluegel", "sc:sahne_butter_kaese"],
+      "gut": ["hk:fisch_mager", "hk:schwein_kalb", "hk:ei", "hk:gemuese", "zb:gedaempft_pochiert"],
+      "meiden": ["hk:wild", "sc:rotwein_jus", "sc:scharf_chili"]
+    },
+    "quellenIds": ["dwi_handbuch"],
+    "alkoholfrei": null
+  },
+  {
+    "id": "weiss_voll",
+    "name": "Weißwein, vollmundig",
+    "farbe": "weiss",
+    "suesse": 0,
+    "saeure": 2,
+    "koerper": 4,
+    "tannin": 0,
+    "alkohol": 3,
+    "schaum": false,
+    "beispiele": ["Grauburgunder", "Chardonnay mit Holz"],
+    "temperatur": { "min": 10, "max": 12 },
+    "passung": {
+      "stark": ["hk:fisch_fett", "hk:schwein_kalb", "sc:sahne_butter_kaese"],
+      "gut": ["hk:meeresfruechte", "hk:gefluegel", "hk:pilze", "hk:kaese_hart", "zb:gebraten", "zb:gegrillt_geroestet"],
+      "meiden": ["sc:scharf_chili", "sc:zitrus_essig", "hk:dessert_frucht"]
+    },
+    "quellenIds": ["dwi_handbuch", "winefolly"],
+    "alkoholfrei": null
+  },
+  {
+    "id": "weiss_aromatisch_feinherb",
+    "name": "Weißwein, aromatisch und feinherb",
+    "farbe": "weiss",
+    "suesse": 1,
+    "saeure": 3,
+    "koerper": 2,
+    "tannin": 0,
+    "alkohol": 1,
+    "schaum": false,
+    "beispiele": ["Riesling feinherb oder Spätlese", "Gewürztraminer", "Bacchus"],
+    "temperatur": { "min": 8, "max": 10 },
+    "passung": {
+      "stark": ["sc:scharf_chili", "sc:curry_gewuerze", "sc:suess_fruchtig"],
+      "gut": ["sc:soja_umami", "hk:schwein_kalb", "hk:gefluegel", "hk:meeresfruechte", "hk:wurst_schinken"],
+      "meiden": ["hk:rind_lamm", "hk:wild", "sc:rotwein_jus"]
+    },
+    "quellenIds": ["dwi_handbuch", "dwi_asien"],
+    "alkoholfrei": null
+  },
+  {
+    "id": "rose_trocken",
+    "name": "Rosé, trocken",
+    "farbe": "rose",
+    "suesse": 0,
+    "saeure": 2,
+    "koerper": 2,
+    "tannin": 0,
+    "alkohol": 2,
+    "schaum": false,
+    "beispiele": ["Spätburgunder Rosé", "Provence-Rosé"],
+    "temperatur": { "min": 8, "max": 10 },
+    "passung": {
+      "stark": ["hk:fisch_fett", "sc:tomate", "sc:kraeuter_gruen"],
+      "gut": ["hk:gefluegel", "hk:schwein_kalb", "hk:wurst_schinken", "hk:gemuese", "zb:gegrillt_geroestet"],
+      "meiden": ["hk:wild", "hk:dessert_schoko", "hk:dessert_creme"]
+    },
+    "quellenIds": ["winefolly"],
+    "alkoholfrei": null
+  },
+  {
+    "id": "rot_leicht",
+    "name": "Rotwein, leicht",
+    "farbe": "rot",
+    "suesse": 0,
+    "saeure": 2,
+    "koerper": 2,
+    "tannin": 1,
+    "alkohol": 2,
+    "schaum": false,
+    "beispiele": ["Spätburgunder", "Gamay"],
+    "temperatur": { "min": 14, "max": 16 },
+    "passung": {
+      "stark": ["hk:pilze", "hk:fisch_fett", "sc:pilz_erdig"],
+      "gut": ["hk:gefluegel", "hk:schwein_kalb", "hk:wild", "hk:kaese_hart", "sc:rotwein_jus", "zb:gebraten"],
+      "meiden": ["hk:fisch_mager", "hk:meeresfruechte", "sc:scharf_chili"]
+    },
+    "quellenIds": ["dwi_handbuch", "winefolly"],
+    "alkoholfrei": null
+  },
+  {
+    "id": "rot_mittel",
+    "name": "Rotwein, mittelkräftig",
+    "farbe": "rot",
+    "suesse": 0,
+    "saeure": 2,
+    "koerper": 3,
+    "tannin": 2,
+    "alkohol": 2,
+    "schaum": false,
+    "beispiele": ["Lemberger", "Dornfelder", "Merlot", "Chianti", "Rioja Crianza"],
+    "temperatur": { "min": 16, "max": 18 },
+    "passung": {
+      "stark": ["hk:wurst_schinken", "sc:tomate"],
+      "gut": ["hk:schwein_kalb", "hk:rind_lamm", "hk:wild", "hk:huelsenfruechte_getreide", "hk:kaese_hart", "zb:gegrillt_geroestet", "zb:geschmort"],
+      "meiden": ["hk:fisch_mager", "hk:meeresfruechte", "hk:dessert_frucht"]
+    },
+    "quellenIds": ["dwi_handbuch", "winefolly"],
+    "alkoholfrei": null
+  },
+  {
+    "id": "rot_kraeftig",
+    "name": "Rotwein, kräftig",
+    "farbe": "rot",
+    "suesse": 0,
+    "saeure": 2,
+    "koerper": 5,
+    "tannin": 3,
+    "alkohol": 3,
+    "schaum": false,
+    "beispiele": ["Cabernet Sauvignon", "Syrah", "Malbec"],
+    "temperatur": { "min": 16, "max": 18 },
+    "passung": {
+      "stark": ["hk:rind_lamm", "hk:wild", "sc:rotwein_jus", "zb:gegrillt_geroestet", "zb:geschmort"],
+      "gut": ["hk:kaese_hart", "sc:pilz_erdig", "sc:rauch"],
+      "meiden": ["hk:fisch_mager", "hk:meeresfruechte", "hk:gemuese", "hk:spargel", "sc:scharf_chili", "hk:dessert_frucht", "hk:dessert_creme"]
+    },
+    "quellenIds": ["winefolly"],
+    "alkoholfrei": null
+  },
+  {
+    "id": "suesswein_edel",
+    "name": "Süßwein, edelsüß",
+    "farbe": "weiss",
+    "suesse": 3,
+    "saeure": 3,
+    "koerper": 3,
+    "tannin": 0,
+    "alkohol": 2,
+    "schaum": false,
+    "beispiele": ["Riesling Auslese", "Eiswein", "Tokaji"],
+    "temperatur": { "min": 10, "max": 12 },
+    "passung": {
+      "stark": ["hk:dessert_frucht", "hk:dessert_creme", "hk:kaese_blau"],
+      "gut": ["hk:dessert_schoko", "sc:suess_fruchtig"],
+      "meiden": ["hk:rind_lamm", "hk:wild", "sc:rotwein_jus"]
+    },
+    "quellenIds": ["dwi_handbuch", "winefolly"],
+    "alkoholfrei": null
+  },
+  {
+    "id": "likoerwein",
+    "name": "Likörwein",
+    "farbe": "rot",
+    "suesse": 3,
+    "saeure": 1,
+    "koerper": 5,
+    "tannin": 2,
+    "alkohol": 3,
+    "schaum": false,
+    "beispiele": ["Portwein", "Sherry", "Madeira"],
+    "temperatur": { "min": 10, "max": 12 },
+    "passung": {
+      "stark": ["hk:dessert_schoko", "hk:kaese_blau"],
+      "gut": ["hk:dessert_creme", "hk:kaese_hart"],
+      "meiden": ["hk:fisch_mager", "hk:meeresfruechte", "hk:gemuese", "hk:spargel"]
+    },
+    "quellenIds": ["winefolly"],
+    "alkoholfrei": null
+  }
+]
