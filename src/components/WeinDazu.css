@@ -87,35 +87,6 @@
   color: var(--color-text-muted);
 }
 
-/* Glas: Kelch und Stiel in Textfarbe, Füllung in der Weinfarbe */
-.wein-dazu-glas {
-  flex-shrink: 0;
-  color: var(--color-brand);
-}
-
-.wein-dazu-glas-fuellung--weiss { fill: var(--color-wein-weiss); }
-.wein-dazu-glas-fuellung--rose { fill: var(--color-wein-rose); }
-.wein-dazu-glas-fuellung--rot { fill: var(--color-wein-rot); }
-.wein-dazu-glas-fuellung--suess { fill: var(--color-wein-suess); }
-
-/* Ladezustand: das Glas füllt sich */
-.wein-dazu-glas--laedt .wein-dazu-glas-fuellung {
-  animation: wein-dazu-fuellen 1.6s ease-in-out infinite;
-}
-
-@keyframes wein-dazu-fuellen {
-  0% { transform: translateY(8px); }
-  70% { transform: translateY(0); }
-  100% { transform: translateY(0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .wein-dazu-glas--laedt .wein-dazu-glas-fuellung {
-    animation: none;
-    transform: translateY(3px);
-  }
-}
-
 /* Sheet wie „Was kochst du dazu?“: über Bottom-Navigation (1200), unter dem Alarm (9999) */
 .wein-dazu-sheet-root {
   position: fixed;
@@ -333,24 +304,6 @@
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--color-brand);
-}
-
-.wein-dazu-gruende {
-  margin: 0;
-  padding-left: 1.1rem;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  color: var(--color-text-body);
-}
-
-.wein-dazu-gruende li + li {
-  margin-top: 0.35rem;
-}
-
-.wein-dazu-quellen a {
-  color: var(--color-brand);
-  text-underline-offset: 2px;
-  white-space: nowrap;
 }
 
 .wein-dazu-nowrap {

@@ -107,6 +107,18 @@ export function istDessertGang(sektionName, gang) {
 }
 
 /**
+ * Sektionen eines Menüs; alte Menüs ohne Sektionen bilden eine Sektion aus `recipeIds`
+ * (Name wie in MenuDetail.js).
+ * @param {Object} menu
+ * @returns {Array<{name: string, recipeIds: Array<string>}>}
+ */
+export function menueSektionen(menu) {
+  return Array.isArray(menu?.sections) && menu.sections.length > 0
+    ? menu.sections
+    : [{ name: ALTE_MENUES_SEKTION_NAME, recipeIds: menu?.recipeIds || [] }];
+}
+
+/**
  * Gänge eines Menüs in Menü-Reihenfolge. Sektionen ohne geladenes Rezept, die
  * Sektion „Drinks“ und Sektionen nur aus Getränken sind keine Gänge.
  * Alte Menüs ohne Sektionen bilden einen Gang aus `recipeIds`.
@@ -116,11 +128,7 @@ export function istDessertGang(sektionName, gang) {
  */
 export function gaengeAusMenue(menu, rezepte) {
   const rezeptNachId = new Map((rezepte || []).filter(Boolean).map((rezept) => [rezept.id, rezept]));
-  const sektionen = Array.isArray(menu?.sections) && menu.sections.length > 0
-    ? menu.sections
-    : [{ name: ALTE_MENUES_SEKTION_NAME, recipeIds: menu?.recipeIds || [] }];
-
-  return sektionen.flatMap((sektion, sektionIndex) => {
+  return menueSektionen(menu).flatMap((sektion, sektionIndex) => {
     const sektionName = typeof sektion?.name === 'string' ? sektion.name : '';
     if (istDrinksSektion(sektionName)) return [];
     const sektionRezepte = (Array.isArray(sektion?.recipeIds) ? sektion.recipeIds : [])

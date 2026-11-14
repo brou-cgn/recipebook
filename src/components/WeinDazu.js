@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { WeinGlas, Gruende, sichereId } from './WeinbegleitungTeile';
 import { canEditRecipes } from '../utils/userManagement';
 import { empfehlungFuerWeinprofil } from '../utils/weinbegleitung/engine';
 import { STATUS_OK, STATUS_KEIN_STIL, STATUS_OHNE_PROFIL } from '../utils/weinbegleitung/konstanten';
-import { getStil, getRegel, quellenFuerRegel, formatTemperatur, beispieleKurz } from '../utils/weinbegleitung/wissensbasis';
+import { getStil, formatTemperatur, beispieleKurz } from '../utils/weinbegleitung/wissensbasis';
 import { istWeinprofilAktuell } from '../utils/weinbegleitung/profilHash';
 import { kennwerteFuer, weinfarbe, weinprofilFehlertext, neueresProfil, TEXT_KEIN_STIL } from '../utils/weinbegleitung/anzeige';
 import { generiereWeinprofile } from '../utils/weinbegleitung/weinprofilCallable';
@@ -20,80 +21,6 @@ import './WeinDazu.css';
  * löst nie einen KI-Aufruf aus. Nur ab Rolle edit und außerhalb von Freigabe-Seiten gibt
  * es „Passenden Wein finden“ bzw. „Neu einschätzen“ (Callable generateWeinprofile).
  */
-
-// useId liefert je nach React-Version Zeichen wie „:“ oder „«“, die in url(#…) nicht gehen.
-const sichereId = (praefix, id) => `${praefix}-${id.replace(/[^a-zA-Z0-9_-]/g, '')}`;
-
-function WeinGlas({ farbe = null, groesse = 20, laedt = false }) {
-  const clipId = sichereId('wein-glas', useId());
-  return (
-    <svg
-      className={`wein-dazu-glas${laedt ? ' wein-dazu-glas--laedt' : ''}`}
-      width={groesse}
-      height={groesse}
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <defs>
-        <clipPath id={clipId}>
-          <path d="M7 3h10l-1 7a4 4 0 0 1-8 0z" />
-        </clipPath>
-      </defs>
-      {(farbe || laedt) && (
-        <g clipPath={`url(#${clipId})`}>
-          <rect
-            className={`wein-dazu-glas-fuellung wein-dazu-glas-fuellung--${farbe || 'rot'}`}
-            x="0"
-            y="5"
-            width="24"
-            height="12"
-          />
-        </g>
-      )}
-      <path d="M7 3h10l-1 7a4 4 0 0 1-8 0z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-      <path d="M12 14v6M8.5 21h7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function Quellen({ regelId }) {
-  const quellen = quellenFuerRegel(regelId);
-  if (quellen.length === 0) return null;
-  return (
-    <span className="wein-dazu-quellen">
-      {quellen.map((quelle, index) => (
-        <React.Fragment key={quelle.id}>
-          {index > 0 && ', '}
-          <a
-            href={quelle.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Quelle: ${quelle.titel} (${quelle.herausgeber})`}
-          >
-            {quelle.herausgeber}
-          </a>
-        </React.Fragment>
-      ))}
-    </span>
-  );
-}
-
-function Gruende({ regelIds }) {
-  return (
-    <ul className="wein-dazu-gruende">
-      {regelIds.map((regelId) => {
-        const regel = getRegel(regelId);
-        if (!regel) return null;
-        return (
-          <li key={regelId}>
-            {regel.kurztext} <Quellen regelId={regelId} />
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
 
 function StilDetails({ option }) {
   const stil = getStil(option.stilId);
