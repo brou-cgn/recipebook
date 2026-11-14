@@ -45,6 +45,7 @@ import CookingSessionDock from './CookingSessionDock';
 import CookingSessionRail from './CookingSessionRail';
 import CookingSessionCarousel from './CookingSessionCarousel';
 import useTabletOrientation from '../hooks/useTabletOrientation';
+import useStepCardFit from '../hooks/useStepCardFit';
 import useLandscapeCameraSide from '../hooks/useLandscapeCameraSide';
 import useViewportFitCover from '../hooks/useViewportFitCover';
 import { getMenuRecipeIds } from '../utils/menuSections';
@@ -245,6 +246,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const showCookingCarousel = parallelCookingEnabled && tabletCookingLayout
     && (tabletOrientation === 'landscape' || hasParkedRecipes);
   const showTabletFullWidth = tabletCookingLayout && !showCookingCarousel;
+  // Mit Flag steht auf dem Tablet „Schritt x von y“ in der Titelzeile (Feinschliff Tablet, Punkt 2); der Zähler
+  // unten in der Schrittkarte entfällt dort, nur „Heute gekocht“ bleibt (Punkt 6)
+  const stepInTitlebar = parallelCookingEnabled && tabletCookingLayout;
   // Handy quer: die Rezept-Schiene steht gegenüber der Kamera (Dynamic Island, Notch); ist die Drehrichtung
   // unbekannt, bleibt sie links. Ohne Abstand zum Displayrand: Beim Drehen ins Querformat reicht die Seite
   // bis an den Rand (viewport-fit=cover, nur beim Drehen umgeschaltet, siehe useViewportFitCover).
@@ -1548,6 +1552,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     }
   }, [currentStepIndex, cookingMode, isMobileLandscape, reducedMotion, tabletOrientation, showCookingCarousel]);
 
+  // Lange Schritte auf dem Tablet: Schrift eine bzw. zwei Stufen kleiner, wenn der Text sonst nicht in die Karte
+  // passt (Feinschliff Tablet, Punkt 6). Neu gemessen, wenn sich der Inhalt ändert: Rezept, Zähler, Timer-Knöpfe
+  // (Start-Knopf und laufende Zeit sind verschieden breit); Größenänderungen meldet ein ResizeObserver im Hook.
+  const timerShapeKey = Object.entries(activeTimers)
+    .map(([key, byIndex]) => `${key}:${byIndex?.[0] ? (byIndex[0].finished ? 'f' : 'r') : ''}`)
+    .join(',');
+  useStepCardFit(
+    stepsContainerRef,
+    cookingMode && tabletCookingLayout,
+    `${selectedRecipe?.id}|${totalSteps}|${stepInTitlebar}|${timerShapeKey}`
+  );
+
   // Auto-activate card on swipe/scroll
   useEffect(() => {
     if (!cookingMode || !stepsContainerRef.current) return;
@@ -1866,7 +1882,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         </div>
       )}
 
-      <div className={`recipe-detail-content ${cookingMode ? 'cooking-mode-active' : ''} ${cookingMode && isMobileLandscape ? 'cooking-mode-landscape' : ''}${cookingMode && showCookingDock ? ' cooking-mode-has-dock' : ''}${cookingMode && showCookingRail ? ' cooking-mode-has-rail' : ''}${cookingMode && showCookingRail && cookingRailRight ? ' cooking-mode-rail-right' : ''}${cookingMode && showCookingCarousel ? ' cooking-mode-split' : ''}${cookingMode && showTabletFullWidth ? ' cooking-mode-tablet-full' : ''}`} ref={contentRef}>
+      <div className={`recipe-detail-content ${cookingMode ? 'cooking-mode-active' : ''} ${cookingMode && isMobileLandscape ? 'cooking-mode-landscape' : ''}${cookingMode && showCookingDock ? ' cooking-mode-has-dock' : ''}${cookingMode && showCookingRail ? ' cooking-mode-has-rail' : ''}${cookingMode && showCookingRail && cookingRailRight ? ' cooking-mode-rail-right' : ''}${cookingMode && showCookingCarousel ? ' cooking-mode-split' : ''}${cookingMode && showTabletFullWidth ? ' cooking-mode-tablet-full' : ''}${cookingMode && stepInTitlebar ? ' cooking-mode-step-in-titlebar' : ''}`} ref={contentRef}>
         {cookingMode ? (
           // Cooking mode layout
           <>
@@ -1979,11 +1995,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   const timerLabel = firstMatch ? firstMatch[0] : null;
                   const timerSeconds = firstMatch ? parseTimeToSeconds(firstMatch[1], firstMatch[2]) : 0;
                   const timer = timerLabel ? activeTimers[stepKey]?.[0] : null;
+                  const showCookedButton = index === totalSteps - 1 && currentUser;
+                  const showStepCounter = !stepInTitlebar || showCookedButton;
 
                   return (
                     <div
                       key={index}
-                      className={`step-card ${index === currentStepIndex ? 'active' : ''}`}
+                      className={`step-card ${index === currentStepIndex ? 'active' : ''}${showStepCounter ? '' : ' step-card--no-counter'}`}
                       onClick={() => setCurrentStepIndex(index)}
                     >
                       {/* Timer header: start/stop button at top right */}
@@ -2023,18 +2041,20 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       <div className="step-content">
                         {stepText}
                       </div>
-                      <div className="step-counter">
-                        {index === totalSteps - 1 && currentUser && (
-                          <button
-                            className="step-heute-gekocht-btn"
-                            onClick={e => { e.stopPropagation(); setCookDateModalPrefillToday(true); setShowCookDateModal(true); }}
-                            aria-label="Heute gekocht"
-                          >
-                            Heute gekocht
-                          </button>
-                        )}
-                        Schritt {index + 1} von {totalSteps}
-                      </div>
+                      {showStepCounter && (
+                        <div className="step-counter">
+                          {showCookedButton && (
+                            <button
+                              className="step-heute-gekocht-btn"
+                              onClick={e => { e.stopPropagation(); setCookDateModalPrefillToday(true); setShowCookDateModal(true); }}
+                              aria-label="Heute gekocht"
+                            >
+                              Heute gekocht
+                            </button>
+                          )}
+                          {!stepInTitlebar && <>Schritt {index + 1} von {totalSteps}</>}
+                        </div>
+                      )}
                       {/* Progress bar at bottom – spans full card width */}
                       {timer && (
                         <div className="step-timer-progress-bar" aria-hidden="true">

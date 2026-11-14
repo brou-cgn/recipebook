@@ -235,3 +235,28 @@ describe('RecipeDetail CSS – Timer in der Schrittkarte (Feinschliff Tablet, Pu
     expect(css).toMatch(/@media \(max-width: 799px\) \{\s*\.cooking-mode-split \.step-timer-header \{\s*float: none;/);
   });
 });
+
+describe('RecipeDetail CSS – lange Schritte auf dem Tablet (Feinschliff Tablet, Punkt 6)', () => {
+  const css = fs.readFileSync(path.join(__dirname, 'RecipeDetail.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rule = (selector) => {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = css.match(new RegExp(`(?:^|\\})\\s*${escaped}\\s*\\{([\\s\\S]*?)\\}`, 'm'));
+    return match ? match[1] : '';
+  };
+
+  test('ohne Zähler unten gibt die Schrittkarte die 4rem dafür frei', () => {
+    expect(rule('.recipe-detail-content.cooking-mode-active.cooking-mode-step-in-titlebar .step-card.step-card--no-counter'))
+      .toContain('padding-bottom: 1.5rem;');
+  });
+
+  test('zwei kleinere Schriftstufen, nicht unter 24 px, nur in den Tablet-Layouts', () => {
+    expect(css).toMatch(
+      /\.cooking-mode-split \.step-card\[data-fit="1"\],\s*\.recipe-detail-content\.cooking-mode-active\.cooking-mode-tablet-full \.step-card\[data-fit="1"\]\s*\{\s*font-size: clamp\(1\.5rem, 3\.25dvh, 1\.7rem\);/
+    );
+    expect(css).toMatch(
+      /\.cooking-mode-split \.step-card\[data-fit="2"\],\s*\.recipe-detail-content\.cooking-mode-active\.cooking-mode-tablet-full \.step-card\[data-fit="2"\]\s*\{\s*font-size: 1\.5rem;/
+    );
+    // Auf dem Handy keine Stufen
+    expect(css).not.toMatch(/cooking-mode-active:not\(\.cooking-mode-landscape\) \.step-card\[data-fit/);
+  });
+});
