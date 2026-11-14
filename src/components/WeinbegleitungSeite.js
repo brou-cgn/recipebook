@@ -177,8 +177,10 @@ function WeinbegleitungSeite({ currentUser, onBack }) {
         </p>
         <p className="wein-seite-text">
           Den passenden Weinstil rechnet die App selbst aus diesem Profil und den Regeln unten. Im Menü
-          achtet sie zusätzlich auf die Folge der Weine. Empfohlen werden Weinstile mit Rebsorten als
-          Beispiel, nie Flaschen, Erzeuger, Jahrgänge oder Preise.
+          achtet sie zusätzlich auf die Folge der Weine. Bei „Ein Wein für alles“ sucht sie je einen Weiß-
+          und einen Rotwein, der zu allen Gängen passt, und nennt den Gang, zu dem er am besten passt.
+          Empfohlen werden Weinstile mit Rebsorten als Beispiel, nie Flaschen, Erzeuger, Jahrgänge oder
+          Preise.
         </p>
         <p className="wein-seite-klein">Stand der Regeln: {RULES_VERSION}</p>
       </section>

@@ -11,6 +11,8 @@ import {
   berechneProGang,
   berechneEinWein,
   gemeinsameRangliste,
+  waehleEinWeinStil,
+  einWeinOptionen,
   farbOptionen,
   labelFuerOption,
 } from './engine';
@@ -36,6 +38,7 @@ import {
   rezept,
   festmenue,
   G1_LACHSTATAR,
+  G2_SPARGEL_HOLLANDAISE,
   G3_GARNELEN_CURRY,
   G5_RINDERSCHMORBRATEN,
   G6_SCHOKOLADENMOUSSE,
@@ -339,45 +342,91 @@ describe('Modus „Ein Wein für alles“', () => {
     expect(berechneWeinbegleitung({ menu, rezepte, modus: MODUS_EIN_WEIN }).gemeinsamerStilId).toBe('weiss_aromatisch_feinherb');
   });
 
-  it('übernimmt einen gewählten gemeinsamen Stil und markiert ihn als fixiert', () => {
+  it('übernimmt einen gewählten gemeinsamen Stil, markiert ihn als fixiert und stellt ihn im Kopf nach vorn', () => {
     const { menu, rezepte } = festmenue();
-    const ergebnis = berechneWeinbegleitung({ menu, rezepte, modus: MODUS_EIN_WEIN, gemeinsamerStilId: 'rose_trocken' });
+    const ergebnis = berechneWeinbegleitung({ menu, rezepte, modus: MODUS_EIN_WEIN, gemeinsamerStilId: 'weiss_voll' });
     const [vorspeise, hauptgang, dessert] = ergebnis.gaenge;
-    expect([vorspeise.stilId, hauptgang.stilId]).toEqual(['rose_trocken', 'rose_trocken']);
+    expect(ergebnis.gemeinsamerStilId).toBe('weiss_voll');
+    expect([vorspeise.stilId, hauptgang.stilId]).toEqual(['weiss_voll', 'weiss_voll']);
     expect(vorspeise.fixiert).toBe(true);
     expect(dessert.stilId).toBe('likoerwein');
+    expect(ergebnis.einWeinOptionen.map((option) => option.stilId)).toEqual(['weiss_voll', 'rot_mittel']);
   });
 
-  it('meldet, wenn kein Stil zu allen Gängen passt', () => {
+  it('ersetzt mit einem gewählten Stil die Option seiner Farbe', () => {
+    const { menu, rezepte } = festmenue();
+    const ergebnis = berechneWeinbegleitung({ menu, rezepte, modus: MODUS_EIN_WEIN, gemeinsamerStilId: 'rot_leicht' });
+    expect(ergebnis.einWeinOptionen.map((option) => option.stilId)).toEqual(['rot_leicht', 'weiss_voll']);
+    expect(ergebnis.gaenge[0]).toEqual(expect.objectContaining({ stilId: 'rot_leicht', fixiert: true }));
+  });
+
+  it('ignoriert einen gewählten Stil, der weder Weiß- noch Rotwein ist: im Kopf stehen nur diese beiden Farben', () => {
+    const { menu, rezepte } = festmenue();
+    const ergebnis = berechneWeinbegleitung({ menu, rezepte, modus: MODUS_EIN_WEIN, gemeinsamerStilId: 'rose_trocken' });
+    expect(ergebnis.gemeinsamerStilId).toBe('rot_mittel');
+    expect(ergebnis.gaenge[0].fixiert).toBe(false);
+    expect(ergebnis.einWeinOptionen.map((option) => option.farbe)).toEqual(['rot', 'weiss']);
+  });
+
+  it('meldet, wenn kein Stil zu allen Gängen passt, und zeigt trotzdem Weiß und Rot', () => {
     // G5 braucht kräftigen Rotwein, G3 verträgt nur Feinherbes: kein gemeinsamer Stil über S_MIN
     const menu = { sections: [{ name: 'Vorspeise', recipeIds: ['curry'] }, { name: 'Hauptgang', recipeIds: ['braten'] }] };
     const rezepte = [rezept('curry', G3_GARNELEN_CURRY), rezept('braten', G5_RINDERSCHMORBRATEN)];
     const ergebnis = berechneWeinbegleitung({ menu, rezepte, modus: MODUS_EIN_WEIN });
     expect(ergebnis.gemeinsamerStilId).toBeNull();
-    ergebnis.gaenge.forEach((gang) => expect(gang.hinweis).toBe(HINWEIS_KEIN_GEMEINSAMER_STIL));
-    // Auch ohne gemeinsamen Stil: Rot und Weiß aus der gemeinsamen Rangliste, in beiden Gängen dieselben
-    const [curry, braten] = ergebnis.gaenge;
-    expect(curry.optionen.map((option) => option.farbe).sort()).toEqual(['rot', 'weiss']);
-    expect(curry.optionen.map((option) => option.stilId).sort()).toEqual(braten.optionen.map((option) => option.stilId).sort());
+    ergebnis.gaenge.forEach((gang) => {
+      expect(gang.hinweis).toBe(HINWEIS_KEIN_GEMEINSAMER_STIL);
+      expect(gang.optionen).toEqual([]);
+    });
+    // Die Optionen stehen einmal im Kopf, ehrlich als „passt bedingt“
+    expect(ergebnis.einWeinOptionen.map((option) => option.farbe).sort()).toEqual(['rot', 'weiss']);
+    ergebnis.einWeinOptionen.forEach((option) => expect(option.label).toBe(LABEL_BEDINGT));
   });
 
-  it('zeigt in allen Hauptgängen dieselben Optionen aus der gemeinsamen Rangliste, mit dem Label je Gang', () => {
+  it('zeigt im Kopf je eine Weiß- und eine Rotwein-Option, die Empfehlung zuerst, mit Label und Gründen je Gang', () => {
     const { menu, rezepte } = festmenue();
-    const [vorspeise, hauptgang, dessert] = berechneWeinbegleitung({ menu, rezepte, modus: MODUS_EIN_WEIN }).gaenge;
-    expect(vorspeise.stilId).toBe('rot_mittel');
-    expect(vorspeise.optionen.map((option) => option.stilId)).toEqual(['weiss_voll']);
-    expect(hauptgang.optionen.map((option) => option.stilId)).toEqual(['weiss_voll']);
-    // Das Dessert hat eine eigene Empfehlung und eigene Optionen
-    expect(dessert.stilId).toBe('likoerwein');
-    expect(dessert.optionen.map((option) => option.farbe)).toEqual(['weiss']);
+    const ergebnis = berechneWeinbegleitung({ menu, rezepte, modus: MODUS_EIN_WEIN });
+    const [rot, weiss] = ergebnis.einWeinOptionen;
+    expect(ergebnis.einWeinOptionen).toHaveLength(2);
+
+    // Rotwein, mittelkräftig passt zu beiden Gängen (2,3 und 2,6), am besten zum Hauptgang
+    expect(rot).toEqual(expect.objectContaining({ stilId: 'rot_mittel', farbe: 'rot', label: 'passt' }));
+    expect(rot.besteGaenge).toEqual([{ sektionIndex: 1, sektionName: 'Hauptgang' }]);
+    expect(rot.gaenge.map(({ sektionName, label }) => [sektionName, label])).toEqual([['Vorspeise', 'passt'], ['Hauptgang', 'passt']]);
+    rot.gaenge.forEach((gang) => expect(gang.regelIds.length).toBeGreaterThan(0));
+
+    // Kein Weißwein trägt Lachstatar und Schmorbraten: der mit dem höchsten Minimum, als „passt bedingt“
+    expect(weiss).toEqual(expect.objectContaining({ stilId: 'weiss_voll', farbe: 'weiss', label: LABEL_BEDINGT }));
+    expect(weiss.besteGaenge).toEqual([{ sektionIndex: 1, sektionName: 'Hauptgang' }]);
+
+    // Die Gänge selbst tragen keine Optionen mehr, auch das Dessert nicht
+    ergebnis.gaenge.forEach((gang) => expect(gang.optionen).toEqual([]));
+    expect(ergebnis.gaenge[2]).toEqual(expect.objectContaining({ istDessert: true, stilId: 'likoerwein' }));
+  });
+
+  it('nimmt eine Option, die für einen Gang ideal ist, wenn sie trotzdem zu allen passt (Lachstatar und Spargel)', () => {
+    const menu = { sections: [{ name: 'Vorspeise', recipeIds: ['tatar'] }, { name: 'Hauptgang', recipeIds: ['spargel'] }] };
+    const rezepte = [rezept('tatar', G1_LACHSTATAR), rezept('spargel', G2_SPARGEL_HOLLANDAISE)];
+    const ergebnis = berechneWeinbegleitung({ menu, rezepte, modus: MODUS_EIN_WEIN });
+    const weiss = ergebnis.einWeinOptionen.find((option) => option.farbe === 'weiss');
+    // Weißwein, grün und aromatisch hätte das höhere Minimum (4,3 / 4,1); leicht und frisch ist zum
+    // Lachstatar der beste Weißwein (5,8) und passt zum Spargel gut (3,8)
+    expect(weiss.stilId).toBe('weiss_leicht_frisch');
+    expect(weiss.besteGaenge).toEqual([{ sektionIndex: 0, sektionName: 'Vorspeise' }]);
+    expect(weiss.gaenge.map((gang) => gang.label)).toEqual(['passt hervorragend', 'passt gut']);
+    expect(ergebnis.gemeinsamerStilId).toBe('weiss_leicht_frisch');
   });
 
   it('lässt Gänge ohne passenden Stil aus der gemeinsamen Wahl heraus', () => {
     const menu = { sections: [{ name: 'Vorspeise', recipeIds: ['extrem'] }, { name: 'Hauptgang', recipeIds: ['braten'] }] };
     const rezepte = [rezept('extrem', E3_EXTREM), rezept('braten', G5_RINDERSCHMORBRATEN)];
-    const [vorspeise, hauptgang] = berechneWeinbegleitung({ menu, rezepte, modus: MODUS_EIN_WEIN }).gaenge;
+    const ergebnis = berechneWeinbegleitung({ menu, rezepte, modus: MODUS_EIN_WEIN });
+    const [vorspeise, hauptgang] = ergebnis.gaenge;
     expect(vorspeise.hinweis).toBe(HINWEIS_KEIN_STIL);
+    expect(vorspeise.optionen).toEqual([]);
     expect(hauptgang.stilId).toBe('rot_kraeftig');
+    // Die Optionen im Kopf rechnen nur mit dem Hauptgang
+    ergebnis.einWeinOptionen.forEach((option) => expect(option.gaenge.map((gang) => gang.sektionName)).toEqual(['Hauptgang']));
   });
 
   it('gibt bei einem reinen Dessert-Menü jedem Dessert eine eigene Empfehlung', () => {
@@ -385,6 +434,7 @@ describe('Modus „Ein Wein für alles“', () => {
     const rezepte = [rezept('mousse', G6_SCHOKOLADENMOUSSE)];
     const ergebnis = berechneEinWein(gaengeAusMenue(menu, rezepte));
     expect(ergebnis.gemeinsamerStilId).toBeNull();
+    expect(ergebnis.einWeinOptionen).toEqual([]);
     expect(ergebnis.gaenge[0].stilId).toBe('likoerwein');
   });
 
@@ -417,12 +467,52 @@ describe('Optionen je Gang', () => {
     expect(optionen.map((option) => option.farbe).sort()).toEqual(['rot', 'weiss']);
   });
 
-  it('lässt die Farbe der Empfehlung weg und folgt einer vorgegebenen Reihenfolge', () => {
+  it('lässt die Farbe der Empfehlung weg', () => {
     const profil = normalisiereWeinprofil(G1_LACHSTATAR);
     const bewertungen = bewerteAlleStile(profil);
     expect(farbOptionen(bewertungen, profil, 'weiss_leicht_frisch').map((option) => option.farbe)).toEqual(['rot']);
-    const reihenfolge = ['rot_kraeftig', 'weiss_voll', ...alleStile().map((stil) => stil.id)];
-    expect(farbOptionen(bewertungen, profil, 'rose_trocken', reihenfolge).map((option) => option.stilId).sort())
-      .toEqual(['rot_kraeftig', 'weiss_voll']);
+    // Zu einer Rosé-Empfehlung je der beste Weiß- und Rotwein des Gangs
+    expect(farbOptionen(bewertungen, profil, 'rose_trocken').map((option) => option.stilId))
+      .toEqual(['weiss_leicht_frisch', 'rot_leicht']);
+  });
+});
+
+describe('Optionen im Modus „Ein Wein“', () => {
+  // Kandidaten einer Farbe wie aus gemeinsameRangliste, Scores je Gang
+  const kandidat = (stilId, scores) => ({
+    stilId,
+    scores,
+    minimum: Math.min(...scores),
+    summe: scores.reduce((summe, score) => summe + score, 0),
+  });
+
+  it('zieht unter den Stilen, die zu allen Gängen passen, einen vor, der für einen Gang der beste seiner Farbe ist', () => {
+    const vielseitig = kandidat('rot_mittel', [3, 3.2]);
+    const idealZurVorspeise = kandidat('rot_leicht', [5, 2]);
+    const idealZumHauptgang = kandidat('rot_kraeftig', [0.5, 6]);
+    expect(waehleEinWeinStil([vielseitig, idealZurVorspeise, idealZumHauptgang]).stilId).toBe('rot_leicht');
+  });
+
+  it('nimmt unter mehreren idealen Stilen den vielseitigeren', () => {
+    expect(waehleEinWeinStil([kandidat('rot_leicht', [5, 2]), kandidat('rot_mittel', [3, 6])]).stilId).toBe('rot_mittel');
+  });
+
+  it('nimmt das höchste Minimum, wenn kein Stil der Farbe zu allen Gängen passt', () => {
+    // Der für die Vorspeise ideale Wein wäre zum Hauptgang ein Fehlgriff
+    const idealZurVorspeise = kandidat('weiss_leicht_frisch', [5.8, -6.9]);
+    const kompromiss = kandidat('weiss_voll', [-2.1, 1.3]);
+    expect(waehleEinWeinStil([idealZurVorspeise, kompromiss]).stilId).toBe('weiss_voll');
+    expect(waehleEinWeinStil([])).toBeNull();
+  });
+
+  it('nennt alle Gänge mit dem höchsten Score als „am besten“', () => {
+    const gaenge = gaengeAusMenue(
+      { sections: [{ name: 'Vorspeise', recipeIds: ['a'] }, { name: 'Hauptgang', recipeIds: ['b'] }] },
+      [rezept('a', G5_RINDERSCHMORBRATEN), rezept('b', G5_RINDERSCHMORBRATEN)],
+    ).map((gang) => ({ ...gang, bewertungen: bewerteAlleStile(gang.gang.profil) }));
+    const rot = einWeinOptionen(gaenge).find((option) => option.farbe === 'rot');
+    expect(rot.stilId).toBe('rot_kraeftig');
+    expect(rot.besteGaenge.map((gang) => gang.sektionName)).toEqual(['Vorspeise', 'Hauptgang']);
+    expect(einWeinOptionen([])).toEqual([]);
   });
 });

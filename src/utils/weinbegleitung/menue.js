@@ -14,6 +14,21 @@ const MODI = [MODUS_PRO_GANG, MODUS_EIN_WEIN];
 
 const normalisierterName = (name) => (typeof name === 'string' ? name.trim().toLowerCase() : '');
 
+const sektionFelder = (gang) => ({ sektionIndex: gang.sektionIndex, sektionName: gang.sektionName || '' });
+
+// Optionen im Modus „Ein Wein“ für den Snapshot: ohne Scores (werden nicht gespeichert)
+const einWeinOptionFelder = (option) => ({
+  stilId: option.stilId,
+  farbe: option.farbe || null,
+  label: option.label || null,
+  besteGaenge: (option.besteGaenge || []).map(sektionFelder),
+  gaenge: (option.gaenge || []).map((gang) => ({
+    ...sektionFelder(gang),
+    label: gang.label || null,
+    regelIds: gang.regelIds || [],
+  })),
+});
+
 /**
  * Rezept-IDs, die für die Weinbegleitung zählen: alle Sektionen außer „Drinks“, in
  * Menü-Reihenfolge, jede ID einmal.
@@ -111,6 +126,7 @@ export function erstelleSnapshot({
       istDessert: Boolean(gang.istDessert),
     })),
     gemeinsamerStilId: ergebnis.modus === MODUS_EIN_WEIN ? (ergebnis.gemeinsamerStilId || null) : null,
+    einWeinOptionen: ergebnis.modus === MODUS_EIN_WEIN ? (ergebnis.einWeinOptionen || []).map(einWeinOptionFelder) : null,
     fixierungen: fixierungen.map((fixierung) => ({
       sektionIndex: fixierung.sektionIndex,
       sektionName: fixierung.sektionName || '',
@@ -132,6 +148,17 @@ export function erstelleSnapshot({
 export const istGueltigerSnapshot = (snapshot) => Boolean(snapshot)
   && MODI.includes(snapshot.modus)
   && Array.isArray(snapshot.gaenge);
+
+/**
+ * Stehen die Weine im Modus „Ein Wein für alles“ im Kopf der Weinbegleitung (je eine Weiß- und
+ * eine Rotwein-Option, seit RULES_VERSION 2026-11-4) statt je Gang? Ältere Snapshots ohne
+ * `einWeinOptionen` erscheinen bis „Neu berechnen“ wie bisher je Gang.
+ * @param {*} snapshot
+ * @returns {boolean}
+ */
+export const zeigtEinWeinImKopf = (snapshot) => istGueltigerSnapshot(snapshot)
+  && snapshot.modus === MODUS_EIN_WEIN
+  && Array.isArray(snapshot.einWeinOptionen);
 
 /**
  * Gespeicherter Gang zu einer Sektion: Index und Name müssen passen; wurde die Sektion
