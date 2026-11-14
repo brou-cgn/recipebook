@@ -13,8 +13,10 @@ import {
   STATUS_KEIN_STIL,
   HINWEIS_KEIN_STIL,
 } from './konstanten';
+import { HAUPTKOMPONENTEN, ROLLEN } from './profilSchema';
 import {
   weinprofil,
+  rezept,
   festmenue,
   G1_LACHSTATAR,
   G2_SPARGEL_HOLLANDAISE,
@@ -24,6 +26,16 @@ import {
   G6_SCHOKOLADENMOUSSE,
   G7_APFELSTRUDEL,
   E3_EXTREM,
+  G10_GAENSEBRATEN,
+  G10_APFELROTKOHL,
+  G10_KLOESSE,
+  G11_REHRUECKEN,
+  G11_PREISELBEEREN,
+  G12_ZIEGENKAESE_HONIG,
+  G13_ENTE_ORANGE,
+  G14_SCHWEINEFILET,
+  G14_HONIGMOEHREN,
+  G15_BIRNE_GORGONZOLA,
 } from './__fixtures__/profile';
 
 // Akzeptanzkriterium 3: jeder empfohlene Stil hat mindestens einen Grund mit Quellenlink.
@@ -114,6 +126,82 @@ describe('Golden-Tests Menü', () => {
     expect(dessert.stilId).not.toBe(vorspeise.stilId);
     expect(['likoerwein', 'suesswein_edel']).toContain(dessert.stilId);
     ergebnis.gaenge.forEach((gang) => erwarteGruendeMitQuelle(gang.regelIds));
+  });
+});
+
+// Kalibrierung vom 14.11.2026: Süßweine (Süße 3) gab es zu herzhaften Gängen, sobald ein Gericht,
+// eine Beilage oder eine Würzung etwas süß war (Rotkohl, Preiselbeeren, Honig).
+const SUESSWEIN_AB = 3;
+const istSuesswein = (stilId) => getStil(stilId).suesse >= SUESSWEIN_AB;
+const ganzerGang = (name, eintraege) => ({
+  menu: { sections: [{ name, recipeIds: eintraege.map(([id]) => id) }] },
+  rezepte: eintraege.map(([id, profil]) => rezept(id, profil)),
+});
+
+describe('Golden-Tests Festtagsgerichte (kein Süßwein zu Herzhaftem)', () => {
+  it('G10 Gänsebraten mit Apfelrotkohl und Klößen: trockener Wein, nicht „Bier oder Wasser“', () => {
+    const { menu, rezepte } = ganzerGang('Hauptgang', [
+      ['gans', G10_GAENSEBRATEN], ['rotkohl', G10_APFELROTKOHL], ['kloesse', G10_KLOESSE],
+    ]);
+    const [hauptgang] = berechneWeinbegleitung({ menu, rezepte }).gaenge;
+    expect(hauptgang.stilId).not.toBeNull();
+    expect(getStil(hauptgang.stilId).suesse).toBe(0);
+    erwarteGruendeMitQuelle(hauptgang.regelIds);
+  });
+
+  it('G11 Rehrücken mit Preiselbeeren: Rotwein, der Wildjus bleibt die Sauce', () => {
+    const { menu, rezepte } = ganzerGang('Hauptgang', [['reh', G11_REHRUECKEN], ['preiselbeeren', G11_PREISELBEEREN]]);
+    const [hauptgang] = berechneWeinbegleitung({ menu, rezepte }).gaenge;
+    expect(getStil(hauptgang.stilId)).toEqual(expect.objectContaining({ farbe: 'rot', suesse: 0 }));
+    hauptgang.alternativen.forEach((alternative) => expect(istSuesswein(alternative.stilId)).toBe(false));
+  });
+
+  it('G12 Ziegenkäse mit Feigen und Honig: höchstens feinherb', () => {
+    const ergebnis = empfehlungFuerWeinprofil(G12_ZIEGENKAESE_HONIG);
+    expect(ergebnis.status).toBe(STATUS_OK);
+    alleStilIds(ergebnis).forEach((stilId) => expect(getStil(stilId).suesse).toBeLessThanOrEqual(1));
+  });
+
+  it('G13 Ente mit Orangensauce: weiss_aromatisch_feinherb, kein Süßwein', () => {
+    const ergebnis = empfehlungFuerWeinprofil(G13_ENTE_ORANGE);
+    expect(ergebnis.stilId).toBe('weiss_aromatisch_feinherb');
+    alleStilIds(ergebnis).forEach((stilId) => expect(istSuesswein(stilId)).toBe(false));
+  });
+
+  it('G14 Menü G12 → Schweinefilet mit Honigmöhren → G7: feinherb zieht den Hauptgang nicht mit, süß erst zum Dessert', () => {
+    const menu = {
+      sections: [
+        { name: 'Vorspeise', recipeIds: ['ziegenkaese'] },
+        { name: 'Hauptgang', recipeIds: ['filet', 'moehren'] },
+        { name: 'Dessert', recipeIds: ['strudel'] },
+      ],
+    };
+    const rezepte = [
+      rezept('ziegenkaese', G12_ZIEGENKAESE_HONIG),
+      rezept('filet', G14_SCHWEINEFILET),
+      rezept('moehren', G14_HONIGMOEHREN),
+      rezept('strudel', G7_APFELSTRUDEL),
+    ];
+    const [vorspeise, hauptgang, dessert] = berechneWeinbegleitung({ menu, rezepte }).gaenge.map((gang) => getStil(gang.stilId));
+    expect(vorspeise.suesse).toBeLessThanOrEqual(1);
+    expect(hauptgang.suesse).toBe(0);
+    expect(dessert.suesse).toBeGreaterThanOrEqual(SUESSWEIN_AB);
+  });
+
+  it('G15 Birne mit Gorgonzola: Süßwein bleibt zu Blauschimmelkäse möglich', () => {
+    expect(['suesswein_edel', 'likoerwein']).toContain(empfehlungFuerWeinprofil(G15_BIRNE_GORGONZOLA).stilId);
+  });
+
+  it('kein herzhaftes Gericht bekommt einen Süßwein, wie süß es auch ist (außer Käse)', () => {
+    const herzhaft = HAUPTKOMPONENTEN.filter((hk) => !hk.startsWith('dessert_') && !['kaese_blau', 'kaese_hart'].includes(hk));
+    const rollen = ROLLEN.filter((rolle) => !['dessert', 'getraenk', 'sauce_dip', 'beilage', 'gebaeck_kuchen'].includes(rolle));
+    rollen.forEach((rolle) => herzhaft.forEach((hauptkomponente) => [0, 1, 2, 3].forEach((suesse) => {
+      const ergebnis = empfehlungFuerWeinprofil(weinprofil({
+        rolle, hauptkomponente, zubereitung: 'gebraten', sauce: 'suess_fruchtig', intensitaet: 3, suesse, fett: 2,
+      }));
+      if (ergebnis.status !== STATUS_OK) return;
+      alleStilIds(ergebnis).forEach((stilId) => expect(istSuesswein(stilId)).toBe(false));
+    })));
   });
 });
 

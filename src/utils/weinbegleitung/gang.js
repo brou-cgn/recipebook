@@ -3,16 +3,21 @@
  *
  * Gang = Sektion in Menü-Reihenfolge mit mindestens einem Rezept. Die Sektion
  * „Drinks“ zählt nicht, Rezepte mit Rolle getraenk werden ignoriert.
- * Leitrezept = Rezept mit Rolle hauptgericht, sonst das mit der höchsten
- * Intensität (bei Gleichstand das erste). Hauptkomponente und Zubereitung
- * kommen vom Leitrezept, die Sauce von einem Rezept mit Rolle sauce_dip, sonst
- * vom Leitrezept. Intensität und Komponenten sind das Maximum über alle Rezepte.
+ * Tragend sind alle Rezepte außer Beilagen und Saucen (BEGLEITER_ROLLEN); gibt es
+ * keins, tragen alle. Leitrezept = Rezept mit Rolle hauptgericht, sonst das
+ * tragende mit der höchsten Intensität (bei Gleichstand das erste).
+ * Hauptkomponente, Zubereitung und Sauce kommen vom Leitrezept; hat es keine
+ * Sauce, zählt die eines Rezepts mit Rolle sauce_dip. Intensität und Komponenten
+ * sind das Maximum der tragenden Rezepte; Beilagen und Saucen heben es höchstens
+ * um BEGLEITER_MAX_ANHEBUNG Stufe.
  */
 import {
   ROLLE_GETRAENK,
   ROLLE_HAUPTGERICHT,
   ROLLE_SAUCE,
   SAUCE_KEINE,
+  BEGLEITER_ROLLEN,
+  BEGLEITER_MAX_ANHEBUNG,
   DESSERT_ROLLEN,
   DESSERT_SEKTION_TEIL,
   ALTE_MENUES_SEKTION_NAME,
@@ -36,14 +41,34 @@ const hoechsteIntensitaet = (eintraege) => eintraege.reduce(
   eintraege[0],
 );
 
+const istBegleiter = (eintrag) => BEGLEITER_ROLLEN.includes(eintrag.profil.rolle);
+
 /**
- * Leitrezept eines Gangs: Hauptgericht vor allem anderen, sonst die höchste Intensität.
+ * Leitrezept eines Gangs: Hauptgericht vor allem anderen, sonst das intensivste
+ * tragende Rezept (keine Beilage, keine Sauce), sonst das intensivste überhaupt.
  * @param {Array<{id: string, profil: Object}>} eintraege - Rezepte mit gültigem Profil, ohne Getränke
  * @returns {{id: string, profil: Object}}
  */
 export function waehleLeitrezept(eintraege) {
   const hauptgerichte = eintraege.filter((eintrag) => eintrag.profil.rolle === ROLLE_HAUPTGERICHT);
-  return hoechsteIntensitaet(hauptgerichte.length > 0 ? hauptgerichte : eintraege);
+  if (hauptgerichte.length > 0) return hoechsteIntensitaet(hauptgerichte);
+  const tragende = eintraege.filter((eintrag) => !istBegleiter(eintrag));
+  return hoechsteIntensitaet(tragende.length > 0 ? tragende : eintraege);
+}
+
+/**
+ * Wert des Gangs für eine Eigenschaft: Maximum der tragenden Rezepte, von Beilagen und
+ * Saucen um höchstens BEGLEITER_MAX_ANHEBUNG Stufe angehoben.
+ * @param {Array<Object>} tragende - nicht leer
+ * @param {Array<Object>} begleiter
+ * @param {function(Object): number} wertVon
+ * @returns {number}
+ */
+function gangWert(tragende, begleiter, wertVon) {
+  const basis = Math.max(...tragende.map(wertVon));
+  if (begleiter.length === 0) return basis;
+  const begleitung = Math.max(...begleiter.map(wertVon));
+  return Math.max(basis, Math.min(begleitung, basis + BEGLEITER_MAX_ANHEBUNG));
 }
 
 /**
@@ -69,13 +94,20 @@ export function bildeGangProfil(rezepte) {
   }
 
   const leit = waehleLeitrezept(relevant);
+  // Eine Sauce aus eigenem Rezept zählt nur, wenn das Leitrezept keine hat: Preiselbeeren
+  // neben dem Rehrücken ersetzen nicht dessen Wildjus.
   const sauceRezept = relevant.find(
     (eintrag) => eintrag.profil.rolle === ROLLE_SAUCE && eintrag.profil.sauce !== SAUCE_KEINE,
   );
+  const sauce = leit.profil.sauce === SAUCE_KEINE && sauceRezept ? sauceRezept.profil.sauce : leit.profil.sauce;
+
+  const tragendeRezepte = relevant.filter((eintrag) => !istBegleiter(eintrag));
+  const tragende = tragendeRezepte.length > 0 ? tragendeRezepte : relevant;
+  const begleiter = tragendeRezepte.length > 0 ? relevant.filter(istBegleiter) : [];
 
   const komponenten = {};
   KOMPONENTEN.forEach((name) => {
-    komponenten[name] = Math.max(...relevant.map((eintrag) => eintrag.profil.komponenten[name]));
+    komponenten[name] = gangWert(tragende, begleiter, (eintrag) => eintrag.profil.komponenten[name]);
   });
 
   return {
@@ -84,8 +116,8 @@ export function bildeGangProfil(rezepte) {
       rolle: leit.profil.rolle,
       hauptkomponente: leit.profil.hauptkomponente,
       zubereitung: leit.profil.zubereitung,
-      sauce: sauceRezept ? sauceRezept.profil.sauce : leit.profil.sauce,
-      intensitaet: Math.max(...relevant.map((eintrag) => eintrag.profil.intensitaet)),
+      sauce,
+      intensitaet: gangWert(tragende, begleiter, (eintrag) => eintrag.profil.intensitaet),
       komponenten,
     },
     leitRezeptId: leit.id,

@@ -7,6 +7,8 @@ import {
   labelFuer,
   ermittleGruende,
   farbePasstZuR8,
+  kommtInfrage,
+  istKandidat,
 } from './bewertung';
 import { getStil, stilReihenfolge } from './wissensbasis';
 import { S_MIN, S_GUT, S_TOP, LABEL_TOP, LABEL_GUT, LABEL_BASIS } from './konstanten';
@@ -86,8 +88,11 @@ describe('Regel-Terme einzeln', () => {
     expect(regelTerme(stil({ saeure: 3 }), gang({}, { saeure: 1 })).R2).toBe(0);
   });
 
-  it('R3: -3 je Stufe, wenn das Gericht süßer ist als der Wein', () => {
-    expect(regelTerme(stil({ suesse: 0 }), gang({}, { suesse: 2 })).R3).toBe(-6);
+  it('R3: wenn das Gericht süßer ist als der Wein, wächst die Strafe mit dem Abstand (1, 3, 6)', () => {
+    expect(regelTerme(stil({ suesse: 0 }), gang({}, { suesse: 1 })).R3).toBe(-1);
+    expect(regelTerme(stil({ suesse: 0 }), gang({}, { suesse: 2 })).R3).toBe(-3);
+    expect(regelTerme(stil({ suesse: 0 }), gang({}, { suesse: 3 })).R3).toBe(-6);
+    expect(regelTerme(stil({ suesse: 1 }), gang({}, { suesse: 3 })).R3).toBe(-3);
     expect(regelTerme(stil({ suesse: 1 }), gang({}, { suesse: 1 })).R3).toBe(0);
   });
 
@@ -135,6 +140,35 @@ describe('Regel-Terme einzeln', () => {
   it('liefert 0 statt -0, wenn eine Regel nichts abzieht', () => {
     const terme = regelTerme(stil(), gang());
     Object.values(terme).forEach((wert) => expect(Object.is(wert, 0)).toBe(true));
+  });
+});
+
+describe('Einschränkung nurZu', () => {
+  const suesswein = stil({ suesse: 3, nurZu: ['rolle:dessert', 'hk:dessert_schoko', 'hk:kaese_blau'] });
+
+  it('lässt Stile ohne nurZu immer zu', () => {
+    expect(kommtInfrage(stil(), gang())).toBe(true);
+    expect(kommtInfrage(stil({ nurZu: [] }), gang())).toBe(true);
+  });
+
+  it('lässt einen Stil mit nurZu nur zu passender Rolle oder Hauptkomponente zu', () => {
+    expect(kommtInfrage(suesswein, gang({ rolle: 'dessert', hauptkomponente: 'kaese_frisch' }))).toBe(true);
+    expect(kommtInfrage(suesswein, gang({ rolle: 'vorspeise', hauptkomponente: 'kaese_blau' }))).toBe(true);
+    expect(kommtInfrage(suesswein, gang({ rolle: 'hauptgericht', hauptkomponente: 'gefluegel' }))).toBe(false);
+  });
+
+  it('schließt auch bei hohem Score aus: Süße im herzhaften Gericht macht es nicht zum Dessert', () => {
+    const passtGut = { ...suesswein, passung: { stark: ['hk:gefluegel', 'sc:suess_fruchtig'], gut: [], meiden: [] } };
+    const bewertung = bewerteStil(passtGut, gang({ hauptkomponente: 'gefluegel', sauce: 'suess_fruchtig' }, { suesse: 3 }));
+    expect(bewertung.score).toBeGreaterThanOrEqual(S_MIN);
+    expect(bewertung.infrage).toBe(false);
+    expect(istKandidat(bewertung)).toBe(false);
+  });
+
+  it('istKandidat verlangt infrage und S_MIN', () => {
+    expect(istKandidat({ infrage: true, score: S_MIN })).toBe(true);
+    expect(istKandidat({ infrage: true, score: S_MIN - 0.1 })).toBe(false);
+    expect(istKandidat({ infrage: false, score: S_TOP })).toBe(false);
   });
 });
 

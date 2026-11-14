@@ -8,7 +8,7 @@
  * als veraltet. wissensbasis.test.js erzwingt das über einen Fingerabdruck.
  */
 
-export const RULES_VERSION = '2026-11-1';
+export const RULES_VERSION = '2026-11-2';
 
 // Rollen, für die ein Einzelrezept keine Weinempfehlung bekommt.
 export const ROLLEN_OHNE_WEIN = ['getraenk', 'sauce_dip', 'beilage', 'gebaeck_kuchen'];
@@ -18,6 +18,13 @@ export const ROLLE_GETRAENK = 'getraenk';
 export const ROLLE_HAUPTGERICHT = 'hauptgericht';
 export const ROLLE_SAUCE = 'sauce_dip';
 export const SAUCE_KEINE = 'keine';
+
+// Beilagen und Saucen begleiten ein Gericht, sie tragen den Gang nicht: Ihre Werte heben
+// Intensität und Komponenten des Gangs höchstens um so viele Stufen über die tragenden
+// Rezepte. Sonst macht ein Rotkohl (Süße 2) oder Preiselbeeren (Süße 3) aus dem Gänsebraten
+// ein Dessert.
+export const BEGLEITER_ROLLEN = ['beilage', 'sauce_dip'];
+export const BEGLEITER_MAX_ANHEBUNG = 1;
 
 // Gänge, die im Modus „Ein Wein für alles“ eine eigene Empfehlung bekommen.
 export const DESSERT_ROLLEN = ['dessert', 'gebaeck_kuchen'];
@@ -38,8 +45,11 @@ export const GEWICHT_ZUBEREITUNG = 0.5;
 export const R1_STRAFE_JE_STUFE = 1;
 // R2: Wein mindestens so säurereich wie das Gericht
 export const R2_STRAFE_JE_STUFE = 2;
-// R3: Wein mindestens so süß wie das Gericht; deutlich süßer nur zu Süßem oder Blauschimmelkäse
-export const R3_STRAFE_JE_STUFE = 3;
+// R3: Wein mindestens so süß wie das Gericht; deutlich süßer nur zu Süßem oder Blauschimmelkäse.
+// Strafe je Abstand der Süße (Index = Gericht minus Wein): Eine Spur Süße (Zwiebeln, Möhren)
+// verträgt ein trockener Wein, ein Dessert nicht. Süßweine kommen zu herzhaften Gerichten
+// ohnehin nicht infrage (`nurZu` in stile.json).
+export const R3_STRAFE_NACH_ABSTAND = [0, 1, 3, 6];
 export const R3_UEBERSUESSE_AB_DIFFERENZ = 2;
 export const R3_UEBERSUESSE_STRAFE_JE_STUFE_UEBER_1 = 2;
 export const R3_AUSNAHME_HAUPTKOMPONENTE = 'kaese_blau';
@@ -79,7 +89,9 @@ export const MAX_GAENGE_VOLLSTAENDIG = 6;
 export const FOLGE_KOERPER_TOLERANZ = 1;
 export const FOLGE_STRAFE_KOERPER_FAELLT = 2;
 export const FOLGE_STRAFE_ROT_VOR_HELL = 2;
-export const FOLGE_STRAFE_SUESSE_FAELLT = 3;
+// Je Stufe, um die die Süße fällt: nach Süßwein (3) zu trocken −3, nach feinherb (1) nur −1,
+// damit ein feinherber Wein zur Vorspeise nicht das ganze Menü feinherb macht.
+export const FOLGE_STRAFE_SUESSE_FAELLT_JE_STUFE = 1;
 export const FOLGE_STRAFE_GLEICHER_STIL = 1;
 // Stile ab dieser Süße sind von der Farbregel (rot vor weiß/rosé) ausgenommen.
 export const FOLGE_FARBREGEL_AUSNAHME_AB_SUESSE = 3;

@@ -85,8 +85,12 @@ describe('Strafen der Menüfolge', () => {
     expect(folgeStrafe(stil('rot_mittel'), stil('suesswein_edel'))).toBe(0);
   });
 
-  it('Süße fällt: -3', () => {
-    expect(folgeStrafe(stil('weiss_aromatisch_feinherb'), stil('weiss_leicht_frisch'))).toBe(3);
+  it('Süße fällt: -1 je Stufe', () => {
+    expect(folgeStrafe(stil('weiss_aromatisch_feinherb'), stil('weiss_leicht_frisch'))).toBe(1);
+    // Süßwein (3) vor Likörwein (3): gleiche Süße, Körper steigt
+    expect(folgeStrafe(stil('suesswein_edel'), stil('likoerwein'))).toBe(0);
+    // Likörwein vor trockenem Rotwein: Süße fällt um 3, Körper bleibt
+    expect(folgeStrafe(stil('likoerwein'), stil('rot_kraeftig'))).toBe(3);
   });
 
   it('derselbe Stil direkt hintereinander: -1', () => {
@@ -268,7 +272,7 @@ describe('Modus „Ein Wein für alles“', () => {
 
   it('nimmt bei gleichem Minimum den Stil mit der höheren Summe, dann die Reihenfolge der Wissensbasis', () => {
     const gangMit = (scores) => ({
-      bewertungen: alleStile().map((stil) => ({ stilId: stil.id, score: scores[stil.id] ?? 0 })),
+      bewertungen: alleStile().map((stil) => ({ stilId: stil.id, score: scores[stil.id] ?? 0, infrage: true })),
     });
     const rangliste = gemeinsameRangliste([
       gangMit({ weiss_leicht_frisch: 3, rot_leicht: 3, rose_trocken: 3 }),
@@ -277,6 +281,21 @@ describe('Modus „Ein Wein für alles“', () => {
     // alle drei haben Minimum 3; rot_leicht hat die höhere Summe, rosé und weiß sind gleich
     expect(rangliste.slice(0, 3).map((eintrag) => eintrag.stilId)).toEqual(['rot_leicht', 'weiss_leicht_frisch', 'rose_trocken']);
     expect(rangliste[0]).toEqual(expect.objectContaining({ minimum: 3, summe: 8 }));
+  });
+
+  it('lässt Stile weg, die für einen der Gänge nicht infrage kommen', () => {
+    const gangMit = (scores, nichtInfrage = []) => ({
+      bewertungen: alleStile().map((stil) => ({
+        stilId: stil.id, score: scores[stil.id] ?? 0, infrage: !nichtInfrage.includes(stil.id),
+      })),
+    });
+    const rangliste = gemeinsameRangliste([
+      gangMit({ suesswein_edel: 9, rot_mittel: 3 }),
+      gangMit({ suesswein_edel: 9, rot_mittel: 3 }, ['suesswein_edel']),
+    ]);
+    expect(rangliste.map((eintrag) => eintrag.stilId)).not.toContain('suesswein_edel');
+    expect(rangliste[0].stilId).toBe('rot_mittel');
+    expect(rangliste).toHaveLength(alleStile().length - 1);
   });
 
   it('wählt für zwei gleiche Currys den einzigen passenden Stil', () => {
