@@ -123,7 +123,7 @@
   background: var(--color-surface-card);
   color: var(--color-text);
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.18);
-  animation: wein-dazu-sheet-ein 0.22s ease-out;
+  animation: wein-dazu-sheet-ein 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes wein-dazu-scrim-ein {
@@ -131,12 +131,24 @@
   to { opacity: 1; }
 }
 
+/* Bottom-Sheet: fährt von unten ganz hoch und beim Schließen wieder ganz nach unten */
 @keyframes wein-dazu-sheet-ein {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes wein-dazu-sheet-aus {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+
+/* Mittiges Fenster (Desktop): nur leicht einschweben und ausblenden */
+@keyframes wein-dazu-fenster-ein {
   from { transform: translateY(24px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
-@keyframes wein-dazu-sheet-aus {
+@keyframes wein-dazu-fenster-aus {
   from { transform: translateY(0); opacity: 1; }
   to { transform: translateY(24px); opacity: 0; }
 }
@@ -407,6 +419,11 @@
   .wein-dazu-sheet {
     border-radius: 20px;
     padding-bottom: 1.25rem;
+    animation-name: wein-dazu-fenster-ein;
+  }
+
+  .wein-dazu-sheet-root--closing .wein-dazu-sheet {
+    animation-name: wein-dazu-fenster-aus;
   }
 
   .wein-dazu-sheet-grabber {

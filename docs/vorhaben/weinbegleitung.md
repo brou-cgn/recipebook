@@ -171,6 +171,10 @@ Umsetzungsnotizen PR 3:
   Symbol (`WeinSymbol`) und `Gruende` mit `mitQuellen` liegen in `WeinbegleitungTeile.js`. Das Menü
   (`Weinbegleitung.js`) zeigt weiter Quellen und das eingebaute Glas (siehe Offen). Geprüft in iPhone-13-Emulation
   über eine Vorschau-Seite (nicht im Repo).
+- Animation 14.11.2026: Das Sheet fährt mobil beim Öffnen von unten ganz hoch (`translateY(100%)` → 0, 0,3 s)
+  und beim Schließen wieder ganz nach unten (0,25 s, passend zu `FADE_OUT_MS`); kein Einblenden mehr per
+  Deckkraft. Das mittige Desktop-Fenster behält das leichte Einschweben mit Ausblenden (eigene Keyframes
+  `wein-dazu-fenster-*`). Nur CSS (`WeinDazu.css`); `prefers-reduced-motion` unverändert ohne Animation.
 - Die vier RecipeDetail-Testdateien mocken `userManagement` mit fester Funktionsliste; dort steht jetzt
   `canEditRecipes: () => false`, damit die neue Zeile die bestehenden Tests nicht berührt.
 - Im Browser geprüft über eine Vorschau-Seite nur mit `WeinDazu` (Vite, Callable und Rolle als Platzhalter):
