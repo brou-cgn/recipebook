@@ -1,7 +1,7 @@
 # Vorhaben: Weinbegleitung (Menüs und Einzelrezepte)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 14.11.2026 (PR 1 bis 6, die Nachbesserungen am Rezept-Sheet und die Kalibrierung der Süße gemergt und deployt; PR 7, „Ein Wein für alles“ mit je einer Weiß- und Rotwein-Option im Kopf, gemergt; Kalibrierung „Auswahl“ für Gänge mit mehreren gleichrangigen Rezepten, z. B. diverse Pizzen, in Arbeit).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 14.11.2026 (PR 1 bis 6, die Nachbesserungen am Rezept-Sheet und die Kalibrierung der Süße gemergt und deployt; PR 7, „Ein Wein für alles“ mit je einer Weiß- und Rotwein-Option im Kopf, gemergt; Kalibrierung „Auswahl“ für Gänge mit mehreren gleichrangigen Rezepten, z. B. diverse Pizzen, gemergt; PR 8, Rebsorten nach Kulinarik, in Arbeit).
 
 **Ziel:** Zu einem Menü (Festtafel) schlägt die App pro Gang einen passenden Weinstil vor, mit bis zu
 zwei Alternativen, einer kurzen Begründung und einem Quellenlink. Dazu gibt es den Modus „Ein Wein für
@@ -25,6 +25,7 @@ Menüansicht, dazu die Zustände). Keine Mockups im Repo.
 | Engine-Startwerte | Wie in der Spezifikation unten. Die Golden-Tests G1 bis G9 und E1 bis E3 sind mit den Startwerten grün, eine Kalibrierung war nicht nötig (Scores in den Umsetzungsnotizen zu PR 1). |
 | Kalibrierung Süße (14.11.2026, Eigentümer: „es wird immer Süßwein vorgeschlagen“) | `RULES_VERSION` `2026-11-2`. (1) Süßweine (`suesswein_edel`, `likoerwein`) kommen nur zu Dessert und Käse infrage: Feld `nurZu` in `stile.json` (Rolle `dessert`, Hauptkomponente `dessert_*`, `kaese_blau`, beim Likörwein zusätzlich `kaese_hart`), unabhängig vom Score. (2) R3 bei zu wenig Süße im Wein: Strafe 1, 3, 6 je Abstand 1, 2, 3 statt 3 je Stufe. (3) Gang-Profil: Beilagen und Saucen (`beilage`, `sauce_dip`) heben Intensität und Komponenten höchstens um eine Stufe über die tragenden Rezepte; das Leitrezept kommt aus den tragenden. (4) Sauce: die des Leitrezepts; nur wenn es keine hat, die eines Rezepts mit Rolle `sauce_dip` (Abweichung von der Spezifikation: Preiselbeeren ersetzten den Wildjus). (5) Menüfolge: Süße fällt kostet 1 je Stufe statt pauschal 3. Golden-Tests G10 bis G15 halten das fest. Gespeicherte Menü-Weinbegleitungen gelten danach als veraltet; „Neu berechnen“ kostet keinen KI-Aufruf, weil die Profile gültig bleiben. |
 | Kalibrierung Auswahl (14.11.2026, Eigentümer: „Als Hauptgang gibt es diverse Pizzen. Die Weinauswahl verstehe ich nicht“) | `RULES_VERSION` `2026-11-5`, Wissensbasis und Konstanten unverändert. Angezeigt wurde „Hier lieber Bier oder Wasser“ mit Rot mittelkräftig und Weiß feinherb, beide „passt bedingt“. Ursache: Der Gang war ein einziges Profil aus dem Maximum je Komponente über alle tragenden Rezepte; die süßeste Pizza (Süße 2, R3 −3 für jeden trockenen Wein) und die kräftigste ergaben zusammen ein Gericht, das es nicht gibt, mit der Margherita als Leitrezept (Mozzarella, für Rotwein neutral). Neu (Vorschlag, siehe Offen): Tragende Rezepte mit der Rolle des Leitrezepts bilden die Auswahl des Gangs; jedes bekommt ein eigenes Profil (Hauptkomponente, Zubereitung, Sauce vom Rezept selbst; übrige tragende Rezepte anderer Rolle wie ein Salat zählen weiter voll, Beilagen und Saucen heben um höchstens eine Stufe). Score je Stil = Median über die Auswahl, infrage nur, wenn für jedes Rezept; Gründe vom Rezept, dessen Score dem Median am nächsten liegt. Bei einem tragenden Rezept ändert sich nichts. Golden-Tests G16 und G17. |
+| Kulinarik (14.11.2026, Eigentümer: „Die Kulinarik (italienisch, deutsch etc.) soll in die Weinempfehlung mit einbezogen werden“) | Umsetzung in PR 8 (Vorschlag, siehe Offen): Die Kulinarik bestimmt die **Rebsorten-Beispiele**, nicht den Weinstil. Zur italienischen Küche stehen Chianti, Barbera vorn statt Lemberger, Dornfelder; zur französischen Muscadet, Chablis. Daten: `src/data/weinbegleitung/kulinarik.json` (neun Weinregionen mit Wortstämmen zur Erkennung und Beispielen je Stil), Helfer `src/utils/weinbegleitung/kulinarik.js`. Rezept: erste Kulinarik mit Weinregion. Gang: häufigste Region der Auswahl-Rezepte (sonst aller Rezepte der Sektion), Gleichstand = keine Region. „Ein Wein“ im Kopf: Region über die Nicht-Dessert-Gänge. Regionale Beispiele zuerst, mit allgemeinen aufgefüllt; im Sheet und aufgeklappt im Menü der Hinweis „Beispiele passend zur … Küche“. Küchen ohne Weinregion (Asiatisch, Indisch, Vegetarisch …) bleiben bei den allgemeinen Beispielen. Berechnet beim Anzeigen, nicht in Engine oder Snapshot: keine neue `RULES_VERSION`, gespeicherte Menüs werden nicht veraltet, alte Snapshots profitieren sofort. Die Kulinarik geht schon seit PR 2 in den Gemini-Prompt des Profils ein. |
 | R8 als Grund | Abweichung von der Spezifikation: R8 erscheint nur, wenn die Farbe zur Aussage der Regel passt (rot zu `rind_lamm`/`wild`; weiß zu Fisch, Meeresfrüchten, Geflügel, Schwein/Kalb). Sonst stünde „Zu kräftigem Fleisch passt eher Rotwein …“ unter einem Süßwein zum Dessert. |
 | Gründe | Bedingungen ohne eigenen Punktbeitrag (R1, R2, R3, R5, R9, R10) haben ein festes Gewicht (Konstanten `GRUND_GEWICHT_*`). R10 erscheint im Menü, wenn sich die Folge gegenüber dem vorherigen Gang mit Wein ohne Strafe steigert. |
 | „Ein Wein“ ohne gemeinsamen Stil | Ergänzung: Erreicht kein Stil `S_MIN` in allen Nicht-Dessert-Gängen, bekommen sie den Hinweis `keinGemeinsamerStil`, statt einen schlechten Stil zu erzwingen. Gänge, zu denen gar kein Stil passt (R11), bleiben aus der gemeinsamen Wahl heraus. |
@@ -113,7 +114,8 @@ Snapshot oder Fixieren beim Einzelrezept.
 | 5 | Seite „Weinbegleitung“ unter „Chefkoch & mehr“ (`src/components/WeinbegleitungSeite.js`, Kachel in `Kueche.js`) mit Regeln, Weinstilen, Quellen und dem Admin-Backfill; Callable `backfillWeinprofile` mit Cursor (F20) und Hook `useWeinprofilBackfill.js`; Freigabe-Seiten ohne Veraltet-Hinweis; Zeitlimit für die Callables im Client | PR #3667 gemergt und deployt (14.11.2026, Merge d2817c3, v2.74.0, Deploy-Lauf 2041: Function `backfillWeinprofile` angelegt); Function-Tests +12, Komponententests +15, Util-Tests +6 |
 | 6 | Menü: je Gang offen die Empfehlung und je eine Rot- und Weißwein-Option mit drei Rebsorten, Gründe ohne Quellen (Wunsch des Eigentümers, siehe „Menü-Optionen“): `farbOptionen` und `labelFuerOption` in `engine.js`, Snapshot-Feld `optionen` in `menue.js`, `WeinbegleitungGang` in `Weinbegleitung.js`; dritte Rebsorte für vier Stile, `RULES_VERSION` `2026-11-3` | PR #3669 gemergt und deployt (14.11.2026, Merge 2542b8c, v2.75.0, Deploy-Lauf 2043) |
 | 7 | Menü, Modus „Ein Wein für alles“: je eine Weiß- und eine Rotwein-Option im Kopf statt Weinzeilen je Gang, mit „Am besten zu“ (Wunsch des Eigentümers, siehe „Ein Wein im Kopf“): `waehleEinWeinStil` und `einWeinOptionen` in `engine.js` (`farbOptionen` ohne Parameter `reihenfolge`), Snapshot-Feld `einWeinOptionen` und `zeigtEinWeinImKopf` in `menue.js`, `EinWeinKopf` in `Weinbegleitung.js`, Festlegen ohne Gang im Hook, ein Satz auf der Seite „Weinbegleitung“; `RULES_VERSION` `2026-11-4` | PR #3671 gemergt (14.11.2026, Merge 784e56a), Nachbesserung Kopf ohne getönte Fläche #3672 (Merge da11b6b); Util-Tests +9, Komponententests +4 |
-| K2 | Kalibrierung Auswahl (siehe „Entschieden“): `bildeGangProfil` liefert je Rezept der Auswahl ein Profil (`auswahl`), `bewerteAuswahl` in `bewertung.js` (Median, infrage für alle, Gründe vom Rezept am Median), `bewerteGang` in `engine.js` für „Pro Gang“, „Ein Wein“ und die Optionen; `RULES_VERSION` `2026-11-5` | in Arbeit (Branch `claude/blissful-pascal-l8x36e`); Util-Tests +15 (u. a. Golden G16 und G17, gegen die alte Engine rot) |
+| K2 | Kalibrierung Auswahl (siehe „Entschieden“): `bildeGangProfil` liefert je Rezept der Auswahl ein Profil (`auswahl`), `bewerteAuswahl` in `bewertung.js` (Median, infrage für alle, Gründe vom Rezept am Median), `bewerteGang` in `engine.js` für „Pro Gang“, „Ein Wein“ und die Optionen; `RULES_VERSION` `2026-11-5` | PR #3673 gemergt (14.11.2026, Merge 3ca5203); Util-Tests +15 (u. a. Golden G16 und G17, gegen die alte Engine rot) |
+| 8 | Rebsorten nach Kulinarik (siehe „Kulinarik“): `kulinarik.json`, `kulinarik.js` (`regionFuerRezept`, `regionFuerRezepte`, `regionenFuerGaenge`, `beispieleFuerRegion`), `WeinDazu.js` (Sheet), `Weinbegleitung.js` (`OptionZeile` mit `regionId`), Hook liefert `regionFuer` und `regionMenue`, ein Absatz auf der Seite „Weinbegleitung“; Wissensbasis, Engine und `RULES_VERSION` unverändert | in Arbeit (Branch `claude/happy-curie-ofsl7b`); Util-Tests +15, Komponententests +4 (ein bestehender Test erwartet jetzt die deutschen Beispiele) |
 
 Nach jedem PR: Tabelle nachziehen. Berührt ein PR einen Tech-Check-Befund (S29 mit PR 2, F20 mit PR 5),
 das Dashboard aktualisieren (siehe `CLAUDE.md`).
@@ -308,6 +310,18 @@ Umsetzungsnotizen PR 7:
   „Pro Gang“ unverändert; keine Konsolenfehler, keine waagrechte Scrollleiste. Nicht in der echten App mit
   Login geprüft.
 
+Umsetzungsnotizen PR 8:
+- Rezept: `regionFuerRezept` nimmt die erste Kulinarik mit Region (`['Vegetarisch', 'Italienische Küche']` →
+  Italien). Mehrdeutiges entscheidet die Reihenfolge der Daten: „Südtiroler Küche“ ist Italien, „Tiroler
+  Küche“ Österreich.
+- Menü-Gang: Gezählt werden die Rezepte der Auswahl (die Gerichte, nach denen der Wein gewählt wird), damit
+  ein deutscher Kartoffelsalat neben drei Pizzen die Region nicht kippt; haben sie keine Kulinarik, alle
+  Rezepte der Sektion (auch Beilagen).
+- Der bestehende Test des Rezept-Sheets (Rinderschmorbraten, Deutsche Küche) zeigt jetzt „Lemberger aus dem
+  Barrique, Cabernet Sauvignon“ statt „Cabernet Sauvignon, Syrah“.
+- Nicht im Browser geprüft (nur Text in bestehenden Zeilen und eine neue Hinweiszeile mit
+  `--color-text-muted`).
+
 ## Offen
 
 - **Kalibrierung Auswahl bestätigen (Eigentümer):** (a) Median über die Rezepte der Auswahl (Alternative:
@@ -320,9 +334,15 @@ Umsetzungsnotizen PR 7:
   und kein trockener Weißwein hat `sc:tomate` in der Passung. Hebel: `sc:tomate` als „gut“ bei
   `weiss_leicht_frisch` oder R3-Strafe für Abstand 1 auf 0 (fachlich: „Eine Spur Süße verträgt ein trockener
   Wein“, so steht es schon in `konstanten.js`). Beides ändert viele Gerichte und braucht neue Golden-Werte.
-- **Rebsorten passend zur Küche?** Zu Pizza zeigt die App „Lemberger, Dornfelder, Merlot“; Chianti steht
-  bei `rot_mittel` erst an vierter Stelle. Idee: Beispiele nach Kulinarik der Rezepte ordnen (Italienische
-  Küche → Chianti zuerst). Braucht die Kulinarik im Snapshot oder beim Anzeigen. Entscheidung beim Eigentümer.
+- **Kulinarik bestätigen (Eigentümer, PR 8):** (a) Die Kulinarik ändert nur die Beispiele, nicht die Wahl des
+  Stils. Begründung: Der Stil folgt Struktur und Aromen des Gerichts (Tomatensauce, Fett, Schärfe), und die
+  stecken schon im Profil; ein Bonus „italienische Küche → Rotwein“ zählte das doppelt und machte aus
+  Vitello tonnato oder Fritto misto einen Rotwein-Gang. Ein Regionsbonus je Stil wäre machbar (neue
+  `RULES_VERSION`, neue Golden-Werte), ist aber nicht umgesetzt. (b) Fachlich gegenlesen: die regionalen
+  Beispiele in `kulinarik.json` (u. a. Arneis als „grün und aromatisch“, Mencía als leichter Rotwein,
+  „Lemberger aus dem Barrique“ als kräftiger deutscher Rotwein, Zinfandel bei mittel und kräftig).
+  (c) Erkennung über Wortstämme: eigene Küchen-Namen ohne Länderbezug (z. B. „Mediterran“, „Alpenküche“)
+  bekommen keine Region.
 - **R4 (Schärfe) gestuft?** Ab Schärfe 2 kostet ein mittelkräftiger Rotwein pauschal 5 Punkte, bei Schärfe 2
   wie bei 3. Eine Pizza mit scharfer Salami allein bekommt deshalb feinherb statt eines fruchtigen Rotweins.
   Hebel: Strafe für Schärfe 2 halbieren. Entscheidung beim Eigentümer.
