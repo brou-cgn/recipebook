@@ -295,3 +295,9 @@
   font-size: 0.9rem;
   color: var(--color-text-muted);
 }
+
+/* Dunkelmodus: --color-brand ist dort hellgrau – der aktive Umschalter soll Orange sein. */
+[data-theme="dark"] .weinbegleitung-umschalter-knopf[aria-pressed="true"] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
