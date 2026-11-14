@@ -64,6 +64,9 @@ jest.mock('../contexts/NutritionReferenceContext', () => ({
 }));
 
 jest.mock('./NetworkPage', () => () => <div data-testid="network-page" />);
+jest.mock('./WeinbegleitungSeite', () => ({ onBack }) => (
+  <div data-testid="weinbegleitung-seite"><button type="button" onClick={onBack}>Seite schließen</button></div>
+));
 
 describe('Kueche', () => {
   beforeEach(() => {
@@ -1031,5 +1034,41 @@ describe('Kueche', () => {
 
     expect(screen.queryByTestId('network-page')).not.toBeInTheDocument();
     expect(onNetworkOpened).toHaveBeenCalled();
+  });
+
+  test('Kachel „Weinbegleitung“ zeigt Stile und Quellen und öffnet die Seite', () => {
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={[]}
+        currentUser={{ id: 'user-1', role: 'read' }}
+      />
+    );
+
+    const kachel = screen.getByTestId('weinbegleitung-tile');
+    expect(within(kachel).getByRole('heading', { name: 'Weinbegleitung' })).toBeInTheDocument();
+    expect(kachel).toHaveTextContent('12Weinstile');
+    expect(kachel).toHaveTextContent('8Quellen');
+
+    fireEvent.click(kachel);
+    expect(screen.getByTestId('weinbegleitung-seite')).toBeInTheDocument();
+    expect(screen.queryByTestId('weinbegleitung-tile')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seite schließen' }));
+    expect(screen.getByTestId('weinbegleitung-tile')).toBeInTheDocument();
+  });
+
+  test('Kachel „Weinbegleitung“ öffnet auch per Tastatur und fehlt ohne Anmeldung', () => {
+    const { rerender } = render(
+      <Kueche recipes={[]} menus={[]} onSelectRecipe={() => {}} allUsers={[]} currentUser={{ id: 'user-1' }} />
+    );
+    fireEvent.keyDown(screen.getByTestId('weinbegleitung-tile'), { key: 'Enter' });
+    expect(screen.getByTestId('weinbegleitung-seite')).toBeInTheDocument();
+
+    rerender(<Kueche recipes={[]} menus={[]} onSelectRecipe={() => {}} allUsers={[]} currentUser={null} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Seite schließen' }));
+    expect(screen.queryByTestId('weinbegleitung-tile')).not.toBeInTheDocument();
   });
 });

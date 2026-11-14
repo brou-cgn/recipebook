@@ -17,6 +17,7 @@ const EXPECTED_EXPORTS = [
   'applyRecipeVersionChanges',
   'aggregateRecipeRating',
   'backfillRecipeThumbnails',
+  'backfillWeinprofile',
   'bringRecipeExport',
   'calculateEventDrinks',
   'calculateNutritionFromOpenFoodFacts',

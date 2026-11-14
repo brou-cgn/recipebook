@@ -1,0 +1,189 @@
+/* Seite „Weinbegleitung“ unter „Chefkoch & mehr“ (WeinbegleitungSeite.js).
+   Farben nur über Tokens (src/tokens.css). */
+
+.wein-seite {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.wein-seite-kopf {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.wein-seite-kopf h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  text-align: left;
+  color: var(--color-text-strong);
+}
+
+.wein-seite-karte {
+  margin-bottom: 1rem;
+  padding: 1.25rem;
+  border-radius: 12px;
+  background: var(--color-surface-card);
+  color: var(--color-text);
+}
+
+.wein-seite-titel {
+  margin: 0 0 0.6rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-brand);
+}
+
+.wein-seite-text {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--color-text-body);
+}
+
+.wein-seite-klein {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.wein-seite-nowrap {
+  white-space: nowrap;
+}
+
+/* Weinstile */
+.wein-seite-stile {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wein-seite-stil {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.wein-seite-stil .wein-glas {
+  margin-top: 0.1rem;
+}
+
+.wein-seite-stil-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.wein-seite-stil-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-strong);
+}
+
+.wein-seite-stil-details {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+/* Quellen */
+.wein-seite-quellen {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wein-seite-quellen li {
+  display: flex;
+  flex-direction: column;
+}
+
+.wein-seite-quellen a {
+  font-size: 0.95rem;
+  color: var(--color-brand);
+  text-underline-offset: 2px;
+}
+
+.wein-seite-quelle-meta {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+/* Profile nachtragen (nur Admins) */
+.wein-seite-fortschritt {
+  margin: 0.25rem 0 0.75rem;
+}
+
+.wein-seite-fortschritt-balken {
+  display: block;
+  width: 100%;
+  height: 8px;
+  margin-bottom: 0.5rem;
+  accent-color: var(--color-brand);
+}
+
+.wein-seite-fortschritt-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-body);
+}
+
+.wein-seite-fortschritt-text strong {
+  color: var(--color-text-strong);
+}
+
+.wein-seite-status {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.wein-seite-fehler {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  color: var(--color-bad-text);
+}
+
+.wein-seite-aktionen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.wein-seite-knopf {
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid var(--color-brand);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-brand);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wein-seite-knopf--primaer {
+  background: var(--color-brand);
+  color: var(--color-surface);
+}
+
+.wein-seite-knopf:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.wein-seite-knopf:focus-visible,
+.wein-seite-quellen a:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}

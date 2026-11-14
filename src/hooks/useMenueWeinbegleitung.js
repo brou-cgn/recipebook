@@ -72,10 +72,11 @@ export default function useMenueWeinbegleitung({ menu, recipes, currentUser, isS
   const darfBearbeiten = !isSharedView && canEditMenu(currentUser, menu) && canEditRecipes(currentUser);
 
   // Veraltet: anderer Menü-Hash (Sektionen, Rezepte, Profile, Regeln) oder ein Rezept wurde nach
-  // seinem Profil geändert. Ohne Web Crypto bleibt es bei „unbekannt“.
+  // seinem Profil geändert. Ohne Web Crypto bleibt es bei „unbekannt“. Freigabe-Seiten zeigen nur
+  // das Ergebnis, ohne Hinweis: Gäste können nichts neu berechnen.
   useEffect(() => {
     let abgebrochen = false;
-    if (!snapshot) {
+    if (!snapshot || isSharedView) {
       setVeraltet(null);
       return undefined;
     }
@@ -89,7 +90,7 @@ export default function useMenueWeinbegleitung({ menu, recipes, currentUser, isS
       }
     })();
     return () => { abgebrochen = true; };
-  }, [snapshot, menu, rezepte]);
+  }, [snapshot, menu, rezepte, isSharedView]);
 
   const berechnenUndSpeichern = useCallback(async ({ modus, fixierungen, gewaehlterGemeinsamerStilId, rezepteStand }) => {
     const ergebnis = berechneWeinbegleitung({

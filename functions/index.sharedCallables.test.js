@@ -203,3 +203,29 @@ test('getSharedRecipesByIds only returns recipes referenced by shared menu', asy
     ],
   });
 });
+
+// Weinbegleitung (docs/vorhaben/weinbegleitung.md, PR 5): Freigabe-Seiten zeigen den gespeicherten
+// Snapshot und die Gericht-Profile. Beides muss unverändert mitkommen, sonst sähen Gäste nichts.
+test('Freigaben liefern Weinbegleitung des Menüs und Weinprofile der Rezepte mit', async () => {
+  const shareId = '81a9ba26-c6e0-4fde-8501-340c248ae246';
+  const weinbegleitung = {
+    modus: 'proGang',
+    gaenge: [{sektionIndex: 0, sektionName: 'Hauptgang', stilId: 'rot_kraeftig', alternativen: [], label: 'passt gut', regelIds: ['R7'], fixiert: false, hinweis: null}],
+    rulesVersion: '2026-11-1',
+    inputHash: 'h',
+  };
+  const weinprofil = {rolle: 'hauptgericht', hauptkomponente: 'rind_lamm', inputHash: 'p', schemaVersion: 1};
+  const {mod} = loadFunctionsModule({
+    menusByShareId: new Map([[shareId, {id: 'm1', data: {sections: [{name: 'Hauptgang', recipeIds: ['r1']}], weinbegleitung}}]]),
+    recipesByShareId: new Map([[shareId, {id: 'r1', data: {title: 'Braten', weinprofil}}]]),
+    recipesById: new Map([['r1', {title: 'Braten', weinprofil}]]),
+  });
+
+  const menu = await mod.getSharedMenuByShareId({data: {shareId}});
+  const rezepte = await mod.getSharedRecipesByIds({data: {shareId, recipeIds: ['r1']}});
+  const rezept = await mod.getSharedRecipeByShareId({data: {shareId}});
+
+  assert.deepEqual(menu.menu.weinbegleitung, weinbegleitung);
+  assert.deepEqual(rezepte.recipes[0].weinprofil, weinprofil);
+  assert.deepEqual(rezept.recipe.weinprofil, weinprofil);
+});

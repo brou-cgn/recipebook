@@ -269,6 +269,20 @@ describe('Veraltete Weinbegleitung', () => {
     expect(screen.queryByRole('button', { name: 'Neu berechnen' })).not.toBeInTheDocument();
   });
 
+  it('zeigt Gästen auf der Freigabe-Seite das Ergebnis, ohne Hinweis, Knöpfe und KI-Aufruf', async () => {
+    const { menu, rezepte } = festtafel();
+    zeige({ menu: mitSnapshot(menu, rezepte, { inputHash: 'alt' }), rezepte, nutzer: null, isSharedView: true });
+
+    expect(screen.getByText('3 Weine für 3 Gänge')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Hauptgang' })).getByText('Rotwein, kräftig')).toBeInTheDocument();
+    // Ohne Freigabe-Seite käme der Hinweis nach der asynchronen Hash-Prüfung
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 100)); });
+    expect(screen.queryByText('Menü oder Rezepte wurden seit der Berechnung geändert.')).not.toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Weinbegleitung' })).queryByRole('button')).not.toBeInTheDocument();
+    expect(generiereWeinprofile).not.toHaveBeenCalled();
+    expect(saveMenuWeinbegleitung).not.toHaveBeenCalled();
+  });
+
   it('zeigt keinen Hinweis, wenn Menü und Profile zum Snapshot passen', async () => {
     const { menu, rezepte } = festtafel();
     const aktuell = await mitAktuellenProfilen(rezepte);

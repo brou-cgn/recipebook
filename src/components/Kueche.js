@@ -3,6 +3,8 @@ import './Kueche.css';
 import RecipeTimeline from './RecipeTimeline';
 import PersonalDataPage from './PersonalDataPage';
 import NetworkPage from './NetworkPage';
+import WeinbegleitungSeite from './WeinbegleitungSeite';
+import { alleStile, alleQuellen } from '../utils/weinbegleitung/wissensbasis';
 import {
   getTimelineBubbleIcon,
   getTimelineMenuBubbleIcon,
@@ -199,6 +201,7 @@ function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSe
   const [timelineCookEventDefaultImage, setTimelineCookEventDefaultImage] = useState(null);
   const [showPersonalData, setShowPersonalData] = useState(false);
   const [showNetwork, setShowNetwork] = useState(false);
+  const [showWeinbegleitung, setShowWeinbegleitung] = useState(false);
   const canUseFollow = Boolean(currentUser?.follow) && !currentUser?.isGuest;
   const [appCalls, setAppCalls] = useState([]);
   const [recipeCalls, setRecipeCalls] = useState([]);
@@ -426,7 +429,9 @@ function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSe
 
   return (
     <div className="kueche-container">
-      {showNetwork ? (
+      {showWeinbegleitung ? (
+        <WeinbegleitungSeite currentUser={currentUser} onBack={() => setShowWeinbegleitung(false)} />
+      ) : showNetwork ? (
         <NetworkPage currentUser={currentUser} onBack={() => setShowNetwork(false)} />
       ) : showPersonalData ? (
         <PersonalDataPage
@@ -563,6 +568,31 @@ function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSe
                   </div>
                 )}
                 <RecipeCallsBarChart recipeCalls={ownRecipeCalls} />
+              </div>
+            </div>
+          )}
+          {currentUser && (
+            <div
+              className="kueche-tile kueche-tile--weinbegleitung"
+              data-testid="weinbegleitung-tile"
+              onClick={() => setShowWeinbegleitung(true)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowWeinbegleitung(true); } }}
+              role="button"
+              tabIndex={0}
+              aria-label="Weinbegleitung: Regeln, Weinstile und Quellen öffnen"
+            >
+              <div className="kueche-tile-content">
+                <h3>Weinbegleitung</h3>
+                <div className="kueche-tile-meta">
+                  <span className="meta-text">
+                    <strong>{alleStile().length}</strong>
+                    <span>Weinstile</span>
+                  </span>
+                  <span className="meta-text">
+                    <strong>{alleQuellen().length}</strong>
+                    <span>Quellen</span>
+                  </span>
+                </div>
               </div>
             </div>
           )}

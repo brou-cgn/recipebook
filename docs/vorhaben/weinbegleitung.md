@@ -1,7 +1,7 @@
 # Vorhaben: Weinbegleitung (Menüs und Einzelrezepte)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 14.11.2026 (PR 1 bis 4 und die Nachbesserung am Rezept-Sheet gemergt und deployt; Kalibrierung der Süße als PR #3666 offen, PR 5 offen).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 14.11.2026 (PR 1 bis 4, die Nachbesserung am Rezept-Sheet und die Kalibrierung der Süße gemergt; PR 5 in Arbeit).
 
 **Ziel:** Zu einem Menü (Festtafel) schlägt die App pro Gang einen passenden Weinstil vor, mit bis zu
 zwei Alternativen, einer kurzen Begründung und einem Quellenlink. Dazu gibt es den Modus „Ein Wein für
@@ -29,6 +29,9 @@ Menüansicht, dazu die Zustände). Keine Mockups im Repo.
 | Fixierungen | Zuordnung über Index und Sektionsnamen. Nach dem Verschieben einer Sektion genügt der Name, wenn er im Menü eindeutig ist; Umbenennen hebt die Fixierung auf. |
 | Menü-Entscheidungen | 14.11.2026, Vorschläge ohne Widerspruch übernommen: Zusammenfassung und Umschalter stehen vor dem ersten Gang (nicht in „Drinks“). Im Modus „Ein Wein“ tauscht das Antippen einer Alternative den gemeinsamen Stil aller Nicht-Dessert-Gänge; Alternativen eines Dessert-Gangs sind dort nur Anzeige. Sektionen nur aus Beilagen oder Saucen bekommen wie spezifiziert einen eigenen Wein (nur Getränke zählen nicht). „Fixierung lösen“ hebt einen fixierten Gang wieder auf. |
 | Snapshot-Felder | Zusätzlich zur Spezifikation: `gemeinsamerStilId` (Modus „Ein Wein“), `fixierungen` (Pro-Gang-Fixierungen, bleiben beim Moduswechsel erhalten), `gewaehlterGemeinsamerStilId` (vom Nutzer gewählter gemeinsamer Stil) und je Gang `istDessert`. Scores und Strafen werden nicht gespeichert. |
+| Seite „Weinbegleitung“ | 14.11.2026 (PR 5): Kachel „Weinbegleitung“ unter „Chefkoch & mehr“ für alle Angemeldeten, als Unterseite wie „Mein Netzwerk“ (ohne neue Route in `App.js`). Inhalt: wie die Empfehlung entsteht, die Regeln mit Quellen (dieselben Gründe wie unter „Warum passt das?“), die zwölf Weinstile mit Beispielen und Temperatur, die Quellen und der Stand der Regeln. Admins starten dort auch den Backfill; der Küchenbetrieb hat dafür keinen passenden Reiter. |
+| Backfill | 14.11.2026 (PR 5): `backfillWeinprofile` nur für Admins, je Aufruf eine Seite (Standard 20, höchstens 40 Rezepte) nach Dokument-ID mit Cursor, beim ersten Aufruf die Gesamtzahl per Zählabfrage. Aktuelle Profile werden übersprungen (kein KI-Aufruf, kein Limit), jedes geschätzte Rezept zählt gegen das Tageslimit des Admins (`aiWeinprofilLimits`, 5000). Ist das Limit erreicht, endet die Seite vor dem ersten Rezept ohne Kontingent, der Cursor zeigt auf das letzte bearbeitete. Der Client ruft Seite für Seite; „Anhalten“ wirkt nach der laufenden Seite, „Fortsetzen“ macht am Cursor weiter, „Von vorn prüfen“ versucht fehlgeschlagene Rezepte erneut. |
+| Freigabe-Seiten | 14.11.2026 (PR 5): Sie zeigen nur Ergebnisse (Snapshot im Menü, Chip und Sheet beim Rezept). Der Hinweis „veraltet“ entfällt dort, weil Gäste nichts neu berechnen können; für angemeldete Leser in der App bleibt er. |
 | Versionierung | `RULES_VERSION` startet mit `2026-11-1`. `wissensbasis.test.js` prüft einen Fingerabdruck über Stile, Regeln und Engine-Konstanten: Inhalt geändert, Version nicht erhöht, Test rot. |
 | Phase-1-Vorschläge | Am 14.11.2026 ohne Widerspruch übernommen; (1) bis (3) sind mit PR 2 umgesetzt, (4) und (5) mit PR 4. (1) Firestore-Regel: Clients dürfen `weinprofil` nicht ändern (`affectedKeys`); dieselbe Regel schützt `ratingAvg`/`ratingCount` (Tech-Check S29). (2) Das Callable prüft je Rezept die Sichtbarkeit (`isVisibleToUser`), weil `requireAiCaller` nur die Rolle prüft. (3) Das Tageslimit zählt je geschätztes Rezept, nicht je Aufruf. (4) Der Button „Weinbegleitung erstellen“ hängt an `canEditMenu`. (5) Alte Menüs ohne Sektionen bilden einen Gang „Alle Rezepte“. Dazu: Veraltet-Erkennung über die Hash-Funktion, nicht über `updatedAt` (das setzen auch Freigabe und Vorschaubild); `backfillWeinprofile` mit Cursor (Muster `backfillRecipeThumbnails` taugt nicht, Tech-Check F20). |
 
@@ -95,9 +98,9 @@ Snapshot oder Fixieren beim Einzelrezept.
 | 1 | Tracker, Wissensbasis (`src/data/weinbegleitung/`), Engine (`src/utils/weinbegleitung/`) mit Tests: Regeln einzeln, Gang-Bildung, Menüfolge, „Ein Wein“, Fixierung, Einzelrezept, Golden G1–G9 und E1–E3, Datenprüfung mit Fingerabdruck. Noch ohne UI. | PR #3660 gemergt (14.11.2026), 129 neue Tests |
 | 2 | Callable `generateWeinprofile` (`functions/handlers/weinbegleitung.js`, Helfer `functions/shared/weinprofil.js`; Gemini, Tageslimit `aiWeinprofilLimits`), Hash-Funktion im Client (`profilHash.js`) mit Konsistenztest gegen die Function, Firestore-Regeln (`weinprofil`, `ratingAvg`, `ratingCount` nur per Function, Tech-Check S29) mit Rules-Tests, `docs/architecture/security.md` | PR #3661 gemergt und deployt (14.11.2026, v2.69.0, Deploy-Lauf 2034: Function `generateWeinprofile` angelegt, Rules veröffentlicht); Function-Tests +19, Client-Tests +18, Rules-Tests +1 und erweitert |
 | 3 | Rezeptansicht nach Variante B: `src/components/WeinDazu.js` (Chip, Sheet, „Passenden Wein finden“, „Neu einschätzen“, Laden, R11, veraltet), Helfer `anzeige.js` und `weinprofilCallable.js`, Farb-Tokens `--color-wein-*`, Einbindung in `RecipeDetail.js` (3 Zeilen) | PR #3662 gemergt und deployt (14.11.2026, v2.70.0, Deploy-Lauf 2035); vom Eigentümer live getestet (14.11.2026, „Passenden Wein finden“ erfolgreich, damit auch das Callable aus PR 2 gegen die echte Gemini-API geprüft); Komponententests +15, Util-Tests +8. Nachbesserung (Quellen und Fußsatz raus, Wischen statt „Schließen“, Icons `weinRot`/`weinWeiss`): PR #3664 gemergt und deployt (14.11.2026, v2.72.0, Deploy-Lauf 2037), Komponententests +3 |
-| 4 | Menü nach Variante B: `src/components/Weinbegleitung.js` (Zusammenfassung, Weinzeile je Gang), Hook `src/hooks/useMenueWeinbegleitung.js`, Utils `menue.js` (Snapshot, Menü-Hash, Zuordnung), `saveMenuWeinbegleitung` in `menuFirestore.js`, gemeinsame Bausteine `WeinbegleitungTeile.js` (aus `WeinDazu.js` herausgelöst); `MenuDetail.js` (+9/−2 Zeilen) nutzt jetzt `DRINKS_SECTION_NAME` aus `menuSections.js` | PR #3663 gemergt und deployt (14.11.2026, v2.71.0, Deploy-Lauf 2036); Komponententests +13, Util-Tests +12 |
-| K | Kalibrierung der Süße (siehe „Entschieden“): `nurZu` in `stile.json`, `kommtInfrage`/`istKandidat` in `bewertung.js`, R3 gestuft, Gang-Profil mit tragenden Rezepten und gedämpften Beilagen/Saucen, Sauce vom Leitrezept, Süße-Strafe der Menüfolge je Stufe; `RULES_VERSION` `2026-11-2` | PR #3666 offen (14.11.2026, Branch `claude/jolly-maxwell-qiak69`); Util-Tests +19 (u. a. Golden G10 bis G15 und Prüfung über alle herzhaften Kombinationen) |
-| 5 | Freigabe-Seiten (Menü und Rezept), Quellen-Seite unter „Chefkoch & mehr“, `backfillWeinprofile` (Cursor, F20), Feinschliff | offen |
+| 4 | Menü nach Variante B: `src/components/Weinbegleitung.js` (Zusammenfassung, Weinzeile je Gang), Hook `src/hooks/useMenueWeinbegleitung.js`, Utils `menue.js` (Snapshot, Menü-Hash, Zuordnung), `saveMenuWeinbegleitung` in `menuFirestore.js`, gemeinsame Bausteine `WeinbegleitungTeile.js` (aus `WeinDazu.js` herausgelöst); `MenuDetail.js` (+9/−2 Zeilen) nutzt jetzt `DRINKS_SECTION_NAME` aus `menuSections.js` | PR #3663 gemergt und deployt (14.11.2026, v2.71.0, Deploy-Lauf 2036); vom Eigentümer live getestet (14.11.2026); Komponententests +13, Util-Tests +12 |
+| K | Kalibrierung der Süße (siehe „Entschieden“): `nurZu` in `stile.json`, `kommtInfrage`/`istKandidat` in `bewertung.js`, R3 gestuft, Gang-Profil mit tragenden Rezepten und gedämpften Beilagen/Saucen, Sauce vom Leitrezept, Süße-Strafe der Menüfolge je Stufe; `RULES_VERSION` `2026-11-2` | PR #3666 gemergt (14.11.2026, Merge d7145c2); Util-Tests +19 (u. a. Golden G10 bis G15 und Prüfung über alle herzhaften Kombinationen) |
+| 5 | Seite „Weinbegleitung“ unter „Chefkoch & mehr“ (`src/components/WeinbegleitungSeite.js`, Kachel in `Kueche.js`) mit Regeln, Weinstilen, Quellen und dem Admin-Backfill; Callable `backfillWeinprofile` mit Cursor (F20) und Hook `useWeinprofilBackfill.js`; Freigabe-Seiten ohne Veraltet-Hinweis; Zeitlimit für die Callables im Client | PR #3667 offen (Branch `claude/intelligent-shannon-t5cts5`); Function-Tests +12, Komponententests +15, Util-Tests +6 |
 
 Nach jedem PR: Tabelle nachziehen. Berührt ein PR einen Tech-Check-Befund (S29 mit PR 2, F20 mit PR 5),
 das Dashboard aktualisieren (siehe `CLAUDE.md`).
@@ -210,6 +213,25 @@ Umsetzungsnotizen Kalibrierung Süße (14.11.2026):
 - Foie gras mit Sauternes geht damit nicht mehr (Gänseleber ist Geflügel, kein Dessert); feinherb bleibt dort
   die Empfehlung. Bewusst in Kauf genommen.
 
+Umsetzungsnotizen PR 5:
+- Backfill-Aufruf: `backfillWeinprofile({cursor, anzahl})`, Antwort `geprueft`, `neu`, `uebersprungen`,
+  `fehlgeschlagen`, `fehlerGruende`, `naechsterCursor` (null, wenn fertig), `fertig`, `tageslimitErreicht`,
+  `gesamt` (nur beim ersten Aufruf), `remainingRequests`, `dailyLimit`. Ist das Limit schon vor dem ersten
+  Rezept erschöpft, kommt `resource-exhausted`. Schätzen und Speichern teilen sich mit `generateWeinprofile`
+  den Helfer `schaetzeUndSpeichere` (nur das Feld `weinprofil`, `updatedAt` bleibt).
+- Der Client bricht ab, wenn eine Antwort ohne Fortschritt kommt (nicht fertig, aber kein neuer Cursor), statt
+  von vorn zu beginnen. Verlässt man die Seite, endet der Lauf nach der laufenden Seite.
+- Zeitlimits im Client: `generateWeinprofile` 125 s (Function 120 s; 20 Rezepte brauchen bis zu fünf
+  Gemini-Runden), `backfillWeinprofile` 310 s (Function 300 s). Vorher galt der SDK-Standard von 70 s.
+- Freigabe: `getSharedMenuByShareId`, `getSharedRecipesByIds` und `getSharedRecipeByShareId` liefern
+  `weinbegleitung` und `weinprofil` mit; ein Function-Test sichert das ab. Gäste lösen weiter keinen KI-Aufruf
+  aus (Knöpfe nur mit Rolle ab edit und nie mit `isSharedView`).
+- Die Weinstile auf der Seite nennen die Einschränkung aus der Kalibrierung (`nurZu`, Helfer `nurZuText` in
+  `anzeige.js`): Likörwein „nur zu Dessert und Käse“, edelsüß „nur zu Dessert und Blauschimmelkäse“.
+- Im Browser geprüft über eine Vorschau-Seite mit Kachel und Seite (Vite, Callable und Symbole als
+  Platzhalter): Mobil 390 px und Desktop 1280 px, hell und dunkel, Backfill mit Fortschritt, Fertig mit
+  Fehlschlag; keine Konsolenfehler, keine waagrechte Scrollleiste. Nicht in der echten App mit Login geprüft.
+
 ## Offen
 
 - **Fachlich gegenlesen (Eigentümer):** Kennwerte, Passungen und Beispiele der zwölf Stile, die Regeltexte,
@@ -227,8 +249,16 @@ Umsetzungsnotizen Kalibrierung Süße (14.11.2026):
   `HASH_KENNUNG`, also eine Neueinschätzung aller Rezepte. Entscheidung beim Eigentümer.
 - **Menü an Rezept-Sheet angleichen?** Quellen weglassen und die Icons `weinRot`/`weinWeiss` auch im Menü
   nutzen (beides vorbereitet: `Gruende mitQuellen={false}`, `WeinSymbol`). Entscheidung beim Eigentümer.
-- **Quellen ungeprüft:** (Im Rezept-Sheet seit 14.11.2026 nicht mehr sichtbar; geplant bleibt die Quellen-Seite in PR 5 – noch gewünscht?) Die acht URLs waren aus der Arbeitsumgebung nicht erreichbar (DNS). `abgerufenAm`
-  bleibt `null`, bis jemand sie geöffnet und den Inhalt gegen die Regeln geprüft hat.
+- **Quellen ungeprüft und sichtbar:** Im Rezept-Sheet stehen seit 14.11.2026 (#3664) keine Quellen mehr, im Menü
+  noch. PR 5 bringt sie trotzdem auf die Seite „Weinbegleitung“ unter „Chefkoch & mehr“ (Regeln mit Quellen und
+  Quellenliste), wie in der Spezifikation geplant. Ob die Seite und dort die Quellen so gewünscht sind, entscheidet
+  der Eigentümer vor dem Merge von PR 5. Die acht URLs sind aus der Arbeitsumgebung nicht erreichbar: Die
+  Netzwerkregel sperrt alle sechs Hosts (wsetglobal.com, www.decanter.com, winefolly.com,
+  symphonia-typo3-prod.deutscheweine.de, ichkoche.de, g-wie-gastro.de). Vor dem Merge einmal durchklicken.
+  `abgerufenAm` bleibt `null`, bis jemand den Inhalt gegen die Regeln geprüft hat; das Datum erscheint dann auf
+  der Seite.
+- **Tech-Check F20, Rest:** `backfillRecipeThumbnails` liest weiter ohne Cursor (kein Aufrufer in `src/`).
+  `backfillWeinprofile` hat den Cursor von Anfang an. Entfernen oder nachrüsten: Entscheidung beim Eigentümer.
 - **Tech-Check S29, Rest:** Beim Anlegen eines Rezepts sind `ratingAvg`, `ratingCount` und `weinprofil` weiter
   frei. Schließen hieße, den Sammelimport (`handleBulkImportRecipes`) anzupassen; Import-Pfade sind laut
   Spezifikation tabu. Vorschlag: so lassen (Risiko gering), Entscheidung beim Eigentümer.
@@ -238,6 +268,7 @@ Umsetzungsnotizen Kalibrierung Süße (14.11.2026):
 - Wissensbasis: `src/data/weinbegleitung/` (`stile.json`, `regeln.json`, `quellen.json`)
 - Rezeptansicht: `src/components/WeinDazu.js` und `.css`, eingebunden in `RecipeDetail.js` nach der Metadatenzeile
 - Menü: `src/components/Weinbegleitung.js` und `.css`, Hook `src/hooks/useMenueWeinbegleitung.js`, eingebunden in `MenuDetail.js` (Zusammenfassung vor `displaySections.map`, Weinzeile nach `section-title-row`); gemeinsame Bausteine `src/components/WeinbegleitungTeile.js`
+- Seite „Weinbegleitung“: `src/components/WeinbegleitungSeite.js` und `.css`, Hook `src/hooks/useWeinprofilBackfill.js`, Kachel und Unterseite in `src/components/Kueche.js`; Backfill-Function in `functions/handlers/weinbegleitung.js`
 - Engine: `src/utils/weinbegleitung/` (`konstanten.js`, `profilSchema.js`, `wissensbasis.js`, `bewertung.js`,
   `gang.js`, `engine.js`), Tests daneben, Profil-Fixtures in `__fixtures__/profile.js`
 - Andockpunkte: Rezept `src/components/RecipeDetail.js` (Metadatenzeile `recipe-metadata`); Menü

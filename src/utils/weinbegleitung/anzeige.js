@@ -35,6 +35,21 @@ export function weinfarbe(stil) {
   return 'weiss';
 }
 
+/**
+ * Einschränkung eines Stils in Worten (Feld `nurZu` der Wissensbasis, z. B. Süßweine nur zu
+ * Dessert und Käse). Ohne Einschränkung null.
+ * @param {Object} stil
+ * @returns {string|null}
+ */
+export function nurZuText(stil) {
+  const tags = Array.isArray(stil?.nurZu) ? stil.nurZu : [];
+  const teile = [];
+  if (tags.some((tag) => tag === 'rolle:dessert' || tag.startsWith('hk:dessert'))) teile.push('Dessert');
+  const kaese = tags.filter((tag) => tag.startsWith('hk:kaese'));
+  if (kaese.length > 0) teile.push(kaese.every((tag) => tag === 'hk:kaese_blau') ? 'Blauschimmelkäse' : 'Käse');
+  return teile.length > 0 ? `nur zu ${teile.join(' und ')}` : null;
+}
+
 const FEHLERTEXTE = {
   tageslimit: 'Das Tageslimit für Wein-Einschätzungen ist erreicht. Versuch es morgen wieder.',
   keinZugriff: 'Dieses Rezept kannst du nicht einschätzen lassen.',

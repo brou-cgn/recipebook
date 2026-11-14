@@ -1,5 +1,5 @@
 import React from 'react';
-import { screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { webcrypto } from 'crypto';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { renderWithProviders } from '../test-utils';
@@ -233,6 +233,17 @@ describe('WeinDazu veraltet', () => {
     await screen.findByRole('button', { name: 'Neu einschätzen' });
     fireEvent.click(screen.getByRole('button', { name: 'Wein: Rotwein, kräftig' }));
     expect(within(sheet()).getByText('Das Rezept wurde seit der Einschätzung geändert.')).toBeInTheDocument();
+  });
+
+  it('zeigt auf Freigabe-Seiten auch bei veraltetem Profil nur das Ergebnis, ohne Hinweis', async () => {
+    zeige({ recipe: mitProfil(veraltetesProfil()), currentUser: null, isSharedView: true });
+    // Kurz warten: ohne Freigabe-Seite käme der Hinweis nach der Hash-Prüfung
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(screen.queryByText('Einschätzung veraltet')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Neu einschätzen' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Wein: Rotwein, kräftig' }));
+    expect(within(sheet()).queryByText('Das Rezept wurde seit der Einschätzung geändert.')).not.toBeInTheDocument();
+    expect(generiereWeinprofile).not.toHaveBeenCalled();
   });
 
   it('zeigt keinen Hinweis, wenn das Profil zum aktuellen Inhalt passt', async () => {
