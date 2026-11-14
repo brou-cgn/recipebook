@@ -1,0 +1,269 @@
+/* Weinbegleitung im Menü-Detail (Weinbegleitung.js, Variante B). Farben nur über Tokens. */
+
+.weinbegleitung-uebersicht {
+  margin: 1rem 0 1.5rem;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  background: var(--color-accent-tint);
+  color: var(--color-text);
+}
+
+.weinbegleitung-kopf {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.weinbegleitung-kopf-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.weinbegleitung-titel {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-brand);
+}
+
+.weinbegleitung-zusammenfassung {
+  margin: 0.1rem 0 0;
+  font-size: 0.9rem;
+  color: var(--color-text-body);
+}
+
+.weinbegleitung-modus {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.weinbegleitung-umschalter {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: var(--color-surface);
+}
+
+.weinbegleitung-umschalter-knopf {
+  min-height: 40px;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.weinbegleitung-umschalter-knopf[aria-pressed="true"] {
+  background: var(--color-brand);
+  color: var(--color-surface);
+  font-weight: 600;
+}
+
+.weinbegleitung-umschalter-knopf:disabled {
+  cursor: default;
+}
+
+.weinbegleitung-knopf {
+  min-height: 44px;
+  margin-top: 0.75rem;
+  padding: 0 1rem;
+  border: 1px solid var(--color-brand);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-brand);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.weinbegleitung-umschalter-knopf:focus-visible,
+.weinbegleitung-knopf:focus-visible,
+.weinbegleitung-gang-zeile:focus-visible,
+.weinbegleitung-alternative:focus-visible,
+.weinbegleitung-link:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.weinbegleitung-status {
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.weinbegleitung-veraltet {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 0.75rem;
+  margin-top: 0.75rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.9rem;
+  color: var(--color-text-body);
+}
+
+.weinbegleitung-veraltet p {
+  margin: 0.25rem 0 0;
+}
+
+.weinbegleitung-fehler {
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+  color: var(--color-bad-text);
+}
+
+.weinbegleitung-hinweis {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+/* Weinzeile unter der Gang-Überschrift */
+.weinbegleitung-gang {
+  margin: -0.75rem 0 1.25rem;
+}
+
+.weinbegleitung-gang-zeile {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  min-height: 52px;
+  padding: 0.45rem 0.75rem;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-surface-subtle);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.weinbegleitung-gang-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.weinbegleitung-gang-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-strong);
+}
+
+.weinbegleitung-gang-details {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.weinbegleitung-nowrap {
+  white-space: nowrap;
+}
+
+.weinbegleitung-gang-label {
+  margin-top: 0.1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-brand);
+}
+
+.weinbegleitung-fixiert {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.weinbegleitung-pfeil {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 0.2s ease;
+}
+
+.weinbegleitung-pfeil--offen {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weinbegleitung-pfeil {
+    transition: none;
+  }
+}
+
+.weinbegleitung-gang-panel {
+  padding: 0.25rem 0.75rem 0.5rem;
+}
+
+.weinbegleitung-abschnitt {
+  margin: 0.75rem 0 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-brand);
+}
+
+.weinbegleitung-alternativen {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.weinbegleitung-alternative {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0 0.85rem 0 0.6rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.88rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.weinbegleitung-alternative--text {
+  cursor: default;
+}
+
+.weinbegleitung-alternative-label {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.weinbegleitung-link {
+  min-height: 44px;
+  margin-top: 0.5rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-brand);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.weinbegleitung-gang-hinweis {
+  margin: -0.75rem 0 1.25rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 12px;
+  background: var(--color-surface-subtle);
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}

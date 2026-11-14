@@ -41,16 +41,26 @@ export function weinprofilHashEingabe(rezept) {
 }
 
 /**
- * sha256 der Hash-Eingabe als Hex, über die Web Crypto API.
+ * sha256 eines Textes als Hex, über die Web Crypto API.
+ * @param {string} text
+ * @param {{subtle?: SubtleCrypto}} [optionen] - für Tests austauschbar
+ * @returns {Promise<string>}
+ */
+export async function sha256Hex(text, { subtle = globalThis.crypto?.subtle } = {}) {
+  if (!subtle) throw new Error('SHA-256 ist in dieser Umgebung nicht verfügbar');
+  const bytes = new TextEncoder().encode(text);
+  const digest = await subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * sha256 der Hash-Eingabe als Hex.
  * @param {Object} rezept
  * @param {{subtle?: SubtleCrypto}} [optionen] - für Tests austauschbar
  * @returns {Promise<string>}
  */
-export async function weinprofilInputHash(rezept, { subtle = globalThis.crypto?.subtle } = {}) {
-  if (!subtle) throw new Error('SHA-256 ist in dieser Umgebung nicht verfügbar');
-  const bytes = new TextEncoder().encode(weinprofilHashEingabe(rezept));
-  const digest = await subtle.digest('SHA-256', bytes);
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+export async function weinprofilInputHash(rezept, optionen = {}) {
+  return sha256Hex(weinprofilHashEingabe(rezept), optionen);
 }
 
 /**
