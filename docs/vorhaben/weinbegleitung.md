@@ -1,7 +1,7 @@
 # Vorhaben: Weinbegleitung (Menüs und Einzelrezepte)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 14.11.2026 (PR 1 in Arbeit).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 14.11.2026 (PR 1 als #3660 offen).
 
 **Ziel:** Zu einem Menü (Festtafel) schlägt die App pro Gang einen passenden Weinstil vor, mit bis zu
 zwei Alternativen, einer kurzen Begründung und einem Quellenlink. Dazu gibt es den Modus „Ein Wein für
@@ -84,7 +84,7 @@ Snapshot oder Fixieren beim Einzelrezept.
 
 | PR | Inhalt | Stand |
 |---|---|---|
-| 1 | Tracker, Wissensbasis (`src/data/weinbegleitung/`), Engine (`src/utils/weinbegleitung/`) mit Tests: Regeln einzeln, Gang-Bildung, Menüfolge, „Ein Wein“, Fixierung, Einzelrezept, Golden G1–G9 und E1–E3, Datenprüfung mit Fingerabdruck. Noch ohne UI. | in Arbeit (Branch `claude/intelligent-shannon-t5cts5`) |
+| 1 | Tracker, Wissensbasis (`src/data/weinbegleitung/`), Engine (`src/utils/weinbegleitung/`) mit Tests: Regeln einzeln, Gang-Bildung, Menüfolge, „Ein Wein“, Fixierung, Einzelrezept, Golden G1–G9 und E1–E3, Datenprüfung mit Fingerabdruck. Noch ohne UI. | PR #3660 offen (14.11.2026, Branch `claude/intelligent-shannon-t5cts5`), 129 neue Tests, `test:ci` lokal grün |
 | 2 | Callable `generateWeinprofile` (Gemini, Tageslimit `aiWeinprofilLimits`), Hash-Funktion in Client und Functions mit Konsistenztest, Firestore-Regeln (schützt auch S29) mit Rules-Tests, `docs/architecture/security.md`, Tests | offen |
 | 3 | Rezeptansicht nach Variante B: Chip und Sheet, „Passenden Wein finden“, „neu einschätzen“, Farb-Tokens für die Weinfarben | offen |
 | 4 | Menü nach Variante B: Weinzeile je Gang, Umschalter, Snapshot über `menuFirestore.js`, Veraltet-Erkennung; `MenuDetail.js` nutzt dann `DRINKS_SECTION_NAME` aus `menuSections.js` | offen |
