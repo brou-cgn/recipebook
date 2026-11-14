@@ -6,6 +6,7 @@
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const firebase = require('firebase/compat/app');
 const { setupEnv, seedUsers, seed, as, assertFails, assertSucceeds } = require('./helpers');
 
 let env;
@@ -46,6 +47,21 @@ test('recipes: anlegen nur ab Rolle edit', async () => {
   const recipe = { title: 'Neu', authorId: 'x', groupId: 'g1' };
   await assertFails(as.user(env, 'reader').collection('recipes').add(recipe));
   await assertSucceeds(as.user(env, 'editor').collection('recipes').add(recipe));
+});
+
+test('recipes (Tech-Check S29): ratingAvg, ratingCount und weinprofil ändern nur Cloud Functions', async () => {
+  const profil = { rolle: 'hauptgericht', hauptkomponente: 'rind_lamm', inputHash: 'abc', schemaVersion: 1 };
+  await seed(env, (db) => db.doc('recipes/open').update({ ratingAvg: 4, ratingCount: 2, weinprofil: profil }));
+  for (const uid of ['editor', 'admin']) {
+    const db = as.user(env, uid);
+    await assertFails(db.doc('recipes/open').update({ ratingAvg: 5 }));
+    await assertFails(db.doc('recipes/open').update({ ratingCount: 99 }));
+    await assertFails(db.doc('recipes/open').update({ weinprofil: { ...profil, rolle: 'dessert' } }));
+    await assertFails(db.doc('recipes/open').update({ weinprofil: firebase.firestore.FieldValue.delete() }));
+  }
+  // Speichern ohne diese Felder bleibt erlaubt, ebenso ein unverändert mitgeschickter Wert.
+  await assertSucceeds(as.user(env, 'editor').doc('recipes/open').update({ title: 'Neu' }));
+  await assertSucceeds(as.user(env, 'editor').doc('recipes/open').update({ title: 'Neuer', ratingAvg: 4, weinprofil: profil }));
 });
 
 test('recipes (Tech-Check S20): Clients legen keine Shortcut-Import-Jobs an, sonst startet der Trigger Gemini ohne Limit', async () => {
@@ -154,8 +170,8 @@ test('Sammlungen nur für Cloud Functions bleiben für Clients gesperrt', async 
   await assertFails(as.user(env, 'admin').doc('invitations/jemand@example.test').get());
 });
 
-test('KI-Tageszähler (Nährwerte, Umformulieren, Import-Sweeper) sind für Clients weder les- noch schreibbar', async () => {
-  for (const path of ['aiNutritionLimits/editor_2026-10-21', 'aiRephraseLimits/editor_2026-10-21', 'aiVersionLimits/editor_2026-10-21', 'importSweeperLimits/editor_2026-10-21']) {
+test('KI-Tageszähler (Nährwerte, Umformulieren, Weinprofile, Import-Sweeper) sind für Clients weder les- noch schreibbar', async () => {
+  for (const path of ['aiNutritionLimits/editor_2026-10-21', 'aiRephraseLimits/editor_2026-10-21', 'aiVersionLimits/editor_2026-10-21', 'aiWeinprofilLimits/editor_2026-10-21', 'importSweeperLimits/editor_2026-10-21']) {
     await assertFails(as.user(env, 'admin').doc(path).get());
     await assertFails(as.user(env, 'admin').doc(path).set({ userId: 'admin', count: 0 }));
     await assertFails(as.user(env, 'editor').doc(path).set({ userId: 'editor', count: 0 }));
