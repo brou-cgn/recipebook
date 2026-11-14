@@ -146,7 +146,9 @@ describe('RecipeDetail - Step Timer', () => {
     // The first step card should contain a timer start button at the top right
     const timerBtn = document.querySelector('.step-timer-start-btn');
     expect(timerBtn).toBeInTheDocument();
-    // The button now shows only an icon; the label text is no longer rendered
+    // Feinschliff Tablet, Punkt 4: neben dem Icon steht die Dauer kurz, die Zahl wie im Rezept
+    expect(timerBtn).toHaveTextContent('10 Min.');
+    expect(timerBtn).toHaveAttribute('aria-label', 'Timer für 10 Minuten starten');
   });
 
   test('step with no time mention has no timer button', () => {
@@ -389,6 +391,7 @@ describe('RecipeDetail - Step Timer', () => {
 
     const btn = document.querySelector('.step-timer-start-btn');
     expect(btn).toBeInTheDocument();
+    expect(btn).toHaveTextContent('2 Std.');
     fireEvent.click(btn);
 
     // 2 Stunden = 7200 seconds → should display 2:00:00

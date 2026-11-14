@@ -3800,15 +3800,6 @@
   background: #c08060;
 }
 
-[data-theme="dark"] .step-timer-top-area {
-  background: #2a2a2a;
-  border-color: #7a5c3a;
-}
-
-[data-theme="dark"] .step-timer-time {
-  color: #c08060;
-}
-
 [data-theme="dark"] .step-timer-progress-bar {
   background: #3d3d3d;
 }

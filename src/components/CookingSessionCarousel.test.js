@@ -18,6 +18,7 @@ const rouladen = {
 const rotkohl = { id: 'rotkohl', title: 'Apfelrotkohl', image: 'rotkohl.jpg', steps: ['Rotkohl fein hobeln.', 'Zugedeckt köcheln lassen.'] };
 const kloesse = { id: 'kloesse', title: 'Kartoffelklöße', image: 'kloesse.jpg', steps: ['Kartoffeln kochen.', 'Klöße formen.'] };
 const bratapfel = { id: 'bratapfel', title: 'Bratapfel', steps: ['Äpfel füllen.', 'Backen.'] };
+const salat = { id: 'salat', title: 'Gurkensalat', steps: ['Gurke hobeln.'] };
 
 let session;
 function SessionProbe() {
@@ -159,13 +160,54 @@ describe('CookingSessionCarousel', () => {
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ recipe: rotkohl, stepIndex: 0 }));
   });
 
-  test('from three other recipes on the cards get compact', () => {
-    renderCarousel({ currentRecipeId: 'bratapfel' });
+  test('the remaining time stands large in the second row next to the step, the name keeps its own row', () => {
+    renderCarousel();
+    seedSession();
+    startTimer(rotkohl, 400);
+
+    const card = cardOf('Apfelrotkohl');
+    const meta = card.querySelector('.cooking-carousel-meta');
+    expect(card.querySelector('.cooking-carousel-name')).toHaveTextContent(/^Apfelrotkohl$/);
+    expect(within(meta).getByText('Schritt 1 von 2')).toBeInTheDocument();
+    expect(within(meta).getByText('6:40')).toHaveClass('cooking-carousel-status', 'cooking-carousel-status--timer');
+    expect(within(meta).getByText('6:40')).not.toHaveClass('cooking-carousel-status--hours');
+    // Ohne Timer steht in der zweiten Zeile nur der Schritt
+    expect(cardOf('Rinderrouladen').querySelector('.cooking-carousel-status')).toBeNull();
+    expect(within(cardOf('Rinderrouladen').querySelector('.cooking-carousel-meta')).getByText('Schritt 2 von 3')).toBeInTheDocument();
+  });
+
+  test('with hours the remaining time gets smaller, so that it fits the column', () => {
+    renderCarousel();
+    seedSession();
+    startTimer(rouladen, 5400);
+
+    expect(within(cardOf('Rinderrouladen')).getByText('1:30:00')).toHaveClass('cooking-carousel-status--hours');
+
+    act(() => { jest.advanceTimersByTime(1801000); });
+    expect(within(cardOf('Rinderrouladen')).getByText('59:59')).not.toHaveClass('cooking-carousel-status--hours');
+  });
+
+  test('landscape: from three other recipes on the cards get compact; up to four share the full height, from five it scrolls', () => {
+    renderCarousel({ currentRecipeId: 'pudding' });
     seedSession();
 
     expect(cardNames()).toHaveLength(3);
     expect(document.querySelector('.cooking-carousel')).toHaveClass('cooking-carousel--compact');
-    // Quer scrollt das Karussell, die vierte Karte schaut heraus; die Höhe teilen sie sich nur hochkant
+    // Vorher scrollte es quer schon ab drei Karten und ließ unten Platz frei
+    expect(document.querySelector('.cooking-carousel')).toHaveClass('cooking-carousel--fill');
+    expect(document.querySelector('.cooking-carousel')).not.toHaveClass('cooking-carousel--dense');
+
+    act(() => { session.addRecipe({ recipe: kloesse, stepIndex: 0, servingMultiplier: 1 }, bratapfel); });
+    expect(cardNames()).toHaveLength(4);
+    expect(document.querySelector('.cooking-carousel')).toHaveClass('cooking-carousel--compact');
+    expect(document.querySelector('.cooking-carousel')).toHaveClass('cooking-carousel--fill');
+    // Ab vier Karten wird es eng: ohne Fortschrittsbalken
+    expect(document.querySelector('.cooking-carousel')).toHaveClass('cooking-carousel--dense');
+
+    // Ab fünf scrollt das Karussell, die vierte Karte schaut heraus
+    act(() => { session.addRecipe({ recipe: bratapfel, stepIndex: 0, servingMultiplier: 1 }, salat); });
+    expect(cardNames()).toHaveLength(5);
+    expect(document.querySelector('.cooking-carousel')).toHaveClass('cooking-carousel--compact');
     expect(document.querySelector('.cooking-carousel')).not.toHaveClass('cooking-carousel--fill');
   });
 
@@ -192,6 +234,8 @@ describe('CookingSessionCarousel', () => {
       expect(cardNames()).toHaveLength(4);
       expect(document.querySelector('.cooking-carousel')).toHaveClass('cooking-carousel--fill');
       expect(document.querySelector('.cooking-carousel')).toHaveClass('cooking-carousel--compact');
+      // Hochkant ist genug Platz für die Fortschrittsbalken
+      expect(document.querySelector('.cooking-carousel')).not.toHaveClass('cooking-carousel--dense');
     });
   });
 

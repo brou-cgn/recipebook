@@ -33,11 +33,44 @@ describe('CookingSessionCarousel CSS', () => {
     expect(getRuleBody(carouselCss, '.cooking-carousel-item')).toContain('scroll-snap-align: start;');
   });
 
-  test('bis zu zwei Karten teilen sich die Höhe, ab drei passen drei ganz und die vierte schaut heraus', () => {
+  test('bis zu zwei Karten teilen sich die Höhe, kompakt ohne fill passen drei ganz und die vierte schaut heraus', () => {
     expect(getRuleBody(carouselCss, '.cooking-carousel-item')).toContain('flex: 0 0 calc((100% - 12px) / 2);');
     expect(getRuleBody(carouselCss, '.cooking-carousel--compact .cooking-carousel-item'))
       .toContain('flex-basis: calc((100% - 3 * 12px) / 3.25);');
-    expect(getRuleBody(carouselCss, '.cooking-carousel--compact .cooking-carousel-step')).toContain('-webkit-line-clamp: 3;');
+  });
+
+  describe('Restzeit groß (Feinschliff Tablet, Punkt 5)', () => {
+    test('die Restzeit ist 28 px groß und ein 44-px-Feld, auch kompakt', () => {
+      const status = getRuleBody(carouselCss, '.cooking-carousel-status');
+      expect(status).toContain('font-size: 28px;');
+      expect(status).toContain('min-height: 44px;');
+      expect(status).toContain('font-variant-numeric: tabular-nums;');
+      // Kompakt wurde sie früher auf 16 px verkleinert
+      expect(carouselCss).not.toMatch(/\.cooking-carousel--compact \.cooking-carousel-status\s*\{/);
+    });
+
+    test('mit Stunden kleiner, sonst wird sie für die schmale Spalte zu breit', () => {
+      expect(getRuleBody(carouselCss, '.cooking-carousel-status--hours')).toContain('font-size: 20px;');
+    });
+
+    test('quer ab vier Karten ohne Fortschrittsbalken, sonst bliebe auf dem iPad mini keine Zeile für den Schritt', () => {
+      expect(getRuleBody(carouselCss, '.cooking-carousel--dense .cooking-carousel-steps')).toContain('display: none;');
+    });
+
+    test('steht in der zweiten Zeile rechts neben dem Schritt und rutscht bei Platzmangel darunter', () => {
+      const meta = getRuleBody(carouselCss, '.cooking-carousel-meta');
+      expect(meta).toContain('display: flex;');
+      expect(meta).toContain('flex-wrap: wrap;');
+      expect(getRuleBody(carouselCss, '.cooking-carousel-status')).toContain('margin-left: auto;');
+    });
+
+    test('der Schritt füllt den Rest der Karte und blendet unten aus, statt nach fester Zeilenzahl abzuschneiden', () => {
+      const step = getRuleBody(carouselCss, '.cooking-carousel-step');
+      expect(step).toContain('flex: 1 1 0;');
+      expect(step).toContain('overflow: hidden;');
+      expect(step).toContain('mask-image: linear-gradient(to bottom, black calc(100% - 0.8em), transparent);');
+      expect(carouselCss).not.toContain('-webkit-line-clamp');
+    });
   });
 
   test('hochkant (Entwurf T1) teilen sich ab drei Karten alle die ganze Höhe, auch kompakt schaut keine heraus', () => {
@@ -66,6 +99,8 @@ describe('CookingSessionCarousel CSS', () => {
       expect(split).toContain('position: fixed;');
       expect(split).toContain('display: grid;');
       expect(split).toContain('grid-template-columns: var(--cooking-carousel-width) minmax(0, 1fr);');
+      // Feinschliff Tablet, Punkt 1: quer 31vw (iPad 11" 370 px statt 513), hochkant überall 360 px
+      expect(split).toContain('--cooking-carousel-width: clamp(360px, 31vw, 440px);');
 
       const left = getRuleBody(recipeDetailCss, '.cooking-mode-split .cooking-carousel');
       expect(left).toContain('grid-column: 1;');

@@ -88,6 +88,15 @@ const mergeUniqueNormalizedValues = (existingValues = [], valuesToAdd = []) => {
 // Regex to detect German time expressions: "10 Minuten", "2 Stunden", "45 Sek"
 const TIME_REGEX_SOURCE = String.raw`(\d+(?:[.,]\d+)?)\s*(Stunden?|h\b|Minuten?|Min\.?|Sekunden?|Sek\.?)`;
 
+// Dauer auf dem Timer-Knopf der Schrittkarte (Feinschliff Tablet, Punkt 4): die Zahl wie im Rezept,
+// die Einheit kurz, z. B. „90 Minuten“ → „90 Min.“, „1,5 Stunden“ → „1,5 Std.“
+function shortTimerLabel(value, unit) {
+  const u = unit.toLowerCase();
+  if (u === 'h' || u.startsWith('stund')) return `${value} Std.`;
+  if (u.startsWith('min')) return `${value} Min.`;
+  return `${value} Sek.`;
+}
+
 // Oberes Padding des Sticky-Titels (0.4rem), muss zu .recipe-sticky-title passen
 const STICKY_TITLE_TOP_PADDING_PX = 6.4;
 
@@ -2001,6 +2010,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                               {isBase64Image(timerStartIcon)
                                 ? <img src={timerStartIcon} alt="Timer starten" className="timer-start-icon-img" />
                                 : timerStartIcon}
+                              <span className="step-timer-start-label">{shortTimerLabel(firstMatch[1], firstMatch[2])}</span>
                             </button>
                           )}
                         </div>
