@@ -14,6 +14,7 @@ jest.mock('../utils/imageUtils', () => ({
   fileToBase64: jest.fn(),
   isBase64Image: jest.fn(() => false),
   analyzeImageBrightness: jest.fn(() => Promise.resolve({ isBright: false })),
+  generateThumbnailBlob: jest.fn(() => Promise.resolve(null)),
 }));
 
 // Das Modul wird per import() nachgeladen und dabei kopiert: jest.spyOn sieht der
@@ -111,6 +112,7 @@ jest.mock('../utils/ingredientUtils', () => {
 jest.mock('../utils/storageUtils', () => ({
   uploadRecipeImage: jest.fn(),
   deleteRecipeImage: jest.fn(),
+  uploadRecipeThumbnail: jest.fn(),
 }));
 
 jest.mock('../utils/recipeLinks', () => ({
@@ -3999,5 +4001,79 @@ describe('RecipeForm - Saving Loading State', () => {
 
     // onSave should only be called once despite two submits
     await waitFor(() => expect(mockOnSave).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe('RecipeForm - Mehrere Fotos auf einmal hochladen', () => {
+  const { uploadRecipeImage, uploadRecipeThumbnail } = jest.requireMock('../utils/storageUtils');
+  const { generateThumbnailBlob, analyzeImageBrightness } = jest.requireMock('../utils/imageUtils');
+  const user = { id: 'user-1', vorname: 'A', nachname: 'B', email: 'a@example.com', role: 'edit' };
+  const originalCreateObjectURL = URL.createObjectURL;
+  const originalRevokeObjectURL = URL.revokeObjectURL;
+  let alertSpy;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    URL.createObjectURL = jest.fn(() => 'blob:mock');
+    URL.revokeObjectURL = jest.fn();
+    alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+    generateThumbnailBlob.mockImplementation(() => Promise.resolve(null));
+    uploadRecipeThumbnail.mockImplementation(() => Promise.resolve(null));
+    analyzeImageBrightness.mockImplementation(() => Promise.resolve({ isBright: false }));
+  });
+
+  afterEach(() => {
+    URL.createObjectURL = originalCreateObjectURL;
+    URL.revokeObjectURL = originalRevokeObjectURL;
+    alertSpy.mockRestore();
+  });
+
+  const makeFile = (name) => new File(['x'], name, { type: 'image/jpeg' });
+
+  test('Bild-Input erlaubt Mehrfachauswahl im nativen Fotopicker', () => {
+    render(<RecipeForm recipe={null} onSave={jest.fn()} onCancel={jest.fn()} currentUser={user} />);
+    const input = document.getElementById('imageFile');
+    expect(input).toHaveAttribute('type', 'file');
+    expect(input).toHaveAttribute('accept', 'image/*');
+    expect(input).toHaveAttribute('multiple');
+  });
+
+  test('lädt alle gewählten Fotos hoch, behält die Auswahlreihenfolge und macht das erste zum Standardbild', async () => {
+    // Das erste Foto braucht am längsten – die Reihenfolge darf trotzdem nicht kippen.
+    uploadRecipeImage.mockImplementation((file) => new Promise((resolve) => {
+      setTimeout(() => resolve(`https://img/${file.name}`), file.name === 'a.jpg' ? 30 : 0);
+    }));
+    render(<RecipeForm recipe={null} onSave={jest.fn()} onCancel={jest.fn()} currentUser={user} />);
+
+    const input = document.getElementById('imageFile');
+    fireEvent.change(input, { target: { files: [makeFile('a.jpg'), makeFile('b.jpg'), makeFile('c.jpg'), makeFile('d.jpg')] } });
+
+    await waitFor(() => expect(screen.getAllByAltText(/^Rezeptbild \d+$/)).toHaveLength(4));
+    expect(uploadRecipeImage).toHaveBeenCalledTimes(4);
+    const srcs = screen.getAllByAltText(/^Rezeptbild \d+$/).map((img) => img.getAttribute('src'));
+    expect(srcs).toEqual(['https://img/a.jpg', 'https://img/b.jpg', 'https://img/c.jpg', 'https://img/d.jpg']);
+    const defaults = document.querySelectorAll('.multi-image-item--default img');
+    expect(defaults).toHaveLength(1);
+    expect(defaults[0]).toHaveAttribute('src', 'https://img/a.jpg');
+    expect(alertSpy).not.toHaveBeenCalled();
+    await waitFor(() => expect(input).not.toBeDisabled());
+  });
+
+  test('ein fehlgeschlagenes Foto hält die übrigen nicht auf und wird einmal gemeldet', async () => {
+    uploadRecipeImage.mockImplementation((file) => (
+      file.name === 'b.jpg'
+        ? Promise.reject(new Error('zu groß'))
+        : Promise.resolve(`https://img/${file.name}`)
+    ));
+    render(<RecipeForm recipe={null} onSave={jest.fn()} onCancel={jest.fn()} currentUser={user} />);
+
+    fireEvent.change(document.getElementById('imageFile'), {
+      target: { files: [makeFile('a.jpg'), makeFile('b.jpg'), makeFile('c.jpg')] },
+    });
+
+    await waitFor(() => expect(alertSpy).toHaveBeenCalledTimes(1));
+    expect(alertSpy).toHaveBeenCalledWith('1 von 3 Bildern konnten nicht hochgeladen werden: zu groß');
+    const srcs = screen.getAllByAltText(/^Rezeptbild \d+$/).map((img) => img.getAttribute('src'));
+    expect(srcs).toEqual(['https://img/a.jpg', 'https://img/c.jpg']);
   });
 });
