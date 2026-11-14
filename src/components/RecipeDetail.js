@@ -239,13 +239,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Tablet (iPad), für alle (Tech-Check M12): Kochmodus über den ganzen Bildschirm, Einstieg über das Rezeptbild;
   // ohne das gäbe es dort keinen Kochmodus (Desktop-Ansicht ab 769 px Breite). Ohne Flag immer volle Breite.
   // Mit dem Flag links das Karussell mit den weiteren Rezepten, rechts der Kochmodus wie im Hochformat auf dem iPhone.
-  // Quer (Entwurf I4) schon mit dem ersten Rezept, damit nichts springt, wenn das zweite dazukommt.
-  // Hochkant (Entwurf T1) erst ab dem zweiten: Eine leere Spalte kostete dort fast die halbe Breite,
-  // bis dahin läuft der Kochmodus über die volle Breite.
+  // Erst ab dem zweiten Rezept, quer wie hochkant (Feinschliff Tablet, Punkt 7; quer bis dahin schon ab dem ersten):
+  // Eine leere Spalte kostete quer 31 bis 43 % der Breite, und mit dem Flag ist ein Rezept allein der Normalfall.
+  // Bis zum zweiten läuft der Kochmodus über die volle Breite; das Layout wechselt nur, wenn man selbst ein Rezept
+  // dazunimmt oder das letzte herausnimmt (dann nach den 6 s für „Rückgängig“).
   const tabletOrientation = useTabletOrientation();
   const tabletCookingLayout = tabletOrientation !== null && !isMobileLandscape;
-  const showCookingCarousel = parallelCookingEnabled && tabletCookingLayout
-    && (tabletOrientation === 'landscape' || hasParkedRecipes);
+  const showCookingCarousel = parallelCookingEnabled && tabletCookingLayout && hasParkedRecipes;
   const showTabletFullWidth = tabletCookingLayout && !showCookingCarousel;
   // Mit Flag steht auf dem Tablet „Schritt x von y“ in der Titelzeile (Feinschliff Tablet, Punkt 2); der Zähler
   // unten in der Schrittkarte entfällt dort, nur „Heute gekocht“ bleibt (Punkt 6)
