@@ -2,9 +2,6 @@
 
 .weinbegleitung-uebersicht {
   margin: 1rem 0 1.5rem;
-  padding: 0.9rem 1rem;
-  border-radius: 14px;
-  background: var(--color-accent-tint);
   color: var(--color-text);
 }
 
@@ -44,7 +41,7 @@
   margin-top: 0.75rem;
   padding: 0.25rem;
   border-radius: 999px;
-  background: var(--color-surface);
+  background: var(--color-surface-subtle);
 }
 
 .weinbegleitung-umschalter-knopf {
@@ -252,18 +249,9 @@
 }
 
 /* Modus „Ein Wein für alles“: Weiß- und Rotwein für alle Gänge und der Dessertwein im Kopf.
-   Die Zeilen heben sich als Fläche vom getönten Kopf ab, die Empfehlung mit Rahmen. */
+   Der Kopf hat keine eigene Fläche; Zeilen und Empfehlung sehen aus wie am Gang. */
 .weinbegleitung-uebersicht .weinbegleitung-optionen {
   margin-top: 0.75rem;
-}
-
-.weinbegleitung-uebersicht .weinbegleitung-gang-zeile {
-  background: var(--color-surface);
-}
-
-.weinbegleitung-uebersicht .weinbegleitung-option--empfehlung .weinbegleitung-gang-zeile {
-  background: var(--color-surface);
-  box-shadow: inset 0 0 0 1.5px var(--color-brand);
 }
 
 .weinbegleitung-kopf-abschnitt {

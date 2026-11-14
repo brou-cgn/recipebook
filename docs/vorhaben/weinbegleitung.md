@@ -257,8 +257,9 @@ Umsetzungsnotizen PR 7:
   Hauptgang“ geht hier nicht, ohne „für alles“ aufzugeben: Der beste Weißwein zum Lachstatar
   (`weiss_leicht_frisch`, 5,8) läge beim Schmorbraten bei −6,9.
 - Zusammenfassung im Kopf: „Ein Wein für alle Gänge: Weiß oder Rot.“, mit Dessert „… außer dem Dessert …“,
-  ohne Empfehlung „Kein Weiß- oder Rotwein passt zu allen Gängen. Pro Gang passt hier besser.“ Die
-  Empfehlung hat im Kopf einen Rahmen statt der Tönung, weil der Kopf selbst getönt ist.
+  ohne Empfehlung „Kein Weiß- oder Rotwein passt zu allen Gängen. Pro Gang passt hier besser.“ Der
+  Kopf hat seit 14.11.2026 (Wunsch des Eigentümers) keine getönte Fläche mehr; die Empfehlung ist dort
+  wie am Gang getönt statt umrahmt, der Umschalter liegt auf `--color-surface-subtle`.
 - Alte Clients (zwischengespeicherte PWA) zeigen neue Ein-Wein-Snapshots bis zum Update je Gang nur mit der
   Empfehlung, weil die Gänge keine `optionen` mehr tragen.
 - Im Browser geprüft über eine Vorschau-Seite ohne Firebase (Vite, Snapshot aus den Fixtures, nicht im Repo):
