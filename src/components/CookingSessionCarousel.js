@@ -19,10 +19,15 @@ import './CookingSessionCarousel.css';
  * an dem das Rezept steht. Das Rezept vorn steht nicht darin.
  *
  * Das Karussell scrollt senkrecht und rastet je Karte ein. Bis zu zwei Karten teilen sich
- * die Höhe, ab drei werden sie kompakt (drei ganz, die vierte schaut heraus). Die Reihenfolge
- * ist die der Sitzung; Tippen tauscht an Ort und Stelle (swapWith mit inPlace in RecipeDetail),
- * so bleiben die übrigen Karten stehen. Liegt ein fälliges Rezept außerhalb des sichtbaren
- * Bereichs, zeigt eine Pille, wo es ist; Tippen scrollt hin.
+ * die Höhe, ab drei werden sie kompakt. Quer teilen sich bis vier Karten die ganze Höhe, damit
+ * alle Restzeiten ohne Scrollen zu sehen sind; erst ab fünf scrollt es (drei ganz, die vierte
+ * schaut heraus). Die Reihenfolge ist die der Sitzung; Tippen tauscht an Ort und Stelle
+ * (swapWith mit inPlace in RecipeDetail), so bleiben die übrigen Karten stehen. Liegt ein
+ * fälliges Rezept außerhalb des sichtbaren Bereichs, zeigt eine Pille, wo es ist; Tippen scrollt hin.
+ *
+ * Die Restzeit ist der wichtigste Wert einer Karte (Feinschliff Tablet, Punkt 5): groß, in der
+ * zweiten Zeile neben dem Schritt, damit der Name die volle Breite behält. Mit Stunden kleiner,
+ * sonst wird sie für die schmale Spalte zu breit.
  *
  * Hochkant (portrait) ist die Spalte hoch genug für alle weiteren Rezepte (höchstens fünf): Ab drei
  * Karten teilen sie sich die ganze Höhe (fill), nichts scrollt und keine schaut heraus; kompakt
@@ -38,6 +43,8 @@ import './CookingSessionCarousel.css';
 
 // Ab so vielen Karten kompakt (quer)
 const COMPACT_FROM = 3;
+// Quer: bis so viele Karten teilen sich die ganze Höhe, darüber scrollt das Karussell
+const LANDSCAPE_FILL_MAX = 4;
 // Hochkant: ab so vielen Karten teilen sie sich die ganze Höhe, ab so vielen werden sie kompakt
 const PORTRAIT_FILL_FROM = 3;
 const PORTRAIT_COMPACT_FROM = 4;
@@ -84,6 +91,9 @@ function CarouselCard({ entry, status, onSelect, onRemove }) {
   };
 
   const itemClass = `cooking-carousel-item${status.urgent ? ' cooking-carousel-item--urgent' : ''}${isDeleteVisible ? ' swipe-delete-active' : ''}`;
+  const withHours = status.kind === 'timer' && status.timer?.remainingSeconds >= 3600;
+  const statusClass = `cooking-carousel-status cooking-carousel-status--${status.kind}${withHours ? ' cooking-carousel-status--hours' : ''}`;
+  const showMeta = step.total > 0 || status.kind !== 'step';
   return (
     <li className={itemClass} data-recipe-id={recipe.id}>
       <div className="swipe-delete-background" aria-hidden={!isDeleteVisible && offset === 0}>
@@ -110,16 +120,20 @@ function CarouselCard({ entry, status, onSelect, onRemove }) {
           <CarouselThumb recipe={recipe} />
           <span className="cooking-carousel-titles">
             <span className="cooking-carousel-name">{recipe.title}</span>
-            {step.total > 0 && (
-              <span className="cooking-carousel-step-number">Schritt {step.number} von {step.total}</span>
+            {showMeta && (
+              <span className="cooking-carousel-meta">
+                {step.total > 0 && (
+                  <span className="cooking-carousel-step-number">Schritt {step.number} von {step.total}</span>
+                )}
+                {status.kind !== 'step' && (
+                  <span className={statusClass}>
+                    {status.kind === 'timer' && <ClockIcon />}
+                    {status.text}
+                  </span>
+                )}
+              </span>
             )}
           </span>
-          {status.kind !== 'step' && (
-            <span className={`cooking-carousel-status cooking-carousel-status--${status.kind}`}>
-              {status.kind === 'timer' && <ClockIcon />}
-              {status.text}
-            </span>
-          )}
         </span>
         {step.total > 1 && (
           <span className="cooking-carousel-steps" aria-hidden="true">
@@ -153,7 +167,11 @@ function CookingSessionCarousel({ currentRecipeId, onSelect, onAdd, portrait = f
   );
   const statuses = items.map((entry) => cookingStatus(entry, session.allTimers));
   const compact = items.length >= (portrait ? PORTRAIT_COMPACT_FROM : COMPACT_FROM);
-  const fill = portrait && items.length >= PORTRAIT_FILL_FROM;
+  const fill = portrait
+    ? items.length >= PORTRAIT_FILL_FROM
+    : items.length >= COMPACT_FROM && items.length <= LANDSCAPE_FILL_MAX;
+  // Quer ab vier Karten wird es eng: ohne Fortschrittsbalken (CookingSessionCarousel.css)
+  const dense = !portrait && items.length > COMPACT_FROM;
   const idsKey = items.map((entry) => entry.recipe.id).join('|');
   // Rezept-ID -> 'up' | 'down' für Karten, die gerade nicht (genug) zu sehen sind
   const offscreen = useOffscreenItems(listRef, idsKey, VISIBLE_RATIO);
@@ -184,7 +202,7 @@ function CookingSessionCarousel({ currentRecipeId, onSelect, onAdd, portrait = f
 
   return (
     <>
-      <nav className={`cooking-carousel${compact ? ' cooking-carousel--compact' : ''}${fill ? ' cooking-carousel--fill' : ''}`} aria-label="Weitere Rezepte am Herd">
+      <nav className={`cooking-carousel${compact ? ' cooking-carousel--compact' : ''}${fill ? ' cooking-carousel--fill' : ''}${dense ? ' cooking-carousel--dense' : ''}`} aria-label="Weitere Rezepte am Herd">
         <h2 className="cooking-carousel-heading">{heading}</h2>
         {items.length === 0 && (
           <div className="cooking-carousel-empty">

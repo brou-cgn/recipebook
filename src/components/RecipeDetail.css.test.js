@@ -178,3 +178,60 @@ describe('RecipeDetail CSS – Abschnittsüberschriften im Zutaten-Sheet des Koc
     expect(heading[1]).toBe(indent('.cooking-mode-landscape .cooking-mode-ingredients .ingredients-list'));
   });
 });
+
+describe('RecipeDetail CSS – Timer in der Schrittkarte (Feinschliff Tablet, Punkt 4)', () => {
+  const read = (file) => fs.readFileSync(path.join(__dirname, file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const css = read('RecipeDetail.css');
+  const tokens = read('../tokens.css');
+  const darkCss = read('../darkMode.css');
+  const [lightTokens, darkTokens] = tokens.split(/\n\[data-theme="dark"\] \{/);
+  const rule = (selector) => {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = css.match(new RegExp(`(?:^|\\})\\s*${escaped}\\s*\\{([\\s\\S]*?)\\}`, 'm'));
+    return match ? match[1] : '';
+  };
+
+  test('Start-Knopf und laufende Zeit sind 48 px hoch, Stoppen ist 44 × 44 px groß (vorher 27 und 24 px)', () => {
+    expect(rule('.step-timer-start-btn')).toContain('min-height: 48px;');
+    expect(rule('.step-timer-top-area')).toContain('min-height: 48px;');
+    const stop = rule('.step-timer-btn.stop');
+    expect(stop).toContain('width: 44px;');
+    expect(stop).toContain('height: 44px;');
+  });
+
+  test('Farben nur über Tokens, die es in Light und Dark gibt; darkMode.css braucht keine Regeln mehr dafür', () => {
+    ['.step-timer-start-btn', '.step-timer-top-area', '.step-timer-time', '.step-timer-top-area .step-timer-time',
+      '.step-timer-top-area .step-timer-time.finished'].forEach((selector) => {
+      expect(rule(selector)).not.toBe('');
+      expect(rule(selector)).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+    });
+    ['--color-timer-surface', '--color-timer-border', '--color-timer-text', '--color-timer-done'].forEach((token) => {
+      expect(css).toContain(`var(${token})`);
+      expect(lightTokens).toContain(`${token}:`);
+      expect(darkTokens).toContain(`${token}:`);
+    });
+    expect(darkCss).not.toMatch(/\.step-timer-top-area|\.step-timer-time\b/);
+  });
+
+  test('die Farben schlagen die Sammelregel [data-theme="dark"] span aus darkMode.css (zwei Klassen)', () => {
+    expect(darkCss).toMatch(/\[data-theme="dark"\] span,/);
+    expect(rule('.step-timer-top-area .step-timer-time')).toContain('color: var(--color-timer-text);');
+    expect(rule('.step-timer-start-btn .step-timer-start-label')).toContain('color: inherit;');
+    expect(rule('.step-timer-time')).not.toContain('color:');
+  });
+
+  test('das Häkchen eines abgelaufenen Timers ist im Light-Theme dunkler grün (4,5 : 1 statt 2,5 : 1 auf dem Beige)', () => {
+    expect(rule('.step-timer-top-area .step-timer-time.finished')).toContain('color: var(--color-timer-done);');
+    expect(lightTokens).toContain('--color-timer-done: #2e7d32;');
+    expect(lightTokens).toContain('--color-timer-surface: #f5f0eb;');
+  });
+
+  test('auf breiten Schrittkarten fließt der Text um den Timer, auf dem Handy hochkant behält er seine Zeile', () => {
+    expect(css).toMatch(
+      /\.cooking-mode-landscape \.step-timer-header,\s*\.cooking-mode-split \.step-timer-header,\s*\.cooking-mode-tablet-full \.step-timer-header\s*\{\s*float: right;/
+    );
+    expect(rule('.step-timer-header')).not.toContain('float');
+    // iPad mini hochkant: Die rechte Spalte ist nur 384 px breit
+    expect(css).toMatch(/@media \(max-width: 799px\) \{\s*\.cooking-mode-split \.step-timer-header \{\s*float: none;/);
+  });
+});

@@ -53,6 +53,12 @@
   --color-undo-floating-action: #ffb4a3;
   --color-undo-floating-action-hover: #ffd4c8;
   --color-undo-floating-focus: rgba(163, 58, 38, 0.5);
+  /* Timer in der Schrittkarte des Kochmodus (Start-Knopf, laufende Zeit). Vorher feste Farben in
+     RecipeDetail.css und darkMode.css; „done“ ist das Häkchen, vorher #4caf50 (auf dem Beige 2,5 : 1). */
+  --color-timer-surface: #f5f0eb;
+  --color-timer-border: #c89c6e;
+  --color-timer-text: #402c1c;
+  --color-timer-done: #2e7d32;
 }
 
 [data-theme="dark"] {
@@ -103,4 +109,9 @@
   --color-undo-floating-action: #ffb4a3;
   --color-undo-floating-action-hover: #ffd4c8;
   --color-undo-floating-focus: rgba(163, 58, 38, 0.5);
+  /* Werte wie bisher in darkMode.css (.step-timer-top-area, .step-timer-time) */
+  --color-timer-surface: #2a2a2a;
+  --color-timer-border: #7a5c3a;
+  --color-timer-text: #c08060;
+  --color-timer-done: #4caf50;
 }
