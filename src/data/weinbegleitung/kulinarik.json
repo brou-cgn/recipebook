@@ -1,0 +1,138 @@
+[
+  {
+    "id": "italien",
+    "anzeige": "italienischen Küche",
+    "erkennung": ["italien", "toskan", "sizilian", "neapolitan", "venezian", "römisch", "ligurisch", "piemont", "sardisch", "südtirol"],
+    "beispiele": {
+      "schaumwein_trocken": ["Franciacorta", "Prosecco Superiore", "Trentodoc"],
+      "weiss_leicht_frisch": ["Vermentino", "Soave", "Pinot Grigio"],
+      "weiss_gruen_aromatisch": ["Sauvignon Blanc aus Südtirol", "Arneis"],
+      "weiss_mild_mittel": ["Lugana", "Verdicchio", "Pinot Bianco"],
+      "weiss_voll": ["Fiano di Avellino", "Greco di Tufo", "Chardonnay aus dem Friaul"],
+      "weiss_aromatisch_feinherb": ["Gewürztraminer aus Südtirol"],
+      "rose_trocken": ["Chiaretto", "Cerasuolo d'Abruzzo"],
+      "rot_leicht": ["Bardolino", "Valpolicella", "Vernatsch"],
+      "rot_mittel": ["Chianti", "Barbera", "Montepulciano d'Abruzzo"],
+      "rot_kraeftig": ["Barolo", "Brunello di Montalcino", "Primitivo"],
+      "suesswein_edel": ["Recioto di Soave", "Passito di Pantelleria"],
+      "likoerwein": ["Marsala"]
+    }
+  },
+  {
+    "id": "frankreich",
+    "anzeige": "französischen Küche",
+    "erkennung": ["französ", "franzoes", "elsäss", "elsass", "provenzal", "bretonisch", "burgund", "lyonn"],
+    "beispiele": {
+      "schaumwein_trocken": ["Champagner", "Crémant"],
+      "weiss_leicht_frisch": ["Muscadet", "Chablis", "Picpoul de Pinet"],
+      "weiss_gruen_aromatisch": ["Sancerre", "Pouilly-Fumé", "Touraine Sauvignon"],
+      "weiss_mild_mittel": ["Mâcon-Villages", "Pinot Blanc aus dem Elsass"],
+      "weiss_voll": ["Meursault", "Condrieu", "Pinot Gris aus dem Elsass"],
+      "weiss_aromatisch_feinherb": ["Gewürztraminer aus dem Elsass", "Vouvray demi-sec"],
+      "rose_trocken": ["Provence-Rosé", "Tavel"],
+      "rot_leicht": ["Beaujolais", "Bourgogne Pinot Noir", "Chinon"],
+      "rot_mittel": ["Côtes du Rhône", "Bordeaux", "Languedoc"],
+      "rot_kraeftig": ["Médoc", "Châteauneuf-du-Pape", "Cahors"],
+      "suesswein_edel": ["Sauternes", "Coteaux du Layon"],
+      "likoerwein": ["Banyuls", "Maury"]
+    }
+  },
+  {
+    "id": "spanien",
+    "anzeige": "spanischen Küche",
+    "erkennung": ["spani", "katalan", "baskisch", "andalus"],
+    "beispiele": {
+      "schaumwein_trocken": ["Cava"],
+      "weiss_leicht_frisch": ["Albariño", "Txakoli"],
+      "weiss_gruen_aromatisch": ["Verdejo aus Rueda"],
+      "weiss_mild_mittel": ["Godello"],
+      "weiss_voll": ["Weißer Rioja aus dem Holzfass"],
+      "rose_trocken": ["Rosado aus Navarra"],
+      "rot_leicht": ["Mencía"],
+      "rot_mittel": ["Rioja Crianza", "Garnacha"],
+      "rot_kraeftig": ["Ribera del Duero", "Priorat", "Toro"],
+      "likoerwein": ["Pedro Ximénez", "Oloroso-Sherry"]
+    }
+  },
+  {
+    "id": "portugal",
+    "anzeige": "portugiesischen Küche",
+    "erkennung": ["portugies"],
+    "beispiele": {
+      "weiss_leicht_frisch": ["Vinho Verde", "Alvarinho"],
+      "weiss_voll": ["Encruzado"],
+      "rot_mittel": ["Dão", "Alentejo"],
+      "rot_kraeftig": ["Douro", "Touriga Nacional"],
+      "likoerwein": ["Portwein", "Madeira"]
+    }
+  },
+  {
+    "id": "griechenland",
+    "anzeige": "griechischen Küche",
+    "erkennung": ["griech"],
+    "beispiele": {
+      "weiss_leicht_frisch": ["Assyrtiko", "Roditis"],
+      "weiss_gruen_aromatisch": ["Malagousia", "Moschofilero"],
+      "rot_mittel": ["Agiorgitiko"],
+      "rot_kraeftig": ["Xinomavro"],
+      "suesswein_edel": ["Vinsanto aus Santorini", "Muscat von Samos"]
+    }
+  },
+  {
+    "id": "oesterreich",
+    "anzeige": "österreichischen Küche",
+    "erkennung": ["österreich", "oesterreich", "wiener", "steirisch", "tirol"],
+    "beispiele": {
+      "schaumwein_trocken": ["Österreichischer Sekt"],
+      "weiss_leicht_frisch": ["Grüner Veltliner", "Welschriesling", "Riesling aus der Wachau"],
+      "weiss_gruen_aromatisch": ["Sauvignon Blanc aus der Steiermark", "Gelber Muskateller"],
+      "weiss_mild_mittel": ["Weißburgunder", "Neuburger"],
+      "weiss_voll": ["Grüner Veltliner Smaragd", "Morillon"],
+      "rose_trocken": ["Schilcher", "Zweigelt Rosé"],
+      "rot_leicht": ["Zweigelt", "St. Laurent"],
+      "rot_mittel": ["Blaufränkisch", "Zweigelt Reserve"],
+      "rot_kraeftig": ["Blaufränkisch Reserve", "Rotwein-Cuvée aus dem Burgenland"],
+      "suesswein_edel": ["Ruster Ausbruch", "Beerenauslese aus dem Burgenland"]
+    }
+  },
+  {
+    "id": "schweiz",
+    "anzeige": "Schweizer Küche",
+    "erkennung": ["schweiz", "walliser", "tessin"],
+    "beispiele": {
+      "weiss_leicht_frisch": ["Chasselas (Fendant)", "Riesling-Silvaner"],
+      "weiss_mild_mittel": ["Johannisberg (Silvaner)", "Petite Arvine"],
+      "rose_trocken": ["Œil de Perdrix"],
+      "rot_leicht": ["Pinot Noir aus Graubünden", "Dôle"],
+      "rot_mittel": ["Merlot del Ticino", "Cornalin"],
+      "rot_kraeftig": ["Syrah aus dem Wallis"]
+    }
+  },
+  {
+    "id": "deutschland",
+    "anzeige": "deutschen Küche",
+    "erkennung": ["deutsch", "bayeri", "schwäbi", "schwaebi", "badisch", "pfälz", "fränki", "rheinisch", "norddeutsch", "sächsisch"],
+    "beispiele": {
+      "schaumwein_trocken": ["Winzersekt brut", "Riesling-Sekt"],
+      "weiss_leicht_frisch": ["Riesling trocken", "Rivaner", "Elbling"],
+      "weiss_gruen_aromatisch": ["Scheurebe", "Sauvignon Blanc aus der Pfalz", "Muskateller trocken"],
+      "weiss_voll": ["Grauburgunder", "Chardonnay aus Baden"],
+      "rose_trocken": ["Spätburgunder Weißherbst", "Schillerwein"],
+      "rot_leicht": ["Spätburgunder", "Trollinger", "Frühburgunder"],
+      "rot_mittel": ["Lemberger", "Dornfelder", "Regent"],
+      "rot_kraeftig": ["Lemberger aus dem Barrique"],
+      "suesswein_edel": ["Riesling Auslese", "Beerenauslese", "Eiswein"]
+    }
+  },
+  {
+    "id": "usa",
+    "anzeige": "amerikanischen Küche",
+    "erkennung": ["amerikan", "kaliforn", "texanisch", "südstaaten"],
+    "beispiele": {
+      "weiss_voll": ["Chardonnay aus Kalifornien"],
+      "rot_leicht": ["Pinot Noir aus Oregon"],
+      "rot_mittel": ["Merlot aus Washington", "Zinfandel"],
+      "rot_kraeftig": ["Cabernet Sauvignon aus dem Napa Valley", "Zinfandel"]
+    }
+  }
+]

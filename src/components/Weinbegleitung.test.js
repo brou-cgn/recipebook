@@ -249,6 +249,36 @@ describe('Gespeicherte Weinbegleitung', () => {
   });
 });
 
+describe('Kulinarik', () => {
+  const kueche = (rezepte, nachId) => rezepte.map((r) => (nachId[r.id] ? { ...r, kulinarik: nachId[r.id] } : r));
+
+  it('zeigt je Gang Rebsorten aus der Weinregion seiner Küche, der Stil bleibt', () => {
+    const { menu, rezepte: basis } = festtafel();
+    const rezepte = kueche(basis, { lachstatar: ['Französische Küche'], schmorbraten: ['Italienische Küche'] });
+    zeige({ menu: mitSnapshot(menu, rezepte), rezepte, nutzer: LESER });
+
+    const hauptgang = within(screen.getByRole('region', { name: 'Hauptgang' }));
+    expect(hauptgang.getByText('Rotwein, kräftig')).toBeInTheDocument();
+    expect(hauptgang.getByText(/Barolo, Brunello di Montalcino, Primitivo/)).toBeInTheDocument();
+    fireEvent.click(hauptgang.getByRole('button', { name: /Rotwein, kräftig/ }));
+    expect(hauptgang.getByText('Beispiele passend zur italienischen Küche')).toBeInTheDocument();
+
+    const vorspeise = within(screen.getByRole('region', { name: 'Vorspeise' }));
+    expect(vorspeise.getByText(/Muscadet, Chablis, Picpoul de Pinet/)).toBeInTheDocument();
+    // Dessert ohne Kulinarik: allgemeine Beispiele
+    expect(within(screen.getByRole('region', { name: 'Dessert' })).getByText(/Portwein, Sherry, Madeira/)).toBeInTheDocument();
+  });
+
+  it('nimmt im Modus „Ein Wein für alles“ die Region des ganzen Menüs', () => {
+    const { menu, rezepte: basis } = festtafel();
+    const rezepte = kueche(basis, { lachstatar: ['Italienische Küche'], schmorbraten: ['Italienische Küche'] });
+    zeige({ menu: mitSnapshot(menu, rezepte, { modus: 'einWein' }), rezepte, nutzer: LESER });
+
+    const kopf = within(screen.getByRole('list', { name: 'Ein Wein für alle Gänge' }));
+    expect(kopf.getByText(/Chianti, Barbera/)).toBeInTheDocument();
+  });
+});
+
 describe('Ein Wein für alles', () => {
   const einWein = (menu, rezepte, optionen = {}) => mitSnapshot(menu, rezepte, { modus: 'einWein', ...optionen });
 

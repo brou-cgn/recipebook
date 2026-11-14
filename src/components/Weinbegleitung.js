@@ -1,6 +1,7 @@
 import React, { useId, useState } from 'react';
 import { WeinGlas, Gruende, sichereId } from './WeinbegleitungTeile';
-import { getStil, formatTemperatur, beispieleKurz } from '../utils/weinbegleitung/wissensbasis';
+import { getStil, formatTemperatur } from '../utils/weinbegleitung/wissensbasis';
+import { beispieleFuerRegion } from '../utils/weinbegleitung/kulinarik';
 import {
   MODUS_PRO_GANG,
   MODUS_EIN_WEIN,
@@ -170,11 +171,13 @@ function Pfeil({ offen }) {
 
 /**
  * Eine Weinzeile: Stil mit Glas, drei Rebsorten, Temperatur und Label, darunter optional ein
- * Zusatz („Am besten zu: …“). Antippen klappt den Inhalt (`children`) auf.
+ * Zusatz („Am besten zu: …“). Antippen klappt den Inhalt (`children`) auf. Die Rebsorten
+ * kommen, wo es sie gibt, aus der Weinregion der Küche (`regionId`, kulinarik.js).
  */
-function OptionZeile({ stilId, label, istEmpfehlung = false, fixiert = false, zusatz = null, offen, onUmschalten, children }) {
+function OptionZeile({ stilId, label, istEmpfehlung = false, fixiert = false, zusatz = null, regionId = null, offen, onUmschalten, children }) {
   const panelId = sichereId('weinbegleitung-option', useId());
   const stil = getStil(stilId);
+  const { beispiele, region } = beispieleFuerRegion(stil, regionId, MENUE_BEISPIELE_JE_STIL);
   return (
     <li className={`weinbegleitung-option${istEmpfehlung ? ' weinbegleitung-option--empfehlung' : ''}`}>
       <button
@@ -188,7 +191,7 @@ function OptionZeile({ stilId, label, istEmpfehlung = false, fixiert = false, zu
         <span className="weinbegleitung-gang-text">
           <span className="weinbegleitung-gang-name">{stil.name}</span>
           <span className="weinbegleitung-gang-details">
-            {beispieleKurz(stil, MENUE_BEISPIELE_JE_STIL).join(', ')} · <span className="weinbegleitung-nowrap">{formatTemperatur(stil)}</span>
+            {beispiele.join(', ')} · <span className="weinbegleitung-nowrap">{formatTemperatur(stil)}</span>
           </span>
           <span className={`weinbegleitung-gang-label${label === LABEL_BEDINGT ? ' weinbegleitung-gang-label--bedingt' : ''}`}>
             {istEmpfehlung && 'Empfehlung · '}
@@ -202,6 +205,7 @@ function OptionZeile({ stilId, label, istEmpfehlung = false, fixiert = false, zu
 
       {offen && (
         <div className="weinbegleitung-gang-panel" id={panelId}>
+          {region && <p className="weinbegleitung-region">Beispiele passend zur {region.anzeige}</p>}
           {children}
         </div>
       )}
@@ -265,6 +269,7 @@ function EinWeinKopf({ wein }) {
                 istEmpfehlung={istEmpfehlung}
                 fixiert={istEmpfehlung && fixiert}
                 zusatz={amBestenZu(option)}
+                regionId={wein.regionMenue}
                 offen={offen === option.stilId}
                 onUmschalten={() => umschalten(option.stilId)}
               >
@@ -302,6 +307,7 @@ function EinWeinKopf({ wein }) {
               <OptionZeile
                 stilId={gang.stilId}
                 label={gang.label}
+                regionId={wein.regionFuer?.(gang.sektionIndex)}
                 offen={offen === schluessel}
                 onUmschalten={() => umschalten(schluessel)}
               >
@@ -325,6 +331,7 @@ function GangOptionZeile({ wein, gang, eintrag, offen, onUmschalten, darfTausche
       label={eintrag.label}
       istEmpfehlung={eintrag.istEmpfehlung}
       fixiert={eintrag.istEmpfehlung && gang.fixiert}
+      regionId={wein.regionFuer?.(gang.sektionIndex)}
       offen={offen}
       onUmschalten={onUmschalten}
     >
