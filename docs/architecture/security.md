@@ -27,7 +27,7 @@ Quelle ist immer `firestore.rules` bzw. `storage.rules`; diese Tabelle gibt den 
 |------------|-------|-----------|
 | `recipes` | Mitglieder und Nutzer ohne Profil (nicht anonym). **Sichtbarkeit (Entwurf, Gruppe) wird nur im Client gefiltert.** | Anlegen/Löschen/Ändern: `edit`, `moderator`, `admin`. Das Flag `importOrigin: 'shortcut'` (Import-Jobs der Kurzbefehl-Endpunkte) darf ein Client weder anlegen noch neu setzen (Tech-Check S20); ein vorhandenes bleibt bei Updates unberührt. Die Felder `ratingAvg`, `ratingCount` (`aggregateRecipeRating`) und `weinprofil` (`generateWeinprofile`) schreiben nur Cloud Functions; ein Client-Update, das sie ändert oder löscht, wird abgelehnt (Tech-Check S29) |
 | `recipes/{id}/ratings` | alle (öffentlich) | Anlegen: angemeldet, eigener Schlüssel oder `guest_…`; Ändern: nur eigener Schlüssel; Löschen: eigener, Gast-Schlüssel, Editoren |
-| `menus` | `isAnyUser()` oder Freigabelink (`shareId`) | `edit`, `moderator`, `admin` |
+| `menus` | `isAnyUser()` oder Freigabelink (`shareId`) | `edit`, `moderator`, `admin`. Dazu gehört das Feld `weinbegleitung` (Snapshot der Weinbegleitung, schreibt der Client über `saveMenuWeinbegleitung`; in der App nur, wer das Menü bearbeiten darf) |
 | `groups` | öffentliche Systemgruppe für `isAnyUser()` (Gäste eingeschlossen); private Listen nur Eigentümer, Mitglieder und Admins (Tech-Check S16) | `edit`+; jedes Mitglied seine eigene Liste „Für dich entdeckt"; Löschen nur `edit`+ |
 | `shoppingLists`, `tutorials` | `isAnyUser()` | `edit`+ |
 | `seasonMatrix`, `drinkWeights`, `drinkWeightsChildren` | `isAnyUser()` | `moderator`, `admin` |

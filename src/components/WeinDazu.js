@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { WeinGlas, WeinSymbol, Gruende, sichereId } from './WeinbegleitungTeile';
 import { canEditRecipes } from '../utils/userManagement';
 import { empfehlungFuerWeinprofil } from '../utils/weinbegleitung/engine';
 import { STATUS_OK, STATUS_KEIN_STIL, STATUS_OHNE_PROFIL } from '../utils/weinbegleitung/konstanten';
-import { getStil, getRegel, formatTemperatur, beispieleKurz } from '../utils/weinbegleitung/wissensbasis';
+import { getStil, formatTemperatur, beispieleKurz } from '../utils/weinbegleitung/wissensbasis';
 import { istWeinprofilAktuell } from '../utils/weinbegleitung/profilHash';
-import { kennwerteFuer, weinfarbe, weinprofilFehlertext, neueresProfil, TEXT_KEIN_STIL } from '../utils/weinbegleitung/anzeige';
+import { kennwerteFuer, weinprofilFehlertext, neueresProfil, TEXT_KEIN_STIL } from '../utils/weinbegleitung/anzeige';
 import { generiereWeinprofile } from '../utils/weinbegleitung/weinprofilCallable';
 import useModalScrollLock from '../hooks/useModalScrollLock';
 import useFadeOutClose from '../hooks/useFadeOutClose';
@@ -23,77 +24,6 @@ import './WeinDazu.css';
  * `icons`: `{ rot, weiss }` aus den Button-Icons (`weinRot`, `weinWeiss`), leer = eingebautes Glas.
  * Das Sheet schließt mobil nur per Wischen nach unten am Griff (Desktop: Hintergrund, Escape).
  */
-
-// useId liefert je nach React-Version Zeichen wie „:“ oder „«“, die in url(#…) nicht gehen.
-const sichereId = (praefix, id) => `${praefix}-${id.replace(/[^a-zA-Z0-9_-]/g, '')}`;
-
-function WeinGlas({ farbe = null, groesse = 20, laedt = false }) {
-  const clipId = sichereId('wein-glas', useId());
-  return (
-    <svg
-      className={`wein-dazu-glas${laedt ? ' wein-dazu-glas--laedt' : ''}`}
-      width={groesse}
-      height={groesse}
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <defs>
-        <clipPath id={clipId}>
-          <path d="M7 3h10l-1 7a4 4 0 0 1-8 0z" />
-        </clipPath>
-      </defs>
-      {(farbe || laedt) && (
-        <g clipPath={`url(#${clipId})`}>
-          <rect
-            className={`wein-dazu-glas-fuellung wein-dazu-glas-fuellung--${farbe || 'rot'}`}
-            x="0"
-            y="5"
-            width="24"
-            height="12"
-          />
-        </g>
-      )}
-      <path d="M7 3h10l-1 7a4 4 0 0 1-8 0z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-      <path d="M12 14v6M8.5 21h7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-const istBildQuelle = (wert) => /^(data:image\/|https?:\/\/|\/)/.test(wert);
-
-/**
- * Symbol für einen Stil: das in den Button-Icons hinterlegte Icon für Rot- bzw. Weißwein
- * (Schlüssel `weinRot`, `weinWeiss`), sonst das eingebaute Glas in der Weinfarbe.
- * Rosé hat kein eigenes Icon und bleibt beim Glas.
- */
-function WeinSymbol({ stil, icons, groesse }) {
-  const eigenes = stil?.farbe === 'rot' ? icons?.rot : stil?.farbe === 'weiss' ? icons?.weiss : '';
-  if (eigenes) {
-    return istBildQuelle(eigenes) ? (
-      <img className="wein-dazu-symbol-bild" src={eigenes} alt="" width={groesse} height={groesse} />
-    ) : (
-      <span className="wein-dazu-symbol-text" style={{ fontSize: groesse * 0.8 }} aria-hidden="true">{eigenes}</span>
-    );
-  }
-  return <WeinGlas farbe={stil ? weinfarbe(stil) : null} groesse={groesse} />;
-}
-
-function Gruende({ regelIds }) {
-  return (
-    <ul className="wein-dazu-gruende">
-      {regelIds.map((regelId) => {
-        const regel = getRegel(regelId);
-        if (!regel) return null;
-        return (
-          <li key={regelId}>
-            {regel.kurztext}
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
 
 function StilDetails({ option, icons }) {
   const stil = getStil(option.stilId);
@@ -122,7 +52,7 @@ function StilDetails({ option, icons }) {
         ))}
       </dl>
       <h3 className="wein-dazu-abschnitt">Warum passt das?</h3>
-      <Gruende regelIds={option.regelIds} />
+      <Gruende regelIds={option.regelIds} mitQuellen={false} />
     </div>
   );
 }
@@ -229,7 +159,7 @@ function WeinDazuSheet({ empfehlung, veraltet, darfSchaetzen, onNeuEinschaetzen,
                 <span className="wein-dazu-stil-glas"><WeinGlas groesse={40} /></span>
                 <p className="wein-dazu-stil-name">{TEXT_KEIN_STIL}</p>
               </div>
-              <Gruende regelIds={empfehlung.regelIds} />
+              <Gruende regelIds={empfehlung.regelIds} mitQuellen={false} />
             </div>
           ) : (
             gewaehlt && <StilDetails option={gewaehlt} icons={icons} />

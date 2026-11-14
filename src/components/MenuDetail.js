@@ -8,7 +8,7 @@ import './PortionSelector.css';
 import './MenuDetail.css';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getUserMenuFavorites } from '../utils/menuFavorites';
-import { groupRecipesBySections, applyItemOrder } from '../utils/menuSections';
+import { groupRecipesBySections, applyItemOrder, DRINKS_SECTION_NAME } from '../utils/menuSections';
 import { canEditMenu, canDeleteMenu } from '../utils/userManagement';
 import { isBase64Image } from '../utils/imageUtils';
 import { enableMenuSharing, disableMenuSharing } from '../utils/menuFirestore';
@@ -25,6 +25,8 @@ import RecipeCard from './RecipeCard';
 import ConfirmDialog from './ConfirmDialog';
 import useModalScrollLock from '../hooks/useModalScrollLock';
 import useFadeOutClose from '../hooks/useFadeOutClose';
+import useMenueWeinbegleitung from '../hooks/useMenueWeinbegleitung';
+import { WeinbegleitungUebersicht, WeinbegleitungGang } from './Weinbegleitung';
 
 const formatEventLiter = (value) => {
   const num = Number(value);
@@ -41,7 +43,6 @@ const getDrinkImageUrl = (recipe) => {
   return recipe.image || null;
 };
 
-const DRINKS_SECTION_NAME = 'Drinks';
 const DRINKS_MEAL_CATEGORY_NAME = 'Drinks';
 
 const MOBILE_TABLET_BREAKPOINT = 768;
@@ -445,6 +446,9 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     return [...recipeSections, { name: DRINKS_SECTION_NAME, recipes: [] }];
   }, [recipeSections]);
 
+  // Weinbegleitung (Variante B): Zusammenfassung vor den Gängen, Weinzeile je Gang
+  const wein = useMenueWeinbegleitung({ menu, recipes, currentUser, isSharedView });
+
   // Collect all unique linked (sub-)recipes referenced in menu recipe ingredients
   const allLinkedRecipes = useMemo(() => {
     const seenIds = new Set();
@@ -734,6 +738,8 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
           <p className="menu-description menu-guests-text">{menuGuestsText}</p>
         )}
 
+        <WeinbegleitungUebersicht wein={wein} />
+
         {displaySections.map((section, index) => {
           const isDrinksSection = section.name?.toLowerCase() === DRINKS_SECTION_NAME.toLowerCase();
           // Drinks (event-linked or manual) that resolve to a recipe already shown
@@ -798,6 +804,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                   </button>
                 )}
               </div>
+              <WeinbegleitungGang wein={wein} sektionIndex={index} sektionName={section.name} />
               {isLoadingDrinks ? (
                 <p className="no-recipes">Getränke werden geladen …</p>
               ) : hasCards ? (

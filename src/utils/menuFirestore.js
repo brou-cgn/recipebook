@@ -146,6 +146,19 @@ export const updateMenu = async (menuId, updates) => {
 };
 
 /**
+ * Weinbegleitung eines Menüs speichern (Snapshot, Tracker docs/vorhaben/weinbegleitung.md).
+ * Schreibt nur das Feld `weinbegleitung`; `updatedAt` bleibt, damit die Menüliste nicht
+ * umsortiert. Rules: wie jedes Menü-Update ab Rolle edit.
+ * @param {string} menuId
+ * @param {Object} snapshot - Ergebnis von erstelleSnapshot (src/utils/weinbegleitung/menue.js)
+ * @returns {Promise<void>}
+ */
+export const saveMenuWeinbegleitung = async (menuId, snapshot) => {
+  const menuRef = doc(db, 'menus', menuId);
+  await updateDoc(menuRef, { weinbegleitung: snapshot });
+};
+
+/**
  * Delete a menu from Firestore
  * @param {string} menuId - ID of the menu to delete
  * @returns {Promise<void>}

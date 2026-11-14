@@ -49,11 +49,14 @@ jest.mock('../utils/customLists', () => ({
 jest.mock('../utils/userManagement', () => ({
   canEditMenu: () => true,
   canDeleteMenu: () => true,
+  // Weinbegleitung: ohne Recht kein Knopf „Weinbegleitung erstellen“
+  canEditRecipes: () => false,
 }));
 
 jest.mock('../utils/menuFirestore', () => ({
   enableMenuSharing: jest.fn(() => Promise.resolve('new-share-id')),
   disableMenuSharing: jest.fn(() => Promise.resolve()),
+  saveMenuWeinbegleitung: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock('../utils/categoryImages', () => ({
