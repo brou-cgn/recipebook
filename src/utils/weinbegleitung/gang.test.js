@@ -24,7 +24,7 @@ describe('bildeGangProfil', () => {
     expect(gang.profil.hauptkomponente).toBe('rind_lamm');
     expect(gang.profil.zubereitung).toBe('geschmort');
     expect(gang.profil.rolle).toBe('hauptgericht');
-    // Intensität und Komponenten: Maximum über alle Rezepte
+    // Intensität und Komponenten: Maximum über die tragenden Rezepte (Salat und Braten)
     expect(gang.profil.intensitaet).toBe(4);
     expect(gang.profil.komponenten.saeure).toBe(3);
     expect(gang.profil.komponenten.fett).toBe(2);
@@ -38,7 +38,7 @@ describe('bildeGangProfil', () => {
     ]).leitRezeptId).toBe('b');
   });
 
-  it('nimmt die Sauce aus einem Rezept mit Rolle sauce_dip, sonst vom Leitrezept', () => {
+  it('nimmt die Sauce eines Rezepts mit Rolle sauce_dip, wenn das Leitrezept keine hat', () => {
     const mitSauce = bildeGangProfil([
       rezept('spargel', profil({ rolle: 'hauptgericht', hauptkomponente: 'spargel', sauce: 'keine' })),
       rezept('hollandaise', profil({ rolle: 'sauce_dip', hauptkomponente: 'ei', sauce: 'sahne_butter_kaese' })),
@@ -48,6 +48,44 @@ describe('bildeGangProfil', () => {
 
     const ohneSauceRezept = bildeGangProfil([rezept('fisch', profil({ rolle: 'hauptgericht', sauce: 'zitrus_essig' }))]);
     expect(ohneSauceRezept.profil.sauce).toBe('zitrus_essig');
+  });
+
+  it('behält die eigene Sauce des Leitrezepts: Preiselbeeren ersetzen nicht den Wildjus', () => {
+    const gang = bildeGangProfil([
+      rezept('reh', profil({ rolle: 'hauptgericht', hauptkomponente: 'wild', sauce: 'rotwein_jus' })),
+      rezept('preiselbeeren', profil({ rolle: 'sauce_dip', hauptkomponente: 'dessert_frucht', sauce: 'suess_fruchtig' })),
+    ]);
+    expect(gang.profil.sauce).toBe('rotwein_jus');
+  });
+
+  it('lässt Beilagen und Saucen jeden Wert um höchstens eine Stufe anheben', () => {
+    const gang = bildeGangProfil([
+      rezept('gans', profil({ rolle: 'hauptgericht', hauptkomponente: 'gefluegel', intensitaet: 3, fett: 3 })),
+      rezept('rotkohl', profil({ rolle: 'beilage', intensitaet: 5, suesse: 2, saeure: 2 })),
+      rezept('preiselbeeren', profil({ rolle: 'sauce_dip', intensitaet: 3, suesse: 3, schaerfe: 1 })),
+    ]);
+    expect(gang.profil.intensitaet).toBe(4);
+    expect(gang.profil.komponenten).toEqual(expect.objectContaining({ suesse: 1, saeure: 1, schaerfe: 1, fett: 3 }));
+  });
+
+  it('nimmt ohne tragendes Rezept das Maximum über Beilagen und Saucen', () => {
+    const gang = bildeGangProfil([
+      rezept('brot', profil({ rolle: 'beilage', intensitaet: 1 })),
+      rezept('chutney', profil({ rolle: 'sauce_dip', intensitaet: 3, suesse: 3 })),
+    ]);
+    expect(gang.leitRezeptId).toBe('chutney');
+    expect(gang.profil.intensitaet).toBe(3);
+    expect(gang.profil.komponenten.suesse).toBe(3);
+  });
+
+  it('wählt ohne Hauptgericht ein tragendes Rezept als Leitrezept, auch wenn eine Sauce intensiver ist', () => {
+    const gang = bildeGangProfil([
+      rezept('bruschetta', profil({ rolle: 'vorspeise', hauptkomponente: 'gemuese', sauce: 'tomate', intensitaet: 2 })),
+      rezept('aioli', profil({ rolle: 'sauce_dip', hauptkomponente: 'ei', sauce: 'sahne_butter_kaese', intensitaet: 4 })),
+    ]);
+    expect(gang.leitRezeptId).toBe('bruschetta');
+    expect(gang.profil.sauce).toBe('tomate');
+    expect(gang.profil.intensitaet).toBe(3);
   });
 
   it('ignoriert Rezepte mit Rolle getraenk', () => {

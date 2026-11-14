@@ -1,4 +1,4 @@
-import { kennwerteFuer, weinfarbe, weinprofilFehlertext, neueresProfil, TEXT_KEIN_STIL } from './anzeige';
+import { kennwerteFuer, weinfarbe, weinprofilFehlertext, neueresProfil, nurZuText, TEXT_KEIN_STIL } from './anzeige';
 import { getStil } from './wissensbasis';
 
 describe('kennwerteFuer', () => {
@@ -62,4 +62,17 @@ describe('neueresProfil', () => {
 
 it('nennt den R11-Fall wie im Entwurf', () => {
   expect(TEXT_KEIN_STIL).toBe('Hier lieber Bier oder Wasser');
+});
+
+describe('nurZuText', () => {
+  it('beschreibt die Einschränkung der Süßweine aus der Wissensbasis', () => {
+    expect(nurZuText(getStil('likoerwein'))).toBe('nur zu Dessert und Käse');
+    expect(nurZuText(getStil('suesswein_edel'))).toBe('nur zu Dessert und Blauschimmelkäse');
+  });
+
+  it('liefert für Stile ohne Einschränkung null', () => {
+    expect(nurZuText(getStil('rot_kraeftig'))).toBeNull();
+    expect(nurZuText(null)).toBeNull();
+    expect(nurZuText({ nurZu: ['hk:wild'] })).toBeNull();
+  });
 });

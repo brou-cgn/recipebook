@@ -104,7 +104,7 @@ describe('WeinDazu mit Profil', () => {
     expect(generiereWeinprofile).not.toHaveBeenCalled();
   });
 
-  it('öffnet ein Sheet mit Beispielen, Temperatur, Label, Kennwerten, Gründen und Quellenlinks', () => {
+  it('öffnet ein Sheet mit Beispielen, Temperatur, Label, Kennwerten und Gründen, ohne Quellenlinks', () => {
     zeige({ recipe: mitProfil(G5_RINDERSCHMORBRATEN) });
     fireEvent.click(screen.getByRole('button', { name: 'Wein: Rotwein, kräftig' }));
 
@@ -117,11 +117,8 @@ describe('WeinDazu mit Profil', () => {
     expect(within(dialog).getByRole('heading', { name: 'Warum passt das?' })).toBeInTheDocument();
     expect(within(dialog).getByText(/Der Wein richtet sich nach der Sauce/)).toBeInTheDocument();
 
-    const quellen = within(dialog).getAllByRole('link', { name: /Quelle: Food and Wine Pairing Basics/ });
-    expect(quellen.length).toBeGreaterThanOrEqual(1);
-    expect(quellen[0]).toHaveAttribute('href', 'https://winefolly.com/tips/getting-started-with-food-and-wine-pairing');
-    expect(quellen[0]).toHaveAttribute('target', '_blank');
-    expect(quellen[0]).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(within(dialog).queryByRole('link')).not.toBeInTheDocument();
+    expect(dialog).not.toHaveTextContent('Empfohlen werden Weinstile');
   });
 
   it('zeigt eine Alternative zum Antippen, ohne etwas zu speichern', () => {
@@ -141,12 +138,15 @@ describe('WeinDazu mit Profil', () => {
     expect(generiereWeinprofile).not.toHaveBeenCalled();
   });
 
-  it('schließt das Sheet über „Schließen“ und mit Escape', async () => {
+  it('hat keinen sichtbaren „Schließen“-Knopf; der Griff schließt per Tastatur, außerdem Escape', async () => {
     zeige({ recipe: mitProfil(G5_RINDERSCHMORBRATEN) });
     const chip = screen.getByRole('button', { name: 'Wein: Rotwein, kräftig' });
 
     fireEvent.click(chip);
-    fireEvent.click(within(sheet()).getByRole('button', { name: 'Schließen' }));
+    expect(within(sheet()).queryByText('Schließen')).not.toBeInTheDocument();
+    const griff = sheet().querySelector('.wein-dazu-sheet-grabber');
+    expect(griff).toHaveAttribute('aria-label', 'Schließen');
+    fireEvent.click(griff);
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(chip).toHaveFocus();
 
@@ -155,13 +155,45 @@ describe('WeinDazu mit Profil', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
-  it('zeigt im R11-Fall „Hier lieber Bier oder Wasser“ mit Grund und Quelle', () => {
+  it('schließt beim Wischen nach unten am Griff, nicht bei einem kurzen Zug', async () => {
+    zeige({ recipe: mitProfil(G5_RINDERSCHMORBRATEN) });
+    fireEvent.click(screen.getByRole('button', { name: 'Wein: Rotwein, kräftig' }));
+    const zone = sheet().querySelector('.wein-dazu-sheet-ziehzone');
+
+    fireEvent.touchStart(zone, { touches: [{ clientY: 100 }] });
+    fireEvent.touchMove(zone, { touches: [{ clientY: 120 }] });
+    expect(sheet().style.transform).toBe('translateY(20px)');
+    fireEvent.touchEnd(zone);
+    expect(sheet()).toBeInTheDocument();
+    expect(sheet().style.transform).toBe('');
+
+    fireEvent.touchStart(zone, { touches: [{ clientY: 100 }] });
+    fireEvent.touchMove(zone, { touches: [{ clientY: 260 }] });
+    fireEvent.touchEnd(zone);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('nutzt die eingerichteten Icons für Rot- und Weißwein', () => {
+    const icons = { rot: 'data:image/png;base64,ROT', weiss: 'data:image/png;base64,WEISS' };
+    zeige({ recipe: mitProfil(G5_RINDERSCHMORBRATEN), icons });
+    const chip = screen.getByRole('button', { name: 'Wein: Rotwein, kräftig' });
+    expect(chip.querySelector('img')).toHaveAttribute('src', icons.rot);
+    expect(chip.querySelector('svg')).toBeNull();
+  });
+
+  it('bleibt ohne eingerichtete Icons beim eingebauten Glas', () => {
+    zeige({ recipe: mitProfil(G5_RINDERSCHMORBRATEN), icons: { rot: '', weiss: '' } });
+    const chip = screen.getByRole('button', { name: 'Wein: Rotwein, kräftig' });
+    expect(chip.querySelector('img')).toBeNull();
+    expect(chip.querySelector('svg')).not.toBeNull();
+  });
+
+  it('zeigt im R11-Fall „Hier lieber Bier oder Wasser“ mit Grund', () => {
     zeige({ recipe: mitProfil(E3_EXTREM) });
     fireEvent.click(screen.getByRole('button', { name: 'Hier lieber Bier oder Wasser' }));
 
     const dialog = sheet();
     expect(within(dialog).getByText(/Passt kein Weinstil, ist Bier oder Wasser/)).toBeInTheDocument();
-    expect(within(dialog).getByRole('link', { name: /Quelle: Getränke zum Menü/ })).toHaveAttribute('href', 'https://ichkoche.de/print/artikel-2923');
     expect(within(dialog).queryByRole('region', { name: 'Empfehlung und Alternativen' })).not.toBeInTheDocument();
   });
 });

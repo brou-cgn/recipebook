@@ -1,7 +1,7 @@
 # Vorhaben: Weinbegleitung (Menüs und Einzelrezepte)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 14.11.2026 (PR 1 bis 4 gemergt und deployt, PR 5 in Arbeit).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 14.11.2026 (PR 1 bis 4, die Nachbesserung am Rezept-Sheet und die Kalibrierung der Süße gemergt; PR 5 in Arbeit).
 
 **Ziel:** Zu einem Menü (Festtafel) schlägt die App pro Gang einen passenden Weinstil vor, mit bis zu
 zwei Alternativen, einer kurzen Begründung und einem Quellenlink. Dazu gibt es den Modus „Ein Wein für
@@ -18,9 +18,11 @@ Menüansicht, dazu die Zustände). Keine Mockups im Repo.
 | Thema | Entscheidung |
 |---|---|
 | Architektur | Gericht-Profil `recipes/{id}.weinprofil` schätzt ein Callable per Gemini (nur Werte aus festen Listen, nie Weinnamen), nur bei Bedarf, gecacht über `inputHash`. Wissensbasis statisch und versioniert im Repo (`src/data/weinbegleitung/`), keine Firestore-Collection. Engine als reine Client-Funktion (`src/utils/weinbegleitung/`). Menü: Snapshot `menus/{id}.weinbegleitung`. Einzelrezept: kein Snapshot, die Empfehlung entsteht beim Anzeigen. Anzeigen löst nie einen KI-Aufruf aus. |
+| Sheet-Nachbesserung (14.11.2026, Eigentümer) | Keine Quellenlinks mehr im Sheet (Gründe nur als Text), kein Fußsatz „Empfohlen werden Weinstile …“. Kein „Schließen“-Knopf: mobil schließt das Sheet nur per Wischen nach unten am Griff oben mittig (Antippen von Hintergrund oder Griff schließt nicht); Desktop weiter über Hintergrund und Escape. Eigene Icons für Rot- und Weißwein über die Button-Icons (`weinRot`, `weinWeiss`, Gruppe „Rezept-Details“, je mit Dunkelmodus-Variante); leer = eingebautes Glas, Rosé bleibt beim Glas. Damit gilt Akzeptanzkriterium (3) nur noch für die Gründe, nicht mehr für den Quellenlink. |
 | Design | **Variante B** (14.11.2026). Rezept: Chip „Wein: <Stil>“ in eigener Zeile direkt unter der Metadatenzeile (die Metadatenzeile bricht nicht um und ist auf dem Handy voll; Vorschlag vom 14.11.2026 ohne Widerspruch übernommen), auf breiten Bildschirmen öffnet ein mittiges Fenster statt des Bottom-Sheets; Antippen öffnet ein Sheet mit Stil, zwei Beispielen, Trinktemperatur, Label, Kennwerten (Körper, Gerbstoff, Süße), „Warum passt das?“ mit Quellenlinks und den Alternativen (nur Anzeige). Menü: Weinzeile direkt unter jeder Gang-Überschrift, aufklappbar mit Gründen und Alternativen (Antippen tauscht und fixiert); vor dem ersten Gang eine Zusammenfassung mit Umschalter „Pro Gang“ / „Ein Wein für alles“. Variante A (Karte unter den Schritten, Block in „Drinks“) war am selben Tag kurz gewählt und ist verworfen. |
 | Rollen ohne Wein | `ROLLEN_OHNE_WEIN` = getraenk, sauce_dip, beilage, gebaeck_kuchen (Einzelrezept: keine Karte). Im Menü zählen nur Getränke nicht mit. |
 | Engine-Startwerte | Wie in der Spezifikation unten. Die Golden-Tests G1 bis G9 und E1 bis E3 sind mit den Startwerten grün, eine Kalibrierung war nicht nötig (Scores in den Umsetzungsnotizen zu PR 1). |
+| Kalibrierung Süße (14.11.2026, Eigentümer: „es wird immer Süßwein vorgeschlagen“) | `RULES_VERSION` `2026-11-2`. (1) Süßweine (`suesswein_edel`, `likoerwein`) kommen nur zu Dessert und Käse infrage: Feld `nurZu` in `stile.json` (Rolle `dessert`, Hauptkomponente `dessert_*`, `kaese_blau`, beim Likörwein zusätzlich `kaese_hart`), unabhängig vom Score. (2) R3 bei zu wenig Süße im Wein: Strafe 1, 3, 6 je Abstand 1, 2, 3 statt 3 je Stufe. (3) Gang-Profil: Beilagen und Saucen (`beilage`, `sauce_dip`) heben Intensität und Komponenten höchstens um eine Stufe über die tragenden Rezepte; das Leitrezept kommt aus den tragenden. (4) Sauce: die des Leitrezepts; nur wenn es keine hat, die eines Rezepts mit Rolle `sauce_dip` (Abweichung von der Spezifikation: Preiselbeeren ersetzten den Wildjus). (5) Menüfolge: Süße fällt kostet 1 je Stufe statt pauschal 3. Golden-Tests G10 bis G15 halten das fest. Gespeicherte Menü-Weinbegleitungen gelten danach als veraltet; „Neu berechnen“ kostet keinen KI-Aufruf, weil die Profile gültig bleiben. |
 | R8 als Grund | Abweichung von der Spezifikation: R8 erscheint nur, wenn die Farbe zur Aussage der Regel passt (rot zu `rind_lamm`/`wild`; weiß zu Fisch, Meeresfrüchten, Geflügel, Schwein/Kalb). Sonst stünde „Zu kräftigem Fleisch passt eher Rotwein …“ unter einem Süßwein zum Dessert. |
 | Gründe | Bedingungen ohne eigenen Punktbeitrag (R1, R2, R3, R5, R9, R10) haben ein festes Gewicht (Konstanten `GRUND_GEWICHT_*`). R10 erscheint im Menü, wenn sich die Folge gegenüber dem vorherigen Gang mit Wein ohne Strafe steigert. |
 | „Ein Wein“ ohne gemeinsamen Stil | Ergänzung: Erreicht kein Stil `S_MIN` in allen Nicht-Dessert-Gängen, bekommen sie den Hinweis `keinGemeinsamerStil`, statt einen schlechten Stil zu erzwingen. Gänge, zu denen gar kein Stil passt (R11), bleiben aus der gemeinsamen Wahl heraus. |
@@ -50,15 +52,19 @@ Parallelität begrenzt. Rückgabe: Profile je `recipeId`, Listen der übersprung
 `backfillWeinprofile` nur für admin, in Batches mit Fortschritt.
 
 **Engine:** Gang = Sektion in Menü-Reihenfolge mit mindestens einem Rezept, ohne „Drinks“, Getränke zählen
-nicht. Leitrezept = Hauptgericht, sonst höchste Intensität; Hauptkomponente und Zubereitung vom Leitrezept,
-Sauce aus einem Rezept mit Rolle `sauce_dip`, sonst vom Leitrezept; Intensität und Komponenten als Maximum.
+nicht. Tragend sind alle Rezepte außer Beilagen und Saucen (gibt es keins, tragen alle). Leitrezept =
+Hauptgericht, sonst das tragende mit der höchsten Intensität; Hauptkomponente, Zubereitung und Sauce vom
+Leitrezept, hat es keine Sauce, die eines Rezepts mit Rolle `sauce_dip`; Intensität und Komponenten als
+Maximum der tragenden Rezepte, Beilagen und Saucen heben sie um höchstens eine Stufe (seit 14.11.2026).
 Score je Stil: Passung der Tags (stark +3, gut +2, sonst +1, meiden −3; Gewicht sc 1,0 nur mit Sauce, hk 0,8
 mit Sauce sonst 1,0, zb 0,5) plus R1 bis R6 und R9 (Werte in `konstanten.js`). Labels ab `S_TOP` 5,5
-„passt hervorragend“, ab `S_GUT` 3,5 „passt gut“, sonst „passt“; Kandidaten ab `S_MIN` 1,5. Menüfolge:
-je Gang die vier besten Kandidaten, bis sechs Gänge alle Kombinationen, darüber greedy; Strafen gegenüber
-dem vorherigen Gang mit Wein (Körper fällt um mehr als 1: −2; rot vor weiß/rosé: −2, außer Süße 3; Süße
-fällt: −3; gleicher Stil: −1). „Ein Wein“: höchstes Minimum über die Nicht-Dessert-Gänge (Gleichstand:
-höhere Summe), Dessert-Gänge (Rolle dessert/gebaeck_kuchen oder Name enthält „Dessert“) eigenständig.
+„passt hervorragend“, ab `S_GUT` 3,5 „passt gut“, sonst „passt“; Kandidaten ab `S_MIN` 1,5 und nur Stile, die
+laut `nurZu` infrage kommen (Süßweine nur zu Dessert und Käse). Menüfolge: je Gang die vier besten
+Kandidaten, bis sechs Gänge alle Kombinationen, darüber greedy; Strafen gegenüber dem vorherigen Gang mit
+Wein (Körper fällt um mehr als 1: −2; rot vor weiß/rosé: −2, außer Süße 3; Süße fällt: −1 je Stufe; gleicher
+Stil: −1). „Ein Wein“: höchstes Minimum über die Nicht-Dessert-Gänge (Gleichstand: höhere Summe), nur Stile,
+die für alle diese Gänge infrage kommen; Dessert-Gänge (Rolle dessert/gebaeck_kuchen oder Name enthält
+„Dessert“) eigenständig.
 
 **Snapshot** `menus/{id}.weinbegleitung` (schreibt der Client ab Rolle edit): `modus` (`proGang`/`einWein`),
 `gaenge` [{`sektionIndex`, `sektionName`, `stilId` oder null, `alternativen`, `label`, `regelIds`, `fixiert`,
@@ -74,7 +80,7 @@ Kaufaufforderung, Texte auf Deutsch.
 
 **Akzeptanzkriterien:** (1) Ab Rolle edit entsteht für ein Menü mit mindestens zwei Gängen eine
 Weinbegleitung; fehlende Profile kosten einen Callable-Aufruf je 20 Rezepte. (2) Erneutes Öffnen löst keinen
-KI-Aufruf aus. (3) Jeder empfohlene Stil zeigt mindestens einen Grund mit Quellenlink. (4) Nach einer
+KI-Aufruf aus. (3) Jeder empfohlene Stil zeigt mindestens einen Grund (Quellenlinks seit 14.11.2026 nicht mehr im Sheet). (4) Nach einer
 Änderung erscheint „veraltet“; „Neu berechnen“ schätzt nur Rezepte mit geändertem Hash neu. (5) Rezept mit
 aktuellem Profil: Karte sofort; ohne Profil sieht nur, wer ab Rolle edit ist, den Button; bei Getränken,
 Saucen, Beilagen und Kuchen keine Karte. (6) Nirgends Flaschen, Erzeuger, Jahrgänge oder Preise. (7) Leser
@@ -91,9 +97,10 @@ Snapshot oder Fixieren beim Einzelrezept.
 |---|---|---|
 | 1 | Tracker, Wissensbasis (`src/data/weinbegleitung/`), Engine (`src/utils/weinbegleitung/`) mit Tests: Regeln einzeln, Gang-Bildung, Menüfolge, „Ein Wein“, Fixierung, Einzelrezept, Golden G1–G9 und E1–E3, Datenprüfung mit Fingerabdruck. Noch ohne UI. | PR #3660 gemergt (14.11.2026), 129 neue Tests |
 | 2 | Callable `generateWeinprofile` (`functions/handlers/weinbegleitung.js`, Helfer `functions/shared/weinprofil.js`; Gemini, Tageslimit `aiWeinprofilLimits`), Hash-Funktion im Client (`profilHash.js`) mit Konsistenztest gegen die Function, Firestore-Regeln (`weinprofil`, `ratingAvg`, `ratingCount` nur per Function, Tech-Check S29) mit Rules-Tests, `docs/architecture/security.md` | PR #3661 gemergt und deployt (14.11.2026, v2.69.0, Deploy-Lauf 2034: Function `generateWeinprofile` angelegt, Rules veröffentlicht); Function-Tests +19, Client-Tests +18, Rules-Tests +1 und erweitert |
-| 3 | Rezeptansicht nach Variante B: `src/components/WeinDazu.js` (Chip, Sheet, „Passenden Wein finden“, „Neu einschätzen“, Laden, R11, veraltet), Helfer `anzeige.js` und `weinprofilCallable.js`, Farb-Tokens `--color-wein-*`, Einbindung in `RecipeDetail.js` (3 Zeilen) | PR #3662 gemergt und deployt (14.11.2026, v2.70.0, Deploy-Lauf 2035); vom Eigentümer live getestet (14.11.2026, „Passenden Wein finden“ erfolgreich, damit auch das Callable aus PR 2 gegen die echte Gemini-API geprüft); Komponententests +15, Util-Tests +8 |
+| 3 | Rezeptansicht nach Variante B: `src/components/WeinDazu.js` (Chip, Sheet, „Passenden Wein finden“, „Neu einschätzen“, Laden, R11, veraltet), Helfer `anzeige.js` und `weinprofilCallable.js`, Farb-Tokens `--color-wein-*`, Einbindung in `RecipeDetail.js` (3 Zeilen) | PR #3662 gemergt und deployt (14.11.2026, v2.70.0, Deploy-Lauf 2035); vom Eigentümer live getestet (14.11.2026, „Passenden Wein finden“ erfolgreich, damit auch das Callable aus PR 2 gegen die echte Gemini-API geprüft); Komponententests +15, Util-Tests +8. Nachbesserung (Quellen und Fußsatz raus, Wischen statt „Schließen“, Icons `weinRot`/`weinWeiss`): PR #3664 gemergt und deployt (14.11.2026, v2.72.0, Deploy-Lauf 2037), Komponententests +3 |
 | 4 | Menü nach Variante B: `src/components/Weinbegleitung.js` (Zusammenfassung, Weinzeile je Gang), Hook `src/hooks/useMenueWeinbegleitung.js`, Utils `menue.js` (Snapshot, Menü-Hash, Zuordnung), `saveMenuWeinbegleitung` in `menuFirestore.js`, gemeinsame Bausteine `WeinbegleitungTeile.js` (aus `WeinDazu.js` herausgelöst); `MenuDetail.js` (+9/−2 Zeilen) nutzt jetzt `DRINKS_SECTION_NAME` aus `menuSections.js` | PR #3663 gemergt und deployt (14.11.2026, v2.71.0, Deploy-Lauf 2036); vom Eigentümer live getestet (14.11.2026); Komponententests +13, Util-Tests +12 |
-| 5 | Seite „Weinbegleitung“ unter „Chefkoch & mehr“ (`src/components/WeinbegleitungSeite.js`, Kachel in `Kueche.js`) mit Regeln, Weinstilen, Quellen und dem Admin-Backfill; Callable `backfillWeinprofile` mit Cursor (F20) und Hook `useWeinprofilBackfill.js`; Freigabe-Seiten ohne Veraltet-Hinweis; Zeitlimit für die Callables im Client | in Arbeit (Branch `claude/intelligent-shannon-t5cts5`); Function-Tests +12, Komponententests +15, Util-Tests +4 |
+| K | Kalibrierung der Süße (siehe „Entschieden“): `nurZu` in `stile.json`, `kommtInfrage`/`istKandidat` in `bewertung.js`, R3 gestuft, Gang-Profil mit tragenden Rezepten und gedämpften Beilagen/Saucen, Sauce vom Leitrezept, Süße-Strafe der Menüfolge je Stufe; `RULES_VERSION` `2026-11-2` | PR #3666 gemergt (14.11.2026, Merge d7145c2); Util-Tests +19 (u. a. Golden G10 bis G15 und Prüfung über alle herzhaften Kombinationen) |
+| 5 | Seite „Weinbegleitung“ unter „Chefkoch & mehr“ (`src/components/WeinbegleitungSeite.js`, Kachel in `Kueche.js`) mit Regeln, Weinstilen, Quellen und dem Admin-Backfill; Callable `backfillWeinprofile` mit Cursor (F20) und Hook `useWeinprofilBackfill.js`; Freigabe-Seiten ohne Veraltet-Hinweis; Zeitlimit für die Callables im Client | PR #3667 offen (Branch `claude/intelligent-shannon-t5cts5`); Function-Tests +12, Komponententests +15, Util-Tests +6 |
 
 Nach jedem PR: Tabelle nachziehen. Berührt ein PR einen Tech-Check-Befund (S29 mit PR 2, F20 mit PR 5),
 das Dashboard aktualisieren (siehe `CLAUDE.md`).
@@ -154,6 +161,14 @@ Umsetzungsnotizen PR 3:
   Hintergrund oder Escape, der Fokus kehrt zum Chip zurück; Scroll-Sperre und Ausblenden wie bei den anderen
   Sheets (`useModalScrollLock`, `useFadeOutClose`).
 - Ladezustand: Glas füllt sich (CSS-Animation), bei „Bewegung reduzieren“ ohne Animation.
+- Nachbesserung 14.11.2026: Ziehzone = Griff plus Titel (`touch-action: none`); ab 90 px oder mit Schwung
+  (ab 30 px, 0,5 px/ms) schließt das Sheet und gleitet von der aktuellen Position nach unten, sonst federt es
+  zurück. Der Griff ist ein Knopf „Schließen“ für Tastatur und Screenreader; das Antippen mit dem Finger
+  löst ihn nicht aus (`preventDefault` im `touchend`). Mobil reagiert der Hintergrund nicht auf Antippen.
+  `RecipeDetail` reicht `{ rot, weiss }` aus `getEffectiveIcon` (Dunkelmodus beachtet) an `WeinDazu`; das
+  Symbol (`WeinSymbol`) und `Gruende` mit `mitQuellen` liegen in `WeinbegleitungTeile.js`. Das Menü
+  (`Weinbegleitung.js`) zeigt weiter Quellen und das eingebaute Glas (siehe Offen). Geprüft in iPhone-13-Emulation
+  über eine Vorschau-Seite (nicht im Repo).
 - Die vier RecipeDetail-Testdateien mocken `userManagement` mit fester Funktionsliste; dort steht jetzt
   `canEditRecipes: () => false`, damit die neue Zeile die bestehenden Tests nicht berührt.
 - Im Browser geprüft über eine Vorschau-Seite nur mit `WeinDazu` (Vite, Callable und Rolle als Platzhalter):
@@ -178,6 +193,26 @@ Umsetzungsnotizen PR 4:
 - `MenuDetail.test.js` mockt `userManagement` und `menuFirestore` mit fester Liste; dort stehen jetzt
   `canEditRecipes: () => false` und `saveMenuWeinbegleitung`.
 
+Umsetzungsnotizen Kalibrierung Süße (14.11.2026):
+- Ursache (nachgestellt mit geschätzten Profilen, nicht mit echten Menüdaten): Herzhafte Gerichte mit etwas
+  Süße (Zwiebeln, Äpfel, Honig) bekommen von Gemini Süße 1 oder 2. R3 zog trockenen Weinen dafür 3 bzw. 6
+  Punkte ab, einem Süßwein bei Süße 1 aber nur 2 und bei Süße 2 gar nichts. Dazu nahm der Gang das Maximum
+  über alle Rezepte, also bestimmte der Apfelrotkohl (Süße 2) oder die Preiselbeeren (Süße 3) die Süße des
+  ganzen Hauptgangs, und Preiselbeeren als `sauce_dip` ersetzten den Wildjus. Ein Süßwein früh im Menü zog
+  über „Süße fällt: −3“ die folgenden Gänge mit.
+- Simulation mit neun typischen Festtagsmenüs (20 herzhafte Gänge, Profile geschätzt, Skript nicht im Repo):
+  vorher 5 Gänge mit Süßwein und 4 mit „Bier oder Wasser“ (u. a. Gans mit Rotkohl, Rehrücken mit
+  Preiselbeeren, Rinderrouladen mit Rotkohl), „Ein Wein für alles“ einmal Süßwein; nachher 0 und 0. Feinherb
+  bleibt dort, wo das Gericht selbst süß ist (Ziegenkäse mit Honig, Ente mit Orangensauce, Bergkäse mit
+  Feigensenf). G1 bis G9 und E1 bis E3 sind unverändert grün; die neuen Golden-Tests G10 bis G14 und die
+  Prüfung über alle herzhaften Kombinationen sind gegen die alte Engine rot.
+- Scores nachher (bester Stil): G10 Gans mit Apfelrotkohl und Klößen `rot_kraeftig` 2,3 („passt“, ohne
+  Alternative); G11 Rehrücken mit Preiselbeeren `rot_kraeftig` 1,9; G12 Ziegenkäse mit Honig
+  `weiss_aromatisch_feinherb` 3,3; G13 Ente mit Orangensauce `weiss_aromatisch_feinherb` 3,1; G15 Birne mit
+  Gorgonzola `suesswein_edel` 3,5. Gans und Reh liegen knapp über `S_MIN` (siehe Offen).
+- Foie gras mit Sauternes geht damit nicht mehr (Gänseleber ist Geflügel, kein Dessert); feinherb bleibt dort
+  die Empfehlung. Bewusst in Kauf genommen.
+
 Umsetzungsnotizen PR 5:
 - Backfill-Aufruf: `backfillWeinprofile({cursor, anzahl})`, Antwort `geprueft`, `neu`, `uebersprungen`,
   `fehlgeschlagen`, `fehlerGruende`, `naechsterCursor` (null, wenn fertig), `fertig`, `tageslimitErreicht`,
@@ -191,6 +226,8 @@ Umsetzungsnotizen PR 5:
 - Freigabe: `getSharedMenuByShareId`, `getSharedRecipesByIds` und `getSharedRecipeByShareId` liefern
   `weinbegleitung` und `weinprofil` mit; ein Function-Test sichert das ab. Gäste lösen weiter keinen KI-Aufruf
   aus (Knöpfe nur mit Rolle ab edit und nie mit `isSharedView`).
+- Die Weinstile auf der Seite nennen die Einschränkung aus der Kalibrierung (`nurZu`, Helfer `nurZuText` in
+  `anzeige.js`): Likörwein „nur zu Dessert und Käse“, edelsüß „nur zu Dessert und Blauschimmelkäse“.
 - Im Browser geprüft über eine Vorschau-Seite mit Kachel und Seite (Vite, Callable und Symbole als
   Platzhalter): Mobil 390 px und Desktop 1280 px, hell und dunkel, Backfill mit Fortschritt, Fertig mit
   Fehlschlag; keine Konsolenfehler, keine waagrechte Scrollleiste. Nicht in der echten App mit Login geprüft.
@@ -202,11 +239,24 @@ Umsetzungsnotizen PR 5:
   sonst Wine Folly) und die Schwellen. Auffällig: G9 empfiehlt im Modus „Ein Wein“ zu Lachstatar und
   Rinderschmorbraten einen mittelkräftigen Rotwein (Label „passt“). Das entspricht der Regel „höchstes
   Minimum“, wirkt aber fachlich gewagt.
-- **Quellen ungeprüft:** Die acht URLs waren aus der Arbeitsumgebung nicht erreichbar. Auch in PR 5 sperrt die
-  Netzwerkregel der Arbeitsumgebung alle sechs Hosts (wsetglobal.com, www.decanter.com, winefolly.com,
-  symphonia-typo3-prod.deutscheweine.de, ichkoche.de, g-wie-gastro.de). Die Seite „Weinbegleitung“ zeigt die
-  Links jetzt allen Angemeldeten: vor dem Merge von PR 5 einmal durchklicken (Eigentümer). `abgerufenAm` bleibt
-  `null`, bis jemand den Inhalt gegen die Regeln geprüft hat; das Datum erscheint dann auf der Seite.
+- **Nach der Kalibrierung prüfen (Eigentümer):** In den echten Menüs „Neu berechnen“ und die Empfehlungen
+  gegenlesen. Die Kalibrierung beruht auf geschätzten Profilen; die echten Gemini-Werte für Süße kennt das
+  Repo nicht. Gans und Reh landen knapp über `S_MIN` – sind die Weine dort zu schwach begründet, wäre der
+  nächste Hebel die Passung (z. B. `rot_leicht` zu Gans) statt weiterer Regeln.
+- **Süße-Skala im Prompt verankern?** Der Prompt sagt nur „0 (nicht vorhanden) bis 3 (stark)“. Eine
+  Verankerung (1 = Spur wie bei Zwiebeln oder Möhren, 2 = deutlich wie bei Glasur oder Fruchtsauce,
+  3 = Dessert) machte die Schätzung stabiler, braucht aber einen Functions-Deploy und eine neue
+  `HASH_KENNUNG`, also eine Neueinschätzung aller Rezepte. Entscheidung beim Eigentümer.
+- **Menü an Rezept-Sheet angleichen?** Quellen weglassen und die Icons `weinRot`/`weinWeiss` auch im Menü
+  nutzen (beides vorbereitet: `Gruende mitQuellen={false}`, `WeinSymbol`). Entscheidung beim Eigentümer.
+- **Quellen ungeprüft und sichtbar:** Im Rezept-Sheet stehen seit 14.11.2026 (#3664) keine Quellen mehr, im Menü
+  noch. PR 5 bringt sie trotzdem auf die Seite „Weinbegleitung“ unter „Chefkoch & mehr“ (Regeln mit Quellen und
+  Quellenliste), wie in der Spezifikation geplant. Ob die Seite und dort die Quellen so gewünscht sind, entscheidet
+  der Eigentümer vor dem Merge von PR 5. Die acht URLs sind aus der Arbeitsumgebung nicht erreichbar: Die
+  Netzwerkregel sperrt alle sechs Hosts (wsetglobal.com, www.decanter.com, winefolly.com,
+  symphonia-typo3-prod.deutscheweine.de, ichkoche.de, g-wie-gastro.de). Vor dem Merge einmal durchklicken.
+  `abgerufenAm` bleibt `null`, bis jemand den Inhalt gegen die Regeln geprüft hat; das Datum erscheint dann auf
+  der Seite.
 - **Tech-Check F20, Rest:** `backfillRecipeThumbnails` liest weiter ohne Cursor (kein Aufrufer in `src/`).
   `backfillWeinprofile` hat den Cursor von Anfang an. Entfernen oder nachrüsten: Entscheidung beim Eigentümer.
 - **Tech-Check S29, Rest:** Beim Anlegen eines Rezepts sind `ratingAvg`, `ratingCount` und `weinprofil` weiter

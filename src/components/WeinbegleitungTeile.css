@@ -46,3 +46,14 @@
   text-underline-offset: 2px;
   white-space: nowrap;
 }
+
+/* Eigene Icons für Rot- und Weißwein (Button-Icons weinRot / weinWeiss) */
+.wein-symbol-bild {
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.wein-symbol-text {
+  flex-shrink: 0;
+  line-height: 1;
+}

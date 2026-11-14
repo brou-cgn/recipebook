@@ -1,5 +1,6 @@
 import React, { useId } from 'react';
 import { getRegel, quellenFuerRegel } from '../utils/weinbegleitung/wissensbasis';
+import { weinfarbe } from '../utils/weinbegleitung/anzeige';
 import './WeinbegleitungTeile.css';
 
 /**
@@ -48,6 +49,26 @@ export function WeinGlas({ farbe = null, groesse = 20, laedt = false }) {
   );
 }
 
+const istBildQuelle = (wert) => /^(data:image\/|https?:\/\/|\/)/.test(wert);
+
+/**
+ * Symbol für einen Stil: das in den Button-Icons hinterlegte Icon für Rot- bzw. Weißwein
+ * (`icons` = `{ rot, weiss }` aus `weinRot`/`weinWeiss`), sonst das Glas in der Weinfarbe.
+ * Rosé hat kein eigenes Icon und bleibt beim Glas. Bilder (data:, http(s), Pfad) als `<img>`,
+ * anderer Text als Zeichen.
+ */
+export function WeinSymbol({ stil, icons = null, groesse = 20 }) {
+  const eigenes = stil?.farbe === 'rot' ? icons?.rot : stil?.farbe === 'weiss' ? icons?.weiss : '';
+  if (eigenes) {
+    return istBildQuelle(eigenes) ? (
+      <img className="wein-symbol-bild" src={eigenes} alt="" width={groesse} height={groesse} />
+    ) : (
+      <span className="wein-symbol-text" style={{ fontSize: groesse * 0.8 }} aria-hidden="true">{eigenes}</span>
+    );
+  }
+  return <WeinGlas farbe={stil ? weinfarbe(stil) : null} groesse={groesse} />;
+}
+
 /** Quellenlinks einer Regel (neuer Tab), durch Komma getrennt. */
 export function Quellen({ regelId }) {
   const quellen = quellenFuerRegel(regelId);
@@ -71,8 +92,11 @@ export function Quellen({ regelId }) {
   );
 }
 
-/** „Warum passt das?“: Kurztexte der Regeln mit ihren Quellen. */
-export function Gruende({ regelIds }) {
+/**
+ * „Warum passt das?“: Kurztexte der Regeln, mit `mitQuellen` samt Quellenlinks
+ * (Rezept-Sheet seit 14.11.2026 ohne Quellen).
+ */
+export function Gruende({ regelIds, mitQuellen = true }) {
   return (
     <ul className="wein-gruende">
       {(regelIds || []).map((regelId) => {
@@ -80,7 +104,8 @@ export function Gruende({ regelIds }) {
         if (!regel) return null;
         return (
           <li key={regelId}>
-            {regel.kurztext} <Quellen regelId={regelId} />
+            {regel.kurztext}
+            {mitQuellen && <> <Quellen regelId={regelId} /></>}
           </li>
         );
       })}

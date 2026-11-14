@@ -62,6 +62,9 @@ describe('WeinbegleitungSeite', () => {
     expect(stile.getAllByRole('listitem')).toHaveLength(alleStile().length);
     expect(stile.getByText('Rotwein, kräftig')).toBeInTheDocument();
     expect(stile.getByText(/Cabernet Sauvignon, Syrah, Malbec/)).toBeInTheDocument();
+    // Kalibrierung der Süße: Süßweine nur zu Dessert und Käse (nurZu in stile.json)
+    expect(stile.getByText('nur zu Dessert und Käse')).toBeInTheDocument();
+    expect(stile.getByText('nur zu Dessert und Blauschimmelkäse')).toBeInTheDocument();
 
     const quellen = within(screen.getByRole('region', { name: 'Die Quellen' }));
     alleQuellen().forEach((quelle) => {

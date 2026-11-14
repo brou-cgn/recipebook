@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { WeinGlas, Gruende } from './WeinbegleitungTeile';
 import { alleStile, alleRegeln, alleQuellen, formatTemperatur } from '../utils/weinbegleitung/wissensbasis';
 import { RULES_VERSION } from '../utils/weinbegleitung/konstanten';
-import { weinfarbe } from '../utils/weinbegleitung/anzeige';
+import { weinfarbe, nurZuText } from '../utils/weinbegleitung/anzeige';
 import useWeinprofilBackfill, { BACKFILL_STATUS } from '../hooks/useWeinprofilBackfill';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
@@ -185,7 +185,7 @@ function WeinbegleitungSeite({ currentUser, onBack }) {
 
       <section className="wein-seite-karte" aria-labelledby="wein-seite-regeln">
         <h3 id="wein-seite-regeln" className="wein-seite-titel">Die Regeln</h3>
-        <p className="wein-seite-text">Diese Gründe stehen unter „Warum passt das?“, jeweils mit ihren Quellen.</p>
+        <p className="wein-seite-text">Diese Gründe stehen unter „Warum passt das?“. Hier stehen sie mit ihren Quellen.</p>
         <Gruende regelIds={alleRegeln().map((regel) => regel.id)} />
       </section>
 
@@ -200,6 +200,7 @@ function WeinbegleitungSeite({ currentUser, onBack }) {
                 <span className="wein-seite-stil-details">
                   {stil.beispiele.join(', ')} · <span className="wein-seite-nowrap">{formatTemperatur(stil)}</span>
                 </span>
+                {nurZuText(stil) && <span className="wein-seite-stil-details">{nurZuText(stil)}</span>}
               </span>
             </li>
           ))}

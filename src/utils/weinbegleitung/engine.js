@@ -18,7 +18,7 @@ import {
   FOLGE_KOERPER_TOLERANZ,
   FOLGE_STRAFE_KOERPER_FAELLT,
   FOLGE_STRAFE_ROT_VOR_HELL,
-  FOLGE_STRAFE_SUESSE_FAELLT,
+  FOLGE_STRAFE_SUESSE_FAELLT_JE_STUFE,
   FOLGE_STRAFE_GLEICHER_STIL,
   FOLGE_FARBREGEL_AUSNAHME_AB_SUESSE,
   MODUS_PRO_GANG,
@@ -31,7 +31,7 @@ import {
   STATUS_ROLLE_OHNE_WEIN,
   STATUS_KEIN_STIL,
 } from './konstanten';
-import { bewerteAlleStile, ermittleGruende, labelFuer, runde } from './bewertung';
+import { bewerteAlleStile, ermittleGruende, istKandidat, labelFuer, runde } from './bewertung';
 import { gaengeAusMenue, GANG_STATUS_OK } from './gang';
 import { normalisiereWeinprofil } from './profilSchema';
 import { alleStile, getStil, stilReihenfolge } from './wissensbasis';
@@ -54,12 +54,12 @@ const stilEintrag = (bewertung, gangProfil) => ({
 
 /**
  * Empfehlung für ein Gang-Profil ohne Menüfolge: bester Stil und bis zu zwei
- * Alternativen mit Score ≥ S_MIN; ohne Kandidat der Hinweis R11.
+ * Alternativen, die infrage kommen und S_MIN erreichen; ohne Kandidat der Hinweis R11.
  * @param {Object} gangProfil
  * @returns {Object} {status, stilId, score, label, regelIds, alternativen} oder {status: keinStil, hinweis, regelIds}
  */
 export function empfehlungFuerGangProfil(gangProfil) {
-  const passende = bewerteAlleStile(gangProfil).filter((bewertung) => bewertung.score >= S_MIN);
+  const passende = bewerteAlleStile(gangProfil).filter(istKandidat);
   if (passende.length === 0) {
     return { status: STATUS_KEIN_STIL, hinweis: HINWEIS_KEIN_STIL, regelIds: [REGEL_KEIN_STIL] };
   }
@@ -108,7 +108,7 @@ export function folgeStrafe(vorher, nachher) {
   if (!farbregelAusgenommen && vorher.farbe === 'rot' && (nachher.farbe === 'weiss' || nachher.farbe === 'rose')) {
     strafe += FOLGE_STRAFE_ROT_VOR_HELL;
   }
-  if (nachher.suesse < vorher.suesse) strafe += FOLGE_STRAFE_SUESSE_FAELLT;
+  if (nachher.suesse < vorher.suesse) strafe += FOLGE_STRAFE_SUESSE_FAELLT_JE_STUFE * (vorher.suesse - nachher.suesse);
   if (vorher.id === nachher.id) strafe += FOLGE_STRAFE_GLEICHER_STIL;
   return strafe;
 }
@@ -236,9 +236,9 @@ const alternativEintraege = (bewertungen, ohneStilId) => bewertungen
   .map((bewertung) => ({ stilId: bewertung.stilId, label: labelFuer(bewertung.score) }));
 
 /**
- * Modus „Pro Gang“: je Gang die besten vier Stile mit Score ≥ S_MIN als Kandidaten,
- * dann die beste Folge (bis MAX_GAENGE_VOLLSTAENDIG Gänge mit Wein alle
- * Kombinationen, darüber greedy von vorn). Fixierte Gänge sind gesetzt.
+ * Modus „Pro Gang“: je Gang die besten vier Kandidaten (istKandidat), dann die beste
+ * Folge (bis MAX_GAENGE_VOLLSTAENDIG Gänge mit Wein alle Kombinationen, darüber
+ * greedy von vorn). Fixierte Gänge sind gesetzt.
  * @param {Array<Object>} gaenge - Ergebnis von gaengeAusMenue
  * @param {{fixierungen?: Array<Object>}} [optionen]
  * @returns {{modus: string, rulesVersion: string, gaenge: Array<Object>, gesamtwert: number, strafen: number}}
@@ -253,7 +253,7 @@ export function berechneProGang(gaenge, { fixierungen = [] } = {}) {
   const vorbereitet = gaenge.map((gang) => {
     if (gang.gang.status !== GANG_STATUS_OK) return { ...gang, art: HINWEIS_OHNE_PROFIL };
     const bewertungen = bewerteAlleStile(gang.gang.profil);
-    const passende = bewertungen.filter((bewertung) => bewertung.score >= S_MIN);
+    const passende = bewertungen.filter(istKandidat);
     const fixierterStilId = findeFixierung(gang, fixierungen, namensHaeufigkeit);
     if (fixierterStilId) {
       const fixiert = bewertungen.find((bewertung) => bewertung.stilId === fixierterStilId);
@@ -311,16 +311,22 @@ export function berechneProGang(gaenge, { fixierungen = [] } = {}) {
 
 /**
  * Rangliste der Stile für mehrere Gänge: höchstes Minimum, bei Gleichstand höhere
- * Summe, dann Reihenfolge der Wissensbasis.
+ * Summe, dann Reihenfolge der Wissensbasis. Stile, die für einen der Gänge nicht
+ * infrage kommen (nurZu), fehlen.
  * @param {Array<{bewertungen: Array<Object>}>} gaenge
  * @returns {Array<{stilId: string, minimum: number, summe: number, scores: Array<number>}>}
  */
 export function gemeinsameRangliste(gaenge) {
   return alleStile()
-    .map((stil) => {
-      const scores = gaenge.map((gang) => gang.bewertungen.find((bewertung) => bewertung.stilId === stil.id).score);
+    .map((stil) => ({
+      stilId: stil.id,
+      bewertungen: gaenge.map((gang) => gang.bewertungen.find((bewertung) => bewertung.stilId === stil.id)),
+    }))
+    .filter(({ bewertungen }) => bewertungen.every((bewertung) => bewertung.infrage))
+    .map(({ stilId, bewertungen }) => {
+      const scores = bewertungen.map((bewertung) => bewertung.score);
       return {
-        stilId: stil.id,
+        stilId,
         minimum: Math.min(...scores),
         summe: runde(scores.reduce((summe, score) => summe + score, 0)),
         scores,
@@ -341,7 +347,7 @@ export function berechneEinWein(gaenge, { gemeinsamerStilId = null } = {}) {
   const vorbereitet = gaenge.map((gang) => {
     if (gang.gang.status !== GANG_STATUS_OK) return { ...gang, art: HINWEIS_OHNE_PROFIL };
     const bewertungen = bewerteAlleStile(gang.gang.profil);
-    const passende = bewertungen.filter((bewertung) => bewertung.score >= S_MIN);
+    const passende = bewertungen.filter(istKandidat);
     if (passende.length === 0) return { ...gang, art: HINWEIS_KEIN_STIL };
     return { ...gang, art: 'wein', bewertungen, passende };
   });
@@ -355,7 +361,7 @@ export function berechneEinWein(gaenge, { gemeinsamerStilId = null } = {}) {
     if (gemeinsamerStilId && getStil(gemeinsamerStilId)) {
       gemeinsam = gemeinsamerStilId;
       fixiert = true;
-    } else if (rangliste[0].minimum >= S_MIN) {
+    } else if (rangliste.length > 0 && rangliste[0].minimum >= S_MIN) {
       gemeinsam = rangliste[0].stilId;
     }
   }
