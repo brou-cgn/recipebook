@@ -36,6 +36,11 @@ import {
   G14_SCHWEINEFILET,
   G14_HONIGMOEHREN,
   G15_BIRNE_GORGONZOLA,
+  G16_MARGHERITA,
+  G16_SALAMI,
+  G16_FUNGHI,
+  G16_HAWAII,
+  G17_DIAVOLA,
 } from './__fixtures__/profile';
 
 // Akzeptanzkriterium 3: jeder empfohlene Stil hat mindestens einen Grund mit Quellenlink.
@@ -206,6 +211,40 @@ describe('Golden-Tests Festtagsgerichte (kein Süßwein zu Herzhaftem)', () => {
       if (ergebnis.status !== STATUS_OK) return;
       alleStilIds(ergebnis).forEach((stilId) => expect(istSuesswein(stilId)).toBe(false));
     })));
+  });
+});
+
+// Pizza-Abend (14.11.2026): Ein Gang aus mehreren Pizzen war vorher ein einziges Profil aus dem
+// Maximum je Komponente. Die Süße der Hawaii und die Intensität der Margherita ergaben zusammen ein
+// Gericht, zu dem kein Wein passte. Die alte Engine zeigte für G16 genau das Bild des Eigentümers:
+// „Hier lieber Bier oder Wasser“, darunter Rot mittelkräftig vor Weiß feinherb, beide „passt bedingt“.
+describe('Golden-Tests Pizza-Abend (Gang mit mehreren Hauptgerichten)', () => {
+  const PIZZEN = [
+    ['margherita', G16_MARGHERITA], ['salami', G16_SALAMI], ['funghi', G16_FUNGHI], ['hawaii', G16_HAWAII],
+  ];
+
+  it('G16 diverse Pizzen: mittelkräftiger Rotwein, nicht „Bier oder Wasser“', () => {
+    const { menu, rezepte } = ganzerGang('Hauptspeise', PIZZEN);
+    const [hauptspeise] = berechneWeinbegleitung({ menu, rezepte }).gaenge;
+    expect(hauptspeise.hinweis).toBeNull();
+    expect(hauptspeise.stilId).toBe('rot_mittel');
+    expect(hauptspeise.score).toBeGreaterThanOrEqual(S_MIN);
+    erwarteGruendeMitQuelle(hauptspeise.regelIds);
+    hauptspeise.optionen.forEach((option) => expect(istSuesswein(option.stilId)).toBe(false));
+  });
+
+  it('G16 jede Pizza außer der Hawaii bekommt für sich denselben Stil', () => {
+    PIZZEN.filter(([id]) => id !== 'hawaii').forEach(([, profil]) => {
+      expect(empfehlungFuerWeinprofil(profil).stilId).toBe('rot_mittel');
+    });
+  });
+
+  it('G17 eine scharfe Pizza unter vier kippt den Gang nicht', () => {
+    const { menu, rezepte } = ganzerGang('Hauptspeise', [
+      ['margherita', G16_MARGHERITA], ['salami', G16_SALAMI], ['diavola', G17_DIAVOLA], ['funghi', G16_FUNGHI],
+    ]);
+    expect(berechneWeinbegleitung({ menu, rezepte }).gaenge[0].stilId).toBe('rot_mittel');
+    expect(berechneWeinbegleitung({ menu, rezepte, modus: MODUS_EIN_WEIN }).gemeinsamerStilId).toBe('rot_mittel');
   });
 });
 

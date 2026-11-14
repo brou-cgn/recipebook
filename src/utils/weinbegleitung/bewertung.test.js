@@ -2,6 +2,7 @@ import {
   regelTerme,
   bewerteStil,
   bewerteAlleStile,
+  bewerteAuswahl,
   gangTags,
   passungsStufe,
   labelFuer,
@@ -232,6 +233,68 @@ describe('Gründe', () => {
   it('fällt bei passender Farbe auf R8 zurück', () => {
     expect(ermittleGruende(stil({ farbe: 'rot', koerper: 5 }), gang({ hauptkomponente: 'wild', intensitaet: 1 })))
       .toEqual(['R8']);
+  });
+});
+
+describe('bewerteAuswahl (Gang mit mehreren gleichrangigen Rezepten)', () => {
+  const nachId = (bewertungen) => new Map(bewertungen.map((bewertung) => [bewertung.stilId, bewertung]));
+  const zart = gang({ intensitaet: 2, hauptkomponente: 'fisch_mager', sauce: 'zitrus_essig' }, { saeure: 2 });
+  const mittel = gang({ intensitaet: 3, sauce: 'tomate' }, { saeure: 2, salz: 2, fett: 2 });
+  const scharf = gang({ intensitaet: 5, hauptkomponente: 'wurst_schinken' }, { schaerfe: 3, salz: 3, fett: 3 });
+
+  it('liefert mit einem Profil dieselbe Rangliste wie bewerteAlleStile, ergänzt um das Profil', () => {
+    const einzeln = bewerteAlleStile(mittel);
+    const auswahl = bewerteAuswahl([mittel]);
+    expect(auswahl.map((b) => [b.stilId, b.score, b.infrage])).toEqual(einzeln.map((b) => [b.stilId, b.score, b.infrage]));
+    auswahl.forEach((bewertung) => {
+      expect(bewertung.profil).toBe(mittel);
+      expect(bewertung.scores).toEqual([bewertung.score]);
+    });
+  });
+
+  it('nimmt je Stil den Median der Scores, eine Ausreißer-Pizza zählt nicht voll', () => {
+    const auswahl = nachId(bewerteAuswahl([zart, mittel, scharf]));
+    const einzeln = [zart, mittel, scharf].map((profil) => nachId(bewerteAlleStile(profil)));
+    auswahl.forEach((bewertung, stilId) => {
+      const scores = einzeln.map((liste) => liste.get(stilId).score);
+      expect(bewertung.scores).toEqual(scores);
+      expect(bewertung.score).toBe([...scores].sort((a, b) => a - b)[1]);
+    });
+  });
+
+  it('nimmt bei gerader Anzahl den Mittelwert der beiden mittleren Scores', () => {
+    const auswahl = nachId(bewerteAuswahl([zart, scharf]));
+    const [a, b] = [zart, scharf].map((profil) => nachId(bewerteAlleStile(profil)).get('rot_mittel').score);
+    expect(auswahl.get('rot_mittel').score).toBeCloseTo((a + b) / 2, 2);
+    // gleich weit vom Median entfernt: die Gründe kommen vom ersten Rezept
+    expect(auswahl.get('rot_mittel').profil).toBe(zart);
+  });
+
+  it('nimmt Gründe und Felder vom Rezept, dessen Score dem Median am nächsten liegt', () => {
+    const auswahl = nachId(bewerteAuswahl([scharf, mittel, zart]));
+    const rot = auswahl.get('rot_mittel');
+    const vertreter = [scharf, mittel, zart].find((profil) => bewerteStil(getStil('rot_mittel'), profil).score === rot.score);
+    expect(rot.profil).toBe(vertreter);
+    expect(rot.terme).toEqual(bewerteStil(getStil('rot_mittel'), vertreter).terme);
+  });
+
+  it('lässt einen Süßwein nur zu, wenn er für jedes Rezept infrage kommt', () => {
+    const dessert = gang({ rolle: 'dessert', hauptkomponente: 'dessert_creme' }, { suesse: 3 });
+    const kaese = gang({ rolle: 'dessert', hauptkomponente: 'kaese_hart' }, { salz: 2 });
+    const auswahl = nachId(bewerteAuswahl([dessert, gang({ rolle: 'vorspeise' })]));
+    expect(auswahl.get('suesswein_edel').infrage).toBe(false);
+    expect(nachId(bewerteAuswahl([dessert, kaese])).get('likoerwein').infrage).toBe(true);
+  });
+
+  it('sortiert absteigend nach dem Median, bei Gleichstand nach der Wissensbasis', () => {
+    const auswahl = bewerteAuswahl([zart, mittel, scharf]);
+    for (let i = 1; i < auswahl.length; i += 1) {
+      const [vorher, nachher] = [auswahl[i - 1], auswahl[i]];
+      expect(vorher.score).toBeGreaterThanOrEqual(nachher.score);
+      if (vorher.score === nachher.score) {
+        expect(stilReihenfolge(vorher.stilId)).toBeLessThan(stilReihenfolge(nachher.stilId));
+      }
+    }
   });
 });
 

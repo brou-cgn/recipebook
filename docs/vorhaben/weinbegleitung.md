@@ -1,7 +1,7 @@
 # Vorhaben: Weinbegleitung (Menüs und Einzelrezepte)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 14.11.2026 (PR 1 bis 6, die Nachbesserungen am Rezept-Sheet und die Kalibrierung der Süße gemergt und deployt; PR 7, „Ein Wein für alles“ mit je einer Weiß- und Rotwein-Option im Kopf, in Arbeit).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 14.11.2026 (PR 1 bis 6, die Nachbesserungen am Rezept-Sheet und die Kalibrierung der Süße gemergt und deployt; PR 7, „Ein Wein für alles“ mit je einer Weiß- und Rotwein-Option im Kopf, gemergt; Kalibrierung „Auswahl“ für Gänge mit mehreren gleichrangigen Rezepten, z. B. diverse Pizzen, in Arbeit).
 
 **Ziel:** Zu einem Menü (Festtafel) schlägt die App pro Gang einen passenden Weinstil vor, mit bis zu
 zwei Alternativen, einer kurzen Begründung und einem Quellenlink. Dazu gibt es den Modus „Ein Wein für
@@ -24,6 +24,7 @@ Menüansicht, dazu die Zustände). Keine Mockups im Repo.
 | Rollen ohne Wein | `ROLLEN_OHNE_WEIN` = getraenk, sauce_dip, beilage, gebaeck_kuchen (Einzelrezept: keine Karte). Im Menü zählen nur Getränke nicht mit. |
 | Engine-Startwerte | Wie in der Spezifikation unten. Die Golden-Tests G1 bis G9 und E1 bis E3 sind mit den Startwerten grün, eine Kalibrierung war nicht nötig (Scores in den Umsetzungsnotizen zu PR 1). |
 | Kalibrierung Süße (14.11.2026, Eigentümer: „es wird immer Süßwein vorgeschlagen“) | `RULES_VERSION` `2026-11-2`. (1) Süßweine (`suesswein_edel`, `likoerwein`) kommen nur zu Dessert und Käse infrage: Feld `nurZu` in `stile.json` (Rolle `dessert`, Hauptkomponente `dessert_*`, `kaese_blau`, beim Likörwein zusätzlich `kaese_hart`), unabhängig vom Score. (2) R3 bei zu wenig Süße im Wein: Strafe 1, 3, 6 je Abstand 1, 2, 3 statt 3 je Stufe. (3) Gang-Profil: Beilagen und Saucen (`beilage`, `sauce_dip`) heben Intensität und Komponenten höchstens um eine Stufe über die tragenden Rezepte; das Leitrezept kommt aus den tragenden. (4) Sauce: die des Leitrezepts; nur wenn es keine hat, die eines Rezepts mit Rolle `sauce_dip` (Abweichung von der Spezifikation: Preiselbeeren ersetzten den Wildjus). (5) Menüfolge: Süße fällt kostet 1 je Stufe statt pauschal 3. Golden-Tests G10 bis G15 halten das fest. Gespeicherte Menü-Weinbegleitungen gelten danach als veraltet; „Neu berechnen“ kostet keinen KI-Aufruf, weil die Profile gültig bleiben. |
+| Kalibrierung Auswahl (14.11.2026, Eigentümer: „Als Hauptgang gibt es diverse Pizzen. Die Weinauswahl verstehe ich nicht“) | `RULES_VERSION` `2026-11-5`, Wissensbasis und Konstanten unverändert. Angezeigt wurde „Hier lieber Bier oder Wasser“ mit Rot mittelkräftig und Weiß feinherb, beide „passt bedingt“. Ursache: Der Gang war ein einziges Profil aus dem Maximum je Komponente über alle tragenden Rezepte; die süßeste Pizza (Süße 2, R3 −3 für jeden trockenen Wein) und die kräftigste ergaben zusammen ein Gericht, das es nicht gibt, mit der Margherita als Leitrezept (Mozzarella, für Rotwein neutral). Neu (Vorschlag, siehe Offen): Tragende Rezepte mit der Rolle des Leitrezepts bilden die Auswahl des Gangs; jedes bekommt ein eigenes Profil (Hauptkomponente, Zubereitung, Sauce vom Rezept selbst; übrige tragende Rezepte anderer Rolle wie ein Salat zählen weiter voll, Beilagen und Saucen heben um höchstens eine Stufe). Score je Stil = Median über die Auswahl, infrage nur, wenn für jedes Rezept; Gründe vom Rezept, dessen Score dem Median am nächsten liegt. Bei einem tragenden Rezept ändert sich nichts. Golden-Tests G16 und G17. |
 | R8 als Grund | Abweichung von der Spezifikation: R8 erscheint nur, wenn die Farbe zur Aussage der Regel passt (rot zu `rind_lamm`/`wild`; weiß zu Fisch, Meeresfrüchten, Geflügel, Schwein/Kalb). Sonst stünde „Zu kräftigem Fleisch passt eher Rotwein …“ unter einem Süßwein zum Dessert. |
 | Gründe | Bedingungen ohne eigenen Punktbeitrag (R1, R2, R3, R5, R9, R10) haben ein festes Gewicht (Konstanten `GRUND_GEWICHT_*`). R10 erscheint im Menü, wenn sich die Folge gegenüber dem vorherigen Gang mit Wein ohne Strafe steigert. |
 | „Ein Wein“ ohne gemeinsamen Stil | Ergänzung: Erreicht kein Stil `S_MIN` in allen Nicht-Dessert-Gängen, bekommen sie den Hinweis `keinGemeinsamerStil`, statt einen schlechten Stil zu erzwingen. Gänge, zu denen gar kein Stil passt (R11), bleiben aus der gemeinsamen Wahl heraus. |
@@ -56,9 +57,13 @@ Parallelität begrenzt. Rückgabe: Profile je `recipeId`, Listen der übersprung
 
 **Engine:** Gang = Sektion in Menü-Reihenfolge mit mindestens einem Rezept, ohne „Drinks“, Getränke zählen
 nicht. Tragend sind alle Rezepte außer Beilagen und Saucen (gibt es keins, tragen alle). Leitrezept =
-Hauptgericht, sonst das tragende mit der höchsten Intensität; Hauptkomponente, Zubereitung und Sauce vom
-Leitrezept, hat es keine Sauce, die eines Rezepts mit Rolle `sauce_dip`; Intensität und Komponenten als
-Maximum der tragenden Rezepte, Beilagen und Saucen heben sie um höchstens eine Stufe (seit 14.11.2026).
+Hauptgericht, sonst das tragende mit der höchsten Intensität. Tragende Rezepte mit der Rolle des
+Leitrezepts bilden die Auswahl (meist nur das Leitrezept, bei „diverse Pizzen“ alle); jedes bekommt ein
+eigenes Profil: Hauptkomponente, Zubereitung und Sauce vom Rezept, hat es keine Sauce, die eines Rezepts
+mit Rolle `sauce_dip`; Intensität und Komponenten als Maximum aus dem Rezept und den übrigen tragenden
+Rezepten, Beilagen und Saucen heben sie um höchstens eine Stufe (seit 14.11.2026). Der Score des Gangs je
+Stil ist der Median über die Auswahl, die Gründe kommen vom Rezept, dessen Score dem Median am nächsten
+liegt (seit 14.11.2026, vorher ein Profil aus dem Maximum aller tragenden Rezepte).
 Score je Stil: Passung der Tags (stark +3, gut +2, sonst +1, meiden −3; Gewicht sc 1,0 nur mit Sauce, hk 0,8
 mit Sauce sonst 1,0, zb 0,5) plus R1 bis R6 und R9 (Werte in `konstanten.js`). Labels ab `S_TOP` 5,5
 „passt hervorragend“, ab `S_GUT` 3,5 „passt gut“, sonst „passt“; Kandidaten ab `S_MIN` 1,5 und nur Stile, die
@@ -107,7 +112,8 @@ Snapshot oder Fixieren beim Einzelrezept.
 | K | Kalibrierung der Süße (siehe „Entschieden“): `nurZu` in `stile.json`, `kommtInfrage`/`istKandidat` in `bewertung.js`, R3 gestuft, Gang-Profil mit tragenden Rezepten und gedämpften Beilagen/Saucen, Sauce vom Leitrezept, Süße-Strafe der Menüfolge je Stufe; `RULES_VERSION` `2026-11-2` | PR #3666 gemergt und deployt (14.11.2026, Merge d7145c2, v2.73.2, Deploy-Lauf 2040); Util-Tests +19 (u. a. Golden G10 bis G15 und Prüfung über alle herzhaften Kombinationen) |
 | 5 | Seite „Weinbegleitung“ unter „Chefkoch & mehr“ (`src/components/WeinbegleitungSeite.js`, Kachel in `Kueche.js`) mit Regeln, Weinstilen, Quellen und dem Admin-Backfill; Callable `backfillWeinprofile` mit Cursor (F20) und Hook `useWeinprofilBackfill.js`; Freigabe-Seiten ohne Veraltet-Hinweis; Zeitlimit für die Callables im Client | PR #3667 gemergt und deployt (14.11.2026, Merge d2817c3, v2.74.0, Deploy-Lauf 2041: Function `backfillWeinprofile` angelegt); Function-Tests +12, Komponententests +15, Util-Tests +6 |
 | 6 | Menü: je Gang offen die Empfehlung und je eine Rot- und Weißwein-Option mit drei Rebsorten, Gründe ohne Quellen (Wunsch des Eigentümers, siehe „Menü-Optionen“): `farbOptionen` und `labelFuerOption` in `engine.js`, Snapshot-Feld `optionen` in `menue.js`, `WeinbegleitungGang` in `Weinbegleitung.js`; dritte Rebsorte für vier Stile, `RULES_VERSION` `2026-11-3` | PR #3669 gemergt und deployt (14.11.2026, Merge 2542b8c, v2.75.0, Deploy-Lauf 2043) |
-| 7 | Menü, Modus „Ein Wein für alles“: je eine Weiß- und eine Rotwein-Option im Kopf statt Weinzeilen je Gang, mit „Am besten zu“ (Wunsch des Eigentümers, siehe „Ein Wein im Kopf“): `waehleEinWeinStil` und `einWeinOptionen` in `engine.js` (`farbOptionen` ohne Parameter `reihenfolge`), Snapshot-Feld `einWeinOptionen` und `zeigtEinWeinImKopf` in `menue.js`, `EinWeinKopf` in `Weinbegleitung.js`, Festlegen ohne Gang im Hook, ein Satz auf der Seite „Weinbegleitung“; `RULES_VERSION` `2026-11-4` | in Arbeit (Branch `claude/inspiring-cray-hv8dsi`); Util-Tests +9, Komponententests +4 |
+| 7 | Menü, Modus „Ein Wein für alles“: je eine Weiß- und eine Rotwein-Option im Kopf statt Weinzeilen je Gang, mit „Am besten zu“ (Wunsch des Eigentümers, siehe „Ein Wein im Kopf“): `waehleEinWeinStil` und `einWeinOptionen` in `engine.js` (`farbOptionen` ohne Parameter `reihenfolge`), Snapshot-Feld `einWeinOptionen` und `zeigtEinWeinImKopf` in `menue.js`, `EinWeinKopf` in `Weinbegleitung.js`, Festlegen ohne Gang im Hook, ein Satz auf der Seite „Weinbegleitung“; `RULES_VERSION` `2026-11-4` | PR #3671 gemergt (14.11.2026, Merge 784e56a), Nachbesserung Kopf ohne getönte Fläche #3672 (Merge da11b6b); Util-Tests +9, Komponententests +4 |
+| K2 | Kalibrierung Auswahl (siehe „Entschieden“): `bildeGangProfil` liefert je Rezept der Auswahl ein Profil (`auswahl`), `bewerteAuswahl` in `bewertung.js` (Median, infrage für alle, Gründe vom Rezept am Median), `bewerteGang` in `engine.js` für „Pro Gang“, „Ein Wein“ und die Optionen; `RULES_VERSION` `2026-11-5` | in Arbeit (Branch `claude/blissful-pascal-l8x36e`); Util-Tests +15 (u. a. Golden G16 und G17, gegen die alte Engine rot) |
 
 Nach jedem PR: Tabelle nachziehen. Berührt ein PR einen Tech-Check-Befund (S29 mit PR 2, F20 mit PR 5),
 das Dashboard aktualisieren (siehe `CLAUDE.md`).
@@ -224,6 +230,41 @@ Umsetzungsnotizen Kalibrierung Süße (14.11.2026):
 - Foie gras mit Sauternes geht damit nicht mehr (Gänseleber ist Geflügel, kein Dessert); feinherb bleibt dort
   die Empfehlung. Bewusst in Kauf genommen.
 
+Umsetzungsnotizen Kalibrierung Auswahl (14.11.2026):
+- Eingegrenzt über die Anzeige (die echten Gemini-Werte des Menüs kennt das Repo nicht): Die Optionen
+  stehen nach Score sortiert, im Screenshot Rot vor Weiß. Eine Suche über 700.000 Pizza-ähnliche
+  Gang-Profile findet 2.728 mit genau diesem Bild (R11, `rot_mittel` vor `weiss_aromatisch_feinherb`,
+  beide „passt bedingt“). Alle haben Tomatensauce, Schärfe und Bitter höchstens 1, 95 % Süße 2, fast
+  alle Intensität 4 oder 5. Auslöser ist also eine süße Pizza (Hawaii, Honig, Feigen, karamellisierte
+  Zwiebeln) im Maximum, nicht Schärfe.
+- Nachgestellt in G16 mit geschätzten Profilen: Margherita (Intensität 4, Leitrezept), Salami, Funghi,
+  Hawaii (Süße 2). Die alte Engine zeigt genau das Bild vom 14.11.2026; Max-Profil Mozzarella, Tomate,
+  Intensität 4, Süße 2, Salz 3, Fett 3: `rot_mittel` 1,3 (ohne R3 wären es 4,3), feinherb 0,3. Für sich
+  bekommen Margherita, Salami und Funghi `rot_mittel` mit „passt“ bis „passt gut“ (3,3 bis 4,9), die Hawaii
+  feinherb; neu hat der Gang `rot_mittel` 3,8 („passt gut“).
+- Zweiter Fall derselben Ursache (G17): Eine scharfe Pizza unter vier machte den Gang mit der alten Engine zu
+  „Weißwein, aromatisch und feinherb“ (R4 kostet `rot_mittel` 5 Punkte); neu bleibt er bei `rot_mittel`.
+- Grenze: Stuft Gemini fast jede Pizza mit Süße 2 und Intensität 4 ein, hilft der Median wenig (Margherita
+  allein dann 1,3). In der Simulation mit vier Pizzen, alle Süße 2, kommt der Gang neu noch auf 2,1
+  („passt“). Prüfen lässt sich das am Chip „Wein: …“ der einzelnen Pizza (siehe Offen).
+- Median statt Mittelwert: Beim Mittelwert hängt der Gang an einer Ausreißer-Pizza. In einer Simulation
+  mit einer Diavola (Schärfe 2, Chilisauce) unter vier kippte er knapp zu feinherb (2,95 gegen 2,85), weil
+  R4 `rot_mittel` bei dieser einen Pizza 7 Punkte unter die anderen drückt; der Median bleibt bei
+  `rot_mittel`. Minimum (wie „Ein Wein für alles“) hieße: Der Wein muss auch zur süßesten oder schärfsten
+  Pizza passen, also wieder „Bier oder Wasser“.
+- Auswahl nur aus Rezepten mit der Rolle des Leitrezepts: Ein Salat neben dem Braten (Rolle `salat`) zählt
+  weiter voll ins Profil des Bratens, statt als gleichrangiges Gericht den Median zu ziehen. Der Test
+  „nimmt das Hauptgericht als Leitrezept …“ bleibt damit unverändert.
+- Andere Gänge mit mehreren gleichrangigen Rezepten ändern sich mit (Simulation, Profile geschätzt):
+  Grillabend (Steak, Bratwurst, Hähnchen) `rot_mittel` „passt“ statt `rot_kraeftig` „passt gut“;
+  Lachstatar und Bruschetta als zwei Vorspeisen `rose_trocken` „passt gut“ statt `weiss_leicht_frisch`
+  „passt hervorragend“ (Weiß bleibt Option mit „passt gut“); zwei Pizzen, eine davon sehr scharf, bleiben
+  bei feinherb (bei zweien ist der Median der Mittelwert).
+- In Kauf genommen: Stuft Gemini eine Beilage als `hauptgericht` ein (z. B. ein Gratin mit Speisekategorie
+  Hauptgericht), zählt sie im Median so viel wie das Hauptgericht.
+- Gespeicherte Menü-Weinbegleitungen gelten mit `2026-11-5` als veraltet; „Neu berechnen“ kostet keinen
+  KI-Aufruf. Die Einzelrezept-Ansicht ändert sich nicht.
+
 Umsetzungsnotizen PR 5:
 - Backfill-Aufruf: `backfillWeinprofile({cursor, anzahl})`, Antwort `geprueft`, `neu`, `uebersprungen`,
   `fehlgeschlagen`, `fehlerGruende`, `naechsterCursor` (null, wenn fertig), `fertig`, `tageslimitErreicht`,
@@ -268,6 +309,23 @@ Umsetzungsnotizen PR 7:
   Login geprüft.
 
 ## Offen
+
+- **Kalibrierung Auswahl bestätigen (Eigentümer):** (a) Median über die Rezepte der Auswahl (Alternative:
+  Mittelwert, siehe Umsetzungsnotizen). (b) Zur Auswahl gehören nur tragende Rezepte mit der Rolle des
+  Leitrezepts. (c) Im echten Pizza-Menü „Neu berechnen“ und gegenlesen; ist es dann immer noch „Bier oder
+  Wasser“, liegt es an den Profilen der einzelnen Pizzen (Rezeptseite: Chip „Wein: …“ je Pizza). Dann
+  ist der Hebel die Süße: R3 oder die Süße-Skala im Prompt (eigener Punkt unten).
+- **Weißwein zu Pizza (Eigentümer):** Die Weiß-Option bleibt „aromatisch und feinherb“ (Riesling feinherb,
+  Gewürztraminer, Bacchus). Grund: R3 zieht trockenen Weinen schon für Süße 1 (Tomatensauce) einen Punkt ab,
+  und kein trockener Weißwein hat `sc:tomate` in der Passung. Hebel: `sc:tomate` als „gut“ bei
+  `weiss_leicht_frisch` oder R3-Strafe für Abstand 1 auf 0 (fachlich: „Eine Spur Süße verträgt ein trockener
+  Wein“, so steht es schon in `konstanten.js`). Beides ändert viele Gerichte und braucht neue Golden-Werte.
+- **Rebsorten passend zur Küche?** Zu Pizza zeigt die App „Lemberger, Dornfelder, Merlot“; Chianti steht
+  bei `rot_mittel` erst an vierter Stelle. Idee: Beispiele nach Kulinarik der Rezepte ordnen (Italienische
+  Küche → Chianti zuerst). Braucht die Kulinarik im Snapshot oder beim Anzeigen. Entscheidung beim Eigentümer.
+- **R4 (Schärfe) gestuft?** Ab Schärfe 2 kostet ein mittelkräftiger Rotwein pauschal 5 Punkte, bei Schärfe 2
+  wie bei 3. Eine Pizza mit scharfer Salami allein bekommt deshalb feinherb statt eines fruchtigen Rotweins.
+  Hebel: Strafe für Schärfe 2 halbieren. Entscheidung beim Eigentümer.
 
 - **„Ein Wein im Kopf“ bestätigen (Eigentümer):** (a) Vorrang: „passt zu allen Gängen“ vor „ideal zu einem
   Gang“ (Begründung und Zahlen in den Umsetzungsnotizen zu PR 7). Umgekehrt wäre es eine Zeile in

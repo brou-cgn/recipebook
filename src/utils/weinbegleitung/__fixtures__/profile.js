@@ -127,6 +127,29 @@ export const G15_BIRNE_GORGONZOLA = weinprofil({
   intensitaet: 4, suesse: 2, salz: 2, fett: 2,
 });
 
+// Pizza-Abend: mehrere Pizzen als Hauptgerichte in einem Gang (Eigentümer, 14.11.2026: „Als
+// Hauptgang gibt es diverse Pizzen. Die Weinauswahl verstehe ich nicht“, angezeigt wurde „Hier
+// lieber Bier oder Wasser“ mit Rot mittelkräftig und Weiß feinherb, beide „passt bedingt“).
+// Die Werte sind geschätzt, wie Gemini Pizzen einstuft; die echten Profile kennt das Repo nicht.
+const pizza = (hauptkomponente, sauce, intensitaet, komponenten) => weinprofil({
+  rolle: 'hauptgericht', hauptkomponente, zubereitung: 'gebacken', sauce, intensitaet, ...komponenten,
+});
+
+// Die Margherita steht vorn und ist mit Intensität 4 das Leitrezept: Mozzarella ist für Rotwein
+// neutral. Die Süße 2 bringt die Hawaii mit.
+export const G16_MARGHERITA = pizza('kaese_frisch', 'tomate', 4, { saeure: 2, suesse: 1, salz: 2, fett: 2, umami: 2 });
+export const G16_SALAMI = pizza('wurst_schinken', 'tomate', 4, {
+  saeure: 2, suesse: 1, salz: 3, fett: 3, schaerfe: 1, umami: 2,
+});
+export const G16_FUNGHI = pizza('pilze', 'tomate', 3, { saeure: 2, suesse: 1, salz: 2, fett: 2, umami: 3 });
+export const G16_HAWAII = pizza('wurst_schinken', 'suess_fruchtig', 3, {
+  saeure: 2, suesse: 2, salz: 2, fett: 2, umami: 1,
+});
+// Für G17: eine scharfe Pizza unter vier
+export const G17_DIAVOLA = pizza('wurst_schinken', 'tomate', 5, {
+  saeure: 2, suesse: 1, salz: 3, fett: 3, schaerfe: 3, umami: 2,
+});
+
 /**
  * Menü G1 → G5 → G6 (Vorspeise, Hauptgang, Dessert) mit leerer Drinks-Sektion.
  * @returns {{menu: Object, rezepte: Array<Object>}}
