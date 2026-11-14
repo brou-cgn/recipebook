@@ -53,14 +53,14 @@ export const quellenFuerRegel = (regelId) => {
 };
 
 /**
- * Trinktemperatur zur Anzeige, z. B. „16–18 °C“.
+ * Trinktemperatur zur Anzeige, z. B. „16–18 °C“ (geschütztes Leerzeichen vor °C).
  * @param {Object} stil
  * @returns {string}
  */
 export const formatTemperatur = (stil) => {
   const temperatur = stil?.temperatur;
   if (!temperatur) return '';
-  return `${temperatur.min}–${temperatur.max} °C`;
+  return `${temperatur.min}–${temperatur.max}\u00a0°C`;
 };
 
 /**

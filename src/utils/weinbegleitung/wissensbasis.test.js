@@ -143,7 +143,7 @@ describe('Stile', () => {
 
 describe('Anzeige-Helfer', () => {
   it('formatiert die Trinktemperatur', () => {
-    expect(formatTemperatur(getStil('rot_kraeftig'))).toBe('16–18 °C');
+    expect(formatTemperatur(getStil('rot_kraeftig'))).toBe('16–18\u00a0°C');
     expect(formatTemperatur(null)).toBe('');
   });
 

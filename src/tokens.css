@@ -59,6 +59,12 @@
   --color-timer-border: #c89c6e;
   --color-timer-text: #402c1c;
   --color-timer-done: #2e7d32;
+  /* Weinbegleitung: Füllung des Glases je Weinfarbe (WeinDazu). Reine Deko neben dem Stilnamen,
+     die Farbe trägt keine Information allein. */
+  --color-wein-weiss: #e3cf86;
+  --color-wein-rose: #e8a0a8;
+  --color-wein-rot: #7a1f2b;
+  --color-wein-suess: #c9852e;
 }
 
 [data-theme="dark"] {
@@ -114,4 +120,8 @@
   --color-timer-border: #7a5c3a;
   --color-timer-text: #c08060;
   --color-timer-done: #4caf50;
+  --color-wein-weiss: #e8d590;
+  --color-wein-rose: #f0aab3;
+  --color-wein-rot: #c0485a;
+  --color-wein-suess: #d89a45;
 }
