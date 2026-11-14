@@ -182,6 +182,11 @@ function WeinbegleitungSeite({ currentUser, onBack }) {
           Empfohlen werden Weinstile mit Rebsorten als Beispiel, nie Flaschen, Erzeuger, Jahrgänge oder
           Preise.
         </p>
+        <p className="wein-seite-text">
+          Die Kulinarik der Rezepte bestimmt die Beispiele: Zur italienischen Küche stehen Rebsorten und
+          Weine aus Italien vorn, etwa Chianti oder Barbera statt Lemberger. Den Weinstil selbst wählt die
+          App weiter nach dem Gericht.
+        </p>
         <p className="wein-seite-klein">Stand der Regeln: {RULES_VERSION}</p>
       </section>
 

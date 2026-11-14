@@ -85,6 +85,20 @@ describe('WeinDazu ohne Profil', () => {
 });
 
 describe('WeinDazu mit Profil', () => {
+  it('wählt die Rebsorten nach der Kulinarik, den Stil nach dem Gericht', () => {
+    zeige({ recipe: mitProfil(G5_RINDERSCHMORBRATEN, { kulinarik: ['Vegetarisch', 'Italienische Küche'] }) });
+    fireEvent.click(screen.getByRole('button', { name: 'Wein: Rotwein, kräftig' }));
+    expect(beispielzeile(sheet())).toHaveTextContent('z. B. Barolo, Brunello di Montalcino · 16–18 °C');
+    expect(within(sheet()).getByText('Beispiele passend zur italienischen Küche')).toBeInTheDocument();
+  });
+
+  it('bleibt ohne Weinregion bei den allgemeinen Beispielen, ohne Hinweis', () => {
+    zeige({ recipe: mitProfil(G5_RINDERSCHMORBRATEN, { kulinarik: ['Indische Küche'] }) });
+    fireEvent.click(screen.getByRole('button', { name: 'Wein: Rotwein, kräftig' }));
+    expect(beispielzeile(sheet())).toHaveTextContent('z. B. Cabernet Sauvignon, Syrah · 16–18 °C');
+    expect(within(sheet()).queryByText(/Beispiele passend zur/)).not.toBeInTheDocument();
+  });
+
   it('zeigt Getränken, Saucen, Beilagen und Gebäck keine Karte', () => {
     ['getraenk', 'sauce_dip', 'beilage', 'gebaeck_kuchen'].forEach((rolle) => {
       const profil = weinprofil({ rolle, hauptkomponente: 'gemuese', zubereitung: 'kalt', sauce: 'keine', intensitaet: 2 });
@@ -109,7 +123,9 @@ describe('WeinDazu mit Profil', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Wein: Rotwein, kräftig' }));
 
     const dialog = sheet();
-    expect(beispielzeile(dialog)).toHaveTextContent('z. B. Cabernet Sauvignon, Syrah · 16–18 °C');
+    // Deutsche Küche: regionale Rebsorte zuerst, aufgefüllt mit den allgemeinen
+    expect(beispielzeile(dialog)).toHaveTextContent('z. B. Lemberger aus dem Barrique, Cabernet Sauvignon · 16–18 °C');
+    expect(within(dialog).getByText('Beispiele passend zur deutschen Küche')).toBeInTheDocument();
     expect(within(dialog).getByText('passt hervorragend')).toBeInTheDocument();
     expect(within(dialog).getByText('Körper').nextSibling).toHaveTextContent('sehr kräftig');
     expect(within(dialog).getByText('Gerbstoff').nextSibling).toHaveTextContent('kräftig');

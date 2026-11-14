@@ -3,7 +3,8 @@ import { WeinGlas, WeinSymbol, Gruende, sichereId } from './WeinbegleitungTeile'
 import { canEditRecipes } from '../utils/userManagement';
 import { empfehlungFuerWeinprofil } from '../utils/weinbegleitung/engine';
 import { STATUS_OK, STATUS_KEIN_STIL, STATUS_OHNE_PROFIL } from '../utils/weinbegleitung/konstanten';
-import { getStil, formatTemperatur, beispieleKurz } from '../utils/weinbegleitung/wissensbasis';
+import { getStil, formatTemperatur } from '../utils/weinbegleitung/wissensbasis';
+import { beispieleFuerRegion, regionFuerRezept } from '../utils/weinbegleitung/kulinarik';
 import { istWeinprofilAktuell } from '../utils/weinbegleitung/profilHash';
 import { kennwerteFuer, weinprofilFehlertext, neueresProfil, TEXT_KEIN_STIL } from '../utils/weinbegleitung/anzeige';
 import { generiereWeinprofile } from '../utils/weinbegleitung/weinprofilCallable';
@@ -23,12 +24,13 @@ import './WeinDazu.css';
  *
  * `icons`: `{ rot, weiss }` aus den Button-Icons (`weinRot`, `weinWeiss`), leer = eingebautes Glas.
  * Das Sheet schließt mobil nur per Wischen nach unten am Griff (Desktop: Hintergrund, Escape).
+ * Die Rebsorten-Beispiele folgen der Kulinarik des Rezepts (kulinarik.js), der Stil nicht.
  */
 
-function StilDetails({ option, icons }) {
+function StilDetails({ option, icons, regionId }) {
   const stil = getStil(option.stilId);
   if (!stil) return null;
-  const beispiele = beispieleKurz(stil);
+  const { beispiele, region } = beispieleFuerRegion(stil, regionId);
   return (
     <div className="wein-dazu-stil">
       <div className="wein-dazu-stil-kopf">
@@ -40,6 +42,7 @@ function StilDetails({ option, icons }) {
           <p className="wein-dazu-stil-beispiele">
             z. B. {beispiele.join(', ')} · <span className="wein-dazu-nowrap">{formatTemperatur(stil)}</span>
           </p>
+          {region && <p className="wein-dazu-stil-region">Beispiele passend zur {region.anzeige}</p>}
           <p className="wein-dazu-stil-label">{option.label}</p>
         </div>
       </div>
@@ -62,7 +65,7 @@ const WISCH_SCHWELLE = 90;
 const WISCH_MIN_SCHWUNG = 30;
 const WISCH_TEMPO = 0.5; // px/ms
 
-function WeinDazuSheet({ empfehlung, veraltet, darfSchaetzen, onNeuEinschaetzen, onClose, icons }) {
+function WeinDazuSheet({ empfehlung, veraltet, darfSchaetzen, onNeuEinschaetzen, onClose, icons, regionId = null }) {
   useModalScrollLock();
   const [closing, schliessen] = useFadeOutClose(onClose);
   const [auswahl, setAuswahl] = useState(0);
@@ -162,7 +165,7 @@ function WeinDazuSheet({ empfehlung, veraltet, darfSchaetzen, onNeuEinschaetzen,
               <Gruende regelIds={empfehlung.regelIds} mitQuellen={false} />
             </div>
           ) : (
-            gewaehlt && <StilDetails option={gewaehlt} icons={icons} />
+            gewaehlt && <StilDetails option={gewaehlt} icons={icons} regionId={regionId} />
           )}
 
           {optionen.length > 1 && (
@@ -320,6 +323,7 @@ function WeinDazu({ recipe, currentUser, isSharedView = false, icons = null }) {
       {sheetOffen && (
         <WeinDazuSheet
           icons={icons}
+          regionId={regionFuerRezept(recipe)}
           empfehlung={empfehlung}
           veraltet={veraltet}
           darfSchaetzen={darfSchaetzen}

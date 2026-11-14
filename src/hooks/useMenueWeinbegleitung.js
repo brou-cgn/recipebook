@@ -16,6 +16,7 @@ import {
   ohneFixierung,
 } from '../utils/weinbegleitung/menue';
 import { neueresProfil, weinprofilFehlertext } from '../utils/weinbegleitung/anzeige';
+import { regionenFuerGaenge } from '../utils/weinbegleitung/kulinarik';
 import { generiereWeinprofile, MAX_REZEPTE_JE_AUFRUF } from '../utils/weinbegleitung/weinprofilCallable';
 
 const TEXT_SPEICHERN_FEHLGESCHLAGEN = 'Die Weinbegleitung konnte nicht gespeichert werden. Versuch es gleich noch einmal.';
@@ -68,7 +69,11 @@ export default function useMenueWeinbegleitung({ menu, recipes, currentUser, isS
       });
   }, [recipes, rezeptIds, lokaleProfile]);
 
-  const hatGaenge = useMemo(() => gaengeAusMenue(menu, rezepte).length > 0, [menu, rezepte]);
+  const gaenge = useMemo(() => gaengeAusMenue(menu, rezepte), [menu, rezepte]);
+  const hatGaenge = gaenge.length > 0;
+  // Weinregion je Gang und fürs ganze Menü aus der Kulinarik: nur für die Rebsorten-Beispiele,
+  // nicht für die Wahl des Stils (kulinarik.js)
+  const regionen = useMemo(() => regionenFuerGaenge(gaenge, rezepte), [gaenge, rezepte]);
   const darfBearbeiten = !isSharedView && canEditMenu(currentUser, menu) && canEditRecipes(currentUser);
 
   // Veraltet: anderer Menü-Hash (Sektionen, Rezepte, Profile, Regeln) oder ein Rezept wurde nach
@@ -234,6 +239,11 @@ export default function useMenueWeinbegleitung({ menu, recipes, currentUser, isS
     [snapshot],
   );
 
+  const regionFuer = useCallback(
+    (sektionIndex) => regionen.jeGang.get(sektionIndex) || null,
+    [regionen],
+  );
+
   return {
     sichtbar: hatGaenge && (Boolean(snapshot) || darfBearbeiten),
     snapshot,
@@ -243,6 +253,8 @@ export default function useMenueWeinbegleitung({ menu, recipes, currentUser, isS
     hinweis,
     veraltet,
     gangFuer,
+    regionFuer,
+    regionMenue: regionen.menue,
     berechnen,
     modusWechseln,
     alternativeWaehlen,
