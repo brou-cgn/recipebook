@@ -38,7 +38,7 @@
 .wein-dazu-link:focus-visible,
 .wein-dazu-knopf:focus-visible,
 .wein-dazu-option:focus-visible,
-.wein-dazu-sheet-schliessen:focus-visible {
+.wein-dazu-sheet-grabber:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
@@ -191,41 +191,81 @@
   .wein-dazu-sheet,
   .wein-dazu-sheet-scrim {
     animation: none;
+    transition: none;
   }
 }
 
+.wein-dazu-sheet:focus {
+  outline: none;
+}
+
+/* Oberer Bereich (Griff und Titel): hier zieht man das Sheet nach unten zu */
+.wein-dazu-sheet-ziehzone {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Griff ohne Füllung erweitert die Trefferfläche, sichtbar ist nur der Strich */
 .wein-dazu-sheet-grabber {
-  width: 40px;
+  display: block;
+  position: relative;
+  width: 64px;
+  height: 24px;
+  margin: -0.25rem auto 0.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: grab;
+}
+
+.wein-dazu-sheet-grabber::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 9px;
   height: 5px;
-  margin: 0 auto 0.75rem;
   border-radius: 3px;
   background: var(--color-border-strong);
 }
 
-.wein-dazu-sheet-kopf {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
 .wein-dazu-sheet-titel {
-  flex: 1;
   margin: 0;
   font-size: 1.3rem;
   font-weight: 700;
   color: var(--color-text-strong);
 }
 
-.wein-dazu-sheet-schliessen {
-  min-height: 44px;
-  padding: 0 0.5rem;
-  border: 0;
-  background: transparent;
-  color: var(--color-brand);
-  font: inherit;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
+/* Nach dem Loslassen federt das Sheet zurück; beim Ziehen folgt es dem Finger direkt */
+.wein-dazu-sheet {
+  transition: transform 0.2s ease-out;
+}
+
+.wein-dazu-sheet--ziehend {
+  transition: none;
+}
+
+/* Weggewischt: ab der aktuellen Zugstrecke ganz nach unten */
+@keyframes wein-dazu-sheet-weg {
+  from { transform: translateY(var(--wein-dazu-zug, 0px)); }
+  to { transform: translateY(100%); }
+}
+
+.wein-dazu-sheet-root--gewischt .wein-dazu-sheet {
+  animation: wein-dazu-sheet-weg 0.25s ease-in both;
+}
+
+/* Eigene Icons für Rot- und Weißwein (Button-Icons weinRot / weinWeiss) */
+.wein-dazu-symbol-bild {
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.wein-dazu-symbol-text {
+  flex-shrink: 0;
+  line-height: 1;
 }
 
 .wein-dazu-sheet-inhalt {
@@ -347,12 +387,6 @@
   margin-top: 0.35rem;
 }
 
-.wein-dazu-quellen a {
-  color: var(--color-brand);
-  text-underline-offset: 2px;
-  white-space: nowrap;
-}
-
 .wein-dazu-nowrap {
   white-space: nowrap;
 }
@@ -404,15 +438,15 @@
   color: var(--color-text-muted);
 }
 
-.wein-dazu-sheet-fuss {
-  margin: 1rem 0 0.25rem;
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-}
-
 @media (max-width: 768px) {
   .wein-dazu {
     padding: 0.75rem 1rem 0;
+  }
+
+  /* Mobil schließt nur das Wischen am Griff, nicht das Antippen des Hintergrunds */
+  .wein-dazu-sheet-scrim {
+    pointer-events: none;
+    cursor: default;
   }
 }
 

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 
 import { canEditRecipes } from '../utils/userManagement';
 import { empfehlungFuerWeinprofil } from '../utils/weinbegleitung/engine';
 import { STATUS_OK, STATUS_KEIN_STIL, STATUS_OHNE_PROFIL } from '../utils/weinbegleitung/konstanten';
-import { getStil, getRegel, quellenFuerRegel, formatTemperatur, beispieleKurz } from '../utils/weinbegleitung/wissensbasis';
+import { getStil, getRegel, formatTemperatur, beispieleKurz } from '../utils/weinbegleitung/wissensbasis';
 import { istWeinprofilAktuell } from '../utils/weinbegleitung/profilHash';
 import { kennwerteFuer, weinfarbe, weinprofilFehlertext, neueresProfil, TEXT_KEIN_STIL } from '../utils/weinbegleitung/anzeige';
 import { generiereWeinprofile } from '../utils/weinbegleitung/weinprofilCallable';
@@ -19,6 +19,9 @@ import './WeinDazu.css';
  * Die Empfehlung rechnet die Engine beim Anzeigen aus dem Feld `weinprofil`; das Anzeigen
  * löst nie einen KI-Aufruf aus. Nur ab Rolle edit und außerhalb von Freigabe-Seiten gibt
  * es „Passenden Wein finden“ bzw. „Neu einschätzen“ (Callable generateWeinprofile).
+ *
+ * `icons`: `{ rot, weiss }` aus den Button-Icons (`weinRot`, `weinWeiss`), leer = eingebautes Glas.
+ * Das Sheet schließt mobil nur per Wischen nach unten am Griff (Desktop: Hintergrund, Escape).
  */
 
 // useId liefert je nach React-Version Zeichen wie „:“ oder „«“, die in url(#…) nicht gehen.
@@ -57,26 +60,23 @@ function WeinGlas({ farbe = null, groesse = 20, laedt = false }) {
   );
 }
 
-function Quellen({ regelId }) {
-  const quellen = quellenFuerRegel(regelId);
-  if (quellen.length === 0) return null;
-  return (
-    <span className="wein-dazu-quellen">
-      {quellen.map((quelle, index) => (
-        <React.Fragment key={quelle.id}>
-          {index > 0 && ', '}
-          <a
-            href={quelle.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Quelle: ${quelle.titel} (${quelle.herausgeber})`}
-          >
-            {quelle.herausgeber}
-          </a>
-        </React.Fragment>
-      ))}
-    </span>
-  );
+const istBildQuelle = (wert) => /^(data:image\/|https?:\/\/|\/)/.test(wert);
+
+/**
+ * Symbol für einen Stil: das in den Button-Icons hinterlegte Icon für Rot- bzw. Weißwein
+ * (Schlüssel `weinRot`, `weinWeiss`), sonst das eingebaute Glas in der Weinfarbe.
+ * Rosé hat kein eigenes Icon und bleibt beim Glas.
+ */
+function WeinSymbol({ stil, icons, groesse }) {
+  const eigenes = stil?.farbe === 'rot' ? icons?.rot : stil?.farbe === 'weiss' ? icons?.weiss : '';
+  if (eigenes) {
+    return istBildQuelle(eigenes) ? (
+      <img className="wein-dazu-symbol-bild" src={eigenes} alt="" width={groesse} height={groesse} />
+    ) : (
+      <span className="wein-dazu-symbol-text" style={{ fontSize: groesse * 0.8 }} aria-hidden="true">{eigenes}</span>
+    );
+  }
+  return <WeinGlas farbe={stil ? weinfarbe(stil) : null} groesse={groesse} />;
 }
 
 function Gruende({ regelIds }) {
@@ -87,7 +87,7 @@ function Gruende({ regelIds }) {
         if (!regel) return null;
         return (
           <li key={regelId}>
-            {regel.kurztext} <Quellen regelId={regelId} />
+            {regel.kurztext}
           </li>
         );
       })}
@@ -95,7 +95,7 @@ function Gruende({ regelIds }) {
   );
 }
 
-function StilDetails({ option }) {
+function StilDetails({ option, icons }) {
   const stil = getStil(option.stilId);
   if (!stil) return null;
   const beispiele = beispieleKurz(stil);
@@ -103,7 +103,7 @@ function StilDetails({ option }) {
     <div className="wein-dazu-stil">
       <div className="wein-dazu-stil-kopf">
         <span className="wein-dazu-stil-glas">
-          <WeinGlas farbe={weinfarbe(stil)} groesse={40} />
+          <WeinSymbol stil={stil} icons={icons} groesse={40} />
         </span>
         <div>
           <p className="wein-dazu-stil-name">{stil.name}</p>
@@ -127,15 +127,24 @@ function StilDetails({ option }) {
   );
 }
 
-function WeinDazuSheet({ empfehlung, veraltet, darfSchaetzen, onNeuEinschaetzen, onClose }) {
+// Wischgeste am Griff: ab dieser Strecke (px) oder mit Schwung schließt das Sheet
+const WISCH_SCHWELLE = 90;
+const WISCH_MIN_SCHWUNG = 30;
+const WISCH_TEMPO = 0.5; // px/ms
+
+function WeinDazuSheet({ empfehlung, veraltet, darfSchaetzen, onNeuEinschaetzen, onClose, icons }) {
   useModalScrollLock();
   const [closing, schliessen] = useFadeOutClose(onClose);
   const [auswahl, setAuswahl] = useState(0);
-  const schliessenRef = useRef(null);
+  const [zug, setZug] = useState(0);
+  const [ziehend, setZiehend] = useState(false);
+  const [gewischt, setGewischt] = useState(false);
+  const dialogRef = useRef(null);
+  const startRef = useRef(null);
   const titelId = sichereId('wein-dazu-titel', useId());
 
   useEffect(() => {
-    if (schliessenRef.current) schliessenRef.current.focus();
+    if (dialogRef.current) dialogRef.current.focus();
   }, []);
 
   useEffect(() => {
@@ -146,19 +155,61 @@ function WeinDazuSheet({ empfehlung, veraltet, darfSchaetzen, onNeuEinschaetzen,
     return () => document.removeEventListener('keydown', beiTaste);
   }, [schliessen]);
 
+  const zugStart = (event) => {
+    const touch = event.touches[0];
+    startRef.current = { y: touch.clientY, zeit: Date.now() };
+    setZiehend(true);
+  };
+
+  const zugBewegen = (event) => {
+    if (!startRef.current) return;
+    setZug(Math.max(0, event.touches[0].clientY - startRef.current.y));
+  };
+
+  const zugEnde = (event) => {
+    if (!startRef.current) return;
+    // Kein synthetischer Klick auf den Griff: Antippen allein schließt nicht
+    if (event.cancelable) event.preventDefault();
+    const dauer = Math.max(1, Date.now() - startRef.current.zeit);
+    startRef.current = null;
+    setZiehend(false);
+    if (zug >= WISCH_SCHWELLE || (zug >= WISCH_MIN_SCHWUNG && zug / dauer >= WISCH_TEMPO)) {
+      setGewischt(true);
+      schliessen();
+    } else {
+      setZug(0);
+    }
+  };
+
   const optionen = empfehlung.status === STATUS_OK ? [empfehlung, ...empfehlung.alternativen] : [];
   const gewaehlt = optionen[auswahl] || optionen[0];
 
+  const rootKlassen = ['wein-dazu-sheet-root'];
+  if (closing) rootKlassen.push('wein-dazu-sheet-root--closing');
+  if (gewischt) rootKlassen.push('wein-dazu-sheet-root--gewischt');
+
   return (
-    <div className={`wein-dazu-sheet-root${closing ? ' wein-dazu-sheet-root--closing' : ''}`}>
+    <div className={rootKlassen.join(' ')}>
       <button type="button" className="wein-dazu-sheet-scrim" aria-label="Schließen" tabIndex={-1} onClick={schliessen} />
-      <div className="wein-dazu-sheet" role="dialog" aria-modal="true" aria-labelledby={titelId}>
-        <div className="wein-dazu-sheet-grabber" aria-hidden="true" />
-        <div className="wein-dazu-sheet-kopf">
+      <div
+        className={`wein-dazu-sheet${ziehend ? ' wein-dazu-sheet--ziehend' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titelId}
+        tabIndex={-1}
+        ref={dialogRef}
+        style={{ '--wein-dazu-zug': `${zug}px`, transform: zug > 0 ? `translateY(${zug}px)` : undefined }}
+      >
+        <div
+          className="wein-dazu-sheet-ziehzone"
+          onTouchStart={zugStart}
+          onTouchMove={zugBewegen}
+          onTouchEnd={zugEnde}
+          onTouchCancel={zugEnde}
+        >
+          {/* Für Tastatur und Screenreader; mit dem Finger schließt nur das Wischen */}
+          <button type="button" className="wein-dazu-sheet-grabber" aria-label="Schließen" onClick={schliessen} />
           <h2 className="wein-dazu-sheet-titel" id={titelId}>Wein dazu</h2>
-          <button type="button" className="wein-dazu-sheet-schliessen" onClick={schliessen} ref={schliessenRef}>
-            Schließen
-          </button>
         </div>
         <div className="wein-dazu-sheet-inhalt">
           {veraltet && (
@@ -181,7 +232,7 @@ function WeinDazuSheet({ empfehlung, veraltet, darfSchaetzen, onNeuEinschaetzen,
               <Gruende regelIds={empfehlung.regelIds} />
             </div>
           ) : (
-            gewaehlt && <StilDetails option={gewaehlt} />
+            gewaehlt && <StilDetails option={gewaehlt} icons={icons} />
           )}
 
           {optionen.length > 1 && (
@@ -199,7 +250,7 @@ function WeinDazuSheet({ empfehlung, veraltet, darfSchaetzen, onNeuEinschaetzen,
                         aria-pressed={index === auswahl}
                         onClick={() => setAuswahl(index)}
                       >
-                        <WeinGlas farbe={weinfarbe(stil)} groesse={22} />
+                        <WeinSymbol stil={stil} icons={icons} groesse={22} />
                         <span className="wein-dazu-option-text">
                           <span className="wein-dazu-option-name">{stil.name}</span>
                           <span className="wein-dazu-option-label">
@@ -213,17 +264,13 @@ function WeinDazuSheet({ empfehlung, veraltet, darfSchaetzen, onNeuEinschaetzen,
               </ul>
             </section>
           )}
-
-          <p className="wein-dazu-sheet-fuss">
-            Empfohlen werden Weinstile mit Rebsorten-Beispielen, keine bestimmten Flaschen.
-          </p>
         </div>
       </div>
     </div>
   );
 }
 
-function WeinDazu({ recipe, currentUser, isSharedView = false }) {
+function WeinDazu({ recipe, currentUser, isSharedView = false, icons = null }) {
   const [lokal, setLokal] = useState(null);
   const [laedt, setLaedt] = useState(false);
   const [fehler, setFehler] = useState(null);
@@ -321,7 +368,7 @@ function WeinDazu({ recipe, currentUser, isSharedView = false }) {
               aria-haspopup="dialog"
               ref={chipRef}
             >
-              <WeinGlas farbe={stil ? weinfarbe(stil) : null} groesse={20} />
+              <WeinSymbol stil={stil} icons={icons} groesse={20} />
               {stil ? (
                 <span><span className="wein-dazu-chip-praefix">Wein:</span> {stil.name}</span>
               ) : (
@@ -341,6 +388,7 @@ function WeinDazu({ recipe, currentUser, isSharedView = false }) {
       {fehler && <p className="wein-dazu-fehler" role="alert">{fehler}</p>}
       {sheetOffen && (
         <WeinDazuSheet
+          icons={icons}
           empfehlung={empfehlung}
           veraltet={veraltet}
           darfSchaetzen={darfSchaetzen}
