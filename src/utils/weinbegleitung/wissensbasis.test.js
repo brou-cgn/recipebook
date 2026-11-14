@@ -29,6 +29,9 @@ const FINGERABDRUECKE = {
   '2026-11-3': 'dd4e252f0b339b45',
   // Gleicher Inhalt: neu ist nur die Auswahl der Optionen im Modus „Ein Wein“ (engine.js).
   '2026-11-4': 'dd4e252f0b339b45',
+  // Gleicher Inhalt: neu ist die Bewertung eines Gangs mit mehreren gleichrangigen Rezepten
+  // je Rezept mit Median statt eines Profils aus dem Maximum (gang.js, bewertung.js).
+  '2026-11-5': 'dd4e252f0b339b45',
 };
 
 // JSON mit sortierten Schlüsseln: die Reihenfolge der Objekt-Schlüssel (auch die, die Babel

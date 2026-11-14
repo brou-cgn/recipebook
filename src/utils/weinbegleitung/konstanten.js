@@ -8,7 +8,7 @@
  * als veraltet. wissensbasis.test.js erzwingt das über einen Fingerabdruck.
  */
 
-export const RULES_VERSION = '2026-11-4';
+export const RULES_VERSION = '2026-11-5';
 
 // Rollen, für die ein Einzelrezept keine Weinempfehlung bekommt.
 export const ROLLEN_OHNE_WEIN = ['getraenk', 'sauce_dip', 'beilage', 'gebaeck_kuchen'];

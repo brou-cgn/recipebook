@@ -15,8 +15,9 @@ import {
   einWeinOptionen,
   farbOptionen,
   labelFuerOption,
+  bewerteGang,
 } from './engine';
-import { bewerteAlleStile } from './bewertung';
+import { bewerteAlleStile, ermittleGruende } from './bewertung';
 import { normalisiereWeinprofil } from './profilSchema';
 import { gaengeAusMenue } from './gang';
 import { getStil, alleStile } from './wissensbasis';
@@ -43,6 +44,10 @@ import {
   G5_RINDERSCHMORBRATEN,
   G6_SCHOKOLADENMOUSSE,
   E3_EXTREM,
+  G16_MARGHERITA,
+  G16_SALAMI,
+  G16_FUNGHI,
+  G17_DIAVOLA,
 } from './__fixtures__/profile';
 
 describe('Einzelrezept', () => {
@@ -474,6 +479,46 @@ describe('Optionen je Gang', () => {
     // Zu einer Rosé-Empfehlung je der beste Weiß- und Rotwein des Gangs
     expect(farbOptionen(bewertungen, profil, 'rose_trocken').map((option) => option.stilId))
       .toEqual(['weiss_leicht_frisch', 'rot_leicht']);
+  });
+});
+
+describe('Gang mit mehreren Hauptgerichten (Auswahl)', () => {
+  const pizzaMenue = () => ({
+    menu: { sections: [{ name: 'Hauptspeise', recipeIds: ['margherita', 'salami', 'diavola', 'funghi'] }] },
+    rezepte: [
+      rezept('margherita', G16_MARGHERITA), rezept('salami', G16_SALAMI),
+      rezept('diavola', G17_DIAVOLA), rezept('funghi', G16_FUNGHI),
+    ],
+  });
+
+  it('bewertet je Pizza und nimmt den Median, nicht ein Profil aus dem Maximum', () => {
+    const { menu, rezepte } = pizzaMenue();
+    const [gang] = gaengeAusMenue(menu, rezepte);
+    const rot = bewerteGang(gang).find((bewertung) => bewertung.stilId === 'rot_mittel');
+    const jePizza = gang.gang.auswahl.map((eintrag) => bewerteAlleStile(eintrag.profil)
+      .find((bewertung) => bewertung.stilId === 'rot_mittel').score);
+    const sortiert = [...jePizza].sort((a, b) => a - b);
+    expect(rot.scores).toEqual(jePizza);
+    expect(rot.score).toBeCloseTo((sortiert[1] + sortiert[2]) / 2, 2);
+    expect(rot.score).toBeGreaterThan(Math.min(...jePizza));
+  });
+
+  it('nimmt die Gründe von der Pizza, deren Score dem Median am nächsten liegt', () => {
+    const { menu, rezepte } = pizzaMenue();
+    const [gang] = gaengeAusMenue(menu, rezepte);
+    const [eintrag] = berechneWeinbegleitung({ menu, rezepte }).gaenge;
+    const bewertung = bewerteGang(gang).find((kandidat) => kandidat.stilId === eintrag.stilId);
+    expect(eintrag.regelIds).toEqual(ermittleGruende(getStil(eintrag.stilId), bewertung.profil));
+    eintrag.optionen.forEach((option) => {
+      const optionBewertung = bewerteGang(gang).find((kandidat) => kandidat.stilId === option.stilId);
+      expect(option.regelIds).toEqual(ermittleGruende(getStil(option.stilId), optionBewertung.profil));
+    });
+  });
+
+  it('bewertet ältere Gang-Objekte ohne Auswahl über das Gang-Profil', () => {
+    const profil = normalisiereWeinprofil(G5_RINDERSCHMORBRATEN);
+    expect(bewerteGang({ gang: { profil } }).map((bewertung) => [bewertung.stilId, bewertung.score]))
+      .toEqual(bewerteAlleStile(profil).map((bewertung) => [bewertung.stilId, bewertung.score]));
   });
 });
 

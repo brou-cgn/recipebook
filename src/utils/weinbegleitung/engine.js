@@ -9,6 +9,10 @@
  *   (farbOptionen). Im Modus „Ein Wein“ gibt es stattdessen einmal für alle Gänge je eine
  *   Weiß- und eine Rotwein-Option mit dem Gang, zu dem sie am besten passt (einWeinOptionen).
  *
+ * Ein Gang mit mehreren gleichrangigen Rezepten (z. B. diverse Pizzen) wird je Rezept bewertet;
+ * sein Score je Stil ist der Median (bewerteGang). Die Gründe kommen vom Rezept, dessen Score dem
+ * Median am nächsten liegt.
+ *
  * Tracker: docs/vorhaben/weinbegleitung.md
  */
 import {
@@ -36,7 +40,7 @@ import {
   STATUS_ROLLE_OHNE_WEIN,
   STATUS_KEIN_STIL,
 } from './konstanten';
-import { bewerteAlleStile, ermittleGruende, istKandidat, labelFuer, runde } from './bewertung';
+import { bewerteAlleStile, bewerteAuswahl, ermittleGruende, istKandidat, labelFuer, runde } from './bewertung';
 import { gaengeAusMenue, GANG_STATUS_OK } from './gang';
 import { normalisiereWeinprofil } from './profilSchema';
 import { alleStile, getStil, stilReihenfolge } from './wissensbasis';
@@ -221,6 +225,21 @@ export function findeFixierung(gang, fixierungen, namensHaeufigkeit) {
   return nachName.length === 1 ? nachName[0].stilId : null;
 }
 
+/**
+ * Bewertungen aller Stile für einen Gang aus gaengeAusMenue: je Rezept der Auswahl bewertet,
+ * Score als Median (bewerteAuswahl). Ältere Gang-Objekte ohne `auswahl` nutzen `profil`.
+ * @param {{gang: {profil: Object, auswahl?: Array<{profil: Object}>}}} gang
+ * @returns {Array<Object>} Bewertungen mit `profil` (Grundlage der Gründe)
+ */
+export function bewerteGang(gang) {
+  const auswahl = gang.gang.auswahl;
+  return bewerteAuswahl(Array.isArray(auswahl) && auswahl.length > 0 ? auswahl.map((eintrag) => eintrag.profil) : [gang.gang.profil]);
+}
+
+// Profil, aus dem die Gründe eines Stils kommen: das Rezept der Auswahl, dessen Score dem Median
+// am nächsten liegt; ohne dieses das Profil des Leitrezepts.
+const gruendeProfil = (bewertung, gang) => bewertung?.profil || gang.gang.profil;
+
 const leererEintrag = (gang, hinweis, optionen = []) => ({
   sektionIndex: gang.sektionIndex,
   sektionName: gang.sektionName,
@@ -248,7 +267,7 @@ const optionEintrag = (bewertung, gangProfil) => {
     stilId: bewertung.stilId,
     farbe: stil.farbe,
     label: labelFuerOption(bewertung.score),
-    regelIds: ermittleGruende(stil, gangProfil),
+    regelIds: ermittleGruende(stil, bewertung.profil || gangProfil),
   };
 };
 
@@ -259,7 +278,8 @@ const nachScore = (a, b) => (b.score - a.score) || (stilReihenfolge(a.stilId) - 
  * OPTION_FARBEN, die die Empfehlung nicht schon hat, der beste Stil dieser Farbe, der für den
  * Gang infrage kommt (nurZu), auch unter S_MIN (dann „passt bedingt“). Ohne Empfehlung (R11)
  * beide Farben.
- * @param {Array<Object>} bewertungen - bewerteAlleStile des Gangs
+ * @param {Array<Object>} bewertungen - Bewertungen des Gangs (bewerteGang); Gründe aus `profil` der
+ *   Bewertung, sonst aus gangProfil
  * @param {Object} gangProfil
  * @param {string|null} hauptStilId - Empfehlung des Gangs
  * @returns {Array<{stilId: string, farbe: string, label: string, regelIds: Array<string>}>}
@@ -294,7 +314,7 @@ export function berechneProGang(gaenge, { fixierungen = [] } = {}) {
 
   const vorbereitet = gaenge.map((gang) => {
     if (gang.gang.status !== GANG_STATUS_OK) return { ...gang, art: HINWEIS_OHNE_PROFIL };
-    const bewertungen = bewerteAlleStile(gang.gang.profil);
+    const bewertungen = bewerteGang(gang);
     const passende = bewertungen.filter(istKandidat);
     const fixierterStilId = findeFixierung(gang, fixierungen, namensHaeufigkeit);
     if (fixierterStilId) {
@@ -331,7 +351,7 @@ export function berechneProGang(gaenge, { fixierungen = [] } = {}) {
       stilId: gewaehlt.stilId,
       optionen: farbOptionen(gang.bewertungen, gang.gang.profil, gewaehlt.stilId),
       label: labelFuer(gewaehlt.score),
-      regelIds: ermittleGruende(stil, gang.gang.profil, { folgeGrund }),
+      regelIds: ermittleGruende(stil, gruendeProfil(gewaehlt, gang), { folgeGrund }),
       fixiert: gang.fixiert,
       hinweis: null,
       score: gewaehlt.score,
@@ -428,7 +448,7 @@ const einWeinOptionEintrag = (eintrag, gaenge) => {
     gaenge: gaenge.map((gang, index) => ({
       ...sektion(gang),
       label: labelFuerOption(eintrag.scores[index]),
-      regelIds: ermittleGruende(stil, gang.gang.profil),
+      regelIds: ermittleGruende(stil, gruendeProfil(gang.bewertungen.find((bewertung) => bewertung.stilId === stil.id), gang)),
     })),
   };
 };
@@ -471,7 +491,7 @@ export function einWeinOptionen(gaenge, { gewaehlterStilId = null } = {}) {
 export function berechneEinWein(gaenge, { gemeinsamerStilId = null } = {}) {
   const vorbereitet = gaenge.map((gang) => {
     if (gang.gang.status !== GANG_STATUS_OK) return { ...gang, art: HINWEIS_OHNE_PROFIL };
-    const bewertungen = bewerteAlleStile(gang.gang.profil);
+    const bewertungen = bewerteGang(gang);
     const passende = bewertungen.filter(istKandidat);
     if (passende.length === 0) return { ...gang, art: HINWEIS_KEIN_STIL, bewertungen };
     return { ...gang, art: 'wein', bewertungen, passende };
@@ -495,7 +515,7 @@ export function berechneEinWein(gaenge, { gemeinsamerStilId = null } = {}) {
         stilId: beste.stilId,
         optionen: [],
         label: labelFuer(beste.score),
-        regelIds: ermittleGruende(getStil(beste.stilId), gang.gang.profil),
+        regelIds: ermittleGruende(getStil(beste.stilId), gruendeProfil(beste, gang)),
         fixiert: false,
         hinweis: null,
         score: beste.score,
@@ -512,7 +532,7 @@ export function berechneEinWein(gaenge, { gemeinsamerStilId = null } = {}) {
       stilId: gemeinsam,
       optionen: [],
       label: labelFuer(bewertung.score),
-      regelIds: ermittleGruende(getStil(gemeinsam), gang.gang.profil),
+      regelIds: ermittleGruende(getStil(gemeinsam), gruendeProfil(bewertung, gang)),
       fixiert,
       hinweis: null,
       score: bewertung.score,

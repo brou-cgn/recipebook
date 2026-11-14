@@ -192,6 +192,8 @@ export function bewerteStil(stil, gang) {
  */
 export const istKandidat = (bewertung) => bewertung.infrage && bewertung.score >= S_MIN;
 
+const nachScore = (a, b) => (b.score - a.score) || (stilReihenfolge(a.stilId) - stilReihenfolge(b.stilId));
+
 /**
  * Alle Stile der Wissensbasis, absteigend nach Score; bei Gleichstand gilt die
  * Reihenfolge der Wissensbasis.
@@ -201,7 +203,50 @@ export const istKandidat = (bewertung) => bewertung.infrage && bewertung.score >
 export function bewerteAlleStile(gang) {
   return alleStile()
     .map((stil) => bewerteStil(stil, gang))
-    .sort((a, b) => (b.score - a.score) || (stilReihenfolge(a.stilId) - stilReihenfolge(b.stilId)));
+    .sort(nachScore);
+}
+
+// Toleranz für gleich weit vom Median entfernte Scores (Summen gerundeter Werte).
+const MEDIAN_TOLERANZ = 1e-9;
+
+const median = (werte) => {
+  const sortiert = [...werte].sort((a, b) => a - b);
+  const mitte = Math.floor(sortiert.length / 2);
+  return sortiert.length % 2 === 1 ? sortiert[mitte] : (sortiert[mitte - 1] + sortiert[mitte]) / 2;
+};
+
+/**
+ * Alle Stile für einen Gang mit einer Auswahl gleichrangiger Rezepte (z. B. diverse Pizzen,
+ * Profile aus bildeGangProfil): Jeder Stil wird je Profil bewertet. Score des Gangs ist der
+ * Median, also der Wert für die typische Pizza; eine einzelne scharfe Pizza kippt den Gang
+ * nicht. Ein Stil kommt nur infrage, wenn er für jedes Profil infrage kommt (nurZu).
+ * Die übrigen Felder und `profil` stammen vom Rezept, dessen Score dem Median am nächsten
+ * liegt (bei Gleichstand das erste); aus diesem Profil kommen die Gründe. Mit einem Profil
+ * dasselbe Ergebnis wie bewerteAlleStile, ergänzt um `profil` und `scores`.
+ * @param {Array<Object>} profile - Profile der Auswahl in Menü-Reihenfolge, nicht leer
+ * @returns {Array<Object>} Bewertungen wie bewerteStil plus `profil` und `scores` (je Profil),
+ *   absteigend nach Score
+ */
+export function bewerteAuswahl(profile) {
+  return alleStile()
+    .map((stil) => {
+      const jeProfil = profile.map((profil) => ({ profil, bewertung: bewerteStil(stil, profil) }));
+      const scores = jeProfil.map(({ bewertung }) => bewertung.score);
+      const score = ohneMinusNull(runde(median(scores)));
+      const abstand = ({ bewertung }) => Math.abs(bewertung.score - score);
+      const vertreter = jeProfil.reduce(
+        (bester, eintrag) => (abstand(eintrag) < abstand(bester) - MEDIAN_TOLERANZ ? eintrag : bester),
+        jeProfil[0],
+      );
+      return {
+        ...vertreter.bewertung,
+        score,
+        infrage: jeProfil.every(({ bewertung }) => bewertung.infrage),
+        scores,
+        profil: vertreter.profil,
+      };
+    })
+    .sort(nachScore);
 }
 
 /**

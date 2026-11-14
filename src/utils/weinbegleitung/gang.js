@@ -1,15 +1,24 @@
 /**
- * Gänge eines Menüs und ihr gemeinsames Gang-Profil.
+ * Gänge eines Menüs und ihre Gang-Profile.
  *
  * Gang = Sektion in Menü-Reihenfolge mit mindestens einem Rezept. Die Sektion
  * „Drinks“ zählt nicht, Rezepte mit Rolle getraenk werden ignoriert.
  * Tragend sind alle Rezepte außer Beilagen und Saucen (BEGLEITER_ROLLEN); gibt es
  * keins, tragen alle. Leitrezept = Rezept mit Rolle hauptgericht, sonst das
  * tragende mit der höchsten Intensität (bei Gleichstand das erste).
- * Hauptkomponente, Zubereitung und Sauce kommen vom Leitrezept; hat es keine
- * Sauce, zählt die eines Rezepts mit Rolle sauce_dip. Intensität und Komponenten
- * sind das Maximum der tragenden Rezepte; Beilagen und Saucen heben es höchstens
- * um BEGLEITER_MAX_ANHEBUNG Stufe.
+ *
+ * Tragende Rezepte mit der Rolle des Leitrezepts bilden die Auswahl des Gangs (meist nur
+ * das Leitrezept; bei „diverse Pizzen“ oder Tapas alle). Jedes Rezept der Auswahl bekommt
+ * ein eigenes Profil, die Engine bewertet die Weinstile je Profil und nimmt den Median
+ * (bewerteAuswahl in bewertung.js). Vorher war der Gang ein einziges Profil aus dem Maximum
+ * aller tragenden Rezepte: Eine scharfe, eine süße und eine bittere Pizza machten den ganzen
+ * Gang scharf, süß und bitter, und kein Wein passte mehr.
+ *
+ * Profil eines Rezepts der Auswahl: Hauptkomponente, Zubereitung und Sauce vom Rezept selbst;
+ * hat es keine Sauce, zählt die eines Rezepts mit Rolle sauce_dip. Intensität und Komponenten
+ * sind das Maximum aus dem Rezept und den übrigen tragenden Rezepten (andere Rolle, z. B. ein
+ * Salat neben dem Hauptgericht); Beilagen und Saucen heben es höchstens um
+ * BEGLEITER_MAX_ANHEBUNG Stufe.
  */
 import {
   ROLLE_GETRAENK,
@@ -72,9 +81,12 @@ function gangWert(tragende, begleiter, wertVon) {
 }
 
 /**
- * Gang-Profil aus den Rezepten eines Gangs.
+ * Gang-Profile aus den Rezepten eines Gangs: je Rezept der Auswahl ein Profil (`auswahl`),
+ * dazu `profil`, das Profil des Leitrezepts (Rolle für die Dessert-Erkennung; bei einem
+ * einzigen tragenden Rezept das Profil des ganzen Gangs).
  * @param {Array<Object>} rezepte - Rezepte (mit optionalem Feld weinprofil) in Menü-Reihenfolge
- * @returns {{status: string, profil?: Object, leitRezeptId?: string, rezeptIdsMitProfil?: Array<string>, fehlendeProfile: number}}
+ * @returns {{status: string, profil?: Object, auswahl?: Array<{id: string, profil: Object}>, leitRezeptId?: string,
+ *   rezeptIdsMitProfil?: Array<string>, fehlendeProfile: number}}
  */
 export function bildeGangProfil(rezepte) {
   const mitProfil = [];
@@ -94,32 +106,39 @@ export function bildeGangProfil(rezepte) {
   }
 
   const leit = waehleLeitrezept(relevant);
-  // Eine Sauce aus eigenem Rezept zählt nur, wenn das Leitrezept keine hat: Preiselbeeren
-  // neben dem Rehrücken ersetzen nicht dessen Wildjus.
   const sauceRezept = relevant.find(
     (eintrag) => eintrag.profil.rolle === ROLLE_SAUCE && eintrag.profil.sauce !== SAUCE_KEINE,
   );
-  const sauce = leit.profil.sauce === SAUCE_KEINE && sauceRezept ? sauceRezept.profil.sauce : leit.profil.sauce;
 
   const tragendeRezepte = relevant.filter((eintrag) => !istBegleiter(eintrag));
   const tragende = tragendeRezepte.length > 0 ? tragendeRezepte : relevant;
   const begleiter = tragendeRezepte.length > 0 ? relevant.filter(istBegleiter) : [];
+  const auswahl = tragende.filter((eintrag) => eintrag.profil.rolle === leit.profil.rolle);
+  const uebrige = tragende.filter((eintrag) => !auswahl.includes(eintrag));
 
-  const komponenten = {};
-  KOMPONENTEN.forEach((name) => {
-    komponenten[name] = gangWert(tragende, begleiter, (eintrag) => eintrag.profil.komponenten[name]);
-  });
+  const profilFuer = (eintrag) => {
+    const basis = [eintrag, ...uebrige];
+    const komponenten = {};
+    KOMPONENTEN.forEach((name) => {
+      komponenten[name] = gangWert(basis, begleiter, (anderer) => anderer.profil.komponenten[name]);
+    });
+    return {
+      rolle: eintrag.profil.rolle,
+      hauptkomponente: eintrag.profil.hauptkomponente,
+      zubereitung: eintrag.profil.zubereitung,
+      // Eine Sauce aus eigenem Rezept zählt nur, wenn das Rezept keine hat: Preiselbeeren
+      // neben dem Rehrücken ersetzen nicht dessen Wildjus.
+      sauce: eintrag.profil.sauce === SAUCE_KEINE && sauceRezept ? sauceRezept.profil.sauce : eintrag.profil.sauce,
+      intensitaet: gangWert(basis, begleiter, (anderer) => anderer.profil.intensitaet),
+      komponenten,
+    };
+  };
+  const auswahlProfile = auswahl.map((eintrag) => ({ id: eintrag.id, profil: profilFuer(eintrag) }));
 
   return {
     status: GANG_STATUS_OK,
-    profil: {
-      rolle: leit.profil.rolle,
-      hauptkomponente: leit.profil.hauptkomponente,
-      zubereitung: leit.profil.zubereitung,
-      sauce,
-      intensitaet: gangWert(tragende, begleiter, (eintrag) => eintrag.profil.intensitaet),
-      komponenten,
-    },
+    profil: auswahlProfile.find((eintrag) => eintrag.id === leit.id).profil,
+    auswahl: auswahlProfile,
     leitRezeptId: leit.id,
     rezeptIdsMitProfil: relevant.map((eintrag) => eintrag.id),
     fehlendeProfile,

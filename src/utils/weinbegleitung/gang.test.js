@@ -88,6 +88,47 @@ describe('bildeGangProfil', () => {
     expect(gang.profil.intensitaet).toBe(3);
   });
 
+  it('gibt jedem Rezept mit der Rolle des Leitrezepts ein eigenes Profil statt eines Maximums', () => {
+    const gang = bildeGangProfil([
+      rezept('margherita', profil({ rolle: 'hauptgericht', hauptkomponente: 'kaese_frisch', sauce: 'tomate', intensitaet: 3, suesse: 1 })),
+      rezept('diavola', profil({ rolle: 'hauptgericht', hauptkomponente: 'wurst_schinken', sauce: 'scharf_chili', intensitaet: 5, schaerfe: 3 })),
+      rezept('hawaii', profil({ rolle: 'hauptgericht', hauptkomponente: 'wurst_schinken', sauce: 'suess_fruchtig', intensitaet: 3, suesse: 2 })),
+    ]);
+    expect(gang.leitRezeptId).toBe('diavola');
+    expect(gang.auswahl.map((eintrag) => eintrag.id)).toEqual(['margherita', 'diavola', 'hawaii']);
+    const [margherita, diavola, hawaii] = gang.auswahl.map((eintrag) => eintrag.profil);
+    expect(margherita).toEqual(expect.objectContaining({ hauptkomponente: 'kaese_frisch', sauce: 'tomate', intensitaet: 3 }));
+    expect(margherita.komponenten).toEqual(expect.objectContaining({ suesse: 1, schaerfe: 0 }));
+    expect(diavola.komponenten).toEqual(expect.objectContaining({ suesse: 0, schaerfe: 3 }));
+    expect(hawaii.sauce).toBe('suess_fruchtig');
+    // profil ist das des Leitrezepts, nicht das Maximum über alle Pizzen
+    expect(gang.profil).toEqual(diavola);
+  });
+
+  it('hebt jedes Profil der Auswahl mit übrigen tragenden Rezepten, Beilagen und Saucen an', () => {
+    const gang = bildeGangProfil([
+      rezept('pizza-a', profil({ rolle: 'hauptgericht', sauce: 'keine', intensitaet: 3, schaerfe: 0, saeure: 1 })),
+      rezept('pizza-b', profil({ rolle: 'hauptgericht', sauce: 'tomate', intensitaet: 4, schaerfe: 2, saeure: 2 })),
+      rezept('salat', profil({ rolle: 'salat', intensitaet: 2, saeure: 3 })),
+      rezept('chilioel', profil({ rolle: 'sauce_dip', sauce: 'scharf_chili', intensitaet: 5, schaerfe: 3 })),
+    ]);
+    const [a, b] = gang.auswahl.map((eintrag) => eintrag.profil);
+    expect(gang.auswahl).toHaveLength(2);
+    // Salat (andere Rolle) zählt voll, das Chiliöl hebt höchstens um eine Stufe
+    expect(a).toEqual(expect.objectContaining({ sauce: 'scharf_chili', intensitaet: 4 }));
+    expect(a.komponenten).toEqual(expect.objectContaining({ saeure: 3, schaerfe: 1 }));
+    expect(b).toEqual(expect.objectContaining({ sauce: 'tomate', intensitaet: 5 }));
+    expect(b.komponenten).toEqual(expect.objectContaining({ saeure: 3, schaerfe: 3 }));
+  });
+
+  it('hat bei einem tragenden Rezept genau ein Profil in der Auswahl, das des Gangs', () => {
+    const gang = bildeGangProfil([
+      rezept('gans', profil({ rolle: 'hauptgericht', hauptkomponente: 'gefluegel', intensitaet: 4 })),
+      rezept('rotkohl', profil({ rolle: 'beilage', suesse: 2 })),
+    ]);
+    expect(gang.auswahl).toEqual([{ id: 'gans', profil: gang.profil }]);
+  });
+
   it('ignoriert Rezepte mit Rolle getraenk', () => {
     const gang = bildeGangProfil([
       rezept('punsch', profil({ rolle: 'getraenk', intensitaet: 5, suesse: 3 })),
