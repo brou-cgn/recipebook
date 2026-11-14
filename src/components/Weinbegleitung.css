@@ -192,6 +192,12 @@
   color: var(--color-text-muted);
 }
 
+.weinbegleitung-gang-zusatz {
+  margin-top: 0.1rem;
+  font-size: 0.8rem;
+  color: var(--color-text-body);
+}
+
 .weinbegleitung-fixiert {
   font-weight: 400;
   color: var(--color-text-muted);
@@ -243,6 +249,43 @@
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
+}
+
+/* Modus „Ein Wein für alles“: Weiß- und Rotwein für alle Gänge und der Dessertwein im Kopf.
+   Die Zeilen heben sich als Fläche vom getönten Kopf ab, die Empfehlung mit Rahmen. */
+.weinbegleitung-uebersicht .weinbegleitung-optionen {
+  margin-top: 0.75rem;
+}
+
+.weinbegleitung-uebersicht .weinbegleitung-gang-zeile {
+  background: var(--color-surface);
+}
+
+.weinbegleitung-uebersicht .weinbegleitung-option--empfehlung .weinbegleitung-gang-zeile {
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1.5px var(--color-brand);
+}
+
+.weinbegleitung-kopf-abschnitt {
+  margin: 0.9rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-brand);
+}
+
+.weinbegleitung-kopf-dessert .weinbegleitung-optionen {
+  margin-top: 0.4rem;
+}
+
+.weinbegleitung-gruende-gang + .weinbegleitung-gruende-gang {
+  margin-top: 0.5rem;
+}
+
+.weinbegleitung-gruende-gang-titel {
+  margin: 0 0 0.2rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text-strong);
 }
 
 /* Im Block mit Optionen steht der Hinweis über den Weinen, sonst allein unter der Überschrift */

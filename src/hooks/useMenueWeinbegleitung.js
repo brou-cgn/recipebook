@@ -205,21 +205,27 @@ export default function useMenueWeinbegleitung({ menu, recipes, currentUser, isS
     return neuSpeichern({ modus });
   }, [snapshot, neuSpeichern]);
 
-  /** Alternative antippen: „Pro Gang“ tauscht und fixiert den Gang, „Ein Wein“ den gemeinsamen Stil. */
+  /**
+   * Option als Empfehlung festlegen: „Pro Gang“ tauscht und fixiert den Gang, „Ein Wein“ den
+   * gemeinsamen Stil. Im Kopf („Ein Wein“) gibt es keinen Gang, dort ist `gang` null.
+   */
   const alternativeWaehlen = useCallback((gang, stilId) => {
     if (!snapshot) return undefined;
     if (snapshot.modus === MODUS_EIN_WEIN) {
-      if (gang.istDessert) return undefined;
+      if (gang?.istDessert) return undefined;
       return neuSpeichern({ gewaehlterGemeinsamerStilId: stilId });
     }
+    if (!gang) return undefined;
     return neuSpeichern({
       fixierungen: mitFixierung(snapshot.fixierungen, { sektionIndex: gang.sektionIndex, sektionName: gang.sektionName, stilId }),
     });
   }, [snapshot, neuSpeichern]);
 
+  /** Fixierung lösen; im Modus „Ein Wein“ (auch aus dem Kopf, `gang` null) die des gemeinsamen Stils. */
   const fixierungLoesen = useCallback((gang) => {
     if (!snapshot) return undefined;
     if (snapshot.modus === MODUS_EIN_WEIN) return neuSpeichern({ gewaehlterGemeinsamerStilId: null });
+    if (!gang) return undefined;
     return neuSpeichern({ fixierungen: ohneFixierung(snapshot.fixierungen, gang.sektionIndex, gang.sektionName) });
   }, [snapshot, neuSpeichern]);
 

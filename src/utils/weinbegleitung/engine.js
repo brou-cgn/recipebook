@@ -4,8 +4,10 @@
  * - empfehlungFuerRezept: Einzelrezept (Rezeptansicht, kein Snapshot)
  * - berechneWeinbegleitung: Menü, Modus „Pro Gang“ (mit Menüfolge R10) oder
  *   „Ein Wein für alles“; das Ergebnis ist die Grundlage des Snapshots
- *   `menus/{id}.weinbegleitung` (gespeichert ab PR 4). Jeder Gang bekommt neben der
- *   Empfehlung `optionen`: die beste Rot- und die beste Weißwein-Option (farbOptionen).
+ *   `menus/{id}.weinbegleitung` (gespeichert ab PR 4). Im Modus „Pro Gang“ bekommt jeder
+ *   Gang neben der Empfehlung `optionen`: die beste Rot- und die beste Weißwein-Option
+ *   (farbOptionen). Im Modus „Ein Wein“ gibt es stattdessen einmal für alle Gänge je eine
+ *   Weiß- und eine Rotwein-Option mit dem Gang, zu dem sie am besten passt (einWeinOptionen).
  *
  * Tracker: docs/vorhaben/weinbegleitung.md
  */
@@ -253,22 +255,20 @@ const optionEintrag = (bewertung, gangProfil) => {
 const nachScore = (a, b) => (b.score - a.score) || (stilReihenfolge(a.stilId) - stilReihenfolge(b.stilId));
 
 /**
- * Optionen eines Gangs neben der Empfehlung: für jede Farbe aus OPTION_FARBEN, die die
- * Empfehlung nicht schon hat, der beste Stil dieser Farbe, der für den Gang infrage kommt
- * (nurZu), auch unter S_MIN (dann „passt bedingt“). Ohne Empfehlung (R11) beide Farben.
+ * Optionen eines Gangs neben der Empfehlung (Modus „Pro Gang“): für jede Farbe aus
+ * OPTION_FARBEN, die die Empfehlung nicht schon hat, der beste Stil dieser Farbe, der für den
+ * Gang infrage kommt (nurZu), auch unter S_MIN (dann „passt bedingt“). Ohne Empfehlung (R11)
+ * beide Farben.
  * @param {Array<Object>} bewertungen - bewerteAlleStile des Gangs
  * @param {Object} gangProfil
  * @param {string|null} hauptStilId - Empfehlung des Gangs
- * @param {Array<string>} [reihenfolge] - Stil-IDs in der Reihenfolge, in der gesucht wird
- *   (Standard: nach Score des Gangs; im Modus „Ein Wein“ die gemeinsame Rangliste)
  * @returns {Array<{stilId: string, farbe: string, label: string, regelIds: Array<string>}>}
  */
-export function farbOptionen(bewertungen, gangProfil, hauptStilId, reihenfolge = null) {
+export function farbOptionen(bewertungen, gangProfil, hauptStilId) {
   const hauptFarbe = hauptStilId ? getStil(hauptStilId)?.farbe : null;
-  const nachId = new Map(bewertungen.map((bewertung) => [bewertung.stilId, bewertung]));
-  const kandidaten = (reihenfolge || [...bewertungen].sort(nachScore).map((bewertung) => bewertung.stilId))
-    .map((stilId) => nachId.get(stilId))
-    .filter((bewertung) => bewertung && bewertung.infrage && bewertung.stilId !== hauptStilId);
+  const kandidaten = [...bewertungen]
+    .sort(nachScore)
+    .filter((bewertung) => bewertung.infrage && bewertung.stilId !== hauptStilId);
   return OPTION_FARBEN
     .filter((farbe) => farbe !== hauptFarbe)
     .map((farbe) => kandidaten.find((bewertung) => getStil(bewertung.stilId)?.farbe === farbe))
@@ -376,16 +376,97 @@ export function gemeinsameRangliste(gaenge) {
         scores,
       };
     })
-    .sort((a, b) => (b.minimum - a.minimum) || (b.summe - a.summe) || (stilReihenfolge(a.stilId) - stilReihenfolge(b.stilId)));
+    .sort(nachMinimum);
+}
+
+function nachMinimum(a, b) {
+  return (b.minimum - a.minimum) || (b.summe - a.summe) || (stilReihenfolge(a.stilId) - stilReihenfolge(b.stilId));
 }
 
 /**
- * Modus „Ein Wein für alles“: ein gemeinsamer Stil für alle Nicht-Dessert-Gänge mit
- * passendem Wein (höchstes Minimum, Gleichstand: höhere Summe); Dessert-Gänge
- * bekommen eine eigene Empfehlung. Gänge ohne passenden Stil behalten R11.
+ * Stil einer Farbe für „Ein Wein für alles“ (Eigentümer, 14.11.2026: je eine Weiß- und eine
+ * Rotwein-Option, idealerweise jede für einen Gang ideal). Vorrang hat, dass der Wein zu allen
+ * Gängen passt (Minimum ab S_MIN); unter diesen gewinnt einer, der für mindestens einen Gang
+ * der beste Kandidat seiner Farbe ist, dann das höhere Minimum, die höhere Summe, die
+ * Reihenfolge der Wissensbasis. Passt kein Stil der Farbe zu allen Gängen, zählt nur das
+ * höchste Minimum: Der für einen Gang beste Wein wäre dann zu einem anderen oft ein Fehlgriff.
+ * @param {Array<{stilId: string, minimum: number, summe: number, scores: Array<number>}>} kandidaten -
+ *   Einträge aus gemeinsameRangliste, alle in einer Farbe
+ * @returns {Object|null} gewählter Eintrag
+ */
+export function waehleEinWeinStil(kandidaten) {
+  if (kandidaten.length === 0) return null;
+  const tragfaehig = kandidaten.filter((eintrag) => eintrag.minimum >= S_MIN);
+  if (tragfaehig.length === 0) return [...kandidaten].sort(nachMinimum)[0];
+  const besterJeGang = kandidaten[0].scores.map((_, index) => Math.max(...kandidaten.map((eintrag) => eintrag.scores[index])));
+  const istIdeal = (eintrag) => eintrag.scores.some((score, index) => score >= besterJeGang[index] - VERGLEICH_TOLERANZ);
+  return [...tragfaehig].sort((a, b) => (Number(istIdeal(b)) - Number(istIdeal(a))) || nachMinimum(a, b))[0];
+}
+
+const kennzahlenFuer = (stilId, gaenge) => {
+  const scores = gaenge.map((gang) => gang.bewertungen.find((bewertung) => bewertung.stilId === stilId).score);
+  return {
+    stilId,
+    minimum: Math.min(...scores),
+    summe: runde(scores.reduce((summe, score) => summe + score, 0)),
+    scores,
+  };
+};
+
+const sektion = (gang) => ({ sektionIndex: gang.sektionIndex, sektionName: gang.sektionName });
+
+const einWeinOptionEintrag = (eintrag, gaenge) => {
+  const stil = getStil(eintrag.stilId);
+  const bester = Math.max(...eintrag.scores);
+  return {
+    stilId: eintrag.stilId,
+    farbe: stil.farbe,
+    label: labelFuerOption(eintrag.minimum),
+    minimum: eintrag.minimum,
+    summe: eintrag.summe,
+    besteGaenge: gaenge.filter((_, index) => eintrag.scores[index] >= bester - VERGLEICH_TOLERANZ).map(sektion),
+    gaenge: gaenge.map((gang, index) => ({
+      ...sektion(gang),
+      label: labelFuerOption(eintrag.scores[index]),
+      regelIds: ermittleGruende(stil, gang.gang.profil),
+    })),
+  };
+};
+
+/**
+ * Optionen im Modus „Ein Wein für alles“: je Farbe aus OPTION_FARBEN ein Stil für alle
+ * übergebenen Gänge (waehleEinWeinStil), nur Stile, die für jeden davon infrage kommen.
+ * Ein gewählter Stil (Bearbeiter) ersetzt die Option seiner Farbe, auch wenn er nicht für jeden
+ * Gang infrage kommt; Stile anderer Farben (Rosé) werden ignoriert.
+ * @param {Array<Object>} gaenge - Nicht-Dessert-Gänge mit Wein, je mit bewertungen und gang.profil
+ * @param {{gewaehlterStilId?: string|null}} [optionen]
+ * @returns {Array<Object>} je Farbe stilId, farbe, label (schwächster Gang), minimum, summe,
+ *   besteGaenge (Gänge mit dem höchsten Score) und gaenge (je Gang Label und Gründe);
+ *   das höhere Minimum zuerst
+ */
+export function einWeinOptionen(gaenge, { gewaehlterStilId = null } = {}) {
+  if (gaenge.length === 0) return [];
+  const rangliste = gemeinsameRangliste(gaenge);
+  const gewaehlteFarbe = getStil(gewaehlterStilId)?.farbe;
+  return OPTION_FARBEN
+    .map((farbe) => (farbe === gewaehlteFarbe
+      ? kennzahlenFuer(gewaehlterStilId, gaenge)
+      : waehleEinWeinStil(rangliste.filter((eintrag) => getStil(eintrag.stilId).farbe === farbe))))
+    .filter(Boolean)
+    .sort(nachMinimum)
+    .map((eintrag) => einWeinOptionEintrag(eintrag, gaenge));
+}
+
+/**
+ * Modus „Ein Wein für alles“: Für alle Nicht-Dessert-Gänge mit passendem Wein je eine Weiß-
+ * und eine Rotwein-Option (`einWeinOptionen`, Empfehlung zuerst). Empfehlung und gemeinsamer
+ * Stil ist der gewählte Stil, sonst die Option mit dem höheren Minimum, wenn sie zu allen
+ * Gängen passt (S_MIN). Dessert-Gänge bekommen eine eigene Empfehlung, Gänge ohne passenden
+ * Stil behalten R11. Die Gänge selbst tragen keine Optionen.
  * @param {Array<Object>} gaenge - Ergebnis von gaengeAusMenue
  * @param {{gemeinsamerStilId?: string|null}} [optionen] - vom Nutzer gewählter gemeinsamer Stil
- * @returns {{modus: string, rulesVersion: string, gaenge: Array<Object>, gemeinsamerStilId: string|null}}
+ * @returns {{modus: string, rulesVersion: string, gaenge: Array<Object>, gemeinsamerStilId: string|null,
+ *   einWeinOptionen: Array<Object>}}
  */
 export function berechneEinWein(gaenge, { gemeinsamerStilId = null } = {}) {
   const vorbereitet = gaenge.map((gang) => {
@@ -397,26 +478,14 @@ export function berechneEinWein(gaenge, { gemeinsamerStilId = null } = {}) {
   });
 
   const hauptgaenge = vorbereitet.filter((gang) => gang.art === 'wein' && !gang.istDessert);
-  const rangliste = hauptgaenge.length > 0 ? gemeinsameRangliste(hauptgaenge) : [];
-
-  let gemeinsam = null;
-  let fixiert = false;
-  if (hauptgaenge.length > 0) {
-    if (gemeinsamerStilId && getStil(gemeinsamerStilId)) {
-      gemeinsam = gemeinsamerStilId;
-      fixiert = true;
-    } else if (rangliste.length > 0 && rangliste[0].minimum >= S_MIN) {
-      gemeinsam = rangliste[0].stilId;
-    }
-  }
-  // Optionen der Hauptgänge aus der gemeinsamen Rangliste: dieselben Stile in jedem Gang
-  const gemeinsameReihenfolge = rangliste.map((eintrag) => eintrag.stilId);
+  const optionen = einWeinOptionen(hauptgaenge, { gewaehlterStilId: gemeinsamerStilId });
+  const gewaehlt = optionen.find((option) => option.stilId === gemeinsamerStilId) || null;
+  const fixiert = Boolean(gewaehlt);
+  const empfehlung = gewaehlt || (optionen[0] && optionen[0].minimum >= S_MIN ? optionen[0] : null);
+  const gemeinsam = empfehlung ? empfehlung.stilId : null;
 
   const eintraege = vorbereitet.map((gang) => {
-    if (gang.art !== 'wein') {
-      const optionen = gang.bewertungen ? farbOptionen(gang.bewertungen, gang.gang.profil, null) : [];
-      return leererEintrag(gang, gang.art, optionen);
-    }
+    if (gang.art !== 'wein') return leererEintrag(gang, gang.art);
 
     if (gang.istDessert) {
       const [beste] = gang.passende;
@@ -424,7 +493,7 @@ export function berechneEinWein(gaenge, { gemeinsamerStilId = null } = {}) {
         sektionIndex: gang.sektionIndex,
         sektionName: gang.sektionName,
         stilId: beste.stilId,
-        optionen: farbOptionen(gang.bewertungen, gang.gang.profil, beste.stilId),
+        optionen: [],
         label: labelFuer(beste.score),
         regelIds: ermittleGruende(getStil(beste.stilId), gang.gang.profil),
         fixiert: false,
@@ -435,19 +504,13 @@ export function berechneEinWein(gaenge, { gemeinsamerStilId = null } = {}) {
       };
     }
 
-    if (!gemeinsam) {
-      return leererEintrag(
-        gang,
-        HINWEIS_KEIN_GEMEINSAMER_STIL,
-        farbOptionen(gang.bewertungen, gang.gang.profil, null, gemeinsameReihenfolge),
-      );
-    }
+    if (!gemeinsam) return leererEintrag(gang, HINWEIS_KEIN_GEMEINSAMER_STIL);
     const bewertung = gang.bewertungen.find((eintrag) => eintrag.stilId === gemeinsam);
     return {
       sektionIndex: gang.sektionIndex,
       sektionName: gang.sektionName,
       stilId: gemeinsam,
-      optionen: farbOptionen(gang.bewertungen, gang.gang.profil, gemeinsam, gemeinsameReihenfolge),
+      optionen: [],
       label: labelFuer(bewertung.score),
       regelIds: ermittleGruende(getStil(gemeinsam), gang.gang.profil),
       fixiert,
@@ -463,6 +526,7 @@ export function berechneEinWein(gaenge, { gemeinsamerStilId = null } = {}) {
     rulesVersion: RULES_VERSION,
     gaenge: eintraege,
     gemeinsamerStilId: gemeinsam,
+    einWeinOptionen: empfehlung ? [empfehlung, ...optionen.filter((option) => option !== empfehlung)] : optionen,
   };
 }
 

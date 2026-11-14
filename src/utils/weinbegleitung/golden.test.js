@@ -126,6 +126,10 @@ describe('Golden-Tests Menü', () => {
     expect(dessert.stilId).not.toBe(vorspeise.stilId);
     expect(['likoerwein', 'suesswein_edel']).toContain(dessert.stilId);
     ergebnis.gaenge.forEach((gang) => erwarteGruendeMitQuelle(gang.regelIds));
+    // Im Kopf genau eine Weiß- und eine Rotwein-Option, die Empfehlung zuerst
+    expect(ergebnis.einWeinOptionen.map((option) => option.farbe).sort()).toEqual(['rot', 'weiss']);
+    expect(ergebnis.einWeinOptionen[0].stilId).toBe(ergebnis.gemeinsamerStilId);
+    ergebnis.einWeinOptionen.forEach((option) => option.gaenge.forEach((gang) => erwarteGruendeMitQuelle(gang.regelIds)));
   });
 });
 

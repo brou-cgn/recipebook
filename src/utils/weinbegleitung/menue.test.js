@@ -8,6 +8,7 @@ import {
   menueInputHash,
   erstelleSnapshot,
   istGueltigerSnapshot,
+  zeigtEinWeinImKopf,
   gangFuerSektion,
   mitFixierung,
   ohneFixierung,
@@ -92,6 +93,7 @@ describe('erstelleSnapshot', () => {
     expect(snapshot).toEqual(expect.objectContaining({
       modus: 'proGang',
       gemeinsamerStilId: null,
+      einWeinOptionen: null,
       fixierungen: [],
       gewaehlterGemeinsamerStilId: null,
       rulesVersion: RULES_VERSION,
@@ -125,6 +127,34 @@ describe('erstelleSnapshot', () => {
     expect(snapshot.gemeinsamerStilId).toBe('rot_mittel');
     expect(snapshot.gewaehlterGemeinsamerStilId).toBe('rose_trocken');
     expect(snapshot.gaenge[2].istDessert).toBe(true);
+  });
+
+  it('speichert im Modus „Ein Wein“ die Optionen für den Kopf, ohne Scores', () => {
+    const ergebnis = berechneWeinbegleitung({ menu, rezepte, modus: MODUS_EIN_WEIN });
+    const snapshot = erstelleSnapshot({ ergebnis, inputHash: null, nutzerId: null });
+    expect(snapshot.einWeinOptionen.map((option) => option.stilId)).toEqual(['rot_mittel', 'weiss_voll']);
+    expect(snapshot.einWeinOptionen[0]).toEqual({
+      stilId: 'rot_mittel',
+      farbe: 'rot',
+      label: 'passt',
+      besteGaenge: [{ sektionIndex: 1, sektionName: 'Hauptgang' }],
+      gaenge: [
+        { sektionIndex: 0, sektionName: 'Vorspeise', label: 'passt', regelIds: expect.any(Array) },
+        { sektionIndex: 1, sektionName: 'Hauptgang', label: 'passt', regelIds: expect.any(Array) },
+      ],
+    });
+    expect(JSON.stringify(snapshot)).not.toContain('undefined');
+    expect(zeigtEinWeinImKopf(snapshot)).toBe(true);
+  });
+});
+
+describe('zeigtEinWeinImKopf', () => {
+  it('gilt nur für Snapshots im Modus „Ein Wein“ mit Optionen, ältere zeigen ihre Weine je Gang', () => {
+    const einWein = { modus: MODUS_EIN_WEIN, gaenge: [], einWeinOptionen: [] };
+    expect(zeigtEinWeinImKopf(einWein)).toBe(true);
+    expect(zeigtEinWeinImKopf({ modus: MODUS_EIN_WEIN, gaenge: [] })).toBe(false);
+    expect(zeigtEinWeinImKopf({ ...einWein, modus: 'proGang' })).toBe(false);
+    expect(zeigtEinWeinImKopf(null)).toBe(false);
   });
 });
 

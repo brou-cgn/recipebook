@@ -203,8 +203,11 @@ describe('Gespeicherte Weinbegleitung', () => {
 
     await waitFor(() => expect(saveMenuWeinbegleitung).toHaveBeenCalledTimes(1));
     expect(gespeicherterSnapshot().modus).toBe('einWein');
-    expect(await screen.findByText('Ein Wein für alles: Rotwein, mittelkräftig')).toBeInTheDocument();
+    expect(await screen.findByText('Ein Wein für alle Gänge außer dem Dessert: Weiß oder Rot.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ein Wein für alles' })).toHaveAttribute('aria-pressed', 'true');
+    // Die Weine stehen jetzt im Kopf, nicht mehr unter den Gängen
+    expect(screen.getByRole('list', { name: 'Ein Wein für alle Gänge' })).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Hauptgang' })).queryByRole('list')).not.toBeInTheDocument();
     expect(generiereWeinprofile).not.toHaveBeenCalled();
   });
 
@@ -243,6 +246,104 @@ describe('Gespeicherte Weinbegleitung', () => {
     expect(zwischengang.getAllByRole('listitem')).toHaveLength(2);
     expect(zwischengang.getAllByText('passt bedingt')).toHaveLength(2);
     expect(zwischengang.queryByText(/Empfehlung ·/)).not.toBeInTheDocument();
+  });
+});
+
+describe('Ein Wein für alles', () => {
+  const einWein = (menu, rezepte, optionen = {}) => mitSnapshot(menu, rezepte, { modus: 'einWein', ...optionen });
+
+  it('zeigt im Kopf je eine Weiß- und eine Rotwein-Option mit dem Gang, zu dem sie am besten passt, und keine Weine je Gang', () => {
+    const { menu, rezepte } = festtafel();
+    zeige({ menu: einWein(menu, rezepte), rezepte, nutzer: LESER });
+
+    const kopf = within(screen.getByRole('region', { name: 'Weinbegleitung' }));
+    expect(kopf.getByText('Ein Wein für alle Gänge außer dem Dessert: Weiß oder Rot.')).toBeInTheDocument();
+    expect(kopf.getByText('Ein Wein für alles')).toBeInTheDocument();
+
+    const weine = within(kopf.getByRole('list', { name: 'Ein Wein für alle Gänge' }));
+    const [rot, weiss] = weine.getAllByRole('listitem');
+    expect(weine.getAllByRole('listitem')).toHaveLength(2);
+    expect(within(rot).getByText('Rotwein, mittelkräftig')).toBeInTheDocument();
+    expect(within(rot).getByText('Empfehlung · passt')).toBeInTheDocument();
+    expect(within(rot).getByText('Am besten zu: Hauptgang')).toBeInTheDocument();
+    expect(within(weiss).getByText('Weißwein, vollmundig')).toBeInTheDocument();
+    expect(within(weiss).getByText('passt bedingt')).toBeInTheDocument();
+    expect(within(weiss).getByText(/Grauburgunder, Chardonnay mit Holz, Viognier/)).toBeInTheDocument();
+
+    // Das Dessert bekommt seinen eigenen Wein, ebenfalls im Kopf
+    expect(within(kopf.getByRole('list', { name: 'Wein zu Dessert' })).getByText('Likörwein')).toBeInTheDocument();
+
+    // Unter den Gängen keine Weinzeilen mehr
+    ['Vorspeise', 'Hauptgang', 'Dessert'].forEach((name) => {
+      const gang = within(screen.getByRole('region', { name }));
+      expect(gang.queryByRole('list')).not.toBeInTheDocument();
+      expect(gang.queryByRole('button')).not.toBeInTheDocument();
+    });
+
+    // Aufgeklappt: Label und Gründe je Gang, ohne Quellen und für Leser ohne Knöpfe
+    fireEvent.click(within(rot).getByRole('button', { name: /Rotwein, mittelkräftig/ }));
+    expect(within(rot).getByRole('heading', { name: 'Warum passt das?' })).toBeInTheDocument();
+    expect(within(rot).getByRole('heading', { name: 'Vorspeise: passt' })).toBeInTheDocument();
+    expect(within(rot).getByRole('heading', { name: 'Hauptgang: passt' })).toBeInTheDocument();
+    expect(within(rot).queryAllByRole('link')).toHaveLength(0);
+    expect(kopf.queryByRole('button', { name: /als Empfehlung festlegen/ })).not.toBeInTheDocument();
+
+    expect(generiereWeinprofile).not.toHaveBeenCalled();
+    expect(saveMenuWeinbegleitung).not.toHaveBeenCalled();
+  });
+
+  it('legt im Kopf die andere Farbe als Empfehlung fest, „Fixierung lösen“ hebt es auf', async () => {
+    const { menu, rezepte } = festtafel();
+    zeige({ menu: einWein(menu, rezepte), rezepte });
+    const kopf = within(screen.getByRole('region', { name: 'Weinbegleitung' }));
+
+    fireEvent.click(kopf.getByRole('button', { name: /Weißwein, vollmundig/ }));
+    expect(kopf.getByText(/Die beste Wahl in dieser Farbe, aber nicht zu jedem Gang/)).toBeInTheDocument();
+    fireEvent.click(kopf.getByRole('button', { name: '„Weißwein, vollmundig“ als Empfehlung festlegen' }));
+
+    await waitFor(() => expect(saveMenuWeinbegleitung).toHaveBeenCalledTimes(1));
+    expect(gespeicherterSnapshot()).toEqual(expect.objectContaining({
+      modus: 'einWein',
+      gemeinsamerStilId: 'weiss_voll',
+      gewaehlterGemeinsamerStilId: 'weiss_voll',
+    }));
+    expect(gespeicherterSnapshot().einWeinOptionen.map((option) => option.stilId)).toEqual(['weiss_voll', 'rot_mittel']);
+    expect(await kopf.findByText('· fixiert')).toBeInTheDocument();
+    expect(generiereWeinprofile).not.toHaveBeenCalled();
+
+    const zeile = kopf.getByRole('button', { name: /Weißwein, vollmundig/ });
+    if (zeile.getAttribute('aria-expanded') === 'false') fireEvent.click(zeile);
+    fireEvent.click(await kopf.findByRole('button', { name: 'Fixierung lösen' }));
+
+    await waitFor(() => expect(saveMenuWeinbegleitung).toHaveBeenCalledTimes(2));
+    expect(gespeicherterSnapshot(1).gewaehlterGemeinsamerStilId).toBeNull();
+    expect(gespeicherterSnapshot(1).gemeinsamerStilId).toBe('rot_mittel');
+  });
+
+  it('zeigt am Gang nur den Hinweis, wenn er ohne Wein bleibt', () => {
+    const menu = { id: 'm3', authorId: 'u1', sections: [{ name: 'Zwischengang', recipeIds: ['extrem'] }, { name: 'Hauptgang', recipeIds: ['braten'] }] };
+    const rezepte = [rezept('extrem', E3_EXTREM), rezept('braten', G5_RINDERSCHMORBRATEN)];
+    zeige({ menu: einWein(menu, rezepte), rezepte, nutzer: LESER });
+
+    const zwischengang = within(screen.getByRole('region', { name: 'Zwischengang' }));
+    expect(zwischengang.getByText('Hier lieber Bier oder Wasser.')).toBeInTheDocument();
+    expect(zwischengang.queryByRole('list')).not.toBeInTheDocument();
+    // Mit nur einem Gang im Kopf gibt es kein „Am besten zu“
+    expect(screen.getByText('Rotwein, kräftig')).toBeInTheDocument();
+    expect(screen.queryByText(/Am besten zu/)).not.toBeInTheDocument();
+  });
+
+  it('zeigt einen älteren Snapshot ohne Optionen im Kopf bis „Neu berechnen“ wie bisher je Gang', () => {
+    const { menu, rezepte } = festtafel();
+    const neu = einWein(menu, rezepte);
+    const { einWeinOptionen: _optionen, ...alt } = neu.weinbegleitung;
+    zeige({ menu: { ...neu, weinbegleitung: alt }, rezepte, nutzer: LESER });
+
+    expect(screen.getByText('Ein Wein für alles: Rotwein, mittelkräftig')).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Ein Wein für alle Gänge' })).not.toBeInTheDocument();
+    const hauptgang = within(screen.getByRole('region', { name: 'Hauptgang' }));
+    expect(hauptgang.getByText('Rotwein, mittelkräftig')).toBeInTheDocument();
+    expect(hauptgang.getByText('Empfehlung · passt')).toBeInTheDocument();
   });
 });
 

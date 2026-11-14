@@ -8,7 +8,7 @@
  * als veraltet. wissensbasis.test.js erzwingt das über einen Fingerabdruck.
  */
 
-export const RULES_VERSION = '2026-11-3';
+export const RULES_VERSION = '2026-11-4';
 
 // Rollen, für die ein Einzelrezept keine Weinempfehlung bekommt.
 export const ROLLEN_OHNE_WEIN = ['getraenk', 'sauce_dip', 'beilage', 'gebaeck_kuchen'];
@@ -84,7 +84,9 @@ export const LABEL_BASIS = 'passt';
 // --- Optionen je Gang im Menü ------------------------------------------------
 // Jeder Gang zeigt neben der Empfehlung die beste Option jeder dieser Farben (Eigentümer,
 // 14.11.2026: immer eine Rot- und eine Weißwein-Option). Sie muss für den Gang infrage
-// kommen (nurZu), darf aber unter S_MIN liegen; dann trägt sie LABEL_BEDINGT.
+// kommen (nurZu), darf aber unter S_MIN liegen; dann trägt sie LABEL_BEDINGT. Im Modus
+// „Ein Wein für alles“ gibt es je Farbe genau eine Option für alle Gänge, angezeigt im Kopf
+// der Weinbegleitung (einWeinOptionen in engine.js).
 export const OPTION_FARBEN = ['rot', 'weiss'];
 export const LABEL_BEDINGT = 'passt bedingt';
 
