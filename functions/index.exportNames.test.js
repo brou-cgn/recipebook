@@ -27,6 +27,7 @@ const EXPECTED_EXPORTS = [
   'fetchRecipeHtml',
   'fillNewFuerDichEntdecktList',
   'generateNutritionFromReference',
+  'generateWeinprofile',
   'getGuestRecipes',
   'getRecipeOptionsShortcut',
   'getSharedMenuByShareId',

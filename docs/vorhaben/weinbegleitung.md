@@ -1,7 +1,7 @@
 # Vorhaben: Weinbegleitung (Menüs und Einzelrezepte)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 14.11.2026 (PR 1 als #3660 offen).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 14.11.2026 (PR 1 gemergt, PR 2 in Arbeit).
 
 **Ziel:** Zu einem Menü (Festtafel) schlägt die App pro Gang einen passenden Weinstil vor, mit bis zu
 zwei Alternativen, einer kurzen Begründung und einem Quellenlink. Dazu gibt es den Modus „Ein Wein für
@@ -26,7 +26,7 @@ Menüansicht, dazu die Zustände). Keine Mockups im Repo.
 | „Ein Wein“ ohne gemeinsamen Stil | Ergänzung: Erreicht kein Stil `S_MIN` in allen Nicht-Dessert-Gängen, bekommen sie den Hinweis `keinGemeinsamerStil`, statt einen schlechten Stil zu erzwingen. Gänge, zu denen gar kein Stil passt (R11), bleiben aus der gemeinsamen Wahl heraus. |
 | Fixierungen | Zuordnung über Index und Sektionsnamen. Nach dem Verschieben einer Sektion genügt der Name, wenn er im Menü eindeutig ist; Umbenennen hebt die Fixierung auf. |
 | Versionierung | `RULES_VERSION` startet mit `2026-11-1`. `wissensbasis.test.js` prüft einen Fingerabdruck über Stile, Regeln und Engine-Konstanten: Inhalt geändert, Version nicht erhöht, Test rot. |
-| Phase-1-Vorschläge | Am 14.11.2026 ohne Widerspruch übernommen, ein Veto ist bis zum jeweiligen PR möglich. (1) Firestore-Regel: Clients dürfen `weinprofil` nicht ändern (`affectedKeys`); dieselbe Regel schützt `ratingAvg`/`ratingCount` (Tech-Check S29). (2) Das Callable prüft je Rezept die Sichtbarkeit (`isVisibleToUser`), weil `requireAiCaller` nur die Rolle prüft. (3) Das Tageslimit zählt je geschätztes Rezept, nicht je Aufruf. (4) Der Button „Weinbegleitung erstellen“ hängt an `canEditMenu`. (5) Alte Menüs ohne Sektionen bilden einen Gang „Alle Rezepte“. Dazu: Veraltet-Erkennung über die Hash-Funktion, nicht über `updatedAt` (das setzen auch Freigabe und Vorschaubild); `backfillWeinprofile` mit Cursor (Muster `backfillRecipeThumbnails` taugt nicht, Tech-Check F20). |
+| Phase-1-Vorschläge | Am 14.11.2026 ohne Widerspruch übernommen; (1) bis (3) sind mit PR 2 umgesetzt, für (4) und (5) ist ein Veto bis PR 4 möglich. (1) Firestore-Regel: Clients dürfen `weinprofil` nicht ändern (`affectedKeys`); dieselbe Regel schützt `ratingAvg`/`ratingCount` (Tech-Check S29). (2) Das Callable prüft je Rezept die Sichtbarkeit (`isVisibleToUser`), weil `requireAiCaller` nur die Rolle prüft. (3) Das Tageslimit zählt je geschätztes Rezept, nicht je Aufruf. (4) Der Button „Weinbegleitung erstellen“ hängt an `canEditMenu`. (5) Alte Menüs ohne Sektionen bilden einen Gang „Alle Rezepte“. Dazu: Veraltet-Erkennung über die Hash-Funktion, nicht über `updatedAt` (das setzen auch Freigabe und Vorschaubild); `backfillWeinprofile` mit Cursor (Muster `backfillRecipeThumbnails` taugt nicht, Tech-Check F20). |
 
 ## Spezifikation (Kurzfassung)
 
@@ -84,8 +84,8 @@ Snapshot oder Fixieren beim Einzelrezept.
 
 | PR | Inhalt | Stand |
 |---|---|---|
-| 1 | Tracker, Wissensbasis (`src/data/weinbegleitung/`), Engine (`src/utils/weinbegleitung/`) mit Tests: Regeln einzeln, Gang-Bildung, Menüfolge, „Ein Wein“, Fixierung, Einzelrezept, Golden G1–G9 und E1–E3, Datenprüfung mit Fingerabdruck. Noch ohne UI. | PR #3660 offen (14.11.2026, Branch `claude/intelligent-shannon-t5cts5`), 129 neue Tests, `test:ci` lokal grün |
-| 2 | Callable `generateWeinprofile` (Gemini, Tageslimit `aiWeinprofilLimits`), Hash-Funktion in Client und Functions mit Konsistenztest, Firestore-Regeln (schützt auch S29) mit Rules-Tests, `docs/architecture/security.md`, Tests | offen |
+| 1 | Tracker, Wissensbasis (`src/data/weinbegleitung/`), Engine (`src/utils/weinbegleitung/`) mit Tests: Regeln einzeln, Gang-Bildung, Menüfolge, „Ein Wein“, Fixierung, Einzelrezept, Golden G1–G9 und E1–E3, Datenprüfung mit Fingerabdruck. Noch ohne UI. | PR #3660 gemergt (14.11.2026), 129 neue Tests |
+| 2 | Callable `generateWeinprofile` (`functions/handlers/weinbegleitung.js`, Helfer `functions/shared/weinprofil.js`; Gemini, Tageslimit `aiWeinprofilLimits`), Hash-Funktion im Client (`profilHash.js`) mit Konsistenztest gegen die Function, Firestore-Regeln (`weinprofil`, `ratingAvg`, `ratingCount` nur per Function, Tech-Check S29) mit Rules-Tests, `docs/architecture/security.md` | in Arbeit (Branch `claude/intelligent-shannon-t5cts5`); Function-Tests +19, Client-Tests +18, Rules-Tests +1 und erweitert |
 | 3 | Rezeptansicht nach Variante B: Chip und Sheet, „Passenden Wein finden“, „neu einschätzen“, Farb-Tokens für die Weinfarben | offen |
 | 4 | Menü nach Variante B: Weinzeile je Gang, Umschalter, Snapshot über `menuFirestore.js`, Veraltet-Erkennung; `MenuDetail.js` nutzt dann `DRINKS_SECTION_NAME` aus `menuSections.js` | offen |
 | 5 | Freigabe-Seiten (Menü und Rezept), Quellen-Seite unter „Chefkoch & mehr“, `backfillWeinprofile` (Cursor, F20), Feinschliff | offen |
@@ -113,6 +113,26 @@ Umsetzungsnotizen PR 1:
 - Die Stilnamen („Weißwein, leicht und frisch“ usw.) und die Zuordnung Quelle → Stil hat die Spezifikation
   nicht vorgegeben; beides habe ich gesetzt (siehe Offen).
 
+Umsetzungsnotizen PR 2:
+- Aufruf: `generateWeinprofile({recipeIds})` mit 1 bis 20 IDs (doppelte zählen einmal). Antwort:
+  `profile` (je `recipeId` das gespeicherte oder neue Profil, auch für übersprungene), `uebersprungen`,
+  `fehlgeschlagen`, `fehlerGruende` (je ID: `nichtGefunden`, `keinZugriff`, `tageslimit`, `kiFehler`,
+  `kiUngueltig`, `speichern`), `remainingRequests`, `dailyLimit`. Ein Fehler trifft nur das betroffene
+  Rezept. `resource-exhausted` kommt nur, wenn das Limit erschöpft ist und kein Rezept übersprungen wurde.
+- Ablauf je Rezept: Sichtbarkeit (`isVisibleToUser`, Gruppen werden dafür gelesen), Hash bilden, bei
+  aktuellem Profil überspringen, sonst ein Zähler aus `aiWeinprofilLimits` (vor dem KI-Aufruf), Gemini
+  per REST (`geminiGenerateContentRequest`, temperature 0, JSON mit `responseSchema` aus Enums,
+  Zeitlimit 30 s, höchstens 4 gleichzeitig), strenge Prüfung, dann `update({weinprofil})`. `updatedAt`
+  bleibt unverändert; `erstelltAm` ist ein Zeitstempel in Millisekunden. `timeoutSeconds` 120.
+- Hash: `weinprofilHashEingabe` = JSON aus Kennung `weinprofil-v1`, getrimmtem Titel, Texten der Zutaten
+  und Schritte (Strings oder `{text}`, leere entfallen, Überschriften zählen mit), sortierter
+  Speisekategorie und Kulinarik (String oder Array). Client: `weinprofilInputHash` (Web Crypto, async) und
+  `istWeinprofilAktuell(rezept)` für die Veraltet-Anzeige in PR 3.
+- Rules-Tests lokal (Emulator) ausgeführt: die neuen Fälle grün; drei Storage-Tests zu `drinks` scheitern in
+  der Arbeitsumgebung auch auf `main` ohne diese Änderungen, in der CI sind sie grün.
+- Nicht gegen die echte Gemini-API geprüft (kein Schlüssel in der Arbeitsumgebung). Das `responseSchema`
+  nutzt `enum` mit `format: 'enum'` wie in der API-Dokumentation; nach dem Deploy mit einem Rezept prüfen.
+
 ## Offen
 
 - **Fachlich gegenlesen (Eigentümer):** Kennwerte, Passungen und Beispiele der zwölf Stile, die Regeltexte,
@@ -131,6 +151,8 @@ Umsetzungsnotizen PR 1:
   „Drinks“ (Wunsch bei Variante A)? Vorschlag: vor dem ersten Gang.
 - **Variante B, Menü:** Antippen einer Alternative im Modus „Ein Wein“: tauscht den gemeinsamen Stil für alle
   Nicht-Dessert-Gänge (Engine: `gemeinsamerStilId`)? Vorschlag: ja.
+- **Live-Prüfung nach dem Deploy von PR 2:** ein Rezept einschätzen lassen (bis PR 3 nur über die Konsole
+  oder einen kurzen Aufruf), Antwort und gespeichertes Feld `weinprofil` ansehen.
 - **Farb-Tokens** für die Weinfarben (weiß, rosé, rot, süß) mit Werten für hell und dunkel in
   `src/tokens.css` (PR 3).
 

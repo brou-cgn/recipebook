@@ -87,6 +87,16 @@ service cloud.firestore {
           && importOriginOf(resource.data) != 'shortcut';
     }
 
+    // Rezept-Felder, die nur Cloud Functions schreiben (Admin SDK umgeht die Regeln):
+    // ratingAvg/ratingCount (aggregateRecipeRating) und weinprofil (generateWeinprofile,
+    // Weinbegleitung). Ein Client darf sie nicht ändern, auch nicht löschen (Tech-Check S29).
+    // Updates, die diese Felder nicht anfassen (Rezept speichern, Freigabe, Nährwerte),
+    // bleiben erlaubt; ein unverändert mitgeschickter Wert zählt nicht als Änderung.
+    function changesFunctionOwnedRecipeFields() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['ratingAvg', 'ratingCount', 'weinprofil']);
+    }
+
     // Recipes collection
     match /recipes/{recipeId} {
       // Direct reads are for signed-in users with a profile only. Anonymous
@@ -98,10 +108,9 @@ service cloud.firestore {
       allow get, list: if isAnyUser() && !isAnonymous();
       allow create: if isEditOrAdmin() && !createsShortcutOrigin();
       allow delete: if isEditOrAdmin();
-      // ratingAvg/ratingCount are written exclusively by the aggregateRecipeRating
-      // Cloud Function (Admin SDK bypasses these rules) in response to changes in
-      // the ratings subcollection below; no client write path for these fields.
-      allow update: if isEditOrAdmin() && !setsShortcutOrigin();
+      // ratingAvg/ratingCount (aggregateRecipeRating) und weinprofil (generateWeinprofile)
+      // schreiben nur Cloud Functions, siehe changesFunctionOwnedRecipeFields.
+      allow update: if isEditOrAdmin() && !setsShortcutOrigin() && !changesFunctionOwnedRecipeFields();
 
       // Ratings subcollection – anyone (including guests) may read and write their own rating.
       // Guests are identified by a localStorage-generated ID (prefixed 'guest_');
@@ -451,6 +460,10 @@ service cloud.firestore {
       allow read, write: if false;
     }
     match /aiVersionLimits/{limitId} {
+      allow read, write: if false;
+    }
+    // Tageszähler von generateWeinprofile (Weinbegleitung), je geschätztes Rezept.
+    match /aiWeinprofilLimits/{limitId} {
       allow read, write: if false;
     }
     // Tageszähler des Import-Sweepers recoverStuckImportJobs je Autor (Tech-Check S21).
