@@ -26,6 +26,7 @@ const quellen = alleQuellen();
 const FINGERABDRUECKE = {
   '2026-11-1': 'b3c3142f72c55ee9',
   '2026-11-2': 'd4adfa4c7d7a2280',
+  '2026-11-3': 'dd4e252f0b339b45',
 };
 
 // JSON mit sortierten Schlüsseln: die Reihenfolge der Objekt-Schlüssel (auch die, die Babel

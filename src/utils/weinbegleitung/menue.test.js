@@ -103,7 +103,7 @@ describe('erstelleSnapshot', () => {
       sektionIndex: 1,
       sektionName: 'Hauptgang',
       stilId: 'rot_kraeftig',
-      alternativen: [{ stilId: 'rot_mittel', label: 'passt' }],
+      optionen: [{ stilId: 'weiss_voll', farbe: 'weiss', label: 'passt bedingt', regelIds: expect.any(Array) }],
       label: 'passt hervorragend',
       regelIds: ['R7', 'R8', 'R10'],
       fixiert: false,

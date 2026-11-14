@@ -49,7 +49,7 @@
     "tannin": 0,
     "alkohol": 2,
     "schaum": false,
-    "beispiele": ["Sauvignon Blanc", "Scheurebe"],
+    "beispiele": ["Sauvignon Blanc", "Scheurebe", "Verdejo"],
     "temperatur": { "min": 8, "max": 10 },
     "passung": {
       "stark": ["hk:kaese_frisch", "hk:gemuese", "sc:kraeuter_gruen"],
@@ -89,7 +89,7 @@
     "tannin": 0,
     "alkohol": 3,
     "schaum": false,
-    "beispiele": ["Grauburgunder", "Chardonnay mit Holz"],
+    "beispiele": ["Grauburgunder", "Chardonnay mit Holz", "Viognier"],
     "temperatur": { "min": 10, "max": 12 },
     "passung": {
       "stark": ["hk:fisch_fett", "hk:schwein_kalb", "sc:sahne_butter_kaese"],
@@ -129,7 +129,7 @@
     "tannin": 0,
     "alkohol": 2,
     "schaum": false,
-    "beispiele": ["Spätburgunder Rosé", "Provence-Rosé"],
+    "beispiele": ["Spätburgunder Rosé", "Provence-Rosé", "Zweigelt Rosé"],
     "temperatur": { "min": 8, "max": 10 },
     "passung": {
       "stark": ["hk:fisch_fett", "sc:tomate", "sc:kraeuter_gruen"],
@@ -149,7 +149,7 @@
     "tannin": 1,
     "alkohol": 2,
     "schaum": false,
-    "beispiele": ["Spätburgunder", "Gamay"],
+    "beispiele": ["Spätburgunder", "Gamay", "Trollinger"],
     "temperatur": { "min": 14, "max": 16 },
     "passung": {
       "stark": ["hk:pilze", "hk:fisch_fett", "sc:pilz_erdig"],
