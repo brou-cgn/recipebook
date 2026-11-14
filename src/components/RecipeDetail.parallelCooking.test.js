@@ -903,3 +903,31 @@ describe('RecipeDetail – Titelzeile mit Timer anderer Schritte (Feinschliff Ta
     expect(screen.getByRole('button', { name: 'Zu Schritt 1 springen, Timer 10:00' })).toBeInTheDocument();
   });
 });
+
+describe('RecipeDetail – Zähler in der Schrittkarte auf dem Tablet (Feinschliff Tablet, Punkt 6)', () => {
+  const originalMatchMedia = window.matchMedia;
+  afterEach(() => { window.matchMedia = originalMatchMedia; });
+
+  test('mit Titelzeile steht „Schritt x von y“ nur dort; unten bleibt „Heute gekocht“ auf dem letzten Schritt', async () => {
+    setTabletViewport();
+    renderWithProviders(<Harness />);
+    await enterCookingMode();
+
+    expect(document.querySelector('.recipe-detail-content')).toHaveClass('cooking-mode-step-in-titlebar');
+    const cards = Array.from(document.querySelectorAll('.step-card'));
+    cards.forEach((card) => expect(card).not.toHaveTextContent(/Schritt \d von \d/));
+    expect(cards[0]).toHaveClass('step-card--no-counter');
+    expect(cards[cards.length - 1]).not.toHaveClass('step-card--no-counter');
+    expect(within(cards[cards.length - 1]).getByRole('button', { name: 'Heute gekocht' })).toBeInTheDocument();
+    expect(within(document.querySelector('.cooking-mode-titlebar')).getByText('Schritt 1 von 3')).toBeInTheDocument();
+  });
+
+  test('ohne Flag gibt es keine Titelzeile, der Zähler bleibt in der Karte', async () => {
+    setTabletViewport();
+    renderWithProviders(<Harness user={{ ...flaggedUser, parallelKochen: false }} />);
+    await enterCookingMode();
+
+    expect(document.querySelector('.recipe-detail-content')).not.toHaveClass('cooking-mode-step-in-titlebar');
+    expect(document.querySelectorAll('.step-card')[0].querySelector('.step-counter')).toHaveTextContent('Schritt 1 von 3');
+  });
+});

@@ -2093,6 +2093,26 @@ button.private-badge-button:active {
   }
 }
 
+/* ── Lange Schritte auf dem Tablet (Feinschliff Tablet, Punkt 6) ─────────────────────
+   Mit Titelzeile (Flag) steht „Schritt x von y“ dort; unten in der Schrittkarte bleibt nur „Heute gekocht“ auf dem
+   letzten Schritt, die übrigen Karten geben die 4rem Innenabstand für den Zähler frei.
+   Passt der Text dann noch nicht, wird er eine Stufe kleiner (useStepCardFit setzt data-fit): rund 27 px, dann
+   24 px. Kleiner nicht, vom Herd aus ist das die Grenze; darüber scrollt die Karte wie bisher. Die Selektoren
+   schlagen die Hochformat-Regeln oben (.step-card.active). */
+.recipe-detail-content.cooking-mode-active.cooking-mode-step-in-titlebar .step-card.step-card--no-counter {
+  padding-bottom: 1.5rem;
+}
+
+.recipe-detail-content.cooking-mode-active.cooking-mode-split .step-card[data-fit="1"],
+.recipe-detail-content.cooking-mode-active.cooking-mode-tablet-full .step-card[data-fit="1"] {
+  font-size: clamp(1.5rem, 3.25dvh, 1.7rem);
+}
+
+.recipe-detail-content.cooking-mode-active.cooking-mode-split .step-card[data-fit="2"],
+.recipe-detail-content.cooking-mode-active.cooking-mode-tablet-full .step-card[data-fit="2"] {
+  font-size: 1.5rem;
+}
+
 /* ── Landscape mobile: side-by-side cooking mode layout ───────────────── */
 
 /* Applied via JS when cookingMode && isMobileLandscape */
