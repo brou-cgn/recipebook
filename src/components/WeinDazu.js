@@ -177,10 +177,11 @@ function WeinDazu({ recipe, currentUser, isSharedView = false }) {
   const empfehlung = useMemo(() => empfehlungFuerWeinprofil(profil), [profil]);
   const darfSchaetzen = !isSharedView && canEditRecipes(currentUser);
 
-  // Veraltet-Erkennung über den inputHash; ohne Web Crypto bleibt es bei „unbekannt“
+  // Veraltet-Erkennung über den inputHash; ohne Web Crypto bleibt es bei „unbekannt“.
+  // Freigabe-Seiten zeigen nur das Ergebnis: Gäste können nichts neu einschätzen lassen.
   useEffect(() => {
     let abgebrochen = false;
-    if (!profil) {
+    if (!profil || isSharedView) {
       setAktuell(null);
       return undefined;
     }
@@ -188,7 +189,7 @@ function WeinDazu({ recipe, currentUser, isSharedView = false }) {
       .then((ergebnis) => { if (!abgebrochen) setAktuell(ergebnis); })
       .catch(() => { if (!abgebrochen) setAktuell(null); });
     return () => { abgebrochen = true; };
-  }, [recipe, profil]);
+  }, [recipe, profil, isSharedView]);
 
   const schaetzen = useCallback(async () => {
     if (!rezeptId) return;
