@@ -216,6 +216,7 @@
       "gut": ["hk:dessert_schoko", "sc:suess_fruchtig"],
       "meiden": ["hk:rind_lamm", "hk:wild", "sc:rotwein_jus"]
     },
+    "nurZu": ["rolle:dessert", "hk:dessert_frucht", "hk:dessert_schoko", "hk:dessert_creme", "hk:kaese_blau"],
     "quellenIds": ["dwi_handbuch", "winefolly"],
     "alkoholfrei": null
   },
@@ -236,6 +237,7 @@
       "gut": ["hk:dessert_creme", "hk:kaese_hart"],
       "meiden": ["hk:fisch_mager", "hk:meeresfruechte", "hk:gemuese", "hk:spargel"]
     },
+    "nurZu": ["rolle:dessert", "hk:dessert_frucht", "hk:dessert_schoko", "hk:dessert_creme", "hk:kaese_blau", "hk:kaese_hart"],
     "quellenIds": ["winefolly"],
     "alkoholfrei": null
   }

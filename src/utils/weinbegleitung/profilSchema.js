@@ -44,6 +44,8 @@ export const KOMPONENTE_MAX = 3;
 export const TAG_HAUPTKOMPONENTE = 'hk';
 export const TAG_ZUBEREITUNG = 'zb';
 export const TAG_SAUCE = 'sc';
+// Nur in `nurZu` (stile.json): Rolle des Gerichts, z. B. „rolle:dessert“
+export const TAG_ROLLE = 'rolle';
 
 const istGanzzahlImBereich = (wert, min, max) => Number.isInteger(wert) && wert >= min && wert <= max;
 

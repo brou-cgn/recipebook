@@ -12,7 +12,7 @@ import {
   SAUCE_KEINE,
   R1_STRAFE_JE_STUFE,
   R2_STRAFE_JE_STUFE,
-  R3_STRAFE_JE_STUFE,
+  R3_STRAFE_NACH_ABSTAND,
   R3_UEBERSUESSE_AB_DIFFERENZ,
   R3_UEBERSUESSE_STRAFE_JE_STUFE_UEBER_1,
   R3_AUSNAHME_HAUPTKOMPONENTE,
@@ -35,6 +35,7 @@ import {
   R9_AB_BITTER,
   R9_AB_TANNIN,
   R9_STRAFE,
+  S_MIN,
   S_GUT,
   S_TOP,
   LABEL_TOP,
@@ -55,7 +56,7 @@ import {
   R8_ROT_HAUPTKOMPONENTEN,
   R8_WEISS_HAUPTKOMPONENTEN,
 } from './konstanten';
-import { TAG_HAUPTKOMPONENTE, TAG_ZUBEREITUNG, TAG_SAUCE } from './profilSchema';
+import { TAG_HAUPTKOMPONENTE, TAG_ZUBEREITUNG, TAG_SAUCE, TAG_ROLLE } from './profilSchema';
 import { alleStile, stilReihenfolge } from './wissensbasis';
 
 // Scores auf zwei Nachkommastellen runden, damit 0,8 + 0,5 + 2 nicht als 3,3000000000000003
@@ -119,7 +120,7 @@ export function regelTerme(stil, gang) {
 
   if (k.saeure > stil.saeure) terme.R2 = -R2_STRAFE_JE_STUFE * (k.saeure - stil.saeure);
 
-  if (k.suesse > stil.suesse) terme.R3 -= R3_STRAFE_JE_STUFE * (k.suesse - stil.suesse);
+  if (k.suesse > stil.suesse) terme.R3 -= R3_STRAFE_NACH_ABSTAND[k.suesse - stil.suesse];
   const uebersuesse = stil.suesse - k.suesse;
   if (uebersuesse >= R3_UEBERSUESSE_AB_DIFFERENZ && gang.hauptkomponente !== R3_AUSNAHME_HAUPTKOMPONENTE) {
     terme.R3 -= R3_UEBERSUESSE_STRAFE_JE_STUFE_UEBER_1 * (uebersuesse - 1);
@@ -146,10 +147,25 @@ export function regelTerme(stil, gang) {
 }
 
 /**
+ * Kommt der Stil für das Gericht überhaupt infrage? Ein Stil mit `nurZu` in stile.json
+ * (Süßweine: nur zu Dessert und Käse) passt nur, wenn die Rolle („rolle:dessert“) oder
+ * die Hauptkomponente („hk:kaese_blau“) des Gangs in der Liste steht. Das gilt unabhängig
+ * vom Score: Eine geschätzte Süße im herzhaften Gericht macht es nicht zum Dessert.
+ * @param {Object} stil
+ * @param {Object} gang
+ * @returns {boolean}
+ */
+export function kommtInfrage(stil, gang) {
+  if (!Array.isArray(stil.nurZu) || stil.nurZu.length === 0) return true;
+  return stil.nurZu.includes(`${TAG_ROLLE}:${gang.rolle}`)
+    || stil.nurZu.includes(`${TAG_HAUPTKOMPONENTE}:${gang.hauptkomponente}`);
+}
+
+/**
  * Score eines Stils für ein Gang-Profil: Passung der Tags plus Regel-Terme.
  * @param {Object} stil
  * @param {Object} gang
- * @returns {{stilId: string, score: number, passung: number, passungen: Array, terme: Object}}
+ * @returns {{stilId: string, score: number, infrage: boolean, passung: number, passungen: Array, terme: Object}}
  */
 export function bewerteStil(stil, gang) {
   const passungen = gangTags(gang).map(({ art, tag, gewicht }) => {
@@ -162,11 +178,19 @@ export function bewerteStil(stil, gang) {
   return {
     stilId: stil.id,
     score: ohneMinusNull(runde(passung + summeTerme)),
+    infrage: kommtInfrage(stil, gang),
     passung: ohneMinusNull(runde(passung)),
     passungen,
     terme,
   };
 }
+
+/**
+ * Kandidat für eine Empfehlung: Der Stil kommt infrage und erreicht S_MIN.
+ * @param {{score: number, infrage: boolean}} bewertung - Ergebnis von bewerteStil
+ * @returns {boolean}
+ */
+export const istKandidat = (bewertung) => bewertung.infrage && bewertung.score >= S_MIN;
 
 /**
  * Alle Stile der Wissensbasis, absteigend nach Score; bei Gleichstand gilt die

@@ -25,6 +25,7 @@ const quellen = alleQuellen();
 // Fingerabdruck je RULES_VERSION. Neue Version: Eintrag ergänzen, alte Einträge nie ändern.
 const FINGERABDRUECKE = {
   '2026-11-1': 'b3c3142f72c55ee9',
+  '2026-11-2': 'd4adfa4c7d7a2280',
 };
 
 // JSON mit sortierten Schlüsseln: die Reihenfolge der Objekt-Schlüssel (auch die, die Babel
@@ -129,6 +130,29 @@ describe('Stile', () => {
     const tags = [...stil.passung.stark, ...stil.passung.gut, ...stil.passung.meiden];
     tags.forEach((tag) => expect(erlaubteTags.has(tag)).toBe(true));
     expect(new Set(tags).size).toBe(tags.length);
+  });
+
+  it.each(stile.filter((stil) => stil.nurZu !== undefined).map((stil) => [stil.id, stil]))(
+    '%s nennt in nurZu nur Rollen und Hauptkomponenten, jede höchstens einmal',
+    (_id, stil) => {
+      const erlaubt = new Set([
+        ...ROLLEN.map((wert) => `rolle:${wert}`),
+        ...HAUPTKOMPONENTEN.map((wert) => `hk:${wert}`),
+      ]);
+      expect(stil.nurZu.length).toBeGreaterThan(0);
+      stil.nurZu.forEach((tag) => expect(erlaubt.has(tag)).toBe(true));
+      expect(new Set(stil.nurZu).size).toBe(stil.nurZu.length);
+    },
+  );
+
+  // Süßweine gehören zum Dessert oder zum Käse; ohne nurZu landen sie bei jedem Gericht mit etwas Süße.
+  it('beschränken jeden Süßwein (Süße 3) mit nurZu auf Dessert und Käse', () => {
+    const suessweine = stile.filter((stil) => stil.suesse === 3);
+    expect(suessweine.length).toBeGreaterThan(0);
+    suessweine.forEach((stil) => {
+      expect(stil.nurZu).toEqual(expect.arrayContaining(['rolle:dessert', 'hk:kaese_blau']));
+      stil.nurZu.forEach((tag) => expect(tag).toMatch(/^(rolle:dessert|hk:dessert_|hk:kaese_)/));
+    });
   });
 
   // Akzeptanzkriterium 6: nur Stile mit Rebsorten-Beispielen, nie Flaschen, Erzeuger, Jahrgänge oder Preise.

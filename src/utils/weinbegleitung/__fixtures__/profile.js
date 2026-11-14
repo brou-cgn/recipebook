@@ -74,6 +74,59 @@ export const E3_EXTREM = weinprofil({
   intensitaet: 5, schaerfe: 3, saeure: 3, suesse: 2, bitter: 2,
 });
 
+// Festtagsgerichte mit süßen Beilagen, Würzungen oder Saucen. Kalibrierung vom 14.11.2026
+// (Eigentümer: „es wird immer Süßwein vorgeschlagen“). Die Werte sind so geschätzt, wie Gemini
+// herzhafte Gerichte mit Zwiebeln, Äpfeln, Honig oder Kompott einstuft: Süße 1 bis 3.
+export const G10_GAENSEBRATEN = weinprofil({
+  rolle: 'hauptgericht', hauptkomponente: 'gefluegel', zubereitung: 'geschmort', sauce: 'rotwein_jus',
+  intensitaet: 4, suesse: 1, salz: 2, fett: 3, umami: 2,
+});
+
+export const G10_APFELROTKOHL = weinprofil({
+  rolle: 'beilage', hauptkomponente: 'gemuese', zubereitung: 'geschmort', sauce: 'suess_fruchtig',
+  intensitaet: 3, saeure: 2, suesse: 2,
+});
+
+export const G10_KLOESSE = weinprofil({
+  rolle: 'beilage', hauptkomponente: 'huelsenfruechte_getreide', zubereitung: 'gedaempft_pochiert', sauce: 'keine',
+  intensitaet: 1, salz: 1,
+});
+
+export const G11_REHRUECKEN = weinprofil({
+  rolle: 'hauptgericht', hauptkomponente: 'wild', zubereitung: 'gebraten', sauce: 'rotwein_jus',
+  intensitaet: 4, salz: 1, fett: 1, umami: 2,
+});
+
+export const G11_PREISELBEEREN = weinprofil({
+  rolle: 'sauce_dip', hauptkomponente: 'dessert_frucht', zubereitung: 'gedaempft_pochiert', sauce: 'suess_fruchtig',
+  intensitaet: 3, saeure: 2, suesse: 3,
+});
+
+export const G12_ZIEGENKAESE_HONIG = weinprofil({
+  rolle: 'vorspeise', hauptkomponente: 'kaese_frisch', zubereitung: 'kalt', sauce: 'suess_fruchtig',
+  intensitaet: 3, saeure: 2, suesse: 2, salz: 1, fett: 2,
+});
+
+export const G13_ENTE_ORANGE = weinprofil({
+  rolle: 'hauptgericht', hauptkomponente: 'gefluegel', zubereitung: 'gebraten', sauce: 'suess_fruchtig',
+  intensitaet: 4, saeure: 1, suesse: 2, salz: 1, fett: 3,
+});
+
+export const G14_SCHWEINEFILET = weinprofil({
+  rolle: 'hauptgericht', hauptkomponente: 'schwein_kalb', zubereitung: 'gebraten', sauce: 'sahne_butter_kaese',
+  intensitaet: 3, salz: 2, fett: 2, umami: 1,
+});
+
+export const G14_HONIGMOEHREN = weinprofil({
+  rolle: 'beilage', hauptkomponente: 'gemuese', zubereitung: 'gedaempft_pochiert', sauce: 'suess_fruchtig',
+  intensitaet: 2, suesse: 2, fett: 1,
+});
+
+export const G15_BIRNE_GORGONZOLA = weinprofil({
+  rolle: 'vorspeise', hauptkomponente: 'kaese_blau', zubereitung: 'gebacken', sauce: 'keine',
+  intensitaet: 4, suesse: 2, salz: 2, fett: 2,
+});
+
 /**
  * Menü G1 → G5 → G6 (Vorspeise, Hauptgang, Dessert) mit leerer Drinks-Sektion.
  * @returns {{menu: Object, rezepte: Array<Object>}}
