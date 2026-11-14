@@ -6,6 +6,13 @@
 const MENU_SECTIONS_KEY = 'menuSections';
 
 /**
+ * Name der Getränke-Sektion eines Menüs (Vergleich ohne Groß-/Kleinschreibung).
+ * MenuDetail.js führt denselben Wert noch als eigene Konstante; die Weinbegleitung
+ * (src/utils/weinbegleitung/gang.js) zählt diese Sektion nicht als Gang.
+ */
+export const DRINKS_SECTION_NAME = 'Drinks';
+
+/**
  * Get all saved menu sections from localStorage
  * These are sections that have been used before and can be reused
  * @returns {Array} Array of unique section names

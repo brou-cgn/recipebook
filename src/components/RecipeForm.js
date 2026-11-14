@@ -43,6 +43,9 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import useSwipeToDelete, { SWIPE_DIRECTION_LOCK_THRESHOLD } from '../hooks/useSwipeToDelete';
 
+// Max. parallel recipe photo uploads when several photos are picked at once.
+const IMAGE_UPLOAD_CONCURRENCY = 3;
+
 // Sortable Ingredient Item Component
 function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, onToggleType, swipeDeleteIcon }) {
   const {
@@ -418,6 +421,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [rephrasingSteps, setRephrasingSteps] = useState(false);
   const [imageError, setImageError] = useState(false); // eslint-disable-line no-unused-vars
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageUploadProgress, setImageUploadProgress] = useState(null); // { done, total } while uploading
   const [authorId, setAuthorId] = useState('');
   const [parentRecipeId, setParentRecipeId] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
@@ -954,58 +958,103 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     }
   };
 
+  // Uploads one image (original + thumbnail + brightness) and returns the image entry.
+  const uploadSingleRecipeImage = async (file) => {
+    // Upload original image and generate thumbnail in parallel
+    const [downloadURL, thumbnailBlob] = await Promise.all([
+      uploadRecipeImage(file),
+      generateThumbnailBlob(file).catch((err) => {
+        console.warn('Thumbnail generation failed (non-critical):', err);
+        return null;
+      }),
+    ]);
+
+    // Upload thumbnail if generated successfully
+    let thumbnailUrl = null;
+    if (thumbnailBlob) {
+      try {
+        thumbnailUrl = await uploadRecipeThumbnail(thumbnailBlob);
+      } catch (thumbUploadErr) {
+        // Thumbnail upload is non-critical – continue without it
+        console.warn('Thumbnail upload failed (non-critical):', thumbUploadErr);
+      }
+    }
+
+    // Analyze brightness using a local object URL (avoids CORS restrictions)
+    let imageBrightness = null;
+    try {
+      const objectUrl = URL.createObjectURL(file);
+      imageBrightness = await analyzeImageBrightness(objectUrl);
+      URL.revokeObjectURL(objectUrl);
+    } catch (_e) {
+      // Brightness analysis is non-critical – ignore errors
+    }
+
+    return { url: downloadURL, thumbnailUrl, imageBrightness };
+  };
+
+  // Several photos can be picked at once in the device's native photo picker
+  // (input `multiple`). At most IMAGE_UPLOAD_CONCURRENCY uploads run at the same
+  // time so large phone photos don't exhaust memory on mobile devices.
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const input = e.target;
+    const files = Array.from(input.files || []);
+    if (files.length === 0) return;
 
     setUploadingImage(true);
     setImageError(false);
+    setImageUploadProgress({ done: 0, total: files.length });
+
+    const results = new Array(files.length);
+    let nextIndex = 0;
+    let doneCount = 0;
+    const worker = async () => {
+      while (nextIndex < files.length) {
+        const idx = nextIndex++;
+        try {
+          results[idx] = { ok: true, value: await uploadSingleRecipeImage(files[idx]) };
+        } catch (error) {
+          results[idx] = { ok: false, error };
+        }
+        doneCount += 1;
+        setImageUploadProgress({ done: doneCount, total: files.length });
+      }
+    };
 
     try {
-      // Upload original image and generate thumbnail in parallel
-      const [downloadURL, thumbnailBlob] = await Promise.all([
-        uploadRecipeImage(file),
-        generateThumbnailBlob(file).catch((err) => {
-          console.warn('Thumbnail generation failed (non-critical):', err);
-          return null;
-        }),
-      ]);
+      await Promise.all(
+        Array.from({ length: Math.min(IMAGE_UPLOAD_CONCURRENCY, files.length) }, worker)
+      );
 
-      // Upload thumbnail if generated successfully
-      let thumbnailUrl = null;
-      if (thumbnailBlob) {
-        try {
-          thumbnailUrl = await uploadRecipeThumbnail(thumbnailBlob);
-        } catch (thumbUploadErr) {
-          // Thumbnail upload is non-critical – continue without it
-          console.warn('Thumbnail upload failed (non-critical):', thumbUploadErr);
-        }
+      // Append in the order the photos were selected; first image overall is default
+      const uploaded = results.filter(r => r.ok).map(r => r.value);
+      if (uploaded.length > 0) {
+        setImages(prev => {
+          const hasDefault = prev.some(img => img.isDefault);
+          return [
+            ...prev,
+            ...uploaded.map((img, i) => ({ ...img, isDefault: !hasDefault && i === 0 })),
+          ];
+        });
+        // Keep legacy image field in sync with default image
+        setImage(prev => prev || uploaded[0].url);
       }
 
-      // Analyze brightness using a local object URL (avoids CORS restrictions)
-      let imageBrightness = null;
-      try {
-        const objectUrl = URL.createObjectURL(file);
-        imageBrightness = await analyzeImageBrightness(objectUrl);
-        URL.revokeObjectURL(objectUrl);
-      } catch (_e) {
-        // Brightness analysis is non-critical – ignore errors
+      const failed = results.filter(r => !r.ok);
+      if (failed.length > 0) {
+        setImageError(true);
+        const reason = failed[0].error?.message || 'Unbekannter Fehler';
+        alert(
+          files.length === 1
+            ? reason
+            : `${failed.length} von ${files.length} Bildern konnten nicht hochgeladen werden: ${reason}`
+        );
       }
-
-      // Add to images array; first image is default, others are not
-      setImages(prev => {
-        const isFirst = prev.length === 0;
-        return [...prev, { url: downloadURL, thumbnailUrl, isDefault: isFirst, imageBrightness }];
-      });
-      // Keep legacy image field in sync with default image
-      setImage(prev => prev || downloadURL);
-    } catch (error) {
-      alert(error.message);
-      setImageError(true);
     } finally {
       setUploadingImage(false);
+      setImageUploadProgress(null);
       // Reset file input so the same file can be selected again
-      e.target.value = '';
+      input.value = '';
     }
   };
 
@@ -1536,7 +1585,13 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
             <label
               htmlFor="imageFile"
               className="add-image-btn"
-              title={uploadingImage ? 'Hochladen...' : 'Bild hinzufügen'}
+              title={uploadingImage
+                ? (imageUploadProgress && imageUploadProgress.total > 1
+                  ? `Hochladen... (${imageUploadProgress.done}/${imageUploadProgress.total})`
+                  : 'Hochladen...')
+                : 'Bilder hinzufügen'}
+              aria-label={uploadingImage ? 'Bilder werden hochgeladen' : 'Bilder hinzufügen'}
+              aria-busy={uploadingImage}
             >
               {isBase64Image(getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)) ? (
                 <img src={getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)} alt="Bild hinzufügen" className="button-icon-img add-image-icon-img" />
@@ -1548,6 +1603,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               type="file"
               id="imageFile"
               accept="image/*"
+              multiple
               onChange={handleImageUpload}
               style={{ display: 'none' }}
               disabled={uploadingImage}

@@ -53,6 +53,7 @@ import RecipeRating from './RecipeRating';
 import CookDateModal from './CookDateModal';
 import FollowButton from './FollowButton';
 import FollowName from './FollowName';
+import WeinDazu from './WeinDazu';
 import { getAllCookDates } from '../utils/recipeCookDates';
 import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { calculateRecipeSortIndexBreakdown } from '../utils/recipeSortIndex';
@@ -259,6 +260,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [showAddRecipeSheet, setShowAddRecipeSheet] = useState(false);
   // Einrichtbares Icon des Knopfs „Rezept dazunehmen“ (Button-Icon cookingAddRecipe), abgeleitet statt eigener State
   const cookingAddRecipeIcon = getEffectiveIcon(allButtonIcons, 'cookingAddRecipe', isDarkMode) || defaultIcon('potPlus', isDarkMode);
+  const weinRotIcon = getEffectiveIcon(allButtonIcons, 'weinRot', isDarkMode);
+  const weinWeissIcon = getEffectiveIcon(allButtonIcons, 'weinWeiss', isDarkMode);
+  const weinIcons = useMemo(() => ({ rot: weinRotIcon, weiss: weinWeissIcon }), [weinRotIcon, weinWeissIcon]);
   const ingredientMatchFromModalRef = useRef(false);
   const [alarmSoundKey] = useState(() => getAlarmSoundPreference());
   const [openIngredientInfoIndex, setOpenIngredientInfoIndex] = useState(null);
@@ -2556,6 +2560,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 </div>
               )}
             </div>
+
+            <WeinDazu
+              recipe={recipe}
+              currentUser={currentUser}
+              isSharedView={isSharedView}
+              icons={weinIcons}
+            />
 
             <section className="recipe-section recipe-section--ingredients">
               <div className="section-header">

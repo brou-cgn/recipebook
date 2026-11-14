@@ -1,0 +1,59 @@
+/* Gemeinsame Bausteine der Weinbegleitung (WeinbegleitungTeile.js): Glas, Gründe, Quellen.
+   Farben nur über Tokens (src/tokens.css), Weinfarben über --color-wein-*. */
+
+.wein-glas {
+  flex-shrink: 0;
+  color: var(--color-brand);
+}
+
+.wein-glas-fuellung--weiss { fill: var(--color-wein-weiss); }
+.wein-glas-fuellung--rose { fill: var(--color-wein-rose); }
+.wein-glas-fuellung--rot { fill: var(--color-wein-rot); }
+.wein-glas-fuellung--suess { fill: var(--color-wein-suess); }
+
+/* Ladezustand: das Glas füllt sich */
+.wein-glas--laedt .wein-glas-fuellung {
+  animation: wein-glas-fuellen 1.6s ease-in-out infinite;
+}
+
+@keyframes wein-glas-fuellen {
+  0% { transform: translateY(8px); }
+  70% { transform: translateY(0); }
+  100% { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wein-glas--laedt .wein-glas-fuellung {
+    animation: none;
+    transform: translateY(3px);
+  }
+}
+
+.wein-gruende {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--color-text-body);
+}
+
+.wein-gruende li + li {
+  margin-top: 0.35rem;
+}
+
+.wein-quellen a {
+  color: var(--color-brand);
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+
+/* Eigene Icons für Rot- und Weißwein (Button-Icons weinRot / weinWeiss) */
+.wein-symbol-bild {
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.wein-symbol-text {
+  flex-shrink: 0;
+  line-height: 1;
+}

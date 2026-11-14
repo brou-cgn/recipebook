@@ -13,6 +13,8 @@ jest.mock('../utils/userFavorites', () => ({
 }));
 
 jest.mock('../utils/userManagement', () => ({
+  // Weinbegleitung (WeinDazu): ohne Recht kein Knopf „Passenden Wein finden“
+  canEditRecipes: () => false,
   canDirectlyEditRecipe: () => true,
   canCreateNewVersion: () => true,
   canDeleteRecipe: () => true,
