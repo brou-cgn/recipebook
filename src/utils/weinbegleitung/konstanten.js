@@ -8,7 +8,7 @@
  * als veraltet. wissensbasis.test.js erzwingt das über einen Fingerabdruck.
  */
 
-export const RULES_VERSION = '2026-11-2';
+export const RULES_VERSION = '2026-11-3';
 
 // Rollen, für die ein Einzelrezept keine Weinempfehlung bekommt.
 export const ROLLEN_OHNE_WEIN = ['getraenk', 'sauce_dip', 'beilage', 'gebaeck_kuchen'];
@@ -80,6 +80,13 @@ export const S_TOP = 5.5;
 export const LABEL_TOP = 'passt hervorragend';
 export const LABEL_GUT = 'passt gut';
 export const LABEL_BASIS = 'passt';
+
+// --- Optionen je Gang im Menü ------------------------------------------------
+// Jeder Gang zeigt neben der Empfehlung die beste Option jeder dieser Farben (Eigentümer,
+// 14.11.2026: immer eine Rot- und eine Weißwein-Option). Sie muss für den Gang infrage
+// kommen (nurZu), darf aber unter S_MIN liegen; dann trägt sie LABEL_BEDINGT.
+export const OPTION_FARBEN = ['rot', 'weiss'];
+export const LABEL_BEDINGT = 'passt bedingt';
 
 // --- Menüfolge (R10) ---------------------------------------------------------
 export const MAX_KANDIDATEN_JE_GANG = 4;

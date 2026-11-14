@@ -1,7 +1,7 @@
 # Vorhaben: Weinbegleitung (Menüs und Einzelrezepte)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 14.11.2026 (PR 1 bis 5, die Nachbesserung am Rezept-Sheet und die Kalibrierung der Süße gemergt und deployt; offen sind nur noch die Punkte unter „Offen“).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 14.11.2026 (PR 1 bis 5, die Nachbesserung am Rezept-Sheet und die Kalibrierung der Süße gemergt und deployt; PR 6, Rot- und Weißwein-Option je Gang im Menü, in Arbeit).
 
 **Ziel:** Zu einem Menü (Festtafel) schlägt die App pro Gang einen passenden Weinstil vor, mit bis zu
 zwei Alternativen, einer kurzen Begründung und einem Quellenlink. Dazu gibt es den Modus „Ein Wein für
@@ -28,7 +28,8 @@ Menüansicht, dazu die Zustände). Keine Mockups im Repo.
 | „Ein Wein“ ohne gemeinsamen Stil | Ergänzung: Erreicht kein Stil `S_MIN` in allen Nicht-Dessert-Gängen, bekommen sie den Hinweis `keinGemeinsamerStil`, statt einen schlechten Stil zu erzwingen. Gänge, zu denen gar kein Stil passt (R11), bleiben aus der gemeinsamen Wahl heraus. |
 | Fixierungen | Zuordnung über Index und Sektionsnamen. Nach dem Verschieben einer Sektion genügt der Name, wenn er im Menü eindeutig ist; Umbenennen hebt die Fixierung auf. |
 | Menü-Entscheidungen | 14.11.2026, Vorschläge ohne Widerspruch übernommen: Zusammenfassung und Umschalter stehen vor dem ersten Gang (nicht in „Drinks“). Im Modus „Ein Wein“ tauscht das Antippen einer Alternative den gemeinsamen Stil aller Nicht-Dessert-Gänge; Alternativen eines Dessert-Gangs sind dort nur Anzeige. Sektionen nur aus Beilagen oder Saucen bekommen wie spezifiziert einen eigenen Wein (nur Getränke zählen nicht). „Fixierung lösen“ hebt einen fixierten Gang wieder auf. |
-| Snapshot-Felder | Zusätzlich zur Spezifikation: `gemeinsamerStilId` (Modus „Ein Wein“), `fixierungen` (Pro-Gang-Fixierungen, bleiben beim Moduswechsel erhalten), `gewaehlterGemeinsamerStilId` (vom Nutzer gewählter gemeinsamer Stil) und je Gang `istDessert`. Scores und Strafen werden nicht gespeichert. |
+| Snapshot-Felder | Zusätzlich zur Spezifikation: `gemeinsamerStilId` (Modus „Ein Wein“), `fixierungen` (Pro-Gang-Fixierungen, bleiben beim Moduswechsel erhalten), `gewaehlterGemeinsamerStilId` (vom Nutzer gewählter gemeinsamer Stil) und je Gang `istDessert`. Scores und Strafen werden nicht gespeichert. Seit PR 6 ersetzt je Gang `optionen` (`stilId`, `farbe`, `label`, `regelIds`) die `alternativen`; alte Snapshots zeigen bis „Neu berechnen“ nur die Empfehlung. |
+| Menü-Optionen | 14.11.2026, Eigentümer: Je Gang stehen offen die Empfehlung und immer eine Rot- und eine Weißwein-Option (die Empfehlung zählt mit; bei einer Rosé-Empfehlung oder ohne Empfehlung beide Farben), jede mit drei Rebsorten. Eine Option muss für den Gang infrage kommen (`nurZu`), darf aber unter `S_MIN` liegen und heißt dann „passt bedingt“ (beim Aufklappen: „Die beste Wahl in dieser Farbe, aber kein idealer Partner für diesen Gang.“). Gänge ohne passenden Stil (R11) zeigen den Hinweis und trotzdem beide Farben. Im Modus „Ein Wein“ kommen die Optionen der Hauptgänge aus der gemeinsamen Rangliste, das Dessert hat eigene. Aufklappen zeigt die Gründe ohne Quellen (wie im Rezept-Sheet); Bearbeiter legen dort eine Option als Empfehlung fest (fixiert wie bisher das Tauschen). Die Rezeptansicht bleibt bei zwei Rebsorten und den bisherigen Alternativen. Dritte Rebsorte für die vier Stile mit nur zwei Beispielen: Verdejo, Viognier, Zweigelt Rosé, Trollinger (fachlich gegenzulesen); `RULES_VERSION` `2026-11-3`. |
 | Seite „Weinbegleitung“ | 14.11.2026 (PR 5): Kachel „Weinbegleitung“ unter „Chefkoch & mehr“ für alle Angemeldeten, als Unterseite wie „Mein Netzwerk“ (ohne neue Route in `App.js`). Inhalt: wie die Empfehlung entsteht, die Regeln mit Quellen (dieselben Gründe wie unter „Warum passt das?“), die zwölf Weinstile mit Beispielen und Temperatur, die Quellen und der Stand der Regeln. Admins starten dort auch den Backfill; der Küchenbetrieb hat dafür keinen passenden Reiter. |
 | Backfill | 14.11.2026 (PR 5): `backfillWeinprofile` nur für Admins, je Aufruf eine Seite (Standard 20, höchstens 40 Rezepte) nach Dokument-ID mit Cursor, beim ersten Aufruf die Gesamtzahl per Zählabfrage. Aktuelle Profile werden übersprungen (kein KI-Aufruf, kein Limit), jedes geschätzte Rezept zählt gegen das Tageslimit des Admins (`aiWeinprofilLimits`, 5000). Ist das Limit erreicht, endet die Seite vor dem ersten Rezept ohne Kontingent, der Cursor zeigt auf das letzte bearbeitete. Der Client ruft Seite für Seite; „Anhalten“ wirkt nach der laufenden Seite, „Fortsetzen“ macht am Cursor weiter, „Von vorn prüfen“ versucht fehlgeschlagene Rezepte erneut. |
 | Freigabe-Seiten | 14.11.2026 (PR 5): Sie zeigen nur Ergebnisse (Snapshot im Menü, Chip und Sheet beim Rezept). Der Hinweis „veraltet“ entfällt dort, weil Gäste nichts neu berechnen können; für angemeldete Leser in der App bleibt er. |
@@ -101,6 +102,7 @@ Snapshot oder Fixieren beim Einzelrezept.
 | 4 | Menü nach Variante B: `src/components/Weinbegleitung.js` (Zusammenfassung, Weinzeile je Gang), Hook `src/hooks/useMenueWeinbegleitung.js`, Utils `menue.js` (Snapshot, Menü-Hash, Zuordnung), `saveMenuWeinbegleitung` in `menuFirestore.js`, gemeinsame Bausteine `WeinbegleitungTeile.js` (aus `WeinDazu.js` herausgelöst); `MenuDetail.js` (+9/−2 Zeilen) nutzt jetzt `DRINKS_SECTION_NAME` aus `menuSections.js` | PR #3663 gemergt und deployt (14.11.2026, v2.71.0, Deploy-Lauf 2036); vom Eigentümer live getestet (14.11.2026); Komponententests +13, Util-Tests +12 |
 | K | Kalibrierung der Süße (siehe „Entschieden“): `nurZu` in `stile.json`, `kommtInfrage`/`istKandidat` in `bewertung.js`, R3 gestuft, Gang-Profil mit tragenden Rezepten und gedämpften Beilagen/Saucen, Sauce vom Leitrezept, Süße-Strafe der Menüfolge je Stufe; `RULES_VERSION` `2026-11-2` | PR #3666 gemergt und deployt (14.11.2026, Merge d7145c2, v2.73.2, Deploy-Lauf 2040); Util-Tests +19 (u. a. Golden G10 bis G15 und Prüfung über alle herzhaften Kombinationen) |
 | 5 | Seite „Weinbegleitung“ unter „Chefkoch & mehr“ (`src/components/WeinbegleitungSeite.js`, Kachel in `Kueche.js`) mit Regeln, Weinstilen, Quellen und dem Admin-Backfill; Callable `backfillWeinprofile` mit Cursor (F20) und Hook `useWeinprofilBackfill.js`; Freigabe-Seiten ohne Veraltet-Hinweis; Zeitlimit für die Callables im Client | PR #3667 gemergt und deployt (14.11.2026, Merge d2817c3, v2.74.0, Deploy-Lauf 2041: Function `backfillWeinprofile` angelegt); Function-Tests +12, Komponententests +15, Util-Tests +6 |
+| 6 | Menü: je Gang offen die Empfehlung und je eine Rot- und Weißwein-Option mit drei Rebsorten, Gründe ohne Quellen (Wunsch des Eigentümers, siehe „Menü-Optionen“): `farbOptionen` und `labelFuerOption` in `engine.js`, Snapshot-Feld `optionen` in `menue.js`, `WeinbegleitungGang` in `Weinbegleitung.js`; dritte Rebsorte für vier Stile, `RULES_VERSION` `2026-11-3` | in Arbeit (Branch `claude/intelligent-shannon-t5cts5`) |
 
 Nach jedem PR: Tabelle nachziehen. Berührt ein PR einen Tech-Check-Befund (S29 mit PR 2, F20 mit PR 5),
 das Dashboard aktualisieren (siehe `CLAUDE.md`).
@@ -234,7 +236,8 @@ Umsetzungsnotizen PR 5:
 
 ## Offen
 
-- **Fachlich gegenlesen (Eigentümer):** Kennwerte, Passungen und Beispiele der zwölf Stile, die Regeltexte,
+- **Fachlich gegenlesen (Eigentümer):** Kennwerte, Passungen und Beispiele der zwölf Stile (neu seit PR 6: Verdejo,
+  Viognier, Zweigelt Rosé, Trollinger als dritte Rebsorte), die Regeltexte,
   die Stilnamen, die Zuordnung Quelle → Stil (vorläufig: deutsche Rebsorten auf das DWI-Seminarhandbuch,
   sonst Wine Folly) und die Schwellen. Auffällig: G9 empfiehlt im Modus „Ein Wein“ zu Lachstatar und
   Rinderschmorbraten einen mittelkräftigen Rotwein (Label „passt“). Das entspricht der Regel „höchstes
@@ -247,8 +250,8 @@ Umsetzungsnotizen PR 5:
   Verankerung (1 = Spur wie bei Zwiebeln oder Möhren, 2 = deutlich wie bei Glasur oder Fruchtsauce,
   3 = Dessert) machte die Schätzung stabiler, braucht aber einen Functions-Deploy und eine neue
   `HASH_KENNUNG`, also eine Neueinschätzung aller Rezepte. Entscheidung beim Eigentümer.
-- **Menü an Rezept-Sheet angleichen?** Quellen weglassen und die Icons `weinRot`/`weinWeiss` auch im Menü
-  nutzen (beides vorbereitet: `Gruende mitQuellen={false}`, `WeinSymbol`). Entscheidung beim Eigentümer.
+- **Menü an Rezept-Sheet angleichen?** Die Quellen sind mit PR 6 im Menü weg. Offen ist nur noch, ob das Menü
+  auch die Icons `weinRot`/`weinWeiss` nutzen soll (vorbereitet: `WeinSymbol`). Entscheidung beim Eigentümer.
 - **Quellen ungeprüft und sichtbar:** Im Rezept-Sheet stehen seit 14.11.2026 (#3664) keine Quellen mehr, im Menü
   noch. PR 5 bringt sie auf die Seite „Weinbegleitung“ unter „Chefkoch & mehr“ (Regeln mit Quellen und Quellenliste),
   wie in der Spezifikation geplant; der Eigentümer hat das nach Rückfrage ohne Änderungswunsch mergen lassen

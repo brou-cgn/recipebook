@@ -86,7 +86,6 @@
 .weinbegleitung-umschalter-knopf:focus-visible,
 .weinbegleitung-knopf:focus-visible,
 .weinbegleitung-gang-zeile:focus-visible,
-.weinbegleitung-alternative:focus-visible,
 .weinbegleitung-link:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
@@ -127,9 +126,21 @@
   color: var(--color-text-muted);
 }
 
-/* Weinzeile unter der Gang-Überschrift */
+/* Weine unter der Gang-Überschrift: Empfehlung und je eine Rot- und Weißwein-Option */
 .weinbegleitung-gang {
   margin: -0.75rem 0 1.25rem;
+}
+
+.weinbegleitung-optionen {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.weinbegleitung-option--empfehlung .weinbegleitung-gang-zeile {
+  background: var(--color-accent-tint);
 }
 
 .weinbegleitung-gang-zeile {
@@ -177,6 +188,10 @@
   color: var(--color-brand);
 }
 
+.weinbegleitung-gang-label--bedingt {
+  color: var(--color-text-muted);
+}
+
 .weinbegleitung-fixiert {
   font-weight: 400;
   color: var(--color-text-muted);
@@ -209,39 +224,10 @@
   color: var(--color-brand);
 }
 
-.weinbegleitung-alternativen {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.5rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.weinbegleitung-alternative {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-height: 44px;
-  padding: 0 0.85rem 0 0.6rem;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 999px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  font: inherit;
-  font-size: 0.88rem;
-  text-align: left;
-  cursor: pointer;
-}
-
-.weinbegleitung-alternative--text {
-  cursor: default;
-}
-
-.weinbegleitung-alternative-label {
+.weinbegleitung-bedingt {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
   color: var(--color-text-muted);
-  white-space: nowrap;
 }
 
 .weinbegleitung-link {
@@ -257,6 +243,11 @@
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
+}
+
+/* Im Block mit Optionen steht der Hinweis über den Weinen, sonst allein unter der Überschrift */
+.weinbegleitung-gang .weinbegleitung-gang-hinweis {
+  margin: 0 0 0.4rem;
 }
 
 .weinbegleitung-gang-hinweis {

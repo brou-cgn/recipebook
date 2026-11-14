@@ -168,14 +168,28 @@ describe('Gespeicherte Weinbegleitung', () => {
     expect(screen.queryByRole('button', { name: 'Weinbegleitung erstellen' })).not.toBeInTheDocument();
 
     const hauptgang = within(screen.getByRole('region', { name: 'Hauptgang' }));
+    // Empfehlung und Weißwein-Option stehen offen da, jede mit drei Rebsorten
+    const weine = hauptgang.getByRole('list', { name: 'Weine zu Hauptgang' });
+    expect(within(weine).getAllByRole('listitem')).toHaveLength(2);
+    expect(hauptgang.getByText('Weißwein, vollmundig')).toBeInTheDocument();
+    expect(hauptgang.getByText(/Cabernet Sauvignon, Syrah, Malbec/)).toBeInTheDocument();
+    expect(hauptgang.getByText(/Grauburgunder, Chardonnay mit Holz, Viognier/)).toBeInTheDocument();
+    expect(hauptgang.getByText('Empfehlung · passt hervorragend')).toBeInTheDocument();
+    expect(hauptgang.getByText('passt bedingt')).toBeInTheDocument();
+
     const zeile = hauptgang.getByRole('button', { name: /Rotwein, kräftig/ });
     expect(zeile).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(zeile);
     expect(zeile).toHaveAttribute('aria-expanded', 'true');
     expect(hauptgang.getByRole('heading', { name: 'Warum passt das?' })).toBeInTheDocument();
-    expect(hauptgang.getAllByRole('link', { name: /Quelle:/ }).length).toBeGreaterThanOrEqual(1);
-    expect(hauptgang.getByText('Rotwein, mittelkräftig')).toBeInTheDocument();
-    expect(hauptgang.queryByRole('button', { name: /tauschen/ })).not.toBeInTheDocument();
+    // Ohne Quellen, wie im Rezept-Sheet
+    expect(hauptgang.queryAllByRole('link')).toHaveLength(0);
+    expect(hauptgang.queryByRole('button', { name: /als Empfehlung festlegen/ })).not.toBeInTheDocument();
+
+    // Die Option unter S_MIN erklärt ihr „passt bedingt“
+    fireEvent.click(hauptgang.getByRole('button', { name: /Weißwein, vollmundig/ }));
+    expect(hauptgang.getByText(/Die beste Wahl in dieser Farbe/)).toBeInTheDocument();
+    expect(zeile).toHaveAttribute('aria-expanded', 'false');
 
     expect(generiereWeinprofile).not.toHaveBeenCalled();
     expect(saveMenuWeinbegleitung).not.toHaveBeenCalled();
@@ -194,20 +208,23 @@ describe('Gespeicherte Weinbegleitung', () => {
     expect(generiereWeinprofile).not.toHaveBeenCalled();
   });
 
-  it('tauscht und fixiert einen Gang über die Alternative, „Fixierung lösen“ hebt es auf', async () => {
+  it('legt eine Option als Empfehlung fest (fixiert), „Fixierung lösen“ hebt es auf', async () => {
     const { menu, rezepte } = festtafel();
     zeige({ menu: mitSnapshot(menu, rezepte), rezepte });
     const vorspeise = within(screen.getByRole('region', { name: 'Vorspeise' }));
 
-    fireEvent.click(vorspeise.getByRole('button', { name: /Weißwein, leicht und frisch/ }));
-    fireEvent.click(vorspeise.getByRole('button', { name: 'Gegen „Weißwein, grün und aromatisch“ tauschen' }));
+    fireEvent.click(vorspeise.getByRole('button', { name: /Rotwein, leicht/ }));
+    fireEvent.click(vorspeise.getByRole('button', { name: '„Rotwein, leicht“ als Empfehlung festlegen' }));
 
     await waitFor(() => expect(saveMenuWeinbegleitung).toHaveBeenCalledTimes(1));
-    expect(gespeicherterSnapshot().fixierungen).toEqual([{ sektionIndex: 0, sektionName: 'Vorspeise', stilId: 'weiss_gruen_aromatisch' }]);
-    expect(gespeicherterSnapshot().gaenge[0]).toEqual(expect.objectContaining({ stilId: 'weiss_gruen_aromatisch', fixiert: true }));
+    expect(gespeicherterSnapshot().fixierungen).toEqual([{ sektionIndex: 0, sektionName: 'Vorspeise', stilId: 'rot_leicht' }]);
+    expect(gespeicherterSnapshot().gaenge[0]).toEqual(expect.objectContaining({ stilId: 'rot_leicht', fixiert: true }));
+    // Jetzt rückt eine Weißwein-Option nach
+    expect(gespeicherterSnapshot().gaenge[0].optionen.map((option) => option.farbe)).toEqual(['weiss']);
     expect(await vorspeise.findByText('· fixiert')).toBeInTheDocument();
+    expect(generiereWeinprofile).not.toHaveBeenCalled();
 
-    const zeile = vorspeise.getByRole('button', { name: /Weißwein, grün und aromatisch/ });
+    const zeile = vorspeise.getByRole('button', { name: /Rotwein, leicht/ });
     if (zeile.getAttribute('aria-expanded') === 'false') fireEvent.click(zeile);
     fireEvent.click(await vorspeise.findByRole('button', { name: 'Fixierung lösen' }));
 
@@ -220,7 +237,12 @@ describe('Gespeicherte Weinbegleitung', () => {
     const menu = { id: 'm3', authorId: 'u1', sections: [{ name: 'Zwischengang', recipeIds: ['extrem'] }, { name: 'Hauptgang', recipeIds: ['braten'] }] };
     const rezepte = [rezept('extrem', E3_EXTREM), rezept('braten', G5_RINDERSCHMORBRATEN)];
     zeige({ menu: mitSnapshot(menu, rezepte), rezepte, nutzer: LESER });
-    expect(within(screen.getByRole('region', { name: 'Zwischengang' })).getByText(/Hier lieber Bier oder Wasser/)).toBeInTheDocument();
+    const zwischengang = within(screen.getByRole('region', { name: 'Zwischengang' }));
+    expect(zwischengang.getByText(/Hier lieber Bier oder Wasser\. Wer trotzdem Wein möchte:/)).toBeInTheDocument();
+    // Auch hier je eine Rot- und eine Weißwein-Option, ehrlich als „passt bedingt“
+    expect(zwischengang.getAllByRole('listitem')).toHaveLength(2);
+    expect(zwischengang.getAllByText('passt bedingt')).toHaveLength(2);
+    expect(zwischengang.queryByText(/Empfehlung ·/)).not.toBeInTheDocument();
   });
 });
 

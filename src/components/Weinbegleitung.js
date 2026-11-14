@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { WeinGlas, Gruende, Quellen } from './WeinbegleitungTeile';
+import React, { useId, useState } from 'react';
+import { WeinGlas, Gruende, sichereId } from './WeinbegleitungTeile';
 import { getStil, formatTemperatur, beispieleKurz } from '../utils/weinbegleitung/wissensbasis';
 import {
   MODUS_PRO_GANG,
@@ -7,6 +7,7 @@ import {
   HINWEIS_KEIN_STIL,
   HINWEIS_OHNE_PROFIL,
   HINWEIS_KEIN_GEMEINSAMER_STIL,
+  LABEL_BEDINGT,
 } from '../utils/weinbegleitung/konstanten';
 import { weinfarbe, TEXT_KEIN_STIL } from '../utils/weinbegleitung/anzeige';
 import { snapshotZaehler } from '../utils/weinbegleitung/menue';
@@ -17,10 +18,14 @@ import './Weinbegleitung.css';
  * Zustand und Aktionen kommen aus useMenueWeinbegleitung (Prop `wein`).
  * - WeinbegleitungUebersicht: Zusammenfassung vor dem ersten Gang mit Umschalter
  *   „Pro Gang“ / „Ein Wein für alles“, „Weinbegleitung erstellen“ bzw. „Neu berechnen“.
- * - WeinbegleitungGang: Weinzeile direkt unter der Gang-Überschrift, aufklappbar mit
- *   Gründen, Quellen und Alternativen (tauschen und fixieren nur für Bearbeiter).
+ * - WeinbegleitungGang: direkt unter der Gang-Überschrift die Empfehlung und je eine Rot-
+ *   und Weißwein-Option, offen sichtbar, jede mit drei Rebsorten; aufklappbar mit Gründen
+ *   (ohne Quellen, wie im Rezept-Sheet). Bearbeiter legen eine Option als Empfehlung fest.
  * Leser und Freigabe-Seiten sehen nur Ergebnisse, ohne Knöpfe.
  */
+
+// Rebsorten-Beispiele je Weinoption im Menü (Eigentümer, 14.11.2026)
+const MENUE_BEISPIELE_JE_STIL = 3;
 
 const MODI = [
   { modus: MODUS_PRO_GANG, text: 'Pro Gang' },
@@ -106,11 +111,11 @@ export function WeinbegleitungUebersicht({ wein }) {
   );
 }
 
-function HinweisZeile({ gang }) {
+function HinweisZeile({ gang, mitOptionen }) {
   if (gang.hinweis === HINWEIS_KEIN_STIL) {
     return (
       <p className="weinbegleitung-gang-hinweis">
-        {TEXT_KEIN_STIL} <Quellen regelId="R11" />
+        {TEXT_KEIN_STIL}.{mitOptionen && ' Wer trotzdem Wein möchte:'}
       </p>
     );
   }
@@ -143,86 +148,107 @@ function Pfeil({ offen }) {
   );
 }
 
-export function WeinbegleitungGang({ wein, sektionIndex, sektionName }) {
-  const [offen, setOffen] = useState(false);
-  if (!wein?.snapshot) return null;
-  const gang = wein.gangFuer(sektionIndex, sektionName);
-  if (!gang) return null;
-  if (!gang.stilId) return <HinweisZeile gang={gang} />;
-
-  const stil = getStil(gang.stilId);
-  if (!stil) return null;
-  const darfTauschen = wein.darfBearbeiten && !wein.arbeit
-    && !(wein.snapshot.modus === MODUS_EIN_WEIN && gang.istDessert);
-  const alternativen = (gang.alternativen || []).filter((alternative) => getStil(alternative.stilId));
-
+/**
+ * Eine Weinoption eines Gangs: Stil mit Glas, drei Rebsorten, Temperatur und Label.
+ * Antippen klappt „Warum passt das?“ auf (ohne Quellen); Bearbeiter legen dort eine Option
+ * als Empfehlung fest (tauscht und fixiert) oder lösen eine Fixierung.
+ */
+function OptionZeile({ wein, gang, eintrag, offen, onUmschalten, darfTauschen }) {
+  const panelId = sichereId('weinbegleitung-option', useId());
+  const stil = getStil(eintrag.stilId);
+  const bedingt = eintrag.label === LABEL_BEDINGT;
   return (
-    <div className="weinbegleitung-gang">
+    <li className={`weinbegleitung-option${eintrag.istEmpfehlung ? ' weinbegleitung-option--empfehlung' : ''}`}>
       <button
         type="button"
         className="weinbegleitung-gang-zeile"
         aria-expanded={offen}
-        onClick={() => setOffen((vorher) => !vorher)}
+        aria-controls={panelId}
+        onClick={onUmschalten}
       >
         <WeinGlas farbe={weinfarbe(stil)} groesse={22} />
         <span className="weinbegleitung-gang-text">
           <span className="weinbegleitung-gang-name">{stil.name}</span>
           <span className="weinbegleitung-gang-details">
-            {beispieleKurz(stil).join(', ')} · <span className="weinbegleitung-nowrap">{formatTemperatur(stil)}</span>
+            {beispieleKurz(stil, MENUE_BEISPIELE_JE_STIL).join(', ')} · <span className="weinbegleitung-nowrap">{formatTemperatur(stil)}</span>
           </span>
-          <span className="weinbegleitung-gang-label">
-            {gang.label}
-            {gang.fixiert && <span className="weinbegleitung-fixiert"> · fixiert</span>}
+          <span className={`weinbegleitung-gang-label${bedingt ? ' weinbegleitung-gang-label--bedingt' : ''}`}>
+            {eintrag.istEmpfehlung && 'Empfehlung · '}
+            {eintrag.label}
+            {eintrag.istEmpfehlung && gang.fixiert && <span className="weinbegleitung-fixiert"> · fixiert</span>}
           </span>
         </span>
         <Pfeil offen={offen} />
       </button>
 
       {offen && (
-        <div className="weinbegleitung-gang-panel">
+        <div className="weinbegleitung-gang-panel" id={panelId}>
           <h3 className="weinbegleitung-abschnitt">Warum passt das?</h3>
-          <Gruende regelIds={gang.regelIds} />
-
-          {alternativen.length > 0 && (
-            <>
-              <h3 className="weinbegleitung-abschnitt">{darfTauschen ? 'Tauschen' : 'Auch passend'}</h3>
-              <ul className="weinbegleitung-alternativen">
-                {alternativen.map((alternative) => {
-                  const alternativStil = getStil(alternative.stilId);
-                  return (
-                    <li key={alternative.stilId}>
-                      {darfTauschen ? (
-                        <button
-                          type="button"
-                          className="weinbegleitung-alternative"
-                          aria-label={`Gegen „${alternativStil.name}“ tauschen`}
-                          onClick={() => wein.alternativeWaehlen(gang, alternative.stilId)}
-                        >
-                          <WeinGlas farbe={weinfarbe(alternativStil)} groesse={20} />
-                          <span>{alternativStil.name}</span>
-                          <span className="weinbegleitung-alternative-label">{alternative.label}</span>
-                        </button>
-                      ) : (
-                        <span className="weinbegleitung-alternative weinbegleitung-alternative--text">
-                          <WeinGlas farbe={weinfarbe(alternativStil)} groesse={20} />
-                          <span>{alternativStil.name}</span>
-                          <span className="weinbegleitung-alternative-label">{alternative.label}</span>
-                        </span>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
+          {bedingt && (
+            <p className="weinbegleitung-bedingt">Die beste Wahl in dieser Farbe, aber kein idealer Partner für diesen Gang.</p>
           )}
-
-          {gang.fixiert && wein.darfBearbeiten && !wein.arbeit && (
+          <Gruende regelIds={eintrag.regelIds} mitQuellen={false} />
+          {!eintrag.istEmpfehlung && darfTauschen && (
+            <button
+              type="button"
+              className="weinbegleitung-link"
+              aria-label={`„${stil.name}“ als Empfehlung festlegen`}
+              onClick={() => wein.alternativeWaehlen(gang, eintrag.stilId)}
+            >
+              Als Empfehlung festlegen
+            </button>
+          )}
+          {eintrag.istEmpfehlung && gang.fixiert && wein.darfBearbeiten && !wein.arbeit && (
             <button type="button" className="weinbegleitung-link" onClick={() => wein.fixierungLoesen(gang)}>
               Fixierung lösen
             </button>
           )}
         </div>
       )}
+    </li>
+  );
+}
+
+/**
+ * Weine eines Gangs unter der Gang-Überschrift: die Empfehlung und je eine Rot- und
+ * Weißwein-Option (Snapshot-Feld `optionen`), offen sichtbar. Gänge ohne Empfehlung zeigen
+ * den Hinweis und, wo vorhanden, die Optionen.
+ */
+export function WeinbegleitungGang({ wein, sektionIndex, sektionName }) {
+  const [offenesStil, setOffenesStil] = useState(null);
+  if (!wein?.snapshot) return null;
+  const gang = wein.gangFuer(sektionIndex, sektionName);
+  if (!gang) return null;
+
+  const darfTauschen = wein.darfBearbeiten && !wein.arbeit
+    && !(wein.snapshot.modus === MODUS_EIN_WEIN && gang.istDessert);
+  const eintraege = [
+    ...(gang.stilId && getStil(gang.stilId)
+      ? [{ stilId: gang.stilId, label: gang.label, regelIds: gang.regelIds, istEmpfehlung: true }]
+      : []),
+    ...(gang.optionen || [])
+      .filter((option) => option.stilId !== gang.stilId && getStil(option.stilId))
+      .map((option) => ({ ...option, istEmpfehlung: false })),
+  ];
+  const hinweis = gang.stilId ? null : <HinweisZeile gang={gang} mitOptionen={eintraege.length > 0} />;
+  if (eintraege.length === 0) return hinweis;
+
+  return (
+    <div className="weinbegleitung-gang">
+      {hinweis}
+      <ul className="weinbegleitung-optionen" aria-label={`Weine zu ${sektionName}`}>
+        {eintraege.map((eintrag) => (
+          <OptionZeile
+            key={eintrag.stilId}
+            wein={wein}
+            gang={gang}
+            eintrag={eintrag}
+            offen={offenesStil === eintrag.stilId}
+            onUmschalten={() => setOffenesStil((vorher) => (vorher === eintrag.stilId ? null : eintrag.stilId))}
+            darfTauschen={darfTauschen}
+          />
+        ))}
+      </ul>
     </div>
   );
 }

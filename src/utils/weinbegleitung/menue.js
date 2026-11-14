@@ -98,9 +98,11 @@ export function erstelleSnapshot({
       sektionIndex: gang.sektionIndex,
       sektionName: gang.sektionName || '',
       stilId: gang.stilId || null,
-      alternativen: (gang.alternativen || []).map((alternative) => ({
-        stilId: alternative.stilId,
-        label: alternative.label || null,
+      optionen: (gang.optionen || []).map((option) => ({
+        stilId: option.stilId,
+        farbe: option.farbe || null,
+        label: option.label || null,
+        regelIds: option.regelIds || [],
       })),
       label: gang.label || null,
       regelIds: gang.regelIds || [],

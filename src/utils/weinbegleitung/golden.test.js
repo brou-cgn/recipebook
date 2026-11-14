@@ -153,7 +153,7 @@ describe('Golden-Tests Festtagsgerichte (kein Süßwein zu Herzhaftem)', () => {
     const { menu, rezepte } = ganzerGang('Hauptgang', [['reh', G11_REHRUECKEN], ['preiselbeeren', G11_PREISELBEEREN]]);
     const [hauptgang] = berechneWeinbegleitung({ menu, rezepte }).gaenge;
     expect(getStil(hauptgang.stilId)).toEqual(expect.objectContaining({ farbe: 'rot', suesse: 0 }));
-    hauptgang.alternativen.forEach((alternative) => expect(istSuesswein(alternative.stilId)).toBe(false));
+    hauptgang.optionen.forEach((option) => expect(istSuesswein(option.stilId)).toBe(false));
   });
 
   it('G12 Ziegenkäse mit Feigen und Honig: höchstens feinherb', () => {

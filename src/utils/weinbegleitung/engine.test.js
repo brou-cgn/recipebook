@@ -11,7 +11,11 @@ import {
   berechneProGang,
   berechneEinWein,
   gemeinsameRangliste,
+  farbOptionen,
+  labelFuerOption,
 } from './engine';
+import { bewerteAlleStile } from './bewertung';
+import { normalisiereWeinprofil } from './profilSchema';
 import { gaengeAusMenue } from './gang';
 import { getStil, alleStile } from './wissensbasis';
 import {
@@ -25,6 +29,7 @@ import {
   HINWEIS_KEIN_STIL,
   HINWEIS_OHNE_PROFIL,
   HINWEIS_KEIN_GEMEINSAMER_STIL,
+  LABEL_BEDINGT,
 } from './konstanten';
 import {
   weinprofil,
@@ -151,7 +156,10 @@ describe('Modus „Pro Gang“', () => {
       fixiert: false,
       hinweis: null,
     }));
-    expect(ergebnis.gaenge[1].alternativen).toEqual([{ stilId: 'rot_mittel', label: 'passt' }]);
+    expect(ergebnis.gaenge[1].optionen).toEqual([
+      { stilId: 'weiss_voll', farbe: 'weiss', label: LABEL_BEDINGT, regelIds: expect.any(Array) },
+    ]);
+    expect(ergebnis.gaenge[1]).not.toHaveProperty('alternativen');
   });
 
   it('nennt R10 als Grund, wenn sich die Folge ohne Strafe steigert', () => {
@@ -161,10 +169,37 @@ describe('Modus „Pro Gang“', () => {
     expect(hauptgang.regelIds).toContain('R10');
   });
 
-  it('bietet je Gang höchstens zwei Alternativen aus den Kandidaten an', () => {
+  it('zeigt je Gang neben der Empfehlung immer die beste Option der anderen Farbe', () => {
     const { menu, rezepte } = festmenue();
-    const [vorspeise] = berechneWeinbegleitung({ menu, rezepte }).gaenge;
-    expect(vorspeise.alternativen.map((alternative) => alternative.stilId)).toEqual(['weiss_gruen_aromatisch', 'rose_trocken']);
+    const [vorspeise, hauptgang, dessert] = berechneWeinbegleitung({ menu, rezepte }).gaenge;
+    expect(vorspeise.optionen).toEqual([expect.objectContaining({ stilId: 'rot_leicht', farbe: 'rot', label: 'passt gut' })]);
+    expect(hauptgang.optionen).toEqual([expect.objectContaining({ stilId: 'weiss_voll', farbe: 'weiss', label: LABEL_BEDINGT })]);
+    expect(dessert.optionen).toEqual([expect.objectContaining({ stilId: 'suesswein_edel', farbe: 'weiss' })]);
+    [vorspeise, hauptgang, dessert].forEach((gang) => {
+      const farben = [getStil(gang.stilId).farbe, ...gang.optionen.map((option) => option.farbe)];
+      expect(farben).toEqual(expect.arrayContaining(['rot', 'weiss']));
+      gang.optionen.forEach((option) => expect(option.regelIds.length).toBeGreaterThanOrEqual(1));
+    });
+  });
+
+  it('gibt einer Rosé-Empfehlung eine Rot- und eine Weißwein-Option, nach Score geordnet', () => {
+    const { menu, rezepte } = festmenue();
+    const [vorspeise] = berechneWeinbegleitung({
+      menu,
+      rezepte,
+      fixierungen: [{ sektionIndex: 0, sektionName: 'Vorspeise', stilId: 'rose_trocken' }],
+    }).gaenge;
+    expect(vorspeise.stilId).toBe('rose_trocken');
+    expect(vorspeise.optionen.map((option) => option.stilId)).toEqual(['weiss_leicht_frisch', 'rot_leicht']);
+  });
+
+  it('zeigt auch einem Gang ohne passenden Stil (R11) Rot und Weiß, als „passt bedingt“', () => {
+    const menu = { sections: [{ name: 'Zwischengang', recipeIds: ['extrem'] }, { name: 'Hauptgang', recipeIds: ['braten'] }] };
+    const rezepte = [rezept('extrem', E3_EXTREM), rezept('braten', G5_RINDERSCHMORBRATEN)];
+    const [zwischengang] = berechneWeinbegleitung({ menu, rezepte }).gaenge;
+    expect(zwischengang.stilId).toBeNull();
+    expect(zwischengang.optionen.map((option) => option.farbe).sort()).toEqual(['rot', 'weiss']);
+    zwischengang.optionen.forEach((option) => expect(option.label).toBe(LABEL_BEDINGT));
   });
 
   it('gibt einem Gang ohne passenden Stil den Hinweis R11 und überspringt ihn in der Folge', () => {
@@ -186,7 +221,7 @@ describe('Modus „Pro Gang“', () => {
     const menu = { sections: [{ name: 'Vorspeise', recipeIds: ['ohne'] }, { name: 'Hauptgang', recipeIds: ['braten'] }] };
     const rezepte = [rezept('ohne'), rezept('braten', G5_RINDERSCHMORBRATEN)];
     const [ohne, braten] = berechneWeinbegleitung({ menu, rezepte }).gaenge;
-    expect(ohne).toEqual(expect.objectContaining({ stilId: null, hinweis: HINWEIS_OHNE_PROFIL, regelIds: [] }));
+    expect(ohne).toEqual(expect.objectContaining({ stilId: null, hinweis: HINWEIS_OHNE_PROFIL, regelIds: [], optionen: [] }));
     expect(braten.stilId).toBe('rot_kraeftig');
   });
 });
@@ -201,8 +236,8 @@ describe('Fixierte Gänge', () => {
     });
     const [vorspeise, hauptgang] = ergebnis.gaenge;
     expect(vorspeise).toEqual(expect.objectContaining({ stilId: 'schaumwein_trocken', fixiert: true }));
-    expect(vorspeise.alternativen.map((alternative) => alternative.stilId)).not.toContain('schaumwein_trocken');
-    expect(vorspeise.alternativen[0].stilId).toBe('weiss_leicht_frisch');
+    expect(vorspeise.optionen.map((option) => option.stilId)).not.toContain('schaumwein_trocken');
+    expect(vorspeise.optionen.map((option) => option.farbe)).toEqual(['rot']);
     expect(hauptgang).toEqual(expect.objectContaining({ stilId: 'rot_kraeftig', fixiert: false }));
   });
 
@@ -320,6 +355,21 @@ describe('Modus „Ein Wein für alles“', () => {
     const ergebnis = berechneWeinbegleitung({ menu, rezepte, modus: MODUS_EIN_WEIN });
     expect(ergebnis.gemeinsamerStilId).toBeNull();
     ergebnis.gaenge.forEach((gang) => expect(gang.hinweis).toBe(HINWEIS_KEIN_GEMEINSAMER_STIL));
+    // Auch ohne gemeinsamen Stil: Rot und Weiß aus der gemeinsamen Rangliste, in beiden Gängen dieselben
+    const [curry, braten] = ergebnis.gaenge;
+    expect(curry.optionen.map((option) => option.farbe).sort()).toEqual(['rot', 'weiss']);
+    expect(curry.optionen.map((option) => option.stilId).sort()).toEqual(braten.optionen.map((option) => option.stilId).sort());
+  });
+
+  it('zeigt in allen Hauptgängen dieselben Optionen aus der gemeinsamen Rangliste, mit dem Label je Gang', () => {
+    const { menu, rezepte } = festmenue();
+    const [vorspeise, hauptgang, dessert] = berechneWeinbegleitung({ menu, rezepte, modus: MODUS_EIN_WEIN }).gaenge;
+    expect(vorspeise.stilId).toBe('rot_mittel');
+    expect(vorspeise.optionen.map((option) => option.stilId)).toEqual(['weiss_voll']);
+    expect(hauptgang.optionen.map((option) => option.stilId)).toEqual(['weiss_voll']);
+    // Das Dessert hat eine eigene Empfehlung und eigene Optionen
+    expect(dessert.stilId).toBe('likoerwein');
+    expect(dessert.optionen.map((option) => option.farbe)).toEqual(['weiss']);
   });
 
   it('lässt Gänge ohne passenden Stil aus der gemeinsamen Wahl heraus', () => {
@@ -348,5 +398,31 @@ describe('Modus „Ein Wein für alles“', () => {
     const [hauptgang, schluss] = berechneWeinbegleitung({ menu, rezepte, modus: MODUS_EIN_WEIN }).gaenge;
     expect(hauptgang.stilId).toBe('rot_kraeftig');
     expect(schluss).toEqual(expect.objectContaining({ istDessert: true, stilId: 'suesswein_edel' }));
+  });
+});
+
+describe('Optionen je Gang', () => {
+  it('benennt Optionen unter S_MIN als „passt bedingt“, darüber wie die Empfehlung', () => {
+    expect(labelFuerOption(S_MIN - 0.1)).toBe(LABEL_BEDINGT);
+    expect(labelFuerOption(-3)).toBe(LABEL_BEDINGT);
+    expect(labelFuerOption(S_MIN)).toBe('passt');
+    expect(labelFuerOption(9)).toBe('passt hervorragend');
+  });
+
+  it('nimmt nur Stile, die für den Gang infrage kommen: kein Süßwein zu Herzhaftem', () => {
+    const profil = normalisiereWeinprofil(G5_RINDERSCHMORBRATEN);
+    const optionen = farbOptionen(bewerteAlleStile(profil), profil, null);
+    expect(optionen.map((option) => option.stilId)).not.toEqual(expect.arrayContaining(['likoerwein']));
+    expect(optionen.map((option) => option.stilId)).not.toEqual(expect.arrayContaining(['suesswein_edel']));
+    expect(optionen.map((option) => option.farbe).sort()).toEqual(['rot', 'weiss']);
+  });
+
+  it('lässt die Farbe der Empfehlung weg und folgt einer vorgegebenen Reihenfolge', () => {
+    const profil = normalisiereWeinprofil(G1_LACHSTATAR);
+    const bewertungen = bewerteAlleStile(profil);
+    expect(farbOptionen(bewertungen, profil, 'weiss_leicht_frisch').map((option) => option.farbe)).toEqual(['rot']);
+    const reihenfolge = ['rot_kraeftig', 'weiss_voll', ...alleStile().map((stil) => stil.id)];
+    expect(farbOptionen(bewertungen, profil, 'rose_trocken', reihenfolge).map((option) => option.stilId).sort())
+      .toEqual(['rot_kraeftig', 'weiss_voll']);
   });
 });
