@@ -140,8 +140,8 @@ const sundayMenu = {
 };
 
 // Spielt App.js nach: Die Kochsitzung öffnet Rezepte, indem sie das angezeigte Rezept wechselt
-function Harness({ user = flaggedUser, menu = null, onPortionCountChange, onHeaderVisibilityChange }) {
-  const [current, setCurrent] = React.useState(rouladen);
+function Harness({ user = flaggedUser, menu = null, onPortionCountChange, onHeaderVisibilityChange, initial = rouladen }) {
+  const [current, setCurrent] = React.useState(initial);
   return (
     <CookingSessionProvider onOpenRecipe={(recipe) => setCurrent(allRecipes.find((r) => r.id === recipe.id) || recipe)}>
       <RecipeDetail
@@ -834,5 +834,72 @@ describe('RecipeDetail – Kochmodus quer: Schritte nur per Wischen', () => {
     expect(screen.queryByRole('button', { name: 'Nächster Schritt' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Vorheriger Schritt' })).toBeNull();
     expect(document.querySelector('.step-nav')).toBeNull();
+  });
+});
+
+describe('RecipeDetail – Titelzeile mit Timer anderer Schritte (Feinschliff Tablet, Punkte 2 und 3)', () => {
+  const originalMatchMedia = window.matchMedia;
+  const gulasch = {
+    id: 'gulasch',
+    title: 'Rindergulasch',
+    authorId: 'user-1',
+    image: 'test-image.jpg',
+    portionen: 4,
+    ingredients: ['1 kg Rindfleisch'],
+    steps: ['Fleisch 10 Minuten scharf anbraten.', 'Zwiebeln in Ringe schneiden.', 'Alles zugedeckt 90 Minuten schmoren.'],
+  };
+
+  beforeEach(() => {
+    window.AudioContext = jest.fn().mockImplementation(() => ({ state: 'running', close: jest.fn(), resume: jest.fn() }));
+  });
+  afterEach(() => { window.matchMedia = originalMatchMedia; });
+
+  function startTimerOnStep(index) {
+    fireEvent.click(document.querySelectorAll('.step-card')[index].querySelector('.step-timer-start-btn'));
+  }
+
+  test('auf dem Tablet wie eine Karte: Bild, Name und der Schritt, an dem das Rezept steht', async () => {
+    setTabletViewport();
+    renderWithProviders(<Harness initial={gulasch} />);
+    await enterCookingMode();
+
+    const bar = document.querySelector('.cooking-mode-titlebar');
+    expect(bar).toHaveClass('cooking-mode-titlebar--tablet');
+    expect(bar.querySelector('.cooking-mode-titlebar-thumb')).toBeInTheDocument();
+    expect(within(bar).getByText('Schritt 1 von 3')).toBeInTheDocument();
+
+    fireEvent.click(document.querySelectorAll('.step-dot')[2]);
+    expect(within(bar).getByText('Schritt 3 von 3')).toBeInTheDocument();
+  });
+
+  test('ein laufender Timer steht nach dem Weiterblättern als Chip in der Titelzeile; Tippen springt zurück (Tech-Check P9)', async () => {
+    setTabletViewport();
+    renderWithProviders(<Harness initial={gulasch} />);
+    await enterCookingMode();
+
+    startTimerOnStep(0);
+    // Auf seinem eigenen Schritt steht der Timer auf der Karte, kein Chip
+    expect(screen.queryByRole('group', { name: 'Timer anderer Schritte' })).toBeNull();
+
+    fireEvent.click(document.querySelectorAll('.step-dot')[1]);
+    const chip = screen.getByRole('button', { name: 'Zu Schritt 1 springen, Timer 10:00' });
+    expect(activeStepIndex()).toBe(1);
+
+    fireEvent.click(chip);
+    expect(activeStepIndex()).toBe(0);
+    expect(screen.queryByRole('group', { name: 'Timer anderer Schritte' })).toBeNull();
+  });
+
+  test('auf dem Handy hochkant ohne Bild und Schritt, der Chip kommt trotzdem', async () => {
+    renderWithProviders(<Harness initial={gulasch} />);
+    await enterCookingMode();
+
+    const bar = document.querySelector('.cooking-mode-titlebar');
+    expect(bar).not.toHaveClass('cooking-mode-titlebar--tablet');
+    expect(bar.querySelector('.cooking-mode-titlebar-thumb')).toBeNull();
+
+    startTimerOnStep(0);
+    fireEvent.click(document.querySelectorAll('.step-dot')[2]);
+    expect(screen.getByRole('button', { name: 'Zu Schritt 1 springen, Timer 10:00' })).toBeInTheDocument();
   });
 });
