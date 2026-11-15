@@ -85,11 +85,16 @@ describe('wichtelFirestore', () => {
     expect(mockCall).toHaveBeenCalledWith({ aktion: 'laden', rundeId: 'r1', token: 'tok' });
 
     await fuegeWichtelEintragHinzu('r1', 'tok', 't2', 'Buch');
-    expect(mockCall).toHaveBeenLastCalledWith({ aktion: 'eintragHinzufuegen', rundeId: 'r1', token: 'tok', ueberId: 't2', text: 'Buch', url: '' });
+    expect(mockCall).toHaveBeenLastCalledWith({ aktion: 'eintragHinzufuegen', rundeId: 'r1', token: 'tok', ueberId: 't2', text: 'Buch', url: '', kommentar: '' });
 
     await fuegeWichtelEintragHinzu('r1', 'tok', 't2', '', 'https://shop.example.de/buch');
     expect(mockCall).toHaveBeenLastCalledWith({
-      aktion: 'eintragHinzufuegen', rundeId: 'r1', token: 'tok', ueberId: 't2', text: '', url: 'https://shop.example.de/buch',
+      aktion: 'eintragHinzufuegen', rundeId: 'r1', token: 'tok', ueberId: 't2', text: '', url: 'https://shop.example.de/buch', kommentar: '',
+    });
+
+    await fuegeWichtelEintragHinzu('r1', 'tok', 't2', 'Pullover', '', 'Größe M');
+    expect(mockCall).toHaveBeenLastCalledWith({
+      aktion: 'eintragHinzufuegen', rundeId: 'r1', token: 'tok', ueberId: 't2', text: 'Pullover', url: '', kommentar: 'Größe M',
     });
   });
 

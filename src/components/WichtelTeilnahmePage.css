@@ -169,6 +169,14 @@
   overflow-wrap: anywhere;
 }
 
+.wt-seite .wt-eintrag-kommentar {
+  color: var(--color-text-soft);
+  font-size: 14px;
+  font-style: italic;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
 .wt-seite .wt-von {
   color: var(--color-text-soft);
   font-size: 13px;
@@ -214,6 +222,7 @@
 .wt-btn:focus-visible,
 .wt-link:focus-visible,
 .wt-formular input:focus-visible,
+.wt-formular textarea:focus-visible,
 .wt-auswahl select:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
@@ -250,6 +259,21 @@
   color: var(--color-text);
   font: inherit;
   font-size: 16px;
+}
+
+.wt-formular textarea {
+  min-width: 0;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface-input);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.35;
+  resize: vertical;
 }
 
 .wt-seite .wt-auswahl {

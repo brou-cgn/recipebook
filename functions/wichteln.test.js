@@ -804,6 +804,35 @@ test('Einträge: Prüfungen und Obergrenze', async () => {
   await rejectsWith(als('Anna', 'eintragHinzufuegen', {ueberId: tn.Anna.id, text: 'einer zu viel'}), 'resource-exhausted');
 });
 
+test('Kommentar: optional, wird gespeichert und mit Wünschen und Ideen ausgeliefert', async () => {
+  const {db, rundeId, tn, als} = await setupRunde();
+  await als('Anna', 'eintragHinzufuegen', {ueberId: tn.Anna.id, text: 'Pullover', kommentar: '  Größe M,\n\n\n\nlieber   blau  '});
+  const sicht = await als('Anna', 'eintragHinzufuegen', {ueberId: tn.Ben.id, text: 'Gin', kommentar: 'x'.repeat(500)});
+  assert.equal(sicht.meineWuensche[0].kommentar, 'Größe M,\n\nlieber blau');
+  assert.equal(sicht.meineIdeen[0].kommentar.length, wichteln._internal.LAENGE.kommentar);
+
+  // Ohne Kommentar: kein Feld im Dokument, nach außen ''.
+  const ohne = await als('Cleo', 'eintragHinzufuegen', {ueberId: tn.Cleo.id, text: 'Buch', kommentar: '   '});
+  assert.equal(ohne.meineWuensche[0].kommentar, '');
+  const gespeichert = [...db.store.entries()]
+      .filter(([path]) => path.startsWith(`wichtelRunden/${rundeId}/eintraege/`))
+      .map(([, data]) => data);
+  assert.equal(gespeichert.find((e) => e.text === 'Buch').kommentar, undefined);
+
+  // Ein Kommentar allein ist kein Eintrag.
+  await rejectsWith(als('Anna', 'eintragHinzufuegen', {ueberId: tn.Anna.id, text: ' ', kommentar: 'nur Kommentar'}), 'invalid-argument');
+});
+
+test('Kommentar: ältere Einträge ohne Feld bleiben unverändert lesbar', async () => {
+  const {db, rundeId, tn, als} = await setupRunde();
+  db.store.set(`wichtelRunden/${rundeId}/eintraege/altereintrag1`, {autorId: tn.Anna.id, ueberId: tn.Anna.id, text: 'Alter Wunsch'});
+  const sicht = await als('Anna', 'laden');
+  const alt = sicht.meineWuensche.find((e) => e.text === 'Alter Wunsch');
+  assert.equal(alt.kommentar, '');
+  assert.deepEqual(db.store.get(`wichtelRunden/${rundeId}/eintraege/altereintrag1`),
+      {autorId: tn.Anna.id, ueberId: tn.Anna.id, text: 'Alter Wunsch'});
+});
+
 // ---------------------------------------------------------------------------
 // Einträge mit Link
 // ---------------------------------------------------------------------------
