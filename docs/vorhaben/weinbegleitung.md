@@ -337,7 +337,7 @@ Umsetzungsnotizen Analyse 15.11.2026 (Grundlage für W1 bis W10, nichts davon um
   (6) `hk:huelsenfruechte_getreide` ist nur bei `rot_mittel` „gut“: Falafel und Dal bekommen Rotwein.
   (7) Feinherb hat `hk:schwein_kalb` als „gut“: Wiener Schnitzel bekommt feinherb statt Grünem Veltliner.
 - Stabilität: 762 Einzelstörungen (je Gericht jeder Zahlenwert ±1); die Empfehlung kippt in 12 %. Je Feld:
-  Intensität 42 %, Süße 16 %, Schärfe 9 %, Salz 5 %, die übrigen höchstens 3 %. Bei 15 von 64 Gerichten liegt
+  Intensität 43 %, Süße 16 %, Schärfe 9 %, Salz 5 %, die übrigen höchstens 3 %. Bei 15 von 64 Gerichten liegt
   die erste Alternative höchstens 0,5 unter der Empfehlung, bei zwei Gerichten gleichauf (dann entscheidet die
   Reihenfolge der Wissensbasis).
 - Paket W3 (a bis e) zusammen: 52 von 64, mit Alternativen 62 von 64, kein R11 mehr im Set; G10 Gans bleibt
@@ -377,7 +377,7 @@ Umsetzungsnotizen Analyse 15.11.2026 (Grundlage für W1 bis W10, nichts davon um
     Pizza wird `weiss_voll` statt feinherb (löst „Weißwein zu Pizza“). (b) wirkt erst zusammen mit (a).
   - **W4 Profil v2** (neue `HASH_KENNUNG`, also ein Backfill aller Rezepte; deshalb gebündelt und erst nach W1
     und W2): (a) Intensität im Prompt mit Referenzgerichten je Stufe verankern; sie ist der größte Hebel für
-    schwankende Empfehlungen (±1 kippt die Empfehlung in 42 % der Fälle). (b) Süße-Skala verankern (offener
+    schwankende Empfehlungen (±1 kippt die Empfehlung in 43 % der Fälle). (b) Süße-Skala verankern (offener
     Punkt unten). (c) `gefluegel` in hell und dunkel teilen (Ente, Gans → Spätburgunder; Gans bleibt sonst bei
     `rot_kraeftig` 2,3).
   - **W5 Gleichauf ehrlich zeigen:** Liegt die erste Alternative höchstens 0,5 unter der Empfehlung (15 von 64
