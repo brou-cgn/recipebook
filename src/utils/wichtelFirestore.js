@@ -93,9 +93,10 @@ export const setzeWichtelGeschenkGekauft = (rundeId, token, gekauft) =>
 /**
  * Wunsch (ueberId = eigene ID) oder Geschenkidee für einen anderen Gast. Text oder Link
  * genügt; zum Link holt der Server beim Speichern eine Bildvorschau (dauert bis zu 5 s).
+ * `kommentar` ist optional (Größe, Farbe …) und wird nur gespeichert, wenn er nicht leer ist.
  */
-export const fuegeWichtelEintragHinzu = (rundeId, token, ueberId, text, url = '') =>
-  rufeTeilnahme('eintragHinzufuegen', rundeId, token, { ueberId, text, url });
+export const fuegeWichtelEintragHinzu = (rundeId, token, ueberId, text, url = '', kommentar = '') =>
+  rufeTeilnahme('eintragHinzufuegen', rundeId, token, { ueberId, text, url, kommentar });
 
 export const loescheWichtelEintrag = (rundeId, token, eintragId) =>
   rufeTeilnahme('eintragLoeschen', rundeId, token, { eintragId });

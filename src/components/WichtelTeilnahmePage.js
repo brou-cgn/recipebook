@@ -26,6 +26,7 @@ import {
 
 const MAX_TEXT = 300;
 const MAX_LINK = 2000;
+const MAX_KOMMENTAR = 300;
 const FEIER_DAUER_MS = 1800;
 const FUNKEN = 8;
 
@@ -56,12 +57,14 @@ function Privat({ children }) {
 }
 
 /**
- * Text und optional ein Link; einer von beiden genügt. Zum Link holt der Server beim
- * Speichern die Vorschau, das dauert ein paar Sekunden – daher „Speichert …“.
+ * Text und optional ein Link; einer von beiden genügt. Dazu optional ein Kommentar
+ * (Größe, Farbe …), der allein nicht reicht. Zum Link holt der Server beim Speichern
+ * die Vorschau, das dauert ein paar Sekunden – daher „Speichert …“.
  */
-function EintragFormular({ label, placeholder, linkLabel, buttonText, t, busy, onSubmit, children }) {
+function EintragFormular({ label, placeholder, linkLabel, kommentarLabel, buttonText, t, busy, onSubmit, children }) {
   const [text, setText] = useState('');
   const [link, setLink] = useState('');
+  const [kommentar, setKommentar] = useState('');
   const [sendet, setSendet] = useState(false);
   const leer = !text.trim() && !link.trim();
   const handleSubmit = async (e) => {
@@ -69,9 +72,10 @@ function EintragFormular({ label, placeholder, linkLabel, buttonText, t, busy, o
     if (leer || sendet) return;
     setSendet(true);
     try {
-      if (await onSubmit({ text: text.trim(), url: link.trim() })) {
+      if (await onSubmit({ text: text.trim(), url: link.trim(), kommentar: kommentar.trim() })) {
         setText('');
         setLink('');
+        setKommentar('');
       }
     } finally {
       setSendet(false);
@@ -88,6 +92,14 @@ function EintragFormular({ label, placeholder, linkLabel, buttonText, t, busy, o
         placeholder={placeholder}
         aria-label={label}
         maxLength={MAX_TEXT}
+      />
+      <textarea
+        rows={2}
+        value={kommentar}
+        onChange={(e) => setKommentar(e.target.value)}
+        placeholder={t.kommentarPlatzhalter}
+        aria-label={kommentarLabel}
+        maxLength={MAX_KOMMENTAR}
       />
       <div className="wt-formular-zeile">
         <input
@@ -110,12 +122,13 @@ function EintragFormular({ label, placeholder, linkLabel, buttonText, t, busy, o
   );
 }
 
-/** Text und Link-Vorschau eines Wunschs oder einer Idee. */
+/** Text, Link-Vorschau und Kommentar eines Wunschs oder einer Idee. */
 function EintragInhalt({ eintrag, t }) {
   return (
     <>
       {eintrag.text && <span className="wt-eintrag-text">{eintrag.text}</span>}
       {eintrag.url && <WichtelLinkKarte url={eintrag.url} vorschau={eintrag.vorschau} neuerTabText={t.neuerTab} />}
+      {eintrag.kommentar && <span className="wt-eintrag-kommentar">{eintrag.kommentar}</span>}
     </>
   );
 }
@@ -463,10 +476,11 @@ function WichtelTeilnahmePage({ rundeId, token, gueltig = true, currentUser, onC
           label={t.wunschLabel}
           placeholder={t.wunschPlatzhalter}
           linkLabel={t.wunschLinkLabel}
+          kommentarLabel={t.wunschKommentarLabel}
           buttonText={t.hinzufuegen}
           t={t}
           busy={busy}
-          onSubmit={({ text, url }) => fuehreAus('eintragHinzufuegen', () => fuegeWichtelEintragHinzu(rundeId, token, ich.id, text, url))}
+          onSubmit={({ text, url, kommentar }) => fuehreAus('eintragHinzufuegen', () => fuegeWichtelEintragHinzu(rundeId, token, ich.id, text, url, kommentar))}
         />
       </section>
 
@@ -478,10 +492,11 @@ function WichtelTeilnahmePage({ rundeId, token, gueltig = true, currentUser, onC
             label={t.ideeLabel}
             placeholder={t.ideePlatzhalter}
             linkLabel={t.ideeLinkLabel}
+            kommentarLabel={t.ideeKommentarLabel}
             buttonText={t.speichern}
             t={t}
             busy={busy || !ideeFuer}
-            onSubmit={({ text, url }) => fuehreAus('eintragHinzufuegen', () => fuegeWichtelEintragHinzu(rundeId, token, ideeFuer, text, url))}
+            onSubmit={({ text, url, kommentar }) => fuehreAus('eintragHinzufuegen', () => fuegeWichtelEintragHinzu(rundeId, token, ideeFuer, text, url, kommentar))}
           >
             <label className="wt-auswahl">
               <span>{t.fuerWen}</span>

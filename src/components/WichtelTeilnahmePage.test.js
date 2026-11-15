@@ -129,8 +129,27 @@ describe('WichtelTeilnahmePage', () => {
     fireEvent.change(await screen.findByLabelText('Wunsch hinzufügen'), { target: { value: ' Ein gutes Buch ' } });
     fireEvent.click(screen.getAllByRole('button', { name: 'Hinzufügen' })[0]);
     expect(await screen.findByText('Ein gutes Buch')).toBeInTheDocument();
-    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', 'tok', 't1', 'Ein gutes Buch', '');
+    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', 'tok', 't1', 'Ein gutes Buch', '', '');
     expect(screen.getByLabelText('Wunsch hinzufügen')).toHaveValue('');
+  });
+
+  it('trägt einen Wunsch mit Kommentar ein und zeigt ihn an', async () => {
+    mockLaden.mockResolvedValue(sicht());
+    mockHinzufuegen.mockResolvedValue(sicht({ meineWuensche: [{ id: 'e1', text: 'Pullover', kommentar: 'Größe M, lieber blau' }] }));
+    renderSeite();
+    fireEvent.change(await screen.findByLabelText('Wunsch hinzufügen'), { target: { value: 'Pullover' } });
+    fireEvent.change(screen.getByLabelText('Kommentar zum Wunsch (optional)'), { target: { value: ' Größe M, lieber blau ' } });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Hinzufügen' })[0]);
+    expect(await screen.findByText('Größe M, lieber blau')).toBeInTheDocument();
+    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', 'tok', 't1', 'Pullover', '', 'Größe M, lieber blau');
+    expect(screen.getByLabelText('Kommentar zum Wunsch (optional)')).toHaveValue('');
+  });
+
+  it('ein Kommentar allein reicht nicht zum Speichern', async () => {
+    mockLaden.mockResolvedValue(sicht());
+    renderSeite();
+    fireEvent.change(await screen.findByLabelText('Kommentar zum Wunsch (optional)'), { target: { value: 'Größe M' } });
+    expect(screen.getAllByRole('button', { name: 'Hinzufügen' })[0]).toBeDisabled();
   });
 
   it('hinterlegt eine Idee für einen anderen Gast erst nach Auswahl des Gasts', async () => {
@@ -141,9 +160,10 @@ describe('WichtelTeilnahmePage', () => {
     const speichern = screen.getByRole('button', { name: 'Speichern' });
     expect(speichern).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Für wen?'), { target: { value: 't3' } });
+    fireEvent.change(screen.getByLabelText('Kommentar zur Geschenkidee (optional)'), { target: { value: 'Mag eher Gin als Whisky' } });
     fireEvent.click(speichern);
     expect(await screen.findByRole('heading', { name: 'Für Cleo' })).toBeInTheDocument();
-    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', 'tok', 't3', 'Gin-Tasting', '');
+    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', 'tok', 't3', 'Gin-Tasting', '', 'Mag eher Gin als Whisky');
   });
 
   it('zieht das Los und zeigt Wünsche und Ideen nur für den Gezogenen', async () => {
@@ -153,9 +173,9 @@ describe('WichtelTeilnahmePage', () => {
       los: {
         gezogen: true,
         empfaenger: { id: 't2', name: 'Ben' },
-        wuensche: [{ id: 'w1', text: 'Wollsocken' }],
+        wuensche: [{ id: 'w1', text: 'Wollsocken', kommentar: 'Größe 42' }],
         ideen: [
-          { id: 'i1', text: 'Kochkurs', von: 'Cleo', vonDir: false },
+          { id: 'i1', text: 'Kochkurs', kommentar: 'Am liebsten Pasta', von: 'Cleo', vonDir: false },
           { id: 'i2', text: 'Kaffeebohnen', von: 'Anna', vonDir: true },
         ],
       },
@@ -168,6 +188,8 @@ describe('WichtelTeilnahmePage', () => {
     expect(screen.queryByRole('button', { name: 'Los ziehen' })).not.toBeInTheDocument();
     const partner = screen.getByRole('heading', { name: 'Für Ben' }).closest('section');
     expect(within(partner).getByText('Wollsocken')).toBeInTheDocument();
+    expect(within(partner).getByText('Größe 42')).toBeInTheDocument();
+    expect(within(partner).getByText('Am liebsten Pasta')).toBeInTheDocument();
     expect(within(partner).getByText('von Cleo')).toBeInTheDocument();
     expect(within(partner).getByText('von dir')).toBeInTheDocument();
     expect(within(partner).getByText('Nur du siehst diese Wünsche und Ideen.')).toBeInTheDocument();
@@ -319,7 +341,7 @@ describe('WichtelTeilnahmePage', () => {
 
     // Der Server holt die Vorschau: das dauert, der Knopf zeigt es.
     expect(await screen.findByRole('button', { name: 'Speichert …' })).toBeDisabled();
-    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', 'tok', 't1', 'Ein gutes Messer', 'https://shop.example.de/messer');
+    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', 'tok', 't1', 'Ein gutes Messer', 'https://shop.example.de/messer', '');
 
     await act(async () => {
       antworte(sicht({
@@ -350,7 +372,7 @@ describe('WichtelTeilnahmePage', () => {
     fireEvent.change(screen.getByLabelText('Link zur Geschenkidee (optional)'), { target: { value: 'shop.example.de/messer' } });
     fireEvent.click(speichern);
     expect(await screen.findByRole('button', { name: 'Idee „Kochmesser 20 cm“ entfernen' })).toBeInTheDocument();
-    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', 'tok', 't2', '', 'shop.example.de/messer');
+    expect(mockHinzufuegen).toHaveBeenCalledWith('runde1', 'tok', 't2', '', 'shop.example.de/messer', '');
   });
 
   it('ohne Vorschaubild oder wenn es nicht lädt: Link-Symbol und Seitenname', async () => {

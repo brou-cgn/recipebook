@@ -110,7 +110,7 @@ const GEKAUFT_PARAMETER = 'gekauft=1';
 
 // vorname, nachname: neuer Gast aus der Runde; „Vorname Nachname“ wird als Teilnehmername auf
 // `name` gekürzt (nur bei sehr langen Namen). email: Höchstlänge einer Adresse (RFC 5321).
-const LAENGE = {titel: 80, budget: 40, hinweis: 300, name: 60, text: 300, vorname: 40, nachname: 40, email: 254};
+const LAENGE = {titel: 80, budget: 40, hinweis: 300, name: 60, text: 300, kommentar: 300, vorname: 40, nachname: 40, email: 254};
 // Datum der Feier (optional): Kalendertag ohne Uhrzeit, wie <input type="date"> ihn liefert.
 const DATUM_MUSTER = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DATUM_JAHRE = {von: 2020, bis: 2100};
@@ -398,11 +398,12 @@ function leseNamen(namen, HttpsError) {
 }
 
 /**
- * Text und Link eines neuen Eintrags. Einer von beiden genügt. Ohne eigenes Link-Feld
- * wird ein Link am Ende des Textes (eingefügter Link, Teilen-Text einer Shop-App) zum Link.
- * @param {object} daten - Eingabe mit text und url
+ * Text, Link und Kommentar eines neuen Eintrags. Text oder Link genügt; der Kommentar
+ * (Größe, Farbe, „lieber gebraucht“ …) ist optional und reicht allein nicht. Ohne eigenes
+ * Link-Feld wird ein Link am Ende des Textes (eingefügter Link, Teilen-Text einer Shop-App) zum Link.
+ * @param {object} daten - Eingabe mit text, url und kommentar
  * @param {function} HttpsError - Fehlerklasse
- * @return {{text: string, url: string|null}}
+ * @return {{text: string, url: string|null, kommentar: string}}
  */
 function leseEintrag(daten, HttpsError) {
   // Vor der Verarbeitung kappen: mehr braucht weder Text noch Link.
@@ -420,12 +421,16 @@ function leseEintrag(daten, HttpsError) {
   }
   text = bereinige(text, LAENGE.text);
   if (!text && !url) throw new HttpsError('invalid-argument', 'Bitte schreib etwas oder füge einen Link ein.');
-  return {text, url};
+  const kommentar = bereinigeMehrzeilig(daten.kommentar, LAENGE.kommentar);
+  return {text, url, kommentar};
 }
 
-/** Was von einem Eintrag nach außen geht: Text, Link und Vorschau. */
+/**
+ * Was von einem Eintrag nach außen geht: Text, Link, Vorschau und Kommentar. Einträge von
+ * vor dem Kommentar-Feld haben keins und liefern ''.
+ */
 function eintragInhalt(e) {
-  return {id: e.id, text: e.text || '', url: e.url || null, vorschau: e.vorschau || null};
+  return {id: e.id, text: e.text || '', url: e.url || null, vorschau: e.vorschau || null, kommentar: e.kommentar || ''};
 }
 
 function pruefeId(value, HttpsError, code = 'invalid-argument', message = 'Ungültige ID.') {
@@ -1765,7 +1770,7 @@ const TEILNAHME = {
 
   async eintragHinzufuegen({admin, db, HttpsError, kontext, daten, ladeVorschau, jetztMs}) {
     const ueberId = pruefeId(daten.ueberId, HttpsError);
-    const {text, url} = leseEintrag(daten, HttpsError);
+    const {text, url, kommentar} = leseEintrag(daten, HttpsError);
     const teilnehmer = await ladeTeilnehmer(db, kontext.rundeId);
     if (!teilnehmer.some((t) => t.id === ueberId)) {
       throw new HttpsError('not-found', 'Diesen Gast gibt es in der Runde nicht (mehr).');
@@ -1781,6 +1786,7 @@ const TEILNAHME = {
       ueberId,
       text,
       ...(url ? {url, vorschau} : {}),
+      ...(kommentar ? {kommentar} : {}),
       erstelltAm: admin.firestore.FieldValue.serverTimestamp(),
     });
     const [, sicht] = await Promise.all([
