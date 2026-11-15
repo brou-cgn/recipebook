@@ -26,6 +26,7 @@ const {
   weinprofilInputHash,
   pruefeWeinprofilWerte,
   istAktuellesWeinprofil,
+  istOhneWein,
   baueWeinprofilPrompt,
 } = require('../shared/weinprofil');
 
@@ -248,6 +249,10 @@ exports.generateWeinprofile = onCall(
           fehler(id, GRUND.KEIN_ZUGRIFF);
           return;
         }
+        if (istOhneWein(rezept)) {
+          uebersprungen.push(id); // Gebäcke & Teige: kein Profil, kein KI-Aufruf
+          return;
+        }
         const inputHash = weinprofilInputHash(rezept);
         if (istAktuellesWeinprofil(rezept.weinprofil, inputHash)) {
           profile[id] = rezept.weinprofil;
@@ -392,7 +397,7 @@ exports.backfillWeinprofile = onCall(
       for (const snap of seite.docs) {
         const rezept = {id: snap.id, ...snap.data()};
         const inputHash = weinprofilInputHash(rezept);
-        if (istAktuellesWeinprofil(rezept.weinprofil, inputHash)) {
+        if (istOhneWein(rezept) || istAktuellesWeinprofil(rezept.weinprofil, inputHash)) {
           uebersprungen += 1;
         } else {
           // Tageslimit vor dem Gemini-Aufruf (fail closed wie generateWeinprofile).

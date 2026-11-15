@@ -4,6 +4,7 @@ import { saveMenuWeinbegleitung } from '../utils/menuFirestore';
 import { berechneWeinbegleitung } from '../utils/weinbegleitung/engine';
 import { gaengeAusMenue, GANG_STATUS_OK } from '../utils/weinbegleitung/gang';
 import { MODUS_PRO_GANG, MODUS_EIN_WEIN } from '../utils/weinbegleitung/konstanten';
+import { istOhneWein } from '../utils/weinbegleitung/ohneWein';
 import { istWeinprofilAktuell } from '../utils/weinbegleitung/profilHash';
 import {
   weinRezeptIds,
@@ -143,6 +144,7 @@ export default function useMenueWeinbegleitung({ menu, recipes, currentUser, isS
     setHinweis(null);
 
     const offen = (await Promise.all(rezepte.map(async (rezept) => {
+      if (istOhneWein(rezept)) return null;
       if (!rezept.weinprofil) return rezept.id;
       try {
         return (await istWeinprofilAktuell(rezept)) ? null : rezept.id;
