@@ -1,0 +1,194 @@
+/* Weinprofil-Einblick im Sheet „Wein dazu“ (Tracker docs/vorhaben/weinbegleitung.md, W1).
+   Eigenes Stylesheet mit eigenen Klassen, weil das Sheet in einem eigenen Chunk lädt
+   (cssChunkIsolation.test.js). Farben nur über Tokens. */
+
+.wein-einblick {
+  margin-top: 1.25rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.wein-einblick-schalter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 0.15rem;
+  border: none;
+  background: none;
+  color: var(--color-brand);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wein-einblick-schalter:focus-visible,
+.wein-einblick-kopieren:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.wein-einblick-pfeil {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.wein-einblick-pfeil--offen {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wein-einblick-pfeil {
+    transition: none;
+  }
+}
+
+.wein-einblick-inhalt {
+  padding: 0.25rem 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--color-text-body);
+}
+
+.wein-einblick-werte {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+}
+
+.wein-einblick-wert {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.wein-einblick-wert dt {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.wein-einblick-wert dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-text-strong);
+  text-align: right;
+}
+
+.wein-einblick-abschnitt {
+  margin: 1rem 0 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text-strong);
+}
+
+.wein-einblick-komponenten {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.wein-einblick-komponente {
+  padding: 0.35rem 0.1rem;
+  border-radius: 8px;
+  background: var(--color-surface-subtle);
+  text-align: center;
+}
+
+.wein-einblick-komponente dt {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.wein-einblick-komponente dd {
+  margin: 0.05rem 0 0;
+  font-weight: 700;
+  color: var(--color-text-strong);
+}
+
+.wein-einblick-hinweis {
+  margin: 0.6rem 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.wein-einblick-stile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wein-einblick-stil {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+/* Kommt nicht infrage oder bleibt unter der Schwelle */
+.wein-einblick-stil--aus {
+  border-style: dashed;
+}
+
+.wein-einblick-stil-kopf {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-strong);
+}
+
+.wein-einblick-stil-punkte {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.wein-einblick-teile {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.wein-einblick-eintrag {
+  white-space: nowrap;
+}
+
+.wein-einblick-aktionen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.wein-einblick-kopieren {
+  min-height: 44px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--color-brand);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-brand);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wein-einblick-status {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 480px) {
+  /* Sieben Werte passen auf schmalen Displays nicht in eine Zeile */
+  .wein-einblick-komponenten {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

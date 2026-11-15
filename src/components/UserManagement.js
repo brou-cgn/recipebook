@@ -43,6 +43,7 @@ const ROLE_PERMISSION_COLUMNS = [
   { key: 'eventplanung', label: 'Eventplanung', name: 'Eventplanung (Kachel Chefkoch & mehr)' },
   { key: 'versionDictation', label: 'Version diktieren', name: 'Version per Beschreibung/Diktat erstellen' },
   { key: 'parallelKochen', label: 'Parallel kochen', name: 'Parallel kochen (mehrere Rezepte im Kochmodus)' },
+  { key: 'weinprofilEinblick', label: 'Weinprofil-Einblick', name: 'Weinprofil-Einblick (Einschätzung und Punkte im Wein-Sheet)' },
 ];
 
 function UserManagement({ onBack, currentUser, allUsers = [] }) {
@@ -285,6 +286,7 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
           <p className="info-text">„Tutorial anlegen“ schaltet den langen Druck auf „Rezept hinzufügen“ frei („Neues Tutorial hinzufügen“), „Tutorial bearbeiten“ den langen Druck auf eine Tutorialkarte. Ohne die Berechtigung bleibt die kurze Geste (Rezept anlegen bzw. Video abspielen) unverändert.</p>
           <p className="info-text">„Für dich entdeckt“ blendet die gleichnamige Kachel auf der Startseite ein und legt für die Nutzer der Rolle eine persönliche interaktive Liste „Für dich entdeckt“ an (Zielliste: ihre Alltagsklassiker-Liste). Ohne die Berechtigung sind Kachel und Liste ausgeblendet.</p>
           <p className="info-text">„Version diktieren“ schaltet bei „Eigene Version erstellen“ einen Vorschritt frei: Du beschreibst (tippen oder diktieren), was du anders gemacht hast, die KI arbeitet es ins Rezept ein, und du kontrollierst das Ergebnis im Formular.</p>
+          <p className="info-text">„Weinprofil-Einblick“ zeigt im Sheet „Wein dazu“ eines Rezepts aufklappbar, wie die KI das Gericht eingeschätzt hat (Rolle, Hauptzutat, Zubereitung, Sauce, Intensität, Geschmackswerte, Konfidenz) und wie die Punkte der fünf besten Weinstile zustande kommen. Mit „Werte kopieren“ lassen sich die Werte als Testfall weitergeben. Die Werte stehen ohnehin im Rezept, es ist nur eine Anzeige.</p>
           <p className="info-text">Damit das Indexfeld im Rezept sichtbar ist, muss die Berechtigung „Rezeptindex“ für die jeweilige Rolle aktiviert sein.</p>
           <div className="role-permissions-table-container">
             <table className="role-permissions-table">

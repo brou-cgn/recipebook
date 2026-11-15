@@ -1,7 +1,7 @@
 # Vorhaben: Weinbegleitung (Menüs und Einzelrezepte)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 15.11.2026 (PR 1 bis 6, die Nachbesserungen am Rezept-Sheet und die Kalibrierung der Süße gemergt und deployt; PR 7, „Ein Wein für alles“ mit je einer Weiß- und Rotwein-Option im Kopf, gemergt; Kalibrierung „Auswahl“ für Gänge mit mehreren gleichrangigen Rezepten, z. B. diverse Pizzen, gemergt; PR 8, Rebsorten nach Kulinarik, gemergt; Analyse vom 15.11.2026 mit Vorschlägen W1 bis W10 für die nächste Ausbaustufe, siehe „Offen“ ganz oben).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 15.11.2026 (PR 1 bis 6, die Nachbesserungen am Rezept-Sheet und die Kalibrierung der Süße gemergt und deployt; PR 7, „Ein Wein für alles“ mit je einer Weiß- und Rotwein-Option im Kopf, gemergt; Kalibrierung „Auswahl“ für Gänge mit mehreren gleichrangigen Rezepten, z. B. diverse Pizzen, gemergt; PR 8, Rebsorten nach Kulinarik, gemergt; Analyse vom 15.11.2026 mit Vorschlägen W1 bis W10 für die nächste Ausbaustufe, siehe „Offen“ ganz oben; PR 9, W1 Weinprofil-Einblick über die Berechtigung `weinprofilEinblick`, umgesetzt, noch nicht gemergt).
 
 **Ziel:** Zu einem Menü (Festtafel) schlägt die App pro Gang einen passenden Weinstil vor, mit bis zu
 zwei Alternativen, einer kurzen Begründung und einem Quellenlink. Dazu gibt es den Modus „Ein Wein für
@@ -30,6 +30,7 @@ Menüansicht, dazu die Zustände). Keine Mockups im Repo.
 | Gründe | Bedingungen ohne eigenen Punktbeitrag (R1, R2, R3, R5, R9, R10) haben ein festes Gewicht (Konstanten `GRUND_GEWICHT_*`). R10 erscheint im Menü, wenn sich die Folge gegenüber dem vorherigen Gang mit Wein ohne Strafe steigert. |
 | „Ein Wein“ ohne gemeinsamen Stil | Ergänzung: Erreicht kein Stil `S_MIN` in allen Nicht-Dessert-Gängen, bekommen sie den Hinweis `keinGemeinsamerStil`, statt einen schlechten Stil zu erzwingen. Gänge, zu denen gar kein Stil passt (R11), bleiben aus der gemeinsamen Wahl heraus. |
 | Fixierungen | Zuordnung über Index und Sektionsnamen. Nach dem Verschieben einer Sektion genügt der Name, wenn er im Menü eindeutig ist; Umbenennen hebt die Fixierung auf. |
+| Weinprofil-Einblick (W1) | 15.11.2026, Eigentümer: „Punkt 1 soll über Funktionen nach Berechtigungen gesteuert werden“. Sichtbar mit der Berechtigung `weinprofilEinblick` unter „Funktionen nach Berechtigung“ (Benutzerverwaltung), standardmäßig nur für Admins; nie auf Freigabe-Seiten. Im Sheet „Wein dazu“ ganz unten aufklappbar „Einschätzung im Detail“: Profilwerte in Worten, Geschmack 0 bis 3, Konfidenz, Modell, Datum, die fünf besten Stile mit Punkten und Aufschlüsselung (Passung je Tag, Regel-Terme), bei Stilen außerhalb von `nurZu` die Einschränkung. „Werte kopieren“ legt das Profil als eine Zeile JSON in die Zwischenablage (Titel, Profil, Konfidenz, Modell, Empfehlung, `RULES_VERSION`; keine Zutaten, keine Schritte), der Weg zu W2. Keine Regel in `firestore.rules`: Das Profil steht im Rezeptdokument, das der Nutzer ohnehin lesen darf. Kein Einblick im Menü (Folgeschritt, falls nötig). |
 | Menü-Entscheidungen | 14.11.2026, Vorschläge ohne Widerspruch übernommen: Zusammenfassung und Umschalter stehen vor dem ersten Gang (nicht in „Drinks“). Im Modus „Ein Wein“ tauscht das Antippen einer Alternative den gemeinsamen Stil aller Nicht-Dessert-Gänge (seit PR 7 im Kopf); Alternativen eines Dessert-Gangs sind dort nur Anzeige. Sektionen nur aus Beilagen oder Saucen bekommen wie spezifiziert einen eigenen Wein (nur Getränke zählen nicht). „Fixierung lösen“ hebt einen fixierten Gang wieder auf. |
 | Snapshot-Felder | Zusätzlich zur Spezifikation: `gemeinsamerStilId` (Modus „Ein Wein“), `fixierungen` (Pro-Gang-Fixierungen, bleiben beim Moduswechsel erhalten), `gewaehlterGemeinsamerStilId` (vom Nutzer gewählter gemeinsamer Stil) und je Gang `istDessert`. Scores und Strafen werden nicht gespeichert. Seit PR 6 ersetzt je Gang `optionen` (`stilId`, `farbe`, `label`, `regelIds`) die `alternativen`; alte Snapshots zeigen bis „Neu berechnen“ nur die Empfehlung. Seit PR 7 im Modus „Ein Wein“ `einWeinOptionen` (je Option `stilId`, `farbe`, `label` des schwächsten Gangs, `besteGaenge` und `gaenge` mit `label` und `regelIds` je Gang); die Gänge tragen dort keine `optionen` mehr, im Modus „Pro Gang“ ist das Feld `null`. |
 | Menü-Optionen | 14.11.2026, Eigentümer: Je Gang stehen offen die Empfehlung und immer eine Rot- und eine Weißwein-Option (die Empfehlung zählt mit; bei einer Rosé-Empfehlung oder ohne Empfehlung beide Farben), jede mit drei Rebsorten. Eine Option muss für den Gang infrage kommen (`nurZu`), darf aber unter `S_MIN` liegen und heißt dann „passt bedingt“ (beim Aufklappen: „Die beste Wahl in dieser Farbe, aber kein idealer Partner für diesen Gang.“). Gänge ohne passenden Stil (R11) zeigen den Hinweis und trotzdem beide Farben. Für den Modus „Ein Wein“ gilt seit PR 7 „Ein Wein im Kopf“. Aufklappen zeigt die Gründe ohne Quellen (wie im Rezept-Sheet); Bearbeiter legen dort eine Option als Empfehlung fest (fixiert wie bisher das Tauschen). Die Rezeptansicht bleibt bei zwei Rebsorten und den bisherigen Alternativen. Dritte Rebsorte für die vier Stile mit nur zwei Beispielen: Verdejo, Viognier, Zweigelt Rosé, Trollinger (fachlich gegenzulesen); `RULES_VERSION` `2026-11-3`. |
@@ -116,6 +117,7 @@ Snapshot oder Fixieren beim Einzelrezept.
 | 7 | Menü, Modus „Ein Wein für alles“: je eine Weiß- und eine Rotwein-Option im Kopf statt Weinzeilen je Gang, mit „Am besten zu“ (Wunsch des Eigentümers, siehe „Ein Wein im Kopf“): `waehleEinWeinStil` und `einWeinOptionen` in `engine.js` (`farbOptionen` ohne Parameter `reihenfolge`), Snapshot-Feld `einWeinOptionen` und `zeigtEinWeinImKopf` in `menue.js`, `EinWeinKopf` in `Weinbegleitung.js`, Festlegen ohne Gang im Hook, ein Satz auf der Seite „Weinbegleitung“; `RULES_VERSION` `2026-11-4` | PR #3671 gemergt (14.11.2026, Merge 784e56a), Nachbesserung Kopf ohne getönte Fläche #3672 (Merge da11b6b); Util-Tests +9, Komponententests +4 |
 | K2 | Kalibrierung Auswahl (siehe „Entschieden“): `bildeGangProfil` liefert je Rezept der Auswahl ein Profil (`auswahl`), `bewerteAuswahl` in `bewertung.js` (Median, infrage für alle, Gründe vom Rezept am Median), `bewerteGang` in `engine.js` für „Pro Gang“, „Ein Wein“ und die Optionen; `RULES_VERSION` `2026-11-5` | PR #3673 gemergt (14.11.2026, Merge 3ca5203); Util-Tests +15 (u. a. Golden G16 und G17, gegen die alte Engine rot) |
 | 8 | Rebsorten nach Kulinarik (siehe „Kulinarik“): `kulinarik.json`, `kulinarik.js` (`regionFuerRezept`, `regionFuerRezepte`, `regionenFuerGaenge`, `beispieleFuerRegion`), `WeinDazu.js` (Sheet), `Weinbegleitung.js` (`OptionZeile` mit `regionId`), Hook liefert `regionFuer` und `regionMenue`, ein Absatz auf der Seite „Weinbegleitung“; Wissensbasis, Engine und `RULES_VERSION` unverändert | PR #3674 gemergt (14.11.2026, Merge 86ee67f); Util-Tests +15, Komponententests +4 (ein bestehender Test erwartet jetzt die deutschen Beispiele) |
+| 9 | W1 Weinprofil-Einblick (siehe „Weinprofil-Einblick (W1)“): Berechtigung `weinprofilEinblick` (`ROLE_PERMISSIONS_DEFAULT` in `userManagement.js`, `applyRolePermissionsToUser` in `App.js`, Zeile und Infotext in `UserManagement.js`), Helfer `src/utils/weinbegleitung/einblick.js` (`profilEinblick`, `stilAufschluesselung`, `testfallText`, Formatierung), Komponente `src/components/WeinprofilEinblick.js` und `.css`, am Ende des Sheets in `WeinDazu.js`; Engine, Wissensbasis und `RULES_VERSION` unverändert | umgesetzt auf Branch `claude/optimistic-maxwell-nwp630`, noch kein PR; Util-Tests +15, Komponententests +6, Test der Standardwerte +1 |
 
 Nach jedem PR: Tabelle nachziehen. Berührt ein PR einen Tech-Check-Befund (S29 mit PR 2, F20 mit PR 5),
 das Dashboard aktualisieren (siehe `CLAUDE.md`).
@@ -353,16 +355,32 @@ Umsetzungsnotizen Analyse 15.11.2026 (Grundlage für W1 bis W10, nichts davon um
   Änderungen zu erwarten, sechs Einzeltests: Zahl der Stile, Rangliste aller Stile, R3- und R4-Einzelwerte,
   eine Alternativenliste im Einzelrezept-Test, Fingerabdruck der `RULES_VERSION`.
 
+Umsetzungsnotizen PR 9 (W1 Weinprofil-Einblick):
+- Sichtbar nur mit `currentUser.weinprofilEinblick` (App.js setzt das Flag aus `rolePermissions/{rolle}`,
+  Standard nur Admin) und nie mit `isSharedView`. Der Einblick hängt am Sheet: Ohne Profil (Knopf „Passenden
+  Wein finden“) und bei Rollen ohne Wein (Getränk, Sauce, Beilage, Gebäck: kein Chip) gibt es keinen. Ein als
+  Beilage eingestuftes Hauptgericht bleibt damit weiter unsichtbar (Folgeschritt, falls nötig).
+- Gerechnet wird mit `bewerteAlleStile` wie bei der Empfehlung; ein Test prüft, dass die Aufschlüsselung je
+  Stil genau den Score ergibt. „Neutral“ steht mit seinen Punkten da (Hauptzutat +0,8 bzw. +1, Zubereitung
+  +0,5, Sauce +1), damit sichtbar wird, dass ein nicht genannter Tag positiv zählt. Gestrichelter Rahmen: Der
+  Stil ist kein Kandidat (unter `S_MIN` oder laut `nurZu` ausgeschlossen).
+- „Werte kopieren“ über `navigator.clipboard.writeText`; ohne Zwischenablage erscheint „Kopieren nicht
+  möglich“. Für W2 schickt der Eigentümer 15 bis 20 kopierte Zeilen mit seiner Erwartung je Gericht.
+- Im Browser geprüft über eine Vorschau-Seite (Vite, Rolle und Callable als Platzhalter, nicht im Repo):
+  mobil 390 px und Desktop 1280 px, hell und dunkel, auf- und zugeklappt; keine Konsolenfehler, keine
+  waagrechte Scrollleiste. Umbrochen wird nur zwischen den Einträgen der Aufschlüsselung. Nicht in der echten
+  App mit Login geprüft.
+
 ## Offen
 
 - **Ausbau nach der Analyse vom 15.11.2026 (Vorschläge, Entscheidung beim Eigentümer).** Zahlen und Grenzen
   der Simulation in den Umsetzungsnotizen „Analyse 15.11.2026“. Reihenfolge = empfohlene Reihenfolge.
-  - **W1 Admin-Einblick ins Profil:** Im Rezept-Sheet sehen Admins aufklappbar die gespeicherten Werte (Rolle,
-    Hauptkomponente, Zubereitung, Sauce, Intensität, Komponenten, Konfidenz) und die fünf besten Stile mit
-    Score. Nur Anzeige, kein KI-Aufruf. Grund: K und K2 beruhten auf geschätzten Profilen, weil das Repo die
-    echten Werte nicht kennt; mit W1 lässt sich jede Rückmeldung am echten Profil prüfen.
+  - **W1 Weinprofil-Einblick:** umgesetzt mit PR 9, gesteuert über die Berechtigung `weinprofilEinblick`
+    statt fest für Admins (siehe „Weinprofil-Einblick (W1)“ unter „Entschieden“). Offen: nach dem Merge in
+    der echten App prüfen.
   - **W2 Echte Profile als Prüfset:** 15 bis 20 echte Profile (nur die Listenwerte, keine Rezepttexte) mit
-    fachlicher Erwartung als Golden-Tests festhalten und W3 vor dem Merge dagegen prüfen.
+    fachlicher Erwartung als Golden-Tests festhalten und W3 vor dem Merge dagegen prüfen. Weg: Der Eigentümer
+    kopiert sie mit „Werte kopieren“ im Einblick und nennt je Gericht, welcher Wein fachlich passt.
   - **W3 Kalibrierung 3** (eine `RULES_VERSION`, kein KI-Aufruf, Profile bleiben gültig): (a) neuer Stil
     „Rotwein, fruchtig und weich“ (Primitivo, Zinfandel, Garnacha): Körper 4, Gerbstoff 1, Alkohol 3, trocken
     (`suesse` 0) mit neuem Feld `fruchtsuesse` 1, das nur R3 mildert; Passung stark `sc:rauch`,
@@ -466,6 +484,10 @@ Umsetzungsnotizen Analyse 15.11.2026 (Grundlage für W1 bis W10, nichts davon um
 
 - Wissensbasis: `src/data/weinbegleitung/` (`stile.json`, `regeln.json`, `quellen.json`)
 - Rezeptansicht: `src/components/WeinDazu.js` und `.css`, eingebunden in `RecipeDetail.js` nach der Metadatenzeile
+- Weinprofil-Einblick (W1): `src/components/WeinprofilEinblick.js` und `.css`, Helfer
+  `src/utils/weinbegleitung/einblick.js`; Berechtigung `weinprofilEinblick` in `src/utils/userManagement.js`
+  (`ROLE_PERMISSIONS_DEFAULT`), `src/App.js` (`applyRolePermissionsToUser`) und `src/components/UserManagement.js`
+  (`ROLE_PERMISSION_COLUMNS`)
 - Menü: `src/components/Weinbegleitung.js` und `.css`, Hook `src/hooks/useMenueWeinbegleitung.js`, eingebunden in `MenuDetail.js` (Zusammenfassung vor `displaySections.map`, Weinzeile nach `section-title-row`); Modus „Ein Wein“ im Kopf: `EinWeinKopf` in `Weinbegleitung.js`, Umschaltung über `zeigtEinWeinImKopf` (`menue.js`); gemeinsame Bausteine `src/components/WeinbegleitungTeile.js`
 - Seite „Weinbegleitung“: `src/components/WeinbegleitungSeite.js` und `.css`, Hook `src/hooks/useWeinprofilBackfill.js`, Kachel und Unterseite in `src/components/Kueche.js`; Backfill-Function in `functions/handlers/weinbegleitung.js`
 - Engine: `src/utils/weinbegleitung/` (`konstanten.js`, `profilSchema.js`, `wissensbasis.js`, `bewertung.js`,
