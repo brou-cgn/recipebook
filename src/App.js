@@ -366,6 +366,7 @@ function applyRolePermissionsToUser(user, permissionsMap = {}) {
     eventplanung: rolePerms.eventplanung ?? false,
     versionDictation: rolePerms.versionDictation ?? false,
     parallelKochen: rolePerms.parallelKochen ?? false,
+    weinprofilEinblick: rolePerms.weinprofilEinblick ?? false,
   };
 }
 

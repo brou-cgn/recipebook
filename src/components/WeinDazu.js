@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { WeinGlas, WeinSymbol, Gruende, sichereId } from './WeinbegleitungTeile';
+import WeinprofilEinblick from './WeinprofilEinblick';
 import { canEditRecipes } from '../utils/userManagement';
 import { empfehlungFuerWeinprofil } from '../utils/weinbegleitung/engine';
 import { STATUS_OK, STATUS_KEIN_STIL, STATUS_OHNE_PROFIL } from '../utils/weinbegleitung/konstanten';
@@ -25,6 +26,9 @@ import './WeinDazu.css';
  * `icons`: `{ rot, weiss }` aus den Button-Icons (`weinRot`, `weinWeiss`), leer = eingebautes Glas.
  * Das Sheet schließt mobil nur per Wischen nach unten am Griff (Desktop: Hintergrund, Escape).
  * Die Rebsorten-Beispiele folgen der Kulinarik des Rezepts (kulinarik.js), der Stil nicht.
+ * Mit der Berechtigung „weinprofilEinblick“ (Funktionen nach Berechtigung, `currentUser`) steht
+ * am Ende des Sheets aufklappbar die Einschätzung im Detail (WeinprofilEinblick), nie auf
+ * Freigabe-Seiten.
  */
 
 function StilDetails({ option, icons, regionId }) {
@@ -65,7 +69,9 @@ const WISCH_SCHWELLE = 90;
 const WISCH_MIN_SCHWUNG = 30;
 const WISCH_TEMPO = 0.5; // px/ms
 
-function WeinDazuSheet({ empfehlung, veraltet, darfSchaetzen, onNeuEinschaetzen, onClose, icons, regionId = null }) {
+function WeinDazuSheet({
+  empfehlung, veraltet, darfSchaetzen, onNeuEinschaetzen, onClose, icons, regionId = null, rezept = null, einblickProfil = null,
+}) {
   useModalScrollLock();
   const [closing, schliessen] = useFadeOutClose(onClose);
   const [auswahl, setAuswahl] = useState(0);
@@ -197,6 +203,8 @@ function WeinDazuSheet({ empfehlung, veraltet, darfSchaetzen, onNeuEinschaetzen,
               </ul>
             </section>
           )}
+
+          {einblickProfil && <WeinprofilEinblick rezept={rezept} profil={einblickProfil} />}
         </div>
       </div>
     </div>
@@ -229,6 +237,8 @@ function WeinDazu({ recipe, currentUser, isSharedView = false, icons = null }) {
   const profil = neueresProfil(recipe?.weinprofil, lokalesProfil);
   const empfehlung = useMemo(() => empfehlungFuerWeinprofil(profil), [profil]);
   const darfSchaetzen = !isSharedView && canEditRecipes(currentUser);
+  // Einschätzung im Detail: Berechtigung „weinprofilEinblick“, nie auf Freigabe-Seiten
+  const darfEinblick = !isSharedView && Boolean(currentUser?.weinprofilEinblick);
 
   // Veraltet-Erkennung über den inputHash; ohne Web Crypto bleibt es bei „unbekannt“.
   // Freigabe-Seiten zeigen nur das Ergebnis: Gäste können nichts neu einschätzen lassen.
@@ -324,6 +334,8 @@ function WeinDazu({ recipe, currentUser, isSharedView = false, icons = null }) {
         <WeinDazuSheet
           icons={icons}
           regionId={regionFuerRezept(recipe)}
+          rezept={recipe}
+          einblickProfil={darfEinblick ? profil : null}
           empfehlung={empfehlung}
           veraltet={veraltet}
           darfSchaetzen={darfSchaetzen}

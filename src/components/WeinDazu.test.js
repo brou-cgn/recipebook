@@ -270,3 +270,88 @@ describe('WeinDazu veraltet', () => {
     expect(screen.queryByText('Einschätzung veraltet')).not.toBeInTheDocument();
   });
 });
+
+// Weinprofil-Einblick (Tracker W1): Berechtigung „weinprofilEinblick“ aus „Funktionen nach
+// Berechtigung“, App.js legt sie als Flag an den currentUser.
+describe('WeinDazu Einschätzung im Detail', () => {
+  const MIT_EINBLICK = { id: 'u3', role: 'admin', weinprofilEinblick: true };
+  const OHNE_EINBLICK = { id: 'u4', role: 'admin', weinprofilEinblick: false };
+  const schalter = (dialog) => within(dialog).queryByRole('button', { name: 'Einschätzung im Detail' });
+
+  const oeffneEinblick = (chipName = 'Wein: Rotwein, kräftig') => {
+    fireEvent.click(screen.getByRole('button', { name: chipName }));
+    const dialog = sheet();
+    const knopf = schalter(dialog);
+    expect(knopf).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(knopf);
+    expect(knopf).toHaveAttribute('aria-expanded', 'true');
+    return dialog;
+  };
+
+  const setzeZwischenablage = (wert) => {
+    Object.defineProperty(navigator, 'clipboard', { value: wert, configurable: true });
+  };
+
+  afterEach(() => setzeZwischenablage(undefined));
+
+  it('zeigt mit der Berechtigung Profilwerte und die Punkte der besten Stile', () => {
+    zeige({ recipe: mitProfil(G5_RINDERSCHMORBRATEN), currentUser: MIT_EINBLICK });
+    const dialog = oeffneEinblick();
+
+    expect(within(dialog).getByText('Rind oder Lamm')).toBeInTheDocument();
+    expect(within(dialog).getByText('Rotwein oder Jus')).toBeInTheDocument();
+    expect(within(dialog).getByText('5 von 5')).toBeInTheDocument();
+    expect(within(dialog).getByText(/Konfidenz 90/)).toBeInTheDocument();
+
+    const stile = within(dialog).getAllByRole('listitem').filter((eintrag) => eintrag.closest('.wein-einblick-stile'));
+    expect(stile).toHaveLength(5);
+    expect(stile[0]).toHaveTextContent('Rotwein, kräftig');
+    expect(stile[0]).toHaveTextContent('7,9');
+    expect(stile[0]).toHaveTextContent('Sauce stark +3');
+    expect(stile[0]).toHaveTextContent('Fett und Salz (R6) +1');
+    expect(within(dialog).getByText(/Empfohlen wird ab 1,5 Punkten/)).toBeInTheDocument();
+  });
+
+  it('ist ohne die Berechtigung nicht da, auch nicht für Admins', () => {
+    zeige({ recipe: mitProfil(G5_RINDERSCHMORBRATEN), currentUser: OHNE_EINBLICK });
+    fireEvent.click(screen.getByRole('button', { name: 'Wein: Rotwein, kräftig' }));
+    expect(schalter(sheet())).not.toBeInTheDocument();
+  });
+
+  it('ist auf Freigabe-Seiten nie da, auch mit der Berechtigung', () => {
+    zeige({ recipe: mitProfil(G5_RINDERSCHMORBRATEN), currentUser: MIT_EINBLICK, isSharedView: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Wein: Rotwein, kräftig' }));
+    expect(schalter(sheet())).not.toBeInTheDocument();
+  });
+
+  it('erklärt auch „Hier lieber Bier oder Wasser“', () => {
+    zeige({ recipe: mitProfil(E3_EXTREM), currentUser: MIT_EINBLICK });
+    const dialog = oeffneEinblick('Hier lieber Bier oder Wasser');
+    expect(within(dialog).getByText('Gemüse')).toBeInTheDocument();
+    expect(within(dialog).getByText('Punkte der Weinstile')).toBeInTheDocument();
+  });
+
+  it('kopiert die Werte als eine Zeile JSON in die Zwischenablage', async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    setzeZwischenablage({ writeText });
+    zeige({ recipe: mitProfil(G5_RINDERSCHMORBRATEN), currentUser: MIT_EINBLICK });
+    const dialog = oeffneEinblick();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Werte kopieren' }));
+
+    expect(await within(dialog).findByRole('status')).toHaveTextContent('Kopiert');
+    expect(writeText).toHaveBeenCalledTimes(1);
+    const kopiert = JSON.parse(writeText.mock.calls[0][0]);
+    expect(kopiert).toEqual(expect.objectContaining({ titel: 'Rinderschmorbraten', hauptkomponente: 'rind_lamm', empfehlung: 'rot_kraeftig' }));
+    expect(kopiert).not.toHaveProperty('ingredients');
+  });
+
+  it('meldet, wenn es keine Zwischenablage gibt', async () => {
+    zeige({ recipe: mitProfil(G5_RINDERSCHMORBRATEN), currentUser: MIT_EINBLICK });
+    const dialog = oeffneEinblick();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Werte kopieren' }));
+
+    expect(await within(dialog).findByRole('status')).toHaveTextContent('Kopieren nicht möglich');
+  });
+});
