@@ -33,6 +33,7 @@ import {
 } from './konstanten';
 import { KOMPONENTEN, normalisiereWeinprofil } from './profilSchema';
 import { DRINKS_SECTION_NAME } from '../menuSections';
+import { istOhneWein } from './ohneWein';
 
 export const GANG_STATUS_OK = 'ok';
 export const GANG_STATUS_OHNE_PROFIL = 'ohneProfil';
@@ -92,6 +93,7 @@ export function bildeGangProfil(rezepte) {
   const mitProfil = [];
   let fehlendeProfile = 0;
   (rezepte || []).forEach((rezept) => {
+    if (istOhneWein(rezept)) return; // Gebäcke & Teige zählen wie Getränke nicht mit
     const profil = normalisiereWeinprofil(rezept?.weinprofil);
     if (profil) mitProfil.push({ id: rezept.id, profil });
     else fehlendeProfile += 1;

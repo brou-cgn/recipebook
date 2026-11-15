@@ -371,6 +371,14 @@ Umsetzungsnotizen PR 9 (W1 Weinprofil-Einblick):
   waagrechte Scrollleiste. Umbrochen wird nur zwischen den Einträgen der Aufschlüsselung. Nicht in der echten
   App mit Login geprüft.
 
+Umsetzungsnotiz Kategorie-Sperre (15.11.2026): Rezepte mit der Speisekategorie „Gebäcke & Teige“ bekommen nie
+eine Weinempfehlung, unabhängig von der KI-Rolle. Client `src/utils/weinbegleitung/ohneWein.js`
+(`istOhneWein`): kein Chip und kein „Passenden Wein finden“ in `WeinDazu`, im Menü zählen solche Rezepte wie
+Getränke nicht mit (`bildeGangProfil`) und werden nicht eingeschätzt. Server (`istOhneWein` in
+`functions/shared/weinprofil.js`): `generateWeinprofile` und `backfillWeinprofile` überspringen sie ohne
+KI-Aufruf und ohne Tageslimit. Die Liste steht an zwei Stellen und muss gleich bleiben. Vorhandene Profile
+bleiben im Rezept liegen, werden aber nicht mehr angezeigt. Kein Tech-Check-Befund berührt.
+
 ## Offen
 
 - **Ausbau nach der Analyse vom 15.11.2026 (Vorschläge, Entscheidung beim Eigentümer).** Zahlen und Grenzen

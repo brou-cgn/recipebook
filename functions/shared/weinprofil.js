@@ -205,7 +205,19 @@ function baueWeinprofilPrompt(rezept) {
   return `${WEINPROFIL_PROMPT}\n\nREZEPT:\n${JSON.stringify(daten)}`;
 }
 
+/** Kategorien, für die es nie eine Weinempfehlung gibt (Client: src/utils/weinbegleitung/ohneWein.js). */
+const KATEGORIEN_OHNE_WEIN = ['Gebäcke & Teige'];
+
+/**
+ * @param {object} rezept
+ * @return {boolean} true, wenn die Speisekategorie eine Kategorie ohne Wein enthält
+ */
+function istOhneWein(rezept) {
+  return sortierteWerte(rezept?.speisekategorie).some((wert) => KATEGORIEN_OHNE_WEIN.includes(wert));
+}
+
 module.exports = {
+  istOhneWein,
   SCHEMA_VERSION,
   ROLLEN,
   HAUPTKOMPONENTEN,

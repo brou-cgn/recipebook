@@ -6,6 +6,7 @@ import { empfehlungFuerWeinprofil } from '../utils/weinbegleitung/engine';
 import { STATUS_OK, STATUS_KEIN_STIL, STATUS_OHNE_PROFIL } from '../utils/weinbegleitung/konstanten';
 import { getStil, formatTemperatur } from '../utils/weinbegleitung/wissensbasis';
 import { beispieleFuerRegion, regionFuerRezept } from '../utils/weinbegleitung/kulinarik';
+import { istOhneWein } from '../utils/weinbegleitung/ohneWein';
 import { istWeinprofilAktuell } from '../utils/weinbegleitung/profilHash';
 import { kennwerteFuer, weinprofilFehlertext, neueresProfil, TEXT_KEIN_STIL } from '../utils/weinbegleitung/anzeige';
 import { generiereWeinprofile } from '../utils/weinbegleitung/weinprofilCallable';
@@ -282,6 +283,7 @@ function WeinDazu({ recipe, currentUser, isSharedView = false, icons = null }) {
   }, [schaetzen]);
 
   if (!recipe) return null;
+  if (istOhneWein(recipe)) return null; // Gebäcke & Teige: nie eine Weinempfehlung, auch nicht berechenbar
   if (empfehlung.status !== STATUS_OK && empfehlung.status !== STATUS_KEIN_STIL && empfehlung.status !== STATUS_OHNE_PROFIL) {
     return null; // Rolle ohne Wein (Getränk, Sauce, Beilage, Gebäck)
   }
