@@ -60,6 +60,7 @@ Quelle ist immer `firestore.rules` bzw. `storage.rules`; diese Tabelle gibt den 
 | `aiScanLimits` | `edit`+ | Admin |
 | `aiNutritionLimits`, `aiRephraseLimits`, `aiVersionLimits`, `aiWeinprofilLimits`, `importSweeperLimits` | niemand | niemand (nur Cloud Function) |
 | `jobRequests`, `invitations` | niemand (nur Cloud Functions) | niemand |
+| `appConfig/firestoreInventory` | niemand (nur Cloud Functions; Vergleichsstand für den Bestand je Collection im Nährwert-Recalc-Bericht, nur Dokumentenzahlen je Tag) | niemand |
 | `failedWebImports` | Admin | Anlegen: `isAnyUser()`; sonst Admin |
 | `cuisineProposals` | `isAnyUser()` | Anlegen: `edit`+ (nicht freigegeben); Ändern: Autor oder `moderator`+; Löschen: `moderator`+ |
 | Collection-Group `events`, `profiles` | Admin | |

@@ -8,6 +8,7 @@ const {onSchedule} = require('firebase-functions/v2/scheduler');
 const admin = require('firebase-admin');
 const {evaluateLowCarbTag} = require('../lowCarb');
 const {fetchFirestoreDailyUsage, buildFirestoreUsageSection} = require('../firestoreUsage');
+const {fetchFirestoreInventory, buildFirestoreInventorySection} = require('../firestoreInventory');
 const {NUTRITION_REFERENCE_COLLECTION, calculateNutritionFromOpenFoodFactsCore} = require('../shared/nutritionCore');
 const {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom, geminiApiKey} = require('../shared/secrets');
 
@@ -76,7 +77,7 @@ function nutritionRecalcLowCarbLabel(action) {
   return null;
 }
 
-function buildNutritionRecalcSummaryMail(report, runAt, usageSection = null) {
+function buildNutritionRecalcSummaryMail(report, runAt, usageSection = null, inventorySection = null) {
   const updatedCount = report.updatedRecipes.length;
   const failedCount = report.failedRecipes.length;
   const skippedCount = report.skippedRecipes.length;
@@ -117,6 +118,9 @@ function buildNutritionRecalcSummaryMail(report, runAt, usageSection = null) {
   if (usageSection) {
     text += usageSection.text;
   }
+  if (inventorySection) {
+    text += inventorySection.text;
+  }
 
   const htmlList = (entries, formatter) => {
     if (!entries || entries.length === 0) return '<p>Keine</p>';
@@ -145,6 +149,7 @@ function buildNutritionRecalcSummaryMail(report, runAt, usageSection = null) {
       <h3>Fehlgeschlagene Rezepte</h3>
       ${htmlList(report.failedRecipes, (entry) => `${escapeNutritionRecalcHtml(entry.title)} (${escapeNutritionRecalcHtml(entry.recipeId)}): ${escapeNutritionRecalcHtml(entry.error)}`)}
       ${usageSection ? usageSection.html : ''}
+      ${inventorySection ? inventorySection.html : ''}
     </div>
   `;
 
@@ -225,10 +230,30 @@ async function loadFirestoreUsageSection() {
   }
 }
 
+/**
+ * Bestand je Collection für den Recalc-Bericht. Schlägt nie fehl: bei einem
+ * Fehler oder nach 60 s steht ein Hinweis im Bericht.
+ *
+ * @return {Promise<{text: string, html: string}>}
+ */
+async function loadFirestoreInventorySection() {
+  try {
+    const inventory = await fetchFirestoreInventory({db: admin.firestore()});
+    return buildFirestoreInventorySection(inventory);
+  } catch (error) {
+    const message = (error && error.message) || String(error);
+    console.warn('loadFirestoreInventorySection: Bestand nicht verfügbar:', message);
+    return buildFirestoreInventorySection({error: message});
+  }
+}
+
 async function sendNutritionRecalcSummary(report) {
   const runAt = new Date(report.finishedAt || Date.now()).toLocaleString('de-DE', {timeZone: 'Europe/Berlin'});
-  const usageSection = await loadFirestoreUsageSection();
-  const mailContent = buildNutritionRecalcSummaryMail(report, runAt, usageSection);
+  const [usageSection, inventorySection] = await Promise.all([
+    loadFirestoreUsageSection(),
+    loadFirestoreInventorySection(),
+  ]);
+  const mailContent = buildNutritionRecalcSummaryMail(report, runAt, usageSection, inventorySection);
   await sendAdminReportMail({
     subject: mailContent.subject,
     text: mailContent.text,
