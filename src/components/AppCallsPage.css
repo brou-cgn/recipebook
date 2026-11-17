@@ -849,3 +849,24 @@
     display: none;
   }
 }
+
+/* Zusammengefasste Aufrufe je Anwender und Monat bzw. Jahr (Tech-Check K2, CallLogPanel.js) */
+.app-calls-aggregates {
+  margin-top: 32px;
+}
+
+.app-calls-aggregates h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.app-calls-table th.app-calls-col-count,
+.app-calls-table td.app-calls-col-count {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.app-calls-limit-hint {
+  margin-top: 8px;
+}

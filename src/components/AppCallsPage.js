@@ -5,8 +5,10 @@ import TrashIcon from './icons/TrashIcon';
 import './Settings.css';
 import './AppCallsPage.css';
 import { httpsCallable } from 'firebase/functions';
-import { getAppCalls } from '../utils/appCallsFirestore';
-import { getRecipeCalls } from '../utils/recipeCallsFirestore';
+import { getAppCalls, getAppCallAggregates, APP_CALLS_LIMIT } from '../utils/appCallsFirestore';
+import { getRecipeCalls, getRecipeCallAggregates, RECIPE_CALLS_LIMIT } from '../utils/recipeCallsFirestore';
+import useCallLog from '../hooks/useCallLog';
+import CallLogPanel from './CallLogPanel';
 import {
   getButtonIcons,
   DEFAULT_BUTTON_ICONS,
@@ -257,6 +259,13 @@ function StandardTermRow({ label, onRemove }) {
   );
 }
 
+// Tech-Check K2: Einzelaufrufe (begrenzt) plus die monatlich zusammengefassten
+// Aufrufe; geladen erst, wenn der jeweilige Reiter aktiv ist (useCallLog).
+const loadAppCallLog = () => Promise.all([getAppCalls(), getAppCallAggregates()])
+  .then(([calls, aggregates]) => ({ calls, aggregates }));
+const loadRecipeCallLog = () => Promise.all([getRecipeCalls(), getRecipeCallAggregates()])
+  .then(([calls, aggregates]) => ({ calls, aggregates }));
+
 const APP_CALLS_TAB_ORDER = [
   KUECHENBETRIEB_TABS.APP,
   KUECHENBETRIEB_TABS.RECIPE,
@@ -274,9 +283,6 @@ const KUECHE_FAB_TAB_ORDER = [
 ];
 
 function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSelectRecipe, activeTab: activeTabProp, onActiveTabChange, visibleTabs, allUsers = [] }) {
-  const [appCalls, setAppCalls] = useState([]);
-  const [recipeCalls, setRecipeCalls] = useState([]);
-  const [loading, setLoading] = useState(true);
   const isControlled = activeTabProp !== undefined && onActiveTabChange !== undefined;
   const [localActiveTab, setLocalActiveTab] = useState(activeTabProp ?? 'app');
   const activeTab = isControlled ? activeTabProp : localActiveTab;
@@ -299,7 +305,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [selectedNutritionRecipeId, setSelectedNutritionRecipeId] = useState(null);
   const [retryAutoCalculateToken, setRetryAutoCalculateToken] = useState(0);
   const [now, setNow] = useState(() => Date.now());
-  const [filterBenjaminRousselli, setFilterBenjaminRousselli] = useState(true);
   const [filterNutritionCalculations, setFilterNutritionCalculations] = useState(true);
   const tabsRef = useRef(null);
   const ingredientMatchFromModalRef = useRef(false);
@@ -362,13 +367,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   }, []);
 
   useEffect(() => {
-    const loadData = async () => {
-      const [fetchedAppCalls, fetchedRecipeCalls] = await Promise.all([getAppCalls(), getRecipeCalls()]);
-      setAppCalls(fetchedAppCalls);
-      setRecipeCalls(fetchedRecipeCalls);
-      setLoading(false);
-    };
-    loadData();
     getButtonIcons().then((icons) => {
       setAllButtonIcons(icons);
     });
@@ -478,13 +476,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     [recipes, sharedRecipeIds]
   );
 
-  const filteredAppCalls = useMemo(
-    () => filterBenjaminRousselli
-      ? appCalls.filter(c => !(c.userVorname === 'Benjamin' && c.userNachname === 'Rousselli'))
-      : appCalls,
-    [appCalls, filterBenjaminRousselli]
-  );
-
   // The call logs store no e-mail addresses. Admins see them resolved from
   // the full user profiles (allUsers carries e-mails only for admins - see
   // getUsers in userManagement.js); everyone else sees no e-mail column.
@@ -493,7 +484,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     () => new Map((allUsers || []).filter((u) => u?.id && u.email).map((u) => [u.id, u.email])),
     [allUsers]
   );
-  const getCallEmail = (call) => emailByUserId.get(call.userId) || '';
+  const getCallEmail = (userId) => emailByUserId.get(userId) || '';
 
   const restrictedVisibleTabs = currentUser?.kuecheFab && Array.isArray(visibleTabs)
     ? KUECHE_FAB_TAB_ORDER.filter((tabId) => visibleTabs.includes(tabId))
@@ -505,6 +496,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     return filteredTabIds.length > 0 ? filteredTabIds : APP_CALLS_TAB_ORDER;
   })();
   const effectiveActiveTab = visibleTabIds.includes(activeTab) ? activeTab : visibleTabIds[0];
+  const canOpenPage = Boolean(currentUser?.appCalls) || hasRestrictedTabAccess;
+  const appCallLog = useCallLog(loadAppCallLog, canOpenPage && effectiveActiveTab === KUECHENBETRIEB_TABS.APP);
+  const recipeCallLog = useCallLog(loadRecipeCallLog, canOpenPage && effectiveActiveTab === KUECHENBETRIEB_TABS.RECIPE);
 
   const nutritionListData = useMemo(() => {
     const withNutrition = recipes.filter((recipe) => recipe.naehrwerte);
@@ -1561,66 +1555,25 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
             <p className="app-calls-info-text">
               Hier sind alle Appaufrufe gemeinsam mit den zugehörigen Anwendern dokumentiert.
               Diese Übersicht dient der Nachvollziehbarkeit und kann für Auditing- oder Supportzwecke
-              herangezogen werden.
+              herangezogen werden. Aufrufe vor dem Vormonat fasst ein Job am Monatsersten je Anwender
+              und Monat zusammen, Aufrufe früherer Jahre je Anwender und Jahr.
             </p>
-            {loading ? (
-              <div className="app-calls-empty">Laden...</div>
-            ) : appCalls.length === 0 ? (
-              <div className="app-calls-empty">Noch keine Appaufrufe vorhanden.</div>
-            ) : (
-              <>
-                <div className="app-calls-filter-row">
-                  <label className="app-calls-filter-label">
-                    <input
-                      type="checkbox"
-                      checked={filterBenjaminRousselli}
-                      onChange={(e) => setFilterBenjaminRousselli(e.target.checked)}
-                      className="app-calls-filter-checkbox"
-                    />
-                    Benjamin Rousselli ausblenden
-                  </label>
-                </div>
-                <div className="app-calls-table-container">
-                  <table className="app-calls-table">
-                    <thead>
-                      <tr>
-                        <th>Datum &amp; Uhrzeit</th>
-                        <th>Vorname</th>
-                        <th>Nachname</th>
-                        {canSeeEmails && <th className="app-calls-col-desktop">E-Mail</th>}
-                        <th className="app-calls-col-desktop">Art</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredAppCalls.map((call) => (
-                        <React.Fragment key={call.id}>
-                          <tr>
-                            <td>
-                              {call.timestamp?.toDate
-                                ? call.timestamp.toDate().toLocaleString('de-DE')
-                                : '–'}
-                            </td>
-                            <td>{call.userVorname}</td>
-                            <td>{call.userNachname}</td>
-                            {canSeeEmails && <td className="app-calls-col-desktop">{getCallEmail(call)}</td>}
-                            <td className="app-calls-col-desktop">{call.isGuest ? 'Gast' : 'Angemeldet'}</td>
-                          </tr>
-                        </React.Fragment>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="app-calls-stats">
-                  Gesamt: <strong>{filteredAppCalls.length}</strong>{filterBenjaminRousselli && filteredAppCalls.length !== appCalls.length ? <> von {appCalls.length} Einträgen (gefiltert)</> : <> Einträge</>}
-                </div>
-              </>
-            )}
+            <CallLogPanel
+              kind="app"
+              log={appCallLog}
+              limit={APP_CALLS_LIMIT}
+              canSeeEmails={canSeeEmails}
+              getEmail={getCallEmail}
+              ownerFilter
+            />
           </>
         ) : effectiveActiveTab === 'recipe' ? (
           <>
             <p className="app-calls-info-text">
               Hier werden alle Rezeptaufrufe mit den zugehörigen Anwendern und Rezepten protokolliert.
               Diese Übersicht ermöglicht die Auswertung, welche Rezepte wie häufig aufgerufen werden.
+              Aufrufe vor dem Vormonat fasst ein Job am Monatsersten je Anwender und Monat zusammen,
+              Aufrufe früherer Jahre je Anwender und Jahr; das Zeitfenster von „Im Trend“ bleibt einzeln erhalten.
             </p>
             {canSeeEmails && (
               <div className="settings-section">
@@ -1651,49 +1604,13 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                 </div>
               </div>
             )}
-            {loading ? (
-              <div className="app-calls-empty">Laden...</div>
-            ) : recipeCalls.length === 0 ? (
-              <div className="app-calls-empty">Noch keine Rezeptaufrufe vorhanden.</div>
-            ) : (
-              <>
-                <div className="app-calls-table-container">
-                  <table className="app-calls-table">
-                    <thead>
-                      <tr>
-                        <th>Datum &amp; Uhrzeit</th>
-                        <th>Rezept</th>
-                        <th>Vorname</th>
-                        <th>Nachname</th>
-                        {canSeeEmails && <th className="app-calls-col-desktop">E-Mail</th>}
-                        <th className="app-calls-col-desktop">Art</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recipeCalls.map((call) => (
-                        <React.Fragment key={call.id}>
-                          <tr>
-                            <td>
-                              {call.timestamp?.toDate
-                                ? call.timestamp.toDate().toLocaleString('de-DE')
-                                : '–'}
-                            </td>
-                            <td>{call.recipeTitle}</td>
-                            <td>{call.userVorname}</td>
-                            <td>{call.userNachname}</td>
-                            {canSeeEmails && <td className="app-calls-col-desktop">{getCallEmail(call)}</td>}
-                            <td className="app-calls-col-desktop">{call.isGuest ? 'Gast' : 'Angemeldet'}</td>
-                          </tr>
-                        </React.Fragment>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="app-calls-stats">
-                  Gesamt: <strong>{recipeCalls.length}</strong> Einträge
-                </div>
-              </>
-            )}
+            <CallLogPanel
+              kind="recipe"
+              log={recipeCallLog}
+              limit={RECIPE_CALLS_LIMIT}
+              canSeeEmails={canSeeEmails}
+              getEmail={getCallEmail}
+            />
           </>
         ) : effectiveActiveTab === 'nolink' ? (
           <>

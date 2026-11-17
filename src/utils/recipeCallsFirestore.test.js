@@ -13,6 +13,7 @@ const mockGetDocs = jest.fn();
 const mockQuery = jest.fn((...args) => args);
 const mockOrderBy = jest.fn((...args) => args);
 const mockWhere = jest.fn((...args) => args);
+const mockLimit = jest.fn((...args) => args);
 const mockServerTimestamp = jest.fn(() => 'mock-timestamp');
 
 jest.mock('firebase/firestore', () => ({
@@ -22,11 +23,19 @@ jest.mock('firebase/firestore', () => ({
   query: (...args) => mockQuery(...args),
   orderBy: (...args) => mockOrderBy(...args),
   where: (...args) => mockWhere(...args),
+  limit: (...args) => mockLimit(...args),
   serverTimestamp: () => mockServerTimestamp(),
   Timestamp: { fromDate: (date) => ({ toDate: () => date, _isMock: true }) }
 }));
 
-import { logRecipeCall, getRecipeCalls, getRecentRecipeCalls } from './recipeCallsFirestore';
+import {
+  logRecipeCall,
+  getRecipeCalls,
+  getRecentRecipeCalls,
+  getRecipeCallAggregates,
+  RECIPE_CALLS_LIMIT,
+  RECIPE_CALL_AGGREGATES_LIMIT
+} from './recipeCallsFirestore';
 
 const { collection: mockCollection } = jest.requireMock('firebase/firestore');
 
@@ -138,7 +147,7 @@ describe('logRecipeCall', () => {
 });
 
 describe('getRecipeCalls', () => {
-  it('returns recipe calls ordered by timestamp', async () => {
+  it('returns recipe calls ordered by timestamp, with an upper bound', async () => {
     const mockDocs = [
       { id: 'call-1', data: () => ({ recipeId: 'r1', recipeTitle: 'Rezept A', timestamp: 'ts1' }) },
       { id: 'call-2', data: () => ({ recipeId: 'r2', recipeTitle: 'Rezept B', timestamp: 'ts2' }) }
@@ -147,7 +156,9 @@ describe('getRecipeCalls', () => {
 
     const result = await getRecipeCalls();
 
+    expect(mockCollection).toHaveBeenCalledWith({}, 'recipeCalls');
     expect(mockOrderBy).toHaveBeenCalledWith('timestamp', 'desc');
+    expect(mockLimit).toHaveBeenCalledWith(RECIPE_CALLS_LIMIT);
     expect(mockGetDocs).toHaveBeenCalledTimes(1);
     expect(result).toEqual([
       { id: 'call-1', recipeId: 'r1', recipeTitle: 'Rezept A', timestamp: 'ts1' },
@@ -202,5 +213,26 @@ describe('getRecentRecipeCalls', () => {
     const result = await getRecentRecipeCalls(30);
 
     expect(result).toEqual([]);
+  });
+});
+
+describe('getRecipeCallAggregates', () => {
+  it('reads the consolidated calls, newest period first, with an upper bound', async () => {
+    mockGetDocs.mockResolvedValue({
+      docs: [{ id: '2025_u1', data: () => ({ period: '2025', count: 12, recipeCounts: { r1: 12 } }) }]
+    });
+
+    const result = await getRecipeCallAggregates();
+
+    expect(mockCollection).toHaveBeenCalledWith({}, 'recipeCallAggregates');
+    expect(mockOrderBy).toHaveBeenCalledWith('period', 'desc');
+    expect(mockLimit).toHaveBeenCalledWith(RECIPE_CALL_AGGREGATES_LIMIT);
+    expect(result).toEqual([{ id: '2025_u1', period: '2025', count: 12, recipeCounts: { r1: 12 } }]);
+  });
+
+  it('returns an empty array if getDocs fails', async () => {
+    mockGetDocs.mockRejectedValue(new Error('permission-denied'));
+
+    await expect(getRecipeCallAggregates()).resolves.toEqual([]);
   });
 });

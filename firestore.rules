@@ -496,6 +496,20 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // Zusammengefasste Aufruf-Protokolle (Tech-Check K2): ein Dokument je Anwender
+    // und Monat bzw. Jahr. Nur der monatliche Job monthlyCallLogConsolidation
+    // schreibt sie (Admin SDK). Lesen wie appCalls: nur die Seite Küchenbetrieb
+    // zeigt sie, auch die zusammengefassten Rezeptaufrufe.
+    match /appCallAggregates/{aggregateId} {
+      allow read: if canSeeAppCalls();
+      allow write: if false;
+    }
+
+    match /recipeCallAggregates/{aggregateId} {
+      allow read: if canSeeAppCalls();
+      allow write: if false;
+    }
+
     // RSVP-Seite "A little Advent Glow" (statisch unter /advent-glow/, kein Teil der App).
     // Gäste melden sich still anonym an; Dokument-ID = Auth-UID, also genau eine Antwort
     // pro Gast, die er später ändern kann. Lesen: der Gast nur sein eigenes Dokument,

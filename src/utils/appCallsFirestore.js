@@ -6,9 +6,16 @@
  *   - userId: string
  *   - userVorname: string
  *   - userNachname: string
- *   - userEmail: string
  *   - isGuest: boolean  (true for anonymous/guest sessions, false for registered users)
  *   - timestamp: serverTimestamp
+ *
+ * Tech-Check K2: once a month the Cloud Function monthlyCallLogConsolidation
+ * folds every call before the previous month into appCallAggregates/{period}_{user}
+ * (one document per user and month, per user and year for earlier calendar years,
+ * guests together) and deletes the raw documents:
+ *   - period: '2026-10' or '2025', periodType: 'month' | 'year', year, month (months only)
+ *   - userId (null for the guest bucket), userVorname, userNachname, isGuest
+ *   - count: number of sessions in that period, updatedAt
  */
 
 import { db } from '../firebase';
@@ -82,16 +89,49 @@ export const getRecentAppCalls = async (days = 7) => {
 };
 
 /**
- * Fetch all app calls, ordered by most recent first
+ * Upper bound for getAppCalls (page Küchenbetrieb). The monthly consolidation
+ * leaves only the calls since the start of the previous month (longer if the
+ * trend window of settings/app is longer) in appCalls. No time window on
+ * purpose: which months are still raw depends on the job, a window computed
+ * here would hide calls of a month the job has not reached yet. The limit caps
+ * the read in case the job stops running.
+ */
+export const APP_CALLS_LIMIT = 5000;
+
+/** Upper bound for getAppCallAggregates: one document per user and month or year. */
+export const APP_CALL_AGGREGATES_LIMIT = 2000;
+
+/**
+ * Fetch the app calls not yet consolidated, newest first, at most APP_CALLS_LIMIT.
  * @returns {Promise<Array>} Array of app call objects
  */
 export const getAppCalls = async () => {
   try {
-    const q = query(collection(db, 'appCalls'), orderBy('timestamp', 'desc'));
+    const q = query(collection(db, 'appCalls'), orderBy('timestamp', 'desc'), limit(APP_CALLS_LIMIT));
     const snapshot = await getDocs(q);
     return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error('Error fetching app calls:', error);
+    return [];
+  }
+};
+
+/**
+ * Fetch the consolidated app calls (one entry per user and month or year),
+ * newest period first.
+ * @returns {Promise<Array>} Array of aggregate objects
+ */
+export const getAppCallAggregates = async () => {
+  try {
+    const q = query(
+      collection(db, 'appCallAggregates'),
+      orderBy('period', 'desc'),
+      limit(APP_CALL_AGGREGATES_LIMIT)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error('Error fetching app call aggregates:', error);
     return [];
   }
 };

@@ -24,7 +24,14 @@ jest.mock('firebase/firestore', () => ({
   Timestamp: { fromDate: (date) => ({ toDate: () => date, _isMock: true }) }
 }));
 
-import { getRecentAppCalls, RECENT_APP_CALLS_LIMIT } from './appCallsFirestore';
+import {
+  getRecentAppCalls,
+  RECENT_APP_CALLS_LIMIT,
+  getAppCalls,
+  APP_CALLS_LIMIT,
+  getAppCallAggregates,
+  APP_CALL_AGGREGATES_LIMIT
+} from './appCallsFirestore';
 
 const { collection: mockCollection } = jest.requireMock('firebase/firestore');
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -73,6 +80,53 @@ describe('getRecentAppCalls', () => {
     mockGetDocs.mockRejectedValue(new Error('Firestore error'));
 
     await expect(getRecentAppCalls(7)).resolves.toEqual([]);
+    error.mockRestore();
+  });
+});
+
+describe('getAppCalls (Küchenbetrieb)', () => {
+  it('reads the raw calls newest first with an upper bound, without a time window', async () => {
+    mockGetDocs.mockResolvedValue({
+      docs: [{ id: 'call-1', data: () => ({ userId: 'u1', timestamp: 'ts1' }) }]
+    });
+
+    const result = await getAppCalls();
+
+    expect(mockCollection).toHaveBeenCalledWith({}, 'appCalls');
+    expect(mockOrderBy).toHaveBeenCalledWith('timestamp', 'desc');
+    expect(mockLimit).toHaveBeenCalledWith(APP_CALLS_LIMIT);
+    expect(mockWhere).not.toHaveBeenCalled();
+    expect(result).toEqual([{ id: 'call-1', userId: 'u1', timestamp: 'ts1' }]);
+  });
+
+  it('returns an empty array if getDocs fails', async () => {
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetDocs.mockRejectedValue(new Error('Firestore error'));
+
+    await expect(getAppCalls()).resolves.toEqual([]);
+    error.mockRestore();
+  });
+});
+
+describe('getAppCallAggregates', () => {
+  it('reads the consolidated calls, newest period first, with an upper bound', async () => {
+    mockGetDocs.mockResolvedValue({
+      docs: [{ id: '2026-10_u1', data: () => ({ period: '2026-10', userId: 'u1', count: 4 }) }]
+    });
+
+    const result = await getAppCallAggregates();
+
+    expect(mockCollection).toHaveBeenCalledWith({}, 'appCallAggregates');
+    expect(mockOrderBy).toHaveBeenCalledWith('period', 'desc');
+    expect(mockLimit).toHaveBeenCalledWith(APP_CALL_AGGREGATES_LIMIT);
+    expect(result).toEqual([{ id: '2026-10_u1', period: '2026-10', userId: 'u1', count: 4 }]);
+  });
+
+  it('returns an empty array if getDocs fails (e.g. missing permission)', async () => {
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetDocs.mockRejectedValue(new Error('permission-denied'));
+
+    await expect(getAppCallAggregates()).resolves.toEqual([]);
     error.mockRestore();
   });
 });
