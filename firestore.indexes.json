@@ -32,6 +32,22 @@
         {"fieldPath": "userId", "order": "ASCENDING"},
         {"fieldPath": "date", "order": "DESCENDING"}
       ]
+    },
+    {
+      "collectionGroup": "appCallAggregates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "periodType", "order": "ASCENDING"},
+        {"fieldPath": "year", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "recipeCallAggregates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "periodType", "order": "ASCENDING"},
+        {"fieldPath": "year", "order": "ASCENDING"}
+      ]
     }
   ],
   "fieldOverrides": [

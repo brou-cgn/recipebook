@@ -38,7 +38,7 @@ const EXPECTED_EXPORTS = [
   'importRecipeCallable',
   'importRecipeShortcut',
   'manageGuestProfile',
-  'monthlyCallLogConsolidation',
+  'nightlyCallLogConsolidation',
   'nightlyImportProtocolCleanup',
   'nightlyNutritionRecalc',
   'nightlySwipeFlagsCleanup',

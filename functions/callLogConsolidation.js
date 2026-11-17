@@ -1,34 +1,33 @@
 /**
- * Monatliche Konsolidierung der Aufruf-Protokolle appCalls und recipeCalls
- * (Tech-Check K2). Jeder Login und jeder Rezeptaufruf legt ein Dokument an; die
- * Seite Küchenbetrieb las bisher beide Historien komplett. Ältere Aufrufe werden
- * deshalb zu einem Dokument je Anwender und Zeitraum zusammengefasst:
+ * Konsolidierung der Aufruf-Protokolle appCalls und recipeCalls (Tech-Check K2).
+ * Jeder Login und jeder Rezeptaufruf legt ein Dokument an; die Seite
+ * Küchenbetrieb las bisher beide Historien komplett. Ältere Aufrufe werden in
+ * Stufen zusammengefasst (Kalender Europe/Berlin, nur ganze Tage und Monate):
  *
- *   appCalls    -> appCallAggregates
- *   recipeCalls -> recipeCallAggregates
+ *   älter als 14 Tage              -> ein Dokument je Tag
+ *                                     appCallDays/{JJJJ-MM-TT}, recipeCallDays/{JJJJ-MM-TT}
+ *   vor Beginn des Vormonats       -> ein Dokument je Anwender und Monat
+ *                                     appCallAggregates/{JJJJ-MM}_{uid}, recipeCallAggregates/…
+ *   aus früheren Kalenderjahren    -> ein Dokument je Anwender und Jahr
+ *                                     appCallAggregates/{JJJJ}_{uid}, recipeCallAggregates/…
  *
- * Zeiträume (Kalender Europe/Berlin):
- * - Ganze Monate, die vollständig älter als einen Monat sind (vor Beginn des
- *   Vormonats), werden zu einem Dokument je Anwender und Monat (`2026-10_<uid>`).
- * - Aufrufe aus früheren Kalenderjahren landen in einem Dokument je Anwender und
- *   Jahr (`2025_<uid>`); Monatsdokumente eines vergangenen Jahres werden dort
- *   hineingefaltet und gelöscht.
- * - recipeCalls: Das Trend-Zeitfenster (settings/app.trendingDays, „Im Trend“
- *   zählt rohe recipeCalls der letzten X Tage) bleibt immer roh. Ist es länger
- *   als ein Monat, wird entsprechend weniger zusammengefasst. appCalls hängen
- *   nicht daran.
+ * Ein Tagesdokument hält die Aufrufe des Tages aller Anwender, aufgeschlüsselt im
+ * Feld users (Name, Anzahl, bei Rezeptaufrufen die Anzahl je Rezept-ID); daraus
+ * entstehen später die Monatsdokumente je Anwender. Monatsdokumente eines
+ * vergangenen Jahres werden ins Jahresdokument gefaltet. Gäste (anonyme Sitzungen,
+ * je Gerät eine eigene uid) zählen je Zeitraum gemeinsam (Schlüssel `gaeste`).
  *
- * Gäste (anonyme Sitzungen, je Gerät eine eigene uid) gehen je Zeitraum in ein
- * gemeinsames Dokument (`<zeitraum>_gaeste`), sonst entstünde fast ein Dokument
- * je Aufruf. recipeCallAggregates zählen zusätzlich je Rezept (recipeCounts),
- * damit die Information, welches Rezept wie oft aufgerufen wurde, beim Löschen
- * der Rohdaten nicht verloren geht.
+ * „Im Trend“ zählt die Rezeptaufrufe der letzten X Tage (settings/app.trendingDays)
+ * aus Einzelaufrufen und recipeCallDays. Tagesdokumente innerhalb dieses Fensters
+ * werden deshalb nicht zu Monaten verdichtet; ist es länger als ein Monat, bleiben
+ * entsprechend mehr Tage stehen. appCalls hängen nicht daran.
  *
- * Absturzsicher und nebenläufig sicher: Jeder Batch erhöht die Zähler
+ * Absturzsicher und nebenläufig sicher: Jeder Batch erhöht die Zähler der Ziele
  * (FieldValue.increment) und löscht genau die gezählten Quelldokumente, atomar.
  * Die Löschungen tragen die Vorbedingung `exists: true`; hat ein zweiter Lauf ein
  * Dokument schon verarbeitet, scheitert der ganze Batch, statt doppelt zu zählen.
- * Bricht ein Lauf ab (Fehler, Zeitbudget), setzt der nächste beim Rest an.
+ * Ein Tagesdokument wird nie über zwei Batches verteilt. Bricht ein Lauf ab
+ * (Fehler, Zeitbudget), setzt der nächste beim Rest an.
  *
  * Die Logik hängt nur an `db` und `FieldValue`, damit sie ohne Emulator testbar
  * ist; die geplante Function steht in handlers/admin.js.
@@ -38,28 +37,35 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const TIME_ZONE = 'Europe/Berlin';
 // Wie DEFAULT_TRENDING_DAYS in src/utils/customLists.js.
 const DEFAULT_TRENDING_DAYS = 30;
+// So viele Tage bleiben Aufrufe einzeln (Küche und „Meine Küchenstars“ lesen 14 Tage roh).
+const RAW_DAYS = 14;
 const GUEST_KEY = 'gaeste';
 const UNKNOWN_KEY = 'unbekannt';
 const PAGE_SIZE = 400;
 // Firestore erlaubt 500 Schreibvorgänge je Batch; Abstand wie in den übrigen Jobs.
 const MAX_BATCH_WRITES = 450;
 
-// perRecipe: Zähler je Rezept-ID; trendWindow: das Trend-Zeitfenster bleibt roh.
+// perRecipe: Zähler je Rezept-ID; trendWindow: Tage des Trend-Zeitfensters bleiben Tagesdokumente.
 const CALL_LOGS = Object.freeze([
-  Object.freeze({source: 'appCalls', target: 'appCallAggregates', perRecipe: false, trendWindow: false}),
-  Object.freeze({source: 'recipeCalls', target: 'recipeCallAggregates', perRecipe: true, trendWindow: true}),
+  Object.freeze({
+    source: 'appCalls', days: 'appCallDays', target: 'appCallAggregates', perRecipe: false, trendWindow: false,
+  }),
+  Object.freeze({
+    source: 'recipeCalls', days: 'recipeCallDays', target: 'recipeCallAggregates', perRecipe: true, trendWindow: true,
+  }),
 ]);
 
 const pad2 = (value) => String(value).padStart(2, '0');
 
 /**
- * Jahr und Monat (1–12) eines Zeitpunkts im Berliner Kalender.
+ * Kalendertag eines Zeitpunkts in Berlin.
  * @param {Date} date
- * @return {{year: number, month: number}}
+ * @return {{year: number, month: number, day: number, key: string}} key: JJJJ-MM-TT
  */
-function berlinYearMonth(date) {
-  const [year, month] = date.toLocaleDateString('sv-SE', {timeZone: TIME_ZONE}).split('-').map(Number);
-  return {year, month};
+function berlinDate(date) {
+  const key = date.toLocaleDateString('sv-SE', {timeZone: TIME_ZONE});
+  const [year, month, day] = key.split('-').map(Number);
+  return {year, month, day, key};
 }
 
 /**
@@ -84,17 +90,29 @@ function berlinOffsetMinutes(date) {
 }
 
 /**
- * Beginn eines Monats (1. um 0:00 Berliner Zeit) als Zeitpunkt.
+ * Beginn eines Kalendertags (0:00 Berliner Zeit) als Zeitpunkt. Monat und Tag
+ * dürfen über- oder unterlaufen (Tag 0 = letzter Tag des Vormonats).
+ * @param {number} year
+ * @param {number} month - 1–12
+ * @param {number} day
+ * @return {Date}
+ */
+function startOfBerlinDay(year, month, day) {
+  const midnightUtc = Date.UTC(year, month - 1, day);
+  const guess = midnightUtc - berlinOffsetMinutes(new Date(midnightUtc)) * 60000;
+  // Zweiter Blick mit dem Abstand zur geschätzten Ortsmitternacht, falls dazwischen
+  // eine Zeitumstellung läge (in Berlin nie um Mitternacht, aber billig).
+  return new Date(midnightUtc - berlinOffsetMinutes(new Date(guess)) * 60000);
+}
+
+/**
+ * Beginn eines Monats (1. um 0:00 Berliner Zeit).
  * @param {number} year
  * @param {number} month - 1–12, darf über- oder unterlaufen (0 = Dezember des Vorjahres)
  * @return {Date}
  */
 function startOfBerlinMonth(year, month) {
-  const midnightUtc = Date.UTC(year, month - 1, 1);
-  const guess = midnightUtc - berlinOffsetMinutes(new Date(midnightUtc)) * 60000;
-  // Zweiter Blick mit dem Abstand zur geschätzten Ortsmitternacht, falls dazwischen
-  // eine Zeitumstellung läge (in Berlin nie am Monatsersten, aber billig).
-  return new Date(midnightUtc - berlinOffsetMinutes(new Date(guess)) * 60000);
+  return startOfBerlinDay(year, month, 1);
 }
 
 /**
@@ -109,25 +127,37 @@ function normalizeTrendingDays(value) {
 }
 
 /**
- * Grenze der Konsolidierung: Aufrufe davor werden zusammengefasst. Immer der
- * Beginn eines Berliner Monats, damit nur ganze Monate wandern: der Beginn des
- * Vormonats, oder früher, wenn ein Trend-Zeitfenster weiter zurückreicht.
+ * Grenze für Einzelaufrufe: Aufrufe davor sind älter als 14 Tage und werden zu
+ * Tagesdokumenten. Immer der Beginn eines Berliner Tags.
+ * @param {Date} now
+ * @return {Date}
+ */
+function dailyCutoff(now) {
+  const {year, month, day} = berlinDate(now);
+  return startOfBerlinDay(year, month, day - RAW_DAYS);
+}
+
+/**
+ * Grenze für Monate: Aufrufe und Tagesdokumente davor werden zu Monats- bzw.
+ * Jahresdokumenten je Anwender. Immer der Beginn eines Berliner Monats: der Beginn
+ * des Vormonats, oder früher, wenn ein Trend-Zeitfenster weiter zurückreicht.
  * @param {Date} now
  * @param {?number} [trendingDays=null] - null: ohne Trend-Zeitfenster
  * @return {Date}
  */
 function consolidationCutoff(now, trendingDays = null) {
-  const {year, month} = berlinYearMonth(now);
+  const {year, month} = berlinDate(now);
   const previousMonth = startOfBerlinMonth(year, month - 1);
   if (trendingDays === null) return previousMonth;
-  const windowStart = berlinYearMonth(new Date(now.getTime() - normalizeTrendingDays(trendingDays) * DAY_MS));
+  const windowStart = berlinDate(new Date(now.getTime() - normalizeTrendingDays(trendingDays) * DAY_MS));
   const trendMonth = startOfBerlinMonth(windowStart.year, windowStart.month);
   return trendMonth < previousMonth ? trendMonth : previousMonth;
 }
 
-const isUid = (value) => typeof value === 'string' && value.length > 0 && value.length <= 128 && !value.includes('/');
+const isKey = (value) => typeof value === 'string' && value.length > 0 && value.length <= 128 && !value.includes('/');
 const isRecipeKey = (value) => typeof value === 'string' && value.length > 0 && value.length <= 200 && !value.includes('/');
 const text = (value) => (typeof value === 'string' ? value : '');
+const positiveCount = (value) => (Number.isFinite(value) && value > 0 ? value : 0);
 
 function toDate(value) {
   if (value && typeof value.toDate === 'function') return value.toDate();
@@ -135,224 +165,305 @@ function toDate(value) {
   return null;
 }
 
+function cleanRecipeCounts(value) {
+  const counts = {};
+  if (value && typeof value === 'object') {
+    for (const [recipeId, count] of Object.entries(value)) {
+      if (isRecipeKey(recipeId) && positiveCount(count) > 0) counts[recipeId] = count;
+    }
+  }
+  return Object.keys(counts).length > 0 ? counts : null;
+}
+
 /** Schlüssel des Anwenders: Gäste gemeinsam, sonst die uid. */
 function userBucket(data) {
   if (data.isGuest === true) return {userKey: GUEST_KEY, userId: null, isGuest: true};
-  if (isUid(data.userId)) return {userKey: data.userId, userId: data.userId, isGuest: false};
+  if (isKey(data.userId)) return {userKey: data.userId, userId: data.userId, isGuest: false};
   return {userKey: UNKNOWN_KEY, userId: null, isGuest: false};
 }
 
 /**
- * Zeitraum eines Aufrufs: Monat im laufenden Jahr, sonst das Jahr.
- * @param {Date} date
+ * Monat im laufenden Jahr, sonst das Jahr.
+ * @param {number} year
+ * @param {number} month
  * @param {number} currentYear - Berliner Jahr des Laufs
  * @return {{period: string, periodType: string, year: number, month: ?number}}
  */
-function periodOf(date, currentYear) {
-  const {year, month} = berlinYearMonth(date);
+function periodFor(year, month, currentYear) {
   if (year < currentYear) return {period: String(year), periodType: 'year', year, month: null};
   return {period: `${year}-${pad2(month)}`, periodType: 'month', year, month};
 }
 
-/**
- * Fasst Quelldokumente in Gruppen je Zieldokument zusammen; die Reihenfolge der
- * Eingabe (älteste zuerst) bleibt in jeder Gruppe erhalten.
- * @param {Array<{key: string, head: Object, item: Object}>} entries
- * @return {Array<Object>}
- */
-function groupEntries(entries) {
-  const groups = new Map();
-  for (const {key, head, item} of entries) {
-    if (!groups.has(key)) groups.set(key, {key, ...head, items: []});
-    groups.get(key).items.push(item);
-  }
-  return [...groups.values()];
+/** Ziel: Monats- oder Jahresdokument eines Anwenders. */
+function userTarget(collection, period, user) {
+  return {
+    kind: 'user',
+    path: `${collection}/${period.period}_${user.userKey}`,
+    collection,
+    id: `${period.period}_${user.userKey}`,
+    head: {...period, userId: user.userId, isGuest: user.isGuest},
+  };
+}
+
+/** Ziel: Tagesdokument (alle Anwender eines Tages). */
+function dayTarget(collection, date) {
+  return {kind: 'day', path: `${collection}/${date.key}`, collection, id: date.key, head: date};
 }
 
 /**
- * Rohe Aufrufe (älteste zuerst) -> Gruppen je Zieldokument.
- * @param {Array} docs - Firestore-Dokumente aus appCalls oder recipeCalls
- * @param {number} currentYear
- * @param {boolean} perRecipe
- * @return {Array<Object>}
+ * Einzelaufruf -> Quelle mit einem Beitrag: vor der Monatsgrenze zum Monat bzw.
+ * Jahr des Anwenders, sonst zum Tagesdokument.
  */
-function groupRawCalls(docs, currentYear, perRecipe) {
-  return groupEntries(docs.map((doc) => {
-    const data = doc.data() || {};
-    const date = toDate(data.timestamp);
-    if (!date) throw new Error(`Aufruf ${doc.id} hat keinen gültigen Zeitstempel`);
-    const period = periodOf(date, currentYear);
-    const user = userBucket(data);
-    const recipeCounts = perRecipe && isRecipeKey(data.recipeId) ? {[data.recipeId]: 1} : null;
-    return {
-      key: `${period.period}_${user.userKey}`,
-      head: {...period, userId: user.userId, isGuest: user.isGuest},
-      item: {ref: doc.ref, count: 1, recipeCounts, userVorname: text(data.userVorname), userNachname: text(data.userNachname)},
-    };
-  }));
-}
-
-/**
- * Monatsdokumente vergangener Jahre (älteste zuerst) -> Gruppen je Jahresdokument.
- * @param {Array} docs
- * @return {Array<Object>}
- */
-function groupMonthAggregates(docs) {
-  return groupEntries(docs.map((doc) => {
-    const data = doc.data() || {};
-    const user = userBucket(data);
-    const recipeCounts = {};
-    if (data.recipeCounts && typeof data.recipeCounts === 'object') {
-      for (const [recipeId, count] of Object.entries(data.recipeCounts)) {
-        if (isRecipeKey(recipeId) && Number.isFinite(count) && count > 0) recipeCounts[recipeId] = count;
-      }
-    }
-    return {
-      key: `${data.year}_${user.userKey}`,
-      head: {period: String(data.year), periodType: 'year', year: data.year, month: null, userId: user.userId, isGuest: user.isGuest},
+function rawSource(doc, ctx) {
+  const data = doc.data() || {};
+  const date = toDate(data.timestamp);
+  if (!date) throw new Error(`Aufruf ${doc.id} hat keinen gültigen Zeitstempel`);
+  const user = userBucket(data);
+  const day = berlinDate(date);
+  const target = date < ctx.monthCutoff ?
+    userTarget(ctx.log.target, periodFor(day.year, day.month, ctx.currentYear), user) :
+    dayTarget(ctx.log.days, day);
+  return {
+    ref: doc.ref,
+    contributions: [{
+      target,
       item: {
-        ref: doc.ref,
-        count: Number.isFinite(data.count) && data.count > 0 ? data.count : 0,
-        recipeCounts: Object.keys(recipeCounts).length > 0 ? recipeCounts : null,
+        ...user,
+        count: 1,
+        recipeCounts: ctx.log.perRecipe && isRecipeKey(data.recipeId) ? {[data.recipeId]: 1} : null,
         userVorname: text(data.userVorname),
         userNachname: text(data.userNachname),
       },
+    }],
+  };
+}
+
+/** Tagesdokument -> Quelle mit einem Beitrag je Anwender (Monat bzw. Jahr). */
+function daySource(doc, ctx) {
+  const data = doc.data() || {};
+  const {year, month} = data;
+  if (!Number.isInteger(year) || !Number.isInteger(month)) {
+    throw new Error(`Tagesdokument ${doc.id} hat kein gültiges Jahr oder keinen gültigen Monat`);
+  }
+  const period = periodFor(year, month, ctx.currentYear);
+  const users = data.users && typeof data.users === 'object' ? data.users : {};
+  const contributions = Object.entries(users).map(([userKey, entry]) => {
+    const value = entry && typeof entry === 'object' ? entry : {};
+    const user = {
+      userKey: isKey(userKey) ? userKey : UNKNOWN_KEY,
+      userId: isKey(value.userId) ? value.userId : null,
+      isGuest: value.isGuest === true,
     };
-  }));
+    return {
+      target: userTarget(ctx.log.target, period, user),
+      item: {
+        ...user,
+        count: positiveCount(value.count),
+        recipeCounts: ctx.log.perRecipe ? cleanRecipeCounts(value.recipeCounts) : null,
+        userVorname: text(value.userVorname),
+        userNachname: text(value.userNachname),
+      },
+    };
+  });
+  if (contributions.length === 0 && positiveCount(data.count) > 0) {
+    throw new Error(`Tagesdokument ${doc.id} zählt Aufrufe, aber keine Anwender`);
+  }
+  return {ref: doc.ref, contributions};
+}
+
+/** Monatsdokument eines vergangenen Jahres -> Quelle mit einem Beitrag zum Jahr. */
+function monthSource(doc, ctx) {
+  const data = doc.data() || {};
+  if (!Number.isInteger(data.year)) throw new Error(`Monatsdokument ${doc.id} hat kein gültiges Jahr`);
+  const user = userBucket(data);
+  const year = {period: String(data.year), periodType: 'year', year: data.year, month: null};
+  return {
+    ref: doc.ref,
+    contributions: [{
+      target: userTarget(ctx.log.target, year, user),
+      item: {
+        ...user,
+        count: positiveCount(data.count),
+        recipeCounts: ctx.log.perRecipe ? cleanRecipeCounts(data.recipeCounts) : null,
+        userVorname: text(data.userVorname),
+        userNachname: text(data.userNachname),
+      },
+    }],
+  };
 }
 
 /**
- * Teilt Gruppen so auf Batches auf, dass jeder Batch höchstens maxWrites
- * Schreibvorgänge hat (je Teil ein Zieldokument plus seine Löschungen). Eine
- * Gruppe kommt je Batch höchstens einmal vor, ein Dokument wird also nie zweimal
- * im selben Batch geschrieben.
- * @param {Array<Object>} groups
+ * Teilt Quellen (älteste zuerst) so auf Batches auf, dass jeder Batch höchstens
+ * maxWrites Schreibvorgänge hat: je verschiedenem Ziel ein set, je Quelle ein
+ * delete. Eine Quelle bleibt mit allen ihren Beiträgen in einem Batch, und jedes
+ * Ziel wird je Batch genau einmal geschrieben.
+ * @param {Array<{ref: Object, contributions: Array}>} sources
  * @param {number} [maxWrites]
  * @return {Array<Array<Object>>}
  */
-function planBatches(groups, maxWrites = MAX_BATCH_WRITES) {
+function planBatches(sources, maxWrites = MAX_BATCH_WRITES) {
   const batches = [];
   let current = [];
-  let writes = 0;
-  for (const group of groups) {
-    let offset = 0;
-    while (offset < group.items.length) {
-      if (maxWrites - writes < 2) {
-        batches.push(current);
-        current = [];
-        writes = 0;
-      }
-      const take = Math.min(group.items.length - offset, maxWrites - writes - 1);
-      current.push({...group, items: group.items.slice(offset, offset + take)});
-      writes += take + 1;
-      offset += take;
+  let targets = new Set();
+  for (const source of sources) {
+    const paths = new Set(source.contributions.map(({target}) => target.path));
+    if (paths.size + 1 > maxWrites) {
+      throw new Error(`${source.ref.id}: ${paths.size} Ziele passen in keinen Batch`);
     }
+    const added = [...paths].filter((path) => !targets.has(path)).length;
+    if (current.length > 0 && targets.size + added + current.length + 1 > maxWrites) {
+      batches.push(current);
+      current = [];
+      targets = new Set();
+    }
+    current.push(source);
+    paths.forEach((path) => targets.add(path));
   }
   if (current.length > 0) batches.push(current);
   return batches;
 }
 
-/**
- * Felder für set(..., {merge: true}) auf das Zieldokument eines Batch-Teils.
- * Namen stammen vom jüngsten Quelldokument; die Zähler werden erhöht.
- * @param {Object} part
- * @param {Object} FieldValue - admin.firestore.FieldValue
- * @param {boolean} perRecipe
- * @return {Object}
- */
-function aggregateUpdate(part, FieldValue, perRecipe) {
-  const newest = part.items[part.items.length - 1];
-  const count = part.items.reduce((sum, item) => sum + item.count, 0);
-  const update = {
-    period: part.period,
-    periodType: part.periodType,
-    year: part.year,
-    userId: part.userId,
-    isGuest: part.isGuest,
-    userVorname: newest.userVorname,
-    userNachname: newest.userNachname,
-    count: FieldValue.increment(count),
-    updatedAt: FieldValue.serverTimestamp(),
-  };
-  if (part.month !== null) update.month = part.month;
-  if (perRecipe) {
-    const totals = {};
-    for (const item of part.items) {
-      for (const [recipeId, n] of Object.entries(item.recipeCounts || {})) {
-        totals[recipeId] = (totals[recipeId] || 0) + n;
-      }
-    }
-    if (Object.keys(totals).length > 0) {
-      update.recipeCounts = Object.fromEntries(
-          Object.entries(totals).map(([recipeId, n]) => [recipeId, FieldValue.increment(n)]));
+function sumRecipeCounts(items) {
+  const totals = {};
+  for (const item of items) {
+    for (const [recipeId, n] of Object.entries(item.recipeCounts || {})) {
+      totals[recipeId] = (totals[recipeId] || 0) + n;
     }
   }
+  return totals;
+}
+
+const increments = (counts, FieldValue) =>
+  Object.fromEntries(Object.entries(counts).map(([key, n]) => [key, FieldValue.increment(n)]));
+
+/**
+ * Felder für set(..., {merge: true}) auf ein Monats- oder Jahresdokument. Namen
+ * stammen vom jüngsten Beitrag; die Zähler werden erhöht.
+ */
+function userUpdate(target, items, FieldValue, perRecipe) {
+  const newest = items[items.length - 1];
+  const update = {
+    period: target.head.period,
+    periodType: target.head.periodType,
+    year: target.head.year,
+    userId: target.head.userId,
+    isGuest: target.head.isGuest,
+    userVorname: newest.userVorname,
+    userNachname: newest.userNachname,
+    count: FieldValue.increment(items.reduce((sum, item) => sum + item.count, 0)),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  if (target.head.month !== null) update.month = target.head.month;
+  const recipeCounts = perRecipe ? sumRecipeCounts(items) : {};
+  if (Object.keys(recipeCounts).length > 0) update.recipeCounts = increments(recipeCounts, FieldValue);
   return update;
+}
+
+/** Felder für set(..., {merge: true}) auf ein Tagesdokument: Summe und je Anwender. */
+function dayUpdate(target, items, FieldValue, perRecipe) {
+  const byUser = new Map();
+  for (const item of items) {
+    if (!byUser.has(item.userKey)) byUser.set(item.userKey, []);
+    byUser.get(item.userKey).push(item);
+  }
+  const users = {};
+  for (const [userKey, userItems] of byUser) {
+    const newest = userItems[userItems.length - 1];
+    const entry = {
+      userId: newest.userId,
+      isGuest: newest.isGuest,
+      userVorname: newest.userVorname,
+      userNachname: newest.userNachname,
+      count: FieldValue.increment(userItems.reduce((sum, item) => sum + item.count, 0)),
+    };
+    const recipeCounts = perRecipe ? sumRecipeCounts(userItems) : {};
+    if (Object.keys(recipeCounts).length > 0) entry.recipeCounts = increments(recipeCounts, FieldValue);
+    users[userKey] = entry;
+  }
+  return {
+    day: target.head.key,
+    year: target.head.year,
+    month: target.head.month,
+    count: FieldValue.increment(items.reduce((sum, item) => sum + item.count, 0)),
+    users,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
 }
 
 class OutOfTime extends Error {}
 
 /**
- * Schreibt die Gruppen Batch für Batch: Zähler erhöhen, Quellen löschen.
+ * Schreibt die Quellen Batch für Batch: Zähler der Ziele erhöhen, Quellen löschen.
  * onCommitted erhält nach jedem Batch die Zahl der verarbeiteten Quelldokumente.
  */
-async function commitGroups({db, FieldValue, target, perRecipe, groups, deadline, clock, onCommitted}) {
-  for (const parts of planBatches(groups)) {
-    if (clock() >= deadline) throw new OutOfTime();
-    const batch = db.batch();
-    for (const part of parts) {
-      batch.set(db.collection(target).doc(part.key), aggregateUpdate(part, FieldValue, perRecipe), {merge: true});
-      part.items.forEach((item) => batch.delete(item.ref, {exists: true}));
+async function commitSources({db, FieldValue, ctx, sources, onCommitted}) {
+  for (const batchSources of planBatches(sources)) {
+    if (ctx.clock() >= ctx.deadline) throw new OutOfTime();
+    const groups = new Map();
+    for (const {contributions} of batchSources) {
+      for (const {target, item} of contributions) {
+        if (!groups.has(target.path)) groups.set(target.path, {target, items: []});
+        groups.get(target.path).items.push(item);
+      }
     }
+    const batch = db.batch();
+    for (const {target, items} of groups.values()) {
+      const update = target.kind === 'day' ?
+        dayUpdate(target, items, FieldValue, ctx.log.perRecipe) :
+        userUpdate(target, items, FieldValue, ctx.log.perRecipe);
+      batch.set(db.collection(target.collection).doc(target.id), update, {merge: true});
+    }
+    batchSources.forEach((source) => batch.delete(source.ref, {exists: true}));
     await batch.commit();
-    onCommitted(parts.reduce((sum, part) => sum + part.items.length, 0));
+    onCommitted(batchSources.length);
   }
 }
 
 /**
- * Faltet Monatsdokumente vergangener Jahre in Jahresdokumente. Liest alle
- * Monatsdokumente (nach jedem vollständigen Lauf höchstens Anwender × 11).
- */
-async function foldPreviousYears({db, FieldValue, log, currentYear, deadline, clock, onCommitted}) {
-  if (clock() >= deadline) throw new OutOfTime();
-  const snapshot = await db.collection(log.target).where('periodType', '==', 'month').get();
-  const docs = snapshot.docs
-      .filter((doc) => {
-        const year = (doc.data() || {}).year;
-        return Number.isInteger(year) && year < currentYear;
-      })
-      .sort((a, b) => String(a.data().period).localeCompare(String(b.data().period)));
-  if (docs.length === 0) return;
-  await commitGroups({
-    db, FieldValue, target: log.target, perRecipe: log.perRecipe,
-    groups: groupMonthAggregates(docs), deadline, clock, onCommitted,
-  });
-}
-
-/**
- * Fasst rohe Aufrufe vor dem Stichtag zusammen, seitenweise, älteste zuerst.
- * Verarbeitete Aufrufe sind danach gelöscht; die nächste Seite beginnt deshalb
+ * Liest eine Abfrage seitenweise, macht jedes Dokument zur Quelle und schreibt.
+ * Verarbeitete Dokumente sind danach gelöscht; die nächste Seite beginnt deshalb
  * wieder am Anfang.
  */
-async function consolidateRawCalls({db, FieldValue, log, cutoff, currentYear, deadline, clock, onCommitted}) {
+async function drain({db, FieldValue, ctx, query, toSource, sort, onCommitted}) {
   for (;;) {
-    if (clock() >= deadline) throw new OutOfTime();
-    const snapshot = await db.collection(log.source)
-        .where('timestamp', '<', cutoff)
-        .orderBy('timestamp')
-        .limit(PAGE_SIZE)
-        .get();
+    if (ctx.clock() >= ctx.deadline) throw new OutOfTime();
+    const snapshot = await query().limit(PAGE_SIZE).get();
     if (snapshot.empty) return;
-    await commitGroups({
-      db, FieldValue, target: log.target, perRecipe: log.perRecipe,
-      groups: groupRawCalls(snapshot.docs, currentYear, log.perRecipe), deadline, clock, onCommitted,
-    });
+    const docs = sort ? [...snapshot.docs].sort(sort) : snapshot.docs;
+    await commitSources({db, FieldValue, ctx, sources: docs.map((doc) => toSource(doc, ctx)), onCommitted});
   }
 }
 
 /**
- * Konsolidiert beide Aufruf-Protokolle. Scheitert eines, läuft das andere weiter;
- * der Fehler steht in seiner Zeile.
+ * Die drei Schritte je Protokoll, älteste Daten zuerst, damit Namen in den Zielen
+ * vom jüngsten Aufruf stammen. Ein Fehler stoppt nur seinen Schritt.
+ */
+function steps(db, ctx) {
+  const {log} = ctx;
+  return [
+    {
+      // Monatsdokumente vergangener Jahre (Index periodType + year, firestore.indexes.json).
+      counter: 'foldedMonths',
+      query: () => db.collection(log.target).where('periodType', '==', 'month').where('year', '<', ctx.currentYear),
+      toSource: monthSource,
+      sort: (a, b) => String(a.data().period).localeCompare(String(b.data().period)),
+    },
+    {
+      counter: 'foldedDays',
+      query: () => db.collection(log.days).where('day', '<', berlinDate(ctx.monthCutoff).key).orderBy('day'),
+      toSource: daySource,
+    },
+    {
+      counter: 'consolidated',
+      query: () => db.collection(log.source).where('timestamp', '<', ctx.dayCutoff).orderBy('timestamp'),
+      toSource: rawSource,
+    },
+  ];
+}
+
+/**
+ * Konsolidiert beide Aufruf-Protokolle. Scheitert ein Schritt, laufen die übrigen
+ * weiter; der Fehler steht in der Zeile des Protokolls.
  *
  * @param {Object} deps
  * @param {Object} deps.db - Firestore (Admin SDK)
@@ -362,8 +473,10 @@ async function consolidateRawCalls({db, FieldValue, log, cutoff, currentYear, de
  * @param {number} [deps.deadline=Infinity] - Zeitpunkt (ms), ab dem kein neuer Batch mehr beginnt
  * @param {Function} [deps.clock=Date.now]
  * @param {Array} [deps.logs=CALL_LOGS]
- * @return {Promise<{currentYear: number, results: Array<{source: string, cutoff: Date, folded: number,
- *   consolidated: number, complete: boolean, timedOut: boolean, error: ?string}>}>}
+ * @return {Promise<{currentYear: number, results: Array<{source: string, dayCutoff: Date,
+ *   monthCutoff: Date, consolidated: number, foldedDays: number, foldedMonths: number,
+ *   complete: boolean, failed: boolean, timedOut: boolean, error: ?string}>}>}
+ *   failed: ein Schritt ist mit einem Fehler gescheitert (nicht nur das Zeitbudget).
  */
 async function consolidateCallLogs({
   db,
@@ -374,25 +487,35 @@ async function consolidateCallLogs({
   clock = Date.now,
   logs = CALL_LOGS,
 }) {
-  const currentYear = berlinYearMonth(now).year;
+  const currentYear = berlinDate(now).year;
+  const dayCutoff = dailyCutoff(now);
   const results = [];
   for (const log of logs) {
-    const cutoff = consolidationCutoff(now, log.trendWindow ? trendingDays : null);
-    const row = {
-      source: log.source, cutoff, folded: 0, consolidated: 0, complete: false, timedOut: false, error: null,
+    const ctx = {
+      log, currentYear, dayCutoff, deadline, clock,
+      monthCutoff: consolidationCutoff(now, log.trendWindow ? trendingDays : null),
     };
-    const shared = {db, FieldValue, log, currentYear, deadline, clock};
-    try {
-      // Erst falten, dann Rohdaten: so stammen die Namen im Jahresdokument vom jüngsten Aufruf.
-      await foldPreviousYears({...shared, onCommitted: (n) => { row.folded += n; }});
-      await consolidateRawCalls({...shared, cutoff, onCommitted: (n) => { row.consolidated += n; }});
-      row.complete = true;
-    } catch (error) {
-      row.timedOut = error instanceof OutOfTime;
-      row.error = row.timedOut ?
-        'Zeitbudget erschöpft, der Rest folgt im nächsten Lauf' :
-        (error && error.message) || String(error);
+    const row = {
+      source: log.source, dayCutoff, monthCutoff: ctx.monthCutoff,
+      consolidated: 0, foldedDays: 0, foldedMonths: 0,
+      complete: false, failed: false, timedOut: false, error: null,
+    };
+    const failures = [];
+    for (const step of steps(db, ctx)) {
+      try {
+        await drain({db, FieldValue, ctx, ...step, onCommitted: (n) => { row[step.counter] += n; }});
+      } catch (error) {
+        if (error instanceof OutOfTime) {
+          row.timedOut = true;
+          break;
+        }
+        failures.push((error && error.message) || String(error));
+      }
     }
+    const messages = [...failures, ...(row.timedOut ? ['Zeitbudget erschöpft, der Rest folgt im nächsten Lauf'] : [])];
+    row.failed = failures.length > 0;
+    row.complete = messages.length === 0;
+    row.error = messages.length > 0 ? messages.join('; ') : null;
     results.push(row);
   }
   return {currentYear, results};
@@ -404,9 +527,11 @@ async function consolidateCallLogs({
  * @return {string}
  */
 function formatConsolidationSummary({results}) {
+  const date = (value) => value.toLocaleDateString('de-DE', {timeZone: TIME_ZONE});
   return results.map((row) =>
-    `${row.source} vor ${row.cutoff.toLocaleDateString('de-DE', {timeZone: TIME_ZONE})}: ` +
-    `${row.consolidated} zusammengefasst, ${row.folded} Monatsdokumente in Jahre gefaltet` +
+    `${row.source}: ${row.consolidated} Einzelaufrufe vor ${date(row.dayCutoff)}, ` +
+    `${row.foldedDays} Tage vor ${date(row.monthCutoff)}, ` +
+    `${row.foldedMonths} Monate früherer Jahre zusammengefasst` +
     (row.complete ? '' : ` (unvollständig: ${row.error})`)).join('; ');
 }
 
@@ -416,13 +541,15 @@ module.exports = {
   GUEST_KEY,
   MAX_BATCH_WRITES,
   PAGE_SIZE,
+  RAW_DAYS,
   UNKNOWN_KEY,
-  aggregateUpdate,
-  berlinYearMonth,
+  berlinDate,
   consolidateCallLogs,
   consolidationCutoff,
+  dailyCutoff,
   formatConsolidationSummary,
   normalizeTrendingDays,
   planBatches,
+  startOfBerlinDay,
   startOfBerlinMonth,
 };

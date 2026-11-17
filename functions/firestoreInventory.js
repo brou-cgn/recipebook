@@ -34,6 +34,10 @@ const MAX_LISTED_ERRORS = 5;
 const AGE_FIELDS = Object.freeze({
   appCalls: {field: 'timestamp', type: 'timestamp'},
   recipeCalls: {field: 'timestamp', type: 'timestamp'},
+  // Tagesdokumente des Aufruf-Jobs (callLogConsolidation.js) leben höchstens bis
+  // zum Ende des Vormonats bzw. des Trend-Zeitfensters; alte deuten auf einen Fehler.
+  appCallDays: {field: 'day', type: 'day'},
+  recipeCallDays: {field: 'day', type: 'day'},
   failedWebImports: {field: 'createdAt', type: 'timestamp'},
   jobRequests: {field: 'requestedAt', type: 'timestamp'},
   cookingTimerAlarms: {field: 'createdAt', type: 'timestamp'},

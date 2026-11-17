@@ -551,20 +551,23 @@ exports.stripCallLogEmails = onCall(
 const TRENDING_DAYS_FALLBACK = 366;
 
 /**
- * Scheduled Cloud Function: fasst die Aufruf-Protokolle einmal im Monat
- * zusammen (Tech-Check K2, Logik in callLogConsolidation.js). Aufrufe vor dem
- * Vormonat werden zu einem Dokument je Anwender und Monat (appCallAggregates,
- * recipeCallAggregates), Aufrufe früherer Kalenderjahre zu einem je Anwender und
- * Jahr; die Rohdokumente in appCalls und recipeCalls werden dabei gelöscht. Bei
- * recipeCalls bleibt das Trend-Zeitfenster (settings/app.trendingDays) immer roh.
+ * Scheduled Cloud Function: fasst die Aufruf-Protokolle zusammen (Tech-Check K2,
+ * Logik in callLogConsolidation.js). Aufrufe älter als 14 Tage werden zu einem
+ * Dokument je Tag (appCallDays, recipeCallDays), Tage vor dem Vormonat zu einem
+ * Dokument je Anwender und Monat (appCallAggregates, recipeCallAggregates),
+ * frühere Kalenderjahre zu einem je Anwender und Jahr; die Quelldokumente werden
+ * dabei gelöscht. Bei recipeCalls bleiben die Tage des Trend-Zeitfensters
+ * (settings/app.trendingDays) Tagesdokumente, „Im Trend“ liest sie.
  *
- * Schedule: am 1. jedes Monats um 4:30 Europe/Berlin. Bricht ein Lauf ab, macht
- * der nächste beim Rest weiter; in Cloud Scheduler lässt er sich auch von Hand
- * starten („Jetzt ausführen“), mehrfaches Ausführen ist unschädlich.
+ * Schedule: täglich um 4:30 Europe/Berlin, damit nie mehr als 14 Tage einzeln
+ * stehen; Monate und Jahre werden nur verdichtet, wenn sie fällig sind. Bricht
+ * ein Lauf ab, macht der nächste beim Rest weiter; in Cloud Scheduler lässt er
+ * sich auch von Hand starten („Jetzt ausführen“), mehrfaches Ausführen ist
+ * unschädlich.
  */
-exports.monthlyCallLogConsolidation = onSchedule(
+exports.nightlyCallLogConsolidation = onSchedule(
     {
-      schedule: '30 4 1 * *',
+      schedule: '30 4 * * *',
       timeZone: 'Europe/Berlin',
       timeoutSeconds: 540,
       maxInstances: 1,
@@ -578,7 +581,7 @@ exports.monthlyCallLogConsolidation = onSchedule(
         trendingDays = normalizeTrendingDays(settings.exists ? (settings.data() || {}).trendingDays : undefined);
       } catch (error) {
         console.warn(
-            `monthlyCallLogConsolidation: settings/app nicht lesbar, Trend-Zeitfenster ${TRENDING_DAYS_FALLBACK} Tage angenommen:`,
+            `nightlyCallLogConsolidation: settings/app nicht lesbar, Trend-Zeitfenster ${TRENDING_DAYS_FALLBACK} Tage angenommen:`,
             error.message,
         );
       }
@@ -590,8 +593,8 @@ exports.monthlyCallLogConsolidation = onSchedule(
         // Abstand zum Timeout von 540 s: nach 480 s beginnt kein neuer Batch.
         deadline: startedAt + 480 * 1000,
       });
-      const summary = `monthlyCallLogConsolidation: ${formatConsolidationSummary(outcome)}`;
-      const failed = outcome.results.filter((row) => row.error && !row.timedOut);
+      const summary = `nightlyCallLogConsolidation: ${formatConsolidationSummary(outcome)}`;
+      const failed = outcome.results.filter((row) => row.failed);
       if (failed.length > 0) {
         console.error(summary);
         throw new Error(`Konsolidierung fehlgeschlagen: ${failed.map((row) => row.source).join(', ')}`);

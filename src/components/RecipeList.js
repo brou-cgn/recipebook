@@ -6,7 +6,7 @@ import { getUserFavorites } from '../utils/userFavorites';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import SortCarousel from './SortCarousel';
-import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
+import { getRecentRecipeViewCounts } from '../utils/recipeCallsFirestore';
 import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
 import { useOptionalNutritionReference } from '../contexts/NutritionReferenceContext';
 import RecipeCard from './RecipeCard';
@@ -253,14 +253,9 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEdi
     const days = sortSettings.trendingDays ?? DEFAULT_TRENDING_DAYS;
     const loadViewCounts = async () => {
       try {
-        const calls = await getRecentRecipeCalls(days);
+        // Tech-Check K2: Einzelaufrufe plus Tagesdokumente (älter als 14 Tage).
+        const counts = await getRecentRecipeViewCounts(days);
         if (cancelled) return;
-        const counts = new Map();
-        calls.forEach(call => {
-          if (call.recipeId) {
-            counts.set(call.recipeId, (counts.get(call.recipeId) || 0) + 1);
-          }
-        });
         setViewCounts(counts);
       } catch (error) {
         if (!cancelled) {

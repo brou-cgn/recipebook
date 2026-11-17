@@ -10,7 +10,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import { isWaterIngredient, scaleIngredient } from '../utils/ingredientUtils';
 import { sendGroupInvitation, LIST_KIND_OPTIONS } from '../utils/groupFirestore';
 import { getUserFavorites } from '../utils/userFavorites';
-import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
+import { getRecentRecipeViewCounts } from '../utils/recipeCallsFirestore';
 import { getAllCookDates } from '../utils/recipeCookDates';
 import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { sortRecipeGroups } from './RecipeList';
@@ -200,14 +200,9 @@ function GroupDetail({
     const days = sortSettings?.trendingDays ?? DEFAULT_TRENDING_DAYS;
     const loadViewCounts = async () => {
       try {
-        const calls = await getRecentRecipeCalls(days);
+        // Tech-Check K2: Einzelaufrufe plus Tagesdokumente (älter als 14 Tage).
+        const counts = await getRecentRecipeViewCounts(days);
         if (cancelled) return;
-        const counts = new Map();
-        calls.forEach((call) => {
-          if (call.recipeId) {
-            counts.set(call.recipeId, (counts.get(call.recipeId) || 0) + 1);
-          }
-        });
         setViewCounts(counts);
       } catch (error) {
         if (!cancelled) {

@@ -32,8 +32,11 @@ import {
   logRecipeCall,
   getRecipeCalls,
   getRecentRecipeCalls,
+  getRecentRecipeViewCounts,
+  getRecipeCallDays,
   getRecipeCallAggregates,
   RECIPE_CALLS_LIMIT,
+  RECIPE_CALL_DAYS_LIMIT,
   RECIPE_CALL_AGGREGATES_LIMIT
 } from './recipeCallsFirestore';
 
@@ -234,5 +237,83 @@ describe('getRecipeCallAggregates', () => {
     mockGetDocs.mockRejectedValue(new Error('permission-denied'));
 
     await expect(getRecipeCallAggregates()).resolves.toEqual([]);
+  });
+});
+
+describe('getRecipeCallDays', () => {
+  it('reads the day documents, newest day first, with an upper bound', async () => {
+    mockGetDocs.mockResolvedValue({
+      docs: [{ id: '2026-11-03', data: () => ({ day: '2026-11-03', count: 1 }) }]
+    });
+
+    const result = await getRecipeCallDays();
+
+    expect(mockCollection).toHaveBeenCalledWith({}, 'recipeCallDays');
+    expect(mockOrderBy).toHaveBeenCalledWith('day', 'desc');
+    expect(mockLimit).toHaveBeenCalledWith(RECIPE_CALL_DAYS_LIMIT);
+    expect(result).toEqual([{ id: '2026-11-03', day: '2026-11-03', count: 1 }]);
+  });
+});
+
+describe('getRecentRecipeViewCounts („Im Trend“)', () => {
+  const berlinDay = (date) => date.toLocaleDateString('sv-SE', { timeZone: 'Europe/Berlin' });
+
+  beforeEach(() => {
+    jest.useFakeTimers({ now: new Date('2026-11-17T10:00:00Z') });
+    // resetMocks (jest.config.js) entfernt die Implementierung aus der Mock-Fabrik.
+    mockQuery.mockImplementation((...args) => args);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('counts raw calls of the window plus the day documents of its older days', async () => {
+    mockCollection.mockImplementation((_db, name) => name);
+    mockGetDocs.mockImplementation((q) => Promise.resolve(q[0] === 'recipeCalls'
+      ? {
+        docs: [
+          { id: 'c1', data: () => ({ recipeId: 'r1' }) },
+          { id: 'c2', data: () => ({ recipeId: 'r1' }) },
+          { id: 'c3', data: () => ({ recipeId: 'r2' }) },
+          { id: 'c4', data: () => ({}) },
+        ]
+      }
+      : {
+        docs: [
+          {
+            id: '2026-11-01',
+            data: () => ({
+              day: '2026-11-01',
+              users: {
+                anna: { count: 3, recipeCounts: { r1: 2, r3: 1 } },
+                gaeste: { count: 2, recipeCounts: { r2: 2, kaputt: -1 } },
+              },
+            }),
+          },
+          { id: '2026-10-20', data: () => ({ day: '2026-10-20', users: { ben: { count: 1, recipeCounts: { r3: 1 } } } }) },
+        ]
+      }));
+
+    const counts = await getRecentRecipeViewCounts(30);
+
+    expect(counts).toEqual(new Map([['r1', 4], ['r2', 3], ['r3', 2]]));
+    const cutoff = new Date('2026-11-17T10:00:00Z');
+    cutoff.setDate(cutoff.getDate() - 30);
+    expect(mockWhere).toHaveBeenCalledWith('timestamp', '>=', expect.objectContaining({ _isMock: true }));
+    expect(mockWhere).toHaveBeenCalledWith('day', '>=', berlinDay(cutoff));
+    expect(mockWhere).toHaveBeenCalledWith('day', '>=', '2026-10-18');
+    expect(mockLimit).toHaveBeenCalledWith(RECIPE_CALL_DAYS_LIMIT);
+  });
+
+  it('falls back to the raw calls if the day documents cannot be read', async () => {
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockCollection.mockImplementation((_db, name) => name);
+    mockGetDocs.mockImplementation((q) => (q[0] === 'recipeCalls'
+      ? Promise.resolve({ docs: [{ id: 'c1', data: () => ({ recipeId: 'r1' }) }] })
+      : Promise.reject(new Error('permission-denied'))));
+
+    await expect(getRecentRecipeViewCounts(30)).resolves.toEqual(new Map([['r1', 1]]));
+    error.mockRestore();
   });
 });

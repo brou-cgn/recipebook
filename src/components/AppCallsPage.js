@@ -5,8 +5,8 @@ import TrashIcon from './icons/TrashIcon';
 import './Settings.css';
 import './AppCallsPage.css';
 import { httpsCallable } from 'firebase/functions';
-import { getAppCalls, getAppCallAggregates, APP_CALLS_LIMIT } from '../utils/appCallsFirestore';
-import { getRecipeCalls, getRecipeCallAggregates, RECIPE_CALLS_LIMIT } from '../utils/recipeCallsFirestore';
+import { getAppCalls, getAppCallDays, getAppCallAggregates, APP_CALLS_LIMIT } from '../utils/appCallsFirestore';
+import { getRecipeCalls, getRecipeCallDays, getRecipeCallAggregates, RECIPE_CALLS_LIMIT } from '../utils/recipeCallsFirestore';
 import useCallLog from '../hooks/useCallLog';
 import CallLogPanel from './CallLogPanel';
 import {
@@ -259,12 +259,12 @@ function StandardTermRow({ label, onRemove }) {
   );
 }
 
-// Tech-Check K2: Einzelaufrufe (begrenzt) plus die monatlich zusammengefassten
-// Aufrufe; geladen erst, wenn der jeweilige Reiter aktiv ist (useCallLog).
-const loadAppCallLog = () => Promise.all([getAppCalls(), getAppCallAggregates()])
-  .then(([calls, aggregates]) => ({ calls, aggregates }));
-const loadRecipeCallLog = () => Promise.all([getRecipeCalls(), getRecipeCallAggregates()])
-  .then(([calls, aggregates]) => ({ calls, aggregates }));
+// Tech-Check K2: Einzelaufrufe (begrenzt), Tagesdokumente und die zusammengefassten
+// Monate/Jahre; geladen erst, wenn der jeweilige Reiter aktiv ist (useCallLog).
+const loadAppCallLog = () => Promise.all([getAppCalls(), getAppCallDays(), getAppCallAggregates()])
+  .then(([calls, days, aggregates]) => ({ calls, days, aggregates }));
+const loadRecipeCallLog = () => Promise.all([getRecipeCalls(), getRecipeCallDays(), getRecipeCallAggregates()])
+  .then(([calls, days, aggregates]) => ({ calls, days, aggregates }));
 
 const APP_CALLS_TAB_ORDER = [
   KUECHENBETRIEB_TABS.APP,
@@ -1555,8 +1555,8 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
             <p className="app-calls-info-text">
               Hier sind alle Appaufrufe gemeinsam mit den zugehörigen Anwendern dokumentiert.
               Diese Übersicht dient der Nachvollziehbarkeit und kann für Auditing- oder Supportzwecke
-              herangezogen werden. Aufrufe vor dem Vormonat fasst ein Job am Monatsersten je Anwender
-              und Monat zusammen, Aufrufe früherer Jahre je Anwender und Jahr.
+              herangezogen werden. Ein nächtlicher Job fasst Aufrufe, die älter als 14 Tage sind, je Tag
+              zusammen, Aufrufe vor dem Vormonat je Anwender und Monat, frühere Jahre je Anwender und Jahr.
             </p>
             <CallLogPanel
               kind="app"
@@ -1572,8 +1572,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
             <p className="app-calls-info-text">
               Hier werden alle Rezeptaufrufe mit den zugehörigen Anwendern und Rezepten protokolliert.
               Diese Übersicht ermöglicht die Auswertung, welche Rezepte wie häufig aufgerufen werden.
-              Aufrufe vor dem Vormonat fasst ein Job am Monatsersten je Anwender und Monat zusammen,
-              Aufrufe früherer Jahre je Anwender und Jahr; das Zeitfenster von „Im Trend“ bleibt einzeln erhalten.
+              Ein nächtlicher Job fasst Aufrufe, die älter als 14 Tage sind, je Tag zusammen, Aufrufe vor dem
+              Vormonat je Anwender und Monat, frühere Jahre je Anwender und Jahr; die Tage im Zeitfenster
+              von „Im Trend“ bleiben als Tage erhalten.
             </p>
             {canSeeEmails && (
               <div className="settings-section">

@@ -1,5 +1,5 @@
 /**
- * Tests für die geplante Function monthlyCallLogConsolidation (Tech-Check K2):
+ * Tests für die geplante Function nightlyCallLogConsolidation (Tech-Check K2):
  * Trend-Zeitfenster aus settings/app, vorsichtiger Ersatzwert, wenn die
  * Einstellungen nicht lesbar sind, und ein Fehler macht den Lauf rot. Die
  * Konsolidierung selbst prüft callLogConsolidation.test.js.
@@ -54,15 +54,16 @@ function loadHandler() {
     return originalLoad.call(this, request, parent, isMain, ...args);
   };
   try {
-    return require('./index').monthlyCallLogConsolidation;
+    return require('./index').nightlyCallLogConsolidation;
   } finally {
     Module._load = originalLoad;
   }
 }
 
 const row = (source, extra = {}) => ({
-  source, cutoff: new Date('2026-10-31T23:00:00Z'), folded: 0, consolidated: 3,
-  complete: true, timedOut: false, error: null, ...extra,
+  source, dayCutoff: new Date('2026-11-16T23:00:00Z'), monthCutoff: new Date('2026-10-31T23:00:00Z'),
+  consolidated: 3, foldedDays: 0, foldedMonths: 0,
+  complete: true, failed: false, timedOut: false, error: null, ...extra,
 });
 
 function captureConsole() {
@@ -92,7 +93,7 @@ test('übernimmt das Trend-Zeitfenster aus settings/app und setzt ein Zeitbudget
   } finally {
     restore();
   }
-  assert.ok(logged.some(({level, text}) => level === 'log' && text.includes('appCalls vor 1.11.2026: 3 zusammengefasst')));
+  assert.ok(logged.some(({level, text}) => level === 'log' && text.includes('appCalls: 3 Einzelaufrufe vor 17.11.2026')));
 });
 
 test('ohne Einstellung gelten 30 Tage wie im Client', async () => {
@@ -121,7 +122,7 @@ test('sind die Einstellungen nicht lesbar, bleibt mehr als ein Jahr roh', async 
 });
 
 test('ein Fehler in einem Protokoll macht den Lauf rot', async () => {
-  results = [row('appCalls', {complete: false, error: 'kaputt'}), row('recipeCalls')];
+  results = [row('appCalls', {complete: false, failed: true, error: 'kaputt'}), row('recipeCalls')];
   const handler = loadHandler();
   const restore = captureConsole();
   try {
@@ -130,6 +131,17 @@ test('ein Fehler in einem Protokoll macht den Lauf rot', async () => {
     restore();
   }
   assert.ok(logged.some(({level}) => level === 'error'));
+});
+
+test('ein Fehler zählt auch, wenn danach das Zeitbudget ausging', async () => {
+  results = [row('appCalls', {complete: false, failed: true, timedOut: true, error: 'kaputt; Zeitbudget erschöpft'})];
+  const handler = loadHandler();
+  const restore = captureConsole();
+  try {
+    await assert.rejects(handler({}), /appCalls/);
+  } finally {
+    restore();
+  }
 });
 
 test('ein erschöpftes Zeitbudget ist kein Fehler, nur eine Warnung', async () => {

@@ -29,6 +29,8 @@ import {
   RECENT_APP_CALLS_LIMIT,
   getAppCalls,
   APP_CALLS_LIMIT,
+  getAppCallDays,
+  APP_CALL_DAYS_LIMIT,
   getAppCallAggregates,
   APP_CALL_AGGREGATES_LIMIT
 } from './appCallsFirestore';
@@ -127,6 +129,29 @@ describe('getAppCallAggregates', () => {
     mockGetDocs.mockRejectedValue(new Error('permission-denied'));
 
     await expect(getAppCallAggregates()).resolves.toEqual([]);
+    error.mockRestore();
+  });
+});
+
+describe('getAppCallDays', () => {
+  it('reads the day documents, newest day first, with an upper bound', async () => {
+    mockGetDocs.mockResolvedValue({
+      docs: [{ id: '2026-11-03', data: () => ({ day: '2026-11-03', count: 2, users: {} }) }]
+    });
+
+    const result = await getAppCallDays();
+
+    expect(mockCollection).toHaveBeenCalledWith({}, 'appCallDays');
+    expect(mockOrderBy).toHaveBeenCalledWith('day', 'desc');
+    expect(mockLimit).toHaveBeenCalledWith(APP_CALL_DAYS_LIMIT);
+    expect(result).toEqual([{ id: '2026-11-03', day: '2026-11-03', count: 2, users: {} }]);
+  });
+
+  it('returns an empty array if getDocs fails', async () => {
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetDocs.mockRejectedValue(new Error('permission-denied'));
+
+    await expect(getAppCallDays()).resolves.toEqual([]);
     error.mockRestore();
   });
 });

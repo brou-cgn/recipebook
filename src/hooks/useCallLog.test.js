@@ -10,7 +10,7 @@ describe('useCallLog', () => {
   });
 
   it('loads once on first activation and keeps the data when the tab is left and reopened', async () => {
-    const load = jest.fn(() => Promise.resolve({ calls: [{ id: 'c1' }], aggregates: [{ id: 'a1' }] }));
+    const load = jest.fn(() => Promise.resolve({ calls: [{ id: 'c1' }], days: [{ id: 'd1' }], aggregates: [{ id: 'a1' }] }));
     const { result, rerender } = renderHook(({ active }) => useCallLog(load, active), {
       initialProps: { active: false },
     });
@@ -18,6 +18,7 @@ describe('useCallLog', () => {
     rerender({ active: true });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.calls).toEqual([{ id: 'c1' }]);
+    expect(result.current.days).toEqual([{ id: 'd1' }]);
     expect(result.current.aggregates).toEqual([{ id: 'a1' }]);
 
     rerender({ active: false });
@@ -44,7 +45,7 @@ describe('useCallLog', () => {
     const load = jest.fn(() => Promise.reject(new Error('offline')));
     const { result } = renderHook(() => useCallLog(load, true));
     await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current).toEqual({ loading: false, calls: [], aggregates: [] });
+    expect(result.current).toEqual({ loading: false, calls: [], days: [], aggregates: [] });
     error.mockRestore();
   });
 });

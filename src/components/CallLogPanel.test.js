@@ -1,6 +1,6 @@
 import { screen, fireEvent, within } from '@testing-library/react';
 import { renderWithProviders } from '../test-utils';
-import CallLogPanel, { formatCallPeriod } from './CallLogPanel';
+import CallLogPanel, { expandCallDays, formatCallPeriod } from './CallLogPanel';
 
 const at = (iso) => ({ toDate: () => new Date(iso) });
 
@@ -30,7 +30,8 @@ const renderPanel = (props = {}) => renderWithProviders(
 const aggregatesTable = () => within(screen.getByRole('region', { name: 'Zusammengefasste Aufrufe' })).getByRole('table');
 
 describe('formatCallPeriod', () => {
-  it('names months and years', () => {
+  it('names days, months and years', () => {
+    expect(formatCallPeriod({ periodType: 'day', period: '2026-11-03' })).toBe('03.11.2026');
     expect(formatCallPeriod({ periodType: 'month', year: 2026, month: 10, period: '2026-10' })).toBe('Oktober 2026');
     expect(formatCallPeriod({ periodType: 'month', year: 2027, month: 1, period: '2027-01' })).toBe('Januar 2027');
     expect(formatCallPeriod({ periodType: 'year', year: 2025, period: '2025' })).toBe('Jahr 2025');
@@ -71,7 +72,7 @@ describe('CallLogPanel', () => {
       ['Oktober 2026', 'Ben', 'Bauer', 'Angemeldet', '2'],
       ['Jahr 2025', 'Anna', 'Alt', 'Angemeldet', '120'],
     ]);
-    expect(screen.getByText('Keine Einzelaufrufe seit dem letzten Zusammenfassen.')).toBeInTheDocument();
+    expect(screen.getByText('Keine Einzelaufrufe in den letzten 14 Tagen.')).toBeInTheDocument();
     expect(screen.getByText(/Zusammengefasst:/).textContent).toBe('Zusammengefasst: 1.363 Aufrufe in 4 Einträgen');
   });
 
@@ -127,6 +128,49 @@ describe('CallLogPanel', () => {
     renderPanel({ log, canSeeEmails: true });
     expect(screen.getAllByRole('columnheader', { name: 'E-Mail' })).toHaveLength(2);
     expect(screen.getAllByText('max@example.com')).toHaveLength(2);
+  });
+
+  it('shows day documents as one row per user and day, newest first, above the months', () => {
+    renderPanel({
+      ownerFilter: true,
+      log: {
+        loading: false,
+        calls: [],
+        days: [
+          {
+            id: '2026-11-03', day: '2026-11-03', count: 9,
+            users: {
+              max: { userId: 'u-max', isGuest: false, userVorname: 'Max', userNachname: 'Mustermann', count: 4 },
+              gaeste: { userId: null, isGuest: true, userVorname: 'Gast', userNachname: '', count: 2 },
+              b: { userId: 'u-b', isGuest: false, userVorname: 'Benjamin', userNachname: 'Rousselli', count: 3 },
+            },
+          },
+          {
+            id: '2026-11-10', day: '2026-11-10', count: 1,
+            users: { max: { userId: 'u-max', isGuest: false, userVorname: 'Max', userNachname: 'Mustermann', count: 1 } },
+          },
+        ],
+        aggregates: [aggregate('max', { count: 30 })],
+      },
+    });
+
+    const rows = within(aggregatesTable()).getAllByRole('row').slice(1)
+      .map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent));
+    expect(rows).toEqual([
+      ['10.11.2026', 'Max', 'Mustermann', 'Angemeldet', '1'],
+      ['03.11.2026', 'Max', 'Mustermann', 'Angemeldet', '4'],
+      ['03.11.2026', 'Alle Gäste', '', 'Gast', '2'],
+      ['Oktober 2026', 'Max', 'Mustermann', 'Angemeldet', '30'],
+    ]);
+    expect(screen.getByText(/Zusammengefasst:/).textContent).toBe('Zusammengefasst: 37 Aufrufe in 4 Einträgen (gefiltert)');
+  });
+
+  it('expandCallDays tolerates incomplete day documents', () => {
+    expect(expandCallDays(undefined)).toEqual([]);
+    expect(expandCallDays([{ id: '2026-11-03' }])).toEqual([]);
+    expect(expandCallDays([{ id: '2026-11-03', users: { x: null } }])).toEqual([
+      { id: '2026-11-03_x', period: '2026-11-03', periodType: 'day', userId: null, isGuest: false, userVorname: '', userNachname: '', count: undefined },
+    ]);
   });
 
   it('says when the raw calls hit the read limit', () => {

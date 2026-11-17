@@ -55,12 +55,14 @@ jest.mock('../utils/ingredientIdMatching', () => {
 // Mock utility modules
 jest.mock('../utils/appCallsFirestore', () => ({
   getAppCalls: jest.fn(() => Promise.resolve([])),
+  getAppCallDays: jest.fn(() => Promise.resolve([])),
   getAppCallAggregates: jest.fn(() => Promise.resolve([])),
   APP_CALLS_LIMIT: 5000,
 }));
 
 jest.mock('../utils/recipeCallsFirestore', () => ({
   getRecipeCalls: jest.fn(() => Promise.resolve([])),
+  getRecipeCallDays: jest.fn(() => Promise.resolve([])),
   getRecipeCallAggregates: jest.fn(() => Promise.resolve([])),
   RECIPE_CALLS_LIMIT: 5000,
 }));
@@ -2095,8 +2097,14 @@ describe('AppCallsPage – Aufruf-Protokolle laden erst mit ihrem Reiter (Tech-C
     const { getAppCalls, getAppCallAggregates } = require('../utils/appCallsFirestore');
     getAppCalls.mockResolvedValue([]);
     getAppCallAggregates.mockResolvedValue([]);
-    const { getRecipeCalls, getRecipeCallAggregates } = require('../utils/recipeCallsFirestore');
+    const { getRecipeCalls, getRecipeCallDays, getRecipeCallAggregates } = require('../utils/recipeCallsFirestore');
     getRecipeCalls.mockResolvedValue([]);
+    getRecipeCallDays.mockResolvedValue([
+      {
+        id: '2026-11-03', day: '2026-11-03', year: 2026, month: 11, count: 5,
+        users: { 'u-erika': { userId: 'u-erika', isGuest: false, userVorname: 'Erika', userNachname: 'Musterfrau', count: 5 } },
+      },
+    ]);
     getRecipeCallAggregates.mockResolvedValue([
       {
         id: '2026-10_u-max', period: '2026-10', periodType: 'month', year: 2026, month: 10,
@@ -2107,19 +2115,23 @@ describe('AppCallsPage – Aufruf-Protokolle laden erst mit ihrem Reiter (Tech-C
 
   test('ein anderer Reiter liest keine Aufrufe; Rezeptaufrufe werden beim ersten Öffnen einmal geladen', async () => {
     const { getAppCalls, getAppCallAggregates } = require('../utils/appCallsFirestore');
-    const { getRecipeCalls, getRecipeCallAggregates } = require('../utils/recipeCallsFirestore');
+    const { getRecipeCalls, getRecipeCallDays, getRecipeCallAggregates } = require('../utils/recipeCallsFirestore');
     render(<AppCallsPage currentUser={adminUser} recipes={[]} onUpdateRecipe={jest.fn()} activeTab="kulinariktypen" />);
 
     await screen.findByText('Offene Vorschläge');
     expect(getAppCalls).not.toHaveBeenCalled();
     expect(getAppCallAggregates).not.toHaveBeenCalled();
     expect(getRecipeCalls).not.toHaveBeenCalled();
+    expect(getRecipeCallDays).not.toHaveBeenCalled();
     expect(getRecipeCallAggregates).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Rezeptaufrufe' }));
     expect(await screen.findByText('Oktober 2026')).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: '17' })).toBeInTheDocument();
+    expect(screen.getByText('03.11.2026')).toBeInTheDocument();
+    expect(screen.getByText('Musterfrau')).toBeInTheDocument();
     expect(getRecipeCalls).toHaveBeenCalledTimes(1);
+    expect(getRecipeCallDays).toHaveBeenCalledTimes(1);
     expect(getRecipeCallAggregates).toHaveBeenCalledTimes(1);
     expect(getAppCalls).not.toHaveBeenCalled();
 

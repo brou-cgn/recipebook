@@ -4,19 +4,45 @@ import { useMemo, useState } from 'react';
 const isOwnerEntry = (entry) => entry.userVorname === 'Benjamin' && entry.userNachname === 'Rousselli';
 
 const MONTH_LABEL = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+const DAY_LABEL = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
+const DAY_KEY = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /**
- * Zeitraum eines zusammengefassten Eintrags: „Oktober 2026“ oder „Jahr 2025“.
- * @param {Object} aggregate - Dokument aus appCallAggregates/recipeCallAggregates
+ * Zeitraum eines zusammengefassten Eintrags: „03.11.2026“, „Oktober 2026“ oder „Jahr 2025“.
+ * @param {Object} aggregate - Eintrag aus expandCallDays oder appCallAggregates/recipeCallAggregates
  * @returns {string}
  */
 export function formatCallPeriod(aggregate) {
   const { periodType, year, month, period } = aggregate || {};
+  const day = periodType === 'day' && DAY_KEY.exec(String(period));
+  if (day) return DAY_LABEL.format(new Date(Date.UTC(Number(day[1]), Number(day[2]) - 1, Number(day[3]))));
   if (periodType === 'month' && Number.isInteger(year) && Number.isInteger(month)) {
     return MONTH_LABEL.format(new Date(Date.UTC(year, month - 1, 1)));
   }
   if (periodType === 'year' && Number.isInteger(year)) return `Jahr ${year}`;
   return period ? String(period) : '–';
+}
+
+/**
+ * Tagesdokumente (appCallDays/recipeCallDays, alle Anwender eines Tages im Feld
+ * users) als Zeilen je Anwender und Tag, im Format der Monats- und Jahreseinträge.
+ * @param {Array} days
+ * @returns {Array}
+ */
+export function expandCallDays(days) {
+  return (days || []).flatMap((dayDoc) => {
+    const period = String(dayDoc?.day || dayDoc?.id || '');
+    return Object.entries(dayDoc?.users || {}).map(([userKey, entry]) => ({
+      id: `${period}_${userKey}`,
+      period,
+      periodType: 'day',
+      userId: entry?.userId || null,
+      isGuest: entry?.isGuest === true,
+      userVorname: entry?.userVorname || '',
+      userNachname: entry?.userNachname || '',
+      count: entry?.count,
+    }));
+  });
 }
 
 const countOf = (aggregate) => (Number.isFinite(aggregate.count) ? aggregate.count : 0);
@@ -37,13 +63,12 @@ const formatCallTime = (call) => (call.timestamp?.toDate ? call.timestamp.toDate
 
 /**
  * Inhalt der Reiter „App-Aufrufe“ und „Rezeptaufrufe“ (Seite Küchenbetrieb):
- * die noch nicht zusammengefassten Einzelaufrufe und darunter die vom
- * monatlichen Job zusammengefassten Aufrufe je Anwender und Monat bzw. Jahr
- * (Tech-Check K2).
+ * die Einzelaufrufe der letzten 14 Tage und darunter die vom nächtlichen Job
+ * zusammengefassten Aufrufe je Anwender und Tag, Monat bzw. Jahr (Tech-Check K2).
  *
  * @param {Object} props
  * @param {'app'|'recipe'} props.kind
- * @param {{loading: boolean, calls: Array, aggregates: Array}} props.log - aus useCallLog
+ * @param {{loading: boolean, calls: Array, days: Array, aggregates: Array}} props.log - aus useCallLog
  * @param {number} props.limit - Obergrenze der gelesenen Einzelaufrufe
  * @param {boolean} props.canSeeEmails - E-Mail-Spalte (nur Admins)
  * @param {Function} props.getEmail - userId -> E-Mail aus den Nutzerprofilen
@@ -58,14 +83,18 @@ function CallLogPanel({ kind, log, limit, canSeeEmails, getEmail, ownerFilter = 
     () => (filterActive ? log.calls.filter((call) => !isOwnerEntry(call)) : log.calls),
     [log.calls, filterActive]
   );
+  const allAggregates = useMemo(
+    () => [...expandCallDays(log.days), ...(log.aggregates || [])],
+    [log.days, log.aggregates]
+  );
   const aggregates = useMemo(
-    () => sortAggregates(filterActive ? log.aggregates.filter((entry) => !isOwnerEntry(entry)) : log.aggregates),
-    [log.aggregates, filterActive]
+    () => sortAggregates(filterActive ? allAggregates.filter((entry) => !isOwnerEntry(entry)) : allAggregates),
+    [allAggregates, filterActive]
   );
   const aggregatedCalls = aggregates.reduce((sum, entry) => sum + countOf(entry), 0);
 
   if (log.loading) return <div className="app-calls-empty">Laden...</div>;
-  if (log.calls.length === 0 && log.aggregates.length === 0) {
+  if (log.calls.length === 0 && allAggregates.length === 0) {
     return (
       <div className="app-calls-empty">
         {isRecipe ? 'Noch keine Rezeptaufrufe vorhanden.' : 'Noch keine Appaufrufe vorhanden.'}
@@ -131,14 +160,14 @@ function CallLogPanel({ kind, log, limit, canSeeEmails, getEmail, ownerFilter = 
           )}
         </>
       ) : (
-        <div className="app-calls-empty">Keine Einzelaufrufe seit dem letzten Zusammenfassen.</div>
+        <div className="app-calls-empty">Keine Einzelaufrufe in den letzten 14 Tagen.</div>
       )}
-      {log.aggregates.length > 0 && (
+      {allAggregates.length > 0 && (
         <section className="app-calls-aggregates" aria-labelledby={`${kind}-call-aggregates-title`}>
           <h3 id={`${kind}-call-aggregates-title`}>Zusammengefasste Aufrufe</h3>
           <p className="app-calls-info-text">
-            Ältere Aufrufe je Anwender und Monat, aus früheren Jahren je Anwender und Jahr.
-            Gäste sind je Zeitraum zusammengefasst.
+            Aufrufe älter als 14 Tage je Anwender und Tag, vor dem Vormonat je Anwender und Monat,
+            aus früheren Jahren je Anwender und Jahr. Gäste sind je Zeitraum zusammengefasst.
           </p>
           <div className="app-calls-table-container">
             <table className="app-calls-table">
@@ -169,7 +198,7 @@ function CallLogPanel({ kind, log, limit, canSeeEmails, getEmail, ownerFilter = 
           <div className="app-calls-stats">
             Zusammengefasst: <strong>{formatNumber(aggregatedCalls)}</strong> Aufrufe
             in {formatNumber(aggregates.length)} {aggregates.length === 1 ? 'Eintrag' : 'Einträgen'}
-            {filterActive && aggregates.length !== log.aggregates.length ? ' (gefiltert)' : ''}
+            {filterActive && aggregates.length !== allAggregates.length ? ' (gefiltert)' : ''}
           </div>
         </section>
       )}

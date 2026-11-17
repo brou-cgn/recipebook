@@ -496,10 +496,24 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    // Zusammengefasste Aufruf-Protokolle (Tech-Check K2): ein Dokument je Anwender
-    // und Monat bzw. Jahr. Nur der monatliche Job monthlyCallLogConsolidation
-    // schreibt sie (Admin SDK). Lesen wie appCalls: nur die Seite Küchenbetrieb
-    // zeigt sie, auch die zusammengefassten Rezeptaufrufe.
+    // Zusammengefasste Aufruf-Protokolle (Tech-Check K2), geschrieben nur vom
+    // täglichen Job nightlyCallLogConsolidation (Admin SDK): Aufrufe älter als
+    // 14 Tage je Tag (…Days, alle Anwender des Tages im Feld users), Tage vor dem
+    // Vormonat je Anwender und Monat, frühere Jahre je Anwender und Jahr
+    // (…Aggregates).
+    // App-Aufrufe lesen wie appCalls. Rezept-Tage lesen Mitglieder wie
+    // recipeCalls, weil „Im Trend“ sie mitzählt; Monate und Jahre zeigt nur die
+    // Seite Küchenbetrieb.
+    match /appCallDays/{day} {
+      allow read: if canSeeAppCalls();
+      allow write: if false;
+    }
+
+    match /recipeCallDays/{day} {
+      allow read: if isMember();
+      allow write: if false;
+    }
+
     match /appCallAggregates/{aggregateId} {
       allow read: if canSeeAppCalls();
       allow write: if false;
