@@ -6,9 +6,20 @@
  *   - userId: string
  *   - userVorname: string
  *   - userNachname: string
- *   - userEmail: string
  *   - isGuest: boolean  (true for anonymous/guest sessions, false for registered users)
  *   - timestamp: serverTimestamp
+ *
+ * Tech-Check K2: every night the Cloud Function nightlyCallLogConsolidation
+ * consolidates and deletes the raw documents (Berlin calendar, guests together
+ * under the key 'gaeste'):
+ *   - older than 14 days: appCallDays/{YYYY-MM-DD}, one document per day:
+ *     day, year, month, count, users: { [userKey]: { userId, isGuest, userVorname,
+ *     userNachname, count } }
+ *   - days before the previous month: appCallAggregates/{period}_{user}, one
+ *     document per user and month, per user and year for earlier calendar years:
+ *     period ('2026-10' or '2025'), periodType ('month' | 'year'), year, month
+ *     (months only), userId (null for guests), userVorname, userNachname, isGuest,
+ *     count, updatedAt
  */
 
 import { db } from '../firebase';
@@ -82,16 +93,67 @@ export const getRecentAppCalls = async (days = 7) => {
 };
 
 /**
- * Fetch all app calls, ordered by most recent first
+ * Upper bound for getAppCalls (page Küchenbetrieb). The nightly consolidation
+ * leaves only the calls of the last 14 days in appCalls. No time window on
+ * purpose: which days are still raw depends on the job, a window computed here
+ * would hide calls of a day the job has not reached yet. The limit caps the read
+ * in case the job stops running.
+ */
+export const APP_CALLS_LIMIT = 5000;
+
+/** Upper bound for getAppCallDays: more than a year of days. */
+export const APP_CALL_DAYS_LIMIT = 400;
+
+/** Upper bound for getAppCallAggregates: one document per user and month or year. */
+export const APP_CALL_AGGREGATES_LIMIT = 2000;
+
+/**
+ * Fetch the app calls not yet consolidated, newest first, at most APP_CALLS_LIMIT.
  * @returns {Promise<Array>} Array of app call objects
  */
 export const getAppCalls = async () => {
   try {
-    const q = query(collection(db, 'appCalls'), orderBy('timestamp', 'desc'));
+    const q = query(collection(db, 'appCalls'), orderBy('timestamp', 'desc'), limit(APP_CALLS_LIMIT));
     const snapshot = await getDocs(q);
     return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error('Error fetching app calls:', error);
+    return [];
+  }
+};
+
+/**
+ * Fetch the day documents of consolidated app calls (older than 14 days),
+ * newest day first.
+ * @returns {Promise<Array>} Array of day objects
+ */
+export const getAppCallDays = async () => {
+  try {
+    const q = query(collection(db, 'appCallDays'), orderBy('day', 'desc'), limit(APP_CALL_DAYS_LIMIT));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error('Error fetching app call days:', error);
+    return [];
+  }
+};
+
+/**
+ * Fetch the consolidated app calls (one entry per user and month or year),
+ * newest period first.
+ * @returns {Promise<Array>} Array of aggregate objects
+ */
+export const getAppCallAggregates = async () => {
+  try {
+    const q = query(
+      collection(db, 'appCallAggregates'),
+      orderBy('period', 'desc'),
+      limit(APP_CALL_AGGREGATES_LIMIT)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error('Error fetching app call aggregates:', error);
     return [];
   }
 };

@@ -36,6 +36,7 @@ jest.mock('../utils/userFavorites', () => ({
 
 jest.mock('../utils/recipeCallsFirestore', () => ({
   getRecentRecipeCalls: () => Promise.resolve([]),
+  getRecentRecipeViewCounts: () => Promise.resolve(new Map()),
 }));
 
 const dessertTutorial = { id: 't-dessert', title: 'Baiser aufschlagen', speisekategorie: ['Dessert'] };

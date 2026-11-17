@@ -60,6 +60,7 @@ jest.mock('../utils/userFavorites', () => ({
 
 jest.mock('../utils/recipeCallsFirestore', () => ({
   getRecentRecipeCalls: jest.fn().mockResolvedValue([]),
+  getRecentRecipeViewCounts: () => Promise.resolve(new Map()),
 }));
 
 jest.mock('./SortCarousel', () => function MockSortCarousel({ onSortChange, activeSort }) {

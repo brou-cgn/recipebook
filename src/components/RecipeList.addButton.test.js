@@ -45,6 +45,7 @@ jest.mock('../utils/userFavorites', () => ({
 // Mock recipeCallsFirestore
 jest.mock('../utils/recipeCallsFirestore', () => ({
   getRecentRecipeCalls: () => Promise.resolve([]),
+  getRecentRecipeViewCounts: () => Promise.resolve(new Map()),
 }));
 
 const mockRecipes = [

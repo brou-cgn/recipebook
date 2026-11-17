@@ -496,6 +496,34 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // Zusammengefasste Aufruf-Protokolle (Tech-Check K2), geschrieben nur vom
+    // täglichen Job nightlyCallLogConsolidation (Admin SDK): Aufrufe älter als
+    // 14 Tage je Tag (…Days, alle Anwender des Tages im Feld users), Tage vor dem
+    // Vormonat je Anwender und Monat, frühere Jahre je Anwender und Jahr
+    // (…Aggregates).
+    // App-Aufrufe lesen wie appCalls. Rezept-Tage lesen Mitglieder wie
+    // recipeCalls, weil „Im Trend“ sie mitzählt; Monate und Jahre zeigt nur die
+    // Seite Küchenbetrieb.
+    match /appCallDays/{day} {
+      allow read: if canSeeAppCalls();
+      allow write: if false;
+    }
+
+    match /recipeCallDays/{day} {
+      allow read: if isMember();
+      allow write: if false;
+    }
+
+    match /appCallAggregates/{aggregateId} {
+      allow read: if canSeeAppCalls();
+      allow write: if false;
+    }
+
+    match /recipeCallAggregates/{aggregateId} {
+      allow read: if canSeeAppCalls();
+      allow write: if false;
+    }
+
     // RSVP-Seite "A little Advent Glow" (statisch unter /advent-glow/, kein Teil der App).
     // Gäste melden sich still anonym an; Dokument-ID = Auth-UID, also genau eine Antwort
     // pro Gast, die er später ändern kann. Lesen: der Gast nur sein eigenes Dokument,

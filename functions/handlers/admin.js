@@ -11,6 +11,7 @@ const {requireAiCaller} = require('../shared/auth');
 const {escapeHtml} = require('../shared/common');
 const {cleanupFollowData} = require('../followCleanup');
 const {deleteCookDatesOfUser, deleteNonPublicRecipesOfUser} = require('../accountCleanup');
+const {consolidateCallLogs, formatConsolidationSummary, normalizeTrendingDays} = require('../callLogConsolidation');
 
 /**
  * Maximum number of account registrations allowed per IP address per hour.
@@ -540,6 +541,66 @@ exports.stripCallLogEmails = onCall(
           `E-Mail-Adressen entfernt: ${appCalls} App-Aufruf${appCalls === 1 ? '' : 'e'}, ` +
           `${recipeCalls} Rezeptaufruf${recipeCalls === 1 ? '' : 'e'}.`,
       };
+    },
+);
+
+/**
+ * Trend-Zeitfenster, wenn settings/app nicht lesbar ist: mehr als die 365 Tage,
+ * die die Einstellungen anbieten, damit „Im Trend“ in keinem Fall Aufrufe verliert.
+ */
+const TRENDING_DAYS_FALLBACK = 366;
+
+/**
+ * Scheduled Cloud Function: fasst die Aufruf-Protokolle zusammen (Tech-Check K2,
+ * Logik in callLogConsolidation.js). Aufrufe älter als 14 Tage werden zu einem
+ * Dokument je Tag (appCallDays, recipeCallDays), Tage vor dem Vormonat zu einem
+ * Dokument je Anwender und Monat (appCallAggregates, recipeCallAggregates),
+ * frühere Kalenderjahre zu einem je Anwender und Jahr; die Quelldokumente werden
+ * dabei gelöscht. Bei recipeCalls bleiben die Tage des Trend-Zeitfensters
+ * (settings/app.trendingDays) Tagesdokumente, „Im Trend“ liest sie.
+ *
+ * Schedule: täglich um 4:30 Europe/Berlin, damit nie mehr als 14 Tage einzeln
+ * stehen; Monate und Jahre werden nur verdichtet, wenn sie fällig sind. Bricht
+ * ein Lauf ab, macht der nächste beim Rest weiter; in Cloud Scheduler lässt er
+ * sich auch von Hand starten („Jetzt ausführen“), mehrfaches Ausführen ist
+ * unschädlich.
+ */
+exports.nightlyCallLogConsolidation = onSchedule(
+    {
+      schedule: '30 4 * * *',
+      timeZone: 'Europe/Berlin',
+      timeoutSeconds: 540,
+      maxInstances: 1,
+    },
+    async (_event) => {
+      const db = admin.firestore();
+      const startedAt = Date.now();
+      let trendingDays = TRENDING_DAYS_FALLBACK;
+      try {
+        const settings = await db.doc('settings/app').get();
+        trendingDays = normalizeTrendingDays(settings.exists ? (settings.data() || {}).trendingDays : undefined);
+      } catch (error) {
+        console.warn(
+            `nightlyCallLogConsolidation: settings/app nicht lesbar, Trend-Zeitfenster ${TRENDING_DAYS_FALLBACK} Tage angenommen:`,
+            error.message,
+        );
+      }
+      const outcome = await consolidateCallLogs({
+        db,
+        FieldValue: admin.firestore.FieldValue,
+        now: new Date(startedAt),
+        trendingDays,
+        // Abstand zum Timeout von 540 s: nach 480 s beginnt kein neuer Batch.
+        deadline: startedAt + 480 * 1000,
+      });
+      const summary = `nightlyCallLogConsolidation: ${formatConsolidationSummary(outcome)}`;
+      const failed = outcome.results.filter((row) => row.failed);
+      if (failed.length > 0) {
+        console.error(summary);
+        throw new Error(`Konsolidierung fehlgeschlagen: ${failed.map((row) => row.source).join(', ')}`);
+      }
+      if (outcome.results.some((row) => row.timedOut)) console.warn(summary);
+      else console.log(summary);
     },
 );
 
