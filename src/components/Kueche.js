@@ -17,7 +17,7 @@ import {
 } from '../utils/customLists';
 import { getAllCookDates } from '../utils/recipeCookDates';
 import { getCategoryImages } from '../utils/categoryImages';
-import { getAppCalls } from '../utils/appCallsFirestore';
+import { getRecentAppCalls } from '../utils/appCallsFirestore';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
 import { isBase64Image } from '../utils/imageUtils';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
@@ -289,7 +289,8 @@ function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSe
 
   useEffect(() => {
     if (!currentUser?.appCalls) return;
-    getAppCalls().then(calls => setAppCalls(calls)).catch(() => {});
+    // Diagramm und „Aufrufe heute“ brauchen nur die letzten 7 Tage (Tech-Check K2).
+    getRecentAppCalls(7).then(calls => setAppCalls(calls)).catch(() => {});
   }, [currentUser]);
 
   useEffect(() => {

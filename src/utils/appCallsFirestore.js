@@ -16,10 +16,21 @@ import {
   collection,
   addDoc,
   getDocs,
+  limit,
   orderBy,
   query,
-  serverTimestamp
+  serverTimestamp,
+  where,
+  Timestamp
 } from 'firebase/firestore';
+
+/**
+ * Upper bound for getRecentAppCalls, a guard against unbounded reads
+ * (AGENTS.md: queries with where and limit). A week of sessions stays far
+ * below it today; if it is ever reached, the oldest calls of the window are
+ * missing from the result.
+ */
+export const RECENT_APP_CALLS_LIMIT = 2000;
 
 /**
  * Log an app call (session start) to Firestore
@@ -39,6 +50,34 @@ export const logAppCall = async (user) => {
     });
   } catch (error) {
     console.error('Error logging app call:', error);
+  }
+};
+
+/**
+ * Fetch app calls from the last N days, ordered by most recent first.
+ * Tech-Check K2: the Küche only charts one week, so it must not read the
+ * whole history (every session adds a document, none is ever deleted).
+ * @param {number} days - Number of days to look back
+ * @returns {Promise<Array>} Array of app call objects within the time window
+ */
+export const getRecentAppCalls = async (days = 7) => {
+  try {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const q = query(
+      collection(db, 'appCalls'),
+      where('timestamp', '>=', Timestamp.fromDate(cutoff)),
+      orderBy('timestamp', 'desc'),
+      limit(RECENT_APP_CALLS_LIMIT)
+    );
+    const snapshot = await getDocs(q);
+    if (snapshot.docs.length >= RECENT_APP_CALLS_LIMIT) {
+      console.warn(`getRecentAppCalls: limit of ${RECENT_APP_CALLS_LIMIT} reached, older calls of the window are missing`);
+    }
+    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error('Error fetching recent app calls:', error);
+    return [];
   }
 };
 
