@@ -5,7 +5,8 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const {onDocumentCreated, onDocumentWritten} = require('firebase-functions/v2/firestore');
 const {onSchedule} = require('firebase-functions/v2/scheduler');
-const admin = require('firebase-admin');
+const {getApp, applicationDefault} = require('firebase-admin/app');
+const {getFirestore, FieldValue} = require('firebase-admin/firestore');
 const {evaluateLowCarbTag} = require('../lowCarb');
 const {fetchFirestoreDailyUsage, buildFirestoreUsageSection} = require('../firestoreUsage');
 const {fetchFirestoreInventory, buildFirestoreInventorySection} = require('../firestoreInventory');
@@ -169,7 +170,7 @@ function buildNutritionRecalcSummaryMail(report, runAt, usageSection = null, inv
  * @return {Promise<boolean>} Whether a mail was actually sent.
  */
 async function sendAdminReportMail({subject, text, html, logLabel}) {
-  const db = admin.firestore();
+  const db = getFirestore();
   const usersSnapshot = await db.collection('users').where('role', '==', 'admin').get();
   const adminEmails = [];
   usersSnapshot.forEach((doc) => {
@@ -220,8 +221,8 @@ async function sendAdminReportMail({subject, text, html, logLabel}) {
 async function loadFirestoreUsageSection() {
   try {
     const rows = await fetchFirestoreDailyUsage({
-      projectId: process.env.GCLOUD_PROJECT || admin.app().options.projectId,
-      getAccessToken: () => admin.credential.applicationDefault().getAccessToken(),
+      projectId: process.env.GCLOUD_PROJECT || getApp().options.projectId,
+      getAccessToken: () => applicationDefault().getAccessToken(),
     });
     return buildFirestoreUsageSection({rows});
   } catch (error) {
@@ -238,7 +239,7 @@ async function loadFirestoreUsageSection() {
  */
 async function loadFirestoreInventorySection() {
   try {
-    const inventory = await fetchFirestoreInventory({db: admin.firestore()});
+    const inventory = await fetchFirestoreInventory({db: getFirestore()});
     return buildFirestoreInventorySection(inventory);
   } catch (error) {
     const message = (error && error.message) || String(error);
@@ -266,7 +267,7 @@ async function setRecalcFalseForReferences(referenceDocs = []) {
   if (!Array.isArray(referenceDocs) || referenceDocs.length === 0) {
     return 0;
   }
-  const db = admin.firestore();
+  const db = getFirestore();
   let updatedCount = 0;
   let batch = db.batch();
   let operationCount = 0;
@@ -291,7 +292,7 @@ async function setRecalcFalseForReferences(referenceDocs = []) {
 }
 
 async function runNutritionRecalcForFlaggedRecipesCore({triggeredBy = 'schedule'} = {}) {
-  const db = admin.firestore();
+  const db = getFirestore();
   const report = {
     triggeredBy,
     startedAt: Date.now(),
@@ -466,7 +467,7 @@ exports.runNutritionRecalcForFlaggedRecipes = onCall(
         throw new HttpsError('unauthenticated', 'Authentication required.');
       }
 
-      const callerDoc = await admin.firestore().doc(`users/${callerUid}`).get();
+      const callerDoc = await getFirestore().doc(`users/${callerUid}`).get();
       const callerData = callerDoc.exists ? (callerDoc.data() || {}) : {};
       const canRunManualRecalc = (
         callerData.role === 'admin' ||
@@ -479,10 +480,10 @@ exports.runNutritionRecalcForFlaggedRecipes = onCall(
       // Nur den Auftrag anlegen: Arbeit nach der Antwort eines Callables
       // drosselt Cloud Run fast auf null und darf sie jederzeit beenden.
       // processNutritionRecalcRequest führt ihn mit voller Laufzeit aus.
-      await admin.firestore().collection('jobRequests').add({
+      await getFirestore().collection('jobRequests').add({
         type: 'nutritionRecalc',
         triggeredBy: `manual:${callerUid}`,
-        requestedAt: admin.firestore.FieldValue.serverTimestamp(),
+        requestedAt: FieldValue.serverTimestamp(),
       });
 
       return {
@@ -709,7 +710,7 @@ async function sendLowCarbTaggingSummary(report) {
 }
 
 async function runLowCarbFullTaggingCore() {
-  const db = admin.firestore();
+  const db = getFirestore();
   const stats = {
     total: 0, added: 0, removed: 0, unchanged: 0, skipped: 0, failed: 0, written: 0,
   };
@@ -834,7 +835,7 @@ exports.runLowCarbFullTagging = onCall(
         throw new HttpsError('unauthenticated', 'Authentication required.');
       }
 
-      const callerDoc = await admin.firestore().doc(`users/${callerUid}`).get();
+      const callerDoc = await getFirestore().doc(`users/${callerUid}`).get();
       const callerData = callerDoc.exists ? (callerDoc.data() || {}) : {};
       const canRunFullTagging = (
         callerData.role === 'admin' ||
@@ -934,7 +935,7 @@ exports.updateSeasonMatrixStatus = onSchedule(
       timeZone: 'Europe/Berlin',
     },
     async (_event) => {
-      const db = admin.firestore();
+      const db = getFirestore();
       const snapshot = await db.collection('seasonMatrix').get();
 
       if (snapshot.empty) {
@@ -967,10 +968,10 @@ exports.onNutritionReferenceChanged = onDocumentWritten(
     {document: 'nutritionReferences/{refId}'},
     async () => {
       try {
-        await admin.firestore()
+        await getFirestore()
             .collection('appConfig')
             .doc('nutritionReferences')
-            .set({lastUpdatedAt: admin.firestore.FieldValue.serverTimestamp()}, {merge: true});
+            .set({lastUpdatedAt: FieldValue.serverTimestamp()}, {merge: true});
       } catch (err) {
         console.error('onNutritionReferenceChanged: failed to update lastUpdatedAt', err);
       }

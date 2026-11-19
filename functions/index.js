@@ -3,10 +3,10 @@
  * Provides secure server-side API access for AI OCR functionality
  */
 
-const admin = require('firebase-admin');
+const {initializeApp} = require('firebase-admin/app');
 
 // Initialize Firebase Admin
-admin.initializeApp();
+initializeApp();
 
 // Getränke-Kalkulation für Events (Menüpunkt "Events" im Hamburger-Menü).
 exports.calculateEventDrinks = require('./calculateEventDrinks').calculateEventDrinks;

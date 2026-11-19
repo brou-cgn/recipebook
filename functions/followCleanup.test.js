@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const {cleanupFollowData} = require('./followCleanup');
 
 const DOC_ID = Symbol('documentId');
-const fakeAdmin = {firestore: {FieldPath: {documentId: () => DOC_ID}}};
+// FieldPath, wie ihn der Handler aus firebase-admin/firestore hereinreicht.
+const fakeFirestore = {FieldPath: {documentId: () => DOC_ID}};
 
 /** Minimaler Firestore-Ersatz: Pfad -> Daten, Sammlungen mit where und Batches. */
 const makeDb = (seed) => {
@@ -63,7 +64,7 @@ const seed = () => ({
 
 test('löscht Follow-Daten des Mitglieds in beiden Richtungen samt Gegenstücken', async () => {
   const db = makeDb(seed());
-  await cleanupFollowData(fakeAdmin, db, 'anna');
+  await cleanupFollowData(fakeFirestore, db, 'anna');
   for (const path of [
     'follows/anna_ben', 'follows/cleo_anna',
     'followCooldowns/anna_ben', 'followCooldowns/cleo_anna', 'followCooldowns/anna_dora',
@@ -77,7 +78,7 @@ test('löscht Follow-Daten des Mitglieds in beiden Richtungen samt Gegenstücken
 
 test('lässt fremde Daten und Namen mit gleichem Präfix unberührt', async () => {
   const db = makeDb(seed());
-  await cleanupFollowData(fakeAdmin, db, 'anna');
+  await cleanupFollowData(fakeFirestore, db, 'anna');
   for (const path of [
     'follows/cleo_ben', 'followCooldowns/cleo_ben', 'followCooldowns/annabelle_ben',
     'followLimits/annabelle_2026-10-25', 'users/ben/followInbox/cleo', 'users/anna',
@@ -88,13 +89,13 @@ test('lässt fremde Daten und Namen mit gleichem Präfix unberührt', async () =
 
 test('ohne Follow-Daten: nichts zu tun, kein Fehler', async () => {
   const db = makeDb({'users/zoe': {role: 'read'}});
-  assert.equal(await cleanupFollowData(fakeAdmin, db, 'zoe'), 0);
+  assert.equal(await cleanupFollowData(fakeFirestore, db, 'zoe'), 0);
 });
 
 test('lehnt ungültige UIDs ab, ohne zu löschen', async () => {
   const db = makeDb(seed());
-  assert.equal(await cleanupFollowData(fakeAdmin, db, ''), 0);
-  assert.equal(await cleanupFollowData(fakeAdmin, db, 'a/b'), 0);
+  assert.equal(await cleanupFollowData(fakeFirestore, db, ''), 0);
+  assert.equal(await cleanupFollowData(fakeFirestore, db, 'a/b'), 0);
   assert.equal(db.batches.length, 0);
 });
 
@@ -102,7 +103,7 @@ test('teilt viele Löschungen in Batches unter dem Firestore-Limit', async () =>
   const many = {};
   for (let i = 0; i < 1000; i++) many[`follows/u${i}_anna`] = {followerId: `u${i}`, followeeId: 'anna'};
   const db = makeDb(many);
-  await cleanupFollowData(fakeAdmin, db, 'anna');
+  await cleanupFollowData(fakeFirestore, db, 'anna');
   assert.ok(db.batches.every((ops) => ops.length <= 400));
   assert.equal([...db.store.keys()].filter((p) => p.startsWith('follows/')).length, 0);
 });

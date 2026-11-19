@@ -11,10 +11,11 @@ class FakeHttpsError extends Error {
 }
 
 const SERVER_TS = {__serverTimestamp: true};
-const fakeAdmin = {firestore: {
+// FieldValue und Timestamp, wie sie der Handler aus firebase-admin/firestore hereinreicht.
+const fakeFirestore = {
   FieldValue: {serverTimestamp: () => SERVER_TS},
   Timestamp: {fromMillis: (ms) => ({toMillis: () => ms})},
-}};
+};
 
 /**
  * Firestore-Ersatz mit dem, was wichteln.js braucht: Dokumente nach Pfad, Collection-
@@ -137,11 +138,11 @@ const auth = (uid, provider = 'password') => ({uid, token: {firebase: {sign_in_p
 // Neue Runden brauchen ein Datum der Feier; weit genug weg, dass es keine Frist berührt.
 const FEIER = '2099-12-24';
 const verwalten = (db, uid, daten, extra = {}) =>
-  wichteln.verwalten(fakeAdmin, db, FakeHttpsError, {auth: uid ? auth(uid) : null, daten, ...extra});
+  wichteln.verwalten(fakeFirestore, db, FakeHttpsError, {auth: uid ? auth(uid) : null, daten, ...extra});
 // Ohne eigenen Ersatz darf kein Test eine Seite abrufen.
 const keinAbruf = async (url) => assert.fail(`unerwarteter Abruf von ${url}`);
 const teilnahme = (db, daten, ladeVorschau = keinAbruf, jetztMs) =>
-  wichteln.teilnahme(fakeAdmin, db, FakeHttpsError, {daten, ladeVorschau, jetztMs});
+  wichteln.teilnahme(fakeFirestore, db, FakeHttpsError, {daten, ladeVorschau, jetztMs});
 
 const rejectsWith = (promise, code) => assert.rejects(promise, (err) => {
   assert.equal(err.code, code, err.message);
@@ -332,7 +333,7 @@ test('neuesToken: 32 Zeichen base64url und jedes Mal anders', () => {
 test('wichtelVerwalten: nur angemeldete Mitglieder ab Rolle edit', async () => {
   const db = makeDb(baseSeed());
   await rejectsWith(verwalten(db, null, {aktion: 'liste'}), 'unauthenticated');
-  await rejectsWith(wichteln.verwalten(fakeAdmin, db, FakeHttpsError,
+  await rejectsWith(wichteln.verwalten(fakeFirestore, db, FakeHttpsError,
       {auth: auth('orga', 'anonymous'), daten: {aktion: 'liste'}}), 'permission-denied');
   await rejectsWith(verwalten(db, 'leser', {aktion: 'liste'}), 'permission-denied');
   await rejectsWith(verwalten(db, 'gast', {aktion: 'liste'}), 'permission-denied');
@@ -1437,7 +1438,7 @@ const setupNeuigkeiten = async ({anlass = 'weihnachten'} = {}) => {
     als: (wer, aktion, daten = {}) => teilnahme(db, {aktion, rundeId, token: tn[wer].token, ...daten}, keinAbruf, jetzt),
     wunsch: (wer, text) => teilnahme(db, {aktion: 'eintragHinzufuegen', rundeId, token: tn[wer].token, ueberId: tn[wer].id, text}, keinAbruf, jetzt),
     idee: (wer, fuer, text) => teilnahme(db, {aktion: 'eintragHinzufuegen', rundeId, token: tn[wer].token, ueberId: tn[fuer].id, text}, keinAbruf, jetzt),
-    lauf: (mailer = versand) => wichteln.versendeNeuigkeiten(fakeAdmin, db, {mailer: mailer.factory, jetztMs: jetzt}),
+    lauf: (mailer = versand) => wichteln.versendeNeuigkeiten(fakeFirestore, db, {mailer: mailer.factory, jetztMs: jetzt}),
     vormerker: (geber = schenker) => db.store.get(`${NEUIGKEITEN_COLLECTION}/${rundeId}_${tn[geber].id}`),
     teilnehmerDoc: (name) => db.store.get(`wichtelRunden/${rundeId}/teilnehmer/${tn[name].id}`),
   };
@@ -1698,7 +1699,7 @@ const setupErinnerung = async ({anlass = 'weihnachten'} = {}) => {
     },
     als: (wer, aktion, daten = {}) => teilnahme(db, {aktion, rundeId, token: tn[wer].token, ...daten}, keinAbruf, jetzt),
     wunsch: (wer, text) => teilnahme(db, {aktion: 'eintragHinzufuegen', rundeId, token: tn[wer].token, ueberId: tn[wer].id, text}, keinAbruf, jetzt),
-    lauf: (mailer = versand) => wichteln.versendeErinnerungen(fakeAdmin, db, {mailer: mailer.factory, jetztMs: jetzt}),
+    lauf: (mailer = versand) => wichteln.versendeErinnerungen(fakeFirestore, db, {mailer: mailer.factory, jetztMs: jetzt}),
     vormerker: (wer) => db.store.get(`${ERINNERUNGEN_COLLECTION}/${rundeId}_${tn[wer].id}`),
     teilnehmerPfad: (wer) => `wichtelRunden/${rundeId}/teilnehmer/${tn[wer].id}`,
     teilnehmerDoc: (wer) => db.store.get(`wichtelRunden/${rundeId}/teilnehmer/${tn[wer].id}`),

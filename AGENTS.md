@@ -84,6 +84,14 @@ erzwungen — wo das gilt, steht die Datei dabei.
   - `sharp`, `cheerio`, `nodemailer`, `@google/genai` und `puppeteer-core` erst beim Aufruf per `require`
     laden, nicht am Dateianfang (Kaltstart).
   - Function-Tests laden `index.js` mit Stubs über `testSupport.purgeFunctionsCache()`.
+  - firebase-admin nur modular und destrukturiert laden, z. B.
+    `const {getFirestore, FieldValue} = require('firebase-admin/firestore')` (ebenso `/app`, `/auth`,
+    `/storage`, `/messaging`), nie `require('firebase-admin')`: Die Namespace-API (`admin.firestore()`
+    usw.) gibt es ab v14 nicht mehr (Tech-Check F18). Module, die ohne Emulator testbar sein sollen,
+    bekommen `FieldValue`, `Timestamp`, `FieldPath` bzw. die `messaging`-Instanz vom Handler
+    hereingereicht. Erzwungen durch `firebaseAdminApi.test.js`, der auch prüft, dass jeder genutzte
+    Name im installierten Paket existiert. In Tests baut `testSupport.firebaseAdminModule()` die
+    Subpfade aus einem Fake.
 
 ## Arbeitsweise
 - Kleine, thematisch geschlossene PRs. Beschreibung nennt, wie getestet wurde.

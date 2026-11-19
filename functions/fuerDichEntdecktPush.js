@@ -37,15 +37,15 @@ const buildPushText = ({listId, label, newCount}) => {
  * Sends one data-only FCM message to all devices of a user who opted in
  * (users/{uid}.backgroundUpdatesEnabled) and has at least one saved token.
  * Stale tokens are removed. Best-effort: never throws.
- * @param {Object} admin - firebase-admin
- * @param {Object} db - admin.firestore()
+ * @param {Object} messaging - getMessaging() from firebase-admin/messaging
+ * @param {Object} db - getFirestore()
  * @param {string} userId - recipient
  * @param {{title: string, body: string, notificationId: string, data?: Object}} message
  *   `data` carries the type and any further string fields of the push payload
  * @param {string} logPrefix - log line prefix on failure (no user data, see AGENTS.md)
  * @return {Promise<number>} number of messages sent
  */
-const sendDataPush = async (admin, db, userId, {title, body, notificationId, data}, logPrefix) => {
+const sendDataPush = async (messaging, db, userId, {title, body, notificationId, data}, logPrefix) => {
   try {
     const userRef = db.collection('users').doc(userId);
     const userSnap = await userRef.get();
@@ -55,7 +55,7 @@ const sendDataPush = async (admin, db, userId, {title, body, notificationId, dat
     const tokens = Array.isArray(userData.fcmTokens) ? userData.fcmTokens.filter(Boolean) : [];
     if (tokens.length === 0) return 0;
 
-    const response = await admin.messaging().sendEachForMulticast({
+    const response = await messaging.sendEachForMulticast({
       tokens,
       data: {
         ...data,
@@ -93,17 +93,17 @@ const sendDataPush = async (admin, db, userId, {title, body, notificationId, dat
 };
 
 /**
- * @param {Object} admin - firebase-admin
- * @param {Object} db - admin.firestore()
+ * @param {Object} messaging - getMessaging() from firebase-admin/messaging
+ * @param {Object} db - getFirestore()
  * @param {string} ownerId - owner of the list
  * @param {Object} info - see buildPushText (listId, label, newCount)
  * @return {Promise<number>} number of messages sent
  */
-const sendFuerDichEntdecktPush = async (admin, db, ownerId, info) => {
+const sendFuerDichEntdecktPush = async (messaging, db, ownerId, info) => {
   if (!ownerId || !(info.newCount > 0)) return 0;
   const {title, body, notificationId} = buildPushText(info);
   return sendDataPush(
-      admin, db, ownerId,
+      messaging, db, ownerId,
       {title, body, notificationId, data: {type: 'fuer_dich_entdeckt', listId: info.listId}},
       `sendFuerDichEntdecktPush: failed for list ${info.listId}:`,
   );

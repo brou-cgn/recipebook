@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
 
 let manualHandler;
 let requestHandler;
@@ -110,7 +111,7 @@ function loadHandlers() {
       return () => chain;
     }
 
-    if (request === 'firebase-admin') {
+    if (isFirebaseAdminRequest(request, parent)) {
       const firestoreFactory = () => ({
         collection: (name) => {
           if (name === 'nutritionReferences') {
@@ -221,10 +222,10 @@ function loadHandlers() {
       firestoreFactory.FieldValue = {
         serverTimestamp: () => ({ seconds: 0, nanos: 0 }),
       };
-      return {
+      return firebaseAdminModule(request, {
         initializeApp: () => {},
         firestore: firestoreFactory,
-      };
+      });
     }
 
     return originalLoad.call(this, request, parent, isMain, ...args);

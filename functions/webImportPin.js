@@ -1,5 +1,5 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
-const admin = require('firebase-admin');
+const {getFirestore, FieldValue, Timestamp} = require('firebase-admin/firestore');
 const crypto = require('crypto');
 
 const PIN_MIN_LENGTH = 4;
@@ -18,9 +18,9 @@ function hashPin(pin, salt) {
 }
 
 /**
- * @param {admin.firestore.Firestore} db Firestore-Instanz.
+ * @param {import('firebase-admin/firestore').Firestore} db Firestore-Instanz.
  * @param {string} uid Firebase-Nutzer-ID.
- * @return {admin.firestore.DocumentReference} Referenz auf das gesperrte PIN-Dokument.
+ * @return {import('firebase-admin/firestore').DocumentReference} Referenz auf das gesperrte PIN-Dokument.
  */
 function getSecurityDocRef(db, uid) {
   return db.collection('users').doc(uid).collection('security').doc('webImportPin');
@@ -54,7 +54,7 @@ exports.setWebImportPin = onCall({maxInstances: 10}, async (request) => {
 
   const uid = auth.uid;
   const {pin} = request.data || {};
-  const db = admin.firestore();
+  const db = getFirestore();
   const docRef = getSecurityDocRef(db, uid);
   const userRef = db.collection('users').doc(uid);
 
@@ -84,7 +84,7 @@ exports.setWebImportPin = onCall({maxInstances: 10}, async (request) => {
     salt,
     failedAttempts: 0,
     lockedUntil: null,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   });
   await userRef.set({webImportPinEnabled: true}, {merge: true});
 
@@ -105,7 +105,7 @@ exports.setWebImportPin = onCall({maxInstances: 10}, async (request) => {
  *   keinen PIN eingerichtet hat (dann wurde nichts geprüft).
  */
 async function verifyPinCore(uid, pin) {
-  const db = admin.firestore();
+  const db = getFirestore();
   const docRef = getSecurityDocRef(db, uid);
   const snap = await docRef.get();
 
@@ -139,7 +139,7 @@ async function verifyPinCore(uid, pin) {
     const failedAttempts = (data.failedAttempts || 0) + 1;
     const update = {failedAttempts};
     if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
-      update.lockedUntil = admin.firestore.Timestamp.fromMillis(now + LOCKOUT_MINUTES * 60000);
+      update.lockedUntil = Timestamp.fromMillis(now + LOCKOUT_MINUTES * 60000);
       update.failedAttempts = 0;
     }
     await docRef.set(update, {merge: true});

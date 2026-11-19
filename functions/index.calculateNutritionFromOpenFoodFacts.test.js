@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
 
 let createUtilsStub;
 let firestoreDocGetStub;
@@ -50,7 +51,7 @@ function loadWrappedFunction() {
       };
     }
 
-    if (request === 'firebase-admin') {
+    if (isFirebaseAdminRequest(request, parent)) {
       const firestoreFactory = () => ({
         // requireNutritionCaller: users/{uid} role and the daily quota counter
         doc: () => ({get: async () => ({exists: true, data: () => ({role: 'edit'})})}),
@@ -76,10 +77,10 @@ function loadWrappedFunction() {
         serverTimestamp: () => ({seconds: 0, nanos: 0}),
       };
 
-      return {
+      return firebaseAdminModule(request, {
         initializeApp: () => {},
         firestore: firestoreFactory,
-      };
+      });
     }
 
     if (/^\.\.?\/nutritionNormalization$/.test(request)) {

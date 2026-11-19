@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
 
 function loadFunctionsModule(state = {}) {
   require('./testSupport').purgeFunctionsCache();
@@ -92,16 +93,16 @@ function loadFunctionsModule(state = {}) {
       return {defineSecret: () => ({value: () => 'test-secret'})};
     }
 
-    if (request === 'firebase-admin') {
+    if (isFirebaseAdminRequest(request, parent)) {
       const firestore = () => db;
       firestore.FieldValue = {serverTimestamp: () => ({})};
-      return {
+      return firebaseAdminModule(request, {
         initializeApp: () => {},
         firestore,
         auth: () => ({getUser: async () => ({uid: 'u1'})}),
         storage: () => ({bucket: () => ({file: () => ({})})}),
         messaging: () => ({sendEachForMulticast: async () => ({successCount: 0})}),
-      };
+      });
     }
 
     if (/^\.\.?\/nutritionNormalization$/.test(request)) {

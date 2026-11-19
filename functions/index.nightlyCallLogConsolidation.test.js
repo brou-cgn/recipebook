@@ -8,6 +8,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const Module = require('module');
+const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
 
 let calls;
 let settings; // Daten von settings/app, null = Dokument fehlt, 'fail' = Lesen scheitert
@@ -37,7 +38,7 @@ function loadHandler() {
         },
       };
     }
-    if (request === 'firebase-admin') {
+    if (isFirebaseAdminRequest(request, parent)) {
       const db = {
         doc: (path) => ({
           get: async () => {
@@ -49,7 +50,7 @@ function loadHandler() {
       };
       const firestore = () => db;
       firestore.FieldValue = {increment: (n) => n, serverTimestamp: () => 'ts'};
-      return {initializeApp: () => {}, firestore, auth: () => ({}), storage: () => ({}), messaging: () => ({})};
+      return firebaseAdminModule(request, {initializeApp: () => {}, firestore, auth: () => ({}), storage: () => ({}), messaging: () => ({})});
     }
     return originalLoad.call(this, request, parent, isMain, ...args);
   };

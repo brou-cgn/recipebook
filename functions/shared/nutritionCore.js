@@ -2,7 +2,7 @@
  * Von mehreren Function-Gruppen genutzte Helfer (nutritionCore; aus index.js, Tech-Check F2).
  */
 
-const admin = require('firebase-admin');
+const {getFirestore} = require('firebase-admin/firestore');
 const {createNutritionNormalizationUtils} = require('../nutritionNormalization');
 const {geminiApiKey} = require('./secrets');
 
@@ -333,7 +333,7 @@ async function calculateNutritionFromOpenFoodFactsCore({
 
     try {
       if (referenceId) {
-        const collectionRef = admin.firestore()
+        const collectionRef = getFirestore()
             .collection(NUTRITION_REFERENCE_COLLECTION);
         cachedSnapshot = await collectionRef
             .doc(referenceId)

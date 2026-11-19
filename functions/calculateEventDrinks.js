@@ -1,5 +1,5 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
-const admin = require('firebase-admin');
+const {getFirestore} = require('firebase-admin/firestore');
 const {DRINK_WEIGHTS, CHILDREN_DRINK_WEIGHTS, SEASON_FACTORS, durationFactor, timeFactor, BASE_RATE_PER_PERSON_PER_HOUR, getDrinkWeight, getWeightSubcategoryParents, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, getChildrenDrinkWeight, loadDrinkWeightsFromFirestore, loadChildrenDrinkWeightsFromFirestore} = require('./drinkRates');
 
 /**
@@ -644,7 +644,7 @@ exports.calculateEventDrinks = onCall({maxInstances: 10}, async (request) => {
     throw new HttpsError('invalid-argument', 'event mit durationHours und guests ist erforderlich.');
   }
 
-  const db = admin.firestore();
+  const db = getFirestore();
 
   // Admins may recalculate/save an event on behalf of another user (full
   // edit access to all events); everyone else may only act on their own.

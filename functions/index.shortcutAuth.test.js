@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
 
 const API_KEY = 'test-secret';
 const PIN_HASH_DOC = {salt: 'abc', hash: 'x', failedAttempts: 0};
@@ -57,16 +58,16 @@ function loadFunctions({userData, pinDoc = null, scanCount = null, limitCheckFai
     if (request === 'firebase-functions/params') {
       return {defineSecret: () => ({value: () => API_KEY})};
     }
-    if (request === 'firebase-admin') {
+    if (isFirebaseAdminRequest(request, parent)) {
       const firestore = () => db;
       firestore.FieldValue = {serverTimestamp: () => ({}), increment: (n) => n};
-      return {
+      return firebaseAdminModule(request, {
         initializeApp: () => {},
         firestore,
         auth: () => ({getUserByEmail: async () => ({uid: 'u1'})}),
         storage: () => ({bucket: () => ({file: () => ({getSignedUrl: async () => ['https://upload.example/signed']})})}),
         messaging: () => ({}),
-      };
+      });
     }
     if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {createNutritionNormalizationUtils: () => ({})};

@@ -3,7 +3,7 @@
  */
 
 const {HttpsError} = require('firebase-functions/v2/https');
-const admin = require('firebase-admin');
+const {getFirestore, FieldValue} = require('firebase-admin/firestore');
 const {RECIPE_EXTRACTION_PROMPT_CACHE_TTL_MS, resolveImportLists, cuisineFields, normalizeIngredientUnits} = require('./importLists');
 const {geminiGenerateContentRequest} = require('./geminiConfig');
 
@@ -142,7 +142,7 @@ async function getRecipeExtractionPrompt() {
     return recipeExtractionPromptCache;
   }
 
-  const db = admin.firestore();
+  const db = getFirestore();
 
   try {
     const settingsDoc = await db.collection('settings').doc('app').get();
@@ -184,7 +184,7 @@ async function getRecipeExtractionPrompt() {
       try {
         await db.collection('settings').doc('app').collection('aiPromptHistory').add({
           prompt: aiRecipePrompt,
-          archivedAt: admin.firestore.FieldValue.serverTimestamp(),
+          archivedAt: FieldValue.serverTimestamp(),
           archivedBy: 'system-migration',
         });
       } catch (historyError) {

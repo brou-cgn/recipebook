@@ -3,7 +3,7 @@
  */
 
 const {HttpsError} = require('firebase-functions/v2/https');
-const admin = require('firebase-admin');
+const {getFirestore} = require('firebase-admin/firestore');
 
 /**
  * Roles that may call the Gemini-backed scan/import callables. Every AI import
@@ -30,7 +30,7 @@ async function requireRoleFeature(userId, role, features) {
   if (role === 'admin' || userId === AI_IMPORTER_TEST_UID) return;
   let flags;
   try {
-    const doc = await admin.firestore().doc(`rolePermissions/${role}`).get();
+    const doc = await getFirestore().doc(`rolePermissions/${role}`).get();
     flags = doc.exists ? (doc.data() || {}) : {};
   } catch (err) {
     console.error(`requireRoleFeature: failed to read rolePermissions/${role}:`, err);
@@ -61,7 +61,7 @@ async function requireAiCaller(auth, features = null) {
   const userId = auth.uid;
   let role;
   try {
-    const doc = await admin.firestore().doc(`users/${userId}`).get();
+    const doc = await getFirestore().doc(`users/${userId}`).get();
     role = doc.exists ? doc.data()?.role : null;
   } catch (err) {
     console.error(`requireAiCaller: failed to look up role for ${userId}:`, err);

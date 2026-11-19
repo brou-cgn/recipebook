@@ -467,7 +467,7 @@ function steps(db, ctx) {
  *
  * @param {Object} deps
  * @param {Object} deps.db - Firestore (Admin SDK)
- * @param {Object} deps.FieldValue - admin.firestore.FieldValue
+ * @param {Object} deps.FieldValue - FieldValue aus firebase-admin/firestore
  * @param {Date} [deps.now=new Date()]
  * @param {number} [deps.trendingDays=30] - settings/app.trendingDays
  * @param {number} [deps.deadline=Infinity] - Zeitpunkt (ms), ab dem kein neuer Batch mehr beginnt

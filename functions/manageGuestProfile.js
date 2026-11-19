@@ -1,5 +1,5 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
-const admin = require('firebase-admin');
+const {getFirestore, FieldValue} = require('firebase-admin/firestore');
 const {SPRACHEN, STANDARD_SPRACHE} = require('./shared/sprachen');
 
 const ALLOWED_ROLES = new Set(['edit', 'moderator', 'admin']);
@@ -106,12 +106,12 @@ exports.manageGuestProfile = onCall({maxInstances: 10}, async (request) => {
 
   const uid = request.auth.uid;
   const {action, profileId, profile, ownerId} = request.data || {};
-  const db = admin.firestore();
+  const db = getFirestore();
 
   const targetUid = await resolveTargetUid(db, uid, ownerId);
 
   const guestsRef = db.collection('guests').doc(targetUid).collection('profiles');
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
 
   if (action === 'delete') {
     const id = getTrimmed(profileId);

@@ -14,6 +14,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
 
 let dailyAiImporterTest;
 let settingsData;
@@ -102,7 +103,7 @@ function loadFunction() {
       return () => chain;
     }
 
-    if (request === 'firebase-admin') {
+    if (isFirebaseAdminRequest(request, parent)) {
       const firestoreFactory = () => ({
         collection: (name) => {
           if (name === 'settings') {
@@ -136,13 +137,13 @@ function loadFunction() {
         }),
       });
 
-      return {
+      return firebaseAdminModule(request, {
         initializeApp: () => {},
         firestore: firestoreFactory,
         auth: () => ({
           createCustomToken: async (uid) => `custom-token-for-${uid}`,
         }),
-      };
+      });
     }
 
     return originalLoad.call(this, request, parent, isMain, ...args);

@@ -35,7 +35,7 @@ const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * angezeigt von public/firebase-messaging-sw.js).
  * @param {string} alarmId - ID des Weckrufs
  * @param {{token: string, body?: string}} alarm - Weckruf
- * @return {object} Nachricht für admin.messaging().send()
+ * @return {object} Nachricht für messaging.send()
  */
 function buildTimerAlarmMessage(alarmId, alarm) {
   const title = 'Timer abgelaufen!';
@@ -64,36 +64,37 @@ function buildTimerAlarmMessage(alarmId, alarm) {
 /**
  * Übernimmt einen Weckruf für diesen Lauf (Transaktion), damit sich überlappende Läufe nicht
  * doppelt senden.
- * @param {object} admin - firebase-admin
+ * @param {object} Timestamp - Timestamp aus firebase-admin/firestore
  * @param {object} db - Firestore
  * @param {object} ref - Dokument des Weckrufs
  * @param {function(): number} now - aktuelle Zeit in ms
  * @return {Promise<object|null>} Daten des Weckrufs, oder null, wenn er weg oder schon vergeben ist
  */
-function claimAlarm(admin, db, ref, now) {
+function claimAlarm(Timestamp, db, ref, now) {
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists) return null;
     const data = snap.data();
     const claimedAt = data.claimedAt && data.claimedAt.toMillis ? data.claimedAt.toMillis() : 0;
     if (claimedAt && now() - claimedAt < CLAIM_MS) return null;
-    tx.update(ref, {claimedAt: admin.firestore.Timestamp.fromMillis(now())});
+    tx.update(ref, {claimedAt: Timestamp.fromMillis(now())});
     return data;
   });
 }
 
 /**
  * Wartet bis zur Endzeit eines Weckrufs und sendet ihn, wenn er dann noch gewollt ist.
- * @param {object} admin - firebase-admin
+ * @param {{Timestamp: object, FieldValue: object, messaging: object}} deps - siehe
+ *   processDueCookingTimerAlarms
  * @param {object} db - Firestore
  * @param {object} ref - Dokument des Weckrufs
  * @param {{now: function(): number, sleep: function(number): Promise<void>}} clock - Zeitquelle
  * @return {Promise<boolean>} ob eine Mitteilung gesendet wurde
  */
-async function handleAlarm(admin, db, ref, {now, sleep}) {
+async function handleAlarm({Timestamp, FieldValue, messaging}, db, ref, {now, sleep}) {
   let alarm;
   try {
-    alarm = await claimAlarm(admin, db, ref, now);
+    alarm = await claimAlarm(Timestamp, db, ref, now);
   } catch (err) {
     console.error(`cookingTimerAlarms: Übernahme von ${ref.id} fehlgeschlagen:`, err);
     return false;
@@ -125,10 +126,10 @@ async function handleAlarm(admin, db, ref, {now, sleep}) {
   }
 
   try {
-    await admin.messaging().send(buildTimerAlarmMessage(ref.id, alarm));
+    await messaging.send(buildTimerAlarmMessage(ref.id, alarm));
   } catch (err) {
     if (STALE_TOKEN_CODES.has(err && err.code)) {
-      await userRef.update({timerPushTokens: admin.firestore.FieldValue.arrayRemove(alarm.token)})
+      await userRef.update({timerPushTokens: FieldValue.arrayRemove(alarm.token)})
           .catch(() => {});
       await ref.delete().catch(() => {});
     } else {
@@ -143,19 +144,20 @@ async function handleAlarm(admin, db, ref, {now, sleep}) {
 
 /**
  * Ein Lauf: alle Weckrufe, die vor dem nächsten Lauf fällig werden, pünktlich senden.
- * @param {object} admin - firebase-admin (firestore.Timestamp, firestore.FieldValue, messaging)
+ * @param {{Timestamp: object, FieldValue: object, messaging: object}} deps - Timestamp und FieldValue
+ *   aus firebase-admin/firestore, messaging = getMessaging() aus firebase-admin/messaging
  * @param {object} db - Firestore
  * @param {{now?: function(): number, sleep?: function(number): Promise<void>}} [clock] - für Tests
  * @return {Promise<number>} Anzahl gesendeter Mitteilungen
  */
-async function processDueCookingTimerAlarms(admin, db, {now = Date.now, sleep = defaultSleep} = {}) {
+async function processDueCookingTimerAlarms(deps, db, {now = Date.now, sleep = defaultSleep} = {}) {
   const until = now() + WINDOW_MS - GRACE_MS;
   const snap = await db.collection(COLLECTION)
-      .where('dueAt', '<=', admin.firestore.Timestamp.fromMillis(until))
+      .where('dueAt', '<=', deps.Timestamp.fromMillis(until))
       .orderBy('dueAt')
       .limit(BATCH_LIMIT)
       .get();
-  const results = await Promise.all(snap.docs.map((doc) => handleAlarm(admin, db, doc.ref, {now, sleep})));
+  const results = await Promise.all(snap.docs.map((doc) => handleAlarm(deps, db, doc.ref, {now, sleep})));
   return results.filter(Boolean).length;
 }
 

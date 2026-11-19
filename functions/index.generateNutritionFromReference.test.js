@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
 
 let wrappedFunction;
 let referenceData;
@@ -49,7 +50,7 @@ function loadWrappedFunction() {
       };
     }
 
-    if (request === 'firebase-admin') {
+    if (isFirebaseAdminRequest(request, parent)) {
       const firestoreFactory = () => ({
         // requireNutritionCaller: users/{uid} role and the daily quota counter
         doc: () => ({get: async () => ({exists: true, data: () => ({role: 'edit'})})}),
@@ -73,10 +74,10 @@ function loadWrappedFunction() {
       firestoreFactory.FieldValue = {
         serverTimestamp: () => ({seconds: 0, nanos: 0}),
       };
-      return {
+      return firebaseAdminModule(request, {
         initializeApp: () => {},
         firestore: firestoreFactory,
-      };
+      });
     }
 
     if (/^\.\.?\/nutritionNormalization$/.test(request)) {
@@ -503,10 +504,10 @@ test('generateNutritionFromReference is registered with cors and invoker:public 
       return {defineSecret: () => ({value: () => 'test-secret'})};
     }
 
-    if (request === 'firebase-admin') {
+    if (isFirebaseAdminRequest(request, parent)) {
       const ff = () => ({collection: () => ({doc: () => ({get: async () => ({exists: false, data: () => ({})})})})});
       ff.FieldValue = {serverTimestamp: () => ({})};
-      return {initializeApp: () => {}, firestore: ff};
+      return firebaseAdminModule(request, {initializeApp: () => {}, firestore: ff});
     }
 
     if (/^\.\.?\/nutritionNormalization$/.test(request)) {

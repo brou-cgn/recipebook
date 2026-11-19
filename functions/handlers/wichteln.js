@@ -6,7 +6,7 @@
 
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const {onSchedule} = require('firebase-functions/v2/scheduler');
-const admin = require('firebase-admin');
+const {getFirestore, FieldValue, Timestamp} = require('firebase-admin/firestore');
 const wichteln = require('../wichteln');
 const {absender} = require('../wichtelMail');
 const {ALLOWED_ORIGINS} = require('../shared/common');
@@ -65,7 +65,7 @@ exports.wichtelVerwalten = onCall(
       timeoutSeconds: 120,
       secrets: SMTP_SECRETS,
     },
-    (request) => wichteln.verwalten(admin, admin.firestore(), HttpsError, {
+    (request) => wichteln.verwalten({FieldValue, Timestamp}, getFirestore(), HttpsError, {
       auth: request.auth,
       daten: request.data,
       mailer: smtpMailer,
@@ -78,7 +78,7 @@ exports.wichtelVerwalten = onCall(
  */
 exports.wichtelTeilnahme = onCall(
     {region: 'us-central1', cors: ALLOWED_ORIGINS, invoker: 'public', maxInstances: 10},
-    (request) => wichteln.teilnahme(admin, admin.firestore(), HttpsError, {
+    (request) => wichteln.teilnahme({FieldValue, Timestamp}, getFirestore(), HttpsError, {
       daten: request.data,
     }),
 );
@@ -98,7 +98,7 @@ exports.wichtelNeuigkeitenVersenden = onSchedule(
       secrets: SMTP_SECRETS,
     },
     async () => {
-      const ergebnis = await wichteln.versendeNeuigkeiten(admin, admin.firestore(), {mailer: smtpMailer});
+      const ergebnis = await wichteln.versendeNeuigkeiten({FieldValue, Timestamp}, getFirestore(), {mailer: smtpMailer});
       if (ergebnis.gesendet || ergebnis.verworfen || ergebnis.verschoben) {
         console.log('wichtelNeuigkeitenVersenden:', JSON.stringify(ergebnis));
       }
@@ -121,7 +121,7 @@ exports.wichtelErinnerungenVersenden = onSchedule(
       secrets: SMTP_SECRETS,
     },
     async () => {
-      const ergebnis = await wichteln.versendeErinnerungen(admin, admin.firestore(), {mailer: smtpMailer});
+      const ergebnis = await wichteln.versendeErinnerungen({FieldValue, Timestamp}, getFirestore(), {mailer: smtpMailer});
       if (ergebnis.gesendet || ergebnis.verworfen || ergebnis.verschoben) {
         console.log('wichtelErinnerungenVersenden:', JSON.stringify(ergebnis));
       }
