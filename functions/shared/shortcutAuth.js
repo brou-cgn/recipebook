@@ -2,7 +2,8 @@
  * Von mehreren Function-Gruppen genutzte Helfer (shortcutAuth; aus index.js, Tech-Check F2).
  */
 
-const admin = require('firebase-admin');
+const {getFirestore} = require('firebase-admin/firestore');
+const {getAuth} = require('firebase-admin/auth');
 const crypto = require('crypto');
 const {requireShortcutPin} = require('../webImportPin');
 const {shortcutApiKey} = require('./secrets');
@@ -21,7 +22,7 @@ async function resolveShortcutUserId(email) {
   const normalizedEmail = String(email || '').trim().toLowerCase();
   if (!normalizedEmail) return null;
   try {
-    const userRecord = await admin.auth().getUserByEmail(normalizedEmail);
+    const userRecord = await getAuth().getUserByEmail(normalizedEmail);
     return userRecord.uid;
   } catch (err) {
     if (err.code !== 'auth/user-not-found') {
@@ -78,7 +79,7 @@ async function authenticateShortcutRequest(req, res, fnName, {allowShortcutUser 
   }
 
   const userId = await resolveShortcutUserId(userEmail);
-  const db = admin.firestore();
+  const db = getFirestore();
   try {
     const userDoc = userId ? await db.collection('users').doc(userId).get() : null;
     if (!userId || !userDoc.exists) {

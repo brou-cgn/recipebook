@@ -17,18 +17,17 @@ function fakes({user, profile}, sendResult) {
       }),
     }),
   };
-  const admin = {
-    messaging: () => ({
-      sendEachForMulticast: async (message) => {
-        sent.push(message);
-        return sendResult || {
-          successCount: message.tokens.length,
-          responses: message.tokens.map(() => ({success: true})),
-        };
-      },
-    }),
+  // Wie getMessaging() aus firebase-messaging/messaging.
+  const messaging = {
+    sendEachForMulticast: async (message) => {
+      sent.push(message);
+      return sendResult || {
+        successCount: message.tokens.length,
+        responses: message.tokens.map(() => ({success: true})),
+      };
+    },
   };
-  return {admin, db, sent};
+  return {messaging, db, sent};
 }
 
 const optedIn = {backgroundUpdatesEnabled: true, fcmTokens: ['t1']};
@@ -41,8 +40,8 @@ test('buildFollowPushText nennt den Namen oder "Jemand"', () => {
 });
 
 test('sendet eine Data-Nachricht mit Typ follow_request und Vornamen', async () => {
-  const {admin, db, sent} = fakes({user: optedIn, profile: {vorname: ' Anna ', versteckt: false}});
-  assert.equal(await sendFollowRequestPush(admin, db, info), 1);
+  const {messaging, db, sent} = fakes({user: optedIn, profile: {vorname: ' Anna ', versteckt: false}});
+  assert.equal(await sendFollowRequestPush(messaging, db, info), 1);
   assert.equal(sent.length, 1);
   assert.deepEqual(sent[0].tokens, ['t1']);
   assert.equal(sent[0].data.type, 'follow_request');
@@ -51,35 +50,32 @@ test('sendet eine Data-Nachricht mit Typ follow_request und Vornamen', async () 
 });
 
 test('ein versteckter Nutzer wird mit Namen genannt', async () => {
-  const {admin, db, sent} = fakes({user: optedIn, profile: {vorname: 'Anna', versteckt: true}});
-  await sendFollowRequestPush(admin, db, {followerId: 'anna', followeeId: 'ben'});
+  const {messaging, db, sent} = fakes({user: optedIn, profile: {vorname: 'Anna', versteckt: true}});
+  await sendFollowRequestPush(messaging, db, {followerId: 'anna', followeeId: 'ben'});
   assert.equal(sent[0].data.body, 'Anna möchte dir folgen.');
 });
 
 test('fehlendes Profil erscheint als "Jemand"', async () => {
   for (const profile of [undefined, {}]) {
-    const {admin, db, sent} = fakes({user: optedIn, profile});
-    await sendFollowRequestPush(admin, db, info);
+    const {messaging, db, sent} = fakes({user: optedIn, profile});
+    await sendFollowRequestPush(messaging, db, info);
     assert.equal(sent[0].data.body, 'Jemand möchte dir folgen.');
   }
 });
 
 test('sendet nichts ohne Opt-in, Token oder Nutzer', async () => {
   for (const user of [{fcmTokens: ['t1']}, {backgroundUpdatesEnabled: true, fcmTokens: []}, undefined]) {
-    const {admin, db, sent} = fakes({user, profile: {vorname: 'Anna'}});
-    assert.equal(await sendFollowRequestPush(admin, db, info), 0);
+    const {messaging, db, sent} = fakes({user, profile: {vorname: 'Anna'}});
+    assert.equal(await sendFollowRequestPush(messaging, db, info), 0);
     assert.equal(sent.length, 0);
   }
 });
 
 test('wirft nie und sendet nichts ohne IDs', async () => {
-  const {admin, db, sent} = fakes({user: optedIn});
-  assert.equal(await sendFollowRequestPush(admin, db, {followerId: '', followeeId: 'ben'}), 0);
+  const {messaging, db, sent} = fakes({user: optedIn});
+  assert.equal(await sendFollowRequestPush(messaging, db, {followerId: '', followeeId: 'ben'}), 0);
   assert.equal(sent.length, 0);
-  const broken = {
-    ...admin,
-    messaging: () => ({sendEachForMulticast: async () => { throw new Error('fcm down'); }}),
-  };
+  const broken = {sendEachForMulticast: async () => { throw new Error('fcm down'); }};
   const original = console.error;
   console.error = () => {};
   try {

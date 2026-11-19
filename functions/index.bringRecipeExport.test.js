@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
 
 let bringRecipeExport;
 
@@ -46,7 +47,7 @@ function loadFunction(firestoreImpl) {
       };
     }
 
-    if (request === 'firebase-admin') {
+    if (isFirebaseAdminRequest(request, parent)) {
       const firestoreFactory = firestoreImpl || (() => ({
         collection: () => ({
           where: () => ({
@@ -63,10 +64,10 @@ function loadFunction(firestoreImpl) {
       firestoreFactory.FieldValue = {
         serverTimestamp: () => ({seconds: 0, nanos: 0}),
       };
-      return {
+      return firebaseAdminModule(request, {
         initializeApp: () => {},
         firestore: firestoreFactory,
-      };
+      });
     }
 
     if (/^\.\.?\/nutritionNormalization$/.test(request)) {

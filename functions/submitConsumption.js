@@ -1,5 +1,5 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
-const admin = require('firebase-admin');
+const {getFirestore, FieldValue} = require('firebase-admin/firestore');
 
 /**
  * Liter pro Gebinde (z.B. Sixpack) einer Ergebniszeile. row.gebindeGroesseLiter
@@ -131,7 +131,7 @@ exports.submitConsumption = onCall({maxInstances: 10}, async (request) => {
     throw new HttpsError('invalid-argument', 'eventId und gebinde sind erforderlich.');
   }
 
-  const db = admin.firestore();
+  const db = getFirestore();
 
   // Admins may record consumption on behalf of another user (full edit
   // access to all events); everyone else may only act on their own.
@@ -179,7 +179,7 @@ exports.submitConsumption = onCall({maxInstances: 10}, async (request) => {
         ...snapshot,
         eventId,
         uid: targetUid,
-        erstelltAm: admin.firestore.FieldValue.serverTimestamp(),
+        erstelltAm: FieldValue.serverTimestamp(),
       });
     }
   }

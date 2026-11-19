@@ -44,19 +44,19 @@ const lookupFollowerName = async (db, followerId) => {
 };
 
 /**
- * @param {Object} admin - firebase-admin
- * @param {Object} db - admin.firestore()
+ * @param {Object} messaging - getMessaging() aus firebase-admin/messaging
+ * @param {Object} db - getFirestore()
  * @param {Object} info
  * @param {string} info.followerId - wer anfragt
  * @param {string} info.followeeId - wer die Anfrage bekommt
  * @return {Promise<number>} Zahl gesendeter Nachrichten
  */
-const sendFollowRequestPush = async (admin, db, {followerId, followeeId}) => {
+const sendFollowRequestPush = async (messaging, db, {followerId, followeeId}) => {
   if (!followerId || !followeeId) return 0;
   const name = await lookupFollowerName(db, followerId);
   const {title, body, notificationId} = buildFollowPushText({followerId, name});
   return sendDataPush(
-      admin, db, followeeId,
+      messaging, db, followeeId,
       {title, body, notificationId, data: {type: 'follow_request'}},
       'sendFollowRequestPush: Versand fehlgeschlagen:',
   );

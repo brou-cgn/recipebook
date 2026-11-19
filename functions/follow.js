@@ -3,7 +3,8 @@
  *
  * Vorhaben-Tracker: docs/vorhaben/follow.md. Die Callables requestFollow und
  * respondFollow in index.js sind dünne Hüllen um diese Funktionen; die Logik
- * hängt nur an `admin` und `db`, damit sie ohne Emulator testbar ist.
+ * hängt nur an FieldValue/Timestamp (aus firebase-admin/firestore) und `db`, damit sie
+ * ohne Emulator testbar ist.
  *
  * Datenmodell (alles nur über diese Funktionen schreibbar, siehe firestore.rules):
  * - follows/{followerId}_{followeeId}: {followerId, followeeId, status, createdAt,
@@ -95,8 +96,8 @@ const isCooldownActive = (cooldown, nowMs) => {
 
 /**
  * Legt eine Follow-Anfrage an.
- * @param {Object} admin - firebase-admin
- * @param {Object} db - admin.firestore()
+ * @param {{FieldValue: Object}} firestore - FieldValue aus firebase-admin/firestore
+ * @param {Object} db - getFirestore()
  * @param {Function} HttpsError
  * @param {Object} params
  * @param {{uid: string, token?: Object}} params.auth - request.auth des Callables
@@ -107,7 +108,7 @@ const isCooldownActive = (cooldown, nowMs) => {
  * @param {number} [params.nowMs]
  * @return {Promise<{status: string}>} 'pending' oder, bei bestehender Beziehung, deren Status
  */
-const requestFollow = async (admin, db, HttpsError, {auth, followeeId, onNewRequest, nowMs = Date.now()}) => {
+const requestFollow = async ({FieldValue}, db, HttpsError, {auth, followeeId, onNewRequest, nowMs = Date.now()}) => {
   if (!auth) fail(HttpsError, 'unauthenticated', 'Du musst angemeldet sein.');
   if (auth.token?.firebase?.sign_in_provider === 'anonymous') {
     fail(HttpsError, 'permission-denied', 'Gäste können niemandem folgen.');
@@ -143,13 +144,13 @@ const requestFollow = async (admin, db, HttpsError, {auth, followeeId, onNewRequ
       followerId,
       followeeId,
       status: 'pending',
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     });
     // Bei einer Sperre sieht der Anfragende "Angefragt", der Gefolgte nichts.
     if (!silent) {
       tx.set(inboxRef, {
         followerId,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
       });
     }
     // Push nur, wenn die Anfrage neu in der Inbox steht: Wer zurückzieht und neu
@@ -178,7 +179,7 @@ const requestFollow = async (admin, db, HttpsError, {auth, followeeId, onNewRequ
  *   anfragen; es entsteht keine Beziehung.
  * @return {Promise<{status: string}>} 'accepted' | 'declined' | 'blocked' | 'unblocked'
  */
-const respondFollow = async (admin, db, HttpsError, {auth, followerId, action, nowMs = Date.now()}) => {
+const respondFollow = async ({FieldValue, Timestamp}, db, HttpsError, {auth, followerId, action, nowMs = Date.now()}) => {
   if (!auth) fail(HttpsError, 'unauthenticated', 'Du musst angemeldet sein.');
   if (auth.token?.firebase?.sign_in_provider === 'anonymous') {
     fail(HttpsError, 'permission-denied', 'Gäste können Anfragen nicht beantworten.');
@@ -196,7 +197,6 @@ const respondFollow = async (admin, db, HttpsError, {auth, followerId, action, n
   const inboxRef = db.doc(`users/${followeeId}/followInbox/${followerId}`);
   const cooldownRef = db.doc(`followCooldowns/${id}`);
   const blockRef = db.doc(`users/${followeeId}/followBlocks/${followerId}`);
-  const FieldValue = admin.firestore.FieldValue;
 
   if (action === 'unblock') {
     return db.runTransaction(async (tx) => {
@@ -234,7 +234,7 @@ const respondFollow = async (admin, db, HttpsError, {auth, followerId, action, n
       tx.delete(inboxRef);
       tx.set(cooldownRef, {
         blocked: false,
-        until: admin.firestore.Timestamp.fromMillis(nowMs + DECLINE_COOLDOWN_DAYS * DAY_MS),
+        until: Timestamp.fromMillis(nowMs + DECLINE_COOLDOWN_DAYS * DAY_MS),
         createdAt: FieldValue.serverTimestamp(),
       });
       return {status: 'declined'};

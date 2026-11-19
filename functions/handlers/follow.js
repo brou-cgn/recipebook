@@ -3,7 +3,8 @@
  */
 
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
-const admin = require('firebase-admin');
+const {getFirestore, FieldValue, Timestamp} = require('firebase-admin/firestore');
+const {getMessaging} = require('firebase-admin/messaging');
 const follow = require('../follow');
 const {sendFollowRequestPush} = require('../followPush');
 
@@ -15,10 +16,10 @@ const {sendFollowRequestPush} = require('../followPush');
  */
 exports.requestFollow = onCall(
     {maxInstances: 10, invoker: 'public'},
-    (request) => follow.requestFollow(admin, admin.firestore(), HttpsError, {
+    (request) => follow.requestFollow({FieldValue}, getFirestore(), HttpsError, {
       auth: request.auth,
       followeeId: request.data?.followeeId,
-      onNewRequest: (info) => sendFollowRequestPush(admin, admin.firestore(), info),
+      onNewRequest: (info) => sendFollowRequestPush(getMessaging(), getFirestore(), info),
     }),
 );
 
@@ -29,7 +30,7 @@ exports.requestFollow = onCall(
  */
 exports.respondFollow = onCall(
     {maxInstances: 10, invoker: 'public'},
-    (request) => follow.respondFollow(admin, admin.firestore(), HttpsError, {
+    (request) => follow.respondFollow({FieldValue, Timestamp}, getFirestore(), HttpsError, {
       auth: request.auth,
       followerId: request.data?.followerId,
       action: request.data?.action,

@@ -4,7 +4,8 @@
 
 const {onRequest} = require('firebase-functions/v2/https');
 const {onObjectFinalized} = require('firebase-functions/v2/storage');
-const admin = require('firebase-admin');
+const {getFirestore, FieldValue} = require('firebase-admin/firestore');
+const {getStorage} = require('firebase-admin/storage');
 const {ALLOWED_ORIGINS} = require('../shared/common');
 const {finalizeImportJobBackground, failImportJobBackground, runImportFromVideoSource} = require('../shared/importJobs');
 const {geminiApiKey, shortcutApiKey} = require('../shared/secrets');
@@ -115,7 +116,7 @@ exports.getVideoUploadUrl = onRequest(
           title: 'Rezept-Import',
           authorId: userId,
           isTemp: true,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
           importStatus: 'awaiting_upload',
           importProgress: 0,
           importHeartbeatAt: Date.now(),
@@ -123,7 +124,7 @@ exports.getVideoUploadUrl = onRequest(
           importSource: {type: 'video', storagePath, language, caption, mimeType: contentType},
         });
 
-        const bucket = admin.storage().bucket();
+        const bucket = getStorage().bucket();
         const [uploadUrl] = await bucket.file(storagePath).getSignedUrl({
           version: 'v4',
           action: 'write',
@@ -173,9 +174,9 @@ exports.processVideoImportUpload = onObjectFinalized(
       }
       const [, userId, jobId] = match;
 
-      const db = admin.firestore();
+      const db = getFirestore();
       const jobRef = db.collection('recipes').doc(jobId);
-      const bucket = admin.storage().bucket(event.data.bucket);
+      const bucket = getStorage().bucket(event.data.bucket);
       const file = bucket.file(filePath);
 
       const steps = [];

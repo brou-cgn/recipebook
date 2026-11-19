@@ -3,7 +3,8 @@
  */
 
 const {onSchedule} = require('firebase-functions/v2/scheduler');
-const admin = require('firebase-admin');
+const {getFirestore, FieldValue, Timestamp} = require('firebase-admin/firestore');
+const {getMessaging} = require('firebase-admin/messaging');
 const {processDueCookingTimerAlarms} = require('../cookingTimerAlarms');
 
 /**
@@ -20,6 +21,6 @@ exports.sendDueCookingTimerAlarms = onSchedule(
       retryCount: 0,
     },
     async () => {
-      await processDueCookingTimerAlarms(admin, admin.firestore());
+      await processDueCookingTimerAlarms({Timestamp, FieldValue, messaging: getMessaging()}, getFirestore());
     },
 );

@@ -5,7 +5,9 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const {onDocumentCreated, onDocumentWritten} = require('firebase-functions/v2/firestore');
 const {onSchedule} = require('firebase-functions/v2/scheduler');
-const admin = require('firebase-admin');
+const {getFirestore, FieldValue, FieldPath} = require('firebase-admin/firestore');
+const {getAuth} = require('firebase-admin/auth');
+const {getStorage} = require('firebase-admin/storage');
 const {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom} = require('../shared/secrets');
 const {requireAiCaller} = require('../shared/auth');
 const {escapeHtml} = require('../shared/common');
@@ -39,7 +41,7 @@ const COMMON_PASSWORDS = [
  * @returns {Promise<{allowed: boolean, remaining: number}>}
  */
 async function checkRegistrationRateLimit(ip) {
-  const db = admin.firestore();
+  const db = getFirestore();
   // Bucket by UTC hour so the counter resets automatically each hour
   const hourKey = new Date().toISOString().slice(0, 13); // e.g. "2026-03-06T19"
   const docRef = db.collection('registrationLimits').doc(`${ip}_${hourKey}`);
@@ -53,7 +55,7 @@ async function checkRegistrationRateLimit(ip) {
           ip,
           hourKey,
           count: 1,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
         });
         return {allowed: true, remaining: REGISTRATION_RATE_LIMIT - 1};
       }
@@ -64,7 +66,7 @@ async function checkRegistrationRateLimit(ip) {
       }
 
       transaction.update(docRef, {
-        count: admin.firestore.FieldValue.increment(1),
+        count: FieldValue.increment(1),
       });
       return {allowed: true, remaining: REGISTRATION_RATE_LIMIT - data.count - 1};
     });
@@ -86,7 +88,7 @@ const INVITATION_DAILY_LIMIT = 20;
  * @return {Promise<void>}
  */
 async function consumeInvitationQuota(uid) {
-  const db = admin.firestore();
+  const db = getFirestore();
   const day = new Date().toISOString().slice(0, 10);
   const ref = db.collection('invitationLimits').doc(`${uid}_${day}`);
   await db.runTransaction(async (tx) => {
@@ -153,11 +155,11 @@ exports.sendGroupInvitationEmail = onCall(
       await consumeInvitationQuota(callerAuth.uid);
 
       const normalizedEmail = email.trim().toLowerCase();
-      const db = admin.firestore();
+      const db = getFirestore();
 
       // Check if the email address is already registered as a user
       try {
-        await admin.auth().getUserByEmail(normalizedEmail);
+        await getAuth().getUserByEmail(normalizedEmail);
         // User exists – no invitation needed; answer exactly like a sent invitation
         return {success: true};
       } catch (authError) {
@@ -234,7 +236,7 @@ exports.sendGroupInvitationEmail = onCall(
       // Record the sent invitation so it is only sent once
       await invitationRef.set({
         email: normalizedEmail,
-        sentAt: admin.firestore.FieldValue.serverTimestamp(),
+        sentAt: FieldValue.serverTimestamp(),
         sentBy: callerAuth.uid,
       });
 
@@ -267,7 +269,7 @@ exports.processGroupInvitationsOnUserRegistration = onDocumentCreated(
       }
 
       const normalizedEmail = userEmail.trim().toLowerCase();
-      const db = admin.firestore();
+      const db = getFirestore();
 
       // Find all groups where this email is listed in invitedEmails
       const groupsSnapshot = await db.collection('groups')
@@ -290,7 +292,7 @@ exports.processGroupInvitationsOnUserRegistration = onDocumentCreated(
         batch.update(groupDoc.ref, {
           memberIds: updatedMemberIds,
           invitedEmails: updatedInvitedEmails,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
         });
         console.log(`processGroupInvitationsOnUserRegistration: adding user ${userId} to group ${groupDoc.id}`);
       });
@@ -305,7 +307,7 @@ exports.processGroupInvitationsOnUserRegistration = onDocumentCreated(
       const invitationSnap = await invitationRef.get();
       if (invitationSnap.exists) {
         await invitationRef.update({
-          processedAt: admin.firestore.FieldValue.serverTimestamp(),
+          processedAt: FieldValue.serverTimestamp(),
           processedUserId: userId,
         });
         console.log(`processGroupInvitationsOnUserRegistration: invitation marked as processed for user ${userId}`);
@@ -350,7 +352,7 @@ exports.notifyAdminsOnUserRegistration = onDocumentCreated(
       }
 
       // Fetch all admin users from Firestore
-      const db = admin.firestore();
+      const db = getFirestore();
       const usersSnapshot = await db.collection('users').where('role', '==', 'admin').get();
 
       if (usersSnapshot.empty) {
@@ -453,16 +455,16 @@ exports.syncPublicProfile = onDocumentWritten(
     // Löschen eines Kontos räumt Rezepte samt Bildern auf, das kann dauern.
     {document: 'users/{userId}', timeoutSeconds: 300},
     async (event) => {
-      const ref = admin.firestore().collection('publicProfiles').doc(event.params.userId);
+      const ref = getFirestore().collection('publicProfiles').doc(event.params.userId);
       const after = event.data?.after;
       if (!after || !after.exists) {
         await ref.delete();
         // Konto gelöscht: Follow-Daten mit entfernen (followCleanup.js). Hier statt in
         // einem eigenen Trigger, damit es keine zweite Invocation je Nutzer-Write gibt.
-        await cleanupFollowData(admin, admin.firestore(), event.params.userId);
-        await deleteCookDatesOfUser(admin.firestore(), event.params.userId);
+        await cleanupFollowData({FieldPath}, getFirestore(), event.params.userId);
+        await deleteCookDatesOfUser(getFirestore(), event.params.userId);
         await deleteNonPublicRecipesOfUser(
-            {db: admin.firestore(), bucket: admin.storage().bucket()}, event.params.userId);
+            {db: getFirestore(), bucket: getStorage().bucket()}, event.params.userId);
         return;
       }
       // Written on every change, not only when a public field changed: users
@@ -495,7 +497,7 @@ async function stripLogEmailsCore(db, collectionName) {
     if (snapshot.empty) break;
     const batch = db.batch();
     snapshot.docs.forEach((docSnap) => {
-      batch.update(docSnap.ref, {userEmail: admin.firestore.FieldValue.delete()});
+      batch.update(docSnap.ref, {userEmail: FieldValue.delete()});
     });
     await batch.commit();
     updated += snapshot.size;
@@ -519,13 +521,13 @@ exports.stripCallLogEmails = onCall(
       if (!callerUid) {
         throw new HttpsError('unauthenticated', 'Authentication required.');
       }
-      const callerDoc = await admin.firestore().doc(`users/${callerUid}`).get();
+      const callerDoc = await getFirestore().doc(`users/${callerUid}`).get();
       const callerData = callerDoc.exists ? (callerDoc.data() || {}) : {};
       if (callerData.role !== 'admin') {
         throw new HttpsError('permission-denied', 'Admin role required.');
       }
 
-      const db = admin.firestore();
+      const db = getFirestore();
       const appCalls = await stripLogEmailsCore(db, 'appCalls');
       const recipeCalls = await stripLogEmailsCore(db, 'recipeCalls');
       console.log(
@@ -573,7 +575,7 @@ exports.nightlyCallLogConsolidation = onSchedule(
       maxInstances: 1,
     },
     async (_event) => {
-      const db = admin.firestore();
+      const db = getFirestore();
       const startedAt = Date.now();
       let trendingDays = TRENDING_DAYS_FALLBACK;
       try {
@@ -587,7 +589,7 @@ exports.nightlyCallLogConsolidation = onSchedule(
       }
       const outcome = await consolidateCallLogs({
         db,
-        FieldValue: admin.firestore.FieldValue,
+        FieldValue,
         now: new Date(startedAt),
         trendingDays,
         // Abstand zum Timeout von 540 s: nach 480 s beginnt kein neuer Batch.
@@ -654,7 +656,7 @@ exports.setUserPassword = onCall(
       }
 
       // Verify that the calling user is an admin by checking Firestore
-      const db = admin.firestore();
+      const db = getFirestore();
       const callerDoc = await db.collection('users').doc(auth.uid).get();
       if (!callerDoc.exists || callerDoc.data().role !== 'admin') {
         throw new HttpsError(
@@ -665,7 +667,7 @@ exports.setUserPassword = onCall(
 
       try {
         // Update the target user's password via Firebase Admin SDK
-        await admin.auth().updateUser(targetUserId, {password: newPassword});
+        await getAuth().updateUser(targetUserId, {password: newPassword});
 
         // Set requiresPasswordChange flag in Firestore (use set with merge to handle missing docs)
         await db.collection('users').doc(targetUserId).set(
@@ -761,7 +763,7 @@ exports.createUserProfile = onCall(
         );
       }
 
-      const db = admin.firestore();
+      const db = getFirestore();
       const userRef = db.collection('users').doc(uid);
       // Sentinel document used to atomically mark that the first user has been
       // registered. Stored in 'settings' because the Admin SDK bypasses rules.
@@ -859,14 +861,14 @@ exports.backfillRecipeThumbnails = onCall(
       if (!callerUid) {
         throw new HttpsError('unauthenticated', 'Authentication required.');
       }
-      const callerDoc = await admin.firestore().doc(`users/${callerUid}`).get();
+      const callerDoc = await getFirestore().doc(`users/${callerUid}`).get();
       if (!callerDoc.exists || callerDoc.data().role !== 'admin') {
         throw new HttpsError('permission-denied', 'Admin role required.');
       }
 
       const {batchSize = 50} = request.data || {};
-      const db = admin.firestore();
-      const bucket = admin.storage().bucket();
+      const db = getFirestore();
+      const bucket = getStorage().bucket();
 
       // Fetch recipes in batches
       const snapshot = await db.collection('recipes').limit(batchSize).get();
@@ -990,7 +992,7 @@ exports.nightlySwipeFlagsCleanup = onSchedule(
       timeZone: 'Europe/Berlin',
     },
     async (_event) => {
-      const db = admin.firestore();
+      const db = getFirestore();
       const snapshot = await db.collection('recipeSwipeFlags').get();
 
       if (snapshot.empty) {

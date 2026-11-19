@@ -3,7 +3,7 @@
  */
 
 const {onRequest} = require('firebase-functions/v2/https');
-const admin = require('firebase-admin');
+const {getFirestore} = require('firebase-admin/firestore');
 
 /**
  * Cloud Function: Render a temporary recipe import as structured HTML.
@@ -28,7 +28,7 @@ exports.recipeImportPage = onRequest(
         return;
       }
 
-      const db = admin.firestore();
+      const db = getFirestore();
       let importData;
       try {
         const importDoc = await db.collection('imports').doc(token).get();

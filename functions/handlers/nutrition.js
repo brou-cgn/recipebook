@@ -3,7 +3,7 @@
  */
 
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
-const admin = require('firebase-admin');
+const {getFirestore, FieldValue} = require('firebase-admin/firestore');
 const {createNutritionNormalizationUtils} = require('../nutritionNormalization');
 const {requireAiCaller} = require('../shared/auth');
 const {ALLOWED_ORIGINS} = require('../shared/common');
@@ -268,7 +268,7 @@ exports.generateNutritionFromReference = onCall(
         env: {GEMINI_API_KEY: geminiApiKey.value()},
       });
 
-      const referenceRef = admin.firestore()
+      const referenceRef = getFirestore()
           .collection(NUTRITION_REFERENCE_COLLECTION)
           .doc(ingredientID);
       const referenceSnapshot = await referenceRef.get();
@@ -438,7 +438,7 @@ exports.generateNutritionFromReference = onCall(
       if (status !== 'Neu' && status !== 'Freigegeben') {
         updatePayload.status = 'Prüfung ausstehend';
       }
-      updatePayload.updatedAt = admin.firestore.FieldValue.serverTimestamp();
+      updatePayload.updatedAt = FieldValue.serverTimestamp();
 
       // Persist dual-confidence: openFoodFacts completeness + KI estimate confidence
       const existingConfidence = referenceData.confidence || {};

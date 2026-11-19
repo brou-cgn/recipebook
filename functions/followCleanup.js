@@ -17,7 +17,8 @@
  *
  * Nicht gelöscht: Rezepte und cookDates des Mitglieds (bestehen unabhängig von Follow),
  * und der Name in fremden fuerDichEntdeckt/current (Rotation schreibt es neu).
- * Die Logik hängt nur an `admin` und `db`, damit sie ohne Emulator testbar ist.
+ * Die Logik hängt nur an FieldPath (aus firebase-admin/firestore) und `db`, damit sie
+ * ohne Emulator testbar ist.
  */
 
 const BATCH_SIZE = 400;
@@ -35,8 +36,8 @@ const deleteRefs = async (db, refs) => {
 };
 
 /** Dokumente, deren ID mit `prefix` beginnt. */
-const refsWithIdPrefix = async (admin, db, collection, prefix) => {
-  const documentId = admin.firestore.FieldPath.documentId();
+const refsWithIdPrefix = async (FieldPath, db, collection, prefix) => {
+  const documentId = FieldPath.documentId();
   const snap = await db.collection(collection)
       .where(documentId, '>=', prefix)
       .where(documentId, '<', `${prefix}`)
@@ -46,12 +47,12 @@ const refsWithIdPrefix = async (admin, db, collection, prefix) => {
 
 /**
  * Entfernt alle Follow-Daten von `uid`.
- * @param {Object} admin - firebase-admin
+ * @param {{FieldPath: Object}} firestore - FieldPath aus firebase-admin/firestore
  * @param {Object} db - Firestore
  * @param {string} uid - Konto, das gelöscht wurde
  * @return {Promise<number>} Anzahl gelöschter Dokumente
  */
-const cleanupFollowData = async (admin, db, uid) => {
+const cleanupFollowData = async ({FieldPath}, db, uid) => {
   if (typeof uid !== 'string' || !uid || uid.includes('/')) return 0;
 
   const [asFollower, asFollowee] = await Promise.all([
@@ -76,8 +77,8 @@ const cleanupFollowData = async (admin, db, uid) => {
   const blocked = await db.collection(`users/${uid}/followBlocks`).get();
   blocked.docs.forEach((doc) => add(db.doc(`followCooldowns/${followId(doc.id, uid)}`)));
 
-  for (const ref of await refsWithIdPrefix(admin, db, 'followCooldowns', `${uid}_`)) add(ref);
-  for (const ref of await refsWithIdPrefix(admin, db, 'followLimits', `${uid}_`)) add(ref);
+  for (const ref of await refsWithIdPrefix(FieldPath, db, 'followCooldowns', `${uid}_`)) add(ref);
+  for (const ref of await refsWithIdPrefix(FieldPath, db, 'followLimits', `${uid}_`)) add(ref);
 
   for (const name of OWN_SUBCOLLECTIONS) {
     const snap = await db.collection(`users/${uid}/${name}`).get();

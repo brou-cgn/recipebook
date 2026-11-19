@@ -11,6 +11,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const Module = require('module');
+const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
 
 const EXPECTED_EXPORTS = [
   'addRecipeViaAPI',
@@ -94,10 +95,10 @@ function loadIndex() {
     if (request === 'firebase-functions/v2/storage') return {onObjectFinalized: (o, h) => h};
     if (request === 'firebase-functions/v2/scheduler') return {onSchedule: (o, h) => h};
     if (request === 'firebase-functions/params') return {defineSecret: () => ({value: () => ''})};
-    if (request === 'firebase-admin') {
+    if (isFirebaseAdminRequest(request, parent)) {
       const firestore = () => ({});
       firestore.FieldValue = {};
-      return {initializeApp: () => {}, firestore, auth: () => ({}), storage: () => ({}), messaging: () => ({})};
+      return firebaseAdminModule(request, {initializeApp: () => {}, firestore, auth: () => ({}), storage: () => ({}), messaging: () => ({})});
     }
     if (request === '@google/genai') return {GoogleGenAI: class {}};
     if (request === 'nodemailer') return {createTransport: () => ({})};

@@ -17,7 +17,7 @@ Der Link ist außerdem im Hamburger-Menü der App unter **Hilfe → Kurzbefehl i
 Alle Shortcut-Endpoints (`importRecipeShortcut`, `addRecipeViaAPI`, `createRecipeImportFromText`, `getVideoUploadUrl`, `scrapeInstagramReelShortcut`, `scanRecipePhotoShortcut`, `getRecipeOptionsShortcut`) verwenden **API Key Authentifizierung** statt Firebase Auth Tokens. Ein API Key ist dauerhaft gültig und muss nur einmal im Kurzbefehl hinterlegt werden – derselbe Key funktioniert für alle Endpoints.
 
 - **`X-Api-Key`** Header: dein persönlicher API Key (als Firebase Secret gespeichert)
-- **`X-User-Email`** Header: deine registrierte E-Mail-Adresse (wird serverseitig per `admin.auth().getUserByEmail` zur Firebase User ID aufgelöst – du musst deine UID nicht mehr nachschlagen)
+- **`X-User-Email`** Header: deine registrierte E-Mail-Adresse (wird serverseitig per `getAuth().getUserByEmail` zur Firebase User ID aufgelöst – du musst deine UID nicht mehr nachschlagen)
 
 ---
 

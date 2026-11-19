@@ -7,6 +7,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
 
 let fillNewList;
 let db; // { discoverTopics, recipes, groups, users, recipeSwipeFlags } -> { id: data }
@@ -40,7 +41,7 @@ function loadFunction() {
     }
     if (request === 'firebase-functions/v2/scheduler') return {onSchedule: (_o, h) => h};
     if (request === 'firebase-functions/params') return {defineSecret: () => ({value: () => ''})};
-    if (request === 'firebase-admin') {
+    if (isFirebaseAdminRequest(request, parent)) {
       const firestore = () => ({
         collection: (name) => ({
           get: async () => ({
@@ -51,7 +52,7 @@ function loadFunction() {
         }),
       });
       firestore.FieldValue = {serverTimestamp: () => serverTimestamp, delete: () => null};
-      return {initializeApp: () => {}, firestore};
+      return firebaseAdminModule(request, {initializeApp: () => {}, firestore});
     }
     return originalLoad.call(this, request, parent, isMain, ...args);
   };
