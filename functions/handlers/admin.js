@@ -835,12 +835,37 @@ exports.createUserProfile = onCall(
     },
 );
 
+/** backfillRecipeThumbnails: Rezepte je Aufruf (Standard und Obergrenze). */
+const THUMBNAIL_BACKFILL_STANDARD = 50;
+const THUMBNAIL_BACKFILL_MAX = 100;
+
+/**
+ * Eingabe von backfillRecipeThumbnails prüfen: {cursor: Rezept-ID oder null, batchSize}.
+ * @param {*} data - request.data
+ * @return {{cursor: string|null, anzahl: number}}
+ */
+function pruefeThumbnailBackfillEingabe(data) {
+  const cursor = data?.cursor ?? null;
+  if (cursor !== null &&
+      (typeof cursor !== 'string' || !cursor.trim() || cursor.includes('/') || cursor.length > 200)) {
+    throw new HttpsError('invalid-argument', 'cursor muss eine Rezept-ID oder null sein');
+  }
+  const anzahl = data?.batchSize ?? THUMBNAIL_BACKFILL_STANDARD;
+  if (!Number.isInteger(anzahl) || anzahl < 1 || anzahl > THUMBNAIL_BACKFILL_MAX) {
+    throw new HttpsError('invalid-argument', `batchSize muss eine ganze Zahl von 1 bis ${THUMBNAIL_BACKFILL_MAX} sein`);
+  }
+  return {cursor, anzahl};
+}
+
 /**
  * Backfills thumbnails for all existing recipes that have images but lack
  * a `thumbnailUrl` on one or more of their image entries.
  *
- * The function processes up to `batchSize` (default 50) recipes per invocation
- * to stay within Cloud Functions time limits. Call it multiple times if needed.
+ * The function processes up to `batchSize` (default 50, at most 100) recipes per
+ * invocation to stay within Cloud Functions time limits, page by page in document-ID
+ * order (Tech-Check F20): pass the returned `naechsterCursor` as `cursor` to continue
+ * until `fertig` is true. Without the cursor every call read the same first page, so
+ * recipes beyond it never got a thumbnail.
  *
  * For each image without a `thumbnailUrl`:
  *  1. Downloads the full image from Firebase Storage (or from a public URL).
@@ -867,13 +892,20 @@ exports.backfillRecipeThumbnails = onCall(
         throw new HttpsError('permission-denied', 'Admin role required.');
       }
 
-      const {batchSize = 50} = request.data || {};
+      const {cursor, anzahl} = pruefeThumbnailBackfillEingabe(request.data);
       const db = getFirestore();
       const bucket = getStorage().bucket();
 
-      // Fetch recipes in batches
-      const snapshot = await db.collection('recipes').limit(batchSize).get();
-      const results = {processed: 0, updated: 0, skipped: 0, errors: []};
+      // Next page of recipes after the cursor, ordered by document ID.
+      let abfrage = db.collection('recipes').orderBy(FieldPath.documentId()).limit(anzahl);
+      if (cursor) abfrage = abfrage.startAfter(cursor);
+      const snapshot = await abfrage.get();
+      const fertig = snapshot.docs.length < anzahl;
+      const results = {
+        processed: 0, updated: 0, skipped: 0, errors: [],
+        naechsterCursor: fertig ? null : snapshot.docs[snapshot.docs.length - 1].id,
+        fertig,
+      };
 
       for (const doc of snapshot.docs) {
         results.processed++;
