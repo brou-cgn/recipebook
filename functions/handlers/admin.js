@@ -9,6 +9,7 @@ const {getFirestore, FieldValue, FieldPath} = require('firebase-admin/firestore'
 const {getAuth} = require('firebase-admin/auth');
 const {getStorage} = require('firebase-admin/storage');
 const {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom} = require('../shared/secrets');
+const {mailFehlerCode} = require('../shared/mailFehler');
 const {requireAiCaller} = require('../shared/auth');
 const {escapeHtml} = require('../shared/common');
 const {cleanupFollowData} = require('../followCleanup');
@@ -229,7 +230,7 @@ exports.sendGroupInvitationEmail = onCall(
         await transporter.sendMail(mailOptions);
         console.log(`sendGroupInvitationEmail: invitation sent (inviter ${callerAuth.uid})`);
       } catch (mailError) {
-        console.error('sendGroupInvitationEmail: error sending email:', mailError);
+        console.error('sendGroupInvitationEmail: error sending email:', mailFehlerCode(mailError));
         throw new HttpsError('internal', 'Fehler beim Versenden der Einladungs-E-Mail.');
       }
 
@@ -423,7 +424,7 @@ exports.notifyAdminsOnUserRegistration = onDocumentCreated(
         await transporter.sendMail(mailOptions);
         console.log(`notifyAdminsOnUserRegistration: email sent to ${adminEmails.length} admin(s)`);
       } catch (error) {
-        console.error('notifyAdminsOnUserRegistration: error sending email:', error);
+        console.error('notifyAdminsOnUserRegistration: error sending email:', mailFehlerCode(error));
       }
     },
 );

@@ -12,6 +12,7 @@ const {fetchFirestoreDailyUsage, buildFirestoreUsageSection} = require('../fires
 const {fetchFirestoreInventory, buildFirestoreInventorySection} = require('../firestoreInventory');
 const {NUTRITION_REFERENCE_COLLECTION, calculateNutritionFromOpenFoodFactsCore} = require('../shared/nutritionCore');
 const {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom, geminiApiKey} = require('../shared/secrets');
+const {mailVersandFehler} = require('../shared/mailFehler');
 
 function extractRecipeIngredientItems(recipeData = {}) {
   const rawIngredients = Array.isArray(recipeData?.zutaten) ?
@@ -202,13 +203,18 @@ async function sendAdminReportMail({subject, text, html, logLabel}) {
     auth: {user: smtpUserVal, pass: smtpPasswordVal},
   });
 
-  await transporter.sendMail({
-    from: smtpFromVal,
-    bcc: adminEmails.join(', '),
-    subject,
-    text,
-    html,
-  });
+  try {
+    await transporter.sendMail({
+      from: smtpFromVal,
+      bcc: adminEmails.join(', '),
+      subject,
+      text,
+      html,
+    });
+  } catch (err) {
+    // Die Aufrufer loggen den Fehler; ohne Ersatz stünden die Admin-Adressen im Log (Tech-Check S27).
+    throw mailVersandFehler(err);
+  }
   return true;
 }
 
