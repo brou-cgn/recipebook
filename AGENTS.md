@@ -40,6 +40,12 @@ erzwungen — wo das gilt, steht die Datei dabei.
   in `tokens.css` mit beiden Werten anlegen. Erzwungen durch `src/colorTokenPolicy.test.js`
   (Baseline je Datei, darf nur sinken: wer Farben migriert, senkt den Wert; für `darkMode.css`
   zählt die Zahl der Dark-Selektoren).
+- **Textfarben auf `p`, `span`, `label`, `li` im Dunkelmodus** (Tech-Check A7): `darkMode.css` setzt
+  sie pauschal auf `#e8e8e8` (`[data-theme="dark"] span` usw., Spezifität 0-1-1). Eine Token-Farbe
+  mit nur einer Klasse (`.hinweis { color: var(--color-danger) }`) verliert dagegen und wird im
+  Dunkelmodus weiß. Bis die pauschale Regel abgelöst ist, Token-Textfarben für diese Elemente mit
+  mindestens 0-1-1 schreiben, z. B. `.seite .hinweis` oder `span.hinweis`. Erzwungen durch
+  `src/darkTextPolicy.test.js` (Baseline je Datei, darf nur sinken).
 - **Löschaktionen**: ausschließlich `DeleteRowButton` (kein eigenes ×, kein gefüllter Kreis,
   kein Icon im Eingabefeld). 28 × 28 px, Radius 999, transparent; Rot `#a33a26` auf 12 % Fläche
   erst bei Hover/Fokus; am rechten Zeilenrand; Tooltip und `aria-label` „<Name> entfernen".
