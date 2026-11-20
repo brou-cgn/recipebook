@@ -16,6 +16,8 @@ erzwungen — wo das gilt, steht die Datei dabei.
 
 ## Datenzugriff
 - Nie eine ganze Collection lesen. Abfragen immer mit `where` und `limit`.
+  Erzwungen durch `src/dataAccessPolicy.test.js` (Tech-Check K3/W3): zählt je Datei Lesezugriffe
+  auf eine ganze Collection und `query(...)` ohne `limit`; Baseline je Datei, darf nur sinken.
 - Aggregierte Daten (Logs, Zähler) nicht pro Aufruf einzeln schreiben und alle lesen.
 - Keine personenbezogenen Daten (E-Mail-Adressen u. Ä.) in Logs oder Protokolle. In `functions/`
   erzwungen durch `functions/logPolicy.test.js` (uid oder ID statt Adresse loggen).
