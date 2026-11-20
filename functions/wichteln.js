@@ -56,6 +56,7 @@
 const crypto = require('crypto');
 const linkVorschau = require('./linkVorschau');
 const {normalisiereSprache, STANDARD_SPRACHE} = require('./shared/sprachen');
+const {mailFehlerCode} = require('./shared/mailFehler');
 const {baueEinladungsMail, baueNeuigkeitenMail, baueErinnerungsMail} = require('./wichtelMail');
 
 const COLLECTION = 'wichtelRunden';
@@ -728,11 +729,6 @@ async function reserviereMails(db, uid, anzahl, jetztMs) {
 /** Antwortfeld `versand`, wenn keine Mail rausgehen sollte. */
 function keinVersand() {
   return {gesendet: 0, fehlgeschlagen: 0, grund: null};
-}
-
-/** Nur Codes, nie die Meldung: die Antwort des SMTP-Servers kann die Adresse enthalten (S26). */
-function mailFehlerCode(err) {
-  return [err?.code, err?.responseCode, err?.command].filter(Boolean).join(' ') || 'unbekannt';
 }
 
 const erinnerungPfad = (rundeId, teilnehmerId) => `${ERINNERUNGEN_COLLECTION}/${rundeId}_${teilnehmerId}`;
