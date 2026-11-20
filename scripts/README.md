@@ -81,3 +81,15 @@ Einmalig in der Cloud Shell ausführen; erneutes Ausführen aktualisiert die Reg
 ```bash
 ./scripts/setup-function-error-alert.sh <MAIL_ADRESSE> [PROJECT_ID]
 ```
+
+## techCheckAbgleich.js
+
+Abgleich des Dashboards „RecipeBook Tech-Check“ mit `main` (Tech-Check W6). Meldet Einträge in den Datensätzen `umsetzungen` und `findings`, die noch einen Stand vor dem Merge nennen („Branch …, noch kein PR“, „PR #… (offen, …)“), obwohl der Branch bzw. PR gemergt ist. Nennt ein Eintrag einen Commit, zählt er nur als gemergt, wenn dieser Commit auf `main` liegt.
+
+**Usage:**
+```bash
+git fetch origin main            # im flachen Klon: git fetch --unshallow origin main
+node scripts/techCheckAbgleich.js umsetzungen.json findings.json
+```
+
+Die beiden JSON-Dateien sind die Datensätze des Dashboards (Blob-ID aus `datasets/<id>.source.url`, Download per Artifact read mit `path`). Exit-Code 1, wenn veraltete Einträge gefunden wurden. Regel dazu: `CLAUDE.md`, Abschnitt Tech-Check.

@@ -69,6 +69,14 @@ das Dashboard im selben Arbeitsgang – nicht erst auf Nachfrage:
 - Roadmap, Kacheln, Kernaussage und Umsetzungsstand nicht von Hand pflegen –
   sie werden aus `findings` und `umsetzungen` berechnet. Die Roadmap selbst
   nur ändern, wenn sich die Planung (Phasen, Zuordnung) ändert.
+- Vor jeder Arbeit am Tech-Check den Stand mit `main` abgleichen (Tech-Check W6):
+  `git fetch origin main` (im flachen Klon `--unshallow`), die Datensätze
+  `umsetzungen` und `findings` herunterladen (Blob-ID aus `datasets/<id>.source.url`,
+  Artifact read mit `path`) und `node scripts/techCheckAbgleich.js umsetzungen.json findings.json`
+  ausführen. Was es meldet, nachtragen: PR-Nummer, Merge-Commit, Deploy-Lauf, Status.
+- Stände vor dem Merge so eintragen, dass der Abgleich sie findet:
+  „Branch <name> (Commit <hash>, noch kein PR)“ bzw. „PR #<n> (offen, …)“.
+  Wird der PR in derselben Session gemergt, den Eintrag gleich danach ersetzen.
 
 ### Follow-Feature (Vernetzung zwischen Mitgliedern)
 Entscheidungen, PR-Plan und offene Punkte stehen in `docs/vorhaben/follow.md`.
