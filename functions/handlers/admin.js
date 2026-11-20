@@ -12,6 +12,7 @@ const {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom} = require('../share
 const {mailFehlerCode} = require('../shared/mailFehler');
 const {requireAiCaller} = require('../shared/auth');
 const {escapeHtml} = require('../shared/common');
+const {abrufOeffentlich} = require('../shared/oeffentlicherAbruf');
 const {cleanupFollowData} = require('../followCleanup');
 const {deleteCookDatesOfUser, deleteNonPublicRecipesOfUser} = require('../accountCleanup');
 const {consolidateCallLogs, formatConsolidationSummary, normalizeTrendingDays} = require('../callLogConsolidation');
@@ -945,7 +946,12 @@ exports.backfillRecipeThumbnails = onCall(
                     if (!matches) return img;
                     imageBuffer = Buffer.from(matches[1], 'base64');
                   } else {
-                    const response = await fetch(img.url);
+                    // img.url comes from recipe data: only public targets (Tech-Check S28).
+                    const response = await abrufOeffentlich(img.url, {
+                      timeoutMs: 20000,
+                      maxBytes: 20 * 1024 * 1024,
+                      beiUeberlaenge: 'fehler',
+                    });
                     if (!response.ok) {
                       throw new Error(`HTTP ${response.status}`);
                     }
