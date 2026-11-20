@@ -97,6 +97,13 @@ service cloud.firestore {
           .hasAny(['ratingAvg', 'ratingCount', 'weinprofil']);
     }
 
+    // Beim Anlegen gar nicht (Tech-Check S29): sonst ließe sich ein Rezept mit erfundener
+    // Bewertung anlegen. addRecipe (src/utils/recipeFirestore.js) entfernt die Felder vorher,
+    // auch aus exportierten Rezepten im Sammelimport und aus Rezeptversionen.
+    function setsFunctionOwnedRecipeFields() {
+      return request.resource.data.keys().hasAny(['ratingAvg', 'ratingCount', 'weinprofil']);
+    }
+
     // Recipes collection
     match /recipes/{recipeId} {
       // Direct reads are for signed-in users with a profile only. Anonymous
@@ -106,7 +113,7 @@ service cloud.firestore {
       // cannot express "public, no draft, not list-locked", and a shareId clause
       // here would let anyone enumerate every shared recipe with a range query.
       allow get, list: if isAnyUser() && !isAnonymous();
-      allow create: if isEditOrAdmin() && !createsShortcutOrigin();
+      allow create: if isEditOrAdmin() && !createsShortcutOrigin() && !setsFunctionOwnedRecipeFields();
       allow delete: if isEditOrAdmin();
       // ratingAvg/ratingCount (aggregateRecipeRating) und weinprofil (generateWeinprofile)
       // schreiben nur Cloud Functions, siehe changesFunctionOwnedRecipeFields.
