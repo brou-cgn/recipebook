@@ -479,12 +479,28 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Anlegen eines Aufruf-Protokolls (Tech-Check S30): genau die Felder, die
+    // logAppCall bzw. logRecipeCall schreiben, mit Typ und Länge; der Zeitstempel
+    // kommt vom Server (serverTimestamp()). Vorher ging jedes Feld mit jedem Wert
+    // durch, etwa ein frei gewählter timestamp, mit dem sich „Im Trend“ füllen ließ.
+    // Eine Mengenbremse je Person ginge nur über eine Cloud Function.
+    function isValidCallLog(data, fields) {
+      return data.keys().hasAll(fields) && data.keys().hasOnly(fields)
+        && data.userId == request.auth.uid
+        && data.userVorname is string && data.userVorname.size() <= 100
+        && data.userNachname is string && data.userNachname.size() <= 100
+        && data.isGuest is bool
+        && data.timestamp == request.time;
+    }
+
     // App calls audit log collection
-    // Holds name and e-mail per session, so only admins and roles granted the
+    // Holds names per session, so only admins and roles granted the
     // appCalls feature may read it. Everyone may only log their own session.
     match /appCalls/{callId} {
       allow read: if canSeeAppCalls();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated()
+        && isValidCallLog(request.resource.data,
+             ['userId', 'userVorname', 'userNachname', 'isGuest', 'timestamp']);
       allow update, delete: if isAdmin();
     }
 
@@ -492,7 +508,12 @@ service cloud.firestore {
     // guests and share-link visitors get nothing.
     match /recipeCalls/{callId} {
       allow read: if isMember();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated()
+        && isValidCallLog(request.resource.data,
+             ['recipeId', 'recipeTitle', 'userId', 'userVorname', 'userNachname', 'isGuest', 'timestamp'])
+        && request.resource.data.recipeId is string
+        && request.resource.data.recipeId.size() > 0 && request.resource.data.recipeId.size() <= 200
+        && request.resource.data.recipeTitle is string && request.resource.data.recipeTitle.size() <= 1000;
       allow update, delete: if isAdmin();
     }
 
