@@ -58,6 +58,12 @@ Concurrency-Gruppe `firebase-deploy` und bricht laufende Deploys **nicht** ab.
 Ein mitten im `firebase deploy` abgebrochener Lauf hinterlässt Hosting,
 Functions und Rules in unterschiedlichen Ständen.
 
+### Vorschau vor dem Merge (Sandbox)
+
+Actions → *Deploy Sandbox* deployt einen beliebigen Branch nur als Hosting in den
+Preview-Channel `sandbox`, ohne Version und ohne Produktions-Deploy.
+Einrichtung und Grenzen: [sandbox.md](sandbox.md).
+
 ### Benötigte Secrets
 
 Settings → Secrets and variables → Actions:

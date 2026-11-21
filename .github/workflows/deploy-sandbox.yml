@@ -1,0 +1,96 @@
+name: Deploy Sandbox
+
+# Manuelle Vorschau eines beliebigen Branches (Tech-Check W2): baut den
+# gewaehlten Branch und laedt NUR Hosting in den Preview-Channel "sandbox" von
+# broubook hoch. Produktion bleibt unberuehrt, es gibt keinen Version-Bump,
+# kein Tag und kein Deploy von Functions oder Rules.
+#
+# Achtung: Die Sandbox nutzt das Produktions-Backend (Firestore, Auth,
+# Storage, Functions). Schreib- und Loeschzugriffe in der Sandbox wirken echt.
+#
+# Start: Actions -> "Deploy Sandbox" -> "Run workflow" -> Branch waehlen.
+# Verfahren und Einrichtung: docs/setup/sandbox.md
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Eigene Gruppe: ein Sandbox-Deploy blockiert nie den Produktions-Deploy.
+# Ein neuer Lauf ersetzt einen laufenden (nur die Vorschau, kein Datenrisiko).
+concurrency:
+  group: firebase-sandbox
+  cancel-in-progress: true
+
+jobs:
+  deploy-sandbox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Version festlegen
+        id: version
+        run: echo "version=sandbox-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          npm_config_fetch_retries: 5
+          npm_config_fetch_retry_mintimeout: 10000
+          npm_config_fetch_retry_maxtimeout: 60000
+
+      - name: Build
+        env:
+          REACT_APP_VERSION: ${{ steps.version.outputs.version }}
+          REACT_APP_FIREBASE_API_KEY: ${{ secrets.REACT_APP_FIREBASE_API_KEY }}
+          REACT_APP_FIREBASE_AUTH_DOMAIN: ${{ secrets.REACT_APP_FIREBASE_AUTH_DOMAIN }}
+          REACT_APP_FIREBASE_PROJECT_ID: ${{ secrets.REACT_APP_FIREBASE_PROJECT_ID }}
+          REACT_APP_FIREBASE_STORAGE_BUCKET: ${{ secrets.REACT_APP_FIREBASE_STORAGE_BUCKET }}
+          REACT_APP_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.REACT_APP_FIREBASE_MESSAGING_SENDER_ID }}
+          REACT_APP_FIREBASE_APP_ID: ${{ secrets.REACT_APP_FIREBASE_APP_ID }}
+          REACT_APP_FIREBASE_MEASUREMENT_ID: ${{ secrets.REACT_APP_FIREBASE_MEASUREMENT_ID }}
+          REACT_APP_FIREBASE_VAPID_KEY: ${{ secrets.REACT_APP_FIREBASE_VAPID_KEY }}
+        run: npm run build
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools@13.35.1
+
+      # Gleicher Channel-Name bei jedem Lauf: die URL bleibt stabil und muss
+      # nur einmal bei Firebase Auth als autorisierte Domain eingetragen
+      # werden. Der Channel laeuft nach 30 Tagen ab und wird beim naechsten
+      # Lauf neu angelegt (die URL aendert sich dann ggf., siehe Doku).
+      - name: Deploy in Preview-Channel
+        id: deploy
+        run: |
+          firebase hosting:channel:deploy sandbox \
+            --project broubook \
+            --expires 30d \
+            --json > channel.json
+          cat channel.json
+          url=$(node -p "const r=require('./channel.json').result; Object.values(r)[0].url")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Sandbox-Deploy"
+            echo ""
+            echo "- **Branch**: ${{ github.ref_name }}"
+            echo "- **Stand**: ${{ steps.version.outputs.version }}"
+            echo "- **URL**: ${{ steps.deploy.outputs.url }}"
+            echo ""
+            echo "Backend ist Produktion: Aenderungen an Daten wirken echt."
+          } >> $GITHUB_STEP_SUMMARY
