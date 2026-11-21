@@ -47,6 +47,15 @@ async function openRecipe(page, title) {
 // `shot` macht das Bild; ein Eintrag darf mehrere Bilder machen.
 const SCREENS = [
   { name: 'anmeldung', loggedOut: true, run: async (page, shot) => shot() },
+  {
+    name: 'registrieren',
+    loggedOut: true,
+    run: async (page, shot) => {
+      await page.getByRole('button', { name: 'Jetzt registrieren' }).click();
+      await page.locator('#confirmPassword').waitFor();
+      await shot();
+    },
+  },
   { name: 'kochbuch', run: async (page, shot) => { await openMenuItem(page, 'Kochbuch'); await shot(); } },
   { name: 'rezept', run: async (page, shot) => { await openRecipe(page, 'Linsensuppe mit Kreuzkümmel'); await shot(); } },
   {
@@ -139,7 +148,51 @@ const SCREENS = [
     },
   },
   { name: 'festtafel', run: async (page, shot) => { await openMenuItem(page, 'Festtafel'); await shot(); } },
+  {
+    name: 'menue',
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Festtafel');
+      await page.getByText('Sonntagsessen', { exact: true }).first().click();
+      await page.locator('.menu-detail-container').first().waitFor();
+      await pause(page, 1000);
+      await shot();
+    },
+  },
   { name: 'events', run: async (page, shot) => { await openMenuItem(page, 'Events'); await shot(); } },
+  {
+    name: 'event',
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Events');
+      await page.getByText('Sommerfest', { exact: true }).first().click();
+      await pause(page, 1000);
+      await shot();
+    },
+  },
+  {
+    // Auf dem Handy öffnet ein schwebender Knopf das Formular; der Bildschirm ist vorerst nur Desktop
+    name: 'event-bearbeiten',
+    variants: ['desktop-hell', 'desktop-dunkel'],
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Events');
+      await page.getByText('Sommerfest', { exact: true }).first().click();
+      await pause(page, 1000);
+      await page.getByRole('button', { name: 'Bearbeiten', exact: true }).first().click();
+      await page.locator('.events-form').first().waitFor();
+      await pause(page);
+      await shot();
+    },
+  },
+  // Die drei Verwaltungsseiten öffnen auf Desktop Knöpfe über der Liste, auf dem Handy schwebende
+  // Knöpfe; beide tragen denselben Namen
+  ...[['event-getraenke', 'Getränke verwalten'], ['event-gaeste', 'Gäste verwalten'], ['event-wichteln', 'Wichteln']].map(([name, label]) => ({
+    name,
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Events');
+      await page.getByRole('button', { name: label, exact: true }).first().click();
+      await pause(page, 1000);
+      await shot();
+    },
+  })),
   { name: 'chefkoch', run: async (page, shot) => { await openMenuItem(page, 'Chefkoch & mehr'); await shot(); } },
   { name: 'einstellungen', run: async (page, shot) => { await openMenuItem(page, 'Einstellungen'); await shot(); } },
   {
