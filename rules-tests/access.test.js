@@ -64,6 +64,19 @@ test('recipes (Tech-Check S29): ratingAvg, ratingCount und weinprofil ändern nu
   await assertSucceeds(as.user(env, 'editor').doc('recipes/open').update({ title: 'Neuer', ratingAvg: 4, weinprofil: profil }));
 });
 
+test('recipes (Tech-Check S29): ein neues Rezept bringt keine Bewertung und kein Weinprofil mit', async () => {
+  const profil = { rolle: 'hauptgericht', hauptkomponente: 'rind_lamm', inputHash: 'abc', schemaVersion: 1 };
+  const recipe = { title: 'Neu', authorId: 'editor', groupId: 'g1' };
+  for (const uid of ['editor', 'admin']) {
+    const db = as.user(env, uid);
+    await assertFails(db.collection('recipes').add({ ...recipe, ratingAvg: 5, ratingCount: 40 }));
+    await assertFails(db.collection('recipes').add({ ...recipe, ratingCount: 0 }));
+    await assertFails(db.collection('recipes').add({ ...recipe, weinprofil: profil }));
+    await assertFails(db.doc('recipes/gesetzt').set({ ...recipe, ratingAvg: 5 }));
+  }
+  await assertSucceeds(as.user(env, 'editor').collection('recipes').add(recipe));
+});
+
 test('recipes (Tech-Check S20): Clients legen keine Shortcut-Import-Jobs an, sonst startet der Trigger Gemini ohne Limit', async () => {
   const job = {
     title: 'Rezept-Import', authorId: 'editor', isTemp: true, importStatus: 'queued',

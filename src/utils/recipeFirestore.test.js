@@ -292,6 +292,18 @@ describe('Recipe Firestore - Recipe Count', () => {
       );
     });
 
+    it('entfernt ratingAvg, ratingCount und weinprofil (nur Cloud Functions, Tech-Check S29)', async () => {
+      const { removeUndefinedFields } = jest.requireMock('./firestoreUtils');
+      removeUndefinedFields.mockImplementation((obj) => obj);
+      await addRecipe({ title: 'Exportiert', ratingAvg: 4.5, ratingCount: 12, weinprofil: { rolle: 'dessert' }, portionen: 4 }, 'user1');
+
+      const gespeichert = mockAddDoc.mock.calls[0][1];
+      expect(gespeichert).toMatchObject({ title: 'Exportiert', portionen: 4, authorId: 'user1' });
+      expect(gespeichert).not.toHaveProperty('ratingAvg');
+      expect(gespeichert).not.toHaveProperty('ratingCount');
+      expect(gespeichert).not.toHaveProperty('weinprofil');
+    });
+
     it('should not update recipe_count when no authorId is provided', async () => {
       await addRecipe({ title: 'Test Recipe' }, null);
 
