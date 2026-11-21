@@ -72,7 +72,10 @@ erzwungen — wo das gilt, steht die Datei dabei.
   mit Fläche; erzwungen durch `src/buttonPolicy.test.js` (Baseline je CSS-Datei, darf nur sinken).
   Außerhalb des Systems: schwebende runde Knöpfe, `DeleteRowButton`, Chips, Tabs, Schalter. Im
   Event-Bereich ist der Haupt-Knopf grün (Token in `Button.css`), die Wichtel-Teilnehmerseite behält
-  ihre Gestaltung. Vorgabe: Designvorschlag https://claude.ai/artifact/6rhAdarajgh9jkVg2HJ5zk (Tech-Check A8).
+  ihre Gestaltung. Auf dem Handy (bis 768 px) ist der Haupt-Knopf so breit wie sein Platz; eine Reihe,
+  in der das nicht passt (Eingabezeile), stellt ihn lokal zurück. Neben-Knöpfe direkt auf dem grauen
+  Seitenhintergrund statt in einer Karte sind weiß mit Rand: den Container in die Liste in `Button.css`
+  aufnehmen. Vorgabe: Designvorschlag https://claude.ai/artifact/6rhAdarajgh9jkVg2HJ5zk (Tech-Check A8).
 - Hooks wiederverwenden, keine eigene Logik: `src/hooks/useSwipeToDelete.js`
   (Direction-Lock 6 px, Schwelle 56 px, max. 96 px Offset) und `src/hooks/useUndoableDelete.js`
   (Mutation erst nach Ablauf des Undo-Fensters oder bei Unmount/`pagehide`;

@@ -32,6 +32,12 @@
   .ui-button {
     min-height: var(--height-button-touch);
   }
+
+  /* Auf dem Handy ist der Haupt-Knopf so breit wie sein Platz (Entscheidung 21.11.2026): allein in
+     voller Breite, in einer umbrechenden Knopfreihe in eigener Zeile, sonst füllt er den Rest */
+  .ui-button--primary {
+    width: 100%;
+  }
 }
 
 .ui-button--primary {
@@ -42,6 +48,7 @@
 .ui-button--secondary {
   background: var(--color-button-secondary-bg);
   color: var(--color-button-secondary-text);
+  border-color: var(--color-button-secondary-border);
 }
 
 .ui-button--danger {
@@ -57,6 +64,17 @@
 .ui-button--ghost {
   background: transparent;
   color: var(--color-button-ghost-text);
+}
+
+/* Neben-Knöpfe direkt auf dem grauen Seitenhintergrund statt in einer Karte: weiß mit feinem Rand,
+   sonst hebt sich die graue Fläche kaum ab (Entscheidung 21.11.2026). Dunkel bleibt alles gleich. */
+.recipe-detail-header,
+.menu-detail-header,
+.events-manage-links,
+.events-page-header-actions {
+  --color-button-secondary-bg: var(--color-button-secondary-page-bg);
+  --color-button-secondary-hover: var(--color-button-secondary-page-hover);
+  --color-button-secondary-border: var(--color-button-secondary-page-border);
 }
 
 /* Im Event-Bereich trägt der Haupt-Knopf die Modulfarbe (wie der Fokusrahmen in focusRing.css) */
