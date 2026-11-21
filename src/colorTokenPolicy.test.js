@@ -48,21 +48,21 @@ const BASELINE = {
   'components/MemberProfilePage.css': 3,
   'components/MenuDetail.css': 22,
   'components/MenuFilterSidebar.css': 12,
-  'components/MenuForm.css': 59,
+  'components/MenuForm.css': 55,
   'components/MenuList.css': 6,
   'components/MobileSearchOverlay.css': 21,
   'components/NetworkPage.css': 6,
   'components/NutritionModal.css': 72,
   'components/OcrScanModal.css': 109,
-  'components/PasswordChangeModal.css': 11,
-  'components/PersonalDataPage.css': 34,
+  'components/PasswordChangeModal.css': 9,
+  'components/PersonalDataPage.css': 28,
   'components/PortionSelector.css': 8,
   'components/PrintFormatEditor.css': 43,
   'components/PrintPage.css': 16,
   'components/RatingModal.css': 15,
   'components/RecipeDetail.css': 110,
   'components/RecipeFilterSidebar.css': 18,
-  'components/RecipeForm.css': 116,
+  'components/RecipeForm.css': 112,
   'components/RecipeImageCarousel.css': 4,
   'components/RecipeImportModal.css': 27,
   'components/RecipeList.css': 24,
@@ -140,7 +140,7 @@ describe('Farb-Token-Richtlinie', () => {
 // darkMode.css ist Altbestand: neue Dark-Regeln gehören als Token in tokens.css
 // (AGENTS.md). Gezählt werden die [data-theme="dark"]-Selektoren; der Wert darf nur
 // sinken (Tech-Check D5: am 27.10.2026 kamen trotz Regel sieben neue dazu).
-const DARK_MODE_SELECTORS = 1006;
+const DARK_MODE_SELECTORS = 995;
 
 describe('darkMode.css (Altbestand)', () => {
   const css = fs.readFileSync(path.join(SRC, 'darkMode.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

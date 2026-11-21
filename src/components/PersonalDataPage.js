@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './PersonalDataPage.css';
+import Button from './Button';
 import { updateUserProfile, changePassword, saveFcmToken, setBackgroundUpdatesEnabled } from '../utils/userManagement';
 import { ALARM_SOUNDS, getAlarmSoundPreference, saveAlarmSoundPreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference } from '../utils/customLists';
 import { previewAlarmSound } from '../utils/alarmAudioUtils';
@@ -478,12 +479,12 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           </div>
         )}
         <div className="personal-data-actions">
-          <button type="button" className="personal-data-cancel-btn" onClick={onBack}>
+          <Button variant="secondary" onClick={onBack}>
             Abbrechen
-          </button>
-          <button type="submit" className="personal-data-save-btn" disabled={saving}>
+          </Button>
+          <Button variant="primary" type="submit" loading={saving}>
             {saving ? 'Wird gespeichert…' : 'Speichern'}
-          </button>
+          </Button>
         </div>
       </form>
 
@@ -723,9 +724,9 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
             </div>
           )}
           <div className="personal-data-actions">
-            <button type="submit" className="personal-data-save-btn" disabled={savingPassword}>
+            <Button variant="primary" type="submit" loading={savingPassword}>
               {savingPassword ? 'Wird geändert…' : 'Passwort ändern'}
-            </button>
+            </Button>
           </div>
         </form>
       </section>
@@ -787,9 +788,9 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
             </div>
           )}
           <div className="personal-data-actions">
-            <button type="submit" className="personal-data-save-btn" disabled={savingPin}>
+            <Button variant="primary" type="submit" loading={savingPin}>
               {savingPin ? 'Wird gespeichert…' : pinActive ? 'PIN ändern' : 'PIN setzen'}
-            </button>
+            </Button>
           </div>
         </form>
       </section>

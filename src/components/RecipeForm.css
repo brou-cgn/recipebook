@@ -24,45 +24,6 @@
   flex-shrink: 0;
 }
 
-.recipe-form-header-cancel,
-.recipe-form-header-save {
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 1rem;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  background: white;
-  transition: all 0.3s ease;
-}
-
-.recipe-form-header-cancel {
-  border: 1px solid var(--color-border);
-  color: #666;
-}
-
-.recipe-form-header-cancel:hover {
-  background: #f5f5f5;
-}
-
-.recipe-form-header-save {
-  border: 1px solid #402C1C;
-  color: var(--color-brand);
-}
-
-.recipe-form-header-save:hover:not(:disabled) {
-  background: #402C1C;
-  color: white;
-}
-
-.recipe-form-header-save:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
 /* Desktop: buttons live in the header instead of floating FABs */
 @media (min-width: 769px) {
   .recipe-form-header-title {
@@ -497,7 +458,6 @@
 .recipe-form-desktop-only {
   display: block;
 }
-
 
 .form-group input:focus,
 .form-group select:focus {

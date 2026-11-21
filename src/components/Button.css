@@ -18,7 +18,10 @@
   font-size: 15px;
   font-weight: 600;
   line-height: 1.2;
-  white-space: nowrap;
+  /* Text bleibt einzeilig, solange Platz ist; in zu schmalen Reihen bricht er um, statt die Seite
+     seitlich scrollbar zu machen */
+  text-align: center;
+  max-width: 100%;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;

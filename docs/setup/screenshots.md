@@ -30,6 +30,10 @@ zu ändern; `--variants` beschränkt auf einzelne Varianten. Läuft auf dem Port
 Ein Lauf dauert rund drei Minuten. Ergebnis: je Variante ein Ordner mit PNG-Dateien und eine
 `index.html` mit allen Bildern als Raster. `screenshots-out/` steht in `.gitignore`.
 
+Jeder Lauf prüft außerdem, ob ein Bildschirm seitlich scrollbar ist, also breiter als das Fenster
+(etwa eine Knopfreihe auf dem Handy). Betroffene Bilder stehen in der Ausgabe und oben in der
+`index.html`.
+
 Vorher-nachher: einmal auf `main` (Ordner `vorher`), einmal auf dem Branch (Ordner `nachher`),
 dann beide `index.html` nebeneinander ansehen.
 
@@ -49,7 +53,9 @@ dann beide `index.html` nebeneinander ansehen.
 ## Bildschirme ergänzen
 
 Neue Einträge in `SCREENS` in `scripts/screenshots/capture.js`: ein Name und eine Funktion, die
-vom Kochbuch aus dorthin navigiert und `shot()` aufruft. Fehlt ein Bild, steht der Grund in der
+vom Kochbuch aus dorthin navigiert und `shot()` aufruft. `fullPage: true` fotografiert die ganze
+Seite statt nur den sichtbaren Ausschnitt, `variants` beschränkt einen Bildschirm auf einzelne
+Varianten (etwa Formulare, die es nur auf Desktop gibt). Fehlt ein Bild, steht der Grund in der
 Ausgabe und oben in der `index.html`; die übrigen Bilder entstehen trotzdem.
 
 ## Grenzen
