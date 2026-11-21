@@ -1658,8 +1658,7 @@
   flex-shrink: 0;
 }
 
-.faq-edit-btn,
-.faq-delete-btn {
+.faq-edit-btn {
   background: transparent;
   border: none;
   cursor: pointer;
@@ -1671,10 +1670,6 @@
 
 .faq-edit-btn:hover {
   background: rgba(64, 44, 28, 0.1);
-}
-
-.faq-delete-btn:hover {
-  background: rgba(255, 100, 100, 0.1);
 }
 
 .faq-list-item-description {

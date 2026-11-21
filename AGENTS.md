@@ -52,9 +52,12 @@ erzwungen — wo das gilt, steht die Datei dabei.
   ESLint (`no-restricted-syntax`) lehnt die Klassen `remove-btn` / `remove-child-btn` ab.
 - Löschen wirkt sofort mit Snackbar „Rückgängig" (6 s, Wiederherstellung am alten Index).
   Kein Bestätigungsdialog, außer beim Löschen eines ganzen Rezepts mit Inhalt sowie einer
-  ganzen Liste oder eines ganzen Menüs (Tech-Check D2: beide sind Detailansichten, die nach dem
-  Löschen verlassen werden, ein Undo-Fenster liefe dort mit dem Unmount sofort ab). Diese
-  Rückfragen nutzen `src/components/ConfirmDialog.js`, nie `window.confirm`.
+  ganzen Liste, eines ganzen Menüs oder eines ganzen Events (Tech-Check D2 und D6: alles
+  Detailansichten, die nach dem Löschen verlassen werden, ein Undo-Fenster liefe dort mit dem
+  Unmount sofort ab). Inhalt eines Rezepts sind Zutaten, Schritte oder ein Bild
+  (`src/utils/recipeContent.js`); ein leeres Rezept wird ohne Rückfrage gelöscht, auch beim
+  Verwerfen eines Imports. Diese Rückfragen nutzen `src/components/ConfirmDialog.js`, nie
+  `window.confirm`.
 - Die Desktop-Spezifikation gilt nur für Desktop. Mobil gilt die Linksswipe-Geste.
 - Hooks wiederverwenden, keine eigene Logik: `src/hooks/useSwipeToDelete.js`
   (Direction-Lock 6 px, Schwelle 56 px, max. 96 px Offset) und `src/hooks/useUndoableDelete.js`

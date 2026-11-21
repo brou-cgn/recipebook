@@ -8,6 +8,8 @@ import Login from './components/Login';
 import SplashScreen from './components/SplashScreen';
 import MobileSearchOverlay from './components/MobileSearchOverlay';
 import BottomNavigation from './components/BottomNavigation';
+import ConfirmDialog from './components/ConfirmDialog';
+import { recipeHasContent } from './utils/recipeContent';
 import CookingSessionDock from './components/CookingSessionDock';
 import {
   loginUser, 
@@ -415,6 +417,7 @@ function App() {
   const [editingTutorial, setEditingTutorial] = useState(null);
   const [tutorials, setTutorials] = useState([]);
   const [editingRecipe, setEditingRecipe] = useState(null);
+  const [importToDiscard, setImportToDiscard] = useState(null);
   const [pendingReviewRecipes, setPendingReviewRecipes] = useState([]);
   const [isCreatingVersion, setIsCreatingVersion] = useState(false);
   // Vorschritt "Änderungen beschreiben" (Berechtigung versionDictation): gilt nur,
@@ -1811,19 +1814,37 @@ function App() {
     }
   };
 
+  const discardTempImport = (recipe) => {
+    handledTempReviewIdsRef.current.add(recipe.id);
+    deleteRecipeFromFirestore(recipe.id).catch((error) => {
+      console.error('Error discarding temp recipe:', error);
+    });
+  };
+
   const handleCancelForm = () => {
     if (editingRecipe?.isTemp) {
       // Discarding a pending background import deletes the recipe document
-      // entirely (it only ever existed as a TEMP draft), so confirm first —
-      // same rule as deleting any other recipe with content.
-      if (!window.confirm(`Möchten Sie den Import "${editingRecipe.title || 'Unbenanntes Rezept'}" wirklich verwerfen?`)) {
+      // entirely (it only ever existed as a TEMP draft): same rule as deleting
+      // any other recipe (AGENTS.md, Löschaktionen) - with content the app
+      // dialog asks first (see importToDiscard), an empty one goes right away.
+      if (recipeHasContent(editingRecipe)) {
+        setImportToDiscard(editingRecipe);
         return;
       }
-      handledTempReviewIdsRef.current.add(editingRecipe.id);
-      deleteRecipeFromFirestore(editingRecipe.id).catch((error) => {
-        console.error('Error discarding temp recipe:', error);
-      });
+      discardTempImport(editingRecipe);
     }
+    closeRecipeForm();
+  };
+
+  const handleDiscardImportConfirmed = () => {
+    const recipe = importToDiscard;
+    setImportToDiscard(null);
+    if (!recipe) return;
+    discardTempImport(recipe);
+    closeRecipeForm();
+  };
+
+  const closeRecipeForm = () => {
     setIsFormOpen(false);
     if (!editingRecipe?.isTemp && editingRecipe && editingRecipe.id !== undefined && !isCreatingVersion) {
       // Return to recipe detail view when canceling an edit of an existing recipe
@@ -3275,6 +3296,15 @@ function App() {
           <Suspense fallback={null}>
             <AtelierTasteIntroOverlay onContinue={handleAtelierTasteIntroContinue} />
           </Suspense>
+        )}
+        {importToDiscard && (
+          <ConfirmDialog
+            title="Import verwerfen"
+            message={`Möchten Sie den Import "${importToDiscard.title || 'Unbenanntes Rezept'}" wirklich verwerfen?`}
+            confirmLabel="Verwerfen"
+            onConfirm={handleDiscardImportConfirmed}
+            onCancel={() => setImportToDiscard(null)}
+          />
         )}
       </div>
     </CookingSessionProvider>

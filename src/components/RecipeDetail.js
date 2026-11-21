@@ -8,6 +8,8 @@ import './DeleteFabButton.css';
 import './PortionSelector.css';
 import './RecipeDetail.css';
 import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe, canDeleteRecipes, canViewRecipeIndex, isCurrentUserAdmin } from '../utils/userManagement';
+import { recipeHasContent } from '../utils/recipeContent';
+import ConfirmDialog from './ConfirmDialog';
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
 import useCookingModeTabPosition from '../hooks/useCookingModeTabPosition';
@@ -111,6 +113,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [lastOwnCookDateMs, setLastOwnCookDateMs] = useState(undefined);
   const [seasonMatrixEntries, setSeasonMatrixEntries] = useState([]);
   const [cookingMode, setCookingMode] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= MOBILE_BREAKPOINT);
   const [isTablet, setIsTablet] = useState(
     window.innerWidth > MOBILE_BREAKPOINT && window.innerWidth <= TABLET_BREAKPOINT
@@ -903,10 +906,19 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     [hasMultipleVersions, allRecipes, recipe]
   );
 
+  // Löschregel (AGENTS.md, Löschaktionen): Ein Rezept mit Inhalt fragt im App-Dialog nach,
+  // ein leeres (nur Titel) wird ohne Rückfrage gelöscht.
   const handleDelete = () => {
-    if (window.confirm(`Möchten Sie "${recipe.title}" wirklich löschen?`)) {
+    if (recipeHasContent(recipe)) {
+      setShowDeleteConfirm(true);
+    } else {
       onDelete(recipe.id);
     }
+  };
+
+  const handleDeleteConfirmed = () => {
+    setShowDeleteConfirm(false);
+    onDelete(recipe.id);
   };
 
   const handlePublish = async () => {
@@ -2800,6 +2812,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             </div>
           </div>
         </div>
+      )}
+      {showDeleteConfirm && (
+        <ConfirmDialog
+          title="Rezept löschen"
+          message={`Möchten Sie "${recipe.title}" wirklich löschen?`}
+          onConfirm={handleDeleteConfirmed}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
       )}
       {showShoppingListModal && (
         <ShoppingListModal
