@@ -83,4 +83,11 @@ describe('findStale', () => {
     expect(findStale({ merges, findings, commitInMain: () => false })).toEqual([]);
     expect(findStale({ merges, findings, commitInMain: () => true })).toHaveLength(1);
   });
+  it('meldet eine Umsetzungszeile des wiederverwendeten Branches nicht, wenn ihre Commits nicht auf main liegen', () => {
+    const umsetzungen = [{ pr: 'Branch claude/fertig', datum: '2026-11-19', ergebnis: 'noch kein PR (Commits abc1234, 1234abc und def5678)' }];
+    expect(findStale({ merges, umsetzungen, commitInMain: () => false })).toEqual([]);
+    // Liegt einer der Commits schon auf main, ist der Stand zumindest teilweise überholt
+    expect(findStale({ merges, umsetzungen, commitInMain: (hash) => hash === '1234abc' })).toHaveLength(1);
+    expect(findStale({ merges, umsetzungen, commitInMain: () => true })).toHaveLength(1);
+  });
 });

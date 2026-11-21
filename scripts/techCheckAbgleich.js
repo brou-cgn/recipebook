@@ -69,14 +69,26 @@ const describe = (m) => `als PR #${m.pr} am ${deDate(m.date)} gemergt (Merge ${m
 const BRANCH_NOT_MERGED = /Branch ([\w./-]+)\s*\(([^)]*?(?:noch kein PR|kein PR|nicht gemergt)[^)]*)\)/g;
 const PR_NOT_MERGED = /PR #(\d+)\s*\(((?:offen|noch nicht gemergt|nicht gemergt)[^)]*)\)/g;
 
+// „Commit abc1234“ oder „Commits abc1234, 1234abc und def5678“: alle genannten Hashes.
+const COMMITS = /Commits? ((?:[0-9a-f]{7,40}(?:\s*(?:,|und)\s*)?)+)/g;
+
+/**
+ * Nennt der Text Commits und liegt keiner davon auf main, gehört der Stand zu Arbeit nach
+ * einem früheren Merge desselben Branches (der Branch wird nach dem Merge weiterverwendet).
+ */
+function commitsNotInMain(text, commitInMain) {
+  if (!commitInMain) return false;
+  const hashes = [...String(text || '').matchAll(COMMITS)].flatMap((m) => m[1].match(/[0-9a-f]{7,40}/g));
+  return hashes.length > 0 && hashes.every((hash) => !commitInMain(hash));
+}
+
 function staleInText(text, idx, isoDate, commitInMain) {
   const hits = [];
   for (const m of String(text || '').matchAll(BRANCH_NOT_MERGED)) {
     const merge = branchMerge(idx, m[1], isoDate);
     // Nennt der Eintrag einen Commit, entscheidet der: Ein Branch kann nach einem Merge
     // weitere Commits bekommen, die nie auf main landen.
-    const commit = /Commit ([0-9a-f]{7,40})\b/.exec(m[2]);
-    if (merge && commit && commitInMain && !commitInMain(commit[1])) continue;
+    if (merge && commitsNotInMain(m[2], commitInMain)) continue;
     if (merge) hits.push({ stelle: m[0], hinweis: `Branch ${m[1]} ist ${describe(merge)}` });
   }
   for (const m of String(text || '').matchAll(PR_NOT_MERGED)) {
@@ -98,7 +110,7 @@ function findStale({ umsetzungen = [], findings = [], merges, commitInMain }) {
     const branch = /^Branch\s+(\S+)/.exec(pr);
     if (branch) {
       const merge = branchMerge(idx, branch[1], u.datum);
-      if (merge) out.push({ datensatz: 'umsetzungen', eintrag: pr, stelle: 'pr', hinweis: `Branch ist ${describe(merge)}` });
+      if (merge && !commitsNotInMain(u.ergebnis, commitInMain)) out.push({ datensatz: 'umsetzungen', eintrag: pr, stelle: 'pr', hinweis: `Branch ist ${describe(merge)}` });
     } else if (/^\s*(offen|noch kein PR|nicht gemergt)/i.test(String(u.ergebnis || ''))) {
       for (const n of pr.match(/\d+/g) || []) {
         const merge = idx.byPr.get(Number(n));
