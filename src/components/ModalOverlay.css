@@ -1,0 +1,25 @@
+/* Abgedunkelter Hintergrund der älteren Dialoge (.modal-overlay): Import-Dialoge (Web, Foto-Scan,
+   Rezept, universell), Import-Fortschritt und Benutzerverwaltung. Jeder Nutzer importiert diese Datei
+   selbst; vorher stand die Regel in drei Stylesheets verschiedener Chunks, und welche galt, hing davon
+   ab, was schon geladen war (cssChunkIsolation.test.js).
+   z-index 2000 wie die übrigen Dialoge (CookDateModal, RatingModal …): Mit 1000 lag auf dem Handy die
+   untere Navigation (1200) über dem Dialog und verdeckte seine Knopfleiste (Tech-Check M17). */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 10px;
+  }
+}

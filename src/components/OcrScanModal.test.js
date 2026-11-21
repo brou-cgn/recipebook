@@ -487,7 +487,7 @@ describe('OcrScanModal', () => {
         expect(screen.getByText(/1 Foto aufgenommen/i)).toBeInTheDocument();
       });
 
-      const abortButton = screen.getByText('× Abbrechen');
+      const abortButton = screen.getByText('Kamera abbrechen');
       fireEvent.click(abortButton);
 
       await waitFor(() => {

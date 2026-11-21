@@ -205,23 +205,6 @@
   line-height: 1.5;
 }
 
-.new-import-button {
-  margin-top: 20px;
-  padding: 10px 20px;
-  background-color: #f5f5f5;
-  color: #333;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.95rem;
-  transition: all 0.2s;
-  width: 100%;
-}
-
-.new-import-button:hover {
-  background-color: #e0e0e0;
-}
-
 /* Error */
 .web-import-error {
   margin-top: 15px;
@@ -251,33 +234,6 @@
   font-size: 1rem;
   font-weight: 500;
   transition: all 0.2s;
-}
-
-.cancel-button {
-  background-color: var(--color-surface-input);
-  color: #333;
-}
-
-.cancel-button:hover {
-  background-color: #e0e0e0;
-}
-
-.submit-button {
-  background-color: #2196F3;
-  color: white;
-}
-
-.submit-button:hover {
-  background-color: #1976D2;
-}
-
-.import-button {
-  background-color: var(--color-ok);
-  color: white;
-}
-
-.import-button:hover {
-  background-color: #388E3C;
 }
 
 /* Responsive */

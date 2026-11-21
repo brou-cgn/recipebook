@@ -22,7 +22,8 @@
 .universal-import-header h2 {
   margin: 0;
   font-size: 1.5rem;
-  color: #333;
+  /* Token statt #333: im Dunkelmodus war der Titel sonst kaum sichtbar (wie P15) */
+  color: var(--color-text-strong);
 }
 
 .universal-import-content {
@@ -320,74 +321,6 @@
   border-top: 1px solid #e0e0e0;
 }
 
-.universal-cancel-button {
-  padding: 10px 20px;
-  border: 1px solid var(--color-border-strong);
-  background-color: white;
-  color: var(--color-text);
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: all 0.2s;
-}
-
-.universal-cancel-button:hover {
-  background-color: #f5f5f5;
-}
-
-.universal-analyse-button {
-  padding: 10px 24px;
-  border: none;
-  background-color: var(--color-ok);
-  color: white;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.universal-analyse-button:hover:not(:disabled) {
-  background-color: #388e3c;
-}
-
-.universal-analyse-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.universal-back-button {
-  padding: 10px 20px;
-  border: 1px solid var(--color-ok);
-  background-color: white;
-  color: var(--color-ok);
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: all 0.2s;
-}
-
-.universal-back-button:hover {
-  background-color: var(--color-ok);
-  color: white;
-}
-
-.universal-import-button {
-  padding: 10px 24px;
-  border: none;
-  background-color: var(--color-ok);
-  color: white;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.universal-import-button:hover {
-  background-color: #388e3c;
-}
-
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .universal-import-modal {
@@ -416,10 +349,5 @@
   .universal-import-actions {
     flex-wrap: wrap;
     padding: 12px 16px;
-  }
-
-  .universal-analyse-button,
-  .universal-import-button {
-    flex: 1;
   }
 }
