@@ -1217,20 +1217,6 @@ button.private-badge-button:active {
   gap: 0.5rem;
 }
 
-.ingredient-match-dialog-cancel,
-.ingredient-match-dialog-confirm {
-  border: 1px solid #d0d0d0;
-  border-radius: 8px;
-  padding: 0.4rem 0.75rem;
-  cursor: pointer;
-}
-
-.ingredient-match-dialog-confirm {
-  background: #402C1C;
-  color: #fff;
-  border-color: #402C1C;
-}
-
 .ingredient-match-dialog-ingredient-text {
   display: flex;
   flex-wrap: wrap;

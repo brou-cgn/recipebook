@@ -32,6 +32,7 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import NutritionModal from './NutritionModal';
 import IngredientIDSelect from './IngredientIDSelect';
+import Button from './Button';
 import ShoppingListModal from './ShoppingListModal';
 import RatingModal from './RatingModal';
 import { getRecipeImages } from '../utils/printRecipe';
@@ -2803,12 +2804,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               })}
             </ul>
             <div className="ingredient-match-dialog-actions">
-              <button type="button" className="ingredient-match-dialog-cancel" onClick={() => { setIngredientMatchDialog(null); setOpenIngredientInfoIndex(null); }}>
+              <Button variant="secondary" onClick={() => { setIngredientMatchDialog(null); setOpenIngredientInfoIndex(null); }}>
                 Abbrechen
-              </button>
-              <button type="button" className="ingredient-match-dialog-confirm" onClick={handleIngredientMatchConfirm}>
+              </Button>
+              <Button variant="primary" onClick={handleIngredientMatchConfirm}>
                 Übernehmen & berechnen
-              </button>
+              </Button>
             </div>
           </div>
         </div>
