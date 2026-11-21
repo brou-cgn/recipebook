@@ -4,6 +4,7 @@ import Button from './Button';
 import { rateRecipe, getUserRatingData, subscribeToRatingSummary, getAllRatings, deleteRating } from '../utils/recipeRatings';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+import useModalScrollLock from '../hooks/useModalScrollLock';
 
 // iOS Safari: reset any zoom triggered by focusing on input fields.
 // Temporarily adding maximum-scale=1.0 forces Safari to snap back to scale 1.
@@ -28,6 +29,8 @@ function resetSafariZoom() {
  * @param {Function} props.onClose       - Called when the modal should close
  */
 function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose }) {
+  // Wie die Einkaufsliste: Seite dahinter gesperrt
+  useModalScrollLock();
   const [avg, setAvg] = useState(0);
   const [count, setCount] = useState(0);
   const [selectedRating, setSelectedRating] = useState(null);
@@ -141,7 +144,7 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
 
   return (
     <div className="rating-modal-overlay" onClick={handleClose}>
-      <div className="rating-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="rating-modal" role="dialog" aria-modal="true" aria-label="Rezept bewerten" onClick={(e) => e.stopPropagation()}>
         <div className="rating-modal-header">
           <h2 className="rating-modal-title">Rezept bewerten</h2>
           <button className="rating-modal-close" onClick={handleClose} aria-label="Schließen">×</button>

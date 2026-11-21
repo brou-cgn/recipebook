@@ -8,6 +8,7 @@ import Button from './Button';
 import { setCookDate, deleteCookDate, subscribeCookDates } from '../utils/recipeCookDates';
 import { isBase64Image } from '../utils/imageUtils';
 import useFadeOutClose from '../hooks/useFadeOutClose';
+import useModalScrollLock from '../hooks/useModalScrollLock';
 
 /**
  * CookDateModal component
@@ -38,6 +39,8 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
   const [saved, setSaved] = useState(false);
   const [cookDates, setCookDates] = useState([]);
   const resetTimerRef = useRef(null);
+  // Wie die Einkaufsliste: Seite dahinter gesperrt
+  useModalScrollLock();
 
   useEffect(() => {
     return () => {
@@ -96,7 +99,7 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
 
   return (
     <div className={`cook-date-modal-overlay${closing ? ' cook-date-modal-overlay--closing' : ''}`} onClick={onClose}>
-      <div className="cook-date-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="cook-date-modal" role="dialog" aria-modal="true" aria-label="Kochtagebuch" onClick={(e) => e.stopPropagation()}>
         <div className="cook-date-modal-header">
           <h2 className="cook-date-modal-title">Kochtagebuch</h2>
           <button className="cook-date-modal-close" onClick={onClose} aria-label="Schließen">×</button>

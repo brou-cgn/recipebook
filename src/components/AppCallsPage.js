@@ -40,6 +40,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import DeleteRowButton from './DeleteRowButton';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import useUndoableDelete from '../hooks/useUndoableDelete';
+import useModalScrollLock from '../hooks/useModalScrollLock';
 import UndoSnackbar from './UndoSnackbar';
 import { enableRecipeSharing } from '../utils/recipeFirestore';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
@@ -571,6 +572,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       }
     },
   });
+  useModalScrollLock(!!ingredientMatchDialog);
 
   const handleCloseIngredientMatchDialog = useCallback(() => {
     setOpenIngredientInfoIndex(null);

@@ -716,6 +716,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       }
     },
   });
+  useModalScrollLock(!!ingredientMatchDialog);
   
   const hasNutritionValues = Boolean(
     recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError || recipe.naehrwerte?.calcNotIncluded
