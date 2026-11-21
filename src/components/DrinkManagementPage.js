@@ -179,6 +179,50 @@ function DrinkRow({ drink, displayName, isForeign, canManage, canAddUnits, onEdi
   );
 }
 
+// Eine Gebindeeinheit im Getränkeformular. Entfernen wie jede Zeile der App (CLAUDE.md, Tech-Check D7):
+// am Desktop DeleteRowButton am rechten Rand, auf dem Handy Linksswipe; die Snackbar „Rückgängig“
+// verwaltet die Seite.
+function EinheitGroup({ index, canRemove, onRemove, swipeDeleteIcon, children }) {
+  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ disabled: !canRemove });
+  const itemName = `Einheit ${index + 1}`;
+  return (
+    <div className={`events-einheit-group${offset < 0 ? ' swipe-delete-active' : ''}`}>
+      {canRemove && (
+        <div className="drink-swipe-delete-background events-einheit-swipe-background" aria-hidden={!isDeleteVisible}>
+          {isDeleteVisible && (
+            <button
+              type="button"
+              className="drink-swipe-delete-action"
+              onClick={() => { onRemove(index); reset(); }}
+              aria-label={`${itemName} löschen`}
+            >
+              {isBase64Image(swipeDeleteIcon) ? (
+                <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
+              ) : (
+                <span className="swipe-delete-icon-text">{swipeDeleteIcon || <TrashIcon />}</span>
+              )}
+            </button>
+          )}
+        </div>
+      )}
+      <div
+        className="events-einheit-content delete-row-hover-target"
+        style={{ transform: `translateX(${offset}px)` }}
+        {...handlers}
+      >
+        <div className="events-einheit-fields">{children}</div>
+        {canRemove && (
+          <DeleteRowButton
+            itemName={itemName}
+            className="events-einheit-delete-btn"
+            onClick={() => onRemove(index)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drinks = [], customDrinksLoaded = true }) {
   const loading = !customDrinksLoaded;
   const [showForm, setShowForm] = useState(false);
@@ -198,6 +242,12 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [fabPressed, setFabPressed] = useState(false);
   const [cancelPressed, setCancelPressed] = useState(false);
+  const einheitUndo = useUndoableDelete();
+  const einheitSessionRef = useRef(0);
+  const einheitRemovalCounterRef = useRef(0);
+  useEffect(() => {
+    einheitSessionRef.current += 1;
+  }, [showForm, editId, addUnitsDrink]);
   const { banners: deleteBanners, pendingKeys: pendingDeleteKeys, scheduleDelete, undoDelete } = useUndoableDelete();
   const [showOwnOnly, setShowOwnOnly] = useState(true);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -390,8 +440,28 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
     setForm((f) => ({ ...f, einheiten: [...f.einheiten, emptyEinheit()] }));
   };
 
+  // Entfernen wirkt sofort, „Rückgängig“ setzt die Einheit an der alten Stelle wieder ein. Die Sitzung
+  // zählt hoch, sobald das Formular schließt oder ein anderes Getränk zeigt: Ein Rückgängig aus einem
+  // früheren Formular darf nicht im neuen landen.
   const removeEinheit = (idx) => {
+    const removed = form.einheiten[idx];
+    if (!removed) return;
+    const session = einheitSessionRef.current;
     setForm((f) => ({ ...f, einheiten: f.einheiten.filter((_, i) => i !== idx) }));
+    einheitRemovalCounterRef.current += 1;
+    einheitUndo.scheduleDelete({
+      key: `einheit-${session}-${einheitRemovalCounterRef.current}`,
+      message: 'Einheit entfernt.',
+      onConfirm: () => {},
+      onUndo: () => {
+        if (einheitSessionRef.current !== session) return;
+        setForm((f) => {
+          const next = [...f.einheiten];
+          next.splice(Math.min(idx, next.length), 0, removed);
+          return { ...f, einheiten: next };
+        });
+      },
+    });
   };
 
   const updateEinheit = (idx, field, value) => {
@@ -648,7 +718,13 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
           <div className="events-form-field">
             <span>{isAddUnitsMode ? 'Meine zusätzlichen Einheiten' : 'Einheiten'}</span>
             {form.einheiten.map((einheit, idx) => (
-              <div key={idx} className="events-einheit-group">
+              <EinheitGroup
+                key={idx}
+                index={idx}
+                canRemove={form.einheiten.length > 1 || isAddUnitsMode}
+                onRemove={removeEinheit}
+                swipeDeleteIcon={getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode)}
+              >
                 <div className="events-form-row events-einheit-row">
                   <label className="events-form-field">
                     <span>{nameDrinkDisplay.isRecipe ? 'Einheitsgröße (ml)' : 'Einheitsgröße'}</span>
@@ -733,17 +809,19 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
                       />
                     )}
                   </label>
-                  {(form.einheiten.length > 1 || isAddUnitsMode) && (
-                    <Button
-                      onClick={() => removeEinheit(idx)}
-                      aria-label="Einheit entfernen"
-                    >
-                      –
-                    </Button>
-                  )}
                 </div>
-              </div>
+              </EinheitGroup>
             ))}
+            {einheitUndo.banners
+              .filter((banner) => banner.key.startsWith(`einheit-${einheitSessionRef.current}-`))
+              .map((banner) => (
+                <div key={banner.id} className="undo-snackbar" role="status">
+                  <span>{banner.message}</span>
+                  <button type="button" className="undo-snackbar-btn" onClick={() => einheitUndo.undoDelete(banner.id)}>
+                    Rückgängig
+                  </button>
+                </div>
+              ))}
             <Button onClick={addEinheit}>
               Einheit hinzufügen
             </Button>

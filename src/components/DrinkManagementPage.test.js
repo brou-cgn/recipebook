@@ -305,6 +305,30 @@ describe('DrinkManagementPage', () => {
     expect(mockSaveCustomDrink.mock.calls[0][1].einheiten).toHaveLength(2);
   });
 
+  test('Einheit entfernen wirkt sofort, Rückgängig setzt sie an der alten Stelle wieder ein (Tech-Check D7)', () => {
+    render(<DrinkManagementPage currentUser={currentUser} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+
+    fireEvent.change(screen.getByPlaceholderText('z. B. Flasche, Dose, Kasten'), { target: { value: 'Flasche' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Einheit hinzufügen' }));
+    fireEvent.change(screen.getAllByPlaceholderText('z. B. Flasche, Dose, Kasten')[1], { target: { value: 'Kasten' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Einheit 1 entfernen' }));
+
+    const verbleibend = screen.getAllByPlaceholderText('z. B. Flasche, Dose, Kasten');
+    expect(verbleibend).toHaveLength(1);
+    expect(verbleibend[0]).toHaveValue('Kasten');
+    expect(screen.getByRole('status')).toHaveTextContent('Einheit entfernt.');
+    // Bei nur noch einer Einheit gibt es nichts mehr zu entfernen
+    expect(screen.queryByRole('button', { name: /^Einheit \d entfernen$/ })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+
+    const wieder = screen.getAllByPlaceholderText('z. B. Flasche, Dose, Kasten');
+    expect(wieder.map((input) => input.value)).toEqual(['Flasche', 'Kasten']);
+    expect(screen.queryByText('Einheit entfernt.')).toBeNull();
+  });
+
   test('gebindeinheit and einheitenProGebinde are optional – saving without them succeeds', async () => {
     mockSaveCustomDrink.mockResolvedValue('new-drink-id');
     render(<DrinkManagementPage currentUser={currentUser} />);
