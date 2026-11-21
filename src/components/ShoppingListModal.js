@@ -5,6 +5,7 @@ import { formatIngredientForBringExport, loadBringStrippedWords, getRecognizedUn
 import './ShoppingListModal.css';
 import useFadeOutClose from '../hooks/useFadeOutClose';
 import useModalScrollLock from '../hooks/useModalScrollLock';
+import Button from './Button';
 
 function ShoppingListModal({ items, title, onClose: onCloseProp, shareId, onEnableSharing, hideBringButton, bringButtonIcon, accentTheme }) {
   const [closing, onClose] = useFadeOutClose(onCloseProp);
@@ -215,12 +216,13 @@ function ShoppingListModal({ items, title, onClose: onCloseProp, shareId, onEnab
           <span className="shopping-list-count">
             {checkedCount} / {listItems.length} erledigt
           </span>
-          <button
-            className="shopping-list-reset-btn"
+          <Button
+            variant="ghost"
+            className="shopping-list-reset"
             onClick={() => setListItems(prev => prev.map(i => ({ ...i, checked: false })))}
           >
             Zurücksetzen
-          </button>
+          </Button>
           {!hideBringButton && <button
             className={`shopping-list-bring-btn${isBringIconImage ? ' shopping-list-bring-btn--image' : ''}`}
             onClick={handleBringExport}

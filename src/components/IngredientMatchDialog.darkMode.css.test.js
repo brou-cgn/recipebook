@@ -46,17 +46,4 @@ describe('ingredient-match-dialog dark mode styles', () => {
     expect(rule).toContain('border-color: #555;');
   });
 
-  test('uses dark background for the cancel button', () => {
-    const rule = getRuleBody(css, '[data-theme="dark"] .ingredient-match-dialog-cancel');
-    expect(rule).toContain('background: #2a2a2a;');
-    expect(rule).toContain('color: #e8e8e8;');
-    expect(rule).toContain('border-color: #555;');
-  });
-
-  test('uses red background for the confirm button', () => {
-    const rule = getRuleBody(css, '[data-theme="dark"] .ingredient-match-dialog-confirm');
-    expect(rule).toContain('background: #c62828;');
-    expect(rule).toContain('color: #fff;');
-    expect(rule).toContain('border-color: #c62828;');
-  });
 });

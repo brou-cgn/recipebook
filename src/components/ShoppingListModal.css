@@ -196,7 +196,6 @@
   color: #666;
 }
 
-.shopping-list-reset-btn,
 .shopping-list-bring-btn {
   padding: 0.6rem 1.25rem;
   border: none;
@@ -221,17 +220,6 @@
 .shopping-list-bring-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-}
-
-.shopping-list-reset-btn {
-  background: white;
-  color: #666;
-  border: 2px solid var(--color-border);
-}
-
-.shopping-list-reset-btn:hover {
-  border-color: #402C1C;
-  color: var(--color-brand);
 }
 
 .shopping-list-bring-btn--image {
@@ -275,11 +263,6 @@
   color: #2F5D50;
 }
 
-.shopping-list-modal--event .shopping-list-reset-btn:hover {
-  border-color: #2F5D50;
-  color: #2F5D50;
-}
-
 @media (max-width: 480px) {
   .shopping-list-footer {
     flex-wrap: wrap;
@@ -289,7 +272,7 @@
     width: 100%;
   }
 
-  .shopping-list-reset-btn,
+  .shopping-list-reset,
   .shopping-list-close-btn,
   .shopping-list-bring-btn {
     flex: 1;

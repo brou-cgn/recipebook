@@ -1278,7 +1278,8 @@
 [data-theme="dark"] .shopping-list-overlay,
 [data-theme="dark"] .password-change-overlay,
 [data-theme="dark"] .recipe-typeahead-overlay,
-[data-theme="dark"] .group-dialog-overlay {
+[data-theme="dark"] .group-dialog-overlay,
+[data-theme="dark"] .ingredient-match-dialog-overlay {
   background: rgba(0, 0, 0, 0.7);
 }
 
@@ -1488,17 +1489,6 @@
 
 [data-theme="dark"] .shopping-list-footer {
   border-top-color: #3d3d3d;
-}
-
-[data-theme="dark"] .shopping-list-reset-btn {
-  background: #2a2a2a;
-  color: #ccc;
-  border-color: #555;
-}
-
-[data-theme="dark"] .shopping-list-reset-btn:hover {
-  border-color: #b07a40;
-  color: #e8e8e8;
 }
 
 [data-theme="dark"] .shopping-list-empty {
@@ -3000,23 +2990,6 @@
   border-color: #555;
 }
 
-[data-theme="dark"] .ingredient-match-dialog-cancel {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
-[data-theme="dark"] .ingredient-match-dialog-confirm {
-  background: #c62828;
-  color: #fff;
-  border-color: #c62828;
-}
-
-[data-theme="dark"] .ingredient-match-dialog-confirm:hover:not(:disabled) {
-  background: #b71c1c;
-  border-color: #b71c1c;
-}
-
 [data-theme="dark"] .cuisine-badge {
   background: transparent;
   color: #ccc;
@@ -3335,12 +3308,6 @@
   background: #2a2a2a;
   color: #f47c00;
   border-color: #f47c00;
-}
-
-[data-theme="dark"] .shopping-list-reset-btn {
-  background: #2a2a2a;
-  color: #aaa;
-  border-color: #555;
 }
 
 [data-theme="dark"] .shopping-list-edit-input {

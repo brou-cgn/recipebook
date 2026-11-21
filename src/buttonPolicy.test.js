@@ -58,7 +58,7 @@ const BASELINE = {
   'components/SeasonMatrixTab.css': 2,
   'components/Settings.css': 43,
   'components/SharePage.css': 2,
-  'components/ShoppingListModal.css': 3,
+  'components/ShoppingListModal.css': 2,
   'components/Startseite.css': 10,
   'components/Tagesmenu.css': 5,
   'components/TemplateFormatEditor.css': 4,
