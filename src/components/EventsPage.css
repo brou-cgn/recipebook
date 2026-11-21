@@ -484,20 +484,24 @@
   min-width: 0;
 }
 
+/* Icon-Knopf „Gäste/Getränke verwalten“ im Event-Formular: kein Teil des Button-Systems,
+   deshalb hier vollständig beschrieben (vorher teils über .events-secondary-btn) */
 .events-guests-manage-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   margin-left: auto;
-  padding: 12px;
+  padding: 12px 22px;
   flex: 0 0 auto;
   white-space: nowrap;
   height: 44px;
-}
-
-.events-secondary-btn.events-guests-manage-btn {
   background: transparent;
   border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .events-guests-manage-btn .button-icon-image {
@@ -1052,38 +1056,6 @@
   flex-wrap: wrap;
 }
 
-.events-primary-btn {
-  background: #2F5D50;
-  color: white;
-  border: none;
-  padding: 12px 22px;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.events-primary-btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.events-secondary-btn {
-  background: #f0f0f0;
-  color: var(--color-text);
-  border: none;
-  padding: 12px 22px;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.events-delete-btn {
-  background: #fbe4e4;
-  color: #a12626;
-}
-
 .events-shopping-list-btn {
   display: inline-flex;
   align-items: center;
@@ -1276,23 +1248,6 @@
   flex-wrap: wrap;
 }
 
-.events-manage-link-btn {
-  background: none;
-  border: 1px solid #2F5D50;
-  color: #2F5D50;
-  border-radius: 8px;
-  padding: 7px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.events-manage-link-btn:hover {
-  background: #2F5D50;
-  color: white;
-}
-
 .event-save-fab-button {
   display: none;
 }
@@ -1397,11 +1352,7 @@
     opacity: 0.85;
   }
 
-  .events-primary-btn--desktop-only {
-    display: none;
-  }
-
-  .events-secondary-btn--desktop-only {
+  .events-desktop-only {
     display: none;
   }
 
@@ -1483,10 +1434,6 @@
   }
 
   .events-warning-text {
-    font-size: 16px;
-  }
-
-  .events-manage-link-btn {
     font-size: 16px;
   }
 

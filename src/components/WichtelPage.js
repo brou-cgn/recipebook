@@ -33,6 +33,7 @@ import { formatBudget } from '../utils/formatBudget';
 import { WICHTEL_ANLAESSE, wichtelAnlassLabel, vorgeschlagenerWichtelAnlass } from '../utils/wichtelAnlaesse';
 import { formatWichtelDatum, heuteAlsWichtelDatum, wichtelAbstandText, wichtelKalenderblatt } from '../utils/wichtelDatum';
 import { istGueltigeEmail } from '../utils/wichtelGaeste';
+import Button from './Button';
 
 const MIN_TEILNEHMER = 3;
 const HINWEIS_DAUER_MS = 3500;
@@ -233,12 +234,12 @@ function RundenFormular({ initial, titelText, submitLabel, busy, onSubmit, onCan
         <span className="wichtel-zeichen-zaehler" id={`${id}-zaehler`}>{hinweis.length} / {HINWEIS_MAX}</span>
       </div>
       <div className="wichtel-formular-aktionen">
-        <button type="button" className="events-secondary-btn" onClick={onCancel} disabled={busy}>
+        <Button onClick={onCancel} disabled={busy}>
           Abbrechen
-        </button>
-        <button type="submit" className="events-primary-btn" disabled={busy}>
+        </Button>
+        <Button variant="primary" type="submit" disabled={busy}>
           {submitLabel}
-        </button>
+        </Button>
       </div>
       <span className="wichtel-pflicht-legende"><span className="wichtel-pflicht" aria-hidden="true">*</span> Pflichtfeld</span>
     </form>
@@ -813,7 +814,7 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [], renderGastBearbe
         {detailStatus === 'fehler' && (
           <div className="events-empty-state">
             {fehlerZeile}
-            <button type="button" className="events-primary-btn" onClick={zurUebersicht}>Zur Übersicht</button>
+            <Button variant="primary" onClick={zurUebersicht}>Zur Übersicht</Button>
           </div>
         )}
 
@@ -885,24 +886,21 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [], renderGastBearbe
 
             <div className="wichtel-aktionen">
               {ausgelost ? (
-                <button
-                  type="button"
-                  className="events-secondary-btn"
+                <Button
                   onClick={() => setZuruecksetzenFragen(true)}
                   disabled={busy}
                 >
                   Auslosung zurücksetzen
-                </button>
+                </Button>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    className="events-primary-btn wichtel-auslosen-btn"
+                  <Button
+                    variant="primary"
                     onClick={handleAuslosen}
                     disabled={busy || entferntWird || sichtbareTeilnehmer.length < MIN_TEILNEHMER}
                   >
                     Jetzt auslosen
-                  </button>
+                  </Button>
                   {sichtbareTeilnehmer.length < MIN_TEILNEHMER && (
                     <span className="wichtel-leise">Zum Auslosen braucht es mindestens {MIN_TEILNEHMER} Teilnehmer.</span>
                   )}
@@ -931,9 +929,8 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [], renderGastBearbe
       <div className="events-page-header">
         <h2>Wichteln</h2>
         <div className="events-page-header-actions">
-          <button
-            type="button"
-            className="events-primary-btn events-header-add-btn"
+          <Button
+            className="events-header-add-btn"
             onClick={() => {
               setFehler('');
               setAnsicht('neu');
@@ -941,7 +938,7 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [], renderGastBearbe
             aria-label="Neue Wichtel-Runde anlegen"
           >
             + Runde
-          </button>
+          </Button>
           {onBack && renderSchliessen('Wichteln schließen', onBack)}
         </div>
       </div>
@@ -959,9 +956,9 @@ function WichtelPage({ onBack, currentUser, guestProfiles = [], renderGastBearbe
       ) : sichtbareRunden.length === 0 ? (
         <div className="events-empty-state">
           <p>Noch keine Wichtel-Runde.</p>
-          <button type="button" className="events-primary-btn" onClick={() => setAnsicht('neu')}>
+          <Button variant="primary" onClick={() => setAnsicht('neu')}>
             Erste Runde anlegen
-          </button>
+          </Button>
         </div>
       ) : (
         <ul className="wichtel-liste wichtel-runden">

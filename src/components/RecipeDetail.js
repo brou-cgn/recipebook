@@ -1820,58 +1820,55 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         <div className="recipe-detail-header">
           <div className="action-buttons" style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}>
             {userCanDirectlyEdit && !showShoppingListModal && !showPortionSelector && (
-              <button
-                className="edit-button"
+              <Button
                 onClick={() => onEdit(recipe)}
                 title="Rezept bearbeiten"
                 aria-label="Rezept bearbeiten"
               >
                 Bearbeiten
-              </button>
+              </Button>
             )}
             {userCanCreateVersion && !userCanDirectlyEdit && (
-              <button className="version-button" onClick={() => onCreateVersion(recipe)}>
+              <Button onClick={() => onCreateVersion(recipe)}>
                 Eigene Version erstellen
-              </button>
+              </Button>
             )}
             {isRecipePublic && !recipe.shareId && (
-              <button
-                className="share-button"
+              <Button
                 onClick={handleToggleShare}
-                disabled={shareLoading}
+                loading={shareLoading}
                 title="Rezept teilen"
               >
-                {shareLoading ? '…' : '↑ Teilen'}
-              </button>
+                {shareLoading ? 'Wird geteilt …' : '↑ Teilen'}
+              </Button>
             )}
             {userCanPublish && onPublish && (
-              <button
-                className="publish-button"
+              <Button
                 onClick={handlePublish}
-                disabled={publishLoading}
+                loading={publishLoading}
                 title="Rezept veröffentlichen"
               >
-                {publishLoading ? '…' : 'Veröffentlichen'}
-              </button>
+                {publishLoading ? 'Wird veröffentlicht …' : 'Veröffentlichen'}
+              </Button>
             )}
             {userCanDelete && onDelete && (
-              <button
-                className="delete-button"
+              <Button
+                variant="danger-quiet"
                 onClick={handleDelete}
                 title="Rezept löschen"
               >
                 Löschen
-              </button>
+              </Button>
             )}
             {userCanResetThumbnail && (
-              <button
-                className="reset-thumbnail-button"
+              <Button
+                variant="ghost"
                 onClick={handleResetThumbnail}
-                disabled={resetThumbnailLoading}
+                loading={resetThumbnailLoading}
                 title="WhatsApp-Thumbnail zurücksetzen"
               >
-                {resetThumbnailLoading ? '…' : 'Thumbnail zurücksetzen'}
-              </button>
+                {resetThumbnailLoading ? 'Wird zurückgesetzt …' : 'Thumbnail zurücksetzen'}
+              </Button>
             )}
             {onAddToMyRecipes && (
               isAddToMyRecipesSuccess ? (
@@ -2323,14 +2320,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   onOpenModal={() => setShowRatingModal(true)}
                 />
                 {isRecipePublic && !recipe.shareId && (
-                  <button
-                    className="share-button"
+                  <Button
                     onClick={handleToggleShare}
-                    disabled={shareLoading}
+                    loading={shareLoading}
                     title="Rezept teilen"
                   >
-                    {shareLoading ? '…' : '↑ Teilen'}
-                  </button>
+                    {shareLoading ? 'Wird geteilt …' : '↑ Teilen'}
+                  </Button>
                 )}
                 {recipe.shareId && (
                   <button

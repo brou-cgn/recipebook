@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import Button from './Button';
 import './Register.css';
 import { validatePassword } from '../utils/userManagement';
 
@@ -156,9 +157,9 @@ function Register({ onRegister, onSwitchToLogin }) {
             />
           </div>
           {error && <div className="error-message">{error}</div>}
-          <button type="submit" className="submit-btn" disabled={isLoading}>
-            {isLoading ? 'Registrierung läuft...' : 'Registrieren'}
-          </button>
+          <Button variant="primary" type="submit" fullWidth loading={isLoading}>
+            {isLoading ? 'Registrierung läuft …' : 'Registrieren'}
+          </Button>
         </form>
         <div className="register-footer">
           <p>Bereits ein Konto?</p>

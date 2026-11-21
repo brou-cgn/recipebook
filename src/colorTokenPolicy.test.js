@@ -30,7 +30,7 @@ const BASELINE = {
   'components/DiscoverTopicsTab.css': 17,
   'components/DrinkWeightsTab.css': 19,
   'components/EventplanungPage.css': 1,
-  'components/EventsPage.css': 125,
+  'components/EventsPage.css': 118,
   'components/EventsTable.css': 2,
   'components/FlowPage.css': 9,
   'components/FollowButton.css': 3,
@@ -43,10 +43,10 @@ const BASELINE = {
   'components/ImportProgressIndicator.css': 5,
   'components/KalibrierungsAuswertung.css': 4,
   'components/Kueche.css': 16,
-  'components/Login.css': 52,
+  'components/Login.css': 45,
   'components/MeineKuechenstarsPage.css': 7,
   'components/MemberProfilePage.css': 3,
-  'components/MenuDetail.css': 22,
+  'components/MenuDetail.css': 15,
   'components/MenuFilterSidebar.css': 12,
   'components/MenuForm.css': 55,
   'components/MenuList.css': 6,
@@ -60,7 +60,7 @@ const BASELINE = {
   'components/PrintFormatEditor.css': 43,
   'components/PrintPage.css': 16,
   'components/RatingModal.css': 15,
-  'components/RecipeDetail.css': 106,
+  'components/RecipeDetail.css': 89,
   'components/RecipeFilterSidebar.css': 18,
   'components/RecipeForm.css': 112,
   'components/RecipeImageCarousel.css': 4,
@@ -69,7 +69,7 @@ const BASELINE = {
   'components/RecipeRating.css': 7,
   'components/RecipeTimeline.css': 7,
   'components/RecipeTypeahead.css': 12,
-  'components/Register.css': 14,
+  'components/Register.css': 12,
   'components/SavingOverlay.css': 1,
   'components/SeasonMatrixTab.css': 61,
   'components/Settings.css': 242,
@@ -140,7 +140,7 @@ describe('Farb-Token-Richtlinie', () => {
 // darkMode.css ist Altbestand: neue Dark-Regeln gehören als Token in tokens.css
 // (AGENTS.md). Gezählt werden die [data-theme="dark"]-Selektoren; der Wert darf nur
 // sinken (Tech-Check D5: am 27.10.2026 kamen trotz Regel sieben neue dazu).
-const DARK_MODE_SELECTORS = 990;
+const DARK_MODE_SELECTORS = 980;
 
 describe('darkMode.css (Altbestand)', () => {
   const css = fs.readFileSync(path.join(SRC, 'darkMode.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

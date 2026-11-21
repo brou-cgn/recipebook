@@ -16,6 +16,7 @@ import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { parseIngredientPartsSync, computeRecipeDrinkEinheitsgroesse, scaleIngredient, decimalToFraction } from '../utils/ingredientUtils';
 import { updateRecipe } from '../utils/recipeFirestore';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
+import Button from './Button';
 
 const DRINK_RECIPE_CATEGORY = 'Drinks';
 
@@ -733,25 +734,19 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
                     )}
                   </label>
                   {(form.einheiten.length > 1 || isAddUnitsMode) && (
-                    <button
-                      type="button"
-                      className="events-secondary-btn"
+                    <Button
                       onClick={() => removeEinheit(idx)}
                       aria-label="Einheit entfernen"
                     >
                       –
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
             ))}
-            <button
-              type="button"
-              className="events-secondary-btn"
-              onClick={addEinheit}
-            >
+            <Button onClick={addEinheit}>
               Einheit hinzufügen
-            </button>
+            </Button>
           </div>
 
           {!isAddUnitsMode && nameDrinkDisplay.isRecipe && nameDrinkDisplay.recipe && (
@@ -812,17 +807,12 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
           {error && <p className="events-error-text">{error}</p>}
 
           <div className="events-form-actions">
-            <button
-              type="button"
-              className="events-secondary-btn events-save-desktop-only"
-              onClick={closeForm}
-              disabled={saving}
-            >
+            <Button className="events-save-desktop-only" onClick={closeForm} disabled={saving}>
               Abbrechen
-            </button>
-            <button type="submit" className="events-primary-btn events-save-desktop-only" disabled={saving}>
-              {saving ? 'Speichere...' : 'Speichern'}
-            </button>
+            </Button>
+            <Button variant="primary" type="submit" className="events-save-desktop-only" loading={saving}>
+              {saving ? 'Speichert …' : 'Speichern'}
+            </Button>
           </div>
         </form>
 
@@ -898,14 +888,13 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
       <div className="events-page-header">
         <h2>Getränke verwalten</h2>
         <div className="events-page-header-actions">
-          <button
-            type="button"
-            className="events-primary-btn events-header-add-btn"
+          <Button
+            className="events-header-add-btn"
             onClick={openNew}
             aria-label="Neues Getränk anlegen"
           >
             + Getränk
-          </button>
+          </Button>
           {onBack && (
             <button
               className="app-close-button"

@@ -79,7 +79,7 @@ const defaultCustomDrinks = [
 ];
 
 describe('EventForm', () => {
-  const getInlineCalculateButton = () => document.querySelector('.events-form-actions .events-primary-btn');
+  const getInlineCalculateButton = () => document.querySelector('.events-form-actions .ui-button--primary');
 
   beforeEach(() => {
     jest.clearAllMocks();

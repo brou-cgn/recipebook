@@ -8,6 +8,7 @@ import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import DeleteRowButton from './DeleteRowButton';
 import useUndoableDelete from '../hooks/useUndoableDelete';
+import Button from './Button';
 
 const MIN_DISTRIBUTION_FACTOR = 0.1;
 const MAX_DISTRIBUTION_FACTOR = 2.0;
@@ -470,12 +471,12 @@ function EventDrinkSelectionPage({
         </label>
 
         <div className="events-form-actions">
-          <button type="button" className="events-secondary-btn events-save-desktop-only" onClick={onBack}>
+          <Button className="events-save-desktop-only" onClick={onBack}>
             Abbrechen
-          </button>
-          <button type="button" className="events-primary-btn events-save-desktop-only" onClick={handleSave}>
+          </Button>
+          <Button variant="primary" className="events-save-desktop-only" onClick={handleSave}>
             Speichern
-          </button>
+          </Button>
         </div>
       </div>
 

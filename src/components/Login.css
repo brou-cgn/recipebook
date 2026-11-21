@@ -99,34 +99,9 @@
   font-size: 14px;
 }
 
-.login-cta-btn {
-  width: 100%;
+/* Haupt-Knopf ist die Button-Komponente (Tech-Check A8), hier nur der Abstand zum Formular */
+.login-cta {
   margin-top: 4px;
-  padding: 16px;
-  border: none;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #402C1C 0%, #2a1c11 100%);
-  box-shadow: 0 10px 24px -6px rgba(64, 44, 28, 0.45);
-  color: #ffffff;
-  font-size: 1.02rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.login-cta-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 28px -6px rgba(64, 44, 28, 0.5);
-}
-
-.login-cta-btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.login-cta-btn:disabled {
-  opacity: 0.6;
-  cursor: default;
 }
 
 .login-forgot-btn {
@@ -166,29 +141,6 @@
   color: #a39c92;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-}
-
-.login-ghost-btn {
-  width: 100%;
-  padding: 14px;
-  border: 1.5px solid rgba(26, 26, 26, 0.14);
-  border-radius: 14px;
-  background: transparent;
-  color: #1a1a1a;
-  font-size: 0.92rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.login-ghost-btn:hover:not(:disabled) {
-  background: rgba(26, 26, 26, 0.04);
-  border-color: rgba(26, 26, 26, 0.22);
-}
-
-.login-ghost-btn:disabled {
-  opacity: 0.6;
-  cursor: default;
 }
 
 .login-footer {
@@ -282,15 +234,6 @@
   color: #7fcf8f;
 }
 
-[data-theme="dark"] .login-cta-btn {
-  background: linear-gradient(135deg, #DF7A00 0%, #b8630a 100%);
-  box-shadow: 0 10px 24px -6px rgba(223, 122, 0, 0.35);
-}
-
-[data-theme="dark"] .login-cta-btn:hover:not(:disabled) {
-  box-shadow: 0 14px 28px -6px rgba(223, 122, 0, 0.4);
-}
-
 [data-theme="dark"] .login-forgot-btn {
   color: #f0973a;
 }
@@ -306,16 +249,6 @@
 
 [data-theme="dark"] .login-divider span:nth-child(2) {
   color: #7d766c;
-}
-
-[data-theme="dark"] .login-ghost-btn {
-  border-color: rgba(240, 236, 230, 0.16);
-  color: #f0ece6;
-}
-
-[data-theme="dark"] .login-ghost-btn:hover:not(:disabled) {
-  background: rgba(240, 236, 230, 0.06);
-  border-color: rgba(240, 236, 230, 0.26);
 }
 
 [data-theme="dark"] .login-footer {

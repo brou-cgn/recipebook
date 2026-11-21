@@ -29,6 +29,7 @@ import CupIcon from './icons/CupIcon';
 import ChevronRightIcon from './icons/ChevronRightIcon';
 import useModalScrollLock from '../hooks/useModalScrollLock';
 import useFadeOutClose from '../hooks/useFadeOutClose';
+import Button from './Button';
 
 function getEinheitSizeLabel(einheitsgroesse) {
   const liters = Number(einheitsgroesse);
@@ -810,9 +811,8 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
         {error && <p className="events-error-text">{error}</p>}
 
         <div className="events-form-actions">
-          <button
-            type="button"
-            className="events-secondary-btn events-shopping-list-btn"
+          <Button
+            className="events-shopping-list-btn"
             onClick={handleShoppingListClick}
             aria-label="Einkaufsliste erstellen"
             title="Einkaufsliste erstellen"
@@ -822,16 +822,16 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
             ) : (
               <span className="events-shopping-list-btn-icon">{shoppingListIcon}</span>
             )}
-          </button>
+          </Button>
         </div>
 
         <div className="events-form-actions">
-          <button type="button" className="events-secondary-btn events-secondary-btn--desktop-only" onClick={onCancel} disabled={saving}>
+          <Button className="events-desktop-only" onClick={onCancel} disabled={saving}>
             Abbrechen
-          </button>
-          <button type="submit" className="events-primary-btn events-primary-btn--desktop-only" disabled={saving}>
-            {saving ? 'Speichere...' : 'Verbrauch speichern'}
-          </button>
+          </Button>
+          <Button variant="primary" type="submit" className="events-desktop-only" loading={saving}>
+            {saving ? 'Speichert …' : 'Verbrauch speichern'}
+          </Button>
         </div>
       </form>
 

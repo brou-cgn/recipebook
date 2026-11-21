@@ -97,7 +97,7 @@
 }
 
 /* Teilen- bzw. Share-Link-kopieren-Button ist immer rechtsbündig in der Buttonleiste */
-.share-button,
+.menu-share-button,
 .share-copy-url-button {
   margin-left: auto;
   flex-shrink: 0;
@@ -150,56 +150,6 @@
   height: 1.5rem;
   object-fit: contain;
   vertical-align: middle;
-}
-
-.publish-menu-button {
-  background: #2e7d32;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 0 1rem;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.publish-menu-button:hover {
-  background: #1b5e20;
-}
-
-.menu-edit-button,
-.menu-delete-button {
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 0 1rem;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.menu-edit-button {
-  color: #402C1C;
-  border-color: #402C1C;
-}
-
-.menu-delete-button {
-  color: #f44336;
-  border-color: #f44336;
 }
 
 .favorite-button.favorite-active {

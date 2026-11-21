@@ -20,6 +20,7 @@ import EventGuestSelectionPage from './EventGuestSelectionPage';
 import EventDrinkSelectionPage from './EventDrinkSelectionPage';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+import Button from './Button';
 
 const CATEGORY_LABELS = {
   wasser: 'Wasser',
@@ -409,7 +410,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
           {guests.length > 0 && (
             <button
               type="button"
-              className="events-secondary-btn events-guests-manage-btn"
+              className="events-guests-manage-btn"
               onClick={() => setShowGuestSelection(true)}
               aria-label="Gäste verwalten"
               title="Gäste verwalten"
@@ -442,7 +443,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
               )}
               <button
                 type="button"
-                className="events-secondary-btn events-guests-manage-btn"
+                className="events-guests-manage-btn"
                 onClick={() => setShowDrinkSelection(true)}
                 aria-label="Getränke verwalten"
                 title="Getränke verwalten"
@@ -467,13 +468,9 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
               {onManageDrinks && (
                 <>
                   {' '}
-                  <button
-                    type="button"
-                    className="events-manage-link-btn"
-                    onClick={onManageDrinks}
-                  >
+                  <Button onClick={onManageDrinks}>
                     Getränke verwalten
-                  </button>
+                  </Button>
                 </>
               )}
             </p>
@@ -484,18 +481,18 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
 
         <div className="events-form-actions">
           {isEditing && onDelete && (
-            <button type="button" className="events-secondary-btn events-delete-btn events-secondary-btn--desktop-only" onClick={onDelete} disabled={saving}>
+            <Button variant="danger-quiet" className="events-desktop-only" onClick={onDelete} disabled={saving}>
               Löschen
-            </button>
+            </Button>
           )}
           {!isEditing && (
-            <button type="button" className="events-secondary-btn events-secondary-btn--desktop-only" onClick={onCancel} disabled={saving}>
+            <Button className="events-desktop-only" onClick={onCancel} disabled={saving}>
               Abbrechen
-            </button>
+            </Button>
           )}
-          <button type="submit" className={`events-primary-btn events-primary-btn--desktop-only`} disabled={saving}>
-            {saving ? 'Berechne...' : isEditing ? 'Berechnung aktualisieren' : 'Einkaufsliste berechnen'}
-          </button>
+          <Button variant="primary" type="submit" className="events-desktop-only" loading={saving}>
+            {saving ? 'Berechnet …' : isEditing ? 'Berechnung aktualisieren' : 'Einkaufsliste berechnen'}
+          </Button>
         </div>
       </form>
 
