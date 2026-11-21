@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
 
 let manualHandler;
 let requestHandler;
@@ -16,6 +17,16 @@ function createDocSnapshot(id, data, onSet) {
       set: async (payload, options) => onSet(payload, options),
       update: async (payload) => onSet(payload, { merge: true }),
     },
+  };
+}
+
+// Zählbare Collection für den Bestand: count() liefert die Gesamtzahl,
+// gefilterte Zählungen (älter als 90 Tage) liefern 0.
+function countable(id, count) {
+  return {
+    id,
+    count: () => ({ get: async () => ({ data: () => ({ count }) }) }),
+    where: () => countable(id, 0),
   };
 }
 
@@ -100,7 +111,7 @@ function loadHandlers() {
       return () => chain;
     }
 
-    if (request === 'firebase-admin') {
+    if (isFirebaseAdminRequest(request, parent)) {
       const firestoreFactory = () => ({
         collection: (name) => {
           if (name === 'nutritionReferences') {
@@ -171,16 +182,33 @@ function loadHandlers() {
           }
           return { get: async () => ({ docs: [] }) };
         },
-        doc: (path) => ({
-          get: async () => {
-            const uid = path.split('/')[1];
-            const user = mockDbState.userById[uid];
+        // Bestand je Collection (firestoreInventory): nur wenn ein Test ihn vorgibt.
+        listCollections: async () => {
+          if (!mockDbState.inventory) throw new Error('listCollections nicht verfügbar');
+          return Object.entries(mockDbState.inventory.collections).map(([id, count]) => countable(id, count));
+        },
+        collectionGroup: (group) => countable(group, (mockDbState.inventory?.groups || {})[group] || 0),
+        doc: (path) => {
+          if (path === 'appConfig/firestoreInventory') {
             return {
-              exists: Boolean(user),
-              data: () => user || {},
+              get: async () => ({
+                exists: Boolean(mockDbState.inventorySnapshot),
+                data: () => mockDbState.inventorySnapshot,
+              }),
+              set: async (data) => { mockDbState.inventorySnapshot = data; },
             };
-          },
-        }),
+          }
+          return {
+            get: async () => {
+              const uid = path.split('/')[1];
+              const user = mockDbState.userById[uid];
+              return {
+                exists: Boolean(user),
+                data: () => user || {},
+              };
+            },
+          };
+        },
         batch: () => {
           const updates = [];
           return {
@@ -194,10 +222,10 @@ function loadHandlers() {
       firestoreFactory.FieldValue = {
         serverTimestamp: () => ({ seconds: 0, nanos: 0 }),
       };
-      return {
+      return firebaseAdminModule(request, {
         initializeApp: () => {},
         firestore: firestoreFactory,
-      };
+      });
     }
 
     return originalLoad.call(this, request, parent, isMain, ...args);
@@ -315,6 +343,39 @@ test('recalc report mail carries the Firestore usage section, even when Monitori
   assert.match(text, /Firestore-Nutzung \(letzte 7 Tage, UTC\)\nNicht verfügbar:/);
   assert.doesNotMatch(text, /Monitoring-Betrachter/);
   assert.match(html, /<h3>Firestore-Nutzung \(letzte 7 Tage, UTC\)<\/h3>/);
+  // Auch der Bestand fällt ohne Daten auf einen Hinweis zurück.
+  assert.match(text, /Firestore-Bestand je Collection\nNicht verfügbar: listCollections nicht verfügbar\./);
+});
+
+test('recalc report mail lists the Firestore inventory after the usage section', async () => {
+  mockDbState.inventory = {
+    collections: { recipes: 120, appCalls: 4800 },
+    groups: { favorites: 35 },
+  };
+  mockDbState.inventorySnapshot = {
+    snapshots: { '2000-01-01': { counts: { recipes: 118, appCalls: 4700 } } },
+  };
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  try {
+    await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
+    await runQueuedJobRequests();
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  assert.equal(sentMails.length, 1);
+  const { text, html } = sentMails[0];
+  // Reihenfolge: Nutzung zuerst (die geplante Aufgabe „K1-Recalc“ liest sie), dann Bestand.
+  assert.ok(text.indexOf('Firestore-Nutzung (letzte 7 Tage, UTC)') < text.indexOf('Firestore-Bestand je Collection'));
+  assert.match(text, /Collection \| Dokumente \| älter als 90 Tage \| ± seit 01\.01\.\n/);
+  assert.match(text, /appCalls \| 4\.800 \| 0 \(0 %\) \| \+100\n/);
+  assert.match(text, /recipes \| 120 \| – \| \+2\n/);
+  assert.match(text, /users\/\*\/favorites \| 35 \| – \| \+35 \(neu\)\n/);
+  assert.match(html, /<h3>Firestore-Bestand je Collection \(Stand /);
+  // Der heutige Stand liegt für den Vergleich morgen bereit.
+  const storedDays = Object.keys(mockDbState.inventorySnapshot.snapshots);
+  assert.equal(storedDays.length, 2);
 });
 
 test('manual recalc job keeps recalc flag when recalculation fails', async () => {

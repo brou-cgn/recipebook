@@ -4,13 +4,15 @@
 
 const {onSchedule} = require('firebase-functions/v2/scheduler');
 const {defineSecret} = require('firebase-functions/params');
-const admin = require('firebase-admin');
+const {getFirestore, FieldValue, Timestamp} = require('firebase-admin/firestore');
+const {getAuth} = require('firebase-admin/auth');
 const {AI_IMPORTER_TEST_UID} = require('../shared/auth');
 const {escapeHtml} = require('../shared/common');
 const {consumeDailyQuota} = require('../shared/rateLimit');
 const {DEFAULT_AI_RECIPE_PROMPT} = require('../shared/gemini');
 const {finalizeImportJobBackground, failImportJobBackground, isReelImportSource, runImportFromSource} = require('../shared/importJobs');
 const {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom, geminiApiKey} = require('../shared/secrets');
+const {mailFehlerCode} = require('../shared/mailFehler');
 
 // Firebase Web API key, used only by dailyAiImporterTest to exchange a
 // server-minted custom token for an ID token so the nightly test can call
@@ -54,13 +56,13 @@ async function mintImporterTestIdToken(webApiKey) {
   // The AI callables read the role from users/{uid} (requireAiCaller) and
   // refuse anyone below 'edit'. The throwaway test user has no profile of its
   // own, so provision one - merge keeps this idempotent across nightly runs.
-  await admin.firestore().doc(`users/${AI_IMPORTER_TEST_UID}`).set({
+  await getFirestore().doc(`users/${AI_IMPORTER_TEST_UID}`).set({
     vorname: 'Nightly',
     nachname: 'Importer-Test',
     role: 'edit',
     isTestAccount: true,
   }, {merge: true});
-  const customToken = await admin.auth().createCustomToken(AI_IMPORTER_TEST_UID);
+  const customToken = await getAuth().createCustomToken(AI_IMPORTER_TEST_UID);
   const response = await fetch(
       `https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${webApiKey}`,
       {
@@ -145,7 +147,7 @@ async function renderImporterTestRecipeImage() {
  */
 async function getAiRecipePromptForTest() {
   try {
-    const db = admin.firestore();
+    const db = getFirestore();
     const settingsDoc = await db.collection('settings').doc('app').get();
     if (settingsDoc.exists) {
       const settings = settingsDoc.data();
@@ -440,7 +442,7 @@ exports.dailyAiImporterTest = onSchedule(
 
       // Check whether the feature is enabled via Firestore configuration
       try {
-        const db = admin.firestore();
+        const db = getFirestore();
         const settingsDoc = await db.collection('settings').doc('app').get();
         if (settingsDoc.exists && settingsDoc.data().dailyImporterTestEnabled === false) {
           console.log('dailyAiImporterTest: disabled via settings/app, skipping');
@@ -472,7 +474,7 @@ exports.dailyAiImporterTest = onSchedule(
       );
 
       // Collect admin e-mail addresses from Firestore
-      const db = admin.firestore();
+      const db = getFirestore();
       const usersSnapshot = await db
           .collection('users').where('role', '==', 'admin').get();
       const adminEmails = [];
@@ -521,7 +523,7 @@ exports.dailyAiImporterTest = onSchedule(
             `dailyAiImporterTest: email sent to ${adminEmails.length} admin(s)`,
         );
       } catch (mailErr) {
-        console.error('dailyAiImporterTest: error sending email:', mailErr);
+        console.error('dailyAiImporterTest: error sending email:', mailFehlerCode(mailErr));
       }
     },
 );
@@ -540,8 +542,8 @@ exports.nightlyImportProtocolCleanup = onSchedule(
       timeZone: 'Europe/Berlin',
     },
     async (_event) => {
-      const db = admin.firestore();
-      const now = admin.firestore.Timestamp.now();
+      const db = getFirestore();
+      const now = Timestamp.now();
       const snapshot = await db.collection('failedWebImports')
           .where('expiresAt', '<=', now)
           .get();
@@ -630,7 +632,7 @@ exports.recoverStuckImportJobs = onSchedule(
       secrets: [geminiApiKey],
     },
     async (_event) => {
-      const db = admin.firestore();
+      const db = getFirestore();
       const cutoff = Date.now() - STUCK_IMPORT_JOB_MS;
 
       const snapshot = await db.collection('recipes')
@@ -712,8 +714,8 @@ exports.recoverStuckImportJobs = onSchedule(
           importHeartbeatAt: Date.now(),
           importAttempts: attempts + 1,
           ...(wasError ? {
-            importError: admin.firestore.FieldValue.delete(),
-            importErrorKind: admin.firestore.FieldValue.delete(),
+            importError: FieldValue.delete(),
+            importErrorKind: FieldValue.delete(),
           } : {}),
         });
 

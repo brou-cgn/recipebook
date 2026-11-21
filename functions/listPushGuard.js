@@ -18,7 +18,7 @@ const fail = (HttpsError, code, message) => {
 };
 
 /**
- * @param {Object} db - admin.firestore()
+ * @param {Object} db - getFirestore()
  * @param {Function} HttpsError
  * @param {Object} params
  * @param {{uid: string}} params.auth - request.auth des Callables

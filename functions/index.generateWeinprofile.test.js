@@ -5,6 +5,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {weinprofilInputHash} = require('./shared/weinprofil');
+const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
 
 let userRoles;
 let userLookupFails;
@@ -43,7 +44,7 @@ function loadHandlers() {
     if (request === 'firebase-functions/params') {
       return {defineSecret: () => ({value: () => 'test-secret'})};
     }
-    if (request === 'firebase-admin') {
+    if (isFirebaseAdminRequest(request, parent)) {
       const docRef = (name, id) => {
         const ref = {
           id,
@@ -91,7 +92,7 @@ function loadHandlers() {
         }),
       });
       firestoreFactory.FieldValue = {serverTimestamp: () => ({}), increment: (n) => n};
-      return {initializeApp: () => {}, firestore: firestoreFactory};
+      return firebaseAdminModule(request, {initializeApp: () => {}, firestore: firestoreFactory});
     }
     if (/^\.\.?\/nutritionNormalization$/.test(request)) {
       return {createNutritionNormalizationUtils: () => ({})};

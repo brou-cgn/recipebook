@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
 
 // ─── CORS / invoker configuration test ──────────────────────────────────────
 
@@ -50,10 +51,10 @@ test('parseIngredientAmountG is registered with cors and invoker:public options'
       return {defineSecret: () => ({value: () => 'test-secret'})};
     }
 
-    if (request === 'firebase-admin') {
+    if (isFirebaseAdminRequest(request, parent)) {
       const ff = () => ({collection: () => ({doc: () => ({get: async () => ({exists: false, data: () => ({})})})})});
       ff.FieldValue = {serverTimestamp: () => ({})};
-      return {initializeApp: () => {}, firestore: ff};
+      return firebaseAdminModule(request, {initializeApp: () => {}, firestore: ff});
     }
 
     if (/^\.\.?\/nutritionNormalization$/.test(request)) {

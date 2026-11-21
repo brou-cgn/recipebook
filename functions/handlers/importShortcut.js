@@ -4,7 +4,7 @@
 
 const {onRequest} = require('firebase-functions/v2/https');
 const {onDocumentCreated} = require('firebase-functions/v2/firestore');
-const admin = require('firebase-admin');
+const {getFirestore, FieldValue} = require('firebase-admin/firestore');
 const crypto = require('crypto');
 const {normalizeCuisines, suggestNewCuisines} = require('../cuisineNormalization');
 const {ALLOWED_ORIGINS} = require('../shared/common');
@@ -134,13 +134,13 @@ exports.importRecipeShortcut = onRequest(
       // same tradeoff recoverStuckImportJobs already accepts for redriven
       // 'web' jobs (see runImportFromWebSource).
       try {
-        const db = admin.firestore();
+        const db = getFirestore();
         const jobRef = db.collection('recipes').doc();
         await jobRef.set({
           title: 'Rezept-Import',
           authorId: userId,
           isTemp: true,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
           importStatus: 'queued',
           importProgress: 0,
           importHeartbeatAt: Date.now(),
@@ -447,7 +447,7 @@ exports.scanRecipePhotoShortcut = onRequest(
           title: 'Rezept-Import',
           authorId: userId,
           isTemp: true,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
           importStatus: 'queued',
           importProgress: 0,
           importHeartbeatAt: Date.now(),
@@ -572,7 +572,7 @@ exports.scrapeInstagramReelShortcut = onRequest(
         const docRef = await db.collection('recipes').add({
           ...buildRecipeFieldsFromResult(result, userId),
           isTemp: true,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
         });
         console.log(`scrapeInstagramReelShortcut: recipe ${docRef.id} created for user ${userId}`);
         await writeImportProtocolEntry({
@@ -843,7 +843,7 @@ exports.addRecipeViaAPI = onRequest(
 
       // --- Save to Firestore ---
       try {
-        const now = admin.firestore.FieldValue.serverTimestamp();
+        const now = FieldValue.serverTimestamp();
 
         // Attach to the user's configured Inspirationssammlung list (the same
         // private list RecipeForm.js pre-selects for review-queue imports, see
@@ -882,7 +882,7 @@ exports.addRecipeViaAPI = onRequest(
         // Increment recipe_count for the author (best-effort)
         try {
           await db.collection('users').doc(userId).update({
-            recipe_count: admin.firestore.FieldValue.increment(1),
+            recipe_count: FieldValue.increment(1),
           });
         } catch (countErr) {
           console.error('addRecipeViaAPI: error incrementing recipe_count:', countErr);
@@ -1068,7 +1068,7 @@ exports.createRecipeImportFromText = onRequest(
           rawText,
           ...(sourceUrl ? {sourceUrl} : {}),
           userId,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
           expiresAt,
         });
 

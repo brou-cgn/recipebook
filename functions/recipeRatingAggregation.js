@@ -1,5 +1,5 @@
 const {onDocumentWritten} = require('firebase-functions/v2/firestore');
-const admin = require('firebase-admin');
+const {getFirestore} = require('firebase-admin/firestore');
 
 /**
  * Rundet einen Rating-Durchschnitt auf 1 Nachkommastelle (analog zur bisherigen
@@ -23,7 +23,7 @@ exports.aggregateRecipeRating = onDocumentWritten(
     {document: 'recipes/{recipeId}/ratings/{raterKey}'},
     async (event) => {
       const {recipeId} = event.params;
-      const db = admin.firestore();
+      const db = getFirestore();
 
       const snapshot = await db.collection('recipes').doc(recipeId).collection('ratings').get();
       const recipeRef = db.collection('recipes').doc(recipeId);

@@ -18,7 +18,7 @@ const EXEMPT = ['tokens.css', 'darkMode.css'];
 
 const BASELINE = {
   'App.css': 5,
-  'components/AppCallsPage.css': 91,
+  'components/AppCallsPage.css': 88,
   'components/AtelierCategorySelectionPage.css': 10,
   'components/AtelierOnboardingOverlay.css': 14,
   'components/AtelierSwipeTrainerOverlay.css': 58,

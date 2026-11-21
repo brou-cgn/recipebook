@@ -5,7 +5,8 @@
 
 const {onSchedule} = require('firebase-functions/v2/scheduler');
 const {onDocumentCreated} = require('firebase-functions/v2/firestore');
-const admin = require('firebase-admin');
+const {getFirestore, FieldValue} = require('firebase-admin/firestore');
+const {getMessaging} = require('firebase-admin/messaging');
 const {countNewRecipes, sendFuerDichEntdecktPush} = require('../fuerDichEntdecktPush');
 const {isRotationDue, getProtectedRecipeIds, pruneExpiredCarriedRecipeIds, pruneStaleRecipeIds, pickRotationRecipeIds, getActiveTopics, normalizeRecipeRule, hasRecipeRule, ruleKey, computeRuleResult, recipeAvailableToUser, usesFollowedScope, buildAttribution, mergeRuleMatches, explainTopicExclusion, isVisibleToUser, pickTopic, SYSTEM_KEY: FUER_DICH_ENTDECKT_KEY} = require('../fuerDichEntdecktRotation');
 
@@ -61,13 +62,13 @@ const applyTopicRules = async (db, topicDocs, recipes) => {
       recipeIds: merged.recipeIds,
       autoRecipeIds: merged.autoRecipeIds,
       autoRecipeOwners: Object.keys(autoRecipeOwners).length > 0 ?
-        autoRecipeOwners : admin.firestore.FieldValue.delete(),
+        autoRecipeOwners : FieldValue.delete(),
       autoRecipeActors: Object.keys(autoRecipeActors).length > 0 ?
-        autoRecipeActors : admin.firestore.FieldValue.delete(),
-      ruleMatchedFor: ruled ? ruleKey(topic.recipeRule) : admin.firestore.FieldValue.delete(),
-      ruleMatchedAt: ruled ? admin.firestore.FieldValue.serverTimestamp() : admin.firestore.FieldValue.delete(),
+        autoRecipeActors : FieldValue.delete(),
+      ruleMatchedFor: ruled ? ruleKey(topic.recipeRule) : FieldValue.delete(),
+      ruleMatchedAt: ruled ? FieldValue.serverTimestamp() : FieldValue.delete(),
       // legacy field of an earlier version (matches were stored separately)
-      ruleRecipeIds: admin.firestore.FieldValue.delete(),
+      ruleRecipeIds: FieldValue.delete(),
     };
     await d.ref.update(update);
     updates.set(d.id, {...update, ownersMap: autoRecipeOwners, actorsMap: autoRecipeActors, matchCount: matches.length, added: merged.autoRecipeIds.length});
@@ -90,7 +91,7 @@ exports.refreshDiscoverTopicRuleMatches = onSchedule(
       maxInstances: 1,
     },
     async () => {
-      const db = admin.firestore();
+      const db = getFirestore();
       const topicsSnap = await db.collection('discoverTopics').get();
       const docs = topicsSnap.docs.filter((d) =>
         hasRecipeRule(d.data().recipeRule) || d.data().autoRecipeIds !== undefined ||
@@ -211,7 +212,7 @@ const rotateFuerDichEntdecktList = async (db, listDoc, context, now = Date.now()
     themeLabel: topic.rubrik || '',
     themeImage: topic.imageUrl || '',
     themeId: topic.id,
-    rotatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    rotatedAt: FieldValue.serverTimestamp(),
   });
   if (followedUsed) {
     // Private to the owner (rules: read by owner only, written by functions only).
@@ -219,11 +220,11 @@ const rotateFuerDichEntdecktList = async (db, listDoc, context, now = Date.now()
       listId: listDoc.id,
       themeId: topic.id,
       recipes: buildAttribution(topic, recipeIds, followedIds),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
   }
   if (notify) {
-    await sendFuerDichEntdecktPush(admin, db, list.ownerId, {
+    await sendFuerDichEntdecktPush(getMessaging(), db, list.ownerId, {
       listId: listDoc.id,
       label: topic.beschreibung || topic.rubrik || '',
       newCount: countNewRecipes(list.recipeIds, recipeIds),
@@ -249,7 +250,7 @@ exports.rotateFuerDichEntdecktLists = onSchedule(
       maxInstances: 1,
     },
     async () => {
-      const db = admin.firestore();
+      const db = getFirestore();
       const listsSnap = await db.collection('groups')
           .where('systemKey', '==', FUER_DICH_ENTDECKT_KEY).get();
       const context = await loadFuerDichEntdecktRotationContext(db);
@@ -305,7 +306,7 @@ exports.fillNewFuerDichEntdecktList = onDocumentCreated(
     async (event) => {
       const data = event.data ? event.data.data() : null;
       if (!data || data.systemKey !== FUER_DICH_ENTDECKT_KEY || !data.ownerId) return;
-      const db = admin.firestore();
+      const db = getFirestore();
       const context = await loadFuerDichEntdecktRotationContext(db);
       if (context.activeTopics.length === 0) {
         console.log(`fillNewFuerDichEntdecktList: list ${event.params.groupId}: no relevant topic`);

@@ -12,6 +12,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
 
 let sendGroupInvitationEmail;
 let userRoles;
@@ -70,7 +71,7 @@ function loadFunction() {
     if (request === 'sharp') {
       return () => ({});
     }
-    if (request === 'firebase-admin') {
+    if (isFirebaseAdminRequest(request, parent)) {
       const firestoreFactory = () => ({
         collection: (name) => ({
           doc: (id) => ({
@@ -103,7 +104,7 @@ function loadFunction() {
         }),
       });
       firestoreFactory.FieldValue = {serverTimestamp: () => ({}), increment: (n) => n};
-      return {
+      return firebaseAdminModule(request, {
         initializeApp: () => {},
         firestore: firestoreFactory,
         auth: () => ({
@@ -114,7 +115,7 @@ function loadFunction() {
             throw err;
           },
         }),
-      };
+      });
     }
     return originalLoad.call(this, request, parent, isMain, ...args);
   };

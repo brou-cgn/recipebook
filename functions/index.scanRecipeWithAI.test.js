@@ -27,6 +27,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
 
 // Minimal valid JPEG base64 string (length > 100 chars, JPEG MIME type)
 const VALID_IMAGE = 'data:image/jpeg;base64,' + 'A'.repeat(200);
@@ -144,7 +145,7 @@ function loadFunction() {
     }
 
     // ── Firebase Admin ─────────────────────────────────────────────────────
-    if (request === 'firebase-admin') {
+    if (isFirebaseAdminRequest(request, parent)) {
       const firestoreFactory = () => ({
         collection: (name) => {
           if (name === 'settings') {
@@ -216,10 +217,10 @@ function loadFunction() {
         increment: (n) => n,
       };
 
-      return {
+      return firebaseAdminModule(request, {
         initializeApp: () => {},
         firestore: firestoreFactory,
-      };
+      });
     }
 
     return originalLoad.call(this, request, parent, isMain, ...args);

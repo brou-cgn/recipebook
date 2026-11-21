@@ -47,7 +47,7 @@ HTTP endpoint for **Apple Shortcut** deep-link imports.
 Authenticates via `SHORTCUT_API_KEY` (same mechanism as `addRecipeViaAPI`).
 
 **Features:**
-- ✅ Authentication: API Key (`X-Api-Key` header) + User Email (`X-User-Email` header, resolved server-side to a Firebase uid via `admin.auth().getUserByEmail`)
+- ✅ Authentication: API Key (`X-Api-Key` header) + User Email (`X-User-Email` header, resolved server-side to a Firebase uid via `getAuth().getUserByEmail`)
 - ✅ CORS enabled for allowed origins
 - ✅ Requires user role `edit`, `admin`, `moderator`, or flag `isShortcutUser: true`
 - ✅ Asynchronous: queues the job and responds in well under a second instead
@@ -135,7 +135,7 @@ HTTP error.
 An HTTP endpoint that lets external tools – such as an **Apple Shortcut** – create recipes directly in Firestore without going through the RecipeBook UI.
 
 **Features:**
-- ✅ Authentication: API Key (`X-Api-Key` header) + User Email (`X-User-Email` header, resolved server-side to a Firebase uid via `admin.auth().getUserByEmail`)
+- ✅ Authentication: API Key (`X-Api-Key` header) + User Email (`X-User-Email` header, resolved server-side to a Firebase uid via `getAuth().getUserByEmail`)
 - ✅ Accepts both German and English field names (compatible with AI/Shortcut output)
 - ✅ Input validation with descriptive error messages
 - ✅ CORS enabled
@@ -249,7 +249,7 @@ See [APPLE_SHORTCUT_SETUP.md](../docs/setup/apple-shortcut.md) for a full step-b
 An HTTP endpoint that stores unstructured recipe text temporarily in Firestore and returns a public URL that renders the text as structured HTML. This enables Apple Shortcuts or other tools to hand off raw text to an AI/website-import workflow without having to build JSON arrays manually.
 
 **Features:**
-- ✅ Authentication: API Key (`X-Api-Key` header) + User Email (`X-User-Email` header, resolved server-side to a Firebase uid via `admin.auth().getUserByEmail`)
+- ✅ Authentication: API Key (`X-Api-Key` header) + User Email (`X-User-Email` header, resolved server-side to a Firebase uid via `getAuth().getUserByEmail`)
 - ✅ Role check: only users with role `edit`, `admin`, `moderator`, or flag `isShortcutUser: true` may create imports
 - ✅ Configurable TTL (default 10 minutes)
 - ✅ Returns a capability URL (`importUrl`) that is publicly accessible
@@ -468,44 +468,12 @@ The Gemini-backed Shortcut endpoints (`importRecipeShortcut`, `scanRecipePhotoSh
 (`503` if the counter cannot be checked). Shortcut users count as authenticated; the tier
 follows their `users/{uid}.role`.
 
-### Setting Admin Custom Claims
+### Admin Privileges
 
-To give a user admin privileges and higher rate limits, set a custom claim using the Firebase Admin SDK:
-
-```javascript
-const admin = require('firebase-admin');
-
-// Set admin claim for a user
-await admin.auth().setCustomUserClaims(uid, { admin: true });
-```
-
-Or create a simple Node.js script:
-
-```javascript
-// set-admin.js
-const admin = require('firebase-admin');
-
-// Initialize with your service account
-// Requires GOOGLE_APPLICATION_CREDENTIALS environment variable
-// or running in a GCP environment with default credentials
-admin.initializeApp({
-  credential: admin.credential.applicationDefault()
-});
-
-const userId = process.argv[2];
-if (!userId) {
-  console.error('Usage: node set-admin.js USER_ID');
-  process.exit(1);
-}
-
-admin.auth().setCustomUserClaims(userId, { admin: true })
-  .then(() => console.log(`Admin claim set for user: ${userId}`))
-  .catch(err => console.error('Error:', err));
-```
-
-Run with: `node set-admin.js USER_UID_HERE`
-
-**Note:** Users need to sign out and sign back in for custom claims to take effect.
+Admin privileges and the higher rate limits depend only on `users/{uid}.role === 'admin'`, the same
+check the functions (`shared/auth.js`) and `firestore.rules` use. Custom claims are not read anywhere,
+so `setCustomUserClaims` has no effect. An admin changes roles in the app under Benutzerverwaltung;
+the very first registered user becomes admin automatically (`createUserProfile` in `handlers/admin.js`).
 
 ## Error Codes
 

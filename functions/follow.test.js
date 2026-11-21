@@ -11,11 +11,10 @@ class FakeHttpsError extends Error {
 
 const SERVER_TS = {__serverTimestamp: true};
 
-const fakeAdmin = {
-  firestore: {
-    FieldValue: {serverTimestamp: () => SERVER_TS},
-    Timestamp: {fromMillis: (ms) => ({toMillis: () => ms})},
-  },
+// FieldValue und Timestamp, wie sie die Handler aus firebase-admin/firestore hereinreichen.
+const fakeFirestore = {
+  FieldValue: {serverTimestamp: () => SERVER_TS},
+  Timestamp: {fromMillis: (ms) => ({toMillis: () => ms})},
 };
 
 /** Minimaler Firestore-Ersatz: db.doc(path), Transaktionen, Pfad -> Daten. */
@@ -59,9 +58,9 @@ const NOW = Date.UTC(2026, 9, 18, 12, 0, 0);
 const DAY = 24 * 60 * 60 * 1000;
 
 const request = (db, uid, followeeId, extra = {}) => follow.requestFollow(
-    fakeAdmin, db, FakeHttpsError, {auth: auth(uid), followeeId, nowMs: NOW, ...extra});
+    fakeFirestore, db, FakeHttpsError, {auth: auth(uid), followeeId, nowMs: NOW, ...extra});
 const respond = (db, uid, followerId, action, extra = {}) => follow.respondFollow(
-    fakeAdmin, db, FakeHttpsError, {auth: auth(uid), followerId, action, nowMs: NOW, ...extra});
+    fakeFirestore, db, FakeHttpsError, {auth: auth(uid), followerId, action, nowMs: NOW, ...extra});
 
 const rejectsWith = (promise, code) => assert.rejects(promise, (err) => {
   assert.equal(err.code, code);
@@ -88,9 +87,9 @@ test('requestFollow ist idempotent und gibt den bestehenden Status zurück', asy
 test('requestFollow lehnt Gäste, Anonyme, Selbstfolgen und ungültige IDs ab', async () => {
   const db = makeDb(baseSeed());
   await rejectsWith(request(db, 'gast', 'ben'), 'permission-denied');
-  await rejectsWith(follow.requestFollow(fakeAdmin, db, FakeHttpsError,
+  await rejectsWith(follow.requestFollow(fakeFirestore, db, FakeHttpsError,
       {auth: auth('anna', 'anonymous'), followeeId: 'ben', nowMs: NOW}), 'permission-denied');
-  await rejectsWith(follow.requestFollow(fakeAdmin, db, FakeHttpsError,
+  await rejectsWith(follow.requestFollow(fakeFirestore, db, FakeHttpsError,
       {auth: null, followeeId: 'ben', nowMs: NOW}), 'unauthenticated');
   await rejectsWith(request(db, 'anna', 'anna'), 'invalid-argument');
   await rejectsWith(request(db, 'anna', ''), 'invalid-argument');
@@ -228,9 +227,9 @@ test('respondFollow prüft Aktion, ID, Gäste und das Flag des Antwortenden', as
   await request(db, 'anna', 'ben');
   await rejectsWith(respond(db, 'ben', 'anna', 'mute'), 'invalid-argument');
   await rejectsWith(respond(db, 'ben', '', 'accept'), 'invalid-argument');
-  await rejectsWith(follow.respondFollow(fakeAdmin, db, FakeHttpsError,
+  await rejectsWith(follow.respondFollow(fakeFirestore, db, FakeHttpsError,
       {auth: auth('ben', 'anonymous'), followerId: 'anna', action: 'accept'}), 'permission-denied');
-  await rejectsWith(follow.respondFollow(fakeAdmin, db, FakeHttpsError,
+  await rejectsWith(follow.respondFollow(fakeFirestore, db, FakeHttpsError,
       {auth: null, followerId: 'anna', action: 'accept'}), 'unauthenticated');
   db.store.set('rolePermissions/edit', {follow: false});
   await rejectsWith(respond(db, 'ben', 'anna', 'accept'), 'permission-denied');

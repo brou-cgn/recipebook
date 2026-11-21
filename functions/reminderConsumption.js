@@ -1,5 +1,6 @@
 const {onSchedule} = require('firebase-functions/v2/scheduler');
-const admin = require('firebase-admin');
+const {getFirestore, FieldValue} = require('firebase-admin/firestore');
+const {getMessaging} = require('firebase-admin/messaging');
 
 // Wie viele Tage nach dem Event-Datum erinnert werden soll.
 const REMINDER_DELAY_DAYS = 1;
@@ -24,7 +25,7 @@ exports.reminderConsumption = onSchedule(
       maxInstances: 1,
     },
     async () => {
-      const db = admin.firestore();
+      const db = getFirestore();
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - REMINDER_DELAY_DAYS);
       const cutoffStr = cutoff.toISOString().slice(0, 10); // YYYY-MM-DD
@@ -116,7 +117,7 @@ exports.reminderConsumption = onSchedule(
       for (let i = 0; i < messages.length; i += FCM_BATCH_SIZE) {
         const batch = messages.slice(i, i + FCM_BATCH_SIZE);
         try {
-          const response = await admin.messaging().sendEach(batch.map((m) => m.payload));
+          const response = await getMessaging().sendEach(batch.map((m) => m.payload));
           response.responses.forEach((resp, idx) => {
             if (resp.success) {
               sentCount += 1;
@@ -144,7 +145,7 @@ exports.reminderConsumption = onSchedule(
         await Promise.allSettled(
             [...staleByUid.entries()].map(([uid, tokens]) =>
               db.collection('users').doc(uid).update({
-                fcmTokens: admin.firestore.FieldValue.arrayRemove(...tokens),
+                fcmTokens: FieldValue.arrayRemove(...tokens),
               }),
             ),
         );

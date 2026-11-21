@@ -11,19 +11,27 @@ class FakeHttpsError extends Error {
 }
 
 const SERVER_TS = {__serverTimestamp: true};
-const fakeAdmin = {firestore: {
+// FieldValue und Timestamp, wie sie der Handler aus firebase-admin/firestore hereinreicht.
+const fakeFirestore = {
   FieldValue: {serverTimestamp: () => SERVER_TS},
   Timestamp: {fromMillis: (ms) => ({toMillis: () => ms})},
-}};
+};
 
 /**
  * Firestore-Ersatz mit dem, was wichteln.js braucht: Dokumente nach Pfad, Collection-
  * Abfragen (where == und <=, orderBy, limit), Batches, Transaktionen, recursiveDelete.
  * Server-Zeitstempel werden beim Schreiben wie in Firestore zu Zeitstempeln mit fortlaufender
  * Uhr; stelleUhr(ms) setzt sie vor (für Tests mit Terminen).
+ *
+ * Transaktionen lesen Dokumente und Abfragen (tx.get) und laufen wie in Firestore erneut, wenn
+ * sich etwas Gelesenes bis zum Commit geändert hat (Versionszähler je Pfad, Tech-Check F19).
+ * db.vorCommit(), falls gesetzt, läuft zwischen dem Handler und dieser Prüfung: so schieben Tests
+ * eine gleichzeitige Änderung einer zweiten Sitzung ein. db.transaktionsVersuche zählt die Läufe.
  */
 const makeDb = (seed = {}) => {
   const store = new Map(Object.entries(seed));
+  const versionen = new Map();
+  const neueVersion = (path) => versionen.set(path, (versionen.get(path) || 0) + 1);
   let uhr = 1000;
   let autoId = 0;
   const resolve = (data) => {
@@ -39,13 +47,22 @@ const makeDb = (seed = {}) => {
     return out;
   };
   const write = {
-    set: (path, data) => store.set(path, resolve(data)),
+    set: (path, data) => {
+      store.set(path, resolve(data));
+      neueVersion(path);
+    },
     update: (path, data) => {
       if (!store.has(path)) throw new Error(`update auf fehlendes Dokument ${path}`);
       store.set(path, {...store.get(path), ...resolve(data)});
+      neueVersion(path);
     },
-    delete: (path) => store.delete(path),
+    delete: (path) => {
+      store.delete(path);
+      neueVersion(path);
+    },
   };
+  // Welche Dokumente eine Abfrage liefert, in welchem Stand: ändert sich das, war die Abfrage veraltet.
+  const signatur = (ergebnis) => ergebnis.docs.map((d) => `${d.ref.path}@${versionen.get(d.ref.path) || 0}`).join('|');
   const snap = (path) => ({
     id: path.split('/').pop(),
     exists: store.has(path),
@@ -104,17 +121,38 @@ const makeDb = (seed = {}) => {
         commit: async () => ops.forEach((op) => op()),
       };
     },
+    vorCommit: null,
+    transaktionsVersuche: 0,
     runTransaction: async (handler) => {
-      const ops = [];
-      const tx = {
-        get: async (ref) => snap(ref.path),
-        set: (ref, data) => ops.push(() => write.set(ref.path, data)),
-        update: (ref, data) => ops.push(() => write.update(ref.path, data)),
-        delete: (ref) => ops.push(() => write.delete(ref.path)),
-      };
-      const result = await handler(tx);
-      ops.forEach((op) => op());
-      return result;
+      for (let versuch = 1; ; versuch += 1) {
+        db.transaktionsVersuche += 1;
+        const ops = [];
+        const pruefungen = [];
+        const tx = {
+          get: async (refOderAbfrage) => {
+            if (typeof refOderAbfrage.path === 'string') {
+              const {path} = refOderAbfrage;
+              const stand = versionen.get(path) || 0;
+              pruefungen.push(async () => (versionen.get(path) || 0) === stand);
+              return snap(path);
+            }
+            const ergebnis = await refOderAbfrage.get();
+            const stand = signatur(ergebnis);
+            pruefungen.push(async () => signatur(await refOderAbfrage.get()) === stand);
+            return ergebnis;
+          },
+          set: (ref, data) => ops.push(() => write.set(ref.path, data)),
+          update: (ref, data) => ops.push(() => write.update(ref.path, data)),
+          delete: (ref) => ops.push(() => write.delete(ref.path)),
+        };
+        const result = await handler(tx);
+        if (db.vorCommit) await db.vorCommit();
+        if ((await Promise.all(pruefungen.map((pruefe) => pruefe()))).every(Boolean)) {
+          ops.forEach((op) => op());
+          return result;
+        }
+        if (versuch >= 5) throw new Error('Transaktion: zu viele Konflikte');
+      }
     },
     recursiveDelete: async (ref) => {
       [...store.keys()]
@@ -137,11 +175,11 @@ const auth = (uid, provider = 'password') => ({uid, token: {firebase: {sign_in_p
 // Neue Runden brauchen ein Datum der Feier; weit genug weg, dass es keine Frist berührt.
 const FEIER = '2099-12-24';
 const verwalten = (db, uid, daten, extra = {}) =>
-  wichteln.verwalten(fakeAdmin, db, FakeHttpsError, {auth: uid ? auth(uid) : null, daten, ...extra});
+  wichteln.verwalten(fakeFirestore, db, FakeHttpsError, {auth: uid ? auth(uid) : null, daten, ...extra});
 // Ohne eigenen Ersatz darf kein Test eine Seite abrufen.
 const keinAbruf = async (url) => assert.fail(`unerwarteter Abruf von ${url}`);
 const teilnahme = (db, daten, ladeVorschau = keinAbruf, jetztMs) =>
-  wichteln.teilnahme(fakeAdmin, db, FakeHttpsError, {daten, ladeVorschau, jetztMs});
+  wichteln.teilnahme(fakeFirestore, db, FakeHttpsError, {daten, ladeVorschau, jetztMs});
 
 const rejectsWith = (promise, code) => assert.rejects(promise, (err) => {
   assert.equal(err.code, code, err.message);
@@ -332,7 +370,7 @@ test('neuesToken: 32 Zeichen base64url und jedes Mal anders', () => {
 test('wichtelVerwalten: nur angemeldete Mitglieder ab Rolle edit', async () => {
   const db = makeDb(baseSeed());
   await rejectsWith(verwalten(db, null, {aktion: 'liste'}), 'unauthenticated');
-  await rejectsWith(wichteln.verwalten(fakeAdmin, db, FakeHttpsError,
+  await rejectsWith(wichteln.verwalten(fakeFirestore, db, FakeHttpsError,
       {auth: auth('orga', 'anonymous'), daten: {aktion: 'liste'}}), 'permission-denied');
   await rejectsWith(verwalten(db, 'leser', {aktion: 'liste'}), 'permission-denied');
   await rejectsWith(verwalten(db, 'gast', {aktion: 'liste'}), 'permission-denied');
@@ -605,6 +643,72 @@ test('Ausschlüsse sieht nur der Organisator, nie ein Teilnehmer', async () => {
   for (const name of Object.keys(tn)) assert.doesNotMatch(JSON.stringify(await als(name, 'laden')), /ausschl/i);
   await verwalten(db, 'orga', {aktion: 'auslosen', rundeId});
   for (const name of Object.keys(tn)) assert.doesNotMatch(JSON.stringify(await als(name, 'ziehen')), /ausschl/i);
+});
+
+// ---------------------------------------------------------------------------
+// Zwei Sitzungen des Organisators gleichzeitig (Tech-Check F19): Statusprüfung, Lesen und
+// Schreiben liegen je Aktion in einer Transaktion. `dazwischen` schiebt die Aktion der zweiten
+// Sitzung zwischen Lesen und Commit; der Firestore-Ersatz wiederholt dann wie Firestore die
+// Transaktion mit dem neuen Stand.
+
+/** Führt `zweiteSitzung` genau einmal zwischen Lesen und Commit der nächsten Transaktion aus. */
+const dazwischen = (db, zweiteSitzung) => {
+  db.vorCommit = async () => {
+    db.vorCommit = null;
+    await zweiteSitzung();
+  };
+};
+
+test('F19: Kommt beim Auslosen ein Teilnehmer dazu, lost die Transaktion mit ihm neu aus', async () => {
+  const {db, rundeId} = await setupRunde();
+  dazwischen(db, () => verwalten(db, 'orga', {aktion: 'teilnehmerHinzufuegen', rundeId, namen: ['Eve']}));
+  const sicht = await verwalten(db, 'orga', {aktion: 'auslosen', rundeId});
+  assert.equal(sicht.runde.status, 'ausgelost');
+  const eve = sicht.teilnehmer.find((t) => t.name === 'Eve');
+  assert.ok(eve, 'Eve ist dabei');
+  const z = zuordnungen(db, rundeId);
+  assert.equal(Object.keys(z).length, 5);
+  assert.ok(z[eve.id], 'Eve beschenkt jemanden');
+  assert.ok(Object.values(z).includes(eve.id), 'Eve wird beschenkt');
+});
+
+test('F19: Hinzufügen im Moment des Auslosens wird abgelehnt, statt einen Teilnehmer ohne Los anzulegen', async () => {
+  const {db, rundeId} = await setupRunde();
+  dazwischen(db, () => verwalten(db, 'orga', {aktion: 'auslosen', rundeId}));
+  await rejectsWith(verwalten(db, 'orga', {aktion: 'teilnehmerHinzufuegen', rundeId, namen: ['Eve']}), 'failed-precondition');
+  const sicht = await verwalten(db, 'orga', {aktion: 'laden', rundeId});
+  assert.equal(sicht.runde.status, 'ausgelost');
+  assert.deepEqual(sicht.teilnehmer.map((t) => t.name).sort(), ['Anna', 'Ben', 'Cleo', 'Dana']);
+  assert.equal(Object.keys(zuordnungen(db, rundeId)).length, 4);
+});
+
+test('F19: Entfernen im Moment des Auslosens wird abgelehnt – kein Geber ohne Empfänger', async () => {
+  const {db, rundeId, tn} = await setupRunde();
+  dazwischen(db, () => verwalten(db, 'orga', {aktion: 'auslosen', rundeId}));
+  await rejectsWith(verwalten(db, 'orga', {aktion: 'teilnehmerEntfernen', rundeId, teilnehmerId: tn.Dana.id}), 'failed-precondition');
+  const ids = Object.values(tn).map((t) => t.id).sort();
+  const z = zuordnungen(db, rundeId);
+  assert.deepEqual(Object.keys(z).sort(), ids);
+  assert.deepEqual(Object.values(z).sort(), ids);
+  assert.ok(db.store.has(`wichtelRunden/${rundeId}/teilnehmer/${tn.Dana.id}`));
+});
+
+test('F19: Ein Ausschluss, der während des Auslosens gesetzt wird, gilt für diese Auslosung', async () => {
+  const {db, rundeId, tn} = await setupRunde();
+  // Mit diesem Zufall zöge Anna ohne Ausschluss Ben; schließt sie Ben und Cleo aus, bleibt nur Dana.
+  const randomInt = () => 0;
+  const ids = ['Anna', 'Ben', 'Cleo', 'Dana'].map((n) => tn[n].id);
+  assert.equal(wichteln.zieheKreis(ids, {ausschluesse: new Map(ids.map((id) => [id, []])), randomInt})[tn.Anna.id], tn.Ben.id);
+  dazwischen(db, () => setzeAusschluesse(db, rundeId, tn, 'Anna', ['Ben', 'Cleo']));
+  await verwalten(db, 'orga', {aktion: 'auslosen', rundeId}, {randomInt});
+  assert.equal(zuordnungen(db, rundeId)[tn.Anna.id], tn.Dana.id);
+});
+
+test('F19: Ein Ausschluss im Moment des Auslosens wird abgelehnt, wenn die Auslosung zuerst steht', async () => {
+  const {db, rundeId, tn} = await setupRunde();
+  dazwischen(db, () => verwalten(db, 'orga', {aktion: 'auslosen', rundeId}));
+  await rejectsWith(setzeAusschluesse(db, rundeId, tn, 'Anna', ['Ben']), 'failed-precondition');
+  assert.deepEqual(db.store.get(`wichtelRunden/${rundeId}/teilnehmer/${tn.Anna.id}`).ausschluesse, []);
 });
 
 test('zuruecksetzen löscht die Zuordnung, Links, Wünsche und Ideen bleiben', async () => {
@@ -1179,7 +1283,8 @@ test('Limit nicht prüfbar: keine Mail (schlägt geschlossen fehl), ausgelost is
   // Nur der Zähler ist nicht lesbar; die Transaktion des Auslosens läuft.
   const transaktion = db.runTransaction;
   db.runTransaction = (handler) => transaktion(async (tx) => handler({...tx, get: async (ref) => {
-    if (ref.path.startsWith('wichtelMailLimits/')) throw new Error('offline');
+    // Abfragen (Teilnehmer) haben keinen Pfad und laufen normal.
+    if (ref.path?.startsWith('wichtelMailLimits/')) throw new Error('offline');
     return tx.get(ref);
   }}));
   const {ergebnis: sicht} = await mitStillemLog(() => eintragenUndAuslosen(orga, [{name: 'Anna', gastId: 'gastAnna0001'}]));
@@ -1437,7 +1542,7 @@ const setupNeuigkeiten = async ({anlass = 'weihnachten'} = {}) => {
     als: (wer, aktion, daten = {}) => teilnahme(db, {aktion, rundeId, token: tn[wer].token, ...daten}, keinAbruf, jetzt),
     wunsch: (wer, text) => teilnahme(db, {aktion: 'eintragHinzufuegen', rundeId, token: tn[wer].token, ueberId: tn[wer].id, text}, keinAbruf, jetzt),
     idee: (wer, fuer, text) => teilnahme(db, {aktion: 'eintragHinzufuegen', rundeId, token: tn[wer].token, ueberId: tn[fuer].id, text}, keinAbruf, jetzt),
-    lauf: (mailer = versand) => wichteln.versendeNeuigkeiten(fakeAdmin, db, {mailer: mailer.factory, jetztMs: jetzt}),
+    lauf: (mailer = versand) => wichteln.versendeNeuigkeiten(fakeFirestore, db, {mailer: mailer.factory, jetztMs: jetzt}),
     vormerker: (geber = schenker) => db.store.get(`${NEUIGKEITEN_COLLECTION}/${rundeId}_${tn[geber].id}`),
     teilnehmerDoc: (name) => db.store.get(`wichtelRunden/${rundeId}/teilnehmer/${tn[name].id}`),
   };
@@ -1698,7 +1803,7 @@ const setupErinnerung = async ({anlass = 'weihnachten'} = {}) => {
     },
     als: (wer, aktion, daten = {}) => teilnahme(db, {aktion, rundeId, token: tn[wer].token, ...daten}, keinAbruf, jetzt),
     wunsch: (wer, text) => teilnahme(db, {aktion: 'eintragHinzufuegen', rundeId, token: tn[wer].token, ueberId: tn[wer].id, text}, keinAbruf, jetzt),
-    lauf: (mailer = versand) => wichteln.versendeErinnerungen(fakeAdmin, db, {mailer: mailer.factory, jetztMs: jetzt}),
+    lauf: (mailer = versand) => wichteln.versendeErinnerungen(fakeFirestore, db, {mailer: mailer.factory, jetztMs: jetzt}),
     vormerker: (wer) => db.store.get(`${ERINNERUNGEN_COLLECTION}/${rundeId}_${tn[wer].id}`),
     teilnehmerPfad: (wer) => `wichtelRunden/${rundeId}/teilnehmer/${tn[wer].id}`,
     teilnehmerDoc: (wer) => db.store.get(`wichtelRunden/${rundeId}/teilnehmer/${tn[wer].id}`),

@@ -16,6 +16,8 @@ erzwungen — wo das gilt, steht die Datei dabei.
 
 ## Datenzugriff
 - Nie eine ganze Collection lesen. Abfragen immer mit `where` und `limit`.
+  Erzwungen durch `src/dataAccessPolicy.test.js` (Tech-Check K3/W3): zählt je Datei Lesezugriffe
+  auf eine ganze Collection und `query(...)` ohne `limit`; Baseline je Datei, darf nur sinken.
 - Aggregierte Daten (Logs, Zähler) nicht pro Aufruf einzeln schreiben und alle lesen.
 - Keine personenbezogenen Daten (E-Mail-Adressen u. Ä.) in Logs oder Protokolle. In `functions/`
   erzwungen durch `functions/logPolicy.test.js` (uid oder ID statt Adresse loggen).
@@ -38,6 +40,12 @@ erzwungen — wo das gilt, steht die Datei dabei.
   in `tokens.css` mit beiden Werten anlegen. Erzwungen durch `src/colorTokenPolicy.test.js`
   (Baseline je Datei, darf nur sinken: wer Farben migriert, senkt den Wert; für `darkMode.css`
   zählt die Zahl der Dark-Selektoren).
+- **Textfarben auf `p`, `span`, `label`, `li` im Dunkelmodus** (Tech-Check A7): `darkMode.css` setzt
+  sie pauschal auf `#e8e8e8` (`[data-theme="dark"] span` usw., Spezifität 0-1-1). Eine Token-Farbe
+  mit nur einer Klasse (`.hinweis { color: var(--color-danger) }`) verliert dagegen und wird im
+  Dunkelmodus weiß. Bis die pauschale Regel abgelöst ist, Token-Textfarben für diese Elemente mit
+  mindestens 0-1-1 schreiben, z. B. `.seite .hinweis` oder `span.hinweis`. Erzwungen durch
+  `src/darkTextPolicy.test.js` (Baseline je Datei, darf nur sinken).
 - **Löschaktionen**: ausschließlich `DeleteRowButton` (kein eigenes ×, kein gefüllter Kreis,
   kein Icon im Eingabefeld). 28 × 28 px, Radius 999, transparent; Rot `#a33a26` auf 12 % Fläche
   erst bei Hover/Fokus; am rechten Zeilenrand; Tooltip und `aria-label` „<Name> entfernen".
@@ -84,6 +92,14 @@ erzwungen — wo das gilt, steht die Datei dabei.
   - `sharp`, `cheerio`, `nodemailer`, `@google/genai` und `puppeteer-core` erst beim Aufruf per `require`
     laden, nicht am Dateianfang (Kaltstart).
   - Function-Tests laden `index.js` mit Stubs über `testSupport.purgeFunctionsCache()`.
+  - firebase-admin nur modular und destrukturiert laden, z. B.
+    `const {getFirestore, FieldValue} = require('firebase-admin/firestore')` (ebenso `/app`, `/auth`,
+    `/storage`, `/messaging`), nie `require('firebase-admin')`: Die Namespace-API (`admin.firestore()`
+    usw.) gibt es ab v14 nicht mehr (Tech-Check F18). Module, die ohne Emulator testbar sein sollen,
+    bekommen `FieldValue`, `Timestamp`, `FieldPath` bzw. die `messaging`-Instanz vom Handler
+    hereingereicht. Erzwungen durch `firebaseAdminApi.test.js`, der auch prüft, dass jeder genutzte
+    Name im installierten Paket existiert. In Tests baut `testSupport.firebaseAdminModule()` die
+    Subpfade aus einem Fake.
 
 ## Arbeitsweise
 - Kleine, thematisch geschlossene PRs. Beschreibung nennt, wie getestet wurde.

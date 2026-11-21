@@ -2,7 +2,7 @@
  * Von mehreren Function-Gruppen genutzte Helfer (importLists; aus index.js, Tech-Check F2).
  */
 
-const admin = require('firebase-admin');
+const {getFirestore} = require('firebase-admin/firestore');
 const {normalizeCuisines, suggestNewCuisines} = require('../cuisineNormalization');
 
 const RECIPE_EXTRACTION_PROMPT_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -25,7 +25,7 @@ async function getConfiguredImportLists() {
   }
   let data = {};
   try {
-    const settingsDoc = await admin.firestore().collection('settings').doc('app').get();
+    const settingsDoc = await getFirestore().collection('settings').doc('app').get();
     data = settingsDoc.exists ? (settingsDoc.data() || {}) : {};
   } catch (err) {
     console.error('getConfiguredImportLists: could not read settings/app, using defaults:', err);

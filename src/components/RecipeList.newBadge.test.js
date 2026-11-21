@@ -30,6 +30,7 @@ jest.mock('../utils/customLists', () => ({
 
 jest.mock('../utils/recipeCallsFirestore', () => ({
   getRecentRecipeCalls: () => Promise.resolve([]),
+  getRecentRecipeViewCounts: () => Promise.resolve(new Map()),
 }));
 
 // ─── Unit tests for isNewRecipe helper ────────────────────────────────────────

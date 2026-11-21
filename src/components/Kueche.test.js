@@ -39,7 +39,7 @@ jest.mock('../utils/imageUtils', () => ({
 }));
 
 jest.mock('../utils/appCallsFirestore', () => ({
-  getAppCalls: jest.fn(),
+  getRecentAppCalls: jest.fn(),
 }));
 
 jest.mock('../utils/recipeCallsFirestore', () => ({
@@ -74,8 +74,8 @@ describe('Kueche', () => {
       { eventId: 'e1', erstelltAm: new Date() },
       { eventId: 'e2', erstelltAm: new Date() },
     ]);
-    const { getAppCalls } = require('../utils/appCallsFirestore');
-    getAppCalls.mockResolvedValue([]);
+    const { getRecentAppCalls } = require('../utils/appCallsFirestore');
+    getRecentAppCalls.mockResolvedValue([]);
     const { getRecipeCalls, getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
     getRecipeCalls.mockResolvedValue([]);
     getRecentRecipeCalls.mockResolvedValue([]);
@@ -704,9 +704,9 @@ describe('Kueche', () => {
   });
 
   test('Küchenbetrieb tile shows today call count', async () => {
-    const { getAppCalls } = require('../utils/appCallsFirestore');
+    const { getRecentAppCalls } = require('../utils/appCallsFirestore');
     const now = new Date();
-    getAppCalls.mockResolvedValueOnce([
+    getRecentAppCalls.mockResolvedValueOnce([
       { id: 'c1', timestamp: { toDate: () => now } },
       { id: 'c2', timestamp: { toDate: () => now } },
     ]);
@@ -724,6 +724,25 @@ describe('Kueche', () => {
     expect(screen.getByText('Küchenbetrieb')).toBeInTheDocument();
     expect(await screen.findByText('2')).toBeInTheDocument();
     expect(screen.getByText('Aufrufe heute')).toBeInTheDocument();
+    // Tech-Check K2: nur die Woche fürs Diagramm, nicht die ganze Historie.
+    expect(getRecentAppCalls).toHaveBeenCalledWith(7);
+  });
+
+  test('does not load app calls for users without the app calls permission', () => {
+    const { getRecentAppCalls } = require('../utils/appCallsFirestore');
+    getRecentAppCalls.mockClear();
+
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1' }}
+      />
+    );
+
+    expect(getRecentAppCalls).not.toHaveBeenCalled();
   });
 
   test('Küchenbetrieb tile calls onViewChange with appCalls when clicked', () => {

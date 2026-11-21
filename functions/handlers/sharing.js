@@ -3,7 +3,9 @@
  */
 
 const {onCall, onRequest, HttpsError} = require('firebase-functions/v2/https');
-const admin = require('firebase-admin');
+const {getFirestore} = require('firebase-admin/firestore');
+const {getStorage} = require('firebase-admin/storage');
+const {getMessaging} = require('firebase-admin/messaging');
 const crypto = require('crypto');
 const {isVisibleToUser} = require('../fuerDichEntdecktRotation');
 const {authorizeListPush} = require('../listPushGuard');
@@ -200,7 +202,7 @@ exports.bringRecipeExport = onRequest(
           return;
         }
         try {
-          const db = admin.firestore();
+          const db = getFirestore();
           const exportRef = db.collection('bringExports').doc();
           await exportRef.set({
             shareId,
@@ -224,7 +226,7 @@ exports.bringRecipeExport = onRequest(
       // If exportId is provided, load pre-resolved items from Firestore.
       if (req.query.exportId) {
         try {
-          const db = admin.firestore();
+          const db = getFirestore();
           const exportDoc = await db.collection('bringExports')
               .doc(req.query.exportId).get();
           if (!exportDoc.exists) {
@@ -261,7 +263,7 @@ exports.bringRecipeExport = onRequest(
       }
 
       try {
-        const db = admin.firestore();
+        const db = getFirestore();
         const recipesRef = db.collection('recipes');
         const snapshot = await recipesRef
             .where('shareId', '==', shareId)
@@ -480,7 +482,7 @@ exports.shareRecipe = onRequest(
       }
 
       try {
-        const db = admin.firestore();
+        const db = getFirestore();
         const snapshot = await db
             .collection('recipes')
             .where('shareId', '==', shareId)
@@ -542,7 +544,7 @@ exports.shareRecipe = onRequest(
 
             // Upload thumbnail to Firebase Storage and get public URL
             if (thumbnailBuffer) {
-              const bucket = admin.storage().bucket();
+              const bucket = getStorage().bucket();
               const fileName =
                 `thumbnails/${recipeDoc.id}_${crypto.randomUUID()}.jpg`;
               const file = bucket.file(fileName);
@@ -644,7 +646,7 @@ exports.getSharedRecipeByShareId = onCall(
         request.data.shareId.trim() : '';
       assertValidShareId(shareId);
 
-      const snapshot = await admin.firestore()
+      const snapshot = await getFirestore()
           .collection('recipes')
           .where('shareId', '==', shareId)
           .limit(1)
@@ -666,7 +668,7 @@ exports.getSharedMenuByShareId = onCall(
         request.data.shareId.trim() : '';
       assertValidShareId(shareId);
 
-      const snapshot = await admin.firestore()
+      const snapshot = await getFirestore()
           .collection('menus')
           .where('shareId', '==', shareId)
           .limit(1)
@@ -717,7 +719,7 @@ exports.getSharedRecipesByIds = onCall(
         return {recipes: []};
       }
 
-      const db = admin.firestore();
+      const db = getFirestore();
       const menuSnapshot = await db
           .collection('menus')
           .where('shareId', '==', shareId)
@@ -766,7 +768,7 @@ exports.getGuestRecipes = onCall(
         throw new HttpsError('permission-denied', 'Nur für Gäste');
       }
 
-      const db = admin.firestore();
+      const db = getFirestore();
       const [recipeSnap, groupSnap] = await Promise.all([
         db.collection('recipes').get(),
         db.collection('groups').where('type', '==', 'public').get(),
@@ -820,7 +822,7 @@ exports.notifyPrivateListMembers = onCall(
         );
       }
 
-      const db = admin.firestore();
+      const db = getFirestore();
 
       // 1. Load the group to get member list
       const groupSnap = await db.collection('groups').doc(groupId).get();
@@ -934,7 +936,7 @@ exports.notifyPrivateListMembers = onCall(
       for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
         const batch = tokens.slice(i, i + BATCH_SIZE);
         try {
-          const response = await admin.messaging().sendEachForMulticast({
+          const response = await getMessaging().sendEachForMulticast({
             tokens: batch,
             ...notificationPayload,
           });

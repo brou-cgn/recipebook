@@ -35,6 +35,7 @@ jest.mock('../utils/userFavorites', () => ({
 
 jest.mock('../utils/recipeCallsFirestore', () => ({
   getRecentRecipeCalls: () => Promise.resolve([]),
+  getRecentRecipeViewCounts: () => Promise.resolve(new Map()),
 }));
 
 // Vier Rezepte ergeben genau einen Einwebe-Slot (TUTORIAL_WEAVE_INTERVAL).

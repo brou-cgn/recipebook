@@ -2,7 +2,7 @@
  * Von mehreren Function-Gruppen genutzte Helfer (importCore; aus index.js, Tech-Check F2).
  */
 
-const admin = require('firebase-admin');
+const {getFirestore, FieldValue, Timestamp} = require('firebase-admin/firestore');
 
 /**
  * Convert a raw Gemini/AI result into the recipe field shape used by
@@ -92,12 +92,12 @@ async function writeImportProtocolEntry({jobId, authorId, source, success, steps
       success: Boolean(success),
       steps: Array.isArray(steps) ? steps : [],
       error: success ? null : (error && error.message ? error.message : 'Import fehlgeschlagen'),
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
       ...(success ? {
-        expiresAt: admin.firestore.Timestamp.fromMillis(Date.now() + IMPORT_PROTOCOL_TTL_MS),
+        expiresAt: Timestamp.fromMillis(Date.now() + IMPORT_PROTOCOL_TTL_MS),
       } : {}),
     };
-    await admin.firestore().collection('failedWebImports').add(entry);
+    await getFirestore().collection('failedWebImports').add(entry);
   } catch (writeError) {
     console.error('writeImportProtocolEntry: failed to write import protocol entry:', writeError);
   }
@@ -127,7 +127,7 @@ async function writeImportProtocolEntry({jobId, authorId, source, success, steps
  */
 async function finalizeImportJob(jobId, authorId, aiResult, meta) {
   if (!jobId) return;
-  const db = admin.firestore();
+  const db = getFirestore();
   const ref = db.collection('recipes').doc(jobId);
   try {
     await db.runTransaction(async (tx) => {
@@ -138,8 +138,8 @@ async function finalizeImportJob(jobId, authorId, aiResult, meta) {
         ...buildRecipeFieldsFromResult(aiResult, authorId),
         authorId,
         isTemp: true,
-        importStatus: admin.firestore.FieldValue.delete(),
-        importProgress: admin.firestore.FieldValue.delete(),
+        importStatus: FieldValue.delete(),
+        importProgress: FieldValue.delete(),
       });
     });
     if (meta && meta.steps) {
@@ -209,7 +209,7 @@ function classifyImportErrorKind(error) {
 async function failImportJob(jobId, error, meta) {
   if (!jobId) return;
   try {
-    await admin.firestore().collection('recipes').doc(jobId).update({
+    await getFirestore().collection('recipes').doc(jobId).update({
       importStatus: 'error',
       importError: error?.message || 'Import fehlgeschlagen',
       importErrorKind: classifyImportErrorKind(error),

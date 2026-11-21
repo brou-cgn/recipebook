@@ -13,7 +13,7 @@
  */
 
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
-const admin = require('firebase-admin');
+const {getFirestore, FieldPath} = require('firebase-admin/firestore');
 const {requireAiCaller} = require('../shared/auth');
 const {ALLOWED_ORIGINS} = require('../shared/common');
 const {consumeDailyQuota} = require('../shared/rateLimit');
@@ -214,7 +214,7 @@ exports.generateWeinprofile = onCall(
       const recipeIds = pruefeRecipeIds(request.data?.recipeIds);
       const caller = await requireAiCaller(request.auth);
 
-      const db = admin.firestore();
+      const db = getFirestore();
       const snaps = await Promise.all(recipeIds.map((id) => db.collection('recipes').doc(id).get()));
 
       // Gruppen nur für die Sichtbarkeitsprüfung laden; Admins sehen alles.
@@ -379,8 +379,8 @@ exports.backfillWeinprofile = onCall(
         throw new HttpsError('failed-precondition', 'Der KI-Dienst ist nicht eingerichtet.');
       }
 
-      const rezepte = admin.firestore().collection('recipes');
-      let abfrage = rezepte.orderBy(admin.firestore.FieldPath.documentId()).limit(anzahl);
+      const rezepte = getFirestore().collection('recipes');
+      let abfrage = rezepte.orderBy(FieldPath.documentId()).limit(anzahl);
       if (cursor) abfrage = abfrage.startAfter(cursor);
       const [seite, gesamt] = await Promise.all([
         abfrage.get(),

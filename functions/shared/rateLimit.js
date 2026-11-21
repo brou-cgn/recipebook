@@ -3,7 +3,7 @@
  */
 
 const {HttpsError} = require('firebase-functions/v2/https');
-const admin = require('firebase-admin');
+const {getFirestore, FieldValue} = require('firebase-admin/firestore');
 
 /**
  * Same day-counter pattern as checkRateLimit above, for a quota with its own
@@ -17,7 +17,7 @@ const admin = require('firebase-admin');
 async function consumeDailyQuota(collectionName, limit, {userId, isAuthenticated, isAdmin, isModerator}) {
   if (limit <= 0) return {allowed: false, remaining: 0, limit};
 
-  const db = admin.firestore();
+  const db = getFirestore();
   const today = new Date().toLocaleDateString('sv-SE', {timeZone: 'Europe/Berlin'});
   const docRef = db.collection(collectionName).doc(`${userId}_${today}`);
 
@@ -43,7 +43,7 @@ async function consumeDailyQuota(collectionName, limit, {userId, isAuthenticated
       }
 
       transaction.update(docRef, {
-        count: admin.firestore.FieldValue.increment(1),
+        count: FieldValue.increment(1),
       });
       return {allowed: true, remaining: limit - data.count - 1, limit};
     });
@@ -90,7 +90,7 @@ function getRateLimit(isAdmin, isAuthenticated, isModerator = false) {
  * @returns {Promise<{allowed: boolean, remaining: number, limit: number}>}
  */
 async function checkRateLimit(userId, isAuthenticated, isAdmin = false, isModerator = false) {
-  const db = admin.firestore();
+  const db = getFirestore();
   // Use MEZ (Europe/Berlin) timezone so counter resets at 0 Uhr MEZ
   const today = new Date().toLocaleDateString('sv-SE', {timeZone: 'Europe/Berlin'}); // YYYY-MM-DD
   const docRef = db.collection('aiScanLimits').doc(`${userId}_${today}`);
@@ -121,7 +121,7 @@ async function checkRateLimit(userId, isAuthenticated, isAdmin = false, isModera
 
       // Increment counter
       transaction.update(docRef, {
-        count: admin.firestore.FieldValue.increment(1),
+        count: FieldValue.increment(1),
       });
       return {allowed: true, remaining: limit - data.count - 1, limit};
     });

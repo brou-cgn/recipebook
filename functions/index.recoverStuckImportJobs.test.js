@@ -6,6 +6,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
 
 let sweeper;
 let quotaCount; // heutiger Zählerstand des Autors (null = noch kein Dokument)
@@ -48,7 +49,7 @@ function loadSweeper(jobs) {
         failImportJobBackground: async (jobId, authorId, error) => failures.push({jobId, code: error.code}),
       };
     }
-    if (request === 'firebase-admin') {
+    if (isFirebaseAdminRequest(request, parent)) {
       const docs = jobs.map((job) => ({
         id: job.id,
         data: () => job.data,
@@ -74,14 +75,14 @@ function loadSweeper(jobs) {
       };
       const firestore = () => db;
       firestore.FieldValue = {delete: () => '__delete__', increment: (n) => n};
-      return {
+      return firebaseAdminModule(request, {
         apps: [{}],
         initializeApp: () => {},
         firestore,
         auth: () => ({}),
         storage: () => ({}),
         messaging: () => ({}),
-      };
+      });
     }
     return originalLoad.call(this, request, parent, isMain, ...args);
   };

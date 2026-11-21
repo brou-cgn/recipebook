@@ -3,7 +3,9 @@
  */
 
 const {HttpsError} = require('firebase-functions/v2/https');
-const admin = require('firebase-admin');
+const {getFirestore} = require('firebase-admin/firestore');
+const {getStorage} = require('firebase-admin/storage');
+const {getMessaging} = require('firebase-admin/messaging');
 const {finalizeImportJob, failImportJob} = require('./importCore');
 const {isInstagramUrl, BATCH_IMAGE_CONCURRENCY, validateImageData, runImportFromInstagram, runImportFromUrl, mergePhotoAiResultsServer, MAX_REEL_VIDEO_SIZE} = require('./importSources');
 const {callGeminiAPI, callGeminiTextAPI, getRecipeExtractionPrompt, RECIPE_EXTRACTION_RESPONSE_SCHEMA, transcribeVideoWithGemini} = require('./gemini');
@@ -33,7 +35,7 @@ const {geminiGenerateContentRequest} = require('./geminiConfig');
  */
 async function sendImportStatusPush(authorId, {jobId, status, title, errorMessage}) {
   if (!authorId || authorId === 'unknown') return;
-  const db = admin.firestore();
+  const db = getFirestore();
   try {
     const userRef = db.collection('users').doc(authorId);
     const userSnap = await userRef.get();
@@ -97,7 +99,7 @@ async function sendImportStatusPush(authorId, {jobId, status, title, errorMessag
       },
     };
 
-    const response = await admin.messaging().sendEachForMulticast({
+    const response = await getMessaging().sendEachForMulticast({
       tokens,
       ...notificationPayload,
     });
@@ -553,7 +555,7 @@ async function runImportFromVideoSource(source, {apiKey, steps} = {}) {
     throw error;
   }
 
-  const bucket = admin.storage().bucket();
+  const bucket = getStorage().bucket();
   const file = bucket.file(storagePath);
 
   const [metadata] = await file.getMetadata();

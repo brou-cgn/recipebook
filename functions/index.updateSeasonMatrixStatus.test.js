@@ -5,6 +5,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
 
 let job;
 let batches;
@@ -26,7 +27,7 @@ function loadJob(entries) {
     if (request === 'firebase-functions/params') {
       return {defineSecret: () => ({value: () => 'secret'})};
     }
-    if (request === 'firebase-admin') {
+    if (isFirebaseAdminRequest(request, parent)) {
       const docs = entries.map((data, i) => ({
         id: `e${i}`,
         data: () => data,
@@ -45,7 +46,7 @@ function loadJob(entries) {
       };
       const firestore = () => db;
       firestore.FieldValue = {serverTimestamp: () => 'ts', delete: () => '__delete__', increment: (n) => n};
-      return {apps: [{}], initializeApp: () => {}, firestore, auth: () => ({}), storage: () => ({}), messaging: () => ({})};
+      return firebaseAdminModule(request, {apps: [{}], initializeApp: () => {}, firestore, auth: () => ({}), storage: () => ({}), messaging: () => ({})});
     }
     return originalLoad.call(this, request, parent, isMain, ...args);
   };
