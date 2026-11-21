@@ -25,7 +25,7 @@ const BASELINE = {
   'components/AtelierTasteIntroOverlay.css': 10,
   'components/BottomNavigation.css': 22,
   'components/ButtonIconsAdminTab.css': 195,
-  'components/CookDateModal.css': 17,
+  'components/CookDateModal.css': 14,
   'components/DeleteRowButton.css': 4,
   'components/DiscoverTopicsTab.css': 17,
   'components/DrinkWeightsTab.css': 19,
@@ -35,10 +35,9 @@ const BASELINE = {
   'components/FlowPage.css': 9,
   'components/FollowButton.css': 3,
   'components/FuerDichEntdecktKachel.css': 10,
-  'components/GroupCreateDialog.css': 21,
+  'components/GroupCreateDialog.css': 15,
   'components/GroupDetail.css': 39,
   'components/GroupList.css': 21,
-  'components/GuestLinkConflictDialog.css': 1,
   'components/Header.css': 61,
   'components/ImportProgressDialog.css': 16,
   'components/ImportProgressIndicator.css': 5,
@@ -60,7 +59,7 @@ const BASELINE = {
   'components/PortionSelector.css': 8,
   'components/PrintFormatEditor.css': 43,
   'components/PrintPage.css': 16,
-  'components/RatingModal.css': 19,
+  'components/RatingModal.css': 15,
   'components/RecipeDetail.css': 110,
   'components/RecipeFilterSidebar.css': 18,
   'components/RecipeForm.css': 116,
@@ -141,7 +140,7 @@ describe('Farb-Token-Richtlinie', () => {
 // darkMode.css ist Altbestand: neue Dark-Regeln gehören als Token in tokens.css
 // (AGENTS.md). Gezählt werden die [data-theme="dark"]-Selektoren; der Wert darf nur
 // sinken (Tech-Check D5: am 27.10.2026 kamen trotz Regel sieben neue dazu).
-const DARK_MODE_SELECTORS = 1011;
+const DARK_MODE_SELECTORS = 1006;
 
 describe('darkMode.css (Altbestand)', () => {
   const css = fs.readFileSync(path.join(SRC, 'darkMode.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

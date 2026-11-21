@@ -1,5 +1,6 @@
 import React from 'react';
 import './GuestLinkConflictDialog.css';
+import Button from './Button';
 
 /**
  * Shown when linking a menu to an existing event and BOTH already have their
@@ -29,33 +30,21 @@ function GuestLinkConflictDialog({ eventGuestCount, menuGuestCount, onChoose, on
             , welche möchtest du übernehmen?
           </p>
           <div className="guest-link-conflict-options">
-            <button
-              type="button"
-              className="guest-link-conflict-option-btn"
-              onClick={() => onChoose('event')}
-            >
+            <Button variant="secondary" fullWidth onClick={() => onChoose('event')}>
               Gäste vom Event
-            </button>
-            <button
-              type="button"
-              className="guest-link-conflict-option-btn"
-              onClick={() => onChoose('menu')}
-            >
+            </Button>
+            <Button variant="secondary" fullWidth onClick={() => onChoose('menu')}>
               Gäste vom Menü
-            </button>
-            <button
-              type="button"
-              className="guest-link-conflict-option-btn"
-              onClick={() => onChoose('all')}
-            >
+            </Button>
+            <Button variant="secondary" fullWidth onClick={() => onChoose('all')}>
               Alle Gäste
-            </button>
+            </Button>
           </div>
         </div>
         <div className="guest-link-conflict-footer">
-          <button type="button" className="guest-link-conflict-cancel-btn" onClick={onCancel}>
+          <Button variant="ghost" onClick={onCancel}>
             Abbrechen
-          </button>
+          </Button>
         </div>
       </div>
     </div>

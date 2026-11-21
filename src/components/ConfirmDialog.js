@@ -1,5 +1,6 @@
 import React from 'react';
 import './ConfirmDialog.css';
+import Button from './Button';
 
 /**
  * In-app confirmation for the few deletions that keep a question: a whole
@@ -10,10 +11,11 @@ import './ConfirmDialog.css';
  * @param {string} props.title
  * @param {string} props.message
  * @param {string} [props.confirmLabel]
+ * @param {string} [props.confirmVariant] - Rolle des Bestätigungsknopfs (Button-System), Standard danger
  * @param {Function} props.onConfirm
  * @param {Function} props.onCancel
  */
-function ConfirmDialog({ title, message, confirmLabel = 'Löschen', onConfirm, onCancel }) {
+function ConfirmDialog({ title, message, confirmLabel = 'Löschen', confirmVariant = 'danger', onConfirm, onCancel }) {
   return (
     <div className="confirm-dialog-overlay" onClick={onCancel}>
       <div
@@ -27,12 +29,12 @@ function ConfirmDialog({ title, message, confirmLabel = 'Löschen', onConfirm, o
         <h2 id="confirm-dialog-title" className="confirm-dialog-title">{title}</h2>
         <p id="confirm-dialog-message" className="confirm-dialog-message">{message}</p>
         <div className="confirm-dialog-actions">
-          <button type="button" className="confirm-dialog-cancel" onClick={onCancel}>
+          <Button variant="secondary" onClick={onCancel}>
             Abbrechen
-          </button>
-          <button type="button" className="confirm-dialog-confirm" onClick={onConfirm} autoFocus>
+          </Button>
+          <Button variant={confirmVariant} onClick={onConfirm} autoFocus>
             {confirmLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -3388,15 +3388,6 @@
 }
 
 /* ---- RatingModal additional ---- */
-[data-theme="dark"] .rating-modal-cancel-btn {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
-[data-theme="dark"] .rating-modal-cancel-btn:hover {
-  background: #333;
-}
 
 [data-theme="dark"] .rating-modal-footer {
   border-top-color: #3d3d3d;
@@ -3632,7 +3623,6 @@
   background: #2a2a2a;
 }
 
-
 /* ---- PasswordChangeModal additional ---- */
 [data-theme="dark"] .password-change-warning {
   background: #2a2218;
@@ -3683,15 +3673,6 @@
 }
 
 /* ---- GroupCreateDialog additional ---- */
-[data-theme="dark"] .group-btn-secondary {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
-[data-theme="dark"] .group-btn-secondary:hover {
-  background: #333;
-}
 
 [data-theme="dark"] .group-dialog-step-info {
   background: #2a2a2a;
@@ -3699,11 +3680,6 @@
 }
 
 /* ---- CookDateModal additional ---- */
-[data-theme="dark"] .cook-date-modal-cancel-btn {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
 
 [data-theme="dark"] .cook-date-modal-footer {
   border-top-color: #3d3d3d;

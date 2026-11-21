@@ -3,6 +3,7 @@ import { defaultIcon } from '../utils/defaultButtonIcons';
 import TrashIcon from './icons/TrashIcon';
 import { useLongPress } from '../utils/useLongPress';
 import './DeleteFabButton.css';
+import Button from './Button';
 import './PortionSelector.css';
 import './GroupDetail.css';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getSortSettings, DEFAULT_TRENDING_DAYS } from '../utils/customLists';
@@ -704,22 +705,20 @@ function GroupDetail({
                   <p className="group-dialog-error" role="alert">{addMemberError}</p>
                 )}
                 <div className="group-add-member-actions">
-                  <button
-                    type="button"
-                    className="group-btn-secondary"
+                  <Button
+                    variant="secondary"
                     onClick={() => { setShowAddMember(false); setAddMemberError(''); setAddMemberIds([]); setInviteEmail(''); }}
                     disabled={saving}
                   >
                     Abbrechen
-                  </button>
-                  <button
-                    type="button"
-                    className="group-btn-primary"
+                  </Button>
+                  <Button
+                    variant="primary"
                     onClick={handleAddMembers}
                     disabled={saving}
                   >
                     {saving ? 'Speichern...' : 'Hinzufügen'}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
