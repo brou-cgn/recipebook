@@ -38,7 +38,8 @@ dann beide `index.html` nebeneinander ansehen.
    des Emulators an den Regeln vorbei; die App selbst läuft mit den echten `firestore.rules`.
 3. `capture.js` startet Vite mit `REACT_APP_USE_EMULATORS=true`, meldet sich an und fotografiert
    die Bildschirme aus der Liste `SCREENS`. Nur mit diesem Schalter verbindet sich die App mit den
-   Emulatoren (`src/firebase.js`); im Produktions-Build fällt der Block weg.
+   Emulatoren (`src/firebase.js`). Der Produktions-Build setzt ihn nicht, dort läuft der Block nie;
+   im gebauten Code bleibt er stehen (rund 80 Byte gezippt).
 
 ## Bildschirme ergänzen
 

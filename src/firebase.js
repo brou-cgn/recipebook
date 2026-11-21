@@ -151,8 +151,9 @@ const functions = getFunctions(app);
 const storage = getStorage(app);
 
 // Lokale Firebase-Emulatoren (Screenshots und Sichtprüfung, docs/setup/screenshots.md):
-// nur wenn der Build REACT_APP_USE_EMULATORS=true mitbekommt. Im Produktions-Build ist die
-// Bedingung fest falsch, der Block fällt beim Bauen weg. Ports wie in firebase.json.
+// nur wenn der Build REACT_APP_USE_EMULATORS=true mitbekommt. Der Produktions-Build setzt den
+// Schalter nicht, dort läuft der Block nie; im Code bleibt er (rund 80 Byte gezippt).
+// Ports wie in firebase.json.
 if (process.env.REACT_APP_USE_EMULATORS === 'true') {
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
