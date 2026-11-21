@@ -151,6 +151,17 @@ const SCREENS = [
     },
   },
   {
+    // Nährwert-Dialog eines berechneten Rezepts (Button-System Schritt 4c)
+    name: 'naehrwerte-dialog',
+    run: async (page, shot) => {
+      await openRecipe(page, 'Linsensuppe mit Kreuzkümmel');
+      await page.locator('.nutrition-metadata-btn').first().click();
+      await page.locator('.nutrition-modal').first().waitFor();
+      await pause(page);
+      await shot();
+    },
+  },
+  {
     name: 'rezept-loeschen-dialog',
     run: async (page, shot) => {
       await openRecipe(page, 'Linsensuppe mit Kreuzkümmel');
@@ -310,6 +321,38 @@ const SCREENS = [
       await shot();
     },
   })),
+  // App-Aufrufe (Küchenbetrieb, Admin), je Reiter als ganze Seite (Button-System Schritt 4c)
+  ...[
+    ['appaufrufe', null],
+    ['appaufrufe-rezepte', 'Rezeptaufrufe'],
+    ['appaufrufe-ohne-link', 'Rezepte ohne Link'],
+    ['appaufrufe-naehrwerte', 'Nährwertberechnungen'],
+    ['appaufrufe-zutaten-ids', 'Fehlende Zutaten-IDs'],
+    ['appaufrufe-kulinarik', 'Kulinariktypen'],
+    ['appaufrufe-einheiten', 'Standardeinheiten/-adjektive'],
+  ].map(([name, label]) => ({
+    name,
+    fullPage: true,
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Appaufrufe');
+      if (label) await page.locator('.app-calls-tab', { hasText: label }).first().click();
+      await pause(page, 1000);
+      await shot();
+    },
+  })),
+  {
+    // Drucklayout im Vorlagen-Modus (TemplateFormatEditor); die Umstellung wird nicht gespeichert
+    name: 'einstellungen-druck-vorlage',
+    fullPage: true,
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Einstellungen');
+      await page.locator('.tab-button', { hasText: 'Drucklayout' }).first().click();
+      await pause(page, 1000);
+      await page.getByRole('button', { name: 'Auf Vorlage umstellen' }).first().click();
+      await pause(page, 1000);
+      await shot();
+    },
+  },
   {
     // Dialog der Benutzerverwaltung auf dem gemeinsamen Hintergrund .modal-overlay (ModalOverlay.css)
     name: 'benutzer-bearbeiten-dialog',
