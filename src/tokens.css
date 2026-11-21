@@ -22,6 +22,8 @@
   --color-focus-ring: var(--color-accent);
   --color-ok: #4caf50;
   --color-bad: #a33a26;
+  /* Schrift auf --color-bad (Löschen-Knopf im Bestätigungsdialog): in beiden Modi weiß */
+  --color-on-bad: #fff;
   --color-text-body: #444;
   --color-text-soft: #7b7b7b;
   --color-text-faint: #999;
@@ -85,6 +87,7 @@
   --color-focus-ring: var(--color-accent);
   --color-ok: #4caf50;
   --color-bad: #a33a26;
+  --color-on-bad: #fff;
   --color-text-body: #ccc;
   --color-text-soft: #aaa;
   --color-text-faint: #777;
