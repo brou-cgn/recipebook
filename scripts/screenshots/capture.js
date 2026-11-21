@@ -182,6 +182,21 @@ const SCREENS = [
       await shot();
     },
   },
+  {
+    // Getränkeformular mit zwei Gebindeeinheiten (Entfernen: Desktop Knopf am Rand, Handy Wischen).
+    // „Neues Getränk anlegen“ (Desktop) und „Getränk anlegen“ (schwebender Knopf, Handy)
+    name: 'getraenk-formular',
+    fullPage: true,
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Events');
+      await page.getByRole('button', { name: 'Getränke verwalten', exact: true }).first().click();
+      await pause(page, 1000);
+      await page.getByRole('button', { name: /Getränk anlegen/ }).first().click();
+      await page.getByRole('button', { name: 'Einheit hinzufügen' }).click();
+      await pause(page);
+      await shot();
+    },
+  },
   // Die drei Verwaltungsseiten öffnen auf Desktop Knöpfe über der Liste, auf dem Handy schwebende
   // Knöpfe; beide tragen denselben Namen
   ...[['event-getraenke', 'Getränke verwalten'], ['event-gaeste', 'Gäste verwalten'], ['event-wichteln', 'Wichteln']].map(([name, label]) => ({
