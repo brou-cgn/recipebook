@@ -1019,8 +1019,7 @@
   border-top: 1px solid #f0f0f0;
 }
 
-.cancel-button,
-.save-button {
+.cancel-button {
   flex: 1;
   padding: 1rem;
   border: none;
@@ -1039,21 +1038,6 @@
 
 .cancel-button:hover {
   background: #e0e0e0;
-}
-
-.save-button {
-  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
-  color: white;
-}
-
-.save-button:hover {
-  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-.save-button:active {
-  transform: translateY(0);
 }
 
 .form-row {
@@ -1225,8 +1209,7 @@
     flex-direction: column;
   }
   
-  .cancel-button,
-  .save-button {
+  .cancel-button {
     width: 100%;
   }
 

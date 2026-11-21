@@ -2,18 +2,6 @@
 .dtt-intro { color: var(--text-secondary, #6b665c); font-size: 0.9rem; margin: 0 0 1rem; }
 .dtt-hint { color: var(--text-secondary, #6b665c); font-size: 0.8rem; margin: 0.3rem 0 0; }
 
-.dtt-btn {
-  border: 1px solid var(--border-color, #d8d3c8);
-  background: transparent;
-  color: inherit;
-  border-radius: 8px;
-  padding: 0.5rem 0.9rem;
-  font: inherit;
-  cursor: pointer;
-}
-.dtt-btn-primary { background: var(--primary-color, #3a6b4f); border-color: transparent; color: #fff; }
-.dtt-btn:disabled { opacity: 0.6; cursor: default; }
-
 /* ---- list (table on desktop, stacked cards on mobile) ---- */
 .dtt-list { margin-top: 1.25rem; border: 1px solid var(--border-color, #e4dfd3); border-radius: 10px; overflow: hidden; }
 .dtt-head,

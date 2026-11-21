@@ -34,6 +34,7 @@ import { hasMeaningfulGeneratedNutrition } from '../utils/nutritionStatusResolve
 import {
   createNutritionReferenceCsv,
 } from '../utils/nutritionReferenceImportExport';
+import Button from './Button';
 
 const NUTRITION_FIELD_LABELS = {
   kalorien: 'Kalorien (kcal)',
@@ -704,25 +705,20 @@ function NutritionReferenceTab({ currentUser }) {
         {lookupError && <p className="section-description">{lookupError}</p>}
 
       <div className="season-matrix-import-export-actions">
-        <button
-          type="button"
-          className="save-button"
-          onClick={saveDirtyRows}
-          disabled={savingChanges || dirtyRows.length === 0}
-        >
-          {savingChanges ? 'Speichert…' : (dirtyRows.length > 0 ? `Änderungen speichern (${dirtyRows.length})` : 'Änderungen speichern')}
-        </button>
-        <button type="button" className="save-button" onClick={handleExportCsv}>
+        <Button onClick={handleExportCsv}>
           CSV exportieren
-        </button>
-        <button
-          type="button"
-          className="save-button"
-          onClick={handleClearCacheAndReload}
-          disabled={clearingCache}
+        </Button>
+        <Button onClick={handleClearCacheAndReload} loading={clearingCache}>
+          {clearingCache ? 'Lädt …' : 'Cache leeren & neu laden'}
+        </Button>
+        <Button
+          variant="primary"
+          onClick={saveDirtyRows}
+          loading={savingChanges}
+          disabled={dirtyRows.length === 0}
         >
-          {clearingCache ? 'Lädt…' : 'Cache leeren & neu laden'}
-        </button>
+          {savingChanges ? 'Speichert …' : (dirtyRows.length > 0 ? `Änderungen speichern (${dirtyRows.length})` : 'Änderungen speichern')}
+        </Button>
       </div>
 
       {loading && rows.length === 0 ? (
@@ -1012,13 +1008,13 @@ function NutritionReferenceTab({ currentUser }) {
                     );
                   })}
                   <td className="conversion-table-actions">
-                    <button
-                      className="add-btn"
+                    <Button
+                      variant="ghost"
                       onClick={() => refreshRowFromOpenFoodFacts(row)}
-                      disabled={refreshingRowId === row.id}
+                      loading={refreshingRowId === row.id}
                     >
-                      {refreshingRowId === row.id ? '…' : 'Nährwerte abrufen'}
-                    </button>
+                      {refreshingRowId === row.id ? 'Ruft ab …' : 'Nährwerte abrufen'}
+                    </Button>
                     <DeleteRowButton itemName={getRowDisplayName(row)} onClick={() => removeRow(row)} />
                   </td>
                   </tr>
@@ -1157,7 +1153,7 @@ function NutritionReferenceTab({ currentUser }) {
                   </td>
                 ))}
                 <td>
-                  <button className="add-btn" onClick={addRow}>Hinzufügen</button>
+                  <Button onClick={addRow}>Hinzufügen</Button>
                 </td>
               </tr>
             </tbody>

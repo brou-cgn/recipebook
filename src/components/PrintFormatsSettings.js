@@ -18,6 +18,7 @@ import {
   duplicatePrintFormat,
 } from '../utils/customLists';
 import { getRecipeImages } from '../utils/printRecipe';
+import Button from './Button';
 
 const isCatchAll = (f) => f.maxPhotos === null || f.maxPhotos === undefined;
 
@@ -173,7 +174,7 @@ export default function PrintFormatsSettings({ allRecipes = [], allUsers = [] })
         <p className="pf-error" role="alert">
           Die Druckformate konnten nicht geladen werden. Speichern ist gesperrt, damit die gespeicherten Formate nicht überschrieben werden.
         </p>
-        <button type="button" className="save-button" onClick={load}>Erneut laden</button>
+        <Button onClick={load}>Erneut laden</Button>
       </div>
     );
   }
@@ -277,10 +278,10 @@ export default function PrintFormatsSettings({ allRecipes = [], allUsers = [] })
       ))}
 
       <div className="print-format-actions">
-        <button type="button" className="save-button" onClick={addFormat}>+ Neues Format hinzufügen</button>
-        <button type="button" className="save-button" disabled={saving || errors.length > 0 || !dirty} onClick={save}>
-          {saving ? 'Speichern...' : 'Druckformate speichern'}
-        </button>
+        <Button onClick={addFormat}>+ Neues Format hinzufügen</Button>
+        <Button variant="primary" loading={saving} disabled={errors.length > 0 || !dirty} onClick={save}>
+          {saving ? 'Speichert …' : 'Druckformate speichern'}
+        </Button>
         {dirty && <span className="sort-settings-hint">Ungespeicherte Änderungen</span>}
       </div>
       {status && (
