@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { defaultIcon } from '../utils/defaultButtonIcons';
+import { defaultIcon, defaultButtonIcon } from '../utils/defaultButtonIcons';
 import StarIcon from './icons/StarIcon';
 import TrashIcon from './icons/TrashIcon';
 import { useLongPress } from '../utils/useLongPress';
@@ -54,14 +54,14 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   const [favoriteMenuIds, setFavoriteMenuIds] = useState([]);
   const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
   const [closeButtonIcon, setCloseButtonIcon] = useState('×');
-  const [copyLinkIcon, setCopyLinkIcon] = useState('Link');
+  const [copyLinkIcon, setCopyLinkIcon] = useState(() => defaultButtonIcon('copyLink', getDarkModePreference()));
   const [openEventIcon, setOpenEventIcon] = useState(defaultIcon('calendar'));
-  const [shoppingListIcon, setShoppingListIcon] = useState('Einkauf');
-  const [bringButtonIcon, setBringButtonIcon] = useState('Bring');
-  const [favoritesButtonIcon, setFavoritesButtonIcon] = useState('☆');
+  const [shoppingListIcon, setShoppingListIcon] = useState(() => defaultButtonIcon('shoppingList', getDarkModePreference()));
+  const [bringButtonIcon, setBringButtonIcon] = useState(() => defaultButtonIcon('bringButton', getDarkModePreference()));
+  const [favoritesButtonIcon, setFavoritesButtonIcon] = useState(() => defaultButtonIcon('menuFavoritesButton', getDarkModePreference()));
   const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('');
   const [privateBadgeIcon, setPrivateBadgeIcon] = useState(defaultIcon('lock'));
-  const [editMenuIcon, setEditMenuIcon] = useState('Edit');
+  const [editMenuIcon, setEditMenuIcon] = useState(() => defaultButtonIcon('editRecipe', getDarkModePreference()));
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [deleteMenuIcon, setDeleteMenuIcon] = useState('');
   const [deleteFabPressed, setDeleteFabPressed] = useState(false);
@@ -109,14 +109,14 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     if (!allButtonIcons) return;
     const eff = (key) => getEffectiveIcon(allButtonIcons, key, isDarkMode);
     setCloseButtonIcon(eff('closeButtonDefaultImg') || eff('closeButton') || '×');
-    setCopyLinkIcon(eff('copyLink') || 'Link');
+    setCopyLinkIcon(eff('copyLink') || defaultButtonIcon('copyLink', isDarkMode));
     setOpenEventIcon(eff('nutritionEmpty') || defaultIcon('calendar'));
-    setShoppingListIcon(eff('shoppingList') || 'Einkauf');
-    setBringButtonIcon(eff('bringButton') || 'Bring');
-    setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
+    setShoppingListIcon(eff('shoppingList') || defaultButtonIcon('shoppingList', isDarkMode));
+    setBringButtonIcon(eff('bringButton') || defaultButtonIcon('bringButton', isDarkMode));
+    setFavoritesButtonIcon(eff('menuFavoritesButton') || defaultButtonIcon('menuFavoritesButton', isDarkMode));
     setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive'));
     setPrivateBadgeIcon(eff('privateBadge') || defaultIcon('lock'));
-    setEditMenuIcon(eff('editRecipe') || 'Edit');
+    setEditMenuIcon(eff('editRecipe') || defaultButtonIcon('editRecipe', isDarkMode));
     setDeleteMenuIcon(eff('deleteRecipe'));
   }, [allButtonIcons, isDarkMode]);
 

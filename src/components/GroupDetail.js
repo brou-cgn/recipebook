@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { defaultIcon } from '../utils/defaultButtonIcons';
+import { defaultIcon, defaultButtonIcon } from '../utils/defaultButtonIcons';
 import TrashIcon from './icons/TrashIcon';
 import { useLongPress } from '../utils/useLongPress';
 import './DeleteFabButton.css';
@@ -86,7 +86,7 @@ function GroupDetail({
     if (onActiveTabChange) onActiveTabChange(tab);
   };
   const [backIcon, setBackIcon] = useState(DEFAULT_BUTTON_ICONS.closeButtonDefaultImg);
-  const [shoppingListIcon, setShoppingListIcon] = useState(DEFAULT_BUTTON_ICONS.shoppingList || 'Einkauf');
+  const [shoppingListIcon, setShoppingListIcon] = useState(() => defaultButtonIcon('shoppingList', getDarkModePreference()));
   const [listSettingsIcon, setListSettingsIcon] = useState(DEFAULT_BUTTON_ICONS.listSettings || DEFAULT_LIST_SETTINGS_ICON);
   const [listSettingsActiveIcon, setListSettingsActiveIcon] = useState(resolveListSettingsActiveIcon(DEFAULT_BUTTON_ICONS, getDarkModePreference()));
   const [addMemberIcon, setAddMemberIcon] = useState(DEFAULT_BUTTON_ICONS.addGroupMember || defaultIcon('userPlus'));
@@ -142,7 +142,7 @@ function GroupDetail({
       getEffectiveIcon(allButtonIcons, 'closeButton', isDarkMode) ||
       DEFAULT_BUTTON_ICONS.closeButtonDefaultImg
     );
-    setShoppingListIcon(getEffectiveIcon(allButtonIcons, 'shoppingList', isDarkMode) || DEFAULT_BUTTON_ICONS.shoppingList || 'Einkauf');
+    setShoppingListIcon(getEffectiveIcon(allButtonIcons, 'shoppingList', isDarkMode) || defaultButtonIcon('shoppingList', isDarkMode));
     setListSettingsIcon(getEffectiveIcon(allButtonIcons, 'listSettings', isDarkMode) || DEFAULT_BUTTON_ICONS.listSettings || DEFAULT_LIST_SETTINGS_ICON);
     setListSettingsActiveIcon(resolveListSettingsActiveIcon(allButtonIcons, isDarkMode));
     setAddMemberIcon(getEffectiveIcon(allButtonIcons, 'addGroupMember', isDarkMode) || DEFAULT_BUTTON_ICONS.addGroupMember || defaultIcon('userPlus'));
