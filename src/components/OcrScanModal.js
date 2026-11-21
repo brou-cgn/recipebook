@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import './ModalOverlay.css';
 import './OcrScanModal.css';
+import Button from './Button';
 import { fileToBase64 } from '../utils/imageUtils';
 import { runPhotoScanImport } from '../utils/importRunners';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
@@ -223,18 +225,21 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
 
               {!cameraActive && (
                 <div className="upload-buttons">
-                  <button className="camera-button" onClick={startCamera}>
+                  <Button onClick={startCamera}>
                     Kamera starten
-                  </button>
-                  <label htmlFor="imageUpload" className="upload-button">
+                  </Button>
+                  {/* Echter Knopf statt <label> im Knopf-Aussehen: per Tastatur erreichbar */}
+                  <Button onClick={() => document.getElementById('imageUpload')?.click()}>
                     Bild(er) hochladen
-                  </label>
+                  </Button>
                   <input
                     type="file"
                     id="imageUpload"
                     accept={UPLOAD_ACCEPT}
                     multiple
                     onChange={handleMultiFileUpload}
+                    aria-label="Bild(er) hochladen"
+                    tabIndex={-1}
                     style={{ display: 'none' }}
                   />
                 </div>
@@ -272,40 +277,34 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
                     </div>
                   )}
 
+                  {/* Abbrechen links, der Haupt-Knopf rechts: erst „Foto aufnehmen“, sobald Fotos da
+                      sind „Analyse starten“ (höchstens ein Haupt-Knopf) */}
                   <div className="camera-controls">
-                    <button
-                      className="capture-button"
+                    <Button onClick={cancelCamera}>
+                      Kamera abbrechen
+                    </Button>
+                    {capturedPhotos.length > 0 && (
+                      <Button onClick={removeLastPhoto} aria-label="Letztes Foto löschen">
+                        Löschen
+                      </Button>
+                    )}
+                    <Button
+                      variant={capturedPhotos.length > 0 ? 'secondary' : 'primary'}
                       onClick={capturePhoto}
                       disabled={capturedPhotos.length >= MAX_CAMERA_PHOTOS}
                       aria-label="Foto aufnehmen"
                     >
                       {capturedPhotos.length > 0 ? 'Weiteres Foto aufnehmen' : 'Foto aufnehmen'}
-                    </button>
+                    </Button>
                     {capturedPhotos.length > 0 && (
-                      <>
-                        <button
-                          className="start-analysis-button"
-                          onClick={startBatchAnalysis}
-                          aria-label={`Analyse starten für ${capturedPhotos.length} Foto${capturedPhotos.length !== 1 ? 's' : ''}`}
-                        >
-                          ✓ Analyse starten ({capturedPhotos.length})
-                        </button>
-                        <button
-                          className="remove-last-photo-button"
-                          onClick={removeLastPhoto}
-                          aria-label="Letztes Foto löschen"
-                        >
-                          Löschen
-                        </button>
-                      </>
+                      <Button
+                        variant="primary"
+                        onClick={startBatchAnalysis}
+                        aria-label={`Analyse starten für ${capturedPhotos.length} Foto${capturedPhotos.length !== 1 ? 's' : ''}`}
+                      >
+                        Analyse starten ({capturedPhotos.length})
+                      </Button>
                     )}
-                    <button
-                      className="stop-camera-button"
-                      onClick={cancelCamera}
-                      aria-label="Kamera abbrechen"
-                    >
-                      × Abbrechen
-                    </button>
                   </div>
                 </div>
               )}
@@ -366,19 +365,16 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
               <p className="ocr-file-hint">JPG · PNG · HEIC — max. {MAX_UPLOAD_PAGES} Seiten</p>
 
               <div className="image-preview-actions">
-                <button
-                  className="start-analysis-button"
+                <Button onClick={handleCancel}>
+                  Abbrechen
+                </Button>
+                <Button
+                  variant="primary"
                   onClick={startUploadedAnalysis}
                   aria-label={`Analyse starten für ${uploadedImages.length} Bild${uploadedImages.length !== 1 ? 'er' : ''}`}
                 >
                   Analyse starten ({uploadedImages.length})
-                </button>
-                <button
-                  className="image-preview-cancel"
-                  onClick={handleCancel}
-                >
-                  Abbrechen
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -392,9 +388,9 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
 
         {step !== 'image-preview' && (
           <div className="ocr-modal-actions">
-            <button className="cancel-button" onClick={handleCancel}>
+            <Button onClick={handleCancel}>
               Abbrechen
-            </button>
+            </Button>
           </div>
         )}
       </div>

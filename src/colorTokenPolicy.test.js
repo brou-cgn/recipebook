@@ -53,7 +53,7 @@ const BASELINE = {
   'components/MobileSearchOverlay.css': 21,
   'components/NetworkPage.css': 6,
   'components/NutritionModal.css': 72,
-  'components/OcrScanModal.css': 109,
+  'components/OcrScanModal.css': 75,
   'components/PasswordChangeModal.css': 9,
   'components/PersonalDataPage.css': 28,
   'components/PortionSelector.css': 8,
@@ -62,9 +62,9 @@ const BASELINE = {
   'components/RatingModal.css': 15,
   'components/RecipeDetail.css': 89,
   'components/RecipeFilterSidebar.css': 18,
-  'components/RecipeForm.css': 108,
+  'components/RecipeForm.css': 107,
   'components/RecipeImageCarousel.css': 4,
-  'components/RecipeImportModal.css': 27,
+  'components/RecipeImportModal.css': 19,
   'components/RecipeList.css': 24,
   'components/RecipeRating.css': 7,
   'components/RecipeTimeline.css': 7,
@@ -84,9 +84,9 @@ const BASELINE = {
   'components/TutorialCard.css': 4,
   'components/TutorialForm.css': 4,
   'components/TutorialVideoModal.css': 10,
-  'components/UniversalImportModal.css': 31,
+  'components/UniversalImportModal.css': 26,
   'components/UserManagement.css': 74,
-  'components/WebImportModal.css': 28
+  'components/WebImportModal.css': 19
 };
 
 function cssFiles(dir) {
@@ -139,7 +139,7 @@ describe('Farb-Token-Richtlinie', () => {
 // darkMode.css ist Altbestand: neue Dark-Regeln gehören als Token in tokens.css
 // (AGENTS.md). Gezählt werden die [data-theme="dark"]-Selektoren; der Wert darf nur
 // sinken (Tech-Check D5: am 27.10.2026 kamen trotz Regel sieben neue dazu).
-const DARK_MODE_SELECTORS = 968;
+const DARK_MODE_SELECTORS = 953;
 
 describe('darkMode.css (Altbestand)', () => {
   const css = fs.readFileSync(path.join(SRC, 'darkMode.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

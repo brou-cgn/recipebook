@@ -2603,18 +2603,6 @@
 }
 
 /* ---- OcrScanModal additional ---- */
-[data-theme="dark"] .camera-button,
-[data-theme="dark"] .upload-button {
-  background: #2a2a2a;
-  color: #7a8fdf;
-  border-color: #7a8fdf;
-}
-
-[data-theme="dark"] .camera-button:hover,
-[data-theme="dark"] .upload-button:hover {
-  background: #7a8fdf;
-  color: #121212;
-}
 
 [data-theme="dark"] .language-selector label {
   color: #ccc;
@@ -2687,18 +2675,6 @@
   color: #f08080;
 }
 
-[data-theme="dark"] .new-scan-button,
-[data-theme="dark"] .edit-text-button {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
-[data-theme="dark"] .new-scan-button:hover,
-[data-theme="dark"] .edit-text-button:hover {
-  background: #333;
-}
-
 [data-theme="dark"] .validation-info {
   background: #2a2a2a;
   border-color: #3d3d3d;
@@ -2751,15 +2727,6 @@
 
 [data-theme="dark"] .ocr-file-hint {
   color: #7d756d;
-}
-
-[data-theme="dark"] .image-preview-cancel {
-  border-color: rgba(255, 255, 255, 0.14);
-  color: #ddd6cd;
-}
-
-[data-theme="dark"] .image-preview-cancel:hover {
-  background: rgba(255, 255, 255, 0.06);
 }
 
 /* ---- RecipeDetail additional ---- */
@@ -3025,15 +2992,6 @@
   color: #8ab4f8;
   border-color: #4f78ad;
 }*/
-
-[data-theme="dark"] .cancel-button {
-  background: #2a2a2a;
-  color: #aaa;
-}
-
-[data-theme="dark"] .cancel-button:hover {
-  background: #333;
-}
 
 [data-theme="dark"] .ingredient-context-menu {
   background: #1e1e1e;
@@ -3462,22 +3420,6 @@
   background: #2a1a1a;
   border-color: #5a2a2a;
   color: #f08080;
-}
-
-[data-theme="dark"] .universal-cancel-button {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
-[data-theme="dark"] .universal-cancel-button:hover {
-  background: #333;
-}
-
-[data-theme="dark"] .universal-back-button {
-  background: #2a2a2a;
-  color: #7a8fdf;
-  border-color: #7a8fdf;
 }
 
 [data-theme="dark"] .universal-progress-bar {

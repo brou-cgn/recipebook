@@ -1,5 +1,7 @@
 import React, { useState, useRef } from 'react';
+import './ModalOverlay.css';
 import './UniversalImportModal.css';
+import Button from './Button';
 import { fileToBase64 } from '../utils/imageUtils';
 import { runUniversalImport } from '../utils/importRunners';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
@@ -140,16 +142,16 @@ function UniversalImportModal({ onCancel, initialImages = [], initialText = '', 
         </div>
 
         <div className="universal-import-actions">
-          <button className="universal-cancel-button" onClick={onCancel}>
+          <Button onClick={onCancel}>
             Abbrechen
-          </button>
-          <button
-            className="universal-analyse-button"
+          </Button>
+          <Button
+            variant="primary"
             onClick={handleQueueImport}
             disabled={!hasContent}
           >
             Import starten
-          </button>
+          </Button>
         </div>
       </div>
     </div>

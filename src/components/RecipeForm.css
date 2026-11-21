@@ -1019,27 +1019,6 @@
   border-top: 1px solid #f0f0f0;
 }
 
-.cancel-button {
-  flex: 1;
-  padding: 1rem;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.cancel-button {
-  background: var(--color-surface-input);
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-}
-
-.cancel-button:hover {
-  background: #e0e0e0;
-}
-
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1207,10 +1186,6 @@
   
   .form-actions {
     flex-direction: column;
-  }
-  
-  .cancel-button {
-    width: 100%;
   }
 
   .form-row {

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import './ModalOverlay.css';
 import './RecipeImportModal.css';
+import Button from './Button';
 import { parseBulkCSV } from '../utils/csvBulkImport';
 import { getImageForCategories } from '../utils/categoryImages';
 
@@ -115,13 +117,19 @@ function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
             <label htmlFor="csv-upload" className="csv-upload-label">
               CSV-Datei hochladen (Bulk-Import)
             </label>
+            {/* Eigener Knopf statt des Datei-Felds des Browsers („Choose File“, englisch); das Feld
+                bleibt über das Label erreichbar */}
             <input
               id="csv-upload"
               type="file"
               accept=".csv"
               onChange={handleCSVFileUpload}
               className="csv-file-input"
+              tabIndex={-1}
             />
+            <Button onClick={() => document.getElementById('csv-upload')?.click()}>
+              CSV-Datei wählen …
+            </Button>
             {csvRecipes && csvRecipes.length > 0 ? (
               <div className="csv-preview">
                 <p className="csv-preview-success">
@@ -150,12 +158,12 @@ function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
         </div>
 
         <div className="import-modal-actions">
-          <button className="cancel-button" onClick={onCancel}>
+          <Button onClick={onCancel}>
             Abbrechen
-          </button>
-          <button className="import-button" onClick={handleImport}>
+          </Button>
+          <Button variant="primary" onClick={handleImport}>
             Importieren
-          </button>
+          </Button>
         </div>
       </div>
     </div>

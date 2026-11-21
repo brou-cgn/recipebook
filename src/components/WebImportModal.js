@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import './ModalOverlay.css';
 import './WebImportModal.css';
+import Button from './Button';
 import { normalizeImportedUrl } from '../utils/webImportService';
 import { runWebImport } from '../utils/importRunners';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
@@ -113,12 +115,12 @@ function WebImportModal({ onCancel, onImported, initialUrl = '', authorId = '', 
         </div>
 
         <div className="web-import-modal-actions">
-          <button className="cancel-button" onClick={onCancel}>
+          <Button onClick={onCancel}>
             Abbrechen
-          </button>
-          <button className="submit-button" onClick={handleSubmit}>
+          </Button>
+          <Button variant="primary" onClick={handleSubmit}>
             Import starten
-          </button>
+          </Button>
         </div>
       </div>
     </div>
