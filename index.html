@@ -32,6 +32,19 @@
     -->
     <link rel="manifest" href="/manifest.json" />
     <title>brouBook - Unsere besten Momente</title>
+    <script id="dark-mode-bootstrap">
+      // Dark Mode vor dem ersten Bild setzen. React setzt data-theme erst im useEffect
+      // (applyDarkModePreference in utils/customLists.js); bis dahin malt iOS den Streifen
+      // unter der Statusleiste mit dem hellen body-Hintergrund und übermalt ihn erst spät.
+      // Logik wie getDarkModeMode: 'true' dunkel, 'false' hell, sonst Systemeinstellung.
+      (function () {
+        var stored = null;
+        try { stored = localStorage.getItem('darkModePreference'); } catch (e) { /* privat/blockiert */ }
+        var dark = stored === 'true' ||
+          (stored !== 'false' && !!window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+      })();
+    </script>
     <script>
       // iOS Safari: Reset zoom after orientation change (Landscape → Portrait)
       // Safari retains the zoom level after auto-zooming on input focus. Temporarily
