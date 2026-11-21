@@ -283,7 +283,7 @@ function WeinDazu({ recipe, currentUser, isSharedView = false, icons = null }) {
   }, [schaetzen]);
 
   if (!recipe) return null;
-  if (istOhneWein(recipe)) return null; // Gebäcke & Teige: nie eine Weinempfehlung, auch nicht berechenbar
+  if (istOhneWein(recipe)) return null; // Gebäcke & Teige, Drinks: nie eine Weinempfehlung, auch nicht berechenbar
   if (empfehlung.status !== STATUS_OK && empfehlung.status !== STATUS_KEIN_STIL && empfehlung.status !== STATUS_OHNE_PROFIL) {
     return null; // Rolle ohne Wein (Getränk, Sauce, Beilage, Gebäck)
   }

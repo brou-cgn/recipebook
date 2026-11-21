@@ -379,6 +379,11 @@ Getränke nicht mit (`bildeGangProfil`) und werden nicht eingeschätzt. Server (
 KI-Aufruf und ohne Tageslimit. Die Liste steht an zwei Stellen und muss gleich bleiben. Vorhandene Profile
 bleiben im Rezept liegen, werden aber nicht mehr angezeigt. Kein Tech-Check-Befund berührt.
 
+Umsetzungsnotiz Drinks (21.11.2026): Die Speisekategorie „Drinks“ steht jetzt ebenfalls in
+`KATEGORIEN_OHNE_WEIN` (Client und Server). Drink-Rezepte zeigen damit keinen Chip und kein „Passenden Wein
+finden“ mehr, zählen im Menü nicht mit und bekommen serverseitig kein Profil. Grund: Die KI-Rolle `getraenk`
+griff nicht zuverlässig, Drinks bekamen Empfehlungen. Kein Tech-Check-Befund berührt.
+
 ## Offen
 
 - **Ausbau nach der Analyse vom 15.11.2026 (Vorschläge, Entscheidung beim Eigentümer).** Zahlen und Grenzen

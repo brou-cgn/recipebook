@@ -206,7 +206,7 @@ function baueWeinprofilPrompt(rezept) {
 }
 
 /** Kategorien, für die es nie eine Weinempfehlung gibt (Client: src/utils/weinbegleitung/ohneWein.js). */
-const KATEGORIEN_OHNE_WEIN = ['Gebäcke & Teige'];
+const KATEGORIEN_OHNE_WEIN = ['Gebäcke & Teige', 'Drinks'];
 
 /**
  * @param {object} rezept
