@@ -1898,7 +1898,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               onKeyPress={(e) => e.key === 'Enter' && addCuisine()}
               placeholder="Neuen Kulinarik-Typ hinzufügen..."
             />
-            <button onClick={addCuisine}>Hinzufügen</button>
+            <Button onClick={addCuisine}>Hinzufügen</Button>
           </div>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndCuisineTypes}>
             <SortableContext items={lists.cuisineTypes} strategy={verticalListSortingStrategy}>
@@ -1932,7 +1932,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               onKeyPress={(e) => e.key === 'Enter' && addCuisineGroupFromInput()}
               placeholder="Neue Gruppe hinzufügen (z.B. Asiatische Küche)..."
             />
-            <button onClick={addCuisineGroupFromInput}>Hinzufügen</button>
+            <Button onClick={addCuisineGroupFromInput}>Hinzufügen</Button>
           </div>
           <div className="list-items">
             {(lists.cuisineGroups || []).map(group => (
@@ -1983,7 +1983,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               onKeyPress={(e) => e.key === 'Enter' && addCategory()}
               placeholder="Neue Speisekategorie hinzufügen..."
             />
-            <button onClick={addCategory}>Hinzufügen</button>
+            <Button onClick={addCategory}>Hinzufügen</Button>
           </div>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndMealCategories}>
             <SortableContext items={lists.mealCategories} strategy={verticalListSortingStrategy}>

@@ -2320,10 +2320,6 @@
   border-color: #7a8fdf;
 }
 
-[data-theme="dark"] .list-input button {
-  background: linear-gradient(135deg, #DF7A00 0%, #c46900 100%);
-}
-
 /* ---- GroupDetail additional ---- */
 [data-theme="dark"] .group-detail-section h3 {
   color: #e8e8e8;

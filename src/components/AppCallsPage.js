@@ -2019,7 +2019,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                   placeholder="Neuen Kulinarik-Typ hinzufügen..."
                   aria-label="Neuen Kulinarik-Typ eingeben"
                 />
-                <button onClick={handleAddCuisineType}>Hinzufügen</button>
+                <Button onClick={handleAddCuisineType}>Hinzufügen</Button>
               </div>
               <div className="list-items">
                 {cuisineTypes.length === 0 ? (
@@ -2052,7 +2052,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                   placeholder="Neue Gruppe hinzufügen (z.B. Asiatische Küche)..."
                   aria-label="Neue Kulinarik-Gruppe eingeben"
                 />
-                <button onClick={handleAddCuisineGroup}>Hinzufügen</button>
+                <Button onClick={handleAddCuisineGroup}>Hinzufügen</Button>
               </div>
               <div className="list-items">
                 {cuisineGroups.length === 0 ? (
@@ -2112,7 +2112,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                     placeholder={`Neues Adjektiv für ${COMMON_ADJECTIVE_GROUP_LABELS[group]} hinzufügen...`}
                     aria-label={`Neues Adjektiv für ${COMMON_ADJECTIVE_GROUP_LABELS[group]} eingeben`}
                   />
-                  <button onClick={() => handleAddCommonAdjective(group, newCommonAdjective[group])}>Hinzufügen</button>
+                  <Button onClick={() => handleAddCommonAdjective(group, newCommonAdjective[group])}>Hinzufügen</Button>
                 </div>
                 <div className="list-items">
                   {(commonAdjectives[group] || []).length === 0 ? (
@@ -2148,13 +2148,12 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                     }
                   }}
                 />
-                <button
-                  type="button"
+                <Button
                   onClick={() => handleAddIgnoredTerm(newIgnoredTerm)}
                   disabled={!newIgnoredTerm.trim()}
                 >
                   Hinzufügen
-                </button>
+                </Button>
               </div>
               <div className="list-items">
                 {ignoredTerms.length === 0 ? (
@@ -2189,12 +2188,12 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                         }
                       }}
                     />
-                    <button
+                    <Button
                       onClick={() => handleAddCommonUnit(group, newCommonUnit[group])}
                       disabled={!newCommonUnit[group]?.trim()}
                     >
                       Hinzufügen
-                    </button>
+                    </Button>
                   </div>
                   <div className="list-items">
                     {(commonUnits[group] || []).length === 0 ? (
