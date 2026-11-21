@@ -404,10 +404,8 @@
   border-color: var(--color-bad-text);
 }
 
-.wichtel-hinzufuegen .events-primary-btn {
+.wichtel-hinzufuegen .ui-button {
   flex: 0 0 auto;
-  height: 44px;
-  padding: 10px 16px;
 }
 
 .wichtel-page .wichtel-feld-fehler {

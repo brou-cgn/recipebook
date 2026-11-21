@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { getGuestDisplayName } from '../utils/guestPreferences';
 import { istGueltigeEmail, sucheGaeste } from '../utils/wichtelGaeste';
+import Button from './Button';
 
 const LEER = { vorname: '', nachname: '', email: '' };
 const EMAIL_FEHLER_ID = 'wichtel-email-fehler';
@@ -124,9 +125,9 @@ function WichtelTeilnehmerFormular({ kandidaten, busy, onEintragen, onGastWaehle
             aria-describedby={emailFehler ? EMAIL_FEHLER_ID : undefined}
           />
         </label>
-        <button type="submit" className="events-primary-btn" disabled={busy || !vorname || !nachname}>
+        <Button variant="primary" type="submit" disabled={busy || !vorname || !nachname}>
           Hinzufügen
-        </button>
+        </Button>
       </div>
       {emailFehler && (
         <p id={EMAIL_FEHLER_ID} className="wichtel-feld-fehler" role="alert">

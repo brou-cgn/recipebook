@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Button from './Button';
 import './Login.css';
 
 function EmailIcon() {
@@ -118,9 +119,9 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
                 </div>
               </div>
               {resetError && <div className="login-error">{resetError}</div>}
-              <button type="submit" className="login-cta-btn" disabled={isLoading}>
-                {isLoading ? 'Wird gesendet...' : 'E-Mail senden'}
-              </button>
+              <Button variant="primary" type="submit" fullWidth loading={isLoading} className="login-cta">
+                {isLoading ? 'Wird gesendet …' : 'E-Mail senden'}
+              </Button>
             </form>
           )}
           <div className="login-footer">
@@ -188,9 +189,9 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
             )}
           </div>
           {error && <div className="login-error">{error}</div>}
-          <button type="submit" className="login-cta-btn" disabled={isLoading}>
-            {isLoading ? 'Anmeldung läuft...' : 'Anmelden'}
-          </button>
+          <Button variant="primary" type="submit" fullWidth loading={isLoading} className="login-cta">
+            {isLoading ? 'Anmeldung läuft …' : 'Anmelden'}
+          </Button>
         </form>
 
         {onGuestLogin && (
@@ -200,14 +201,13 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
               <span>oder</span>
               <span></span>
             </div>
-            <button
-              type="button"
-              className="login-ghost-btn"
+            <Button
+              fullWidth
               onClick={handleGuestLogin}
               disabled={isLoading}
             >
               Als Gast anmelden
-            </button>
+            </Button>
           </>
         )}
 

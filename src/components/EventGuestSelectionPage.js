@@ -7,6 +7,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import DeleteRowButton from './DeleteRowButton';
 import useUndoableDelete from '../hooks/useUndoableDelete';
+import Button from './Button';
 
 function GuestRow({
   fullName,
@@ -271,20 +272,12 @@ function EventGuestSelectionPage({
           </div>
         </div>
         <div className="events-form-actions">
-          <button
-            type="button"
-            className="events-secondary-btn events-save-desktop-only"
-            onClick={onBack}
-          >
+          <Button className="events-save-desktop-only" onClick={onBack}>
             Abbrechen
-          </button>
-          <button
-            type="button"
-            className="events-primary-btn events-form-actions-save"
-            onClick={handleSave}
-          >
+          </Button>
+          <Button variant="primary" className="events-form-actions-save" onClick={handleSave}>
             Speichern
-          </button>
+          </Button>
         </div>
       </div>
 

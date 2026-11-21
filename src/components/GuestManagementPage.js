@@ -21,6 +21,7 @@ import { DEFAULT_BUTTON_ICONS, getButtonIcons, getDarkModePreference, getEffecti
 import { isBase64Image } from '../utils/imageUtils';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
+import Button from './Button';
 
 const emptyForm = () => ({
   vorname: '',
@@ -476,9 +477,7 @@ function GuestManagementPage({
                       <option key={drink.id} value={drink.id}>{drink.label}</option>
                     ))}
                 </select>
-                <button
-                  type="button"
-                  className="events-secondary-btn"
+                <Button
                   onClick={() => {
                     if (drinkToAdd) {
                       togglePreferredDrink(drinkToAdd);
@@ -488,7 +487,7 @@ function GuestManagementPage({
                   disabled={!drinkToAdd}
                 >
                   Hinzufügen
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -537,9 +536,7 @@ function GuestManagementPage({
                     )
                   )}
                 </select>
-                <button
-                  type="button"
-                  className="events-secondary-btn"
+                <Button
                   onClick={() => {
                     if (categoryToAdd) {
                       togglePreferredCategory(categoryToAdd);
@@ -549,7 +546,7 @@ function GuestManagementPage({
                   disabled={!categoryToAdd}
                 >
                   Hinzufügen
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -570,17 +567,12 @@ function GuestManagementPage({
           {error && <p className="events-error-text">{error}</p>}
 
           <div className="events-form-actions">
-            <button
-              type="button"
-              className="events-secondary-btn events-save-desktop-only"
-              onClick={() => closeForm(null)}
-              disabled={saving}
-            >
+            <Button className="events-save-desktop-only" onClick={() => closeForm(null)} disabled={saving}>
               Abbrechen
-            </button>
-            <button type="submit" className="events-primary-btn events-form-actions-save" disabled={saving}>
-              {saving ? 'Speichere...' : 'Speichern'}
-            </button>
+            </Button>
+            <Button variant="primary" type="submit" className="events-form-actions-save" loading={saving}>
+              {saving ? 'Speichert …' : 'Speichern'}
+            </Button>
           </div>
         </form>
         <button
@@ -632,14 +624,13 @@ function GuestManagementPage({
       <div className="events-page-header">
         <h2>Gäste verwalten</h2>
         <div className="events-page-header-actions">
-          <button
-            type="button"
-            className="events-primary-btn events-header-add-btn"
+          <Button
+            className="events-header-add-btn"
             onClick={openNew}
             aria-label="Neuen Gast anlegen"
           >
             + Gast
-          </button>
+          </Button>
           {onBack && (
             <button
               className="app-close-button"
@@ -695,9 +686,9 @@ function GuestManagementPage({
       ) : profiles.length === 0 ? (
         <div className="events-empty-state">
           <p>Noch keine Gäste erfasst.</p>
-          <button type="button" className="events-primary-btn" onClick={openNew}>
+          <Button variant="primary" onClick={openNew}>
             Ersten Gast anlegen
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="events-list">

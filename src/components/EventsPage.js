@@ -17,6 +17,7 @@ import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import ConfirmDialog from './ConfirmDialog';
+import Button from './Button';
 
 const STATUS_LABELS = {
   geplant: 'Geplant',
@@ -588,23 +589,15 @@ function EventsPage({
 
           {canManageSelectedEvent && (
             <div className="events-form-actions">
-              {(selectedEvent.status === 'berechnet' || selectedEvent.status === 'eingekauft') && (
-                <button
-                  type="button"
-                  className="events-primary-btn"
-                  onClick={() => setSubView('consumption')}
-                >
-                  Einkauf & Verbrauch
-                </button>
-              )}
               {!isMobileView && (
-                <button
-                  type="button"
-                  className="events-secondary-btn"
-                  onClick={() => setSubView('edit')}
-                >
+                <Button onClick={() => setSubView('edit')}>
                   Bearbeiten
-                </button>
+                </Button>
+              )}
+              {(selectedEvent.status === 'berechnet' || selectedEvent.status === 'eingekauft') && (
+                <Button variant="primary" onClick={() => setSubView('consumption')}>
+                  Einkauf & Verbrauch
+                </Button>
               )}
             </div>
           )}
@@ -665,18 +658,18 @@ function EventsPage({
       </div>
 
       <div className="events-manage-links">
-        <button type="button" className="events-manage-link-btn" onClick={() => setSubView('drinks')}>
+        <Button onClick={() => setSubView('drinks')}>
           Getränke verwalten
-        </button>
+        </Button>
         {canEditRecipes(currentUser) && (
-          <button type="button" className="events-manage-link-btn" onClick={() => setSubView('guests')}>
+          <Button onClick={() => setSubView('guests')}>
             Gäste verwalten
-          </button>
+          </Button>
         )}
         {canEditRecipes(currentUser) && (
-          <button type="button" className="events-manage-link-btn" onClick={() => setSubView('wichteln')}>
+          <Button onClick={() => setSubView('wichteln')}>
             Wichteln
-          </button>
+          </Button>
         )}
       </div>
 
@@ -707,9 +700,9 @@ function EventsPage({
       ) : events.length === 0 ? (
         <div className="events-empty-state">
           <p>Noch keine Events geplant.</p>
-          <button type="button" className="events-primary-btn" onClick={() => setSubView('new')}>
+          <Button variant="primary" onClick={() => setSubView('new')}>
             Erstes Event anlegen
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="events-list">

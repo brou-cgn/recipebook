@@ -23,6 +23,7 @@ import { getImageForCategory } from '../utils/categoryImages';
 import ShoppingListModal from './ShoppingListModal';
 import RecipeCard from './RecipeCard';
 import ConfirmDialog from './ConfirmDialog';
+import Button from './Button';
 import useModalScrollLock from '../hooks/useModalScrollLock';
 import useFadeOutClose from '../hooks/useFadeOutClose';
 import useMenueWeinbegleitung from '../hooks/useMenueWeinbegleitung';
@@ -576,32 +577,32 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
         <div className="menu-detail-header">
           <div className="action-buttons">
             {canEdit && onEdit && !showShoppingListModal && !showPortionSelector && (
-              <button
+              <Button
                 className="menu-edit-button"
                 onClick={() => onEdit(menu)}
                 title="Menü bearbeiten"
               >
                 Bearbeiten
-              </button>
+              </Button>
             )}
             {menu.privat && canEdit && onPublish && (
-              <button
-                className="publish-menu-button"
+              <Button
                 onClick={handlePublish}
-                disabled={publishLoading}
+                loading={publishLoading}
                 title="Menü veröffentlichen"
               >
-                {publishLoading ? '…' : 'Veröffentlichen'}
-              </button>
+                {publishLoading ? 'Wird veröffentlicht …' : 'Veröffentlichen'}
+              </Button>
             )}
             {canDeleteMenu(currentUser, menu) && onDelete && (
-              <button
+              <Button
+                variant="danger-quiet"
                 className="menu-delete-button"
                 onClick={handleDelete}
                 title="Menü löschen"
               >
                 Löschen
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -670,14 +671,14 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
             )}
           </button>
           {canEdit && !menu.shareId && (
-            <button
-              className="share-button"
+            <Button
+              className="menu-share-button"
               onClick={handleToggleShare}
-              disabled={shareLoading}
+              loading={shareLoading}
               title="Menü teilen"
             >
-              {shareLoading ? '…' : '↑ Teilen'}
-            </button>
+              {shareLoading ? 'Wird geteilt …' : '↑ Teilen'}
+            </Button>
           )}
           {canEdit && menu.shareId && (
             <button
