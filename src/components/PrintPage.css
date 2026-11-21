@@ -141,7 +141,7 @@
   right: 0;
   padding: 0.1em 0.5em;
   border-radius: 0 0 0 6px;
-  background: #a33a26;
+  background: var(--color-bad);
   color: #fff;
   font-size: 0.7em;
   font-family: sans-serif;

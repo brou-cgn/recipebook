@@ -64,7 +64,7 @@
 
 .recipe-list-title-area h2 {
   margin: 0;
-  color: #333;
+  color: var(--color-text);
   font-size: 1.5rem;
   text-align: left;
   min-width: 0;
@@ -94,8 +94,8 @@
 
 .view-mode-button {
   background: white;
-  color: #1A1A1A;
-  border: 1px solid #ddd;
+  color: var(--color-text-strong);
+  border: 1px solid var(--color-border);
   padding: 0.75rem 0.75rem;
   border-radius: 25px;
   font-size: 0.95rem;
@@ -106,9 +106,9 @@
 }
 
 .view-mode-button.active {
-  background: linear-gradient(135deg, #DF7A00 0%, #c46900 100%);
+  background: linear-gradient(135deg, var(--color-accent) 0%, #c46900 100%);
   color: white;
-  border-color: #DF7A00;
+  border-color: var(--color-accent);
 }
 
 .filter-button {
@@ -117,8 +117,8 @@
   justify-content: center;
 
   background: white;
-  color: #666;
-  border: 1px solid #ddd;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
   border-radius: 25px;
 
   padding: 0.75rem;
@@ -143,8 +143,8 @@
 }
 
 .filter-button.has-active-filters {
-  background: #DF7A00;
-  border-color: #DF7A00;
+  background: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 /* On desktop the recipe overview's filter sidebar already provides search
@@ -161,7 +161,7 @@
 .add-button {
   background: white;
   color: white;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   padding: 0.75rem 1.5rem;
   border-radius: 25px;
   font-size: 1rem;
@@ -188,7 +188,7 @@
 
   background: white;
   color: white;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 50%;
 
   font-size: 1.1rem;
@@ -305,7 +305,7 @@
 
 .recipe-card-content h3 {
   margin: 0 0 0.75rem 0;
-  color: #333;
+  color: var(--color-text);
   font-size: 1.25rem;
   min-width: 0;
   max-width: 100%;
@@ -332,7 +332,7 @@
   width: 36px;
   height: 36px;
 
-  background: #DF7A00;
+  background: var(--color-accent);
   color: white;
   border-radius: 6px;
   font-size: 1.4rem;
@@ -410,14 +410,14 @@
 }
 
 .version-count {
-  color: #DF7A00;
+  color: var(--color-accent);
   font-weight: 600;
   flex-shrink: 0;
   white-space: nowrap;
 }
 
 .recipe-author {
-  color: #666;
+  color: var(--color-text-muted);
   text-align: left;
   min-width: 0;
   flex-shrink: 1;

@@ -55,7 +55,7 @@
 }
 
 .rating-heart-icon.filled {
-  color: #DF7A00;
+  color: var(--color-accent);
 }
 
 .rating-heart-icon.empty {
@@ -95,7 +95,7 @@
 }
 
 .rating-heart-btn.filled {
-  color: #DF7A00;
+  color: var(--color-accent);
   opacity: 1;
 }
 

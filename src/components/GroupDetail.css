@@ -150,7 +150,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: #fff !important;
+  background: var(--color-surface) !important;
   border: 1px solid #f0f0f0 !important;
   border-radius: 12px;
   color: #555;
@@ -199,7 +199,7 @@
 .group-detail-section h3 {
   margin: 0 0 1rem 0;
   font-size: 1.1rem;
-  color: #333;
+  color: var(--color-text);
 }
 
 .group-section-header h3 {
@@ -228,7 +228,7 @@
   border-radius: 8px;
   background: #fafafa;
   min-height: 2.75rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
 }
 
 .group-member-name {
@@ -283,7 +283,7 @@
 .group-section-header h3 {
   margin: 0;
   font-size: 1.1rem;
-  color: #333;
+  color: var(--color-text);
 }
 
 .group-add-member-btn {
@@ -330,7 +330,7 @@
 
 .group-invite-email-input {
   padding: 0.6rem 0.85rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 0.95rem;
   width: 100%;
@@ -364,7 +364,7 @@
 
 .group-recipe-card {
   background: #fafafa;
-  border: 1px solid #eee;
+  border: 1px solid var(--color-border-subtle);
   border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
@@ -396,7 +396,7 @@
 .group-recipe-card-content h4 {
   margin: 0 0 0.3rem 0;
   font-size: 0.95rem;
-  color: #333;
+  color: var(--color-text);
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -431,8 +431,8 @@
     border-radius: 50%;
     padding: 0;
     background: white;
-    color: #333;
-    border: 1px solid #ddd;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
     font-size: 1.1rem;
     cursor: pointer;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
@@ -517,7 +517,7 @@
 .group-info-row dd {
   margin: 0;
   font-size: 0.95rem;
-  color: #333;
+  color: var(--color-text);
 }
 
 /* Add member icon button (owner only, right-aligned in section header) */

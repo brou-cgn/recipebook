@@ -210,9 +210,9 @@ describe('CookingSessionCarousel CSS', () => {
     // Keine Linie in der Displaymitte zwischen Karussell und Rezept vorn
     expect(getRuleBody(carouselCss, '.cooking-carousel')).not.toMatch(/border(-right)?:/);
     expect(getRuleBody(recipeDetailCss, '.cooking-mode-steps')).toContain('background: var(--color-surface-subtle);');
-    // Die Fläche des ganzen Kochmodus hochkant (dahinter) hat im Light-Theme denselben Wert wie das Token
+    // Die Fläche des ganzen Kochmodus hochkant (dahinter) nutzt dasselbe Token (Light #f9f9f9)
     expect(lightTokens).toContain('--color-surface-subtle: #f9f9f9;');
     expect(getRuleBody(recipeDetailCss, '.recipe-detail-content.cooking-mode-active:not(.cooking-mode-landscape)'))
-      .toContain('background: #f9f9f9;');
+      .toContain('background: var(--color-surface-subtle);');
   });
 });

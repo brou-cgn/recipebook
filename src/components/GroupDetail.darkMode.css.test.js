@@ -60,7 +60,7 @@ describe('GroupDetail light mode styles', () => {
     const shoppingRule = getRuleBody(css, '.group-header-actions .shopping-list-trigger-button');
     const settingsIconRule = getRuleBody(css, '.list-settings-icon-img');
 
-    expect(settingsRule).toContain('background: #fff !important;');
+    expect(settingsRule).toContain('background: var(--color-surface) !important;');
     expect(settingsRule).toContain('border: 1px solid #f0f0f0 !important;');
     expect(settingsRule).toContain('display: inline-flex;');
     expect(settingsRule).toContain('-webkit-tap-highlight-color: transparent;');
@@ -105,8 +105,11 @@ describe('GroupDetail light mode styles', () => {
     const cssPath = path.join(__dirname, 'GroupDetail.css');
     const css = fs.readFileSync(cssPath, 'utf8');
     const rule = getRuleBody(css, '.group-member-row');
+    const tokens = fs.readFileSync(path.join(__dirname, '..', 'tokens.css'), 'utf8');
 
-    expect(rule).toContain('border: 1px solid #ddd;');
+    // Token --color-border hat Light #ddd, denselben Wert wie der Rand des Einladungsfelds
+    expect(rule).toContain('border: 1px solid var(--color-border);');
+    expect(tokens).toContain('--color-border: #ddd;');
   });
 
   test('group-member-row has min-height set for equal row heights', () => {

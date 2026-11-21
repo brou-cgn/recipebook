@@ -13,7 +13,7 @@
 
 .recipe-form-header h2 {
   margin: 0;
-  color: #333;
+  color: var(--color-text);
   font-size: 1.75rem;
 }
 
@@ -40,7 +40,7 @@
 }
 
 .recipe-form-header-cancel {
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   color: #666;
 }
 
@@ -50,7 +50,7 @@
 
 .recipe-form-header-save {
   border: 1px solid #402C1C;
-  color: #402C1C;
+  color: var(--color-brand);
 }
 
 .recipe-form-header-save:hover:not(:disabled) {
@@ -111,7 +111,7 @@
   min-width: 0;
   padding: 0 0.75rem;
   height: 46px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border-strong);
   border-radius: 6px;
   font-size: 0.9rem;
   background-color: white;
@@ -256,14 +256,14 @@
   justify-content: space-between;
   align-items: center;
   gap: 0.5rem;
-  background: #f5f5f5;
+  background: var(--color-surface-input);
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   padding: 0.6rem 0.9rem;
   cursor: pointer;
   text-align: left;
   font-size: 0.95rem;
-  color: #1a1a1a;
+  color: var(--color-text-strong);
 }
 
 .pending-import-item:hover {
@@ -312,7 +312,7 @@
 
 .group-assignment-banner.public {
   background-color: #E8F5E9;
-  border-left: 4px solid #4CAF50;
+  border-left: 4px solid var(--color-ok);
   color: #2E7D32;
 }
 
@@ -408,7 +408,7 @@
   width: 100%;
   margin-top: 0.5rem;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border-strong);
   border-radius: 6px;
   font-size: 0.9rem;
   box-sizing: border-box;
@@ -461,9 +461,9 @@
 }
 
 .recipe-form-cuisine-pill.active {
-  background: #DF7A00;
+  background: var(--color-accent);
   color: white;
-  border-color: #DF7A00;
+  border-color: var(--color-accent);
 }
 
 .recipe-form-cuisine-pill:focus-visible {
@@ -552,7 +552,7 @@
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #e0e0e0;
-  background: #f5f5f5;
+  background: var(--color-surface-input);
   aspect-ratio: 1 / 1;
 }
 
@@ -582,7 +582,7 @@
 
 .set-default-image-btn {
   background: rgba(255, 255, 255, 0.9);
-  color: #402C1C;
+  color: var(--color-brand);
   border: none;
   border-radius: 4px;
   padding: 0.2rem 0.4rem;
@@ -699,7 +699,7 @@
 
 .form-section h3 {
   margin: 0;
-  color: #1a1a1a;
+  color: var(--color-text-strong);
   font-size: 1.25rem;
   font-weight: 700;
 }
@@ -764,7 +764,7 @@
 .form-list-item textarea {
   flex: 1;
   padding: 0.75rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 1rem;
   font-family: inherit;
@@ -826,8 +826,8 @@
   right: 0;
   bottom: 0;
   background: #f5f5f5;
-  color: #999;
-  border: 1px solid #ddd;
+  color: var(--color-text-faint);
+  border: 1px solid var(--color-border);
   border-left: none;
   border-radius: 0 8px 8px 0;
   cursor: grab;
@@ -847,7 +847,7 @@
 
 .drag-handle:hover {
   background: #e8e8e8;
-  color: #402C1C;
+  color: var(--color-brand);
   border-color: #402C1C;
 }
 
@@ -893,7 +893,7 @@
   position: fixed;
   z-index: 1200;
   background: white;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   overflow: hidden;
@@ -909,11 +909,11 @@
   text-align: left;
   cursor: pointer;
   font-size: 0.95rem;
-  color: #333;
+  color: var(--color-text);
 }
 
 .ingredient-context-menu button:hover {
-  background: #f5f5f5;
+  background: var(--color-surface-input);
 }
 
 .form-list-item.dragging {
@@ -978,7 +978,7 @@
   padding: 0;
   background: white;
   color: #402C1C;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 50%;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.18);
   cursor: pointer;
@@ -1072,9 +1072,9 @@
 }
 
 .cancel-button {
-  background: #f5f5f5;
+  background: var(--color-surface-input);
   font-size: 0.8rem;
-  color: #666;
+  color: var(--color-text-muted);
 }
 
 .cancel-button:hover {
@@ -1124,7 +1124,7 @@
 
 .difficulty-slider .star {
   font-size: 2rem;
-  color: #DF7A00;
+  color: var(--color-accent);
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
@@ -1136,7 +1136,7 @@
 
 .difficulty-slider .star:hover,
 .difficulty-slider .star.filled {
-  color: #DF7A00;
+  color: var(--color-accent);
 }
 
 .difficulty-slider .star:hover {
@@ -1155,7 +1155,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -1179,7 +1179,7 @@
 
 .cuisine-checkbox span {
   font-size: 0.95rem;
-  color: #333;
+  color: var(--color-text);
   user-select: none;
 }
 
@@ -1357,7 +1357,7 @@
   z-index: 1101;
   background: white;
   color: #666;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   padding: 0;
   border-radius: 50%;
   font-size: 1.1rem;
@@ -1382,7 +1382,7 @@
 .cancel-fab-button {
   background: white;
   color: #666;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   padding: 0;
   border-radius: 50%;
   font-size: 1.1rem;

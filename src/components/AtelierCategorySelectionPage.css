@@ -51,8 +51,8 @@
 }
 
 .atelier-category-selection__pill.active {
-  background: #DF7A00;
-  border-color: #DF7A00;
+  background: var(--color-accent);
+  border-color: var(--color-accent);
   color: #fff;
 }
 

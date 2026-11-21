@@ -11,7 +11,7 @@
   flex-shrink: 0;
   padding: 1.5rem 1.25rem;
   box-sizing: border-box;
-  background: #FFFFFF;
+  background: var(--color-surface-card);
   border: 1px solid #E6E2DD;
   border-radius: 16px;
   align-self: flex-start;
@@ -55,7 +55,7 @@
 }
 
 .menu-filter-sidebar-toggle:hover {
-  border-color: #DF7A00;
+  border-color: var(--color-accent);
 }
 
 .menu-filter-sidebar-toggle:focus-visible {
@@ -129,14 +129,14 @@
 }
 
 .menu-filter-sidebar-pill:hover {
-  border-color: #DF7A00;
+  border-color: var(--color-accent);
 }
 
 .menu-filter-sidebar-pill.active {
-  background: #DF7A00;
+  background: var(--color-accent);
   color: white;
   font-weight: 700;
-  border-color: #DF7A00;
+  border-color: var(--color-accent);
 }
 
 .menu-filter-sidebar-pill:focus-visible {

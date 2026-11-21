@@ -17,7 +17,7 @@
 }
 
 .import-progress-fill {
-  stroke: #1a1a1a;
+  stroke: var(--color-text-strong);
   stroke-linecap: round;
   transition: stroke-dashoffset 0.2s ease;
 }
@@ -31,7 +31,7 @@
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: #a33a26;
+  background: var(--color-bad);
 }
 
 .import-progress-badge {

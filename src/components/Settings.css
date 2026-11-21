@@ -13,7 +13,7 @@
 
 .settings-header h2 {
   margin: 0;
-  color: #333;
+  color: var(--color-text);
   font-size: 1.75rem;
 }
 
@@ -81,7 +81,7 @@
   padding: 0.85rem 1.25rem;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #666;
+  color: var(--color-text-muted);
   cursor: pointer;
   border-left: 3px solid transparent;
   text-align: left;
@@ -91,7 +91,7 @@
 }
 
 .tab-button:hover {
-  color: #402C1C;
+  color: var(--color-brand);
   background: #f5f0eb;
 }
 
@@ -155,7 +155,7 @@
 
 .settings-section h3 {
   margin: 0 0 1rem 0;
-  color: #1a1a1a;
+  color: var(--color-text-strong);
   font-size: 1.25rem;
   font-weight: 700;
 }
@@ -170,7 +170,7 @@
   flex: 1;
   min-width: 0;
   padding: 0.75rem;
-  border: 2px solid #ddd;
+  border: 2px solid var(--color-border);
   border-radius: 8px;
   font-size: 1rem;
   transition: border-color 0.3s ease;
@@ -234,7 +234,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: #f5f5f5;
+  background: var(--color-surface-input);
   border: 1px solid #ddd;
   border-radius: 6px;
   padding: 0.5rem 0.75rem;
@@ -242,7 +242,7 @@
 
 .list-item span {
   font-size: 0.95rem;
-  color: #333;
+  color: var(--color-text);
 }
 
 .list-item .remove-btn {
@@ -262,9 +262,9 @@
 }
 
 .list-item .edit-btn {
-  background: #fff;
+  background: var(--color-surface);
   color: #555;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border-strong);
   padding: 0.25rem 0.4rem;
   border-radius: 4px;
   cursor: pointer;
@@ -301,7 +301,7 @@
   justify-content: center;
   width: 1.8rem;
   height: 1.8rem;
-  border: 1px dashed #ccc;
+  border: 1px dashed var(--color-border-strong);
   border-radius: 4px;
   color: #aaa;
   font-size: 0.9rem;
@@ -309,7 +309,7 @@
 }
 
 .list-item .drag-handle {
-  background: #f5f5f5;
+  background: var(--color-surface-input);
   color: #666;
   border: 1px solid #ddd;
   border-radius: 6px;
@@ -362,7 +362,7 @@
 }
 
 .ut-header-row {
-  background: #f5f5f5;
+  background: var(--color-surface-input);
   font-weight: 600;
   color: #333;
   font-size: 0.85rem;
@@ -377,7 +377,7 @@
 .ut-row {
   position: relative;
   overflow: hidden;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .ut-row:last-child {
@@ -392,7 +392,7 @@
 .ut-row-content {
   position: relative;
   z-index: 1;
-  background: #fff;
+  background: var(--color-surface-card);
 }
 
 .ut-drag-handle {
@@ -416,10 +416,10 @@
   width: 100%;
   min-width: 0;
   padding: 0.4rem 0.5rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   font-size: 0.9rem;
-  background: #fff;
+  background: var(--color-surface-card);
 }
 
 .ut-cell-input:focus,
@@ -429,7 +429,7 @@
 }
 
 .ut-cell-input:disabled {
-  background: #f5f5f5;
+  background: var(--color-surface-input);
   color: #aaa;
   cursor: not-allowed;
 }
@@ -509,7 +509,7 @@
 }
 
 .reset-button {
-  background: #DF7A00;
+  background: var(--color-accent);
   color: white;
 }
 
@@ -615,7 +615,7 @@
 }
 
 .conversion-table th {
-  background: #f5f5f5;
+  background: var(--color-surface-input);
   font-weight: 600;
   color: #333;
   white-space: nowrap;
@@ -646,7 +646,7 @@
 .conversion-table-input {
   width: 100%;
   padding: 0.4rem 0.5rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   font-size: 0.9rem;
   box-sizing: border-box;
@@ -874,7 +874,7 @@
 .users-table td {
   padding: 12px;
   text-align: left;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .users-table th {
@@ -959,21 +959,21 @@
   display: flex;
   gap: 30px;
   padding-top: 20px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--color-border-subtle);
   font-size: 14px;
 }
 
 .stat-item {
-  color: #666;
+  color: var(--color-text-muted);
 }
 
 .stat-item strong {
-  color: #333;
+  color: var(--color-text);
 }
 
 .role-select {
   padding: 6px 10px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 5px;
   font-size: 14px;
   background: white;
@@ -1082,7 +1082,7 @@
 }
 
 .favicon-change-btn {
-  background: #DF7A00;
+  background: var(--color-accent);
   color: white;
   flex: 1;
 }
@@ -1167,7 +1167,7 @@
 }
 
 .upload-icon-btn {
-  background: #4CAF50;
+  background: var(--color-ok);
   color: white;
   border: none;
   padding: 0.4rem 0.6rem;
@@ -1190,7 +1190,7 @@
   flex: 1;
   padding: 0.4rem 0.5rem;
   background: #e8f5e9;
-  border: 2px solid #4CAF50;
+  border: 2px solid var(--color-ok);
   border-radius: 6px;
   color: #2e7d32;
   font-weight: 500;
@@ -1217,7 +1217,7 @@
 }
 
 .reset-icon-btn {
-  background: #DF7A00;
+  background: var(--color-accent);
   color: white;
   border: none;
   padding: 0.4rem 0.6rem;
@@ -1327,7 +1327,7 @@
 
 .dark-icon-col-label {
   font-size: 0.82rem;
-  color: #333;
+  color: var(--color-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1346,7 +1346,7 @@
   align-items: center;
   justify-content: center;
   background: white;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   font-size: 1rem;
   overflow: hidden;
@@ -1374,7 +1374,7 @@
   flex: 1;
   min-width: 0;
   padding: 0.25rem 0.4rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   font-size: 0.85rem;
   transition: border-color 0.2s ease;
@@ -1389,7 +1389,7 @@
   flex: 1;
   padding: 0.25rem 0.4rem;
   background: #e8f5e9;
-  border: 1px solid #4CAF50;
+  border: 1px solid var(--color-ok);
   border-radius: 4px;
   color: #2e7d32;
   font-size: 0.75rem;
@@ -1879,7 +1879,7 @@
   align-items: center;
   gap: 0.25rem;
   padding: 1rem 1.5rem;
-  border: 2px solid #ddd;
+  border: 2px solid var(--color-border);
   border-radius: 12px;
   background: white;
   cursor: pointer;
@@ -1928,7 +1928,7 @@
   align-items: center;
   gap: 0.25rem;
   padding: 1rem 1.5rem;
-  border: 2px solid #ddd;
+  border: 2px solid var(--color-border);
   border-radius: 12px;
   background: white;
   cursor: pointer;
@@ -2068,7 +2068,7 @@
   margin: 0 0 0.75rem 0;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #402C1C;
+  color: var(--color-brand);
 }
 
 .sort-settings-field {
@@ -2181,9 +2181,9 @@
   padding: 3px 6px;
   border: 1px dashed #c8b8a2;
   border-radius: 4px;
-  background: #fff;
+  background: var(--color-surface);
   cursor: pointer;
-  color: #402C1C;
+  color: var(--color-brand);
 }
 
 .icon-saving-indicator {

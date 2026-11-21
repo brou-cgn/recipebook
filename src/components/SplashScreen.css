@@ -43,7 +43,7 @@
 .splash-screen__tagline {
   font-size: 0.7rem;
   font-weight: 500;
-  color: #402C1C;
+  color: var(--color-brand);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   animation: splash-screen-fade-up 480ms ease-out 260ms both;
@@ -61,7 +61,7 @@
 .splash-screen__sweep {
   width: 40%;
   height: 100%;
-  background: #DF7A00;
+  background: var(--color-accent);
   animation: splash-screen-hairline-sweep 1.6s ease-in-out infinite;
 }
 

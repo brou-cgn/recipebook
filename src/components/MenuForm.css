@@ -15,7 +15,7 @@
 
 .menu-form-header h2 {
   margin: 0;
-  color: #333;
+  color: var(--color-text);
   font-size: 1.75rem;
 }
 
@@ -42,7 +42,7 @@
 }
 
 .menu-form-header-cancel {
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   color: #666;
 }
 
@@ -52,7 +52,7 @@
 
 .menu-form-header-save {
   border: 1px solid #402C1C;
-  color: #402C1C;
+  color: var(--color-brand);
 }
 
 .menu-form-header-save:hover:not(:disabled) {
@@ -160,7 +160,7 @@
 
 .form-section h3 {
   margin: 0 0 1rem 0;
-  color: #1a1a1a;
+  color: var(--color-text-strong);
   font-size: 1.25rem;
   font-weight: 700;
 }
@@ -209,7 +209,7 @@
   display: block;
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
-  color: #666;
+  color: var(--color-text-muted);
   font-weight: 600;
 }
 
@@ -354,13 +354,13 @@
   padding-top: 0.75rem;
   border-top: 1px solid #e0d5c7;
   font-size: 0.85rem;
-  color: #666;
+  color: var(--color-text-muted);
   font-weight: 600;
 }
 
 .recipe-section-info {
   font-size: 0.85rem;
-  color: #999;
+  color: var(--color-text-faint);
   font-style: italic;
   margin-left: 0.5rem;
 }
@@ -383,7 +383,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -458,7 +458,7 @@
   padding: 0.75rem;
   cursor: pointer;
   transition: background 0.2s ease;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .typeahead-item:last-child {
@@ -481,7 +481,7 @@
    removed with the shared DeleteRowButton). The wrapper visually stands in
    for the textarea's own border so pills read as being "in" the field. */
 .menu-description-field {
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 0.75rem;
   transition: border-color 0.3s ease;
@@ -559,7 +559,7 @@
 
 .selected-recipes h5 {
   margin: 0 0 0.5rem 0;
-  color: #666;
+  color: var(--color-text-muted);
   font-size: 0.9rem;
   font-weight: 600;
 }
@@ -576,7 +576,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 0.75rem;
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid #e0d5c7;
   border-radius: 6px;
   gap: 0.5rem;
@@ -586,7 +586,7 @@
 
 .selected-recipe-item.dragging .selected-recipe-item-content {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid #402C1C;
 }
 
@@ -598,7 +598,7 @@
    hover/touch instead of staying hidden behind an opaque field. */
 .selected-recipe-item-content.delete-row-hover-target:hover,
 .selected-recipe-item-content.delete-row-hover-target:focus-within {
-  background: #fff;
+  background: var(--color-surface);
 }
 
 /* Mobile: the delete button is only revealed via the left-swipe gesture
@@ -675,7 +675,7 @@
   z-index: 1101;
   background: white;
   color: #666;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   padding: 0;
   border-radius: 50%;
   font-size: 1.1rem;
@@ -700,7 +700,7 @@
 .cancel-fab-button {
   background: white;
   color: #666;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   padding: 0;
   border-radius: 50%;
   font-size: 1.1rem;
@@ -827,8 +827,8 @@
     border-radius: 50%;
     padding: 0;
     background: white;
-    color: #333;
-    border: 1px solid #ddd;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
     font-size: 1.1rem;
     cursor: pointer;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);

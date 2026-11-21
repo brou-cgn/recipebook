@@ -42,7 +42,7 @@
   margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--color-text-strong);
 }
 
 .import-progress-dialog-count {
@@ -69,7 +69,7 @@
 .import-progress-dialog-header .close-button:hover,
 .import-progress-dialog-header .close-button:focus-visible {
   background: rgba(120, 84, 52, 0.08);
-  color: #1a1a1a;
+  color: var(--color-text-strong);
 }
 
 .import-progress-dialog-content {
@@ -128,7 +128,7 @@
 }
 
 .import-row-icon-fill {
-  stroke: #1a1a1a;
+  stroke: var(--color-text-strong);
   transition: stroke-dashoffset 0.2s ease;
 }
 
@@ -196,7 +196,7 @@
 
 .import-progress-item-restart:hover,
 .import-progress-item-restart:focus-visible {
-  color: #DF7A00;
+  color: var(--color-accent);
   background: rgba(223, 122, 0, 0.12);
 }
 
@@ -206,7 +206,7 @@
 }
 
 .import-progress-item.status-error .import-progress-item-restart {
-  color: #DF7A00;
+  color: var(--color-accent);
 }
 
 .import-progress-hint {

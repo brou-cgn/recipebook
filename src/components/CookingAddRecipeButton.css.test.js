@@ -73,12 +73,14 @@ describe('Knopf „Rezept dazunehmen“: gleiche Formatierung und Animation wie 
   test('Light: Fläche, Schrift und Rand über Tokens mit den Werten des FAB', () => {
     const light = declarations(ruleBody(tokensCss, ':root'));
     const used = { background: tokenName(mine.background), color: tokenName(mine.color), border: tokenName(mine.border) };
+    // Der FAB nutzt teils selbst Tokens (Farb-Token-Codemod, A5): auf den Light-Wert auflösen
+    const resolve = (value) => (tokenName(value) ? light[tokenName(value)] : value);
 
     expect(Object.values(used).every(Boolean)).toBe(true);
     expect({ background: light[used.background], color: light[used.color], border: light[used.border] }).toEqual({
-      background: hex(fab.background),
-      color: fab.color,
-      border: fab.border.split(' ').pop(),
+      background: hex(resolve(fab.background)),
+      color: resolve(fab.color),
+      border: resolve(fab.border.split(' ').pop()),
     });
   });
 

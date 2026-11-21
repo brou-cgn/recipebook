@@ -8,7 +8,7 @@
   flex-shrink: 0;
   padding: 1.5rem 1.25rem;
   box-sizing: border-box;
-  background: #FFFFFF;
+  background: var(--color-surface-card);
   border: 1px solid #E6E2DD;
   border-radius: 16px;
   align-self: flex-start;
@@ -55,7 +55,7 @@
 }
 
 .recipe-filter-sidebar-toggle:hover {
-  border-color: #DF7A00;
+  border-color: var(--color-accent);
 }
 
 .recipe-filter-sidebar-toggle:focus-visible {
@@ -121,7 +121,7 @@
 }
 
 .recipe-filter-sidebar-search-input::placeholder {
-  color: #999;
+  color: var(--color-text-faint);
 }
 
 .recipe-filter-sidebar-section {
@@ -195,14 +195,14 @@
 }
 
 .recipe-filter-sidebar-pill:hover {
-  border-color: #DF7A00;
+  border-color: var(--color-accent);
 }
 
 .recipe-filter-sidebar-pill.active {
-  background: #DF7A00;
+  background: var(--color-accent);
   color: white;
   font-weight: 700;
-  border-color: #DF7A00;
+  border-color: var(--color-accent);
 }
 
 .recipe-filter-sidebar-pill:focus-visible {
@@ -225,7 +225,7 @@
 .recipe-filter-sidebar-reset {
   background: none;
   border: none;
-  color: #DF7A00;
+  color: var(--color-accent);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
