@@ -1833,15 +1833,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 Eigene Version erstellen
               </Button>
             )}
-            {isRecipePublic && !recipe.shareId && (
-              <Button
-                onClick={handleToggleShare}
-                loading={shareLoading}
-                title="Rezept teilen"
-              >
-                {shareLoading ? 'Wird geteilt …' : '↑ Teilen'}
-              </Button>
-            )}
+            {/* Teilen steht nur in der Aktionszeile unter dem Bild, die es auf allen Breiten gibt (Tech-Check P11) */}
             {userCanPublish && onPublish && (
               <Button
                 onClick={handlePublish}

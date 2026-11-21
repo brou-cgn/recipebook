@@ -1,5 +1,9 @@
 import React, { useState, useRef } from 'react';
 import Button from './Button';
+import { EmailIcon, LockIcon } from './LoginInputIcons';
+// Registrierung nutzt die Gestaltung der Anmeldung (Tech-Check P12); Login.css hier selbst laden,
+// weil die Registrierung als eigener Teil nachgeladen wird
+import './Login.css';
 import './Register.css';
 import { validatePassword } from '../utils/userManagement';
 
@@ -83,17 +87,18 @@ function Register({ onRegister, onSwitchToLogin }) {
   };
 
   return (
-    <div className="register-container">
-      <div className="register-box">
-        <h2>Registrierung</h2>
+    <div className="login-container">
+      <div className="login-card">
+        <h2 className="login-title">Registrierung</h2>
         <form onSubmit={handleSubmit}>
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="vorname">Vorname *</label>
+          <div className="register-name-row">
+            <div className="login-field">
+              <label htmlFor="vorname" className="login-label">VORNAME *</label>
               <input
                 type="text"
                 id="vorname"
                 name="vorname"
+                className="login-input login-input--plain"
                 value={formData.vorname}
                 onChange={handleChange}
                 autoComplete="given-name"
@@ -101,12 +106,13 @@ function Register({ onRegister, onSwitchToLogin }) {
                 disabled={isLoading}
               />
             </div>
-            <div className="form-group">
-              <label htmlFor="nachname">Nachname *</label>
+            <div className="login-field">
+              <label htmlFor="nachname" className="login-label">NACHNAME *</label>
               <input
                 type="text"
                 id="nachname"
                 name="nachname"
+                className="login-input login-input--plain"
                 value={formData.nachname}
                 onChange={handleChange}
                 autoComplete="family-name"
@@ -115,62 +121,79 @@ function Register({ onRegister, onSwitchToLogin }) {
               />
             </div>
           </div>
-          <div className="form-group">
-            <label htmlFor="email">E-Mail-Adresse *</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              autoComplete="email"
-              required
-              disabled={isLoading}
-            />
+          <div className="login-field">
+            <label htmlFor="email" className="login-label">E-MAIL-ADRESSE *</label>
+            <div className="login-input-wrap">
+              <EmailIcon />
+              <input
+                type="email"
+                id="email"
+                name="email"
+                className="login-input"
+                placeholder="name@beispiel.de"
+                value={formData.email}
+                onChange={handleChange}
+                autoComplete="email"
+                required
+                disabled={isLoading}
+              />
+            </div>
           </div>
-          <div className="form-group">
-            <label htmlFor="password">Passwort * (mind. 12 Zeichen, Zahl oder Sonderzeichen)</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              autoComplete="new-password"
-              required
-              minLength="12"
-              disabled={isLoading}
-            />
+          <div className="login-field">
+            <label htmlFor="password" className="login-label">
+              PASSWORT * <span className="login-label-hint">(mind. 12 Zeichen, Zahl oder Sonderzeichen)</span>
+            </label>
+            <div className="login-input-wrap">
+              <LockIcon />
+              <input
+                type="password"
+                id="password"
+                name="password"
+                className="login-input"
+                value={formData.password}
+                onChange={handleChange}
+                autoComplete="new-password"
+                required
+                minLength="12"
+                disabled={isLoading}
+              />
+            </div>
           </div>
-          <div className="form-group">
-            <label htmlFor="confirmPassword">Passwort bestätigen *</label>
-            <input
-              type="password"
-              id="confirmPassword"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              autoComplete="new-password"
-              required
-              minLength="12"
-              disabled={isLoading}
-            />
+          <div className="login-field">
+            <label htmlFor="confirmPassword" className="login-label">PASSWORT BESTÄTIGEN *</label>
+            <div className="login-input-wrap">
+              <LockIcon />
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                className="login-input"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                autoComplete="new-password"
+                required
+                minLength="12"
+                disabled={isLoading}
+              />
+            </div>
           </div>
-          {error && <div className="error-message">{error}</div>}
-          <Button variant="primary" type="submit" fullWidth loading={isLoading}>
+          {error && <div className="login-error">{error}</div>}
+          <Button variant="primary" type="submit" fullWidth loading={isLoading} className="login-cta">
             {isLoading ? 'Registrierung läuft …' : 'Registrieren'}
           </Button>
         </form>
-        <div className="register-footer">
-          <p>Bereits ein Konto?</p>
-          <button 
-            type="button" 
-            className="switch-btn"
-            onClick={onSwitchToLogin}
-            disabled={isLoading}
-          >
-            Jetzt anmelden
-          </button>
+        <div className="login-footer">
+          <p>
+            Bereits ein Konto?{' '}
+            <button
+              type="button"
+              className="login-register-link"
+              onClick={onSwitchToLogin}
+              disabled={isLoading}
+            >
+              Jetzt anmelden
+            </button>
+          </p>
         </div>
       </div>
     </div>
