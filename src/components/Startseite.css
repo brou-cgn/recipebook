@@ -65,6 +65,12 @@
   justify-content: center;
 }
 
+.startseite-add-recipe-btn .button-icon-image {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+}
+
 .startseite-add-recipe-btn:hover {
   background: rgba(223, 122, 0, 0.1);
 }
