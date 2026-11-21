@@ -515,10 +515,40 @@
   line-height: 1;
 }
 
+/* Gebindeeinheit im Getränkeformular: Felder links, Entfernen am rechten Rand (DeleteRowButton,
+   Desktop) bzw. per Linksswipe (Handy), Tech-Check D7 */
 .events-einheit-group {
+  position: relative;
+}
+
+.events-einheit-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface-card);
+  transition: transform 0.15s ease;
+}
+
+.events-einheit-fields {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.events-einheit-group.swipe-delete-active .events-einheit-swipe-background {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Auf dem Handy entfernt der Linksswipe, der Knopf entfällt (wie bei den Getränkezeilen) */
+@media (max-width: 768px) {
+  .delete-row-button.events-einheit-delete-btn {
+    display: none;
+  }
 }
 
 .events-einheit-group + .events-einheit-group {
