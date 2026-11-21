@@ -101,8 +101,10 @@ export function defaultIcon(name, dark = false) {
     ? `<circle cx="${shape.badge.cx}" cy="${shape.badge.cy}" r="${shape.badge.r}" fill="${BADGE_FILL}" stroke="none"/>` +
       `<path d="${shape.badge.plus}" fill="none" stroke="${BADGE_PLUS}" stroke-width="1.8"/>`
     : '';
+  // width/height: Ohne sie rendern Browser (v. a. Safari) ein <img> ohne CSS-Größe
+  // in 300 × 150 bzw. auf volle Breite — das Plus auf der Startseite wurde riesig.
   const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" ${paint} ` +
+    `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" ${paint} ` +
     `stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${shape.d}"/>${badge}</svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }

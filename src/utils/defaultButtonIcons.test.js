@@ -135,3 +135,17 @@ describe('getEffectiveIcon: gepflegte Icons vor Standard-Symbolen', () => {
     expect(getEffectiveIcon(icons, 'shoppingList', true)).toBe(eigenesDunkel);
   });
 });
+
+describe('Eigengröße der Standard-Symbole', () => {
+  // Ohne width/height rendert Safari ein <img> ohne CSS-Größe in 300 × 150 —
+  // so wurde das Plus neben „Meine Kochideen“ bildschirmhoch.
+  test('jedes Standard-SVG trägt 24 × 24 als Eigengröße', () => {
+    Object.values(DEFAULT_BUTTON_ICONS)
+      .filter((v) => typeof v === 'string' && v.startsWith('data:image/svg+xml'))
+      .forEach((uri) => {
+        const svg = decode(uri);
+        expect(svg).toContain('width="24"');
+        expect(svg).toContain('height="24"');
+      });
+  });
+});
