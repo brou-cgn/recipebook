@@ -20,7 +20,7 @@
   color: #8a8a8a;
   font-weight: 500;
   font-size: 13px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .events-table tbody tr:last-child td {

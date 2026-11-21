@@ -57,7 +57,7 @@
   margin: 0;
   font-size: 1.25rem;
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--color-text-strong);
 }
 
 .cook-date-modal-close {
@@ -65,7 +65,7 @@
   border: none;
   font-size: 1.25rem;
   cursor: pointer;
-  color: #666;
+  color: var(--color-text-muted);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   transition: all 0.2s ease;
@@ -74,7 +74,7 @@
 
 .cook-date-modal-close:hover {
   background: rgba(0, 0, 0, 0.08);
-  color: #1a1a1a;
+  color: var(--color-text-strong);
 }
 
 .cook-date-modal-body {
@@ -102,11 +102,11 @@
   width: 100%;
   box-sizing: border-box;
   padding: 0.6rem 0.75rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 0.95rem;
   font-family: inherit;
-  color: #333;
+  color: var(--color-text);
   transition: border-color 0.2s ease;
   -webkit-appearance: none;
   appearance: none;
@@ -115,7 +115,7 @@
 
 .cook-date-input:focus {
   outline: none;
-  border-color: #DF7A00;
+  border-color: var(--color-accent);
 }
 
 .cook-date-modal-footer {
@@ -128,7 +128,7 @@
 
 .cook-date-modal-cancel-btn {
   background: transparent;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 0.5rem 1rem;
   cursor: pointer;
@@ -142,7 +142,7 @@
 }
 
 .cook-date-modal-save-btn {
-  background: #DF7A00;
+  background: var(--color-accent);
   border: none;
   border-radius: 8px;
   padding: 0.5rem 1.25rem;
@@ -192,7 +192,7 @@
   top: 0;
   bottom: 0;
   width: 3px;
-  background: linear-gradient(180deg, #402C1C 0%, #DF7A00 100%);
+  background: linear-gradient(180deg, #402C1C 0%, var(--color-accent) 100%);
   border-radius: 2px;
 }
 

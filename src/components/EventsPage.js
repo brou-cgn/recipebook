@@ -16,6 +16,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import useUndoableDelete from '../hooks/useUndoableDelete';
+import ConfirmDialog from './ConfirmDialog';
 
 const STATUS_LABELS = {
   geplant: 'Geplant',
@@ -198,6 +199,7 @@ function EventsPage({
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [selectedEventOwnerId, setSelectedEventOwnerId] = useState(currentUser?.id ?? null);
   const [fallbackEvent, setFallbackEvent] = useState(null); // used right after calculation, before onSnapshot syncs
+  const [eventToDelete, setEventToDelete] = useState(null);
   // Admins always see every user's events instead of just their own.
   const isAdmin = currentUser?.role === 'admin';
   const allEventsLoading = !allEventsLoaded;
@@ -337,8 +339,15 @@ function EventsPage({
     setSubView('detail');
   };
 
-  const handleDelete = async (event) => {
-    if (!window.confirm(`Möchtest du "${event.eventName}" wirklich löschen?`)) return;
+  // Ein ganzes Event fragt wie Liste und Menü im App-Dialog nach (AGENTS.md, Löschaktionen;
+  // Tech-Check D6): Die Ansicht wird nach dem Löschen verlassen, ein Rückgängig-Fenster
+  // liefe dort sofort ab. In der Übersicht bleibt das Wischen mit Rückgängig.
+  const handleDelete = (event) => setEventToDelete(event);
+
+  const handleDeleteConfirmed = async () => {
+    const event = eventToDelete;
+    setEventToDelete(null);
+    if (!event) return;
     try {
       await deleteEvent(selectedEventOwnerId || currentUser.id, event.id);
       setSubView('list');
@@ -431,18 +440,28 @@ function EventsPage({
 
   if (subView === 'edit' && selectedEvent && canManageSelectedEvent) {
     return (
-      <EventForm
-        onSaved={handleEventSaved}
-        onCancel={() => setSubView('detail')}
-        onDelete={() => handleDelete(selectedEvent)}
-        currentUser={currentUser}
-        ownerId={selectedEventOwnerId}
-        onManageDrinks={() => setSubView('drinks')}
-        initialEvent={selectedEvent}
-        recipes={recipes}
-        guestProfiles={guestProfiles}
-        customDrinks={customDrinks}
-      />
+      <>
+        <EventForm
+          onSaved={handleEventSaved}
+          onCancel={() => setSubView('detail')}
+          onDelete={() => handleDelete(selectedEvent)}
+          currentUser={currentUser}
+          ownerId={selectedEventOwnerId}
+          onManageDrinks={() => setSubView('drinks')}
+          initialEvent={selectedEvent}
+          recipes={recipes}
+          guestProfiles={guestProfiles}
+          customDrinks={customDrinks}
+        />
+        {eventToDelete && (
+          <ConfirmDialog
+            title="Event löschen"
+            message={`Möchtest du "${eventToDelete.eventName}" wirklich löschen?`}
+            onConfirm={handleDeleteConfirmed}
+            onCancel={() => setEventToDelete(null)}
+          />
+        )}
+      </>
     );
   }
 

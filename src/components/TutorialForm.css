@@ -40,7 +40,7 @@
 }
 
 .tutorial-thumb-frame-option.active {
-  border-color: #DF7A00;
+  border-color: var(--color-accent);
 }
 
 [data-theme="dark"] .tutorial-thumb-frame-option {

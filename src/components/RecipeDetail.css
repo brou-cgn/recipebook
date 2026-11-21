@@ -266,7 +266,7 @@
   justify-content: center;
   flex-shrink: 0;
 
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid #f0f0f0 !important;
   border-radius: 12px !important;
 
@@ -295,8 +295,8 @@
 }
 
 .favorite-button--active {
-  background: #DF7A00 !important;
-  border-color: #DF7A00 !important;
+  background: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
 }
 
 .favorite-button--active:active {
@@ -352,7 +352,7 @@ button.private-badge-button:active {
   justify-content: center;
   flex-shrink: 0;
 
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid #f0f0f0;
   border-radius: 12px;
 
@@ -390,7 +390,7 @@ button.private-badge-button:active {
   justify-content: center;
   padding: 0 1rem;
   border-radius: 6px;
-  color: #402C1C;
+  color: var(--color-brand);
   border-color: #402C1C;
   height: 48px;
   display: flex;
@@ -503,14 +503,14 @@ button.private-badge-button:active {
 
 .reset-thumbnail-button {
   background: white;
-  border: 1px solid #DF7A00;
+  border: 1px solid var(--color-accent);
   padding: 0.75rem 1rem;
   border-radius: 6px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  color: #DF7A00;
+  color: var(--color-accent);
   height: 48px;
 }
 
@@ -565,8 +565,8 @@ button.private-badge-button:active {
   top: 1rem;
   right: 1rem;
   background: #FFFFFF;
-  color: #DF7A00;
-  border: 2px solid #DF7A00;
+  color: var(--color-accent);
+  border: 2px solid var(--color-accent);
   padding: 0.5rem 1rem;
   border-radius: 20px;
   font-size: 0.85rem;
@@ -593,7 +593,7 @@ button.private-badge-button:active {
 .version-select {
   flex: 1;
   padding: 0.5rem 1rem;
-  border: 2px solid #ddd;
+  border: 2px solid var(--color-border);
   border-radius: 8px;
   font-size: 0.95rem;
   background: white;
@@ -814,8 +814,8 @@ button.private-badge-button:active {
   height: 48px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.95);
-  border: 2px solid #4CAF50;
-  color: #4CAF50;
+  border: 2px solid var(--color-ok);
+  color: var(--color-ok);
   font-size: 1.5rem;
   cursor: pointer;
   display: flex;
@@ -855,9 +855,9 @@ button.private-badge-button:active {
 }
 
 .overlay-cooking-mode.active {
-  background: #4CAF50;
+  background: var(--color-ok);
   color: white;
-  border-color: #4CAF50;
+  border-color: var(--color-ok);
   animation: pulse 2s infinite;
 }
 
@@ -972,7 +972,7 @@ button.private-badge-button:active {
   top: 50%;
   width: 1px;
   height: 14px;
-  background: #f0f0f0;
+  background: var(--color-surface-raised);
   transform: translateY(-50%);
 }
 
@@ -1205,7 +1205,7 @@ button.private-badge-button:active {
 .ingredient-match-dialog-list select {
   width: 100%;
   min-height: 2.2rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border-strong);
   border-radius: 6px;
   padding: 0.35rem 0.45rem;
 }
@@ -1325,7 +1325,7 @@ button.private-badge-button:active {
 
 .difficulty-stars .star {
   font-size: 0.85rem;
-  color: #DF7A00;
+  color: var(--color-accent);
   transition: all 0.2s ease;
   user-select: none;
 }
@@ -1335,7 +1335,7 @@ button.private-badge-button:active {
 }
 
 .difficulty-stars .star.filled {
-  color: #DF7A00;
+  color: var(--color-accent);
 }
 
 .recipe-section {
@@ -1350,7 +1350,7 @@ button.private-badge-button:active {
 
 .recipe-section h2 {
   /*margin: 0 0 1rem 0;*/
-  color: #1a1a1a;
+  color: var(--color-text-strong);
   font-size: 1.25rem;
   font-weight: 700;
 }
@@ -1607,7 +1607,7 @@ button.private-badge-button:active {
   min-width: 100px;
   text-align: center;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text);
   font-size: 0.95rem;
 }
 
@@ -1688,7 +1688,7 @@ button.private-badge-button:active {
   border-radius: 12px;
   font-size: 1.1rem;
   line-height: 1.8;
-  color: #333;
+  color: var(--color-text);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   min-height: 150px;
   position: relative;
@@ -1723,7 +1723,7 @@ button.private-badge-button:active {
   font-weight: 600;
   font-size: 0.85rem;
   color: #888;
-  background: #f5f5f5;
+  background: var(--color-surface-input);
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
 }
@@ -1814,7 +1814,7 @@ button.private-badge-button:active {
 /* ── Hochformat: Schritt groß oben, Zutaten-Schublade, Navigation im Daumenbereich ── */
 
 .recipe-detail-content.cooking-mode-active:not(.cooking-mode-landscape) {
-  background: #f9f9f9;
+  background: var(--color-surface-subtle);
 }
 
 /* Mobile: Kochmodus füllt den Viewport; der App-Header ist ausgeblendet und nimmt keinen Platz ein */
@@ -2430,7 +2430,7 @@ button.private-badge-button:active {
 }
 
 .step-timer-progress-fill.finished {
-  background: #4CAF50;
+  background: var(--color-ok);
 }
 
 /* Icon images for timer start button */
@@ -2560,7 +2560,7 @@ button.private-badge-button:active {
   gap: 0.5rem;
   cursor: pointer;
   font-size: 0.95rem;
-  color: #333;
+  color: var(--color-text);
 }
 
 .private-list-item input[type="checkbox"] {
@@ -2583,8 +2583,8 @@ button.private-badge-button:active {
   border-radius: 50%;
   padding: 0;
   background: white;
-  color: #333;
-  border: 1px solid #ddd;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
   font-size: 1.1rem;
   cursor: pointer;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
@@ -2640,8 +2640,8 @@ button.private-badge-button:active {
   border-radius: 50%;
   padding: 0;
   background: white;
-  color: #333;
-  border: 1px solid #ddd;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
   font-size: 1.1rem;
   cursor: pointer;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
@@ -2723,8 +2723,8 @@ button.private-badge-button:active {
   border-radius: 50%;
   padding: 0;
   background: white;
-  color: #333;
-  border: 1px solid #ddd;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
   font-size: 1.1rem;
   cursor: pointer;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);

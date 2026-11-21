@@ -11,7 +11,7 @@
   top: 0;
   bottom: 0;
   width: 3px;
-  background: linear-gradient(180deg, #402C1C 0%, #DF7A00 50%, #402C1C 100%);
+  background: linear-gradient(180deg, #402C1C 0%, var(--color-accent) 50%, #402C1C 100%);
   border-radius: 2px;
 }
 
@@ -85,7 +85,7 @@
 
 .timeline-date {
   font-size: 0.85rem;
-  color: #666;
+  color: var(--color-text-muted);
   font-weight: 600;
   margin-bottom: 0.5rem;
   text-transform: capitalize;
@@ -132,7 +132,7 @@
 
 .timeline-title {
   margin: 0 0 0.5rem 0;
-  color: #333;
+  color: var(--color-text);
   font-size: 1.15rem;
   font-weight: 600;
   white-space: nowrap;
@@ -144,7 +144,7 @@
   display: flex;
   gap: 1rem;
   font-size: 0.85rem;
-  color: #666;
+  color: var(--color-text-muted);
   margin-bottom: 0.25rem;
 }
 
@@ -156,14 +156,14 @@
 
 .timeline-author {
   font-size: 0.75rem;
-  color: #999;
+  color: var(--color-text-faint);
   margin-top: 0.25rem;
 }
 
 .timeline-empty {
   text-align: center;
   padding: 3rem 1rem;
-  color: #666;
+  color: var(--color-text-muted);
 }
 
 .timeline-empty p {
@@ -188,7 +188,7 @@
 .timeline-stack-toggle {
   background: none;
   border: none;
-  color: #DF7A00;
+  color: var(--color-accent);
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -249,7 +249,7 @@
   position: absolute;
   top: -8px;
   right: -8px;
-  background: #DF7A00;
+  background: var(--color-accent);
   color: white;
   border-radius: 50%;
   width: 24px;

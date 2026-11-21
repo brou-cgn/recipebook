@@ -11,8 +11,13 @@ jest.mock('../utils/eventsFirestore', () => ({
 }));
 
 jest.mock('./EventForm', () => {
-  function MockEventForm() {
-    return <div>EventForm geöffnet</div>;
+  function MockEventForm({ onDelete }) {
+    return (
+      <div>
+        <span>EventForm geöffnet</span>
+        {onDelete && <button type="button" onClick={onDelete}>Event im Formular löschen</button>}
+      </div>
+    );
   }
   MockEventForm.CATEGORY_LABELS = {};
   MockEventForm.EVENT_TYPE_LABELS = { party: 'Party' };
@@ -106,6 +111,50 @@ describe('EventsPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
     expect(screen.getByText('EventForm geöffnet')).toBeInTheDocument();
+  });
+
+  describe('Event löschen im Bearbeiten-Formular: Rückfrage im App-Dialog wie Liste und Menü (Tech-Check D6)', () => {
+    const event = {
+      id: 'e1',
+      eventName: 'Sommerfest',
+      date: '2025-07-01',
+      durationHours: 4,
+      eventType: 'party',
+      status: 'berechnet',
+      guests: { adults: 10, children: 0 },
+      berechnung: { ergebnis: [] },
+    };
+
+    const openEditForm = () => {
+      render(<EventsPage currentUser={currentUser} events={[event]} />);
+      fireEvent.click(screen.getByText('Sommerfest'));
+      fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Event im Formular löschen' }));
+    };
+
+    test('fragt im App-Dialog nach, nie per window.confirm, und löscht erst nach Bestätigung', async () => {
+      const confirmSpy = jest.spyOn(window, 'confirm');
+      mockDeleteEvent.mockResolvedValue();
+      openEditForm();
+
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(screen.getByRole('alertdialog')).toHaveTextContent('Möchtest du "Sommerfest" wirklich löschen?');
+      expect(mockDeleteEvent).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+      await waitFor(() => expect(mockDeleteEvent).toHaveBeenCalledWith('u1', 'e1'));
+      await waitFor(() => expect(screen.queryByText('EventForm geöffnet')).not.toBeInTheDocument());
+      confirmSpy.mockRestore();
+    });
+
+    test('Abbrechen schließt den Dialog und löscht nichts', () => {
+      openEditForm();
+      fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(screen.getByText('EventForm geöffnet')).toBeInTheDocument();
+      expect(mockDeleteEvent).not.toHaveBeenCalled();
+    });
   });
 
   test('pendingEventDetailRequest opens the linked event directly, without flashing the events overview', async () => {

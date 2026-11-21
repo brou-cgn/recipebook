@@ -32,7 +32,7 @@
 }
 
 .meine-kuechenstars-empty {
-  color: #999;
+  color: var(--color-text-faint);
   text-align: center;
   padding: 40px 0;
   font-size: 15px;
@@ -52,7 +52,7 @@
 .meine-kuechenstars-table td {
   padding: 12px 16px;
   text-align: left;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .meine-kuechenstars-table th {

@@ -15,7 +15,7 @@
 
 .events-page-header h2 {
   margin: 0;
-  color: #333;
+  color: var(--color-text);
   font-size: 28px;
   font-weight: 600;
   text-align: left;
@@ -265,7 +265,7 @@
   padding: 0;
   background: white;
   color: #666;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   font-size: 1.1rem;
   cursor: pointer;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
@@ -593,19 +593,19 @@
   padding: 10px 12px;
   border: 1px solid #d8d8d3;
   border-radius: 12px;
-  background: #fff;
-  color: #333;
+  background: var(--color-surface);
+  color: var(--color-text);
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
   font-family: inherit;
 }
 
 .events-consumption-toggle-btn:hover {
-  border-color: #2F5D50;
+  border-color: var(--color-events);
 }
 
 .events-consumption-toggle-btn.is-expanded {
-  border-color: #2F5D50;
+  border-color: var(--color-events);
   box-shadow: 0 0 0 2px rgba(47, 93, 80, 0.12);
 }
 
@@ -683,7 +683,7 @@
 
 .events-form-field > span:first-child {
   font-weight: 500;
-  color: #333;
+  color: var(--color-text);
 }
 
 .events-form-field input:not([type="checkbox"]),
@@ -732,7 +732,7 @@
   height: 38px;
   border: 1px solid #e2e2e2;
   border-radius: 8px;
-  background: #fff;
+  background: var(--color-surface);
   color: #666;
   cursor: pointer;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
@@ -741,7 +741,7 @@
 .events-lock-btn:hover {
   background: #f2f2f2;
   color: #2F5D50;
-  border-color: #2F5D50;
+  border-color: var(--color-events);
 }
 
 .events-name-input-wrapper {
@@ -1070,7 +1070,7 @@
 
 .events-secondary-btn {
   background: #f0f0f0;
-  color: #333;
+  color: var(--color-text);
   border: none;
   padding: 12px 22px;
   border-radius: 8px;
@@ -1126,7 +1126,7 @@
 .events-drink-add-btn {
   background: transparent;
   color: #555;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border-strong);
   padding: 10px 18px;
   border-radius: 8px;
   font-size: 14px;
@@ -1136,7 +1136,7 @@
 }
 
 .events-drink-add-btn:hover:not(:disabled) {
-  background: #f5f5f5;
+  background: var(--color-surface-input);
   border-color: #bbb;
 }
 
@@ -1311,7 +1311,7 @@
     padding: 0;
     background: white;
     color: white;
-    border: 1px solid #ddd;
+    border: 1px solid var(--color-border);
     opacity: 0.85;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     display: flex;
@@ -1342,7 +1342,7 @@
     padding: 0;
     background: white;
     color: #666;
-    border: 1px solid #ddd;
+    border: 1px solid var(--color-border);
     opacity: 0.85;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     display: flex;
@@ -1419,7 +1419,7 @@
     padding: 0;
     background: white;
     color: #666;
-    border: 1px solid #ddd;
+    border: 1px solid var(--color-border);
     opacity: 0.85;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     align-items: center;
@@ -1515,7 +1515,7 @@
   z-index: 1101;
   background: white;
   color: #666;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   padding: 0;
   border-radius: 50%;
   font-size: 1.1rem;
@@ -1756,7 +1756,7 @@
   max-width: 200px;
   box-sizing: border-box;
   padding: 3px 10px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 999px;
   font-size: 0.78rem;
   font-family: inherit;
@@ -1764,7 +1764,7 @@
 }
 
 .events-einheiten-typeahead-input::placeholder {
-  color: #999;
+  color: var(--color-text-faint);
 }
 
 .events-einheiten-typeahead-dropdown {
@@ -1793,7 +1793,7 @@
   background: none;
   border: none;
   font-size: 0.85rem;
-  color: #333;
+  color: var(--color-text);
   cursor: pointer;
 }
 
@@ -1810,17 +1810,17 @@
   width: 72px;
   box-sizing: border-box;
   padding: 8px 10px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 16px;
   font-family: inherit;
-  color: #333;
+  color: var(--color-text);
   text-align: right;
 }
 
 .events-drink-row-factor input[type="number"]:focus {
   outline: none;
-  border-color: #2F5D50;
+  border-color: var(--color-events);
 }
 
 /* Guest row two-line structure with swipe-to-delete, matching .events-drink-row */

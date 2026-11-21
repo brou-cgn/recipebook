@@ -85,7 +85,7 @@
 
 .group-card-content h3 {
   margin: 0 0 0.4rem;
-  color: #333;
+  color: var(--color-text);
   font-size: 1.15rem;
 }
 
@@ -128,7 +128,7 @@
 
 .group-list-kind-indicator--interactive {
   background: #FFF3E0;
-  color: #DF7A00;
+  color: var(--color-accent);
   border-color: #FFD9A0;
 }
 
@@ -136,7 +136,7 @@
   display: flex;
   gap: 1rem;
   font-size: 0.78rem;
-  color: #666;
+  color: var(--color-text-muted);
   font-weight: 500;
   margin-top: 0.25rem;
 }
@@ -219,8 +219,8 @@
     opacity: 0.85;
 
     background: white;
-    color: #333;
-    border: 1px solid #ddd;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
     font-size: 1.1rem;
     cursor: pointer;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);

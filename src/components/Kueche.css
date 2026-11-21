@@ -19,7 +19,7 @@
   background: var(--color-surface-card);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid #DF7A00;
+  border-left: 4px solid var(--color-accent);
   margin-bottom: 0.75rem;
   transition: all 0.3s ease;
   cursor: pointer;
@@ -93,7 +93,7 @@
 
 .kueche-tile-content h3 {
   margin: 0 0 0.5rem 0;
-  color: #DF7A00;
+  color: var(--color-accent);
   font-size: 1.25rem;
 }
 
@@ -130,7 +130,7 @@
   display: flex;
   gap: 1rem;
   font-size: 0.85rem;
-  color: #7B7B7B;
+  color: var(--color-text-soft);
   font-weight: 500;
 }
 
@@ -191,7 +191,7 @@
 }
 
 .kueche-bar-chart__bar--meinkochbuch {
-  background-color: #DF7A00;
+  background-color: var(--color-accent);
 }
 
 .kueche-bar-chart__bar--meine-kuechenstars {

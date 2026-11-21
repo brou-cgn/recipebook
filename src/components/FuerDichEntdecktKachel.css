@@ -19,7 +19,7 @@
 }
 
 .fuer-dich-entdeckt-card:focus-visible {
-  outline: 3px solid #DF7A00;
+  outline: 3px solid var(--color-accent);
   outline-offset: 2px;
 }
 

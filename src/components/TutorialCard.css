@@ -111,7 +111,7 @@
   margin: 0;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

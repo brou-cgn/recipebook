@@ -26,7 +26,7 @@
 }
 
 .eventplanung-empty {
-  color: #999;
+  color: var(--color-text-faint);
   text-align: center;
   padding: 40px 0;
   font-size: 15px;

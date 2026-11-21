@@ -13,7 +13,7 @@
 
 .user-management-header h2 {
   margin: 0;
-  color: #333;
+  color: var(--color-text);
   font-size: 28px;
 }
 
@@ -85,7 +85,7 @@
 .users-table td {
   padding: 12px;
   text-align: left;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .users-table th {
@@ -170,16 +170,16 @@
   display: flex;
   gap: 30px;
   padding-top: 20px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--color-border-subtle);
   font-size: 14px;
 }
 
 .stat-item {
-  color: #666;
+  color: var(--color-text-muted);
 }
 
 .stat-item strong {
-  color: #333;
+  color: var(--color-text);
 }
 
 /* Action Buttons */
@@ -191,8 +191,8 @@
 
 .action-btn {
   padding: 6px 12px;
-  background: #f5f5f5;
-  border: 1px solid #ddd;
+  background: var(--color-surface-input);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   cursor: pointer;
   font-size: 16px;
@@ -249,7 +249,7 @@
 .fotoscan-toggle.active,
 .permission-toggle.active {
   background: #c8e6c9;
-  border: 1px solid #4caf50;
+  border: 1px solid var(--color-ok);
   color: #2e7d32;
 }
 
@@ -297,7 +297,7 @@
 .role-permissions-table td {
   padding: 10px 16px;
   text-align: center;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .role-permissions-table th:first-child,
@@ -417,7 +417,7 @@
 
 .modal h3 {
   margin: 0 0 10px 0;
-  color: #333;
+  color: var(--color-text);
   font-size: 22px;
 }
 
@@ -510,7 +510,7 @@
 }
 
 .btn-cancel {
-  background: #f5f5f5;
+  background: var(--color-surface-input);
   color: #666;
 }
 

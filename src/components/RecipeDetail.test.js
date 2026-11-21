@@ -3734,3 +3734,45 @@ describe('RecipeDetail - Kulinarik icon', () => {
     expect(cuisineBadge.textContent).not.toContain(',');
   });
 });
+
+describe('RecipeDetail – Rezept löschen (AGENTS.md, Löschaktionen; Tech-Check D6)', () => {
+  const currentUser = { id: 'user-1' };
+  const renderRecipe = (recipe, onDelete) => render(
+    <RecipeDetail
+      recipe={recipe}
+      onBack={() => {}}
+      onEdit={() => {}}
+      onDelete={onDelete}
+      currentUser={currentUser}
+    />
+  );
+
+  test('ein Rezept mit Inhalt fragt im App-Dialog nach, nie per window.confirm', () => {
+    const confirmSpy = jest.spyOn(window, 'confirm');
+    const onDelete = jest.fn();
+    renderRecipe({ id: 'r-voll', title: 'Linsensuppe', authorId: 'user-1', ingredients: ['200 g Linsen'], steps: ['Kochen'] }, onDelete);
+
+    fireEvent.click(screen.getByTitle('Rezept löschen'));
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Möchten Sie "Linsensuppe" wirklich löschen?');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(onDelete).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTitle('Rezept löschen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+    expect(onDelete).toHaveBeenCalledWith('r-voll');
+    confirmSpy.mockRestore();
+  });
+
+  test('ein leeres Rezept (nur Titel) wird ohne Rückfrage gelöscht', () => {
+    const onDelete = jest.fn();
+    renderRecipe({ id: 'r-leer', title: 'Entwurf', authorId: 'user-1', ingredients: [], steps: [] }, onDelete);
+
+    fireEvent.click(screen.getByTitle('Rezept löschen'));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(onDelete).toHaveBeenCalledWith('r-leer');
+  });
+});

@@ -2,8 +2,8 @@ import React from 'react';
 import './ConfirmDialog.css';
 
 /**
- * In-app confirmation for the few deletions that keep a question
- * (a whole list or menu with content; see AGENTS.md, Löschaktionen).
+ * In-app confirmation for the few deletions that keep a question: a whole
+ * recipe with content, a whole list, menu or event (AGENTS.md, Löschaktionen).
  * Replaces the native window.confirm.
  *
  * @param {Object} props

@@ -23,7 +23,7 @@
 .startseite-section-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text);
   margin: 0;
   flex: 1;
 }
@@ -110,7 +110,7 @@
 .startseite-mehr-btn {
   background: transparent;
   border: none;
-  color: #DF7A00;
+  color: var(--color-accent);
   font-size: 0.9rem;
   cursor: pointer;
   padding: 0.25rem 0;

@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, act, cleanup, fireEvent } from '@testing-library/react';
 import App from './App';
+import { deleteRecipe } from './utils/recipeFirestore';
 
 let mockAuthStateCallback;
 let mockEmitTempRecipes;
@@ -490,5 +491,51 @@ describe('Push-Tipp öffnet das Prüf-Rezept', () => {
 
     expect(screen.getByTestId('recipe-form-view')).toHaveAttribute('data-recipe-id', 'b');
     expect(mockReconnectFirestore).not.toHaveBeenCalled();
+  });
+
+  describe('Import verwerfen: Rückfrage im App-Dialog, nur mit Inhalt (AGENTS.md, Löschaktionen; Tech-Check D6)', () => {
+    const cancelForm = async () => {
+      const { onCancel } = mockRecipeFormProps.mock.calls[mockRecipeFormProps.mock.calls.length - 1][0];
+      await act(async () => { onCancel(); });
+    };
+
+    test('mit Inhalt: App-Dialog statt window.confirm, verworfen erst nach Bestätigung', async () => {
+      const confirmSpy = jest.spyOn(window, 'confirm');
+      deleteRecipe.mockResolvedValue();
+      await loginWithQueue([{ ...tempRecipe('b', 'Neues Rezept'), ingredients: ['1 Ei'] }]);
+      await tapNotification('b');
+
+      await cancelForm();
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(screen.getByRole('alertdialog')).toHaveTextContent('Möchten Sie den Import "Neues Rezept" wirklich verwerfen?');
+      expect(deleteRecipe).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Verwerfen' }));
+      expect(deleteRecipe).toHaveBeenCalledWith('b');
+      expect(screen.queryByTestId('recipe-form-view')).not.toBeInTheDocument();
+      confirmSpy.mockRestore();
+    });
+
+    test('Abbrechen lässt das Formular offen und verwirft nichts', async () => {
+      await loginWithQueue([{ ...tempRecipe('b', 'Neues Rezept'), steps: ['Rühren'] }]);
+      await tapNotification('b');
+
+      await cancelForm();
+      fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(screen.getByTestId('recipe-form-view')).toHaveAttribute('data-recipe-id', 'b');
+      expect(deleteRecipe).not.toHaveBeenCalled();
+    });
+
+    test('ohne Inhalt: wird ohne Rückfrage verworfen', async () => {
+      deleteRecipe.mockResolvedValue();
+      await loginWithQueue([tempRecipe('b', 'Leerer Import')]);
+      await tapNotification('b');
+
+      await cancelForm();
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(deleteRecipe).toHaveBeenCalledWith('b');
+      expect(screen.queryByTestId('recipe-form-view')).not.toBeInTheDocument();
+    });
   });
 });

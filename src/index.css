@@ -45,7 +45,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #f5f5f5;
+  background: var(--color-bg);
   overscroll-behavior-y: none;
   overscroll-behavior-x: none;
 }

@@ -65,7 +65,7 @@
 .portion-selector-title {
   margin: 0;
   font-size: 1.2rem;
-  color: #333;
+  color: var(--color-text);
 }
 
 .portion-selector-close {
@@ -73,13 +73,13 @@
   border: none;
   font-size: 1.25rem;
   cursor: pointer;
-  color: #666;
+  color: var(--color-text-muted);
   padding: 0.25rem;
   line-height: 1;
 }
 
 .portion-selector-close:hover {
-  color: #333;
+  color: var(--color-text);
 }
 
 .portion-selector-body {
@@ -130,7 +130,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #333;
+  color: var(--color-text);
   transition: background 0.2s;
 }
 
@@ -154,7 +154,7 @@
 
 .portion-selector-footer {
   padding: 1rem 1.5rem;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--color-border-subtle);
   display: flex;
   justify-content: flex-end;
 }
@@ -183,5 +183,5 @@
   letter-spacing: 0.05em;
   padding: 0.75rem 0 0.25rem 0;
   margin-top: 0.25rem;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--color-border-subtle);
 }

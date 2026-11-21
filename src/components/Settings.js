@@ -255,6 +255,9 @@ function renderBoldText(text) {
   });
 }
 
+// Titel eines Kochschule-Eintrags ohne Fett-Markierung (**…**), für Tooltip und Snackbar.
+const faqDisplayName = (faq) => (faq.title || 'Kochschule-Eintrag').replace(/\*\*/g, '');
+
 function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdateRecipe }) {
   const [lists, setLists] = useState({
     cuisineTypes: [],
@@ -277,6 +280,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [unitRowDeleteVisibleKey, setUnitRowDeleteVisibleKey] = useState(null);
   const unitRowUndo = useUndoableDelete();
   const listUndo = useUndoableDelete();
+  const faqUndo = useUndoableDelete();
   const [newConversionIngredient, setNewConversionIngredient] = useState('');
   const [newConversionUnit, setNewConversionUnit] = useState('');
   const [newConversionGrams, setNewConversionGrams] = useState('');
@@ -514,18 +518,27 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     setFaqForm({ title: faq.title || '', description: faq.description || '', screenshot: faq.screenshot || null, level: faq.level ?? 1, adminOnly: faq.adminOnly ?? false, showOnDesktop: faq.showOnDesktop ?? true, showOnMobile: faq.showOnMobile ?? true });
   };
 
-  const handleDeleteFaq = async (faqId) => {
-    if (!window.confirm('Möchtest du diesen Kochschule-Eintrag wirklich löschen?')) return;
-    try {
-      await deleteFaq(faqId);
-      if (editingFaqId === faqId) {
-        setEditingFaqId(null);
-        setFaqForm({ title: '', description: '', screenshot: null, level: 1, adminOnly: false, showOnDesktop: true, showOnMobile: true });
-      }
-      setFaqSelectedIds(prev => prev.filter(id => id !== faqId));
-    } catch (error) {
-      alert('Fehler beim Löschen des Kochschule-Eintrags: ' + error.message);
+  // Löschen wirkt sofort mit Rückgängig (AGENTS.md, Löschaktionen; Tech-Check D6): Der
+  // Eintrag verschwindet aus der Liste, gelöscht wird in Firestore erst nach Ablauf des
+  // Rückgängig-Fensters (useUndoableDelete; beim Verlassen der Ansicht sofort).
+  const handleDeleteFaq = (faq) => {
+    faqUndo.scheduleDelete({
+      key: faq.id,
+      message: `„${faqDisplayName(faq)}" entfernt`,
+      onConfirm: async () => {
+        try {
+          await deleteFaq(faq.id);
+        } catch (error) {
+          alert('Fehler beim Löschen des Kochschule-Eintrags: ' + error.message);
+        }
+      },
+      onUndo: () => {},
+    });
+    if (editingFaqId === faq.id) {
+      setEditingFaqId(null);
+      setFaqForm({ title: '', description: '', screenshot: null, level: 1, adminOnly: false, showOnDesktop: true, showOnMobile: true });
     }
+    setFaqSelectedIds(prev => prev.filter(id => id !== faq.id));
   };
 
   const handleCancelFaqEdit = () => {
@@ -1218,6 +1231,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   };
 
   const isFullWidthTab = ['users', 'saisonmatrix', 'naehrwerte', 'getraenkegewichte', 'buttonIconsV2', 'entdeckt'].includes(activeTab);
+
+  const visibleFaqs = faqs.filter((faq) => !faqUndo.pendingKeys.has(faq.id));
+  const lastFaqBanner = faqUndo.banners[faqUndo.banners.length - 1];
 
   return (
     <div className="settings-container">
@@ -2397,7 +2413,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               </div>
 
               {/* FAQ list */}
-              {faqs.length === 0 ? (
+              {visibleFaqs.length === 0 ? (
                 <p className="section-description">Noch keine Kochschule-Einträge vorhanden. Füge oben den ersten Eintrag hinzu!</p>
               ) : (
                 <>
@@ -2421,12 +2437,12 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     </div>
                   )}
                   <div className="faq-list">
-                    {faqs.map((faq, faqIndex) => {
+                    {visibleFaqs.map((faq, faqIndex) => {
                       const isSelected = faqSelectedIds.includes(faq.id);
                       return (
                         <div
                           key={faq.id}
-                          className={`faq-list-item${faq.level === 0 ? ' faq-list-item--heading' : ''}${faq.level > 1 ? ' faq-list-item--indented' : ''}${isSelected ? ' faq-list-item--selected' : ''}`}
+                          className={`faq-list-item delete-row-hover-target${faq.level === 0 ? ' faq-list-item--heading' : ''}${faq.level > 1 ? ' faq-list-item--indented' : ''}${isSelected ? ' faq-list-item--selected' : ''}`}
                         >
                           <div className="faq-list-item-header">
                             <input
@@ -2465,7 +2481,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                               <button
                                 className="faq-move-btn"
                                 onClick={() => handleFaqMoveDown(faq.id)}
-                                disabled={faqIndex === faqs.length - 1}
+                                disabled={faqIndex === visibleFaqs.length - 1}
                                 title="Nach unten"
                               >
                                 ↓
@@ -2477,13 +2493,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                               >
                                 Edit
                               </button>
-                              <button
-                                className="faq-delete-btn"
-                                onClick={() => handleDeleteFaq(faq.id)}
-                                title="Löschen"
-                              >
-                                Löschen
-                              </button>
+                              <DeleteRowButton itemName={faqDisplayName(faq)} onClick={() => handleDeleteFaq(faq)} />
                             </div>
                           </div>
                           {faq.description && (
@@ -2498,6 +2508,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   </div>
                 </>
               )}
+              <UndoSnackbar message={lastFaqBanner?.message} onUndo={() => lastFaqBanner && faqUndo.undoDelete(lastFaqBanner.id)} />
             </div>
           </>
         ) : activeTab === 'buttonIconsV2' ? (

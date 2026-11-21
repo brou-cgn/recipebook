@@ -13,7 +13,7 @@
 }
 
 .share-page-not-found h2 {
-  color: #402C1C;
+  color: var(--color-brand);
   margin-bottom: 0.5rem;
 }
 
