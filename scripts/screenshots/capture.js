@@ -43,7 +43,7 @@ async function openRecipe(page, title) {
   await pause(page, 1200);
 }
 
-// Jeder Bildschirm startet angemeldet in der Rezeptübersicht (außer „anmeldung“).
+// Jeder Bildschirm startet angemeldet auf der Startseite („Küche“; außer „anmeldung“ und „registrieren“).
 // `shot` macht das Bild; ein Eintrag darf mehrere Bilder machen.
 const SCREENS = [
   { name: 'anmeldung', loggedOut: true, run: async (page, shot) => shot() },
@@ -55,6 +55,12 @@ const SCREENS = [
       await page.locator('#confirmPassword').waitFor();
       await shot();
     },
+  },
+  {
+    // Startseite mit den Karussells „Meine Kochideen“ und „Meine Alltagsklassiker“ samt Plus (P14, T9)
+    name: 'startseite',
+    fullPage: true,
+    run: async (page, shot) => { await openMenuItem(page, 'Küche'); await pause(page, 1500); await shot(); },
   },
   { name: 'kochbuch', run: async (page, shot) => { await openMenuItem(page, 'Kochbuch'); await shot(); } },
   { name: 'rezept', run: async (page, shot) => { await openRecipe(page, 'Linsensuppe mit Kreuzkümmel'); await shot(); } },

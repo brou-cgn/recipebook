@@ -3,7 +3,10 @@
  * Testdaten für Screenshots gegen die lokalen Firebase-Emulatoren (docs/setup/screenshots.md).
  *
  * Leert Auth- und Firestore-Emulator und legt dann an: ein Admin-Konto, sechs Rezepte mit
- * Platzhalterbildern, die öffentliche Liste, eine private Liste, ein Menü und ein Event.
+ * Platzhalterbildern, die öffentliche Liste, zwei private Listen (eine davon die interaktive
+ * Inspirationssammlung), ein Menü und ein Event. Die Startseite („Küche“) ist für Admins
+ * freigeschaltet und hat Inspirationssammlung und Alltagsklassiker gesetzt, damit ihre
+ * Karussells samt Plus-Knöpfen erscheinen (Tech-Check T9).
  * Alles erfunden und als Testdaten erkennbar. Schreibt über die REST-Schnittstelle der
  * Emulatoren („Authorization: Bearer owner“ umgeht die Regeln) und braucht keine Pakete.
  *
@@ -101,12 +104,19 @@ async function main() {
   await setDoc(`users/${uid}`, {
     vorname: ACCOUNT.vorname, nachname: ACCOUNT.nachname, email: ACCOUNT.email,
     role: 'admin', fotoscan: false, createdAt: now.toISOString(),
+    defaultWebImportListId: 'inspiration', defaultEverydayClassicsListId: 'familie',
   });
+  // Startseite („Küche“) für Admins freischalten; ohne sie fehlte die Startseite in den Bildern (T9)
+  await setDoc('rolePermissions/admin', { startseite: true });
   await setDoc(`publicProfiles/${uid}`, { vorname: ACCOUNT.vorname, nachname: ACCOUNT.nachname, versteckt: false, recipe_count: RECIPES.length });
   await setDoc('groups/oeffentlich', { type: 'public', name: 'Öffentlich', ownerId: null, memberIds: [], memberRoles: {}, createdAt: now });
   await setDoc('groups/familie', {
     type: 'private', name: 'Familienrezepte', ownerId: uid, memberIds: [uid], memberRoles: { [uid]: 'owner' },
     recipeIds: ['rezept-linsensuppe', 'rezept-apfelkuchen'], createdAt: now,
+  });
+  await setDoc('groups/inspiration', {
+    type: 'private', listKind: 'interactive', name: 'Meine Inspirationen', ownerId: uid, memberIds: [uid],
+    memberRoles: { [uid]: 'owner' }, recipeIds: ['rezept-aglio-olio', 'rezept-thai-curry'], createdAt: now,
   });
 
   for (const [i, r] of RECIPES.entries()) {
@@ -137,7 +147,7 @@ async function main() {
     guests: { adults: 18, children: 4 }, berechnung: { ergebnis: [] }, ownerId: uid, createdAt: now.toISOString(),
   });
 
-  console.log(`Testdaten angelegt: ${ACCOUNT.email} (Admin), ${RECIPES.length} Rezepte, 2 Listen, 1 Menü, 1 Event.`);
+  console.log(`Testdaten angelegt: ${ACCOUNT.email} (Admin, mit Startseite), ${RECIPES.length} Rezepte, 3 Listen, 1 Menü, 1 Event.`);
 }
 
 if (require.main === module) {
