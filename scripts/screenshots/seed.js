@@ -52,6 +52,19 @@ function placeholderImage(hue) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
+// Nährwerte für drei Rezepte: eins berechnet (mit einer nicht berücksichtigten Zutat, damit der
+// Nährwert-Dialog seine Zusammensetzung zeigt), eins in Berechnung (App-Aufrufe, Reiter
+// „Nährwertberechnungen“, mit „Berechnung abbrechen“), eins mit Fehler („Erneut versuchen“)
+const NUTRITION = {
+  'rezept-linsensuppe': {
+    kalorien: 320, protein: 18, fett: 6, kohlenhydrate: 48, zucker: 7, ballaststoffe: 12, salz: 1.8,
+    calcNotIncluded: [{ ingredient: '1 Zitrone' }],
+  },
+  'rezept-aglio-olio': { calcPending: true, calcPendingAt: Date.parse('2026-11-20T17:30:00Z') },
+  // Fehlgeschlagene Berechnung: Der Nährwert-Dialog zeigt die Meldung und „Erneut versuchen“
+  'rezept-shakshuka': { calcError: 'Die Nährwertdatenbank war nicht erreichbar (Testdaten).' },
+};
+
 const RECIPES = [
   {
     id: 'rezept-linsensuppe', hue: 28, title: 'Linsensuppe mit Kreuzkümmel', kulinarik: ['Orientalisch'], speisekategorie: ['Hauptgericht'],
@@ -129,6 +142,7 @@ async function main() {
       publishedToPublic: true,
       isPrivate: false,
       createdAt: new Date(now.getTime() - i * 86400000).toISOString(),
+      ...(NUTRITION[id] ? { naehrwerte: NUTRITION[id] } : {}),
     });
   }
 

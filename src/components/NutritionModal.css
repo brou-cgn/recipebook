@@ -501,29 +501,6 @@
   margin-top: 0;
 }
 
-.nutrition-autocalc-button {
-  width: 100%;
-  padding: 0.6rem 1rem;
-  border: 1.5px solid #402C1C;
-  background: white;
-  color: var(--color-brand);
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.nutrition-autocalc-button:hover:not(:disabled) {
-  background: #402C1C;
-  color: white;
-}
-
-.nutrition-autocalc-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 .nutrition-autocalc-info {
   margin: 0.5rem 0 0 0;
   font-size: 0.82rem;
@@ -554,29 +531,6 @@
 
 .nutrition-autocalc-error-box .nutrition-autocalc-info {
   margin: 0.35rem 0 0 0;
-}
-
-.nutrition-autocalc-retry-button {
-  margin-top: 0.5rem;
-  padding: 0.35rem 0.75rem;
-  border: 1.5px solid #c62828;
-  background: white;
-  color: #c62828;
-  border-radius: 6px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.nutrition-autocalc-retry-button:hover:not(:disabled) {
-  background: #c62828;
-  color: white;
-}
-
-.nutrition-autocalc-retry-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .nutrition-autocalc-details {
@@ -804,66 +758,3 @@
 }
 
 /* Recalculate with reformulations button */
-.nutrition-recalc-reformulated-button {
-  margin-top: 0.6rem;
-  width: 100%;
-  padding: 0.45rem 0.75rem;
-  border: 1.5px solid #402C1C;
-  background: #fdf6f0;
-  color: #402C1C;
-  border-radius: 7px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.nutrition-recalc-reformulated-button:hover:not(:disabled) {
-  background: #402C1C;
-  color: white;
-}
-
-.nutrition-recalc-reformulated-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.nutrition-reset-adjustments-button {
-  margin-top: 0.6rem;
-  width: 100%;
-  padding: 0.45rem 0.75rem;
-  border: 1.5px solid #8b3a3a;
-  background: #fdf0f0;
-  color: #8b3a3a;
-  border-radius: 7px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.nutrition-reset-adjustments-button:hover:not(:disabled) {
-  background: #8b3a3a;
-  color: white;
-}
-
-.nutrition-reset-adjustments-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.nutrition-abort-button {
-  margin-top: 8px;
-  padding: 6px 12px;
-  background: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.nutrition-abort-button:hover {
-  background: #c82333;
-}

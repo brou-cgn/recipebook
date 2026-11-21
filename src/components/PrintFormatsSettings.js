@@ -52,9 +52,9 @@ function FormatHeader({ format, canDelete, deleteHint, onNameChange, onDuplicate
           aria-label="Formatname"
           onChange={(e) => onNameChange(e.target.value)}
         />
-        <button type="button" className="pfe-reset-btn pf-duplicate-btn" onClick={onDuplicate} title="Format duplizieren">
+        <Button onClick={onDuplicate} title="Format duplizieren">
           Duplizieren
-        </button>
+        </Button>
         <span className="pf-delete-wrap" title={canDelete ? undefined : deleteHint}>
           <DeleteRowButton itemName={label} onClick={onDelete} className="pf-delete-btn" disabled={!canDelete} />
         </span>
@@ -262,9 +262,9 @@ export default function PrintFormatsSettings({ allRecipes = [], allUsers = [] })
             <>
               <p className="pfe-hint pf-free-hint">
                 Freies Layout (Expertenmodus): Elemente werden von Hand platziert und Text wird bei zu langem Inhalt abgeschnitten.{' '}
-                <button type="button" className="pfe-reset-btn pf-switch-btn" onClick={() => switchToTemplate(index)}>
+                <Button onClick={() => switchToTemplate(index)}>
                   Auf Vorlage umstellen
-                </button>
+                </Button>
               </p>
               <PrintFormatEditor
                 format={fmt}

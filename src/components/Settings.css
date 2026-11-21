@@ -1710,26 +1710,6 @@
   gap: 0.5rem;
 }
 
-.nutrition-abort-settings-button {
-  padding: 5px 10px;
-  background: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.nutrition-abort-settings-button:hover:not(:disabled) {
-  background: #c82333;
-}
-
-.nutrition-abort-settings-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 /* Sort settings section */
 .sort-settings-grid {
   display: flex;
@@ -2064,10 +2044,6 @@
   background: #fdfaf6;
 }
 
-.pf-duplicate-btn {
-  margin-left: 0;
-}
-
 .pf-delete-btn {
   display: none;
   margin-top: 0;
@@ -2093,8 +2069,4 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-}
-
-.pf-switch-btn {
-  margin-left: 0;
 }

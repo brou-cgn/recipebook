@@ -2226,26 +2226,6 @@
   border-color: #555;
 }
 
-[data-theme="dark"] .cuisine-proposal-edit-btn {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
-[data-theme="dark"] .cuisine-proposal-edit-btn:hover {
-  background: #333;
-}
-
-[data-theme="dark"] .cuisine-proposal-cancel-btn {
-  background: #2a2a2a;
-  color: #aaa;
-  border-color: #555;
-}
-
-[data-theme="dark"] .cuisine-proposal-cancel-btn:hover {
-  background: #333;
-}
-
 [data-theme="dark"] .cuisine-proposal-no-group {
   color: #777;
 }
@@ -2535,12 +2515,6 @@
   border-color: #555;
 }
 
-[data-theme="dark"] .nutrition-autocalc-button {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
 [data-theme="dark"] .nutrition-autocalc-info {
   color: #aaa;
 }
@@ -2548,12 +2522,6 @@
 [data-theme="dark"] .nutrition-autocalc-error-box {
   background: #2a1a1a;
   border-color: #5a2a2a;
-}
-
-[data-theme="dark"] .nutrition-autocalc-retry-button {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
 }
 
 [data-theme="dark"] .nutrition-autocalc-source {

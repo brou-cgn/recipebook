@@ -11,6 +11,7 @@ import { NUTRITION_REFERENCE_APPROVED_STATUS } from '../utils/nutritionReference
 import { isBase64Image } from '../utils/imageUtils';
 import { normalizeNutritionEmptyIcon, normalizeNutritionSaveManualAmountIcon } from '../utils/nutritionIconUtils';
 import './NutritionModal.css';
+import Button from './Button';
 import useFadeOutClose from '../hooks/useFadeOutClose';
 
 const CALC_RESULT_STORAGE_KEY_PREFIX = 'nutrition_calc_result_';
@@ -1725,13 +1726,9 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
             {!autoCalcLoading && !autoCalcResult && recipe.naehrwerte?.calcError && (
               <div className="nutrition-autocalc-error-box">
                 <p className="nutrition-autocalc-error">{recipe.naehrwerte.calcError}</p>
-                <button
-                  className="nutrition-autocalc-retry-button"
-                  onClick={handleAutoCalculate}
-                  disabled={autoCalcLoading}
-                >
+                <Button onClick={handleAutoCalculate} disabled={autoCalcLoading}>
                   Erneut versuchen
-                </button>
+                </Button>
               </div>
             )}
             {autoCalcLoading && calcProgress && (
@@ -1848,14 +1845,13 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
                       ))}
                     </ul>
                     {(Object.keys(reformulations).length > 0 || acceptedIngredients.size > 0) && (
-                      <button
-                        className="nutrition-recalc-reformulated-button"
+                      <Button
                         onClick={handleRecalcReformulated}
                         disabled={autoCalcLoading}
                         title="Nährwerte mit den umformulierten Zutaten neu berechnen"
                       >
                         Mit Umformulierungen neu berechnen
-                      </button>
+                      </Button>
                     )}
                   </div>
                 )}
@@ -1874,24 +1870,20 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
             {autoCalcResult && autoCalcResult.error && (
               <div className="nutrition-autocalc-error-box">
                 <p className="nutrition-autocalc-error">{autoCalcResult.error}</p>
-                <button
-                  className="nutrition-autocalc-retry-button"
-                  onClick={handleAutoCalculate}
-                  disabled={autoCalcLoading}
-                >
+                <Button onClick={handleAutoCalculate} disabled={autoCalcLoading}>
                   Erneut versuchen
-                </button>
+                </Button>
               </div>
             )}
             {(Object.keys(reformulations).length > 0 || acceptedIngredients.size > 0) && (
-              <button
-                className="nutrition-reset-adjustments-button"
+              <Button
+                variant="ghost"
                 onClick={handleResetAdjustments}
                 disabled={autoCalcLoading}
                 title="Umformulierungen und ausgeschlossene Zutaten zurücksetzen"
               >
                 Anpassungen zurücksetzen
-              </button>
+              </Button>
             )}
           </div>
         </div>

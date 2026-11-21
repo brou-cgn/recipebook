@@ -102,6 +102,12 @@
   background: #f8f9fa;
 }
 
+/* Aktionen in Tabellenzeilen („Link erstellen“, „IDs zuordnen“ …) bleiben einzeilig; umbrechen soll auf
+   dem Handy der Rezeptname daneben, nicht die Beschriftung des Knopfs */
+.app-calls-table .ui-button {
+  white-space: nowrap;
+}
+
 .app-calls-empty {
   text-align: center;
   padding: 60px 20px;
@@ -164,26 +170,6 @@
 
 .app-calls-stats strong {
   color: var(--color-text);
-}
-
-.app-calls-share-btn {
-  padding: 6px 14px;
-  background: #d32f2f;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: background 0.2s;
-}
-
-.app-calls-share-btn:hover:not(:disabled) {
-  background: #b71c1c;
-}
-
-.app-calls-share-btn:disabled {
-  background: #e57373;
-  cursor: not-allowed;
 }
 
 .app-calls-share-error {
@@ -455,12 +441,6 @@
   .kochatelier-settings-field textarea {
     min-height: 96px;
   }
-
-  .kochatelier-settings-actions .app-calls-share-btn {
-    width: 100%;
-    min-height: 44px;
-    font-size: 14px;
-  }
 }
 
 /* Kulinariktypen tab styles */
@@ -494,56 +474,6 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-}
-
-.cuisine-proposal-edit-btn {
-  padding: 5px 12px;
-  background: var(--color-surface-input);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: background 0.2s;
-}
-
-.cuisine-proposal-edit-btn:hover {
-  background: #e0e0e0;
-}
-
-.cuisine-proposal-release-btn {
-  padding: 5px 12px;
-  background: #2e7d32;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: background 0.2s;
-}
-
-.cuisine-proposal-release-btn:hover:not(:disabled) {
-  background: #1b5e20;
-}
-
-.cuisine-proposal-release-btn:disabled {
-  background: #81c784;
-  cursor: not-allowed;
-}
-
-.cuisine-proposal-cancel-btn {
-  padding: 5px 12px;
-  background: var(--color-surface-input);
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: background 0.2s;
-}
-
-.cuisine-proposal-cancel-btn:hover {
-  background: #e0e0e0;
 }
 
 /* Offene Vorschläge: one row per proposal (replaces the former table, which
