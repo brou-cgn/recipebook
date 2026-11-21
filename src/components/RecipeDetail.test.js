@@ -1420,6 +1420,23 @@ describe('RecipeDetail - Desktop Close Button', () => {
     const header = document.querySelector('.recipe-detail-header');
     expect(header).not.toBeInTheDocument();
   });
+
+  test('zeigt Teilen am Desktop nur einmal, in der Aktionszeile statt in der Werkzeugleiste (Tech-Check P11)', () => {
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    const header = document.querySelector('.recipe-detail-header');
+    expect(header).toBeInTheDocument();
+    expect(header.querySelector('[title="Rezept teilen"]')).toBeNull();
+    expect(screen.getAllByTitle('Rezept teilen')).toHaveLength(1);
+  });
 });
 
 describe('RecipeDetail - Nutrition recalc icon', () => {

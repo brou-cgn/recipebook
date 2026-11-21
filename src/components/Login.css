@@ -66,6 +66,17 @@
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
+/* Feld ohne Icon (Vor- und Nachname in der Registrierung) */
+.login-input--plain {
+  padding-left: 14px;
+}
+
+/* Hinweis in der Feldbeschriftung, nicht in Großbuchstaben (Passwortregeln in der Registrierung) */
+.login-label-hint {
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
 .login-input::placeholder {
   color: #a8a196;
 }

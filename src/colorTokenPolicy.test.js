@@ -69,7 +69,6 @@ const BASELINE = {
   'components/RecipeRating.css': 7,
   'components/RecipeTimeline.css': 7,
   'components/RecipeTypeahead.css': 12,
-  'components/Register.css': 12,
   'components/SavingOverlay.css': 1,
   'components/SeasonMatrixTab.css': 61,
   'components/Settings.css': 242,
