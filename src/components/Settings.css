@@ -483,14 +483,16 @@
   }
 
   /* Untereinander gestapelt: Die Inhaltsspalte nimmt die Bildschirmbreite statt der Breite ihres
-     Inhalts an (align-items: flex-start der Desktop-Reihe), sonst schob die breite Nährwert-Tabelle
-     die ganze Seite seitlich auf, statt in ihrem eigenen Bereich zu scrollen */
+     Inhalts an (align-items: flex-start der Desktop-Reihe), sonst schoben breite Tabellen und
+     Knopfreihen (Nährwerte, Benutzer, Saisonmatrix …) die ganze Seite seitlich auf, statt in ihrem
+     eigenen Bereich zu scrollen oder umzubrechen */
+  .settings-main {
+    align-self: stretch;
+  }
+
   .settings-content {
     padding: 1rem;
     border-radius: 0 0 12px 12px;
-    width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
   }
 
   .settings-actions {

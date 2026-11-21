@@ -7,8 +7,10 @@
  * die letzte Stufe des Selektors trägt eine Klasse mit „btn“ oder „button“ im Namen, und die
  * Regel setzt background oder background-color auf eine Farbe. Ausgenommen sind Bausteine
  * außerhalb des Systems: schwebende runde Knöpfe (fab), DeleteRowButton, Chips, Tabs, Schalter,
- * Pillen sowie Bilder in Knöpfen (image, img). Bestand als Baseline, darf nur sinken; neue Dateien
- * starten bei 0.
+ * Pillen sowie Bilder in Knöpfen (image, img). Ebenso gezählt werden Knöpfe, die ihr Container
+ * gestaltet (letzte Stufe ist das Element button, etwa „.list-input button“, so fielen acht
+ * Hinzufügen-Knöpfe durch); ausgenommen sind dort Einträge in Auswahllisten und Kontextmenüs.
+ * Bestand als Baseline, darf nur sinken; neue Dateien starten bei 0.
  */
 const fs = require('fs');
 const path = require('path');
@@ -18,6 +20,9 @@ const EXEMPT_FILES = ['tokens.css', 'darkMode.css', 'Button.css'];
 const BUTTON_CLASS = /(^|[-_])(btn|button)([-_]|$)/;
 const OUTSIDE_SYSTEM = /fab|delete-row|chip|tab|toggle|switch|pill|ui-button|image|img/;
 const NO_SURFACE = /^(transparent|none|inherit|initial|unset|revert)(\s*!important)?$/i;
+const BARE_BUTTON = /^button(?![\w-])/;
+// Einträge in Auswahllisten und Kontextmenüs sind Listenzeilen, keine Knöpfe des Systems
+const LIST_CONTAINER = /dropdown|context-menu|typeahead|matches|suggest|autocomplete/;
 
 const BASELINE = {
   'App.css': 1,
@@ -90,7 +95,12 @@ function ownButtonRules(css) {
     if (!surface || NO_SURFACE.test(surface[1].trim())) return false;
     return selector.split(',').some((single) => {
       const parts = single.trim().split(/\s+|>|\+|~/).filter(Boolean);
-      const classes = ((parts[parts.length - 1] || '').match(/\.[A-Za-z_-][\w-]*/g) || []).map((c) => c.slice(1));
+      const last = parts[parts.length - 1] || '';
+      const classes = (last.match(/\.[A-Za-z_-][\w-]*/g) || []).map((c) => c.slice(1));
+      if (BARE_BUTTON.test(last)) {
+        const containers = (single.match(/\.[A-Za-z_-][\w-]*/g) || []).map((c) => c.slice(1));
+        return !classes.some((c) => OUTSIDE_SYSTEM.test(c)) && !containers.some((c) => LIST_CONTAINER.test(c));
+      }
       return classes.some((c) => BUTTON_CLASS.test(c) && !OUTSIDE_SYSTEM.test(c));
     });
   });
@@ -128,7 +138,18 @@ describe('Button-System (Tech-Check A8)', () => {
       .settings-tab-button { background: #eee; }
       .button-icon-image { background: #fff; }
       .row > .icon-wrap { background: #fff; }
+      .list-input button { background: #402c1c; }
+      .list-input > button:hover { background: #1a1a1a; }
+      .toolbar button.ui-button { background: #fff; }
+      .unit-typeahead-dropdown button:hover { background: #eee; }
+      .ingredient-context-menu button:hover { background: #eee; }
     `;
-    expect(ownButtonRules(css).map((r) => r.selector)).toEqual(['.save-btn', '.save-btn:hover', '.card .share-button']);
+    expect(ownButtonRules(css).map((r) => r.selector)).toEqual([
+      '.save-btn',
+      '.save-btn:hover',
+      '.card .share-button',
+      '.list-input button',
+      '.list-input > button:hover',
+    ]);
   });
 });

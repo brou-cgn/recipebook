@@ -348,8 +348,12 @@ async function main() {
           let overflow = 0;
           await screen.run(page, async () => {
             await pause(page);
-            // Seitlich scrollbar? Dann ist etwas breiter als der Bildschirm (z. B. eine Knopfreihe)
-            overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+            // Seitlich scrollbar? Dann ist etwas breiter als der Bildschirm (z. B. eine Knopfreihe).
+            // Gemessen an der Fensterbreite der Variante: In der Handy-Emulation zoomt Chromium eine
+            // zu breite Seite heraus, dann wächst innerWidth mit und der Vergleich damit sähe nichts
+            // (so blieben am 21.11.2026 sechs Einstellungs-Reiter mit bis zu 996 statt 390 px unbemerkt).
+            const width = page.viewportSize().width;
+            overflow = await page.evaluate((w) => document.documentElement.scrollWidth - Math.min(window.innerWidth, w), width);
             await page.screenshot({ path: file, fullPage: Boolean(screen.fullPage) });
           });
           results.push({ variant: variant.name, screen: screen.name, overflow: overflow > 1 ? overflow : 0 });

@@ -48,7 +48,7 @@ const BASELINE = {
   'components/MemberProfilePage.css': 3,
   'components/MenuDetail.css': 15,
   'components/MenuFilterSidebar.css': 12,
-  'components/MenuForm.css': 55,
+  'components/MenuForm.css': 53,
   'components/MenuList.css': 6,
   'components/MobileSearchOverlay.css': 21,
   'components/NetworkPage.css': 6,
