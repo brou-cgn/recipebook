@@ -11,6 +11,7 @@ const wichteln = require('../wichteln');
 const {absender} = require('../wichtelMail');
 const {ALLOWED_ORIGINS} = require('../shared/common');
 const {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom} = require('../shared/secrets');
+const {mailVersandFehler} = require('../shared/mailFehler');
 
 const SMTP_SECRETS = [smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom];
 
@@ -45,7 +46,14 @@ function smtpMailer() {
     socketTimeout: 30000,
   });
   return {
-    senden: ({absenderName, ...mail}) => transporter.sendMail({from: absender(from, absenderName), ...mail}),
+    // Versandfehler ohne Empfängeradressen weiterwerfen (Tech-Check S27); die Aufrufer loggen mailFehlerCode.
+    senden: async ({absenderName, ...mail}) => {
+      try {
+        return await transporter.sendMail({from: absender(from, absenderName), ...mail});
+      } catch (err) {
+        throw mailVersandFehler(err);
+      }
+    },
     schliessen: () => transporter.close(),
   };
 }
