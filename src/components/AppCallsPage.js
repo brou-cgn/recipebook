@@ -1589,14 +1589,12 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                   den Nutzerprofilen ergänzt. Mehrfaches Ausführen ist unschädlich.
                 </p>
                 <div className="app-calls-action-row">
-                  <button
-                    type="button"
-                    className="app-calls-share-btn"
+                  <Button
                     onClick={handleStripRecipeCallEmails}
-                    disabled={strippingRecipeCallEmails}
+                    loading={strippingRecipeCallEmails}
                   >
                     {strippingRecipeCallEmails ? 'Bereinigung läuft…' : 'E-Mail-Adressen aus Aufruf-Protokollen entfernen'}
-                  </button>
+                  </Button>
                   {stripEmailsFeedback?.message ? (
                     <span
                       className={`app-calls-feedback${stripEmailsFeedback.type === 'error' ? ' is-error' : ''}`}
@@ -1639,13 +1637,12 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                         <tr key={recipe.id}>
                           <td>{recipe.title}</td>
                           <td>
-                            <button
-                              className="app-calls-share-btn"
+                            <Button
                               onClick={() => handleCreateShareLink(recipe)}
-                              disabled={creatingShareIds[recipe.id]}
+                              loading={creatingShareIds[recipe.id]}
                             >
                               {creatingShareIds[recipe.id] ? 'Wird erstellt…' : 'Link erstellen'}
-                            </button>
+                            </Button>
                             {shareLinkErrors[recipe.id] && (
                               <span className="app-calls-share-error">{shareLinkErrors[recipe.id]}</span>
                             )}
@@ -1693,14 +1690,13 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                           </td>
                           <td className="app-calls-calc-duration">{formatCalcDuration(recipe.naehrwerte?.calcPendingAt) || '—'}</td>
                           <td>
-                            <button
-                              className="nutrition-abort-settings-button"
+                            <Button
                               onClick={() => handleAbortCalcForRecipe(recipe)}
-                              disabled={abortingCalcId === recipe.id}
+                              loading={abortingCalcId === recipe.id}
                               title="Berechnung abbrechen"
                             >
                               {abortingCalcId === recipe.id ? 'Wird abgebrochen…' : 'Abbrechen'}
-                            </button>
+                            </Button>
                           </td>
                         </tr>
                       ))}
@@ -1765,13 +1761,12 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                                 !
                               </span>
                             )}
-                            <button
-                              className="app-calls-share-btn"
+                            <Button
                               onClick={() => setSelectedNutritionRecipeId(recipe.id)}
                               title="Nährwertedialog öffnen"
                             >
                               Öffnen
-                            </button>
+                            </Button>
                           </td>
                         </tr>
                       ))}
@@ -1793,22 +1788,18 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               Über den Button „IDs zuordnen" kann die Zuordnung direkt vorgenommen werden.
             </p>
             <div className="app-calls-action-row">
-              <button
-                type="button"
-                className="app-calls-share-btn"
+              <Button
                 onClick={handleRefreshNutritionReferenceCache}
-                disabled={refreshingNutritionReferenceCache}
+                loading={refreshingNutritionReferenceCache}
               >
                 {refreshingNutritionReferenceCache ? 'Cache wird geleert…' : 'Cache leeren'}
-              </button>
-              <button
-                type="button"
-                className="app-calls-share-btn"
+              </Button>
+              <Button
                 onClick={handleRunNutritionRecalcJob}
-                disabled={runningNutritionRecalcJob}
+                loading={runningNutritionRecalcJob}
               >
                 {runningNutritionRecalcJob ? 'Recalc läuft…' : 'Nährwerte jetzt neu berechnen'}
-              </button>
+              </Button>
               {nutritionReferenceCacheFeedback?.message ? (
                 <span
                   className={`app-calls-feedback${nutritionReferenceCacheFeedback.type === 'error' ? ' is-error' : ''}`}
@@ -1843,14 +1834,13 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                             </button>
                           </td>
                           <td>
-                            <button
-                              className="app-calls-share-btn"
+                            <Button
                               onClick={() => handleAssignIngredientIDs(recipe)}
-                              disabled={assigningIngredientIdRecipeId === recipe.id}
+                              loading={assigningIngredientIdRecipeId === recipe.id}
                               title="ingredientIDs zuordnen"
                             >
                               {assigningIngredientIdRecipeId === recipe.id ? 'Wird zugeordnet…' : 'IDs zuordnen'}
-                            </button>
+                            </Button>
                           </td>
                         </tr>
                       ))}
@@ -1878,14 +1868,12 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                 Rechengrundlage sie beurteilt wurden, geht zusätzlich per E-Mail an alle Admins.
               </p>
               <div className="app-calls-action-row">
-                <button
-                  type="button"
-                  className="app-calls-share-btn"
+                <Button
                   onClick={handleRunLowCarbFullTagging}
-                  disabled={runningLowCarbFullTagging}
+                  loading={runningLowCarbFullTagging}
                 >
                   {runningLowCarbFullTagging ? 'Prüfung läuft…' : 'Low Carb für alle Rezepte prüfen'}
-                </button>
+                </Button>
                 {lowCarbTaggingFeedback?.message ? (
                   <span
                     className={`app-calls-feedback${lowCarbTaggingFeedback.type === 'error' ? ' is-error' : ''}`}
@@ -1946,20 +1934,18 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                               <option key={g.name} value={g.name}>{g.name}</option>
                             ))}
                           </select>
+                          {/* Abbrechen links, Speichern rechts (Button-System) */}
                           <div className="cuisine-proposal-actions">
-                            <button
-                              className="app-calls-share-btn"
+                            <Button onClick={handleCancelEdit}>
+                              Abbrechen
+                            </Button>
+                            <Button
+                              variant="primary"
                               onClick={() => handleSaveEdit(proposal.id)}
                               disabled={!editingName.trim()}
                             >
                               Speichern
-                            </button>
-                            <button
-                              className="cuisine-proposal-cancel-btn"
-                              onClick={handleCancelEdit}
-                            >
-                              Abbrechen
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       ) : (
@@ -1972,21 +1958,19 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                             {renderSourceBadge(proposal.source)}
                           </div>
                           <div className="cuisine-proposal-actions">
-                            <button
-                              className="cuisine-proposal-edit-btn"
+                            <Button
                               onClick={() => handleStartEdit(proposal)}
                               title="Kulinariktyp bearbeiten"
                             >
                               Bearbeiten
-                            </button>
-                            <button
-                              className="cuisine-proposal-release-btn"
+                            </Button>
+                            <Button
                               onClick={() => handleRelease(proposal)}
-                              disabled={releasingId === proposal.id}
+                              loading={releasingId === proposal.id}
                               title="Kulinariktyp freigeben"
                             >
-                              {releasingId === proposal.id ? 'Wird freigegeben…' : '✓ Freigeben'}
-                            </button>
+                              {releasingId === proposal.id ? 'Wird freigegeben…' : 'Freigeben'}
+                            </Button>
                           </div>
                         </div>
                       )}
@@ -2283,13 +2267,14 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               </div>
             </div>
             <div className="kochatelier-settings-actions">
-              <button
-                className="app-calls-share-btn"
+              <Button
+                variant="primary"
                 onClick={handleSaveKochatelierSettings}
-                disabled={savingKochatelierSettings || !canManageKochatelierSettings}
+                loading={savingKochatelierSettings}
+                disabled={!canManageKochatelierSettings}
               >
                 {savingKochatelierSettings ? 'Wird gespeichert…' : 'Kochateliereinstellungen speichern'}
-              </button>
+              </Button>
               {kochatelierSettingsFeedback && (
                 <span className="kochatelier-settings-feedback">{kochatelierSettingsFeedback}</span>
               )}

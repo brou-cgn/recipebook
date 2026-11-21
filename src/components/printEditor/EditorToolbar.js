@@ -1,5 +1,6 @@
 import React from 'react';
 import { PRINT_FONT_OPTIONS, DEFAULT_PRINT_PAGE_WIDTH_CM, DEFAULT_PRINT_PAGE_HEIGHT_CM } from '../../utils/printElements';
+import Button from '../Button';
 
 /** Orientation, page size, font and reset for one print format. */
 export default function EditorToolbar({ format, orientation, page, fontFamily, onUpdate, onOrientationChange, onReset }) {
@@ -69,9 +70,9 @@ export default function EditorToolbar({ format, orientation, page, fontFamily, o
         </select>
       </div>
 
-      <button type="button" className="pfe-reset-btn" onClick={onReset} title="Standardlayout wiederherstellen">
+      <Button variant="ghost" className="pfe-toolbar-reset" onClick={onReset} title="Standardlayout wiederherstellen">
         Layout zurücksetzen
-      </button>
+      </Button>
     </div>
   );
 }

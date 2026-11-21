@@ -49,21 +49,9 @@
   min-width: 160px;
 }
 
-.pfe-reset-btn {
-  padding: 0.25rem 0.75rem;
-  border: 1px solid #c8b8a2;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  background: #fff;
-  cursor: pointer;
-  color: #5a3e2b;
-  white-space: nowrap;
-  transition: background 0.15s;
+/* „Layout zurücksetzen“ (Button, ruhige Aktion) steht am rechten Rand der Werkzeugleiste */
+.pfe-toolbar-reset {
   margin-left: auto;
-}
-
-.pfe-reset-btn:hover {
-  background: #f0e8dc;
 }
 
 /* ── Visibility chips ─────────────────────────────────────────────────────── */

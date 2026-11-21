@@ -7,7 +7,9 @@
  * die letzte Stufe des Selektors trägt eine Klasse mit „btn“ oder „button“ im Namen, und die
  * Regel setzt background oder background-color auf eine Farbe. Ausgenommen sind Bausteine
  * außerhalb des Systems: schwebende runde Knöpfe (fab), DeleteRowButton, Chips, Tabs, Schalter,
- * Pillen sowie Bilder in Knöpfen (image, img). Ebenso gezählt werden Knöpfe, die ihr Container
+ * Pillen, Bilder in Knöpfen (image, img) und die Werkzeug-Schalter der Druck- und Vorlagen-Editoren
+ * (Fett/Kursiv, Ausrichtung, Segmente, schwebende Werkzeugleiste: umschaltbare Formatierung, keine
+ * Aktion mit Rolle). Ebenso gezählt werden Knöpfe, die ihr Container
  * gestaltet (letzte Stufe ist das Element button, etwa „.list-input button“, so fielen acht
  * Hinzufügen-Knöpfe durch); ausgenommen sind dort Einträge in Auswahllisten und Kontextmenüs.
  * Bestand als Baseline, darf nur sinken; neue Dateien starten bei 0.
@@ -20,13 +22,15 @@ const EXEMPT_FILES = ['tokens.css', 'darkMode.css', 'Button.css'];
 const BUTTON_CLASS = /(^|[-_])(btn|button)([-_]|$)/;
 const OUTSIDE_SYSTEM = /fab|delete-row|chip|tab|toggle|switch|pill|ui-button|image|img/;
 const NO_SURFACE = /^(transparent|none|inherit|initial|unset|revert)(\s*!important)?$/i;
+// Werkzeug-Schalter der Editoren (printEditor/ElementPropsPanel.js, templateEditor/Segmented.js und
+// FloatingToolbar.js): aria-pressed bzw. role="radio", gehören nicht ins Rollen-System
+const EDITOR_TOOLS = /^(pfe-style-btn|pfe-align-btn|tfe-seg-btn|tfe-tb-btn)/;
 const BARE_BUTTON = /^button(?![\w-])/;
 // Einträge in Auswahllisten und Kontextmenüs sind Listenzeilen, keine Knöpfe des Systems
 const LIST_CONTAINER = /dropdown|context-menu|typeahead|matches|suggest|autocomplete/;
 
 const BASELINE = {
   'App.css': 1,
-  'components/AppCallsPage.css': 10,
   'components/AtelierOnboardingOverlay.css': 2,
   'components/AtelierTasteIntroOverlay.css': 2,
   'components/ButtonIconsAdminTab.css': 4,
@@ -47,10 +51,10 @@ const BASELINE = {
   'components/MenuList.css': 2,
   'components/MobileSearchOverlay.css': 1,
   'components/NetworkPage.css': 2,
-  'components/NutritionModal.css': 15,
+  'components/NutritionModal.css': 5,
   'components/OcrScanModal.css': 1,
   'components/PortionSelector.css': 5,
-  'components/PrintFormatEditor.css': 9,
+  'components/PrintFormatEditor.css': 2,
   'components/RatingModal.css': 1,
   'components/RecipeDetail.css': 18,
   'components/RecipeFilterSidebar.css': 2,
@@ -58,12 +62,11 @@ const BASELINE = {
   'components/RecipeImportModal.css': 1,
   'components/RecipeList.css': 8,
   'components/SeasonMatrixTab.css': 2,
-  'components/Settings.css': 10,
+  'components/Settings.css': 8,
   'components/SharePage.css': 2,
   'components/ShoppingListModal.css': 2,
   'components/Startseite.css': 10,
   'components/Tagesmenu.css': 5,
-  'components/TemplateFormatEditor.css': 4,
   'components/UserManagement.css': 6,
   'components/WichtelPage.css': 2,
   'components/WichtelTeilnahmePage.css': 1,
@@ -99,7 +102,7 @@ function ownButtonRules(css) {
         const containers = (single.match(/\.[A-Za-z_-][\w-]*/g) || []).map((c) => c.slice(1));
         return !classes.some((c) => OUTSIDE_SYSTEM.test(c)) && !containers.some((c) => LIST_CONTAINER.test(c));
       }
-      return classes.some((c) => BUTTON_CLASS.test(c) && !OUTSIDE_SYSTEM.test(c));
+      return classes.some((c) => BUTTON_CLASS.test(c) && !OUTSIDE_SYSTEM.test(c) && !EDITOR_TOOLS.test(c));
     });
   });
 }
@@ -141,6 +144,8 @@ describe('Button-System (Tech-Check A8)', () => {
       .toolbar button.ui-button { background: #fff; }
       .unit-typeahead-dropdown button:hover { background: #eee; }
       .ingredient-context-menu button:hover { background: #eee; }
+      .pfe-style-btn--active { background: #5a3e2b; }
+      .tfe-seg-btn { background: #fff; }
     `;
     expect(ownButtonRules(css).map((r) => r.selector)).toEqual([
       '.save-btn',

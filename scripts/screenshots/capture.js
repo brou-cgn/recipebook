@@ -162,6 +162,29 @@ const SCREENS = [
     },
   },
   {
+    // Nährwert-Dialog nach fehlgeschlagener Berechnung („Erneut versuchen“)
+    name: 'naehrwerte-fehler',
+    run: async (page, shot) => {
+      await openRecipe(page, 'Shakshuka');
+      await page.locator('.nutrition-metadata-btn').first().click();
+      await page.locator('.nutrition-modal').first().waitFor();
+      await pause(page);
+      await shot();
+    },
+  },
+  {
+    // Zusammensetzung im Nährwert-Dialog (Tabelle der Zutaten)
+    name: 'naehrwerte-zusammensetzung',
+    run: async (page, shot) => {
+      await openRecipe(page, 'Linsensuppe mit Kreuzkümmel');
+      await page.locator('.nutrition-metadata-btn').first().click();
+      await page.locator('.nutrition-modal').first().waitFor();
+      await page.locator('.nutrition-composition-toggle').first().click();
+      await pause(page, 1000);
+      await shot();
+    },
+  },
+  {
     name: 'rezept-loeschen-dialog',
     run: async (page, shot) => {
       await openRecipe(page, 'Linsensuppe mit Kreuzkümmel');
@@ -348,6 +371,8 @@ const SCREENS = [
       await openMenuItem(page, 'Einstellungen');
       await page.locator('.tab-button', { hasText: 'Drucklayout' }).first().click();
       await pause(page, 1000);
+      // Die Umstellung fragt per window.confirm nach; Playwright würde die Rückfrage sonst ablehnen
+      page.once('dialog', (dialog) => dialog.accept());
       await page.getByRole('button', { name: 'Auf Vorlage umstellen' }).first().click();
       await pause(page, 1000);
       await shot();
