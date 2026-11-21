@@ -4,6 +4,7 @@ import FollowName from './FollowName';
 import PencilIcon from './icons/PencilIcon';
 import SteamIcon from './icons/SteamIcon';
 import './CookDateModal.css';
+import Button from './Button';
 import { setCookDate, deleteCookDate, subscribeCookDates } from '../utils/recipeCookDates';
 import { isBase64Image } from '../utils/imageUtils';
 import useFadeOutClose from '../hooks/useFadeOutClose';
@@ -193,14 +194,14 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
           </div>
         </div>
         <div className="cook-date-modal-footer">
-          <button className="cook-date-modal-cancel-btn" onClick={onClose}>Abbrechen</button>
-          <button
-            className="cook-date-modal-save-btn"
+          <Button variant="secondary" onClick={onClose}>Abbrechen</Button>
+          <Button
+            variant="primary"
             onClick={handleSave}
             disabled={!selectedDate || isSubmitting || saved}
           >
             {saved ? '✓ Gespeichert' : isSubmitting ? 'Speichern…' : 'Speichern'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

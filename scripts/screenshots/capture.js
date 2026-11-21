@@ -6,6 +6,9 @@
  * am Ende. Erwartet laufende Emulatoren mit den Testdaten aus seed.js (run.sh erledigt beides).
  *
  * Aufruf: node scripts/screenshots/capture.js [Ausgabeordner] [--only name,name]
+ *         [--variants desktop-hell,handy-dunkel] [--css entwurf.css]
+ * --css legt ein Stylesheet über die App (Gestaltungsentwürfe auf den echten Bildschirmen,
+ * ohne App-Code zu ändern).
  * Ergebnis: <Ausgabe>/<variante>/<bildschirm>.png und <Ausgabe>/index.html zum Durchsehen.
  * Braucht Playwright mit Chromium (in den Cloud-Sessions vorinstalliert).
  */
@@ -47,6 +50,18 @@ const SCREENS = [
   { name: 'kochbuch', run: async (page, shot) => { await openMenuItem(page, 'Kochbuch'); await shot(); } },
   { name: 'rezept', run: async (page, shot) => { await openRecipe(page, 'Linsensuppe mit Kreuzkümmel'); await shot(); } },
   {
+    // Auf dem Handy öffnet der schwebende Knopf das Formular in der Testumgebung nicht zuverlässig
+    name: 'rezept-bearbeiten',
+    variants: ['desktop-hell', 'desktop-dunkel'],
+    run: async (page, shot) => {
+      await openRecipe(page, 'Linsensuppe mit Kreuzkümmel');
+      await page.locator('[title="Rezept bearbeiten"]').first().click();
+      await page.locator('.recipe-form-header-save, form').first().waitFor();
+      await pause(page, 1200);
+      await shot();
+    },
+  },
+  {
     name: 'rezept-loeschen-dialog',
     run: async (page, shot) => {
       await openRecipe(page, 'Linsensuppe mit Kreuzkümmel');
@@ -54,6 +69,37 @@ const SCREENS = [
       await page.getByRole('alertdialog').waitFor();
       await shot();
       await page.getByRole('button', { name: 'Abbrechen' }).click();
+    },
+  },
+  {
+    name: 'kochdatum-dialog',
+    run: async (page, shot) => {
+      await openRecipe(page, 'Linsensuppe mit Kreuzkümmel');
+      await page.locator('[title="Kochdatum erfassen"]').first().click();
+      await page.locator('.cook-date-modal').first().waitFor();
+      await shot();
+    },
+  },
+  {
+    name: 'bewertung-dialog',
+    run: async (page, shot) => {
+      await openRecipe(page, 'Linsensuppe mit Kreuzkümmel');
+      await page.locator('[title="Bewerten"]').first().click();
+      await page.locator('.rating-modal').first().waitFor();
+      await shot();
+    },
+  },
+  {
+    // Auf dem Handy legt der schwebende Plus-Knopf die Liste an; der Bildschirm ist vorerst nur Desktop
+    name: 'liste-anlegen-dialog',
+    variants: ['desktop-hell', 'desktop-dunkel'],
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Chefkoch & mehr');
+      await page.locator('[aria-label^="Meine Mise en Place"]').first().click();
+      await pause(page, 1000);
+      await page.getByText('+ Liste erstellen').first().click();
+      await page.getByRole('dialog').first().waitFor();
+      await shot();
     },
   },
   { name: 'festtafel', run: async (page, shot) => { await openMenuItem(page, 'Festtafel'); await shot(); } },
@@ -91,8 +137,27 @@ function startVite() {
     REACT_APP_FIREBASE_APP_ID: 'demo-app',
     REACT_APP_USE_EMULATORS: 'true',
   };
-  const vite = spawn('npx', ['vite', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], { cwd: ROOT, env, stdio: 'ignore' });
+  // Eigene Prozessgruppe: npx startet Vite als Kindprozess, beendet wird die ganze Gruppe (stopVite)
+  const vite = spawn('npx', ['vite', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], { cwd: ROOT, env, stdio: 'ignore', detached: true });
   return vite;
+}
+
+function stopVite(vite) {
+  try {
+    process.kill(-vite.pid, 'SIGTERM');
+  } catch (e) {
+    vite.kill();
+  }
+}
+
+/** Läuft auf dem Port schon ein Server, zeigten die Bilder dessen Stand statt des Arbeitsstands. */
+async function assertPortFree() {
+  try {
+    await fetch(URL);
+  } catch (e) {
+    return;
+  }
+  throw new Error(`Port ${PORT} ist belegt (läuft noch ein Dev-Server?). Erst beenden, sonst zeigen die Bilder dessen Stand.`);
 }
 
 async function waitForServer() {
@@ -125,21 +190,31 @@ td img{max-width:260px;max-height:420px;display:block}.fehlt{color:#a33a26}</sty
 
 async function main() {
   const args = process.argv.slice(2);
-  const onlyIdx = args.indexOf('--only');
-  const only = onlyIdx >= 0 ? new Set(args[onlyIdx + 1].split(',')) : null;
-  const positional = args.filter((a, i) => !a.startsWith('--') && (onlyIdx < 0 || i !== onlyIdx + 1));
+  const option = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : null; };
+  const valueIdx = new Set(['--only', '--variants', '--css'].map((n) => args.indexOf(n)).filter((i) => i >= 0).map((i) => i + 1));
+  const only = option('--only') ? new Set(option('--only').split(',')) : null;
+  const variants = option('--variants') ? new Set(option('--variants').split(',')) : null;
+  const css = option('--css') ? fs.readFileSync(path.resolve(option('--css')), 'utf8') : null;
+  const positional = args.filter((a, i) => !a.startsWith('--') && !valueIdx.has(i));
   const outDir = path.resolve(positional[0] || path.join(ROOT, 'screenshots-out'));
+  await assertPortFree();
   const vite = startVite();
   const results = [];
   try {
     await waitForServer();
     const browser = await chromium.launch();
-    for (const variant of VARIANTS) {
+    for (const variant of VARIANTS.filter((v) => !variants || variants.has(v.name))) {
       fs.mkdirSync(path.join(outDir, variant.name), { recursive: true });
-      for (const screen of SCREENS.filter((s) => !only || only.has(s.name))) {
+      for (const screen of SCREENS.filter((s) => (!only || only.has(s.name)) && (!s.variants || s.variants.includes(variant.name)))) {
         const context = await browser.newContext(variant.context);
         // Dunkelmodus wie in der App gewählt (customLists.js, darkModePreference)
         await context.addInitScript((dark) => localStorage.setItem('darkModePreference', dark ? 'true' : 'false'), variant.dark);
+        if (css) {
+          await context.addInitScript((text) => {
+            const add = () => { const style = document.createElement('style'); style.dataset.entwurf = ''; style.textContent = text; document.head.appendChild(style); };
+            if (document.head) add(); else document.addEventListener('DOMContentLoaded', add);
+          }, css);
+        }
         const page = await context.newPage();
         const file = path.join(outDir, variant.name, `${screen.name}.png`);
         try {
@@ -155,7 +230,7 @@ async function main() {
     }
     await browser.close();
   } finally {
-    vite.kill();
+    stopVite(vite);
   }
   writeIndex(outDir, results);
   const failed = results.filter((r) => r.error);
@@ -163,7 +238,11 @@ async function main() {
   failed.forEach((r) => console.log(`  fehlt: ${r.variant} / ${r.screen}: ${r.error}`));
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
+
+module.exports = { SCREENS, VARIANTS };

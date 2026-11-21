@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './GroupCreateDialog.css';
+import Button from './Button';
 import { LIST_KIND_OPTIONS } from '../utils/groupFirestore';
 
 /**
@@ -258,12 +259,12 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
           {error && <p className="group-dialog-error">{error}</p>}
 
           <div className="group-dialog-actions">
-            <button type="button" className="group-btn-secondary" onClick={onCancel} disabled={saving}>
+            <Button variant="secondary" onClick={onCancel} disabled={saving}>
               Abbrechen
-            </button>
-            <button type="submit" className="group-btn-primary" disabled={saving}>
+            </Button>
+            <Button variant="primary" type="submit" disabled={saving}>
               {saving ? 'Erstellen...' : 'Liste erstellen'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

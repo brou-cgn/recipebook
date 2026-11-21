@@ -67,6 +67,23 @@
   --color-wein-rose: #e8a0a8;
   --color-wein-rot: #7a1f2b;
   --color-wein-suess: #c9852e;
+  /* Knöpfe (Button-System, components/Button.js; Tech-Check A8). Im Event-Bereich ist der
+     Haupt-Knopf grün, siehe Button.css. */
+  --color-button-primary-bg: var(--color-accent);
+  --color-button-primary-text: var(--color-on-accent);
+  --color-button-secondary-bg: var(--color-surface-raised);
+  --color-button-secondary-hover: #e5e5e5;
+  --color-button-secondary-text: var(--color-text-strong);
+  --color-button-danger-bg: var(--color-bad);
+  --color-button-danger-text: var(--color-on-bad);
+  --color-button-danger-quiet-bg: var(--color-bad-tint);
+  --color-button-danger-quiet-text: var(--color-bad-text);
+  --color-button-ghost-text: var(--color-text-muted);
+  --color-button-focus: var(--color-text-strong);
+  /* Maße der Knöpfe (Tech-Check A10): Höhe auf dem Handy bis 768 px Breite */
+  --radius-button: 8px;
+  --height-button: 40px;
+  --height-button-touch: 48px;
 }
 
 [data-theme="dark"] {
@@ -127,4 +144,15 @@
   --color-wein-rose: #f0aab3;
   --color-wein-rot: #c0485a;
   --color-wein-suess: #d89a45;
+  --color-button-primary-bg: var(--color-accent);
+  --color-button-primary-text: var(--color-on-accent);
+  --color-button-secondary-bg: var(--color-surface-raised);
+  --color-button-secondary-hover: #484848;
+  --color-button-secondary-text: var(--color-text-strong);
+  --color-button-danger-bg: var(--color-bad);
+  --color-button-danger-text: var(--color-on-bad);
+  --color-button-danger-quiet-bg: var(--color-bad-tint);
+  --color-button-danger-quiet-text: var(--color-bad-text);
+  --color-button-ghost-text: var(--color-text-muted);
+  --color-button-focus: var(--color-text-strong);
 }
