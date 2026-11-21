@@ -56,6 +56,7 @@
 const crypto = require('crypto');
 const linkVorschau = require('./linkVorschau');
 const {normalisiereSprache, STANDARD_SPRACHE} = require('./shared/sprachen');
+const {mailFehlerCode} = require('./shared/mailFehler');
 const {baueEinladungsMail, baueNeuigkeitenMail, baueErinnerungsMail} = require('./wichtelMail');
 
 const COLLECTION = 'wichtelRunden';
@@ -463,10 +464,12 @@ const eintraegePfad = (rundeId) => `${COLLECTION}/${rundeId}/eintraege`;
  * dieser Runde; das Limit begrenzt den Lesevorgang auf die erlaubte Höchstzahl.
  * @param {object} db - Firestore
  * @param {string} rundeId - Runde
+ * @param {object} [tx] - Transaktion: dann liest die Abfrage in ihr (Tech-Check F19)
  * @return {Promise<Array<object>>}
  */
-async function ladeTeilnehmer(db, rundeId) {
-  const snap = await db.collection(teilnehmerPfad(rundeId)).limit(MAX_TEILNEHMER).get();
+async function ladeTeilnehmer(db, rundeId, tx = null) {
+  const abfrage = db.collection(teilnehmerPfad(rundeId)).limit(MAX_TEILNEHMER);
+  const snap = await (tx ? tx.get(abfrage) : abfrage.get());
   return snap.docs
       .map((doc) => ({id: doc.id, ...doc.data()}))
       .sort((a, b) => (a.reihenfolge || 0) - (b.reihenfolge || 0));
@@ -645,6 +648,22 @@ function pruefeOffen(runde, HttpsError, was = 'Teilnehmer') {
   }
 }
 
+/**
+ * Liest die Runde in der Transaktion (Tech-Check F19). Statusprüfung und Schreiben liegen so in
+ * derselben Transaktion: Ändert eine zweite Sitzung des Organisators die Runde oder ihre
+ * Teilnehmer dazwischen (etwa Auslosen auf dem Handy, Teilnehmer ändern am Laptop), wiederholt
+ * Firestore die Transaktion mit dem neuen Stand, statt eine der beiden Änderungen zu überholen.
+ * @param {object} tx - Transaktion
+ * @param {object} ref - Runden-Dokument
+ * @param {function} HttpsError - Fehlerklasse
+ * @return {Promise<object>} Rundendaten
+ */
+async function leseRundeInTransaktion(tx, ref, HttpsError) {
+  const snap = await tx.get(ref);
+  if (!snap.exists) throw new HttpsError('not-found', RUNDE_FEHLT);
+  return snap.data();
+}
+
 // ---------------------------------------------------------------------------
 // Einladung per Mail
 // ---------------------------------------------------------------------------
@@ -728,11 +747,6 @@ async function reserviereMails(db, uid, anzahl, jetztMs) {
 /** Antwortfeld `versand`, wenn keine Mail rausgehen sollte. */
 function keinVersand() {
   return {gesendet: 0, fehlgeschlagen: 0, grund: null};
-}
-
-/** Nur Codes, nie die Meldung: die Antwort des SMTP-Servers kann die Adresse enthalten (S26). */
-function mailFehlerCode(err) {
-  return [err?.code, err?.responseCode, err?.command].filter(Boolean).join(' ') || 'unbekannt';
 }
 
 const erinnerungPfad = (rundeId, teilnehmerId) => `${ERINNERUNGEN_COLLECTION}/${rundeId}_${teilnehmerId}`;
@@ -825,7 +839,7 @@ async function versendeEinladungen(ctx, rundeId, runde, empfaenger) {
 
 /**
  * Legt Teilnehmer an (Gast-Verknüpfung nur zu Gästen aus der eigenen Gästeliste). Für einen neuen
- * Gast (Vor- und Nachname) entsteht in der Gästeliste ein Gästeprofil, im selben Batch wie der
+ * Gast (Vor- und Nachname) entsteht in der Gästeliste ein Gästeprofil, in derselben Transaktion wie der
  * Teilnehmer; einem vorhandenen Gast ohne Adresse wird die mitgeschickte eingetragen, eine andere
  * gespeicherte überschreibt die Runde nicht. Mails gehen hier keine raus – die Einladung folgt
  * beim Auslosen (ladeZurAuslosungEin).
@@ -836,8 +850,24 @@ async function versendeEinladungen(ctx, rundeId, runde, empfaenger) {
  * @return {Promise<void>}
  */
 async function nimmTeilnehmerAuf(ctx, rundeRef, rundeId, eintraege) {
+  const {db} = ctx;
+  // Statusprüfung, Lesen und Schreiben in einer Transaktion (Tech-Check F19): Lost eine zweite
+  // Sitzung im selben Moment aus, landet kein neuer Teilnehmer ohne Los in der Runde.
+  await db.runTransaction(async (tx) => {
+    pruefeOffen(await leseRundeInTransaktion(tx, rundeRef, ctx.HttpsError), ctx.HttpsError);
+    const vorhanden = await ladeTeilnehmer(db, rundeId, tx);
+    const schritte = await teilnehmerSchritte(ctx, rundeRef, rundeId, eintraege, vorhanden);
+    schritte.forEach((schritt) => schritt(tx));
+  });
+}
+
+/**
+ * Prüft die neuen Einträge gegen die vorhandenen Teilnehmer und liefert die Schreibvorgänge
+ * (Teilnehmer, neue Gästeprofile, ergänzte Adressen, Zähler der Runde).
+ * @return {Promise<Array<function(object): void>>}
+ */
+async function teilnehmerSchritte(ctx, rundeRef, rundeId, eintraege, vorhanden) {
   const {FieldValue, db, HttpsError, uid} = ctx;
-  const vorhanden = await ladeTeilnehmer(db, rundeId);
   const belegt = new Set(vorhanden.map((t) => schluessel(String(t.name))));
   const doppelt = eintraege.find((e) => belegt.has(schluessel(e.name)));
   if (doppelt) throw new HttpsError('already-exists', `„${doppelt.name}“ ist schon dabei.`);
@@ -910,8 +940,8 @@ async function nimmTeilnehmerAuf(ctx, rundeRef, rundeId, eintraege) {
     teilnehmerAnzahl: vorhanden.length + neue.length,
     aktualisiertAm: jetzt,
   }));
-  // Bis MAX_TEILNEHMER Teilnehmer samt Gästeprofilen passt das in einen Batch: alles oder nichts.
-  await schreibeInBatches(db, schritte);
+  // Bis MAX_TEILNEHMER Teilnehmer samt Gästeprofilen passt das in eine Transaktion: alles oder nichts.
+  return schritte;
 }
 
 /**
@@ -1481,31 +1511,38 @@ const VERWALTEN = {
     const {ref, runde} = await ladeEigeneRunde(db, HttpsError, uid, daten.rundeId);
     pruefeOffen(runde, HttpsError);
     const teilnehmerId = pruefeId(daten.teilnehmerId, HttpsError);
-    const teilnehmer = await ladeTeilnehmer(db, daten.rundeId);
-    if (!teilnehmer.some((t) => t.id === teilnehmerId)) {
-      throw new HttpsError('not-found', 'Diesen Teilnehmer gibt es nicht (mehr).');
-    }
-    // Mit dem Teilnehmer gehen seine Wünsche, seine Ideen für andere und die Ideen über ihn.
+    // Teilnehmer, Ausschlüsse auf ihn und Zähler in einer Transaktion mit der Statusprüfung
+    // (Tech-Check F19): Lost eine zweite Sitzung im selben Moment aus, bleibt kein Geber zurück,
+    // dessen Empfänger fehlt.
+    await db.runTransaction(async (tx) => {
+      pruefeOffen(await leseRundeInTransaktion(tx, ref, HttpsError), HttpsError);
+      const teilnehmer = await ladeTeilnehmer(db, daten.rundeId, tx);
+      if (!teilnehmer.some((t) => t.id === teilnehmerId)) {
+        throw new HttpsError('not-found', 'Diesen Teilnehmer gibt es nicht (mehr).');
+      }
+      tx.delete(db.doc(`${teilnehmerPfad(daten.rundeId)}/${teilnehmerId}`));
+      tx.delete(db.doc(erinnerungPfad(daten.rundeId, teilnehmerId)));
+      // Wer ihn ausgeschlossen hatte, verliert diesen Ausschluss.
+      teilnehmer
+          .filter((t) => t.id !== teilnehmerId && Array.isArray(t.ausschluesse) && t.ausschluesse.includes(teilnehmerId))
+          .forEach((t) => tx.update(
+              db.doc(`${teilnehmerPfad(daten.rundeId)}/${t.id}`),
+              {ausschluesse: t.ausschluesse.filter((id) => id !== teilnehmerId)},
+          ));
+      tx.update(ref, {
+        teilnehmerAnzahl: teilnehmer.length - 1,
+        aktualisiertAm: FieldValue.serverTimestamp(),
+      });
+    });
+    // Mit dem Teilnehmer gehen seine Wünsche, seine Ideen für andere und die Ideen über ihn – bis
+    // zu MAX_EINTRAEGE_UEBER Einträge, zu viele für eine Transaktion. Für die Auslosung zählen sie
+    // nicht, deshalb danach in Batches.
     const [vonIhm, ueberIhn] = await Promise.all([
       ladeEintraege(db, daten.rundeId, 'autorId', teilnehmerId, MAX_EINTRAEGE_PRO_AUTOR),
       ladeEintraege(db, daten.rundeId, 'ueberId', teilnehmerId, MAX_EINTRAEGE_UEBER),
     ]);
     const refs = new Map([...vonIhm, ...ueberIhn].map((e) => [e.id, e.ref]));
-    const schritte = [...refs.values()].map((eintragRef) => (batch) => batch.delete(eintragRef));
-    schritte.push((batch) => batch.delete(db.doc(`${teilnehmerPfad(daten.rundeId)}/${teilnehmerId}`)));
-    schritte.push((batch) => batch.delete(db.doc(erinnerungPfad(daten.rundeId, teilnehmerId))));
-    // Wer ihn ausgeschlossen hatte, verliert diesen Ausschluss.
-    teilnehmer
-        .filter((t) => t.id !== teilnehmerId && Array.isArray(t.ausschluesse) && t.ausschluesse.includes(teilnehmerId))
-        .forEach((t) => schritte.push((batch) => batch.update(
-            db.doc(`${teilnehmerPfad(daten.rundeId)}/${t.id}`),
-            {ausschluesse: t.ausschluesse.filter((id) => id !== teilnehmerId)},
-        )));
-    schritte.push((batch) => batch.update(ref, {
-      teilnehmerAnzahl: teilnehmer.length - 1,
-      aktualisiertAm: FieldValue.serverTimestamp(),
-    }));
-    await schreibeInBatches(db, schritte);
+    await schreibeInBatches(db, [...refs.values()].map((eintragRef) => (batch) => batch.delete(eintragRef)));
     return organisatorSicht(db, daten.rundeId, runde);
   },
 
@@ -1514,23 +1551,31 @@ const VERWALTEN = {
    * Runde nicht (mehr) gibt, und der Teilnehmer selbst fallen still heraus – etwa aus einer
    * Ansicht, die ein gerade entferntes Mitglied noch zeigte.
    */
-  async ausschluesseSetzen({db, HttpsError, uid, daten}) {
-    const {runde} = await ladeEigeneRunde(db, HttpsError, uid, daten.rundeId);
+  async ausschluesseSetzen({FieldValue, db, HttpsError, uid, daten}) {
+    const {ref, runde} = await ladeEigeneRunde(db, HttpsError, uid, daten.rundeId);
     pruefeOffen(runde, HttpsError, 'Ausschlüsse');
     const teilnehmerId = pruefeId(daten.teilnehmerId, HttpsError);
     if (!Array.isArray(daten.ausschluesse) || daten.ausschluesse.length > MAX_TEILNEHMER) {
       throw new HttpsError('invalid-argument', 'ausschluesse muss eine Liste von Teilnehmer-IDs sein.');
     }
     daten.ausschluesse.forEach((id) => pruefeId(id, HttpsError));
-    const teilnehmer = await ladeTeilnehmer(db, daten.rundeId);
-    if (!teilnehmer.some((t) => t.id === teilnehmerId)) {
-      throw new HttpsError('not-found', 'Diesen Teilnehmer gibt es nicht (mehr).');
-    }
-    const ausschluesse = ausschluesseVon(
-        {id: teilnehmerId, ausschluesse: daten.ausschluesse},
-        new Set(teilnehmer.map((t) => t.id)),
-    );
-    await db.doc(`${teilnehmerPfad(daten.rundeId)}/${teilnehmerId}`).update({ausschluesse});
+    // Statusprüfung und Schreiben in einer Transaktion (Tech-Check F19): Ein Ausschluss, der im
+    // Moment des Auslosens gesetzt wird, gilt entweder für diese Auslosung oder wird abgelehnt.
+    await db.runTransaction(async (tx) => {
+      pruefeOffen(await leseRundeInTransaktion(tx, ref, HttpsError), HttpsError, 'Ausschlüsse');
+      const teilnehmer = await ladeTeilnehmer(db, daten.rundeId, tx);
+      if (!teilnehmer.some((t) => t.id === teilnehmerId)) {
+        throw new HttpsError('not-found', 'Diesen Teilnehmer gibt es nicht (mehr).');
+      }
+      const ausschluesse = ausschluesseVon(
+          {id: teilnehmerId, ausschluesse: daten.ausschluesse},
+          new Set(teilnehmer.map((t) => t.id)),
+      );
+      tx.update(db.doc(`${teilnehmerPfad(daten.rundeId)}/${teilnehmerId}`), {ausschluesse});
+      // Auch die Runde schreiben: Wie beim Auslosen und Ändern der Teilnehmer schließen sich die
+      // Transaktionen damit über das Runden-Dokument gegenseitig aus.
+      tx.update(ref, {aktualisiertAm: FieldValue.serverTimestamp()});
+    });
     return organisatorSicht(db, daten.rundeId, runde);
   },
 
@@ -1541,30 +1586,31 @@ const VERWALTEN = {
   async auslosen(ctx) {
     const {FieldValue, db, HttpsError, uid, daten, randomInt} = ctx;
     const {ref} = await ladeEigeneRunde(db, HttpsError, uid, daten.rundeId);
-    const teilnehmer = await ladeTeilnehmer(db, daten.rundeId);
-    if (teilnehmer.length < MIN_TEILNEHMER) {
-      throw new HttpsError('failed-precondition', `Zum Auslosen braucht es mindestens ${MIN_TEILNEHMER} Teilnehmer.`);
-    }
-    const ausschluesse = ausschlussKarte(teilnehmer);
-    const zuordnung = zieheKreis(teilnehmer.map((t) => t.id), {ausschluesse, randomInt});
-    if (!zuordnung) throw new HttpsError('failed-precondition', meldungOhneKreis(teilnehmer, ausschluesse));
     const jetzt = FieldValue.serverTimestamp();
-    // Statuswechsel in einer Transaktion: ein doppelter Klick lost nicht zweimal aus.
-    const runde = await db.runTransaction(async (tx) => {
-      const snap = await tx.get(ref);
-      const aktuell = snap.data();
+    // Status, Teilnehmer und Ausschlüsse liest die Transaktion selbst (Tech-Check F19): Ändert eine
+    // zweite Sitzung sie dazwischen, lost Firestore mit dem neuen Stand erneut aus. Ein doppelter
+    // Klick lost nicht zweimal aus.
+    const {runde, teilnehmer} = await db.runTransaction(async (tx) => {
+      const aktuell = await leseRundeInTransaktion(tx, ref, HttpsError);
       pruefeOffen(aktuell, HttpsError);
+      const alle = await ladeTeilnehmer(db, daten.rundeId, tx);
+      if (alle.length < MIN_TEILNEHMER) {
+        throw new HttpsError('failed-precondition', `Zum Auslosen braucht es mindestens ${MIN_TEILNEHMER} Teilnehmer.`);
+      }
+      const ausschluesse = ausschlussKarte(alle);
+      const zuordnung = zieheKreis(alle.map((t) => t.id), {ausschluesse, randomInt});
+      if (!zuordnung) throw new HttpsError('failed-precondition', meldungOhneKreis(alle, ausschluesse));
       Object.entries(zuordnung).forEach(([geberId, empfaengerId]) => {
         tx.set(db.doc(`${zuordnungenPfad(daten.rundeId)}/${geberId}`), {empfaengerId, ausgelostAm: jetzt});
       });
-      teilnehmer.forEach((t) => {
+      alle.forEach((t) => {
         // Neue Zuordnung: Los und „Geschenk gekauft“ gelten nicht mehr.
         if (t.gezogenAm || t.geschenkGekauftAm) {
           tx.update(db.doc(`${teilnehmerPfad(daten.rundeId)}/${t.id}`), {gezogenAm: null, geschenkGekauftAm: null});
         }
       });
       tx.update(ref, {status: 'ausgelost', ausgelostAm: jetzt, aktualisiertAm: jetzt});
-      return {...aktuell, status: 'ausgelost', ausgelostAm: jetzt};
+      return {runde: {...aktuell, status: 'ausgelost', ausgelostAm: jetzt}, teilnehmer: alle};
     });
     const versand = await ladeZurAuslosungEin(ctx, daten.rundeId, runde, teilnehmer);
     return {...await organisatorSicht(db, daten.rundeId, runde), versand};
@@ -1575,21 +1621,23 @@ const VERWALTEN = {
     if (runde.status !== 'ausgelost') {
       throw new HttpsError('failed-precondition', 'Die Runde ist noch nicht ausgelost.');
     }
-    const [zuordnungen, teilnehmer] = await Promise.all([
-      db.collection(zuordnungenPfad(daten.rundeId)).limit(MAX_TEILNEHMER).get(),
-      ladeTeilnehmer(db, daten.rundeId),
-    ]);
-    const schritte = zuordnungen.docs.map((doc) => (batch) => batch.delete(doc.ref));
-    teilnehmer.filter((t) => t.gezogenAm || t.geschenkGekauftAm).forEach((t) => {
-      schritte.push((batch) => batch.update(
-          db.doc(`${teilnehmerPfad(daten.rundeId)}/${t.id}`), {gezogenAm: null, geschenkGekauftAm: null}));
+    // Wie beim Auslosen: Status, Zuordnung und Teilnehmer liest die Transaktion selbst (Tech-Check F19).
+    await db.runTransaction(async (tx) => {
+      if ((await leseRundeInTransaktion(tx, ref, HttpsError)).status !== 'ausgelost') {
+        throw new HttpsError('failed-precondition', 'Die Runde ist noch nicht ausgelost.');
+      }
+      const zuordnungen = await tx.get(db.collection(zuordnungenPfad(daten.rundeId)).limit(MAX_TEILNEHMER));
+      const teilnehmer = await ladeTeilnehmer(db, daten.rundeId, tx);
+      zuordnungen.docs.forEach((doc) => tx.delete(doc.ref));
+      teilnehmer.filter((t) => t.gezogenAm || t.geschenkGekauftAm).forEach((t) => {
+        tx.update(db.doc(`${teilnehmerPfad(daten.rundeId)}/${t.id}`), {gezogenAm: null, geschenkGekauftAm: null});
+      });
+      tx.update(ref, {
+        status: 'offen',
+        ausgelostAm: null,
+        aktualisiertAm: FieldValue.serverTimestamp(),
+      });
     });
-    schritte.push((batch) => batch.update(ref, {
-      status: 'offen',
-      ausgelostAm: null,
-      aktualisiertAm: FieldValue.serverTimestamp(),
-    }));
-    await schreibeInBatches(db, schritte);
     await loescheVormerker(db, daten.rundeId);
     return organisatorSicht(db, daten.rundeId, {...runde, status: 'offen', ausgelostAm: null});
   },

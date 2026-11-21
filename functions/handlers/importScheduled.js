@@ -12,6 +12,7 @@ const {consumeDailyQuota} = require('../shared/rateLimit');
 const {DEFAULT_AI_RECIPE_PROMPT} = require('../shared/gemini');
 const {finalizeImportJobBackground, failImportJobBackground, isReelImportSource, runImportFromSource} = require('../shared/importJobs');
 const {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom, geminiApiKey} = require('../shared/secrets');
+const {mailFehlerCode} = require('../shared/mailFehler');
 
 // Firebase Web API key, used only by dailyAiImporterTest to exchange a
 // server-minted custom token for an ID token so the nightly test can call
@@ -522,7 +523,7 @@ exports.dailyAiImporterTest = onSchedule(
             `dailyAiImporterTest: email sent to ${adminEmails.length} admin(s)`,
         );
       } catch (mailErr) {
-        console.error('dailyAiImporterTest: error sending email:', mailErr);
+        console.error('dailyAiImporterTest: error sending email:', mailFehlerCode(mailErr));
       }
     },
 );

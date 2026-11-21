@@ -4,6 +4,7 @@
 
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const {launchBrowser} = require('../launchBrowser');
+const {abrufOeffentlich, schuetzeSeite} = require('../shared/oeffentlicherAbruf');
 const {requireAiCaller} = require('../shared/auth');
 const {ALLOWED_ORIGINS} = require('../shared/common');
 const {RECIPE_STEP_STYLE_RULE, RECIPE_STEP_BOUNDARY_RULE, callGeminiAPI, callGeminiTextAPI} = require('../shared/gemini');
@@ -610,7 +611,8 @@ exports.fetchRecipeHtml = onCall(
       console.log(`fetchRecipeHtml request from user ${userId} for URL: ${url}`);
 
       try {
-        const response = await fetch(url, {
+        // Only public targets, every redirect checked (Tech-Check S28).
+        const response = await abrufOeffentlich(url, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
@@ -622,8 +624,7 @@ exports.fetchRecipeHtml = onCall(
             'Sec-Fetch-Site': 'none',
             'Sec-Fetch-User': '?1',
           },
-          redirect: 'follow',
-          signal: AbortSignal.timeout(20000),
+          timeoutMs: 20000,
         });
 
         if (!response.ok) {
@@ -647,6 +648,11 @@ exports.fetchRecipeHtml = onCall(
         return {html: html.slice(0, MAX_FETCH_HTML_SIZE)};
       } catch (error) {
         if (error instanceof HttpsError) throw error;
+        if (error.code === 'ZIEL_GESPERRT') {
+          // The host or a redirect resolved to an internal address.
+          console.warn(`fetchRecipeHtml: blocked target for user ${userId}`);
+          throw new HttpsError('invalid-argument', 'URL targets a disallowed host');
+        }
         console.error(`fetchRecipeHtml failed for user ${userId}:`, error);
         if (error.name === 'TimeoutError' || error.name === 'AbortError') {
           throw new HttpsError('deadline-exceeded', 'Website took too long to respond');
@@ -714,6 +720,8 @@ exports.captureWebsiteScreenshot = onCall(
         browser = await launchBrowser();
 
         const page = await browser.newPage();
+        // Every request of the page only to public targets (Tech-Check S28).
+        await schuetzeSeite(page);
         await page.setViewport({ width: 1280, height: 800 });
 
         // Hide automation fingerprint before any page scripts run

@@ -15,11 +15,11 @@
  * Das Bild selbst lädt erst der Browser des Betrachters direkt von der Seite des Shops.
  */
 
-const dns = require('dns');
 const http = require('http');
 const https = require('https');
 const net = require('net');
 const zlib = require('zlib');
+const {istOeffentlicheAdresse, erstelleLookup, pruefeZiel, rohHost} = require('./shared/oeffentlicherAbruf');
 
 const MAX_LINK = 2000;
 const MAX_TITEL = 200;
@@ -46,38 +46,8 @@ const ANFRAGE_HEADER = {
 // Adressen
 // ---------------------------------------------------------------------------
 
-// Nicht öffentlich: privat, Loopback, Link-Local (Metadaten-Server), CGNAT,
-// Dokumentation, Benchmark, Multicast, reserviert.
-const GESPERRT = new net.BlockList();
-[
-  ['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10], ['127.0.0.0', 8],
-  ['169.254.0.0', 16], ['172.16.0.0', 12], ['192.0.0.0', 24], ['192.0.2.0', 24],
-  ['192.88.99.0', 24], ['192.168.0.0', 16], ['198.18.0.0', 15], ['198.51.100.0', 24],
-  ['203.0.113.0', 24], ['224.0.0.0', 4], ['240.0.0.0', 4],
-].forEach(([netz, praefix]) => GESPERRT.addSubnet(netz, praefix, 'ipv4'));
-// IPv6: nur globale Unicast-Adressen (2000::/3) ohne Sonderbereiche (Teredo, 6to4,
-// Dokumentation). Alles außerhalb – Loopback, ULA, Link-Local, IPv4-gemappt, NAT64 –
-// fällt damit schon heraus.
-const IPV6_GLOBAL = new net.BlockList();
-IPV6_GLOBAL.addSubnet('2000::', 3, 'ipv6');
-[['2001::', 23], ['2001:db8::', 32], ['2002::', 16], ['3fff::', 20]]
-    .forEach(([netz, praefix]) => GESPERRT.addSubnet(netz, praefix, 'ipv6'));
-
-/**
- * @param {string} adresse - IP-Adresse
- * @return {boolean} true, wenn die Adresse öffentlich im Internet erreichbar ist
- */
-function istOeffentlicheAdresse(adresse) {
-  const typ = net.isIP(adresse);
-  if (typ === 4) return !GESPERRT.check(adresse, 'ipv4');
-  if (typ === 6) return IPV6_GLOBAL.check(adresse, 'ipv6') && !GESPERRT.check(adresse, 'ipv6');
-  return false;
-}
-
-/** Hostname ohne die eckigen Klammern einer IPv6-Adresse. */
-function rohHost(url) {
-  return url.hostname.replace(/^\[|\]$/g, '');
-}
+// Adressprüfung, DNS-Lookup und Zielprüfung teilt sich die Link-Vorschau mit den
+// Rezept-Importen (Tech-Check S28): shared/oeffentlicherAbruf.js.
 
 const SATZZEICHEN_AM_ENDE = /[.,;:!?'"»“”]+$/;
 
@@ -303,42 +273,6 @@ function leseVorschauAusHtml(html, seitenUrl) {
 // ---------------------------------------------------------------------------
 // Abruf
 // ---------------------------------------------------------------------------
-
-/**
- * DNS-Lookup, der nur erlaubte Adressen herausgibt. net.connect ruft ihn für jede
- * Verbindung auf, die Prüfung gilt also für genau die Adresse, zu der verbunden wird.
- * @param {function(string): boolean} istErlaubt
- * @return {function} lookup im Format von dns.lookup
- */
-function erstelleLookup(istErlaubt) {
-  return function lookup(hostname, optionen, callback) {
-    if (typeof optionen === 'function') {
-      callback = optionen;
-      optionen = {};
-    }
-    const familie = optionen && (optionen.family === 4 || optionen.family === 6) ? optionen.family : 0;
-    dns.lookup(hostname, {all: true, family: familie, hints: optionen?.hints}, (fehler, adressen) => {
-      if (fehler) return callback(fehler);
-      if (!adressen.length || adressen.some((a) => !istErlaubt(a.address))) {
-        const gesperrt = new Error(`Ziel nicht erlaubt: ${hostname}`);
-        gesperrt.code = 'ZIEL_GESPERRT';
-        return callback(gesperrt);
-      }
-      if (optionen && optionen.all) return callback(null, adressen);
-      return callback(null, adressen[0].address, adressen[0].family);
-    });
-  };
-}
-
-function pruefeZiel(url, {istErlaubt, nurStandardPorts}) {
-  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
-    throw new Error('Adresse nicht erlaubt');
-  }
-  if (nurStandardPorts && url.port !== '') throw new Error('Port nicht erlaubt');
-  const host = rohHost(url);
-  // IP-Adressen im Link umgehen den Lookup und werden hier geprüft.
-  if (!host || (net.isIP(host) && !istErlaubt(host))) throw new Error('Ziel nicht erlaubt');
-}
 
 /** Cookies einer Antwort für die nächste Anfrage an denselben Host (manche Shops leiten sonst im Kreis). */
 function merkeKekse(kekse, host, setCookie) {

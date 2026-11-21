@@ -3,13 +3,19 @@
  */
 
 const {HttpsError} = require('firebase-functions/v2/https');
+const net = require('net');
 const {launchBrowser} = require('../launchBrowser');
+const {istOeffentlicheAdresse, rohHost, abrufOeffentlich, schuetzeSeite} = require('./oeffentlicherAbruf');
 const {transcribeVideoWithGemini, callGeminiTextAPI, callGeminiAPI} = require('./gemini');
 const {extractJsonLdRecipeCandidateFromHtml, extractMicrodataRecipeCandidateFromHtml, jsonLdCandidateToText, extractPlainTextFromHtml, looksLikeIncompleteRecipe} = require('./htmlExtraction');
 
 /**
  * Validate that a URL does not target internal/private infrastructure (SSRF guard).
  * Throws an HttpsError if the URL is blocked.
+ *
+ * This is the early, synchronous check (clear error before rate limiting). It cannot see
+ * where a hostname resolves to or redirects; that is checked when connecting
+ * (abrufOeffentlich, schuetzeSeite in shared/oeffentlicherAbruf.js, Tech-Check S28).
  * @param {string} urlString - The URL to validate
  */
 function assertPublicUrl(urlString) {
@@ -23,8 +29,18 @@ function assertPublicUrl(urlString) {
   if (!['http:', 'https:'].includes(urlObj.protocol)) {
     throw new HttpsError('invalid-argument', 'URL must use HTTP or HTTPS protocol');
   }
+  if (urlObj.username || urlObj.password) {
+    throw new HttpsError('invalid-argument', 'URL must not contain credentials');
+  }
 
   const hostname = urlObj.hostname.toLowerCase();
+
+  // IP addresses in the URL: only public ones (also link-local, CGNAT, IPv6 ULA,
+  // IPv4-mapped IPv6 and 0.0.0.0/8, which the patterns below missed).
+  const host = rohHost(urlObj);
+  if (net.isIP(host) && !istOeffentlicheAdresse(host)) {
+    throw new HttpsError('invalid-argument', 'URL targets a disallowed host');
+  }
 
   // Block loopback and link-local
   if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]' ||
@@ -276,6 +292,8 @@ async function runImportFromInstagram(url, {language = 'de', apiKey, cuisineType
     browser = await launchBrowser();
 
     const page = await browser.newPage();
+    // Every request of the page only to public targets (Tech-Check S28).
+    await schuetzeSeite(page);
 
     // Hide automation fingerprint before any page scripts run
     await page.evaluateOnNewDocument(() => {
@@ -625,7 +643,8 @@ async function runImportFromUrl(url, {apiKey, cuisineTypes, mealCategories, sour
   let html = null;
   try {
     console.log(`[importRecipe:fetch_html:start] host=${hostname}`);
-    const fetchResponse = await fetch(url, {
+    // Only public targets, every redirect checked (Tech-Check S28).
+    const fetchResponse = await abrufOeffentlich(url, {
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
@@ -641,8 +660,7 @@ async function runImportFromUrl(url, {apiKey, cuisineTypes, mealCategories, sour
         'Sec-Fetch-Site': 'none',
         'Sec-Fetch-User': '?1',
       },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(20000),
+      timeoutMs: 20000,
     });
     if (fetchResponse.ok) {
       html = (await fetchResponse.text()).slice(0, MAX_FETCH_HTML_SIZE);
@@ -798,6 +816,8 @@ async function runImportFromUrl(url, {apiKey, cuisineTypes, mealCategories, sour
     browser = await launchBrowser();
 
     const page = await browser.newPage();
+    // Every request of the page only to public targets (Tech-Check S28).
+    await schuetzeSeite(page);
     await page.setViewport({width: 1280, height: 800});
     await page.evaluateOnNewDocument(() => {
       Object.defineProperty(navigator, 'webdriver', {get: () => false});
