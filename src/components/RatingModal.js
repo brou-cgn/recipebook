@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './RatingModal.css';
+import Button from './Button';
 import { rateRecipe, getUserRatingData, subscribeToRatingSummary, getAllRatings, deleteRating } from '../utils/recipeRatings';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
@@ -217,14 +218,14 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
           )}
         </div>
         <div className="rating-modal-footer">
-          <button className="rating-modal-cancel-btn" onClick={handleClose}>Abbrechen</button>
-          <button
-            className="rating-modal-save-btn"
+          <Button variant="secondary" onClick={handleClose}>Abbrechen</Button>
+          <Button
+            variant="primary"
             onClick={handleSave}
             disabled={!selectedRating || isSubmitting || saved || (isGuest && !guestName.trim())}
           >
             {saved ? '✓ Gespeichert' : isSubmitting ? 'Speichern…' : 'Speichern'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

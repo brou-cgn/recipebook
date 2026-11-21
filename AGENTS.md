@@ -59,6 +59,14 @@ erzwungen — wo das gilt, steht die Datei dabei.
   Verwerfen eines Imports. Diese Rückfragen nutzen `src/components/ConfirmDialog.js`, nie
   `window.confirm`.
 - Die Desktop-Spezifikation gilt nur für Desktop. Mobil gilt die Linksswipe-Geste.
+- **Knöpfe**: `src/components/Button.js` mit den Rollen `primary` (die eine abschließende Aktion,
+  höchstens eine je Bildschirm oder Dialog), `secondary` (Abbrechen, Zurück, weitere Aktionen),
+  `danger` (nur die Bestätigung im Lösch-Dialog), `danger-quiet` (Löschen in Werkzeugleisten) und
+  `ghost` (selten Gebrauchtes). Neben-Knopf links, Haupt-Knopf rechts. Keine eigenen Knopf-Klassen
+  mit Fläche; erzwungen durch `src/buttonPolicy.test.js` (Baseline je CSS-Datei, darf nur sinken).
+  Außerhalb des Systems: schwebende runde Knöpfe, `DeleteRowButton`, Chips, Tabs, Schalter. Im
+  Event-Bereich ist der Haupt-Knopf grün (Token in `Button.css`), die Wichtel-Teilnehmerseite behält
+  ihre Gestaltung. Vorgabe: Designvorschlag https://claude.ai/artifact/6rhAdarajgh9jkVg2HJ5zk (Tech-Check A8).
 - Hooks wiederverwenden, keine eigene Logik: `src/hooks/useSwipeToDelete.js`
   (Direction-Lock 6 px, Schwelle 56 px, max. 96 px Offset) und `src/hooks/useUndoableDelete.js`
   (Mutation erst nach Ablauf des Undo-Fensters oder bei Unmount/`pagehide`;
