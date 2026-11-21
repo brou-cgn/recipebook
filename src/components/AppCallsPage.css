@@ -102,6 +102,12 @@
   background: #f8f9fa;
 }
 
+/* Aktionen in Tabellenzeilen („Link erstellen“, „IDs zuordnen“ …) bleiben einzeilig; umbrechen soll auf
+   dem Handy der Rezeptname daneben, nicht die Beschriftung des Knopfs */
+.app-calls-table .ui-button {
+  white-space: nowrap;
+}
+
 .app-calls-empty {
   text-align: center;
   padding: 60px 20px;
