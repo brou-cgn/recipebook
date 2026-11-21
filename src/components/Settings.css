@@ -133,7 +133,8 @@
 
 .settings-tab-header h2 {
   margin: 0;
-  color: #333;
+  /* Token statt #333: Im Dunkelmodus war die Überschrift jedes Reiters sonst kaum sichtbar (Tech-Check P15) */
+  color: var(--color-text-strong);
   font-size: 28px;
   font-weight: 700;
 }

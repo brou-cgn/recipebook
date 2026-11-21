@@ -71,7 +71,7 @@ const BASELINE = {
   'components/RecipeTypeahead.css': 12,
   'components/SavingOverlay.css': 1,
   'components/SeasonMatrixTab.css': 61,
-  'components/Settings.css': 191,
+  'components/Settings.css': 190,
   'components/SharePage.css': 9,
   'components/ShoppingListModal.css': 23,
   'components/SortCarousel.css': 1,
