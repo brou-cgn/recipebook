@@ -2,7 +2,9 @@
 .rating-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  /* Hintergrund wie beim Einkaufslisten-Dialog: weichgezeichnet statt abgedunkelt */
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   z-index: 2000;
   display: flex;
   align-items: center;
