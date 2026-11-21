@@ -36,3 +36,6 @@ firebase-adminsdk-*.json
 
 # Lokale Build-Logs
 .tmp-*.log
+
+# Screenshots der Sichtprüfung (scripts/screenshots/run.sh)
+screenshots-out/

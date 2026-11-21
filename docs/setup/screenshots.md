@@ -1,0 +1,55 @@
+# Screenshots und Sichtprüfung
+
+Ein Befehl fotografiert eine feste Liste von Bildschirmen der App: hell und dunkel, auf
+Desktop-Breite (1280 px) und Handy-Breite (iPhone 13). Die App läuft dafür lokal gegen die
+Firebase-Emulatoren mit erfundenen Testdaten, nicht gegen das echte Projekt. Zweck: UI-Änderungen
+vor dem PR ansehen, statt sie über mehrere PRs auszuprobieren (Tech-Check W2, Roadmap-Phase 7
+„UI-System“).
+
+## Voraussetzungen
+
+- Node 20 oder neuer, `npm ci` im Repo-Wurzelordner (für Vite).
+- Java 21 oder neuer für den Firestore-Emulator.
+- Einmal `cd rules-tests && npm ci` (bringt `firebase-tools` mit, dieselben Emulatoren wie die Regel-Tests).
+- Playwright mit Chromium. In den Claude-Cloud-Sessions ist es vorinstalliert; lokal
+  `npm i -g playwright && npx playwright install chromium`.
+
+## Aufruf
+
+```bash
+scripts/screenshots/run.sh                       # alle Bildschirme nach screenshots-out/
+scripts/screenshots/run.sh vorher                # in einen eigenen Ordner (relativ zum Repo)
+scripts/screenshots/run.sh nachher --only rezept,kochbuch
+```
+
+Ein Lauf dauert rund drei Minuten. Ergebnis: je Variante ein Ordner mit PNG-Dateien und eine
+`index.html` mit allen Bildern als Raster. `screenshots-out/` steht in `.gitignore`.
+
+Vorher-nachher: einmal auf `main` (Ordner `vorher`), einmal auf dem Branch (Ordner `nachher`),
+dann beide `index.html` nebeneinander ansehen.
+
+## Was passiert
+
+1. `run.sh` startet Auth-, Firestore- und Storage-Emulator (`firebase emulators:exec`, Ports aus
+   `firebase.json`, Projekt `demo-recipebook`) und beendet sie am Ende wieder.
+2. `seed.js` leert die Emulatoren und legt die Testdaten an: Admin-Konto `testkoch@example.com`
+   (Passwort `screenshots-only`, gilt nur im Emulator), sechs Rezepte mit Platzhalterbildern, die
+   öffentliche und eine private Liste, ein Menü, ein Event. Geschrieben wird über die REST-Schnittstelle
+   des Emulators an den Regeln vorbei; die App selbst läuft mit den echten `firestore.rules`.
+3. `capture.js` startet Vite mit `REACT_APP_USE_EMULATORS=true`, meldet sich an und fotografiert
+   die Bildschirme aus der Liste `SCREENS`. Nur mit diesem Schalter verbindet sich die App mit den
+   Emulatoren (`src/firebase.js`); im Produktions-Build fällt der Block weg.
+
+## Bildschirme ergänzen
+
+Neue Einträge in `SCREENS` in `scripts/screenshots/capture.js`: ein Name und eine Funktion, die
+vom Kochbuch aus dorthin navigiert und `shot()` aufruft. Fehlt ein Bild, steht der Grund in der
+Ausgabe und oben in der `index.html`; die übrigen Bilder entstehen trotzdem.
+
+## Grenzen
+
+- Cloud Functions laufen nicht mit: KI-Import, Nährwertberechnung, Einladungen und Push gehen hier nicht.
+- Es gibt keine gepflegten Button-Icons. Knöpfe zeigen deshalb die Standardwerte aus
+  `DEFAULT_BUTTON_ICONS`, bei zwei Rezept-Knöpfen ist das Text, der aus dem Knopf läuft (Tech-Check P10).
+- Bilder sind SVG-Platzhalter statt Fotos aus Storage.
+- Die Bilder zeigen den Zustand nach dem Laden, keine Hover- oder Ladezustände.

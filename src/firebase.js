@@ -8,11 +8,12 @@ import {
   initializeFirestore,
   getFirestore,
   persistentLocalCache,
-  persistentMultipleTabManager
+  persistentMultipleTabManager,
+  connectFirestoreEmulator
 } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
-import { getFunctions } from 'firebase/functions';
-import { getStorage } from 'firebase/storage';
+import { getAuth, connectAuthEmulator } from 'firebase/auth';
+import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { getMessaging, isSupported as isMessagingSupported } from 'firebase/messaging';
 
 // Firestore's multi-tab persistence (`persistentMultipleTabManager`) mirrors
@@ -148,6 +149,16 @@ const functions = getFunctions(app);
 
 // Initialize Firebase Storage
 const storage = getStorage(app);
+
+// Lokale Firebase-Emulatoren (Screenshots und Sichtprüfung, docs/setup/screenshots.md):
+// nur wenn der Build REACT_APP_USE_EMULATORS=true mitbekommt. Im Produktions-Build ist die
+// Bedingung fest falsch, der Block fällt beim Bauen weg. Ports wie in firebase.json.
+if (process.env.REACT_APP_USE_EMULATORS === 'true') {
+  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+  connectFirestoreEmulator(db, '127.0.0.1', 8080);
+  connectFunctionsEmulator(functions, '127.0.0.1', 5001);
+  connectStorageEmulator(storage, '127.0.0.1', 9199);
+}
 
 // Initialize Firebase Cloud Messaging (only in supported environments)
 // Exported as a Promise so consumers can await the resolved Messaging instance

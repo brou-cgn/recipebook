@@ -82,6 +82,10 @@ erzwungen — wo das gilt, steht die Datei dabei.
   Neue Einträge nur mit Datum und Grund.
 - Tests nicht überspringen oder abschalten, um grün zu werden.
 - Komponententests mit dem Helper `renderWithProviders` (`src/test-utils.js`).
+- Sichtprüfung: Wer UI ändert und Java plus Playwright hat, fotografiert die Bildschirme vorher und
+  nachher mit `scripts/screenshots/run.sh` (lokale Firebase-Emulatoren mit Testdaten, hell und dunkel,
+  Handy und Desktop; `docs/setup/screenshots.md`) und sieht die Bilder vor dem PR an. Fehlt ein
+  betroffener Bildschirm, in `scripts/screenshots/capture.js` ergänzen.
 - Cloud Functions: Tests und Lint in `functions/` (`npm run lint`).
 - Cloud Functions-Aufbau (Tech-Check F2): `functions/index.js` enthält nur Re-Exports. Jede Function
   liegt in `functions/handlers/<gruppe>.js`; von mehreren Gruppen genutzte Helfer in
