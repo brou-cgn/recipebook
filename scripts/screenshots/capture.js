@@ -210,6 +210,26 @@ const SCREENS = [
   })),
   { name: 'chefkoch', run: async (page, shot) => { await openMenuItem(page, 'Chefkoch & mehr'); await shot(); } },
   { name: 'einstellungen', run: async (page, shot) => { await openMenuItem(page, 'Einstellungen'); await shot(); } },
+  // Weitere Reiter der Einstellungen (Admin), je als ganze Seite
+  ...[
+    ['einstellungen-druck', 'Drucklayout'],
+    ['einstellungen-kochatelier', 'Kochatelier'],
+    ['einstellungen-entdeckt', 'Für dich entdeckt'],
+    ['einstellungen-benutzer', 'Benutzerverwaltung'],
+    ['einstellungen-icons', 'Bilder & Icons'],
+    ['einstellungen-saison', 'Saisonmatrix'],
+    ['einstellungen-naehrwerte', 'Nährwerte'],
+    ['einstellungen-getraenke', 'Getränkegewichtung'],
+  ].map(([name, label]) => ({
+    name,
+    fullPage: true,
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Einstellungen');
+      await page.locator('.tab-button', { hasText: label }).first().click();
+      await pause(page, 1000);
+      await shot();
+    },
+  })),
   {
     name: 'einstellungen-listen',
     run: async (page, shot) => {
