@@ -25,6 +25,7 @@ import ButtonIconsAdminTab from './ButtonIconsAdminTab';
 import DiscoverTopicsTab from './DiscoverTopicsTab';
 import { downloadRecipesKeywordCsv } from '../utils/recipeKeywordsCsv';
 import DeleteRowButton from './DeleteRowButton';
+import Button from './Button';
 import UndoSnackbar from './UndoSnackbar';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
@@ -1601,20 +1602,19 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                 mit Vorschlägen für Themenschlagwörter in den Spalten Anlass, Saison, Aufwand,
                 Ernährung und Hauptzutat. Die Spalte ID dient als Schlüssel für den späteren Reimport.
               </p>
-              <button
-                type="button"
-                className="reset-button"
+              <Button
+                variant="secondary"
                 disabled={allRecipes.length === 0}
                 onClick={() => downloadRecipesKeywordCsv(allRecipes)}
               >
                 CSV exportieren
-              </button>
+              </Button>
             </div>
 
             <div className="settings-actions">
-              <button className="save-button" onClick={handleSave}>
+              <Button variant="primary" onClick={handleSave}>
                 Einstellungen speichern
-              </button>
+              </Button>
             </div>
           </>
         ) : activeTab === 'druck' ? (
@@ -1878,9 +1878,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
             </div>
 
             <div className="settings-actions">
-              <button className="save-button" onClick={handleSave}>
+              <Button variant="primary" onClick={handleSave}>
                 Einstellungen speichern
-              </button>
+              </Button>
             </div>
           </>
         ) : activeTab === 'lists' ? (
@@ -2193,12 +2193,12 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
         </div>
 
         <div className="settings-actions">
-          <button className="reset-button" onClick={handleReset}>
+          <Button variant="ghost" onClick={handleReset}>
             Auf Standard zurücksetzen
-          </button>
-          <button className="save-button" onClick={handleSave}>
+          </Button>
+          <Button variant="primary" onClick={handleSave}>
             Einstellungen speichern
-          </button>
+          </Button>
         </div>
       </>
         ) : activeTab === 'ai' ? (
@@ -2217,22 +2217,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                 rows={15}
               />
               <div className="prompt-actions">
-                <button
-                  className="save-button"
-                  onClick={async () => {
-                    try {
-                      await saveAIRecipePrompt(aiPrompt, currentUser?.id);
-                      setAiPromptHistory(await getAIRecipePromptHistory());
-                      alert('KI-Prompt erfolgreich gespeichert!');
-                    } catch (e) {
-                      alert('Fehler beim Speichern: ' + e.message);
-                    }
-                  }}
-                >
-                  Speichern
-                </button>
-                <button
-                  className="reset-button"
+                <Button
+                  variant="ghost"
                   onClick={async () => {
                     if (window.confirm('Möchten Sie den KI-Prompt wirklich auf den Standard zurücksetzen?')) {
                       try {
@@ -2247,7 +2233,21 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   }}
                 >
                   Auf Standard zurücksetzen
-                </button>
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={async () => {
+                    try {
+                      await saveAIRecipePrompt(aiPrompt, currentUser?.id);
+                      setAiPromptHistory(await getAIRecipePromptHistory());
+                      alert('KI-Prompt erfolgreich gespeichert!');
+                    } catch (e) {
+                      alert('Fehler beim Speichern: ' + e.message);
+                    }
+                  }}
+                >
+                  Speichern
+                </Button>
               </div>
               {aiPromptHistory.length > 0 && (
                 <div className="prompt-history">
@@ -2299,13 +2299,13 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                 <p className="section-description">
                   Importiert alle Einträge aus der <code>FAQ.md</code>-Datei automatisch als FAQ-Einträge. Bereits vorhandene Einträge werden nicht gelöscht.
                 </p>
-                <button
-                  className="save-button"
+                <Button
+                  variant="secondary"
                   onClick={handleImportFaqFromMd}
-                  disabled={importingFaq}
+                  loading={importingFaq}
                 >
-                  {importingFaq ? 'Importiere...' : 'FAQ.md importieren'}
-                </button>
+                  {importingFaq ? 'Importiere …' : 'FAQ.md importieren'}
+                </Button>
               </div>
 
               {/* FAQ form */}
@@ -2397,18 +2397,18 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   />
                 </div>
                 <div className="faq-form-actions">
-                  <button
-                    className="save-button"
-                    onClick={handleSaveFaq}
-                    disabled={savingFaq}
-                  >
-                    {savingFaq ? 'Speichern...' : editingFaqId ? 'Kochschule-Eintrag aktualisieren' : 'Kochschule-Eintrag hinzufügen'}
-                  </button>
                   {editingFaqId && (
-                    <button className="reset-button" onClick={handleCancelFaqEdit}>
+                    <Button variant="secondary" onClick={handleCancelFaqEdit}>
                       Abbrechen
-                    </button>
+                    </Button>
                   )}
+                  <Button
+                    variant="primary"
+                    onClick={handleSaveFaq}
+                    loading={savingFaq}
+                  >
+                    {savingFaq ? 'Speichert …' : editingFaqId ? 'Kochschule-Eintrag aktualisieren' : 'Kochschule-Eintrag hinzufügen'}
+                  </Button>
                 </div>
               </div>
 

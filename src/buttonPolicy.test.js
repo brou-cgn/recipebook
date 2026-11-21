@@ -46,8 +46,6 @@ const BASELINE = {
   'components/NetworkPage.css': 2,
   'components/NutritionModal.css': 15,
   'components/OcrScanModal.css': 28,
-  'components/PasswordChangeModal.css': 2,
-  'components/PersonalDataPage.css': 4,
   'components/PortionSelector.css': 5,
   'components/PrintFormatEditor.css': 9,
   'components/RatingModal.css': 1,

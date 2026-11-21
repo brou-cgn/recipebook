@@ -3,6 +3,7 @@ import { defaultIcon } from '../utils/defaultButtonIcons';
 import StarIcon from './icons/StarIcon';
 import TrashIcon from './icons/TrashIcon';
 import './RecipeForm.css';
+import Button from './Button';
 import { removeEmojis, containsEmojis } from '../utils/emojiUtils';
 import { fileToBase64, isBase64Image, analyzeImageBrightness, generateThumbnailBlob } from '../utils/imageUtils';
 import { uploadRecipeImage, deleteRecipeImage, uploadRecipeThumbnail } from '../utils/storageUtils';
@@ -1397,25 +1398,23 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               : (recipe ? 'Rezept bearbeiten' : 'Neues Rezept hinzufügen')}
         </h2>
         <div className="recipe-form-header-actions">
-          <button
-            type="button"
-            className="recipe-form-header-cancel"
+          <Button
+            variant="secondary"
             onClick={onCancel}
             title="Abbrechen"
             aria-label="Rezeptbearbeitung abbrechen"
           >
             Abbrechen
-          </button>
-          <button
-            type="button"
-            className="recipe-form-header-save"
+          </Button>
+          <Button
+            variant="primary"
             onClick={handleFabClick}
-            disabled={isSaving}
+            loading={isSaving}
             title={recipe ? 'Rezept aktualisieren' : 'Rezept speichern'}
             aria-label={recipe ? 'Rezept aktualisieren' : 'Rezept speichern'}
           >
-            {isSaving ? '…' : (recipe ? 'Aktualisieren' : 'Speichern')}
-          </button>
+            {isSaving ? 'Speichert …' : (recipe ? 'Aktualisieren' : 'Speichern')}
+          </Button>
         </div>
       </div>
 

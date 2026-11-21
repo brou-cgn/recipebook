@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import StarIcon from './icons/StarIcon';
 import TrashIcon from './icons/TrashIcon';
 import './MenuForm.css';
+import Button from './Button';
 import './EventsPage.css';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getSavedSections, saveSectionNames, createMenuSection, applyItemOrder } from '../utils/menuSections';
@@ -1676,26 +1677,24 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
       <div className="menu-form-header">
         <h2 className="menu-form-header-title">{menu ? 'Menü bearbeiten' : 'Neues Menü erstellen'}</h2>
         <div className="menu-form-header-actions">
-          <button
-            type="button"
-            className="menu-form-header-cancel"
+          <Button
+            variant="secondary"
             onClick={onCancel}
             disabled={savingMenu}
             title="Abbrechen"
             aria-label="Menübearbeitung abbrechen"
           >
             Abbrechen
-          </button>
-          <button
-            type="button"
-            className="menu-form-header-save"
+          </Button>
+          <Button
+            variant="primary"
             onClick={handleFabClick}
-            disabled={savingMenu}
+            loading={savingMenu}
             title={menu ? 'Menü aktualisieren' : 'Menü speichern'}
             aria-label={menu ? 'Menü aktualisieren' : 'Menü speichern'}
           >
-            {savingMenu ? '…' : (menu ? 'Aktualisieren' : 'Speichern')}
-          </button>
+            {savingMenu ? 'Speichert …' : (menu ? 'Aktualisieren' : 'Speichern')}
+          </Button>
         </div>
       </div>
 
