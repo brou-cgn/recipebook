@@ -74,6 +74,11 @@
   --color-button-secondary-bg: var(--color-surface-raised);
   --color-button-secondary-hover: #e5e5e5;
   --color-button-secondary-text: var(--color-text-strong);
+  --color-button-secondary-border: transparent;
+  /* Neben-Knopf direkt auf dem Seitenhintergrund (--color-bg) statt in einer Karte: weiß mit Rand */
+  --color-button-secondary-page-bg: var(--color-surface);
+  --color-button-secondary-page-hover: var(--color-surface-raised);
+  --color-button-secondary-page-border: var(--color-border);
   --color-button-danger-bg: var(--color-bad);
   --color-button-danger-text: var(--color-on-bad);
   --color-button-danger-quiet-bg: var(--color-bad-tint);
@@ -149,6 +154,11 @@
   --color-button-secondary-bg: var(--color-surface-raised);
   --color-button-secondary-hover: #484848;
   --color-button-secondary-text: var(--color-text-strong);
+  --color-button-secondary-border: transparent;
+  /* Auf dem dunklen Seitenhintergrund hebt sich der Neben-Knopf ohnehin ab: unverändert */
+  --color-button-secondary-page-bg: var(--color-surface-raised);
+  --color-button-secondary-page-hover: #484848;
+  --color-button-secondary-page-border: transparent;
   --color-button-danger-bg: var(--color-bad);
   --color-button-danger-text: var(--color-on-bad);
   --color-button-danger-quiet-bg: var(--color-bad-tint);
