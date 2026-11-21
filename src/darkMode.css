@@ -1312,7 +1312,8 @@
 [data-theme="dark"] .shopping-list-overlay,
 [data-theme="dark"] .password-change-overlay,
 [data-theme="dark"] .recipe-typeahead-overlay,
-[data-theme="dark"] .group-dialog-overlay {
+[data-theme="dark"] .group-dialog-overlay,
+[data-theme="dark"] .ingredient-match-dialog-overlay {
   background: rgba(0, 0, 0, 0.7);
 }
 

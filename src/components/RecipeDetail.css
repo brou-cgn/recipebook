@@ -1130,7 +1130,9 @@ button.private-badge-button:active {
 .ingredient-match-dialog-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  /* Hintergrund wie beim Einkaufslisten-Dialog: weichgezeichnet statt abgedunkelt */
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
