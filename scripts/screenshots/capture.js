@@ -71,6 +71,37 @@ const SCREENS = [
       await page.getByRole('button', { name: 'Abbrechen' }).click();
     },
   },
+  {
+    name: 'kochdatum-dialog',
+    run: async (page, shot) => {
+      await openRecipe(page, 'Linsensuppe mit Kreuzkümmel');
+      await page.locator('[title="Kochdatum erfassen"]').first().click();
+      await page.locator('.cook-date-modal').first().waitFor();
+      await shot();
+    },
+  },
+  {
+    name: 'bewertung-dialog',
+    run: async (page, shot) => {
+      await openRecipe(page, 'Linsensuppe mit Kreuzkümmel');
+      await page.locator('[title="Bewerten"]').first().click();
+      await page.locator('.rating-modal').first().waitFor();
+      await shot();
+    },
+  },
+  {
+    // Auf dem Handy legt der schwebende Plus-Knopf die Liste an; der Bildschirm ist vorerst nur Desktop
+    name: 'liste-anlegen-dialog',
+    variants: ['desktop-hell', 'desktop-dunkel'],
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Chefkoch & mehr');
+      await page.locator('[aria-label^="Meine Mise en Place"]').first().click();
+      await pause(page, 1000);
+      await page.getByText('+ Liste erstellen').first().click();
+      await page.getByRole('dialog').first().waitFor();
+      await shot();
+    },
+  },
   { name: 'festtafel', run: async (page, shot) => { await openMenuItem(page, 'Festtafel'); await shot(); } },
   { name: 'events', run: async (page, shot) => { await openMenuItem(page, 'Events'); await shot(); } },
   { name: 'chefkoch', run: async (page, shot) => { await openMenuItem(page, 'Chefkoch & mehr'); await shot(); } },
@@ -106,8 +137,27 @@ function startVite() {
     REACT_APP_FIREBASE_APP_ID: 'demo-app',
     REACT_APP_USE_EMULATORS: 'true',
   };
-  const vite = spawn('npx', ['vite', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], { cwd: ROOT, env, stdio: 'ignore' });
+  // Eigene Prozessgruppe: npx startet Vite als Kindprozess, beendet wird die ganze Gruppe (stopVite)
+  const vite = spawn('npx', ['vite', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], { cwd: ROOT, env, stdio: 'ignore', detached: true });
   return vite;
+}
+
+function stopVite(vite) {
+  try {
+    process.kill(-vite.pid, 'SIGTERM');
+  } catch (e) {
+    vite.kill();
+  }
+}
+
+/** Läuft auf dem Port schon ein Server, zeigten die Bilder dessen Stand statt des Arbeitsstands. */
+async function assertPortFree() {
+  try {
+    await fetch(URL);
+  } catch (e) {
+    return;
+  }
+  throw new Error(`Port ${PORT} ist belegt (läuft noch ein Dev-Server?). Erst beenden, sonst zeigen die Bilder dessen Stand.`);
 }
 
 async function waitForServer() {
@@ -147,6 +197,7 @@ async function main() {
   const css = option('--css') ? fs.readFileSync(path.resolve(option('--css')), 'utf8') : null;
   const positional = args.filter((a, i) => !a.startsWith('--') && !valueIdx.has(i));
   const outDir = path.resolve(positional[0] || path.join(ROOT, 'screenshots-out'));
+  await assertPortFree();
   const vite = startVite();
   const results = [];
   try {
@@ -179,7 +230,7 @@ async function main() {
     }
     await browser.close();
   } finally {
-    vite.kill();
+    stopVite(vite);
   }
   writeIndex(outDir, results);
   const failed = results.filter((r) => r.error);
