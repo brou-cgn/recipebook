@@ -70,6 +70,7 @@
    sonst hebt sich die graue Fläche kaum ab (Entscheidung 21.11.2026). Dunkel bleibt alles gleich. */
 .recipe-detail-header,
 .menu-detail-header,
+.settings-header,
 .events-manage-links,
 .events-page-header-actions {
   --color-button-secondary-bg: var(--color-button-secondary-page-bg);

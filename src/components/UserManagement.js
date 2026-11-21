@@ -17,6 +17,7 @@ import {
   updateRolePermission
 } from '../utils/userManagement';
 import { initializeRecipeCounts } from '../utils/recipeFirestore';
+import Button from './Button';
 
 const ROLE_PERMISSION_COLUMNS = [
   { key: 'settingsAccess', label: 'Einstellungen', name: 'Einstellungen' },
@@ -418,19 +419,18 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
             <strong>Administratoren:</strong> {adminCount}
           </div>
           <div className="stat-item">
-            <button className="action-btn" onClick={loadUsers} title="KI-OCR Zähler aktualisieren">
+            <Button onClick={loadUsers} title="KI-OCR Zähler aktualisieren">
               ↻ KI-OCR Zähler aktualisieren
-            </button>
+            </Button>
           </div>
           <div className="stat-item">
-            <button
-              className="action-btn"
+            <Button
               onClick={handleRecalculateRecipeCounts}
-              disabled={recalculatingRecipeCounts}
+              loading={recalculatingRecipeCounts}
               title="Rezeptanzahl je Benutzer aus allen Rezepten neu berechnen"
             >
-              {recalculatingRecipeCounts ? 'Berechnung läuft…' : 'Rezeptzähler neu berechnen'}
-            </button>
+              {recalculatingRecipeCounts ? 'Berechnung läuft …' : 'Rezeptzähler neu berechnen'}
+            </Button>
           </div>
         </div>
       </div>
@@ -462,12 +462,12 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
               />
             </div>
             <div className="modal-actions">
-              <button className="btn-cancel" onClick={handleCancelEdit}>
+              <Button onClick={handleCancelEdit}>
                 Abbrechen
-              </button>
-              <button className="btn-save" onClick={handleSaveEdit}>
+              </Button>
+              <Button variant="primary" onClick={handleSaveEdit}>
                 Speichern
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -517,16 +517,16 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
               )}
             </div>
             <div className="modal-actions">
-              <button className="btn-cancel" onClick={handleCancelRoleEdit}>
+              <Button onClick={handleCancelRoleEdit}>
                 Abbrechen
-              </button>
-              <button 
-                className="btn-save" 
+              </Button>
+              <Button
+                variant="primary"
                 onClick={() => handleRoleChange(roleEditUser.id, selectedRole)}
                 disabled={selectedRole === roleEditUser.role}
               >
                 Berechtigung ändern
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -557,12 +557,12 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
               )}
             </div>
             <div className="modal-actions">
-              <button className="btn-cancel" onClick={handleCancelPasswordReset}>
+              <Button onClick={handleCancelPasswordReset}>
                 Abbrechen
-              </button>
-              <button className="btn-save" onClick={handleSetTemporaryPassword}>
+              </Button>
+              <Button variant="primary" onClick={handleSetTemporaryPassword}>
                 Passwort setzen
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -585,15 +585,15 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
               Rezepte bleiben bestehen.
             </p>
             <div className="modal-actions">
-              <button className="btn-cancel" onClick={handleCancelDelete}>
+              <Button onClick={handleCancelDelete}>
                 Abbrechen
-              </button>
-              <button 
-                className="btn-delete" 
+              </Button>
+              <Button
+                variant="danger"
                 onClick={() => handleDeleteUser(deleteConfirmUser.id)}
               >
                 Benutzer löschen
-              </button>
+              </Button>
             </div>
           </div>
         </div>

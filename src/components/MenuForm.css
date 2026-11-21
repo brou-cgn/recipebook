@@ -223,21 +223,6 @@
   font-size: 0.9rem;
 }
 
-.input-with-button button {
-  background: #402C1C;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.input-with-button button:hover {
-  background: #1a1a1a;
-}
-
 .sections-list {
   display: flex;
   flex-direction: column;

@@ -1915,9 +1915,9 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
                       }
                     }}
                   />
-                  <button type="button" onClick={() => handleAddSection()}>
+                  <Button onClick={() => handleAddSection()}>
                     Hinzufügen
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

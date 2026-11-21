@@ -12,6 +12,7 @@ import { createSeasonMatrixTemplateCsv, parseSeasonMatrixImport } from '../utils
 import { canManageSeasonMatrix } from '../utils/userManagement';
 import DeleteRowButton from './DeleteRowButton';
 import useUndoableDelete from '../hooks/useUndoableDelete';
+import Button from './Button';
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
 const REGION_OPTIONS = ['GLOBAL', 'DE', 'AT', 'CH'];
@@ -364,15 +365,17 @@ function SeasonMatrixTab({ currentUser }) {
           </p>
         </div>
         <div className="season-matrix-import-export-actions">
-          <button type="button" className="save-button" onClick={handleTemplateDownload}>
+          <Button onClick={handleTemplateDownload}>
             Template herunterladen
-          </button>
-          <label htmlFor="season-matrix-import-input" className={`save-button ${isImporting ? 'disabled' : ''}`}>
-            {isImporting ? 'Import läuft...' : 'Datei importieren'}
-          </label>
+          </Button>
+          <Button onClick={() => importInputRef.current?.click()} loading={isImporting}>
+            {isImporting ? 'Import läuft …' : 'Datei importieren'}
+          </Button>
           <input
             id="season-matrix-import-input"
             ref={importInputRef}
+            aria-label="Datei importieren"
+            tabIndex={-1}
             type="file"
             accept="text/csv,application/json"
             onChange={handleImport}
@@ -404,9 +407,9 @@ function SeasonMatrixTab({ currentUser }) {
           <option value="aktiv">Aktiv</option>
           <option value="inaktiv">Inaktiv</option>
         </select>
-        <button type="button" className="save-button season-matrix-new-button" onClick={resetForm}>
+        <Button className="season-matrix-new-button" onClick={resetForm}>
           Neu
-        </button>
+        </Button>
       </div>
 
       <div className="season-matrix-table-container">
@@ -691,12 +694,12 @@ function SeasonMatrixTab({ currentUser }) {
         </label>
 
         <div className="season-matrix-form-actions">
-          <button type="button" className="save-button" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? 'Speichern...' : 'Speichern'}
-          </button>
-          <button type="button" className="reset-button" onClick={resetForm}>
+          <Button onClick={resetForm}>
             Abbrechen
-          </button>
+          </Button>
+          <Button variant="primary" onClick={handleSave} loading={isSaving}>
+            {isSaving ? 'Speichert …' : 'Speichern'}
+          </Button>
         </div>
       </div>
     </div>

@@ -235,7 +235,7 @@ function NewUnitRow({ type, singular, plural, onTypeChange, onSingularChange, on
           <option key={opt.value} value={opt.value}>{opt.label}</option>
         ))}
       </select>
-      <button type="button" className="ut-add-btn" onClick={onAdd}>Hinzufügen</button>
+      <Button onClick={onAdd}>Hinzufügen</Button>
     </div>
   );
 }
@@ -1239,9 +1239,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   return (
     <div className="settings-container">
       <div className="settings-header">
-        <button className="back-button" onClick={onBack}>
+        <Button onClick={onBack}>
           ← Zurück
-        </button>
+        </Button>
         <h2>Einstellungen</h2>
       </div>
 
@@ -1439,9 +1439,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   <div className="favicon-preview">
                     <img src={faviconImage} alt="Favicon" style={{ width: '32px', height: '32px' }} />
                     <div className="favicon-actions">
-                      <label htmlFor="faviconImageFile" className="favicon-change-btn">
-                        {uploadingFavicon ? 'Hochladen...' : 'Ändern'}
-                      </label>
+                      <Button onClick={() => document.getElementById('faviconImageFile')?.click()} loading={uploadingFavicon}>
+                        {uploadingFavicon ? 'Lädt hoch …' : 'Ändern'}
+                      </Button>
                       <button 
                         className="favicon-remove-btn" 
                         onClick={handleRemoveFavicon}
@@ -1480,9 +1480,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   <div className="favicon-preview">
                     <img src={appLogoImage} alt="App Logo" style={{ width: '64px', height: '64px' }} />
                     <div className="favicon-actions">
-                      <label htmlFor="appLogoImageFile" className="favicon-change-btn">
-                        {uploadingAppLogo ? 'Hochladen...' : 'Ändern'}
-                      </label>
+                      <Button onClick={() => document.getElementById('appLogoImageFile')?.click()} loading={uploadingAppLogo}>
+                        {uploadingAppLogo ? 'Lädt hoch …' : 'Ändern'}
+                      </Button>
                       <button 
                         className="favicon-remove-btn" 
                         onClick={handleRemoveAppLogo}
@@ -1898,7 +1898,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               onKeyPress={(e) => e.key === 'Enter' && addCuisine()}
               placeholder="Neuen Kulinarik-Typ hinzufügen..."
             />
-            <button onClick={addCuisine}>Hinzufügen</button>
+            <Button onClick={addCuisine}>Hinzufügen</Button>
           </div>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndCuisineTypes}>
             <SortableContext items={lists.cuisineTypes} strategy={verticalListSortingStrategy}>
@@ -1932,7 +1932,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               onKeyPress={(e) => e.key === 'Enter' && addCuisineGroupFromInput()}
               placeholder="Neue Gruppe hinzufügen (z.B. Asiatische Küche)..."
             />
-            <button onClick={addCuisineGroupFromInput}>Hinzufügen</button>
+            <Button onClick={addCuisineGroupFromInput}>Hinzufügen</Button>
           </div>
           <div className="list-items">
             {(lists.cuisineGroups || []).map(group => (
@@ -1983,7 +1983,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               onKeyPress={(e) => e.key === 'Enter' && addCategory()}
               placeholder="Neue Speisekategorie hinzufügen..."
             />
-            <button onClick={addCategory}>Hinzufügen</button>
+            <Button onClick={addCategory}>Hinzufügen</Button>
           </div>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndMealCategories}>
             <SortableContext items={lists.mealCategories} strategy={verticalListSortingStrategy}>
@@ -2142,7 +2142,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     />
                   </td>
                   <td>
-                    <button onClick={addConversionEntry} className="add-conversion-btn" title="Hinzufügen">+</button>
+                    <Button onClick={addConversionEntry} title="Hinzufügen" aria-label="Hinzufügen">+</Button>
                   </td>
                 </tr>
               </tbody>
@@ -2185,9 +2185,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                 placeholder="Neue Maßeinheit..."
                 className="custom-unit-input"
               />
-              <button onClick={addCustomUnitHandler} className="add-custom-unit-btn">
+              <Button onClick={addCustomUnitHandler}>
                 + Hinzufügen
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -2268,13 +2268,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           <span className="prompt-history-meta">
                             {changedAtLabel} · {changedByLabel}
                           </span>
-                          <button
-                            type="button"
-                            className="prompt-history-restore-button"
-                            onClick={() => setAiPrompt(entry.prompt)}
-                          >
+                          <Button variant="ghost" onClick={() => setAiPrompt(entry.prompt)}>
                             In Textfeld laden
-                          </button>
+                          </Button>
                         </li>
                       );
                     })}
@@ -2420,20 +2416,12 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   {faqSelectedIds.length > 0 && (
                     <div className="faq-indent-toolbar">
                       <span className="faq-indent-toolbar-label">{faqSelectedIds.length} ausgewählt:</span>
-                      <button
-                        className="faq-indent-btn"
-                        onClick={() => handleFaqIndent(-1)}
-                        title="Ausrücken"
-                      >
+                      <Button onClick={() => handleFaqIndent(-1)} title="Ausrücken">
                         ← Ausrücken
-                      </button>
-                      <button
-                        className="faq-indent-btn"
-                        onClick={() => handleFaqIndent(1)}
-                        title="Einrücken"
-                      >
+                      </Button>
+                      <Button onClick={() => handleFaqIndent(1)} title="Einrücken">
                         Einrücken →
-                      </button>
+                      </Button>
                     </div>
                   )}
                   <div className="faq-list">

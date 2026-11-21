@@ -487,7 +487,6 @@
   color: #ccc;
 }
 
-[data-theme="dark"] .back-button,
 [data-theme="dark"] .back-btn,
 [data-theme="dark"] .back-icon-btn {
   color: #e8e8e8;
@@ -848,22 +847,6 @@
   background: #333;
 }
 
-[data-theme="dark"] .tile-size-btn {
-  background: #2a2a2a;
-  border-color: #555;
-  color: #e8e8e8;
-}
-
-[data-theme="dark"] .tile-size-btn:hover {
-  background: #333;
-}
-
-[data-theme="dark"] .tile-size-btn.active {
-  background: #402C1C;
-  border-color: #5a3c2c;
-  color: #fff;
-}
-
 [data-theme="dark"] .tile-size-desc {
   color: #aaa;
 }
@@ -933,21 +916,6 @@
 }
 
 /* ---- Theme toggle buttons ---- */
-[data-theme="dark"] .theme-btn {
-  background: #2a2a2a;
-  border-color: #555;
-  color: #e8e8e8;
-}
-
-[data-theme="dark"] .theme-btn:hover {
-  background: #333;
-}
-
-[data-theme="dark"] .theme-btn.active {
-  background: #402C1C;
-  border-color: #5a3c2c;
-  color: #fff;
-}
 
 [data-theme="dark"] .theme-btn-desc {
   color: #aaa;
@@ -2352,10 +2320,6 @@
   border-color: #7a8fdf;
 }
 
-[data-theme="dark"] .list-input button {
-  background: linear-gradient(135deg, #DF7A00 0%, #c46900 100%);
-}
-
 /* ---- GroupDetail additional ---- */
 [data-theme="dark"] .group-detail-section h3 {
   color: #e8e8e8;
@@ -2799,14 +2763,6 @@
 }
 
 /* ---- RecipeDetail additional ---- */
-[data-theme="dark"] .back-button {
-  background: transparent;
-  color: #e8e8e8;
-}
-
-[data-theme="dark"] .back-button:hover {
-  background: #333;
-}
 
 [data-theme="dark"] .cook-date-button {
   background: #2a2a2a;
@@ -3408,16 +3364,6 @@
   background: #1a2a3a;
   color: #7aafdf;
   border-left-color: #7a8fdf;
-}
-
-[data-theme="dark"] .btn-cancel {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
-[data-theme="dark"] .btn-cancel:hover {
-  background: #333;
 }
 
 /* ---- WebImportModal additional ---- */

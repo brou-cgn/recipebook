@@ -24,10 +24,10 @@ const BASELINE = {
   'components/AtelierSwipeTrainerOverlay.css': 58,
   'components/AtelierTasteIntroOverlay.css': 10,
   'components/BottomNavigation.css': 22,
-  'components/ButtonIconsAdminTab.css': 195,
+  'components/ButtonIconsAdminTab.css': 167,
   'components/CookDateModal.css': 14,
   'components/DeleteRowButton.css': 4,
-  'components/DiscoverTopicsTab.css': 17,
+  'components/DiscoverTopicsTab.css': 14,
   'components/DrinkWeightsTab.css': 19,
   'components/EventplanungPage.css': 1,
   'components/EventsPage.css': 118,
@@ -48,7 +48,7 @@ const BASELINE = {
   'components/MemberProfilePage.css': 3,
   'components/MenuDetail.css': 15,
   'components/MenuFilterSidebar.css': 12,
-  'components/MenuForm.css': 55,
+  'components/MenuForm.css': 53,
   'components/MenuList.css': 6,
   'components/MobileSearchOverlay.css': 21,
   'components/NetworkPage.css': 6,
@@ -62,7 +62,7 @@ const BASELINE = {
   'components/RatingModal.css': 15,
   'components/RecipeDetail.css': 89,
   'components/RecipeFilterSidebar.css': 18,
-  'components/RecipeForm.css': 112,
+  'components/RecipeForm.css': 108,
   'components/RecipeImageCarousel.css': 4,
   'components/RecipeImportModal.css': 27,
   'components/RecipeList.css': 24,
@@ -71,7 +71,7 @@ const BASELINE = {
   'components/RecipeTypeahead.css': 12,
   'components/SavingOverlay.css': 1,
   'components/SeasonMatrixTab.css': 61,
-  'components/Settings.css': 242,
+  'components/Settings.css': 190,
   'components/SharePage.css': 9,
   'components/ShoppingListModal.css': 23,
   'components/SortCarousel.css': 1,
@@ -85,7 +85,7 @@ const BASELINE = {
   'components/TutorialForm.css': 4,
   'components/TutorialVideoModal.css': 10,
   'components/UniversalImportModal.css': 31,
-  'components/UserManagement.css': 83,
+  'components/UserManagement.css': 74,
   'components/WebImportModal.css': 28
 };
 
@@ -139,7 +139,7 @@ describe('Farb-Token-Richtlinie', () => {
 // darkMode.css ist Altbestand: neue Dark-Regeln gehören als Token in tokens.css
 // (AGENTS.md). Gezählt werden die [data-theme="dark"]-Selektoren; der Wert darf nur
 // sinken (Tech-Check D5: am 27.10.2026 kamen trotz Regel sieben neue dazu).
-const DARK_MODE_SELECTORS = 980;
+const DARK_MODE_SELECTORS = 968;
 
 describe('darkMode.css (Altbestand)', () => {
   const css = fs.readFileSync(path.join(SRC, 'darkMode.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

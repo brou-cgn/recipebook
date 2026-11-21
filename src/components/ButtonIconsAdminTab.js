@@ -51,6 +51,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import Button from './Button';
 
 const VARIANT_LABELS = ['Hellmodus · normal', 'Hellmodus · aktiv', 'Dunkelmodus · normal', 'Dunkelmodus · aktiv'];
 const VARIANT_SHORT_LABELS = ['Hell · normal', 'Hell · aktiv', 'Dunkel · normal', 'Dunkel · aktiv'];
@@ -468,17 +469,12 @@ function CategoryImageRow({
               })}
             </div>
             <div className="bia-catimg-edit-actions">
-              <button
-                type="button"
-                className="bia-btn-primary"
-                onClick={onSaveEdit}
-                disabled={selectedCategories.length === 0}
-              >
-                Speichern
-              </button>
-              <button type="button" className="bia-btn-secondary" onClick={onCancelEdit}>
+              <Button onClick={onCancelEdit}>
                 Abbrechen
-              </button>
+              </Button>
+              <Button variant="primary" onClick={onSaveEdit} disabled={selectedCategories.length === 0}>
+                Speichern
+              </Button>
             </div>
           </div>
         </div>
@@ -1293,7 +1289,7 @@ function ButtonIconsAdminTab() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <button type="button" className="bia-btn-secondary" onClick={handleAddGroup}>+ Gruppe</button>
+          <Button onClick={handleAddGroup}>+ Gruppe</Button>
         </div>
 
         <div className="bia-card">
@@ -1348,15 +1344,13 @@ function ButtonIconsAdminTab() {
                         />
                       ) : (
                         <div className="bia-cuisine-add-row">
-                          <button
-                            type="button"
-                            className="bia-btn-dashed"
+                          <Button
                             onClick={() => handleStartAddCuisineRow(group.id)}
                             disabled={availableCuisineTypeNames.length === 0}
                             title={availableCuisineTypeNames.length === 0 ? 'Alle Kulinarik-Typen sind bereits als Zeile angelegt' : undefined}
                           >
                             + Bild/Icon
-                          </button>
+                          </Button>
                         </div>
                       )
                     ) : null}
@@ -1398,15 +1392,13 @@ function ButtonIconsAdminTab() {
                             />
                           ) : (
                             <div className="bia-cuisine-add-row">
-                              <button
-                                type="button"
-                                className="bia-btn-dashed"
+                              <Button
                                 onClick={handleStartAddCategoryImage}
                                 disabled={availableMealCategoryNames.length === 0}
                                 title={availableMealCategoryNames.length === 0 ? 'Alle Speisekategorien sind bereits als Zeile angelegt' : undefined}
                               >
                                 + Bild/Icon
-                              </button>
+                              </Button>
                             </div>
                           )}
                         </div>
@@ -1420,7 +1412,7 @@ function ButtonIconsAdminTab() {
 
           <div className="bia-footer">
             <span className="bia-totals">{data.groups.length} {data.groups.length === 1 ? 'Gruppe' : 'Gruppen'} · {visibleRowCount} Buttons sichtbar</span>
-            <button type="button" className="bia-btn-dashed" onClick={handleAddGroup}>+ Neue Gruppe</button>
+            <Button onClick={handleAddGroup}>+ Neue Gruppe</Button>
           </div>
         </div>
 
@@ -1467,9 +1459,9 @@ function ButtonIconsAdminTab() {
                     className="bia-modal-text-input"
                   />
                   <div className="bia-modal-input-actions">
-                    <label htmlFor="bia-modal-file" className="bia-btn-secondary bia-modal-image-btn">
-                      Bild wählen…
-                    </label>
+                    <Button className="bia-modal-image-btn" onClick={() => document.getElementById('bia-modal-file')?.click()}>
+                      Bild wählen …
+                    </Button>
                     <input
                       type="file"
                       id="bia-modal-file"
@@ -1477,7 +1469,7 @@ function ButtonIconsAdminTab() {
                       onChange={handleModalImage}
                       style={{ display: 'none' }}
                     />
-                    <button type="button" className="bia-btn-tertiary" onClick={() => patchEditing({ value: '' })}>Leeren</button>
+                    <Button variant="ghost" onClick={() => patchEditing({ value: '' })}>Leeren</Button>
                   </div>
                 </div>
               </div>
@@ -1506,8 +1498,8 @@ function ButtonIconsAdminTab() {
             </div>
 
             <div className="bia-modal-footer">
-              <button type="button" className="bia-btn-secondary" onClick={closeEditor}>Abbrechen</button>
-              <button type="button" className="bia-btn-primary" onClick={saveEditor}>Übernehmen</button>
+              <Button onClick={closeEditor}>Abbrechen</Button>
+              <Button variant="primary" onClick={saveEditor}>Übernehmen</Button>
             </div>
           </div>
         </div>

@@ -25,6 +25,7 @@ import {
   toMonthDay,
   validateTopic,
 } from '../utils/discoverTopics';
+import Button from './Button';
 
 const emptyForm = () => ({
   id: '',
@@ -453,10 +454,10 @@ function TopicEditor({ initial, allRecipes, cuisineOptions, categoryOptions, ing
 
       {error && <div className="message error">{error}</div>}
       <div className="dtt-actions">
-        <button type="button" className="dtt-btn" onClick={onCancel} disabled={saving}>Abbrechen</button>
-        <button type="submit" className="dtt-btn dtt-btn-primary" disabled={saving}>
-          {saving ? 'Speichern…' : 'Speichern'}
-        </button>
+        <Button onClick={onCancel} disabled={saving}>Abbrechen</Button>
+        <Button variant="primary" type="submit" loading={saving}>
+          {saving ? 'Speichert …' : 'Speichern'}
+        </Button>
       </div>
     </form>
   );
@@ -563,9 +564,9 @@ function DiscoverTopicsTab({ currentUser, allRecipes = [] }) {
           onCancel={() => setEditing(null)}
         />
       ) : (
-        <button type="button" className="dtt-btn dtt-btn-primary" onClick={() => openEditor(null)}>
+        <Button onClick={() => openEditor(null)}>
           Thema hinzufügen
-        </button>
+        </Button>
       )}
 
       <div className="dtt-list" role="table" aria-label="Themen">

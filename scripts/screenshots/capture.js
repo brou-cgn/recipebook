@@ -210,6 +210,26 @@ const SCREENS = [
   })),
   { name: 'chefkoch', run: async (page, shot) => { await openMenuItem(page, 'Chefkoch & mehr'); await shot(); } },
   { name: 'einstellungen', run: async (page, shot) => { await openMenuItem(page, 'Einstellungen'); await shot(); } },
+  // Weitere Reiter der Einstellungen (Admin), je als ganze Seite
+  ...[
+    ['einstellungen-druck', 'Drucklayout'],
+    ['einstellungen-kochatelier', 'Kochatelier'],
+    ['einstellungen-entdeckt', 'Für dich entdeckt'],
+    ['einstellungen-benutzer', 'Benutzerverwaltung'],
+    ['einstellungen-icons', 'Bilder & Icons'],
+    ['einstellungen-saison', 'Saisonmatrix'],
+    ['einstellungen-naehrwerte', 'Nährwerte'],
+    ['einstellungen-getraenke', 'Getränkegewichtung'],
+  ].map(([name, label]) => ({
+    name,
+    fullPage: true,
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Einstellungen');
+      await page.locator('.tab-button', { hasText: label }).first().click();
+      await pause(page, 1000);
+      await shot();
+    },
+  })),
   {
     name: 'einstellungen-listen',
     run: async (page, shot) => {
@@ -328,8 +348,12 @@ async function main() {
           let overflow = 0;
           await screen.run(page, async () => {
             await pause(page);
-            // Seitlich scrollbar? Dann ist etwas breiter als der Bildschirm (z. B. eine Knopfreihe)
-            overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+            // Seitlich scrollbar? Dann ist etwas breiter als der Bildschirm (z. B. eine Knopfreihe).
+            // Gemessen an der Fensterbreite der Variante: In der Handy-Emulation zoomt Chromium eine
+            // zu breite Seite heraus, dann wächst innerWidth mit und der Vergleich damit sähe nichts
+            // (so blieben am 21.11.2026 sechs Einstellungs-Reiter mit bis zu 996 statt 390 px unbemerkt).
+            const width = page.viewportSize().width;
+            overflow = await page.evaluate((w) => document.documentElement.scrollWidth - Math.min(window.innerWidth, w), width);
             await page.screenshot({ path: file, fullPage: Boolean(screen.fullPage) });
           });
           results.push({ variant: variant.name, screen: screen.name, overflow: overflow > 1 ? overflow : 0 });

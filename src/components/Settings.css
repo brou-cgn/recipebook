@@ -133,7 +133,8 @@
 
 .settings-tab-header h2 {
   margin: 0;
-  color: #333;
+  /* Token statt #333: Im Dunkelmodus war die Überschrift jedes Reiters sonst kaum sichtbar (Tech-Check P15) */
+  color: var(--color-text-strong);
   font-size: 28px;
   font-weight: 700;
 }
@@ -181,24 +182,6 @@
   border-color: #402C1C;
 }
 
-.list-input button {
-  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.list-input button:hover {
-  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
-}
-
 .portion-unit-input {
   display: grid;
   grid-template-columns: 1fr 1fr auto;
@@ -243,22 +226,6 @@
 .list-item span {
   font-size: 0.95rem;
   color: var(--color-text);
-}
-
-.list-item .remove-btn {
-  background: #f44336;
-  color: white;
-  border: none;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  line-height: 1;
-  transition: all 0.3s ease;
-}
-
-.list-item .remove-btn:hover {
-  background: #d32f2f;
 }
 
 .list-item .edit-btn {
@@ -471,23 +438,6 @@
   width: auto;
 }
 
-.ut-add-btn {
-  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
-  color: #fff;
-  border: none;
-  padding: 0.5rem 0.9rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 600;
-  white-space: nowrap;
-  transition: all 0.3s ease;
-}
-
-.ut-add-btn:hover {
-  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
-}
-
 .settings-actions {
   display: flex;
   justify-content: flex-end;
@@ -495,54 +445,6 @@
   margin-top: 2rem;
   padding-top: 1.5rem;
   border-top: 2px solid #f0f0f0;
-}
-
-.reset-button,
-.save-button {
-  flex: 1;
-  padding: 1rem;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.reset-button {
-  background: var(--color-accent);
-  color: white;
-}
-
-.reset-button:hover {
-  background: #f57c00;
-}
-
-.save-button {
-  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
-  color: white;
-}
-
-.save-button:hover {
-  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-.back-button {
-  background: #f5f5f5;
-  color: #666;
-  border: none;
-  padding: 0.75rem 1.25rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 600;
-  transition: all 0.3s ease;
-}
-
-.back-button:hover {
-  background: #e0e0e0;
 }
 
 @media (max-width: 768px) {
@@ -581,6 +483,14 @@
     border-bottom-color: #402C1C;
   }
 
+  /* Untereinander gestapelt: Die Inhaltsspalte nimmt die Bildschirmbreite statt der Breite ihres
+     Inhalts an (align-items: flex-start der Desktop-Reihe), sonst schoben breite Tabellen und
+     Knopfreihen (Nährwerte, Benutzer, Saisonmatrix …) die ganze Seite seitlich auf, statt in ihrem
+     eigenen Bereich zu scrollen oder umzubrechen */
+  .settings-main {
+    align-self: stretch;
+  }
+
   .settings-content {
     padding: 1rem;
     border-radius: 0 0 12px 12px;
@@ -588,11 +498,6 @@
 
   .settings-actions {
     flex-direction: column;
-  }
-
-  .reset-button,
-  .save-button {
-    width: 100%;
   }
 }
 
@@ -656,21 +561,6 @@
 .conversion-table-input:focus {
   outline: none;
   border-color: #402C1C;
-}
-
-.conversion-table .remove-btn {
-  background: #f44336;
-  color: white;
-  border: none;
-  padding: 0.3rem 0.6rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  white-space: nowrap;
-}
-
-.conversion-table .remove-btn:hover {
-  background: #d32f2f;
 }
 
 .nutrition-reference-section .conversion-table-container {
@@ -809,22 +699,6 @@
   .nutrition-source-cell .conversion-table-input {
     min-width: 48px;
   }
-}
-
-.add-conversion-btn {
-  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
-  color: white;
-  border: none;
-  padding: 0.35rem 0.8rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1.1rem;
-  font-weight: bold;
-  transition: all 0.3s ease;
-}
-
-.add-conversion-btn:hover {
-  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
 }
 
 /* User Management Styles within Settings */
@@ -991,22 +865,6 @@
   border-color: #999;
 }
 
-.delete-user-btn {
-  background: #f44336;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: all 0.3s ease;
-}
-
-.delete-user-btn:hover {
-  background: #d32f2f;
-  transform: scale(1.1);
-}
-
 .image-upload-label {
   display: inline-block;
   background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
@@ -1071,7 +929,6 @@
   flex: 1;
 }
 
-.favicon-change-btn,
 .favicon-remove-btn {
   padding: 0.5rem 1rem;
   border: none;
@@ -1080,17 +937,6 @@
   font-size: 0.9rem;
   font-weight: 600;
   transition: all 0.2s ease;
-}
-
-.favicon-change-btn {
-  background: var(--color-accent);
-  color: white;
-  flex: 1;
-}
-
-.favicon-change-btn:hover {
-  background: #f57c00;
-  transform: translateY(-1px);
 }
 
 .favicon-remove-btn {
@@ -1167,26 +1013,6 @@
   border-color: #402C1C;
 }
 
-.upload-icon-btn {
-  background: var(--color-ok);
-  color: white;
-  border: none;
-  padding: 0.4rem 0.6rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 38px;
-}
-
-.upload-icon-btn:hover {
-  background: #45a049;
-  transform: scale(1.05);
-}
-
 .icon-image-info {
   flex: 1;
   padding: 0.4rem 0.5rem;
@@ -1197,41 +1023,6 @@
   font-weight: 500;
   text-align: center;
   font-size: 0.82rem;
-}
-
-.remove-icon-btn {
-  background: #f44336;
-  color: white;
-  border: none;
-  padding: 0.4rem 0.6rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.remove-icon-btn:hover {
-  background: #d32f2f;
-  transform: scale(1.05);
-}
-
-.reset-icon-btn {
-  background: var(--color-accent);
-  color: white;
-  border: none;
-  padding: 0.4rem 0.6rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.2s ease;
-}
-
-.reset-icon-btn:hover {
-  background: #f57c00;
-  transform: scale(1.05);
 }
 
 .icon-preview {
@@ -1423,9 +1214,6 @@
     flex: 1 0 100%;
   }
   
-  .upload-icon-btn,
-  .remove-icon-btn,
-  .reset-icon-btn,
   .icon-preview {
     flex: 1;
   }
@@ -1508,23 +1296,6 @@
   font-size: 0.85rem;
 }
 
-.prompt-history-restore-button {
-  flex-shrink: 0;
-  padding: 0.35rem 0.75rem;
-  border: 1px solid #402C1C;
-  border-radius: 6px;
-  background: transparent;
-  color: #402C1C;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.prompt-history-restore-button:hover {
-  background: #402C1C;
-  color: #fff;
-}
-
 .toggle-label {
   display: flex;
   align-items: center;
@@ -1541,7 +1312,6 @@
   accent-color: #402C1C;
   flex-shrink: 0;
 }
-
 
 /* FAQ Settings Styles */
 .faq-import-section {
@@ -1819,21 +1589,6 @@
   font-weight: 600;
 }
 
-.faq-indent-btn {
-  background: white;
-  border: 1px solid #c0ceff;
-  border-radius: 4px;
-  padding: 0.25rem 0.75rem;
-  cursor: pointer;
-  font-size: 0.9rem;
-  color: #402C1C;
-  transition: background 0.2s ease;
-}
-
-.faq-indent-btn:hover {
-  background: #dce8ff;
-}
-
 .faq-list-item-checkbox {
   flex-shrink: 0;
   width: 1rem;
@@ -1870,30 +1625,6 @@
   flex-wrap: wrap;
 }
 
-.tile-size-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 1rem 1.5rem;
-  border: 2px solid var(--color-border);
-  border-radius: 12px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-width: 100px;
-}
-
-.tile-size-btn:hover {
-  border-color: #402C1C;
-}
-
-.tile-size-btn.active {
-  border-color: #402C1C;
-  background: #f7f3ef;
-  color: #402C1C;
-}
-
 .tile-size-icon {
   font-size: 1.4rem;
   letter-spacing: -0.15em;
@@ -1909,38 +1640,10 @@
   color: #888;
 }
 
-.tile-size-btn.active .tile-size-desc {
-  color: #6b4c35;
-}
-
 .theme-options {
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
-}
-
-.theme-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 1rem 1.5rem;
-  border: 2px solid var(--color-border);
-  border-radius: 12px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-width: 100px;
-}
-
-.theme-btn:hover {
-  border-color: #402C1C;
-}
-
-.theme-btn.active {
-  border-color: #402C1C;
-  background: #f7f3ef;
-  color: #402C1C;
 }
 
 .theme-btn-icon {
@@ -1955,10 +1658,6 @@
 .theme-btn-desc {
   font-size: 0.78rem;
   color: #888;
-}
-
-.theme-btn.active .theme-btn-desc {
-  color: #6b4c35;
 }
 
 .custom-units-container {
@@ -2009,22 +1708,6 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-}
-
-.add-custom-unit-btn {
-  padding: 0.6rem 1rem;
-  background: #402C1C;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.add-custom-unit-btn:hover {
-  background: #5a3e28;
 }
 
 .nutrition-abort-settings-button {
