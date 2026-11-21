@@ -1525,17 +1525,6 @@
   border-top-color: #3d3d3d;
 }
 
-[data-theme="dark"] .shopping-list-reset-btn {
-  background: #2a2a2a;
-  color: #ccc;
-  border-color: #555;
-}
-
-[data-theme="dark"] .shopping-list-reset-btn:hover {
-  border-color: #b07a40;
-  color: #e8e8e8;
-}
-
 [data-theme="dark"] .shopping-list-empty {
   color: #aaa;
 }
@@ -3357,12 +3346,6 @@
   background: #2a2a2a;
   color: #f47c00;
   border-color: #f47c00;
-}
-
-[data-theme="dark"] .shopping-list-reset-btn {
-  background: #2a2a2a;
-  color: #aaa;
-  border-color: #555;
 }
 
 [data-theme="dark"] .shopping-list-edit-input {
