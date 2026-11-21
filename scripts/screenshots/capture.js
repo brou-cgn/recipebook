@@ -37,6 +37,33 @@ async function openMenuItem(page, label) {
   await pause(page, 1200);
 }
 
+// Neues Rezept: Nur dort gibt es die Import-Knöpfe (Webimport, Foto-Scan, Rezept importieren)
+async function openNewRecipeForm(page) {
+  await openMenuItem(page, 'Kochbuch');
+  await page.locator('[aria-label^="Rezept hinzufügen"]').first().click();
+  await page.locator('.recipe-form-toolbar').first().waitFor();
+  await pause(page, 800);
+}
+
+// Teilen aus einer anderen App: Der Service-Worker legt die Daten in IndexedDB ab, die App liest sie
+// beim Aufruf mit ?share-target (App.js, readSharedDataFromDB) und öffnet den universellen Import
+async function shareIntoApp(page, data) {
+  await page.evaluate((shared) => new Promise((resolve, reject) => {
+    const req = indexedDB.open('recipebook-settings', 1);
+    req.onupgradeneeded = () => {
+      if (!req.result.objectStoreNames.contains('settings')) req.result.createObjectStore('settings');
+    };
+    req.onsuccess = () => {
+      const tx = req.result.transaction(['settings'], 'readwrite');
+      tx.objectStore('settings').put(shared, 'pendingSharedData');
+      tx.oncomplete = () => { req.result.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    };
+    req.onerror = () => reject(req.error);
+  }), data);
+  await page.goto(`${URL}?share-target`, { waitUntil: 'load' });
+}
+
 async function openRecipe(page, title) {
   await openMenuItem(page, 'Kochbuch');
   await page.getByText(title, { exact: true }).first().click();
@@ -73,6 +100,53 @@ const SCREENS = [
       await page.locator('[title="Rezept bearbeiten"]').first().click();
       await page.locator('.recipe-form-header-save, form').first().waitFor();
       await pause(page, 1200);
+      await shot();
+    },
+  },
+  // Import-Dialoge (Button-System Schritt 4b); wie „rezept-bearbeiten“ nur am Desktop
+  {
+    name: 'import-web',
+    variants: ['desktop-hell', 'desktop-dunkel'],
+    run: async (page, shot) => {
+      await openNewRecipeForm(page);
+      await page.getByRole('button', { name: 'Webimport' }).click();
+      await page.locator('.web-import-modal').waitFor();
+      await shot();
+    },
+  },
+  {
+    name: 'import-text',
+    variants: ['desktop-hell', 'desktop-dunkel'],
+    run: async (page, shot) => {
+      await openNewRecipeForm(page);
+      await page.getByRole('button', { name: 'Rezept importieren' }).click();
+      await page.getByRole('heading', { name: /importieren/i }).first().waitFor();
+      await pause(page);
+      await shot();
+    },
+  },
+  {
+    name: 'import-scan',
+    variants: ['desktop-hell', 'desktop-dunkel'],
+    run: async (page, shot) => {
+      await openNewRecipeForm(page);
+      await page.locator('#ocrImageUpload').setInputFiles(path.join(ROOT, 'public', 'logo192.png'));
+      await page.locator('.ocr-modal').waitFor();
+      await pause(page, 1000);
+      await shot();
+    },
+  },
+  {
+    name: 'import-geteilt',
+    run: async (page, shot) => {
+      await shareIntoApp(page, {
+        title: 'Ofengemüse mit Feta',
+        text: 'Ofengemüse mit Feta. Zutaten: 2 Paprika, 1 Zucchini, 200 g Feta, Olivenöl, Thymian.',
+        url: 'https://example.com/rezept/ofengemuese',
+        images: [],
+      });
+      await page.locator('.universal-import-modal').waitFor({ timeout: 30000 });
+      await pause(page, 1000);
       await shot();
     },
   },
@@ -236,6 +310,19 @@ const SCREENS = [
       await shot();
     },
   })),
+  {
+    // Dialog der Benutzerverwaltung auf dem gemeinsamen Hintergrund .modal-overlay (ModalOverlay.css)
+    name: 'benutzer-bearbeiten-dialog',
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Einstellungen');
+      await page.locator('.tab-button', { hasText: 'Benutzerverwaltung' }).first().click();
+      await pause(page, 1000);
+      await page.locator('[title="Name bearbeiten"]').first().click();
+      await page.getByRole('heading', { name: 'Benutzer bearbeiten' }).waitFor();
+      await pause(page);
+      await shot();
+    },
+  },
   {
     name: 'einstellungen-listen',
     run: async (page, shot) => {
