@@ -3,7 +3,7 @@
  * Maßgeblich ist die Speisekategorie des Rezepts; die Server-Variante steht in
  * functions/shared/weinprofil.js (istOhneWein), beide müssen gleich bleiben.
  */
-export const KATEGORIEN_OHNE_WEIN = ['Gebäcke & Teige'];
+export const KATEGORIEN_OHNE_WEIN = ['Gebäcke & Teige', 'Drinks'];
 
 /**
  * @param {Object} rezept

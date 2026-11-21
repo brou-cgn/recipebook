@@ -102,6 +102,42 @@ const SCREENS = [
       await shot();
     },
   },
+  {
+    name: 'menue-bearbeiten',
+    variants: ['desktop-hell', 'desktop-dunkel'],
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Festtafel');
+      await page.getByText('Sonntagsessen', { exact: true }).first().click();
+      await pause(page, 1000);
+      await page.locator('[title="Menü bearbeiten"]').first().click();
+      await page.locator('.menu-form-container').first().waitFor();
+      await shot();
+    },
+  },
+  {
+    name: 'persoenliche-daten',
+    fullPage: true,
+    run: async (page, shot) => { await openMenuItem(page, 'Testkoch Beispiel'); await shot(); },
+  },
+  {
+    name: 'einstellungen-ki',
+    fullPage: true,
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Einstellungen');
+      await page.locator('.tab-button', { hasText: 'KI-Einstellungen' }).first().click();
+      await pause(page);
+      await shot();
+    },
+  },
+  {
+    name: 'einstellungen-kochschule',
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Einstellungen');
+      await page.locator('.tab-button', { hasText: 'Kochschule' }).first().click();
+      await pause(page);
+      await shot();
+    },
+  },
   { name: 'festtafel', run: async (page, shot) => { await openMenuItem(page, 'Festtafel'); await shot(); } },
   { name: 'events', run: async (page, shot) => { await openMenuItem(page, 'Events'); await shot(); } },
   { name: 'chefkoch', run: async (page, shot) => { await openMenuItem(page, 'Chefkoch & mehr'); await shot(); } },
@@ -180,7 +216,8 @@ function writeIndex(outDir, results) {
       ? `<td><a href="${file}"><img src="${file}" loading="lazy" alt="${s.name}, ${v.name}"></a></td>`
       : `<td class="fehlt">fehlt</td>`;
   }).join('')}</tr>`).join('\n');
-  const failures = results.filter((r) => r.error).map((r) => `<li>${r.variant} / ${r.screen}: ${r.error.replace(/</g, '&lt;')}</li>`).join('');
+  const failures = results.filter((r) => r.error).map((r) => `<li>${r.variant} / ${r.screen}: ${r.error.replace(/</g, '&lt;')}</li>`)
+    .concat(results.filter((r) => r.overflow).map((r) => `<li>${r.variant} / ${r.screen}: seitlich scrollbar, ${r.overflow} px zu breit</li>`)).join('');
   fs.writeFileSync(path.join(outDir, 'index.html'), `<!doctype html><meta charset="utf-8"><title>Screenshots</title>
 <style>body{font:14px system-ui;margin:16px;background:#f5f5f5}table{border-collapse:collapse}th,td{padding:6px;vertical-align:top;border:1px solid #ddd;background:#fff}
 td img{max-width:260px;max-height:420px;display:block}.fehlt{color:#a33a26}</style>
@@ -220,8 +257,14 @@ async function main() {
         try {
           if (screen.loggedOut) await page.goto(URL, { waitUntil: 'load' }).then(() => page.locator('input[type="password"]').waitFor());
           else await login(page);
-          await screen.run(page, async () => { await pause(page); await page.screenshot({ path: file }); });
-          results.push({ variant: variant.name, screen: screen.name });
+          let overflow = 0;
+          await screen.run(page, async () => {
+            await pause(page);
+            // Seitlich scrollbar? Dann ist etwas breiter als der Bildschirm (z. B. eine Knopfreihe)
+            overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+            await page.screenshot({ path: file, fullPage: Boolean(screen.fullPage) });
+          });
+          results.push({ variant: variant.name, screen: screen.name, overflow: overflow > 1 ? overflow : 0 });
         } catch (err) {
           results.push({ variant: variant.name, screen: screen.name, error: err.message.split('\n')[0] });
         }
@@ -236,6 +279,7 @@ async function main() {
   const failed = results.filter((r) => r.error);
   console.log(`${results.length - failed.length} von ${results.length} Bildern erstellt: ${outDir}`);
   failed.forEach((r) => console.log(`  fehlt: ${r.variant} / ${r.screen}: ${r.error}`));
+  results.filter((r) => r.overflow).forEach((r) => console.log(`  seitlich scrollbar: ${r.variant} / ${r.screen} (${r.overflow} px zu breit)`));
 }
 
 if (require.main === module) {

@@ -40,7 +40,6 @@ const ALLOWED = {
   'components/MenuForm.js::section-header': 'styled via .menu-form-container .section-header in MenuForm.css',
   'components/PasswordChangeModal.js::error-message': 'styled via .password-change-modal .error-message',
   'components/PasswordChangeModal.js::form-group': 'styled via .password-change-modal .form-group',
-  'components/PasswordChangeModal.js::submit-btn': 'styled via .password-change-modal .submit-btn',
   'components/Settings.js::drag-handle': 'styled via .list-item .drag-handle in Settings.css',
 };
 

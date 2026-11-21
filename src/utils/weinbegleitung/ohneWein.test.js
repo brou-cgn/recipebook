@@ -10,6 +10,11 @@ describe('istOhneWein', () => {
     expect(istOhneWein({ speisekategorie: ['Hauptspeisen', ' Gebäcke & Teige '] })).toBe(true);
   });
 
+  it('erkennt Drinks als String und in Listen', () => {
+    expect(istOhneWein({ speisekategorie: 'Drinks' })).toBe(true);
+    expect(istOhneWein({ speisekategorie: ['Desserts', 'Drinks'] })).toBe(true);
+  });
+
   it('lässt andere Kategorien und fehlende Werte durch', () => {
     expect(istOhneWein({ speisekategorie: ['Hauptspeisen'] })).toBe(false);
     expect(istOhneWein({})).toBe(false);

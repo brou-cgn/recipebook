@@ -250,7 +250,7 @@ exports.generateWeinprofile = onCall(
           return;
         }
         if (istOhneWein(rezept)) {
-          uebersprungen.push(id); // Gebäcke & Teige: kein Profil, kein KI-Aufruf
+          uebersprungen.push(id); // Gebäcke & Teige, Drinks: kein Profil, kein KI-Aufruf
           return;
         }
         const inputHash = weinprofilInputHash(rezept);

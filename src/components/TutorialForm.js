@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import './RecipeForm.css';
 import './TutorialForm.css';
+import Button from './Button';
 import SavingOverlay from './SavingOverlay';
 import { isBase64Image } from '../utils/imageUtils';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
@@ -241,12 +242,12 @@ function TutorialForm({ onSave, onCancel, tutorial = null, nutritionReferenceRow
           <h2>{isEditing ? 'Tutorial bearbeiten' : 'Neues Tutorial hinzufügen'}</h2>
         </div>
         <div className="recipe-form-header-actions">
-          <button type="button" className="recipe-form-header-cancel" onClick={onCancel}>
+          <Button variant="secondary" onClick={onCancel}>
             Abbrechen
-          </button>
-          <button type="button" className="recipe-form-header-save" onClick={handleSave} disabled={!canSave}>
-            {isSaving ? '…' : 'Speichern'}
-          </button>
+          </Button>
+          <Button variant="primary" onClick={handleSave} disabled={!canSave} loading={isSaving}>
+            {isSaving ? 'Speichert …' : 'Speichern'}
+          </Button>
         </div>
       </div>
 

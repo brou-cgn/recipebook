@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './PasswordChangeModal.css';
+import Button from './Button';
 import { changePassword, validatePassword } from '../utils/userManagement';
 
 function PasswordChangeModal({ user, onPasswordChanged }) {
@@ -79,9 +80,9 @@ function PasswordChangeModal({ user, onPasswordChanged }) {
             />
           </div>
           {error && <div className="error-message">{error}</div>}
-          <button type="submit" className="submit-btn" disabled={isLoading}>
+          <Button variant="primary" type="submit" fullWidth loading={isLoading}>
             {isLoading ? 'Passwort wird geändert...' : 'Passwort ändern'}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

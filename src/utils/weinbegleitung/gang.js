@@ -93,7 +93,7 @@ export function bildeGangProfil(rezepte) {
   const mitProfil = [];
   let fehlendeProfile = 0;
   (rezepte || []).forEach((rezept) => {
-    if (istOhneWein(rezept)) return; // Gebäcke & Teige zählen wie Getränke nicht mit
+    if (istOhneWein(rezept)) return; // Gebäcke & Teige und Drinks zählen wie Getränke nicht mit
     const profil = normalisiereWeinprofil(rezept?.weinprofil);
     if (profil) mitProfil.push({ id: rezept.id, profil });
     else fehlendeProfile += 1;
