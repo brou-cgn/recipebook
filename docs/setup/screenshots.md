@@ -61,7 +61,7 @@ Ausgabe und oben in der `index.html`; die übrigen Bilder entstehen trotzdem.
 ## Grenzen
 
 - Cloud Functions laufen nicht mit: KI-Import, Nährwertberechnung, Einladungen und Push gehen hier nicht.
-- Es gibt keine gepflegten Button-Icons. Knöpfe zeigen deshalb die Standardwerte aus
-  `DEFAULT_BUTTON_ICONS`, bei zwei Rezept-Knöpfen ist das Text, der aus dem Knopf läuft (Tech-Check P10).
+- Es gibt keine gepflegten Button-Icons. Knöpfe zeigen deshalb die Standard-Symbole aus
+  `DEFAULT_BUTTON_ICONS`, nicht die Icons des Live-Projekts.
 - Bilder sind SVG-Platzhalter statt Fotos aus Storage.
 - Die Bilder zeigen den Zustand nach dem Laden, keine Hover- oder Ladezustände.

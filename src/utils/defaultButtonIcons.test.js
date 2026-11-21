@@ -1,5 +1,5 @@
-import { defaultIcon } from './defaultButtonIcons';
-import { DEFAULT_BUTTON_ICONS } from './customLists';
+import { defaultIcon, defaultButtonIcon } from './defaultButtonIcons';
+import { DEFAULT_BUTTON_ICONS, getEffectiveIcon } from './customLists';
 import { mergeButtonIconRowDefs, getDefaultButtonIconGroups } from './buttonIconRows';
 
 const decode = (uri) => decodeURIComponent(uri.replace('data:image/svg+xml;utf8,', ''));
@@ -68,5 +68,70 @@ describe('Icon Wichteln: Teilnehmer bearbeiten', () => {
     expect(row).toMatchObject({ label: 'Wichteln: Teilnehmer bearbeiten', darkKey: 'wichtelTeilnehmerBearbeitenDark' });
     const group = getDefaultButtonIconGroups().groups.find((g) => g.id === 'g-kueche-events');
     expect(group.rowKeys.map((r) => r.key)).toContain('wichtelTeilnehmerBearbeiten');
+  });
+});
+
+describe('Standard-Symbole statt Text (Tech-Check P10)', () => {
+  // Text bleibt nur, wo die Farbe vom Hintergrund abhängt: Schließen über Fotos, farbige
+  // Wisch-Hinweise im Tagesmenü, Kachel-Menü je nach Helligkeit der Kachel
+  const TEXT_ERLAUBT = {
+    closeButton: '×',
+    closeButtonDefaultImg: '×',
+    swipeRight: '✓',
+    swipeLeft: '×',
+    tagesmenuKachelMenu: '⋯',
+    tagesmenuKachelMenuAlt: '⋯',
+  };
+
+  test('kein Button-Icon hat mehr Text als Standard, außer den begründeten Zeichen', () => {
+    const mitText = Object.entries(DEFAULT_BUTTON_ICONS)
+      .filter(([key, value]) => value && !value.startsWith('data:image/') && TEXT_ERLAUBT[key] !== value)
+      .map(([key, value]) => `${key}: ${value}`);
+    expect(mitText).toEqual([]);
+  });
+
+  test.each([
+    ['shoppingList', 'cart'],
+    ['cookDate', 'calendar'],
+    ['editRecipe', 'pencil'],
+    ['saveRecipe', 'save'],
+    ['addPrivateRecipe', 'lockPlus'],
+    ['printRecipe', 'printer'],
+  ])('%s zeigt als Standard das Symbol %s, im Dunkelmodus hell eingefärbt', (key, shape) => {
+    expect(DEFAULT_BUTTON_ICONS[key]).toBe(defaultIcon(shape));
+    expect(DEFAULT_BUTTON_ICONS[`${key}Dark`]).toBe(defaultIcon(shape, true));
+    expect(defaultButtonIcon(key)).toBe(defaultIcon(shape));
+    expect(defaultButtonIcon(key, true)).toBe(defaultIcon(shape, true));
+  });
+
+  test('der Stopp-Knopf am Timer bleibt in beiden Themes rot', () => {
+    [defaultButtonIcon('timerStop'), defaultButtonIcon('timerStop', true)].forEach((uri) => {
+      expect(decode(uri)).toContain('fill="#cc4444"');
+    });
+  });
+
+  test('defaultButtonIcon liefert für Schlüssel ohne Standard-Symbol einen leeren Wert', () => {
+    expect(defaultButtonIcon('closeButton')).toBe('');
+    expect(defaultButtonIcon('gibtEsNicht')).toBe('');
+  });
+});
+
+describe('getEffectiveIcon: gepflegte Icons vor Standard-Symbolen', () => {
+  const eigenesIcon = 'data:image/png;base64,AAAA';
+
+  test('ohne gepflegtes Icon gilt im Dunkelmodus das helle Standard-Dunkelsymbol', () => {
+    expect(getEffectiveIcon(DEFAULT_BUTTON_ICONS, 'shoppingList', true)).toBe(defaultIcon('cart', true));
+    expect(getEffectiveIcon(DEFAULT_BUTTON_ICONS, 'shoppingList', false)).toBe(defaultIcon('cart'));
+  });
+
+  test('ein nur hell gepflegtes Icon erscheint auch im Dunkelmodus, nicht das Standard-Symbol', () => {
+    const icons = { ...DEFAULT_BUTTON_ICONS, shoppingList: eigenesIcon };
+    expect(getEffectiveIcon(icons, 'shoppingList', true)).toBe(eigenesIcon);
+  });
+
+  test('ein gepflegtes Dunkel-Icon hat im Dunkelmodus Vorrang', () => {
+    const eigenesDunkel = 'data:image/png;base64,BBBB';
+    const icons = { ...DEFAULT_BUTTON_ICONS, shoppingList: eigenesIcon, shoppingListDark: eigenesDunkel };
+    expect(getEffectiveIcon(icons, 'shoppingList', true)).toBe(eigenesDunkel);
   });
 });

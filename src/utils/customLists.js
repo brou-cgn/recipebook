@@ -3,6 +3,7 @@
  */
 import { db } from '../firebase';
 import { defaultIcon, DEFAULT_ICON_NAMES } from './defaultButtonIcons';
+import { DEFAULT_ADD_NUTRITION_ICON } from './nutritionIconUtils';
 import { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField, collection, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { normalizeNutritionReferenceId } from './nutritionReferenceUtils';
 import { DEFAULT_PRINT_FORMATS, migrateFormat, validatePrintFormats, PrintFormatValidationError } from './printFormats';
@@ -573,7 +574,7 @@ BEISPIEL GUTE EXTRAKTION:
 
 Extrahiere nun alle sichtbaren Informationen aus dem Bild genau nach diesem Schema.`;
 
-// Default button icons (Text-Labels bzw. SVG-Symbole als data:-URI)
+// Default button icons (SVG-Symbole als data:-URI; Text nur noch bei ×, ✓ und ⋯, siehe defaultButtonIcons.js)
 export const DEFAULT_BUTTON_ICONS = {
   cookingMode: defaultIcon('steam'),
   // Icon shown when the recipe uses the default category image, or when the
@@ -583,49 +584,50 @@ export const DEFAULT_BUTTON_ICONS = {
   cookingModeExit: '',
   // Kochmodus-Titelzeile: weiteres Rezept dazunehmen (Kochsitzung, Rollen-Flag parallelKochen)
   cookingAddRecipe: defaultIcon('potPlus'),
-  importRecipe: 'Import',
-  scanImage: 'Scan',
-  webImport: 'Web',
+  importRecipe: defaultIcon('download'),
+  scanImage: defaultIcon('scan'),
+  webImport: defaultIcon('globe'),
   closeButton: '×',
   // Icon shown when the recipe uses the default category image (light mode)
   closeButtonDefaultImg: '×',
   filterButton: defaultIcon('gear'),
-  filterButtonActive: '▼',
-  copyLink: 'Link',
-  nutritionEmpty: '+',
-  nutritionFilled: 'Nähr.',
-  nutritionRecalc: '↻',
+  filterButtonActive: defaultIcon('filter'),
+  copyLink: defaultIcon('link'),
+  // Blaues Plus im Kreis wie in der Rezeptansicht; dient auch für „Verknüpftes Event öffnen“ im Menü
+  nutritionEmpty: DEFAULT_ADD_NUTRITION_ICON,
+  nutritionFilled: defaultIcon('apple'),
+  nutritionRecalc: defaultIcon('refresh'),
   ratingHeartEmpty: defaultIcon('heart'),
   ratingHeartEmptyModal: defaultIcon('heart'),
   ratingHeartFilled: defaultIcon('heartFilled'),
-  shoppingList: 'Einkauf',
+  shoppingList: defaultIcon('cart'),
   listSettings: defaultIcon('gear'),
   listSettingsActive: defaultIcon('pencil'),
-  bringButton: 'Bring',
+  bringButton: defaultIcon('bag'),
   timerStart: defaultIcon('play'),
-  timerStop: '■',
-  cookDate: 'Datum',
+  timerStop: defaultIcon('stop'),
+  cookDate: defaultIcon('calendar'),
   // Folgen-Button (Rezeptdetail, Kochtagebuch)
   followButton: defaultIcon('follow'),
   // Weinbegleitung: eigene Icons für Rot- und Weißwein; leer = eingebautes Glas in der Weinfarbe
   weinRot: '',
   weinWeiss: '',
-  addRecipe: '+',
-  editRecipe: 'Edit',
-  addPrivateRecipe: 'Privat',
+  addRecipe: defaultIcon('plus'),
+  editRecipe: defaultIcon('pencil'),
+  addPrivateRecipe: defaultIcon('lockPlus'),
   addGroupMember: defaultIcon('userPlus'),
-  addRecipeToList: '+',
-  saveRecipe: 'Speich.',
+  addRecipeToList: defaultIcon('plus'),
+  saveRecipe: defaultIcon('save'),
   swipeRight: '✓',
   swipeLeft: '×',
   swipeUp: '',
   swipeDelete: '',
-  menuFavoritesButton: '☆',
+  menuFavoritesButton: defaultIcon('star'),
   menuFavoritesButtonActive: '',
   privateBadge: defaultIcon('lock'),
-  tagesmenuZumTagesMenu: 'Menü',
-  tagesmenuMeineAuswahl: 'Liste',
-  tagesmenuZurueckZumStapel: 'Stapel',
+  tagesmenuZumTagesMenu: defaultIcon('utensils'),
+  tagesmenuMeineAuswahl: defaultIcon('list'),
+  tagesmenuZurueckZumStapel: defaultIcon('layers'),
   tagesmenuKachelMenu: '⋯',
   // Alt icon shown when the tile image is dark (low luminance)
   tagesmenuKachelMenuAlt: '⋯',
@@ -635,12 +637,12 @@ export const DEFAULT_BUTTON_ICONS = {
   timelineBubbleIcon: '',
   timelineMenuBubbleIcon: '',
   timelineCookEventBubbleIcon: '',
-  newVersion: 'Version',
+  newVersion: defaultIcon('copy'),
   newVersionDescribing: defaultIcon('pencil'),
   newVersionWithText: defaultIcon('check'),
   deleteRecipe: '',
-  printRecipe: '⎙',
-  addSection: '+',
+  printRecipe: defaultIcon('printer'),
+  addSection: defaultIcon('plus'),
   addIngredient: defaultIcon('carrot'),
   addStep: defaultIcon('note'),
   resetThumbnail: defaultIcon('camera'),
@@ -649,7 +651,7 @@ export const DEFAULT_BUTTON_ICONS = {
   addImage: defaultIcon('image'),
   trendingDifficultyIcon: '',
   trendingTimeIcon: defaultIcon('timer'),
-  kuecheFab: '+',
+  kuecheFab: defaultIcon('plus'),
   eventsDrinksFab: defaultIcon('cup'),
   eventsGuestsFab: defaultIcon('people'),
   eventsWichtelFab: defaultIcon('gift'),
@@ -766,7 +768,11 @@ export function getEffectiveIcon(icons, key, isDarkMode) {
   if (isDarkMode) {
     const darkKey = key + 'Dark';
     const darkIcon = icons[darkKey];
-    if (darkIcon) return darkIcon;
+    // Ein Standard-Dunkelsymbol gilt nur, solange auch das helle Icon der Standard ist:
+    // Wer nur ein helles Icon gepflegt hat, sieht es auch im Dunkelmodus (wie bei leerem <key>Dark).
+    const lightIsCustom = icons[key] != null && icons[key] !== DEFAULT_BUTTON_ICONS[key];
+    const darkIsStandard = darkIcon === DEFAULT_BUTTON_ICONS[darkKey];
+    if (darkIcon && !(lightIsCustom && darkIsStandard)) return darkIcon;
   }
   return icons[key] ?? DEFAULT_BUTTON_ICONS[key] ?? '';
 }

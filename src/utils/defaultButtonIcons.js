@@ -6,6 +6,8 @@
 const LIGHT_COLOR = '#402C1C';
 const DARK_COLOR = '#f2e8dc';
 const HEART_RED = '#c0392b';
+// Stopp-Knopf am Schritt-Timer: Rot wie bisher das Textsymbol (.step-timer-btn.stop), in beiden Themes
+const TIMER_STOP_RED = '#cc4444';
 
 const SHAPES = {
   steam: { d: 'M7 4c-1.5 2 1.5 3 0 5s1.5 3 0 5M12 4c-1.5 2 1.5 3 0 5s1.5 3 0 5M17 4c-1.5 2 1.5 3 0 5s1.5 3 0 5M5 19h14' },
@@ -47,6 +49,38 @@ const SHAPES = {
   // Dampfender Topf mit Plus-Badge (Kochmodus: weiteres Rezept dazunehmen), Badge wie bei Folgen
   potPlus: {
     d: 'M4 12.5h12v4.5a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3zM1.8 14h2.2M16 14h2.2M7 9.5c-1-1.2 1-2.3 0-4.5M10.5 9.5c-1-1.2 1-2.3 0-4.5',
+    badge: { cx: 18, cy: 6, r: 5.5, plus: 'M18 3.4v5.2M15.4 6h5.2' },
+  },
+  // Ersatz für die früheren Text-Standards („Einkauf“, „Datum“, „Edit“, „Import“ …, Tech-Check P10)
+  plus: { d: 'M12 5v14M5 12h14' },
+  // Stern wie components/icons/StarIcon.js
+  star: { d: 'M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z' },
+  // Einkaufswagen wie components/icons/ShoppingCartIcon.js
+  cart: { d: 'M2 3h2l2.4 12.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 7H6M9 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM18 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2z' },
+  // Einkaufstasche (Einkaufsliste an Bring! übergeben)
+  bag: { d: 'M5.5 8h13l-1 12.5h-11zM9 8V6.5a3 3 0 0 1 6 0V8' },
+  printer: { d: 'M7 9V3h10v6M7 17H5a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2M7 14h10v7H7z' },
+  download: { d: 'M12 3v12M7 10l5 5 5-5M4 17v3h16v-3' },
+  scan: { d: 'M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10' },
+  globe: { d: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9M12 3c-2.5 2.5-3.8 5.5-3.8 9s1.3 6.5 3.8 9' },
+  // Apfel (Nährwerte vorhanden)
+  apple: {
+    d: 'M12 7.5c-1.4-1.1-3.4-1.5-5-.7-2.4 1.2-3.2 4.4-2.2 7.6 1 3.2 3.2 5.6 5.1 5.6.8 0 1.3-.4 2.1-.4s1.3.4 2.1.4c1.9 0 4.1-2.4 5.1-5.6 1-3.2.2-6.4-2.2-7.6-1.6-.8-3.6-.4-5 .7zM12 7.5c0-2 .8-3.5 2.5-4.5',
+  },
+  refresh: { d: 'M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5' },
+  stop: { d: 'M7 7h10v10H7z', fill: true, color: TIMER_STOP_RED, darkColor: TIMER_STOP_RED },
+  // Gefüllter Trichter: Filter aktiv (inaktiv: gear)
+  filter: { d: 'M4 5h16l-6 7.5V19l-4 2v-8.5z', fill: true },
+  // Zwei Blätter übereinander: eigene Version
+  copy: { d: 'M9 9h11v11H9zM5 15H4V4h11v1' },
+  list: { d: 'M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01' },
+  // Gestapelte Lagen: zurück zum Swipestapel
+  layers: { d: 'M12 3l9 4.5-9 4.5-9-4.5zM3 12l9 4.5 9-4.5M3 16.5l9 4.5 9-4.5' },
+  // Gabel und Messer: zum Tagesmenü
+  utensils: { d: 'M6 3v5.5a2.5 2.5 0 0 0 5 0V3M8.5 3v5M8.5 11v10M17 3c-1.7 1.6-2.5 4-2.5 7.5V13H17M17 3v18' },
+  // Schloss mit Plus-Badge: privates Rezept anlegen (Badge wie bei Folgen)
+  lockPlus: {
+    d: 'M3 14a1.5 1.5 0 0 1 1.5-1.5h9A1.5 1.5 0 0 1 15 14v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 3 19.5zM5.5 12.5v-3a3.5 3.5 0 0 1 7 0v3',
     badge: { cx: 18, cy: 6, r: 5.5, plus: 'M18 3.4v5.2M15.4 6h5.2' },
   },
 };
@@ -101,4 +135,42 @@ export const DEFAULT_ICON_NAMES = {
   wichtelTeilnehmerBearbeiten: 'pencil',
   saveRecipeIcon: 'save',
   followButton: 'follow',
+  // Früher Text-Standards (Tech-Check P10). Bewusst weiter Text: closeButton(DefaultImg) „×“
+  // (Farbe kommt über Fotos aus dem CSS), swipeRight/swipeLeft „✓“/„×“ (farbige Wisch-Hinweise),
+  // tagesmenuKachelMenu(Alt) „⋯“ (Farbe hängt an der Helligkeit der Kachel).
+  importRecipe: 'download',
+  scanImage: 'scan',
+  webImport: 'globe',
+  filterButtonActive: 'filter',
+  copyLink: 'link',
+  nutritionFilled: 'apple',
+  nutritionRecalc: 'refresh',
+  shoppingList: 'cart',
+  bringButton: 'bag',
+  timerStop: 'stop',
+  cookDate: 'calendar',
+  addRecipe: 'plus',
+  editRecipe: 'pencil',
+  addPrivateRecipe: 'lockPlus',
+  addRecipeToList: 'plus',
+  saveRecipe: 'save',
+  menuFavoritesButton: 'star',
+  tagesmenuZumTagesMenu: 'utensils',
+  tagesmenuMeineAuswahl: 'list',
+  tagesmenuZurueckZumStapel: 'layers',
+  newVersion: 'copy',
+  printRecipe: 'printer',
+  addSection: 'plus',
+  kuecheFab: 'plus',
 };
+
+/**
+ * Standard-Symbol eines Button-Icon-Schlüssels, z. B. für den ersten Render, bevor die
+ * gepflegten Icons geladen sind. Leer, wenn der Schlüssel kein Standard-Symbol hat.
+ * @param {string} key Button-Icon-Schlüssel (z. B. 'shoppingList')
+ * @param {boolean} [dark] Variante für den Dunkelmodus
+ */
+export function defaultButtonIcon(key, dark = false) {
+  const name = DEFAULT_ICON_NAMES[key];
+  return name ? defaultIcon(name, dark) : '';
+}

@@ -10,6 +10,7 @@ import { fuzzyFilter } from '../utils/fuzzySearch';
 import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage, convertImageUrlsToBase64, isBase64Image } from '../utils/imageUtils';
 import { uploadMenuGridImage, uploadMenuGridImageDark, deleteMenuGridImage, deleteMenuGridImageDark, isStorageUrl } from '../utils/storageUtils';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getButtonIcons } from '../utils/customLists';
+import { defaultButtonIcon } from '../utils/defaultButtonIcons';
 import { getCategoryImages } from '../utils/categoryImages';
 import { getEvent, subscribeToEvent, subscribeToCustomDrinks, saveCustomDrink, calculateEventDrinks } from '../utils/eventsFirestore';
 import { updateMenu } from '../utils/menuFirestore';
@@ -530,7 +531,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
   const [cancelPressed, setCancelPressed] = useState(false);
   const formRef = useRef(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= MOBILE_BREAKPOINT);
-  const [addSectionIcon, setAddSectionIcon] = useState('+');
+  const [addSectionIcon, setAddSectionIcon] = useState(() => defaultButtonIcon('addSection', getDarkModePreference()));
   const [addSectionFabPressedIndex, setAddSectionFabPressedIndex] = useState(null);
   const [insertSectionAtIndex, setInsertSectionAtIndex] = useState(null);
   const [eventId, setEventId] = useState(null);
@@ -600,7 +601,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
     const loadIcons = async () => {
       const icons = await getButtonIcons();
       setButtonIcons(icons);
-      setAddSectionIcon(getEffectiveIcon(icons, 'addSection', isDarkMode) || '+');
+      setAddSectionIcon(getEffectiveIcon(icons, 'addSection', isDarkMode) || defaultButtonIcon('addSection', isDarkMode));
     };
     loadIcons();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -608,7 +609,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
 
   // Re-compute addSection icon when button icons or dark mode changes
   useEffect(() => {
-    setAddSectionIcon(getEffectiveIcon(buttonIcons, 'addSection', isDarkMode) || '+');
+    setAddSectionIcon(getEffectiveIcon(buttonIcons, 'addSection', isDarkMode) || defaultButtonIcon('addSection', isDarkMode));
   }, [buttonIcons, isDarkMode]);
 
   // Listen for dark mode changes

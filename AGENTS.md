@@ -34,6 +34,12 @@ erzwungen — wo das gilt, steht die Datei dabei.
 - **Keine Emojis im UI-Code.** Alternativen: Text-Label, HTML-Entity, CSS-Klasse, Icon-Bibliothek.
   Erzwungen durch `src/emojiPolicy.test.js` (Baseline leer: jedes Emoji in einer Quelldatei
   lässt den Test rot werden).
+- **Button-Icons haben ein Symbol als Standard, keinen Text.** Neue Schlüssel in
+  `DEFAULT_BUTTON_ICONS` bekommen ein Symbol aus `src/utils/defaultButtonIcons.js` (`DEFAULT_ICON_NAMES`,
+  dort entsteht auch die Dunkelvariante). Startwerte und Fallbacks in Komponenten nutzen
+  `defaultButtonIcon(key, isDarkMode)`, kein eingetipptes Wort: Sonst blitzt der Text auf, bis die
+  gepflegten Icons geladen sind. Der Knopf trägt seinen Namen über `aria-label` oder den `alt`-Text
+  des Bildes. Erzwungen durch `src/utils/defaultButtonIcons.test.js`.
 - **Farben nur über Tokens.** Komponenten-CSS nutzt `var(--color-…)` aus `src/tokens.css`,
   keine Hex-Farben; Light und Dark sind dort je Token definiert, ein Eintrag in `darkMode.css`
   ist dann nicht nötig. Neue Dark-Mode-Regeln in `darkMode.css` nicht ergänzen. Fehlt ein Token,

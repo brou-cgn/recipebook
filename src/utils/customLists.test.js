@@ -56,6 +56,7 @@ import {
   getAIRecipePromptHistory,
   resetAIRecipePrompt,
 } from './customLists';
+import { defaultIcon } from './defaultButtonIcons';
 import { getDoc, getDocs, updateDoc, setDoc, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
 
 const mockBatch = {
@@ -1148,8 +1149,8 @@ describe('button icons localStorage cache', () => {
 
 describe('button icon dark-mode resolution', () => {
   test('includes a default entry for the save icon and its dark variant, shared with the nutrition manual-save button', () => {
-    expect(DEFAULT_BUTTON_ICONS.saveRecipe).toBe('Speich.');
-    expect(DEFAULT_BUTTON_ICONS.saveRecipeDark).toBe('');
+    expect(DEFAULT_BUTTON_ICONS.saveRecipe).toBe(defaultIcon('save'));
+    expect(DEFAULT_BUTTON_ICONS.saveRecipeDark).toBe(defaultIcon('save', true));
   });
 
   test('includes configurable default entries for bottom navigation icons, active icons and their dark variants', () => {
