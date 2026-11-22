@@ -43,4 +43,11 @@ describe('FlaggeIcon – Fahnen als Umriss', () => {
     expect(regel[1]).toMatch(/stroke:\s*var\(--color-text-strong\)/);
     expect(regel[1]).toMatch(/vector-effect:\s*non-scaling-stroke/);
   });
+
+  test('ab doppelter Pixeldichte (iPhone) sind die Linien feiner', () => {
+    const css = fs.readFileSync(path.join(__dirname, '..', 'SprachWahl.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const block = css.match(/@media \(-webkit-min-device-pixel-ratio: 2\), \(min-resolution: 2dppx\)\s*\{\s*\.flagge rect,\s*\.flagge path\s*\{([^}]*)\}/);
+    expect(block).not.toBeNull();
+    expect(block[1]).toMatch(/stroke-width:\s*0\.75px/);
+  });
 });

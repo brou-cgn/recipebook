@@ -26,6 +26,15 @@
   vector-effect: non-scaling-stroke;
 }
 
+/* Ab doppelter Pixeldichte (iPhone: drei Bildpunkte je px) wirkt 1 px zu kräftig; 0,75 px ist dort
+   noch klar, am Bildschirm mit einfacher Dichte würde es unscharf. */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 2dppx) {
+  .flagge rect,
+  .flagge path {
+    stroke-width: 0.75px;
+  }
+}
+
 .sprachwahl {
   position: relative;
   display: flex;
