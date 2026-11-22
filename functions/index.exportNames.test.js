@@ -84,6 +84,7 @@ const EXPECTED_EXPORTS = [
   'uebersetzeRezeptTitel',
   'backfillInhaltUebersetzungen',
   'uebersetzeRezeptInhalt',
+  'uebersetzeListenwerte',
 ];
 
 function loadIndex() {

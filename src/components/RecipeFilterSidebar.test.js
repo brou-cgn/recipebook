@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import RecipeFilterSidebar from './RecipeFilterSidebar';
+import { SpracheProvider } from '../contexts/SpracheContext';
 
 const mockRecipes = [
   { id: '1', title: 'Sushi', kulinarik: ['Japanische Küche'], speisekategorie: ['Hauptgericht'] },
@@ -195,5 +196,44 @@ describe('RecipeFilterSidebar top-5 category/cuisine cap', () => {
   test('does not cap results while a search term is active', () => {
     renderManySidebar({ searchTerm: 'Kategorie' });
     expect(screen.getByText('Kategorie 6')).toBeInTheDocument();
+  });
+});
+
+describe('RecipeFilterSidebar – übersetzte Listen (Mehrsprachigkeit PR 5)', () => {
+  const uebersetzungen = {
+    cuisineTypes: [{ wert: 'Italienische Küche', en: 'Italian cuisine', fr: 'Cuisine italienne' }],
+    cuisineGroups: [{ wert: 'Asiatische Küche', en: 'Asian cuisine', fr: 'Cuisine asiatique' }],
+    mealCategories: [{ wert: 'Hauptgericht', en: 'Main course', fr: 'Plat principal' }],
+  };
+  const zeige = (props = {}) => render(
+    <SpracheProvider profilSprache="en" inhalteUebersetzen listenUebersetzungen={uebersetzungen} speicher={null}>
+      <RecipeFilterSidebar
+        recipes={mockRecipes}
+        currentUser={mockCurrentUser}
+        cuisineTypes={mockCuisineTypes}
+        cuisineGroups={mockCuisineGroups}
+        mealCategories={mockMealCategories}
+        {...props}
+      />
+    </SpracheProvider>
+  );
+
+  test('zeigt Kategorien und Küchen übersetzt, gefiltert wird weiter mit dem deutschen Wert', () => {
+    const onMealCategoryFilterChange = jest.fn();
+    zeige({ onMealCategoryFilterChange });
+    expect(screen.getByRole('button', { name: 'Main course' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Italian cuisine' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Asian cuisine' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Hauptgericht' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Main course' }));
+    expect(onMealCategoryFilterChange).toHaveBeenCalledWith(['Hauptgericht']);
+  });
+
+  test('die Suche findet Original und Übersetzung', () => {
+    const { unmount } = zeige({ searchTerm: 'italian' });
+    expect(screen.getByRole('button', { name: 'Italian cuisine' })).toBeInTheDocument();
+    unmount();
+    zeige({ searchTerm: 'italienisch' });
+    expect(screen.getByRole('button', { name: 'Italian cuisine' })).toBeInTheDocument();
   });
 });

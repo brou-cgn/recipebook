@@ -1,0 +1,47 @@
+/* Einstellungen › Listen & Kategorien: Übersetzungen der Listen (Mehrsprachigkeit PR 5) */
+.listen-uebersetzungen-liste {
+  margin: 0.5rem 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+.listen-uebersetzungen-liste summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.listen-uebersetzungen .listen-uebersetzungen-stand {
+  margin-left: 0.5rem;
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.listen-uebersetzungen-tabelle {
+  width: 100%;
+  margin-top: 0.5rem;
+  border-collapse: collapse;
+}
+
+.listen-uebersetzungen-tabelle th,
+.listen-uebersetzungen-tabelle td {
+  padding: 0.25rem 0.5rem 0.25rem 0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.listen-uebersetzungen-tabelle th[scope='row'] {
+  font-weight: 400;
+}
+
+.listen-uebersetzungen-tabelle input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.listen-uebersetzungen-einheit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}

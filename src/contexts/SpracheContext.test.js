@@ -1,5 +1,5 @@
 import { act, render, screen } from '@testing-library/react';
-import { SpracheProvider, useProfilSprache, useRezeptTitel, useSprache, useSpracheFuerNutzer, useTexte } from './SpracheContext';
+import { SpracheProvider, useListenwerte, useProfilSprache, useRezeptTitel, useSprache, useSpracheFuerNutzer, useTexte } from './SpracheContext';
 import { SITZUNGS_SPRACHE_KEY } from '../i18n/sprachen';
 import allgemeinTexte from '../i18n/texte/allgemein';
 import { renderWithProviders } from '../test-utils';
@@ -164,5 +164,42 @@ describe('übersetzte Rezepttitel (Mehrsprachigkeit PR 3)', () => {
     }
     render(<OhneProvider />);
     expect(screen.getByRole('heading')).toHaveTextContent('Omas Apfelkuchen');
+  });
+});
+
+describe('useListenwerte (Mehrsprachigkeit PR 5)', () => {
+  const uebersetzungen = {
+    mealCategories: [{ wert: 'Hauptspeisen', en: 'Main courses', fr: 'Plats principaux' }],
+    portionUnits: [{ wert: 'portion', en: { einzahl: 'serving', mehrzahl: 'servings' }, fr: { einzahl: 'portion', mehrzahl: 'portions' } }],
+  };
+  function Anzeige() {
+    const listen = useListenwerte();
+    return <p>{`${listen.text('mealCategories', 'Hauptspeisen')} · 4 ${listen.einheit('portionUnits', { id: 'portion', singular: 'Portion', plural: 'Portionen' }, 4)}`}</p>;
+  }
+
+  it('übersetzt nur mit eingeschalteten übersetzten Inhalten', () => {
+    const { rerender } = render(
+      <SpracheProvider profilSprache="en" inhalteUebersetzen listenUebersetzungen={uebersetzungen} speicher={null}><Anzeige /></SpracheProvider>,
+    );
+    expect(screen.getByText('Main courses · 4 servings')).toBeInTheDocument();
+    rerender(<SpracheProvider profilSprache="en" inhalteUebersetzen listenUebersetzungen={uebersetzungen} speicher={null}><Anzeige /></SpracheProvider>);
+    expect(screen.getByText('Main courses · 4 servings')).toBeInTheDocument();
+  });
+
+  it('ohne Freischaltung oder ohne Provider das Original', () => {
+    render(<SpracheProvider profilSprache="en" listenUebersetzungen={uebersetzungen} speicher={null}><Anzeige /></SpracheProvider>);
+    expect(screen.getByText('Hauptspeisen · 4 Portionen')).toBeInTheDocument();
+  });
+
+  it('setzeListenUebersetzungen aktualisiert die Anzeige', () => {
+    let steuern;
+    function Mit() {
+      steuern = useSprache();
+      return <Anzeige />;
+    }
+    render(<SpracheProvider profilSprache="fr" inhalteUebersetzen speicher={null}><Mit /></SpracheProvider>);
+    expect(screen.getByText('Hauptspeisen · 4 Portionen')).toBeInTheDocument();
+    act(() => steuern.setzeListenUebersetzungen(uebersetzungen));
+    expect(screen.getByText('Plats principaux · 4 portions')).toBeInTheDocument();
   });
 });

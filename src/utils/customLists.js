@@ -1476,6 +1476,30 @@ export async function saveCommonUnits(groups, userId) {
 }
 
 /**
+ * Übersetzungen der Auswahllisten (Vorhaben Mehrsprachigkeit, PR 5; Aufbau in
+ * src/i18n/listenwerte.js). Bewusst nicht Teil von getCustomLists/saveCustomLists: Sonst schriebe
+ * „Einstellungen speichern“ einen beim Öffnen geladenen, älteren Stand zurück.
+ * @returns {Promise<Object|null>}
+ */
+export async function getListenUebersetzungen() {
+  const settings = await getSettings();
+  return settings.listenUebersetzungen || null;
+}
+
+/**
+ * @param {Object} uebersetzungen - vollständiges Feld listenUebersetzungen
+ * @returns {Promise<void>}
+ */
+export async function saveListenUebersetzungen(uebersetzungen) {
+  const listenUebersetzungen = uebersetzungen || {};
+  await updateDoc(doc(db, 'settings', 'app'), { listenUebersetzungen });
+  if (settingsCache) {
+    settingsCache = { ...settingsCache, listenUebersetzungen };
+    saveSettingsToLocalStorageCache(settingsCache);
+  }
+}
+
+/**
  * Save customizable lists to Firestore
  * @param {Object} lists - Lists object containing cuisineTypes, mealCategories, units, portionUnits
  * @returns {Promise<void>}

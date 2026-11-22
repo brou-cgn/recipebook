@@ -3882,3 +3882,37 @@ describe('RecipeDetail – übersetzter Inhalt (Mehrsprachigkeit PR 4)', () => {
     expect(screen.getByText('200 g Linsen')).toBeInTheDocument();
   });
 });
+
+describe('RecipeDetail – übersetzte Listenwerte (Mehrsprachigkeit PR 5)', () => {
+  const rezept = {
+    id: 'recipe-l',
+    title: 'Pasta',
+    authorId: 'user-1',
+    portionen: 4,
+    portionUnitId: 'portion',
+    kulinarik: ['Italienische Küche'],
+    ingredients: ['200 g Nudeln'],
+    steps: ['Kochen.'],
+  };
+  const uebersetzungen = {
+    cuisineTypes: [{ wert: 'Italienische Küche', en: 'Italian cuisine', fr: 'Cuisine italienne' }],
+    portionUnits: [{ wert: 'portion', en: { einzahl: 'serving', mehrzahl: 'servings' }, fr: { einzahl: 'portion', mehrzahl: 'portions' } }],
+  };
+  const zeige = (inhalteUebersetzen) => render(
+    <SpracheProvider profilSprache="en" inhalteUebersetzen={inhalteUebersetzen} listenUebersetzungen={uebersetzungen} speicher={null}>
+      <RecipeDetail recipe={rezept} onBack={() => {}} onEdit={() => {}} onDelete={() => {}} currentUser={{ id: 'user-1', vorname: 'T', nachname: 'U' }} />
+    </SpracheProvider>
+  );
+
+  test('zeigt Portionseinheit und Kulinarik in der geltenden Sprache', async () => {
+    zeige(true);
+    expect(await screen.findByText('4 servings')).toBeInTheDocument();
+    expect(screen.getByText('Italian cuisine')).toBeInTheDocument();
+  });
+
+  test('ohne übersetzte Inhalte wie bisher', async () => {
+    zeige(false);
+    expect(await screen.findByText('4 Portionen')).toBeInTheDocument();
+    expect(screen.getByText('Italienische Küche')).toBeInTheDocument();
+  });
+});

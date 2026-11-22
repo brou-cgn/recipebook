@@ -91,6 +91,22 @@ test('rezeptUebersetzungen (Mehrsprachigkeit): Mitglieder lesen einzeln, niemand
   }
 });
 
+test('settings/app (Mehrsprachigkeit): listenUebersetzungen pflegen wie die Listen, nur als Map', async () => {
+  await seed(env, (db) => db.doc('settings/app').set({ cuisineTypes: ['Italienische Küche'] }));
+  const uebersetzungen = { cuisineTypes: [{ wert: 'Italienische Küche', en: 'Italian cuisine', fr: 'Cuisine italienne' }] };
+  await assertSucceeds(as.user(env, 'editor').doc('settings/app').update({ listenUebersetzungen: uebersetzungen }));
+  await assertSucceeds(as.user(env, 'admin').doc('settings/app').update({ listenUebersetzungen: {} }));
+  await assertFails(as.user(env, 'reader').doc('settings/app').update({ listenUebersetzungen: uebersetzungen }));
+  await assertFails(as.user(env, 'editor').doc('settings/app').update({ listenUebersetzungen: 'kaputt' }));
+  // Andere Felder bleiben für Editoren gesperrt, auch zusammen mit den Übersetzungen.
+  await assertFails(as.user(env, 'editor').doc('settings/app').update({ listenUebersetzungen: uebersetzungen, headerSlogan: 'x' }));
+});
+
+test('aiListenUebersetzungLimits: Zähler nur für Cloud Functions', async () => {
+  await assertFails(as.user(env, 'admin').doc('aiListenUebersetzungLimits/admin_2026-11-22').get());
+  await assertFails(as.user(env, 'admin').doc('aiListenUebersetzungLimits/admin_2026-11-22').set({ count: 0 }));
+});
+
 test('aiInhaltUebersetzungLimits: Zähler nur für Cloud Functions', async () => {
   await assertFails(as.user(env, 'admin').doc('aiInhaltUebersetzungLimits/automatik_2026-11-22').get());
   await assertFails(as.user(env, 'admin').doc('aiInhaltUebersetzungLimits/admin_2026-11-22').set({ count: 0 }));

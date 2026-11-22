@@ -8,6 +8,7 @@ import {
 } from '../i18n/sprachen';
 import { erstelleT } from '../i18n/texte';
 import { rezeptTitel } from '../i18n/rezeptTitel';
+import { baueListenIndex, einheitText, kulinarikText, listenwertText } from '../i18n/listenwerte';
 
 // Sprache der App (Vorhaben docs/vorhaben/mehrsprachigkeit.md). Der Provider umschließt in
 // src/index.js die ganze App. App.js meldet die Sprache aus den persönlichen Einstellungen
@@ -21,9 +22,11 @@ const OHNE_PROVIDER = Object.freeze({
   profilSprache: null,
   sitzungsSprache: null,
   inhalteUebersetzen: false,
+  listenUebersetzungen: null,
   setzeProfilSprache: () => {},
   setzeSitzungsSprache: () => {},
   setzeInhalteUebersetzen: () => {},
+  setzeListenUebersetzungen: () => {},
 });
 
 const SpracheContext = createContext(OHNE_PROVIDER);
@@ -44,15 +47,19 @@ export function SpracheProvider({
   profilSprache: startProfilSprache = null,
   speicher,
   inhalteUebersetzen: startInhalteUebersetzen = false,
+  listenUebersetzungen: startListenUebersetzungen = null,
 }) {
   const [profilSprache, setProfilSprache] = useState(() => gueltigOderNull(startProfilSprache));
   const [inhalteUebersetzen, setInhalteUebersetzen] = useState(Boolean(startInhalteUebersetzen));
+  // Übersetzungen der Auswahllisten aus settings/app (PR 5); App.js lädt sie beim Start.
+  const [listenUebersetzungen, setListenUebersetzungen] = useState(startListenUebersetzungen);
   const [sitzungsSprache, setSitzungsSprache] = useState(() => (
     speicher === null ? null : leseSitzungsSprache(speicher)
   ));
 
   const setzeProfilSprache = useCallback((wert) => setProfilSprache(gueltigOderNull(wert)), []);
   const setzeInhalteUebersetzen = useCallback((wert) => setInhalteUebersetzen(Boolean(wert)), []);
+  const setzeListenUebersetzungen = useCallback((wert) => setListenUebersetzungen(wert || null), []);
 
   const setzeSitzungsSprache = useCallback((wert) => {
     const neu = gueltigOderNull(wert);
@@ -72,11 +79,13 @@ export function SpracheProvider({
     profilSprache,
     sitzungsSprache,
     inhalteUebersetzen,
+    listenUebersetzungen,
     setzeProfilSprache,
     setzeSitzungsSprache,
     setzeInhalteUebersetzen,
-  }), [sprache, profilSprache, sitzungsSprache, inhalteUebersetzen,
-    setzeProfilSprache, setzeSitzungsSprache, setzeInhalteUebersetzen]);
+    setzeListenUebersetzungen,
+  }), [sprache, profilSprache, sitzungsSprache, inhalteUebersetzen, listenUebersetzungen,
+    setzeProfilSprache, setzeSitzungsSprache, setzeInhalteUebersetzen, setzeListenUebersetzungen]);
 
   return <SpracheContext.Provider value={wert}>{children}</SpracheContext.Provider>;
 }
@@ -108,6 +117,25 @@ export function useTexte(woerterbuch) {
 export function useRezeptTitel() {
   const { sprache, inhalteUebersetzen } = useSprache();
   return useCallback((rezept) => rezeptTitel(rezept, sprache, inhalteUebersetzen), [sprache, inhalteUebersetzen]);
+}
+
+/**
+ * Anzeige übersetzter Listenwerte (Kulinarik, Speisekategorien, Einheiten; src/i18n/listenwerte.js),
+ * solange übersetzte Inhalte eingeschaltet sind; sonst das Original wie gespeichert.
+ * @returns {{text: function(string, string): string, einheit: function(string, Object, number): string,
+ *   kulinarik: function(string): string}}
+ */
+export function useListenwerte() {
+  const { sprache, inhalteUebersetzen, listenUebersetzungen } = useSprache();
+  return useMemo(() => {
+    const index = baueListenIndex(listenUebersetzungen);
+    const ziel = inhalteUebersetzen ? sprache : STANDARD_SPRACHE;
+    return {
+      text: (listeId, wert) => listenwertText(index, listeId, wert, ziel),
+      einheit: (listeId, einheit, anzahl) => einheitText(index, listeId, einheit, ziel, anzahl),
+      kulinarik: (name) => kulinarikText(index, name, ziel),
+    };
+  }, [sprache, inhalteUebersetzen, listenUebersetzungen]);
 }
 
 /**

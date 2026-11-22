@@ -30,6 +30,8 @@ const NUR_DEUTSCH = new Set([
   'components/ButtonIconsAdminTab.js',
   'components/DiscoverTopicsTab.js',
   'components/DrinkWeightsTab.js',
+  // Einstellungen › Listen & Kategorien: Übersetzungen der Listen (Mehrsprachigkeit PR 5)
+  'components/ListenUebersetzungen.js',
   'components/NutritionReferenceTab.js',
   'components/PrintFormatsSettings.js',
   'components/SeasonMatrixTab.js',

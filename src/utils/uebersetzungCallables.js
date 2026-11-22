@@ -2,7 +2,8 @@
  * Aufrufe der Backfill-Functions der Mehrsprachigkeit (nur für Admins, eine Seite je Aufruf;
  * Antwortaufbau in functions/handlers/uebersetzung.js):
  *  - backfillTitelUebersetzungen (PR 3): Rezepttitel,
- *  - backfillInhaltUebersetzungen (PR 4): Zutaten und Schritte.
+ *  - backfillInhaltUebersetzungen (PR 4): Zutaten und Schritte,
+ *  - uebersetzeListenwerte (PR 5): Vorschläge für die Auswahllisten (schreibt nichts).
  */
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../firebase';
@@ -31,5 +32,16 @@ export async function trageTitelUebersetzungenNach({ cursor = null } = {}) {
 export async function trageInhaltUebersetzungenNach({ cursor = null } = {}) {
   const callable = httpsCallable(functions, 'backfillInhaltUebersetzungen', { timeout: INHALT_TIMEOUT_MS });
   const ergebnis = await callable({ cursor, anzahl: INHALT_BACKFILL_ANZAHL });
+  return ergebnis?.data || null;
+}
+
+/**
+ * Übersetzungsvorschläge für Listenwerte (nur Admins).
+ * @param {Array<object>} eintraege - [{liste, wert, text}] bzw. [{liste, wert, einzahl, mehrzahl}], höchstens 100
+ * @returns {Promise<{vorschlaege: Array<object>}|null>}
+ */
+export async function schlageListenUebersetzungenVor(eintraege) {
+  const callable = httpsCallable(functions, 'uebersetzeListenwerte', { timeout: 100000 });
+  const ergebnis = await callable({ eintraege });
   return ergebnis?.data || null;
 }
