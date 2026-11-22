@@ -438,8 +438,10 @@ function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSe
         <PersonalDataPage
           currentUser={currentUser}
           onBack={() => setShowPersonalData(false)}
-          onProfileUpdated={(updatedUser) => {
-            setShowPersonalData(false);
+          // Speichern des Formulars schließt die Seite; eine geänderte Einstellung (Sprache,
+          // Liste, Hintergrundaktualisierung, PIN) meldet { schliessen: false } und bleibt.
+          onProfileUpdated={(updatedUser, { schliessen = true } = {}) => {
+            if (schliessen) setShowPersonalData(false);
             if (onProfileUpdated) onProfileUpdated(updatedUser);
           }}
           privateLists={groups.filter(g => g.type === 'private' && !isFuerDichEntdecktList(g) && (g.ownerId === currentUser?.id || (Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id))))}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, within, act } from '@testing-library/react';
+import { render, screen, fireEvent, within, act, waitFor } from '@testing-library/react';
 import Kueche from './Kueche';
 import { getKalibrierungsSnapshotsOnce } from '../utils/drinkWeightsFirestore';
 
@@ -49,6 +49,7 @@ jest.mock('../utils/recipeCallsFirestore', () => ({
 
 jest.mock('../utils/userManagement', () => ({
   updateUserProfile: jest.fn(() => Promise.resolve({ success: true, message: 'Profil erfolgreich aktualisiert.' })),
+  setUserSprache: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock('../utils/drinkWeightsFirestore', () => ({
@@ -384,6 +385,47 @@ describe('Kueche', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Abbrechen/i }));
     expect(screen.queryByRole('heading', { name: 'Chefkoch', level: 2 })).not.toBeInTheDocument();
+  });
+
+  test('Speichern der persönlichen Daten schließt die Profilseite', async () => {
+    jest.requireMock('../utils/userManagement').updateUserProfile.mockResolvedValue({ success: true, message: '' });
+    const onProfileUpdated = jest.fn();
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1', vorname: 'John', nachname: 'Doe', email: 'john@example.com' }}
+        onProfileUpdated={onProfileUpdated}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Chefkoch persönliche Daten/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Chefkoch', level: 2 })).not.toBeInTheDocument());
+    expect(onProfileUpdated).toHaveBeenCalledWith(expect.objectContaining({ vorname: 'John' }));
+  });
+
+  test('eine geänderte Einstellung (Sprache) lässt die Profilseite offen', async () => {
+    const onProfileUpdated = jest.fn();
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1', vorname: 'John', nachname: 'Doe', email: 'john@example.com', sprachwahl: true }}
+        onProfileUpdated={onProfileUpdated}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Chefkoch persönliche Daten/i }));
+    fireEvent.click(screen.getByRole('radio', { name: 'English' }));
+
+    await waitFor(() => expect(onProfileUpdated).toHaveBeenCalledWith(expect.objectContaining({ sprache: 'en' })));
+    expect(screen.getByRole('heading', { name: 'Chefkoch', level: 2 })).toBeInTheDocument();
   });
 
   test('renders the info tile above the timeline with recipe and menu counts', () => {

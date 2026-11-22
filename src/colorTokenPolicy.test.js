@@ -55,7 +55,6 @@ const BASELINE = {
   'components/NutritionModal.css': 57,
   'components/OcrScanModal.css': 75,
   'components/PasswordChangeModal.css': 9,
-  'components/PersonalDataPage.css': 28,
   'components/PortionSelector.css': 8,
   'components/PrintFormatEditor.css': 39,
   'components/PrintPage.css': 16,
@@ -138,8 +137,9 @@ describe('Farb-Token-Richtlinie', () => {
 
 // darkMode.css ist Altbestand: neue Dark-Regeln gehören als Token in tokens.css
 // (AGENTS.md). Gezählt werden die [data-theme="dark"]-Selektoren; der Wert darf nur
-// sinken (Tech-Check D5: am 27.10.2026 kamen trotz Regel sieben neue dazu).
-const DARK_MODE_SELECTORS = 947;
+// sinken (Tech-Check D5: am 27.10.2026 kamen trotz Regel sieben neue dazu). 22.11.2026: 947 → 935,
+// die zwölf Regeln der Profilseite stehen jetzt als Tokens in PersonalDataPage.css.
+const DARK_MODE_SELECTORS = 935;
 
 describe('darkMode.css (Altbestand)', () => {
   const css = fs.readFileSync(path.join(SRC, 'darkMode.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

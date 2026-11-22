@@ -243,6 +243,18 @@ const SCREENS = [
     run: async (page, shot) => { await openMenuItem(page, 'Testkoch Beispiel'); await shot(); },
   },
   {
+    // Profilseite mit aufgeklapptem Alarmton (Auswahl direkt in der Zeile, Variante B)
+    name: 'persoenliche-daten-alarmton',
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Testkoch Beispiel');
+      const zeile = page.getByRole('button', { name: /^Alarmton/ });
+      await zeile.click();
+      await zeile.scrollIntoViewIfNeeded();
+      await pause(page, 500);
+      await shot();
+    },
+  },
+  {
     name: 'einstellungen-ki',
     fullPage: true,
     run: async (page, shot) => {
