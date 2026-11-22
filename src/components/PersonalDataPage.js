@@ -35,7 +35,7 @@ const SEITE_BLEIBT_OFFEN = { schliessen: false };
 
 /**
  * Profilseite „Chefkoch“: persönliche Daten und Einstellungen. Aufbau nach Variante B des
- * Designvorschlags (https://claude.ai/artifact/5S6yBvMf7j4JvfHLCzwQU2): Kopf mit Person,
+ * Designvorschlags (https://claude.ai/artifact/5S6yBvMf7j4JvfHLCzwQU2): Kopf mit Person (mittig, ohne Box),
  * darunter gruppierte Abschnitte. Erscheinungsbild und Sprache wählt man direkt in der Zeile,
  * Inspirationssammlung, Alltagsklassiker und Alarmton klappen in der Zeile auf (immer nur eine).
  * Keine Unterseiten.
@@ -419,40 +419,40 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
         )}
         <div className="personal-data-kopf-person">
           {initialen && <span className="personal-data-avatar" aria-hidden="true">{initialen}</span>}
-          <div className="personal-data-kopf-text">
-            <h2>{tB('chefkoch')}</h2>
-            {anzeigeName && <p className="personal-data-kopf-name">{anzeigeName}</p>}
-          </div>
+          <h2>{tB('chefkoch')}</h2>
+          {anzeigeName && <p className="personal-data-kopf-name">{anzeigeName}</p>}
         </div>
       </header>
 
       <section className="personal-data-abschnitt">
         <h3 className="personal-data-section-title">{t('persoenlicheDaten')}</h3>
         <form className="personal-data-form" onSubmit={handleSubmit}>
-          <div className="personal-data-gruppe">
-            <div className="personal-data-field">
-              <label htmlFor="vorname">{t('vorname')}</label>
-              <input
-                id="vorname"
-                type="text"
-                value={vorname}
-                onChange={(e) => setVorname(e.target.value)}
-                required
-                autoComplete="given-name"
-              />
+          <div className="personal-data-felder">
+            <div className="personal-data-felder-paar">
+              <div className="personal-data-field">
+                <label htmlFor="vorname">{t('vorname')}</label>
+                <input
+                  id="vorname"
+                  type="text"
+                  value={vorname}
+                  onChange={(e) => setVorname(e.target.value)}
+                  required
+                  autoComplete="given-name"
+                />
+              </div>
+              <div className="personal-data-field">
+                <label htmlFor="nachname">{t('nachname')}</label>
+                <input
+                  id="nachname"
+                  type="text"
+                  value={nachname}
+                  onChange={(e) => setNachname(e.target.value)}
+                  required
+                  autoComplete="family-name"
+                />
+              </div>
             </div>
             <div className="personal-data-field">
-              <label htmlFor="nachname">{t('nachname')}</label>
-              <input
-                id="nachname"
-                type="text"
-                value={nachname}
-                onChange={(e) => setNachname(e.target.value)}
-                required
-                autoComplete="family-name"
-              />
-            </div>
-            <div className="personal-data-field personal-data-field--block">
               <label htmlFor="email">{t('email')}</label>
               <input
                 id="email"
@@ -463,7 +463,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
                 autoComplete="email"
               />
             </div>
-            <div className="personal-data-field personal-data-field--block">
+            <div className="personal-data-field">
               <label htmlFor="signatureSatz">{t('signatureSatz')}</label>
               <textarea
                 id="signatureSatz"
@@ -674,8 +674,8 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           {t('passwortHinweis')}
         </p>
         <form className="personal-data-form" onSubmit={handlePasswordSubmit}>
-          <div className="personal-data-gruppe">
-            <div className="personal-data-field personal-data-field--block">
+          <div className="personal-data-felder">
+            <div className="personal-data-field">
               <label htmlFor="currentPassword">{t('aktuellesPasswort')}</label>
               <input
                 id="currentPassword"
@@ -686,7 +686,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
                 autoComplete="current-password"
               />
             </div>
-            <div className="personal-data-field personal-data-field--block">
+            <div className="personal-data-field">
               <label htmlFor="newPassword">{t('neuesPasswort')}</label>
               <input
                 id="newPassword"
@@ -697,7 +697,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
                 autoComplete="new-password"
               />
             </div>
-            <div className="personal-data-field personal-data-field--block">
+            <div className="personal-data-field">
               <label htmlFor="confirmPassword">{t('neuesPasswortBestaetigen')}</label>
               <input
                 id="confirmPassword"
@@ -747,8 +747,8 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
         )}
 
         <form className="personal-data-form" onSubmit={handleSetPin}>
-          <div className="personal-data-gruppe">
-            <div className="personal-data-field personal-data-field--block">
+          <div className="personal-data-felder">
+            <div className="personal-data-field">
               <label htmlFor="newPin">{pinActive ? tPin('feldNeu') : tPin('feld')}</label>
               <input
                 id="newPin"
@@ -760,7 +760,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
                 required
               />
             </div>
-            <div className="personal-data-field personal-data-field--block">
+            <div className="personal-data-field">
               <label htmlFor="confirmPin">{tPin('bestaetigen')}</label>
               <input
                 id="confirmPin"

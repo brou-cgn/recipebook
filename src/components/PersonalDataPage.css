@@ -1,6 +1,6 @@
 /* Profilseite „Chefkoch“ (PersonalDataPage.js), Variante B des Designvorschlags
-   https://claude.ai/artifact/5S6yBvMf7j4JvfHLCzwQU2: Kopf mit Person, darunter gruppierte
-   Abschnitte auf dem Seitenhintergrund. Farben nur über Tokens (src/tokens.css); Textfarben auf
+   https://claude.ai/artifact/5S6yBvMf7j4JvfHLCzwQU2: Kopf mit Person (ohne Box, aus V2),
+   darunter gruppierte Abschnitte auf dem Seitenhintergrund. Farben nur über Tokens (src/tokens.css); Textfarben auf
    p, span und label mit mindestens zwei Klassen (Tech-Check A7, src/darkTextPolicy.test.js). */
 
 .personal-data-page {
@@ -15,15 +15,10 @@
   gap: 1.75rem;
 }
 
-/* ---- Kopf: Person auf Markenbraun ---- */
+/* ---- Kopf: Person mittig, ohne eigene Fläche (Kopf aus V2 des Designvorschlags) ---- */
 .personal-data-kopf {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem 1.25rem;
-  border-radius: 16px;
-  background: var(--color-brand-surface);
-  color: var(--color-on-brand-surface);
 }
 
 .personal-data-kopf-zurueck {
@@ -32,12 +27,13 @@
   align-items: center;
   gap: 0.2rem;
   min-height: 44px;
-  padding: 0 0.25rem;
+  padding: 0 0.25rem 0 0;
   border: none;
   background: transparent;
-  color: var(--color-on-brand-surface-muted);
+  color: var(--color-brand);
   font: inherit;
   font-size: 0.95rem;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -48,43 +44,40 @@
 
 .personal-data-kopf-person {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.9rem;
-  padding: 0 0.25rem;
+  gap: 0.25rem;
+  text-align: center;
 }
 
 .personal-data-kopf .personal-data-avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 0.5rem;
   border-radius: 999px;
   background: var(--color-accent);
   color: var(--color-on-accent);
-  font-size: 1.25rem;
+  font-size: 1.75rem;
   font-weight: 700;
-}
-
-.personal-data-kopf-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
 }
 
 .personal-data-page .personal-data-kopf h2 {
   margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-on-brand-surface);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
 
 .personal-data-kopf .personal-data-kopf-name {
   margin: 0;
-  font-size: 0.95rem;
-  color: var(--color-on-brand-surface-muted);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text-strong);
   overflow-wrap: anywhere;
 }
 
@@ -126,37 +119,46 @@
   border-top: 1px solid var(--color-border-subtle);
 }
 
-/* ---- Formulare: Beschriftung links, Feld rechts; zu schmal, rutscht das Feld darunter.
-   Lange Beschriftungen und lange Werte (E-Mail, Passwort, PIN) stehen über dem Feld (--block). Das Feld hat eine
-   leichte Fläche, damit auch ein leeres Feld als Eingabe erkennbar ist. ---- */
+/* ---- Formulare (Felder aus V3): Beschriftung über dem Feld, Vor- und Nachname nebeneinander,
+   alles andere in voller Breite. Das Feld hat eine leichte Fläche, damit auch ein leeres Feld
+   als Eingabe erkennbar ist. ---- */
 .personal-data-form {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
+.personal-data-felder {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1rem;
+  border-radius: 16px;
+  background: var(--color-surface-card);
+}
+
+.personal-data-felder-paar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
 .personal-data-field {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  column-gap: 0.75rem;
-  row-gap: 0.2rem;
-  min-height: 48px;
-  padding: 0.35rem 1rem;
-  box-sizing: border-box;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
 }
 
 .personal-data-page .personal-data-field label {
-  flex: 0 0 6.5rem;
-  font-size: 1rem;
+  font-size: 0.85rem;
   color: var(--color-text-body);
 }
 
 .personal-data-page .personal-data-field input,
 .personal-data-page .personal-data-field textarea {
-  flex: 1 1 10rem;
+  width: 100%;
   min-width: 0;
-  padding: 0 0.6rem;
   border: none;
   border-radius: 8px;
   background: var(--color-surface-input);
@@ -167,36 +169,19 @@
 }
 
 .personal-data-page .personal-data-field input {
-  height: 2.5rem;
+  height: 2.75rem;
+  padding: 0 0.75rem;
+}
+
+.personal-data-page .personal-data-field textarea {
+  padding: 0.6rem 0.75rem;
+  line-height: 1.4;
+  resize: vertical;
 }
 
 .personal-data-page .personal-data-field input::placeholder,
 .personal-data-page .personal-data-field textarea::placeholder {
   color: var(--color-text-faint);
-}
-
-.personal-data-field--block {
-  flex-direction: column;
-  flex-wrap: nowrap;
-  align-items: stretch;
-  row-gap: 0.4rem;
-  padding: 0.75rem 1rem;
-}
-
-.personal-data-page .personal-data-field--block label {
-  flex: none;
-}
-
-.personal-data-page .personal-data-field--block input,
-.personal-data-page .personal-data-field--block textarea {
-  flex: none;
-  width: 100%;
-}
-
-.personal-data-page .personal-data-field--block textarea {
-  padding: 0.5rem 0.6rem;
-  resize: vertical;
-  line-height: 1.4;
 }
 
 .personal-data-message {
