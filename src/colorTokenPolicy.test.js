@@ -55,7 +55,7 @@ const BASELINE = {
   'components/PrintFormatEditor.css': 39,
   'components/PrintPage.css': 16,
   'components/RatingModal.css': 15,
-  'components/RecipeDetail.css': 89,
+  'components/RecipeDetail.css': 85,
   'components/RecipeFilterSidebar.css': 18,
   'components/RecipeForm.css': 107,
   'components/RecipeImageCarousel.css': 4,
@@ -138,7 +138,7 @@ describe('Farb-Token-Richtlinie', () => {
 // der Slogan im Header nutzt das Token --color-accent-text. 934 → 928: die sechs Regeln von
 // „Chefkoch & mehr“ ersetzen die Kachel-Tokens in Kueche.css (Variante A). 928 → 904: die Regeln der
 // Unterseiten (Küchenstars, Eventplanung, Mise en Place, Küchenbetrieb) nach Variante A.
-const DARK_MODE_SELECTORS = 904;
+const DARK_MODE_SELECTORS = 900;
 
 describe('darkMode.css (Altbestand)', () => {
   const css = fs.readFileSync(path.join(SRC, 'darkMode.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

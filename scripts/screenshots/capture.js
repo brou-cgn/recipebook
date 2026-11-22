@@ -207,6 +207,19 @@ const SCREENS = [
     },
   },
   {
+    // Kochmodus beim letzten Schritt: Timer im Schritt und „Heute gekocht“ (Einstieg nur auf dem Handy)
+    name: 'kochmodus',
+    variants: ['handy-hell', 'handy-dunkel'],
+    run: async (page, shot) => {
+      await openRecipe(page, 'Linsensuppe mit Kreuzkümmel');
+      await page.locator('[aria-label="Kochmodus aktivieren"]').first().click();
+      await page.locator('.step-card').first().waitFor();
+      await page.locator('.step-card').last().click();
+      await pause(page, 1000);
+      await shot();
+    },
+  },
+  {
     name: 'rezept-loeschen-dialog',
     run: async (page, shot) => {
       await openRecipe(page, 'Linsensuppe mit Kreuzkümmel');

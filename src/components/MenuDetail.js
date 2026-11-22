@@ -1042,8 +1042,8 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
               )}
             </div>
             <div className="portion-selector-footer">
-              <button
-                className="portion-selector-generate-btn"
+              <Button
+                variant="primary"
                 onClick={() => {
                   setShowPortionSelector(false);
                   missingSavedRef.current = false;
@@ -1051,7 +1051,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                 }}
               >
                 {tAnsicht('einkaufslisteErstellen')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
