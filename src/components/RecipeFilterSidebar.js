@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import StarIcon from './icons/StarIcon';
+import Button from './Button';
 import { canEditRecipes } from '../utils/userManagement';
 import './RecipeFilterSidebar.css';
 import { useListenwerte, useTexte } from '../contexts/SpracheContext';
@@ -211,15 +212,14 @@ function RecipeFilterSidebar({
     >
       <div className="recipe-filter-sidebar-header">
         {!collapsed && userCanEdit && (
-          <button
-            type="button"
-            className="recipe-filter-sidebar-add-button"
+          <Button
+            className="recipe-filter-sidebar-add"
             onClick={handleAddClick}
             title={activePrivateListId ? t('privatesRezeptHinzufuegen') : t('rezeptHinzufuegen')}
             aria-label={activePrivateListId ? t('privatesRezeptHinzufuegen') : t('rezeptHinzufuegen')}
           >
             {activePrivateListId ? t('plusPrivatesRezept') : t('plusRezept')}
-          </button>
+          </Button>
         )}
         <button
           type="button"

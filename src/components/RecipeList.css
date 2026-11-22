@@ -92,25 +92,6 @@
    3. Header Controls / Buttons
    ========================================================= */
 
-.view-mode-button {
-  background: white;
-  color: var(--color-text-strong);
-  border: 1px solid var(--color-border);
-  padding: 0.75rem 0.75rem;
-  border-radius: 25px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  transition: all 0.3s ease;
-}
-
-.view-mode-button.active {
-  background: linear-gradient(135deg, var(--color-accent) 0%, #c46900 100%);
-  color: white;
-  border-color: var(--color-accent);
-}
-
 .filter-button {
   display: flex;
   align-items: center;
@@ -156,24 +137,6 @@
   .recipe-overview-main .add-icon-button {
     display: none;
   }
-}
-
-.add-button {
-  background: white;
-  color: white;
-  border: 1px solid var(--color-border);
-  padding: 0.75rem 1.5rem;
-  border-radius: 25px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  transition: all 0.3s ease;
-}
-
-.add-button:active {
-  background: white;
-  transform: translateY(0);
 }
 
 .add-icon-button {

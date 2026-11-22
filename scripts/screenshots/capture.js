@@ -16,7 +16,7 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { chromium, devices } = require('playwright');
-const { ACCOUNT } = require('./seed');
+const { ACCOUNT, patchAccount } = require('./seed');
 
 const ROOT = path.join(__dirname, '..', '..');
 const PORT = Number(process.env.SCREENSHOT_PORT || 5174);
@@ -88,6 +88,25 @@ const SCREENS = [
     name: 'startseite',
     fullPage: true,
     run: async (page, shot) => { await openMenuItem(page, 'Küche'); await pause(page, 1500); await shot(); },
+  },
+  {
+    // Neues Konto ohne Inspirationssammlung und Alltagsklassiker: Die Karussells zeigen statt der
+    // Plus-Knöpfe ihre Einrichtungs-Knöpfe. Das Konto wird danach zurückgesetzt.
+    name: 'startseite-einrichtung',
+    fullPage: true,
+    run: async (page, shot) => {
+      await patchAccount({ defaultWebImportListId: undefined, defaultEverydayClassicsListId: undefined });
+      try {
+        await page.reload({ waitUntil: 'load' });
+        await page.locator('.hamburger-btn').waitFor({ timeout: 30000 });
+        await openMenuItem(page, 'Küche');
+        await page.getByRole('button', { name: 'Alltagsklassiker zuordnen' }).waitFor();
+        await pause(page, 1500);
+        await shot();
+      } finally {
+        await patchAccount({ defaultWebImportListId: 'inspiration', defaultEverydayClassicsListId: 'familie' });
+      }
+    },
   },
   { name: 'kochbuch', run: async (page, shot) => { await openMenuItem(page, 'Kochbuch'); await shot(); } },
   {
@@ -277,12 +296,29 @@ const SCREENS = [
   {
     name: 'menue-bearbeiten',
     variants: ['desktop-hell', 'desktop-dunkel'],
+    fullPage: true,
     run: async (page, shot) => {
       await openMenuItem(page, 'Festtafel');
       await page.getByText('Sonntagsessen', { exact: true }).first().click();
       await pause(page, 1000);
       await page.locator('[title="Menü bearbeiten"]').first().click();
       await page.locator('.menu-form-container').first().waitFor();
+      await shot();
+    },
+  },
+  {
+    // „+ Abschnitt hinzufügen“ öffnet die vordefinierten Abschnitte und das Feld für einen eigenen Namen
+    name: 'menue-bearbeiten-abschnitt',
+    variants: ['desktop-hell', 'desktop-dunkel'],
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Festtafel');
+      await page.getByText('Sonntagsessen', { exact: true }).first().click();
+      await pause(page, 1000);
+      await page.locator('[title="Menü bearbeiten"]').first().click();
+      await page.locator('.menu-form-container').first().waitFor();
+      await page.getByRole('button', { name: '+ Abschnitt hinzufügen' }).click();
+      await page.locator('.new-section-input').first().scrollIntoViewIfNeeded();
+      await pause(page, 500);
       await shot();
     },
   },
