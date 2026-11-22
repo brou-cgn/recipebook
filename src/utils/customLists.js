@@ -1083,6 +1083,10 @@ export async function getSettings() {
         drinkUnits: settings.drinkUnits || DEFAULT_DRINK_UNITS,
         conversionTable: settings.conversionTable || DEFAULT_CONVERSION_TABLE,
         customUnits: settings.customUnits || [],
+        // Übersetzungen der Auswahllisten (Mehrsprachigkeit PR 5): Ohne diese Zeile fehlt das Feld
+        // nach jedem frischen Laden, getListenUebersetzungen liefert null, und die Pflege unter
+        // „Listen & Kategorien“ überschriebe beim Speichern den gespeicherten Stand.
+        listenUebersetzungen: settings.listenUebersetzungen || null,
         customIngredientAdjectives: settings.customIngredientAdjectives || [],
         headerSlogan: settings.headerSlogan || DEFAULT_SLOGAN,
         faviconText: settings.faviconText || DEFAULT_FAVICON_TEXT,
