@@ -57,7 +57,7 @@ const BASELINE = {
   'components/RatingModal.css': 13,
   'components/RecipeDetail.css': 83,
   'components/RecipeFilterSidebar.css': 18,
-  'components/RecipeForm.css': 107,
+  'components/RecipeForm.css': 101,
   'components/RecipeImageCarousel.css': 4,
   'components/RecipeImportModal.css': 19,
   'components/RecipeList.css': 24,

@@ -26,11 +26,12 @@ const NO_SURFACE = /^(transparent|none|inherit|initial|unset|revert)(\s*!importa
 // Werkzeug-Schalter der Editoren (printEditor/ElementPropsPanel.js, templateEditor/Segmented.js und
 // FloatingToolbar.js): aria-pressed bzw. role="radio", gehören nicht ins Rollen-System
 const EDITOR_TOOLS = /^(pfe-style-btn|pfe-align-btn|tfe-seg-btn|tfe-tb-btn)/;
-// Bedienelemente der Rezeptansicht und des Kochmodus mit eigener Gestalt: Symbol-Knöpfe der Aktionszeile
-// (Icons unter „Bilder & Icons“ konfigurierbar: Favorit, Privat, Kochdatum, Drucken), Plus/Minus der
-// Portionen, Timer im Schritt, Kacheln der Kochsitzung, Bring! (Marke) und der Alarm-Knopf des Timers
-// (eigene Alarmfarbe --color-alarm). Kein Rollen-Knopf, daher nicht über components/Button.js
-const RECIPE_CONTROLS = /^(favorite-button|private-badge-button|cook-date-button|serving-btn|portion-selector-btn|step-timer-start-btn|cooking-rail-button|shopping-list-bring-btn|alarm-modal-stop-btn)/;
+// Bedienelemente der Rezeptansicht, des Kochmodus und des Rezeptformulars mit eigener Gestalt: Symbol-Knöpfe
+// der Aktionszeile (Icons unter „Bilder & Icons“ konfigurierbar: Favorit, Privat, Kochdatum, Drucken), Plus/Minus
+// der Portionen, Timer im Schritt, Kacheln der Kochsitzung, Bring! (Marke), der Alarm-Knopf des Timers (eigene
+// Alarmfarbe --color-alarm) und im Formular die Symbole für Zutat/Schritt hinzufügen sowie Webimport, Foto-Scan und
+// Import in der Kopfzeile. Kein Rollen-Knopf, daher nicht über components/Button.js
+const RECIPE_CONTROLS = /^(favorite-button|private-badge-button|cook-date-button|serving-btn|portion-selector-btn|step-timer-start-btn|cooking-rail-button|shopping-list-bring-btn|alarm-modal-stop-btn|add-item-button|import-button-header|ocr-scan-button-header|webimport-button-header)/;
 const BARE_BUTTON = /^button(?![\w-])/;
 // Einträge in Auswahllisten und Kontextmenüs sind Listenzeilen, keine Knöpfe des Systems
 const LIST_CONTAINER = /dropdown|context-menu|typeahead|matches|suggest|autocomplete/;
@@ -57,7 +58,6 @@ const BASELINE = {
   'components/PortionSelector.css': 2,
   'components/PrintFormatEditor.css': 2,
   'components/RecipeFilterSidebar.css': 2,
-  'components/RecipeForm.css': 13,
   'components/RecipeImportModal.css': 1,
   'components/RecipeList.css': 8,
   'components/SeasonMatrixTab.css': 2,
