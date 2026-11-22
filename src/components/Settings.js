@@ -6,7 +6,7 @@ import TrashIcon from './icons/TrashIcon';
 import './Settings.css';
 import useInlineRename from '../hooks/useInlineRename';
 import { addCuisineType, removeCuisineType, renameCuisineType, addCuisineGroup, removeCuisineGroup, addChildToGroup, removeChildFromGroup } from '../utils/cuisineListOps';
-import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, renameCuisineTypeIcon, deleteCuisineTypeIcon, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, getAIRecipePromptHistory, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, renameCuisineTypeIcon, deleteCuisineTypeIcon, getHeaderSlogan, saveHeaderSlogan, getSloganUebersetzungen, saveSloganUebersetzungen, DEFAULT_SLOGAN, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, getAIRecipePromptHistory, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION } from '../utils/customLists';
 import { getOnboardingTestmodeActive, saveOnboardingTestmodeActive } from '../utils/onboardingSettings';
 import { getAdventGlowTickerText, saveAdventGlowTickerText, ADVENT_GLOW_TICKER_MAX_LENGTH } from '../utils/adventGlowSettings';
 import { renameMealCategoryInImages, removeMealCategoryFromImages } from '../utils/categoryImages';
@@ -28,6 +28,8 @@ import DeleteRowButton from './DeleteRowButton';
 import Button from './Button';
 import UebersetzungBackfill from './UebersetzungBackfill';
 import ListenUebersetzungen from './ListenUebersetzungen';
+import { sloganUebersetzungenZumSpeichern } from '../i18n/slogan';
+import kopfzeileTexte from '../i18n/texte/kopfzeile';
 import { trageInhaltUebersetzungenNach, trageTitelUebersetzungenNach } from '../utils/uebersetzungCallables';
 import UndoSnackbar from './UndoSnackbar';
 import useUndoableDelete from '../hooks/useUndoableDelete';
@@ -290,6 +292,11 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [newConversionGrams, setNewConversionGrams] = useState('');
   const [newConversionMl, setNewConversionMl] = useState('');
   const [headerSlogan, setHeaderSlogan] = useState('');
+  // Übersetzungen des Slogans (Mehrsprachigkeit, src/i18n/slogan.js). sloganQuelle ist der deutsche
+  // Slogan, zu dem sie gehören; wer eine Übersetzung bearbeitet, übersetzt den aktuellen Slogan.
+  const [sloganEn, setSloganEn] = useState('');
+  const [sloganFr, setSloganFr] = useState('');
+  const [sloganQuelle, setSloganQuelle] = useState('');
   const [activeTab, setActiveTab] = useState(currentUser?.role === ROLES.MODERATOR ? 'lists' : 'general'); // 'general', 'lists', 'druck', or 'users'
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const isAdmin = isCurrentUserAdmin();
@@ -393,6 +400,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     const loadSettings = async () => {
       const lists = await getCustomLists();
       const slogan = await getHeaderSlogan();
+      const sloganUebersetzungen = await getSloganUebersetzungen();
       const faviconImg = await getFaviconImage();
       const faviconTxt = await getFaviconText();
       const appLogoImg = await getAppLogoImage();
@@ -412,6 +420,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       
       setLists(lists);
       setHeaderSlogan(slogan);
+      setSloganEn(sloganUebersetzungen?.en || '');
+      setSloganFr(sloganUebersetzungen?.fr || '');
+      setSloganQuelle(sloganUebersetzungen?.quelle || '');
       setFaviconImage(faviconImg);
       setFaviconText(faviconTxt);
       setAppLogoImage(appLogoImg);
@@ -650,10 +661,26 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     clearDeletes([]);
   };
 
+  const sloganJetzt = (headerSlogan || '').trim();
+  const sloganUebersetzungVeraltet = Boolean(
+    (sloganEn.trim() || sloganFr.trim()) && sloganQuelle.trim() && sloganQuelle.trim() !== sloganJetzt
+  );
+  const istStandardSlogan = sloganJetzt === DEFAULT_SLOGAN;
+  const aendereSloganUebersetzung = (setzen) => (event) => {
+    setzen(event.target.value);
+    setSloganQuelle(headerSlogan);
+  };
+
   const handleSave = async () => {
     try {
       await saveCustomLists(lists);
       saveHeaderSlogan(headerSlogan);
+      // Veraltete Übersetzungen behalten ihre alte Quelle und erscheinen erst nach Anpassen oder Bestätigen
+      await saveSloganUebersetzungen(sloganUebersetzungenZumSpeichern({
+        quelle: sloganUebersetzungVeraltet ? sloganQuelle : headerSlogan,
+        en: sloganEn,
+        fr: sloganFr,
+      }));
       saveFaviconImage(faviconImage);
       saveFaviconText(faviconText);
       await saveAppLogoImage(appLogoImage);
@@ -1369,7 +1396,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
             <div className="settings-section">
               <h3>Header-Slogan</h3>
               <p className="section-description">
-                Passen Sie den Slogan an, der im Header unter "brouBook" angezeigt wird.
+                Passe den Slogan an, der im Header unter „brouBook“ angezeigt wird. Englisch und Französisch
+                erscheinen, wenn jemand die App in dieser Sprache nutzt; ohne Übersetzung bleibt der deutsche Slogan.
+                {istStandardSlogan && ' Für den Standard-Slogan bringt die App eine Übersetzung mit, die Felder können leer bleiben.'}
               </p>
               <div className="list-input">
                 <input
@@ -1377,8 +1406,42 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   value={headerSlogan}
                   onChange={(e) => setHeaderSlogan(e.target.value)}
                   placeholder="Header-Slogan eingeben..."
+                  aria-label="Header-Slogan"
                 />
               </div>
+              <div className="slogan-uebersetzungen">
+                <label className="slogan-uebersetzung">
+                  <span className="slogan-uebersetzung__sprache">Englisch</span>
+                  <input
+                    type="text"
+                    lang="en"
+                    value={sloganEn}
+                    onChange={aendereSloganUebersetzung(setSloganEn)}
+                    placeholder={istStandardSlogan ? kopfzeileTexte.en.standardSlogan : 'Ohne Übersetzung bleibt der deutsche Slogan'}
+                  />
+                </label>
+                <label className="slogan-uebersetzung">
+                  <span className="slogan-uebersetzung__sprache">Französisch</span>
+                  <input
+                    type="text"
+                    lang="fr"
+                    value={sloganFr}
+                    onChange={aendereSloganUebersetzung(setSloganFr)}
+                    placeholder={istStandardSlogan ? kopfzeileTexte.fr.standardSlogan : 'Ohne Übersetzung bleibt der deutsche Slogan'}
+                  />
+                </label>
+              </div>
+              {sloganUebersetzungVeraltet && (
+                <div className="slogan-uebersetzungen-hinweis" role="status">
+                  <p>
+                    Die Übersetzungen gehören zum bisherigen Slogan „{sloganQuelle}“. Bis du sie anpasst oder bestätigst,
+                    erscheint in allen Sprachen der deutsche Slogan.
+                  </p>
+                  <Button variant="secondary" onClick={() => setSloganQuelle(headerSlogan)}>
+                    Übersetzungen passen weiterhin
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="settings-section">

@@ -33,6 +33,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Zugriffsbeschränkung für Entwurfs-Rezepte: Nur Administratoren und Autoren können Rezepte im Entwurfstatus (isPrivate) sehen
 
 ### Geändert
+- Slogan im Header auf Englisch und Französisch (Vorschau mit der Berechtigung „Sprachwahl“): Der Standard-Slogan „Unsere besten Momente“ erscheint übersetzt („Our best moments“, „Nos meilleurs moments“), ein eigener Slogan, sobald unter Einstellungen › Allgemein eine Übersetzung eingetragen ist. Ändert sich der Slogan, erscheint bis zur angepassten Übersetzung das Original. Der Seitentitel folgt der Sprache.
 - Sprachwahl (Vorschau mit der Berechtigung „Sprachwahl“): Die Sprache wählst du jetzt direkt im Header über einen Chip mit Flagge und Kürzel (DE, EN, FR) statt im Menü. Auf dem Handy öffnet er eine Auswahl von unten, auf dem Desktop ein kleines Menü; jede Sprache steht dort auch in der gewählten Sprache, die Standardsprache ist markiert. Gilt eine andere Sprache nur für die Sitzung, hat der Chip einen orangen Rand.
 - Header: Der Slogan unter „brouBook“ sieht jetzt aus wie von Hand mit Bleistift geschrieben, in Orange und mit jedem Buchstaben etwas anders, auch bei einem eigenen Slogan. Er sitzt direkt unter dem Titel, die Lücke dazwischen ist weg. Die Schrift (Reenie Beanie) kommt mit der App und steht auch offline bereit.
 - Persönliche Daten: Die Hinweise zu Mitteilungen duzen jetzt wie der Rest der App.
