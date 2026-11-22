@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './RecipeTypeahead.css';
 import { fuzzyFilter } from '../utils/fuzzySearch';
+import { useListenwerte, useRezeptTitel, useSprache, useTexte } from '../contexts/SpracheContext';
+import { titelFassungen } from '../i18n/rezeptTitel';
+import rezeptformularTexte from '../i18n/texte/rezeptformular';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 /**
  * RecipeTypeahead component for selecting recipes with fuzzy search
@@ -17,6 +21,13 @@ function RecipeTypeahead({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef(null);
   const inputRef = useRef(null);
+  // Titel und Speisekategorien in der geltenden Sprache; die Suche findet Original und Übersetzung
+  // (Mehrsprachigkeit PR 6h). Verlinkt wird weiter mit dem Originaltitel (encodeRecipeLink).
+  const t = useTexte(rezeptformularTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const { inhalteUebersetzen } = useSprache();
+  const zeigeTitel = useRezeptTitel();
+  const listen = useListenwerte();
 
   // Extract search query from input value (everything after #)
   useEffect(() => {
@@ -30,7 +41,7 @@ function RecipeTypeahead({
   const filteredRecipes = fuzzyFilter(
     recipes,
     searchQuery,
-    (recipe) => recipe.title
+    (recipe) => titelFassungen(recipe, inhalteUebersetzen).join(' · ')
   );
 
   // Limit to top 10 results for performance
@@ -105,13 +116,14 @@ function RecipeTypeahead({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Rezept suchen..."
+            placeholder={t('rezeptSuchen')}
             autoFocus
           />
           <button 
             className="recipe-typeahead-close"
             onClick={onCancel}
             type="button"
+            aria-label={tAllgemein('schliessen')}
           >
             ×
           </button>
@@ -132,17 +144,17 @@ function RecipeTypeahead({
                   {recipe.image && (
                     <img 
                       src={recipe.image} 
-                      alt={recipe.title}
+                      alt={zeigeTitel(recipe)}
                       className="recipe-typeahead-image"
                     />
                   )}
                   <div className="recipe-typeahead-text">
-                    <div className="recipe-typeahead-title">{recipe.title}</div>
+                    <div className="recipe-typeahead-title">{zeigeTitel(recipe)}</div>
                     {recipe.speisekategorie && (
                       <div className="recipe-typeahead-category">
-                        {Array.isArray(recipe.speisekategorie) 
-                          ? recipe.speisekategorie.join(', ')
-                          : recipe.speisekategorie}
+                        {(Array.isArray(recipe.speisekategorie) ? recipe.speisekategorie : [recipe.speisekategorie])
+                          .map((kategorie) => listen.text('mealCategories', kategorie))
+                          .join(', ')}
                       </div>
                     )}
                   </div>
@@ -151,13 +163,13 @@ function RecipeTypeahead({
             ))
           ) : (
             <div className="recipe-typeahead-empty">
-              Keine Rezepte gefunden
+              {t('keineRezepteGefunden')}
             </div>
           )}
         </div>
         
         <div className="recipe-typeahead-footer">
-          ↑↓ navigieren • Enter auswählen • Esc abbrechen
+          {t('tastaturHinweis')}
         </div>
       </div>
     </div>
