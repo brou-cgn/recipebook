@@ -74,10 +74,16 @@
   transition: background-color 0.2s ease;
 }
 
-/* Hover/geöffnet: nur ein dezenter Hover-Overlay als Rückmeldung, ruhend bleibt die Pille transparent */
-.sprachwahl-chip:hover .sprachwahl-chip__flaeche,
+/* Geöffnet: dezenter Hover-Overlay als Rückmeldung, ruhend bleibt die Pille transparent */
 .sprachwahl-chip[aria-expanded="true"] .sprachwahl-chip__flaeche {
   background: var(--color-hover-overlay);
+}
+
+/* Hover nur bei Geräten mit echtem Hover: iOS lässt :hover nach einem Tap hängen */
+@media (hover: hover) {
+  .sprachwahl-chip:hover .sprachwahl-chip__flaeche {
+    background: var(--color-hover-overlay);
+  }
 }
 
 .sprachwahl-chip__flagge {
@@ -124,9 +130,14 @@
   cursor: pointer;
 }
 
-.sprachwahl-zeile:hover,
 .sprachwahl-zeile--aktiv {
   background: var(--color-hover-overlay);
+}
+
+@media (hover: hover) {
+  .sprachwahl-zeile:hover {
+    background: var(--color-hover-overlay);
+  }
 }
 
 .sprachwahl-zeile--aktiv {
