@@ -1,5 +1,5 @@
 /**
- * Texte des Headers (src/components/Header.js): Suche, Menü, Sprachwahl für die Sitzung,
+ * Texte des Headers (src/components/Header.js): Suche, Menü, Sprachwahl für die Sitzung (SprachWahl.js),
  * Kochschule und der Dialog zum Webimport-PIN. Bereichsnamen stehen in bereiche.js, die
  * PIN-Texte in webimportPin.js. Aufbau und Regeln: src/i18n/texte.js.
  */
@@ -22,6 +22,11 @@ export default {
     appaufrufe: 'Appaufrufe',
     sprache: 'Sprache',
     spracheNurSitzung: 'Gilt nur für diese Sitzung. Deine Standardsprache: {sprache}',
+    spracheWaehlen: 'Sprache wählen (aktuell: {sprache})',
+    standardsprache: 'Deine Standardsprache',
+    sprachnameDe: 'Deutsch',
+    sprachnameEn: 'Englisch',
+    sprachnameFr: 'Französisch',
     benutzer: 'Benutzer',
     seiteOeffnen: '{name}-Seite öffnen',
     admin: 'Admin',
@@ -48,6 +53,11 @@ export default {
     appaufrufe: 'App calls',
     sprache: 'Language',
     spracheNurSitzung: 'For this session only. Your default language: {sprache}',
+    spracheWaehlen: 'Choose language (current: {sprache})',
+    standardsprache: 'Your default language',
+    sprachnameDe: 'German',
+    sprachnameEn: 'English',
+    sprachnameFr: 'French',
     benutzer: 'User',
     seiteOeffnen: 'Open {name} page',
     admin: 'Admin',
@@ -74,6 +84,11 @@ export default {
     appaufrufe: 'Appels de l’app',
     sprache: 'Langue',
     spracheNurSitzung: `Uniquement pour cette session. Ta langue par défaut${NBSP}: {sprache}`,
+    spracheWaehlen: `Choisir la langue (actuelle${NBSP}: {sprache})`,
+    standardsprache: 'Ta langue par défaut',
+    sprachnameDe: 'Allemand',
+    sprachnameEn: 'Anglais',
+    sprachnameFr: 'Français',
     benutzer: 'Utilisateur',
     seiteOeffnen: 'Ouvrir la page {name}',
     admin: 'Admin',

@@ -512,14 +512,6 @@
   background: rgba(255, 100, 100, 0.1);
 }
 
-/* Hinweis unter der Sprachwahl, solange eine Sitzungs-Sprache gilt */
-.menu-language-hint {
-  padding: 0.25rem 1rem 0.5rem;
-  font-size: 0.8rem;
-  line-height: 1.35;
-  color: var(--color-text-muted);
-}
-
 .menu-version {
   padding: 0.5rem 1rem;
   text-align: right;
@@ -589,6 +581,18 @@
 @media (max-width: 480px) {
   .header-title {
     text-align: left;
+  }
+
+  /* Engere Abstände, damit neben Sprach-Chip und Menü der Slogan in eine Zeile passt
+     (Maße wie im Entwurf: 12 px zwischen Logo, Titel und Knöpfen, 4 px zwischen den Knöpfen). */
+  .header-content,
+  .header-title,
+  .header-title-link {
+    gap: 0.75rem;
+  }
+
+  .header-actions {
+    gap: 0.25rem;
   }
 
   .header-logo {

@@ -1,0 +1,383 @@
+/* Sprachwahl im Header (SprachWahl.js, Entwurf Variante C). Farben nur über Tokens.
+   Maße wie im Canvas „Sprachwahl im Header“, Reihe „Header final“. */
+
+/* Flagge: füllt ihren Rahmen; der feine Ring trennt dunkle und weiße Streifen vom Hintergrund. */
+.flagge {
+  display: inline-block;
+  flex-shrink: 0;
+  overflow: hidden;
+  line-height: 0;
+  box-shadow: 0 0 0 1px var(--color-flag-ring);
+}
+
+.flagge svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.sprachwahl {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Chip: 32 px hoch in einer Tippfläche von 44 px */
+.sprachwahl-chip {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  margin: 0;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sprachwahl-chip:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.sprachwahl-chip__flaeche {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  box-sizing: border-box;
+  padding: 0 6px 0 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.sprachwahl-chip:hover .sprachwahl-chip__flaeche,
+.sprachwahl-chip[aria-expanded="true"] .sprachwahl-chip__flaeche {
+  background: var(--color-surface-raised);
+}
+
+/* Solange eine andere Sprache als die Standardsprache gilt */
+.sprachwahl-chip--uebersteuert .sprachwahl-chip__flaeche {
+  border-color: var(--color-accent);
+}
+
+.sprachwahl-chip__flagge {
+  width: 21px;
+  height: 14px;
+  border-radius: 2px;
+}
+
+.sprachwahl-chip .sprachwahl-chip__kuerzel {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: var(--color-text-strong);
+}
+
+.sprachwahl-chip__pfeil {
+  display: block;
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-muted);
+}
+
+/* Zeilen, im Popover und im Sheet gleich aufgebaut */
+.sprachwahl-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sprachwahl-zeile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-strong);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sprachwahl-zeile:hover,
+.sprachwahl-zeile--aktiv {
+  background: var(--color-hover-overlay);
+}
+
+.sprachwahl-zeile--aktiv {
+  color: var(--color-accent-text);
+}
+
+.sprachwahl-zeile:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.sprachwahl-zeile__flagge {
+  width: 24px;
+  height: 16px;
+  border-radius: 2px;
+}
+
+.sprachwahl-zeile__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+/* color: inherit mit zwei Klassen, weil darkMode.css span im Dunkelmodus pauschal einfärbt
+   ([data-theme="dark"] span, 0-1-1); sonst bliebe der Name der aktiven Sprache weiß statt orange. */
+.sprachwahl-zeile .sprachwahl-zeile__text {
+  color: inherit;
+}
+
+.sprachwahl-zeile .sprachwahl-zeile__name {
+  font-size: 15px;
+  font-weight: 500;
+  color: inherit;
+}
+
+.sprachwahl-zeile--aktiv .sprachwahl-zeile__name {
+  font-weight: 600;
+}
+
+.sprachwahl-zeile .sprachwahl-zeile__zweit {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.sprachwahl-zeile__haken {
+  display: block;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.sprachwahl-popover .sprachwahl-hinweis,
+.sprachwahl-sheet .sprachwahl-hinweis {
+  margin: 0;
+  padding: 8px 10px 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}
+
+/* Desktop: Popover unter dem Chip, rechtsbündig */
+.sprachwahl-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 1000;
+  width: 300px;
+  box-sizing: border-box;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface-card);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.sprachwahl-popover .sprachwahl-popover__titel {
+  padding: 8px 10px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* Handy: Bottom Sheet über der unteren Navigation (1200), wie „Was kochst du dazu?“ */
+.sprachwahl-sheet-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.sprachwahl-sheet-scrim {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.45);
+  animation: sprachwahl-scrim-ein 0.25s ease-out both;
+  cursor: pointer;
+}
+
+.sprachwahl-sheet {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 8px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  border-radius: 16px 16px 0 0;
+  background: var(--color-surface-card);
+  color: var(--color-text);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.3);
+  animation: sprachwahl-sheet-ein 0.22s ease-out;
+}
+
+.sprachwahl-sheet-root--closing {
+  pointer-events: none;
+}
+
+.sprachwahl-sheet-root--closing .sprachwahl-sheet-scrim {
+  animation: sprachwahl-scrim-aus 0.25s ease-in both;
+}
+
+.sprachwahl-sheet-root--closing .sprachwahl-sheet {
+  animation: sprachwahl-sheet-aus 0.25s ease-in both;
+}
+
+@keyframes sprachwahl-scrim-ein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes sprachwahl-scrim-aus {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes sprachwahl-sheet-ein {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes sprachwahl-sheet-aus {
+  from { transform: translateY(0);    opacity: 1; }
+  to   { transform: translateY(24px); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sprachwahl-sheet,
+  .sprachwahl-sheet-scrim {
+    animation: none;
+  }
+}
+
+.sprachwahl-sheet__griff {
+  width: 36px;
+  height: 4px;
+  margin: 0 auto 8px;
+  border-radius: 2px;
+  background: var(--color-border-strong);
+}
+
+.sprachwahl-sheet__kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-left: 4px;
+}
+
+.sprachwahl-sheet .sprachwahl-sheet__titel {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-strong);
+}
+
+.sprachwahl-sheet__schliessen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.sprachwahl-sheet__schliessen svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
+.sprachwahl-sheet .sprachwahl-liste {
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.sprachwahl-sheet .sprachwahl-zeile {
+  gap: 14px;
+  min-height: 60px;
+  padding: 0 12px;
+  border-radius: 12px;
+}
+
+.sprachwahl-sheet .sprachwahl-zeile__flagge {
+  width: 30px;
+  height: 20px;
+  border-radius: 3px;
+}
+
+.sprachwahl-sheet .sprachwahl-zeile .sprachwahl-zeile__name {
+  font-size: 16px;
+}
+
+.sprachwahl-sheet .sprachwahl-zeile .sprachwahl-zeile__zweit {
+  font-size: 13px;
+}
+
+.sprachwahl-sheet .sprachwahl-zeile__haken {
+  width: 22px;
+  height: 22px;
+}
+
+.sprachwahl-sheet .sprachwahl-hinweis {
+  padding: 12px 12px 0;
+}
+
+/* Desktop: Chip etwas größer */
+@media (min-width: 769px) {
+  .sprachwahl-chip__flaeche {
+    gap: 8px;
+    height: 36px;
+    padding: 0 8px 0 11px;
+  }
+
+  .sprachwahl-chip__flagge {
+    width: 24px;
+    height: 16px;
+  }
+
+  .sprachwahl-chip .sprachwahl-chip__kuerzel {
+    font-size: 14px;
+  }
+
+  .sprachwahl-chip__pfeil {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* Sehr schmale Handys: nur die Flagge, sonst wird der Titel zu eng */
+@media (max-width: 359px) {
+  .sprachwahl-chip .sprachwahl-chip__kuerzel {
+    display: none;
+  }
+}
