@@ -862,6 +862,38 @@ describe('NutritionReferenceTab', () => {
     expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
   });
 
+  test('removes the success message of an earlier fetch when the next fetch fails', async () => {
+    const mockCallFn = jest.fn()
+      .mockResolvedValueOnce({ data: { searchTerm: 'tomato', source: 'openfoodfacts', values: { kalorien: 18 } } })
+      .mockRejectedValueOnce(new Error('Keine Nährwertdaten gefunden. Gemini-Schätzung: API key not valid'));
+    mockHttpsCallable.mockReturnValue(mockCallFn);
+
+    renderTab({ id: 'u1', role: 'moderator' });
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nährwerte abrufen' }));
+    expect(await screen.findByText(/OpenFoodFacts-Daten für dummy-tomate aktualisiert/)).toBeInTheDocument();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Nährwerte abrufen' }));
+    expect(await screen.findByText(/Gemini-Schätzung: API key not valid/)).toBeInTheDocument();
+    expect(screen.queryByText(/OpenFoodFacts-Daten für dummy-tomate aktualisiert/)).not.toBeInTheDocument();
+  });
+
+  test('shows a load error with retry instead of a silently empty table', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetDocs.mockRejectedValueOnce(new Error('Firestore down'));
+
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByText('Nährwert-Referenzen konnten nicht geladen werden: Firestore down')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Erneut laden' }));
+
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+    expect(screen.queryByText(/konnten nicht geladen werden/)).not.toBeInTheDocument();
+    consoleErrorSpy.mockRestore();
+  });
+
   test('allows refreshing rows with status Freigegeben', async () => {
     mockGetDocs.mockResolvedValueOnce({
       docs: [

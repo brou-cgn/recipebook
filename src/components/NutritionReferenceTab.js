@@ -140,7 +140,7 @@ const getConfidenceInfoText = (diagnostics, row) => {
 
 function NutritionReferenceTab({ currentUser }) {
   const canManage = currentUser?.role === ROLES.ADMIN || currentUser?.role === ROLES.MODERATOR;
-  const { rows: cachedRows, loading, reload } = useNutritionReference();
+  const { rows: cachedRows, loading, error: loadError, reload } = useNutritionReference();
   const [rows, setRows] = useState([]);
   const { banners: rowDeleteBanners, pendingKeys: pendingRowDeleteKeys, scheduleDelete: scheduleRowDelete, undoDelete: undoRowDelete } = useUndoableDelete();
   const [newIngredientID, setNewIngredientID] = useState('');
@@ -519,6 +519,9 @@ function NutritionReferenceTab({ currentUser }) {
   };
 
   const refreshRowFromOpenFoodFacts = async (row) => {
+    // Meldung des vorherigen Abrufs entfernen, sonst steht ein altes „aktualisiert“
+    // über dem neuen Fehler.
+    setActionMessage('');
     setLookupError('');
     setRefreshingRowId(row.id);
     const ingredientID = getIngredientID(row);
@@ -703,6 +706,14 @@ function NutritionReferenceTab({ currentUser }) {
       <div className="settings-section nutrition-reference-section">
         {actionMessage && <p className="section-description">{actionMessage}</p>}
         {lookupError && <p className="section-description">{lookupError}</p>}
+        {loadError && !loading && !clearingCache && (
+          <div className="nutrition-reference-load-error" role="alert">
+            <p className="section-description">
+              {`Nährwert-Referenzen konnten nicht geladen werden: ${loadError}`}
+            </p>
+            <Button onClick={handleClearCacheAndReload}>Erneut laden</Button>
+          </div>
+        )}
 
       <div className="season-matrix-import-export-actions">
         <Button onClick={handleExportCsv}>

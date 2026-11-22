@@ -28,10 +28,11 @@ jest.mock('firebase/firestore', () => ({
 }));
 
 function NutritionReferenceConsumer() {
-  const { rows, loading } = useNutritionReference();
+  const { rows, loading, error } = useNutritionReference();
   return (
     <div>
       <span data-testid="loading">{loading ? 'loading' : 'ready'}</span>
+      <span data-testid="error">{error || ''}</span>
       <span data-testid="rows-count">{rows.length}</span>
       <span data-testid="first-id">{rows[0]?.ingredientID || ''}</span>
     </div>
@@ -208,6 +209,54 @@ describe('NutritionReferenceContext caching', () => {
       await expect(reloadNutritionReferences({ throwOnError: true })).rejects.toThrow('Firestore down');
     });
 
+    consoleErrorSpy.mockRestore();
+  });
+
+  test('treats an empty cached list as no cache and fetches again', async () => {
+    localStorage.setItem(NUTRITION_REF_CACHE_KEY, JSON.stringify({ rows: [], cachedAt: Date.now(), lastUpdatedAt: 5000 }));
+    expect(loadCachedRows()).toBeNull();
+
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ lastUpdatedAt: { toMillis: () => 5000 } }),
+    });
+    mockGetDocs.mockResolvedValue({ docs: [{ id: 'tomate', data: () => ({ ingredientID: 'tomate' }) }], metadata: { fromCache: false } });
+
+    render(
+      <NutritionReferenceProvider>
+        <NutritionReferenceConsumer />
+      </NutritionReferenceProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('rows-count')).toHaveTextContent('1');
+    });
+    expect(mockGetDocs).toHaveBeenCalledTimes(1);
+  });
+
+  test('does not cache an empty list', () => {
+    saveCachedRows([{ ingredientID: 'tomate' }], 1000);
+    saveCachedRows([], 2000);
+    expect(localStorage.getItem(NUTRITION_REF_CACHE_KEY)).toBeNull();
+  });
+
+  test('reports an empty offline result as load error instead of an empty table', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetDoc.mockResolvedValue({ exists: () => false, data: () => ({}) });
+    mockGetDocs.mockResolvedValue({ docs: [], metadata: { fromCache: true } });
+
+    render(
+      <NutritionReferenceProvider>
+        <NutritionReferenceConsumer />
+      </NutritionReferenceProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading')).toHaveTextContent('ready');
+    });
+    expect(screen.getByTestId('rows-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('error')).toHaveTextContent('offline');
+    expect(localStorage.getItem(NUTRITION_REF_CACHE_KEY)).toBeNull();
     consoleErrorSpy.mockRestore();
   });
 });

@@ -284,11 +284,16 @@ exports.generateNutritionFromReference = onCall(
       let hasOffValues = hasSourceValues(NUTRITION_SOURCE_SUFFIX_OFF);
       const hasAiValues = hasSourceValues(NUTRITION_SOURCE_SUFFIX_AI);
 
+      // Warum eine Quelle nichts geliefert hat – landet im Log und in der 404-Meldung,
+      // sonst ist „Keine Nährwertdaten gefunden“ nicht von einem Gemini-Ausfall zu unterscheiden.
+      const failureReasons = [];
+
       // 1. Generate search term with Gemini
       const generatedSearchTerm = await generateSearchTermWithGemini(
           ingredientID,
           nutritionFamily || '',
           category || '',
+          {onError: (reason) => failureReasons.push(`Gemini-Suchbegriff: ${reason}`)},
       );
       const searchTerm = generatedSearchTerm || ingredientID;
 
@@ -299,7 +304,9 @@ exports.generateNutritionFromReference = onCall(
         try {
           const offUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(searchTerm)}&action=process&json=1&page_size=5`;
           const offResponse = await fetch(offUrl);
-          if (offResponse.ok) {
+          if (!offResponse.ok) {
+            failureReasons.push(`OpenFoodFacts: HTTP ${offResponse.status}`);
+          } else {
             const offData = await offResponse.json();
             const product = (offData.products || []).find((entry) => {
               const nutriments = entry?.nutriments || {};
@@ -323,9 +330,13 @@ exports.generateNutritionFromReference = onCall(
                 offValues = null;
               }
             }
+            if (!offValues) {
+              failureReasons.push(`OpenFoodFacts: kein Produkt mit Nährwerten für „${searchTerm}“`);
+            }
           }
         } catch (e) {
           // Network error → continue with Gemini generation if needed
+          failureReasons.push(`OpenFoodFacts: nicht erreichbar (${String(e?.message || e).slice(0, 120)})`);
         }
       }
 
@@ -336,7 +347,10 @@ exports.generateNutritionFromReference = onCall(
         const estimated = await estimateNutritionWithGemini(
             ingredientID,
             {amountG: 100, name: ingredientID, searchName: searchTerm},
-            {timeoutMs: 20000},
+            {
+              timeoutMs: 20000,
+              onError: (reason) => failureReasons.push(`Gemini-Schätzung: ${reason}`),
+            },
         );
         if (estimated?.per100g) {
           aiValues = parseNutritionReferenceValues(estimated.per100g);
@@ -413,7 +427,9 @@ exports.generateNutritionFromReference = onCall(
       }, {});
 
       if (Object.keys(selectedValues).length === 0) {
-        throw new HttpsError('not-found', 'Keine Nährwertdaten gefunden.');
+        console.warn('generateNutritionFromReference ohne Ergebnis', {ingredientID, searchTerm, failureReasons});
+        const details = failureReasons.length > 0 ? ` ${failureReasons.join(' · ')}` : '';
+        throw new HttpsError('not-found', `Keine Nährwertdaten gefunden.${details}`);
       }
 
       const trackingFields = buildNutritionTrackingFields({

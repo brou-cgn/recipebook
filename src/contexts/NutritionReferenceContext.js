@@ -23,6 +23,10 @@ export function loadCachedRows() {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
     if (!Array.isArray(parsed.rows)) return null;
+    // Eine leere Liste ist nie ein gültiger Cache: Sie entsteht nur, wenn ein Abruf
+    // nichts geliefert hat (z. B. offline aus dem Firestore-Cache), und würde sonst
+    // die Tabelle bis zu 24 h leer halten.
+    if (parsed.rows.length === 0) return null;
     if (typeof parsed.cachedAt !== 'number') return null;
     const lastUpdatedAt = typeof parsed.lastUpdatedAt === 'number' ? parsed.lastUpdatedAt : null;
     return { rows: parsed.rows, cachedAt: parsed.cachedAt, lastUpdatedAt };
@@ -32,11 +36,15 @@ export function loadCachedRows() {
 }
 
 export function saveCachedRows(rows, lastUpdatedAt) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    clearNutritionReferenceCache();
+    return;
+  }
   try {
     localStorage.setItem(
       NUTRITION_REF_CACHE_KEY,
       JSON.stringify({
-        rows: Array.isArray(rows) ? rows : [],
+        rows,
         cachedAt: Date.now(),
         lastUpdatedAt: typeof lastUpdatedAt === 'number' ? lastUpdatedAt : null,
       })
@@ -125,9 +133,20 @@ function mapNutritionReferenceRows(snapshot) {
     .sort((a, b) => (a.ingredientID || '').localeCompare(b.ingredientID || '', 'de', { sensitivity: 'base' }));
 }
 
+export const NUTRITION_REF_OFFLINE_ERROR = 'Die Nährwert-Referenzen konnten nicht vom Server geladen werden (offline?).';
+
 async function fetchNutritionReferenceRows() {
   const snapshot = await getDocs(collection(db, 'nutritionReferences'));
+  // Ohne Verbindung beantwortet Firestore getDocs aus dem lokalen Cache – ist der leer,
+  // kommt eine leere Liste ohne Fehler zurück. Das ist kein „keine Einträge“, sondern ein Ladefehler.
+  if (snapshot.docs.length === 0 && snapshot.metadata?.fromCache) {
+    throw new Error(NUTRITION_REF_OFFLINE_ERROR);
+  }
   return mapNutritionReferenceRows(snapshot);
+}
+
+function describeLoadError(error) {
+  return String(error?.message || '').trim() || 'Unbekannter Fehler.';
 }
 
 async function fetchNutritionReferenceLastUpdatedAt() {
@@ -145,6 +164,7 @@ export function NutritionReferenceProvider({ children, enabled = true }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(enabled);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
+  const [error, setError] = useState(null);
   const lastUpdatedAtRef = useRef(null);
 
   useEffect(() => {
@@ -167,10 +187,12 @@ export function NutritionReferenceProvider({ children, enabled = true }) {
       ]);
       setRows(loaded);
       setLastUpdatedAt(updatedAt);
+      setError(null);
       saveCachedRows(loaded, updatedAt);
       return loaded;
     } catch (error) {
       console.error('Fehler beim Laden der Nährwert-Referenzen:', error);
+      setError(describeLoadError(error));
       setRows([]);
       if (throwOnError) {
         throw error;
@@ -204,6 +226,7 @@ export function NutritionReferenceProvider({ children, enabled = true }) {
           if (isMounted) {
             setRows(cached.rows);
             setLastUpdatedAt(updatedAt);
+            setError(null);
           }
           return;
         }
@@ -213,11 +236,13 @@ export function NutritionReferenceProvider({ children, enabled = true }) {
         if (isMounted) {
           setRows(loaded);
           setLastUpdatedAt(updatedAt);
+          setError(null);
         }
       } catch (error) {
         console.error('Fehler beim Laden der Nährwert-Referenzen:', error);
         if (isMounted) {
           setRows([]);
+          setError(describeLoadError(error));
         }
       } finally {
         if (isMounted) {
@@ -267,6 +292,7 @@ export function NutritionReferenceProvider({ children, enabled = true }) {
               saveCachedRows(loaded, updatedAt);
               setRows(loaded);
               setLastUpdatedAt(updatedAt);
+              setError(null);
             })
             .catch((error) => {
               console.error('Fehler beim Live-Aktualisieren der Nährwert-Referenzen:', error);
@@ -290,10 +316,11 @@ export function NutritionReferenceProvider({ children, enabled = true }) {
     () => ({
       rows,
       loading,
+      error,
       reload,
       lastUpdatedAt,
     }),
-    [rows, loading, reload, lastUpdatedAt]
+    [rows, loading, error, reload, lastUpdatedAt]
   );
 
   return <NutritionReferenceContext.Provider value={value}>{children}</NutritionReferenceContext.Provider>;
