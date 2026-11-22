@@ -2,10 +2,12 @@ import React from 'react';
 import StarIcon from './icons/StarIcon';
 import { isBase64Image, getRecipeCardImageUrl } from '../utils/imageUtils';
 import './TrendingCard.css';
+import { useRezeptTitel, useTexte } from '../contexts/SpracheContext';
+import startseiteTexte from '../i18n/texte/startseite';
 
-function renderDifficultyStars(level) {
+function renderDifficultyStars(level, t) {
   return (
-    <span className="trending-card-stars" aria-label={`Schwierigkeit ${level} von 5`}>
+    <span className="trending-card-stars" aria-label={t('schwierigkeit', { stufe: level })}>
       {[1, 2, 3, 4, 5].map((i) => (
         <span
           key={i}
@@ -19,7 +21,11 @@ function renderDifficultyStars(level) {
 }
 
 function TrendingCard({ recipe, onSelectRecipe, difficultyIcon = null, timeIcon = null }) {
+  const t = useTexte(startseiteTexte);
+  // Titel in der geltenden Sprache (Mehrsprachigkeit PR 3, hier seit PR 6e)
+  const zeigeTitel = useRezeptTitel();
   if (!recipe) return null;
+  const titel = zeigeTitel(recipe);
 
   const imageUrl = getRecipeCardImageUrl(recipe);
 
@@ -33,13 +39,13 @@ function TrendingCard({ recipe, onSelectRecipe, difficultyIcon = null, timeIcon 
     >
       <div className="trending-card-image">
         {imageUrl ? (
-          <img src={imageUrl} alt={recipe.title} loading="lazy" decoding="async" />
+          <img src={imageUrl} alt={titel} loading="lazy" decoding="async" />
         ) : (
           <div className="trending-card-image-placeholder" />
         )}
       </div>
       <div className="trending-card-content">
-        <h3 className="trending-card-title">{recipe.title}</h3>
+        <h3 className="trending-card-title">{titel}</h3>
         <div className="trending-card-meta">
           {recipe.schwierigkeit && (
             <span className="trending-card-meta-left">
@@ -50,7 +56,7 @@ function TrendingCard({ recipe, onSelectRecipe, difficultyIcon = null, timeIcon 
                   <span className="trending-card-meta-icon">{difficultyIcon || <StarIcon />}</span>
                 )
               )}
-              {renderDifficultyStars(recipe.schwierigkeit)}
+              {renderDifficultyStars(recipe.schwierigkeit, t)}
             </span>
           )}
           {recipe.kochdauer && (
@@ -62,7 +68,7 @@ function TrendingCard({ recipe, onSelectRecipe, difficultyIcon = null, timeIcon 
                   <span className="trending-card-meta-icon">{timeIcon}</span>
                 )
               )}
-              {recipe.kochdauer} Min.
+              {t('minuten', { anzahl: recipe.kochdauer })}
             </span>
           )}
         </div>

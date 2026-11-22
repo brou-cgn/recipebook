@@ -1,14 +1,18 @@
 import React from 'react';
 import { getRecipeCardImageUrl } from '../utils/imageUtils';
+import { useSprache, useTexte } from '../contexts/SpracheContext';
+import { formatiereDatum } from '../i18n/format';
+import startseiteTexte from '../i18n/texte/startseite';
+import { FUER_DICH_ENTDECKT_SYSTEM_KEY } from '../utils/fuerDichEntdeckt';
 import './StartseitenKarussell.css';
 import './FuerDichEntdecktKachel.css';
 
 const COLLAGE_MAX = 3;
 
-const formatMonthYear = (value) => {
+const formatMonthYear = (value, sprache) => {
   const date = typeof value?.toDate === 'function' ? value.toDate() : value;
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+  return formatiereDatum(date, sprache, { month: 'long', year: 'numeric' });
 };
 
 /**
@@ -29,6 +33,8 @@ const formatMonthYear = (value) => {
  *   onOpen   {Function} (listId) => void – öffnet den Swipestapel
  */
 function FuerDichEntdecktKachel({ list, recipes = [], themeImage = '', themeTitle: themeTitleProp = '', onOpen }) {
+  const t = useTexte(startseiteTexte);
+  const { sprache } = useSprache();
   if (!list) return null;
 
   // Übernommene Kandidaten (carriedRecipeIds) gehören nicht zum aktuellen Thema:
@@ -43,29 +49,30 @@ function FuerDichEntdecktKachel({ list, recipes = [], themeImage = '', themeTitl
     title: recipe.title,
     imageUrl: getRecipeCardImageUrl(recipe),
   }));
-  const themeTitle = (typeof list.description === 'string' && list.description.trim()) || themeTitleProp.trim() || 'Rezepte zu wechselnden Themen';
+  // Thema und Rubrik sind Inhalt (gepflegt bzw. vom System gesetzt), der Ersatztext ist Oberfläche
+  const themeTitle = (typeof list.description === 'string' && list.description.trim()) || themeTitleProp.trim() || t('themenStandard');
   const themeLabel = (typeof list.themeLabel === 'string' && list.themeLabel.trim()) || '';
-  const countText = count === 1 ? '1 Rezept' : `${count} Rezepte`;
-  const monthYear = formatMonthYear(list.rotatedAt);
+  const countText = t('rezepte', { anzahl: count });
+  const monthYear = formatMonthYear(list.rotatedAt, sprache);
+  // Systemname der Liste in der geltenden Sprache; eigene Namen bleiben
+  const listName = list.systemKey === FUER_DICH_ENTDECKT_SYSTEM_KEY ? t('fuerDichEntdeckt') : list.name;
   const meta = monthYear ? `${countText} · ${monthYear}` : countText;
 
   return (
     <section className="startseite-trending-section fuer-dich-entdeckt">
       <div className="startseite-section-header">
-        <h2 className="startseite-section-title">{list.name}</h2>
+        <h2 className="startseite-section-title">{listName}</h2>
       </div>
       {count === 0 ? (
         <div className="fuer-dich-entdeckt-card fuer-dich-entdeckt-card--empty">
-          <p className="fuer-dich-entdeckt-empty-text">
-            Hier tauchen bald Rezepte zu wechselnden Themen auf.
-          </p>
+          <p className="fuer-dich-entdeckt-empty-text">{t('baldThemen')}</p>
         </div>
       ) : (
         <button
           type="button"
           className="fuer-dich-entdeckt-card"
           onClick={() => onOpen?.(list.id)}
-          aria-label={`${themeTitle}, ${countText} – Swipestapel öffnen`}
+          aria-label={t('stapelOeffnen', { thema: themeTitle, rezepte: countText })}
         >
           {themeImage ? (
             <span className="fuer-dich-entdeckt-collage fuer-dich-entdeckt-collage--1" aria-hidden="true">

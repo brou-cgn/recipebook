@@ -18,6 +18,7 @@ export const MELDUNGEN = Object.freeze([
   'meldungUnbekannt', 'meldungJe100gFehlen', 'meldungVerlinktFehlt', 'meldungNichtUmgerechnet',
   'meldungVerlinktNichtUmgerechnet', 'meldungVerlinktGeloescht', 'meldungKeineZutaten',
   'fehlerNetzwerk', 'fehlerAnmeldung', 'fehlerZeit', 'fehlerZuViele', 'fehlerAbruf', 'fehlerBerechnung',
+  'meldungReferenzFehlgeschlagen',
 ]);
 
 export default {
@@ -128,6 +129,7 @@ export default {
     meldungVerlinktNichtUmgerechnet: 'Verlinktes Rezept "{name}" konnte nicht umgerechnet werden.',
     meldungVerlinktGeloescht: 'Verlinktes Rezept "{name}" nicht gefunden. Möglicherweise wurde das Rezept gelöscht.',
     meldungKeineZutaten: 'Keine Zutaten im Rezept gefunden.',
+    meldungReferenzFehlgeschlagen: 'Nährwertreferenz-Aktualisierung fehlgeschlagen',
     fehlerNetzwerk: 'Netzwerkfehler. Bitte Internetverbindung prüfen und erneut versuchen.',
     fehlerAnmeldung: 'Du musst angemeldet sein, um Nährwerte zu berechnen.',
     fehlerZeit: 'Die Berechnung hat zu lange gedauert. Bitte versuch es erneut.',
@@ -242,6 +244,7 @@ export default {
     meldungVerlinktNichtUmgerechnet: 'Linked recipe “{name}” could not be converted.',
     meldungVerlinktGeloescht: 'Linked recipe “{name}” not found. It may have been deleted.',
     meldungKeineZutaten: 'No ingredients found in the recipe.',
+    meldungReferenzFehlgeschlagen: 'Updating the nutrition reference failed',
     fehlerNetzwerk: 'Network error. Please check your internet connection and try again.',
     fehlerAnmeldung: 'You need to be signed in to calculate nutrition.',
     fehlerZeit: 'The calculation took too long. Please try again.',
@@ -356,6 +359,7 @@ export default {
     meldungVerlinktNichtUmgerechnet: `La recette liée «${NBSP}{name}${NBSP}» n’a pas pu être convertie.`,
     meldungVerlinktGeloescht: `Recette liée «${NBSP}{name}${NBSP}» introuvable. Elle a peut-être été supprimée.`,
     meldungKeineZutaten: 'Aucun ingrédient trouvé dans la recette.',
+    meldungReferenzFehlgeschlagen: 'La mise à jour de la référence nutritionnelle a échoué',
     fehlerNetzwerk: 'Erreur réseau. Vérifie ta connexion Internet et réessaie.',
     fehlerAnmeldung: 'Connecte-toi pour calculer les valeurs nutritionnelles.',
     fehlerZeit: 'Le calcul a pris trop de temps. Réessaie.',

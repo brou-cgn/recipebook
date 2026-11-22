@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import StartseitenKarussell from './StartseitenKarussell';
+import { renderWithProviders } from '../test-utils';
 
 const mockItems = [
   { id: 'i1', label: 'Element 1' },
@@ -164,5 +165,15 @@ describe('StartseitenKarussell', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /Aktion/i }));
     expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('StartseitenKarussell in anderer Sprache (Mehrsprachigkeit PR 6e)', () => {
+  test('Laden und „mehr“ auf Englisch', () => {
+    const { unmount } = renderWithProviders(<StartseitenKarussell title="Trending" items={[]} loading renderItem={() => null} />, { sprache: 'en' });
+    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    unmount();
+    renderWithProviders(<StartseitenKarussell title="Trending" items={[{ id: 'a' }]} renderItem={() => <span>A</span>} onMehr={() => {}} />, { sprache: 'en' });
+    expect(screen.getByRole('button', { name: 'more' })).toBeInTheDocument();
   });
 });
