@@ -39,9 +39,12 @@ const NUR_DEUTSCH = new Set([
   // Einstellungen › KI: Backfill der Titel- und Inhaltsübersetzungen (Mehrsprachigkeit PR 3 und 4)
   'components/UebersetzungBackfill.js',
   'components/UserManagement.js',
+  // „Einschätzung im Detail“ in „Wein dazu“: Diagnoseansicht mit der Berechtigung weinprofilEinblick,
+  // standardmäßig nur für Admins (Mehrsprachigkeit PR 6c)
+  'components/WeinprofilEinblick.js',
 ]);
 
-// Stand 22.11.2026 (PR 6b, Nährwerte): 1423 Textstellen in 77 Dateien.
+// Stand 22.11.2026 (PR 6c, Wein dazu): 1397 Textstellen in 74 Dateien.
 const BASELINE = {
   'App.js': 5,
   'components/AtelierCategorySelectionPage.js': 5,
@@ -105,11 +108,8 @@ const BASELINE = {
   'components/TutorialVideoModal.js': 2,
   'components/UniversalImportModal.js': 17,
   'components/WebImportModal.js': 9,
-  'components/WeinDazu.js': 16,
   'components/Weinbegleitung.js': 23,
   'components/WeinbegleitungSeite.js': 24,
-  'components/WeinbegleitungTeile.js': 1,
-  'components/WeinprofilEinblick.js': 9,
   'components/WichtelPage.js': 66,
   'components/WichtelTeilnehmerFormular.js': 11,
   'components/printEditor/EditorCanvas.js': 3,

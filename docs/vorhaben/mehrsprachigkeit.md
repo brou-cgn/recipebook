@@ -1,8 +1,8 @@
 # Vorhaben: Mehrsprachigkeit (Deutsch, Englisch, Französisch)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 22.11.2026 (PR 1 bis 6a
-und die Entscheidungen (E) gemergt, PR 6b als PR #3727 offen).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 22.11.2026 (PR 1 bis 6b
+und die Entscheidungen (E) gemergt, PR 6c als Patch vorbereitet, noch nicht eingespielt).
 
 **Ziel:** Die App gibt es auf Deutsch, Englisch und Französisch. Jede:r wählt die eigene Sprache in den
 persönlichen Einstellungen, der Header übersteuert sie für die laufende Sitzung. Rezepte (Titel und
@@ -50,7 +50,8 @@ auch mehrsprachig aufgesetzt werden.“ Umfang: „alles“, also kein Halt nach
 | Timer im Kochmodus | 22.11.2026 (PR 6a): Die Zeit wird weiter im deutschen Original erkannt (Stunden, Minuten, Sekunden in `RecipeDetail.js`), auch wenn die Schritte übersetzt angezeigt werden. Knopf, Beschriftung und Alarm zeigen die Dauer in der geltenden Sprache (`timerDauer` in `RecipeDetail.js`, `dauer…` in `kochmodus.js`, Mehrzahl und Zahl nach der Sprache). |
 | Gemeinsame Bausteine | 22.11.2026 (PR 6a): `ConfirmDialog` (Abbrechen, Standard Löschen) und `UndoSnackbar` („… entfernt“, Rückgängig) folgen der geltenden Sprache überall, auch im Admin-Bereich. Meldungen, die der Admin-Bereich selbst baut, bleiben deutsch. |
 | Gespeicherte Meldungen | 22.11.2026 (PR 6b): Texte, die mit Daten gespeichert werden (Fehler der Nährwertberechnung in `naehrwerte.calcNotIncluded` und `calcError`, auch von der Cloud Function), entstehen weiter deutsch. Sonst stünde im Rezept die Sprache dessen, der zuletzt gerechnet hat. Angezeigt werden sie in der geltenden Sprache: `findeText` erkennt den deutschen Text samt Platzhaltern (Liste `MELDUNGEN` in `naehrwerte.js`), Unbekanntes bleibt wie gespeichert. Der deutsche Text im Wörterbuch muss deshalb genau dem gespeicherten entsprechen. |
-| Lieferweg | PR 1 bis 6b entstanden als Patches in einer Session ohne Schreibrechte auf das Repo. Empfehlung für die weiteren PRs: Session mit GitHub-Zugang. |
+| Wissensbasis Wein | 22.11.2026 (PR 6c): Übersetzungen getrennt nach ID in `src/data/weinbegleitung/uebersetzungen.js`, nicht in den JSON-Dateien: Diese gehen in den Fingerabdruck von `RULES_VERSION` ein, eine Übersetzung soll keine neue Regelversion auslösen. Deutsch bleibt in der Wissensbasis. Übersetzt werden Namen der Stile, Kurztexte der Regeln, Küchen der Regionen und Rebsorten-Beispiele mit deutschen Wörtern (aus, mit, trocken …); Eigennamen wie Chianti, Spätburgunder oder Winzersekt bleiben. Die Labels der Engine („passt gut“ …) bleiben deutsch (im Menü auch gespeichert), übersetzt wird beim Anzeigen (`labelText`). „Einschätzung im Detail“ (`WeinprofilEinblick`, Berechtigung `weinprofilEinblick`, standardmäßig nur Admins) bleibt als Diagnoseansicht deutsch. |
+| Lieferweg | PR 1 bis 6c entstanden als Patches in einer Session ohne Schreibrechte auf das Repo. Empfehlung für die weiteren PRs: Session mit GitHub-Zugang. |
 
 ## Stand der Umsetzung
 
@@ -63,8 +64,8 @@ auch mehrsprachig aufgesetzt werden.“ Umfang: „alles“, also kein Halt nach
 | 5 | Auswahllisten: `src/i18n/listenwerte.js` (Listen, Nachschlagen, Einzahl/Mehrzahl, fehlende Werte, Bereinigung), `useListenwerte` und `listenUebersetzungen` im SpracheContext (geladen in `App.js`), Laden und Speichern in `customLists.js`; Anzeige in `RecipeCard`, `RecipeDetail`, `RecipeFilterSidebar`, `MobileSearchOverlay`; Pflege `ListenUebersetzungen.js` unter Listen & Kategorien; Callable `uebersetzeListenwerte` (`functions/shared/listenUebersetzung.js`, Tests in `functions/index.listenUebersetzung.test.js`); Regeln für das Feld und `aiListenUebersetzungLimits` mit Tests, `security.md`. | gemergt 22.11.2026 (PR #3725, Merge bab5f67; mit Fix: `getSettings` übernahm `listenUebersetzungen` nicht, siehe Tech-Check A12) |
 | 6 | Oberfläche Bereich für Bereich, mehrere PRs (6a, 6b, …), nach Nutzung: Rezeptansicht und Kochmodus, Kochbuch mit Suche und Filtern, Küche (Startseite), Festtafel (Menüs), Atelier, Events und Gäste, Gruppen, Netzwerk und Profile, Dialoge und Fehlermeldungen aus `utils/`. Wie viel noch fehlt, zeigt die `BASELINE` in `src/i18nPolicy.test.js`. | in Arbeit |
 | 6a | Rezeptansicht und Kochmodus: Wörterbücher `kochmodus.js`, `bewertung.js`, `einkaufsliste.js`, `kochtagebuch.js`, erweitert `rezeptansicht.js` und `allgemein.js`. Umgestellt: `RecipeDetail` (bis auf den ingredientID-Abgleich, siehe 6b), `CookingModeTitleBar`, `CookingSessionCarousel`, `CookingSessionDock`, `CookingSessionRail` (Titel übersetzt, im Karussell auch der Schritt), `CookingAddRecipeButton`, `CookingAddRecipeSheet` (Suche über Original und Übersetzung), `CookingAlarmModal`, Status-Texte in `utils/cookingSessionStatus.js` (über `t`, ohne `t` deutsch), Mitteilung und Hinweis in `CookingSessionContext.js`, `RecipeRating`, `RatingModal`, `ShoppingListModal`, `CookDateModal`, `ConfirmDialog`, `UndoSnackbar`, `FollowName`, `RecipeImageCarousel`. Datum und Zahlen nach der Sprache; gesiezte Meldungen geduzt. Baseline 1738 → 1499 Textstellen. | gemergt 22.11.2026 (PR #3726, Merge c6eb56a) |
-| 6b | Nährwerte: Wörterbuch `naehrwerte.js`; umgestellt `NutritionModal` (Werte, Zusammensetzung, Berechnung, Umformulierungen; `buildNutritionCompositionRows` über `anzeige` = `{t, sprache, meldung}`, ohne deutsch, `statusKey` für die Logik), der ingredientID-Abgleich in `RecipeDetail` (jetzt geduzt), `IngredientIDSelect`, `IngredientCatalogSearchModal`, `mapNutritionCalcError` (geduzt). Gespeicherte Meldungen erkennt `findeText` (`src/i18n/texte.js`). Zahlen nach der Sprache. Baseline 1499 → 1423 Textstellen. | PR #3727 (offen, 22.11.2026) |
-| 6c | Wein dazu: Oberfläche (`WeinDazu`, `WeinprofilEinblick`, `WeinbegleitungTeile`) und Wissensbasis (`src/data/weinbegleitung/*.json`: Namen der Weinstile, Beispiele, Begründungen der Regeln, Regionen; `src/utils/weinbegleitung/anzeige.js`, `einblick.js`). Vorher festlegen, wie die Wissensbasis übersetzt wird (Felder je Sprache in den JSON-Dateien oder Wörterbuch nach ID). | offen |
+| 6b | Nährwerte: Wörterbuch `naehrwerte.js`; umgestellt `NutritionModal` (Werte, Zusammensetzung, Berechnung, Umformulierungen; `buildNutritionCompositionRows` über `anzeige` = `{t, sprache, meldung}`, ohne deutsch, `statusKey` für die Logik), der ingredientID-Abgleich in `RecipeDetail` (jetzt geduzt), `IngredientIDSelect`, `IngredientCatalogSearchModal`, `mapNutritionCalcError` (geduzt). Gespeicherte Meldungen erkennt `findeText` (`src/i18n/texte.js`). Zahlen nach der Sprache. Baseline 1499 → 1423 Textstellen. | gemergt 22.11.2026 (PR #3727, Merge c9b525c) |
+| 6c | Wein dazu: Wörterbuch `wein.js`; Übersetzung der Wissensbasis nach ID in `src/data/weinbegleitung/uebersetzungen.js` mit `src/utils/weinbegleitung/sprache.js` (`stilName`, `regelText`, `regionName`, `beispielText`, `labelText`) und Vollständigkeitstest; `kennwerteFuer` und `weinprofilFehlertext` in `anzeige.js` über `t`; umgestellt `WeinDazu` und `WeinbegleitungTeile` (Gründe, Quellen). `WeinprofilEinblick` als Diagnoseansicht in `NUR_DEUTSCH`. Baseline 1423 → 1397 Textstellen. | Patch vorbereitet (22.11.2026), noch nicht eingespielt |
 | E | Entscheidungen umgesetzt: Bereichsnamen übersetzt (`bereiche.js`, untere Navigation mit eigenem Wörterbuch `navigation.js`), Hinweise zu Mitteilungen in „Persönliche Daten“ duzen, Test gegen die Höflichkeitsform, Regel in `AGENTS.md`. | gemergt 22.11.2026 (PR #3721, Merge 442bd21) |
 | B | Phase B (siehe „Entschieden“). | später |
 
@@ -98,6 +99,10 @@ aktualisieren.
 - **Meldungen der Nährwertberechnung:** Was die Cloud Function oder Firestore selbst meldet und nicht in
   `MELDUNGEN` steht (etwa HTTP-Fehler oder `error.message`), erscheint unübersetzt. Neue feste Meldungen der
   Function in `naehrwerte.js` aufnehmen, mit genau demselben deutschen Text.
+- **Weinbegleitung außerhalb der Rezeptansicht:** Die Weinbegleitung im Menü (`Weinbegleitung.js`) und die Seite
+  „Weinbegleitung“ (`WeinbegleitungSeite.js`, `nurZuText` in `anzeige.js`, Lizenzhinweise in `quellen.json`) folgen
+  mit Festtafel bzw. „Chefkoch & mehr“; sie nutzen dann `sprache.js`. Die Gründe (`Gruende`) erscheinen dort schon
+  übersetzt.
 - **Freischaltung für alle:** nach PR 6 die Berechtigung `sprachwahl` für alle Rollen einschalten und im
   `CHANGELOG.md` als allgemein verfügbar eintragen.
 
@@ -122,6 +127,8 @@ aktualisieren.
   Backfill-Knöpfe `src/components/UebersetzungBackfill.js` mit `src/hooks/useSeitenweiserBackfill.js`
 - Auswahllisten: `src/i18n/listenwerte.js`, `useListenwerte` im SpracheContext, Pflege in
   `src/components/ListenUebersetzungen.js`, Vorschläge über `uebersetzeListenwerte` (`functions/handlers/uebersetzung.js`)
+- Wein dazu (PR 6c): Wörterbuch `src/i18n/texte/wein.js`; Wissensbasis über `src/utils/weinbegleitung/sprache.js`
+  mit den Übersetzungen in `src/data/weinbegleitung/uebersetzungen.js` (Test `sprache.test.js`)
 - Nährwerte (PR 6b): Wörterbuch `src/i18n/texte/naehrwerte.js` mit `MELDUNGEN`; gespeicherte Meldungen über
   `findeText` in `src/i18n/texte.js`; Zusammensetzung über `anzeige` in `buildNutritionCompositionRows`
   (`src/components/NutritionModal.js`)
