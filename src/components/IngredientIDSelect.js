@@ -5,6 +5,8 @@ import {
   INGREDIENT_MATCH_SEARCH_EXISTING_OPTION,
 } from '../hooks/useIngredientIDMatching';
 import IngredientCatalogSearchModal from './IngredientCatalogSearchModal';
+import { useTexte } from '../contexts/SpracheContext';
+import naehrwerteTexte from '../i18n/texte/naehrwerte';
 
 function findRowDisplayName(ingredientID, nutritionReferenceRows) {
   const row = nutritionReferenceRows.find(
@@ -26,6 +28,7 @@ function IngredientIDSelect({
   learnSynonymChecked,
   onLearnSynonymChange,
 }) {
+  const t = useTexte(naehrwerteTexte);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const selectedValue = value || '';
@@ -50,9 +53,9 @@ function IngredientIDSelect({
       <select
         value={selectedValue}
         onChange={handleSelectChange}
-        aria-label={`ingredientID für ${entry.ingredient}`}
+        aria-label={t('auswahlFuer', { zutat: entry.ingredient })}
       >
-        <option value="">Bitte auswählen</option>
+        <option value="">{t('bitteAuswaehlen')}</option>
         {entry.suggestions.map((suggestion) => (
           <option key={suggestion.ingredientID} value={suggestion.ingredientID}>
             {suggestion.displayName || suggestion.ingredientID} ({suggestion.confidencePercent}%)
@@ -63,9 +66,9 @@ function IngredientIDSelect({
             {searchedSelection.displayName}
           </option>
         )}
-        <option value={INGREDIENT_MATCH_SEARCH_EXISTING_OPTION}>Bestehende Zutaten durchsuchen…</option>
-        <option value={INGREDIENT_MATCH_CREATE_NEW_OPTION}>Neue Zutat</option>
-        <option value={INGREDIENT_MATCH_IGNORE_OPTION}>Zutat ignorieren</option>
+        <option value={INGREDIENT_MATCH_SEARCH_EXISTING_OPTION}>{t('durchsuchen')}</option>
+        <option value={INGREDIENT_MATCH_CREATE_NEW_OPTION}>{t('neueZutat')}</option>
+        <option value={INGREDIENT_MATCH_IGNORE_OPTION}>{t('zutatIgnorieren')}</option>
       </select>
       {entry.suggestions.length > 0 && (
         <label className="ingredient-match-learn-label">
@@ -74,7 +77,7 @@ function IngredientIDSelect({
             checked={learnSynonymChecked !== false}
             onChange={(e) => onLearnSynonymChange(entry.index, e.target.checked)}
           />
-          {' '}Synonym lernen
+          {' '}{t('synonymLernen')}
         </label>
       )}
       {isSearchOpen && (

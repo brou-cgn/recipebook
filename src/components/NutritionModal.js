@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { functions, db } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import { mapNutritionCalcError, naehrwertePerPortion, naehrwerteToTotals, extractQuantityFromPrefix } from '../utils/nutritionUtils';
@@ -13,6 +13,16 @@ import { normalizeNutritionEmptyIcon, normalizeNutritionSaveManualAmountIcon } f
 import './NutritionModal.css';
 import Button from './Button';
 import useFadeOutClose from '../hooks/useFadeOutClose';
+import { useSprache, useTexte } from '../contexts/SpracheContext';
+import { erstelleT, findeText } from '../i18n/texte';
+import { STANDARD_SPRACHE, localeFuer } from '../i18n/sprachen';
+import { formatiereZahl } from '../i18n/format';
+import naehrwerteTexte, { MELDUNGEN } from '../i18n/texte/naehrwerte';
+import allgemeinTexte from '../i18n/texte/allgemein';
+
+// Texte über t aus src/i18n/texte/naehrwerte.js (Mehrsprachigkeit PR 6b). Meldungen, die mit dem
+// Ergebnis gespeichert werden, entstehen deutsch (T_DEUTSCH); die Anzeige übersetzt sie (zeigeMeldung).
+const T_DEUTSCH = erstelleT(naehrwerteTexte, STANDARD_SPRACHE);
 
 const CALC_RESULT_STORAGE_KEY_PREFIX = 'nutrition_calc_result_';
 const AMOUNT_G_DECIMALS = 1;
@@ -143,21 +153,29 @@ export function deriveLinkedRecipePer100g(naehrwerte = {}) {
   return Object.keys(per100g).length > 0 ? per100g : null;
 }
 
-function formatRoundedValue(value, decimals = 1) {
+function formatRoundedValue(value, decimals = 1, sprache = STANDARD_SPRACHE) {
   if (value == null) return '—';
   const factor = Math.pow(10, decimals);
   const rounded = Math.round(value * factor) / factor;
-  return String(rounded).replace('.', ',');
+  return formatiereZahl(rounded, sprache, { maximumFractionDigits: decimals, useGrouping: false });
 }
 
-function buildLinkedRecipeDetail({ link, amountG, amountEstimated, naehrwerte }) {
+function buildLinkedRecipeDetail({ link, amountG, amountEstimated, naehrwerte }, t = T_DEUTSCH, sprache = STANDARD_SPRACHE) {
   if (!naehrwerte) return null;
 
-  const quantityLabel = link?.quantityPrefix || '1 Portion';
+  const quantityLabel = link?.quantityPrefix || t('einePortion');
   const amountLabel = amountG != null
-    ? ` (≈${formatRoundedValue(amountG, AMOUNT_G_DECIMALS)} g${amountEstimated ? ', geschätzt' : ''})`
+    ? t(amountEstimated ? 'verlinktMengeGeschaetzt' : 'verlinktMenge', { gramm: formatRoundedValue(amountG, AMOUNT_G_DECIMALS, sprache) })
     : '';
-  return `${quantityLabel}${amountLabel} — Nährwerte: ${roundNutritionValue('kalorien', naehrwerte.kalorien || 0)} kcal, ${formatRoundedValue(roundNutritionValue('fett', naehrwerte.fett || 0))} g Fett, ${formatRoundedValue(roundNutritionValue('kohlenhydrate', naehrwerte.kohlenhydrate || 0))} g KH, ${formatRoundedValue(roundNutritionValue('protein', naehrwerte.protein || 0))} g Protein`;
+  const wert = (feld) => formatRoundedValue(roundNutritionValue(feld, naehrwerte[feld] || 0), 1, sprache);
+  return t('verlinktDetail', {
+    menge: quantityLabel,
+    gramm: amountLabel,
+    kcal: roundNutritionValue('kalorien', naehrwerte.kalorien || 0),
+    fett: wert('fett'),
+    kh: wert('kohlenhydrate'),
+    protein: wert('protein'),
+  });
 }
 
 async function estimateAmountG(parseIngredientAmountG, ingredientText) {
@@ -248,12 +266,12 @@ async function resolveLinkedRecipeAmountG({ link, linkedRecipe, parseIngredientA
 
 export async function resolveLinkedRecipeNutrition({ link, linkedRecipe, parseIngredientAmountG, portionUnits = [] } = {}) {
   if (!linkedRecipe || !linkedRecipe.naehrwerte) {
-    return { found: false, error: linkedRecipe ? 'Nährwerte je 100 g fehlen für das verlinkte Rezept.' : 'Verlinktes Rezept nicht gefunden.' };
+    return { found: false, error: linkedRecipe ? T_DEUTSCH('meldungJe100gFehlen') : T_DEUTSCH('meldungVerlinktFehlt') };
   }
 
   const per100g = deriveLinkedRecipePer100g(linkedRecipe.naehrwerte);
   if (!per100g) {
-    return { found: false, error: 'Nährwerte je 100 g fehlen für das verlinkte Rezept.' };
+    return { found: false, error: T_DEUTSCH('meldungJe100gFehlen') };
   }
 
   const { amountG, amountEstimated } = await resolveLinkedRecipeAmountG({
@@ -268,7 +286,7 @@ export async function resolveLinkedRecipeNutrition({ link, linkedRecipe, parseIn
 
   const naehrwerte = scaleNutritionByAmountG(per100g, amountG);
   if (!naehrwerte) {
-    return { found: false, error: 'Nährwerte des verlinkten Rezepts konnten nicht umgerechnet werden.' };
+    return { found: false, error: T_DEUTSCH('meldungNichtUmgerechnet') };
   }
 
   return { found: true, naehrwerte, amountG, amountEstimated };
@@ -361,10 +379,11 @@ export function getRecipeCalcResult(recipe) {
   };
 }
 
+// Anzeige der Quelle: Name des Dienstes oder Schlüssel in naehrwerte.js
 const NUTRITION_SOURCE_DISPLAY_LABELS = {
-  openfoodfacts: 'OpenFoodFacts',
-  'ai-generiert': 'KI-Schätzung',
-  manual: 'Manuell',
+  openfoodfacts: { name: 'OpenFoodFacts' },
+  'ai-generiert': { schluessel: 'quelleKi' },
+  manual: { schluessel: 'quelleManuell' },
 };
 
 function normalizeIngredientItem(item) {
@@ -372,13 +391,16 @@ function normalizeIngredientItem(item) {
   return { text: item.text || '', ingredientID: item.ingredientID || null };
 }
 
-function resolveNonLinkSource(refRow, ingredientDetail) {
+function resolveNonLinkSource(refRow, ingredientDetail, t) {
   const refLabel = NUTRITION_SOURCE_DISPLAY_LABELS[refRow?.source];
-  if (refLabel) return refLabel;
-  return ingredientDetail?.aiEstimated ? 'KI-Schätzung' : '';
+  if (refLabel) return refLabel.name || t(refLabel.schluessel);
+  return ingredientDetail?.aiEstimated ? t('quelleKi') : '';
 }
 
-export function buildNutritionCompositionRows(recipe, calcResult, reformulationMap = {}, acceptedIngredientsInput = [], manualAmountsInput = {}, nutritionReferenceRows = [], linkedRecipeCalcCompletedAtMap = {}) {
+// anzeige (Mehrsprachigkeit PR 6b): t aus naehrwerte.js, sprache für Zahlen, meldung zeigt gespeicherte
+// Meldungen in der geltenden Sprache. Ohne anzeige deutsch. statusKey steht für die Logik, status für die Anzeige.
+export function buildNutritionCompositionRows(recipe, calcResult, reformulationMap = {}, acceptedIngredientsInput = [], manualAmountsInput = {}, nutritionReferenceRows = [], linkedRecipeCalcCompletedAtMap = {}, anzeige = {}) {
+  const { t = T_DEUTSCH, sprache = STANDARD_SPRACHE, meldung = (text) => text } = anzeige;
   const rawIngredients = recipe?.zutaten || recipe?.ingredients || [];
   const ingredientItems = rawIngredients
     .filter(item => typeof item === 'string' || (item && typeof item === 'object' && item.type !== 'heading'))
@@ -408,35 +430,37 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
     const convertedNaehrwerte = manualAmountApplied ? scaleNutritionByAmountG(ingredientDetail.naehrwerte, manualAmountG) : null;
 
     let source;
-    let status;
+    let statusKey;
     let isNotNutritionRelevant = false;
     if (link) {
-      source = 'Rezept';
+      source = t('quelleRezept');
       const linkedCalcCompletedAt = linkedRecipeCalcCompletedAtMap?.[link.recipeId] ?? null;
       if (mainCalcCompletedAt != null && linkedCalcCompletedAt != null) {
-        status = linkedCalcCompletedAt <= mainCalcCompletedAt ? 'Aktuell' : 'Veraltet';
+        statusKey = linkedCalcCompletedAt <= mainCalcCompletedAt ? 'statusAktuell' : 'statusVeraltet';
       } else {
-        status = 'Ungeprüft';
+        statusKey = 'statusUngeprueft';
       }
     } else {
       const refRow = ingredientID ? refByIngredientID.get(String(ingredientID).trim()) : null;
       if (refRow?.nutritionRelevant === false) {
         isNotNutritionRelevant = true;
         source = '—';
-        status = 'Nicht nährwertrelevant';
+        statusKey = 'nichtRelevant';
       } else {
-        source = resolveNonLinkSource(refRow, ingredientDetail);
-        status = refRow?.status === NUTRITION_REFERENCE_APPROVED_STATUS ? 'Geprüft' : 'Ungeprüft';
+        source = resolveNonLinkSource(refRow, ingredientDetail, t);
+        statusKey = refRow?.status === NUTRITION_REFERENCE_APPROVED_STATUS ? 'statusGeprueft' : 'statusUngeprueft';
       }
     }
+    const status = t(statusKey);
 
     if (isNotNutritionRelevant) {
       return {
         ingredient,
         source,
         status,
+        statusKey,
         amountG: null,
-        detail: 'Nicht nährwertrelevant',
+        detail: t('nichtRelevant'),
         naehrwerte: null,
         searchTerm: null,
         aiEstimated: false,
@@ -452,27 +476,28 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
         amountG: amountForDisplay,
         amountEstimated: ingredientDetail?.amountEstimated === true,
         naehrwerte: calculatedNaehrwerte,
-      })
+      }, t, sprache)
       : null;
     const isNotIncluded = Boolean(notIncludedItem);
     return {
       ingredient,
       source,
       status,
+      statusKey,
       amountG: amountForDisplay,
-      detail: notIncludedItem?.error ||
+      detail: (notIncludedItem?.error && meldung(notIncludedItem.error)) ||
         linkDetail ||
         (reformulation
-          ? `Umformulierung: ${reformulation}`
+          ? t('detailUmformulierung', { text: reformulation })
           : (noAmountG
             ? (manualAmountApplied
-            ? 'Aus Referenzwert je 100 g umgerechnet'
+            ? t('detailUmgerechnet')
             : (hasNaehrwerte
-              ? 'Referenzwert je 100 g vorhanden – Menge eingeben'
-              : 'Referenzquelle vorhanden, Menge nicht berechenbar'))
+              ? t('detailMengeEingeben')
+              : t('detailNichtBerechenbar')))
             : (searchTerm
-            ? `Suchbegriff: ${searchTerm}`
-            : (!hasNaehrwerte && !isNotIncluded ? 'Neu berechnen' : '—')))),
+            ? t('detailSuchbegriff', { begriff: searchTerm })
+            : (!hasNaehrwerte && !isNotIncluded ? t('detailNeuBerechnen') : '—')))),
       naehrwerte: calculatedNaehrwerte,
       searchTerm,
       aiEstimated: ingredientDetail?.aiEstimated || false,
@@ -485,6 +510,14 @@ export { computeIngredientAmountG, resolveIngredientNutritionByStatus };
 
 function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [], currentUser, onEnsureIngredientIDs, nutritionReferenceRows = [], onReloadNutritionReferences = null, retryAutoCalculateToken = 0, onOpenLinkedRecipe = null, autoCalcIcon = null, manualSaveIcon = null, portionUnits = [] }) {
   const [closing, onClose] = useFadeOutClose(onCloseProp);
+  const t = useTexte(naehrwerteTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const { sprache } = useSprache();
+  // Gespeicherte deutsche Meldungen (Berechnung, Cloud Function) in der geltenden Sprache; Unbekanntes bleibt
+  const zeigeMeldung = useCallback((text) => {
+    const treffer = findeText(naehrwerteTexte, text, MELDUNGEN);
+    return treffer ? t(treffer.schluessel, treffer.werte) : text;
+  }, [t]);
   const resolvedAutoCalcIcon = normalizeNutritionEmptyIcon(autoCalcIcon);
   const resolvedManualSaveIcon = normalizeNutritionSaveManualAmountIcon(manualSaveIcon);
   const [kalorien, setKalorien] = useState('');
@@ -615,19 +648,23 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
     if (naehrwerte == null) return '—';
     const value = naehrwerte[key] ?? 0;
     const factor = Math.pow(10, decimals);
-    return String(Math.round(value * factor) / factor);
+    return formatiereZahl(Math.round(value * factor) / factor, sprache, { maximumFractionDigits: decimals, useGrouping: false });
   };
 
   const formatAmountG = (amountG) => {
     if (amountG == null) return '—';
     const factor = Math.pow(10, AMOUNT_G_DECIMALS);
     const rounded = Math.round(amountG * factor) / factor;
-    return `${rounded} g`;
+    return `${formatiereZahl(rounded, sprache, { maximumFractionDigits: AMOUNT_G_DECIMALS, useGrouping: false })} g`;
   };
 
   const formatLabelValue = (value, unit) => {
     if (value === '' || value == null) return '—';
-    return `${String(value).replace('.', ',')} ${unit}`;
+    const zahl = typeof value === 'number' ? value : parseFloat(String(value).replace(',', '.'));
+    const text = Number.isFinite(zahl)
+      ? formatiereZahl(zahl, sprache, { maximumFractionDigits: 3, useGrouping: false })
+      : String(value);
+    return `${text} ${unit}`;
   };
 
   const calculatedNutritionState = useMemo(() => {
@@ -784,7 +821,7 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
     setManualAmountErrors((prev) => {
       const next = { ...prev };
       if (String(value).trim() && parsed == null) {
-        next[ingredient] = 'Bitte eine gültige Grammzahl > 0 eingeben.';
+        next[ingredient] = t('mengeUngueltig');
       } else {
         delete next[ingredient];
       }
@@ -799,7 +836,7 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
     if (parsed === null) {
       setManualAmountErrors((prev) => ({
         ...prev,
-        [ingredient]: 'Bitte eine gültige Grammzahl > 0 eingeben.',
+        [ingredient]: t('mengeUngueltig'),
       }));
       return;
     }
@@ -972,7 +1009,7 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
     }
 
     if (ingredients.length === 0 && recipeLinkItems.length === 0) {
-      setAutoCalcResult({ error: 'Keine Zutaten im Rezept gefunden.' });
+      setAutoCalcResult({ error: T_DEUTSCH('meldungKeineZutaten') });
       return;
     }
 
@@ -1087,7 +1124,7 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
         const reform = reformulations[ingredient];
         notIncluded.push({
           ingredient,
-          error: resolved.error || 'Nicht gefunden',
+          error: resolved.error || T_DEUTSCH('meldungNichtGefunden'),
           ...(reform && { reformulation: reform.text, changeLog: reform.changeLog }),
         });
       } catch (err) {
@@ -1153,13 +1190,13 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
         }
         notIncluded.push({
           ingredient,
-          error: resolvedLink.error || `Verlinktes Rezept "${link.recipeName}" konnte nicht umgerechnet werden.`,
+          error: resolvedLink.error || T_DEUTSCH('meldungVerlinktNichtUmgerechnet', { name: link.recipeName }),
           isRecipeLink: true,
         });
       } else {
         notIncluded.push({
           ingredient,
-          error: `Verlinktes Rezept "${link.recipeName}" nicht gefunden. Möglicherweise wurde das Rezept gelöscht.`,
+          error: T_DEUTSCH('meldungVerlinktGeloescht', { name: link.recipeName }),
           isRecipeLink: true,
         });
       }
@@ -1341,7 +1378,7 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
           const reform = reformulations[ingredient];
           stillNotIncluded.push({
             ingredient,
-            error: detail?.error || 'Nicht gefunden',
+            error: detail?.error || T_DEUTSCH('meldungNichtGefunden'),
             ...(reform && { reformulation: reform.text, changeLog: reform.changeLog }),
           });
         }
@@ -1368,7 +1405,7 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
       if (!linkedRecipe) {
         stillNotIncluded.push({
           ingredient,
-          error: `Verlinktes Rezept "${link?.recipeName || ingredient}" nicht gefunden. Möglicherweise wurde das Rezept gelöscht.`,
+          error: T_DEUTSCH('meldungVerlinktGeloescht', { name: link?.recipeName || ingredient }),
           isRecipeLink: true,
         });
         continue;
@@ -1486,8 +1523,9 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
     acceptedIngredients,
     manualAmounts,
     nutritionReferenceRows,
-    linkedRecipeCalcCompletedAtMap
-  ), [recipe, autoCalcResult, reformulations, acceptedIngredients, manualAmounts, nutritionReferenceRows, linkedRecipeCalcCompletedAtMap]);
+    linkedRecipeCalcCompletedAtMap,
+    { t, sprache, meldung: zeigeMeldung }
+  ), [recipe, autoCalcResult, reformulations, acceptedIngredients, manualAmounts, nutritionReferenceRows, linkedRecipeCalcCompletedAtMap, t, sprache, zeigeMeldung]);
 
   const ungeprüftCount = useMemo(() => {
     const rawIngredients = recipe?.zutaten || recipe?.ingredients || [];
@@ -1521,7 +1559,7 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
           type="button"
           className="nutrition-composition-recipe-link"
           onClick={() => onOpenLinkedRecipe?.(recipeLink.recipeId, displayName)}
-          title={`Öffne Rezept: ${displayName}`}
+          title={t('oeffneRezept', { titel: displayName })}
         >
           {displayName}
         </button>
@@ -1549,21 +1587,21 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
         className="nutrition-modal"
         role="dialog"
         aria-modal="true"
-        aria-label="Nährwerte"
+        aria-label={t('naehrwerte')}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="nutrition-modal-header">
-          <h2 className="nutrition-modal-title">Nährwerte</h2>
+          <h2 className="nutrition-modal-title">{t('naehrwerte')}</h2>
           <div className="nutrition-modal-header-actions">
             <button
               className="nutrition-autocalc-header-btn"
               onClick={handleAutoCalculate}
               disabled={autoCalcLoading}
-              title="Nährwerte automatisch aus OpenFoodFacts berechnen"
-              aria-label="Nährwerte automatisch berechnen"
+              title={t('automatischBerechnenTitel')}
+              aria-label={t('automatischBerechnen')}
             >
               {isBase64Image(resolvedAutoCalcIcon) ? (
-                <img src={resolvedAutoCalcIcon} alt="Nährwerte berechnen" />
+                <img src={resolvedAutoCalcIcon} alt={t('berechnen')} />
               ) : (
                 resolvedAutoCalcIcon
               )}
@@ -1572,7 +1610,7 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
               ref={closeButtonRef}
               className="nutrition-modal-close"
               onClick={onClose}
-              aria-label="Nährwerte schließen"
+              aria-label={t('schliessen')}
             >
               ×
             </button>
@@ -1588,43 +1626,43 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
             </colgroup>
             <thead>
               <tr>
-                <th className="nutrition-values-table__amount-col nutrition-values-table__amount-col--merged" colSpan={2}>Nährwerte pro Portion</th>
-                <th className="nutrition-values-table__amount-col nutrition-values-table__amount-col--per100g">pro 100 g</th>
+                <th className="nutrition-values-table__amount-col nutrition-values-table__amount-col--merged" colSpan={2}>{t('proPortion')}</th>
+                <th className="nutrition-values-table__amount-col nutrition-values-table__amount-col--per100g">{t('pro100g')}</th>
               </tr>
             </thead>
             <tbody>
               <tr className="nutrition-values-table__row">
-                <td className="nutrition-values-table__label">Kalorien</td>
+                <td className="nutrition-values-table__label">{t('kalorien')}</td>
                 <td className="nutrition-values-table__amount nutrition-values-table__amount--portion">{formatLabelValue(kalorien, 'kcal')}</td>
                 <td className="nutrition-values-table__amount nutrition-values-table__amount--per100g">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.kalorien, 'kcal') : '—'}</td>
               </tr>
               <tr className="nutrition-values-table__row">
-                <td className="nutrition-values-table__label">Fett</td>
+                <td className="nutrition-values-table__label">{t('fett')}</td>
                 <td className="nutrition-values-table__amount nutrition-values-table__amount--portion">{formatLabelValue(fett, 'g')}</td>
                 <td className="nutrition-values-table__amount nutrition-values-table__amount--per100g">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.fett, 'g') : '—'}</td>
               </tr>
               <tr className="nutrition-values-table__row">
-                <td className="nutrition-values-table__label">Kohlenhydrate</td>
+                <td className="nutrition-values-table__label">{t('kohlenhydrate')}</td>
                 <td className="nutrition-values-table__amount nutrition-values-table__amount--portion">{formatLabelValue(kohlenhydrate, 'g')}</td>
                 <td className="nutrition-values-table__amount nutrition-values-table__amount--per100g">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.kohlenhydrate, 'g') : '—'}</td>
               </tr>
               <tr className="nutrition-values-table__row nutrition-values-table__row--indented">
-                <td className="nutrition-values-table__label">davon Zucker</td>
+                <td className="nutrition-values-table__label">{t('davonZucker')}</td>
                 <td className="nutrition-values-table__amount nutrition-values-table__amount--portion">{formatLabelValue(zucker, 'g')}</td>
                 <td className="nutrition-values-table__amount nutrition-values-table__amount--per100g">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.zucker, 'g') : '—'}</td>
               </tr>
               <tr className="nutrition-values-table__row">
-                <td className="nutrition-values-table__label">Protein</td>
+                <td className="nutrition-values-table__label">{t('protein')}</td>
                 <td className="nutrition-values-table__amount nutrition-values-table__amount--portion">{formatLabelValue(protein, 'g')}</td>
                 <td className="nutrition-values-table__amount nutrition-values-table__amount--per100g">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.protein, 'g') : '—'}</td>
               </tr>
               <tr className="nutrition-values-table__row">
-                <td className="nutrition-values-table__label">Salz</td>
+                <td className="nutrition-values-table__label">{t('salz')}</td>
                 <td className="nutrition-values-table__amount nutrition-values-table__amount--portion">{formatLabelValue(salz, 'g')}</td>
                 <td className="nutrition-values-table__amount nutrition-values-table__amount--per100g">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.salz, 'g') : '—'}</td>
               </tr>
               <tr className="nutrition-values-table__row">
-                <td className="nutrition-values-table__label">Ballaststoffe</td>
+                <td className="nutrition-values-table__label">{t('ballaststoffe')}</td>
                 <td className="nutrition-values-table__amount nutrition-values-table__amount--portion">{formatLabelValue(ballaststoffe, 'g')}</td>
                 <td className="nutrition-values-table__amount nutrition-values-table__amount--per100g">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.ballaststoffe, 'g') : '—'}</td>
               </tr>
@@ -1640,29 +1678,29 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
                 className="nutrition-composition-toggle"
                 onClick={() => setShowCompositionTable(prev => !prev)}
               >
-                {showCompositionTable ? 'Zusammensetzung ausblenden' : 'Zusammensetzung anzeigen'}
+                {showCompositionTable ? t('zusammensetzungAusblenden') : t('zusammensetzungAnzeigen')}
               </button>
               {showCompositionTable && (
                 <div className="nutrition-composition-table-wrap">
                   <table className="nutrition-composition-table">
                     <thead>
                       <tr>
-                        <th>Zutat</th>
-                        <th>Quelle</th>
-                        <th className="nutrition-composition-num">kcal</th>
-                        <th className="nutrition-composition-num">Protein</th>
-                        <th className="nutrition-composition-num">Fett</th>
-                        <th className="nutrition-composition-num">KH</th>
-                        <th>Status</th>
-                        <th className="nutrition-composition-num">Menge</th>
-                        <th>Detail</th>
+                        <th>{t('spalteZutat')}</th>
+                        <th>{t('spalteQuelle')}</th>
+                        <th className="nutrition-composition-num">{t('spalteKcal')}</th>
+                        <th className="nutrition-composition-num">{t('protein')}</th>
+                        <th className="nutrition-composition-num">{t('fett')}</th>
+                        <th className="nutrition-composition-num">{t('spalteKh')}</th>
+                        <th>{t('spalteStatus')}</th>
+                        <th className="nutrition-composition-num">{t('spalteMenge')}</th>
+                        <th>{t('spalteDetail')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {compositionRows.map((row, index) => (
                         <tr
                          key={`${row.ingredient}-${index}`}
-                         className={['Ungeprüft', 'Veraltet'].includes(row.status) ? 'nutrition-composition-row--needs-review' : ''}
+                         className={['statusUngeprueft', 'statusVeraltet'].includes(row.statusKey) ? 'nutrition-composition-row--needs-review' : ''}
                         >
                          <td>{renderCompositionIngredient(row.ingredient)}</td>
                          <td>
@@ -1684,16 +1722,16 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
                                     value={manualAmounts[row.ingredient] ?? ''}
                                     onChange={(e) => handleManualAmountChange(row.ingredient, e.target.value)}
                                     placeholder="g"
-                                    aria-label={`Menge in Gramm für ${row.ingredient}`}
+                                    aria-label={t('mengeInGramm', { zutat: row.ingredient })}
                                   />
                                   <button
                                     type="button"
                                     className="nutrition-composition-manual-amount-save"
                                     onClick={() => handleSaveManualAmount(row.ingredient)}
-                                    aria-label={`Menge für ${row.ingredient} speichern`}
+                                    aria-label={t('mengeSpeichern', { zutat: row.ingredient })}
                                   >
                                     {isBase64Image(resolvedManualSaveIcon) ? (
-                                      <img className="nutrition-composition-manual-amount-save-img" src={resolvedManualSaveIcon} alt="Speichern" />
+                                      <img className="nutrition-composition-manual-amount-save-img" src={resolvedManualSaveIcon} alt={tAllgemein('speichern')} />
                                     ) : (
                                       resolvedManualSaveIcon
                                     )}
@@ -1720,21 +1758,21 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
           <div className="nutrition-autocalc">
             {!autoCalcLoading && recipe.naehrwerte?.calcPending && (
               <div className="nutrition-calc-progress">
-                <span>Hintergrundberechnung läuft…</span>
+                <span>{t('hintergrund')}</span>
               </div>
             )}
             {!autoCalcLoading && !autoCalcResult && recipe.naehrwerte?.calcError && (
               <div className="nutrition-autocalc-error-box">
-                <p className="nutrition-autocalc-error">{recipe.naehrwerte.calcError}</p>
+                <p className="nutrition-autocalc-error">{zeigeMeldung(recipe.naehrwerte.calcError)}</p>
                 <Button onClick={handleAutoCalculate} disabled={autoCalcLoading}>
-                  Erneut versuchen
+                  {t('erneutVersuchen')}
                 </Button>
               </div>
             )}
             {autoCalcLoading && calcProgress && (
               <div className="nutrition-calc-progress">
                 <div className="nutrition-calc-progress-header">
-                  <span>{calcProgress.done} von {calcProgress.total} Zutaten überprüft</span>
+                  <span>{t('fortschritt', { erledigt: calcProgress.done, gesamt: calcProgress.total })}</span>
                 </div>
                 <div className="nutrition-calc-progress-bar-track">
                   <div
@@ -1743,26 +1781,26 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
                   />
                 </div>
                 {calcProgress.current && (
-                  <p className="nutrition-calc-current">Überprüfe: {calcProgress.current}</p>
+                  <p className="nutrition-calc-current">{t('ueberpruefe', { zutat: calcProgress.current })}</p>
                 )}
               </div>
             )}
             {autoCalcResult && autoCalcResult.info && (
-              <p className="nutrition-autocalc-info">{autoCalcResult.info}</p>
+              <p className="nutrition-autocalc-info">{zeigeMeldung(autoCalcResult.info)}</p>
             )}
             {autoCalcResult && !autoCalcResult.error && !autoCalcResult.info && (
               <>
                 <p className="nutrition-autocalc-info">
-                  {autoCalcResult.foundCount} von {autoCalcResult.totalCount} Zutaten gefunden.
+                  {t('gefunden', { gefunden: autoCalcResult.foundCount, gesamt: autoCalcResult.totalCount })}
                 </p>
                 {(() => {
                   const aiEstimatedCount = (autoCalcResult.ingredientDetails || []).filter(item => item.aiEstimated).length;
                   const parts = [];
                   if (ungeprüftCount > 0) {
-                    parts.push(`${ungeprüftCount} ${ungeprüftCount === 1 ? 'Zutat ist' : 'Zutaten sind'} noch nicht geprüft.`);
+                    parts.push(t('ungeprueft', { anzahl: ungeprüftCount }));
                   }
                   if (aiEstimatedCount > 0) {
-                    parts.push(`Für ${aiEstimatedCount} ${aiEstimatedCount === 1 ? 'Zutat wurde' : 'Zutaten wurden'} Nährwerte über KI geschätzt.`);
+                    parts.push(t('kiGeschaetzt', { anzahl: aiEstimatedCount }));
                   }
                   if (parts.length === 0) return null;
                   return (
@@ -1773,7 +1811,7 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
                 })()}
                 {autoCalcResult.notIncluded && autoCalcResult.notIncluded.length > 0 && (
                   <div className="nutrition-not-included">
-                    <p className="nutrition-not-included-title">Nicht einkalkulierte Zutaten:</p>
+                    <p className="nutrition-not-included-title">{t('nichtEinkalkuliert')}</p>
                     <ul className="nutrition-not-included-list">
                       {autoCalcResult.notIncluded.map((item, i) => (
                         <li key={i} className="nutrition-not-included-item">
@@ -1793,12 +1831,12 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
                               <button
                                 className="nutrition-reformulation-confirm-btn"
                                 onClick={() => handleSaveReformulation(item.ingredient, editingText)}
-                                title="Umformulierung speichern"
+                                title={t('umformulierungSpeichern')}
                               >✓</button>
                               <button
                                 className="nutrition-reformulation-cancel-btn"
                                 onClick={() => setEditingIngredient(null)}
-                                title="Abbrechen"
+                                title={tAllgemein('abbrechen')}
                               >×</button>                            </div>
                           ) : (
                             <>
@@ -1806,11 +1844,11 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
                                 <span className="nutrition-not-included-name">
                                   {reformulations[item.ingredient]?.text || item.ingredient}
                                   {reformulations[item.ingredient] && (
-                                    <span className="nutrition-reformulation-badge"> (umformuliert)</span>
+                                    <span className="nutrition-reformulation-badge">{` ${t('umformuliert')}`}</span>
                                   )}
                                 </span>
                                 {item.error && (
-                                  <span className="nutrition-not-included-reason">: {item.error}</span>
+                                  <span className="nutrition-not-included-reason">: {zeigeMeldung(item.error)}</span>
                                 )}
                                 <button
                                   className="nutrition-reformulation-edit-btn"
@@ -1818,22 +1856,25 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
                                     setEditingIngredient(item.ingredient);
                                     setEditingText(reformulations[item.ingredient]?.text || item.ingredient);
                                   }}
-                                  title="Zutat umformulieren"
-                                >Edit</button>
+                                  title={t('zutatUmformulieren')}
+                                >{t('umformulieren')}</button>
                                 <button
                                   className="nutrition-accept-ingredient-btn"
                                   onClick={() => handleAcceptIngredient(item.ingredient)}
-                                  title="Als gefunden markieren (von der Neuberechnung ausschließen)"
+                                  title={t('alsGefundenMarkieren')}
                                 >✓</button>
                               </div>
                               {(item.changeLog || reformulations[item.ingredient]?.changeLog)?.length > 0 && (
                                 <details className="nutrition-change-log">
-                                  <summary>Änderungsprotokoll</summary>
+                                  <summary>{t('aenderungsprotokoll')}</summary>
                                   <ul className="nutrition-change-log-list">
                                     {(item.changeLog || reformulations[item.ingredient]?.changeLog || []).map((entry, j) => (
                                       <li key={j}>
-                                        {new Date(entry.timestamp).toLocaleString('de-DE')}:{' '}
-                                        „{entry.from}" → „{entry.to}"
+                                        {t('protokollEintrag', {
+                                          zeit: new Date(entry.timestamp).toLocaleString(localeFuer(sprache)),
+                                          von: entry.from,
+                                          nach: entry.to,
+                                        })}
                                       </li>
                                     ))}
                                   </ul>
@@ -1848,30 +1889,30 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
                       <Button
                         onClick={handleRecalcReformulated}
                         disabled={autoCalcLoading}
-                        title="Nährwerte mit den umformulierten Zutaten neu berechnen"
+                        title={t('neuBerechnenTitel')}
                       >
-                        Mit Umformulierungen neu berechnen
+                        {t('neuBerechnen')}
                       </Button>
                     )}
                   </div>
                 )}
                 {autoCalcResult.saveError && (
                   <p className="nutrition-autocalc-error">
-                    Speichern fehlgeschlagen. Bitte manuell speichern.
+                    {t('speichernFehlgeschlagen')}
                   </p>
                 )}
                 {autoCalcResult.writebackError && (
                   <p className="nutrition-autocalc-error">
-                    Nährwertreferenz konnte nicht aktualisiert werden: {autoCalcResult.writebackError}
+                    {t('referenzFehler', { fehler: zeigeMeldung(autoCalcResult.writebackError) })}
                   </p>
                 )}
               </>
             )}
             {autoCalcResult && autoCalcResult.error && (
               <div className="nutrition-autocalc-error-box">
-                <p className="nutrition-autocalc-error">{autoCalcResult.error}</p>
+                <p className="nutrition-autocalc-error">{zeigeMeldung(autoCalcResult.error)}</p>
                 <Button onClick={handleAutoCalculate} disabled={autoCalcLoading}>
-                  Erneut versuchen
+                  {t('erneutVersuchen')}
                 </Button>
               </div>
             )}
@@ -1880,9 +1921,9 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
                 variant="ghost"
                 onClick={handleResetAdjustments}
                 disabled={autoCalcLoading}
-                title="Umformulierungen und ausgeschlossene Zutaten zurücksetzen"
+                title={t('anpassungenTitel')}
               >
-                Anpassungen zurücksetzen
+                {t('anpassungenZuruecksetzen')}
               </Button>
             )}
           </div>

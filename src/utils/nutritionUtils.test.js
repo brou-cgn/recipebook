@@ -25,28 +25,28 @@ describe('mapNutritionCalcError', () => {
   it('returns unauthenticated message for functions/unauthenticated', () => {
     const err = { code: 'functions/unauthenticated', message: '' };
     expect(mapNutritionCalcError(err)).toBe(
-      'Sie müssen angemeldet sein, um Nährwerte zu berechnen.'
+      'Du musst angemeldet sein, um Nährwerte zu berechnen.'
     );
   });
 
   it('returns deadline exceeded message for functions/deadline-exceeded', () => {
     const err = { code: 'functions/deadline-exceeded', message: '' };
     expect(mapNutritionCalcError(err)).toBe(
-      'Die Berechnung hat zu lange gedauert. Bitte versuchen Sie es erneut.'
+      'Die Berechnung hat zu lange gedauert. Bitte versuch es erneut.'
     );
   });
 
   it('returns resource exhausted message for functions/resource-exhausted', () => {
     const err = { code: 'functions/resource-exhausted', message: '' };
     expect(mapNutritionCalcError(err)).toBe(
-      'Zu viele Anfragen. Bitte versuchen Sie es später erneut.'
+      'Zu viele Anfragen. Bitte versuch es später erneut.'
     );
   });
 
   it('returns internal error message for functions/internal', () => {
     const err = { code: 'functions/internal', message: '' };
     expect(mapNutritionCalcError(err)).toBe(
-      'Fehler beim Abrufen der Nährwertdaten. Bitte versuchen Sie es erneut.'
+      'Fehler beim Abrufen der Nährwertdaten. Bitte versuch es erneut.'
     );
   });
 
@@ -58,7 +58,7 @@ describe('mapNutritionCalcError', () => {
   it('returns fallback message when error code is unknown and message is empty', () => {
     const err = { code: 'functions/unknown', message: '' };
     expect(mapNutritionCalcError(err)).toBe(
-      'Fehler beim Berechnen der Nährwerte. Bitte versuchen Sie es erneut.'
+      'Fehler beim Berechnen der Nährwerte. Bitte versuch es erneut.'
     );
   });
 });

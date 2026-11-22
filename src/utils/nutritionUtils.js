@@ -1,3 +1,11 @@
+import { erstelleT } from '../i18n/texte';
+import { STANDARD_SPRACHE } from '../i18n/sprachen';
+import naehrwerteTexte from '../i18n/texte/naehrwerte';
+
+// Meldungen der Berechnung bleiben deutsch, weil sie mit dem Ergebnis gespeichert werden; die Anzeige
+// übersetzt sie (findeText, Mehrsprachigkeit PR 6b, src/i18n/texte/naehrwerte.js).
+const T_DEUTSCH = erstelleT(naehrwerteTexte, STANDARD_SPRACHE);
+
 /**
  * Extracts a numeric quantity from an ingredient quantity prefix string.
  * Supports formats like "1 Teil", "0.5 Stück", "1/2", "2", "200 ml".
@@ -19,7 +27,8 @@ export function extractQuantityFromPrefix(prefix) {
 }
 
 /**
- * Maps a Firebase callable function error to a user-facing German error message.
+ * Maps a Firebase callable function error to a user-facing German error message
+ * (texts in src/i18n/texte/naehrwerte.js; shown translated via findeText).
  * @param {Error} err - The error thrown by a Firebase httpsCallable call.
  * @returns {string} A descriptive German error message.
  */
@@ -33,20 +42,20 @@ export function mapNutritionCalcError(err) {
     msg.toLowerCase().includes('fetch failed') ||
     msg.toLowerCase().includes('networkerror');
   if (isNetworkError) {
-    return 'Netzwerkfehler. Bitte Internetverbindung prüfen und erneut versuchen.';
+    return T_DEUTSCH('fehlerNetzwerk');
   }
 
   switch (err.code) {
     case 'functions/unauthenticated':
-      return 'Sie müssen angemeldet sein, um Nährwerte zu berechnen.';
+      return T_DEUTSCH('fehlerAnmeldung');
     case 'functions/deadline-exceeded':
-      return 'Die Berechnung hat zu lange gedauert. Bitte versuchen Sie es erneut.';
+      return T_DEUTSCH('fehlerZeit');
     case 'functions/resource-exhausted':
-      return 'Zu viele Anfragen. Bitte versuchen Sie es später erneut.';
+      return T_DEUTSCH('fehlerZuViele');
     case 'functions/internal':
-      return 'Fehler beim Abrufen der Nährwertdaten. Bitte versuchen Sie es erneut.';
+      return T_DEUTSCH('fehlerAbruf');
     default:
-      return msg || 'Fehler beim Berechnen der Nährwerte. Bitte versuchen Sie es erneut.';
+      return msg || T_DEUTSCH('fehlerBerechnung');
   }
 }
 
