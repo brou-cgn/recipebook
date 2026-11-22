@@ -90,6 +90,28 @@ const SCREENS = [
     run: async (page, shot) => { await openMenuItem(page, 'Küche'); await pause(page, 1500); await shot(); },
   },
   { name: 'kochbuch', run: async (page, shot) => { await openMenuItem(page, 'Kochbuch'); await shot(); } },
+  {
+    // Sprach-Chip im Header (Mehrsprachigkeit): Handy mit Bottom Sheet, Desktop mit Popover
+    name: 'sprachwahl',
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Kochbuch');
+      await page.getByRole('button', { name: /^Sprache wählen/ }).click();
+      await pause(page, 500);
+      await shot();
+    },
+  },
+  {
+    // Englisch nur für die Sitzung: oranger Rand am Chip, die Auswahl nennt die Standardsprache
+    name: 'sprachwahl-englisch',
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Kochbuch');
+      await page.getByRole('button', { name: /^Sprache wählen/ }).click();
+      await page.getByRole('button', { name: 'English', exact: true }).click();
+      await page.getByRole('button', { name: /^Choose language/ }).click();
+      await pause(page, 500);
+      await shot();
+    },
+  },
   { name: 'rezept', run: async (page, shot) => { await openRecipe(page, 'Linsensuppe mit Kreuzkümmel'); await shot(); } },
   {
     // Auf dem Handy öffnet der schwebende Knopf das Formular in der Testumgebung nicht zuverlässig

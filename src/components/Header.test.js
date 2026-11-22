@@ -574,36 +574,32 @@ describe('Header – Sprache dieser Sitzung (Vorhaben Mehrsprachigkeit)', () => 
     </SpracheProvider>
   );
 
-  test('ohne die Berechtigung sprachwahl gibt es keine Sprachwahl im Menü', () => {
+  test('ohne die Berechtigung sprachwahl gibt es keinen Sprach-Chip', () => {
     zeige(mockCurrentUser);
-    fireEvent.click(screen.getByLabelText('Menü öffnen'));
-    expect(screen.queryByRole('group', { name: 'Sprache' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Sprache wählen/ })).not.toBeInTheDocument();
   });
 
-  test('übersteuert die Sprache für die Sitzung, das Menü spricht sofort die neue Sprache', () => {
+  test('die Sprachwahl sitzt als Chip im Header, nicht mehr im Menü', () => {
     zeige(mitSprachwahl);
+    expect(screen.getByRole('button', { name: 'Sprache wählen (aktuell: Deutsch)' })).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText('Menü öffnen'));
-    const gruppe = screen.getByRole('group', { name: 'Sprache' });
-    expect(within(gruppe).getByRole('button', { name: 'Deutsch' })).toHaveAttribute('aria-pressed', 'true');
-    expect(within(gruppe).getByRole('button', { name: 'Français' })).toHaveAttribute('lang', 'fr');
-    expect(screen.queryByText(/Gilt nur für diese Sitzung/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Sprache' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Français' })).not.toBeInTheDocument();
+  });
 
-    fireEvent.click(within(gruppe).getByRole('button', { name: 'English' }));
-    const neu = screen.getByRole('group', { name: 'Language' });
-    expect(within(neu).getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true');
-    expect(within(neu).getByText('For this session only. Your default language: Deutsch')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument();
+  test('übersteuert die Sprache für die Sitzung, der Header spricht sofort die neue Sprache', () => {
+    zeige(mitSprachwahl);
+    fireEvent.click(screen.getByRole('button', { name: 'Sprache wählen (aktuell: Deutsch)' }));
+    fireEvent.click(within(screen.getByRole('group', { name: 'Sprache' })).getByRole('button', { name: 'English' }));
+    expect(screen.getByRole('button', { name: 'Choose language (current: English)' })).toBeInTheDocument();
     expect(screen.getByLabelText('Open menu')).toBeInTheDocument();
   });
 
-  test('die eigene Standardsprache hebt die Übersteuerung wieder auf', () => {
-    zeige(mitSprachwahl, { profilSprache: 'fr' });
-    fireEvent.click(screen.getByLabelText('Ouvrir le menu'));
-    fireEvent.click(within(screen.getByRole('group', { name: 'Langue' })).getByRole('button', { name: 'English' }));
-    expect(screen.getByText('For this session only. Your default language: Français')).toBeInTheDocument();
-
-    fireEvent.click(within(screen.getByRole('group', { name: 'Language' })).getByRole('button', { name: 'Français' }));
-    expect(screen.getByRole('button', { name: 'Se déconnecter' })).toBeInTheDocument();
-    expect(screen.queryByText(/session/)).not.toBeInTheDocument();
+  test('solange die Auswahl offen ist, liegt der Header über FABs und Navigation', () => {
+    const { container } = zeige(mitSprachwahl);
+    const header = container.querySelector('header.header');
+    expect(header).not.toHaveClass('header--menu-open');
+    fireEvent.click(screen.getByRole('button', { name: /Sprache wählen/ }));
+    expect(header).toHaveClass('header--menu-open');
   });
 });

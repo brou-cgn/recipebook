@@ -3,6 +3,7 @@ import React, { useState, useEffect, useLayoutEffect, useRef, forwardRef, useImp
 import '@fontsource/reenie-beanie/latin-400.css';
 import './Header.css';
 import HandschriftText from './HandschriftText';
+import SprachWahl from './SprachWahl';
 import { getHeaderSlogan, getAppLogoImage } from '../utils/customLists';
 import { subscribeToFaqs } from '../utils/faqFirestore';
 import SearchIcon from './icons/SearchIcon';
@@ -10,15 +11,13 @@ import ImportProgressIndicator from './ImportProgressIndicator';
 import ImportProgressDialog from './ImportProgressDialog';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 import { setWebImportPin } from '../utils/webImportPin';
-import { useSprache, useTexte } from '../contexts/SpracheContext';
-import { SPRACHEN, STANDARD_SPRACHE } from '../i18n/sprachen';
+import { useTexte } from '../contexts/SpracheContext';
 import allgemeinTexte from '../i18n/texte/allgemein';
 import bereicheTexte from '../i18n/texte/bereiche';
 import kopfzeileTexte from '../i18n/texte/kopfzeile';
 import webimportPinTexte from '../i18n/texte/webimportPin';
 
 const APP_NAME = 'brouBook';
-const spracheName = (id) => SPRACHEN.find((eintrag) => eintrag.id === id)?.name || id;
 
 const RECIPE_IMPORT_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/a9f137c8c6a04a97a8c611d3181d73fd';
 const SHORTCUT_PIN_PATTERN = /^\d{4,8}$/;
@@ -72,12 +71,10 @@ const Header = forwardRef(function Header({
   const tA = useTexte(allgemeinTexte);
   const tB = useTexte(bereicheTexte);
   const tPin = useTexte(webimportPinTexte);
-  // Sprache dieser Sitzung (Vorhaben Mehrsprachigkeit): nur mit der Berechtigung sprachwahl.
-  // Die eigene Standardsprache zu wählen hebt die Übersteuerung wieder auf.
-  const { sprache, profilSprache, sitzungsSprache, setzeSitzungsSprache } = useSprache();
+  // Sprache dieser Sitzung (Vorhaben Mehrsprachigkeit): Chip im Header (SprachWahl), nur mit der
+  // Berechtigung sprachwahl. Solange seine Auswahl offen ist, liegt der Header wie beim Menü oben.
   const darfSprachwahl = Boolean(currentUser?.sprachwahl);
-  const standardSprache = profilSprache || STANDARD_SPRACHE;
-  const waehleSprache = (id) => setzeSitzungsSprache(id === standardSprache ? null : id);
+  const [sprachwahlOffen, setSprachwahlOffen] = useState(false);
   const [headerSlogan, setHeaderSlogan] = useState('');
   const [appLogoImage, setAppLogoImage] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -318,7 +315,7 @@ const Header = forwardRef(function Header({
 
   return (
     <>
-    <header className={`header ${!visible ? 'header-hidden' : ''} ${menuOpen ? 'header--menu-open' : ''}`}> 
+    <header className={`header ${!visible ? 'header-hidden' : ''} ${menuOpen || sprachwahlOffen ? 'header--menu-open' : ''}`}> 
       <div className="header-content">
         <div className="header-title">
           {onViewChange ? (
@@ -373,6 +370,9 @@ const Header = forwardRef(function Header({
               jobs={importJobs}
               onClick={() => setImportDialogOpen(true)}
             />
+          )}
+          {currentUser && darfSprachwahl && (
+            <SprachWahl alsSheet={isMobile} onOffenChange={setSprachwahlOffen} />
           )}
           {currentUser && (
               <div className="hamburger-menu-container" ref={menuRef}>
@@ -474,28 +474,6 @@ const Header = forwardRef(function Header({
                         >
                           {t('appaufrufe')}
                         </button>
-                      )}
-                    </div>
-                  )}
-                  {darfSprachwahl && (
-                    <div className="menu-section" role="group" aria-labelledby="menu-sprache-titel">
-                      <div className="menu-section-title" id="menu-sprache-titel">{t('sprache')}</div>
-                      {SPRACHEN.map((eintrag) => (
-                        <button
-                          key={eintrag.id}
-                          type="button"
-                          lang={eintrag.id}
-                          className={`menu-item ${sprache === eintrag.id ? 'active' : ''}`}
-                          aria-pressed={sprache === eintrag.id}
-                          onClick={() => waehleSprache(eintrag.id)}
-                        >
-                          {eintrag.name}
-                        </button>
-                      ))}
-                      {sitzungsSprache && (
-                        <div className="menu-language-hint">
-                          {t('spracheNurSitzung', { sprache: spracheName(standardSprache) })}
-                        </div>
                       )}
                     </div>
                   )}
