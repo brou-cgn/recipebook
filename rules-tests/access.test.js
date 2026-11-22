@@ -78,6 +78,24 @@ test('recipes (Mehrsprachigkeit): titelUebersetzung ändern nur Cloud Functions,
   await assertSucceeds(as.user(env, 'editor').doc('recipes/open').update({ title: 'Neuer', titelUebersetzung: uebersetzung }));
 });
 
+test('rezeptUebersetzungen (Mehrsprachigkeit): Mitglieder lesen einzeln, niemand listet oder schreibt', async () => {
+  await seed(env, (db) => db.doc('rezeptUebersetzungen/open').set({ quellHash: 'h', en: { zutaten: ['200 g lentils'], schritte: [] } }));
+  await assertSucceeds(as.user(env, 'reader').doc('rezeptUebersetzungen/open').get());
+  await assertFails(as.anonymous(env).doc('rezeptUebersetzungen/open').get());
+  await assertFails(as.unauth(env).doc('rezeptUebersetzungen/open').get());
+  await assertFails(as.user(env, 'reader').collection('rezeptUebersetzungen').get());
+  for (const uid of ['editor', 'admin']) {
+    await assertFails(as.user(env, uid).doc('rezeptUebersetzungen/open').set({ quellHash: 'erfunden' }));
+    await assertFails(as.user(env, uid).doc('rezeptUebersetzungen/neu').set({ quellHash: 'erfunden' }));
+    await assertFails(as.user(env, uid).doc('rezeptUebersetzungen/open').delete());
+  }
+});
+
+test('aiInhaltUebersetzungLimits: Zähler nur für Cloud Functions', async () => {
+  await assertFails(as.user(env, 'admin').doc('aiInhaltUebersetzungLimits/automatik_2026-11-22').get());
+  await assertFails(as.user(env, 'admin').doc('aiInhaltUebersetzungLimits/admin_2026-11-22').set({ count: 0 }));
+});
+
 test('aiTitelUebersetzungLimits: Zähler nur für Cloud Functions', async () => {
   await assertFails(as.user(env, 'admin').doc('aiTitelUebersetzungLimits/automatik_2026-11-22').get());
   await assertFails(as.user(env, 'admin').doc('aiTitelUebersetzungLimits/admin_2026-11-22').set({ count: 0 }));

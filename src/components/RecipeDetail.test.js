@@ -3,6 +3,10 @@ import { defaultIcon } from '../utils/defaultButtonIcons';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import RecipeDetail from './RecipeDetail';
 import { SpracheProvider } from '../contexts/SpracheContext';
+import useRezeptInhalt from '../hooks/useRezeptInhalt';
+
+// Übersetzter Inhalt (Mehrsprachigkeit PR 4): ohne eigenen Rückgabewert (resetMocks) kein Inhalt
+jest.mock('../hooks/useRezeptInhalt', () => jest.fn());
 import * as ingredientIdMatching from '../utils/ingredientIdMatching';
 import {
   INGREDIENT_MATCH_CREATE_NEW_OPTION,
@@ -3824,5 +3828,57 @@ describe('RecipeDetail – übersetzter Titel (Mehrsprachigkeit PR 3)', () => {
     zeige(false);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Omas Apfelkuchen');
     expect(screen.queryByText(/^Original:/)).not.toBeInTheDocument();
+  });
+});
+
+describe('RecipeDetail – übersetzter Inhalt (Mehrsprachigkeit PR 4)', () => {
+  const rezept = {
+    id: 'recipe-i',
+    title: 'Linsensuppe',
+    authorId: 'user-1',
+    portionen: 4,
+    portionUnitId: 1,
+    ingredients: [{ type: 'heading', text: 'Suppe' }, '200 g Linsen'],
+    steps: ['Linsen waschen.', '20 Minuten köcheln.'],
+  };
+  const uebersetzung = {
+    zutaten: [{ type: 'heading', text: 'Soup' }, '200 g lentils'],
+    schritte: ['Wash the lentils.', 'Simmer for 20 minutes.'],
+  };
+  const zeige = () => render(
+    <SpracheProvider profilSprache="en" inhalteUebersetzen speicher={null}>
+      <RecipeDetail recipe={rezept} onBack={() => {}} onEdit={() => {}} onDelete={() => {}} currentUser={{ id: 'user-1', vorname: 'T', nachname: 'U' }} />
+    </SpracheProvider>
+  );
+
+  test('zeigt Zutaten und Schritte übersetzt, die Portionsumrechnung rechnet mit', () => {
+    useRezeptInhalt.mockReturnValue(uebersetzung);
+    zeige();
+    expect(screen.getByText('Soup')).toBeInTheDocument();
+    expect(screen.getByText('200 g lentils')).toBeInTheDocument();
+    expect(screen.getByText('Wash the lentils.')).toBeInTheDocument();
+    expect(screen.queryByText('200 g Linsen')).not.toBeInTheDocument();
+
+    const plus = screen.getAllByRole('button').find((knopf) => knopf.textContent === '+');
+    for (let i = 0; i < 4; i += 1) fireEvent.click(plus);
+    expect(screen.getByText('400 g lentils')).toBeInTheDocument();
+  });
+
+  test('„Original anzeigen“ blendet das Original ein und wieder aus', () => {
+    useRezeptInhalt.mockReturnValue(uebersetzung);
+    zeige();
+    expect(screen.getByText(/Automatically translated/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Show original' }));
+    expect(screen.getByText('200 g Linsen')).toBeInTheDocument();
+    expect(screen.getByText('Linsen waschen.')).toBeInTheDocument();
+    expect(screen.getByText(/^Original/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Show translation' }));
+    expect(screen.getByText('200 g lentils')).toBeInTheDocument();
+  });
+
+  test('ohne Übersetzung kein Hinweis und das Original', () => {
+    zeige();
+    expect(screen.queryByRole('button', { name: 'Show original' })).not.toBeInTheDocument();
+    expect(screen.getByText('200 g Linsen')).toBeInTheDocument();
   });
 });

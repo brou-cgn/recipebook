@@ -1,6 +1,6 @@
 /**
- * Mehrsprachigkeit (Tracker docs/vorhaben/mehrsprachigkeit.md, PR 3): Rezepttitel per Gemini
- * ins Deutsche, Englische und Französische übersetzen.
+ * Mehrsprachigkeit (Tracker docs/vorhaben/mehrsprachigkeit.md): Rezepttitel (PR 3) und
+ * Rezeptinhalt (PR 4) per Gemini ins Deutsche, Englische und Französische übersetzen.
  *
  * uebersetzeRezeptTitel (Trigger auf recipes/{id}) übersetzt den Titel, sobald ein Rezept
  * angelegt oder sein Titel geändert wird, und schreibt das Feld `titelUebersetzung`
@@ -15,6 +15,14 @@
  * Beide schreiben nur, wenn sich das Rezept seit dem Lesen nicht geändert hat (Vorbedingung
  * lastUpdateTime). Sonst gewinnt die neuere Änderung, und deren Trigger übersetzt.
  * updatedAt bleibt unberührt, damit das Rezept nicht als geändert gilt.
+ *
+ * uebersetzeRezeptInhalt (Trigger auf recipes/{id}) übersetzt Zutaten und Schritte, wenn ein
+ * Rezept angelegt wird oder sich sein Inhalt ändert, und schreibt rezeptUebersetzungen/{id}
+ * (Aufbau in shared/inhaltUebersetzung.js); beim Löschen des Rezepts löscht er die Übersetzung.
+ * Die Übersetzung liegt bewusst nicht im Rezept: Die App lädt alle Rezeptdokumente für die
+ * Listen, zwei vollständige Übersetzungen darin würden die Datenmenge etwa verdreifachen.
+ * backfillInhaltUebersetzungen (nur admin) trägt sie für den Bestand nach. Geschrieben wird in
+ * einer Transaktion nur, wenn das Rezept noch denselben Inhalt hat (gleicher quellHash).
  */
 
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
@@ -33,6 +41,15 @@ const {
   brauchtTitelUebersetzung,
   baueTitelUebersetzung,
 } = require('../shared/titelUebersetzung');
+const {
+  INHALT_RESPONSE_SCHEMA,
+  inhaltQuellHash,
+  anfrageAusRezept,
+  baueInhaltPrompt,
+  pruefeInhaltAntwort,
+  baueUebersetzungsDokument,
+  istAktuelleInhaltUebersetzung,
+} = require('../shared/inhaltUebersetzung');
 
 const LIMIT_COLLECTION = 'aiTitelUebersetzungLimits';
 /**
@@ -328,6 +345,335 @@ exports.backfillTitelUebersetzungen = onCall(
         gesamt,
         remainingRequests,
         dailyLimit: LIMIT_BACKFILL_ADMIN,
+      };
+    },
+);
+
+// ── Rezeptinhalt (PR 4) ───────────────────────────────────────────────────────
+
+const UEBERSETZUNGEN = 'rezeptUebersetzungen';
+const INHALT_LIMIT_COLLECTION = 'aiInhaltUebersetzungLimits';
+/**
+ * Tageslimits in aiInhaltUebersetzungLimits, gezählt je übersetztem Rezept (fail closed). Ein
+ * Rezeptinhalt kostet deutlich mehr Token als ein Titel, die Grenzen sind deshalb kleiner. Der
+ * Trigger zählt für alle zusammen unter `automatik`, der Backfill je Admin.
+ */
+const LIMIT_INHALT_AUTOMATIK = 1000;
+const LIMIT_INHALT_BACKFILL_ADMIN = 3000;
+const INHALT_GEMINI_TIMEOUT_MS = 90000;
+const INHALT_BACKFILL_ANZAHL_STANDARD = 10;
+const INHALT_BACKFILL_ANZAHL_MAX = 20;
+const INHALT_MAX_PARALLEL = 3;
+
+/**
+ * Führt `arbeit` für alle Einträge aus, höchstens `maxParallel` gleichzeitig.
+ * @param {Array} eintraege
+ * @param {number} maxParallel
+ * @param {function(*): Promise<void>} arbeit
+ * @return {Promise<void>}
+ */
+async function mitBegrenzterParallelitaet(eintraege, maxParallel, arbeit) {
+  let naechster = 0;
+  const arbeiter = async () => {
+    while (naechster < eintraege.length) {
+      const eintrag = eintraege[naechster];
+      naechster += 1;
+      await arbeit(eintrag);
+    }
+  };
+  await Promise.all(Array.from({length: Math.min(maxParallel, eintraege.length)}, arbeiter));
+}
+
+/**
+ * Ein Gemini-Aufruf für den Inhalt eines Rezepts (temperature 0, JSON mit festem Schema).
+ * @param {string} apiKey
+ * @param {{zutaten: Array<object>, schritte: Array<object>}} anfrage
+ * @param {string} id - Rezept-ID, nur für Protokolle
+ * @return {Promise<object|null>} geprüftes Ergebnis aus pruefeInhaltAntwort oder null
+ */
+async function uebersetzeInhalt(apiKey, anfrage, id) {
+  const {url, headers} = geminiGenerateContentRequest(apiKey);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), INHALT_GEMINI_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      signal: controller.signal,
+      body: JSON.stringify({
+        contents: [{parts: [{text: baueInhaltPrompt(anfrage)}]}],
+        generationConfig: {
+          temperature: 0,
+          responseMimeType: 'application/json',
+          responseSchema: INHALT_RESPONSE_SCHEMA,
+        },
+      }),
+    });
+    if (!response.ok) {
+      console.error(`inhaltUebersetzung: Gemini antwortet ${response.status} für Rezept ${id}`);
+      return null;
+    }
+    const data = await response.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    let geparst;
+    try {
+      geparst = JSON.parse(text);
+    } catch {
+      console.error(`inhaltUebersetzung: keine JSON-Antwort für Rezept ${id}`);
+      return null;
+    }
+    const ergebnis = pruefeInhaltAntwort(geparst, anfrage);
+    if (!ergebnis) console.error(`inhaltUebersetzung: unvollständige Antwort für Rezept ${id}`);
+    return ergebnis;
+  } catch (error) {
+    const art = error?.name === 'AbortError' ? 'Zeitüberschreitung' : error?.message;
+    console.error(`inhaltUebersetzung: Gemini nicht erreichbar für Rezept ${id}: ${art}`);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Schreibt die Übersetzung nur, wenn das Rezept noch denselben Inhalt hat: In einer Transaktion
+ * wird das Rezept erneut gelesen und sein quellHash verglichen.
+ * @param {object} db - Firestore
+ * @param {object} rezeptRef
+ * @param {object} uebersetzungRef
+ * @param {string} quellHash - Hash des übersetzten Inhalts
+ * @param {object} dokument
+ * @return {Promise<'neu'|'ueberholt'|'speichern'>}
+ */
+async function speichereInhalt(db, rezeptRef, uebersetzungRef, quellHash, dokument) {
+  try {
+    return await db.runTransaction(async (transaktion) => {
+      const aktuell = await transaktion.get(rezeptRef);
+      if (!aktuell.exists || inhaltQuellHash(aktuell.data()) !== quellHash) return 'ueberholt';
+      transaktion.set(uebersetzungRef, dokument);
+      return 'neu';
+    });
+  } catch (error) {
+    console.error(`inhaltUebersetzung: Speichern für Rezept ${rezeptRef.id} fehlgeschlagen: ${error?.code || error?.message}`);
+    return 'speichern';
+  }
+}
+
+/**
+ * @param {object} uebersetzungRef
+ * @return {Promise<void>}
+ */
+async function loescheUebersetzung(uebersetzungRef) {
+  try {
+    await uebersetzungRef.delete();
+  } catch (error) {
+    console.error(`inhaltUebersetzung: Löschen für Rezept ${uebersetzungRef.id} fehlgeschlagen: ${error?.message}`);
+  }
+}
+
+/**
+ * Trigger: übersetzt Zutaten und Schritte eines neuen Rezepts oder nach einer Änderung am Inhalt
+ * und löscht die Übersetzung mit dem Rezept.
+ */
+exports.uebersetzeRezeptInhalt = onDocumentWritten(
+    {
+      document: 'recipes/{recipeId}',
+      region: 'us-central1',
+      secrets: [geminiApiKey],
+      memory: '256MiB',
+      timeoutSeconds: 120,
+      maxInstances: 5,
+    },
+    async (event) => {
+      const vorher = event.data?.before;
+      const nachher = event.data?.after;
+      const id = event.params?.recipeId || nachher?.id || vorher?.id;
+      const db = getFirestore();
+      const uebersetzungRef = db.collection(UEBERSETZUNGEN).doc(id);
+
+      if (!nachher?.exists) {
+        if (vorher?.exists) await loescheUebersetzung(uebersetzungRef);
+        return;
+      }
+      const rezept = nachher.data();
+      if (rezept.importStatus) return;
+      const quellHash = inhaltQuellHash(rezept);
+      // Inhalt unverändert (Bewertung, Freigabe, Titelübersetzung …): nichts zu tun, ohne Lesezugriff.
+      const vorherDaten = vorher?.exists ? vorher.data() : null;
+      if (vorherDaten && !vorherDaten.importStatus && inhaltQuellHash(vorherDaten) === quellHash) return;
+
+      const anfrage = anfrageAusRezept(rezept);
+      const vorhanden = await uebersetzungRef.get();
+      if (!anfrage) {
+        if (vorhanden.exists) await loescheUebersetzung(uebersetzungRef);
+        return;
+      }
+      if (vorhanden.exists && istAktuelleInhaltUebersetzung(vorhanden.data(), quellHash)) return;
+
+      const apiKey = geminiApiKey.value();
+      if (!apiKey) {
+        console.error('uebersetzeRezeptInhalt: GEMINI_API_KEY ist nicht gesetzt');
+        return;
+      }
+      let quota;
+      try {
+        quota = await consumeDailyQuota(INHALT_LIMIT_COLLECTION, LIMIT_INHALT_AUTOMATIK, AUTOMATIK);
+      } catch {
+        return; // nicht prüfbar: fail closed, consumeDailyQuota hat schon protokolliert
+      }
+      if (!quota.allowed) {
+        console.warn(`uebersetzeRezeptInhalt: Tageslimit erreicht, Rezept ${id} bleibt vorerst unübersetzt`);
+        return;
+      }
+
+      const ergebnis = await uebersetzeInhalt(apiKey, anfrage, id);
+      if (!ergebnis) return;
+      const dokument = baueUebersetzungsDokument(rezept, quellHash, ergebnis, GEMINI_MODEL, Date.now());
+      const stand = await speichereInhalt(db, nachher.ref, uebersetzungRef, quellHash, dokument);
+      if (stand === 'ueberholt') {
+        console.log(`uebersetzeRezeptInhalt: Rezept ${id} wurde inzwischen geändert, die neuere Änderung übersetzt`);
+      }
+    },
+);
+
+/**
+ * @param {*} data - request.data des Backfills
+ * @return {{cursor: (string|null), anzahl: number}}
+ */
+function pruefeInhaltBackfillEingabe(data) {
+  const cursor = data?.cursor ?? null;
+  if (cursor !== null &&
+      (typeof cursor !== 'string' || !cursor.trim() || cursor.includes('/') || cursor.length > MAX_ID_LAENGE)) {
+    throw new HttpsError('invalid-argument', 'cursor muss eine Rezept-ID oder null sein');
+  }
+  const anzahl = data?.anzahl ?? INHALT_BACKFILL_ANZAHL_STANDARD;
+  if (!Number.isInteger(anzahl) || anzahl < 1 || anzahl > INHALT_BACKFILL_ANZAHL_MAX) {
+    throw new HttpsError('invalid-argument', `anzahl muss eine ganze Zahl von 1 bis ${INHALT_BACKFILL_ANZAHL_MAX} sein`);
+  }
+  return {cursor, anzahl};
+}
+
+/**
+ * Cloud Function: Inhaltsübersetzungen für den Bestand nachtragen (nur admin).
+ *
+ * Eingabe: {cursor: string|null, anzahl: 1 bis 20 (Standard 10)}. Liest die nächste Seite der
+ * Rezepte nach Dokument-ID ab `cursor`, überspringt Rezepte ohne Inhalt, mit laufendem Import oder
+ * mit passender Übersetzung und übersetzt die übrigen, höchstens drei gleichzeitig. Jedes
+ * übersetzte Rezept zählt gegen das Tageslimit des Admins; ist es erreicht, endet die Seite vor
+ * dem ersten Rezept, das nicht mehr übersetzt werden darf.
+ *
+ * Antwort wie backfillTitelUebersetzungen: {geprueft, neu, uebersprungen, fehlgeschlagen,
+ * fehlerGruende, naechsterCursor, fertig, tageslimitErreicht, gesamt, remainingRequests, dailyLimit}.
+ */
+exports.backfillInhaltUebersetzungen = onCall(
+    {
+      secrets: [geminiApiKey],
+      cors: ALLOWED_ORIGINS,
+      invoker: 'public',
+      maxInstances: 1,
+      memory: '512MiB',
+      timeoutSeconds: 540,
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Anmeldung erforderlich');
+      }
+      const {cursor, anzahl} = pruefeInhaltBackfillEingabe(request.data);
+      const caller = await requireAiCaller(request.auth);
+      if (!caller.isAdmin) {
+        throw new HttpsError('permission-denied', 'Inhaltsübersetzungen nachtragen dürfen nur Admins.');
+      }
+      const apiKey = geminiApiKey.value();
+      if (!apiKey) {
+        console.error('backfillInhaltUebersetzungen: GEMINI_API_KEY ist nicht gesetzt');
+        throw new HttpsError('failed-precondition', 'Der KI-Dienst ist nicht eingerichtet.');
+      }
+
+      const db = getFirestore();
+      const rezepte = db.collection('recipes');
+      let abfrage = rezepte.orderBy(FieldPath.documentId()).limit(anzahl);
+      if (cursor) abfrage = abfrage.startAfter(cursor);
+      const [seite, gesamt] = await Promise.all([
+        abfrage.get(),
+        cursor ? Promise.resolve(null) : zaehleRezepte(rezepte),
+      ]);
+
+      const eintraege = seite.docs.map((snap) => {
+        const rezept = snap.data() || {};
+        const anfrage = rezept.importStatus ? null : anfrageAusRezept(rezept);
+        return {id: snap.id, ref: snap.ref, rezept, anfrage, quellHash: anfrage ? inhaltQuellHash(rezept) : null};
+      });
+      const vorhandene = await Promise.all(eintraege.map((eintrag) => (
+        eintrag.anfrage ? db.collection(UEBERSETZUNGEN).doc(eintrag.id).get() : null
+      )));
+
+      let remainingRequests = null;
+      let tageslimitErreicht = false;
+      let letzteId = cursor;
+      let geprueft = 0;
+      let uebersprungen = 0;
+      const zuUebersetzen = [];
+      for (const [index, eintrag] of eintraege.entries()) {
+        const vorhanden = vorhandene[index];
+        if (!eintrag.anfrage || (vorhanden?.exists && istAktuelleInhaltUebersetzung(vorhanden.data(), eintrag.quellHash))) {
+          uebersprungen += 1;
+        } else {
+          const quota = await consumeDailyQuota(INHALT_LIMIT_COLLECTION, LIMIT_INHALT_BACKFILL_ADMIN, caller);
+          if (!quota.allowed) {
+            tageslimitErreicht = true;
+            break;
+          }
+          remainingRequests = quota.remaining;
+          zuUebersetzen.push(eintrag);
+        }
+        letzteId = eintrag.id;
+        geprueft += 1;
+      }
+
+      if (tageslimitErreicht && geprueft === 0) {
+        throw new HttpsError(
+            'resource-exhausted',
+            `Tageslimit für Inhaltsübersetzungen erreicht (${LIMIT_INHALT_BACKFILL_ADMIN}). Versuche es morgen erneut.`,
+        );
+      }
+
+      let neu = 0;
+      const fehlgeschlagen = [];
+      const fehlerGruende = {};
+      await mitBegrenzterParallelitaet(zuUebersetzen, INHALT_MAX_PARALLEL, async (eintrag) => {
+        const ergebnis = await uebersetzeInhalt(apiKey, eintrag.anfrage, eintrag.id);
+        if (!ergebnis) {
+          fehlgeschlagen.push(eintrag.id);
+          fehlerGruende[eintrag.id] = GRUND.KI;
+          return;
+        }
+        const dokument = baueUebersetzungsDokument(eintrag.rezept, eintrag.quellHash, ergebnis, GEMINI_MODEL, Date.now());
+        const uebersetzungRef = db.collection(UEBERSETZUNGEN).doc(eintrag.id);
+        const stand = await speichereInhalt(db, eintrag.ref, uebersetzungRef, eintrag.quellHash, dokument);
+        if (stand === 'neu') {
+          neu += 1;
+        } else if (stand === 'ueberholt') {
+          uebersprungen += 1; // inzwischen geändert: der Trigger übersetzt den neuen Inhalt
+        } else {
+          fehlgeschlagen.push(eintrag.id);
+          fehlerGruende[eintrag.id] = GRUND.SPEICHERN;
+        }
+      });
+
+      const fertig = !tageslimitErreicht && seite.docs.length < anzahl;
+      console.log(`backfillInhaltUebersetzungen: ${geprueft} geprüft, ${neu} neu, ${uebersprungen} übersprungen, ` +
+        `${fehlgeschlagen.length} fehlgeschlagen${fertig ? ', fertig' : ''}`);
+      return {
+        geprueft,
+        neu,
+        uebersprungen,
+        fehlgeschlagen: fehlgeschlagen.sort(),
+        fehlerGruende,
+        naechsterCursor: fertig ? null : letzteId,
+        fertig,
+        tageslimitErreicht,
+        gesamt,
+        remainingRequests,
+        dailyLimit: LIMIT_INHALT_BACKFILL_ADMIN,
       };
     },
 );

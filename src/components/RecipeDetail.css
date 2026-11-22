@@ -813,6 +813,24 @@ p.recipe-title-original {
   color: var(--color-text-muted);
 }
 
+/* Hinweis „Automatisch übersetzt · Original anzeigen“ (Mehrsprachigkeit) */
+p.recipe-translation-note {
+  margin: -0.5rem 1.5rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.recipe-translation-toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
 /* Original-Titel blendet aus, während der Sticky-Titel übernimmt */
 .recipe-title--stuck {
   opacity: 0;
@@ -1403,7 +1421,8 @@ p.recipe-title-original {
   }
 
   /* Bündig mit dem Titel, der hier 1rem Innenabstand hat */
-  p.recipe-title-original {
+  p.recipe-title-original,
+  p.recipe-translation-note {
     margin: -0.25rem 1rem 0.5rem;
   }
 

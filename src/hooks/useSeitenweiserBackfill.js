@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { trageTitelUebersetzungenNach } from '../utils/titelUebersetzungCallable';
 import { getCallableErrorDetails } from '../utils/callableErrors';
 
-export const TITEL_BACKFILL_STATUS = {
+export const BACKFILL_STATUS = {
   BEREIT: 'bereit',
   LAEUFT: 'laeuft',
   ANGEHALTEN: 'angehalten',
@@ -14,22 +13,28 @@ export const TITEL_BACKFILL_STATUS = {
 const LEER = { geprueft: 0, neu: 0, uebersprungen: 0, fehlgeschlagen: 0, gesamt: null };
 
 // Admin-Bereich: bleibt deutsch (Tracker Mehrsprachigkeit, „Admin-Bereich“).
-const TEXT_NUR_ADMINS = 'Titelübersetzungen nachtragen dürfen nur Admins.';
+const TEXT_NUR_ADMINS = 'Das dürfen nur Admins.';
 const TEXT_UNERWARTET = 'Die Antwort des Servers war unerwartet. Versuch es gleich noch einmal.';
 const TEXT_ALLGEMEIN = 'Das hat nicht geklappt. Versuch es gleich noch einmal.';
 
+const standardFehlertext = (error) => getCallableErrorDetails(error).message || TEXT_ALLGEMEIN;
+
 /**
- * Admin-Backfill der Titelübersetzungen (Vorhaben Mehrsprachigkeit, PR 3), gebaut wie
- * useWeinprofilBackfill: ruft backfillTitelUebersetzungen Seite für Seite auf, bis der Bestand
- * durch ist, und summiert den Fortschritt. Anhalten wirkt nach der laufenden Seite; nach
- * Anhalten, Fehler oder Tageslimit setzt „Fortsetzen“ am letzten Cursor an. Verlässt man die
- * Seite, endet der Lauf nach der laufenden Seite.
+ * Seitenweiser Admin-Backfill (Weinprofile, Titel- und Inhaltsübersetzungen; gemeinsam seit
+ * Mehrsprachigkeit PR 4). Ruft `aufruf({cursor})` Seite für Seite auf, bis der Bestand durch ist,
+ * und summiert den Fortschritt. Die Antwort hat den Aufbau der Backfill-Functions
+ * ({geprueft, neu, uebersprungen, fehlgeschlagen, gesamt, naechsterCursor, fertig,
+ * tageslimitErreicht}). Anhalten wirkt nach der laufenden Seite; nach Anhalten, Fehler oder
+ * Tageslimit setzt „Fortsetzen“ am letzten Cursor an. Verlässt man die Seite, endet der Lauf nach
+ * der laufenden Seite (keine Aufrufe im Hintergrund).
  *
+ * @param {function({cursor: (string|null)}): Promise<Object>} aufruf - Callable-Aufruf einer Seite
+ * @param {{textNurAdmins?: string, fehlertext?: function(Error): string}} [optionen]
  * @returns {{status: string, stand: Object, fehler: string|null, kannFortsetzen: boolean,
  *   haltAngefragt: boolean, starten: Function, fortsetzen: Function, anhalten: Function}}
  */
-export default function useTitelUebersetzungBackfill() {
-  const [status, setStatus] = useState(TITEL_BACKFILL_STATUS.BEREIT);
+export default function useSeitenweiserBackfill(aufruf, { textNurAdmins = TEXT_NUR_ADMINS, fehlertext = standardFehlertext } = {}) {
+  const [status, setStatus] = useState(BACKFILL_STATUS.BEREIT);
   const [stand, setStand] = useState(LEER);
   const [fehler, setFehler] = useState(null);
   const [kannFortsetzen, setKannFortsetzen] = useState(false);
@@ -57,37 +62,37 @@ export default function useTitelUebersetzungBackfill() {
       standRef.current = LEER;
     }
     let summe = standRef.current;
-    let ende = TITEL_BACKFILL_STATUS.FERTIG;
+    let ende = BACKFILL_STATUS.FERTIG;
     let fehlerText = null;
     setStand(summe);
     setFehler(null);
     setKannFortsetzen(false);
     setHaltAngefragt(false);
-    setStatus(TITEL_BACKFILL_STATUS.LAEUFT);
+    setStatus(BACKFILL_STATUS.LAEUFT);
 
     try {
       for (;;) {
         if (anhaltenRef.current) {
-          ende = TITEL_BACKFILL_STATUS.ANGEHALTEN;
+          ende = BACKFILL_STATUS.ANGEHALTEN;
           break;
         }
         const cursor = cursorRef.current;
         let antwort;
         try {
-          antwort = await trageTitelUebersetzungenNach({ cursor });
+          antwort = await aufruf({ cursor });
         } catch (error) {
-          const { code, message } = getCallableErrorDetails(error);
+          const { code } = getCallableErrorDetails(error);
           if (code === 'resource-exhausted') {
-            ende = TITEL_BACKFILL_STATUS.TAGESLIMIT;
+            ende = BACKFILL_STATUS.TAGESLIMIT;
           } else {
-            ende = TITEL_BACKFILL_STATUS.FEHLER;
-            fehlerText = code === 'permission-denied' ? TEXT_NUR_ADMINS : (message || TEXT_ALLGEMEIN);
+            ende = BACKFILL_STATUS.FEHLER;
+            fehlerText = code === 'permission-denied' ? textNurAdmins : fehlertext(error);
           }
           break;
         }
         // Ohne Fortschritt (kein neuer Cursor, obwohl nicht fertig) nicht von vorn beginnen.
         if (!antwort || (!antwort.fertig && (!antwort.naechsterCursor || antwort.naechsterCursor === cursor))) {
-          ende = TITEL_BACKFILL_STATUS.FEHLER;
+          ende = BACKFILL_STATUS.FEHLER;
           fehlerText = TEXT_UNERWARTET;
           break;
         }
@@ -104,12 +109,12 @@ export default function useTitelUebersetzungBackfill() {
 
         if (antwort.fertig) {
           cursorRef.current = null;
-          ende = TITEL_BACKFILL_STATUS.FERTIG;
+          ende = BACKFILL_STATUS.FERTIG;
           break;
         }
         cursorRef.current = antwort.naechsterCursor;
         if (antwort.tageslimitErreicht) {
-          ende = TITEL_BACKFILL_STATUS.TAGESLIMIT;
+          ende = BACKFILL_STATUS.TAGESLIMIT;
           break;
         }
       }
@@ -118,11 +123,11 @@ export default function useTitelUebersetzungBackfill() {
       if (aktivRef.current) {
         setStatus(ende);
         setFehler(fehlerText);
-        setKannFortsetzen(ende !== TITEL_BACKFILL_STATUS.FERTIG);
+        setKannFortsetzen(ende !== BACKFILL_STATUS.FERTIG);
         setHaltAngefragt(false);
       }
     }
-  }, []);
+  }, [aufruf, textNurAdmins, fehlertext]);
 
   const starten = useCallback(() => lauf(true), [lauf]);
   const fortsetzen = useCallback(() => lauf(false), [lauf]);

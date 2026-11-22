@@ -7,6 +7,7 @@
  * `updatedAt` taugt dafür nicht, weil es auch Freigabe und Vorschaubild setzen.
  */
 import { SCHEMA_VERSION, normalisiereWeinprofil } from './profilSchema';
+import { sha256Hex } from '../sha256';
 
 export const HASH_KENNUNG = 'weinprofil-v1';
 
@@ -40,18 +41,8 @@ export function weinprofilHashEingabe(rezept) {
   ]);
 }
 
-/**
- * sha256 eines Textes als Hex, über die Web Crypto API.
- * @param {string} text
- * @param {{subtle?: SubtleCrypto}} [optionen] - für Tests austauschbar
- * @returns {Promise<string>}
- */
-export async function sha256Hex(text, { subtle = globalThis.crypto?.subtle } = {}) {
-  if (!subtle) throw new Error('SHA-256 ist in dieser Umgebung nicht verfügbar');
-  const bytes = new TextEncoder().encode(text);
-  const digest = await subtle.digest('SHA-256', bytes);
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
-}
+// sha256Hex liegt in src/utils/sha256.js; hier weiter exportiert für bestehende Importe.
+export { sha256Hex };
 
 /**
  * sha256 der Hash-Eingabe als Hex.

@@ -2,7 +2,7 @@
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
 Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 22.11.2026 (PR 1 bis 3
-gemergt, Umsetzung der Entscheidungen zu Bereichsnamen und Ansprache als PR #3721 offen).
+und die Entscheidungen (E) gemergt, PR 4 als Patch vorbereitet, noch nicht eingespielt).
 
 **Ziel:** Die App gibt es auf Deutsch, Englisch und Französisch. Jede:r wählt die eigene Sprache in den
 persönlichen Einstellungen, der Header übersteuert sie für die laufende Sitzung. Rezepte (Titel und
@@ -38,7 +38,13 @@ auch mehrsprachig aufgesetzt werden.“ Umfang: „alles“, also kein Halt nach
 | Titelübersetzung: Feld | `recipes/{id}.titelUebersetzung` = `{quelle, originalSprache, de, en, fr, modell, erstelltAm}`, schreibt nur die Cloud Function (`firestore.rules` wie bei `weinprofil`, Tech-Check S29; `addRecipe` entfernt es aus Kopien). `quelle` ist der übersetzte Titel; weicht `title` ab, zeigt der Client bis zur neuen Übersetzung das Original. `originalSprache` erkennt Gemini (`de`, `en`, `fr` oder `andere`); in der Originalsprache bleibt das Original, ein englisches Original bekommt also eine deutsche Übersetzung. |
 | Titelübersetzung: Ablauf | Trigger `uebersetzeRezeptTitel` (`functions/handlers/uebersetzung.js`) auf `recipes/{id}`: nur bei neuem oder geändertem Titel, nicht bei laufenden Importen (`importStatus`), schreibt mit Vorbedingung `lastUpdateTime` (eine neuere Änderung gewinnt). Gesamt-Tageslimit 3000 Titel (`automatik` in `aiTitelUebersetzungLimits`), fail closed. Backfill `backfillTitelUebersetzungen` nur für Admins, Cursor, 25 Rezepte je Seite und ein Gemini-Aufruf je Seite, 10000 Titel je Admin und Tag; Knopf unter Einstellungen › KI. |
 | Titelübersetzung: Anzeige | Nur mit der Berechtigung `sprachwahl` (`inhalteUebersetzen` im SpracheContext), sonst überall das Original wie bisher, auch auf Deutsch. Umgestellt in PR 3: Kochbuch (Karten, alphabetische Sortierung, Suche), Suche in Listen und auf dem Handy, Rezeptansicht (Titel, Sticky-Titel, Kochmodus, Bild-Alt) mit „Original: …“ darunter. Die übrigen Stellen folgen je Bereich mit PR 6 (siehe „Offen“). |
-| Lieferweg | PR 1 bis 3 entstanden als Patches in einer Session ohne Schreibrechte auf das Repo und werden in dieser Reihenfolge eingespielt. Empfehlung für die weiteren PRs: Session mit GitHub-Zugang. |
+| Inhaltsübersetzung: Speicherort | 22.11.2026: eigene Collection `rezeptUebersetzungen/{recipeId}`, nicht im Rezept. Die App lädt alle Rezeptdokumente für die Listen; zwei vollständige Übersetzungen darin würden die Datenmenge etwa verdreifachen. Titel bleiben im Rezept (`titelUebersetzung`), weil Listen sie brauchen. Lesen: Mitglieder, nur einzeln; schreiben nur die Cloud Function (`firestore.rules`, Test). |
+| Inhaltsübersetzung: Format | `{quellHash, originalSprache, schemaVersion, modell, erstelltAm, <sprache>: {zutaten, schritte}}` für jede Sprache außer der des Originals. Die Listen stehen Eintrag für Eintrag wie im Rezept; Überschriften werden übersetzt, verknüpfte Rezepte (`#recipe:…`) und leere Einträge bleiben. `quellHash` ist der sha256 über Art und Text aller Zutaten und Schritte; Client (`src/i18n/rezeptInhalt.js`) und Function (`functions/shared/inhaltUebersetzung.js`) bilden ihn gleich (Konsistenztest). |
+| Portionsumrechnung | 22.11.2026: bleibt unverändert. `scaleIngredient` skaliert nur die Menge am Zeilenanfang und erkennt Zahlen, Brüche und Bereiche unabhängig von der Sprache. Der Prompt verlangt, dass die Menge am Zeilenanfang genau wie im Original stehen bleibt; Einheit und Zutat werden übersetzt. |
+| Inhaltsübersetzung: Ablauf | Trigger `uebersetzeRezeptInhalt` auf `recipes/{id}`: vergleicht den `quellHash` vorher und nachher (ohne Lesezugriff) und ruft Gemini nur bei neuem oder geändertem Inhalt, nicht bei laufenden Importen; schreibt in einer Transaktion nur, wenn das Rezept noch denselben Inhalt hat; löscht die Übersetzung mit dem Rezept. Die Antwort gilt nur vollständig (jede Zielsprache, jeder Eintrag). Tageslimits in `aiInhaltUebersetzungLimits`: 1000 Rezepte automatisch, 3000 je Admin im Backfill `backfillInhaltUebersetzungen` (10 Rezepte je Seite, drei gleichzeitig; Knopf unter Einstellungen › KI). |
+| Inhaltsübersetzung: Anzeige | Rezeptansicht und Kochmodus (Zutaten, Schritte, Überschriften) über `useRezeptInhalt`, nur mit der Berechtigung `sprachwahl`. Passt der Hash nicht (Rezept geändert), zeigt die App das Original, bis die neue Übersetzung da ist. Unter dem Titel „Automatisch übersetzt · Original anzeigen“; der Umschalter gilt für Titel und Inhalt. Portionsumrechnung, Timer, Nährwerte und Einkaufsliste arbeiten mit dem Original. |
+| Backfill-Hooks | 22.11.2026 (PR 4): zusammengelegt in `useSeitenweiserBackfill`; `useWeinprofilBackfill` ist ein dünner Aufruf davon, die Übersetzungs-Backfills nutzen ihn über `UebersetzungBackfill.js`. |
+| Lieferweg | PR 1 bis 4 entstanden als Patches in einer Session ohne Schreibrechte auf das Repo. Empfehlung für die weiteren PRs: Session mit GitHub-Zugang. |
 
 ## Stand der Umsetzung
 
@@ -46,11 +52,11 @@ auch mehrsprachig aufgesetzt werden.“ Umfang: „alles“, also kein Halt nach
 |---|---|---|
 | 1 | Fundament ohne sichtbare Änderung: `src/i18n/sprachen.js` (Sprachen, `aktiveSprache`, Sitzungs-Speicher, `browserSprache`), `src/i18n/texte.js` (`erstelleT`, `fuelleText`, Mehrzahl), `src/i18n/format.js` (Zahl, Datum), erstes Wörterbuch `src/i18n/texte/allgemein.js`. `SpracheProvider`, `useSprache`, `useTexte` und `useProfilSprache` in `src/contexts/SpracheContext.js`; der Provider setzt `<html lang>` und umschließt die App in `src/index.js`, `App.js` meldet `currentUser.sprache`. `renderWithProviders(ui, { sprache })`. Regel in `AGENTS.md` mit `src/i18nPolicy.test.js`, dieser Tracker, Eintrag in `CLAUDE.md`. | gemergt 22.11.2026 (PR #3718, Merge d137225) |
 | 2 | Sprachwahl: Feld `sprache` im Nutzerdokument mit `setUserSprache`, Regel in `firestore.rules` mit Test in `rules-tests/access.test.js`, Eintrag in `docs/architecture/security.md`. Berechtigung `sprachwahl` (`ROLE_PERMISSIONS_DEFAULT`, `applyRolePermissionsToUser` in `App.js`, Spalte in `UserManagement.js`). `useSpracheFuerNutzer` statt `useProfilSprache` in `App.js`. Zeile „Sprache“ in „Persönliche Daten“ unter „Einstellungen“ mit Auswahlseite nach dem Muster von „Erscheinungsbild“. Abschnitt „Sprache“ im Header-Menü. Header und „Persönliche Daten“ vollständig übersetzt (Wörterbücher `kopfzeile.js`, `persoenlicheDaten.js`, `webimportPin.js`, `bereiche.js`). Eintrag im `CHANGELOG.md`. | gemergt 22.11.2026 (PR #3719, Merge 67670c7) |
-| 3 | Rezepttitel: `functions/shared/titelUebersetzung.js` (Prompt, Schema, Prüfung), `functions/handlers/uebersetzung.js` (Trigger `uebersetzeRezeptTitel`, Callable `backfillTitelUebersetzungen`) mit Tests in `functions/index.titelUebersetzung.test.js`; Regeln für `titelUebersetzung` und `aiTitelUebersetzungLimits` mit Tests in `rules-tests/access.test.js`, `security.md`. Client: `src/i18n/rezeptTitel.js`, `useRezeptTitel` und `inhalteUebersetzen` im SpracheContext, Anzeige in `RecipeCard`, `RecipeList`, `RecipeDetail`, `MobileSearchOverlay`, Suche in `GroupDetail`; Backfill-Knopf `TitelUebersetzungBackfill.js` mit `useTitelUebersetzungBackfill`. | gemergt 22.11.2026 (PR #3720, Merge 68e9e7b) |
-| 4 | Rezeptinhalt: Zutaten, Schritte und weitere Textfelder bei Anlage und Änderung übersetzen (Hash über die Quelltexte). Speicherort festlegen (siehe „Offen“). Anzeige mit Hinweis und „Original anzeigen“; Portionsumrechnung mit übersetzten Zutaten. | offen |
+| 3 | Rezepttitel: `functions/shared/titelUebersetzung.js` (Prompt, Schema, Prüfung), `functions/handlers/uebersetzung.js` (Trigger `uebersetzeRezeptTitel`, Callable `backfillTitelUebersetzungen`) mit Tests in `functions/index.titelUebersetzung.test.js`; Regeln für `titelUebersetzung` und `aiTitelUebersetzungLimits` mit Tests in `rules-tests/access.test.js`, `security.md`. Client: `src/i18n/rezeptTitel.js`, `useRezeptTitel` und `inhalteUebersetzen` im SpracheContext, Anzeige in `RecipeCard`, `RecipeList`, `RecipeDetail`, `MobileSearchOverlay`, Suche in `GroupDetail`; Backfill-Knopf (seit PR 4 `UebersetzungBackfill.js` mit `useSeitenweiserBackfill`). | gemergt 22.11.2026 (PR #3720, Merge 68e9e7b) |
+| 4 | Rezeptinhalt: `functions/shared/inhaltUebersetzung.js` (Hash, Anfrage, Prompt, Schema, Prüfung, Dokument), Trigger `uebersetzeRezeptInhalt` und Callable `backfillInhaltUebersetzungen` in `functions/handlers/uebersetzung.js` mit Tests in `functions/index.inhaltUebersetzung.test.js`; Regeln für `rezeptUebersetzungen` und `aiInhaltUebersetzungLimits` mit Tests, `security.md`. Client: `src/i18n/rezeptInhalt.js` (mit Konsistenztest), `src/utils/rezeptUebersetzungFirestore.js`, `src/hooks/useRezeptInhalt.js`, Anzeige und Umschalter in `RecipeDetail.js`, `src/utils/sha256.js` (aus `profilHash.js` herausgelöst); Backfill-Hooks zusammengelegt (`useSeitenweiserBackfill`), `UebersetzungBackfill.js` mit zweitem Abschnitt unter Einstellungen › KI. | Patch vorbereitet (22.11.2026), noch nicht eingespielt |
 | 5 | Auswahllisten: Zuordnung je Listenwert (Kulinarik-Typen und -Gruppen, Speisekategorien, Einheiten, Portions-, Gebinde- und Getränkeeinheiten mit Einzahl und Mehrzahl, Adjektive). KI-Vorbefüllung, Pflege unter „Listen & Kategorien“, Anzeige-Helfer. | offen |
 | 6 | Oberfläche Bereich für Bereich, mehrere PRs, nach Nutzung: Rezeptansicht und Kochmodus, Kochbuch mit Suche und Filtern, Küche (Startseite), Festtafel (Menüs), Atelier, Events und Gäste, Gruppen, Netzwerk und Profile, Dialoge und Fehlermeldungen aus `utils/`. Wie viel noch fehlt, zeigt die `BASELINE` in `src/i18nPolicy.test.js`. | offen |
-| E | Entscheidungen umgesetzt: Bereichsnamen übersetzt (`bereiche.js`, untere Navigation mit eigenem Wörterbuch `navigation.js`), Hinweise zu Mitteilungen in „Persönliche Daten“ duzen, Test gegen die Höflichkeitsform, Regel in `AGENTS.md`. | PR #3721 (offen, 22.11.2026) |
+| E | Entscheidungen umgesetzt: Bereichsnamen übersetzt (`bereiche.js`, untere Navigation mit eigenem Wörterbuch `navigation.js`), Hinweise zu Mitteilungen in „Persönliche Daten“ duzen, Test gegen die Höflichkeitsform, Regel in `AGENTS.md`. | gemergt 22.11.2026 (PR #3721, Merge 442bd21) |
 | B | Phase B (siehe „Entschieden“). | später |
 
 Nach jedem PR: Tabelle nachziehen. Berührt ein PR einen Tech-Check-Befund, auch das Dashboard
@@ -58,25 +64,21 @@ aktualisieren.
 
 ## Offen
 
-- **Speicherort der Inhaltsübersetzungen** (vor PR 4): im Rezeptdokument oder in einer eigenen
-  Collection. Vorschlag: Inhalt in einer eigenen Collection, damit Rezept-Versionen
-  (`applyRecipeVersionChanges`), Trigger und Listener nicht auf jede Übersetzung reagieren; Titel dagegen
-  im Rezept, weil Listen sie ohne zusätzliche Lesezugriffe brauchen. Prüfen.
-- **Portionsumrechnung** (vor PR 4): Der Parser liest den deutschen Zutatentext. Vorschlag: Menge und
-  Einheit kommen weiter aus dem Original, übersetzt werden nur der Name und die Beschriftung der Einheit.
-  Prüfen.
 - **Seiten ohne Anmeldung** (Freigabe-Links für Rezepte und Menüs): Browsersprache nutzen (`browserSprache`)?
   Vorschlag: ja, mit PR 6.
 - **Wichtel-Seite:** hat eigene Helfer (`fuelleText`, `browserSprache` in
   `src/utils/wichtelTeilnahmeTexte.js`), die es jetzt auch in `src/i18n` gibt. Nach der Wichtel-Saison auf
   `src/i18n` umstellen; bewusst nicht in PR 1, um die laufende Saison nicht zu berühren.
-- **KI-Kosten:** Titel kosten wenige Token (Limits in PR 3: 3000 automatisch, 10000 je Admin und Tag). Vor
-  PR 4 (Rezeptinhalte, deutlich mehr Token) die aktuellen Gemini-Preise prüfen und den Bestand zählen.
+- **KI-Kosten:** Titel kosten wenige Token (3000 automatisch, 10000 je Admin und Tag), Inhalte deutlich mehr
+  (1000 automatisch, 3000 je Admin und Tag). Nach dem ersten Backfill der Inhalte die tatsächlichen
+  Gemini-Kosten in der Abrechnung prüfen und die Limits bei Bedarf anpassen.
 - **Weitere Stellen für übersetzte Titel** (mit PR 6 je Bereich): Festtafel (`MenuDetail`, `MenuForm`),
   Kochmodus-Leiste und Karussell (`CookingSession*`), Tagesmenü, Startseite und Trends, `RecipeTypeahead`,
   Zeitleiste, Druck, Freigabe-Seiten.
-- **Backfill-Hooks zusammenlegen:** `useTitelUebersetzungBackfill` ist nach `useWeinprofilBackfill` gebaut;
-  bei einem dritten Backfill einen gemeinsamen Hook daraus machen.
+- **Kochmodus:** Schritte und Zutaten erscheinen übersetzt, die Beschriftung der Timer (aus dem Originaltext)
+  und die übrigen Texte des Kochmodus noch deutsch. Mit PR 6 (Rezeptansicht und Kochmodus).
+- **Übersetzte Inhalte für Gäste:** `rezeptUebersetzungen` lesen nur Mitglieder. Freigabe-Seiten zeigen
+  vorerst das Original (zusammen mit den Seiten ohne Anmeldung, siehe oben).
 - **Größe der Wörterbücher:** Sie wachsen mit jedem Bereich und landen im Chunk des Bereichs. Wächst der
   Start-Chunk spürbar, Sprachen nachladen statt alle drei mitzuliefern.
 - **Meldungen aus `utils/`:** Fehlermeldungen von `updateUserProfile`, `changePassword` und den PIN-Callables
@@ -100,4 +102,7 @@ aktualisieren.
   Komponententests in anderer Sprache mit `renderWithProviders(ui, { sprache: 'en' })`
 - Titelübersetzung: Server in `functions/shared/titelUebersetzung.js` und `functions/handlers/uebersetzung.js`;
   Anzeige über `src/i18n/rezeptTitel.js` und `useRezeptTitel`; Backfill-Knopf in `Settings.js` (KI)
+- Inhaltsübersetzung: Server in `functions/shared/inhaltUebersetzung.js` und `functions/handlers/uebersetzung.js`;
+  Anzeige über `src/hooks/useRezeptInhalt.js` und `src/i18n/rezeptInhalt.js` in `RecipeDetail.js`;
+  Backfill-Knöpfe `src/components/UebersetzungBackfill.js` mit `src/hooks/useSeitenweiserBackfill.js`
 - Vorlage: Wichtel-Teilnehmerseite (`src/utils/wichtelTeilnahmeTexte.js`)

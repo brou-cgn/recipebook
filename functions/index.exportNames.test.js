@@ -82,6 +82,8 @@ const EXPECTED_EXPORTS = [
   'wichtelVerwalten',
   'backfillTitelUebersetzungen',
   'uebersetzeRezeptTitel',
+  'backfillInhaltUebersetzungen',
+  'uebersetzeRezeptInhalt',
 ];
 
 function loadIndex() {
