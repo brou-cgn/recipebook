@@ -117,11 +117,25 @@ const SCREENS = [
     // Auf dem Handy öffnet der schwebende Knopf das Formular in der Testumgebung nicht zuverlässig
     name: 'rezept-bearbeiten',
     variants: ['desktop-hell', 'desktop-dunkel'],
+    fullPage: true,
     run: async (page, shot) => {
       await openRecipe(page, 'Linsensuppe mit Kreuzkümmel');
       await page.locator('[title="Rezept bearbeiten"]').first().click();
       await page.locator('.recipe-form-header-save, form').first().waitFor();
       await pause(page, 1200);
+      await shot();
+    },
+  },
+  {
+    // Rezeptformular mit Emoji im Titel: „Emojis entfernen“ erscheint (Button-System Schritt 5b)
+    name: 'rezept-bearbeiten-emoji',
+    variants: ['desktop-hell', 'desktop-dunkel'],
+    run: async (page, shot) => {
+      await openRecipe(page, 'Linsensuppe mit Kreuzkümmel');
+      await page.locator('[title="Rezept bearbeiten"]').first().click();
+      await page.locator('#title').waitFor();
+      await page.locator('#title').fill('Linsensuppe mit Kreuzkümmel 🍲');
+      await pause(page, 800);
       await shot();
     },
   },

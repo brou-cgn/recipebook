@@ -1572,14 +1572,12 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
           <div className="form-group-header">
             <label htmlFor="title">{t('rezepttitel')}</label>
             {containsEmojis(title) && (
-              <button
-                type="button"
-                className="emoji-remove-btn"
+              <Button
                 onClick={handleRemoveEmojisFromTitle}
                 title={t('emojisEntfernen')}
               >
                 {t('emojisEntfernen')}
-              </button>
+              </Button>
             )}
           </div>
           <div className="title-image-row">
@@ -1844,14 +1842,12 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
           <div className="section-header">
             <h3>{t('zutaten')}</h3>
             {ingredients.some(i => containsEmojis(i.text)) && (
-              <button
-                type="button"
-                className="emoji-remove-btn-small"
+              <Button
                 onClick={handleRemoveEmojisFromIngredients}
                 title={t('emojisAusZutaten')}
               >
                 {t('emojisEntfernen')}
-              </button>
+              </Button>
             )}
           </div>
           <DndContext
@@ -1906,25 +1902,21 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
             <h3>{t('zubereitungsschritte')}</h3>
             <div className="section-header-actions">
               {rephrasableStepIndices.length > 0 && (
-                <button
-                  type="button"
-                  className="rephrase-steps-btn"
+                <Button
                   onClick={handleRephraseSteps}
-                  disabled={rephrasingSteps}
+                  loading={rephrasingSteps}
                   title={t('umformulierenTitel')}
                 >
                   {rephrasingSteps ? t('formuliereUm') : t('umformulieren')}
-                </button>
+                </Button>
               )}
               {steps.some(s => containsEmojis(s.text)) && (
-                <button
-                  type="button"
-                  className="emoji-remove-btn-small"
+                <Button
                   onClick={handleRemoveEmojisFromSteps}
                   title={t('emojisAusSchritten')}
                 >
                   {t('emojisEntfernen')}
-                </button>
+                </Button>
               )}
             </div>
           </div>
