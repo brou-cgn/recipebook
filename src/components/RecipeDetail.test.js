@@ -1,6 +1,6 @@
 import React from 'react';
 import { defaultIcon } from '../utils/defaultButtonIcons';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor, within } from '@testing-library/react';
 import RecipeDetail from './RecipeDetail';
 import { SpracheProvider } from '../contexts/SpracheContext';
 import useRezeptInhalt from '../hooks/useRezeptInhalt';
@@ -3777,7 +3777,7 @@ describe('RecipeDetail – Rezept löschen (AGENTS.md, Löschaktionen; Tech-Chec
     fireEvent.click(screen.getByTitle('Rezept löschen'));
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(onDelete).not.toHaveBeenCalled();
-    expect(screen.getByRole('alertdialog')).toHaveTextContent('Möchten Sie "Linsensuppe" wirklich löschen?');
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Möchtest du „Linsensuppe“ wirklich löschen?');
 
     fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
@@ -3914,5 +3914,49 @@ describe('RecipeDetail – übersetzte Listenwerte (Mehrsprachigkeit PR 5)', () 
     zeige(false);
     expect(await screen.findByText('4 Portionen')).toBeInTheDocument();
     expect(screen.getByText('Italienische Küche')).toBeInTheDocument();
+  });
+});
+
+describe('RecipeDetail – Oberfläche auf Englisch und Französisch (Mehrsprachigkeit PR 6a)', () => {
+  const nutzer = { id: 'user-1', vorname: 'Anna', nachname: 'B' };
+  const rezept = {
+    id: 'recipe-o',
+    title: 'Linsensuppe',
+    authorId: 'user-1',
+    createdAt: '2024-01-15T10:30:00Z',
+    kochdauer: 30,
+    portionen: 4,
+    ingredients: ['200 g Linsen'],
+    steps: ['Kochen'],
+  };
+  const zeige = (sprache, onDelete = () => {}) => render(
+    <SpracheProvider profilSprache={sprache} speicher={null}>
+      <RecipeDetail recipe={rezept} allUsers={[nutzer]} onBack={() => {}} onEdit={() => {}} onDelete={onDelete} currentUser={nutzer} />
+    </SpracheProvider>
+  );
+
+  test('Englisch: Überschriften, Kochzeit, Autor und Datum nach der Sprache', () => {
+    zeige('en');
+    expect(screen.getByRole('heading', { name: 'Ingredients for' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Method' })).toBeInTheDocument();
+    expect(screen.getByText('30 min')).toBeInTheDocument();
+    expect(document.querySelector('.author-date-caption')).toHaveTextContent('By Anna created on 15/01/2024');
+    expect(screen.getByTitle('Delete recipe')).toBeInTheDocument();
+  });
+
+  test('Französisch: Löschen fragt auf Französisch und duzt', () => {
+    zeige('fr', jest.fn());
+    fireEvent.click(screen.getByTitle('Supprimer la recette'));
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog).toHaveTextContent('Veux-tu vraiment supprimer « Linsensuppe » ?');
+    expect(within(dialog).getByRole('button', { name: 'Annuler' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Supprimer' })).toBeInTheDocument();
+  });
+
+  test('Deutsch bleibt wie bisher', () => {
+    zeige('de');
+    expect(screen.getByRole('heading', { name: 'Zubereitungsschritte' })).toBeInTheDocument();
+    expect(screen.getByText('30 Min.')).toBeInTheDocument();
+    expect(document.querySelector('.author-date-caption')).toHaveTextContent('Von Anna erstellt am 15.1.2024');
   });
 });

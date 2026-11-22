@@ -1,4 +1,4 @@
-import React, { useId, useRef } from 'react';
+import React, { useId, useMemo, useRef } from 'react';
 import { useCookingSession } from '../contexts/CookingSessionContext';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import useUndoableDelete from '../hooks/useUndoableDelete';
@@ -6,6 +6,9 @@ import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import useOffscreenItems from '../hooks/useOffscreenItems';
 import { getRecipeThumbnail } from '../utils/recipeThumbnail';
 import { cookingStatus, currentStep, pickJumpTarget } from '../utils/cookingSessionStatus';
+import { useRezeptTitel, useTexte } from '../contexts/SpracheContext';
+import kochmodusTexte from '../i18n/texte/kochmodus';
+import useRezeptInhalt from '../hooks/useRezeptInhalt';
 import UndoSnackbar from './UndoSnackbar';
 import TrashIcon from './icons/TrashIcon';
 import ArrowVerticalIcon from './icons/ArrowVerticalIcon';
@@ -77,11 +80,26 @@ function timerProgress(status) {
   return Math.max(0, Math.min(100, (timer.remainingSeconds / timer.totalSeconds) * 100));
 }
 
+// Text eines Schritts ohne Zwischenüberschriften gezählt, wie currentStep (cookingSessionStatus.js)
+function schrittText(schritte, nummer) {
+  const ohneUeberschriften = (schritte || []).filter((schritt) => typeof schritt === 'string' || schritt?.type !== 'heading');
+  const schritt = ohneUeberschriften[nummer - 1];
+  return typeof schritt === 'string' ? schritt : schritt?.text;
+}
+
 function CarouselCard({ entry, status, onSelect, onRemove }) {
   const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete();
   const stepId = useId();
   const { recipe } = entry;
   const step = currentStep(entry);
+  const t = useTexte(kochmodusTexte);
+  // Titel und Schritt in der geltenden Sprache (Mehrsprachigkeit PR 6a), sonst das Original
+  const titel = useRezeptTitel()(recipe);
+  const inhalt = useRezeptInhalt(recipe);
+  const stepText = useMemo(
+    () => (inhalt?.schritte && schrittText(inhalt.schritte, step.number)) || step.text,
+    [inhalt, step.number, step.text]
+  );
   const progress = timerProgress(status);
 
   const handleRemove = (e) => {
@@ -101,7 +119,7 @@ function CarouselCard({ entry, status, onSelect, onRemove }) {
           type="button"
           className="swipe-delete-action"
           onClick={handleRemove}
-          aria-label={`${recipe.title} entfernen`}
+          aria-label={t('rezeptEntfernen', { titel })}
           tabIndex={isDeleteVisible ? 0 : -1}
         >
           <span className="swipe-delete-icon-text"><TrashIcon /></span>
@@ -112,18 +130,18 @@ function CarouselCard({ entry, status, onSelect, onRemove }) {
         className="cooking-carousel-card"
         style={{ transform: `translateX(${offset}px)`, transition: 'transform 0.15s ease' }}
         onClick={() => { if (isDeleteVisible) reset(); else onSelect(entry); }}
-        aria-label={`${recipe.title} nach vorn holen, ${status.label}`}
-        aria-describedby={step.text ? stepId : undefined}
+        aria-label={t('nachVornHolen', { titel, status: status.label })}
+        aria-describedby={stepText ? stepId : undefined}
         {...handlers}
       >
         <span className="cooking-carousel-head">
           <CarouselThumb recipe={recipe} />
           <span className="cooking-carousel-titles">
-            <span className="cooking-carousel-name">{recipe.title}</span>
+            <span className="cooking-carousel-name">{titel}</span>
             {showMeta && (
               <span className="cooking-carousel-meta">
                 {step.total > 0 && (
-                  <span className="cooking-carousel-step-number">Schritt {step.number} von {step.total}</span>
+                  <span className="cooking-carousel-step-number">{t('schrittVon', { schritt: step.number, gesamt: step.total })}</span>
                 )}
                 {status.kind !== 'step' && (
                   <span className={statusClass}>
@@ -145,7 +163,7 @@ function CarouselCard({ entry, status, onSelect, onRemove }) {
             ))}
           </span>
         )}
-        {step.text && <span className="cooking-carousel-step" id={stepId}>{step.text}</span>}
+        {stepText && <span className="cooking-carousel-step" id={stepId}>{stepText}</span>}
         {progress !== null && (
           <span className="cooking-carousel-timer-bar" aria-hidden="true">
             <span className="cooking-carousel-timer-fill" style={{ width: `${progress}%` }} />
@@ -158,6 +176,8 @@ function CarouselCard({ entry, status, onSelect, onRemove }) {
 
 function CookingSessionCarousel({ currentRecipeId, onSelect, onAdd, portrait = false }) {
   const session = useCookingSession();
+  const t = useTexte(kochmodusTexte);
+  const zeigeTitel = useRezeptTitel();
   const reducedMotion = usePrefersReducedMotion();
   const { banners, pendingKeys, scheduleDelete, undoDelete } = useUndoableDelete();
   const listRef = useRef(null);
@@ -165,7 +185,7 @@ function CookingSessionCarousel({ currentRecipeId, onSelect, onAdd, portrait = f
   const items = session.sessionRecipes.filter(
     (entry) => entry.recipe.id !== currentRecipeId && !pendingKeys.has(entry.recipe.id)
   );
-  const statuses = items.map((entry) => cookingStatus(entry, session.allTimers));
+  const statuses = items.map((entry) => cookingStatus(entry, session.allTimers, t));
   const compact = items.length >= (portrait ? PORTRAIT_COMPACT_FROM : COMPACT_FROM);
   const fill = portrait
     ? items.length >= PORTRAIT_FILL_FROM
@@ -190,27 +210,25 @@ function CookingSessionCarousel({ currentRecipeId, onSelect, onAdd, portrait = f
 
   const handleRemove = (entry) => scheduleDelete({
     key: entry.recipe.id,
-    message: entry.recipe.title,
+    message: zeigeTitel(entry.recipe),
     onConfirm: () => session.removeFromSession(entry.recipe.id),
     onUndo: () => {},
   });
   const lastBanner = banners[banners.length - 1];
 
-  let heading = 'Am Herd';
-  if (items.length === 1) heading = 'Am Herd · 1 weiteres';
-  else if (items.length > 1) heading = `Am Herd · ${items.length} weitere`;
+  const heading = items.length > 0 ? t('amHerdWeitere', { anzahl: items.length }) : t('amHerd');
 
   return (
     <>
-      <nav className={`cooking-carousel${compact ? ' cooking-carousel--compact' : ''}${fill ? ' cooking-carousel--fill' : ''}${dense ? ' cooking-carousel--dense' : ''}`} aria-label="Weitere Rezepte am Herd">
+      <nav className={`cooking-carousel${compact ? ' cooking-carousel--compact' : ''}${fill ? ' cooking-carousel--fill' : ''}${dense ? ' cooking-carousel--dense' : ''}`} aria-label={t('weitereAmHerd')}>
         <h2 className="cooking-carousel-heading">{heading}</h2>
         {items.length === 0 && (
           <div className="cooking-carousel-empty">
-            <p className="cooking-carousel-empty-title">Noch kein weiteres Rezept am Herd</p>
-            <p className="cooking-carousel-empty-text">Was du dazunimmst, steht hier mit seinem aktuellen Schritt.</p>
+            <p className="cooking-carousel-empty-title">{t('keinWeiteres')}</p>
+            <p className="cooking-carousel-empty-text">{t('keinWeiteresText')}</p>
             {onAdd && (
               <button type="button" className="cooking-carousel-empty-add" onClick={onAdd}>
-                Rezept dazunehmen
+                {t('rezeptDazunehmen')}
               </button>
             )}
           </div>
@@ -231,10 +249,10 @@ function CookingSessionCarousel({ currentRecipeId, onSelect, onAdd, portrait = f
             type="button"
             className={`cooking-carousel-jump${jump.up ? ' cooking-carousel-jump--up' : ''}`}
             onClick={() => scrollToCard(jump.entry.recipe.id)}
-            aria-label={`Zu ${jump.entry.recipe.title} scrollen, ${jump.status.label}`}
+            aria-label={t('zuRezeptScrollen', { titel: zeigeTitel(jump.entry.recipe), status: jump.status.label })}
           >
             <CarouselThumb recipe={jump.entry.recipe} />
-            <span className="cooking-carousel-jump-label">{jump.entry.recipe.title} · {jump.status.text}</span>
+            <span className="cooking-carousel-jump-label">{zeigeTitel(jump.entry.recipe)} · {jump.status.text}</span>
             <ArrowVerticalIcon up={jump.up} />
           </button>
         )}

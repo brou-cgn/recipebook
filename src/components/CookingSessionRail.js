@@ -6,6 +6,8 @@ import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import useOffscreenItems from '../hooks/useOffscreenItems';
 import { getRecipeThumbnail } from '../utils/recipeThumbnail';
 import { cookingStatus, pickJumpTarget } from '../utils/cookingSessionStatus';
+import { useRezeptTitel, useTexte } from '../contexts/SpracheContext';
+import kochmodusTexte from '../i18n/texte/kochmodus';
 import CookingAddRecipeButton from './CookingAddRecipeButton';
 import UndoSnackbar from './UndoSnackbar';
 import TrashIcon from './icons/TrashIcon';
@@ -63,10 +65,12 @@ function itemClass(status, extra = '') {
 
 // Das Rezept vorn: kein Knopf, nur markiert (aria-current)
 function CurrentItem({ entry, status }) {
+  const t = useTexte(kochmodusTexte);
+  const titel = useRezeptTitel()(entry.recipe);
   return (
     <li className={itemClass(status, ' cooking-rail-item--current')} data-recipe-id={entry.recipe.id}>
-      <span className="cooking-rail-button" aria-current="true" title={`${entry.recipe.title}, vorn`}>
-        <RailThumb recipe={entry.recipe} label={entry.recipe.title} />
+      <span className="cooking-rail-button" aria-current="true" title={t('rezeptVorn', { titel })}>
+        <RailThumb recipe={entry.recipe} label={titel} />
         <RailStatus status={status} />
       </span>
     </li>
@@ -77,6 +81,8 @@ function ParkedItem({ entry, status, onSelect, onRemove }) {
   // So weit, wie die Schiene breit ist: Das Rezept gleitet ganz hinaus, kein Rest bleibt stehen
   const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ maxOffset: 70 });
   const { recipe } = entry;
+  const t = useTexte(kochmodusTexte);
+  const titel = useRezeptTitel()(recipe);
 
   const handleRemove = (e) => {
     e.stopPropagation();
@@ -91,7 +97,7 @@ function ParkedItem({ entry, status, onSelect, onRemove }) {
           type="button"
           className="swipe-delete-action"
           onClick={handleRemove}
-          aria-label={`${recipe.title} entfernen`}
+          aria-label={t('rezeptEntfernen', { titel })}
           tabIndex={isDeleteVisible ? 0 : -1}
         >
           <span className="swipe-delete-icon-text"><TrashIcon /></span>
@@ -102,8 +108,8 @@ function ParkedItem({ entry, status, onSelect, onRemove }) {
         className="cooking-rail-button"
         style={{ transform: `translateX(${offset}px)`, transition: 'transform 0.15s ease' }}
         onClick={() => { if (isDeleteVisible) reset(); else onSelect(entry); }}
-        aria-label={`${recipe.title} öffnen, ${status.label}`}
-        title={recipe.title}
+        aria-label={t('rezeptOeffnen', { titel, status: status.label })}
+        title={titel}
         {...handlers}
       >
         <RailThumb recipe={recipe} />
@@ -129,6 +135,8 @@ function CookingSessionRail({
   addIconLoaded = true,
 }) {
   const session = useCookingSession();
+  const t = useTexte(kochmodusTexte);
+  const zeigeTitel = useRezeptTitel();
   const reducedMotion = usePrefersReducedMotion();
   const { banners, pendingKeys, scheduleDelete, undoDelete } = useUndoableDelete();
   const listRef = useRef(null);
@@ -138,7 +146,7 @@ function CookingSessionRail({
   const items = listed.some((e) => e.recipe.id === currentRecipe.id)
     ? listed.map((e) => (e.recipe.id === currentRecipe.id ? current : e))
     : [...listed, current];
-  const statuses = items.map((entry) => cookingStatus(entry, session.allTimers));
+  const statuses = items.map((entry) => cookingStatus(entry, session.allTimers, t));
   const offscreen = useOffscreenItems(listRef, items.map((entry) => entry.recipe.id).join('|'));
   const jumpIndex = pickJumpTarget(items, statuses, offscreen);
   const jump = jumpIndex >= 0
@@ -153,7 +161,7 @@ function CookingSessionRail({
 
   const handleRemove = (entry) => scheduleDelete({
     key: entry.recipe.id,
-    message: entry.recipe.title,
+    message: zeigeTitel(entry.recipe),
     onConfirm: () => session.removeFromSession(entry.recipe.id),
     onUndo: () => {},
   });
@@ -161,7 +169,7 @@ function CookingSessionRail({
 
   return (
     <>
-      <nav className={`cooking-rail cooking-rail--${side === 'right' ? 'right' : 'left'}`} aria-label="Rezepte am Herd">
+      <nav className={`cooking-rail cooking-rail--${side === 'right' ? 'right' : 'left'}`} aria-label={t('rezepteAmHerd')}>
         <div className="cooking-rail-viewport">
           <ul className="cooking-rail-list" ref={listRef}>
             {items.map((entry, index) => (entry.current ? (
@@ -175,7 +183,7 @@ function CookingSessionRail({
               type="button"
               className={`cooking-rail-jump${jump.up ? ' cooking-rail-jump--up' : ''}`}
               onClick={() => scrollItemIntoView(listRef.current, jump.entry.recipe.id, reducedMotion ? 'auto' : 'smooth')}
-              aria-label={`Zu ${jump.entry.recipe.title} scrollen, ${jump.status.label}`}
+              aria-label={t('zuRezeptScrollen', { titel: zeigeTitel(jump.entry.recipe), status: jump.status.label })}
             >
               <ArrowVerticalIcon up={jump.up} size={12} strokeWidth={3} />
               <span className="cooking-rail-jump-label">{jump.status.text}</span>

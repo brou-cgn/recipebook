@@ -62,8 +62,11 @@ import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { calculateRecipeSortIndexBreakdown } from '../utils/recipeSortIndex';
 import { evaluateLowCarbTag } from '../utils/lowCarb';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
-import { useListenwerte, useRezeptTitel, useTexte } from '../contexts/SpracheContext';
+import { useListenwerte, useRezeptTitel, useSprache, useTexte } from '../contexts/SpracheContext';
 import rezeptansichtTexte from '../i18n/texte/rezeptansicht';
+import kochmodusTexte from '../i18n/texte/kochmodus';
+import allgemeinTexte from '../i18n/texte/allgemein';
+import { formatiereDatum } from '../i18n/format';
 import useRezeptInhalt from '../hooks/useRezeptInhalt';
 import useModalScrollLock from '../hooks/useModalScrollLock';
 import useFadeOutClose from '../hooks/useFadeOutClose';
@@ -97,13 +100,16 @@ const mergeUniqueNormalizedValues = (existingValues = [], valuesToAdd = []) => {
 // Regex to detect German time expressions: "10 Minuten", "2 Stunden", "45 Sek"
 const TIME_REGEX_SOURCE = String.raw`(\d+(?:[.,]\d+)?)\s*(Stunden?|h\b|Minuten?|Min\.?|Sekunden?|Sek\.?)`;
 
-// Dauer auf dem Timer-Knopf der Schrittkarte (Feinschliff Tablet, Punkt 4): die Zahl wie im Rezept,
-// die Einheit kurz, z. B. „90 Minuten“ → „90 Min.“, „1,5 Stunden“ → „1,5 Std.“
-function shortTimerLabel(value, unit) {
+// Dauer eines Schritt-Timers in der geltenden Sprache (Mehrsprachigkeit PR 6a; erkannt wird sie im
+// deutschen Original): lang für Beschriftung und Alarm, kurz für den Knopf der Schrittkarte
+// (Feinschliff Tablet, Punkt 4), z. B. „90 Minuten“ → „90 Min.“, „1,5 Stunden“ → „1,5 Std.“
+function timerDauer(value, unit, t) {
+  const anzahl = parseFloat(String(value).replace(',', '.'));
   const u = unit.toLowerCase();
-  if (u === 'h' || u.startsWith('stund')) return `${value} Std.`;
-  if (u.startsWith('min')) return `${value} Min.`;
-  return `${value} Sek.`;
+  let art = 'Sekunden';
+  if (u === 'h' || u.startsWith('stund')) art = 'Stunden';
+  else if (u.startsWith('min')) art = 'Minuten';
+  return { lang: t(`dauer${art}`, { anzahl }), kurz: t(`dauer${art}Kurz`, { anzahl }) };
 }
 
 // Oberes Padding des Sticky-Titels (0.4rem), muss zu .recipe-sticky-title passen
@@ -115,6 +121,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Titel in der geltenden Sprache (Mehrsprachigkeit PR 3); bearbeitet wird immer recipe.title
   const zeigeTitel = useRezeptTitel();
   const tAnsicht = useTexte(rezeptansichtTexte);
+  // Kochmodus und allgemeine Texte (Mehrsprachigkeit PR 6a)
+  const tKoch = useTexte(kochmodusTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const { sprache } = useSprache();
   // Listenwerte (Kulinarik, Portionseinheit) in der geltenden Sprache (Mehrsprachigkeit PR 5)
   const listen = useListenwerte();
   // „Original anzeigen“ (Mehrsprachigkeit PR 4): Titel und Inhalt wieder im Original
@@ -782,8 +792,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   }, [recipe.ingredients, recipe.naehrwerte?.calcCompletedAt, recalcIngredientMap]);
   const showNutritionRecalcIcon = hasNutritionValues && hasNutritionRecalcIngredient;
   const nutritionButtonTitle = showNutritionRecalcIcon
-    ? 'Nährwerte nachkalkulieren'
-    : (hasNutritionValues ? 'Nährwerte anzeigen' : 'Nährwerte berechnen');
+    ? tAnsicht('naehrwerteNachkalkulieren')
+    : (hasNutritionValues ? tAnsicht('naehrwerteAnzeigen') : tAnsicht('naehrwerteBerechnen'));
 
   // Derive favorite status from favoriteIds
   const isFavorite = favoriteIds.includes(recipe?.id);
@@ -830,14 +840,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const cookDistanceExplanation = useMemo(() => {
     if (!sortIndexBreakdown) return '';
     if (lastOwnCookDateMs === null || lastOwnCookDateMs === undefined) {
-      return 'Kochabstand: Noch nie gekocht (Bonus +10).';
+      return tAnsicht('kochabstandNie');
     }
     const daysSince = Math.max(0, Math.floor((Date.now() - lastOwnCookDateMs) / (1000 * 60 * 60 * 24)));
     const bonusText = sortIndexBreakdown.kochabstandsBonus >= 0
       ? `+${sortIndexBreakdown.kochabstandsBonus}`
       : `${sortIndexBreakdown.kochabstandsBonus}`;
-    return `Kochabstand: Zuletzt vor ${daysSince} Tagen gekocht (Bonus ${bonusText}).`;
-  }, [sortIndexBreakdown, lastOwnCookDateMs]);
+    return tAnsicht('kochabstandTage', { anzahl: daysSince, bonus: bonusText });
+  }, [sortIndexBreakdown, lastOwnCookDateMs, tAnsicht]);
 
   const formatIndexValue = (value) => parseFloat(Number(value || 0).toFixed(2));
   const formatSignedIndexValue = (value) => {
@@ -920,12 +930,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       } else {
         return null;
       }
-      return date.toLocaleDateString('de-DE');
+      return formatiereDatum(date, sprache, { day: 'numeric', month: 'numeric', year: 'numeric' }) || null;
     } catch (error) {
       console.error('Error formatting creation date:', error);
       return null;
     }
-  }, [recipe.createdAt]);
+  }, [recipe.createdAt, sprache]);
 
   const versionNumber = useMemo(() => 
     hasMultipleVersions ? getVersionNumber(allRecipes, recipe) : 0, 
@@ -949,7 +959,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
   const handlePublish = async () => {
     if (!onPublish) return;
-    if (window.confirm(`Möchten Sie "${recipe.title}" in der Liste "Öffentlich" veröffentlichen?`)) {
+    if (window.confirm(tAnsicht('veroeffentlichenFrage', { titel }))) {
       setPublishLoading(true);
       setSelectedRecipe(prev => ({ ...prev, publishedToPublic: true }));
       try {
@@ -961,14 +971,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   };
 
   const handleResetThumbnail = async () => {
-    if (!window.confirm(`Möchten Sie das WhatsApp-Thumbnail für "${recipe.title}" zurücksetzen? Beim nächsten Teilen über WhatsApp wird ein neues Thumbnail generiert.`)) return;
+    if (!window.confirm(tAnsicht('thumbnailFrage', { titel }))) return;
     setResetThumbnailLoading(true);
     try {
       await resetRecipeThumbnail(recipe.id);
       setSelectedRecipe(prev => { const updated = { ...prev }; delete updated.imageThumbnail; return updated; });
     } catch (error) {
       console.error('Error resetting thumbnail:', error);
-      alert('Fehler beim Zurücksetzen des Thumbnails. Bitte versuchen Sie es erneut.');
+      alert(tAnsicht('fehlerThumbnail'));
     } finally {
       setResetThumbnailLoading(false);
     }
@@ -982,7 +992,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setSelectedRecipe({ ...recipe, isPrivate: newStatus });
     } catch (error) {
       console.error('Error updating draft status:', error);
-      alert('Fehler beim Aktualisieren des Status. Bitte versuchen Sie es erneut.');
+      alert(tAnsicht('fehlerStatus'));
     }
   };
 
@@ -1377,7 +1387,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       }
     } catch (error) {
       console.error('Error toggling share:', error);
-      alert('Fehler beim Ändern des Share-Status. Bitte versuchen Sie es erneut.');
+      alert(tAnsicht('fehlerTeilen'));
     }
     setShareLoading(false);
   };
@@ -1533,7 +1543,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   function startTimer(stepKey, timerIndex, totalSeconds, label) {
     cookingSession.startTimer({
       recipeId: timerRecipeId,
-      recipeTitle: recipe.title,
+      recipeTitle: titel,
       stepKey,
       timerIndex,
       totalSeconds,
@@ -1736,7 +1746,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       // the linked recipe was deleted and re-created under a new ID - looks
       // exactly like a working link but silently did nothing on click.
       // Surface that instead of leaving the tap unexplained.
-      alert(`„${displayName}" konnte nicht geöffnet werden. Das verlinkte Rezept existiert unter dieser Verknüpfung nicht mehr (z. B. gelöscht und neu angelegt). Bitte die Zutat neu verlinken.`);
+      alert(tAnsicht('verlinktNichtGefunden', { name: displayName }));
     }
   };
 
@@ -1794,7 +1804,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           <button
             className="recipe-link-button"
             onClick={() => handleRecipeLinkClick(recipeLink.recipeId, displayName)}
-            title={`Öffne Rezept: ${displayName}`}
+            title={tAnsicht('oeffneRezept', { titel: displayName })}
           >
             {displayName}
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -1818,7 +1828,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           ref={cookingTabRef}
           style={{ top: `${cookingTabTop * 100}%` }}
           role="group"
-          aria-label="Kochmodus – mit Pfeiltasten verschieben"
+          aria-label={tKoch('kochmodusVerschieben')}
           tabIndex={0}
           {...cookingTabHandleProps}
         >
@@ -1826,8 +1836,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             <button
               className="cooking-mode-exit"
               onClick={toggleCookingMode}
-              title="Kochmodus beenden"
-              aria-label="Kochmodus beenden"
+              title={tKoch('kochmodusBeenden')}
+              aria-label={tKoch('kochmodusBeenden')}
             >
               {isBase64Image(cookingModeExitIcon) ? (
                 <img src={cookingModeExitIcon} alt="" className="cooking-mode-exit-img" />
@@ -1841,7 +1851,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 </svg>
               )}
             </button>
-            <span className="cooking-mode-text">Kochmodus</span>
+            <span className="cooking-mode-text">{tKoch('kochmodus')}</span>
           </div>
         </div>
       )}
@@ -1852,15 +1862,15 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             {userCanDirectlyEdit && !showShoppingListModal && !showPortionSelector && (
               <Button
                 onClick={() => onEdit(recipe)}
-                title="Rezept bearbeiten"
-                aria-label="Rezept bearbeiten"
+                title={tAnsicht('rezeptBearbeiten')}
+                aria-label={tAnsicht('rezeptBearbeiten')}
               >
-                Bearbeiten
+                {tAllgemein('bearbeiten')}
               </Button>
             )}
             {userCanCreateVersion && !userCanDirectlyEdit && (
               <Button onClick={() => onCreateVersion(recipe)}>
-                Eigene Version erstellen
+                {tAnsicht('eigeneVersion')}
               </Button>
             )}
             {/* Teilen steht nur in der Aktionszeile unter dem Bild, die es auf allen Breiten gibt (Tech-Check P11) */}
@@ -1868,18 +1878,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               <Button
                 onClick={handlePublish}
                 loading={publishLoading}
-                title="Rezept veröffentlichen"
+                title={tAnsicht('rezeptVeroeffentlichen')}
               >
-                {publishLoading ? 'Wird veröffentlicht …' : 'Veröffentlichen'}
+                {publishLoading ? tAnsicht('veroeffentlichenLaeuft') : tAnsicht('veroeffentlichen')}
               </Button>
             )}
             {userCanDelete && onDelete && (
               <Button
                 variant="danger-quiet"
                 onClick={handleDelete}
-                title="Rezept löschen"
+                title={tAnsicht('rezeptLoeschen')}
               >
-                Löschen
+                {tAllgemein('loeschen')}
               </Button>
             )}
             {userCanResetThumbnail && (
@@ -1887,21 +1897,21 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 variant="ghost"
                 onClick={handleResetThumbnail}
                 loading={resetThumbnailLoading}
-                title="WhatsApp-Thumbnail zurücksetzen"
+                title={tAnsicht('thumbnailZuruecksetzenTitel')}
               >
-                {resetThumbnailLoading ? 'Wird zurückgesetzt …' : 'Thumbnail zurücksetzen'}
+                {resetThumbnailLoading ? tAnsicht('thumbnailLaeuft') : tAnsicht('thumbnailZuruecksetzen')}
               </Button>
             )}
             {onAddToMyRecipes && (
               isAddToMyRecipesSuccess ? (
-                <span className="share-add-success">✓ Zu deinen Rezepten hinzugefügt!</span>
+                <span className="share-add-success">{tAnsicht('hinzugefuegt')}</span>
               ) : (
                 <button
                   className="share-add-button"
                   onClick={onAddToMyRecipes}
                   disabled={isAddToMyRecipesLoading}
                 >
-                  {isAddToMyRecipesLoading ? 'Wird hinzugefügt…' : currentUser ? '+ Zu meinen Rezepten' : 'Anmelden & hinzufügen'}
+                  {isAddToMyRecipesLoading ? tAnsicht('hinzufuegenLaeuft') : currentUser ? tAnsicht('zuMeinenRezepten') : tAnsicht('anmeldenHinzufuegen')}
                 </button>
               )
             )}
@@ -1909,11 +1919,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           <button
             className="recipe-detail__close"
             onClick={handleBackFromLinkedRecipe}
-            aria-label="Schließen"
-            title="Schließen"
+            aria-label={tAllgemein('schliessen')}
+            title={tAllgemein('schliessen')}
           >
             {isBase64Image(closeButtonDefaultImgIcon)
-              ? <img src={closeButtonDefaultImgIcon} alt="Schließen" className="close-button-icon-img" />
+              ? <img src={closeButtonDefaultImgIcon} alt={tAllgemein('schliessen')} className="close-button-icon-img" />
               : closeButtonDefaultImgIcon}
           </button>
         </div>
@@ -1928,10 +1938,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             {parallelCookingEnabled && !isMobileLandscape && (
               <CookingModeTitleBar
                 recipe={recipe}
+                title={titel}
                 tablet={tabletCookingLayout}
                 stepNumber={Math.min(currentStepIndex + 1, totalSteps)}
                 totalSteps={totalSteps}
-                timerChips={stepTimerChips(activeTimers, currentStepIndex)}
+                timerChips={stepTimerChips(activeTimers, currentStepIndex, tKoch)}
                 onJumpToStep={setCurrentStepIndex}
                 addIcon={cookingAddRecipeIcon}
                 addIconLoaded={buttonIconsLoaded}
@@ -1966,7 +1977,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             <section className="cooking-mode-ingredients">
               {showCookingRail && <h2 className="cooking-mode-landscape-title">{titel}</h2>}
               <div className="section-header">
-                <h2>Zutaten für</h2>
+                <h2>{tAnsicht('zutatenFuer')}</h2>
                 {recipe.portionen && (
                   <div className="serving-control">
                     <button
@@ -2015,7 +2026,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               <ul className="ingredients-list">
                 {anzeigeZutaten?.map((ingredient, index) =>
                   renderIngredient(ingredient, index)
-                ) || <li>Keine Zutaten aufgelistet</li>}
+                ) || <li>{tAnsicht('keineZutaten')}</li>}
               </ul>
             </section>
 
@@ -2029,7 +2040,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   // Detect first time mention for the per-step timer
                   const re = new RegExp(TIME_REGEX_SOURCE, 'gi');
                   const firstMatch = re.exec(stepText);
-                  const timerLabel = firstMatch ? firstMatch[0] : null;
+                  const dauer = firstMatch ? timerDauer(firstMatch[1], firstMatch[2], tKoch) : null;
+                  const timerLabel = dauer ? dauer.lang : null;
                   const timerSeconds = firstMatch ? parseTimeToSeconds(firstMatch[1], firstMatch[2]) : 0;
                   const timer = timerLabel ? activeTimers[stepKey]?.[0] : null;
                   const showCookedButton = index === totalSteps - 1 && currentUser;
@@ -2052,11 +2064,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                               <button
                                 className="step-timer-btn stop"
                                 onClick={e => { e.stopPropagation(); stopTimer(stepKey, 0); }}
-                                aria-label="Timer stoppen"
-                                title="Stoppen"
+                                aria-label={tKoch('timerStoppen')}
+                                title={tKoch('stoppen')}
                               >
                                 {isBase64Image(timerStopIcon)
-                                  ? <img src={timerStopIcon} alt="Timer stoppen" className="timer-stop-icon-img" />
+                                  ? <img src={timerStopIcon} alt={tKoch('timerStoppen')} className="timer-stop-icon-img" />
                                   : timerStopIcon}
                               </button>
                             </div>
@@ -2064,13 +2076,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                             <button
                               className="step-timer-start-btn"
                               onClick={e => { e.stopPropagation(); startTimer(stepKey, 0, timerSeconds, timerLabel); }}
-                              aria-label={`Timer für ${timerLabel} starten`}
-                              title={`Timer für ${timerLabel} starten`}
+                              aria-label={tKoch('timerFuerStarten', { dauer: timerLabel })}
+                              title={tKoch('timerFuerStarten', { dauer: timerLabel })}
                             >
                               {isBase64Image(timerStartIcon)
-                                ? <img src={timerStartIcon} alt="Timer starten" className="timer-start-icon-img" />
+                                ? <img src={timerStartIcon} alt={tKoch('timerStarten')} className="timer-start-icon-img" />
                                 : timerStartIcon}
-                              <span className="step-timer-start-label">{shortTimerLabel(firstMatch[1], firstMatch[2])}</span>
+                              <span className="step-timer-start-label">{dauer.kurz}</span>
                             </button>
                           )}
                         </div>
@@ -2084,12 +2096,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                             <button
                               className="step-heute-gekocht-btn"
                               onClick={e => { e.stopPropagation(); setCookDateModalPrefillToday(true); setShowCookDateModal(true); }}
-                              aria-label="Heute gekocht"
+                              aria-label={tKoch('heuteGekocht')}
                             >
-                              Heute gekocht
+                              {tKoch('heuteGekocht')}
                             </button>
                           )}
-                          {!stepInTitlebar && <>Schritt {index + 1} von {totalSteps}</>}
+                          {!stepInTitlebar && tKoch('schrittVon', { schritt: index + 1, gesamt: totalSteps })}
                         </div>
                       )}
                       {/* Progress bar at bottom – spans full card width */}
@@ -2113,7 +2125,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     key={index}
                     className={`step-dot ${index === currentStepIndex ? 'active' : ''}`}
                     onClick={() => setCurrentStepIndex(index)}
-                    aria-label={`Gehe zu Schritt ${index + 1}`}
+                    aria-label={tKoch('zuSchritt', { schritt: index + 1 })}
                   />
                 ))}
               </div>
@@ -2170,14 +2182,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       <button
                         className="carousel-arrow carousel-arrow--prev"
                         onClick={() => scrollToCarouselIndex((safeIndex - 1 + orderedImages.length) % orderedImages.length)}
-                        aria-label="Vorheriges Bild"
+                        aria-label={tAllgemein('vorherigesBild')}
                       >
                         ‹
                       </button>
                       <button
                         className="carousel-arrow carousel-arrow--next"
                         onClick={() => scrollToCarouselIndex((safeIndex + 1) % orderedImages.length)}
-                        aria-label="Nächstes Bild"
+                        aria-label={tAllgemein('naechstesBild')}
                       >
                         ›
                       </button>
@@ -2187,7 +2199,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                             key={dotIdx}
                             className={`carousel-dot${dotIdx === safeIndex ? ' carousel-dot--active' : ''}`}
                             onClick={() => scrollToCarouselIndex(dotIdx)}
-                            aria-label={`Bild ${dotIdx + 1}`}
+                            aria-label={tAllgemein('bildNummer', { nummer: dotIdx + 1 })}
                           />
                         ))}
                       </div>
@@ -2204,7 +2216,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         tabIndex="0" 
                         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleCookingMode()}
                         onContextMenu={(e) => e.preventDefault()}
-                        aria-label="Kochmodus aktivieren"
+                        aria-label={tKoch('kochmodusAktivieren')}
                       >
                         {/* Use the default-category-image icon when the displayed image is a
                             category image (respects dark mode); for bright image corners always
@@ -2215,7 +2227,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                             ? cookingModeDefaultImgIcon
                             : (useCookingModeAlt ? cookingModeDefaultImgLightIcon : cookingModeIcon);
                           return isBase64Image(icon)
-                            ? <img src={icon} alt="Kochmodus" className="overlay-cooking-mode-icon-img" />
+                            ? <img src={icon} alt={tKoch('kochmodus')} className="overlay-cooking-mode-icon-img" />
                             : <span>{icon}</span>;
                         })()}
                       </div>
@@ -2223,7 +2235,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       <button
                         className="overlay-back-button"
                         onClick={handleBackFromLinkedRecipe}
-                        title="Zurück"
+                        title={tAllgemein('zurueck')}
                       >
                         {/* Use default-category-image icon when the displayed image is a category image,
                             otherwise use the light-mode default-image icon for bright corners
@@ -2233,7 +2245,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                             ? closeButtonDefaultImgIcon
                             : (useCloseButtonAlt ? closeButtonBrightImgIcon : closeButtonIcon);
                           return isBase64Image(icon)
-                            ? <img src={icon} alt="Schließen" className="close-button-icon-img" />
+                            ? <img src={icon} alt={tAllgemein('schliessen')} className="close-button-icon-img" />
                             : icon;
                         })()}
                       </button>
@@ -2250,20 +2262,20 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 <button
                   className={`favorite-button ${isFavorite ? 'favorite-button--active' : ''}`}
                   onClick={handleToggleFavorite}
-                  title={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
-                  aria-label={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
+                  title={isFavorite ? tAnsicht('favoritEntfernen') : tAnsicht('favoritHinzufuegen')}
+                  aria-label={isFavorite ? tAnsicht('favoritEntfernen') : tAnsicht('favoritHinzufuegen')}
                   aria-pressed={isFavorite}
                   type="button"
                 >
                   {isFavorite ? (
                     isBase64Image(favoritesButtonActiveIcon) ? (
-                      <img src={favoritesButtonActiveIcon} alt="Favorit aktiv" className="button-icon-image" draggable="false" />
+                      <img src={favoritesButtonActiveIcon} alt={tAnsicht('favoritAktiv')} className="button-icon-image" draggable="false" />
                     ) : (
                       favoritesButtonActiveIcon || <StarIcon />
                     )
                   ) : (
                     isBase64Image(favoritesButtonIcon) ? (
-                      <img src={favoritesButtonIcon} alt="Favorit" className="button-icon-image" draggable="false" />
+                      <img src={favoritesButtonIcon} alt={tAnsicht('favorit')} className="button-icon-image" draggable="false" />
                     ) : (
                       favoritesButtonIcon
                     )
@@ -2272,7 +2284,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 )}
                 {(recipe.isPrivate || !isRecipePublic) && currentUser?.id === recipe.authorId && (() => {
                   const badgeIcon = isBase64Image(privateBadgeIcon) ? (
-                    <img src={privateBadgeIcon} alt="Privat" className="button-icon-image" draggable="false" />
+                    <img src={privateBadgeIcon} alt={tAnsicht('privat')} className="button-icon-image" draggable="false" />
                   ) : (
                     privateBadgeIcon
                   );
@@ -2282,13 +2294,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       className="private-badge-button"
                       onClick={handlePublish}
                       disabled={publishLoading}
-                      title="Rezept veröffentlichen"
-                      aria-label="Rezept veröffentlichen"
+                      title={tAnsicht('rezeptVeroeffentlichen')}
+                      aria-label={tAnsicht('rezeptVeroeffentlichen')}
                     >
                       {badgeIcon}
                     </button>
                   ) : (
-                    <div className="private-badge-button" title="Unveröffentlichtes Rezept" aria-label="Unveröffentlichtes Rezept">
+                    <div className="private-badge-button" title={tAnsicht('unveroeffentlicht')} aria-label={tAnsicht('unveroeffentlicht')}>
                       {badgeIcon}
                     </div>
                   );
@@ -2296,11 +2308,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 <button
                   className="shopping-list-trigger-button"
                   onClick={handleShoppingListClick}
-                  title="Einkaufsliste anzeigen"
-                  aria-label="Einkaufsliste öffnen"
+                  title={tAnsicht('einkaufslisteAnzeigen')}
+                  aria-label={tAnsicht('einkaufslisteOeffnen')}
                 >
                   {isBase64Image(shoppingListIcon) ? (
-                    <img src={shoppingListIcon} alt="Einkaufsliste" className="shopping-list-icon-img" />
+                    <img src={shoppingListIcon} alt={tAnsicht('einkaufsliste')} className="shopping-list-icon-img" />
                   ) : (
                     shoppingListIcon
                   )}
@@ -2309,11 +2321,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   <button
                     className="cook-date-button"
                     onClick={() => { setCookDateModalPrefillToday(false); setShowCookDateModal(true); }}
-                    title="Kochdatum erfassen"
-                    aria-label="Kochdatum erfassen"
+                    title={tAnsicht('kochdatumErfassen')}
+                    aria-label={tAnsicht('kochdatumErfassen')}
                   >
                     {isBase64Image(cookDateIcon) ? (
-                      <img src={cookDateIcon} alt="Kochdatum" className="cook-date-icon-img" />
+                      <img src={cookDateIcon} alt={tAnsicht('kochdatum')} className="cook-date-icon-img" />
                     ) : (
                       cookDateIcon
                     )}
@@ -2323,11 +2335,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   <button
                     className="cook-date-button print-recipe-button"
                     onClick={() => handlePrint()}
-                    title="Rezept drucken"
-                    aria-label="Rezept drucken"
+                    title={tAnsicht('rezeptDrucken')}
+                    aria-label={tAnsicht('rezeptDrucken')}
                   >
                     {isBase64Image(printRecipeIcon) ? (
-                      <img src={printRecipeIcon} alt="Drucken" className="cook-date-icon-img" />
+                      <img src={printRecipeIcon} alt={tAnsicht('drucken')} className="cook-date-icon-img" />
                     ) : (
                       printRecipeIcon
                     )}
@@ -2345,20 +2357,20 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   <Button
                     onClick={handleToggleShare}
                     loading={shareLoading}
-                    title="Rezept teilen"
+                    title={tAnsicht('rezeptTeilen')}
                   >
-                    {shareLoading ? 'Wird geteilt …' : '↑ Teilen'}
+                    {shareLoading ? tAnsicht('teilenLaeuft') : tAnsicht('teilen')}
                   </Button>
                 )}
                 {recipe.shareId && (
                   <button
                     className="share-copy-url-button"
                     onClick={handleCopyShareUrl}
-                    title="Share-Link kopieren"
+                    title={tAnsicht('linkKopierenTitel')}
                   >
                     {shareUrlCopied ? '✓' : (
                       isBase64Image(copyLinkIcon) ? (
-                        <img src={copyLinkIcon} alt="Link kopieren" className="copy-link-icon-img" />
+                        <img src={copyLinkIcon} alt={tAnsicht('linkKopieren')} className="copy-link-icon-img" />
                       ) : (
                         copyLinkIcon
                       )
@@ -2369,11 +2381,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   <button
                     className="share-copy-url-button"
                     onClick={handleCopyShareUrl}
-                    title="Share-Link kopieren"
+                    title={tAnsicht('linkKopierenTitel')}
                   >
                     {shareUrlCopied ? '✓' : (
                       isBase64Image(copyLinkIcon) ? (
-                        <img src={copyLinkIcon} alt="Link kopieren" className="copy-link-icon-img" />
+                        <img src={copyLinkIcon} alt={tAnsicht('linkKopieren')} className="copy-link-icon-img" />
                       ) : (
                         copyLinkIcon
                       )
@@ -2382,14 +2394,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 )}
                 {onAddToMyRecipes && (
                   isAddToMyRecipesSuccess ? (
-                    <span className="share-add-success">✓ Zu deinen Rezepten hinzugefügt!</span>
+                    <span className="share-add-success">{tAnsicht('hinzugefuegt')}</span>
                   ) : (
                     <button
                       className="share-add-button"
                       onClick={onAddToMyRecipes}
                       disabled={isAddToMyRecipesLoading}
                     >
-                      {isAddToMyRecipesLoading ? 'Wird hinzugefügt…' : currentUser ? '+ Zu meinen Rezepten' : 'Anmelden & hinzufügen'}
+                      {isAddToMyRecipesLoading ? tAnsicht('hinzufuegenLaeuft') : currentUser ? tAnsicht('zuMeinenRezepten') : tAnsicht('anmeldenHinzufuegen')}
                     </button>
                   )
                 )}
@@ -2431,20 +2443,20 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   className="version-arrow"
                   onClick={handlePreviousVersion}
                   disabled={currentVersionIndex === 0}
-                  title="Vorherige Version"
-                  aria-label="Vorherige Version"
+                  title={tAnsicht('vorherigeVersion')}
+                  aria-label={tAnsicht('vorherigeVersion')}
                 >
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
                 </button>
                 <span className="version-caption">
-                  {isRecipeVersion(recipe) ? `Version ${versionNumber}` : 'Original'}
+                  {isRecipeVersion(recipe) ? tAnsicht('versionNummer', { nummer: versionNumber }) : tAnsicht('originalAngezeigt')}
                 </span>
                 <button
                   className="version-arrow"
                   onClick={handleNextVersion}
                   disabled={currentVersionIndex === allVersions.length - 1}
-                  title="Nächste Version"
-                  aria-label="Nächste Version"
+                  title={tAnsicht('naechsteVersion')}
+                  aria-label={tAnsicht('naechsteVersion')}
                 >
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
                 </button>
@@ -2453,18 +2465,22 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
             {(authorName || formattedCreatedAt) && (
               <div className="author-date-caption">
-                {authorName && (
-                  <>{'Von '}<FollowName className="author-name" userId={recipe.authorId} name={authorName} /></>
-                )}
+                {authorName && tAnsicht('von', {
+                  name: <FollowName key="autor" className="author-name" userId={recipe.authorId} name={authorName} />,
+                })}
                 {formattedCreatedAt && (
-                  <span className="creation-date">{authorName ? ' erstellt am ' : 'Erstellt am '}{formattedCreatedAt}</span>
+                  <span className="creation-date">
+                    {authorName
+                      ? ` ${tAnsicht('erstelltAmNachAutor', { datum: formattedCreatedAt })}`
+                      : tAnsicht('erstelltAm', { datum: formattedCreatedAt })}
+                  </span>
                 )}
               </div>
             )}
 
             {cuisineDisplay && (
               <div className="recipe-cuisine-line">
-                <span className="metadata-label metadata-label--hidden">Kulinarik:</span>
+                <span className="metadata-label metadata-label--hidden">{tAnsicht('kulinarik')}</span>
                 <span className="metadata-value cuisine-badge">
                   {cuisineListSorted.map((cuisine, index) => {
                     const icon = getEffectiveCuisineIcon(cuisineIcons, cuisine, isDarkMode);
@@ -2490,14 +2506,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             <div className="recipe-metadata">
               {recipe.kochdauer && (
                 <div className="metadata-item">
-                  <span className="metadata-label metadata-label--hidden">Zeit:</span>
-                  <span className="metadata-value">{recipe.kochdauer} Min.</span>
+                  <span className="metadata-label metadata-label--hidden">{tAnsicht('zeit')}</span>
+                  <span className="metadata-value">{tAnsicht('minuten', { anzahl: recipe.kochdauer })}</span>
                 </div>
               )}
 
               {recipe.schwierigkeit && (
                 <div className="metadata-item">
-                  <span className="metadata-label metadata-label--hidden">Schwierigkeit:</span>
+                  <span className="metadata-label metadata-label--hidden">{tAnsicht('schwierigkeit')}</span>
                   <span className="metadata-value difficulty-stars">
                     {[1, 2, 3, 4, 5].map((level) => (
                       <span
@@ -2513,12 +2529,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
               {hasRecipeIndexViewPermission && (
                 <div className="metadata-item">
-                  <span className="metadata-label">Index:</span>
+                  <span className="metadata-label">{tAnsicht('index')}</span>
                   <button
                     type="button"
                     className="metadata-value metadata-index-button"
                     onClick={() => setShowIndexDialog(true)}
-                    aria-label="Indexwert-Details anzeigen"
+                    aria-label={tAnsicht('indexDetails')}
                     disabled={computedSortIndex === null}
                   >
                     {computedSortIndex !== null ? Math.round(computedSortIndex) : '—'}
@@ -2529,14 +2545,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               {/* Draft status - only visible to admins when activated */}
               {recipe.isPrivate && isCurrentUserAdmin() && (
                 <div className="metadata-item draft-checkbox-container">
-                  <span className="metadata-label">Entwurf:</span>
+                  <span className="metadata-label">{tAnsicht('entwurf')}</span>
                   <label className="draft-checkbox-wrapper">
                     <input
                       type="checkbox"
                       checked={recipe.isPrivate}
                       onChange={handleToggleDraftStatus}
                       className="draft-checkbox"
-                      aria-label="Rezept als Entwurf markieren"
+                      aria-label={tAnsicht('alsEntwurf')}
                     />
                   </label>
                 </div>
@@ -2556,29 +2572,29 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     <span className="nutrition-icon">
                       {showNutritionRecalcIcon ? (
                         isBase64Image(nutritionRecalcIcon) ? (
-                          <img src={nutritionRecalcIcon} alt="Nährwerte nachkalkulieren" />
+                          <img src={nutritionRecalcIcon} alt={tAnsicht('naehrwerteNachkalkulieren')} />
                         ) : (
                           nutritionRecalcIcon
                         )
                       ) : hasNutritionValues ? (
                         isBase64Image(nutritionFilledIcon) ? (
-                          <img src={nutritionFilledIcon} alt="Nährwerte" />
+                          <img src={nutritionFilledIcon} alt={tAnsicht('naehrwerte')} />
                         ) : (
                           nutritionFilledIcon
                         )
                       ) : (
                         isBase64Image(nutritionEmptyIcon) ? (
-                          <img src={nutritionEmptyIcon} alt="Nährwerte hinzufügen" />
+                          <img src={nutritionEmptyIcon} alt={tAnsicht('naehrwerteHinzufuegen')} />
                         ) : (
                           nutritionEmptyIcon
                         )
                       )}
                     </span>
                     {recipe.naehrwerte?.kalorien != null && (
-                      <span className="nutrition-kcal-badge">{Math.round(recipe.naehrwerte.kalorien / (recipe.portionen || 4))} kcal</span>
+                      <span className="nutrition-kcal-badge">{tAnsicht('kcal', { anzahl: Math.round(recipe.naehrwerte.kalorien / (recipe.portionen || 4)) })}</span>
                     )}
                     <span className="nutrition-label">
-                      {recipe.naehrwerte?.calcPending ? 'Berechne…' : (hasNutritionValues ? null : 'Nährwerte berechnen')}
+                      {recipe.naehrwerte?.calcPending ? tAnsicht('naehrwerteBerechnenLaeuft') : (hasNutritionValues ? null : tAnsicht('naehrwerteBerechnen'))}
                     </span>
                   </button>
                 </div>
@@ -2593,8 +2609,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     href={recipeSourceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    title="Rezeptquelle öffnen"
-                    aria-label="Rezeptquelle öffnen"
+                    title={tAnsicht('quelleOeffnen')}
+                    aria-label={tAnsicht('quelleOeffnen')}
                   >
                     <span className="source-url-icon">
                       {isBase64Image(sourceUrlIcon) ? (
@@ -2603,7 +2619,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         sourceUrlIcon
                       )}
                     </span>
-                    <span className="source-url-text">Quelle</span>
+                    <span className="source-url-text">{tAnsicht('quelle')}</span>
                   </a>
                 </div>
               )}
@@ -2618,7 +2634,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
             <section className="recipe-section recipe-section--ingredients">
               <div className="section-header">
-                <h2>Zutaten für</h2>
+                <h2>{tAnsicht('zutatenFuer')}</h2>
                 {recipe.portionen && (
                   <div className="serving-control">
                     <button
@@ -2667,12 +2683,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               <ul className="ingredients-list">
                 {anzeigeZutaten?.map((ingredient, index) =>
                   renderIngredient(ingredient, index)
-                ) || <li>Keine Zutaten aufgelistet</li>}
+                ) || <li>{tAnsicht('keineZutaten')}</li>}
               </ul>
             </section>
 
             <section className="recipe-section recipe-section--steps">
-              <h2>Zubereitungsschritte</h2>
+              <h2>{tAnsicht('zubereitungsschritte')}</h2>
               <ol className="steps-list">
                 {(() => {
                   let stepCount = 0;
@@ -2690,7 +2706,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     // Regular step with explicit value to skip headings in numbering
                     stepCount += 1;
                     return <li key={index} value={stepCount}>{item.text}</li>;
-                  }) || <li>Keine Zubereitungsschritte aufgelistet</li>;
+                  }) || <li>{tAnsicht('keineSchritte')}</li>;
                 })()}
               </ol>
             </section>
@@ -2705,30 +2721,30 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             className="index-dialog"
             role="dialog"
             aria-modal="true"
-            aria-label="Indexwert-Berechnung"
+            aria-label={tAnsicht('indexBerechnung')}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="index-dialog-header">
-              <h2 className="index-dialog-title">Indexwert-Berechnung</h2>
+              <h2 className="index-dialog-title">{tAnsicht('indexBerechnung')}</h2>
               <button
                 type="button"
                 className="index-dialog-close"
                 onClick={() => setShowIndexDialog(false)}
-                aria-label="Index-Dialog schließen"
+                aria-label={tAnsicht('indexDialogSchliessen')}
               >
                 ×
               </button>
             </div>
             <ul className="index-dialog-list">
-              <li><span>Basiswert</span><strong>{formatSignedIndexValue(sortIndexBreakdown.baseValue)}</strong></li>
-              <li><span>Favoritenbonus</span><strong>{formatSignedIndexValue(sortIndexBreakdown.favoritenBonus)}</strong></li>
-              <li><span>Kochabstandsbonus</span><strong>{formatSignedIndexValue(sortIndexBreakdown.kochabstandsBonus)}</strong></li>
-              <li><span>Saisonbonus</span><strong>{formatSignedIndexValue(sortIndexBreakdown.saisonBonus)}</strong></li>
-              <li><span>Saisonbonus-Zutat</span><strong>{sortIndexBreakdown.saisonBonusIngredient || 'Keine passende Zutat'}</strong></li>
-              <li className="index-dialog-total"><span>Gesamtindex (gerundet)</span><strong>{Math.round(formatIndexValue(sortIndexBreakdown.totalIndex))}</strong></li>
+              <li><span>{tAnsicht('basiswert')}</span><strong>{formatSignedIndexValue(sortIndexBreakdown.baseValue)}</strong></li>
+              <li><span>{tAnsicht('favoritenbonus')}</span><strong>{formatSignedIndexValue(sortIndexBreakdown.favoritenBonus)}</strong></li>
+              <li><span>{tAnsicht('kochabstandsbonus')}</span><strong>{formatSignedIndexValue(sortIndexBreakdown.kochabstandsBonus)}</strong></li>
+              <li><span>{tAnsicht('saisonbonus')}</span><strong>{formatSignedIndexValue(sortIndexBreakdown.saisonBonus)}</strong></li>
+              <li><span>{tAnsicht('saisonbonusZutat')}</span><strong>{sortIndexBreakdown.saisonBonusIngredient || tAnsicht('keinePassendeZutat')}</strong></li>
+              <li className="index-dialog-total"><span>{tAnsicht('gesamtindex')}</span><strong>{Math.round(formatIndexValue(sortIndexBreakdown.totalIndex))}</strong></li>
             </ul>
             <p className="index-dialog-note">{cookDistanceExplanation}</p>
-            <p className="index-dialog-note">Saisonbonus basiert auf den aktuell zugeordneten Zutaten aus der Saisonmatrix.</p>
+            <p className="index-dialog-note">{tAnsicht('saisonHinweis')}</p>
           </div>
         </div>
       )}
@@ -2851,8 +2867,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       )}
       {showDeleteConfirm && (
         <ConfirmDialog
-          title="Rezept löschen"
-          message={`Möchten Sie "${recipe.title}" wirklich löschen?`}
+          title={tAnsicht('rezeptLoeschen')}
+          message={tAnsicht('loeschenFrage', { titel })}
           onConfirm={handleDeleteConfirmed}
           onCancel={() => setShowDeleteConfirm(false)}
         />
@@ -2860,7 +2876,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       {showShoppingListModal && (
         <ShoppingListModal
           items={getShoppingListIngredients()}
-          title={recipe.title}
+          title={titel}
           onClose={() => setShowShoppingListModal(false)}
           shareId={recipe.shareId}
           bringButtonIcon={bringButtonIcon}
@@ -2902,26 +2918,26 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             className="portion-selector-modal"
             role="dialog"
             aria-modal="true"
-            aria-label="Portionen auswählen"
+            aria-label={tAnsicht('portionenAuswaehlen')}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="portion-selector-header">
-              <h2 className="portion-selector-title">Portionen für Einkaufsliste</h2>
+              <h2 className="portion-selector-title">{tAnsicht('portionenFuerEinkaufsliste')}</h2>
               <button
                 className="portion-selector-close"
                 onClick={closePortionSelector}
-                aria-label="Portionsauswahl schließen"
+                aria-label={tAnsicht('portionsauswahlSchliessen')}
               >
                 ×
               </button>
             </div>
             <div className="portion-selector-body">
-              <div className="portion-selector-section-label">Verlinkte Rezepte</div>
+              <div className="portion-selector-section-label">{tAnsicht('verlinkteRezepte')}</div>
               {linkedRecipes.map(linkedRecipe => {
                 const current = linkedPortionCounts[linkedRecipe.id] ?? (linkedRecipe.portionen || 4);
                 return (
                   <div key={linkedRecipe.id} className="portion-selector-item">
-                    <span className="portion-selector-recipe-name">{linkedRecipe.title}</span>
+                    <span className="portion-selector-recipe-name">{zeigeTitel(linkedRecipe)}</span>
                     <div className="portion-selector-controls">
                       <button
                         className={`portion-selector-btn${portionMinusLongPressActiveId === linkedRecipe.id ? ' longpress-active' : ''}`}
@@ -2941,7 +2957,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         onTouchStart={() => handlePortionMinusPressStart(linkedRecipe.id, () => setLinkedPortionCounts(prev => ({ ...prev, [linkedRecipe.id]: 0 })))}
                         onTouchEnd={handlePortionMinusPressEnd}
                         onTouchCancel={handlePortionMinusPressEnd}
-                        aria-label="Portionen verringern"
+                        aria-label={tAnsicht('portionenVerringern')}
                         disabled={current === 0}
                       >
                         −
@@ -2953,7 +2969,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                           ...prev,
                           [linkedRecipe.id]: current + 1
                         }))}
-                        aria-label="Portionen erhöhen"
+                        aria-label={tAnsicht('portionenErhoehen')}
                       >
                         +
                       </button>
@@ -2971,7 +2987,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   setShowShoppingListModal(true);
                 }}
               >
-                Einkaufsliste erstellen
+                {tAnsicht('einkaufslisteErstellen')}
               </button>
             </div>
           </div>
@@ -3004,8 +3020,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           onMouseDown={handleEditFabPressStart}
           onMouseUp={handleEditFabPressEnd}
           onMouseLeave={handleEditFabPressEnd}
-          title={onVersionDescribeContinue ? 'Eigene Version erstellen' : 'Rezept bearbeiten'}
-          aria-label={onVersionDescribeContinue ? 'Eigene Version erstellen' : 'Rezept bearbeiten'}
+          title={onVersionDescribeContinue ? tAnsicht('eigeneVersion') : tAnsicht('rezeptBearbeiten')}
+          aria-label={onVersionDescribeContinue ? tAnsicht('eigeneVersion') : tAnsicht('rezeptBearbeiten')}
         >
           {onVersionDescribeContinue ? (
             // Versions-Beschreibung offen: gleiche Icon-Zustände wie der Versions-FAB bei fremden Rezepten.
@@ -3025,7 +3041,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               ))}
             </span>
           ) : isBase64Image(editRecipeIcon) ? (
-            <img src={editRecipeIcon} alt="Bearbeiten" className="button-icon-image" draggable="false" />
+            <img src={editRecipeIcon} alt={tAllgemein('bearbeiten')} className="button-icon-image" draggable="false" />
           ) : (
             editRecipeIcon
           )}
@@ -3042,8 +3058,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           onMouseDown={() => setNewVersionFabPressed(true)}
           onMouseUp={() => setNewVersionFabPressed(false)}
           onMouseLeave={() => setNewVersionFabPressed(false)}
-          title="Eigene Version erstellen"
-          aria-label="Eigene Version erstellen"
+          title={tAnsicht('eigeneVersion')}
+          aria-label={tAnsicht('eigeneVersion')}
         >
           <span className="new-version-fab-icons">
             {versionFabIcons.map(({ state, icon }) => (
@@ -3073,11 +3089,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           onMouseDown={() => setDeleteFabPressed(true)}
           onMouseUp={() => setDeleteFabPressed(false)}
           onMouseLeave={() => setDeleteFabPressed(false)}
-          title="Rezept löschen"
-          aria-label="Rezept löschen"
+          title={tAnsicht('rezeptLoeschen')}
+          aria-label={tAnsicht('rezeptLoeschen')}
         >
           {isBase64Image(deleteRecipeIcon) ? (
-            <img src={deleteRecipeIcon} alt="Löschen" className="button-icon-image" draggable="false" />
+            <img src={deleteRecipeIcon} alt={tAllgemein('loeschen')} className="button-icon-image" draggable="false" />
           ) : (
             deleteRecipeIcon || <TrashIcon />
           )}
@@ -3095,12 +3111,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           onMouseUp={() => setResetThumbnailFabPressed(false)}
           onMouseLeave={() => setResetThumbnailFabPressed(false)}
           disabled={resetThumbnailLoading}
-          title="WhatsApp-Thumbnail zurücksetzen"
-          aria-label="WhatsApp-Thumbnail zurücksetzen"
+          title={tAnsicht('thumbnailZuruecksetzenTitel')}
+          aria-label={tAnsicht('thumbnailZuruecksetzenTitel')}
         >
           {resetThumbnailLoading ? '…' : (
             isBase64Image(resetThumbnailIcon) ? (
-              <img src={resetThumbnailIcon} alt="Thumbnail löschen" className="button-icon-image" draggable="false" />
+              <img src={resetThumbnailIcon} alt={tAnsicht('thumbnailLoeschen')} className="button-icon-image" draggable="false" />
             ) : (
               resetThumbnailIcon
             )

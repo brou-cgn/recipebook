@@ -4,6 +4,13 @@
  * sonst der nächste laufende, sonst der Schritt.
  */
 
+import { erstelleT } from '../i18n/texte';
+import { STANDARD_SPRACHE } from '../i18n/sprachen';
+import kochmodusTexte from '../i18n/texte/kochmodus';
+
+// Texte über t aus src/i18n/texte/kochmodus.js (Mehrsprachigkeit PR 6a); ohne t Deutsch
+const T_DEUTSCH = erstelleT(kochmodusTexte, STANDARD_SPRACHE);
+
 // Ab dieser Restzeit wird ein Rezept als bald fällig hervorgehoben
 export const DUE_SOON_SECONDS = 5 * 60;
 
@@ -38,28 +45,35 @@ export function currentStep(entry) {
 /**
  * @param {{ recipe: Object, stepIndex?: number }} entry Rezept der Sitzung mit seinem Schritt
  * @param {Object} timers Alle Timer der Sitzung (timers[recipeId][stepKey][timerIndex])
+ * @param {Function} [t] Übersetzungsfunktion für kochmodus.js (useTexte), sonst Deutsch
  * @returns {{ kind: 'finished'|'timer'|'step', text: string, shortText?: string, urgent: boolean, label: string,
  *   timer?: Object }} timer: der abgelaufene bzw. nächste laufende Timer (für den Fortschrittsbalken im Karussell)
  */
-export function cookingStatus(entry, timers) {
+export function cookingStatus(entry, timers, t = T_DEUTSCH) {
   let finished = null;
   let next = null;
   Object.values(timers[entry.recipe.id] || {}).forEach((byIndex) => {
-    Object.values(byIndex).forEach((t) => {
-      if (t.finished) finished = finished || t;
-      else if (t.running && (!next || t.endTime < next.endTime)) next = t;
+    Object.values(byIndex).forEach((timer) => {
+      if (timer.finished) finished = finished || timer;
+      else if (timer.running && (!next || timer.endTime < next.endTime)) next = timer;
     });
   });
-  if (finished) return { kind: 'finished', text: 'Fertig', urgent: true, label: 'Timer abgelaufen', timer: finished };
+  if (finished) return { kind: 'finished', text: t('fertig'), urgent: true, label: t('timerAbgelaufen'), timer: finished };
   if (next) {
     const time = formatRemaining(next.remainingSeconds);
-    return { kind: 'timer', text: time, urgent: next.remainingSeconds <= DUE_SOON_SECONDS, label: `Timer ${time}`, timer: next };
+    return { kind: 'timer', text: time, urgent: next.remainingSeconds <= DUE_SOON_SECONDS, label: t('timerRestzeit', { zeit: time }), timer: next };
   }
   const total = countSteps(entry.recipe);
   const step = Math.min((entry.stepIndex || 0) + 1, Math.max(total, 1));
   return total > 0
-    ? { kind: 'step', text: `Schritt ${step} / ${total}`, shortText: `${step} / ${total}`, urgent: false, label: `Schritt ${step} von ${total}` }
-    : { kind: 'step', text: 'Kocht', urgent: false, label: 'kocht' };
+    ? {
+      kind: 'step',
+      text: t('schrittKurz', { schritt: step, gesamt: total }),
+      shortText: `${step} / ${total}`,
+      urgent: false,
+      label: t('schrittVon', { schritt: step, gesamt: total }),
+    }
+    : { kind: 'step', text: t('kocht'), urgent: false, label: t('kochtKlein') };
 }
 
 /**
@@ -93,23 +107,24 @@ const STEP_KEY = /^step_(\d+)$/;
  * aktuellen Schritts fehlt hier, er steht auf dessen Karte. Abgelaufene zuerst, dann nach Restzeit.
  * @param {Object} timers Timer des Rezepts vorn (getTimers: stepKey -> timerIndex -> Timer)
  * @param {number} currentStepIndex der Schritt, der gerade vorn steht
+ * @param {Function} [t] Übersetzungsfunktion für kochmodus.js (useTexte), sonst Deutsch
  * @returns {Array<{ stepIndex: number, kind: 'finished'|'timer', text: string, urgent: boolean, label: string }>}
  */
-export function stepTimerChips(timers, currentStepIndex) {
+export function stepTimerChips(timers, currentStepIndex, t = T_DEUTSCH) {
   const chips = [];
   Object.entries(timers || {}).forEach(([stepKey, byIndex]) => {
     const match = STEP_KEY.exec(stepKey);
     if (!match) return;
     const stepIndex = Number(match[1]);
     if (stepIndex === currentStepIndex) return;
-    Object.values(byIndex || {}).forEach((t) => {
-      if (!t) return;
-      if (t.finished) {
-        chips.push({ stepIndex, kind: 'finished', text: 'Fertig', urgent: true, label: 'Timer abgelaufen', remaining: -1 });
-      } else if (t.running) {
-        const time = formatRemaining(t.remainingSeconds);
+    Object.values(byIndex || {}).forEach((timer) => {
+      if (!timer) return;
+      if (timer.finished) {
+        chips.push({ stepIndex, kind: 'finished', text: t('fertig'), urgent: true, label: t('timerAbgelaufen'), remaining: -1 });
+      } else if (timer.running) {
+        const time = formatRemaining(timer.remainingSeconds);
         chips.push({
-          stepIndex, kind: 'timer', text: time, urgent: t.remainingSeconds <= DUE_SOON_SECONDS, label: `Timer ${time}`, remaining: t.remainingSeconds,
+          stepIndex, kind: 'timer', text: time, urgent: timer.remainingSeconds <= DUE_SOON_SECONDS, label: t('timerRestzeit', { zeit: time }), remaining: timer.remainingSeconds,
         });
       }
     });

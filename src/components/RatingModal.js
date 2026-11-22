@@ -5,6 +5,10 @@ import { rateRecipe, getUserRatingData, subscribeToRatingSummary, getAllRatings,
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import useModalScrollLock from '../hooks/useModalScrollLock';
+import { useSprache, useTexte } from '../contexts/SpracheContext';
+import { formatiereDatum, formatiereZahl } from '../i18n/format';
+import bewertungTexte from '../i18n/texte/bewertung';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 // iOS Safari: reset any zoom triggered by focusing on input fields.
 // Temporarily adding maximum-scale=1.0 forces Safari to snap back to scale 1.
@@ -29,6 +33,9 @@ function resetSafariZoom() {
  * @param {Function} props.onClose       - Called when the modal should close
  */
 function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose }) {
+  const t = useTexte(bewertungTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const { sprache } = useSprache();
   // Wie die Einkaufsliste: Seite dahinter gesperrt
   useModalScrollLock();
   const [avg, setAvg] = useState(0);
@@ -131,7 +138,7 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
   const renderHeartIcon = (filled) => {
     const icon = filled ? heartFilledIcon : heartEmptyIcon;
     if (isBase64Image(icon)) {
-      return <img src={icon} alt={filled ? 'Herz gefüllt' : 'Herz leer'} className="rating-heart-img" />;
+      return <img src={icon} alt={filled ? t('herzGefuellt') : t('herzLeer')} className="rating-heart-img" />;
     }
     return icon;
   };
@@ -139,23 +146,26 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
   const formatDate = (timestamp) => {
     if (!timestamp) return '';
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return formatiereDatum(date, sprache, { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   return (
     <div className="rating-modal-overlay" onClick={handleClose}>
-      <div className="rating-modal" role="dialog" aria-modal="true" aria-label="Rezept bewerten" onClick={(e) => e.stopPropagation()}>
+      <div className="rating-modal" role="dialog" aria-modal="true" aria-label={t('rezeptBewerten')} onClick={(e) => e.stopPropagation()}>
         <div className="rating-modal-header">
-          <h2 className="rating-modal-title">Rezept bewerten</h2>
-          <button className="rating-modal-close" onClick={handleClose} aria-label="Schließen">×</button>
+          <h2 className="rating-modal-title">{t('rezeptBewerten')}</h2>
+          <button className="rating-modal-close" onClick={handleClose} aria-label={tAllgemein('schliessen')}>×</button>
         </div>
         <div className="rating-modal-body">
           {count > 0 && (
             <p className="rating-modal-avg">
-              Ø {avg.toFixed(1)} ({count} {count === 1 ? 'Bewertung' : 'Bewertungen'})
+              {t('durchschnitt', {
+                schnitt: formatiereZahl(avg, sprache, { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+                anzahl: count,
+              })}
             </p>
           )}
-          <div className="rating-modal-hearts" role="group" aria-label="Bewertung auswählen">
+          <div className="rating-modal-hearts" role="group" aria-label={t('bewertungAuswaehlen')}>
             {[1, 2, 3, 4, 5].map((n) => (
               <button
                 key={n}
@@ -163,7 +173,7 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
                 onClick={() => setSelectedRating(n)}
                 onMouseEnter={() => setHoveredRating(n)}
                 onMouseLeave={() => setHoveredRating(null)}
-                aria-label={`${n} von 5 Herzen`}
+                aria-label={t('vonFuenf', { anzahl: n })}
                 aria-pressed={selectedRating === n}
               >
                 {renderHeartIcon(activeRating >= n)}
@@ -176,7 +186,7 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
               type="text"
               value={guestName}
               onChange={(e) => setGuestName(e.target.value)}
-              placeholder="Dein Name *"
+              placeholder={t('deinName')}
               maxLength={50}
               required
             />
@@ -185,29 +195,29 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
             className="rating-comment-input"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder="Kommentar (optional)…"
+            placeholder={t('kommentar')}
             rows={3}
           />
           {allRatings.length > 0 && (
             <div className="rating-reviews-list">
-              <h3 className="rating-reviews-title">Alle Bewertungen</h3>
+              <h3 className="rating-reviews-title">{t('alleBewertungen')}</h3>
               {allRatings.map((r) => (
                 <div key={r.id} className="rating-review-item">
                   <div className="rating-review-header">
-                    <span className="rating-review-name">{r.raterName || 'Anonym'}</span>
+                    <span className="rating-review-name">{r.raterName || t('anonym')}</span>
                     <span className="rating-review-date">{formatDate(r.updatedAt || r.createdAt)}</span>
                     {canDeleteRatings && (
                       <button
                         className="rating-review-delete-btn"
                         onClick={() => handleDeleteRating(r.id)}
-                        title="Bewertung löschen"
-                        aria-label="Bewertung löschen"
+                        title={t('bewertungLoeschen')}
+                        aria-label={t('bewertungLoeschen')}
                       >
-                        Löschen
+                        {tAllgemein('loeschen')}
                       </button>
                     )}
                   </div>
-                  <div className="rating-review-hearts" aria-label={`${r.rating} von 5 Herzen`}>
+                  <div className="rating-review-hearts" aria-label={t('vonFuenf', { anzahl: r.rating })}>
                     {[1, 2, 3, 4, 5].map((n) => (
                       <span key={n} className={`rating-review-heart ${r.rating >= n ? 'filled' : 'empty'}`}>
                         {renderHeartIcon(r.rating >= n)}
@@ -221,13 +231,13 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
           )}
         </div>
         <div className="rating-modal-footer">
-          <Button variant="secondary" onClick={handleClose}>Abbrechen</Button>
+          <Button variant="secondary" onClick={handleClose}>{tAllgemein('abbrechen')}</Button>
           <Button
             variant="primary"
             onClick={handleSave}
             disabled={!selectedRating || isSubmitting || saved || (isGuest && !guestName.trim())}
           >
-            {saved ? '✓ Gespeichert' : isSubmitting ? 'Speichern…' : 'Speichern'}
+            {saved ? tAllgemein('gespeichert') : isSubmitting ? tAllgemein('speichernKurz') : tAllgemein('speichern')}
           </Button>
         </div>
       </div>

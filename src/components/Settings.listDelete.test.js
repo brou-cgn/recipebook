@@ -82,7 +82,7 @@ describe('Settings – Listen: Löschen mit Rückgängig (Tech-Check D1)', () =>
 
     fireEvent.click(screen.getByRole('button', { name: 'Spanisch entfernen' }));
     expect(typeNames()).not.toContain('Spanisch');
-    expect(screen.getByText(/„Spanisch" entfernt/)).toBeInTheDocument();
+    expect(screen.getByText(/„Spanisch“ entfernt/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Spanisch aus Südeuropa entfernen' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));

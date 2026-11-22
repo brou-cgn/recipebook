@@ -6,9 +6,17 @@ import './ShoppingListModal.css';
 import useFadeOutClose from '../hooks/useFadeOutClose';
 import useModalScrollLock from '../hooks/useModalScrollLock';
 import Button from './Button';
+import { useTexte } from '../contexts/SpracheContext';
+import einkaufslisteTexte from '../i18n/texte/einkaufsliste';
+import allgemeinTexte from '../i18n/texte/allgemein';
+
+// Produktname, in allen Sprachen gleich
+const BRING = 'Bring!';
 
 function ShoppingListModal({ items, title, onClose: onCloseProp, shareId, onEnableSharing, hideBringButton, bringButtonIcon, accentTheme }) {
   const [closing, onClose] = useFadeOutClose(onCloseProp);
+  const t = useTexte(einkaufslisteTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
   useModalScrollLock();
   const [listItems, setListItems] = useState(() =>
     items.map((text, index) => ({ id: index, text, checked: false }))
@@ -94,7 +102,7 @@ function ShoppingListModal({ items, title, onClose: onCloseProp, shareId, onEnab
         sid = await onEnableSharing();
       }
       if (!sid) {
-        alert('Dieser Eintrag muss zuerst geteilt werden, um ihn an Bring! zu übergeben.');
+        alert(t('teilenNoetig'));
         return;
       }
       // Only export unchecked (open) items. The items in listItems are already
@@ -129,7 +137,7 @@ function ShoppingListModal({ items, title, onClose: onCloseProp, shareId, onEnab
       window.location.href = bringUrl;
     } catch (err) {
       console.error('Bring! export failed:', err);
-      alert('Fehler beim Exportieren zu Bring!. Bitte versuchen Sie es erneut.');
+      alert(t('fehlerBring'));
     } finally {
       setBringLoading(false);
     }
@@ -141,16 +149,16 @@ function ShoppingListModal({ items, title, onClose: onCloseProp, shareId, onEnab
         className={`shopping-list-modal${accentTheme === 'event' ? ' shopping-list-modal--event' : ''}`}
         role="dialog"
         aria-modal="true"
-        aria-label="Einkaufsliste"
+        aria-label={t('einkaufsliste')}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="shopping-list-header">
-          <h2 className="shopping-list-title">Einkaufsliste</h2>
+          <h2 className="shopping-list-title">{t('einkaufsliste')}</h2>
           <button
             ref={closeButtonRef}
             className="shopping-list-close"
             onClick={onClose}
-            aria-label="Einkaufsliste schließen"
+            aria-label={t('schliessen')}
           >
             ×
           </button>
@@ -162,7 +170,7 @@ function ShoppingListModal({ items, title, onClose: onCloseProp, shareId, onEnab
 
         <div className="shopping-list-body">
           {listItems.length === 0 ? (
-            <p className="shopping-list-empty">Keine Zutaten vorhanden.</p>
+            <p className="shopping-list-empty">{t('keineZutaten')}</p>
           ) : (
             <ul className="shopping-list-items">
               {listItems.map((item) => (
@@ -199,9 +207,9 @@ function ShoppingListModal({ items, title, onClose: onCloseProp, shareId, onEnab
                     <button
                       className="shopping-list-edit-btn"
                       onClick={() => !item.checked && startEditing(item.id, item.text)}
-                      aria-label="Zutat bearbeiten"
+                      aria-label={t('zutatBearbeiten')}
                       disabled={item.checked}
-                      title="Bearbeiten"
+                      title={tAllgemein('bearbeiten')}
                     >
                       <PencilIcon />
                     </button>
@@ -214,24 +222,24 @@ function ShoppingListModal({ items, title, onClose: onCloseProp, shareId, onEnab
 
         <div className="shopping-list-footer">
           <span className="shopping-list-count">
-            {checkedCount} / {listItems.length} erledigt
+            {t('erledigt', { erledigt: checkedCount, gesamt: listItems.length })}
           </span>
           <Button
             variant="ghost"
             className="shopping-list-reset"
             onClick={() => setListItems(prev => prev.map(i => ({ ...i, checked: false })))}
           >
-            Zurücksetzen
+            {t('zuruecksetzen')}
           </Button>
           {!hideBringButton && <button
             className={`shopping-list-bring-btn${isBringIconImage ? ' shopping-list-bring-btn--image' : ''}`}
             onClick={handleBringExport}
             disabled={bringLoading || listItems.length === 0}
-            title="Einkaufsliste an Bring! übergeben"
+            title={t('anBring')}
           >
             {bringLoading ? '…' : (
               isBringIconImage
-                ? <img src={bringButtonIcon} alt="Bring!" className="bring-btn-icon-img" />
+                ? <img src={bringButtonIcon} alt={BRING} className="bring-btn-icon-img" />
                 : (bringButtonIcon || 'Bring') + ' Bring!'
             )}
           </button>}

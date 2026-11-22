@@ -635,3 +635,30 @@ describe('RecipeDetail - Edit FAB Long Press', () => {
     expect(onEdit).toHaveBeenCalledWith(recipe);
   });
 });
+
+describe('RecipeDetail - Step Timer in anderer Sprache (Mehrsprachigkeit PR 6a)', () => {
+  // Erkannt wird die Zeit im deutschen Original; Beschriftung und Alarm stehen in der geltenden Sprache
+  const zeige = (sprache) => {
+    renderWithProviders(
+      <RecipeDetail recipe={mockRecipe} onBack={() => {}} onEdit={() => {}} onDelete={() => {}} currentUser={currentUser} />,
+      { sprache }
+    );
+    enterCookingMode();
+    return document.querySelectorAll('.step-timer-start-btn');
+  };
+
+  test('Englisch: Dauer kurz auf dem Knopf, lang in der Beschriftung', () => {
+    const [minuten, stunden] = zeige('en');
+    expect(minuten).toHaveTextContent('10 min');
+    expect(minuten).toHaveAttribute('aria-label', 'Start timer for 10 minutes');
+    expect(stunden).toHaveTextContent('2 hrs');
+    expect(document.querySelector('.cooking-mode-text')).toHaveTextContent('Cooking mode');
+  });
+
+  test('Französisch: Stunden als „h“, Mehrzahl nach den Regeln der Sprache', () => {
+    const [minuten, stunden] = zeige('fr');
+    expect(minuten).toHaveAttribute('aria-label', 'Démarrer le minuteur de 10 minutes');
+    expect(stunden).toHaveTextContent('2 h');
+    expect(stunden).toHaveAttribute('aria-label', 'Démarrer le minuteur de 2 heures');
+  });
+});

@@ -4,6 +4,9 @@ import { getRecentlyCookedRecipeIds } from '../utils/recipeCookDates';
 import { getRecipeThumbnail } from '../utils/recipeThumbnail';
 import useModalScrollLock from '../hooks/useModalScrollLock';
 import useFadeOutClose from '../hooks/useFadeOutClose';
+import { useRezeptTitel, useTexte } from '../contexts/SpracheContext';
+import kochmodusTexte from '../i18n/texte/kochmodus';
+import allgemeinTexte from '../i18n/texte/allgemein';
 import './CookingAddRecipeSheet.css';
 
 /**
@@ -20,6 +23,8 @@ const MAX_RECENT = 5;
 const normalize = (text) => (text || '').toLocaleLowerCase('de');
 
 function RecipeRow({ recipe, onSelect }) {
+  const t = useTexte(kochmodusTexte);
+  const titel = useRezeptTitel()(recipe);
   const thumbnail = getRecipeThumbnail(recipe);
   return (
     <li>
@@ -27,14 +32,14 @@ function RecipeRow({ recipe, onSelect }) {
         type="button"
         className="add-recipe-sheet-row"
         onClick={() => onSelect(recipe)}
-        aria-label={`${recipe.title} dazunehmen`}
+        aria-label={t('dazunehmen', { titel })}
       >
         {thumbnail ? (
           <img className="add-recipe-sheet-thumb" src={thumbnail} alt="" />
         ) : (
           <span className="add-recipe-sheet-thumb add-recipe-sheet-thumb--empty" aria-hidden="true" />
         )}
-        <span className="add-recipe-sheet-title">{recipe.title}</span>
+        <span className="add-recipe-sheet-title">{titel}</span>
         <span className="add-recipe-sheet-plus" aria-hidden="true">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
             <path d="M12 5v14" />
@@ -71,6 +76,10 @@ function CookingAddRecipeSheet({
   onSelect,
   onClose: onCloseProp,
 }) {
+  const t = useTexte(kochmodusTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  // Titel in der geltenden Sprache (Mehrsprachigkeit PR 6a); die Suche findet Original und Übersetzung
+  const zeigeTitel = useRezeptTitel();
   // Wie die Einkaufsliste: Seite dahinter gesperrt, Overlay blendet aus
   useModalScrollLock();
   const [closing, onClose] = useFadeOutClose(onCloseProp);
@@ -118,38 +127,38 @@ function CookingAddRecipeSheet({
   const results = useMemo(() => {
     if (!trimmedQuery) return [];
     const q = normalize(trimmedQuery);
+    const passt = (r) => normalize(r.title).includes(q) || normalize(zeigeTitel(r)).includes(q);
+    const beginnt = (r) => normalize(zeigeTitel(r)).startsWith(q) || normalize(r.title).startsWith(q);
     return allRecipes
-      .filter((r) => r && !excluded.has(r.id) && normalize(r.title).includes(q))
+      .filter((r) => r && !excluded.has(r.id) && passt(r))
       .sort((a, b) =>
-        (normalize(b.title).startsWith(q) - normalize(a.title).startsWith(q))
-        || (a.title || '').localeCompare(b.title || '', 'de'))
+        (beginnt(b) - beginnt(a))
+        || (zeigeTitel(a) || '').localeCompare(zeigeTitel(b) || '', 'de'))
       .slice(0, MAX_RESULTS);
-  }, [trimmedQuery, allRecipes, excluded]);
+  }, [trimmedQuery, allRecipes, excluded, zeigeTitel]);
 
   return (
     <div className={`add-recipe-sheet-root${closing ? ' add-recipe-sheet-root--closing' : ''}`}>
       <button
         type="button"
         className="add-recipe-sheet-scrim"
-        aria-label="Schließen"
+        aria-label={tAllgemein('schliessen')}
         tabIndex={-1}
         onClick={onClose}
       />
       <div className="add-recipe-sheet" role="dialog" aria-modal="true" aria-labelledby="add-recipe-sheet-heading">
         <div className="add-recipe-sheet-grabber" aria-hidden="true" />
         <div className="add-recipe-sheet-header">
-          <h2 className="add-recipe-sheet-heading" id="add-recipe-sheet-heading">Was kochst du dazu?</h2>
+          <h2 className="add-recipe-sheet-heading" id="add-recipe-sheet-heading">{t('wasKochstDu')}</h2>
           <button type="button" className="add-recipe-sheet-close" onClick={onClose}>
-            Abbrechen
+            {tAllgemein('abbrechen')}
           </button>
         </div>
         {isFull ? (
-          <p className="add-recipe-sheet-hint">
-            Es kochen schon sechs Rezepte gleichzeitig. Beende eines im Kochmodus, bevor du ein weiteres dazunimmst.
-          </p>
+          <p className="add-recipe-sheet-hint">{t('sitzungVoll')}</p>
         ) : (
           <>
-            <p className="add-recipe-sheet-subtitle">„{currentRecipe.title}“ läuft im Hintergrund weiter, samt Timer.</p>
+            <p className="add-recipe-sheet-subtitle">{t('laeuftWeiter', { titel: zeigeTitel(currentRecipe) })}</p>
             <label className="add-recipe-sheet-search">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="6.5" />
@@ -160,28 +169,28 @@ function CookingAddRecipeSheet({
                 className="add-recipe-sheet-search-input"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Rezept suchen"
-                aria-label="Rezept suchen"
+                placeholder={t('rezeptSuchen')}
+                aria-label={t('rezeptSuchen')}
               />
             </label>
             <div className="add-recipe-sheet-body">
               {trimmedQuery ? (
                 results.length > 0 ? (
-                  <SuggestionSection title="Suchergebnisse" recipes={results} onSelect={onSelect} />
+                  <SuggestionSection title={t('suchergebnisse')} recipes={results} onSelect={onSelect} />
                 ) : (
-                  <p className="add-recipe-sheet-hint">Kein Rezept gefunden.</p>
+                  <p className="add-recipe-sheet-hint">{t('keinRezeptGefunden')}</p>
                 )
               ) : (
                 <>
                   <SuggestionSection
-                    title={menu?.name ? `Aus der Festtafel „${menu.name}“` : 'Aus der Festtafel'}
+                    title={menu?.name ? t('ausFesttafelName', { name: menu.name }) : t('ausFesttafel')}
                     recipes={menuSuggestions}
                     onSelect={onSelect}
                   />
-                  <SuggestionSection title="Verknüpfte Rezepte" recipes={linkedSuggestions} onSelect={onSelect} />
-                  <SuggestionSection title="Zuletzt gekocht" recipes={recentSuggestions} onSelect={onSelect} />
+                  <SuggestionSection title={t('verknuepfteRezepte')} recipes={linkedSuggestions} onSelect={onSelect} />
+                  <SuggestionSection title={t('zuletztGekocht')} recipes={recentSuggestions} onSelect={onSelect} />
                   {menuSuggestions.length === 0 && linkedSuggestions.length === 0 && recentSuggestions.length === 0 && (
-                    <p className="add-recipe-sheet-hint">Such nach dem Rezept, das du dazunehmen willst.</p>
+                    <p className="add-recipe-sheet-hint">{t('suchHinweis')}</p>
                   )}
                 </>
               )}

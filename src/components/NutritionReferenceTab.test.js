@@ -91,7 +91,7 @@ describe('NutritionReferenceTab', () => {
     try {
       fireEvent.click(screen.getByRole('button', { name: 'Tomate entfernen' }));
       expect(screen.queryByDisplayValue('dummy-tomate')).not.toBeInTheDocument();
-      expect(screen.getByText(/„Tomate" entfernt/)).toBeInTheDocument();
+      expect(screen.getByText(/„Tomate“ entfernt/)).toBeInTheDocument();
       expect(mockDeleteDoc).not.toHaveBeenCalled();
 
       jest.advanceTimersByTime(6000);

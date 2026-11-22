@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './RecipeImageCarousel.css';
+import { useTexte } from '../contexts/SpracheContext';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 /**
  * A reusable image carousel with scroll-snap, dot indicators, and desktop arrow navigation.
@@ -20,6 +22,7 @@ import './RecipeImageCarousel.css';
  *                   default false).  Use in list/overview contexts for faster loading.
  */
 function RecipeImageCarousel({ images, altText, className = '', onImageClick, useThumbnails = false }) {
+  const t = useTexte(allgemeinTexte);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [loadedImages, setLoadedImages] = useState({});
   const [isVisible, setIsVisible] = useState(false);
@@ -138,14 +141,14 @@ function RecipeImageCarousel({ images, altText, className = '', onImageClick, us
           <button
             className="ric-arrow ric-arrow--prev"
             onClick={handlePrev}
-            aria-label="Vorheriges Bild"
+            aria-label={t('vorherigesBild')}
           >
             ‹
           </button>
           <button
             className="ric-arrow ric-arrow--next"
             onClick={handleNext}
-            aria-label="Nächstes Bild"
+            aria-label={t('naechstesBild')}
           >
             ›
           </button>
@@ -155,7 +158,7 @@ function RecipeImageCarousel({ images, altText, className = '', onImageClick, us
                 key={dotIdx}
                 className={`ric-dot${dotIdx === safeIndex ? ' ric-dot--active' : ''}`}
                 onClick={(e) => { e.stopPropagation(); scrollToIndex(dotIdx); }}
-                aria-label={`Bild ${dotIdx + 1}`}
+                aria-label={t('bildNummer', { nummer: dotIdx + 1 })}
               />
             ))}
           </div>

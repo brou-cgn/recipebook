@@ -5,6 +5,9 @@ import { PUSH_NOT_ALLOWED, cancelTimerPush, scheduleTimerPush, timerAlarmId } fr
 import { getCookingDeviceId, saveCookingSession, subscribeCookingSession } from '../utils/cookingSessionFirestore';
 import CookingAlarmModal from '../components/CookingAlarmModal';
 import UndoSnackbar from '../components/UndoSnackbar';
+import { useRezeptTitel, useTexte } from './SpracheContext';
+import kochmodusTexte from '../i18n/texte/kochmodus';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 /**
  * Kochsitzung (Vorhaben „Parallel kochen“, docs/vorhaben/parallel-kochen.md).
@@ -174,6 +177,13 @@ function useCookingSessionStore({
   syncForUserId = null,
 }) {
   const [timers, setTimers] = useState(NO_TIMERS);
+  // Titel der Mitteilung bei abgelaufenem Timer in der geltenden Sprache (Mehrsprachigkeit PR 6a).
+  // Über eine Ref, damit startAlarm beim Sprachwechsel gleich bleibt.
+  const t = useTexte(kochmodusTexte);
+  const textRef = useRef(t);
+  useEffect(() => {
+    textRef.current = t;
+  }, [t]);
   const [alarm, setAlarm] = useState(null);
   const [entries, setEntries] = useState(NO_ENTRIES);
   const [notice, setNotice] = useState(null);
@@ -266,7 +276,7 @@ function useCookingSessionStore({
     // Im Hintergrund zusätzlich eine Mitteilung – nach dem Ton und so, dass sie ihn nie verhindert.
     // Früher `new Notification()`: Chrome auf Android wirft dabei, der Ton startete dann gar nicht.
     if (document.visibilityState !== 'visible') {
-      showLocalNotification('Timer abgelaufen!', {
+      showLocalNotification(textRef.current('timerAbgelaufenTitel'), {
         body: item.recipeTitle ? `${item.recipeTitle}: ${item.label}` : item.label,
         icon: '/logo192.png',
         badge: '/favicon.ico',
@@ -826,14 +836,17 @@ export function CookingSessionProvider({
     enabled: true, shared: true, onOpenRecipe, persistForUserId, recipes, pushForUserId, syncForUserId,
   });
   const { notice, switchTo } = session;
+  const t = useTexte(kochmodusTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const zeigeTitel = useRezeptTitel();
   return (
     <CookingSessionContext.Provider value={session}>
       {children}
       {notice && (
         <UndoSnackbar
           key={notice.recipe.id}
-          message={`„${notice.recipe.title}“ läuft im Hintergrund`}
-          actionLabel="Zurück"
+          message={t('laeuftImHintergrund', { titel: zeigeTitel(notice.recipe) })}
+          actionLabel={tAllgemein('zurueck')}
           onUndo={() => switchTo(notice.recipe.id)}
         />
       )}

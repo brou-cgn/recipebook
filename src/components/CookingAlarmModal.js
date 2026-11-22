@@ -1,4 +1,7 @@
 import React from 'react';
+import { useTexte } from '../contexts/SpracheContext';
+import kochmodusTexte from '../i18n/texte/kochmodus';
+import allgemeinTexte from '../i18n/texte/allgemein';
 import './CookingAlarmModal.css';
 
 /**
@@ -7,12 +10,14 @@ import './CookingAlarmModal.css';
  * (Kochsitzung, siehe src/contexts/CookingSessionContext.js).
  */
 function CookingAlarmModal({ alarm, onStop }) {
+  const t = useTexte(kochmodusTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
   if (!alarm || alarm.items.length === 0) return null;
 
   return (
     <div className="alarm-modal-overlay">
       <div className="alarm-modal" role="dialog" aria-modal="true" aria-labelledby="alarm-modal-title">
-        <h2 className="alarm-modal-title" id="alarm-modal-title">Timer abgelaufen!</h2>
+        <h2 className="alarm-modal-title" id="alarm-modal-title">{t('timerAbgelaufenTitel')}</h2>
         {alarm.items.map((item, index) => (
           <div className="alarm-modal-item" key={index}>
             {item.recipeTitle && <p className="alarm-modal-recipe">{item.recipeTitle}</p>}
@@ -20,7 +25,7 @@ function CookingAlarmModal({ alarm, onStop }) {
           </div>
         ))}
         <button className="alarm-modal-stop-btn" onClick={onStop}>
-          OK
+          {tAllgemein('ok')}
         </button>
       </div>
     </div>
