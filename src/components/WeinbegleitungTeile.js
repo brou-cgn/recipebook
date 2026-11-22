@@ -1,6 +1,9 @@
 import React, { useId } from 'react';
 import { getRegel, quellenFuerRegel } from '../utils/weinbegleitung/wissensbasis';
 import { weinfarbe } from '../utils/weinbegleitung/anzeige';
+import { regelText } from '../utils/weinbegleitung/sprache';
+import { useSprache, useTexte } from '../contexts/SpracheContext';
+import weinTexte from '../i18n/texte/wein';
 import './WeinbegleitungTeile.css';
 
 /**
@@ -71,6 +74,7 @@ export function WeinSymbol({ stil, icons = null, groesse = 20 }) {
 
 /** Quellenlinks einer Regel (neuer Tab), durch Komma getrennt. */
 export function Quellen({ regelId }) {
+  const t = useTexte(weinTexte);
   const quellen = quellenFuerRegel(regelId);
   if (quellen.length === 0) return null;
   return (
@@ -82,7 +86,7 @@ export function Quellen({ regelId }) {
             href={quelle.url}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={`Quelle: ${quelle.titel} (${quelle.herausgeber})`}
+            aria-label={t('quelle', { titel: quelle.titel, herausgeber: quelle.herausgeber })}
           >
             {quelle.herausgeber}
           </a>
@@ -97,6 +101,8 @@ export function Quellen({ regelId }) {
  * (Rezept-Sheet seit 14.11.2026 ohne Quellen).
  */
 export function Gruende({ regelIds, mitQuellen = true }) {
+  // Kurztexte in der geltenden Sprache (Mehrsprachigkeit PR 6c)
+  const { sprache } = useSprache();
   return (
     <ul className="wein-gruende">
       {(regelIds || []).map((regelId) => {
@@ -104,7 +110,7 @@ export function Gruende({ regelIds, mitQuellen = true }) {
         if (!regel) return null;
         return (
           <li key={regelId}>
-            {regel.kurztext}
+            {regelText(regel, sprache)}
             {mitQuellen && <> <Quellen regelId={regelId} /></>}
           </li>
         );

@@ -3,24 +3,31 @@
  * Menü und Freigabe-Seiten). Reine Funktionen, ohne React.
  */
 import { getCallableErrorDetails } from '../callableErrors';
+import { erstelleT } from '../../i18n/texte';
+import { STANDARD_SPRACHE } from '../../i18n/sprachen';
+import weinTexte from '../../i18n/texte/wein';
 
-export const TEXT_KEIN_STIL = 'Hier lieber Bier oder Wasser';
+// Texte über t aus src/i18n/texte/wein.js (Mehrsprachigkeit PR 6c); ohne t Deutsch
+const T_DEUTSCH = erstelleT(weinTexte, STANDARD_SPRACHE);
 
-const KOERPER = { 1: 'sehr leicht', 2: 'leicht', 3: 'mittel', 4: 'kräftig', 5: 'sehr kräftig' };
-const GERBSTOFF = { 0: 'kaum', 1: 'wenig', 2: 'mittel', 3: 'kräftig' };
-const SUESSE = { 0: 'trocken', 1: 'feinherb', 2: 'lieblich', 3: 'süß' };
+export const TEXT_KEIN_STIL = T_DEUTSCH('keinStil');
+
+// Stufen der Kennwerte, je Stufe ein Text (koerper1 … koerper5 usw. in wein.js)
+const STUFEN = { koerper: [1, 2, 3, 4, 5], gerbstoff: [0, 1, 2, 3], suesse: [0, 1, 2, 3] };
+const stufeText = (art, wert, t) => (STUFEN[art].includes(wert) ? t(`${art}${wert}`) : '');
 
 /**
  * Kennwerte eines Stils in Worten, für die Übersicht im Sheet.
  * @param {Object} stil
+ * @param {Function} [t] - Übersetzungsfunktion für wein.js (useTexte), sonst Deutsch
  * @returns {Array<{name: string, wert: string}>}
  */
-export function kennwerteFuer(stil) {
+export function kennwerteFuer(stil, t = T_DEUTSCH) {
   if (!stil) return [];
   return [
-    { name: 'Körper', wert: KOERPER[stil.koerper] || '' },
-    { name: 'Gerbstoff', wert: GERBSTOFF[stil.tannin] || '' },
-    { name: 'Süße', wert: SUESSE[stil.suesse] || '' },
+    { name: t('koerper'), wert: stufeText('koerper', stil.koerper, t) },
+    { name: t('gerbstoff'), wert: stufeText('gerbstoff', stil.tannin, t) },
+    { name: t('suesse'), wert: stufeText('suesse', stil.suesse, t) },
   ];
 }
 
@@ -50,28 +57,30 @@ export function nurZuText(stil) {
   return teile.length > 0 ? `nur zu ${teile.join(' und ')}` : null;
 }
 
+// Grund aus der Antwort (fehlerGruende) → Schlüssel in wein.js
 const FEHLERTEXTE = {
-  tageslimit: 'Das Tageslimit für Wein-Einschätzungen ist erreicht. Versuch es morgen wieder.',
-  keinZugriff: 'Dieses Rezept kannst du nicht einschätzen lassen.',
-  nichtGefunden: 'Das Rezept wurde nicht gefunden.',
-  kiUngueltig: 'Die Einschätzung war nicht brauchbar. Versuch es später noch einmal.',
-  speichern: 'Die Einschätzung konnte nicht gespeichert werden. Versuch es gleich noch einmal.',
-  rolle: 'Wein-Einschätzungen sind erst ab der Rolle „Bearbeiten“ möglich.',
-  allgemein: 'Die Einschätzung hat nicht geklappt. Versuch es gleich noch einmal.',
+  tageslimit: 'fehlerTageslimit',
+  keinZugriff: 'fehlerKeinZugriff',
+  nichtGefunden: 'fehlerNichtGefunden',
+  kiUngueltig: 'fehlerKiUngueltig',
+  speichern: 'fehlerSpeichern',
+  rolle: 'fehlerRolle',
+  allgemein: 'fehlerAllgemein',
 };
 
 /**
  * Fehlertext für einen Grund aus der Antwort (fehlerGruende) oder einen geworfenen
  * Callable-Fehler.
  * @param {string|Error} grundOderFehler
+ * @param {Function} [t] - Übersetzungsfunktion für wein.js (useTexte), sonst Deutsch
  * @returns {string}
  */
-export function weinprofilFehlertext(grundOderFehler) {
-  if (typeof grundOderFehler === 'string') return FEHLERTEXTE[grundOderFehler] || FEHLERTEXTE.allgemein;
+export function weinprofilFehlertext(grundOderFehler, t = T_DEUTSCH) {
+  if (typeof grundOderFehler === 'string') return t(FEHLERTEXTE[grundOderFehler] || FEHLERTEXTE.allgemein);
   const { code } = getCallableErrorDetails(grundOderFehler);
-  if (code === 'resource-exhausted') return FEHLERTEXTE.tageslimit;
-  if (code === 'permission-denied') return FEHLERTEXTE.rolle;
-  return FEHLERTEXTE.allgemein;
+  if (code === 'resource-exhausted') return t(FEHLERTEXTE.tageslimit);
+  if (code === 'permission-denied') return t(FEHLERTEXTE.rolle);
+  return t(FEHLERTEXTE.allgemein);
 }
 
 /**
