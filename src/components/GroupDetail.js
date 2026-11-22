@@ -23,6 +23,8 @@ import RecipeCard from './RecipeCard';
 import SortCarousel from './SortCarousel';
 import useModalScrollLock from '../hooks/useModalScrollLock';
 import useFadeOutClose from '../hooks/useFadeOutClose';
+import { useSprache } from '../contexts/SpracheContext';
+import { titelFassungen } from '../i18n/rezeptTitel';
 
 const DEFAULT_PORTIONS = 4;
 const TAB_RECIPES = 'rezepte';
@@ -79,6 +81,8 @@ function GroupDetail({
   publicGroupId,
   onMoveRecipeToPublic
 }) {
+  // Mehrsprachigkeit PR 3: die Suche findet Original und Übersetzung des Titels
+  const { inhalteUebersetzen } = useSprache();
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState(TAB_RECIPES);
   const handleTabChange = (tab) => {
@@ -290,12 +294,12 @@ function GroupDetail({
     if (searchTerm?.trim()) {
       const lowerSearchTerm = searchTerm.toLowerCase();
       filtered = filtered.filter(recipe =>
-        recipe.title?.toLowerCase().includes(lowerSearchTerm)
+        titelFassungen(recipe, inhalteUebersetzen).some(titel => titel.toLowerCase().includes(lowerSearchTerm))
       );
     }
 
     return filtered;
-  }, [group, recipes, showFavoritesOnly, favoriteIds, searchTerm]);
+  }, [group, recipes, showFavoritesOnly, favoriteIds, searchTerm, inhalteUebersetzen]);
 
   const sortedGroupRecipes = useMemo(() => {
     const recipeGroups = filteredGroupRecipes.map((recipe) => ({ primaryRecipe: recipe }));

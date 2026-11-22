@@ -304,6 +304,17 @@ describe('Recipe Firestore - Recipe Count', () => {
       expect(gespeichert).not.toHaveProperty('weinprofil');
     });
 
+    it('entfernt titelUebersetzung (nur Cloud Function, Mehrsprachigkeit): kopierte Rezepte übersetzt der Trigger neu', async () => {
+      const { removeUndefinedFields } = jest.requireMock('./firestoreUtils');
+      removeUndefinedFields.mockImplementation((obj) => obj);
+      const titelUebersetzung = { quelle: 'Original', originalSprache: 'de', de: 'Original', en: 'Original', fr: 'Original' };
+      await addRecipe({ title: 'Eigene Version', titelUebersetzung }, 'user1');
+
+      const gespeichert = mockAddDoc.mock.calls[0][1];
+      expect(gespeichert).toMatchObject({ title: 'Eigene Version', authorId: 'user1' });
+      expect(gespeichert).not.toHaveProperty('titelUebersetzung');
+    });
+
     it('should not update recipe_count when no authorId is provided', async () => {
       await addRecipe({ title: 'Test Recipe' }, null);
 

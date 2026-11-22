@@ -34,6 +34,8 @@ const NUR_DEUTSCH = new Set([
   'components/PrintFormatsSettings.js',
   'components/SeasonMatrixTab.js',
   'components/Settings.js',
+  // Einstellungen › KI: Backfill der Titelübersetzungen (Mehrsprachigkeit PR 3)
+  'components/TitelUebersetzungBackfill.js',
   'components/UserManagement.js',
 ]);
 

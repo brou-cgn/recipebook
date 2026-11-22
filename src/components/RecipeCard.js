@@ -5,6 +5,7 @@ import './RecipeList.css';
 import RecipeImageCarousel from './RecipeImageCarousel';
 import RecipeRating from './RecipeRating';
 import { isBase64Image } from '../utils/imageUtils';
+import { useRezeptTitel } from '../contexts/SpracheContext';
 
 const MAX_KULINARIK_TAGS = 5;
 
@@ -32,6 +33,8 @@ function renderKulinarikTags(kulinarik) {
 }
 
 function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, authorName, versionCount, currentUser, privateLists, onAddToPrivateList, onRemoveFromPrivateList, swipeRightIcon, publicGroupId, onMoveRecipeToPublic }) {
+  // Titel in der geltenden Sprache (Mehrsprachigkeit PR 3), sonst das Original
+  const titel = useRezeptTitel()(recipe);
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const isSwiping = useRef(false);
@@ -240,14 +243,14 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
             <RecipeImageCarousel
               key={recipe.id}
               images={orderedImages}
-              altText={recipe.title}
+              altText={titel}
               onImageClick={onClick}
               useThumbnails={true}
             />
           </div>
         )}
         <div className="recipe-card-content">
-          <h3>{recipe.title}</h3>
+          <h3>{titel}</h3>
           {recipe.kulinarik && (Array.isArray(recipe.kulinarik) ? recipe.kulinarik.length > 0 : recipe.kulinarik.trim().length > 0) && (
             <div className="recipe-kulinarik">
               {Array.isArray(recipe.kulinarik)

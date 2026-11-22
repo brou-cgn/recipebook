@@ -38,4 +38,5 @@ Object.assign(exports, require('./handlers/discover'), require('./handlers/follo
     require('./handlers/versionChanges'),
     require('./handlers/cookingTimers'),
     require('./handlers/wichteln'),
-    require('./handlers/weinbegleitung'));
+    require('./handlers/weinbegleitung'),
+    require('./handlers/uebersetzung'));

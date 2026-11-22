@@ -188,10 +188,11 @@ export const subscribeToTempRecipes = (userId, callback) => {
  */
 export const addRecipe = async (recipe, authorId) => {
   try {
-    // ratingAvg/ratingCount und weinprofil schreiben nur Cloud Functions (Tech-Check S29);
-    // firestore.rules lehnt sie beim Anlegen ab. Exportierte Rezepte im Sammelimport und
-    // Rezeptversionen bringen sie mit – ein neues Rezept startet ohne Bewertung und Profil.
-    const { ratingAvg, ratingCount, weinprofil, ...ohneFunctionFelder } = recipe;
+    // ratingAvg/ratingCount, weinprofil und titelUebersetzung schreiben nur Cloud Functions
+    // (Tech-Check S29, Mehrsprachigkeit); firestore.rules lehnt sie beim Anlegen ab. Exportierte
+    // Rezepte im Sammelimport und Rezeptversionen bringen sie mit – ein neues Rezept startet
+    // ohne Bewertung, Profil und Übersetzung (die übersetzt dann der Trigger).
+    const { ratingAvg, ratingCount, weinprofil, titelUebersetzung, ...ohneFunctionFelder } = recipe;
     const recipeData = {
       ...ohneFunctionFelder,
       authorId,

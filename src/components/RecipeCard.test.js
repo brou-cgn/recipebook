@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import RecipeCard from './RecipeCard';
+import { SpracheProvider } from '../contexts/SpracheContext';
 
 const mockRecipeImageCarousel = jest.fn(() => <div data-testid="mock-carousel" />);
 
@@ -125,5 +126,31 @@ describe('RecipeCard swipe-to-reveal list button', () => {
     swipe(card, [{ x: 0, y: 0 }, { x: 60, y: 0 }]);
 
     expect(imageWrapper).toHaveStyle('pointer-events: none');
+  });
+});
+
+describe('RecipeCard – übersetzter Titel (Mehrsprachigkeit PR 3)', () => {
+  const recipe = {
+    id: 'r9',
+    title: 'Omas Apfelkuchen',
+    titelUebersetzung: { quelle: 'Omas Apfelkuchen', originalSprache: 'de', de: 'Omas Apfelkuchen', en: 'Grandma’s apple cake', fr: 'Gâteau de mamie' },
+  };
+
+  test('zeigt den Titel in der geltenden Sprache, wenn übersetzte Inhalte an sind', () => {
+    const { container } = render(
+      <SpracheProvider profilSprache="en" inhalteUebersetzen speicher={null}>
+        <RecipeCard recipe={recipe} onClick={jest.fn()} />
+      </SpracheProvider>
+    );
+    expect(container.querySelector('h3')).toHaveTextContent('Grandma’s apple cake');
+  });
+
+  test('sonst das Original', () => {
+    const { container } = render(
+      <SpracheProvider profilSprache="en" speicher={null}>
+        <RecipeCard recipe={recipe} onClick={jest.fn()} />
+      </SpracheProvider>
+    );
+    expect(container.querySelector('h3')).toHaveTextContent('Omas Apfelkuchen');
   });
 });

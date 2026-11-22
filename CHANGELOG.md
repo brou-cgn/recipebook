@@ -8,6 +8,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 ## [Unreleased]
 
 ### Hinzugefügt
+- Rezepttitel auf Englisch und Französisch (Vorschau mit der Berechtigung „Sprachwahl“): Neue und geänderte Titel übersetzt die App automatisch per KI, bestehende über „Übersetzungen nachtragen“ unter Einstellungen › KI. Kochbuch, Suche und Rezeptansicht zeigen den Titel in der gewählten Sprache, die Rezeptansicht darunter das Original.
 - Sprachwahl (Vorschau, zunächst nur für Admins): In den persönlichen Daten lässt sich die Sprache wählen (Deutsch, English, Français), im Menü lässt sie sich für die laufende Sitzung übersteuern. Übersetzt sind bisher das Menü und die persönlichen Daten; die übrige Oberfläche folgt Bereich für Bereich. Freigeschaltet über die neue Berechtigung „Sprachwahl“ unter „Funktionen nach Berechtigung“.
 - Wichteln: Direktlink `broubook.web.app/wichteln` öffnet die Seite zum Anlegen und Verwalten von Wichtel-Runden, ohne den Weg über Events. Wer nicht angemeldet ist, sieht zuerst die Anmeldung und landet danach direkt dort.
 - Wichteln: Optionales Datum der Feier je Runde, beim Anlegen oder später über „Runde bearbeiten“ – auch nach dem Auslosen. Es steht in der Runde, in der Übersicht, auf der Teilnehmerseite (Deutsch, Englisch, Französisch) und in Einladung, Erinnerung und Neuigkeiten-Mail. Mit Datum kommt die letzte Erinnerung an Wünsche spätestens drei Tage vor der Feier, Neuigkeiten-Mails enden mit dem Tag der Feier.

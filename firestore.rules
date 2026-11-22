@@ -88,20 +88,21 @@ service cloud.firestore {
     }
 
     // Rezept-Felder, die nur Cloud Functions schreiben (Admin SDK umgeht die Regeln):
-    // ratingAvg/ratingCount (aggregateRecipeRating) und weinprofil (generateWeinprofile,
-    // Weinbegleitung). Ein Client darf sie nicht ändern, auch nicht löschen (Tech-Check S29).
+    // ratingAvg/ratingCount (aggregateRecipeRating), weinprofil (generateWeinprofile,
+    // Weinbegleitung) und titelUebersetzung (uebersetzeRezeptTitel, Mehrsprachigkeit).
+    // Ein Client darf sie nicht ändern, auch nicht löschen (Tech-Check S29).
     // Updates, die diese Felder nicht anfassen (Rezept speichern, Freigabe, Nährwerte),
     // bleiben erlaubt; ein unverändert mitgeschickter Wert zählt nicht als Änderung.
     function changesFunctionOwnedRecipeFields() {
       return request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['ratingAvg', 'ratingCount', 'weinprofil']);
+          .hasAny(['ratingAvg', 'ratingCount', 'weinprofil', 'titelUebersetzung']);
     }
 
     // Beim Anlegen gar nicht (Tech-Check S29): sonst ließe sich ein Rezept mit erfundener
     // Bewertung anlegen. addRecipe (src/utils/recipeFirestore.js) entfernt die Felder vorher,
     // auch aus exportierten Rezepten im Sammelimport und aus Rezeptversionen.
     function setsFunctionOwnedRecipeFields() {
-      return request.resource.data.keys().hasAny(['ratingAvg', 'ratingCount', 'weinprofil']);
+      return request.resource.data.keys().hasAny(['ratingAvg', 'ratingCount', 'weinprofil', 'titelUebersetzung']);
     }
 
     // Recipes collection
@@ -115,8 +116,9 @@ service cloud.firestore {
       allow get, list: if isAnyUser() && !isAnonymous();
       allow create: if isEditOrAdmin() && !createsShortcutOrigin() && !setsFunctionOwnedRecipeFields();
       allow delete: if isEditOrAdmin();
-      // ratingAvg/ratingCount (aggregateRecipeRating) und weinprofil (generateWeinprofile)
-      // schreiben nur Cloud Functions, siehe changesFunctionOwnedRecipeFields.
+      // ratingAvg/ratingCount (aggregateRecipeRating), weinprofil (generateWeinprofile) und
+      // titelUebersetzung (uebersetzeRezeptTitel) schreiben nur Cloud Functions, siehe
+      // changesFunctionOwnedRecipeFields.
       allow update: if isEditOrAdmin() && !setsShortcutOrigin() && !changesFunctionOwnedRecipeFields();
 
       // Ratings subcollection – anyone (including guests) may read and write their own rating.
@@ -476,6 +478,11 @@ service cloud.firestore {
     }
     // Tageszähler von generateWeinprofile (Weinbegleitung), je geschätztes Rezept.
     match /aiWeinprofilLimits/{limitId} {
+      allow read, write: if false;
+    }
+    // Tageszähler der Titelübersetzung (Mehrsprachigkeit): uebersetzeRezeptTitel unter
+    // `automatik`, backfillTitelUebersetzungen je Admin, je übersetztem Titel.
+    match /aiTitelUebersetzungLimits/{limitId} {
       allow read, write: if false;
     }
     // Tageszähler des Import-Sweepers recoverStuckImportJobs je Autor (Tech-Check S21).

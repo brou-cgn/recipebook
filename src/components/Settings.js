@@ -26,6 +26,7 @@ import DiscoverTopicsTab from './DiscoverTopicsTab';
 import { downloadRecipesKeywordCsv } from '../utils/recipeKeywordsCsv';
 import DeleteRowButton from './DeleteRowButton';
 import Button from './Button';
+import TitelUebersetzungBackfill from './TitelUebersetzungBackfill';
 import UndoSnackbar from './UndoSnackbar';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
@@ -2205,6 +2206,15 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
           <>
             <div className="settings-tab-header">
               <h2>KI-Einstellungen</h2>
+            </div>
+            <div className="settings-section">
+              <h3>Rezepttitel übersetzen</h3>
+              <p className="section-description">
+                Neue und geänderte Rezepttitel übersetzt die App automatisch ins Deutsche, Englische und Französische
+                (Mehrsprachigkeit). Hier trägst du die Übersetzungen für die bestehenden Rezepte nach; Rezepte mit
+                passender Übersetzung werden übersprungen.
+              </p>
+              <TitelUebersetzungBackfill />
             </div>
             <div className="settings-section">
               <p className="prompt-help-text">

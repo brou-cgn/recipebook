@@ -9,6 +9,8 @@ import SortCarousel from './SortCarousel';
 import { getRecentRecipeViewCounts } from '../utils/recipeCallsFirestore';
 import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
 import { useOptionalNutritionReference } from '../contexts/NutritionReferenceContext';
+import { useSprache } from '../contexts/SpracheContext';
+import { rezeptTitel, titelFassungen } from '../i18n/rezeptTitel';
 import RecipeCard from './RecipeCard';
 import TutorialCard from './TutorialCard';
 
@@ -78,6 +80,8 @@ export function isNewRecipe(recipe, sortSettings) {
 }
 
 export function sortRecipeGroups(groups, sortType, sortSettings, viewCounts, indexSortOptions = {}) {
+  // Titel für die alphabetische Reihenfolge: der angezeigte (Mehrsprachigkeit), sonst das Original
+  const titelVon = indexSortOptions.titelVon || ((recipe) => recipe?.title || '');
   const toMs = (ts) => {
     if (!ts) return 0;
     if (typeof ts.toDate === 'function') return ts.toDate().getTime();
@@ -88,8 +92,8 @@ export function sortRecipeGroups(groups, sortType, sortSettings, viewCounts, ind
 
   if (sortType === 'alphabetical') {
     sorted.sort((a, b) => {
-      const titleA = a.primaryRecipe?.title?.toLowerCase() || '';
-      const titleB = b.primaryRecipe?.title?.toLowerCase() || '';
+      const titleA = titelVon(a.primaryRecipe).toLowerCase();
+      const titleB = titelVon(b.primaryRecipe).toLowerCase();
       const cmp = titleA.localeCompare(titleB);
       if (cmp !== 0) return cmp;
       return toMs(a.primaryRecipe?.createdAt) - toMs(b.primaryRecipe?.createdAt);
@@ -103,8 +107,8 @@ export function sortRecipeGroups(groups, sortType, sortSettings, viewCounts, ind
     filtered.sort((a, b) => {
       const dateDiff = effectiveMs(b.primaryRecipe) - effectiveMs(a.primaryRecipe);
       if (dateDiff !== 0) return dateDiff;
-      const titleA = a.primaryRecipe?.title?.toLowerCase() || '';
-      const titleB = b.primaryRecipe?.title?.toLowerCase() || '';
+      const titleA = titelVon(a.primaryRecipe).toLowerCase();
+      const titleB = titelVon(b.primaryRecipe).toLowerCase();
       return titleA.localeCompare(titleB);
     });
     return filtered;
@@ -128,8 +132,8 @@ export function sortRecipeGroups(groups, sortType, sortSettings, viewCounts, ind
     filtered.sort((a, b) => {
       const countDiff = getViewCount(b) - getViewCount(a);
       if (countDiff !== 0) return countDiff;
-      const titleA = a.primaryRecipe?.title?.toLowerCase() || '';
-      const titleB = b.primaryRecipe?.title?.toLowerCase() || '';
+      const titleA = titelVon(a.primaryRecipe).toLowerCase();
+      const titleB = titelVon(b.primaryRecipe).toLowerCase();
       const cmp = titleA.localeCompare(titleB);
       if (cmp !== 0) return cmp;
       return toMs(a.primaryRecipe?.createdAt) - toMs(b.primaryRecipe?.createdAt);
@@ -170,6 +174,7 @@ const EMPTY_ROWS = [];
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEditTutorial, tutorials = [], categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly = false, showRecipes = true, showTutorials = true, onShowFavoritesOnlyChange, privateLists, onAddToPrivateList, onRemoveFromPrivateList, publicGroupId, onMoveRecipeToPublic, cookDatesMap = new Map(), seasonMatrixEntries = [] }) {
   const nutritionReferenceRows = useOptionalNutritionReference()?.rows ?? EMPTY_ROWS;
+  const { sprache, inhalteUebersetzen } = useSprache();
   const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnlyProp || showSeasonalOnly || !showRecipes || !showTutorials || (activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
@@ -408,15 +413,16 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEdi
       const lowerSearchTerm = searchTerm.toLowerCase();
       filteredGroups = filteredGroups.filter(group => {
         // Search in any recipe title within the group
-        return group.allRecipes.some(recipe => 
-          recipe.title?.toLowerCase().includes(lowerSearchTerm)
+        return group.allRecipes.some(recipe =>
+          titelFassungen(recipe, inhalteUebersetzen).some(titel => titel.toLowerCase().includes(lowerSearchTerm))
         );
       });
     }
 
     // Sort groups based on active sort option
-    return sortRecipeGroups(filteredGroups, activeSort, sortSettings, viewCounts, { favoriteIds, cookDatesMap, seasonMatrixEntries, nutritionReferenceRows });
-  }, [allRecipeGroups, showFavoritesOnly, favoriteIds, searchTerm, activeSort, sortSettings, viewCounts, cookDatesMap, seasonMatrixEntries, nutritionReferenceRows]);
+    const titelVon = (recipe) => rezeptTitel(recipe, sprache, inhalteUebersetzen);
+    return sortRecipeGroups(filteredGroups, activeSort, sortSettings, viewCounts, { favoriteIds, cookDatesMap, seasonMatrixEntries, nutritionReferenceRows, titelVon });
+  }, [allRecipeGroups, showFavoritesOnly, favoriteIds, searchTerm, activeSort, sortSettings, viewCounts, cookDatesMap, seasonMatrixEntries, nutritionReferenceRows, sprache, inhalteUebersetzen]);
 
   const handleRecipeClick = (group) => {
     // Select the recipe that is at the top according to current sorting order
