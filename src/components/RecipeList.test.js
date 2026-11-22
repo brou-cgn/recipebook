@@ -1340,3 +1340,30 @@ describe('RecipeList - Filter Button Long Press', () => {
     expect(onClearAllFilters).not.toHaveBeenCalled();
   });
 });
+
+describe('RecipeList - Überschrift in anderen Sprachen (Mehrsprachigkeit PR 6d)', () => {
+  const { SpracheProvider } = require('../contexts/SpracheContext');
+  const liste = (props) => (
+    <RecipeList recipes={mockRecipes} onSelectRecipe={() => {}} onAddRecipe={() => {}} categoryFilter="" {...props} />
+  );
+  const mitSprache = (sprache, ui, extra = {}) => render(
+    <SpracheProvider profilSprache={sprache} speicher={null} {...extra}>{ui}</SpracheProvider>
+  );
+
+  test('Kochbuch und Mein Kochbuch auf Englisch und Französisch', () => {
+    const { unmount } = mitSprache('en', liste());
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Cookbook');
+    unmount();
+    const zwei = mitSprache('en', liste({ showFavoritesOnly: true }));
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('My cookbook');
+    zwei.unmount();
+    mitSprache('fr', liste({ showFavoritesOnly: true }));
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Mes recettes');
+  });
+
+  test('übersetzt die Speisekategorie als Listenwert, gefiltert wird weiter mit dem deutschen Wert', () => {
+    const listenUebersetzungen = { mealCategories: [{ wert: 'Appetizer', en: 'Starters' }] };
+    mitSprache('en', liste({ categoryFilter: 'Appetizer', showFavoritesOnly: true }), { inhalteUebersetzen: true, listenUebersetzungen });
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('My Starters');
+  });
+});

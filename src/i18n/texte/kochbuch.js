@@ -86,6 +86,9 @@ export default {
     filterAufheben: 'Filter aufheben',
     nachFiltern: 'Nach {name} filtern',
     sucheLoeschen: 'Suche löschen',
+    // Überschrift der Liste; „Kochbuch“ selbst steht in bereiche.js
+    meinKochbuch: 'Mein Kochbuch',
+    meineKategorie: 'Meine {kategorie}',
   },
   en: {
     weitereFilter: 'More filters',
@@ -163,6 +166,8 @@ export default {
     filterAufheben: 'Remove filter',
     nachFiltern: 'Filter by {name}',
     sucheLoeschen: 'Clear search',
+    meinKochbuch: 'My cookbook',
+    meineKategorie: 'My {kategorie}',
   },
   fr: {
     weitereFilter: 'Plus de filtres',
@@ -240,5 +245,7 @@ export default {
     filterAufheben: 'Retirer le filtre',
     nachFiltern: 'Filtrer par {name}',
     sucheLoeschen: 'Effacer la recherche',
+    meinKochbuch: 'Mes recettes',
+    meineKategorie: 'Mes {kategorie}',
   },
 };

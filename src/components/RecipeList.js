@@ -9,8 +9,9 @@ import SortCarousel from './SortCarousel';
 import { getRecentRecipeViewCounts } from '../utils/recipeCallsFirestore';
 import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
 import { useOptionalNutritionReference } from '../contexts/NutritionReferenceContext';
-import { useSprache, useTexte } from '../contexts/SpracheContext';
+import { useListenwerte, useSprache, useTexte } from '../contexts/SpracheContext';
 import kochbuchTexte from '../i18n/texte/kochbuch';
+import bereicheTexte from '../i18n/texte/bereiche';
 import { rezeptTitel, titelFassungen } from '../i18n/rezeptTitel';
 import RecipeCard from './RecipeCard';
 import TutorialCard from './TutorialCard';
@@ -178,6 +179,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEdi
   const { sprache, inhalteUebersetzen } = useSprache();
   // Texte des Kochbuchs (Mehrsprachigkeit PR 6d)
   const t = useTexte(kochbuchTexte);
+  const tB = useTexte(bereicheTexte);
+  const listenwerte = useListenwerte();
   const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnlyProp || showSeasonalOnly || !showRecipes || !showTutorials || (activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
@@ -393,10 +396,11 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEdi
       return activePrivateListName;
     }
     if (!categoryFilter) {
-      return showFavoritesOnly ? 'Mein Kochbuch' : 'Kochbuch';
+      return showFavoritesOnly ? t('meinKochbuch') : tB('kochbuch');
     }
-    const prefix = showFavoritesOnly ? 'Meine ' : '';
-    return `${prefix}${categoryFilter}`;
+    // Speisekategorie als Listenwert (Mehrsprachigkeit PR 5), gespeichert bleibt der deutsche Wert
+    const kategorie = listenwerte.text('mealCategories', categoryFilter);
+    return showFavoritesOnly ? t('meineKategorie', { kategorie }) : kategorie;
   };
 
   const userCanEdit = canEditRecipes(currentUser);
