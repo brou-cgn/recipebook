@@ -27,7 +27,7 @@ scripts/screenshots/run.sh entwurf --css entwurf.css --variants desktop-hell,han
 zu ändern; `--variants` beschränkt auf einzelne Varianten. Läuft auf dem Port des Dev-Servers
 (5174) schon ein Server, bricht der Lauf ab, damit die Bilder nicht dessen Stand zeigen.
 
-Ein voller Lauf macht 240 Bilder in vier Varianten. Jedes Bild meldet sich neu an und braucht in
+Ein voller Lauf macht 252 Bilder in vier Varianten. Jedes Bild meldet sich neu an und braucht in
 der Cloud-Session gut fünf Sekunden (gemessen am 22.11.2026), der volle Lauf also gut 20 Minuten;
 für Vorher-nachher-Vergleiche einzelner Bildschirme reichen `--only` und `--variants`. Ergebnis:
 je Variante ein Ordner mit PNG-Dateien und eine `index.html` mit allen Bildern als Raster.
@@ -47,7 +47,7 @@ dann beide `index.html` nebeneinander ansehen.
 2. `seed.js` leert die Emulatoren und legt die Testdaten an: Admin-Konto `testkoch@example.com`
    (Passwort `screenshots-only`, gilt nur im Emulator), sechs Rezepte mit Platzhalterbildern, die
    öffentliche und zwei private Listen (eine als Inspirationssammlung), ein Menü, ein Event, ein
-   Kochtagebuch-Eintrag und eine Bewertung der Linsensuppe. Für Admins ist die Startseite („Küche“)
+   Kochtagebuch-Eintrag und eine Bewertung der Linsensuppe sowie ein Eintrag der Saisonmatrix. Für Admins ist die Startseite („Küche“)
    freigeschaltet, sie ist daher der erste Bildschirm nach der Anmeldung. Geschrieben wird über die REST-Schnittstelle des Emulators an den Regeln vorbei; die
    App selbst läuft mit den echten `firestore.rules`.
 3. `capture.js` startet Vite mit `REACT_APP_USE_EMULATORS=true`, meldet sich an und fotografiert

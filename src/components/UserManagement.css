@@ -175,44 +175,10 @@
   justify-content: center;
 }
 
-.action-btn {
-  padding: 6px 12px;
-  background: var(--color-surface-input);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: all 0.2s;
-}
-
-.action-btn:hover:not(:disabled) {
-  background: #e5e5e5;
-  transform: scale(1.1);
-}
-
-.action-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.edit-btn:hover:not(:disabled) {
-  background: #e3f2fd;
-  border-color: #2196f3;
-}
-
-.role-btn:hover:not(:disabled) {
-  background: #f3e5f5;
-  border-color: #9c27b0;
-}
-
-.password-btn:hover:not(:disabled) {
-  background: #fff3e0;
-  border-color: #ff9800;
-}
-
-.delete-btn:hover:not(:disabled) {
-  background: #ffebee;
-  border-color: #f44336;
+/* Zeilen-Aktionen der Tabelle (components/Button.js): kompakt, damit vier nebeneinander passen */
+.users-table .user-row-action {
+  padding: 0 12px;
+  white-space: nowrap;
 }
 
 /* Fotoscan / Permission Toggle */
@@ -503,11 +469,6 @@
   .user-management-container .action-buttons {
     flex-direction: column;
     gap: 4px;
-  }
-
-  .action-btn {
-    padding: 4px 8px;
-    font-size: 14px;
   }
 
   .modal {

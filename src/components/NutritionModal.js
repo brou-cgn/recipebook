@@ -1828,16 +1828,19 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
                                   if (e.key === 'Escape') setEditingIngredient(null);
                                 }}
                               />
-                              <button
-                                className="nutrition-reformulation-confirm-btn"
-                                onClick={() => handleSaveReformulation(item.ingredient, editingText)}
-                                title={t('umformulierungSpeichern')}
-                              >✓</button>
-                              <button
-                                className="nutrition-reformulation-cancel-btn"
-                                onClick={() => setEditingIngredient(null)}
-                                title={tAllgemein('abbrechen')}
-                              >×</button>                            </div>
+                              <div className="nutrition-reformulation-actions">
+                                <Button onClick={() => setEditingIngredient(null)}>
+                                  {tAllgemein('abbrechen')}
+                                </Button>
+                                <Button
+                                  variant="primary"
+                                  onClick={() => handleSaveReformulation(item.ingredient, editingText)}
+                                  title={t('umformulierungSpeichern')}
+                                >
+                                  {tAllgemein('speichern')}
+                                </Button>
+                              </div>
+                            </div>
                           ) : (
                             <>
                               <div className="nutrition-not-included-row">

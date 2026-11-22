@@ -1483,9 +1483,10 @@ function ButtonIconsAdminTab() {
                       <button
                         key={variantLabel}
                         type="button"
-                        className={`bia-modal-apply-btn${editing.apply[i] ? ' bia-modal-apply-btn--checked' : ''}`}
+                        className={`bia-modal-apply-toggle${editing.apply[i] ? ' bia-modal-apply-toggle--checked' : ''}`}
                         onClick={() => toggleApply(i)}
                         disabled={disabled}
+                        aria-pressed={Boolean(editing.apply[i])}
                       >
                         <span className="bia-modal-apply-check" aria-hidden="true">{editing.apply[i] ? '✓' : ''}</span>
                         {variantLabel}

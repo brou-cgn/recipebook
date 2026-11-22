@@ -456,7 +456,6 @@
   color: #e8e8e8;
 }
 
-[data-theme="dark"] .action-btn,
 [data-theme="dark"] .icon-btn {
   color: #e8e8e8;
 }
@@ -2958,16 +2957,6 @@
 
 [data-theme="dark"] .user-management-header h2 {
   color: #e8e8e8;
-}
-
-[data-theme="dark"] .action-btn {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
-[data-theme="dark"] .action-btn:hover:not(:disabled) {
-  background: #333;
 }
 
 [data-theme="dark"] .role-badge.role-admin {

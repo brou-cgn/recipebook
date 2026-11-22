@@ -182,17 +182,14 @@
 
 .season-matrix-actions {
   display: flex;
+  align-items: center;
   gap: 0.35rem;
 }
 
-.season-matrix-edit-btn,
-.season-matrix-delete-btn {
-  border: 1px solid #ddd;
-  background: white;
-  border-radius: 6px;
-  padding: 0.3rem 0.5rem;
-  font-size: 0.82rem;
-  cursor: pointer;
+/* Zeilen-Aktionen (components/Button.js) kompakt in der Tabellenzelle */
+.season-matrix-actions .ui-button {
+  padding: 0 12px;
+  white-space: nowrap;
 }
 
 .season-matrix-inline-input,
@@ -214,11 +211,6 @@
 .season-matrix-inline-checkbox {
   width: 1rem;
   height: 1rem;
-}
-
-.season-matrix-delete-btn {
-  border-color: #ffc7c7;
-  color: #b12626;
 }
 
 .season-matrix-form {
@@ -343,9 +335,7 @@
 [data-theme="dark"] .season-matrix-grid input,
 [data-theme="dark"] .season-matrix-grid select,
 [data-theme="dark"] .season-matrix-full-width input,
-[data-theme="dark"] .season-matrix-full-width textarea,
-[data-theme="dark"] .season-matrix-edit-btn,
-[data-theme="dark"] .season-matrix-delete-btn {
+[data-theme="dark"] .season-matrix-full-width textarea {
   background: #1d1d1d;
   border-color: #444;
   color: #e8e8e8;

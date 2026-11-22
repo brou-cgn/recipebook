@@ -4,7 +4,8 @@
  *
  * Leert Auth- und Firestore-Emulator und legt dann an: ein Admin-Konto, sechs Rezepte mit
  * Platzhalterbildern, die öffentliche Liste, zwei private Listen (eine davon die interaktive
- * Inspirationssammlung), ein Menü und ein Event. Die Startseite („Küche“) ist für Admins
+ * Inspirationssammlung), ein Menü, ein Event, einen Kochtagebuch-Eintrag, eine Bewertung und einen
+ * Eintrag der Saisonmatrix. Die Startseite („Küche“) ist für Admins
  * freigeschaltet und hat Inspirationssammlung und Alltagsklassiker gesetzt, damit ihre
  * Karussells samt Plus-Knöpfen erscheinen (Tech-Check T9).
  * Alles erfunden und als Testdaten erkennbar. Schreibt über die REST-Schnittstelle der
@@ -184,6 +185,13 @@ async function main() {
     rating: 4, userId: null, raterName: 'Anna', comment: 'Mit Brot sehr gut.', createdAt: now, updatedAt: now,
   });
 
+  // Ein Eintrag der Saisonmatrix (Einstellungen › Saisonmatrix: Zeile mit Bearbeiten und Löschen). Quitte passt zu
+  // keinem Testrezept, die übrigen Bilder (etwa „Saisonale Rezepte“ auf der Startseite) bleiben so unverändert.
+  await setDoc('seasonMatrix/quitte', {
+    name: 'Quitte', category: 'Obst', mainSeasonMonths: [10, 11], secondarySeasonMonths: [9, 12], seasonScore: 3,
+    isActive: true, region: 'GLOBAL', synonyms: [], description: 'Testdaten', updatedAt: now,
+  });
+
   await setDoc('menus/menu-sonntag', {
     name: 'Sonntagsessen', description: 'Drei Gänge für sechs Personen', authorId: uid, privat: false,
     sections: [
@@ -199,7 +207,7 @@ async function main() {
     guests: { adults: 18, children: 4 }, berechnung: { ergebnis: [] }, ownerId: uid, createdAt: now.toISOString(),
   });
 
-  console.log(`Testdaten angelegt: ${ACCOUNT.email} (Admin, mit Startseite), ${RECIPES.length} Rezepte, ${aufrufNr} Rezeptaufrufe, 3 Listen, 1 Menü, 1 Event, 1 Kochdatum, 1 Bewertung.`);
+  console.log(`Testdaten angelegt: ${ACCOUNT.email} (Admin, mit Startseite), ${RECIPES.length} Rezepte, ${aufrufNr} Rezeptaufrufe, 3 Listen, 1 Menü, 1 Event, 1 Kochdatum, 1 Bewertung, 1 Saisonmatrix-Eintrag.`);
 }
 
 if (require.main === module) {

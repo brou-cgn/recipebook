@@ -492,6 +492,24 @@ const SCREENS = [
       await shot();
     },
   })),
+  // Tabellen der Verwaltung mit einer Zeile in Bearbeitung: Abbrechen und Speichern in der Zeile (Schritt 7)
+  ...[
+    ['einstellungen-saison-bearbeiten', 'Saisonmatrix', '.season-matrix-actions'],
+    ['einstellungen-getraenke-bearbeiten', 'Getränkegewichtung', '.drink-weights-actions'],
+  ].map(([name, label, actions]) => ({
+    name,
+    fullPage: true,
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Einstellungen');
+      await page.locator('.tab-button', { hasText: label }).first().click();
+      await pause(page, 1000);
+      await page.locator(actions).first().getByRole('button', { name: 'Bearbeiten', exact: true }).click();
+      // Maus weg, sonst zeigt der Knopf, der jetzt unter ihr liegt, seinen Hover-Zustand
+      await page.mouse.move(0, 0);
+      await pause(page, 500);
+      await shot();
+    },
+  })),
   // App-Aufrufe (Küchenbetrieb, Admin), je Reiter als ganze Seite (Button-System Schritt 4c)
   ...[
     ['appaufrufe', null],
@@ -523,6 +541,20 @@ const SCREENS = [
       page.once('dialog', (dialog) => dialog.accept());
       await page.getByRole('button', { name: 'Auf Vorlage umstellen' }).first().click();
       await pause(page, 1000);
+      await shot();
+    },
+  },
+  {
+    // Benutzertabelle nach rechts gescrollt: Die Spalte „Aktionen“ liegt sonst außerhalb des Bildes
+    name: 'einstellungen-benutzer-aktionen',
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Einstellungen');
+      await page.locator('.tab-button', { hasText: 'Benutzerverwaltung' }).first().click();
+      await pause(page, 1000);
+      const tabelle = page.locator('.users-table-container').first();
+      await tabelle.scrollIntoViewIfNeeded();
+      await tabelle.evaluate((el) => { el.scrollLeft = el.scrollWidth; });
+      await pause(page, 300);
       await shot();
     },
   },

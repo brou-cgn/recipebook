@@ -365,45 +365,35 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                     <td>{aiOcrScanCounts[user.id] ?? 0}</td>
                     <td>{user.recipe_count ?? 0}</td>
                     <td>
-                      <button
-                        className={`action-btn versteckt-btn${user.versteckt ? ' active' : ''}`}
+                      <Button
+                        className="user-row-action"
                         onClick={() => handleToggleHidden(user)}
                         title={user.versteckt ? 'Benutzer einblenden' : 'Benutzer verstecken'}
+                        aria-pressed={Boolean(user.versteckt)}
                       >
                         {user.versteckt ? 'Ja' : 'Nein'}
-                      </button>
+                      </Button>
                     </td>
                     <td>
                       <div className="action-buttons">
-                        <button 
-                          className="action-btn edit-btn" 
-                          onClick={() => handleEditUser(user)}
-                          title="Name bearbeiten"
-                        >
-                          Edit
-                        </button>
-                        <button 
-                          className="action-btn role-btn" 
-                          onClick={() => handleOpenRoleEdit(user)}
-                          title="Berechtigung ändern"
-                        >
-                          Bearb.
-                        </button>
-                        <button 
-                          className="action-btn password-btn" 
-                          onClick={() => handleOpenPasswordReset(user)}
-                          title="Temporäres Passwort setzen"
-                        >
-                          Pw.
-                        </button>
-                        <button 
-                          className="action-btn delete-btn" 
+                        <Button className="user-row-action" onClick={() => handleEditUser(user)} title="Name bearbeiten">
+                          Name
+                        </Button>
+                        <Button className="user-row-action" onClick={() => handleOpenRoleEdit(user)} title="Berechtigung ändern">
+                          Rolle
+                        </Button>
+                        <Button className="user-row-action" onClick={() => handleOpenPasswordReset(user)} title="Temporäres Passwort setzen">
+                          Passwort
+                        </Button>
+                        <Button
+                          variant="danger-quiet"
+                          className="user-row-action"
                           onClick={() => handleOpenDeleteConfirm(user)}
                           title="Benutzer löschen"
                           disabled={user.id === currentUser?.id}
                         >
                           Löschen
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>
