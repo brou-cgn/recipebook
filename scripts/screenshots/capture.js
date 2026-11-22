@@ -240,7 +240,7 @@ const SCREENS = [
     variants: ['desktop-hell', 'desktop-dunkel'],
     run: async (page, shot) => {
       await openMenuItem(page, 'Chefkoch & mehr');
-      await page.locator('[aria-label^="Meine Mise en Place"]').first().click();
+      await page.getByRole('button', { name: 'Meine Mise en Place' }).first().click();
       await pause(page, 1000);
       await page.getByText('+ Liste erstellen').first().click();
       await page.getByRole('dialog').first().waitFor();
@@ -378,7 +378,7 @@ const SCREENS = [
       await shot();
     },
   })),
-  { name: 'chefkoch', run: async (page, shot) => { await openMenuItem(page, 'Chefkoch & mehr'); await shot(); } },
+  { name: 'chefkoch', fullPage: true, run: async (page, shot) => { await openMenuItem(page, 'Chefkoch & mehr'); await shot(); } },
   { name: 'einstellungen', run: async (page, shot) => { await openMenuItem(page, 'Einstellungen'); await shot(); } },
   // Weitere Reiter der Einstellungen (Admin), je als ganze Seite
   ...[

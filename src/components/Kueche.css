@@ -1,3 +1,10 @@
+/* „Chefkoch & mehr“ (Kueche.js), Variante A des Designvorschlags
+   https://claude.ai/artifact/5S6yBvMf7j4JvfHLCzwQU2 (Bento): Profilkarte und „Mein Kochbuch“
+   breit, darunter ein Raster farbiger Kacheln, die Verwaltung in einem eigenen Abschnitt.
+   Farben nur über Tokens (src/tokens.css); jede Kachel setzt --kachel-farbe, Fläche und Balken
+   werden daraus gemischt, damit hell und dunkel ohne eigene Regeln stimmen. Textfarben auf p und
+   span mit mindestens zwei Klassen (Tech-Check A7, src/darkTextPolicy.test.js). */
+
 .kueche-container {
   padding: 1.5rem;
   max-width: 1200px;
@@ -5,7 +12,7 @@
 }
 
 .kueche-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .kueche-header h2 {
@@ -15,200 +22,296 @@
   color: var(--color-text-strong);
 }
 
+/* ---- Raster: zwei Spalten, ab 900 px vier ---- */
+.kueche-raster {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.kueche-tile--chefkoch,
+.kueche-tile--breit,
+.kueche-zeitleiste {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 900px) {
+  .kueche-raster {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .kueche-tile--chefkoch,
+  .kueche-tile--breit {
+    grid-column: span 2;
+  }
+}
+
+/* ---- Kachel ---- */
 .kueche-tile {
+  --kachel-farbe: var(--color-text-strong);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+  min-height: 140px;
+  box-sizing: border-box;
+  padding: 1rem;
+  border-radius: 20px;
   background: var(--color-surface-card);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid var(--color-accent);
-  margin-bottom: 0.75rem;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  height: 120px;
-}
-
-.kueche-tile.kueche-tile--chefkoch {
-  border-left-color: #1A1A1A;
-}
-
-.kueche-tile.kueche-tile--netzwerk {
-  border-left-color: #2F5D62;
-}
-
-.kueche-tile--netzwerk .kueche-tile-content h3 {
-  color: #2F5D62;
-}
-
-.kueche-tile.kueche-tile--mise-en-place {
-  border-left-color: #5A2A4A;
-}
-
-.kueche-tile--mise-en-place .kueche-tile-content h3 {
-  color: #5A2A4A;
-}
-
-.kueche-tile.kueche-tile--appaufrufe {
-  border-left-color: #7A2E2E;
-}
-
-.kueche-tile--appaufrufe .kueche-tile-content h3 {
-  color: #7A2E2E;
-}
-
-.kueche-tile.kueche-tile--meine-kuechenstars {
-  border-left-color: #556B2F;
-}
-
-.kueche-tile--meine-kuechenstars .kueche-tile-content h3 {
-  color: #556B2F;
-}
-
-.kueche-tile.kueche-tile--eventplanung {
-  border-left-color: #2F5D50;
-}
-
-.kueche-tile--eventplanung .kueche-tile-content h3 {
-  color: #2F5D50;
-}
-
-.kueche-tile.kueche-tile--weinbegleitung {
-  border-left-color: var(--color-wein-rot);
-}
-
-.kueche-tile--weinbegleitung .kueche-tile-content h3 {
-  color: var(--color-wein-rot);
+  background: color-mix(in srgb, var(--kachel-farbe) 9%, var(--color-surface-card));
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .kueche-tile:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px var(--color-kachel-schatten);
 }
 
-.kueche-tile-content {
-  position: relative;
-  padding: 15px 18px 10px;
-  display: block;
-  height: 100%;
-  box-sizing: border-box;
+.kueche-tile--meinkochbuch { --kachel-farbe: var(--color-accent-text); }
+.kueche-tile--meine-kuechenstars { --kachel-farbe: var(--color-kachel-stars); }
+.kueche-tile--netzwerk { --kachel-farbe: var(--color-kachel-netzwerk); }
+.kueche-tile--mise-en-place { --kachel-farbe: var(--color-kachel-mise); }
+.kueche-tile--weinbegleitung { --kachel-farbe: var(--color-kachel-wein); }
+.kueche-tile--appaufrufe { --kachel-farbe: var(--color-kachel-betrieb); }
+.kueche-tile--eventplanung { --kachel-farbe: var(--color-kachel-events); }
+
+/* Profil und Verwaltung auf neutraler Karte, nur der Titel trägt die Farbe */
+.kueche-raster .kueche-tile--chefkoch,
+.kueche-verwaltung .kueche-tile {
+  background: var(--color-surface-card);
 }
 
-.kueche-tile-content h3 {
-  margin: 0 0 0.5rem 0;
-  color: var(--color-accent);
-  font-size: 1.25rem;
+.kueche-tile__kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
-.kueche-tile--chefkoch .kueche-tile-content h3 {
-  color: var(--color-text-strong);
+.kueche-tile .kueche-tile__titel {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--kachel-farbe);
 }
 
-.kueche-tile--chefkoch .kueche-tile-meta {
+/* Der Titel ist der Knopf; sein ::after macht die ganze Kachel klickbar */
+.kueche-tile .kueche-tile__knopf {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  /* Knöpfe setzen beides im Browser zurück; die Profilkarte braucht die Großschrift */
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.kueche-tile__knopf::after {
+  content: '';
   position: absolute;
-  bottom: 10px;
-  margin-top: 0;
+  inset: 0;
+  border-radius: 20px;
 }
 
-.kueche-tile--netzwerk .kueche-tile-meta,
-.kueche-tile--mise-en-place .kueche-tile-meta,
-.kueche-tile--meinkochbuch .kueche-tile-meta,
-.kueche-tile--appaufrufe .kueche-tile-meta,
-.kueche-tile--meine-kuechenstars .kueche-tile-meta,
-.kueche-tile--eventplanung .kueche-tile-meta,
-.kueche-tile--weinbegleitung .kueche-tile-meta {
-  position: absolute;
-  bottom: 10px;
-  margin-top: 0;
+.kueche-tile__knopf:focus-visible {
+  outline: none;
 }
 
-.kueche-tile-description {
-  margin: 0 0 1rem 0;
-  color: var(--color-text-muted);
-  font-size: 0.9rem;
-  line-height: 1.4;
+.kueche-tile__knopf:focus-visible::after {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.kueche-tile .kueche-tile__aktion {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--kachel-farbe);
+  white-space: nowrap;
+}
+
+.kueche-tile__punkt {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--color-accent);
+}
+
+/* ---- Zahlen und Diagramm ---- */
+.kueche-tile__inhalt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.kueche-tile--breit .kueche-tile__inhalt {
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
 }
 
 .kueche-tile-meta {
   display: flex;
-  gap: 1rem;
-  font-size: 0.85rem;
-  color: var(--color-text-soft);
-  font-weight: 500;
+  gap: 1.25rem;
+  min-width: 0;
 }
 
-.kueche-tile-meta .meta-text {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.25rem;
+.kueche-tile .meta-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
-.kueche-tile-meta .meta-text strong {
+.kueche-tile .meta-text strong {
+  font-size: 1.9rem;
   font-weight: 700;
-  font-size: 1.4rem;
-  color: #000;
-}
-
-.kueche-tile--chefkoch .kueche-tile-meta .meta-text,
-.kueche-tile--meinkochbuch .kueche-tile-meta .meta-text,
-.kueche-tile--mise-en-place .kueche-tile-meta .meta-text,
-.kueche-tile--appaufrufe .kueche-tile-meta .meta-text,
-.kueche-tile--meine-kuechenstars .kueche-tile-meta .meta-text,
-.kueche-tile--eventplanung .kueche-tile-meta .meta-text,
-.kueche-tile--weinbegleitung .kueche-tile-meta .meta-text {
-  margin-bottom: 6px;
-}
-
-.kueche-section-title {
-  margin: 2rem 0 0.5rem;
-  padding-left: 1rem;
-}
-
-.kueche-section-title h3 {
-  margin: 0;
-  font-size: 1.3rem;
-  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
   color: var(--color-text-strong);
 }
 
-.kueche-bar-chart {
-  position: absolute;
-  right: 18px;
-  bottom: 10px;
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  height: 52px;
-}
-
-.kueche-bar-chart__bar {
-  width: 9px;
-  border-radius: 3px 3px 0 0;
-  background-color: #E0E0E0;
-  min-height: 8px;
-  margin-bottom: 6px;
-}
-
-.kueche-bar-chart__bar--appaufrufe {
-  background-color: #7A2E2E;
-}
-
-.kueche-bar-chart__bar--meinkochbuch {
-  background-color: var(--color-accent);
-}
-
-.kueche-bar-chart__bar--meine-kuechenstars {
-  background-color: #556B2F;
-}
-
-.kueche-bar-chart__bar--eventplanung {
-  background-color: #2F5D50;
-}
-
-.kueche-tile--meine-kuechenstars .kueche-tile-meta .meta-text span {
-  max-width: 110px;
+.kueche-tile .meta-text span {
+  font-size: 0.85rem;
+  color: var(--color-text-body);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.kueche-tile .kueche-tile-leer {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.kueche-bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 52px;
+  flex-shrink: 0;
+}
+
+.kueche-bar-chart__bar {
+  width: 9px;
+  min-height: 4px;
+  border-radius: 3px;
+  background: var(--color-border);
+  background: color-mix(in srgb, var(--kachel-farbe) 30%, transparent);
+}
+
+/* In schmalen Kacheln läuft das Diagramm über die ganze Breite */
+.kueche-tile:not(.kueche-tile--breit) .kueche-bar-chart {
+  height: 24px;
+  gap: 3px;
+}
+
+.kueche-tile:not(.kueche-tile--breit) .kueche-bar-chart__bar {
+  flex: 1 1 0;
+  width: auto;
+}
+
+/* Der heutige Tag bzw. der laufende Monat in voller Farbe */
+.kueche-bar-chart__bar--meinkochbuch,
+.kueche-bar-chart__bar--meine-kuechenstars,
+.kueche-bar-chart__bar--appaufrufe,
+.kueche-bar-chart__bar--eventplanung {
+  background: var(--kachel-farbe);
+}
+
+/* ---- Profilkarte ---- */
+.kueche-raster .kueche-profil {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.9rem;
+  min-height: 0;
+}
+
+.kueche-profil .kueche-profil__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.kueche-profil__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.kueche-profil .kueche-profil__rolle {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.kueche-profil .kueche-profil__name {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text-strong);
+  overflow-wrap: anywhere;
+}
+
+.kueche-profil .kueche-profil__signatur {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.kueche-profil .kueche-profil__pfeil {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--color-text-faint);
+}
+
+/* ---- Abschnitt Verwaltung ---- */
+.kueche-verwaltung {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+
+.kueche-verwaltung .kueche-abschnitt-titel {
+  margin: 0;
+  padding: 0 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kueche-tile {
+    transition: none;
+  }
+
+  .kueche-tile:hover {
+    transform: none;
+  }
+}
+
+/* ---- Schwebender Knopf (Küche-Aktion) ---- */
 .kueche-fab-button {
   position: fixed;
   right: 20px;

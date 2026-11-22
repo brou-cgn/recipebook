@@ -42,7 +42,6 @@ const BASELINE = {
   'components/ImportProgressDialog.css': 16,
   'components/ImportProgressIndicator.css': 5,
   'components/KalibrierungsAuswertung.css': 4,
-  'components/Kueche.css': 16,
   'components/Login.css': 45,
   'components/MeineKuechenstarsPage.css': 7,
   'components/MemberProfilePage.css': 3,
@@ -139,8 +138,9 @@ describe('Farb-Token-Richtlinie', () => {
 // (AGENTS.md). Gezählt werden die [data-theme="dark"]-Selektoren; der Wert darf nur
 // sinken (Tech-Check D5: am 27.10.2026 kamen trotz Regel sieben neue dazu). 22.11.2026: 947 → 935,
 // die zwölf Regeln der Profilseite stehen jetzt als Tokens in PersonalDataPage.css. 22.11.2026: 935 → 934,
-// der Slogan im Header nutzt das Token --color-accent-text.
-const DARK_MODE_SELECTORS = 934;
+// der Slogan im Header nutzt das Token --color-accent-text. 934 → 928: die sechs Regeln von
+// „Chefkoch & mehr“ ersetzen die Kachel-Tokens in Kueche.css (Variante A).
+const DARK_MODE_SELECTORS = 928;
 
 describe('darkMode.css (Altbestand)', () => {
   const css = fs.readFileSync(path.join(SRC, 'darkMode.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
