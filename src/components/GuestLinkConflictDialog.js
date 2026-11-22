@@ -1,6 +1,9 @@
 import React from 'react';
 import './GuestLinkConflictDialog.css';
 import Button from './Button';
+import { useTexte } from '../contexts/SpracheContext';
+import festtafelTexte from '../i18n/texte/festtafel';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 /**
  * Shown when linking a menu to an existing event and BOTH already have their
@@ -14,36 +17,38 @@ import Button from './Button';
  * @param {Function} props.onCancel
  */
 function GuestLinkConflictDialog({ eventGuestCount, menuGuestCount, onChoose, onCancel }) {
+  // Texte der Festtafel (Mehrsprachigkeit PR 6g)
+  const t = useTexte(festtafelTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const mitAnzahl = typeof eventGuestCount === 'number' && typeof menuGuestCount === 'number';
   return (
     <div className="guest-link-conflict-overlay" onClick={onCancel}>
       <div className="guest-link-conflict-modal" onClick={(e) => e.stopPropagation()}>
         <div className="guest-link-conflict-header">
-          <h2 className="guest-link-conflict-title">Gästelisten zusammenführen</h2>
-          <button className="guest-link-conflict-close" onClick={onCancel} aria-label="Schließen">×</button>
+          <h2 className="guest-link-conflict-title">{t('konfliktTitel')}</h2>
+          <button className="guest-link-conflict-close" onClick={onCancel} aria-label={tAllgemein('schliessen')}>×</button>
         </div>
         <div className="guest-link-conflict-body">
           <p>
-            Du hast an Event und Menü bereits Gäste erfasst
-            {typeof eventGuestCount === 'number' && typeof menuGuestCount === 'number'
-              ? ` (Event: ${eventGuestCount}, Menü: ${menuGuestCount})`
-              : ''}
-            , welche möchtest du übernehmen?
+            {mitAnzahl
+              ? t('konfliktFrageAnzahl', { event: eventGuestCount, menue: menuGuestCount })
+              : t('konfliktFrage')}
           </p>
           <div className="guest-link-conflict-options">
             <Button variant="secondary" fullWidth onClick={() => onChoose('event')}>
-              Gäste vom Event
+              {t('gaesteVomEvent')}
             </Button>
             <Button variant="secondary" fullWidth onClick={() => onChoose('menu')}>
-              Gäste vom Menü
+              {t('gaesteVomMenue')}
             </Button>
             <Button variant="secondary" fullWidth onClick={() => onChoose('all')}>
-              Alle Gäste
+              {t('alleGaeste')}
             </Button>
           </div>
         </div>
         <div className="guest-link-conflict-footer">
           <Button variant="ghost" onClick={onCancel}>
-            Abbrechen
+            {tAllgemein('abbrechen')}
           </Button>
         </div>
       </div>

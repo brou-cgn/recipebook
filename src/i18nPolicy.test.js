@@ -44,8 +44,8 @@ const NUR_DEUTSCH = new Set([
   'components/WeinprofilEinblick.js',
 ]);
 
-// Stand 22.11.2026 (PR 6f, Festtafel Teil 1, zusammen mit „Chefkoch & mehr“ aus #3738):
-// 1156 Textstellen in 59 Dateien.
+// Stand 22.11.2026 (PR 6g, Festtafel Teil 2, zusammen mit den Unterseiten von „Chefkoch & mehr“
+// aus #3742): 1032 Textstellen in 56 Dateien.
 const BASELINE = {
   'App.js': 5,
   'components/AtelierCategorySelectionPage.js': 5,
@@ -65,7 +65,6 @@ const BASELINE = {
   'components/GroupDetail.js': 53,
   'components/GroupEditDialog.js': 21,
   'components/GroupList.js': 12,
-  'components/GuestLinkConflictDialog.js': 9,
   'components/GuestManagementPage.js': 55,
   'components/ImportProgressDialog.js': 9,
   'components/ImportProgressIndicator.js': 3,
@@ -73,7 +72,6 @@ const BASELINE = {
   'components/Login.js': 18,
   'components/MeineKuechenstarsPage.js': 6,
   'components/MemberProfilePage.js': 6,
-  'components/MenuForm.js': 78,
   'components/NetworkPage.js': 14,
   'components/OcrScanModal.js': 38,
   'components/PasswordChangeModal.js': 8,
@@ -94,7 +92,6 @@ const BASELINE = {
   'components/TutorialVideoModal.js': 2,
   'components/UniversalImportModal.js': 17,
   'components/WebImportModal.js': 9,
-  'components/Weinbegleitung.js': 23,
   'components/WeinbegleitungSeite.js': 24,
   'components/WichtelPage.js': 66,
   'components/WichtelTeilnehmerFormular.js': 11,

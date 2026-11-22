@@ -5,7 +5,7 @@ import './MenuForm.css';
 import Button from './Button';
 import './EventsPage.css';
 import { getUserFavorites } from '../utils/userFavorites';
-import { getSavedSections, saveSectionNames, createMenuSection, applyItemOrder } from '../utils/menuSections';
+import { getSavedSections, saveSectionNames, createMenuSection, applyItemOrder, abschnittAnzeige } from '../utils/menuSections';
 import { fuzzyFilter } from '../utils/fuzzySearch';
 import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage, convertImageUrlsToBase64, isBase64Image } from '../utils/imageUtils';
 import { uploadMenuGridImage, uploadMenuGridImageDark, deleteMenuGridImage, deleteMenuGridImageDark, isStorageUrl } from '../utils/storageUtils';
@@ -28,6 +28,11 @@ import UndoSnackbar from './UndoSnackbar';
 import GuestLinkConflictDialog from './GuestLinkConflictDialog';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
+import { useRezeptTitel, useSprache, useTexte } from '../contexts/SpracheContext';
+import { titelFassungen } from '../i18n/rezeptTitel';
+import { formatiereDatum } from '../i18n/format';
+import festtafelTexte from '../i18n/texte/festtafel';
+import allgemeinTexte from '../i18n/texte/allgemein';
 import {
   DndContext,
   closestCenter,
@@ -48,13 +53,9 @@ import { CSS } from '@dnd-kit/utilities';
 
 const MOBILE_BREAKPOINT = 768;
 
-const formatEventDate = (dateStr) => {
+const formatEventDate = (dateStr, sprache) => {
   if (!dateStr) return '';
-  try {
-    return new Date(dateStr).toLocaleDateString('de-DE');
-  } catch {
-    return dateStr;
-  }
+  return formatiereDatum(dateStr, sprache, { day: 'numeric', month: 'numeric', year: 'numeric' }) || dateStr;
 };
 
 // A recipe is selectable in the menu's "Drinks" section only if it's tagged
@@ -73,18 +74,22 @@ const recipeHasDrinksCategory = (recipe) => {
 // persisted section.itemOrder is reconciled against the current items via
 // applyItemOrder, falling back to "recipes, then event drinks, then manual
 // drinks" for sections that don't have a saved order yet.
-const getDrinksSectionItems = (section, recipes, eventDrinksForSection, getDrinkDisplayName) => {
+// zeigeTitel: Rezepttitel in der geltenden Sprache (useRezeptTitel); ohne das Original.
+const getDrinksSectionItems = (section, recipes, eventDrinksForSection, getDrinkDisplayName, zeigeTitel = (rezept) => rezept.title) => {
   const renderableRecipeIds = (section.recipeIds || []).filter((recipeId) => recipes.some((r) => r.id === recipeId));
   const dedupedEventDrinks = eventDrinksForSection.filter((drink) => !drink.recipeId || !section.recipeIds.includes(drink.recipeId));
   const eventDrinkIds = dedupedEventDrinks.map((drink) => drink.id);
   const manualDrinkIds = (section.drinkIds || []).filter((drinkId) => !eventDrinkIds.includes(drinkId));
   const baseItems = [
-    ...renderableRecipeIds.map((recipeId) => ({
-      compositeId: `recipe:${recipeId}`,
-      type: 'recipe',
-      id: recipeId,
-      displayName: recipes.find((r) => r.id === recipeId)?.title || recipeId,
-    })),
+    ...renderableRecipeIds.map((recipeId) => {
+      const rezept = recipes.find((r) => r.id === recipeId);
+      return {
+        compositeId: `recipe:${recipeId}`,
+        type: 'recipe',
+        id: recipeId,
+        displayName: (rezept && zeigeTitel(rezept)) || recipeId,
+      };
+    }),
     ...dedupedEventDrinks.map((drink) => ({ compositeId: `event:${drink.id}`, type: 'event', id: drink.id, displayName: drink.displayName })),
     ...manualDrinkIds.map((drinkId) => ({ compositeId: `manual:${drinkId}`, type: 'manual', id: drinkId, displayName: getDrinkDisplayName(drinkId) })),
   ];
@@ -110,6 +115,11 @@ function SortableSection({
     transition,
     isDragging,
   } = useSortable({ id });
+
+  // Texte der Festtafel (Mehrsprachigkeit PR 6g); Titel in der geltenden Sprache
+  const t = useTexte(festtafelTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const zeigeTitel = useRezeptTitel();
 
   // Own sensor instances for this section's recipe-reordering DndContext.
   // Sharing sensor instances with the outer, section-reordering DndContext
@@ -141,7 +151,7 @@ function SortableSection({
   // customDrinkIds links back to the same recipe) and against manually
   // added drinks, so the same drink never shows up twice in the merged list
   // below.
-  const { dedupedEventDrinks, manualDrinkIds, items: drinkSectionItems } = getDrinksSectionItems(section, recipes, eventDrinks, getDrinkDisplayName);
+  const { dedupedEventDrinks, manualDrinkIds, items: drinkSectionItems } = getDrinksSectionItems(section, recipes, eventDrinks, getDrinkDisplayName, zeigeTitel);
   const hasSelectedRecipesOrDrinks = section.recipeIds.length > 0 || dedupedEventDrinks.length > 0 || manualDrinkIds.length > 0;
 
   // section.recipeIds can contain ids of recipes that no longer resolve (e.g.
@@ -189,20 +199,20 @@ function SortableSection({
           className="drag-handle section-drag-handle"
           {...attributes}
           {...listeners}
-          aria-label="Abschnitt verschieben"
+          aria-label={t('abschnittVerschieben')}
         >
           ⋮⋮
         </button>
-        <h4>{section.name}</h4>
+        <h4>{abschnittAnzeige(section.name, t)}</h4>
         <div className="section-actions">
           <button
             type="button"
             className="app-close-button remove-section-button"
             onClick={() => onRemoveSection(sectionIndex)}
-            title="Abschnitt löschen"
+            title={t('abschnittLoeschen')}
           >
             {isBase64Image(closeIcon) ? (
-              <img src={closeIcon} alt="Löschen" className="button-icon-image" draggable="false" />
+              <img src={closeIcon} alt={tAllgemein('loeschen')} className="button-icon-image" draggable="false" />
             ) : (
               closeIcon
             )}
@@ -213,7 +223,7 @@ function SortableSection({
         {isDrinksSection ? (
           hasSelectedRecipesOrDrinks && (
             <div className="selected-recipes">
-              <h5>Ausgewählte Rezepte & Getränke:</h5>
+              <h5>{t('ausgewaehltRezepteGetraenke')}</h5>
               {drinkSectionItems.length > 0 && (
                 <DndContext
                   sensors={recipeSensors}
@@ -246,7 +256,7 @@ function SortableSection({
         ) : (
           section.recipeIds.length > 0 && (
             <div className="selected-recipes">
-              <h5>Ausgewählte Rezepte:</h5>
+              <h5>{t('ausgewaehltRezepte')}</h5>
               {selectedRecipesList}
             </div>
           )
@@ -257,7 +267,7 @@ function SortableSection({
             <input
               type="text"
               className="typeahead-input"
-              placeholder="Rezept suchen und hinzufügen..."
+              placeholder={t('rezeptSuchen')}
               value={searchQueries[sectionIndex] || ''}
               onChange={(e) => onSearchChange(sectionIndex, e.target.value)}
             />
@@ -267,7 +277,7 @@ function SortableSection({
                 {(() => {
                   const filteredRecipes = getFilteredRecipes(sectionIndex);
                   if (filteredRecipes.length === 0) {
-                    return <div className="typeahead-no-results">Keine Rezepte gefunden</div>;
+                    return <div className="typeahead-no-results">{t('keineRezepteGefunden')}</div>;
                   }
                   return filteredRecipes.slice(0, 10).map(recipe => {
                     const isFavorite = favoriteIds.includes(recipe.id);
@@ -278,7 +288,7 @@ function SortableSection({
                         onClick={() => onAddRecipeToSection(sectionIndex, recipe.id)}
                       >
                         <span className="recipe-name">
-                          {recipe.title}
+                          {zeigeTitel(recipe)}
                         </span>
                         {isFavorite && <span className="favorite-indicator"><StarIcon /></span>}
                       </div>
@@ -296,7 +306,7 @@ function SortableSection({
             <input
               type="text"
               className="typeahead-input"
-              placeholder="Rezept oder Getränk suchen und hinzufügen..."
+              placeholder={t('rezeptOderGetraenkSuchen')}
               value={drinkSearchQueries[sectionIndex] || ''}
               onChange={(e) => onDrinkSearchChange(sectionIndex, e.target.value)}
             />
@@ -306,7 +316,7 @@ function SortableSection({
                 {(() => {
                   const filteredOptions = getFilteredDrinkSectionOptions(sectionIndex);
                   if (filteredOptions.length === 0) {
-                    return <div className="typeahead-no-results">Keine Rezepte oder Getränke gefunden</div>;
+                    return <div className="typeahead-no-results">{t('keineRezepteOderGetraenke')}</div>;
                   }
                   return filteredOptions.slice(0, 10).map(option => {
                     if (option.type === 'recipe') {
@@ -317,7 +327,7 @@ function SortableSection({
                           className="typeahead-item"
                           onClick={() => onAddRecipeToDrinksSection(sectionIndex, option.id)}
                         >
-                          <span className="recipe-name">{option.recipe.title}</span>
+                          <span className="recipe-name">{zeigeTitel(option.recipe)}</span>
                           {isFavorite && <span className="favorite-indicator"><StarIcon /></span>}
                         </div>
                       );
@@ -338,13 +348,13 @@ function SortableSection({
           </div>
           <div className="drink-own-filter-row">
             <label className="drink-own-filter-label">
-              <span>Eigene Getränke</span>
+              <span>{t('eigeneGetraenke')}</span>
               <span className="drink-own-filter-toggle drink-own-filter-toggle--brown">
                 <input
                   type="checkbox"
                   checked={showOwnDrinksOnly}
                   onChange={(e) => onToggleShowOwnDrinksOnly(e.target.checked)}
-                  aria-label="Nur eigene Getränke in der Suche anzeigen"
+                  aria-label={t('nurEigeneGetraenke')}
                 />
                 <span className="drink-own-filter-toggle-slider" aria-hidden="true" />
               </span>
@@ -353,9 +363,9 @@ function SortableSection({
         </div>
       )}
       <div className="section-summary">
-        {section.recipeIds.length} Rezept{section.recipeIds.length !== 1 ? 'e' : ''}
+        {t('anzahlRezepte', { anzahl: section.recipeIds.length })}
         {isDrinksSection && (dedupedEventDrinks.length + manualDrinkIds.length) > 0
-          ? `, ${dedupedEventDrinks.length + manualDrinkIds.length} Getränk${(dedupedEventDrinks.length + manualDrinkIds.length) !== 1 ? 'e' : ''}`
+          ? `, ${t('anzahlGetraenke', { anzahl: dedupedEventDrinks.length + manualDrinkIds.length })}`
           : ''}
       </div>
     </div>
@@ -374,6 +384,10 @@ function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex, sw
   } = useSortable({ id });
 
   const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete();
+  // Titel in der geltenden Sprache, auch in der Snackbar (Mehrsprachigkeit PR 6g)
+  const t = useTexte(festtafelTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const titel = useRezeptTitel()(recipe);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -386,7 +400,7 @@ function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex, sw
   };
 
   const handleSwipeDeleteClick = () => {
-    onRemove(sectionIndex, recipe.id, recipe.title);
+    onRemove(sectionIndex, recipe.id, titel);
     reset();
   };
 
@@ -402,7 +416,7 @@ function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex, sw
             type="button"
             className="swipe-delete-action"
             onClick={handleSwipeDeleteClick}
-            aria-label={`${recipe.title} entfernen`}
+            aria-label={tAllgemein('nameEntfernen', { name: titel })}
           >
             {isBase64Image(swipeDeleteIcon) ? (
               <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
@@ -418,18 +432,18 @@ function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex, sw
           className="drag-handle"
           {...attributes}
           {...listeners}
-          aria-label="Rezept verschieben"
+          aria-label={t('rezeptVerschieben')}
         >
           ⋮⋮
         </button>
         <span className="recipe-name" {...handlers}>
-          {recipe.title}
+          {titel}
           {isFavorite && <span className="favorite-indicator"><StarIcon /></span>}
         </span>
         <DeleteRowButton
-          itemName={recipe.title}
+          itemName={titel}
           className="selected-recipe-item-delete-btn"
-          onClick={() => onRemove(sectionIndex, recipe.id, recipe.title)}
+          onClick={() => onRemove(sectionIndex, recipe.id, titel)}
         />
       </div>
     </div>
@@ -450,6 +464,8 @@ function SortableDrinkItem({ id, displayName, isFavorite, onRemove, swipeDeleteI
   } = useSortable({ id });
 
   const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete();
+  const t = useTexte(festtafelTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -478,7 +494,7 @@ function SortableDrinkItem({ id, displayName, isFavorite, onRemove, swipeDeleteI
             type="button"
             className="swipe-delete-action"
             onClick={handleSwipeDeleteClick}
-            aria-label={`${displayName} entfernen`}
+            aria-label={tAllgemein('nameEntfernen', { name: displayName })}
           >
             {isBase64Image(swipeDeleteIcon) ? (
               <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
@@ -494,7 +510,7 @@ function SortableDrinkItem({ id, displayName, isFavorite, onRemove, swipeDeleteI
           className="drag-handle"
           {...attributes}
           {...listeners}
-          aria-label="Eintrag verschieben"
+          aria-label={t('eintragVerschieben')}
         >
           ⋮⋮
         </button>
@@ -569,6 +585,10 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
   // Set while linking to an existing event whose guest list conflicts with
   // this menu's own (both non-empty) - see handleLinkEvent/applyGuestLinkChoice.
   const [guestLinkConflict, setGuestLinkConflict] = useState(null);
+  // Texte der Festtafel (Mehrsprachigkeit PR 6g); die Suche findet Original und Übersetzung der Titel
+  const t = useTexte(festtafelTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const { sprache, inhalteUebersetzen } = useSprache();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -792,7 +812,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
     const recipeOptions = recipes
       .filter(recipeHasDrinksCategory)
       .filter((recipe) => !selectedRecipeIds.includes(recipe.id))
-      .map((recipe) => ({ type: 'recipe', id: recipe.id, recipe, searchLabel: recipe.title }));
+      .map((recipe) => ({ type: 'recipe', id: recipe.id, recipe, searchLabel: titelFassungen(recipe, inhalteUebersetzen).join(' · ') }));
 
     const drinkOptions = allDrinks
       .filter((drink) => !selectedDrinkIds.includes(drink.id))
@@ -1058,13 +1078,14 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
   const handleAddSection = (sectionName = null) => {
     const name = sectionName || newSectionName.trim();
     if (!name) {
-      alert('Bitte geben Sie einen Abschnittsnamen ein');
+      alert(t('alertAbschnittsname'));
       return;
     }
 
-    // Check if section already exists
-    if (sections.some(s => s.name.toLowerCase() === name.toLowerCase())) {
-      alert('Ein Abschnitt mit diesem Namen existiert bereits');
+    // Check if section already exists (also under its displayed name, e.g. „Main course“ for Hauptspeise)
+    const nameKlein = name.toLowerCase();
+    if (sections.some(s => s.name.toLowerCase() === nameKlein || abschnittAnzeige(s.name, t).toLowerCase() === nameKlein)) {
+      alert(t('alertAbschnittDoppelt'));
       return;
     }
 
@@ -1089,7 +1110,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
 
   const handleRemoveSection = (index) => {
     if (sections.length === 1) {
-      alert('Ein Menü muss mindestens einen Abschnitt haben');
+      alert(t('alertMindestensAbschnitt'));
       return;
     }
 
@@ -1097,7 +1118,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
     setSections(sections.filter((_, i) => i !== index));
     notifyDeleted({
       id: `section:${index}:${removed.name}`,
-      name: removed.name,
+      name: abschnittAnzeige(removed.name, t),
       undo: () => {
         setSections((prev) => {
           const next = [...prev];
@@ -1150,7 +1171,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
       const compressed = await compressImage(base64);
       setMenuImage(compressed);
     } catch (error) {
-      alert('Fehler beim Hochladen des Bildes. Bitte versuchen Sie es erneut.');
+      alert(t('fehlerBild'));
     } finally {
       setUploadingMenuImage(false);
     }
@@ -1170,7 +1191,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
 
 
     if (!name.trim()) {
-      alert('Bitte geben Sie einen Menü-Namen ein');
+      alert(t('alertMenueName'));
       return;
     }
 
@@ -1178,7 +1199,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
     const totalRecipes = sections.reduce((sum, section) => sum + section.recipeIds.length, 0);
     const totalDrinks = sections.reduce((sum, section) => sum + (section.drinkIds?.length || 0), 0);
     if (totalRecipes === 0 && totalDrinks === 0) {
-      alert('Bitte wählen Sie mindestens ein Rezept oder Getränk aus');
+      alert(t('alertMindestensRezept'));
       return;
     }
 
@@ -1360,6 +1381,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
             )];
             const targetDriverGuestIds = (linkedEvent.driverGuestIds || []).filter((id) => descriptionGuestIds.includes(id));
             const selectedGuestObjs = guests.filter((guest) => descriptionGuestIds.includes(guest.id));
+            // Bleibt deutsch: geht mit der Kalkulation ins Event (gespeicherte Daten, Mehrsprachigkeit Phase B)
             const guestNamesById = selectedGuestObjs.reduce((acc, guest) => {
               acc[guest.id] = getGuestDisplayName(guest) || 'Unbenannter Gast';
               return acc;
@@ -1421,7 +1443,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
     if (canSyncToEvent) pushGuestsToEvent(eventId, eventOwnerId, next, linkedEvent);
     notifyDeleted({
       id: `description-guest:${guestId}`,
-      name: displayName || 'Gast',
+      name: displayName || t('gast'),
       undo: () => {
         // Kept side-effect-free (the sync push happens after, not inside the
         // updater) so React StrictMode's double-invoke of updater functions
@@ -1495,7 +1517,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
     )));
     notifyDeleted({
       id: `recipe:${sectionIndex}:${recipeId}`,
-      name: displayName || 'Rezept',
+      name: displayName || t('rezept'),
       undo: () => {
         setSections((prev) => prev.map((s, i) => {
           if (i !== sectionIndex || s.recipeIds.includes(recipeId)) return s;
@@ -1583,7 +1605,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
     }
     
     // Use fuzzy search
-    return fuzzyFilter(availableRecipes, query, recipe => recipe.title);
+    return fuzzyFilter(availableRecipes, query, recipe => titelFassungen(recipe, inhalteUebersetzen).join(' · '));
   };
 
   const handleAddSectionFabPressStart = (index) => setAddSectionFabPressedIndex(index);
@@ -1635,19 +1657,19 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
     return (
       <div className="events-page-container">
         <div className="events-page-header">
-          <h2>Bestehende Kalkulation verknüpfen</h2>
+          <h2>{t('kalkulationVerknuepfen')}</h2>
           <button
             className="events-close-btn"
             onClick={() => setFormSubView('main')}
-            aria-label="Abbrechen"
-            title="Abbrechen"
+            aria-label={tAllgemein('abbrechen')}
+            title={tAllgemein('abbrechen')}
           >
             ×
           </button>
         </div>
         {availableEvents.length === 0 ? (
           <div className="events-empty-state">
-            <p>Noch keine Events vorhanden.</p>
+            <p>{t('keineEvents')}</p>
           </div>
         ) : (
           <div className="events-list">
@@ -1655,7 +1677,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
               <div key={event.id} className="events-card" onClick={() => handleLinkEvent(event.id)}>
                 <div className="events-card-main">
                   <h3>{event.eventName}</h3>
-                  <p className="events-card-meta">{formatEventDate(event.date)}</p>
+                  <p className="events-card-meta">{formatEventDate(event.date, sprache)}</p>
                 </div>
               </div>
             ))}
@@ -1676,50 +1698,50 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
   return (
     <div className="menu-form-container">
       <div className="menu-form-header">
-        <h2 className="menu-form-header-title">{menu ? 'Menü bearbeiten' : 'Neues Menü erstellen'}</h2>
+        <h2 className="menu-form-header-title">{menu ? t('menueBearbeiten') : t('neuesMenue')}</h2>
         <div className="menu-form-header-actions">
           <Button
             variant="secondary"
             onClick={onCancel}
             disabled={savingMenu}
-            title="Abbrechen"
-            aria-label="Menübearbeitung abbrechen"
+            title={tAllgemein('abbrechen')}
+            aria-label={t('bearbeitungAbbrechen')}
           >
-            Abbrechen
+            {tAllgemein('abbrechen')}
           </Button>
           <Button
             variant="primary"
             onClick={handleFabClick}
             loading={savingMenu}
-            title={menu ? 'Menü aktualisieren' : 'Menü speichern'}
-            aria-label={menu ? 'Menü aktualisieren' : 'Menü speichern'}
+            title={menu ? t('menueAktualisieren') : t('menueSpeichern')}
+            aria-label={menu ? t('menueAktualisieren') : t('menueSpeichern')}
           >
-            {savingMenu ? 'Speichert …' : (menu ? 'Aktualisieren' : 'Speichern')}
+            {savingMenu ? t('speichert') : (menu ? t('aktualisieren') : tAllgemein('speichern'))}
           </Button>
         </div>
       </div>
 
       <form ref={formRef} className="menu-form" onSubmit={handleSubmit}>
         <div className="form-group">
-          <label htmlFor="menuName">Menü-Name *</label>
+          <label htmlFor="menuName">{t('menueName')}</label>
           <input
             type="text"
             id="menuName"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="z.B. Sonntagsessen, Festtagsmenü"
+            placeholder={t('menueNameBeispiel')}
             required
           />
         </div>
 
         <div className="form-group">
-          <label htmlFor="menuDescription">Beschreibung (optional)</label>
+          <label htmlFor="menuDescription">{t('beschreibung')}</label>
           <div className="menu-description-field">
             {descriptionGuestIds.length > 0 && (
               <div className="menu-description-guest-pills">
                 {descriptionGuestIds.map((guestId) => {
                   const guest = guests.find((g) => g.id === guestId);
-                  const fullName = getGuestDisplayName(guest) || 'Unbenannter Gast';
+                  const fullName = getGuestDisplayName(guest) || t('unbenannterGast');
                   return (
                     <span key={guestId} className="menu-description-guest-pill delete-row-hover-target">
                       {fullName}
@@ -1738,7 +1760,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
               <input
                 type="text"
                 className="typeahead-input menu-description-guest-search-input"
-                placeholder="Suche Gäste und füge sie hinzu"
+                placeholder={t('gaesteSuchen')}
                 value={guestSearchQuery}
                 onChange={(e) => setGuestSearchQuery(e.target.value)}
               />
@@ -1748,7 +1770,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
                   {(() => {
                     const filteredGuests = getFilteredDescriptionGuests();
                     if (filteredGuests.length === 0) {
-                      return <div className="typeahead-no-results">Keine Gäste gefunden</div>;
+                      return <div className="typeahead-no-results">{t('keineGaeste')}</div>;
                     }
                     return filteredGuests.slice(0, 10).map((guest) => (
                       <div
@@ -1756,7 +1778,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
                         className="typeahead-item"
                         onClick={() => handleAddDescriptionGuest(guest.id)}
                       >
-                        <span className="recipe-name">{getGuestDisplayName(guest) || 'Unbenannter Gast'}</span>
+                        <span className="recipe-name">{getGuestDisplayName(guest) || t('unbenannterGast')}</span>
                       </div>
                     ));
                   })()}
@@ -1769,7 +1791,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
               className="menu-description-textarea"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Sag etwas über dein Menü."
+              placeholder={t('beschreibungPlatzhalter')}
               rows="3"
             />
           </div>
@@ -1777,7 +1799,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
 
         <div className="form-group menu-date-row">
           <div className="menu-date-field">
-            <label htmlFor="menuDate">Datum</label>
+            <label htmlFor="menuDate">{t('datumFeld')}</label>
             <input
               type="date"
               id="menuDate"
@@ -1790,12 +1812,12 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
               <label
                 htmlFor="menuImageFile"
                 className="menu-photo-upload-btn"
-                title={uploadingMenuImage ? 'Hochladen...' : 'Foto hochladen'}
+                title={uploadingMenuImage ? t('hochladen') : t('fotoHochladen')}
               >
                 {isBase64Image(getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)) ? (
                   <img
                     src={getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)}
-                    alt="Foto hochladen"
+                    alt={t('fotoHochladen')}
                     className="button-icon-img menu-photo-upload-icon-img"
                   />
                 ) : (
@@ -1817,10 +1839,10 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
         {menuImage && (
           <div className="form-group">
             <div className="menu-image-preview">
-              <img src={menuImage} alt="Menüfoto" />
+              <img src={menuImage} alt={t('menueFoto')} />
               <div className="menu-image-actions">
                 <label htmlFor="menuImageFile" className="menu-image-change-btn">
-                  {uploadingMenuImage ? 'Hochladen...' : 'Ändern'}
+                  {uploadingMenuImage ? t('hochladen') : tAllgemein('aendern')}
                 </label>
                 <button
                   type="button"
@@ -1828,7 +1850,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
                   onClick={handleRemoveMenuImage}
                   disabled={uploadingMenuImage}
                 >
-                  × Entfernen
+                  {t('fotoEntfernen')}
                 </button>
               </div>
             </div>
@@ -1836,25 +1858,25 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
         )}
 
         <div className="form-group">
-          <label>Mengenkalkulation (für Getränke)</label>
+          <label>{t('mengenkalkulation')}</label>
           {eventId ? (
             <div className="menu-event-linked">
               <p className="menu-event-linked-name">
-                {linkedEventLoading ? 'Lädt …' : (linkedEvent?.eventName || 'Verknüpftes Event konnte nicht geladen werden.')}
+                {linkedEventLoading ? t('laedtKurz') : (linkedEvent?.eventName || t('eventFehlt'))}
               </p>
               <div className="menu-drinks-link-actions">
                 <button type="button" className="menu-drinks-link-btn" onClick={() => setFormSubView('linkPicker')}>
-                  Kalkulation ändern
+                  {t('kalkulationAendern')}
                 </button>
                 <button type="button" className="menu-drinks-link-btn" onClick={handleUnlinkEvent}>
-                  Kalkulation entfernen
+                  {t('kalkulationEntfernen')}
                 </button>
               </div>
             </div>
           ) : (
             <div className="menu-drinks-link-actions">
               <button type="button" className="menu-drinks-link-btn" onClick={() => setFormSubView('linkPicker')}>
-                Bestehende Kalkulation verknüpfen
+                {t('kalkulationVerknuepfen')}
               </button>
               <button
                 type="button"
@@ -1862,7 +1884,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
                 onClick={handleStartNewEvent}
                 disabled={preparingNewEvent}
               >
-                {preparingNewEvent ? 'Wird vorbereitet …' : 'Neue Kalkulation erstellen'}
+                {preparingNewEvent ? t('wirdVorbereitet') : t('kalkulationErstellen')}
               </button>
             </div>
           )}
@@ -1870,14 +1892,14 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
 
         <div className="form-section sections-management">
           <div className="sections-header">
-            <h3>Abschnitte & Rezepte</h3>
+            <h3>{t('abschnitteRezepte')}</h3>
             {!isMobile && (
               <button 
                 type="button" 
                 className="add-section-button"
                 onClick={() => { setInsertSectionAtIndex(null); setShowSectionInput(!showSectionInput); }}
               >
-                + Abschnitt hinzufügen
+                {t('plusAbschnitt')}
               </button>
             )}
           </div>
@@ -1885,7 +1907,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
           {showSectionInput && (
             <div className="new-section-input">
               <div className="section-quick-select">
-                <label>Vordefinierte Abschnitte:</label>
+                <label>{t('vordefinierteAbschnitte')}</label>
                 <div className="quick-select-buttons">
                   {availableSections.map(sectionName => (
                     <button
@@ -1895,19 +1917,19 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
                       onClick={() => handleAddSection(sectionName)}
                       disabled={sections.some(s => s.name === sectionName)}
                     >
-                      {sectionName}
+                      {abschnittAnzeige(sectionName, t)}
                     </button>
                   ))}
                 </div>
               </div>
               <div className="custom-section-input">
-                <label>Oder eigenen Namen eingeben:</label>
+                <label>{t('eigenerName')}</label>
                 <div className="input-with-button">
                   <input
                     type="text"
                     value={newSectionName}
                     onChange={(e) => setNewSectionName(e.target.value)}
-                    placeholder="z.B. Fingerfood, Amuse-Bouche"
+                    placeholder={t('abschnittBeispiel')}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -1916,7 +1938,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
                     }}
                   />
                   <Button onClick={() => handleAddSection()}>
-                    Hinzufügen
+                    {tAllgemein('hinzufuegen')}
                   </Button>
                 </div>
               </div>
@@ -1924,7 +1946,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
           )}
 
           {recipes.length === 0 ? (
-            <p className="no-recipes">Keine Rezepte verfügbar. Bitte erstellen Sie zuerst einige Rezepte.</p>
+            <p className="no-recipes">{t('keineRezepteVerfuegbar')}</p>
           ) : (
             <div className="sections-list">
               {isMobile && (
@@ -1939,11 +1961,11 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
                     onMouseDown={() => handleAddSectionFabPressStart(0)}
                     onMouseUp={handleAddSectionFabPressEnd}
                     onMouseLeave={handleAddSectionFabPressEnd}
-                    title="Abschnitt hinzufügen"
-                    aria-label="Abschnitt hinzufügen"
+                    title={t('abschnittHinzufuegen')}
+                    aria-label={t('abschnittHinzufuegen')}
                   >
                     {isBase64Image(addSectionIcon) ? (
-                      <img src={addSectionIcon} alt="Abschnitt hinzufügen" className="button-icon-image" draggable="false" />
+                      <img src={addSectionIcon} alt={t('abschnittHinzufuegen')} className="button-icon-image" draggable="false" />
                     ) : (
                       addSectionIcon
                     )}
@@ -2002,11 +2024,11 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
                       onMouseDown={() => handleAddSectionFabPressStart(sectionIndex + 1)}
                       onMouseUp={handleAddSectionFabPressEnd}
                       onMouseLeave={handleAddSectionFabPressEnd}
-                      title="Abschnitt hinzufügen"
-                      aria-label="Abschnitt hinzufügen"
+                      title={t('abschnittHinzufuegen')}
+                      aria-label={t('abschnittHinzufuegen')}
                     >
                       {isBase64Image(addSectionIcon) ? (
-                        <img src={addSectionIcon} alt="Abschnitt hinzufügen" className="button-icon-image" draggable="false" />
+                        <img src={addSectionIcon} alt={t('abschnittHinzufuegen')} className="button-icon-image" draggable="false" />
                       ) : (
                         addSectionIcon
                       )}
@@ -2033,11 +2055,11 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
         onMouseUp={() => setCancelPressed(false)}
         onMouseLeave={() => setCancelPressed(false)}
         disabled={savingMenu}
-        title="Abbrechen"
-        aria-label="Menübearbeitung abbrechen"
+        title={tAllgemein('abbrechen')}
+        aria-label={t('bearbeitungAbbrechen')}
       >
         {isBase64Image(getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)) ? (
-          <img src={getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
+          <img src={getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)} alt={tAllgemein('abbrechen')} className="button-icon-image" draggable="false" />
         ) : (
           getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)
         )}
@@ -2054,16 +2076,16 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
         onTouchStart={handleFabMouseDown}
         onTouchEnd={handleFabMouseUp}
         disabled={savingMenu}
-        aria-label={menu ? 'Menü aktualisieren' : 'Menü speichern'}
-        title={menu ? 'Menü aktualisieren' : 'Menü speichern'}
+        aria-label={menu ? t('menueAktualisieren') : t('menueSpeichern')}
+        title={menu ? t('menueAktualisieren') : t('menueSpeichern')}
       >
         {isBase64Image(getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)) ? (
-          <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt="Speichern" className="button-icon-image" draggable="false" />
+          <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt={tAllgemein('speichern')} className="button-icon-image" draggable="false" />
         ) : (
           getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)
         )}
       </button>
-      {savingMenu && <SavingOverlay label="Menü wird gespeichert" />}
+      {savingMenu && <SavingOverlay label={t('menueWirdGespeichert')} />}
       <UndoSnackbar itemName={pendingName} onUndo={undo} />
     </div>
   );

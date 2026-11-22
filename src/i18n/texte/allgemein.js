@@ -25,6 +25,10 @@ export default {
     profilOeffnen: 'Profil von {name} öffnen',
     entfernt: '„{name}“ entfernt',
     rueckgaengig: 'Rückgängig',
+    // Löschknopf einer Zeile (DeleteRowButton.js) und kurze Knöpfe, PR 6g
+    nameEntfernen: '{name} entfernen',
+    hinzufuegen: 'Hinzufügen',
+    aendern: 'Ändern',
   },
   en: {
     speichern: 'Save',
@@ -45,6 +49,10 @@ export default {
     profilOeffnen: 'Open {name}’s profile',
     entfernt: '“{name}” removed',
     rueckgaengig: 'Undo',
+    // Löschknopf einer Zeile (DeleteRowButton.js) und kurze Knöpfe, PR 6g
+    nameEntfernen: 'Remove {name}',
+    hinzufuegen: 'Add',
+    aendern: 'Change',
   },
   fr: {
     speichern: 'Enregistrer',
@@ -65,5 +73,9 @@ export default {
     profilOeffnen: 'Ouvrir le profil de {name}',
     entfernt: `«${NBSP}{name}${NBSP}» retiré`,
     rueckgaengig: 'Annuler',
+    // Löschknopf einer Zeile (DeleteRowButton.js) und kurze Knöpfe, PR 6g
+    nameEntfernen: 'Retirer {name}',
+    hinzufuegen: 'Ajouter',
+    aendern: 'Modifier',
   },
 };

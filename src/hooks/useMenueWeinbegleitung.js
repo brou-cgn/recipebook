@@ -19,8 +19,8 @@ import {
 import { neueresProfil, weinprofilFehlertext } from '../utils/weinbegleitung/anzeige';
 import { regionenFuerGaenge } from '../utils/weinbegleitung/kulinarik';
 import { generiereWeinprofile, MAX_REZEPTE_JE_AUFRUF } from '../utils/weinbegleitung/weinprofilCallable';
-
-const TEXT_SPEICHERN_FEHLGESCHLAGEN = 'Die Weinbegleitung konnte nicht gespeichert werden. Versuch es gleich noch einmal.';
+import { useTexte } from '../contexts/SpracheContext';
+import weinTexte from '../i18n/texte/wein';
 
 /**
  * Weinbegleitung im Menü-Detail (Tracker docs/vorhaben/weinbegleitung.md, Variante B).
@@ -44,6 +44,8 @@ export default function useMenueWeinbegleitung({ menu, recipes, currentUser, isS
   const [veraltet, setVeraltet] = useState(null);
   const aktivRef = useRef(true);
   const beschaeftigtRef = useRef(false);
+  // Meldungen in der geltenden Sprache, gebildet beim Berechnen (Mehrsprachigkeit PR 6g)
+  const t = useTexte(weinTexte);
 
   useEffect(() => {
     aktivRef.current = true;
@@ -178,7 +180,7 @@ export default function useMenueWeinbegleitung({ menu, recipes, currentUser, isS
     const ersterGrund = Object.values(fehlgeschlagen)[0];
 
     if (!gaengeAusMenue(menu, stand).some((gang) => gang.gang.status === GANG_STATUS_OK)) {
-      if (aktivRef.current) setFehler(weinprofilFehlertext(ersterGrund ?? 'allgemein'));
+      if (aktivRef.current) setFehler(weinprofilFehlertext(ersterGrund ?? 'allgemein', t));
       return;
     }
 
@@ -186,16 +188,15 @@ export default function useMenueWeinbegleitung({ menu, recipes, currentUser, isS
     try {
       await berechnenUndSpeichern({ ...aktuelleWahl(), rezepteStand: stand });
     } catch {
-      if (aktivRef.current) setFehler(TEXT_SPEICHERN_FEHLGESCHLAGEN);
+      if (aktivRef.current) setFehler(t('fehlerWeinbegleitungSpeichern'));
       return;
     }
 
     const anzahl = Object.keys(fehlgeschlagen).length;
     if (anzahl > 0 && aktivRef.current) {
-      const wer = anzahl === 1 ? 'Ein Gericht konnte' : `${anzahl} Gerichte konnten`;
-      setHinweis(`${wer} nicht eingeschätzt werden. ${weinprofilFehlertext(ersterGrund)}`);
+      setHinweis(t('gerichteNichtEingeschaetzt', { anzahl, grund: weinprofilFehlertext(ersterGrund, t) }));
     }
-  }), [ausfuehren, darfBearbeiten, rezepte, menu, berechnenUndSpeichern, aktuelleWahl]);
+  }), [ausfuehren, darfBearbeiten, rezepte, menu, berechnenUndSpeichern, aktuelleWahl, t]);
 
   const neuSpeichern = useCallback((aenderung) => ausfuehren(async () => {
     if (!darfBearbeiten || !snapshot) return;
@@ -203,9 +204,9 @@ export default function useMenueWeinbegleitung({ menu, recipes, currentUser, isS
     try {
       await berechnenUndSpeichern({ ...aktuelleWahl(), ...aenderung, rezepteStand: rezepte });
     } catch {
-      if (aktivRef.current) setFehler(TEXT_SPEICHERN_FEHLGESCHLAGEN);
+      if (aktivRef.current) setFehler(t('fehlerWeinbegleitungSpeichern'));
     }
-  }), [ausfuehren, darfBearbeiten, snapshot, berechnenUndSpeichern, aktuelleWahl, rezepte]);
+  }), [ausfuehren, darfBearbeiten, snapshot, berechnenUndSpeichern, aktuelleWahl, rezepte, t]);
 
   const modusWechseln = useCallback((modus) => {
     if (!snapshot || snapshot.modus === modus) return undefined;

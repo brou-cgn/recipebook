@@ -8,7 +8,7 @@ import './PortionSelector.css';
 import './MenuDetail.css';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getUserMenuFavorites } from '../utils/menuFavorites';
-import { groupRecipesBySections, applyItemOrder, DRINKS_SECTION_NAME } from '../utils/menuSections';
+import { groupRecipesBySections, applyItemOrder, DRINKS_SECTION_NAME, abschnittAnzeige } from '../utils/menuSections';
 import { canEditMenu, canDeleteMenu } from '../utils/userManagement';
 import { isBase64Image } from '../utils/imageUtils';
 import { enableMenuSharing, disableMenuSharing } from '../utils/menuFirestore';
@@ -41,7 +41,7 @@ const formatEventLiter = (value, sprache = STANDARD_SPRACHE) => {
   return formatiereZahl(num, sprache, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 };
 
-// Ersatzabschnitt für Menüs im alten Format (ohne Sektionen); angezeigt in der geltenden Sprache
+// Ersatzabschnitt für Menüs im alten Format (ohne Sektionen); angezeigt in der geltenden Sprache (abschnittAnzeige)
 const ALLE_REZEPTE = 'Alle Rezepte';
 const DATUM_ZAHLEN = { day: 'numeric', month: 'numeric', year: 'numeric' };
 
@@ -802,10 +802,8 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
           if (isDrinksSection && menu.eventId && !linkedEventLoading && !linkedEvent) {
             emptyText = t('eventFehlt');
           }
-          // Systemabschnitt „Drinks“ und Ersatzabschnitt in der geltenden Sprache, eigene Namen bleiben
-          let abschnittName = section.name;
-          if (isDrinksSection) abschnittName = t('drinks');
-          else if (section.name === ALLE_REZEPTE) abschnittName = t('alleRezepte');
+          // Standardnamen (auch „Drinks“ und „Alle Rezepte“) in der geltenden Sprache, eigene Namen bleiben
+          const abschnittName = abschnittAnzeige(section.name, t);
 
           return (
             <section key={index} className="menu-section">

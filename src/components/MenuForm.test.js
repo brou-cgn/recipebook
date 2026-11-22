@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import MenuForm from './MenuForm';
+import { SpracheProvider } from '../contexts/SpracheContext';
 
 const mockSubscribeToCustomDrinks = jest.fn();
 const mockSubscribeToEvent = jest.fn();
@@ -1093,5 +1094,72 @@ describe('MenuForm - Abschnitt löschen (D2)', () => {
     const headings = screen.getAllByRole('heading', { level: 4 }).map((h) => h.textContent);
     expect(headings.indexOf('Vorspeise')).toBeLessThan(headings.indexOf('Hauptspeise'));
     confirmSpy.mockRestore();
+  });
+});
+
+describe('MenuForm in anderer Sprache (Mehrsprachigkeit PR 6g)', () => {
+  // Titel mit Übersetzung: angezeigt in der geltenden Sprache, gesucht über Original und Übersetzung
+  const uebersetzteRezepte = [
+    { ...recipes[0], titelUebersetzung: { quelle: 'Nudelsalat', originalSprache: 'de', en: 'Pasta salad', fr: 'Salade de pâtes' } },
+    recipes[1],
+  ];
+
+  const zeigeIn = (sprache, props = {}) => render(
+    <SpracheProvider profilSprache={sprache} speicher={null} inhalteUebersetzen>
+      <MenuForm
+        menu={null}
+        recipes={uebersetzteRezepte}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+        guestProfiles={guests}
+        customDrinks={customDrinks}
+        {...props}
+      />
+    </SpracheProvider>
+  );
+
+  test('Englisch: Standardabschnitt als „Main course“, gespeichert bleibt „Hauptspeise“', async () => {
+    const onSave = jest.fn(() => Promise.resolve());
+    zeigeIn('en', { onSave });
+
+    expect(screen.getByRole('heading', { name: 'Create new menu' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 4, name: 'Main course' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Menu name *'), { target: { value: 'Sunday lunch' } });
+    fireEvent.change(screen.getByPlaceholderText('Search and add a recipe…'), { target: { value: 'Nudel' } });
+    fireEvent.click(await screen.findByText('Pasta salad'));
+    expect(screen.getByText('1 recipe')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove Pasta salad' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Save menu' })[0]);
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0].sections[0]).toEqual(expect.objectContaining({ name: 'Hauptspeise', recipeIds: ['recipe-1'] }));
+  });
+
+  test('Englisch: vordefinierte Abschnitte übersetzt, Dublette auch über den angezeigten Namen', () => {
+    const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+    zeigeIn('en');
+
+    fireEvent.click(screen.getByText('+ Add section'));
+    expect(screen.getByRole('button', { name: 'Main course' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Starter' }));
+    expect(screen.getByRole('heading', { level: 4, name: 'Starter' })).toBeInTheDocument();
+    // Gespeichert wird der deutsche Standardname (Reihenfolge der Abschnitte nach Namen)
+    expect(mockSortableContextItemsCalls.some((items) => items.includes('Vorspeise'))).toBe(true);
+
+    fireEvent.click(screen.getByText('+ Add section'));
+    fireEvent.change(screen.getByPlaceholderText('e.g. finger food, amuse-bouche'), { target: { value: 'main course' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(alertSpy).toHaveBeenCalledWith('A section with this name already exists');
+    alertSpy.mockRestore();
+  });
+
+  test('Französisch: Anzahl in der Einzahl und Abschnitt „Plat principal“', () => {
+    zeigeIn('fr', { menu: { id: 'menu-fr', name: 'Dîner', sections: [{ name: 'Hauptspeise', recipeIds: ['recipe-1'] }] } });
+    expect(screen.getByRole('heading', { name: 'Modifier le menu' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 4, name: 'Plat principal' })).toBeInTheDocument();
+    expect(screen.getByText('1 recette')).toBeInTheDocument();
+    expect(screen.getByText('Salade de pâtes')).toBeInTheDocument();
   });
 });
