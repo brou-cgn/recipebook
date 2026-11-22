@@ -1,19 +1,29 @@
 /* Sprachwahl im Header (SprachWahl.js, Entwurf Variante C). Farben nur über Tokens.
    Maße wie im Canvas „Sprachwahl im Header“, Reihe „Header final“. */
 
-/* Flagge: füllt ihren Rahmen; der feine Ring trennt dunkle und weiße Streifen vom Hintergrund. */
+/* Fahne als Umriss (icons/FlaggeIcon.js): füllt ihren Rahmen, Linien 1 px in der Textfarbe, in jeder
+   Größe gleich stark. Der Rahmen liegt auf der Kante; overflow: visible zeigt ihn ganz. */
 .flagge {
   display: inline-block;
   flex-shrink: 0;
-  overflow: hidden;
   line-height: 0;
-  box-shadow: 0 0 0 1px var(--color-flag-ring);
 }
 
 .flagge svg {
   display: block;
   width: 100%;
   height: 100%;
+  overflow: visible;
+}
+
+.flagge rect,
+.flagge path {
+  fill: none;
+  stroke: var(--color-text-strong);
+  stroke-width: 1px;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  vector-effect: non-scaling-stroke;
 }
 
 .sprachwahl {
@@ -68,7 +78,6 @@
 .sprachwahl-chip__flagge {
   width: 21px;
   height: 14px;
-  border-radius: 2px;
 }
 
 .sprachwahl-chip .sprachwahl-chip__kuerzel {
@@ -127,7 +136,6 @@
 .sprachwahl-zeile__flagge {
   width: 24px;
   height: 16px;
-  border-radius: 2px;
 }
 
 .sprachwahl-zeile__text {
@@ -332,7 +340,6 @@
 .sprachwahl-sheet .sprachwahl-zeile__flagge {
   width: 30px;
   height: 20px;
-  border-radius: 3px;
 }
 
 .sprachwahl-sheet .sprachwahl-zeile .sprachwahl-zeile__name {

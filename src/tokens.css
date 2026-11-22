@@ -34,8 +34,6 @@
   /* Akzent als Textfarbe (Slogan im Header): auf Hell dunkler als --color-accent. #df7a00 erreicht
      auf Weiß 3,0 : 1 und auf #f5f5f5 2,8 : 1; #a65800 kommt auf 5,2 : 1 bzw. 4,8 : 1. */
   --color-accent-text: #a65800;
-  /* Feiner Ring um Flaggen (Sprachwahl im Header): trennt Schwarz und Weiß vom Hintergrund */
-  --color-flag-ring: rgba(0, 0, 0, 0.18);
   --color-hover-overlay: rgba(0, 0, 0, 0.08);
   --color-bad-text: #a33a26;
   --color-alarm: #e53935;
@@ -137,7 +135,6 @@
   --color-surface-input: #2a2a2a;
   --color-accent-tint: #3a2a1c;
   --color-accent-text: #df7a00;
-  --color-flag-ring: rgba(255, 255, 255, 0.28);
   --color-hover-overlay: rgba(255, 255, 255, 0.1);
   --color-bad-text: #e8806c;
   --color-alarm: #e53935;
