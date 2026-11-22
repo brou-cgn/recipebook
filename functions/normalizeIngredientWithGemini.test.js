@@ -660,3 +660,43 @@ test('estimateNutritionWithGemini meldet API-Fehler über onError', async () => 
   }
   assert.deepEqual(reasons, ['API key not valid']);
 });
+
+test('der SDK-Client fragt v1beta an, sonst lehnt Gemini den JSON-Modus ab (Tech-Check F22)', async () => {
+  let constructorOptions;
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenAI: class FakeGoogleGenAI {
+      constructor(options) {
+        constructorOptions = options;
+      }
+      get models() {
+        return {generateContent: async () => ({text: JSON.stringify({searchTerm: 'gingerbread spice'})})};
+      }
+    },
+    env: {GEMINI_API_KEY: 'test-key'},
+  });
+
+  await utils.generateSearchTermWithGemini('lebkuchengewuerz', '', '');
+
+  assert.equal(constructorOptions.apiVersion, 'v1beta');
+});
+
+test('mit dem echten @google/genai geht der JSON-Aufruf an /v1beta/', async () => {
+  const {GoogleGenAI} = require('@google/genai');
+  const originalFetch = global.fetch;
+  const urls = [];
+  global.fetch = async (input) => {
+    urls.push(String(input?.url || input));
+    return new Response(JSON.stringify({
+      candidates: [{content: {role: 'model', parts: [{text: '{"searchTerm":"gingerbread spice"}'}]}}],
+    }), {status: 200, headers: {'Content-Type': 'application/json'}});
+  };
+  try {
+    const utils = createNutritionNormalizationUtils({GoogleGenAI, env: {GEMINI_API_KEY: 'test-key'}});
+    const result = await utils.generateSearchTermWithGemini('lebkuchengewuerz', '', '');
+    assert.equal(result, 'gingerbread spice');
+  } finally {
+    global.fetch = originalFetch;
+  }
+  assert.equal(urls.length, 1);
+  assert.match(urls[0], /\/v1beta\/models\/gemini-2\.5-flash:generateContent/);
+});

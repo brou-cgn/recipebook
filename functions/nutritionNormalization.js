@@ -2,7 +2,7 @@
  * Nutrition ingredient normalization helpers.
  */
 
-const {GEMINI_MODEL} = require('./shared/geminiConfig');
+const {GEMINI_MODEL, GEMINI_API_VERSION} = require('./shared/geminiConfig');
 
 /**
  * Parse an ingredient string and return the estimated weight in grams and
@@ -307,7 +307,7 @@ async function withTimeout(promise, timeoutMs) {
  * @return {{generateContent: function(string): Promise<{response: {text: function(): Promise<string>}}>}}
  */
 function createGenAiModel(GoogleGenAI, apiKey, config) {
-  const client = new GoogleGenAI({apiKey});
+  const client = new GoogleGenAI({apiKey, apiVersion: GEMINI_API_VERSION});
   return {
     generateContent: async (prompt) => {
       const response = await client.models.generateContent({
