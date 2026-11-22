@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+// Schrift des Slogans, selbst gehostet (nur Latin, mit Umlauten und Akzenten); landet im Offline-Cache.
+import '@fontsource/reenie-beanie/latin-400.css';
 import './Header.css';
+import HandschriftText from './HandschriftText';
 import { getHeaderSlogan, getAppLogoImage } from '../utils/customLists';
 import { subscribeToFaqs } from '../utils/faqFirestore';
 import SearchIcon from './icons/SearchIcon';
@@ -308,7 +311,7 @@ const Header = forwardRef(function Header({
       )}
       <div className="header-title-text">
         <h1>{APP_NAME}</h1>
-        <p className="tagline">{headerSlogan}</p>
+        <HandschriftText text={headerSlogan} className="tagline" />
       </div>
     </>
   );
