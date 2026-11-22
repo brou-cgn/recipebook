@@ -9,6 +9,8 @@ import {
 import { compressImage } from '../utils/imageUtils';
 import { logFailedWebImport } from '../utils/failedWebImportsFirestore';
 import useUndoableDelete from '../hooks/useUndoableDelete';
+import { useTexte } from './SpracheContext';
+import rezeptimportTexte from '../i18n/texte/rezeptimport';
 
 const RecipeImportQueueContext = createContext(null);
 
@@ -121,6 +123,9 @@ export function RecipeImportQueueProvider({ userId, children }) {
   // the row disappears from `jobs` right away, the underlying Firestore
   // delete only runs once the undo window passes unconfirmed.
   const { banners: deleteBanners, pendingKeys: pendingDeleteKeys, scheduleDelete, undoDelete } = useUndoableDelete();
+  // Meldungen der Rückgängig-Leiste in der geltenden Sprache (Mehrsprachigkeit PR 6i); Titel und Fehler der
+  // Jobs bleiben deutsch gespeichert und werden beim Anzeigen übersetzt (importTextAnzeige)
+  const t = useTexte(rezeptimportTexte);
 
   useEffect(() => {
     const unsubscribe = subscribeToTempRecipes(userId, setTempRecipes);
@@ -247,7 +252,7 @@ export function RecipeImportQueueProvider({ userId, children }) {
     const tempRecipe = tempRecipes.find((r) => r.id === id);
     scheduleDelete({
       key: id,
-      message: `„${label || 'Import'}" verworfen`,
+      message: t('verworfen', { name: label || t('import') }),
       onConfirm: () => {
         // Log dismissed, failed web imports (URL + error) so app development
         // can look into what went wrong on that site. Only web imports have
@@ -266,7 +271,7 @@ export function RecipeImportQueueProvider({ userId, children }) {
       },
       onUndo: () => {},
     });
-  }, [scheduleDelete, tempRecipes]);
+  }, [scheduleDelete, tempRecipes, t]);
 
   // Cancels a queued or actively running job: it disappears from the list
   // immediately and, if the job is mid-run, its eventual result is discarded
@@ -279,7 +284,7 @@ export function RecipeImportQueueProvider({ userId, children }) {
     cancelledJobsRef.current.add(id);
     scheduleDelete({
       key: id,
-      message: `„${label || 'Import'}" abgebrochen`,
+      message: t('abgebrochen', { name: label || t('import') }),
       onConfirm: () => {
         deleteRecipe(id).catch((error) => {
           console.error('Fehler beim Abbrechen des Import-Jobs:', error);
@@ -289,7 +294,7 @@ export function RecipeImportQueueProvider({ userId, children }) {
         cancelledJobsRef.current.delete(id);
       },
     });
-  }, [scheduleDelete]);
+  }, [scheduleDelete, t]);
 
   // Requeues a job from its persisted importSource — shared by the manual
   // "Neu starten" button (restartJob) and the orphan-recovery effect below.

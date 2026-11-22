@@ -4,11 +4,17 @@ import './RecipeImportModal.css';
 import Button from './Button';
 import { parseBulkCSV } from '../utils/csvBulkImport';
 import { getImageForCategories } from '../utils/categoryImages';
+import { useTexte } from '../contexts/SpracheContext';
+import rezeptimportTexte from '../i18n/texte/rezeptimport';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
   const [error, setError] = useState('');
   const [csvRecipes, setCsvRecipes] = useState(null);
   const [csvFileName, setCsvFileName] = useState('');
+  // Texte des Rezept-Imports (Mehrsprachigkeit PR 6i); Meldungen von parseBulkCSV bleiben vorerst deutsch
+  const t = useTexte(rezeptimportTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
 
   const handleImport = () => {
     setError('');
@@ -26,9 +32,9 @@ function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
     
     // No CSV file selected or parsing failed
     if (csvFileName) {
-      setError('CSV-Datei konnte nicht verarbeitet werden. Bitte überprüfen Sie das Dateiformat.');
+      setError(t('csvFehlerFormat'));
     } else {
-      setError('Bitte wählen Sie eine CSV-Datei aus');
+      setError(t('csvFehlerWaehlen'));
     }
   };
 
@@ -71,12 +77,12 @@ function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
 
     // Check file extension and MIME type
     if (!file.name.toLowerCase().endsWith('.csv')) {
-      setError('Bitte wählen Sie eine CSV-Datei aus');
+      setError(t('csvFehlerWaehlen'));
       return;
     }
     
     if (file.type && file.type !== 'text/csv' && file.type !== 'application/vnd.ms-excel') {
-      setError('Ungültiger Dateityp. Bitte wählen Sie eine CSV-Datei aus');
+      setError(t('csvFehlerTyp'));
       return;
     }
 
@@ -104,18 +110,18 @@ function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
     <div className="modal-overlay">
       <div className="import-modal">
         <div className="import-modal-header">
-          <h2>Rezept importieren</h2>
-          <button className="close-button" onClick={onCancel}>×</button>
+          <h2>{t('csvTitel')}</h2>
+          <button className="close-button" onClick={onCancel} aria-label={tAllgemein('schliessen')}>×</button>
         </div>
 
         <div className="import-modal-content">
           <p className="import-instructions">
-            Lade deine Rezeptdaten hoch (unterstützte Formate: CSV)
+            {t('csvAnleitung')}
           </p>
 
           <div className="csv-upload-section">
             <label htmlFor="csv-upload" className="csv-upload-label">
-              CSV-Datei hochladen (Bulk-Import)
+              {t('csvHochladen')}
             </label>
             {/* Eigener Knopf statt des Datei-Felds des Browsers („Choose File“, englisch); das Feld
                 bleibt über das Label erreichbar */}
@@ -128,24 +134,23 @@ function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
               tabIndex={-1}
             />
             <Button onClick={() => document.getElementById('csv-upload')?.click()}>
-              CSV-Datei wählen …
+              {t('csvWaehlen')}
             </Button>
             {csvRecipes && csvRecipes.length > 0 ? (
               <div className="csv-preview">
                 <p className="csv-preview-success">
-                  ✓ {csvFileName} erfolgreich geladen
+                  {t('csvGeladen', { datei: csvFileName })}
                 </p>
                 <p className="csv-preview-count">
-                  {csvRecipes.length} Rezept{csvRecipes.length !== 1 ? 'e' : ''} bereit zum Importieren
+                  {t('csvBereit', { anzahl: csvRecipes.length })}
                 </p>
                 <p className="csv-preview-hint">
-                   Klicke auf "Importieren", um fortzufahren
+                  {t('csvWeiter')}
                 </p>
               </div>
             ) : (
               <p className="csv-help-text">
-                CSV-Dateien können mehrere Rezepte auf einmal importieren. 
-                Alle importierten Rezepte werden automatisch als privat markiert.
+                {t('csvHilfe')}
               </p>
             )}
           </div>
@@ -159,10 +164,10 @@ function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
 
         <div className="import-modal-actions">
           <Button onClick={onCancel}>
-            Abbrechen
+            {tAllgemein('abbrechen')}
           </Button>
           <Button variant="primary" onClick={handleImport}>
-            Importieren
+            {t('importieren')}
           </Button>
         </div>
       </div>

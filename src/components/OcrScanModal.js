@@ -5,10 +5,16 @@ import Button from './Button';
 import { fileToBase64 } from '../utils/imageUtils';
 import { runPhotoScanImport } from '../utils/importRunners';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
+import { useTexte } from '../contexts/SpracheContext';
+import { SPRACHEN } from '../i18n/sprachen';
+import rezeptimportTexte from '../i18n/texte/rezeptimport';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 const MAX_CAMERA_PHOTOS = 10;
 const MAX_UPLOAD_PAGES = 8;
 const UPLOAD_ACCEPT = 'image/jpeg,image/jpg,image/png,image/heic,image/heif,.heic,.heif';
+// Sprachen des Rezepts für die Erkennung, benannt in ihrer eigenen Sprache (Deutsch, English)
+const SCAN_SPRACHEN = SPRACHEN.filter((eintrag) => eintrag.id === 'de' || eintrag.id === 'en');
 
 // initialImage: single image that triggers an immediate background scan (takes precedence over initialImages)
 // initialImages: array of base64 images to pre-fill the image-preview step
@@ -23,6 +29,9 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
   const [capturedPhotos, setCapturedPhotos] = useState([]);
 
   const { enqueueImportJob } = useRecipeImportQueue();
+  // Texte des Rezept-Imports (Mehrsprachigkeit PR 6i); die Bezeichnung „Foto-Scan“ bleibt deutsch gespeichert
+  const t = useTexte(rezeptimportTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -75,7 +84,7 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
       setUploadedImages(prev => {
         const combined = [...prev, ...base64s];
         if (combined.length > MAX_UPLOAD_PAGES) {
-          setError(`Maximal ${MAX_UPLOAD_PAGES} Seiten möglich.`);
+          setError(t('maxSeiten', { anzahl: MAX_UPLOAD_PAGES }));
         }
         return combined.slice(0, MAX_UPLOAD_PAGES);
       });
@@ -97,7 +106,7 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
       setUploadedImages(prev => {
         const combined = [...prev, ...base64s];
         if (combined.length > MAX_UPLOAD_PAGES) {
-          setError(`Maximal ${MAX_UPLOAD_PAGES} Seiten möglich.`);
+          setError(t('maxSeiten', { anzahl: MAX_UPLOAD_PAGES }));
         }
         return combined.slice(0, MAX_UPLOAD_PAGES);
       });
@@ -133,7 +142,7 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
       streamRef.current = stream;
       setCameraActive(true);
     } catch (err) {
-      setError(`Kamera-Zugriff fehlgeschlagen: ${err.message}. Bitte erlauben Sie den Kamera-Zugriff oder verwenden Sie den Datei-Upload.`);
+      setError(t('kameraFehler', { fehler: err.message }));
     }
   };
 
@@ -191,10 +200,10 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
       <div className="ocr-modal">
         <div className="ocr-modal-header">
           <div className="ocr-modal-heading">
-            <span className="ocr-step-label">Schritt {step === 'image-preview' ? 2 : 1} von 2</span>
-            <h2>Rezept scannen</h2>
+            <span className="ocr-step-label">{t('schrittVon', { schritt: step === 'image-preview' ? 2 : 1 })}</span>
+            <h2>{t('scanTitel')}</h2>
           </div>
-          <button className="close-button" onClick={handleCancel} aria-label="Schließen">×</button>
+          <button className="close-button" onClick={handleCancel} aria-label={tAllgemein('schliessen')}>×</button>
         </div>
 
         <div className="ocr-modal-content">
@@ -202,35 +211,32 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
           {step === 'upload' && (
             <div className="upload-section">
               <p className="ocr-instructions">
-                Fotografieren Sie ein Rezept oder laden Sie ein Bild hoch
+                {t('scanAnleitung')}
               </p>
 
               <div className="language-selector">
-                <label>Sprache:</label>
+                <label>{t('sprache')}</label>
                 <div className="language-tabs">
-                  <button
-                    className={`language-tab ${language === 'de' ? 'active' : ''}`}
-                    onClick={() => setLanguage('de')}
-                  >
-                    Deutsch
-                  </button>
-                  <button
-                    className={`language-tab ${language === 'en' ? 'active' : ''}`}
-                    onClick={() => setLanguage('en')}
-                  >
-                    English
-                  </button>
+                  {SCAN_SPRACHEN.map((eintrag) => (
+                    <button
+                      key={eintrag.id}
+                      className={`language-tab ${language === eintrag.id ? 'active' : ''}`}
+                      onClick={() => setLanguage(eintrag.id)}
+                    >
+                      {eintrag.name}
+                    </button>
+                  ))}
                 </div>
               </div>
 
               {!cameraActive && (
                 <div className="upload-buttons">
                   <Button onClick={startCamera}>
-                    Kamera starten
+                    {t('kameraStarten')}
                   </Button>
                   {/* Echter Knopf statt <label> im Knopf-Aussehen: per Tastatur erreichbar */}
                   <Button onClick={() => document.getElementById('imageUpload')?.click()}>
-                    Bild(er) hochladen
+                    {t('bilderHochladen')}
                   </Button>
                   <input
                     type="file"
@@ -238,7 +244,7 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
                     accept={UPLOAD_ACCEPT}
                     multiple
                     onChange={handleMultiFileUpload}
-                    aria-label="Bild(er) hochladen"
+                    aria-label={t('bilderHochladen')}
                     tabIndex={-1}
                     style={{ display: 'none' }}
                   />
@@ -257,9 +263,9 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
                   {capturedPhotos.length > 0 && (
                     <div className="captured-photos-preview">
                       <p className="captured-photos-count">
-                        {capturedPhotos.length} Foto{capturedPhotos.length !== 1 ? 's' : ''} aufgenommen
+                        {t('fotosAufgenommen', { anzahl: capturedPhotos.length })}
                         {capturedPhotos.length >= MAX_CAMERA_PHOTOS && (
-                          <span className="captured-photos-max"> (Maximum erreicht)</span>
+                          <span className="captured-photos-max"> {t('maximumErreicht')}</span>
                         )}
                       </p>
                       <div className="captured-thumbnails">
@@ -267,7 +273,7 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
                           <div key={index} className="thumbnail-wrapper">
                             <img
                               src={photo}
-                              alt={`Foto ${index + 1}`}
+                              alt={t('fotoNummer', { nummer: index + 1 })}
                               className="photo-thumbnail"
                             />
                             <span className="thumbnail-number">{index + 1}</span>
@@ -281,28 +287,28 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
                       sind „Analyse starten“ (höchstens ein Haupt-Knopf) */}
                   <div className="camera-controls">
                     <Button onClick={cancelCamera}>
-                      Kamera abbrechen
+                      {t('kameraAbbrechen')}
                     </Button>
                     {capturedPhotos.length > 0 && (
-                      <Button onClick={removeLastPhoto} aria-label="Letztes Foto löschen">
-                        Löschen
+                      <Button onClick={removeLastPhoto} aria-label={t('letztesFotoLoeschen')}>
+                        {tAllgemein('loeschen')}
                       </Button>
                     )}
                     <Button
                       variant={capturedPhotos.length > 0 ? 'secondary' : 'primary'}
                       onClick={capturePhoto}
                       disabled={capturedPhotos.length >= MAX_CAMERA_PHOTOS}
-                      aria-label="Foto aufnehmen"
+                      aria-label={t('fotoAufnehmen')}
                     >
-                      {capturedPhotos.length > 0 ? 'Weiteres Foto aufnehmen' : 'Foto aufnehmen'}
+                      {capturedPhotos.length > 0 ? t('weiteresFoto') : t('fotoAufnehmen')}
                     </Button>
                     {capturedPhotos.length > 0 && (
                       <Button
                         variant="primary"
                         onClick={startBatchAnalysis}
-                        aria-label={`Analyse starten für ${capturedPhotos.length} Foto${capturedPhotos.length !== 1 ? 's' : ''}`}
+                        aria-label={t('analyseFuerFotos', { anzahl: capturedPhotos.length })}
                       >
-                        Analyse starten ({capturedPhotos.length})
+                        {t('analyseStarten', { anzahl: capturedPhotos.length })}
                       </Button>
                     )}
                   </div>
@@ -320,9 +326,9 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
                 <span className="ocr-status-dot" />
                 <div className="ocr-status-text">
                   <div className="ocr-status-title">
-                    {uploadedImages.length} Bild{uploadedImages.length !== 1 ? 'er' : ''} ausgewählt
+                    {t('bilderAusgewaehlt', { anzahl: uploadedImages.length })}
                   </div>
-                  <div className="ocr-status-subtitle">Weitere Seiten hinzufügen oder Analyse starten</div>
+                  <div className="ocr-status-subtitle">{t('weitereSeitenOderAnalyse')}</div>
                 </div>
               </div>
 
@@ -331,15 +337,15 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
                   <div key={index} className="image-preview-item">
                     <img
                       src={src}
-                      alt={`Bild ${index + 1}`}
+                      alt={t('bildNummer', { nummer: index + 1 })}
                       className="image-preview-thumb"
                     />
-                    <span className="image-preview-number">S{index + 1}</span>
+                    <span className="image-preview-number">{t('seiteNummer', { nummer: index + 1 })}</span>
                     <button
                       className="image-preview-remove"
                       onClick={() => handleRemoveUploadedImage(index)}
-                      aria-label={`Bild ${index + 1} entfernen`}
-                      title="Bild entfernen"
+                      aria-label={t('bildNummerEntfernen', { nummer: index + 1 })}
+                      title={t('bildEntfernen')}
                     >
                       ×
                     </button>
@@ -347,9 +353,9 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
                 ))}
 
                 {uploadedImages.length < MAX_UPLOAD_PAGES && (
-                  <label className="image-preview-add" title="Weitere Seiten hinzufügen">
+                  <label className="image-preview-add" title={t('weitereSeiten')}>
                     <span className="image-preview-add-icon">+</span>
-                    <span className="image-preview-add-label">Seite</span>
+                    <span className="image-preview-add-label">{t('seite')}</span>
                     <input
                       ref={addMoreInputRef}
                       type="file"
@@ -362,18 +368,18 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
                 )}
               </div>
 
-              <p className="ocr-file-hint">JPG · PNG · HEIC — max. {MAX_UPLOAD_PAGES} Seiten</p>
+              <p className="ocr-file-hint">{t('dateiHinweis', { anzahl: MAX_UPLOAD_PAGES })}</p>
 
               <div className="image-preview-actions">
                 <Button onClick={handleCancel}>
-                  Abbrechen
+                  {tAllgemein('abbrechen')}
                 </Button>
                 <Button
                   variant="primary"
                   onClick={startUploadedAnalysis}
-                  aria-label={`Analyse starten für ${uploadedImages.length} Bild${uploadedImages.length !== 1 ? 'er' : ''}`}
+                  aria-label={t('analyseFuerBilder', { anzahl: uploadedImages.length })}
                 >
-                  Analyse starten ({uploadedImages.length})
+                  {t('analyseStarten', { anzahl: uploadedImages.length })}
                 </Button>
               </div>
             </div>
@@ -389,7 +395,7 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
         {step !== 'image-preview' && (
           <div className="ocr-modal-actions">
             <Button onClick={handleCancel}>
-              Abbrechen
+              {tAllgemein('abbrechen')}
             </Button>
           </div>
         )}
