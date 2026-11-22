@@ -36,7 +36,7 @@ Quelle ist immer `firestore.rules` bzw. `storage.rules`; diese Tabelle gibt den 
 | `settings` | `isAnyUser()`; `settings/app` und `settings/images` auch öffentlich | Admin; `edit`+ nur bestimmte Listenfelder, `moderator` zusätzlich Kochatelier-Texte |
 | `settings/app/aiPromptHistory` | Admin | Anlegen und Löschen: Admin; Ändern: niemand (Einträge unveränderlich). Die Migration in `functions/shared/gemini.js` schreibt per Admin SDK |
 | `nutritionReferences`, `commonTerms`, `buttonIcons`, `customLists`, `appConfig/nutritionReferences` | öffentlich (Freigabelink-Betrachter brauchen sie) | `moderator`/`admin` (Icons, Listen: Admin; `appConfig`: nur Cloud Function) |
-| `users/{uid}` | Eigentümer, Admin | Eigentümer ändert alles außer `role`; Anlegen nur mit `role == 'read'`, nicht anonym; Löschen Admin |
+| `users/{uid}` | Eigentümer, Admin | Eigentümer ändert alles außer `role`, `sprache` nur auf `de`, `en` oder `fr` (Mehrsprachigkeit); Anlegen nur mit `role == 'read'`, nicht anonym; Löschen Admin |
 | `publicProfiles/{uid}` | angemeldet (**schließt Gäste ein**) | Admin und `syncPublicProfile` (Cloud Function) |
 | `users/{uid}/favorites`, `menuFavorites`, `erfahrungswerte`, `guestProfiles` | Eigentümer | Eigentümer (`erfahrungswerte`, `guestProfiles`: nur Cloud Function) |
 | `users/{uid}/events` | Eigentümer, Admin | Eigentümer, Admin |

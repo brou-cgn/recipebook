@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './PersonalDataPage.css';
 import Button from './Button';
-import { updateUserProfile, changePassword, saveFcmToken, setBackgroundUpdatesEnabled } from '../utils/userManagement';
+import { updateUserProfile, changePassword, saveFcmToken, setBackgroundUpdatesEnabled, setUserSprache } from '../utils/userManagement';
 import { ALARM_SOUNDS, getAlarmSoundPreference, saveAlarmSoundPreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference } from '../utils/customLists';
 import { previewAlarmSound } from '../utils/alarmAudioUtils';
 import { requestNotificationPermission, getMessagingServiceWorkerVersion } from '../utils/pushNotifications';
@@ -10,22 +10,45 @@ import { setWebImportPin, clearWebImportPin } from '../utils/webImportPin';
 import DeleteRowButton from './DeleteRowButton';
 import UndoSnackbar from './UndoSnackbar';
 import useUndoableDelete from '../hooks/useUndoableDelete';
+import { useSprache, useTexte } from '../contexts/SpracheContext';
+import { SPRACHEN, STANDARD_SPRACHE, istSprache } from '../i18n/sprachen';
+import { formatiereDatum } from '../i18n/format';
+import allgemeinTexte from '../i18n/texte/allgemein';
+import bereicheTexte from '../i18n/texte/bereiche';
+import persoenlicheDatenTexte from '../i18n/texte/persoenlicheDaten';
+import webimportPinTexte from '../i18n/texte/webimportPin';
 
 const PIN_PATTERN = /^\d{4,8}$/;
 
-const formatPushLogTime = (at) => new Date(at).toLocaleString('de-DE', {
-  day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
-});
-
-const NO_LIST_OPTION = { id: '', name: '– Keine Vorauswahl –' };
+const PUSH_LOG_ZEIT = { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' };
 
 const THEME_MODES = [
-  { key: 'light', label: 'Hell' },
-  { key: 'dark', label: 'Dunkel' },
-  { key: 'auto', label: 'Automatisch' },
+  { key: 'light', textKey: 'themaHell' },
+  { key: 'dark', textKey: 'themaDunkel' },
+  { key: 'auto', textKey: 'themaAutomatisch' },
 ];
 
+const spracheName = (id) => SPRACHEN.find((eintrag) => eintrag.id === id)?.name || id;
+
 function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists = [] }) {
+  const t = useTexte(persoenlicheDatenTexte);
+  const tA = useTexte(allgemeinTexte);
+  const tB = useTexte(bereicheTexte);
+  const tPin = useTexte(webimportPinTexte);
+  const { sprache } = useSprache();
+  const NO_LIST_OPTION = { id: '', name: t('keineVorauswahl') };
+  const formatPushLogTime = (at) => formatiereDatum(at, sprache, PUSH_LOG_ZEIT);
+  // Name eines Alarmtons; ein Ton ohne Übersetzung behält seinen deutschen Namen.
+  const alarmName = (key) => {
+    const schluessel = `alarm_${key}`;
+    const name = t(schluessel);
+    return name === schluessel ? (ALARM_SOUNDS.find((s) => s.key === key)?.label || key) : name;
+  };
+  // Sprachwahl (Vorhaben Mehrsprachigkeit): nur mit der Berechtigung sprachwahl.
+  const darfSprachwahl = Boolean(currentUser?.sprachwahl);
+  const gewaehlteSprache = istSprache(currentUser?.sprache) ? currentUser.sprache : STANDARD_SPRACHE;
+  const [showSprachePicker, setShowSprachePicker] = useState(false);
+  const [spracheFehler, setSpracheFehler] = useState(null);
   const isIosDevice = typeof navigator !== 'undefined' && /iPhone|iPad/.test(navigator.userAgent);
   const [vorname, setVorname] = useState(currentUser?.vorname || '');
   const [nachname, setNachname] = useState(currentUser?.nachname || '');
@@ -118,7 +141,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           setNotificationPermission(permission);
         }
         if (permission !== 'granted') {
-          setBackgroundUpdatesMessage('Hintergrundaktualisierung benötigt die Erlaubnis für Mitteilungen.');
+          setBackgroundUpdatesMessage(t('hintergrundBrauchtErlaubnis'));
           return;
         }
       }
@@ -127,7 +150,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
       if (onProfileUpdated) onProfileUpdated({ ...currentUser, backgroundUpdatesEnabled: nextValue });
     } catch (err) {
       console.warn('Fehler beim Umschalten der Hintergrundaktualisierung:', err);
-      setBackgroundUpdatesMessage('Änderung konnte nicht gespeichert werden.');
+      setBackgroundUpdatesMessage(t('aenderungNichtGespeichert'));
     } finally {
       setTogglingBackgroundUpdates(false);
     }
@@ -146,9 +169,9 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
     setPushLog(await readPushLog());
     setMessagingSwVersion(await getMessagingServiceWorkerVersion().catch(() => null));
   };
-  const messagingSwVersionLabel = messagingSwVersion === undefined ? 'wird geprüft…' :
-    messagingSwVersion === 'none' ? 'nicht registriert' :
-    messagingSwVersion === null ? 'ältere Fassung (meldet keine Version)' :
+  const messagingSwVersionLabel = messagingSwVersion === undefined ? t('workerWirdGeprueft') :
+    messagingSwVersion === 'none' ? t('workerNichtRegistriert') :
+    messagingSwVersion === null ? t('workerAlt') :
     messagingSwVersion;
   const handleClearPushLog = async () => {
     await clearPushLog();
@@ -185,11 +208,26 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
     }
   };
 
+  const handleSpracheSelect = async (id) => {
+    setSpracheFehler(null);
+    try {
+      await setUserSprache(currentUser.id, id);
+      setShowSprachePicker(false);
+      if (onProfileUpdated) onProfileUpdated({ ...currentUser, sprache: id });
+    } catch (err) {
+      console.warn('Fehler beim Speichern der Sprache:', err);
+      setSpracheFehler(t('aenderungNichtGespeichert'));
+    }
+  };
+
+  const pickerOffen = showAlarmPicker || showAppearancePicker || showWebImportListPicker
+    || showEverydayClassicsListPicker || showSprachePicker;
+
   useEffect(() => {
-    if (showAlarmPicker || showAppearancePicker || showWebImportListPicker || showEverydayClassicsListPicker) {
+    if (pickerOffen) {
       window.scrollTo(0, 0);
     }
-  }, [showAlarmPicker, showAppearancePicker, showWebImportListPicker, showEverydayClassicsListPicker]);
+  }, [pickerOffen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -206,7 +244,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
     });
 
     setSaving(false);
-    setMessage({ success: result.success, text: result.message });
+    setMessage({ success: result.success, text: result.success ? t('profilGespeichert') : result.message });
 
     if (result.success && onProfileUpdated) {
       onProfileUpdated({
@@ -226,7 +264,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
     setPasswordMessage(null);
 
     if (newPassword !== confirmPassword) {
-      setPasswordMessage({ success: false, text: 'Die neuen Passwörter stimmen nicht überein.' });
+      setPasswordMessage({ success: false, text: t('passwoerterUngleich') });
       return;
     }
 
@@ -247,11 +285,11 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
     setPinMessage(null);
 
     if (!PIN_PATTERN.test(newPin)) {
-      setPinMessage({ success: false, text: 'PIN muss aus 4 bis 8 Ziffern bestehen.' });
+      setPinMessage({ success: false, text: tPin('fehlerFormat') });
       return;
     }
     if (newPin !== confirmPin) {
-      setPinMessage({ success: false, text: 'Die PINs stimmen nicht überein.' });
+      setPinMessage({ success: false, text: tPin('fehlerUngleich') });
       return;
     }
 
@@ -262,7 +300,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
       setPinRemovedLocally(false);
       setNewPin('');
       setConfirmPin('');
-      setPinMessage({ success: true, text: 'Webimport-PIN gespeichert.' });
+      setPinMessage({ success: true, text: t('pinGespeichert') });
       if (onProfileUpdated) onProfileUpdated({ ...currentUser, webImportPinEnabled: true });
     } catch (err) {
       setPinMessage({ success: false, text: err.message });
@@ -275,7 +313,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
     setPinRemovedLocally(true);
     schedulePinDelete({
       key: 'webImportPin',
-      message: '„Webimport-PIN" entfernt',
+      message: t('pinEntfernt', { name: tPin('name') }),
       onConfirm: async () => {
         try {
           await clearWebImportPin();
@@ -290,6 +328,9 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
     });
   };
 
+  const themaModus = THEME_MODES.find(m => m.key === darkMode);
+  const themaName = themaModus ? t(themaModus.textKey) : darkMode;
+
   return (
     <div className="personal-data-page">
       {showWebImportListPicker && (
@@ -299,13 +340,13 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
               type="button"
               className="alarm-sound-picker-back-btn"
               onClick={() => setShowWebImportListPicker(false)}
-              aria-label="Zurück"
+              aria-label={tA('zurueck')}
             >
-              ‹ Zurück
+              ‹ {tA('zurueck')}
             </button>
-            <h2 className="alarm-sound-picker-title">Inspirationssammlung</h2>
+            <h2 className="alarm-sound-picker-title">{t('inspirationssammlung')}</h2>
           </div>
-          <ul className="alarm-sound-picker-list" aria-label="Inspirationssammlung auswählen">
+          <ul className="alarm-sound-picker-list" aria-label={t('inspirationssammlungWaehlen')}>
             {[NO_LIST_OPTION, ...privateLists].map(list => (
               <li key={list.id}>
                 <button
@@ -332,13 +373,13 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
               type="button"
               className="alarm-sound-picker-back-btn"
               onClick={() => setShowAlarmPicker(false)}
-              aria-label="Zurück"
+              aria-label={tA('zurueck')}
             >
-              ‹ Zurück
+              ‹ {tA('zurueck')}
             </button>
-            <h2 className="alarm-sound-picker-title">Alarmton</h2>
+            <h2 className="alarm-sound-picker-title">{t('alarmton')}</h2>
           </div>
-          <ul className="alarm-sound-picker-list" aria-label="Alarmton auswählen">
+          <ul className="alarm-sound-picker-list" aria-label={t('alarmtonWaehlen')}>
             {ALARM_SOUNDS.map(sound => (
               <li key={sound.key}>
                 <button
@@ -355,7 +396,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
                   <span className="alarm-sound-picker-checkmark" aria-hidden="true">
                     {alarmSoundKey === sound.key ? '✓' : ''}
                   </span>
-                  <span className="alarm-sound-picker-name">{sound.label}</span>
+                  <span className="alarm-sound-picker-name">{alarmName(sound.key)}</span>
                 </button>
               </li>
             ))}
@@ -369,13 +410,13 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
               type="button"
               className="alarm-sound-picker-back-btn"
               onClick={() => setShowAppearancePicker(false)}
-              aria-label="Zurück"
+              aria-label={tA('zurueck')}
             >
-              ‹ Zurück
+              ‹ {tA('zurueck')}
             </button>
-            <h2 className="alarm-sound-picker-title">Erscheinungsbild</h2>
+            <h2 className="alarm-sound-picker-title">{t('erscheinungsbild')}</h2>
           </div>
-          <ul className="alarm-sound-picker-list" aria-label="Erscheinungsbild auswählen">
+          <ul className="alarm-sound-picker-list" aria-label={t('erscheinungsbildWaehlen')}>
             {THEME_MODES.map(mode => (
               <li key={mode.key}>
                 <button
@@ -388,7 +429,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
                   <span className="alarm-sound-picker-checkmark" aria-hidden="true">
                     {darkMode === mode.key ? '✓' : ''}
                   </span>
-                  <span className="alarm-sound-picker-name">{mode.label}</span>
+                  <span className="alarm-sound-picker-name">{t(mode.textKey)}</span>
                 </button>
               </li>
             ))}
@@ -402,13 +443,13 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
               type="button"
               className="alarm-sound-picker-back-btn"
               onClick={() => setShowEverydayClassicsListPicker(false)}
-              aria-label="Zurück"
+              aria-label={tA('zurueck')}
             >
-              ‹ Zurück
+              ‹ {tA('zurueck')}
             </button>
-            <h2 className="alarm-sound-picker-title">Alltagsklassiker</h2>
+            <h2 className="alarm-sound-picker-title">{t('alltagsklassiker')}</h2>
           </div>
-          <ul className="alarm-sound-picker-list" aria-label="Alltagsklassiker auswählen">
+          <ul className="alarm-sound-picker-list" aria-label={t('alltagsklassikerWaehlen')}>
             {[NO_LIST_OPTION, ...privateLists].map(list => (
               <li key={list.id}>
                 <button
@@ -428,13 +469,50 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           </ul>
         </div>
       )}
-      <div className={`personal-data-main${showAlarmPicker || showAppearancePicker || showWebImportListPicker || showEverydayClassicsListPicker ? ' personal-data-main--hidden' : ''}`}>
+      {showSprachePicker && (
+        <div className="alarm-sound-picker-page">
+          <div className="alarm-sound-picker-header">
+            <button
+              type="button"
+              className="alarm-sound-picker-back-btn"
+              onClick={() => setShowSprachePicker(false)}
+              aria-label={tA('zurueck')}
+            >
+              ‹ {tA('zurueck')}
+            </button>
+            <h2 className="alarm-sound-picker-title">{t('sprache')}</h2>
+          </div>
+          <ul className="alarm-sound-picker-list" aria-label={t('spracheWaehlen')}>
+            {SPRACHEN.map(eintrag => (
+              <li key={eintrag.id}>
+                <button
+                  type="button"
+                  role="option"
+                  lang={eintrag.id}
+                  aria-selected={gewaehlteSprache === eintrag.id}
+                  className={`alarm-sound-picker-item${gewaehlteSprache === eintrag.id ? ' selected' : ''}`}
+                  onClick={() => handleSpracheSelect(eintrag.id)}
+                >
+                  <span className="alarm-sound-picker-checkmark" aria-hidden="true">
+                    {gewaehlteSprache === eintrag.id ? '✓' : ''}
+                  </span>
+                  <span className="alarm-sound-picker-name">{eintrag.name}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {spracheFehler && (
+            <p className="pwa-notification-hint pwa-notification-hint--warning">{spracheFehler}</p>
+          )}
+        </div>
+      )}
+      <div className={`personal-data-main${pickerOffen ? ' personal-data-main--hidden' : ''}`}>
       <div className="personal-data-header">
-        <h2>Chefkoch</h2>
+        <h2>{tB('chefkoch')}</h2>
       </div>
       <form className="personal-data-form" onSubmit={handleSubmit}>
         <div className="personal-data-field">
-          <label htmlFor="vorname">Vorname</label>
+          <label htmlFor="vorname">{t('vorname')}</label>
           <input
             id="vorname"
             type="text"
@@ -444,7 +522,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           />
         </div>
         <div className="personal-data-field">
-          <label htmlFor="nachname">Nachname</label>
+          <label htmlFor="nachname">{t('nachname')}</label>
           <input
             id="nachname"
             type="text"
@@ -454,7 +532,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           />
         </div>
         <div className="personal-data-field">
-          <label htmlFor="email">E-Mail</label>
+          <label htmlFor="email">{t('email')}</label>
           <input
             id="email"
             type="email"
@@ -464,12 +542,12 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           />
         </div>
         <div className="personal-data-field">
-          <label htmlFor="signatureSatz">Signature-Satz (optional)</label>
+          <label htmlFor="signatureSatz">{t('signatureSatz')}</label>
           <textarea
             id="signatureSatz"
             value={signatureSatz}
             onChange={(e) => setSignatureSatz(e.target.value)}
-            placeholder="Wird als letzter Zubereitungsschritt bei neuen Rezepten übernommen"
+            placeholder={t('signatureHinweis')}
             rows={3}
           />
         </div>
@@ -480,10 +558,10 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
         )}
         <div className="personal-data-actions">
           <Button variant="secondary" onClick={onBack}>
-            Abbrechen
+            {tA('abbrechen')}
           </Button>
           <Button variant="primary" type="submit" loading={saving}>
-            {saving ? 'Wird gespeichert…' : 'Speichern'}
+            {saving ? tA('speichernLaeuft') : tA('speichern')}
           </Button>
         </div>
       </form>
@@ -491,7 +569,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
       <div className="personal-data-section-divider" />
 
       <section className="personal-data-settings-section">
-        <h3 className="personal-data-section-title">Einstellungen</h3>
+        <h3 className="personal-data-section-title">{t('einstellungen')}</h3>
         <div className="preferences-group">
           {privateLists.length > 0 && (
             <>
@@ -499,9 +577,9 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
                 type="button"
                 className="settings-row"
                 onClick={() => setShowWebImportListPicker(true)}
-                aria-label={`Inspirationssammlung: ${privateLists.find(l => l.id === defaultWebImportListId)?.name || NO_LIST_OPTION.name}. Zum Ändern klicken.`}
+                aria-label={t('zumAendern', { name: t('inspirationssammlung'), wert: privateLists.find(l => l.id === defaultWebImportListId)?.name || NO_LIST_OPTION.name })}
               >
-                <span className="settings-row-label">Inspirationssammlung</span>
+                <span className="settings-row-label">{t('inspirationssammlung')}</span>
                 <span className="settings-row-right">
                   <span className="settings-row-value">
                     {privateLists.find(l => l.id === defaultWebImportListId)?.name || NO_LIST_OPTION.name}
@@ -514,9 +592,9 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
                 type="button"
                 className="settings-row"
                 onClick={() => setShowEverydayClassicsListPicker(true)}
-                aria-label={`Alltagsklassiker: ${privateLists.find(l => l.id === defaultEverydayClassicsListId)?.name || NO_LIST_OPTION.name}. Zum Ändern klicken.`}
+                aria-label={t('zumAendern', { name: t('alltagsklassiker'), wert: privateLists.find(l => l.id === defaultEverydayClassicsListId)?.name || NO_LIST_OPTION.name })}
               >
-                <span className="settings-row-label">Alltagsklassiker</span>
+                <span className="settings-row-label">{t('alltagsklassiker')}</span>
                 <span className="settings-row-right">
                   <span className="settings-row-value">
                     {privateLists.find(l => l.id === defaultEverydayClassicsListId)?.name || NO_LIST_OPTION.name}
@@ -531,12 +609,12 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
             type="button"
             className="settings-row"
             onClick={() => setShowAppearancePicker(true)}
-            aria-label={`Erscheinungsbild: ${THEME_MODES.find(m => m.key === darkMode)?.label || darkMode}. Zum Ändern klicken.`}
+            aria-label={t('zumAendern', { name: t('erscheinungsbild'), wert: themaName })}
           >
-            <span className="settings-row-label">Erscheinungsbild</span>
+            <span className="settings-row-label">{t('erscheinungsbild')}</span>
             <span className="settings-row-right">
               <span className="settings-row-value">
-                {THEME_MODES.find(m => m.key === darkMode)?.label || darkMode}
+                {themaName}
               </span>
               <span className="settings-row-chevron" aria-hidden="true">›</span>
             </span>
@@ -546,29 +624,48 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
             type="button"
             className="settings-row"
             onClick={() => setShowAlarmPicker(true)}
-            aria-label={`Alarmton: ${ALARM_SOUNDS.find(s => s.key === alarmSoundKey)?.label || alarmSoundKey}. Zum Ändern klicken.`}
+            aria-label={t('zumAendern', { name: t('alarmton'), wert: alarmName(alarmSoundKey) })}
           >
-            <span className="settings-row-label">Alarmton</span>
+            <span className="settings-row-label">{t('alarmton')}</span>
             <span className="settings-row-right">
               <span className="settings-row-value">
-                {ALARM_SOUNDS.find(s => s.key === alarmSoundKey)?.label || alarmSoundKey}
+                {alarmName(alarmSoundKey)}
               </span>
               <span className="settings-row-chevron" aria-hidden="true">›</span>
             </span>
           </button>
+          {darfSprachwahl && (
+            <>
+              <div className="preferences-group-divider" />
+              <button
+                type="button"
+                className="settings-row"
+                onClick={() => setShowSprachePicker(true)}
+                aria-label={t('zumAendern', { name: t('sprache'), wert: spracheName(gewaehlteSprache) })}
+              >
+                <span className="settings-row-label">{t('sprache')}</span>
+                <span className="settings-row-right">
+                  <span className="settings-row-value" lang={gewaehlteSprache}>
+                    {spracheName(gewaehlteSprache)}
+                  </span>
+                  <span className="settings-row-chevron" aria-hidden="true">›</span>
+                </span>
+              </button>
+            </>
+          )}
         </div>
       </section>
 
       <div className="personal-data-section-divider" />
 
       <section className="personal-data-notifications-section">
-        <h3 className="personal-data-section-title">PWA-Mitteilungen</h3>
+        <h3 className="personal-data-section-title">{t('pwaMitteilungen')}</h3>
         <p className="personal-data-password-hint">
-          Erhalten Sie Benachrichtigungen über neue Rezepte und Aktivitäten in Ihren Listen – auch wenn brouBook gerade nicht geöffnet ist.
+          {t('mitteilungenHinweis')}
         </p>
         {isIosDevice && (
           <p className="personal-data-password-hint">
-            Auf iPhone/iPad funktionieren Mitteilungen nur ab iOS 16.4+, wenn brouBook über „Zum Home-Bildschirm hinzufügen“ installiert wurde.
+            {t('mitteilungenIos')}
           </p>
         )}
         <div className="preferences-group">
@@ -577,24 +674,22 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
             className="settings-row"
             onClick={notificationSupported && notificationPermission === 'default' ? handleEnableNotifications : undefined}
             disabled={!notificationSupported || notificationPermission !== 'default' || requestingNotification}
-            aria-label={
-              !notificationSupported
-                ? 'Mitteilungen: Nicht verfügbar'
-                : `Mitteilungen: ${
-                    notificationPermission === 'granted' ? 'Aktiv' :
-                    notificationPermission === 'denied' ? 'Deaktiviert' :
-                    requestingNotification ? 'Wird aktiviert…' : 'Aktivieren. Zum Aktivieren klicken.'
-                  }`
-            }
+            aria-label={t('zustand', {
+              name: t('mitteilungen'),
+              wert: !notificationSupported ? t('nichtVerfuegbar') :
+                notificationPermission === 'granted' ? t('aktiv') :
+                notificationPermission === 'denied' ? t('deaktiviert') :
+                requestingNotification ? t('wirdAktiviert') : t('aktivierenKlicken'),
+            })}
           >
-            <span className="settings-row-label">Mitteilungen</span>
+            <span className="settings-row-label">{t('mitteilungen')}</span>
             <span className="settings-row-right">
               <span className="settings-row-value">
-                {!notificationSupported ? 'Nicht verfügbar' :
-                 requestingNotification ? 'Wird aktiviert…' :
-                 notificationPermission === 'granted' ? 'Aktiv' :
-                 notificationPermission === 'denied' ? 'Deaktiviert' :
-                 'Aktivieren'}
+                {!notificationSupported ? t('nichtVerfuegbar') :
+                 requestingNotification ? t('wirdAktiviert') :
+                 notificationPermission === 'granted' ? t('aktiv') :
+                 notificationPermission === 'denied' ? t('deaktiviert') :
+                 t('aktivieren')}
               </span>
               {notificationSupported && notificationPermission === 'default' && !requestingNotification && (
                 <span className="settings-row-chevron" aria-hidden="true">›</span>
@@ -604,17 +699,17 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
         </div>
         {!notificationSupported && (
           <p className="pwa-notification-hint pwa-notification-hint--info">
-            Ihr Browser oder Gerät unterstützt keine PWA-Mitteilungen. Auf iOS müssen Sie brouBook zunächst zum Home-Bildschirm hinzufügen (Safari → Teilen → Zum Startbildschirm).
+            {t('mitteilungenNichtUnterstuetzt')}
           </p>
         )}
         {notificationSupported && notificationPermission === 'denied' && (
           <p className="pwa-notification-hint pwa-notification-hint--warning">
-            Mitteilungen wurden abgelehnt. Um sie zu aktivieren, erlauben Sie brouBook in Ihren Browsereinstellungen den Zugriff auf Benachrichtigungen.
+            {t('mitteilungenAbgelehnt')}
           </p>
         )}
 
         <p className="personal-data-password-hint">
-          Hintergrundaktualisierung zeigt neue, zur Prüfung bereite Rezept-Importe als Kennzeichen auf dem App-Symbol an – auch wenn brouBook gerade geschlossen ist.
+          {t('hintergrundHinweis')}
         </p>
         <div className="preferences-group">
           <button
@@ -622,12 +717,12 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
             className="settings-row"
             onClick={handleToggleBackgroundUpdates}
             disabled={togglingBackgroundUpdates || (!backgroundUpdatesEnabled && !notificationSupported)}
-            aria-label={`Hintergrundaktualisierung: ${backgroundUpdatesEnabled ? 'Aktiv' : 'Aus'}. Zum ${backgroundUpdatesEnabled ? 'Deaktivieren' : 'Aktivieren'} klicken.`}
+            aria-label={t(backgroundUpdatesEnabled ? 'hintergrundAktivAria' : 'hintergrundAusAria', { name: t('hintergrund') })}
           >
-            <span className="settings-row-label">Hintergrundaktualisierung</span>
+            <span className="settings-row-label">{t('hintergrund')}</span>
             <span className="settings-row-right">
               <span className="settings-row-value">
-                {togglingBackgroundUpdates ? 'Wird geändert…' : backgroundUpdatesEnabled ? 'Aktiv' : 'Aus'}
+                {togglingBackgroundUpdates ? t('wirdGeaendert') : backgroundUpdatesEnabled ? t('aktiv') : t('aus')}
               </span>
             </span>
           </button>
@@ -644,24 +739,24 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
             onClick={handleTogglePushLog}
             aria-expanded={pushLog !== null}
           >
-            <span className="settings-row-label">Protokoll Push-Tipps</span>
+            <span className="settings-row-label">{t('protokoll')}</span>
             <span className="settings-row-right">
-              <span className="settings-row-value">{pushLog !== null ? 'Ausblenden' : 'Anzeigen'}</span>
+              <span className="settings-row-value">{pushLog !== null ? t('ausblenden') : t('anzeigen')}</span>
             </span>
           </button>
           {pushLog !== null && (
             <>
               <p className="personal-data-password-hint">
-                App {process.env.REACT_APP_VERSION || '–'} · Mitteilungs-Worker {messagingSwVersionLabel}
+                {t('protokollKopf', { app: process.env.REACT_APP_VERSION || '–', worker: messagingSwVersionLabel })}
               </p>
               {pushLog.length === 0 ? (
-                <p className="personal-data-password-hint">Noch keine Einträge.</p>
+                <p className="personal-data-password-hint">{t('keineEintraege')}</p>
               ) : (
                 <ol className="push-tap-log">
                   {[...pushLog].reverse().map((entry, index) => (
                     <li key={`${entry.at}-${index}`}>
                       <span className="push-tap-log-time">{formatPushLogTime(entry.at)}</span>
-                      {entry.by === 'sw' ? 'Worker' : 'App'}: {entry.step}
+                      {entry.by === 'sw' ? t('quelleWorker') : t('quelleApp')}: {entry.step}
                       {entry.detail ? ` – ${entry.detail}` : ''}
                     </li>
                   ))}
@@ -669,7 +764,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
               )}
               {pushLog.length > 0 && (
                 <button type="button" className="settings-row" onClick={handleClearPushLog}>
-                  <span className="settings-row-label">Protokoll leeren</span>
+                  <span className="settings-row-label">{t('protokollLeeren')}</span>
                 </button>
               )}
             </>
@@ -680,13 +775,13 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
       <div className="personal-data-section-divider" />
 
       <section className="personal-data-password-section">
-        <h3 className="personal-data-section-title">Passwort ändern</h3>
+        <h3 className="personal-data-section-title">{t('passwortAendern')}</h3>
         <p className="personal-data-password-hint">
-          Mindestanforderungen: 12 Zeichen, mindestens eine Zahl oder ein Sonderzeichen.
+          {t('passwortHinweis')}
         </p>
         <form className="personal-data-form" onSubmit={handlePasswordSubmit}>
           <div className="personal-data-field">
-            <label htmlFor="currentPassword">Aktuelles Passwort</label>
+            <label htmlFor="currentPassword">{t('aktuellesPasswort')}</label>
             <input
               id="currentPassword"
               type="password"
@@ -697,7 +792,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
             />
           </div>
           <div className="personal-data-field">
-            <label htmlFor="newPassword">Neues Passwort</label>
+            <label htmlFor="newPassword">{t('neuesPasswort')}</label>
             <input
               id="newPassword"
               type="password"
@@ -708,7 +803,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
             />
           </div>
           <div className="personal-data-field">
-            <label htmlFor="confirmPassword">Neues Passwort bestätigen</label>
+            <label htmlFor="confirmPassword">{t('neuesPasswortBestaetigen')}</label>
             <input
               id="confirmPassword"
               type="password"
@@ -725,7 +820,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           )}
           <div className="personal-data-actions">
             <Button variant="primary" type="submit" loading={savingPassword}>
-              {savingPassword ? 'Wird geändert…' : 'Passwort ändern'}
+              {savingPassword ? t('wirdGeaendert') : t('passwortAendern')}
             </Button>
           </div>
         </form>
@@ -734,32 +829,32 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
       <div className="personal-data-section-divider" />
 
       <section className="personal-data-webimport-pin-section">
-        <h3 className="personal-data-section-title">Webimport-PIN</h3>
+        <h3 className="personal-data-section-title">{tPin('name')}</h3>
         <p className="personal-data-password-hint">
-          Schützt den Webimport zusätzlich mit einer PIN, die nur du kennst – so kann niemand mit deinem Zugang ungefragt Rezepte importieren.
+          {t('pinHinweis')}
         </p>
         {pinActive && (
           <p className="personal-data-password-hint">
-            Nutzt du den Apple-Kurzbefehl für den Webimport, musst du diesen PIN dort im Anfragetext als Feld „pin" ergänzen – sonst schlägt der Import ab jetzt fehl.
+            {t('pinKurzbefehlHinweis')}
           </p>
         )}
 
         {pinActive ? (
           <div className="preferences-group">
             <div className="settings-row settings-row--static delete-row-hover-target">
-              <span className="settings-row-label">PIN aktiv</span>
+              <span className="settings-row-label">{t('pinAktiv')}</span>
               <span className="settings-row-right">
-                <DeleteRowButton itemName="Webimport-PIN" onClick={handleRemovePin} />
+                <DeleteRowButton itemName={tPin('name')} onClick={handleRemovePin} />
               </span>
             </div>
           </div>
         ) : (
-          <p className="personal-data-password-hint">Kein PIN gesetzt.</p>
+          <p className="personal-data-password-hint">{t('keinPin')}</p>
         )}
 
         <form className="personal-data-form" onSubmit={handleSetPin}>
           <div className="personal-data-field">
-            <label htmlFor="newPin">{pinActive ? 'Neuer PIN (4–8 Ziffern)' : 'PIN (4–8 Ziffern)'}</label>
+            <label htmlFor="newPin">{pinActive ? tPin('feldNeu') : tPin('feld')}</label>
             <input
               id="newPin"
               type="password"
@@ -771,7 +866,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
             />
           </div>
           <div className="personal-data-field">
-            <label htmlFor="confirmPin">PIN bestätigen</label>
+            <label htmlFor="confirmPin">{tPin('bestaetigen')}</label>
             <input
               id="confirmPin"
               type="password"
@@ -789,14 +884,14 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           )}
           <div className="personal-data-actions">
             <Button variant="primary" type="submit" loading={savingPin}>
-              {savingPin ? 'Wird gespeichert…' : pinActive ? 'PIN ändern' : 'PIN setzen'}
+              {savingPin ? tA('speichernLaeuft') : pinActive ? t('pinAendern') : t('pinSetzen')}
             </Button>
           </div>
         </form>
       </section>
       </div>
       {pinBanners.length > 0 && (
-        <UndoSnackbar itemName="Webimport-PIN" onUndo={() => undoPinDelete(pinBanners[0].id)} />
+        <UndoSnackbar itemName={tPin('name')} onUndo={() => undoPinDelete(pinBanners[0].id)} />
       )}
     </div>
   );

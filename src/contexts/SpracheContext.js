@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   STANDARD_SPRACHE,
   aktiveSprache,
@@ -92,4 +92,26 @@ export function useProfilSprache(wert) {
   useEffect(() => {
     setzeProfilSprache(wert);
   }, [wert, setzeProfilSprache]);
+}
+
+/**
+ * Verbindet die Sprache mit der angemeldeten Person (App.js mit `currentUser`).
+ * Die persönliche Einstellung gilt nur mit der Berechtigung `sprachwahl` (Funktionen nach
+ * Berechtigung); ohne sie gilt Deutsch, und eine im Header gewählte Sitzungs-Sprache endet.
+ * Sie endet auch beim Abmelden, damit die nächste Person nicht in fremder Sprache startet.
+ * Solange noch niemand angemeldet ist (App-Start), bleibt sie stehen.
+ * @param {object|null} nutzer - currentUser mit `sprache` und `sprachwahl`
+ */
+export function useSpracheFuerNutzer(nutzer) {
+  const angemeldet = Boolean(nutzer);
+  const darfWaehlen = Boolean(nutzer?.sprachwahl);
+  useProfilSprache(darfWaehlen ? nutzer?.sprache : null);
+
+  const { setzeSitzungsSprache } = useSprache();
+  const warAngemeldet = useRef(false);
+  useEffect(() => {
+    const abgemeldet = !angemeldet && warAngemeldet.current;
+    if ((angemeldet && !darfWaehlen) || abgemeldet) setzeSitzungsSprache(null);
+    warAngemeldet.current = angemeldet;
+  }, [angemeldet, darfWaehlen, setzeSitzungsSprache]);
 }

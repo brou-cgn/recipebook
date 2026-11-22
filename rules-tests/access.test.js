@@ -171,6 +171,21 @@ test('users: die eigene Rolle lässt sich nicht ändern, andere eigene Felder sc
   await assertSucceeds(as.user(env, 'reader').doc('users/reader').update({ vorname: 'Neu' }));
 });
 
+test('users (Mehrsprachigkeit): die eigene Sprache ist nur de, en oder fr', async () => {
+  const db = as.user(env, 'reader');
+  await assertSucceeds(db.doc('users/reader').update({ sprache: 'en' }));
+  await assertSucceeds(db.doc('users/reader').update({ sprache: 'fr' }));
+  await assertSucceeds(db.doc('users/reader').update({ vorname: 'Neu', sprache: 'de' }));
+  await assertFails(db.doc('users/reader').update({ sprache: 'es' }));
+  await assertFails(db.doc('users/reader').update({ sprache: 'EN' }));
+  await assertFails(db.doc('users/reader').update({ sprache: 1 }));
+  await assertFails(db.doc('users/reader').update({ sprache: null }));
+  // Ohne Änderung an der Sprache bleibt ein Update erlaubt, auch wenn sie schon steht.
+  await assertSucceeds(db.doc('users/reader').update({ vorname: 'Noch neuer' }));
+  // Fremde Profile ändert ein Mitglied auch mit gültiger Sprache nicht.
+  await assertFails(as.user(env, 'reader').doc('users/other').update({ sprache: 'en' }));
+});
+
 test('users: anonyme Gäste legen kein Profil an, Mitglieder nur mit Rolle read', async () => {
   await assertFails(as.anonymous(env, 'gast9').doc('users/gast9').set({ role: 'read' }));
   await assertSucceeds(as.user(env, 'neu').doc('users/neu').set({ role: 'read' }));

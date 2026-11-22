@@ -106,7 +106,8 @@ import {
   updateUserFotoscan,
   ROLES,
   ROLE_PERMISSIONS_DEFAULT,
-  updateRolePermission
+  updateRolePermission,
+  setUserSprache
 } from "./userManagement";
 
 const VALID_PASSWORD = "SecurePass12!";
@@ -985,6 +986,12 @@ describe("User Management Utilities", () => {
         expect(ROLE_PERMISSIONS_DEFAULT[role].weinprofilEinblick).toBe(false);
       });
     });
+    test("should have sprachwahl enabled only for admin (Mehrsprachigkeit, bis die Oberfläche übersetzt ist)", () => {
+      expect(ROLE_PERMISSIONS_DEFAULT[ROLES.ADMIN].sprachwahl).toBe(true);
+      [ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].forEach((role) => {
+        expect(ROLE_PERMISSIONS_DEFAULT[role].sprachwahl).toBe(false);
+      });
+    });
     test("should have sortCarousel enabled for admin", () => { expect(ROLE_PERMISSIONS_DEFAULT[ROLES.ADMIN].sortCarousel).toBe(true); });
     test("should have sortCarousel disabled for non-admin roles", () => {
       [ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].forEach((role) => {
@@ -1042,6 +1049,28 @@ describe("User Management Utilities", () => {
       const result = await updateRolePermission("invalid-role", "fotoscan", true);
       expect(result.success).toBe(false);
       expect(result.message).toBe("Ungültige Berechtigung.");
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  describe("setUserSprache (Mehrsprachigkeit)", () => {
+    test("speichert die Sprache im Nutzerdokument", async () => {
+      _firestoreStore["users/u1"] = { role: "read", vorname: "Anna" };
+      await setUserSprache("u1", "fr");
+      expect(_firestoreStore["users/u1"]).toEqual({ role: "read", vorname: "Anna", sprache: "fr" });
+    });
+
+    test("lehnt unbekannte Sprachen ab und schreibt nichts", async () => {
+      _firestoreStore["users/u1"] = { role: "read" };
+      await expect(setUserSprache("u1", "es")).rejects.toThrow("Unbekannte Sprache");
+      await expect(setUserSprache("u1", "EN")).rejects.toThrow("Unbekannte Sprache");
+      expect(_firestoreStore["users/u1"].sprache).toBeUndefined();
+    });
+
+    test("ohne Nutzer-ID passiert nichts", async () => {
+      const { updateDoc } = require("firebase/firestore");
+      await expect(setUserSprache("", "en")).resolves.toBeUndefined();
+      expect(updateDoc).not.toHaveBeenCalled();
     });
   });
 });
