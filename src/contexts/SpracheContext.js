@@ -7,18 +7,23 @@ import {
   speichereSitzungsSprache,
 } from '../i18n/sprachen';
 import { erstelleT } from '../i18n/texte';
+import { rezeptTitel } from '../i18n/rezeptTitel';
 
 // Sprache der App (Vorhaben docs/vorhaben/mehrsprachigkeit.md). Der Provider umschließt in
 // src/index.js die ganze App. App.js meldet die Sprache aus den persönlichen Einstellungen
 // (useProfilSprache), der Umschalter im Header setzt die Sprache dieser Sitzung
 // (setzeSitzungsSprache, null hebt sie auf). Welche gilt: aktiveSprache in src/i18n/sprachen.js.
 // Ohne Provider (etwa in Tests mit render() statt renderWithProviders) gilt Deutsch.
+// `inhalteUebersetzen`: übersetzte Inhalte (Rezepttitel, ab PR 4 Rezeptinhalt) anzeigen; in
+// der App nur mit der Berechtigung sprachwahl (useSpracheFuerNutzer).
 const OHNE_PROVIDER = Object.freeze({
   sprache: STANDARD_SPRACHE,
   profilSprache: null,
   sitzungsSprache: null,
+  inhalteUebersetzen: false,
   setzeProfilSprache: () => {},
   setzeSitzungsSprache: () => {},
+  setzeInhalteUebersetzen: () => {},
 });
 
 const SpracheContext = createContext(OHNE_PROVIDER);
@@ -31,14 +36,23 @@ const gueltigOderNull = (wert) => (istSprache(wert) ? wert : null);
  *   in der App meldet App.js sie über useProfilSprache
  * @param {Storage|null} [props.speicher] - wo die Sitzungs-Sprache liegt; ohne Angabe
  *   sessionStorage, null = nirgends (Tests)
+ * @param {boolean} [props.inhalteUebersetzen] - Startwert (Tests); in der App setzt ihn
+ *   useSpracheFuerNutzer
  */
-export function SpracheProvider({ children, profilSprache: startProfilSprache = null, speicher }) {
+export function SpracheProvider({
+  children,
+  profilSprache: startProfilSprache = null,
+  speicher,
+  inhalteUebersetzen: startInhalteUebersetzen = false,
+}) {
   const [profilSprache, setProfilSprache] = useState(() => gueltigOderNull(startProfilSprache));
+  const [inhalteUebersetzen, setInhalteUebersetzen] = useState(Boolean(startInhalteUebersetzen));
   const [sitzungsSprache, setSitzungsSprache] = useState(() => (
     speicher === null ? null : leseSitzungsSprache(speicher)
   ));
 
   const setzeProfilSprache = useCallback((wert) => setProfilSprache(gueltigOderNull(wert)), []);
+  const setzeInhalteUebersetzen = useCallback((wert) => setInhalteUebersetzen(Boolean(wert)), []);
 
   const setzeSitzungsSprache = useCallback((wert) => {
     const neu = gueltigOderNull(wert);
@@ -57,16 +71,20 @@ export function SpracheProvider({ children, profilSprache: startProfilSprache = 
     sprache,
     profilSprache,
     sitzungsSprache,
+    inhalteUebersetzen,
     setzeProfilSprache,
     setzeSitzungsSprache,
-  }), [sprache, profilSprache, sitzungsSprache, setzeProfilSprache, setzeSitzungsSprache]);
+    setzeInhalteUebersetzen,
+  }), [sprache, profilSprache, sitzungsSprache, inhalteUebersetzen,
+    setzeProfilSprache, setzeSitzungsSprache, setzeInhalteUebersetzen]);
 
   return <SpracheContext.Provider value={wert}>{children}</SpracheContext.Provider>;
 }
 
 /**
  * @returns {{sprache: string, profilSprache: string|null, sitzungsSprache: string|null,
- *   setzeProfilSprache: Function, setzeSitzungsSprache: Function}}
+ *   inhalteUebersetzen: boolean, setzeProfilSprache: Function, setzeSitzungsSprache: Function,
+ *   setzeInhalteUebersetzen: Function}}
  */
 export function useSprache() {
   return useContext(SpracheContext);
@@ -80,6 +98,16 @@ export function useSprache() {
 export function useTexte(woerterbuch) {
   const { sprache } = useSprache();
   return useMemo(() => erstelleT(woerterbuch, sprache), [woerterbuch, sprache]);
+}
+
+/**
+ * Titel eines Rezepts in der geltenden Sprache (src/i18n/rezeptTitel.js), solange übersetzte
+ * Inhalte eingeschaltet sind; sonst das Original.
+ * @returns {(rezept: object) => string}
+ */
+export function useRezeptTitel() {
+  const { sprache, inhalteUebersetzen } = useSprache();
+  return useCallback((rezept) => rezeptTitel(rezept, sprache, inhalteUebersetzen), [sprache, inhalteUebersetzen]);
 }
 
 /**
@@ -97,7 +125,8 @@ export function useProfilSprache(wert) {
 /**
  * Verbindet die Sprache mit der angemeldeten Person (App.js mit `currentUser`).
  * Die persönliche Einstellung gilt nur mit der Berechtigung `sprachwahl` (Funktionen nach
- * Berechtigung); ohne sie gilt Deutsch, und eine im Header gewählte Sitzungs-Sprache endet.
+ * Berechtigung); ohne sie gilt Deutsch, übersetzte Inhalte bleiben aus, und eine im Header
+ * gewählte Sitzungs-Sprache endet.
  * Sie endet auch beim Abmelden, damit die nächste Person nicht in fremder Sprache startet.
  * Solange noch niemand angemeldet ist (App-Start), bleibt sie stehen.
  * @param {object|null} nutzer - currentUser mit `sprache` und `sprachwahl`
@@ -107,7 +136,10 @@ export function useSpracheFuerNutzer(nutzer) {
   const darfWaehlen = Boolean(nutzer?.sprachwahl);
   useProfilSprache(darfWaehlen ? nutzer?.sprache : null);
 
-  const { setzeSitzungsSprache } = useSprache();
+  const { setzeSitzungsSprache, setzeInhalteUebersetzen } = useSprache();
+  useEffect(() => {
+    setzeInhalteUebersetzen(darfWaehlen);
+  }, [darfWaehlen, setzeInhalteUebersetzen]);
   const warAngemeldet = useRef(false);
   useEffect(() => {
     const abgemeldet = !angemeldet && warAngemeldet.current;

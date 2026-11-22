@@ -62,6 +62,8 @@ import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { calculateRecipeSortIndexBreakdown } from '../utils/recipeSortIndex';
 import { evaluateLowCarbTag } from '../utils/lowCarb';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
+import { useRezeptTitel, useTexte } from '../contexts/SpracheContext';
+import rezeptansichtTexte from '../i18n/texte/rezeptansicht';
 import useModalScrollLock from '../hooks/useModalScrollLock';
 import useFadeOutClose from '../hooks/useFadeOutClose';
 import {
@@ -109,6 +111,9 @@ const STICKY_TITLE_TOP_PADDING_PX = 6.4;
 function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId, menuPortionCount, onPortionCountChange, menu = null, onVersionDescribeContinue, versionDescribeHasText = false }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
+  // Titel in der geltenden Sprache (Mehrsprachigkeit PR 3); bearbeitet wird immer recipe.title
+  const zeigeTitel = useRezeptTitel();
+  const tAnsicht = useTexte(rezeptansichtTexte);
   const { rows: nutritionReferenceRows, loading: nutritionReferenceLoading, reload: reloadNutritionReferences } = useNutritionReference();
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [lastOwnCookDateMs, setLastOwnCookDateMs] = useState(undefined);
@@ -656,6 +661,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const hasMultipleVersions = allVersions.length > 1;
 
   const recipe = selectedRecipe;
+  const titel = zeigeTitel(recipe);
+  const titelUebersetzt = titel !== (recipe?.title || '');
+  const originalSprache = recipe?.titelUebersetzung?.originalSprache;
 
   // Schritt und Portionen eines Rezepts der Sitzung mitschreiben, damit ein Wechsel sie wiederherstellt.
   // Nur auf Änderungen der Werte: Beim Wechsel selbst zeigt der erste Render noch die alten Werte.
@@ -1934,7 +1942,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
             {/* Ingredients list */}
             <section className="cooking-mode-ingredients">
-              {showCookingRail && <h2 className="cooking-mode-landscape-title">{recipe.title}</h2>}
+              {showCookingRail && <h2 className="cooking-mode-landscape-title">{titel}</h2>}
               <div className="section-header">
                 <h2>Zutaten für</h2>
                 {recipe.portionen && (
@@ -2129,7 +2137,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       <div key={idx} className="carousel-slide">
                         <img
                           src={img.url}
-                          alt={recipe.title}
+                          alt={titel}
                           ref={el => { carouselImagesRef.current[idx] = el; }}
                         />
                       </div>
@@ -2366,16 +2374,23 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               </div>
 
             <div className="recipe-title-row">
-              <h1 className={`recipe-title${showStickyTitle && !cookingMode ? ' recipe-title--stuck' : ''}`} ref={titleRef}>{recipe.title}</h1>
+              <h1 className={`recipe-title${showStickyTitle && !cookingMode ? ' recipe-title--stuck' : ''}`} ref={titleRef}>{titel}</h1>
             </div>
+            {titelUebersetzt && (
+              <p className="recipe-title-original">
+                <span lang={['de', 'en', 'fr'].includes(originalSprache) ? originalSprache : undefined}>
+                  {tAnsicht('originalTitel', { titel: recipe.title })}
+                </span>
+              </p>
+            )}
             {!cookingMode && (
               <div
                 className={`recipe-sticky-title${showStickyTitle ? ' recipe-sticky-title--visible' : ''}`}
                 style={{ top: stickyTitleTop }}
                 aria-hidden="true"
-                title={recipe.title}
+                title={titel}
               >
-                <span className="recipe-sticky-title__text" data-title={recipe.title} />
+                <span className="recipe-sticky-title__text" data-title={titel} />
               </div>
             )}
 

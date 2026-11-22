@@ -806,6 +806,13 @@ button.private-badge-button:active {
   transition: opacity 0.2s ease;
 }
 
+/* Originaltitel unter einem übersetzten Titel (Mehrsprachigkeit) */
+p.recipe-title-original {
+  margin: -0.5rem 1.5rem 0.75rem;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
 /* Original-Titel blendet aus, während der Sticky-Titel übernimmt */
 .recipe-title--stuck {
   opacity: 0;
@@ -1393,6 +1400,11 @@ button.private-badge-button:active {
   .recipe-title {
     font-size: 1.5rem;
     padding: 0;
+  }
+
+  /* Bündig mit dem Titel, der hier 1rem Innenabstand hat */
+  p.recipe-title-original {
+    margin: -0.25rem 1rem 0.5rem;
   }
 
   .recipe-metadata {

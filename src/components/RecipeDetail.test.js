@@ -2,6 +2,7 @@ import React from 'react';
 import { defaultIcon } from '../utils/defaultButtonIcons';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import RecipeDetail from './RecipeDetail';
+import { SpracheProvider } from '../contexts/SpracheContext';
 import * as ingredientIdMatching from '../utils/ingredientIdMatching';
 import {
   INGREDIENT_MATCH_CREATE_NEW_OPTION,
@@ -3791,5 +3792,37 @@ describe('RecipeDetail – Rezept löschen (AGENTS.md, Löschaktionen; Tech-Chec
     fireEvent.click(screen.getByTitle('Rezept löschen'));
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     expect(onDelete).toHaveBeenCalledWith('r-leer');
+  });
+});
+
+describe('RecipeDetail – übersetzter Titel (Mehrsprachigkeit PR 3)', () => {
+  const rezept = {
+    id: 'recipe-t',
+    title: 'Omas Apfelkuchen',
+    authorId: 'user-1',
+    portionen: 4,
+    portionUnitId: 1,
+    ingredients: ['200 g Mehl'],
+    steps: ['Backen'],
+    titelUebersetzung: {
+      quelle: 'Omas Apfelkuchen', originalSprache: 'de', de: 'Omas Apfelkuchen', en: 'Grandma’s apple cake', fr: 'Gâteau de mamie',
+    },
+  };
+  const zeige = (inhalteUebersetzen) => render(
+    <SpracheProvider profilSprache="en" inhalteUebersetzen={inhalteUebersetzen} speicher={null}>
+      <RecipeDetail recipe={rezept} onBack={() => {}} onEdit={() => {}} onDelete={() => {}} currentUser={{ id: 'user-1', vorname: 'T', nachname: 'U' }} />
+    </SpracheProvider>
+  );
+
+  test('zeigt den übersetzten Titel und darunter das Original', () => {
+    zeige(true);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Grandma’s apple cake');
+    expect(screen.getByText('Original: Omas Apfelkuchen')).toHaveAttribute('lang', 'de');
+  });
+
+  test('ohne übersetzte Inhalte nur das Original, ohne Hinweis', () => {
+    zeige(false);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Omas Apfelkuchen');
+    expect(screen.queryByText(/^Original:/)).not.toBeInTheDocument();
   });
 });

@@ -64,6 +64,25 @@ test('recipes (Tech-Check S29): ratingAvg, ratingCount und weinprofil ändern nu
   await assertSucceeds(as.user(env, 'editor').doc('recipes/open').update({ title: 'Neuer', ratingAvg: 4, weinprofil: profil }));
 });
 
+test('recipes (Mehrsprachigkeit): titelUebersetzung ändern nur Cloud Functions, auch nicht beim Anlegen', async () => {
+  const uebersetzung = { quelle: 'Offen', originalSprache: 'de', de: 'Offen', en: 'Open', fr: 'Ouvert' };
+  await seed(env, (db) => db.doc('recipes/open').update({ titelUebersetzung: uebersetzung }));
+  for (const uid of ['editor', 'admin']) {
+    const db = as.user(env, uid);
+    await assertFails(db.doc('recipes/open').update({ titelUebersetzung: { ...uebersetzung, en: 'Erfunden' } }));
+    await assertFails(db.doc('recipes/open').update({ titelUebersetzung: firebase.firestore.FieldValue.delete() }));
+    await assertFails(db.collection('recipes').add({ title: 'Neu', authorId: uid, groupId: 'g1', titelUebersetzung: uebersetzung }));
+  }
+  // Titel ändern bleibt erlaubt, ebenso ein unverändert mitgeschickter Wert.
+  await assertSucceeds(as.user(env, 'editor').doc('recipes/open').update({ title: 'Neu' }));
+  await assertSucceeds(as.user(env, 'editor').doc('recipes/open').update({ title: 'Neuer', titelUebersetzung: uebersetzung }));
+});
+
+test('aiTitelUebersetzungLimits: Zähler nur für Cloud Functions', async () => {
+  await assertFails(as.user(env, 'admin').doc('aiTitelUebersetzungLimits/automatik_2026-11-22').get());
+  await assertFails(as.user(env, 'admin').doc('aiTitelUebersetzungLimits/admin_2026-11-22').set({ count: 0 }));
+});
+
 test('recipes (Tech-Check S29): ein neues Rezept bringt keine Bewertung und kein Weinprofil mit', async () => {
   const profil = { rolle: 'hauptgericht', hauptkomponente: 'rind_lamm', inputHash: 'abc', schemaVersion: 1 };
   const recipe = { title: 'Neu', authorId: 'editor', groupId: 'g1' };

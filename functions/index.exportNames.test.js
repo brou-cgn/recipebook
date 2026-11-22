@@ -80,6 +80,8 @@ const EXPECTED_EXPORTS = [
   'wichtelNeuigkeitenVersenden',
   'wichtelTeilnahme',
   'wichtelVerwalten',
+  'backfillTitelUebersetzungen',
+  'uebersetzeRezeptTitel',
 ];
 
 function loadIndex() {

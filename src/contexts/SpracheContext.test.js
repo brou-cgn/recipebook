@@ -1,5 +1,5 @@
 import { act, render, screen } from '@testing-library/react';
-import { SpracheProvider, useProfilSprache, useSprache, useSpracheFuerNutzer, useTexte } from './SpracheContext';
+import { SpracheProvider, useProfilSprache, useRezeptTitel, useSprache, useSpracheFuerNutzer, useTexte } from './SpracheContext';
 import { SITZUNGS_SPRACHE_KEY } from '../i18n/sprachen';
 import allgemeinTexte from '../i18n/texte/allgemein';
 import { renderWithProviders } from '../test-utils';
@@ -137,5 +137,32 @@ describe('useSpracheFuerNutzer (App.js)', () => {
     rerender(mit(s, null));
     expect(screen.getByRole('button', { name: 'Speichern' })).toBeInTheDocument();
     expect(SITZUNGS_SPRACHE_KEY in s.daten).toBe(false);
+  });
+});
+
+describe('übersetzte Rezepttitel (Mehrsprachigkeit PR 3)', () => {
+  const rezept = {
+    title: 'Omas Apfelkuchen',
+    titelUebersetzung: { quelle: 'Omas Apfelkuchen', originalSprache: 'de', de: 'Omas Apfelkuchen', en: 'Grandma’s apple cake', fr: 'Gâteau de mamie' },
+  };
+  function Titel({ nutzer }) {
+    useSpracheFuerNutzer(nutzer);
+    return <h1>{useRezeptTitel()(rezept)}</h1>;
+  }
+  const mit = (nutzer) => <SpracheProvider speicher={null}><Titel nutzer={nutzer} /></SpracheProvider>;
+
+  it('zeigt die Übersetzung nur mit der Berechtigung sprachwahl', () => {
+    const { rerender } = render(mit({ id: 'u1', sprache: 'en', sprachwahl: true }));
+    expect(screen.getByRole('heading')).toHaveTextContent('Grandma’s apple cake');
+    rerender(mit({ id: 'u1', sprache: 'en', sprachwahl: false }));
+    expect(screen.getByRole('heading')).toHaveTextContent('Omas Apfelkuchen');
+  });
+
+  it('ohne Provider immer das Original', () => {
+    function OhneProvider() {
+      return <h1>{useRezeptTitel()(rezept)}</h1>;
+    }
+    render(<OhneProvider />);
+    expect(screen.getByRole('heading')).toHaveTextContent('Omas Apfelkuchen');
   });
 });

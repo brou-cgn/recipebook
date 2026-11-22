@@ -6,6 +6,8 @@ import { getUserFavorites } from '../utils/userFavorites';
 import { expandCuisineSelection } from '../utils/customLists';
 import { hasHauptsaisonIngredient } from '../utils/recipeSortIndex';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
+import { useRezeptTitel, useSprache } from '../contexts/SpracheContext';
+import { titelFassungen } from '../i18n/rezeptTitel';
 import { splitIntoTwoRows, reorderActiveFirst } from '../utils/pillCarousel';
 import useFadeOutClose from '../hooks/useFadeOutClose';
 
@@ -72,6 +74,9 @@ function computeTopCuisineTypes(recipes, cuisineTypes) {
 function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRecipe, onSearch, onClearSearch, currentUser, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly: showSeasonalOnlyProp, showRecipes: showRecipesProp, showTutorials: showTutorialsProp, onFavoritesToggle, onSeasonalToggle, onRecipesToggle, onTutorialsToggle, seasonMatrixEntries = [], cuisineTypes, cuisineGroups, onCuisineFilterChange, selectedCuisines: selectedCuisinesProp, mealCategories, onMealCategoryFilterChange, selectedCategories: selectedCategoriesProp, availableAuthors, onAuthorFilterChange, selectedAuthors: selectedAuthorsProp, privateLists, onPrivateListFilterChange, selectedPrivateLists: selectedPrivateListsProp, searchTerm: searchTermProp, showPrivateListFilters = true }) {
   const [closing, onClose] = useFadeOutClose(onCloseProp);
   const { rows: nutritionReferenceRows } = useNutritionReference();
+  // Mehrsprachigkeit PR 3: Titel in der geltenden Sprache, die Suche findet Original und Übersetzung
+  const zeigeTitel = useRezeptTitel();
+  const { inhalteUebersetzen } = useSprache();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -222,7 +227,7 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
   const filteredRecipes = fuzzyFilter(
     baseRecipes,
     debouncedTerm,
-    (recipe) => recipe.title || ''
+    (recipe) => titelFassungen(recipe, inhalteUebersetzen).join(' · ')
   );
 
   const handleSelect = useCallback((recipe) => {
@@ -497,7 +502,7 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
                       </span>
                     )}
                   </div>
-                  <span className="mobile-search-tile-title">{recipe.title}</span>
+                  <span className="mobile-search-tile-title">{zeigeTitel(recipe)}</span>
                 </button>
               ))}
             </div>
