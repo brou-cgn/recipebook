@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import Startseite from './Startseite';
+import { SpracheProvider } from '../contexts/SpracheContext';
 
 const mockNutritionReferenceState = {
   rows: [{ ingredientID: 'ing-spargel', seasonRelevant: true, seasonalFamily: 'Spargel' }],
@@ -1278,5 +1279,34 @@ describe('Startseite – Kachel "Für dich entdeckt"', () => {
     fireEvent.click(assignButton);
     expect(await screen.findByRole('button', { name: 'Familienrezepte' })).toBeInTheDocument();
     expect(screen.queryAllByRole('button', { name: 'Für dich entdeckt' })).toHaveLength(0);
+  });
+});
+
+describe('Startseite in anderer Sprache (Mehrsprachigkeit PR 6e)', () => {
+  test('Englisch: Überschriften und der unveränderte Standard-Leertext übersetzt', async () => {
+    await act(async () => {
+      render(
+        <SpracheProvider profilSprache="en" speicher={null}>
+          <Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={() => {}} />
+        </SpracheProvider>
+      );
+    });
+    expect(screen.getByText('My cooking ideas')).toBeInTheDocument();
+    expect(screen.getByText('No shared candidates yet.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'My recipe collections' })).toBeInTheDocument();
+    expect(screen.getByText('No trending recipes yet.')).toBeInTheDocument();
+  });
+
+  test('ein selbst gepflegter Leertext bleibt, wie er ist', async () => {
+    const { getStartseitenKandidatenLeertext } = require('../utils/customLists');
+    getStartseitenKandidatenLeertext.mockResolvedValue('Noch nichts gemeinsam gemerkt.');
+    await act(async () => {
+      render(
+        <SpracheProvider profilSprache="en" speicher={null}>
+          <Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />
+        </SpracheProvider>
+      );
+    });
+    expect(await screen.findByText('Noch nichts gemeinsam gemerkt.')).toBeInTheDocument();
   });
 });

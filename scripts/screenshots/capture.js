@@ -289,6 +289,16 @@ const SCREENS = [
     },
   },
   {
+    // Einstellungen › Allgemein: Header-Slogan mit Englisch und Französisch (Mehrsprachigkeit)
+    name: 'einstellungen-allgemein',
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Einstellungen');
+      await page.getByRole('heading', { name: 'Header-Slogan' }).waitFor();
+      await pause(page);
+      await shot();
+    },
+  },
+  {
     name: 'einstellungen-ki',
     fullPage: true,
     run: async (page, shot) => {

@@ -1089,6 +1089,8 @@ export async function getSettings() {
         listenUebersetzungen: settings.listenUebersetzungen || null,
         customIngredientAdjectives: settings.customIngredientAdjectives || [],
         headerSlogan: settings.headerSlogan || DEFAULT_SLOGAN,
+        // Übersetzungen des Slogans {quelle, en, fr} (Mehrsprachigkeit, src/i18n/slogan.js)
+        sloganUebersetzungen: settings.sloganUebersetzungen || null,
         faviconText: settings.faviconText || DEFAULT_FAVICON_TEXT,
         aiRecipePrompt,
         autoShareOnCreate: settings.autoShareOnCreate ?? false,
@@ -1585,6 +1587,30 @@ export async function getAvailableUnits() {
 export async function getHeaderSlogan() {
   const settings = await getSettings();
   return settings.headerSlogan;
+}
+
+/**
+ * Übersetzungen des Slogans (Mehrsprachigkeit): {quelle, en, fr} oder null.
+ * `quelle` ist der deutsche Slogan, zu dem sie gehören (src/i18n/slogan.js).
+ * @returns {Promise<{quelle: string, en?: string, fr?: string}|null>}
+ */
+export async function getSloganUebersetzungen() {
+  const settings = await getSettings();
+  return settings.sloganUebersetzungen || null;
+}
+
+/**
+ * Speichert die Übersetzungen des Slogans; null leert das Feld. Schreiben dürfen wie beim
+ * Slogan selbst nur Admins (firestore.rules, settings/app).
+ * @param {{quelle: string, en?: string, fr?: string}|null} uebersetzungen
+ * @returns {Promise<void>}
+ */
+export async function saveSloganUebersetzungen(uebersetzungen) {
+  const sloganUebersetzungen = uebersetzungen || null;
+  await updateDoc(doc(db, 'settings', 'app'), { sloganUebersetzungen });
+  if (settingsCache) {
+    settingsCache = { ...settingsCache, sloganUebersetzungen };
+  }
 }
 
 /**

@@ -1273,7 +1273,7 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
       ...(finalNaehrwerte.calcFinalWeightGrams != null && { calcFinalWeightGrams: finalNaehrwerte.calcFinalWeightGrams }),
       ...(finalNaehrwerte.calcPer100g && { calcPer100g: finalNaehrwerte.calcPer100g }),
       ...(writebackErrors.length > 0 && {
-        writebackError: writebackErrors[0]?.message || 'Nährwertreferenz-Aktualisierung fehlgeschlagen',
+        writebackError: writebackErrors[0]?.message || T_DEUTSCH('meldungReferenzFehlgeschlagen'),
       }),
     };
     setAutoCalcResult(result);
@@ -1432,7 +1432,7 @@ function NutritionModal({ recipe, onClose: onCloseProp, onSave, allRecipes = [],
       } else {
         stillNotIncluded.push({
           ingredient,
-          error: resolvedLink.error || `Verlinktes Rezept "${link?.recipeName || ingredient}" konnte nicht umgerechnet werden.`,
+          error: resolvedLink.error || T_DEUTSCH('meldungVerlinktNichtUmgerechnet', { name: link?.recipeName || ingredient }),
           isRecipeLink: true,
         });
       }

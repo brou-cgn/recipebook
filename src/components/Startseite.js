@@ -16,6 +16,9 @@ import { calculateRecipeSortIndex, hasHauptsaisonIngredient, buildNutritionRefer
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import { getCuisineProposals } from '../utils/cuisineProposalsFirestore';
 import { getKuechenbetriebFabConfig } from '../utils/kuechenbetriebTabs';
+import { useTexte } from '../contexts/SpracheContext';
+import startseiteTexte from '../i18n/texte/startseite';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 const TRENDING_DAYS = 7;
 const TRENDING_TOP = 10;
@@ -26,6 +29,12 @@ const KOCHIDEEN_KARUSSELL_MAX = 6;
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 
 function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], groupsLoading = false, onCreateInspirationList, onSelectExistingInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes, onOpenSeasonalRecipes, onOpenInteractiveList, onAddRecipe, onCarouselsLoadedChange }) {
+  // Texte der Startseite (Mehrsprachigkeit PR 6e)
+  const t = useTexte(startseiteTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  // Leertexte der Kacheln pflegen Admins in den Einstellungen (Inhalt). Steht dort noch der
+  // Standardtext, erscheint er in der geltenden Sprache.
+  const leertext = (wert, standard, schluessel) => (!wert || wert === standard ? t(schluessel) : wert);
   const { rows: nutritionReferenceRows } = useNutritionReference();
   const nutritionReferenceIndex = useMemo(
     () => buildNutritionReferenceIndex(nutritionReferenceRows),
@@ -558,12 +567,12 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         <div className="startseite-inspiration-picker-overlay">
           <div className="startseite-inspiration-picker">
             <div className="startseite-inspiration-picker-header">
-              <h3>Inspirationssammlung auswählen</h3>
+              <h3>{t('inspirationAuswaehlen')}</h3>
               <button
                 type="button"
                 className="startseite-inspiration-picker-close"
                 onClick={() => setShowInspirationPicker(false)}
-                aria-label="Schließen"
+                aria-label={tAllgemein('schliessen')}
                 disabled={isCreatingInspiration}
               >
                 ×
@@ -587,7 +596,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
                 onClick={() => handleInspirationPickerSelect('__new__')}
                 disabled={isCreatingInspiration}
               >
-                Neue Liste erstellen
+                {t('neueListe')}
               </button>
             </div>
           </div>
@@ -597,12 +606,12 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         <div className="startseite-alltagsklassiker-picker-overlay">
           <div className="startseite-alltagsklassiker-picker">
             <div className="startseite-alltagsklassiker-picker-header">
-              <h3>Alltagsklassiker zuordnen</h3>
+              <h3>{t('alltagsklassikerZuordnen')}</h3>
               <button
                 type="button"
                 className="startseite-alltagsklassiker-picker-close"
                 onClick={() => setShowAlltagsklassikerPicker(false)}
-                aria-label="Schließen"
+                aria-label={tAllgemein('schliessen')}
                 disabled={isAssigningAlltagsklassiker}
               >
                 ×
@@ -632,7 +641,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         onOpen={onOpenInteractiveList}
       />
       <StartseitenKarussell
-        title="Meine Kochideen"
+        title={t('meineKochideen')}
         items={gemeinsameKandidaten.slice(0, KOCHIDEEN_KARUSSELL_MAX)}
         loading={kandidatenLoading}
         renderItem={(recipe) => (
@@ -643,7 +652,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
             timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
           />
         )}
-        emptyText={showInspirationButtonInKochideen ? '' : kandidatenLeertext}
+        emptyText={showInspirationButtonInKochideen ? '' : leertext(kandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, 'kandidatenLeer')}
         emptyContent={showInspirationButtonInKochideen ? (
           <div className="startseite-inspiration-setup">
             <button
@@ -652,7 +661,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
               onClick={handleCreateInspirationClick}
               disabled={isCreatingInspiration}
             >
-              {isCreatingInspiration ? 'Wird angelegt…' : 'Inspirationssammlung anlegen'}
+              {isCreatingInspiration ? t('wirdAngelegt') : t('inspirationAnlegen')}
             </button>
           </div>
         ) : null}
@@ -662,11 +671,11 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
             type="button"
             className="startseite-add-recipe-btn"
             onClick={() => onAddRecipe(defaultWebImportList.id)}
-            title="Neues Rezept hinzufügen"
-            aria-label="Neues Rezept hinzufügen"
+            title={t('neuesRezept')}
+            aria-label={t('neuesRezept')}
           >
             {isBase64Image(getEffectiveIcon(buttonIcons, 'addRecipeToList', isDarkMode)) ? (
-              <img src={getEffectiveIcon(buttonIcons, 'addRecipeToList', isDarkMode)} alt="Neues Rezept hinzufügen" className="button-icon-image" draggable="false" />
+              <img src={getEffectiveIcon(buttonIcons, 'addRecipeToList', isDarkMode)} alt={t('neuesRezept')} className="button-icon-image" draggable="false" />
             ) : (
               getEffectiveIcon(buttonIcons, 'addRecipeToList', isDarkMode)
             )}
@@ -674,7 +683,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         ) : null}
       />
       <StartseitenKarussell
-        title="Meine Alltagsklassiker"
+        title={t('meineAlltagsklassiker')}
         items={alltagsklassikerRecipes}
         loading={false}
         renderItem={(recipe) => (
@@ -685,7 +694,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
             timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
           />
         )}
-        emptyText={showAlltagsklassikerSetupButton ? '' : alltagsklassikerLeertextValue}
+        emptyText={showAlltagsklassikerSetupButton ? '' : leertext(alltagsklassikerLeertextValue, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, 'alltagsklassikerLeer')}
         emptyContent={showAlltagsklassikerSetupButton ? (
           <div className="startseite-inspiration-setup">
             <button
@@ -694,7 +703,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
               onClick={() => setShowAlltagsklassikerPicker(true)}
               disabled={!onAssignEverydayClassicsList || privateListsForCurrentUser.length === 0 || isAssigningAlltagsklassiker}
             >
-              Alltagsklassiker zuordnen
+              {t('alltagsklassikerZuordnen')}
             </button>
           </div>
         ) : null}
@@ -704,11 +713,11 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
             type="button"
             className="startseite-add-recipe-btn"
             onClick={() => onAddRecipe(defaultEverydayClassicsList.id)}
-            title="Neues Rezept hinzufügen"
-            aria-label="Neues Rezept hinzufügen"
+            title={t('neuesRezept')}
+            aria-label={t('neuesRezept')}
           >
             {isBase64Image(getEffectiveIcon(buttonIcons, 'addRecipeToList', isDarkMode)) ? (
-              <img src={getEffectiveIcon(buttonIcons, 'addRecipeToList', isDarkMode)} alt="Neues Rezept hinzufügen" className="button-icon-image" draggable="false" />
+              <img src={getEffectiveIcon(buttonIcons, 'addRecipeToList', isDarkMode)} alt={t('neuesRezept')} className="button-icon-image" draggable="false" />
             ) : (
               getEffectiveIcon(buttonIcons, 'addRecipeToList', isDarkMode)
             )}
@@ -721,11 +730,11 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
           className="startseite-rezeptsammlungen-btn"
           onClick={() => onViewChange?.('groups')}
         >
-          Meine Rezeptsammlungen
+          {t('meineSammlungen')}
         </button>
       </div>
       <StartseitenKarussell
-        title="Im Trend"
+        title={t('imTrend')}
         items={topRecipes}
         loading={loading}
         renderItem={(recipe) => (
@@ -736,11 +745,11 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
             timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
           />
         )}
-        emptyText="Keine Trendrezepte vorhanden."
+        emptyText={t('keineTrends')}
         onMehr={handleMehrClick}
       />
       <StartseitenKarussell
-        title="Saisonale Rezepte"
+        title={t('saisonal')}
         items={saisonaleRezepte}
         loading={false}
         renderItem={(recipe) => (
@@ -751,11 +760,11 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
             timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
           />
         )}
-        emptyText="Keine saisonalen Rezepte vorhanden."
+        emptyText={t('keineSaisonalen')}
         onMehr={handleSaisonaleRezepteMehrClick}
       />
       <StartseitenKarussell
-        title="Neue Rezepte"
+        title={t('neu')}
         items={neueRezepte}
         loading={false}
         renderItem={(recipe) => (
@@ -766,11 +775,11 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
             timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
           />
         )}
-        emptyText="Keine Rezepte vorhanden."
+        emptyText={t('keineRezepte')}
         onMehr={handleNeueRezepteMehrClick}
       />
       <StartseitenKarussell
-        title="Relevante Rezepte"
+        title={t('relevant')}
         items={relevanteRezepte}
         loading={false}
         renderItem={(recipe) => (
@@ -781,7 +790,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
             timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
           />
         )}
-        emptyText="Keine Rezepte vorhanden."
+        emptyText={t('keineRezepte')}
         onMehr={handleRelevanteRezepteMehrClick}
       />
       {currentUser?.kuecheFab && kuechenbetriebFabConfig.showFab && (
@@ -795,11 +804,11 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
           onMouseDown={() => setFabPressed(true)}
           onMouseUp={() => setFabPressed(false)}
           onMouseLeave={() => setFabPressed(false)}
-          title="Küche-Aktion"
-          aria-label="Küche-Aktion"
+          title={t('kuecheAktion')}
+          aria-label={t('kuecheAktion')}
         >
           {isBase64Image(getEffectiveIcon(buttonIcons, 'kuecheFab', isDarkMode)) ? (
-            <img src={getEffectiveIcon(buttonIcons, 'kuecheFab', isDarkMode)} alt="Küche-Aktion" className="startseite-fab-button__icon" draggable="false" />
+            <img src={getEffectiveIcon(buttonIcons, 'kuecheFab', isDarkMode)} alt={t('kuecheAktion')} className="startseite-fab-button__icon" draggable="false" />
           ) : (
             getEffectiveIcon(buttonIcons, 'kuecheFab', isDarkMode)
           )}

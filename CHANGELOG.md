@@ -8,6 +8,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 ## [Unreleased]
 
 ### Hinzugefügt
+- Startseite („Küche“) auf Englisch und Französisch (Vorschau mit der Berechtigung „Sprachwahl“): Kacheln und Karussells, Trend-Karten mit übersetztem Titel, „Für dich entdeckt“ mit Anzahl und Monat in der gewählten Sprache. Selbst gepflegte Leertexte und Themen bleiben, wie sie sind.
 - Kochbuch auf Englisch und Französisch (Vorschau mit der Berechtigung „Sprachwahl“): Liste und Rezeptkarten, Sortierung, Filter-Seitenleiste und die Suche auf dem Handy, dazu die Kategorien der Tutorials. Der Hinweis bei leeren Favoriten duzt jetzt; „1 weitere Kategorie“ steht in der Einzahl.
 - „Wein dazu“ auf Englisch und Französisch (Vorschau mit der Berechtigung „Sprachwahl“): Weinstil, Rebsorten-Beispiele, Kennwerte, Bewertung und die Gründe unter „Warum passt das?“ erscheinen in der gewählten Sprache. Rebsorten und Weinnamen bleiben, wie sie sind; übersetzt werden Zusätze wie „aus dem Elsass“ oder „trocken“.
 - Nährwerte auf Englisch und Französisch (Vorschau mit der Berechtigung „Sprachwahl“): der Nährwert-Dialog mit Zusammensetzung und Berechnung, der Abgleich der Zutaten (ingredientID) und die Zutatensuche; Zahlen erscheinen im Format der Sprache. Meldungen der Berechnung bleiben im Rezept deutsch gespeichert und werden beim Anzeigen übersetzt. Die Hinweise beim Abgleich und die Fehlermeldungen der Berechnung duzen jetzt.
@@ -32,6 +33,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Zugriffsbeschränkung für Entwurfs-Rezepte: Nur Administratoren und Autoren können Rezepte im Entwurfstatus (isPrivate) sehen
 
 ### Geändert
+- Slogan im Header auf Englisch und Französisch (Vorschau mit der Berechtigung „Sprachwahl“): Der Standard-Slogan „Unsere besten Momente“ erscheint übersetzt („Our best moments“, „Nos meilleurs moments“), ein eigener Slogan, sobald unter Einstellungen › Allgemein eine Übersetzung eingetragen ist. Ändert sich der Slogan, erscheint bis zur angepassten Übersetzung das Original. Der Seitentitel folgt der Sprache.
 - Sprachwahl (Vorschau mit der Berechtigung „Sprachwahl“): Die Sprache wählst du jetzt direkt im Header über einen Chip mit Flagge und Kürzel (DE, EN, FR) statt im Menü. Auf dem Handy öffnet er eine Auswahl von unten, auf dem Desktop ein kleines Menü; jede Sprache steht dort auch in der gewählten Sprache, die Standardsprache ist markiert. Gilt eine andere Sprache nur für die Sitzung, hat der Chip einen orangen Rand.
 - Header: Der Slogan unter „brouBook“ sieht jetzt aus wie von Hand mit Bleistift geschrieben, in Orange und mit jedem Buchstaben etwas anders, auch bei einem eigenen Slogan. Er sitzt direkt unter dem Titel, die Lücke dazwischen ist weg. Die Schrift (Reenie Beanie) kommt mit der App und steht auch offline bereit.
 - Persönliche Daten: Die Hinweise zu Mitteilungen duzen jetzt wie der Rest der App.
