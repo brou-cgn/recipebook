@@ -76,7 +76,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   const [bringButtonIcon, setBringButtonIcon] = useState(() => defaultButtonIcon('bringButton', getDarkModePreference()));
   const [favoritesButtonIcon, setFavoritesButtonIcon] = useState(() => defaultButtonIcon('menuFavoritesButton', getDarkModePreference()));
   const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('');
-  const [privateBadgeIcon, setPrivateBadgeIcon] = useState(defaultIcon('lock'));
+  const [privateButtonIcon, setPrivateButtonIcon] = useState(() => defaultButtonIcon('privateButton', getDarkModePreference()));
   const [editMenuIcon, setEditMenuIcon] = useState(() => defaultButtonIcon('editRecipe', getDarkModePreference()));
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [deleteMenuIcon, setDeleteMenuIcon] = useState('');
@@ -131,7 +131,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     setBringButtonIcon(eff('bringButton') || defaultButtonIcon('bringButton', isDarkMode));
     setFavoritesButtonIcon(eff('menuFavoritesButton') || defaultButtonIcon('menuFavoritesButton', isDarkMode));
     setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive'));
-    setPrivateBadgeIcon(eff('privateBadge') || defaultIcon('lock'));
+    setPrivateButtonIcon(eff('privateButton') || defaultButtonIcon('privateButton', isDarkMode));
     setEditMenuIcon(eff('editRecipe') || defaultButtonIcon('editRecipe', isDarkMode));
     setDeleteMenuIcon(eff('deleteRecipe'));
   }, [allButtonIcons, isDarkMode]);
@@ -632,6 +632,29 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
         )}
 
         <div className="mobile-action-buttons">
+          {menu.privat && (() => {
+            const badgeIcon = isBase64Image(privateButtonIcon) ? (
+              <img src={privateButtonIcon} alt={tAnsicht('privat')} className="button-icon-image" draggable="false" />
+            ) : (
+              privateButtonIcon
+            );
+            return canEdit && onPublish ? (
+              <button
+                type="button"
+                className="private-badge-button"
+                onClick={handlePublish}
+                disabled={publishLoading}
+                title={t('menueVeroeffentlichen')}
+                aria-label={t('menueVeroeffentlichen')}
+              >
+                {badgeIcon}
+              </button>
+            ) : (
+              <div className="private-badge-button" title={t('privatesMenue')} aria-label={t('privatesMenue')}>
+                {badgeIcon}
+              </div>
+            );
+          })()}
           <button
             className={`favorite-button ${isFavorite ? 'favorite-active' : ''}`}
             onClick={handleToggleFavorite}
@@ -651,29 +674,6 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
               )
             )}
           </button>
-          {menu.privat && (() => {
-            const badgeIcon = isBase64Image(privateBadgeIcon) ? (
-              <img src={privateBadgeIcon} alt={tAnsicht('privat')} className="button-icon-image" draggable="false" />
-            ) : (
-              privateBadgeIcon
-            );
-            return canEdit && onPublish ? (
-              <button
-                type="button"
-                className="private-badge-button"
-                onClick={handlePublish}
-                disabled={publishLoading}
-                title={t('menueVeroeffentlichen')}
-                aria-label={t('menueVeroeffentlichen')}
-              >
-                {badgeIcon}
-              </button>
-            ) : (
-              <div className="private-badge-button" title={t('privatesMenue')} aria-label={t('privatesMenue')}>
-                {badgeIcon}
-              </div>
-            );
-          })()}
           <button
             className="shopping-list-trigger-button"
             onClick={handleShoppingListClick}

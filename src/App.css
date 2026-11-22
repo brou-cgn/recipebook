@@ -177,6 +177,44 @@
   object-fit: contain;
 }
 
+/* Privat-Knopf in Rezept- und Menü-Detailansicht. Gestaltet wie der Teilen-Knopf
+   (.share-copy-url-button): ohne Fläche und Rahmen, dieselbe Drück-Animation.
+   Liegt im eager geladenen App.css, weil RecipeDetail und MenuDetail getrennte
+   Lazy-Chunks sind (vorher je eine Kopie, die letzte geladene gewann). Das Icon ist
+   der eigene Schlüssel privateButton; privateBadge bleibt für die dunklen Menü-Kacheln. */
+.private-badge-button {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+
+  line-height: 1;
+  font-size: 1.5rem;
+}
+
+button.private-badge-button {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+button.private-badge-button:active {
+  transform: scale(1.1);
+  opacity: 0.2;
+}
+
+.private-badge-button .button-icon-image {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .App .startseite-fab-button,
   .App .kueche-fab-button,
