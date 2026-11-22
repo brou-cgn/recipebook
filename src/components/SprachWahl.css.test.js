@@ -26,4 +26,14 @@ describe('SprachWahl CSS', () => {
     const aktiv = regeln.find(({ selektoren, inhalt }) => selektoren.includes('.sprachwahl-zeile--aktiv') && /color:/.test(inhalt));
     expect(aktiv.inhalt).toMatch(/color:\s*var\(--color-accent-text\)/);
   });
+
+  test('das Sheet zeichnet den Hintergrund weich wie die Einkaufsliste, ohne Abdunkeln', () => {
+    const scrim = regeln.find(({ selektoren }) => selektoren.includes('.sprachwahl-sheet-scrim'));
+    const einkaufsliste = fs.readFileSync(path.join(__dirname, 'ShoppingListModal.css'), 'utf8')
+      .match(/\.shopping-list-overlay\s*\{([^}]*)\}/)[1];
+    const blur = einkaufsliste.match(/backdrop-filter:\s*([^;]+);/)[1];
+    expect(scrim.inhalt).toMatch(new RegExp(`(^|\\s)backdrop-filter:\\s*${blur.replace(/[()]/g, '\\$&')}`));
+    expect(scrim.inhalt).toMatch(/-webkit-backdrop-filter:/);
+    expect(scrim.inhalt).toMatch(/background:\s*transparent/);
+  });
 });
