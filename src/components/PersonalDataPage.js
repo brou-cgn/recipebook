@@ -35,9 +35,10 @@ const SEITE_BLEIBT_OFFEN = { schliessen: false };
 
 /**
  * Profilseite „Chefkoch“: persönliche Daten und Einstellungen. Aufbau nach Variante B des
- * Designvorschlags (https://claude.ai/artifact/5S6yBvMf7j4JvfHLCzwQU2): Kopf mit Person,
+ * Designvorschlags (https://claude.ai/artifact/5S6yBvMf7j4JvfHLCzwQU2): Kopf mit Person (mittig, ohne Box),
  * darunter gruppierte Abschnitte. Erscheinungsbild und Sprache wählt man direkt in der Zeile,
- * der Alarmton klappt in der Zeile auf. Nur die Listen (beliebig viele) öffnen eine Unterseite.
+ * Inspirationssammlung, Alltagsklassiker und Alarmton klappen in der Zeile auf (immer nur eine).
+ * Keine Unterseiten.
  */
 function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists = [] }) {
   const t = useTexte(persoenlicheDatenTexte);
@@ -79,10 +80,10 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const [passwordMessage, setPasswordMessage] = useState(null);
 
   const [alarmSoundKey, setAlarmSoundKey] = useState(() => getAlarmSoundPreference());
-  const [alarmOffen, setAlarmOffen] = useState(false);
   const [darkMode, setDarkMode] = useState(getDarkModeMode);
-  const [showWebImportListPicker, setShowWebImportListPicker] = useState(false);
-  const [showEverydayClassicsListPicker, setShowEverydayClassicsListPicker] = useState(false);
+  // Welche Zeile aufgeklappt ist: 'inspiration' | 'alltag' | 'alarm' | null
+  const [aufgeklappt, setAufgeklappt] = useState(null);
+  const [listenFehler, setListenFehler] = useState(null);
 
   const [notificationPermission, setNotificationPermission] = useState('default');
   const [notificationSupported, setNotificationSupported] = useState(false);
@@ -202,34 +203,41 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
     setPushLog([]);
   };
 
-  const handleWebImportListSelect = async (listId) => {
-    setDefaultWebImportListId(listId);
-    const result = await updateUserProfile(currentUser.id, {
-      vorname: currentUser.vorname,
-      nachname: currentUser.nachname,
-      email: currentUser.email,
-      signatureSatz: currentUser.signatureSatz,
-      defaultWebImportListId: listId,
-      defaultEverydayClassicsListId,
-    });
-    if (result.success && onProfileUpdated) {
-      onProfileUpdated({ ...currentUser, defaultWebImportListId: listId, defaultEverydayClassicsListId }, SEITE_BLEIBT_OFFEN);
+  // Standardlisten speichern sofort; scheitert es, springt die Auswahl zurück.
+  const speichereStandardlisten = async (neu) => {
+    const vorher = { defaultWebImportListId, defaultEverydayClassicsListId };
+    setDefaultWebImportListId(neu.defaultWebImportListId);
+    setDefaultEverydayClassicsListId(neu.defaultEverydayClassicsListId);
+    setListenFehler(null);
+    let result;
+    try {
+      result = await updateUserProfile(currentUser.id, {
+        vorname: currentUser.vorname,
+        nachname: currentUser.nachname,
+        email: currentUser.email,
+        signatureSatz: currentUser.signatureSatz,
+        ...neu,
+      });
+    } catch (err) {
+      console.warn('Fehler beim Speichern der Standardliste:', err);
     }
+    if (result?.success) {
+      if (onProfileUpdated) onProfileUpdated({ ...currentUser, ...neu }, SEITE_BLEIBT_OFFEN);
+      return;
+    }
+    setDefaultWebImportListId(vorher.defaultWebImportListId);
+    setDefaultEverydayClassicsListId(vorher.defaultEverydayClassicsListId);
+    setListenFehler(t('aenderungNichtGespeichert'));
   };
 
-  const handleEverydayClassicsListSelect = async (listId) => {
-    setDefaultEverydayClassicsListId(listId);
-    const result = await updateUserProfile(currentUser.id, {
-      vorname: currentUser.vorname,
-      nachname: currentUser.nachname,
-      email: currentUser.email,
-      signatureSatz: currentUser.signatureSatz,
-      defaultWebImportListId,
-      defaultEverydayClassicsListId: listId,
-    });
-    if (result.success && onProfileUpdated) {
-      onProfileUpdated({ ...currentUser, defaultWebImportListId, defaultEverydayClassicsListId: listId }, SEITE_BLEIBT_OFFEN);
-    }
+  const handleWebImportListSelect = (listId) => {
+    if (listId === defaultWebImportListId) return;
+    speichereStandardlisten({ defaultWebImportListId: listId, defaultEverydayClassicsListId });
+  };
+
+  const handleEverydayClassicsListSelect = (listId) => {
+    if (listId === defaultEverydayClassicsListId) return;
+    speichereStandardlisten({ defaultWebImportListId, defaultEverydayClassicsListId: listId });
   };
 
   const handleSpracheSelect = async (id) => {
@@ -248,14 +256,6 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
       setSpracheSpeichert(false);
     }
   };
-
-  const pickerOffen = showWebImportListPicker || showEverydayClassicsListPicker;
-
-  useEffect(() => {
-    if (pickerOffen) {
-      window.scrollTo(0, 0);
-    }
-  }, [pickerOffen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -367,82 +367,47 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const themaOptionen = THEME_MODES.map((mode) => ({ wert: mode.key, label: t(mode.textKey) }));
   const spracheOptionen = SPRACHEN.map((eintrag) => ({ wert: eintrag.id, label: eintrag.name, lang: eintrag.id }));
   const alarmOptionen = ALARM_SOUNDS.map((sound) => ({ wert: sound.key, label: alarmName(sound.key) }));
+  const listenOptionen = [NO_LIST_OPTION, ...privateLists].map((list) => ({ wert: list.id, label: list.name }));
+  const listenName = (id) => privateLists.find((list) => list.id === id)?.name || NO_LIST_OPTION.name;
   const themaLabelId = `${idBasis}-thema`;
   const spracheLabelId = `${idBasis}-sprache`;
-  const alarmListeId = `${idBasis}-alarmtoene`;
+
+  // Zeile, die ihre Auswahl darunter aufklappt (Standardlisten, Alarmton). Es ist immer nur eine offen.
+  const aufklappZeile = ({ schluessel, label, wertName, listenLabel, optionen, wert, onWaehlen }) => {
+    const offen = aufgeklappt === schluessel;
+    const listeId = `${idBasis}-${schluessel}`;
+    return (
+      <React.Fragment key={schluessel}>
+        <button
+          type="button"
+          className="settings-row"
+          aria-expanded={offen}
+          aria-controls={offen ? listeId : undefined}
+          onClick={() => setAufgeklappt(offen ? null : schluessel)}
+        >
+          <span className="settings-row-label">{label}</span>
+          <span className="settings-row-right">
+            <span className="settings-row-value">{wertName}</span>
+            <span className={`settings-row-chevron${offen ? ' settings-row-chevron--offen' : ''}`} aria-hidden="true">›</span>
+          </span>
+        </button>
+        {offen && (
+          <AuswahlGruppe
+            id={listeId}
+            darstellung="liste"
+            aria-label={listenLabel}
+            optionen={optionen}
+            wert={wert}
+            onWaehlen={onWaehlen}
+          />
+        )}
+      </React.Fragment>
+    );
+  };
 
   return (
     <div className="personal-data-page">
-      {showWebImportListPicker && (
-        <div className="alarm-sound-picker-page">
-          <div className="alarm-sound-picker-header">
-            <button
-              type="button"
-              className="alarm-sound-picker-back-btn"
-              onClick={() => setShowWebImportListPicker(false)}
-              aria-label={tA('zurueck')}
-            >
-              ‹ {tA('zurueck')}
-            </button>
-            <h2 className="alarm-sound-picker-title">{t('inspirationssammlung')}</h2>
-          </div>
-          <ul className="alarm-sound-picker-list" aria-label={t('inspirationssammlungWaehlen')}>
-            {[NO_LIST_OPTION, ...privateLists].map(list => (
-              <li key={list.id}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={defaultWebImportListId === list.id}
-                  className={`alarm-sound-picker-item${defaultWebImportListId === list.id ? ' selected' : ''}`}
-                  onClick={() => handleWebImportListSelect(list.id)}
-                >
-                  <span className="alarm-sound-picker-checkmark" aria-hidden="true">
-                    {defaultWebImportListId === list.id ? '✓' : ''}
-                  </span>
-                  <span className="alarm-sound-picker-name">{list.name}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {showEverydayClassicsListPicker && (
-        <div className="alarm-sound-picker-page">
-          <div className="alarm-sound-picker-header">
-            <button
-              type="button"
-              className="alarm-sound-picker-back-btn"
-              onClick={() => setShowEverydayClassicsListPicker(false)}
-              aria-label={tA('zurueck')}
-            >
-              ‹ {tA('zurueck')}
-            </button>
-            <h2 className="alarm-sound-picker-title">{t('alltagsklassiker')}</h2>
-          </div>
-          <ul className="alarm-sound-picker-list" aria-label={t('alltagsklassikerWaehlen')}>
-            {[NO_LIST_OPTION, ...privateLists].map(list => (
-              <li key={list.id}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={defaultEverydayClassicsListId === list.id}
-                  className={`alarm-sound-picker-item${defaultEverydayClassicsListId === list.id ? ' selected' : ''}`}
-                  onClick={() => handleEverydayClassicsListSelect(list.id)}
-                >
-                  <span className="alarm-sound-picker-checkmark" aria-hidden="true">
-                    {defaultEverydayClassicsListId === list.id ? '✓' : ''}
-                  </span>
-                  <span className="alarm-sound-picker-name">{list.name}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      <div
-        className={`personal-data-main${pickerOffen ? ' personal-data-main--hidden' : ''}`}
-        aria-hidden={pickerOffen || undefined}
-      >
+      <div className="personal-data-main">
       <header className="personal-data-kopf">
         {onBack && (
           <button type="button" className="personal-data-kopf-zurueck" onClick={onBack}>
@@ -454,38 +419,38 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
         )}
         <div className="personal-data-kopf-person">
           {initialen && <span className="personal-data-avatar" aria-hidden="true">{initialen}</span>}
-          <div className="personal-data-kopf-text">
-            <h2>{tB('chefkoch')}</h2>
-            {anzeigeName && <p className="personal-data-kopf-name">{anzeigeName}</p>}
-          </div>
+          <h2>{tB('chefkoch')}</h2>
+          {anzeigeName && <p className="personal-data-kopf-name">{anzeigeName}</p>}
         </div>
       </header>
 
       <section className="personal-data-abschnitt">
         <h3 className="personal-data-section-title">{t('persoenlicheDaten')}</h3>
         <form className="personal-data-form" onSubmit={handleSubmit}>
-          <div className="personal-data-gruppe">
-            <div className="personal-data-field">
-              <label htmlFor="vorname">{t('vorname')}</label>
-              <input
-                id="vorname"
-                type="text"
-                value={vorname}
-                onChange={(e) => setVorname(e.target.value)}
-                required
-                autoComplete="given-name"
-              />
-            </div>
-            <div className="personal-data-field">
-              <label htmlFor="nachname">{t('nachname')}</label>
-              <input
-                id="nachname"
-                type="text"
-                value={nachname}
-                onChange={(e) => setNachname(e.target.value)}
-                required
-                autoComplete="family-name"
-              />
+          <div className="personal-data-felder">
+            <div className="personal-data-felder-paar">
+              <div className="personal-data-field">
+                <label htmlFor="vorname">{t('vorname')}</label>
+                <input
+                  id="vorname"
+                  type="text"
+                  value={vorname}
+                  onChange={(e) => setVorname(e.target.value)}
+                  required
+                  autoComplete="given-name"
+                />
+              </div>
+              <div className="personal-data-field">
+                <label htmlFor="nachname">{t('nachname')}</label>
+                <input
+                  id="nachname"
+                  type="text"
+                  value={nachname}
+                  onChange={(e) => setNachname(e.target.value)}
+                  required
+                  autoComplete="family-name"
+                />
+              </div>
             </div>
             <div className="personal-data-field">
               <label htmlFor="email">{t('email')}</label>
@@ -498,7 +463,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
                 autoComplete="email"
               />
             </div>
-            <div className="personal-data-field personal-data-field--block">
+            <div className="personal-data-field">
               <label htmlFor="signatureSatz">{t('signatureSatz')}</label>
               <textarea
                 id="signatureSatz"
@@ -529,35 +494,28 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
         <h3 className="personal-data-section-title">{t('einstellungen')}</h3>
         {privateLists.length > 0 && (
           <div className="personal-data-gruppe">
-            <button
-              type="button"
-              className="settings-row"
-              onClick={() => setShowWebImportListPicker(true)}
-              aria-label={t('zumAendern', { name: t('inspirationssammlung'), wert: privateLists.find(l => l.id === defaultWebImportListId)?.name || NO_LIST_OPTION.name })}
-            >
-              <span className="settings-row-label">{t('inspirationssammlung')}</span>
-              <span className="settings-row-right">
-                <span className="settings-row-value">
-                  {privateLists.find(l => l.id === defaultWebImportListId)?.name || NO_LIST_OPTION.name}
-                </span>
-                <span className="settings-row-chevron" aria-hidden="true">›</span>
-              </span>
-            </button>
-            <button
-              type="button"
-              className="settings-row"
-              onClick={() => setShowEverydayClassicsListPicker(true)}
-              aria-label={t('zumAendern', { name: t('alltagsklassiker'), wert: privateLists.find(l => l.id === defaultEverydayClassicsListId)?.name || NO_LIST_OPTION.name })}
-            >
-              <span className="settings-row-label">{t('alltagsklassiker')}</span>
-              <span className="settings-row-right">
-                <span className="settings-row-value">
-                  {privateLists.find(l => l.id === defaultEverydayClassicsListId)?.name || NO_LIST_OPTION.name}
-                </span>
-                <span className="settings-row-chevron" aria-hidden="true">›</span>
-              </span>
-            </button>
+            {aufklappZeile({
+              schluessel: 'inspiration',
+              label: t('inspirationssammlung'),
+              wertName: listenName(defaultWebImportListId),
+              listenLabel: t('inspirationssammlungWaehlen'),
+              optionen: listenOptionen,
+              wert: defaultWebImportListId,
+              onWaehlen: handleWebImportListSelect,
+            })}
+            {aufklappZeile({
+              schluessel: 'alltag',
+              label: t('alltagsklassiker'),
+              wertName: listenName(defaultEverydayClassicsListId),
+              listenLabel: t('alltagsklassikerWaehlen'),
+              optionen: listenOptionen,
+              wert: defaultEverydayClassicsListId,
+              onWaehlen: handleEverydayClassicsListSelect,
+            })}
           </div>
+        )}
+        {listenFehler && (
+          <p className="pwa-notification-hint pwa-notification-hint--warning" role="alert">{listenFehler}</p>
         )}
         <div className="personal-data-gruppe">
           <div className="settings-row settings-row--stapel">
@@ -583,31 +541,17 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
               )}
             </div>
           )}
-          <button
-            type="button"
-            className="settings-row"
-            aria-expanded={alarmOffen}
-            aria-controls={alarmOffen ? alarmListeId : undefined}
-            onClick={() => setAlarmOffen((offen) => !offen)}
-          >
-            <span className="settings-row-label">{t('alarmton')}</span>
-            <span className="settings-row-right">
-              <span className="settings-row-value">{alarmName(alarmSoundKey)}</span>
-              <span className={`settings-row-chevron${alarmOffen ? ' settings-row-chevron--offen' : ''}`} aria-hidden="true">›</span>
-            </span>
-          </button>
-          {alarmOffen && (
-            <AuswahlGruppe
-              id={alarmListeId}
-              darstellung="liste"
-              aria-label={t('alarmtonWaehlen')}
-              optionen={alarmOptionen}
-              wert={alarmSoundKey}
-              onWaehlen={handleAlarmSelect}
-            />
-          )}
+          {aufklappZeile({
+            schluessel: 'alarm',
+            label: t('alarmton'),
+            wertName: alarmName(alarmSoundKey),
+            listenLabel: t('alarmtonWaehlen'),
+            optionen: alarmOptionen,
+            wert: alarmSoundKey,
+            onWaehlen: handleAlarmSelect,
+          })}
         </div>
-        {alarmOffen && <p className="personal-data-password-hint">{t('alarmtonHinweis')}</p>}
+        {aufgeklappt === 'alarm' && <p className="personal-data-password-hint">{t('alarmtonHinweis')}</p>}
       </section>
 
       <section className="personal-data-abschnitt personal-data-notifications-section">
@@ -730,8 +674,8 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           {t('passwortHinweis')}
         </p>
         <form className="personal-data-form" onSubmit={handlePasswordSubmit}>
-          <div className="personal-data-gruppe">
-            <div className="personal-data-field personal-data-field--block">
+          <div className="personal-data-felder">
+            <div className="personal-data-field">
               <label htmlFor="currentPassword">{t('aktuellesPasswort')}</label>
               <input
                 id="currentPassword"
@@ -742,7 +686,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
                 autoComplete="current-password"
               />
             </div>
-            <div className="personal-data-field personal-data-field--block">
+            <div className="personal-data-field">
               <label htmlFor="newPassword">{t('neuesPasswort')}</label>
               <input
                 id="newPassword"
@@ -753,7 +697,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
                 autoComplete="new-password"
               />
             </div>
-            <div className="personal-data-field personal-data-field--block">
+            <div className="personal-data-field">
               <label htmlFor="confirmPassword">{t('neuesPasswortBestaetigen')}</label>
               <input
                 id="confirmPassword"
@@ -803,8 +747,8 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
         )}
 
         <form className="personal-data-form" onSubmit={handleSetPin}>
-          <div className="personal-data-gruppe">
-            <div className="personal-data-field personal-data-field--block">
+          <div className="personal-data-felder">
+            <div className="personal-data-field">
               <label htmlFor="newPin">{pinActive ? tPin('feldNeu') : tPin('feld')}</label>
               <input
                 id="newPin"
@@ -816,7 +760,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
                 required
               />
             </div>
-            <div className="personal-data-field personal-data-field--block">
+            <div className="personal-data-field">
               <label htmlFor="confirmPin">{tPin('bestaetigen')}</label>
               <input
                 id="confirmPin"

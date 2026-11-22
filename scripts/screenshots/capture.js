@@ -277,6 +277,18 @@ const SCREENS = [
     },
   },
   {
+    // Profilseite mit aufgeklappter Inspirationssammlung (Standardlisten klappen wie der Alarmton auf)
+    name: 'persoenliche-daten-liste',
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Testkoch Beispiel');
+      const zeile = page.getByRole('button', { name: /^Inspirationssammlung/ });
+      await zeile.click();
+      await zeile.scrollIntoViewIfNeeded();
+      await pause(page, 500);
+      await shot();
+    },
+  },
+  {
     // Einstellungen › Allgemein: Header-Slogan mit Englisch und Französisch (Mehrsprachigkeit)
     name: 'einstellungen-allgemein',
     run: async (page, shot) => {
