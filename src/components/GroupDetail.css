@@ -1,36 +1,25 @@
+/* Listendetail (GroupDetail.js), Variante A: Kopf aus Unterseite.css mit „‹ Meine Mise en Place“,
+   Einkaufsliste und Einstellungen rechts im Kopf. Die Abschnitte der Einstellungen stehen als
+   weiße Karten auf dem Seitenhintergrund, die Rezeptliste bleibt ohne Karte. */
 .group-detail-container {
+  --kachel-farbe: var(--color-kachel-mise);
   max-width: 800px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 1.5rem;
   position: relative;
 }
 
-.group-detail-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.group-detail-title {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex: 1;
-}
-
-.group-detail-title h2 {
-  margin: 0;
-  font-size: 1.5rem;
-  color: #333;
+.group-detail-container .group-detail-section:not(.group-recipes-section) {
+  margin-bottom: 0.75rem;
+  border-radius: 20px;
+  background: var(--color-surface-card);
 }
 
 .group-type-badge {
   font-size: 0.75rem;
   font-weight: 700;
   padding: 0.25rem 0.65rem;
-  -radius: 12px;
+  border-radius: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }

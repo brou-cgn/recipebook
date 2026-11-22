@@ -1,6 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import './GroupList.css';
 import GroupCreateDialog from './GroupCreateDialog';
+import Button from './Button';
+import { UnterseiteKopf } from './Unterseite';
+import { useTexte } from '../contexts/SpracheContext';
+import bereicheTexte from '../i18n/texte/bereiche';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import { LIST_KIND_OPTIONS } from '../utils/groupFirestore';
@@ -15,15 +19,15 @@ import { LIST_KIND_OPTIONS } from '../utils/groupFirestore';
  * @param {Object} props.currentUser - The current authenticated user
  * @param {Function} props.onSelectGroup - Called when a group card is clicked
  * @param {Function} props.onCreateGroup - Called with group data to create a new group
- * @param {Function} [props.onBack] - Called when the close button is clicked (navigate to Küche)
+ * @param {Function} [props.onBack] - Zurück-Link oben links (zu „Chefkoch & mehr“ bzw. zur Startseite)
+ * @param {boolean} [props.ausStartseite] - Von der Startseite geöffnet: Der Zurück-Link heißt „Küche“
  */
-function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup, onBack }) {
+function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup, onBack, ausStartseite = false }) {
+  const tB = useTexte(bereicheTexte);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.closeButtonDefaultImg);
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [addFabPressed, setAddFabPressed] = useState(false);
-  const closeBtnRef = useRef(null);
 
   useEffect(() => {
     getButtonIcons().then((icons) => {
@@ -32,23 +36,9 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
   }, []);
 
   useEffect(() => {
-    setCloseIcon(
-      getEffectiveIcon(allButtonIcons, 'closeButtonDefaultImg', isDarkMode) ||
-      getEffectiveIcon(allButtonIcons, 'closeButton', isDarkMode) ||
-      DEFAULT_BUTTON_ICONS.closeButtonDefaultImg
-    );
-  }, [allButtonIcons, isDarkMode]);
-
-  useEffect(() => {
     const handler = (e) => setIsDarkMode(e.detail.isDark);
     window.addEventListener('darkModeChange', handler);
     return () => window.removeEventListener('darkModeChange', handler);
-  }, []);
-
-  useEffect(() => {
-    if (closeBtnRef.current) {
-      closeBtnRef.current.blur();
-    }
   }, []);
 
   const getOwnerName = (group) => {
@@ -68,41 +58,32 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
 
   return (
     <div className="group-list-container">
-      <div className="group-list-header">
-        <h2>Meine Mise en Place</h2>
-        {onBack && (
-          <button
-            ref={closeBtnRef}
-            className="app-close-button"
-            onClick={onBack}
-            aria-label="Meine Mise en Place schließen"
-            title="Meine Mise en Place schließen"
-          >
-            {isBase64Image(closeIcon) ? (
-              <img src={closeIcon} alt="Meine Mise en Place schließen" className="app-close-button-icon-img" />
-            ) : (
-              closeIcon
-            )}
-          </button>
+      <UnterseiteKopf
+        onZurueck={onBack}
+        zurueckText={ausStartseite ? tB('kueche') : undefined}
+        aktionen={(
+          <div className="group-list-actions">
+            <Button variant="primary" className="add-group-button" onClick={() => setIsDialogOpen(true)}>
+              + Liste erstellen
+            </Button>
+          </div>
         )}
-      </div>
-      <div className="group-list-actions">
-        <button className="add-group-button" onClick={() => setIsDialogOpen(true)}>
-          + Liste erstellen
-        </button>
-      </div>
+      >
+        <h2>Meine Mise en Place</h2>
+      </UnterseiteKopf>
 
       {publicGroup && currentUser?.role === 'admin' && (
         <div className="group-section">
           <h3 className="group-section-title">Systemgruppen</h3>
           <div className="group-grid">
-            <div
-              className="group-card group-card-public"
-              onClick={() => onSelectGroup(publicGroup)}
-            >
+            <div className="group-card group-card-public">
               <div className="group-card-content">
                 <span className="group-type-indicator public">Öffentlich</span>
-                <h3>{publicGroup.name}</h3>
+                <h3>
+                  <button type="button" className="group-card-knopf" onClick={() => onSelectGroup(publicGroup)}>
+                    {publicGroup.name}
+                  </button>
+                </h3>
                 <p className="group-card-hint">Systemweite Gruppe für öffentliche Inhalte</p>
               </div>
             </div>
@@ -124,13 +105,13 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
               const ownerName = getOwnerName(group);
               const isOwner = group.ownerId === currentUser?.id;
               return (
-                <div
-                  key={group.id}
-                  className="group-card"
-                  onClick={() => onSelectGroup(group)}
-                >
+                <div key={group.id} className="group-card">
                   <div className="group-card-content">
-                    <h3>{group.name}</h3>
+                    <h3>
+                      <button type="button" className="group-card-knopf" onClick={() => onSelectGroup(group)}>
+                        {group.name}
+                      </button>
+                    </h3>
                     {group.listKind && (
                       <span className={`group-list-kind-indicator group-list-kind-indicator--${group.listKind}`}>
                         {LIST_KIND_OPTIONS.find((o) => o.value === group.listKind)?.label ?? group.listKind}

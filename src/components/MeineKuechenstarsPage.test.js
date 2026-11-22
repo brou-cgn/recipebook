@@ -42,7 +42,7 @@ describe('MeineKuechenstarsPage', () => {
     expect(screen.getByText('Meine Küchenstars')).toBeInTheDocument();
   });
 
-  test('renders close button', () => {
+  test('zeigt den Zurück-Link „Chefkoch & mehr“', () => {
     render(
       <MeineKuechenstarsPage
         onBack={() => {}}
@@ -50,10 +50,10 @@ describe('MeineKuechenstarsPage', () => {
         recipes={[]}
       />
     );
-    expect(screen.getByRole('button', { name: /schließen/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Chefkoch & mehr' })).toBeInTheDocument();
   });
 
-  test('calls onBack when close button is clicked', () => {
+  test('Zurück-Link ruft onBack', () => {
     const handleBack = jest.fn();
     render(
       <MeineKuechenstarsPage
@@ -62,7 +62,7 @@ describe('MeineKuechenstarsPage', () => {
         recipes={[]}
       />
     );
-    fireEvent.click(screen.getByRole('button', { name: /schließen/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Chefkoch & mehr' }));
     expect(handleBack).toHaveBeenCalled();
   });
 
@@ -108,12 +108,12 @@ describe('MeineKuechenstarsPage', () => {
         recipes={mockRecipes}
       />
     );
-    const rows = await screen.findAllByRole('row');
-    // rows[0] is the header, rows[1] is rank 1, rows[2] is rank 2
-    expect(rows[1]).toHaveTextContent('Pizza Margherita');
-    expect(rows[1]).toHaveTextContent('3');
-    expect(rows[2]).toHaveTextContent('Pasta Bolognese');
-    expect(rows[2]).toHaveTextContent('2');
+    // Variante A: Platz 1 bis 3 als Podium (nummerierte Liste), danach die Liste ab Platz 4
+    const plaetze = await screen.findAllByRole('listitem');
+    expect(plaetze[0]).toHaveTextContent('Pizza Margherita');
+    expect(plaetze[0]).toHaveTextContent('3');
+    expect(plaetze[1]).toHaveTextContent('Pasta Bolognese');
+    expect(plaetze[1]).toHaveTextContent('2');
   });
 
   test('only shows own recipes, not other users recipes', async () => {
@@ -153,9 +153,10 @@ describe('MeineKuechenstarsPage', () => {
         recipes={manyRecipes}
       />
     );
-    const rows = await screen.findAllByRole('row');
-    // 1 header row + max 20 data rows
-    expect(rows.length).toBe(21);
+    const plaetze = await screen.findAllByRole('listitem');
+    // höchstens 20 Plätze: 3 auf dem Podium, 17 in der Liste ab Platz 4
+    expect(plaetze.length).toBe(20);
+    expect(plaetze[3].closest('ol')).toHaveAttribute('start', '4');
   });
 
   test('fetches only recipe calls from the last 14 days', async () => {

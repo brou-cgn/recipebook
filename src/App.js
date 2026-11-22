@@ -3211,6 +3211,7 @@ function App() {
             onSelectGroup={handleSelectGroup}
             onCreateGroup={handleCreateGroup}
             onBack={() => handleViewChange(groupsOpenedFromStartseite ? 'startseite' : 'kueche')}
+            ausStartseite={groupsOpenedFromStartseite}
           />
         )
         ) : currentView === 'menus' ? (

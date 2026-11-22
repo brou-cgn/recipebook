@@ -146,6 +146,22 @@ async function main() {
     });
   }
 
+  // Rezeptaufrufe der letzten Stunden, relativ zur echten Zeit: Sie liegen so immer im 14-Tage-Fenster
+  // von „Meine Küchenstars“ (Podium, Balken) und der Küchenstars-Kachel in „Chefkoch & mehr“.
+  const aufrufe = [['rezept-aglio-olio', 7], ['rezept-linsensuppe', 5], ['rezept-apfelkuchen', 4],
+    ['rezept-shakshuka', 3], ['rezept-thai-curry', 2], ['rezept-spargel', 1]];
+  let aufrufNr = 0;
+  for (const [recipeId, anzahl] of aufrufe) {
+    const recipeTitle = RECIPES.find((rezept) => rezept.id === recipeId).title;
+    for (let i = 0; i < anzahl; i++) {
+      aufrufNr += 1;
+      await setDoc(`recipeCalls/aufruf-${aufrufNr}`, {
+        recipeId, recipeTitle, userId: uid, userVorname: ACCOUNT.vorname, userNachname: ACCOUNT.nachname,
+        isGuest: false, timestamp: new Date(Date.now() - aufrufNr * 60 * 60 * 1000),
+      });
+    }
+  }
+
   await setDoc('menus/menu-sonntag', {
     name: 'Sonntagsessen', description: 'Drei Gänge für sechs Personen', authorId: uid, privat: false,
     sections: [
@@ -161,7 +177,7 @@ async function main() {
     guests: { adults: 18, children: 4 }, berechnung: { ergebnis: [] }, ownerId: uid, createdAt: now.toISOString(),
   });
 
-  console.log(`Testdaten angelegt: ${ACCOUNT.email} (Admin, mit Startseite), ${RECIPES.length} Rezepte, 3 Listen, 1 Menü, 1 Event.`);
+  console.log(`Testdaten angelegt: ${ACCOUNT.email} (Admin, mit Startseite), ${RECIPES.length} Rezepte, ${aufrufNr} Rezeptaufrufe, 3 Listen, 1 Menü, 1 Event.`);
 }
 
 if (require.main === module) {

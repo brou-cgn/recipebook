@@ -154,12 +154,15 @@ test('Ein zu kurzer Swipe löst nichts aus', async () => {
   expect(content.parentElement.querySelector('.swipe-delete-action')).toHaveAttribute('tabindex', '-1');
 });
 
-test('Kopfzeile: Titel „Mein Netzwerk“ und Schließbutton rechts', async () => {
+test('Kopfzeile (Variante A): Zurück-Link „Chefkoch & mehr“, Titel „Mein Netzwerk“, Reiter als Kacheln mit Anzahl', async () => {
   const onBack = jest.fn();
   render(<NetworkPage currentUser={user} onBack={onBack} />);
   await screen.findByText('Anna Berg');
   expect(screen.getByRole('heading', { level: 2, name: 'Mein Netzwerk' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Mein Netzwerk schließen' }));
+  const anfragen = screen.getByRole('tab', { name: 'Anfragen' });
+  expect(anfragen).toHaveAttribute('aria-selected', 'true');
+  expect(anfragen.querySelector('.network-tab-zahl')).toHaveTextContent('1');
+  fireEvent.click(screen.getByRole('button', { name: 'Chefkoch & mehr' }));
   expect(onBack).toHaveBeenCalled();
 });
 

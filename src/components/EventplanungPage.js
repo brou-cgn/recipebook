@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import './EventplanungPage.css';
 import KalibrierungsAuswertung from './KalibrierungsAuswertung';
-import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
-import { isBase64Image } from '../utils/imageUtils';
+import { UnterseiteKopf } from './Unterseite';
 
 /**
  * Eventplanung: Soll-vs.-Ist-Auswertung des Getraenkeverbrauchs ueber alle
@@ -11,48 +10,12 @@ import { isBase64Image } from '../utils/imageUtils';
  * (canSeeEventplanung) den Lesezugriff auf die Snapshots frei.
  */
 function EventplanungPage({ onBack, currentUser }) {
-  const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.closeButtonDefaultImg);
-  const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
-  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
-
-  useEffect(() => {
-    getButtonIcons().then(setAllButtonIcons).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    setCloseIcon(
-      getEffectiveIcon(allButtonIcons, 'closeButtonDefaultImg', isDarkMode) ||
-      getEffectiveIcon(allButtonIcons, 'closeButton', isDarkMode) ||
-      DEFAULT_BUTTON_ICONS.closeButtonDefaultImg
-    );
-  }, [allButtonIcons, isDarkMode]);
-
-  useEffect(() => {
-    const handler = (e) => setIsDarkMode(e.detail.isDark);
-    window.addEventListener('darkModeChange', handler);
-    return () => window.removeEventListener('darkModeChange', handler);
-  }, []);
-
   return (
     <div className="eventplanung-container">
-      <div className="eventplanung-header">
+      <UnterseiteKopf onZurueck={onBack}>
         <h2>Eventplanung</h2>
-        {onBack && (
-          <button
-            className="app-close-button"
-            onClick={onBack}
-            aria-label="Eventplanung schließen"
-            title="Eventplanung schließen"
-          >
-            {isBase64Image(closeIcon) ? (
-              <img src={closeIcon} alt="Eventplanung schließen" className="app-close-button-icon-img" />
-            ) : (
-              closeIcon
-            )}
-          </button>
-        )}
-      </div>
-      <div className="eventplanung-content">
+      </UnterseiteKopf>
+      <div className="eventplanung-content unterseite-karte">
         {currentUser?.eventplanung ? (
           <KalibrierungsAuswertung />
         ) : (

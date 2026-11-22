@@ -88,10 +88,10 @@ describe('WeinbegleitungSeite', () => {
     expect(screen.queryByRole('button', { name: 'Profile nachtragen' })).not.toBeInTheDocument();
   });
 
-  it('schließt über den Schließen-Knopf', async () => {
+  it('führt über den Zurück-Link „Chefkoch & mehr“ zurück', async () => {
     const onBack = jest.fn();
     await zeige({ onBack });
-    fireEvent.click(screen.getByRole('button', { name: 'Weinbegleitung schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Chefkoch & mehr' }));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 });

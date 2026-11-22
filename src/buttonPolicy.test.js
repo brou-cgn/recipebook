@@ -41,7 +41,6 @@ const BASELINE = {
   'components/EventsPage.css': 7,
   'components/FollowButton.css': 1,
   'components/GroupDetail.css': 9,
-  'components/GroupList.css': 2,
   'components/Header.css': 8,
   'components/ImportProgressDialog.css': 2,
   'components/MemberProfilePage.css': 2,

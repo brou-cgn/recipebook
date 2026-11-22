@@ -1,28 +1,18 @@
+/* „Küchenbetrieb“ (AppCallsPage.js), Variante A: Kopf aus Unterseite.css mit „‹ Chefkoch & mehr“,
+   die Reiter als Pillen (waagerecht scrollbar), der Inhalt als weiße Karte mit 20 px Radius.
+   Farben dieses Abschnitts nur über Tokens. */
 .app-calls-container {
+  --kachel-farbe: var(--color-kachel-betrieb);
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
-}
-
-.app-calls-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.app-calls-header h2 {
-  margin: 0;
-  color: #7A2E2E;
-  font-size: 28px;
-  text-align: left;
+  padding: 1.5rem;
 }
 
 .app-calls-tabs {
   display: flex;
-  gap: 0;
-  margin-bottom: 0;
-  border-bottom: 2px solid #e0e0e0;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 2px;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -34,41 +24,44 @@
   display: none;
 }
 
-.app-calls-tab {
-  padding: 10px 24px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 15px;
-  color: #666;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  transition: color 0.2s, border-color 0.2s;
-  white-space: nowrap;
+.app-calls-container .app-calls-tab {
   flex-shrink: 0;
-}
-
-.app-calls-tab:hover {
-  color: #333;
-}
-
-.app-calls-tab.active {
-  color: #d32f2f;
-  border-bottom-color: #d32f2f;
+  min-height: 40px;
+  padding: 0 1rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-surface-card);
+  background: color-mix(in srgb, var(--kachel-farbe) 10%, var(--color-surface-card));
+  color: var(--kachel-farbe);
+  font: inherit;
+  font-size: 0.9rem;
   font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-calls-container .app-calls-tab.active {
+  background: var(--kachel-farbe);
+  color: var(--color-surface-card);
+}
+
+.app-calls-container .app-calls-tab:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .app-calls-content {
-  background: white;
-  border-radius: 0 0 10px 10px;
-  padding: 30px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 1.25rem;
+  border-radius: 20px;
+  background: var(--color-surface-card);
 }
 
-.app-calls-info-text {
-  color: #666;
-  margin-bottom: 25px;
-  font-size: 14px;
+.app-calls-container .app-calls-info-text {
+  margin: 0 0 1.25rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--color-text-muted);
 }
 
 .app-calls-table-container {

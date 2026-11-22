@@ -1,33 +1,19 @@
+/* „Eventplanung“ (EventplanungPage.js), Variante A: Rahmen und Karte aus Unterseite.css.
+   Farben nur über Tokens. */
 .eventplanung-container {
+  --kachel-farbe: var(--color-kachel-events);
   max-width: 800px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 1.5rem;
 }
 
-.eventplanung-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+.eventplanung-content.unterseite-karte {
+  padding: 1.25rem;
 }
 
-.eventplanung-header h2 {
-  margin: 0;
-  color: #2F5D50;
-  font-size: 28px;
-  text-align: left;
-}
-
-.eventplanung-content {
-  background: white;
-  border-radius: 10px;
-  padding: 30px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.eventplanung-empty {
-  color: var(--color-text-faint);
+.eventplanung-container .eventplanung-empty {
+  padding: 2.5rem 0;
   text-align: center;
-  padding: 40px 0;
-  font-size: 15px;
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
 }

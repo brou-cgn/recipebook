@@ -1112,32 +1112,6 @@
 }
 
 /* ---- Group List ---- */
-[data-theme="dark"] .group-list-container {
-  background: #121212;
-}
-
-[data-theme="dark"] .group-list-header h2 {
-  color: #e8e8e8;
-}
-
-[data-theme="dark"] .group-card {
-  background: #1e1e1e;
-  border-color: #3d3d3d;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-}
-
-[data-theme="dark"] .group-card-name {
-  color: #e8e8e8;
-}
-
-[data-theme="dark"] .group-card-content h3 {
-  color: #e8e8e8;
-}
-
-[data-theme="dark"] .group-card-meta {
-  color: #aaa;
-}
-
 [data-theme="dark"] .add-group-fab-button {
   background: #2a2a2a;
   color: #e8e8e8;
@@ -1153,14 +1127,6 @@
 [data-theme="dark"] .group-header-actions .list-settings-trigger-button {
   background: #2a2a2a !important;
   border-color: #555 !important;
-  color: #e8e8e8;
-}
-
-[data-theme="dark"] .group-detail-container {
-  background: #121212;
-}
-
-[data-theme="dark"] .group-detail-header h2 {
   color: #e8e8e8;
 }
 
@@ -1615,31 +1581,6 @@
   border-color: #2a4a6a;
 }
 
-/* ---- AppCallsPage ---- */
-[data-theme="dark"] .app-calls-container {
-  background: #121212;
-}
-
-[data-theme="dark"] .app-calls-header h2 {
-  color: #e8e8e8;
-}
-
-[data-theme="dark"] .app-calls-tab {
-  background: transparent;
-  color: #ccc;
-  border-color: #555;
-}
-
-[data-theme="dark"] .app-calls-tab.active {
-  background: transparent;
-  color: #DF7A00;
-  border-bottom-color: #DF7A00;
-}
-
-[data-theme="dark"] .app-calls-tabs {
-  border-bottom-color: #3d3d3d;
-}
-
 /* ---- Timeline ---- */
 [data-theme="dark"] .recipe-timeline-container {
   background: #121212;
@@ -1700,24 +1641,6 @@
 
 [data-theme="dark"] .timeline-empty {
   color: #aaa;
-}
-
-/* ---- Meine Küchenstars Page ---- */
-[data-theme="dark"] .meine-kuechenstars-container {
-  background: #121212;
-}
-
-/* ---- Eventplanung Page ---- */
-[data-theme="dark"] .eventplanung-container {
-  background: #121212;
-}
-
-[data-theme="dark"] .eventplanung-content {
-  background: #1e1e1e;
-}
-
-[data-theme="dark"] .eventplanung-empty {
-  color: #777;
 }
 
 /* ---- Share Page ---- */
@@ -2391,33 +2314,6 @@
   background: #2a2a2a;
   border-color: #555;
   color: #e8e8e8;
-}
-
-/* ---- MeineKuechenstarsPage additional ---- */
-[data-theme="dark"] .meine-kuechenstars-content {
-  background: #1e1e1e;
-}
-
-[data-theme="dark"] .meine-kuechenstars-info-text {
-  color: #aaa;
-}
-
-[data-theme="dark"] .meine-kuechenstars-empty {
-  color: #777;
-}
-
-[data-theme="dark"] .meine-kuechenstars-table th,
-[data-theme="dark"] .meine-kuechenstars-table td {
-  border-bottom-color: #3d3d3d;
-}
-
-[data-theme="dark"] .meine-kuechenstars-table th {
-  background: #2a2a2a;
-  color: #ccc;
-}
-
-[data-theme="dark"] .meine-kuechenstars-table tbody tr:hover {
-  background: #2a2a2a;
 }
 
 /* ---- NutritionModal additional ---- */
