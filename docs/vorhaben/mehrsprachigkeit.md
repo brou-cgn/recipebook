@@ -1,8 +1,8 @@
 # Vorhaben: Mehrsprachigkeit (Deutsch, Englisch, Französisch)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 22.11.2026 (PR 1 bis 6e
-und die Entscheidungen (E) gemergt, PR 6f als PR #3739 offen).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 22.11.2026 (PR 1 bis 6e,
+„Chefkoch & mehr“ (C) und die Entscheidungen (E) gemergt, PR 6f als PR #3739 offen).
 
 **Ziel:** Die App gibt es auf Deutsch, Englisch und Französisch. Jede:r wählt die eigene Sprache in den
 persönlichen Einstellungen, der Header übersteuert sie für die laufende Sitzung. Rezepte (Titel und
@@ -76,6 +76,7 @@ auch mehrsprachig aufgesetzt werden.“ Umfang: „alles“, also kein Halt nach
 | S | Sprach-Chip im Header (Entscheidung „Sprachwahl im Header“): `SprachWahl.js` mit Popover und Bottom Sheet (Fokus auf der geltenden Sprache, Escape und Klick außerhalb schließen, Seite hinter dem Sheet gesperrt), `FlaggeIcon.js`, Texte in `kopfzeile.js` (Sprachnamen in der geltenden Sprache, Standardsprache), Token `--color-flag-ring`; engere Abstände im Handy-Header; Abschnitt „Sprache“ im Menü entfernt. Tests `SprachWahl.test.js`, `SprachWahl.css.test.js`, `Header.test.js`; Bildschirme `sprachwahl` und `sprachwahl-englisch` in `scripts/screenshots/capture.js`. Eintrag im `CHANGELOG.md`. | gemergt 22.11.2026 (PR #3732, Merge 81189f5) |
 | SL | Slogan übersetzen (Entscheidung „Slogan übersetzen“): `src/i18n/slogan.js` (`sloganInSprache`, `sloganUebersetzungenZumSpeichern`), Laden und Speichern in `customLists.js` (`getSloganUebersetzungen`, `saveSloganUebersetzungen`, Feld in `getSettings`), Anzeige und Seitentitel in `Header.js`, Pflege in `Settings.js` (Englisch und Französisch, Hinweis bei veralteter Übersetzung); `standardSlogan` in `kopfzeile.js`. Tests `src/i18n/slogan.test.js`, `Header.test.js`, `Settings.slogan.test.js`; Bildschirm `einstellungen-allgemein` in `scripts/screenshots/capture.js`. Eintrag im `CHANGELOG.md`. | gemergt 22.11.2026 (PR #3733, Merge 65cf393) |
 | U | Fahnen als Umriss (Entscheidung „Sprachwahl im Header“): `FlaggeIcon.js` zeichnet nur Linien (`FLAGGEN_LINIEN`, Rahmen 45 × 30, britische Fahne vereinfacht), Linien 1 px in `--color-text-strong` und in jeder Größe gleich stark (`SprachWahl.css`); der Ring und das Token `--color-flag-ring` entfallen. Test `icons/FlaggeIcon.test.js`. Eintrag im `CHANGELOG.md`. Nachtrag: ab doppelter Pixeldichte 0,5 px (PR #3737, gemergt 22.11.2026, Merge 2e43022). | gemergt 22.11.2026 (PR #3736, Merge c2ac0f3) |
+| C | „Chefkoch & mehr“ (`Kueche.js`), zusammen mit der Gestaltung nach Variante A (Bento): Wörterbuch `chefkochUndMehr.js` (Kacheln, Abschnitt „Verwaltung“, Mengen als Bezeichnung in Einzahl und Mehrzahl ohne Zahl, Küche-Aktion, „Unbekanntes Rezept“ der Zeitleiste); Seitentitel und „Chefkoch“ aus `bereiche.js`; Zahlen nach der Sprache (`formatiereZahl`). Test auf Englisch in `Kueche.test.js`. Noch deutsch: die Unterseiten Netzwerk, Mise en Place, Meine Küchenstars, Küchenbetrieb, Eventplanung und die Seite Weinbegleitung. Baseline 1274 → 1241 Textstellen. | gemergt 22.11.2026 (PR #3738, Merge 11681f0) |
 | B | Phase B (siehe „Entschieden“). | später |
 
 Nach jedem PR: Tabelle nachziehen. Berührt ein PR einen Tech-Check-Befund, auch das Dashboard

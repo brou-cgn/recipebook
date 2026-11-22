@@ -1702,32 +1702,6 @@
   color: #aaa;
 }
 
-/* ---- Kueche ---- */
-[data-theme="dark"] .kueche-container {
-  background: #121212;
-}
-
-[data-theme="dark"] .kueche-tile {
-  border-color: #3d3d3d;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-}
-
-[data-theme="dark"] .kueche-tile.kueche-tile--meinkochbuch {
-  border-left-color: #DF7A00;
-}
-
-[data-theme="dark"] .kueche-tile:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
-}
-
-[data-theme="dark"] .kueche-tile-meta {
-  color: #aaa;
-}
-
-[data-theme="dark"] .kueche-tile-meta .meta-text strong {
-  color: #e8e8e8;
-}
-
 /* ---- Meine Küchenstars Page ---- */
 [data-theme="dark"] .meine-kuechenstars-container {
   background: #121212;

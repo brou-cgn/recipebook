@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useId } from 'react';
 import './Kueche.css';
 import RecipeTimeline from './RecipeTimeline';
 import PersonalDataPage from './PersonalDataPage';
@@ -26,6 +26,10 @@ import { getKuechenbetriebFabConfig } from '../utils/kuechenbetriebTabs';
 import { isFuerDichEntdecktList } from '../utils/fuerDichEntdeckt';
 import { getKalibrierungsSnapshotsOnce } from '../utils/drinkWeightsFirestore';
 import { countSnapshotsByMonth } from '../utils/kalibrierungsAuswertung';
+import { useSprache, useTexte } from '../contexts/SpracheContext';
+import { formatiereZahl } from '../i18n/format';
+import bereicheTexte from '../i18n/texte/bereiche';
+import chefkochTexte from '../i18n/texte/chefkochUndMehr';
 
 function getLastSixMonthsRecipeCounts(recipes) {
   const now = new Date();
@@ -191,8 +195,53 @@ function EventCalibrationBarChart({ snapshots }) {
   );
 }
 
+/**
+ * Kachel auf „Chefkoch & mehr“ (Variante A, Bento). Der Titel ist ein echter Knopf in der
+ * Überschrift; sein Klickbereich deckt per ::after die ganze Kachel ab. Der Inhalt (Zahlen)
+ * beschreibt den Knopf (aria-describedby), Diagramme sind nur Schmuck.
+ */
+function Kachel({ art, titel, onOeffnen, testId, breit = false, ausgeklappt, steuert, zusatz, children }) {
+  const inhaltId = useId();
+  return (
+    <div className={`kueche-tile kueche-tile--${art}${breit ? ' kueche-tile--breit' : ''}`} data-testid={testId}>
+      <div className="kueche-tile__kopf">
+        <h3 className="kueche-tile__titel">
+          <button
+            type="button"
+            className="kueche-tile__knopf"
+            onClick={onOeffnen}
+            aria-expanded={ausgeklappt}
+            aria-controls={steuert}
+            aria-describedby={children ? inhaltId : undefined}
+          >
+            {titel}
+          </button>
+        </h3>
+        {zusatz}
+      </div>
+      {children && <div className="kueche-tile__inhalt" id={inhaltId}>{children}</div>}
+    </div>
+  );
+}
+
+/** Große Zahl mit ihrer Bezeichnung darunter. */
+function Kennzahl({ wert, label }) {
+  return (
+    <span className="meta-text">
+      <strong>{wert}</strong>
+      <span>{label}</span>
+    </span>
+  );
+}
+
 function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated, onViewChange, openPersonalData, onPersonalDataOpened, openNetwork, onNetworkOpened, onPersonalDataVisibilityChange }) {
   const { rows: nutritionReferenceRows } = useNutritionReference();
+  const t = useTexte(chefkochTexte);
+  const tB = useTexte(bereicheTexte);
+  const { sprache } = useSprache();
+  const zahl = (wert) => formatiereZahl(wert, sprache);
+  const profilInhaltId = useId();
+  const zeitleisteId = useId();
   const [showTimeline, setShowTimeline] = useState(false);
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
   const [timelineMenuBubbleIcon, setTimelineMenuBubbleIcon] = useState(null);
@@ -385,7 +434,7 @@ function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSe
   const cookDateTimelineItems = cookDates
     .map(cookDate => ({
       id: `cookdate-${cookDate.id}`,
-      title: filteredRecipes.find(r => r.id === cookDate.recipeId)?.title || 'Unbekanntes Rezept',
+      title: filteredRecipes.find(r => r.id === cookDate.recipeId)?.title || t('unbekanntesRezept'),
       recipeId: cookDate.recipeId,
       createdAt: cookDate.date,
       authorId: cookDate.userId,
@@ -414,6 +463,12 @@ function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSe
   const chefkochName = currentUser
     ? [currentUser.vorname, currentUser.nachname].filter(Boolean).join(' ')
     : null;
+  const initialen = [currentUser?.vorname, currentUser?.nachname]
+    .map((teil) => (teil || '').trim().charAt(0))
+    .join('')
+    .toUpperCase();
+  const signatur = (currentUser?.signatureSatz || '').trim();
+  const zeigtVerwaltung = Boolean(currentUser?.appCalls || currentUser?.eventplanung);
 
   const kuechenbetriebFabConfig = useMemo(
     () => getKuechenbetriebFabConfig({ recipes, nutritionReferenceRows, cuisineProposals }),
@@ -449,193 +504,158 @@ function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSe
       ) : (
         <>
           <div className="kueche-header">
-            <h2>Chefkoch &amp; mehr</h2>
+            <h2>{tB('chefkochUndMehr')}</h2>
           </div>
-          <div
-            className="kueche-tile kueche-tile--chefkoch"
-            onClick={() => setShowPersonalData(true)}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowPersonalData(true); } }}
-            role="button"
-            tabIndex={0}
-            aria-label="Chefkoch persönliche Daten öffnen"
-          >
-            <div className="kueche-tile-content">
-              <h3>Chefkoch</h3>
-              {chefkochName && (
-                <div className="kueche-tile-meta">
-                  <span className="meta-text">{chefkochName}</span>
-                </div>
-              )}
-            </div>
-          </div>
-          {canUseFollow && (
-            <div
-              className="kueche-tile kueche-tile--netzwerk"
-              data-testid="netzwerk-tile"
-              onClick={() => setShowNetwork(true)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowNetwork(true); } }}
-              role="button"
-              tabIndex={0}
-              aria-label="Mein Netzwerk öffnen"
-            >
-              <div className="kueche-tile-content">
-                <h3>Mein Netzwerk</h3>
-                <div className="kueche-tile-meta">
-                  <span className="meta-text">
-                    <strong>{followRequestCount}</strong>
-                    <span>{followRequestCount === 1 ? 'offene Anfrage' : 'offene Anfragen'}</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-          <div
-            className="kueche-tile kueche-tile--mise-en-place"
-            data-testid="mise-en-place-tile"
-            onClick={handleMiseEnPlaceClick}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleMiseEnPlaceClick(); } }}
-            role="button"
-            tabIndex={0}
-            aria-label="Meine Mise en Place – Berechtigungsgruppen öffnen"
-          >
-            <div className="kueche-tile-content">
-              <h3>Meine Mise en Place</h3>
-              <div className="kueche-tile-meta">
-                <span className="meta-text">
-                  <strong>{privateListCount}</strong>
-                  <span>{privateListCount === 1 ? 'private Liste' : 'private Listen'}</span>
-                </span>
-              </div>
-            </div>
-          </div>
-          {currentUser?.appCalls && (
-            <div
-              className="kueche-tile kueche-tile--appaufrufe"
-              onClick={() => onViewChange && onViewChange('appCalls')}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onViewChange && onViewChange('appCalls'); } }}
-              role="button"
-              tabIndex={0}
-              aria-label="Küchenbetrieb Statistik öffnen"
-            >
-              <div className="kueche-tile-content">
-                <h3>Küchenbetrieb</h3>
-                <div className="kueche-tile-meta">
-                  <span className="meta-text">
-                    <strong>{todayCallsCount}</strong>
-                    <span>{todayCallsCount === 1 ? 'Aufruf heute' : 'Aufrufe heute'}</span>
-                  </span>
-                </div>
-                <AppCallsBarChart appCalls={appCalls} />
-              </div>
-            </div>
-          )}
-          {currentUser?.eventplanung && (
-            <div
-              className="kueche-tile kueche-tile--eventplanung"
-              data-testid="eventplanung-tile"
-              onClick={() => onViewChange && onViewChange('eventplanung')}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onViewChange && onViewChange('eventplanung'); } }}
-              role="button"
-              tabIndex={0}
-              aria-label="Eventplanung Soll-vs.-Ist-Auswertung öffnen"
-            >
-              <div className="kueche-tile-content">
-                <h3>Eventplanung</h3>
-                <div className="kueche-tile-meta">
-                  <span className="meta-text">
-                    <strong>{kalibrierungsSnapshots.length}</strong>
-                    <span>Events</span>
-                  </span>
-                </div>
-                <EventCalibrationBarChart snapshots={kalibrierungsSnapshots} />
-              </div>
-            </div>
-          )}
-          {currentUser && (
-            <div
-              className="kueche-tile kueche-tile--meine-kuechenstars"
-              onClick={() => onViewChange && onViewChange('meineKuechenstars')}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onViewChange && onViewChange('meineKuechenstars'); } }}
-              role="button"
-              tabIndex={0}
-              aria-label="Meine Küchenstars Top Rezepte öffnen"
-            >
-              <div className="kueche-tile-content">
-                <h3>Meine Küchenstars</h3>
-                {mostViewedRecipe && (
-                  <div className="kueche-tile-meta">
-                    <span className="meta-text">
-                      <strong>{mostViewedRecipe.count}</strong>
-                      <span>{mostViewedRecipe.recipe.title}</span>
-                    </span>
+          <div className="kueche-raster">
+            <div className="kueche-tile kueche-tile--chefkoch kueche-profil">
+              {initialen && <span className="kueche-profil__avatar" aria-hidden="true">{initialen}</span>}
+              <div className="kueche-profil__text">
+                <h3 className="kueche-tile__titel kueche-profil__rolle">
+                  <button
+                    type="button"
+                    className="kueche-tile__knopf"
+                    onClick={() => setShowPersonalData(true)}
+                    aria-describedby={chefkochName || signatur ? profilInhaltId : undefined}
+                  >
+                    {tB('chefkoch')}
+                  </button>
+                </h3>
+                {(chefkochName || signatur) && (
+                  <div id={profilInhaltId}>
+                    {chefkochName && <p className="kueche-profil__name">{chefkochName}</p>}
+                    {signatur && <p className="kueche-profil__signatur">{signatur}</p>}
                   </div>
                 )}
-                <RecipeCallsBarChart recipeCalls={ownRecipeCalls} />
               </div>
+              <span className="kueche-profil__pfeil" aria-hidden="true">›</span>
             </div>
-          )}
-          {currentUser && (
-            <div
-              className="kueche-tile kueche-tile--weinbegleitung"
-              data-testid="weinbegleitung-tile"
-              onClick={() => setShowWeinbegleitung(true)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowWeinbegleitung(true); } }}
-              role="button"
-              tabIndex={0}
-              aria-label="Weinbegleitung: Regeln, Weinstile und Quellen öffnen"
+
+            <Kachel
+              art="meinkochbuch"
+              breit
+              titel={t('meinKochbuch')}
+              onOeffnen={() => setShowTimeline(prev => !prev)}
+              ausgeklappt={showTimeline}
+              steuert={showTimeline ? zeitleisteId : undefined}
+              zusatz={(
+                <span className={`kueche-tile__aktion${showTimeline ? ' kueche-tile__aktion--offen' : ''}`} aria-hidden="true">
+                  {t('zeitleiste')} ›
+                </span>
+              )}
             >
-              <div className="kueche-tile-content">
-                <h3>Weinbegleitung</h3>
-                <div className="kueche-tile-meta">
-                  <span className="meta-text">
-                    <strong>{alleStile().length}</strong>
-                    <span>Weinstile</span>
-                  </span>
-                  <span className="meta-text">
-                    <strong>{alleQuellen().length}</strong>
-                    <span>Quellen</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-          <div
-            className="kueche-tile kueche-tile--meinkochbuch"
-            onClick={() => setShowTimeline(prev => !prev)}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowTimeline(prev => !prev); } }}
-            role="button"
-            tabIndex={0}
-            aria-expanded={showTimeline}
-            aria-label="Toggle Meine Küche timeline"
-          >
-            <div className="kueche-tile-content">
-              <h3>Mein Kochbuch</h3>
-              <div className="kueche-tile-meta">
-                <span className="meta-text">
-                  <strong>{filteredRecipes.length}</strong>
-                  <span>{filteredRecipes.length === 1 ? 'Rezept' : 'Rezepte'}</span>
-                </span>
-                <span className="meta-text">
-                  <strong>{filteredMenus.length}</strong>
-                  <span>{filteredMenus.length === 1 ? 'Menü' : 'Menüs'}</span>
-                </span>
-              </div>
+              <span className="kueche-tile-meta">
+                <Kennzahl wert={zahl(filteredRecipes.length)} label={t('rezepte', { anzahl: filteredRecipes.length })} />
+                <Kennzahl wert={zahl(filteredMenus.length)} label={t('menues', { anzahl: filteredMenus.length })} />
+              </span>
               <RecipeBarChart recipes={filteredRecipes} />
-            </div>
+            </Kachel>
+
+            {showTimeline && (
+              <div className="kueche-zeitleiste" id={zeitleisteId}>
+                <RecipeTimeline
+                  recipes={combinedItems}
+                  onSelectRecipe={handleSelectItem}
+                  allUsers={allUsers}
+                  timelineBubbleIcon={timelineBubbleIcon}
+                  timelineMenuBubbleIcon={timelineMenuBubbleIcon}
+                  timelineCookEventBubbleIcon={timelineCookEventBubbleIcon}
+                  categoryImages={categoryImages}
+                  defaultImage={getEffectiveIcon(buttonIcons, 'timelineMenuDefaultImg', isDarkMode) || null}
+                  timelineCookEventDefaultImage={timelineCookEventDefaultImage}
+                />
+              </div>
+            )}
+
+            {currentUser && (
+              <Kachel
+                art="meine-kuechenstars"
+                titel={t('kuechenstars')}
+                onOeffnen={() => onViewChange && onViewChange('meineKuechenstars')}
+              >
+                <span className="kueche-tile-meta">
+                  {mostViewedRecipe ? (
+                    <Kennzahl wert={zahl(mostViewedRecipe.count)} label={mostViewedRecipe.recipe.title} />
+                  ) : (
+                    <span className="kueche-tile-leer">{t('keineAufrufe')}</span>
+                  )}
+                </span>
+                <RecipeCallsBarChart recipeCalls={ownRecipeCalls} />
+              </Kachel>
+            )}
+
+            {canUseFollow && (
+              <Kachel
+                art="netzwerk"
+                testId="netzwerk-tile"
+                titel={t('meinNetzwerk')}
+                onOeffnen={() => setShowNetwork(true)}
+                zusatz={followRequestCount > 0 ? <span className="kueche-tile__punkt" aria-hidden="true" /> : null}
+              >
+                <span className="kueche-tile-meta">
+                  <Kennzahl wert={zahl(followRequestCount)} label={t('offeneAnfragen', { anzahl: followRequestCount })} />
+                </span>
+              </Kachel>
+            )}
+
+            <Kachel
+              art="mise-en-place"
+              testId="mise-en-place-tile"
+              titel={t('miseEnPlace')}
+              onOeffnen={handleMiseEnPlaceClick}
+            >
+              <span className="kueche-tile-meta">
+                <Kennzahl wert={zahl(privateListCount)} label={t('privateListen', { anzahl: privateListCount })} />
+              </span>
+            </Kachel>
+
+            {currentUser && (
+              <Kachel
+                art="weinbegleitung"
+                testId="weinbegleitung-tile"
+                titel={t('weinbegleitung')}
+                onOeffnen={() => setShowWeinbegleitung(true)}
+              >
+                <span className="kueche-tile-meta">
+                  <Kennzahl wert={zahl(alleStile().length)} label={t('weinstile', { anzahl: alleStile().length })} />
+                  <Kennzahl wert={zahl(alleQuellen().length)} label={t('quellen', { anzahl: alleQuellen().length })} />
+                </span>
+              </Kachel>
+            )}
           </div>
-          {showTimeline && (
-            <RecipeTimeline
-              recipes={combinedItems}
-              onSelectRecipe={handleSelectItem}
-              allUsers={allUsers}
-              timelineBubbleIcon={timelineBubbleIcon}
-              timelineMenuBubbleIcon={timelineMenuBubbleIcon}
-              timelineCookEventBubbleIcon={timelineCookEventBubbleIcon}
-              categoryImages={categoryImages}
-              defaultImage={getEffectiveIcon(buttonIcons, 'timelineMenuDefaultImg', isDarkMode) || null}
-              timelineCookEventDefaultImage={timelineCookEventDefaultImage}
-            />
+
+          {zeigtVerwaltung && (
+            <section className="kueche-verwaltung">
+              <h3 className="kueche-abschnitt-titel">{t('verwaltung')}</h3>
+              <div className="kueche-raster">
+                {currentUser?.appCalls && (
+                  <Kachel
+                    art="appaufrufe"
+                    titel={t('kuechenbetrieb')}
+                    onOeffnen={() => onViewChange && onViewChange('appCalls')}
+                  >
+                    <span className="kueche-tile-meta">
+                      <Kennzahl wert={zahl(todayCallsCount)} label={t('aufrufeHeute', { anzahl: todayCallsCount })} />
+                    </span>
+                    <AppCallsBarChart appCalls={appCalls} />
+                  </Kachel>
+                )}
+                {currentUser?.eventplanung && (
+                  <Kachel
+                    art="eventplanung"
+                    testId="eventplanung-tile"
+                    titel={t('eventplanung')}
+                    onOeffnen={() => onViewChange && onViewChange('eventplanung')}
+                  >
+                    <span className="kueche-tile-meta">
+                      <Kennzahl wert={zahl(kalibrierungsSnapshots.length)} label={t('events', { anzahl: kalibrierungsSnapshots.length })} />
+                    </span>
+                    <EventCalibrationBarChart snapshots={kalibrierungsSnapshots} />
+                  </Kachel>
+                )}
+              </div>
+            </section>
           )}
+
           {currentUser?.kuecheFab && kuechenbetriebFabConfig.showFab && (
             <button
               className={`kueche-fab-button${fabPressed ? ' pressed' : ''}`}
@@ -646,11 +666,11 @@ function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSe
               onMouseDown={() => setFabPressed(true)}
               onMouseUp={() => setFabPressed(false)}
               onMouseLeave={() => setFabPressed(false)}
-              title="Küche-Aktion"
-              aria-label="Küche-Aktion"
+              title={t('kuecheAktion')}
+              aria-label={t('kuecheAktion')}
             >
               {isBase64Image(getEffectiveIcon(buttonIcons, 'kuecheFab', isDarkMode)) ? (
-                <img src={getEffectiveIcon(buttonIcons, 'kuecheFab', isDarkMode)} alt="Küche-Aktion" className="kueche-fab-button__icon" draggable="false" />
+                <img src={getEffectiveIcon(buttonIcons, 'kuecheFab', isDarkMode)} alt={t('kuecheAktion')} className="kueche-fab-button__icon" draggable="false" />
               ) : (
                 getEffectiveIcon(buttonIcons, 'kuecheFab', isDarkMode)
               )}
