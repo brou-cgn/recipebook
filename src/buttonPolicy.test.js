@@ -11,9 +11,10 @@
  * (Fett/Kursiv, Ausrichtung, Segmente, schwebende Werkzeugleiste: umschaltbare Formatierung, keine
  * Aktion mit Rolle), Symbol-Knöpfe ohne Text (konfigurierbare Icons, Suche und Menü in der Kopfzeile,
  * Suchfeld leeren), die Bedienelemente der Rezeptansicht mit eigener Gestalt (Plus/Minus der Portionen,
- * Timer, Alarm) und Aufklapp-Zeilen (Fragen der Hilfe). Ebenso gezählt werden Knöpfe, die ihr Container
- * gestaltet (letzte Stufe ist das Element button, etwa „.list-input button“, so fielen acht
- * Hinzufügen-Knöpfe durch); ausgenommen sind dort Einträge in Auswahllisten und Kontextmenüs.
+ * Timer, Alarm) und Zeilen als Knopf (Fragen der Hilfe, Namen in Verwaltungslisten). Ebenso gezählt
+ * werden Knöpfe, die ihr Container gestaltet (letzte Stufe ist das Element button, etwa
+ * „.list-input button“, so fielen acht Hinzufügen-Knöpfe durch); ausgenommen sind dort Einträge in
+ * Auswahllisten und Kontextmenüs.
  * Bestand als Baseline, darf nur sinken; neue Dateien starten bei 0.
  */
 const fs = require('fs');
@@ -30,15 +31,16 @@ const EDITOR_TOOLS = /^(pfe-style-btn|pfe-align-btn|tfe-seg-btn|tfe-tb-btn)/;
 // Symbol-Knöpfe ohne Text: Ihre Gestalt ist das Symbol, keine Rolle, daher nicht über components/Button.js.
 // Die Symbole, die unter „Bilder & Icons“ konfigurierbar sind (Rezeptansicht: Favorit, Privat, Kochdatum;
 // Rezeptformular: Zutat/Schritt hinzufügen, Webimport, Foto-Scan, Import; Rezept- und Menüliste: Filter, Favoriten,
-// Rezept hinzufügen, am Handy schwebend; Startseite: Rezept zur Sammlung hinzufügen), dazu Suche und Menü in der
-// Kopfzeile und das Leeren eines Suchfelds
-const ICON_BUTTONS = /^(favorite-button|private-badge-button|cook-date-button|add-item-button|import-button-header|ocr-scan-button-header|webimport-button-header|filter-button|menu-favorites-filter-button|add-icon-button|startseite-add-recipe-btn|search-btn|search-clear-btn|mobile-search-clear-btn|hamburger-btn)/;
+// Rezept hinzufügen, am Handy schwebend; Startseite: Rezept zur Sammlung hinzufügen; Nährwert-Dialog: automatisch
+// berechnen), dazu Suche und Menü in der Kopfzeile und das Leeren eines Suchfelds
+const ICON_BUTTONS = /^(favorite-button|private-badge-button|cook-date-button|add-item-button|import-button-header|ocr-scan-button-header|webimport-button-header|filter-button|menu-favorites-filter-button|add-icon-button|startseite-add-recipe-btn|nutrition-autocalc-header-btn|search-btn|search-clear-btn|mobile-search-clear-btn|hamburger-btn)/;
 // Bedienelemente der Rezeptansicht und des Kochmodus mit eigener Gestalt: Plus/Minus der Portionen, Timer im
 // Schritt, Kacheln der Kochsitzung, Bring! (Marke) und der Alarm-Knopf des Timers (eigene Alarmfarbe --color-alarm)
 const RECIPE_CONTROLS = /^(serving-btn|portion-selector-btn|step-timer-start-btn|cooking-rail-button|shopping-list-bring-btn|alarm-modal-stop-btn)/;
-// Aufklapp-Zeilen (aria-expanded) wie die Fragen der Hilfe sind Listenzeilen, keine Knöpfe des Systems
-const DISCLOSURE_ROWS = /^faq-question-btn/;
-const OWN_SHAPES = [EDITOR_TOOLS, ICON_BUTTONS, RECIPE_CONTROLS, DISCLOSURE_ROWS];
+// Zeilen als Knopf sind Listenzeilen, keine Knöpfe des Systems: Aufklapp-Zeilen (aria-expanded) wie die Fragen der
+// Hilfe und Namen in Verwaltungslisten, die ihre Bearbeitung öffnen (Icon-Verwaltung, Speisekategorien)
+const ROW_BUTTONS = /^(faq-question-btn|bia-row-name-btn)/;
+const OWN_SHAPES = [EDITOR_TOOLS, ICON_BUTTONS, RECIPE_CONTROLS, ROW_BUTTONS];
 const BARE_BUTTON = /^button(?![\w-])/;
 // Einträge in Auswahllisten und Kontextmenüs sind Listenzeilen, keine Knöpfe des Systems
 const LIST_CONTAINER = /dropdown|context-menu|typeahead|matches|suggest|autocomplete/;
@@ -47,24 +49,18 @@ const BASELINE = {
   'App.css': 1,
   'components/AtelierOnboardingOverlay.css': 2,
   'components/AtelierTasteIntroOverlay.css': 2,
-  'components/ButtonIconsAdminTab.css': 4,
-  'components/DrinkWeightsTab.css': 2,
   'components/EventsPage.css': 6,
   'components/FollowButton.css': 1,
   'components/GroupDetail.css': 8,
   'components/ImportProgressDialog.css': 2,
   'components/MemberProfilePage.css': 2,
   'components/NetworkPage.css': 2,
-  'components/NutritionModal.css': 5,
   'components/OcrScanModal.css': 1,
   'components/PortionSelector.css': 2,
-  'components/PrintFormatEditor.css': 2,
   'components/RecipeImportModal.css': 1,
-  'components/SeasonMatrixTab.css': 2,
-  'components/Settings.css': 8,
+  'components/Settings.css': 7,
   'components/SharePage.css': 2,
   'components/Tagesmenu.css': 5,
-  'components/UserManagement.css': 6,
   'components/WichtelPage.css': 2,
   'components/WichtelTeilnahmePage.css': 1,
 };
@@ -148,6 +144,7 @@ describe('Button-System (Tech-Check A8)', () => {
       .search-btn:hover { background: rgba(0, 0, 0, 0.06); }
       .menu-favorites-filter-button.active { background: #df7a00; }
       .faq-question-btn:hover { background: #f5f5f5; }
+      .bia-row-name-btn:hover { background: #f5f5f5; }
     `;
     expect(ownButtonRules(css).map((r) => r.selector)).toEqual([
       '.save-btn',

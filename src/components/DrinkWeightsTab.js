@@ -10,6 +10,7 @@ import { DEFAULT_DRINK_WEIGHTS, DEFAULT_CHILDREN_DRINK_WEIGHTS, DRINK_WEIGHT_CAT
 import { getDrinkCategoryLabel } from '../utils/drinkCategories';
 import { canManageDrinkWeights } from '../utils/userManagement';
 import KalibrierungsAuswertung from './KalibrierungsAuswertung';
+import Button from './Button';
 
 const NUMBER_FIELDS = ['basis', 'winter', 'sommer', 'nachmittag'];
 
@@ -196,21 +197,21 @@ function DrinkWeightMatrixTable({ title, description, rows, defaults, onSave, cu
                     <div className="drink-weights-actions">
                       {isEditing ? (
                         <>
-                          <button type="button" className="drink-weights-edit-btn" onClick={handleSave} disabled={isSaving}>
-                            {isSaving ? 'Speichern...' : 'Speichern'}
-                          </button>
-                          <button type="button" className="drink-weights-delete-btn" onClick={resetEditing}>
+                          <Button onClick={resetEditing}>
                             Abbrechen
-                          </button>
+                          </Button>
+                          <Button variant="primary" onClick={handleSave} loading={isSaving}>
+                            {isSaving ? 'Speichert …' : 'Speichern'}
+                          </Button>
                         </>
                       ) : (
                         <>
-                          <button type="button" className="drink-weights-edit-btn" onClick={() => handleEdit(row)}>
+                          <Button onClick={() => handleEdit(row)}>
                             Bearbeiten
-                          </button>
-                          <button type="button" className="drink-weights-delete-btn" onClick={() => handleResetToDefault(row.id)}>
+                          </Button>
+                          <Button variant="ghost" onClick={() => handleResetToDefault(row.id)}>
                             Zurücksetzen
-                          </button>
+                          </Button>
                         </>
                       )}
                     </div>

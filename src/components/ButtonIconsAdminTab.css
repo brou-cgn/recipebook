@@ -471,7 +471,7 @@
   gap: 8px;
 }
 
-.bia-modal-apply-btn {
+.bia-modal-apply-toggle {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -486,9 +486,9 @@
   font-family: inherit;
   text-align: left;
 }
-.bia-modal-apply-btn:hover:not(:disabled) { border-color: #8a857c; }
-.bia-modal-apply-btn:disabled { opacity: 0.4; cursor: default; }
-.bia-modal-apply-btn--checked { border-color: #402C1C; }
+.bia-modal-apply-toggle:hover:not(:disabled) { border-color: #8a857c; }
+.bia-modal-apply-toggle:disabled { opacity: 0.4; cursor: default; }
+.bia-modal-apply-toggle--checked { border-color: #402C1C; }
 
 .bia-modal-apply-check {
   width: 15px;
@@ -584,8 +584,8 @@
 [data-theme="dark"] .bia-modal-preview { background: #202226; border-color: #3a3d42; color: #f2f0ec; }
 [data-theme="dark"] .bia-modal-text-input { background: #202226; border-color: #3a3d42; color: #f2f0ec; }
 [data-theme="dark"] .bia-modal-apply { background: #202226; border-color: #2a2d31; }
-[data-theme="dark"] .bia-modal-apply-btn { background: #1d1f23; border-color: #3a3d42; color: #cfcbc3; }
-[data-theme="dark"] .bia-modal-apply-btn--checked { border-color: #6f757e; }
+[data-theme="dark"] .bia-modal-apply-toggle { background: #1d1f23; border-color: #3a3d42; color: #cfcbc3; }
+[data-theme="dark"] .bia-modal-apply-toggle--checked { border-color: #6f757e; }
 [data-theme="dark"] .bia-modal-apply-check { border-color: #4a463f; color: #f2f0ec; }
 
 /* ---- category images (Speisekategorien) ----

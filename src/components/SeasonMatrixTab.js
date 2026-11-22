@@ -538,29 +538,18 @@ function SeasonMatrixTab({ currentUser }) {
                     <div className="season-matrix-actions">
                       {editingId === entry.id ? (
                         <>
-                          <button
-                            type="button"
-                            className="season-matrix-edit-btn"
-                            onClick={handleSave}
-                            disabled={isSaving}
-                            aria-label={`Speichern für ${entry.id}`}
-                          >
-                            {isSaving ? 'Speichern...' : 'Speichern'}
-                          </button>
-                          <button
-                            type="button"
-                            className="season-matrix-delete-btn"
-                            onClick={resetForm}
-                            aria-label={`Bearbeitung abbrechen für ${entry.id}`}
-                          >
+                          <Button onClick={resetForm} aria-label={`Bearbeitung abbrechen für ${entry.id}`}>
                             Abbrechen
-                          </button>
+                          </Button>
+                          <Button onClick={handleSave} loading={isSaving} aria-label={`Speichern für ${entry.id}`}>
+                            {isSaving ? 'Speichert …' : 'Speichern'}
+                          </Button>
                         </>
                       ) : (
                         <>
-                          <button type="button" className="season-matrix-edit-btn" onClick={() => handleEdit(entry)}>
+                          <Button onClick={() => handleEdit(entry)}>
                             Bearbeiten
-                          </button>
+                          </Button>
                           <DeleteRowButton itemName={entry.name || entry.id} onClick={() => handleDelete(entry)} />
                         </>
                       )}

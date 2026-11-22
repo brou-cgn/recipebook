@@ -32,7 +32,6 @@ const SRC = __dirname;
 // adds nuances once the other chunk is loaded. Key: "<file>::<class>".
 // Add entries only with a reason; stale entries make the test fail.
 const ALLOWED = {
-  'components/AppCallsPage.js::edit-btn': 'styled via .list-item .edit-btn in Settings.css',
   'components/EventsPage.js::edit-fab-button': 'styled via .events-edit-fab-button in EventsPage.css',
   'components/GroupCreateDialog.js::group-member-list': 'styled via .group-dialog .group-member-list in GroupCreateDialog.css',
   'components/MenuForm.js::button-icon-img': 'sized via .menu-photo-upload-icon-img in MenuForm.css',
