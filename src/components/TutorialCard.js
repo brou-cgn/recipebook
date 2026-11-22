@@ -3,6 +3,8 @@ import './TutorialCard.css';
 import TutorialVideoModal from './TutorialVideoModal';
 import { TUTORIAL_CATEGORIES } from '../utils/tutorialsFirestore';
 import { extractYouTubeVideoId, getYouTubeThumbnailUrl, getYouTubeFrameUrls } from '../utils/youtubeUtils';
+import { useTexte } from '../contexts/SpracheContext';
+import kochbuchTexte from '../i18n/texte/kochbuch';
 
 // Same timings as the long-press on the "Rezept hinzufügen" button in
 // RecipeList.js, so both gestures feel identical.
@@ -12,6 +14,15 @@ const LONG_PRESS_CLICK_SUPPRESSION_MS = 500;
 // weiter als Longpress, darüber als Scrollversuch.
 const LONG_PRESS_MOVE_TOLERANCE_PX = 10;
 
+// Kategorie → Schlüssel in kochbuch.js (Mehrsprachigkeit PR 6d); die deutschen Namen stehen in
+// TUTORIAL_CATEGORIES (utils/tutorialsFirestore.js)
+const CATEGORY_KEYS = {
+  schneiden: 'tutorialSchneiden',
+  sauce: 'tutorialSauce',
+  teig: 'tutorialTeig',
+  garen: 'tutorialGaren',
+  anrichten: 'tutorialAnrichten',
+};
 const CATEGORY_LABELS = TUTORIAL_CATEGORIES.reduce((map, c) => {
   map[c.id] = c.label;
   return map;
@@ -77,6 +88,7 @@ function CategoryIcon({ category }) {
 // A short press keeps playing the video, so the gesture adds an entry point
 // without taking one away.
 function TutorialCard({ tutorial, onEdit }) {
+  const t = useTexte(kochbuchTexte);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [thumbFailed, setThumbFailed] = useState(false);
   const longPressTimer = useRef(null);
@@ -161,7 +173,7 @@ function TutorialCard({ tutorial, onEdit }) {
         onPointerCancel={cancelLongPress}
         onPointerLeave={cancelLongPress}
         onContextMenu={onEdit ? (e) => e.preventDefault() : undefined}
-        title={onEdit ? `${tutorial.title} (lang drücken zum Bearbeiten)` : undefined}
+        title={onEdit ? t('tutorialBearbeiten', { titel: tutorial.title }) : undefined}
         {...contentTagProps}
       >
         <div className="tutorial-card-thumb">
@@ -191,7 +203,9 @@ function TutorialCard({ tutorial, onEdit }) {
         <div className="tutorial-card-body">
           <div className="tutorial-card-text">
             <h3>{tutorial.title}</h3>
-            <span className="kulinarik-tag">{CATEGORY_LABELS[tutorial.category] || 'Tutorial'}</span>
+            <span className="kulinarik-tag">
+              {CATEGORY_KEYS[tutorial.category] ? t(CATEGORY_KEYS[tutorial.category]) : (CATEGORY_LABELS[tutorial.category] || t('tutorial'))}
+            </span>
           </div>
         </div>
       </ContentTag>

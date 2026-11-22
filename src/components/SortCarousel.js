@@ -1,18 +1,22 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import './SortCarousel.css';
+import { useTexte } from '../contexts/SpracheContext';
+import kochbuchTexte from '../i18n/texte/kochbuch';
 
+// label: deutsch wie bisher; angezeigt wird `schluessel` aus kochbuch.js (Mehrsprachigkeit PR 6d)
 export const SORT_OPTIONS = [
-  { id: 'alphabetical', label: 'Alphabetisch' },
-  { id: 'trending', label: 'Im Trend' },
-  { id: 'newest', label: 'Neue Rezepte' },
-  { id: 'rating', label: 'Nach Bewertung' },
-  { id: 'index', label: 'Nach Relevanz' },
+  { id: 'alphabetical', label: 'Alphabetisch', schluessel: 'sortAlphabetisch' },
+  { id: 'trending', label: 'Im Trend', schluessel: 'sortTrend' },
+  { id: 'newest', label: 'Neue Rezepte', schluessel: 'sortNeu' },
+  { id: 'rating', label: 'Nach Bewertung', schluessel: 'sortBewertung' },
+  { id: 'index', label: 'Nach Relevanz', schluessel: 'sortRelevanz' },
 ];
 
 // Simple tap-to-select pill bar with native horizontal scrolling/snapping.
 // Replaces the previous long-press + drag gesture carousel, whose custom
 // touch-velocity math reacted unpredictably.
 function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
+  const t = useTexte(kochbuchTexte);
   const itemRefs = useRef([]);
 
   const activeIndex = SORT_OPTIONS.findIndex((o) => o.id === activeSort);
@@ -46,7 +50,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
   );
 
   return (
-    <div className="sort-carousel" role="tablist" aria-label="Sortierung">
+    <div className="sort-carousel" role="tablist" aria-label={t('sortierung')}>
       {SORT_OPTIONS.map((option, idx) => (
         <button
           key={option.id}
@@ -61,7 +65,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
           onClick={() => handleSelect(option.id)}
           onKeyDown={onKeyDown}
         >
-          {option.label}
+          {t(option.schluessel)}
         </button>
       ))}
     </div>
