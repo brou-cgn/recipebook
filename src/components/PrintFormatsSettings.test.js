@@ -150,7 +150,7 @@ describe('delete with undo', () => {
     fireEvent.click(within(items()[0]).getByRole('button', { name: 'Ein Foto entfernen' }));
     expect(confirm).not.toHaveBeenCalled();
     expect(names()).toEqual(['Standard']);
-    expect(screen.getByRole('status')).toHaveTextContent('„Ein Foto" entfernt');
+    expect(screen.getByRole('status')).toHaveTextContent('„Ein Foto“ entfernt');
   });
 
   test('Rückgängig restores the format at its old index', async () => {

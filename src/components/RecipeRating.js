@@ -3,13 +3,15 @@ import './RecipeRating.css';
 import { rateRecipe, getUserRating, subscribeToRatingSummary } from '../utils/recipeRatings';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+import { useSprache, useTexte } from '../contexts/SpracheContext';
+import { formatiereZahl } from '../i18n/format';
+import bewertungTexte from '../i18n/texte/bewertung';
 
 /**
- * Formats a rating average using German locale (comma as decimal separator).
- * E.g. 4.8 → "4,8"
+ * Durchschnitt mit einer Nachkommastelle in der geltenden Sprache (4,8 / 4.8).
  */
-const formatRatingAvg = (avg) =>
-  avg.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const formatRatingAvg = (avg, sprache) =>
+  formatiereZahl(avg, sprache, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /**
  * RecipeRating component
@@ -31,6 +33,8 @@ const formatRatingAvg = (avg) =>
  *                                         that calls this instead of inline rating
  */
 function RecipeRating({ recipeId, ratingAvg: initialAvg, ratingCount: initialCount, currentUser, interactive = false, onOpenModal }) {
+  const t = useTexte(bewertungTexte);
+  const { sprache } = useSprache();
   const [avg, setAvg] = useState(initialAvg || 0);
   const [count, setCount] = useState(initialCount || 0);
   const [userRating, setUserRating] = useState(null);
@@ -106,7 +110,7 @@ function RecipeRating({ recipeId, ratingAvg: initialAvg, ratingCount: initialCou
   const renderHeartIcon = (filled) => {
     const icon = filled ? heartFilledIcon : heartEmptyIcon;
     if (isBase64Image(icon)) {
-      return <img src={icon} alt={filled ? 'Herz gefüllt' : 'Herz leer'} className="rating-heart-img" />;
+      return <img src={icon} alt={filled ? t('herzGefuellt') : t('herzLeer')} className="rating-heart-img" />;
     }
     return icon;
   };
@@ -118,27 +122,27 @@ function RecipeRating({ recipeId, ratingAvg: initialAvg, ratingCount: initialCou
         <button
           className="recipe-rating-detail-summary"
           onClick={onOpenModal}
-          title="Bewerten"
-          aria-label={count > 0 ? `Bewertung: Ø ${formatRatingAvg(avg)} (${count} ${count === 1 ? 'Bewertung' : 'Bewertungen'}) – Jetzt bewerten` : 'Jetzt bewerten'}
+          title={t('bewerten')}
+          aria-label={count > 0 ? t('zusammenfassung', { schnitt: formatRatingAvg(avg, sprache), anzahl: count }) : t('jetztBewerten')}
         >
           <span className={`rating-heart-icon ${userRating !== null ? 'filled' : 'empty'}`}>{renderHeartIcon(userRating !== null)}</span>
           {count > 0 && (
-            <span className="rating-detail-summary-text">{formatRatingAvg(avg)} ({count})</span>
+            <span className="rating-detail-summary-text">{formatRatingAvg(avg, sprache)} ({count})</span>
           )}
         </button>
       );
     }
     const cardTitle = userRating !== null
-      ? `Deine Bewertung: ${userRating} Herz${userRating === 1 ? '' : 'en'}`
+      ? t('deineBewertung', { anzahl: userRating })
       : count > 0
-        ? `Ø ${formatRatingAvg(avg)} (${count} Bewertungen)`
-        : 'Noch keine Bewertungen';
+        ? t('durchschnitt', { schnitt: formatRatingAvg(avg, sprache), anzahl: count })
+        : t('nochKeine');
     return (
       <div className="recipe-rating-compact" title={cardTitle} aria-label={cardTitle}>
         <span className={`rating-heart-icon ${userRating !== null ? 'filled' : 'empty'}`} aria-hidden="true">
           {renderHeartIcon(userRating !== null)}
         </span>
-        {count > 0 && <span className="rating-text">{formatRatingAvg(avg)} ({count})</span>}
+        {count > 0 && <span className="rating-text">{formatRatingAvg(avg, sprache)} ({count})</span>}
       </div>
     );
   }
@@ -147,7 +151,7 @@ function RecipeRating({ recipeId, ratingAvg: initialAvg, ratingCount: initialCou
   const activeRating = hoveredRating || userRating || 0;
   return (
     <div className="recipe-rating-interactive">
-      <div className="rating-hearts-interactive" role="group" aria-label="Rezept bewerten">
+      <div className="rating-hearts-interactive" role="group" aria-label={t('rezeptBewerten')}>
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
@@ -156,8 +160,8 @@ function RecipeRating({ recipeId, ratingAvg: initialAvg, ratingCount: initialCou
             onMouseEnter={() => setHoveredRating(n)}
             onMouseLeave={() => setHoveredRating(null)}
             disabled={isSubmitting}
-            title={`${n} Herz${n === 1 ? '' : 'en'}`}
-            aria-label={`${n} von 5 Herzen`}
+            title={t('herzen', { anzahl: n })}
+            aria-label={t('vonFuenf', { anzahl: n })}
             aria-pressed={userRating === n}
           >
             {renderHeartIcon(activeRating >= n)}
@@ -166,7 +170,7 @@ function RecipeRating({ recipeId, ratingAvg: initialAvg, ratingCount: initialCou
       </div>
       {count > 0 && (
         <span className="rating-summary-text">
-          {formatRatingAvg(avg)} <span className="rating-count-text">({count} {count === 1 ? 'Bewertung' : 'Bewertungen'})</span>
+          {formatRatingAvg(avg, sprache)} <span className="rating-count-text">({t('anzahlBewertungen', { anzahl: count })})</span>
         </span>
       )}
     </div>

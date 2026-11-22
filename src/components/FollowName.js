@@ -1,6 +1,8 @@
 import React from 'react';
 import './FollowButton.css';
 import { useFollow } from '../contexts/FollowContext';
+import { useTexte } from '../contexts/SpracheContext';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 /**
  * Name eines Mitglieds. Ab "angefragt" ein Link auf das Profil (Vorhaben Follow,
@@ -10,6 +12,7 @@ import { useFollow } from '../contexts/FollowContext';
  */
 function FollowName({ userId, name, className, fromNetwork = false }) {
   const { enabled, statusOf, openProfile } = useFollow();
+  const t = useTexte(allgemeinTexte);
   if (!enabled || !openProfile || !userId || !(fromNetwork || statusOf(userId))) {
     return <span className={className}>{name}</span>;
   }
@@ -19,7 +22,7 @@ function FollowName({ userId, name, className, fromNetwork = false }) {
       className={`follow-name-link${className ? ` ${className}` : ''}`}
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => { e.stopPropagation(); if (fromNetwork) openProfile(userId, { fromNetwork: true }); else openProfile(userId); }}
-      aria-label={`Profil von ${name} öffnen`}
+      aria-label={t('profilOeffnen', { name })}
     >
       {name}
     </button>

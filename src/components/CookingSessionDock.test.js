@@ -150,7 +150,7 @@ describe('CookingSessionDock', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Apfelrotkohl entfernen' }));
 
     expect(screen.queryByRole('button', { name: 'Apfelrotkohl öffnen, Schritt 1 von 2' })).toBeNull();
-    expect(screen.getByText('„Apfelrotkohl" entfernt')).toBeInTheDocument();
+    expect(screen.getByText('„Apfelrotkohl“ entfernt')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
     expect(screen.getByRole('button', { name: 'Apfelrotkohl öffnen, Schritt 1 von 2' })).toBeInTheDocument();

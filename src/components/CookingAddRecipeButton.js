@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { isBase64Image } from '../utils/imageUtils';
+import { useTexte } from '../contexts/SpracheContext';
+import kochmodusTexte from '../i18n/texte/kochmodus';
 import './CookingAddRecipeButton.css';
 
 /**
@@ -11,6 +13,7 @@ import './CookingAddRecipeButton.css';
  * bei den FABs bleibt der Knopf unsichtbar, bis die Button-Icons geladen sind.
  */
 function CookingAddRecipeButton({ icon, loaded = true, onClick }) {
+  const t = useTexte(kochmodusTexte);
   const [pressed, setPressed] = useState(false);
   const press = () => setPressed(true);
   const release = () => setPressed(false);
@@ -27,8 +30,8 @@ function CookingAddRecipeButton({ icon, loaded = true, onClick }) {
       onMouseDown={press}
       onMouseUp={release}
       onMouseLeave={release}
-      aria-label="Weiteres Rezept dazunehmen"
-      title="Weiteres Rezept dazunehmen"
+      aria-label={t('weiteresDazunehmen')}
+      title={t('weiteresDazunehmen')}
     >
       <span className="cooking-mode-add-recipe-icon" aria-hidden="true">
         {isBase64Image(icon)

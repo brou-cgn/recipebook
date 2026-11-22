@@ -1,6 +1,8 @@
 import React from 'react';
 import CookingAddRecipeButton from './CookingAddRecipeButton';
 import { getRecipeThumbnail } from '../utils/recipeThumbnail';
+import { useRezeptTitel, useTexte } from '../contexts/SpracheContext';
+import kochmodusTexte from '../i18n/texte/kochmodus';
 import './CookingModeTitleBar.css';
 
 /**
@@ -43,6 +45,7 @@ function CheckIcon() {
 
 function CookingModeTitleBar({
   recipe,
+  title = null,
   tablet = false,
   stepNumber = 0,
   totalSteps = 0,
@@ -52,6 +55,11 @@ function CookingModeTitleBar({
   addIconLoaded = true,
   onAdd,
 }) {
+  const t = useTexte(kochmodusTexte);
+  // Titel in der geltenden Sprache (Mehrsprachigkeit PR 6a); RecipeDetail gibt den angezeigten mit,
+  // damit „Original anzeigen“ auch hier gilt
+  const zeigeTitel = useRezeptTitel();
+  const titel = title ?? zeigeTitel(recipe);
   const chips = timerChips.slice(0, MAX_CHIPS);
   const more = timerChips.length - chips.length;
 
@@ -59,23 +67,23 @@ function CookingModeTitleBar({
     <div className={`cooking-mode-titlebar${tablet ? ' cooking-mode-titlebar--tablet' : ''}`}>
       {tablet && <TitleBarThumb recipe={recipe} />}
       <div className="cooking-mode-titlebar-titles">
-        <h2 className="cooking-mode-titlebar-title">{recipe.title}</h2>
+        <h2 className="cooking-mode-titlebar-title">{titel}</h2>
         {tablet && totalSteps > 0 && (
-          <span className="cooking-mode-titlebar-step">Schritt {stepNumber} von {totalSteps}</span>
+          <span className="cooking-mode-titlebar-step">{t('schrittVon', { schritt: stepNumber, gesamt: totalSteps })}</span>
         )}
       </div>
       {chips.length > 0 && (
-        <div className="cooking-mode-timer-chips" role="group" aria-label="Timer anderer Schritte">
+        <div className="cooking-mode-timer-chips" role="group" aria-label={t('timerAndererSchritte')}>
           {chips.map((chip) => (
             <button
               key={`${chip.stepIndex}-${chip.kind}`}
               type="button"
               className={`cooking-mode-timer-chip${chip.urgent ? ' cooking-mode-timer-chip--urgent' : ''}`}
               onClick={() => onJumpToStep(chip.stepIndex)}
-              aria-label={`Zu Schritt ${chip.stepIndex + 1} springen, ${chip.label}`}
+              aria-label={t('zuSchrittSpringen', { schritt: chip.stepIndex + 1, status: chip.label })}
             >
               {chip.kind === 'finished' ? <CheckIcon /> : <ClockIcon />}
-              <span className="cooking-mode-timer-chip-step">Schritt {chip.stepIndex + 1}</span>
+              <span className="cooking-mode-timer-chip-step">{t('schritt', { schritt: chip.stepIndex + 1 })}</span>
               <span className="cooking-mode-timer-chip-time">{chip.text}</span>
             </button>
           ))}

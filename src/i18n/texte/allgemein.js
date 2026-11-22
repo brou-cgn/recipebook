@@ -2,6 +2,9 @@
  * Allgemeine Texte, die viele Bereiche brauchen (Knöpfe, Zustände). Was nur ein Bereich
  * braucht, gehört in dessen eigenes Wörterbuch. Aufbau und Regeln: src/i18n/texte.js.
  */
+// Geschütztes Leerzeichen: im Französischen vor : ? ! ; und innerhalb von « ».
+const NBSP = '\u00a0';
+
 export default {
   de: {
     speichern: 'Speichern',
@@ -13,6 +16,15 @@ export default {
     speichernLaeuft: 'Wird gespeichert…',
     laden: 'Wird geladen …',
     fehlerAllgemein: 'Das hat nicht geklappt. Bitte versuch es noch einmal.',
+    ok: 'OK',
+    gespeichert: '✓ Gespeichert',
+    speichernKurz: 'Speichern…',
+    vorherigesBild: 'Vorheriges Bild',
+    naechstesBild: 'Nächstes Bild',
+    bildNummer: 'Bild {nummer}',
+    profilOeffnen: 'Profil von {name} öffnen',
+    entfernt: '„{name}“ entfernt',
+    rueckgaengig: 'Rückgängig',
   },
   en: {
     speichern: 'Save',
@@ -24,6 +36,15 @@ export default {
     speichernLaeuft: 'Saving…',
     laden: 'Loading…',
     fehlerAllgemein: 'Something went wrong. Please try again.',
+    ok: 'OK',
+    gespeichert: '✓ Saved',
+    speichernKurz: 'Saving…',
+    vorherigesBild: 'Previous image',
+    naechstesBild: 'Next image',
+    bildNummer: 'Image {nummer}',
+    profilOeffnen: 'Open {name}’s profile',
+    entfernt: '“{name}” removed',
+    rueckgaengig: 'Undo',
   },
   fr: {
     speichern: 'Enregistrer',
@@ -35,5 +56,14 @@ export default {
     speichernLaeuft: 'Enregistrement…',
     laden: 'Chargement…',
     fehlerAllgemein: 'Ça n’a pas marché. Réessaie.',
+    ok: 'OK',
+    gespeichert: '✓ Enregistré',
+    speichernKurz: 'Enregistrement…',
+    vorherigesBild: 'Image précédente',
+    naechstesBild: 'Image suivante',
+    bildNummer: 'Image {nummer}',
+    profilOeffnen: 'Ouvrir le profil de {name}',
+    entfernt: `«${NBSP}{name}${NBSP}» retiré`,
+    rueckgaengig: 'Annuler',
   },
 };

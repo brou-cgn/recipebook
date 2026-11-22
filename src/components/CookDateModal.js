@@ -9,6 +9,10 @@ import { setCookDate, deleteCookDate, subscribeCookDates } from '../utils/recipe
 import { isBase64Image } from '../utils/imageUtils';
 import useFadeOutClose from '../hooks/useFadeOutClose';
 import useModalScrollLock from '../hooks/useModalScrollLock';
+import { useSprache, useTexte } from '../contexts/SpracheContext';
+import { formatiereDatum } from '../i18n/format';
+import kochtagebuchTexte from '../i18n/texte/kochtagebuch';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 /**
  * CookDateModal component
@@ -33,6 +37,9 @@ import useModalScrollLock from '../hooks/useModalScrollLock';
  */
 function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, recipeCreatedAt, recipeImage, timelineBubbleIcon = null, timelineCookEventBubbleIcon = null, timelineCookEventDefaultImage = null, followButtonIcon, canDeleteCookDates = false, prefillToday = false, onSaved, onClose: onCloseProp }) {
   const [closing, onClose] = useFadeOutClose(onCloseProp);
+  const t = useTexte(kochtagebuchTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const { sprache } = useSprache();
   const todayStr = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(prefillToday ? todayStr : '');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,9 +62,9 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
   }, [recipeId]);
 
   const getUserName = (userId) => {
-    if (!userId) return 'Unbekannter Benutzer';
+    if (!userId) return t('unbekannt');
     const user = allUsers.find((u) => u.id === userId);
-    return user?.vorname || 'Unbekannter Benutzer';
+    return user?.vorname || t('unbekannt');
   };
 
   const formatDate = (date) => {
@@ -65,7 +72,7 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
     let d = date;
     if (typeof date.toDate === 'function') d = date.toDate();
     else if (typeof date === 'string') d = new Date(date);
-    return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return formatiereDatum(d, sprache, { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   const handleSave = async () => {
@@ -99,15 +106,15 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
 
   return (
     <div className={`cook-date-modal-overlay${closing ? ' cook-date-modal-overlay--closing' : ''}`} onClick={onClose}>
-      <div className="cook-date-modal" role="dialog" aria-modal="true" aria-label="Kochtagebuch" onClick={(e) => e.stopPropagation()}>
+      <div className="cook-date-modal" role="dialog" aria-modal="true" aria-label={t('kochtagebuch')} onClick={(e) => e.stopPropagation()}>
         <div className="cook-date-modal-header">
-          <h2 className="cook-date-modal-title">Kochtagebuch</h2>
-          <button className="cook-date-modal-close" onClick={onClose} aria-label="Schließen">×</button>
+          <h2 className="cook-date-modal-title">{t('kochtagebuch')}</h2>
+          <button className="cook-date-modal-close" onClick={onClose} aria-label={tAllgemein('schliessen')}>×</button>
         </div>
         <div className="cook-date-modal-body">
           <div className="cook-date-input-wrapper">
             <label className="cook-date-label" htmlFor="cook-date-input">
-              Wann hast du dieses Rezept gekocht?
+              {t('wannGekocht')}
             </label>
             <input
               id="cook-date-input"
@@ -136,11 +143,11 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
                 <div className="cook-date-timeline-card">
                   {(recipeImage || timelineCookEventDefaultImage) && (
                     <div className="cook-date-timeline-card-image">
-                      <img src={recipeImage || timelineCookEventDefaultImage} alt="Rezept" />
+                      <img src={recipeImage || timelineCookEventDefaultImage} alt={t('rezept')} />
                     </div>
                   )}
                   <div className="cook-date-timeline-card-info">
-                    <span className="cook-date-timeline-label">Gekocht am</span>
+                    <span className="cook-date-timeline-label">{t('gekochtAm')}</span>
                     <span className="cook-date-timeline-date">{formatDate(cd.date)}</span>
                     <span className="cook-date-timeline-recipe-title">
                       <FollowName userId={cd.userId} name={getUserName(cd.userId)} />
@@ -153,8 +160,8 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
                     <button
                       className="cook-date-timeline-delete-btn"
                       onClick={() => handleDeleteCookDate(cd.id)}
-                      title="Eintrag löschen"
-                      aria-label="Gekocht am-Eintrag löschen"
+                      title={t('eintragLoeschen')}
+                      aria-label={t('eintragLoeschenAria')}
                     >
                       ×
                     </button>
@@ -178,11 +185,11 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
                 <div className="cook-date-timeline-card">
                   {recipeImage && (
                     <div className="cook-date-timeline-card-image">
-                      <img src={recipeImage} alt="Rezept" />
+                      <img src={recipeImage} alt={t('rezept')} />
                     </div>
                   )}
                   <div className="cook-date-timeline-card-info">
-                    <span className="cook-date-timeline-label">Erstellt am</span>
+                    <span className="cook-date-timeline-label">{t('erstelltAm')}</span>
                     <span className="cook-date-timeline-date">{formatDate(recipeCreatedAt)}</span>
                     <span className="cook-date-timeline-recipe-title">
                       <FollowName userId={recipeAuthorId} name={getUserName(recipeAuthorId)} />
@@ -197,13 +204,13 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
           </div>
         </div>
         <div className="cook-date-modal-footer">
-          <Button variant="secondary" onClick={onClose}>Abbrechen</Button>
+          <Button variant="secondary" onClick={onClose}>{tAllgemein('abbrechen')}</Button>
           <Button
             variant="primary"
             onClick={handleSave}
             disabled={!selectedDate || isSubmitting || saved}
           >
-            {saved ? '✓ Gespeichert' : isSubmitting ? 'Speichern…' : 'Speichern'}
+            {saved ? tAllgemein('gespeichert') : isSubmitting ? tAllgemein('speichernKurz') : tAllgemein('speichern')}
           </Button>
         </div>
       </div>

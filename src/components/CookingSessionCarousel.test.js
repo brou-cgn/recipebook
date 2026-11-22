@@ -26,14 +26,15 @@ function SessionProbe() {
   return null;
 }
 
-function renderCarousel(props = {}) {
+function renderCarousel(props = {}, { sprache = 'de' } = {}) {
   const onSelect = jest.fn();
   const onAdd = jest.fn();
   renderWithProviders(
     <CookingSessionProvider onOpenRecipe={() => {}}>
       <SessionProbe />
       <CookingSessionCarousel currentRecipeId="kloesse" onSelect={onSelect} onAdd={onAdd} {...props} />
-    </CookingSessionProvider>
+    </CookingSessionProvider>,
+    { sprache }
   );
   return { onSelect, onAdd };
 }
@@ -255,7 +256,7 @@ describe('CookingSessionCarousel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Rinderrouladen entfernen' }));
 
     expect(cardNames()).toEqual(['Apfelrotkohl nach vorn holen, Schritt 1 von 2']);
-    expect(screen.getByText('„Rinderrouladen" entfernt')).toBeInTheDocument();
+    expect(screen.getByText('„Rinderrouladen“ entfernt')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
     expect(cardNames()).toEqual([
@@ -337,5 +338,18 @@ describe('CookingSessionCarousel', () => {
 
       expect(screen.getByRole('button', { name: /scrollen/ })).toHaveAccessibleName('Zu Apfelrotkohl scrollen, Timer abgelaufen');
     });
+  });
+});
+
+describe('CookingSessionCarousel in anderer Sprache (Mehrsprachigkeit PR 6a)', () => {
+  test('Überschrift, Schritt und Beschriftung auf Englisch', () => {
+    renderCarousel({}, { sprache: 'en' });
+    const nav = () => screen.getByRole('navigation', { name: 'Other recipes on the stove' });
+    expect(within(nav()).getByRole('heading', { name: 'On the stove' })).toBeInTheDocument();
+    seedSession();
+
+    expect(within(nav()).getByRole('heading', { name: 'On the stove · 2 more' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bring Rinderrouladen to the front, Step 2 of 3' })).toBeInTheDocument();
+    expect(screen.getByText('Step 2 of 3')).toBeInTheDocument();
   });
 });

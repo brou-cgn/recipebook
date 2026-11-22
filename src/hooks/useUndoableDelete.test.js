@@ -14,7 +14,7 @@ describe('useUndoableDelete', () => {
     const onConfirm = jest.fn();
     const onUndo = jest.fn();
     act(() => {
-      result.current.scheduleDelete({ key: 'item-1', message: '„Item" entfernt', onConfirm, onUndo, ...overrides });
+      result.current.scheduleDelete({ key: 'item-1', message: '„Item“ entfernt', onConfirm, onUndo, ...overrides });
     });
     return { onConfirm, onUndo };
   };

@@ -213,7 +213,7 @@ describe('CookingSessionRail', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Apfelrotkohl entfernen' }));
 
     expect(screen.queryByRole('button', { name: /^Apfelrotkohl öffnen/ })).toBeNull();
-    expect(screen.getByText('„Apfelrotkohl" entfernt')).toBeInTheDocument();
+    expect(screen.getByText('„Apfelrotkohl“ entfernt')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
     expect(railItems()).toEqual([

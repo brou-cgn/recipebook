@@ -1,6 +1,8 @@
 import React from 'react';
 import './ConfirmDialog.css';
 import Button from './Button';
+import { useTexte } from '../contexts/SpracheContext';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 /**
  * In-app confirmation for the few deletions that keep a question: a whole
@@ -10,12 +12,13 @@ import Button from './Button';
  * @param {Object} props
  * @param {string} props.title
  * @param {string} props.message
- * @param {string} [props.confirmLabel]
+ * @param {string} [props.confirmLabel] - Standard „Löschen“ in der geltenden Sprache
  * @param {string} [props.confirmVariant] - Rolle des Bestätigungsknopfs (Button-System), Standard danger
  * @param {Function} props.onConfirm
  * @param {Function} props.onCancel
  */
-function ConfirmDialog({ title, message, confirmLabel = 'Löschen', confirmVariant = 'danger', onConfirm, onCancel }) {
+function ConfirmDialog({ title, message, confirmLabel, confirmVariant = 'danger', onConfirm, onCancel }) {
+  const t = useTexte(allgemeinTexte);
   return (
     <div className="confirm-dialog-overlay" onClick={onCancel}>
       <div
@@ -30,10 +33,10 @@ function ConfirmDialog({ title, message, confirmLabel = 'Löschen', confirmVaria
         <p id="confirm-dialog-message" className="confirm-dialog-message">{message}</p>
         <div className="confirm-dialog-actions">
           <Button variant="secondary" onClick={onCancel}>
-            Abbrechen
+            {t('abbrechen')}
           </Button>
           <Button variant={confirmVariant} onClick={onConfirm} autoFocus>
-            {confirmLabel}
+            {confirmLabel || t('loeschen')}
           </Button>
         </div>
       </div>

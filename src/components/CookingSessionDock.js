@@ -4,6 +4,8 @@ import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import { getRecipeThumbnail } from '../utils/recipeThumbnail';
 import { cookingStatus } from '../utils/cookingSessionStatus';
+import { useRezeptTitel, useTexte } from '../contexts/SpracheContext';
+import kochmodusTexte from '../i18n/texte/kochmodus';
 import UndoSnackbar from './UndoSnackbar';
 import TrashIcon from './icons/TrashIcon';
 import './DeleteRowButton.css';
@@ -19,6 +21,8 @@ import './CookingSessionDock.css';
  */
 
 function DockChip({ entry, status, compact, onSelect, onRemove }) {
+  const t = useTexte(kochmodusTexte);
+  const titel = useRezeptTitel()(entry.recipe);
   const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ maxOffset: 64 });
   const { recipe } = entry;
   const thumbnail = getRecipeThumbnail(recipe);
@@ -36,7 +40,7 @@ function DockChip({ entry, status, compact, onSelect, onRemove }) {
           type="button"
           className="swipe-delete-action"
           onClick={handleRemove}
-          aria-label={`${recipe.title} entfernen`}
+          aria-label={t('rezeptEntfernen', { titel })}
           tabIndex={isDeleteVisible ? 0 : -1}
         >
           <span className="swipe-delete-icon-text"><TrashIcon /></span>
@@ -47,7 +51,7 @@ function DockChip({ entry, status, compact, onSelect, onRemove }) {
         className="cooking-dock-chip-main"
         style={{ transform: `translateX(${offset}px)`, transition: 'transform 0.15s ease' }}
         onClick={() => { if (isDeleteVisible) reset(); else onSelect(entry); }}
-        aria-label={`${recipe.title} öffnen, ${status.label}`}
+        aria-label={t('rezeptOeffnen', { titel, status: status.label })}
         {...handlers}
       >
         {thumbnail ? (
@@ -56,7 +60,7 @@ function DockChip({ entry, status, compact, onSelect, onRemove }) {
           <span className="cooking-dock-chip-thumb cooking-dock-chip-thumb--empty" aria-hidden="true" />
         )}
         <span className="cooking-dock-chip-text">
-          <span className="cooking-dock-chip-title">{recipe.title}</span>
+          <span className="cooking-dock-chip-title">{titel}</span>
           <span className={`cooking-dock-chip-status cooking-dock-chip-status--${status.kind}`}>{compact && status.shortText ? status.shortText : status.text}</span>
         </span>
       </button>
@@ -91,6 +95,8 @@ function useDockOffset(ref, active) {
 
 function CookingSessionDock({ placement = 'inline', currentRecipeId = null, onSelect }) {
   const session = useCookingSession();
+  const t = useTexte(kochmodusTexte);
+  const zeigeTitel = useRezeptTitel();
   const navRef = useRef(null);
   const { banners, pendingKeys, scheduleDelete, undoDelete } = useUndoableDelete();
   const entries = sortByNextDue(
@@ -104,7 +110,7 @@ function CookingSessionDock({ placement = 'inline', currentRecipeId = null, onSe
   const handleSelect = onSelect || ((entry) => session.switchTo(entry.recipe.id));
   const handleRemove = (entry) => scheduleDelete({
     key: entry.recipe.id,
-    message: entry.recipe.title,
+    message: zeigeTitel(entry.recipe),
     onConfirm: () => session.removeFromSession(entry.recipe.id),
     onUndo: () => {},
   });
@@ -114,13 +120,13 @@ function CookingSessionDock({ placement = 'inline', currentRecipeId = null, onSe
   return (
     <>
       {visible && (
-        <nav ref={navRef} className={`cooking-dock cooking-dock--${placement} cooking-dock--${density}`} aria-label="Rezepte im Hintergrund">
+        <nav ref={navRef} className={`cooking-dock cooking-dock--${placement} cooking-dock--${density}`} aria-label={t('rezepteImHintergrund')}>
           <ul className="cooking-dock-list">
             {entries.map((entry) => (
               <DockChip
                 key={entry.recipe.id}
                 entry={entry}
-                status={cookingStatus(entry, session.allTimers)}
+                status={cookingStatus(entry, session.allTimers, t)}
                 compact={density !== 'full'}
                 onSelect={handleSelect}
                 onRemove={handleRemove}
