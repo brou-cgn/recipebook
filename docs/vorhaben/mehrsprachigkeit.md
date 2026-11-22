@@ -2,8 +2,7 @@
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
 Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 22.11.2026 (PR 1 bis 3
-gemergt, Umsetzung der Entscheidungen zu Bereichsnamen und Ansprache auf Branch
-`claude/mehrsprachigkeit-bereichsnamen`).
+gemergt, Umsetzung der Entscheidungen zu Bereichsnamen und Ansprache als PR #3721 offen).
 
 **Ziel:** Die App gibt es auf Deutsch, Englisch und Französisch. Jede:r wählt die eigene Sprache in den
 persönlichen Einstellungen, der Header übersteuert sie für die laufende Sitzung. Rezepte (Titel und
@@ -51,7 +50,7 @@ auch mehrsprachig aufgesetzt werden.“ Umfang: „alles“, also kein Halt nach
 | 4 | Rezeptinhalt: Zutaten, Schritte und weitere Textfelder bei Anlage und Änderung übersetzen (Hash über die Quelltexte). Speicherort festlegen (siehe „Offen“). Anzeige mit Hinweis und „Original anzeigen“; Portionsumrechnung mit übersetzten Zutaten. | offen |
 | 5 | Auswahllisten: Zuordnung je Listenwert (Kulinarik-Typen und -Gruppen, Speisekategorien, Einheiten, Portions-, Gebinde- und Getränkeeinheiten mit Einzahl und Mehrzahl, Adjektive). KI-Vorbefüllung, Pflege unter „Listen & Kategorien“, Anzeige-Helfer. | offen |
 | 6 | Oberfläche Bereich für Bereich, mehrere PRs, nach Nutzung: Rezeptansicht und Kochmodus, Kochbuch mit Suche und Filtern, Küche (Startseite), Festtafel (Menüs), Atelier, Events und Gäste, Gruppen, Netzwerk und Profile, Dialoge und Fehlermeldungen aus `utils/`. Wie viel noch fehlt, zeigt die `BASELINE` in `src/i18nPolicy.test.js`. | offen |
-| E | Entscheidungen umgesetzt: Bereichsnamen übersetzt (`bereiche.js`, untere Navigation mit eigenem Wörterbuch `navigation.js`), Hinweise zu Mitteilungen in „Persönliche Daten“ duzen, Test gegen die Höflichkeitsform, Regel in `AGENTS.md`. | Branch `claude/mehrsprachigkeit-bereichsnamen` (22.11.2026, noch kein PR) |
+| E | Entscheidungen umgesetzt: Bereichsnamen übersetzt (`bereiche.js`, untere Navigation mit eigenem Wörterbuch `navigation.js`), Hinweise zu Mitteilungen in „Persönliche Daten“ duzen, Test gegen die Höflichkeitsform, Regel in `AGENTS.md`. | PR #3721 (offen, 22.11.2026) |
 | B | Phase B (siehe „Entschieden“). | später |
 
 Nach jedem PR: Tabelle nachziehen. Berührt ein PR einen Tech-Check-Befund, auch das Dashboard
