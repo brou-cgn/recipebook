@@ -4,8 +4,11 @@ import { getMenuByShareId } from '../utils/menuFirestore';
 import { getRecipesByIds } from '../utils/recipeFirestore';
 import MenuDetail from './MenuDetail';
 import RecipeDetail from './RecipeDetail';
+import { useTexte } from '../contexts/SpracheContext';
+import festtafelTexte from '../i18n/texte/festtafel';
 
 function MenuSharePage({ shareId, currentUser, onClose }) {
+  const t = useTexte(festtafelTexte);
   const [menu, setMenu] = useState(null);
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +48,7 @@ function MenuSharePage({ shareId, currentUser, onClose }) {
   if (loading) {
     return (
       <div className="share-page-loading">
-        Menü wird geladen…
+        {t('laedt')}
       </div>
     );
   }
@@ -53,8 +56,8 @@ function MenuSharePage({ shareId, currentUser, onClose }) {
   if (notFound) {
     return (
       <div className="share-page-not-found">
-        <h2>Menü nicht gefunden</h2>
-        <p>Dieser Share-Link ist ungültig oder das Menü wurde nicht mehr geteilt.</p>
+        <h2>{t('nichtGefunden')}</h2>
+        <p>{t('linkUngueltig')}</p>
       </div>
     );
   }

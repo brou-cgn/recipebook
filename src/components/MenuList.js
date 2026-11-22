@@ -6,8 +6,18 @@ import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePref
 import { isBase64Image } from '../utils/imageUtils';
 import { subscribeToGuestProfiles, subscribeToAllGuestProfiles } from '../utils/eventsFirestore';
 import { formatMenuGuestsFliesstext } from '../utils/guestPreferences';
+import { useSprache, useTexte } from '../contexts/SpracheContext';
+import { formatiereDatum } from '../i18n/format';
+import festtafelTexte from '../i18n/texte/festtafel';
+import rezeptansichtTexte from '../i18n/texte/rezeptansicht';
+import bereicheTexte from '../i18n/texte/bereiche';
 
 function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorite, currentUser, allUsers }) {
+  // Texte der Festtafel (Mehrsprachigkeit PR 6f)
+  const t = useTexte(festtafelTexte);
+  const tBereiche = useTexte(bereicheTexte);
+  const tAnsicht = useTexte(rezeptansichtTexte);
+  const { sprache } = useSprache();
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [addPressed, setAddPressed] = useState(false);
@@ -71,12 +81,12 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
     return author.vorname;
   };
 
-  const getMenuGuestsText = (menu) => formatMenuGuestsFliesstext(menu.descriptionGuestIds, guests);
+  const getMenuGuestsText = (menu) => formatMenuGuestsFliesstext(menu.descriptionGuestIds, guests, t);
 
   const getMenuDate = (menu) => {
     if (menu.menuDate) {
       try {
-        return new Date(menu.menuDate).toLocaleDateString('de-DE');
+        return formatiereDatum(new Date(menu.menuDate), sprache, { day: 'numeric', month: 'numeric', year: 'numeric' }) || null;
       } catch (e) {
         return null;
       }
@@ -91,7 +101,7 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
         } else if (menu.createdAt instanceof Date) {
           date = menu.createdAt;
         }
-        return date ? date.toLocaleDateString('de-DE') : null;
+        return date ? (formatiereDatum(date, sprache, { day: 'numeric', month: 'numeric', year: 'numeric' }) || null) : null;
       } catch (e) {
         return null;
       }
@@ -135,18 +145,18 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
       <div className="menu-overview-main">
     <div className="menu-list-container">
       <div className="menu-list-header">
-        <h2>{showFavoritesOnly ? 'Meine Festtafel' : 'Festtafel'}</h2>
+        <h2>{showFavoritesOnly ? t('meineFesttafel') : tBereiche('festtafel')}</h2>
       </div>
 
       {filteredMenus.length === 0 ? (
         <div className="empty-state">
-          <p>{showFavoritesOnly ? 'Keine favorisierten Menüs!' : 'Noch keine Menüs!'}</p>
+          <p>{showFavoritesOnly ? t('keineFavoriten') : t('nochKeine')}</p>
           {showFavoritesOnly ? (
-            <p className="empty-hint">Markiere Menüs als Favorit, so findest du sie schneller.</p>
+            <p className="empty-hint">{t('hinweisFavoriten')}</p>
           ) : (
             <>
-              <p className="empty-hint empty-hint-desktop">Tippe auf "+ Menü", um deine Rezepte in Menüs zu organisieren</p>
-              <p className="empty-hint empty-hint-mobile">Tippe auf "Menü erstellen", um deine Rezepte in Menüs zu organisieren</p>
+              <p className="empty-hint empty-hint-desktop">{t('hinweisDesktop')}</p>
+              <p className="empty-hint empty-hint-mobile">{t('hinweisMobil')}</p>
             </>
           )}
         </div>
@@ -181,9 +191,9 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
                 })()}
                 <div className="menu-card-badges">
                   {menu.privat && (
-                    <div className="private-badge" title="Privates Menü" aria-label="Privates Menü">
+                    <div className="private-badge" title={t('privatesMenue')} aria-label={t('privatesMenue')}>
                       {isBase64Image(getEffectiveIcon(buttonIcons, 'privateBadge', isDarkMode)) ? (
-                        <img src={getEffectiveIcon(buttonIcons, 'privateBadge', isDarkMode)} alt="Privat" className="button-icon-image" draggable="false" />
+                        <img src={getEffectiveIcon(buttonIcons, 'privateBadge', isDarkMode)} alt={tAnsicht('privat')} className="button-icon-image" draggable="false" />
                       ) : (
                         getEffectiveIcon(buttonIcons, 'privateBadge', isDarkMode)
                       )}
@@ -192,7 +202,7 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
                   {isFavorite && (
                     <div className="menu-favorite-badge favorite-active">
                       {isBase64Image(buttonIcons.menuFavoritesButtonActive) ? (
-                        <img src={buttonIcons.menuFavoritesButtonActive} alt="Favorit" className="button-icon-image" draggable="false" />
+                        <img src={buttonIcons.menuFavoritesButtonActive} alt={tAnsicht('favorit')} className="button-icon-image" draggable="false" />
                       ) : (
                         buttonIcons.menuFavoritesButtonActive
                       )}
@@ -226,11 +236,11 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
         onMouseDown={() => setAddPressed(true)}
         onMouseUp={() => setAddPressed(false)}
         onMouseLeave={() => setAddPressed(false)}
-        title="Menü erstellen"
-        aria-label="Menü erstellen"
+        title={t('menueErstellen')}
+        aria-label={t('menueErstellen')}
       >
         {isBase64Image(getEffectiveIcon(buttonIcons, 'addRecipe', isDarkMode)) ? (
-          <img src={getEffectiveIcon(buttonIcons, 'addRecipe', isDarkMode)} alt="Menü erstellen" className="button-icon-image" draggable="false" />
+          <img src={getEffectiveIcon(buttonIcons, 'addRecipe', isDarkMode)} alt={t('menueErstellen')} className="button-icon-image" draggable="false" />
         ) : (
           getEffectiveIcon(buttonIcons, 'addRecipe', isDarkMode)
         )}
@@ -244,18 +254,18 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
         onMouseDown={() => setFavPressed(true)}
         onMouseUp={() => setFavPressed(false)}
         onMouseLeave={() => setFavPressed(false)}
-        title={showFavoritesOnly ? 'Alle Festtafeln anzeigen' : 'Nur Favoriten anzeigen'}
-        aria-label={showFavoritesOnly ? 'Alle Festtafeln anzeigen' : 'Nur Favoriten anzeigen'}
+        title={showFavoritesOnly ? t('alleAnzeigen') : t('nurFavoriten')}
+        aria-label={showFavoritesOnly ? t('alleAnzeigen') : t('nurFavoriten')}
       >
         {showFavoritesOnly ? (
           isBase64Image(getEffectiveIcon(buttonIcons, 'menuFavoritesButtonActive', isDarkMode)) ? (
-            <img src={getEffectiveIcon(buttonIcons, 'menuFavoritesButtonActive', isDarkMode)} alt="Favoriten aktiv" className="button-icon-image" draggable="false" />
+            <img src={getEffectiveIcon(buttonIcons, 'menuFavoritesButtonActive', isDarkMode)} alt={t('favoritenAktiv')} className="button-icon-image" draggable="false" />
           ) : (
             getEffectiveIcon(buttonIcons, 'menuFavoritesButtonActive', isDarkMode)
           )
         ) : (
           isBase64Image(getEffectiveIcon(buttonIcons, 'menuFavoritesButton', isDarkMode)) ? (
-            <img src={getEffectiveIcon(buttonIcons, 'menuFavoritesButton', isDarkMode)} alt="Favoriten" className="button-icon-image" draggable="false" />
+            <img src={getEffectiveIcon(buttonIcons, 'menuFavoritesButton', isDarkMode)} alt={t('favoriten')} className="button-icon-image" draggable="false" />
           ) : (
             getEffectiveIcon(buttonIcons, 'menuFavoritesButton', isDarkMode)
           )

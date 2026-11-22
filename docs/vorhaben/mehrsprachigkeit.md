@@ -1,8 +1,8 @@
 # Vorhaben: Mehrsprachigkeit (Deutsch, Englisch, Französisch)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 22.11.2026 (PR 1 bis 6d
-und die Entscheidungen (E) gemergt, PR 6e als PR #3734 offen).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 22.11.2026 (PR 1 bis 6e,
+„Chefkoch & mehr“ (C) und die Entscheidungen (E) gemergt, PR 6f als PR #3739 offen).
 
 **Ziel:** Die App gibt es auf Deutsch, Englisch und Französisch. Jede:r wählt die eigene Sprache in den
 persönlichen Einstellungen, der Header übersteuert sie für die laufende Sitzung. Rezepte (Titel und
@@ -53,7 +53,7 @@ auch mehrsprachig aufgesetzt werden.“ Umfang: „alles“, also kein Halt nach
 | Gemeinsame Bausteine | 22.11.2026 (PR 6a): `ConfirmDialog` (Abbrechen, Standard Löschen) und `UndoSnackbar` („… entfernt“, Rückgängig) folgen der geltenden Sprache überall, auch im Admin-Bereich. Meldungen, die der Admin-Bereich selbst baut, bleiben deutsch. |
 | Gespeicherte Meldungen | 22.11.2026 (PR 6b): Texte, die mit Daten gespeichert werden (Fehler der Nährwertberechnung in `naehrwerte.calcNotIncluded` und `calcError`, auch von der Cloud Function), entstehen weiter deutsch. Sonst stünde im Rezept die Sprache dessen, der zuletzt gerechnet hat. Angezeigt werden sie in der geltenden Sprache: `findeText` erkennt den deutschen Text samt Platzhaltern (Liste `MELDUNGEN` in `naehrwerte.js`), Unbekanntes bleibt wie gespeichert. Der deutsche Text im Wörterbuch muss deshalb genau dem gespeicherten entsprechen. |
 | Wissensbasis Wein | 22.11.2026 (PR 6c): Übersetzungen getrennt nach ID in `src/data/weinbegleitung/uebersetzungen.js`, nicht in den JSON-Dateien: Diese gehen in den Fingerabdruck von `RULES_VERSION` ein, eine Übersetzung soll keine neue Regelversion auslösen. Deutsch bleibt in der Wissensbasis. Übersetzt werden Namen der Stile, Kurztexte der Regeln, Küchen der Regionen und Rebsorten-Beispiele mit deutschen Wörtern (aus, mit, trocken …); Eigennamen wie Chianti, Spätburgunder oder Winzersekt bleiben. Die Labels der Engine („passt gut“ …) bleiben deutsch (im Menü auch gespeichert), übersetzt wird beim Anzeigen (`labelText`). „Einschätzung im Detail“ (`WeinprofilEinblick`, Berechtigung `weinprofilEinblick`, standardmäßig nur Admins) bleibt als Diagnoseansicht deutsch. |
-| Lieferweg | PR 1 bis 6e entstanden als Patches in einer Session ohne Schreibrechte auf das Repo. Empfehlung für die weiteren PRs: Session mit GitHub-Zugang. |
+| Lieferweg | PR 1 bis 6f entstanden als Patches in einer Session ohne Schreibrechte auf das Repo. Empfehlung für die weiteren PRs: Session mit GitHub-Zugang. |
 
 ## Stand der Umsetzung
 
@@ -69,13 +69,14 @@ auch mehrsprachig aufgesetzt werden.“ Umfang: „alles“, also kein Halt nach
 | 6b | Nährwerte: Wörterbuch `naehrwerte.js`; umgestellt `NutritionModal` (Werte, Zusammensetzung, Berechnung, Umformulierungen; `buildNutritionCompositionRows` über `anzeige` = `{t, sprache, meldung}`, ohne deutsch, `statusKey` für die Logik), der ingredientID-Abgleich in `RecipeDetail` (jetzt geduzt), `IngredientIDSelect`, `IngredientCatalogSearchModal`, `mapNutritionCalcError` (geduzt). Gespeicherte Meldungen erkennt `findeText` (`src/i18n/texte.js`). Zahlen nach der Sprache. Baseline 1499 → 1423 Textstellen. | gemergt 22.11.2026 (PR #3727, Merge c9b525c) |
 | 6c | Wein dazu: Wörterbuch `wein.js`; Übersetzung der Wissensbasis nach ID in `src/data/weinbegleitung/uebersetzungen.js` mit `src/utils/weinbegleitung/sprache.js` (`stilName`, `regelText`, `regionName`, `beispielText`, `labelText`) und Vollständigkeitstest; `kennwerteFuer` und `weinprofilFehlertext` in `anzeige.js` über `t`; umgestellt `WeinDazu` und `WeinbegleitungTeile` (Gründe, Quellen). `WeinprofilEinblick` als Diagnoseansicht in `NUR_DEUTSCH`. Baseline 1423 → 1397 Textstellen. | gemergt 22.11.2026 (PR #3728, Merge 31965f3) |
 | 6d | Kochbuch mit Suche und Filtern: Wörterbuch `kochbuch.js`; umgestellt `RecipeList` (Knöpfe, leere Liste, jetzt geduzt), `RecipeCard` (weitere Küchen, Liste, Neu, Versionen), `SortCarousel` (Sortierungen über `schluessel`, `label` bleibt deutsch), `TutorialCard` (Kategorien übersetzt, Titel bleiben Inhalt), `RecipeFilterSidebar`, `MobileSearchOverlay`. Einzahl korrigiert („1 weitere Kategorie“). Baseline 1397 → 1303 Textstellen. | gemergt 22.11.2026 (PR #3729, Merge ab8d152; mit Fix der Überschrift `getHeading`, siehe „Offen“) |
-| 6e | Küche, also die Startseite (Reiter „Küche“, `Startseite.js`; „Chefkoch & mehr“ ist `Kueche.js` und folgt später): Wörterbuch `startseite.js`; umgestellt `Startseite`, `StartseitenKarussell` („mehr“, Laden), `TrendingCard` (Titel übersetzt, Schwierigkeit, Zeit), `FuerDichEntdecktKachel` (Systemname, Anzahl, Monat nach der Sprache). Inhalt bleibt: eigene Listennamen, gepflegte Themen; die Leertexte aus den Einstellungen erscheinen übersetzt, solange der Standardtext gilt. Auf Englisch gerendert und auf deutsche Reste durchsucht (auch Hilfsfunktionen und eigene Props wie `emptyText`). Nachtrag zu 6b: `meldungReferenzFehlgeschlagen` in `MELDUNGEN`. Baseline 1303 → 1274 Textstellen. | PR #3734 (offen, 22.11.2026) |
+| 6e | Küche, also die Startseite (Reiter „Küche“, `Startseite.js`; „Chefkoch & mehr“ ist `Kueche.js` und folgt später): Wörterbuch `startseite.js`; umgestellt `Startseite`, `StartseitenKarussell` („mehr“, Laden), `TrendingCard` (Titel übersetzt, Schwierigkeit, Zeit), `FuerDichEntdecktKachel` (Systemname, Anzahl, Monat nach der Sprache). Inhalt bleibt: eigene Listennamen, gepflegte Themen; die Leertexte aus den Einstellungen erscheinen übersetzt, solange der Standardtext gilt. Auf Englisch gerendert und auf deutsche Reste durchsucht (auch Hilfsfunktionen und eigene Props wie `emptyText`). Nachtrag zu 6b: `meldungReferenzFehlgeschlagen` in `MELDUNGEN`. Baseline 1303 → 1274 Textstellen. | gemergt 22.11.2026 (PR #3734, Merge 5372729) |
+| 6f | Festtafel, Teil 1 (Liste und Ansicht): Wörterbuch `festtafel.js`; umgestellt `MenuList` (Überschrift, leere Liste, Hinweise mit typografischen Anführungszeichen, Datum nach der Sprache), `MenuFilterSidebar`, `MenuSharePage` (Laden, nicht gefunden, ungültiger Link), `MenuDetail` (Knöpfe, Autor und Datum, Getränkemengen nach der Sprache, Portionsauswahl mit übersetzten Titeln; Gemeinsames mit der Rezeptansicht aus `rezeptansicht.js`, Rückfragen zum Veröffentlichen und Löschen und die Fehlermeldung beim Teilen jetzt geduzt). Satz mit den Gästen (`formatMenuGuestsFliesstext`) über `t` mit dem Bindewort aus dem Wörterbuch („und“, „and“, „et“), nicht über `Intl.ListFormat`, das Safari 14.0 (Build-Ziel `safari14`) fehlt. Übersetzt angezeigt werden der Systemabschnitt „Drinks“ und der Ersatzabschnitt „Alle Rezepte“ alter Menüs ohne Abschnitte; Menünamen, Beschreibungen und eigene Abschnittsnamen bleiben Inhalt (Phase B). `MenuForm` und die Weinbegleitung im Menü folgen mit 6g. Baseline 1274 → 1189 Textstellen. | PR #3739 (offen, 22.11.2026) |
 | E | Entscheidungen umgesetzt: Bereichsnamen übersetzt (`bereiche.js`, untere Navigation mit eigenem Wörterbuch `navigation.js`), Hinweise zu Mitteilungen in „Persönliche Daten“ duzen, Test gegen die Höflichkeitsform, Regel in `AGENTS.md`. | gemergt 22.11.2026 (PR #3721, Merge 442bd21) |
 | H | Header-Gestaltung (Entscheidung „Header-Gestaltung“): Titel mit Zeilenhöhe 1, Slogan als Randnotiz über `HandschriftText` (`src/components/HandschriftText.js`, Rechnung in `src/utils/handschrift.js`, Tests halten die Werte des Canvas-Entwurfs fest), Schrift `@fontsource/reenie-beanie` (nur Latin, landet im Offline-Cache), Farbe über das neue Token `--color-accent-text`; die Dark-Regel für `.header .tagline` in `darkMode.css` entfällt. Eintrag im `CHANGELOG.md`. | gemergt 22.11.2026 (PR #3731, Merge f357a8c) |
 | S | Sprach-Chip im Header (Entscheidung „Sprachwahl im Header“): `SprachWahl.js` mit Popover und Bottom Sheet (Fokus auf der geltenden Sprache, Escape und Klick außerhalb schließen, Seite hinter dem Sheet gesperrt), `FlaggeIcon.js`, Texte in `kopfzeile.js` (Sprachnamen in der geltenden Sprache, Standardsprache), Token `--color-flag-ring`; engere Abstände im Handy-Header; Abschnitt „Sprache“ im Menü entfernt. Tests `SprachWahl.test.js`, `SprachWahl.css.test.js`, `Header.test.js`; Bildschirme `sprachwahl` und `sprachwahl-englisch` in `scripts/screenshots/capture.js`. Eintrag im `CHANGELOG.md`. | gemergt 22.11.2026 (PR #3732, Merge 81189f5) |
 | SL | Slogan übersetzen (Entscheidung „Slogan übersetzen“): `src/i18n/slogan.js` (`sloganInSprache`, `sloganUebersetzungenZumSpeichern`), Laden und Speichern in `customLists.js` (`getSloganUebersetzungen`, `saveSloganUebersetzungen`, Feld in `getSettings`), Anzeige und Seitentitel in `Header.js`, Pflege in `Settings.js` (Englisch und Französisch, Hinweis bei veralteter Übersetzung); `standardSlogan` in `kopfzeile.js`. Tests `src/i18n/slogan.test.js`, `Header.test.js`, `Settings.slogan.test.js`; Bildschirm `einstellungen-allgemein` in `scripts/screenshots/capture.js`. Eintrag im `CHANGELOG.md`. | gemergt 22.11.2026 (PR #3733, Merge 65cf393) |
-| U | Fahnen als Umriss (Entscheidung „Sprachwahl im Header“): `FlaggeIcon.js` zeichnet nur Linien (`FLAGGEN_LINIEN`, Rahmen 45 × 30, britische Fahne vereinfacht), Linien 1 px in `--color-text-strong` und in jeder Größe gleich stark (`SprachWahl.css`); der Ring und das Token `--color-flag-ring` entfallen. Test `icons/FlaggeIcon.test.js`. Eintrag im `CHANGELOG.md`. Nachtrag: ab doppelter Pixeldichte 0,5 px (PR #3737, offen, 22.11.2026). | gemergt 22.11.2026 (PR #3736, Merge c2ac0f3) |
-| C | „Chefkoch & mehr“ (`Kueche.js`), zusammen mit der Gestaltung nach Variante A (Bento): Wörterbuch `chefkochUndMehr.js` (Kacheln, Abschnitt „Verwaltung“, Mengen als Bezeichnung in Einzahl und Mehrzahl ohne Zahl, Küche-Aktion, „Unbekanntes Rezept“ der Zeitleiste); Seitentitel und „Chefkoch“ aus `bereiche.js`; Zahlen nach der Sprache (`formatiereZahl`). Test auf Englisch in `Kueche.test.js`. Noch deutsch: die Unterseiten Netzwerk, Mise en Place, Meine Küchenstars, Küchenbetrieb, Eventplanung und die Seite Weinbegleitung. Baseline 1274 → 1241 Textstellen. | PR #3738 (offen, 22.11.2026) |
+| U | Fahnen als Umriss (Entscheidung „Sprachwahl im Header“): `FlaggeIcon.js` zeichnet nur Linien (`FLAGGEN_LINIEN`, Rahmen 45 × 30, britische Fahne vereinfacht), Linien 1 px in `--color-text-strong` und in jeder Größe gleich stark (`SprachWahl.css`); der Ring und das Token `--color-flag-ring` entfallen. Test `icons/FlaggeIcon.test.js`. Eintrag im `CHANGELOG.md`. Nachtrag: ab doppelter Pixeldichte 0,5 px (PR #3737, gemergt 22.11.2026, Merge 2e43022). | gemergt 22.11.2026 (PR #3736, Merge c2ac0f3) |
+| C | „Chefkoch & mehr“ (`Kueche.js`), zusammen mit der Gestaltung nach Variante A (Bento): Wörterbuch `chefkochUndMehr.js` (Kacheln, Abschnitt „Verwaltung“, Mengen als Bezeichnung in Einzahl und Mehrzahl ohne Zahl, Küche-Aktion, „Unbekanntes Rezept“ der Zeitleiste); Seitentitel und „Chefkoch“ aus `bereiche.js`; Zahlen nach der Sprache (`formatiereZahl`). Test auf Englisch in `Kueche.test.js`. Noch deutsch: die Unterseiten Netzwerk, Mise en Place, Meine Küchenstars, Küchenbetrieb, Eventplanung und die Seite Weinbegleitung. Baseline 1274 → 1241 Textstellen. | gemergt 22.11.2026 (PR #3738, Merge 11681f0) |
 | B | Phase B (siehe „Entschieden“). | später |
 
 Nach jedem PR: Tabelle nachziehen. Berührt ein PR einen Tech-Check-Befund, auch das Dashboard
@@ -87,14 +88,15 @@ aktualisieren.
   `RecipeList`, in PR 6d bei der Sichtprüfung gefunden und nachgezogen). Bei jedem Bereich gezielt danach suchen
   (`return '…'`, Template-Strings mit deutschem Text) und den Bereich auf Englisch ansehen, bevor er als fertig gilt.
 - **Seiten ohne Anmeldung** (Freigabe-Links für Rezepte und Menüs): Browsersprache nutzen (`browserSprache`)?
-  Vorschlag: ja, mit PR 6.
+  Vorschlag: ja, mit PR 6. Die Texte der Menü-Freigabeseite stehen seit PR 6f im Wörterbuch; angemeldete Mitglieder
+  sehen sie in ihrer Sprache, Gäste ohne Anmeldung bis zur Entscheidung auf Deutsch.
 - **Wichtel-Seite:** hat eigene Helfer (`fuelleText`, `browserSprache` in
   `src/utils/wichtelTeilnahmeTexte.js`), die es jetzt auch in `src/i18n` gibt. Nach der Wichtel-Saison auf
   `src/i18n` umstellen; bewusst nicht in PR 1, um die laufende Saison nicht zu berühren.
 - **KI-Kosten:** Titel kosten wenige Token (3000 automatisch, 10000 je Admin und Tag), Inhalte deutlich mehr
   (1000 automatisch, 3000 je Admin und Tag). Nach dem ersten Backfill der Inhalte die tatsächlichen
   Gemini-Kosten in der Abrechnung prüfen und die Limits bei Bedarf anpassen.
-- **Weitere Stellen für übersetzte Titel** (mit PR 6 je Bereich): Festtafel (`MenuDetail`, `MenuForm`),
+- **Weitere Stellen für übersetzte Titel** (mit PR 6 je Bereich): Festtafel (`MenuForm`, PR 6g),
   Tagesmenü, `RecipeTypeahead`, Zeitleiste, Druck, Freigabe-Seiten.
 - **Kochmodus:** mit PR 6a übersetzt. Noch deutsch: die Push-Mitteilung eines Timers vom Server (Phase B,
   Push-Mitteilungen).
@@ -113,7 +115,7 @@ aktualisieren.
   Function in `naehrwerte.js` aufnehmen, mit genau demselben deutschen Text.
 - **Weinbegleitung außerhalb der Rezeptansicht:** Die Weinbegleitung im Menü (`Weinbegleitung.js`) und die Seite
   „Weinbegleitung“ (`WeinbegleitungSeite.js`, `nurZuText` in `anzeige.js`, Lizenzhinweise in `quellen.json`) folgen
-  mit Festtafel bzw. „Chefkoch & mehr“; sie nutzen dann `sprache.js`. Die Gründe (`Gruende`) erscheinen dort schon
+  mit Festtafel Teil 2 (PR 6g) bzw. „Chefkoch & mehr“; sie nutzen dann `sprache.js`. Die Gründe (`Gruende`) erscheinen dort schon
   übersetzt.
 - **Freischaltung für alle:** nach PR 6 die Berechtigung `sprachwahl` für alle Rollen einschalten und im
   `CHANGELOG.md` als allgemein verfügbar eintragen.
@@ -139,6 +141,9 @@ aktualisieren.
   Backfill-Knöpfe `src/components/UebersetzungBackfill.js` mit `src/hooks/useSeitenweiserBackfill.js`
 - Auswahllisten: `src/i18n/listenwerte.js`, `useListenwerte` im SpracheContext, Pflege in
   `src/components/ListenUebersetzungen.js`, Vorschläge über `uebersetzeListenwerte` (`functions/handlers/uebersetzung.js`)
+- Festtafel, Teil 1 (PR 6f): Wörterbuch `src/i18n/texte/festtafel.js`; Satz mit den Gästen über
+  `formatMenuGuestsFliesstext(guestIds, guests, t)` in `src/utils/guestPreferences.js` (ohne `t` deutsch); Abschnitte
+  „Drinks“ und „Alle Rezepte“ über `abschnittName` in `MenuDetail.js`, Gemeinsames mit der Rezeptansicht aus `rezeptansicht.js`
 - Küche, also die Startseite (PR 6e): Wörterbuch `src/i18n/texte/startseite.js`; Leertexte aus den Einstellungen über
   `leertext` in `Startseite.js`, Systemname „Für dich entdeckt“ über `systemKey` in `FuerDichEntdecktKachel.js`
 - Kochbuch (PR 6d): Wörterbuch `src/i18n/texte/kochbuch.js`; Sortierungen über `schluessel` in `SORT_OPTIONS`

@@ -8,6 +8,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 ## [Unreleased]
 
 ### Hinzugefügt
+- Festtafel auf Englisch und Französisch (Vorschau mit der Berechtigung „Sprachwahl“): Menüliste mit Filtern, Menüansicht und die Hinweise der Freigabeseite; Datum, Getränkemengen und die Gäste („Anna, Ben and Clara“) erscheinen in der gewählten Sprache, ebenso die Abschnitte „Drinks“ und „Alle Rezepte“. Menünamen, Beschreibungen und eigene Abschnitte bleiben, wie sie sind; Menüs bearbeiten und die Weinbegleitung im Menü folgen. Die Rückfragen beim Veröffentlichen und Löschen eines Menüs und die Fehlermeldung beim Teilen duzen jetzt.
 - Startseite („Küche“) auf Englisch und Französisch (Vorschau mit der Berechtigung „Sprachwahl“): Kacheln und Karussells, Trend-Karten mit übersetztem Titel, „Für dich entdeckt“ mit Anzahl und Monat in der gewählten Sprache. Selbst gepflegte Leertexte und Themen bleiben, wie sie sind.
 - Kochbuch auf Englisch und Französisch (Vorschau mit der Berechtigung „Sprachwahl“): Liste und Rezeptkarten, Sortierung, Filter-Seitenleiste und die Suche auf dem Handy, dazu die Kategorien der Tutorials. Der Hinweis bei leeren Favoriten duzt jetzt; „1 weitere Kategorie“ steht in der Einzahl.
 - „Wein dazu“ auf Englisch und Französisch (Vorschau mit der Berechtigung „Sprachwahl“): Weinstil, Rebsorten-Beispiele, Kennwerte, Bewertung und die Gründe unter „Warum passt das?“ erscheinen in der gewählten Sprache. Rebsorten und Weinnamen bleiben, wie sie sind; übersetzt werden Zusätze wie „aus dem Elsass“ oder „trocken“.

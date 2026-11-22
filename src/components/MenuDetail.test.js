@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { SpracheProvider } from '../contexts/SpracheContext';
 import MenuDetail from './MenuDetail';
 
 jest.mock('./RecipeCard', () => function MockRecipeCard({ recipe, onClick, isFavorite }) {
@@ -947,5 +948,38 @@ describe('MenuDetail - Menü löschen mit App-Dialog (D2)', () => {
     fireEvent.click(container.querySelector('.delete-fab-button'));
     fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
     expect(onDelete).not.toHaveBeenCalled();
+  });
+});
+
+describe('MenuDetail in anderer Sprache (Mehrsprachigkeit PR 6f)', () => {
+  const zeigeIn = (sprache, menu) => render(
+    <SpracheProvider profilSprache={sprache} speicher={null}>
+      <MenuDetail
+        menu={menu}
+        recipes={[]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        currentUser={currentUser}
+        allUsers={[{ id: 'user-1', vorname: 'Anna' }]}
+      />
+    </SpracheProvider>
+  );
+
+  test('Französisch: Beschriftungen, Datum und der Ersatzabschnitt übersetzt, Menüname bleibt', () => {
+    zeigeIn('fr', mockMenuWithMeta);
+    expect(screen.getByRole('heading', { level: 1, name: 'Testmenü mit Metadaten' })).toBeInTheDocument();
+    expect(screen.getByTitle('Modifier le menu')).toBeInTheDocument();
+    expect(screen.getByText('Auteur :')).toBeInTheDocument();
+    expect(screen.getByText('15/01/2024')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Toutes les recettes' })).toBeInTheDocument();
+  });
+
+  test('Englisch: Löschen fragt auf Englisch', () => {
+    zeigeIn('en', mockMenu);
+    fireEvent.click(screen.getByTitle('Delete menu'));
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Do you really want to delete “Testmenü”?');
   });
 });
