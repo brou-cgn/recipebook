@@ -34,6 +34,14 @@ erzwungen — wo das gilt, steht die Datei dabei.
 - **Keine Emojis im UI-Code.** Alternativen: Text-Label, HTML-Entity, CSS-Klasse, Icon-Bibliothek.
   Erzwungen durch `src/emojiPolicy.test.js` (Baseline leer: jedes Emoji in einer Quelldatei
   lässt den Test rot werden).
+- **Texte über `src/i18n`, nicht fest im JSX** (Vorhaben Mehrsprachigkeit,
+  `docs/vorhaben/mehrsprachigkeit.md`). Sichtbare Texte (Textknoten, `aria-label`, `title`,
+  `placeholder`, `alt`, `label`) stehen in einem Wörterbuch `src/i18n/texte/<bereich>.js` mit
+  Deutsch, Englisch und Französisch und kommen über `useTexte` (Anleitung im Kopf von
+  `src/i18n/texte.js`). Französisch duzt wie Deutsch. Datum und Zahl über `src/i18n/format.js`.
+  Erzwungen durch `src/i18nPolicy.test.js` (Baseline je Datei, darf nur sinken; neue Dateien
+  starten bei 0) und `src/i18n/texte.test.js` (alle Sprachen mit denselben Schlüsseln). Der
+  Admin-Bereich bleibt deutsch: Seine Dateien stehen in `NUR_DEUTSCH`, neue nur mit Begründung.
 - **Button-Icons haben ein Symbol als Standard, keinen Text.** Neue Schlüssel in
   `DEFAULT_BUTTON_ICONS` bekommen ein Symbol aus `src/utils/defaultButtonIcons.js` (`DEFAULT_ICON_NAMES`,
   dort entsteht auch die Dunkelvariante). Startwerte und Fallbacks in Komponenten nutzen
@@ -98,7 +106,8 @@ erzwungen — wo das gilt, steht die Datei dabei.
 - Quarantäne: `scripts/quarantined-tests.js`. Wer eine Suite repariert, streicht ihre Zeile.
   Neue Einträge nur mit Datum und Grund.
 - Tests nicht überspringen oder abschalten, um grün zu werden.
-- Komponententests mit dem Helper `renderWithProviders` (`src/test-utils.js`).
+- Komponententests mit dem Helper `renderWithProviders` (`src/test-utils.js`). Standard ist
+  Deutsch; `renderWithProviders(ui, { sprache: 'en' })` bzw. `'fr'` rendert in einer anderen Sprache.
 - Sichtprüfung: Wer UI ändert und Java plus Playwright hat, fotografiert die Bildschirme vorher und
   nachher mit `scripts/screenshots/run.sh` (lokale Firebase-Emulatoren mit Testdaten, hell und dunkel,
   Handy und Desktop; `docs/setup/screenshots.md`) und sieht die Bilder vor dem PR an. Fehlt ein
