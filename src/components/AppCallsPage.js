@@ -3,6 +3,7 @@ import { defaultIcon } from '../utils/defaultButtonIcons';
 import PencilIcon from './icons/PencilIcon';
 import TrashIcon from './icons/TrashIcon';
 import './Settings.css';
+import { UnterseiteKopf } from './Unterseite';
 import './AppCallsPage.css';
 import { httpsCallable } from 'firebase/functions';
 import { getAppCalls, getAppCallDays, getAppCallAggregates, APP_CALLS_LIMIT } from '../utils/appCallsFirestore';
@@ -295,7 +296,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       setLocalActiveTab(tab);
     }
   };
-  const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.closeButtonDefaultImg);
   const [nutritionEmptyIcon, setNutritionEmptyIcon] = useState(normalizeNutritionEmptyIcon());
   const [nutritionManualSaveIcon, setNutritionManualSaveIcon] = useState(DEFAULT_BUTTON_ICONS.saveRecipe || defaultIcon('save'));
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
@@ -448,11 +448,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   }, []);
 
   useEffect(() => {
-    setCloseIcon(
-      getEffectiveIcon(allButtonIcons, 'closeButtonDefaultImg', isDarkMode) ||
-      getEffectiveIcon(allButtonIcons, 'closeButton', isDarkMode) ||
-      DEFAULT_BUTTON_ICONS.closeButtonDefaultImg
-    );
     setNutritionEmptyIcon(normalizeNutritionEmptyIcon(getEffectiveIcon(allButtonIcons, 'nutritionEmpty', isDarkMode)));
     setNutritionManualSaveIcon(getEffectiveIcon(allButtonIcons, 'saveRecipe', isDarkMode) || DEFAULT_BUTTON_ICONS.saveRecipe || defaultIcon('save'));
   }, [allButtonIcons, isDarkMode]);
@@ -1445,21 +1440,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   if (!currentUser?.appCalls && !hasRestrictedTabAccess) {
     return (
       <div className="app-calls-container">
-        <div className="app-calls-header">
+        <UnterseiteKopf onZurueck={onBack}>
           <h2>Küchenbetrieb</h2>
-          <button
-            className="app-close-button"
-            onClick={onBack}
-            aria-label="Schließen"
-            title="Schließen"
-          >
-            {isBase64Image(closeIcon) ? (
-              <img src={closeIcon} alt="Schließen" className="app-close-button-icon-img" />
-            ) : (
-              closeIcon
-            )}
-          </button>
-        </div>
+        </UnterseiteKopf>
         <div className="app-calls-content">
           <p className="app-calls-info-text">
             Sie haben keine Berechtigung, diese Seite aufzurufen.
@@ -1471,21 +1454,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
 
   return (
     <div className="app-calls-container">
-      <div className="app-calls-header">
+      <UnterseiteKopf onZurueck={onBack}>
         <h2>Küchenbetrieb</h2>
-        <button
-          className="app-close-button"
-          onClick={onBack}
-          aria-label="Schließen"
-          title="Schließen"
-        >
-          {isBase64Image(closeIcon) ? (
-            <img src={closeIcon} alt="Schließen" className="app-close-button-icon-img" />
-          ) : (
-            closeIcon
-          )}
-        </button>
-      </div>
+      </UnterseiteKopf>
       <div className="app-calls-tabs" ref={tabsRef}>
         {visibleTabIds.includes(KUECHENBETRIEB_TABS.APP) && (
           <button

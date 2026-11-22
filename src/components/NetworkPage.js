@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import './NetworkPage.css';
 import DeleteRowButton from './DeleteRowButton';
 import UndoSnackbar from './UndoSnackbar';
@@ -6,8 +6,7 @@ import FollowName from './FollowName';
 import TrashIcon from './icons/TrashIcon';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
-import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
-import { isBase64Image } from '../utils/imageUtils';
+import { UnterseiteKopf } from './Unterseite';
 import {
   loadNetwork, respondToFollow, stopFollowing, removeFollower,
 } from '../utils/followFirestore';
@@ -109,27 +108,6 @@ function NetworkPage({ currentUser, onBack }) {
   const [error, setError] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const { banners, pendingKeys, scheduleDelete, undoDelete } = useUndoableDelete();
-  const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
-  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
-  const closeBtnRef = useRef(null);
-
-  useEffect(() => {
-    getButtonIcons().then(setButtonIcons).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    const handler = (e) => setIsDarkMode(e.detail.isDark);
-    window.addEventListener('darkModeChange', handler);
-    return () => window.removeEventListener('darkModeChange', handler);
-  }, []);
-
-  useEffect(() => {
-    closeBtnRef.current?.blur();
-  }, []);
-
-  const closeIcon = getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)
-    || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode)
-    || DEFAULT_BUTTON_ICONS.closeButtonDefaultImg;
 
   const reload = useCallback(async () => {
     if (!uid) return;
@@ -216,45 +194,28 @@ function NetworkPage({ currentUser, onBack }) {
 
   return (
     <div className="network-container">
-      <div className="network-header">
+      <UnterseiteKopf onZurueck={onBack}>
         <h2>Mein Netzwerk</h2>
-        {onBack && (
+      </UnterseiteKopf>
+
+      <div className="network-tabs" role="tablist">
+        {/* Variante A: Reiter als Kennzahl-Kacheln; die Zahl ist Schmuck, der Name des Reiters bleibt */}
+        {TABS.map((tab) => (
           <button
-            ref={closeBtnRef}
+            key={tab.key}
             type="button"
-            className="app-close-button"
-            onClick={onBack}
-            aria-label="Mein Netzwerk schließen"
-            title="Mein Netzwerk schließen"
+            role="tab"
+            aria-selected={activeTab === tab.key}
+            className={`network-tab${activeTab === tab.key ? ' network-tab--active' : ''}`}
+            onClick={() => setActiveTab(tab.key)}
           >
-            {isBase64Image(closeIcon) ? (
-              <img src={closeIcon} alt="Mein Netzwerk schließen" className="app-close-button-icon-img" />
-            ) : (
-              closeIcon
-            )}
+            <span className="network-tab-zahl" aria-hidden="true">{loading ? '–' : visible(tab.key).length}</span>
+            <span className="network-tab-name">{tab.label}</span>
           </button>
-        )}
+        ))}
       </div>
 
       <div className="network-page">
-        <div className="network-tabs" role="tablist">
-          {TABS.map((tab) => {
-            const count = tab.key === 'requests' ? network.requests.length : 0;
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === tab.key}
-                className={`network-tab${activeTab === tab.key ? ' network-tab--active' : ''}`}
-                onClick={() => setActiveTab(tab.key)}
-              >
-                {tab.label}{count > 0 ? ` (${count})` : ''}
-              </button>
-            );
-          })}
-        </div>
-
         {error && <p className="network-error" role="alert">{error}</p>}
         {loading ? (
           <p className="network-empty">Wird geladen …</p>

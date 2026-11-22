@@ -1,82 +1,152 @@
+/* „Meine Küchenstars“ (MeineKuechenstarsPage.js), Variante A des Designvorschlags: Kennzahlen,
+   Platz 1 als große Karte in der Kachelfarbe, Platz 2 und 3 als Kacheln, ab Platz 4 eine Liste
+   mit Balken. Rahmen und Karten aus Unterseite.css; Farben nur über Tokens. */
+
 .meine-kuechenstars-container {
+  --kachel-farbe: var(--color-kachel-stars);
   max-width: 800px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 1.5rem;
 }
 
-.meine-kuechenstars-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.meine-kuechenstars-header h2 {
-  margin: 0;
-  color: #2C4A7A;
-  font-size: 28px;
-  text-align: left;
-}
-
-.meine-kuechenstars-content {
-  background: white;
-  border-radius: 10px;
-  padding: 30px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.meine-kuechenstars-info-text {
-  color: #666;
-  margin-bottom: 25px;
-  font-size: 14px;
-}
-
-.meine-kuechenstars-empty {
-  color: var(--color-text-faint);
+.unterseite-karte.meine-kuechenstars-empty {
+  padding: 2.5rem 1rem;
   text-align: center;
-  padding: 40px 0;
-  font-size: 15px;
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
 }
 
-.meine-kuechenstars-table-container {
-  overflow-x: auto;
+/* Podium: Platz 1 über die ganze Breite, Platz 2 und 3 nebeneinander */
+.kuechenstars-podium {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
 }
 
-.meine-kuechenstars-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 15px;
+.kuechenstars-platz {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+  padding: 1rem;
+  border-radius: 20px;
+  background: var(--color-surface-card);
+  background: color-mix(in srgb, var(--kachel-farbe) 10%, var(--color-surface-card));
 }
 
-.meine-kuechenstars-table th,
-.meine-kuechenstars-table td {
-  padding: 12px 16px;
-  text-align: left;
+.kuechenstars-platz--1 {
+  grid-column: 1 / -1;
+  gap: 0.6rem;
+  padding: 1.1rem 1.2rem;
+  background: var(--kachel-farbe);
+}
+
+.kuechenstars-platz .kuechenstars-rang {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--kachel-farbe);
+}
+
+.kuechenstars-platz .kuechenstars-titel {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-text-strong);
+  overflow-wrap: anywhere;
+}
+
+.kuechenstars-platz .kuechenstars-aufrufe {
+  margin-top: auto;
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-strong);
+}
+
+/* Platz 1: Schrift in der Farbe der Fläche, damit sie hell wie dunkel lesbar bleibt */
+.kuechenstars-platz--1 .kuechenstars-rang,
+.kuechenstars-platz--1 .kuechenstars-titel,
+.kuechenstars-platz--1 .kuechenstars-aufrufe {
+  color: var(--color-surface-card);
+}
+
+.kuechenstars-platz--1 .kuechenstars-titel {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.kuechenstars-platz--1 .kuechenstars-aufrufe {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+/* Ab Platz 4: Liste in einer Karte */
+.kuechenstars-rest.unterseite-karte {
+  margin: 0;
+  padding: 0.25rem 1rem;
+  list-style: none;
+}
+
+.kuechenstars-zeile {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.6rem;
+  min-height: 56px;
+  padding: 0.5rem 0;
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
-.meine-kuechenstars-table th {
-  background: #f8f9fa;
-  color: #555;
-  font-weight: 600;
-}
-
-.meine-kuechenstars-rank {
-  color: #888;
-  font-weight: 600;
-  width: 40px;
-}
-
-.meine-kuechenstars-count {
-  font-weight: 700;
-  color: #2C4A7A;
-  text-align: right;
-}
-
-.meine-kuechenstars-table tbody tr:hover {
-  background: #f5faf8;
-}
-
-.meine-kuechenstars-table tbody tr:last-child td {
+.kuechenstars-zeile:last-child {
   border-bottom: none;
+}
+
+.kuechenstars-zeile .kuechenstars-rang {
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+.kuechenstars-zeile-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.kuechenstars-zeile .kuechenstars-titel {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kuechenstars-balken {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border-subtle);
+  background: color-mix(in srgb, var(--kachel-farbe) 15%, transparent);
+}
+
+.kuechenstars-balken span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--kachel-farbe);
+}
+
+.kuechenstars-zeile .kuechenstars-aufrufe {
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--color-text-strong);
 }

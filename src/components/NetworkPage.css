@@ -1,68 +1,82 @@
-/* Kopfzeile steht über der Karte, wie bei „Meine Mise en Place“ über den Kacheln.
-   Die Seite liegt in .kueche-container (padding 1.5rem); „Meine Mise en Place“ hat nur 1rem
-   Außenabstand – der negative Rand gleicht die 0,5rem aus, damit Titel und Kartenbreite
-   identisch sitzen. */
+/* „Mein Netzwerk“ (NetworkPage.js), Variante A: Kopf aus Unterseite.css, die Reiter als
+   Kennzahl-Kacheln, die Liste in einer Karte. Die Seite liegt in .kueche-container
+   (padding 1.5rem). Farben nur über Tokens. */
 .network-container {
-  margin: -0.5rem;
-  padding: 0;
+  --kachel-farbe: var(--color-kachel-netzwerk);
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 .network-page {
   background: var(--color-surface-card);
-  border-radius: 12px;
-  padding: 1.5rem;
-}
-
-.network-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-
-.network-header h2 {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-  text-align: left;
-  flex: 1;
-  color: var(--color-text-strong);
-}
-
-@media (max-width: 768px) {
-  .network-header {
-    gap: 0.5rem;
-  }
+  border-radius: 20px;
+  padding: 0.5rem 1.1rem 1rem;
 }
 
 .network-tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .network-tab {
-  padding: 0.5rem 0.9rem;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
-  color: var(--color-text-body);
-  font-size: 0.9rem;
-  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  min-width: 0;
+  min-height: 84px;
+  padding: 0.8rem 0.9rem;
+  border: none;
+  border-radius: 18px;
+  background: var(--color-surface-card);
+  background: color-mix(in srgb, var(--kachel-farbe) 10%, var(--color-surface-card));
+  color: var(--color-text-strong);
+  font: inherit;
+  text-align: left;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
+.network-tab .network-tab-zahl {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-strong);
+}
+
+.network-tab .network-tab-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--kachel-farbe);
+  overflow-wrap: anywhere;
+}
+
+/* Gewählter Reiter: Fläche in der Kachelfarbe, Schrift in der Kartenfarbe (hell wie dunkel lesbar) */
 .network-tab--active {
-  background: #2f5d62;
-  border-color: #2f5d62;
-  color: #fff;
+  background: var(--kachel-farbe);
+}
+
+.network-tab--active .network-tab-zahl,
+.network-tab--active .network-tab-name {
+  color: var(--color-surface-card);
+}
+
+.network-tab:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .network-list {
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.network-list .network-row:last-child {
+  border-bottom: none;
 }
 
 .network-row {
@@ -110,9 +124,9 @@
 }
 
 .network-btn--primary {
-  background: #2f5d62;
-  border-color: #2f5d62;
-  color: #fff;
+  background: var(--color-kachel-netzwerk);
+  border-color: var(--color-kachel-netzwerk);
+  color: var(--color-surface-card);
 }
 
 .network-btn--quiet {

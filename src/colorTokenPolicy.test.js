@@ -18,7 +18,7 @@ const EXEMPT = ['tokens.css', 'darkMode.css'];
 
 const BASELINE = {
   'App.css': 3,
-  'components/AppCallsPage.css': 64,
+  'components/AppCallsPage.css': 57,
   'components/AtelierCategorySelectionPage.css': 8,
   'components/AtelierOnboardingOverlay.css': 14,
   'components/AtelierSwipeTrainerOverlay.css': 58,
@@ -29,28 +29,25 @@ const BASELINE = {
   'components/DeleteRowButton.css': 4,
   'components/DiscoverTopicsTab.css': 14,
   'components/DrinkWeightsTab.css': 19,
-  'components/EventplanungPage.css': 1,
   'components/EventsPage.css': 118,
   'components/EventsTable.css': 2,
   'components/FlowPage.css': 9,
   'components/FollowButton.css': 3,
   'components/FuerDichEntdecktKachel.css': 10,
   'components/GroupCreateDialog.css': 15,
-  'components/GroupDetail.css': 39,
-  'components/GroupList.css': 21,
+  'components/GroupDetail.css': 38,
+  'components/GroupList.css': 9,
   'components/Header.css': 60,
   'components/ImportProgressDialog.css': 16,
   'components/ImportProgressIndicator.css': 5,
   'components/KalibrierungsAuswertung.css': 4,
   'components/Login.css': 45,
-  'components/MeineKuechenstarsPage.css': 7,
   'components/MemberProfilePage.css': 3,
   'components/MenuDetail.css': 15,
   'components/MenuFilterSidebar.css': 12,
   'components/MenuForm.css': 53,
   'components/MenuList.css': 6,
   'components/MobileSearchOverlay.css': 21,
-  'components/NetworkPage.css': 6,
   'components/NutritionModal.css': 57,
   'components/OcrScanModal.css': 75,
   'components/PasswordChangeModal.css': 9,
@@ -139,8 +136,9 @@ describe('Farb-Token-Richtlinie', () => {
 // sinken (Tech-Check D5: am 27.10.2026 kamen trotz Regel sieben neue dazu). 22.11.2026: 947 → 935,
 // die zwölf Regeln der Profilseite stehen jetzt als Tokens in PersonalDataPage.css. 22.11.2026: 935 → 934,
 // der Slogan im Header nutzt das Token --color-accent-text. 934 → 928: die sechs Regeln von
-// „Chefkoch & mehr“ ersetzen die Kachel-Tokens in Kueche.css (Variante A).
-const DARK_MODE_SELECTORS = 928;
+// „Chefkoch & mehr“ ersetzen die Kachel-Tokens in Kueche.css (Variante A). 928 → 904: die Regeln der
+// Unterseiten (Küchenstars, Eventplanung, Mise en Place, Küchenbetrieb) nach Variante A.
+const DARK_MODE_SELECTORS = 904;
 
 describe('darkMode.css (Altbestand)', () => {
   const css = fs.readFileSync(path.join(SRC, 'darkMode.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

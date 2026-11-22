@@ -8,12 +8,13 @@ describe('GroupList dark mode styles', () => {
     return match ? match[1] : '';
   };
 
-  test('uses readable dark mode color for list names', () => {
-    const cssPath = path.join(__dirname, '..', 'darkMode.css');
-    const css = fs.readFileSync(cssPath, 'utf8');
-    const rule = getRuleBody(css, '[data-theme="dark"] .group-card-content h3');
+  test('Listennamen nutzen die Kachelfarbe (Token mit Hell- und Dunkelwert) statt einer Dark-Regel', () => {
+    const darkCss = fs.readFileSync(path.join(__dirname, '..', 'darkMode.css'), 'utf8');
+    const listCss = fs.readFileSync(path.join(__dirname, 'GroupList.css'), 'utf8');
 
-    expect(rule).toContain('color: #e8e8e8;');
+    expect(getRuleBody(darkCss, '[data-theme="dark"] .group-card-content h3')).toBe('');
+    expect(getRuleBody(listCss, '.group-card .group-card-content h3')).toContain('color: var(--kachel-farbe);');
+    expect(getRuleBody(listCss, '.group-list-container')).toContain('--kachel-farbe: var(--color-kachel-mise);');
   });
 
   test('styles the add-list FAB like dark mode recipe add FAB', () => {

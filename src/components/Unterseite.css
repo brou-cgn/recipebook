@@ -1,0 +1,110 @@
+/* Rahmen der Unterseiten von „Chefkoch & mehr“ (Unterseite.js, Variante A): Zurück-Link,
+   Titel, Kennzahl-Kacheln und weiße Karten mit 20 px Radius auf dem Seitenhintergrund.
+   Farben nur über Tokens; Textfarben auf p und span mit zwei Klassen (Tech-Check A7). */
+
+.unterseite-kopf {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 1rem;
+}
+
+.unterseite-kopf__zurueck {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-height: 44px;
+  padding: 0 0.25rem 0 0;
+  border: none;
+  background: transparent;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.unterseite-kopf__zurueck:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.unterseite-kopf__zeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.unterseite-kopf__titel {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.unterseite-kopf .unterseite-kopf__titel h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-align: left;
+  color: var(--color-text-strong);
+}
+
+.unterseite-kopf__aktionen {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Satz zur Seite unter dem Kopf */
+.unterseite-untertitel.unterseite-untertitel {
+  margin: -0.5rem 0 1rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+
+/* Weiße Karte für Inhalte */
+.unterseite-karte {
+  padding: 1rem 1.1rem;
+  border-radius: 20px;
+  background: var(--color-surface-card);
+}
+
+/* Kennzahlen: zwei bis vier Kacheln nebeneinander */
+.unterseite-kennzahlen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.unterseite-kennzahl {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  background: var(--color-surface-card);
+}
+
+.unterseite-kennzahl strong {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-strong);
+}
+
+.unterseite-kennzahl .unterseite-kennzahl__label {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}

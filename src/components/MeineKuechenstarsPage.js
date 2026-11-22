@@ -1,15 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import './MeineKuechenstarsPage.css';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
-import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
-import { isBase64Image } from '../utils/imageUtils';
+import { UnterseiteKopf, Kennzahl } from './Unterseite';
 
 function MeineKuechenstarsPage({ onBack, currentUser, recipes = [] }) {
   const [recipeCalls, setRecipeCalls] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.closeButtonDefaultImg);
-  const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
-  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
 
   useEffect(() => {
     getRecentRecipeCalls(14)
@@ -21,26 +17,6 @@ function MeineKuechenstarsPage({ onBack, currentUser, recipes = [] }) {
         console.error('Fehler beim Laden der Rezeptaufrufe:', err);
         setLoading(false);
       });
-  }, []);
-
-  useEffect(() => {
-    getButtonIcons().then((icons) => {
-      setAllButtonIcons(icons);
-    });
-  }, []);
-
-  useEffect(() => {
-    setCloseIcon(
-      getEffectiveIcon(allButtonIcons, 'closeButtonDefaultImg', isDarkMode) ||
-      getEffectiveIcon(allButtonIcons, 'closeButton', isDarkMode) ||
-      DEFAULT_BUTTON_ICONS.closeButtonDefaultImg
-    );
-  }, [allButtonIcons, isDarkMode]);
-
-  useEffect(() => {
-    const handler = (e) => setIsDarkMode(e.detail.isDark);
-    window.addEventListener('darkModeChange', handler);
-    return () => window.removeEventListener('darkModeChange', handler);
   }, []);
 
   const ownRecipes = recipes.filter(r => r.authorId === currentUser?.id);
@@ -57,56 +33,57 @@ function MeineKuechenstarsPage({ onBack, currentUser, recipes = [] }) {
       .slice(0, 20);
   })();
 
+  const maxCount = top20.length ? top20[0].count : 1;
+  const summeAufrufe = top20.reduce((summe, { count }) => summe + count, 0);
+  const podium = top20.slice(0, 3);
+  const rest = top20.slice(3);
+  const balkenBreite = (count) => `${Math.max(4, Math.round((count / maxCount) * 100))}%`;
+
   return (
     <div className="meine-kuechenstars-container">
-      <div className="meine-kuechenstars-header">
+      <UnterseiteKopf onZurueck={onBack}>
         <h2>Meine Küchenstars</h2>
-        {onBack && (
-          <button
-            className="app-close-button"
-            onClick={onBack}
-            aria-label="Meine Küchenstars schließen"
-            title="Meine Küchenstars schließen"
-          >
-            {isBase64Image(closeIcon) ? (
-              <img src={closeIcon} alt="Meine Küchenstars schließen" className="app-close-button-icon-img" />
-            ) : (
-              closeIcon
-            )}
-          </button>
-        )}
-      </div>
-      <div className="meine-kuechenstars-content">
-        <p className="meine-kuechenstars-info-text">
-          Hier sind deine Top 20 Rezepte nach Anzahl der Aufrufe der letzten 14 Tage.
-        </p>
-        {loading ? (
-          <div className="meine-kuechenstars-empty">Laden...</div>
-        ) : top20.length === 0 ? (
-          <div className="meine-kuechenstars-empty">Noch keine Rezeptaufrufe vorhanden.</div>
-        ) : (
-          <div className="meine-kuechenstars-table-container">
-            <table className="meine-kuechenstars-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Rezept</th>
-                  <th>Aufrufe</th>
-                </tr>
-              </thead>
-              <tbody>
-                {top20.map(({ recipe, count }, index) => (
-                  <tr key={recipe.id}>
-                    <td className="meine-kuechenstars-rank">{index + 1}</td>
-                    <td>{recipe.title}</td>
-                    <td className="meine-kuechenstars-count">{count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      </UnterseiteKopf>
+      <p className="unterseite-untertitel">
+        Hier sind deine Top 20 Rezepte nach Anzahl der Aufrufe der letzten 14 Tage.
+      </p>
+      {loading ? (
+        <div className="unterseite-karte meine-kuechenstars-empty">Laden...</div>
+      ) : top20.length === 0 ? (
+        <div className="unterseite-karte meine-kuechenstars-empty">Noch keine Rezeptaufrufe vorhanden.</div>
+      ) : (
+        <>
+          <div className="unterseite-kennzahlen">
+            <Kennzahl wert={summeAufrufe} label={<>Aufrufe</>} />
+            <Kennzahl wert={top20.length} label={<>Rezepte</>} />
           </div>
-        )}
-      </div>
+          <ol className="kuechenstars-podium">
+            {podium.map(({ recipe, count }, index) => (
+              <li key={recipe.id} className={`kuechenstars-platz kuechenstars-platz--${index + 1}`}>
+                <span className="kuechenstars-rang">{index + 1}</span>
+                <span className="kuechenstars-titel">{recipe.title}</span>
+                <span className="kuechenstars-aufrufe">{count}</span>
+              </li>
+            ))}
+          </ol>
+          {rest.length > 0 && (
+            <ol className="kuechenstars-rest unterseite-karte" start={4}>
+              {rest.map(({ recipe, count }, index) => (
+                <li key={recipe.id} className="kuechenstars-zeile">
+                  <span className="kuechenstars-rang">{index + 4}</span>
+                  <span className="kuechenstars-zeile-text">
+                    <span className="kuechenstars-titel">{recipe.title}</span>
+                    <span className="kuechenstars-balken" aria-hidden="true">
+                      <span style={{ width: balkenBreite(count) }} />
+                    </span>
+                  </span>
+                  <span className="kuechenstars-aufrufe">{count}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </>
+      )}
     </div>
   );
 }

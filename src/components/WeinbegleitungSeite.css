@@ -1,40 +1,26 @@
-/* Seite „Weinbegleitung“ unter „Chefkoch & mehr“ (WeinbegleitungSeite.js).
-   Farben nur über Tokens (src/tokens.css). */
+/* Seite „Weinbegleitung“ unter „Chefkoch & mehr“ (WeinbegleitungSeite.js), Variante A:
+   Kopf und Kennzahlen aus Unterseite.css, Abschnitte als Karten mit 20 px Radius, Titel in der
+   Kachelfarbe der Weinbegleitung. Farben nur über Tokens (src/tokens.css). */
 
 .wein-seite {
+  --kachel-farbe: var(--color-kachel-wein);
   max-width: 800px;
   margin: 0 auto;
 }
 
-.wein-seite-kopf {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-
-.wein-seite-kopf h2 {
-  flex: 1;
-  margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-  text-align: left;
-  color: var(--color-text-strong);
-}
-
 .wein-seite-karte {
-  margin-bottom: 1rem;
-  padding: 1.25rem;
-  border-radius: 12px;
+  margin-bottom: 0.75rem;
+  padding: 1.1rem 1.2rem;
+  border-radius: 20px;
   background: var(--color-surface-card);
   color: var(--color-text);
 }
 
-.wein-seite-titel {
+.wein-seite .wein-seite-titel {
   margin: 0 0 0.6rem;
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--color-brand);
+  color: var(--kachel-farbe);
 }
 
 .wein-seite-text {

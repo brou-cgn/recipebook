@@ -379,6 +379,35 @@ const SCREENS = [
     },
   })),
   { name: 'chefkoch', fullPage: true, run: async (page, shot) => { await openMenuItem(page, 'Chefkoch & mehr'); await shot(); } },
+  // Unterseiten von „Chefkoch & mehr“ (Variante A): über die Kachel geöffnet, ganze Seite
+  ...[
+    ['chefkoch-kuechenstars', 'Meine Küchenstars'],
+    ['chefkoch-mise-en-place', 'Meine Mise en Place'],
+    ['chefkoch-weinbegleitung', 'Weinbegleitung'],
+    ['chefkoch-kuechenbetrieb', 'Küchenbetrieb'],
+    ['chefkoch-eventplanung', 'Eventplanung'],
+  ].map(([name, kachel]) => ({
+    name,
+    fullPage: true,
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Chefkoch & mehr');
+      await page.getByRole('button', { name: kachel, exact: true }).first().click();
+      await pause(page, 1200);
+      await shot();
+    },
+  })),
+  {
+    name: 'chefkoch-liste',
+    fullPage: true,
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Chefkoch & mehr');
+      await page.getByRole('button', { name: 'Meine Mise en Place', exact: true }).first().click();
+      await pause(page, 1000);
+      await page.getByRole('button', { name: 'Familienrezepte', exact: true }).first().click();
+      await pause(page, 1200);
+      await shot();
+    },
+  },
   { name: 'einstellungen', run: async (page, shot) => { await openMenuItem(page, 'Einstellungen'); await shot(); } },
   // Weitere Reiter der Einstellungen (Admin), je als ganze Seite
   ...[

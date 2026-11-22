@@ -1,11 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect } from 'react';
 import { WeinGlas, Gruende } from './WeinbegleitungTeile';
 import { alleStile, alleRegeln, alleQuellen, formatTemperatur } from '../utils/weinbegleitung/wissensbasis';
 import { RULES_VERSION } from '../utils/weinbegleitung/konstanten';
 import { weinfarbe, nurZuText } from '../utils/weinbegleitung/anzeige';
 import useWeinprofilBackfill, { BACKFILL_STATUS } from '../hooks/useWeinprofilBackfill';
-import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
-import { isBase64Image } from '../utils/imageUtils';
+import { UnterseiteKopf, Kennzahl } from './Unterseite';
 import './WeinbegleitungSeite.css';
 
 /**
@@ -119,53 +118,25 @@ function ProfileNachtragen() {
 }
 
 function WeinbegleitungSeite({ currentUser, onBack }) {
-  const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
-  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
-  const closeBtnRef = useRef(null);
   // Wie in den Rules und im Server: allein die Rolle entscheidet über Admin.
   const istAdmin = currentUser?.role === 'admin';
   const quellen = alleQuellen();
   const hinweise = [...new Set(quellen.map((quelle) => quelle.lizenzhinweis).filter(Boolean))];
 
   useEffect(() => {
-    getButtonIcons().then(setButtonIcons).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    const handler = (e) => setIsDarkMode(e.detail.isDark);
-    window.addEventListener('darkModeChange', handler);
-    return () => window.removeEventListener('darkModeChange', handler);
-  }, []);
-
-  useEffect(() => {
     window.scrollTo(0, 0);
-    closeBtnRef.current?.blur();
   }, []);
-
-  const closeIcon = getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)
-    || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode)
-    || DEFAULT_BUTTON_ICONS.closeButtonDefaultImg;
 
   return (
     <div className="wein-seite">
-      <div className="wein-seite-kopf">
+      <UnterseiteKopf onZurueck={onBack}>
         <h2>Weinbegleitung</h2>
-        {onBack && (
-          <button
-            ref={closeBtnRef}
-            type="button"
-            className="app-close-button"
-            onClick={onBack}
-            aria-label="Weinbegleitung schließen"
-            title="Weinbegleitung schließen"
-          >
-            {isBase64Image(closeIcon) ? (
-              <img src={closeIcon} alt="Weinbegleitung schließen" className="app-close-button-icon-img" />
-            ) : (
-              closeIcon
-            )}
-          </button>
-        )}
+      </UnterseiteKopf>
+
+      <div className="unterseite-kennzahlen">
+        <Kennzahl wert={alleStile().length} label={<>Weinstile</>} />
+        <Kennzahl wert={alleRegeln().length} label={<>Regeln</>} />
+        <Kennzahl wert={quellen.length} label={<>Quellen</>} />
       </div>
 
       <section className="wein-seite-karte" aria-labelledby="wein-seite-so">

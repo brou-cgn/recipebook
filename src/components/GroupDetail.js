@@ -20,6 +20,7 @@ import { isFuerDichEntdecktList } from '../utils/fuerDichEntdeckt';
 import GroupEditDialog from './GroupEditDialog';
 import ConfirmDialog from './ConfirmDialog';
 import RecipeCard from './RecipeCard';
+import { UnterseiteKopf } from './Unterseite';
 import SortCarousel from './SortCarousel';
 import useModalScrollLock from '../hooks/useModalScrollLock';
 import useFadeOutClose from '../hooks/useFadeOutClose';
@@ -89,7 +90,6 @@ function GroupDetail({
     setActiveTab(tab);
     if (onActiveTabChange) onActiveTabChange(tab);
   };
-  const [backIcon, setBackIcon] = useState(DEFAULT_BUTTON_ICONS.closeButtonDefaultImg);
   const [shoppingListIcon, setShoppingListIcon] = useState(() => defaultButtonIcon('shoppingList', getDarkModePreference()));
   const [listSettingsIcon, setListSettingsIcon] = useState(DEFAULT_BUTTON_ICONS.listSettings || DEFAULT_LIST_SETTINGS_ICON);
   const [listSettingsActiveIcon, setListSettingsActiveIcon] = useState(resolveListSettingsActiveIcon(DEFAULT_BUTTON_ICONS, getDarkModePreference()));
@@ -141,11 +141,6 @@ function GroupDetail({
   }, []);
 
   useEffect(() => {
-    setBackIcon(
-      getEffectiveIcon(allButtonIcons, 'closeButtonDefaultImg', isDarkMode) ||
-      getEffectiveIcon(allButtonIcons, 'closeButton', isDarkMode) ||
-      DEFAULT_BUTTON_ICONS.closeButtonDefaultImg
-    );
     setShoppingListIcon(getEffectiveIcon(allButtonIcons, 'shoppingList', isDarkMode) || defaultButtonIcon('shoppingList', isDarkMode));
     setListSettingsIcon(getEffectiveIcon(allButtonIcons, 'listSettings', isDarkMode) || DEFAULT_BUTTON_ICONS.listSettings || DEFAULT_LIST_SETTINGS_ICON);
     setListSettingsActiveIcon(resolveListSettingsActiveIcon(allButtonIcons, isDarkMode));
@@ -503,51 +498,47 @@ function GroupDetail({
 
   return (
     <div className="group-detail-container">
-      <div className="group-detail-header">
-        <div className="group-detail-title">
-          <h2>{group.name}</h2>
-          {isPublic && (
-            <span className="group-type-badge public">Öffentlich</span>
-          )}
-        </div>
-        <div className="group-header-actions">
-          {groupRecipes.length > 0 && (
-            <button
-              className="shopping-list-trigger-button"
-              onClick={handleShoppingListClick}
-              title="Einkaufsliste anzeigen"
-              aria-label="Einkaufsliste öffnen"
-            >
-              {isBase64Image(shoppingListIcon) ? (
-                <img src={shoppingListIcon} alt="Einkaufsliste" className="shopping-list-icon-img" />
-              ) : (
-                shoppingListIcon
-              )}
-            </button>
-          )}
-          {!isPublic && !isSystemList && (
-            <button
-              className="list-settings-trigger-button"
-              onClick={() => handleTabChange(activeTab === TAB_SETTINGS ? TAB_RECIPES : TAB_SETTINGS)}
-              title="Einstellungen anzeigen"
-              aria-label="Einstellungen öffnen"
-            >
-              {isBase64Image(activeListSettingsIcon) ? (
-                <img src={activeListSettingsIcon} alt="Einstellungen" className="list-settings-icon-img" />
-              ) : (
-                activeListSettingsIcon
-              )}
-            </button>
-          )}
-          <button className="app-close-button" onClick={onBack} aria-label="Private Liste schließen" title="Private Liste schließen">
-            {isBase64Image(backIcon) ? (
-              <img src={backIcon} alt="Private Liste schließen" className="app-close-button-icon-img" />
-            ) : (
-              backIcon
+      <UnterseiteKopf
+        onZurueck={onBack}
+        zurueckText={<>Meine Mise en Place</>}
+        aktionen={(
+          <div className="group-header-actions">
+            {groupRecipes.length > 0 && (
+              <button
+                className="shopping-list-trigger-button"
+                onClick={handleShoppingListClick}
+                title="Einkaufsliste anzeigen"
+                aria-label="Einkaufsliste öffnen"
+              >
+                {isBase64Image(shoppingListIcon) ? (
+                  <img src={shoppingListIcon} alt="Einkaufsliste" className="shopping-list-icon-img" />
+                ) : (
+                  shoppingListIcon
+                )}
+              </button>
             )}
-          </button>
-        </div>
-      </div>
+            {!isPublic && !isSystemList && (
+              <button
+                className="list-settings-trigger-button"
+                onClick={() => handleTabChange(activeTab === TAB_SETTINGS ? TAB_RECIPES : TAB_SETTINGS)}
+                title="Einstellungen anzeigen"
+                aria-label="Einstellungen öffnen"
+              >
+                {isBase64Image(activeListSettingsIcon) ? (
+                  <img src={activeListSettingsIcon} alt="Einstellungen" className="list-settings-icon-img" />
+                ) : (
+                  activeListSettingsIcon
+                )}
+              </button>
+            )}
+          </div>
+        )}
+      >
+        <h2>{group.name}</h2>
+        {isPublic && (
+          <span className="group-type-badge public">Öffentlich</span>
+        )}
+      </UnterseiteKopf>
 
       {activeTab === TAB_RECIPES && (
         <div className="group-toolbar-row">
