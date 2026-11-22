@@ -216,7 +216,9 @@
   color: var(--color-text-muted);
 }
 
-/* Handy: Bottom Sheet über der unteren Navigation (1200), wie „Was kochst du dazu?“ */
+/* Handy: Bottom Sheet über der unteren Navigation (1200), wie „Was kochst du dazu?“. Hintergrund
+   weichgezeichnet statt abgedunkelt, wie bei der Einkaufsliste (ShoppingListModal.css); die Seite
+   dahinter sperrt useModalScrollLock. */
 .sprachwahl-sheet-root {
   position: fixed;
   inset: 0;
@@ -232,7 +234,9 @@
   margin: 0;
   padding: 0;
   border: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: transparent;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   animation: sprachwahl-scrim-ein 0.25s ease-out both;
   cursor: pointer;
 }
