@@ -26,6 +26,15 @@
   vector-effect: non-scaling-stroke;
 }
 
+/* Ab doppelter Pixeldichte (iPhone: drei Bildpunkte je px) wirkt 1 px zu kräftig; dort 0,5 px, vom
+   Eigentümer gewählt. Am Bildschirm mit einfacher Dichte bliebe davon nur ein grauer Schleier. */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 2dppx) {
+  .flagge rect,
+  .flagge path {
+    stroke-width: 0.5px;
+  }
+}
+
 .sprachwahl {
   position: relative;
   display: flex;
