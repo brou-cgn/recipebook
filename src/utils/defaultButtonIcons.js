@@ -124,6 +124,7 @@ export const DEFAULT_ICON_NAMES = {
   timerStart: 'play',
   addGroupMember: 'userPlus',
   privateBadge: 'lock',
+  privateButton: 'lock',
   addIngredient: 'carrot',
   addStep: 'note',
   resetThumbnail: 'camera',

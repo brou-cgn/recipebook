@@ -68,20 +68,16 @@
   height: 32px;
   box-sizing: border-box;
   padding: 0 6px 0 9px;
-  border: 1px solid var(--color-border);
+  border: 0;
   border-radius: 999px;
-  background: var(--color-surface);
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  background: transparent;
+  transition: background-color 0.2s ease;
 }
 
+/* Hover/geöffnet: nur ein dezenter Hover-Overlay als Rückmeldung, ruhend bleibt die Pille transparent */
 .sprachwahl-chip:hover .sprachwahl-chip__flaeche,
 .sprachwahl-chip[aria-expanded="true"] .sprachwahl-chip__flaeche {
-  background: var(--color-surface-raised);
-}
-
-/* Solange eine andere Sprache als die Standardsprache gilt */
-.sprachwahl-chip--uebersteuert .sprachwahl-chip__flaeche {
-  border-color: var(--color-accent);
+  background: var(--color-hover-overlay);
 }
 
 .sprachwahl-chip__flagge {
