@@ -223,7 +223,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [newVersionWithTextIcon, setNewVersionWithTextIcon] = useState(defaultIcon('check'));
   const [favoritesButtonIcon, setFavoritesButtonIcon] = useState(() => defaultButtonIcon('menuFavoritesButton', getDarkModePreference()));
   const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('');
-  const [privateBadgeIcon, setPrivateBadgeIcon] = useState(defaultIcon('lock'));
+  const [privateButtonIcon, setPrivateButtonIcon] = useState(() => defaultButtonIcon('privateButton', getDarkModePreference()));
   // Drei Zustände des Versions-FAB: Start → Beschreibung offen (noch ohne Text) → Text erfasst.
   const versionFabState = !onVersionDescribeContinue ? 'start' : versionDescribeHasText ? 'text' : 'describing';
   const versionFabIcons = [
@@ -335,7 +335,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setNewVersionWithTextIcon(eff('newVersionWithText') || defaultIcon('check'));
       setFavoritesButtonIcon(eff('menuFavoritesButton') || defaultButtonIcon('menuFavoritesButton', currentDarkMode));
       setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive'));
-      setPrivateBadgeIcon(eff('privateBadge') || defaultIcon('lock'));
+      setPrivateButtonIcon(eff('privateButton') || defaultButtonIcon('privateButton', currentDarkMode));
       setDeleteRecipeIcon(eff('deleteRecipe'));
       setResetThumbnailIcon(eff('resetThumbnail') || defaultIcon('camera'));
       setSourceUrlIcon(eff('recipeSourceLink') || defaultIcon('link'));
@@ -389,7 +389,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setNewVersionWithTextIcon(eff('newVersionWithText') || defaultIcon('check'));
     setFavoritesButtonIcon(eff('menuFavoritesButton') || defaultButtonIcon('menuFavoritesButton', isDarkMode));
     setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive'));
-    setPrivateBadgeIcon(eff('privateBadge') || defaultIcon('lock'));
+    setPrivateButtonIcon(eff('privateButton') || defaultButtonIcon('privateButton', isDarkMode));
     setDeleteRecipeIcon(eff('deleteRecipe'));
     setResetThumbnailIcon(eff('resetThumbnail') || defaultIcon('camera'));
     setSourceUrlIcon(eff('recipeSourceLink') || defaultIcon('link'));
@@ -2261,6 +2261,29 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             })()}
 
             <div className="mobile-action-buttons" style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}>
+                {(recipe.isPrivate || !isRecipePublic) && currentUser?.id === recipe.authorId && (() => {
+                  const badgeIcon = isBase64Image(privateButtonIcon) ? (
+                    <img src={privateButtonIcon} alt={tAnsicht('privat')} className="button-icon-image" draggable="false" />
+                  ) : (
+                    privateButtonIcon
+                  );
+                  return userCanPublish && onPublish ? (
+                    <button
+                      type="button"
+                      className="private-badge-button"
+                      onClick={handlePublish}
+                      disabled={publishLoading}
+                      title={tAnsicht('rezeptVeroeffentlichen')}
+                      aria-label={tAnsicht('rezeptVeroeffentlichen')}
+                    >
+                      {badgeIcon}
+                    </button>
+                  ) : (
+                    <div className="private-badge-button" title={tAnsicht('unveroeffentlicht')} aria-label={tAnsicht('unveroeffentlicht')}>
+                      {badgeIcon}
+                    </div>
+                  );
+                })()}
                 {onToggleFavorite && (
                 <button
                   className={`favorite-button ${isFavorite ? 'favorite-button--active' : ''}`}
@@ -2285,29 +2308,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   )}
                 </button>
                 )}
-                {(recipe.isPrivate || !isRecipePublic) && currentUser?.id === recipe.authorId && (() => {
-                  const badgeIcon = isBase64Image(privateBadgeIcon) ? (
-                    <img src={privateBadgeIcon} alt={tAnsicht('privat')} className="button-icon-image" draggable="false" />
-                  ) : (
-                    privateBadgeIcon
-                  );
-                  return userCanPublish && onPublish ? (
-                    <button
-                      type="button"
-                      className="private-badge-button"
-                      onClick={handlePublish}
-                      disabled={publishLoading}
-                      title={tAnsicht('rezeptVeroeffentlichen')}
-                      aria-label={tAnsicht('rezeptVeroeffentlichen')}
-                    >
-                      {badgeIcon}
-                    </button>
-                  ) : (
-                    <div className="private-badge-button" title={tAnsicht('unveroeffentlicht')} aria-label={tAnsicht('unveroeffentlicht')}>
-                      {badgeIcon}
-                    </div>
-                  );
-                })()}
                 <button
                   className="shopping-list-trigger-button"
                   onClick={handleShoppingListClick}

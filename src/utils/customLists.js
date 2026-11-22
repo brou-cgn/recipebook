@@ -625,6 +625,9 @@ export const DEFAULT_BUTTON_ICONS = {
   menuFavoritesButton: defaultIcon('star'),
   menuFavoritesButtonActive: '',
   privateBadge: defaultIcon('lock'),
+  // Privat-Knopf in Rezept- und Menü-Detailansicht: ohne Fläche (wie Teilen), daher eigenes
+  // Icon neben dem Badge auf den Menü-Kacheln, das auf dunkler Fläche liegt
+  privateButton: defaultIcon('lock'),
   tagesmenuZumTagesMenu: defaultIcon('utensils'),
   tagesmenuMeineAuswahl: defaultIcon('list'),
   tagesmenuZurueckZumStapel: defaultIcon('layers'),
@@ -712,6 +715,7 @@ export const DEFAULT_BUTTON_ICONS = {
   menuFavoritesButtonDark: '',
   menuFavoritesButtonActiveDark: '',
   privateBadgeDark: '',
+  privateButtonDark: '',
   tagesmenuZumTagesMenuDark: '',
   tagesmenuMeineAuswahlDark: '',
   tagesmenuZurueckZumStapelDark: '',
