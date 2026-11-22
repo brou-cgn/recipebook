@@ -74,9 +74,15 @@
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.sprachwahl-chip:hover .sprachwahl-chip__flaeche,
 .sprachwahl-chip[aria-expanded="true"] .sprachwahl-chip__flaeche {
   background: var(--color-surface-raised);
+}
+
+/* Hover nur bei Geräten mit echtem Hover: iOS lässt :hover nach einem Tap hängen */
+@media (hover: hover) {
+  .sprachwahl-chip:hover .sprachwahl-chip__flaeche {
+    background: var(--color-surface-raised);
+  }
 }
 
 /* Solange eine andere Sprache als die Standardsprache gilt */
@@ -128,9 +134,14 @@
   cursor: pointer;
 }
 
-.sprachwahl-zeile:hover,
 .sprachwahl-zeile--aktiv {
   background: var(--color-hover-overlay);
+}
+
+@media (hover: hover) {
+  .sprachwahl-zeile:hover {
+    background: var(--color-hover-overlay);
+  }
 }
 
 .sprachwahl-zeile--aktiv {
