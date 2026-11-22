@@ -5,6 +5,7 @@ import './tokens.css';
 import './darkMode.css';
 import './focusRing.css';
 import App from './App';
+import { SpracheProvider } from './contexts/SpracheContext';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import reportWebVitals from './reportWebVitals';
 import { markSwUpdateReload } from './utils/swUpdateReloadFlag';
@@ -12,7 +13,9 @@ import { markSwUpdateReload } from './utils/swUpdateReloadFlag';
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <App />
+    <SpracheProvider>
+      <App />
+    </SpracheProvider>
   </React.StrictMode>
 );
 

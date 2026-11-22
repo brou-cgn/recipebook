@@ -101,6 +101,7 @@ import { FollowProvider } from './contexts/FollowContext';
 import { CookingSessionProvider } from './contexts/CookingSessionContext';
 import MemberProfilePage from './components/MemberProfilePage';
 import { RecipeImportQueueProvider, useRecipeImportQueue } from './contexts/RecipeImportQueueContext';
+import { useProfilSprache } from './contexts/SpracheContext';
 import { updateAppBadge } from './utils/appBadge';
 import { resolveRecipeGroupContext, resolveImportGroupContext } from './utils/recipeGroupContext';
 import { openRecipeWithTransition } from './utils/recipeViewTransition';
@@ -478,6 +479,8 @@ function App() {
   // ~380ms exit fade - never shows at all, not just skips its entrance.
   const [splashDismissed, setSplashDismissed] = useState(isRecoveryNavigation);
   const [currentUser, setCurrentUser] = useState(null);
+  // Sprache aus den persönlichen Einstellungen (Vorhaben docs/vorhaben/mehrsprachigkeit.md)
+  useProfilSprache(currentUser?.sprache);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
   const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);

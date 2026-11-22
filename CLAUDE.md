@@ -87,6 +87,11 @@ Entscheidungen, PR-Plan und offene Punkte stehen in `docs/vorhaben/parallel-koch
 Jede Änderung daran trägt dort den Stand nach; berührt sie einen Tech-Check-Befund (z. B. A1),
 aktualisiert sie auch das Dashboard.
 
+### Mehrsprachigkeit (Deutsch, Englisch, Französisch)
+Entscheidungen, PR-Plan und offene Punkte stehen in `docs/vorhaben/mehrsprachigkeit.md`.
+Jede Änderung daran trägt dort den Stand nach; berührt sie einen Tech-Check-Befund,
+aktualisiert sie auch das Dashboard.
+
 ### Weinbegleitung (Menüs und Einzelrezepte)
 Entscheidungen, Spezifikation, PR-Plan und offene Punkte stehen in `docs/vorhaben/weinbegleitung.md`.
 Jede Änderung daran trägt dort den Stand nach; berührt sie einen Tech-Check-Befund (z. B. S29, F20),
