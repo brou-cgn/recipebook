@@ -27,7 +27,7 @@ scripts/screenshots/run.sh entwurf --css entwurf.css --variants desktop-hell,han
 zu ändern; `--variants` beschränkt auf einzelne Varianten. Läuft auf dem Port des Dev-Servers
 (5174) schon ein Server, bricht der Lauf ab, damit die Bilder nicht dessen Stand zeigen.
 
-Ein voller Lauf (132 Bilder in vier Varianten) dauert in der Cloud-Session rund zwölf Minuten;
+Ein voller Lauf (136 Bilder in vier Varianten) dauert in der Cloud-Session rund zwölf Minuten;
 für Vorher-nachher-Vergleiche einzelner Bildschirme reichen `--only` und `--variants`. Ergebnis:
 je Variante ein Ordner mit PNG-Dateien und eine `index.html` mit allen Bildern als Raster.
 `screenshots-out/` steht in `.gitignore`.
