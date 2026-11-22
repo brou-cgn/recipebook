@@ -26,7 +26,8 @@ import DiscoverTopicsTab from './DiscoverTopicsTab';
 import { downloadRecipesKeywordCsv } from '../utils/recipeKeywordsCsv';
 import DeleteRowButton from './DeleteRowButton';
 import Button from './Button';
-import TitelUebersetzungBackfill from './TitelUebersetzungBackfill';
+import UebersetzungBackfill from './UebersetzungBackfill';
+import { trageInhaltUebersetzungenNach, trageTitelUebersetzungenNach } from '../utils/uebersetzungCallables';
 import UndoSnackbar from './UndoSnackbar';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
@@ -2214,7 +2215,22 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                 (Mehrsprachigkeit). Hier trägst du die Übersetzungen für die bestehenden Rezepte nach; Rezepte mit
                 passender Übersetzung werden übersprungen.
               </p>
-              <TitelUebersetzungBackfill />
+              <UebersetzungBackfill
+                aufruf={trageTitelUebersetzungenNach}
+                textNurAdmins="Titelübersetzungen nachtragen dürfen nur Admins."
+              />
+            </div>
+            <div className="settings-section">
+              <h3>Rezeptinhalte übersetzen</h3>
+              <p className="section-description">
+                Zutaten und Zubereitungsschritte neuer und geänderter Rezepte übersetzt die App automatisch. Hier
+                trägst du die Übersetzungen für die bestehenden Rezepte nach, zehn Rezepte je Schritt; das dauert
+                länger und kostet mehr als bei den Titeln. Rezepte mit passender Übersetzung werden übersprungen.
+              </p>
+              <UebersetzungBackfill
+                aufruf={trageInhaltUebersetzungenNach}
+                textNurAdmins="Inhaltsübersetzungen nachtragen dürfen nur Admins."
+              />
             </div>
             <div className="settings-section">
               <p className="prompt-help-text">

@@ -64,6 +64,7 @@ import { evaluateLowCarbTag } from '../utils/lowCarb';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import { useRezeptTitel, useTexte } from '../contexts/SpracheContext';
 import rezeptansichtTexte from '../i18n/texte/rezeptansicht';
+import useRezeptInhalt from '../hooks/useRezeptInhalt';
 import useModalScrollLock from '../hooks/useModalScrollLock';
 import useFadeOutClose from '../hooks/useFadeOutClose';
 import {
@@ -114,6 +115,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Titel in der geltenden Sprache (Mehrsprachigkeit PR 3); bearbeitet wird immer recipe.title
   const zeigeTitel = useRezeptTitel();
   const tAnsicht = useTexte(rezeptansichtTexte);
+  // „Original anzeigen“ (Mehrsprachigkeit PR 4): Titel und Inhalt wieder im Original
+  const [zeigeOriginal, setZeigeOriginal] = useState(false);
   const { rows: nutritionReferenceRows, loading: nutritionReferenceLoading, reload: reloadNutritionReferences } = useNutritionReference();
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [lastOwnCookDateMs, setLastOwnCookDateMs] = useState(undefined);
@@ -661,9 +664,20 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const hasMultipleVersions = allVersions.length > 1;
 
   const recipe = selectedRecipe;
-  const titel = zeigeTitel(recipe);
+  const titelAnzeige = zeigeTitel(recipe);
+  // Übersetzte Zutaten und Schritte (Mehrsprachigkeit PR 4). Nur Anzeige: Portionsumrechnung,
+  // Timer, Nährwerte und Einkaufsliste arbeiten weiter mit recipe.ingredients und recipe.steps.
+  const inhaltUebersetzung = useRezeptInhalt(recipe);
+  const uebersetzungVorhanden = Boolean(inhaltUebersetzung) || titelAnzeige !== (recipe?.title || '');
+  const titel = zeigeOriginal ? (recipe?.title || '') : titelAnzeige;
   const titelUebersetzt = titel !== (recipe?.title || '');
   const originalSprache = recipe?.titelUebersetzung?.originalSprache;
+  const inhaltAnzeige = zeigeOriginal ? null : inhaltUebersetzung;
+  const anzeigeZutaten = inhaltAnzeige ? inhaltAnzeige.zutaten : recipe.ingredients;
+  const anzeigeSchritte = inhaltAnzeige ? inhaltAnzeige.schritte : recipe.steps;
+  useEffect(() => {
+    setZeigeOriginal(false);
+  }, [recipe?.id]);
 
   // Schritt und Portionen eines Rezepts der Sitzung mitschreiben, damit ein Wechsel sie wiederherstellt.
   // Nur auf Änderungen der Werte: Beim Wechsel selbst zeigt der erste Render noch die alten Werte.
@@ -1539,6 +1553,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     });
   }, [recipe.steps]);
 
+  // Angezeigter Text je Schritt im Kochmodus (übersetzt oder Original, gleiche Reihenfolge wie
+  // stepItems). Die Timer lesen ihre Zeiten weiter aus dem Original.
+  const stepTexteAnzeige = useMemo(() => (anzeigeSchritte || [])
+    .filter((step) => (typeof step === 'string' ? true : step?.type !== 'heading'))
+    .map((step) => (typeof step === 'string' ? step : step?.text)), [anzeigeSchritte]);
+
   const totalSteps = stepItems.length;
 
   // Keyboard navigation for cooking mode
@@ -1991,7 +2011,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 )}
               </div>
               <ul className="ingredients-list">
-                {recipe.ingredients?.map((ingredient, index) => 
+                {anzeigeZutaten?.map((ingredient, index) =>
                   renderIngredient(ingredient, index)
                 ) || <li>Keine Zutaten aufgelistet</li>}
               </ul>
@@ -2054,7 +2074,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         </div>
                       )}
                       <div className="step-content">
-                        {stepText}
+                        {stepTexteAnzeige[index] ?? stepText}
                       </div>
                       {showStepCounter && (
                         <div className="step-counter">
@@ -2383,6 +2403,15 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 </span>
               </p>
             )}
+            {uebersetzungVorhanden && (
+              <p className="recipe-translation-note">
+                {zeigeOriginal ? tAnsicht('originalAngezeigt') : tAnsicht('automatischUebersetzt')}
+                {' · '}
+                <button type="button" className="recipe-translation-toggle" onClick={() => setZeigeOriginal((wert) => !wert)}>
+                  {zeigeOriginal ? tAnsicht('uebersetzungAnzeigen') : tAnsicht('originalAnzeigen')}
+                </button>
+              </p>
+            )}
             {!cookingMode && (
               <div
                 className={`recipe-sticky-title${showStickyTitle ? ' recipe-sticky-title--visible' : ''}`}
@@ -2634,7 +2663,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 )}
               </div>
               <ul className="ingredients-list">
-                {recipe.ingredients?.map((ingredient, index) => 
+                {anzeigeZutaten?.map((ingredient, index) =>
                   renderIngredient(ingredient, index)
                 ) || <li>Keine Zutaten aufgelistet</li>}
               </ul>
@@ -2645,7 +2674,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               <ol className="steps-list">
                 {(() => {
                   let stepCount = 0;
-                  return recipe.steps?.map((step, index) => {
+                  return anzeigeSchritte?.map((step, index) => {
                     // Handle both old string format and new object format
                     const item = typeof step === 'string' 
                       ? { type: 'step', text: step }

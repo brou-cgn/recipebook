@@ -485,6 +485,17 @@ service cloud.firestore {
     match /aiTitelUebersetzungLimits/{limitId} {
       allow read, write: if false;
     }
+    // Übersetzter Rezeptinhalt (Mehrsprachigkeit PR 4): schreiben nur uebersetzeRezeptInhalt und
+    // backfillInhaltUebersetzungen. Lesen wie Rezepte selbst (angemeldete Mitglieder, nicht
+    // anonym), nur einzeln: Die App lädt die Übersetzung des geöffneten Rezepts.
+    match /rezeptUebersetzungen/{recipeId} {
+      allow get: if isAnyUser() && !isAnonymous();
+      allow list, write: if false;
+    }
+    // Tageszähler der Inhaltsübersetzung: `automatik` (Trigger) und je Admin (Backfill).
+    match /aiInhaltUebersetzungLimits/{limitId} {
+      allow read, write: if false;
+    }
     // Tageszähler des Import-Sweepers recoverStuckImportJobs je Autor (Tech-Check S21).
     match /importSweeperLimits/{limitId} {
       allow read, write: if false;
