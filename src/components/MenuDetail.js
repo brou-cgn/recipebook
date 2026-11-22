@@ -28,12 +28,22 @@ import useModalScrollLock from '../hooks/useModalScrollLock';
 import useFadeOutClose from '../hooks/useFadeOutClose';
 import useMenueWeinbegleitung from '../hooks/useMenueWeinbegleitung';
 import { WeinbegleitungUebersicht, WeinbegleitungGang } from './Weinbegleitung';
+import { useRezeptTitel, useSprache, useTexte } from '../contexts/SpracheContext';
+import { formatiereDatum, formatiereZahl } from '../i18n/format';
+import { STANDARD_SPRACHE } from '../i18n/sprachen';
+import festtafelTexte from '../i18n/texte/festtafel';
+import rezeptansichtTexte from '../i18n/texte/rezeptansicht';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
-const formatEventLiter = (value) => {
+const formatEventLiter = (value, sprache = STANDARD_SPRACHE) => {
   const num = Number(value);
   if (!Number.isFinite(num)) return value;
-  return num.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  return formatiereZahl(num, sprache, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 };
+
+// Ersatzabschnitt für Menüs im alten Format (ohne Sektionen); angezeigt in der geltenden Sprache
+const ALLE_REZEPTE = 'Alle Rezepte';
+const DATUM_ZAHLEN = { day: 'numeric', month: 'numeric', year: 'numeric' };
 
 const getDrinkImageUrl = (recipe) => {
   if (!recipe) return null;
@@ -50,6 +60,12 @@ const MOBILE_TABLET_BREAKPOINT = 768;
 
 function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPublish, onSelectRecipe, onToggleMenuFavorite, onOpenEvent, currentUser, allUsers, isSharedView }) {
   const [menu, setMenu] = useState(initialMenu);
+  // Texte der Festtafel; Gemeinsames mit der Rezeptansicht aus rezeptansicht.js (Mehrsprachigkeit PR 6f)
+  const t = useTexte(festtafelTexte);
+  const tAnsicht = useTexte(rezeptansichtTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const { sprache } = useSprache();
+  const zeigeTitel = useRezeptTitel();
   const [menuGuests, setMenuGuests] = useState([]);
   const [favoriteMenuIds, setFavoriteMenuIds] = useState([]);
   const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
@@ -281,8 +297,8 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   }, [menu.authorId, allUsers]);
 
   const menuGuestsText = useMemo(
-    () => formatMenuGuestsFliesstext(menu.descriptionGuestIds, menuGuests),
-    [menu.descriptionGuestIds, menuGuests]
+    () => formatMenuGuestsFliesstext(menu.descriptionGuestIds, menuGuests, t),
+    [menu.descriptionGuestIds, menuGuests, t]
   );
 
   const getRecipeAuthorName = (recipe) => {
@@ -294,7 +310,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   const formattedMenuDate = useMemo(() => {
     if (menu.menuDate) {
       try {
-        return new Date(menu.menuDate).toLocaleDateString('de-DE');
+        return formatiereDatum(new Date(menu.menuDate), sprache, DATUM_ZAHLEN) || null;
       } catch (e) {
         return null;
       }
@@ -309,13 +325,13 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
         } else if (menu.createdAt instanceof Date) {
           date = menu.createdAt;
         }
-        return date ? date.toLocaleDateString('de-DE') : null;
+        return date ? (formatiereDatum(date, sprache, DATUM_ZAHLEN) || null) : null;
       } catch (e) {
         return null;
       }
     }
     return null;
-  }, [menu.menuDate, menu.createdAt]);
+  }, [menu.menuDate, menu.createdAt, sprache]);
 
   const handleDelete = () => setShowDeleteConfirm(true);
 
@@ -348,7 +364,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
 
   const handlePublish = async () => {
     if (!onPublish) return;
-    if (window.confirm(`Möchten Sie "${menu.name}" in der Liste "Öffentlich" veröffentlichen?`)) {
+    if (window.confirm(tAnsicht('veroeffentlichenFrage', { titel: menu.name }))) {
       setPublishLoading(true);
       setMenu(prev => ({ ...prev, privat: false }));
       try {
@@ -389,7 +405,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
       }
     } catch (error) {
       console.error('Error toggling share:', error);
-      alert('Fehler beim Ändern des Share-Status. Bitte versuchen Sie es erneut.');
+      alert(tAnsicht('fehlerTeilen'));
     }
     setShareLoading(false);
   };
@@ -432,7 +448,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
       .map(id => recipes.find(r => r.id === id))
       .filter(Boolean);
     return [{
-      name: 'Alle Rezepte',
+      name: ALLE_REZEPTE,
       recipes: menuRecipes
     }];
   }, [menu, recipes]);
@@ -580,18 +596,18 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
               <Button
                 className="menu-edit-button"
                 onClick={() => onEdit(menu)}
-                title="Menü bearbeiten"
+                title={t('menueBearbeiten')}
               >
-                Bearbeiten
+                {tAllgemein('bearbeiten')}
               </Button>
             )}
             {menu.privat && canEdit && onPublish && (
               <Button
                 onClick={handlePublish}
                 loading={publishLoading}
-                title="Menü veröffentlichen"
+                title={t('menueVeroeffentlichen')}
               >
-                {publishLoading ? 'Wird veröffentlicht …' : 'Veröffentlichen'}
+                {publishLoading ? tAnsicht('veroeffentlichenLaeuft') : tAnsicht('veroeffentlichen')}
               </Button>
             )}
             {canDeleteMenu(currentUser, menu) && onDelete && (
@@ -599,9 +615,9 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                 variant="danger-quiet"
                 className="menu-delete-button"
                 onClick={handleDelete}
-                title="Menü löschen"
+                title={t('menueLoeschen')}
               >
-                Löschen
+                {tAllgemein('loeschen')}
               </Button>
             )}
           </div>
@@ -619,17 +635,17 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
           <button
             className={`favorite-button ${isFavorite ? 'favorite-active' : ''}`}
             onClick={handleToggleFavorite}
-            title={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
+            title={isFavorite ? tAnsicht('favoritEntfernen') : tAnsicht('favoritHinzufuegen')}
           >
             {isFavorite ? (
               isBase64Image(favoritesButtonActiveIcon) ? (
-                <img src={favoritesButtonActiveIcon} alt="Favorit aktiv" className="button-icon-image" draggable="false" />
+                <img src={favoritesButtonActiveIcon} alt={tAnsicht('favoritAktiv')} className="button-icon-image" draggable="false" />
               ) : (
                 favoritesButtonActiveIcon || <StarIcon />
               )
             ) : (
               isBase64Image(favoritesButtonIcon) ? (
-                <img src={favoritesButtonIcon} alt="Favorit" className="button-icon-image" draggable="false" />
+                <img src={favoritesButtonIcon} alt={tAnsicht('favorit')} className="button-icon-image" draggable="false" />
               ) : (
                 favoritesButtonIcon
               )
@@ -637,7 +653,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
           </button>
           {menu.privat && (() => {
             const badgeIcon = isBase64Image(privateBadgeIcon) ? (
-              <img src={privateBadgeIcon} alt="Privat" className="button-icon-image" draggable="false" />
+              <img src={privateBadgeIcon} alt={tAnsicht('privat')} className="button-icon-image" draggable="false" />
             ) : (
               privateBadgeIcon
             );
@@ -647,13 +663,13 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                 className="private-badge-button"
                 onClick={handlePublish}
                 disabled={publishLoading}
-                title="Menü veröffentlichen"
-                aria-label="Menü veröffentlichen"
+                title={t('menueVeroeffentlichen')}
+                aria-label={t('menueVeroeffentlichen')}
               >
                 {badgeIcon}
               </button>
             ) : (
-              <div className="private-badge-button" title="Privates Menü" aria-label="Privates Menü">
+              <div className="private-badge-button" title={t('privatesMenue')} aria-label={t('privatesMenue')}>
                 {badgeIcon}
               </div>
             );
@@ -661,11 +677,11 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
           <button
             className="shopping-list-trigger-button"
             onClick={handleShoppingListClick}
-            title="Einkaufsliste anzeigen"
-            aria-label="Einkaufsliste öffnen"
+            title={tAnsicht('einkaufslisteAnzeigen')}
+            aria-label={tAnsicht('einkaufslisteOeffnen')}
           >
             {isBase64Image(shoppingListIcon) ? (
-              <img src={shoppingListIcon} alt="Einkaufsliste" className="shopping-list-icon-img" />
+              <img src={shoppingListIcon} alt={tAnsicht('einkaufsliste')} className="shopping-list-icon-img" />
             ) : (
               shoppingListIcon
             )}
@@ -675,20 +691,20 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
               className="menu-share-button"
               onClick={handleToggleShare}
               loading={shareLoading}
-              title="Menü teilen"
+              title={t('menueTeilen')}
             >
-              {shareLoading ? 'Wird geteilt …' : '↑ Teilen'}
+              {shareLoading ? tAnsicht('teilenLaeuft') : tAnsicht('teilen')}
             </Button>
           )}
           {canEdit && menu.shareId && (
             <button
               className="share-copy-url-button"
               onClick={handleCopyShareUrl}
-              title="Share-Link kopieren"
+              title={tAnsicht('linkKopierenTitel')}
             >
               {shareUrlCopied ? '✓' : (
                 isBase64Image(copyLinkIcon) ? (
-                  <img src={copyLinkIcon} alt="Link kopieren" className="copy-link-icon-img" />
+                  <img src={copyLinkIcon} alt={tAnsicht('linkKopieren')} className="copy-link-icon-img" />
                 ) : (
                   copyLinkIcon
                 )
@@ -699,11 +715,11 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
             <button
               className="share-copy-url-button"
               onClick={handleCopyShareUrl}
-              title="Share-Link kopieren"
+              title={tAnsicht('linkKopierenTitel')}
             >
               {shareUrlCopied ? '✓' : (
                 isBase64Image(copyLinkIcon) ? (
-                  <img src={copyLinkIcon} alt="Link kopieren" className="copy-link-icon-img" />
+                  <img src={copyLinkIcon} alt={tAnsicht('linkKopieren')} className="copy-link-icon-img" />
                 ) : (
                   copyLinkIcon
                 )
@@ -715,9 +731,9 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
         <div className="menu-detail-body">
         <div className="menu-title-row">
           <h1 className="menu-title">{menu.name}</h1>
-          <button className="app-close-button" onClick={onBack} aria-label="Menüdetailansicht schließen" title="Menüdetailansicht schließen">
+          <button className="app-close-button" onClick={onBack} aria-label={t('schliessenAnsicht')} title={t('schliessenAnsicht')}>
             {isBase64Image(closeButtonIcon) ? (
-              <img src={closeButtonIcon} alt="Menüdetailansicht schließen" className="app-close-button-icon-img" />
+              <img src={closeButtonIcon} alt={t('schliessenAnsicht')} className="app-close-button-icon-img" />
             ) : (
               closeButtonIcon
             )}
@@ -726,8 +742,8 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
 
         {(formattedMenuDate || authorName) && (
           <div className="menu-author-date">
-            {authorName && <span className="menu-author"><span className="menu-author-label">Autor:</span> {authorName}</span>}
-            {formattedMenuDate && <span className="menu-date"><span className="menu-date-label">Datum:</span> {formattedMenuDate}</span>}
+            {authorName && <span className="menu-author"><span className="menu-author-label">{t('autor')}</span> {authorName}</span>}
+            {formattedMenuDate && <span className="menu-date"><span className="menu-date-label">{t('datum')}</span> {formattedMenuDate}</span>}
           </div>
         )}
 
@@ -782,23 +798,27 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
             return null;
           }
 
-          let emptyText = 'Keine Rezepte in diesem Abschnitt';
+          let emptyText = t('keineRezepte');
           if (isDrinksSection && menu.eventId && !linkedEventLoading && !linkedEvent) {
-            emptyText = 'Verknüpftes Event konnte nicht geladen werden.';
+            emptyText = t('eventFehlt');
           }
+          // Systemabschnitt „Drinks“ und Ersatzabschnitt in der geltenden Sprache, eigene Namen bleiben
+          let abschnittName = section.name;
+          if (isDrinksSection) abschnittName = t('drinks');
+          else if (section.name === ALLE_REZEPTE) abschnittName = t('alleRezepte');
 
           return (
             <section key={index} className="menu-section">
               <div className="section-title-row">
-                <h2 className="section-title">{section.name}</h2>
+                <h2 className="section-title">{abschnittName}</h2>
                 {isDrinksSection && menu.eventId && menu.eventOwnerId === currentUser?.id && onOpenEvent && (
                   <button
                     className="open-event-button"
                     onClick={() => onOpenEvent(menu.eventOwnerId, menu.eventId)}
-                    title="Verknüpftes Event öffnen"
+                    title={t('eventOeffnenTitel')}
                   >
                     {isBase64Image(openEventIcon) ? (
-                      <img src={openEventIcon} alt="Event öffnen" className="open-event-icon-img" />
+                      <img src={openEventIcon} alt={t('eventOeffnen')} className="open-event-icon-img" />
                     ) : (
                       openEventIcon
                     )}
@@ -807,7 +827,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
               </div>
               <WeinbegleitungGang wein={wein} sektionIndex={index} sektionName={section.name} />
               {isLoadingDrinks ? (
-                <p className="no-recipes">Getränke werden geladen …</p>
+                <p className="no-recipes">{t('getraenkeLaden')}</p>
               ) : hasCards ? (
                 <div className="recipes-grid">
                   {sectionCards.map((card) => {
@@ -848,8 +868,8 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                           {isExpanded && (
                             <p className="drink-card-amount">
                               {drink.literMitPuffer != null
-                                ? `${formatEventLiter(drink.literMitPuffer)} l`
-                                : 'Noch nicht berechnet'}
+                                ? t('liter', { menge: formatEventLiter(drink.literMitPuffer, sprache) })
+                                : t('nochNichtBerechnet')}
                             </p>
                           )}
                         </div>
@@ -875,11 +895,11 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
           onMouseDown={handleDeleteFabPressStart}
           onMouseUp={handleDeleteFabPressEnd}
           onMouseLeave={handleDeleteFabPressEnd}
-          title="Menü löschen"
-          aria-label="Menü löschen"
+          title={t('menueLoeschen')}
+          aria-label={t('menueLoeschen')}
         >
           {isBase64Image(deleteMenuIcon) ? (
-            <img src={deleteMenuIcon} alt="Löschen" className="button-icon-image" draggable="false" />
+            <img src={deleteMenuIcon} alt={tAllgemein('loeschen')} className="button-icon-image" draggable="false" />
           ) : (
             deleteMenuIcon || <TrashIcon />
           )}
@@ -887,8 +907,8 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
       )}
       {showDeleteConfirm && (
         <ConfirmDialog
-          title="Menü löschen"
-          message={`Möchten Sie "${menu.name}" wirklich löschen?`}
+          title={t('menueLoeschen')}
+          message={tAnsicht('loeschenFrage', { titel: menu.name })}
           onConfirm={handleDeleteConfirmed}
           onCancel={() => setShowDeleteConfirm(false)}
         />
@@ -913,15 +933,15 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
             className="portion-selector-modal"
             role="dialog"
             aria-modal="true"
-            aria-label="Portionen auswählen"
+            aria-label={tAnsicht('portionenAuswaehlen')}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="portion-selector-header">
-              <h2 className="portion-selector-title">Portionen für Einkaufsliste</h2>
+              <h2 className="portion-selector-title">{tAnsicht('portionenFuerEinkaufsliste')}</h2>
               <button
                 className="portion-selector-close"
                 onClick={closePortionSelector}
-                aria-label="Portionsauswahl schließen"
+                aria-label={tAnsicht('portionsauswahlSchliessen')}
               >
                 ×
               </button>
@@ -932,7 +952,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                 const portionMinusId = `main-${recipe.id}`;
                 return (
                   <div key={recipe.id} className="portion-selector-item">
-                    <span className="portion-selector-recipe-name">{recipe.title}</span>
+                    <span className="portion-selector-recipe-name">{zeigeTitel(recipe)}</span>
                     <div className="portion-selector-controls">
                       <button
                         className={`portion-selector-btn${portionMinusLongPressActiveId === portionMinusId ? ' longpress-active' : ''}`}
@@ -952,7 +972,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                         onTouchStart={() => handlePortionMinusPressStart(portionMinusId, () => setPortionCounts(prev => ({ ...prev, [recipe.id]: 0 })))}
                         onTouchEnd={handlePortionMinusPressEnd}
                         onTouchCancel={handlePortionMinusPressEnd}
-                        aria-label="Portionen verringern"
+                        aria-label={tAnsicht('portionenVerringern')}
                         disabled={current === 0}
                       >
                         −
@@ -964,7 +984,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                           ...prev,
                           [recipe.id]: current + 1
                         }))}
-                        aria-label="Portionen erhöhen"
+                        aria-label={tAnsicht('portionenErhoehen')}
                       >
                         +
                       </button>
@@ -974,13 +994,13 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
               })}
               {allLinkedRecipes.length > 0 && (
                 <>
-                  <div className="portion-selector-section-label">Verlinkte Rezepte</div>
+                  <div className="portion-selector-section-label">{tAnsicht('verlinkteRezepte')}</div>
                   {allLinkedRecipes.map(linkedRecipe => {
                     const current = linkedPortionCounts[linkedRecipe.id] ?? (linkedRecipe.portionen || 4);
                     const linkedPortionMinusId = `linked-${linkedRecipe.id}`;
                     return (
                       <div key={linkedRecipe.id} className="portion-selector-item">
-                        <span className="portion-selector-recipe-name">{linkedRecipe.title}</span>
+                        <span className="portion-selector-recipe-name">{zeigeTitel(linkedRecipe)}</span>
                         <div className="portion-selector-controls">
                           <button
                             className={`portion-selector-btn${portionMinusLongPressActiveId === linkedPortionMinusId ? ' longpress-active' : ''}`}
@@ -1000,7 +1020,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                             onTouchStart={() => handlePortionMinusPressStart(linkedPortionMinusId, () => setLinkedPortionCounts(prev => ({ ...prev, [linkedRecipe.id]: 0 })))}
                             onTouchEnd={handlePortionMinusPressEnd}
                             onTouchCancel={handlePortionMinusPressEnd}
-                            aria-label="Portionen verringern"
+                            aria-label={tAnsicht('portionenVerringern')}
                             disabled={current === 0}
                           >
                             −
@@ -1012,7 +1032,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                               ...prev,
                               [linkedRecipe.id]: current + 1
                             }))}
-                            aria-label="Portionen erhöhen"
+                            aria-label={tAnsicht('portionenErhoehen')}
                           >
                             +
                           </button>
@@ -1032,7 +1052,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                   setShowShoppingListModal(true);
                 }}
               >
-                Einkaufsliste erstellen
+                {tAnsicht('einkaufslisteErstellen')}
               </button>
             </div>
           </div>
@@ -1048,11 +1068,11 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
           onMouseDown={handleEditFabPressStart}
           onMouseUp={handleEditFabPressEnd}
           onMouseLeave={handleEditFabPressEnd}
-          title="Menü bearbeiten"
-          aria-label="Menü bearbeiten"
+          title={t('menueBearbeiten')}
+          aria-label={t('menueBearbeiten')}
         >
           {isBase64Image(editMenuIcon) ? (
-            <img src={editMenuIcon} alt="Bearbeiten" className="button-icon-image" draggable="false" />
+            <img src={editMenuIcon} alt={tAllgemein('bearbeiten')} className="button-icon-image" draggable="false" />
           ) : (
             editMenuIcon
           )}

@@ -5,7 +5,10 @@ import {
   GUEST_LANGUAGES,
   DEFAULT_GUEST_LANGUAGE,
   normalizeGuestLanguage,
+  formatMenuGuestsFliesstext,
 } from './guestPreferences';
+import { erstelleT } from '../i18n/texte';
+import festtafelTexte from '../i18n/texte/festtafel';
 
 describe('guestPreferences', () => {
   test('normalizePreferenceFactor keeps only allowed steps', () => {
@@ -204,5 +207,25 @@ describe('Sprache für Einladungen', () => {
     const { SPRACHEN, STANDARD_SPRACHE } = require('../../functions/shared/sprachen');
     expect(GUEST_LANGUAGES.map((language) => language.id)).toEqual(SPRACHEN);
     expect(DEFAULT_GUEST_LANGUAGE).toBe(STANDARD_SPRACHE);
+  });
+});
+
+describe('formatMenuGuestsFliesstext in anderer Sprache (Mehrsprachigkeit PR 6f)', () => {
+  const gaeste = [{ id: 'a', vorname: 'Anna' }, { id: 'b', vorname: 'Ben' }, { id: 'c', vorname: 'Clara' }];
+  const ids = ['a', 'b', 'c'];
+
+  it('Deutsch wie bisher, ohne Übersetzungsfunktion', () => {
+    expect(formatMenuGuestsFliesstext(ids, gaeste)).toBe('Gäste: Anna, Ben und Clara');
+    expect(formatMenuGuestsFliesstext(['a', 'b'], gaeste)).toBe('Gäste: Anna und Ben');
+    expect(formatMenuGuestsFliesstext(['a'], gaeste)).toBe('Gäste: Anna');
+  });
+
+  it('Englisch und Französisch mit „and“ bzw. „et“', () => {
+    const tEn = erstelleT(festtafelTexte, 'en');
+    const tFr = erstelleT(festtafelTexte, 'fr');
+    expect(formatMenuGuestsFliesstext(ids, gaeste, tEn)).toBe('Guests: Anna, Ben and Clara');
+    expect(formatMenuGuestsFliesstext(['a', 'b'], gaeste, tEn)).toBe('Guests: Anna and Ben');
+    expect(formatMenuGuestsFliesstext(ids, gaeste, tFr)).toBe('Invités\u00a0: Anna, Ben et Clara');
+    expect(formatMenuGuestsFliesstext(['a'], gaeste, tFr)).toBe('Invités\u00a0: Anna');
   });
 });

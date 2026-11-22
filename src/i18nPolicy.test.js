@@ -44,7 +44,7 @@ const NUR_DEUTSCH = new Set([
   'components/WeinprofilEinblick.js',
 ]);
 
-// Stand 22.11.2026 (PR 6e, Küche): 1274 Textstellen in 64 Dateien.
+// Stand 22.11.2026 (PR 6f, Festtafel Teil 1): 1189 Textstellen in 60 Dateien.
 const BASELINE = {
   'App.js': 5,
   'components/AtelierCategorySelectionPage.js': 5,
@@ -73,11 +73,7 @@ const BASELINE = {
   'components/Login.js': 18,
   'components/MeineKuechenstarsPage.js': 9,
   'components/MemberProfilePage.js': 6,
-  'components/MenuDetail.js': 51,
-  'components/MenuFilterSidebar.js': 11,
   'components/MenuForm.js': 78,
-  'components/MenuList.js': 20,
-  'components/MenuSharePage.js': 3,
   'components/NetworkPage.js': 17,
   'components/OcrScanModal.js': 38,
   'components/PasswordChangeModal.js': 8,

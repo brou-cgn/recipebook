@@ -1,4 +1,10 @@
 import { DRINK_CATEGORIES, getDrinkParentCategoryId } from './drinkCategories';
+import { erstelleT } from '../i18n/texte';
+import { STANDARD_SPRACHE } from '../i18n/sprachen';
+import festtafelTexte from '../i18n/texte/festtafel';
+
+// Texte über t aus festtafel.js (Mehrsprachigkeit PR 6f); ohne t deutsch
+const T_FESTTAFEL_DEUTSCH = erstelleT(festtafelTexte, STANDARD_SPRACHE);
 
 const ALCOHOLIC_CATEGORY_IDS = ['bier', 'wein', 'sekt', 'spirituosen'];
 const NON_ALCOHOLIC_SUBCATEGORY_IDS = ['bier_alkoholfrei'];
@@ -36,13 +42,15 @@ export const getGuestDisplayName = (guest) => {
 /**
  * Formats the guests selected for a menu as Fließtext, e.g.
  * "Gäste: Anna, Ben und Clara". Only first names are used, joined by commas
- * except between the last two, which get "und". Guest IDs that can't be
+ * except between the last two, which get "und" ("and", "et" from festtafel.js;
+ * Mehrsprachigkeit PR 6f, not Intl.ListFormat, which Safari 14.0 lacks). Guest IDs that can't be
  * resolved (guest not loaded yet, or missing vorname) are silently skipped.
  * @param {string[]} guestIds - descriptionGuestIds from a menu document
  * @param {Array} guests - resolved guest profile objects (with id, vorname)
+ * @param {Function} [t] - translation function for festtafel.js (useTexte), German by default
  * @returns {string} The formatted text, or '' if there are no resolvable guests
  */
-export const formatMenuGuestsFliesstext = (guestIds, guests) => {
+export const formatMenuGuestsFliesstext = (guestIds, guests, t = T_FESTTAFEL_DEUTSCH) => {
   if (!Array.isArray(guestIds) || guestIds.length === 0) return '';
   const guestList = Array.isArray(guests) ? guests : [];
   const firstNames = guestIds
@@ -51,8 +59,10 @@ export const formatMenuGuestsFliesstext = (guestIds, guests) => {
     .filter((name) => name.length > 0);
 
   if (firstNames.length === 0) return '';
-  if (firstNames.length === 1) return `Gäste: ${firstNames[0]}`;
-  return `Gäste: ${firstNames.slice(0, -1).join(', ')} und ${firstNames[firstNames.length - 1]}`;
+  const namen = firstNames.length === 1
+    ? firstNames[0]
+    : `${firstNames.slice(0, -1).join(', ')} ${t('und')} ${firstNames[firstNames.length - 1]}`;
+  return t('gaeste', { namen });
 };
 
 export const countGuestsByCategory = (guests) => {

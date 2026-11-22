@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import StarIcon from './icons/StarIcon';
 import './MenuFilterSidebar.css';
+import { useTexte } from '../contexts/SpracheContext';
+import festtafelTexte from '../i18n/texte/festtafel';
 
 const COLLAPSED_STORAGE_KEY = 'menuFilterSidebar_collapsed';
 
@@ -18,6 +20,7 @@ function getStoredCollapsed() {
  * but scoped to the single Favoriten quick filter menus offer.
  */
 function MenuFilterSidebar({ onAddMenu, showFavoritesOnly = false, onFavoritesToggle }) {
+  const t = useTexte(festtafelTexte);
   const [collapsed, setCollapsed] = useState(getStoredCollapsed);
 
   const toggleCollapsed = () => {
@@ -35,7 +38,7 @@ function MenuFilterSidebar({ onAddMenu, showFavoritesOnly = false, onFavoritesTo
   return (
     <nav
       className={`menu-filter-sidebar${collapsed ? ' menu-filter-sidebar--collapsed' : ''}`}
-      aria-label="Menüfilter"
+      aria-label={t('menuefilter')}
     >
       <div className="menu-filter-sidebar-header">
         {!collapsed && (
@@ -43,10 +46,10 @@ function MenuFilterSidebar({ onAddMenu, showFavoritesOnly = false, onFavoritesTo
             type="button"
             className="menu-filter-sidebar-add-button"
             onClick={onAddMenu}
-            title="Menü hinzufügen"
-            aria-label="Menü hinzufügen"
+            title={t('menueHinzufuegen')}
+            aria-label={t('menueHinzufuegen')}
           >
-            + Menü
+            {t('plusMenue')}
           </button>
         )}
         <button
@@ -54,8 +57,8 @@ function MenuFilterSidebar({ onAddMenu, showFavoritesOnly = false, onFavoritesTo
           className="menu-filter-sidebar-toggle"
           onClick={toggleCollapsed}
           aria-expanded={!collapsed}
-          aria-label={collapsed ? 'Filter einblenden' : 'Filter ausblenden'}
-          title={collapsed ? 'Filter einblenden' : 'Filter ausblenden'}
+          aria-label={collapsed ? t('filterEinblenden') : t('filterAusblenden')}
+          title={collapsed ? t('filterEinblenden') : t('filterAusblenden')}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             {collapsed ? <polyline points="9 6 15 12 9 18" /> : <polyline points="15 6 9 12 15 18" />}
@@ -70,9 +73,9 @@ function MenuFilterSidebar({ onAddMenu, showFavoritesOnly = false, onFavoritesTo
             className={`menu-filter-sidebar-pill menu-filter-sidebar-pill--quick${showFavoritesOnly ? ' active' : ''}`}
             onClick={() => onFavoritesToggle?.(!showFavoritesOnly)}
             aria-pressed={showFavoritesOnly}
-            title={showFavoritesOnly ? 'Alle Festtafeln anzeigen' : 'Nur Favoriten anzeigen'}
+            title={showFavoritesOnly ? t('alleAnzeigen') : t('nurFavoriten')}
           >
-            <StarIcon /> Favoriten
+            <StarIcon /> {t('favoriten')}
           </button>
         </div>
       )}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import MenuList from './MenuList';
+import { renderWithProviders } from '../test-utils';
 import * as menuFavorites from '../utils/menuFavorites';
 
 // Mock getUserMenuFavorites to avoid async Firestore calls
@@ -185,5 +186,17 @@ describe('MenuList - dynamic title', () => {
     const [allButton] = screen.getAllByTitle('Alle Festtafeln anzeigen');
     fireEvent.click(allButton);
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Festtafel');
+  });
+});
+
+describe('MenuList in anderer Sprache (Mehrsprachigkeit PR 6f)', () => {
+  test('Englisch: Überschrift aus den Bereichsnamen und leere Liste', async () => {
+    renderWithProviders(
+      <MenuList menus={[]} recipes={[]} onSelectMenu={() => {}} onAddMenu={() => {}} onToggleMenuFavorite={() => {}} currentUser={{ id: 'u1' }} allUsers={[]} />,
+      { sprache: 'en' }
+    );
+    expect(await screen.findByRole('heading', { name: 'Feast' })).toBeInTheDocument();
+    expect(screen.getByText('No menus yet!')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create menu' })).toBeInTheDocument();
   });
 });
