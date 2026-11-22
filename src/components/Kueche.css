@@ -64,9 +64,17 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.kueche-tile:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 14px var(--color-kachel-schatten);
+/* Anheben nur mit Maus: Auf dem Handy bliebe der Hover nach dem Tippen hängen. Beim Tippen
+   drückt sich die Kachel kurz ein, statt der grauen Tipp-Hervorhebung von iOS (siehe Knopf). */
+@media (hover: hover) {
+  .kueche-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px var(--color-kachel-schatten);
+  }
+}
+
+.kueche-tile:active {
+  transform: scale(0.98);
 }
 
 .kueche-tile--meinkochbuch { --kachel-farbe: var(--color-accent-text); }
@@ -110,6 +118,9 @@
   text-transform: inherit;
   text-align: left;
   cursor: pointer;
+  /* iOS legt beim Tippen sonst eine graue Fläche über den Titel, die in der installierten App
+     nach dem Wechsel auf die Unterseite stehen bleiben kann */
+  -webkit-tap-highlight-color: transparent;
 }
 
 .kueche-tile__knopf::after {
@@ -306,7 +317,8 @@
     transition: none;
   }
 
-  .kueche-tile:hover {
+  .kueche-tile:hover,
+  .kueche-tile:active {
     transform: none;
   }
 }
