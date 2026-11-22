@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import FuerDichEntdecktKachel from './FuerDichEntdecktKachel';
+import { renderWithProviders } from '../test-utils';
 
 const list = { id: 'fuerDichEntdeckt_u1', name: 'Für dich entdeckt', description: '' };
 
@@ -87,5 +88,26 @@ describe('FuerDichEntdecktKachel', () => {
     const recipes = [{ id: 'alt', title: 'Altes Thema', image: 'c.jpg' }];
     render(<FuerDichEntdecktKachel list={{ ...list, description: 'Pilze', carriedRecipeIds: ['alt'] }} recipes={recipes} />);
     expect(screen.getByRole('button', { name: 'Pilze, 1 Rezept – Swipestapel öffnen' })).toBeInTheDocument();
+  });
+});
+
+describe('FuerDichEntdecktKachel in anderer Sprache (Mehrsprachigkeit PR 6e)', () => {
+  const systemListe = { id: 'fuerDichEntdeckt_u1', name: 'Für dich entdeckt', systemKey: 'fuerDichEntdeckt', description: '', rotatedAt: { toDate: () => new Date(2026, 9, 11) } };
+
+  test('Englisch: Systemname, Ersatzthema, Anzahl und Monat in der Sprache', () => {
+    renderWithProviders(<FuerDichEntdecktKachel list={systemListe} recipes={[{ id: 'r1', title: 'Suppe' }]} onOpen={() => {}} />, { sprache: 'en' });
+    expect(screen.getByRole('heading', { name: 'Discovered for you' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Recipes on changing themes, 1 recipe – open swipe stack' })).toBeInTheDocument();
+    expect(screen.getByText('1 recipe · October 2026')).toBeInTheDocument();
+  });
+
+  test('eigene Listennamen und gepflegte Themen bleiben', () => {
+    renderWithProviders(
+      <FuerDichEntdecktKachel list={{ ...systemListe, systemKey: undefined, name: 'Meine Liste', description: 'Kürbis-Zeit' }} recipes={[{ id: 'r1' }, { id: 'r2' }]} />,
+      { sprache: 'fr' }
+    );
+    expect(screen.getByRole('heading', { name: 'Meine Liste' })).toBeInTheDocument();
+    expect(screen.getByText('Kürbis-Zeit')).toBeInTheDocument();
+    expect(screen.getByText('2 recettes · octobre 2026')).toBeInTheDocument();
   });
 });

@@ -8,6 +8,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 ## [Unreleased]
 
 ### Hinzugefügt
+- Startseite („Küche“) auf Englisch und Französisch (Vorschau mit der Berechtigung „Sprachwahl“): Kacheln und Karussells, Trend-Karten mit übersetztem Titel, „Für dich entdeckt“ mit Anzahl und Monat in der gewählten Sprache. Selbst gepflegte Leertexte und Themen bleiben, wie sie sind.
 - Kochbuch auf Englisch und Französisch (Vorschau mit der Berechtigung „Sprachwahl“): Liste und Rezeptkarten, Sortierung, Filter-Seitenleiste und die Suche auf dem Handy, dazu die Kategorien der Tutorials. Der Hinweis bei leeren Favoriten duzt jetzt; „1 weitere Kategorie“ steht in der Einzahl.
 - „Wein dazu“ auf Englisch und Französisch (Vorschau mit der Berechtigung „Sprachwahl“): Weinstil, Rebsorten-Beispiele, Kennwerte, Bewertung und die Gründe unter „Warum passt das?“ erscheinen in der gewählten Sprache. Rebsorten und Weinnamen bleiben, wie sie sind; übersetzt werden Zusätze wie „aus dem Elsass“ oder „trocken“.
 - Nährwerte auf Englisch und Französisch (Vorschau mit der Berechtigung „Sprachwahl“): der Nährwert-Dialog mit Zusammensetzung und Berechnung, der Abgleich der Zutaten (ingredientID) und die Zutatensuche; Zahlen erscheinen im Format der Sprache. Meldungen der Berechnung bleiben im Rezept deutsch gespeichert und werden beim Anzeigen übersetzt. Die Hinweise beim Abgleich und die Fehlermeldungen der Berechnung duzen jetzt.

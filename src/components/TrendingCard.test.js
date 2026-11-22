@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import TrendingCard from './TrendingCard';
+import { renderWithProviders } from '../test-utils';
 
 const mockRecipe = {
   id: 'r1',
@@ -144,5 +145,29 @@ describe('TrendingCard', () => {
   test('image container has trending-card-image CSS class for round corners', () => {
     const { container } = render(<TrendingCard recipe={mockRecipe} />);
     expect(container.querySelector('.trending-card-image')).toBeInTheDocument();
+  });
+});
+
+describe('TrendingCard in anderer Sprache (Mehrsprachigkeit PR 6e)', () => {
+  const rezept = {
+    id: 't1',
+    title: 'Linsensuppe',
+    schwierigkeit: 3,
+    kochdauer: 30,
+    titelUebersetzung: { quelle: 'Linsensuppe', originalSprache: 'de', de: 'Linsensuppe', en: 'Lentil soup', fr: 'Soupe aux lentilles' },
+  };
+
+  test('Französisch: Titel übersetzt, Schwierigkeit und Zeit in der Sprache', () => {
+    renderWithProviders(<TrendingCard recipe={rezept} />, { sprache: 'fr', inhalteUebersetzen: true });
+    expect(screen.getByRole('heading', { name: 'Soupe aux lentilles' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Difficulté 3 sur 5')).toBeInTheDocument();
+    expect(screen.getByText('30 min')).toBeInTheDocument();
+  });
+
+  test('Deutsch wie bisher', () => {
+    renderWithProviders(<TrendingCard recipe={rezept} />);
+    expect(screen.getByRole('heading', { name: 'Linsensuppe' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Schwierigkeit 3 von 5')).toBeInTheDocument();
+    expect(screen.getByText('30 Min.')).toBeInTheDocument();
   });
 });
