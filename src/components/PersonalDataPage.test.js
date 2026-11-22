@@ -605,7 +605,7 @@ describe('PersonalDataPage - PWA-Mitteilungen', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
     expect(screen.getByRole('heading', { name: 'PWA-Mitteilungen' })).toBeInTheDocument();
-    expect(screen.getByText(/Erhalten Sie Benachrichtigungen/i)).toBeInTheDocument();
+    expect(screen.getByText(/Erhalte Benachrichtigungen/i)).toBeInTheDocument();
   });
 
   test('shows "Aktivieren" status and chevron when permission is default', () => {
@@ -648,7 +648,7 @@ describe('PersonalDataPage - PWA-Mitteilungen', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
     expect(screen.getByText('Nicht verfügbar')).toBeInTheDocument();
-    expect(screen.getByText(/Ihr Browser oder Gerät unterstützt keine PWA-Mitteilungen/i)).toBeInTheDocument();
+    expect(screen.getByText(/Dein Browser oder Gerät unterstützt keine PWA-Mitteilungen/i)).toBeInTheDocument();
   });
 
   test('calls requestNotificationPermission when "Aktivieren" button is clicked', async () => {
@@ -713,7 +713,7 @@ describe('PersonalDataPage - PWA-Mitteilungen', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
     expect(screen.queryByText(/Mitteilungen wurden abgelehnt/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Ihr Browser oder Gerät unterstützt keine PWA-Mitteilungen/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Dein Browser oder Gerät unterstützt keine PWA-Mitteilungen/i)).not.toBeInTheDocument();
   });
 
   test('does not show warning hint when permission is granted', () => {
@@ -721,7 +721,7 @@ describe('PersonalDataPage - PWA-Mitteilungen', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
     expect(screen.queryByText(/Mitteilungen wurden abgelehnt/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Ihr Browser oder Gerät unterstützt keine PWA-Mitteilungen/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Dein Browser oder Gerät unterstützt keine PWA-Mitteilungen/i)).not.toBeInTheDocument();
   });
 
   test('shows the iOS install hint on iPhone/iPad user agents', () => {

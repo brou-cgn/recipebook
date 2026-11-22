@@ -101,7 +101,8 @@ import { FollowProvider } from './contexts/FollowContext';
 import { CookingSessionProvider } from './contexts/CookingSessionContext';
 import MemberProfilePage from './components/MemberProfilePage';
 import { RecipeImportQueueProvider, useRecipeImportQueue } from './contexts/RecipeImportQueueContext';
-import { useSpracheFuerNutzer } from './contexts/SpracheContext';
+import { useSpracheFuerNutzer, useTexte } from './contexts/SpracheContext';
+import bereicheTexte from './i18n/texte/bereiche';
 import { updateAppBadge } from './utils/appBadge';
 import { resolveRecipeGroupContext, resolveImportGroupContext } from './utils/recipeGroupContext';
 import { openRecipeWithTransition } from './utils/recipeViewTransition';
@@ -151,12 +152,13 @@ const PENDING_REVIEW_IMPORT_STORAGE_KEY = 'pendingReviewImportFlag';
 // review queue before falling back to the first pending one.
 const REVIEW_IMPORT_WAIT_MS = 30000;
 const ATELIER_ONBOARDING_KEY = 'atelierOnboardingSeen';
+// Namen der Tabs: textKey in src/i18n/texte/bereiche.js (Mehrsprachigkeit)
 const BOTTOM_NAV_TABS = [
-  { key: 'home', label: 'Küche', view: 'startseite' },
-  { key: 'recipes', label: 'Kochbuch', view: 'recipes' },
-  { key: 'menus', label: 'Festtafel', view: 'menus' },
-  { key: 'atelier', label: 'Atelier', view: 'tagesmenu' },
-  { key: 'chef', label: 'Chefkoch', view: 'kueche' },
+  { key: 'home', textKey: 'kueche', view: 'startseite' },
+  { key: 'recipes', textKey: 'kochbuch', view: 'recipes' },
+  { key: 'menus', textKey: 'festtafel', view: 'menus' },
+  { key: 'atelier', textKey: 'atelier', view: 'tagesmenu' },
+  { key: 'chef', textKey: 'chefkoch', view: 'kueche' },
 ];
 
 // IndexedDB helpers to read/clear shared data written by the service worker
@@ -482,6 +484,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null);
   // Sprache aus den persönlichen Einstellungen (Vorhaben docs/vorhaben/mehrsprachigkeit.md)
   useSpracheFuerNutzer(currentUser);
+  const tBereiche = useTexte(bereicheTexte);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
   const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
@@ -711,8 +714,10 @@ function App() {
     && !selectedMenu
     && !isKuechePersonalDataOpen;
   const bottomNavTabs = useMemo(
-    () => BOTTOM_NAV_TABS.filter((tab) => tab.view !== 'startseite' || currentUser?.startseite),
-    [currentUser?.startseite]
+    () => BOTTOM_NAV_TABS
+      .filter((tab) => tab.view !== 'startseite' || currentUser?.startseite)
+      .map((tab) => ({ ...tab, label: tBereiche(tab.textKey) })),
+    [currentUser?.startseite, tBereiche]
   );
   const followRequestCount = useFollowRequestCount(
     currentUser?.id,

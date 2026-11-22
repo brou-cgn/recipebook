@@ -28,8 +28,9 @@
  *  - Mengenabhängige Texte sind Objekte mit den Formen von Intl.PluralRules, mindestens
  *    `one` und `other`. Die Menge kommt als Wert `anzahl`; sie wählt die Form und wird nach
  *    der Sprache formatiert (1.234,5 / 1,234.5 / 1 234,5). Französisch zählt 0 und 1 als `one`.
- *  - Französisch duzt (wie die Wichtel-Seite) und setzt geschützte Leerzeichen (U+00A0)
- *    vor : ? ! ; und innerhalb von « ».
+ *  - Die App duzt immer: Deutsch ohne Höflichkeitsform (Sie, Ihr, Ihnen), Französisch mit
+ *    „tu“, Englisch neutral.
+ *  - Französisch setzt geschützte Leerzeichen (U+00A0) vor : ? ! ; und innerhalb von « ».
  * Andere Zahlen in Platzhaltern vorher mit formatiereZahl (format.js) formatieren.
  */
 import { STANDARD_SPRACHE, localeFuer } from './sprachen';

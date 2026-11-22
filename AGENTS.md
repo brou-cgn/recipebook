@@ -38,9 +38,11 @@ erzwungen — wo das gilt, steht die Datei dabei.
   `docs/vorhaben/mehrsprachigkeit.md`). Sichtbare Texte (Textknoten, `aria-label`, `title`,
   `placeholder`, `alt`, `label`) stehen in einem Wörterbuch `src/i18n/texte/<bereich>.js` mit
   Deutsch, Englisch und Französisch und kommen über `useTexte` (Anleitung im Kopf von
-  `src/i18n/texte.js`). Französisch duzt wie Deutsch. Datum und Zahl über `src/i18n/format.js`.
+  `src/i18n/texte.js`). Die App duzt immer: Deutsch „du“ (siezender Altbestand wird beim Umstellen
+  angeglichen), Französisch „tu“, Englisch neutral. Datum und Zahl über `src/i18n/format.js`.
   Erzwungen durch `src/i18nPolicy.test.js` (Baseline je Datei, darf nur sinken; neue Dateien
-  starten bei 0) und `src/i18n/texte.test.js` (alle Sprachen mit denselben Schlüsseln). Der
+  starten bei 0) und `src/i18n/texte.test.js` (alle Sprachen mit denselben Schlüsseln, Deutsch ohne
+  Höflichkeitsform). Der
   Admin-Bereich bleibt deutsch: Seine Dateien stehen in `NUR_DEUTSCH`, neue nur mit Begründung.
 - **Button-Icons haben ein Symbol als Standard, keinen Text.** Neue Schlüssel in
   `DEFAULT_BUTTON_ICONS` bekommen ein Symbol aus `src/utils/defaultButtonIcons.js` (`DEFAULT_ICON_NAMES`,

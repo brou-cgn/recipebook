@@ -1,24 +1,42 @@
 /**
- * Namen der Bereiche der App (Header-Menü, Seitentitel, untere Navigation).
+ * Namen der Bereiche der App (Header-Menü, untere Navigation, Seitentitel).
  *
- * Ob sie übersetzt werden oder als Namen der App bleiben, entscheidet der Eigentümer vor
- * PR 6 (docs/vorhaben/mehrsprachigkeit.md, „Offen“). Bis dahin stehen sie in allen Sprachen
- * wie im Deutschen, damit Menü, Seiten und Navigation gleich heißen. Die Entscheidung wird
- * dann nur hier umgesetzt.
+ * 22.11.2026, Eigentümer: Bereichsnamen werden übersetzt (docs/vorhaben/mehrsprachigkeit.md,
+ * „Entschieden“). Wer einen Namen ändern will, ändert ihn nur hier. `atelier` ist die kurze
+ * Form für die untere Navigation, `kochatelier` die lange für das Menü.
  */
-const NAMEN = {
-  kueche: 'Küche',
-  kochbuch: 'Kochbuch',
-  festtafel: 'Festtafel',
-  events: 'Events',
-  kochatelier: 'Kochatelier',
-  chefkoch: 'Chefkoch',
-  chefkochUndMehr: 'Chefkoch & mehr',
-  kochschule: 'Kochschule',
-};
-
 export default {
-  de: { ...NAMEN },
-  en: { ...NAMEN },
-  fr: { ...NAMEN },
+  de: {
+    kueche: 'Küche',
+    kochbuch: 'Kochbuch',
+    festtafel: 'Festtafel',
+    events: 'Events',
+    kochatelier: 'Kochatelier',
+    atelier: 'Atelier',
+    chefkoch: 'Chefkoch',
+    chefkochUndMehr: 'Chefkoch & mehr',
+    kochschule: 'Kochschule',
+  },
+  en: {
+    kueche: 'Kitchen',
+    kochbuch: 'Cookbook',
+    festtafel: 'Feast',
+    events: 'Events',
+    kochatelier: 'Cooking studio',
+    atelier: 'Studio',
+    chefkoch: 'Chef',
+    chefkochUndMehr: 'Chef & more',
+    kochschule: 'Cooking school',
+  },
+  fr: {
+    kueche: 'Cuisine',
+    kochbuch: 'Recettes',
+    festtafel: 'Festin',
+    events: 'Événements',
+    kochatelier: 'Atelier cuisine',
+    atelier: 'Atelier',
+    chefkoch: 'Chef',
+    chefkochUndMehr: 'Chef & plus',
+    kochschule: 'École de cuisine',
+  },
 };
