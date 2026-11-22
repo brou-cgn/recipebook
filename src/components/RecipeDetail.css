@@ -1556,6 +1556,18 @@ p.recipe-translation-note {
   border-radius: 6px;
 }
 
+/* „Heute gekocht“ steht klein neben „Schritt x von y“: Der Haupt-Knopf nimmt hier nur seine eigene
+   Breite, nicht wie sonst auf dem Handy die ganze Zeile (Button.css), und die Schrittzahl bleibt einzeilig */
+.step-card .step-counter .ui-button {
+  width: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.step-card .step-counter {
+  white-space: nowrap;
+}
+
 .step-dots {
   display: flex;
   justify-content: center;
