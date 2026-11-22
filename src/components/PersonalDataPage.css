@@ -1,184 +1,18 @@
+/* Profilseite „Chefkoch“ (PersonalDataPage.js), Variante B des Designvorschlags
+   https://claude.ai/artifact/5S6yBvMf7j4JvfHLCzwQU2: Kopf mit Person, darunter gruppierte
+   Abschnitte auf dem Seitenhintergrund. Farben nur über Tokens (src/tokens.css); Textfarben auf
+   p, span und label mit mindestens zwei Klassen (Tech-Check A7, src/darkTextPolicy.test.js). */
+
 .personal-data-page {
-  background: #fff;
-  border-radius: 12px;
-  padding: 1.5rem;
   max-width: 600px;
   margin: 0 auto;
   position: relative;
 }
 
-.personal-data-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.personal-data-header h2 {
-  margin: 0;
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: var(--color-text-strong);
-}
-
-.personal-data-form {
+.personal-data-main {
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
-}
-
-.personal-data-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.personal-data-field label {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
-.personal-data-field input,
-.personal-data-field textarea,
-.personal-data-field select {
-  padding: 0.6rem 0.8rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-family: inherit;
-  resize: vertical;
-}
-
-.personal-data-field input:focus,
-.personal-data-field textarea:focus,
-.personal-data-field select:focus {
-  outline: none;
-  border-color: #1a1a1a;
-}
-
-.personal-data-message {
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  font-size: 0.9rem;
-}
-
-.personal-data-message.success {
-  background: #e8f5e9;
-  color: #2e7d32;
-}
-
-.personal-data-message.error {
-  background: #fdecea;
-  color: #c62828;
-}
-
-.personal-data-actions {
-  display: flex;
-  gap: 1rem;
-  /*margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 2px solid #f0f0f0;*/
-}
-
-.personal-data-section-divider {
-  border: none;
-  border-top: 2px solid #f0f0f0;
-  margin: 2rem 0;
-}
-
-.personal-data-password-section {
-  margin-top: 0;
-}
-
-.personal-data-section-title {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #1a1a1a;
-}
-
-.personal-data-password-hint {
-  margin: 0 0 1.2rem 0;
-  font-size: 0.85rem;
-  color: #666;
-}
-
-.personal-data-alarm-section {
-  margin-top: 0;
-}
-
-.personal-data-preferences-section {
-  margin-top: 0;
-}
-
-.preferences-group {
-  display: flex;
-  flex-direction: column;
-}
-
-.preferences-group-divider {
-  border: none;
-  border-top: 1px solid #e5e5ea;
-  margin: 0;
-}
-
-.settings-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 0.85rem 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1rem;
-  font-family: inherit;
-  color: #1a1a1a;
-  text-align: left;
-}
-
-.settings-row:hover {
-  background: none;
-}
-
-.settings-row--static {
-  cursor: default;
-}
-
-.settings-row-label {
-  font-size: 1rem;
-  color: #1a1a1a;
-}
-
-.settings-row-right {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  color: #888;
-}
-
-.settings-row-value {
-  font-size: 1rem;
-  color: #888;
-}
-
-.settings-row-chevron {
-  font-size: 1.3rem;
-  line-height: 1;
-  color: #c7c7cc;
-}
-
-/* Alarm Sound Picker sub-screen */
-.alarm-sound-picker-page {
-  position: absolute;
-  inset: 0;
-  background: var(--color-surface);
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  border-radius: 12px;
+  gap: 1.75rem;
 }
 
 .personal-data-main--hidden {
@@ -186,26 +20,410 @@
   pointer-events: none;
 }
 
-.alarm-sound-picker-header {
+/* ---- Kopf: Person auf Markenbraun ---- */
+.personal-data-kopf {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem 1.25rem;
+  border-radius: 16px;
+  background: var(--color-brand-surface);
+  color: var(--color-on-brand-surface);
+}
+
+.personal-data-kopf-zurueck {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-height: 44px;
+  padding: 0 0.25rem;
+  border: none;
+  background: transparent;
+  color: var(--color-on-brand-surface-muted);
+  font: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.personal-data-kopf-zurueck:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.personal-data-kopf-person {
   display: flex;
   align-items: center;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #e5e5ea;
+  gap: 0.9rem;
+  padding: 0 0.25rem;
+}
+
+.personal-data-kopf .personal-data-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.personal-data-kopf-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.personal-data-page .personal-data-kopf h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-on-brand-surface);
+}
+
+.personal-data-kopf .personal-data-kopf-name {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--color-on-brand-surface-muted);
+  overflow-wrap: anywhere;
+}
+
+/* ---- Abschnitte und Gruppen ---- */
+.personal-data-abschnitt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.personal-data-page .personal-data-section-title {
+  margin: 0;
+  padding: 0 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.personal-data-page .personal-data-password-hint {
+  margin: 0;
+  padding: 0 0.25rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+
+.personal-data-gruppe {
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--color-surface-card);
+}
+
+/* Trennlinie zwischen den Zeilen einer Gruppe (zwei Klassen: stärker als border: none der Zeile) */
+.personal-data-page .personal-data-gruppe > * + * {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+/* ---- Formulare: Beschriftung links, Feld rechts; zu schmal, rutscht das Feld darunter.
+   Lange Beschriftungen (Passwort, PIN) stehen über dem Feld (--block). Das Feld hat eine
+   leichte Fläche, damit auch ein leeres Feld als Eingabe erkennbar ist. ---- */
+.personal-data-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.personal-data-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0.75rem;
+  row-gap: 0.2rem;
+  min-height: 48px;
+  padding: 0.35rem 1rem;
+  box-sizing: border-box;
+}
+
+.personal-data-page .personal-data-field label {
+  flex: 0 0 8.5rem;
+  font-size: 1rem;
+  color: var(--color-text-body);
+}
+
+.personal-data-page .personal-data-field input,
+.personal-data-page .personal-data-field textarea {
+  flex: 1 1 10rem;
+  min-width: 0;
+  padding: 0 0.6rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-surface-input);
+  color: var(--color-text-strong);
+  font-family: inherit;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.personal-data-page .personal-data-field input {
+  height: 2.5rem;
+}
+
+.personal-data-page .personal-data-field input::placeholder,
+.personal-data-page .personal-data-field textarea::placeholder {
+  color: var(--color-text-faint);
+}
+
+.personal-data-field--block {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  row-gap: 0.4rem;
+  padding: 0.75rem 1rem;
+}
+
+.personal-data-page .personal-data-field--block label {
+  flex: none;
+}
+
+.personal-data-page .personal-data-field--block input,
+.personal-data-page .personal-data-field--block textarea {
+  flex: none;
+  width: 100%;
+}
+
+.personal-data-page .personal-data-field--block textarea {
+  padding: 0.5rem 0.6rem;
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.personal-data-message {
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+.personal-data-message.success {
+  background: var(--color-ok-tint);
+  color: var(--color-ok-text);
+}
+
+.personal-data-message.error {
+  background: var(--color-bad-tint);
+  color: var(--color-bad-text);
+}
+
+.personal-data-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+/* ---- Einstellungszeilen ---- */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 48px;
+  padding: 0.5rem 1rem;
+  box-sizing: border-box;
+  border: none;
+  background: transparent;
+  color: var(--color-text-strong);
+  font: inherit;
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.settings-row:disabled,
+.settings-row--static,
+.settings-row--stapel {
+  cursor: default;
+}
+
+.settings-row:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+/* Zeile mit Auswahl darunter (Erscheinungsbild, Sprache) */
+.settings-row--stapel {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+}
+
+.personal-data-page .settings-row-label {
+  font-size: 1rem;
+  color: var(--color-text-strong);
+}
+
+.settings-row-right {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.personal-data-page .settings-row-value {
+  font-size: 0.95rem;
+  text-align: right;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.personal-data-page .settings-row-chevron {
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--color-text-faint);
+  transition: transform 0.2s ease;
+}
+
+.personal-data-page .settings-row-chevron--offen {
+  transform: rotate(90deg);
+}
+
+/* Aufgeklappte Auswahl (Alarmton) liegt eingerückt unter ihrer Zeile */
+.personal-data-gruppe .auswahl-gruppe--liste {
+  padding-left: 1rem;
+  background: var(--color-surface-subtle);
+}
+
+/* Schalter (Hintergrundaktualisierung); Zustand über aria-checked der Zeile */
+.personal-data-schalter {
+  position: relative;
+  width: 51px;
+  height: 31px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--color-switch-off);
+  transition: background 0.2s ease;
+}
+
+.personal-data-schalter::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: var(--color-switch-knob);
+  box-shadow: 0 1px 3px var(--color-segment-shadow);
+  transition: transform 0.2s ease;
+}
+
+.settings-row[aria-checked="true"] .personal-data-schalter {
+  background: var(--color-switch-on);
+}
+
+.settings-row[aria-checked="true"] .personal-data-schalter::after {
+  transform: translateX(20px);
+}
+
+.settings-row:disabled .personal-data-schalter {
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .personal-data-page .settings-row-chevron,
+  .personal-data-schalter,
+  .personal-data-schalter::after {
+    transition: none;
+  }
+}
+
+/* ---- Hinweise ---- */
+.pwa-notification-hint {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.personal-data-page .pwa-notification-hint--info {
+  background: var(--color-info-tint);
+  color: var(--color-info-text);
+}
+
+.personal-data-page .pwa-notification-hint--warning {
+  background: var(--color-warning-tint);
+  color: var(--color-warning-text);
+}
+
+/* Diagnose: Protokoll der letzten Push-Tipps (src/utils/pushTapHandoff.js) */
+.personal-data-protokoll {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.75rem 1rem;
+}
+
+.push-tap-log {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+}
+
+.personal-data-page .push-tap-log li {
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.push-tap-log-time {
+  font-variant-numeric: tabular-nums;
+  margin-right: 0.4rem;
+}
+
+/* ---- Unterseite für die Standardlisten (Inspirationssammlung, Alltagsklassiker) ---- */
+.alarm-sound-picker-page {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  border-radius: 16px;
+  background: var(--color-bg);
+}
+
+.alarm-sound-picker-header {
   position: sticky;
   top: 0;
-  background: var(--color-surface);
   z-index: 1;
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 0 1rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-bg);
 }
 
 .alarm-sound-picker-back-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.05rem;
-  color: #007aff;
-  padding: 0;
+  min-height: 44px;
   margin-right: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-brand);
   font-family: inherit;
+  font-size: 1.05rem;
+  cursor: pointer;
 }
 
 .alarm-sound-picker-back-btn:hover {
@@ -219,17 +437,19 @@
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--color-text-strong);
 }
 
 .alarm-sound-picker-list {
+  margin: 1rem 0 0;
+  padding: 0 0 0 1rem;
   list-style: none;
-  margin: 1rem 1.5rem 0;
-  padding: 0;
+  border-radius: 16px;
+  background: var(--color-surface-card);
 }
 
 .alarm-sound-picker-list li {
-  border-bottom: 1px solid #e5e5ea;
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .alarm-sound-picker-list li:last-child {
@@ -239,96 +459,30 @@
 .alarm-sound-picker-item {
   display: flex;
   align-items: center;
-  width: 100%;
-  padding: 0.9rem 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1rem;
-  font-family: inherit;
-  color: #1a1a1a;
-  text-align: left;
   gap: 0.75rem;
-}
-
-.alarm-sound-picker-item:hover {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 1rem 0 0;
+  border: none;
   background: none;
+  color: var(--color-text-strong);
+  font-family: inherit;
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
 }
 
-.alarm-sound-picker-checkmark {
+.alarm-sound-picker-list .alarm-sound-picker-checkmark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 1.2rem;
+  flex-shrink: 0;
   font-size: 1.1rem;
-  color: #007aff;
   font-weight: 700;
-  flex-shrink: 0;
-}
-
-.alarm-sound-picker-icon {
-  font-size: 1.1rem;
-  flex-shrink: 0;
+  color: var(--color-brand);
 }
 
 .alarm-sound-picker-name {
   flex: 1;
-}
-
-.personal-data-appearance-section {
-  margin-top: 0;
-}
-
-.personal-data-settings-section {
-  margin-top: 0;
-}
-
-.personal-data-field--inline {
-  padding: 0.6rem 0;
-}
-
-.personal-data-field--inline label {
-  margin-bottom: 0.5rem;
-}
-
-.personal-data-notifications-section {
-  margin-top: 0;
-}
-
-.pwa-notification-hint {
-  margin: 0.6rem 0 0;
-  font-size: 0.82rem;
-  line-height: 1.45;
-  border-radius: 6px;
-  padding: 0.55rem 0.75rem;
-}
-
-.pwa-notification-hint--info {
-  background: #e8f0fe;
-  color: #1a56db;
-}
-
-.pwa-notification-hint--warning {
-  background: #fff3cd;
-  color: #856404;
-}
-
-/* Diagnose: Protokoll der letzten Push-Tipps (src/utils/pushTapHandoff.js) */
-.push-tap-log {
-  margin: 0.4rem 0 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: 0.8rem;
-  color: #666;
-}
-
-.push-tap-log li {
-  padding: 0.25rem 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  overflow-wrap: anywhere;
-}
-
-.push-tap-log-time {
-  font-variant-numeric: tabular-nums;
-  margin-right: 0.4rem;
 }

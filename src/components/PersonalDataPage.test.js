@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import PersonalDataPage from './PersonalDataPage';
 import { updateUserProfile, changePassword, saveFcmToken, setUserSprache } from '../utils/userManagement';
 import { renderWithProviders } from '../test-utils';
@@ -9,6 +9,7 @@ jest.mock('../utils/userManagement', () => ({
   changePassword: jest.fn(),
   saveFcmToken: jest.fn(),
   setUserSprache: jest.fn(),
+  setBackgroundUpdatesEnabled: jest.fn(),
 }));
 
 jest.mock('../utils/customLists', () => ({
@@ -64,6 +65,26 @@ describe('PersonalDataPage', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
     expect(screen.getByRole('heading', { name: 'Chefkoch' })).toBeInTheDocument();
+  });
+
+  test('zeigt im Kopf Initialen und Namen, „Zurück“ ruft onBack', () => {
+    const onBack = jest.fn();
+    const { container } = render(<PersonalDataPage currentUser={mockUser} onBack={onBack} />);
+
+    expect(container.querySelector('.personal-data-avatar')).toHaveTextContent('JD');
+    expect(screen.getByText('John Doe')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(onBack).toHaveBeenCalled();
+  });
+
+  test('Speichern des Formulars meldet ohne Zusatz – „Chefkoch & mehr“ schließt dann die Seite', async () => {
+    const onProfileUpdated = jest.fn();
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} onProfileUpdated={onProfileUpdated} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    await waitFor(() => expect(onProfileUpdated).toHaveBeenCalledTimes(1));
+    expect(onProfileUpdated.mock.calls[0]).toHaveLength(1);
   });
 
   test('renders personal data form with pre-filled user data', () => {
@@ -367,7 +388,8 @@ describe('PersonalDataPage - Standard-Liste für Webimport', () => {
 
     await waitFor(() => {
       expect(onProfileUpdated).toHaveBeenCalledWith(
-        expect.objectContaining({ defaultWebImportListId: 'list-2' })
+        expect.objectContaining({ defaultWebImportListId: 'list-2' }),
+        { schliessen: false }
       );
     });
   });
@@ -399,7 +421,7 @@ describe('PersonalDataPage - Standard-Liste für Webimport', () => {
   });
 });
 
-describe('PersonalDataPage - Erscheinungsbild', () => {
+describe('PersonalDataPage - Erscheinungsbild (Auswahl direkt in der Zeile)', () => {
   const mockUser = {
     id: 'user-1',
     vorname: 'John',
@@ -414,98 +436,49 @@ describe('PersonalDataPage - Erscheinungsbild', () => {
     getDarkModeMode.mockReturnValue('auto');
   });
 
-  test('renders Erscheinungsbild row with current selection', () => {
+  const gruppe = () => screen.getByRole('radiogroup', { name: 'Erscheinungsbild' });
+
+  test('zeigt die drei Möglichkeiten ohne Unterseite, die gespeicherte ist gewählt', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
-    expect(screen.getByText('Erscheinungsbild')).toBeInTheDocument();
-    expect(screen.getByText('Automatisch')).toBeInTheDocument();
+    const optionen = within(gruppe()).getAllByRole('radio');
+    expect(optionen.map((o) => o.textContent)).toEqual(['Hell', 'Dunkel', 'Automatisch']);
+    expect(within(gruppe()).getByRole('radio', { name: 'Automatisch' })).toHaveAttribute('aria-checked', 'true');
+    expect(within(gruppe()).getByRole('radio', { name: 'Hell' })).toHaveAttribute('aria-checked', 'false');
   });
 
-  test('opens appearance picker when Erscheinungsbild row is clicked', () => {
-    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Erscheinungsbild/i }));
-
-    expect(screen.getByRole('heading', { name: 'Erscheinungsbild' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: /Hell/i })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: /Dunkel/i })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: /Automatisch/i })).toBeInTheDocument();
-  });
-
-  test('auto option shows checkmark in picker when darkMode is auto', () => {
-    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Erscheinungsbild/i }));
-
-    const autoOption = screen.getByRole('option', { name: /Automatisch/i });
-    expect(autoOption).toHaveAttribute('aria-selected', 'true');
-    const lightOption = screen.getByRole('option', { name: /Hell/i });
-    expect(lightOption).toHaveAttribute('aria-selected', 'false');
-  });
-
-  test('clicking Hell option saves light mode', () => {
+  test.each([
+    ['Hell', 'light'],
+    ['Dunkel', 'dark'],
+  ])('Tipp auf %s speichert und wendet den Modus %s sofort an', (name, modus) => {
     const { saveDarkModePreference, applyDarkModePreference } = jest.requireMock('../utils/customLists');
-
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Erscheinungsbild/i }));
-    fireEvent.click(screen.getByRole('option', { name: /Hell/i }));
+    fireEvent.click(within(gruppe()).getByRole('radio', { name }));
 
-    expect(saveDarkModePreference).toHaveBeenCalledWith('light');
-    expect(applyDarkModePreference).toHaveBeenCalledWith('light');
+    expect(saveDarkModePreference).toHaveBeenCalledWith(modus);
+    expect(applyDarkModePreference).toHaveBeenCalledWith(modus);
+    expect(within(gruppe()).getByRole('radio', { name })).toHaveAttribute('aria-checked', 'true');
   });
 
-  test('clicking Dunkel option saves dark mode', () => {
-    const { saveDarkModePreference, applyDarkModePreference } = jest.requireMock('../utils/customLists');
-
+  test('Pfeiltasten wechseln die Auswahl wie bei Radioknöpfen, Tab erreicht nur die gewählte', () => {
+    const { saveDarkModePreference } = jest.requireMock('../utils/customLists');
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Erscheinungsbild/i }));
-    fireEvent.click(screen.getByRole('option', { name: /Dunkel/i }));
+    const auto = within(gruppe()).getByRole('radio', { name: 'Automatisch' });
+    expect(auto).toHaveAttribute('tabindex', '0');
+    expect(within(gruppe()).getByRole('radio', { name: 'Hell' })).toHaveAttribute('tabindex', '-1');
 
-    expect(saveDarkModePreference).toHaveBeenCalledWith('dark');
-    expect(applyDarkModePreference).toHaveBeenCalledWith('dark');
-  });
+    fireEvent.keyDown(auto, { key: 'ArrowRight' });
+    expect(saveDarkModePreference).toHaveBeenLastCalledWith('light');
+    expect(within(gruppe()).getByRole('radio', { name: 'Hell' })).toHaveFocus();
 
-  test('clicking Automatisch option saves auto mode', () => {
-    const { saveDarkModePreference, applyDarkModePreference, getDarkModeMode } = jest.requireMock('../utils/customLists');
-    getDarkModeMode.mockReturnValue('light');
-
-    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Erscheinungsbild/i }));
-    fireEvent.click(screen.getByRole('option', { name: /Automatisch/i }));
-
-    expect(saveDarkModePreference).toHaveBeenCalledWith('auto');
-    expect(applyDarkModePreference).toHaveBeenCalledWith('auto');
-  });
-
-  test('back button in picker returns to main page', () => {
-    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Erscheinungsbild/i }));
-    expect(screen.getByRole('heading', { name: 'Erscheinungsbild' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
-    expect(screen.queryByRole('heading', { name: 'Erscheinungsbild' })).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Chefkoch' })).toBeInTheDocument();
-  });
-
-  test('selecting an option updates the row value after closing picker', () => {
-    const { getDarkModeMode } = jest.requireMock('../utils/customLists');
-    getDarkModeMode.mockReturnValue('auto');
-
-    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Erscheinungsbild/i }));
-    fireEvent.click(screen.getByRole('option', { name: /Hell/i }));
-
-    fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
-    expect(screen.getByText('Hell')).toBeInTheDocument();
+    fireEvent.keyDown(within(gruppe()).getByRole('radio', { name: 'Hell' }), { key: 'ArrowLeft' });
+    expect(saveDarkModePreference).toHaveBeenLastCalledWith('auto');
   });
 });
 
-describe('PersonalDataPage - Alarmton', () => {
+describe('PersonalDataPage - Alarmton (klappt in der Zeile auf)', () => {
   const mockUser = {
     id: 'user-1',
     vorname: 'John',
@@ -520,59 +493,52 @@ describe('PersonalDataPage - Alarmton', () => {
     getAlarmSoundPreference.mockReturnValue('radar');
   });
 
-  test('renders Alarmton row with current selection and chevron', () => {
+  const zeile = () => screen.getByRole('button', { name: /Alarmton/ });
+
+  test('zeigt den gewählten Ton in der Zeile, zugeklappt', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
-    expect(screen.getByText('Alarmton')).toBeInTheDocument();
-    expect(screen.getByText('Radar')).toBeInTheDocument();
+    expect(zeile()).toHaveTextContent('Radar');
+    expect(zeile()).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('radiogroup', { name: 'Alarmton auswählen' })).not.toBeInTheDocument();
   });
 
-  test('opens alarm sound picker when Alarmton row is clicked', () => {
+  test('Tipp auf die Zeile klappt die Töne auf und wieder zu, ohne Unterseite', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Alarmton/i }));
+    fireEvent.click(zeile());
+    expect(zeile()).toHaveAttribute('aria-expanded', 'true');
+    const liste = screen.getByRole('radiogroup', { name: 'Alarmton auswählen' });
+    expect(within(liste).getByRole('radio', { name: 'Radar' })).toHaveAttribute('aria-checked', 'true');
+    expect(within(liste).getByRole('radio', { name: 'Chime' })).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('heading', { name: 'Chefkoch' })).toBeInTheDocument();
 
-    expect(screen.getByRole('heading', { name: 'Alarmton' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: /Chime/i })).toBeInTheDocument();
+    fireEvent.click(zeile());
+    expect(screen.queryByRole('radiogroup', { name: 'Alarmton auswählen' })).not.toBeInTheDocument();
   });
 
-  test('selected sound shows checkmark in picker', () => {
-    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Alarmton/i }));
-
-    const radarOption = screen.getByRole('option', { name: /Radar/i });
-    expect(radarOption).toHaveAttribute('aria-selected', 'true');
-    const chimeOption = screen.getByRole('option', { name: /Chime/i });
-    expect(chimeOption).toHaveAttribute('aria-selected', 'false');
-  });
-
-  test('clicking a sound in picker saves and previews it, and updates the row', () => {
+  test('Tipp auf einen Ton speichert ihn, spielt ihn an und zeigt ihn in der Zeile', () => {
     const { saveAlarmSoundPreference } = jest.requireMock('../utils/customLists');
     const { previewAlarmSound } = jest.requireMock('../utils/alarmAudioUtils');
-
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Alarmton/i }));
-    fireEvent.click(screen.getByRole('option', { name: /Chime/i }));
+    fireEvent.click(zeile());
+    fireEvent.click(screen.getByRole('radio', { name: 'Chime' }));
 
     expect(saveAlarmSoundPreference).toHaveBeenCalledWith('chime');
     expect(previewAlarmSound).toHaveBeenCalledWith('chime');
-
-    // Return to main page and verify row shows new selection
-    fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
-    expect(screen.getByText('Chime')).toBeInTheDocument();
+    expect(zeile()).toHaveTextContent('Chime');
+    expect(screen.getByRole('radio', { name: 'Chime' })).toHaveAttribute('aria-checked', 'true');
   });
 
-  test('back button in picker returns to main page', () => {
+  test('der schon gewählte Ton spielt beim Antippen noch einmal an', () => {
+    const { previewAlarmSound } = jest.requireMock('../utils/alarmAudioUtils');
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Alarmton/i }));
-    expect(screen.getByRole('heading', { name: 'Alarmton' })).toBeInTheDocument();
+    fireEvent.click(zeile());
+    fireEvent.click(screen.getByRole('radio', { name: 'Radar' }));
 
-    fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
-    expect(screen.queryByRole('heading', { name: 'Alarmton' })).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Chefkoch' })).toBeInTheDocument();
+    expect(previewAlarmSound).toHaveBeenCalledWith('radar');
   });
 });
 
@@ -744,6 +710,22 @@ describe('PersonalDataPage - PWA-Mitteilungen', () => {
     expect(screen.queryByText(/iOS 16\.4\+/i)).not.toBeInTheDocument();
   });
 
+  test('Hintergrundaktualisierung ist ein Schalter und bleibt nach dem Umschalten auf der Seite', async () => {
+    global.Notification = { permission: 'granted' };
+    const { setBackgroundUpdatesEnabled } = require('../utils/userManagement');
+    setBackgroundUpdatesEnabled.mockResolvedValue(undefined);
+    const onProfileUpdated = jest.fn();
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} onProfileUpdated={onProfileUpdated} />);
+
+    const schalter = screen.getByRole('switch', { name: 'Hintergrundaktualisierung' });
+    expect(schalter).toHaveAttribute('aria-checked', 'false');
+    fireEvent.click(schalter);
+
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Hintergrundaktualisierung' })).toHaveAttribute('aria-checked', 'true'));
+    expect(setBackgroundUpdatesEnabled).toHaveBeenCalledWith('user-1', true);
+    expect(onProfileUpdated).toHaveBeenCalledWith({ ...mockUser, backgroundUpdatesEnabled: true }, { schliessen: false });
+  });
+
   test('Protokoll Push-Tipps zeigt, welche Fassung des Mitteilungs-Workers läuft', async () => {
     mockGetMessagingServiceWorkerVersion.mockResolvedValue(null);
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
@@ -764,50 +746,52 @@ describe('PersonalDataPage – Sprache (Vorhaben Mehrsprachigkeit)', () => {
     signatureSatz: '',
     sprachwahl: true,
   };
-  const zeileDeutsch = { name: 'Sprache: Deutsch. Zum Ändern klicken.' };
+  const gruppe = () => screen.getByRole('radiogroup', { name: 'Sprache' });
 
   beforeEach(() => {
     jest.clearAllMocks();
     setUserSprache.mockResolvedValue(undefined);
   });
 
-  it('zeigt die Zeile „Sprache“ nur mit der Berechtigung sprachwahl', () => {
+  it('zeigt die Sprachwahl nur mit der Berechtigung sprachwahl', () => {
     const { unmount } = render(<PersonalDataPage currentUser={{ ...nutzer, sprachwahl: false }} onBack={() => {}} />);
-    expect(screen.queryByRole('button', { name: /^Sprache:/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: 'Sprache' })).not.toBeInTheDocument();
     unmount();
     render(<PersonalDataPage currentUser={nutzer} onBack={() => {}} />);
-    expect(screen.getByRole('button', zeileDeutsch)).toBeInTheDocument();
+    expect(gruppe()).toBeInTheDocument();
   });
 
   it('zeigt die gespeicherte Sprache und bietet alle drei in ihrer eigenen Sprache an', () => {
     render(<PersonalDataPage currentUser={{ ...nutzer, sprache: 'fr' }} onBack={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Sprache: Français. Zum Ändern klicken.' }));
-    const liste = screen.getByRole('list', { name: 'Sprache auswählen' });
-    expect(liste).toBeInTheDocument();
-    expect(screen.getAllByRole('option').map((option) => option.getAttribute('lang'))).toEqual(['de', 'en', 'fr']);
-    expect(screen.getByRole('option', { name: 'English' })).toHaveAttribute('aria-selected', 'false');
-    expect(screen.getByRole('option', { name: 'Français' })).toHaveAttribute('aria-selected', 'true');
+    const optionen = within(gruppe()).getAllByRole('radio');
+    expect(optionen.map((option) => option.getAttribute('lang'))).toEqual(['de', 'en', 'fr']);
+    expect(within(gruppe()).getByRole('radio', { name: 'English' })).toHaveAttribute('aria-checked', 'false');
+    expect(within(gruppe()).getByRole('radio', { name: 'Français' })).toHaveAttribute('aria-checked', 'true');
   });
 
-  it('speichert die gewählte Sprache im Profil und meldet sie weiter', async () => {
+  it('speichert die gewählte Sprache und meldet sie weiter, ohne die Seite zu schließen', async () => {
     const onProfileUpdated = jest.fn();
     render(<PersonalDataPage currentUser={nutzer} onBack={() => {}} onProfileUpdated={onProfileUpdated} />);
-    fireEvent.click(screen.getByRole('button', zeileDeutsch));
-    fireEvent.click(screen.getByRole('option', { name: 'English' }));
-    await waitFor(() => expect(onProfileUpdated).toHaveBeenCalledWith({ ...nutzer, sprache: 'en' }));
+    fireEvent.click(within(gruppe()).getByRole('radio', { name: 'English' }));
+    expect(within(gruppe()).getByRole('radio', { name: 'English' })).toHaveAttribute('aria-checked', 'true');
+    await waitFor(() => expect(onProfileUpdated).toHaveBeenCalledWith({ ...nutzer, sprache: 'en' }, { schliessen: false }));
     expect(setUserSprache).toHaveBeenCalledWith('user-1', 'en');
-    expect(screen.queryByRole('list', { name: 'Sprache auswählen' })).not.toBeInTheDocument();
   });
 
-  it('meldet einen Fehler beim Speichern und lässt die Auswahl offen', async () => {
+  it('speichert nichts, wenn die schon gewählte Sprache angetippt wird', () => {
+    render(<PersonalDataPage currentUser={nutzer} onBack={() => {}} />);
+    fireEvent.click(within(gruppe()).getByRole('radio', { name: 'Deutsch' }));
+    expect(setUserSprache).not.toHaveBeenCalled();
+  });
+
+  it('meldet einen Fehler beim Speichern und springt zur gespeicherten Sprache zurück', async () => {
     setUserSprache.mockRejectedValue(new Error('offline'));
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const onProfileUpdated = jest.fn();
     render(<PersonalDataPage currentUser={nutzer} onBack={() => {}} onProfileUpdated={onProfileUpdated} />);
-    fireEvent.click(screen.getByRole('button', zeileDeutsch));
-    fireEvent.click(screen.getByRole('option', { name: 'Français' }));
-    expect(await screen.findByText('Änderung konnte nicht gespeichert werden.')).toBeInTheDocument();
-    expect(screen.getByRole('list', { name: 'Sprache auswählen' })).toBeInTheDocument();
+    fireEvent.click(within(gruppe()).getByRole('radio', { name: 'Français' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Änderung konnte nicht gespeichert werden.');
+    expect(within(gruppe()).getByRole('radio', { name: 'Deutsch' })).toHaveAttribute('aria-checked', 'true');
     expect(onProfileUpdated).not.toHaveBeenCalled();
     warn.mockRestore();
   });
@@ -815,13 +799,16 @@ describe('PersonalDataPage – Sprache (Vorhaben Mehrsprachigkeit)', () => {
   it('erscheint auf Englisch und Französisch, wenn die Sprache gilt', () => {
     const { unmount } = renderWithProviders(<PersonalDataPage currentUser={nutzer} onBack={() => {}} />, { sprache: 'en' });
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Personal details' })).toBeInTheDocument();
     expect(screen.getByLabelText('First name')).toHaveValue('John');
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Language: Deutsch. Click to change.' })).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'Language' })).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'Appearance' })).toBeInTheDocument();
     unmount();
 
     renderWithProviders(<PersonalDataPage currentUser={nutzer} onBack={() => {}} />, { sprache: 'fr' });
     expect(screen.getByRole('heading', { name: 'Paramètres' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Données personnelles' })).toBeInTheDocument();
     expect(screen.getByLabelText('Prénom')).toHaveValue('John');
     expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeInTheDocument();
   });

@@ -44,7 +44,7 @@ const NUR_DEUTSCH = new Set([
   'components/WeinprofilEinblick.js',
 ]);
 
-// Stand 22.11.2026 (PR 6c, Wein dazu): 1397 Textstellen in 74 Dateien.
+// Stand 22.11.2026 (PR 6d, Kochbuch mit Suche und Filtern): 1303 Textstellen in 68 Dateien.
 const BASELINE = {
   'App.js': 5,
   'components/AtelierCategorySelectionPage.js': 5,
@@ -79,23 +79,18 @@ const BASELINE = {
   'components/MenuForm.js': 78,
   'components/MenuList.js': 20,
   'components/MenuSharePage.js': 3,
-  'components/MobileSearchOverlay.js': 30,
   'components/NetworkPage.js': 17,
   'components/OcrScanModal.js': 38,
   'components/PasswordChangeModal.js': 8,
   'components/PrintFormatEditor.js': 1,
   'components/PrintPage.js': 2,
-  'components/RecipeCard.js': 6,
-  'components/RecipeFilterSidebar.js': 34,
   'components/RecipeForm.js': 112,
   'components/RecipeImportModal.js': 11,
-  'components/RecipeList.js': 21,
   'components/RecipeTimeline.js': 5,
   'components/RecipeTypeahead.js': 3,
   'components/RecipeVersionDescribe.js': 11,
   'components/Register.js': 12,
   'components/SharePage.js': 3,
-  'components/SortCarousel.js': 1,
   'components/SplashScreen.js': 2,
   'components/Startseite.js': 24,
   'components/StartseitenKarussell.js': 1,
@@ -103,7 +98,6 @@ const BASELINE = {
   'components/TagesmenuFilterOverlay.js': 10,
   'components/TemplateFormatEditor.js': 1,
   'components/TrendingCard.js': 2,
-  'components/TutorialCard.js': 2,
   'components/TutorialForm.js': 32,
   'components/TutorialVideoModal.js': 2,
   'components/UniversalImportModal.js': 17,

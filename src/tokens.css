@@ -85,6 +85,25 @@
   --color-button-danger-quiet-text: var(--color-bad-text);
   --color-button-ghost-text: var(--color-text-muted);
   --color-button-focus: var(--color-text-strong);
+  /* Profilseite (PersonalDataPage, Variante B): Kopf auf Markenbraun. --color-brand ist im
+     Dunkelmodus hell (Schriftfarbe), deshalb eigene Fläche. */
+  --color-brand-surface: #402c1c;
+  --color-on-brand-surface: #fff;
+  --color-on-brand-surface-muted: #d9cbbd;
+  /* Auswahl in der Zeile (AuswahlGruppe: Segmente) und Schalter */
+  --color-segment-track: #ececec;
+  --color-segment-selected: #fff;
+  --color-segment-shadow: rgba(0, 0, 0, 0.15);
+  --color-switch-on: #2e7d32;
+  --color-switch-off: #bdbdbd;
+  --color-switch-knob: #fff;
+  /* Meldungen und Hinweise (vorher feste Farben in PersonalDataPage.css) */
+  --color-ok-tint: #e8f5e9;
+  --color-ok-text: #2e7d32;
+  --color-info-tint: #e8f0fe;
+  --color-info-text: #1a56db;
+  --color-warning-tint: #fff3cd;
+  --color-warning-text: #856404;
   /* Maße der Knöpfe (Tech-Check A10): Höhe auf dem Handy bis 768 px Breite */
   --radius-button: 8px;
   --height-button: 40px;
@@ -165,4 +184,19 @@
   --color-button-danger-quiet-text: var(--color-bad-text);
   --color-button-ghost-text: var(--color-text-muted);
   --color-button-focus: var(--color-text-strong);
+  --color-brand-surface: #2b2018;
+  --color-on-brand-surface: #f1e6df;
+  --color-on-brand-surface-muted: #c4b3a3;
+  --color-segment-track: #2a2a2a;
+  --color-segment-selected: #4a4a4a;
+  --color-segment-shadow: rgba(0, 0, 0, 0.4);
+  --color-switch-on: #4caf50;
+  --color-switch-off: #555;
+  --color-switch-knob: #e8e8e8;
+  --color-ok-tint: rgba(76, 175, 80, 0.16);
+  --color-ok-text: #81c784;
+  --color-info-tint: rgba(26, 86, 219, 0.2);
+  --color-info-text: #9ab8f5;
+  --color-warning-tint: rgba(255, 193, 7, 0.14);
+  --color-warning-text: #e6c35c;
 }
