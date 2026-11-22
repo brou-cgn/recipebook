@@ -4,14 +4,16 @@ import '@fontsource/reenie-beanie/latin-400.css';
 import './Header.css';
 import HandschriftText from './HandschriftText';
 import SprachWahl from './SprachWahl';
-import { getHeaderSlogan, getAppLogoImage } from '../utils/customLists';
+import { getHeaderSlogan, getSloganUebersetzungen, getAppLogoImage, getFaviconText, DEFAULT_SLOGAN } from '../utils/customLists';
+import { updatePageTitle } from '../utils/faviconUtils';
+import { sloganInSprache } from '../i18n/slogan';
 import { subscribeToFaqs } from '../utils/faqFirestore';
 import SearchIcon from './icons/SearchIcon';
 import ImportProgressIndicator from './ImportProgressIndicator';
 import ImportProgressDialog from './ImportProgressDialog';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 import { setWebImportPin } from '../utils/webImportPin';
-import { useTexte } from '../contexts/SpracheContext';
+import { useSprache, useTexte } from '../contexts/SpracheContext';
 import allgemeinTexte from '../i18n/texte/allgemein';
 import bereicheTexte from '../i18n/texte/bereiche';
 import kopfzeileTexte from '../i18n/texte/kopfzeile';
@@ -76,6 +78,8 @@ const Header = forwardRef(function Header({
   const darfSprachwahl = Boolean(currentUser?.sprachwahl);
   const [sprachwahlOffen, setSprachwahlOffen] = useState(false);
   const [headerSlogan, setHeaderSlogan] = useState('');
+  const [sloganUebersetzungen, setSloganUebersetzungen] = useState(null);
+  const [seitenName, setSeitenName] = useState(null);
   const [appLogoImage, setAppLogoImage] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -124,12 +128,29 @@ const Header = forwardRef(function Header({
     if (!currentUser) return;
     const loadHeaderData = async () => {
       const slogan = await getHeaderSlogan();
+      const uebersetzungen = await getSloganUebersetzungen();
       const logo = await getAppLogoImage();
+      const name = await getFaviconText();
       setHeaderSlogan(slogan);
+      setSloganUebersetzungen(uebersetzungen);
       setAppLogoImage(logo);
+      setSeitenName(name);
     };
     loadHeaderData();
   }, [currentUser]);
+
+  // Slogan in der geltenden Sprache (src/i18n/slogan.js): gepflegte Übersetzung, für den
+  // Standard-Slogan die eingebaute, sonst das deutsche Original. Der Seitentitel folgt mit.
+  const { sprache } = useSprache();
+  const slogan = sloganInSprache({
+    slogan: headerSlogan,
+    uebersetzungen: sloganUebersetzungen,
+    sprache,
+    standard: { slogan: DEFAULT_SLOGAN, uebersetzung: t('standardSlogan') },
+  });
+  useEffect(() => {
+    if (headerSlogan) updatePageTitle(seitenName, slogan);
+  }, [headerSlogan, seitenName, slogan]);
 
   // Subscribe to FAQs for live display in the menu
   useEffect(() => {
@@ -308,7 +329,7 @@ const Header = forwardRef(function Header({
       )}
       <div className="header-title-text">
         <h1>{APP_NAME}</h1>
-        <HandschriftText text={headerSlogan} className="tagline" />
+        <HandschriftText text={slogan} className="tagline" />
       </div>
     </>
   );

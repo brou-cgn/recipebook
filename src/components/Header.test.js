@@ -4,9 +4,15 @@ import Header from './Header';
 import { SpracheProvider } from '../contexts/SpracheContext';
 
 // Mock the custom lists utility
+// Slogan und Übersetzungen über Variablen statt jest.fn: resetMocks setzt vor jedem Test zurück.
+let mockSlogan = 'Test Slogan';
+let mockSloganUebersetzungen = null;
 jest.mock('../utils/customLists', () => ({
-  getHeaderSlogan: () => Promise.resolve('Test Slogan'),
+  DEFAULT_SLOGAN: 'Unsere besten Momente',
+  getHeaderSlogan: () => Promise.resolve(mockSlogan),
+  getSloganUebersetzungen: () => Promise.resolve(mockSloganUebersetzungen),
   getAppLogoImage: () => Promise.resolve(null),
+  getFaviconText: () => Promise.resolve('brouBook'),
 }));
 
 // Mock faqFirestore with a controllable subscribeToFaqs
@@ -601,5 +607,53 @@ describe('Header – Sprache dieser Sitzung (Vorhaben Mehrsprachigkeit)', () => 
     expect(header).not.toHaveClass('header--menu-open');
     fireEvent.click(screen.getByRole('button', { name: /Sprache wählen/ }));
     expect(header).toHaveClass('header--menu-open');
+  });
+});
+
+describe('Header – Slogan in der geltenden Sprache (Vorhaben Mehrsprachigkeit)', () => {
+  const mitSprachwahl = { ...mockCurrentUser, sprachwahl: true };
+  const zeige = ({ profilSprache = null } = {}) => render(
+    <SpracheProvider profilSprache={profilSprache} speicher={null}>
+      <Header currentView="recipes" currentUser={mitSprachwahl} onViewChange={() => {}} onLogout={() => {}} />
+    </SpracheProvider>
+  );
+  const sloganText = (container) => container.querySelector('.tagline .handschrift-text__vorlesen')?.textContent;
+
+  afterEach(() => {
+    mockSlogan = 'Test Slogan';
+    mockSloganUebersetzungen = null;
+  });
+
+  test('zeigt die gepflegte Übersetzung und setzt den Seitentitel mit', async () => {
+    mockSlogan = 'Kochen mit Freunden';
+    mockSloganUebersetzungen = { quelle: 'Kochen mit Freunden', en: 'Cooking with friends', fr: 'Cuisiner entre amis' };
+    const { container } = zeige({ profilSprache: 'en' });
+    await waitFor(() => expect(sloganText(container)).toBe('Cooking with friends'));
+    expect(document.title).toBe('brouBook - Cooking with friends');
+  });
+
+  test('auf Deutsch das Original', async () => {
+    mockSlogan = 'Kochen mit Freunden';
+    mockSloganUebersetzungen = { quelle: 'Kochen mit Freunden', en: 'Cooking with friends' };
+    const { container } = zeige();
+    await waitFor(() => expect(sloganText(container)).toBe('Kochen mit Freunden'));
+    expect(document.title).toBe('brouBook - Kochen mit Freunden');
+  });
+
+  test('eine veraltete Übersetzung zeigt das Original', async () => {
+    mockSlogan = 'Kochen mit der Familie';
+    mockSloganUebersetzungen = { quelle: 'Kochen mit Freunden', en: 'Cooking with friends' };
+    const { container } = zeige({ profilSprache: 'en' });
+    await waitFor(() => expect(sloganText(container)).toBe('Kochen mit der Familie'));
+  });
+
+  test('der Standard-Slogan erscheint ohne Pflege übersetzt und wechselt mit der Sprache', async () => {
+    mockSlogan = 'Unsere besten Momente';
+    const { container } = zeige();
+    await waitFor(() => expect(sloganText(container)).toBe('Unsere besten Momente'));
+    fireEvent.click(screen.getByRole('button', { name: /Sprache wählen/ }));
+    fireEvent.click(within(screen.getByRole('group', { name: 'Sprache' })).getByRole('button', { name: 'Français' }));
+    expect(sloganText(container)).toBe('Nos meilleurs moments');
+    expect(document.title).toBe('brouBook - Nos meilleurs moments');
   });
 });
