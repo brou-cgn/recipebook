@@ -609,3 +609,54 @@ test('estimateNutritionWithGemini handles partial null nutrient fields with conf
   assert.equal(result?.per100g.protein, 0);
   assert.equal(result?.per100g.zucker, 0);
 });
+
+test('generateSearchTermWithGemini meldet den Fehlergrund über onError', async () => {
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async () => {
+    throw new Error('429 RESOURCE_EXHAUSTED: quota exceeded');
+  });
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenAI: FakeGoogleGenAI,
+    env: {GEMINI_API_KEY: 'test-key'},
+  });
+  const reasons = [];
+  const originalError = console.error;
+  console.error = () => {};
+  try {
+    const result = await utils.generateSearchTermWithGemini('dummy-mehl', '', '', {
+      onError: (reason) => reasons.push(reason),
+    });
+    assert.equal(result, null);
+  } finally {
+    console.error = originalError;
+  }
+  assert.deepEqual(reasons, ['429 RESOURCE_EXHAUSTED: quota exceeded']);
+});
+
+test('generateSearchTermWithGemini meldet einen fehlenden API-Key über onError', async () => {
+  const utils = createNutritionNormalizationUtils({GoogleGenAI: createFakeGoogleGenAI(async () => '{}'), env: {}});
+  const reasons = [];
+  await utils.generateSearchTermWithGemini('dummy-mehl', '', '', {onError: (r) => reasons.push(r)});
+  assert.deepEqual(reasons, ['kein Gemini-API-Key konfiguriert']);
+});
+
+test('estimateNutritionWithGemini meldet API-Fehler über onError', async () => {
+  const FakeGoogleGenAI = createFakeGoogleGenAI(async () => {
+    throw new Error('API key not valid');
+  });
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenAI: FakeGoogleGenAI,
+    env: {GEMINI_API_KEY: 'test-key'},
+  });
+  const reasons = [];
+  const originalError = console.error;
+  console.error = () => {};
+  try {
+    const result = await utils.estimateNutritionWithGemini('Lebkuchengewürz', {amountG: 100, name: 'lebkuchengewuerz'}, {
+      onError: (reason) => reasons.push(reason),
+    });
+    assert.equal(result, null);
+  } finally {
+    console.error = originalError;
+  }
+  assert.deepEqual(reasons, ['API key not valid']);
+});

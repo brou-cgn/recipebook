@@ -266,6 +266,18 @@ function normalizeGeminiNutritionEstimate(data) {
  * @param {number} timeoutMs
  * @return {Promise<*>}
  */
+/**
+ * Kurzer, protokollierbarer Fehlergrund für einen fehlgeschlagenen Gemini-Aufruf.
+ * Gekürzt, damit lange SDK-Fehler (inkl. JSON-Details) die Meldung nicht sprengen.
+ *
+ * @param {unknown} error
+ * @return {string}
+ */
+function describeGeminiError(error) {
+  const message = String(error?.message || error || 'unbekannter Fehler').replace(/\s+/g, ' ').trim();
+  return message.length > 200 ? `${message.slice(0, 200)}…` : message;
+}
+
 async function withTimeout(promise, timeoutMs) {
   if (!timeoutMs || timeoutMs <= 0) {
     return promise;
@@ -369,8 +381,10 @@ function createNutritionNormalizationUtils({GoogleGenAI, env = process.env} = {}
       return null;
     }
 
+    const reportError = typeof options.onError === 'function' ? options.onError : () => {};
     const apiKey = options.apiKey ?? env.GEMINI_API_KEY;
     if (!apiKey || !GoogleGenAI) {
+      reportError('kein Gemini-API-Key konfiguriert');
       return null;
     }
 
@@ -394,12 +408,14 @@ function createNutritionNormalizationUtils({GoogleGenAI, env = process.env} = {}
         );
         const text = String(await result.response.text() || '').trim();
         if (!text || /^null$/i.test(text)) {
+          reportError('Gemini kennt die Zutat nicht (leere Antwort)');
           return null;
         }
         const jsonText = extractJsonObject(text);
         const parsedData = JSON.parse(jsonText);
         const per100g = normalizeGeminiNutritionEstimate(parsedData);
         if (!per100g) {
+          reportError('Gemini-Antwort enthält keine verwertbaren Nährwerte');
           return null;
         }
         return {
@@ -414,6 +430,9 @@ function createNutritionNormalizationUtils({GoogleGenAI, env = process.env} = {}
           await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
           continue;
         }
+        const reason = describeGeminiError(error);
+        console.error('estimateNutritionWithGemini fehlgeschlagen:', reason);
+        reportError(reason);
         return null;
       }
     }
@@ -432,8 +451,12 @@ function createNutritionNormalizationUtils({GoogleGenAI, env = process.env} = {}
    * @return {Promise<string|null>}
    */
   async function generateSearchTermWithGemini(ingredientID, nutritionFamily, category, options = {}) {
+    const reportError = typeof options.onError === 'function' ? options.onError : () => {};
     const apiKey = options.apiKey ?? env.GEMINI_API_KEY;
-    if (!apiKey || !GoogleGenAI) return null;
+    if (!apiKey || !GoogleGenAI) {
+      reportError('kein Gemini-API-Key konfiguriert');
+      return null;
+    }
 
     const model = options.model || (options.createModel ?
       options.createModel(apiKey) :
@@ -451,8 +474,15 @@ function createNutritionNormalizationUtils({GoogleGenAI, env = process.env} = {}
       const jsonText = extractJsonObject(text);
       const parsed = JSON.parse(jsonText);
       const searchTerm = normalizeName(parsed?.searchTerm);
-      return searchTerm || null;
+      if (!searchTerm) {
+        reportError('Gemini-Antwort ohne Suchbegriff');
+        return null;
+      }
+      return searchTerm;
     } catch (e) {
+      const reason = describeGeminiError(e);
+      console.error('generateSearchTermWithGemini fehlgeschlagen:', reason);
+      reportError(reason);
       return null;
     }
   }
@@ -467,6 +497,7 @@ function createNutritionNormalizationUtils({GoogleGenAI, env = process.env} = {}
 }
 
 module.exports = {
+  describeGeminiError,
   buildIngredientNormalizationPrompt,
   buildNutritionEstimationPrompt,
   buildReferenceSearchTermPrompt,

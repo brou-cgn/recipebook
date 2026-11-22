@@ -546,3 +546,62 @@ test('generateNutritionFromReference is registered with cors and invoker:public 
   );
   assert.equal(capturedOpts.invoker, 'public', 'invoker should be public');
 });
+
+test('404 nennt die Gründe, warum keine Quelle Nährwerte geliefert hat', async () => {
+  createUtilsStub = () => ({
+    generateSearchTermWithGemini: async (_id, _family, _category, options = {}) => {
+      options.onError?.('API key not valid');
+      return null;
+    },
+    estimateNutritionWithGemini: async (_id, _parsed, options = {}) => {
+      options.onError?.('API key not valid');
+      return null;
+    },
+  });
+  referenceData = {status: 'Neu', source: ''};
+  loadWrappedFunction();
+
+  const originalFetch = global.fetch;
+  const originalWarn = console.warn;
+  global.fetch = async () => ({ok: true, json: async () => ({products: []})});
+  console.warn = () => {};
+  try {
+    await assert.rejects(
+        wrappedFunction({auth: {uid: 'u1', token: {firebase: {sign_in_provider: 'password'}}}, data: {ingredientID: 'lebkuchengewuerz'}}),
+        (error) => {
+          assert.equal(error.code, 'not-found');
+          assert.match(error.message, /^Keine Nährwertdaten gefunden\./);
+          assert.match(error.message, /Gemini-Suchbegriff: API key not valid/);
+          assert.match(error.message, /OpenFoodFacts: kein Produkt mit Nährwerten für „lebkuchengewuerz“/);
+          assert.match(error.message, /Gemini-Schätzung: API key not valid/);
+          return true;
+        },
+    );
+  } finally {
+    global.fetch = originalFetch;
+    console.warn = originalWarn;
+  }
+});
+
+test('404 nennt einen HTTP-Fehler von OpenFoodFacts', async () => {
+  createUtilsStub = () => ({
+    generateSearchTermWithGemini: async () => 'gingerbread spice',
+    estimateNutritionWithGemini: async () => null,
+  });
+  referenceData = {status: 'Neu', source: ''};
+  loadWrappedFunction();
+
+  const originalFetch = global.fetch;
+  const originalWarn = console.warn;
+  global.fetch = async () => ({ok: false, status: 503});
+  console.warn = () => {};
+  try {
+    await assert.rejects(
+        wrappedFunction({auth: {uid: 'u1', token: {firebase: {sign_in_provider: 'password'}}}, data: {ingredientID: 'lebkuchengewuerz'}}),
+        /OpenFoodFacts: HTTP 503/,
+    );
+  } finally {
+    global.fetch = originalFetch;
+    console.warn = originalWarn;
+  }
+});
