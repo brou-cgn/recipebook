@@ -68,26 +68,22 @@
   height: 32px;
   box-sizing: border-box;
   padding: 0 6px 0 9px;
-  border: 1px solid var(--color-border);
+  border: 0;
   border-radius: 999px;
-  background: var(--color-surface);
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  background: transparent;
+  transition: background-color 0.2s ease;
 }
 
+/* Geöffnet: dezenter Hover-Overlay als Rückmeldung, ruhend bleibt die Pille transparent */
 .sprachwahl-chip[aria-expanded="true"] .sprachwahl-chip__flaeche {
-  background: var(--color-surface-raised);
+  background: var(--color-hover-overlay);
 }
 
 /* Hover nur bei Geräten mit echtem Hover: iOS lässt :hover nach einem Tap hängen */
 @media (hover: hover) {
   .sprachwahl-chip:hover .sprachwahl-chip__flaeche {
-    background: var(--color-surface-raised);
+    background: var(--color-hover-overlay);
   }
-}
-
-/* Solange eine andere Sprache als die Standardsprache gilt */
-.sprachwahl-chip--uebersteuert .sprachwahl-chip__flaeche {
-  border-color: var(--color-accent);
 }
 
 .sprachwahl-chip__flagge {
