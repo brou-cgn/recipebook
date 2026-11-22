@@ -45,9 +45,9 @@ dann beide `index.html` nebeneinander ansehen.
    `firebase.json`, Projekt `demo-recipebook`) und beendet sie am Ende wieder.
 2. `seed.js` leert die Emulatoren und legt die Testdaten an: Admin-Konto `testkoch@example.com`
    (Passwort `screenshots-only`, gilt nur im Emulator), sechs Rezepte mit Platzhalterbildern, die
-   öffentliche und zwei private Listen (eine als Inspirationssammlung), ein Menü, ein Event. Für
-   Admins ist die Startseite („Küche“) freigeschaltet, sie ist daher der erste Bildschirm nach der
-   Anmeldung. Geschrieben wird über die REST-Schnittstelle des Emulators an den Regeln vorbei; die
+   öffentliche und zwei private Listen (eine als Inspirationssammlung), ein Menü, ein Event, ein
+   Kochtagebuch-Eintrag und eine Bewertung der Linsensuppe. Für Admins ist die Startseite („Küche“)
+   freigeschaltet, sie ist daher der erste Bildschirm nach der Anmeldung. Geschrieben wird über die REST-Schnittstelle des Emulators an den Regeln vorbei; die
    App selbst läuft mit den echten `firestore.rules`.
 3. `capture.js` startet Vite mit `REACT_APP_USE_EMULATORS=true`, meldet sich an und fotografiert
    die Bildschirme aus der Liste `SCREENS`. Nur mit diesem Schalter verbindet sich die App mit den

@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './RatingModal.css';
 import Button from './Button';
+import DeleteRowButton from './DeleteRowButton';
+import UndoSnackbar from './UndoSnackbar';
+import TrashIcon from './icons/TrashIcon';
+import useSwipeToDelete from '../hooks/useSwipeToDelete';
+import useUndoableDelete from '../hooks/useUndoableDelete';
 import { rateRecipe, getUserRatingData, subscribeToRatingSummary, getAllRatings, deleteRating } from '../utils/recipeRatings';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
@@ -32,12 +37,53 @@ function resetSafariZoom() {
  * @param {boolean}  [props.canDeleteRatings] - Whether the current user may delete ratings
  * @param {Function} props.onClose       - Called when the modal should close
  */
+/**
+ * Eine Bewertung in der Liste mit Löschen nach CLAUDE.md: am Desktop DeleteRowButton am rechten Rand der
+ * Kopfzeile, auf dem Handy Linksswipe (useSwipeToDelete). Gelöscht wird erst nach dem Rückgängig-Fenster.
+ */
+function RatingReview({ canDelete, itemName, swipeLabel, onDelete, header, children }) {
+  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ disabled: !canDelete });
+  return (
+    <div className={`rating-review-swipe${offset < 0 ? ' swipe-delete-active' : ''}`}>
+      {canDelete && (
+        <div className="rating-review-swipe-background" aria-hidden={!isDeleteVisible}>
+          {isDeleteVisible && (
+            <button
+              type="button"
+              className="rating-review-swipe-action"
+              onClick={() => { onDelete(); reset(); }}
+              aria-label={swipeLabel}
+            >
+              <TrashIcon />
+            </button>
+          )}
+        </div>
+      )}
+      <div
+        className="rating-review-item delete-row-hover-target"
+        style={offset ? { transform: `translateX(${offset}px)` } : undefined}
+        {...handlers}
+      >
+        <div className="rating-review-header">
+          {header}
+          {canDelete && (
+            <DeleteRowButton itemName={itemName} className="rating-review-delete" onClick={onDelete} />
+          )}
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose }) {
   const t = useTexte(bewertungTexte);
   const tAllgemein = useTexte(allgemeinTexte);
   const { sprache } = useSprache();
   // Wie die Einkaufsliste: Seite dahinter gesperrt
   useModalScrollLock();
+  // Löschen wirkt sofort in der Ansicht, die Mutation erst nach dem Rückgängig-Fenster (CLAUDE.md)
+  const { banners: deleteBanners, pendingKeys: pendingDeleteKeys, scheduleDelete, undoDelete } = useUndoableDelete();
   const [avg, setAvg] = useState(0);
   const [count, setCount] = useState(0);
   const [selectedRating, setSelectedRating] = useState(null);
@@ -119,13 +165,19 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
     }
   };
 
-  const handleDeleteRating = async (ratingId) => {
-    try {
-      await deleteRating(recipeId, ratingId);
-      getAllRatings(recipeId).then(setAllRatings);
-    } catch (error) {
-      console.error('Error deleting rating:', error);
-    }
+  const handleDeleteRating = (rating, itemName) => {
+    scheduleDelete({
+      key: `rating-${rating.id}`,
+      message: itemName,
+      onConfirm: () => {
+        // Erst lokal entfernen, damit die Bewertung nach dem Fenster nicht kurz zurückkommt
+        setAllRatings((prev) => prev.filter((r) => r.id !== rating.id));
+        deleteRating(recipeId, rating.id)
+          .then(() => getAllRatings(recipeId).then(setAllRatings))
+          .catch((error) => console.error('Error deleting rating:', error));
+      },
+      onUndo: () => {},
+    });
   };
 
   const activeRating = hoveredRating || selectedRating || 0;
@@ -201,32 +253,33 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
           {allRatings.length > 0 && (
             <div className="rating-reviews-list">
               <h3 className="rating-reviews-title">{t('alleBewertungen')}</h3>
-              {allRatings.map((r) => (
-                <div key={r.id} className="rating-review-item">
-                  <div className="rating-review-header">
-                    <span className="rating-review-name">{r.raterName || t('anonym')}</span>
-                    <span className="rating-review-date">{formatDate(r.updatedAt || r.createdAt)}</span>
-                    {canDeleteRatings && (
-                      <button
-                        className="rating-review-delete-btn"
-                        onClick={() => handleDeleteRating(r.id)}
-                        title={t('bewertungLoeschen')}
-                        aria-label={t('bewertungLoeschen')}
-                      >
-                        {tAllgemein('loeschen')}
-                      </button>
+              {allRatings.filter((r) => !pendingDeleteKeys.has(`rating-${r.id}`)).map((r) => {
+                const bewertungName = t('bewertungVon', { name: r.raterName || t('anonym') });
+                return (
+                  <RatingReview
+                    key={r.id}
+                    canDelete={canDeleteRatings}
+                    itemName={bewertungName}
+                    swipeLabel={t('bewertungLoeschen')}
+                    onDelete={() => handleDeleteRating(r, bewertungName)}
+                    header={(
+                      <>
+                        <span className="rating-review-name">{r.raterName || t('anonym')}</span>
+                        <span className="rating-review-date">{formatDate(r.updatedAt || r.createdAt)}</span>
+                      </>
                     )}
-                  </div>
-                  <div className="rating-review-hearts" aria-label={t('vonFuenf', { anzahl: r.rating })}>
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <span key={n} className={`rating-review-heart ${r.rating >= n ? 'filled' : 'empty'}`}>
-                        {renderHeartIcon(r.rating >= n)}
-                      </span>
-                    ))}
-                  </div>
-                  {r.comment && <p className="rating-review-comment">{r.comment}</p>}
-                </div>
-              ))}
+                  >
+                    <div className="rating-review-hearts" aria-label={t('vonFuenf', { anzahl: r.rating })}>
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <span key={n} className={`rating-review-heart ${r.rating >= n ? 'filled' : 'empty'}`}>
+                          {renderHeartIcon(r.rating >= n)}
+                        </span>
+                      ))}
+                    </div>
+                    {r.comment && <p className="rating-review-comment">{r.comment}</p>}
+                  </RatingReview>
+                );
+              })}
             </div>
           )}
         </div>
@@ -241,6 +294,15 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
           </Button>
         </div>
       </div>
+      {/* Im Overlay, damit sie über dem Dialog liegt; ein Klick darauf schließt den Dialog nicht */}
+      {deleteBanners.length > 0 && (
+        <div className="rating-undo" onClick={(e) => e.stopPropagation()}>
+          <UndoSnackbar
+            itemName={deleteBanners[deleteBanners.length - 1].message}
+            onUndo={() => undoDelete(deleteBanners[deleteBanners.length - 1].id)}
+          />
+        </div>
+      )}
     </div>
   );
 }

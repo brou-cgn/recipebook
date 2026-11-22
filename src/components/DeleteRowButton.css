@@ -80,15 +80,25 @@
 }
 
 /* The row the button lives in should add this class to its hoverable
-   container so it gets the row tint and the icon darkens with it. */
-.delete-row-hover-target:hover,
+   container so it gets the row tint and the icon darkens with it.
+   Die Tönung bei :hover nur auf Geräten mit echtem Hover: iOS lässt :hover nach einem Tipp hängen, die
+   Zeile blieb dann grau (wie #3746 bei der Sprachwahl); auf dem Handy löscht ohnehin der Linksswipe. */
 .delete-row-hover-target:focus-within {
   background: rgba(120, 84, 52, 0.07);
 }
 
-.delete-row-hover-target:hover .delete-row-button:not(:hover):not(:focus-visible),
 .delete-row-hover-target:focus-within .delete-row-button:not(:hover):not(:focus-visible) {
   color: rgba(74, 52, 34, 0.62);
+}
+
+@media (hover: hover) {
+  .delete-row-hover-target:hover {
+    background: rgba(120, 84, 52, 0.07);
+  }
+
+  .delete-row-hover-target:hover .delete-row-button:not(:hover):not(:focus-visible) {
+    color: rgba(74, 52, 34, 0.62);
+  }
 }
 
 .delete-row-button:hover,
@@ -121,14 +131,22 @@
   color: rgba(255, 255, 255, 0.38);
 }
 
-[data-theme="dark"] .delete-row-hover-target:hover,
 [data-theme="dark"] .delete-row-hover-target:focus-within {
   background: rgba(255, 255, 255, 0.06);
 }
 
-[data-theme="dark"] .delete-row-hover-target:hover .delete-row-button:not(:hover):not(:focus-visible),
 [data-theme="dark"] .delete-row-hover-target:focus-within .delete-row-button:not(:hover):not(:focus-visible) {
   color: rgba(255, 255, 255, 0.62);
+}
+
+@media (hover: hover) {
+  [data-theme="dark"] .delete-row-hover-target:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  [data-theme="dark"] .delete-row-hover-target:hover .delete-row-button:not(:hover):not(:focus-visible) {
+    color: rgba(255, 255, 255, 0.62);
+  }
 }
 
 [data-theme="dark"] .delete-row-button:hover,

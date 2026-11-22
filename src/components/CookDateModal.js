@@ -5,6 +5,11 @@ import PencilIcon from './icons/PencilIcon';
 import SteamIcon from './icons/SteamIcon';
 import './CookDateModal.css';
 import Button from './Button';
+import DeleteRowButton from './DeleteRowButton';
+import UndoSnackbar from './UndoSnackbar';
+import TrashIcon from './icons/TrashIcon';
+import useSwipeToDelete from '../hooks/useSwipeToDelete';
+import useUndoableDelete from '../hooks/useUndoableDelete';
 import { setCookDate, deleteCookDate, subscribeCookDates } from '../utils/recipeCookDates';
 import { isBase64Image } from '../utils/imageUtils';
 import useFadeOutClose from '../hooks/useFadeOutClose';
@@ -13,6 +18,42 @@ import { useSprache, useTexte } from '../contexts/SpracheContext';
 import { formatiereDatum } from '../i18n/format';
 import kochtagebuchTexte from '../i18n/texte/kochtagebuch';
 import allgemeinTexte from '../i18n/texte/allgemein';
+
+/**
+ * Karte eines „Gekocht am“-Eintrags mit Löschen nach CLAUDE.md: am Desktop DeleteRowButton am rechten
+ * Rand, auf dem Handy Linksswipe (useSwipeToDelete). Gelöscht wird erst nach dem Rückgängig-Fenster.
+ */
+function CookDateCard({ canDelete, itemName, swipeLabel, onDelete, children }) {
+  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ disabled: !canDelete });
+  return (
+    <div className={`cook-date-timeline-swipe${offset < 0 ? ' swipe-delete-active' : ''}`}>
+      {canDelete && (
+        <div className="cook-date-timeline-swipe-background" aria-hidden={!isDeleteVisible}>
+          {isDeleteVisible && (
+            <button
+              type="button"
+              className="cook-date-timeline-swipe-action"
+              onClick={() => { onDelete(); reset(); }}
+              aria-label={swipeLabel}
+            >
+              <TrashIcon />
+            </button>
+          )}
+        </div>
+      )}
+      <div
+        className="cook-date-timeline-card delete-row-hover-target"
+        style={offset ? { transform: `translateX(${offset}px)` } : undefined}
+        {...handlers}
+      >
+        {children}
+        {canDelete && (
+          <DeleteRowButton itemName={itemName} className="cook-date-timeline-delete" onClick={onDelete} />
+        )}
+      </div>
+    </div>
+  );
+}
 
 /**
  * CookDateModal component
@@ -46,6 +87,8 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
   const [saved, setSaved] = useState(false);
   const [cookDates, setCookDates] = useState([]);
   const resetTimerRef = useRef(null);
+  // Löschen wirkt sofort in der Ansicht, die Mutation erst nach dem Rückgängig-Fenster (CLAUDE.md)
+  const { banners: deleteBanners, pendingKeys: pendingDeleteKeys, scheduleDelete, undoDelete } = useUndoableDelete();
   // Wie die Einkaufsliste: Seite dahinter gesperrt
   useModalScrollLock();
 
@@ -95,13 +138,17 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
     }
   };
 
-  const handleDeleteCookDate = async (cookDateId) => {
-    try {
-      await deleteCookDate(cookDateId);
-      setCookDates((prev) => prev.filter((cd) => cd.id !== cookDateId));
-    } catch (error) {
-      console.error('Error deleting cook date:', error);
-    }
+  const handleDeleteCookDate = (cookDate, itemName) => {
+    scheduleDelete({
+      key: `cookdate-${cookDate.id}`,
+      message: itemName,
+      onConfirm: () => {
+        // Erst lokal entfernen, damit der Eintrag nach dem Fenster nicht kurz zurückkommt, bis das Abo nachzieht
+        setCookDates((prev) => prev.filter((cd) => cd.id !== cookDate.id));
+        deleteCookDate(cookDate.id).catch((error) => console.error('Error deleting cook date:', error));
+      },
+      onUndo: () => {},
+    });
   };
 
   return (
@@ -127,7 +174,9 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
           </div>
           <div className="cook-date-timeline">
             <div className="cook-date-timeline-line" />
-            {cookDates.map((cd) => (
+            {cookDates.filter((cd) => !pendingDeleteKeys.has(`cookdate-${cd.id}`)).map((cd) => {
+              const eintragName = t('eintragVom', { datum: formatDate(cd.date) });
+              return (
               <div key={cd.id} className="cook-date-timeline-item">
                 <div className="cook-date-timeline-marker cook-date-timeline-marker--cook">
                   {timelineCookEventBubbleIcon ? (
@@ -140,7 +189,12 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
                     <span className="cook-date-timeline-marker-emoji"><SteamIcon /></span>
                   )}
                 </div>
-                <div className="cook-date-timeline-card">
+                <CookDateCard
+                  canDelete={canDeleteCookDates}
+                  itemName={eintragName}
+                  swipeLabel={t('eintragLoeschenAria')}
+                  onDelete={() => handleDeleteCookDate(cd, eintragName)}
+                >
                   {(recipeImage || timelineCookEventDefaultImage) && (
                     <div className="cook-date-timeline-card-image">
                       <img src={recipeImage || timelineCookEventDefaultImage} alt={t('rezept')} />
@@ -156,19 +210,10 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
                   {allUsers.some((u) => u.id === cd.userId) && (
                     <FollowButton userId={cd.userId} name={getUserName(cd.userId)} variant="round" icon={followButtonIcon} />
                   )}
-                  {canDeleteCookDates && (
-                    <button
-                      className="cook-date-timeline-delete-btn"
-                      onClick={() => handleDeleteCookDate(cd.id)}
-                      title={t('eintragLoeschen')}
-                      aria-label={t('eintragLoeschenAria')}
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
+                </CookDateCard>
               </div>
-            ))}
+              );
+            })}
             {recipeCreatedAt && (
               <div className="cook-date-timeline-item">
                 <div className="cook-date-timeline-marker">
@@ -214,6 +259,15 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
           </Button>
         </div>
       </div>
+      {/* Im Overlay, damit sie über dem Dialog liegt; ein Klick darauf schließt den Dialog nicht */}
+      {deleteBanners.length > 0 && (
+        <div className="cook-date-undo" onClick={(e) => e.stopPropagation()}>
+          <UndoSnackbar
+            itemName={deleteBanners[deleteBanners.length - 1].message}
+            onUndo={() => undoDelete(deleteBanners[deleteBanners.length - 1].id)}
+          />
+        </div>
+      )}
     </div>
   );
 }

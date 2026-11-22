@@ -162,6 +162,15 @@ async function main() {
     }
   }
 
+  // Ein „Gekocht am“-Eintrag und eine Bewertung der Linsensuppe: Kochtagebuch und Bewertung zeigen dann je eine
+  // Zeile mit Löschen (DeleteRowButton, Tech-Check D9)
+  await setDoc('cookDates/kochdatum-linsensuppe', {
+    userId: uid, recipeId: 'rezept-linsensuppe', date: new Date('2026-11-18T18:00:00Z'), createdAt: now,
+  });
+  await setDoc('recipes/rezept-linsensuppe/ratings/gast-anna', {
+    rating: 4, userId: null, raterName: 'Anna', comment: 'Mit Brot sehr gut.', createdAt: now, updatedAt: now,
+  });
+
   await setDoc('menus/menu-sonntag', {
     name: 'Sonntagsessen', description: 'Drei Gänge für sechs Personen', authorId: uid, privat: false,
     sections: [
@@ -177,7 +186,7 @@ async function main() {
     guests: { adults: 18, children: 4 }, berechnung: { ergebnis: [] }, ownerId: uid, createdAt: now.toISOString(),
   });
 
-  console.log(`Testdaten angelegt: ${ACCOUNT.email} (Admin, mit Startseite), ${RECIPES.length} Rezepte, ${aufrufNr} Rezeptaufrufe, 3 Listen, 1 Menü, 1 Event.`);
+  console.log(`Testdaten angelegt: ${ACCOUNT.email} (Admin, mit Startseite), ${RECIPES.length} Rezepte, ${aufrufNr} Rezeptaufrufe, 3 Listen, 1 Menü, 1 Event, 1 Kochdatum, 1 Bewertung.`);
 }
 
 if (require.main === module) {

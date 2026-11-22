@@ -25,7 +25,7 @@ const BASELINE = {
   'components/AtelierTasteIntroOverlay.css': 10,
   'components/BottomNavigation.css': 22,
   'components/ButtonIconsAdminTab.css': 167,
-  'components/CookDateModal.css': 14,
+  'components/CookDateModal.css': 12,
   'components/DeleteRowButton.css': 4,
   'components/DiscoverTopicsTab.css': 14,
   'components/DrinkWeightsTab.css': 19,
@@ -54,7 +54,7 @@ const BASELINE = {
   'components/PortionSelector.css': 8,
   'components/PrintFormatEditor.css': 39,
   'components/PrintPage.css': 16,
-  'components/RatingModal.css': 15,
+  'components/RatingModal.css': 13,
   'components/RecipeDetail.css': 83,
   'components/RecipeFilterSidebar.css': 18,
   'components/RecipeForm.css': 107,
@@ -140,7 +140,7 @@ describe('Farb-Token-Richtlinie', () => {
 // Unterseiten (Küchenstars, Eventplanung, Mise en Place, Küchenbetrieb) nach Variante A. 904 → 903:
 // der Privat-Knopf der Detailansichten hat keinen Rahmen mehr (gestaltet wie Teilen, App.css). 903 → 899:
 // Button-System Schritt 5a, alte Knopf-Regeln der Rezeptansicht (Tech-Check A8).
-const DARK_MODE_SELECTORS = 899;
+const DARK_MODE_SELECTORS = 898;
 
 describe('darkMode.css (Altbestand)', () => {
   const css = fs.readFileSync(path.join(SRC, 'darkMode.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

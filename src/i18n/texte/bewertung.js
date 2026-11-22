@@ -29,6 +29,8 @@ export default {
     alleBewertungen: 'Alle Bewertungen',
     anonym: 'Anonym',
     bewertungLoeschen: 'Bewertung löschen',
+    // Name einer Bewertung für „… entfernen“ (DeleteRowButton) und „„…“ entfernt“ (Rückgängig)
+    bewertungVon: 'Bewertung von {name}',
   },
   en: {
     herzGefuellt: 'Filled heart',
@@ -52,6 +54,7 @@ export default {
     alleBewertungen: 'All ratings',
     anonym: 'Anonymous',
     bewertungLoeschen: 'Delete rating',
+    bewertungVon: 'Rating by {name}',
   },
   fr: {
     herzGefuellt: 'Cœur plein',
@@ -75,5 +78,6 @@ export default {
     alleBewertungen: 'Toutes les notes',
     anonym: 'Anonyme',
     bewertungLoeschen: 'Supprimer la note',
+    bewertungVon: 'Note de {name}',
   },
 };
