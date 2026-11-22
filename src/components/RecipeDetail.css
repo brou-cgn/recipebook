@@ -1402,6 +1402,11 @@ p.recipe-title-original {
     padding: 0;
   }
 
+  /* Bündig mit dem Titel, der hier 1rem Innenabstand hat */
+  p.recipe-title-original {
+    margin: -0.25rem 1rem 0.5rem;
+  }
+
   .recipe-metadata {
     padding: 1rem 1rem 1rem;
   }
