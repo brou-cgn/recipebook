@@ -15,11 +15,6 @@
   gap: 1.75rem;
 }
 
-.personal-data-main--hidden {
-  visibility: hidden;
-  pointer-events: none;
-}
-
 /* ---- Kopf: Person auf Markenbraun ---- */
 .personal-data-kopf {
   display: flex;
@@ -132,7 +127,7 @@
 }
 
 /* ---- Formulare: Beschriftung links, Feld rechts; zu schmal, rutscht das Feld darunter.
-   Lange Beschriftungen (Passwort, PIN) stehen über dem Feld (--block). Das Feld hat eine
+   Lange Beschriftungen und lange Werte (E-Mail, Passwort, PIN) stehen über dem Feld (--block). Das Feld hat eine
    leichte Fläche, damit auch ein leeres Feld als Eingabe erkennbar ist. ---- */
 .personal-data-form {
   display: flex;
@@ -152,7 +147,7 @@
 }
 
 .personal-data-page .personal-data-field label {
-  flex: 0 0 8.5rem;
+  flex: 0 0 6.5rem;
   font-size: 1rem;
   color: var(--color-text-body);
 }
@@ -294,7 +289,7 @@
   transform: rotate(90deg);
 }
 
-/* Aufgeklappte Auswahl (Alarmton) liegt eingerückt unter ihrer Zeile */
+/* Aufgeklappte Auswahl (Standardlisten, Alarmton) liegt eingerückt unter ihrer Zeile */
 .personal-data-gruppe .auswahl-gruppe--liste {
   padding-left: 1rem;
   background: var(--color-surface-subtle);
@@ -388,101 +383,4 @@
 .push-tap-log-time {
   font-variant-numeric: tabular-nums;
   margin-right: 0.4rem;
-}
-
-/* ---- Unterseite für die Standardlisten (Inspirationssammlung, Alltagsklassiker) ---- */
-.alarm-sound-picker-page {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  border-radius: 16px;
-  background: var(--color-bg);
-}
-
-.alarm-sound-picker-header {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  min-height: 52px;
-  padding: 0 1rem;
-  border-bottom: 1px solid var(--color-border-subtle);
-  background: var(--color-bg);
-}
-
-.alarm-sound-picker-back-btn {
-  min-height: 44px;
-  margin-right: auto;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--color-brand);
-  font-family: inherit;
-  font-size: 1.05rem;
-  cursor: pointer;
-}
-
-.alarm-sound-picker-back-btn:hover {
-  opacity: 0.7;
-}
-
-.alarm-sound-picker-title {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--color-text-strong);
-}
-
-.alarm-sound-picker-list {
-  margin: 1rem 0 0;
-  padding: 0 0 0 1rem;
-  list-style: none;
-  border-radius: 16px;
-  background: var(--color-surface-card);
-}
-
-.alarm-sound-picker-list li {
-  border-bottom: 1px solid var(--color-border-subtle);
-}
-
-.alarm-sound-picker-list li:last-child {
-  border-bottom: none;
-}
-
-.alarm-sound-picker-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  min-height: 48px;
-  padding: 0 1rem 0 0;
-  border: none;
-  background: none;
-  color: var(--color-text-strong);
-  font-family: inherit;
-  font-size: 1rem;
-  text-align: left;
-  cursor: pointer;
-}
-
-.alarm-sound-picker-list .alarm-sound-picker-checkmark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.2rem;
-  flex-shrink: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--color-brand);
-}
-
-.alarm-sound-picker-name {
-  flex: 1;
 }

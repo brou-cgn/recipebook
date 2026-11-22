@@ -255,6 +255,18 @@ const SCREENS = [
     },
   },
   {
+    // Profilseite mit aufgeklappter Inspirationssammlung (Standardlisten klappen wie der Alarmton auf)
+    name: 'persoenliche-daten-liste',
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Testkoch Beispiel');
+      const zeile = page.getByRole('button', { name: /^Inspirationssammlung/ });
+      await zeile.click();
+      await zeile.scrollIntoViewIfNeeded();
+      await pause(page, 500);
+      await shot();
+    },
+  },
+  {
     name: 'einstellungen-ki',
     fullPage: true,
     run: async (page, shot) => {
