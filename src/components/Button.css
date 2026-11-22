@@ -72,7 +72,8 @@
 .menu-detail-header,
 .settings-header,
 .events-manage-links,
-.events-page-header-actions {
+.events-page-header-actions,
+.personal-data-actions {
   --color-button-secondary-bg: var(--color-button-secondary-page-bg);
   --color-button-secondary-hover: var(--color-button-secondary-page-hover);
   --color-button-secondary-border: var(--color-button-secondary-page-border);

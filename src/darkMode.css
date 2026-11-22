@@ -1619,53 +1619,6 @@
   border-color: #2a4a6a;
 }
 
-/* ---- Personal Data Page ---- */
-[data-theme="dark"] .personal-data-page {
-  background: #121212;
-}
-
-[data-theme="dark"] .personal-data-header h2 {
-  color: #e8e8e8;
-}
-
-[data-theme="dark"] .personal-data-form {
-  background: transparent;
-  border-color: #3d3d3d;
-}
-
-[data-theme="dark"] .personal-data-field label {
-  color: #ccc;
-}
-
-[data-theme="dark"] .personal-data-field input {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
-[data-theme="dark"] .personal-data-field textarea {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
-[data-theme="dark"] .personal-data-section-divider {
-  border-top: 1px solid #3d3d3d;
-}
-
-[data-theme="dark"] .alarm-sound-picker-list li {
-  border-bottom: 1px solid #3d3d3d;
-}
-
-[data-theme="dark"] .alarm-sound-picker-header {
-  background: #2A2A2A;
-  border-bottom: 1px solid #3d3d3d;
-}
-
-[data-theme="dark"] .alarm-sound-picker-page {
-  background: #2A2A2A;
-}
-
 /* ---- AppCallsPage ---- */
 [data-theme="dark"] .app-calls-container {
   background: #121212;
@@ -3399,18 +3352,6 @@
   background: #2a2218;
   color: #dfb86a;
   border-color: #5a4a28;
-}
-
-/* ---- PersonalDataPage additional ---- */
-
-[data-theme="dark"] .personal-data-success {
-  background: #1a2f1a;
-  color: #4caf50;
-}
-
-[data-theme="dark"] .personal-data-error {
-  background: #2a1a1a;
-  color: #f08080;
 }
 
 /* ---- RecipeTimeline additional ---- */
