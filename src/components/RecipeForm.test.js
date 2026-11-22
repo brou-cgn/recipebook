@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { useSensor, TouchSensor } from '@dnd-kit/core';
 import RecipeForm from './RecipeForm';
+import { SpracheProvider } from '../contexts/SpracheContext';
 import { rephraseRecipeSteps } from '../utils/aiOcrService';
 
 // Mock the utility modules
@@ -864,7 +865,7 @@ describe('RecipeForm - Multi-Select Fields', () => {
     fireEvent.submit(document.querySelector('.recipe-form'));
 
     expect(alertMock).not.toHaveBeenCalled();
-    expect(screen.getByRole('alert')).toHaveTextContent('Bitte wählen Sie mindestens eine Speisekategorie aus');
+    expect(screen.getByRole('alert')).toHaveTextContent('Bitte wähle mindestens eine Speisekategorie aus');
     expect(screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)')).toHaveAttribute('aria-invalid', 'true');
     expect(mockOnSave).not.toHaveBeenCalled();
 
@@ -1307,7 +1308,7 @@ describe('RecipeForm - Category Image Integration', () => {
 
     // Category validation should block the save before getImageForCategories is called
     expect(getImageForCategories).not.toHaveBeenCalled();
-    expect(screen.getByRole('alert')).toHaveTextContent('Bitte wählen Sie mindestens eine Speisekategorie aus');
+    expect(screen.getByRole('alert')).toHaveTextContent('Bitte wähle mindestens eine Speisekategorie aus');
     expect(mockOnSave).not.toHaveBeenCalled();
 
     alertMock.mockRestore();
@@ -4072,8 +4073,79 @@ describe('RecipeForm - Mehrere Fotos auf einmal hochladen', () => {
     });
 
     await waitFor(() => expect(alertSpy).toHaveBeenCalledTimes(1));
-    expect(alertSpy).toHaveBeenCalledWith('1 von 3 Bildern konnten nicht hochgeladen werden: zu groß');
+    // Einzahl seit Mehrsprachigkeit PR 6h („1 von 3 Bildern konnte …“)
+    expect(alertSpy).toHaveBeenCalledWith('1 von 3 Bildern konnte nicht hochgeladen werden: zu groß');
     const srcs = screen.getAllByAltText(/^Rezeptbild \d+$/).map((img) => img.getAttribute('src'));
     expect(srcs).toEqual(['https://img/a.jpg', 'https://img/c.jpg']);
+  });
+});
+
+describe('RecipeForm in anderer Sprache (Mehrsprachigkeit PR 6h)', () => {
+  const nutzer = { id: 'user-1', vorname: 'Regular', nachname: 'User', email: 'user@example.com', role: 'edit' };
+  // Übersetzungen der Auswahllisten wie in settings/app.listenUebersetzungen (PR 5)
+  const listen = {
+    mealCategories: [{ wert: 'Dessert', en: 'Sweet course', fr: 'Douceur' }],
+    cuisineTypes: [{ wert: 'Thai', en: 'Thai food', fr: 'Thaï' }],
+    portionUnits: [{ wert: 'portion', en: { einzahl: 'serving', mehrzahl: 'servings' }, fr: { einzahl: 'part', mehrzahl: 'parts' } }],
+  };
+  const nudelsalat = {
+    id: 'r1',
+    title: 'Nudelsalat',
+    titelUebersetzung: { quelle: 'Nudelsalat', originalSprache: 'de', en: 'Pasta salad', fr: 'Salade de pâtes' },
+    ingredients: ['200 g Nudeln'],
+    steps: ['Kochen.'],
+    speisekategorie: ['Dessert'],
+    kulinarik: ['Thai'],
+  };
+  const zeigeIn = (sprache, props = {}) => render(
+    <SpracheProvider profilSprache={sprache} speicher={null} inhalteUebersetzen listenUebersetzungen={listen}>
+      <RecipeForm recipe={null} onSave={jest.fn()} onCancel={jest.fn()} currentUser={nutzer} {...props} />
+    </SpracheProvider>
+  );
+
+  test('Englisch: Listenwerte übersetzt angezeigt, gespeichert bleiben die deutschen Werte', async () => {
+    const onSave = jest.fn(() => Promise.resolve());
+    zeigeIn('en', { onSave });
+
+    expect(screen.getByRole('heading', { name: 'Add new recipe' })).toBeInTheDocument();
+    expect(await screen.findByRole('option', { name: 'serving / servings' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Recipe title *'), { target: { value: 'Mango sticky rice' } });
+    fireEvent.change(screen.getByPlaceholderText('Ingredient 1'), { target: { value: '200 g Reis' } });
+    fireEvent.change(screen.getByPlaceholderText('Step 1'), { target: { value: 'Kochen.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sweet course' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Thai food' }));
+    fireEvent.submit(document.querySelector('.recipe-form'));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0]).toEqual(expect.objectContaining({ speisekategorie: ['Dessert'], kulinarik: ['Thai'] }));
+  });
+
+  test('Englisch: Hinweis ohne Speisekategorie', async () => {
+    zeigeIn('en');
+    fireEvent.change(screen.getByLabelText('Recipe title *'), { target: { value: 'Mango sticky rice' } });
+    fireEvent.submit(document.querySelector('.recipe-form'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Please select at least one meal category.');
+  });
+
+  test('Englisch: Suche nach der Übersetzung findet den Typ und bietet keinen neuen an', async () => {
+    zeigeIn('en');
+    await screen.findByRole('button', { name: 'Thai food' });
+    fireEvent.change(screen.getByPlaceholderText('Search cuisines or meal categories…'), { target: { value: 'thai food' } });
+    expect(screen.getByRole('button', { name: 'Thai food' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'thai food' })).not.toBeInTheDocument();
+  });
+
+  test('Französisch: eigene Version mit übersetztem Titel, Inhalt bleibt das Original', async () => {
+    zeigeIn('fr', { recipe: nudelsalat, isCreatingVersion: true });
+    expect(screen.getByRole('heading', { name: 'Créer ta propre version' })).toBeInTheDocument();
+    expect(screen.getByText('Tu crées une nouvelle version de « Salade de pâtes ».')).toBeInTheDocument();
+    expect(screen.getByLabelText('Titre de la recette *')).toHaveValue('Nudelsalat');
+    expect(screen.getByDisplayValue('200 g Nudeln')).toBeInTheDocument();
+  });
+
+  test('Deutsch: eigene Version nennt den Titel in typografischen Anführungszeichen', () => {
+    render(<RecipeForm recipe={nudelsalat} isCreatingVersion onSave={jest.fn()} onCancel={jest.fn()} currentUser={nutzer} />);
+    expect(screen.getByText('Du erstellst eine neue Version von „Nudelsalat“.')).toBeInTheDocument();
   });
 });

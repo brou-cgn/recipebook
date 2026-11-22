@@ -43,6 +43,10 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import useSwipeToDelete, { SWIPE_DIRECTION_LOCK_THRESHOLD } from '../hooks/useSwipeToDelete';
+import { useListenwerte, useRezeptTitel, useSprache, useTexte } from '../contexts/SpracheContext';
+import { STANDARD_SPRACHE } from '../i18n/sprachen';
+import rezeptformularTexte from '../i18n/texte/rezeptformular';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 // Max. parallel recipe photo uploads when several photos are picked at once.
 const IMAGE_UPLOAD_CONCURRENCY = 3;
@@ -57,6 +61,8 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
     transition,
     isDragging,
   } = useSortable({ id });
+  // Texte des Rezeptformulars (Mehrsprachigkeit PR 6h)
+  const t = useTexte(rezeptformularTexte);
 
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPos, setContextMenuPos] = useState({ top: 0, right: 0 });
@@ -157,7 +163,7 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
               type="button"
               className="swipe-delete-action"
               onClick={handleSwipeDeleteClick}
-              aria-label={isHeading ? 'Überschrift löschen' : 'Zutat löschen'}
+              aria-label={isHeading ? t('ueberschriftLoeschen') : t('zutatLoeschen')}
             >
               {isBase64Image(swipeDeleteIcon) ? (
                 <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
@@ -175,9 +181,9 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
           value={displayValue}
           readOnly={!!recipeLink}
           onChange={(e) => onChange(index, e.target.value)}
-          placeholder={isHeading ? 'Zwischenüberschrift' : `Zutat ${index + 1}`}
+          placeholder={isHeading ? t('zwischenueberschrift') : t('zutatNummer', { nummer: index + 1 })}
           className={`${isHeading ? 'heading-input' : ''} ${recipeLink ? 'recipe-link-input' : ''}`}
-          title={recipeLink ? `Verlinktes Rezept: ${recipeLink.recipeName}` : undefined}
+          title={recipeLink ? t('verlinktesRezept', { name: recipeLink.recipeName }) : undefined}
           onContextMenu={handleContextMenu}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
@@ -189,7 +195,7 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
           className="drag-handle"
           {...attributes}
           {...listeners}
-          aria-label="Zutat verschieben"
+          aria-label={t('zutatVerschieben')}
         >
           ⋮⋮
         </button>
@@ -197,7 +203,7 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
       <div className="form-list-item-delete-col">
         {canRemove && (
           <DeleteRowButton
-            itemName={isHeading ? (text || 'Überschrift') : (text || 'Zutat')}
+            itemName={isHeading ? (text || t('ueberschrift')) : (text || t('zutat'))}
             onClick={() => onRemove(index)}
           />
         )}
@@ -216,7 +222,7 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
               type="button"
               onClick={() => { onToggleType(index); setShowContextMenu(false); }}
             >
-              {isHeading ? 'Als Zutat formatieren' : 'Als Überschrift formatieren'}
+              {isHeading ? t('alsZutat') : t('alsUeberschrift')}
             </button>
           </div>
         </>
@@ -235,6 +241,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
     transition,
     isDragging,
   } = useSortable({ id });
+  const t = useTexte(rezeptformularTexte);
 
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPos, setContextMenuPos] = useState({ top: 0, right: 0 });
@@ -336,7 +343,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
               type="button"
               className="swipe-delete-action"
               onClick={handleSwipeDeleteClick}
-              aria-label={isHeading ? 'Überschrift löschen' : 'Schritt löschen'}
+              aria-label={isHeading ? t('ueberschriftLoeschen') : t('schrittLoeschen')}
             >
               {isBase64Image(swipeDeleteIcon) ? (
                 <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
@@ -352,7 +359,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
           ref={textareaRef}
           value={text}
           onChange={(e) => onChange(index, e.target.value)}
-          placeholder={isHeading ? 'Zwischenüberschrift' : `Schritt ${stepNumber}`}
+          placeholder={isHeading ? t('zwischenueberschrift') : t('schrittNummer', { nummer: stepNumber })}
           rows={isHeading ? '1' : '2'}
           className={isHeading ? 'heading-input' : ''}
           onContextMenu={handleContextMenu}
@@ -366,7 +373,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
           className="drag-handle"
           {...attributes}
           {...listeners}
-          aria-label="Schritt verschieben"
+          aria-label={t('schrittVerschieben')}
         >
           ⋮⋮
         </button>
@@ -374,7 +381,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
       <div className="form-list-item-delete-col">
         {canRemove && (
           <DeleteRowButton
-            itemName={isHeading ? (text || 'Überschrift') : (text || 'Schritt')}
+            itemName={isHeading ? (text || t('ueberschrift')) : (text || t('schritt'))}
             onClick={() => onRemove(index)}
           />
         )}
@@ -393,7 +400,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
               type="button"
               onClick={() => { onToggleType(index); setShowContextMenu(false); }}
             >
-              {isHeading ? 'Als Schritt formatieren' : 'Als Überschrift formatieren'}
+              {isHeading ? t('alsSchritt') : t('alsUeberschrift')}
             </button>
           </div>
         </>
@@ -473,18 +480,27 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   // Nutrition reference rows for auto-assigning ingredient IDs
   const { rows: nutritionReferenceRows } = useNutritionReference();
 
+  // Texte des Rezeptformulars (Mehrsprachigkeit PR 6h). Kulinarik, Speisekategorien und Portionseinheiten
+  // erscheinen übersetzt und werden auch unter ihrer Übersetzung gefunden; gespeichert bleiben die deutschen Werte.
+  const t = useTexte(rezeptformularTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const { sprache } = useSprache();
+  const listen = useListenwerte();
+  const zeigeTitel = useRezeptTitel();
+  const kulinarikGleich = (name, begriff) => name.toLowerCase() === begriff || listen.kulinarik(name).toLowerCase() === begriff;
+
   // Derived cuisine pill lists for the pill-based cuisine selector
   const visibleCuisinePills = useMemo(() => {
     const allTypes = customLists.cuisineTypes || [];
     const term = newCuisineInput.trim().toLowerCase();
     if (!term) return allTypes;
-    return allTypes.filter((name) => name.toLowerCase().includes(term));
-  }, [customLists.cuisineTypes, newCuisineInput]);
+    return allTypes.filter((name) => name.toLowerCase().includes(term) || listen.kulinarik(name).toLowerCase().includes(term));
+  }, [customLists.cuisineTypes, newCuisineInput, listen]);
 
   const visibleCuisineSuggestions = useMemo(() => {
-    const known = (customLists.cuisineTypes || []).map((t) => t.toLowerCase());
+    const known = (customLists.cuisineTypes || []).flatMap((typ) => [typ.toLowerCase(), listen.kulinarik(typ).toLowerCase()]);
     return kulinarikVorschlag.filter((name) => !known.includes(name.toLowerCase()));
-  }, [kulinarikVorschlag, customLists.cuisineTypes]);
+  }, [kulinarikVorschlag, customLists.cuisineTypes, listen]);
 
   const orderedCuisinePills = useMemo(() => {
     const active = visibleCuisinePills.filter((name) => kulinarik.includes(name));
@@ -496,8 +512,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     const allCategories = customLists.mealCategories || [];
     const term = newCuisineInput.trim().toLowerCase();
     if (!term) return allCategories;
-    return allCategories.filter((name) => name.toLowerCase().includes(term));
-  }, [customLists.mealCategories, newCuisineInput]);
+    return allCategories.filter((name) => name.toLowerCase().includes(term) || listen.text('mealCategories', name).toLowerCase().includes(term));
+  }, [customLists.mealCategories, newCuisineInput, listen]);
 
   const orderedMealCategoryPills = useMemo(() => {
     const active = visibleMealCategoryPills.filter((name) => speisekategorie.includes(name));
@@ -717,13 +733,10 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
 
   const handleNewCuisinePillClick = async (name) => {
     if (!name) return;
-    const exists = customLists.cuisineTypes.some(
-      (t) => t.toLowerCase() === name.toLowerCase()
-    );
-    if (exists) {
-      handleCuisinePillToggle(
-        customLists.cuisineTypes.find((t) => t.toLowerCase() === name.toLowerCase()) || name
-      );
+    // Vorhanden ist ein Typ auch unter seiner Übersetzung („Italian“ für Italienisch), sonst entstünden Dubletten
+    const vorhandener = customLists.cuisineTypes.find((typ) => kulinarikGleich(typ, name.toLowerCase()));
+    if (vorhandener) {
+      handleCuisinePillToggle(vorhandener);
       setNewCuisineInput('');
       setNewCuisineDuplicateHint(true);
       return;
@@ -772,7 +785,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     if (options.fromSwipe) {
       ingredientUndo.scheduleDelete({
         key: `ingredient-${index}`,
-        message: 'Zutat gelöscht.',
+        message: t('zutatGeloescht'),
         onConfirm: () => {},
         onUndo: () => {
           setIngredients((current) => {
@@ -839,7 +852,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     if (options.fromSwipe) {
       stepUndo.scheduleDelete({
         key: `step-${index}`,
-        message: 'Schritt gelöscht.',
+        message: t('schrittGeloescht'),
         onConfirm: () => {},
         onUndo: () => {
           setSteps((current) => {
@@ -937,7 +950,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       const rephrasedTexts = await rephraseRecipeSteps(originalTexts);
 
       if (!Array.isArray(rephrasedTexts) || rephrasedTexts.length !== rephrasableStepIndices.length) {
-        throw new Error('Die KI hat eine unerwartete Anzahl an Schritten zurückgegeben.');
+        throw new Error(t('kiAnzahlFalsch'));
       }
 
       const newSteps = [...steps];
@@ -948,11 +961,12 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     } catch (error) {
       const code = error?.code?.replace(/^functions\//, '');
       if (code === 'resource-exhausted') {
-        alert(error.message || 'Tageslimit für das Umformulieren erreicht. Versuche es morgen erneut.');
+        // Die Meldung des Servers ist deutsch (mit dem Limit); in anderen Sprachen der eigene Text
+        alert(sprache === STANDARD_SPRACHE && error.message ? error.message : t('limitUmformulieren'));
       } else if (code === 'unauthenticated') {
-        alert('Bitte melde dich an, um Zubereitungsschritte umformulieren zu lassen.');
+        alert(t('anmeldenUmformulieren'));
       } else {
-        alert('Fehler beim Umformulieren der Zubereitungsschritte: ' + error.message);
+        alert(t('fehlerUmformulieren', { fehler: error.message }));
       }
     } finally {
       setRephrasingSteps(false);
@@ -1044,11 +1058,11 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       const failed = results.filter(r => !r.ok);
       if (failed.length > 0) {
         setImageError(true);
-        const reason = failed[0].error?.message || 'Unbekannter Fehler';
+        const reason = failed[0].error?.message || t('unbekannterFehler');
         alert(
           files.length === 1
             ? reason
-            : `${failed.length} von ${files.length} Bildern konnten nicht hochgeladen werden: ${reason}`
+            : t('bilderFehlgeschlagen', { anzahl: failed.length, gesamt: files.length, grund: reason })
         );
       }
     } finally {
@@ -1100,7 +1114,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     if (isSaving) return;
 
     if (!title.trim()) {
-      alert('Bitte geben Sie einen Rezepttitel ein');
+      alert(t('alertTitel'));
       return;
     }
 
@@ -1111,12 +1125,12 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     }
 
     if (ingredients.filter(i => i.text.trim() !== '').length === 0) {
-      alert('Bitte geben Sie mindestens eine Zutat ein');
+      alert(t('alertZutat'));
       return;
     }
 
     if (steps.filter(s => s.text.trim() !== '').length === 0) {
-      alert('Bitte geben Sie mindestens einen Zubereitungsschritt ein');
+      alert(t('alertSchritt'));
       return;
     }
 
@@ -1328,7 +1342,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       setOcrImagesBase64(base64s);
       setShowOcrModal(true);
     } catch (error) {
-      alert('Fehler beim Hochladen des Bildes: ' + error.message);
+      alert(t('fehlerBildHochladen', { fehler: error.message }));
     }
   };
 
@@ -1392,28 +1406,28 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       <div className="recipe-form-header">
         <h2 className="recipe-form-header-title">
           {isCreatingVersion
-            ? 'Eigene Version erstellen'
+            ? t('eigeneVersion')
             : recipe?.isTemp
-              ? 'Import überprüfen'
-              : (recipe ? 'Rezept bearbeiten' : 'Neues Rezept hinzufügen')}
+              ? t('importPruefen')
+              : (recipe ? t('rezeptBearbeiten') : t('neuesRezept'))}
         </h2>
         <div className="recipe-form-header-actions">
           <Button
             variant="secondary"
             onClick={onCancel}
-            title="Abbrechen"
-            aria-label="Rezeptbearbeitung abbrechen"
+            title={tAllgemein('abbrechen')}
+            aria-label={t('bearbeitungAbbrechen')}
           >
-            Abbrechen
+            {tAllgemein('abbrechen')}
           </Button>
           <Button
             variant="primary"
             onClick={handleFabClick}
             loading={isSaving}
-            title={recipe ? 'Rezept aktualisieren' : 'Rezept speichern'}
-            aria-label={recipe ? 'Rezept aktualisieren' : 'Rezept speichern'}
+            title={recipe ? t('rezeptAktualisieren') : t('rezeptSpeichern')}
+            aria-label={recipe ? t('rezeptAktualisieren') : t('rezeptSpeichern')}
           >
-            {isSaving ? 'Speichert …' : (recipe ? 'Aktualisieren' : 'Speichern')}
+            {isSaving ? t('speichert') : (recipe ? t('aktualisieren') : tAllgemein('speichern'))}
           </Button>
         </div>
       </div>
@@ -1421,10 +1435,10 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       {isCreatingVersion && (
         <div className="version-info-banner">
           <div className="version-info-text">
-            <p>Du erstellst eine neue Version von "{recipe?.title}".</p>
+            <p>{t('neueVersionVon', { titel: zeigeTitel(recipe) })}</p>
             {versionChangeSummary && (
               <p className="version-change-summary">
-                Eingearbeitet: {versionChangeSummary} Bitte prüfe Zutaten und Schritte, bevor du speicherst.
+                {t('eingearbeitet', { zusammenfassung: versionChangeSummary })}
               </p>
             )}
           </div>
@@ -1434,12 +1448,10 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       {recipe?.isTemp && (
         <div className="version-info-banner temp-import-banner">
           <div className="version-info-text">
-            <p>Dieses Rezept wurde automatisch importiert. Bitte prüfen und speichern oder verwerfen.</p>
+            <p>{t('automatischImportiert')}</p>
             {reviewRecipes.length > 1 && (
               <p>
-                {reviewRecipes.length - 1 === 1
-                  ? 'Noch 1 weiterer Import wartet auf Überprüfung.'
-                  : `Noch ${reviewRecipes.length - 1} weitere Importe warten auf Überprüfung.`}
+                {t('weitereImporte', { anzahl: reviewRecipes.length - 1 })}
               </p>
             )}
           </div>
@@ -1449,9 +1461,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       {!recipe && !isCreatingVersion && tempRecipes.length > 0 && (
         <div className="pending-imports-section">
           <p className="pending-imports-title">
-            {tempRecipes.length === 1
-              ? '1 automatischer Import wartet auf Überprüfung'
-              : `${tempRecipes.length} automatische Importe warten auf Überprüfung`}
+            {t('wartendeImporte', { anzahl: tempRecipes.length })}
           </p>
           <ul className="pending-imports-list">
             {tempRecipes.map((tempRecipe) => (
@@ -1461,7 +1471,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                   className="pending-import-item"
                   onClick={() => onSelectTempRecipe?.(tempRecipe)}
                 >
-                  <span className="pending-import-item-title">{tempRecipe.title || 'Unbenanntes Rezept'}</span>
+                  <span className="pending-import-item-title">{tempRecipe.title || t('unbenanntesRezept')}</span>
                   <span className="pending-import-item-arrow">›</span>
                 </button>
               </li>
@@ -1475,13 +1485,13 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
           <div className="recipe-form-toolbar">
             {privateLists.length > 0 && (
               <div className="toolbar-private-list">
-                <label htmlFor="private-list-select">Private Liste:</label>
+                <label htmlFor="private-list-select">{t('privateListe')}</label>
                 <select
                   id="private-list-select"
                   value={selectedPrivateListId}
                   onChange={(e) => setSelectedPrivateListId(e.target.value)}
                 >
-                  <option value="">– Keine (öffentlich) –</option>
+                  <option value="">{t('keineOeffentlich')}</option>
                   {privateLists.map((list) => (
                     <option key={list.id} value={list.id}>
                       {list.name}
@@ -1495,12 +1505,12 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                 type="button"
                 className="webimport-button-header"
                 onClick={() => !aiOcrLimitReached && setShowWebImportModal(true)}
-                title={aiOcrLimitReached ? `KI-OCR Tageslimit erreicht (${aiOcrDailyLimit}/Tag). Import nicht verfügbar.` : 'Rezept von Website importieren'}
-                aria-label="Webimport"
+                title={aiOcrLimitReached ? t('limitImport', { limit: aiOcrDailyLimit }) : t('webImportTitel')}
+                aria-label={t('webimport')}
                 disabled={aiOcrLimitReached}
               >
                 {isBase64Image(getEffectiveIcon(buttonIcons, 'webImport', isDarkMode)) ? (
-                  <img src={getEffectiveIcon(buttonIcons, 'webImport', isDarkMode)} alt="Webimport" className="button-icon-img" />
+                  <img src={getEffectiveIcon(buttonIcons, 'webImport', isDarkMode)} alt={t('webimport')} className="button-icon-img" />
                 ) : (
                   getEffectiveIcon(buttonIcons, 'webImport', isDarkMode)
                 )}
@@ -1511,8 +1521,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                 <label
                   htmlFor={aiOcrLimitReached ? undefined : 'ocrImageUpload'}
                   className={`ocr-scan-button-header${aiOcrLimitReached ? ' disabled' : ''}`}
-                  title={aiOcrLimitReached ? `KI-OCR Tageslimit erreicht (${aiOcrDailyLimit}/Tag). Scan nicht verfügbar.` : 'Rezept mit Kamera scannen'}
-                  aria-label="Rezept mit Kamera scannen"
+                  title={aiOcrLimitReached ? t('limitScan', { limit: aiOcrDailyLimit }) : t('scanTitel')}
+                  aria-label={t('scanTitel')}
                   aria-disabled={aiOcrLimitReached}
                   style={{ cursor: aiOcrLimitReached ? 'not-allowed' : 'pointer' }}
                   tabIndex={0}
@@ -1524,7 +1534,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                   }}
                 >
                   {isBase64Image(getEffectiveIcon(buttonIcons, 'scanImage', isDarkMode)) ? (
-                    <img src={getEffectiveIcon(buttonIcons, 'scanImage', isDarkMode)} alt="Scan" className="button-icon-img" />
+                    <img src={getEffectiveIcon(buttonIcons, 'scanImage', isDarkMode)} alt={t('scan')} className="button-icon-img" />
                   ) : (
                     getEffectiveIcon(buttonIcons, 'scanImage', isDarkMode)
                   )}
@@ -1545,11 +1555,11 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                 type="button"
                 className="import-button-header"
                 onClick={() => setShowImportModal(true)}
-                title="Rezept aus externer Quelle importieren"
-                aria-label="Rezept importieren"
+                title={t('importTitel')}
+                aria-label={t('rezeptImportieren')}
               >
                 {isBase64Image(getEffectiveIcon(buttonIcons, 'importRecipe', isDarkMode)) ? (
-                  <img src={getEffectiveIcon(buttonIcons, 'importRecipe', isDarkMode)} alt="Import" className="button-icon-img" />
+                  <img src={getEffectiveIcon(buttonIcons, 'importRecipe', isDarkMode)} alt={t('import')} className="button-icon-img" />
                 ) : (
                   getEffectiveIcon(buttonIcons, 'importRecipe', isDarkMode)
                 )}
@@ -1560,15 +1570,15 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
 
         <div className="form-group">
           <div className="form-group-header">
-            <label htmlFor="title">Rezepttitel *</label>
+            <label htmlFor="title">{t('rezepttitel')}</label>
             {containsEmojis(title) && (
               <button
                 type="button"
                 className="emoji-remove-btn"
                 onClick={handleRemoveEmojisFromTitle}
-                title="Emojis entfernen"
+                title={t('emojisEntfernen')}
               >
-                Emojis entfernen
+                {t('emojisEntfernen')}
               </button>
             )}
           </div>
@@ -1578,7 +1588,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="z.B. Spaghetti Carbonara"
+              placeholder={t('titelBeispiel')}
               required
             />
             <label
@@ -1586,14 +1596,14 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               className="add-image-btn"
               title={uploadingImage
                 ? (imageUploadProgress && imageUploadProgress.total > 1
-                  ? `Hochladen... (${imageUploadProgress.done}/${imageUploadProgress.total})`
-                  : 'Hochladen...')
-                : 'Bilder hinzufügen'}
-              aria-label={uploadingImage ? 'Bilder werden hochgeladen' : 'Bilder hinzufügen'}
+                  ? t('hochladenFortschritt', { fertig: imageUploadProgress.done, gesamt: imageUploadProgress.total })
+                  : t('hochladen'))
+                : t('bilderHinzufuegen')}
+              aria-label={uploadingImage ? t('bilderWerdenHochgeladen') : t('bilderHinzufuegen')}
               aria-busy={uploadingImage}
             >
               {isBase64Image(getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)) ? (
-                <img src={getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)} alt="Bild hinzufügen" className="button-icon-img add-image-icon-img" />
+                <img src={getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)} alt={t('bildHinzufuegen')} className="button-icon-img add-image-icon-img" />
               ) : (
                 getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)
               )}
@@ -1612,30 +1622,30 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
 
         {images.length > 0 && (
           <div className="form-group">
-            <label>Rezeptbilder</label>
+            <label>{t('rezeptbilder')}</label>
             <div className="multi-image-grid">
               {images.map((img, idx) => (
                 <div key={img.url} className={`multi-image-item${img.isDefault ? ' multi-image-item--default' : ''}`}>
-                  <img src={img.url} alt={`Rezeptbild ${idx + 1}`} onError={(e) => { e.target.style.display = 'none'; }} />
+                  <img src={img.url} alt={t('rezeptbild', { nummer: idx + 1 })} onError={(e) => { e.target.style.display = 'none'; }} />
                   <div className="multi-image-actions">
                     {!img.isDefault && (
                       <button
                         type="button"
                         className="set-default-image-btn"
                         onClick={() => handleSetDefaultImage(img.url)}
-                        title="Als Standardbild festlegen"
+                        title={t('alsStandardbild')}
                       >
-                        <StarIcon /> Standard
+                        <StarIcon /> {t('standard')}
                       </button>
                     )}
                     {img.isDefault && (
-                      <span className="default-image-badge"><StarIcon /> Standard</span>
+                      <span className="default-image-badge"><StarIcon /> {t('standard')}</span>
                     )}
                     <button
                       type="button"
                       className="remove-image-btn remove-image-btn--small"
                       onClick={() => handleRemoveImageFromList(img.url)}
-                      title="Bild entfernen"
+                      title={t('bildEntfernen')}
                     >
                       ×
                     </button>
@@ -1648,7 +1658,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
 
         {currentUser?.role === 'admin' && (
           <div className="form-group">
-            <label htmlFor="author">Autor</label>
+            <label htmlFor="author">{t('autor')}</label>
             <select
               id="author"
               value={authorId}
@@ -1665,7 +1675,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
 
         <div className="form-row">
           <div className="form-group">
-            <label htmlFor="portionen">Portionen</label>
+            <label htmlFor="portionen">{t('portionen')}</label>
             <div className="portionen-inline">
               <input
                 type="number"
@@ -1683,7 +1693,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               >
                 {(customLists.portionUnits || []).map((unit) => (
                   <option key={unit.id} value={unit.id}>
-                    {unit.singular} / {unit.plural}
+                    {listen.einheit('portionUnits', unit, 1)} / {listen.einheit('portionUnits', unit, 2)}
                   </option>
                 ))}
               </select>
@@ -1691,7 +1701,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
           </div>
 
           <div className="form-group">
-            <label htmlFor="kochdauer">Kochzeit (Minuten)</label>
+            <label htmlFor="kochdauer">{t('kochzeit')}</label>
             <input
               type="number"
               id="kochdauer"
@@ -1705,7 +1715,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         </div>
 
         <div className="form-group" ref={categoryGroupRef}>
-          <label htmlFor="speisekategorie">Speisekategorie (Mehrfachauswahl möglich)</label>
+          <label htmlFor="speisekategorie">{t('speisekategorie')}</label>
           <div className="recipe-form-mobile-only">
             {orderedMealCategoryPills.length > 0 && (
               <div className="recipe-form-cuisine-grid">
@@ -1716,9 +1726,9 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                     className={`recipe-form-cuisine-pill${speisekategorie.includes(category) ? ' active' : ''}`}
                     onClick={() => handleMealCategoryPillToggle(category)}
                     aria-pressed={speisekategorie.includes(category)}
-                    title={speisekategorie.includes(category) ? 'Auswahl aufheben' : `${category} auswählen`}
+                    title={speisekategorie.includes(category) ? t('auswahlAufheben') : t('auswaehlen', { name: listen.text('mealCategories', category) })}
                   >
-                    {category}
+                    {listen.text('mealCategories', category)}
                   </button>
                 ))}
               </div>
@@ -1739,18 +1749,18 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
             size={Math.min(customLists.mealCategories.length, 8)}
           >
             {customLists.mealCategories.map((category) => (
-              <option key={category} value={category}>{category}</option>
+              <option key={category} value={category}>{listen.text('mealCategories', category)}</option>
             ))}
           </select>
           {showCategoryError && (
             <p id="speisekategorie-error" className="recipe-form-field-error" role="alert">
-              Bitte wählen Sie mindestens eine Speisekategorie aus.
+              {t('kategorieFehlt')}
             </p>
           )}
         </div>
 
         <div className="form-group">
-          <label>Kulinarik (Mehrfachauswahl möglich)</label>
+          <label>{t('kulinarik')}</label>
           {(orderedCuisinePills.length > 0 || visibleCuisineSuggestions.length > 0 || newCuisineInput.trim()) && (
             <div className="recipe-form-cuisine-grid">
               {orderedCuisinePills.map((name) => (
@@ -1760,9 +1770,9 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                   className={`recipe-form-cuisine-pill${kulinarik.includes(name) ? ' active' : ''}`}
                   onClick={() => handleCuisinePillToggle(name)}
                   aria-pressed={kulinarik.includes(name)}
-                  title={kulinarik.includes(name) ? 'Auswahl aufheben' : `${name} auswählen`}
+                  title={kulinarik.includes(name) ? t('auswahlAufheben') : t('auswaehlen', { name: listen.kulinarik(name) })}
                 >
-                  {name}
+                  {listen.kulinarik(name)}
                 </button>
               ))}
               {visibleCuisineSuggestions.map((name) => (
@@ -1772,14 +1782,14 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                   className="recipe-form-cuisine-pill recipe-form-cuisine-pill--new"
                   onClick={() => handleCuisineSuggestionClick(name)}
                   disabled={newCuisineLoading}
-                  title={`Beim Import erkannt: „${name}" als neuen Kulinariktyp anlegen und auswählen`}
+                  title={t('kulinarikVorschlagTitel', { name })}
                 >
-                  {`Neu: ${name}?`}
+                  {t('neuFrage', { name })}
                 </button>
               ))}
               {newCuisineInput.trim() &&
                 !visibleCuisinePills.some(
-                  (p) => p.toLowerCase() === newCuisineInput.trim().toLowerCase()
+                  (p) => kulinarikGleich(p, newCuisineInput.trim().toLowerCase())
                 ) && (
                   <button
                     key={`new-${newCuisineInput.trim()}`}
@@ -1788,7 +1798,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                     onClick={() => handleNewCuisinePillClick(newCuisineInput.trim())}
                     disabled={newCuisineLoading}
                     aria-pressed={kulinarik.includes(newCuisineInput.trim())}
-                    title={`„${newCuisineInput.trim()}" als neuen Kulinariktyp vorschlagen und auswählen`}
+                    title={t('kulinarikNeuTitel', { name: newCuisineInput.trim() })}
                   >
                     {newCuisineLoading ? '…' : newCuisineInput.trim()}
                   </button>
@@ -1804,19 +1814,19 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
             className="recipe-form-cuisine-search"
             value={newCuisineInput}
             onChange={handleCuisineInputChange}
-            placeholder="Kulinarik oder Speisekategorien suchen …"
-            aria-label="Kulinarik und Speisekategorien suchen"
+            placeholder={t('kulinarikSuchen')}
+            aria-label={t('kulinarikSuchenLabel')}
             autoComplete="off"
           />
           {newCuisineDuplicateHint && (
             <p className="recipe-form-cuisine-duplicate-hint">
-              Dieser Kulinariktyp ist bereits vorhanden und wurde ausgewählt.
+              {t('kulinarikVorhanden')}
             </p>
           )}
         </div>
 
         <div className="form-group">
-          <label htmlFor="schwierigkeit">Schwierigkeitsgrad</label>
+          <label htmlFor="schwierigkeit">{t('schwierigkeitsgrad')}</label>
           <div className="difficulty-slider">
             {[1, 2, 3, 4, 5].map((level) => (
               <span
@@ -1832,15 +1842,15 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
 
         <div className="form-section">
           <div className="section-header">
-            <h3>Zutaten</h3>
+            <h3>{t('zutaten')}</h3>
             {ingredients.some(i => containsEmojis(i.text)) && (
               <button
                 type="button"
                 className="emoji-remove-btn-small"
                 onClick={handleRemoveEmojisFromIngredients}
-                title="Emojis aus allen Zutaten entfernen"
+                title={t('emojisAusZutaten')}
               >
-                Emojis entfernen
+                {t('emojisEntfernen')}
               </button>
             )}
           </div>
@@ -1872,7 +1882,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
             <div key={banner.id} className="undo-snackbar" role="status">
               <span>{banner.message}</span>
               <button type="button" className="undo-snackbar-btn" onClick={() => ingredientUndo.undoDelete(banner.id)}>
-                Rückgängig
+                {tAllgemein('rueckgaengig')}
               </button>
             </div>
           ))}
@@ -1880,11 +1890,11 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
             type="button"
             className="add-item-button add-item-button--ingredient"
             onClick={handleAddIngredient}
-            title="Zutat hinzufügen"
-            aria-label="Zutat hinzufügen"
+            title={t('zutatHinzufuegen')}
+            aria-label={t('zutatHinzufuegen')}
           >
             {isBase64Image(addIngredientIcon) ? (
-              <img src={addIngredientIcon} alt="Zutat hinzufügen" className="button-icon-image" draggable="false" />
+              <img src={addIngredientIcon} alt={t('zutatHinzufuegen')} className="button-icon-image" draggable="false" />
             ) : (
               addIngredientIcon
             )}
@@ -1893,7 +1903,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
 
         <div className="form-section">
           <div className="section-header">
-            <h3>Zubereitungsschritte</h3>
+            <h3>{t('zubereitungsschritte')}</h3>
             <div className="section-header-actions">
               {rephrasableStepIndices.length > 0 && (
                 <button
@@ -1901,9 +1911,9 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                   className="rephrase-steps-btn"
                   onClick={handleRephraseSteps}
                   disabled={rephrasingSteps}
-                  title="Zubereitungsschritte per KI umformulieren (beschreibend, Du-Form, energiegeladen aber sachlich)"
+                  title={t('umformulierenTitel')}
                 >
-                  {rephrasingSteps ? 'Formuliere um…' : 'Umformulieren'}
+                  {rephrasingSteps ? t('formuliereUm') : t('umformulieren')}
                 </button>
               )}
               {steps.some(s => containsEmojis(s.text)) && (
@@ -1911,9 +1921,9 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                   type="button"
                   className="emoji-remove-btn-small"
                   onClick={handleRemoveEmojisFromSteps}
-                  title="Emojis aus allen Schritten entfernen"
+                  title={t('emojisAusSchritten')}
                 >
-                  Emojis entfernen
+                  {t('emojisEntfernen')}
                 </button>
               )}
             </div>
@@ -1951,7 +1961,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
             <div key={banner.id} className="undo-snackbar" role="status">
               <span>{banner.message}</span>
               <button type="button" className="undo-snackbar-btn" onClick={() => stepUndo.undoDelete(banner.id)}>
-                Rückgängig
+                {tAllgemein('rueckgaengig')}
               </button>
             </div>
           ))}
@@ -1959,11 +1969,11 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
             type="button"
             className="add-item-button add-item-button--step"
             onClick={handleAddStep}
-            title="Schritt hinzufügen"
-            aria-label="Schritt hinzufügen"
+            title={t('schrittHinzufuegen')}
+            aria-label={t('schrittHinzufuegen')}
           >
             {isBase64Image(addStepIcon) ? (
-              <img src={addStepIcon} alt="Schritt hinzufügen" className="button-icon-image" draggable="false" />
+              <img src={addStepIcon} alt={t('schrittHinzufuegen')} className="button-icon-image" draggable="false" />
             ) : (
               addStepIcon
             )}
@@ -1973,14 +1983,14 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         {/* Draft checkbox - only visible to admins */}
         {isCurrentUserAdmin() && (
           <div className="form-group draft-checkbox-container">
-            <span className="draft-label">Entwurf:</span>
+            <span className="draft-label">{t('entwurf')}</span>
             <label className="draft-checkbox-wrapper">
               <input
                 type="checkbox"
                 checked={isPrivate}
                 onChange={(e) => setIsPrivate(e.target.checked)}
                 className="draft-checkbox"
-                aria-label="Rezept als Entwurf markieren"
+                aria-label={t('alsEntwurf')}
               />
             </label>
           </div>
@@ -1997,11 +2007,11 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         onMouseDown={() => setCancelPressed(true)}
         onMouseUp={() => setCancelPressed(false)}
         onMouseLeave={() => setCancelPressed(false)}
-        title="Abbrechen"
-        aria-label="Rezeptbearbeitung abbrechen"
+        title={tAllgemein('abbrechen')}
+        aria-label={t('bearbeitungAbbrechen')}
       >
         {isBase64Image(getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)) ? (
-          <img src={getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
+          <img src={getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)} alt={tAllgemein('abbrechen')} className="button-icon-image" draggable="false" />
         ) : (
           getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)
         )}
@@ -2046,7 +2056,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       )}
 
       {/* Loading overlay with animated dots while saving */}
-      {isSaving && <SavingOverlay label="Rezept wird gespeichert" />}
+      {isSaving && <SavingOverlay label={t('rezeptWirdGespeichert')} />}
 
       {/* FAB Save Button */}
       <button
@@ -2059,11 +2069,11 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         onTouchStart={handleFabMouseDown}
         onTouchEnd={handleFabMouseUp}
         disabled={isSaving}
-        aria-label={recipe ? 'Rezept aktualisieren' : 'Rezept speichern'}
-        title={recipe ? 'Rezept aktualisieren' : 'Rezept speichern'}
+        aria-label={recipe ? t('rezeptAktualisieren') : t('rezeptSpeichern')}
+        title={recipe ? t('rezeptAktualisieren') : t('rezeptSpeichern')}
       >
         {isBase64Image(getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)) ? (
-          <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt="Speichern" className="button-icon-image" draggable="false" />
+          <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt={tAllgemein('speichern')} className="button-icon-image" draggable="false" />
         ) : (
           getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)
         )}
