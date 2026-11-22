@@ -88,11 +88,6 @@
   --color-button-danger-quiet-text: var(--color-bad-text);
   --color-button-ghost-text: var(--color-text-muted);
   --color-button-focus: var(--color-text-strong);
-  /* Profilseite (PersonalDataPage, Variante B): Kopf auf Markenbraun. --color-brand ist im
-     Dunkelmodus hell (Schriftfarbe), deshalb eigene Fläche. */
-  --color-brand-surface: #402c1c;
-  --color-on-brand-surface: #fff;
-  --color-on-brand-surface-muted: #d9cbbd;
   /* Auswahl in der Zeile (AuswahlGruppe: Segmente) und Schalter */
   --color-segment-track: #ececec;
   --color-segment-selected: #fff;
@@ -188,9 +183,6 @@
   --color-button-danger-quiet-text: var(--color-bad-text);
   --color-button-ghost-text: var(--color-text-muted);
   --color-button-focus: var(--color-text-strong);
-  --color-brand-surface: #2b2018;
-  --color-on-brand-surface: #f1e6df;
-  --color-on-brand-surface-muted: #c4b3a3;
   --color-segment-track: #2a2a2a;
   --color-segment-selected: #4a4a4a;
   --color-segment-shadow: rgba(0, 0, 0, 0.4);

@@ -283,141 +283,111 @@ describe('PersonalDataPage - Standard-Liste für Webimport', () => {
     updateUserProfile.mockResolvedValue({ success: true, message: 'Profil erfolgreich aktualisiert.' });
   });
 
-  test('renders Standard-Liste row with chevron when privateLists are provided', () => {
-    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
+  const zeile = (name) => screen.getByRole('button', { name: new RegExp(`^${name}`) });
+  const liste = (name) => screen.getByRole('radiogroup', { name });
 
-    expect(screen.getByText('Inspirationssammlung')).toBeInTheDocument();
-    expect(screen.getByText('Alltagsklassiker')).toBeInTheDocument();
-    expect(screen.getAllByText('– Keine Vorauswahl –').length).toBeGreaterThan(0);
+  test('zeigt beide Zeilen mit der aktuellen Auswahl, zugeklappt', () => {
+    render(<PersonalDataPage currentUser={{ ...mockUser, defaultWebImportListId: 'list-1' }} onBack={() => {}} privateLists={privateLists} />);
+
+    expect(zeile('Inspirationssammlung')).toHaveTextContent('Meine Favoriten');
+    expect(zeile('Inspirationssammlung')).toHaveAttribute('aria-expanded', 'false');
+    expect(zeile('Alltagsklassiker')).toHaveTextContent('– Keine Vorauswahl –');
+    expect(screen.queryByRole('radiogroup', { name: 'Inspirationssammlung auswählen' })).not.toBeInTheDocument();
   });
 
-  test('does not render Standard-Liste row when privateLists is empty', () => {
+  test('zeigt keine Zeilen ohne private Listen', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={[]} />);
 
     expect(screen.queryByText('Inspirationssammlung')).not.toBeInTheDocument();
     expect(screen.queryByText('Alltagsklassiker')).not.toBeInTheDocument();
   });
 
-  test('shows current selection in the row when defaultWebImportListId is set', () => {
-    const userWithList = { ...mockUser, defaultWebImportListId: 'list-1' };
-    render(<PersonalDataPage currentUser={userWithList} onBack={() => {}} privateLists={privateLists} />);
-
-    expect(screen.getByText('Meine Favoriten')).toBeInTheDocument();
-  });
-
-  test('opens web import list picker when row is clicked', () => {
+  test('klappt die Listen in der Zeile auf, ohne Unterseite, und wieder zu', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Inspirationssammlung/i }));
+    fireEvent.click(zeile('Inspirationssammlung'));
 
-    expect(screen.getByRole('heading', { name: 'Inspirationssammlung' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: /Keine Vorauswahl/i })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: /Meine Favoriten/i })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: /Wochenplan/i })).toBeInTheDocument();
-  });
-
-  test('no-preselection option shows checkmark by default', () => {
-    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Inspirationssammlung/i }));
-
-    const noListOption = screen.getByRole('option', { name: /Keine Vorauswahl/i });
-    expect(noListOption).toHaveAttribute('aria-selected', 'true');
-    const list1Option = screen.getByRole('option', { name: /Meine Favoriten/i });
-    expect(list1Option).toHaveAttribute('aria-selected', 'false');
-  });
-
-  test('selected list shows checkmark in picker', () => {
-    const userWithList = { ...mockUser, defaultWebImportListId: 'list-1' };
-    render(<PersonalDataPage currentUser={userWithList} onBack={() => {}} privateLists={privateLists} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Inspirationssammlung/i }));
-
-    const list1Option = screen.getByRole('option', { name: /Meine Favoriten/i });
-    expect(list1Option).toHaveAttribute('aria-selected', 'true');
-    const noListOption = screen.getByRole('option', { name: /Keine Vorauswahl/i });
-    expect(noListOption).toHaveAttribute('aria-selected', 'false');
-  });
-
-  test('clicking a list in picker saves profile immediately and updates the row', async () => {
-    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Inspirationssammlung/i }));
-    fireEvent.click(screen.getByRole('option', { name: /Meine Favoriten/i }));
-
-    await waitFor(() => {
-      expect(updateUserProfile).toHaveBeenCalledWith('user-1', expect.objectContaining({
-        defaultWebImportListId: 'list-1',
-      }));
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
-    expect(screen.getByText('Meine Favoriten')).toBeInTheDocument();
-  });
-
-  test('clicking no-preselection option clears the selection', async () => {
-    const userWithList = { ...mockUser, defaultWebImportListId: 'list-1' };
-    render(<PersonalDataPage currentUser={userWithList} onBack={() => {}} privateLists={privateLists} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Inspirationssammlung/i }));
-    fireEvent.click(screen.getByRole('option', { name: /Keine Vorauswahl/i }));
-
-    await waitFor(() => {
-      expect(updateUserProfile).toHaveBeenCalledWith('user-1', expect.objectContaining({
-        defaultWebImportListId: '',
-      }));
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
-    expect(screen.getAllByText('– Keine Vorauswahl –').length).toBeGreaterThan(0);
-  });
-
-  test('calls onProfileUpdated when list is selected', async () => {
-    const onProfileUpdated = jest.fn();
-    render(
-      <PersonalDataPage
-        currentUser={mockUser}
-        onBack={() => {}}
-        onProfileUpdated={onProfileUpdated}
-        privateLists={privateLists}
-      />
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: /Inspirationssammlung/i }));
-    fireEvent.click(screen.getByRole('option', { name: /Wochenplan/i }));
-
-    await waitFor(() => {
-      expect(onProfileUpdated).toHaveBeenCalledWith(
-        expect.objectContaining({ defaultWebImportListId: 'list-2' }),
-        { schliessen: false }
-      );
-    });
-  });
-
-  test('back button in picker returns to main page', () => {
-    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Inspirationssammlung/i }));
-    expect(screen.getByRole('heading', { name: 'Inspirationssammlung' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
-    expect(screen.queryByRole('heading', { name: 'Inspirationssammlung' })).not.toBeInTheDocument();
+    expect(zeile('Inspirationssammlung')).toHaveAttribute('aria-expanded', 'true');
+    const optionen = within(liste('Inspirationssammlung auswählen')).getAllByRole('radio');
+    expect(optionen.map((o) => o.textContent)).toEqual(['– Keine Vorauswahl –', 'Meine Favoriten', 'Wochenplan']);
+    expect(optionen[0]).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('heading', { name: 'Chefkoch' })).toBeInTheDocument();
+
+    fireEvent.click(zeile('Inspirationssammlung'));
+    expect(screen.queryByRole('radiogroup', { name: 'Inspirationssammlung auswählen' })).not.toBeInTheDocument();
   });
 
-  test('opens alltagsklassiker picker and saves selected list', async () => {
+  test('es ist immer nur eine Zeile aufgeklappt', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Alltagsklassiker/i }));
-    expect(screen.getByRole('heading', { name: 'Alltagsklassiker' })).toBeInTheDocument();
+    fireEvent.click(zeile('Inspirationssammlung'));
+    fireEvent.click(zeile('Alltagsklassiker'));
 
-    fireEvent.click(screen.getByRole('option', { name: /Wochenplan/i }));
+    expect(screen.queryByRole('radiogroup', { name: 'Inspirationssammlung auswählen' })).not.toBeInTheDocument();
+    expect(liste('Alltagsklassiker auswählen')).toBeInTheDocument();
+    expect(zeile('Inspirationssammlung')).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('Tipp auf eine Liste speichert sofort, zeigt sie in der Zeile und lässt die Seite offen', async () => {
+    const onProfileUpdated = jest.fn();
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} onProfileUpdated={onProfileUpdated} privateLists={privateLists} />);
+
+    fireEvent.click(zeile('Inspirationssammlung'));
+    fireEvent.click(within(liste('Inspirationssammlung auswählen')).getByRole('radio', { name: 'Wochenplan' }));
+
+    expect(zeile('Inspirationssammlung')).toHaveTextContent('Wochenplan');
+    await waitFor(() => {
+      expect(updateUserProfile).toHaveBeenCalledWith('user-1', expect.objectContaining({ defaultWebImportListId: 'list-2' }));
+    });
+    expect(onProfileUpdated).toHaveBeenCalledWith(
+      expect.objectContaining({ defaultWebImportListId: 'list-2' }),
+      { schliessen: false }
+    );
+  });
+
+  test('„Keine Vorauswahl“ hebt die Auswahl auf', async () => {
+    render(<PersonalDataPage currentUser={{ ...mockUser, defaultWebImportListId: 'list-1' }} onBack={() => {}} privateLists={privateLists} />);
+
+    fireEvent.click(zeile('Inspirationssammlung'));
+    fireEvent.click(within(liste('Inspirationssammlung auswählen')).getByRole('radio', { name: '– Keine Vorauswahl –' }));
 
     await waitFor(() => {
-      expect(updateUserProfile).toHaveBeenCalledWith('user-1', expect.objectContaining({
-        defaultEverydayClassicsListId: 'list-2',
-      }));
+      expect(updateUserProfile).toHaveBeenCalledWith('user-1', expect.objectContaining({ defaultWebImportListId: '' }));
     });
+    expect(zeile('Inspirationssammlung')).toHaveTextContent('– Keine Vorauswahl –');
+  });
+
+  test('die schon gewählte Liste speichert nicht noch einmal', () => {
+    render(<PersonalDataPage currentUser={{ ...mockUser, defaultWebImportListId: 'list-1' }} onBack={() => {}} privateLists={privateLists} />);
+
+    fireEvent.click(zeile('Inspirationssammlung'));
+    fireEvent.click(within(liste('Inspirationssammlung auswählen')).getByRole('radio', { name: 'Meine Favoriten' }));
+
+    expect(updateUserProfile).not.toHaveBeenCalled();
+  });
+
+  test('Alltagsklassiker speichert die gewählte Liste', async () => {
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
+
+    fireEvent.click(zeile('Alltagsklassiker'));
+    fireEvent.click(within(liste('Alltagsklassiker auswählen')).getByRole('radio', { name: 'Wochenplan' }));
+
+    await waitFor(() => {
+      expect(updateUserProfile).toHaveBeenCalledWith('user-1', expect.objectContaining({ defaultEverydayClassicsListId: 'list-2' }));
+    });
+  });
+
+  test('scheitert das Speichern, springt die Auswahl zurück und ein Hinweis erscheint', async () => {
+    updateUserProfile.mockResolvedValue({ success: false, message: 'offline' });
+    const onProfileUpdated = jest.fn();
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} onProfileUpdated={onProfileUpdated} privateLists={privateLists} />);
+
+    fireEvent.click(zeile('Alltagsklassiker'));
+    fireEvent.click(within(liste('Alltagsklassiker auswählen')).getByRole('radio', { name: 'Wochenplan' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Änderung konnte nicht gespeichert werden.');
+    expect(zeile('Alltagsklassiker')).toHaveTextContent('– Keine Vorauswahl –');
+    expect(onProfileUpdated).not.toHaveBeenCalled();
   });
 });
 
