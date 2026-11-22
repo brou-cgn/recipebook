@@ -190,18 +190,32 @@
   flex-direction: column;
 }
 
+/* Zeilenhöhe 1: Mit dem Browser-Standard blieb unter „brouBook“ (keine Unterlängen) ein leerer
+   Streifen, der Slogan wirkte abgesetzt. Entscheidung „Header-Gestaltung“ im Tracker
+   docs/vorhaben/mehrsprachigkeit.md. */
 .header h1 {
   margin: 0;
   font-size: 2rem;
   font-weight: 700;
+  line-height: 1;
   color: var(--color-text-strong);
 }
 
+/* Slogan als Randnotiz: Handschrift direkt unter dem Titel (HandschriftText.js). Höchstens zwei
+   Zeilen; rechts etwas Luft, damit gedrehte Buchstaben am Rand nicht abgeschnitten werden. */
 .header .tagline {
-  margin: 0.25rem 0 0 0;
-  font-size: 0.9rem;
-  color: #1a1a1a;
-  opacity: 0.8;
+  margin: 0;
+  padding-right: 0.15em;
+  font-family: 'Reenie Beanie', cursive;
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1.15;
+  color: var(--color-accent-text);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
 }
 
 
@@ -585,9 +599,11 @@
   .header h1 {
     font-size: 1.5rem;
   }
-  
+
+  /* 19 px, bis etwa 22 Zeichen eine Zeile; längere Slogans werden bis 15 px kleiner
+     (--handschrift-faktor aus HandschriftText.js), danach zwei Zeilen. */
   .header .tagline {
-    font-size: 0.8rem;
+    font-size: max(15px, calc(19px * var(--handschrift-faktor, 1)));
   }
 
   /* Stays 44 × 44 px on mobile (minimum touch target); only the padding
@@ -613,6 +629,12 @@
   }
 }
 
+/* Sehr schmale Handys (iPhone SE): Slogan fest 15 px, längere brechen in die zweite Zeile um. */
+@media (max-width: 359px) {
+  .header .tagline {
+    font-size: 15px;
+  }
+}
 
 /* FAQ Modal Styles */
 .faq-modal-overlay {

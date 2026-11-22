@@ -70,10 +70,6 @@
   color: #e8e8e8;
 }
 
-[data-theme="dark"] .header .tagline {
-  color: #ccc;
-}
-
 [data-theme="dark"] .header-slogan {
   color: #aaa;
 }

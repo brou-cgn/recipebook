@@ -69,6 +69,7 @@ auch mehrsprachig aufgesetzt werden.“ Umfang: „alles“, also kein Halt nach
 | 6c | Wein dazu: Wörterbuch `wein.js`; Übersetzung der Wissensbasis nach ID in `src/data/weinbegleitung/uebersetzungen.js` mit `src/utils/weinbegleitung/sprache.js` (`stilName`, `regelText`, `regionName`, `beispielText`, `labelText`) und Vollständigkeitstest; `kennwerteFuer` und `weinprofilFehlertext` in `anzeige.js` über `t`; umgestellt `WeinDazu` und `WeinbegleitungTeile` (Gründe, Quellen). `WeinprofilEinblick` als Diagnoseansicht in `NUR_DEUTSCH`. Baseline 1423 → 1397 Textstellen. | gemergt 22.11.2026 (PR #3728, Merge 31965f3) |
 | 6d | Kochbuch mit Suche und Filtern: Wörterbuch `kochbuch.js`; umgestellt `RecipeList` (Knöpfe, leere Liste, jetzt geduzt), `RecipeCard` (weitere Küchen, Liste, Neu, Versionen), `SortCarousel` (Sortierungen über `schluessel`, `label` bleibt deutsch), `TutorialCard` (Kategorien übersetzt, Titel bleiben Inhalt), `RecipeFilterSidebar`, `MobileSearchOverlay`. Einzahl korrigiert („1 weitere Kategorie“). Baseline 1397 → 1303 Textstellen. | PR #3729 (offen, 22.11.2026; mit Fix der Überschrift `getHeading`, siehe „Offen“) |
 | E | Entscheidungen umgesetzt: Bereichsnamen übersetzt (`bereiche.js`, untere Navigation mit eigenem Wörterbuch `navigation.js`), Hinweise zu Mitteilungen in „Persönliche Daten“ duzen, Test gegen die Höflichkeitsform, Regel in `AGENTS.md`. | gemergt 22.11.2026 (PR #3721, Merge 442bd21) |
+| H | Header-Gestaltung (Entscheidung „Header-Gestaltung“): Titel mit Zeilenhöhe 1, Slogan als Randnotiz über `HandschriftText` (`src/components/HandschriftText.js`, Rechnung in `src/utils/handschrift.js`, Tests halten die Werte des Canvas-Entwurfs fest), Schrift `@fontsource/reenie-beanie` (nur Latin, landet im Offline-Cache), Farbe über das neue Token `--color-accent-text`; die Dark-Regel für `.header .tagline` in `darkMode.css` entfällt. Eintrag im `CHANGELOG.md`. | Branch claude/confident-brown-916zzc, noch kein PR (22.11.2026) |
 | B | Phase B (siehe „Entschieden“). | später |
 
 Nach jedem PR: Tabelle nachziehen. Berührt ein PR einen Tech-Check-Befund, auch das Dashboard
@@ -111,9 +112,6 @@ aktualisieren.
 - **Sprachwahl als Flaggen-Chip** (Entscheidung „Sprachwahl im Header“): umsetzen. Dabei klären, ob der Abschnitt
   „Sprache“ im Header-Menü wegfällt (Vorschlag: ja, nur ein Ort für die Sprachwahl). Unter 360 px Breite zeigt der
   Chip nur die Flagge, sonst wird der Titel zu eng.
-- **Header-Gestaltung** (Entscheidung „Header-Gestaltung“): umsetzen, unabhängig von der Sprachwahl und als eigener
-  PR. Die Schrift kommt als woff2 ins Projekt und in den Offline-Cache. Den Handschrift-Effekt übernimmt eine kleine
-  Komponente mit derselben Rechnung wie im Canvas.
 - **Slogan im Header:** kommt aus den Einstellungen (`getHeaderSlogan`, auch im Seitentitel über `faviconUtils`) und
   bleibt in jeder Sprache deutsch, direkt unter der Sprachwahl. Vorschlag: Übersetzungen pflegen wie bei den
   Auswahllisten. Noch nicht entschieden.
@@ -151,4 +149,6 @@ aktualisieren.
 - Rezeptansicht und Kochmodus (PR 6a): Wörterbücher `rezeptansicht.js`, `kochmodus.js`, `bewertung.js`,
   `einkaufsliste.js`, `kochtagebuch.js` in `src/i18n/texte/`; Status-Texte der Kochsitzung über `t` in
   `src/utils/cookingSessionStatus.js`; Timer-Dauern über `timerDauer` in `src/components/RecipeDetail.js`
+- Header-Gestaltung (H): Slogan über `src/components/HandschriftText.js` mit `src/utils/handschrift.js`, Stil in
+  `.header .tagline` (`Header.css`), Schrift aus `@fontsource/reenie-beanie` (Import in `Header.js`)
 - Vorlage: Wichtel-Teilnehmerseite (`src/utils/wichtelTeilnahmeTexte.js`)
