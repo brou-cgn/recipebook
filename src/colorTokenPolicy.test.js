@@ -38,7 +38,7 @@ const BASELINE = {
   'components/GroupCreateDialog.css': 15,
   'components/GroupDetail.css': 39,
   'components/GroupList.css': 21,
-  'components/Header.css': 61,
+  'components/Header.css': 60,
   'components/ImportProgressDialog.css': 16,
   'components/ImportProgressIndicator.css': 5,
   'components/KalibrierungsAuswertung.css': 4,
@@ -138,8 +138,9 @@ describe('Farb-Token-Richtlinie', () => {
 // darkMode.css ist Altbestand: neue Dark-Regeln gehören als Token in tokens.css
 // (AGENTS.md). Gezählt werden die [data-theme="dark"]-Selektoren; der Wert darf nur
 // sinken (Tech-Check D5: am 27.10.2026 kamen trotz Regel sieben neue dazu). 22.11.2026: 947 → 935,
-// die zwölf Regeln der Profilseite stehen jetzt als Tokens in PersonalDataPage.css.
-const DARK_MODE_SELECTORS = 935;
+// die zwölf Regeln der Profilseite stehen jetzt als Tokens in PersonalDataPage.css. 22.11.2026: 935 → 934,
+// der Slogan im Header nutzt das Token --color-accent-text.
+const DARK_MODE_SELECTORS = 934;
 
 describe('darkMode.css (Altbestand)', () => {
   const css = fs.readFileSync(path.join(SRC, 'darkMode.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
