@@ -482,13 +482,14 @@ function App() {
   // ~380ms exit fade - never shows at all, not just skips its entrance.
   const [splashDismissed, setSplashDismissed] = useState(isRecoveryNavigation);
   const [currentUser, setCurrentUser] = useState(null);
-  // Sprache aus den persönlichen Einstellungen (Vorhaben docs/vorhaben/mehrsprachigkeit.md)
-  useSpracheFuerNutzer(currentUser);
-  const tBereiche = useTexte(bereicheTexte);
-  const { setzeListenUebersetzungen } = useSprache();
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
   const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
+  // Sprache aus den persönlichen Einstellungen, ohne Anmeldung die des Browsers
+  // (Vorhaben docs/vorhaben/mehrsprachigkeit.md)
+  useSpracheFuerNutzer(currentUser, { anmeldungGeprueft: !authLoading });
+  const tBereiche = useTexte(bereicheTexte);
+  const { setzeListenUebersetzungen } = useSprache();
   const [allUsers, setAllUsers] = useState([]);
   const [headerVisible, setHeaderVisible] = useState(true);
   const headerRef = useRef(null);

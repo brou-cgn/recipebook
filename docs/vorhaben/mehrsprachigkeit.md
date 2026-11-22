@@ -2,7 +2,8 @@
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
 Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 22.11.2026 (PR 1 bis 6h,
-„Chefkoch & mehr“ (C) und die Entscheidungen (E) gemergt, PR 6i als PR #3751 offen).
+„Chefkoch & mehr“ (C) und die Entscheidungen (E) gemergt, PR 6i als PR #3751 offen, O und 6j auf Branch
+`claude/mehrsprachigkeit-browsersprache-events`).
 
 **Ziel:** Die App gibt es auf Deutsch, Englisch und Französisch. Jede:r wählt die eigene Sprache in den
 persönlichen Einstellungen, der Header übersteuert sie für die laufende Sitzung. Rezepte (Titel und
@@ -21,7 +22,7 @@ auch mehrsprachig aufgesetzt werden.“ Umfang: „alles“, also kein Halt nach
 | Thema | Entscheidung |
 |---|---|
 | Sprachen | `de` (Original, Standard), `en`, `fr`. Locales `de-DE`, `en-GB` (Tag vor Monat), `fr-FR`. Sprachnamen in der eigenen Sprache (Deutsch, English, Français). Französisch duzt wie Deutsch, wie die Wichtel-Seite. Liste in `src/i18n/sprachen.js`, deckungsgleich mit den Sprachen der Gästeprofile (`GUEST_LANGUAGES`, Test). |
-| Welche Sprache gilt | (1) die im Header gewählte Sprache der Sitzung (sessionStorage `sitzungsSprache`, endet mit der Sitzung), (2) die persönliche Einstellung `users/{uid}.sprache`, (3) Deutsch. Die Browsersprache zählt in der angemeldeten App nicht, damit niemand ungefragt eine andere Sprache bekommt. Seiten ohne Anmeldung: siehe „Offen“. Umsetzung: `aktiveSprache` in `src/i18n/sprachen.js`. |
+| Welche Sprache gilt | (1) die im Header gewählte Sprache der Sitzung (sessionStorage `sitzungsSprache`, endet mit der Sitzung), (2) die persönliche Einstellung `users/{uid}.sprache`, (3) Deutsch. Die Browsersprache zählt in der angemeldeten App nicht, damit niemand ungefragt eine andere Sprache bekommt. Ohne Anmeldung (Anmeldung, Freigabe-Links, Kopf der Wichtel-Seite) gilt die Sprache des Browsers, wenn die App sie hat, sonst Deutsch (22.11.2026, Eigentümer: „Seiten ohne Anmeldung verwenden Sprache des Browsers“), und zwar erst, wenn die Anmeldung geprüft ist (`anmeldungGeprueft` in `useSpracheFuerNutzer`), damit beim Start niemand kurz die Browsersprache sieht. Das gilt für alle Besucher, unabhängig von der Berechtigung `sprachwahl`; übersetzte Inhalte (Titel, Zutaten, Listenwerte) bleiben ohne Anmeldung aus. Umsetzung: `aktiveSprache` in `src/i18n/sprachen.js`, `useSpracheFuerNutzer` im SpracheContext. |
 | Technik der Oberfläche | Eigenes kleines Modul nach dem Muster der Wichtel-Seite, keine Bibliothek. Wörterbücher je Bereich in `src/i18n/texte/<bereich>.js` mit allen drei Sprachen nebeneinander; `useTexte(woerterbuch)` liefert `t(schluessel, werte)`. Platzhalter `{name}`; Mengen über `Intl.PluralRules` mit dem Wert `anzahl`, der auch nach der Sprache formatiert wird; Datum und Zahl über `src/i18n/format.js`. Fehlt ein Text in einer Sprache, gilt der deutsche. |
 | Neue Texte | Ab PR 1 nur noch über `src/i18n` (Regel in `AGENTS.md`). Erzwungen durch `src/i18nPolicy.test.js`: Baseline je Datei, darf nur sinken, neue Dateien starten bei 0. Die Summe der Baseline ist der Rest, der noch zu übersetzen ist. |
 | Rezepttitel | Übersetzt bei Anlage, bei Titeländerung und einmal für den Bestand (Backfill nach dem Muster von `backfillWeinprofile`). |
@@ -54,7 +55,7 @@ auch mehrsprachig aufgesetzt werden.“ Umfang: „alles“, also kein Halt nach
 | Gespeicherte Meldungen | 22.11.2026 (PR 6b): Texte, die mit Daten gespeichert werden (Fehler der Nährwertberechnung in `naehrwerte.calcNotIncluded` und `calcError`, auch von der Cloud Function), entstehen weiter deutsch. Sonst stünde im Rezept die Sprache dessen, der zuletzt gerechnet hat. Angezeigt werden sie in der geltenden Sprache: `findeText` erkennt den deutschen Text samt Platzhaltern (Liste `MELDUNGEN` in `naehrwerte.js`), Unbekanntes bleibt wie gespeichert. Der deutsche Text im Wörterbuch muss deshalb genau dem gespeicherten entsprechen. Seit PR 6i ebenso Titel und Fehler wartender Importe (`GESPEICHERTE_TEXTE` in `rezeptimport.js`, Anzeige über `importTextAnzeige`; ein Test gleicht die Texte mit dem Code ab, der sie schreibt). |
 | Abschnitte der Menüs | 22.11.2026 (PR 6g), nach dem Muster der Auswahllisten: Die Standardnamen (Vorspeise, Hauptspeise, Dessert, der Systemabschnitt Drinks und „Alle Rezepte“ alter Menüs) bleiben im Menü deutsch gespeichert, weil Drinks Getränke und Weinbegleitung steuert, und erscheinen in der geltenden Sprache (`abschnittAnzeige` in `src/utils/menuSections.js`): in Menüansicht, Menü-Formular (auch die vordefinierten Abschnitte) und Weinbegleitung. Eigene Namen sind Inhalt und bleiben, wie sie sind. Ein eigener Name, der wie ein angezeigter Standardname lautet („Main course“ neben Hauptspeise), gilt im Formular als Dublette. |
 | Wissensbasis Wein | 22.11.2026 (PR 6c): Übersetzungen getrennt nach ID in `src/data/weinbegleitung/uebersetzungen.js`, nicht in den JSON-Dateien: Diese gehen in den Fingerabdruck von `RULES_VERSION` ein, eine Übersetzung soll keine neue Regelversion auslösen. Deutsch bleibt in der Wissensbasis. Übersetzt werden Namen der Stile, Kurztexte der Regeln, Küchen der Regionen und Rebsorten-Beispiele mit deutschen Wörtern (aus, mit, trocken …); Eigennamen wie Chianti, Spätburgunder oder Winzersekt bleiben. Die Labels der Engine („passt gut“ …) bleiben deutsch (im Menü auch gespeichert), übersetzt wird beim Anzeigen (`labelText`). „Einschätzung im Detail“ (`WeinprofilEinblick`, Berechtigung `weinprofilEinblick`, standardmäßig nur Admins) bleibt als Diagnoseansicht deutsch. |
-| Lieferweg | PR 1 bis 6i entstanden als Patches in einer Session ohne Schreibrechte auf das Repo. Empfehlung für die weiteren PRs: Session mit GitHub-Zugang. |
+| Lieferweg | PR 1 bis 6i und O entstanden als Patches in einer Session ohne Schreibrechte auf das Repo. Empfehlung für die weiteren PRs: Session mit GitHub-Zugang. |
 
 ## Stand der Umsetzung
 
@@ -81,6 +82,7 @@ auch mehrsprachig aufgesetzt werden.“ Umfang: „alles“, also kein Halt nach
 | SL | Slogan übersetzen (Entscheidung „Slogan übersetzen“): `src/i18n/slogan.js` (`sloganInSprache`, `sloganUebersetzungenZumSpeichern`), Laden und Speichern in `customLists.js` (`getSloganUebersetzungen`, `saveSloganUebersetzungen`, Feld in `getSettings`), Anzeige und Seitentitel in `Header.js`, Pflege in `Settings.js` (Englisch und Französisch, Hinweis bei veralteter Übersetzung); `standardSlogan` in `kopfzeile.js`. Tests `src/i18n/slogan.test.js`, `Header.test.js`, `Settings.slogan.test.js`; Bildschirm `einstellungen-allgemein` in `scripts/screenshots/capture.js`. Eintrag im `CHANGELOG.md`. | gemergt 22.11.2026 (PR #3733, Merge 65cf393) |
 | U | Fahnen als Umriss (Entscheidung „Sprachwahl im Header“): `FlaggeIcon.js` zeichnet nur Linien (`FLAGGEN_LINIEN`, Rahmen 45 × 30, britische Fahne vereinfacht), Linien 1 px in `--color-text-strong` und in jeder Größe gleich stark (`SprachWahl.css`); der Ring und das Token `--color-flag-ring` entfallen. Test `icons/FlaggeIcon.test.js`. Eintrag im `CHANGELOG.md`. Nachtrag: ab doppelter Pixeldichte 0,5 px (PR #3737, gemergt 22.11.2026, Merge 2e43022). | gemergt 22.11.2026 (PR #3736, Merge c2ac0f3) |
 | C | „Chefkoch & mehr“ (`Kueche.js`), zusammen mit der Gestaltung nach Variante A (Bento): Wörterbuch `chefkochUndMehr.js` (Kacheln, Abschnitt „Verwaltung“, Mengen als Bezeichnung in Einzahl und Mehrzahl ohne Zahl, Küche-Aktion, „Unbekanntes Rezept“ der Zeitleiste); Seitentitel und „Chefkoch“ aus `bereiche.js`; Zahlen nach der Sprache (`formatiereZahl`). Test auf Englisch in `Kueche.test.js`. Noch deutsch: die Unterseiten Netzwerk, Mise en Place, Meine Küchenstars, Küchenbetrieb, Eventplanung und die Seite Weinbegleitung. Baseline 1274 → 1241 Textstellen. | gemergt 22.11.2026 (PR #3738, Merge 11681f0) |
+| O | Seiten ohne Anmeldung in der Sprache des Browsers (Entscheidung in „Welche Sprache gilt“): `useSpracheFuerNutzer(nutzer, { anmeldungGeprueft })` meldet ohne Anmeldung `browserSprache()`, `App.js` übergibt `!authLoading`. Tests laufen wie in einem deutschen Browser (`src/setupTests.js`), neue Tests in `SpracheContext.test.js`. Eintrag im `CHANGELOG.md`. | Patch vorbereitet (22.11.2026), noch nicht eingespielt |
 | B | Phase B (siehe „Entschieden“). | später |
 
 Nach jedem PR: Tabelle nachziehen. Berührt ein PR einen Tech-Check-Befund, auch das Dashboard
@@ -91,9 +93,8 @@ aktualisieren.
 - **Texte in Hilfsfunktionen der Komponenten** zählt `src/i18nPolicy.test.js` nicht (etwa `getHeading` in
   `RecipeList`, in PR 6d bei der Sichtprüfung gefunden und nachgezogen). Bei jedem Bereich gezielt danach suchen
   (`return '…'`, Template-Strings mit deutschem Text) und den Bereich auf Englisch ansehen, bevor er als fertig gilt.
-- **Seiten ohne Anmeldung** (Freigabe-Links für Rezepte und Menüs): Browsersprache nutzen (`browserSprache`)?
-  Vorschlag: ja, mit PR 6. Die Texte der Menü-Freigabeseite stehen seit PR 6f im Wörterbuch; angemeldete Mitglieder
-  sehen sie in ihrer Sprache, Gäste ohne Anmeldung bis zur Entscheidung auf Deutsch.
+- **Seiten ohne Anmeldung:** entschieden, siehe „Welche Sprache gilt“ (Browsersprache). Noch deutsch: Anmeldung und
+  Registrierung (`Login.js`); sie folgen mit einem eigenen PR.
 - **Wichtel-Seite:** hat eigene Helfer (`fuelleText`, `browserSprache` in
   `src/utils/wichtelTeilnahmeTexte.js`), die es jetzt auch in `src/i18n` gibt. Nach der Wichtel-Saison auf
   `src/i18n` umstellen; bewusst nicht in PR 1, um die laufende Saison nicht zu berühren.
@@ -105,7 +106,7 @@ aktualisieren.
 - **Kochmodus:** mit PR 6a übersetzt. Noch deutsch: die Push-Mitteilung eines Timers vom Server (Phase B,
   Push-Mitteilungen).
 - **Übersetzte Inhalte für Gäste:** `rezeptUebersetzungen` lesen nur Mitglieder. Freigabe-Seiten zeigen
-  vorerst das Original (zusammen mit den Seiten ohne Anmeldung, siehe oben).
+  vorerst das Original; ihre Oberfläche folgt ohne Anmeldung der Sprache des Browsers.
 - **Größe der Wörterbücher:** Sie wachsen mit jedem Bereich und landen im Chunk des Bereichs. Wächst der
   Start-Chunk spürbar, Sprachen nachladen statt alle drei mitzuliefern.
 - **Meldungen aus `utils/`:** Fehlermeldungen von `updateUserProfile`, `changePassword` und den PIN-Callables
