@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import './IngredientCatalogSearchModal.css';
 import { normalizeNutritionReferenceId } from '../utils/nutritionReferenceUtils';
+import { useTexte } from '../contexts/SpracheContext';
+import naehrwerteTexte from '../i18n/texte/naehrwerte';
 
 function getIngredientRowDisplayName(row) {
   return String(
@@ -15,6 +17,7 @@ function getIngredientRowDisplayName(row) {
 }
 
 function IngredientCatalogSearchModal({ nutritionReferenceRows = [], onSelect, onClose }) {
+  const t = useTexte(naehrwerteTexte);
   const [query, setQuery] = useState('');
 
   const catalogEntries = useMemo(() => {
@@ -45,17 +48,17 @@ function IngredientCatalogSearchModal({ nutritionReferenceRows = [], onSelect, o
         className="ingredient-search-modal"
         role="dialog"
         aria-modal="true"
-        aria-label="Bestehende Zutaten durchsuchen"
+        aria-label={t('katalog')}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="ingredient-search-modal-header">
           <input
             type="search"
             className="ingredient-search-modal-input"
-            placeholder="Zutat suchen…"
+            placeholder={t('zutatSuchenPlatzhalter')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            aria-label="Zutat suchen"
+            aria-label={t('zutatSuchen')}
             autoFocus
             onKeyDown={(e) => {
               if (e.key === 'Escape') onClose();
@@ -65,14 +68,14 @@ function IngredientCatalogSearchModal({ nutritionReferenceRows = [], onSelect, o
             type="button"
             className="ingredient-search-modal-close"
             onClick={onClose}
-            aria-label="Zutatensuche schließen"
+            aria-label={t('katalogSchliessen')}
           >
             ×
           </button>
         </div>
         <ul className="ingredient-search-modal-list">
           {filteredEntries.length === 0 ? (
-            <li className="ingredient-search-modal-empty">Keine Zutat gefunden.</li>
+            <li className="ingredient-search-modal-empty">{t('keineZutatGefunden')}</li>
           ) : (
             filteredEntries.map((entry) => (
               <li key={entry.ingredientID}>

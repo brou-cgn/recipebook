@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createElement } from 'react';
-import { erstelleT, fuelleText } from './texte';
+import { erstelleT, findeText, fuelleText } from './texte';
 import { SPRACH_IDS, STANDARD_SPRACHE } from './sprachen';
 
 const NBSP = '\u00a0';
@@ -145,5 +145,29 @@ describe('Wörterbücher in src/i18n/texte/', () => {
         expect(text).not.toMatch(/« /);
       });
     });
+  });
+});
+
+describe('findeText (gespeicherte deutsche Texte wiedererkennen)', () => {
+  const WOERTERBUCH = {
+    de: { fehlt: 'Nicht gefunden', geloescht: 'Rezept "{name}" (Nr. {nr}) fehlt.', mehr: { one: 'x', other: 'y' } },
+    en: { fehlt: 'Not found', geloescht: 'Recipe “{name}” (no. {nr}) is missing.', mehr: { one: 'x', other: 'y' } },
+    fr: { fehlt: 'Introuvable', geloescht: 'Recette «{name}» (n° {nr}) manquante.', mehr: { one: 'x', other: 'y' } },
+  };
+  const LISTE = ['fehlt', 'geloescht', 'mehr'];
+
+  it('findet feste Texte und Texte mit Platzhaltern', () => {
+    expect(findeText(WOERTERBUCH, 'Nicht gefunden', LISTE)).toEqual({ schluessel: 'fehlt', werte: {} });
+    const treffer = findeText(WOERTERBUCH, 'Rezept "Suppe (scharf)" (Nr. 3) fehlt.', LISTE);
+    expect(treffer).toEqual({ schluessel: 'geloescht', werte: { name: 'Suppe (scharf)', nr: '3' } });
+    expect(erstelleT(WOERTERBUCH, 'en')(treffer.schluessel, treffer.werte)).toBe('Recipe “Suppe (scharf)” (no. 3) is missing.');
+  });
+
+  it('nur ganze Texte, nur die genannten Schlüssel, keine Mehrzahl', () => {
+    expect(findeText(WOERTERBUCH, 'Nicht gefunden.', LISTE)).toBeNull();
+    expect(findeText(WOERTERBUCH, 'Nicht gefunden', ['geloescht'])).toBeNull();
+    expect(findeText(WOERTERBUCH, 'x', LISTE)).toBeNull();
+    expect(findeText(WOERTERBUCH, null, LISTE)).toBeNull();
+    expect(findeText(WOERTERBUCH, '', LISTE)).toBeNull();
   });
 });

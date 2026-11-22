@@ -65,6 +65,7 @@ import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import { useListenwerte, useRezeptTitel, useSprache, useTexte } from '../contexts/SpracheContext';
 import rezeptansichtTexte from '../i18n/texte/rezeptansicht';
 import kochmodusTexte from '../i18n/texte/kochmodus';
+import naehrwerteTexte from '../i18n/texte/naehrwerte';
 import allgemeinTexte from '../i18n/texte/allgemein';
 import { formatiereDatum } from '../i18n/format';
 import useRezeptInhalt from '../hooks/useRezeptInhalt';
@@ -123,6 +124,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const tAnsicht = useTexte(rezeptansichtTexte);
   // Kochmodus und allgemeine Texte (Mehrsprachigkeit PR 6a)
   const tKoch = useTexte(kochmodusTexte);
+  // ingredientID-Abgleich vor dem Berechnen der Nährwerte (Mehrsprachigkeit PR 6b)
+  const tNaehr = useTexte(naehrwerteTexte);
   const tAllgemein = useTexte(allgemeinTexte);
   const { sprache } = useSprache();
   // Listenwerte (Kulinarik, Portionseinheit) in der geltenden Sprache (Mehrsprachigkeit PR 5)
@@ -1093,12 +1096,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
   const handleAutoCalculateAndSave = async () => {
     if (nutritionReferenceLoading) {
-      alert('Referenzdaten werden noch geladen. Bitte versuche es in einem Moment erneut.');
+      alert(tNaehr('referenzLaedt'));
       return;
     }
     if (nutritionReferenceRows.length === 0) {
       console.error('Nährwert-Referenzdaten konnten nicht geladen werden.');
-      alert('Nährwert-Referenzdaten konnten nicht geladen werden. Bitte lade die Seite neu und versuche es erneut.');
+      alert(tNaehr('referenzNichtGeladen'));
       return;
     }
     const matchingResult = await ensureIngredientIDsForNutrition();
@@ -1147,7 +1150,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       if (!selectedOption) {
         setIngredientMatchDialog((prev) => prev ? {
           ...prev,
-          errorMessage: 'Bitte für jede Zutat eine ingredientID auswählen.',
+          errorMessage: tNaehr('zuordnungFehlt'),
         } : prev);
         return;
       }
@@ -1178,7 +1181,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         if (!nextDraft) {
           setIngredientMatchDialog((prev) => prev ? {
             ...prev,
-            errorMessage: `Für "${entry.ingredient}" konnte keine neue ingredientID angelegt werden.`,
+            errorMessage: tNaehr('zuordnungNeuFehler', { zutat: entry.ingredient }),
           } : prev);
           return;
         }
@@ -2772,27 +2775,21 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             className="ingredient-match-dialog"
             role="dialog"
             aria-modal="true"
-            aria-label="ingredientID-Zuordnung"
+            aria-label={tNaehr('zuordnung')}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="ingredient-match-dialog-header">
-              <h2 className="ingredient-match-dialog-title">ingredientID prüfen</h2>
+              <h2 className="ingredient-match-dialog-title">{tNaehr('zuordnungPruefen')}</h2>
               <button
                 type="button"
                 className="ingredient-match-dialog-close"
                 onClick={() => { setIngredientMatchDialog(null); setOpenIngredientInfoIndex(null); }}
-                aria-label="ingredientID-Dialog schließen"
+                aria-label={tNaehr('zuordnungSchliessen')}
               >
                 ×
               </button>
             </div>
-            <p className="ingredient-match-dialog-note">
-              Bitte bestätigen Sie die vorgeschlagenen ingredientIDs, bevor die Nährwerte berechnet werden. Bei Uneindeutigkeit können Sie auch
-              {' '}
-              „Neue Zutat“
-              {' '}
-              oder „Zutat ignorieren“ wählen.
-            </p>
+            <p className="ingredient-match-dialog-note">{tNaehr('zuordnungHinweis')}</p>
             {ingredientMatchDialog.errorMessage ? (
               <p className="ingredient-match-dialog-error">{ingredientMatchDialog.errorMessage}</p>
             ) : null}
@@ -2807,7 +2804,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       <button
                         type="button"
                         className="ingredient-info-trigger"
-                        aria-label={`Details zur Erkennung von „${entry.ingredient}"`}
+                        aria-label={tNaehr('erkennungDetails', { zutat: entry.ingredient })}
                         aria-expanded={isInfoOpen}
                         onClick={() => setOpenIngredientInfoIndex(isInfoOpen ? null : entry.index)}
                       >
@@ -2817,15 +2814,15 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     {isInfoOpen && wordInfo && (
                       <dl className="ingredient-info-panel">
                         <div className="ingredient-info-row">
-                          <dt>Menge</dt>
+                          <dt>{tNaehr('menge')}</dt>
                           <dd>{wordInfo.amount ?? <span className="ingredient-info-none">—</span>}</dd>
                         </div>
                         <div className="ingredient-info-row">
-                          <dt>Einheit</dt>
+                          <dt>{tNaehr('einheit')}</dt>
                           <dd>{wordInfo.unit ?? <span className="ingredient-info-none">—</span>}</dd>
                         </div>
                         <div className="ingredient-info-row">
-                          <dt>Zutat</dt>
+                          <dt>{tNaehr('zutat')}</dt>
                           <dd>
                             {wordInfo.ingredientWords.length > 0
                               ? wordInfo.ingredientWords.join(' ')
@@ -2833,7 +2830,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                           </dd>
                         </div>
                         <div className="ingredient-info-row">
-                          <dt>Ignoriert</dt>
+                          <dt>{tNaehr('ignoriert')}</dt>
                           <dd>
                             {wordInfo.ignoredWords.length > 0
                               ? wordInfo.ignoredWords.join(' ')
@@ -2856,10 +2853,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             </ul>
             <div className="ingredient-match-dialog-actions">
               <Button variant="secondary" onClick={() => { setIngredientMatchDialog(null); setOpenIngredientInfoIndex(null); }}>
-                Abbrechen
+                {tAllgemein('abbrechen')}
               </Button>
               <Button variant="primary" onClick={handleIngredientMatchConfirm}>
-                Übernehmen & berechnen
+                {tNaehr('uebernehmenBerechnen')}
               </Button>
             </div>
           </div>

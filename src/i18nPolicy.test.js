@@ -41,7 +41,7 @@ const NUR_DEUTSCH = new Set([
   'components/UserManagement.js',
 ]);
 
-// Stand 22.11.2026 (PR 6a, Rezeptansicht und Kochmodus): 1499 Textstellen in 81 Dateien.
+// Stand 22.11.2026 (PR 6b, Nährwerte): 1423 Textstellen in 77 Dateien.
 const BASELINE = {
   'App.js': 5,
   'components/AtelierCategorySelectionPage.js': 5,
@@ -66,8 +66,6 @@ const BASELINE = {
   'components/GuestManagementPage.js': 55,
   'components/ImportProgressDialog.js': 9,
   'components/ImportProgressIndicator.js': 3,
-  'components/IngredientCatalogSearchModal.js': 5,
-  'components/IngredientIDSelect.js': 6,
   'components/KalibrierungsAuswertung.js': 14,
   'components/Kueche.js': 33,
   'components/Login.js': 18,
@@ -80,13 +78,11 @@ const BASELINE = {
   'components/MenuSharePage.js': 3,
   'components/MobileSearchOverlay.js': 30,
   'components/NetworkPage.js': 17,
-  'components/NutritionModal.js': 52,
   'components/OcrScanModal.js': 38,
   'components/PasswordChangeModal.js': 8,
   'components/PrintFormatEditor.js': 1,
   'components/PrintPage.js': 2,
   'components/RecipeCard.js': 6,
-  'components/RecipeDetail.js': 13,
   'components/RecipeFilterSidebar.js': 34,
   'components/RecipeForm.js': 112,
   'components/RecipeImportModal.js': 11,

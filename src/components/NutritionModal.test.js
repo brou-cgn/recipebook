@@ -14,6 +14,9 @@ import NutritionModal, {
 } from './NutritionModal';
 import { hasMeaningfulGeneratedNutrition } from '../utils/nutritionStatusResolver';
 import { DEFAULT_ADD_NUTRITION_ICON, DEFAULT_SAVE_MANUAL_AMOUNT_ICON } from '../utils/nutritionIconUtils';
+import { SpracheProvider } from '../contexts/SpracheContext';
+import { erstelleT } from '../i18n/texte';
+import naehrwerteTexte from '../i18n/texte/naehrwerte';
 
 jest.mock('../firebase', () => ({
   functions: {},
@@ -1993,5 +1996,61 @@ describe('NutritionModal manual save foundCount', () => {
     // Re-open the input by clearing the saved state isn't possible via UI in this test,
     // but we verify that the initial foundCount display is unchanged at 2
     expect(screen.queryByText(/3 von 3/)).not.toBeInTheDocument();
+  });
+});
+
+describe('NutritionModal in anderer Sprache (Mehrsprachigkeit PR 6b)', () => {
+  const rezept = {
+    id: 'r-sprache',
+    portionen: 2,
+    naehrwerte: {
+      kalorien: 1024,
+      fett: 56.4,
+      kohlenhydrate: 108,
+      zucker: 48.4,
+      protein: 16,
+      ballaststoffe: 9.6,
+      salz: 2.44,
+      calcFoundCount: 1,
+      calcTotalCount: 2,
+      // gespeicherte Meldung der Berechnung: bleibt deutsch, die Anzeige übersetzt sie
+      calcNotIncluded: [{ ingredient: '1 Prise Zauberpulver', error: 'Nicht gefunden' }],
+      calcIngredientDetails: [{ ingredient: '200 g Linsen', searchTerm: 'lentil', naehrwerte: { kalorien: 700, fett: 5, kohlenhydrate: 120, protein: 50 } }],
+    },
+    ingredients: ['200 g Linsen', '1 Prise Zauberpulver'],
+  };
+  const zeige = (sprache) => render(
+    <SpracheProvider profilSprache={sprache} speicher={null}>
+      <NutritionModal recipe={rezept} onClose={jest.fn()} onSave={jest.fn()} />
+    </SpracheProvider>
+  );
+
+  it('Englisch: Beschriftungen, Zahlen mit Punkt und übersetzte gespeicherte Meldungen', () => {
+    zeige('en');
+    expect(screen.getByRole('dialog', { name: 'Nutrition' })).toBeInTheDocument();
+    expect(screen.getByText('Calories')).toBeInTheDocument();
+    expect(screen.getByText('Fibre')).toBeInTheDocument();
+    // Fett pro Portion: 5 g / 2 Portionen
+    expect(screen.getByText('2.5 g')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show breakdown' }));
+    expect(screen.getByRole('columnheader', { name: 'Ingredient' })).toBeInTheDocument();
+    expect(screen.getByText('Search term: lentil')).toBeInTheDocument();
+    expect(screen.getByText('Not found')).toBeInTheDocument();
+  });
+
+  it('Deutsch bleibt wie bisher, mit Komma', () => {
+    zeige('de');
+    expect(screen.getByText('2,5 g')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Zusammensetzung anzeigen' }));
+    expect(screen.getByText('Suchbegriff: lentil')).toBeInTheDocument();
+    expect(screen.getByText('Nicht gefunden')).toBeInTheDocument();
+  });
+
+  it('buildNutritionCompositionRows mit t: Status und Quelle übersetzt, statusKey für die Logik', () => {
+    const t = erstelleT(naehrwerteTexte, 'fr');
+    const rows = buildNutritionCompositionRows(rezept, null, {}, [], {}, [], {}, { t, sprache: 'fr' });
+    expect(rows[0]).toEqual(expect.objectContaining({ status: 'Non vérifié', statusKey: 'statusUngeprueft' }));
+    expect(rows[0].detail).toBe('Terme recherché : lentil');
   });
 });

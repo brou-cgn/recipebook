@@ -95,3 +95,40 @@ export function erstelleT(woerterbuch, sprache) {
     return fuellwerte ? fuelleText(eintrag, fuellwerte) : eintrag;
   };
 }
+
+const sonderzeichen = /[.*+?^${}()|[\]\\]/g;
+
+/**
+ * Erkennt einen gespeicherten deutschen Text wieder, etwa eine Meldung, die mit Daten gespeichert
+ * wurde (Nährwerte, PR 6b), und liefert Schlüssel und Werte der Platzhalter. So bleiben
+ * gespeicherte Daten deutsch, angezeigt werden sie in der geltenden Sprache:
+ *
+ *   const treffer = findeText(woerterbuch, gespeichert, MELDUNGEN);
+ *   const anzeige = treffer ? t(treffer.schluessel, treffer.werte) : gespeichert;
+ *
+ * Verglichen wird mit dem deutschen Text des Wörterbuchs, nur mit einfachen Texten (ohne
+ * Mehrzahl). Ein Platzhalter steht für beliebigen Text.
+ * @param {Object<string, Object>} woerterbuch
+ * @param {*} text
+ * @param {string[]} schluesselListe - welche Schlüssel infrage kommen
+ * @returns {{schluessel: string, werte: Object<string, string>}|null}
+ */
+export function findeText(woerterbuch, text, schluesselListe) {
+  if (typeof text !== 'string' || !text) return null;
+  const deutsch = woerterbuch?.[STANDARD_SPRACHE] || {};
+  for (const schluessel of schluesselListe) {
+    const vorlage = deutsch[schluessel];
+    if (typeof vorlage !== 'string') continue;
+    const namen = [];
+    const muster = vorlage.split(/\{(\w+)\}/).map((teil, i) => {
+      if (i % 2 === 0) return teil.replace(sonderzeichen, '\\$&');
+      namen.push(teil);
+      return '(.+?)';
+    }).join('');
+    const treffer = new RegExp(`^${muster}$`, 's').exec(text);
+    if (treffer) {
+      return { schluessel, werte: Object.fromEntries(namen.map((name, i) => [name, treffer[i + 1]])) };
+    }
+  }
+  return null;
+}
