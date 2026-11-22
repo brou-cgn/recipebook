@@ -48,6 +48,6 @@ describe('FlaggeIcon – Fahnen als Umriss', () => {
     const css = fs.readFileSync(path.join(__dirname, '..', 'SprachWahl.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
     const block = css.match(/@media \(-webkit-min-device-pixel-ratio: 2\), \(min-resolution: 2dppx\)\s*\{\s*\.flagge rect,\s*\.flagge path\s*\{([^}]*)\}/);
     expect(block).not.toBeNull();
-    expect(block[1]).toMatch(/stroke-width:\s*0\.75px/);
+    expect(block[1]).toMatch(/stroke-width:\s*0\.5px/);
   });
 });
