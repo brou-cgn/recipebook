@@ -3256,10 +3256,6 @@
   color: #999;
 }
 
-[data-theme="dark"] .cook-date-timeline-delete-btn {
-  color: #aaa;
-}
-
 /* ---- RecipeTypeahead additional ---- */
 [data-theme="dark"] .recipe-typeahead-no-results {
   color: #aaa;

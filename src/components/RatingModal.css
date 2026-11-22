@@ -209,22 +209,58 @@
   line-height: 1.4;
 }
 
-.rating-review-delete-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0.1rem 0.25rem;
-  font-size: 1rem;
-  color: #888;
-  border-radius: 4px;
-  line-height: 1;
-  transition: color 0.2s ease, background 0.2s ease;
+/* Löschen einer Bewertung (Tech-Check D9, CLAUDE.md): am Desktop DeleteRowButton am rechten Rand der
+   Kopfzeile, auf dem Handy Linksswipe mit rotem Hintergrund; danach Rückgängig für 6 s */
+.rating-review-delete {
   margin-left: auto;
 }
 
-.rating-review-delete-btn:hover {
-  color: #c94d6b;
-  background: rgba(224, 92, 122, 0.08);
+.rating-review-swipe {
+  position: relative;
+}
+
+.rating-review-swipe .rating-review-item {
+  position: relative;
+  z-index: 1;
+}
+
+.rating-review-swipe-background {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-right: 0.85rem;
+  border-radius: 8px;
+  background: var(--color-button-danger-bg);
+  color: var(--color-button-danger-text);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.rating-review-swipe.swipe-delete-active .rating-review-swipe-background {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.rating-review-swipe-action {
+  border: none;
+  background: transparent;
+  color: inherit;
+  width: 2.5rem;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  /* Auf dem Handy löscht der Linksswipe, der Desktop-Knopf entfällt (CLAUDE.md) */
+  .delete-row-button.rating-review-delete {
+    display: none;
+  }
 }
 
 .rating-heart-img {

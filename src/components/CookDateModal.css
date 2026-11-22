@@ -285,21 +285,57 @@
   text-align: right;
 }
 
-.cook-date-timeline-delete-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  font-size: 1rem;
-  color: #888;
+/* Löschen eines „Gekocht am“-Eintrags (Tech-Check D9, CLAUDE.md): am Desktop DeleteRowButton am rechten
+   Rand der Karte, auf dem Handy Linksswipe mit rotem Hintergrund; danach Rückgängig für 6 s */
+.cook-date-timeline-delete {
   align-self: center;
-  flex-shrink: 0;
-  border-radius: 4px;
-  line-height: 1;
-  transition: color 0.2s ease, background 0.2s ease;
+  margin-right: 0.5rem;
 }
 
-.cook-date-timeline-delete-btn:hover {
-  color: #c94d6b;
-  background: rgba(224, 92, 122, 0.08);
+.cook-date-timeline-swipe {
+  position: relative;
+}
+
+.cook-date-timeline-swipe .cook-date-timeline-card {
+  position: relative;
+  z-index: 1;
+}
+
+.cook-date-timeline-swipe-background {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-right: 0.85rem;
+  border-radius: 12px;
+  background: var(--color-button-danger-bg);
+  color: var(--color-button-danger-text);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.cook-date-timeline-swipe.swipe-delete-active .cook-date-timeline-swipe-background {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.cook-date-timeline-swipe-action {
+  border: none;
+  background: transparent;
+  color: inherit;
+  width: 2.5rem;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  /* Auf dem Handy löscht der Linksswipe, der Desktop-Knopf entfällt (CLAUDE.md) */
+  .delete-row-button.cook-date-timeline-delete {
+    display: none;
+  }
 }
