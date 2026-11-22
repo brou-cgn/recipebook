@@ -27,7 +27,8 @@ scripts/screenshots/run.sh entwurf --css entwurf.css --variants desktop-hell,han
 zu ändern; `--variants` beschränkt auf einzelne Varianten. Läuft auf dem Port des Dev-Servers
 (5174) schon ein Server, bricht der Lauf ab, damit die Bilder nicht dessen Stand zeigen.
 
-Ein voller Lauf (136 Bilder in vier Varianten) dauert in der Cloud-Session rund zwölf Minuten;
+Ein voller Lauf macht 240 Bilder in vier Varianten. Jedes Bild meldet sich neu an und braucht in
+der Cloud-Session gut fünf Sekunden (gemessen am 22.11.2026), der volle Lauf also gut 20 Minuten;
 für Vorher-nachher-Vergleiche einzelner Bildschirme reichen `--only` und `--variants`. Ergebnis:
 je Variante ein Ordner mit PNG-Dateien und eine `index.html` mit allen Bildern als Raster.
 `screenshots-out/` steht in `.gitignore`.
@@ -59,7 +60,9 @@ dann beide `index.html` nebeneinander ansehen.
 Neue Einträge in `SCREENS` in `scripts/screenshots/capture.js`: ein Name und eine Funktion, die
 vom Kochbuch aus dorthin navigiert und `shot()` aufruft. `fullPage: true` fotografiert die ganze
 Seite statt nur den sichtbaren Ausschnitt, `variants` beschränkt einen Bildschirm auf einzelne
-Varianten (etwa Formulare, die es nur auf Desktop gibt). Fehlt ein Bild, steht der Grund in der
+Varianten (etwa Formulare, die es nur auf Desktop gibt). Braucht ein Bildschirm einen anderen Stand
+des Testkontos, etwa ein neues Konto ohne Sammlungen, ändert er ihn mit `patchAccount` aus `seed.js`
+und setzt ihn danach zurück (Beispiel `startseite-einrichtung`). Fehlt ein Bild, steht der Grund in der
 Ausgabe und oben in der `index.html`; die übrigen Bilder entstehen trotzdem.
 
 ## Grenzen

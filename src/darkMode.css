@@ -230,17 +230,6 @@
   color: #e8e8e8;
 }
 
-[data-theme="dark"] .recipe-filter-sidebar-add-button {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #e8e8e8;
-}
-
-[data-theme="dark"] .recipe-filter-sidebar-add-button:hover {
-  background: #e8e8e8;
-  color: #1e1e1e;
-}
-
 /* ---- Menu filter sidebar ---- */
 [data-theme="dark"] .menu-filter-sidebar {
   background: #1e1e1e;
@@ -265,17 +254,6 @@
   color: #e8e8e8;
 }
 
-[data-theme="dark"] .menu-filter-sidebar-add-button {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #e8e8e8;
-}
-
-[data-theme="dark"] .menu-filter-sidebar-add-button:hover {
-  background: #e8e8e8;
-  color: #1e1e1e;
-}
-
 /* ---- Recipe List ---- */
 [data-theme="dark"] .recipe-list-container {
   background: #121212;
@@ -283,16 +261,6 @@
 
 [data-theme="dark"] .recipe-list-title-area h2 {
   color: #e8e8e8;
-}
-
-[data-theme="dark"] .view-mode-button {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
-[data-theme="dark"] .view-mode-button:hover {
-  background: #3a3a3a;
 }
 
 [data-theme="dark"] .filter-section {
@@ -2240,17 +2208,6 @@
   color: #aaa;
 }
 
-[data-theme="dark"] .quick-select-button {
-  background: #2a2a2a;
-  color: #c08060;
-  border-color: #5a3c2c;
-}
-
-[data-theme="dark"] .quick-select-button:hover:not(:disabled) {
-  background: #402C1C;
-  color: #fff;
-}
-
 [data-theme="dark"] .typeahead-dropdown {
   background: #1e1e1e;
   border-color: #555;
@@ -2863,16 +2820,6 @@
 [data-theme="dark"] .filter-button {
   background: #2a2a2a;
   color: #aaa;
-  border-color: #555;
-}
-
-[data-theme="dark"] .filter-button.active {
-  border-color: #DF7A00;
-  color: #DF7A00;
-}
-
-[data-theme="dark"] .add-button {
-  background: #2a2a2a;
   border-color: #555;
 }
 

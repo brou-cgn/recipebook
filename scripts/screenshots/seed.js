@@ -41,6 +41,19 @@ async function call(method, url, body, headers = {}) {
 const docUrl = (path) => `${FIRESTORE}/v1/projects/${PROJECT}/databases/(default)/documents/${path}`;
 const setDoc = (path, data) => call('PATCH', docUrl(path), { fields: toValue(data).mapValue.fields }, { Authorization: 'Bearer owner' });
 
+/**
+ * Ändert Felder des Testkontos für einzelne Bildschirme (capture.js); `undefined` entfernt ein Feld.
+ * Der Bildschirm setzt sie danach zurück, damit die übrigen Bilder die Testdaten von main() zeigen.
+ */
+async function patchAccount(fields) {
+  const { localId: uid } = await call('POST', `${AUTH}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=demo-key`, {
+    email: ACCOUNT.email, password: ACCOUNT.password, returnSecureToken: true,
+  });
+  const mask = Object.keys(fields).map((f) => `updateMask.fieldPaths=${encodeURIComponent(f)}`).join('&');
+  const kept = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined));
+  await call('PATCH', `${docUrl(`users/${uid}`)}?${mask}`, { fields: toValue(kept).mapValue.fields }, { Authorization: 'Bearer owner' });
+}
+
 /** Platzhalterbild als SVG: Teller auf farbigem Grund, je Rezept ein anderer Farbton. */
 function placeholderImage(hue) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
@@ -196,4 +209,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { ACCOUNT, toValue };
+module.exports = { ACCOUNT, toValue, patchAccount };
