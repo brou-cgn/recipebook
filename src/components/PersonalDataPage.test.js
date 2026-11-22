@@ -1,12 +1,14 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import PersonalDataPage from './PersonalDataPage';
-import { updateUserProfile, changePassword, saveFcmToken } from '../utils/userManagement';
+import { updateUserProfile, changePassword, saveFcmToken, setUserSprache } from '../utils/userManagement';
+import { renderWithProviders } from '../test-utils';
 
 jest.mock('../utils/userManagement', () => ({
   updateUserProfile: jest.fn(),
   changePassword: jest.fn(),
   saveFcmToken: jest.fn(),
+  setUserSprache: jest.fn(),
 }));
 
 jest.mock('../utils/customLists', () => ({
@@ -750,5 +752,77 @@ describe('PersonalDataPage - PWA-Mitteilungen', () => {
 
     expect(await screen.findByText(/Mitteilungs-Worker ältere Fassung/)).toBeInTheDocument();
     expect(screen.getByText('Noch keine Einträge.')).toBeInTheDocument();
+  });
+});
+
+describe('PersonalDataPage – Sprache (Vorhaben Mehrsprachigkeit)', () => {
+  const nutzer = {
+    id: 'user-1',
+    vorname: 'John',
+    nachname: 'Doe',
+    email: 'john@example.com',
+    signatureSatz: '',
+    sprachwahl: true,
+  };
+  const zeileDeutsch = { name: 'Sprache: Deutsch. Zum Ändern klicken.' };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setUserSprache.mockResolvedValue(undefined);
+  });
+
+  it('zeigt die Zeile „Sprache“ nur mit der Berechtigung sprachwahl', () => {
+    const { unmount } = render(<PersonalDataPage currentUser={{ ...nutzer, sprachwahl: false }} onBack={() => {}} />);
+    expect(screen.queryByRole('button', { name: /^Sprache:/ })).not.toBeInTheDocument();
+    unmount();
+    render(<PersonalDataPage currentUser={nutzer} onBack={() => {}} />);
+    expect(screen.getByRole('button', zeileDeutsch)).toBeInTheDocument();
+  });
+
+  it('zeigt die gespeicherte Sprache und bietet alle drei in ihrer eigenen Sprache an', () => {
+    render(<PersonalDataPage currentUser={{ ...nutzer, sprache: 'fr' }} onBack={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Sprache: Français. Zum Ändern klicken.' }));
+    const liste = screen.getByRole('list', { name: 'Sprache auswählen' });
+    expect(liste).toBeInTheDocument();
+    expect(screen.getAllByRole('option').map((option) => option.getAttribute('lang'))).toEqual(['de', 'en', 'fr']);
+    expect(screen.getByRole('option', { name: 'English' })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('option', { name: 'Français' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('speichert die gewählte Sprache im Profil und meldet sie weiter', async () => {
+    const onProfileUpdated = jest.fn();
+    render(<PersonalDataPage currentUser={nutzer} onBack={() => {}} onProfileUpdated={onProfileUpdated} />);
+    fireEvent.click(screen.getByRole('button', zeileDeutsch));
+    fireEvent.click(screen.getByRole('option', { name: 'English' }));
+    await waitFor(() => expect(onProfileUpdated).toHaveBeenCalledWith({ ...nutzer, sprache: 'en' }));
+    expect(setUserSprache).toHaveBeenCalledWith('user-1', 'en');
+    expect(screen.queryByRole('list', { name: 'Sprache auswählen' })).not.toBeInTheDocument();
+  });
+
+  it('meldet einen Fehler beim Speichern und lässt die Auswahl offen', async () => {
+    setUserSprache.mockRejectedValue(new Error('offline'));
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const onProfileUpdated = jest.fn();
+    render(<PersonalDataPage currentUser={nutzer} onBack={() => {}} onProfileUpdated={onProfileUpdated} />);
+    fireEvent.click(screen.getByRole('button', zeileDeutsch));
+    fireEvent.click(screen.getByRole('option', { name: 'Français' }));
+    expect(await screen.findByText('Änderung konnte nicht gespeichert werden.')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Sprache auswählen' })).toBeInTheDocument();
+    expect(onProfileUpdated).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('erscheint auf Englisch und Französisch, wenn die Sprache gilt', () => {
+    const { unmount } = renderWithProviders(<PersonalDataPage currentUser={nutzer} onBack={() => {}} />, { sprache: 'en' });
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
+    expect(screen.getByLabelText('First name')).toHaveValue('John');
+    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Language: Deutsch. Click to change.' })).toBeInTheDocument();
+    unmount();
+
+    renderWithProviders(<PersonalDataPage currentUser={nutzer} onBack={() => {}} />, { sprache: 'fr' });
+    expect(screen.getByRole('heading', { name: 'Paramètres' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Prénom')).toHaveValue('John');
+    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeInTheDocument();
   });
 });

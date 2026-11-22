@@ -28,6 +28,7 @@ import {
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { logAppCall } from './appCallsFirestore';
+import { istSprache } from '../i18n/sprachen';
 
 // Permission roles
 export const ROLES = {
@@ -1191,7 +1192,24 @@ export const setBackgroundUpdatesEnabled = async (userId, enabled) => {
 };
 
 /**
- * Default role permissions for settingsAccess, fotoscan, webimport, appCalls, appCallsMenu, recipeImport, deleteRating, abortCalc, sortCarousel, editLists, tagesmenuTestmode, themeToggle, printRecipe, recipeIndex, startseite, kuecheFab, onboardingTestmode, addTutorial, editTutorial, fuerDichEntdeckt, eventplanung, versionDictation, parallelKochen and weinprofilEinblick features.
+ * Speichert die Sprache aus den persönlichen Einstellungen (`users/{uid}.sprache`,
+ * docs/vorhaben/mehrsprachigkeit.md). firestore.rules lässt nur die Sprachen der App zu.
+ *
+ * @param {string} userId
+ * @param {string} sprache - 'de', 'en' oder 'fr'
+ * @returns {Promise<void>}
+ */
+export const setUserSprache = async (userId, sprache) => {
+  if (!userId) return;
+  if (!istSprache(sprache)) throw new Error(`Unbekannte Sprache: ${sprache}`);
+  await updateDoc(doc(db, 'users', userId), { sprache });
+  if (currentUserCache && currentUserCache.id === userId) {
+    currentUserCache = { ...currentUserCache, sprache };
+  }
+};
+
+/**
+ * Default role permissions for settingsAccess, fotoscan, webimport, appCalls, appCallsMenu, recipeImport, deleteRating, abortCalc, sortCarousel, editLists, tagesmenuTestmode, themeToggle, printRecipe, recipeIndex, startseite, kuecheFab, onboardingTestmode, addTutorial, editTutorial, fuerDichEntdeckt, eventplanung, versionDictation, parallelKochen, weinprofilEinblick and sprachwahl features.
  * Admins get all features enabled by default; printRecipe is enabled for all roles by default; recipeIndex defaults to true for admin/moderator; all other features start with all disabled for non-admin roles.
  *
  * addTutorial/editTutorial steuern die beiden Longpress-Einstiege rund um
@@ -1226,13 +1244,18 @@ export const setBackgroundUpdatesEnabled = async (userId, enabled) => {
  * Aufschlüsselung (docs/vorhaben/weinbegleitung.md, W1). Nur Anzeige: Die Werte
  * stehen ohnehin im Rezeptdokument, deshalb keine Regel in firestore.rules.
  * Standardmäßig nur für Admins an.
+ *
+ * sprachwahl zeigt die Zeile „Sprache“ in den persönlichen Daten und die Sprachwahl
+ * im Header-Menü (docs/vorhaben/mehrsprachigkeit.md). Ohne die Berechtigung gilt
+ * Deutsch, auch wenn im Profil eine andere Sprache steht. Standardmäßig nur für
+ * Admins an, bis die Oberfläche übersetzt ist (PR 6 im Tracker).
  */
 export const ROLE_PERMISSIONS_DEFAULT = {
-  [ROLES.ADMIN]: { settingsAccess: true, fotoscan: true, webimport: true, appCalls: true, appCallsMenu: true, recipeImport: true, deleteRating: true, abortCalc: true, sortCarousel: true, editLists: true, tagesmenuTestmode: true, themeToggle: true, printRecipe: true, recipeIndex: true, startseite: false, kuecheFab: false, onboardingTestmode: true, addTutorial: true, editTutorial: true, fuerDichEntdeckt: false, follow: false, eventplanung: true, versionDictation: true, parallelKochen: false, weinprofilEinblick: true },
-  [ROLES.MODERATOR]: { settingsAccess: true, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: true, startseite: false, kuecheFab: false, onboardingTestmode: false, addTutorial: false, editTutorial: false, fuerDichEntdeckt: false, follow: false, eventplanung: false, versionDictation: false, parallelKochen: false, weinprofilEinblick: false },
-  [ROLES.EDIT]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: false, startseite: false, kuecheFab: false, onboardingTestmode: false, addTutorial: false, editTutorial: false, fuerDichEntdeckt: false, follow: false, eventplanung: false, versionDictation: false, parallelKochen: false, weinprofilEinblick: false },
-  [ROLES.COMMENT]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: false, startseite: false, kuecheFab: false, onboardingTestmode: false, addTutorial: false, editTutorial: false, fuerDichEntdeckt: false, follow: false, eventplanung: false, versionDictation: false, parallelKochen: false, weinprofilEinblick: false },
-  [ROLES.READ]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: false, startseite: false, kuecheFab: false, onboardingTestmode: false, addTutorial: false, editTutorial: false, fuerDichEntdeckt: false, follow: false, eventplanung: false, versionDictation: false, parallelKochen: false, weinprofilEinblick: false },
+  [ROLES.ADMIN]: { settingsAccess: true, fotoscan: true, webimport: true, appCalls: true, appCallsMenu: true, recipeImport: true, deleteRating: true, abortCalc: true, sortCarousel: true, editLists: true, tagesmenuTestmode: true, themeToggle: true, printRecipe: true, recipeIndex: true, startseite: false, kuecheFab: false, onboardingTestmode: true, addTutorial: true, editTutorial: true, fuerDichEntdeckt: false, follow: false, eventplanung: true, versionDictation: true, parallelKochen: false, weinprofilEinblick: true, sprachwahl: true },
+  [ROLES.MODERATOR]: { settingsAccess: true, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: true, startseite: false, kuecheFab: false, onboardingTestmode: false, addTutorial: false, editTutorial: false, fuerDichEntdeckt: false, follow: false, eventplanung: false, versionDictation: false, parallelKochen: false, weinprofilEinblick: false, sprachwahl: false },
+  [ROLES.EDIT]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: false, startseite: false, kuecheFab: false, onboardingTestmode: false, addTutorial: false, editTutorial: false, fuerDichEntdeckt: false, follow: false, eventplanung: false, versionDictation: false, parallelKochen: false, weinprofilEinblick: false, sprachwahl: false },
+  [ROLES.COMMENT]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: false, startseite: false, kuecheFab: false, onboardingTestmode: false, addTutorial: false, editTutorial: false, fuerDichEntdeckt: false, follow: false, eventplanung: false, versionDictation: false, parallelKochen: false, weinprofilEinblick: false, sprachwahl: false },
+  [ROLES.READ]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: false, startseite: false, kuecheFab: false, onboardingTestmode: false, addTutorial: false, editTutorial: false, fuerDichEntdeckt: false, follow: false, eventplanung: false, versionDictation: false, parallelKochen: false, weinprofilEinblick: false, sprachwahl: false },
 };
 
 /**

@@ -1,5 +1,5 @@
 import { act, render, screen } from '@testing-library/react';
-import { SpracheProvider, useProfilSprache, useSprache, useTexte } from './SpracheContext';
+import { SpracheProvider, useProfilSprache, useSprache, useSpracheFuerNutzer, useTexte } from './SpracheContext';
 import { SITZUNGS_SPRACHE_KEY } from '../i18n/sprachen';
 import allgemeinTexte from '../i18n/texte/allgemein';
 import { renderWithProviders } from '../test-utils';
@@ -102,5 +102,40 @@ describe('SpracheContext', () => {
     // rerender behält Provider und Sprache
     rerender(<Knopf />);
     expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeInTheDocument();
+  });
+});
+
+describe('useSpracheFuerNutzer (App.js)', () => {
+  function MitNutzer({ nutzer }) {
+    useSpracheFuerNutzer(nutzer);
+    return <Knopf />;
+  }
+  const mit = (s, nutzer) => <SpracheProvider speicher={s}><MitNutzer nutzer={nutzer} /></SpracheProvider>;
+
+  it('die persönliche Sprache gilt nur mit der Berechtigung sprachwahl', () => {
+    const { rerender } = render(mit(null, { id: 'u1', sprache: 'en', sprachwahl: false }));
+    expect(screen.getByRole('button', { name: 'Speichern' })).toBeInTheDocument();
+    rerender(mit(null, { id: 'u1', sprache: 'en', sprachwahl: true }));
+    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+  });
+
+  it('ohne Berechtigung endet eine Sitzungs-Sprache', () => {
+    const s = speicher({ [SITZUNGS_SPRACHE_KEY]: 'fr' });
+    render(mit(s, { id: 'u1', sprachwahl: false }));
+    expect(screen.getByRole('button', { name: 'Speichern' })).toBeInTheDocument();
+    expect(SITZUNGS_SPRACHE_KEY in s.daten).toBe(false);
+  });
+
+  it('beim App-Start ohne Anmeldung bleibt die Sitzungs-Sprache, beim Abmelden endet sie', () => {
+    const s = speicher({ [SITZUNGS_SPRACHE_KEY]: 'fr' });
+    const { rerender } = render(mit(s, null));
+    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeInTheDocument();
+
+    rerender(mit(s, { id: 'u1', sprache: 'en', sprachwahl: true }));
+    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeInTheDocument();
+
+    rerender(mit(s, null));
+    expect(screen.getByRole('button', { name: 'Speichern' })).toBeInTheDocument();
+    expect(SITZUNGS_SPRACHE_KEY in s.daten).toBe(false);
   });
 });

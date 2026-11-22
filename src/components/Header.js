@@ -7,6 +7,15 @@ import ImportProgressIndicator from './ImportProgressIndicator';
 import ImportProgressDialog from './ImportProgressDialog';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 import { setWebImportPin } from '../utils/webImportPin';
+import { useSprache, useTexte } from '../contexts/SpracheContext';
+import { SPRACHEN, STANDARD_SPRACHE } from '../i18n/sprachen';
+import allgemeinTexte from '../i18n/texte/allgemein';
+import bereicheTexte from '../i18n/texte/bereiche';
+import kopfzeileTexte from '../i18n/texte/kopfzeile';
+import webimportPinTexte from '../i18n/texte/webimportPin';
+
+const APP_NAME = 'brouBook';
+const spracheName = (id) => SPRACHEN.find((eintrag) => eintrag.id === id)?.name || id;
 
 const RECIPE_IMPORT_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/a9f137c8c6a04a97a8c611d3181d73fd';
 const SHORTCUT_PIN_PATTERN = /^\d{4,8}$/;
@@ -56,6 +65,16 @@ const Header = forwardRef(function Header({
   onChefkochClick,
   onProfileUpdated
 }, ref) {
+  const t = useTexte(kopfzeileTexte);
+  const tA = useTexte(allgemeinTexte);
+  const tB = useTexte(bereicheTexte);
+  const tPin = useTexte(webimportPinTexte);
+  // Sprache dieser Sitzung (Vorhaben Mehrsprachigkeit): nur mit der Berechtigung sprachwahl.
+  // Die eigene Standardsprache zu wählen hebt die Übersteuerung wieder auf.
+  const { sprache, profilSprache, sitzungsSprache, setzeSitzungsSprache } = useSprache();
+  const darfSprachwahl = Boolean(currentUser?.sprachwahl);
+  const standardSprache = profilSprache || STANDARD_SPRACHE;
+  const waehleSprache = (id) => setzeSitzungsSprache(id === standardSprache ? null : id);
   const [headerSlogan, setHeaderSlogan] = useState('');
   const [appLogoImage, setAppLogoImage] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -258,11 +277,11 @@ const Header = forwardRef(function Header({
     e.preventDefault();
     setShortcutPinError(null);
     if (!SHORTCUT_PIN_PATTERN.test(shortcutPin)) {
-      setShortcutPinError('PIN muss aus 4 bis 8 Ziffern bestehen.');
+      setShortcutPinError(tPin('fehlerFormat'));
       return;
     }
     if (shortcutPin !== shortcutPinConfirm) {
-      setShortcutPinError('Die PINs stimmen nicht überein.');
+      setShortcutPinError(tPin('fehlerUngleich'));
       return;
     }
     setSavingShortcutPin(true);
@@ -285,10 +304,10 @@ const Header = forwardRef(function Header({
   const headerTitleContent = (
     <>
       {appLogoImage && (
-        <img src={appLogoImage} alt="Logo" className="header-logo" />
+        <img src={appLogoImage} alt={t('logo')} className="header-logo" />
       )}
       <div className="header-title-text">
-        <h1>brouBook</h1>
+        <h1>{APP_NAME}</h1>
         <p className="tagline">{headerSlogan}</p>
       </div>
     </>
@@ -304,7 +323,7 @@ const Header = forwardRef(function Header({
               type="button"
               className="header-title-link"
               onClick={handleLogoClick}
-              aria-label="Zur Startseite"
+              aria-label={t('zurStartseite')}
             >
               {headerTitleContent}
             </button>
@@ -318,8 +337,8 @@ const Header = forwardRef(function Header({
                 <button 
                   className="search-btn" 
                   onClick={toggleSearch}
-                  aria-label="Suche"
-                  title="Suche"
+                  aria-label={t('suche')}
+                  title={t('suche')}
                 >
                   <SearchIcon color="#1a1a1a" size={20} />
                 </button>
@@ -328,7 +347,7 @@ const Header = forwardRef(function Header({
                     <input
                       type="text"
                       className="search-input"
-                      placeholder="Rezepte durchsuchen..."
+                      placeholder={t('suchePlatzhalter')}
                       value={searchTerm}
                       onChange={handleSearchChange}
                       onKeyDown={handleSearchKeyDown}
@@ -337,7 +356,7 @@ const Header = forwardRef(function Header({
                       <button 
                         className="search-clear-btn"
                         onClick={handleSearchClear}
-                        aria-label="Suche löschen"
+                        aria-label={t('sucheLoeschen')}
                       >
                         ×
                       </button>
@@ -357,7 +376,7 @@ const Header = forwardRef(function Header({
               <button 
                 className="hamburger-btn" 
                 onClick={toggleMenu}
-                aria-label="Menü öffnen"
+                aria-label={t('menueOeffnen')}
                 aria-expanded={menuOpen}
               >
                 <span className="hamburger-line"></span>
@@ -368,52 +387,52 @@ const Header = forwardRef(function Header({
                 <div className="hamburger-dropdown" ref={dropdownRef}>
                   {onViewChange && (
                     <div className="menu-section">
-                      <div className="menu-section-title">Navigation</div>
+                      <div className="menu-section-title">{t('navigation')}</div>
                       {startseiteEnabled && (
                         <button
                           className={`menu-item ${currentView === 'startseite' ? 'active' : ''}`}
                           onClick={() => handleViewChangeInternal('startseite')}
                         >
-                          Küche
+                          {tB('kueche')}
                         </button>
                       )}
                       <button
                         className={`menu-item ${currentView === 'recipes' ? 'active' : ''}`}
                         onClick={() => handleViewChangeInternal('recipes')}
                       >
-                        Kochbuch
+                        {tB('kochbuch')}
                       </button>
                       <button
                         className={`menu-item ${currentView === 'menus' ? 'active' : ''}`}
                         onClick={() => handleViewChangeInternal('menus')}
                       >
-                        Festtafel
+                        {tB('festtafel')}
                       </button>
                       <button
                         className={`menu-item menu-item-events ${currentView === 'events' ? 'active' : ''}`}
                         onClick={() => handleViewChangeInternal('events')}
                       >
-                        Events
+                        {tB('events')}
                       </button>
                       {interactiveLists.length > 0 && (
                         <button
                           className={`menu-item ${currentView === 'tagesmenu' ? 'active' : ''}`}
                           onClick={() => handleViewChangeInternal('tagesmenu')}
                         >
-                          Kochatelier
+                          {tB('kochatelier')}
                         </button>
                       )}
                       <button
                         className={`menu-item ${currentView === 'kueche' ? 'active' : ''}`}
                         onClick={() => handleViewChangeInternal('kueche')}
                       >
-                        Chefkoch & mehr
+                        {tB('chefkochUndMehr')}
                       </button>
                     </div>
                   )}
                   {(visibleFaqs.length > 0 || isApple) && (
                     <div className="menu-section">
-                      <div className="menu-section-title">Hilfe</div>
+                      <div className="menu-section-title">{t('hilfe')}</div>
                       {visibleFaqs.length > 0 && (
                         <button
                           className="menu-item"
@@ -423,7 +442,7 @@ const Header = forwardRef(function Header({
                             setMenuOpen(false);
                           }}
                         >
-                          Kochschule
+                          {tB('kochschule')}
                         </button>
                       )}
                       {isApple && (
@@ -431,48 +450,70 @@ const Header = forwardRef(function Header({
                           className="menu-item"
                           onClick={handleInstallShortcutClick}
                         >
-                          Kurzbefehl installieren
+                          {t('kurzbefehlInstallieren')}
                         </button>
                       )}
                     </div>
                   )}
                   {onSettingsClick && (currentUser?.role === 'admin' || currentUser?.settingsAccess) && (
                     <div className="menu-section">
-                      <div className="menu-section-title">Verwaltung</div>
+                      <div className="menu-section-title">{t('verwaltung')}</div>
                       <button className="menu-item" onClick={() => {
                         onSettingsClick();
                         setMenuOpen(false);
                       }}>
-                        Einstellungen
+                        {t('einstellungen')}
                       </button>
                       {currentUser?.appCallsMenu && (
                         <button
                           className={`menu-item ${currentView === 'appCalls' ? 'active' : ''}`}
                           onClick={() => handleViewChangeInternal('appCalls')}
                         >
-                          Appaufrufe
+                          {t('appaufrufe')}
                         </button>
                       )}
                     </div>
                   )}
+                  {darfSprachwahl && (
+                    <div className="menu-section" role="group" aria-labelledby="menu-sprache-titel">
+                      <div className="menu-section-title" id="menu-sprache-titel">{t('sprache')}</div>
+                      {SPRACHEN.map((eintrag) => (
+                        <button
+                          key={eintrag.id}
+                          type="button"
+                          lang={eintrag.id}
+                          className={`menu-item ${sprache === eintrag.id ? 'active' : ''}`}
+                          aria-pressed={sprache === eintrag.id}
+                          onClick={() => waehleSprache(eintrag.id)}
+                        >
+                          {eintrag.name}
+                        </button>
+                      ))}
+                      {sitzungsSprache && (
+                        <div className="menu-language-hint">
+                          {t('spracheNurSitzung', { sprache: spracheName(standardSprache) })}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="menu-section">
-                    <div className="menu-section-title">Benutzer</div>
+                    <div className="menu-section-title">{t('benutzer')}</div>
                     <div className="menu-user-info">
                       <button
                         className={`menu-user-name${onChefkochClick ? ' menu-user-name--clickable' : ''}`}
                         onClick={onChefkochClick ? handleChefkochClickInternal : undefined}
                         disabled={!onChefkochClick}
-                        aria-label={onChefkochClick ? 'Chefkoch-Seite öffnen' : undefined}
+                        aria-label={onChefkochClick ? t('seiteOeffnen', { name: tB('chefkoch') }) : undefined}
                       >
                         {currentUser.vorname} {currentUser.nachname}
                       </button>
                       {currentUser.role === 'admin' && (
-                        <span className="admin-badge">Admin</span>
+                        <span className="admin-badge">{t('admin')}</span>
                       )}
                     </div>
                     {onLogout && (
                       <button className="menu-item logout-item" onClick={handleLogoutInternal}>
-                        Abmelden
+                        {t('abmelden')}
                       </button>
                     )}
                   </div>
@@ -491,11 +532,11 @@ const Header = forwardRef(function Header({
         <div className="faq-modal-overlay" onClick={() => setFaqModalOpen(false)}>
           <div className="faq-modal" onClick={(e) => e.stopPropagation()}>
             <div className="faq-modal-header">
-              <h2 className="faq-modal-title">Kochschule</h2>
+              <h2 className="faq-modal-title">{tB('kochschule')}</h2>
               <button
                 className="faq-modal-close"
                 onClick={() => setFaqModalOpen(false)}
-                aria-label="Kochschule schließen"
+                aria-label={t('schliessen', { name: tB('kochschule') })}
               >
                 ×
               </button>
@@ -529,7 +570,7 @@ const Header = forwardRef(function Header({
                       {faq.screenshot && (
                         <img
                           src={faq.screenshot}
-                          alt="Screenshot"
+                          alt={t('screenshot')}
                           className="faq-answer-screenshot"
                         />
                       )}
@@ -547,23 +588,22 @@ const Header = forwardRef(function Header({
         <div className="faq-modal-overlay" onClick={() => setShortcutPinModalOpen(false)}>
           <div className="faq-modal shortcut-pin-modal" onClick={(e) => e.stopPropagation()}>
             <div className="faq-modal-header">
-              <h2 className="faq-modal-title">Webimport-PIN erforderlich</h2>
+              <h2 className="faq-modal-title">{t('pinTitel')}</h2>
               <button
                 className="faq-modal-close"
                 onClick={() => setShortcutPinModalOpen(false)}
-                aria-label="Dialog schließen"
+                aria-label={t('dialogSchliessen')}
               >
                 ×
               </button>
             </div>
             <div className="faq-modal-body shortcut-pin-modal-body">
               <p className="shortcut-pin-modal-hint">
-                Bevor du den Kurzbefehl herunterladen kannst, musst du einen Webimport-PIN vergeben.
-                Er schützt deinen Zugang davor, dass über den Kurzbefehl ungefragt Rezepte importiert werden.
+                {t('pinHinweis')}
               </p>
               <form className="shortcut-pin-modal-form" onSubmit={handleSetShortcutPin}>
                 <div className="shortcut-pin-modal-field">
-                  <label htmlFor="shortcutPin">PIN (4–8 Ziffern)</label>
+                  <label htmlFor="shortcutPin">{tPin('feld')}</label>
                   <input
                     id="shortcutPin"
                     type="password"
@@ -575,7 +615,7 @@ const Header = forwardRef(function Header({
                   />
                 </div>
                 <div className="shortcut-pin-modal-field">
-                  <label htmlFor="shortcutPinConfirm">PIN bestätigen</label>
+                  <label htmlFor="shortcutPinConfirm">{tPin('bestaetigen')}</label>
                   <input
                     id="shortcutPinConfirm"
                     type="password"
@@ -595,10 +635,10 @@ const Header = forwardRef(function Header({
                     className="shortcut-pin-modal-cancel"
                     onClick={() => setShortcutPinModalOpen(false)}
                   >
-                    Abbrechen
+                    {tA('abbrechen')}
                   </button>
                   <button type="submit" className="shortcut-pin-modal-submit" disabled={savingShortcutPin}>
-                    {savingShortcutPin ? 'Wird gespeichert…' : 'PIN setzen & herunterladen'}
+                    {savingShortcutPin ? tA('speichernLaeuft') : t('pinSetzenUndLaden')}
                   </button>
                 </div>
               </form>

@@ -46,6 +46,7 @@ const ROLE_PERMISSION_COLUMNS = [
   { key: 'versionDictation', label: 'Version diktieren', name: 'Version per Beschreibung/Diktat erstellen' },
   { key: 'parallelKochen', label: 'Parallel kochen', name: 'Parallel kochen (mehrere Rezepte im Kochmodus)' },
   { key: 'weinprofilEinblick', label: 'Weinprofil-Einblick', name: 'Weinprofil-Einblick (Einschätzung und Punkte im Wein-Sheet)' },
+  { key: 'sprachwahl', label: 'Sprachwahl', name: 'Sprachwahl (Sprache in den persönlichen Daten und im Menü)' },
 ];
 
 function UserManagement({ onBack, currentUser, allUsers = [] }) {

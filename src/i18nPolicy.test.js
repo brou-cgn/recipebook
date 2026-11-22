@@ -37,7 +37,7 @@ const NUR_DEUTSCH = new Set([
   'components/UserManagement.js',
 ]);
 
-// Stand 22.11.2026 (PR 1): 1856 Textstellen in 99 Dateien.
+// Stand 22.11.2026 (PR 2): 1740 Textstellen in 97 Dateien.
 const BASELINE = {
   'App.js': 5,
   'components/AtelierCategorySelectionPage.js': 5,
@@ -71,7 +71,6 @@ const BASELINE = {
   'components/GroupList.js': 15,
   'components/GuestLinkConflictDialog.js': 9,
   'components/GuestManagementPage.js': 55,
-  'components/Header.js': 36,
   'components/ImportProgressDialog.js': 9,
   'components/ImportProgressIndicator.js': 3,
   'components/IngredientCatalogSearchModal.js': 5,
@@ -91,7 +90,6 @@ const BASELINE = {
   'components/NutritionModal.js': 52,
   'components/OcrScanModal.js': 38,
   'components/PasswordChangeModal.js': 8,
-  'components/PersonalDataPage.js': 80,
   'components/PrintFormatEditor.js': 1,
   'components/PrintPage.js': 2,
   'components/RatingModal.js': 21,

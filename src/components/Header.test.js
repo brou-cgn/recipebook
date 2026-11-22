@@ -1,6 +1,7 @@
 import React, { createRef, act } from 'react';
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import Header from './Header';
+import { SpracheProvider } from '../contexts/SpracheContext';
 
 // Mock the custom lists utility
 jest.mock('../utils/customLists', () => ({
@@ -562,5 +563,47 @@ describe('Header - Kurzbefehl download PIN requirement', () => {
 
     expect(screen.queryByText('Webimport-PIN erforderlich')).not.toBeInTheDocument();
     expect(windowOpenSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('Header – Sprache dieser Sitzung (Vorhaben Mehrsprachigkeit)', () => {
+  const mitSprachwahl = { ...mockCurrentUser, sprachwahl: true };
+  const zeige = (nutzer, { profilSprache = null } = {}) => render(
+    <SpracheProvider profilSprache={profilSprache} speicher={null}>
+      <Header currentView="recipes" currentUser={nutzer} onViewChange={() => {}} onLogout={() => {}} />
+    </SpracheProvider>
+  );
+
+  test('ohne die Berechtigung sprachwahl gibt es keine Sprachwahl im Menü', () => {
+    zeige(mockCurrentUser);
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+    expect(screen.queryByRole('group', { name: 'Sprache' })).not.toBeInTheDocument();
+  });
+
+  test('übersteuert die Sprache für die Sitzung, das Menü spricht sofort die neue Sprache', () => {
+    zeige(mitSprachwahl);
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+    const gruppe = screen.getByRole('group', { name: 'Sprache' });
+    expect(within(gruppe).getByRole('button', { name: 'Deutsch' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(gruppe).getByRole('button', { name: 'Français' })).toHaveAttribute('lang', 'fr');
+    expect(screen.queryByText(/Gilt nur für diese Sitzung/)).not.toBeInTheDocument();
+
+    fireEvent.click(within(gruppe).getByRole('button', { name: 'English' }));
+    const neu = screen.getByRole('group', { name: 'Language' });
+    expect(within(neu).getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(neu).getByText('For this session only. Your default language: Deutsch')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Open menu')).toBeInTheDocument();
+  });
+
+  test('die eigene Standardsprache hebt die Übersteuerung wieder auf', () => {
+    zeige(mitSprachwahl, { profilSprache: 'fr' });
+    fireEvent.click(screen.getByLabelText('Ouvrir le menu'));
+    fireEvent.click(within(screen.getByRole('group', { name: 'Langue' })).getByRole('button', { name: 'English' }));
+    expect(screen.getByText('For this session only. Your default language: Français')).toBeInTheDocument();
+
+    fireEvent.click(within(screen.getByRole('group', { name: 'Language' })).getByRole('button', { name: 'Français' }));
+    expect(screen.getByRole('button', { name: 'Se déconnecter' })).toBeInTheDocument();
+    expect(screen.queryByText(/session/)).not.toBeInTheDocument();
   });
 });

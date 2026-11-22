@@ -282,12 +282,17 @@ service cloud.firestore {
                     && request.auth.uid == userId
                     && request.resource.data.role == 'read';
       // Admins may update any field. Authenticated users may update only their own
-      // document, but may NOT change the privilege field (role).
+      // document, but may NOT change the privilege field (role). The language from
+      // the personal settings (sprache, docs/vorhaben/mehrsprachigkeit.md) must be
+      // one of the app's languages.
       allow update: if isAdmin()
                     || (isAuthenticated()
                         && request.auth.uid == userId
                         && !request.resource.data.diff(resource.data).affectedKeys()
-                             .hasAny(['role']));
+                             .hasAny(['role'])
+                        && (!request.resource.data.diff(resource.data).affectedKeys()
+                              .hasAny(['sprache'])
+                            || request.resource.data.sprache in ['de', 'en', 'fr']));
       allow delete: if isAdmin();
     }
 
