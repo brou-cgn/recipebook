@@ -403,7 +403,8 @@ service cloud.firestore {
       // Admins may update any settings document.
       // edit/moderator users may update only the list fields in settings/app
       // (cuisineTypes, cuisineGroups, cuisineIcons, mealCategories, units,
-      //  portionUnits, conversionTable, plus the legacy customUnits field) or
+      //  portionUnits, conversionTable, plus the legacy customUnits field, and the list
+      //  translations listenUebersetzungen, Mehrsprachigkeit PR 5, which must be a map) or
       //  the standard ingredient term fields in settings/standardIngredientTerms
       //  – all other fields remain admin-only.
       // Moderators may additionally update Kochatelier name/description fields.
@@ -413,7 +414,10 @@ service cloud.firestore {
                       && settingId == 'app'
                       && request.resource.data.diff(resource.data).affectedKeys()
                            .hasOnly(['cuisineTypes', 'cuisineGroups', 'cuisineIcons', 'mealCategories',
-                                     'units', 'portionUnits', 'conversionTable', 'customUnits'])
+                                     'units', 'portionUnits', 'conversionTable', 'customUnits',
+                                     'listenUebersetzungen'])
+                      && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['listenUebersetzungen'])
+                          || request.resource.data.listenUebersetzungen is map)
                     )
                  || (
                      isEditOrAdmin()
@@ -494,6 +498,10 @@ service cloud.firestore {
     }
     // Tageszähler der Inhaltsübersetzung: `automatik` (Trigger) und je Admin (Backfill).
     match /aiInhaltUebersetzungLimits/{limitId} {
+      allow read, write: if false;
+    }
+    // Tageszähler von uebersetzeListenwerte (Übersetzungsvorschläge für Auswahllisten), je Admin.
+    match /aiListenUebersetzungLimits/{limitId} {
       allow read, write: if false;
     }
     // Tageszähler des Import-Sweepers recoverStuckImportJobs je Autor (Tech-Check S21).

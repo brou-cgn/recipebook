@@ -23,6 +23,10 @@
  * Listen, zwei vollständige Übersetzungen darin würden die Datenmenge etwa verdreifachen.
  * backfillInhaltUebersetzungen (nur admin) trägt sie für den Bestand nach. Geschrieben wird in
  * einer Transaktion nur, wenn das Rezept noch denselben Inhalt hat (gleicher quellHash).
+ *
+ * uebersetzeListenwerte (nur admin, PR 5) liefert Vorschläge für Übersetzungen der Auswahllisten
+ * (Kulinarik, Speisekategorien, Einheiten). Sie schreibt nichts; gespeichert wird im Client unter
+ * Einstellungen › Listen & Kategorien (settings/app.listenUebersetzungen).
  */
 
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
@@ -50,6 +54,12 @@ const {
   baueUebersetzungsDokument,
   istAktuelleInhaltUebersetzung,
 } = require('../shared/inhaltUebersetzung');
+const {
+  LISTEN_RESPONSE_SCHEMA,
+  pruefeListenEingabe,
+  baueListenPrompt,
+  pruefeListenAntwort,
+} = require('../shared/listenUebersetzung');
 
 const LIMIT_COLLECTION = 'aiTitelUebersetzungLimits';
 /**
@@ -675,5 +685,99 @@ exports.backfillInhaltUebersetzungen = onCall(
         remainingRequests,
         dailyLimit: LIMIT_INHALT_BACKFILL_ADMIN,
       };
+    },
+);
+
+// ── Auswahllisten (PR 5) ──────────────────────────────────────────────────────
+
+const LISTEN_LIMIT_COLLECTION = 'aiListenUebersetzungLimits';
+/** Aufrufe je Admin und Tag (fail closed); ein Aufruf übersetzt bis zu 100 Listenwerte. */
+const LIMIT_LISTEN_ADMIN = 100;
+const LISTEN_GEMINI_TIMEOUT_MS = 60000;
+
+/**
+ * Cloud Function: Übersetzungsvorschläge für Listenwerte (nur admin).
+ *
+ * Eingabe: {eintraege: [{liste, wert, text?} | {liste, wert, einzahl, mehrzahl}]}, 1 bis 100.
+ * Antwort: {vorschlaege: [{liste, wert, en, fr}], remainingRequests, dailyLimit}; bei Einheiten
+ * sind en und fr {einzahl, mehrzahl}. Einträge ohne gültige Antwort fehlen in den Vorschlägen.
+ */
+exports.uebersetzeListenwerte = onCall(
+    {
+      secrets: [geminiApiKey],
+      cors: ALLOWED_ORIGINS,
+      invoker: 'public',
+      maxInstances: 2,
+      memory: '256MiB',
+      timeoutSeconds: 90,
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Anmeldung erforderlich');
+      }
+      let eintraege;
+      try {
+        eintraege = pruefeListenEingabe(request.data?.eintraege);
+      } catch (error) {
+        throw new HttpsError('invalid-argument', error.message);
+      }
+      const caller = await requireAiCaller(request.auth);
+      if (!caller.isAdmin) {
+        throw new HttpsError('permission-denied', 'Übersetzungsvorschläge für Listen dürfen nur Admins anfordern.');
+      }
+      const apiKey = geminiApiKey.value();
+      if (!apiKey) {
+        console.error('uebersetzeListenwerte: GEMINI_API_KEY ist nicht gesetzt');
+        throw new HttpsError('failed-precondition', 'Der KI-Dienst ist nicht eingerichtet.');
+      }
+      const quota = await consumeDailyQuota(LISTEN_LIMIT_COLLECTION, LIMIT_LISTEN_ADMIN, caller);
+      if (!quota.allowed) {
+        throw new HttpsError(
+            'resource-exhausted',
+            `Tageslimit für Listenübersetzungen erreicht (${LIMIT_LISTEN_ADMIN}). Versuche es morgen erneut.`,
+        );
+      }
+
+      const {url, headers} = geminiGenerateContentRequest(apiKey);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), LISTEN_GEMINI_TIMEOUT_MS);
+      let vorschlaege;
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers,
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [{parts: [{text: baueListenPrompt(eintraege)}]}],
+            generationConfig: {
+              temperature: 0,
+              responseMimeType: 'application/json',
+              responseSchema: LISTEN_RESPONSE_SCHEMA,
+            },
+          }),
+        });
+        if (!response.ok) {
+          console.error(`uebersetzeListenwerte: Gemini antwortet ${response.status}`);
+          throw new HttpsError('unavailable', 'Der KI-Dienst hat nicht geantwortet. Versuche es gleich noch einmal.');
+        }
+        const data = await response.json();
+        let geparst = null;
+        try {
+          geparst = JSON.parse(data?.candidates?.[0]?.content?.parts?.[0]?.text);
+        } catch {
+          console.error('uebersetzeListenwerte: keine JSON-Antwort');
+        }
+        vorschlaege = pruefeListenAntwort(geparst, eintraege);
+      } catch (error) {
+        if (error instanceof HttpsError) throw error;
+        const art = error?.name === 'AbortError' ? 'Zeitüberschreitung' : error?.message;
+        console.error(`uebersetzeListenwerte: Gemini nicht erreichbar: ${art}`);
+        throw new HttpsError('unavailable', 'Der KI-Dienst hat nicht geantwortet. Versuche es gleich noch einmal.');
+      } finally {
+        clearTimeout(timer);
+      }
+
+      console.log(`uebersetzeListenwerte: ${vorschlaege.length} von ${eintraege.length} Vorschlägen`);
+      return {vorschlaege, remainingRequests: quota.remaining, dailyLimit: LIMIT_LISTEN_ADMIN};
     },
 );

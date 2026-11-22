@@ -62,7 +62,7 @@ import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { calculateRecipeSortIndexBreakdown } from '../utils/recipeSortIndex';
 import { evaluateLowCarbTag } from '../utils/lowCarb';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
-import { useRezeptTitel, useTexte } from '../contexts/SpracheContext';
+import { useListenwerte, useRezeptTitel, useTexte } from '../contexts/SpracheContext';
 import rezeptansichtTexte from '../i18n/texte/rezeptansicht';
 import useRezeptInhalt from '../hooks/useRezeptInhalt';
 import useModalScrollLock from '../hooks/useModalScrollLock';
@@ -115,6 +115,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Titel in der geltenden Sprache (Mehrsprachigkeit PR 3); bearbeitet wird immer recipe.title
   const zeigeTitel = useRezeptTitel();
   const tAnsicht = useTexte(rezeptansichtTexte);
+  // Listenwerte (Kulinarik, Portionseinheit) in der geltenden Sprache (Mehrsprachigkeit PR 5)
+  const listen = useListenwerte();
   // „Original anzeigen“ (Mehrsprachigkeit PR 4): Titel und Inhalt wieder im Original
   const [zeigeOriginal, setZeigeOriginal] = useState(false);
   const { rows: nutritionReferenceRows, loading: nutritionReferenceLoading, reload: reloadNutritionReferences } = useNutritionReference();
@@ -1458,8 +1460,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
   // Get the portion unit for the recipe
   const portionUnitId = recipe.portionUnitId || 'portion';
-  const portionUnit = portionUnits.find(u => u.id === portionUnitId) || { singular: 'Portion', plural: 'Portionen' };
-  const portionLabel = currentServings === 1 ? portionUnit.singular : portionUnit.plural;
+  const portionUnit = portionUnits.find(u => u.id === portionUnitId) || { id: 'portion', singular: 'Portion', plural: 'Portionen' };
+  const portionLabel = listen.einheit('portionUnits', portionUnit, currentServings);
 
   // Handle both array and string formats for kulinarik
   const cuisineList = (Array.isArray(recipe.kulinarik) ? recipe.kulinarik : [recipe.kulinarik]).filter(Boolean);
@@ -2474,9 +2476,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       <span key={`${cuisine}-${index}`} className="cuisine-badge-item">
                         {icon ? (
                           isBase64Image(icon)
-                            ? <img src={icon} alt={cuisine} title={cuisine} className="cuisine-badge-icon-img" />
-                            : <span title={cuisine} aria-label={cuisine}>{icon}</span>
-                        ) : cuisine}
+                            ? <img src={icon} alt={listen.kulinarik(cuisine)} title={listen.kulinarik(cuisine)} className="cuisine-badge-icon-img" />
+                            : <span title={listen.kulinarik(cuisine)} aria-label={listen.kulinarik(cuisine)}>{icon}</span>
+                        ) : listen.kulinarik(cuisine)}
                         {!isLast && (nextHasIcon ? '  ' : ', ')}
                       </span>
                     );

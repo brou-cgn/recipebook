@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import StarIcon from './icons/StarIcon';
 import { canEditRecipes } from '../utils/userManagement';
 import './RecipeFilterSidebar.css';
+import { useListenwerte } from '../contexts/SpracheContext';
 
 const COLLAPSED_STORAGE_KEY = 'recipeFilterSidebar_collapsed';
 const MAX_VISIBLE_PILLS = 5;
@@ -53,6 +54,8 @@ function RecipeFilterSidebar({
   onAddRecipe,
   activePrivateListId = null,
 }) {
+  // Namen der Kategorien und Küchen in der geltenden Sprache (Mehrsprachigkeit PR 5)
+  const listen = useListenwerte();
   const [collapsed, setCollapsed] = useState(getStoredCollapsed);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [showAllCuisines, setShowAllCuisines] = useState(false);
@@ -134,10 +137,11 @@ function RecipeFilterSidebar({
   // (by recipe count); the rest stay hidden behind a "+" toggle.
   const visibleCategories = useMemo(() => {
     if (trimmedSearch) {
-      return availableCategories.filter((name) => name.toLowerCase().includes(trimmedSearch));
+      return availableCategories.filter((name) => [name, listen.text('mealCategories', name)]
+        .some((text) => text.toLowerCase().includes(trimmedSearch)));
     }
     return showAllCategories ? availableCategories : availableCategories.slice(0, MAX_VISIBLE_PILLS);
-  }, [availableCategories, trimmedSearch, showAllCategories]);
+  }, [availableCategories, trimmedSearch, showAllCategories, listen]);
 
   const hiddenCategoriesCount = trimmedSearch || showAllCategories
     ? 0
@@ -145,10 +149,11 @@ function RecipeFilterSidebar({
 
   const visibleCuisinePills = useMemo(() => {
     if (trimmedSearch) {
-      return cuisinePills.filter((name) => name.toLowerCase().includes(trimmedSearch));
+      return cuisinePills.filter((name) => [name, listen.kulinarik(name)]
+        .some((text) => text.toLowerCase().includes(trimmedSearch)));
     }
     return showAllCuisines ? cuisinePills : cuisinePills.slice(0, MAX_VISIBLE_PILLS);
-  }, [cuisinePills, trimmedSearch, showAllCuisines]);
+  }, [cuisinePills, trimmedSearch, showAllCuisines, listen]);
 
   const hiddenCuisinesCount = trimmedSearch || showAllCuisines
     ? 0
@@ -308,7 +313,7 @@ function RecipeFilterSidebar({
                     onClick={() => handleCategoryClick(name)}
                     aria-pressed={selectedCategories.includes(name)}
                   >
-                    {name}
+                    {listen.text('mealCategories', name)}
                   </button>
                 ))}
                 {hiddenCategoriesCount > 0 && (
@@ -349,7 +354,7 @@ function RecipeFilterSidebar({
                     onClick={() => handleCuisineClick(name)}
                     aria-pressed={selectedCuisines.includes(name)}
                   >
-                    {name}
+                    {listen.kulinarik(name)}
                   </button>
                 ))}
                 {hiddenCuisinesCount > 0 && (

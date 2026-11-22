@@ -20,6 +20,7 @@ jest.mock('firebase/firestore', () => ({
 
 import {
   getSettings,
+  getListenUebersetzungen,
   getCustomLists,
   saveCustomLists,
   clearSettingsCache,
@@ -88,6 +89,44 @@ beforeEach(() => {
   getDoc.mockResolvedValue({ exists: () => false, data: () => ({}) });
   clearSettingsCache();
   clearButtonIconsLocalStorageCache();
+});
+
+describe('getListenUebersetzungen (Mehrsprachigkeit PR 5)', () => {
+  const gespeichert = {
+    cuisineTypes: [{ wert: 'Orientalische Küche', en: 'Middle Eastern cuisine' }],
+    portionUnits: [{ wert: 'portion', en: { einzahl: 'serving', mehrzahl: 'servings' } }],
+  };
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  test('liest das Feld nach einem frischen Laden aus settings/app', async () => {
+    mockGetDoc.mockResolvedValue({ exists: () => true, data: () => ({ listenUebersetzungen: gespeichert }) });
+
+    await expect(getListenUebersetzungen()).resolves.toEqual(gespeichert);
+  });
+
+  test('behält das Feld auch über den Cache im localStorage (nächster App-Start)', async () => {
+    mockGetDoc.mockResolvedValue({ exists: () => true, data: () => ({ listenUebersetzungen: gespeichert }) });
+    await getSettings();
+    // Nächster App-Start: Speicher im Arbeitsspeicher leer, localStorage noch gültig
+    const cache = localStorage.getItem('appSettingsCache');
+    const zeit = localStorage.getItem('appSettingsCacheTimestamp');
+    expect(cache).not.toBeNull();
+    clearSettingsCache();
+    localStorage.setItem('appSettingsCache', cache);
+    localStorage.setItem('appSettingsCacheTimestamp', zeit);
+    mockGetDoc.mockResolvedValue({ exists: () => false, data: () => ({}) });
+
+    await expect(getListenUebersetzungen()).resolves.toEqual(gespeichert);
+  });
+
+  test('ohne gespeicherte Übersetzungen null', async () => {
+    mockGetDoc.mockResolvedValue({ exists: () => true, data: () => ({}) });
+
+    await expect(getListenUebersetzungen()).resolves.toBeNull();
+  });
 });
 
 describe('getSettings – AI prompt (read-only, no client-side migration)', () => {

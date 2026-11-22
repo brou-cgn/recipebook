@@ -290,6 +290,7 @@ jest.mock('./utils/faviconUtils', () => ({
 }));
 
 jest.mock('./utils/customLists', () => ({
+  getListenUebersetzungen: () => Promise.resolve(null),
   applyTileSizePreference: jest.fn(),
   applyDarkModePreference: jest.fn(),
   expandCuisineSelection: jest.fn(() => []),

@@ -42,7 +42,7 @@ import {
 import { toggleMenuFavorite } from './utils/menuFavorites';
 import { getOnboardingTestmodeActive, shouldShowOnboardingOverlay } from './utils/onboardingSettings';
 import { applyFaviconSettings } from './utils/faviconUtils';
-import { applyTileSizePreference, applyDarkModePreference, getCustomLists, expandCuisineSelection, getInspirationListSettings } from './utils/customLists';
+import { applyTileSizePreference, applyDarkModePreference, getCustomLists, getListenUebersetzungen, expandCuisineSelection, getInspirationListSettings } from './utils/customLists';
 import { logRecipeCall } from './utils/recipeCallsFirestore';
 import useFollowRequestCount from './hooks/useFollowRequestCount';
 import { isRecoveryNavigation } from './utils/navigationType';
@@ -101,7 +101,7 @@ import { FollowProvider } from './contexts/FollowContext';
 import { CookingSessionProvider } from './contexts/CookingSessionContext';
 import MemberProfilePage from './components/MemberProfilePage';
 import { RecipeImportQueueProvider, useRecipeImportQueue } from './contexts/RecipeImportQueueContext';
-import { useSpracheFuerNutzer, useTexte } from './contexts/SpracheContext';
+import { useSprache, useSpracheFuerNutzer, useTexte } from './contexts/SpracheContext';
 import bereicheTexte from './i18n/texte/bereiche';
 import { updateAppBadge } from './utils/appBadge';
 import { resolveRecipeGroupContext, resolveImportGroupContext } from './utils/recipeGroupContext';
@@ -485,6 +485,7 @@ function App() {
   // Sprache aus den persönlichen Einstellungen (Vorhaben docs/vorhaben/mehrsprachigkeit.md)
   useSpracheFuerNutzer(currentUser);
   const tBereiche = useTexte(bereicheTexte);
+  const { setzeListenUebersetzungen } = useSprache();
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
   const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
@@ -1049,7 +1050,9 @@ function App() {
       setCuisineTypes([]);
       setMealCategories([]);
     });
-  }, []);
+    // Übersetzungen der Auswahllisten (Mehrsprachigkeit PR 5); ohne sie bleibt alles im Original
+    getListenUebersetzungen().then(setzeListenUebersetzungen).catch(() => setzeListenUebersetzungen(null));
+  }, [setzeListenUebersetzungen]);
 
   // Detect Web Share Target: read shared data from IndexedDB when URL param is present
   useEffect(() => {

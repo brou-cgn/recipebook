@@ -27,6 +27,7 @@ import { downloadRecipesKeywordCsv } from '../utils/recipeKeywordsCsv';
 import DeleteRowButton from './DeleteRowButton';
 import Button from './Button';
 import UebersetzungBackfill from './UebersetzungBackfill';
+import ListenUebersetzungen from './ListenUebersetzungen';
 import { trageInhaltUebersetzungenNach, trageTitelUebersetzungenNach } from '../utils/uebersetzungCallables';
 import UndoSnackbar from './UndoSnackbar';
 import useUndoableDelete from '../hooks/useUndoableDelete';
@@ -2193,6 +2194,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
             </div>
           </div>
         </div>
+
+        <ListenUebersetzungen lists={lists} kiVorschlaege={isAdmin} />
 
         <div className="settings-actions">
           <Button variant="ghost" onClick={handleReset}>

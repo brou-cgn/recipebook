@@ -6,7 +6,7 @@ import { getUserFavorites } from '../utils/userFavorites';
 import { expandCuisineSelection } from '../utils/customLists';
 import { hasHauptsaisonIngredient } from '../utils/recipeSortIndex';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
-import { useRezeptTitel, useSprache } from '../contexts/SpracheContext';
+import { useListenwerte, useRezeptTitel, useSprache } from '../contexts/SpracheContext';
 import { titelFassungen } from '../i18n/rezeptTitel';
 import { splitIntoTwoRows, reorderActiveFirst } from '../utils/pillCarousel';
 import useFadeOutClose from '../hooks/useFadeOutClose';
@@ -76,6 +76,7 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
   const { rows: nutritionReferenceRows } = useNutritionReference();
   // Mehrsprachigkeit PR 3: Titel in der geltenden Sprache, die Suche findet Original und Übersetzung
   const zeigeTitel = useRezeptTitel();
+  const listen = useListenwerte();
   const { inhalteUebersetzen } = useSprache();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
@@ -335,7 +336,7 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
     const groupNames = new Set((cuisineGroups || []).map((g) => g.name));
     let cuisineTypeCount = 0;
     allCuisinePills.forEach((name) => {
-      if (name.toLowerCase().includes(lower)) {
+      if ([name, listen.kulinarik(name)].some((text) => text.toLowerCase().includes(lower))) {
         if (!seen.has(name)) {
           result.push(name);
           seen.add(name);
@@ -370,7 +371,7 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
       }
     }
     return result;
-  }, [allCuisinePills, debouncedTerm, cuisineGroups, allSortedCuisineTypes]);
+  }, [allCuisinePills, debouncedTerm, cuisineGroups, allSortedCuisineTypes, listen]);
 
   // Row membership stays stable regardless of selection; within each row,
   // active (selected) pills are always shown first (leftmost).
@@ -406,8 +407,9 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
   const visibleCategoryPills = useMemo(() => {
     if (!debouncedTerm) return availableCategories;
     const lower = debouncedTerm.toLowerCase();
-    return availableCategories.filter((name) => name.toLowerCase().includes(lower));
-  }, [availableCategories, debouncedTerm]);
+    return availableCategories.filter((name) => [name, listen.text('mealCategories', name)]
+      .some((text) => text.toLowerCase().includes(lower)));
+  }, [availableCategories, debouncedTerm, listen]);
 
   // Row membership stays stable regardless of selection; within each row,
   // active (selected) pills are always shown first (leftmost).
@@ -573,9 +575,9 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
                     className={`mobile-search-filter-pill mobile-search-cuisine-pill${selectedCategories.includes(name) ? ' active' : ''}`}
                     onClick={() => handleCategoryPillClick(name)}
                     aria-pressed={selectedCategories.includes(name)}
-                    title={selectedCategories.includes(name) ? 'Filter aufheben' : `Nach ${name} filtern`}
+                    title={selectedCategories.includes(name) ? 'Filter aufheben' : `Nach ${listen.text('mealCategories', name)} filtern`}
                   >
-                    {name}
+                    {listen.text('mealCategories', name)}
                   </button>
                 ))}
               </div>
@@ -595,9 +597,9 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
                     className={`mobile-search-filter-pill mobile-search-cuisine-pill${selectedCuisines.includes(name) ? ' active' : ''}`}
                     onClick={() => handleCuisinePillClick(name)}
                     aria-pressed={selectedCuisines.includes(name)}
-                    title={selectedCuisines.includes(name) ? 'Filter aufheben' : `Nach ${name} filtern`}
+                    title={selectedCuisines.includes(name) ? 'Filter aufheben' : `Nach ${listen.kulinarik(name)} filtern`}
                   >
-                    {name}
+                    {listen.kulinarik(name)}
                   </button>
                 ))}
               </div>

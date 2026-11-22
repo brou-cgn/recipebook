@@ -154,3 +154,20 @@ describe('RecipeCard – übersetzter Titel (Mehrsprachigkeit PR 3)', () => {
     expect(container.querySelector('h3')).toHaveTextContent('Omas Apfelkuchen');
   });
 });
+
+describe('RecipeCard – übersetzte Kulinarik (Mehrsprachigkeit PR 5)', () => {
+  test('zeigt die Kulinarik in der geltenden Sprache', () => {
+    const { container } = render(
+      <SpracheProvider
+        profilSprache="fr"
+        inhalteUebersetzen
+        listenUebersetzungen={{ cuisineTypes: [{ wert: 'Italienische Küche', en: 'Italian cuisine', fr: 'Cuisine italienne' }] }}
+        speicher={null}
+      >
+        <RecipeCard recipe={{ id: 'k1', title: 'Pasta', kulinarik: ['Italienische Küche', 'Deutsche Küche'] }} onClick={jest.fn()} />
+      </SpracheProvider>
+    );
+    expect(Array.from(container.querySelectorAll('.kulinarik-tag')).map((tag) => tag.textContent))
+      .toEqual(['Cuisine italienne', 'Deutsche Küche']);
+  });
+});

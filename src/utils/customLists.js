@@ -1083,6 +1083,10 @@ export async function getSettings() {
         drinkUnits: settings.drinkUnits || DEFAULT_DRINK_UNITS,
         conversionTable: settings.conversionTable || DEFAULT_CONVERSION_TABLE,
         customUnits: settings.customUnits || [],
+        // Übersetzungen der Auswahllisten (Mehrsprachigkeit PR 5): Ohne diese Zeile fehlt das Feld
+        // nach jedem frischen Laden, getListenUebersetzungen liefert null, und die Pflege unter
+        // „Listen & Kategorien“ überschriebe beim Speichern den gespeicherten Stand.
+        listenUebersetzungen: settings.listenUebersetzungen || null,
         customIngredientAdjectives: settings.customIngredientAdjectives || [],
         headerSlogan: settings.headerSlogan || DEFAULT_SLOGAN,
         faviconText: settings.faviconText || DEFAULT_FAVICON_TEXT,
@@ -1472,6 +1476,30 @@ export async function saveCommonUnits(groups, userId) {
   } catch (error) {
     console.error('Error saving common units:', error);
     throw error;
+  }
+}
+
+/**
+ * Übersetzungen der Auswahllisten (Vorhaben Mehrsprachigkeit, PR 5; Aufbau in
+ * src/i18n/listenwerte.js). Bewusst nicht Teil von getCustomLists/saveCustomLists: Sonst schriebe
+ * „Einstellungen speichern“ einen beim Öffnen geladenen, älteren Stand zurück.
+ * @returns {Promise<Object|null>}
+ */
+export async function getListenUebersetzungen() {
+  const settings = await getSettings();
+  return settings.listenUebersetzungen || null;
+}
+
+/**
+ * @param {Object} uebersetzungen - vollständiges Feld listenUebersetzungen
+ * @returns {Promise<void>}
+ */
+export async function saveListenUebersetzungen(uebersetzungen) {
+  const listenUebersetzungen = uebersetzungen || {};
+  await updateDoc(doc(db, 'settings', 'app'), { listenUebersetzungen });
+  if (settingsCache) {
+    settingsCache = { ...settingsCache, listenUebersetzungen };
+    saveSettingsToLocalStorageCache(settingsCache);
   }
 }
 

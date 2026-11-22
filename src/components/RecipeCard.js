@@ -5,7 +5,7 @@ import './RecipeList.css';
 import RecipeImageCarousel from './RecipeImageCarousel';
 import RecipeRating from './RecipeRating';
 import { isBase64Image } from '../utils/imageUtils';
-import { useRezeptTitel } from '../contexts/SpracheContext';
+import { useListenwerte, useRezeptTitel } from '../contexts/SpracheContext';
 
 const MAX_KULINARIK_TAGS = 5;
 
@@ -14,16 +14,17 @@ const MAX_SWIPE_OFFSET = 80;
 const SWIPE_REVEAL_THRESHOLD = 50;
 const isRemoteUrl = (url) => url?.startsWith('https://') || url?.startsWith('http://');
 
-function renderKulinarikTags(kulinarik) {
+// anzeige: Name in der geltenden Sprache (Mehrsprachigkeit PR 5); gespeichert bleibt der deutsche Wert
+function renderKulinarikTags(kulinarik, anzeige) {
   if (!Array.isArray(kulinarik)) {
-    return <span className="kulinarik-tag">{kulinarik}</span>;
+    return <span className="kulinarik-tag">{anzeige(kulinarik)}</span>;
   }
   const displayed = kulinarik.slice(0, MAX_KULINARIK_TAGS);
   const remaining = kulinarik.length - MAX_KULINARIK_TAGS;
   return (
     <>
       {displayed.map((k) => (
-        <span key={k} className="kulinarik-tag">{k}</span>
+        <span key={k} className="kulinarik-tag">{anzeige(k)}</span>
       ))}
       {remaining > 0 && (
         <span className="kulinarik-tag kulinarik-tag-more">+{remaining} weitere</span>
@@ -35,6 +36,7 @@ function renderKulinarikTags(kulinarik) {
 function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, authorName, versionCount, currentUser, privateLists, onAddToPrivateList, onRemoveFromPrivateList, swipeRightIcon, publicGroupId, onMoveRecipeToPublic }) {
   // Titel in der geltenden Sprache (Mehrsprachigkeit PR 3), sonst das Original
   const titel = useRezeptTitel()(recipe);
+  const listen = useListenwerte();
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const isSwiping = useRef(false);
@@ -254,8 +256,8 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
           {recipe.kulinarik && (Array.isArray(recipe.kulinarik) ? recipe.kulinarik.length > 0 : recipe.kulinarik.trim().length > 0) && (
             <div className="recipe-kulinarik">
               {Array.isArray(recipe.kulinarik)
-                ? renderKulinarikTags(recipe.kulinarik)
-                : <span className="kulinarik-tag">{recipe.kulinarik}</span>
+                ? renderKulinarikTags(recipe.kulinarik, listen.kulinarik)
+                : <span className="kulinarik-tag">{listen.kulinarik(recipe.kulinarik)}</span>
               }
             </div>
           )}
