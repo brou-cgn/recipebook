@@ -102,6 +102,16 @@
   --color-info-text: #1a56db;
   --color-warning-tint: #fff3cd;
   --color-warning-text: #856404;
+  /* „Chefkoch & mehr“ (Kueche.css, Variante A): Farbe je Kachel für Titel und Balken; Fläche und
+     helle Balken mischt Kueche.css daraus. Dunkelwerte heller, damit Titel auf der dunklen Fläche
+     lesbar bleiben (vorher z. B. „Küchenbetrieb“ dunkelrot auf Dunkelgrau, siehe Tech-Check A5). */
+  --color-kachel-netzwerk: #2f5d62;
+  --color-kachel-mise: #5a2a4a;
+  --color-kachel-stars: #556b2f;
+  --color-kachel-wein: #7a1f2b;
+  --color-kachel-betrieb: #7a2e2e;
+  --color-kachel-events: #2f5d50;
+  --color-kachel-schatten: rgba(0, 0, 0, 0.1);
   /* Maße der Knöpfe (Tech-Check A10): Höhe auf dem Handy bis 768 px Breite */
   --radius-button: 8px;
   --height-button: 40px;
@@ -195,4 +205,11 @@
   --color-info-text: #9ab8f5;
   --color-warning-tint: rgba(255, 193, 7, 0.14);
   --color-warning-text: #e6c35c;
+  --color-kachel-netzwerk: #8cc3c8;
+  --color-kachel-mise: #d9a0c6;
+  --color-kachel-stars: #b3cc7a;
+  --color-kachel-wein: #ec98a2;
+  --color-kachel-betrieb: #ee9d97;
+  --color-kachel-events: #7fcaa9;
+  --color-kachel-schatten: rgba(0, 0, 0, 0.5);
 }

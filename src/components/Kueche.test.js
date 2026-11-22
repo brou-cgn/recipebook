@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, within, act, waitFor } from '@testing-library/react';
 import Kueche from './Kueche';
+import { SpracheProvider } from '../contexts/SpracheContext';
 import { getKalibrierungsSnapshotsOnce } from '../utils/drinkWeightsFirestore';
 
 const DEFAULT_MENU_IMAGE = 'data:image/png;base64,defaultmenuimage';
@@ -143,7 +144,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Toggle Meine Küche timeline/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mein Kochbuch' }));
     expect(screen.getByText('My Recipe')).toBeInTheDocument();
     expect(screen.queryByText('Other Recipe')).not.toBeInTheDocument();
   });
@@ -157,7 +158,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Toggle Meine Küche timeline/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mein Kochbuch' }));
     expect(screen.getByText('My Recipe')).toBeInTheDocument();
     expect(screen.getByText('Other Recipe')).toBeInTheDocument();
   });
@@ -174,7 +175,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Toggle Meine Küche timeline/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mein Kochbuch' }));
     expect(screen.getByText('My Menu')).toBeInTheDocument();
     expect(screen.queryByText('Other Menu')).not.toBeInTheDocument();
   });
@@ -191,7 +192,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Toggle Meine Küche timeline/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mein Kochbuch' }));
     expect(screen.getByText('My Recipe')).toBeInTheDocument();
     expect(screen.getByText('My Menu')).toBeInTheDocument();
   });
@@ -226,7 +227,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Toggle Meine Küche timeline/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mein Kochbuch' }));
     fireEvent.click(screen.getByText('My Menu').closest('.timeline-card'));
     expect(handleSelectMenu).toHaveBeenCalledWith(mockMenus[0]);
   });
@@ -253,7 +254,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Toggle Meine Küche timeline/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mein Kochbuch' }));
     // The timeline should show the date from menuDate (15. Juni 2024), not createdAt (01. Januar 2024)
     expect(screen.getByText('15. Juni 2024')).toBeInTheDocument();
     expect(screen.queryByText('01. Januar 2024')).not.toBeInTheDocument();
@@ -279,7 +280,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Toggle Meine Küche timeline/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mein Kochbuch' }));
     expect(screen.getByText('Created By Menu')).toBeInTheDocument();
   });
 
@@ -303,7 +304,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Toggle Meine Küche timeline/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mein Kochbuch' }));
     const img = await screen.findByAltText('Image Menu');
     expect(img).toHaveAttribute('src', DEFAULT_MENU_IMAGE);
   });
@@ -350,8 +351,8 @@ describe('Kueche', () => {
       />
     );
 
-    const chefkochTile = screen.getByRole('button', { name: /Chefkoch persönliche Daten/i });
-    expect(chefkochTile).toHaveClass('kueche-tile--chefkoch');
+    const chefkochTile = screen.getByRole('button', { name: 'Chefkoch' });
+    expect(chefkochTile.closest('.kueche-tile')).toHaveClass('kueche-tile--chefkoch');
   });
 
   test('clicking Chefkoch tile shows the PersonalDataPage', () => {
@@ -365,7 +366,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Chefkoch persönliche Daten/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Chefkoch' }));
     expect(screen.getByRole('heading', { name: 'Chefkoch', level: 2 })).toBeInTheDocument();
   });
 
@@ -380,7 +381,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Chefkoch persönliche Daten/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Chefkoch' }));
     expect(screen.getByRole('heading', { name: 'Chefkoch', level: 2 })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Abbrechen/i }));
@@ -401,7 +402,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Chefkoch persönliche Daten/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Chefkoch' }));
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'Chefkoch', level: 2 })).not.toBeInTheDocument());
@@ -421,7 +422,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Chefkoch persönliche Daten/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Chefkoch' }));
     fireEvent.click(screen.getByRole('radio', { name: 'English' }));
 
     await waitFor(() => expect(onProfileUpdated).toHaveBeenCalledWith(expect.objectContaining({ sprache: 'en' })));
@@ -477,7 +478,7 @@ describe('Kueche', () => {
 
     expect(screen.queryByText('My Recipe')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Toggle Meine Küche timeline/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mein Kochbuch' }));
     expect(screen.getByText('My Recipe')).toBeInTheDocument();
   });
 
@@ -493,7 +494,7 @@ describe('Kueche', () => {
       />
     );
 
-    const tile = screen.getByRole('button', { name: /Toggle Meine Küche timeline/i });
+    const tile = screen.getByRole('button', { name: 'Mein Kochbuch' });
     fireEvent.click(tile);
     expect(screen.getByText('My Recipe')).toBeInTheDocument();
 
@@ -701,7 +702,7 @@ describe('Kueche', () => {
     expect(within(tile).getByText('private Listen')).toBeInTheDocument();
   });
 
-  test('Meine Mise en Place tile appears before Mein Kochbuch tile', () => {
+  test('Variante A: Mein Kochbuch steht vor Meine Mise en Place', () => {
     render(
       <Kueche
         recipes={[]}
@@ -713,8 +714,8 @@ describe('Kueche', () => {
     );
 
     const miseEnPlace = screen.getByTestId('mise-en-place-tile');
-    const kochbuchTile = screen.getByRole('button', { name: /Toggle Meine Küche timeline/i });
-    expect(miseEnPlace.compareDocumentPosition(kochbuchTile)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    const kochbuchTile = screen.getByRole('button', { name: 'Mein Kochbuch' });
+    expect(kochbuchTile.compareDocumentPosition(miseEnPlace)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
   test('Küchenbetrieb tile is not rendered for non-admin users', () => {
@@ -801,7 +802,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Küchenbetrieb Statistik öffnen/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Küchenbetrieb' }));
     expect(handleViewChange).toHaveBeenCalledWith('appCalls');
   });
 
@@ -904,7 +905,7 @@ describe('Kueche', () => {
     expect(chart.children).toHaveLength(7);
   });
 
-  test('Meine Küchenstars tile is positioned between Küchenbetrieb and Mein Kochbuch', () => {
+  test('Variante A: Kochbuch, dann Küchenstars, die Verwaltung (Küchenbetrieb) zuletzt in eigenem Abschnitt', () => {
     render(
       <Kueche
         recipes={[]}
@@ -915,12 +916,14 @@ describe('Kueche', () => {
       />
     );
 
-    const kuechenbetriebTile = screen.getByRole('button', { name: /Küchenbetrieb Statistik öffnen/i });
+    const kuechenbetriebTile = screen.getByRole('button', { name: 'Küchenbetrieb' });
     const kuechenstarsTile = screen.getByRole('button', { name: /Meine Küchenstars/i });
-    const kochbuchTile = screen.getByRole('button', { name: /Toggle Meine Küche timeline/i });
+    const kochbuchTile = screen.getByRole('button', { name: 'Mein Kochbuch' });
 
-    expect(kuechenbetriebTile.compareDocumentPosition(kuechenstarsTile)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(kuechenstarsTile.compareDocumentPosition(kochbuchTile)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(kochbuchTile.compareDocumentPosition(kuechenstarsTile)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(kuechenstarsTile.compareDocumentPosition(kuechenbetriebTile)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    const verwaltung = screen.getByRole('heading', { name: 'Verwaltung' }).closest('section');
+    expect(within(verwaltung).getByRole('button', { name: 'Küchenbetrieb' })).toBe(kuechenbetriebTile);
   });
 
   test('FAB button is hidden on Kueche when no relevant Küchenbetrieb tabs are available', async () => {
@@ -1026,7 +1029,7 @@ describe('Kueche', () => {
     const tile = screen.getByTestId('eventplanung-tile');
     expect(tile).toHaveClass('kueche-tile--eventplanung');
     expect(within(tile).getByText('Eventplanung')).toBeInTheDocument();
-    fireEvent.click(tile);
+    fireEvent.click(within(tile).getByRole('button', { name: 'Eventplanung' }));
     expect(onViewChange).toHaveBeenCalledWith('eventplanung');
   });
 
@@ -1113,7 +1116,7 @@ describe('Kueche', () => {
     expect(kachel).toHaveTextContent('12Weinstile');
     expect(kachel).toHaveTextContent('8Quellen');
 
-    fireEvent.click(kachel);
+    fireEvent.click(within(kachel).getByRole('button', { name: 'Weinbegleitung' }));
     expect(screen.getByTestId('weinbegleitung-seite')).toBeInTheDocument();
     expect(screen.queryByTestId('weinbegleitung-tile')).not.toBeInTheDocument();
 
@@ -1121,11 +1124,58 @@ describe('Kueche', () => {
     expect(screen.getByTestId('weinbegleitung-tile')).toBeInTheDocument();
   });
 
-  test('Kachel „Weinbegleitung“ öffnet auch per Tastatur und fehlt ohne Anmeldung', () => {
+  test('Abschnitt „Verwaltung“ erscheint nur mit Küchenbetrieb oder Eventplanung', () => {
     const { rerender } = render(
       <Kueche recipes={[]} menus={[]} onSelectRecipe={() => {}} allUsers={[]} currentUser={{ id: 'user-1' }} />
     );
-    fireEvent.keyDown(screen.getByTestId('weinbegleitung-tile'), { key: 'Enter' });
+    expect(screen.queryByRole('heading', { name: 'Verwaltung' })).not.toBeInTheDocument();
+    rerender(<Kueche recipes={[]} menus={[]} onSelectRecipe={() => {}} allUsers={[]} currentUser={{ id: 'user-1', eventplanung: true }} />);
+    expect(screen.getByRole('heading', { name: 'Verwaltung' })).toBeInTheDocument();
+  });
+
+  test('Profilkarte zeigt Initialen, Namen und Signature-Satz', () => {
+    const { container } = render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={[]}
+        currentUser={{ id: 'user-1', vorname: 'John', nachname: 'Doe', signatureSatz: 'Ich koche gern.' }}
+      />
+    );
+    expect(container.querySelector('.kueche-profil__avatar')).toHaveTextContent('JD');
+    expect(screen.getByText('Ich koche gern.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Chefkoch' })).toHaveAccessibleDescription('John Doe Ich koche gern.');
+  });
+
+  test('erscheint auf Englisch, Zahlen mit ihrer Bezeichnung in Einzahl und Mehrzahl', () => {
+    // renderWithProviders braucht den NutritionReferenceProvider, den diese Datei wegmockt
+    render(
+      <SpracheProvider profilSprache="en" speicher={null}>
+        <Kueche
+          recipes={[{ id: 'r1', title: 'Soup', authorId: 'user-1', createdAt: new Date() }]}
+          menus={[]}
+          onSelectRecipe={() => {}}
+          allUsers={[]}
+          currentUser={{ id: 'user-1', vorname: 'John', appCalls: true }}
+        />
+      </SpracheProvider>
+    );
+    expect(screen.getByRole('heading', { name: 'Chef & more' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'My cookbook' })).toBeInTheDocument();
+    expect(screen.getByText('recipe')).toBeInTheDocument();
+    expect(screen.getByText('menus')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Administration' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kitchen operations' })).toBeInTheDocument();
+  });
+
+  test('Kachel „Weinbegleitung“ ist ein echter Knopf (Tastatur) und fehlt ohne Anmeldung', () => {
+    const { rerender } = render(
+      <Kueche recipes={[]} menus={[]} onSelectRecipe={() => {}} allUsers={[]} currentUser={{ id: 'user-1' }} />
+    );
+    const knopf = within(screen.getByTestId('weinbegleitung-tile')).getByRole('button', { name: 'Weinbegleitung' });
+    expect(knopf.tagName).toBe('BUTTON');
+    fireEvent.click(knopf);
     expect(screen.getByTestId('weinbegleitung-seite')).toBeInTheDocument();
 
     rerender(<Kueche recipes={[]} menus={[]} onSelectRecipe={() => {}} allUsers={[]} currentUser={null} />);
