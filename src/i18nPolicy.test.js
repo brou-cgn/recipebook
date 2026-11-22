@@ -56,7 +56,7 @@ const NUR_DEUTSCH = new Set([
   'components/templateEditor/TemplateGallery.js',
 ]);
 
-// Stand 22.11.2026 (PR 6i, Import-Dialoge): 738 Textstellen in 40 Dateien.
+// Stand 22.11.2026 (PR 6j, Events): 634 Textstellen in 37 Dateien.
 const BASELINE = {
   'App.js': 5,
   'components/AtelierCategorySelectionPage.js': 5,
@@ -67,10 +67,7 @@ const BASELINE = {
   'components/ConsumptionForm.js': 33,
   'components/DrinkManagementPage.js': 60,
   'components/EventDrinkSelectionPage.js': 26,
-  'components/EventForm.js': 36,
-  'components/EventGuestSelectionPage.js': 20,
   'components/EventplanungPage.js': 2,
-  'components/EventsPage.js': 48,
   'components/FlowPage.js': 3,
   'components/GroupCreateDialog.js': 23,
   'components/GroupDetail.js': 53,
