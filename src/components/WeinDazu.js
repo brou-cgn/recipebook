@@ -8,8 +8,12 @@ import { getStil, formatTemperatur } from '../utils/weinbegleitung/wissensbasis'
 import { beispieleFuerRegion, regionFuerRezept } from '../utils/weinbegleitung/kulinarik';
 import { istOhneWein } from '../utils/weinbegleitung/ohneWein';
 import { istWeinprofilAktuell } from '../utils/weinbegleitung/profilHash';
-import { kennwerteFuer, weinprofilFehlertext, neueresProfil, TEXT_KEIN_STIL } from '../utils/weinbegleitung/anzeige';
+import { kennwerteFuer, weinprofilFehlertext, neueresProfil } from '../utils/weinbegleitung/anzeige';
 import { generiereWeinprofile } from '../utils/weinbegleitung/weinprofilCallable';
+import { beispielText, labelText, regionName, stilName } from '../utils/weinbegleitung/sprache';
+import { useSprache, useTexte } from '../contexts/SpracheContext';
+import weinTexte from '../i18n/texte/wein';
+import allgemeinTexte from '../i18n/texte/allgemein';
 import useModalScrollLock from '../hooks/useModalScrollLock';
 import useFadeOutClose from '../hooks/useFadeOutClose';
 import './WeinDazu.css';
@@ -33,6 +37,9 @@ import './WeinDazu.css';
  */
 
 function StilDetails({ option, icons, regionId }) {
+  // Wissensbasis und Texte in der geltenden Sprache (Mehrsprachigkeit PR 6c)
+  const t = useTexte(weinTexte);
+  const { sprache } = useSprache();
   const stil = getStil(option.stilId);
   if (!stil) return null;
   const { beispiele, region } = beispieleFuerRegion(stil, regionId);
@@ -43,23 +50,25 @@ function StilDetails({ option, icons, regionId }) {
           <WeinSymbol stil={stil} icons={icons} groesse={40} />
         </span>
         <div>
-          <p className="wein-dazu-stil-name">{stil.name}</p>
+          <p className="wein-dazu-stil-name">{stilName(stil, sprache)}</p>
           <p className="wein-dazu-stil-beispiele">
-            z. B. {beispiele.join(', ')} · <span className="wein-dazu-nowrap">{formatTemperatur(stil)}</span>
+            {t('zumBeispiel', { beispiele: beispiele.map((beispiel) => beispielText(beispiel, sprache)).join(', ') })}
+            {' · '}
+            <span className="wein-dazu-nowrap">{formatTemperatur(stil)}</span>
           </p>
-          {region && <p className="wein-dazu-stil-region">Beispiele passend zur {region.anzeige}</p>}
-          <p className="wein-dazu-stil-label">{option.label}</p>
+          {region && <p className="wein-dazu-stil-region">{t('beispielePassend', { region: regionName(region, sprache) })}</p>}
+          <p className="wein-dazu-stil-label">{labelText(option.label, t)}</p>
         </div>
       </div>
       <dl className="wein-dazu-kennwerte">
-        {kennwerteFuer(stil).map((eintrag) => (
+        {kennwerteFuer(stil, t).map((eintrag) => (
           <div key={eintrag.name} className="wein-dazu-kennwert">
             <dt>{eintrag.name}</dt>
             <dd>{eintrag.wert}</dd>
           </div>
         ))}
       </dl>
-      <h3 className="wein-dazu-abschnitt">Warum passt das?</h3>
+      <h3 className="wein-dazu-abschnitt">{t('warumPasst')}</h3>
       <Gruende regelIds={option.regelIds} mitQuellen={false} />
     </div>
   );
@@ -74,6 +83,9 @@ function WeinDazuSheet({
   empfehlung, veraltet, darfSchaetzen, onNeuEinschaetzen, onClose, icons, regionId = null, rezept = null, einblickProfil = null,
 }) {
   useModalScrollLock();
+  const t = useTexte(weinTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const { sprache } = useSprache();
   const [closing, schliessen] = useFadeOutClose(onClose);
   const [auswahl, setAuswahl] = useState(0);
   const [zug, setZug] = useState(0);
@@ -130,7 +142,7 @@ function WeinDazuSheet({
 
   return (
     <div className={rootKlassen.join(' ')}>
-      <button type="button" className="wein-dazu-sheet-scrim" aria-label="Schließen" tabIndex={-1} onClick={schliessen} />
+      <button type="button" className="wein-dazu-sheet-scrim" aria-label={tAllgemein('schliessen')} tabIndex={-1} onClick={schliessen} />
       <div
         className={`wein-dazu-sheet${ziehend ? ' wein-dazu-sheet--ziehend' : ''}`}
         role="dialog"
@@ -148,16 +160,16 @@ function WeinDazuSheet({
           onTouchCancel={zugEnde}
         >
           {/* Für Tastatur und Screenreader; mit dem Finger schließt nur das Wischen */}
-          <button type="button" className="wein-dazu-sheet-grabber" aria-label="Schließen" onClick={schliessen} />
-          <h2 className="wein-dazu-sheet-titel" id={titelId}>Wein dazu</h2>
+          <button type="button" className="wein-dazu-sheet-grabber" aria-label={tAllgemein('schliessen')} onClick={schliessen} />
+          <h2 className="wein-dazu-sheet-titel" id={titelId}>{t('weinDazu')}</h2>
         </div>
         <div className="wein-dazu-sheet-inhalt">
           {veraltet && (
             <div className="wein-dazu-veraltet">
-              <p>Das Rezept wurde seit der Einschätzung geändert.</p>
+              <p>{t('veraendert')}</p>
               {darfSchaetzen && (
                 <button type="button" className="wein-dazu-knopf" onClick={onNeuEinschaetzen}>
-                  Neu einschätzen
+                  {t('neuEinschaetzen')}
                 </button>
               )}
             </div>
@@ -167,7 +179,7 @@ function WeinDazuSheet({
             <div className="wein-dazu-stil">
               <div className="wein-dazu-stil-kopf">
                 <span className="wein-dazu-stil-glas"><WeinGlas groesse={40} /></span>
-                <p className="wein-dazu-stil-name">{TEXT_KEIN_STIL}</p>
+                <p className="wein-dazu-stil-name">{t('keinStil')}</p>
               </div>
               <Gruende regelIds={empfehlung.regelIds} mitQuellen={false} />
             </div>
@@ -176,8 +188,8 @@ function WeinDazuSheet({
           )}
 
           {optionen.length > 1 && (
-            <section className="wein-dazu-optionen" aria-label="Empfehlung und Alternativen">
-              <h3 className="wein-dazu-abschnitt">Zur Auswahl</h3>
+            <section className="wein-dazu-optionen" aria-label={t('empfehlungUndAlternativen')}>
+              <h3 className="wein-dazu-abschnitt">{t('zurAuswahl')}</h3>
               <ul className="wein-dazu-optionen-liste">
                 {optionen.map((option, index) => {
                   const stil = getStil(option.stilId);
@@ -192,9 +204,9 @@ function WeinDazuSheet({
                       >
                         <WeinSymbol stil={stil} icons={icons} groesse={22} />
                         <span className="wein-dazu-option-text">
-                          <span className="wein-dazu-option-name">{stil.name}</span>
+                          <span className="wein-dazu-option-name">{stilName(stil, sprache)}</span>
                           <span className="wein-dazu-option-label">
-                            {index === 0 ? 'Empfehlung' : 'Alternative'} · {option.label}
+                            {index === 0 ? t('empfehlung') : t('alternative')} · {labelText(option.label, t)}
                           </span>
                         </span>
                       </button>
@@ -213,6 +225,8 @@ function WeinDazuSheet({
 }
 
 function WeinDazu({ recipe, currentUser, isSharedView = false, icons = null }) {
+  const t = useTexte(weinTexte);
+  const { sprache } = useSprache();
   const [lokal, setLokal] = useState(null);
   const [laedt, setLaedt] = useState(false);
   const [fehler, setFehler] = useState(null);
@@ -264,13 +278,13 @@ function WeinDazu({ recipe, currentUser, isSharedView = false, icons = null }) {
       if (!aktivRef.current) return;
       const neu = antwort?.profile?.[rezeptId];
       if (neu) setLokal({ recipeId: rezeptId, profil: neu });
-      else setFehler(weinprofilFehlertext(antwort?.fehlerGruende?.[rezeptId]));
+      else setFehler(weinprofilFehlertext(antwort?.fehlerGruende?.[rezeptId], t));
     } catch (error) {
-      if (aktivRef.current) setFehler(weinprofilFehlertext(error));
+      if (aktivRef.current) setFehler(weinprofilFehlertext(error, t));
     } finally {
       if (aktivRef.current) setLaedt(false);
     }
-  }, [rezeptId]);
+  }, [rezeptId, t]);
 
   const sheetSchliessen = useCallback(() => {
     setSheetOffen(false);
@@ -298,12 +312,12 @@ function WeinDazu({ recipe, currentUser, isSharedView = false, icons = null }) {
         {laedt ? (
           <span className="wein-dazu-laden" role="status">
             <WeinGlas laedt groesse={22} />
-            Gericht wird eingeschätzt …
+            {t('wirdEingeschaetzt')}
           </span>
         ) : empfehlung.status === STATUS_OHNE_PROFIL ? (
           <button type="button" className="wein-dazu-chip wein-dazu-chip--leer" onClick={schaetzen}>
             <WeinGlas groesse={20} />
-            Passenden Wein finden
+            {t('weinFinden')}
           </button>
         ) : (
           <>
@@ -316,17 +330,17 @@ function WeinDazu({ recipe, currentUser, isSharedView = false, icons = null }) {
             >
               <WeinSymbol stil={stil} icons={icons} groesse={20} />
               {stil ? (
-                <span><span className="wein-dazu-chip-praefix">Wein:</span> {stil.name}</span>
+                <span><span className="wein-dazu-chip-praefix">{t('wein')}</span> {stilName(stil, sprache)}</span>
               ) : (
-                <span>{TEXT_KEIN_STIL}</span>
+                <span>{t('keinStil')}</span>
               )}
             </button>
             {veraltet && (darfSchaetzen ? (
               <button type="button" className="wein-dazu-link" onClick={schaetzen}>
-                Neu einschätzen
+                {t('neuEinschaetzen')}
               </button>
             ) : (
-              <span className="wein-dazu-hinweis">Einschätzung veraltet</span>
+              <span className="wein-dazu-hinweis">{t('veraltet')}</span>
             ))}
           </>
         )}

@@ -355,3 +355,33 @@ describe('WeinDazu Einschätzung im Detail', () => {
     expect(await within(dialog).findByRole('status')).toHaveTextContent('Kopieren nicht möglich');
   });
 });
+
+describe('WeinDazu in anderer Sprache (Mehrsprachigkeit PR 6c)', () => {
+  const zeigeIn = (sprache, props) => renderWithProviders(<WeinDazu currentUser={BEARBEITER} {...props} />, { sprache });
+
+  it('Englisch: Stil, Beispiele, Region, Kennwerte und Gründe aus der übersetzten Wissensbasis', () => {
+    zeigeIn('en', { recipe: mitProfil(G5_RINDERSCHMORBRATEN, { kulinarik: ['Italienische Küche'] }) });
+    fireEvent.click(screen.getByRole('button', { name: 'Wine: Red wine, full-bodied' }));
+    const dialog = screen.getByRole('dialog', { name: 'Wine pairing' });
+    expect(beispielzeile(dialog)).toHaveTextContent('e.g. Barolo, Brunello di Montalcino · 16–18 °C');
+    expect(within(dialog).getByText('Examples to suit Italian cuisine')).toBeInTheDocument();
+    expect(within(dialog).getByText('Body')).toBeInTheDocument();
+    expect(within(dialog).getByText('Why does it work?')).toBeInTheDocument();
+    expect(within(dialog).getByText('Dish and wine are similarly intense; neither overpowers the other.')).toBeInTheDocument();
+  });
+
+  it('Französisch: Beispiele mit deutschen Wörtern übersetzt, Eigennamen bleiben', () => {
+    zeigeIn('fr', { recipe: mitProfil(G5_RINDERSCHMORBRATEN, { kulinarik: ['Österreichische Küche'] }) });
+    fireEvent.click(screen.getByRole('button', { name: /^Vin\s: Vin rouge, corsé$/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Accord mets-vin' });
+    expect(beispielzeile(dialog)).toHaveTextContent('p. ex. Blaufränkisch Reserve, Assemblage rouge du Burgenland · 16–18 °C');
+    expect(within(dialog).getByText('Exemples adaptés à la cuisine autrichienne')).toBeInTheDocument();
+  });
+
+  it('Fehler auf Englisch', async () => {
+    generiereWeinprofile.mockResolvedValue({ profile: {}, uebersprungen: [], fehlgeschlagen: ['r1'], fehlerGruende: { r1: 'tageslimit' } });
+    zeigeIn('en', { recipe: REZEPT });
+    fireEvent.click(screen.getByRole('button', { name: 'Find a matching wine' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('The daily limit for wine assessments has been reached.');
+  });
+});

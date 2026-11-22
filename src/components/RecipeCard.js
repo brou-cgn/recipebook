@@ -5,7 +5,8 @@ import './RecipeList.css';
 import RecipeImageCarousel from './RecipeImageCarousel';
 import RecipeRating from './RecipeRating';
 import { isBase64Image } from '../utils/imageUtils';
-import { useListenwerte, useRezeptTitel } from '../contexts/SpracheContext';
+import { useListenwerte, useRezeptTitel, useTexte } from '../contexts/SpracheContext';
+import kochbuchTexte from '../i18n/texte/kochbuch';
 
 const MAX_KULINARIK_TAGS = 5;
 
@@ -15,7 +16,7 @@ const SWIPE_REVEAL_THRESHOLD = 50;
 const isRemoteUrl = (url) => url?.startsWith('https://') || url?.startsWith('http://');
 
 // anzeige: Name in der geltenden Sprache (Mehrsprachigkeit PR 5); gespeichert bleibt der deutsche Wert
-function renderKulinarikTags(kulinarik, anzeige) {
+function renderKulinarikTags(kulinarik, anzeige, t) {
   if (!Array.isArray(kulinarik)) {
     return <span className="kulinarik-tag">{anzeige(kulinarik)}</span>;
   }
@@ -27,7 +28,7 @@ function renderKulinarikTags(kulinarik, anzeige) {
         <span key={k} className="kulinarik-tag">{anzeige(k)}</span>
       ))}
       {remaining > 0 && (
-        <span className="kulinarik-tag kulinarik-tag-more">+{remaining} weitere</span>
+        <span className="kulinarik-tag kulinarik-tag-more">{t('weitereKulinarik', { anzahl: remaining })}</span>
       )}
     </>
   );
@@ -37,6 +38,7 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
   // Titel in der geltenden Sprache (Mehrsprachigkeit PR 3), sonst das Original
   const titel = useRezeptTitel()(recipe);
   const listen = useListenwerte();
+  const t = useTexte(kochbuchTexte);
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const isSwiping = useRef(false);
@@ -139,7 +141,7 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
 
     // Private recipes cannot be moved from their original list
     if (recipe.isPrivate === true) {
-      alert('Private Rezepte können nicht aus ihrer ursprünglichen Liste entfernt werden.');
+      alert(t('privatNichtEntfernen'));
       return;
     }
 
@@ -181,7 +183,7 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
   return (
     <div className="recipe-card-swipe-wrapper">
       {privateLists && privateLists.length > 0 && (
-        <div className="recipe-card-list-reveal-button" aria-label="Zu Liste hinzufügen">
+        <div className="recipe-card-list-reveal-button" aria-label={t('zuListe')}>
           <span className="recipe-card-list-reveal-icon" aria-hidden="true">
             {(() => {
               const icon = swipeRightIcon || defaultIcon('clipboard');
@@ -196,7 +198,7 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
             value=""
             className="recipe-card-list-reveal-select"
           >
-            <option value="" disabled>Zu Liste hinzufügen…</option>
+            <option value="" disabled>{t('zuListeAuswahl')}</option>
             {privateLists.map((list) => {
               const isInList = list.recipeIds?.includes(recipe.id) || recipe.groupId === list.id;
               return (
@@ -224,7 +226,7 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
           <div className="recipe-favorite-badge">
             {favoriteActiveIcon ? (
               isBase64Image(favoriteActiveIcon) ? (
-                <img src={favoriteActiveIcon} alt="Favorit" className="button-icon-image" draggable="false" />
+                <img src={favoriteActiveIcon} alt={t('favorit')} className="button-icon-image" draggable="false" />
               ) : (
                 favoriteActiveIcon
               )
@@ -234,7 +236,7 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
           </div>
         )}
         {isNew && (
-          <div className="new-badge">Neu</div>
+          <div className="new-badge">{t('neu')}</div>
         )}
         {hasImages && (
           <div
@@ -256,7 +258,7 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
           {recipe.kulinarik && (Array.isArray(recipe.kulinarik) ? recipe.kulinarik.length > 0 : recipe.kulinarik.trim().length > 0) && (
             <div className="recipe-kulinarik">
               {Array.isArray(recipe.kulinarik)
-                ? renderKulinarikTags(recipe.kulinarik, listen.kulinarik)
+                ? renderKulinarikTags(recipe.kulinarik, listen.kulinarik, t)
                 : <span className="kulinarik-tag">{listen.kulinarik(recipe.kulinarik)}</span>
               }
             </div>
@@ -267,7 +269,7 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
             )}
             {versionCount && versionCount > 1 && (
               <div className="version-count">
-                {versionCount} Versionen
+                {t('versionen', { anzahl: versionCount })}
               </div>
             )}
             <RecipeRating

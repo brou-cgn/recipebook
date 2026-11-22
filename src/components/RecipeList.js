@@ -9,7 +9,9 @@ import SortCarousel from './SortCarousel';
 import { getRecentRecipeViewCounts } from '../utils/recipeCallsFirestore';
 import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
 import { useOptionalNutritionReference } from '../contexts/NutritionReferenceContext';
-import { useSprache } from '../contexts/SpracheContext';
+import { useListenwerte, useSprache, useTexte } from '../contexts/SpracheContext';
+import kochbuchTexte from '../i18n/texte/kochbuch';
+import bereicheTexte from '../i18n/texte/bereiche';
 import { rezeptTitel, titelFassungen } from '../i18n/rezeptTitel';
 import RecipeCard from './RecipeCard';
 import TutorialCard from './TutorialCard';
@@ -175,6 +177,10 @@ const EMPTY_ROWS = [];
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEditTutorial, tutorials = [], categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly = false, showRecipes = true, showTutorials = true, onShowFavoritesOnlyChange, privateLists, onAddToPrivateList, onRemoveFromPrivateList, publicGroupId, onMoveRecipeToPublic, cookDatesMap = new Map(), seasonMatrixEntries = [] }) {
   const nutritionReferenceRows = useOptionalNutritionReference()?.rows ?? EMPTY_ROWS;
   const { sprache, inhalteUebersetzen } = useSprache();
+  // Texte des Kochbuchs (Mehrsprachigkeit PR 6d)
+  const t = useTexte(kochbuchTexte);
+  const tB = useTexte(bereicheTexte);
+  const listenwerte = useListenwerte();
   const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnlyProp || showSeasonalOnly || !showRecipes || !showTutorials || (activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
@@ -390,10 +396,11 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEdi
       return activePrivateListName;
     }
     if (!categoryFilter) {
-      return showFavoritesOnly ? 'Mein Kochbuch' : 'Kochbuch';
+      return showFavoritesOnly ? t('meinKochbuch') : tB('kochbuch');
     }
-    const prefix = showFavoritesOnly ? 'Meine ' : '';
-    return `${prefix}${categoryFilter}`;
+    // Speisekategorie als Listenwert (Mehrsprachigkeit PR 5), gespeichert bleibt der deutsche Wert
+    const kategorie = listenwerte.text('mealCategories', categoryFilter);
+    return showFavoritesOnly ? t('meineKategorie', { kategorie }) : kategorie;
   };
 
   const userCanEdit = canEditRecipes(currentUser);
@@ -485,17 +492,17 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEdi
                   onMouseDown={() => setFilterPressed(true)}
                   onMouseUp={() => setFilterPressed(false)}
                   onMouseLeave={() => setFilterPressed(false)}
-                  title="Weitere Filter"
+                  title={t('weitereFilter')}
                 >
                   {hasActiveFilters ? (
                     isBase64Image(getEffectiveIcon(buttonIcons, 'filterButtonActive', isDarkMode)) ? (
-                      <img src={getEffectiveIcon(buttonIcons, 'filterButtonActive', isDarkMode)} alt="Filter aktiv" className="button-icon-image" draggable="false" />
+                      <img src={getEffectiveIcon(buttonIcons, 'filterButtonActive', isDarkMode)} alt={t('filterAktiv')} className="button-icon-image" draggable="false" />
                     ) : (
                       getEffectiveIcon(buttonIcons, 'filterButtonActive', isDarkMode)
                     )
                   ) : (
                     isBase64Image(getEffectiveIcon(buttonIcons, 'filterButton', isDarkMode)) ? (
-                      <img src={getEffectiveIcon(buttonIcons, 'filterButton', isDarkMode)} alt="Filter" className="button-icon-image" draggable="false" />
+                      <img src={getEffectiveIcon(buttonIcons, 'filterButton', isDarkMode)} alt={t('filter')} className="button-icon-image" draggable="false" />
                     ) : (
                       getEffectiveIcon(buttonIcons, 'filterButton', isDarkMode)
                     )
@@ -513,11 +520,11 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEdi
                       onMouseDown={() => setAddPressed(true)}
                       onMouseUp={() => setAddPressed(false)}
                       onMouseLeave={() => setAddPressed(false)}
-                      title={canAddTutorial ? 'Rezept hinzufügen (lang drücken für Tutorial)' : 'Rezept hinzufügen'}
-                      aria-label={canAddTutorial ? 'Rezept hinzufügen (lang drücken für Tutorial)' : 'Rezept hinzufügen'}
+                      title={canAddTutorial ? t('rezeptHinzufuegenTutorial') : t('rezeptHinzufuegen')}
+                      aria-label={canAddTutorial ? t('rezeptHinzufuegenTutorial') : t('rezeptHinzufuegen')}
                     >
                       {isBase64Image(getEffectiveIcon(buttonIcons, 'addRecipe', isDarkMode)) ? (
-                        <img src={getEffectiveIcon(buttonIcons, 'addRecipe', isDarkMode)} alt="Rezept hinzufügen" className="button-icon-image" draggable="false" />
+                        <img src={getEffectiveIcon(buttonIcons, 'addRecipe', isDarkMode)} alt={t('rezeptHinzufuegen')} className="button-icon-image" draggable="false" />
                       ) : (
                         getEffectiveIcon(buttonIcons, 'addRecipe', isDarkMode)
                       )}
@@ -533,11 +540,11 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEdi
                       onMouseDown={() => setAddPressed(true)}
                       onMouseUp={() => setAddPressed(false)}
                       onMouseLeave={() => setAddPressed(false)}
-                      title="Privates Rezept hinzufügen"
-                      aria-label="Privates Rezept hinzufügen"
+                      title={t('privatesRezeptHinzufuegen')}
+                      aria-label={t('privatesRezeptHinzufuegen')}
                     >
                       {isBase64Image(getEffectiveIcon(buttonIcons, 'addPrivateRecipe', isDarkMode)) ? (
-                        <img src={getEffectiveIcon(buttonIcons, 'addPrivateRecipe', isDarkMode)} alt="Privates Rezept hinzufügen" className="button-icon-image" draggable="false" />
+                        <img src={getEffectiveIcon(buttonIcons, 'addPrivateRecipe', isDarkMode)} alt={t('privatesRezeptHinzufuegen')} className="button-icon-image" draggable="false" />
                       ) : (
                         getEffectiveIcon(buttonIcons, 'addPrivateRecipe', isDarkMode)
                       )}
@@ -554,21 +561,21 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, onAddTutorial, onEdi
         <div className="empty-state">
           <p>
             {!showRecipes && !showTutorials
-              ? 'Nichts ausgewählt!'
+              ? t('leerNichts')
               : !showRecipes
-                ? 'Keine Tutorials!'
-                : searchTerm && searchTerm.trim() ? 'Keine Rezepte gefunden!' : showFavoritesOnly ? 'Keine favorisierten Rezepte!' : 'Noch keine Rezepte!'}
+                ? t('leerKeineTutorials')
+                : searchTerm && searchTerm.trim() ? t('leerKeineTreffer') : showFavoritesOnly ? t('leerKeineFavoriten') : t('leerNochKeine')}
           </p>
           <p className="empty-hint">
             {!showRecipes && !showTutorials
-              ? 'Aktiviere die Pille „Rezepte“ oder „Tutorials“, um wieder Inhalte zu sehen.'
+              ? t('hinweisPillen')
               : !showRecipes
-                ? 'Aktiviere die Pille „Rezepte“, um wieder Rezepte zu sehen.'
+                ? t('hinweisPilleRezepte')
                 : searchTerm && searchTerm.trim()
-                  ? `Für "${searchTerm.trim()}" wurden keine passenden Rezepte gefunden.`
+                  ? t('hinweisSuche', { suche: searchTerm.trim() })
                   : showFavoritesOnly
-                    ? 'Markieren Sie Rezepte als Favoriten, um sie schnell zu finden'
-                    : 'Das kannst du ändern, lege direkt ein Rezept an.'}
+                    ? t('hinweisFavoriten')
+                    : t('hinweisAnlegen')}
           </p>
         </div>
       ) : (

@@ -177,7 +177,8 @@ describe('RecipeFilterSidebar top-5 category/cuisine cap', () => {
 
   test('expands to show all categories via the "+" pill, then collapses again via "-"', () => {
     renderManySidebar();
-    fireEvent.click(screen.getByRole('button', { name: /weitere Kategorien anzeigen/i }));
+    // Ein ausgeblendeter Eintrag: Einzahl (Mehrsprachigkeit PR 6d)
+    fireEvent.click(screen.getByRole('button', { name: '1 weitere Kategorie anzeigen' }));
     expect(screen.getByText('Kategorie 6')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Weniger Kategorien anzeigen/i }));
@@ -186,7 +187,7 @@ describe('RecipeFilterSidebar top-5 category/cuisine cap', () => {
 
   test('expands to show all cuisines via the "+" pill, then collapses again via "-"', () => {
     renderManySidebar();
-    fireEvent.click(screen.getByRole('button', { name: /weitere Kulinariktypen anzeigen/i }));
+    fireEvent.click(screen.getByRole('button', { name: '1 weiteren Kulinariktyp anzeigen' }));
     expect(screen.getByText('Küche 6')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Weniger Kulinariktypen anzeigen/i }));
@@ -235,5 +236,40 @@ describe('RecipeFilterSidebar – übersetzte Listen (Mehrsprachigkeit PR 5)', (
     unmount();
     zeige({ searchTerm: 'italienisch' });
     expect(screen.getByRole('button', { name: 'Italian cuisine' })).toBeInTheDocument();
+  });
+});
+
+describe('RecipeFilterSidebar in anderer Sprache (Mehrsprachigkeit PR 6d)', () => {
+  const zeigeIn = (sprache) => render(
+    <SpracheProvider profilSprache={sprache} speicher={null}>
+      <RecipeFilterSidebar
+        recipes={mockRecipes}
+        currentUser={mockCurrentUser}
+        cuisineTypes={mockCuisineTypes}
+        cuisineGroups={mockCuisineGroups}
+        mealCategories={mockMealCategories}
+        availableAuthors={mockAuthors}
+        privateLists={mockPrivateLists}
+        showPrivateListFilters
+      />
+    </SpracheProvider>
+  );
+
+  test('Englisch: Überschriften, Schnellfilter und Suche', () => {
+    zeigeIn('en');
+    expect(screen.getByRole('navigation', { name: 'Recipe filters' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Categories' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Cuisine' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Authors' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Favourites/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Seasonal' })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Search recipes…')).toBeInTheDocument();
+  });
+
+  test('Französisch: Autoren und Listen bleiben, wie sie heißen', () => {
+    zeigeIn('fr');
+    expect(screen.getByRole('heading', { name: 'Auteurs' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Johannes' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'De saison' })).toBeInTheDocument();
   });
 });
