@@ -2,6 +2,8 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import './BottomNavigation.css';
 import { DEFAULT_BUTTON_ICONS, getButtonIcons, getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+import { useTexte } from '../contexts/SpracheContext';
+import navigationTexte from '../i18n/texte/navigation';
 
 function NavIcon({ children, className }) {
   return (
@@ -150,6 +152,7 @@ function TabIcon({ tab, isActive, buttonIcons, isDarkMode, iconClassName, badgeC
 }
 
 function BottomNavigation({ tabs, activeKey, isVisible, onSelect, badgeCounts }) {
+  const t = useTexte(navigationTexte);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const railRef = useRef(null);
@@ -248,7 +251,7 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect, badgeCounts })
       <nav
         className={`bottom-navigation${navStateClass}`}
         role="navigation"
-        aria-label="Hauptnavigation"
+        aria-label={t('hauptnavigation')}
         data-visible={isVisible ? 'true' : 'false'}
       >
         {tabs.map((tab) => {
@@ -277,7 +280,7 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect, badgeCounts })
           className="bottom-navigation-pill__rail"
           ref={railRef}
           role="navigation"
-          aria-label="Hauptnavigation (kompakt)"
+          aria-label={t('hauptnavigationKompakt')}
         >
           {tabs.map((tab) => {
             const isActive = tab.key === activeKey;

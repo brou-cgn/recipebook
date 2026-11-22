@@ -129,6 +129,16 @@ describe('Wörterbücher in src/i18n/texte/', () => {
       });
     });
 
+    it('Deutsch duzt: keine Höflichkeitsform (Sie, Ihr, Ihnen …)', () => {
+      // Entscheidung 22.11.2026: Die App duzt immer. „sie“ (Mehrzahl) am Satzanfang bitte umformulieren.
+      Object.entries(deutsch).forEach(([schluessel, eintrag]) => {
+        formen(eintrag).forEach((text) => {
+          const treffer = text.match(/\b(Sie|Ihnen|Ihr|Ihre|Ihren|Ihrem|Ihrer|Ihres)\b/);
+          expect({ schluessel, sie: treffer ? treffer[0] : null }).toEqual({ schluessel, sie: null });
+        });
+      });
+    });
+
     it('setzt im Französischen geschützte Leerzeichen vor : ? ! ; und innerhalb von « »', () => {
       Object.values(woerterbuch.fr).flatMap(formen).forEach((text) => {
         expect(text).not.toMatch(/ [:?!;»]/);

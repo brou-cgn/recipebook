@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, waitFor, within } from '@testing-library/react';
 import BottomNavigation from './BottomNavigation';
+import { renderWithProviders } from '../test-utils';
 
 jest.mock('../utils/customLists', () => ({
   ...jest.requireActual('../utils/customLists'),
@@ -250,5 +251,28 @@ describe('BottomNavigation icon rendering', () => {
     const fullBar = within(container.querySelector('.bottom-navigation'));
     expect(container.querySelector('.bottom-navigation__badge')).not.toBeInTheDocument();
     expect(fullBar.getByLabelText('Kochbuch')).toBeInTheDocument();
+  });
+});
+
+describe('BottomNavigation – Sprache (Mehrsprachigkeit)', () => {
+  beforeEach(() => {
+    jest.requireMock('../utils/customLists').getButtonIcons.mockResolvedValue({});
+  });
+
+  test('benennt die Navigation in der geltenden Sprache', () => {
+    const { getAllByRole, unmount } = renderWithProviders(
+      <BottomNavigation tabs={[{ key: 'home', label: 'Kitchen' }]} activeKey="home" isVisible onSelect={() => {}} />,
+      { sprache: 'en' },
+    );
+    expect(getAllByRole('navigation').map((nav) => nav.getAttribute('aria-label')))
+      .toEqual(expect.arrayContaining(['Main navigation']));
+    unmount();
+
+    const fr = renderWithProviders(
+      <BottomNavigation tabs={[{ key: 'home', label: 'Cuisine' }]} activeKey="home" isVisible onSelect={() => {}} />,
+      { sprache: 'fr' },
+    );
+    expect(fr.getAllByRole('navigation').map((nav) => nav.getAttribute('aria-label')))
+      .toEqual(expect.arrayContaining(['Navigation principale']));
   });
 });

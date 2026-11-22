@@ -39,14 +39,13 @@ const NUR_DEUTSCH = new Set([
   'components/UserManagement.js',
 ]);
 
-// Stand 22.11.2026 (PR 2): 1740 Textstellen in 97 Dateien.
+// Stand 22.11.2026 (Entscheidungen Bereichsnamen und du): 1738 Textstellen in 96 Dateien.
 const BASELINE = {
   'App.js': 5,
   'components/AtelierCategorySelectionPage.js': 5,
   'components/AtelierOnboardingOverlay.js': 9,
   'components/AtelierSwipeTrainerOverlay.js': 8,
   'components/AtelierTasteIntroOverlay.js': 8,
-  'components/BottomNavigation.js': 2,
   'components/CallLogPanel.js': 35,
   'components/ConfirmDialog.js': 1,
   'components/ConsumptionForm.js': 33,
