@@ -5,8 +5,11 @@ import {
   saveSectionNames,
   groupRecipesBySections,
   createMenuSection,
-  validateMenuSections
+  validateMenuSections,
+  abschnittAnzeige
 } from './menuSections';
+import { erstelleT } from '../i18n/texte';
+import festtafelTexte from '../i18n/texte/festtafel';
 
 // Clear localStorage before each test
 beforeEach(() => {
@@ -225,5 +228,31 @@ describe('menuSections utility functions', () => {
       ];
       expect(validateMenuSections(sections)).toBe(false);
     });
+  });
+});
+
+describe('abschnittAnzeige (Mehrsprachigkeit PR 6g)', () => {
+  const tEn = erstelleT(festtafelTexte, 'en');
+  const tFr = erstelleT(festtafelTexte, 'fr');
+
+  it('lässt Deutsch ohne Übersetzungsfunktion unverändert', () => {
+    ['Vorspeise', 'Hauptspeise', 'Dessert', 'Drinks', 'Alle Rezepte', 'Fingerfood'].forEach((name) => {
+      expect(abschnittAnzeige(name)).toBe(name);
+    });
+  });
+
+  it('übersetzt die Standardnamen und den Systemabschnitt Drinks', () => {
+    expect(abschnittAnzeige('Vorspeise', tEn)).toBe('Starter');
+    expect(abschnittAnzeige('Hauptspeise', tEn)).toBe('Main course');
+    expect(abschnittAnzeige('Alle Rezepte', tFr)).toBe('Toutes les recettes');
+    expect(abschnittAnzeige('drinks', tFr)).toBe('Boissons');
+    expect(abschnittAnzeige(' Hauptspeise ', tFr)).toBe('Plat principal');
+  });
+
+  it('lässt eigene Namen und Fremdes, wie es ist', () => {
+    expect(abschnittAnzeige('Fingerfood', tEn)).toBe('Fingerfood');
+    expect(abschnittAnzeige('vorspeise', tEn)).toBe('vorspeise');
+    expect(abschnittAnzeige('constructor', tEn)).toBe('constructor');
+    expect(abschnittAnzeige(undefined, tEn)).toBeUndefined();
   });
 });

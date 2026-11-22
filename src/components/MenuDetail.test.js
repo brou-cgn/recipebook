@@ -977,6 +977,12 @@ describe('MenuDetail in anderer Sprache (Mehrsprachigkeit PR 6f)', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Toutes les recettes' })).toBeInTheDocument();
   });
 
+  test('Englisch: Standardnamen der Abschnitte übersetzt, eigene bleiben (PR 6g)', () => {
+    zeigeIn('en', { ...mockMenu, sections: [{ name: 'Hauptspeise', recipeIds: [] }, { name: 'Fingerfood', recipeIds: [] }] });
+    expect(screen.getByRole('heading', { level: 2, name: 'Main course' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Fingerfood' })).toBeInTheDocument();
+  });
+
   test('Englisch: Löschen fragt auf Englisch', () => {
     zeigeIn('en', mockMenu);
     fireEvent.click(screen.getByTitle('Delete menu'));

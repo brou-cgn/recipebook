@@ -2,6 +2,9 @@
  * Menu Sections Utilities
  * Handles menu sections for organizing recipes within menus
  */
+import { erstelleT } from '../i18n/texte';
+import { STANDARD_SPRACHE } from '../i18n/sprachen';
+import festtafelTexte from '../i18n/texte/festtafel';
 
 const MENU_SECTIONS_KEY = 'menuSections';
 
@@ -11,6 +14,32 @@ const MENU_SECTIONS_KEY = 'menuSections';
  * (src/utils/weinbegleitung/gang.js) zählt diese Sektion nicht als Gang.
  */
 export const DRINKS_SECTION_NAME = 'Drinks';
+
+// Texte über t aus festtafel.js (Mehrsprachigkeit PR 6g); ohne t deutsch
+const T_FESTTAFEL_DEUTSCH = erstelleT(festtafelTexte, STANDARD_SPRACHE);
+
+// Standardnamen (getDefaultSections, „Alle Rezepte“ alter Menüs) und ihr Text in festtafel.js
+const STANDARD_ABSCHNITTE = new Map([
+  ['Vorspeise', 'abschnittVorspeise'],
+  ['Hauptspeise', 'abschnittHauptspeise'],
+  ['Dessert', 'abschnittDessert'],
+  ['Alle Rezepte', 'alleRezepte'],
+]);
+
+/**
+ * Name eines Abschnitts für die Anzeige. Die Standardnamen bleiben im Menü deutsch gespeichert
+ * (Drinks steuert Getränke und Weinbegleitung) und erscheinen in der geltenden Sprache; eigene
+ * Namen sind Inhalt und bleiben, wie sie sind (Mehrsprachigkeit PR 6g).
+ * @param {string} name - gespeicherter Name des Abschnitts
+ * @param {Function} [t] - Übersetzungsfunktion für festtafel.js (useTexte), ohne deutsch
+ * @returns {string}
+ */
+export const abschnittAnzeige = (name, t = T_FESTTAFEL_DEUTSCH) => {
+  if (typeof name !== 'string') return name;
+  const bereinigt = name.trim();
+  if (bereinigt.toLowerCase() === DRINKS_SECTION_NAME.toLowerCase()) return t('drinks');
+  return STANDARD_ABSCHNITTE.has(bereinigt) ? t(STANDARD_ABSCHNITTE.get(bereinigt)) : name;
+};
 
 /**
  * Get all saved menu sections from localStorage

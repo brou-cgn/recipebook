@@ -449,3 +449,45 @@ describe('Veraltete Weinbegleitung', () => {
     expect(screen.queryByRole('button', { name: 'Neu berechnen' })).not.toBeInTheDocument();
   });
 });
+
+describe('Weinbegleitung in anderer Sprache (Mehrsprachigkeit PR 6g)', () => {
+  it('Englisch: Zusammenfassung, Stil, Label und Gang unter seinem Standardnamen', () => {
+    const { menu, rezepte } = festtafel();
+    renderWithProviders(<Menue menu={mitSnapshot(menu, rezepte)} recipes={rezepte} currentUser={AUTOR} />, { sprache: 'en' });
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Wine pairing' })).toBeInTheDocument();
+    expect(screen.getByText('3 wines for 3 courses')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Per course' })).toBeInTheDocument();
+    // „Vorspeise“ ist ein Standardname, „Hauptgang“ ein eigener Name
+    expect(screen.getByRole('list', { name: 'Wines with Starter' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Wines with Hauptgang' })).toBeInTheDocument();
+    expect(screen.getAllByText('Recommendation · excellent match').length).toBeGreaterThan(0);
+  });
+
+  it('Englisch: Meldung, wenn ein Gericht nicht eingeschätzt werden konnte', async () => {
+    const { menu, rezepte } = festtafel();
+    generiereWeinprofile.mockResolvedValue({
+      profile: { lachstatar: G1_LACHSTATAR, schmorbraten: G5_RINDERSCHMORBRATEN },
+      uebersprungen: [],
+      fehlgeschlagen: ['mousse'],
+      fehlerGruende: { mousse: 'tageslimit' },
+    });
+    renderWithProviders(<Menue menu={menu} recipes={ohneProfile(rezepte)} currentUser={AUTOR} />, { sprache: 'en' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create wine pairing' }));
+
+    expect(await screen.findByText(/^One dish could not be assessed\. /)).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Dessert' })).getByText('Not assessed yet.')).toBeInTheDocument();
+  });
+
+  it('Französisch: ein Wein für alles mit „Idéal avec“', () => {
+    const { menu, rezepte } = festtafel();
+    renderWithProviders(
+      <Menue menu={mitSnapshot(menu, rezepte, { modus: 'einWein' })} recipes={rezepte} currentUser={AUTOR} />,
+      { sprache: 'fr' },
+    );
+
+    expect(screen.getByText('Un vin pour tous les plats sauf le dessert : blanc ou rouge.')).toBeInTheDocument();
+    expect(screen.getAllByText('Idéal avec : Hauptgang').length).toBeGreaterThan(0);
+  });
+});
