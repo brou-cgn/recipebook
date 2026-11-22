@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import RecipeTypeahead from './RecipeTypeahead';
+import { SpracheProvider } from '../contexts/SpracheContext';
 
 // Mock fuzzyFilter
 jest.mock('../utils/fuzzySearch', () => ({
@@ -207,5 +208,32 @@ describe('RecipeTypeahead', () => {
     fireEvent.keyDown(input, { key: 'Escape' });
     
     expect(mockOnCancel).toHaveBeenCalled();
+  });
+});
+
+describe('RecipeTypeahead in anderer Sprache (Mehrsprachigkeit PR 6h)', () => {
+  const rezepte = [
+    {
+      id: '1',
+      title: 'Tomatensoße',
+      titelUebersetzung: { quelle: 'Tomatensoße', originalSprache: 'de', en: 'Tomato sauce', fr: 'Sauce tomate' },
+      speisekategorie: ['Sauce'],
+    },
+  ];
+  const listen = { mealCategories: [{ wert: 'Sauce', en: 'Sauces & dips', fr: 'Sauces' }] };
+
+  test('Englisch: Titel und Kategorie übersetzt, die Suche findet die Übersetzung', () => {
+    const onSelect = jest.fn();
+    render(
+      <SpracheProvider profilSprache="en" speicher={null} inhalteUebersetzen listenUebersetzungen={listen}>
+        <RecipeTypeahead recipes={rezepte} onSelect={onSelect} onCancel={() => {}} inputValue="#tomato" />
+      </SpracheProvider>
+    );
+    expect(screen.getByPlaceholderText('Search recipe…')).toBeInTheDocument();
+    expect(screen.getByText('Tomato sauce')).toBeInTheDocument();
+    expect(screen.getByText('Sauces & dips')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Tomato sauce'));
+    // Verlinkt wird mit dem Rezept selbst (Originaltitel), nicht mit der Übersetzung
+    expect(onSelect).toHaveBeenCalledWith(rezepte[0]);
   });
 });

@@ -42,10 +42,22 @@ const NUR_DEUTSCH = new Set([
   // „Einschätzung im Detail“ in „Wein dazu“: Diagnoseansicht mit der Berechtigung weinprofilEinblick,
   // standardmäßig nur für Admins (Mehrsprachigkeit PR 6c)
   'components/WeinprofilEinblick.js',
+  // Einstellungen › Druckformate: Druck- und Vorlagen-Editor, nur über PrintFormatsSettings erreichbar
+  // (Mehrsprachigkeit PR 6h). Die Druckausgabe selbst (printElementRenderers.js) folgt mit Phase B.
+  'components/PrintFormatEditor.js',
+  'components/TemplateFormatEditor.js',
+  'components/printEditor/EditorCanvas.js',
+  'components/printEditor/EditorToolbar.js',
+  'components/printEditor/ElementPropsPanel.js',
+  'components/printEditor/VisibilityChips.js',
+  'components/templateEditor/FloatingToolbar.js',
+  'components/templateEditor/Segmented.js',
+  'components/templateEditor/StylePanel.js',
+  'components/templateEditor/TemplateGallery.js',
 ]);
 
-// Stand 22.11.2026 (PR 6g, Festtafel Teil 2, zusammen mit den Unterseiten von „Chefkoch & mehr“
-// aus #3742): 1032 Textstellen in 56 Dateien.
+// Stand 22.11.2026 (PR 6h, Rezeptformular, dazu Druck- und Vorlagen-Editor in NUR_DEUTSCH):
+// 825 Textstellen in 46 Dateien.
 const BASELINE = {
   'App.js': 5,
   'components/AtelierCategorySelectionPage.js': 5,
@@ -75,19 +87,15 @@ const BASELINE = {
   'components/NetworkPage.js': 14,
   'components/OcrScanModal.js': 38,
   'components/PasswordChangeModal.js': 8,
-  'components/PrintFormatEditor.js': 1,
   'components/PrintPage.js': 2,
-  'components/RecipeForm.js': 112,
   'components/RecipeImportModal.js': 11,
   'components/RecipeTimeline.js': 5,
-  'components/RecipeTypeahead.js': 3,
   'components/RecipeVersionDescribe.js': 11,
   'components/Register.js': 12,
   'components/SharePage.js': 3,
   'components/SplashScreen.js': 2,
   'components/Tagesmenu.js': 26,
   'components/TagesmenuFilterOverlay.js': 10,
-  'components/TemplateFormatEditor.js': 1,
   'components/TutorialForm.js': 32,
   'components/TutorialVideoModal.js': 2,
   'components/UniversalImportModal.js': 17,
@@ -95,13 +103,7 @@ const BASELINE = {
   'components/WeinbegleitungSeite.js': 24,
   'components/WichtelPage.js': 66,
   'components/WichtelTeilnehmerFormular.js': 11,
-  'components/printEditor/EditorCanvas.js': 3,
-  'components/printEditor/EditorToolbar.js': 11,
-  'components/printEditor/ElementPropsPanel.js': 30,
   'components/printElementRenderers.js': 3,
-  'components/templateEditor/FloatingToolbar.js': 19,
-  'components/templateEditor/StylePanel.js': 26,
-  'components/templateEditor/TemplateGallery.js': 1,
   'contexts/FollowContext.js': 1,
 };
 
