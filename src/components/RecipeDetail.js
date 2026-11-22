@@ -1909,13 +1909,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               isAddToMyRecipesSuccess ? (
                 <span className="share-add-success">{tAnsicht('hinzugefuegt')}</span>
               ) : (
-                <button
-                  className="share-add-button"
+                <Button
+                  variant="primary"
                   onClick={onAddToMyRecipes}
-                  disabled={isAddToMyRecipesLoading}
+                  loading={isAddToMyRecipesLoading}
                 >
                   {isAddToMyRecipesLoading ? tAnsicht('hinzufuegenLaeuft') : currentUser ? tAnsicht('zuMeinenRezepten') : tAnsicht('anmeldenHinzufuegen')}
-                </button>
+                </Button>
               )
             )}
           </div>
@@ -2096,13 +2096,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       {showStepCounter && (
                         <div className="step-counter">
                           {showCookedButton && (
-                            <button
+                            <Button
+                              variant="primary"
                               className="step-heute-gekocht-btn"
                               onClick={e => { e.stopPropagation(); setCookDateModalPrefillToday(true); setShowCookDateModal(true); }}
-                              aria-label={tKoch('heuteGekocht')}
                             >
                               {tKoch('heuteGekocht')}
-                            </button>
+                            </Button>
                           )}
                           {!stepInTitlebar && tKoch('schrittVon', { schritt: index + 1, gesamt: totalSteps })}
                         </div>
@@ -2399,13 +2399,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   isAddToMyRecipesSuccess ? (
                     <span className="share-add-success">{tAnsicht('hinzugefuegt')}</span>
                   ) : (
-                    <button
-                      className="share-add-button"
+                    <Button
+                      variant="primary"
                       onClick={onAddToMyRecipes}
-                      disabled={isAddToMyRecipesLoading}
+                      loading={isAddToMyRecipesLoading}
                     >
                       {isAddToMyRecipesLoading ? tAnsicht('hinzufuegenLaeuft') : currentUser ? tAnsicht('zuMeinenRezepten') : tAnsicht('anmeldenHinzufuegen')}
-                    </button>
+                    </Button>
                   )
                 )}
               </div>
@@ -2976,8 +2976,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               })}
             </div>
             <div className="portion-selector-footer">
-              <button
-                className="portion-selector-generate-btn"
+              <Button
+                variant="primary"
                 onClick={() => {
                   setShowPortionSelector(false);
                   missingSavedRef.current = false;
@@ -2985,7 +2985,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 }}
               >
                 {tAnsicht('einkaufslisteErstellen')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

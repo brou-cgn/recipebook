@@ -55,7 +55,7 @@ const BASELINE = {
   'components/PrintFormatEditor.css': 39,
   'components/PrintPage.css': 16,
   'components/RatingModal.css': 15,
-  'components/RecipeDetail.css': 87,
+  'components/RecipeDetail.css': 83,
   'components/RecipeFilterSidebar.css': 18,
   'components/RecipeForm.css': 107,
   'components/RecipeImageCarousel.css': 4,
@@ -138,8 +138,9 @@ describe('Farb-Token-Richtlinie', () => {
 // der Slogan im Header nutzt das Token --color-accent-text. 934 → 928: die sechs Regeln von
 // „Chefkoch & mehr“ ersetzen die Kachel-Tokens in Kueche.css (Variante A). 928 → 904: die Regeln der
 // Unterseiten (Küchenstars, Eventplanung, Mise en Place, Küchenbetrieb) nach Variante A. 904 → 903:
-// der Privat-Knopf der Detailansichten hat keinen Rahmen mehr (gestaltet wie Teilen, App.css).
-const DARK_MODE_SELECTORS = 903;
+// der Privat-Knopf der Detailansichten hat keinen Rahmen mehr (gestaltet wie Teilen, App.css). 903 → 899:
+// Button-System Schritt 5a, alte Knopf-Regeln der Rezeptansicht (Tech-Check A8).
+const DARK_MODE_SELECTORS = 899;
 
 describe('darkMode.css (Altbestand)', () => {
   const css = fs.readFileSync(path.join(SRC, 'darkMode.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
