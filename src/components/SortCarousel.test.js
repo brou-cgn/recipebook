@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import SortCarousel, { SORT_OPTIONS } from './SortCarousel';
+import { renderWithProviders } from '../test-utils';
 
 // JSDOM does not implement scrollIntoView — provide a no-op mock.
 beforeAll(() => {
@@ -75,5 +76,16 @@ describe('SortCarousel', () => {
   test('has an accessible tablist role', () => {
     render(<SortCarousel activeSort="alphabetical" onSortChange={() => {}} />);
     expect(screen.getByRole('tablist', { name: 'Sortierung' })).toBeInTheDocument();
+  });
+});
+
+describe('SortCarousel in anderer Sprache (Mehrsprachigkeit PR 6d)', () => {
+  test('zeigt die Sortierungen auf Englisch, die IDs bleiben', () => {
+    const onSortChange = jest.fn();
+    renderWithProviders(<SortCarousel activeSort="newest" onSortChange={onSortChange} />, { sprache: 'en' });
+    expect(screen.getByRole('tablist', { name: 'Sort order' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'New recipes' })).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(screen.getByRole('tab', { name: 'By rating' }));
+    expect(onSortChange).toHaveBeenCalledWith('rating');
   });
 });

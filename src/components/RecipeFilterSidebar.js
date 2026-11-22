@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import StarIcon from './icons/StarIcon';
 import { canEditRecipes } from '../utils/userManagement';
 import './RecipeFilterSidebar.css';
-import { useListenwerte } from '../contexts/SpracheContext';
+import { useListenwerte, useTexte } from '../contexts/SpracheContext';
+import kochbuchTexte from '../i18n/texte/kochbuch';
 
 const COLLAPSED_STORAGE_KEY = 'recipeFilterSidebar_collapsed';
 const MAX_VISIBLE_PILLS = 5;
@@ -56,6 +57,7 @@ function RecipeFilterSidebar({
 }) {
   // Namen der Kategorien und Küchen in der geltenden Sprache (Mehrsprachigkeit PR 5)
   const listen = useListenwerte();
+  const t = useTexte(kochbuchTexte);
   const [collapsed, setCollapsed] = useState(getStoredCollapsed);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [showAllCuisines, setShowAllCuisines] = useState(false);
@@ -205,7 +207,7 @@ function RecipeFilterSidebar({
   return (
     <nav
       className={`recipe-filter-sidebar${collapsed ? ' recipe-filter-sidebar--collapsed' : ''}`}
-      aria-label="Rezeptfilter"
+      aria-label={t('rezeptfilter')}
     >
       <div className="recipe-filter-sidebar-header">
         {!collapsed && userCanEdit && (
@@ -213,10 +215,10 @@ function RecipeFilterSidebar({
             type="button"
             className="recipe-filter-sidebar-add-button"
             onClick={handleAddClick}
-            title={activePrivateListId ? 'Privates Rezept hinzufügen' : 'Rezept hinzufügen'}
-            aria-label={activePrivateListId ? 'Privates Rezept hinzufügen' : 'Rezept hinzufügen'}
+            title={activePrivateListId ? t('privatesRezeptHinzufuegen') : t('rezeptHinzufuegen')}
+            aria-label={activePrivateListId ? t('privatesRezeptHinzufuegen') : t('rezeptHinzufuegen')}
           >
-            {activePrivateListId ? '+ Privates Rezept' : '+ Rezept'}
+            {activePrivateListId ? t('plusPrivatesRezept') : t('plusRezept')}
           </button>
         )}
         <button
@@ -224,8 +226,8 @@ function RecipeFilterSidebar({
           className="recipe-filter-sidebar-toggle"
           onClick={toggleCollapsed}
           aria-expanded={!collapsed}
-          aria-label={collapsed ? 'Filter einblenden' : 'Filter ausblenden'}
-          title={collapsed ? 'Filter einblenden' : 'Filter ausblenden'}
+          aria-label={collapsed ? t('filterEinblenden') : t('filterAusblenden')}
+          title={collapsed ? t('filterEinblenden') : t('filterAusblenden')}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             {collapsed ? <polyline points="9 6 15 12 9 18" /> : <polyline points="15 6 9 12 15 18" />}
@@ -246,10 +248,10 @@ function RecipeFilterSidebar({
               <input
                 type="search"
                 className="recipe-filter-sidebar-search-input"
-                placeholder="Rezepte durchsuchen …"
+                placeholder={t('durchsuchenPlatzhalter')}
                 value={searchTerm}
                 onChange={(e) => onSearchChange?.(e.target.value)}
-                aria-label="Rezepte durchsuchen"
+                aria-label={t('durchsuchen')}
               />
             </div>
 
@@ -259,7 +261,7 @@ function RecipeFilterSidebar({
                 className="recipe-filter-sidebar-reset"
                 onClick={onClearAllFilters}
               >
-                Filter zurücksetzen
+                {t('filterZuruecksetzen')}
               </button>
             )}
           </div>
@@ -271,7 +273,7 @@ function RecipeFilterSidebar({
               onClick={() => onFavoritesToggle?.(!showFavoritesOnly)}
               aria-pressed={showFavoritesOnly}
             >
-              <StarIcon /> Favoriten
+              <StarIcon /> {t('favoriten')}
             </button>
             <button
               type="button"
@@ -279,31 +281,31 @@ function RecipeFilterSidebar({
               onClick={() => onSeasonalToggle?.(!showSeasonalOnly)}
               aria-pressed={showSeasonalOnly}
             >
-              Saisonal
+              {t('saisonal')}
             </button>
             <button
               type="button"
               className={`recipe-filter-sidebar-pill recipe-filter-sidebar-pill--quick${showRecipes ? ' active' : ''}`}
               onClick={() => onRecipesToggle?.(!showRecipes)}
               aria-pressed={showRecipes}
-              title={showRecipes ? 'Rezepte ausblenden' : 'Rezepte einblenden'}
+              title={showRecipes ? t('rezepteAusblenden') : t('rezepteEinblenden')}
             >
-              Rezepte
+              {t('rezepte')}
             </button>
             <button
               type="button"
               className={`recipe-filter-sidebar-pill recipe-filter-sidebar-pill--quick${showTutorials ? ' active' : ''}`}
               onClick={() => onTutorialsToggle?.(!showTutorials)}
               aria-pressed={showTutorials}
-              title={showTutorials ? 'Tutorials ausblenden' : 'Tutorials einblenden'}
+              title={showTutorials ? t('tutorialsAusblenden') : t('tutorialsEinblenden')}
             >
-              Tutorials
+              {t('tutorials')}
             </button>
           </div>
 
           {visibleCategories.length > 0 && (
             <div className="recipe-filter-sidebar-section">
-              <h3 className="recipe-filter-sidebar-heading">Kategorien</h3>
+              <h3 className="recipe-filter-sidebar-heading">{t('kategorien')}</h3>
               <div className="recipe-filter-sidebar-row">
                 {visibleCategories.map((name) => (
                   <button
@@ -321,8 +323,8 @@ function RecipeFilterSidebar({
                     type="button"
                     className="recipe-filter-sidebar-pill recipe-filter-sidebar-pill--more"
                     onClick={() => setShowAllCategories(true)}
-                    aria-label={`${hiddenCategoriesCount} weitere Kategorien anzeigen`}
-                    title="Weitere Kategorien anzeigen"
+                    aria-label={t('weitereKategorien', { anzahl: hiddenCategoriesCount })}
+                    title={t('weitereKategorienTitel')}
                   >
                     +{hiddenCategoriesCount}
                   </button>
@@ -332,8 +334,8 @@ function RecipeFilterSidebar({
                     type="button"
                     className="recipe-filter-sidebar-pill recipe-filter-sidebar-pill--more"
                     onClick={() => setShowAllCategories(false)}
-                    aria-label="Weniger Kategorien anzeigen"
-                    title="Weniger Kategorien anzeigen"
+                    aria-label={t('wenigerKategorien')}
+                    title={t('wenigerKategorien')}
                   >
                     −
                   </button>
@@ -344,7 +346,7 @@ function RecipeFilterSidebar({
 
           {visibleCuisinePills.length > 0 && (
             <div className="recipe-filter-sidebar-section">
-              <h3 className="recipe-filter-sidebar-heading">Küche</h3>
+              <h3 className="recipe-filter-sidebar-heading">{t('kueche')}</h3>
               <div className="recipe-filter-sidebar-row">
                 {visibleCuisinePills.map((name) => (
                   <button
@@ -362,8 +364,8 @@ function RecipeFilterSidebar({
                     type="button"
                     className="recipe-filter-sidebar-pill recipe-filter-sidebar-pill--more"
                     onClick={() => setShowAllCuisines(true)}
-                    aria-label={`${hiddenCuisinesCount} weitere Kulinariktypen anzeigen`}
-                    title="Weitere Kulinariktypen anzeigen"
+                    aria-label={t('weitereKuechen', { anzahl: hiddenCuisinesCount })}
+                    title={t('weitereKuechenTitel')}
                   >
                     +{hiddenCuisinesCount}
                   </button>
@@ -373,8 +375,8 @@ function RecipeFilterSidebar({
                     type="button"
                     className="recipe-filter-sidebar-pill recipe-filter-sidebar-pill--more"
                     onClick={() => setShowAllCuisines(false)}
-                    aria-label="Weniger Kulinariktypen anzeigen"
-                    title="Weniger Kulinariktypen anzeigen"
+                    aria-label={t('wenigerKuechen')}
+                    title={t('wenigerKuechen')}
                   >
                     −
                   </button>
@@ -385,7 +387,7 @@ function RecipeFilterSidebar({
 
           {visibleAuthors.length > 0 && (
             <div className="recipe-filter-sidebar-section">
-              <h3 className="recipe-filter-sidebar-heading">Autoren</h3>
+              <h3 className="recipe-filter-sidebar-heading">{t('autoren')}</h3>
               <div className="recipe-filter-sidebar-row">
                 {visibleAuthors.map((author) => (
                   <button
@@ -404,7 +406,7 @@ function RecipeFilterSidebar({
 
           {showPrivateListFilters && currentUser && visiblePrivateLists.length > 0 && (
             <div className="recipe-filter-sidebar-section">
-              <h3 className="recipe-filter-sidebar-heading">Listen</h3>
+              <h3 className="recipe-filter-sidebar-heading">{t('listen')}</h3>
               <div className="recipe-filter-sidebar-row">
                 {visiblePrivateLists.map((list) => (
                   <button

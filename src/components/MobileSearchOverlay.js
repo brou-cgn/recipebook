@@ -6,7 +6,8 @@ import { getUserFavorites } from '../utils/userFavorites';
 import { expandCuisineSelection } from '../utils/customLists';
 import { hasHauptsaisonIngredient } from '../utils/recipeSortIndex';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
-import { useListenwerte, useRezeptTitel, useSprache } from '../contexts/SpracheContext';
+import { useListenwerte, useRezeptTitel, useSprache, useTexte } from '../contexts/SpracheContext';
+import kochbuchTexte from '../i18n/texte/kochbuch';
 import { titelFassungen } from '../i18n/rezeptTitel';
 import { splitIntoTwoRows, reorderActiveFirst } from '../utils/pillCarousel';
 import useFadeOutClose from '../hooks/useFadeOutClose';
@@ -77,6 +78,7 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
   // Mehrsprachigkeit PR 3: Titel in der geltenden Sprache, die Suche findet Original und Übersetzung
   const zeigeTitel = useRezeptTitel();
   const listen = useListenwerte();
+  const t = useTexte(kochbuchTexte);
   const { inhalteUebersetzen } = useSprache();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
@@ -457,7 +459,7 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
       className={`mobile-search-overlay${closing ? ' mobile-search-overlay--closing' : ''}`}
       role="dialog"
       aria-modal="true"
-      aria-label="Rezepte suchen"
+      aria-label={t('rezepteSuchen')}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       {/* Panel sits at the bottom of the visible viewport, above the keyboard */}
@@ -466,20 +468,20 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
         style={{ bottom: panelBottom }}
       >
         {/* Tiles carousel – displayed at the top of the panel */}
-        <div className="mobile-search-results" role="listbox" aria-label="Suchergebnisse">
+        <div className="mobile-search-results" role="listbox" aria-label={t('suchergebnisse')}>
           {!showRecipes && (
-            <p className="mobile-search-no-results">Rezepte sind ausgeblendet</p>
+            <p className="mobile-search-no-results">{t('rezepteAusgeblendet')}</p>
           )}
           {showRecipes && debouncedTerm && filteredRecipes.length === 0 && (
             <p className="mobile-search-no-results">
-              {showFavoritesOnly ? 'Kein Favorit gefunden' : 'Keine Rezepte gefunden'}
+              {showFavoritesOnly ? t('keinFavoritGefunden') : t('keineRezepteGefunden')}
             </p>
           )}
           {showRecipes && !debouncedTerm && filteredRecipes.length === 0 && showFavoritesOnly && (
-            <p className="mobile-search-no-results">Keine favorisierten Rezepte</p>
+            <p className="mobile-search-no-results">{t('keineFavorisierten')}</p>
           )}
           {showRecipes && !debouncedTerm && filteredRecipes.length === 0 && (selectedCuisines.length > 0 || selectedCategories.length > 0) && !showFavoritesOnly && (
-            <p className="mobile-search-no-results">Keine Rezepte für diese Filterauswahl</p>
+            <p className="mobile-search-no-results">{t('keineFuerFilter')}</p>
           )}
           {filteredRecipes.length > 0 && (
             <div className="mobile-search-tiles-grid">
@@ -521,9 +523,9 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
               onFavoritesToggle?.(newValue);
             }}
             aria-pressed={showFavoritesOnly}
-            title={showFavoritesOnly ? 'Alle Rezepte anzeigen' : 'Nur Favoriten anzeigen'}
+            title={showFavoritesOnly ? t('alleAnzeigen') : t('nurFavoriten')}
           >
-            <StarIcon /> Favoriten
+            <StarIcon /> {t('favoriten')}
           </button>
           <button
             className={`mobile-search-filter-pill${showSeasonalOnly ? ' active' : ''}`}
@@ -533,9 +535,9 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
               onSeasonalToggle?.(newValue);
             }}
             aria-pressed={showSeasonalOnly}
-            title={showSeasonalOnly ? 'Alle Rezepte anzeigen' : 'Nur saisonale Rezepte anzeigen'}
+            title={showSeasonalOnly ? t('alleAnzeigen') : t('nurSaisonal')}
           >
-            Saisonal
+            {t('saisonal')}
           </button>
           <button
             className={`mobile-search-filter-pill${showRecipes ? ' active' : ''}`}
@@ -545,9 +547,9 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
               onRecipesToggle?.(newValue);
             }}
             aria-pressed={showRecipes}
-            title={showRecipes ? 'Rezepte ausblenden' : 'Rezepte einblenden'}
+            title={showRecipes ? t('rezepteAusblenden') : t('rezepteEinblenden')}
           >
-            Rezepte
+            {t('rezepte')}
           </button>
           <button
             className={`mobile-search-filter-pill${showTutorials ? ' active' : ''}`}
@@ -557,9 +559,9 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
               onTutorialsToggle?.(newValue);
             }}
             aria-pressed={showTutorials}
-            title={showTutorials ? 'Tutorials ausblenden' : 'Tutorials einblenden'}
+            title={showTutorials ? t('tutorialsAusblenden') : t('tutorialsEinblenden')}
           >
-            Tutorials
+            {t('tutorials')}
           </button>
         </div>
 
@@ -575,7 +577,7 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
                     className={`mobile-search-filter-pill mobile-search-cuisine-pill${selectedCategories.includes(name) ? ' active' : ''}`}
                     onClick={() => handleCategoryPillClick(name)}
                     aria-pressed={selectedCategories.includes(name)}
-                    title={selectedCategories.includes(name) ? 'Filter aufheben' : `Nach ${listen.text('mealCategories', name)} filtern`}
+                    title={selectedCategories.includes(name) ? t('filterAufheben') : t('nachFiltern', { name: listen.text('mealCategories', name) })}
                   >
                     {listen.text('mealCategories', name)}
                   </button>
@@ -597,7 +599,7 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
                     className={`mobile-search-filter-pill mobile-search-cuisine-pill${selectedCuisines.includes(name) ? ' active' : ''}`}
                     onClick={() => handleCuisinePillClick(name)}
                     aria-pressed={selectedCuisines.includes(name)}
-                    title={selectedCuisines.includes(name) ? 'Filter aufheben' : `Nach ${listen.kulinarik(name)} filtern`}
+                    title={selectedCuisines.includes(name) ? t('filterAufheben') : t('nachFiltern', { name: listen.kulinarik(name) })}
                   >
                     {listen.kulinarik(name)}
                   </button>
@@ -617,7 +619,7 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
                 className={`mobile-search-filter-pill mobile-search-cuisine-pill${selectedAuthors.includes(author.id) ? ' active' : ''}`}
                 onClick={() => handleAuthorPillClick(author.id)}
                 aria-pressed={selectedAuthors.includes(author.id)}
-                title={selectedAuthors.includes(author.id) ? 'Filter aufheben' : `Nach ${author.name} filtern`}
+                title={selectedAuthors.includes(author.id) ? t('filterAufheben') : t('nachFiltern', { name: author.name })}
               >
                 {author.name}
               </button>
@@ -635,7 +637,7 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
                 className={`mobile-search-filter-pill mobile-search-cuisine-pill${selectedPrivateLists.includes(list.id) ? ' active' : ''}`}
                 onClick={() => handlePrivateListPillClick(list.id)}
                 aria-pressed={selectedPrivateLists.includes(list.id)}
-                title={selectedPrivateLists.includes(list.id) ? 'Filter aufheben' : `Nach ${list.name} filtern`}
+                title={selectedPrivateLists.includes(list.id) ? t('filterAufheben') : t('nachFiltern', { name: list.name })}
               >
                 {list.name}
               </button>
@@ -656,11 +658,11 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
               ref={inputRef}
               type="search"
               className="mobile-search-input"
-              placeholder="Rezepte durchsuchen …"
+              placeholder={t('durchsuchenPlatzhalter')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={handleInputKeyDown}
-              aria-label="Rezepte durchsuchen"
+              aria-label={t('durchsuchen')}
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
@@ -671,7 +673,7 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
               <button
                 className="mobile-search-clear-btn"
                 onClick={handleClear}
-                aria-label="Suche löschen"
+                aria-label={t('sucheLoeschen')}
                 tabIndex={0}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
