@@ -10,8 +10,12 @@
  * zeigt das Original, bis die Function neu übersetzt hat.
  *
  * Angezeigt wird die Übersetzung nur; bearbeitet, umgerechnet und gerechnet wird mit dem Original.
+ * Das Original ist immer deutsch (ORIGINAL_SPRACHE): Auf Deutsch zeigt die App es immer, auch wenn
+ * eine ältere Übersetzung ein Rezept mit englischen Zutaten für englisch hielt und eine deutsche
+ * Fassung mitbringt.
  */
 import { sha256Hex } from '../utils/sha256';
+import { ORIGINAL_SPRACHE } from './sprachen';
 
 export const SCHEMA_VERSION = 1;
 export const HASH_KENNUNG = 'inhalt-v1';
@@ -70,7 +74,7 @@ export function mitUebersetztemText(eintraege, texte) {
  */
 export function anzeigbareUebersetzung(rezept, dokument, sprache, quellHash) {
   if (!dokument || !quellHash || dokument.schemaVersion !== SCHEMA_VERSION || dokument.quellHash !== quellHash) return null;
-  if (dokument.originalSprache === sprache) return null;
+  if (sprache === ORIGINAL_SPRACHE || dokument.originalSprache === sprache) return null;
   const teil = dokument[sprache];
   const zutaten = liste(rezept?.ingredients);
   const schritte = liste(rezept?.steps);
