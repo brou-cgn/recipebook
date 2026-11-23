@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import OcrScanModal from './OcrScanModal';
+import { renderWithProviders } from '../test-utils';
 
 // Test configuration constants
 const OCR_TIMEOUT = 3000;
@@ -50,7 +51,7 @@ describe('OcrScanModal', () => {
     render(<OcrScanModal onCancel={mockOnCancel} />);
 
     expect(screen.getByText('Rezept scannen')).toBeInTheDocument();
-    expect(screen.getByText(/Fotografieren Sie ein Rezept/i)).toBeInTheDocument();
+    expect(screen.getByText(/Fotografiere ein Rezept/i)).toBeInTheDocument();
     expect(screen.getByText('Kamera starten')).toBeInTheDocument();
     expect(screen.getByText('Bild(er) hochladen')).toBeInTheDocument();
   });
@@ -528,5 +529,30 @@ describe('OcrScanModal', () => {
       const recipe = await runQueuedJob();
       expect(recipe).toEqual(expect.objectContaining({ title: 'Kamera Rezept' }));
     }, OCR_TIMEOUT);
+  });
+});
+
+describe('OcrScanModal in anderer Sprache (Mehrsprachigkeit PR 6i)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('Englisch: Schritt, Anleitung und Sprachen in ihrer eigenen Sprache', () => {
+    renderWithProviders(<OcrScanModal onCancel={() => {}} />, { sprache: 'en' });
+    expect(screen.getByText('Step 1 of 2')).toBeInTheDocument();
+    expect(screen.getByText('Take a photo of a recipe or upload an image')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Deutsch' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'English' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start camera' })).toBeInTheDocument();
+  });
+
+  test('Französisch: Vorschau mit Mehrzahl, gespeichert wird die deutsche Bezeichnung', () => {
+    renderWithProviders(
+      <OcrScanModal onCancel={() => {}} initialImages={['data:image/png;base64,AAA', 'data:image/png;base64,BBB']} />,
+      { sprache: 'fr' }
+    );
+    expect(screen.getByText('2 images sélectionnées')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Lancer l’analyse de 2 images' }));
+    expect(mockEnqueueImportJob).toHaveBeenCalledWith(expect.objectContaining({ label: 'Foto-Scan (2 Bilder)' }));
   });
 });

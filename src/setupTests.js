@@ -26,3 +26,9 @@ process.env.REACT_APP_FIREBASE_MEASUREMENT_ID = 'test-measurement-id';
 if (!globalThis.crypto) {
   globalThis.crypto = { randomUUID: () => require('crypto').randomUUID() };
 }
+
+// Tests laufen wie in einem deutschen Browser: Seiten ohne Anmeldung nehmen die Sprache des Browsers
+// (Mehrsprachigkeit, Entscheidung „Seiten ohne Anmeldung“), jsdom meldet sonst en-US. Tests, die eine andere
+// Browsersprache brauchen, überschreiben navigator.language(s) selbst (Getter, damit jest.spyOn(…, 'get') geht).
+Object.defineProperty(window.navigator, 'language', { get: () => 'de-DE', configurable: true });
+Object.defineProperty(window.navigator, 'languages', { get: () => ['de-DE', 'de'], configurable: true });

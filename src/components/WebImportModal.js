@@ -5,11 +5,17 @@ import Button from './Button';
 import { normalizeImportedUrl } from '../utils/webImportService';
 import { runWebImport } from '../utils/importRunners';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
+import { useTexte } from '../contexts/SpracheContext';
+import rezeptimportTexte from '../i18n/texte/rezeptimport';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 function WebImportModal({ onCancel, onImported, initialUrl = '', authorId = '', userId = '', importContext = {} }) {
   const [url, setUrl] = useState(() => normalizeImportedUrl(initialUrl));
   const [error, setError] = useState('');
   const { enqueueImportJob } = useRecipeImportQueue();
+  // Texte des Rezept-Imports (Mehrsprachigkeit PR 6i)
+  const t = useTexte(rezeptimportTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
 
   useEffect(() => {
     setUrl(normalizeImportedUrl(initialUrl));
@@ -34,12 +40,12 @@ function WebImportModal({ onCancel, onImported, initialUrl = '', authorId = '', 
     setError('');
 
     if (!normalizedUrl) {
-      setError('Bitte geben Sie eine URL ein');
+      setError(t('webFehlerLeer'));
       return;
     }
 
     if (!isValidUrl(normalizedUrl)) {
-      setError('Bitte geben Sie eine gültige URL ein (z.B. https://example.com)');
+      setError(t('webFehlerUngueltig'));
       return;
     }
 
@@ -73,24 +79,24 @@ function WebImportModal({ onCancel, onImported, initialUrl = '', authorId = '', 
     <div className="modal-overlay">
       <div className="web-import-modal">
         <div className="web-import-modal-header">
-          <h2>Rezept von Website importieren</h2>
-          <button className="close-button" onClick={onCancel}>×</button>
+          <h2>{t('webTitel')}</h2>
+          <button className="close-button" onClick={onCancel} aria-label={tAllgemein('schliessen')}>×</button>
         </div>
 
         <div className="web-import-modal-content">
           <div className="url-input-section">
             <p className="web-import-instructions">
-              Gebe die URL deines Rezepts ein
+              {t('webAnleitung')}
             </p>
 
             <div className="url-input-container">
-              <label htmlFor="urlInput">Website-URL:</label>
+              <label htmlFor="urlInput">{t('webUrl')}</label>
               <input
                 type="text"
                 id="urlInput"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="z.B. https://www.chefkoch.de/rezepte/..."
+                placeholder={t('webBeispiel')}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     handleSubmit();
@@ -101,9 +107,9 @@ function WebImportModal({ onCancel, onImported, initialUrl = '', authorId = '', 
             </div>
 
             <div className="url-input-hint">
-              <p>Tipp: Die Website wird automatisch erfasst und das Rezept extrahiert.</p>
-              <p>Instagram Reels werden direkt unterstützt – die Caption wird automatisch ausgelesen.</p>
-              <p>Der Import läuft im Hintergrund – du kannst währenddessen weiterarbeiten.</p>
+              <p>{t('webTippErfassen')}</p>
+              <p>{t('webTippInstagram')}</p>
+              <p>{t('webTippHintergrund')}</p>
             </div>
           </div>
 
@@ -116,10 +122,10 @@ function WebImportModal({ onCancel, onImported, initialUrl = '', authorId = '', 
 
         <div className="web-import-modal-actions">
           <Button onClick={onCancel}>
-            Abbrechen
+            {tAllgemein('abbrechen')}
           </Button>
           <Button variant="primary" onClick={handleSubmit}>
-            Import starten
+            {t('importStarten')}
           </Button>
         </div>
       </div>
