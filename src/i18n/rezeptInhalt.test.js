@@ -74,4 +74,16 @@ describe('anzeigbareUebersetzung', () => {
     expect(anzeigbareUebersetzung(rezept, { ...dokument, schemaVersion: 2 }, 'en', 'h')).toBeNull();
     expect(anzeigbareUebersetzung(rezept, null, 'en', 'h')).toBeNull();
   });
+
+  it('auf Deutsch immer null, auch wenn eine ältere Übersetzung eine deutsche Fassung mitbringt', () => {
+    // Früher erkannte die KI die Originalsprache; ein Rezept mit englischen Zutaten galt dann als englisch.
+    const alt = {
+      ...dokument,
+      originalSprache: 'en',
+      de: { zutaten: ['200 g Weizenmehl'], schritte: ['Umrühren.'] },
+      fr: { zutaten: ['200 g de farine'], schritte: ['Remuer.'] },
+    };
+    expect(anzeigbareUebersetzung(rezept, alt, 'de', 'h')).toBeNull();
+    expect(anzeigbareUebersetzung(rezept, alt, 'fr', 'h')).toEqual({ zutaten: ['200 g de farine'], schritte: ['Remuer.'] });
+  });
 });

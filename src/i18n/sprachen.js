@@ -19,6 +19,13 @@
 export const STANDARD_SPRACHE = 'de';
 
 /**
+ * Sprache der Rezept-Originale (Entscheidung „Primärsprache“): Titel und Inhalt sind deutsch, auch
+ * wenn einzelne Begriffe englisch sind („American Pancakes“). In dieser Sprache zeigt die App
+ * immer das Original, übersetzt wird nur ins Englische und Französische.
+ */
+export const ORIGINAL_SPRACHE = 'de';
+
+/**
  * Wählbare Sprachen. `name` steht in der eigenen Sprache, damit jede:r die eigene findet.
  * `locale` gilt für Datums- und Zahlenformate; Englisch ist britisch (Tag vor Monat).
  */
