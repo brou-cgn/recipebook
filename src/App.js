@@ -88,7 +88,7 @@ import {
 import RecipeVersionDescribe from './components/RecipeVersionDescribe';
 import { applyRecipeVersionChanges } from './utils/aiOcrService';
 import { buildVersionRequest, mergeVersionChanges } from './utils/versionChanges';
-import { filterFuerDichEntdecktGroups, isFuerDichEntdecktList, planFuerDichEntdecktSync, syncFuerDichEntdecktList } from './utils/fuerDichEntdeckt';
+import { filterFuerDichEntdecktGroups, isFuerDichEntdecktList, listenAnzeigeName, planFuerDichEntdecktSync, syncFuerDichEntdecktList } from './utils/fuerDichEntdeckt';
 import {
   subscribeToEvents,
   subscribeToAllEvents,
@@ -106,6 +106,8 @@ import bereicheTexte from './i18n/texte/bereiche';
 import anmeldungTexte from './i18n/texte/anmeldung';
 import appMeldungenTexte from './i18n/texte/appMeldungen';
 import allgemeinTexte from './i18n/texte/allgemein';
+import kochbuchTexte from './i18n/texte/kochbuch';
+import startseiteTexte from './i18n/texte/startseite';
 import { updateAppBadge } from './utils/appBadge';
 import { resolveRecipeGroupContext, resolveImportGroupContext } from './utils/recipeGroupContext';
 import { openRecipeWithTransition } from './utils/recipeViewTransition';
@@ -496,6 +498,9 @@ function App() {
   const tAnmeldung = useTexte(anmeldungTexte);
   // Meldungen und Hinweise der App (Mehrsprachigkeit PR 6m)
   const tMeldungen = useTexte(appMeldungenTexte);
+  // Überschrift des Kochbuchs: saisonale Ansicht und Name der Systemliste „Für dich entdeckt“ (PR 6p)
+  const tKochbuch = useTexte(kochbuchTexte);
+  const tStartseite = useTexte(startseiteTexte);
   const { setzeListenUebersetzungen } = useSprache();
   const [allUsers, setAllUsers] = useState([]);
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -702,15 +707,20 @@ function App() {
 
   // Name of the currently selected private list filter (if any).
   // Falls back to the single selectedPrivateList from the search overlay when no group filter is set.
+  // Systemlisten wie „Für dich entdeckt“ in der geltenden Sprache (listenAnzeigeName), eigene Namen, wie sie sind.
   const activePrivateListName = useMemo(() => {
+    const anzeigeName = (id) => {
+      const gruppe = groups.find(g => g.id === id);
+      return gruppe ? listenAnzeigeName(gruppe, tStartseite) : undefined;
+    };
     if (recipeFilters.selectedGroup) {
-      return groups.find(g => g.id === recipeFilters.selectedGroup)?.name;
+      return anzeigeName(recipeFilters.selectedGroup);
     }
     if (recipeFilters.selectedPrivateLists.length === 1) {
-      return groups.find(g => g.id === recipeFilters.selectedPrivateLists[0])?.name;
+      return anzeigeName(recipeFilters.selectedPrivateLists[0]);
     }
     return undefined;
-  }, [groups, recipeFilters.selectedGroup, recipeFilters.selectedPrivateLists]);
+  }, [groups, recipeFilters.selectedGroup, recipeFilters.selectedPrivateLists, tStartseite]);
 
   const bottomNavActiveKey = useMemo(() => getBottomNavActiveKey(currentView), [currentView]);
   const bottomNavBehavior = useMemo(() => getBottomNavBehavior(currentView), [currentView]);
@@ -2897,7 +2907,7 @@ function App() {
           searchTerm={searchTerm}
           onOpenSearch={handleOpenSearch}
           onClearSearch={handleClearSearch}
-          activePrivateListName={isSeasonalRecipesView ? 'Saisonale Rezepte' : activePrivateListName}
+          activePrivateListName={isSeasonalRecipesView ? tKochbuch('saisonaleRezepte') : activePrivateListName}
           activePrivateListId={recipeFilters.selectedGroup || (recipeFilters.selectedPrivateLists.length === 1 ? recipeFilters.selectedPrivateLists[0] : null)}
           activeFilters={recipeFilters}
           onClearCuisineFilter={handleClearCuisineFilter}

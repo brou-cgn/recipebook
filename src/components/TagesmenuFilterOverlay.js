@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './MobileSearchOverlay.css';
 import { splitIntoTwoRows, reorderActiveFirst } from '../utils/pillCarousel';
 import { useListenwerte, useTexte } from '../contexts/SpracheContext';
+import useListenName from '../hooks/useListenName';
 import tagesmenuTexte from '../i18n/texte/tagesmenu';
 
 const DEBOUNCE_DELAY_MS = 200;
@@ -39,6 +40,8 @@ function TagesmenuFilterOverlay({
   // Texte der Filter (Mehrsprachigkeit PR 6n); Speisekategorien übersetzt, Listennamen sind Inhalt
   const t = useTexte(tagesmenuTexte);
   const listen = useListenwerte();
+  // Systemliste „Für dich entdeckt“ in der geltenden Sprache, eigene Listennamen, wie sie sind (PR 6p)
+  const listenName = useListenName();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
   // panelBottom tracks how far from the bottom of the screen the panel sits
@@ -104,12 +107,12 @@ function TagesmenuFilterOverlay({
     let lists = interactiveLists || [];
     if (debouncedTerm) {
       const lower = debouncedTerm.toLowerCase();
-      lists = lists.filter((l) => l.name.toLowerCase().includes(lower));
+      lists = lists.filter((l) => listenName(l).toLowerCase().includes(lower));
     }
     const active = lists.filter((l) => l.id === selectedListId);
     const inactive = lists.filter((l) => l.id !== selectedListId);
     return [...active, ...inactive];
-  }, [interactiveLists, selectedListId, debouncedTerm]);
+  }, [interactiveLists, selectedListId, debouncedTerm, listenName]);
 
   const handleListPillClick = (listId) => {
     // Tapping the active pill lifts the list filter (all lists) when the parent supports it
@@ -191,9 +194,9 @@ function TagesmenuFilterOverlay({
                 className={`mobile-search-filter-pill mobile-search-cuisine-pill${list.id === selectedListId ? ' active' : ''}`}
                 onClick={() => handleListPillClick(list.id)}
                 aria-pressed={list.id === selectedListId}
-                title={list.id === selectedListId ? (onClearListFilter ? t('listenfilterAufheben') : t('aktiveListe')) : t('zuWechseln', { name: list.name })}
+                title={list.id === selectedListId ? (onClearListFilter ? t('listenfilterAufheben') : t('aktiveListe')) : t('zuWechseln', { name: listenName(list) })}
               >
-                {list.name}
+                {listenName(list)}
               </button>
             ))}
           </div>

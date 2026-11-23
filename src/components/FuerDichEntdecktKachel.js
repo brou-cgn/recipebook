@@ -3,7 +3,7 @@ import { getRecipeCardImageUrl } from '../utils/imageUtils';
 import { useSprache, useTexte } from '../contexts/SpracheContext';
 import { formatiereDatum } from '../i18n/format';
 import startseiteTexte from '../i18n/texte/startseite';
-import { FUER_DICH_ENTDECKT_SYSTEM_KEY } from '../utils/fuerDichEntdeckt';
+import { listenAnzeigeName } from '../utils/fuerDichEntdeckt';
 import './StartseitenKarussell.css';
 import './FuerDichEntdecktKachel.css';
 
@@ -55,7 +55,7 @@ function FuerDichEntdecktKachel({ list, recipes = [], themeImage = '', themeTitl
   const countText = t('rezepte', { anzahl: count });
   const monthYear = formatMonthYear(list.rotatedAt, sprache);
   // Systemname der Liste in der geltenden Sprache; eigene Namen bleiben
-  const listName = list.systemKey === FUER_DICH_ENTDECKT_SYSTEM_KEY ? t('fuerDichEntdeckt') : list.name;
+  const listName = listenAnzeigeName(list, t);
   const meta = monthYear ? `${countText} · ${monthYear}` : countText;
 
   return (

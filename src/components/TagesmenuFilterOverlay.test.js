@@ -31,3 +31,27 @@ describe('TagesmenuFilterOverlay in anderer Sprache (Mehrsprachigkeit PR 6n)', (
     expect(screen.getByTitle('Passer à Feierabend')).toBeInTheDocument();
   });
 });
+
+describe('TagesmenuFilterOverlay: Systemliste „Für dich entdeckt“ (Mehrsprachigkeit PR 6p)', () => {
+  test('Englisch: der Name der Systemliste ist übersetzt, eigene Namen bleiben', () => {
+    renderWithProviders(
+      <TagesmenuFilterOverlay
+        isOpen
+        onClose={() => {}}
+        interactiveLists={[
+          { id: 'fde', name: 'Für dich entdeckt', systemKey: 'fuerDichEntdeckt' },
+          { id: 'l2', name: 'Feierabend' },
+        ]}
+        selectedListId="l2"
+        onSelectList={() => {}}
+        categoryOptions={[]}
+        selectedCategories={[]}
+        onSelectCategory={() => {}}
+      />,
+      { sprache: 'en' }
+    );
+    expect(screen.getByTitle('Switch to Discovered for you')).toHaveTextContent('Discovered for you');
+    expect(screen.queryByText('Für dich entdeckt')).not.toBeInTheDocument();
+    expect(screen.getByTitle('Active list')).toHaveTextContent('Feierabend');
+  });
+});

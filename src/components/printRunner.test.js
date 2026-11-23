@@ -136,8 +136,16 @@ describe('printRecipe', () => {
     jest.spyOn(window, 'alert').mockImplementation(() => {});
     jest.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X)');
     await printRecipe({ recipe, format: createPrintFormat() });
-    expect(window.alert).toHaveBeenCalled();
+    expect(window.alert).toHaveBeenCalledWith('Bitte erlaube Popups für diese Seite, um das Rezept zu drucken.');
     expect(printSpy).not.toHaveBeenCalled();
     expect(leftovers().root).toBeNull();
+  });
+
+  test('iOS with blocked popup shows the hint in the language passed in (Mehrsprachigkeit PR 6p)', async () => {
+    jest.spyOn(window, 'open').mockReturnValue(null);
+    jest.spyOn(window, 'alert').mockImplementation(() => {});
+    jest.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
+    await printRecipe({ recipe, format: createPrintFormat(), popupHinweis: 'Please allow pop-ups for this page to print the recipe.' });
+    expect(window.alert).toHaveBeenCalledWith('Please allow pop-ups for this page to print the recipe.');
   });
 });

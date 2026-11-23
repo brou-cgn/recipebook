@@ -4,6 +4,7 @@ import Button from './Button';
 import { canEditRecipes } from '../utils/userManagement';
 import './RecipeFilterSidebar.css';
 import { useListenwerte, useTexte } from '../contexts/SpracheContext';
+import useListenName from '../hooks/useListenName';
 import kochbuchTexte from '../i18n/texte/kochbuch';
 
 const COLLAPSED_STORAGE_KEY = 'recipeFilterSidebar_collapsed';
@@ -59,6 +60,8 @@ function RecipeFilterSidebar({
   // Namen der Kategorien und Küchen in der geltenden Sprache (Mehrsprachigkeit PR 5)
   const listen = useListenwerte();
   const t = useTexte(kochbuchTexte);
+  // Systemliste „Für dich entdeckt“ in der geltenden Sprache, eigene Listennamen, wie sie sind (PR 6p)
+  const listenName = useListenName();
   const [collapsed, setCollapsed] = useState(getStoredCollapsed);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [showAllCuisines, setShowAllCuisines] = useState(false);
@@ -169,8 +172,8 @@ function RecipeFilterSidebar({
 
   const visiblePrivateLists = useMemo(() => {
     if (!trimmedSearch) return privateLists;
-    return privateLists.filter((list) => list.name?.toLowerCase().includes(trimmedSearch));
-  }, [privateLists, trimmedSearch]);
+    return privateLists.filter((list) => listenName(list).toLowerCase().includes(trimmedSearch));
+  }, [privateLists, trimmedSearch, listenName]);
 
   const hasActiveFilters = !!(
     searchTerm?.trim() ||
@@ -416,7 +419,7 @@ function RecipeFilterSidebar({
                     onClick={() => handlePrivateListClick(list.id)}
                     aria-pressed={selectedPrivateLists.includes(list.id)}
                   >
-                    {list.name}
+                    {listenName(list)}
                   </button>
                 ))}
               </div>

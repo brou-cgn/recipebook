@@ -59,6 +59,8 @@ export default {
     filterZuruecksetzen: 'Filter zurücksetzen',
     favoriten: 'Favoriten',
     saisonal: 'Saisonal',
+    // Überschrift der Ansicht mit saisonalen Rezepten (App.js), PR 6p
+    saisonaleRezepte: 'Saisonale Rezepte',
     rezepte: 'Rezepte',
     rezepteEinblenden: 'Rezepte einblenden',
     rezepteAusblenden: 'Rezepte ausblenden',
@@ -141,6 +143,8 @@ export default {
     filterZuruecksetzen: 'Reset filters',
     favoriten: 'Favourites',
     saisonal: 'Seasonal',
+    // Überschrift der Ansicht mit saisonalen Rezepten (App.js), PR 6p
+    saisonaleRezepte: 'Seasonal recipes',
     rezepte: 'Recipes',
     rezepteEinblenden: 'Show recipes',
     rezepteAusblenden: 'Hide recipes',
@@ -222,6 +226,8 @@ export default {
     filterZuruecksetzen: 'Réinitialiser les filtres',
     favoriten: 'Favoris',
     saisonal: 'De saison',
+    // Überschrift der Ansicht mit saisonalen Rezepten (App.js), PR 6p
+    saisonaleRezepte: 'Recettes de saison',
     rezepte: 'Recettes',
     rezepteEinblenden: 'Afficher les recettes',
     rezepteAusblenden: 'Masquer les recettes',
