@@ -1,7 +1,7 @@
 # Vorhaben: Parallel kochen (mehrere Rezepte im Hintergrund, Mobile)
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
-Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 23.11.2026 (26: Timer anderer Schritte auch ohne Flag, Tech-Check P9, PR #3777 offen). Davor 14.11.2026 (Feinschliff Tablet: PR 22 mit den Punkten 1, 4 und 5 gemergt, v2.64.0; PR 23 Titelzeile und Timer-Chips (Punkte 2 und 3) gemergt, v2.65.0; PR 24 Schriftstufen (Punkt 6) gemergt, v2.66.0; PR 25 ein Rezept quer und Sheet (Punkte 7 und 8) gemergt, v2.73.0; damit alle acht Punkte live, offen bleibt der Test am Gerät; Auftrag „gehe alle weiteren PRs an“; PR 1 bis 25 gemergt; Tests am Gerät laut Rückmeldung vom 07.11.2026 erfolgreich, siehe „Offen“).
+Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 23.11.2026 (26: Timer anderer Schritte auch ohne Flag, Tech-Check P9, PR #3777 offen). Davor 14.11.2026 (Feinschliff Tablet: PR 22 mit den Punkten 1, 4 und 5 gemergt, v2.64.0; PR 23 Titelzeile und Timer-Chips (Punkte 2 und 3) gemergt, v2.65.0; PR 24 Schriftstufen (Punkt 6) gemergt, v2.66.0; PR 25 ein Rezept quer und Sheet (Punkte 7 und 8) gemergt, v2.73.0; damit alle acht Punkte live, der Test am Gerät ist seit 23.11.2026 erfolgreich (Rückmeldung des Eigentümers); Auftrag „gehe alle weiteren PRs an“; PR 1 bis 25 gemergt; Tests am Gerät laut Rückmeldung vom 07.11.2026 erfolgreich, siehe „Offen“).
 
 **Ziel:** Wer mehrere Gerichte gleichzeitig kocht (Beispiel im Entwurf: Rouladen, Rotkohl, Klöße), hält im
 Kochmodus auf dem Handy mehrere Rezepte offen. Rezepte im Hintergrund laufen weiter, samt Timer, und sind mit
@@ -326,8 +326,9 @@ Schiene PR 9, Aufteilung der Höhe mit Leiste (56-px-Knopf bleibt), Abgleich mit
 - **Feinschliff Tablet** (Entwurf 13.11.2026, Leinwand siehe oben; Auftrag „perfektioniere das Multicook-Layout auf dem
   Tablet“): acht Punkte, einzeln zu entscheiden; alle nur Tablet mit Flag, sofern nicht anders gesagt. **Stand 14.11.2026:
   (1), (4) und (5) mit PR 22 umgesetzt (v2.64.0), (2) und (3) mit PR 23 (v2.65.0), (6) mit PR 24 (v2.66.0), (7) und (8) mit
-  PR 25 (siehe „Entschieden“, dort auch die Abweichungen); alle live seit v2.73.0. Am Gerät zu prüfen: alles davon, vor allem
-  die Schriftstufen (24 px vom Herd aus lesbar?), die Timer-Chips auf dem iPhone und das zentrierte Sheet mit Tastatur.**
+  PR 25 (siehe „Entschieden“, dort auch die Abweichungen); alle live seit v2.73.0. Am Gerät geprüft am 23.11.2026: „Tablet Test war erfolgreich“
+  (Rückmeldung des Eigentümers ohne Einzelaufstellung; ob dabei auch die Timer-Chips auf dem iPhone und das Sheet mit
+  Tastatur geprüft wurden, ist nicht festgehalten, kein Handlungsbedarf, solange nichts auffällt).**
   (1) Karussell `clamp(360px, 31vw, 440px)` statt `clamp(360px, 43vw, 560px)`: 11" quer 370 | 824 px statt 513 | 681, die
   Schrittkarte vorn fasst rund 46 statt 38 Zeichen pro Zeile; hochkant auf dem 11" unverändert 360, auf dem 13" hochkant 360
   statt 440.
