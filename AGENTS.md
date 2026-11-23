@@ -93,7 +93,8 @@ erzwungen — wo das gilt, steht die Datei dabei.
   mit Fläche; erzwungen durch `src/buttonPolicy.test.js` (Baseline je CSS-Datei, darf nur sinken).
   Außerhalb des Systems: schwebende runde Knöpfe, `DeleteRowButton`, Chips, Tabs, Schalter und
   Symbol-Knöpfe ohne Text (Icons unter „Bilder & Icons“, Suche und Menü in der Kopfzeile). Symbole
-  in einer Listenzeile neben dem `DeleteRowButton` (Umbenennen, Bearbeiten, Verschieben) nutzen
+  in einer Listenzeile neben dem `DeleteRowButton` (Umbenennen, Bearbeiten, Verschieben) und das
+  Schließen-Kreuz im Kopf eines Dialogs (mit `CloseThinIcon`) nutzen
   `src/components/RowIconButton.js`, sein neutrales Gegenstück: gleiche Form, grau statt rot. Im
   Event-Bereich ist der Haupt-Knopf grün (Token in `Button.css`), die Wichtel-Teilnehmerseite behält
   ihre Gestaltung. Auf dem Handy (bis 768 px) ist der Haupt-Knopf so breit wie sein Platz; eine Reihe,

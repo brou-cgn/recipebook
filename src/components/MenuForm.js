@@ -3,6 +3,8 @@ import StarIcon from './icons/StarIcon';
 import TrashIcon from './icons/TrashIcon';
 import './MenuForm.css';
 import Button from './Button';
+import RowIconButton from './RowIconButton';
+import CloseThinIcon from './icons/CloseThinIcon';
 import './EventsPage.css';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getSavedSections, saveSectionNames, createMenuSection, applyItemOrder, abschnittAnzeige } from '../utils/menuSections';
@@ -1667,14 +1669,9 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
       <div className="events-page-container">
         <div className="events-page-header">
           <h2>{t('kalkulationVerknuepfen')}</h2>
-          <button
-            className="events-close-btn"
-            onClick={() => setFormSubView('main')}
-            aria-label={tAllgemein('abbrechen')}
-            title={tAllgemein('abbrechen')}
-          >
-            ×
-          </button>
+          <RowIconButton label={tAllgemein('abbrechen')} onClick={() => setFormSubView('main')}>
+            <CloseThinIcon />
+          </RowIconButton>
         </div>
         {availableEvents.length === 0 ? (
           <div className="events-empty-state">

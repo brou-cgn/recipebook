@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import './ModalOverlay.css';
 import './WebImportModal.css';
 import Button from './Button';
+import RowIconButton from './RowIconButton';
+import CloseThinIcon from './icons/CloseThinIcon';
 import { normalizeImportedUrl } from '../utils/webImportService';
 import { runWebImport } from '../utils/importRunners';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
@@ -80,7 +82,9 @@ function WebImportModal({ onCancel, onImported, initialUrl = '', authorId = '', 
       <div className="web-import-modal">
         <div className="web-import-modal-header">
           <h2>{t('webTitel')}</h2>
-          <button className="close-button" onClick={onCancel} aria-label={tAllgemein('schliessen')}>×</button>
+          <RowIconButton label={tAllgemein('schliessen')} onClick={onCancel}>
+            <CloseThinIcon />
+          </RowIconButton>
         </div>
 
         <div className="web-import-modal-content">

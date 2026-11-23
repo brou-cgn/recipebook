@@ -1139,25 +1139,6 @@
   color: #e8e8e8;
 }
 
-[data-theme="dark"] .tagesmenu-filter-btn {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
-[data-theme="dark"] .tagesmenu-meine-auswahl-btn {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
-[data-theme="dark"] .tagesmenu-zum-tagesMenu-btn,
-[data-theme="dark"] .tagesmenu-zurueck-zum-stapel-btn {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
 /* ---- Modals (generic) ---- */
 [data-theme="dark"] .modal-overlay,
 [data-theme="dark"] .import-modal-overlay,
@@ -1212,17 +1193,6 @@
   color: #8f867c;
 }
 
-[data-theme="dark"] .ocr-modal-header .close-button {
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #a8a099;
-}
-
-[data-theme="dark"] .ocr-modal-header .close-button:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #f5f1ea;
-}
-
-[data-theme="dark"] .close-button,
 [data-theme="dark"] .cook-date-modal-close,
 [data-theme="dark"] .rating-modal-close,
 [data-theme="dark"] .nutrition-modal-close,
@@ -1231,7 +1201,6 @@
   color: #aaa;
 }
 
-[data-theme="dark"] .close-button:hover,
 [data-theme="dark"] .cook-date-modal-close:hover,
 [data-theme="dark"] .rating-modal-close:hover,
 [data-theme="dark"] .nutrition-modal-close:hover,
@@ -1609,11 +1578,6 @@
 
 [data-theme="dark"] .share-page-not-found h2 {
   color: #e8e8e8;
-}
-
-[data-theme="dark"] .share-page-actions-banner {
-  background: #1e1e1e;
-  border-bottom-color: #3d3d3d;
 }
 
 /* ---- Buttons (generic) ---- */
@@ -3404,15 +3368,6 @@
   color: #7fb8a3;
 }
 
-[data-theme="dark"] .events-close-btn {
-  color: #ccc;
-}
-
-[data-theme="dark"] .events-close-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-
 [data-theme="dark"] .events-empty-state,
 [data-theme="dark"] .events-card-meta,
 [data-theme="dark"] .events-info-text,
@@ -3583,18 +3538,6 @@
   color: #888;
 }
 
-[data-theme="dark"] .events-lock-btn {
-  background: #2a2a2a;
-  border-color: #555;
-  color: #ccc;
-}
-
-[data-theme="dark"] .events-lock-btn:hover {
-  background: #333;
-  color: #7fb8a3;
-  border-color: #4f9a80;
-}
-
 [data-theme="dark"] .events-name-input-wrapper input.recipe-link-input {
   background-color: #1a2a3a;
   border-color: #2a4a6a;
@@ -3734,17 +3677,6 @@
 
 [data-theme="dark"] .events-guest-row-driver {
   color: #ccc;
-}
-
-[data-theme="dark"] .events-drink-add-btn {
-  background: transparent;
-  color: #ccc;
-  border-color: #555;
-}
-
-[data-theme="dark"] .events-drink-add-btn:hover:not(:disabled) {
-  background: #2a2a2a;
-  border-color: #666;
 }
 
 [data-theme="dark"] .events-selected-count-badge {

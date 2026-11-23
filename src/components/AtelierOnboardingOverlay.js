@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './AtelierOnboardingOverlay.css';
 import { useTexte } from '../contexts/SpracheContext';
+import Button from './Button';
 import atelierTexte from '../i18n/texte/atelier';
 import startseiteTexte from '../i18n/texte/startseite';
 import allgemeinTexte from '../i18n/texte/allgemein';
@@ -66,13 +67,9 @@ function AtelierOnboardingOverlay({ onConfirm }) {
             alltagsklassiker: <strong key="alltagsklassiker">{tStart('meineAlltagsklassiker')}</strong>,
           })}
         </p>
-        <button
-          className="atelier-onboarding-overlay__btn"
-          onClick={onConfirm}
-          type="button"
-        >
+        <Button variant="primary" fullWidth onClick={onConfirm}>
           {tAllgemein('weiter')}
-        </button>
+        </Button>
       </div>
     </div>
   );

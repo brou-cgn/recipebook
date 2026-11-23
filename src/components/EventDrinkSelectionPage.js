@@ -396,9 +396,7 @@ function EventDrinkSelectionPage({
                       <option key={drink.id} value={drink.id}>{resolveDrinkDisplay(drink, recipes, t).displayName}</option>
                     ))}
                 </select>
-                <button
-                  type="button"
-                  className="events-drink-add-btn"
+                <Button
                   onClick={() => {
                     if (drinkToAdd) {
                       toggleCustomDrink(drinkToAdd);
@@ -409,7 +407,7 @@ function EventDrinkSelectionPage({
                   aria-label={t('getraenkHinzufuegen')}
                 >
                   {tAllgemein('hinzufuegen')}
-                </button>
+                </Button>
               </div>
 
               <div className="drink-own-filter-row">

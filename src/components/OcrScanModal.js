@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import './ModalOverlay.css';
 import './OcrScanModal.css';
 import Button from './Button';
+import RowIconButton from './RowIconButton';
+import CloseThinIcon from './icons/CloseThinIcon';
 import { fileToBase64 } from '../utils/imageUtils';
 import { runPhotoScanImport } from '../utils/importRunners';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
@@ -205,7 +207,9 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
             <span className="ocr-step-label">{t('schrittVon', { schritt: step === 'image-preview' ? 2 : 1 })}</span>
             <h2>{t('scanTitel')}</h2>
           </div>
-          <button className="close-button" onClick={handleCancel} aria-label={tAllgemein('schliessen')}>×</button>
+          <RowIconButton label={tAllgemein('schliessen')} onClick={handleCancel}>
+            <CloseThinIcon />
+          </RowIconButton>
         </div>
 
         <div className="ocr-modal-content">
