@@ -783,3 +783,23 @@ describe('PersonalDataPage – Sprache (Vorhaben Mehrsprachigkeit)', () => {
     expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeInTheDocument();
   });
 });
+
+describe('PersonalDataPage – Meldungen beim Passwortwechsel (Mehrsprachigkeit PR 6l)', () => {
+  const nutzer = { id: 'user-1', vorname: 'John', nachname: 'Doe', email: 'john@example.com', signatureSatz: '' };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('Englisch: Meldung von changePassword über ihren Schlüssel', async () => {
+    changePassword.mockResolvedValue({ success: false, schluessel: 'fehlerAktuellesPasswort', message: 'Das aktuelle Passwort ist nicht korrekt.' });
+    renderWithProviders(<PersonalDataPage currentUser={nutzer} onBack={() => {}} />, { sprache: 'en' });
+
+    fireEvent.change(screen.getByLabelText('Current password'), { target: { value: 'WrongPass!' } });
+    fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'NewPass456!' } });
+    fireEvent.change(screen.getByLabelText('Confirm new password'), { target: { value: 'NewPass456!' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Change password' }));
+
+    expect(await screen.findByText('The current password is incorrect.')).toBeInTheDocument();
+  });
+});

@@ -109,6 +109,7 @@ import {
   updateRolePermission,
   setUserSprache
 } from "./userManagement";
+import anmeldungTexte from "../i18n/texte/anmeldung";
 
 const VALID_PASSWORD = "SecurePass12!";
 
@@ -334,6 +335,11 @@ describe("User Management Utilities", () => {
       const result = await loginUser("nonexistent@example.com", VALID_PASSWORD);
       expect(result.success).toBe(false);
       expect(result.message).toContain("Ungültige");
+    });
+
+    test("liefert bei falschen Anmeldedaten den Schlüssel für die Übersetzung (Mehrsprachigkeit PR 6l)", async () => {
+      const result = await loginUser("test@example.com", "wrongpassword");
+      expect(result).toMatchObject({ success: false, schluessel: "fehlerAnmeldedaten", message: "Ungültige E-Mail oder Passwort." });
     });
 
     test("should be case-insensitive for email", async () => {
@@ -610,6 +616,20 @@ describe("User Management Utilities", () => {
     });
     test("should reject null password", () => { expect(validatePassword(null).valid).toBe(false); });
     test("should reject common passwords", () => { expect(validatePassword("password123").valid).toBe(false); });
+    test("liefert Schlüssel und deutschen Text aus anmeldung.js (Mehrsprachigkeit PR 6l)", () => {
+      expect(validatePassword("Short1!")).toEqual({
+        valid: false,
+        schluessel: "passwortZuKurz",
+        message: "Das Passwort muss mindestens 12 Zeichen lang sein.",
+      });
+      expect(validatePassword("password1234")).toMatchObject({ valid: false, schluessel: "passwortZuHaeufig" });
+    });
+    test("alle Schlüssel der Meldungen stehen in anmeldung.js (Mehrsprachigkeit PR 6l)", () => {
+      const quelle = require("fs").readFileSync(require("path").join(__dirname, "userManagement.js"), "utf8");
+      const schluessel = [...quelle.matchAll(/mitMeldung\([^;]*?'(\w+)'\)/g)].map((treffer) => treffer[1]);
+      expect(schluessel.length).toBeGreaterThan(20);
+      schluessel.forEach((name) => expect(anmeldungTexte.de).toHaveProperty(name));
+    });
   });
 
   describe("updateUserName", () => {

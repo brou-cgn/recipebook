@@ -132,3 +132,20 @@ export function findeText(woerterbuch, text, schluesselListe) {
   }
   return null;
 }
+
+/**
+ * Text eines Ergebnisses aus einer Hilfsfunktion in der geltenden Sprache (seit PR 6l, etwa
+ * `loginUser` in src/utils/userManagement.js): Trägt das Ergebnis einen Schlüssel, kommt der Text
+ * über `t`, sonst die mitgelieferte deutsche `message`.
+ *
+ *   const result = await loginUser(email, passwort);
+ *   if (!result.success) setFehler(ergebnisText(result, t));
+ *
+ * @param {{schluessel?: string, werte?: Object, message?: string}|null|undefined} ergebnis
+ * @param {Function} t - Übersetzungsfunktion des Wörterbuchs, aus dem der Schlüssel stammt
+ * @returns {string}
+ */
+export function ergebnisText(ergebnis, t) {
+  if (ergebnis?.schluessel) return t(ergebnis.schluessel, ergebnis.werte);
+  return ergebnis?.message || '';
+}

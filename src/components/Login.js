@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import Button from './Button';
 import { EmailIcon, LockIcon } from './LoginInputIcons';
 import './Login.css';
+import { useTexte } from '../contexts/SpracheContext';
+import { ergebnisText } from '../i18n/texte';
+import anmeldungTexte from '../i18n/texte/anmeldung';
 
 function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
   const [email, setEmail] = useState('');
@@ -12,6 +15,8 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
   const [resetEmail, setResetEmail] = useState('');
   const [resetMessage, setResetMessage] = useState('');
   const [resetError, setResetError] = useState('');
+  // Texte der Anmeldung (Mehrsprachigkeit PR 6l); ohne Anmeldung gilt die Sprache des Browsers
+  const t = useTexte(anmeldungTexte);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,10 +27,10 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
       // Trim email only; password must not be trimmed to preserve user-intended characters
       const result = await onLogin((email || '').trim(), password || '');
       if (!result.success) {
-        setError(result.message);
+        setError(ergebnisText(result, t));
       }
     } catch (err) {
-      setError('Ein unerwarteter Fehler ist aufgetreten.');
+      setError(t('fehlerUnerwartet'));
     } finally {
       setIsLoading(false);
     }
@@ -38,7 +43,7 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
       try {
         await onGuestLogin();
       } catch (err) {
-        setError('Gast-Anmeldung fehlgeschlagen.');
+        setError(t('fehlerGast'));
       } finally {
         setIsLoading(false);
       }
@@ -54,12 +59,12 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
     try {
       const result = await onResetPassword((resetEmail || '').trim());
       if (result.success) {
-        setResetMessage(result.message);
+        setResetMessage(ergebnisText(result, t));
       } else {
-        setResetError(result.message);
+        setResetError(ergebnisText(result, t));
       }
     } catch (err) {
-      setResetError('Ein unerwarteter Fehler ist aufgetreten.');
+      setResetError(t('fehlerUnerwartet'));
     } finally {
       setIsLoading(false);
     }
@@ -76,23 +81,23 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
     return (
       <div className="login-container">
         <div className="login-card">
-          <h2 className="login-title">Passwort zurücksetzen</h2>
+          <h2 className="login-title">{t('passwortZuruecksetzen')}</h2>
           {resetMessage ? (
             <div className="login-success">{resetMessage}</div>
           ) : (
             <form onSubmit={handleResetPassword}>
               <p className="login-reset-info">
-                Geben Sie Ihre E-Mail-Adresse ein. Sie erhalten eine E-Mail mit einem Link zum Zurücksetzen Ihres Passworts.
+                {t('resetHinweis')}
               </p>
               <div className="login-field">
-                <label htmlFor="reset-email" className="login-label">E-MAIL-ADRESSE</label>
+                <label htmlFor="reset-email" className="login-label">{t('emailLabel')}</label>
                 <div className="login-input-wrap">
                   <EmailIcon />
                   <input
                     type="email"
                     id="reset-email"
                     className="login-input"
-                    placeholder="name@beispiel.de"
+                    placeholder={t('emailBeispiel')}
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
                     autoComplete="email"
@@ -103,7 +108,7 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
               </div>
               {resetError && <div className="login-error">{resetError}</div>}
               <Button variant="primary" type="submit" fullWidth loading={isLoading} className="login-cta">
-                {isLoading ? 'Wird gesendet …' : 'E-Mail senden'}
+                {isLoading ? t('wirdGesendet') : t('emailSenden')}
               </Button>
             </form>
           )}
@@ -114,7 +119,7 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
               onClick={handleBackToLogin}
               disabled={isLoading}
             >
-              Zurück zur Anmeldung
+              {t('zurueckZurAnmeldung')}
             </button>
           </div>
         </div>
@@ -125,17 +130,17 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h2 className="login-title">Anmelden</h2>
+        <h2 className="login-title">{t('anmelden')}</h2>
         <form onSubmit={handleSubmit}>
           <div className="login-field">
-            <label htmlFor="email" className="login-label">E-MAIL-ADRESSE</label>
+            <label htmlFor="email" className="login-label">{t('emailLabel')}</label>
             <div className="login-input-wrap">
               <EmailIcon />
               <input
                 type="email"
                 id="email"
                 className="login-input"
-                placeholder="name@beispiel.de"
+                placeholder={t('emailBeispiel')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
@@ -145,7 +150,7 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
             </div>
           </div>
           <div className="login-field">
-            <label htmlFor="password" className="login-label">PASSWORT</label>
+            <label htmlFor="password" className="login-label">{t('passwortLabel')}</label>
             <div className="login-input-wrap">
               <LockIcon />
               <input
@@ -167,13 +172,13 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
                 onClick={() => setShowResetForm(true)}
                 disabled={isLoading}
               >
-                Passwort vergessen?
+                {t('passwortVergessen')}
               </button>
             )}
           </div>
           {error && <div className="login-error">{error}</div>}
           <Button variant="primary" type="submit" fullWidth loading={isLoading} className="login-cta">
-            {isLoading ? 'Anmeldung läuft …' : 'Anmelden'}
+            {isLoading ? t('anmeldungLaeuft') : t('anmelden')}
           </Button>
         </form>
 
@@ -181,7 +186,7 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
           <>
             <div className="login-divider">
               <span></span>
-              <span>oder</span>
+              <span>{t('oder')}</span>
               <span></span>
             </div>
             <Button
@@ -189,21 +194,21 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
               onClick={handleGuestLogin}
               disabled={isLoading}
             >
-              Als Gast anmelden
+              {t('alsGastAnmelden')}
             </Button>
           </>
         )}
 
         <div className="login-footer">
           <p>
-            Noch kein Konto?{' '}
+            {t('nochKeinKonto')}{' '}
             <button
               type="button"
               className="login-register-link"
               onClick={onSwitchToRegister}
               disabled={isLoading}
             >
-              Jetzt registrieren
+              {t('jetztRegistrieren')}
             </button>
           </p>
         </div>
