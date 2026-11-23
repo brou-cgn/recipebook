@@ -4,7 +4,8 @@ Entwurf vom 25.10.2026 für die Datenschutzerklärung der App. Die Erklärung se
 der Abschnitt wird dort eingefügt. **Keine Rechtsberatung:** Rechtsgrundlage, Speicherdauer und
 Verantwortlichen bitte vor Veröffentlichung prüfen (Freigabe beim Eigentümer, siehe `follow.md`).
 
-Quelle der technischen Angaben: `follow.md` und `docs/architecture/security.md`, Stand PR 8.
+Quelle der technischen Angaben: `follow.md` und `docs/architecture/security.md`, Stand PR 11, mit dem Code
+abgeglichen am 23.11.2026 (Bezeichnungen „Mein Netzwerk“ und „Chefkoch & mehr“ nachgezogen, sonst unverändert).
 
 ---
 
@@ -15,8 +16,8 @@ andere Mitglieder können dir folgen.
 
 ### Was passiert, wenn dir jemand folgt
 
-Folgen braucht deine Bestätigung. Eine Anfrage wirkt erst, wenn du sie in „Netzwerk“ (unter Chefkoch)
-annimmst. Bis dahin sieht die anfragende Person nichts von dir, was sie nicht ohnehin sehen konnte.
+Folgen braucht deine Bestätigung. Eine Anfrage wirkt erst, wenn du sie in „Mein Netzwerk“ (unter
+„Chefkoch & mehr“) annimmst. Bis dahin sieht die anfragende Person nichts von dir, was sie nicht ohnehin sehen konnte.
 
 Nach dem Annehmen zeigt die App dem Follower in seiner Rubrik „Für dich entdeckt“ Rezepte, die du
 zuletzt gekocht oder angelegt hast, **mit deinem Vornamen** („Anna hat das gekocht“) und einer groben
@@ -52,10 +53,10 @@ Anfrage nur in der App (Badge am Tab „Chefkoch“).
 
 ### Deine Möglichkeiten
 
-- Anfragen annehmen, ablehnen oder die Person blockieren, ein Blockieren kannst du in „Netzwerk“ wieder aufheben.
+- Anfragen annehmen, ablehnen oder die Person blockieren, ein Blockieren kannst du in „Mein Netzwerk“ wieder aufheben.
 - Follower jederzeit entfernen. Danach erscheinen deine Einträge dieser Person nicht mehr.
-- Selbst jemandem folgen und das Folgen beenden oder eine offene Anfrage zurückziehen, in „Netzwerk“ oder
-  auf dem Profil der Person.
+- Selbst jemandem folgen und das Folgen beenden oder eine offene Anfrage zurückziehen, in „Mein Netzwerk“
+  oder auf dem Profil der Person.
 - Die Funktion ist freiwillig. Ohne Annehmen einer Anfrage ändert sich nichts.
 
 ### Wichtig: Was das Bestätigen nicht schützt
@@ -102,3 +103,11 @@ indem du den Follower entfernst. Bereits angezeigte Hinweise lassen sich dadurch
    Themas kann abweichen. Bei Änderung des Zeitfensters den Text nachziehen.
 5. **Gäste:** Anonyme Gäste können Follow nicht nutzen (`canUseFollow` schließt sie aus). Der Text
    erwähnt sie deshalb nicht.
+6. **Wo die Erklärung liegt (23.11.2026):** In Repo und App gibt es keinen Link auf eine Datenschutzerklärung
+   (Suche nach „Datenschutzerklärung“, „Impressum“ und „privacy“ in `src/`, `public/` und `index.html` ohne
+   Treffer). Liegt sie außerhalb der App, fehlt der Weg dorthin; gibt es keine, ist das die eigentliche Frage
+   vor dem Rollout, nicht dieser Abschnitt.
+7. **Sprachen (23.11.2026):** Die App gibt es inzwischen auch auf Englisch und Französisch. Der Hinweis
+   „Was wird sichtbar?“ (`FollowVisibilityInfo` in `NetworkPage.js`) steht noch deutsch fest im Code (die
+   Netzwerk-Seite ist im Vorhaben Mehrsprachigkeit noch nicht umgestellt). Ob Erklärung und Hinweis in allen
+   angebotenen Sprachen vorliegen müssen, gehört zur Prüfung.
