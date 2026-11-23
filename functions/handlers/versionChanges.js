@@ -11,6 +11,7 @@ const {RECIPE_STEP_STYLE_RULE} = require('../shared/gemini');
 const {consumeDailyQuota} = require('../shared/rateLimit');
 const {geminiApiKey} = require('../shared/secrets');
 const {geminiGenerateContentRequest} = require('../shared/geminiConfig');
+const {normalisiereSprache} = require('../shared/sprachen');
 
 /** Rolle muss diese Funktion in rolePermissions/{rolle} freigeschaltet haben. */
 const VERSION_CHANGES_FEATURE = 'versionDictation';
@@ -28,7 +29,17 @@ const MAX_ENTRIES = 150;
 const MAX_ENTRY_LENGTH = 1500;
 const MAX_TITLE_LENGTH = 200;
 
-const VERSION_CHANGES_PROMPT = `Du bekommst ein Rezept als JSON (titel, portionen, kochdauer, zutaten, schritte) und eine Beschreibung, was jemand bei der Zubereitung anders gemacht hat. Die Beschreibung wurde diktiert und kann Füllwörter, Wiederholungen und Erkennungsfehler enthalten.
+/**
+ * Sprache der Zusammenfassung: die der App beim Aufruf (Mehrsprachigkeit PR 6q). Das Rezept selbst bleibt
+ * immer deutsch (Entscheidung „Primärsprache“ in docs/vorhaben/mehrsprachigkeit.md), Regel 9 im Prompt.
+ */
+const ZUSAMMENFASSUNG_SPRACHE = {de: 'Deutsch', en: 'Englisch', fr: 'Französisch'};
+
+/**
+ * @param {string} sprache - de, en oder fr (normalisiereSprache)
+ * @return {string} Prompt mit der Sprache der Zusammenfassung
+ */
+const versionChangesPrompt = (sprache) => `Du bekommst ein Rezept als JSON (titel, portionen, kochdauer, zutaten, schritte) und eine Beschreibung, was jemand bei der Zubereitung anders gemacht hat. Die Beschreibung wurde diktiert und kann Füllwörter, Wiederholungen und Erkennungsfehler enthalten.
 
 Arbeite die beschriebenen Änderungen in das Rezept ein und gib das vollständige geänderte Rezept zurück.
 
@@ -40,7 +51,8 @@ REGELN:
 5. Neue oder geänderte Schritte: ${RECIPE_STEP_STYLE_RULE}
 6. "portionen" und "kochdauer" (Minuten) nur ändern, wenn die Beschreibung es verlangt, sonst unverändert übernehmen.
 7. Beschreibt der Text keine erkennbare Änderung am Rezept, gib das Rezept unverändert zurück und sage das in "zusammenfassung".
-8. "zusammenfassung": ein bis drei kurze Sätze auf Deutsch, was du geändert hast. Kein Lob, keine Rückfragen.
+8. "zusammenfassung": ein bis drei kurze Sätze auf ${ZUSAMMENFASSUNG_SPRACHE[sprache]}, was du geändert hast. Kein Lob, keine Rückfragen.
+9. Das Rezept ist und bleibt deutsch: Schreibe jeden geänderten oder neuen Eintrag und einen geänderten Titel auf Deutsch, auch wenn die Beschreibung auf Englisch, Französisch oder in einer anderen Sprache verfasst ist.
 
 Gib ausschließlich das JSON zurück.`;
 
@@ -119,6 +131,7 @@ function normalizeAiResult(parsed) {
  * Input data:
  * - description: diktierte/getippte Beschreibung der Änderungen
  * - recipe: {title, portionen, kochdauer, ingredients: [{type, text}], steps: [{type, text}]}
+ * - sprache (optional): Sprache der App, de/en/fr; nur für die Zusammenfassung, Standard de
  *
  * Nur für Rollen mit Berechtigung `versionDictation` (Funktionen nach Berechtigung).
  */
@@ -135,7 +148,7 @@ exports.applyRecipeVersionChanges = onCall(
         throw new HttpsError('unauthenticated', 'You must be logged in to create a recipe version');
       }
 
-      const {description, recipe} = request.data || {};
+      const {description, recipe, sprache} = request.data || {};
       const trimmedDescription = typeof description === 'string' ? description.trim() : '';
       if (trimmedDescription.length < 3 || trimmedDescription.length > MAX_DESCRIPTION_LENGTH) {
         throw new HttpsError(
@@ -180,7 +193,7 @@ exports.applyRecipeVersionChanges = onCall(
       const requestBody = {
         contents: [{
           parts: [{
-            text: `${VERSION_CHANGES_PROMPT}\n\nREZEPT:\n${JSON.stringify(recipeInput)}\n\nBESCHREIBUNG DER ÄNDERUNGEN:\n${trimmedDescription}`,
+            text: `${versionChangesPrompt(normalisiereSprache(sprache))}\n\nREZEPT:\n${JSON.stringify(recipeInput)}\n\nBESCHREIBUNG DER ÄNDERUNGEN:\n${trimmedDescription}`,
           }],
         }],
         generationConfig: {

@@ -228,3 +228,22 @@ test('maps Gemini rate limiting to resource-exhausted', async () => {
   mockGemini({}, 429);
   await assert.rejects(() => call('edit-1', {description: 'Olivenöl', recipe: RECIPE}), (e) => e.code === 'resource-exhausted');
 });
+
+// Mehrsprachigkeit PR 6q: Zusammenfassung in der Sprache der App, das Rezept bleibt immer deutsch
+test('writes the summary in the app language and keeps the recipe German', async () => {
+  await call('edit-1', {description: 'I used olive oil instead of butter', recipe: RECIPE, sprache: 'en'});
+  const prompt = fetchCalls[0].body.contents[0].parts[0].text;
+  assert.match(prompt, /"zusammenfassung": ein bis drei kurze Sätze auf Englisch/);
+  assert.match(prompt, /Das Rezept ist und bleibt deutsch/);
+  assert.match(prompt, /I used olive oil instead of butter/);
+});
+
+test('falls back to a German summary without or with an unknown language', async () => {
+  await call('edit-1', {description: 'Olivenöl statt Butter', recipe: RECIPE});
+  await call('edit-1', {description: 'Olivenöl statt Butter', recipe: RECIPE, sprache: 'xx'});
+  await call('edit-1', {description: 'Huile d’olive au lieu du beurre', recipe: RECIPE, sprache: 'fr'});
+  const prompts = fetchCalls.map((c) => c.body.contents[0].parts[0].text);
+  assert.match(prompts[0], /Sätze auf Deutsch,/);
+  assert.match(prompts[1], /Sätze auf Deutsch,/);
+  assert.match(prompts[2], /Sätze auf Französisch,/);
+});
