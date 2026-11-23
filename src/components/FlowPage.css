@@ -26,6 +26,21 @@
   break-inside: auto;
 }
 
+/* Papier bleibt Papier, auch im Dunkelmodus und im Ausdruck (Tech-Check P21, siehe PrintPage.css).
+   Eigene Farben auf dem Blatt stehen mit .ppf-sheet davor oder sind spezifischer. */
+.ppf-sheet h1,
+.ppf-sheet h2,
+.ppf-sheet h3,
+.ppf-sheet h4,
+.ppf-sheet h5,
+.ppf-sheet h6,
+.ppf-sheet p,
+.ppf-sheet span,
+.ppf-sheet label,
+.ppf-sheet li {
+  color: inherit;
+}
+
 .ppf-content > * + * {
   margin-top: var(--ppf-gap);
 }
@@ -178,7 +193,7 @@
   pointer-events: none;
 }
 
-.ppf-page-break span {
+.ppf-sheet .ppf-page-break span {
   position: absolute;
   right: 0.5cm;
   top: 0.1cm;

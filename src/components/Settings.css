@@ -1855,11 +1855,11 @@
 
 /* ===== Print Format Settings ===== */
 .print-format-item {
-  border: 1px solid #d9c9b8;
+  border: 1px solid var(--color-print-border);
   border-radius: 8px;
   padding: 1rem 1.25rem;
   margin-bottom: 1.25rem;
-  background: #fdfaf6;
+  background: var(--color-print-panel);
 }
 
 .print-format-header {
@@ -1872,11 +1872,11 @@
 .print-format-name-input {
   flex: 1;
   padding: 0.4rem 0.6rem;
-  border: 1px solid #c8b8a2;
+  border: 1px solid var(--color-print-border-control);
   border-radius: 4px;
   font-size: 1rem;
   font-weight: 600;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .print-format-fields {
@@ -1901,10 +1901,10 @@
 
 .print-format-select {
   padding: 0.35rem 0.6rem;
-  border: 1px solid #c8b8a2;
+  border: 1px solid var(--color-print-border-control);
   border-radius: 4px;
   font-size: 0.95rem;
-  background: #fff;
+  background: var(--color-surface);
   min-width: 240px;
 }
 
@@ -1919,8 +1919,8 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: #fff;
-  border: 1px solid #e0d5c8;
+  background: var(--color-surface);
+  border: 1px solid var(--color-print-border);
   border-radius: 5px;
   padding: 0.35rem 0.6rem;
 }
@@ -1951,15 +1951,15 @@
 
 .print-format-image-width-slider {
   flex: 1;
-  accent-color: #8b5e3c;
+  accent-color: var(--color-print-active-border);
 }
 
-.print-format-image-width-label {
+.print-format-image-width-row .print-format-image-width-label {
   min-width: 3.5rem;
   text-align: right;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #5a3e2b;
+  color: var(--color-print-text);
 }
 
 /* ===== Print Format Preview ===== */
@@ -1971,19 +1971,20 @@
   flex-wrap: wrap;
 }
 
-.print-preview-label {
+/* label bzw. span: mindestens 0-1-1 gegen die pauschale Textfarbe aus darkMode.css (Tech-Check A7) */
+.print-preview-selector .print-preview-label {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #5a3e2b;
+  color: var(--color-print-text);
   white-space: nowrap;
 }
 
 .print-preview-container {
   margin-top: 1rem;
-  border: 1px dashed #c8b8a2;
+  border: 1px dashed var(--color-print-border-control);
   border-radius: 6px;
   padding: 0.75rem;
-  background: #f9f5ef;
+  background: var(--color-print-panel-strong);
 }
 
 .print-preview-header {
@@ -1994,10 +1995,10 @@
   flex-wrap: wrap;
 }
 
-.print-preview-title {
+.print-preview-header .print-preview-title {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #5a3e2b;
+  color: var(--color-print-text);
 }
 
 .print-preview-badge {
@@ -2007,16 +2008,16 @@
   font-weight: 600;
 }
 
-.print-preview-badge--active {
-  background: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
+.print-preview-header .print-preview-badge--active {
+  background: var(--color-ok-tint);
+  color: var(--color-ok-text);
+  border: 1px solid var(--color-ok-tint);
 }
 
-.print-preview-badge--inactive {
-  background: #f0f0f0;
-  color: #666;
-  border: 1px solid #ddd;
+.print-preview-header .print-preview-badge--inactive {
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
 }
 
 /* Print format header row: name, duplicate and delete (swipe on mobile) */
@@ -2036,7 +2037,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: #fdfaf6;
+  background: var(--color-print-panel);
 }
 
 .pf-delete-btn {
@@ -2050,12 +2051,12 @@
   }
 }
 
-.pf-error {
+p.pf-error {
   margin: 0.25rem 0 0.75rem;
   padding: 0.4rem 0.6rem;
   border-radius: 6px;
-  background: #fdecea;
-  color: #a33a26;
+  background: var(--color-bad-tint);
+  color: var(--color-bad-text);
   font-size: 0.85rem;
 }
 

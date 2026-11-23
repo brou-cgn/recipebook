@@ -60,6 +60,11 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Datenmodell der Druckformate auf Version 3 (abwärtskompatibel, Sicherung des alten Stands in `printFormatsBackup`)
 - GitHub Actions Workflow erweitert um automatisches Version-Bumping
 
+### Behoben
+- Drucken im Dunkelmodus: Titel, Abschnittsüberschriften, Angaben wie Zeit und Portionen, Zutaten und Schritte kamen hellgrau aufs Papier, ebenso in der Druckvorschau. Das Papier bleibt jetzt in beiden Modi weiß mit dunkler Schrift.
+- Drucklayout (Einstellungen) im Dunkelmodus lesbar: Die Bedienflächen sind dunkel mit heller Schrift, statt hellgrauer Schrift auf hellem Grund; die Vorschau bleibt Papier.
+- Benutzerverwaltung: Die Spalte „Aktionen“ bleibt am rechten Rand stehen und ist ohne seitliches Scrollen erreichbar, auch bei 1280 px Breite und auf dem Handy.
+
 ### Sicherheit
 - Kurzbefehle melden sich nur noch mit dem persönlichen Schlüssel an. Der gemeinsame Schlüssel mit E-Mail-Adresse („X-Api-Key“ und „X-User-Email“) gilt nicht mehr: Wer ihn kannte, konnte im Namen jedes Mitglieds importieren. Ein Kurzbefehl, der ihn noch schickt, bekommt eine Meldung, wo der eigene Schlüssel erzeugt wird. Der Webimport-PIN ist damit überflüssig und entfällt samt der PIN-Abfrage vor dem Download des fertigen Kurzbefehls und dem Abschnitt in den persönlichen Daten; ein noch mitgeschicktes Feld „pin“ wird ignoriert.
 - Shortcut-Endpunkte: Authentifizierung (API-Key, Rolle, Webimport-PIN) läuft jetzt über gemeinsame Helper statt sieben Kopien. `createRecipeImportFromText` prüft damit auch die Webimport-PIN (vorher als einziger Endpunkt nicht).
