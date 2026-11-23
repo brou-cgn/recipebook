@@ -3800,6 +3800,7 @@ describe('RecipeDetail – Rezept löschen (AGENTS.md, Löschaktionen; Tech-Chec
 });
 
 describe('RecipeDetail – übersetzter Titel (Mehrsprachigkeit PR 3)', () => {
+  const { isCurrentUserAdmin } = require('../utils/userManagement');
   const rezept = {
     id: 'recipe-t',
     title: 'Omas Apfelkuchen',
@@ -3830,6 +3831,22 @@ describe('RecipeDetail – übersetzter Titel (Mehrsprachigkeit PR 3)', () => {
     expect(screen.queryByText(/^Original:/)).not.toBeInTheDocument();
   });
 
+  // Zeile „Automatisch übersetzt · Original anzeigen“ nur für Admins (23.11.2026)
+  test('Admins sehen unter dem Titel „Automatically translated · Show original“', () => {
+    isCurrentUserAdmin.mockReturnValue(true);
+    zeige(true);
+    expect(screen.getByText(/Automatically translated/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show original' })).toBeInTheDocument();
+  });
+
+  test('ohne Admin-Rolle keine Zeile „Automatically translated“, der übersetzte Titel bleibt', () => {
+    isCurrentUserAdmin.mockReturnValue(false);
+    zeige(true);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Grandma’s apple cake');
+    expect(screen.queryByText(/Automatically translated/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Show original' })).not.toBeInTheDocument();
+  });
+
   test('auf Deutsch das Original, auch wenn eine ältere Übersetzung den Titel für englisch hielt', () => {
     const pancakes = {
       ...rezept,
@@ -3852,6 +3869,7 @@ describe('RecipeDetail – übersetzter Titel (Mehrsprachigkeit PR 3)', () => {
 });
 
 describe('RecipeDetail – übersetzter Inhalt (Mehrsprachigkeit PR 4)', () => {
+  const { isCurrentUserAdmin } = require('../utils/userManagement');
   const rezept = {
     id: 'recipe-i',
     title: 'Linsensuppe',
@@ -3884,7 +3902,8 @@ describe('RecipeDetail – übersetzter Inhalt (Mehrsprachigkeit PR 4)', () => {
     expect(screen.getByText('400 g lentils')).toBeInTheDocument();
   });
 
-  test('„Original anzeigen“ blendet das Original ein und wieder aus', () => {
+  test('„Original anzeigen“ blendet das Original ein und wieder aus (Admin)', () => {
+    isCurrentUserAdmin.mockReturnValue(true);
     useRezeptInhalt.mockReturnValue(uebersetzung);
     zeige();
     expect(screen.getByText(/Automatically translated/)).toBeInTheDocument();
@@ -3896,8 +3915,21 @@ describe('RecipeDetail – übersetzter Inhalt (Mehrsprachigkeit PR 4)', () => {
     expect(screen.getByText('200 g lentils')).toBeInTheDocument();
   });
 
-  test('ohne Übersetzung kein Hinweis und das Original', () => {
+  test('ohne Admin-Rolle keine Zeile „Automatically translated · Show original“, die Übersetzung bleibt', () => {
+    isCurrentUserAdmin.mockReturnValue(false);
+    useRezeptInhalt.mockReturnValue(uebersetzung);
     zeige();
+    expect(screen.queryByText(/Automatically translated/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Show original' })).not.toBeInTheDocument();
+    expect(screen.getByText('200 g lentils')).toBeInTheDocument();
+    expect(screen.getByText('Wash the lentils.')).toBeInTheDocument();
+    expect(screen.queryByText('200 g Linsen')).not.toBeInTheDocument();
+  });
+
+  test('ohne Übersetzung kein Hinweis und das Original (auch für Admins)', () => {
+    isCurrentUserAdmin.mockReturnValue(true);
+    zeige();
+    expect(screen.queryByText(/Automatically translated/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Show original' })).not.toBeInTheDocument();
     expect(screen.getByText('200 g Linsen')).toBeInTheDocument();
   });
