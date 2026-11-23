@@ -10,6 +10,13 @@
  * Die Listen stehen Eintrag für Eintrag wie im Rezept: gleiche Länge, gleiche Reihenfolge.
  * Verknüpfte Rezepte (#recipe:…) und leere Einträge bleiben unverändert.
  *
+ * Das Original ist immer deutsch (Entscheidung „Primärsprache“): `originalSprache` ist `de`,
+ * übersetzt wird ins Englische und Französische. Einzelne Begriffe, die im Original nicht deutsch
+ * sind (eine englische Zutat, ein englischer Gerichtsname), bleiben in jeder Sprache stehen. Früher
+ * erkannte Gemini die Originalsprache; ein Rezept mit vielen englischen Zutaten galt dann als
+ * englisch. Solche Übersetzungen gelten als veraltet (istAktuelleInhaltUebersetzung), der Backfill
+ * erneuert sie.
+ *
  * Die Menge am Anfang einer Zutat bleibt wie im Original. So rechnet die Portionsumrechnung
  * (scaleIngredient in src/utils/ingredientUtils.js, nur die Menge am Zeilenanfang) auch mit
  * übersetzten Zeilen.
@@ -20,11 +27,10 @@
  */
 
 const crypto = require('crypto');
-const {SPRACHEN} = require('./sprachen');
+const {ORIGINAL_SPRACHE, ZIEL_SPRACHEN} = require('./sprachen');
 
 const SCHEMA_VERSION = 1;
 const HASH_KENNUNG = 'inhalt-v1';
-const ORIGINAL_SPRACHEN = [...SPRACHEN, 'andere'];
 const MAX_ZUTAT_LAENGE = 300;
 const MAX_SCHRITT_LAENGE = 3000;
 
@@ -85,11 +91,8 @@ const sprachSchema = {
 
 const INHALT_RESPONSE_SCHEMA = {
   type: 'OBJECT',
-  properties: {
-    originalSprache: {type: 'STRING', format: 'enum', enum: ORIGINAL_SPRACHEN},
-    ...Object.fromEntries(SPRACHEN.map((sprache) => [sprache, sprachSchema])),
-  },
-  required: ['originalSprache'],
+  properties: Object.fromEntries(ZIEL_SPRACHEN.map((sprache) => [sprache, sprachSchema])),
+  required: [...ZIEL_SPRACHEN],
 };
 
 /**
@@ -98,17 +101,20 @@ const INHALT_RESPONSE_SCHEMA = {
  */
 function baueInhaltPrompt(anfrage) {
   return [
-    'Du übersetzt den Inhalt eines Kochbuch-Rezepts: Zutaten und Zubereitungsschritte samt',
-    'Zwischenüberschriften (ueberschrift: true).',
+    'Du übersetzt den Inhalt eines Rezepts aus einem deutschen Kochbuch ins Englische (en) und',
+    'Französische (fr): Zutaten und Zubereitungsschritte samt Zwischenüberschriften (ueberschrift: true).',
+    'Das Rezept ist das deutsche Original, auch wenn einzelne Einträge ganz oder teilweise in einer',
+    'anderen Sprache stehen.',
     '',
-    '- originalSprache: die Sprache des Rezepts, "de", "en" oder "fr", sonst "andere".',
-    '- Übersetze in jede Sprache aus de, en und fr außer der Originalsprache; bei "andere" in alle drei.',
-    '  Die Originalsprache selbst lässt du weg.',
     '- Zutaten: Die Menge am Zeilenanfang bleibt genau wie im Original (Ziffern, Brüche wie 1/2,',
     '  Bereiche wie 2-3, Dezimalkomma wie 1,5). Einheit und Zutat schreibst du so, wie man sie in der',
     '  Zielsprache schreibt (z. B. 2 EL Olivenöl → 2 tbsp olive oil → 2 c. à s. d’huile d’olive).',
+    '- Ausnahme: Einzelne Begriffe, die im Original nicht deutsch sind, etwa eine englische Zutat oder ein',
+    '  englischer Gerichtsname, sind feststehende Begriffe und bleiben in beiden Sprachen genau so stehen;',
+    '  übersetzt werden nur die deutschen Wörter (z. B. 2 EL Peanut Butter → 2 tbsp Peanut Butter →',
+    '  2 c. à s. de Peanut Butter). Ganze Sätze in einer anderen Sprache übersetzt du wie den Rest.',
     '- Schritte: natürliche Kochanweisungen. Zahlen, Zeiten und Temperaturen bleiben gleich.',
-    '- Sprichst du die Lesenden an, dann auf Deutsch mit „du“ und auf Französisch mit „tu“.',
+    '- Sprichst du die Lesenden an, dann auf Französisch mit „tu“.',
     '- Eigennamen, feststehende Gerichtsnamen und Marken bleiben stehen.',
     '- Nichts weglassen, nichts hinzufügen, keine Erklärungen. Jeder Eintrag behält seine Nummer nr.',
     '',
@@ -133,17 +139,16 @@ function sauberesFeld(wert, maxLaenge, mehrzeilig) {
 /**
  * Prüft die Gemini-Antwort. Gültig ist sie nur, wenn es für jede Zielsprache zu jedem angefragten
  * Eintrag einen Text gibt; sonst null (der Versuch wird bei der nächsten Änderung oder im Backfill
- * wiederholt). Eine halbe Übersetzung wäre schlechter als das Original.
+ * wiederholt). Eine halbe Übersetzung wäre schlechter als das Original. Weitere Felder (etwa eine
+ * Originalsprache oder eine deutsche Fassung) zählen nicht: Deutsch ist immer das Original.
  * @param {*} antwort - geparstes JSON
  * @param {{zutaten: Array<object>, schritte: Array<object>}} anfrage
  * @return {{originalSprache: string, sprachen: Object<string, {zutaten: Map, schritte: Map}>}|null}
  */
 function pruefeInhaltAntwort(antwort, anfrage) {
-  const originalSprache = antwort?.originalSprache;
-  if (!ORIGINAL_SPRACHEN.includes(originalSprache)) return null;
-  const ziele = SPRACHEN.filter((sprache) => sprache !== originalSprache);
+  if (!antwort || typeof antwort !== 'object') return null;
   const sprachen = {};
-  for (const sprache of ziele) {
+  for (const sprache of ZIEL_SPRACHEN) {
     const teil = antwort[sprache];
     const zuordnen = (eintraege, angefragt, maxLaenge, mehrzeilig) => {
       const texte = new Map();
@@ -158,7 +163,7 @@ function pruefeInhaltAntwort(antwort, anfrage) {
     if (!zutaten || !schritte) return null;
     sprachen[sprache] = {zutaten, schritte};
   }
-  return {originalSprache, sprachen};
+  return {originalSprache: ORIGINAL_SPRACHE, sprachen};
 }
 
 /**
@@ -184,13 +189,16 @@ function baueUebersetzungsDokument(rezept, quellHash, ergebnis, modell, jetzt) {
 }
 
 /**
- * Passt die gespeicherte Übersetzung noch zum Rezept?
+ * Passt die gespeicherte Übersetzung noch zum Rezept? Eine Übersetzung aus der Zeit, als Gemini die
+ * Originalsprache erkannte, gilt als veraltet, wenn dabei nicht Deutsch herauskam: Ihr fehlt die
+ * englische oder französische Fassung, dafür hat sie eine deutsche, die die App nicht mehr zeigt.
  * @param {object|undefined} dokument - Daten aus rezeptUebersetzungen
  * @param {string} quellHash
  * @return {boolean}
  */
 function istAktuelleInhaltUebersetzung(dokument, quellHash) {
-  return Boolean(dokument) && dokument.quellHash === quellHash && dokument.schemaVersion === SCHEMA_VERSION;
+  return Boolean(dokument) && dokument.quellHash === quellHash && dokument.schemaVersion === SCHEMA_VERSION &&
+    dokument.originalSprache === ORIGINAL_SPRACHE;
 }
 
 module.exports = {

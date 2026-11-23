@@ -3829,6 +3829,26 @@ describe('RecipeDetail – übersetzter Titel (Mehrsprachigkeit PR 3)', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Omas Apfelkuchen');
     expect(screen.queryByText(/^Original:/)).not.toBeInTheDocument();
   });
+
+  test('auf Deutsch das Original, auch wenn eine ältere Übersetzung den Titel für englisch hielt', () => {
+    const pancakes = {
+      ...rezept,
+      id: 'recipe-p',
+      title: 'American Pancakes',
+      titelUebersetzung: {
+        quelle: 'American Pancakes', originalSprache: 'en', de: 'Amerikanische Pfannkuchen', en: 'American Pancakes', fr: 'Pancakes américains',
+      },
+    };
+    render(
+      <SpracheProvider profilSprache="de" inhalteUebersetzen speicher={null}>
+        <RecipeDetail recipe={pancakes} onBack={() => {}} onEdit={() => {}} onDelete={() => {}} currentUser={{ id: 'user-1', vorname: 'T', nachname: 'U' }} />
+      </SpracheProvider>
+    );
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('American Pancakes');
+    expect(screen.queryByText('Amerikanische Pfannkuchen')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Original:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Automatisch übersetzt/)).not.toBeInTheDocument();
+  });
 });
 
 describe('RecipeDetail – übersetzter Inhalt (Mehrsprachigkeit PR 4)', () => {

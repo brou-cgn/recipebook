@@ -4,16 +4,25 @@
  * in handlers/uebersetzung.js. Ohne Firestore und Netz, damit es ohne Emulator testbar ist.
  *
  * Feld am Rezept, das nur die Cloud Function schreibt (firestore.rules):
- *   titelUebersetzung: {quelle, originalSprache, de, en, fr, modell, erstelltAm}
+ *   titelUebersetzung: {quelle, originalSprache, de, en, fr, version, modell, erstelltAm}
  * `quelle` ist der Titel, der übersetzt wurde. Weicht `title` davon ab, ist die Übersetzung
  * veraltet: Der Trigger übersetzt neu, der Client zeigt bis dahin das Original
  * (src/i18n/rezeptTitel.js).
+ *
+ * Der Titel ist immer das deutsche Original (Entscheidung „Primärsprache“), auch wenn er ganz
+ * oder teilweise englisch ist („American Pancakes“). Gemini übersetzt deshalb nur ins Englische
+ * und Französische; `originalSprache` ist immer `de` und `de` der Titel selbst. Was im Titel nicht
+ * deutsch ist, bleibt als feststehender Begriff in jeder Sprache stehen.
+ *
+ * `version` 2 steht für diese Regeln. Bis Version 1 (ohne Feld) erkannte Gemini die Sprache am Titel
+ * allein und übersetzte englische Gerichtsnamen deutscher Rezepte ins Deutsche
+ * („Amerikanische Pfannkuchen“). Solche Übersetzungen gelten als veraltet und werden beim
+ * nächsten Schreiben des Rezepts oder im Backfill erneuert.
  */
 
-const {SPRACHEN} = require('./sprachen');
+const {ORIGINAL_SPRACHE, ZIEL_SPRACHEN} = require('./sprachen');
 
-/** Erkannte Sprache des Originals; „andere“ z. B. für einen italienischen Titel. */
-const ORIGINAL_SPRACHEN = [...SPRACHEN, 'andere'];
+const TITEL_VERSION = 2;
 const MAX_TITEL_LAENGE = 200;
 /** So viele Titel gehen höchstens in einen Gemini-Aufruf (Backfill). */
 const MAX_TITEL_JE_AUFRUF = 25;
@@ -27,10 +36,9 @@ const TITEL_RESPONSE_SCHEMA = {
         type: 'OBJECT',
         properties: {
           nr: {type: 'INTEGER'},
-          originalSprache: {type: 'STRING', format: 'enum', enum: ORIGINAL_SPRACHEN},
-          ...Object.fromEntries(SPRACHEN.map((sprache) => [sprache, {type: 'STRING'}])),
+          ...Object.fromEntries(ZIEL_SPRACHEN.map((sprache) => [sprache, {type: 'STRING'}])),
         },
-        required: ['nr', 'originalSprache', ...SPRACHEN],
+        required: ['nr', ...ZIEL_SPRACHEN],
       },
     },
   },
@@ -46,12 +54,16 @@ const TITEL_RESPONSE_SCHEMA = {
 function baueTitelPrompt(titel) {
   const liste = titel.map((text, index) => ({nr: index + 1, text}));
   return [
-    'Du übersetzt Rezepttitel eines Kochbuchs ins Deutsche (de), Englische (en) und Französische (fr).',
+    'Du übersetzt Rezepttitel eines deutschen Kochbuchs ins Englische (en) und Französische (fr).',
+    'Jeder Titel ist das deutsche Original, auch wenn er ganz oder teilweise in einer anderen Sprache steht.',
     '',
     'Für jeden Titel:',
-    '- originalSprache: die Sprache des Titels, "de", "en" oder "fr", sonst "andere".',
-    '- de, en, fr: der Titel in dieser Sprache. In seiner Originalsprache bleibt er unverändert.',
-    '- Übersetze so, wie man das Gericht in der Zielsprache in einem Kochbuch nennen würde: kurz und natürlich.',
+    '- en, fr: der Titel in dieser Sprache. Übersetze so, wie man das Gericht in der Zielsprache in einem',
+    '  Kochbuch nennen würde: kurz und natürlich.',
+    '- Was im Titel nicht deutsch ist, ist ein feststehender Begriff und bleibt in beiden Sprachen genau so',
+    '  stehen (z. B. American Pancakes, Pulled Pork, Banana Bread, Chili con Carne, Crème brûlée).',
+    '  Übersetzt werden nur die deutschen Wörter (z. B. American Pancakes mit Blaubeeren →',
+    '  American Pancakes with blueberries → American Pancakes aux myrtilles).',
     '- Feststehende Gerichtsnamen (z. B. Tiramisu, Ratatouille, Shakshuka, Wiener Schnitzel), Eigennamen',
     '  und Marken bleiben stehen.',
     '- Keine Anführungszeichen, keine Erklärungen, keine Emojis, nichts hinzufügen oder weglassen.',
@@ -75,10 +87,11 @@ function sauberesFeld(wert) {
 
 /**
  * Prüft die Gemini-Antwort. Ungültige Einträge fallen weg; deren Titel gelten als
- * fehlgeschlagen und werden beim nächsten Anlass erneut versucht.
+ * fehlgeschlagen und werden beim nächsten Anlass erneut versucht. Weitere Felder (etwa eine
+ * Originalsprache oder eine deutsche Fassung) zählen nicht: Deutsch ist immer das Original.
  * @param {*} antwort - geparstes JSON
  * @param {number} anzahl - Zahl der angefragten Titel
- * @return {Array<object|null>} je Titel (Index wie angefragt) {originalSprache, de, en, fr} oder null
+ * @return {Array<object|null>} je Titel (Index wie angefragt) {en, fr} oder null
  */
 function pruefeTitelAntwort(antwort, anzahl) {
   const ergebnis = Array.from({length: anzahl}, () => null);
@@ -86,10 +99,9 @@ function pruefeTitelAntwort(antwort, anzahl) {
   for (const eintrag of eintraege) {
     const nr = eintrag?.nr;
     if (!Number.isInteger(nr) || nr < 1 || nr > anzahl || ergebnis[nr - 1]) continue;
-    if (!ORIGINAL_SPRACHEN.includes(eintrag.originalSprache)) continue;
-    const texte = Object.fromEntries(SPRACHEN.map((sprache) => [sprache, sauberesFeld(eintrag[sprache])]));
-    if (SPRACHEN.some((sprache) => !texte[sprache])) continue;
-    ergebnis[nr - 1] = {originalSprache: eintrag.originalSprache, ...texte};
+    const texte = Object.fromEntries(ZIEL_SPRACHEN.map((sprache) => [sprache, sauberesFeld(eintrag[sprache])]));
+    if (ZIEL_SPRACHEN.some((sprache) => !texte[sprache])) continue;
+    ergebnis[nr - 1] = texte;
   }
   return ergebnis;
 }
@@ -97,7 +109,8 @@ function pruefeTitelAntwort(antwort, anzahl) {
 /**
  * Braucht dieses Rezept (neu) eine Übersetzung des Titels? Nicht bei laufenden oder
  * gescheiterten Importen (`importStatus` gesetzt, der Titel ist dann noch vorläufig),
- * nicht ohne Titel und nicht, wenn die Übersetzung zum aktuellen Titel passt.
+ * nicht ohne Titel und nicht, wenn die Übersetzung zum aktuellen Titel passt und nach den
+ * geltenden Regeln entstand (`version`).
  * @param {object} rezept - Daten des Rezeptdokuments
  * @return {boolean}
  */
@@ -105,13 +118,15 @@ function brauchtTitelUebersetzung(rezept) {
   if (!rezept || rezept.importStatus) return false;
   const titel = rezept.title;
   if (typeof titel !== 'string' || !titel.trim() || titel.length > MAX_TITEL_LAENGE) return false;
-  return rezept.titelUebersetzung?.quelle !== titel;
+  const uebersetzung = rezept.titelUebersetzung;
+  const aktuell = uebersetzung?.quelle === titel && Number(uebersetzung.version) >= TITEL_VERSION;
+  return !aktuell;
 }
 
 /**
  * Das Feld titelUebersetzung für ein geprüftes Ergebnis.
  * @param {string} quelle - übersetzter Titel, genau wie im Rezept
- * @param {{originalSprache: string, de: string, en: string, fr: string}} ergebnis
+ * @param {{en: string, fr: string}} ergebnis
  * @param {string} modell
  * @param {number} jetzt - Date.now()
  * @return {object}
@@ -119,15 +134,17 @@ function brauchtTitelUebersetzung(rezept) {
 function baueTitelUebersetzung(quelle, ergebnis, modell, jetzt) {
   return {
     quelle,
-    originalSprache: ergebnis.originalSprache,
-    ...Object.fromEntries(SPRACHEN.map((sprache) => [sprache, ergebnis[sprache]])),
+    originalSprache: ORIGINAL_SPRACHE,
+    [ORIGINAL_SPRACHE]: quelle,
+    ...Object.fromEntries(ZIEL_SPRACHEN.map((sprache) => [sprache, ergebnis[sprache]])),
+    version: TITEL_VERSION,
     modell,
     erstelltAm: jetzt,
   };
 }
 
 module.exports = {
-  ORIGINAL_SPRACHEN,
+  TITEL_VERSION,
   MAX_TITEL_LAENGE,
   MAX_TITEL_JE_AUFRUF,
   TITEL_RESPONSE_SCHEMA,

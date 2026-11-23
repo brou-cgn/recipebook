@@ -1,11 +1,14 @@
 // Mehrsprachigkeit (docs/vorhaben/mehrsprachigkeit.md, PR 3): Rezepttitel übersetzen.
-// Geprüft wird: Prüfung der Gemini-Antwort, der Trigger (nur bei neuem oder geändertem Titel,
+// Geprüft wird: Prüfung der Gemini-Antwort (nur Englisch und Französisch, Deutsch ist immer das
+// Original), der Trigger (nur bei neuem oder geändertem Titel oder Übersetzung nach älteren Regeln,
 // nicht bei laufenden Importen, Tageslimit, Vorbedingung gegen überholte Stände) und der
 // Backfill (nur Admins, seitenweise mit Cursor, mehrere Titel je Gemini-Aufruf).
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
+  TITEL_VERSION,
+  TITEL_RESPONSE_SCHEMA,
   pruefeTitelAntwort,
   baueTitelPrompt,
   brauchtTitelUebersetzung,
@@ -143,7 +146,7 @@ const realFetch = global.fetch;
 const titelAusPrompt = (prompt) => JSON.parse(prompt.slice(prompt.lastIndexOf('\n') + 1));
 
 const uebersetzt = (liste) => ({
-  titel: liste.map(({nr, text}) => ({nr, originalSprache: 'de', de: text, en: `EN ${text}`, fr: `FR ${text}`})),
+  titel: liste.map(({nr, text}) => ({nr, en: `EN ${text}`, fr: `FR ${text}`})),
 });
 
 function mockGemini() {
@@ -159,7 +162,15 @@ function mockGemini() {
 
 const mitUebersetzung = (title) => ({
   title,
-  titelUebersetzung: {quelle: title, originalSprache: 'de', de: title, en: `EN ${title}`, fr: `FR ${title}`},
+  titelUebersetzung: {quelle: title, originalSprache: 'de', de: title, en: `EN ${title}`, fr: `FR ${title}`, version: TITEL_VERSION},
+});
+
+/** So sah eine Übersetzung nach den alten Regeln aus: Gemini hielt den Titel allein für englisch. */
+const nachAltenRegeln = (title) => ({
+  title,
+  titelUebersetzung: {
+    quelle: title, originalSprache: 'en', de: 'Amerikanische Pfannkuchen', en: title, fr: 'Pancakes américains',
+  },
 });
 
 test.beforeEach(() => {
@@ -181,28 +192,35 @@ test.afterEach(() => {
 
 // ── Prüfung und Prompt ─────────────────────────────────────────────────────────
 
-test('pruefeTitelAntwort: übernimmt gültige Einträge nach Nummer, verwirft ungültige', () => {
+test('pruefeTitelAntwort: übernimmt Englisch und Französisch nach Nummer, verwirft ungültige', () => {
   const ergebnis = pruefeTitelAntwort({
     titel: [
-      {nr: 2, originalSprache: 'en', de: ' Pfannkuchen ', en: 'Pancakes', fr: 'Crêpes épaisses'},
-      {nr: 1, originalSprache: 'de', de: 'Apfelkuchen', en: '', fr: 'Gâteau aux pommes'},
-      {nr: 3, originalSprache: 'it', de: 'a', en: 'b', fr: 'c'},
-      {nr: 4, originalSprache: 'de', de: 'Zeile\nUmbruch', en: 'b', fr: 'c'},
-      {nr: 5, originalSprache: 'andere', de: 'Pasta alla Norma', en: 'Pasta alla Norma', fr: 'Pâtes alla Norma'},
-      {nr: 5, originalSprache: 'de', de: 'doppelt', en: 'doppelt', fr: 'doppelt'},
-      {nr: 9, originalSprache: 'de', de: 'zu weit', en: 'x', fr: 'y'},
+      {nr: 2, en: ' Pancakes ', fr: 'Crêpes épaisses'},
+      {nr: 1, en: '', fr: 'Gâteau aux pommes'},
+      {nr: 3, en: 'Zeile\nUmbruch', fr: 'c'},
+      {nr: 4, en: 'Pasta alla Norma', fr: 'Pâtes alla Norma'},
+      {nr: 4, en: 'doppelt', fr: 'doppelt'},
+      {nr: 5, en: 'nur Englisch'},
+      {nr: 9, en: 'zu weit', fr: 'y'},
     ],
   }, 6);
   assert.deepEqual(ergebnis, [
     null,
-    {originalSprache: 'en', de: 'Pfannkuchen', en: 'Pancakes', fr: 'Crêpes épaisses'},
+    {en: 'Pancakes', fr: 'Crêpes épaisses'},
     null,
+    {en: 'Pasta alla Norma', fr: 'Pâtes alla Norma'},
     null,
-    {originalSprache: 'andere', de: 'Pasta alla Norma', en: 'Pasta alla Norma', fr: 'Pâtes alla Norma'},
     null,
   ]);
   assert.deepEqual(pruefeTitelAntwort({titel: 'kaputt'}, 2), [null, null]);
   assert.deepEqual(pruefeTitelAntwort(null, 1), [null]);
+});
+
+test('pruefeTitelAntwort: eine erkannte Originalsprache oder deutsche Fassung der KI zählt nicht', () => {
+  const [ergebnis] = pruefeTitelAntwort({
+    titel: [{nr: 1, originalSprache: 'en', de: 'Amerikanische Pfannkuchen', en: 'American Pancakes', fr: 'American Pancakes'}],
+  }, 1);
+  assert.deepEqual(ergebnis, {en: 'American Pancakes', fr: 'American Pancakes'});
 });
 
 test('baueTitelPrompt: Titel stehen als JSON am Ende, auch mit Anführungszeichen', () => {
@@ -211,6 +229,16 @@ test('baueTitelPrompt: Titel stehen als JSON am Ende, auch mit Anführungszeiche
     {nr: 1, text: 'Omas "beste" Torte'},
     {nr: 2, text: 'Chili sin carne'},
   ]);
+});
+
+test('baueTitelPrompt und Schema: nur Englisch und Französisch, nicht Deutsches bleibt stehen', () => {
+  const prompt = baueTitelPrompt(['American Pancakes']);
+  assert.match(prompt, /ins Englische \(en\) und Französische \(fr\)/);
+  assert.match(prompt, /Jeder Titel ist das deutsche Original/);
+  assert.match(prompt, /Was im Titel nicht deutsch ist, ist ein feststehender Begriff/);
+  assert.doesNotMatch(prompt, /originalSprache/);
+  assert.deepEqual(TITEL_RESPONSE_SCHEMA.properties.titel.items.required, ['nr', 'en', 'fr']);
+  assert.deepEqual(Object.keys(TITEL_RESPONSE_SCHEMA.properties.titel.items.properties), ['nr', 'en', 'fr']);
 });
 
 test('brauchtTitelUebersetzung: nur mit Titel, ohne laufenden Import und wenn die Quelle nicht passt', () => {
@@ -223,9 +251,31 @@ test('brauchtTitelUebersetzung: nur mit Titel, ohne laufenden Import und wenn di
   assert.equal(brauchtTitelUebersetzung(null), false);
 });
 
-test('baueTitelUebersetzung: Quelle, Originalsprache, alle Sprachen, Modell und Zeit', () => {
-  const feld = baueTitelUebersetzung('Suppe', {originalSprache: 'de', de: 'Suppe', en: 'Soup', fr: 'Soupe'}, 'm', 42);
-  assert.deepEqual(feld, {quelle: 'Suppe', originalSprache: 'de', de: 'Suppe', en: 'Soup', fr: 'Soupe', modell: 'm', erstelltAm: 42});
+test('brauchtTitelUebersetzung: eine Übersetzung nach älteren Regeln wird erneuert, eine neuere nicht', () => {
+  const alt = nachAltenRegeln('American Pancakes');
+  assert.equal(brauchtTitelUebersetzung(alt), true, 'ohne version');
+  assert.equal(brauchtTitelUebersetzung({...alt, titelUebersetzung: {...alt.titelUebersetzung, version: 1}}), true);
+  const neuer = {...mitUebersetzung('Suppe'), titelUebersetzung: {...mitUebersetzung('Suppe').titelUebersetzung, version: TITEL_VERSION + 1}};
+  assert.equal(brauchtTitelUebersetzung(neuer), false, 'nach einem Rollback kein Hin und Her');
+});
+
+test('baueTitelUebersetzung: Deutsch ist der Titel selbst, dazu Englisch, Französisch, Version, Modell und Zeit', () => {
+  const feld = baueTitelUebersetzung(
+      'American Pancakes mit Blaubeeren',
+      {en: 'American Pancakes with blueberries', fr: 'American Pancakes aux myrtilles'},
+      'm',
+      42,
+  );
+  assert.deepEqual(feld, {
+    quelle: 'American Pancakes mit Blaubeeren',
+    originalSprache: 'de',
+    de: 'American Pancakes mit Blaubeeren',
+    en: 'American Pancakes with blueberries',
+    fr: 'American Pancakes aux myrtilles',
+    version: TITEL_VERSION,
+    modell: 'm',
+    erstelltAm: 42,
+  });
 });
 
 // ── Trigger ────────────────────────────────────────────────────────────────────
@@ -264,6 +314,8 @@ test('Trigger: übersetzt den Titel eines neuen Rezepts und schreibt nur titelUe
   assert.equal(patch.titelUebersetzung.en, 'EN Omas Apfelkuchen');
   assert.equal(patch.titelUebersetzung.fr, 'FR Omas Apfelkuchen');
   assert.equal(patch.titelUebersetzung.originalSprache, 'de');
+  assert.equal(patch.titelUebersetzung.de, 'Omas Apfelkuchen');
+  assert.equal(patch.titelUebersetzung.version, TITEL_VERSION);
   assert.equal(typeof patch.titelUebersetzung.modell, 'string');
   assert.deepEqual(vorbedingung, {lastUpdateTime: 'stand-1'});
   assert.equal(quota[quotaPfad('automatik')], 1);
@@ -286,6 +338,22 @@ test('Trigger: ein geänderter Titel wird neu übersetzt', async () => {
   await handlers.uebersetzeRezeptTitel(ereignis('r1'));
   assert.deepEqual(fetchCalls, [['Kürbissuppe']]);
   assert.equal(updates[0].patch.titelUebersetzung.quelle, 'Kürbissuppe');
+});
+
+test('Trigger: eine Übersetzung nach älteren Regeln wird erneuert, Deutsch bleibt das Original', async () => {
+  store.recipes.r1 = nachAltenRegeln('American Pancakes');
+  // Auch wenn die KI wie früher eine Originalsprache und eine deutsche Fassung mitschickt.
+  geminiAntwort = (liste) => ({
+    json: {titel: liste.map(({nr, text}) => ({nr, originalSprache: 'en', de: 'Amerikanische Pfannkuchen', en: text, fr: text}))},
+  });
+  await handlers.uebersetzeRezeptTitel(ereignis('r1'));
+  assert.deepEqual(fetchCalls, [['American Pancakes']]);
+  const feld = updates[0].patch.titelUebersetzung;
+  assert.equal(feld.originalSprache, 'de');
+  assert.equal(feld.de, 'American Pancakes');
+  assert.equal(feld.en, 'American Pancakes');
+  assert.equal(feld.fr, 'American Pancakes');
+  assert.equal(feld.version, TITEL_VERSION);
 });
 
 test('Trigger: am Tageslimit kein KI-Aufruf und nichts geschrieben', async () => {
@@ -362,6 +430,20 @@ test('Backfill: übersetzt seitenweise nur, was fehlt, mit einem Gemini-Aufruf j
   assert.equal(zweite.naechsterCursor, null);
   assert.equal(zweite.gesamt, null);
   assert.equal(quota[quotaPfad('admin-1')], 3);
+});
+
+test('Backfill: erneuert Übersetzungen nach älteren Regeln, aktuelle bleiben', async () => {
+  store.recipes = {
+    a: nachAltenRegeln('American Pancakes'),
+    b: mitUebersetzung('Suppe'),
+  };
+  const ergebnis = await backfill('admin-1', {});
+  assert.deepEqual(fetchCalls, [['American Pancakes']]);
+  assert.equal(ergebnis.neu, 1);
+  assert.equal(ergebnis.uebersprungen, 1);
+  assert.equal(store.recipes.a.titelUebersetzung.de, 'American Pancakes');
+  assert.equal(store.recipes.a.titelUebersetzung.originalSprache, 'de');
+  assert.equal(store.recipes.a.titelUebersetzung.version, TITEL_VERSION);
 });
 
 test('Backfill: KI-Fehler und überholte Rezepte treffen nur diese Rezepte', async () => {
