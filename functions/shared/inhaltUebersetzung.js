@@ -12,7 +12,8 @@
  *
  * Das Original ist immer deutsch (Entscheidung „Primärsprache“): `originalSprache` ist `de`,
  * übersetzt wird ins Englische und Französische. Einzelne Begriffe, die im Original nicht deutsch
- * sind (eine englische Zutat, ein englischer Gerichtsname), bleiben in jeder Sprache stehen. Früher
+ * sind (eine englische Zutat, ein englischer Gerichtsname), bleiben in jeder Sprache stehen, ebenso
+ * Marken und Produktnamen aus deutschen Wörtern („Jägermeister Manifest“, „Bärenmarke“). Früher
  * erkannte Gemini die Originalsprache; ein Rezept mit vielen englischen Zutaten galt dann als
  * englisch. Solche Übersetzungen gelten als veraltet (istAktuelleInhaltUebersetzung), der Backfill
  * erneuert sie.
@@ -115,7 +116,10 @@ function baueInhaltPrompt(anfrage) {
     '  2 c. à s. de Peanut Butter). Ganze Sätze in einer anderen Sprache übersetzt du wie den Rest.',
     '- Schritte: natürliche Kochanweisungen. Zahlen, Zeiten und Temperaturen bleiben gleich.',
     '- Sprichst du die Lesenden an, dann auf Französisch mit „tu“.',
-    '- Eigennamen, feststehende Gerichtsnamen und Marken bleiben stehen.',
+    '- Eigennamen und feststehende Gerichtsnamen bleiben stehen.',
+    '- Marken und Produktnamen bleiben genau so stehen, auch wenn sie aus deutschen Wörtern bestehen',
+    '  (z. B. 4 cl Jägermeister Manifest → 4 cl Jägermeister Manifest; 1 Dose Bärenmarke Kondensmilch →',
+    '  1 can Bärenmarke condensed milk → 1 boîte de lait concentré Bärenmarke).',
     '- Nichts weglassen, nichts hinzufügen, keine Erklärungen. Jeder Eintrag behält seine Nummer nr.',
     '',
     'Rezept (JSON):',

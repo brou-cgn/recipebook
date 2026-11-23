@@ -241,6 +241,13 @@ test('baueTitelPrompt und Schema: nur Englisch und Französisch, nicht Deutsches
   assert.deepEqual(Object.keys(TITEL_RESPONSE_SCHEMA.properties.titel.items.properties), ['nr', 'en', 'fr']);
 });
 
+test('baueTitelPrompt: Marken und Produktnamen aus deutschen Wörtern bleiben stehen', () => {
+  const prompt = baueTitelPrompt(['Rinderbraten mit Jägermeister Manifest']);
+  assert.match(prompt, /Marken und Produktnamen bleiben genau so stehen, auch wenn sie aus deutschen Wörtern bestehen/);
+  assert.match(prompt, /Jägermeister Manifest, Bärenmarke, Hohes C/);
+  assert.match(prompt, /Beef roast with Jägermeister Manifest →\n {2}Rôti de bœuf au Jägermeister Manifest/);
+});
+
 test('brauchtTitelUebersetzung: nur mit Titel, ohne laufenden Import und wenn die Quelle nicht passt', () => {
   assert.equal(brauchtTitelUebersetzung({title: 'Suppe'}), true);
   assert.equal(brauchtTitelUebersetzung({...mitUebersetzung('Suppe'), title: 'Suppe neu'}), true);

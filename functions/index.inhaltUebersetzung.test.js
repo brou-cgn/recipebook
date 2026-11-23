@@ -228,6 +228,13 @@ test('Prompt und Schema: deutsches Original, nur Englisch und Französisch, nich
   assert.deepEqual(INHALT_RESPONSE_SCHEMA.required, ['en', 'fr']);
 });
 
+test('Prompt: Marken und Produktnamen aus deutschen Wörtern bleiben stehen', () => {
+  const prompt = baueInhaltPrompt(anfrageAusRezept({ingredients: ['4 cl Jägermeister Manifest'], steps: []}));
+  assert.match(prompt, /Marken und Produktnamen bleiben genau so stehen, auch wenn sie aus deutschen Wörtern bestehen/);
+  assert.match(prompt, /4 cl Jägermeister Manifest → 4 cl Jägermeister Manifest/);
+  assert.match(prompt, /1 boîte de lait concentré Bärenmarke/);
+});
+
 test('Prüfung: jede Zielsprache, jeder Eintrag; sonst null', () => {
   const anfrage = anfrageAusRezept(REZEPT);
   const ok = pruefeInhaltAntwort(uebersetzt(anfrage), anfrage);

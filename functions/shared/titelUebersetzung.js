@@ -12,7 +12,8 @@
  * Der Titel ist immer das deutsche Original (Entscheidung „Primärsprache“), auch wenn er ganz
  * oder teilweise englisch ist („American Pancakes“). Gemini übersetzt deshalb nur ins Englische
  * und Französische; `originalSprache` ist immer `de` und `de` der Titel selbst. Was im Titel nicht
- * deutsch ist, bleibt als feststehender Begriff in jeder Sprache stehen.
+ * deutsch ist, bleibt als feststehender Begriff in jeder Sprache stehen, ebenso Marken und
+ * Produktnamen aus deutschen Wörtern („Jägermeister Manifest“).
  *
  * `version` 2 steht für diese Regeln. Bis Version 1 (ohne Feld) erkannte Gemini die Sprache am Titel
  * allein und übersetzte englische Gerichtsnamen deutscher Rezepte ins Deutsche
@@ -64,8 +65,12 @@ function baueTitelPrompt(titel) {
     '  stehen (z. B. American Pancakes, Pulled Pork, Banana Bread, Chili con Carne, Crème brûlée).',
     '  Übersetzt werden nur die deutschen Wörter (z. B. American Pancakes mit Blaubeeren →',
     '  American Pancakes with blueberries → American Pancakes aux myrtilles).',
-    '- Feststehende Gerichtsnamen (z. B. Tiramisu, Ratatouille, Shakshuka, Wiener Schnitzel), Eigennamen',
-    '  und Marken bleiben stehen.',
+    '- Feststehende Gerichtsnamen (z. B. Tiramisu, Ratatouille, Shakshuka, Wiener Schnitzel) und Eigennamen',
+    '  bleiben stehen.',
+    '- Marken und Produktnamen bleiben genau so stehen, auch wenn sie aus deutschen Wörtern bestehen',
+    '  (z. B. Jägermeister Manifest, Bärenmarke, Hohes C); übersetzt werden nur die Wörter drumherum',
+    '  (z. B. Rinderbraten mit Jägermeister Manifest → Beef roast with Jägermeister Manifest →',
+    '  Rôti de bœuf au Jägermeister Manifest).',
     '- Keine Anführungszeichen, keine Erklärungen, keine Emojis, nichts hinzufügen oder weglassen.',
     '- nr ist die Nummer des Titels aus der Liste.',
     '',
