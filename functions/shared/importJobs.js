@@ -8,7 +8,7 @@ const {getStorage} = require('firebase-admin/storage');
 const {getMessaging} = require('firebase-admin/messaging');
 const {finalizeImportJob, failImportJob} = require('./importCore');
 const {isInstagramUrl, BATCH_IMAGE_CONCURRENCY, validateImageData, runImportFromInstagram, runImportFromUrl, mergePhotoAiResultsServer, MAX_REEL_VIDEO_SIZE} = require('./importSources');
-const {callGeminiAPI, callGeminiTextAPI, getRecipeExtractionPrompt, RECIPE_EXTRACTION_RESPONSE_SCHEMA, DEUTSCH_REGEL, rezeptAusAntwort, transcribeVideoWithGemini} = require('./gemini');
+const {callGeminiAPI, callGeminiTextAPI, getRecipeExtractionPrompt, RECIPE_EXTRACTION_RESPONSE_SCHEMA, scanSpracheRegel, rezeptAusAntwort, transcribeVideoWithGemini} = require('./gemini');
 const {resolveImportLists} = require('./importLists');
 const {geminiApiKey} = require('./secrets');
 const {geminiGenerateContentRequest} = require('./geminiConfig');
@@ -329,8 +329,8 @@ async function runImportFromUniversalSource(source, {apiKey} = {}) {
  * continuation page's content lands in the combined result instead of
  * being discarded.
  * @param {Array<{mimeType: string, base64Data: string}>} imageInputs
- * @param {string} lang - Sprache aus der Anfrage; ändert das Ergebnis nicht mehr, das Rezept kommt immer deutsch
- *   (DEUTSCH_REGEL, Tech-Check F23)
+ * @param {string} lang - Sprache des Rezepts laut Auswahl; nur ein Hinweis, das Rezept kommt immer deutsch
+ *   (scanSpracheRegel, Tech-Check F23)
  * @param {string} apiKey
  * @param {string[]|undefined} cuisineTypes
  * @param {string[]|undefined} mealCategories
@@ -368,7 +368,7 @@ async function callGeminiMultiImageAPI(imageInputs, lang, apiKey, cuisineTypes, 
   // prompt instead makes it the last instruction the model reads before
   // the images themselves, so it overrides the singular framing rather
   // than competing with it.
-  // Immer deutsch wie der Prompt selbst; das Rezept kommt ohnehin auf Deutsch (DEUTSCH_REGEL, Tech-Check F23).
+  // Immer deutsch wie der Prompt selbst; das Rezept kommt ohnehin auf Deutsch (scanSpracheRegel, Tech-Check F23).
   const multiPageNote =
     '\n\nWICHTIGER HINWEIS ZU DEN BILDERN: Die obigen Anweisungen sprechen von "dem Bild" (Singular) – ' +
       'tatsächlich erhältst du mehrere Fotos, die zusammen SEITEN DESSELBEN Rezepts zeigen, in der Reihenfolge, ' +
@@ -377,7 +377,8 @@ async function callGeminiMultiImageAPI(imageInputs, lang, apiKey, cuisineTypes, 
       'EINEM vollständigen Rezept-JSON. Ignoriere KEIN Foto, auch wenn es für sich allein unvollständig wirkt ' +
       '(z. B. nur Zubereitungsschritte ohne eigenen Titel) – solche Fotos ergänzen die Informationen der anderen.';
 
-  const parts = [{text: prompt + DEUTSCH_REGEL + multiPageNote}];
+  // Regel zur Sprache vor dem Hinweis zu den Bildern: Der soll als letzte Anweisung vor den Fotos stehen.
+  const parts = [{text: prompt + scanSpracheRegel(lang) + multiPageNote}];
   for (const {mimeType, base64Data} of imageInputs) {
     parts.push({inline_data: {mime_type: mimeType, data: base64Data}});
   }

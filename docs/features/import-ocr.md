@@ -113,7 +113,7 @@ import { recognizeRecipeWithAI } from './utils/aiOcrService';
 async function scanRecipeWithAI(imageBase64) {
   try {
     const result = await recognizeRecipeWithAI(imageBase64, {
-      language: 'de', // 'en' ist erlaubt, ändert aber nichts: Das Rezept kommt immer deutsch (Tech-Check F23)
+      language: 'de', // oder 'en': nur ein Hinweis für die Erkennung, das Rezept kommt immer deutsch (Tech-Check F23)
       provider: 'gemini' // optional, Standard ist 'gemini'
     });
     
