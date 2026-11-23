@@ -130,7 +130,9 @@ erzwungen — wo das gilt, steht die Datei dabei.
   Handy und Desktop; `docs/setup/screenshots.md`) und sieht die Bilder vor dem PR an. Fehlt ein
   betroffener Bildschirm, in `scripts/screenshots/capture.js` ergänzen.
 - Cloud Functions: Tests und Lint in `functions/` (`npm run lint`).
-- Cloud Functions-Aufbau (Tech-Check F2): `functions/index.js` enthält nur Re-Exports. Jede Function
+- Cloud Functions-Aufbau (Tech-Check F2): `functions/index.js` enthält nur Re-Exports (davor nur
+  `initializeApp` und `applyGlobalOptions` aus `shared/runtimeOptions.js`: das Dienstkonto aller Functions,
+  Tech-Check S15, `docs/setup/functions-dienstkonto.md`; eine Function setzt kein eigenes). Jede Function
   liegt in `functions/handlers/<gruppe>.js`; von mehreren Gruppen genutzte Helfer in
   `functions/shared/<thema>.js` (Secrets, Auth, Rate-Limit, Gemini, Import-Kern usw.). Neue Function:
   in ein Handler-Modul schreiben und den Namen in `index.exportNames.test.js` eintragen. Bibliotheksdateien

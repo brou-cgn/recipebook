@@ -8,6 +8,10 @@ const {initializeApp} = require('firebase-admin/app');
 // Initialize Firebase Admin
 initializeApp();
 
+// Dienstkonto aller Functions (Tech-Check S15). Muss vor dem ersten Handler stehen: firebase-functions
+// liest die globalen Optionen, wenn eine Function definiert wird (runtimeOptions.test.js).
+require('./shared/runtimeOptions').applyGlobalOptions();
+
 // Getränke-Kalkulation für Events (Menüpunkt "Events" im Hamburger-Menü).
 exports.calculateEventDrinks = require('./calculateEventDrinks').calculateEventDrinks;
 exports.submitConsumption = require('./submitConsumption').submitConsumption;
