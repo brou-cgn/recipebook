@@ -1,14 +1,18 @@
 import {
+  KI_UNGEPRUEFT,
   UEBERSETZBARE_LISTEN,
   ZIELSPRACHEN,
+  alsGeprueft,
   baueListenIndex,
   bereinigeUebersetzungen,
   einheitText,
   fehlendeUebersetzungen,
+  istUngeprueft,
   kulinarikText,
   listenwertText,
   mitUebersetzung,
   quellwerte,
+  ungepruefteWerte,
 } from './listenwerte';
 
 const LISTS = {
@@ -90,5 +94,41 @@ describe('listenwerte', () => {
     const bereinigt = bereinigeUebersetzungen(LISTS, alt);
     expect(bereinigt.mealCategories).toBeUndefined();
     expect(bereinigt.cuisineTypes).toEqual(UEBERSETZUNGEN.cuisineTypes);
+  });
+
+  describe('Übersetzungen der Automatik (kiUngeprueft, PR 6t)', () => {
+    const MIT_KI = {
+      ...UEBERSETZUNGEN,
+      cuisineTypes: [
+        ...UEBERSETZUNGEN.cuisineTypes,
+        { wert: 'Deutsche Küche', en: 'German cuisine', fr: 'Cuisine allemande', [KI_UNGEPRUEFT]: ['en', 'fr'] },
+      ],
+      mealCategories: [{ wert: 'Gelöscht', en: 'Deleted', fr: 'Supprimé', [KI_UNGEPRUEFT]: ['fr'] }],
+    };
+
+    it('erkennt ungeprüfte Übersetzungen je Sprache und zählt nur vorhandene Werte', () => {
+      const kiIndex = baueListenIndex(MIT_KI);
+      expect(istUngeprueft(kiIndex, 'cuisineTypes', 'Deutsche Küche', 'fr')).toBe(true);
+      expect(istUngeprueft(kiIndex, 'cuisineTypes', 'Italienische Küche', 'en')).toBe(false);
+      expect(listenwertText(kiIndex, 'cuisineTypes', 'Deutsche Küche', 'en')).toBe('German cuisine');
+      expect(ungepruefteWerte(LISTS, MIT_KI)).toEqual([{ liste: 'cuisineTypes', wert: 'Deutsche Küche' }]);
+    });
+
+    it('wer eine Sprache ändert, hat sie geprüft; die andere bleibt markiert', () => {
+      const geaendert = mitUebersetzung(MIT_KI, 'cuisineTypes', 'Deutsche Küche', 'en', 'German');
+      const eintrag = geaendert.cuisineTypes.find((e) => e.wert === 'Deutsche Küche');
+      expect(eintrag).toEqual({ wert: 'Deutsche Küche', en: 'German', fr: 'Cuisine allemande', [KI_UNGEPRUEFT]: ['fr'] });
+      const beide = mitUebersetzung(geaendert, 'cuisineTypes', 'Deutsche Küche', 'fr', 'Allemande');
+      expect(beide.cuisineTypes.find((e) => e.wert === 'Deutsche Küche')[KI_UNGEPRUEFT]).toBeUndefined();
+    });
+
+    it('alsGeprueft entfernt alle Markierungen und lässt die Übersetzungen stehen', () => {
+      const geprueft = alsGeprueft(MIT_KI);
+      expect(geprueft.cuisineTypes[1]).toEqual({ wert: 'Deutsche Küche', en: 'German cuisine', fr: 'Cuisine allemande' });
+      expect(geprueft.mealCategories).toEqual([{ wert: 'Gelöscht', en: 'Deleted', fr: 'Supprimé' }]);
+      expect(geprueft.portionUnits).toEqual(UEBERSETZUNGEN.portionUnits);
+      expect(ungepruefteWerte(LISTS, geprueft)).toEqual([]);
+      expect(alsGeprueft(null)).toEqual({});
+    });
   });
 });

@@ -4,7 +4,7 @@
 import { db } from '../firebase';
 import { defaultIcon, DEFAULT_ICON_NAMES } from './defaultButtonIcons';
 import { DEFAULT_ADD_NUTRITION_ICON } from './nutritionIconUtils';
-import { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField, collection, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField, collection, writeBatch, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { normalizeNutritionReferenceId } from './nutritionReferenceUtils';
 import { DEFAULT_PRINT_FORMATS, migrateFormat, validatePrintFormats, PrintFormatValidationError } from './printFormats';
 import { getDefaultButtonIconGroups, reconcileButtonIconGroups, reconcileCuisineTypeGroup, reconcileMealCategoriesGroup, cuisineTypeIconKey } from './buttonIconRows';
@@ -1522,6 +1522,29 @@ export async function saveCommonUnits(groups, userId) {
 export async function getListenUebersetzungen() {
   const settings = await getSettings();
   return settings.listenUebersetzungen || null;
+}
+
+/**
+ * Hört auf die Übersetzungen der Auswahllisten, solange Einstellungen › Listen & Kategorien offen
+ * ist: Neue Listenwerte übersetzt die Function uebersetzeListenwerteAutomatisch nach dem Speichern
+ * der Listen (Mehrsprachigkeit PR 6t), ihre Übersetzungen erscheinen so ohne Neuladen. Hält auch
+ * den Einstellungs-Cache aktuell.
+ * @param {(uebersetzungen: Object|null) => void} callback
+ * @returns {() => void} Abmelden
+ */
+export function subscribeListenUebersetzungen(callback) {
+  return onSnapshot(
+    doc(db, 'settings', 'app'),
+    (snapshot) => {
+      const listenUebersetzungen = (snapshot.exists() && snapshot.data().listenUebersetzungen) || null;
+      if (settingsCache) {
+        settingsCache = { ...settingsCache, listenUebersetzungen };
+        saveSettingsToLocalStorageCache(settingsCache);
+      }
+      callback(listenUebersetzungen);
+    },
+    (error) => console.warn('Übersetzungen der Listen konnten nicht abonniert werden:', error)
+  );
 }
 
 /**

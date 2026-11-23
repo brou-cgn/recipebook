@@ -16,11 +16,13 @@ jest.mock('firebase/firestore', () => ({
   collection: jest.fn((db, ...segments) => ({ id: segments.join('/') })),
   writeBatch: jest.fn(),
   serverTimestamp: jest.fn(() => ({ _methodName: 'FieldValue.serverTimestamp' })),
+  onSnapshot: jest.fn(),
 }));
 
 import {
   getSettings,
   getListenUebersetzungen,
+  subscribeListenUebersetzungen,
   getCustomLists,
   saveCustomLists,
   clearSettingsCache,
@@ -58,7 +60,7 @@ import {
   resetAIRecipePrompt,
 } from './customLists';
 import { defaultIcon } from './defaultButtonIcons';
-import { getDoc, getDocs, updateDoc, setDoc, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { getDoc, getDocs, updateDoc, setDoc, doc, writeBatch, serverTimestamp, onSnapshot } from 'firebase/firestore';
 
 const mockBatch = {
   set: jest.fn(),
@@ -126,6 +128,24 @@ describe('getListenUebersetzungen (Mehrsprachigkeit PR 5)', () => {
     mockGetDoc.mockResolvedValue({ exists: () => true, data: () => ({}) });
 
     await expect(getListenUebersetzungen()).resolves.toBeNull();
+  });
+
+  test('subscribeListenUebersetzungen meldet jeden Stand von settings/app und hält den Cache aktuell (PR 6t)', async () => {
+    mockGetDoc.mockResolvedValue({ exists: () => true, data: () => ({ listenUebersetzungen: null }) });
+    await getSettings();
+    const abmelden = jest.fn();
+    onSnapshot.mockReset();
+    onSnapshot.mockReturnValue(abmelden);
+    const callback = jest.fn();
+
+    expect(subscribeListenUebersetzungen(callback)).toBe(abmelden);
+    expect(onSnapshot.mock.calls[0][0]).toEqual({ path: 'settings/app' });
+    const [, beiStand] = onSnapshot.mock.calls[0];
+    beiStand({ exists: () => true, data: () => ({ listenUebersetzungen: gespeichert, headerSlogan: 'x' }) });
+    expect(callback).toHaveBeenLastCalledWith(gespeichert);
+    await expect(getListenUebersetzungen()).resolves.toEqual(gespeichert);
+    beiStand({ exists: () => true, data: () => ({}) });
+    expect(callback).toHaveBeenLastCalledWith(null);
   });
 });
 

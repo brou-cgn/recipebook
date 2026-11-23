@@ -30,6 +30,8 @@
  * uebersetzeListenwerte (nur admin, PR 5) liefert Vorschläge für Übersetzungen der Auswahllisten
  * (Kulinarik, Speisekategorien, Einheiten). Sie schreibt nichts; gespeichert wird im Client unter
  * Einstellungen › Listen & Kategorien (settings/app.listenUebersetzungen).
+ * uebersetzeListenwerteAutomatisch (Trigger auf settings/app, PR 6t) übersetzt neue Listenwerte
+ * selbst, sobald eine Liste sich ändert, und füllt dabei nur leere Felder.
  */
 
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
@@ -58,10 +60,14 @@ const {
   istAktuelleInhaltUebersetzung,
 } = require('../shared/inhaltUebersetzung');
 const {
+  MAX_EINTRAEGE: MAX_LISTENWERTE_JE_AUFRUF,
   LISTEN_RESPONSE_SCHEMA,
   pruefeListenEingabe,
   baueListenPrompt,
   pruefeListenAntwort,
+  fehlendeListenwerte,
+  ergaenzeListenUebersetzungen,
+  listenStand,
 } = require('../shared/listenUebersetzung');
 
 const LIMIT_COLLECTION = 'aiTitelUebersetzungLimits';
@@ -695,12 +701,64 @@ exports.backfillInhaltUebersetzungen = onCall(
     },
 );
 
-// ── Auswahllisten (PR 5) ──────────────────────────────────────────────────────
+// ── Auswahllisten (PR 5, Automatik PR 6t) ─────────────────────────────────────
 
 const LISTEN_LIMIT_COLLECTION = 'aiListenUebersetzungLimits';
-/** Aufrufe je Admin und Tag (fail closed); ein Aufruf übersetzt bis zu 100 Listenwerte. */
+/**
+ * Tageslimits in aiListenUebersetzungLimits, gezählt je Gemini-Aufruf mit bis zu 100 Listenwerten
+ * (fail closed): je Admin für die Vorschläge, für den Trigger gemeinsam unter `automatik`. Neue
+ * Listenwerte sind selten; die Grenze des Triggers schützt vor Schleifen, nicht vor Gebrauch.
+ */
 const LIMIT_LISTEN_ADMIN = 100;
+const LIMIT_LISTEN_AUTOMATIK = 50;
 const LISTEN_GEMINI_TIMEOUT_MS = 60000;
+
+/**
+ * Ein Gemini-Aufruf für Listenwerte (temperature 0, JSON mit festem Schema).
+ * @param {string} apiKey
+ * @param {Array<object>} eintraege - aus pruefeListenEingabe
+ * @param {string} name - Name der Function, nur für Protokolle
+ * @return {Promise<Array<object>|null>} geprüfte Vorschläge (Einträge ohne gültige Antwort fehlen)
+ *   oder null, wenn der KI-Dienst nicht geantwortet hat
+ */
+async function uebersetzeListen(apiKey, eintraege, name) {
+  const {url, headers} = geminiGenerateContentRequest(apiKey);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), LISTEN_GEMINI_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      signal: controller.signal,
+      body: JSON.stringify({
+        contents: [{parts: [{text: baueListenPrompt(eintraege)}]}],
+        generationConfig: {
+          temperature: 0,
+          responseMimeType: 'application/json',
+          responseSchema: LISTEN_RESPONSE_SCHEMA,
+        },
+      }),
+    });
+    if (!response.ok) {
+      console.error(`${name}: Gemini antwortet ${response.status}`);
+      return null;
+    }
+    const data = await response.json();
+    let geparst = null;
+    try {
+      geparst = JSON.parse(data?.candidates?.[0]?.content?.parts?.[0]?.text);
+    } catch {
+      console.error(`${name}: keine JSON-Antwort`);
+    }
+    return pruefeListenAntwort(geparst, eintraege);
+  } catch (error) {
+    const art = error?.name === 'AbortError' ? 'Zeitüberschreitung' : error?.message;
+    console.error(`${name}: Gemini nicht erreichbar: ${art}`);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /**
  * Cloud Function: Übersetzungsvorschläge für Listenwerte (nur admin).
@@ -745,46 +803,79 @@ exports.uebersetzeListenwerte = onCall(
         );
       }
 
-      const {url, headers} = geminiGenerateContentRequest(apiKey);
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), LISTEN_GEMINI_TIMEOUT_MS);
-      let vorschlaege;
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers,
-          signal: controller.signal,
-          body: JSON.stringify({
-            contents: [{parts: [{text: baueListenPrompt(eintraege)}]}],
-            generationConfig: {
-              temperature: 0,
-              responseMimeType: 'application/json',
-              responseSchema: LISTEN_RESPONSE_SCHEMA,
-            },
-          }),
-        });
-        if (!response.ok) {
-          console.error(`uebersetzeListenwerte: Gemini antwortet ${response.status}`);
-          throw new HttpsError('unavailable', 'Der KI-Dienst hat nicht geantwortet. Versuche es gleich noch einmal.');
-        }
-        const data = await response.json();
-        let geparst = null;
-        try {
-          geparst = JSON.parse(data?.candidates?.[0]?.content?.parts?.[0]?.text);
-        } catch {
-          console.error('uebersetzeListenwerte: keine JSON-Antwort');
-        }
-        vorschlaege = pruefeListenAntwort(geparst, eintraege);
-      } catch (error) {
-        if (error instanceof HttpsError) throw error;
-        const art = error?.name === 'AbortError' ? 'Zeitüberschreitung' : error?.message;
-        console.error(`uebersetzeListenwerte: Gemini nicht erreichbar: ${art}`);
+      const vorschlaege = await uebersetzeListen(apiKey, eintraege, 'uebersetzeListenwerte');
+      if (!vorschlaege) {
         throw new HttpsError('unavailable', 'Der KI-Dienst hat nicht geantwortet. Versuche es gleich noch einmal.');
-      } finally {
-        clearTimeout(timer);
       }
-
       console.log(`uebersetzeListenwerte: ${vorschlaege.length} von ${eintraege.length} Vorschlägen`);
       return {vorschlaege, remainingRequests: quota.remaining, dailyLimit: LIMIT_LISTEN_ADMIN};
+    },
+);
+
+/**
+ * Trigger: übersetzt neue Listenwerte (Entscheidung „Listenwerte automatisch übersetzen“, PR 6t).
+ *
+ * Wacht nur auf, wenn sich eine Liste oder listenUebersetzungen geändert hat, und liest dann
+ * settings/app frisch: Mehrere Speichervorgänge kurz hintereinander übersetzen so nicht doppelt
+ * (maxInstances 1 arbeitet sie nacheinander ab). Je Lauf gehen bis zu 100 fehlende Werte in einen
+ * Gemini-Aufruf; schreibt der Lauf etwas, weckt das den Trigger für den Rest erneut. Geschrieben
+ * wird in einer Transaktion und nur in leere Felder (ergaenzeListenUebersetzungen): Von Hand
+ * gepflegte Übersetzungen bleiben, die gefüllten Sprachen stehen in kiUngeprueft, bis jemand sie
+ * unter Einstellungen › Listen & Kategorien prüft. Bringt ein Lauf nichts Neues, schreibt er nicht;
+ * scheitert die KI an einem Wert, bleibt er bis zur nächsten Änderung an den Listen offen.
+ */
+exports.uebersetzeListenwerteAutomatisch = onDocumentWritten(
+    {
+      document: 'settings/app',
+      region: 'us-central1',
+      secrets: [geminiApiKey],
+      memory: '256MiB',
+      timeoutSeconds: 120,
+      maxInstances: 1,
+    },
+    async (event) => {
+      const vorher = event.data?.before;
+      const nachher = event.data?.after;
+      if (!nachher?.exists) return;
+      if (vorher?.exists && listenStand(vorher.data()) === listenStand(nachher.data())) return;
+
+      const db = getFirestore();
+      const ref = db.collection('settings').doc('app');
+      const aktuell = await ref.get();
+      if (!aktuell.exists) return;
+      const anfrage = fehlendeListenwerte(aktuell.data()).slice(0, MAX_LISTENWERTE_JE_AUFRUF);
+      if (anfrage.length === 0) return;
+
+      const apiKey = geminiApiKey.value();
+      if (!apiKey) {
+        console.error('uebersetzeListenwerteAutomatisch: GEMINI_API_KEY ist nicht gesetzt');
+        return;
+      }
+      let quota;
+      try {
+        quota = await consumeDailyQuota(LISTEN_LIMIT_COLLECTION, LIMIT_LISTEN_AUTOMATIK, AUTOMATIK);
+      } catch {
+        return; // nicht prüfbar: fail closed, consumeDailyQuota hat schon protokolliert
+      }
+      if (!quota.allowed) {
+        console.warn(`uebersetzeListenwerteAutomatisch: Tageslimit erreicht, ${anfrage.length} Werte bleiben vorerst unübersetzt`);
+        return;
+      }
+
+      const vorschlaege = await uebersetzeListen(apiKey, pruefeListenEingabe(anfrage), 'uebersetzeListenwerteAutomatisch');
+      if (!vorschlaege?.length) return;
+      try {
+        const neu = await db.runTransaction(async (transaktion) => {
+          const stand = await transaktion.get(ref);
+          if (!stand.exists) return 0;
+          const ergebnis = ergaenzeListenUebersetzungen(stand.data(), anfrage, vorschlaege);
+          if (ergebnis.neu > 0) transaktion.update(ref, {listenUebersetzungen: ergebnis.listenUebersetzungen});
+          return ergebnis.neu;
+        });
+        console.log(`uebersetzeListenwerteAutomatisch: ${anfrage.length} Werte angefragt, ${vorschlaege.length} übersetzt, ` +
+          `${neu} Sprachfelder eingetragen`);
+      } catch (error) {
+        console.error(`uebersetzeListenwerteAutomatisch: Speichern fehlgeschlagen: ${error?.code || error?.message}`);
+      }
     },
 );

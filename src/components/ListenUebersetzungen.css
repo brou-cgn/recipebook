@@ -1,4 +1,4 @@
-/* Einstellungen › Listen & Kategorien: Übersetzungen der Listen (Mehrsprachigkeit PR 5) */
+/* Einstellungen › Listen & Kategorien: Übersetzungen der Listen (Mehrsprachigkeit PR 5, KI-Hinweis PR 6t) */
 .listen-uebersetzungen-liste {
   margin: 0.5rem 0;
   border: 1px solid var(--color-border);
@@ -44,4 +44,17 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+}
+
+/* Übersetzung der Automatik, noch nicht geprüft (PR 6t) */
+.listen-uebersetzungen-tabelle .listen-uebersetzungen-ki input {
+  border-color: var(--color-text-muted);
+  border-style: dashed;
+}
+
+.listen-uebersetzungen .listen-uebersetzungen-ki-hinweis {
+  display: inline-block;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
 }
