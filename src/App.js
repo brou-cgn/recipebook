@@ -104,6 +104,8 @@ import { RecipeImportQueueProvider, useRecipeImportQueue } from './contexts/Reci
 import { useSprache, useSpracheFuerNutzer, useTexte } from './contexts/SpracheContext';
 import bereicheTexte from './i18n/texte/bereiche';
 import anmeldungTexte from './i18n/texte/anmeldung';
+import appMeldungenTexte from './i18n/texte/appMeldungen';
+import allgemeinTexte from './i18n/texte/allgemein';
 import { updateAppBadge } from './utils/appBadge';
 import { resolveRecipeGroupContext, resolveImportGroupContext } from './utils/recipeGroupContext';
 import { openRecipeWithTransition } from './utils/recipeViewTransition';
@@ -141,9 +143,10 @@ const AtelierSwipeTrainerOverlay = lazy(() => import('./components/AtelierSwipeT
 const AtelierTasteIntroOverlay = lazy(() => import('./components/AtelierTasteIntroOverlay'));
 const AtelierCategorySelectionPage = lazy(() => import('./components/AtelierCategorySelectionPage'));
 
-const ViewLoadingFallback = () => (
-  <div style={{ padding: '2rem', textAlign: 'center' }}>Laden...</div>
-);
+const ViewLoadingFallback = () => {
+  const t = useTexte(allgemeinTexte);
+  return <div style={{ padding: '2rem', textAlign: 'center' }}>{t('laden')}</div>;
+};
 
 const PENDING_WEBIMPORT_URL_STORAGE_KEY = 'pendingWebimportUrl';
 const PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY = 'pendingWebimportAuthor';
@@ -491,6 +494,8 @@ function App() {
   useSpracheFuerNutzer(currentUser, { anmeldungGeprueft: !authLoading });
   const tBereiche = useTexte(bereicheTexte);
   const tAnmeldung = useTexte(anmeldungTexte);
+  // Meldungen und Hinweise der App (Mehrsprachigkeit PR 6m)
+  const tMeldungen = useTexte(appMeldungenTexte);
   const { setzeListenUebersetzungen } = useSprache();
   const [allUsers, setAllUsers] = useState([]);
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -1761,7 +1766,7 @@ function App() {
       setWebimportDeeplink('');
     } catch (error) {
       console.error('Error saving recipe:', error);
-      alert('Fehler beim Speichern des Rezepts. Bitte versuchen Sie es erneut.');
+      alert(tMeldungen('fehlerRezeptSpeichern'));
     }
   };
 
@@ -1788,18 +1793,18 @@ function App() {
 
       // Show success message with details
       if (errors.length === 0) {
-        alert(`✓ ${successCount} Rezept(e) erfolgreich importiert!`);
+        alert(tMeldungen('rezepteImportiert', { anzahl: successCount }));
       } else {
         const failedRecipes = errors.map(e => `- ${e.title}: ${e.error}`).join('\n');
         alert(
-          `Import abgeschlossen:\n\n` +
-          `✓ ${successCount} Rezept(e) erfolgreich importiert\n` +
-          `✗ ${errors.length} fehlgeschlagen:\n\n${failedRecipes}`
+          `${tMeldungen('importAbgeschlossen')}\n\n` +
+          `${tMeldungen('rezepteImportiertKurz', { anzahl: successCount })}\n` +
+          `${tMeldungen('rezepteFehlgeschlagen', { anzahl: errors.length })}\n\n${failedRecipes}`
         );
       }
     } catch (error) {
       console.error('Error bulk importing recipes:', error);
-      alert('Fehler beim Importieren der Rezepte. Bitte versuchen Sie es erneut.');
+      alert(tMeldungen('fehlerRezepteImportieren'));
     }
   };
 
@@ -1811,7 +1816,7 @@ function App() {
       setSelectedRecipe(null);
     } catch (error) {
       console.error('Error deleting recipe:', error);
-      alert('Fehler beim Löschen des Rezepts. Bitte versuchen Sie es erneut.');
+      alert(tMeldungen('fehlerRezeptLoeschen'));
     }
   };
 
@@ -1825,7 +1830,7 @@ function App() {
       }
     } catch (error) {
       console.error('Error publishing recipe:', error);
-      alert('Fehler beim Veröffentlichen des Rezepts. Bitte versuchen Sie es erneut.');
+      alert(tMeldungen('fehlerRezeptVeroeffentlichen'));
     }
   };
 
@@ -2099,7 +2104,7 @@ function App() {
 
   const handleEditMenu = (menu) => {
     if (!canEditMenu(currentUser, menu)) {
-      alert('Sie haben keine Berechtigung, dieses Menü zu bearbeiten.');
+      alert(tMeldungen('keineBerechtigungMenueBearbeiten'));
       return;
     }
     setEditingMenu(menu);
@@ -2123,7 +2128,7 @@ function App() {
       setEditingMenu(null);
     } catch (error) {
       console.error('Error saving menu:', error);
-      alert('Fehler beim Speichern des Menüs. Bitte versuchen Sie es erneut.');
+      alert(tMeldungen('fehlerMenueSpeichern'));
     }
   };
 
@@ -2132,7 +2137,7 @@ function App() {
 
     const menu = menus.find(m => m.id === menuId);
     if (!canDeleteMenu(currentUser, menu)) {
-      alert('Sie haben keine Berechtigung, dieses Menü zu löschen.');
+      alert(tMeldungen('keineBerechtigungMenueLoeschen'));
       return;
     }
 
@@ -2141,7 +2146,7 @@ function App() {
       setSelectedMenu(null);
     } catch (error) {
       console.error('Error deleting menu:', error);
-      alert('Fehler beim Löschen des Menüs. Bitte versuchen Sie es erneut.');
+      alert(tMeldungen('fehlerMenueLoeschen'));
     }
   };
 
@@ -2150,7 +2155,7 @@ function App() {
 
     const menu = menus.find(m => m.id === menuId);
     if (!canEditMenu(currentUser, menu)) {
-      alert('Sie haben keine Berechtigung, dieses Menü freizugeben.');
+      alert(tMeldungen('keineBerechtigungMenueVeroeffentlichen'));
       return;
     }
 
@@ -2161,7 +2166,7 @@ function App() {
       }
     } catch (error) {
       console.error('Error publishing menu:', error);
-      alert('Fehler beim Freigeben des Menüs. Bitte versuchen Sie es erneut.');
+      alert(tMeldungen('fehlerMenueVeroeffentlichen'));
     }
   };
 
@@ -2250,7 +2255,7 @@ function App() {
       }
     } catch (error) {
       console.error('Error creating group:', error);
-      alert('Fehler beim Erstellen der Gruppe. Bitte versuchen Sie es erneut.');
+      alert(tMeldungen('fehlerGruppeErstellen'));
     }
   };
 
@@ -2304,7 +2309,7 @@ function App() {
       }
     } catch (error) {
       console.error('Error creating inspiration list:', error);
-      alert('Fehler beim Anlegen der Inspirationssammlung. Bitte versuchen Sie es erneut.');
+      alert(tMeldungen('fehlerInspirationAnlegen'));
     }
   };
 
@@ -2349,7 +2354,7 @@ function App() {
       }
     } catch (error) {
       console.error('Error selecting existing inspiration list:', error);
-      alert('Fehler beim Hinterlegen der Inspirationssammlung. Bitte versuchen Sie es erneut.');
+      alert(tMeldungen('fehlerInspirationHinterlegen'));
     }
   };
 
@@ -2379,7 +2384,7 @@ function App() {
       await updateGroupInFirestore(groupId, updates);
     } catch (error) {
       console.error('Error updating group:', error);
-      alert('Fehler beim Aktualisieren der Gruppe. Bitte versuchen Sie es erneut.');
+      alert(tMeldungen('fehlerGruppeAktualisieren'));
     }
   };
 
@@ -2417,7 +2422,7 @@ function App() {
       setGroups(prev => prev.map(g => (g.id === groupId ? { ...g, ...updates } : g)));
     } catch (error) {
       console.error('Error editing group properties:', error);
-      alert('Fehler beim Bearbeiten der Liste. Bitte versuchen Sie es erneut.');
+      alert(tMeldungen('fehlerListeBearbeiten'));
     }
   };
 
@@ -2427,7 +2432,7 @@ function App() {
       setSelectedGroup(null);
     } catch (error) {
       console.error('Error deleting group:', error);
-      alert('Fehler beim Löschen der Gruppe. Bitte versuchen Sie es erneut.');
+      alert(tMeldungen('fehlerGruppeLoeschen'));
     }
   };
 
@@ -2942,8 +2947,8 @@ function App() {
         <div className="undo-snackbar" role="status">
           <span className="undo-snackbar-message">
             {isFormOpen && !editingRecipe?.isTemp
-              ? 'Prüf-Rezept öffnet sich nach dem Schließen des Formulars'
-              : 'Rezept wird geöffnet …'}
+              ? tMeldungen('pruefRezeptNachFormular')
+              : tMeldungen('rezeptWirdGeoeffnet')}
           </span>
         </div>
       )}
@@ -3314,9 +3319,9 @@ function App() {
         )}
         {importToDiscard && (
           <ConfirmDialog
-            title="Import verwerfen"
-            message={`Möchten Sie den Import "${importToDiscard.title || 'Unbenanntes Rezept'}" wirklich verwerfen?`}
-            confirmLabel="Verwerfen"
+            title={tMeldungen('importVerwerfen')}
+            message={tMeldungen('importVerwerfenFrage', { titel: importToDiscard.title || tMeldungen('unbenanntesRezept') })}
+            confirmLabel={tMeldungen('verwerfen')}
             onConfirm={handleDiscardImportConfirmed}
             onCancel={() => setImportToDiscard(null)}
           />

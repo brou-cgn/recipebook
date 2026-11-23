@@ -67,7 +67,7 @@ export async function captureWebsiteScreenshot(url, onProgress = null) {
   try {
     new URL(normalizedUrl); // This will throw if URL is invalid
   } catch {
-    throw new Error('Ungültige URL. Bitte geben Sie eine vollständige URL ein (z.B. https://example.com)');
+    throw new Error('Ungültige URL. Bitte gib eine vollständige URL ein (z.B. https://example.com)');
   }
 
   if (onProgress) onProgress(10);
@@ -113,15 +113,15 @@ export async function captureWebsiteScreenshot(url, onProgress = null) {
 
     // Enhance error messages based on Firebase error codes
     if (code === 'unauthenticated') {
-      throw new Error('Sie müssen angemeldet sein, um den Webimport zu verwenden.', { cause: error });
+      throw new Error('Du musst angemeldet sein, um den Webimport zu verwenden.', { cause: error });
     } else if (code === 'resource-exhausted') {
-      throw new Error(message || 'Rate-Limit erreicht. Bitte versuchen Sie es später erneut.', { cause: error });
+      throw new Error(message || 'Rate-Limit erreicht. Bitte versuche es später erneut.', { cause: error });
     } else if (code === 'invalid-argument') {
       throw new Error(message || 'Ungültige URL angegeben.', { cause: error });
     } else if (code === 'failed-precondition') {
-      throw new Error('Webimport-Service nicht konfiguriert. Bitte kontaktieren Sie den Administrator.', { cause: error });
+      throw new Error('Webimport-Service nicht konfiguriert. Bitte kontaktiere den Administrator.', { cause: error });
     } else if (code === 'deadline-exceeded') {
-      throw new Error('Zeitüberschreitung beim Laden der Website. Bitte versuchen Sie es erneut.', { cause: error });
+      throw new Error('Zeitüberschreitung beim Laden der Website. Bitte versuche es erneut.', { cause: error });
     } else if (code === 'internal') {
       if (
         lowerMessage.includes('name_not_resolved') ||
@@ -130,12 +130,12 @@ export async function captureWebsiteScreenshot(url, onProgress = null) {
       ) {
         throw new Error('Die Website konnte nicht erreicht werden. Bitte prüfe die URL und versuche es erneut.', { cause: error });
       }
-      throw new Error('Fehler beim Erfassen der Website. Bitte versuchen Sie es erneut.', { cause: error });
+      throw new Error('Fehler beim Erfassen der Website. Bitte versuche es erneut.', { cause: error });
     } else if (message) {
       throw new Error(message, { cause: error });
     }
 
-    throw new Error('Fehler beim Erfassen der Website. Bitte versuchen Sie es erneut.', { cause: error });
+    throw new Error('Fehler beim Erfassen der Website. Bitte versuche es erneut.', { cause: error });
   }
 }
 
@@ -195,7 +195,7 @@ export async function importInstagramReel(url, onProgress = null, jobMeta = null
   const normalizedUrl = normalizeImportedUrl(url);
 
   if (!isInstagramUrl(normalizedUrl)) {
-    throw new Error('Ungültige Instagram-URL');
+    throw new Error('Ungültige Instagram-URL.');
   }
 
   if (onProgress) onProgress(10);
@@ -383,12 +383,12 @@ export async function parseRecipeImportPage(url, onProgress = null, jobMeta = nu
   try {
     response = await fetch(url);
   } catch (err) {
-    throw new Error('Import-Seite konnte nicht geladen werden. Bitte prüfen Sie Ihre Verbindung.', { cause: err });
+    throw new Error('Die Import-Seite konnte nicht geladen werden. Bitte prüfe deine Verbindung.', { cause: err });
   }
 
   if (!response.ok) {
     if (response.status === 404) throw new Error('Import nicht gefunden. Möglicherweise wurde er bereits gelöscht.');
-    if (response.status === 410) throw new Error('Import ist abgelaufen. Bitte erstellen Sie einen neuen Import.');
+    if (response.status === 410) throw new Error('Der Import ist abgelaufen. Bitte erstelle einen neuen Import.');
     throw new Error(`Fehler beim Laden der Import-Seite (HTTP ${response.status}).`);
   }
 
@@ -439,10 +439,8 @@ export async function parseRecipeImportPage(url, onProgress = null, jobMeta = nu
     const cleanedText = extractTextFromHtml(rawText);
 
     if (!cleanedText || !cleanedText.trim()) {
-      throw new Error(
-        'Die importierte Seite enthält keinen lesbaren Text. ' +
-        'Bitte stelle sicher, dass die Seite ein Rezept enthält.',
-      );
+      // Ein Literal, damit importAnzeige.test.js den Text im Code findet (Mehrsprachigkeit PR 6m)
+      throw new Error('Die importierte Seite enthält keinen lesbaren Text. Bitte stelle sicher, dass die Seite ein Rezept enthält.');
     }
 
     let aiResult;
@@ -839,15 +837,15 @@ export async function importRecipeFromUrl(url, onProgress = null, jobMeta = null
     const { code, message, lowerMessage } = getCallableErrorDetails(error);
 
     if (code === 'unauthenticated') {
-      throw new Error('Sie müssen angemeldet sein, um den Webimport zu verwenden.', { cause: error });
+      throw new Error('Du musst angemeldet sein, um den Webimport zu verwenden.', { cause: error });
     } else if (code === 'resource-exhausted') {
       throw new Error(message || 'Tageslimit erreicht. Versuche es morgen erneut.', { cause: error });
     } else if (code === 'invalid-argument') {
       throw new Error(message || 'Ungültige URL angegeben.', { cause: error });
     } else if (code === 'failed-precondition') {
-      throw new Error('Webimport-Service nicht konfiguriert. Bitte kontaktieren Sie den Administrator.', { cause: error });
+      throw new Error('Webimport-Service nicht konfiguriert. Bitte kontaktiere den Administrator.', { cause: error });
     } else if (code === 'deadline-exceeded') {
-      throw new Error('Zeitüberschreitung beim Laden der Website. Bitte versuchen Sie es erneut.', { cause: error });
+      throw new Error('Zeitüberschreitung beim Laden der Website. Bitte versuche es erneut.', { cause: error });
     } else if (code === 'internal') {
       if (
         lowerMessage.includes('name_not_resolved') ||
@@ -856,12 +854,12 @@ export async function importRecipeFromUrl(url, onProgress = null, jobMeta = null
       ) {
         throw new Error('Die Website konnte nicht erreicht werden. Bitte prüfe die URL und versuche es erneut.', { cause: error });
       }
-      throw new Error('Fehler beim Importieren des Rezepts. Bitte versuchen Sie es erneut.', { cause: error });
+      throw new Error('Fehler beim Importieren des Rezepts. Bitte versuche es erneut.', { cause: error });
     } else if (message) {
       throw new Error(message, { cause: error });
     }
 
-    throw new Error('Fehler beim Importieren des Rezepts. Bitte versuchen Sie es erneut.', { cause: error });
+    throw new Error('Fehler beim Importieren des Rezepts. Bitte versuche es erneut.', { cause: error });
   }
 }
 

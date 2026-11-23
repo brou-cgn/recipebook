@@ -1,7 +1,8 @@
 /**
  * Texte von Anmeldung, Registrierung und Passwortwechsel (src/components/Login.js, Register.js,
  * PasswordChangeModal.js, Hinweis zum Import in App.js) sowie die Meldungen, die src/utils/userManagement.js dazu
- * liefert (loginUser, registerUser, sendPasswordResetEmail, loginAsGuest, validatePassword, changePassword).
+ * liefert (loginUser, registerUser, sendPasswordResetEmail, loginAsGuest, validatePassword, changePassword; seit
+ * PR 6m auch updateUserProfile für die persönlichen Daten).
  * Vorhaben Mehrsprachigkeit, PR 6l. Aufbau und Regeln: src/i18n/texte.js.
  *
  * Ohne Anmeldung gilt die Sprache des Browsers (Entscheidung „Welche Sprache gilt“). Die Ergebnisse aus
@@ -86,6 +87,10 @@ export default {
     fehlerErneutAnmelden: 'Für diese Aktion musst du dich erneut anmelden.',
     fehlerAktuellesPasswort: 'Das aktuelle Passwort ist nicht korrekt.',
     fehlerPasswortAendern: 'Fehler beim Ändern des Passworts.',
+    // updateUserProfile (persönliche Daten), PR 6m
+    fehlerProfilFelderLeer: 'Vorname, Nachname und E-Mail dürfen nicht leer sein.',
+    profilAktualisiert: 'Profil erfolgreich aktualisiert.',
+    fehlerProfilAktualisieren: 'Fehler beim Aktualisieren des Profils.',
   },
   en: {
     // Anmeldung (Login.js)
@@ -161,6 +166,10 @@ export default {
     fehlerErneutAnmelden: 'You need to sign in again for this action.',
     fehlerAktuellesPasswort: 'The current password is incorrect.',
     fehlerPasswortAendern: 'The password couldn’t be changed.',
+    // updateUserProfile (persönliche Daten), PR 6m
+    fehlerProfilFelderLeer: 'First name, last name and email must not be empty.',
+    profilAktualisiert: 'Profile updated.',
+    fehlerProfilAktualisieren: 'The profile couldn’t be updated.',
   },
   fr: {
     // Anmeldung (Login.js)
@@ -236,5 +245,9 @@ export default {
     fehlerErneutAnmelden: 'Pour cette action, tu dois te reconnecter.',
     fehlerAktuellesPasswort: 'Le mot de passe actuel est incorrect.',
     fehlerPasswortAendern: 'Le mot de passe n’a pas pu être modifié.',
+    // updateUserProfile (persönliche Daten), PR 6m
+    fehlerProfilFelderLeer: 'Le prénom, le nom et l’e-mail ne peuvent pas être vides.',
+    profilAktualisiert: 'Profil mis à jour.',
+    fehlerProfilAktualisieren: 'Le profil n’a pas pu être mis à jour.',
   },
 };
