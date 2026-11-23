@@ -1,11 +1,14 @@
 /**
  * Mehrsprachigkeit (Tracker docs/vorhaben/mehrsprachigkeit.md): Rezepttitel (PR 3) und
- * Rezeptinhalt (PR 4) per Gemini ins Deutsche, Englische und Französische übersetzen.
+ * Rezeptinhalt (PR 4) per Gemini vom deutschen Original ins Englische und Französische
+ * übersetzen (Entscheidung „Primärsprache“).
  *
  * uebersetzeRezeptTitel (Trigger auf recipes/{id}) übersetzt den Titel, sobald ein Rezept
  * angelegt oder sein Titel geändert wird, und schreibt das Feld `titelUebersetzung`
  * (Aufbau in shared/titelUebersetzung.js). Andere Änderungen am Rezept und das eigene
- * Schreiben lösen nichts aus, weil `titelUebersetzung.quelle` dann schon zum Titel passt.
+ * Schreiben lösen nichts aus, weil `titelUebersetzung` dann schon zum Titel passt (`quelle`)
+ * und nach den geltenden Regeln entstand (`version`). Eine Übersetzung nach älteren Regeln
+ * erneuert der Trigger beim nächsten Schreiben des Rezepts, einmal je Rezept.
  * Laufende Importe (`importStatus` gesetzt) warten, bis der Titel feststeht.
  *
  * backfillTitelUebersetzungen (nur admin) trägt Übersetzungen für den Bestand nach:
@@ -90,7 +93,7 @@ const GRUND = {
  * Fehler betreffen nur diese Titel: Sie kommen als null zurück.
  * @param {string} apiKey
  * @param {string[]} titel
- * @return {Promise<Array<object|null>>} je Titel {originalSprache, de, en, fr} oder null
+ * @return {Promise<Array<object|null>>} je Titel {en, fr} oder null
  */
 async function uebersetzeTitel(apiKey, titel) {
   const ohneErgebnis = () => titel.map(() => null);
@@ -161,7 +164,8 @@ async function speichere(eintrag, ergebnis) {
 }
 
 /**
- * Trigger: übersetzt den Titel eines neuen Rezepts oder einen geänderten Titel.
+ * Trigger: übersetzt den Titel eines neuen Rezepts, einen geänderten Titel oder einen Titel,
+ * dessen Übersetzung nach älteren Regeln entstand.
  */
 exports.uebersetzeRezeptTitel = onDocumentWritten(
     {
@@ -244,8 +248,9 @@ async function zaehleRezepte(rezepte) {
  * Cloud Function: Titelübersetzungen für den Bestand nachtragen (nur admin).
  *
  * Eingabe: {cursor: string|null, anzahl: 1 bis 50 (Standard 25)}. Liest die nächste Seite der
- * Rezepte nach Dokument-ID ab `cursor`, überspringt Rezepte mit passender Übersetzung, ohne
- * Titel oder mit laufendem Import (kein KI-Aufruf, kein Limit) und übersetzt die übrigen in
+ * Rezepte nach Dokument-ID ab `cursor`, überspringt Rezepte mit passender Übersetzung (gleicher
+ * Titel, aktuelle `version`), ohne Titel oder mit laufendem Import (kein KI-Aufruf, kein Limit)
+ * und übersetzt die übrigen, auch Übersetzungen nach älteren Regeln, in
  * Blöcken zu höchstens 25 Titeln je Gemini-Aufruf. Jeder Titel zählt gegen das Tageslimit;
  * ist es erreicht, endet die Seite vor dem ersten Rezept, das nicht mehr übersetzt werden darf.
  *
@@ -567,7 +572,9 @@ function pruefeInhaltBackfillEingabe(data) {
  *
  * Eingabe: {cursor: string|null, anzahl: 1 bis 20 (Standard 10)}. Liest die nächste Seite der
  * Rezepte nach Dokument-ID ab `cursor`, überspringt Rezepte ohne Inhalt, mit laufendem Import oder
- * mit passender Übersetzung und übersetzt die übrigen, höchstens drei gleichzeitig. Jedes
+ * mit passender Übersetzung und übersetzt die übrigen, höchstens drei gleichzeitig; dazu gehören
+ * Übersetzungen, bei denen Gemini früher eine andere Originalsprache als Deutsch erkannt hatte
+ * (istAktuelleInhaltUebersetzung). Jedes
  * übersetzte Rezept zählt gegen das Tageslimit des Admins; ist es erreicht, endet die Seite vor
  * dem ersten Rezept, das nicht mehr übersetzt werden darf.
  *
