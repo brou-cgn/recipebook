@@ -8,7 +8,7 @@ function LockToggleButton({ locked, onToggle, lockedLabel, unlockedLabel, locked
   return (
     <button
       type="button"
-      className="events-lock-btn"
+      className="events-lock-toggle"
       onClick={onToggle}
       aria-label={locked ? lockedLabel : unlockedLabel}
       title={locked ? lockedTitle : unlockedTitle}

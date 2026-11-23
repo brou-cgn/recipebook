@@ -86,7 +86,8 @@
 .events-page-container,
 .events-form,
 .events-table-container,
-.eventplanung-container {
+.eventplanung-container,
+.events-portion-selector-overlay {
   --color-button-primary-bg: var(--color-events);
   --color-button-primary-text: var(--color-on-events);
 }

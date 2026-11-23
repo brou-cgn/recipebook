@@ -17,82 +17,9 @@
   margin-bottom: 0.5rem;
 }
 
-.share-page-actions-banner {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  padding: 0.75rem 1rem;
-  background: #fdf8f3;
-  border-bottom: 2px solid #f0e8e0;
-}
-
-.share-add-button {
-  background: white;
-  border: 2px solid #ddd;
-  padding: 0.6rem 1rem;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: inherit;
-  color: #402C1C;
-  border-color: #402C1C;
-  font-weight: 600;
-}
-
-.share-copy-button {
-  background: transparent;
-  border: none;
-  padding: 0.6rem;
-  border-radius: 8px;
-  font-size: 1.4rem;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
-  font-family: inherit;
-  color: #555;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.share-copy-button:hover {
-  background: transparent;
-  opacity: 0.7;
-}
-
-.share-copy-icon-img {
-  width: 1.4rem;
-  height: 1.4rem;
-  object-fit: contain;
-}
-
-.share-add-button:hover:not(:disabled) {
-  background: #402C1C;
-  color: white;
-}
-
-.share-add-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 .share-add-success {
   color: #4caf50;
   font-weight: 600;
   padding: 0.6rem 0;
   font-size: 0.9rem;
-}
-
-@media (max-width: 600px) {
-  .share-page-actions-banner {
-    justify-content: stretch;
-  }
-
-  .share-copy-button,
-  .share-add-button {
-    flex: 1;
-    text-align: center;
-  }
 }

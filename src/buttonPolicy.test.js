@@ -33,8 +33,9 @@ const EDITOR_TOOLS = /^(pfe-style-btn|pfe-align-btn|tfe-seg-btn|tfe-tb-btn)/;
 // Die Symbole, die unter „Bilder & Icons“ konfigurierbar sind (Rezeptansicht: Favorit, Privat, Kochdatum;
 // Rezeptformular: Zutat/Schritt hinzufügen, Webimport, Foto-Scan, Import; Rezept- und Menüliste: Filter, Favoriten,
 // Rezept hinzufügen, am Handy schwebend; Startseite: Rezept zur Sammlung hinzufügen; Nährwert-Dialog: automatisch
-// berechnen), dazu Suche und Menü in der Kopfzeile und das Leeren eines Suchfelds
-const ICON_BUTTONS = /^(favorite-button|private-badge-button|cook-date-button|add-item-button|import-button-header|ocr-scan-button-header|webimport-button-header|filter-button|menu-favorites-filter-button|add-icon-button|startseite-add-recipe-btn|nutrition-autocalc-header-btn|search-btn|search-clear-btn|mobile-search-clear-btn|hamburger-btn)/;
+// berechnen; Rezept-, Menü- und Gruppenansicht: Einkaufsliste; Tagesmenü, schwebend: Filter, Meine Auswahl, zum
+// Tagesmenü und zurück zum Stapel), dazu Suche und Menü in der Kopfzeile und das Leeren eines Suchfelds
+const ICON_BUTTONS = /^(favorite-button|shopping-list-trigger-button|tagesmenu-(filter|meine-auswahl|zum-tagesMenu|zurueck-zum-stapel)-btn|private-badge-button|cook-date-button|add-item-button|import-button-header|ocr-scan-button-header|webimport-button-header|filter-button|menu-favorites-filter-button|add-icon-button|startseite-add-recipe-btn|nutrition-autocalc-header-btn|search-btn|search-clear-btn|mobile-search-clear-btn|hamburger-btn)/;
 // Bedienelemente der Rezeptansicht und des Kochmodus mit eigener Gestalt: Plus/Minus der Portionen, Timer im
 // Schritt, Kacheln der Kochsitzung, Bring! (Marke) und der Alarm-Knopf des Timers (eigene Alarmfarbe --color-alarm)
 const RECIPE_CONTROLS = /^(serving-btn|portion-selector-btn|step-timer-start-btn|cooking-rail-button|shopping-list-bring-btn|alarm-modal-stop-btn)/;
@@ -47,20 +48,11 @@ const BARE_BUTTON = /^button(?![\w-])/;
 const LIST_CONTAINER = /dropdown|context-menu|typeahead|matches|suggest|autocomplete/;
 
 const BASELINE = {
-  'App.css': 1,
-  'components/AtelierOnboardingOverlay.css': 2,
-  'components/AtelierTasteIntroOverlay.css': 2,
-  'components/EventsPage.css': 6,
   'components/FollowButton.css': 1,
   'components/GroupDetail.css': 8,
-  'components/ImportProgressDialog.css': 2,
   'components/MemberProfilePage.css': 2,
   'components/NetworkPage.css': 2,
-  'components/OcrScanModal.css': 1,
   'components/PortionSelector.css': 2,
-  'components/RecipeImportModal.css': 1,
-  'components/SharePage.css': 2,
-  'components/Tagesmenu.css': 5,
   'components/WichtelPage.css': 2,
   'components/WichtelTeilnahmePage.css': 1,
 };

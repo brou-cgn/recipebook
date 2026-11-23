@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import './ModalOverlay.css';
 import './RecipeImportModal.css';
 import Button from './Button';
+import RowIconButton from './RowIconButton';
+import CloseThinIcon from './icons/CloseThinIcon';
 import { parseBulkCSV } from '../utils/csvBulkImport';
 import { getImageForCategories } from '../utils/categoryImages';
 import { useTexte } from '../contexts/SpracheContext';
@@ -113,7 +115,9 @@ function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
       <div className="import-modal">
         <div className="import-modal-header">
           <h2>{t('csvTitel')}</h2>
-          <button className="close-button" onClick={onCancel} aria-label={tAllgemein('schliessen')}>×</button>
+          <RowIconButton label={tAllgemein('schliessen')} onClick={onCancel}>
+            <CloseThinIcon />
+          </RowIconButton>
         </div>
 
         <div className="import-modal-content">

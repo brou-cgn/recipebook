@@ -40,27 +40,6 @@
   flex-shrink: 0;
 }
 
-.import-progress-dialog-header .close-button {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  border: none;
-  background: transparent;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  cursor: pointer;
-  color: rgba(74, 52, 34, 0.55);
-  transition: background 0.16s ease, color 0.16s ease;
-}
-
-.import-progress-dialog-header .close-button:hover,
-.import-progress-dialog-header .close-button:focus-visible {
-  background: rgba(120, 84, 52, 0.08);
-  color: var(--color-text-strong);
-}
-
 .import-progress-dialog-content {
   padding: 4px 8px;
   overflow-y: auto;
@@ -225,16 +204,6 @@
   color: #b8ac9d;
 }
 
-[data-theme="dark"] .import-progress-dialog-header .close-button {
-  color: rgba(255, 255, 255, 0.55);
-}
-
-[data-theme="dark"] .import-progress-dialog-header .close-button:hover,
-[data-theme="dark"] .import-progress-dialog-header .close-button:focus-visible {
-  background: rgba(255, 255, 255, 0.08);
-  color: #e8e8e8;
-}
-
 [data-theme="dark"] .import-progress-item.delete-row-hover-target:hover,
 [data-theme="dark"] .import-progress-item.delete-row-hover-target:focus-within {
   background: rgba(255, 255, 255, 0.06);
@@ -295,8 +264,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .import-row-icon-fill,
-  .import-progress-item-restart,
-  .import-progress-dialog-header .close-button {
+  .import-progress-item-restart {
     transition: none;
   }
 }
