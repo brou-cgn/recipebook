@@ -212,6 +212,31 @@ describe('WeinDazu mit Profil', () => {
     expect(within(dialog).getByText(/Passt kein Weinstil, ist Bier oder Wasser/)).toBeInTheDocument();
     expect(within(dialog).queryByRole('region', { name: 'Empfehlung und Alternativen' })).not.toBeInTheDocument();
   });
+
+  it('nutzt im R11-Fall das eingerichtete Icon für Bier oder Wasser, in Chip und Sheet', () => {
+    const icons = { rot: 'data:image/png;base64,ROT', weiss: '', keinStil: 'data:image/png;base64,BIER' };
+    zeige({ recipe: mitProfil(E3_EXTREM), icons });
+    const chip = screen.getByRole('button', { name: 'Hier lieber Bier oder Wasser' });
+    expect(chip.querySelector('img')).toHaveAttribute('src', icons.keinStil);
+    expect(chip.querySelector('svg')).toBeNull();
+
+    fireEvent.click(chip);
+    const kopf = sheet().querySelector('.wein-dazu-stil-glas');
+    expect(kopf.querySelector('img')).toHaveAttribute('src', icons.keinStil);
+    expect(kopf.querySelector('svg')).toBeNull();
+  });
+
+  it('bleibt im R11-Fall ohne eingerichtetes Icon beim eingebauten Glas', () => {
+    zeige({ recipe: mitProfil(E3_EXTREM), icons: { rot: 'data:image/png;base64,ROT', weiss: '', keinStil: '' } });
+    const chip = screen.getByRole('button', { name: 'Hier lieber Bier oder Wasser' });
+    expect(chip.querySelector('img')).toBeNull();
+    expect(chip.querySelector('svg')).not.toBeNull();
+
+    fireEvent.click(chip);
+    const kopf = sheet().querySelector('.wein-dazu-stil-glas');
+    expect(kopf.querySelector('img')).toBeNull();
+    expect(kopf.querySelector('svg')).not.toBeNull();
+  });
 });
 
 describe('WeinDazu veraltet', () => {
