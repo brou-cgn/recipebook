@@ -47,6 +47,8 @@ export default {
     tutorialTeig: 'Teig & Backen',
     tutorialGaren: 'Garmethoden',
     tutorialAnrichten: 'Plattieren & Anrichten',
+    // Video einer Tutorial-Karte (TutorialVideoModal.js), PR 6n
+    videoAbspielen: 'Video „{titel}“ abspielen',
     rezeptfilter: 'Rezeptfilter',
     plusPrivatesRezept: '+ Privates Rezept',
     plusRezept: '+ Rezept',
@@ -127,6 +129,8 @@ export default {
     tutorialTeig: 'Dough & baking',
     tutorialGaren: 'Cooking methods',
     tutorialAnrichten: 'Plating & presentation',
+    // Video einer Tutorial-Karte (TutorialVideoModal.js), PR 6n
+    videoAbspielen: 'Play video “{titel}”',
     rezeptfilter: 'Recipe filters',
     plusPrivatesRezept: '+ Private recipe',
     plusRezept: '+ Recipe',
@@ -206,6 +210,8 @@ export default {
     tutorialTeig: 'Pâtes et pâtisserie',
     tutorialGaren: 'Modes de cuisson',
     tutorialAnrichten: 'Dressage',
+    // Video einer Tutorial-Karte (TutorialVideoModal.js), PR 6n
+    videoAbspielen: `Lire la vidéo «${NBSP}{titel}${NBSP}»`,
     rezeptfilter: 'Filtres de recettes',
     plusPrivatesRezept: '+ Recette privée',
     plusRezept: '+ Recette',

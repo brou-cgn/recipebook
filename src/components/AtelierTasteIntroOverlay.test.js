@@ -24,7 +24,7 @@ describe('AtelierTasteIntroOverlay', () => {
 
   test('shows a spotlight around the search button once the second card is active', () => {
     const mockBtn = document.createElement('button');
-    mockBtn.setAttribute('aria-label', 'Suche');
+    mockBtn.setAttribute('data-spotlight', 'suche');
     mockBtn.getBoundingClientRect = () => ({
       left: 300, top: 20, width: 32, height: 32, right: 332, bottom: 52,
     });

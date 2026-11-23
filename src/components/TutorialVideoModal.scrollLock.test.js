@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import TutorialVideoModal from './TutorialVideoModal';
+import { renderWithProviders } from '../test-utils';
 
 // Regression guard for the iPhone restarts that were reported when closing a
 // tutorial video (see the scroll-lock comment in TutorialVideoModal.js).
@@ -58,5 +59,13 @@ describe('TutorialVideoModal scroll lock', () => {
     fireEvent.click(screen.getByLabelText('Schließen'));
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('TutorialVideoModal in anderer Sprache (Mehrsprachigkeit PR 6n)', () => {
+  test('Englisch: Schließen und Abspielen mit dem Titel des Videos', () => {
+    renderWithProviders(<TutorialVideoModal videoId="abcdefghijk" title="Zwiebeln schneiden" onClose={() => {}} />, { sprache: 'en' });
+    expect(screen.getByLabelText('Close')).toBeInTheDocument();
+    expect(screen.getByLabelText('Play video “Zwiebeln schneiden”')).toBeInTheDocument();
   });
 });

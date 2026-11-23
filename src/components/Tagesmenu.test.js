@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, act, fireEvent, screen } from '@testing-library/react';
 import Tagesmenu from './Tagesmenu';
+import { SpracheProvider } from '../contexts/SpracheContext';
 import { updateRecipe } from '../utils/recipeFirestore';
 import { addRecipeToGroup, removeRecipeFromGroup } from '../utils/groupFirestore';
 import { addFavorite } from '../utils/userFavorites';
@@ -2978,5 +2979,38 @@ describe('Tagesmenu – Bewegung reduzieren', () => {
     expect(setRecipeSwipeFlag).toHaveBeenCalledWith(
       'user1', 'list1', 'r1', 'archiv', expect.any(Object)
     );
+  });
+});
+
+describe('Tagesmenu in anderer Sprache (Mehrsprachigkeit PR 6n)', () => {
+  const uebersetzt = (id, titel, en) => ({
+    ...makeRecipe(id, titel),
+    titelUebersetzung: { quelle: titel, originalSprache: 'de', de: titel, en, fr: en },
+  });
+  const rezepte = [
+    uebersetzt('r1', 'Kartoffelsuppe', 'Potato soup'),
+    uebersetzt('r2', 'Linsensalat', 'Lentil salad'),
+    uebersetzt('r3', 'Apfelkuchen', 'Apple cake'),
+  ];
+
+  test('Englisch: übersetzte Titel auf der Karte und in den Ergebnissen, Knöpfe und Gruppen in der Sprache', async () => {
+    await act(async () => {
+      render(
+        <SpracheProvider profilSprache="en" speicher={null} inhalteUebersetzen>
+          <Tagesmenu interactiveLists={[list]} recipes={rezepte} allUsers={[]} onSelectRecipe={() => {}} currentUser={currentUser} />
+        </SpracheProvider>
+      );
+    });
+    expect(document.querySelector('.tagesmenu-card-top .tagesmenu-card-title')).toHaveTextContent(/Potato soup|Lentil salad|Apple cake/);
+
+    ['first', 'second', 'third'].forEach(() => {
+      const topCard = document.querySelector('.tagesmenu-card-top');
+      swipeLeft(topCard);
+      finishSwipeAnimation(topCard);
+    });
+
+    expect(screen.getByRole('heading', { name: 'Cooking studio' })).toBeInTheDocument();
+    expect(document.querySelector('.tagesmenu-results-group')).toHaveTextContent('Archived');
+    expect(screen.getByText('Apple cake')).toBeInTheDocument();
   });
 });

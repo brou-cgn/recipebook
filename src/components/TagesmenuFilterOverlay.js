@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './MobileSearchOverlay.css';
 import { splitIntoTwoRows, reorderActiveFirst } from '../utils/pillCarousel';
+import { useListenwerte, useTexte } from '../contexts/SpracheContext';
+import tagesmenuTexte from '../i18n/texte/tagesmenu';
 
 const DEBOUNCE_DELAY_MS = 200;
 // Delay in ms before auto-focusing the input – gives the slide-up animation
@@ -34,6 +36,9 @@ function TagesmenuFilterOverlay({
   selectedCategories = [],
   onSelectCategory,
 }) {
+  // Texte der Filter (Mehrsprachigkeit PR 6n); Speisekategorien übersetzt, Listennamen sind Inhalt
+  const t = useTexte(tagesmenuTexte);
+  const listen = useListenwerte();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
   // panelBottom tracks how far from the bottom of the screen the panel sits
@@ -153,7 +158,7 @@ function TagesmenuFilterOverlay({
       className="mobile-search-overlay tagesmenu-filter-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label="Kochatelier filtern"
+      aria-label={t('kochatelierFiltern')}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="mobile-search-panel" style={{ bottom: panelBottom }}>
@@ -167,9 +172,9 @@ function TagesmenuFilterOverlay({
                     className={`mobile-search-filter-pill mobile-search-cuisine-pill${selectedCategories.includes(category) ? ' active' : ''}`}
                     onClick={() => handleCategoryPillClick(category)}
                     aria-pressed={selectedCategories.includes(category)}
-                    title={selectedCategories.includes(category) ? 'Filter aufheben' : `Nach ${category} filtern`}
+                    title={selectedCategories.includes(category) ? t('filterAufheben') : t('nachFiltern', { name: listen.text('mealCategories', category) })}
                   >
-                    {category}
+                    {listen.text('mealCategories', category)}
                   </button>
                 ))}
               </div>
@@ -186,7 +191,7 @@ function TagesmenuFilterOverlay({
                 className={`mobile-search-filter-pill mobile-search-cuisine-pill${list.id === selectedListId ? ' active' : ''}`}
                 onClick={() => handleListPillClick(list.id)}
                 aria-pressed={list.id === selectedListId}
-                title={list.id === selectedListId ? (onClearListFilter ? 'Listenfilter aufheben' : 'Aktive Liste') :`Zu ${list.name} wechseln`}
+                title={list.id === selectedListId ? (onClearListFilter ? t('listenfilterAufheben') : t('aktiveListe')) : t('zuWechseln', { name: list.name })}
               >
                 {list.name}
               </button>
@@ -194,7 +199,7 @@ function TagesmenuFilterOverlay({
           </div>
         ) : (
           debouncedTerm && (
-            <p className="mobile-search-no-results">Keine Listen gefunden</p>
+            <p className="mobile-search-no-results">{t('keineListen')}</p>
           )
         )}
 
@@ -211,10 +216,10 @@ function TagesmenuFilterOverlay({
               ref={inputRef}
               type="search"
               className="mobile-search-input"
-              placeholder="Listen durchsuchen …"
+              placeholder={t('listenDurchsuchenPlatzhalter')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              aria-label="Listen durchsuchen"
+              aria-label={t('listenDurchsuchen')}
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
@@ -225,7 +230,7 @@ function TagesmenuFilterOverlay({
               <button
                 className="mobile-search-clear-btn"
                 onClick={handleClear}
-                aria-label="Suche löschen"
+                aria-label={t('sucheLoeschen')}
                 tabIndex={0}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">

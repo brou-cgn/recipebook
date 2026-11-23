@@ -56,12 +56,8 @@ const NUR_DEUTSCH = new Set([
   'components/templateEditor/TemplateGallery.js',
 ]);
 
-// Stand 23.11.2026 (PR 6m, Meldungen): 417 Textstellen in 29 Dateien.
+// Stand 23.11.2026 (PR 6n, Tagesmenü, Tutorials und Atelier): 317 Textstellen in 21 Dateien.
 const BASELINE = {
-  'components/AtelierCategorySelectionPage.js': 5,
-  'components/AtelierOnboardingOverlay.js': 9,
-  'components/AtelierSwipeTrainerOverlay.js': 8,
-  'components/AtelierTasteIntroOverlay.js': 8,
   'components/CallLogPanel.js': 35,
   'components/EventplanungPage.js': 2,
   'components/FlowPage.js': 3,
@@ -78,10 +74,6 @@ const BASELINE = {
   'components/RecipeVersionDescribe.js': 11,
   'components/SharePage.js': 3,
   'components/SplashScreen.js': 2,
-  'components/Tagesmenu.js': 26,
-  'components/TagesmenuFilterOverlay.js': 10,
-  'components/TutorialForm.js': 32,
-  'components/TutorialVideoModal.js': 2,
   'components/WeinbegleitungSeite.js': 24,
   'components/WichtelPage.js': 66,
   'components/WichtelTeilnehmerFormular.js': 11,

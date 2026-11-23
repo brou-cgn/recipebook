@@ -314,6 +314,7 @@ const Header = forwardRef(function Header({
               <div className="search-container" ref={searchRef}>
                 <button 
                   className="search-btn" 
+                  data-spotlight="suche"
                   onClick={toggleSearch}
                   aria-label={t('suche')}
                   title={t('suche')}

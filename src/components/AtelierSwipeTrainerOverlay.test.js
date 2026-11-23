@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, within, act } from '@testing-library/react';
 import AtelierSwipeTrainerOverlay from './AtelierSwipeTrainerOverlay';
+import { renderWithProviders } from '../test-utils';
 
 beforeAll(() => {
   if (!HTMLElement.prototype.setPointerCapture) {
@@ -123,5 +124,16 @@ describe('AtelierSwipeTrainerOverlay', () => {
 
     expect(onComplete).toHaveBeenCalledTimes(1);
     expect(onComplete).toHaveBeenCalledWith('l');
+  });
+});
+
+describe('AtelierSwipeTrainerOverlay in anderer Sprache (Mehrsprachigkeit PR 6n)', () => {
+  test('Englisch: Beispielkarte und Hinweis in der Sprache, der Autor bleibt', () => {
+    renderWithProviders(<AtelierSwipeTrainerOverlay onComplete={() => {}} />, { sprache: 'en' });
+    expect(screen.getByRole('dialog', { name: 'Swipe training' })).toBeInTheDocument();
+    expect(screen.getAllByText('Mango cocktail').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Vegetarian').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Swipe right').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Benjamin').length).toBeGreaterThan(0);
   });
 });

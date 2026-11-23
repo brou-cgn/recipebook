@@ -29,6 +29,7 @@ export default {
     nameEntfernen: '{name} entfernen',
     // Anzeigename von Gästen (anonyme Anmeldung); gespeichert bleibt vorname 'Gast' (userManagement.js)
     gast: 'Gast',
+    weiter: 'Weiter',
     hinzufuegen: 'Hinzufügen',
     aendern: 'Ändern',
   },
@@ -55,6 +56,7 @@ export default {
     nameEntfernen: 'Remove {name}',
     // Anzeigename von Gästen (anonyme Anmeldung); gespeichert bleibt vorname 'Gast' (userManagement.js)
     gast: 'Guest',
+    weiter: 'Next',
     hinzufuegen: 'Add',
     aendern: 'Change',
   },
@@ -81,6 +83,7 @@ export default {
     nameEntfernen: 'Retirer {name}',
     // Anzeigename von Gästen (anonyme Anmeldung); gespeichert bleibt vorname 'Gast' (userManagement.js)
     gast: 'Invité',
+    weiter: 'Suivant',
     hinzufuegen: 'Ajouter',
     aendern: 'Modifier',
   },

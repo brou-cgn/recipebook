@@ -261,6 +261,7 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect, badgeCounts })
             <button
               key={tab.key}
               type="button"
+              data-nav-key={tab.key}
               className={`bottom-navigation__tab${isActive ? ' bottom-navigation__tab--active' : ''}`}
               onClick={() => onSelect(tab)}
               aria-label={badgeCount > 0 ? `${tab.label} (${badgeCount})` : tab.label}
@@ -289,6 +290,7 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect, badgeCounts })
               <button
                 key={tab.key}
                 type="button"
+                data-nav-key={tab.key}
                 className={`bottom-navigation-pill__item${isActive ? ' bottom-navigation-pill__item--active' : ''}`}
                 onClick={() => onSelect(tab)}
                 aria-label={badgeCount > 0 ? `${tab.label} (${badgeCount})` : tab.label}
