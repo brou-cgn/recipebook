@@ -48,13 +48,14 @@ export function weinfarbe(stil) {
  * @param {Object} stil
  * @returns {string|null}
  */
-export function nurZuText(stil) {
+// t: Texte aus wein.js in der geltenden Sprache (Mehrsprachigkeit PR 6o); ohne t Deutsch wie bisher
+export function nurZuText(stil, t = T_DEUTSCH) {
   const tags = Array.isArray(stil?.nurZu) ? stil.nurZu : [];
   const teile = [];
-  if (tags.some((tag) => tag === 'rolle:dessert' || tag.startsWith('hk:dessert'))) teile.push('Dessert');
+  if (tags.some((tag) => tag === 'rolle:dessert' || tag.startsWith('hk:dessert'))) teile.push(t('nurZuDessert'));
   const kaese = tags.filter((tag) => tag.startsWith('hk:kaese'));
-  if (kaese.length > 0) teile.push(kaese.every((tag) => tag === 'hk:kaese_blau') ? 'Blauschimmelkäse' : 'Käse');
-  return teile.length > 0 ? `nur zu ${teile.join(' und ')}` : null;
+  if (kaese.length > 0) teile.push(kaese.every((tag) => tag === 'hk:kaese_blau') ? t('nurZuBlauschimmel') : t('nurZuKaese'));
+  return teile.length > 0 ? t('nurZu', { liste: teile.join(` ${t('nurZuUnd')} `) }) : null;
 }
 
 // Grund aus der Antwort (fehlerGruende) → Schlüssel in wein.js

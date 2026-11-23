@@ -1,26 +1,51 @@
+import { erstelleT } from '../i18n/texte';
+import allgemeinTexte from '../i18n/texte/allgemein';
+
+const tAllgemeinDeutsch = erstelleT(allgemeinTexte, 'de');
+
+/** Größte erlaubte Bilddatei (5 MB) */
+export const MAX_BILD_GROESSE = 5 * 1024 * 1024;
+
+/** Erlaubte Bildformate */
+export const BILD_TYPEN = Object.freeze(['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']);
+
+/**
+ * Fehler rund um ein Bild mit Schlüssel aus src/i18n/texte/allgemein.js (Mehrsprachigkeit PR 6o):
+ * `message` ist der deutsche Text (Verwaltung, Logs), angezeigt wird er über
+ * `ergebnisText(fehler, tAllgemein)` in der geltenden Sprache.
+ * @param {string} schluessel - etwa 'bildZuGross'
+ * @param {{cause?: *}} [optionen] - wie bei new Error
+ * @returns {Error & {schluessel: string}}
+ */
+export function bildFehler(schluessel, optionen) {
+  const fehler = new Error(tAllgemeinDeutsch(schluessel), optionen);
+  fehler.schluessel = schluessel;
+  return fehler;
+}
+
+/**
+ * Prüft eine gewählte Bilddatei: vorhanden, höchstens 5 MB, eines der Formate aus BILD_TYPEN.
+ * Gilt für fileToBase64 und das Hochladen in Firebase Storage (src/utils/storageUtils.js).
+ * @param {File|Blob|null|undefined} file
+ * @returns {Error|null} der Fehler (bildFehler) oder null, wenn die Datei passt
+ */
+export function bildDateiFehler(file) {
+  if (!file) return bildFehler('bildFehlt');
+  if (file.size > MAX_BILD_GROESSE) return bildFehler('bildZuGross');
+  if (!BILD_TYPEN.includes(file.type)) return bildFehler('bildTypUngueltig');
+  return null;
+}
+
 /**
  * Convert a file to base64 string
  * @param {File} file - The image file to convert
- * @returns {Promise<string>} - Base64 encoded string
+ * @returns {Promise<string>} - Base64 encoded string; rejects with bildDateiFehler for unsuitable files
  */
 export function fileToBase64(file) {
   return new Promise((resolve, reject) => {
-    if (!file) {
-      reject(new Error('No file provided'));
-      return;
-    }
-
-    // Check file size (limit to 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      reject(new Error('Image file size must be less than 5MB'));
-      return;
-    }
-
-    // Check file type
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      reject(new Error('Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image'));
+    const fehler = bildDateiFehler(file);
+    if (fehler) {
+      reject(fehler);
       return;
     }
 

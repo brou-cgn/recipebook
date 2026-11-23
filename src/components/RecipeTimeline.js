@@ -1,6 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import './RecipeTimeline.css';
 import { isBase64Image } from '../utils/imageUtils';
+import { useRezeptTitel, useSprache, useTexte } from '../contexts/SpracheContext';
+import { formatiereDatum } from '../i18n/format';
+import chefkochTexte from '../i18n/texte/chefkochUndMehr';
 
 // Return a YYYY-MM-DD key for a Firestore timestamp or Date
 function getDateKey(timestamp) {
@@ -13,6 +16,9 @@ function getDateKey(timestamp) {
   }
 }
 
+// Bezeichnung der Anzahl im Stapel je Art (chefkochUndMehr.js, Mehrsprachigkeit PR 6o)
+const ANZAHL_SCHLUESSEL = { menu: 'menues', cookEvent: 'kochereignisse' };
+
 function getMarkerColor(type) {
   if (type === 'menu') return '#DF7A00';
   if (type === 'cookEvent') return '#2F5D50';
@@ -21,6 +27,10 @@ function getMarkerColor(type) {
 
 function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubbleIcon = null, timelineMenuBubbleIcon = null, timelineCookEventBubbleIcon = null, defaultImage = null, timelineCookEventDefaultImage = null, categoryImages = [], itemType = 'recipe' }) {
   const [expandedDates, setExpandedDates] = useState({});
+  // Texte, Datum und Rezepttitel in der geltenden Sprache (Mehrsprachigkeit PR 6o)
+  const { sprache } = useSprache();
+  const t = useTexte(chefkochTexte);
+  const zeigeTitel = useRezeptTitel();
 
   // Sort recipes by createdAt in reverse chronological order (newest first)
   const sortedRecipes = useMemo(() => {
@@ -48,22 +58,10 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
     return groups;
   }, [sortedRecipes, itemType]);
 
-  // Helper function to format date
-  const formatDate = (timestamp) => {
-    if (!timestamp) return 'Unbekannt';
-    
-    try {
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-      return date.toLocaleDateString('de-DE', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-      });
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Unbekannt';
-    }
-  };
+  // Datum des Tages in der geltenden Sprache; ohne gültiges Datum „Unbekannt“
+  const formatDate = (timestamp) => (
+    formatiereDatum(timestamp, sprache, { day: '2-digit', month: 'long', year: 'numeric' }) || t('datumUnbekannt')
+  );
 
   // Helper function to get author name
   const getAuthorName = (authorId) => {
@@ -96,11 +94,11 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
     >
       {displayImage && (
         <div className="timeline-image">
-          <img src={displayImage} alt={recipe.title} />
+          <img src={displayImage} alt={zeigeTitel(recipe)} />
         </div>
       )}
       <div className="timeline-info">
-        <h3 className="timeline-title">{recipe.title}</h3>
+        <h3 className="timeline-title">{zeigeTitel(recipe)}</h3>
         {getAuthorName(recipe.authorId) && (
           <div className="timeline-author">{getAuthorName(recipe.authorId)}</div>
         )}
@@ -149,15 +147,9 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
                   <button
                     className="timeline-stack-toggle"
                     onClick={() => toggleExpand(dateKey)}
-                    aria-label={isExpanded ? 'Stapel einklappen' : 'Stapel ausklappen'}
+                    aria-label={t(isExpanded ? 'stapelEinklappen' : 'stapelAusklappen')}
                   >
-                    {(() => {
-                      let label;
-                      if (primaryType === 'menu') label = 'Menüs';
-                      else if (primaryType === 'cookEvent') label = 'Kochereignisse';
-                      else label = 'Rezepte';
-                      return `${isExpanded ? '▾' : '▸'} ${dayRecipes.length} ${label}`;
-                    })()}
+                    {`${isExpanded ? '▾' : '▸'} ${dayRecipes.length} ${t(ANZAHL_SCHLUESSEL[primaryType] || 'rezepte', { anzahl: dayRecipes.length })}`}
                   </button>
                 )}
               </div>
@@ -181,11 +173,11 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
                   >
                     {getDisplayImage(primaryRecipe) && (
                       <div className="timeline-image">
-                        <img src={getDisplayImage(primaryRecipe)} alt={primaryRecipe.title} />
+                        <img src={getDisplayImage(primaryRecipe)} alt={zeigeTitel(primaryRecipe)} />
                       </div>
                     )}
                     <div className="timeline-info">
-                      <h3 className="timeline-title">{primaryRecipe.title}</h3>
+                      <h3 className="timeline-title">{zeigeTitel(primaryRecipe)}</h3>
                       {getAuthorName(primaryRecipe.authorId) && (
                         <div className="timeline-author">{getAuthorName(primaryRecipe.authorId)}</div>
                       )}
@@ -208,7 +200,7 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
                     className="timeline-gutter"
                     role="button"
                     tabIndex={0}
-                    aria-label="Stapel einklappen"
+                    aria-label={t('stapelEinklappen')}
                     onClick={() => toggleExpand(dateKey)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -233,7 +225,7 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
       })}
       {sortedRecipes.length === 0 && (
         <div className="timeline-empty">
-          <p>{itemType === 'menu' ? 'Keine Menüs vorhanden' : 'Keine Rezepte vorhanden'}</p>
+          <p>{t(itemType === 'menu' ? 'zeitleisteKeineMenues' : 'zeitleisteKeineRezepte')}</p>
         </div>
       )}
     </div>

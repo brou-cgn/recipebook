@@ -6,6 +6,7 @@ import { fileToBase64 } from '../utils/imageUtils';
 import { runPhotoScanImport } from '../utils/importRunners';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 import { useTexte } from '../contexts/SpracheContext';
+import { ergebnisText } from '../i18n/texte';
 import { SPRACHEN } from '../i18n/sprachen';
 import rezeptimportTexte from '../i18n/texte/rezeptimport';
 import allgemeinTexte from '../i18n/texte/allgemein';
@@ -90,7 +91,8 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
       });
       setStep('image-preview');
     } catch (err) {
-      setError(err.message);
+      // Meldung von fileToBase64 über ihren Schlüssel (Mehrsprachigkeit PR 6o)
+      setError(ergebnisText(err, tAllgemein));
     }
   };
 
@@ -111,7 +113,7 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
         return combined.slice(0, MAX_UPLOAD_PAGES);
       });
     } catch (err) {
-      setError(err.message);
+      setError(ergebnisText(err, tAllgemein));
     }
   };
 

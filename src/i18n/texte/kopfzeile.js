@@ -1,6 +1,7 @@
 /**
  * Texte des Headers (src/components/Header.js): Suche, Menü, Sprachwahl für die Sitzung (SprachWahl.js)
  * und Kochschule. Bereichsnamen stehen in bereiche.js. Aufbau und Regeln: src/i18n/texte.js.
+ * Seit PR 6o auch der Startbildschirm (src/components/SplashScreen.js): Logo und Standard-Slogan.
  */
 // Geschütztes Leerzeichen: im Französischen vor : ? ! ; und innerhalb von « ».
 const NBSP = '\u00a0';
@@ -33,6 +34,8 @@ export default {
     standardsprache: 'Deine Standardsprache',
     // Übersetzung des Standard-Slogans (DEFAULT_SLOGAN in utils/customLists.js), src/i18n/slogan.js
     standardSlogan: 'Unsere besten Momente',
+    // Startbildschirm (SplashScreen.js), PR 6o
+    splashLogo: 'brouBook Logo',
     sprachnameDe: 'Deutsch',
     sprachnameEn: 'Englisch',
     sprachnameFr: 'Französisch',
@@ -69,6 +72,8 @@ export default {
     spracheWaehlen: 'Choose language (current: {sprache})',
     standardsprache: 'Your default language',
     standardSlogan: 'Our best moments',
+    // Startbildschirm (SplashScreen.js), PR 6o
+    splashLogo: 'brouBook logo',
     sprachnameDe: 'German',
     sprachnameEn: 'English',
     sprachnameFr: 'French',
@@ -105,6 +110,8 @@ export default {
     spracheWaehlen: `Choisir la langue (actuelle${NBSP}: {sprache})`,
     standardsprache: 'Ta langue par défaut',
     standardSlogan: 'Nos meilleurs moments',
+    // Startbildschirm (SplashScreen.js), PR 6o
+    splashLogo: 'Logo brouBook',
     sprachnameDe: 'Allemand',
     sprachnameEn: 'Anglais',
     sprachnameFr: 'Français',

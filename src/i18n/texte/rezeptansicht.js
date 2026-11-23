@@ -3,9 +3,24 @@
  * src/i18n/texte/kochmodus.js). Vorhaben Mehrsprachigkeit: Hinweis auf die Übersetzung seit PR 4,
  * die übrige Ansicht seit PR 6a. Noch deutsch: der Abgleich der ingredientIDs vor dem Berechnen der
  * Nährwerte (kommt mit den Nährwerten, PR 6b). Aufbau und Regeln: src/i18n/texte.js.
+ * Seit PR 6o auch die Seite eines geteilten Rezepts (src/components/SharePage.js; ohne Anmeldung in
+ * der Sprache des Browsers) und der Dialog „Eigene Version erstellen“ (src/components/RecipeVersionDescribe.js);
+ * die Texte seines Mikrofon-Knopfs und der Spracherkennung stehen in src/i18n/texte/diktat.js.
  */
 // Geschütztes Leerzeichen: im Französischen vor : ? ! ; und innerhalb von « ».
 const NBSP = '\u00a0';
+
+/**
+ * Deutsche Meldungen der Cloud Function applyRecipeVersionChanges
+ * (functions/handlers/versionChanges.js), die der Versions-Dialog anzeigt. Sie kommen als Text
+ * vom Server und werden über findeText erkannt (Mehrsprachigkeit PR 6o); ein Test gleicht sie
+ * mit dem Code der Function ab. Englische technische Meldungen bleiben, wie sie sind.
+ */
+export const VERSION_MELDUNGEN = Object.freeze([
+  'versionKiUnvollstaendig',
+  'versionTageslimit',
+  'versionKiAusgelastet',
+]);
 
 export default {
   de: {
@@ -103,6 +118,22 @@ export default {
     portionenVerringern: 'Portionen verringern',
     portionenErhoehen: 'Portionen erhöhen',
     einkaufslisteErstellen: 'Einkaufsliste erstellen',
+    // Dialog „Eigene Version erstellen“ (RecipeVersionDescribe.js), PR 6o
+    versionWasAnders: 'Was war anders?',
+    versionPlatzhalter: 'Was hast du anders gemacht?',
+    versionErstellen: 'Version erstellen',
+    versionEinarbeitenTitel: 'Änderungen einarbeiten – danach kannst du alles kontrollieren',
+    versionOhneBeschreibung: 'Ohne Beschreibung weiter',
+    versionWirdEingearbeitet: 'Wird eingearbeitet …',
+    versionFehler: 'Die Änderungen konnten nicht eingearbeitet werden.',
+    // Meldungen der Cloud Function (VERSION_MELDUNGEN)
+    versionKiUnvollstaendig: 'Die KI hat kein vollständiges Rezept zurückgegeben.',
+    versionTageslimit: 'Tageslimit für Versionsbeschreibungen erreicht ({limit}/{limit}). Versuche es morgen erneut.',
+    versionKiAusgelastet: 'Die KI-API ist momentan ausgelastet. Bitte versuche es in einigen Minuten erneut.',
+    // Geteiltes Rezept (SharePage.js), PR 6o; wie beim Menü in festtafel.js
+    freigabeLaedt: 'Rezept wird geladen…',
+    freigabeNichtGefunden: 'Rezept nicht gefunden',
+    freigabeLinkUngueltig: 'Dieser Share-Link ist ungültig oder das Rezept wurde nicht mehr geteilt.',
   },
   en: {
     originalTitel: 'Original: {titel}',
@@ -199,6 +230,22 @@ export default {
     portionenVerringern: 'Fewer servings',
     portionenErhoehen: 'More servings',
     einkaufslisteErstellen: 'Create shopping list',
+    // Dialog „Eigene Version erstellen“ (RecipeVersionDescribe.js), PR 6o
+    versionWasAnders: 'What was different?',
+    versionPlatzhalter: 'What did you do differently?',
+    versionErstellen: 'Create version',
+    versionEinarbeitenTitel: 'Work in the changes – you can check everything afterwards',
+    versionOhneBeschreibung: 'Continue without a description',
+    versionWirdEingearbeitet: 'Working in your changes …',
+    versionFehler: 'The changes couldn’t be worked in.',
+    // Meldungen der Cloud Function (VERSION_MELDUNGEN)
+    versionKiUnvollstaendig: 'The AI didn’t return a complete recipe.',
+    versionTageslimit: 'Daily limit for version descriptions reached ({limit}/{limit}). Try again tomorrow.',
+    versionKiAusgelastet: 'The AI service is busy right now. Please try again in a few minutes.',
+    // Geteiltes Rezept (SharePage.js), PR 6o; wie beim Menü in festtafel.js
+    freigabeLaedt: 'Loading recipe…',
+    freigabeNichtGefunden: 'Recipe not found',
+    freigabeLinkUngueltig: 'This share link is invalid or the recipe is no longer shared.',
   },
   fr: {
     originalTitel: `Original${NBSP}: {titel}`,
@@ -295,5 +342,21 @@ export default {
     portionenVerringern: 'Moins de portions',
     portionenErhoehen: 'Plus de portions',
     einkaufslisteErstellen: 'Créer la liste de courses',
+    // Dialog „Eigene Version erstellen“ (RecipeVersionDescribe.js), PR 6o
+    versionWasAnders: `Qu’est-ce qui était différent${NBSP}?`,
+    versionPlatzhalter: `Qu’as-tu fait différemment${NBSP}?`,
+    versionErstellen: 'Créer la version',
+    versionEinarbeitenTitel: 'Intégrer les modifications – tu pourras tout vérifier ensuite',
+    versionOhneBeschreibung: 'Continuer sans description',
+    versionWirdEingearbeitet: 'Intégration en cours…',
+    versionFehler: 'Impossible d’intégrer les modifications.',
+    // Meldungen der Cloud Function (VERSION_MELDUNGEN)
+    versionKiUnvollstaendig: 'L’IA n’a pas renvoyé de recette complète.',
+    versionTageslimit: 'Limite quotidienne de descriptions de version atteinte ({limit}/{limit}). Réessaie demain.',
+    versionKiAusgelastet: 'Le service d’IA est surchargé pour le moment. Réessaie dans quelques minutes.',
+    // Geteiltes Rezept (SharePage.js), PR 6o; wie beim Menü in festtafel.js
+    freigabeLaedt: 'Chargement de la recette…',
+    freigabeNichtGefunden: 'Recette introuvable',
+    freigabeLinkUngueltig: 'Ce lien de partage n’est pas valide ou la recette n’est plus partagée.',
   },
 };

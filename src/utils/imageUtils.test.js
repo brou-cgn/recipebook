@@ -211,18 +211,36 @@ describe('imageUtils', () => {
   });
 
   describe('fileToBase64', () => {
+    // Meldungen deutsch mit Schlüssel für ergebnisText (Mehrsprachigkeit PR 6o)
     test('rejects when no file provided', async () => {
-      await expect(fileToBase64(null)).rejects.toThrow('No file provided');
+      await expect(fileToBase64(null)).rejects.toMatchObject({
+        message: 'Es wurde keine Datei ausgewählt.', schluessel: 'bildFehlt',
+      });
     });
 
     test('rejects when file is too large', async () => {
       const largeFile = new File(['x'.repeat(6 * 1024 * 1024)], 'large.jpg', { type: 'image/jpeg' });
-      await expect(fileToBase64(largeFile)).rejects.toThrow('Image file size must be less than 5MB');
+      await expect(fileToBase64(largeFile)).rejects.toMatchObject({
+        message: 'Das Bild darf höchstens 5 MB groß sein.', schluessel: 'bildZuGross',
+      });
     });
 
     test('rejects invalid file types', async () => {
       const invalidFile = new File(['test'], 'test.txt', { type: 'text/plain' });
-      await expect(fileToBase64(invalidFile)).rejects.toThrow('Invalid file type');
+      await expect(fileToBase64(invalidFile)).rejects.toMatchObject({
+        message: 'Dieses Dateiformat geht nicht. Bitte wähle ein Bild im Format JPEG, PNG, GIF oder WebP.',
+        schluessel: 'bildTypUngueltig',
+      });
+    });
+
+    test('Meldung in der geltenden Sprache über ergebnisText', async () => {
+      const { ergebnisText, erstelleT } = require('../i18n/texte');
+      const allgemeinTexte = require('../i18n/texte/allgemein').default;
+      const fehler = await fileToBase64(new File(['test'], 'test.txt', { type: 'text/plain' })).catch((e) => e);
+      expect(ergebnisText(fehler, erstelleT(allgemeinTexte, 'en')))
+        .toBe('This file type isn’t supported. Please choose a JPEG, PNG, GIF or WebP image.');
+      expect(ergebnisText(fehler, erstelleT(allgemeinTexte, 'fr')))
+        .toBe('Ce format de fichier n’est pas pris en charge. Choisis une image JPEG, PNG, GIF ou WebP.');
     });
 
     test('accepts valid image types', async () => {

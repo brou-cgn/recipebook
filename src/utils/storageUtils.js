@@ -5,7 +5,7 @@
 
 import { storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { fileToBase64, compressImage } from './imageUtils';
+import { fileToBase64, compressImage, bildDateiFehler, bildFehler } from './imageUtils';
 
 /**
  * Generate a unique filename for recipe images
@@ -36,20 +36,10 @@ function generateUniqueFilename(file) {
  * @returns {Promise<string>} - Download URL of the uploaded image
  */
 async function uploadImageToFolder(file, folder) {
-  if (!file) {
-    throw new Error('No file provided');
-  }
-
-  // Validate file size (limit to 5MB)
-  const maxSize = 5 * 1024 * 1024; // 5MB
-  if (file.size > maxSize) {
-    throw new Error('Image file size must be less than 5MB');
-  }
-
-  // Validate file type
-  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-  if (!validTypes.includes(file.type)) {
-    throw new Error('Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image');
+  // Datei vorhanden, höchstens 5 MB, erlaubtes Format; Fehler mit Schlüssel (Mehrsprachigkeit PR 6o)
+  const fehler = bildDateiFehler(file);
+  if (fehler) {
+    throw fehler;
   }
 
   try {
@@ -68,7 +58,7 @@ async function uploadImageToFolder(file, folder) {
     return downloadURL;
   } catch (error) {
     console.error('Error uploading image to Firebase Storage:', error);
-    throw new Error('Failed to upload image. Please try again.', { cause: error });
+    throw bildFehler('bildHochladenFehlgeschlagen', { cause: error });
   }
 }
 

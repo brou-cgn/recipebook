@@ -42,6 +42,8 @@ const NUR_DEUTSCH = new Set([
   // „Einschätzung im Detail“ in „Wein dazu“: Diagnoseansicht mit der Berechtigung weinprofilEinblick,
   // standardmäßig nur für Admins (Mehrsprachigkeit PR 6c)
   'components/WeinprofilEinblick.js',
+  // „Profile nachtragen“ auf der Seite Weinbegleitung: nur für die Rolle admin (Mehrsprachigkeit PR 6o)
+  'components/WeinprofilNachtragen.js',
   // „Verwaltung“ in „Chefkoch & mehr“ (Kueche.js), nur mit den Berechtigungen appCalls oder eventplanung: die
   // App-Aufrufe und die Eventplanung mit Kalibrierung (Entscheidung vom 23.11.2026). Die Kacheln dorthin sind übersetzt.
   'components/CallLogPanel.js',
@@ -61,22 +63,16 @@ const NUR_DEUTSCH = new Set([
   'components/templateEditor/TemplateGallery.js',
 ]);
 
-// Stand 23.11.2026 (Verwaltung in „Chefkoch & mehr“ bleibt deutsch): 266 Textstellen in 18 Dateien.
+// Stand 23.11.2026 (PR 6o: Weinbegleitung und Kleinkram): 215 Textstellen in 12 Dateien.
 const BASELINE = {
   'components/FlowPage.js': 3,
   'components/GroupCreateDialog.js': 23,
   'components/GroupDetail.js': 53,
   'components/GroupEditDialog.js': 21,
   'components/GroupList.js': 12,
-  'components/MeineKuechenstarsPage.js': 6,
   'components/MemberProfilePage.js': 6,
   'components/NetworkPage.js': 14,
   'components/PrintPage.js': 2,
-  'components/RecipeTimeline.js': 5,
-  'components/RecipeVersionDescribe.js': 11,
-  'components/SharePage.js': 3,
-  'components/SplashScreen.js': 2,
-  'components/WeinbegleitungSeite.js': 24,
   'components/WichtelPage.js': 66,
   'components/WichtelTeilnehmerFormular.js': 11,
   'components/printElementRenderers.js': 3,

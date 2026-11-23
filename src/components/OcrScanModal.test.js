@@ -556,3 +556,16 @@ describe('OcrScanModal in anderer Sprache (Mehrsprachigkeit PR 6i)', () => {
     expect(mockEnqueueImportJob).toHaveBeenCalledWith(expect.objectContaining({ label: 'Foto-Scan (2 Bilder)' }));
   });
 });
+
+describe('OcrScanModal: Meldungen der Bildprüfung (Mehrsprachigkeit PR 6o)', () => {
+  test('Englisch: die deutsche Meldung von fileToBase64 erscheint über ihren Schlüssel', async () => {
+    const { fileToBase64 } = require('../utils/imageUtils');
+    fileToBase64.mockRejectedValue(
+      Object.assign(new Error('Das Bild darf höchstens 5 MB groß sein.'), { schluessel: 'bildZuGross' }),
+    );
+    renderWithProviders(<OcrScanModal onCancel={jest.fn()} />, { sprache: 'en' });
+    const datei = new File(['test'], 'gross.png', { type: 'image/png' });
+    fireEvent.change(screen.getByLabelText('Upload image(s)'), { target: { files: [datei] } });
+    expect(await screen.findByText('The image can be no larger than 5 MB.')).toBeInTheDocument();
+  });
+});

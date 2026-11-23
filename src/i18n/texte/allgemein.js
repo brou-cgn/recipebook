@@ -32,6 +32,12 @@ export default {
     weiter: 'Weiter',
     hinzufuegen: 'Hinzufügen',
     aendern: 'Ändern',
+    // Prüfung und Hochladen von Bildern (bildDateiFehler in src/utils/imageUtils.js), PR 6o; message der
+    // Fehler ist der deutsche Text, angezeigt über ergebnisText(fehler, t)
+    bildFehlt: 'Es wurde keine Datei ausgewählt.',
+    bildZuGross: 'Das Bild darf höchstens 5 MB groß sein.',
+    bildTypUngueltig: 'Dieses Dateiformat geht nicht. Bitte wähle ein Bild im Format JPEG, PNG, GIF oder WebP.',
+    bildHochladenFehlgeschlagen: 'Das Bild konnte nicht hochgeladen werden. Bitte versuch es noch einmal.',
   },
   en: {
     speichern: 'Save',
@@ -59,6 +65,12 @@ export default {
     weiter: 'Next',
     hinzufuegen: 'Add',
     aendern: 'Change',
+    // Prüfung und Hochladen von Bildern (bildDateiFehler in src/utils/imageUtils.js), PR 6o; message der
+    // Fehler ist der deutsche Text, angezeigt über ergebnisText(fehler, t)
+    bildFehlt: 'No file was selected.',
+    bildZuGross: 'The image can be no larger than 5 MB.',
+    bildTypUngueltig: 'This file type isn’t supported. Please choose a JPEG, PNG, GIF or WebP image.',
+    bildHochladenFehlgeschlagen: 'The image couldn’t be uploaded. Please try again.',
   },
   fr: {
     speichern: 'Enregistrer',
@@ -86,5 +98,11 @@ export default {
     weiter: 'Suivant',
     hinzufuegen: 'Ajouter',
     aendern: 'Modifier',
+    // Prüfung und Hochladen von Bildern (bildDateiFehler in src/utils/imageUtils.js), PR 6o; message der
+    // Fehler ist der deutsche Text, angezeigt über ergebnisText(fehler, t)
+    bildFehlt: 'Aucun fichier n’a été sélectionné.',
+    bildZuGross: 'L’image ne doit pas dépasser 5 Mo.',
+    bildTypUngueltig: 'Ce format de fichier n’est pas pris en charge. Choisis une image JPEG, PNG, GIF ou WebP.',
+    bildHochladenFehlgeschlagen: 'Impossible d’envoyer l’image. Réessaie.',
   },
 };

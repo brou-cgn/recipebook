@@ -504,7 +504,7 @@ griff nicht zuverlässig, Drinks bekamen Empfehlungen. Kein Tech-Check-Befund be
   (`ROLE_PERMISSIONS_DEFAULT`), `src/App.js` (`applyRolePermissionsToUser`) und `src/components/UserManagement.js`
   (`ROLE_PERMISSION_COLUMNS`)
 - Menü: `src/components/Weinbegleitung.js` und `.css`, Hook `src/hooks/useMenueWeinbegleitung.js`, eingebunden in `MenuDetail.js` (Zusammenfassung vor `displaySections.map`, Weinzeile nach `section-title-row`); Modus „Ein Wein“ im Kopf: `EinWeinKopf` in `Weinbegleitung.js`, Umschaltung über `zeigtEinWeinImKopf` (`menue.js`); gemeinsame Bausteine `src/components/WeinbegleitungTeile.js`
-- Seite „Weinbegleitung“: `src/components/WeinbegleitungSeite.js` und `.css`, Hook `src/hooks/useWeinprofilBackfill.js`, Kachel und Unterseite in `src/components/Kueche.js`; Backfill-Function in `functions/handlers/weinbegleitung.js`
+- Seite „Weinbegleitung“: `src/components/WeinbegleitungSeite.js` und `.css`, Hook `src/hooks/useWeinprofilBackfill.js`, Kachel und Unterseite in `src/components/Kueche.js`; Backfill-Function in `functions/handlers/weinbegleitung.js`. Seit Mehrsprachigkeit PR 6o ist die Seite übersetzt (Texte in `src/i18n/texte/wein.js`, Weinstile über `src/utils/weinbegleitung/sprache.js`); der Admin-Teil „Profile nachtragen“ steht in `src/components/WeinprofilNachtragen.js` und bleibt deutsch
 - Engine: `src/utils/weinbegleitung/` (`konstanten.js`, `profilSchema.js`, `wissensbasis.js`, `bewertung.js`,
   `gang.js`, `engine.js`), Tests daneben, Profil-Fixtures in `__fixtures__/profile.js`
 - Andockpunkte: Rezept `src/components/RecipeDetail.js` (Metadatenzeile `recipe-metadata`); Menü

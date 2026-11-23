@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import './SharePage.css';
 import { getRecipeByShareId } from '../utils/recipeFirestore';
 import RecipeDetail from './RecipeDetail';
+import { useTexte } from '../contexts/SpracheContext';
+import rezeptansichtTexte from '../i18n/texte/rezeptansicht';
 
 function SharePage({ shareId, currentUser, onClose }) {
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  // Ohne Anmeldung gilt die Sprache des Browsers (Mehrsprachigkeit PR 6o)
+  const t = useTexte(rezeptansichtTexte);
 
   useEffect(() => {
     const load = async () => {
@@ -25,7 +29,7 @@ function SharePage({ shareId, currentUser, onClose }) {
   if (loading) {
     return (
       <div className="share-page-loading">
-        Rezept wird geladen…
+        {t('freigabeLaedt')}
       </div>
     );
   }
@@ -33,8 +37,8 @@ function SharePage({ shareId, currentUser, onClose }) {
   if (notFound) {
     return (
       <div className="share-page-not-found">
-        <h2>Rezept nicht gefunden</h2>
-        <p>Dieser Share-Link ist ungültig oder das Rezept wurde nicht mehr geteilt.</p>
+        <h2>{t('freigabeNichtGefunden')}</h2>
+        <p>{t('freigabeLinkUngueltig')}</p>
       </div>
     );
   }

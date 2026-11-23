@@ -1,7 +1,10 @@
 import React from 'react';
-import { screen, fireEvent, waitFor } from '@testing-library/react';
+import fs from 'fs';
+import path from 'path';
+import { screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { renderWithProviders } from '../test-utils';
 import RecipeVersionDescribe from './RecipeVersionDescribe';
+import rezeptansichtTexte, { VERSION_MELDUNGEN } from '../i18n/texte/rezeptansicht';
 
 const recipe = { id: 'r1', title: 'Pfannkuchen' };
 
@@ -94,11 +97,79 @@ test('Diktat hängt erkannten Text an das Textfeld an', () => {
   setup();
   typeText('Ich habe');
   fireEvent.click(screen.getByRole('button', { name: 'Diktat starten' }));
-  const { act } = require('@testing-library/react');
+  expect(instance.lang).toBe('de-DE');
   act(() => {
     instance.onresult({ resultIndex: 0, results: [Object.assign([{ transcript: 'Olivenöl genommen' }], { isFinal: true })] });
   });
   expect(screen.getByLabelText('Was war anders?')).toHaveValue('Ich habe Olivenöl genommen');
   fireEvent.click(screen.getByRole('button', { name: 'Diktat beenden' }));
   expect(screen.getByRole('button', { name: 'Diktat starten' })).toBeInTheDocument();
+});
+
+describe('Mehrsprachigkeit (PR 6o)', () => {
+  const zeige = (sprache, props = {}) => renderWithProviders(
+    <RecipeVersionDescribe recipe={recipe} onApply={jest.fn()} onSkip={jest.fn()} onCancel={jest.fn()} {...props} />,
+    { sprache },
+  );
+
+  function spracherkennung() {
+    const erkennung = {};
+    window.SpeechRecognition = class {
+      constructor() { erkennung.instanz = this; }
+      start() {}
+      stop() { this.onend?.(); }
+      abort() {}
+    };
+    return erkennung;
+  }
+
+  test('Englisch: Dialog, Diktat-Knopf und bekannte Meldung der Cloud Function', async () => {
+    spracherkennung();
+    const onApply = jest.fn().mockRejectedValue(
+      new Error('Tageslimit für Versionsbeschreibungen erreicht (40/40). Versuche es morgen erneut.'),
+    );
+    zeige('en', { onApply });
+    expect(screen.getByRole('dialog', { name: 'Create your own version' })).toBeInTheDocument();
+    const feld = screen.getByLabelText('What was different?');
+    expect(feld).toHaveAttribute('placeholder', 'What did you do differently?');
+    expect(screen.getByRole('button', { name: 'Start dictation' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create version' })).toHaveAttribute('title', 'Continue without a description');
+
+    fireEvent.change(feld, { target: { value: 'Olive oil instead of butter' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create version' }));
+    expect(await screen.findByRole('alert'))
+      .toHaveTextContent('Daily limit for version descriptions reached (40/40). Try again tomorrow.');
+  });
+
+  test('Französisch: die Spracherkennung hört französisch zu, ihre Fehler erscheinen französisch', () => {
+    const erkennung = spracherkennung();
+    zeige('fr');
+    expect(screen.getByLabelText('Qu’est-ce qui était différent ?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Lancer la dictée' }));
+    expect(erkennung.instanz.lang).toBe('fr-FR');
+    expect(screen.getByRole('button', { name: 'Arrêter la dictée' })).toBeInTheDocument();
+    act(() => {
+      erkennung.instanz.onerror({ error: 'no-speech' });
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent('Rien n’a été compris. Réessaie.');
+  });
+
+  test('ohne Meldung kommt der eigene Ersatztext, eine unbekannte Meldung bleibt, wie sie ist', async () => {
+    const onApply = jest.fn().mockRejectedValueOnce(new Error('')).mockRejectedValueOnce(new Error('Gemini API error: quota'));
+    zeige('fr', { onApply });
+    fireEvent.change(screen.getByLabelText('Qu’est-ce qui était différent ?'), { target: { value: 'Plus de sel' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Créer la version' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Impossible d’intégrer les modifications.');
+    fireEvent.click(screen.getByRole('button', { name: 'Créer la version' }));
+    expect(await screen.findByText('Gemini API error: quota')).toHaveAttribute('role', 'alert');
+  });
+
+  test('kennt jede Meldung so, wie die Cloud Function sie meldet', () => {
+    const quelle = fs.readFileSync(path.join(__dirname, '..', '..', 'functions', 'handlers', 'versionChanges.js'), 'utf8');
+    VERSION_MELDUNGEN.forEach((schluessel) => {
+      rezeptansichtTexte.de[schluessel].split(/\{\w+\}/).filter((teil) => teil.trim()).forEach((teil) => {
+        expect({ schluessel, gefunden: quelle.includes(teil) }).toEqual({ schluessel, gefunden: true });
+      });
+    });
+  });
 });
