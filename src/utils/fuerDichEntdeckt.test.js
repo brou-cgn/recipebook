@@ -5,6 +5,7 @@ import {
   getFuerDichEntdecktListId,
   hideExpiredCarriedRecipes,
   isFuerDichEntdecktList,
+  listenAnzeigeName,
   planFuerDichEntdecktSync,
   syncFuerDichEntdecktList,
 } from './fuerDichEntdeckt';
@@ -111,5 +112,23 @@ describe('fuerDichEntdeckt', () => {
     };
     expect(hideExpiredCarriedRecipes(list, recipes, docs).map((r) => r.id)).toEqual(['a', 'd']);
     expect(hideExpiredCarriedRecipes({}, recipes, docs)).toBe(recipes);
+  });
+});
+
+describe('listenAnzeigeName (Mehrsprachigkeit PR 6p)', () => {
+  const { erstelleT } = jest.requireActual('../i18n/texte');
+  const startseiteTexte = jest.requireActual('../i18n/texte/startseite').default;
+
+  test('die Systemliste erscheint in der geltenden Sprache, gespeichert bleibt der deutsche Name', () => {
+    const systemListe = { ...ownList, name: FUER_DICH_ENTDECKT_LIST_NAME };
+    expect(listenAnzeigeName(systemListe, erstelleT(startseiteTexte, 'de'))).toBe('Für dich entdeckt');
+    expect(listenAnzeigeName(systemListe, erstelleT(startseiteTexte, 'en'))).toBe('Discovered for you');
+    expect(listenAnzeigeName(systemListe, erstelleT(startseiteTexte, 'fr'))).toBe('Découvert pour toi');
+  });
+
+  test('eigene Namen bleiben, ohne Liste kommt ein leerer Text', () => {
+    const tEn = erstelleT(startseiteTexte, 'en');
+    expect(listenAnzeigeName({ ...regularList, name: 'Sommerküche' }, tEn)).toBe('Sommerküche');
+    expect(listenAnzeigeName(undefined, tEn)).toBe('');
   });
 });

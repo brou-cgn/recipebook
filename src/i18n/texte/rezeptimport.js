@@ -82,6 +82,11 @@ export const DIENST_MELDUNGEN = Object.freeze([
   'csvZuKurz',
   'csvFehlerImportieren',
   'csvKeineRezepte',
+  'tageslimitAnfragen',
+  'tageslimitAufnahmen',
+  'kiBerechtigungUngeprueft',
+  'kiErstAbBearbeiten',
+  'kiRolleOhneBerechtigung',
 ]);
 
 export default {
@@ -225,6 +230,13 @@ export default {
     tageslimitScans: 'Tageslimit erreicht ({limit}/{limit} Scans). Versuche es morgen erneut.',
     kiAusgelastet: 'Die KI-API ist momentan ausgelastet. Bitte versuche es in einigen Minuten erneut.',
     kiAusgelastetOcr: 'Die KI-API ist momentan ausgelastet. Bitte versuche es in einigen Minuten erneut oder nutze Standard-OCR.',
+    // Tageslimit der KI-Anfragen und Website-Aufnahmen (functions/handlers/importApp.js) und KI-Berechtigung
+    // (functions/shared/auth.js), PR 6p
+    tageslimitAnfragen: 'Tageslimit erreicht ({limit}/{limit} Anfragen). Versuche es morgen erneut.',
+    tageslimitAufnahmen: 'Tageslimit erreicht ({limit}/{limit} Website-Aufnahmen). Versuche es morgen erneut.',
+    kiBerechtigungUngeprueft: 'Die Berechtigung für KI-Funktionen konnte nicht geprüft werden. Bitte versuche es gleich noch einmal.',
+    kiErstAbBearbeiten: 'KI-Funktionen sind erst ab der Rolle „Bearbeiten“ verfügbar.',
+    kiRolleOhneBerechtigung: 'Deiner Rolle fehlt die Berechtigung für diese Funktion.',
     // CSV-Import (csvBulkImport.js), angezeigt im Dialog (RecipeImportModal.js)
     csvZeileOhneName: 'Zeile {zeile}: Rezeptname fehlt',
     csvZeileOhneZutat: 'Zeile {zeile} ({titel}): Mindestens eine Zutat erforderlich',
@@ -374,6 +386,13 @@ export default {
     tageslimitScans: 'Daily limit reached ({limit}/{limit} scans). Try again tomorrow.',
     kiAusgelastet: 'The AI service is busy right now. Please try again in a few minutes.',
     kiAusgelastetOcr: 'The AI service is busy right now. Please try again in a few minutes or use standard OCR.',
+    // Tageslimit der KI-Anfragen und Website-Aufnahmen (functions/handlers/importApp.js) und KI-Berechtigung
+    // (functions/shared/auth.js), PR 6p
+    tageslimitAnfragen: 'Daily limit reached ({limit}/{limit} requests). Try again tomorrow.',
+    tageslimitAufnahmen: 'Daily limit reached ({limit}/{limit} website captures). Try again tomorrow.',
+    kiBerechtigungUngeprueft: 'Your permission for AI features couldn’t be checked. Please try again in a moment.',
+    kiErstAbBearbeiten: 'AI features are only available from the “Edit” role upwards.',
+    kiRolleOhneBerechtigung: 'Your role doesn’t have permission for this feature.',
     // CSV-Import (csvBulkImport.js), angezeigt im Dialog (RecipeImportModal.js)
     csvZeileOhneName: 'Row {zeile}: recipe name missing',
     csvZeileOhneZutat: 'Row {zeile} ({titel}): at least one ingredient required',
@@ -523,6 +542,13 @@ export default {
     tageslimitScans: 'Limite quotidienne atteinte ({limit}/{limit} scans). Réessaie demain.',
     kiAusgelastet: 'Le service d’IA est surchargé pour le moment. Réessaie dans quelques minutes.',
     kiAusgelastetOcr: 'Le service d’IA est surchargé pour le moment. Réessaie dans quelques minutes ou utilise l’OCR standard.',
+    // Tageslimit der KI-Anfragen und Website-Aufnahmen (functions/handlers/importApp.js) und KI-Berechtigung
+    // (functions/shared/auth.js), PR 6p
+    tageslimitAnfragen: 'Limite quotidienne atteinte ({limit}/{limit} requêtes). Réessaie demain.',
+    tageslimitAufnahmen: 'Limite quotidienne atteinte ({limit}/{limit} captures de site). Réessaie demain.',
+    kiBerechtigungUngeprueft: 'Impossible de vérifier ton autorisation pour les fonctions d’IA. Réessaie dans un instant.',
+    kiErstAbBearbeiten: `Les fonctions d’IA ne sont disponibles qu’à partir du rôle «${NBSP}Modifier${NBSP}».`,
+    kiRolleOhneBerechtigung: 'Ton rôle n’a pas l’autorisation pour cette fonction.',
     // CSV-Import (csvBulkImport.js), angezeigt im Dialog (RecipeImportModal.js)
     csvZeileOhneName: `Ligne {zeile}${NBSP}: nom de la recette manquant`,
     csvZeileOhneZutat: `Ligne {zeile} ({titel})${NBSP}: au moins un ingrédient est requis`,

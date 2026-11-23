@@ -1431,6 +1431,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       servings: currentServings,
       authorName,
       portionLabel,
+      popupHinweis: tAnsicht('popupsErlauben'),
     });
   };
 

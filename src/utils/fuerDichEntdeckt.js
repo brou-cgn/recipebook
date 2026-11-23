@@ -35,6 +35,16 @@ export const isFuerDichEntdecktList = (group) =>
   Boolean(group) && group.systemKey === FUER_DICH_ENTDECKT_SYSTEM_KEY;
 
 /**
+ * Anzeigename einer Liste (Mehrsprachigkeit PR 6p): „Für dich entdeckt“ legt das System mit deutschem
+ * Namen an (FUER_DICH_ENTDECKT_LIST_NAME); er erscheint in der geltenden Sprache. Eigene Namen sind
+ * Inhalt und bleiben, wie sie sind. In Komponenten über useListenName (src/hooks/useListenName.js).
+ * @param {object|null|undefined} liste - Gruppe bzw. Liste aus Firestore
+ * @param {Function} t - Übersetzungsfunktion für src/i18n/texte/startseite.js
+ * @returns {string}
+ */
+export const listenAnzeigeName = (liste, t) => (isFuerDichEntdecktList(liste) ? t('fuerDichEntdeckt') : (liste?.name || ''));
+
+/**
  * Die "Für dich entdeckt"-Liste des Nutzers aus den geladenen Gruppen.
  * @returns {Object|null}
  */

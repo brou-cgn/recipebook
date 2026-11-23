@@ -12,7 +12,8 @@ const NBSP = '\u00a0';
 
 /**
  * Deutsche Meldungen der Cloud Function applyRecipeVersionChanges
- * (functions/handlers/versionChanges.js), die der Versions-Dialog anzeigt. Sie kommen als Text
+ * (functions/handlers/versionChanges.js, seit PR 6p auch die der KI-Berechtigung aus
+ * functions/shared/auth.js), die der Versions-Dialog anzeigt. Sie kommen als Text
  * vom Server und werden über findeText erkannt (Mehrsprachigkeit PR 6o); ein Test gleicht sie
  * mit dem Code der Function ab. Englische technische Meldungen bleiben, wie sie sind.
  */
@@ -20,6 +21,9 @@ export const VERSION_MELDUNGEN = Object.freeze([
   'versionKiUnvollstaendig',
   'versionTageslimit',
   'versionKiAusgelastet',
+  'versionKiBerechtigungUngeprueft',
+  'versionKiErstAbBearbeiten',
+  'versionRolleOhneBerechtigung',
 ]);
 
 export default {
@@ -61,6 +65,8 @@ export default {
     kochdatum: 'Kochdatum',
     rezeptDrucken: 'Rezept drucken',
     drucken: 'Drucken',
+    // Hinweis, wenn iOS das Druckfenster blockiert (printRunner.js), PR 6p
+    popupsErlauben: 'Bitte erlaube Popups für diese Seite, um das Rezept zu drucken.',
     rezeptTeilen: 'Rezept teilen',
     teilen: '↑ Teilen',
     teilenLaeuft: 'Wird geteilt …',
@@ -130,6 +136,9 @@ export default {
     versionKiUnvollstaendig: 'Die KI hat kein vollständiges Rezept zurückgegeben.',
     versionTageslimit: 'Tageslimit für Versionsbeschreibungen erreicht ({limit}/{limit}). Versuche es morgen erneut.',
     versionKiAusgelastet: 'Die KI-API ist momentan ausgelastet. Bitte versuche es in einigen Minuten erneut.',
+    versionKiBerechtigungUngeprueft: 'Die Berechtigung für KI-Funktionen konnte nicht geprüft werden. Bitte versuche es gleich noch einmal.',
+    versionKiErstAbBearbeiten: 'KI-Funktionen sind erst ab der Rolle „Bearbeiten“ verfügbar.',
+    versionRolleOhneBerechtigung: 'Deiner Rolle fehlt die Berechtigung für diese Funktion.',
     // Geteiltes Rezept (SharePage.js), PR 6o; wie beim Menü in festtafel.js
     freigabeLaedt: 'Rezept wird geladen…',
     freigabeNichtGefunden: 'Rezept nicht gefunden',
@@ -173,6 +182,8 @@ export default {
     kochdatum: 'Cooking date',
     rezeptDrucken: 'Print recipe',
     drucken: 'Print',
+    // Hinweis, wenn iOS das Druckfenster blockiert (printRunner.js), PR 6p
+    popupsErlauben: 'Please allow pop-ups for this page to print the recipe.',
     rezeptTeilen: 'Share recipe',
     teilen: '↑ Share',
     teilenLaeuft: 'Sharing…',
@@ -242,6 +253,9 @@ export default {
     versionKiUnvollstaendig: 'The AI didn’t return a complete recipe.',
     versionTageslimit: 'Daily limit for version descriptions reached ({limit}/{limit}). Try again tomorrow.',
     versionKiAusgelastet: 'The AI service is busy right now. Please try again in a few minutes.',
+    versionKiBerechtigungUngeprueft: 'Your permission for AI features couldn’t be checked. Please try again in a moment.',
+    versionKiErstAbBearbeiten: 'AI features are only available from the “Edit” role upwards.',
+    versionRolleOhneBerechtigung: 'Your role doesn’t have permission for this feature.',
     // Geteiltes Rezept (SharePage.js), PR 6o; wie beim Menü in festtafel.js
     freigabeLaedt: 'Loading recipe…',
     freigabeNichtGefunden: 'Recipe not found',
@@ -285,6 +299,8 @@ export default {
     kochdatum: 'Date de cuisine',
     rezeptDrucken: 'Imprimer la recette',
     drucken: 'Imprimer',
+    // Hinweis, wenn iOS das Druckfenster blockiert (printRunner.js), PR 6p
+    popupsErlauben: 'Autorise les fenêtres pop-up pour cette page afin d’imprimer la recette.',
     rezeptTeilen: 'Partager la recette',
     teilen: '↑ Partager',
     teilenLaeuft: 'Partage…',
@@ -354,6 +370,9 @@ export default {
     versionKiUnvollstaendig: 'L’IA n’a pas renvoyé de recette complète.',
     versionTageslimit: 'Limite quotidienne de descriptions de version atteinte ({limit}/{limit}). Réessaie demain.',
     versionKiAusgelastet: 'Le service d’IA est surchargé pour le moment. Réessaie dans quelques minutes.',
+    versionKiBerechtigungUngeprueft: 'Impossible de vérifier ton autorisation pour les fonctions d’IA. Réessaie dans un instant.',
+    versionKiErstAbBearbeiten: `Les fonctions d’IA ne sont disponibles qu’à partir du rôle «${NBSP}Modifier${NBSP}».`,
+    versionRolleOhneBerechtigung: 'Ton rôle n’a pas l’autorisation pour cette fonction.',
     // Geteiltes Rezept (SharePage.js), PR 6o; wie beim Menü in festtafel.js
     freigabeLaedt: 'Chargement de la recette…',
     freigabeNichtGefunden: 'Recette introuvable',

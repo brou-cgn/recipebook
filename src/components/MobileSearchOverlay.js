@@ -11,6 +11,7 @@ import kochbuchTexte from '../i18n/texte/kochbuch';
 import { titelFassungen } from '../i18n/rezeptTitel';
 import { splitIntoTwoRows, reorderActiveFirst } from '../utils/pillCarousel';
 import useFadeOutClose from '../hooks/useFadeOutClose';
+import useListenName from '../hooks/useListenName';
 
 const DEBOUNCE_DELAY_MS = 200;
 // Delay in ms before auto-focusing the input – gives the slide-up animation
@@ -79,6 +80,8 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
   const zeigeTitel = useRezeptTitel();
   const listen = useListenwerte();
   const t = useTexte(kochbuchTexte);
+  // Systemliste „Für dich entdeckt“ in der geltenden Sprache, eigene Listennamen, wie sie sind (PR 6p)
+  const listenName = useListenName();
   const { inhalteUebersetzen } = useSprache();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
@@ -445,12 +448,12 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
     let lists = privateLists || [];
     if (debouncedTerm) {
       const lower = debouncedTerm.toLowerCase();
-      lists = lists.filter((l) => l.name.toLowerCase().includes(lower));
+      lists = lists.filter((l) => listenName(l).toLowerCase().includes(lower));
     }
     const active = lists.filter((l) => selectedPrivateLists.includes(l.id));
     const inactive = lists.filter((l) => !selectedPrivateLists.includes(l.id));
     return [...active, ...inactive];
-  }, [privateLists, selectedPrivateLists, debouncedTerm]);
+  }, [privateLists, selectedPrivateLists, debouncedTerm, listenName]);
 
   if (!isOpen) return null;
 
@@ -637,9 +640,9 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
                 className={`mobile-search-filter-pill mobile-search-cuisine-pill${selectedPrivateLists.includes(list.id) ? ' active' : ''}`}
                 onClick={() => handlePrivateListPillClick(list.id)}
                 aria-pressed={selectedPrivateLists.includes(list.id)}
-                title={selectedPrivateLists.includes(list.id) ? t('filterAufheben') : t('nachFiltern', { name: list.name })}
+                title={selectedPrivateLists.includes(list.id) ? t('filterAufheben') : t('nachFiltern', { name: listenName(list) })}
               >
-                {list.name}
+                {listenName(list)}
               </button>
             ))}
           </div>
