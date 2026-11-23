@@ -1,7 +1,8 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import ConsumptionForm from './ConsumptionForm';
 import { encodeRecipeLink } from '../utils/recipeLinks';
+import { renderWithProviders } from '../test-utils';
 
 const mockSubmitConsumption = jest.fn();
 const mockLockEinkaufMengen = jest.fn(() => Promise.resolve());
@@ -30,10 +31,6 @@ jest.mock('../utils/customLists', () => {
     getButtonIcons: () => Promise.resolve({}),
   };
 });
-
-jest.mock('./EventForm', () => ({
-  CATEGORY_LABELS: { wasser: 'Wasser' },
-}));
 
 function makeEvent(ergebnis) {
   return {
@@ -897,5 +894,163 @@ describe('ConsumptionForm', () => {
     );
 
     expect(screen.getByLabelText('Verbrauch fehlt')).toBeInTheDocument();
+  });
+});
+
+describe('ConsumptionForm in anderer Sprache (Mehrsprachigkeit PR 6k)', () => {
+  const NBSP = '\u00a0';
+
+  beforeEach(() => {
+    mockLockEinkaufMengen.mockResolvedValue(undefined);
+    mockUnlockEinkaufMengen.mockResolvedValue(undefined);
+    mockLockVerbrauchMengen.mockResolvedValue(undefined);
+    mockUnlockVerbrauchMengen.mockResolvedValue(undefined);
+    mockSetEventStatus.mockResolvedValue(undefined);
+    mockSubmitConsumption.mockResolvedValue({ eventId: 'event1' });
+    mockGetCustomLists.mockResolvedValue({ conversionTable: [], packageUnits: [], drinkUnits: [] });
+  });
+
+  // Hausbier mit Fass (50 l) und Flasche im Kasten (24 × 0,33 l), Bedarf 62,7 l
+  const hausbierErgebnis = () => {
+    const einheiten = [
+      { einheitsgroesse: 50, einheit: 'Fass', gebindeinheit: '', einheitenProGebinde: '' },
+      { einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 },
+    ];
+    const zeile = { drinkId: 'drink1', drinkLabel: 'Hausbier', isCustomDrink: true, literMitPuffer: 62.7, einheiten };
+    return [
+      { ...zeile, kategorie: 'drink1:0', einheitIdx: 0, gebinde: null, gebindeGroesseLiter: 50 },
+      { ...zeile, kategorie: 'drink1:1', einheitIdx: 1, gebinde: 'Kasten', gebindeGroesseLiter: 0.33 },
+    ];
+  };
+
+  it('Englisch: Überschrift, Einkauf, Unterdeckung und Sperrstatus mit Zahlen nach der Sprache', () => {
+    const event = { ...makeEvent(hausbierErgebnis()), status: 'berechnet' };
+    renderWithProviders(
+      <ConsumptionForm event={event} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'user1' }} />,
+      { sprache: 'en' }
+    );
+
+    expect(screen.getByText('Shopping & consumption')).toBeInTheDocument();
+    expect(screen.getByLabelText('Open')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Edit purchase'));
+    // Einheiten bleiben deutsch gespeichert (Phase B), die Größe folgt dem Zahlenformat der Sprache
+    expect(screen.getByText('50.0 l · Fass')).toBeInTheDocument();
+    const eingekauft = screen.getAllByLabelText('Bought');
+    expect(eingekauft[0]).toHaveAttribute('placeholder', 'e.g. 1 3/4');
+    fireEvent.change(eingekauft[0], { target: { value: '1' } });
+    fireEvent.change(eingekauft[1], { target: { value: '1 1/2' } });
+    fireEvent.click(screen.getByLabelText('Lock bought quantity'));
+
+    expect(screen.getByText('Shortfall: 61.88 l bought, but 62.7 l calculated.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Purchase locked')).toBeInTheDocument();
+    expect(screen.getByText('1× Fass, 1 1/2× Kasten')).toBeInTheDocument();
+  });
+
+  it('Französisch: Verbrauch, fehlender Verbrauch und Hinweis zu einer Einheit ohne Größe', () => {
+    const ergebnis = [
+      {
+        kategorie: 'drink2:0',
+        drinkId: 'drink2',
+        drinkLabel: 'Cola',
+        isCustomDrink: true,
+        einheitIdx: 0,
+        literMitPuffer: 12.7,
+        gebinde: 'Kasten',
+        gebindeGroesseLiter: 0.33,
+        einheiten: [{ einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 }],
+      },
+      {
+        kategorie: 'drink3:0',
+        drinkId: 'drink3',
+        drinkLabel: 'Limo',
+        isCustomDrink: true,
+        einheitIdx: 0,
+        literMitPuffer: 10,
+        gebinde: null,
+        gebindeGroesseLiter: 0.5,
+        einheiten: [{ einheitsgroesse: 0, einheit: 'Flasche', gebindeinheit: '', einheitenProGebinde: '' }],
+      },
+    ];
+    const event = { ...makeEvent(ergebnis), status: 'eingekauft', date: '2000-01-01', einkaufGesperrt: { 'drink2:0': '2' } };
+    renderWithProviders(
+      <ConsumptionForm event={event} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'user1' }} />,
+      { sprache: 'fr' }
+    );
+
+    expect(screen.getByText('Achats et consommation')).toBeInTheDocument();
+    // getByText vergleicht mit normalisierten Leerzeichen, textContent prüft die geschützten
+    const hinweis = screen.getByText('Limo : l’unité « Flasche » n’a pas de taille valide (litres), le champ reste vide.');
+    expect(hinweis.textContent).toBe(`Limo${NBSP}: l’unité «${NBSP}Flasche${NBSP}» n’a pas de taille valide (litres), le champ reste vide.`);
+    expect(screen.getAllByLabelText('Consommation manquante')).toHaveLength(2);
+
+    fireEvent.click(screen.getAllByLabelText('Modifier la consommation')[0]);
+    fireEvent.change(screen.getByLabelText('Restant (Flasche)'), { target: { value: '8' } });
+
+    // 2 Kästen = 48 Flaschen, 8 übrig: 40 getrunken, 13,2 l verbraucht
+    expect(screen.getByLabelText('Bu (Flasche)')).toHaveValue(40);
+    expect(screen.getByText('13,2 l')).toBeInTheDocument();
+    expect(screen.getByLabelText('Verrouiller la quantité consommée')).toBeInTheDocument();
+    expect(screen.getAllByText('Enregistrer la consommation').length).toBeGreaterThan(0);
+  });
+
+  it('Französisch: vordefiniertes Mineralwasser aus der Berechnung unter dem Namen der Sprache', () => {
+    const ergebnis = [
+      {
+        kategorie: 'predefined_mineralwasser:0',
+        drinkId: 'predefined_mineralwasser',
+        drinkLabel: 'Mineralwasser',
+        isCustomDrink: true,
+        einheitIdx: 0,
+        literMitPuffer: 6,
+        gebinde: 'Flasche',
+        gebindeGroesseLiter: 1,
+        einheiten: [{ einheitsgroesse: 1.0, gebindeinheit: 'Flasche', einheitenProGebinde: 1 }],
+      },
+    ];
+    renderWithProviders(
+      <ConsumptionForm event={makeEvent(ergebnis)} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} />,
+      { sprache: 'fr' }
+    );
+
+    expect(screen.getByText('Eau minérale')).toBeInTheDocument();
+    expect(screen.queryByText('Mineralwasser')).not.toBeInTheDocument();
+  });
+
+  it('Englisch: Portionsauswahl mit übersetztem Rezepttitel', async () => {
+    const recipe = {
+      id: 'rezept1',
+      title: 'Hugo mit Holunder',
+      titelUebersetzung: { quelle: 'Hugo mit Holunder', originalSprache: 'de', de: 'Hugo mit Holunder', en: 'Hugo with elderflower', fr: 'Hugo au sureau' },
+      portionen: 4,
+      ingredients: [{ type: 'ingredient', text: '100 ml Holundersirup' }],
+    };
+    const ergebnis = [
+      {
+        kategorie: 'drink4:0',
+        drinkId: 'drink4',
+        drinkLabel: encodeRecipeLink('rezept1', 'Hugo mit Holunder'),
+        isCustomDrink: true,
+        einheitIdx: 0,
+        literMitPuffer: 4,
+        gebinde: null,
+        gebindeGroesseLiter: 0.2,
+        einheiten: [{ einheitsgroesse: 0.2, einheit: 'Glas', gebindeinheit: '', einheitenProGebinde: '' }],
+      },
+    ];
+    renderWithProviders(
+      <ConsumptionForm event={makeEvent(ergebnis)} recipes={[recipe]} onDone={jest.fn()} onCancel={jest.fn()} />,
+      { sprache: 'en', inhalteUebersetzen: true }
+    );
+
+    fireEvent.click(screen.getByLabelText('Create shopping list'));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Choose servings' });
+    expect(within(dialog).getByText('Servings for the shopping list')).toBeInTheDocument();
+    expect(within(dialog).getByText('Linked recipes')).toBeInTheDocument();
+    expect(within(dialog).getByText('Hugo with elderflower')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('More servings')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Fewer servings')).toBeInTheDocument();
+    expect(within(dialog).getByText('Create shopping list')).toBeInTheDocument();
   });
 });

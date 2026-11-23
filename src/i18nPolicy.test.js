@@ -56,7 +56,7 @@ const NUR_DEUTSCH = new Set([
   'components/templateEditor/TemplateGallery.js',
 ]);
 
-// Stand 22.11.2026 (PR 6j, Events): 634 Textstellen in 37 Dateien.
+// Stand 23.11.2026 (PR 6k, Gäste, Getränke und Verbrauch): 460 Textstellen in 33 Dateien.
 const BASELINE = {
   'App.js': 5,
   'components/AtelierCategorySelectionPage.js': 5,
@@ -64,16 +64,12 @@ const BASELINE = {
   'components/AtelierSwipeTrainerOverlay.js': 8,
   'components/AtelierTasteIntroOverlay.js': 8,
   'components/CallLogPanel.js': 35,
-  'components/ConsumptionForm.js': 33,
-  'components/DrinkManagementPage.js': 60,
-  'components/EventDrinkSelectionPage.js': 26,
   'components/EventplanungPage.js': 2,
   'components/FlowPage.js': 3,
   'components/GroupCreateDialog.js': 23,
   'components/GroupDetail.js': 53,
   'components/GroupEditDialog.js': 21,
   'components/GroupList.js': 12,
-  'components/GuestManagementPage.js': 55,
   'components/KalibrierungsAuswertung.js': 14,
   'components/Login.js': 18,
   'components/MeineKuechenstarsPage.js': 6,

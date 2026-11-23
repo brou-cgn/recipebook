@@ -7,7 +7,7 @@ import OverviewAddFab from './OverviewAddFab';
 import DeleteRowButton from './DeleteRowButton';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import RecipeTypeahead from './RecipeTypeahead';
-import { DRINK_CATEGORIES, getDrinkCategoryLabel, mergePredefinedDrinks } from '../utils/drinkCategories';
+import { DRINK_CATEGORIES, getraenkKategorieAnzeige, getraenkNameAnzeige, mergePredefinedDrinks } from '../utils/drinkCategories';
 import { getCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image, generateThumbnailBlob } from '../utils/imageUtils';
 import { uploadDrinkImage, uploadDrinkThumbnail, deleteRecipeImage } from '../utils/storageUtils';
@@ -17,6 +17,11 @@ import { parseIngredientPartsSync, computeRecipeDrinkEinheitsgroesse, scaleIngre
 import { updateRecipe } from '../utils/recipeFirestore';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import Button from './Button';
+import { useSprache, useTexte } from '../contexts/SpracheContext';
+import { formatiereZahl } from '../i18n/format';
+import { STANDARD_SPRACHE } from '../i18n/sprachen';
+import getraenkeTexte from '../i18n/texte/getraenke';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 const DRINK_RECIPE_CATEGORY = 'Drinks';
 
@@ -29,7 +34,8 @@ const CATEGORY_ORDER = DRINK_CATEGORIES.reduce((acc, cat) => {
 }, []);
 const UNCATEGORIZED_GROUP_ID = '__uncategorized__';
 
-const groupDrinksByCategory = (drinksList, recipes) => {
+// t: Texte aus getraenke.js, damit vordefinierte Getränke nach ihrem angezeigten Namen sortiert werden
+const groupDrinksByCategory = (drinksList, recipes, t) => {
   const groups = new Map();
   drinksList.forEach((drink) => {
     const groupId = drink.kategorie && CATEGORY_ORDER.includes(drink.kategorie)
@@ -42,12 +48,12 @@ const groupDrinksByCategory = (drinksList, recipes) => {
   const orderedGroupIds = [...CATEGORY_ORDER.filter((id) => groups.has(id))];
   if (groups.has(UNCATEGORIZED_GROUP_ID)) orderedGroupIds.push(UNCATEGORIZED_GROUP_ID);
 
+  // Überschrift je Gruppe beim Anzeigen in der geltenden Sprache (Mehrsprachigkeit PR 6k)
   return orderedGroupIds.map((groupId) => ({
     id: groupId,
-    label: groupId === UNCATEGORIZED_GROUP_ID ? 'Ohne Kategorie' : getDrinkCategoryLabel(groupId),
     drinks: [...groups.get(groupId)].sort((a, b) =>
-      resolveDrinkDisplay(a, recipes).displayName.localeCompare(
-        resolveDrinkDisplay(b, recipes).displayName,
+      resolveDrinkDisplay(a, recipes, t).displayName.localeCompare(
+        resolveDrinkDisplay(b, recipes, t).displayName,
         'de',
         { sensitivity: 'base' },
       )
@@ -60,25 +66,16 @@ const isDrinkRecipe = (recipe) =>
     ? recipe.speisekategorie.includes(DRINK_RECIPE_CATEGORY)
     : recipe?.speisekategorie === DRINK_RECIPE_CATEGORY;
 
-const UNIT_SIZES = [
-  { label: '200 ml', value: 0.2 },
-  { label: '330 ml', value: 0.33 },
-  { label: '500 ml', value: 0.5 },
-  { label: '750 ml', value: 0.75 },
-  { label: '1,0 l', value: 1.0 },
-  { label: '1,5 l', value: 1.5 },
-  { label: '2,0 l', value: 2.0 },
-  { label: '5,0 l', value: 5.0 },
-  { label: '10,0 l', value: 10.0 },
-];
+// Wählbare Einheitsgrößen in Litern; angezeigt über getUnitSizeLabel
+const UNIT_SIZES = [0.2, 0.33, 0.5, 0.75, 1.0, 1.5, 2.0, 5.0, 10.0];
 
-const getUnitSizeLabel = (liters) => {
+// Größe einer Einheit: unter 1 l in ml, sonst in l mit einer Nachkommastelle im Format der Sprache
+// (Mehrsprachigkeit PR 6k; auf Deutsch wie bisher „1,0 l“)
+const getUnitSizeLabel = (liters, sprache = STANDARD_SPRACHE) => {
   const value = Number(liters);
   if (!Number.isFinite(value) || value <= 0) return null;
-  const configuredUnit = UNIT_SIZES.find((unit) => unit.value === value);
-  if (configuredUnit) return configuredUnit.label;
   if (value < 1) return `${Math.round(value * 1000)} ml`;
-  return `${value.toFixed(1).replace('.', ',')} l`;
+  return `${formatiereZahl(value, sprache, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} l`;
 };
 
 const emptyEinheit = () => ({
@@ -107,6 +104,8 @@ const deleteDrinkImageFiles = (image) => {
 
 function DrinkRow({ drink, displayName, isForeign, canManage, canAddUnits, onEdit, onAddUnits, onDelete, swipeDeleteIcon }) {
   const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ disabled: drink.predefined || !canManage });
+  const t = useTexte(getraenkeTexte);
+  const { sprache } = useSprache();
   const isClickable = canManage || canAddUnits;
   const handleRowClick = () => {
     if (canManage) onEdit(drink);
@@ -125,7 +124,7 @@ function DrinkRow({ drink, displayName, isForeign, canManage, canAddUnits, onEdi
               type="button"
               className="drink-swipe-delete-action"
               onClick={() => { onDelete(drink); reset(); }}
-              aria-label={`${displayName} löschen`}
+              aria-label={t('nameLoeschen', { name: displayName })}
             >
               {isBase64Image(swipeDeleteIcon) ? (
                 <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
@@ -166,10 +165,10 @@ function DrinkRow({ drink, displayName, isForeign, canManage, canAddUnits, onEdi
         </div>
         <p className="events-card-meta">
           {[
-            drink.kategorie ? getDrinkCategoryLabel(drink.kategorie) : null,
+            drink.kategorie ? getraenkKategorieAnzeige(drink.kategorie, t) : null,
             Array.isArray(drink.einheiten) && drink.einheiten.length > 0
               ? drink.einheiten
-                  .map((e) => getUnitSizeLabel(e.einheitsgroesse) || String(e.einheitsgroesse))
+                  .map((e) => getUnitSizeLabel(e.einheitsgroesse, sprache) || String(e.einheitsgroesse))
                   .join(', ')
               : null,
           ].filter(Boolean).join(' · ')}
@@ -184,7 +183,8 @@ function DrinkRow({ drink, displayName, isForeign, canManage, canAddUnits, onEdi
 // verwaltet die Seite.
 function EinheitGroup({ index, canRemove, onRemove, swipeDeleteIcon, children }) {
   const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ disabled: !canRemove });
-  const itemName = `Einheit ${index + 1}`;
+  const t = useTexte(getraenkeTexte);
+  const itemName = t('einheitNummer', { nummer: index + 1 });
   return (
     <div className={`events-einheit-group${offset < 0 ? ' swipe-delete-active' : ''}`}>
       {canRemove && (
@@ -194,7 +194,7 @@ function EinheitGroup({ index, canRemove, onRemove, swipeDeleteIcon, children })
               type="button"
               className="drink-swipe-delete-action"
               onClick={() => { onRemove(index); reset(); }}
-              aria-label={`${itemName} löschen`}
+              aria-label={t('nameLoeschen', { name: itemName })}
             >
               {isBase64Image(swipeDeleteIcon) ? (
                 <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
@@ -225,6 +225,11 @@ function EinheitGroup({ index, canRemove, onRemove, swipeDeleteIcon, children })
 
 function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drinks = [], customDrinksLoaded = true }) {
   const loading = !customDrinksLoaded;
+  // Texte der Getränke (Mehrsprachigkeit PR 6k); Einheiten bleiben deutsch gespeichert und angezeigt (Phase B)
+  const t = useTexte(getraenkeTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const { sprache } = useSprache();
+  const kategorieName = (id) => getraenkKategorieAnzeige(id, t);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
   const [editOwnerId, setEditOwnerId] = useState(null);
@@ -285,7 +290,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
     if (!showOwnOnly) return merged;
     return merged.filter((drink) => !drink.ownerId || drink.ownerId === currentUser?.id);
   }, [drinks, currentUser?.id, showOwnOnly, pendingDeleteKeys]);
-  const groupedDrinks = useMemo(() => groupDrinksByCategory(allDrinks, recipes), [allDrinks, recipes]);
+  const groupedDrinks = useMemo(() => groupDrinksByCategory(allDrinks, recipes, t), [allDrinks, recipes, t]);
 
   const nameDrinkDisplay = resolveDrinkDisplay(form.name, recipes);
 
@@ -416,7 +421,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
       setForm((f) => ({ ...f, image: { url, thumbnailUrl } }));
     } catch (err) {
       console.error('Error uploading drink image:', err);
-      setError('Das Bild konnte nicht hochgeladen werden. Erlaubt sind JPEG, PNG, GIF oder WebP bis 5 MB.');
+      setError(t('fehlerBild'));
     } finally {
       setUploadingImage(false);
       input.value = '';
@@ -451,7 +456,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
     einheitRemovalCounterRef.current += 1;
     einheitUndo.scheduleDelete({
       key: `einheit-${session}-${einheitRemovalCounterRef.current}`,
-      message: 'Einheit entfernt.',
+      message: t('einheitEntfernt'),
       onConfirm: () => {},
       onUndo: () => {
         if (einheitSessionRef.current !== session) return;
@@ -515,7 +520,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
       setAddUnitsDrink(null);
     } catch (err) {
       console.error('Error saving drink unit addition:', err);
-      setError('Die zusätzlichen Einheiten konnten nicht gespeichert werden. Bitte versuche es erneut.');
+      setError(t('fehlerEinheitenSpeichern'));
     } finally {
       setSaving(false);
     }
@@ -528,16 +533,16 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
       return;
     }
     if (!isPredefined && !form.name.trim()) {
-      setError('Bitte einen Namen angeben.');
+      setError(t('fehlerName'));
       return;
     }
     if (form.einheiten.length === 0) {
-      setError('Bitte mindestens eine Einheit angeben.');
+      setError(t('fehlerEinheit'));
       return;
     }
     for (const einheit of form.einheiten) {
       if (!einheit.einheitsgroesse) {
-        setError('Bitte eine Einheitsgröße pro Einheit angeben.');
+        setError(t('fehlerGroesse'));
         return;
       }
     }
@@ -567,7 +572,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
       setShowForm(false);
     } catch (err) {
       console.error('Error saving custom drink:', err);
-      setError('Das Getränk konnte nicht gespeichert werden. Bitte versuche es erneut.');
+      setError(t('fehlerSpeichern'));
     } finally {
       setSaving(false);
     }
@@ -575,10 +580,10 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
 
   const handleDelete = (drink) => {
     const ownerId = drink.ownerId || currentUser.id;
-    const deletedDisplayName = resolveDrinkDisplay(drink, recipes).displayName;
+    const deletedDisplayName = resolveDrinkDisplay(drink, recipes, t).displayName;
     scheduleDelete({
       key: `${drink.ownerId || ''}_${drink.id}`,
-      message: `"${deletedDisplayName}" gelöscht.`,
+      message: t('getraenkGeloescht', { name: deletedDisplayName }),
       onConfirm: async () => {
         try {
           await deleteCustomDrink(ownerId, drink.id);
@@ -594,39 +599,39 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
     return (
       <div className="events-page-container">
         <div className="events-page-header">
-          <h2>{isAddUnitsMode ? 'Zusätzliche Einheiten' : editId ? 'Getränk bearbeiten' : 'Neues Getränk'}</h2>
+          <h2>{isAddUnitsMode ? t('zusaetzlicheEinheiten') : editId ? t('getraenkBearbeiten') : t('neuesGetraenk')}</h2>
         </div>
         <form className="events-form" onSubmit={handleSave} ref={formRef}>
           {isAddUnitsMode ? (
             <div className="events-form-field">
-              <span>Getränk</span>
-              <p className="drink-add-units-name">{resolveDrinkDisplay(addUnitsDrink, recipes).displayName}</p>
+              <span>{t('getraenk')}</span>
+              <p className="drink-add-units-name">{resolveDrinkDisplay(addUnitsDrink, recipes, t).displayName}</p>
             </div>
           ) : (
             <>
               <div className="events-form-field">
-                <label htmlFor="drinkName" className="drink-field-label">Name</label>
+                <label htmlFor="drinkName" className="drink-field-label">{t('name')}</label>
                 <div className="drink-title-image-row">
                 <div className="events-name-input-wrapper">
                   <input
                     id="drinkName"
                     type="text"
-                    value={nameDrinkDisplay.isRecipe ? nameDrinkDisplay.displayName : form.name}
+                    value={nameDrinkDisplay.isRecipe ? nameDrinkDisplay.displayName : (isPredefined ? getraenkNameAnzeige(form.name, t) : form.name)}
                     onChange={(e) => handleNameChange(e.target.value)}
-                    placeholder="z. B. Craft-Bier, Apfelsaft, ... (# verlinkt ein Rezept)"
+                    placeholder={t('nameBeispiel')}
                     required={!isPredefined}
                     disabled={isPredefined}
                     readOnly={nameDrinkDisplay.isRecipe}
                     className={nameDrinkDisplay.isRecipe ? 'recipe-link-input' : ''}
-                    title={nameDrinkDisplay.isRecipe ? `Verlinktes Rezept: ${nameDrinkDisplay.displayName}` : undefined}
+                    title={nameDrinkDisplay.isRecipe ? t('verlinktesRezept', { name: nameDrinkDisplay.displayName }) : undefined}
                   />
                   {nameDrinkDisplay.isRecipe && !isPredefined && (
                     <button
                       type="button"
                       className="events-name-link-clear-btn"
                       onClick={handleClearNameLink}
-                      aria-label="Verknüpfung entfernen"
-                      title="Verknüpfung entfernen"
+                      aria-label={t('verknuepfungEntfernen')}
+                      title={t('verknuepfungEntfernen')}
                     >
                       ×
                     </button>
@@ -635,10 +640,10 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
                 <label
                   htmlFor="drinkImageFile"
                   className="drink-add-image-btn"
-                  title={uploadingImage ? 'Hochladen...' : 'Bild hinzufügen'}
+                  title={uploadingImage ? t('hochladen') : t('bildHinzufuegen')}
                 >
                   {isBase64Image(getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)) ? (
-                    <img src={getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)} alt="Bild hinzufügen" className="drink-add-image-icon-img" />
+                    <img src={getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)} alt={t('bildHinzufuegen')} className="drink-add-image-icon-img" />
                   ) : (
                     getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)
                   )}
@@ -656,38 +661,38 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
 
               {form.image && (
                 <div className="events-form-field">
-                  <span>Getränkebild</span>
+                  <span>{t('getraenkebild')}</span>
                   <div className="drink-image-tile delete-row-hover-target">
                     <img
                       src={form.image.thumbnailUrl || form.image.url}
-                      alt="Getränkebild"
+                      alt={t('getraenkebild')}
                       onError={(e) => { e.target.style.display = 'none'; }}
                     />
                     <div className="drink-image-actions">
-                      <DeleteRowButton itemName="Getränkebild" onClick={handleRemoveImage} />
+                      <DeleteRowButton itemName={t('getraenkebild')} onClick={handleRemoveImage} />
                     </div>
                   </div>
                 </div>
               )}
 
               <label className="events-form-field">
-                <span>Getränkekategorie</span>
+                <span>{t('getraenkekategorie')}</span>
                 <select
                   value={form.kategorie}
                   onChange={(e) => setForm((f) => ({ ...f, kategorie: e.target.value }))}
                   disabled={isPredefined}
                 >
-                  <option value="">Keine Kategorie</option>
+                  <option value="">{t('keineKategorie')}</option>
                   {DRINK_CATEGORIES.map((cat) =>
                     cat.subcategories ? (
-                      <optgroup key={cat.id} label={cat.label}>
-                        <option value={cat.id}>{cat.label}</option>
+                      <optgroup key={cat.id} label={kategorieName(cat.id)}>
+                        <option value={cat.id}>{kategorieName(cat.id)}</option>
                         {cat.subcategories.map((sub) => (
-                          <option key={sub.id} value={sub.id}>{sub.label}</option>
+                          <option key={sub.id} value={sub.id}>{kategorieName(sub.id)}</option>
                         ))}
                       </optgroup>
                     ) : (
-                      <option key={cat.id} value={cat.id}>{cat.label}</option>
+                      <option key={cat.id} value={cat.id}>{kategorieName(cat.id)}</option>
                     )
                   )}
                 </select>
@@ -697,7 +702,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
 
           {isAddUnitsMode && (
             <div className="events-form-field">
-              <span>Vorhandene Einheiten</span>
+              <span>{t('vorhandeneEinheiten')}</span>
               {(Array.isArray(addUnitsDrink?.einheiten) ? addUnitsDrink.einheiten : [])
                 .filter((e) => e.addedByUserId !== currentUser?.id).length > 0 ? (
                 <ul className="drink-existing-einheiten-list">
@@ -705,18 +710,18 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
                     .filter((e) => e.addedByUserId !== currentUser?.id)
                     .map((e, idx) => (
                       <li key={idx}>
-                        {[getUnitSizeLabel(e.einheitsgroesse) || String(e.einheitsgroesse), e.einheit].filter(Boolean).join(' ')}
+                        {[getUnitSizeLabel(e.einheitsgroesse, sprache) || String(e.einheitsgroesse), e.einheit].filter(Boolean).join(' ')}
                       </li>
                     ))}
                 </ul>
               ) : (
-                <p className="events-info-text">Noch keine Einheiten vorhanden.</p>
+                <p className="events-info-text">{t('nochKeineEinheiten')}</p>
               )}
             </div>
           )}
 
           <div className="events-form-field">
-            <span>{isAddUnitsMode ? 'Meine zusätzlichen Einheiten' : 'Einheiten'}</span>
+            <span>{isAddUnitsMode ? t('meineZusaetzlichenEinheiten') : t('einheiten')}</span>
             {form.einheiten.map((einheit, idx) => (
               <EinheitGroup
                 key={idx}
@@ -727,7 +732,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
               >
                 <div className="events-form-row events-einheit-row">
                   <label className="events-form-field">
-                    <span>{nameDrinkDisplay.isRecipe ? 'Einheitsgröße (ml)' : 'Einheitsgröße'}</span>
+                    <span>{nameDrinkDisplay.isRecipe ? t('einheitsgroesseMl') : t('einheitsgroesse')}</span>
                     {nameDrinkDisplay.isRecipe ? (
                       <input
                         type="number"
@@ -742,27 +747,27 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
                           const ml = e.target.value;
                           updateEinheit(idx, 'einheitsgroesse', ml === '' ? '' : Number(ml) / 1000);
                         }}
-                        placeholder="z. B. 250"
+                        placeholder={t('groesseBeispiel')}
                       />
                     ) : (
                       <select
                         value={einheit.einheitsgroesse}
                         onChange={(e) => updateEinheit(idx, 'einheitsgroesse', e.target.value)}
                       >
-                        {UNIT_SIZES.map((u) => (
-                          <option key={u.value} value={u.value}>{u.label}</option>
+                        {UNIT_SIZES.map((liter) => (
+                          <option key={liter} value={liter}>{getUnitSizeLabel(liter, sprache)}</option>
                         ))}
                       </select>
                     )}
                   </label>
                   <label className="events-form-field">
-                    <span>Einheit</span>
+                    <span>{t('einheit')}</span>
                     {drinkUnits.length > 0 ? (
                       <select
                         value={einheit.einheit}
                         onChange={(e) => updateEinheit(idx, 'einheit', e.target.value)}
                       >
-                        <option value="">Keine Angabe</option>
+                        <option value="">{t('keineAngabe')}</option>
                         {drinkUnits.map((unit) => (
                           <option key={unit.id} value={unit.singular}>{unit.singular}</option>
                         ))}
@@ -772,14 +777,14 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
                         type="text"
                         value={einheit.einheit}
                         onChange={(e) => updateEinheit(idx, 'einheit', e.target.value)}
-                        placeholder="z. B. Glas, Flasche, Dose"
+                        placeholder={t('einheitBeispiel')}
                       />
                     )}
                   </label>
                 </div>
                 <div className="events-form-row events-einheit-row">
                   <label className="events-form-field">
-                    <span>Menge/Gebinde</span>
+                    <span>{t('mengeGebinde')}</span>
                     <input
                       type="number"
                       min="1"
@@ -789,13 +794,13 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
                     />
                   </label>
                   <label className="events-form-field">
-                    <span>Gebindeinheit</span>
+                    <span>{t('gebindeinheit')}</span>
                     {packageUnits.length > 0 ? (
                       <select
                         value={einheit.gebindeinheit}
                         onChange={(e) => updateEinheit(idx, 'gebindeinheit', e.target.value)}
                       >
-                        <option value="">Keine Angabe</option>
+                        <option value="">{t('keineAngabe')}</option>
                         {packageUnits.map((unit) => (
                           <option key={unit.id} value={unit.singular}>{unit.singular}</option>
                         ))}
@@ -805,7 +810,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
                         type="text"
                         value={einheit.gebindeinheit}
                         onChange={(e) => updateEinheit(idx, 'gebindeinheit', e.target.value)}
-                        placeholder="z. B. Flasche, Dose, Kasten"
+                        placeholder={t('gebindeBeispiel')}
                       />
                     )}
                   </label>
@@ -818,18 +823,18 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
                 <div key={banner.id} className="undo-snackbar" role="status">
                   <span>{banner.message}</span>
                   <button type="button" className="undo-snackbar-btn" onClick={() => einheitUndo.undoDelete(banner.id)}>
-                    Rückgängig
+                    {tAllgemein('rueckgaengig')}
                   </button>
                 </div>
               ))}
             <Button onClick={addEinheit}>
-              Einheit hinzufügen
+              {t('einheitHinzufuegen')}
             </Button>
           </div>
 
           {!isAddUnitsMode && nameDrinkDisplay.isRecipe && nameDrinkDisplay.recipe && (
             <div className="events-form-field">
-              <span>Zutaten von „{nameDrinkDisplay.displayName}"</span>
+              <span>{t('zutatenVon', { name: nameDrinkDisplay.displayName })}</span>
               <ul className="drink-recipe-ingredient-list">
                 {(() => {
                   // Zutatenmengen sind im Rezept auf Basis der Rezeptportionen
@@ -870,7 +875,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
                             type="checkbox"
                             checked={included}
                             onChange={() => handleToggleIngredientIncluded(idx)}
-                            aria-label={`${name} in Kalkulation berücksichtigen`}
+                            aria-label={t('inKalkulation', { name })}
                           />
                           <span className="drink-recipe-ingredient-toggle-slider" aria-hidden="true" />
                         </label>
@@ -886,10 +891,10 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
 
           <div className="events-form-actions">
             <Button className="events-save-desktop-only" onClick={closeForm} disabled={saving}>
-              Abbrechen
+              {tAllgemein('abbrechen')}
             </Button>
             <Button variant="primary" type="submit" className="events-save-desktop-only" loading={saving}>
-              {saving ? 'Speichert …' : 'Speichern'}
+              {saving ? t('speichert') : tAllgemein('speichern')}
             </Button>
           </div>
         </form>
@@ -914,13 +919,13 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
           onTouchStart={() => setFabPressed(true)}
           onTouchEnd={() => setFabPressed(false)}
           disabled={saving}
-          aria-label={isAddUnitsMode ? 'Einheiten speichern' : editId ? 'Getränk aktualisieren' : 'Getränk speichern'}
-          title={isAddUnitsMode ? 'Einheiten speichern' : editId ? 'Getränk aktualisieren' : 'Getränk speichern'}
+          aria-label={isAddUnitsMode ? t('einheitenSpeichern') : editId ? t('getraenkAktualisieren') : t('getraenkSpeichern')}
+          title={isAddUnitsMode ? t('einheitenSpeichern') : editId ? t('getraenkAktualisieren') : t('getraenkSpeichern')}
         >
           {(() => {
             const saveIcon = getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode) || defaultIcon('save');
             return isBase64Image(saveIcon)
-              ? <img src={saveIcon} alt="Speichern" className="button-icon-image" draggable="false" />
+              ? <img src={saveIcon} alt={tAllgemein('speichern')} className="button-icon-image" draggable="false" />
               : saveIcon;
           })()}
         </button>
@@ -935,12 +940,12 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
           onMouseDown={() => setCancelPressed(true)}
           onMouseUp={() => setCancelPressed(false)}
           onMouseLeave={() => setCancelPressed(false)}
-          title="Abbrechen"
-          aria-label="Getränkbearbeitung abbrechen"
+          title={tAllgemein('abbrechen')}
+          aria-label={t('getraenkbearbeitungAbbrechen')}
           disabled={saving}
         >
           {isBase64Image(getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)) ? (
-            <img src={getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
+            <img src={getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)} alt={tAllgemein('abbrechen')} className="button-icon-image" draggable="false" />
           ) : (
             getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)
           )}
@@ -964,24 +969,24 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
   return (
     <div className="events-page-container">
       <div className="events-page-header">
-        <h2>Getränke verwalten</h2>
+        <h2>{t('getraenkeVerwalten')}</h2>
         <div className="events-page-header-actions">
           <Button
             className="events-header-add-btn"
             onClick={openNew}
-            aria-label="Neues Getränk anlegen"
+            aria-label={t('neuesGetraenkAnlegen')}
           >
-            + Getränk
+            {t('plusGetraenk')}
           </Button>
           {onBack && (
             <button
               className="app-close-button"
               onClick={onBack}
-              aria-label="Getränke verwalten schließen"
-              title="Getränke verwalten schließen"
+              aria-label={t('getraenkeVerwaltenSchliessen')}
+              title={t('getraenkeVerwaltenSchliessen')}
             >
               {isBase64Image(closeIcon) ? (
-                <img src={closeIcon} alt="Getränke verwalten schließen" className="app-close-button-icon-img" />
+                <img src={closeIcon} alt={t('getraenkeVerwaltenSchliessen')} className="app-close-button-icon-img" />
               ) : (
                 closeIcon || '×'
               )}
@@ -992,13 +997,13 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
 
       <div className="drink-own-filter-row">
         <label className="drink-own-filter-label">
-          <span>Eigene Getränke</span>
+          <span>{t('eigeneGetraenke')}</span>
           <span className="drink-own-filter-toggle">
             <input
               type="checkbox"
               checked={showOwnOnly}
               onChange={(e) => setShowOwnOnly(e.target.checked)}
-              aria-label="Nur eigene Getränke anzeigen"
+              aria-label={t('nurEigeneAnzeigen')}
             />
             <span className="drink-own-filter-toggle-slider" aria-hidden="true" />
           </span>
@@ -1006,12 +1011,12 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
       </div>
 
       {loading ? (
-        <div className="events-empty-state">Laden...</div>
+        <div className="events-empty-state">{t('laden')}</div>
       ) : (
         <div className="events-list">
           {groupedDrinks.map((group) => (
             <div key={group.id} className="drink-category-group">
-              <h3 className="drink-category-group-header">{group.label}</h3>
+              <h3 className="drink-category-group-header">{group.id === UNCATEGORIZED_GROUP_ID ? t('ohneKategorie') : kategorieName(group.id)}</h3>
               {group.drinks.map((drink) => {
                 const isForeign = Boolean(drink.ownerId) && drink.ownerId !== currentUser?.id;
                 const canManage = drink.predefined || !isForeign || isAdmin;
@@ -1020,7 +1025,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
                   <DrinkRow
                     key={`${drink.ownerId || ''}_${drink.id}`}
                     drink={drink}
-                    displayName={resolveDrinkDisplay(drink, recipes).displayName}
+                    displayName={resolveDrinkDisplay(drink, recipes, t).displayName}
                     isForeign={isForeign}
                     canManage={canManage}
                     canAddUnits={canAddUnits}
@@ -1034,7 +1039,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
             </div>
           ))}
           {drinks.length === 0 && (
-            <p className="events-info-text">Noch keine Getränke angelegt.</p>
+            <p className="events-info-text">{t('nochKeineGetraenke')}</p>
           )}
         </div>
       )}
@@ -1042,11 +1047,11 @@ function DrinkManagementPage({ onBack, currentUser, recipes, customDrinks: drink
         <div key={banner.id} className="undo-snackbar" role="status">
           <span>{banner.message}</span>
           <button type="button" className="undo-snackbar-btn" onClick={() => undoDelete(banner.id)}>
-            Rückgängig
+            {tAllgemein('rueckgaengig')}
           </button>
         </div>
       ))}
-      <OverviewAddFab onClick={openNew} title="Getränk anlegen" ariaLabel="Getränk anlegen" />
+      <OverviewAddFab onClick={openNew} title={t('getraenkAnlegen')} ariaLabel={t('getraenkAnlegen')} />
     </div>
   );
 }

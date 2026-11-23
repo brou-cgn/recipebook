@@ -20,11 +20,9 @@ jest.mock('./EventForm', () => {
       </div>
     );
   }
-  MockEventForm.CATEGORY_LABELS = {};
   return {
     __esModule: true,
     default: MockEventForm,
-    CATEGORY_LABELS: {},
   };
 });
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import DrinkManagementPage from './DrinkManagementPage';
+import { renderWithProviders } from '../test-utils';
 
 const mockSaveCustomDrink = jest.fn();
 const mockDeleteCustomDrink = jest.fn();
@@ -860,7 +861,7 @@ describe('DrinkManagementPage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Craft-Bier löschen' }));
 
       await waitFor(() => {
-        expect(screen.getByRole('status')).toHaveTextContent('"Craft-Bier" gelöscht.');
+        expect(screen.getByRole('status')).toHaveTextContent('„Craft-Bier“ gelöscht.');
       });
     });
 
@@ -1052,5 +1053,49 @@ describe('DrinkManagementPage', () => {
       expect(screen.getByText(/Das Bild konnte nicht hochgeladen werden/)).toBeInTheDocument();
       expect(screen.queryByAltText('Getränkebild')).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('DrinkManagementPage in anderer Sprache (Mehrsprachigkeit PR 6k)', () => {
+  const currentUser = { id: 'u1' };
+
+  beforeEach(() => {
+    mockGetCustomLists.mockResolvedValue({ packageUnits: [] });
+  });
+
+  test('Englisch: Gruppen nach übersetzter Kategorie und Größen im Zahlenformat der Sprache', () => {
+    renderWithProviders(
+      <DrinkManagementPage
+        currentUser={currentUser}
+        customDrinks={[
+          { id: 'd1', name: 'Riesling', kategorie: 'wein_weisswein' },
+          { id: 'd2', name: 'Mystery Drink', kategorie: '' },
+        ]}
+      />,
+      { sprache: 'en' }
+    );
+
+    expect(screen.getByText('Manage drinks')).toBeInTheDocument();
+    expect(screen.getAllByText('White wine').length).toBeGreaterThan(0);
+    expect(screen.getByText('No category')).toBeInTheDocument();
+    // Das vordefinierte Mineralwasser steht immer in der Liste, gespeichert bleibt der deutsche Name
+    expect(screen.getByText('Mineral water')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Add drink'));
+    expect(screen.getByText('New drink')).toBeInTheDocument();
+    expect(screen.getByText('1.5 l')).toBeInTheDocument();
+    expect(screen.getByText('330 ml')).toBeInTheDocument();
+  });
+
+  test('Französisch: Kategorien im Formular als Gruppen der Sprache', () => {
+    renderWithProviders(<DrinkManagementPage currentUser={currentUser} />, { sprache: 'fr' });
+
+    expect(screen.getByText('Aucune boisson ajoutée pour l’instant.')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Ajouter une boisson'));
+
+    expect(screen.getByText('Nouvelle boisson')).toBeInTheDocument();
+    expect(document.querySelector('optgroup[label="Vin"]')).not.toBeNull();
+    expect(screen.getByText('Vin blanc')).toBeInTheDocument();
+    expect(screen.getByText('1,5 l')).toBeInTheDocument();
   });
 });

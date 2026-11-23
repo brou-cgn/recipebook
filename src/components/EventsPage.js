@@ -97,8 +97,8 @@ const groupErgebnisRowsByDrink = (rows) => {
 // Fasst den tatsaechlichen Verbrauch pro Getraenk zusammen (istVerbrauch ist
 // pro Ergebniszeile gespeichert, also ggf. mehrere Eintraege pro Getraenk,
 // wenn mehrere Gebinde-Einheiten ausgewaehlt wurden).
-// kategorieName: Name einer Getränkekategorie in der geltenden Sprache (getraenkKategorieAnzeige)
-const groupIstVerbrauchByDrink = (istVerbrauch, ergebnis, recipes, kategorieName) => {
+// tGetraenke: Texte aus getraenke.js für Kategorien und vordefinierte Getränke in der geltenden Sprache
+const groupIstVerbrauchByDrink = (istVerbrauch, ergebnis, recipes, tGetraenke) => {
   const groups = [];
   const groupsByKey = new Map();
   Object.entries(istVerbrauch || {}).forEach(([kategorie, liter]) => {
@@ -107,8 +107,8 @@ const groupIstVerbrauchByDrink = (istVerbrauch, ergebnis, recipes, kategorieName
     let group = groupsByKey.get(key);
     if (!group) {
       const label = ergebnisRow?.isCustomDrink && ergebnisRow.drinkLabel
-        ? resolveDrinkDisplay(ergebnisRow.drinkLabel, recipes).displayName
-        : kategorieName(kategorie);
+        ? resolveDrinkDisplay(ergebnisRow.drinkLabel, recipes, tGetraenke).displayName
+        : getraenkKategorieAnzeige(kategorie, tGetraenke);
       group = { key, label, liter: 0 };
       groupsByKey.set(key, group);
       groups.push(group);
@@ -570,7 +570,7 @@ function EventsPage({
                   .filter((row) => row.isCustomDrink || !row.hasCustomDrinkCoverage))
                   .map((row) => (
                     <tr key={row.drinkId || row.kategorie}>
-                      <td>{row.isCustomDrink && row.drinkLabel ? resolveDrinkDisplay(row.drinkLabel, recipes).displayName : kategorieName(row.kategorie)}</td>
+                      <td>{row.isCustomDrink && row.drinkLabel ? resolveDrinkDisplay(row.drinkLabel, recipes, tGetraenke).displayName : kategorieName(row.kategorie)}</td>
                       <td className="events-table-amount">{t('liter', { menge: formatLiter(row.literMitPuffer, sprache) })}</td>
                     </tr>
                   ))}
@@ -590,7 +590,7 @@ function EventsPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {groupIstVerbrauchByDrink(selectedEvent.istVerbrauch, berechnung?.ergebnis, recipes, kategorieName).map((group) => (
+                    {groupIstVerbrauchByDrink(selectedEvent.istVerbrauch, berechnung?.ergebnis, recipes, tGetraenke).map((group) => (
                       <tr key={group.key}>
                         <td>{group.label}</td>
                         <td className="events-table-amount">{t('liter', { menge: formatLiter(group.liter, sprache) })}</td>
