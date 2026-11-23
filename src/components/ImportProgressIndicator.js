@@ -1,5 +1,7 @@
 import React from 'react';
 import './ImportProgressIndicator.css';
+import { useTexte } from '../contexts/SpracheContext';
+import rezeptimportTexte from '../i18n/texte/rezeptimport';
 
 const SIZE = 28;
 const STROKE = 3;
@@ -10,6 +12,8 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 // background recipe imports (Web-Import / Foto-OCR) are running. Clicking
 // it opens the ImportProgressDialog with the full job list.
 function ImportProgressIndicator({ jobs, onClick }) {
+  // Texte des Rezept-Imports (Mehrsprachigkeit PR 6i)
+  const t = useTexte(rezeptimportTexte);
   if (!jobs || jobs.length === 0) return null;
 
   const activeJob = jobs.find((job) => job.status === 'processing') || jobs[0];
@@ -23,8 +27,8 @@ function ImportProgressIndicator({ jobs, onClick }) {
       type="button"
       className={`import-progress-indicator${hasError ? ' has-error' : ''}`}
       onClick={onClick}
-      title={hasError ? 'Import fehlgeschlagen – Details anzeigen' : `Rezept-Import läuft (${progress}%)`}
-      aria-label="Import-Fortschritt anzeigen"
+      title={hasError ? t('fehlgeschlagenDetails') : t('importLaeuft', { prozent: progress })}
+      aria-label={t('fortschrittAnzeigen')}
     >
       <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
         <circle

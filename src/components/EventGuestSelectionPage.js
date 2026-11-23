@@ -8,6 +8,9 @@ import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import DeleteRowButton from './DeleteRowButton';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import Button from './Button';
+import { useTexte } from '../contexts/SpracheContext';
+import eventsTexte from '../i18n/texte/events';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 function GuestRow({
   fullName,
@@ -19,6 +22,9 @@ function GuestRow({
   onSwipeDeleteHidden,
   swipeDeleteIcon,
 }) {
+  // Texte der Events (Mehrsprachigkeit PR 6j)
+  const t = useTexte(eventsTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
   const { offset, reset, handlers } = useSwipeToDelete({
     isDeleteVisible,
     onDeleteVisibleChange: (visible) => (visible ? onSwipeDeleteVisible() : onSwipeDeleteHidden()),
@@ -42,7 +48,7 @@ function GuestRow({
             type="button"
             className="events-guest-row-swipe-action"
             onClick={handleSwipeDeleteClick}
-            aria-label={`${fullName} entfernen`}
+            aria-label={tAllgemein('nameEntfernen', { name: fullName })}
           >
             {isBase64Image(swipeDeleteIcon) ? (
               <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
@@ -72,9 +78,9 @@ function GuestRow({
             className="events-driver-checkbox"
             checked={isDriver}
             onChange={onToggleDriver}
-            aria-label={`${fullName} als Fahrer markieren`}
+            aria-label={t('alsFahrer', { name: fullName })}
           />
-          <span>Fahrer</span>
+          <span>{t('fahrerLabel')}</span>
         </label>
       </div>
     </div>
@@ -90,6 +96,8 @@ function EventGuestSelectionPage({
   buttonIcons,
   isDarkMode,
 }) {
+  const t = useTexte(eventsTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
   const [selectedGuestIds, setSelectedGuestIds] = useState(initialSelectedGuestIds ?? []);
   const [driverGuestIds, setDriverGuestIds] = useState(initialDriverGuestIds ?? []);
   const [searchQuery, setSearchQuery] = useState('');
@@ -129,10 +137,10 @@ function EventGuestSelectionPage({
   };
 
   const handleRemoveGuest = (guest) => {
-    const fullName = getGuestDisplayName(guest) || 'Unbenannter Gast';
+    const fullName = getGuestDisplayName(guest) || t('unbenannterGast');
     scheduleDelete({
       key: guest.id,
-      message: `"${fullName}" entfernt.`,
+      message: tAllgemein('entfernt', { name: fullName }),
       onConfirm: () => toggleGuest(guest.id),
       onUndo: () => {},
     });
@@ -167,7 +175,7 @@ function EventGuestSelectionPage({
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredGuests = normalizedQuery
     ? guests.filter((guest) => {
-        const fullName = (getGuestDisplayName(guest) || 'Unbenannter Gast').toLowerCase();
+        const fullName = (getGuestDisplayName(guest) || t('unbenannterGast')).toLowerCase();
         return fullName.includes(normalizedQuery) && !selectedGuestIds.includes(guest.id);
       })
     : [];
@@ -179,7 +187,7 @@ function EventGuestSelectionPage({
   return (
     <div className="events-page-container">
       <div className="events-page-header">
-        <h2>Gäste</h2>
+        <h2>{t('gaeste')}</h2>
       </div>
 
       <div className="events-form">
@@ -189,13 +197,13 @@ function EventGuestSelectionPage({
               ref={searchRef}
               type="text"
               className="events-guest-search-input"
-              placeholder="Gast suchen..."
+              placeholder={t('gastSuchen')}
               value={searchQuery}
               onChange={handleSearchChange}
               onFocus={() => {
                 if (searchQuery.trim().length > 0) setIsDropdownOpen(true);
               }}
-              aria-label="Gast suchen"
+              aria-label={t('gastSuchenLabel')}
               aria-autocomplete="list"
               aria-expanded={isDropdownOpen}
               role="combobox"
@@ -209,10 +217,10 @@ function EventGuestSelectionPage({
                 role="listbox"
               >
                 {filteredGuests.length === 0 ? (
-                  <li className="events-guest-typeahead-empty">Keine Gäste gefunden.</li>
+                  <li className="events-guest-typeahead-empty">{t('keineGaesteGefunden')}</li>
                 ) : (
                   filteredGuests.map((guest) => {
-                    const fullName = getGuestDisplayName(guest) || 'Unbenannter Gast';
+                    const fullName = getGuestDisplayName(guest) || t('unbenannterGast');
                     return (
                       <li
                         key={guest.id}
@@ -233,7 +241,7 @@ function EventGuestSelectionPage({
           {selectedGuests.length > 0 && (
             <div className="events-guest-list">
               {selectedGuests.map((guest) => {
-                const fullName = getGuestDisplayName(guest) || 'Unbenannter Gast';
+                const fullName = getGuestDisplayName(guest) || t('unbenannterGast');
                 const isDeleteVisible = swipeDeleteVisibleId === guest.id;
                 return (
                   <GuestRow
@@ -257,26 +265,26 @@ function EventGuestSelectionPage({
             <div key={banner.id} className="undo-snackbar" role="status">
               <span>{banner.message}</span>
               <button type="button" className="undo-snackbar-btn" onClick={() => undoDelete(banner.id)}>
-                Rückgängig
+                {tAllgemein('rueckgaengig')}
               </button>
             </div>
           ))}
 
           <div className="events-guest-summary-badges">
             <span className="events-summary-badge">
-              {effectiveSelectedGuestIds.length} {effectiveSelectedGuestIds.length === 1 ? 'Gast' : 'Gäste'} ausgewählt.
+              {t('gaesteAusgewaehlt', { anzahl: effectiveSelectedGuestIds.length })}
             </span>
             <span className="events-summary-badge">
-              {effectiveDriverGuestIds.length} Fahrer markiert.
+              {t('fahrerMarkiert', { anzahl: effectiveDriverGuestIds.length })}
             </span>
           </div>
         </div>
         <div className="events-form-actions">
           <Button className="events-save-desktop-only" onClick={onBack}>
-            Abbrechen
+            {tAllgemein('abbrechen')}
           </Button>
           <Button variant="primary" className="events-form-actions-save" onClick={handleSave}>
-            Speichern
+            {tAllgemein('speichern')}
           </Button>
         </div>
       </div>
@@ -291,11 +299,11 @@ function EventGuestSelectionPage({
         onMouseLeave={() => setFabPressed(false)}
         onTouchStart={() => setFabPressed(true)}
         onTouchEnd={() => setFabPressed(false)}
-        aria-label="Gästeliste speichern"
-        title="Speichern"
+        aria-label={t('gaestelisteSpeichern')}
+        title={tAllgemein('speichern')}
       >
         {isBase64Image(getEffectiveIcon(effectiveButtonIcons, 'saveRecipe', isDarkMode)) ? (
-          <img src={getEffectiveIcon(effectiveButtonIcons, 'saveRecipe', isDarkMode)} alt="Speichern" className="button-icon-image" draggable="false" />
+          <img src={getEffectiveIcon(effectiveButtonIcons, 'saveRecipe', isDarkMode)} alt={tAllgemein('speichern')} className="button-icon-image" draggable="false" />
         ) : (
           getEffectiveIcon(effectiveButtonIcons, 'saveRecipe', isDarkMode)
         )}
@@ -312,11 +320,11 @@ function EventGuestSelectionPage({
         onMouseDown={() => setCancelPressed(true)}
         onMouseUp={() => setCancelPressed(false)}
         onMouseLeave={() => setCancelPressed(false)}
-        title="Abbrechen"
-        aria-label="Gästeauswahl abbrechen"
+        title={tAllgemein('abbrechen')}
+        aria-label={t('gaesteauswahlAbbrechen')}
       >
         {isBase64Image(getEffectiveIcon(effectiveButtonIcons, 'closeButtonDefaultImg', isDarkMode)) ? (
-          <img src={getEffectiveIcon(effectiveButtonIcons, 'closeButtonDefaultImg', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
+          <img src={getEffectiveIcon(effectiveButtonIcons, 'closeButtonDefaultImg', isDarkMode)} alt={tAllgemein('abbrechen')} className="button-icon-image" draggable="false" />
         ) : (
           getEffectiveIcon(effectiveButtonIcons, 'closeButtonDefaultImg', isDarkMode)
         )}
