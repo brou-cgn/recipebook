@@ -4,6 +4,11 @@ import { createRoot } from 'react-dom/client';
 import PrintPage from './PrintPage';
 import { getPageSize } from '../utils/printLayout';
 import { getFormatMarginCm } from '../utils/printTemplates';
+import { erstelleT } from '../i18n/texte';
+import rezeptansichtTexte from '../i18n/texte/rezeptansicht';
+
+// Ohne mitgegebenen Hinweis gilt der deutsche Text (Mehrsprachigkeit PR 6p)
+const T_DEUTSCH = erstelleT(rezeptansichtTexte, 'de');
 
 const ROOT_ID = 'print-root';
 const PAGE_STYLE_ID = 'print-page-format';
@@ -42,13 +47,14 @@ const isIOS = () =>
  * @param {number} [options.servings]
  * @param {string} [options.authorName]
  * @param {string} [options.portionLabel]
+ * @param {string} [options.popupHinweis] - Hinweis in der geltenden Sprache, wenn iOS das Druckfenster blockiert
  * @returns {Promise<void>} resolves once the print dialog was handed over to the browser
  */
-export async function printRecipe({ recipe, format, servings, authorName, portionLabel }) {
+export async function printRecipe({ recipe, format, servings, authorName, portionLabel, popupHinweis }) {
   // iOS needs the popup to be opened synchronously inside the click handler.
   const popup = isIOS() ? window.open('', '_blank') : null;
   if (isIOS() && !popup) {
-    alert('Bitte erlaube Popups für diese Seite, um das Rezept zu drucken.');
+    alert(popupHinweis || T_DEUTSCH('popupsErlauben'));
     return;
   }
 

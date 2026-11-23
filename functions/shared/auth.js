@@ -42,7 +42,7 @@ async function requireRoleFeature(userId, role, features) {
   if (!features.some((feature) => flags[feature] === true)) {
     throw new HttpsError(
         'permission-denied',
-        'Für diesen Import fehlt deiner Rolle die Berechtigung.',
+        'Deiner Rolle fehlt die Berechtigung für diese Funktion.',
     );
   }
 }

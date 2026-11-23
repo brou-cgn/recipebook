@@ -604,7 +604,7 @@ exports.fetchRecipeHtml = onCall(
         const limit = getRateLimit(isAdmin, isAuthenticated, isModerator);
         throw new HttpsError(
             'resource-exhausted',
-            `Rate limit exceeded: maximum ${limit} requests per day`,
+            `Tageslimit erreicht (${limit}/${limit} Anfragen). Versuche es morgen erneut.`,
         );
       }
 
@@ -707,7 +707,7 @@ exports.captureWebsiteScreenshot = onCall(
         const limit = getRateLimit(isAdmin, isAuthenticated, isModerator);
         throw new HttpsError(
             'resource-exhausted',
-            `Rate limit exceeded: maximum ${limit} captures per day`
+            `Tageslimit erreicht (${limit}/${limit} Website-Aufnahmen). Versuche es morgen erneut.`
         );
       }
 
@@ -925,7 +925,7 @@ exports.importRecipeCallable = onCall(
         const limit = getRateLimit(isAdmin, isAuthenticated, isModerator);
         throw new HttpsError(
             'resource-exhausted',
-            `Rate limit exceeded: maximum ${limit} requests per day`,
+            `Tageslimit erreicht (${limit}/${limit} Anfragen). Versuche es morgen erneut.`,
         );
       }
 

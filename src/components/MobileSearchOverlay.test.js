@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import MobileSearchOverlay from './MobileSearchOverlay';
+import { SpracheProvider } from '../contexts/SpracheContext';
 
 const mockNutritionReferenceState = {
   rows: [
@@ -778,5 +779,30 @@ describe('MobileSearchOverlay – pre-populated search term', () => {
     renderOverlay();
     const input = screen.getByRole('searchbox');
     expect(input.value).toBe('');
+  });
+});
+
+describe('MobileSearchOverlay: Systemliste „Für dich entdeckt“ (Mehrsprachigkeit PR 6p)', () => {
+  test('Französisch: der Name der Systemliste ist übersetzt, eigene Namen bleiben', () => {
+    render(
+      <SpracheProvider profilSprache="fr" speicher={null}>
+        <MobileSearchOverlay
+          isOpen
+          onClose={jest.fn()}
+          recipes={[]}
+          onSelectRecipe={jest.fn()}
+          onSearch={jest.fn()}
+          currentUser={{ id: 'user1' }}
+          cuisineTypes={[]}
+          cuisineGroups={[]}
+          onCuisineFilterChange={jest.fn()}
+          privateLists={[{ id: 'fde', name: 'Für dich entdeckt', systemKey: 'fuerDichEntdeckt' }, { id: 'l1', name: 'Familienrezepte' }]}
+          onPrivateListFilterChange={jest.fn()}
+        />
+      </SpracheProvider>
+    );
+    expect(screen.getByText('Découvert pour toi')).toBeInTheDocument();
+    expect(screen.queryByText('Für dich entdeckt')).not.toBeInTheDocument();
+    expect(screen.getByText('Familienrezepte')).toBeInTheDocument();
   });
 });

@@ -273,3 +273,26 @@ describe('RecipeFilterSidebar in anderer Sprache (Mehrsprachigkeit PR 6d)', () =
     expect(screen.getByRole('button', { name: 'De saison' })).toBeInTheDocument();
   });
 });
+
+describe('RecipeFilterSidebar: Systemliste „Für dich entdeckt“ (Mehrsprachigkeit PR 6p)', () => {
+  test('Englisch: Name übersetzt, auch beim Durchsuchen der Listen', () => {
+    render(
+      <SpracheProvider profilSprache="en" speicher={null}>
+        <RecipeFilterSidebar
+          recipes={mockRecipes}
+          currentUser={mockCurrentUser}
+          cuisineTypes={mockCuisineTypes}
+          cuisineGroups={mockCuisineGroups}
+          mealCategories={mockMealCategories}
+          availableAuthors={mockAuthors}
+          privateLists={[...mockPrivateLists, { id: 'fde', name: 'Für dich entdeckt', systemKey: 'fuerDichEntdeckt' }]}
+          showPrivateListFilters
+          searchTerm="discovered"
+        />
+      </SpracheProvider>
+    );
+    expect(screen.getByRole('button', { name: 'Discovered for you' })).toBeInTheDocument();
+    expect(screen.queryByText('Für dich entdeckt')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Alltagsrezepte' })).not.toBeInTheDocument();
+  });
+});

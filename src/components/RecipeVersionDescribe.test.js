@@ -164,8 +164,19 @@ describe('Mehrsprachigkeit (PR 6o)', () => {
     expect(await screen.findByText('Gemini API error: quota')).toHaveAttribute('role', 'alert');
   });
 
+  test('Englisch: Meldung der KI-Berechtigung (PR 6p)', async () => {
+    const onApply = jest.fn().mockRejectedValue(new Error('Deiner Rolle fehlt die Berechtigung für diese Funktion.'));
+    zeige('en', { onApply });
+    fireEvent.change(screen.getByLabelText('What was different?'), { target: { value: 'More salt' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create version' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your role doesn’t have permission for this feature.');
+  });
+
   test('kennt jede Meldung so, wie die Cloud Function sie meldet', () => {
-    const quelle = fs.readFileSync(path.join(__dirname, '..', '..', 'functions', 'handlers', 'versionChanges.js'), 'utf8');
+    const quelle = [
+      ['handlers', 'versionChanges.js'],
+      ['shared', 'auth.js'],
+    ].map((teile) => fs.readFileSync(path.join(__dirname, '..', '..', 'functions', ...teile), 'utf8')).join('\n');
     VERSION_MELDUNGEN.forEach((schluessel) => {
       rezeptansichtTexte.de[schluessel].split(/\{\w+\}/).filter((teil) => teil.trim()).forEach((teil) => {
         expect({ schluessel, gefunden: quelle.includes(teil) }).toEqual({ schluessel, gefunden: true });

@@ -18,7 +18,7 @@ export const MELDUNGEN = Object.freeze([
   'meldungUnbekannt', 'meldungJe100gFehlen', 'meldungVerlinktFehlt', 'meldungNichtUmgerechnet',
   'meldungVerlinktNichtUmgerechnet', 'meldungVerlinktGeloescht', 'meldungKeineZutaten',
   'fehlerNetzwerk', 'fehlerAnmeldung', 'fehlerZeit', 'fehlerZuViele', 'fehlerAbruf', 'fehlerBerechnung',
-  'meldungReferenzFehlgeschlagen',
+  'meldungReferenzFehlgeschlagen', 'meldungDatenerfassung', 'meldungMengeUnbekannt',
 ]);
 
 export default {
@@ -130,6 +130,9 @@ export default {
     meldungVerlinktGeloescht: 'Verlinktes Rezept "{name}" nicht gefunden. Möglicherweise wurde das Rezept gelöscht.',
     meldungKeineZutaten: 'Keine Zutaten im Rezept gefunden.',
     meldungReferenzFehlgeschlagen: 'Nährwertreferenz-Aktualisierung fehlgeschlagen',
+    // aus resolveIngredientNutritionByStatus (src/utils/nutritionStatusResolver.js), PR 6p
+    meldungDatenerfassung: 'Nährwerte konnten nicht ermittelt werden (Datenerfassung ausstehend)',
+    meldungMengeUnbekannt: 'Mengenangabe konnte nicht ermittelt werden',
     fehlerNetzwerk: 'Netzwerkfehler. Bitte Internetverbindung prüfen und erneut versuchen.',
     fehlerAnmeldung: 'Du musst angemeldet sein, um Nährwerte zu berechnen.',
     fehlerZeit: 'Die Berechnung hat zu lange gedauert. Bitte versuch es erneut.',
@@ -245,6 +248,9 @@ export default {
     meldungVerlinktGeloescht: 'Linked recipe “{name}” not found. It may have been deleted.',
     meldungKeineZutaten: 'No ingredients found in the recipe.',
     meldungReferenzFehlgeschlagen: 'Updating the nutrition reference failed',
+    // aus resolveIngredientNutritionByStatus (src/utils/nutritionStatusResolver.js), PR 6p
+    meldungDatenerfassung: 'Nutrition values couldn’t be determined (data collection pending)',
+    meldungMengeUnbekannt: 'The amount couldn’t be determined',
     fehlerNetzwerk: 'Network error. Please check your internet connection and try again.',
     fehlerAnmeldung: 'You need to be signed in to calculate nutrition.',
     fehlerZeit: 'The calculation took too long. Please try again.',
@@ -360,6 +366,9 @@ export default {
     meldungVerlinktGeloescht: `Recette liée «${NBSP}{name}${NBSP}» introuvable. Elle a peut-être été supprimée.`,
     meldungKeineZutaten: 'Aucun ingrédient trouvé dans la recette.',
     meldungReferenzFehlgeschlagen: 'La mise à jour de la référence nutritionnelle a échoué',
+    // aus resolveIngredientNutritionByStatus (src/utils/nutritionStatusResolver.js), PR 6p
+    meldungDatenerfassung: 'Impossible de déterminer les valeurs nutritionnelles (collecte des données en attente)',
+    meldungMengeUnbekannt: 'Impossible de déterminer la quantité',
     fehlerNetzwerk: 'Erreur réseau. Vérifie ta connexion Internet et réessaie.',
     fehlerAnmeldung: 'Connecte-toi pour calculer les valeurs nutritionnelles.',
     fehlerZeit: 'Le calcul a pris trop de temps. Réessaie.',

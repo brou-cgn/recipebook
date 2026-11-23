@@ -55,6 +55,15 @@ describe('importTextAnzeige: Meldungen der Import-Dienste (Mehrsprachigkeit PR 6
       .toBe('Daily limit reached (20/20 scans). Try again tomorrow or use standard OCR.');
   });
 
+  it('übersetzt das Tageslimit der Anfragen und die Meldungen der KI-Berechtigung (PR 6p)', () => {
+    expect(importTextAnzeige('Tageslimit erreicht (20/20 Anfragen). Versuche es morgen erneut.', tEn))
+      .toBe('Daily limit reached (20/20 requests). Try again tomorrow.');
+    expect(importTextAnzeige('Deiner Rolle fehlt die Berechtigung für diese Funktion.', tFr))
+      .toBe('Ton rôle n’a pas l’autorisation pour cette fonction.');
+    expect(importTextAnzeige('KI-Funktionen sind erst ab der Rolle „Bearbeiten“ verfügbar.', tEn))
+      .toBe('AI features are only available from the “Edit” role upwards.');
+  });
+
   it('übersetzt den Grund in einer zusammengesetzten Meldung', () => {
     const gespeichert = 'Die importierte Seite konnte nicht als Rezept verarbeitet werden. Tageslimit erreicht. Versuche es morgen erneut.';
     expect(importTextAnzeige(gespeichert, tEn)).toBe('The imported page couldn’t be processed as a recipe. Daily limit reached. Try again tomorrow.');
@@ -77,6 +86,7 @@ describe('importTextAnzeige: Meldungen der Import-Dienste (Mehrsprachigkeit PR 6
       'utils/ocrParser.js',
       '../functions/handlers/importApp.js',
       '../functions/shared/gemini.js',
+      '../functions/shared/auth.js',
     ].map((datei) => fs.readFileSync(path.join(__dirname, '..', datei), 'utf8')).join('\n');
     DIENST_MELDUNGEN.forEach((schluessel) => {
       rezeptimportTexte.de[schluessel].split(/\{\w+\}/).filter((teil) => teil.trim()).forEach((teil) => {
