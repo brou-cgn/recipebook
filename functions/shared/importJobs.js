@@ -8,8 +8,8 @@ const {getStorage} = require('firebase-admin/storage');
 const {getMessaging} = require('firebase-admin/messaging');
 const {finalizeImportJob, failImportJob} = require('./importCore');
 const {isInstagramUrl, BATCH_IMAGE_CONCURRENCY, validateImageData, runImportFromInstagram, runImportFromUrl, mergePhotoAiResultsServer, MAX_REEL_VIDEO_SIZE} = require('./importSources');
-const {callGeminiAPI, callGeminiTextAPI, getRecipeExtractionPrompt, RECIPE_EXTRACTION_RESPONSE_SCHEMA, transcribeVideoWithGemini} = require('./gemini');
-const {resolveImportLists, cuisineFields, normalizeIngredientUnits} = require('./importLists');
+const {callGeminiAPI, callGeminiTextAPI, getRecipeExtractionPrompt, RECIPE_EXTRACTION_RESPONSE_SCHEMA, DEUTSCH_REGEL, rezeptAusAntwort, transcribeVideoWithGemini} = require('./gemini');
+const {resolveImportLists} = require('./importLists');
 const {geminiApiKey} = require('./secrets');
 const {geminiGenerateContentRequest} = require('./geminiConfig');
 
@@ -329,7 +329,8 @@ async function runImportFromUniversalSource(source, {apiKey} = {}) {
  * continuation page's content lands in the combined result instead of
  * being discarded.
  * @param {Array<{mimeType: string, base64Data: string}>} imageInputs
- * @param {string} lang
+ * @param {string} lang - Sprache aus der Anfrage; ändert das Ergebnis nicht mehr, das Rezept kommt immer deutsch
+ *   (DEUTSCH_REGEL, Tech-Check F23)
  * @param {string} apiKey
  * @param {string[]|undefined} cuisineTypes
  * @param {string[]|undefined} mealCategories
@@ -367,21 +368,16 @@ async function callGeminiMultiImageAPI(imageInputs, lang, apiKey, cuisineTypes, 
   // prompt instead makes it the last instruction the model reads before
   // the images themselves, so it overrides the singular framing rather
   // than competing with it.
-  const multiPageNote = lang === 'de' ?
+  // Immer deutsch wie der Prompt selbst; das Rezept kommt ohnehin auf Deutsch (DEUTSCH_REGEL, Tech-Check F23).
+  const multiPageNote =
     '\n\nWICHTIGER HINWEIS ZU DEN BILDERN: Die obigen Anweisungen sprechen von "dem Bild" (Singular) – ' +
       'tatsächlich erhältst du mehrere Fotos, die zusammen SEITEN DESSELBEN Rezepts zeigen, in der Reihenfolge, ' +
       'in der sie angehängt sind (z. B. Zutatenliste auf einem Foto, Zubereitungsschritte auf einem anderen). ' +
       'Betrachte JEDES einzelne angehängte Foto genau und kombiniere die Informationen aus ALLEN Fotos zu ' +
       'EINEM vollständigen Rezept-JSON. Ignoriere KEIN Foto, auch wenn es für sich allein unvollständig wirkt ' +
-      '(z. B. nur Zubereitungsschritte ohne eigenen Titel) – solche Fotos ergänzen die Informationen der anderen.' :
-    '\n\nIMPORTANT NOTE ABOUT THE IMAGES: The instructions above refer to "the image" (singular) – ' +
-      'you are actually receiving multiple photos that together show PAGES OF THE SAME recipe, in the order ' +
-      'they are attached (e.g. ingredient list on one photo, preparation steps on another). Examine EVERY ' +
-      'attached photo closely and combine the information from ALL photos into ONE complete recipe JSON. ' +
-      'Do not ignore any photo, even if it looks incomplete on its own (e.g. only preparation steps with no ' +
-      'title of its own) – such photos complement the information in the others.';
+      '(z. B. nur Zubereitungsschritte ohne eigenen Titel) – solche Fotos ergänzen die Informationen der anderen.';
 
-  const parts = [{text: prompt + multiPageNote}];
+  const parts = [{text: prompt + DEUTSCH_REGEL + multiPageNote}];
   for (const {mimeType, base64Data} of imageInputs) {
     parts.push({inline_data: {mime_type: mimeType, data: base64Data}});
   }
@@ -440,41 +436,7 @@ async function callGeminiMultiImageAPI(imageInputs, lang, apiKey, cuisineTypes, 
     }
 
     const recipeData = JSON.parse(jsonText);
-
-    if (lang === 'de') {
-      return {
-        title: recipeData.titel || '',
-        servings: recipeData.portionen || 0,
-        prepTime: recipeData.zubereitungszeit || '',
-        cookTime: recipeData.kochzeit || '',
-        difficulty: recipeData.schwierigkeit || 0,
-        ...cuisineFields(recipeData.kulinarik, cuisineTypes),
-        category: recipeData.kategorie || '',
-        tags: recipeData.tags || [],
-        ingredients: normalizeIngredientUnits(recipeData.zutaten || []),
-        steps: recipeData.zubereitung || [],
-        notes: recipeData.notizen || '',
-        confidence: 95,
-        provider: 'gemini',
-        rawResponse: textResponse,
-      };
-    }
-    return {
-      title: recipeData.title || '',
-      servings: recipeData.servings || 0,
-      prepTime: recipeData.prepTime || '',
-      cookTime: recipeData.cookTime || '',
-      difficulty: recipeData.difficulty || 0,
-      ...cuisineFields(recipeData.cuisine, cuisineTypes),
-      category: recipeData.category || '',
-      tags: recipeData.tags || [],
-      ingredients: normalizeIngredientUnits(recipeData.ingredients || []),
-      steps: recipeData.steps || [],
-      notes: recipeData.notes || '',
-      confidence: 95,
-      provider: 'gemini',
-      rawResponse: textResponse,
-    };
+    return rezeptAusAntwort(recipeData, textResponse, cuisineTypes);
   } catch (error) {
     if (error instanceof HttpsError) {
       throw error;
