@@ -3,8 +3,8 @@ import TrashIcon from './icons/TrashIcon';
 import './EventsPage.css';
 import './EventsTable.css';
 import { deleteEvent, getEvent } from '../utils/eventsFirestore';
-import { CATEGORY_LABELS, EVENT_TYPE_LABELS } from './EventForm';
 import EventForm from './EventForm';
+import { eventTypAnzeige } from '../utils/eventAnzeige';
 import ConsumptionForm from './ConsumptionForm';
 import DrinkManagementPage from './DrinkManagementPage';
 import GuestManagementPage from './GuestManagementPage';
@@ -18,12 +18,20 @@ import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import ConfirmDialog from './ConfirmDialog';
 import Button from './Button';
+import { useSprache, useTexte } from '../contexts/SpracheContext';
+import { formatiereDatum, formatiereZahl } from '../i18n/format';
+import { getraenkKategorieAnzeige } from '../utils/drinkCategories';
+import eventsTexte from '../i18n/texte/events';
+import getraenkeTexte from '../i18n/texte/getraenke';
+import allgemeinTexte from '../i18n/texte/allgemein';
+import bereicheTexte from '../i18n/texte/bereiche';
 
-const STATUS_LABELS = {
-  geplant: 'Geplant',
-  berechnet: 'Berechnet',
-  eingekauft: 'Eingekauft',
-  verbrauchErfasst: 'Verbrauch erfasst',
+// Status in der geltenden Sprache (Mehrsprachigkeit PR 6j); gespeichert bleibt die id
+const STATUS_SCHLUESSEL = {
+  geplant: 'statusGeplant',
+  berechnet: 'statusBerechnet',
+  eingekauft: 'statusEingekauft',
+  verbrauchErfasst: 'statusVerbrauchErfasst',
 };
 
 const STATUS_STEPS = {
@@ -38,6 +46,7 @@ const TOTAL_STATUS_STEPS = 4;
 // Statuspille als Fortschrittsanzeige: vier Segmente zeigen, wie weit ein Event
 // ist; der Endzustand ("Verbrauch erfasst") wird stattdessen gefuellt gesetzt.
 function StatusBadge({ status }) {
+  const t = useTexte(eventsTexte);
   const step = STATUS_STEPS[status] || 0;
   const isComplete = step === TOTAL_STATUS_STEPS;
   return (
@@ -54,24 +63,20 @@ function StatusBadge({ status }) {
           ))}
         </span>
       )}
-      {STATUS_LABELS[status] || status}
+      {Object.prototype.hasOwnProperty.call(STATUS_SCHLUESSEL, status) ? t(STATUS_SCHLUESSEL[status]) : status}
     </span>
   );
 }
 
-const formatDate = (dateStr) => {
+const formatDate = (dateStr, sprache) => {
   if (!dateStr) return '';
-  try {
-    return new Date(dateStr).toLocaleDateString('de-DE');
-  } catch {
-    return dateStr;
-  }
+  return formatiereDatum(dateStr, sprache, { day: 'numeric', month: 'numeric', year: 'numeric' }) || dateStr;
 };
 
-const formatLiter = (value) => {
+const formatLiter = (value, sprache) => {
   const num = Number(value);
   if (!Number.isFinite(num)) return value;
-  return num.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  return formatiereZahl(num, sprache, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 };
 
 // Fasst die Ergebniszeilen pro Getraenk zusammen (ein Getraenk kann mehrere
@@ -92,7 +97,8 @@ const groupErgebnisRowsByDrink = (rows) => {
 // Fasst den tatsaechlichen Verbrauch pro Getraenk zusammen (istVerbrauch ist
 // pro Ergebniszeile gespeichert, also ggf. mehrere Eintraege pro Getraenk,
 // wenn mehrere Gebinde-Einheiten ausgewaehlt wurden).
-const groupIstVerbrauchByDrink = (istVerbrauch, ergebnis, recipes) => {
+// kategorieName: Name einer Getränkekategorie in der geltenden Sprache (getraenkKategorieAnzeige)
+const groupIstVerbrauchByDrink = (istVerbrauch, ergebnis, recipes, kategorieName) => {
   const groups = [];
   const groupsByKey = new Map();
   Object.entries(istVerbrauch || {}).forEach(([kategorie, liter]) => {
@@ -102,7 +108,7 @@ const groupIstVerbrauchByDrink = (istVerbrauch, ergebnis, recipes) => {
     if (!group) {
       const label = ergebnisRow?.isCustomDrink && ergebnisRow.drinkLabel
         ? resolveDrinkDisplay(ergebnisRow.drinkLabel, recipes).displayName
-        : (CATEGORY_LABELS[kategorie] || kategorie);
+        : kategorieName(kategorie);
       group = { key, label, liter: 0 };
       groupsByKey.set(key, group);
       groups.push(group);
@@ -125,6 +131,8 @@ const formatDrinkSummary = (berechnung) => {
 };
 
 function EventCard({ event, ownerName, canManage, onSelect, onDelete, swipeDeleteIcon }) {
+  const t = useTexte(eventsTexte);
+  const { sprache } = useSprache();
   const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ disabled: !canManage });
 
   return (
@@ -139,7 +147,7 @@ function EventCard({ event, ownerName, canManage, onSelect, onDelete, swipeDelet
               type="button"
               className="events-card-swipe-delete-action"
               onClick={() => { onDelete(event); reset(); }}
-              aria-label={`${event.eventName} löschen`}
+              aria-label={t('eventLoeschenName', { name: event.eventName })}
             >
               {isBase64Image(swipeDeleteIcon) ? (
                 <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
@@ -159,8 +167,8 @@ function EventCard({ event, ownerName, canManage, onSelect, onDelete, swipeDelet
         <h3>{event.eventName}</h3>
         <div className="events-card-meta-row">
           <p className="events-card-meta">
-            {formatDate(event.date)} · {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
-            {ownerName ? ` · von ${ownerName}` : ''}
+            {formatDate(event.date, sprache)} · {eventTypAnzeige(event.eventType, t)}
+            {ownerName ? ` · ${t('von', { name: ownerName })}` : ''}
           </p>
           <StatusBadge status={event.status} />
         </div>
@@ -206,6 +214,13 @@ function EventsPage({
   const allEventsLoading = !allEventsLoaded;
   const [allUsers, setAllUsers] = useState([]);
   const { banners: deleteBanners, pendingKeys: pendingDeleteKeys, scheduleDelete, undoDelete } = useUndoableDelete();
+  // Texte der Events (Mehrsprachigkeit PR 6j); Event-Namen sind Inhalt
+  const t = useTexte(eventsTexte);
+  const tGetraenke = useTexte(getraenkeTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const tBereiche = useTexte(bereicheTexte);
+  const { sprache } = useSprache();
+  const kategorieName = (kategorie) => getraenkKategorieAnzeige(kategorie, tGetraenke);
 
   useEffect(() => {
     const handleResize = () => setIsMobileView(window.innerWidth <= 768);
@@ -363,7 +378,7 @@ function EventsPage({
     const ownerId = event.ownerId || currentUser.id;
     scheduleDelete({
       key: `${ownerId}_${event.id}`,
-      message: `"${event.eventName}" gelöscht.`,
+      message: t('eventGeloescht', { name: event.eventName }),
       onConfirm: async () => {
         try {
           await deleteEvent(ownerId, event.id);
@@ -456,8 +471,8 @@ function EventsPage({
         />
         {eventToDelete && (
           <ConfirmDialog
-            title="Event löschen"
-            message={`Möchtest du "${eventToDelete.eventName}" wirklich löschen?`}
+            title={t('eventLoeschen')}
+            message={t('loeschenFrage', { name: eventToDelete.eventName })}
             onConfirm={handleDeleteConfirmed}
             onCancel={() => setEventToDelete(null)}
           />
@@ -505,11 +520,11 @@ function EventsPage({
               setSelectedEventId(null);
               setFallbackEvent(null);
             }}
-            aria-label={openedFromMenuLink ? 'Zurück zum Menü' : 'Zurück zur Liste'}
-            title={openedFromMenuLink ? 'Zurück zum Menü' : 'Zurück zur Liste'}
+            aria-label={openedFromMenuLink ? t('zurueckZumMenue') : t('zurueckZurListe')}
+            title={openedFromMenuLink ? t('zurueckZumMenue') : t('zurueckZurListe')}
           >
             {isBase64Image(eventsCloseIcon) ? (
-              <img src={eventsCloseIcon} alt="Schließen" className="app-close-button-icon-img" />
+              <img src={eventsCloseIcon} alt={tAllgemein('schliessen')} className="app-close-button-icon-img" />
             ) : (
               eventsCloseIcon || '×'
             )}
@@ -519,17 +534,17 @@ function EventsPage({
         <div className="events-result-card">
           <div className="events-detail-meta">
             <StatusBadge status={selectedEvent.status} />
-            <span>{formatDate(selectedEvent.date)}</span>
-            <span>{selectedEvent.durationHours} Std.</span>
-            <span>{EVENT_TYPE_LABELS[selectedEvent.eventType] || selectedEvent.eventType}</span>
+            <span>{formatDate(selectedEvent.date, sprache)}</span>
+            <span>{t('stunden', { anzahl: Number(selectedEvent.durationHours) || 0 })}</span>
+            <span>{eventTypAnzeige(selectedEvent.eventType, t)}</span>
             <span>
-              {selectedEvent.guests?.adults ?? 0} Erw. / {selectedEvent.guests?.children ?? 0} Kinder
+              {t('erwachsene', { anzahl: selectedEvent.guests?.adults ?? 0 })} / {t('kinder', { anzahl: selectedEvent.guests?.children ?? 0 })}
             </span>
             {driverGuestIds.length > 0 && (
-              <span>Fahrer: {driverNames.join(', ')}</span>
+              <span>{t('fahrer', { anzahl: driverNames.length, namen: driverNames.join(', ') })}</span>
             )}
             {!isOwnEvent && getOwnerFirstName(selectedEventOwnerId) && (
-              <span>von {getOwnerFirstName(selectedEventOwnerId)}</span>
+              <span>{t('von', { name: getOwnerFirstName(selectedEventOwnerId) })}</span>
             )}
           </div>
 
@@ -541,13 +556,13 @@ function EventsPage({
             </div>
           )}
 
-          <h3>Getränke</h3>
+          <h3>{t('getraenke')}</h3>
           <div className="events-table-container">
             <table className="events-table">
               <thead>
                 <tr>
-                  <th>Getränk</th>
-                  <th className="events-table-amount">Menge</th>
+                  <th>{t('getraenk')}</th>
+                  <th className="events-table-amount">{t('menge')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -555,8 +570,8 @@ function EventsPage({
                   .filter((row) => row.isCustomDrink || !row.hasCustomDrinkCoverage))
                   .map((row) => (
                     <tr key={row.drinkId || row.kategorie}>
-                      <td>{row.isCustomDrink && row.drinkLabel ? resolveDrinkDisplay(row.drinkLabel, recipes).displayName : (CATEGORY_LABELS[row.kategorie] || row.kategorie)}</td>
-                      <td className="events-table-amount">{formatLiter(row.literMitPuffer)} l</td>
+                      <td>{row.isCustomDrink && row.drinkLabel ? resolveDrinkDisplay(row.drinkLabel, recipes).displayName : kategorieName(row.kategorie)}</td>
+                      <td className="events-table-amount">{t('liter', { menge: formatLiter(row.literMitPuffer, sprache) })}</td>
                     </tr>
                   ))}
               </tbody>
@@ -565,20 +580,20 @@ function EventsPage({
 
           {selectedEvent.status === 'verbrauchErfasst' && selectedEvent.istVerbrauch && (
             <>
-              <h3>Tatsächlicher Verbrauch</h3>
+              <h3>{t('tatsaechlicherVerbrauch')}</h3>
               <div className="events-table-container">
                 <table className="events-table">
                   <thead>
                     <tr>
-                      <th>Getränk</th>
-                      <th className="events-table-amount">Menge</th>
+                      <th>{t('getraenk')}</th>
+                      <th className="events-table-amount">{t('menge')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {groupIstVerbrauchByDrink(selectedEvent.istVerbrauch, berechnung?.ergebnis, recipes).map((group) => (
+                    {groupIstVerbrauchByDrink(selectedEvent.istVerbrauch, berechnung?.ergebnis, recipes, kategorieName).map((group) => (
                       <tr key={group.key}>
                         <td>{group.label}</td>
-                        <td className="events-table-amount">{formatLiter(group.liter)} l</td>
+                        <td className="events-table-amount">{t('liter', { menge: formatLiter(group.liter, sprache) })}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -591,12 +606,12 @@ function EventsPage({
             <div className="events-form-actions">
               {!isMobileView && (
                 <Button onClick={() => setSubView('edit')}>
-                  Bearbeiten
+                  {tAllgemein('bearbeiten')}
                 </Button>
               )}
               {(selectedEvent.status === 'berechnet' || selectedEvent.status === 'eingekauft') && (
                 <Button variant="primary" onClick={() => setSubView('consumption')}>
-                  Einkauf & Verbrauch
+                  {t('einkaufVerbrauch')}
                 </Button>
               )}
             </div>
@@ -613,11 +628,11 @@ function EventsPage({
             onMouseDown={() => setEditFabPressed(true)}
             onMouseUp={() => setEditFabPressed(false)}
             onMouseLeave={() => setEditFabPressed(false)}
-            title="Event bearbeiten"
-            aria-label="Event bearbeiten"
+            title={t('eventBearbeiten')}
+            aria-label={t('eventBearbeiten')}
           >
             {isBase64Image(editEventIcon) ? (
-              <img src={editEventIcon} alt="Bearbeiten" className="button-icon-image" draggable="false" />
+              <img src={editEventIcon} alt={tAllgemein('bearbeiten')} className="button-icon-image" draggable="false" />
             ) : (
               editEventIcon
             )}
@@ -632,7 +647,7 @@ function EventsPage({
   if ((subView === 'detail' || subView === 'consumption') && !selectedEvent) {
     return (
       <div className="events-page-container">
-        <div className="events-empty-state">Laden...</div>
+        <div className="events-empty-state">{t('laden')}</div>
       </div>
     );
   }
@@ -640,16 +655,16 @@ function EventsPage({
   return (
     <div className="events-page-container">
       <div className="events-page-header">
-        <h2>Events</h2>
+        <h2>{tBereiche('events')}</h2>
         {onBack && (
           <button
             className="app-close-button"
             onClick={onBack}
-            aria-label="Events schließen"
-            title="Events schließen"
+            aria-label={t('eventsSchliessen')}
+            title={t('eventsSchliessen')}
           >
             {isBase64Image(eventsCloseIcon) ? (
-              <img src={eventsCloseIcon} alt="Events schließen" className="app-close-button-icon-img" />
+              <img src={eventsCloseIcon} alt={t('eventsSchliessen')} className="app-close-button-icon-img" />
             ) : (
               eventsCloseIcon || '×'
             )}
@@ -659,26 +674,26 @@ function EventsPage({
 
       <div className="events-manage-links">
         <Button onClick={() => setSubView('drinks')}>
-          Getränke verwalten
+          {t('getraenkeVerwalten')}
         </Button>
         {canEditRecipes(currentUser) && (
           <Button onClick={() => setSubView('guests')}>
-            Gäste verwalten
+            {t('gaesteVerwalten')}
           </Button>
         )}
         {canEditRecipes(currentUser) && (
           <Button onClick={() => setSubView('wichteln')}>
-            Wichteln
+            {t('wichteln')}
           </Button>
         )}
       </div>
 
       {isAdmin ? (
         allEventsLoading ? (
-          <div className="events-empty-state">Laden...</div>
+          <div className="events-empty-state">{t('laden')}</div>
         ) : allEvents.length === 0 ? (
           <div className="events-empty-state">
-            <p>Keine Events vorhanden.</p>
+            <p>{t('keineEvents')}</p>
           </div>
         ) : (
           <div className="events-list">
@@ -696,12 +711,12 @@ function EventsPage({
           </div>
         )
       ) : loading ? (
-        <div className="events-empty-state">Laden...</div>
+        <div className="events-empty-state">{t('laden')}</div>
       ) : events.length === 0 ? (
         <div className="events-empty-state">
-          <p>Noch keine Events geplant.</p>
+          <p>{t('nochKeineEvents')}</p>
           <Button variant="primary" onClick={() => setSubView('new')}>
-            Erstes Event anlegen
+            {t('erstesEvent')}
           </Button>
         </div>
       ) : (
@@ -722,11 +737,11 @@ function EventsPage({
         <div key={banner.id} className="undo-snackbar" role="status">
           <span>{banner.message}</span>
           <button type="button" className="undo-snackbar-btn" onClick={() => undoDelete(banner.id)}>
-            Rückgängig
+            {tAllgemein('rueckgaengig')}
           </button>
         </div>
       ))}
-      <OverviewAddFab onClick={() => setSubView('new')} title="Event erstellen" ariaLabel="Event erstellen" />
+      <OverviewAddFab onClick={() => setSubView('new')} title={t('eventErstellen')} ariaLabel={t('eventErstellen')} />
       {isMobileView && (
         <button
           type="button"
@@ -738,11 +753,11 @@ function EventsPage({
           onMouseDown={() => setDrinksFabPressed(true)}
           onMouseUp={() => setDrinksFabPressed(false)}
           onMouseLeave={() => setDrinksFabPressed(false)}
-          title="Getränke verwalten"
-          aria-label="Getränke verwalten"
+          title={t('getraenkeVerwalten')}
+          aria-label={t('getraenkeVerwalten')}
         >
           {isBase64Image(drinksFabIcon) ? (
-            <img src={drinksFabIcon} alt="Getränke" className="button-icon-image" draggable="false" />
+            <img src={drinksFabIcon} alt={t('getraenke')} className="button-icon-image" draggable="false" />
           ) : (
             drinksFabIcon
           )}
@@ -759,11 +774,11 @@ function EventsPage({
           onMouseDown={() => setGuestsFabPressed(true)}
           onMouseUp={() => setGuestsFabPressed(false)}
           onMouseLeave={() => setGuestsFabPressed(false)}
-          title="Gäste verwalten"
-          aria-label="Gäste verwalten"
+          title={t('gaesteVerwalten')}
+          aria-label={t('gaesteVerwalten')}
         >
           {isBase64Image(guestsFabIcon) ? (
-            <img src={guestsFabIcon} alt="Gäste" className="button-icon-image" draggable="false" />
+            <img src={guestsFabIcon} alt={t('gaeste')} className="button-icon-image" draggable="false" />
           ) : (
             guestsFabIcon
           )}
@@ -780,11 +795,11 @@ function EventsPage({
           onMouseDown={() => setWichtelFabPressed(true)}
           onMouseUp={() => setWichtelFabPressed(false)}
           onMouseLeave={() => setWichtelFabPressed(false)}
-          title="Wichteln"
-          aria-label="Wichteln"
+          title={t('wichteln')}
+          aria-label={t('wichteln')}
         >
           {isBase64Image(wichtelFabIcon) ? (
-            <img src={wichtelFabIcon} alt="Wichteln" className="button-icon-image" draggable="false" />
+            <img src={wichtelFabIcon} alt={t('wichteln')} className="button-icon-image" draggable="false" />
           ) : (
             wichtelFabIcon
           )}

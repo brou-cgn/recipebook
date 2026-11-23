@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import {
   STANDARD_SPRACHE,
   aktiveSprache,
+  browserSprache,
   istSprache,
   leseSitzungsSprache,
   speichereSitzungsSprache,
@@ -140,7 +141,8 @@ export function useListenwerte() {
 
 /**
  * Meldet die Sprache aus den persönlichen Einstellungen an den Provider (App.js mit
- * `currentUser?.sprache`). Ohne Anmeldung oder ohne Wahl: null, dann gilt Deutsch.
+ * `currentUser?.sprache`), ohne Anmeldung die des Browsers (useSpracheFuerNutzer). Ohne Wahl: null,
+ * dann gilt Deutsch.
  * @param {string|null|undefined} wert
  */
 export function useProfilSprache(wert) {
@@ -157,12 +159,17 @@ export function useProfilSprache(wert) {
  * gewählte Sitzungs-Sprache endet.
  * Sie endet auch beim Abmelden, damit die nächste Person nicht in fremder Sprache startet.
  * Solange noch niemand angemeldet ist (App-Start), bleibt sie stehen.
+ * Ohne Anmeldung (Login, Freigabe-Links) gilt die Sprache des Browsers, wenn die App sie hat, sonst Deutsch
+ * (Entscheidung „Seiten ohne Anmeldung“, 22.11.2026). Erst wenn die Anmeldung geprüft ist, damit beim Start
+ * niemand kurz die Browsersprache sieht; übersetzte Inhalte bleiben ohne Anmeldung aus.
  * @param {object|null} nutzer - currentUser mit `sprache` und `sprachwahl`
+ * @param {{anmeldungGeprueft?: boolean}} [optionen] - App.js: false, solange die Anmeldung noch geprüft wird
  */
-export function useSpracheFuerNutzer(nutzer) {
+export function useSpracheFuerNutzer(nutzer, { anmeldungGeprueft = false } = {}) {
   const angemeldet = Boolean(nutzer);
   const darfWaehlen = Boolean(nutzer?.sprachwahl);
-  useProfilSprache(darfWaehlen ? nutzer?.sprache : null);
+  const ohneAnmeldung = !angemeldet && anmeldungGeprueft;
+  useProfilSprache(darfWaehlen ? nutzer?.sprache : (ohneAnmeldung ? browserSprache() : null));
 
   const { setzeSitzungsSprache, setzeInhalteUebersetzen } = useSprache();
   useEffect(() => {

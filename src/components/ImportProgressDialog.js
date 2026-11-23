@@ -5,18 +5,22 @@ import './UndoSnackbar.css';
 import DeleteRowButton from './DeleteRowButton';
 import RestartIcon from './icons/RestartIcon';
 import CloseThinIcon from './icons/CloseThinIcon';
+import { useTexte } from '../contexts/SpracheContext';
+import rezeptimportTexte from '../i18n/texte/rezeptimport';
+import allgemeinTexte from '../i18n/texte/allgemein';
+import { importTextAnzeige } from '../utils/importAnzeige';
 
 const RING_SIZE = 20;
 const RING_STROKE = 2.5;
 const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
-function statusLabel(status, progress) {
+function statusLabel(status, progress, t) {
   switch (status) {
     case 'queued':
-      return 'Wartet…';
+      return t('wartet');
     case 'processing':
-      return `Analysiert · ${Math.round(progress || 0)} %`;
+      return t('analysiert', { prozent: Math.round(progress || 0) });
     default:
       return '';
   }
@@ -71,6 +75,9 @@ function RowStatusIcon({ status, progress }) {
 // this list immediately and show up as pending reviews on "Neues Rezept
 // hinzufügen" instead.
 function ImportProgressDialog({ jobs, deleteBanners = [], onClose, onDismissJob, onRestartJob, onCancelJob, onUndoDelete }) {
+  // Texte des Rezept-Imports; gespeicherte Bezeichnungen und Fehler übersetzt (Mehrsprachigkeit PR 6i)
+  const t = useTexte(rezeptimportTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
   // Lock body scroll while this dialog is open (iOS Safari safe)
   useEffect(() => {
     const scrollY = window.scrollY;
@@ -96,34 +103,34 @@ function ImportProgressDialog({ jobs, deleteBanners = [], onClose, onDismissJob,
       <div className="import-progress-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="import-progress-dialog-header">
           <div className="import-progress-dialog-title">
-            <h2>Rezept-Import</h2>
+            <h2>{t('rezeptImport')}</h2>
             {jobs.length > 0 && (
-              <span className="import-progress-dialog-count">{jobs.length} aktiv</span>
+              <span className="import-progress-dialog-count">{t('aktiv', { anzahl: jobs.length })}</span>
             )}
           </div>
-          <button className="close-button" onClick={onClose} aria-label="Schließen" title="Schließen">
+          <button className="close-button" onClick={onClose} aria-label={tAllgemein('schliessen')} title={tAllgemein('schliessen')}>
             <CloseThinIcon size={13} />
           </button>
         </div>
 
         <div className="import-progress-dialog-content">
           {jobs.length === 0 ? (
-            <p className="import-progress-empty">Kein Import aktiv.</p>
+            <p className="import-progress-empty">{t('keinImport')}</p>
           ) : (
             <ul className="import-progress-list">
               {jobs.map((job) => {
-                const label = job.label || 'Rezept-Import';
+                const label = importTextAnzeige(job.label, t) || t('rezeptImport');
                 return (
                   <li key={job.id} className={`import-progress-item status-${job.status} delete-row-hover-target`}>
                     <RowStatusIcon status={job.status} progress={job.progress} />
                     <div className="import-progress-item-body">
                       <span className="import-progress-item-label">{label}</span>
                       {job.status === 'error' && (
-                        <span className="import-progress-item-error-text">{job.error}</span>
+                        <span className="import-progress-item-error-text">{importTextAnzeige(job.error, t)}</span>
                       )}
                     </div>
                     {job.status !== 'error' && (
-                      <span className="import-progress-item-status">{statusLabel(job.status, job.progress)}</span>
+                      <span className="import-progress-item-status">{statusLabel(job.status, job.progress, t)}</span>
                     )}
                     <div className="import-progress-item-actions">
                       {job.canRestart && (
@@ -131,8 +138,8 @@ function ImportProgressDialog({ jobs, deleteBanners = [], onClose, onDismissJob,
                           type="button"
                           className="import-progress-item-restart"
                           onClick={() => onRestartJob(job.id)}
-                          title="Import neu starten"
-                          aria-label={`${label} neu starten`}
+                          title={t('neuStarten')}
+                          aria-label={t('nameNeuStarten', { name: label })}
                         >
                           <RestartIcon size={14} />
                         </button>
@@ -150,7 +157,7 @@ function ImportProgressDialog({ jobs, deleteBanners = [], onClose, onDismissJob,
             </ul>
           )}
           <p className="import-progress-hint">
-            Fertige Importe findest du unter „Neues Rezept hinzufügen" zur Überprüfung.
+            {t('fertigeImporte')}
           </p>
         </div>
       </div>
@@ -165,7 +172,7 @@ function ImportProgressDialog({ jobs, deleteBanners = [], onClose, onDismissJob,
         >
           <span className="undo-snackbar-message">{banner.message}</span>
           <button type="button" className="undo-snackbar-action" onClick={() => onUndoDelete(banner.id)}>
-            Rückgängig
+            {tAllgemein('rueckgaengig')}
           </button>
         </div>
       ))}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import EventForm from './EventForm';
+import { renderWithProviders } from '../test-utils';
 
 const mockCalculateEventDrinks = jest.fn();
 // EventForm only calls this itself when editing another user's event (ownerId
@@ -673,5 +674,31 @@ describe('EventForm', () => {
     render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />);
 
     expect(screen.queryByRole('button', { name: /Getränke nach Gästewunsch/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('EventForm in anderer Sprache (Mehrsprachigkeit PR 6j)', () => {
+  // getByText statt getByRole: Rollenabfragen sind in diesem großen Formular sehr langsam
+  test('Englisch: Felder, Anlass und Meldung bei fehlenden Angaben', () => {
+    renderWithProviders(
+      <EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />,
+      { sprache: 'en' }
+    );
+    expect(screen.getByText('New event')).toBeInTheDocument();
+    expect(screen.getByText('Occasion')).toBeInTheDocument();
+    expect(screen.getByText('Party')).toBeInTheDocument();
+    // Der runde Speichern-Knopf prüft selbst (der Formularknopf scheitert schon an required)
+    fireEvent.click(screen.getByLabelText('Calculate shopping list'));
+    expect(screen.getByText('Please enter a name, date and duration.')).toBeInTheDocument();
+  });
+
+  test('Französisch: Titel, Anlass und Gäste verwalten', () => {
+    renderWithProviders(
+      <EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} guestProfiles={defaultGuestProfiles} customDrinks={defaultCustomDrinks} />,
+      { sprache: 'fr' }
+    );
+    expect(screen.getByText('Nouvel événement')).toBeInTheDocument();
+    expect(screen.getByText('Soirée')).toBeInTheDocument();
+    expect(screen.getByTitle('Gérer les invités')).toBeInTheDocument();
   });
 });
