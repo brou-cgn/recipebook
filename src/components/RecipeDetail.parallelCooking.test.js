@@ -909,6 +909,72 @@ describe('RecipeDetail – Titelzeile mit Timer anderer Schritte (Feinschliff Ta
   });
 });
 
+describe('RecipeDetail – Timer anderer Schritte ohne Titelzeile (ohne Flag, Tech-Check P9)', () => {
+  const originalMatchMedia = window.matchMedia;
+  const gulasch = {
+    id: 'gulasch',
+    title: 'Rindergulasch',
+    authorId: 'user-1',
+    image: 'test-image.jpg',
+    portionen: 4,
+    ingredients: ['1 kg Rindfleisch'],
+    steps: ['Fleisch 10 Minuten scharf anbraten.', 'Zwiebeln in Ringe schneiden.', 'Alles zugedeckt 90 Minuten schmoren.'],
+  };
+  const ohneFlag = { ...flaggedUser, parallelKochen: false };
+
+  beforeEach(() => {
+    window.AudioContext = jest.fn().mockImplementation(() => ({ state: 'running', close: jest.fn(), resume: jest.fn() }));
+  });
+  afterEach(() => { window.matchMedia = originalMatchMedia; });
+
+  function startTimerOnStep(index) {
+    fireEvent.click(document.querySelectorAll('.step-card')[index].querySelector('.step-timer-start-btn'));
+  }
+
+  // Quer schaltet RecipeDetail den Kochmodus selbst ein (siehe setLandscapeViewport)
+  const startetSelbst = () => act(async () => {});
+
+  test.each([
+    ['Handy hochkant', () => {}, enterCookingMode, 'cooking-mode-active'],
+    ['Tablet', () => setTabletViewport(), enterCookingMode, 'cooking-mode-tablet-full'],
+    ['Handy quer', () => setLandscapeViewport(), startetSelbst, 'cooking-mode-landscape'],
+  ])('%s: der laufende Timer steht nach dem Weiterblättern allein über dem Fortschritt, Tippen springt zurück', async (_name, viewport, kochmodus, layout) => {
+    viewport();
+    renderWithProviders(<Harness user={ohneFlag} initial={gulasch} />);
+    await kochmodus();
+    const content = document.querySelector('.recipe-detail-content');
+    expect(content).toHaveClass(layout);
+    expect(document.querySelector('.cooking-mode-titlebar')).toBeNull();
+
+    startTimerOnStep(0);
+    expect(screen.queryByRole('group', { name: 'Timer anderer Schritte' })).toBeNull();
+    expect(content).not.toHaveClass('cooking-mode-has-timer-chips');
+
+    fireEvent.click(document.querySelectorAll('.step-dot')[1]);
+    const group = screen.getByRole('group', { name: 'Timer anderer Schritte' });
+    expect(group).toHaveClass('cooking-mode-timer-chips--alone');
+    expect(group.closest('.cooking-mode-steps')).not.toBeNull();
+    expect(content).toHaveClass('cooking-mode-has-timer-chips');
+
+    fireEvent.click(within(group).getByRole('button', { name: 'Zu Schritt 1 springen, Timer 10:00' }));
+    expect(activeStepIndex()).toBe(0);
+    expect(screen.queryByRole('group', { name: 'Timer anderer Schritte' })).toBeNull();
+    expect(content).not.toHaveClass('cooking-mode-has-timer-chips');
+  });
+
+  test('mit Flag bleiben die Chips in der Titelzeile, nicht doppelt', async () => {
+    renderWithProviders(<Harness initial={gulasch} />);
+    await enterCookingMode();
+
+    startTimerOnStep(0);
+    fireEvent.click(document.querySelectorAll('.step-dot')[1]);
+    const groups = screen.getAllByRole('group', { name: 'Timer anderer Schritte' });
+    expect(groups).toHaveLength(1);
+    expect(groups[0].closest('.cooking-mode-titlebar')).not.toBeNull();
+    expect(document.querySelector('.cooking-mode-timer-chips--alone')).toBeNull();
+  });
+});
+
 describe('RecipeDetail – Zähler in der Schrittkarte auf dem Tablet (Feinschliff Tablet, Punkt 6)', () => {
   const originalMatchMedia = window.matchMedia;
   afterEach(() => { window.matchMedia = originalMatchMedia; });

@@ -1710,6 +1710,36 @@ p.recipe-translation-note {
 /* Aufbau der Titelzeile (Name, Timer-Chips, auf dem Tablet Bild und Schritt) in CookingModeTitleBar.css,
    der Knopf „Rezept dazunehmen“ hat seine Formatierung in CookingAddRecipeButton.css */
 
+/* Ohne Titelzeile (ohne Rollen-Flag parallelKochen) stehen die Timer anderer Schritte allein über dem
+   Fortschritt, sobald einer läuft (Tech-Check P9); Aussehen der Chips wie in der Titelzeile auf dem Handy.
+   Hochkant und auf dem Tablet ein eigenes Flex-Kind vor den Fortschritt-Strichen (order 1). */
+.cooking-mode-active:not(.cooking-mode-landscape) .cooking-mode-timer-chips--alone {
+  order: 0;
+  margin-top: 0;
+  padding: 0.75rem 1rem 0;
+}
+
+/* Handy quer: oberste Zeile der Schritt-Spalte, Fortschritt und Karussell rücken eine Zeile nach unten */
+.cooking-mode-landscape.cooking-mode-has-timer-chips .cooking-mode-steps {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+/* grid-column auch setzen: grid-area: chips aus CookingModeTitleBar.css gäbe es in diesem Raster nicht,
+   die Zeile landete sonst in einer zusätzlichen Spalte */
+.cooking-mode-landscape .cooking-mode-timer-chips--alone {
+  grid-row: 1;
+  grid-column: 1;
+  margin-top: 0;
+}
+
+.cooking-mode-landscape.cooking-mode-has-timer-chips .step-dots {
+  grid-row: 2;
+}
+
+.cooking-mode-landscape.cooking-mode-has-timer-chips .step-carousel {
+  grid-row: 3;
+}
+
 /* Kochsitzung mit Rezept-Leiste: Die Leiste geht vom Schritt-Karussell ab, nicht von den
    Zutaten. Das Zutaten-Sheet behält seine Listenhöhe (den Abstand zur Home-Leiste des
    iPhones übernimmt die Leiste, daher ohne safe-area), das Karussell (flex: 1) wird um die

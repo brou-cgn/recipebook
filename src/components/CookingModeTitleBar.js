@@ -15,6 +15,7 @@ import './CookingModeTitleBar.css';
  * Chips (Punkt 3, Tech-Check P9): Ein Timer steht nur auf der Karte seines Schritts; wer weiterblättert, sähe
  * ihn sonst nirgends. Tippen springt zum Schritt. Höchstens zwei, fällige zuerst, der Rest als „+n“.
  * Auf dem Tablet quer stehen sie neben dem Namen, sonst in einer eigenen Zeile darunter (CookingModeTitleBar.css).
+ * Ohne Titelzeile (ohne Rollen-Flag) zeigt RecipeDetail die Chips allein über dem Fortschritt (CookingTimerChips).
  */
 const MAX_CHIPS = 2;
 
@@ -43,6 +44,40 @@ function CheckIcon() {
   );
 }
 
+/**
+ * Timer anderer Schritte des Rezepts vorn als Chips (Tech-Check P9): in der Titelzeile und, ohne Titelzeile,
+ * allein über dem Fortschritt. Ohne Chips nichts.
+ * @param {object} props
+ * @param {Array} props.chips - aus stepTimerChips (src/utils/cookingSessionStatus.js)
+ * @param {function(number): void} props.onJumpToStep
+ * @param {string} [props.className] - zusätzliche Klasse für die Lage (RecipeDetail.css)
+ */
+export function CookingTimerChips({ chips = [], onJumpToStep, className = '' }) {
+  const t = useTexte(kochmodusTexte);
+  const shown = chips.slice(0, MAX_CHIPS);
+  const more = chips.length - shown.length;
+  if (shown.length === 0) return null;
+
+  return (
+    <div className={`cooking-mode-timer-chips${className ? ` ${className}` : ''}`} role="group" aria-label={t('timerAndererSchritte')}>
+      {shown.map((chip) => (
+        <button
+          key={`${chip.stepIndex}-${chip.kind}`}
+          type="button"
+          className={`cooking-mode-timer-chip${chip.urgent ? ' cooking-mode-timer-chip--urgent' : ''}`}
+          onClick={() => onJumpToStep(chip.stepIndex)}
+          aria-label={t('zuSchrittSpringen', { schritt: chip.stepIndex + 1, status: chip.label })}
+        >
+          {chip.kind === 'finished' ? <CheckIcon /> : <ClockIcon />}
+          <span className="cooking-mode-timer-chip-step">{t('schritt', { schritt: chip.stepIndex + 1 })}</span>
+          <span className="cooking-mode-timer-chip-time">{chip.text}</span>
+        </button>
+      ))}
+      {more > 0 && <span className="cooking-mode-timer-chips-more">+{more}</span>}
+    </div>
+  );
+}
+
 function CookingModeTitleBar({
   recipe,
   title = null,
@@ -60,8 +95,6 @@ function CookingModeTitleBar({
   // damit „Original anzeigen“ auch hier gilt
   const zeigeTitel = useRezeptTitel();
   const titel = title ?? zeigeTitel(recipe);
-  const chips = timerChips.slice(0, MAX_CHIPS);
-  const more = timerChips.length - chips.length;
 
   return (
     <div className={`cooking-mode-titlebar${tablet ? ' cooking-mode-titlebar--tablet' : ''}`}>
@@ -72,24 +105,7 @@ function CookingModeTitleBar({
           <span className="cooking-mode-titlebar-step">{t('schrittVon', { schritt: stepNumber, gesamt: totalSteps })}</span>
         )}
       </div>
-      {chips.length > 0 && (
-        <div className="cooking-mode-timer-chips" role="group" aria-label={t('timerAndererSchritte')}>
-          {chips.map((chip) => (
-            <button
-              key={`${chip.stepIndex}-${chip.kind}`}
-              type="button"
-              className={`cooking-mode-timer-chip${chip.urgent ? ' cooking-mode-timer-chip--urgent' : ''}`}
-              onClick={() => onJumpToStep(chip.stepIndex)}
-              aria-label={t('zuSchrittSpringen', { schritt: chip.stepIndex + 1, status: chip.label })}
-            >
-              {chip.kind === 'finished' ? <CheckIcon /> : <ClockIcon />}
-              <span className="cooking-mode-timer-chip-step">{t('schritt', { schritt: chip.stepIndex + 1 })}</span>
-              <span className="cooking-mode-timer-chip-time">{chip.text}</span>
-            </button>
-          ))}
-          {more > 0 && <span className="cooking-mode-timer-chips-more">+{more}</span>}
-        </div>
-      )}
+      <CookingTimerChips chips={timerChips} onJumpToStep={onJumpToStep} />
       <CookingAddRecipeButton icon={addIcon} loaded={addIconLoaded} onClick={onAdd} />
     </div>
   );
