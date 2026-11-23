@@ -159,6 +159,27 @@ aktualisieren.
   ein englisches Rezeptfoto scannen (erwartet: ein vollständiges deutsches Rezept). Rezepte, die vorher aus englischen
   Fotos oder Website-Aufnahmen entstanden, bleiben englisch und erscheinen seit PR D auch auf Deutsch so (Original); sie
   lassen sich nur von Hand korrigieren.
+- **Nach dem Deploy von PR D:** Auf Deutsch wirkt der Fix sofort (die App zeigt dort immer das Original). Für Englisch und
+  Französisch unter Einstellungen › KI beide Backfills laufen lassen: „Titelübersetzungen nachtragen“ erneuert alle Titel
+  nach den neuen Regeln (bis 25 Titel je Gemini-Aufruf, Tageslimit 10000), „Inhaltsübersetzungen nachtragen“ nur die
+  Inhalte, für die Gemini eine andere Originalsprache als Deutsch erkannt hatte. Ohne Backfill erneuert der Trigger alte
+  Titel nach und nach beim nächsten Schreiben eines Rezepts. Wer wissen will, wie viele Rezepte ganz englisch erfasst
+  sind, zählt vor dem Inhalts-Backfill in `rezeptUebersetzungen` die Dokumente mit `originalSprache` `en`; der Backfill
+  setzt sie auf `de`.
+- **Ältere Inhaltsübersetzungen mit deutschem Original** bleiben, wie sie sind (kein Backfill, um Kosten zu sparen). Dort
+  kann eine englische Zutat auf Französisch übersetzt sein („Peanut Butter“ → „beurre de cacahuète“); neue und geänderte
+  Rezepte folgen der Regel „Feststehende Begriffe“. Alles angleichen hieße: `SCHEMA_VERSION` in Client und Function
+  erhöhen (bis zum Backfill zeigt die App dann überall das Original) oder eine eigene Regel-Version nur für den Backfill
+  einführen; je Rezept ein Gemini-Aufruf, Tageslimit 3000 je Admin.
+- **Feststehende Begriffe auf Französisch:** „nicht übersetzt angezeigt“ ist so umgesetzt, dass englische Begriffe auch auf
+  Französisch englisch bleiben („American Pancakes“ statt „Pancakes américains“). Soll Französisch übersetzen, ist es eine
+  Regel in beiden Prompts. Nach dem Deploy an zwei, drei Rezepten prüfen, ob die KI die Regel einhält, auch bei
+  Zutaten und bei einer Marke aus deutschen Wörtern („Jägermeister Manifest“ im Titel und als Zutat).
+- **Marken, die die KI nicht erkennt:** Die Regel hängt daran, dass Gemini einen Markennamen als solchen erkennt;
+  bei bekannten Marken sehr wahrscheinlich, bei kleinen Marken aus deutschen Wörtern nicht sicher. Zeigt die Prüfung
+  nach dem Deploy Fehler: eine gepflegte Liste geschützter Begriffe in den Einstellungen, die an beide Prompts geht und
+  nach der Übersetzung geprüft wird (fehlt ein Begriff, wird die Übersetzung verworfen). Robust, aber deutlich mehr
+  Aufwand; erst bauen, wenn es nötig ist.
 - **Rest der Baseline (215 Textstellen):** Gruppen und Netzwerk (130, nach der Neugestaltung), Wichteln (77, nach der
   Saison, siehe „Wichtel-Seite“) und der Druck (`FlowPage.js`, `PrintPage.js`, `printElementRenderers.js`, 8,
   Phase B).
