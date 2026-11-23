@@ -57,6 +57,7 @@ import CookDateModal from './CookDateModal';
 import FollowButton from './FollowButton';
 import FollowName from './FollowName';
 import WeinDazu from './WeinDazu';
+import { weinIconsAus } from '../utils/weinbegleitung/anzeige';
 import { getAllCookDates } from '../utils/recipeCookDates';
 import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { calculateRecipeSortIndexBreakdown } from '../utils/recipeSortIndex';
@@ -287,12 +288,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [showAddRecipeSheet, setShowAddRecipeSheet] = useState(false);
   // Einrichtbares Icon des Knopfs „Rezept dazunehmen“ (Button-Icon cookingAddRecipe), abgeleitet statt eigener State
   const cookingAddRecipeIcon = getEffectiveIcon(allButtonIcons, 'cookingAddRecipe', isDarkMode) || defaultIcon('potPlus', isDarkMode);
-  const weinRotIcon = getEffectiveIcon(allButtonIcons, 'weinRot', isDarkMode);
-  const weinWeissIcon = getEffectiveIcon(allButtonIcons, 'weinWeiss', isDarkMode);
-  const weinKeinStilIcon = getEffectiveIcon(allButtonIcons, 'weinKeinStil', isDarkMode);
+  // Icons der Weinbegleitung (weinRot, weinWeiss, weinSuess, weinKeinStil), leer = eingebautes Glas
   const weinIcons = useMemo(
-    () => ({ rot: weinRotIcon, weiss: weinWeissIcon, keinStil: weinKeinStilIcon }),
-    [weinRotIcon, weinWeissIcon, weinKeinStilIcon]
+    () => weinIconsAus((schluessel) => getEffectiveIcon(allButtonIcons, schluessel, isDarkMode)),
+    [allButtonIcons, isDarkMode]
   );
   const ingredientMatchFromModalRef = useRef(false);
   const [alarmSoundKey] = useState(() => getAlarmSoundPreference());

@@ -16,7 +16,7 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { chromium, devices } = require('playwright');
-const { ACCOUNT, patchAccount } = require('./seed');
+const { ACCOUNT, patchAccount, patchDoc } = require('./seed');
 
 const ROOT = path.join(__dirname, '..', '..');
 const PORT = Number(process.env.SCREENSHOT_PORT || 5174);
@@ -137,6 +137,17 @@ const SCREENS = [
     },
   },
   { name: 'rezept', run: async (page, shot) => { await openRecipe(page, 'Linsensuppe mit Kreuzkümmel'); await shot(); } },
+  {
+    // „Wein dazu“ mit dem eingerichteten Süßwein-Icon (seed.js) im Chip und im Sheet
+    name: 'rezept-wein-dazu-suesswein',
+    run: async (page, shot) => {
+      await openRecipe(page, 'Apfelkuchen vom Blech');
+      await page.getByRole('button', { name: /^Wein: Süßwein/ }).click();
+      await page.getByRole('dialog', { name: 'Wein dazu' }).waitFor();
+      await pause(page, 600);
+      await shot();
+    },
+  },
   {
     // Auf dem Handy öffnet der schwebende Knopf das Formular in der Testumgebung nicht zuverlässig
     name: 'rezept-bearbeiten',
@@ -446,6 +457,33 @@ const SCREENS = [
       await shot();
     },
   },
+  // Weinbegleitung im Menü mit den eingerichteten Icons (seed.js: Rot, Weiß, Süß, Bier oder Wasser). Die Profile
+  // sind aktuell, „Weinbegleitung erstellen“ rechnet also ohne KI-Aufruf; danach wird sie wieder entfernt, damit
+  // „menue“ in der nächsten Variante ohne Weinbegleitung bleibt.
+  ...[
+    { name: 'menue-weinbegleitung', einWein: false },
+    { name: 'menue-weinbegleitung-ein-wein', einWein: true },
+  ].map(({ name, einWein }) => ({
+    name,
+    fullPage: true,
+    run: async (page, shot) => {
+      try {
+        await openMenuItem(page, 'Festtafel');
+        await page.getByText('Sonntagsessen', { exact: true }).first().click();
+        await page.locator('.menu-detail-container').first().waitFor();
+        await page.getByRole('button', { name: 'Weinbegleitung erstellen' }).click();
+        await page.locator('.weinbegleitung-gang').first().waitFor();
+        if (einWein) {
+          await page.getByRole('button', { name: 'Ein Wein für alles' }).click();
+          await page.getByRole('list', { name: 'Ein Wein für alle Gänge' }).waitFor();
+        }
+        await pause(page, 1000);
+        await shot();
+      } finally {
+        await patchDoc('menus/menu-sonntag', { weinbegleitung: undefined });
+      }
+    },
+  })),
   { name: 'events', run: async (page, shot) => { await openMenuItem(page, 'Events'); await shot(); } },
   {
     name: 'event',

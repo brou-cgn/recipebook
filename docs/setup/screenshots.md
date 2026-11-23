@@ -48,8 +48,9 @@ dann beide `index.html` nebeneinander ansehen.
 2. `seed.js` leert die Emulatoren und legt die Testdaten an: Admin-Konto `testkoch@example.com`
    (Passwort `screenshots-only`, gilt nur im Emulator), sechs Rezepte mit Platzhalterbildern, die
    öffentliche und zwei private Listen (eine als Inspirationssammlung), ein Menü, ein Event, ein
-   Kochtagebuch-Eintrag und eine Bewertung der Linsensuppe, ein Eintrag der Saisonmatrix und zwei Einträge
-   der Kochschule. Für Admins ist die Startseite („Küche“)
+   Kochtagebuch-Eintrag und eine Bewertung der Linsensuppe, ein Eintrag der Saisonmatrix, zwei Einträge
+   der Kochschule sowie Weinprofile für die drei Gerichte des Menüs und eigene Test-Icons der Weinbegleitung
+   (Kreise mit R, W, S und B für Rot-, Weiß- und Süßwein und „Bier oder Wasser“). Für Admins ist die Startseite („Küche“)
    freigeschaltet, sie ist daher der erste Bildschirm nach der Anmeldung. Geschrieben wird über die REST-Schnittstelle des Emulators an den Regeln vorbei; die
    App selbst läuft mit den echten `firestore.rules`.
 3. `capture.js` startet Vite mit `REACT_APP_USE_EMULATORS=true`, meldet sich an und fotografiert

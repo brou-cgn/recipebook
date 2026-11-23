@@ -28,6 +28,7 @@ import useModalScrollLock from '../hooks/useModalScrollLock';
 import useFadeOutClose from '../hooks/useFadeOutClose';
 import useMenueWeinbegleitung from '../hooks/useMenueWeinbegleitung';
 import { WeinbegleitungUebersicht, WeinbegleitungGang } from './Weinbegleitung';
+import { weinIconsAus } from '../utils/weinbegleitung/anzeige';
 import { useRezeptTitel, useSprache, useTexte } from '../contexts/SpracheContext';
 import { formatiereDatum, formatiereZahl } from '../i18n/format';
 import { STANDARD_SPRACHE } from '../i18n/sprachen';
@@ -468,6 +469,11 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
 
   // Weinbegleitung (Variante B): Zusammenfassung vor den Gängen, Weinzeile je Gang
   const wein = useMenueWeinbegleitung({ menu, recipes, currentUser, isSharedView });
+  // Eingerichtete Icons wie im Rezept-Sheet (weinRot, weinWeiss, weinSuess, weinKeinStil), leer = Glas
+  const weinIcons = useMemo(
+    () => (allButtonIcons ? weinIconsAus((schluessel) => getEffectiveIcon(allButtonIcons, schluessel, isDarkMode)) : null),
+    [allButtonIcons, isDarkMode]
+  );
 
   // Collect all unique linked (sub-)recipes referenced in menu recipe ingredients
   const allLinkedRecipes = useMemo(() => {
@@ -758,7 +764,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
           <p className="menu-description menu-guests-text">{menuGuestsText}</p>
         )}
 
-        <WeinbegleitungUebersicht wein={wein} />
+        <WeinbegleitungUebersicht wein={wein} icons={weinIcons} />
 
         {displaySections.map((section, index) => {
           const isDrinksSection = section.name?.toLowerCase() === DRINKS_SECTION_NAME.toLowerCase();
@@ -826,7 +832,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                   </button>
                 )}
               </div>
-              <WeinbegleitungGang wein={wein} sektionIndex={index} sektionName={section.name} />
+              <WeinbegleitungGang wein={wein} sektionIndex={index} sektionName={section.name} icons={weinIcons} />
               {isLoadingDrinks ? (
                 <p className="no-recipes">{t('getraenkeLaden')}</p>
               ) : hasCards ? (

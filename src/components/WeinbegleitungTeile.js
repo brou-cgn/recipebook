@@ -55,16 +55,16 @@ export function WeinGlas({ farbe = null, groesse = 20, laedt = false }) {
 const istBildQuelle = (wert) => /^(data:image\/|https?:\/\/|\/)/.test(wert);
 
 /**
- * Symbol für einen Stil: das in den Button-Icons hinterlegte Icon für Rot- bzw. Weißwein
- * (`icons` = `{ rot, weiss, keinStil }` aus `weinRot`/`weinWeiss`/`weinKeinStil`), sonst das Glas in
- * der Weinfarbe. Ohne Stil („Hier lieber Bier oder Wasser“) gilt `icons.keinStil`, sonst das leere Glas.
+ * Symbol für einen Stil: das in den Button-Icons hinterlegte Icon seiner Weinfarbe (`icons` =
+ * `{ rot, weiss, suess, keinStil }`, siehe `weinIconsAus` in anzeige.js), sonst das Glas in der
+ * Weinfarbe. Süßweine nehmen `icons.suess`, auch wenn sie weiß oder rot sind (Tokaji, Portwein).
+ * Ohne Stil („Hier lieber Bier oder Wasser“) gilt `icons.keinStil`, sonst das leere Glas.
  * Rosé hat kein eigenes Icon und bleibt beim Glas. Bilder (data:, http(s), Pfad) als `<img>`,
  * anderer Text als Zeichen.
  */
 export function WeinSymbol({ stil, icons = null, groesse = 20 }) {
-  const eigenes = !stil
-    ? icons?.keinStil
-    : stil.farbe === 'rot' ? icons?.rot : stil.farbe === 'weiss' ? icons?.weiss : '';
+  const art = stil ? weinfarbe(stil) : 'keinStil';
+  const eigenes = art === 'rose' ? '' : icons?.[art];
   if (eigenes) {
     return istBildQuelle(eigenes) ? (
       <img className="wein-symbol-bild" src={eigenes} alt="" width={groesse} height={groesse} />

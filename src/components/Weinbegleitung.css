@@ -305,6 +305,13 @@
   color: var(--color-text-muted);
 }
 
+/* „Hier lieber Bier oder Wasser“ mit Symbol (Button-Icon weinKeinStil oder leeres Glas) */
+.weinbegleitung-gang-hinweis--symbol {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
 /* Dunkelmodus: --color-brand ist dort hellgrau – der aktive Umschalter soll Orange sein. */
 [data-theme="dark"] .weinbegleitung-umschalter-knopf[aria-pressed="true"] {
   background: var(--color-accent);

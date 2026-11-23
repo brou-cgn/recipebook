@@ -1,4 +1,4 @@
-import { kennwerteFuer, weinfarbe, weinprofilFehlertext, neueresProfil, nurZuText, TEXT_KEIN_STIL } from './anzeige';
+import { kennwerteFuer, weinfarbe, weinIconsAus, weinprofilFehlertext, neueresProfil, nurZuText, TEXT_KEIN_STIL } from './anzeige';
 import { getStil } from './wissensbasis';
 
 describe('kennwerteFuer', () => {
@@ -30,6 +30,15 @@ describe('weinfarbe', () => {
     expect(weinfarbe(getStil('suesswein_edel'))).toBe('suess');
     expect(weinfarbe(getStil('likoerwein'))).toBe('suess');
     expect(weinfarbe(undefined)).toBe('weiss');
+  });
+});
+
+describe('weinIconsAus', () => {
+  it('liest je Art das Button-Icon, fehlende werden leer (eingebautes Glas)', () => {
+    const icons = { weinRot: 'ROT', weinSuess: 'SUESS', weinKeinStil: undefined };
+    expect(weinIconsAus((schluessel) => icons[schluessel])).toEqual({
+      rot: 'ROT', weiss: '', suess: 'SUESS', keinStil: '',
+    });
   });
 });
 
