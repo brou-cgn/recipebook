@@ -100,3 +100,7 @@ aus `users/{uid}/followInbox` verschwindet. Ein Entsperren fehlt noch (siehe Off
 - Kochdaten: `src/utils/recipeCookDates.js`, `src/components/CookDateModal.js`
 - Sichtbarkeit: `filterVisibleRecipes` in `src/utils/recipeFirestore.js`, `isVisibleToUser` in `functions/fuerDichEntdecktRotation.js`
 - Navigation: `src/components/BottomNavigation.js` (`badgeCounts`), Chefkoch: `src/components/Kueche.js`, `PersonalDataPage.js`
+- Texte (Mehrsprachigkeit PR 6s): `src/i18n/texte/netzwerk.js` für Netzwerk, Profil, Folgen-Knopf, Hinweis nach einer
+  Anfrage, „Was wird sichtbar?“ und den Satz „Anna hat das gekocht · gestern“ (`describeActorSegments` nimmt `t`);
+  Änderungen am Datenschutz-Text dort in allen drei Sprachen nachziehen. Neue Meldungen in `functions/follow.js`
+  brauchen einen Eintrag in `FOLGEN_MELDUNGEN` mit genau demselben deutschen Text (Test `netzwerk.test.js`).

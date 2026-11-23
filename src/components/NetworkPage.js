@@ -8,19 +8,25 @@ import useUndoableDelete from '../hooks/useUndoableDelete';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import { UnterseiteKopf } from './Unterseite';
 import {
-  loadNetwork, respondToFollow, stopFollowing, removeFollower,
+  loadNetwork, respondToFollow, stopFollowing, removeFollower, ANONYMOUS_NAME,
 } from '../utils/followFirestore';
+import { useTexte } from '../contexts/SpracheContext';
+import { erkannterText } from '../i18n/texte';
+import netzwerkTexte, { FOLGEN_MELDUNGEN } from '../i18n/texte/netzwerk';
+import chefkochTexte from '../i18n/texte/chefkochUndMehr';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
+// Reiter und leere Listen; Texte in src/i18n/texte/netzwerk.js (Mehrsprachigkeit PR 6s)
 const TABS = [
-  { key: 'requests', label: 'Anfragen' },
-  { key: 'following', label: 'Ich folge' },
-  { key: 'followers', label: 'Follower' },
+  { key: 'requests', label: 'anfragen' },
+  { key: 'following', label: 'ichFolge' },
+  { key: 'followers', label: 'follower' },
 ];
 
 const EMPTY_TEXT = {
-  requests: 'Keine offenen Anfragen.',
-  following: 'Du folgst noch niemandem.',
-  followers: 'Dir folgt noch niemand.',
+  requests: 'keineAnfragen',
+  following: 'folgstNiemandem',
+  followers: 'dirFolgtNiemand',
 };
 
 const EMPTY_NETWORK = { requests: [], following: [], followers: [], blocked: [] };
@@ -31,6 +37,7 @@ const withoutId = (rows, id) => rows.filter((row) => row.id !== id);
 // Linksswipe-Geste (CLAUDE.md, Löschaktionen). Beide lösen dieselbe Entfernung aus.
 function NetworkRemovableRow({ userId, name, note, onRemove }) {
   const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete();
+  const tAllgemein = useTexte(allgemeinTexte);
 
   const handleSwipeRemove = (e) => {
     e.stopPropagation();
@@ -45,7 +52,7 @@ function NetworkRemovableRow({ userId, name, note, onRemove }) {
           type="button"
           className="swipe-delete-action"
           onClick={handleSwipeRemove}
-          aria-label={`${name} entfernen`}
+          aria-label={tAllgemein('nameEntfernen', { name })}
           tabIndex={isDeleteVisible ? 0 : -1}
         >
           <span className="swipe-delete-icon-text"><TrashIcon /></span>
@@ -70,6 +77,7 @@ function NetworkRemovableRow({ userId, name, note, onRemove }) {
 // diesem Entwurf übereinstimmen, insbesondere Rückwirkung und Zeitfenster.
 function FollowVisibilityInfo() {
   const [open, setOpen] = useState(false);
+  const t = useTexte(netzwerkTexte);
   return (
     <div className="network-info">
       <button
@@ -79,20 +87,18 @@ function FollowVisibilityInfo() {
         aria-controls="network-info-body"
         onClick={() => setOpen((v) => !v)}
       >
-        Was wird sichtbar?
+        {t('wasWirdSichtbar')}
       </button>
       {open && (
         <div id="network-info-body" className="network-info-body">
           <p>
-            Mit dem Annehmen zeigt die App dieser Person in „Für dich entdeckt“ Rezepte, die du
-            gekocht oder angelegt hast, mit deinem Vornamen und einer groben Zeitangabe
-            („Anna hat das gekocht · gestern“).
+            {t('infoAnnehmen')}
           </p>
           <ul>
-            <li>Rückwirkend: Es zählen auch frühere Einträge aus dem Zeitfenster der Rubrik (derzeit bis zu 30 Tage).</li>
-            <li>Verwendet werden deine „Gekocht am“-Einträge und deine angelegten Rezepte. Einzelne Einträge lassen sich nicht ausnehmen.</li>
-            <li>Daraus lassen sich Rückschlüsse auf deine Ernährungsgewohnheiten ziehen.</li>
-            <li>Du kannst Follower jederzeit entfernen. Bereits angezeigte Hinweise lassen sich nicht zurückholen.</li>
+            <li>{t('infoRueckwirkend')}</li>
+            <li>{t('infoEintraege')}</li>
+            <li>{t('infoRueckschluesse')}</li>
+            <li>{t('infoEntfernen')}</li>
           </ul>
         </div>
       )}
@@ -108,6 +114,11 @@ function NetworkPage({ currentUser, onBack }) {
   const [error, setError] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const { banners, pendingKeys, scheduleDelete, undoDelete } = useUndoableDelete();
+  const t = useTexte(netzwerkTexte);
+  const tChefkoch = useTexte(chefkochTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  // Ohne Profil heißt eine Person „Ein Mitglied“ (ANONYMOUS_NAME); angezeigt in der geltenden Sprache
+  const anzeigeName = (name) => (name === ANONYMOUS_NAME ? t('einMitglied') : name);
 
   const reload = useCallback(async () => {
     if (!uid) return;
@@ -116,7 +127,8 @@ function NetworkPage({ currentUser, onBack }) {
       setError(null);
     } catch (err) {
       console.error('Netzwerk nicht ladbar:', err);
-      setError('Das Netzwerk konnte nicht geladen werden.');
+      // Als Schlüssel, damit ein Sprachwechsel das Netzwerk nicht neu lädt
+      setError({ schluessel: 'fehlerLaden' });
     } finally {
       setLoading(false);
     }
@@ -132,7 +144,10 @@ function NetworkPage({ currentUser, onBack }) {
       await reload();
     } catch (err) {
       console.error('Antwort auf Follow-Anfrage fehlgeschlagen:', err);
-      setError(err?.message || 'Die Aktion ist fehlgeschlagen.');
+      // Deutsche Meldung der Function über ihren Schlüssel (FOLGEN_MELDUNGEN), sonst, wie sie kommt
+      setError(err?.message
+        ? { text: erkannterText(netzwerkTexte, err.message, FOLGEN_MELDUNGEN, t) }
+        : { schluessel: 'fehlerAktion' });
     } finally {
       setBusyId(null);
     }
@@ -144,7 +159,7 @@ function NetworkPage({ currentUser, onBack }) {
     const key = `${listKey}:${row.id}`;
     scheduleDelete({
       key,
-      message: row.name,
+      message: anzeigeName(row.name),
       onConfirm: () => {
         Promise.resolve().then(mutate).catch((err) => console.error('Follow entfernen fehlgeschlagen:', err));
       },
@@ -157,14 +172,14 @@ function NetworkPage({ currentUser, onBack }) {
 
   const renderRequest = (row) => (
     <li key={row.id} className="network-row">
-      <FollowName userId={row.id} name={row.name} className="network-row-name" fromNetwork />
+      <FollowName userId={row.id} name={anzeigeName(row.name)} className="network-row-name" fromNetwork />
       <div className="network-row-actions">
         <button type="button" className="network-btn network-btn--primary" disabled={busyId === row.id}
-          onClick={() => respond(row, 'accept')}>Annehmen</button>
+          onClick={() => respond(row, 'accept')}>{t('annehmen')}</button>
         <button type="button" className="network-btn" disabled={busyId === row.id}
-          onClick={() => respond(row, 'decline')}>Ablehnen</button>
+          onClick={() => respond(row, 'decline')}>{t('ablehnen')}</button>
         <button type="button" className="network-btn network-btn--quiet" disabled={busyId === row.id}
-          onClick={() => respond(row, 'block')}>Blockieren</button>
+          onClick={() => respond(row, 'block')}>{t('blockieren')}</button>
       </div>
     </li>
   );
@@ -173,8 +188,8 @@ function NetworkPage({ currentUser, onBack }) {
     <NetworkRemovableRow
       key={row.id}
       userId={row.id}
-      name={row.name}
-      note={row.status === 'pending' ? 'Angefragt' : null}
+      name={anzeigeName(row.name)}
+      note={row.status === 'pending' ? t('angefragt') : null}
       onRemove={() => removeRow('following', row, () => stopFollowing(uid, row.id))}
     />
   );
@@ -183,7 +198,7 @@ function NetworkPage({ currentUser, onBack }) {
     <NetworkRemovableRow
       key={row.id}
       userId={row.id}
-      name={row.name}
+      name={anzeigeName(row.name)}
       onRemove={() => removeRow('followers', row, () => removeFollower(uid, row.id))}
     />
   );
@@ -195,7 +210,7 @@ function NetworkPage({ currentUser, onBack }) {
   return (
     <div className="network-container">
       <UnterseiteKopf onZurueck={onBack}>
-        <h2>Mein Netzwerk</h2>
+        <h2>{tChefkoch('meinNetzwerk')}</h2>
       </UnterseiteKopf>
 
       <div className="network-tabs" role="tablist">
@@ -210,33 +225,33 @@ function NetworkPage({ currentUser, onBack }) {
             onClick={() => setActiveTab(tab.key)}
           >
             <span className="network-tab-zahl" aria-hidden="true">{loading ? '–' : visible(tab.key).length}</span>
-            <span className="network-tab-name">{tab.label}</span>
+            <span className="network-tab-name">{t(tab.label)}</span>
           </button>
         ))}
       </div>
 
       <div className="network-page">
-        {error && <p className="network-error" role="alert">{error}</p>}
+        {error && <p className="network-error" role="alert">{error.schluessel ? t(error.schluessel) : error.text}</p>}
         {loading ? (
-          <p className="network-empty">Wird geladen …</p>
+          <p className="network-empty">{tAllgemein('laden')}</p>
         ) : (
           <>
             {activeTab === 'requests' && rows.length > 0 && <FollowVisibilityInfo />}
             {rows.length === 0 ? (
-              <p className="network-empty">{EMPTY_TEXT[activeTab]}</p>
+              <p className="network-empty">{t(EMPTY_TEXT[activeTab])}</p>
             ) : (
               <ul className="network-list">{rows.map(renderers[activeTab])}</ul>
             )}
 
             {activeTab === 'requests' && blocked.length > 0 && (
               <section className="network-blocked">
-                <h3>Blockiert</h3>
+                <h3>{t('blockiert')}</h3>
                 <ul className="network-list">
                   {blocked.map((row) => (
                     <li key={row.id} className="network-row">
-                      <span className="network-row-name">{row.name}</span>
+                      <span className="network-row-name">{anzeigeName(row.name)}</span>
                       <button type="button" className="network-btn" disabled={busyId === row.id}
-                        onClick={() => respond(row, 'unblock')}>Freigeben</button>
+                        onClick={() => respond(row, 'unblock')}>{t('freigeben')}</button>
                     </li>
                   ))}
                 </ul>

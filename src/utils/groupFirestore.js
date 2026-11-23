@@ -42,6 +42,7 @@ export const LIST_KIND_OPTIONS = [
   { value: 'interactive', label: 'Interaktive Liste' },
   { value: 'classic', label: 'Klassische Sammlung' },
 ];
+// Angezeigt werden die Arten über listenArtText (src/utils/listenArt.js) in der geltenden Sprache; `label` bleibt deutsch.
 
 /**
  * Ensure a system-wide "public" group exists. Creates it if missing.

@@ -63,20 +63,13 @@ const NUR_DEUTSCH = new Set([
   'components/templateEditor/TemplateGallery.js',
 ]);
 
-// Stand 23.11.2026 (PR 6o: Weinbegleitung und Kleinkram): 215 Textstellen in 12 Dateien.
+// Stand 23.11.2026 (PR 6s: Gruppen und Netzwerk): 85 Textstellen in 5 Dateien.
 const BASELINE = {
   'components/FlowPage.js': 3,
-  'components/GroupCreateDialog.js': 23,
-  'components/GroupDetail.js': 53,
-  'components/GroupEditDialog.js': 21,
-  'components/GroupList.js': 12,
-  'components/MemberProfilePage.js': 6,
-  'components/NetworkPage.js': 14,
   'components/PrintPage.js': 2,
   'components/WichtelPage.js': 66,
   'components/WichtelTeilnehmerFormular.js': 11,
   'components/printElementRenderers.js': 3,
-  'contexts/FollowContext.js': 1,
 };
 
 function files(dir) {

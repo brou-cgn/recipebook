@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import FollowButton from './FollowButton';
+import { SpracheProvider } from '../contexts/SpracheContext';
 import { FollowProvider } from '../contexts/FollowContext';
 import { subscribeMyFollows, requestToFollow, stopFollowing } from '../utils/followFirestore';
 
@@ -87,4 +88,32 @@ test('eingerichtetes Icon (Bild oder Text) ersetzt das Standard-Symbol', () => {
     </FollowProvider>,
   );
   expect(screen.getByRole('button', { name: 'Anna folgen' })).toHaveTextContent('Folgen');
+});
+
+describe('FollowButton in anderer Sprache (Mehrsprachigkeit PR 6s)', () => {
+  const zeige = (sprache) => render(
+    <SpracheProvider profilSprache={sprache} speicher={null}>
+      <FollowProvider userId="me" enabled>
+        <FollowButton userId="anna" name="Anna" />
+      </FollowProvider>
+    </SpracheProvider>
+  );
+
+  test('Englisch: Beschriftung und Hinweis nach der Anfrage', async () => {
+    zeige('en');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Follow Anna' }));
+    });
+    expect(screen.getByRole('status')).toHaveTextContent('Request sent to Anna');
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument();
+  });
+
+  test('Französisch: Meldung der Function über ihren Schlüssel', async () => {
+    requestToFollow.mockRejectedValueOnce(new Error('Du kannst dir nicht selbst folgen.'));
+    zeige('fr');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Suivre Anna' }));
+    });
+    expect(screen.getByRole('status')).toHaveTextContent('Tu ne peux pas te suivre toi-même.');
+  });
 });

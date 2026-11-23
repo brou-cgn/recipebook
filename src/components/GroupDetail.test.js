@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import GroupDetail from './GroupDetail';
+import { SpracheProvider } from '../contexts/SpracheContext';
 import { sendGroupInvitation } from '../utils/groupFirestore';
 
 jest.mock('./RecipeRating', () => () => <div data-testid="mock-rating" />);
@@ -45,6 +46,7 @@ jest.mock('../utils/customLists', () => ({
 jest.mock('../utils/groupFirestore', () => ({
   sendGroupInvitation: jest.fn().mockResolvedValue({ success: true }),
   invitationStored: (error) => error?.details?.gespeichert === true,
+  PUBLIC_GROUP_NAME: 'Öffentlich',
   LIST_KIND_OPTIONS: [
     { value: 'interactive', label: 'Interaktive Liste' },
     { value: 'classic', label: 'Klassische Sammlung' },
@@ -989,5 +991,59 @@ describe('GroupDetail – Liste löschen mit App-Dialog (D2)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
     expect(onDeleteGroup).not.toHaveBeenCalled();
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('GroupDetail in anderer Sprache (Mehrsprachigkeit PR 6s)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  const zeige = (sprache, props = {}) => render(
+    <SpracheProvider profilSprache={sprache} speicher={null}>
+      <GroupDetail {...defaultProps} {...props} />
+    </SpracheProvider>
+  );
+
+  it('Englisch: Einstellungen der Liste, Mitglieder, Knöpfe', () => {
+    zeige('en', { group: { ...mockPrivateGroup, listKind: 'classic' } });
+    expect(screen.getByRole('heading', { name: 'Familie' })).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Open settings'));
+    expect(screen.getByRole('heading', { name: 'List settings' })).toBeInTheDocument();
+    expect(screen.getByText('Visibility')).toBeInTheDocument();
+    expect(screen.getByText('Private')).toBeInTheDocument();
+    expect(screen.getByText('Classic collection')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Members (2)' })).toBeInTheDocument();
+    expect(screen.getByText('(owner)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove Ben Schmidt' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Edit list' }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Delete list' })).toBeInTheDocument();
+  });
+
+  it('Französisch: Meldung der Function zur Einladung über ihren Schlüssel', async () => {
+    // Vorbereitete Antworten früherer Tests verwerfen (clearAllMocks lässt sie stehen)
+    sendGroupInvitation.mockReset();
+    sendGroupInvitation.mockRejectedValueOnce(Object.assign(
+      new Error('Nur der Eigentümer der Liste kann Mitglieder einladen.'),
+      { code: 'functions/permission-denied' },
+    ));
+    zeige('fr');
+    fireEvent.click(screen.getByLabelText('Ouvrir les réglages'));
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter un membre' }));
+    fireEvent.change(screen.getByLabelText('Invitation par e-mail'), { target: { value: 'neu@example.com' } });
+    // In act: Der Block mit künstlichen Timern oben lässt den Zeitplaner von React an ihnen hängen; act
+    // spielt die Zustandswechsel nach dem await selbst ab
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Ajouter' }));
+    });
+    expect(sendGroupInvitation).toHaveBeenCalledWith('grp1', 'neu@example.com');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'L’invitation n’a pas été enregistrée : Seul le propriétaire de la liste peut inviter des membres.'
+    );
+  });
+
+  it('Englisch: öffentliche Gruppe mit übersetztem Namen', () => {
+    zeige('en', { group: { ...mockPublicGroup, name: 'Öffentlich' } });
+    expect(screen.getByRole('heading', { name: 'Public' })).toBeInTheDocument();
   });
 });
