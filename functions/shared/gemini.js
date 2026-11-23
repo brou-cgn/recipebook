@@ -124,14 +124,21 @@ const RECIPE_EXTRACTION_RESPONSE_SCHEMA = {
 };
 
 /**
- * Primärsprache (Entscheidung vom 23.11.2026, docs/vorhaben/mehrsprachigkeit.md): Rezepte entstehen immer auf
- * Deutsch, Englisch und Französisch sind Übersetzungen davon. Für Bilder (Foto-Scan, Website-Aufnahme) steht die
- * Regel hier im Code und nicht im Prompt aus den Einstellungen, damit eine Änderung dort sie nicht verliert; der
- * HTML-Import hat seine eigene (callGeminiTextAPI). Angehängt nach dem Prompt, als letzte Anweisung vor den
- * Bildern (Tech-Check F23).
+ * Regel zur Sprache für Bilder (Foto-Scan, Website-Aufnahme): Rezepte entstehen immer auf Deutsch (Entscheidung
+ * „Primärsprache“ vom 23.11.2026, docs/vorhaben/mehrsprachigkeit.md), Englisch und Französisch sind Übersetzungen
+ * davon. Die Sprachauswahl im Foto-Scan ist nur ein Hinweis für die Erkennung (Entscheidung „Auswahl bleibt als
+ * Hilfe“, Mehrsprachigkeit PR 6r). Die Regel steht im Code und nicht im Prompt aus den Einstellungen, damit eine
+ * Änderung dort sie nicht verliert; angehängt nach dem Prompt, als letzte Anweisung vor den Bildern (Tech-Check
+ * F23). Der HTML-Import hat seine eigene (callGeminiTextAPI).
+ * @param {string} lang - Sprache des Rezepts im Bild laut Auswahl ('de' oder 'en')
+ * @return {string} Absatz für das Ende des Prompts
  */
-const DEUTSCH_REGEL = '\n\nSPRACHE: Das Rezept wird auf Deutsch gespeichert. Ist es nicht auf Deutsch, übersetze ' +
-  'Titel, Zutaten, Zubereitungsschritte und Notizen ins Deutsche.';
+function scanSpracheRegel(lang) {
+  const hinweis = lang === 'en' ? 'Das Rezept im Bild ist laut Auswahl auf Englisch. ' : '';
+  return `\n\nSPRACHE: ${hinweis}Gib Titel, Zutaten, Zubereitungsschritte und Notizen immer auf Deutsch zurück. ` +
+    'Ist das Rezept in einer anderen Sprache verfasst, übersetze es ins Deutsche; für Mengen und Einheiten gelten ' +
+    'die Regeln oben.';
+}
 
 /**
  * Rezept aus der JSON-Antwort von Gemini in der Form, die die App erwartet. Das Antwortschema
@@ -262,8 +269,8 @@ async function getRecipeExtractionPrompt() {
  * Call Gemini API to analyze recipe image
  * @param {string} base64Data - Pure base64 image data (no prefix)
  * @param {string} mimeType - Image MIME type
- * @param {string} lang - Sprache aus der Anfrage; ändert das Ergebnis nicht mehr, das Rezept kommt immer deutsch
- *   (DEUTSCH_REGEL, Tech-Check F23)
+ * @param {string} lang - Sprache des Rezepts im Bild laut Auswahl; nur ein Hinweis, das Rezept kommt immer deutsch
+ *   (scanSpracheRegel, Tech-Check F23)
  * @param {string} apiKey - Gemini API key
  * @param {string[]|undefined} cuisineTypes - Configured cuisine types
  * @param {string[]|undefined} mealCategories - Configured meal categories
@@ -306,7 +313,7 @@ async function callGeminiAPI(base64Data, mimeType, lang, apiKey, cuisineTypes, m
     contents: [
       {
         parts: [
-          {text: prompt + DEUTSCH_REGEL},
+          {text: prompt + scanSpracheRegel(lang)},
           {
             inline_data: {
               mime_type: mimeType,
@@ -611,4 +618,4 @@ async function transcribeVideoWithGemini(videoBuffer, language, apiKey, mimeType
   }
 }
 
-module.exports = {RECIPE_STEP_STYLE_RULE, RECIPE_STEP_BOUNDARY_RULE, DEFAULT_AI_RECIPE_PROMPT, RECIPE_EXTRACTION_RESPONSE_SCHEMA, recipeExtractionPromptCache, recipeExtractionPromptCacheExpiry, getRecipeExtractionPrompt, DEUTSCH_REGEL, rezeptAusAntwort, callGeminiAPI, callGeminiTextAPI, transcribeVideoWithGemini};
+module.exports = {RECIPE_STEP_STYLE_RULE, RECIPE_STEP_BOUNDARY_RULE, DEFAULT_AI_RECIPE_PROMPT, RECIPE_EXTRACTION_RESPONSE_SCHEMA, recipeExtractionPromptCache, recipeExtractionPromptCacheExpiry, getRecipeExtractionPrompt, scanSpracheRegel, rezeptAusAntwort, callGeminiAPI, callGeminiTextAPI, transcribeVideoWithGemini};

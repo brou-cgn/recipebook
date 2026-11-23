@@ -268,10 +268,10 @@ RecipeBook features powerful OCR (Optical Character Recognition) to digitize rec
    - **Camera**: Grant camera permissions and photograph your recipe
    - **File Upload**: Select a recipe image from your device
 
-3. **Scan**
+3. **Select Language and Scan**
+   - Optionally choose the language of the recipe (Deutsch or English); it only helps with recognition
    - Click Scan to process the image
-   - No language choice needed: the AI detects the recipe's language itself and saves the recipe in German,
-     the app's primary language (English and French are translations of it)
+   - The recipe is always saved in German, the app's primary language (English and French are translations of it)
 
 4. **Review and Edit**
    - Wait for OCR processing (typically 5-15 seconds)

@@ -90,6 +90,57 @@
   gap: 15px;
 }
 
+/* Sprache des Rezepts: nur ein Hinweis für die Erkennung, das Rezept bleibt deutsch (Mehrsprachigkeit PR 6r,
+   Tech-Check F23). Farben über Tokens, damit der Dunkelmodus ohne eigene Regeln auskommt. */
+.language-selector {
+  margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+}
+
+.language-selector .language-label {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.language-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.language-tab {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.language-tab:hover {
+  background-color: var(--color-surface-raised);
+}
+
+.language-tab.active {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+/* Selektor mit Elternklasse, damit die Farbe im Dunkelmodus nicht überstimmt wird (Tech-Check A7) */
+.language-selector .language-hint {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.85rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
 /* OCR Mode Selector */
 .ocr-mode-selector {
   margin-bottom: 20px;
