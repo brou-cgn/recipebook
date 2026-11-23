@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import EventsPage from './EventsPage';
+import { SpracheProvider } from '../contexts/SpracheContext';
 
 const mockDeleteEvent = jest.fn();
 const mockGetEvent = jest.fn();
@@ -20,12 +21,10 @@ jest.mock('./EventForm', () => {
     );
   }
   MockEventForm.CATEGORY_LABELS = {};
-  MockEventForm.EVENT_TYPE_LABELS = { party: 'Party' };
   return {
     __esModule: true,
     default: MockEventForm,
     CATEGORY_LABELS: {},
-    EVENT_TYPE_LABELS: { party: 'Party' },
   };
 });
 
@@ -138,7 +137,7 @@ describe('EventsPage', () => {
       openEditForm();
 
       expect(confirmSpy).not.toHaveBeenCalled();
-      expect(screen.getByRole('alertdialog')).toHaveTextContent('Möchtest du "Sommerfest" wirklich löschen?');
+      expect(screen.getByRole('alertdialog')).toHaveTextContent('Möchtest du „Sommerfest“ wirklich löschen?');
       expect(mockDeleteEvent).not.toHaveBeenCalled();
 
       fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
@@ -723,7 +722,7 @@ describe('EventsPage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Sommerfest löschen' }));
 
       expect(screen.queryByText('Sommerfest')).not.toBeInTheDocument();
-      expect(screen.getByRole('status')).toHaveTextContent('"Sommerfest" gelöscht.');
+      expect(screen.getByRole('status')).toHaveTextContent('„Sommerfest“ gelöscht.');
       expect(mockDeleteEvent).not.toHaveBeenCalled();
     });
 
@@ -779,5 +778,55 @@ describe('EventsPage', () => {
         jest.useRealTimers();
       }
     });
+  });
+});
+
+describe('EventsPage in anderer Sprache (Mehrsprachigkeit PR 6j)', () => {
+  const currentUser = { id: 'u1' };
+  const event = {
+    id: 'e1',
+    eventName: 'Sommerfest',
+    date: '2025-07-01',
+    durationHours: 2.5,
+    eventType: 'grillfest',
+    status: 'berechnet',
+    guests: { adults: 10, children: 1 },
+    driverGuestIds: ['g1', 'g2'],
+    guestNamesById: { g1: 'Anna Beispiel', g2: 'Ben Muster' },
+    berechnung: { ergebnis: [{ kategorie: 'wein_rotwein', literMitPuffer: 4.25 }] },
+  };
+  const zeigeIn = (sprache) => render(
+    <SpracheProvider profilSprache={sprache} speicher={null}>
+      <EventsPage currentUser={currentUser} events={[event]} />
+    </SpracheProvider>
+  );
+
+  test('Englisch: Karte und Ansicht mit Anlass, Status, Mengen und Kategorie', () => {
+    zeigeIn('en');
+    expect(screen.getByText('Calculated')).toBeInTheDocument();
+    expect(screen.getByText(/01\/07\/2025 · Barbecue/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Sommerfest'));
+    expect(screen.getByText('2.5 h')).toBeInTheDocument();
+    expect(screen.getByText('10 adults / 1 child')).toBeInTheDocument();
+    expect(screen.getByText('Drivers: Anna Beispiel, Ben Muster')).toBeInTheDocument();
+    expect(screen.getByText('Red wine')).toBeInTheDocument();
+    expect(screen.getByText('4.3 l')).toBeInTheDocument();
+  });
+
+  test('Französisch: Zahlen mit Komma, Kinder in der Einzahl', () => {
+    zeigeIn('fr');
+    fireEvent.click(screen.getByText('Sommerfest'));
+    expect(screen.getByText('2,5 h')).toBeInTheDocument();
+    expect(screen.getByText('10 adultes / 1 enfant')).toBeInTheDocument();
+    expect(screen.getByText('Vin rouge')).toBeInTheDocument();
+    expect(screen.getByText('4,3 l')).toBeInTheDocument();
+  });
+
+  test('Deutsch: ein Kind in der Einzahl, Dauer mit Komma', () => {
+    zeigeIn('de');
+    fireEvent.click(screen.getByText('Sommerfest'));
+    expect(screen.getByText('2,5 Std.')).toBeInTheDocument();
+    expect(screen.getByText('10 Erw. / 1 Kind')).toBeInTheDocument();
+    expect(screen.getByText('Rotwein')).toBeInTheDocument();
   });
 });

@@ -1,3 +1,5 @@
+import getraenkeTexte from '../i18n/texte/getraenke';
+
 export const DRINK_CATEGORIES = [
   { id: 'wasser', label: 'Wasser' },
   { id: 'softdrinks', label: 'Softdrinks' },
@@ -118,6 +120,18 @@ export const mergeDrinkUnitAdditions = (rawDrinks = []) => {
       einheiten: [...(Array.isArray(drink.einheiten) ? drink.einheiten : []), ...addedEinheiten],
     };
   });
+};
+
+/**
+ * Name einer Getränkekategorie in der geltenden Sprache (Mehrsprachigkeit PR 6j): Text kategorie_<id> aus
+ * getraenke.js über t (useTexte); unbekannte Kategorien erscheinen, wie sie gespeichert sind.
+ * @param {string} kategorieId
+ * @param {Function} t - Übersetzungsfunktion für getraenke.js
+ * @returns {string}
+ */
+export const getraenkKategorieAnzeige = (kategorieId, t) => {
+  const schluessel = `kategorie_${kategorieId}`;
+  return Object.prototype.hasOwnProperty.call(getraenkeTexte.de, schluessel) ? t(schluessel) : kategorieId;
 };
 
 export const getDrinkCategoryLabel = (kategorieId) => {

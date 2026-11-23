@@ -56,8 +56,7 @@ const NUR_DEUTSCH = new Set([
   'components/templateEditor/TemplateGallery.js',
 ]);
 
-// Stand 22.11.2026 (PR 6h, Rezeptformular, dazu Druck- und Vorlagen-Editor in NUR_DEUTSCH):
-// 825 Textstellen in 46 Dateien.
+// Stand 22.11.2026 (PR 6j, Events): 634 Textstellen in 37 Dateien.
 const BASELINE = {
   'App.js': 5,
   'components/AtelierCategorySelectionPage.js': 5,
@@ -68,27 +67,20 @@ const BASELINE = {
   'components/ConsumptionForm.js': 33,
   'components/DrinkManagementPage.js': 60,
   'components/EventDrinkSelectionPage.js': 26,
-  'components/EventForm.js': 36,
-  'components/EventGuestSelectionPage.js': 20,
   'components/EventplanungPage.js': 2,
-  'components/EventsPage.js': 48,
   'components/FlowPage.js': 3,
   'components/GroupCreateDialog.js': 23,
   'components/GroupDetail.js': 53,
   'components/GroupEditDialog.js': 21,
   'components/GroupList.js': 12,
   'components/GuestManagementPage.js': 55,
-  'components/ImportProgressDialog.js': 9,
-  'components/ImportProgressIndicator.js': 3,
   'components/KalibrierungsAuswertung.js': 14,
   'components/Login.js': 18,
   'components/MeineKuechenstarsPage.js': 6,
   'components/MemberProfilePage.js': 6,
   'components/NetworkPage.js': 14,
-  'components/OcrScanModal.js': 38,
   'components/PasswordChangeModal.js': 8,
   'components/PrintPage.js': 2,
-  'components/RecipeImportModal.js': 11,
   'components/RecipeTimeline.js': 5,
   'components/RecipeVersionDescribe.js': 11,
   'components/Register.js': 12,
@@ -98,8 +90,6 @@ const BASELINE = {
   'components/TagesmenuFilterOverlay.js': 10,
   'components/TutorialForm.js': 32,
   'components/TutorialVideoModal.js': 2,
-  'components/UniversalImportModal.js': 17,
-  'components/WebImportModal.js': 9,
   'components/WeinbegleitungSeite.js': 24,
   'components/WichtelPage.js': 66,
   'components/WichtelTeilnehmerFormular.js': 11,
