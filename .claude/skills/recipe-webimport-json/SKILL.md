@@ -18,7 +18,7 @@ Instagram-Caption, handschriftliche Notiz-Transkription).
 
 Der Skill ruft `addRecipeViaAPI` **nie selbst auf** — er würde damit ein
 Rezept anlegen, ohne dass der Nutzer das JSON vorher gesehen hat, und ohne
-API-Key/E-Mail des Nutzers ginge das ohnehin nicht. Er liefert nur das
+den persönlichen Kurzbefehl-Schlüssel des Nutzers ginge das ohnehin nicht. Er liefert nur das
 fertige JSON (und optional ein curl-Template), das der Nutzer selbst per
 Kurzbefehl, curl oder in der App weiterverwendet.
 
@@ -108,12 +108,9 @@ unabhängig vom Importweg gleich aussieht.
 
    **Bevorzugt — Live-Listen abfragen:** Hat Claude in der aktuellen
    Umgebung HTTP-Zugriff (z. B. `curl`/`WebFetch` in Claude Code) und
-   liegt der persönliche Kurzbefehl-Schlüssel des Nutzers vor (oder, für
-   Konten ohne eigenen Schlüssel, API-Key + registrierte E-Mail), rufe zuerst
+   liegt der persönliche Kurzbefehl-Schlüssel des Nutzers vor, rufe zuerst
    `GET https://us-central1-<PROJECT-ID>.cloudfunctions.net/getRecipeOptionsShortcut`
-   auf (Header `X-Shortcut-Token`, sonst `X-Api-Key` und `X-User-Email`; falls ein Webimport-PIN bekannt
-   ist, zusätzlich als Query-Parameter `?pin=<PIN>` anhängen — siehe
-   `docs/setup/apple-shortcut.md`). Die Antwort liefert `cuisineTypes` und
+   auf (Header `X-Shortcut-Token` — siehe `docs/setup/apple-shortcut.md`). Die Antwort liefert `cuisineTypes` und
    `mealCategories` als aktuell in der App konfigurierte Arrays — das ist
    ein reiner Lesezugriff (siehe Hinweis oben) und liefert die
    tatsächlichen Werte, auch wenn der Nutzer seine Listen in den
@@ -183,18 +180,13 @@ curl -X POST "https://us-central1-<PROJECT-ID>.cloudfunctions.net/addRecipeViaAP
 ```
 
 Den persönlichen Schlüssel erzeugt der Nutzer in der App unter Chefkoch ›
-Kurzbefehl-Schlüssel. Hat sein Konto noch keinen, gilt der alte Weg: statt
-`X-Shortcut-Token` die Header `X-Api-Key: <API-KEY>` und `X-User-Email: <EMAIL>`.
-Hat das Konto einen persönlichen Schlüssel, lehnt der Server den alten Weg ab.
+Kurzbefehl-Schlüssel. Einen anderen Weg gibt es nicht mehr: Der gemeinsame
+Schlüssel (`X-Api-Key` mit `X-User-Email`) und der Webimport-PIN (Feld `pin`)
+sind seit dem 23.11.2026 abgeschafft. Kein `pin` ins JSON schreiben.
 
 Danach kurz (2–3 Zeilen, kein eigener Abschnitt nötig) die geschätzten
 Felder benennen, z. B.: "Geschätzt habe ich `schwierigkeit` (2) und
 `speisekategorie` (Hauptgericht) — im Text nicht explizit genannt."
-
-Falls der Nutzer einen Webimport-PIN erwähnt (oder du ihn aus dem Kontext
-kennst), füge dem JSON zusätzlich `"pin": "<PIN>"` hinzu — `addRecipeViaAPI`
-verlangt das Feld nur, wenn der Ziel-Account einen PIN eingerichtet hat,
-sonst wird es ignoriert. Ohne bekannten PIN einfach weglassen, nicht raten.
 
 Wenn ein **Pflichtfeld** (Titel, Zutaten oder Zubereitungsschritte) im
 Ausgangstext fehlt oder leer ist, erzeuge kein unvollständiges JSON,

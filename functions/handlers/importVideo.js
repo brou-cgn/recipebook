@@ -8,8 +8,8 @@ const {getFirestore, FieldValue} = require('firebase-admin/firestore');
 const {getStorage} = require('firebase-admin/storage');
 const {ALLOWED_ORIGINS} = require('../shared/common');
 const {finalizeImportJobBackground, failImportJobBackground, runImportFromVideoSource} = require('../shared/importJobs');
-const {geminiApiKey, shortcutApiKey} = require('../shared/secrets');
-const {authenticateShortcutRequest, enforceShortcutPin, enforceShortcutAiLimit} = require('../shared/shortcutAuth');
+const {geminiApiKey} = require('../shared/secrets');
+const {authenticateShortcutRequest, enforceShortcutAiLimit} = require('../shared/shortcutAuth');
 
 /**
  * Default Firebase Storage bucket for the broubook project.
@@ -33,7 +33,7 @@ const VIDEO_IMPORT_STORAGE_PREFIX = 'pending-video-imports';
  * limit. processVideoImportUpload (Storage trigger, below) picks the file up
  * once the PUT completes and deletes it again once processing finishes.
  *
- * Input (POST JSON body): { pin, language?, audioOnly? }
+ * Input (POST JSON body): { language?, audioOnly? }
  * Returns: { success: true, jobId, uploadUrl } — uploadUrl accepts a single
  * PUT with Content-Type matching what was requested (video/mp4, or
  * audio/mp4 when audioOnly is true), valid for 10 minutes. audioOnly lets
@@ -47,7 +47,6 @@ exports.getVideoUploadUrl = onRequest(
       maxInstances: 10,
       memory: '256MiB',
       timeoutSeconds: 30,
-      secrets: [shortcutApiKey],
       invoker: 'public',
     },
     async (req, res) => {
@@ -57,7 +56,7 @@ exports.getVideoUploadUrl = onRequest(
         res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
         res.set(
             'Access-Control-Allow-Headers',
-            'Content-Type, X-Shortcut-Token, X-Api-Key, X-User-Email',
+            'Content-Type, X-Shortcut-Token',
         );
         if (req.method === 'OPTIONS') {
           res.status(204).send('');
@@ -73,7 +72,7 @@ exports.getVideoUploadUrl = onRequest(
         return;
       }
 
-      // Shortcut authentication: API key + user email + role (see authenticateShortcutRequest)
+      // Shortcut authentication: personal key + role (see authenticateShortcutRequest)
       const auth = await authenticateShortcutRequest(req, res, 'getVideoUploadUrl');
       if (!auth) return;
       const {userId, db} = auth;
@@ -89,14 +88,11 @@ exports.getVideoUploadUrl = onRequest(
         }
       }
 
-      const {pin} = body || {};
       const language = ['de', 'en'].includes(body?.language) ? body.language : 'de';
       const caption = typeof body?.caption === 'string' ? body.caption.slice(0, 10000) : '';
       const audioOnly = body?.audioOnly === true;
       const extension = audioOnly ? 'm4a' : 'mp4';
       const contentType = audioOnly ? 'audio/mp4' : 'video/mp4';
-
-      if (!(await enforceShortcutPin(res, userId, pin))) return;
 
       // The upload is transcribed with Gemini (processVideoImportUpload), so
       // issuing the URL counts against the same daily quota as the other

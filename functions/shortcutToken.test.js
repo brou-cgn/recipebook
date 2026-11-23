@@ -74,6 +74,17 @@ test('createShortcutToken: gibt den Schlüssel einmal zurück und speichert nur 
   assert.equal(db.store.get('users/u1').role, 'edit', 'das Nutzerdokument wird nur ergänzt');
 });
 
+test('createShortcutToken: räumt den Altbestand des abgeschafften Webimport-PINs auf', async () => {
+  const db = makeDb({
+    'users/u1': {role: 'edit', webImportPinEnabled: true},
+    'users/u1/security/webImportPin': {hash: 'alt', salt: 'alt'},
+  });
+  const mod = loadModule(db);
+  await mod.createShortcutToken({auth: {uid: 'u1'}});
+  assert.equal(db.store.has('users/u1/security/webImportPin'), false);
+  assert.equal('webImportPinEnabled' in db.store.get('users/u1'), false);
+});
+
 test('createShortcutToken: ein neuer Schlüssel ersetzt den alten', async () => {
   const db = makeDb({'users/u1': {role: 'edit'}});
   const mod = loadModule(db);
@@ -106,7 +117,7 @@ test('revokeShortcutToken: Schlüssel gilt danach nicht mehr, Anzeige-Spiegel is
   await mod.revokeShortcutToken({auth: {uid: 'u1'}});
 
   assert.equal(await mod.verifyShortcutToken(db, token), null);
-  assert.equal(await mod.hasShortcutToken(db, 'u1'), false);
+  assert.equal(db.store.has('users/u1/security/shortcutToken'), false);
   assert.equal(db.store.get('users/u1').shortcutTokenEnabled, false);
   assert.equal('shortcutTokenCreatedAt' in db.store.get('users/u1'), false);
 });

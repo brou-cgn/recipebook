@@ -37,7 +37,7 @@ const BASELINE = {
   'components/GroupCreateDialog.css': 15,
   'components/GroupDetail.css': 38,
   'components/GroupList.css': 9,
-  'components/Header.css': 53,
+  'components/Header.css': 40,
   'components/ImportProgressDialog.css': 16,
   'components/ImportProgressIndicator.css': 5,
   'components/KalibrierungsAuswertung.css': 4,

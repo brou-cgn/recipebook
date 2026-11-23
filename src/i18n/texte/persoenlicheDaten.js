@@ -1,6 +1,6 @@
 /**
  * Texte der Seite „Persönliche Daten“ (src/components/PersonalDataPage.js). Bereichsnamen
- * stehen in bereiche.js, PIN-Texte in webimportPin.js, Knöpfe wie Speichern in
+ * stehen in bereiche.js, der Kurzbefehl-Schlüssel in kurzbefehlSchluessel.js, Knöpfe wie Speichern in
  * allgemein.js. Aufbau und Regeln: src/i18n/texte.js.
  *
  * Die Namen der Alarmtöne stehen hier als `alarm_<key>` (Schlüssel aus
@@ -73,14 +73,6 @@ export default {
     neuesPasswort: 'Neues Passwort',
     neuesPasswortBestaetigen: 'Neues Passwort bestätigen',
     passwoerterUngleich: 'Die neuen Passwörter stimmen nicht überein.',
-    pinHinweis: 'Schützt den Webimport zusätzlich mit einer PIN, die nur du kennst – so kann niemand mit deinem Zugang ungefragt Rezepte importieren.',
-    pinKurzbefehlHinweis: 'Nutzt du den Apple-Kurzbefehl für den Webimport, musst du diesen PIN dort im Anfragetext als Feld „pin" ergänzen – sonst schlägt der Import ab jetzt fehl.',
-    pinAktiv: 'PIN aktiv',
-    keinPin: 'Kein PIN gesetzt.',
-    pinGespeichert: 'Webimport-PIN gespeichert.',
-    pinEntfernt: '„{name}" entfernt',
-    pinAendern: 'PIN ändern',
-    pinSetzen: 'PIN setzen',
   },
   en: {
     inspirationssammlung: 'Inspiration collection',
@@ -145,14 +137,6 @@ export default {
     neuesPasswort: 'New password',
     neuesPasswortBestaetigen: 'Confirm new password',
     passwoerterUngleich: 'The new passwords don’t match.',
-    pinHinweis: 'Adds a PIN that only you know to protect web import – so no one can import recipes with your account without your consent.',
-    pinKurzbefehlHinweis: 'If you use the Apple shortcut for web import, add this PIN there as the field “pin” in the request body – otherwise imports will fail from now on.',
-    pinAktiv: 'PIN active',
-    keinPin: 'No PIN set.',
-    pinGespeichert: 'Web import PIN saved.',
-    pinEntfernt: '“{name}” removed',
-    pinAendern: 'Change PIN',
-    pinSetzen: 'Set PIN',
   },
   fr: {
     inspirationssammlung: 'Collection d’inspiration',
@@ -217,13 +201,5 @@ export default {
     neuesPasswort: 'Nouveau mot de passe',
     neuesPasswortBestaetigen: 'Confirmer le nouveau mot de passe',
     passwoerterUngleich: 'Les nouveaux mots de passe ne correspondent pas.',
-    pinHinweis: 'Protège en plus l’import web avec un code PIN que personne d’autre ne connaît – ainsi personne ne peut importer de recettes avec ton compte sans ton accord.',
-    pinKurzbefehlHinweis: `Si tu utilises le raccourci Apple pour l’import web, ajoute ce code PIN dans le corps de la requête sous forme de champ «${NBSP}pin${NBSP}» – sinon l’import échouera désormais.`,
-    pinAktiv: 'Code PIN actif',
-    keinPin: 'Aucun code PIN défini.',
-    pinGespeichert: 'Code PIN d’import web enregistré.',
-    pinEntfernt: `«${NBSP}{name}${NBSP}» supprimé`,
-    pinAendern: 'Modifier le code PIN',
-    pinSetzen: 'Définir le code PIN',
   },
 };

@@ -70,7 +70,6 @@ const EXPECTED_EXPORTS = [
   'sendDueCookingTimerAlarms',
   'sendGroupInvitationEmail',
   'setUserPassword',
-  'setWebImportPin',
   'createShortcutToken',
   'revokeShortcutToken',
   'shareRecipe',

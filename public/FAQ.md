@@ -266,10 +266,9 @@ Für Massenimporte gibt es zusätzlich den Import aus einer **CSV-Datei** über 
 Auf Apple-Geräten kannst du Rezepte auch per Kurzbefehl importieren, z. B. direkt aus Safari.
 
 1. Öffne das Menü und tippe auf **„Kurzbefehl installieren"**.
-2. Beim ersten Mal vergibst du einen **Webimport-PIN** (4 bis 8 Ziffern). Er verhindert, dass über den Kurzbefehl ungefragt Rezepte in deinem Konto landen.
-3. Lade den Kurzbefehl herunter und füge ihn in der Kurzbefehle-App hinzu.
+2. Füge den Kurzbefehl in der Kurzbefehle-App hinzu.
 
-Den PIN änderst du unter **Chefkoch → persönliche Daten**.
+Der fertige Kurzbefehl öffnet die App und braucht keinen Schlüssel. Baust du dir einen eigenen Kurzbefehl, der Rezepte direkt ins Kochbuch schickt, erzeugst du dafür unter **Chefkoch → persönliche Daten** einen **Kurzbefehl-Schlüssel**. Er wird nur einmal angezeigt; ein neuer ersetzt den alten.
 
 ### Nährwerte
 <!-- id: faq-naehrwerte -->
@@ -299,7 +298,7 @@ Unter **Chefkoch → Mein Netzwerk** verwaltest du alles: offene **Anfragen** an
 
 Unter **Chefkoch** findest du alles rund um dich:
 
-**Chefkoch** – deine persönlichen Daten: Name, Passwort, Webimport-PIN, Erscheinungsbild (hell/dunkel), Alarmton, Mitteilungen und deine Standard-Listen.
+**Chefkoch** – deine persönlichen Daten: Name, Passwort, Kurzbefehl-Schlüssel, Erscheinungsbild (hell/dunkel), Alarmton, Mitteilungen und deine Standard-Listen.
 **Meine Mise en Place** – deine privaten Listen.
 **Meine Küchenstars** – deine meistaufgerufenen Rezepte.
 **Mein Kochbuch** – wie viele Rezepte und Menüs du angelegt hast, mit einer Zeitleiste deiner Rezepte, Menüs und Kochtage.

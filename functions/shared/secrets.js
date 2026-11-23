@@ -17,8 +17,8 @@ const smtpFrom = defineSecret('SMTP_FROM');
 // Set with: firebase functions:secrets:set GEMINI_API_KEY
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
-// API key for Apple Shortcut / external recipe import
-// Set with: firebase functions:secrets:set SHORTCUT_API_KEY
-const shortcutApiKey = defineSecret('SHORTCUT_API_KEY');
+// Der gemeinsame Kurzbefehl-Schlüssel SHORTCUT_API_KEY ist seit dem 23.11.2026 abgeschaltet (Tech-Check S7):
+// Kurzbefehle melden sich mit dem persönlichen Schlüssel an (shortcutToken.js). Das Secret kann in
+// Secret Manager gelöscht werden.
 
-module.exports = {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom, geminiApiKey, shortcutApiKey};
+module.exports = {smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom, geminiApiKey};

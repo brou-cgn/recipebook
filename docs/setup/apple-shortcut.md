@@ -14,20 +14,15 @@ Der Link ist außerdem im Hamburger-Menü der App unter **Hilfe → Kurzbefehl i
 
 ## Authentifizierung
 
-Alle Shortcut-Endpoints (`importRecipeShortcut`, `addRecipeViaAPI`, `createRecipeImportFromText`, `getVideoUploadUrl`, `scrapeInstagramReelShortcut`, `scanRecipePhotoShortcut`, `getRecipeOptionsShortcut`) arbeiten ohne Anmeldung in der App. Der Kurzbefehl weist sich mit einem dauerhaft gültigen Schlüssel aus, der für alle Endpoints gilt.
+Alle Shortcut-Endpoints (`importRecipeShortcut`, `addRecipeViaAPI`, `createRecipeImportFromText`, `getVideoUploadUrl`, `scrapeInstagramReelShortcut`, `scanRecipePhotoShortcut`, `getRecipeOptionsShortcut`) arbeiten ohne Anmeldung in der App. Der Kurzbefehl weist sich mit deinem **persönlichen Schlüssel** aus (Tech-Check S7), der für alle Endpoints gilt:
 
-**Empfohlen: persönlicher Schlüssel (Tech-Check S7).** Erzeuge ihn in der App unter **Chefkoch › Kurzbefehl-Schlüssel**. Er wird nur einmal angezeigt; kopiere ihn und trage im Kurzbefehl einen Header ein:
+- **`X-Shortcut-Token`** Header: dein persönlicher Schlüssel (`rbk.…`)
 
-- **`X-Shortcut-Token`**: dein persönlicher Schlüssel (`rbk.…`). `X-Api-Key` und `X-User-Email` entfallen.
+Erzeuge ihn in der App unter **Chefkoch › Kurzbefehl-Schlüssel**. Er wird nur einmal angezeigt; kopiere ihn und trage ihn im Kurzbefehl ein. Ein neuer Schlüssel ersetzt den alten, widerrufen kannst du ihn an derselben Stelle. Ohne Schlüssel nimmt der Server für dein Konto keinen Kurzbefehl an. Danach prüft er wie bisher die Rolle (`edit`, `admin` oder `moderator`; außer bei `addRecipeViaAPI` und `getRecipeOptionsShortcut` genügt auch `isShortcutUser`).
 
-In den Header-Tabellen unten ersetzt diese eine Zeile die beiden Zeilen `X-Api-Key` und `X-User-Email`. Sobald dein Konto einen persönlichen Schlüssel hat, lehnt der Server für dein Konto den gemeinsamen Schlüssel ab: Wer den gemeinsamen Schlüssel kennt, kann dann nicht mehr in deinem Namen importieren. Ein neuer Schlüssel ersetzt den alten; widerrufen kannst du ihn an derselben Stelle.
+Seit dem 23.11.2026 gibt es keinen anderen Weg: Der gemeinsame Schlüssel (`X-Api-Key` mit `X-User-Email`, Firebase Secret `SHORTCUT_API_KEY`) und der Webimport-PIN (Feld bzw. Parameter `pin`) sind abgeschafft. Ein Kurzbefehl, der noch `X-Api-Key` oder `X-User-Email` statt `X-Shortcut-Token` schickt, bekommt HTTP 401 mit dem Hinweis, wo du deinen Schlüssel erzeugst. Ein noch mitgeschicktes `pin` wird ignoriert und kann weg.
 
-**Bisher: gemeinsamer Schlüssel mit E-Mail.** Für Konten ohne persönlichen Schlüssel gilt weiter:
-
-- **`X-Api-Key`** Header: der gemeinsame API Key (als Firebase Secret `SHORTCUT_API_KEY` gespeichert, für alle gleich)
-- **`X-User-Email`** Header: deine registrierte E-Mail-Adresse (wird serverseitig per `getAuth().getUserByEmail` zur Firebase User ID aufgelöst)
-
-Der fertige Kurzbefehl aus dem Menü (Deeplink, siehe oben) braucht keinen der beiden Wege, er öffnet die App. Ein gesetzter Webimport-PIN gilt bei beiden Wegen weiter (Feld `pin`).
+Der fertige Kurzbefehl aus dem Menü (Deeplink, siehe oben) braucht keinen Schlüssel, er öffnet die App.
 
 ---
 
@@ -47,16 +42,13 @@ Für den Fall „ich habe eine Rezept-URL und will sie importieren" (der Anwendu
 | Name | Wert |
 |------|------|
 | `Content-Type` | `application/json` |
-| `X-Api-Key` | `<dein-api-key>` |
-| `X-User-Email` | `<deine-e-mail-adresse>` |
+| `X-Shortcut-Token` | `<dein persönlicher Schlüssel>` |
 
 **Body:**
 
 ```json
-{ "url": "<Rezept-URL, z. B. aus „Text abrufen aus Eingabe“>", "pin": "<dein Webimport-PIN>" }
+{ "url": "<Rezept-URL, z. B. aus „Text abrufen aus Eingabe“>" }
 ```
-
-Das Feld `pin` ist nur nötig, wenn du im Hamburger-Menü unter „Kurzbefehl installieren" einen Webimport-PIN vergeben hast (das ist inzwischen Voraussetzung für den Download des Kurzbefehls) – ohne `pin` schlägt der Aufruf dann mit HTTP 403 fehl. Der PIN schützt ausschließlich diesen Kurzbefehl-Endpoint, der über den dauerhaft gültigen API Key statt einer Session läuft; er wird deshalb bei jedem Aufruf neu mitgeschickt und nicht wie in der App einmalig „entsperrt". Für Importe direkt in der eingeloggten Web-App wird kein PIN verlangt.
 
 **Antwort (HTTP 200) – Job wurde eingereiht, noch nicht fertig importiert:**
 
@@ -84,13 +76,12 @@ Für den Fall „ich habe ein Rezept fotografiert (z. B. eine Kochbuch-Seite ode
 | Name | Wert |
 |------|------|
 | `Content-Type` | `application/json` |
-| `X-Api-Key` | `<dein-api-key>` |
-| `X-User-Email` | `<deine-e-mail-adresse>` |
+| `X-Shortcut-Token` | `<dein persönlicher Schlüssel>` |
 
 **Body:**
 
 ```json
-{ "images": ["<Base64-kodiertes Foto>", "..."], "language": "de", "pin": "<dein Webimport-PIN>" }
+{ "images": ["<Base64-kodiertes Foto>", "..."], "language": "de" }
 ```
 
 `images` ist ein Array mit 1 bis 5 Base64-kodierten Fotos (mit oder ohne `data:image/jpeg;base64,`-Präfix). Baue den Kurzbefehl z. B. so: Foto(s) auswählen → „Bild in Format konvertieren" (Format `JPEG`) → „Base64 kodieren" auf jedes Foto anwenden → in einer Schleife per „Zu Variable hinzufügen" zu einer Listen-Variable sammeln. Mehrere Fotos werden serverseitig zu einem Rezept zusammengeführt (wie beim Mehrfach-Foto-Scan in der App) – praktisch für Rezepte über mehrere Buchseiten.
@@ -107,7 +98,7 @@ Der Endpoint erkennt einen JSON-kodierten String in `images` automatisch und par
 
 **Achtung Dateigröße:** Alle Fotos zusammen dürfen nicht mehr als ca. 15 MB (Base64-kodiert) ergeben, sonst lehnt der Endpoint den Request mit HTTP 400 ab. Falls dein iPhone-Foto in voller Auflösung größer ist, füge vor dem Kodieren eine „Bild anpassen"-Aktion ein (z. B. auf max. 2000 px Breite).
 
-`language` ist optional (Standard `de`). `pin` ist wie beim URL-Import nur nötig, wenn du einen Webimport-PIN eingerichtet hast.
+`language` ist optional (Standard `de`).
 
 **Antwort (HTTP 200) – Job wurde eingereiht, noch nicht fertig gescannt:**
 
@@ -143,13 +134,12 @@ Der Import läuft in zwei Kurzbefehl-Schritten ab:
 | Name | Wert |
 |------|------|
 | `Content-Type` | `application/json` |
-| `X-Api-Key` | `<dein-api-key>` |
-| `X-User-Email` | `<deine-e-mail-adresse>` |
+| `X-Shortcut-Token` | `<dein persönlicher Schlüssel>` |
 
 **Body:**
 
 ```json
-{ "pin": "<dein Webimport-PIN>", "language": "de", "caption": "<Bildunterschrift, optional>", "audioOnly": false }
+{ "language": "de", "caption": "<Bildunterschrift, optional>", "audioOnly": false }
 ```
 
 `caption` ist optional – weglassen oder leer lassen funktioniert genauso (dann wird nur das Transkript verwendet).
@@ -206,13 +196,12 @@ Für den Fall „probiere zuerst den bequemen URL-Import, und nur falls Instagra
 | Name | Wert |
 |------|------|
 | `Content-Type` | `application/json` |
-| `X-Api-Key` | `<dein-api-key>` |
-| `X-User-Email` | `<deine-e-mail-adresse>` |
+| `X-Shortcut-Token` | `<dein persönlicher Schlüssel>` |
 
 **Body:**
 
 ```json
-{ "url": "<Instagram-Reel-URL>", "pin": "<dein Webimport-PIN>" }
+{ "url": "<Instagram-Reel-URL>" }
 ```
 
 **Antwort (immer HTTP 200):**
@@ -235,46 +224,15 @@ oder
 
 ---
 
-## Schritt 1: API Key generieren
+## Schritt 1: Persönlichen Schlüssel erzeugen
 
-Generiere einen sicheren, zufälligen API Key:
+Öffne in der App **Chefkoch › Kurzbefehl-Schlüssel** und tippe auf **Schlüssel erzeugen**. Kopiere den angezeigten Schlüssel (`rbk.…`) sofort: Er wird nur dieses eine Mal angezeigt. Verlierst du ihn, erzeugst du einen neuen; der alte gilt dann nicht mehr.
 
-```bash
-openssl rand -hex 32
-```
-
-Beispielausgabe:
-```
-a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
-```
-
-Diesen Wert notierst du dir – er wird sowohl in Firebase als Secret als auch im Apple Kurzbefehl eingetragen.
+Ein Secret in Firebase oder eine E-Mail-Adresse im Kurzbefehl brauchst du nicht mehr.
 
 ---
 
-## Schritt 2: API Key als Firebase Secret speichern
-
-```bash
-firebase functions:secrets:set SHORTCUT_API_KEY
-```
-
-Wenn du dazu aufgefordert wirst, gibst du den zuvor generierten API Key ein. Das Secret wird sicher in Google Cloud Secret Manager gespeichert und ist nur der Cloud Function zugänglich.
-
-Anschließend die Function deployen:
-
-```bash
-firebase deploy --only functions:addRecipeViaAPI
-```
-
----
-
-## Schritt 3: E-Mail-Adresse verwenden
-
-Nutze einfach die E-Mail-Adresse, mit der du in RecipeBook registriert bist – eine UID musst du dafür nicht mehr nachschlagen.
-
----
-
-## Schritt 4: Apple Kurzbefehl konfigurieren
+## Schritt 2: Apple Kurzbefehl konfigurieren
 
 ### Aktion: „Inhalt von URL laden"
 
@@ -290,8 +248,7 @@ Füge im Kurzbefehl eine **„Inhalt von URL laden"** Aktion hinzu und konfiguri
 | Name | Wert |
 |------|------|
 | `Content-Type` | `application/json` |
-| `X-Api-Key` | `<dein-api-key>` |
-| `X-User-Email` | `<deine-e-mail-adresse>` |
+| `X-Shortcut-Token` | `<dein persönlicher Schlüssel>` |
 
 **Body:** JSON (siehe Beispiel unten)
 
@@ -324,8 +281,7 @@ Füge im Kurzbefehl eine **„Inhalt von URL laden"** Aktion hinzu und konfiguri
     "Pasta zum Guanciale geben, von der Hitze nehmen.",
     "Ei-Käse-Mischung unterrühren, mit Nudelwasser cremig rühren und sofort servieren."
   ],
-  "notizen": "Pfanne unbedingt von der Hitze nehmen, bevor die Eier hinzugefügt werden.",
-  "pin": "<dein Webimport-PIN>"
+  "notizen": "Pfanne unbedingt von der Hitze nehmen, bevor die Eier hinzugefügt werden."
 }
 ```
 
@@ -344,9 +300,6 @@ Füge im Kurzbefehl eine **„Inhalt von URL laden"** Aktion hinzu und konfiguri
 | `tags` | – | string \| string[] | – |
 | `notizen` | `notes` | string | – |
 | `url` | `sourceUrl`, `quelle` | string (http/https) | – (wird als Quell-Link im Rezept angezeigt, nicht abgerufen; ungültige URL → `400`) |
-| `pin` | – | string | nur, wenn Webimport-PIN eingerichtet |
-
-Das Feld `pin` ist nur nötig, wenn du im Hamburger-Menü unter „Kurzbefehl installieren" einen Webimport-PIN vergeben hast – ohne `pin` schlägt der Aufruf dann mit HTTP 403 fehl. Ohne eingerichteten PIN kannst du das Feld einfach weglassen.
 
 ---
 
@@ -369,11 +322,11 @@ Das Rezept landet automatisch in deiner **Inspirationssammlung**-Liste (die unte
 | HTTP Status | Bedeutung |
 |-------------|-----------|
 | 400 | Fehlende oder ungültige Felder im Body |
-| 401 | Fehlender oder ungültiger API Key / User Email Header |
-| 403 | E-Mail-Adresse unbekannt oder fehlende Berechtigung (Rolle muss `edit`, `admin` oder `moderator` sein) – aus Enumeration-Schutz gibt es hierfür bewusst nur eine generische Fehlermeldung |
+| 401 | Fehlender oder ungültiger Header `X-Shortcut-Token`; auch, wenn noch der abgeschaffte gemeinsame Schlüssel (`X-Api-Key`/`X-User-Email`) geschickt wird |
+| 403 | Konto nicht gefunden oder fehlende Berechtigung (Rolle muss `edit`, `admin` oder `moderator` sein) |
 | 405 | Falsche HTTP-Methode (nur POST erlaubt) |
 | 429 | Nur bei `importRecipeShortcut`, `scanRecipePhotoShortcut` und `scrapeInstagramReelShortcut`: KI-Tageslimit erreicht (gleicher Zähler wie in der App, Reset um 0 Uhr MEZ) |
-| 500 | Fehler beim Speichern in Firestore oder fehlendes SHORTCUT_API_KEY Secret |
+| 500 | Fehler beim Prüfen des Schlüssels oder beim Speichern in Firestore |
 | 503 | Nur bei den drei KI-Endpunkten: Tageszähler konnte nicht geprüft werden – später erneut versuchen (fail closed) |
 
 ---
@@ -399,17 +352,14 @@ So ersetzt du den bisherigen „Notiz erstellen"-Schritt durch einen direkten Im
 
 | Feld | Wert |
 |------|------|
-| URL | `https://us-central1-<PROJECT-ID>.cloudfunctions.net/getRecipeOptionsShortcut` (bzw. `?pin=<dein Webimport-PIN>` anhängen, falls eingerichtet) |
+| URL | `https://us-central1-<PROJECT-ID>.cloudfunctions.net/getRecipeOptionsShortcut` |
 | Methode | `GET` |
 
 **Headers:**
 
 | Name | Wert |
 |------|------|
-| `X-Api-Key` | `<dein-api-key>` |
-| `X-User-Email` | `<deine-e-mail-adresse>` |
-
-Da ein GET-Request keinen Body hat, wandert der PIN hier – anders als bei den übrigen Endpunkten – als Query-Parameter `?pin=...` an die URL, nicht als JSON-Feld. Ohne eingerichteten Webimport-PIN einfach weglassen.
+| `X-Shortcut-Token` | `<dein persönlicher Schlüssel>` |
 
 **Antwort (HTTP 200):**
 
@@ -423,7 +373,7 @@ Da ein GET-Request keinen Body hat, wandert der PIN hier – anders als bei den 
 
 Ruft der Kurzbefehl vor dem KI-Aufruf zuerst diesen Endpoint auf, kannst du `cuisineTypes`/`mealCategories` aus der Antwort in den KI-Prompt einsetzen (z. B. anstelle von `{{CUISINE_TYPES}}`/`{{MEAL_CATEGORIES}}`), damit die KI nur Werte wählt, die auch tatsächlich in deiner App existieren. Ohne diesen Zwischenschritt fällt eine KI auf ihre eigene Einschätzung sinnvoller Standardwerte zurück.
 
-Derselbe Endpoint eignet sich auch für Claude direkt (z. B. den `recipe-webimport-json`-Skill), sofern Claude in der jeweiligen Umgebung HTTP-Zugriff hat und API Key + E-Mail vorliegen.
+Derselbe Endpoint eignet sich auch für Claude direkt (z. B. den `recipe-webimport-json`-Skill), sofern Claude in der jeweiligen Umgebung HTTP-Zugriff hat und dein persönlicher Schlüssel vorliegt.
 
 ---
 
@@ -435,7 +385,7 @@ Für den Kurzbefehl „Rezept exportieren" wird ein technischer **Service-User**
 
 1. Erstelle einen dedizierten Service-User in Firebase Authentication (z. B. `shortcut-service@example.com`)
 2. Setze in der Firestore `users`-Collection auf diesem User-Dokument: `isShortcutUser: true`
-3. Notiere die E-Mail-Adresse des Service-Users
+3. Melde dich einmal mit dem Service-User in der App an und erzeuge unter **Chefkoch › Kurzbefehl-Schlüssel** seinen persönlichen Schlüssel
 
 ### Kurzbefehl-Aktion: `createRecipeImportFromText`
 
@@ -451,8 +401,7 @@ Füge eine **„Inhalt von URL laden"** Aktion hinzu:
 | Name | Wert |
 |------|------|
 | `Content-Type` | `application/json` |
-| `X-Api-Key` | `<dein-api-key>` |
-| `X-User-Email` | `<e-mail-adresse-des-service-users>` |
+| `X-Shortcut-Token` | `<persönlicher Schlüssel des Service-Users>` |
 
 **Body:** `{ "rawText": "<Rezepttext>", "url": "<Quelle, optional>" }`
 
@@ -479,13 +428,15 @@ Nach dem API-Call öffnest du die `importUrl` mit der Aktion „URL öffnen".
 
 ## Troubleshooting
 
-**„Invalid API key" (401)**
-- Prüfe, ob der API Key im Header exakt mit dem gespeicherten Secret übereinstimmt
-- Stelle sicher, dass die Function neu deployt wurde: `firebase deploy --only functions:addRecipeViaAPI`
+**„Invalid shortcut token" (401)**
+- Prüfe, ob der Schlüssel vollständig im Header `X-Shortcut-Token` steht (beginnt mit `rbk.`)
+- Hast du inzwischen einen neuen Schlüssel erzeugt oder ihn widerrufen, gilt der alte nicht mehr: neuen erzeugen und im Kurzbefehl ersetzen
+
+**„Der gemeinsame Schlüssel … gilt nicht mehr" (401)**
+- Der Kurzbefehl schickt noch `X-Api-Key`/`X-User-Email`: beide Header löschen und stattdessen `X-Shortcut-Token` mit deinem persönlichen Schlüssel eintragen
 
 **„Access denied" / „Insufficient permissions" (403)**
-- Prüfe, ob die E-Mail-Adresse korrekt (und exakt wie registriert) eingetragen wurde
-- Stelle sicher, dass der Benutzer in der Firebase Authentication existiert und einen Eintrag in der `users` Firestore-Collection hat
+- Stelle sicher, dass der Benutzer einen Eintrag in der `users` Firestore-Collection hat
 - Stelle sicher, dass der Benutzer die Rolle `edit`, `admin` oder `moderator` hat, oder `isShortcutUser: true` gesetzt ist
 
 **„Method not allowed" (405)**
