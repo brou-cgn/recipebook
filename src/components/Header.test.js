@@ -23,12 +23,6 @@ jest.mock('../utils/faqFirestore', () => ({
   })
 }));
 
-jest.mock('../utils/webImportPin', () => ({
-  setWebImportPin: jest.fn(() => Promise.resolve()),
-}));
-
-const { setWebImportPin: mockSetWebImportPin } = jest.requireMock('../utils/webImportPin');
-
 const { subscribeToFaqs: mockSubscribeToFaqs } = jest.requireMock('../utils/faqFirestore');
 
 const mockCurrentUser = {
@@ -454,7 +448,7 @@ describe('Header - Chefkoch user name click', () => {
   });
 });
 
-describe('Header - Kurzbefehl download PIN requirement', () => {
+describe('Header - Kurzbefehl installieren', () => {
   const originalPlatform = window.navigator.platform;
   const originalMaxTouchPoints = window.navigator.maxTouchPoints;
   let windowOpenSpy;
@@ -463,7 +457,6 @@ describe('Header - Kurzbefehl download PIN requirement', () => {
     Object.defineProperty(window.navigator, 'platform', { value: 'MacIntel', configurable: true });
     Object.defineProperty(window.navigator, 'maxTouchPoints', { value: 0, configurable: true });
     windowOpenSpy = jest.spyOn(window, 'open').mockImplementation(() => {});
-    mockSetWebImportPin.mockClear();
   });
 
   afterEach(() => {
@@ -472,28 +465,12 @@ describe('Header - Kurzbefehl download PIN requirement', () => {
     windowOpenSpy.mockRestore();
   });
 
-  test('opens the PIN dialog instead of downloading when no PIN is set yet', () => {
+  // Der Webimport-PIN ist seit dem 23.11.2026 abgeschafft (Tech-Check S7): kein Dialog mehr davor
+  test('lädt den fertigen Kurzbefehl direkt, ohne Dialog davor', () => {
     render(
       <Header
         currentView="recipes"
-        currentUser={{ ...mockCurrentUser, webImportPinEnabled: false }}
-        onViewChange={() => {}}
-        onLogout={() => {}}
-      />
-    );
-
-    fireEvent.click(screen.getByLabelText('Menü öffnen'));
-    fireEvent.click(screen.getByText('Kurzbefehl installieren'));
-
-    expect(windowOpenSpy).not.toHaveBeenCalled();
-    expect(screen.getByText('Webimport-PIN erforderlich')).toBeInTheDocument();
-  });
-
-  test('downloads directly when a PIN is already set', () => {
-    render(
-      <Header
-        currentView="recipes"
-        currentUser={{ ...mockCurrentUser, webImportPinEnabled: true }}
+        currentUser={mockCurrentUser}
         onViewChange={() => {}}
         onLogout={() => {}}
       />
@@ -503,72 +480,29 @@ describe('Header - Kurzbefehl download PIN requirement', () => {
     fireEvent.click(screen.getByText('Kurzbefehl installieren'));
 
     expect(windowOpenSpy).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText('Webimport-PIN erforderlich')).not.toBeInTheDocument();
-  });
-
-  test('setting a valid PIN in the dialog saves it and then triggers the download', async () => {
-    const onProfileUpdated = jest.fn();
-    render(
-      <Header
-        currentView="recipes"
-        currentUser={{ ...mockCurrentUser, webImportPinEnabled: false }}
-        onViewChange={() => {}}
-        onLogout={() => {}}
-        onProfileUpdated={onProfileUpdated}
-      />
+    expect(windowOpenSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/^https:\/\/www\.icloud\.com\/shortcuts\//),
+      '_blank',
+      'noopener,noreferrer',
     );
-
-    fireEvent.click(screen.getByLabelText('Menü öffnen'));
-    fireEvent.click(screen.getByText('Kurzbefehl installieren'));
-
-    fireEvent.change(screen.getByLabelText('PIN (4–8 Ziffern)'), { target: { value: '1234' } });
-    fireEvent.change(screen.getByLabelText('PIN bestätigen'), { target: { value: '1234' } });
-    fireEvent.click(screen.getByText('PIN setzen & herunterladen'));
-
-    await waitFor(() => expect(mockSetWebImportPin).toHaveBeenCalledWith('1234'));
-    await waitFor(() => expect(windowOpenSpy).toHaveBeenCalledTimes(1));
-    expect(onProfileUpdated).toHaveBeenCalledWith(expect.objectContaining({ webImportPinEnabled: true }));
-    expect(screen.queryByText('Webimport-PIN erforderlich')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    // das Menü schließt sich dabei
+    expect(screen.queryByText('Kurzbefehl installieren')).not.toBeInTheDocument();
   });
 
-  test('mismatched PINs show an error and do not save or download', async () => {
+  test('zeigt den Eintrag nur auf Apple-Geräten', () => {
+    Object.defineProperty(window.navigator, 'platform', { value: 'Win32', configurable: true });
     render(
       <Header
         currentView="recipes"
-        currentUser={{ ...mockCurrentUser, webImportPinEnabled: false }}
+        currentUser={mockCurrentUser}
         onViewChange={() => {}}
         onLogout={() => {}}
       />
     );
 
     fireEvent.click(screen.getByLabelText('Menü öffnen'));
-    fireEvent.click(screen.getByText('Kurzbefehl installieren'));
-
-    fireEvent.change(screen.getByLabelText('PIN (4–8 Ziffern)'), { target: { value: '1234' } });
-    fireEvent.change(screen.getByLabelText('PIN bestätigen'), { target: { value: '5678' } });
-    fireEvent.click(screen.getByText('PIN setzen & herunterladen'));
-
-    expect(await screen.findByText('Die PINs stimmen nicht überein.')).toBeInTheDocument();
-    expect(mockSetWebImportPin).not.toHaveBeenCalled();
-    expect(windowOpenSpy).not.toHaveBeenCalled();
-  });
-
-  test('cancelling the PIN dialog closes it without downloading', () => {
-    render(
-      <Header
-        currentView="recipes"
-        currentUser={{ ...mockCurrentUser, webImportPinEnabled: false }}
-        onViewChange={() => {}}
-        onLogout={() => {}}
-      />
-    );
-
-    fireEvent.click(screen.getByLabelText('Menü öffnen'));
-    fireEvent.click(screen.getByText('Kurzbefehl installieren'));
-    fireEvent.click(screen.getByText('Abbrechen'));
-
-    expect(screen.queryByText('Webimport-PIN erforderlich')).not.toBeInTheDocument();
-    expect(windowOpenSpy).not.toHaveBeenCalled();
+    expect(screen.queryByText('Kurzbefehl installieren')).not.toBeInTheDocument();
   });
 });
 

@@ -64,7 +64,7 @@ test('ohne Schlüssel: erzeugen zeigt ihn einmal an und meldet das Profil weiter
   const onProfileUpdated = jest.fn();
   render(<PersonalDataPage currentUser={nutzer()} onBack={() => {}} onProfileUpdated={onProfileUpdated} />);
 
-  expect(screen.getByText(/^Kein eigener Schlüssel/)).toBeInTheDocument();
+  expect(screen.getByText(/^Noch kein Schlüssel/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Schlüssel erzeugen' }));
 
   expect(await screen.findByText(TOKEN)).toBeInTheDocument();
@@ -92,7 +92,7 @@ test('mit Schlüssel: Widerrufen wirkt erst nach dem Rückgängig-Fenster', asyn
   render(<PersonalDataPage currentUser={nutzer({ shortcutTokenEnabled: true })} onBack={() => {}} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Kurzbefehl-Schlüssel entfernen' }));
-  expect(screen.getByText(/^Kein eigener Schlüssel/)).toBeInTheDocument();
+  expect(screen.getByText(/^Noch kein Schlüssel/)).toBeInTheDocument();
   expect(mockRevokeShortcutToken).not.toHaveBeenCalled();
 
   await act(async () => { jest.advanceTimersByTime(6000); });

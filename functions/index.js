@@ -14,14 +14,8 @@ exports.submitConsumption = require('./submitConsumption').submitConsumption;
 exports.reminderConsumption = require('./reminderConsumption').reminderConsumption;
 exports.manageGuestProfile = require('./manageGuestProfile').manageGuestProfile;
 
-// Webimport-PIN: pro Nutzer optionaler PIN-Schutz für den Apple-Kurzbefehl-Import
-// (importRecipeShortcut in handlers/importShortcut.js ruft requireShortcutPin() mit jedem Request auf,
-// da der Kurzbefehl per API-Key ohne Session arbeitet). In-App-Importe über
-// die eingeloggte Web-App verlangen den PIN nicht.
-exports.setWebImportPin = require('./webImportPin').setWebImportPin;
-
-// Persönlicher Kurzbefehl-Schlüssel (Tech-Check S7): ersetzt für das eigene Konto den gemeinsamen
-// SHORTCUT_API_KEY samt X-User-Email; geprüft in shared/shortcutAuth.js
+// Persönlicher Kurzbefehl-Schlüssel (Tech-Check S7): einziger Zugang der Kurzbefehl-Endpunkte, geprüft
+// in shared/shortcutAuth.js. Gemeinsamer SHORTCUT_API_KEY und Webimport-PIN sind seit dem 23.11.2026 entfernt.
 exports.createShortcutToken = require('./shortcutToken').createShortcutToken;
 exports.revokeShortcutToken = require('./shortcutToken').revokeShortcutToken;
 

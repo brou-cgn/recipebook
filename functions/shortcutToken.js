@@ -1,20 +1,18 @@
 /**
  * Persönlicher Kurzbefehl-Schlüssel (Tech-Check S7, Entscheidung vom 23.11.2026).
  *
- * Bisher erkannten die Kurzbefehl-Endpunkte ein Mitglied an einem für alle gleichen Schlüssel
- * (SHORTCUT_API_KEY) plus der E-Mail-Adresse im Header X-User-Email: Wer den Schlüssel kannte, konnte
- * im Namen jedes Mitglieds importieren. Jetzt erzeugt jedes Mitglied in den persönlichen Daten einen
- * eigenen Schlüssel und schickt ihn im Header X-Shortcut-Token; die E-Mail entfällt.
+ * Bis zum 23.11.2026 erkannten die Kurzbefehl-Endpunkte ein Mitglied an einem für alle gleichen
+ * Schlüssel (SHORTCUT_API_KEY) plus der E-Mail-Adresse im Header X-User-Email, abgesichert nur durch
+ * einen optionalen Webimport-PIN: Wer den Schlüssel kannte, konnte im Namen jedes Mitglieds ohne PIN
+ * importieren. Jetzt erzeugt jedes Mitglied in den persönlichen Daten einen eigenen Schlüssel und
+ * schickt ihn im Header X-Shortcut-Token; das ist der einzige Zugang, gemeinsamer Schlüssel und PIN
+ * sind entfernt.
  *
  * Aufbau: rbk.<uid>.<geheim>. Die uid dient nur dem Nachschlagen, geheim sind die 32 Zufallsbytes
  * (base64url). Gespeichert wird nur der SHA-256-Fingerabdruck des Geheimnisses in
  * users/{uid}/security/shortcutToken, einer Untersammlung ohne Client-Zugriff (firestore.rules); der
  * Schlüssel selbst geht genau einmal an den Client zurück. SHA-256 statt scrypt wie beim PIN, weil
  * das Geheimnis zufällig und 256 Bit lang ist und nicht erraten werden kann.
- *
- * Hat ein Konto einen eigenen Schlüssel, lehnt shared/shortcutAuth.js für dieses Konto den alten
- * gemeinsamen Schlüssel ab. Konten ohne eigenen Schlüssel funktionieren wie bisher, bis der gemeinsame
- * Schlüssel abgeschaltet wird.
  */
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const {getFirestore, FieldValue} = require('firebase-admin/firestore');
@@ -60,10 +58,13 @@ exports.createShortcutToken = onCall({maxInstances: 10}, async (request) => {
     createdAt: FieldValue.serverTimestamp(),
     lastUsedAt: null,
   });
-  // Nicht vertraulicher Spiegel für die Anzeige in den persönlichen Daten (wie webImportPinEnabled)
+  // Altbestand des abgeschafften Webimport-PINs mit aufräumen, wenn das Mitglied umstellt
+  await db.collection('users').doc(uid).collection('security').doc('webImportPin').delete();
+  // Nicht vertraulicher Spiegel für die Anzeige in den persönlichen Daten
   await db.collection('users').doc(uid).set({
     shortcutTokenEnabled: true,
     shortcutTokenCreatedAt: FieldValue.serverTimestamp(),
+    webImportPinEnabled: FieldValue.delete(),
   }, {merge: true});
 
   return {token: `${TOKEN_PREFIX}.${uid}.${secret}`};
@@ -71,8 +72,8 @@ exports.createShortcutToken = onCall({maxInstances: 10}, async (request) => {
 
 /**
  * Cloud Function: revokeShortcutToken
- * Widerruft den persönlichen Schlüssel des eigenen Kontos. Danach gilt für das Konto wieder der
- * gemeinsame Schlüssel, solange er nicht abgeschaltet ist.
+ * Widerruft den persönlichen Schlüssel des eigenen Kontos. Danach nimmt der Server für das Konto
+ * keinen Kurzbefehl mehr an, bis ein neuer Schlüssel erzeugt ist.
  */
 exports.revokeShortcutToken = onCall({maxInstances: 10}, async (request) => {
   if (!request.auth) {
@@ -117,16 +118,5 @@ async function verifyShortcutToken(db, token) {
   return uid;
 }
 
-/**
- * @param {import('firebase-admin/firestore').Firestore} db Firestore-Instanz.
- * @param {string} uid Firebase-Nutzer-ID.
- * @return {Promise<boolean>} true, wenn das Konto einen persönlichen Schlüssel hat.
- */
-async function hasShortcutToken(db, uid) {
-  const snap = await getTokenDocRef(db, uid).get();
-  return snap.exists;
-}
-
 exports.verifyShortcutToken = verifyShortcutToken;
-exports.hasShortcutToken = hasShortcutToken;
 exports.TOKEN_PATTERN = TOKEN_PATTERN;

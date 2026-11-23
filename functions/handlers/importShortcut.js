@@ -12,26 +12,22 @@ const {buildRecipeFieldsFromResult, writeImportProtocolEntry} = require('../shar
 const {assertPublicUrl, validateImageData, isInstagramUrl, runImportFromInstagram} = require('../shared/importSources');
 const {finalizeImportJobBackground, failImportJobBackground, isReelImportSource, runImportFromSource} = require('../shared/importJobs');
 const {getConfiguredImportLists, FALLBACK_CUISINE_TYPES, FALLBACK_MEAL_CATEGORIES} = require('../shared/importLists');
-const {geminiApiKey, shortcutApiKey} = require('../shared/secrets');
-const {authenticateShortcutRequest, enforceShortcutPin, enforceShortcutAiLimit} = require('../shared/shortcutAuth');
+const {geminiApiKey} = require('../shared/secrets');
+const {authenticateShortcutRequest, enforceShortcutAiLimit} = require('../shared/shortcutAuth');
 
 /**
  * Cloud Function: importRecipeShortcut
  * HTTP endpoint for Apple Shortcut deep-link imports.
- * Authenticates via SHORTCUT_API_KEY (same mechanism as addRecipeViaAPI).
+ * Authenticates via the member's personal key (X-Shortcut-Token, see shared/shortcutAuth.js).
  *
  * POST /importRecipeShortcut
  *
  * Headers:
- *   X-Api-Key:    <SHORTCUT_API_KEY secret>
- *   X-User-Email: <registrierte E-Mail-Adresse des Users>
+ *   X-Shortcut-Token: <persönlicher Kurzbefehl-Schlüssel, Tech-Check S7>
  *   Content-Type: application/json
  *
  * Body (JSON):
  *   url {string}            Required – public recipe URL to import
- *   pin {string}            Required, wenn der Zielnutzer einen Webimport-PIN
- *                            eingerichtet hat (sonst nicht erforderlich) –
- *                            siehe requireShortcutPin in webImportPin.js
  *   cuisineTypes {string[]} Optional – cuisine type list for AI prompt
  *   mealCategories {string[]} Optional – meal category list for AI prompt
  *
@@ -44,7 +40,7 @@ exports.importRecipeShortcut = onRequest(
       maxInstances: 10,
       memory: '2GiB',
       timeoutSeconds: 120,
-      secrets: [geminiApiKey, shortcutApiKey],
+      secrets: [geminiApiKey],
       invoker: 'public',
     },
     async (req, res) => {
@@ -56,7 +52,7 @@ exports.importRecipeShortcut = onRequest(
         res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
         res.set(
             'Access-Control-Allow-Headers',
-            'Content-Type, X-Shortcut-Token, X-Api-Key, X-User-Email',
+            'Content-Type, X-Shortcut-Token',
         );
         if (req.method === 'OPTIONS') {
           res.status(204).send('');
@@ -72,7 +68,7 @@ exports.importRecipeShortcut = onRequest(
         return;
       }
 
-      // Shortcut authentication: API key + user email + role (see authenticateShortcutRequest)
+      // Shortcut authentication: personal key + role (see authenticateShortcutRequest)
       const auth = await authenticateShortcutRequest(req, res, 'importRecipeShortcut');
       if (!auth) return;
       const {userId} = auth;
@@ -89,7 +85,7 @@ exports.importRecipeShortcut = onRequest(
         }
       }
 
-      const {url, pin} = body || {};
+      const {url} = body || {};
       if (!url || typeof url !== 'string') {
         res.status(400).json({
           success: false,
@@ -97,11 +93,6 @@ exports.importRecipeShortcut = onRequest(
         });
         return;
       }
-
-      // Webimport-PIN: no-op if the target user never set one; otherwise the
-      // Shortcut must send a matching `pin` field with every request (it has
-      // no interactive session to stay "unlocked" like the in-app modals).
-      if (!(await enforceShortcutPin(res, userId, pin))) return;
 
       // SSRF guard
       try {
@@ -234,8 +225,8 @@ async function compressPhotoForImportJob(base64Data, maxBase64Length) {
 /**
  * Cloud Function: Queue up to MAX_SHORTCUT_PHOTO_IMAGES Shortcut-provided
  * recipe photos for AI OCR import (see docs/setup/apple-shortcut.md).
- * Authenticates via SHORTCUT_API_KEY (same mechanism as importRecipeShortcut
- * / addRecipeViaAPI). processShortcutImportJob (Firestore trigger, further
+ * Authenticates via the member's personal key (X-Shortcut-Token, see
+ * shared/shortcutAuth.js). processShortcutImportJob (Firestore trigger, further
  * below) already knows how to run a 'photo' importSource
  * (runImportFromPhotoSource) — the same code path the in-app Foto-Scan
  * import uses — so queuing the job here is all this endpoint needs to do.
@@ -243,17 +234,13 @@ async function compressPhotoForImportJob(base64Data, maxBase64Length) {
  * POST /scanRecipePhotoShortcut
  *
  * Headers:
- *   X-Api-Key:    <SHORTCUT_API_KEY secret>
- *   X-User-Email: <registrierte E-Mail-Adresse des Users>
+ *   X-Shortcut-Token: <persönlicher Kurzbefehl-Schlüssel, Tech-Check S7>
  *   Content-Type: application/json
  *
  * Body (JSON):
  *   images {string[]}       Required – 1..MAX_SHORTCUT_PHOTO_IMAGES base64-encoded
  *                             photos (data URL prefix optional, see validateImageData)
  *   language {string}       Optional – 'de' or 'en', defaults to 'de'
- *   pin {string}            Required, wenn der Zielnutzer einen Webimport-PIN
- *                             eingerichtet hat (sonst nicht erforderlich) –
- *                             siehe requireShortcutPin in webImportPin.js
  *
  * Returns:
  *   200 { success: true, jobId: string, status: 'queued' }
@@ -264,7 +251,6 @@ exports.scanRecipePhotoShortcut = onRequest(
       maxInstances: 10,
       memory: '256MiB',
       timeoutSeconds: 30,
-      secrets: [shortcutApiKey],
       invoker: 'public',
     },
     async (req, res) => {
@@ -275,7 +261,7 @@ exports.scanRecipePhotoShortcut = onRequest(
         res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
         res.set(
             'Access-Control-Allow-Headers',
-            'Content-Type, X-Shortcut-Token, X-Api-Key, X-User-Email',
+            'Content-Type, X-Shortcut-Token',
         );
         if (req.method === 'OPTIONS') {
           res.status(204).send('');
@@ -291,7 +277,7 @@ exports.scanRecipePhotoShortcut = onRequest(
         return;
       }
 
-      // Shortcut authentication: API key + user email + role (see authenticateShortcutRequest)
+      // Shortcut authentication: personal key + role (see authenticateShortcutRequest)
       const auth = await authenticateShortcutRequest(req, res, 'scanRecipePhotoShortcut');
       if (!auth) return;
       const {userId, db} = auth;
@@ -309,7 +295,6 @@ exports.scanRecipePhotoShortcut = onRequest(
       }
 
       let {images: rawImages} = body || {};
-      const {pin} = body || {};
       const language = ['de', 'en'].includes(body?.language) ? body.language : 'de';
 
       // Shortcuts' native array-field editor for a JSON request body only
@@ -429,11 +414,6 @@ exports.scanRecipePhotoShortcut = onRequest(
         return;
       }
 
-      // Webimport-PIN: no-op if the target user never set one; otherwise the
-      // Shortcut must send a matching `pin` field with every request (it has
-      // no interactive session to stay "unlocked" like the in-app modals).
-      if (!(await enforceShortcutPin(res, userId, pin))) return;
-
       if (!(await enforceShortcutAiLimit(res, auth))) return;
 
       console.log(`scanRecipePhotoShortcut: import queued by user ${userId} for ${images.length} image(s)`);
@@ -478,7 +458,7 @@ exports.scanRecipePhotoShortcut = onRequest(
  * if that's not acceptable. Only handles Instagram URLs (use
  * importRecipeShortcut for generic recipe URLs).
  *
- * Input (POST JSON body): { url, pin, cuisineTypes?, mealCategories? }
+ * Input (POST JSON body): { url, cuisineTypes?, mealCategories? }
  * Returns on success (HTTP 200): { success: true, recipeId }
  * Returns when the scrape ran but found nothing (HTTP 200, not an error
  * status — the request itself succeeded): { success: false, error,
@@ -491,7 +471,7 @@ exports.scrapeInstagramReelShortcut = onRequest(
       maxInstances: 5,
       memory: '4GiB',
       timeoutSeconds: 180,
-      secrets: [geminiApiKey, shortcutApiKey],
+      secrets: [geminiApiKey],
       invoker: 'public',
     },
     async (req, res) => {
@@ -501,7 +481,7 @@ exports.scrapeInstagramReelShortcut = onRequest(
         res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
         res.set(
             'Access-Control-Allow-Headers',
-            'Content-Type, X-Shortcut-Token, X-Api-Key, X-User-Email',
+            'Content-Type, X-Shortcut-Token',
         );
         if (req.method === 'OPTIONS') {
           res.status(204).send('');
@@ -517,7 +497,7 @@ exports.scrapeInstagramReelShortcut = onRequest(
         return;
       }
 
-      // Shortcut authentication: API key + user email + role (see authenticateShortcutRequest)
+      // Shortcut authentication: personal key + role (see authenticateShortcutRequest)
       const auth = await authenticateShortcutRequest(req, res, 'scrapeInstagramReelShortcut');
       if (!auth) return;
       const {userId, db} = auth;
@@ -533,7 +513,7 @@ exports.scrapeInstagramReelShortcut = onRequest(
         }
       }
 
-      const {url, pin, cuisineTypes, mealCategories} = body || {};
+      const {url, cuisineTypes, mealCategories} = body || {};
       if (!url || typeof url !== 'string') {
         res.status(400).json({success: false, error: 'Missing required field: url (string)'});
         return;
@@ -545,8 +525,6 @@ exports.scrapeInstagramReelShortcut = onRequest(
         });
         return;
       }
-
-      if (!(await enforceShortcutPin(res, userId, pin))) return;
 
       const apiKey = geminiApiKey.value();
       if (!apiKey) {
@@ -735,8 +713,7 @@ function validateAndNormaliseRecipeInput(body) {
  * POST /addRecipeViaAPI
  *
  * Headers:
- *   X-Api-Key:    <API Key stored as SHORTCUT_API_KEY secret>
- *   X-User-Email: <registrierte E-Mail-Adresse des Users>
+ *   X-Shortcut-Token: <persönlicher Kurzbefehl-Schlüssel, Tech-Check S7>
  *   Content-Type: application/json
  *
  * Body (JSON) – supports both German and English field names:
@@ -752,9 +729,6 @@ function validateAndNormaliseRecipeInput(body) {
  *   notizen / notes         {string}   Optional – additional notes
  *   url / sourceUrl / quelle{string}   Optional – Quelle (http/https), wird als
  *                            Link im Rezept angezeigt, nicht abgerufen
- *   pin                     {string}   Required only if the target user configured a
- *                            Webimport-PIN (see requireShortcutPin in webImportPin.js) –
- *                            no-op otherwise.
  *
  * The recipe is attached to the caller's configured Inspirationssammlung list
  * (users/{uid}.defaultWebImportListId – same private list RecipeForm.js
@@ -773,13 +747,13 @@ function validateAndNormaliseRecipeInput(body) {
  *   500 { success: false, error: string }
  */
 exports.addRecipeViaAPI = onRequest(
-    {maxInstances: 10, secrets: [shortcutApiKey], invoker: 'public'},
+    {maxInstances: 10, invoker: 'public'},
     async (req, res) => {
       const origin = req.headers.origin;
       if (origin && ALLOWED_ORIGINS.includes(origin)) {
         res.set('Access-Control-Allow-Origin', origin);
         res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Shortcut-Token, X-Api-Key, X-User-Email');
+        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Shortcut-Token');
         if (req.method === 'OPTIONS') {
           res.status(204).send('');
           return;
@@ -794,7 +768,7 @@ exports.addRecipeViaAPI = onRequest(
         return;
       }
 
-      // Shortcut authentication: API key + user email + role (see authenticateShortcutRequest)
+      // Shortcut authentication: personal key + role (see authenticateShortcutRequest)
       const auth = await authenticateShortcutRequest(req, res, 'addRecipeViaAPI', {allowShortcutUser: false});
       if (!auth) return;
       const {userId, userData, db} = auth;
@@ -811,11 +785,6 @@ exports.addRecipeViaAPI = onRequest(
           return;
         }
       }
-
-      // Webimport-PIN: no-op if the target user never set one; otherwise the
-      // Shortcut must send a matching `pin` field with every request (it has
-      // no interactive session to stay "unlocked" like the in-app modals).
-      if (!(await enforceShortcutPin(res, userId, body?.pin))) return;
 
       // --- Validate & normalise ---
       let recipeData;
@@ -906,18 +875,11 @@ exports.addRecipeViaAPI = onRequest(
  * categories (for Apple Shortcuts / external integrations, e.g. Claude, to use
  * the same values as addRecipeViaAPI's `kulinarik`/`speisekategorie` fields).
  *
- * GET /getRecipeOptionsShortcut?pin=<pin>
+ * GET /getRecipeOptionsShortcut
  *
  * Headers:
- *   X-Api-Key:    <API Key stored as SHORTCUT_API_KEY secret>
- *   X-User-Email: <registrierte E-Mail-Adresse des Users>
- *
- * Query params:
- *   pin {string} Required only if the target user configured a Webimport-PIN
- *       (see requireShortcutPin in webImportPin.js) – no-op otherwise. A GET
- *       request has no body, so the PIN travels as a query param here (all
- *       other pinned endpoints are POST and take it in the JSON body instead).
- *
+ *   X-Shortcut-Token: <persönlicher Kurzbefehl-Schlüssel, Tech-Check S7>
+ * *
  * Returns:
  *   200 { success: true, cuisineTypes: string[], mealCategories: string[] }
  *   401 { success: false, error: string, requiredHeaders?: string[] }
@@ -927,13 +889,13 @@ exports.addRecipeViaAPI = onRequest(
  *   500 { success: false, error: string }
  */
 exports.getRecipeOptionsShortcut = onRequest(
-    {maxInstances: 10, secrets: [shortcutApiKey], invoker: 'public'},
+    {maxInstances: 10, invoker: 'public'},
     async (req, res) => {
       const origin = req.headers.origin;
       if (origin && ALLOWED_ORIGINS.includes(origin)) {
         res.set('Access-Control-Allow-Origin', origin);
         res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Shortcut-Token, X-Api-Key, X-User-Email');
+        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Shortcut-Token');
         if (req.method === 'OPTIONS') {
           res.status(204).send('');
           return;
@@ -948,15 +910,10 @@ exports.getRecipeOptionsShortcut = onRequest(
         return;
       }
 
-      // Shortcut authentication: API key + user email + role (see authenticateShortcutRequest)
+      // Shortcut authentication: personal key + role (see authenticateShortcutRequest)
       const auth = await authenticateShortcutRequest(req, res, 'getRecipeOptionsShortcut', {allowShortcutUser: false});
       if (!auth) return;
-      const {userId, db} = auth;
-
-      // Webimport-PIN: no-op if the target user never set one; otherwise the
-      // Shortcut must send a matching `pin` query param with every request (it
-      // has no interactive session to stay "unlocked" like the in-app modals).
-      if (!(await enforceShortcutPin(res, userId, req.query?.pin))) return;
+      const {db} = auth;
 
       // --- Read configured lists from settings/app, fall back to defaults ---
       try {
@@ -985,8 +942,7 @@ const RECIPE_IMPORT_TTL_MS = 10 * 60 * 1000;
  * POST /createRecipeImportFromText
  *
  * Headers:
- *   X-Api-Key:    <API Key stored as SHORTCUT_API_KEY secret>
- *   X-User-Email: <registrierte E-Mail-Adresse des Users/Service-Users>
+ *   X-Shortcut-Token: <persönlicher Kurzbefehl-Schlüssel, Tech-Check S7>
  *   Content-Type: application/json
  *
  * Body (JSON):
@@ -1004,13 +960,13 @@ const RECIPE_IMPORT_TTL_MS = 10 * 60 * 1000;
  *   500 { success: false, error: string }
  */
 exports.createRecipeImportFromText = onRequest(
-    {maxInstances: 10, secrets: [shortcutApiKey], invoker: 'public'},
+    {maxInstances: 10, invoker: 'public'},
     async (req, res) => {
       const origin = req.headers.origin;
       if (origin && ALLOWED_ORIGINS.includes(origin)) {
         res.set('Access-Control-Allow-Origin', origin);
         res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Shortcut-Token, X-Api-Key, X-User-Email');
+        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Shortcut-Token');
         if (req.method === 'OPTIONS') {
           res.status(204).send('');
           return;
@@ -1025,7 +981,7 @@ exports.createRecipeImportFromText = onRequest(
         return;
       }
 
-      // Shortcut authentication: API key + user email + role (see authenticateShortcutRequest)
+      // Shortcut authentication: personal key + role (see authenticateShortcutRequest)
       const auth = await authenticateShortcutRequest(req, res, 'createRecipeImportFromText');
       if (!auth) return;
       const {userId, db} = auth;
@@ -1055,10 +1011,6 @@ exports.createRecipeImportFromText = onRequest(
         res.status(err.code || 400).json({success: false, error: err.message});
         return;
       }
-
-      // Webimport-PIN: no-op if the target user never set one (same rule as
-      // every other Shortcut endpoint).
-      if (!(await enforceShortcutPin(res, userId, body?.pin))) return;
 
       // --- Save to Firestore imports collection with TTL ---
       try {

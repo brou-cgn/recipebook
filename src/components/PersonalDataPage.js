@@ -7,7 +7,6 @@ import { ALARM_SOUNDS, getAlarmSoundPreference, saveAlarmSoundPreference, getDar
 import { previewAlarmSound } from '../utils/alarmAudioUtils';
 import { requestNotificationPermission, getMessagingServiceWorkerVersion } from '../utils/pushNotifications';
 import { readPushLog, clearPushLog } from '../utils/pushTapHandoff';
-import { setWebImportPin, clearWebImportPin } from '../utils/webImportPin';
 import { createShortcutToken, revokeShortcutToken } from '../utils/shortcutToken';
 import DeleteRowButton from './DeleteRowButton';
 import UndoSnackbar from './UndoSnackbar';
@@ -18,10 +17,7 @@ import { formatiereDatum } from '../i18n/format';
 import allgemeinTexte from '../i18n/texte/allgemein';
 import bereicheTexte from '../i18n/texte/bereiche';
 import persoenlicheDatenTexte from '../i18n/texte/persoenlicheDaten';
-import webimportPinTexte from '../i18n/texte/webimportPin';
 import kurzbefehlSchluesselTexte from '../i18n/texte/kurzbefehlSchluessel';
-
-const PIN_PATTERN = /^\d{4,8}$/;
 
 const PUSH_LOG_ZEIT = { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' };
 
@@ -46,7 +42,6 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const t = useTexte(persoenlicheDatenTexte);
   const tA = useTexte(allgemeinTexte);
   const tB = useTexte(bereicheTexte);
-  const tPin = useTexte(webimportPinTexte);
   const tKey = useTexte(kurzbefehlSchluesselTexte);
   const { sprache } = useSprache();
   const idBasis = useId();
@@ -95,15 +90,6 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const [backgroundUpdatesEnabled, setBackgroundUpdatesEnabledState] = useState(Boolean(currentUser?.backgroundUpdatesEnabled));
   const [togglingBackgroundUpdates, setTogglingBackgroundUpdates] = useState(false);
   const [backgroundUpdatesMessage, setBackgroundUpdatesMessage] = useState(null);
-
-  const [webImportPinEnabled, setWebImportPinEnabledState] = useState(Boolean(currentUser?.webImportPinEnabled));
-  const [pinRemovedLocally, setPinRemovedLocally] = useState(false);
-  const [newPin, setNewPin] = useState('');
-  const [confirmPin, setConfirmPin] = useState('');
-  const [savingPin, setSavingPin] = useState(false);
-  const [pinMessage, setPinMessage] = useState(null);
-  const { banners: pinBanners, scheduleDelete: schedulePinDelete, undoDelete: undoPinDelete } = useUndoableDelete();
-  const pinActive = webImportPinEnabled && !pinRemovedLocally;
 
   // Persönlicher Kurzbefehl-Schlüssel (Tech-Check S7): wird nur beim Erzeugen einmal angezeigt
   const [tokenEnabled, setTokenEnabled] = useState(Boolean(currentUser?.shortcutTokenEnabled));
@@ -322,54 +308,6 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
     }
   };
 
-  const handleSetPin = async (e) => {
-    e.preventDefault();
-    setPinMessage(null);
-
-    if (!PIN_PATTERN.test(newPin)) {
-      setPinMessage({ success: false, text: tPin('fehlerFormat') });
-      return;
-    }
-    if (newPin !== confirmPin) {
-      setPinMessage({ success: false, text: tPin('fehlerUngleich') });
-      return;
-    }
-
-    setSavingPin(true);
-    try {
-      await setWebImportPin(newPin);
-      setWebImportPinEnabledState(true);
-      setPinRemovedLocally(false);
-      setNewPin('');
-      setConfirmPin('');
-      setPinMessage({ success: true, text: t('pinGespeichert') });
-      if (onProfileUpdated) onProfileUpdated({ ...currentUser, webImportPinEnabled: true }, SEITE_BLEIBT_OFFEN);
-    } catch (err) {
-      setPinMessage({ success: false, text: err.message });
-    } finally {
-      setSavingPin(false);
-    }
-  };
-
-  const handleRemovePin = () => {
-    setPinRemovedLocally(true);
-    schedulePinDelete({
-      key: 'webImportPin',
-      message: t('pinEntfernt', { name: tPin('name') }),
-      onConfirm: async () => {
-        try {
-          await clearWebImportPin();
-          setWebImportPinEnabledState(false);
-          if (onProfileUpdated) onProfileUpdated({ ...currentUser, webImportPinEnabled: false }, SEITE_BLEIBT_OFFEN);
-        } catch (err) {
-          setPinRemovedLocally(false);
-          setPinMessage({ success: false, text: err.message });
-        }
-      },
-      onUndo: () => setPinRemovedLocally(false),
-    });
-  };
-
   const handleCreateToken = async () => {
     setTokenFehler(null);
     setTokenCopied(false);
@@ -384,7 +322,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
       if (onProfileUpdated) {
         onProfileUpdated({ ...currentUser, shortcutTokenEnabled: true, shortcutTokenCreatedAt: jetzt }, SEITE_BLEIBT_OFFEN);
       }
-    } catch (err) {
+    } catch {
       setTokenFehler(tKey('fehlerErzeugen'));
     } finally {
       setCreatingToken(false);
@@ -395,13 +333,13 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
     try {
       await navigator.clipboard.writeText(newToken);
       setTokenCopied(true);
-    } catch (err) {
+    } catch {
       // Ohne Zwischenablage bleibt der Schlüssel markierbar (user-select: all)
       setTokenCopied(false);
     }
   };
 
-  // Widerrufen wie das Entfernen des PINs: sofort aus der Ansicht, wirksam nach dem Rückgängig-Fenster
+  // Widerrufen wie andere Löschaktionen: sofort aus der Ansicht, wirksam nach dem Rückgängig-Fenster
   const handleRevokeToken = () => {
     setTokenRevokedLocally(true);
     setNewToken('');
@@ -416,7 +354,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           if (onProfileUpdated) {
             onProfileUpdated({ ...currentUser, shortcutTokenEnabled: false, shortcutTokenCreatedAt: null }, SEITE_BLEIBT_OFFEN);
           }
-        } catch (err) {
+        } catch {
           setTokenRevokedLocally(false);
           setTokenFehler(tKey('fehlerWiderrufen'));
         }
@@ -791,70 +729,6 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
         </form>
       </section>
 
-      <section className="personal-data-abschnitt personal-data-webimport-pin-section">
-        <h3 className="personal-data-section-title">{tPin('name')}</h3>
-        <p className="personal-data-password-hint">
-          {t('pinHinweis')}
-        </p>
-        {pinActive && (
-          <p className="personal-data-password-hint">
-            {t('pinKurzbefehlHinweis')}
-          </p>
-        )}
-
-        {pinActive ? (
-          <div className="personal-data-gruppe">
-            <div className="settings-row settings-row--static delete-row-hover-target">
-              <span className="settings-row-label">{t('pinAktiv')}</span>
-              <span className="settings-row-right">
-                <DeleteRowButton itemName={tPin('name')} onClick={handleRemovePin} />
-              </span>
-            </div>
-          </div>
-        ) : (
-          <p className="personal-data-password-hint">{t('keinPin')}</p>
-        )}
-
-        <form className="personal-data-form" onSubmit={handleSetPin}>
-          <div className="personal-data-felder">
-            <div className="personal-data-field">
-              <label htmlFor="newPin">{pinActive ? tPin('feldNeu') : tPin('feld')}</label>
-              <input
-                id="newPin"
-                type="password"
-                inputMode="numeric"
-                autoComplete="off"
-                value={newPin}
-                onChange={(e) => setNewPin(e.target.value)}
-                required
-              />
-            </div>
-            <div className="personal-data-field">
-              <label htmlFor="confirmPin">{tPin('bestaetigen')}</label>
-              <input
-                id="confirmPin"
-                type="password"
-                inputMode="numeric"
-                autoComplete="off"
-                value={confirmPin}
-                onChange={(e) => setConfirmPin(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-          {pinMessage && (
-            <div className={`personal-data-message ${pinMessage.success ? 'success' : 'error'}`}>
-              {pinMessage.text}
-            </div>
-          )}
-          <div className="personal-data-actions">
-            <Button variant="primary" type="submit" loading={savingPin}>
-              {savingPin ? tA('speichernLaeuft') : pinActive ? t('pinAendern') : t('pinSetzen')}
-            </Button>
-          </div>
-        </form>
-      </section>
-
       <section className="personal-data-abschnitt personal-data-kurzbefehl-section">
         <h3 className="personal-data-section-title">{tKey('titel')}</h3>
         <p className="personal-data-password-hint">{tKey('hinweis')}</p>
@@ -890,9 +764,6 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
         </div>
       </section>
       </div>
-      {pinBanners.length > 0 && (
-        <UndoSnackbar itemName={tPin('name')} onUndo={() => undoPinDelete(pinBanners[0].id)} />
-      )}
       {tokenBanners.length > 0 && (
         <UndoSnackbar itemName={tKey('name')} onUndo={() => undoTokenRevoke(tokenBanners[0].id)} />
       )}

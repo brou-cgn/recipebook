@@ -1,6 +1,6 @@
 /**
  * Fehler aus Cloud-Function-Aufrufen vereinheitlichen. Eigene Datei, damit leichte
- * Module (z. B. webImportPin im Start-Bundle) nicht den ganzen Web-Import-Service
+ * Module (z. B. Wichteln oder Weinbegleitung) nicht den ganzen Web-Import-Service
  * mitladen (Tech-Check P2).
  */
 

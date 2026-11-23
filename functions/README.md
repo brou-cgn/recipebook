@@ -9,7 +9,7 @@ The web import flow uses a **hybrid architecture** to avoid browser CORS/auth is
 | Path | Function | Auth |
 |------|----------|------|
 | Web app | `importRecipeCallable` (onCall) | Firebase Auth (httpsCallable) |
-| Apple Shortcut | `importRecipeShortcut` (onRequest) | `X-Api-Key` + `X-User-Email` headers |
+| Apple Shortcut | `importRecipeShortcut` (onRequest) | `X-Shortcut-Token` header (personal key) |
 
 Both endpoints share the same internal `runImportFromUrl` pipeline:
 1. **fetch_html** – server-side HTTP GET of the recipe URL
@@ -43,24 +43,24 @@ Firebase Auth tokens and CORS automatically.
 
 ### Shortcut authentication (all Shortcut endpoints)
 
-`shared/shortcutAuth.js` (`authenticateShortcutRequest`) accepts two ways in:
+`shared/shortcutAuth.js` (`authenticateShortcutRequest`) accepts exactly one way in, the member's
+**personal key** (Tech-Check S7): header `X-Shortcut-Token: rbk.<uid>.<secret>`. Members create or
+revoke it in the app (Chefkoch › Kurzbefehl-Schlüssel) via the callables `createShortcutToken` /
+`revokeShortcutToken` (`shortcutToken.js`). Only the SHA-256 hash of the secret is stored, in
+`users/{uid}/security/shortcutToken` (no client access, see `firestore.rules`). After the key, the
+user's role is checked (`edit`, `admin`, `moderator`, or `isShortcutUser: true` where allowed).
 
-- **Personal key (Tech-Check S7):** header `X-Shortcut-Token: rbk.<uid>.<secret>`. Members create or
-  revoke it in the app (Chefkoch › Kurzbefehl-Schlüssel) via the callables `createShortcutToken` /
-  `revokeShortcutToken` (`shortcutToken.js`). Only the SHA-256 hash of the secret is stored, in
-  `users/{uid}/security/shortcutToken` (no client access, see `firestore.rules`).
-- **Legacy:** `X-Api-Key` (shared `SHORTCUT_API_KEY`) plus `X-User-Email`. Refused for accounts that
-  have a personal key, so the shared key can no longer act in their name.
-
-Role checks and the optional Webimport-PIN apply to both.
+The shared `SHORTCUT_API_KEY` (`X-Api-Key` + `X-User-Email`) and the Webimport-PIN were retired on
+23.11.2026. Requests that still send `X-Api-Key` or `X-User-Email` instead of `X-Shortcut-Token` get a
+401 explaining where to create the personal key; a leftover `pin` field is ignored.
 
 ### importRecipeShortcut
 
 HTTP endpoint for **Apple Shortcut** deep-link imports.
-Authenticates via the personal key or `SHORTCUT_API_KEY` (same mechanism as `addRecipeViaAPI`).
+Authenticates via the personal key (same mechanism as `addRecipeViaAPI`).
 
 **Features:**
-- ✅ Authentication: API Key (`X-Api-Key` header) + User Email (`X-User-Email` header, resolved server-side to a Firebase uid via `getAuth().getUserByEmail`)
+- ✅ Authentication: personal key in the `X-Shortcut-Token` header (see *Shortcut authentication* above)
 - ✅ CORS enabled for allowed origins
 - ✅ Requires user role `edit`, `admin`, `moderator`, or flag `isShortcutUser: true`
 - ✅ Asynchronous: queues the job and responds in well under a second instead
@@ -75,18 +75,15 @@ Authenticates via the personal key or `SHORTCUT_API_KEY` (same mechanism as `add
   "Neue Rezepte" review queue; there's nothing further to poll from the
   Shortcut.
 
-**Setup:**
-1. Generate API key: `openssl rand -hex 32`
-2. Store as secret: `firebase functions:secrets:set SHORTCUT_API_KEY`
-3. Use the registered email address of the target account – no UID lookup needed
+**Setup:** create the personal key in the app (Chefkoch › Kurzbefehl-Schlüssel); no secret or email
+address needed.
 
 **Request:**
 
 ```
 POST https://<region>-<project-id>.cloudfunctions.net/importRecipeShortcut
 Content-Type: application/json
-X-Api-Key: <SHORTCUT_API_KEY>
-X-User-Email: <registered email address>
+X-Shortcut-Token: <personal key>
 ```
 
 **Body (JSON):**
@@ -110,8 +107,7 @@ Method: POST
 URL:    https://us-central1-broubook.cloudfunctions.net/importRecipeShortcut
 Headers:
   Content-Type:  application/json
-  X-Api-Key:     <your SHORTCUT_API_KEY>
-  X-User-Email:  <your registered email address>
+  X-Shortcut-Token: <your personal key>
 Body:   {"url": "<the recipe URL>"}
 ```
 
@@ -130,10 +126,10 @@ Body:   {"url": "<the recipe URL>"}
 | Status | Reason |
 |--------|--------|
 | 400 | Missing or invalid `url` field |
-| 401 | Missing or invalid `X-Api-Key` / `X-User-Email` |
-| 403 | Unknown email address or insufficient permissions (same generic response for both, to avoid email enumeration) |
+| 401 | Missing or invalid `X-Shortcut-Token` (also when the retired `X-Api-Key` / `X-User-Email` are sent) |
+| 403 | Account not found or insufficient permissions |
 | 405 | Wrong HTTP method (only POST allowed) |
-| 500 | Server misconfiguration, or the job could not be written to Firestore |
+| 500 | Key could not be checked, or the job could not be written to Firestore |
 
 A 200 response only means the import was queued successfully — it does not
 guarantee the recipe was recognized correctly. Check the app's review queue
@@ -148,7 +144,7 @@ HTTP error.
 An HTTP endpoint that lets external tools – such as an **Apple Shortcut** – create recipes directly in Firestore without going through the RecipeBook UI.
 
 **Features:**
-- ✅ Authentication: API Key (`X-Api-Key` header) + User Email (`X-User-Email` header, resolved server-side to a Firebase uid via `getAuth().getUserByEmail`)
+- ✅ Authentication: personal key in the `X-Shortcut-Token` header (see *Shortcut authentication* above)
 - ✅ Accepts both German and English field names (compatible with AI/Shortcut output)
 - ✅ Input validation with descriptive error messages
 - ✅ CORS enabled
@@ -156,20 +152,16 @@ An HTTP endpoint that lets external tools – such as an **Apple Shortcut** – 
 - ✅ Increments user's `recipe_count`
 - ✅ Creates the recipe with `isTemp: true` (same pending-review status as an Instagram import) — it only appears in the "Neues Rezept hinzufügen" review queue until the user reviews and saves it
 
-**Authentication:** API Key (stored as Firebase Secret `SHORTCUT_API_KEY`)
+**Authentication:** personal key in the `X-Shortcut-Token` header
 
-**Setup:**
-1. API Key generieren: `openssl rand -hex 32`
-2. Als Secret speichern: `firebase functions:secrets:set SHORTCUT_API_KEY`
-3. Registrierte E-Mail-Adresse des Ziel-Accounts verwenden – keine UID nötig
+**Setup:** Schlüssel in der App unter Chefkoch › Kurzbefehl-Schlüssel erzeugen – kein Secret, keine E-Mail-Adresse.
 
 **Request:**
 
 ```
 POST https://<region>-<project-id>.cloudfunctions.net/addRecipeViaAPI
 Content-Type: application/json
-X-Api-Key: <API Key>
-X-User-Email: <registrierte E-Mail-Adresse>
+X-Shortcut-Token: <persönlicher Schlüssel>
 ```
 
 **Body (JSON) – supported field names:**
@@ -232,8 +224,8 @@ X-User-Email: <registrierte E-Mail-Adresse>
 | Status | Reason |
 |--------|--------|
 | 400 | Missing or invalid fields |
-| 401 | Missing or invalid API Key / User Email header |
-| 403 | Unknown email address or insufficient permissions (same generic response for both, to avoid email enumeration) |
+| 401 | Missing or invalid `X-Shortcut-Token` header |
+| 403 | Account not found or insufficient permissions |
 | 405 | Wrong HTTP method (only POST allowed) |
 | 500 | Firestore write error |
 
@@ -243,15 +235,13 @@ X-User-Email: <registrierte E-Mail-Adresse>
 
 See [APPLE_SHORTCUT_SETUP.md](../docs/setup/apple-shortcut.md) for a full step-by-step guide.
 
-1. **Generate an API key** once: `openssl rand -hex 32`
-2. **Store the key** as a Firebase Secret: `firebase functions:secrets:set SHORTCUT_API_KEY`
-3. **Use your registered email address** – no UID lookup needed.
-4. **Send the recipe** with a "Get Contents of URL" action:
+1. **Create your personal key** once in the app: Chefkoch › Kurzbefehl-Schlüssel (shown only once).
+2. **Send the recipe** with a "Get Contents of URL" action:
    - Method: `POST`
    - URL: `https://us-central1-<project-id>.cloudfunctions.net/addRecipeViaAPI`
-   - Headers: `X-Api-Key: <your-api-key>`, `X-User-Email: <your-email>`, `Content-Type: application/json`
+   - Headers: `X-Shortcut-Token: <your personal key>`, `Content-Type: application/json`
    - Body: JSON with the recipe fields listed above.
-5. **Check the result**: the response contains `recipeId` if successful.
+3. **Check the result**: the response contains `recipeId` if successful.
 
 > **Tip:** Use OpenAI / AI Actions in your Shortcut to extract and structure the recipe text before sending it to this endpoint. Replace the "Create Note" step with a "Get Contents of URL" POST action.
 
@@ -262,7 +252,7 @@ See [APPLE_SHORTCUT_SETUP.md](../docs/setup/apple-shortcut.md) for a full step-b
 An HTTP endpoint that stores unstructured recipe text temporarily in Firestore and returns a public URL that renders the text as structured HTML. This enables Apple Shortcuts or other tools to hand off raw text to an AI/website-import workflow without having to build JSON arrays manually.
 
 **Features:**
-- ✅ Authentication: API Key (`X-Api-Key` header) + User Email (`X-User-Email` header, resolved server-side to a Firebase uid via `getAuth().getUserByEmail`)
+- ✅ Authentication: personal key in the `X-Shortcut-Token` header (see *Shortcut authentication* above)
 - ✅ Role check: only users with role `edit`, `admin`, `moderator`, or flag `isShortcutUser: true` may create imports
 - ✅ Configurable TTL (default 10 minutes)
 - ✅ Returns a capability URL (`importUrl`) that is publicly accessible
@@ -272,8 +262,7 @@ An HTTP endpoint that stores unstructured recipe text temporarily in Firestore a
 ```
 POST https://<region>-<project-id>.cloudfunctions.net/createRecipeImportFromText
 Content-Type: application/json
-X-Api-Key: <API Key>
-X-User-Email: <registered email address of the user/service account>
+X-Shortcut-Token: <personal key of the user/service account>
 ```
 
 **Body (JSON):**
@@ -304,8 +293,8 @@ X-User-Email: <registered email address of the user/service account>
 | Status | Reason |
 |--------|--------|
 | 400 | Missing or empty `rawText` |
-| 401 | Missing or invalid API Key / User Email header |
-| 403 | Unknown email address or role insufficient (requires `edit`, `admin`, `moderator`, or `isShortcutUser: true`) – same generic response for both, to avoid email enumeration |
+| 401 | Missing or invalid `X-Shortcut-Token` header |
+| 403 | Account not found or role insufficient (requires `edit`, `admin`, `moderator`, or `isShortcutUser: true`) |
 | 405 | Wrong HTTP method (only POST allowed) |
 | 500 | Firestore write error |
 
@@ -315,7 +304,7 @@ To use a technical service account for authentication:
 
 1. Create a dedicated user in Firebase Authentication for the shortcut/service account
 2. In Firestore `users` collection, set `isShortcutUser: true` on that user's document
-3. In the iOS Shortcut, use the service user's email address in `X-User-Email`
+3. Sign in to the app once as the service user, create its personal key (Chefkoch › Kurzbefehl-Schlüssel) and put it in `X-Shortcut-Token` in the iOS Shortcut
 
 ---
 
@@ -448,7 +437,7 @@ firebase emulators:start --only functions
 The function uses Firebase Secrets for secure API key storage:
 
 - `GEMINI_API_KEY` - Google Gemini Vision API key (required for `scanRecipeWithAI`)
-- `SHORTCUT_API_KEY` - API key for `addRecipeViaAPI` (required for Apple Shortcut integration)
+- `SHORTCUT_API_KEY` - retired on 23.11.2026 (Shortcuts now use each member's personal key); no function reads it any more, the secret can be deleted in Secret Manager
 - `WEB_API_KEY` - the project's public Web API key (same value as the
   app's `REACT_APP_FIREBASE_API_KEY`), required by the nightly
   `dailyAiImporterTest` to mint a test-user ID token and call the real

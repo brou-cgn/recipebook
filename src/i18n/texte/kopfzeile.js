@@ -1,7 +1,6 @@
 /**
- * Texte des Headers (src/components/Header.js): Suche, Menü, Sprachwahl für die Sitzung (SprachWahl.js),
- * Kochschule und der Dialog zum Webimport-PIN. Bereichsnamen stehen in bereiche.js, die
- * PIN-Texte in webimportPin.js. Aufbau und Regeln: src/i18n/texte.js.
+ * Texte des Headers (src/components/Header.js): Suche, Menü, Sprachwahl für die Sitzung (SprachWahl.js)
+ * und Kochschule. Bereichsnamen stehen in bereiche.js. Aufbau und Regeln: src/i18n/texte.js.
  */
 // Geschütztes Leerzeichen: im Französischen vor : ? ! ; und innerhalb von « ».
 const NBSP = '\u00a0';
@@ -35,10 +34,6 @@ export default {
     abmelden: 'Abmelden',
     schliessen: '{name} schließen',
     screenshot: 'Screenshot',
-    pinTitel: 'Webimport-PIN erforderlich',
-    dialogSchliessen: 'Dialog schließen',
-    pinHinweis: 'Bevor du den Kurzbefehl herunterladen kannst, musst du einen Webimport-PIN vergeben. Er schützt deinen Zugang davor, dass über den Kurzbefehl ungefragt Rezepte importiert werden.',
-    pinSetzenUndLaden: 'PIN setzen & herunterladen',
   },
   en: {
     zurStartseite: 'Go to home page',
@@ -67,10 +62,6 @@ export default {
     abmelden: 'Log out',
     schliessen: 'Close {name}',
     screenshot: 'Screenshot',
-    pinTitel: 'Web import PIN required',
-    dialogSchliessen: 'Close dialog',
-    pinHinweis: 'Before you can download the shortcut, you need to set a web import PIN. It stops recipes from being imported into your account through the shortcut without your consent.',
-    pinSetzenUndLaden: 'Set PIN & download',
   },
   fr: {
     zurStartseite: 'Aller à l’accueil',
@@ -99,9 +90,5 @@ export default {
     abmelden: 'Se déconnecter',
     schliessen: 'Fermer {name}',
     screenshot: 'Capture d’écran',
-    pinTitel: 'Code PIN d’import web requis',
-    dialogSchliessen: 'Fermer la boîte de dialogue',
-    pinHinweis: 'Avant de pouvoir télécharger le raccourci, tu dois définir un code PIN d’import web. Il empêche que des recettes soient importées dans ton compte via le raccourci sans ton accord.',
-    pinSetzenUndLaden: 'Définir le code PIN et télécharger',
   },
 };

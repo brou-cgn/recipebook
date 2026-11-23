@@ -12,7 +12,6 @@ const HEAVY = /from\s+['"][./]+(?:utils\/)?(webImportService|importRunners|aiOcr
 describe('Start-Bundle', () => {
   test.each([
     'contexts/RecipeImportQueueContext.js',
-    'utils/webImportPin.js',
   ])('%s importiert keine Import-Module statisch', (file) => {
     expect(read(file)).not.toMatch(HEAVY);
   });

@@ -12,17 +12,13 @@ import SearchIcon from './icons/SearchIcon';
 import ImportProgressIndicator from './ImportProgressIndicator';
 import ImportProgressDialog from './ImportProgressDialog';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
-import { setWebImportPin } from '../utils/webImportPin';
 import { useSprache, useTexte } from '../contexts/SpracheContext';
-import allgemeinTexte from '../i18n/texte/allgemein';
 import bereicheTexte from '../i18n/texte/bereiche';
 import kopfzeileTexte from '../i18n/texte/kopfzeile';
-import webimportPinTexte from '../i18n/texte/webimportPin';
 
 const APP_NAME = 'brouBook';
 
 const RECIPE_IMPORT_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/a9f137c8c6a04a97a8c611d3181d73fd';
-const SHORTCUT_PIN_PATTERN = /^\d{4,8}$/;
 
 /**
  * Detects iPhone/iPad/Mac, the only platforms with a Shortcuts app that can
@@ -67,12 +63,9 @@ const Header = forwardRef(function Header({
   interactiveLists = [],
   startseiteEnabled = false,
   onChefkochClick,
-  onProfileUpdated
 }, ref) {
   const t = useTexte(kopfzeileTexte);
-  const tA = useTexte(allgemeinTexte);
   const tB = useTexte(bereicheTexte);
-  const tPin = useTexte(webimportPinTexte);
   // Sprache dieser Sitzung (Vorhaben Mehrsprachigkeit): Chip im Header (SprachWahl), nur mit der
   // Berechtigung sprachwahl. Solange seine Auswahl offen ist, liegt der Header wie beim Menü oben.
   const darfSprachwahl = Boolean(currentUser?.sprachwahl);
@@ -90,11 +83,6 @@ const Header = forwardRef(function Header({
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const [isApple] = useState(isAppleDevice);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [shortcutPinModalOpen, setShortcutPinModalOpen] = useState(false);
-  const [shortcutPin, setShortcutPin] = useState('');
-  const [shortcutPinConfirm, setShortcutPinConfirm] = useState('');
-  const [savingShortcutPin, setSavingShortcutPin] = useState(false);
-  const [shortcutPinError, setShortcutPinError] = useState(null);
   const menuRef = useRef(null);
   const dropdownRef = useRef(null);
   const searchRef = useRef(null);
@@ -282,44 +270,11 @@ const Header = forwardRef(function Header({
     setMenuOpen(false);
   };
 
+  // Der fertige Kurzbefehl öffnet die App per Link und braucht keinen Schlüssel; die frühere PIN-Hürde
+  // vor dem Download ist mit dem Webimport-PIN entfallen (Tech-Check S7)
   const handleInstallShortcutClick = () => {
     setMenuOpen(false);
-    if (currentUser?.webImportPinEnabled) {
-      window.open(RECIPE_IMPORT_SHORTCUT_URL, '_blank', 'noopener,noreferrer');
-    } else {
-      setShortcutPin('');
-      setShortcutPinConfirm('');
-      setShortcutPinError(null);
-      setShortcutPinModalOpen(true);
-    }
-  };
-
-  const handleSetShortcutPin = async (e) => {
-    e.preventDefault();
-    setShortcutPinError(null);
-    if (!SHORTCUT_PIN_PATTERN.test(shortcutPin)) {
-      setShortcutPinError(tPin('fehlerFormat'));
-      return;
-    }
-    if (shortcutPin !== shortcutPinConfirm) {
-      setShortcutPinError(tPin('fehlerUngleich'));
-      return;
-    }
-    setSavingShortcutPin(true);
-    try {
-      await setWebImportPin(shortcutPin);
-      if (onProfileUpdated) {
-        onProfileUpdated({ ...currentUser, webImportPinEnabled: true });
-      }
-      setShortcutPinModalOpen(false);
-      setShortcutPin('');
-      setShortcutPinConfirm('');
-      window.open(RECIPE_IMPORT_SHORTCUT_URL, '_blank', 'noopener,noreferrer');
-    } catch (err) {
-      setShortcutPinError(err.message);
-    } finally {
-      setSavingShortcutPin(false);
-    }
+    window.open(RECIPE_IMPORT_SHORTCUT_URL, '_blank', 'noopener,noreferrer');
   };
 
   const headerTitleContent = (
@@ -581,69 +536,6 @@ const Header = forwardRef(function Header({
                 </div>
                 )
               ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {shortcutPinModalOpen && (
-        <div className="faq-modal-overlay" onClick={() => setShortcutPinModalOpen(false)}>
-          <div className="faq-modal shortcut-pin-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="faq-modal-header">
-              <h2 className="faq-modal-title">{t('pinTitel')}</h2>
-              <button
-                className="faq-modal-close"
-                onClick={() => setShortcutPinModalOpen(false)}
-                aria-label={t('dialogSchliessen')}
-              >
-                ×
-              </button>
-            </div>
-            <div className="faq-modal-body shortcut-pin-modal-body">
-              <p className="shortcut-pin-modal-hint">
-                {t('pinHinweis')}
-              </p>
-              <form className="shortcut-pin-modal-form" onSubmit={handleSetShortcutPin}>
-                <div className="shortcut-pin-modal-field">
-                  <label htmlFor="shortcutPin">{tPin('feld')}</label>
-                  <input
-                    id="shortcutPin"
-                    type="password"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    value={shortcutPin}
-                    onChange={(e) => setShortcutPin(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="shortcut-pin-modal-field">
-                  <label htmlFor="shortcutPinConfirm">{tPin('bestaetigen')}</label>
-                  <input
-                    id="shortcutPinConfirm"
-                    type="password"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    value={shortcutPinConfirm}
-                    onChange={(e) => setShortcutPinConfirm(e.target.value)}
-                    required
-                  />
-                </div>
-                {shortcutPinError && (
-                  <div className="shortcut-pin-modal-message">{shortcutPinError}</div>
-                )}
-                <div className="shortcut-pin-modal-actions">
-                  <button
-                    type="button"
-                    className="shortcut-pin-modal-cancel"
-                    onClick={() => setShortcutPinModalOpen(false)}
-                  >
-                    {tA('abbrechen')}
-                  </button>
-                  <button type="submit" className="shortcut-pin-modal-submit" disabled={savingShortcutPin}>
-                    {savingShortcutPin ? tA('speichernLaeuft') : t('pinSetzenUndLaden')}
-                  </button>
-                </div>
-              </form>
             </div>
           </div>
         </div>
