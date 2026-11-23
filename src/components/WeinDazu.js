@@ -28,7 +28,8 @@ import './WeinDazu.css';
  * löst nie einen KI-Aufruf aus. Nur ab Rolle edit und außerhalb von Freigabe-Seiten gibt
  * es „Passenden Wein finden“ bzw. „Neu einschätzen“ (Callable generateWeinprofile).
  *
- * `icons`: `{ rot, weiss }` aus den Button-Icons (`weinRot`, `weinWeiss`), leer = eingebautes Glas.
+ * `icons`: `{ rot, weiss, keinStil }` aus den Button-Icons (`weinRot`, `weinWeiss`, `weinKeinStil` für
+ * „Hier lieber Bier oder Wasser“), leer = eingebautes Glas.
  * Das Sheet schließt mobil nur per Wischen nach unten am Griff (Desktop: Hintergrund, Escape).
  * Die Rebsorten-Beispiele folgen der Kulinarik des Rezepts (kulinarik.js), der Stil nicht.
  * Mit der Berechtigung „weinprofilEinblick“ (Funktionen nach Berechtigung, `currentUser`) steht
@@ -178,7 +179,7 @@ function WeinDazuSheet({
           {empfehlung.status === STATUS_KEIN_STIL ? (
             <div className="wein-dazu-stil">
               <div className="wein-dazu-stil-kopf">
-                <span className="wein-dazu-stil-glas"><WeinGlas groesse={40} /></span>
+                <span className="wein-dazu-stil-glas"><WeinSymbol stil={null} icons={icons} groesse={40} /></span>
                 <p className="wein-dazu-stil-name">{t('keinStil')}</p>
               </div>
               <Gruende regelIds={empfehlung.regelIds} mitQuellen={false} />

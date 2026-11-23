@@ -71,6 +71,24 @@ describe('Icon Wichteln: Teilnehmer bearbeiten', () => {
   });
 });
 
+describe('Icons „Wein dazu“ (Weinbegleitung)', () => {
+  test.each(['weinRot', 'weinWeiss', 'weinKeinStil'])(
+    '%s ist einrichtbar, mit Dunkelmodus-Variante; leer = eingebautes Glas',
+    (key) => {
+      expect(DEFAULT_BUTTON_ICONS[key]).toBe('');
+      expect(DEFAULT_BUTTON_ICONS[`${key}Dark`]).toBe('');
+      expect(mergeButtonIconRowDefs().find((r) => r.key === key)).toMatchObject({ darkKey: `${key}Dark` });
+      const group = getDefaultButtonIconGroups().groups.find((g) => g.id === 'g-rezept-details');
+      expect(group.rowKeys.map((r) => r.key)).toContain(key);
+    }
+  );
+
+  test('das Icon für „Hier lieber Bier oder Wasser“ heißt in der Verwaltung so', () => {
+    expect(mergeButtonIconRowDefs().find((r) => r.key === 'weinKeinStil').label)
+      .toBe('Wein dazu: Bier oder Wasser (leer = Glas)');
+  });
+});
+
 describe('Standard-Symbole statt Text (Tech-Check P10)', () => {
   // Text bleibt nur, wo die Farbe vom Hintergrund abhängt: Schließen über Fotos, farbige
   // Wisch-Hinweise im Tagesmenü, Kachel-Menü je nach Helligkeit der Kachel

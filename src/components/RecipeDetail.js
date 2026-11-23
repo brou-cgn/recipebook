@@ -289,7 +289,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const cookingAddRecipeIcon = getEffectiveIcon(allButtonIcons, 'cookingAddRecipe', isDarkMode) || defaultIcon('potPlus', isDarkMode);
   const weinRotIcon = getEffectiveIcon(allButtonIcons, 'weinRot', isDarkMode);
   const weinWeissIcon = getEffectiveIcon(allButtonIcons, 'weinWeiss', isDarkMode);
-  const weinIcons = useMemo(() => ({ rot: weinRotIcon, weiss: weinWeissIcon }), [weinRotIcon, weinWeissIcon]);
+  const weinKeinStilIcon = getEffectiveIcon(allButtonIcons, 'weinKeinStil', isDarkMode);
+  const weinIcons = useMemo(
+    () => ({ rot: weinRotIcon, weiss: weinWeissIcon, keinStil: weinKeinStilIcon }),
+    [weinRotIcon, weinWeissIcon, weinKeinStilIcon]
+  );
   const ingredientMatchFromModalRef = useRef(false);
   const [alarmSoundKey] = useState(() => getAlarmSoundPreference());
   const [openIngredientInfoIndex, setOpenIngredientInfoIndex] = useState(null);
