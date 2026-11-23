@@ -3,6 +3,8 @@ import './FollowButton.css';
 import { useFollow } from '../contexts/FollowContext';
 import { defaultIcon } from '../utils/defaultButtonIcons';
 import { isBase64Image } from '../utils/imageUtils';
+import { useTexte } from '../contexts/SpracheContext';
+import netzwerkTexte from '../i18n/texte/netzwerk';
 
 /**
  * Folgen-Button (Rezeptdetail, Kochtagebuch).
@@ -16,8 +18,10 @@ import { isBase64Image } from '../utils/imageUtils';
  */
 function FollowButton({ userId, name, variant = 'tile', icon }) {
   const { enabled, userId: me, statusOf, request } = useFollow();
+  // Beschriftung in der geltenden Sprache (Mehrsprachigkeit PR 6s); der Hook steht vor dem frühen Ausstieg
+  const t = useTexte(netzwerkTexte);
   if (!enabled || !userId || userId === me || statusOf(userId)) return null;
-  const label = `${name} folgen`;
+  const label = t('nameFolgen', { name });
   const iconValue = icon || defaultIcon('follow');
   return (
     <button

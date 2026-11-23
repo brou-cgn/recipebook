@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createElement } from 'react';
-import { ergebnisText, erstelleT, findeText, fuelleText } from './texte';
+import { ergebnisText, erkannterText, erstelleT, findeText, fuelleText } from './texte';
 import { SPRACH_IDS, STANDARD_SPRACHE } from './sprachen';
 
 const NBSP = '\u00a0';
@@ -187,5 +187,17 @@ describe('ergebnisText (Ergebnisse aus Hilfsfunktionen, PR 6l)', () => {
   it('zeigt ohne Schlüssel die mitgelieferte Meldung, ohne Ergebnis einen leeren Text', () => {
     expect(ergebnisText({ success: false, message: 'Wie geliefert' }, t)).toBe('Wie geliefert');
     expect(ergebnisText(null, t)).toBe('');
+  });
+});
+
+describe('erkannterText (Mehrsprachigkeit PR 6s)', () => {
+  const woerterbuch = {
+    de: { limit: 'Tageslimit erreicht ({anzahl}/{anzahl}).' },
+    en: { limit: 'Daily limit reached ({anzahl}/{anzahl}).' },
+  };
+  it('übersetzt einen bekannten deutschen Text mit seinen Werten, Unbekanntes bleibt', () => {
+    const tEn = erstelleT(woerterbuch, 'en');
+    expect(erkannterText(woerterbuch, 'Tageslimit erreicht (20/20).', ['limit'], tEn)).toBe('Daily limit reached (20/20).');
+    expect(erkannterText(woerterbuch, 'Quota exceeded', ['limit'], tEn)).toBe('Quota exceeded');
   });
 });

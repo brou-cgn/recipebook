@@ -1,0 +1,212 @@
+/**
+ * Texte des Netzwerks (Vorhaben Follow): Seite „Mein Netzwerk“ (src/components/NetworkPage.js), Profil eines
+ * Mitglieds (MemberProfilePage.js), Folgen-Knopf (FollowButton.js), Hinweis nach einer Anfrage
+ * (src/contexts/FollowContext.js) und der Satz unter Rezepten aus „Für dich entdeckt“ („Anna hat das gekocht ·
+ * gestern“, src/utils/fuerDichAttribution.js). Vorhaben Mehrsprachigkeit PR 6s. Aufbau und Regeln:
+ * src/i18n/texte.js.
+ *
+ * Der Hinweis „Was wird sichtbar?“ (info…) muss mit dem Datenschutz-Entwurf docs/vorhaben/follow-datenschutz.md
+ * übereinstimmen; Englisch und Französisch sind Übersetzungen davon und bei einer Änderung mitzuziehen.
+ */
+// Geschütztes Leerzeichen: im Französischen vor : ? ! ; und innerhalb von « ».
+const NBSP = '\u00a0';
+
+/**
+ * Deutsche Meldungen der Cloud Functions requestFollow und respondFollow (functions/follow.js), die das
+ * Netzwerk und der Hinweis nach einer Anfrage zeigen. Erkannt über erkannterText; ein Test gleicht sie mit dem
+ * Code der Functions ab.
+ */
+export const FOLGEN_MELDUNGEN = Object.freeze([
+  'folgenAnmelden',
+  'folgenGaeste',
+  'folgenUngueltigePerson',
+  'folgenSelbst',
+  'folgenNichtFreigeschaltet',
+  'folgenNichtErreichbar',
+  'folgenGaesteAntworten',
+  'folgenUngueltigeAktion',
+  'folgenAnfrageWeg',
+  'folgenNichtAnnehmbar',
+  'folgenBeantwortet',
+  'folgenTageslimit',
+]);
+
+export default {
+  de: {
+    // Mein Netzwerk (NetworkPage.js)
+    anfragen: 'Anfragen',
+    ichFolge: 'Ich folge',
+    follower: 'Follower',
+    keineAnfragen: 'Keine offenen Anfragen.',
+    folgstNiemandem: 'Du folgst noch niemandem.',
+    dirFolgtNiemand: 'Dir folgt noch niemand.',
+    fehlerLaden: 'Das Netzwerk konnte nicht geladen werden.',
+    fehlerAktion: 'Die Aktion ist fehlgeschlagen.',
+    annehmen: 'Annehmen',
+    ablehnen: 'Ablehnen',
+    blockieren: 'Blockieren',
+    angefragt: 'Angefragt',
+    blockiert: 'Blockiert',
+    freigeben: 'Freigeben',
+    wasWirdSichtbar: 'Was wird sichtbar?',
+    infoAnnehmen: 'Mit dem Annehmen zeigt die App dieser Person in „Für dich entdeckt“ Rezepte, die du gekocht oder angelegt hast, mit deinem Vornamen und einer groben Zeitangabe („Anna hat das gekocht · gestern“).',
+    infoRueckwirkend: 'Rückwirkend: Es zählen auch frühere Einträge aus dem Zeitfenster der Rubrik (derzeit bis zu 30 Tage).',
+    infoEintraege: 'Verwendet werden deine „Gekocht am“-Einträge und deine angelegten Rezepte. Einzelne Einträge lassen sich nicht ausnehmen.',
+    infoRueckschluesse: 'Daraus lassen sich Rückschlüsse auf deine Ernährungsgewohnheiten ziehen.',
+    infoEntfernen: 'Du kannst Follower jederzeit entfernen. Bereits angezeigte Hinweise lassen sich nicht zurückholen.',
+    // Profil (MemberProfilePage.js)
+    folgen: 'Folgen',
+    statusAngefragt: 'Angefragt. Du siehst die Aktivität, sobald die Person zustimmt.',
+    statusFolgst: 'Du folgst dieser Person.',
+    folgstNicht: 'Du folgst dieser Person nicht.',
+    anfrageZurueckziehen: 'Anfrage zurückziehen',
+    nichtMehrFolgen: 'Nicht mehr folgen',
+    rezepte: 'Rezepte',
+    keineRezepte: 'Keine Rezepte, die du sehen kannst.',
+    // Folgen-Knopf und Hinweis nach einer Anfrage
+    nameFolgen: '{name} folgen',
+    anfrageGesendet: 'Anfrage an {name} gesendet',
+    anfrageFehler: 'Die Anfrage konnte nicht gesendet werden.',
+    // Satz unter Rezepten aus „Für dich entdeckt“ (fuerDichAttribution.js); Name, Verb, Zeit
+    einMitglied: 'Ein Mitglied',
+    hatGekocht: { one: 'hat das gekocht', other: 'haben das gekocht' },
+    hatAngelegt: { one: 'hat es angelegt', other: 'haben es angelegt' },
+    und: ' und ',
+    heute: 'heute',
+    gestern: 'gestern',
+    dieseWoche: 'diese Woche',
+    letzteWoche: 'letzte Woche',
+    vorWochen: { one: 'vor {anzahl} Woche', other: 'vor {anzahl} Wochen' },
+    // Meldungen der Cloud Functions (FOLGEN_MELDUNGEN), genau wie dort
+    folgenAnmelden: 'Du musst angemeldet sein.',
+    folgenGaeste: 'Gäste können niemandem folgen.',
+    folgenUngueltigePerson: 'Ungültige Person.',
+    folgenSelbst: 'Du kannst dir nicht selbst folgen.',
+    folgenNichtFreigeschaltet: 'Follow ist für dich nicht freigeschaltet.',
+    folgenNichtErreichbar: 'Diese Person ist nicht erreichbar.',
+    folgenGaesteAntworten: 'Gäste können Anfragen nicht beantworten.',
+    folgenUngueltigeAktion: 'Ungültige Aktion.',
+    folgenAnfrageWeg: 'Diese Anfrage gibt es nicht mehr.',
+    folgenNichtAnnehmbar: 'Diese Anfrage lässt sich nicht annehmen.',
+    folgenBeantwortet: 'Diese Anfrage ist bereits beantwortet.',
+    folgenTageslimit: 'Das Tageslimit für Follow-Anfragen ist erreicht. Bitte versuche es morgen erneut.',
+  },
+  en: {
+    // Mein Netzwerk (NetworkPage.js)
+    anfragen: 'Requests',
+    ichFolge: 'Following',
+    follower: 'Followers',
+    keineAnfragen: 'No open requests.',
+    folgstNiemandem: 'You’re not following anyone yet.',
+    dirFolgtNiemand: 'Nobody is following you yet.',
+    fehlerLaden: 'Couldn’t load your network.',
+    fehlerAktion: 'The action failed.',
+    annehmen: 'Accept',
+    ablehnen: 'Decline',
+    blockieren: 'Block',
+    angefragt: 'Requested',
+    blockiert: 'Blocked',
+    freigeben: 'Unblock',
+    wasWirdSichtbar: 'What becomes visible?',
+    infoAnnehmen: 'If you accept, the app shows this person the recipes you cooked or created in “Discovered for you”, with your first name and a rough time (“Anna cooked this · yesterday”).',
+    infoRueckwirkend: 'Retroactive: earlier entries within the section’s time window count too (currently up to 30 days).',
+    infoEintraege: 'Your “Cooked on” entries and the recipes you created are used. Individual entries can’t be excluded.',
+    infoRueckschluesse: 'This can reveal things about your eating habits.',
+    infoEntfernen: 'You can remove followers at any time. Notes that have already been shown can’t be taken back.',
+    // Profil (MemberProfilePage.js)
+    folgen: 'Follow',
+    statusAngefragt: 'Requested. You’ll see their activity once they accept.',
+    statusFolgst: 'You’re following this person.',
+    folgstNicht: 'You’re not following this person.',
+    anfrageZurueckziehen: 'Withdraw request',
+    nichtMehrFolgen: 'Unfollow',
+    rezepte: 'Recipes',
+    keineRezepte: 'No recipes you can see.',
+    // Folgen-Knopf und Hinweis nach einer Anfrage
+    nameFolgen: 'Follow {name}',
+    anfrageGesendet: 'Request sent to {name}',
+    anfrageFehler: 'The request couldn’t be sent.',
+    // Satz unter Rezepten aus „Für dich entdeckt“ (fuerDichAttribution.js); Name, Verb, Zeit
+    einMitglied: 'A member',
+    hatGekocht: { one: 'cooked this', other: 'cooked this' },
+    hatAngelegt: { one: 'added it', other: 'added it' },
+    und: ' and ',
+    heute: 'today',
+    gestern: 'yesterday',
+    dieseWoche: 'this week',
+    letzteWoche: 'last week',
+    vorWochen: { one: '{anzahl} week ago', other: '{anzahl} weeks ago' },
+    // Meldungen der Cloud Functions (FOLGEN_MELDUNGEN), genau wie dort
+    folgenAnmelden: 'You need to be signed in.',
+    folgenGaeste: 'Guests can’t follow anyone.',
+    folgenUngueltigePerson: 'Invalid person.',
+    folgenSelbst: 'You can’t follow yourself.',
+    folgenNichtFreigeschaltet: 'Following isn’t enabled for you.',
+    folgenNichtErreichbar: 'This person can’t be reached.',
+    folgenGaesteAntworten: 'Guests can’t answer requests.',
+    folgenUngueltigeAktion: 'Invalid action.',
+    folgenAnfrageWeg: 'This request no longer exists.',
+    folgenNichtAnnehmbar: 'This request can’t be accepted.',
+    folgenBeantwortet: 'This request has already been answered.',
+    folgenTageslimit: 'The daily limit for follow requests has been reached. Please try again tomorrow.',
+  },
+  fr: {
+    // Mein Netzwerk (NetworkPage.js)
+    anfragen: 'Demandes',
+    ichFolge: 'Abonnements',
+    follower: 'Abonnés',
+    keineAnfragen: 'Aucune demande en attente.',
+    folgstNiemandem: 'Tu ne suis encore personne.',
+    dirFolgtNiemand: 'Personne ne te suit encore.',
+    fehlerLaden: 'Impossible de charger ton réseau.',
+    fehlerAktion: 'L’action a échoué.',
+    annehmen: 'Accepter',
+    ablehnen: 'Refuser',
+    blockieren: 'Bloquer',
+    angefragt: 'Demandé',
+    blockiert: 'Bloqués',
+    freigeben: 'Débloquer',
+    wasWirdSichtbar: `Qu’est-ce qui devient visible${NBSP}?`,
+    infoAnnehmen: `En acceptant, l’application montre à cette personne, dans «${NBSP}Découvert pour toi${NBSP}», les recettes que tu as cuisinées ou créées, avec ton prénom et une indication de temps approximative («${NBSP}Anna l’a cuisiné · hier${NBSP}»).`,
+    infoRueckwirkend: `Rétroactif${NBSP}: les entrées antérieures dans la fenêtre de temps de la rubrique comptent aussi (actuellement jusqu’à 30 jours).`,
+    infoEintraege: `Tes entrées «${NBSP}Cuisinée le${NBSP}» et les recettes que tu as créées sont utilisées. Il n’est pas possible d’exclure des entrées individuelles.`,
+    infoRueckschluesse: 'Cela peut permettre de tirer des conclusions sur tes habitudes alimentaires.',
+    infoEntfernen: 'Tu peux retirer des abonnés à tout moment. Les indications déjà affichées ne peuvent pas être retirées.',
+    // Profil (MemberProfilePage.js)
+    folgen: 'Suivre',
+    statusAngefragt: 'Demandé. Tu verras l’activité dès que la personne aura accepté.',
+    statusFolgst: 'Tu suis cette personne.',
+    folgstNicht: 'Tu ne suis pas cette personne.',
+    anfrageZurueckziehen: 'Retirer la demande',
+    nichtMehrFolgen: 'Ne plus suivre',
+    rezepte: 'Recettes',
+    keineRezepte: 'Aucune recette que tu peux voir.',
+    // Folgen-Knopf und Hinweis nach einer Anfrage
+    nameFolgen: 'Suivre {name}',
+    anfrageGesendet: 'Demande envoyée à {name}',
+    anfrageFehler: 'La demande n’a pas pu être envoyée.',
+    // Satz unter Rezepten aus „Für dich entdeckt“ (fuerDichAttribution.js); Name, Verb, Zeit
+    einMitglied: 'Un membre',
+    hatGekocht: { one: 'l’a cuisiné', other: 'l’ont cuisiné' },
+    hatAngelegt: { one: 'l’a ajouté', other: 'l’ont ajouté' },
+    und: ' et ',
+    heute: 'aujourd’hui',
+    gestern: 'hier',
+    dieseWoche: 'cette semaine',
+    letzteWoche: 'la semaine dernière',
+    vorWochen: { one: 'il y a {anzahl} semaine', other: 'il y a {anzahl} semaines' },
+    // Meldungen der Cloud Functions (FOLGEN_MELDUNGEN), genau wie dort
+    folgenAnmelden: 'Tu dois te connecter.',
+    folgenGaeste: 'Les invités ne peuvent suivre personne.',
+    folgenUngueltigePerson: 'Personne non valide.',
+    folgenSelbst: 'Tu ne peux pas te suivre toi-même.',
+    folgenNichtFreigeschaltet: 'Le suivi n’est pas activé pour toi.',
+    folgenNichtErreichbar: 'Cette personne n’est pas joignable.',
+    folgenGaesteAntworten: 'Les invités ne peuvent pas répondre aux demandes.',
+    folgenUngueltigeAktion: 'Action non valide.',
+    folgenAnfrageWeg: 'Cette demande n’existe plus.',
+    folgenNichtAnnehmbar: 'Cette demande ne peut pas être acceptée.',
+    folgenBeantwortet: 'Cette demande a déjà reçu une réponse.',
+    folgenTageslimit: 'La limite quotidienne de demandes de suivi est atteinte. Réessaie demain.',
+  },
+};

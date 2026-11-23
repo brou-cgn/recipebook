@@ -1,4 +1,6 @@
 import { describeActors, describeActorSegments, formatActionDay } from './fuerDichAttribution';
+import { erstelleT } from '../i18n/texte';
+import netzwerkTexte from '../i18n/texte/netzwerk';
 
 const NOW = new Date(2026, 9, 19, 12, 0, 0); // 19.10.2026
 const names = { a: 'Anna', b: 'Ben', c: 'Cara' };
@@ -58,5 +60,29 @@ describe('describeActorSegments', () => {
 
   test('ohne Einträge leer', () => {
     expect(describeActorSegments([], nameOf, NOW)).toEqual([]);
+  });
+});
+
+describe('Satz in anderer Sprache (Mehrsprachigkeit PR 6s)', () => {
+  const tEn = erstelleT(netzwerkTexte, 'en');
+  const tFr = erstelleT(netzwerkTexte, 'fr');
+
+  test('Englisch: Namen, Verb und Zeit', () => {
+    expect(describeActors([
+      { userId: 'a', kind: 'cooked', day: '2026-10-14' },
+      { userId: 'b', kind: 'cooked', day: '2026-10-18' },
+    ], nameOf, NOW, tEn)).toBe('Anna and Ben cooked this · yesterday');
+    expect(describeActors([{ userId: 'zz', kind: 'created', day: '2026-09-28' }], nameOf, NOW, tEn))
+      .toBe('A member added it · 3 weeks ago');
+  });
+
+  test('Französisch: Einzahl und Mehrzahl des Verbs', () => {
+    expect(describeActors([{ userId: 'a', kind: 'cooked', day: '2026-10-19' }], nameOf, NOW, tFr))
+      .toBe('Anna l’a cuisiné · aujourd’hui');
+    expect(describeActors([
+      { userId: 'a', kind: 'created', day: '2026-10-08' },
+      { userId: 'c', kind: 'created', day: '2026-10-08' },
+    ], nameOf, NOW, tFr)).toBe('Anna et Cara l’ont ajouté · la semaine dernière');
+    expect(formatActionDay('2026-10-14', NOW, tFr)).toBe('cette semaine');
   });
 });

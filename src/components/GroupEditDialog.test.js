@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import GroupEditDialog from './GroupEditDialog';
+import { SpracheProvider } from '../contexts/SpracheContext';
 
 // Mock groupFirestore so LIST_KIND_OPTIONS is available without Firebase
 jest.mock('../utils/groupFirestore', () => ({
@@ -262,5 +263,26 @@ describe('GroupEditDialog', () => {
 
       expect(screen.getByLabelText('Bestehende Liste auswählen')).toHaveValue('list1');
     });
+  });
+});
+
+describe('GroupEditDialog in anderer Sprache (Mehrsprachigkeit PR 6s)', () => {
+  it('Englisch: Titel, Ziel-Liste mit „(this list)“, Knöpfe', () => {
+    render(
+      <SpracheProvider profilSprache="en" speicher={null}>
+        <GroupEditDialog
+          group={mockInteractiveGroup}
+          onSave={jest.fn()}
+          onCancel={jest.fn()}
+          privateLists={[...mockPrivateLists, { id: 'grp2', name: 'Interaktiv', type: 'private', memberIds: ['user1'] }]}
+        />
+      </SpracheProvider>
+    );
+    expect(screen.getByRole('heading', { name: 'Edit list' })).toBeInTheDocument();
+    expect(screen.getByLabelText('List name *')).toHaveValue('Interaktiv');
+    expect(screen.getByRole('option', { name: 'Interactive list' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Interaktiv (this list)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
   });
 });

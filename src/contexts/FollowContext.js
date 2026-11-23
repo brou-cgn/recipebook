@@ -1,6 +1,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { subscribeMyFollows, requestToFollow, stopFollowing } from '../utils/followFirestore';
 import '../components/UndoSnackbar.css';
+import { useTexte } from './SpracheContext';
+import { erkannterText } from '../i18n/texte';
+import netzwerkTexte, { FOLGEN_MELDUNGEN } from '../i18n/texte/netzwerk';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 // Eigene ausgehende Follows (Vorhaben docs/vorhaben/follow.md, PR 4). Ohne Provider
 // oder ohne Freischaltung ist `enabled` false: Folgen-Buttons rendern dann nichts.
@@ -14,6 +18,9 @@ export function FollowProvider({ userId, enabled, onOpenProfile, children }) {
   const [statuses, setStatuses] = useState({});
   const [notice, setNotice] = useState(null);
   const timerRef = useRef(null);
+  // Hinweise nach einer Anfrage in der geltenden Sprache (Mehrsprachigkeit PR 6s)
+  const t = useTexte(netzwerkTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
 
   useEffect(() => {
     if (!active) {
@@ -35,7 +42,7 @@ export function FollowProvider({ userId, enabled, onOpenProfile, children }) {
     try {
       await requestToFollow(followeeId);
       showNotice({
-        message: `Anfrage an ${name} gesendet`,
+        message: t('anfrageGesendet', { name }),
         undo: async () => {
           setNotice(null);
           try {
@@ -47,9 +54,12 @@ export function FollowProvider({ userId, enabled, onOpenProfile, children }) {
       });
     } catch (err) {
       console.error('Follow-Anfrage fehlgeschlagen:', err);
-      showNotice({ message: err?.message || 'Die Anfrage konnte nicht gesendet werden.' });
+      // Deutsche Meldung der Function über ihren Schlüssel (FOLGEN_MELDUNGEN), sonst, wie sie kommt
+      showNotice({
+        message: err?.message ? erkannterText(netzwerkTexte, err.message, FOLGEN_MELDUNGEN, t) : t('anfrageFehler'),
+      });
     }
-  }, [userId, showNotice]);
+  }, [userId, showNotice, t]);
 
   const value = useMemo(() => ({
     enabled: active,
@@ -67,7 +77,7 @@ export function FollowProvider({ userId, enabled, onOpenProfile, children }) {
           <span className="undo-snackbar-message">{notice.message}</span>
           {notice.undo && (
             <button type="button" className="undo-snackbar-action" onClick={notice.undo}>
-              Rückgängig
+              {tAllgemein('rueckgaengig')}
             </button>
           )}
         </div>

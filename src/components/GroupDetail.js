@@ -9,7 +9,8 @@ import './GroupDetail.css';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getSortSettings, DEFAULT_TRENDING_DAYS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import { isWaterIngredient, scaleIngredient } from '../utils/ingredientUtils';
-import { sendGroupInvitation, invitationStored, LIST_KIND_OPTIONS } from '../utils/groupFirestore';
+import { sendGroupInvitation, invitationStored } from '../utils/groupFirestore';
+import { listenArtText } from '../utils/listenArt';
 import { getCallableErrorDetails } from '../utils/callableErrors';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getRecentRecipeViewCounts } from '../utils/recipeCallsFirestore';
@@ -25,8 +26,15 @@ import { UnterseiteKopf } from './Unterseite';
 import SortCarousel from './SortCarousel';
 import useModalScrollLock from '../hooks/useModalScrollLock';
 import useFadeOutClose from '../hooks/useFadeOutClose';
-import { useSprache } from '../contexts/SpracheContext';
+import { useRezeptTitel, useSprache, useTexte } from '../contexts/SpracheContext';
 import { titelFassungen } from '../i18n/rezeptTitel';
+import { erkannterText } from '../i18n/texte';
+import gruppenTexte, { EINLADUNG_MELDUNGEN } from '../i18n/texte/gruppen';
+import kochbuchTexte from '../i18n/texte/kochbuch';
+import rezeptansichtTexte from '../i18n/texte/rezeptansicht';
+import chefkochTexte from '../i18n/texte/chefkochUndMehr';
+import allgemeinTexte from '../i18n/texte/allgemein';
+import useListenName from '../hooks/useListenName';
 
 const DEFAULT_PORTIONS = 4;
 const TAB_RECIPES = 'rezepte';
@@ -85,6 +93,14 @@ function GroupDetail({
 }) {
   // Mehrsprachigkeit PR 3: die Suche findet Original und Übersetzung des Titels
   const { inhalteUebersetzen } = useSprache();
+  // Texte der Liste (Mehrsprachigkeit PR 6s): eigene, dazu Knöpfe aus Kochbuch und Rezeptansicht
+  const t = useTexte(gruppenTexte);
+  const tKochbuch = useTexte(kochbuchTexte);
+  const tAnsicht = useTexte(rezeptansichtTexte);
+  const tChefkoch = useTexte(chefkochTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const listenName = useListenName();
+  const zeigeTitel = useRezeptTitel();
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState(TAB_RECIPES);
   const handleTabChange = (tab) => {
@@ -311,7 +327,9 @@ function GroupDetail({
   const isPublic = group.type === 'public';
   const isMember = (group.memberIds || []).includes(currentUser?.id);
 
-  const addRecipeLabel = isPublic ? 'Rezept hinzufügen' : 'Privates Rezept hinzufügen';
+  const addRecipeLabel = tKochbuch(isPublic ? 'rezeptHinzufuegen' : 'privatesRezeptHinzufuegen');
+  // Name der Liste: Systemnamen („Öffentlich“, „Für dich entdeckt“) übersetzt, eigene Namen, wie sie sind
+  const gruppenName = listenName(group);
   const addRecipeIcon = getEffectiveIcon(allButtonIcons, isPublic ? 'addRecipe' : 'addPrivateRecipe', isDarkMode);
   const editGroupIcon = getEffectiveIcon(allButtonIcons, 'editRecipe', isDarkMode);
   const deleteGroupIcon = getEffectiveIcon(allButtonIcons, 'deleteRecipe', isDarkMode);
@@ -354,7 +372,7 @@ function GroupDetail({
   };
 
   const handleLeaveGroup = async () => {
-    if (!window.confirm(`Liste "${group.name}" wirklich verlassen?`)) return;
+    if (!window.confirm(t('wirklichVerlassen', { name: gruppenName }))) return;
     const updatedIds = (group.memberIds || []).filter((id) => id !== currentUser?.id);
     const updatedRoles = { ...(group.memberRoles || {}) };
     delete updatedRoles[currentUser?.id];
@@ -387,15 +405,17 @@ function GroupDetail({
     const hasEmail = emailTrimmed.length > 0;
 
     if (!hasSelections && !hasEmail) {
-      setAddMemberError('Bitte wähle mindestens ein Mitglied aus oder gib eine E-Mail-Adresse ein.');
+      setAddMemberError(t('fehlerMitgliedWaehlen'));
       return;
     }
 
     if (hasEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
-      setAddMemberError('Bitte gib eine gültige E-Mail-Adresse ein.');
+      setAddMemberError(t('fehlerEmail'));
       return;
     }
 
+    // Für die Meldung danach: so viele Mitglieder kommen dazu (Einzahl oder Mehrzahl)
+    const anzahlNeu = addMemberIds.length;
     setSaving(true);
     try {
       if (hasSelections) {
@@ -406,7 +426,7 @@ function GroupDetail({
         try {
           await onUpdateGroup(group.id, { memberIds: updatedMemberIds });
         } catch (err) {
-          setAddMemberError('Fehler beim Hinzufügen. Bitte erneut versuchen.');
+          setAddMemberError(t('fehlerHinzufuegen'));
           return;
         }
         setAddMemberIds([]);
@@ -414,7 +434,7 @@ function GroupDetail({
 
       if (!hasEmail) {
         setShowAddMember(false);
-        setAddMemberSuccess('Mitglied(er) erfolgreich hinzugefügt.');
+        setAddMemberSuccess(t('hinzugefuegt', { anzahl: anzahlNeu }));
         return;
       }
 
@@ -424,20 +444,21 @@ function GroupDetail({
         await sendGroupInvitation(group.id, emailTrimmed);
         setInviteEmail('');
         setShowAddMember(false);
-        setAddMemberSuccess(`Einladung an ${emailTrimmed} wurde gespeichert. Falls die Adresse noch nicht eingeladen oder registriert ist, wird eine Einladungs-E-Mail versendet.`);
+        setAddMemberSuccess(t('einladungGespeichert', { email: emailTrimmed }));
       } catch (inviteErr) {
         console.error('Error sending invitation:', inviteErr);
         if (invitationStored(inviteErr)) {
           setInviteEmail('');
           setShowAddMember(false);
-          setAddMemberSuccess(`Einladung an ${emailTrimmed} wurde gespeichert, aber die Einladungs-E-Mail konnte nicht versendet werden.`);
+          setAddMemberSuccess(t('einladungOhneMail', { email: emailTrimmed }));
         } else {
           // Nicht gespeichert: Feld bleibt offen, damit man es erneut versuchen kann.
-          if (hasSelections) setAddMemberSuccess('Mitglied(er) erfolgreich hinzugefügt.');
+          if (hasSelections) setAddMemberSuccess(t('hinzugefuegt', { anzahl: anzahlNeu }));
           const { code, message } = getCallableErrorDetails(inviteErr);
+          // Deutsche Meldung der Function über ihren Schlüssel (EINLADUNG_MELDUNGEN), sonst, wie sie kommt
           setAddMemberError(['permission-denied', 'resource-exhausted'].includes(code) && message
-            ? `Die Einladung wurde nicht gespeichert: ${message}`
-            : 'Die Einladung wurde nicht gespeichert. Bitte erneut versuchen.');
+            ? t('einladungNichtGespeichertGrund', { grund: erkannterText(gruppenTexte, message, EINLADUNG_MELDUNGEN, t) })
+            : t('einladungNichtGespeichert'));
         }
       }
     } finally {
@@ -513,18 +534,18 @@ function GroupDetail({
     <div className="group-detail-container">
       <UnterseiteKopf
         onZurueck={onBack}
-        zurueckText={<>Meine Mise en Place</>}
+        zurueckText={tChefkoch('miseEnPlace')}
         aktionen={(
           <div className="group-header-actions">
             {groupRecipes.length > 0 && (
               <button
                 className="shopping-list-trigger-button"
                 onClick={handleShoppingListClick}
-                title="Einkaufsliste anzeigen"
-                aria-label="Einkaufsliste öffnen"
+                title={tAnsicht('einkaufslisteAnzeigen')}
+                aria-label={tAnsicht('einkaufslisteOeffnen')}
               >
                 {isBase64Image(shoppingListIcon) ? (
-                  <img src={shoppingListIcon} alt="Einkaufsliste" className="shopping-list-icon-img" />
+                  <img src={shoppingListIcon} alt={tAnsicht('einkaufsliste')} className="shopping-list-icon-img" />
                 ) : (
                   shoppingListIcon
                 )}
@@ -534,11 +555,11 @@ function GroupDetail({
               <button
                 className="list-settings-trigger-button"
                 onClick={() => handleTabChange(activeTab === TAB_SETTINGS ? TAB_RECIPES : TAB_SETTINGS)}
-                title="Einstellungen anzeigen"
-                aria-label="Einstellungen öffnen"
+                title={t('einstellungenAnzeigen')}
+                aria-label={t('einstellungenOeffnen')}
               >
                 {isBase64Image(activeListSettingsIcon) ? (
-                  <img src={activeListSettingsIcon} alt="Einstellungen" className="list-settings-icon-img" />
+                  <img src={activeListSettingsIcon} alt={t('einstellungen')} className="list-settings-icon-img" />
                 ) : (
                   activeListSettingsIcon
                 )}
@@ -547,9 +568,9 @@ function GroupDetail({
           </div>
         )}
       >
-        <h2>{group.name}</h2>
+        <h2>{gruppenName}</h2>
         {isPublic && (
-          <span className="group-type-badge public">Öffentlich</span>
+          <span className="group-type-badge public">{t('oeffentlich')}</span>
         )}
       </UnterseiteKopf>
 
@@ -565,11 +586,11 @@ function GroupDetail({
               onMouseDown={() => setFilterPressed(true)}
               onMouseUp={() => setFilterPressed(false)}
               onMouseLeave={() => setFilterPressed(false)}
-              title="Weitere Filter"
-              aria-label="Weitere Filter"
+              title={tKochbuch('weitereFilter')}
+              aria-label={tKochbuch('weitereFilter')}
             >
               {isBase64Image(filterIcon) ? (
-                <img src={filterIcon} alt={hasActiveFilters ? 'Filter aktiv' : 'Filter'} className="button-icon-image" draggable="false" />
+                <img src={filterIcon} alt={tKochbuch(hasActiveFilters ? 'filterAktiv' : 'filter')} className="button-icon-image" draggable="false" />
               ) : (
                 filterIcon
               )}
@@ -603,9 +624,9 @@ function GroupDetail({
 
       {(isPublic || activeTab === TAB_RECIPES) && (
         <div className="group-detail-section group-recipes-section">
-          {isPublic && <h3>Rezepte ({groupRecipes.length})</h3>}
+          {isPublic && <h3>{t('rezepteAnzahl', { anzahl: groupRecipes.length })}</h3>}
           {sortedGroupRecipes.length === 0 ? (
-            <p className="group-empty-hint">Noch keine Rezepte in dieser Liste.</p>
+            <p className="group-empty-hint">{t('keineRezepte')}</p>
           ) : (
             <div className="recipe-grid group-recipe-grid">
               {sortedGroupRecipes.map((recipe) => (
@@ -632,25 +653,28 @@ function GroupDetail({
       {!isPublic && !isSystemList && activeTab === TAB_SETTINGS && (
         <>
           <div className="group-detail-section group-info-section">
-            <h3>Listeneinstellungen</h3>
+            <h3>{t('listeneinstellungen')}</h3>
             {typeof group.description === 'string' && group.description.trim() && (
               <p className="group-info-description">{group.description.trim()}</p>
             )}
             <dl className="group-info-list">
               <div className="group-info-row">
-                <dt>Typ</dt>
-                <dd>Privat</dd>
+                <dt>{t('typ')}</dt>
+                <dd>{t('privat')}</dd>
               </div>
               {group.listKind && (
                 <div className="group-info-row">
-                  <dt>Art</dt>
-                  <dd>{LIST_KIND_OPTIONS.find((o) => o.value === group.listKind)?.label ?? group.listKind}</dd>
+                  <dt>{t('artLabel')}</dt>
+                  <dd>{listenArtText(group.listKind, t)}</dd>
                 </div>
               )}
               {group.targetListId && (
                 <div className="group-info-row">
-                  <dt>Ziel-Liste</dt>
-                  <dd>{privateLists.find((l) => l.id === group.targetListId)?.name ?? group.targetListId}</dd>
+                  <dt>{t('zielListeLabel')}</dt>
+                  <dd>{(() => {
+                    const ziel = privateLists.find((l) => l.id === group.targetListId);
+                    return ziel ? listenName(ziel) : group.targetListId;
+                  })()}</dd>
                 </div>
               )}
             </dl>
@@ -658,16 +682,16 @@ function GroupDetail({
 
           <div className="group-detail-section">
             <div className="group-section-header">
-              <h3>Mitglieder ({(group.memberIds || []).length})</h3>
+              <h3>{t('mitgliederAnzahl', { anzahl: (group.memberIds || []).length })}</h3>
               {isOwner && (
                 <button
                   className="group-add-member-icon-btn"
                   onClick={() => { setShowAddMember((v) => !v); setAddMemberError(''); setAddMemberSuccess(''); setAddMemberIds([]); setInviteEmail(''); }}
-                  aria-label="Mitglied hinzufügen"
-                  title="Mitglied hinzufügen"
+                  aria-label={t('mitgliedHinzufuegen')}
+                  title={t('mitgliedHinzufuegen')}
                 >
                   {isBase64Image(addMemberIcon) ? (
-                    <img src={addMemberIcon} alt="Mitglied hinzufügen" className="button-icon-image" draggable="false" />
+                    <img src={addMemberIcon} alt={t('mitgliedHinzufuegen')} className="button-icon-image" draggable="false" />
                   ) : (
                     <span>{addMemberIcon}</span>
                   )}
@@ -681,7 +705,7 @@ function GroupDetail({
               <div className="group-add-member-panel">
                 {nonMembers.length > 0 && (
                   <div className="group-dialog-field">
-                    <label>Bestehende Nutzer</label>
+                    <label>{t('bestehendeNutzer')}</label>
                     <div className="group-add-member-list">
                       {nonMembers.map((user) => (
                         <label key={user.id} className="group-member-item">
@@ -699,14 +723,14 @@ function GroupDetail({
                   </div>
                 )}
                 <div className="group-dialog-field">
-                  <label htmlFor="invite-email">Einladung per E-Mail</label>
+                  <label htmlFor="invite-email">{t('einladungPerEmail')}</label>
                   <input
                     id="invite-email"
                     type="email"
                     className="group-invite-email-input"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="name@example.com"
+                    placeholder={t('emailPlatzhalter')}
                   />
                 </div>
                 {addMemberError && (
@@ -718,20 +742,20 @@ function GroupDetail({
                     onClick={() => { setShowAddMember(false); setAddMemberError(''); setAddMemberIds([]); setInviteEmail(''); }}
                     disabled={saving}
                   >
-                    Abbrechen
+                    {tAllgemein('abbrechen')}
                   </Button>
                   <Button
                     variant="primary"
                     onClick={handleAddMembers}
                     disabled={saving}
                   >
-                    {saving ? 'Speichern...' : 'Hinzufügen'}
+                    {saving ? t('speichernLaeuft') : tAllgemein('hinzufuegen')}
                   </Button>
                 </div>
               </div>
             )}
             {(group.memberIds || []).length === 0 ? (
-              <p className="group-empty-hint">Keine Mitglieder.</p>
+              <p className="group-empty-hint">{t('keineMitglieder')}</p>
             ) : (
               <ul className="group-member-list">
                 {(group.memberIds || []).map((userId) => (
@@ -739,7 +763,7 @@ function GroupDetail({
                     <span className="group-member-name">
                       {getMemberName(userId)}
                       {userId === group.ownerId && (
-                        <span className="group-owner-badge"> (Besitzer)</span>
+                        <span className="group-owner-badge">{' '}{t('besitzer')}</span>
                       )}
                     </span>
                     {isOwner && userId !== group.ownerId && (
@@ -747,9 +771,9 @@ function GroupDetail({
                         className="group-remove-btn"
                         onClick={() => handleRemoveMember(userId)}
                         disabled={saving}
-                        aria-label={`${getMemberName(userId)} entfernen`}
+                        aria-label={tAllgemein('nameEntfernen', { name: getMemberName(userId) })}
                       >
-                        Entfernen
+                        {t('entfernen')}
                       </button>
                     )}
                     {!isOwner && userId === currentUser?.id && (
@@ -757,9 +781,9 @@ function GroupDetail({
                         className="group-leave-btn"
                         onClick={handleLeaveGroup}
                         disabled={saving}
-                        aria-label="Liste verlassen"
+                        aria-label={t('listeVerlassen')}
                       >
-                        Austreten
+                        {t('austreten')}
                       </button>
                     )}
                   </li>
@@ -774,9 +798,9 @@ function GroupDetail({
                 className="group-edit-btn"
                 onClick={() => setShowEditDialog(true)}
                 disabled={saving}
-                aria-label="Liste bearbeiten"
+                aria-label={t('listeBearbeiten')}
               >
-                Liste bearbeiten
+                {t('listeBearbeiten')}
               </button>
             </div>
           )}
@@ -786,10 +810,10 @@ function GroupDetail({
       {isPublic && (
         <div className="group-detail-section">
           <div className="group-section-header">
-            <h3>Mitglieder ({(group.memberIds || []).length})</h3>
+            <h3>{t('mitgliederAnzahl', { anzahl: (group.memberIds || []).length })}</h3>
           </div>
           {(group.memberIds || []).length === 0 ? (
-            <p className="group-empty-hint">Keine Mitglieder.</p>
+            <p className="group-empty-hint">{t('keineMitglieder')}</p>
           ) : (
             <ul className="group-member-list">
               {(group.memberIds || []).map((userId) => (
@@ -797,7 +821,7 @@ function GroupDetail({
                   <span className="group-member-name">
                     {getMemberName(userId)}
                     {userId === group.ownerId && (
-                      <span className="group-owner-badge"> (Besitzer)</span>
+                      <span className="group-owner-badge">{' '}{t('besitzer')}</span>
                     )}
                   </span>
                 </li>
@@ -818,13 +842,13 @@ function GroupDetail({
             onMouseDown={() => setDeleteFabPressed(true)}
             onMouseUp={() => setDeleteFabPressed(false)}
             onMouseLeave={() => setDeleteFabPressed(false)}
-            title="Liste löschen"
-            aria-label="Liste löschen"
+            title={t('listeLoeschen')}
+            aria-label={t('listeLoeschen')}
             type="button"
             disabled={saving}
           >
             {isBase64Image(deleteGroupIcon) ? (
-              <img src={deleteGroupIcon} alt="Löschen" className="button-icon-image" draggable="false" />
+              <img src={deleteGroupIcon} alt={tAllgemein('loeschen')} className="button-icon-image" draggable="false" />
             ) : (
               deleteGroupIcon || <TrashIcon />
             )}
@@ -838,12 +862,12 @@ function GroupDetail({
             onMouseDown={() => setEditFabPressed(true)}
             onMouseUp={() => setEditFabPressed(false)}
             onMouseLeave={() => setEditFabPressed(false)}
-            title="Liste bearbeiten"
-            aria-label="Liste bearbeiten"
+            title={t('listeBearbeiten')}
+            aria-label={t('listeBearbeiten')}
             type="button"
           >
             {isBase64Image(editGroupIcon) ? (
-              <img src={editGroupIcon} alt="Bearbeiten" className="button-icon-image" draggable="false" />
+              <img src={editGroupIcon} alt={tAllgemein('bearbeiten')} className="button-icon-image" draggable="false" />
             ) : (
               editGroupIcon
             )}
@@ -852,8 +876,8 @@ function GroupDetail({
       )}
       {showDeleteConfirm && (
         <ConfirmDialog
-          title="Liste löschen"
-          message={`Liste "${group.name}" wirklich löschen?`}
+          title={t('listeLoeschen')}
+          message={t('wirklichLoeschen', { name: gruppenName })}
           onConfirm={handleDeleteConfirmed}
           onCancel={() => setShowDeleteConfirm(false)}
         />
@@ -872,15 +896,15 @@ function GroupDetail({
             className="portion-selector-modal"
             role="dialog"
             aria-modal="true"
-            aria-label="Portionen auswählen"
+            aria-label={tAnsicht('portionenAuswaehlen')}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="portion-selector-header">
-              <h2 className="portion-selector-title">Portionen für Einkaufsliste</h2>
+              <h2 className="portion-selector-title">{tAnsicht('portionenFuerEinkaufsliste')}</h2>
               <button
                 className="portion-selector-close"
                 onClick={closePortionSelector}
-                aria-label="Portionsauswahl schließen"
+                aria-label={tAnsicht('portionsauswahlSchliessen')}
               >
                 ×
               </button>
@@ -890,7 +914,7 @@ function GroupDetail({
                 const current = portionCounts[recipe.id] ?? (recipe.portionen || DEFAULT_PORTIONS);
                 return (
                   <div key={recipe.id} className="portion-selector-item">
-                    <span className="portion-selector-recipe-name">{recipe.title}</span>
+                    <span className="portion-selector-recipe-name">{zeigeTitel(recipe)}</span>
                     <div className="portion-selector-controls">
                       <button
                         className={`portion-selector-btn${portionMinusLongPressActiveId === recipe.id ? ' longpress-active' : ''}`}
@@ -910,7 +934,7 @@ function GroupDetail({
                         onTouchStart={() => handlePortionMinusPressStart(recipe.id, () => setPortionCounts((prev) => ({ ...prev, [recipe.id]: 0 })))}
                         onTouchEnd={handlePortionMinusPressEnd}
                         onTouchCancel={handlePortionMinusPressEnd}
-                        aria-label="Portionen verringern"
+                        aria-label={tAnsicht('portionenVerringern')}
                         disabled={current === 0}
                       >
                         −
@@ -922,7 +946,7 @@ function GroupDetail({
                           ...prev,
                           [recipe.id]: current + 1
                         }))}
-                        aria-label="Portionen erhöhen"
+                        aria-label={tAnsicht('portionenErhoehen')}
                       >
                         +
                       </button>
@@ -939,7 +963,7 @@ function GroupDetail({
                   setShowShoppingListModal(true);
                 }}
               >
-                Einkaufsliste erstellen
+                {tAnsicht('einkaufslisteErstellen')}
               </button>
             </div>
           </div>
@@ -948,7 +972,7 @@ function GroupDetail({
       {showShoppingListModal && (
         <ShoppingListModal
           items={getGroupShoppingListIngredients()}
-          title={group.name}
+          title={gruppenName}
           onClose={() => setShowShoppingListModal(false)}
           hideBringButton={true}
         />

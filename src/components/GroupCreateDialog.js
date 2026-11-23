@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import './GroupCreateDialog.css';
 import Button from './Button';
 import { LIST_KIND_OPTIONS } from '../utils/groupFirestore';
+import { listenArtText } from '../utils/listenArt';
+import { useTexte } from '../contexts/SpracheContext';
+import gruppenTexte from '../i18n/texte/gruppen';
+import allgemeinTexte from '../i18n/texte/allgemein';
+import useListenName from '../hooks/useListenName';
 
 /**
  * Dialog for creating a new private group.
@@ -19,6 +24,10 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
   const [selectedMemberIds, setSelectedMemberIds] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // Texte der Listen (Mehrsprachigkeit PR 6s)
+  const t = useTexte(gruppenTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const listenName = useListenName();
 
   // Target list state (only used when listKind === 'interactive')
   const [targetListMode, setTargetListMode] = useState(''); // '' | 'select' | 'create'
@@ -60,24 +69,24 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
     e.preventDefault();
     setError('');
     if (!name.trim()) {
-      setError('Bitte gib einen Listennamen ein.');
+      setError(t('fehlerName'));
       return;
     }
     if (!listKind) {
-      setError('Bitte wähle eine Art der Liste aus.');
+      setError(t('fehlerArt'));
       return;
     }
     if (listKind === 'interactive') {
       if (!targetListMode) {
-        setError('Bitte wähle eine Ziel-Liste aus oder lege eine neue an.');
+        setError(t('fehlerZiel'));
         return;
       }
       if (targetListMode === 'select' && !targetListId) {
-        setError('Bitte wähle eine bestehende Liste als Ziel aus.');
+        setError(t('fehlerZielBestehend'));
         return;
       }
       if (targetListMode === 'create' && !newTargetListName.trim()) {
-        setError('Bitte gib einen Namen für die neue Ziel-Liste ein.');
+        setError(t('fehlerZielName'));
         return;
       }
     }
@@ -101,7 +110,7 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
       }
       await onSave(saveData);
     } catch (err) {
-      setError('Fehler beim Erstellen der Liste. Bitte erneut versuchen.');
+      setError(t('fehlerErstellen'));
       setSaving(false);
     }
   };
@@ -110,51 +119,51 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
   const membersAreFromSelectedList = isInteractive && targetListMode === 'select' && targetListId;
 
   return (
-    <div className="group-dialog-overlay" role="dialog" aria-modal="true" aria-label="Liste erstellen">
+    <div className="group-dialog-overlay" role="dialog" aria-modal="true" aria-label={t('listeErstellen')}>
       <div className="group-dialog">
         <div className="group-dialog-header">
-          <h2>Neue Liste erstellen</h2>
-          <button className="group-dialog-close" onClick={onCancel} aria-label="Schließen">×</button>
+          <h2>{t('neueListe')}</h2>
+          <button className="group-dialog-close" onClick={onCancel} aria-label={tAllgemein('schliessen')}>×</button>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="group-dialog-field">
-            <label htmlFor="group-name">Listenname *</label>
+            <label htmlFor="group-name">{t('listenname')}</label>
             <input
               id="group-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="z. B. Familie, Freunde, Team..."
+              placeholder={t('listennamePlatzhalter')}
               maxLength={80}
               autoFocus
             />
           </div>
 
           <div className="group-dialog-field">
-            <label htmlFor="group-description">Beschreibung (optional)</label>
+            <label htmlFor="group-description">{t('beschreibung')}</label>
             <textarea
               id="group-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Notizen, Hinweise oder zusätzliche Infos zur Liste..."
+              placeholder={t('beschreibungPlatzhalter')}
               maxLength={300}
               rows={3}
             />
           </div>
 
           <div className="group-dialog-field">
-            <label htmlFor="group-list-kind">Art *</label>
+            <label htmlFor="group-list-kind">{t('art')}</label>
             <select
               id="group-list-kind"
               value={listKind}
               onChange={(e) => setListKind(e.target.value)}
               required
             >
-              <option value="">– Bitte auswählen –</option>
+              <option value="">{t('bitteAuswaehlen')}</option>
               {LIST_KIND_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {listenArtText(opt.value, t)}
                 </option>
               ))}
             </select>
@@ -162,9 +171,9 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
 
           {isInteractive && (
             <div className="group-dialog-field">
-              <label>Ziel-Liste *</label>
+              <label>{t('zielListe')}</label>
               <p className="group-dialog-hint">
-                Interaktive Listen benötigen eine Ziel-Liste, in die Rezepte verschoben werden können.
+                {t('zielListeHinweis')}
               </p>
               <div className="group-target-list-options">
                 <label className="group-target-list-option">
@@ -176,7 +185,7 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
                     onChange={() => { setTargetListMode('select'); setTargetListId(''); setNewTargetListName(''); }}
                     disabled={privateLists.length === 0}
                   />
-                  <span>Bestehende Liste wählen</span>
+                  <span>{t('bestehendeWaehlen')}</span>
                 </label>
                 <label className="group-target-list-option">
                   <input
@@ -186,7 +195,7 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
                     checked={targetListMode === 'create'}
                     onChange={() => { setTargetListMode('create'); setTargetListId(''); }}
                   />
-                  <span>Neue Liste anlegen</span>
+                  <span>{t('neueAnlegen')}</span>
                 </label>
                 <label className="group-target-list-option">
                   <input
@@ -196,7 +205,7 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
                     checked={targetListMode === 'self'}
                     onChange={() => { setTargetListMode('self'); setTargetListId(''); setNewTargetListName(''); }}
                   />
-                  <span>Diese Liste</span>
+                  <span>{t('dieseListe')}</span>
                 </label>
               </div>
 
@@ -205,12 +214,12 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
                   id="target-list-select"
                   value={targetListId}
                   onChange={(e) => setTargetListId(e.target.value)}
-                  aria-label="Bestehende Liste auswählen"
+                  aria-label={t('bestehendeAuswaehlen')}
                 >
-                  <option value="">– Bitte auswählen –</option>
+                  <option value="">{t('bitteAuswaehlen')}</option>
                   {privateLists.map((list) => (
                     <option key={list.id} value={list.id}>
-                      {list.name}
+                      {listenName(list)}
                     </option>
                   ))}
                 </select>
@@ -222,9 +231,9 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
                   type="text"
                   value={newTargetListName}
                   onChange={(e) => setNewTargetListName(e.target.value)}
-                  placeholder="Name der neuen Liste..."
+                  placeholder={t('neueListePlatzhalter')}
                   maxLength={80}
-                  aria-label="Name der neuen Ziel-Liste"
+                  aria-label={t('neueZielListe')}
                 />
               )}
             </div>
@@ -233,9 +242,9 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
           {otherUsers.length > 0 && (
             <div className="group-dialog-field">
               <label>
-                Mitglieder hinzufügen
+                {t('mitgliederHinzufuegen')}
                 {membersAreFromSelectedList && (
-                  <span className="group-dialog-hint-inline"> (aus gewählter Ziel-Liste übernommen)</span>
+                  <span className="group-dialog-hint-inline">{' '}{t('ausZielListe')}</span>
                 )}
               </label>
               <div className="group-member-list">
@@ -260,10 +269,10 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
 
           <div className="group-dialog-actions">
             <Button variant="secondary" onClick={onCancel} disabled={saving}>
-              Abbrechen
+              {tAllgemein('abbrechen')}
             </Button>
             <Button variant="primary" type="submit" disabled={saving}>
-              {saving ? 'Erstellen...' : 'Liste erstellen'}
+              {saving ? t('erstellenLaeuft') : t('listeErstellen')}
             </Button>
           </div>
         </form>
