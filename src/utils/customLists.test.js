@@ -129,6 +129,60 @@ describe('getListenUebersetzungen (Mehrsprachigkeit PR 5)', () => {
   });
 });
 
+describe('getSettings reicht Felder ohne eigene Zeile durch (Tech-Check A12)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  const naechsterAppStart = () => {
+    const cache = localStorage.getItem('appSettingsCache');
+    const zeit = localStorage.getItem('appSettingsCacheTimestamp');
+    expect(cache).not.toBeNull();
+    clearSettingsCache();
+    localStorage.setItem('appSettingsCache', cache);
+    localStorage.setItem('appSettingsCacheTimestamp', zeit);
+    mockGetDoc.mockResolvedValue({ exists: () => false, data: () => ({}) });
+  };
+
+  test('ein neues Feld kommt an, frisch aus Firestore und über den localStorage-Cache', async () => {
+    const neuesFeld = { a: 1, liste: ['x', 'y'] };
+    mockGetDoc.mockResolvedValue({ exists: () => true, data: () => ({ kuenftigesFeld: neuesFeld, recipesSeeded: true }) });
+
+    const frisch = await getSettings();
+    expect(frisch.kuenftigesFeld).toEqual(neuesFeld);
+    expect(frisch.recipesSeeded).toBe(true);
+
+    naechsterAppStart();
+    const ausCache = await getSettings();
+    expect(ausCache.kuenftigesFeld).toEqual(neuesFeld);
+  });
+
+  test('Standardwerte und Umrechnungen gehen weiter vor', async () => {
+    mockGetDoc.mockResolvedValue({ exists: () => true, data: () => ({ headerSlogan: '', trendingDays: 7 }) });
+
+    const settings = await getSettings();
+    expect(settings.headerSlogan).toBeTruthy();
+    expect(settings.headerSlogan).not.toBe('');
+    expect(settings.trendingDays).toBe(7);
+  });
+
+  test('Altbestand, der in eigene Dokumente wandert, kommt weder in den Cache noch in den localStorage', async () => {
+    mockGetDoc.mockImplementation(async (ref) => (ref.path === 'settings/app'
+      ? { exists: () => true, data: () => ({
+        categoryImages: [{ id: 'k1', image: 'data:image/png;base64,AAAA', categories: ['Pasta'] }],
+        timelineBubbleIcon: 'data:image/png;base64,BBBB',
+      }) }
+      : { exists: () => false, data: () => ({}) }));
+
+    const settings = await getSettings();
+    expect(settings).not.toHaveProperty('categoryImages');
+    expect(settings.timelineBubbleIcon).toBe('data:image/png;base64,BBBB');
+    const gespeichert = JSON.parse(localStorage.getItem('appSettingsCache'));
+    expect(gespeichert).not.toHaveProperty('categoryImages');
+    expect(gespeichert).not.toHaveProperty('timelineBubbleIcon');
+  });
+});
+
 describe('getSettings – AI prompt (read-only, no client-side migration)', () => {
   // Validating and migrating an outdated prompt is server-only responsibility now
   // (functions/index.js: getRecipeExtractionPrompt) - the client must never write

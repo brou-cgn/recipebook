@@ -49,6 +49,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Zugriffsbeschränkung für Entwurfs-Rezepte: Nur Administratoren und Autoren können Rezepte im Entwurfstatus (isPrivate) sehen
 
 ### Geändert
+- Rezeptansicht (Vorschau mit der Berechtigung „Sprachwahl“): Die Zeile „Automatisch übersetzt · Original anzeigen“ unter dem Titel sehen nur noch Admins. Alle anderen sehen die Übersetzung ohne Hinweis und ohne Umschalter zum Original; die Zeile „Original: …“ unter dem Titel bleibt für alle.
 - Sprachwahl im Header: Die Fahnen im Chip und in der Auswahl sind jetzt Umrisse in der Textfarbe statt farbiger Flächen, im hellen und dunklen Modus. Die britische Fahne ist dafür vereinfacht. Auf dem iPhone und anderen Bildschirmen mit hoher Pixeldichte sind die Linien feiner (0,5 statt 1 px). Hinter der Auswahl auf dem Handy wird die Seite jetzt weichgezeichnet wie bei der Einkaufsliste, statt nur abgedunkelt.
 - Slogan im Header auf Englisch und Französisch (Vorschau mit der Berechtigung „Sprachwahl“): Der Standard-Slogan „Unsere besten Momente“ erscheint übersetzt („Our best moments“, „Nos meilleurs moments“), ein eigener Slogan, sobald unter Einstellungen › Allgemein eine Übersetzung eingetragen ist. Ändert sich der Slogan, erscheint bis zur angepassten Übersetzung das Original. Der Seitentitel folgt der Sprache.
 - Sprachwahl (Vorschau mit der Berechtigung „Sprachwahl“): Die Sprache wählst du jetzt direkt im Header über einen Chip mit Flagge und Kürzel (DE, EN, FR) statt im Menü. Auf dem Handy öffnet er eine Auswahl von unten, auf dem Desktop ein kleines Menü; jede Sprache steht dort auch in der gewählten Sprache, die Standardsprache ist markiert. Gilt eine andere Sprache nur für die Sitzung, hat der Chip einen orangen Rand.
@@ -63,10 +64,12 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - GitHub Actions Workflow erweitert um automatisches Version-Bumping
 
 ### Behoben
+- Foto-Scan: Mit der Sprache „English“ kam das Rezept leer an, weil die Antwort der KI unter den falschen Feldnamen gelesen wurde. Die Sprachwahl im Scan-Dialog entfällt: Die KI erkennt die Sprache im Bild selbst, und Rezepte in anderen Sprachen werden ins Deutsche übersetzt, beim Foto-Scan wie bei der Website-Aufnahme. Rezepte entstehen damit immer auf Deutsch, Englisch und Französisch sind Übersetzungen davon.
 - Drucken im Dunkelmodus: Titel, Abschnittsüberschriften, Angaben wie Zeit und Portionen, Zutaten und Schritte kamen hellgrau aufs Papier, ebenso in der Druckvorschau. Das Papier bleibt jetzt in beiden Modi weiß mit dunkler Schrift.
 - Drucklayout (Einstellungen) im Dunkelmodus lesbar: Die Bedienflächen sind dunkel mit heller Schrift, statt hellgrauer Schrift auf hellem Grund; die Vorschau bleibt Papier.
 - Benutzerverwaltung: Die Spalte „Aktionen“ bleibt am rechten Rand stehen und ist ohne seitliches Scrollen erreichbar, auch bei 1280 px Breite und auf dem Handy.
 - CSV-Import im Dunkelmodus: Überschrift und Hinweis der Upload-Fläche standen hell auf hellem Grund; die Fläche ist jetzt dunkel mit heller Schrift.
+- Übersetzte Rezepte (Vorschau mit der Berechtigung „Sprachwahl“): Ein englischer Rezepttitel wie „American Pancakes“ erschien auf Deutsch als „Amerikanische Pfannkuchen“. Auf Deutsch steht jetzt immer das Original, und die automatische Übersetzung geht nur noch vom Deutschen ins Englische und Französische. Englische Begriffe in einem deutschen Rezept, etwa im Titel oder bei den Zutaten, bleiben dabei in jeder Sprache stehen („American Pancakes aux myrtilles“), ebenso Marken und Produktnamen wie „Jägermeister Manifest“.
 
 ### Sicherheit
 - Kurzbefehle melden sich nur noch mit dem persönlichen Schlüssel an. Der gemeinsame Schlüssel mit E-Mail-Adresse („X-Api-Key“ und „X-User-Email“) gilt nicht mehr: Wer ihn kannte, konnte im Namen jedes Mitglieds importieren. Ein Kurzbefehl, der ihn noch schickt, bekommt eine Meldung, wo der eigene Schlüssel erzeugt wird. Der Webimport-PIN ist damit überflüssig und entfällt samt der PIN-Abfrage vor dem Download des fertigen Kurzbefehls und dem Abschnitt in den persönlichen Daten; ein noch mitgeschicktes Feld „pin“ wird ignoriert.

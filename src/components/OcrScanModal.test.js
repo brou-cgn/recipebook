@@ -537,13 +537,25 @@ describe('OcrScanModal in anderer Sprache (Mehrsprachigkeit PR 6i)', () => {
     jest.clearAllMocks();
   });
 
-  test('Englisch: Schritt, Anleitung und Sprachen in ihrer eigenen Sprache', () => {
+  test('Englisch: Schritt und Anleitung übersetzt, keine Sprachwahl (Tech-Check F23)', () => {
     renderWithProviders(<OcrScanModal onCancel={() => {}} />, { sprache: 'en' });
     expect(screen.getByText('Step 1 of 2')).toBeInTheDocument();
     expect(screen.getByText('Take a photo of a recipe or upload an image')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Deutsch' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'English' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Deutsch' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'English' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Language:')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start camera' })).toBeInTheDocument();
+  });
+
+  test('Englische Oberfläche: Der Scan läuft trotzdem mit Deutsch, das Rezept bleibt deutsch (Tech-Check F23)', () => {
+    renderWithProviders(
+      <OcrScanModal onCancel={() => {}} initialImages={['data:image/png;base64,AAA']} />,
+      { sprache: 'en' }
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^Start analysis/ }));
+    expect(mockEnqueueImportJob).toHaveBeenCalledWith(
+      expect.objectContaining({ source: expect.objectContaining({ type: 'photo', language: 'de' }) })
+    );
   });
 
   test('Französisch: Vorschau mit Mehrzahl, gespeichert wird die deutsche Bezeichnung', () => {

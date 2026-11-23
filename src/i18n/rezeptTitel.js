@@ -9,10 +9,12 @@
  *    siehe `inhalteUebersetzen` im SpracheContext),
  *  - sie zum aktuellen Titel passt (`quelle` === `title`; nach einer Änderung zeigt die App
  *    bis zur neuen Übersetzung das Original) und
- *  - die Sprache nicht die des Originals ist.
+ *  - die Sprache nicht die des Originals ist. Das Original ist immer deutsch (ORIGINAL_SPRACHE),
+ *    auch bei älteren Übersetzungen, für die Gemini einen englischen Titel wie „American
+ *    Pancakes“ noch für ein englisches Original hielt und ins Deutsche übersetzte.
  * Sonst bleibt es beim Original. Bearbeitet und gespeichert wird immer `title`.
  */
-import { SPRACH_IDS } from './sprachen';
+import { ORIGINAL_SPRACHE, SPRACH_IDS } from './sprachen';
 
 /** @returns {object|null} die Übersetzung, wenn sie zum aktuellen Titel passt */
 function passendeUebersetzung(rezept) {
@@ -31,7 +33,7 @@ const istText = (wert) => typeof wert === 'string' && wert.trim() !== '';
  */
 export function rezeptTitel(rezept, sprache, aktiv = true) {
   const original = rezept?.title || '';
-  if (!aktiv) return original;
+  if (!aktiv || sprache === ORIGINAL_SPRACHE) return original;
   const uebersetzung = passendeUebersetzung(rezept);
   if (!uebersetzung || uebersetzung.originalSprache === sprache) return original;
   return istText(uebersetzung[sprache]) ? uebersetzung[sprache] : original;

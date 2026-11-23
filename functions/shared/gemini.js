@@ -123,6 +123,45 @@ const RECIPE_EXTRACTION_RESPONSE_SCHEMA = {
   required: ['titel', 'zutaten', 'zubereitung'],
 };
 
+/**
+ * Primärsprache (Entscheidung vom 23.11.2026, docs/vorhaben/mehrsprachigkeit.md): Rezepte entstehen immer auf
+ * Deutsch, Englisch und Französisch sind Übersetzungen davon. Für Bilder (Foto-Scan, Website-Aufnahme) steht die
+ * Regel hier im Code und nicht im Prompt aus den Einstellungen, damit eine Änderung dort sie nicht verliert; der
+ * HTML-Import hat seine eigene (callGeminiTextAPI). Angehängt nach dem Prompt, als letzte Anweisung vor den
+ * Bildern (Tech-Check F23).
+ */
+const DEUTSCH_REGEL = '\n\nSPRACHE: Das Rezept wird auf Deutsch gespeichert. Ist es nicht auf Deutsch, übersetze ' +
+  'Titel, Zutaten, Zubereitungsschritte und Notizen ins Deutsche.';
+
+/**
+ * Rezept aus der JSON-Antwort von Gemini in der Form, die die App erwartet. Das Antwortschema
+ * (RECIPE_EXTRACTION_RESPONSE_SCHEMA) erzwingt die deutschen Feldnamen; die englischen bleiben nur als Rückfall.
+ * Gemeinsam für ein Bild, mehrere Bilder und HTML (Tech-Check F23: Vorher las der Foto-Scan bei language 'en'
+ * nur die englischen Namen und bekam so ein leeres Rezept).
+ * @param {Object} recipeData - geparste Antwort
+ * @param {string} textResponse - Rohtext der Antwort (rawResponse)
+ * @param {string[]|undefined} cuisineTypes - konfigurierte Kulinarik-Typen
+ * @return {Object} Rezept mit title, servings, ingredients, steps …
+ */
+function rezeptAusAntwort(recipeData, textResponse, cuisineTypes) {
+  return {
+    title: recipeData.titel || recipeData.title || '',
+    servings: recipeData.portionen || recipeData.servings || 0,
+    prepTime: recipeData.zubereitungszeit || recipeData.prepTime || '',
+    cookTime: recipeData.kochzeit || recipeData.cookTime || '',
+    difficulty: recipeData.schwierigkeit || recipeData.difficulty || 0,
+    ...cuisineFields(recipeData.kulinarik || recipeData.cuisine, cuisineTypes),
+    category: recipeData.kategorie || recipeData.category || '',
+    tags: recipeData.tags || [],
+    ingredients: normalizeIngredientUnits(recipeData.zutaten || recipeData.ingredients || []),
+    steps: recipeData.zubereitung || recipeData.steps || [],
+    notes: recipeData.notizen || recipeData.notes || '',
+    confidence: 95,
+    provider: 'gemini',
+    rawResponse: textResponse,
+  };
+}
+
 // In-memory cache for the AI recipe extraction prompt, shared across warm
 // invocations of the same Cloud Functions instance. TTL keeps changes made
 // in Settings visible within a few minutes without a Firestore read on
@@ -223,7 +262,8 @@ async function getRecipeExtractionPrompt() {
  * Call Gemini API to analyze recipe image
  * @param {string} base64Data - Pure base64 image data (no prefix)
  * @param {string} mimeType - Image MIME type
- * @param {string} lang - Language code
+ * @param {string} lang - Sprache aus der Anfrage; ändert das Ergebnis nicht mehr, das Rezept kommt immer deutsch
+ *   (DEUTSCH_REGEL, Tech-Check F23)
  * @param {string} apiKey - Gemini API key
  * @param {string[]|undefined} cuisineTypes - Configured cuisine types
  * @param {string[]|undefined} mealCategories - Configured meal categories
@@ -266,7 +306,7 @@ async function callGeminiAPI(base64Data, mimeType, lang, apiKey, cuisineTypes, m
     contents: [
       {
         parts: [
-          {text: prompt},
+          {text: prompt + DEUTSCH_REGEL},
           {
             inline_data: {
               mime_type: mimeType,
@@ -335,43 +375,7 @@ async function callGeminiAPI(base64Data, mimeType, lang, apiKey, cuisineTypes, m
     }
 
     const recipeData = JSON.parse(jsonText);
-    
-    // Normalize the data structure based on language
-    if (lang === 'de') {
-      return {
-        title: recipeData.titel || '',
-        servings: recipeData.portionen || 0,
-        prepTime: recipeData.zubereitungszeit || '',
-        cookTime: recipeData.kochzeit || '',
-        difficulty: recipeData.schwierigkeit || 0,
-        ...cuisineFields(recipeData.kulinarik, cuisineTypes),
-        category: recipeData.kategorie || '',
-        tags: recipeData.tags || [],
-        ingredients: normalizeIngredientUnits(recipeData.zutaten || []),
-        steps: recipeData.zubereitung || [],
-        notes: recipeData.notizen || '',
-        confidence: 95,
-        provider: 'gemini',
-        rawResponse: textResponse,
-      };
-    } else {
-      return {
-        title: recipeData.title || '',
-        servings: recipeData.servings || 0,
-        prepTime: recipeData.prepTime || '',
-        cookTime: recipeData.cookTime || '',
-        difficulty: recipeData.difficulty || 0,
-        ...cuisineFields(recipeData.cuisine, cuisineTypes),
-        category: recipeData.category || '',
-        tags: recipeData.tags || [],
-        ingredients: normalizeIngredientUnits(recipeData.ingredients || []),
-        steps: recipeData.steps || [],
-        notes: recipeData.notes || '',
-        confidence: 95,
-        provider: 'gemini',
-        rawResponse: textResponse,
-      };
-    }
+    return rezeptAusAntwort(recipeData, textResponse, cuisineTypes);
   } catch (error) {
     if (error instanceof HttpsError) {
       throw error;
@@ -514,23 +518,7 @@ async function callGeminiTextAPI(rawHtml, lang, apiKey, cuisineTypes, mealCatego
     }
 
     const recipeData = JSON.parse(jsonText);
-
-    return {
-      title: recipeData.titel || recipeData.title || '',
-      servings: recipeData.portionen || recipeData.servings || 0,
-      prepTime: recipeData.zubereitungszeit || recipeData.prepTime || '',
-      cookTime: recipeData.kochzeit || recipeData.cookTime || '',
-      difficulty: recipeData.schwierigkeit || recipeData.difficulty || 0,
-      ...cuisineFields(recipeData.kulinarik || recipeData.cuisine, cuisineTypes),
-      category: recipeData.kategorie || recipeData.category || '',
-      tags: recipeData.tags || [],
-      ingredients: normalizeIngredientUnits(recipeData.zutaten || recipeData.ingredients || []),
-      steps: recipeData.zubereitung || recipeData.steps || [],
-      notes: recipeData.notizen || recipeData.notes || '',
-      confidence: 95,
-      provider: 'gemini',
-      rawResponse: textResponse,
-    };
+    return rezeptAusAntwort(recipeData, textResponse, cuisineTypes);
   } catch (error) {
     if (error instanceof HttpsError) {
       throw error;
@@ -623,4 +611,4 @@ async function transcribeVideoWithGemini(videoBuffer, language, apiKey, mimeType
   }
 }
 
-module.exports = {RECIPE_STEP_STYLE_RULE, RECIPE_STEP_BOUNDARY_RULE, DEFAULT_AI_RECIPE_PROMPT, RECIPE_EXTRACTION_RESPONSE_SCHEMA, recipeExtractionPromptCache, recipeExtractionPromptCacheExpiry, getRecipeExtractionPrompt, callGeminiAPI, callGeminiTextAPI, transcribeVideoWithGemini};
+module.exports = {RECIPE_STEP_STYLE_RULE, RECIPE_STEP_BOUNDARY_RULE, DEFAULT_AI_RECIPE_PROMPT, RECIPE_EXTRACTION_RESPONSE_SCHEMA, recipeExtractionPromptCache, recipeExtractionPromptCacheExpiry, getRecipeExtractionPrompt, DEUTSCH_REGEL, rezeptAusAntwort, callGeminiAPI, callGeminiTextAPI, transcribeVideoWithGemini};

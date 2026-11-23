@@ -255,16 +255,31 @@ export const getGroup = async (groupId) => {
 };
 
 /**
- * Send an invitation email to a new email address added to a private list.
- * The Cloud Function sends the mail only once per address and only to
- * unregistered addresses, but always answers the same way so the registration
- * status of an address is not revealed. Requires the edit role; limited per day.
+ * Invite an email address into a private list. The Cloud Function stores the
+ * invitation server-side (`groupInvitations`, not readable by any client; the
+ * address no longer goes into the list document, Tech-Check S16) and adds the
+ * person to the list when they register. It sends the mail only once per
+ * address and only to unregistered addresses, but always answers the same way
+ * so the registration status of an address is not revealed. Requires the edit
+ * role and ownership of the list; limited per day.
  *
+ * A rejected call whose `details.gespeichert` is true stored the invitation but
+ * could not send the mail (see `invitationStored`).
+ *
+ * @param {string} groupId - The private list
  * @param {string} email - The email address to invite
  * @returns {Promise<{success: boolean}>}
  */
-export const sendGroupInvitation = async (email) => {
+export const sendGroupInvitation = async (groupId, email) => {
   const sendInvitation = httpsCallable(functions, 'sendGroupInvitationEmail');
-  const result = await sendInvitation({ email });
+  const result = await sendInvitation({ groupId, email });
   return result.data;
 };
+
+/**
+ * True if a failed `sendGroupInvitation` call still stored the invitation
+ * (only the mail failed).
+ * @param {Error & {details?: Object}} error
+ * @returns {boolean}
+ */
+export const invitationStored = (error) => error?.details?.gespeichert === true;

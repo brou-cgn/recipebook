@@ -196,6 +196,45 @@ test('groups: Schreiben bleibt wie bisher (Editoren dürfen, Leser nicht)', asyn
   await assertFails(as.user(env, 'reader').doc('groups/g1').update({ name: 'Neu' }));
 });
 
+test('groups (Tech-Check S16): kein Client schreibt neue E-Mail-Adressen ins Listendokument', async () => {
+  for (const uid of ['editor', 'admin']) {
+    const db = as.user(env, uid);
+    await assertFails(db.doc('groups/g1').update({ invitedEmails: ['jemand@example.test', 'neu@example.test'] }));
+    await assertFails(db.doc('groups/g1').update({ invitedEmails: firebase.firestore.FieldValue.arrayUnion('neu@example.test') }));
+    await assertFails(db.collection('groups').add({ type: 'private', ownerId: uid, memberIds: [uid], invitedEmails: ['neu@example.test'] }));
+  }
+  // Was ältere App-Versionen beim Hinzufügen von Mitgliedern schicken, bleibt erlaubt:
+  // das Feld unverändert, leer oder ganz weg.
+  const editor = as.user(env, 'editor');
+  await assertSucceeds(editor.doc('groups/g1').update({ memberIds: ['editor', 'reader', 'other'], invitedEmails: ['jemand@example.test'] }));
+  await assertSucceeds(editor.doc('groups/g1').update({ invitedEmails: [] }));
+  await assertSucceeds(editor.doc('groups/g1').update({ invitedEmails: firebase.firestore.FieldValue.delete() }));
+  await assertSucceeds(editor.doc('groups/g1').update({ memberIds: ['editor', 'reader'], invitedEmails: [] }));
+  await assertSucceeds(editor.collection('groups').add({ type: 'private', ownerId: 'editor', memberIds: ['editor'], invitedEmails: [] }));
+  await assertSucceeds(editor.collection('groups').add({ type: 'private', ownerId: 'editor', memberIds: ['editor'] }));
+});
+
+test('groups (BEKANNTE LÜCKE, Tech-Check S31): ein Editor ändert und löscht auch fremde private Listen, deren ID er kennt', async () => {
+  // Die ID steht an jedem Rezept der Liste (groupId), und Rezepte liest jedes Mitglied (S2).
+  await seed(env, (db) => db.doc('users/editor2').set({ role: 'edit', vorname: 'editor2' }));
+  const fremd = as.user(env, 'editor2');
+  await assertFails(fremd.doc('groups/g1').get());
+  await assertSucceeds(fremd.doc('groups/g1').update({ memberIds: ['editor', 'reader', 'editor2'] }));
+  await assertSucceeds(fremd.doc('groups/g1').get());
+  await assertSucceeds(fremd.doc('groups/g1').delete());
+});
+
+test('groupInvitations (Tech-Check S16): niemand liest oder schreibt, auch Eigentümer und Admins nicht', async () => {
+  await seed(env, (db) => db.doc('groupInvitations/inv1').set({ groupId: 'g1', email: 'jemand@example.test', invitedBy: 'editor' }));
+  const invitation = { groupId: 'g1', email: 'neu@example.test', invitedBy: 'editor' };
+  for (const db of [as.unauth(env), as.anonymous(env), as.user(env, 'reader'), as.user(env, 'editor'), as.user(env, 'admin')]) {
+    await assertFails(db.doc('groupInvitations/inv1').get());
+    await assertFails(db.collection('groupInvitations').where('groupId', '==', 'g1').get());
+    await assertFails(db.doc('groupInvitations/inv2').set(invitation));
+    await assertFails(db.doc('groupInvitations/inv1').delete());
+  }
+});
+
 test('publicProfiles (BEKANNTE LÜCKE): auch anonyme Gäste lesen Vor- und Nachnamen aller Mitglieder', async () => {
   await assertSucceeds(as.user(env, 'reader').doc('publicProfiles/other').get());
   await assertSucceeds(as.anonymous(env).doc('publicProfiles/other').get());

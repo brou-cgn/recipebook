@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import GroupDetail from './GroupDetail';
+import { sendGroupInvitation } from '../utils/groupFirestore';
 
 jest.mock('./RecipeRating', () => () => <div data-testid="mock-rating" />);
 jest.mock('./RecipeImageCarousel', () => () => <div data-testid="mock-carousel" />);
@@ -43,6 +44,7 @@ jest.mock('../utils/customLists', () => ({
 // Mock groupFirestore so LIST_KIND_OPTIONS is available without Firebase
 jest.mock('../utils/groupFirestore', () => ({
   sendGroupInvitation: jest.fn().mockResolvedValue({ success: true }),
+  invitationStored: (error) => error?.details?.gespeichert === true,
   LIST_KIND_OPTIONS: [
     { value: 'interactive', label: 'Interaktive Liste' },
     { value: 'classic', label: 'Klassische Sammlung' },
@@ -277,7 +279,7 @@ describe('GroupDetail – add member feature', () => {
     });
   });
 
-  it('calls onUpdateGroup with invitedEmails when an email is entered', async () => {
+  it('hands an entered email to the Cloud Function and keeps it out of the list document (S16)', async () => {
     const onUpdateGroup = jest.fn().mockResolvedValue(undefined);
     render(<GroupDetail {...defaultProps} onUpdateGroup={onUpdateGroup} />);
     goToEinstellungen();
@@ -287,15 +289,14 @@ describe('GroupDetail – add member feature', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Hinzufügen$/i }));
 
     await waitFor(() => {
-      expect(onUpdateGroup).toHaveBeenCalledWith('grp1', expect.objectContaining({
-        invitedEmails: expect.arrayContaining(['new@example.com']),
-      }));
+      expect(sendGroupInvitation).toHaveBeenCalledWith('grp1', 'new@example.com');
     });
+    expect(onUpdateGroup).not.toHaveBeenCalled();
+    expect(screen.getByRole('status')).toHaveTextContent(/Einladung an new@example.com wurde gespeichert/);
   });
 
-  it('normalizes invited email to lowercase before storing', async () => {
-    const onUpdateGroup = jest.fn().mockResolvedValue(undefined);
-    render(<GroupDetail {...defaultProps} onUpdateGroup={onUpdateGroup} />);
+  it('normalizes invited email to lowercase before sending', async () => {
+    render(<GroupDetail {...defaultProps} />);
     goToEinstellungen();
     fireEvent.click(screen.getByRole('button', { name: /Mitglied hinzufügen/i }));
 
@@ -303,10 +304,55 @@ describe('GroupDetail – add member feature', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Hinzufügen$/i }));
 
     await waitFor(() => {
-      expect(onUpdateGroup).toHaveBeenCalledWith('grp1', expect.objectContaining({
-        invitedEmails: expect.arrayContaining(['new@example.com']),
-      }));
+      expect(sendGroupInvitation).toHaveBeenCalledWith('grp1', 'new@example.com');
     });
+  });
+
+  it('adds selected members without any invitedEmails field', async () => {
+    const onUpdateGroup = jest.fn().mockResolvedValue(undefined);
+    render(<GroupDetail {...defaultProps} onUpdateGroup={onUpdateGroup} />);
+    goToEinstellungen();
+    fireEvent.click(screen.getByRole('button', { name: /Mitglied hinzufügen/i }));
+
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: /^Hinzufügen$/i }));
+
+    await waitFor(() => expect(onUpdateGroup).toHaveBeenCalled());
+    expect(Object.keys(onUpdateGroup.mock.calls[0][1])).toEqual(['memberIds']);
+    expect(sendGroupInvitation).not.toHaveBeenCalled();
+  });
+
+  it('reports a stored invitation whose mail failed', async () => {
+    sendGroupInvitation.mockRejectedValueOnce(Object.assign(new Error('smtp'), { code: 'functions/internal', details: { gespeichert: true } }));
+    render(<GroupDetail {...defaultProps} />);
+    goToEinstellungen();
+    fireEvent.click(screen.getByRole('button', { name: /Mitglied hinzufügen/i }));
+
+    fireEvent.change(screen.getByLabelText('Einladung per E-Mail'), { target: { value: 'new@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Hinzufügen$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent(/gespeichert, aber die Einladungs-E-Mail konnte nicht versendet werden/);
+    });
+    expect(screen.queryByLabelText('Einladung per E-Mail')).not.toBeInTheDocument();
+  });
+
+  it('keeps the panel open with the server reason when the invitation was not stored', async () => {
+    sendGroupInvitation.mockRejectedValueOnce(Object.assign(
+      new Error('Das Tageslimit für Einladungen ist erreicht. Bitte versuche es morgen erneut.'),
+      { code: 'functions/resource-exhausted' },
+    ));
+    render(<GroupDetail {...defaultProps} />);
+    goToEinstellungen();
+    fireEvent.click(screen.getByRole('button', { name: /Mitglied hinzufügen/i }));
+
+    fireEvent.change(screen.getByLabelText('Einladung per E-Mail'), { target: { value: 'new@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Hinzufügen$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('Die Einladung wurde nicht gespeichert: Das Tageslimit für Einladungen ist erreicht.');
+    });
+    expect(screen.getByLabelText('Einladung per E-Mail')).toHaveValue('new@example.com');
   });
 
   it('shows success message and closes the panel after adding a member', async () => {

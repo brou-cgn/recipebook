@@ -41,7 +41,7 @@ import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getEffectiveCuisineIcon, getDar
 import { getCategoryImages } from '../utils/categoryImages';
 import { useCookingSession } from '../contexts/CookingSessionContext';
 import CookingAlarmModal from './CookingAlarmModal';
-import CookingModeTitleBar from './CookingModeTitleBar';
+import CookingModeTitleBar, { CookingTimerChips } from './CookingModeTitleBar';
 import { stepTimerChips } from '../utils/cookingSessionStatus';
 import CookingAddRecipeSheet from './CookingAddRecipeSheet';
 import CookingSessionDock from './CookingSessionDock';
@@ -1509,6 +1509,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const showCookingDock = hasParkedRecipes && !isMobileLandscape && !showCookingCarousel;
   // Im Querformat statt Leiste und Titelzeile: die Rezept-Schiene am Rand gegenüber der Kamera (Entwurf Q2), immer mit „+“
   const showCookingRail = parallelCookingEnabled && isMobileLandscape;
+  // Timer anderer Schritte des Rezepts vorn (Tech-Check P9): mit Flag in der Titelzeile bzw. auf der Schiene,
+  // ohne Flag allein über dem Fortschritt, sobald einer läuft oder abgelaufen ist
+  const timerChips = cookingMode ? stepTimerChips(activeTimers, currentStepIndex, tKoch) : [];
+  const showAloneTimerChips = cookingMode && !parallelCookingEnabled && timerChips.length > 0;
   const swapWithSessionRecipe = (entry) => cookingSession.swapWith(
     { recipe, stepIndex: currentStepIndex, servingMultiplier },
     entry.recipe.id
@@ -1933,7 +1937,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         </div>
       )}
 
-      <div className={`recipe-detail-content ${cookingMode ? 'cooking-mode-active' : ''} ${cookingMode && isMobileLandscape ? 'cooking-mode-landscape' : ''}${cookingMode && showCookingDock ? ' cooking-mode-has-dock' : ''}${cookingMode && showCookingRail ? ' cooking-mode-has-rail' : ''}${cookingMode && showCookingRail && cookingRailRight ? ' cooking-mode-rail-right' : ''}${cookingMode && showCookingCarousel ? ' cooking-mode-split' : ''}${cookingMode && showTabletFullWidth ? ' cooking-mode-tablet-full' : ''}${cookingMode && stepInTitlebar ? ' cooking-mode-step-in-titlebar' : ''}`} ref={contentRef}>
+      <div className={`recipe-detail-content ${cookingMode ? 'cooking-mode-active' : ''} ${cookingMode && isMobileLandscape ? 'cooking-mode-landscape' : ''}${cookingMode && showCookingDock ? ' cooking-mode-has-dock' : ''}${cookingMode && showCookingRail ? ' cooking-mode-has-rail' : ''}${cookingMode && showCookingRail && cookingRailRight ? ' cooking-mode-rail-right' : ''}${cookingMode && showCookingCarousel ? ' cooking-mode-split' : ''}${cookingMode && showTabletFullWidth ? ' cooking-mode-tablet-full' : ''}${cookingMode && stepInTitlebar ? ' cooking-mode-step-in-titlebar' : ''}${showAloneTimerChips ? ' cooking-mode-has-timer-chips' : ''}`} ref={contentRef}>
         {cookingMode ? (
           // Cooking mode layout
           <>
@@ -1946,7 +1950,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 tablet={tabletCookingLayout}
                 stepNumber={Math.min(currentStepIndex + 1, totalSteps)}
                 totalSteps={totalSteps}
-                timerChips={stepTimerChips(activeTimers, currentStepIndex, tKoch)}
+                timerChips={timerChips}
                 onJumpToStep={setCurrentStepIndex}
                 addIcon={cookingAddRecipeIcon}
                 addIconLoaded={buttonIconsLoaded}
@@ -2036,6 +2040,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
             {/* Horizontal step cards with swipe support */}
             <section className="cooking-mode-steps">
+              {showAloneTimerChips && (
+                <CookingTimerChips chips={timerChips} onJumpToStep={setCurrentStepIndex} className="cooking-mode-timer-chips--alone" />
+              )}
               <div className="step-carousel" ref={stepsContainerRef}>
                 {stepItems.map((step, index) => {
                   const stepText = typeof step === 'string' ? step : step.text;
@@ -2421,7 +2428,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 </span>
               </p>
             )}
-            {uebersetzungVorhanden && (
+            {/* Hinweis „Automatisch übersetzt · Original anzeigen“: nur für Admins (Mehrsprachigkeit, 23.11.2026).
+                Alle anderen sehen die Übersetzung ohne Hinweis und ohne Umschalter; „Original: …“ unter dem Titel bleibt. */}
+            {uebersetzungVorhanden && isCurrentUserAdmin() && (
               <p className="recipe-translation-note">
                 {zeigeOriginal ? tAnsicht('originalAngezeigt') : tAnsicht('automatischUebersetzt')}
                 {' · '}

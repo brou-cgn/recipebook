@@ -15,9 +15,17 @@ describe('rezeptTitel', () => {
 
   it('in der Sprache des Originals bleibt das Original', () => {
     expect(rezeptTitel(uebersetzt('Omas Apfelkuchen'), 'de')).toBe('Omas Apfelkuchen');
-    const englisch = uebersetzt('Pancakes', { originalSprache: 'en', de: 'Pfannkuchen', en: 'Pancakes' });
-    expect(rezeptTitel(englisch, 'en')).toBe('Pancakes');
-    expect(rezeptTitel(englisch, 'de')).toBe('Pfannkuchen');
+  });
+
+  it('auf Deutsch immer das Original, auch wenn eine ältere Übersetzung den Titel für englisch hielt', () => {
+    // So schrieb die Cloud Function bis zur Entscheidung „Primärsprache“: Sprache am Titel allein erkannt.
+    const alt = uebersetzt('American Pancakes', {
+      originalSprache: 'en', de: 'Amerikanische Pfannkuchen', en: 'American Pancakes', fr: 'Pancakes américains',
+    });
+    expect(rezeptTitel(alt, 'de')).toBe('American Pancakes');
+    expect(rezeptTitel(alt, 'en')).toBe('American Pancakes');
+    // Bis zur neuen Übersetzung gilt die alte französische Fassung.
+    expect(rezeptTitel(alt, 'fr')).toBe('Pancakes américains');
   });
 
   it('eine veraltete Übersetzung (Titel inzwischen geändert) zeigt das Original', () => {

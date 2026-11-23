@@ -2271,9 +2271,10 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
             <div className="settings-section">
               <h3>Rezepttitel übersetzen</h3>
               <p className="section-description">
-                Neue und geänderte Rezepttitel übersetzt die App automatisch ins Deutsche, Englische und Französische
-                (Mehrsprachigkeit). Hier trägst du die Übersetzungen für die bestehenden Rezepte nach; Rezepte mit
-                passender Übersetzung werden übersprungen.
+                Neue und geänderte Rezepttitel übersetzt die App automatisch vom deutschen Original ins Englische und
+                Französische (Mehrsprachigkeit). Hier trägst du die Übersetzungen für die bestehenden Rezepte nach und
+                erneuerst ältere, die noch nach den früheren Regeln entstanden sind; Rezepte mit passender Übersetzung
+                werden übersprungen.
               </p>
               <UebersetzungBackfill
                 aufruf={trageTitelUebersetzungenNach}
@@ -2285,7 +2286,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               <p className="section-description">
                 Zutaten und Zubereitungsschritte neuer und geänderter Rezepte übersetzt die App automatisch. Hier
                 trägst du die Übersetzungen für die bestehenden Rezepte nach, zehn Rezepte je Schritt; das dauert
-                länger und kostet mehr als bei den Titeln. Rezepte mit passender Übersetzung werden übersprungen.
+                länger und kostet mehr als bei den Titeln. Erneuert werden auch Übersetzungen, für die die KI ein
+                deutsches Rezept noch für englisch oder französisch hielt. Rezepte mit passender Übersetzung werden
+                übersprungen.
               </p>
               <UebersetzungBackfill
                 aufruf={trageInhaltUebersetzungenNach}

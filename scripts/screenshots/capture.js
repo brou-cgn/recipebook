@@ -258,6 +258,22 @@ const SCREENS = [
     },
   },
   {
+    // Kochmodus ohne Rollen-Flag parallelKochen (wie das Testkonto): Timer auf Schritt 3 läuft, man steht auf
+    // Schritt 2. Seit Tech-Check P9 steht die Restzeit als Chip über dem Fortschritt, vorher nirgends.
+    name: 'kochmodus-timer-anderer-schritt',
+    variants: ['handy-hell', 'handy-dunkel'],
+    run: async (page, shot) => {
+      await openRecipe(page, 'Linsensuppe mit Kreuzkümmel');
+      await page.locator('[aria-label="Kochmodus aktivieren"]').first().click();
+      await page.locator('.step-card').first().waitFor();
+      await page.locator('.step-dot').nth(2).click();
+      await page.locator('.step-card').nth(2).locator('.step-timer-start-btn').click();
+      await page.locator('.step-dot').nth(1).click();
+      await pause(page, 1000);
+      await shot();
+    },
+  },
+  {
     name: 'rezept-loeschen-dialog',
     run: async (page, shot) => {
       await openRecipe(page, 'Linsensuppe mit Kreuzkümmel');

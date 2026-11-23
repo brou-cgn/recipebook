@@ -1,8 +1,9 @@
 // Mehrsprachigkeit (docs/vorhaben/mehrsprachigkeit.md, PR 4): Rezeptinhalt übersetzen.
 // Geprüft wird: Hash-Eingabe und Anfrage (Verknüpfungen und leere Einträge bleiben), die Prüfung
-// der Gemini-Antwort (alle Zielsprachen, jeder Eintrag), das Ausrichten nach Position, der Trigger
-// (nur bei geändertem Inhalt, nicht bei Importen, Löschen mit dem Rezept, Tageslimit, überholte
-// Stände) und der Backfill (nur Admins, seitenweise, überspringt Aktuelles).
+// der Gemini-Antwort (Englisch und Französisch, jeder Eintrag; Deutsch ist immer das Original),
+// das Ausrichten nach Position, der Trigger (nur bei geändertem Inhalt, nicht bei Importen, Löschen
+// mit dem Rezept, Tageslimit, überholte Stände) und der Backfill (nur Admins, seitenweise,
+// überspringt Aktuelles, erneuert Übersetzungen mit einer anderen erkannten Originalsprache).
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -13,6 +14,8 @@ const {
   baueInhaltPrompt,
   pruefeInhaltAntwort,
   baueUebersetzungsDokument,
+  istAktuelleInhaltUebersetzung,
+  INHALT_RESPONSE_SCHEMA,
   SCHEMA_VERSION,
 } = require('./shared/inhaltUebersetzung');
 const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
@@ -137,7 +140,6 @@ const realFetch = global.fetch;
 /** Die Anfrage aus dem Prompt (JSON in der letzten Zeile). */
 const anfrageAusPrompt = (prompt) => JSON.parse(prompt.slice(prompt.lastIndexOf('\n') + 1));
 const uebersetzt = (anfrage, sprachen = ['en', 'fr']) => ({
-  originalSprache: 'de',
   ...Object.fromEntries(sprachen.map((sprache) => [sprache, {
     zutaten: anfrage.zutaten.map(({nr, text}) => ({nr, text: `${sprache.toUpperCase()} ${text}`})),
     schritte: anfrage.schritte.map(({nr, text}) => ({nr, text: `${sprache.toUpperCase()} ${text}`})),
@@ -216,6 +218,23 @@ test('Prompt: Anfrage als JSON am Ende, Regel für die Menge am Zeilenanfang', (
   assert.match(prompt, /Menge am Zeilenanfang bleibt genau wie im Original/);
 });
 
+test('Prompt und Schema: deutsches Original, nur Englisch und Französisch, nicht Deutsches bleibt stehen', () => {
+  const prompt = baueInhaltPrompt(anfrageAusRezept(REZEPT));
+  assert.match(prompt, /Das Rezept ist das deutsche Original/);
+  assert.match(prompt, /ins Englische \(en\) und\nFranzösische \(fr\)/);
+  assert.match(prompt, /2 EL Peanut Butter → 2 tbsp Peanut Butter/);
+  assert.doesNotMatch(prompt, /originalSprache/);
+  assert.deepEqual(Object.keys(INHALT_RESPONSE_SCHEMA.properties), ['en', 'fr']);
+  assert.deepEqual(INHALT_RESPONSE_SCHEMA.required, ['en', 'fr']);
+});
+
+test('Prompt: Marken und Produktnamen aus deutschen Wörtern bleiben stehen', () => {
+  const prompt = baueInhaltPrompt(anfrageAusRezept({ingredients: ['4 cl Jägermeister Manifest'], steps: []}));
+  assert.match(prompt, /Marken und Produktnamen bleiben genau so stehen, auch wenn sie aus deutschen Wörtern bestehen/);
+  assert.match(prompt, /4 cl Jägermeister Manifest → 4 cl Jägermeister Manifest/);
+  assert.match(prompt, /1 boîte de lait concentré Bärenmarke/);
+});
+
 test('Prüfung: jede Zielsprache, jeder Eintrag; sonst null', () => {
   const anfrage = anfrageAusRezept(REZEPT);
   const ok = pruefeInhaltAntwort(uebersetzt(anfrage), anfrage);
@@ -230,16 +249,25 @@ test('Prüfung: jede Zielsprache, jeder Eintrag; sonst null', () => {
   const zeilenumbruch = uebersetzt(anfrage);
   zeilenumbruch.en.zutaten[1].text = '200 g\nlentils';
   assert.equal(pruefeInhaltAntwort(zeilenumbruch, anfrage), null, 'Zutat mit Zeilenumbruch');
-  assert.equal(pruefeInhaltAntwort({...uebersetzt(anfrage), originalSprache: 'it'}, anfrage), null);
   assert.equal(pruefeInhaltAntwort(null, anfrage), null);
+  assert.equal(pruefeInhaltAntwort('kaputt', anfrage), null);
 
-  // Englisches Original: Deutsch und Französisch nötig, Englisch nicht
-  const englisch = {...uebersetzt(anfrage, ['de', 'fr']), originalSprache: 'en'};
-  assert.deepEqual(Object.keys(pruefeInhaltAntwort(englisch, anfrage).sprachen).sort(), ['de', 'fr']);
-  // „andere“: alle drei nötig
-  const andere = {...uebersetzt(anfrage, ['de', 'en', 'fr']), originalSprache: 'andere'};
-  assert.deepEqual(Object.keys(pruefeInhaltAntwort(andere, anfrage).sprachen).sort(), ['de', 'en', 'fr']);
-  assert.equal(pruefeInhaltAntwort({...uebersetzt(anfrage), originalSprache: 'andere'}, anfrage), null);
+  // Deutsch ist immer das Original: Englisch und Französisch sind immer nötig, eine erkannte
+  // Originalsprache oder eine deutsche Fassung der KI zählt nicht.
+  const alsEnglischErkannt = {...uebersetzt(anfrage, ['de', 'fr']), originalSprache: 'en'};
+  assert.equal(pruefeInhaltAntwort(alsEnglischErkannt, anfrage), null, 'Englisch fehlt');
+  const mitDeutsch = pruefeInhaltAntwort({...uebersetzt(anfrage, ['de', 'en', 'fr']), originalSprache: 'andere'}, anfrage);
+  assert.equal(mitDeutsch.originalSprache, 'de');
+  assert.deepEqual(Object.keys(mitDeutsch.sprachen).sort(), ['en', 'fr']);
+});
+
+test('Aktuell: gleicher Hash, gleiches Schema und Deutsch als Original', () => {
+  const dokument = {quellHash: 'h', schemaVersion: SCHEMA_VERSION, originalSprache: 'de'};
+  assert.equal(istAktuelleInhaltUebersetzung(dokument, 'h'), true);
+  assert.equal(istAktuelleInhaltUebersetzung(dokument, 'anders'), false);
+  assert.equal(istAktuelleInhaltUebersetzung({...dokument, schemaVersion: SCHEMA_VERSION + 1}, 'h'), false);
+  assert.equal(istAktuelleInhaltUebersetzung({...dokument, originalSprache: 'en'}, 'h'), false, 'früher als englisch erkannt');
+  assert.equal(istAktuelleInhaltUebersetzung(undefined, 'h'), false);
 });
 
 test('Dokument: Listen in der Länge des Rezepts, Verknüpfungen und leere Einträge bleiben', () => {
@@ -274,6 +302,8 @@ test('Trigger: übersetzt ein neues Rezept und legt rezeptUebersetzungen an', as
   assert.equal(fetchCalls.length, 1);
   const dokument = daten['rezeptUebersetzungen/r1'];
   assert.equal(dokument.quellHash, inhaltQuellHash(REZEPT));
+  assert.equal(dokument.originalSprache, 'de');
+  assert.deepEqual(Object.keys(dokument).filter((feld) => ['de', 'en', 'fr'].includes(feld)), ['en', 'fr']);
   assert.deepEqual(dokument.en.zutaten.slice(3), ['1 Teil #recipe:abc:Gemüsebrühe', '']);
   assert.equal(daten[quotaPfad('automatik')].count, 1);
   assert.equal(daten['recipes/r1'].updatedAt, undefined, 'das Rezept selbst bleibt unberührt');
@@ -288,7 +318,7 @@ test('Trigger: bei unverändertem Inhalt kein Lesezugriff und kein KI-Aufruf', a
 
 test('Trigger: eine aktuelle Übersetzung wird nicht neu erzeugt', async () => {
   daten['recipes/r1'] = REZEPT;
-  daten['rezeptUebersetzungen/r1'] = {quellHash: inhaltQuellHash(REZEPT), schemaVersion: SCHEMA_VERSION};
+  daten['rezeptUebersetzungen/r1'] = {quellHash: inhaltQuellHash(REZEPT), schemaVersion: SCHEMA_VERSION, originalSprache: 'de'};
   await handlers.uebersetzeRezeptInhalt(ereignis('r1', undefined, REZEPT));
   assert.deepEqual(fetchCalls, []);
 });
@@ -296,7 +326,7 @@ test('Trigger: eine aktuelle Übersetzung wird nicht neu erzeugt', async () => {
 test('Trigger: geänderter Inhalt wird neu übersetzt, laufende Importe warten', async () => {
   const neu = {...REZEPT, steps: ['Linsen waschen.', 'Würzen.']};
   daten['recipes/r1'] = neu;
-  daten['rezeptUebersetzungen/r1'] = {quellHash: inhaltQuellHash(REZEPT), schemaVersion: SCHEMA_VERSION};
+  daten['rezeptUebersetzungen/r1'] = {quellHash: inhaltQuellHash(REZEPT), schemaVersion: SCHEMA_VERSION, originalSprache: 'de'};
   await handlers.uebersetzeRezeptInhalt(ereignis('r1', REZEPT, neu));
   assert.equal(fetchCalls.length, 1);
   assert.equal(daten['rezeptUebersetzungen/r1'].quellHash, inhaltQuellHash(neu));
@@ -353,12 +383,12 @@ test('Backfill: nur für Admins, prüft die Eingabe', async () => {
 
 test('Backfill: übersetzt seitenweise, was fehlt oder veraltet ist', async () => {
   daten['recipes/a'] = REZEPT;
-  daten['rezeptUebersetzungen/a'] = {quellHash: inhaltQuellHash(REZEPT), schemaVersion: SCHEMA_VERSION};
+  daten['rezeptUebersetzungen/a'] = {quellHash: inhaltQuellHash(REZEPT), schemaVersion: SCHEMA_VERSION, originalSprache: 'de'};
   daten['recipes/b'] = {...REZEPT, steps: ['B']};
   daten['recipes/c'] = {title: 'Leer'};
   daten['recipes/d'] = {...REZEPT, importStatus: 'queued'};
   daten['recipes/e'] = {...REZEPT, steps: ['E']};
-  daten['rezeptUebersetzungen/e'] = {quellHash: 'veraltet', schemaVersion: SCHEMA_VERSION};
+  daten['rezeptUebersetzungen/e'] = {quellHash: 'veraltet', schemaVersion: SCHEMA_VERSION, originalSprache: 'de'};
 
   const erste = await backfill('admin-1', {anzahl: 3});
   assert.equal(erste.geprueft, 3);
@@ -374,6 +404,29 @@ test('Backfill: übersetzt seitenweise, was fehlt oder veraltet ist', async () =
   assert.equal(zweite.fertig, true);
   assert.equal(daten['rezeptUebersetzungen/e'].quellHash, inhaltQuellHash(daten['recipes/e']));
   assert.equal(daten[quotaPfad('admin-1')].count, 2);
+});
+
+test('Backfill: erneuert eine Übersetzung, für die Gemini früher eine andere Originalsprache erkannt hatte', async () => {
+  // Deutsches Rezept mit englischen Zutaten, früher als englisch erkannt: mit deutscher Fassung, ohne englische.
+  daten['recipes/a'] = REZEPT;
+  daten['rezeptUebersetzungen/a'] = {
+    quellHash: inhaltQuellHash(REZEPT), schemaVersion: SCHEMA_VERSION, originalSprache: 'en',
+    de: {zutaten: [], schritte: []}, fr: {zutaten: [], schritte: []},
+  };
+  const ergebnis = await backfill('admin-1', {});
+  assert.equal(ergebnis.neu, 1);
+  const dokument = daten['rezeptUebersetzungen/a'];
+  assert.equal(dokument.originalSprache, 'de');
+  assert.equal(dokument.de, undefined);
+  assert.deepEqual(dokument.en.schritte, ['EN Linsen waschen.', 'EN Kochen', 'EN 20 Minuten köcheln.']);
+});
+
+test('Trigger: eine Übersetzung mit anderer erkannter Originalsprache wartet bei unverändertem Inhalt auf den Backfill', async () => {
+  daten['recipes/r1'] = {...REZEPT, ratingAvg: 4};
+  daten['rezeptUebersetzungen/r1'] = {quellHash: inhaltQuellHash(REZEPT), schemaVersion: SCHEMA_VERSION, originalSprache: 'en'};
+  await handlers.uebersetzeRezeptInhalt(ereignis('r1', REZEPT, {...REZEPT, ratingAvg: 4}));
+  assert.deepEqual(fetchCalls, []);
+  assert.deepEqual(gelesen, []);
 });
 
 test('Backfill: am Tageslimit endet die Seite, KI-Fehler treffen nur das Rezept', async () => {
