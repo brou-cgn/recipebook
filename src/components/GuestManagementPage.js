@@ -16,12 +16,18 @@ import {
   normalizeGuestLanguage,
   normalizePreferenceFactor,
 } from '../utils/guestPreferences';
-import { DRINK_CATEGORIES, getDrinkCategoryLabel } from '../utils/drinkCategories';
+import { DRINK_CATEGORIES, getraenkKategorieAnzeige } from '../utils/drinkCategories';
 import { DEFAULT_BUTTON_ICONS, getButtonIcons, getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import Button from './Button';
+import { useSprache, useTexte } from '../contexts/SpracheContext';
+import { formatiereZahl } from '../i18n/format';
+import gaesteTexte from '../i18n/texte/gaeste';
+import getraenkeTexte from '../i18n/texte/getraenke';
+import kopfzeileTexte from '../i18n/texte/kopfzeile';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 const emptyForm = () => ({
   vorname: '',
@@ -35,17 +41,22 @@ const emptyForm = () => ({
   praeferenzFaktor: 0.5,
 });
 
-const getPreferenceLabel = (factor) => {
-  if (factor === 1) return 'trinkt nur diese Getränke';
-  if (factor === 0.75) return 'trinkt vorwiegend diese Getränke';
-  if (factor === 0.5) return 'trinkt diese Getränke gerne';
-  if (factor === 0.25) return 'mag diese Getränke';
-  return 'wird nicht berücksichtigt';
+// Beschreibung des Präferenzfaktors in der geltenden Sprache (Mehrsprachigkeit PR 6k)
+const getPreferenceLabel = (factor, t) => {
+  if (factor === 1) return t('praeferenzNur');
+  if (factor === 0.75) return t('praeferenzVorwiegend');
+  if (factor === 0.5) return t('praeferenzGerne');
+  if (factor === 0.25) return t('praeferenzMag');
+  return t('praeferenzKeine');
 };
+
+// Name der Einladungssprache in der geltenden Sprache (sprachnameDe … in kopfzeile.js)
+const sprachnameSchluessel = (id) => `sprachname${id.charAt(0).toUpperCase()}${id.slice(1)}`;
 
 function GuestCard({ fullName, deleteIcon, onOpenEdit, onDelete, children }) {
   const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete();
-  const deleteLabel = `${fullName || 'Gast'} löschen`;
+  const t = useTexte(gaesteTexte);
+  const deleteLabel = t('nameLoeschen', { name: fullName || t('gast') });
 
   const handleContentClick = () => {
     if (isDeleteVisible) {
@@ -87,7 +98,7 @@ function GuestCard({ fullName, deleteIcon, onOpenEdit, onDelete, children }) {
         {children}
         <DeleteRowButton
           className="events-guest-delete-btn"
-          itemName={fullName || 'Gast'}
+          itemName={fullName || t('gast')}
           onClick={(e) => {
             e.stopPropagation();
             onDelete();
@@ -125,6 +136,13 @@ function GuestManagementPage({
   basicFieldsOnly = false,
 }) {
   const loading = !guestProfilesLoaded;
+  // Texte der Gäste-Verwaltung (Mehrsprachigkeit PR 6k); Namen sind Inhalt
+  const t = useTexte(gaesteTexte);
+  const tGetraenke = useTexte(getraenkeTexte);
+  const tKopfzeile = useTexte(kopfzeileTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const { sprache } = useSprache();
+  const kategorieName = (id) => getraenkKategorieAnzeige(id, tGetraenke);
   const [showForm, setShowForm] = useState(Boolean(editGuest));
   const [editId, setEditId] = useState(editGuest?.id || null);
   const [editOwnerId, setEditOwnerId] = useState(editGuest?.ownerId || null);
@@ -180,8 +198,8 @@ function GuestManagementPage({
     customDrinks.forEach((drink) => {
       if (!byId.has(drink.id) || drink.ownerId === currentUser?.id) byId.set(drink.id, drink);
     });
-    return [...byId.values()].map((drink) => ({ id: drink.id, label: resolveDrinkDisplay(drink, recipes).displayName || drink.id }));
-  }, [customDrinks, recipes, currentUser?.id]);
+    return [...byId.values()].map((drink) => ({ id: drink.id, label: resolveDrinkDisplay(drink, recipes, tGetraenke).displayName || drink.id }));
+  }, [customDrinks, recipes, currentUser?.id, tGetraenke]);
 
   const sortByName = (list) => {
     return [...list].sort((a, b) => {
@@ -254,15 +272,15 @@ function GuestManagementPage({
   const handleSave = async (e) => {
     e.preventDefault();
     if (!canManageGuests) {
-      setError('Du hast keine Berechtigung, Gäste zu verwalten.');
+      setError(t('keineBerechtigung'));
       return;
     }
     if (!form.vorname.trim() || !form.nachname.trim()) {
-      setError('Bitte Vorname und Nachname angeben.');
+      setError(t('fehlerName'));
       return;
     }
     if (!validateEmail(form.email.trim())) {
-      setError('Bitte eine gültige E-Mail-Adresse angeben.');
+      setError(t('fehlerEmail'));
       return;
     }
     setSaving(true);
@@ -289,7 +307,7 @@ function GuestManagementPage({
       closeForm(payload);
     } catch (err) {
       console.error('Error saving guest profile:', err);
-      setError('Das Gästeprofil konnte nicht gespeichert werden. Bitte versuche es erneut.');
+      setError(t('fehlerSpeichern'));
     } finally {
       setSaving(false);
     }
@@ -297,10 +315,10 @@ function GuestManagementPage({
 
   const handleDelete = (profile) => {
     if (!canManageGuests) return;
-    const name = getGuestDisplayName(profile) || 'diesen Gast';
+    const name = getGuestDisplayName(profile) || t('diesenGast');
     scheduleDelete({
       key: getProfileKey(profile),
-      message: `"${name}" gelöscht.`,
+      message: t('gastGeloescht', { name }),
       onConfirm: async () => {
         try {
           // Admin deleting another user's guest: pass their ownerId through.
@@ -333,16 +351,16 @@ function GuestManagementPage({
     return (
       <div className="events-page-container">
         <div className="events-page-header">
-          <h2>Gäste verwalten</h2>
+          <h2>{t('gaesteVerwalten')}</h2>
           {onBack && (
             <button
               className="app-close-button"
               onClick={onBack}
-              aria-label="Gäste verwalten schließen"
-              title="Gäste verwalten schließen"
+              aria-label={t('gaesteVerwaltenSchliessen')}
+              title={t('gaesteVerwaltenSchliessen')}
             >
               {isBase64Image(closeIcon) ? (
-                <img src={closeIcon} alt="Gäste verwalten schließen" className="app-close-button-icon-img" />
+                <img src={closeIcon} alt={t('gaesteVerwaltenSchliessen')} className="app-close-button-icon-img" />
               ) : (
                 closeIcon || '×'
               )}
@@ -350,7 +368,7 @@ function GuestManagementPage({
           )}
         </div>
         <div className="events-empty-state">
-          Nur Benutzer mit der Rolle „edit“ oder höher können Gäste verwalten.
+          {t('nurRolleEdit')}
         </div>
       </div>
     );
@@ -360,12 +378,12 @@ function GuestManagementPage({
     return (
       <div className="events-page-container">
         <div className="events-page-header">
-          <h2>{editId ? 'Gast bearbeiten' : 'Neuen Gast erfassen'}</h2>
+          <h2>{editId ? t('gastBearbeiten') : t('neuerGast')}</h2>
         </div>
         <form className="events-form" onSubmit={handleSave} ref={formRef}>
           <div className="events-form-row">
             <label className="events-form-field">
-              <span>Vorname</span>
+              <span>{t('vorname')}</span>
               <input
                 type="text"
                 value={form.vorname}
@@ -374,7 +392,7 @@ function GuestManagementPage({
               />
             </label>
             <label className="events-form-field">
-              <span>Nachname</span>
+              <span>{t('nachname')}</span>
               <input
                 type="text"
                 value={form.nachname}
@@ -385,23 +403,23 @@ function GuestManagementPage({
           </div>
 
           <label className="events-form-field">
-            <span>E-Mail (optional)</span>
+            <span>{t('email')}</span>
             <input
               type="email"
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              placeholder="name@beispiel.de"
+              placeholder={t('emailBeispiel')}
             />
           </label>
 
           <label className="events-form-field">
-            <span>Sprache für Einladungen</span>
+            <span>{t('spracheEinladungen')}</span>
             <select
               value={form.sprache}
               onChange={(e) => setForm((f) => ({ ...f, sprache: e.target.value }))}
             >
               {GUEST_LANGUAGES.map((language) => (
-                <option key={language.id} value={language.id}>{language.label}</option>
+                <option key={language.id} value={language.id}>{tKopfzeile(sprachnameSchluessel(language.id))}</option>
               ))}
             </select>
           </label>
@@ -422,7 +440,7 @@ function GuestManagementPage({
                   }));
                 }}
               />
-              <span>Kind</span>
+              <span>{t('kind')}</span>
             </label>
 
             <label className="events-category-checkbox">
@@ -439,11 +457,11 @@ function GuestManagementPage({
                   }));
                 }}
               />
-              <span>Alkoholische Getränke</span>
+              <span>{t('alkoholisch')}</span>
             </label>
 
             <div className="events-form-field">
-              <span>Bevorzugte Getränke</span>
+              <span>{t('bevorzugteGetraenke')}</span>
               {form.bevorzugteGetraenke.length > 0 && (
                 <div className="events-preferred-drinks-list">
                   {form.bevorzugteGetraenke.map((drinkId) => {
@@ -455,7 +473,7 @@ function GuestManagementPage({
                           type="button"
                           className="events-drink-chip-remove"
                           onClick={() => togglePreferredDrink(drinkId)}
-                          aria-label={`${drink ? drink.label : drinkId} entfernen`}
+                          aria-label={tAllgemein('nameEntfernen', { name: drink ? drink.label : drinkId })}
                         >
                           ×
                         </button>
@@ -468,9 +486,9 @@ function GuestManagementPage({
                 <select
                   value={drinkToAdd}
                   onChange={(e) => setDrinkToAdd(e.target.value)}
-                  aria-label="Getränk auswählen"
+                  aria-label={t('getraenkAuswaehlen')}
                 >
-                  <option value="">Getränk auswählen …</option>
+                  <option value="">{t('getraenkAuswaehlenOption')}</option>
                   {availableDrinks
                     .filter((d) => !form.bevorzugteGetraenke.includes(d.id))
                     .map((drink) => (
@@ -486,23 +504,23 @@ function GuestManagementPage({
                   }}
                   disabled={!drinkToAdd}
                 >
-                  Hinzufügen
+                  {tAllgemein('hinzufuegen')}
                 </Button>
               </div>
             </div>
 
             <div className="events-form-field">
-              <span>Bevorzugte Getränkekategorien</span>
+              <span>{t('bevorzugteKategorien')}</span>
               {form.bevorzugteKategorien.length > 0 && (
                 <div className="events-preferred-drinks-list">
                   {form.bevorzugteKategorien.map((catId) => (
                     <span key={catId} className="events-drink-chip">
-                      {getDrinkCategoryLabel(catId)}
+                      {kategorieName(catId)}
                       <button
                         type="button"
                         className="events-drink-chip-remove"
                         onClick={() => togglePreferredCategory(catId)}
-                        aria-label={`${getDrinkCategoryLabel(catId)} entfernen`}
+                        aria-label={tAllgemein('nameEntfernen', { name: kategorieName(catId) })}
                       >
                         ×
                       </button>
@@ -514,24 +532,24 @@ function GuestManagementPage({
                 <select
                   value={categoryToAdd}
                   onChange={(e) => setCategoryToAdd(e.target.value)}
-                  aria-label="Getränkekategorie auswählen"
+                  aria-label={t('kategorieAuswaehlen')}
                 >
-                  <option value="">Kategorie auswählen …</option>
+                  <option value="">{t('kategorieAuswaehlenOption')}</option>
                   {DRINK_CATEGORIES.map((cat) =>
                     cat.subcategories ? (
-                      <optgroup key={cat.id} label={cat.label}>
+                      <optgroup key={cat.id} label={kategorieName(cat.id)}>
                         {!form.bevorzugteKategorien.includes(cat.id) && (
-                          <option value={cat.id}>{cat.label}</option>
+                          <option value={cat.id}>{kategorieName(cat.id)}</option>
                         )}
                         {cat.subcategories
                           .filter((sub) => !form.bevorzugteKategorien.includes(sub.id))
                           .map((sub) => (
-                            <option key={sub.id} value={sub.id}>{sub.label}</option>
+                            <option key={sub.id} value={sub.id}>{kategorieName(sub.id)}</option>
                           ))}
                       </optgroup>
                     ) : (
                       !form.bevorzugteKategorien.includes(cat.id) && (
-                        <option key={cat.id} value={cat.id}>{cat.label}</option>
+                        <option key={cat.id} value={cat.id}>{kategorieName(cat.id)}</option>
                       )
                     )
                   )}
@@ -545,13 +563,13 @@ function GuestManagementPage({
                   }}
                   disabled={!categoryToAdd}
                 >
-                  Hinzufügen
+                  {tAllgemein('hinzufuegen')}
                 </Button>
               </div>
             </div>
 
             <label className="events-form-field">
-              <span>Präferenzfaktor: {Number(form.praeferenzFaktor).toFixed(2)} ({getPreferenceLabel(Number(form.praeferenzFaktor))})</span>
+              <span>{t('praeferenzfaktor', { faktor: formatiereZahl(Number(form.praeferenzFaktor), sprache, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), beschreibung: getPreferenceLabel(Number(form.praeferenzFaktor), t) })}</span>
               <input
                 type="range"
                 min="0"
@@ -568,10 +586,10 @@ function GuestManagementPage({
 
           <div className="events-form-actions">
             <Button className="events-save-desktop-only" onClick={() => closeForm(null)} disabled={saving}>
-              Abbrechen
+              {tAllgemein('abbrechen')}
             </Button>
             <Button variant="primary" type="submit" className="events-form-actions-save" loading={saving}>
-              {saving ? 'Speichert …' : 'Speichern'}
+              {saving ? t('speichert') : tAllgemein('speichern')}
             </Button>
           </div>
         </form>
@@ -585,11 +603,11 @@ function GuestManagementPage({
           onTouchStart={() => setFabPressed(true)}
           onTouchEnd={() => setFabPressed(false)}
           disabled={saving}
-          aria-label={editId ? 'Gast aktualisieren' : 'Gast speichern'}
-          title={editId ? 'Gast aktualisieren' : 'Gast speichern'}
+          aria-label={editId ? t('gastAktualisieren') : t('gastSpeichern')}
+          title={editId ? t('gastAktualisieren') : t('gastSpeichern')}
         >
           {isBase64Image(getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)) ? (
-            <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt="Speichern" className="button-icon-image" draggable="false" />
+            <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt={tAllgemein('speichern')} className="button-icon-image" draggable="false" />
           ) : (
             getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)
           )}
@@ -606,11 +624,11 @@ function GuestManagementPage({
           onMouseUp={() => setCancelPressed(false)}
           onMouseLeave={() => setCancelPressed(false)}
           disabled={saving}
-          title="Abbrechen"
-          aria-label="Gast bearbeiten abbrechen"
+          title={tAllgemein('abbrechen')}
+          aria-label={t('gastBearbeitenAbbrechen')}
         >
           {isBase64Image(getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)) ? (
-            <img src={getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
+            <img src={getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)} alt={tAllgemein('abbrechen')} className="button-icon-image" draggable="false" />
           ) : (
             getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)
           )}
@@ -622,24 +640,24 @@ function GuestManagementPage({
   return (
     <div className="events-page-container">
       <div className="events-page-header">
-        <h2>Gäste verwalten</h2>
+        <h2>{t('gaesteVerwalten')}</h2>
         <div className="events-page-header-actions">
           <Button
             className="events-header-add-btn"
             onClick={openNew}
-            aria-label="Neuen Gast anlegen"
+            aria-label={t('neuenGastAnlegen')}
           >
-            + Gast
+            {t('plusGast')}
           </Button>
           {onBack && (
             <button
               className="app-close-button"
               onClick={onBack}
-              aria-label="Gäste verwalten schließen"
-              title="Gäste verwalten schließen"
+              aria-label={t('gaesteVerwaltenSchliessen')}
+              title={t('gaesteVerwaltenSchliessen')}
             >
               {isBase64Image(closeIcon) ? (
-                <img src={closeIcon} alt="Gäste verwalten schließen" className="app-close-button-icon-img" />
+                <img src={closeIcon} alt={t('gaesteVerwaltenSchliessen')} className="app-close-button-icon-img" />
               ) : (
                 closeIcon || '×'
               )}
@@ -650,10 +668,10 @@ function GuestManagementPage({
 
       {isAdmin ? (
         allProfilesLoading ? (
-          <div className="events-empty-state">Laden...</div>
+          <div className="events-empty-state">{t('laden')}</div>
         ) : sortedAllProfiles.length === 0 ? (
           <div className="events-empty-state">
-            <p>Keine Gäste vorhanden.</p>
+            <p>{t('keineGaeste')}</p>
           </div>
         ) : (
           <div className="events-list">
@@ -670,10 +688,10 @@ function GuestManagementPage({
                   onDelete={() => handleDelete(profile)}
                 >
                   <div className="events-card-main">
-                    <h3>{fullName || 'Unbenannter Gast'}</h3>
-                    {profile.kind === true && <p className="events-info-text">Kind</p>}
+                    <h3>{fullName || t('unbenannterGast')}</h3>
+                    {profile.kind === true && <p className="events-info-text">{t('kind')}</p>}
                     {ownerName && (
-                      <p className="events-card-meta">von {ownerName}</p>
+                      <p className="events-card-meta">{t('von', { name: ownerName })}</p>
                     )}
                   </div>
                 </GuestCard>
@@ -682,12 +700,12 @@ function GuestManagementPage({
           </div>
         )
       ) : loading ? (
-        <div className="events-empty-state">Laden...</div>
+        <div className="events-empty-state">{t('laden')}</div>
       ) : profiles.length === 0 ? (
         <div className="events-empty-state">
-          <p>Noch keine Gäste erfasst.</p>
+          <p>{t('nochKeineGaeste')}</p>
           <Button variant="primary" onClick={openNew}>
-            Ersten Gast anlegen
+            {t('ersterGast')}
           </Button>
         </div>
       ) : (
@@ -700,7 +718,7 @@ function GuestManagementPage({
                 )
               : [];
             const preferredCategoryNames = Array.isArray(profile.bevorzugteKategorien)
-              ? profile.bevorzugteKategorien.map(getDrinkCategoryLabel)
+              ? profile.bevorzugteKategorien.map(kategorieName)
               : [];
             const preferredSummary = [...preferredDrinkNames, ...preferredCategoryNames];
             const guestDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode);
@@ -713,11 +731,11 @@ function GuestManagementPage({
                 onDelete={() => handleDelete(profile)}
               >
                 <div className="events-card-main">
-                  <h3>{fullName || 'Unbenannter Gast'}</h3>
-                  {profile.kind === true && <p className="events-info-text">Kind</p>}
+                  <h3>{fullName || t('unbenannterGast')}</h3>
+                  {profile.kind === true && <p className="events-info-text">{t('kind')}</p>}
                   {preferredSummary.length > 0 && (
                     <p className="events-card-drink-summary">
-                      Bevorzugt: {preferredSummary.join(', ')}
+                      {t('bevorzugt', { liste: preferredSummary.join(', ') })}
                     </p>
                   )}
                 </div>
@@ -730,11 +748,11 @@ function GuestManagementPage({
         <div key={banner.id} className="undo-snackbar" role="status">
           <span>{banner.message}</span>
           <button type="button" className="undo-snackbar-btn" onClick={() => undoDelete(banner.id)}>
-            Rückgängig
+            {tAllgemein('rueckgaengig')}
           </button>
         </div>
       ))}
-      <OverviewAddFab onClick={openNew} title="Gast anlegen" ariaLabel="Gast anlegen" />
+      <OverviewAddFab onClick={openNew} title={t('gastAnlegen')} ariaLabel={t('gastAnlegen')} />
     </div>
   );
 }

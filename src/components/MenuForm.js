@@ -33,6 +33,7 @@ import { titelFassungen } from '../i18n/rezeptTitel';
 import { formatiereDatum } from '../i18n/format';
 import festtafelTexte from '../i18n/texte/festtafel';
 import allgemeinTexte from '../i18n/texte/allgemein';
+import getraenkeTexte from '../i18n/texte/getraenke';
 import {
   DndContext,
   closestCenter,
@@ -588,6 +589,8 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
   // Texte der Festtafel (Mehrsprachigkeit PR 6g); die Suche findet Original und Übersetzung der Titel
   const t = useTexte(festtafelTexte);
   const tAllgemein = useTexte(allgemeinTexte);
+  // Namen vordefinierter Getränke in der geltenden Sprache (Mehrsprachigkeit PR 6k)
+  const tGetraenke = useTexte(getraenkeTexte);
   const { sprache, inhalteUebersetzen } = useSprache();
 
   const sensors = useSensors(
@@ -694,10 +697,10 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
     const ids = Array.isArray(linkedEvent.customDrinkIds) ? linkedEvent.customDrinkIds : [];
     return ids.map((drinkId) => {
       const drink = allDrinks.find((d) => d.id === drinkId);
-      const resolved = resolveDrinkDisplay(drink || drinkId, recipes);
+      const resolved = resolveDrinkDisplay(drink || drinkId, recipes, tGetraenke);
       return { id: drinkId, displayName: resolved.displayName || drinkId, recipeId: resolved.recipeId };
     });
-  }, [linkedEvent, linkedEventCustomDrinks, recipes]);
+  }, [linkedEvent, linkedEventCustomDrinks, recipes, tGetraenke]);
 
   // Event drinks actually shown/saved: staged removals filtered out, staged
   // reordering (from dragging) applied on top.
@@ -728,7 +731,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
 
   const getDrinkDisplayName = (drinkId) => {
     const drink = allDrinks.find((d) => d.id === drinkId);
-    return resolveDrinkDisplay(drink || drinkId, recipes).displayName || drinkId;
+    return resolveDrinkDisplay(drink || drinkId, recipes, tGetraenke).displayName || drinkId;
   };
 
   const handleDrinkSearchChange = (sectionIndex, query) => {
@@ -821,7 +824,13 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
       // both would show the same name twice.
       .filter((drink) => !decodeRecipeLink(drink.name))
       .filter((drink) => !showOwnDrinksOnly || !drink.ownerId || drink.ownerId === currentUser?.id)
-      .map((drink) => ({ type: 'drink', id: drink.id, drink, searchLabel: resolveDrinkDisplay(drink, recipes).displayName }));
+      // Die Suche findet vordefinierte Getränke unter dem angezeigten und dem deutschen Namen
+      .map((drink) => ({
+        type: 'drink',
+        id: drink.id,
+        drink,
+        searchLabel: [...new Set([resolveDrinkDisplay(drink, recipes, tGetraenke).displayName, resolveDrinkDisplay(drink, recipes).displayName])].join(' · '),
+      }));
 
     const combinedOptions = [...recipeOptions, ...drinkOptions];
 

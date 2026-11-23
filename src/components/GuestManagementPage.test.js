@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import GuestManagementPage from './GuestManagementPage';
+import { renderWithProviders } from '../test-utils';
 
 const mockSaveGuestProfile = jest.fn();
 const mockDeleteGuestProfile = jest.fn();
@@ -513,5 +514,47 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
         jest.useRealTimers();
       }
     });
+  });
+});
+
+describe('GuestManagementPage in anderer Sprache (Mehrsprachigkeit PR 6k)', () => {
+  const NBSP = '\u00a0';
+  const currentUser = { id: 'u1' };
+
+  beforeEach(() => {
+    mockSaveGuestProfile.mockResolvedValue(undefined);
+  });
+
+  const zeige = (sprache, guestProfiles = []) => renderWithProviders(
+    <GuestManagementPage
+      currentUser={currentUser}
+      guestProfiles={guestProfiles}
+      guestProfilesLoaded
+      allGuestProfiles={[]}
+      allGuestProfilesLoaded
+      customDrinks={[]}
+    />,
+    { sprache }
+  );
+
+  test('Englisch: Liste mit Kind und bevorzugten Kategorien', () => {
+    zeige('en', [{ id: 'g1', vorname: 'Anna', nachname: 'Beispiel', kind: true, bevorzugteKategorien: ['wasser', 'saft'] }]);
+    expect(screen.getByText('Manage guests')).toBeInTheDocument();
+    expect(screen.getByText('Child')).toBeInTheDocument();
+    expect(screen.getByText('Preferred: Water, Juice')).toBeInTheDocument();
+  });
+
+  test('Französisch: Formular mit Sprachen, Kategorien und Präferenzfaktor', () => {
+    zeige('fr');
+    expect(screen.getByText('Aucun invité ajouté pour l’instant.')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Ajouter ton premier invité'));
+
+    expect(screen.getByText('Langue des invitations')).toBeInTheDocument();
+    expect(screen.getByText('Allemand')).toBeInTheDocument();
+    const kategorie = screen.getByLabelText('Choisir une catégorie de boisson');
+    expect(within(kategorie).getByText('Eau')).toBeInTheDocument();
+    // getByText vergleicht mit normalisierten Leerzeichen, textContent prüft die geschützten
+    const faktor = screen.getByText('Facteur de préférence : 0,50 (aime boire ces boissons)');
+    expect(faktor.textContent).toBe(`Facteur de préférence${NBSP}: 0,50 (aime boire ces boissons)`);
   });
 });

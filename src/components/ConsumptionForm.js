@@ -9,7 +9,6 @@ import {
   unlockVerbrauchMengen,
   setEventStatus,
 } from '../utils/eventsFirestore';
-import { CATEGORY_LABELS } from './EventForm';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { calculateCascadingEinkauf } from '../utils/einkaufCascade';
 import { formatQuantityFraction, parseFractionQuantity } from '../utils/fractionFormat';
@@ -31,18 +30,27 @@ import ChevronRightIcon from './icons/ChevronRightIcon';
 import useModalScrollLock from '../hooks/useModalScrollLock';
 import useFadeOutClose from '../hooks/useFadeOutClose';
 import Button from './Button';
+import { useSprache, useTexte, useRezeptTitel } from '../contexts/SpracheContext';
+import { formatiereZahl } from '../i18n/format';
+import { STANDARD_SPRACHE } from '../i18n/sprachen';
+import { getraenkKategorieAnzeige } from '../utils/drinkCategories';
+import getraenkeTexte from '../i18n/texte/getraenke';
+import rezeptansichtTexte from '../i18n/texte/rezeptansicht';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
-function getEinheitSizeLabel(einheitsgroesse) {
+// Groesse einer Einheit, unter 1 l in ml, sonst in l mit einer Nachkommastelle nach der Sprache.
+function getEinheitSizeLabel(einheitsgroesse, sprache = STANDARD_SPRACHE) {
   const liters = Number(einheitsgroesse);
   if (liters < 1) {
     return `${Math.round(liters * 1000)} ml`;
   }
-  return `${liters.toFixed(1).replace('.', ',')} l`;
+  return `${formatiereZahl(liters, sprache, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} l`;
 }
 
-function getRowDrinkName(row, recipes) {
-  if ((row.isCustomDrink || row.isPredefinedDrink) && row.drinkLabel) return resolveDrinkDisplay(row.drinkLabel, recipes).displayName;
-  return CATEGORY_LABELS[row.kategorie] || row.kategorie;
+// t: Texte aus getraenke.js fuer Kategorien und vordefinierte Getraenke in der geltenden Sprache
+function getRowDrinkName(row, recipes, t) {
+  if ((row.isCustomDrink || row.isPredefinedDrink) && row.drinkLabel) return resolveDrinkDisplay(row.drinkLabel, recipes, t).displayName;
+  return getraenkKategorieAnzeige(row.kategorie, t);
 }
 
 // Gebindeeinheit wenn vorhanden, sonst die Einheit -- fuer die Einkaufsliste.
@@ -83,30 +91,30 @@ function getRowConsumptionUnit(row) {
   return row.gebinde || '';
 }
 
-function getRowUnitSubtitle(row, unitLabelOverride) {
+function getRowUnitSubtitle(row, sprache, unitLabelOverride) {
   if (row.isCustomDrink && Array.isArray(row.einheiten) && row.einheitIdx !== undefined) {
     const einheit = row.einheiten[row.einheitIdx];
     if (einheit) {
-      const sizeLabel = getEinheitSizeLabel(einheit.einheitsgroesse);
+      const sizeLabel = getEinheitSizeLabel(einheit.einheitsgroesse, sprache);
       const unitLabel = unitLabelOverride !== undefined ? unitLabelOverride : (einheit.gebindeinheit || einheit.einheit);
       return unitLabel ? `${sizeLabel} · ${unitLabel}` : sizeLabel;
     }
   }
   if (row.gebindeGroesseLiter) {
-    const sizeLabel = getEinheitSizeLabel(row.gebindeGroesseLiter);
+    const sizeLabel = getEinheitSizeLabel(row.gebindeGroesseLiter, sprache);
     return row.gebinde ? `${sizeLabel} · ${row.gebinde}` : sizeLabel;
   }
   return null;
 }
 
-function groupKategorienByDrink(kategorien, recipes) {
+function groupKategorienByDrink(kategorien, recipes, t) {
   const groups = [];
   const groupsByKey = new Map();
   kategorien.forEach((row) => {
     const key = row.drinkId || row.kategorie;
     let group = groupsByKey.get(key);
     if (!group) {
-      group = { key, drinkName: getRowDrinkName(row, recipes), rows: [] };
+      group = { key, drinkName: getRowDrinkName(row, recipes, t), rows: [] };
       groupsByKey.set(key, group);
       groups.push(group);
     }
@@ -178,15 +186,23 @@ function getGroupBedarfLiter(group) {
 }
 
 // Berechnet die kaskadierende Vorbefuellung fuer alle Getraenke-Gruppen.
-function getCascadePrefill(drinkGroups) {
+// t: Texte aus getraenke.js in der geltenden Sprache.
+function getCascadePrefill(drinkGroups, t) {
   const prefillMap = {};
   const warnings = [];
   drinkGroups.forEach((group) => {
     const units = getGroupCascadeUnits(group);
     const bedarfLiter = getGroupBedarfLiter(group);
-    const { values: cascadeValues, warnings: groupWarnings } = calculateCascadingEinkauf(units, bedarfLiter);
+    const { values: cascadeValues } = calculateCascadingEinkauf(units, bedarfLiter);
     Object.assign(prefillMap, cascadeValues);
-    groupWarnings.forEach((warning) => warnings.push(`${group.drinkName}: ${warning}`));
+    // Einheiten ohne gueltige Groesse bleiben leer (null, siehe calculateCascadingEinkauf). Der Hinweis
+    // entsteht hier statt aus dessen deutschen warnings, damit er in der geltenden Sprache erscheint
+    // und die Einheit statt des internen Schluessels nennt.
+    group.rows.forEach((row, idx) => {
+      if (cascadeValues[row.kategorie] !== null) return;
+      const einheit = getRowConsumptionUnit(row) || t('einheitNummer', { nummer: idx + 1 });
+      warnings.push(t('warnungOhneGroesse', { getraenk: group.drinkName, einheit }));
+    });
   });
   return { prefillMap, warnings };
 }
@@ -233,10 +249,10 @@ function isEventPast(dateStr) {
   return dateStr < todayStr;
 }
 
-function formatLiterShort(value) {
+function formatLiterShort(value, sprache = STANDARD_SPRACHE) {
   const num = Number(value);
   if (!Number.isFinite(num)) return '';
-  return num.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+  return formatiereZahl(num, sprache, { minimumFractionDigits: 1, maximumFractionDigits: 2 });
 }
 
 // Kompakte Zusammenfassung der eingetragenen "Eingekauft"-Mengen fuer den Einkauf-Button, z.B. "1× Fass, 1× Flasche".
@@ -278,9 +294,9 @@ function getGroupVerbrauchLiter(group, values) {
 
 // Zusammenfassung fuer den Verbrauch-Button: zeigt immer den berechneten
 // Verbrauch (Einkauf minus Uebrig) der Gruppe in Litern.
-function getGroupVerbrauchSummary(group, values) {
+function getGroupVerbrauchSummary(group, values, sprache) {
   const verbrauchLiter = getGroupVerbrauchLiter(group, values);
-  return verbrauchLiter > 0 ? `${formatLiterShort(verbrauchLiter)} l` : '–';
+  return verbrauchLiter > 0 ? `${formatLiterShort(verbrauchLiter, sprache)} l` : '–';
 }
 
 // Ermittelt den Sperr-Zustand einer Getraenke-Gruppe aus den getrennten
@@ -293,10 +309,11 @@ function getLockIconState(einkaufGesperrt, verbrauchGesperrt) {
   return 'open';
 }
 
+// titel: Schluessel in getraenke.js
 const LOCK_ICON_CONFIG = {
-  open: { title: 'Offen', color: '#999', filled: false, Icon: UnlockIcon },
-  purchaseLocked: { title: 'Einkauf gesperrt', color: '#c9a227', filled: false, Icon: LockIcon },
-  fullyLocked: { title: 'Einkauf & Verbrauch gesperrt', color: '#2F5D50', filled: true, Icon: LockIcon },
+  open: { titel: 'statusOffen', color: '#999', filled: false, Icon: UnlockIcon },
+  purchaseLocked: { titel: 'statusEinkaufGesperrt', color: '#c9a227', filled: false, Icon: LockIcon },
+  fullyLocked: { titel: 'statusAllesGesperrt', color: '#2F5D50', filled: true, Icon: LockIcon },
 };
 
 // Zeigt den Sperr-Zustand einer Getraenke-Gruppe rein ueber das Lock-Icon an
@@ -304,7 +321,9 @@ const LOCK_ICON_CONFIG = {
 // im aufgeklappten Detailbereich). Der Zustand wird ausschliesslich ueber
 // outline/filled vermittelt, kein Text-Badge.
 function LockStateIcon({ state }) {
-  const { title, color, filled, Icon } = LOCK_ICON_CONFIG[state];
+  const t = useTexte(getraenkeTexte);
+  const { titel, color, filled, Icon } = LOCK_ICON_CONFIG[state];
+  const title = t(titel);
   return (
     <span className={`events-lock-state-icon events-lock-state-${state}`} title={title} aria-label={title}>
       <Icon size={16} color={color} filled={filled} />
@@ -314,9 +333,16 @@ function LockStateIcon({ state }) {
 
 function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerId }) {
   const effectiveOwnerId = ownerId || currentUser?.id;
+  // Texte von Einkauf und Verbrauch (Mehrsprachigkeit PR 6k); Getraenke- und Gebindeeinheiten
+  // bleiben deutsch gespeichert und angezeigt (Phase B)
+  const t = useTexte(getraenkeTexte);
+  const tRezept = useTexte(rezeptansichtTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const { sprache } = useSprache();
+  const zeigeTitel = useRezeptTitel();
   const kategorien = (event.berechnung?.ergebnis || []).filter((row) => (row.isCustomDrink || row.isPredefinedDrink) && row.gebindeGroesseLiter);
-  const drinkGroups = groupKategorienByDrink(kategorien, recipes);
-  const { prefillMap, warnings: prefillWarnings } = getCascadePrefill(drinkGroups);
+  const drinkGroups = groupKategorienByDrink(kategorien, recipes, t);
+  const { prefillMap, warnings: prefillWarnings } = getCascadePrefill(drinkGroups, t);
   const [values, setValues] = useState(() => {
     const cascadeUnitsByKey = buildCascadeUnitsByKey(drinkGroups);
     const initial = {};
@@ -590,7 +616,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
       onDone(event.id);
     } catch (err) {
       console.error('Error submitting consumption:', err);
-      setError('Der Verbrauch konnte nicht gespeichert werden. Bitte versuche es erneut.');
+      setError(t('fehlerVerbrauch'));
       autoSubmitTriggeredRef.current = false;
     } finally {
       setSaving(false);
@@ -628,7 +654,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
   return (
     <div className="events-page-container">
       <div className="events-page-header">
-        <h2>Einkauf & Verbrauch</h2>
+        <h2>{t('einkaufVerbrauch')}</h2>
       </div>
       {prefillWarnings.length > 0 && (
         <div className="events-warnings">
@@ -649,7 +675,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
           const verbrauchFehlt = isEventPast(event.date) && !verbrauchGroupLocked;
           const lockState = getLockIconState(einkaufGroupLocked, verbrauchGroupLocked);
           const einkaufSummary = getGroupEinkaufSummary(group, values);
-          const verbrauchSummary = getGroupVerbrauchSummary(group, values);
+          const verbrauchSummary = getGroupVerbrauchSummary(group, values, sprache);
           const activeSection = expandedSection[group.key] || null;
           return (
             <div className="events-consumption-group" key={group.key}>
@@ -658,7 +684,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
                   <h3 className="events-consumption-drink-name">{group.drinkName}</h3>
                   <LockStateIcon state={lockState} />
                   {verbrauchFehlt && (
-                    <span className="events-consumption-missing-usage" title="Verbrauch fehlt" aria-label="Verbrauch fehlt">
+                    <span className="events-consumption-missing-usage" title={t('verbrauchFehlt')} aria-label={t('verbrauchFehlt')}>
                       <WarningIcon size={16} color="#c9a227" />
                     </span>
                   )}
@@ -666,7 +692,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
               </div>
               {rowStatus === 'unterdeckung' && !verbrauchGroupLocked && (
                 <p className="events-warning-text events-consumption-underdeckung-warning">
-                  Unterdeckung: {formatLiterShort(totalLiter)} l eingekauft, aber {formatLiterShort(bedarfLiter)} l kalkuliert.
+                  {t('unterdeckung', { eingekauft: formatLiterShort(totalLiter, sprache), kalkuliert: formatLiterShort(bedarfLiter, sprache) })}
                 </p>
               )}
 
@@ -676,12 +702,12 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
                   className={`events-consumption-toggle-btn${einkaufGroupLocked ? ' is-locked' : ''}${activeSection === 'einkauf' ? ' is-expanded' : ''}`}
                   onClick={() => toggleSection(group.key, 'einkauf')}
                   aria-expanded={activeSection === 'einkauf'}
-                  aria-label="Einkauf bearbeiten"
-                  title="Einkauf bearbeiten"
+                  aria-label={t('einkaufBearbeiten')}
+                  title={t('einkaufBearbeiten')}
                 >
                   <ShoppingCartIcon size={16} />
                   <span className="events-consumption-toggle-text">
-                    <span className="events-consumption-toggle-label">Einkauf</span>
+                    <span className="events-consumption-toggle-label">{t('einkauf')}</span>
                     <span className="events-consumption-toggle-value">{einkaufSummary || '–'}</span>
                   </span>
                   <ChevronRightIcon size={14} />
@@ -691,12 +717,12 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
                   className={`events-consumption-toggle-btn${verbrauchGroupLocked ? ' is-locked' : ''}${activeSection === 'verbrauch' ? ' is-expanded' : ''}`}
                   onClick={() => toggleSection(group.key, 'verbrauch')}
                   aria-expanded={activeSection === 'verbrauch'}
-                  aria-label="Verbrauch bearbeiten"
-                  title="Verbrauch bearbeiten"
+                  aria-label={t('verbrauchBearbeiten')}
+                  title={t('verbrauchBearbeiten')}
                 >
                   <CupIcon size={16} />
                   <span className="events-consumption-toggle-text">
-                    <span className="events-consumption-toggle-label">Verbrauch</span>
+                    <span className="events-consumption-toggle-label">{t('verbrauch')}</span>
                     <span className="events-consumption-toggle-value">{verbrauchSummary}</span>
                   </span>
                   <ChevronRightIcon size={14} />
@@ -709,20 +735,20 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
                     const inputId = `${row.kategorie}-eingekauft`;
                     return (
                       <div className="events-form-row" key={row.kategorie}>
-                        {getRowUnitSubtitle(row) && (
-                          <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row)}</span>
+                        {getRowUnitSubtitle(row, sprache) && (
+                          <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row, sprache)}</span>
                         )}
                         <div className="events-form-field">
                           <span className="events-form-field-label-row">
-                            <label htmlFor={inputId}>Eingekauft</label>
+                            <label htmlFor={inputId}>{t('eingekauft')}</label>
                             {idx === 0 && (
                               <LockToggleButton
                                 locked={einkaufGroupLocked}
                                 onToggle={() => handleToggleEinkaufLock(group)}
-                                lockedLabel="Eingekaufte Menge entsperren"
-                                unlockedLabel="Eingekaufte Menge sperren"
-                                lockedTitle="Eingekaufte Menge entsperren (wird beim Öffnen wieder neu berechnet)"
-                                unlockedTitle="Eingekaufte Menge sperren (keine automatische Neuberechnung mehr)"
+                                lockedLabel={t('eingekauftEntsperren')}
+                                unlockedLabel={t('eingekauftSperren')}
+                                lockedTitle={t('eingekauftEntsperrenTitel')}
+                                unlockedTitle={t('eingekauftSperrenTitel')}
                               />
                             )}
                           </span>
@@ -730,8 +756,8 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
                             id={inputId}
                             type="text"
                             inputMode="text"
-                            placeholder="z.B. 1 3/4"
-                            title="Menge als Bruch (z.B. 1/2 oder 1 3/4) oder Zahl"
+                            placeholder={t('mengeBeispiel')}
+                            title={t('mengeBruch')}
                             value={values[row.kategorie].eingekauft}
                             onChange={(e) => updateValue(row.kategorie, 'eingekauft', e.target.value)}
                             disabled={einkaufGroupLocked}
@@ -749,16 +775,16 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
                     const inputId = `${row.kategorie}-uebrig`;
                     const getrunkenInputId = `${row.kategorie}-getrunken`;
                     const consumptionUnit = getRowConsumptionUnit(row);
-                    const uebrigLabel = consumptionUnit ? `Übrig (${consumptionUnit})` : 'Übrig';
-                    const getrunkenLabel = consumptionUnit ? `Getrunken (${consumptionUnit})` : 'Getrunken';
+                    const uebrigLabel = consumptionUnit ? t('uebrigEinheit', { einheit: consumptionUnit }) : t('uebrig');
+                    const getrunkenLabel = consumptionUnit ? t('getrunkenEinheit', { einheit: consumptionUnit }) : t('getrunken');
                     const unit = cascadeUnitsByKey[row.kategorie];
                     const stepAttr = isDecimalConsumptionAllowed(unit) ? '0.1' : '1';
                     const totalEinheiten = getRowTotalEinheiten(unit, values[row.kategorie].eingekauft);
                     const getrunkenDisabled = verbrauchGroupLocked || !Number.isFinite(totalEinheiten);
                     return (
                       <div className="events-form-row" key={row.kategorie}>
-                        {getRowUnitSubtitle(row, consumptionUnit) && (
-                          <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row, consumptionUnit)}</span>
+                        {getRowUnitSubtitle(row, sprache, consumptionUnit) && (
+                          <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row, sprache, consumptionUnit)}</span>
                         )}
                         <div className="events-form-field">
                           <span className="events-form-field-label-row">
@@ -767,10 +793,10 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
                               <LockToggleButton
                                 locked={verbrauchGroupLocked}
                                 onToggle={() => handleToggleVerbrauchLock(group)}
-                                lockedLabel="Verbrauchte Menge entsperren"
-                                unlockedLabel="Verbrauchte Menge sperren"
-                                lockedTitle="Verbrauchte Menge entsperren (kann wieder bearbeitet werden)"
-                                unlockedTitle="Verbrauchte Menge sperren (keine automatische Änderung mehr)"
+                                lockedLabel={t('verbrauchtEntsperren')}
+                                unlockedLabel={t('verbrauchtSperren')}
+                                lockedTitle={t('verbrauchtEntsperrenTitel')}
+                                unlockedTitle={t('verbrauchtSperrenTitel')}
                                 disabled={saving}
                               />
                             )}
@@ -797,7 +823,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
                             value={values[row.kategorie].getrunken}
                             onChange={(e) => updateGetrunken(row.kategorie, unit, e.target.value)}
                             disabled={getrunkenDisabled}
-                            title={!Number.isFinite(totalEinheiten) ? 'Erfordert eine eingetragene Eingekauft-Menge' : undefined}
+                            title={!Number.isFinite(totalEinheiten) ? t('erfordertEingekauft') : undefined}
                           />
                         </div>
                       </div>
@@ -815,8 +841,8 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
           <Button
             className="events-shopping-list-btn"
             onClick={handleShoppingListClick}
-            aria-label="Einkaufsliste erstellen"
-            title="Einkaufsliste erstellen"
+            aria-label={tRezept('einkaufslisteErstellen')}
+            title={tRezept('einkaufslisteErstellen')}
           >
             {isBase64Image(shoppingListIcon) ? (
               <img src={shoppingListIcon} alt="" className="button-icon-image" draggable="false" />
@@ -828,10 +854,10 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
 
         <div className="events-form-actions">
           <Button className="events-desktop-only" onClick={onCancel} disabled={saving}>
-            Abbrechen
+            {tAllgemein('abbrechen')}
           </Button>
           <Button variant="primary" type="submit" className="events-desktop-only" loading={saving}>
-            {saving ? 'Speichert …' : 'Verbrauch speichern'}
+            {saving ? t('speichert') : t('verbrauchSpeichern')}
           </Button>
         </div>
       </form>
@@ -848,11 +874,11 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
         onTouchEnd={() => setFabPressed(false)}
         onTouchCancel={() => setFabPressed(false)}
         disabled={saving}
-        aria-label="Verbrauch speichern"
-        title="Verbrauch speichern"
+        aria-label={t('verbrauchSpeichern')}
+        title={t('verbrauchSpeichern')}
       >
         {isBase64Image(getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)) ? (
-          <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt="Speichern" className="button-icon-image" draggable="false" />
+          <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt={tAllgemein('speichern')} className="button-icon-image" draggable="false" />
         ) : (
           getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)
         )}
@@ -869,11 +895,11 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
         onMouseDown={() => setCancelPressed(true)}
         onMouseUp={() => setCancelPressed(false)}
         onMouseLeave={() => setCancelPressed(false)}
-        title="Abbrechen"
-        aria-label="Verbrauch abbrechen"
+        title={tAllgemein('abbrechen')}
+        aria-label={t('verbrauchAbbrechen')}
       >
         {isBase64Image(getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)) ? (
-          <img src={getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
+          <img src={getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)} alt={tAllgemein('abbrechen')} className="button-icon-image" draggable="false" />
         ) : (
           getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)
         )}
@@ -895,26 +921,26 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
             className="portion-selector-modal"
             role="dialog"
             aria-modal="true"
-            aria-label="Portionen auswählen"
+            aria-label={tRezept('portionenAuswaehlen')}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="portion-selector-header">
-              <h2 className="portion-selector-title">Portionen für Einkaufsliste</h2>
+              <h2 className="portion-selector-title">{tRezept('portionenFuerEinkaufsliste')}</h2>
               <button
                 className="portion-selector-close"
                 onClick={closePortionSelector}
-                aria-label="Portionsauswahl schließen"
+                aria-label={tRezept('portionsauswahlSchliessen')}
               >
                 ×
               </button>
             </div>
             <div className="portion-selector-body">
-              <div className="portion-selector-section-label">Verlinkte Rezepte</div>
+              <div className="portion-selector-section-label">{tRezept('verlinkteRezepte')}</div>
               {linkedRecipes.map(linkedRecipe => {
                 const current = linkedPortionCounts[linkedRecipe.id] ?? (linkedRecipe.portionen || 4);
                 return (
                   <div key={linkedRecipe.id} className="portion-selector-item">
-                    <span className="portion-selector-recipe-name">{linkedRecipe.title}</span>
+                    <span className="portion-selector-recipe-name">{zeigeTitel(linkedRecipe)}</span>
                     <div className="portion-selector-controls">
                       <button
                         className={`portion-selector-btn${portionMinusLongPressActiveId === linkedRecipe.id ? ' longpress-active' : ''}`}
@@ -934,7 +960,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
                         onTouchStart={() => handlePortionMinusPressStart(linkedRecipe.id, () => setLinkedPortionCounts(prev => ({ ...prev, [linkedRecipe.id]: 0 })))}
                         onTouchEnd={handlePortionMinusPressEnd}
                         onTouchCancel={handlePortionMinusPressEnd}
-                        aria-label="Portionen verringern"
+                        aria-label={tRezept('portionenVerringern')}
                         disabled={current === 0}
                       >
                         −
@@ -946,7 +972,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
                           ...prev,
                           [linkedRecipe.id]: current + 1
                         }))}
-                        aria-label="Portionen erhöhen"
+                        aria-label={tRezept('portionenErhoehen')}
                       >
                         +
                       </button>
@@ -964,7 +990,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
                   setShowShoppingListModal(true);
                 }}
               >
-                Einkaufsliste erstellen
+                {tRezept('einkaufslisteErstellen')}
               </button>
             </div>
           </div>
