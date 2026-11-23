@@ -9,8 +9,10 @@ import { updatePageTitle } from '../utils/faviconUtils';
 import { sloganInSprache } from '../i18n/slogan';
 import { subscribeToFaqs } from '../utils/faqFirestore';
 import SearchIcon from './icons/SearchIcon';
+import ConfirmDialog from './ConfirmDialog';
 import ImportProgressIndicator from './ImportProgressIndicator';
 import ImportProgressDialog from './ImportProgressDialog';
+import { createShortcutToken } from '../utils/shortcutToken';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 import { useSprache, useTexte } from '../contexts/SpracheContext';
 import bereicheTexte from '../i18n/texte/bereiche';
@@ -19,7 +21,7 @@ import allgemeinTexte from '../i18n/texte/allgemein';
 
 const APP_NAME = 'brouBook';
 
-const RECIPE_IMPORT_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/a9f137c8c6a04a97a8c611d3181d73fd';
+const RECIPE_IMPORT_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/7825443f6ad640ccb3a626869ca501b9';
 
 /**
  * Detects iPhone/iPad/Mac, the only platforms with a Shortcuts app that can
@@ -64,6 +66,7 @@ const Header = forwardRef(function Header({
   interactiveLists = [],
   startseiteEnabled = false,
   onChefkochClick,
+  onProfileUpdated,
 }, ref) {
   const t = useTexte(kopfzeileTexte);
   const tB = useTexte(bereicheTexte);
@@ -85,6 +88,8 @@ const Header = forwardRef(function Header({
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const [isApple] = useState(isAppleDevice);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [shortcutHinweis, setShortcutHinweis] = useState(null);
+  const [schluesselRueckfrage, setSchluesselRueckfrage] = useState(false);
   const menuRef = useRef(null);
   const dropdownRef = useRef(null);
   const searchRef = useRef(null);
@@ -272,11 +277,42 @@ const Header = forwardRef(function Header({
     setMenuOpen(false);
   };
 
-  // Der fertige Kurzbefehl öffnet die App per Link und braucht keinen Schlüssel; die frühere PIN-Hürde
-  // vor dem Download ist mit dem Webimport-PIN entfallen (Tech-Check S7)
+  // Der Kurzbefehl braucht den persönlichen Schlüssel (Tech-Check S7). Beim Klick wird deshalb ein neuer
+  // Schlüssel erzeugt (ein vorhandener gilt danach nicht mehr), in die Zwischenablage gelegt und der
+  // Kurzbefehl geöffnet; dort wird er im ersten Textfeld eingesetzt. Fehlt die Zwischenablage oder
+  // schlägt das Erzeugen fehl, öffnet sich der Kurzbefehl trotzdem, damit die Installation nicht hängt.
+  // Gilt schon ein Schlüssel, wird vorher gefragt: Ein neuer macht den alten und damit bereits
+  // installierte Kurzbefehle unbrauchbar.
   const handleInstallShortcutClick = () => {
     setMenuOpen(false);
-    window.open(RECIPE_IMPORT_SHORTCUT_URL, '_blank', 'noopener,noreferrer');
+    if (currentUser?.shortcutTokenEnabled) {
+      setSchluesselRueckfrage(true);
+      return;
+    }
+    installShortcut();
+  };
+
+  const installShortcut = async () => {
+    setSchluesselRueckfrage(false);
+    setShortcutHinweis(null);
+    let hinweis;
+    try {
+      const token = await createShortcutToken();
+      if (onProfileUpdated) {
+        onProfileUpdated({ shortcutTokenEnabled: true, shortcutTokenCreatedAt: new Date() });
+      }
+      try {
+        await navigator.clipboard.writeText(token);
+        hinweis = 'kurzbefehlSchluesselKopiert';
+      } catch {
+        hinweis = 'kurzbefehlSchluesselNichtKopiert';
+      }
+    } catch {
+      hinweis = 'kurzbefehlFehler';
+    }
+    setShortcutHinweis(hinweis);
+    // Nach dem await zählt window.open in iOS-Safari nicht mehr als Nutzeraktion; eine Navigation schon
+    window.location.assign(RECIPE_IMPORT_SHORTCUT_URL);
   };
 
   const headerTitleContent = (
@@ -540,6 +576,24 @@ const Header = forwardRef(function Header({
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {schluesselRueckfrage && (
+        <ConfirmDialog
+          title={t('kurzbefehlRueckfrageTitel')}
+          message={t('kurzbefehlRueckfrageText')}
+          confirmLabel={t('kurzbefehlRueckfrageWeiter')}
+          confirmVariant="primary"
+          onConfirm={installShortcut}
+          onCancel={() => setSchluesselRueckfrage(false)}
+        />
+      )}
+
+      {shortcutHinweis && (
+        <div className="header-shortcut-hinweis" role="status">
+          <span>{t(shortcutHinweis)}</span>
+          <button type="button" onClick={() => setShortcutHinweis(null)} aria-label={t('hinweisSchliessen')}>{t('ok')}</button>
         </div>
       )}
 

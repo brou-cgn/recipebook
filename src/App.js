@@ -2967,6 +2967,7 @@ function App() {
           interactiveLists={interactiveLists}
           startseiteEnabled={!!currentUser?.startseite}
           onChefkochClick={currentUser ? handleChefkochClick : undefined}
+          onProfileUpdated={(updatedUser) => setCurrentUser(prev => ({ ...prev, ...updatedUser }))}
         />
         {/* Kochsitzung: Rezepte im Hintergrund direkt unter dem Header (Rollen-Flag parallelKochen).
             Nur auf der Startseite – nicht in Kochbuch, Festtafel, Atelier oder Chefkoch. */}

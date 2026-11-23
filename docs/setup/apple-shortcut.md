@@ -6,11 +6,11 @@ Diese Anleitung erklärt, wie du Rezepte direkt aus einem Apple Kurzbefehl (Shor
 
 Statt den Kurzbefehl manuell nachzubauen (siehe unten), kannst du auch den fertigen Kurzbefehl laden:
 
-**[Kurzbefehl herunterladen](https://www.icloud.com/shortcuts/a9f137c8c6a04a97a8c611d3181d73fd)**
+**[Kurzbefehl herunterladen](https://www.icloud.com/shortcuts/7825443f6ad640ccb3a626869ca501b9)**
 
 Der Link ist außerdem im Hamburger-Menü der App unter **Hilfe → Kurzbefehl installieren** hinterlegt und dort für alle Nutzer sichtbar (nicht nur Admins) – der Menüpunkt erscheint aber nur auf iPhone, iPad und Mac, da nur dort eine Kurzbefehle-App existiert.
 
-**Hinweis:** Dieser fertige Kurzbefehl startet den Import per **Deeplink** (`https://broubook.web.app/?webimport=<url>`, Aktion „URL öffnen"). Das öffnet dabei jedes Mal die komplette Web-App in Safari (JS-Bundle laden, Firebase-Auth initialisieren) und wartet erst danach auf den eigentlichen Import – das kann sich auf dem iPhone lange und wackelig anfühlen. Für einen deutlich schnelleren und stabileren Import per URL nutze stattdessen den Abschnitt **„Rezept von einer URL importieren"** unten – dafür musst du den heruntergeladenen Kurzbefehl entsprechend abändern (die „URL öffnen"-Aktion durch „Inhalt von URL laden" ersetzen) oder ihn manuell nachbauen.
+**Schlüssel beim Installieren:** Der Menüpunkt erzeugt bei jedem Klick einen neuen persönlichen Schlüssel (ein vorhandener gilt danach nicht mehr), legt ihn in die Zwischenablage und öffnet den Kurzbefehl. Dessen erstes Textfeld nimmt den Schlüssel auf; der Kurzbefehl schickt ihn als Header `X-Shortcut-Token`. Schlägt die Zwischenablage fehl, zeigt die App einen Hinweis, wo sich der Schlüssel unter Persönliche Daten erzeugen lässt. Hinweis: Apple erlaubt kein serverseitiges Einsetzen in eine iCloud-Kurzbefehl-Datei – das Einsetzen geschieht über die Zwischenablage (Textfeld bzw. Import-Frage im Kurzbefehl).
 
 ## Authentifizierung
 
@@ -21,8 +21,6 @@ Alle Shortcut-Endpoints (`importRecipeShortcut`, `addRecipeViaAPI`, `createRecip
 Erzeuge ihn in der App unter **Chefkoch › Kurzbefehl-Schlüssel**. Er wird nur einmal angezeigt; kopiere ihn und trage ihn im Kurzbefehl ein. Ein neuer Schlüssel ersetzt den alten, widerrufen kannst du ihn an derselben Stelle. Ohne Schlüssel nimmt der Server für dein Konto keinen Kurzbefehl an. Danach prüft er wie bisher die Rolle (`edit`, `admin` oder `moderator`; außer bei `addRecipeViaAPI` und `getRecipeOptionsShortcut` genügt auch `isShortcutUser`).
 
 Seit dem 23.11.2026 gibt es keinen anderen Weg: Der gemeinsame Schlüssel (`X-Api-Key` mit `X-User-Email`, Firebase Secret `SHORTCUT_API_KEY`) und der Webimport-PIN (Feld bzw. Parameter `pin`) sind abgeschafft. Ein Kurzbefehl, der noch `X-Api-Key` oder `X-User-Email` statt `X-Shortcut-Token` schickt, bekommt HTTP 401 mit dem Hinweis, wo du deinen Schlüssel erzeugst. Ein noch mitgeschicktes `pin` wird ignoriert und kann weg.
-
-Der fertige Kurzbefehl aus dem Menü (Deeplink, siehe oben) braucht keinen Schlüssel, er öffnet die App.
 
 ---
 

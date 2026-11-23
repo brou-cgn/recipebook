@@ -448,46 +448,105 @@ describe('Header - Chefkoch user name click', () => {
   });
 });
 
+jest.mock('../utils/shortcutToken', () => ({
+  createShortcutToken: jest.fn(),
+}));
+const { createShortcutToken: mockCreateShortcutToken } = jest.requireMock('../utils/shortcutToken');
+
 describe('Header - Kurzbefehl installieren', () => {
   const originalPlatform = window.navigator.platform;
   const originalMaxTouchPoints = window.navigator.maxTouchPoints;
-  let windowOpenSpy;
 
   beforeEach(() => {
     Object.defineProperty(window.navigator, 'platform', { value: 'MacIntel', configurable: true });
     Object.defineProperty(window.navigator, 'maxTouchPoints', { value: 0, configurable: true });
-    windowOpenSpy = jest.spyOn(window, 'open').mockImplementation(() => {});
   });
 
   afterEach(() => {
     Object.defineProperty(window.navigator, 'platform', { value: originalPlatform, configurable: true });
     Object.defineProperty(window.navigator, 'maxTouchPoints', { value: originalMaxTouchPoints, configurable: true });
-    windowOpenSpy.mockRestore();
   });
 
-  // Der Webimport-PIN ist seit dem 23.11.2026 abgeschafft (Tech-Check S7): kein Dialog mehr davor
-  test('lädt den fertigen Kurzbefehl direkt, ohne Dialog davor', () => {
+  const originalLocation = window.location;
+  let assignSpy;
+  let writeText;
+  beforeEach(() => {
+    assignSpy = jest.fn();
+    delete window.location;
+    window.location = { ...originalLocation, assign: assignSpy };
+    writeText = jest.fn().mockResolvedValue();
+    Object.defineProperty(window.navigator, 'clipboard', { value: { writeText }, configurable: true });
+    mockCreateShortcutToken.mockResolvedValue('rbk.uid1.geheim');
+  });
+  afterEach(() => {
+    window.location = originalLocation;
+  });
+
+  const klickeInstallieren = (props = {}) => {
     render(
       <Header
         currentView="recipes"
         currentUser={mockCurrentUser}
         onViewChange={() => {}}
         onLogout={() => {}}
+        {...props}
       />
     );
-
     fireEvent.click(screen.getByLabelText('Menü öffnen'));
     fireEvent.click(screen.getByText('Kurzbefehl installieren'));
+  };
 
-    expect(windowOpenSpy).toHaveBeenCalledTimes(1);
-    expect(windowOpenSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/^https:\/\/www\.icloud\.com\/shortcuts\//),
-      '_blank',
-      'noopener,noreferrer',
+  test('erzeugt einen neuen Schlüssel, kopiert ihn und öffnet den Kurzbefehl', async () => {
+    const onProfileUpdated = jest.fn();
+    klickeInstallieren({ onProfileUpdated });
+
+    await waitFor(() => expect(assignSpy).toHaveBeenCalledTimes(1));
+    expect(mockCreateShortcutToken).toHaveBeenCalledTimes(1);
+    expect(writeText).toHaveBeenCalledWith('rbk.uid1.geheim');
+    expect(assignSpy).toHaveBeenCalledWith(
+      'https://www.icloud.com/shortcuts/7825443f6ad640ccb3a626869ca501b9',
     );
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(onProfileUpdated).toHaveBeenCalledWith(expect.objectContaining({ shortcutTokenEnabled: true }));
+    expect(screen.getByRole('status')).toHaveTextContent('in der Zwischenablage');
     // das Menü schließt sich dabei
     expect(screen.queryByText('Kurzbefehl installieren')).not.toBeInTheDocument();
+  });
+
+  test('fragt vorher nach, wenn schon ein Schlüssel aktiv ist', async () => {
+    klickeInstallieren({ currentUser: { ...mockCurrentUser, shortcutTokenEnabled: true } });
+
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(mockCreateShortcutToken).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText('Neuen Schlüssel erzeugen', { selector: 'button' }));
+    await waitFor(() => expect(assignSpy).toHaveBeenCalledTimes(1));
+    expect(mockCreateShortcutToken).toHaveBeenCalledTimes(1);
+  });
+
+  test('Abbrechen der Rückfrage lässt den Schlüssel unberührt', () => {
+    klickeInstallieren({ currentUser: { ...mockCurrentUser, shortcutTokenEnabled: true } });
+    fireEvent.click(screen.getByText('Abbrechen'));
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(mockCreateShortcutToken).not.toHaveBeenCalled();
+    expect(assignSpy).not.toHaveBeenCalled();
+  });
+
+  test('öffnet den Kurzbefehl auch, wenn der Schlüssel nicht erzeugt werden kann', async () => {
+    mockCreateShortcutToken.mockRejectedValue(new Error('offline'));
+    klickeInstallieren();
+
+    await waitFor(() => expect(assignSpy).toHaveBeenCalledTimes(1));
+    expect(writeText).not.toHaveBeenCalled();
+    expect(screen.getByRole('status')).toHaveTextContent('nicht erzeugt werden');
+  });
+
+  test('weist darauf hin, wenn die Zwischenablage nicht verfügbar ist', async () => {
+    writeText.mockRejectedValue(new Error('denied'));
+    klickeInstallieren();
+
+    await waitFor(() => expect(assignSpy).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('status')).toHaveTextContent('nicht kopiert');
   });
 
   test('zeigt den Eintrag nur auf Apple-Geräten', () => {
