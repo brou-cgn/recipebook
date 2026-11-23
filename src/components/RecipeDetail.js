@@ -2421,7 +2421,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 </span>
               </p>
             )}
-            {uebersetzungVorhanden && (
+            {/* Hinweis „Automatisch übersetzt · Original anzeigen“: nur für Admins (Mehrsprachigkeit, 23.11.2026).
+                Alle anderen sehen die Übersetzung ohne Hinweis und ohne Umschalter; „Original: …“ unter dem Titel bleibt. */}
+            {uebersetzungVorhanden && isCurrentUserAdmin() && (
               <p className="recipe-translation-note">
                 {zeigeOriginal ? tAnsicht('originalAngezeigt') : tAnsicht('automatischUebersetzt')}
                 {' · '}
