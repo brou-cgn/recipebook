@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
 import './AtelierCategorySelectionPage.css';
+import { useListenwerte, useTexte } from '../contexts/SpracheContext';
+import atelierTexte from '../i18n/texte/atelier';
 
 function AtelierCategorySelectionPage({
   categoryOptions = [],
@@ -7,6 +9,9 @@ function AtelierCategorySelectionPage({
   onSelectedCategoriesChange,
   onContinue,
 }) {
+  // Texte des Ateliers (Mehrsprachigkeit PR 6n); Speisekategorien übersetzt, gespeichert bleibt der deutsche Wert
+  const t = useTexte(atelierTexte);
+  const listen = useListenwerte();
   const orderedCategoryOptions = useMemo(() => {
     const active = categoryOptions.filter((category) => selectedCategories.includes(category));
     const inactive = categoryOptions.filter((category) => !selectedCategories.includes(category));
@@ -23,11 +28,10 @@ function AtelierCategorySelectionPage({
   return (
     <section className="atelier-category-selection" data-testid="atelier-category-selection-view">
       <div className="atelier-category-selection__content">
-        <p className="atelier-category-selection__eyebrow">Kochatelier vorbereiten</p>
-        <h1 className="atelier-category-selection__title">Wonach suchst du heute?</h1>
+        <p className="atelier-category-selection__eyebrow">{t('vorbereiten')}</p>
+        <h1 className="atelier-category-selection__title">{t('wonachSuchst')}</h1>
         <p className="atelier-category-selection__body">
-          Wähle aus, wie du inspiriert werden möchtest. Lass dich überraschen indem du einfach
-          keine Kategorie auswählst.
+          {t('inspirationHinweis')}
         </p>
 
         {orderedCategoryOptions.length > 0 ? (
@@ -40,13 +44,13 @@ function AtelierCategorySelectionPage({
                 aria-pressed={selectedCategories.includes(category)}
                 onClick={() => handleToggleCategory(category)}
               >
-                {category}
+                {listen.text('mealCategories', category)}
               </button>
             ))}
           </div>
         ) : (
           <p className="atelier-category-selection__empty">
-            Aktuell sind noch keine Speisekategorien verfügbar.
+            {t('keineKategorien')}
           </p>
         )}
 
@@ -55,7 +59,7 @@ function AtelierCategorySelectionPage({
           className="atelier-category-selection__continue"
           onClick={onContinue}
         >
-          Kochatelier öffnen
+          {t('kochatelierOeffnen')}
         </button>
       </div>
     </section>

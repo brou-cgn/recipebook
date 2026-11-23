@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './TutorialVideoModal.css';
 import { getYouTubeThumbnailUrl } from '../utils/youtubeUtils';
+import { useTexte } from '../contexts/SpracheContext';
+import kochbuchTexte from '../i18n/texte/kochbuch';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 // Inline YouTube playback for a tutorial, opened from TutorialCard instead of
 // navigating away to youtube.com. Same overlay/dialog anatomy as
@@ -9,6 +12,9 @@ import { getYouTubeThumbnailUrl } from '../utils/youtubeUtils';
 // mid-playback - but deliberately NOT the position:fixed variant used in
 // NutritionModal.js; see the scroll-lock effect below for why.
 function TutorialVideoModal({ videoId, title, onClose }) {
+  // Mehrsprachigkeit PR 6n; der Titel des Videos ist Inhalt
+  const t = useTexte(kochbuchTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
   const closeButtonRef = useRef(null);
   const iframeRef = useRef(null);
   const overlayRef = useRef(null);
@@ -123,7 +129,7 @@ function TutorialVideoModal({ videoId, title, onClose }) {
             type="button"
             className="tutorial-video-modal-close"
             onClick={requestClose}
-            aria-label="Schließen"
+            aria-label={tAllgemein('schliessen')}
           >
             ×
           </button>
@@ -142,7 +148,7 @@ function TutorialVideoModal({ videoId, title, onClose }) {
               type="button"
               className="tutorial-video-modal-facade"
               onClick={() => setIsPlaying(true)}
-              aria-label={`Video „${title}“ abspielen`}
+              aria-label={t('videoAbspielen', { titel: title })}
             >
               {thumbnailUrl && (
                 <img src={thumbnailUrl} alt="" className="tutorial-video-modal-facade-image" />

@@ -6,6 +6,11 @@ import SavingOverlay from './SavingOverlay';
 import { isBase64Image } from '../utils/imageUtils';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { TUTORIAL_CATEGORIES } from '../utils/tutorialsFirestore';
+import { tutorialKategorieAnzeige } from '../utils/tutorialKategorien';
+import { useListenwerte, useTexte } from '../contexts/SpracheContext';
+import tutorialFormularTexte from '../i18n/texte/tutorialFormular';
+import kochbuchTexte from '../i18n/texte/kochbuch';
+import allgemeinTexte from '../i18n/texte/allgemein';
 import { extractYouTubeVideoId, getYouTubeThumbnailUrl, getYouTubeFrameUrls } from '../utils/youtubeUtils';
 import { splitIntoTwoRows, reorderActiveFirst } from '../utils/pillCarousel';
 
@@ -27,6 +32,11 @@ const INGREDIENT_PILL_LIMIT = 40;
 // gesture that opens this form empty from the add button.
 function TutorialForm({ onSave, onCancel, tutorial = null, nutritionReferenceRows = [], mealCategories = [] }) {
   const isEditing = Boolean(tutorial);
+  // Texte des Tutorial-Formulars (Mehrsprachigkeit PR 6n); Kategorien übersetzt, gespeichert bleiben id und Wert
+  const t = useTexte(tutorialFormularTexte);
+  const tKochbuch = useTexte(kochbuchTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const listen = useListenwerte();
   const [title, setTitle] = useState(tutorial?.title || '');
   const [videoUrl, setVideoUrl] = useState(tutorial?.videoUrl || '');
   const [category, setCategory] = useState(tutorial?.category || TUTORIAL_CATEGORIES[0].id);
@@ -222,7 +232,7 @@ function TutorialForm({ onSave, onCancel, tutorial = null, nutritionReferenceRow
       });
     } catch (err) {
       console.error('Error saving tutorial:', err);
-      setError('Das Tutorial konnte nicht gespeichert werden. Bitte versuche es erneut.');
+      setError(t('fehlerSpeichern'));
       setIsSaving(false);
     }
   };
@@ -239,46 +249,46 @@ function TutorialForm({ onSave, onCancel, tutorial = null, nutritionReferenceRow
     <div className="recipe-form-container">
       <div className="recipe-form-header">
         <div className="recipe-form-header-title">
-          <h2>{isEditing ? 'Tutorial bearbeiten' : 'Neues Tutorial hinzufügen'}</h2>
+          <h2>{isEditing ? t('tutorialBearbeiten') : t('neuesTutorial')}</h2>
         </div>
         <div className="recipe-form-header-actions">
           <Button variant="secondary" onClick={onCancel}>
-            Abbrechen
+            {tAllgemein('abbrechen')}
           </Button>
           <Button variant="primary" onClick={handleSave} disabled={!canSave} loading={isSaving}>
-            {isSaving ? 'Speichert …' : 'Speichern'}
+            {isSaving ? t('speichert') : tAllgemein('speichern')}
           </Button>
         </div>
       </div>
 
       <form className="recipe-form" onSubmit={handleSave}>
         <div className="form-group">
-          <label htmlFor="tutorial-title">Titel</label>
+          <label htmlFor="tutorial-title">{t('titel')}</label>
           <input
             id="tutorial-title"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="z. B. Fisch filetieren wie ein Profi"
+            placeholder={t('titelBeispiel')}
             required
           />
         </div>
 
         <div className="form-group">
-          <label htmlFor="tutorial-video-url">Video-URL</label>
+          <label htmlFor="tutorial-video-url">{t('videoUrl')}</label>
           <input
             id="tutorial-video-url"
             type="url"
             value={videoUrl}
             onChange={(e) => setVideoUrl(e.target.value)}
-            placeholder="https://www.youtube.com/..."
+            placeholder={t('videoUrlBeispiel')}
             required
           />
         </div>
 
         {cropSourceUrl && (
           <div className="form-group">
-            <label>Vorschaubild zuschneiden</label>
+            <label>{t('vorschaubildZuschneiden')}</label>
             <div className="tutorial-thumb-frame-picker">
               {frameUrls.map((url, index) => (
                 <button
@@ -286,7 +296,7 @@ function TutorialForm({ onSave, onCancel, tutorial = null, nutritionReferenceRow
                   type="button"
                   className={`tutorial-thumb-frame-option${thumbFrame === index ? ' active' : ''}`}
                   onClick={() => setThumbFrame(index)}
-                  aria-label={`Szene ${index + 1} als Vorschaubasis wählen`}
+                  aria-label={t('szeneWaehlen', { nummer: index + 1 })}
                   aria-pressed={thumbFrame === index}
                 >
                   <img src={url} alt="" draggable="false" />
@@ -303,7 +313,7 @@ function TutorialForm({ onSave, onCancel, tutorial = null, nutritionReferenceRow
             >
               <img
                 src={cropSourceUrl}
-                alt="Vorschau-Zuschnitt"
+                alt={t('vorschauZuschnitt')}
                 draggable="false"
                 className="tutorial-thumb-crop-image"
                 style={{
@@ -322,14 +332,14 @@ function TutorialForm({ onSave, onCancel, tutorial = null, nutritionReferenceRow
               value={thumbZoom}
               onChange={(e) => setThumbZoom(parseFloat(e.target.value))}
               className="tutorial-thumb-zoom-slider"
-              aria-label="Vorschaubild zoomen"
+              aria-label={t('vorschaubildZoomen')}
             />
-            <p className="tutorial-thumb-crop-hint">Szene wählen, dann ziehen zum Verschieben und Regler zum Zoomen</p>
+            <p className="tutorial-thumb-crop-hint">{t('zuschnittHinweis')}</p>
           </div>
         )}
 
         <div className="form-group">
-          <label>Technik-Kategorie</label>
+          <label>{t('technikKategorie')}</label>
           <div className="tutorial-category-grid">
             {TUTORIAL_CATEGORIES.map((cat) => (
               <button
@@ -338,20 +348,20 @@ function TutorialForm({ onSave, onCancel, tutorial = null, nutritionReferenceRow
                 className={`recipe-form-cuisine-pill${category === cat.id ? ' active' : ''}`}
                 onClick={() => setCategory(cat.id)}
               >
-                {cat.label}
+                {tutorialKategorieAnzeige(cat.id, tKochbuch) || cat.label}
               </button>
             ))}
           </div>
         </div>
 
         <div className="form-group">
-          <label htmlFor="tutorial-ingredient-search">Zutaten (Mehrfachauswahl möglich)</label>
+          <label htmlFor="tutorial-ingredient-search">{t('zutatenMehrfach')}</label>
           <input
             id="tutorial-ingredient-search"
             type="text"
             value={ingredientSearch}
             onChange={(e) => setIngredientSearch(e.target.value)}
-            placeholder="Zutat suchen, z. B. Zwiebel"
+            placeholder={t('zutatSuchen')}
             autoComplete="off"
           />
           {visibleIngredientOptions.length > 0 && (
@@ -365,7 +375,7 @@ function TutorialForm({ onSave, onCancel, tutorial = null, nutritionReferenceRow
                       className={`recipe-form-cuisine-pill${ingredientIDs.includes(option.id) ? ' active' : ''}`}
                       onClick={() => toggleIngredientID(option.id)}
                       aria-pressed={ingredientIDs.includes(option.id)}
-                      title={ingredientIDs.includes(option.id) ? 'Auswahl aufheben' : `${option.label} auswählen`}
+                      title={ingredientIDs.includes(option.id) ? t('auswahlAufheben') : t('auswaehlen', { name: option.label })}
                     >
                       {option.label}
                     </button>
@@ -375,18 +385,18 @@ function TutorialForm({ onSave, onCancel, tutorial = null, nutritionReferenceRow
             </div>
           )}
           {ingredientOptions.length === 0 ? (
-            <p className="tutorial-pill-hint">Keine Zutaten verfügbar.</p>
+            <p className="tutorial-pill-hint">{t('keineZutaten')}</p>
           ) : hiddenIngredientCount > 0 ? (
             <p className="tutorial-pill-hint">
-              {`Noch ${hiddenIngredientCount} weitere Treffer – Suche eingrenzen`}
+              {t('weitereTreffer', { anzahl: hiddenIngredientCount })}
             </p>
           ) : matchingIngredientOptions.length === 0 && ingredientSearch.trim() !== '' ? (
-            <p className="tutorial-pill-hint">Keine passende Zutat gefunden.</p>
+            <p className="tutorial-pill-hint">{t('keinePassendeZutat')}</p>
           ) : null}
         </div>
 
         <div className="form-group">
-          <label>Speisekategorie (Mehrfachauswahl möglich)</label>
+          <label>{t('speisekategorieMehrfach')}</label>
           {mealCategories.length > 0 ? (
             <div className="tutorial-pill-carousel">
               {[mealCategoryPillsRow1, mealCategoryPillsRow2].filter((row) => row.length > 0).map((row, rowIndex) => (
@@ -398,23 +408,23 @@ function TutorialForm({ onSave, onCancel, tutorial = null, nutritionReferenceRow
                       className={`recipe-form-cuisine-pill${speisekategorie.includes(name) ? ' active' : ''}`}
                       onClick={() => toggleSpeisekategorie(name)}
                       aria-pressed={speisekategorie.includes(name)}
-                      title={speisekategorie.includes(name) ? 'Auswahl aufheben' : `${name} auswählen`}
+                      title={speisekategorie.includes(name) ? t('auswahlAufheben') : t('auswaehlen', { name: listen.text('mealCategories', name) })}
                     >
-                      {name}
+                      {listen.text('mealCategories', name)}
                     </button>
                   ))}
                 </div>
               ))}
             </div>
           ) : (
-            <p className="tutorial-pill-hint">Keine Speisekategorien verfügbar.</p>
+            <p className="tutorial-pill-hint">{t('keineSpeisekategorien')}</p>
           )}
         </div>
 
         {error && <p className="ai-ocr-limit-info">{error}</p>}
       </form>
 
-      {isSaving && <SavingOverlay label="Tutorial wird gespeichert" />}
+      {isSaving && <SavingOverlay label={t('wirdGespeichert')} />}
 
       <button
         type="button"
@@ -426,10 +436,10 @@ function TutorialForm({ onSave, onCancel, tutorial = null, nutritionReferenceRow
         onMouseDown={() => setCancelPressed(true)}
         onMouseUp={() => setCancelPressed(false)}
         onMouseLeave={() => setCancelPressed(false)}
-        title="Abbrechen"
-        aria-label={isEditing ? 'Tutorial-Bearbeitung abbrechen' : 'Tutorial-Erstellung abbrechen'}
+        title={tAllgemein('abbrechen')}
+        aria-label={isEditing ? t('bearbeitungAbbrechen') : t('erstellungAbbrechen')}
       >
-        {renderIcon('closeButtonDefaultImg', 'Abbrechen')}
+        {renderIcon('closeButtonDefaultImg', tAllgemein('abbrechen'))}
       </button>
       <button
         type="button"
@@ -442,10 +452,10 @@ function TutorialForm({ onSave, onCancel, tutorial = null, nutritionReferenceRow
         onMouseDown={() => setSavePressed(true)}
         onMouseUp={() => setSavePressed(false)}
         onMouseLeave={() => setSavePressed(false)}
-        title="Tutorial speichern"
-        aria-label="Tutorial speichern"
+        title={t('tutorialSpeichern')}
+        aria-label={t('tutorialSpeichern')}
       >
-        {renderIcon('saveRecipe', 'Speichern')}
+        {renderIcon('saveRecipe', tAllgemein('speichern'))}
       </button>
     </div>
   );

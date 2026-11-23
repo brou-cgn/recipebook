@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import TutorialForm from './TutorialForm';
+import { renderWithProviders } from '../test-utils';
 
 jest.mock('../utils/customLists', () => ({
   getButtonIcons: () => Promise.resolve({}),
@@ -154,5 +155,29 @@ describe('TutorialForm Mehrfachauswahlen', () => {
 
     expect(screen.getByText('Keine Zutaten verfügbar.')).toBeInTheDocument();
     expect(screen.getByText('Keine Speisekategorien verfügbar.')).toBeInTheDocument();
+  });
+});
+
+describe('TutorialForm in anderer Sprache (Mehrsprachigkeit PR 6n)', () => {
+  test('Englisch: Formular, Technik-Kategorien und Hinweise in der Sprache', () => {
+    renderWithProviders(
+      <TutorialForm onSave={jest.fn()} onCancel={jest.fn()} nutritionReferenceRows={nutritionReferenceRows} mealCategories={mealCategories} />,
+      { sprache: 'en' }
+    );
+    expect(screen.getByRole('heading', { name: 'Add new tutorial' })).toBeInTheDocument();
+    expect(screen.getByText('Knife skills')).toBeInTheDocument();
+    expect(screen.getByText('Plating & presentation')).toBeInTheDocument();
+    expect(screen.getByLabelText('Ingredients (choose several)')).toHaveAttribute('placeholder', 'Search ingredient, e.g. onion');
+    expect(screen.getByText('Dish category (choose several)')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Save tutorial').length).toBeGreaterThan(0);
+  });
+
+  test('Französisch: Zutat auswählen mit Namen der Referenz', () => {
+    renderWithProviders(
+      <TutorialForm onSave={jest.fn()} onCancel={jest.fn()} nutritionReferenceRows={nutritionReferenceRows} mealCategories={mealCategories} />,
+      { sprache: 'fr' }
+    );
+    expect(screen.getByTitle('Sélectionner Zwiebel')).toBeInTheDocument();
+    expect(screen.getByText('Techniques de découpe')).toBeInTheDocument();
   });
 });

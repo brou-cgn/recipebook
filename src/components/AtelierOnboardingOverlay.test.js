@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import AtelierOnboardingOverlay, { BUBBLE_HORIZONTAL_INSET } from './AtelierOnboardingOverlay';
+import { renderWithProviders } from '../test-utils';
 
 describe('AtelierOnboardingOverlay', () => {
   const originalInnerWidth = window.innerWidth;
@@ -45,7 +46,7 @@ describe('AtelierOnboardingOverlay', () => {
 
     // Create a mock Atelier button in the document
     const mockBtn = document.createElement('button');
-    mockBtn.setAttribute('aria-label', 'Atelier');
+    mockBtn.setAttribute('data-nav-key', 'atelier');
     mockBtn.getBoundingClientRect = () => ({
       left: buttonLeft, top: 700, width: buttonWidth, height: 60, right: buttonLeft + buttonWidth, bottom: 760,
     });
@@ -68,5 +69,15 @@ describe('AtelierOnboardingOverlay', () => {
     const { container } = render(<AtelierOnboardingOverlay onConfirm={() => {}} />);
 
     expect(container.querySelector('[data-testid="atelier-onboarding-spotlight"]')).toBeNull();
+  });
+});
+
+describe('AtelierOnboardingOverlay in anderer Sprache (Mehrsprachigkeit PR 6n)', () => {
+  test('Französisch: Text mit den Namen der Listen', () => {
+    renderWithProviders(<AtelierOnboardingOverlay onConfirm={() => {}} />, { sprache: 'fr' });
+    expect(screen.getByRole('heading', { name: 'Ton atelier, ton espace créatif' })).toBeInTheDocument();
+    expect(screen.getByText('Mes idées de cuisine')).toBeInTheDocument();
+    expect(screen.getByText('Mes classiques du quotidien')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Suivant' })).toBeInTheDocument();
   });
 });

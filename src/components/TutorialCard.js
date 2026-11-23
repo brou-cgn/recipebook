@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './TutorialCard.css';
 import TutorialVideoModal from './TutorialVideoModal';
-import { TUTORIAL_CATEGORIES } from '../utils/tutorialsFirestore';
+import { tutorialKategorieAnzeige } from '../utils/tutorialKategorien';
 import { extractYouTubeVideoId, getYouTubeThumbnailUrl, getYouTubeFrameUrls } from '../utils/youtubeUtils';
 import { useTexte } from '../contexts/SpracheContext';
 import kochbuchTexte from '../i18n/texte/kochbuch';
@@ -13,20 +13,6 @@ const LONG_PRESS_CLICK_SUPPRESSION_MS = 500;
 // Ein Finger liegt nie ganz still. Unterhalb dieser Strecke gilt der Druck
 // weiter als Longpress, darüber als Scrollversuch.
 const LONG_PRESS_MOVE_TOLERANCE_PX = 10;
-
-// Kategorie → Schlüssel in kochbuch.js (Mehrsprachigkeit PR 6d); die deutschen Namen stehen in
-// TUTORIAL_CATEGORIES (utils/tutorialsFirestore.js)
-const CATEGORY_KEYS = {
-  schneiden: 'tutorialSchneiden',
-  sauce: 'tutorialSauce',
-  teig: 'tutorialTeig',
-  garen: 'tutorialGaren',
-  anrichten: 'tutorialAnrichten',
-};
-const CATEGORY_LABELS = TUTORIAL_CATEGORIES.reduce((map, c) => {
-  map[c.id] = c.label;
-  return map;
-}, {});
 
 // Small stroke-icon set matching the app's existing nav/BottomNavigation
 // icon style (24px grid, ~1.6-1.8 stroke, currentColor).
@@ -204,7 +190,7 @@ function TutorialCard({ tutorial, onEdit }) {
           <div className="tutorial-card-text">
             <h3>{tutorial.title}</h3>
             <span className="kulinarik-tag">
-              {CATEGORY_KEYS[tutorial.category] ? t(CATEGORY_KEYS[tutorial.category]) : (CATEGORY_LABELS[tutorial.category] || t('tutorial'))}
+              {tutorialKategorieAnzeige(tutorial.category, t) || t('tutorial')}
             </span>
           </div>
         </div>
