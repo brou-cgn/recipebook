@@ -66,7 +66,7 @@ const BASELINE = {
   'components/RecipeTypeahead.css': 12,
   'components/SavingOverlay.css': 1,
   'components/SeasonMatrixTab.css': 58,
-  'components/Settings.css': 185,
+  'components/Settings.css': 172,
   'components/SharePage.css': 9,
   'components/ShoppingListModal.css': 23,
   'components/SortCarousel.css': 1,
@@ -142,7 +142,8 @@ describe('Farb-Token-Richtlinie', () => {
 // Button-System Schritt 5a, alte Knopf-Regeln der Rezeptansicht (Tech-Check A8). 899 → 898: Löschen in
 // Kochtagebuch und Bewertung (D9). 898 → 888: Button-System Schritt 6, Knöpfe von Kochbuch, Festtafel und
 // Menüformular sowie tote Regeln (A8). 888 → 885: Schritt 7, Zeilen-Aktionen der Benutzerverwaltung (A8).
-const DARK_MODE_SELECTORS = 885;
+// 885 → 883: Stift der Verwaltungslisten als RowIconButton (A8).
+const DARK_MODE_SELECTORS = 883;
 
 describe('darkMode.css (Altbestand)', () => {
   const css = fs.readFileSync(path.join(SRC, 'darkMode.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

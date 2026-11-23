@@ -73,7 +73,14 @@ erzwungen — wo das gilt, steht die Datei dabei.
   Unmount sofort ab). Inhalt eines Rezepts sind Zutaten, Schritte oder ein Bild
   (`src/utils/recipeContent.js`); ein leeres Rezept wird ohne Rückfrage gelöscht, auch beim
   Verwerfen eines Imports. Diese Rückfragen nutzen `src/components/ConfirmDialog.js`, nie
-  `window.confirm`.
+  `window.confirm`. Ebenso mit Rückfrage: ein ganzes Benutzerkonto in der Benutzerverwaltung
+  (Tech-Check D10: endgültig, der Server löscht Kochtagebuch, Follow-Verbindungen und nicht
+  öffentliche Rezepte mit; ein Undo-Fenster liefe beim Verlassen der Seite sofort ab). Knopf in der
+  Zeile `danger-quiet`, Bestätigung `danger`.
+- Keine Löschaktion ist das Entfernen eines Bildes aus einem Formularfeld, das erst mit dem
+  Speichern des Formulars wirkt (Favicon, App-Logo, Screenshot eines Kochschule-Eintrags): normaler
+  Knopf „Entfernen“ (`src/components/Button.js`) neben „Ändern“, kein `DeleteRowButton` und kein
+  Rückgängig (Tech-Check D8).
 - Die Desktop-Spezifikation gilt nur für Desktop. Mobil gilt die Linksswipe-Geste.
 - **Knöpfe**: `src/components/Button.js` mit den Rollen `primary` (die eine abschließende Aktion,
   höchstens eine je Bildschirm oder Dialog), `secondary` (Abbrechen, Zurück, weitere Aktionen),
@@ -81,7 +88,9 @@ erzwungen — wo das gilt, steht die Datei dabei.
   `ghost` (selten Gebrauchtes). Neben-Knopf links, Haupt-Knopf rechts. Keine eigenen Knopf-Klassen
   mit Fläche; erzwungen durch `src/buttonPolicy.test.js` (Baseline je CSS-Datei, darf nur sinken).
   Außerhalb des Systems: schwebende runde Knöpfe, `DeleteRowButton`, Chips, Tabs, Schalter und
-  Symbol-Knöpfe ohne Text (Icons unter „Bilder & Icons“, Suche und Menü in der Kopfzeile). Im
+  Symbol-Knöpfe ohne Text (Icons unter „Bilder & Icons“, Suche und Menü in der Kopfzeile). Symbole
+  in einer Listenzeile neben dem `DeleteRowButton` (Umbenennen, Bearbeiten, Verschieben) nutzen
+  `src/components/RowIconButton.js`, sein neutrales Gegenstück: gleiche Form, grau statt rot. Im
   Event-Bereich ist der Haupt-Knopf grün (Token in `Button.css`), die Wichtel-Teilnehmerseite behält
   ihre Gestaltung. Auf dem Handy (bis 768 px) ist der Haupt-Knopf so breit wie sein Platz; eine Reihe,
   in der das nicht passt (Eingabezeile), stellt ihn lokal zurück. Neben-Knöpfe direkt auf dem grauen

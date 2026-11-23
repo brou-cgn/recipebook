@@ -1,0 +1,72 @@
+/* Symbol-Knopf in einer Listenzeile (RowIconButton.js): Form wie DeleteRowButton (DeleteRowButton.css),
+   Tönung neutral statt rot. Farben nur über Tokens, der Dunkelmodus kommt aus tokens.css. */
+.row-icon-button {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-faint);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+/* Trefferfläche ab 32 px, ohne den sichtbaren Kreis zu vergrößern */
+.row-icon-button::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+}
+
+.row-icon-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media (hover: hover) {
+  .row-icon-button:not(:disabled):hover {
+    color: var(--color-text-strong);
+    background: var(--color-hover-overlay);
+  }
+}
+
+.row-icon-button:not(:disabled):active,
+.row-icon-button:focus-visible {
+  color: var(--color-text-strong);
+  background: var(--color-hover-overlay);
+}
+
+.row-icon-button:focus-visible {
+  outline: 2px solid var(--color-button-focus);
+  outline-offset: 2px;
+}
+
+.row-icon-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Ohne Hover (Handy, Tablet) ist das Symbol dauerhaft etwas kräftiger, wie beim DeleteRowButton */
+@media (max-width: 768px), (hover: none), (pointer: coarse) {
+  .row-icon-button {
+    color: var(--color-text-soft);
+  }
+
+  .row-icon-button::before {
+    inset: -8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-icon-button {
+    transition: none;
+  }
+}

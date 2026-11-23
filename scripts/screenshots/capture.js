@@ -354,10 +354,28 @@ const SCREENS = [
   {
     // Einstellungen › Allgemein: Header-Slogan mit Englisch und Französisch (Mehrsprachigkeit)
     name: 'einstellungen-allgemein',
+    fullPage: true,
     run: async (page, shot) => {
       await openMenuItem(page, 'Einstellungen');
       await page.getByRole('heading', { name: 'Header-Slogan' }).waitFor();
       await pause(page);
+      await shot();
+    },
+  },
+  {
+    // Favicon und App-Logo gewählt, noch nicht gespeichert: Vorschau mit „Ändern“ und „Entfernen“ (Tech-Check D8).
+    // Hochgeladen wird im Bildschirm selbst; die Testdaten haben keine allgemeinen Einstellungen, ohne die die App
+    // gespeicherte Bilder nicht liest
+    name: 'einstellungen-allgemein-logo',
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Einstellungen');
+      await page.getByRole('heading', { name: 'Header-Slogan' }).waitFor();
+      const bild = path.join(ROOT, 'public', 'logo192.png');
+      await page.locator('#faviconImageFile').setInputFiles(bild);
+      await page.locator('#appLogoImageFile').setInputFiles(bild);
+      await page.locator('.favicon-preview').nth(1).waitFor();
+      await page.locator('.favicon-image-section').first().scrollIntoViewIfNeeded();
+      await pause(page, 700);
       await shot();
     },
   },
@@ -373,10 +391,26 @@ const SCREENS = [
   },
   {
     name: 'einstellungen-kochschule',
+    fullPage: true,
     run: async (page, shot) => {
       await openMenuItem(page, 'Einstellungen');
       await page.locator('.tab-button', { hasText: 'Kochschule' }).first().click();
       await pause(page);
+      await shot();
+    },
+  },
+  {
+    // Kochschule-Eintrag bearbeiten: Formular mit Screenshot und „Entfernen“ (Tech-Check D8). Bearbeiten ist der
+    // dritte Knopf der Zeile (nach den Pfeilen), vor und nach Schritt 8 gleich gezählt
+    name: 'einstellungen-kochschule-bearbeiten',
+    fullPage: true,
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Einstellungen');
+      await page.locator('.tab-button', { hasText: 'Kochschule' }).first().click();
+      await pause(page);
+      await page.locator('.faq-list-item-actions').first().locator('button').nth(2).click();
+      await page.mouse.move(0, 0);
+      await pause(page, 700);
       await shot();
     },
   },
