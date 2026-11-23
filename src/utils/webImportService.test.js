@@ -96,7 +96,7 @@ describe('captureWebsiteScreenshot', () => {
     httpsCallable.mockReturnValue(mockCallable);
 
     await expect(captureWebsiteScreenshot('https://example.com/rezept')).rejects.toThrow(
-      'Fehler beim Erfassen der Website. Bitte versuchen Sie es erneut.',
+      'Fehler beim Erfassen der Website. Bitte versuche es erneut.',
     );
   });
 
@@ -1194,7 +1194,7 @@ describe('importRecipeFromUrl', () => {
     httpsCallable.mockReturnValue(mockCallable);
 
     await expect(importRecipeFromUrl('https://example.com/rezept')).rejects.toThrow(
-      'Sie müssen angemeldet sein',
+      'Du musst angemeldet sein',
     );
   });
 

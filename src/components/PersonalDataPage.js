@@ -45,7 +45,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const tA = useTexte(allgemeinTexte);
   const tB = useTexte(bereicheTexte);
   const tKey = useTexte(kurzbefehlSchluesselTexte);
-  // Meldungen von changePassword (Schlüssel in anmeldung.js, Mehrsprachigkeit PR 6l)
+  // Meldungen von changePassword und updateUserProfile (Schlüssel in anmeldung.js, Mehrsprachigkeit PR 6l und 6m)
   const tAnmeldung = useTexte(anmeldungTexte);
   const { sprache } = useSprache();
   const idBasis = useId();
@@ -276,7 +276,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
     });
 
     setSaving(false);
-    setMessage({ success: result.success, text: result.success ? t('profilGespeichert') : result.message });
+    setMessage({ success: result.success, text: result.success ? t('profilGespeichert') : ergebnisText(result, tAnmeldung) });
 
     if (result.success && onProfileUpdated) {
       onProfileUpdated({

@@ -56,9 +56,8 @@ const NUR_DEUTSCH = new Set([
   'components/templateEditor/TemplateGallery.js',
 ]);
 
-// Stand 23.11.2026 (PR 6l, Anmeldung und Registrierung): 421 Textstellen in 30 Dateien.
+// Stand 23.11.2026 (PR 6m, Meldungen): 417 Textstellen in 29 Dateien.
 const BASELINE = {
-  'App.js': 4,
   'components/AtelierCategorySelectionPage.js': 5,
   'components/AtelierOnboardingOverlay.js': 9,
   'components/AtelierSwipeTrainerOverlay.js': 8,

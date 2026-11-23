@@ -802,4 +802,13 @@ describe('PersonalDataPage – Meldungen beim Passwortwechsel (Mehrsprachigkeit 
 
     expect(await screen.findByText('The current password is incorrect.')).toBeInTheDocument();
   });
+
+  test('Französisch: Meldung von updateUserProfile über ihren Schlüssel (PR 6m)', async () => {
+    updateUserProfile.mockResolvedValue({ success: false, schluessel: 'fehlerProfilAktualisieren', message: 'Fehler beim Aktualisieren des Profils.' });
+    renderWithProviders(<PersonalDataPage currentUser={nutzer} onBack={() => {}} />, { sprache: 'fr' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(await screen.findByText('Le profil n’a pas pu être mis à jour.')).toBeInTheDocument();
+  });
 });

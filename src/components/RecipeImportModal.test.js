@@ -52,3 +52,21 @@ describe('RecipeImportModal in anderer Sprache (Mehrsprachigkeit PR 6i)', () => 
     expect(screen.getByText('Bitte wähle eine CSV-Datei aus')).toBeInTheDocument();
   });
 });
+
+describe('RecipeImportModal: Meldungen des CSV-Imports (Mehrsprachigkeit PR 6m)', () => {
+  // jsdom kennt weder TextDecoder noch File.arrayBuffer; beides nur für diesen Test bereitstellen
+  const ohneTextDecoder = global.TextDecoder;
+  beforeEach(() => {
+    global.TextDecoder = jest.requireActual('util').TextDecoder;
+  });
+  afterEach(() => {
+    global.TextDecoder = ohneTextDecoder;
+  });
+
+  test('Englisch: Fehler aus csvBulkImport in der Sprache', async () => {
+    const { container } = renderWithProviders(<RecipeImportModal onImport={() => {}} onCancel={() => {}} />, { sprache: 'en' });
+    const datei = { name: 'rezepte.csv', type: 'text/csv', arrayBuffer: async () => Buffer.from('Titel;Zutaten\n') };
+    fireEvent.change(container.querySelector('input[type="file"]'), { target: { files: [datei] } });
+    expect(await screen.findByText('The CSV must contain at least a header and one data row')).toBeInTheDocument();
+  });
+});

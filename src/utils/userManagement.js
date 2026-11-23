@@ -874,10 +874,7 @@ export const updateUserProfile = async (userId, profileData) => {
   const { vorname, nachname, email, signatureSatz, defaultWebImportListId, defaultEverydayClassicsListId } = profileData;
 
   if (!vorname || !nachname || !email) {
-    return {
-      success: false,
-      message: 'Vorname, Nachname und E-Mail dürfen nicht leer sein.'
-    };
+    return mitMeldung({ success: false }, 'fehlerProfilFelderLeer');
   }
 
   try {
@@ -896,16 +893,10 @@ export const updateUserProfile = async (userId, profileData) => {
       currentUserCache = { ...currentUserCache, ...updates };
     }
 
-    return {
-      success: true,
-      message: 'Profil erfolgreich aktualisiert.'
-    };
+    return mitMeldung({ success: true }, 'profilAktualisiert');
   } catch (error) {
     console.error('Error updating user profile:', error);
-    return {
-      success: false,
-      message: 'Fehler beim Aktualisieren des Profils.'
-    };
+    return mitMeldung({ success: false }, 'fehlerProfilAktualisieren');
   }
 };
 

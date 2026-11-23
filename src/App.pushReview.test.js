@@ -508,7 +508,7 @@ describe('Push-Tipp öffnet das Prüf-Rezept', () => {
 
       await cancelForm();
       expect(confirmSpy).not.toHaveBeenCalled();
-      expect(screen.getByRole('alertdialog')).toHaveTextContent('Möchten Sie den Import "Neues Rezept" wirklich verwerfen?');
+      expect(screen.getByRole('alertdialog')).toHaveTextContent('Möchtest du den Import „Neues Rezept“ wirklich verwerfen?');
       expect(deleteRecipe).not.toHaveBeenCalled();
 
       fireEvent.click(screen.getByRole('button', { name: 'Verwerfen' }));
