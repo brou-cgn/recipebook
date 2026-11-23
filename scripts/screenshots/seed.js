@@ -4,8 +4,8 @@
  *
  * Leert Auth- und Firestore-Emulator und legt dann an: ein Admin-Konto, sechs Rezepte mit
  * Platzhalterbildern, die öffentliche Liste, zwei private Listen (eine davon die interaktive
- * Inspirationssammlung), ein Menü, ein Event, einen Kochtagebuch-Eintrag, eine Bewertung und einen
- * Eintrag der Saisonmatrix. Die Startseite („Küche“) ist für Admins
+ * Inspirationssammlung), ein Menü, ein Event, einen Kochtagebuch-Eintrag, eine Bewertung, einen
+ * Eintrag der Saisonmatrix und zwei Einträge der Kochschule. Die Startseite („Küche“) ist für Admins
  * freigeschaltet und hat Inspirationssammlung und Alltagsklassiker gesetzt, damit ihre
  * Karussells samt Plus-Knöpfen erscheinen (Tech-Check T9).
  * Alles erfunden und als Testdaten erkennbar. Schreibt über die REST-Schnittstelle der
@@ -185,6 +185,17 @@ async function main() {
     rating: 4, userId: null, raterName: 'Anna', comment: 'Mit Brot sehr gut.', createdAt: now, updatedAt: now,
   });
 
+  // Zwei Einträge der Kochschule (Einstellungen › Kochschule: Zeilen mit Pfeilen, Bearbeiten und Löschen), der erste mit
+  // Screenshot (das Bearbeiten-Formular zeigt dann „Entfernen“)
+  await setDoc('faqs/faq-rezept-anlegen', {
+    sourceId: 'faq-rezept-anlegen', title: 'Wie lege ich ein Rezept an?', description: 'Im Kochbuch über „+ Rezept“ (Testdaten).',
+    screenshot: placeholderImage(200), order: 0, level: 1, showOnDesktop: true, showOnMobile: true, createdAt: now, updatedAt: now,
+  });
+  await setDoc('faqs/faq-liste-teilen', {
+    sourceId: 'faq-liste-teilen', title: 'Wie teile ich eine Liste?', description: 'In der Liste über „Teilen“ (Testdaten).',
+    order: 1, level: 1, showOnDesktop: true, showOnMobile: true, createdAt: now, updatedAt: now,
+  });
+
   // Ein Eintrag der Saisonmatrix (Einstellungen › Saisonmatrix: Zeile mit Bearbeiten und Löschen). Quitte passt zu
   // keinem Testrezept, die übrigen Bilder (etwa „Saisonale Rezepte“ auf der Startseite) bleiben so unverändert.
   await setDoc('seasonMatrix/quitte', {
@@ -207,7 +218,7 @@ async function main() {
     guests: { adults: 18, children: 4 }, berechnung: { ergebnis: [] }, ownerId: uid, createdAt: now.toISOString(),
   });
 
-  console.log(`Testdaten angelegt: ${ACCOUNT.email} (Admin, mit Startseite), ${RECIPES.length} Rezepte, ${aufrufNr} Rezeptaufrufe, 3 Listen, 1 Menü, 1 Event, 1 Kochdatum, 1 Bewertung, 1 Saisonmatrix-Eintrag.`);
+  console.log(`Testdaten angelegt: ${ACCOUNT.email} (Admin, mit Startseite), ${RECIPES.length} Rezepte, ${aufrufNr} Rezeptaufrufe, 3 Listen, 1 Menü, 1 Event, 1 Kochdatum, 1 Bewertung, 1 Saisonmatrix-Eintrag, 2 Kochschule-Einträge.`);
 }
 
 if (require.main === module) {

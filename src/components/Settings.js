@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import StarIcon from './icons/StarIcon';
 import { defaultIcon } from '../utils/defaultButtonIcons';
 import PencilIcon from './icons/PencilIcon';
+import ArrowVerticalIcon from './icons/ArrowVerticalIcon';
+import RowIconButton from './RowIconButton';
 import TrashIcon from './icons/TrashIcon';
 import './Settings.css';
 import useInlineRename from '../hooks/useInlineRename';
@@ -113,7 +115,7 @@ function SortableListItem({
         </div>
       )}
       {onRename && !isEditing && (
-        <button className="edit-btn" onClick={start} title="Umbenennen"><PencilIcon /></button>
+        <RowIconButton label={`${label} umbenennen`} onClick={start}><PencilIcon /></RowIconButton>
       )}
       <DeleteRowButton itemName={label} onClick={onRemove} />
     </div>
@@ -1508,13 +1510,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                       <Button onClick={() => document.getElementById('faviconImageFile')?.click()} loading={uploadingFavicon}>
                         {uploadingFavicon ? 'Lädt hoch …' : 'Ändern'}
                       </Button>
-                      <button 
-                        className="favicon-remove-btn" 
-                        onClick={handleRemoveFavicon}
-                        disabled={uploadingFavicon}
-                      >
-                        × Entfernen
-                      </button>
+                      <Button onClick={handleRemoveFavicon} disabled={uploadingFavicon}>
+                        Entfernen
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -1549,13 +1547,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                       <Button onClick={() => document.getElementById('appLogoImageFile')?.click()} loading={uploadingAppLogo}>
                         {uploadingAppLogo ? 'Lädt hoch …' : 'Ändern'}
                       </Button>
-                      <button 
-                        className="favicon-remove-btn" 
-                        onClick={handleRemoveAppLogo}
-                        disabled={uploadingAppLogo}
-                      >
-                        × Entfernen
-                      </button>
+                      <Button onClick={handleRemoveAppLogo} disabled={uploadingAppLogo}>
+                        Entfernen
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -2462,13 +2456,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   {faqForm.screenshot ? (
                     <div className="faq-screenshot-preview">
                       <img src={faqForm.screenshot} alt="Screenshot" className="faq-screenshot-img" />
-                      <button
-                        type="button"
-                        className="favicon-remove-btn"
-                        onClick={() => setFaqForm(prev => ({ ...prev, screenshot: null }))}
-                      >
-                        × Entfernen
-                      </button>
+                      <Button onClick={() => setFaqForm(prev => ({ ...prev, screenshot: null }))}>
+                        Entfernen
+                      </Button>
                     </div>
                   ) : (
                     <label htmlFor="faqScreenshotFile" className="image-upload-label">
@@ -2550,29 +2540,23 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                               <span className="faq-visibility-badge" title="Auf Mobilgeräten sichtbar">Mobil</span>
                             )}
                             <div className="faq-list-item-actions">
-                              <button
-                                className="faq-move-btn"
+                              <RowIconButton
+                                label={`${faqDisplayName(faq)} nach oben`}
                                 onClick={() => handleFaqMoveUp(faq.id)}
                                 disabled={faqIndex === 0}
-                                title="Nach oben"
                               >
-                                ↑
-                              </button>
-                              <button
-                                className="faq-move-btn"
+                                <ArrowVerticalIcon up />
+                              </RowIconButton>
+                              <RowIconButton
+                                label={`${faqDisplayName(faq)} nach unten`}
                                 onClick={() => handleFaqMoveDown(faq.id)}
                                 disabled={faqIndex === visibleFaqs.length - 1}
-                                title="Nach unten"
                               >
-                                ↓
-                              </button>
-                              <button
-                                className="faq-edit-btn"
-                                onClick={() => handleEditFaq(faq)}
-                                title="Bearbeiten"
-                              >
-                                Edit
-                              </button>
+                                <ArrowVerticalIcon />
+                              </RowIconButton>
+                              <RowIconButton label={`${faqDisplayName(faq)} bearbeiten`} onClick={() => handleEditFaq(faq)}>
+                                <PencilIcon />
+                              </RowIconButton>
                               <DeleteRowButton itemName={faqDisplayName(faq)} onClick={() => handleDeleteFaq(faq)} />
                             </div>
                           </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { defaultIcon } from '../utils/defaultButtonIcons';
 import PencilIcon from './icons/PencilIcon';
+import RowIconButton from './RowIconButton';
 import TrashIcon from './icons/TrashIcon';
 import './Settings.css';
 import { UnterseiteKopf } from './Unterseite';
@@ -162,7 +163,7 @@ function CuisineTypeListItem({ label, onRemove, onRename }) {
         <span>{label}</span>
       )}
       {onRename && !isEditing && (
-        <button className="edit-btn" onClick={start} title="Umbenennen"><PencilIcon /></button>
+        <RowIconButton label={`${label} umbenennen`} onClick={start}><PencilIcon /></RowIconButton>
       )}
       <DeleteRowButton itemName={label} onClick={onRemove} />
     </div>

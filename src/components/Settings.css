@@ -288,24 +288,6 @@
   color: var(--color-text);
 }
 
-.list-item .edit-btn {
-  background: var(--color-surface);
-  color: #555;
-  border: 1px solid var(--color-border-strong);
-  padding: 0.25rem 0.4rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  line-height: 1;
-  transition: all 0.2s ease;
-}
-
-.list-item .edit-btn:hover {
-  background: #f0f0f0;
-  color: #402C1C;
-  border-color: #402C1C;
-}
-
 .list-item-edit-input {
   flex: 1;
   font-size: 0.95rem;
@@ -965,7 +947,8 @@
 .favicon-image-section label {
   display: block;
   font-weight: 600;
-  color: #333;
+  /* Token statt #333: im Dunkelmodus waren die Beschriftungen dunkelgrau auf dunklem Grund (Tech-Check P19) */
+  color: var(--color-text);
   margin-bottom: 0.5rem;
   font-size: 0.95rem;
 }
@@ -982,14 +965,14 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  background: #f9f9f9;
+  background: var(--color-surface-subtle);
   border-radius: 8px;
-  border: 2px solid #ddd;
+  border: 2px solid var(--color-border);
   margin-top: 0.5rem;
 }
 
 .favicon-preview img {
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   background: white;
   padding: 4px;
@@ -999,32 +982,6 @@
   display: flex;
   gap: 0.5rem;
   flex: 1;
-}
-
-.favicon-remove-btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.2s ease;
-}
-
-.favicon-remove-btn {
-  background: #f44336;
-  color: white;
-}
-
-.favicon-remove-btn:hover {
-  background: #d32f2f;
-  transform: translateY(-1px);
-}
-
-.favicon-remove-btn:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-  transform: none;
 }
 
 .favicon-upload {
@@ -1469,6 +1426,7 @@
 
 .faq-list-item-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
   gap: 0.5rem;
@@ -1479,26 +1437,26 @@
   color: #1a1a1a;
   font-size: 1rem;
   flex: 1;
+  min-width: 0;
 }
 
 .faq-list-item-actions {
   display: flex;
+  align-items: center;
   gap: 0.25rem;
   flex-shrink: 0;
 }
 
-.faq-edit-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 1.1rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  transition: background 0.2s ease;
-}
+/* Handy: Titel in eigener Zeile, Kennzeichen und Aktionen darunter, Aktionen rechts. Vorher stand alles
+   in einer Reihe, der Titel brach nach jedem Wort um und die Zeile war 51 px breiter als der Bildschirm. */
+@media (max-width: 768px) {
+  .faq-list-item-title {
+    flex-basis: calc(100% - 2rem);
+  }
 
-.faq-edit-btn:hover {
-  background: rgba(64, 44, 28, 0.1);
+  .faq-list-item-actions {
+    margin-left: auto;
+  }
 }
 
 .faq-list-item-description {
@@ -1606,26 +1564,6 @@
   padding: 0.1rem 0.4rem;
   white-space: nowrap;
   flex-shrink: 0;
-}
-
-.faq-move-btn {
-  background: transparent;
-  border: 1px solid #ddd;
-  cursor: pointer;
-  font-size: 0.9rem;
-  padding: 0.2rem 0.45rem;
-  border-radius: 4px;
-  transition: background 0.2s ease;
-  color: #555;
-}
-
-.faq-move-btn:hover:not(:disabled) {
-  background: rgba(64, 44, 28, 0.1);
-}
-
-.faq-move-btn:disabled {
-  opacity: 0.3;
-  cursor: default;
 }
 
 .faq-indent-toolbar {

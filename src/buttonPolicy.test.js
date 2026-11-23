@@ -6,8 +6,9 @@
  * Gezählt werden je CSS-Datei die Regeln, die eine eigene Knopf-Klasse mit Fläche gestalten:
  * die letzte Stufe des Selektors trägt eine Klasse mit „btn“ oder „button“ im Namen, und die
  * Regel setzt background oder background-color auf eine Farbe. Ausgenommen sind Bausteine
- * außerhalb des Systems: schwebende runde Knöpfe (fab), DeleteRowButton, Chips, Tabs, Schalter,
- * Pillen, Bilder in Knöpfen (image, img), die Werkzeug-Schalter der Druck- und Vorlagen-Editoren
+ * außerhalb des Systems: schwebende runde Knöpfe (fab), DeleteRowButton und sein neutrales Gegenstück
+ * RowIconButton, Chips, Tabs, Schalter, Pillen, Bilder in Knöpfen (image, img), die Werkzeug-Schalter
+ * der Druck- und Vorlagen-Editoren
  * (Fett/Kursiv, Ausrichtung, Segmente, schwebende Werkzeugleiste: umschaltbare Formatierung, keine
  * Aktion mit Rolle), Symbol-Knöpfe ohne Text (konfigurierbare Icons, Suche und Menü in der Kopfzeile,
  * Suchfeld leeren), die Bedienelemente der Rezeptansicht mit eigener Gestalt (Plus/Minus der Portionen,
@@ -23,7 +24,7 @@ const path = require('path');
 const SRC = __dirname;
 const EXEMPT_FILES = ['tokens.css', 'darkMode.css', 'Button.css'];
 const BUTTON_CLASS = /(^|[-_])(btn|button)([-_]|$)/;
-const OUTSIDE_SYSTEM = /fab|delete-row|chip|tab|toggle|switch|pill|ui-button|image|img/;
+const OUTSIDE_SYSTEM = /fab|delete-row|row-icon|chip|tab|toggle|switch|pill|ui-button|image|img/;
 const NO_SURFACE = /^(transparent|none|inherit|initial|unset|revert)(\s*!important)?$/i;
 // Werkzeug-Schalter der Editoren (printEditor/ElementPropsPanel.js, templateEditor/Segmented.js und
 // FloatingToolbar.js): aria-pressed bzw. role="radio", gehören nicht ins Rollen-System
@@ -58,7 +59,6 @@ const BASELINE = {
   'components/OcrScanModal.css': 1,
   'components/PortionSelector.css': 2,
   'components/RecipeImportModal.css': 1,
-  'components/Settings.css': 7,
   'components/SharePage.css': 2,
   'components/Tagesmenu.css': 5,
   'components/WichtelPage.css': 2,
@@ -145,6 +145,7 @@ describe('Button-System (Tech-Check A8)', () => {
       .menu-favorites-filter-button.active { background: #df7a00; }
       .faq-question-btn:hover { background: #f5f5f5; }
       .bia-row-name-btn:hover { background: #f5f5f5; }
+      .row-icon-button:hover { background: var(--color-hover-overlay); }
     `;
     expect(ownButtonRules(css).map((r) => r.selector)).toEqual([
       '.save-btn',
