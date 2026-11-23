@@ -1,4 +1,7 @@
-import { mergeDrinkUnitAdditions } from './drinkCategories';
+import { getraenkNameAnzeige, mergeDrinkUnitAdditions, PREDEFINED_DRINKS } from './drinkCategories';
+import { resolveDrinkDisplay } from './drinkDisplay';
+import { erstelleT } from '../i18n/texte';
+import getraenkeTexte from '../i18n/texte/getraenke';
 
 describe('mergeDrinkUnitAdditions', () => {
   it('returns drinks unchanged when there are no additions', () => {
@@ -66,5 +69,34 @@ describe('mergeDrinkUnitAdditions', () => {
   it('handles a non-array input gracefully', () => {
     expect(mergeDrinkUnitAdditions(undefined)).toEqual([]);
     expect(mergeDrinkUnitAdditions(null)).toEqual([]);
+  });
+});
+
+describe('getraenkNameAnzeige (Mehrsprachigkeit PR 6k)', () => {
+  const tEn = erstelleT(getraenkeTexte, 'en');
+  const tFr = erstelleT(getraenkeTexte, 'fr');
+
+  it('übersetzt den gespeicherten deutschen Namen vordefinierter Getränke', () => {
+    expect(getraenkNameAnzeige('Mineralwasser', tEn)).toBe('Mineral water');
+    expect(getraenkNameAnzeige('Mineralwasser', tFr)).toBe('Eau minérale');
+  });
+
+  it('lässt eigene Getränke und den Namen ohne t, wie er ist', () => {
+    expect(getraenkNameAnzeige('Hausbier', tEn)).toBe('Hausbier');
+    expect(getraenkNameAnzeige('Mineralwasser')).toBe('Mineralwasser');
+  });
+
+  it('hat für jedes vordefinierte Getränk einen Namen in jeder Sprache, auf Deutsch genau den gespeicherten', () => {
+    PREDEFINED_DRINKS.forEach((drink) => {
+      expect(getraenkeTexte.de[`getraenk_${drink.id}`]).toBe(drink.name);
+      expect(getraenkeTexte.en[`getraenk_${drink.id}`]).toEqual(expect.any(String));
+      expect(getraenkeTexte.fr[`getraenk_${drink.id}`]).toEqual(expect.any(String));
+    });
+  });
+
+  it('greift in resolveDrinkDisplay für Getränke und gespeicherte Namen aus der Berechnung', () => {
+    expect(resolveDrinkDisplay(PREDEFINED_DRINKS[0], [], tEn).displayName).toBe('Mineral water');
+    expect(resolveDrinkDisplay('Mineralwasser', [], tFr).displayName).toBe('Eau minérale');
+    expect(resolveDrinkDisplay('Mineralwasser', []).displayName).toBe('Mineralwasser');
   });
 });

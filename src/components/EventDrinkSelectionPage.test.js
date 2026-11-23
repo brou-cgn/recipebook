@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import EventDrinkSelectionPage from './EventDrinkSelectionPage';
+import { renderWithProviders } from '../test-utils';
 
 const customDrinks = [
   { id: 'custom-wasser', name: 'Wasser (eigen)', kategorie: 'wasser' },
@@ -592,5 +593,43 @@ describe('EventDrinkSelectionPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
     expect(onSave).toHaveBeenCalledWith(['custom-wasser'], {}, {}, 30);
+  });
+});
+
+describe('EventDrinkSelectionPage in anderer Sprache (Mehrsprachigkeit PR 6k)', () => {
+  const zeige = (sprache, props = {}) => renderWithProviders(
+    <EventDrinkSelectionPage
+      customDrinks={customDrinks}
+      customDrinkIds={['custom-wasser', 'custom-bier']}
+      guestPreferenceMultipliers={{}}
+      selectedGuestIds={[]}
+      onSave={jest.fn()}
+      onBack={jest.fn()}
+      {...props}
+    />,
+    { sprache }
+  );
+
+  test('Englisch: Überschrift, Auswahl, Anzahl und Größe im Zahlenformat der Sprache', () => {
+    const getraenke = [
+      ...customDrinks,
+      { id: 'd-koelsch', name: 'Kölsch vom Fass', kategorie: 'bier_koelsch', einheiten: [{ einheitsgroesse: 1.5, einheit: 'Flasche', gebindeinheit: '' }] },
+    ];
+    zeige('en', { customDrinks: getraenke, customDrinkIds: ['custom-wasser', 'd-koelsch'] });
+
+    expect(screen.getByText('Drinks')).toBeInTheDocument();
+    expect(screen.getByLabelText('Choose drink')).toBeInTheDocument();
+    expect(screen.getByText('2 drinks selected.')).toBeInTheDocument();
+    expect(screen.getByText('1.5 l')).toBeInTheDocument();
+    expect(screen.getByText('No unit selected')).toBeInTheDocument();
+    expect(screen.getByLabelText('Wasser (eigen) factor')).toBeInTheDocument();
+  });
+
+  test('Französisch: Anzahl in der Einzahl und Entfernen', () => {
+    zeige('fr', { customDrinkIds: ['custom-saft'] });
+
+    expect(screen.getByText('Boissons')).toBeInTheDocument();
+    expect(screen.getByText('1 boisson sélectionnée.')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Retirer Saft (eigen)').length).toBeGreaterThan(0);
   });
 });
