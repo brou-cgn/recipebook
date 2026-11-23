@@ -21,6 +21,10 @@ import EventDrinkSelectionPage from './EventDrinkSelectionPage';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import Button from './Button';
+import { useTexte } from '../contexts/SpracheContext';
+import eventsTexte from '../i18n/texte/events';
+import allgemeinTexte from '../i18n/texte/allgemein';
+import { eventTypAnzeige } from '../utils/eventAnzeige';
 
 const CATEGORY_LABELS = {
   wasser: 'Wasser',
@@ -42,14 +46,6 @@ const CATEGORY_LABELS = {
   tee: 'Tee',
 };
 
-const EVENT_TYPE_LABELS = {
-  familienfeier: 'Familienfeier',
-  party: 'Party',
-  kaffeeundkuchen: 'Kaffee & Kuchen',
-  grillfest: 'Grillfest',
-  sportuebertragung: 'Sportübertragung',
-};
-
 const DEFAULT_PUFFER_PROZENT = 25;
 const DEFAULT_DISTRIBUTION_FACTOR = 1;
 
@@ -67,6 +63,9 @@ const currentHourStartTime = () => `${String(new Date().getHours()).padStart(2, 
 function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManageDrinks, initialEvent, recipes, guestProfiles = [], customDrinks = [] }) {
   const isEditing = Boolean(initialEvent?.id);
   const effectiveOwnerId = ownerId || currentUser?.id;
+  // Texte der Events (Mehrsprachigkeit PR 6j)
+  const t = useTexte(eventsTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
 
   const [eventName, setEventName] = useState(initialEvent?.eventName ?? '');
   const [date, setDate] = useState(initialEvent?.date ?? todayIsoDate());
@@ -164,7 +163,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!eventName.trim() || !date || !durationHours) {
-      setError('Bitte Name, Datum und Dauer angeben.');
+      setError(t('fehlerPflichtfelder'));
       return;
     }
     setSaving(true);
@@ -188,6 +187,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
         guests: { adults: Number(adults) || 0, children: Number(children) || 0 },
         selectedGuestIds,
         driverGuestIds: driverGuestIds.filter((guestId) => selectedGuestIds.includes(guestId)),
+        // Bleibt deutsch: geht mit der Berechnung ins Event (gespeicherte Daten)
         guestNamesById: selectedGuests.reduce((acc, guest) => {
           acc[guest.id] = getGuestDisplayName(guest) || 'Unbenannter Gast';
           return acc;
@@ -272,7 +272,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
       onSaved(result.eventId);
     } catch (err) {
       console.error('Error calculating event drinks:', err);
-      setError('Die Berechnung ist fehlgeschlagen. Bitte versuche es erneut.');
+      setError(t('fehlerBerechnung'));
     } finally {
       setSaving(false);
     }
@@ -332,32 +332,32 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
   return (
     <div className="events-page-container">
       <div className="events-page-header">
-        <h2>{isEditing ? 'Event bearbeiten' : 'Neues Event'}</h2>
+        <h2>{isEditing ? t('eventBearbeiten') : t('neuesEvent')}</h2>
       </div>
       <form className="events-form" onSubmit={handleSubmit}>
         <label className="events-form-field">
-          <span>Name</span>
+          <span>{t('name')}</span>
           <input
             type="text"
             value={eventName}
             onChange={(e) => setEventName(e.target.value)}
-            placeholder="z. B. Sommerfest im Garten"
+            placeholder={t('nameBeispiel')}
             required
           />
         </label>
 
         <label className="events-form-field">
-          <span>Anlass</span>
+          <span>{t('anlass')}</span>
           <select value={eventType} onChange={(e) => setEventType(e.target.value)}>
             {EVENT_TYPES.map((type) => (
-              <option key={type} value={type}>{EVENT_TYPE_LABELS[type]}</option>
+              <option key={type} value={type}>{eventTypAnzeige(type, t)}</option>
             ))}
           </select>
         </label>
 
         <div className="events-form-row">
           <label className="events-form-field">
-            <span>Datum</span>
+            <span>{t('datum')}</span>
             <input
               type="date"
               value={date}
@@ -366,17 +366,17 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
             />
           </label>
           <label className="events-form-field">
-            <span>Startuhrzeit</span>
+            <span>{t('startuhrzeit')}</span>
             <input
               type="time"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
-              aria-label="Startuhrzeit"
+              aria-label={t('startuhrzeit')}
               step="900"
             />
           </label>
           <label className="events-form-field">
-            <span>Dauer (Stunden)</span>
+            <span>{t('dauer')}</span>
             <input
               type="number"
               min="1"
@@ -390,7 +390,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
 
         <div className="events-form-row events-form-row--guests">
           <label className="events-form-field">
-            <span>Erwachsene</span>
+            <span>{t('erwachseneFeld')}</span>
             <input
               type="number"
               min="0"
@@ -399,7 +399,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
             />
           </label>
           <label className="events-form-field">
-            <span>Kinder</span>
+            <span>{t('kinderFeld')}</span>
             <input
               type="number"
               min="0"
@@ -412,8 +412,8 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
               type="button"
               className="events-guests-manage-btn"
               onClick={() => setShowGuestSelection(true)}
-              aria-label="Gäste verwalten"
-              title="Gäste verwalten"
+              aria-label={t('gaesteVerwalten')}
+              title={t('gaesteVerwalten')}
             >
               {isBase64Image(getEffectiveIcon(buttonIcons, 'editRecipe', isDarkMode)) ? (
                 <img
@@ -436,17 +436,17 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
             <div className="events-form-row events-form-row--guests">
               {customDrinkIds.length > 0 ? (
                 <p className="events-info-text">
-                  {customDrinkIds.length} {customDrinkIds.length === 1 ? 'Getränk' : 'Getränke'} ausgewählt
+                  {t('getraenkeAusgewaehlt', { anzahl: customDrinkIds.length })}
                 </p>
               ) : (
-                <p className="events-info-text">Keine Getränke ausgewählt.</p>
+                <p className="events-info-text">{t('keineGetraenkeAusgewaehlt')}</p>
               )}
               <button
                 type="button"
                 className="events-guests-manage-btn"
                 onClick={() => setShowDrinkSelection(true)}
-                aria-label="Getränke verwalten"
-                title="Getränke verwalten"
+                aria-label={t('getraenkeVerwalten')}
+                title={t('getraenkeVerwalten')}
               >
                 {isBase64Image(getEffectiveIcon(buttonIcons, 'editRecipe', isDarkMode)) ? (
                   <img
@@ -464,12 +464,12 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
             </div>
           ) : (
             <p className="events-info-text">
-              Noch keine eigenen Getränke angelegt.
+              {t('keineEigenenGetraenke')}
               {onManageDrinks && (
                 <>
                   {' '}
                   <Button onClick={onManageDrinks}>
-                    Getränke verwalten
+                    {t('getraenkeVerwalten')}
                   </Button>
                 </>
               )}
@@ -482,16 +482,16 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
         <div className="events-form-actions">
           {isEditing && onDelete && (
             <Button variant="danger-quiet" className="events-desktop-only" onClick={onDelete} disabled={saving}>
-              Löschen
+              {tAllgemein('loeschen')}
             </Button>
           )}
           {!isEditing && (
             <Button className="events-desktop-only" onClick={onCancel} disabled={saving}>
-              Abbrechen
+              {tAllgemein('abbrechen')}
             </Button>
           )}
           <Button variant="primary" type="submit" className="events-desktop-only" loading={saving}>
-            {saving ? 'Berechnet …' : isEditing ? 'Berechnung aktualisieren' : 'Einkaufsliste berechnen'}
+            {saving ? t('berechnetLaeuft') : isEditing ? t('berechnungAktualisieren') : t('einkaufslisteBerechnen')}
           </Button>
         </div>
       </form>
@@ -507,11 +507,11 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
         onTouchEnd={() => setFabPressed(false)}
         onTouchCancel={() => setFabPressed(false)}
         disabled={saving}
-        aria-label={isEditing ? 'Event-Berechnung aktualisieren' : 'Einkaufsliste berechnen'}
-        title={isEditing ? 'Berechnung aktualisieren' : 'Einkaufsliste berechnen'}
+        aria-label={isEditing ? t('eventBerechnungAktualisieren') : t('einkaufslisteBerechnen')}
+        title={isEditing ? t('berechnungAktualisieren') : t('einkaufslisteBerechnen')}
       >
         {isBase64Image(getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)) ? (
-          <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt="Speichern" className="button-icon-image" draggable="false" />
+          <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt={tAllgemein('speichern')} className="button-icon-image" draggable="false" />
         ) : (
           getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)
         )}
@@ -527,20 +527,21 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
         onMouseDown={() => setCancelPressed(true)}
         onMouseUp={() => setCancelPressed(false)}
         onMouseLeave={() => setCancelPressed(false)}
-        title="Abbrechen"
-        aria-label={isEditing ? 'Eventbearbeitung abbrechen' : 'Neues Event abbrechen'}
+        title={tAllgemein('abbrechen')}
+        aria-label={isEditing ? t('eventbearbeitungAbbrechen') : t('neuesEventAbbrechen')}
         disabled={saving}
       >
         {isBase64Image(getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)) ? (
-          <img src={getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
+          <img src={getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)} alt={tAllgemein('abbrechen')} className="button-icon-image" draggable="false" />
         ) : (
           getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode)
         )}
       </button>
-      {saving && <SavingOverlay label="Event wird gespeichert" />}
+      {saving && <SavingOverlay label={t('eventWirdGespeichert')} />}
     </div>
   );
 }
 
-export { CATEGORY_LABELS, EVENT_TYPE_LABELS };
+// CATEGORY_LABELS (deutsch) nutzt noch ConsumptionForm.js; umgestellt mit Mehrsprachigkeit PR 6k
+export { CATEGORY_LABELS };
 export default EventForm;

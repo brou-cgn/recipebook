@@ -5,6 +5,9 @@ import Button from './Button';
 import { fileToBase64 } from '../utils/imageUtils';
 import { runUniversalImport } from '../utils/importRunners';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
+import { useTexte } from '../contexts/SpracheContext';
+import rezeptimportTexte from '../i18n/texte/rezeptimport';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 function buildInitialText(title, text) {
   return [title, text].filter(Boolean).join('\n\n');
@@ -16,6 +19,9 @@ function UniversalImportModal({ onCancel, initialImages = [], initialText = '', 
   const [url, setUrl] = useState(initialUrl);
   const [error, setError] = useState('');
   const { enqueueImportJob } = useRecipeImportQueue();
+  // Texte des Rezept-Imports (Mehrsprachigkeit PR 6i); die Bezeichnung des Imports bleibt deutsch gespeichert
+  const t = useTexte(rezeptimportTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
 
   const fileInputRef = useRef(null);
 
@@ -29,7 +35,7 @@ function UniversalImportModal({ onCancel, initialImages = [], initialText = '', 
       const newBase64s = await Promise.all(files.map(f => fileToBase64(f)));
       setImages(prev => [...prev, ...newBase64s]);
     } catch (err) {
-      setError('Fehler beim Laden der Bilder: ' + err.message);
+      setError(t('fehlerBilderLaden', { fehler: err.message }));
     }
     e.target.value = '';
   };
@@ -40,7 +46,7 @@ function UniversalImportModal({ onCancel, initialImages = [], initialText = '', 
 
   const handleQueueImport = async () => {
     if (!hasContent) {
-      setError('Bitte fügen Sie mindestens einen Inhalt hinzu.');
+      setError(t('universalFehlerLeer'));
       return;
     }
 
@@ -65,31 +71,29 @@ function UniversalImportModal({ onCancel, initialImages = [], initialText = '', 
     <div className="modal-overlay">
       <div className="universal-import-modal">
         <div className="universal-import-header">
-          <h2>Universeller Import</h2>
-          <button className="app-close-button" onClick={onCancel} aria-label="Import schließen" title="Import schließen">×</button>
+          <h2>{t('universalTitel')}</h2>
+          <button className="app-close-button" onClick={onCancel} aria-label={t('importSchliessen')} title={t('importSchliessen')}>×</button>
         </div>
 
         <div className="universal-import-content">
           {!hasContent ? (
             <p className="universal-import-instructions">
-              Keine geteilten Inhalte gefunden. Fügen Sie Bilder, Text oder eine URL hinzu.
+              {t('universalLeer')}
             </p>
           ) : (
             <p className="universal-import-instructions">
-              {totalItems === 1
-                ? '1 Inhalt bereit für die Analyse.'
-                : `${totalItems} Inhalte bereit für die Analyse.`}{' '}
-              Sie können weitere Bilder hinzufügen oder Inhalte bearbeiten.
+              {t('universalBereit', { anzahl: totalItems })}{' '}
+              {t('universalWeitere')}
             </p>
           )}
 
           {/* URL field */}
           <div className="universal-import-field">
-            <label className="universal-import-label">URL</label>
+            <label className="universal-import-label">{t('url')}</label>
             <input
               type="url"
               className="universal-import-url-input"
-              placeholder="https://beispiel.de/rezept"
+              placeholder={t('urlBeispiel')}
               value={url}
               onChange={(e) => setUrl(e.target.value)}
             />
@@ -97,10 +101,10 @@ function UniversalImportModal({ onCancel, initialImages = [], initialText = '', 
 
           {/* Text field */}
           <div className="universal-import-field">
-            <label className="universal-import-label">Text</label>
+            <label className="universal-import-label">{t('text')}</label>
             <textarea
               className="universal-import-textarea"
-              placeholder="Rezepttext hier einfügen..."
+              placeholder={t('textPlatzhalter')}
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={4}
@@ -109,22 +113,22 @@ function UniversalImportModal({ onCancel, initialImages = [], initialText = '', 
 
           {/* Image grid */}
           <div className="universal-import-field">
-            <label className="universal-import-label">Bilder ({images.length})</label>
+            <label className="universal-import-label">{t('bilderAnzahl', { anzahl: images.length })}</label>
             <div className="universal-image-grid">
               {images.map((src, index) => (
                 <div key={index} className="universal-image-item">
-                  <img src={src} alt={`Bild ${index + 1}`} className="universal-image-thumb" />
+                  <img src={src} alt={t('bildNummer', { nummer: index + 1 })} className="universal-image-thumb" />
                   <button
                     className="universal-image-remove"
                     onClick={() => handleRemoveImage(index)}
-                    title="Bild entfernen"
+                    title={t('bildEntfernen')}
                   >
                     ×
                   </button>
                 </div>
               ))}
 
-              <label className="universal-add-image" title="Weitere Bilder hinzufügen">
+              <label className="universal-add-image" title={t('weitereBilder')}>
                 <span>+</span>
                 <input
                   ref={fileInputRef}
@@ -143,14 +147,14 @@ function UniversalImportModal({ onCancel, initialImages = [], initialText = '', 
 
         <div className="universal-import-actions">
           <Button onClick={onCancel}>
-            Abbrechen
+            {tAllgemein('abbrechen')}
           </Button>
           <Button
             variant="primary"
             onClick={handleQueueImport}
             disabled={!hasContent}
           >
-            Import starten
+            {t('importStarten')}
           </Button>
         </div>
       </div>

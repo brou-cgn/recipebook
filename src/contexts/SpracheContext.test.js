@@ -203,3 +203,54 @@ describe('useListenwerte (Mehrsprachigkeit PR 5)', () => {
     expect(screen.getByText('Plats principaux · 4 portions')).toBeInTheDocument();
   });
 });
+
+describe('Seiten ohne Anmeldung in der Sprache des Browsers (Entscheidung vom 22.11.2026)', () => {
+  let spies = [];
+  const browser = (...sprachen) => {
+    spies = [
+      jest.spyOn(window.navigator, 'languages', 'get').mockReturnValue(sprachen),
+      jest.spyOn(window.navigator, 'language', 'get').mockReturnValue(sprachen[0]),
+    ];
+  };
+  afterEach(() => spies.forEach((spy) => spy.mockRestore()));
+
+  function MitNutzer({ nutzer, geprueft }) {
+    useSpracheFuerNutzer(nutzer, { anmeldungGeprueft: geprueft });
+    return <Knopf />;
+  }
+  const mit = (nutzer, geprueft) => (
+    <SpracheProvider speicher={null}><MitNutzer nutzer={nutzer} geprueft={geprueft} /></SpracheProvider>
+  );
+
+  it('gilt erst, wenn die Anmeldung geprüft ist', () => {
+    browser('fr-FR', 'fr');
+    const { rerender } = render(mit(null, false));
+    expect(screen.getByRole('button', { name: 'Speichern' })).toBeInTheDocument();
+    rerender(mit(null, true));
+    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeInTheDocument();
+  });
+
+  it('zählt angemeldet nicht, auch ohne Berechtigung sprachwahl', () => {
+    browser('en-GB', 'en');
+    render(mit({ id: 'u1', sprachwahl: false }, true));
+    expect(screen.getByRole('button', { name: 'Speichern' })).toBeInTheDocument();
+  });
+
+  it('eine Sprache, die die App nicht hat, ergibt Deutsch', () => {
+    browser('es-ES', 'es');
+    render(mit(null, true));
+    expect(screen.getByRole('button', { name: 'Speichern' })).toBeInTheDocument();
+  });
+
+  it('übersetzte Inhalte bleiben ohne Anmeldung aus', () => {
+    browser('en-GB', 'en');
+    let inhalte;
+    function Inhalte() {
+      useSpracheFuerNutzer(null, { anmeldungGeprueft: true });
+      inhalte = useSprache().inhalteUebersetzen;
+      return null;
+    }
+    render(<SpracheProvider speicher={null}><Inhalte /></SpracheProvider>);
+    expect(inhalte).toBe(false);
+  });
+});

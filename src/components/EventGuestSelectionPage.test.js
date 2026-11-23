@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import EventGuestSelectionPage from './EventGuestSelectionPage';
+import { renderWithProviders } from '../test-utils';
 
 describe('EventGuestSelectionPage', () => {
   const currentUser = { id: 'u1' };
@@ -284,5 +285,30 @@ describe('EventGuestSelectionPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
     expect(onSave).toHaveBeenCalledWith([], []);
+  });
+});
+
+describe('EventGuestSelectionPage in anderer Sprache (Mehrsprachigkeit PR 6j)', () => {
+  const guests = [
+    { id: 'g1', vorname: 'Anna', nachname: 'Beispiel' },
+    { id: 'g2', vorname: 'Bob', nachname: 'Muster' },
+  ];
+  const zeige = (sprache) => renderWithProviders(
+    <EventGuestSelectionPage guests={guests} selectedGuestIds={['g1', 'g2']} driverGuestIds={['g1']} onSave={jest.fn()} onBack={jest.fn()} />,
+    { sprache }
+  );
+
+  test('Französisch: Anzahl der Gäste in der Mehrzahl, der Fahrer in der Einzahl', () => {
+    zeige('fr');
+    expect(screen.getByText('Invités')).toBeInTheDocument();
+    expect(screen.getByText('2 invités sélectionnés.')).toBeInTheDocument();
+    expect(screen.getByText('1 conducteur indiqué.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Marquer Anna Beispiel comme conducteur')).toBeInTheDocument();
+  });
+
+  test('Englisch: Entfernen über den Löschknopf', () => {
+    zeige('en');
+    expect(screen.getByText('2 guests selected.')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Remove Bob Muster').length).toBeGreaterThan(0);
   });
 });
