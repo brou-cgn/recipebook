@@ -1,6 +1,9 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import './AtelierSwipeTrainerOverlay.css';
 import cocktailPlaceholder from '../assets/atelier-swipe-trainer-cocktail.png';
+import { useTexte } from '../contexts/SpracheContext';
+import atelierTexte from '../i18n/texte/atelier';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 // Preview thresholds (px) at which the direction hint label starts to appear while dragging.
 const PREVIEW_THRESHOLD_H = 30;
@@ -10,18 +13,6 @@ const COMMIT_THRESHOLD = 70;
 const FLY_DISTANCE_H = 500;
 const FLY_DISTANCE_V = 700;
 
-const DEFAULT_LABELS = {
-  r: '→ Für später parken',
-  l: '← Archivieren',
-  u: '↑ Jetzt kochen!',
-};
-
-const FINAL_LABELS = {
-  r: 'Nochmal ansehen',
-  l: 'Direkt ins Kochatelier',
-  u: 'Weiter',
-};
-
 const STEPS = [
   { dir: 'r' },
   { dir: 'l' },
@@ -29,62 +20,49 @@ const STEPS = [
   { dir: null, final: true },
 ];
 
-const SLOT_CONTENT = [
-  {
-    type: 'recipe',
-    name: 'Mango Cocktail',
-    author: 'Benjamin',
-    tags: ['Vegetarisch', '5 Min.'],
-    imgAlt: 'Mango Cocktail',
-    hints: [{ icon: '→', bg: '#FDF3E3', title: 'Parken', sub: 'Swipe nach rechts' }],
-  },
-  {
-    type: 'note',
-    tag: 'Remind me later',
-    title: 'Richtiges Rezept, falscher Moment',
-    body: (
-      <>
-        Es gibt Rezepte, die neugierig machen, aber gerade einfach nicht passen. Nach{' '}
-        <strong>30 Tagen</strong> tauchen sie wieder in deinem Stapel auf – manchmal braucht
-        Inspiration einfach etwas Zeit.
-      </>
-    ),
-    imgAlt: 'Mango Cocktail',
-    hints: [{ icon: '←', bg: '#F0F0EE', title: 'Archivieren', sub: 'Swipe nach links' }],
-  },
-  {
-    type: 'note',
-    tag: "I don't feel it",
-    title: 'Rezept warm-, Überblick behalten',
-    body: (
-      <>
-        Nicht jedes Rezept trifft den Nerv, das ist ganz normal. Aber deswegen wird dein Rezept
-        nicht direkt gelöscht. Du findest es jederzeit im Archiv und behältst beim Swipen trotzdem
-        immer den Fokus.
-      </>
-    ),
-    imgAlt: 'Mango Cocktail',
-    hints: [{ icon: '↑', bg: '#EDF2EE', title: 'Kochen', sub: 'Swipe nach oben' }],
-  },
-  {
-    type: 'final',
-    tag: "It's a Match",
-    title: 'Ein Rezept, ein Koch',
-    body: (
-      <>
-        Gesucht, gefunden, jetzt habt ihr <strong>7 Tage</strong> Zeit für euer
-        Candlelight-Dinner. Danach verschwindet dein Match wieder im Stapel – so wird's nicht
-        langweilig und es ist wieder Platz für neue Rezepte.
-      </>
-    ),
-    imgAlt: 'Mango Cocktail',
-    hints: [
-      { icon: '↑', bg: '#EDF2EE', title: 'Weiter', sub: 'Swipe nach oben' },
-      { icon: '→', bg: '#FDF3E3', title: 'Nochmal ansehen', sub: 'Swipe nach rechts' },
-      { icon: '←', bg: '#F0F0EE', title: 'Direkt ins Kochatelier', sub: 'Swipe nach links' },
-    ],
-  },
-];
+// Inhalt der vier Karten in der geltenden Sprache (Mehrsprachigkeit PR 6n); t: atelier.js, tAllgemein: allgemein.js.
+// Die Beispielkarte ist ausgedacht: Name und Tags übersetzt, der Autor bleibt.
+function slotInhalte(t, tAllgemein) {
+  const beispiel = t('beispielName');
+  return [
+    {
+      type: 'recipe',
+      name: beispiel,
+      author: 'Benjamin',
+      tags: [t('beispielVegetarisch'), t('beispielDauer')],
+      imgAlt: beispiel,
+      hints: [{ icon: '→', bg: '#FDF3E3', title: t('parken'), sub: t('swipeRechts') }],
+    },
+    {
+      type: 'note',
+      tag: t('remindMeLater'),
+      title: t('falscherMoment'),
+      body: t('parkenText', { dauer: <strong key="dauer">{t('dreissigTage')}</strong> }),
+      imgAlt: beispiel,
+      hints: [{ icon: '←', bg: '#F0F0EE', title: t('archivieren'), sub: t('swipeLinks') }],
+    },
+    {
+      type: 'note',
+      tag: t('dontFeelIt'),
+      title: t('warmHalten'),
+      body: t('archivText'),
+      imgAlt: beispiel,
+      hints: [{ icon: '↑', bg: '#EDF2EE', title: t('kochen'), sub: t('swipeOben') }],
+    },
+    {
+      type: 'final',
+      tag: t('itsAMatch'),
+      title: t('einKoch'),
+      body: t('matchText', { dauer: <strong key="dauer">{t('siebenTage')}</strong> }),
+      imgAlt: beispiel,
+      hints: [
+        { icon: '↑', bg: '#EDF2EE', title: tAllgemein('weiter'), sub: t('swipeOben') },
+        { icon: '→', bg: '#FDF3E3', title: t('nochmalAnsehen'), sub: t('swipeRechts') },
+        { icon: '←', bg: '#F0F0EE', title: t('direktInsKochatelier'), sub: t('swipeLinks') },
+      ],
+    },
+  ];
+}
 
 function CardHints({ hints }) {
   return (
@@ -155,9 +133,18 @@ function AtelierSwipeTrainerOverlay({ onComplete }) {
   const gestureRef = useRef(null);
   const pendingOutcomeRef = useRef(null); // 'advance' | 'restart' | 'complete' | null
 
+  // Texte des Swipe-Trainings (Mehrsprachigkeit PR 6n)
+  const t = useTexte(atelierTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const slots = useMemo(() => slotInhalte(t, tAllgemein), [t, tAllgemein]);
+
   const step = STEPS[trainerStep];
-  const slot = SLOT_CONTENT[trainerStep];
-  const ghostSlot = SLOT_CONTENT[(trainerStep + 1) % SLOT_CONTENT.length];
+  const slot = slots[trainerStep];
+  const ghostSlot = slots[(trainerStep + 1) % slots.length];
+  // Hinweis beim Ziehen: in den ersten Schritten die Aktion, in der letzten Karte, wohin es weitergeht
+  const labels = step.final
+    ? { r: t('nochmalAnsehen'), l: t('direktInsKochatelier'), u: tAllgemein('weiter') }
+    : { r: t('labelParken'), l: t('labelArchivieren'), u: t('labelKochen') };
 
   const handlePointerDown = useCallback((e) => {
     if (cardPhase !== 'idle') return;
@@ -275,22 +262,22 @@ function AtelierSwipeTrainerOverlay({ onComplete }) {
   };
 
   return (
-    <div className="atelier-swipe-trainer-overlay" role="dialog" aria-modal="true" aria-label="Swipe-Training">
+    <div className="atelier-swipe-trainer-overlay" role="dialog" aria-modal="true" aria-label={t('swipeTraining')}>
       <div className="atelier-swipe-trainer-stack">
         <div
           className={`atelier-swipe-trainer-label atelier-swipe-trainer-label--r${activeLabel === 'r' ? ' atelier-swipe-trainer-label--visible' : ''}`}
         >
-          {step.final ? FINAL_LABELS.r : DEFAULT_LABELS.r}
+          {labels.r}
         </div>
         <div
           className={`atelier-swipe-trainer-label atelier-swipe-trainer-label--l${activeLabel === 'l' ? ' atelier-swipe-trainer-label--visible' : ''}`}
         >
-          {step.final ? FINAL_LABELS.l : DEFAULT_LABELS.l}
+          {labels.l}
         </div>
         <div
           className={`atelier-swipe-trainer-label atelier-swipe-trainer-label--u${activeLabel === 'u' ? ' atelier-swipe-trainer-label--visible' : ''}`}
         >
-          {step.final ? FINAL_LABELS.u : DEFAULT_LABELS.u}
+          {labels.u}
         </div>
 
         <div className="atelier-swipe-trainer-ghost" data-testid="atelier-swipe-trainer-ghost">

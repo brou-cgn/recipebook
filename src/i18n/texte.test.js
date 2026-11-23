@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createElement } from 'react';
-import { erstelleT, findeText, fuelleText } from './texte';
+import { ergebnisText, erstelleT, findeText, fuelleText } from './texte';
 import { SPRACH_IDS, STANDARD_SPRACHE } from './sprachen';
 
 const NBSP = '\u00a0';
@@ -169,5 +169,23 @@ describe('findeText (gespeicherte deutsche Texte wiedererkennen)', () => {
     expect(findeText(WOERTERBUCH, 'x', LISTE)).toBeNull();
     expect(findeText(WOERTERBUCH, null, LISTE)).toBeNull();
     expect(findeText(WOERTERBUCH, '', LISTE)).toBeNull();
+  });
+});
+
+describe('ergebnisText (Ergebnisse aus Hilfsfunktionen, PR 6l)', () => {
+  const WOERTERBUCH = {
+    de: { fehler: 'Fehler {nr}' },
+    en: { fehler: 'Error {nr}' },
+    fr: { fehler: 'Erreur {nr}' },
+  };
+  const t = erstelleT(WOERTERBUCH, 'en');
+
+  it('übersetzt über den Schlüssel, mit Werten', () => {
+    expect(ergebnisText({ schluessel: 'fehler', werte: { nr: 3 }, message: 'Fehler 3' }, t)).toBe('Error 3');
+  });
+
+  it('zeigt ohne Schlüssel die mitgelieferte Meldung, ohne Ergebnis einen leeren Text', () => {
+    expect(ergebnisText({ success: false, message: 'Wie geliefert' }, t)).toBe('Wie geliefert');
+    expect(ergebnisText(null, t)).toBe('');
   });
 });

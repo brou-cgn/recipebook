@@ -22,11 +22,16 @@ const ROOT = path.join(__dirname, '..', '..');
 const PORT = Number(process.env.SCREENSHOT_PORT || 5174);
 const URL = `http://127.0.0.1:${PORT}/`;
 
+// Deutscher Browser: Seiten ohne Anmeldung folgen der Sprache des Browsers (Mehrsprachigkeit,
+// Entscheidung O). Ohne locale meldet Chromium en-US, dann erschienen Anmeldung und Registrierung
+// englisch, und Bildschirme mit deutschen Knopfnamen (registrieren) fänden ihren Knopf nicht.
+const BROWSER = { locale: 'de-DE' };
+
 const VARIANTS = [
-  { name: 'desktop-hell', context: { viewport: { width: 1280, height: 860 }, deviceScaleFactor: 2 }, dark: false },
-  { name: 'desktop-dunkel', context: { viewport: { width: 1280, height: 860 }, deviceScaleFactor: 2 }, dark: true },
-  { name: 'handy-hell', context: { ...devices['iPhone 13'] }, dark: false },
-  { name: 'handy-dunkel', context: { ...devices['iPhone 13'] }, dark: true },
+  { name: 'desktop-hell', context: { ...BROWSER, viewport: { width: 1280, height: 860 }, deviceScaleFactor: 2 }, dark: false },
+  { name: 'desktop-dunkel', context: { ...BROWSER, viewport: { width: 1280, height: 860 }, deviceScaleFactor: 2 }, dark: true },
+  { name: 'handy-hell', context: { ...devices['iPhone 13'], ...BROWSER }, dark: false },
+  { name: 'handy-dunkel', context: { ...devices['iPhone 13'], ...BROWSER }, dark: true },
 ];
 
 const pause = (page, ms = 700) => page.waitForTimeout(ms);

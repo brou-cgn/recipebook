@@ -30,6 +30,7 @@ import { useSprache, useTexte } from '../contexts/SpracheContext';
 import { formatiereZahl } from '../i18n/format';
 import bereicheTexte from '../i18n/texte/bereiche';
 import chefkochTexte from '../i18n/texte/chefkochUndMehr';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 function getLastSixMonthsRecipeCounts(recipes) {
   const now = new Date();
@@ -238,6 +239,7 @@ function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSe
   const { rows: nutritionReferenceRows } = useNutritionReference();
   const t = useTexte(chefkochTexte);
   const tB = useTexte(bereicheTexte);
+  const tA = useTexte(allgemeinTexte);
   const { sprache } = useSprache();
   const zahl = (wert) => formatiereZahl(wert, sprache);
   const profilInhaltId = useId();
@@ -460,10 +462,10 @@ function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSe
     if (onViewChange) onViewChange('groups');
   };
 
-  const chefkochName = currentUser
-    ? [currentUser.vorname, currentUser.nachname].filter(Boolean).join(' ')
-    : null;
-  const initialen = [currentUser?.vorname, currentUser?.nachname]
+  // Gäste heißen in der geltenden Sprache „Gast“ (gespeichert bleibt vorname 'Gast')
+  const namensteile = currentUser?.isGuest ? [tA('gast')] : [currentUser?.vorname, currentUser?.nachname];
+  const chefkochName = currentUser ? namensteile.filter(Boolean).join(' ') : null;
+  const initialen = namensteile
     .map((teil) => (teil || '').trim().charAt(0))
     .join('')
     .toUpperCase();

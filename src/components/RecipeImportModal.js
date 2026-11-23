@@ -5,6 +5,7 @@ import Button from './Button';
 import { parseBulkCSV } from '../utils/csvBulkImport';
 import { getImageForCategories } from '../utils/categoryImages';
 import { useTexte } from '../contexts/SpracheContext';
+import { importTextAnzeige } from '../utils/importAnzeige';
 import rezeptimportTexte from '../i18n/texte/rezeptimport';
 import allgemeinTexte from '../i18n/texte/allgemein';
 
@@ -98,7 +99,8 @@ function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
       setCsvFileName(file.name);
       
     } catch (err) {
-      setError(err.message);
+      // Meldungen des CSV-Imports kommen deutsch, auch mehrzeilig (Mehrsprachigkeit PR 6m)
+      setError(importTextAnzeige(err.message, t));
       setCsvRecipes(null);
       setCsvFileName('');
     }

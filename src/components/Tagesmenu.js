@@ -17,6 +17,9 @@ import { describeActors, useFuerDichAttribution } from '../utils/fuerDichAttribu
 import FuerDichAttributionText from './FuerDichAttributionText';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import { useOptionalNutritionReference } from '../contexts/NutritionReferenceContext';
+import { useListenwerte, useRezeptTitel, useTexte } from '../contexts/SpracheContext';
+import tagesmenuTexte from '../i18n/texte/tagesmenu';
+import bereicheTexte from '../i18n/texte/bereiche';
 
 /**
  * Tagesmenü page – shows recipe cards as a swipeable Tinder-style stack.
@@ -41,7 +44,6 @@ const SWIPE_VELOCITY_THRESHOLD = 0.3; // px/ms – fast flick triggers swipe eve
 const MIN_FAST_SWIPE_DISTANCE = 20;   // px – minimum displacement required for a velocity swipe
 const DIRECTION_THRESHOLD = 5;        // px of movement before we decide drag direction
 const STACK_VISIBLE = 3;              // how many cards are rendered in the stack
-const KACHEL_MENU_PROMPT_LABEL = 'Erzähl, wie war es?';
 const DISAPPOINTED_MENU_ITEM = 'Ich bin enttäuscht';
 const PARK_MENU_ITEM = 'Zweite Chance, bitte';
 const COOK_AGAIN_MENU_ITEM = 'Koche ich mal wieder';
@@ -51,6 +53,19 @@ const TAGESMENU_KACHEL_MENU_ITEMS = [
   PARK_MENU_ITEM,
   COOK_AGAIN_MENU_ITEM,
   COOK_REGULARLY_MENU_ITEM,
+];
+// Anzeige der Menüpunkte in der geltenden Sprache (Mehrsprachigkeit PR 6n); die deutschen Werte bleiben Kennung
+const KACHEL_MENU_TEXTE = {
+  [DISAPPOINTED_MENU_ITEM]: 'menueEnttaeuscht',
+  [PARK_MENU_ITEM]: 'menueZweiteChance',
+  [COOK_AGAIN_MENU_ITEM]: 'menueMalWieder',
+  [COOK_REGULARLY_MENU_ITEM]: 'menueRegelmaessig',
+};
+// Gruppen unter „Meine Auswahl“: Überschrift (Schlüssel in tagesmenu.js) und Merkmal
+const AUSWAHL_GRUPPEN = [
+  { titel: 'gruppeKandidat', flag: 'kandidat' },
+  { titel: 'gruppeFuerSpaeter', flag: 'geparkt' },
+  { titel: 'gruppeArchiviert', flag: 'archiv' },
 ];
 const TAGESMENU_ASSIGN_TO_TARGET_LIST_ITEMS = {
   [COOK_AGAIN_MENU_ITEM]: { markAsFavorite: false },
@@ -92,6 +107,11 @@ function Tagesmenu({
   restoreState,
   onRestoreStateConsumed,
 }) {
+  // Texte des Tagesmenüs (Mehrsprachigkeit PR 6n); Titel und Listenwerte übersetzt, gespeichert bleibt das Original
+  const t = useTexte(tagesmenuTexte);
+  const tB = useTexte(bereicheTexte);
+  const zeigeTitel = useRezeptTitel();
+  const listen = useListenwerte();
   // Restore list + view (stack / results grid / Meine Auswahl) after returning from a recipe
   const restoredListId = restoreState && interactiveLists.some((l) => l.id === restoreState.listId)
     ? restoreState.listId
@@ -1209,11 +1229,11 @@ function Tagesmenu({
       {showAllLists ? (
         <div className="tagesmenu-results">
           <div className="tagesmenu-results-page-header">
-            <h2 className="tagesmenu-results-page-title">Kochatelier</h2>
+            <h2 className="tagesmenu-results-page-title">{tB('kochatelier')}</h2>
           </div>
           {!allListsLoaded || !maxKandidatenSchwelleLoaded ? null : allListsKandidaten.length === 0 ? (
             <div className="tagesmenu-empty">
-              <p>Keine gemeinsamen Kandidaten in deinen Listen.</p>
+              <p>{t('keineGemeinsamenKandidaten')}</p>
             </div>
           ) : (
             <div className="tagesmenu-results-group tagesmenu-results-group--gemeinsame-kandidaten">
@@ -1271,23 +1291,23 @@ function Tagesmenu({
                             }}
                             value=""
                             className="tagesmenu-kachel-context-select"
-                            aria-label="Kachel-Kontextmenü öffnen"
+                            aria-label={t('kachelMenueOeffnen')}
                           >
-                            <option value="" disabled>{KACHEL_MENU_PROMPT_LABEL}</option>
+                            <option value="" disabled>{t('menuePrompt')}</option>
                             {TAGESMENU_KACHEL_MENU_ITEMS.map((item) => (
-                              <option key={item} value={item}>{item}</option>
+                              <option key={item} value={item}>{t(KACHEL_MENU_TEXTE[item])}</option>
                             ))}
                           </select>
                         </div>
                       )}
                       <div className="tagesmenu-results-tile-image">
                         {orderedImages.length > 0 ? (
-                          <img src={orderedImages[0].url} alt={recipe.title} />
+                          <img src={orderedImages[0].url} alt={zeigeTitel(recipe)} />
                         ) : (
                           <span></span>
                         )}
                       </div>
-                      <p className="tagesmenu-results-tile-name">{recipe.title}</p>
+                      <p className="tagesmenu-results-tile-name">{zeigeTitel(recipe)}</p>
                       {authorName && (
                         <p className="tagesmenu-results-tile-author">{authorName}</p>
                       )}
@@ -1301,7 +1321,7 @@ function Tagesmenu({
       ) : allListRecipes.length === 0 ? (
         <div className="tagesmenu-empty">
           <span className="tagesmenu-empty-icon"></span>
-          <p>Diese Liste enthält noch keine Rezepte.</p>
+          <p>{t('listeLeer')}</p>
         </div>
       ) : !readyToRender ? (
         // Switching lists from within the grid: keep the page header on screen
@@ -1309,20 +1329,16 @@ function Tagesmenu({
         gridCarriedOver && !showMeineAuswahl ? (
           <div className="tagesmenu-results">
             <div className="tagesmenu-results-page-header">
-              <h2 className="tagesmenu-results-page-title">Kochatelier</h2>
+              <h2 className="tagesmenu-results-page-title">{tB('kochatelier')}</h2>
             </div>
           </div>
         ) : null
       ) : showMeineAuswahl ? (
         <div className="tagesmenu-meine-auswahl">
           <div className="tagesmenu-results-page-header">
-            <h2 className="tagesmenu-results-page-title">Meine Auswahl</h2>
+            <h2 className="tagesmenu-results-page-title">{t('meineAuswahl')}</h2>
           </div>
-          {[
-            { label: 'Kandidat', flag: 'kandidat' },
-            { label: 'Für später', flag: 'geparkt' },
-            { label: 'Archiviert', flag: 'archiv' },
-          ].map(({ label, flag }) => {
+          {AUSWAHL_GRUPPEN.map(({ titel, flag }) => {
             const group = allListRecipes.filter((r) => {
               const combinedFlag = swipeResults[r.id] ?? activeFlags[r.id];
               return combinedFlag === flag;
@@ -1330,7 +1346,7 @@ function Tagesmenu({
             if (group.length === 0) return null;
             return (
               <div key={flag} className="tagesmenu-results-group">
-                <h3 className="tagesmenu-results-group-title">{label}</h3>
+                <h3 className="tagesmenu-results-group-title">{t(titel)}</h3>
                 <div className={`tagesmenu-results-tiles ${group.length <= 6 ? 'tagesmenu-results-tiles--2col' : 'tagesmenu-results-tiles--3col'}`}>
                   {group.map((recipe) => {
                     const allImages =
@@ -1381,26 +1397,26 @@ function Tagesmenu({
                               }}
                               value=""
                               className="tagesmenu-kachel-context-select"
-                              aria-label="Kachel-Kontextmenü öffnen"
+                              aria-label={t('kachelMenueOeffnen')}
                             >
-                              <option value="" disabled>{KACHEL_MENU_PROMPT_LABEL}</option>
+                              <option value="" disabled>{t('menuePrompt')}</option>
                               {TAGESMENU_KACHEL_MENU_ITEMS.map((item) => (
-                                <option key={item} value={item}>{item}</option>
+                                <option key={item} value={item}>{t(KACHEL_MENU_TEXTE[item])}</option>
                               ))}
                             </select>
                           </div>
                         )}
                         {flag === 'archiv' && permanentlyArchivedRecipeIds.has(recipe.id) && (
-                          <div className="tagesmenu-permanent-archive-badge" title="Dauerhaft archiviert">Archiv</div>
+                          <div className="tagesmenu-permanent-archive-badge" title={t('dauerhaftArchiviert')}>{t('archiv')}</div>
                         )}
                         <div className="tagesmenu-results-tile-image">
                           {orderedImages.length > 0 ? (
-                            <img src={orderedImages[0].url} alt={recipe.title} />
+                            <img src={orderedImages[0].url} alt={zeigeTitel(recipe)} />
                           ) : (
                             <span></span>
                           )}
                         </div>
-                        <p className="tagesmenu-results-tile-name">{recipe.title}</p>
+                        <p className="tagesmenu-results-tile-name">{zeigeTitel(recipe)}</p>
                         {authorName && (
                           <p className="tagesmenu-results-tile-author">{authorName}</p>
                         )}
@@ -1415,7 +1431,7 @@ function Tagesmenu({
       ) : allSwiped ? (
         <div className="tagesmenu-results">
           <div className="tagesmenu-results-page-header">
-            <h2 className="tagesmenu-results-page-title">Kochatelier</h2>
+            <h2 className="tagesmenu-results-page-title">{tB('kochatelier')}</h2>
           </div>
           {/* Group status section – only shown for lists with multiple members */}
           {(listMemberIds.length > 1 || isFuerDichEntdecktList(selectedList)) && (() => {
@@ -1469,23 +1485,23 @@ function Tagesmenu({
                         }}
                         value=""
                         className="tagesmenu-kachel-context-select"
-                        aria-label="Kachel-Kontextmenü öffnen"
+                        aria-label={t('kachelMenueOeffnen')}
                       >
-                        <option value="" disabled>{KACHEL_MENU_PROMPT_LABEL}</option>
+                        <option value="" disabled>{t('menuePrompt')}</option>
                         {TAGESMENU_KACHEL_MENU_ITEMS.map((item) => (
-                          <option key={item} value={item}>{item}</option>
+                          <option key={item} value={item}>{t(KACHEL_MENU_TEXTE[item])}</option>
                         ))}
                       </select>
                     </div>
                   )}
                   <div className="tagesmenu-results-tile-image">
                     {orderedImages.length > 0 ? (
-                      <img src={orderedImages[0].url} alt={recipe.title} />
+                      <img src={orderedImages[0].url} alt={zeigeTitel(recipe)} />
                     ) : (
                       <span></span>
                     )}
                   </div>
-                  <p className="tagesmenu-results-tile-name">{recipe.title}</p>
+                  <p className="tagesmenu-results-tile-name">{zeigeTitel(recipe)}</p>
                   {authorName && (
                     <p className="tagesmenu-results-tile-author">{authorName}</p>
                   )}
@@ -1524,11 +1540,7 @@ function Tagesmenu({
           })()}
           {/* Meine Auswahl groups – shown in results only for single-member lists.
               For multi-member lists, these are accessible via the dedicated Meine Auswahl view. */}
-          {currentUser?.tagesmenuTestmode !== false && listMemberIds.length <= 1 && [
-            { label: 'Kandidat', flag: 'kandidat' },
-            { label: 'Für später', flag: 'geparkt' },
-            { label: 'Archiviert', flag: 'archiv' },
-          ].map(({ label, flag }) => {
+          {currentUser?.tagesmenuTestmode !== false && listMemberIds.length <= 1 && AUSWAHL_GRUPPEN.map(({ titel, flag }) => {
             if (flag === 'kandidat' && isFuerDichEntdecktList(selectedList)) return null;
             const group = allListRecipes.filter((r) => {
               const combinedFlag = swipeResults[r.id] ?? activeFlags[r.id];
@@ -1537,7 +1549,7 @@ function Tagesmenu({
             if (group.length === 0) return null;
             return (
               <div key={flag} className="tagesmenu-results-group">
-                <h3 className="tagesmenu-results-group-title">{label}</h3>
+                <h3 className="tagesmenu-results-group-title">{t(titel)}</h3>
                 <div className={`tagesmenu-results-tiles ${group.length <= 6 ? 'tagesmenu-results-tiles--2col' : 'tagesmenu-results-tiles--3col'}`}>
                   {group.map((recipe) => {
                     const allImages =
@@ -1588,23 +1600,23 @@ function Tagesmenu({
                               }}
                               value=""
                               className="tagesmenu-kachel-context-select"
-                              aria-label="Kachel-Kontextmenü öffnen"
+                              aria-label={t('kachelMenueOeffnen')}
                             >
-                              <option value="" disabled>{KACHEL_MENU_PROMPT_LABEL}</option>
+                              <option value="" disabled>{t('menuePrompt')}</option>
                               {TAGESMENU_KACHEL_MENU_ITEMS.map((item) => (
-                                <option key={item} value={item}>{item}</option>
+                                <option key={item} value={item}>{t(KACHEL_MENU_TEXTE[item])}</option>
                               ))}
                             </select>
                           </div>
                         )}
                         <div className="tagesmenu-results-tile-image">
                           {orderedImages.length > 0 ? (
-                            <img src={orderedImages[0].url} alt={recipe.title} />
+                            <img src={orderedImages[0].url} alt={zeigeTitel(recipe)} />
                           ) : (
                             <span></span>
                           )}
                         </div>
-                        <p className="tagesmenu-results-tile-name">{recipe.title}</p>
+                        <p className="tagesmenu-results-tile-name">{zeigeTitel(recipe)}</p>
                         {authorName && (
                           <p className="tagesmenu-results-tile-author">{authorName}</p>
                         )}
@@ -1717,7 +1729,7 @@ function Tagesmenu({
                   <div className="tagesmenu-card-image">
                     <img
                       src={orderedImages[0].url}
-                      alt={recipe.title}
+                      alt={zeigeTitel(recipe)}
                       onClick={isTop && cardPhase === 'idle' ? () => handleOpenRecipe(recipe) : undefined}
                     />
                   </div>
@@ -1728,7 +1740,7 @@ function Tagesmenu({
                 )}
 
                 <div className="tagesmenu-card-info">
-                  <h2 className="tagesmenu-card-title">{recipe.title}</h2>
+                  <h2 className="tagesmenu-card-title">{zeigeTitel(recipe)}</h2>
                   {authorName && (
                     <p className="tagesmenu-card-author">{authorName}</p>
                   )}
@@ -1745,12 +1757,12 @@ function Tagesmenu({
                         {Array.isArray(recipe.kulinarik)
                           ? recipe.kulinarik.map((k, i) => (
                               <span key={i} className="tagesmenu-kulinarik-tag">
-                                {k}
+                                {listen.kulinarik(k)}
                               </span>
                             ))
                           : (
                               <span className="tagesmenu-kulinarik-tag">
-                                {recipe.kulinarik}
+                                {listen.kulinarik(recipe.kulinarik)}
                               </span>
                             )}
                       </div>
@@ -1758,7 +1770,7 @@ function Tagesmenu({
 
                   {Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0 && (
                     <div className="tagesmenu-card-section">
-                      <h3 className="tagesmenu-card-section-title">Zutaten</h3>
+                      <h3 className="tagesmenu-card-section-title">{t('zutaten')}</h3>
                       <ul className="tagesmenu-ingredients-list">
                         {recipe.ingredients.map((item, i) => {
                           if (typeof item === 'object' && item.type === 'heading') {
@@ -1784,7 +1796,7 @@ function Tagesmenu({
 
                   {Array.isArray(recipe.steps) && recipe.steps.length > 0 && (
                     <div className="tagesmenu-card-section">
-                      <h3 className="tagesmenu-card-section-title">Zubereitung</h3>
+                      <h3 className="tagesmenu-card-section-title">{t('zubereitung')}</h3>
                       <ol className="tagesmenu-steps-list">
                         {recipe.steps.map((item, i) => {
                           if (typeof item === 'object' && item.type === 'heading') {
@@ -1810,11 +1822,11 @@ function Tagesmenu({
         <button
           className="tagesmenu-filter-btn"
           onClick={() => setIsFilterOpen(true)}
-          aria-label="Filter öffnen"
-          title="Filter öffnen"
+          aria-label={t('filterOeffnen')}
+          title={t('filterOeffnen')}
         >
           {isBase64Image(filterButtonIcon) ? (
-            <img src={filterButtonIcon} alt="Filter öffnen" className="button-icon-image" draggable="false" />
+            <img src={filterButtonIcon} alt={t('filterOeffnen')} className="button-icon-image" draggable="false" />
           ) : (
             <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{filterButtonIcon}</span>
           )}
@@ -1826,11 +1838,11 @@ function Tagesmenu({
         <button
           className="tagesmenu-meine-auswahl-btn"
           onClick={() => setShowMeineAuswahl((v) => !v)}
-          aria-label="Meine Auswahl"
-          title="Meine Auswahl"
+          aria-label={t('meineAuswahl')}
+          title={t('meineAuswahl')}
         >
           {isBase64Image(meineAuswahlIcon) ? (
-            <img src={meineAuswahlIcon} alt="Meine Auswahl" className="button-icon-image" draggable="false" />
+            <img src={meineAuswahlIcon} alt={t('meineAuswahl')} className="button-icon-image" draggable="false" />
           ) : (
             <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{meineAuswahlIcon}</span>
           )}
@@ -1842,11 +1854,11 @@ function Tagesmenu({
         <button
           className="tagesmenu-zum-tagesMenu-btn"
           onClick={() => setForceShowResults(true)}
-          aria-label="Zum Tagesmenü"
-          title="Zum Tagesmenü"
+          aria-label={t('zumTagesmenue')}
+          title={t('zumTagesmenue')}
         >
           {isBase64Image(zumTagesMenuIcon) ? (
-            <img src={zumTagesMenuIcon} alt="Zum Tagesmenü" className="button-icon-image" draggable="false" />
+            <img src={zumTagesMenuIcon} alt={t('zumTagesmenue')} className="button-icon-image" draggable="false" />
           ) : (
             <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{zumTagesMenuIcon}</span>
           )}
@@ -1858,11 +1870,11 @@ function Tagesmenu({
         <button
           className="tagesmenu-zurueck-zum-stapel-btn"
           onClick={() => setForceShowResults(false)}
-          aria-label="Zurück zum Swipestapel"
-          title="Zurück zum Swipestapel"
+          aria-label={t('zurueckZumStapel')}
+          title={t('zurueckZumStapel')}
         >
           {isBase64Image(zurueckZumStapelIcon) ? (
-            <img src={zurueckZumStapelIcon} alt="Zurück zum Swipestapel" className="button-icon-image" draggable="false" />
+            <img src={zurueckZumStapelIcon} alt={t('zurueckZumStapel')} className="button-icon-image" draggable="false" />
           ) : (
             <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{zurueckZumStapelIcon}</span>
           )}

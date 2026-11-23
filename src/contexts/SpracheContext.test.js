@@ -253,4 +253,32 @@ describe('Seiten ohne Anmeldung in der Sprache des Browsers (Entscheidung vom 22
     render(<SpracheProvider speicher={null}><Inhalte /></SpracheProvider>);
     expect(inhalte).toBe(false);
   });
+
+  describe('Gäste (anonyme Anmeldung, Entscheidung vom 23.11.2026)', () => {
+    const gast = { id: 'anonym1', vorname: 'Gast', isGuest: true, role: 'guest' };
+
+    it('bekommen die Sprache des Browsers wie ohne Anmeldung', () => {
+      browser('fr-FR', 'fr');
+      render(mit(gast, true));
+      expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeInTheDocument();
+    });
+
+    it('auch wenn sprachwahl gesetzt ist, ohne eigene Profilsprache', () => {
+      browser('en-GB', 'en');
+      render(mit({ ...gast, sprachwahl: true }, true));
+      expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+    });
+
+    it('übersetzte Inhalte bleiben ohne Berechtigung aus', () => {
+      browser('en-GB', 'en');
+      let inhalte;
+      function Inhalte() {
+        useSpracheFuerNutzer(gast, { anmeldungGeprueft: true });
+        inhalte = useSprache().inhalteUebersetzen;
+        return null;
+      }
+      render(<SpracheProvider speicher={null}><Inhalte /></SpracheProvider>);
+      expect(inhalte).toBe(false);
+    });
+  });
 });

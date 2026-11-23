@@ -29,6 +29,14 @@ import {
 import { httpsCallable } from 'firebase/functions';
 import { logAppCall } from './appCallsFirestore';
 import { istSprache } from '../i18n/sprachen';
+import { erstelleT } from '../i18n/texte';
+import anmeldungTexte from '../i18n/texte/anmeldung';
+
+// Meldungen rund um Anmeldung, Registrierung und Passwort (Mehrsprachigkeit PR 6l): Das Ergebnis trägt den
+// Schlüssel in src/i18n/texte/anmeldung.js, die Oberfläche zeigt ihn in der geltenden Sprache (ergebnisText).
+// `message` bleibt deutsch, aus demselben Wörterbuch, für die Verwaltung und für Logs.
+const tAnmeldungDeutsch = erstelleT(anmeldungTexte, 'de');
+const mitMeldung = (ergebnis, schluessel) => ({ ...ergebnis, schluessel, message: tAnmeldungDeutsch(schluessel) });
 
 // Permission roles
 export const ROLES = {
@@ -167,7 +175,7 @@ export const registerUser = async (userData) => {
   
   // Validation
   if (!vorname || !nachname || !email || !password) {
-    return { success: false, message: 'Alle Felder müssen ausgefüllt werden.' };
+    return mitMeldung({ success: false }, 'fehlerFelderLeer');
   }
   
   let authUser = null;
@@ -193,11 +201,7 @@ export const registerUser = async (userData) => {
     // Sign out immediately after registration – no automatic login after sign-up
     await signOut(auth);
 
-    return {
-      success: true,
-      message: 'Registrierung erfolgreich! Bitte melden Sie sich an.',
-      user: result.data.user
-    };
+    return mitMeldung({ success: true, user: result.data.user }, 'registrierungErfolgreich');
   } catch (error) {
     console.error('Registration error:', error);
 
@@ -216,16 +220,16 @@ export const registerUser = async (userData) => {
 
     // Handle specific Firebase Auth errors
     if (error.code === 'auth/email-already-in-use') {
-      return { success: false, message: 'Diese E-Mail-Adresse ist bereits registriert.' };
+      return mitMeldung({ success: false }, 'fehlerEmailVergeben');
     } else if (error.code === 'auth/invalid-email') {
-      return { success: false, message: 'Ungültige E-Mail-Adresse.' };
+      return mitMeldung({ success: false }, 'fehlerEmailUngueltig');
     } else if (error.code === 'auth/weak-password') {
-      return { success: false, message: 'Das Passwort ist zu schwach. Mindestens 12 Zeichen erforderlich.' };
+      return mitMeldung({ success: false }, 'fehlerPasswortSchwach');
     } else if (error.code === 'functions/resource-exhausted') {
-      return { success: false, message: 'Zu viele Registrierungsversuche. Bitte versuchen Sie es später erneut.' };
+      return mitMeldung({ success: false }, 'fehlerZuVieleRegistrierungen');
     }
     
-    return { success: false, message: 'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.' };
+    return mitMeldung({ success: false }, 'fehlerRegistrierung');
   }
 };
 
@@ -237,7 +241,7 @@ export const registerUser = async (userData) => {
  */
 export const loginUser = async (email, password) => {
   if (!email || !password) {
-    return { success: false, message: 'E-Mail und Passwort erforderlich.' };
+    return mitMeldung({ success: false }, 'fehlerAnmeldedatenFehlen');
   }
   
   try {
@@ -254,31 +258,30 @@ export const loginUser = async (email, password) => {
     const userProfile = await getUserProfile(userId);
     
     if (!userProfile) {
-      return { success: false, message: 'Benutzerprofil nicht gefunden.' };
+      return mitMeldung({ success: false }, 'fehlerProfilFehlt');
     }
     
     const currentUser = { id: userId, ...userProfile };
     currentUserCache = currentUser;
     
-    return {
+    return mitMeldung({
       success: true,
-      message: 'Anmeldung erfolgreich!',
       user: currentUser,
       requiresPasswordChange: userProfile.requiresPasswordChange || false
-    };
+    }, 'anmeldungErfolgreich');
   } catch (error) {
     console.error('Login error:', error);
     
     // Handle specific Firebase Auth errors
     if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-      return { success: false, message: 'Ungültige E-Mail oder Passwort.' };
+      return mitMeldung({ success: false }, 'fehlerAnmeldedaten');
     } else if (error.code === 'auth/invalid-email') {
-      return { success: false, message: 'Ungültige E-Mail-Adresse.' };
+      return mitMeldung({ success: false }, 'fehlerEmailUngueltig');
     } else if (error.code === 'auth/too-many-requests') {
-      return { success: false, message: 'Zu viele fehlgeschlagene Anmeldeversuche. Bitte versuchen Sie es später erneut.' };
+      return mitMeldung({ success: false }, 'fehlerZuVieleAnmeldungen');
     }
     
-    return { success: false, message: 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.' };
+    return mitMeldung({ success: false }, 'fehlerAnmeldung');
   }
 };
 
@@ -289,25 +292,22 @@ export const loginUser = async (email, password) => {
  */
 export const sendPasswordResetEmail = async (email) => {
   if (!email) {
-    return { success: false, message: 'E-Mail-Adresse erforderlich.' };
+    return mitMeldung({ success: false }, 'fehlerEmailFehlt');
   }
 
   try {
     await firebaseSendPasswordResetEmail(auth, email.toLowerCase().trim());
-    return {
-      success: true,
-      message: 'Eine E-Mail zum Zurücksetzen des Passworts wurde versendet, falls ein Konto mit dieser Adresse existiert.'
-    };
+    return mitMeldung({ success: true }, 'resetVersendet');
   } catch (error) {
     console.error('Password reset error:', error);
 
     if (error.code === 'auth/invalid-email') {
-      return { success: false, message: 'Ungültige E-Mail-Adresse.' };
+      return mitMeldung({ success: false }, 'fehlerEmailUngueltig');
     } else if (error.code === 'auth/too-many-requests') {
-      return { success: false, message: 'Zu viele Anfragen. Bitte versuchen Sie es später erneut.' };
+      return mitMeldung({ success: false }, 'fehlerZuVieleAnfragen');
     }
 
-    return { success: false, message: 'Fehler beim Senden der E-Mail. Bitte versuchen Sie es erneut.' };
+    return mitMeldung({ success: false }, 'fehlerResetSenden');
   }
 };
 
@@ -437,17 +437,10 @@ export const loginAsGuest = async () => {
     
     currentUserCache = guestUser;
     
-    return {
-      success: true,
-      message: 'Als Gast angemeldet.',
-      user: guestUser
-    };
+    return mitMeldung({ success: true, user: guestUser }, 'gastAngemeldet');
   } catch (error) {
     console.error('Guest login error:', error);
-    return {
-      success: false,
-      message: 'Gast-Anmeldung fehlgeschlagen.'
-    };
+    return mitMeldung({ success: false }, 'fehlerGast');
   }
 };
 
@@ -812,22 +805,13 @@ const COMMON_PASSWORDS = [
  */
 export const validatePassword = (password) => {
   if (!password || password.length < 12) {
-    return { 
-      valid: false, 
-      message: 'Das Passwort muss mindestens 12 Zeichen lang sein.' 
-    };
+    return mitMeldung({ valid: false }, 'passwortZuKurz');
   }
   if (!/[0-9]/.test(password) && !/[^a-zA-Z0-9]/.test(password)) {
-    return {
-      valid: false,
-      message: 'Das Passwort muss mindestens eine Zahl oder ein Sonderzeichen enthalten.'
-    };
+    return mitMeldung({ valid: false }, 'passwortOhneZahl');
   }
   if (COMMON_PASSWORDS.includes(password.toLowerCase())) {
-    return {
-      valid: false,
-      message: 'Dieses Passwort ist zu häufig verwendet. Bitte wählen Sie ein sichereres Passwort.'
-    };
+    return mitMeldung({ valid: false }, 'passwortZuHaeufig');
   }
   return { valid: true, message: '' };
 };
@@ -890,10 +874,7 @@ export const updateUserProfile = async (userId, profileData) => {
   const { vorname, nachname, email, signatureSatz, defaultWebImportListId, defaultEverydayClassicsListId } = profileData;
 
   if (!vorname || !nachname || !email) {
-    return {
-      success: false,
-      message: 'Vorname, Nachname und E-Mail dürfen nicht leer sein.'
-    };
+    return mitMeldung({ success: false }, 'fehlerProfilFelderLeer');
   }
 
   try {
@@ -912,16 +893,10 @@ export const updateUserProfile = async (userId, profileData) => {
       currentUserCache = { ...currentUserCache, ...updates };
     }
 
-    return {
-      success: true,
-      message: 'Profil erfolgreich aktualisiert.'
-    };
+    return mitMeldung({ success: true }, 'profilAktualisiert');
   } catch (error) {
     console.error('Error updating user profile:', error);
-    return {
-      success: false,
-      message: 'Fehler beim Aktualisieren des Profils.'
-    };
+    return mitMeldung({ success: false }, 'fehlerProfilAktualisieren');
   }
 };
 
@@ -989,19 +964,13 @@ export const changePassword = async (userId, newPassword, currentPassword) => {
   // Validate new password
   const validation = validatePassword(newPassword);
   if (!validation.valid) {
-    return {
-      success: false,
-      message: validation.message
-    };
+    return mitMeldung({ success: false }, validation.schluessel);
   }
 
   try {
     const user = auth.currentUser;
     if (!user || user.uid !== userId) {
-      return {
-        success: false,
-        message: 'Benutzer nicht angemeldet oder IDs stimmen nicht überein.'
-      };
+      return mitMeldung({ success: false }, 'fehlerNichtAngemeldet');
     }
 
     // Reauthenticate with current password if provided
@@ -1021,31 +990,19 @@ export const changePassword = async (userId, newPassword, currentPassword) => {
       currentUserCache = { ...currentUserCache, requiresPasswordChange: false };
     }
     
-    return {
-      success: true,
-      message: 'Passwort erfolgreich geändert.'
-    };
+    return mitMeldung({ success: true }, 'passwortGeaendert');
   } catch (error) {
     console.error('Error changing password:', error);
     
     if (error.code === 'auth/requires-recent-login') {
-      return {
-        success: false,
-        message: 'Für diese Aktion ist eine erneute Anmeldung erforderlich. Bitte melden Sie sich erneut an.'
-      };
+      return mitMeldung({ success: false }, 'fehlerErneutAnmelden');
     }
 
     if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-      return {
-        success: false,
-        message: 'Das aktuelle Passwort ist nicht korrekt.'
-      };
+      return mitMeldung({ success: false }, 'fehlerAktuellesPasswort');
     }
     
-    return {
-      success: false,
-      message: 'Fehler beim Ändern des Passworts.'
-    };
+    return mitMeldung({ success: false }, 'fehlerPasswortAendern');
   }
 };
 

@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import './AtelierOnboardingOverlay.css';
+import { useTexte } from '../contexts/SpracheContext';
+import atelierTexte from '../i18n/texte/atelier';
+import startseiteTexte from '../i18n/texte/startseite';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 const PADDING = 6;
 const ARROW_LEFT_MIN = 0;
@@ -10,9 +14,14 @@ function AtelierOnboardingOverlay({ onConfirm }) {
   const [spotlightStyle, setSpotlightStyle] = useState(null);
   const [bubbleBottom, setBubbleBottom] = useState(120);
   const [arrowLeft, setArrowLeft] = useState('50%');
+  // Texte des Ateliers (Mehrsprachigkeit PR 6n); die Namen der Listen aus startseite.js
+  const t = useTexte(atelierTexte);
+  const tStart = useTexte(startseiteTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
 
   useEffect(() => {
-    const btn = document.querySelector('[aria-label="Atelier"]');
+    // Über den Schlüssel des Tabs, nicht über seinen (übersetzten) Namen
+    const btn = document.querySelector('[data-nav-key="atelier"]');
     if (btn) {
       const rect = btn.getBoundingClientRect();
       const buttonCenterX = rect.left + rect.width / 2;
@@ -35,7 +44,7 @@ function AtelierOnboardingOverlay({ onConfirm }) {
   }, []);
 
   return (
-    <div className="atelier-onboarding-overlay" role="dialog" aria-modal="true" aria-label="Atelier Onboarding">
+    <div className="atelier-onboarding-overlay" role="dialog" aria-modal="true" aria-label={t('onboardingName')}>
       {spotlightStyle && (
         <div
           className="atelier-onboarding-spotlight"
@@ -49,18 +58,20 @@ function AtelierOnboardingOverlay({ onConfirm }) {
         data-testid="atelier-onboarding-bubble"
       >
         <div className="atelier-onboarding-bubble__arrow" />
-        <p className="atelier-onboarding-bubble__tag">Dein Kreativraum</p>
-        <h2 className="atelier-onboarding-bubble__title">Dein Atelier, dein Kreativraum</h2>
+        <p className="atelier-onboarding-bubble__tag">{t('kreativraum')}</p>
+        <h2 className="atelier-onboarding-bubble__title">{t('kreativraumTitel')}</h2>
         <p className="atelier-onboarding-bubble__body">
-          In <strong>Meine Kochideen</strong> und <strong>Meine Alltagsklassiker</strong> warten
-          Rezepte auf dich. Lass dich inspirieren und entdecke, was heute auf den Tisch kommt.
+          {t('kreativraumText', {
+            kochideen: <strong key="kochideen">{tStart('meineKochideen')}</strong>,
+            alltagsklassiker: <strong key="alltagsklassiker">{tStart('meineAlltagsklassiker')}</strong>,
+          })}
         </p>
         <button
           className="atelier-onboarding-overlay__btn"
           onClick={onConfirm}
           type="button"
         >
-          Weiter
+          {tAllgemein('weiter')}
         </button>
       </div>
     </div>
