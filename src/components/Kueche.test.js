@@ -1169,6 +1169,22 @@ describe('Kueche', () => {
     expect(screen.getByRole('button', { name: 'Kitchen operations' })).toBeInTheDocument();
   });
 
+  test('nennt Gäste in der geltenden Sprache, auch im Kürzel', () => {
+    const { container } = render(
+      <SpracheProvider profilSprache="fr" speicher={null}>
+        <Kueche
+          recipes={[]}
+          menus={[]}
+          onSelectRecipe={() => {}}
+          allUsers={[]}
+          currentUser={{ id: 'anonym1', vorname: 'Gast', nachname: '', role: 'guest', isGuest: true }}
+        />
+      </SpracheProvider>
+    );
+    expect(container.querySelector('.kueche-profil__avatar')).toHaveTextContent('I');
+    expect(screen.getByRole('button', { name: 'Chef' })).toHaveAccessibleDescription('Invité');
+  });
+
   test('Kachel „Weinbegleitung“ ist ein echter Knopf (Tastatur) und fehlt ohne Anmeldung', () => {
     const { rerender } = render(
       <Kueche recipes={[]} menus={[]} onSelectRecipe={() => {}} allUsers={[]} currentUser={{ id: 'user-1' }} />

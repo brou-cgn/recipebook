@@ -162,14 +162,17 @@ export function useProfilSprache(wert) {
  * Ohne Anmeldung (Login, Freigabe-Links) gilt die Sprache des Browsers, wenn die App sie hat, sonst Deutsch
  * (Entscheidung „Seiten ohne Anmeldung“, 22.11.2026). Erst wenn die Anmeldung geprüft ist, damit beim Start
  * niemand kurz die Browsersprache sieht; übersetzte Inhalte bleiben ohne Anmeldung aus.
- * @param {object|null} nutzer - currentUser mit `sprache` und `sprachwahl`
+ * Gäste („Als Gast anmelden“, anonyme Anmeldung) haben kein Profil und bekommen ebenfalls die Sprache des
+ * Browsers (Entscheidung 23.11.2026); mit `sprachwahl` übersteuern sie sie wie alle über den Header.
+ * @param {object|null} nutzer - currentUser mit `sprache`, `sprachwahl` und bei Gästen `isGuest`
  * @param {{anmeldungGeprueft?: boolean}} [optionen] - App.js: false, solange die Anmeldung noch geprüft wird
  */
 export function useSpracheFuerNutzer(nutzer, { anmeldungGeprueft = false } = {}) {
   const angemeldet = Boolean(nutzer);
   const darfWaehlen = Boolean(nutzer?.sprachwahl);
-  const ohneAnmeldung = !angemeldet && anmeldungGeprueft;
-  useProfilSprache(darfWaehlen ? nutzer?.sprache : (ohneAnmeldung ? browserSprache() : null));
+  const gast = angemeldet && nutzer.isGuest === true;
+  const browserSpracheGilt = gast || (!angemeldet && anmeldungGeprueft);
+  useProfilSprache(darfWaehlen && !gast ? nutzer?.sprache : (browserSpracheGilt ? browserSprache() : null));
 
   const { setzeSitzungsSprache, setzeInhalteUebersetzen } = useSprache();
   useEffect(() => {
