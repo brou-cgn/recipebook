@@ -265,10 +265,10 @@ Für Massenimporte gibt es zusätzlich den Import aus einer **CSV-Datei** über 
 
 Auf Apple-Geräten kannst du Rezepte auch per Kurzbefehl importieren, z. B. direkt aus Safari.
 
-1. Öffne das Menü und tippe auf **„Kurzbefehl installieren"**.
-2. Füge den Kurzbefehl in der Kurzbefehle-App hinzu.
+1. Öffne das Menü und tippe auf **„Kurzbefehl installieren"**. Die App erzeugt dabei deinen persönlichen **Kurzbefehl-Schlüssel** und legt ihn in die Zwischenablage.
+2. Füge den Kurzbefehl in der Kurzbefehle-App hinzu und setze den Schlüssel in das erste Textfeld ein.
 
-Der fertige Kurzbefehl öffnet die App und braucht keinen Schlüssel. Baust du dir einen eigenen Kurzbefehl, der Rezepte direkt ins Kochbuch schickt, erzeugst du dafür unter **Chefkoch → persönliche Daten** einen **Kurzbefehl-Schlüssel**. Er wird nur einmal angezeigt; ein neuer ersetzt den alten.
+Hast du schon einen Schlüssel, fragt die App vorher nach: Ein neuer ersetzt den alten, bereits installierte Kurzbefehle brauchen dann den neuen. Für selbst gebaute Kurzbefehle erzeugst du den Schlüssel unter **Chefkoch → persönliche Daten**.
 
 ### Nährwerte
 <!-- id: faq-naehrwerte -->

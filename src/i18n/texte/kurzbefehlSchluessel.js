@@ -6,8 +6,8 @@ export default {
   de: {
     titel: 'Kurzbefehl-Schlüssel',
     name: 'Kurzbefehl-Schlüssel',
-    hinweis: 'Dein Schlüssel für selbst gebaute Kurzbefehle, die Rezepte direkt ins Kochbuch schicken. Der fertige Kurzbefehl aus dem Menü braucht keinen.',
-    keiner: 'Noch kein Schlüssel. Selbst gebaute Kurzbefehle funktionieren erst, wenn du einen erzeugst.',
+    hinweis: 'Dein Schlüssel für Kurzbefehle, die Rezepte direkt ins Kochbuch schicken. „Kurzbefehl installieren“ im Menü erzeugt ihn gleich mit; hier erzeugst du ihn für selbst gebaute Kurzbefehle.',
+    keiner: 'Noch kein Schlüssel. Kurzbefehle funktionieren erst mit einem Schlüssel.',
     aktiv: 'Schlüssel aktiv',
     aktivSeit: 'Schlüssel aktiv seit {datum}',
     erzeugen: 'Schlüssel erzeugen',
@@ -23,8 +23,8 @@ export default {
   en: {
     titel: 'Shortcut key',
     name: 'Shortcut key',
-    hinweis: 'Your key for self-built shortcuts that send recipes straight to the cookbook. The ready-made shortcut from the menu doesn’t need one.',
-    keiner: 'No key yet. Self-built shortcuts only work once you create one.',
+    hinweis: 'Your key for shortcuts that send recipes straight to the cookbook. “Install shortcut” in the menu creates one along the way; create one here for self-built shortcuts.',
+    keiner: 'No key yet. Shortcuts only work with a key.',
     aktiv: 'Key active',
     aktivSeit: 'Key active since {datum}',
     erzeugen: 'Create key',
@@ -40,8 +40,8 @@ export default {
   fr: {
     titel: 'Clé du raccourci',
     name: 'Clé du raccourci',
-    hinweis: 'Ta clé pour les raccourcis que tu crées toi-même et qui envoient des recettes directement dans le livre. Le raccourci prêt à l’emploi du menu n’en a pas besoin.',
-    keiner: 'Pas encore de clé. Les raccourcis que tu crées toi-même ne fonctionnent qu’une fois la clé créée.',
+    hinweis: 'Ta clé pour les raccourcis qui envoient des recettes directement dans le livre. « Installer le raccourci » dans le menu en crée une au passage ; ici, tu la crées pour les raccourcis que tu fabriques toi-même.',
+    keiner: 'Pas encore de clé. Les raccourcis ne fonctionnent qu’avec une clé.',
     aktiv: 'Clé active',
     aktivSeit: 'Clé active depuis le {datum}',
     erzeugen: 'Créer une clé',
