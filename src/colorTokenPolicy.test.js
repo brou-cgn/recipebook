@@ -49,7 +49,7 @@ const BASELINE = {
   'components/MenuList.css': 6,
   'components/MobileSearchOverlay.css': 21,
   'components/NutritionModal.css': 50,
-  'components/OcrScanModal.css': 71,
+  'components/OcrScanModal.css': 67,
   'components/PasswordChangeModal.css': 9,
   'components/PortionSelector.css': 8,
   'components/PrintFormatEditor.css': 8,
@@ -141,8 +141,9 @@ describe('Farb-Token-Richtlinie', () => {
 // Button-System Schritt 5a, alte Knopf-Regeln der Rezeptansicht (Tech-Check A8). 899 → 898: Löschen in
 // Kochtagebuch und Bewertung (D9). 898 → 888: Button-System Schritt 6, Knöpfe von Kochbuch, Festtafel und
 // Menüformular sowie tote Regeln (A8). 888 → 885: Schritt 7, Zeilen-Aktionen der Benutzerverwaltung (A8).
-// 885 → 883: Stift der Verwaltungslisten als RowIconButton (A8).
-const DARK_MODE_SELECTORS = 868;
+// 885 → 883: Stift der Verwaltungslisten als RowIconButton (A8). 868 → 865: Sprachwahl im Foto-Scan
+// entfallen (Tech-Check F23).
+const DARK_MODE_SELECTORS = 865;
 
 describe('darkMode.css (Altbestand)', () => {
   const css = fs.readFileSync(path.join(SRC, 'darkMode.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

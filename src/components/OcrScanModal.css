@@ -90,44 +90,6 @@
   gap: 15px;
 }
 
-.language-selector {
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.language-selector label {
-  font-weight: 500;
-  color: #333;
-}
-
-.language-tabs {
-  display: flex;
-  gap: 8px;
-}
-
-.language-tab {
-  background-color: white;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  padding: 8px 16px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  color: var(--color-text-muted);
-  transition: all 0.2s;
-}
-
-.language-tab:hover {
-  background-color: #f0f0f0;
-}
-
-.language-tab.active {
-  background-color: #2196F3;
-  color: white;
-  border-color: #2196F3;
-}
-
 /* OCR Mode Selector */
 .ocr-mode-selector {
   margin-bottom: 20px;
@@ -376,11 +338,6 @@
     padding: 16px;
     flex-direction: row;
     justify-content: space-between;
-  }
-
-  .language-selector {
-    flex-direction: column;
-    align-items: flex-start;
   }
 
   .ocr-mode-selector {
