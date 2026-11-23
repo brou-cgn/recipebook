@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import './SplashScreen.css';
 import { consumeSwUpdateReloadFlag } from '../utils/swUpdateReloadFlag';
 import { isRecoveryNavigation } from '../utils/navigationType';
+import { useTexte } from '../contexts/SpracheContext';
+import kopfzeileTexte from '../i18n/texte/kopfzeile';
 
 const SplashScreen = ({ exiting = false }) => {
   // Skip the logo/tagline entrance animations on a reload we forced
@@ -11,6 +13,9 @@ const SplashScreen = ({ exiting = false }) => {
   // app, so replaying the entrance would read as a glitch rather than a
   // continuation.
   const [skipEnterAnimation] = useState(() => consumeSwUpdateReloadFlag() || isRecoveryNavigation());
+  // Logo und Standard-Slogan in der geltenden Sprache (Mehrsprachigkeit PR 6o); der Slogan aus den
+  // Einstellungen ist beim Start noch nicht geladen
+  const t = useTexte(kopfzeileTexte);
 
   return (
     <div
@@ -22,9 +27,9 @@ const SplashScreen = ({ exiting = false }) => {
         <img
           className="splash-screen__logo"
           src={`${process.env.PUBLIC_URL}/logo512.png`}
-          alt="brouBook Logo"
+          alt={t('splashLogo')}
         />
-        <div className="splash-screen__tagline">Unsere besten Momente</div>
+        <div className="splash-screen__tagline">{t('standardSlogan')}</div>
       </div>
       <div className="splash-screen__hairline">
         <div className="splash-screen__sweep" />

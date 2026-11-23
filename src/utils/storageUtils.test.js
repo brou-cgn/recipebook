@@ -71,8 +71,8 @@ describe('Storage Utilities', () => {
       uploadBytes.mockResolvedValue({ ref: { path: 'drinks/u1/x.jpg' } });
       getDownloadURL.mockResolvedValue(MOCK_STORAGE_URL);
 
-      await expect(uploadDrinkImage({ size: 10, type: 'application/pdf' }, 'u1')).rejects.toThrow('Invalid file type');
-      await expect(uploadDrinkImage({ size: 6 * 1024 * 1024, type: 'image/png' }, 'u1')).rejects.toThrow('less than 5MB');
+      await expect(uploadDrinkImage({ size: 10, type: 'application/pdf' }, 'u1')).rejects.toMatchObject({ schluessel: 'bildTypUngueltig' });
+      await expect(uploadDrinkImage({ size: 6 * 1024 * 1024, type: 'image/png' }, 'u1')).rejects.toThrow('höchstens 5 MB');
 
       await expect(uploadDrinkImage({ size: 10, type: 'image/png' }, 'u1')).resolves.toBe(MOCK_STORAGE_URL);
       expect(ref.mock.calls[ref.mock.calls.length - 1][1]).toMatch(/^drinks\/u1\/[^/]+\.png$/);
@@ -117,8 +117,8 @@ describe('Storage Utilities', () => {
     });
 
     it('should throw error if no file is provided', async () => {
-      await expect(uploadRecipeImage(null)).rejects.toThrow('No file provided');
-      await expect(uploadRecipeImage(undefined)).rejects.toThrow('No file provided');
+      await expect(uploadRecipeImage(null)).rejects.toThrow('Es wurde keine Datei ausgewählt.');
+      await expect(uploadRecipeImage(undefined)).rejects.toMatchObject({ schluessel: 'bildFehlt' });
     });
 
     it('should throw error if file size exceeds 5MB', async () => {
@@ -129,7 +129,7 @@ describe('Storage Utilities', () => {
       };
 
       await expect(uploadRecipeImage(largeFile)).rejects.toThrow(
-        'Image file size must be less than 5MB'
+        'Das Bild darf höchstens 5 MB groß sein.'
       );
     });
 
@@ -141,7 +141,7 @@ describe('Storage Utilities', () => {
       };
 
       await expect(uploadRecipeImage(invalidFile)).rejects.toThrow(
-        'Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image'
+        'Dieses Dateiformat geht nicht. Bitte wähle ein Bild im Format JPEG, PNG, GIF oder WebP.'
       );
     });
 
@@ -197,9 +197,10 @@ describe('Storage Utilities', () => {
       ref.mockReturnValue({ path: 'recipes/test.jpg' });
       uploadBytes.mockRejectedValue(new Error('Network error'));
 
-      await expect(uploadRecipeImage(validFile)).rejects.toThrow(
-        'Failed to upload image. Please try again.'
-      );
+      await expect(uploadRecipeImage(validFile)).rejects.toMatchObject({
+        message: 'Das Bild konnte nicht hochgeladen werden. Bitte versuch es noch einmal.',
+        schluessel: 'bildHochladenFehlgeschlagen',
+      });
     });
   });
 

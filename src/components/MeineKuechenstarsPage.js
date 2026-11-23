@@ -2,10 +2,17 @@ import React, { useState, useEffect } from 'react';
 import './MeineKuechenstarsPage.css';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
 import { UnterseiteKopf, Kennzahl } from './Unterseite';
+import { useRezeptTitel, useTexte } from '../contexts/SpracheContext';
+import chefkochTexte from '../i18n/texte/chefkochUndMehr';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 function MeineKuechenstarsPage({ onBack, currentUser, recipes = [] }) {
   const [recipeCalls, setRecipeCalls] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Texte der Seite (Mehrsprachigkeit PR 6o); Rezepttitel wie überall über useRezeptTitel
+  const t = useTexte(chefkochTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const zeigeTitel = useRezeptTitel();
 
   useEffect(() => {
     getRecentRecipeCalls(14)
@@ -42,26 +49,26 @@ function MeineKuechenstarsPage({ onBack, currentUser, recipes = [] }) {
   return (
     <div className="meine-kuechenstars-container">
       <UnterseiteKopf onZurueck={onBack}>
-        <h2>Meine Küchenstars</h2>
+        <h2>{t('kuechenstars')}</h2>
       </UnterseiteKopf>
       <p className="unterseite-untertitel">
-        Hier sind deine Top 20 Rezepte nach Anzahl der Aufrufe der letzten 14 Tage.
+        {t('kuechenstarsUntertitel')}
       </p>
       {loading ? (
-        <div className="unterseite-karte meine-kuechenstars-empty">Laden...</div>
+        <div className="unterseite-karte meine-kuechenstars-empty">{tAllgemein('laden')}</div>
       ) : top20.length === 0 ? (
-        <div className="unterseite-karte meine-kuechenstars-empty">Noch keine Rezeptaufrufe vorhanden.</div>
+        <div className="unterseite-karte meine-kuechenstars-empty">{t('kuechenstarsLeer')}</div>
       ) : (
         <>
           <div className="unterseite-kennzahlen">
-            <Kennzahl wert={summeAufrufe} label={<>Aufrufe</>} />
-            <Kennzahl wert={top20.length} label={<>Rezepte</>} />
+            <Kennzahl wert={summeAufrufe} label={t('aufrufe', { anzahl: summeAufrufe })} />
+            <Kennzahl wert={top20.length} label={t('rezepte', { anzahl: top20.length })} />
           </div>
           <ol className="kuechenstars-podium">
             {podium.map(({ recipe, count }, index) => (
               <li key={recipe.id} className={`kuechenstars-platz kuechenstars-platz--${index + 1}`}>
                 <span className="kuechenstars-rang">{index + 1}</span>
-                <span className="kuechenstars-titel">{recipe.title}</span>
+                <span className="kuechenstars-titel">{zeigeTitel(recipe)}</span>
                 <span className="kuechenstars-aufrufe">{count}</span>
               </li>
             ))}
@@ -72,7 +79,7 @@ function MeineKuechenstarsPage({ onBack, currentUser, recipes = [] }) {
                 <li key={recipe.id} className="kuechenstars-zeile">
                   <span className="kuechenstars-rang">{index + 4}</span>
                   <span className="kuechenstars-zeile-text">
-                    <span className="kuechenstars-titel">{recipe.title}</span>
+                    <span className="kuechenstars-titel">{zeigeTitel(recipe)}</span>
                     <span className="kuechenstars-balken" aria-hidden="true">
                       <span style={{ width: balkenBreite(count) }} />
                     </span>

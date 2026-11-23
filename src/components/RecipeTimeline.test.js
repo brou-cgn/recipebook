@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import RecipeTimeline from './RecipeTimeline';
+import { renderWithProviders } from '../test-utils';
 
 describe('RecipeTimeline', () => {
   const mockRecipes = [
@@ -597,5 +598,49 @@ describe('RecipeTimeline', () => {
     // Toggle labels reflect the correct type per group
     expect(screen.getByText(/2 Rezepte/)).toBeInTheDocument();
     expect(screen.getByText(/2 Menüs/)).toBeInTheDocument();
+  });
+});
+
+describe('RecipeTimeline: Mehrsprachigkeit (PR 6o)', () => {
+  const tag = new Date('2024-03-05T12:00:00');
+  const kochereignisse = [
+    {
+      id: 'a',
+      title: 'Pfannkuchen',
+      itemType: 'cookEvent',
+      createdAt: { toDate: () => tag },
+      originalRecipe: { image: 'https://example.com/pfannkuchen.jpg' },
+      titelUebersetzung: { quelle: 'Pfannkuchen', originalSprache: 'de', en: 'Pancakes', fr: 'Crêpes' },
+    },
+    { id: 'b', title: 'Eintopf', itemType: 'cookEvent', createdAt: { toDate: () => tag } },
+  ];
+
+  test('Englisch: Datum, Anzahl im Stapel, Knopf und übersetzter Titel', () => {
+    renderWithProviders(
+      <RecipeTimeline recipes={kochereignisse} onSelectRecipe={() => {}} />,
+      { sprache: 'en', inhalteUebersetzen: true },
+    );
+    expect(screen.getByText('05 March 2024')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand stack' })).toHaveTextContent('▸ 2 cooked dishes');
+    expect(screen.getByRole('heading', { name: 'Pancakes' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Pancakes' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand stack' }));
+    expect(screen.getAllByRole('button', { name: 'Collapse stack' })).toHaveLength(2);
+  });
+
+  test('Französisch: leere Zeitleiste der Menüs und Datum ohne gültigen Wert', () => {
+    const { unmount } = renderWithProviders(
+      <RecipeTimeline recipes={[]} onSelectRecipe={() => {}} itemType="menu" />,
+      { sprache: 'fr' },
+    );
+    expect(screen.getByText('Aucun menu pour l’instant')).toBeInTheDocument();
+    unmount();
+
+    renderWithProviders(
+      <RecipeTimeline recipes={[{ id: 'x', title: 'Soupe', createdAt: 'kein Datum' }]} onSelectRecipe={() => {}} />,
+      { sprache: 'fr' },
+    );
+    expect(screen.getByText('Date inconnue')).toBeInTheDocument();
   });
 });

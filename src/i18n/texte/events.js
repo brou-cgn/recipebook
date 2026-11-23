@@ -4,10 +4,21 @@
  *
  * Event-Namen sind Inhalt (Phase B). Anlässe werden als id gespeichert und hier übersetzt (anlass…), Namen der
  * Getränkekategorien stehen in getraenke.js. Warnungen der Berechnung kommen deutsch von der Cloud Function
- * (calculateEventDrinks) und erscheinen noch so; „Unbenannter Gast“ in guestNamesById bleibt deutsch gespeichert.
+ * (calculateEventDrinks) und werden seit PR 6o beim Anzeigen erkannt (BERECHNUNG_WARNUNGEN, berechnungWarnungAnzeige
+ * in src/utils/eventAnzeige.js); „Unbenannter Gast“ in guestNamesById bleibt deutsch gespeichert.
  */
 // Geschütztes Leerzeichen: im Französischen vor : ? ! ; und innerhalb von « ».
 const NBSP = '\u00a0';
+
+/**
+ * Warnungen der Cloud Function calculateEventDrinks (functions/calculateEventDrinks.js), gespeichert in
+ * berechnung.warnungen. Der deutsche Text steht hier genau so, wie die Function ihn schreibt (ohne Umlaute);
+ * ein Test gleicht ihn mit ihrem Code ab.
+ */
+export const BERECHNUNG_WARNUNGEN = Object.freeze([
+  'warnungKategorieUnbekannt',
+  'warnungGetraenkFehlt',
+]);
 
 export default {
   de: {
@@ -83,6 +94,9 @@ export default {
     gaestelisteSpeichern: 'Gästeliste speichern',
     gaesteauswahlAbbrechen: 'Gästeauswahl abbrechen',
     unbenannterGast: 'Unbenannter Gast',
+    // Warnungen der Berechnung (BERECHNUNG_WARNUNGEN), PR 6o: so, wie die Cloud Function sie speichert
+    warnungKategorieUnbekannt: "Kategorie '{kategorie}' ist unbekannt -- keine Faustwerte hinterlegt. Bitte manuell schaetzen oder in erfahrungswerte ergaenzen.",
+    warnungGetraenkFehlt: "Benutzerdefiniertes Getraenk '{getraenk}' nicht gefunden -- wird uebersprungen.",
   },
   en: {
     // Liste und Ansicht (EventsPage.js)
@@ -157,6 +171,9 @@ export default {
     gaestelisteSpeichern: 'Save guest list',
     gaesteauswahlAbbrechen: 'Cancel guest selection',
     unbenannterGast: 'Unnamed guest',
+    // Warnungen der Berechnung (BERECHNUNG_WARNUNGEN), PR 6o: so, wie die Cloud Function sie speichert
+    warnungKategorieUnbekannt: 'Category “{kategorie}” is unknown – no rules of thumb are stored for it. Please estimate it yourself or add it to erfahrungswerte.',
+    warnungGetraenkFehlt: 'Custom drink “{getraenk}” wasn’t found – it’s being skipped.',
   },
   fr: {
     // Liste und Ansicht (EventsPage.js)
@@ -231,5 +248,8 @@ export default {
     gaestelisteSpeichern: 'Enregistrer la liste d’invités',
     gaesteauswahlAbbrechen: 'Annuler la sélection des invités',
     unbenannterGast: 'Invité sans nom',
+    // Warnungen der Berechnung (BERECHNUNG_WARNUNGEN), PR 6o: so, wie die Cloud Function sie speichert
+    warnungKategorieUnbekannt: `Catégorie «${NBSP}{kategorie}${NBSP}» inconnue – aucune valeur indicative enregistrée. Estime-la toi-même ou complète erfahrungswerte.`,
+    warnungGetraenkFehlt: `Boisson personnalisée «${NBSP}{getraenk}${NBSP}» introuvable – elle est ignorée.`,
   },
 };

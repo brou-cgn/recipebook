@@ -6,6 +6,7 @@ import { fileToBase64 } from '../utils/imageUtils';
 import { runUniversalImport } from '../utils/importRunners';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 import { useTexte } from '../contexts/SpracheContext';
+import { ergebnisText } from '../i18n/texte';
 import rezeptimportTexte from '../i18n/texte/rezeptimport';
 import allgemeinTexte from '../i18n/texte/allgemein';
 
@@ -35,7 +36,8 @@ function UniversalImportModal({ onCancel, initialImages = [], initialText = '', 
       const newBase64s = await Promise.all(files.map(f => fileToBase64(f)));
       setImages(prev => [...prev, ...newBase64s]);
     } catch (err) {
-      setError(t('fehlerBilderLaden', { fehler: err.message }));
+      // Meldung von fileToBase64 über ihren Schlüssel (Mehrsprachigkeit PR 6o)
+      setError(t('fehlerBilderLaden', { fehler: ergebnisText(err, tAllgemein) }));
     }
     e.target.value = '';
   };

@@ -1,8 +1,25 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import useSpeechDictation from '../hooks/useSpeechDictation';
+import { useTexte } from '../contexts/SpracheContext';
+import { findeText } from '../i18n/texte';
+import rezeptansichtTexte, { VERSION_MELDUNGEN } from '../i18n/texte/rezeptansicht';
+import diktatTexte from '../i18n/texte/diktat';
 import './RecipeVersionDescribe.css';
 
 const MAX_LENGTH = 2000;
+
+/**
+ * Meldung beim Einarbeiten in der geltenden Sprache (Mehrsprachigkeit PR 6o): bekannte deutsche
+ * Meldungen der Cloud Function über ihren Schlüssel, andere so, wie sie kommen, ohne Meldung der
+ * eigene Ersatztext.
+ * @param {string} meldung - message des Fehlers aus onApply
+ * @param {Function} t - Übersetzungsfunktion für rezeptansicht.js
+ */
+function versionFehlerText(meldung, t) {
+  if (!meldung) return t('versionFehler');
+  const treffer = findeText(rezeptansichtTexte, meldung, VERSION_MELDUNGEN);
+  return treffer ? t(treffer.schluessel, treffer.werte) : meldung;
+}
 
 function MicIcon() {
   return (
@@ -37,7 +54,10 @@ const hasVersionFab = () => window.innerWidth <= TABLET_BREAKPOINT || window.inn
 function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef, onHasTextChange }) {
   const [text, setText] = useState('');
   const [isApplying, setIsApplying] = useState(false);
-  const [error, setError] = useState('');
+  // Fehler beim Einarbeiten: { meldung } wie geworfen, übersetzt erst bei der Anzeige
+  const [error, setError] = useState(null);
+  const t = useTexte(rezeptansichtTexte);
+  const tDiktat = useTexte(diktatTexte);
 
   const appendText = (chunk) => {
     setText((prev) => `${prev}${prev && !/\s$/.test(prev) ? ' ' : ''}${chunk}`.slice(0, MAX_LENGTH));
@@ -94,11 +114,11 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef,
     if (!canSubmit) return;
     dictation.stop();
     setIsApplying(true);
-    setError('');
+    setError(null);
     try {
       await onApply(trimmed);
     } catch (err) {
-      setError(err?.message || 'Die Änderungen konnten nicht eingearbeitet werden.');
+      setError({ meldung: err?.message || '' });
       setIsApplying(false);
     }
   };
@@ -127,7 +147,8 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef,
     onCancel();
   };
 
-  const note = error || dictation.error || (isApplying ? 'Wird eingearbeitet …' : dictation.interim);
+  const errorText = error ? versionFehlerText(error.meldung, t) : '';
+  const note = errorText || dictation.error || (isApplying ? t('versionWirdEingearbeitet') : dictation.interim);
 
   return (
     <div
@@ -135,15 +156,15 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef,
       className="version-describe-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label="Eigene Version erstellen"
+      aria-label={t('eigeneVersion')}
       onClick={handleOverlayClick}
       onKeyDown={(e) => { if (e.key === 'Escape' && !isApplying) onCancel(); }}
     >
       <form className={`version-describe${fabVisible ? ' has-fab' : ''}`} onSubmit={handleSubmit}>
         {note && (
           <p
-            className={`version-describe-note${error || dictation.error ? ' is-error' : ''}`}
-            role={error || dictation.error ? 'alert' : undefined}
+            className={`version-describe-note${errorText || dictation.error ? ' is-error' : ''}`}
+            role={errorText || dictation.error ? 'alert' : undefined}
             aria-live="polite"
           >
             {note}
@@ -157,8 +178,8 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef,
             className="version-describe-textarea"
             value={text}
             onChange={(e) => setText(e.target.value.slice(0, MAX_LENGTH))}
-            aria-label="Was war anders?"
-            placeholder="Was hast du anders gemacht?"
+            aria-label={t('versionWasAnders')}
+            placeholder={t('versionPlatzhalter')}
             rows={2}
             disabled={isApplying}
           />
@@ -169,8 +190,8 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef,
               onClick={dictation.listening ? dictation.stop : dictation.start}
               disabled={isApplying}
               aria-pressed={dictation.listening}
-              aria-label={dictation.listening ? 'Diktat beenden' : 'Diktat starten'}
-              title={dictation.listening ? 'Diktat beenden' : 'Diktat starten'}
+              aria-label={tDiktat(dictation.listening ? 'diktatBeenden' : 'diktatStarten')}
+              title={tDiktat(dictation.listening ? 'diktatBeenden' : 'diktatStarten')}
             >
               <MicIcon />
             </button>
@@ -181,10 +202,10 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef,
               className="version-describe-continue"
               onClick={proceed}
               disabled={isApplying}
-              aria-label="Version erstellen"
-              title={hasText ? 'Änderungen einarbeiten – danach kannst du alles kontrollieren' : 'Ohne Beschreibung weiter'}
+              aria-label={t('versionErstellen')}
+              title={t(hasText ? 'versionEinarbeitenTitel' : 'versionOhneBeschreibung')}
             >
-              Version erstellen
+              {t('versionErstellen')}
             </button>
           )}
         </div>

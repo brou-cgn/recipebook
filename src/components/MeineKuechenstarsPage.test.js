@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import MeineKuechenstarsPage from './MeineKuechenstarsPage';
+import { renderWithProviders } from '../test-utils';
 
 jest.mock('../utils/recipeCallsFirestore', () => ({
   getRecentRecipeCalls: jest.fn(),
@@ -76,7 +77,7 @@ describe('MeineKuechenstarsPage', () => {
         recipes={mockRecipes}
       />
     );
-    expect(screen.getByText('Laden...')).toBeInTheDocument();
+    expect(screen.getByText('Wird geladen …')).toBeInTheDocument();
   });
 
   test('shows empty message when no recipe calls exist', async () => {
@@ -183,5 +184,46 @@ describe('MeineKuechenstarsPage', () => {
       />
     );
     expect(screen.getByText(/14 Tage/)).toBeInTheDocument();
+  });
+});
+
+describe('MeineKuechenstarsPage: Mehrsprachigkeit (PR 6o)', () => {
+  const rezepte = [
+    {
+      id: 'r1',
+      title: 'Pfannkuchen',
+      authorId: 'user-1',
+      titelUebersetzung: { quelle: 'Pfannkuchen', originalSprache: 'de', en: 'Pancakes', fr: 'Crêpes' },
+    },
+    { id: 'r2', title: 'Tiramisu', authorId: 'user-1' },
+  ];
+
+  beforeEach(() => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([{ recipeId: 'r1' }, { recipeId: 'r1' }, { recipeId: 'r2' }]);
+  });
+
+  test('Englisch: Texte, Kennzahlen in Einzahl und Mehrzahl, übersetzter Titel', async () => {
+    renderWithProviders(
+      <MeineKuechenstarsPage onBack={() => {}} currentUser={mockCurrentUser} recipes={rezepte} />,
+      { sprache: 'en', inhalteUebersetzen: true },
+    );
+    expect(screen.getByRole('heading', { name: 'My kitchen stars' })).toBeInTheDocument();
+    expect(screen.getByText('Here are your top 20 recipes by number of views over the last 14 days.')).toBeInTheDocument();
+    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    expect(await screen.findByText('Pancakes')).toBeInTheDocument();
+    expect(screen.getByText('views')).toBeInTheDocument();
+    expect(screen.getByText('recipes')).toBeInTheDocument();
+  });
+
+  test('Französisch: leere Seite', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([]);
+    renderWithProviders(
+      <MeineKuechenstarsPage onBack={() => {}} currentUser={mockCurrentUser} recipes={rezepte} />,
+      { sprache: 'fr' },
+    );
+    expect(await screen.findByText('Aucune consultation de recette pour l’instant.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Mes stars en cuisine' })).toBeInTheDocument();
   });
 });

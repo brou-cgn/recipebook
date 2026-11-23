@@ -44,6 +44,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import useSwipeToDelete, { SWIPE_DIRECTION_LOCK_THRESHOLD } from '../hooks/useSwipeToDelete';
 import { useListenwerte, useRezeptTitel, useSprache, useTexte } from '../contexts/SpracheContext';
+import { ergebnisText } from '../i18n/texte';
 import { STANDARD_SPRACHE } from '../i18n/sprachen';
 import rezeptformularTexte from '../i18n/texte/rezeptformular';
 import allgemeinTexte from '../i18n/texte/allgemein';
@@ -1058,7 +1059,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       const failed = results.filter(r => !r.ok);
       if (failed.length > 0) {
         setImageError(true);
-        const reason = failed[0].error?.message || t('unbekannterFehler');
+        // Meldungen der Prüfung und des Hochladens über ihren Schlüssel (Mehrsprachigkeit PR 6o)
+        const reason = ergebnisText(failed[0].error, tAllgemein) || t('unbekannterFehler');
         alert(
           files.length === 1
             ? reason
@@ -1342,7 +1344,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       setOcrImagesBase64(base64s);
       setShowOcrModal(true);
     } catch (error) {
-      alert(t('fehlerBildHochladen', { fehler: error.message }));
+      alert(t('fehlerBildHochladen', { fehler: ergebnisText(error, tAllgemein) }));
     }
   };
 

@@ -4,7 +4,7 @@ import './EventsPage.css';
 import './EventsTable.css';
 import { deleteEvent, getEvent } from '../utils/eventsFirestore';
 import EventForm from './EventForm';
-import { eventTypAnzeige } from '../utils/eventAnzeige';
+import { berechnungWarnungAnzeige, eventTypAnzeige } from '../utils/eventAnzeige';
 import ConsumptionForm from './ConsumptionForm';
 import DrinkManagementPage from './DrinkManagementPage';
 import GuestManagementPage from './GuestManagementPage';
@@ -551,7 +551,7 @@ function EventsPage({
           {berechnung?.warnungen?.length > 0 && (
             <div className="events-warnings">
               {berechnung.warnungen.map((warnung, idx) => (
-                <p key={idx} className="events-warning-text">{warnung}</p>
+                <p key={idx} className="events-warning-text">{berechnungWarnungAnzeige(warnung, t)}</p>
               ))}
             </div>
           )}

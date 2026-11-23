@@ -1,33 +1,43 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSprache, useTexte } from '../contexts/SpracheContext';
+import { localeFuer } from '../i18n/sprachen';
+import diktatTexte from '../i18n/texte/diktat';
 
 const getRecognitionClass = () => (
   typeof window === 'undefined' ? null : (window.SpeechRecognition || window.webkitSpeechRecognition || null)
 );
 
-const ERROR_MESSAGES = {
-  'not-allowed': 'Mikrofonzugriff nicht erlaubt. Bitte in den Browser-Einstellungen freigeben.',
-  'service-not-allowed': 'Mikrofonzugriff nicht erlaubt. Bitte in den Browser-Einstellungen freigeben.',
-  'no-speech': 'Es wurde nichts verstanden. Bitte versuche es noch einmal.',
-  'audio-capture': 'Es wurde kein Mikrofon gefunden.',
-  network: 'Die Spracherkennung braucht eine Internetverbindung.',
+// Fehlercodes der Web Speech API → Schlüssel in src/i18n/texte/diktat.js (Mehrsprachigkeit PR 6o)
+const FEHLER_SCHLUESSEL = {
+  'not-allowed': 'keinZugriff',
+  'service-not-allowed': 'keinZugriff',
+  'no-speech': 'nichtsVerstanden',
+  'audio-capture': 'keinMikrofon',
+  network: 'keineVerbindung',
 };
 
 /**
- * Diktierfunktion über die Web Speech API (Browser-Spracherkennung, Deutsch).
+ * Diktierfunktion über die Web Speech API (Browser-Spracherkennung).
  * Fertig erkannte Textstücke werden über `onText` angehängt; Zwischenergebnisse
  * stehen in `interim`. Wo die API fehlt (z. B. Firefox), ist `supported` false —
  * die Eingabe per Tastatur (inkl. Diktat der System-Tastatur) funktioniert weiter.
+ * Erkannt wird in der geltenden Sprache der App, Fehler erscheinen in ihr (seit
+ * Mehrsprachigkeit PR 6o; vorher immer Deutsch).
  *
  * @param {Object} options
  * @param {(text: string) => void} options.onText - bekommt jedes fertig erkannte Stück
- * @param {string} [options.lang='de-DE']
+ * @param {string} [options.lang] - Sprache der Erkennung (BCP 47), sonst die der App (localeFuer)
  * @returns {{supported: boolean, listening: boolean, interim: string, error: string, start: Function, stop: Function}}
  */
-export default function useSpeechDictation({ onText, lang = 'de-DE' }) {
+export default function useSpeechDictation({ onText, lang }) {
+  const { sprache } = useSprache();
+  const t = useTexte(diktatTexte);
+  const erkennungsSprache = lang || localeFuer(sprache);
   const supported = Boolean(getRecognitionClass());
   const [listening, setListening] = useState(false);
   const [interim, setInterim] = useState('');
-  const [error, setError] = useState('');
+  // Schlüssel des Fehlers, übersetzt erst bei der Rückgabe (folgt so einem Sprachwechsel)
+  const [fehler, setFehler] = useState('');
   const recognitionRef = useRef(null);
   const onTextRef = useRef(onText);
   onTextRef.current = onText;
@@ -39,9 +49,9 @@ export default function useSpeechDictation({ onText, lang = 'de-DE' }) {
   const start = useCallback(() => {
     const Recognition = getRecognitionClass();
     if (!Recognition || recognitionRef.current) return;
-    setError('');
+    setFehler('');
     const recognition = new Recognition();
-    recognition.lang = lang;
+    recognition.lang = erkennungsSprache;
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.onresult = (event) => {
@@ -60,7 +70,7 @@ export default function useSpeechDictation({ onText, lang = 'de-DE' }) {
     recognition.onerror = (event) => {
       // Vom Nutzer abgebrochen (Stopp/Abbruch) ist kein Fehler.
       if (event.error === 'aborted') return;
-      setError(ERROR_MESSAGES[event.error] || 'Die Spracherkennung ist fehlgeschlagen.');
+      setFehler(FEHLER_SCHLUESSEL[event.error] || 'fehlgeschlagen');
     };
     recognition.onend = () => {
       recognitionRef.current = null;
@@ -73,9 +83,9 @@ export default function useSpeechDictation({ onText, lang = 'de-DE' }) {
       setListening(true);
     } catch (e) {
       recognitionRef.current = null;
-      setError('Die Spracherkennung konnte nicht gestartet werden.');
+      setFehler('startFehlgeschlagen');
     }
-  }, [lang]);
+  }, [erkennungsSprache]);
 
   useEffect(() => () => {
     const recognition = recognitionRef.current;
@@ -86,5 +96,5 @@ export default function useSpeechDictation({ onText, lang = 'de-DE' }) {
     }
   }, []);
 
-  return { supported, listening, interim, error, start, stop };
+  return { supported, listening, interim, error: fehler ? t(fehler) : '', start, stop };
 }

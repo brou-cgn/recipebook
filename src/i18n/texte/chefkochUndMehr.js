@@ -5,6 +5,9 @@
  *
  * Die Mengen erscheinen als große Zahl über ihrer Bezeichnung; die Texte hier sind deshalb nur
  * die Bezeichnung in Einzahl und Mehrzahl, ohne {anzahl}.
+ *
+ * Seit PR 6o auch die Seite „Meine Küchenstars“ (src/components/MeineKuechenstarsPage.js) und die
+ * Zeitleiste (src/components/RecipeTimeline.js).
  */
 export default {
   de: {
@@ -28,6 +31,17 @@ export default {
     keineAufrufe: 'Noch keine Aufrufe',
     kuecheAktion: 'Küche-Aktion',
     unbekanntesRezept: 'Unbekanntes Rezept',
+    // Seite „Meine Küchenstars“, PR 6o
+    kuechenstarsUntertitel: 'Hier sind deine Top 20 Rezepte nach Anzahl der Aufrufe der letzten 14 Tage.',
+    kuechenstarsLeer: 'Noch keine Rezeptaufrufe vorhanden.',
+    aufrufe: { one: 'Aufruf', other: 'Aufrufe' },
+    // Zeitleiste (RecipeTimeline.js), PR 6o; Anzahl im Stapel: „▸ 3 Rezepte“ mit rezepte/menues
+    kochereignisse: { one: 'Kochereignis', other: 'Kochereignisse' },
+    stapelEinklappen: 'Stapel einklappen',
+    stapelAusklappen: 'Stapel ausklappen',
+    zeitleisteKeineMenues: 'Keine Menüs vorhanden',
+    zeitleisteKeineRezepte: 'Keine Rezepte vorhanden',
+    datumUnbekannt: 'Unbekannt',
   },
   en: {
     meinKochbuch: 'My cookbook',
@@ -50,6 +64,17 @@ export default {
     keineAufrufe: 'No views yet',
     kuecheAktion: 'Kitchen action',
     unbekanntesRezept: 'Unknown recipe',
+    // Seite „Meine Küchenstars“, PR 6o
+    kuechenstarsUntertitel: 'Here are your top 20 recipes by number of views over the last 14 days.',
+    kuechenstarsLeer: 'No recipe views yet.',
+    aufrufe: { one: 'view', other: 'views' },
+    // Zeitleiste (RecipeTimeline.js), PR 6o; Anzahl im Stapel: „▸ 3 Rezepte“ mit rezepte/menues
+    kochereignisse: { one: 'cooked dish', other: 'cooked dishes' },
+    stapelEinklappen: 'Collapse stack',
+    stapelAusklappen: 'Expand stack',
+    zeitleisteKeineMenues: 'No menus yet',
+    zeitleisteKeineRezepte: 'No recipes yet',
+    datumUnbekannt: 'Unknown date',
   },
   fr: {
     meinKochbuch: 'Mes recettes',
@@ -72,5 +97,16 @@ export default {
     keineAufrufe: 'Pas encore de consultations',
     kuecheAktion: 'Action cuisine',
     unbekanntesRezept: 'Recette inconnue',
+    // Seite „Meine Küchenstars“, PR 6o
+    kuechenstarsUntertitel: 'Voici tes 20 recettes les plus consultées ces 14 derniers jours.',
+    kuechenstarsLeer: 'Aucune consultation de recette pour l’instant.',
+    aufrufe: { one: 'consultation', other: 'consultations' },
+    // Zeitleiste (RecipeTimeline.js), PR 6o; Anzahl im Stapel: „▸ 3 Rezepte“ mit rezepte/menues
+    kochereignisse: { one: 'plat cuisiné', other: 'plats cuisinés' },
+    stapelEinklappen: 'Replier la pile',
+    stapelAusklappen: 'Déplier la pile',
+    zeitleisteKeineMenues: 'Aucun menu pour l’instant',
+    zeitleisteKeineRezepte: 'Aucune recette pour l’instant',
+    datumUnbekannt: 'Date inconnue',
   },
 };

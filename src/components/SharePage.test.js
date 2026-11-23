@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import { NutritionReferenceProvider } from '../contexts/NutritionReferenceContext';
 import SharePage from './SharePage';
+import { SpracheProvider } from '../contexts/SpracheContext';
 
 // MockRecipeDetail calls useNutritionReference — reproduces the real component's
 // context dependency. Without a NutritionReferenceProvider in the tree this
@@ -93,5 +94,40 @@ describe('SharePage', () => {
     expect(
       screen.getByText(/Dieser Share-Link ist ungültig/)
     ).toBeInTheDocument();
+  });
+});
+
+describe('SharePage: Mehrsprachigkeit (PR 6o)', () => {
+  beforeEach(() => {
+    mockGetRecipeByShareId.mockReset();
+    mockGetDocs.mockResolvedValue({ docs: [] });
+    mockGetDoc.mockResolvedValue({ exists: () => false, data: () => null });
+  });
+
+  const zeige = (sprache) => render(
+    <SpracheProvider profilSprache={sprache} speicher={null}>
+      <NutritionReferenceProvider>
+        <SharePage shareId="unknown-id" currentUser={null} onClose={() => {}} />
+      </NutritionReferenceProvider>
+    </SpracheProvider>,
+  );
+
+  test('Englisch: Laden und ungültiger Link', async () => {
+    let fertig;
+    mockGetRecipeByShareId.mockImplementation(() => new Promise((resolve) => { fertig = resolve; }));
+    zeige('en');
+    expect(screen.getByText('Loading recipe…')).toBeInTheDocument();
+    await act(async () => fertig(null));
+    expect(screen.getByRole('heading', { name: 'Recipe not found' })).toBeInTheDocument();
+    expect(screen.getByText('This share link is invalid or the recipe is no longer shared.')).toBeInTheDocument();
+  });
+
+  test('Französisch: ungültiger Link', async () => {
+    mockGetRecipeByShareId.mockResolvedValue(null);
+    await act(async () => {
+      zeige('fr');
+    });
+    expect(screen.getByRole('heading', { name: 'Recette introuvable' })).toBeInTheDocument();
+    expect(screen.getByText('Ce lien de partage n’est pas valide ou la recette n’est plus partagée.')).toBeInTheDocument();
   });
 });
