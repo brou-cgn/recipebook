@@ -567,11 +567,13 @@ export async function rephraseRecipeSteps(stepTexts) {
  * (Cloud Function applyRecipeVersionChanges, Berechtigung "versionDictation").
  * @param {Object} recipeRequest - Ergebnis von buildVersionRequest()
  * @param {string} description - freie Beschreibung, was anders gemacht wurde
+ * @param {string} [sprache='de'] - geltende Sprache der App: Die Zusammenfassung kommt in ihr, das Rezept
+ *   bleibt immer deutsch (Mehrsprachigkeit PR 6q)
  * @returns {Promise<{title: string, portionen: ?number, kochdauer: ?number, ingredients: Array, steps: Array, summary: string}>}
  */
-export async function applyRecipeVersionChanges(recipeRequest, description) {
+export async function applyRecipeVersionChanges(recipeRequest, description, sprache = 'de') {
   const callable = httpsCallable(functions, 'applyRecipeVersionChanges');
-  const result = await callable({ recipe: recipeRequest, description });
+  const result = await callable({ recipe: recipeRequest, description, sprache });
   return result.data;
 }
 

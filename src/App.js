@@ -501,7 +501,7 @@ function App() {
   // Überschrift des Kochbuchs: saisonale Ansicht und Name der Systemliste „Für dich entdeckt“ (PR 6p)
   const tKochbuch = useTexte(kochbuchTexte);
   const tStartseite = useTexte(startseiteTexte);
-  const { setzeListenUebersetzungen } = useSprache();
+  const { sprache, setzeListenUebersetzungen } = useSprache();
   const [allUsers, setAllUsers] = useState([]);
   const [headerVisible, setHeaderVisible] = useState(true);
   const headerRef = useRef(null);
@@ -1653,7 +1653,8 @@ function App() {
   // Wirft bei Fehlern, damit RecipeVersionDescribe die Meldung anzeigen kann.
   const handleApplyVersionChanges = async (description) => {
     const original = editingRecipe;
-    const result = await applyRecipeVersionChanges(buildVersionRequest(original), description);
+    // Zusammenfassung in der geltenden Sprache, das Rezept bleibt deutsch (Mehrsprachigkeit PR 6q)
+    const result = await applyRecipeVersionChanges(buildVersionRequest(original), description, sprache);
     setEditingRecipe(mergeVersionChanges(original, result));
     setVersionChangeSummary(result.summary || '');
     handleLeaveVersionDescribe();

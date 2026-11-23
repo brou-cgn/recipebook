@@ -7,6 +7,7 @@ import {
   recognizeRecipeWithGemini,
   recognizeRecipeWithAI,
   compareOcrMethods,
+  applyRecipeVersionChanges,
 } from './aiOcrService';
 import { httpsCallable } from 'firebase/functions';
 import { getCustomLists } from './customLists';
@@ -528,5 +529,21 @@ describe('AI OCR Service', () => {
       // Skipping for now as it requires complex mocking
       expect(typeof compareOcrMethods).toBe('function');
     });
+  });
+});
+
+describe('applyRecipeVersionChanges (Mehrsprachigkeit PR 6q)', () => {
+  test('schickt die Sprache der App mit, ohne Angabe Deutsch', async () => {
+    const callable = jest.fn().mockResolvedValue({ data: { summary: 'Butter replaced with olive oil.' } });
+    httpsCallable.mockReturnValue(callable);
+    const anfrage = { title: 'Pfannkuchen', ingredients: [], steps: [] };
+
+    await expect(applyRecipeVersionChanges(anfrage, 'I used olive oil', 'en'))
+      .resolves.toEqual({ summary: 'Butter replaced with olive oil.' });
+    expect(httpsCallable).toHaveBeenCalledWith(expect.anything(), 'applyRecipeVersionChanges');
+    expect(callable).toHaveBeenCalledWith({ recipe: anfrage, description: 'I used olive oil', sprache: 'en' });
+
+    await applyRecipeVersionChanges(anfrage, 'Olivenöl statt Butter');
+    expect(callable).toHaveBeenLastCalledWith({ recipe: anfrage, description: 'Olivenöl statt Butter', sprache: 'de' });
   });
 });
