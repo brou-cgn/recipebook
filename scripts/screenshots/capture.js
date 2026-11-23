@@ -16,7 +16,7 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { chromium, devices } = require('playwright');
-const { ACCOUNT } = require('./seed');
+const { ACCOUNT, patchAccount } = require('./seed');
 
 const ROOT = path.join(__dirname, '..', '..');
 const PORT = Number(process.env.SCREENSHOT_PORT || 5174);
@@ -88,6 +88,25 @@ const SCREENS = [
     name: 'startseite',
     fullPage: true,
     run: async (page, shot) => { await openMenuItem(page, 'Küche'); await pause(page, 1500); await shot(); },
+  },
+  {
+    // Neues Konto ohne Inspirationssammlung und Alltagsklassiker: Die Karussells zeigen statt der
+    // Plus-Knöpfe ihre Einrichtungs-Knöpfe. Das Konto wird danach zurückgesetzt.
+    name: 'startseite-einrichtung',
+    fullPage: true,
+    run: async (page, shot) => {
+      await patchAccount({ defaultWebImportListId: undefined, defaultEverydayClassicsListId: undefined });
+      try {
+        await page.reload({ waitUntil: 'load' });
+        await page.locator('.hamburger-btn').waitFor({ timeout: 30000 });
+        await openMenuItem(page, 'Küche');
+        await page.getByRole('button', { name: 'Alltagsklassiker zuordnen' }).waitFor();
+        await pause(page, 1500);
+        await shot();
+      } finally {
+        await patchAccount({ defaultWebImportListId: 'inspiration', defaultEverydayClassicsListId: 'familie' });
+      }
+    },
   },
   { name: 'kochbuch', run: async (page, shot) => { await openMenuItem(page, 'Kochbuch'); await shot(); } },
   {
@@ -277,12 +296,29 @@ const SCREENS = [
   {
     name: 'menue-bearbeiten',
     variants: ['desktop-hell', 'desktop-dunkel'],
+    fullPage: true,
     run: async (page, shot) => {
       await openMenuItem(page, 'Festtafel');
       await page.getByText('Sonntagsessen', { exact: true }).first().click();
       await pause(page, 1000);
       await page.locator('[title="Menü bearbeiten"]').first().click();
       await page.locator('.menu-form-container').first().waitFor();
+      await shot();
+    },
+  },
+  {
+    // „+ Abschnitt hinzufügen“ öffnet die vordefinierten Abschnitte und das Feld für einen eigenen Namen
+    name: 'menue-bearbeiten-abschnitt',
+    variants: ['desktop-hell', 'desktop-dunkel'],
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Festtafel');
+      await page.getByText('Sonntagsessen', { exact: true }).first().click();
+      await pause(page, 1000);
+      await page.locator('[title="Menü bearbeiten"]').first().click();
+      await page.locator('.menu-form-container').first().waitFor();
+      await page.getByRole('button', { name: '+ Abschnitt hinzufügen' }).click();
+      await page.locator('.new-section-input').first().scrollIntoViewIfNeeded();
+      await pause(page, 500);
       await shot();
     },
   },
@@ -456,6 +492,24 @@ const SCREENS = [
       await shot();
     },
   })),
+  // Tabellen der Verwaltung mit einer Zeile in Bearbeitung: Abbrechen und Speichern in der Zeile (Schritt 7)
+  ...[
+    ['einstellungen-saison-bearbeiten', 'Saisonmatrix', '.season-matrix-actions'],
+    ['einstellungen-getraenke-bearbeiten', 'Getränkegewichtung', '.drink-weights-actions'],
+  ].map(([name, label, actions]) => ({
+    name,
+    fullPage: true,
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Einstellungen');
+      await page.locator('.tab-button', { hasText: label }).first().click();
+      await pause(page, 1000);
+      await page.locator(actions).first().getByRole('button', { name: 'Bearbeiten', exact: true }).click();
+      // Maus weg, sonst zeigt der Knopf, der jetzt unter ihr liegt, seinen Hover-Zustand
+      await page.mouse.move(0, 0);
+      await pause(page, 500);
+      await shot();
+    },
+  })),
   // App-Aufrufe (Küchenbetrieb, Admin), je Reiter als ganze Seite (Button-System Schritt 4c)
   ...[
     ['appaufrufe', null],
@@ -487,6 +541,20 @@ const SCREENS = [
       page.once('dialog', (dialog) => dialog.accept());
       await page.getByRole('button', { name: 'Auf Vorlage umstellen' }).first().click();
       await pause(page, 1000);
+      await shot();
+    },
+  },
+  {
+    // Benutzertabelle nach rechts gescrollt: Die Spalte „Aktionen“ liegt sonst außerhalb des Bildes
+    name: 'einstellungen-benutzer-aktionen',
+    run: async (page, shot) => {
+      await openMenuItem(page, 'Einstellungen');
+      await page.locator('.tab-button', { hasText: 'Benutzerverwaltung' }).first().click();
+      await pause(page, 1000);
+      const tabelle = page.locator('.users-table-container').first();
+      await tabelle.scrollIntoViewIfNeeded();
+      await tabelle.evaluate((el) => { el.scrollLeft = el.scrollWidth; });
+      await pause(page, 300);
       await shot();
     },
   },

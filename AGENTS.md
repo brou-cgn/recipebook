@@ -80,7 +80,8 @@ erzwungen — wo das gilt, steht die Datei dabei.
   `danger` (nur die Bestätigung im Lösch-Dialog), `danger-quiet` (Löschen in Werkzeugleisten) und
   `ghost` (selten Gebrauchtes). Neben-Knopf links, Haupt-Knopf rechts. Keine eigenen Knopf-Klassen
   mit Fläche; erzwungen durch `src/buttonPolicy.test.js` (Baseline je CSS-Datei, darf nur sinken).
-  Außerhalb des Systems: schwebende runde Knöpfe, `DeleteRowButton`, Chips, Tabs, Schalter. Im
+  Außerhalb des Systems: schwebende runde Knöpfe, `DeleteRowButton`, Chips, Tabs, Schalter und
+  Symbol-Knöpfe ohne Text (Icons unter „Bilder & Icons“, Suche und Menü in der Kopfzeile). Im
   Event-Bereich ist der Haupt-Knopf grün (Token in `Button.css`), die Wichtel-Teilnehmerseite behält
   ihre Gestaltung. Auf dem Handy (bis 768 px) ist der Haupt-Knopf so breit wie sein Platz; eine Reihe,
   in der das nicht passt (Eingabezeile), stellt ihn lokal zurück. Neben-Knöpfe direkt auf dem grauen

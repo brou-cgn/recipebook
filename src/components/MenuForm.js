@@ -1865,27 +1865,22 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
                 {linkedEventLoading ? t('laedtKurz') : (linkedEvent?.eventName || t('eventFehlt'))}
               </p>
               <div className="menu-drinks-link-actions">
-                <button type="button" className="menu-drinks-link-btn" onClick={() => setFormSubView('linkPicker')}>
+                <Button onClick={() => setFormSubView('linkPicker')}>
                   {t('kalkulationAendern')}
-                </button>
-                <button type="button" className="menu-drinks-link-btn" onClick={handleUnlinkEvent}>
+                </Button>
+                <Button onClick={handleUnlinkEvent}>
                   {t('kalkulationEntfernen')}
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
             <div className="menu-drinks-link-actions">
-              <button type="button" className="menu-drinks-link-btn" onClick={() => setFormSubView('linkPicker')}>
+              <Button onClick={() => setFormSubView('linkPicker')}>
                 {t('kalkulationVerknuepfen')}
-              </button>
-              <button
-                type="button"
-                className="menu-drinks-link-btn"
-                onClick={handleStartNewEvent}
-                disabled={preparingNewEvent}
-              >
+              </Button>
+              <Button onClick={handleStartNewEvent} loading={preparingNewEvent}>
                 {preparingNewEvent ? t('wirdVorbereitet') : t('kalkulationErstellen')}
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -1894,13 +1889,9 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
           <div className="sections-header">
             <h3>{t('abschnitteRezepte')}</h3>
             {!isMobile && (
-              <button 
-                type="button" 
-                className="add-section-button"
-                onClick={() => { setInsertSectionAtIndex(null); setShowSectionInput(!showSectionInput); }}
-              >
+              <Button onClick={() => { setInsertSectionAtIndex(null); setShowSectionInput(!showSectionInput); }}>
                 {t('plusAbschnitt')}
-              </button>
+              </Button>
             )}
           </div>
 
@@ -1910,15 +1901,13 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
                 <label>{t('vordefinierteAbschnitte')}</label>
                 <div className="quick-select-buttons">
                   {availableSections.map(sectionName => (
-                    <button
+                    <Button
                       key={sectionName}
-                      type="button"
-                      className="quick-select-button"
                       onClick={() => handleAddSection(sectionName)}
                       disabled={sections.some(s => s.name === sectionName)}
                     >
                       {abschnittAnzeige(sectionName, t)}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>

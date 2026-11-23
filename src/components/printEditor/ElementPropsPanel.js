@@ -1,4 +1,5 @@
 import React from 'react';
+import Button from '../Button';
 import {
   PRINT_ROTATION_OPTIONS,
   PRINT_ASPECT_RATIO_OPTIONS,
@@ -217,7 +218,7 @@ export default function ElementPropsPanel({ element, def, page, onPatch, onAlign
         </div>
       ))}
 
-      <button type="button" className="pfe-props-close-btn" onClick={onClose}>Schließen</button>
+      <Button className="pfe-props-close" onClick={onClose}>Schließen</Button>
     </div>
   );
 }

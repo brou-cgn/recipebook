@@ -62,19 +62,10 @@
   gap: 0.35rem;
 }
 
-.drink-weights-edit-btn,
-.drink-weights-delete-btn {
-  border: 1px solid #ddd;
-  background: white;
-  border-radius: 6px;
-  padding: 0.3rem 0.5rem;
-  font-size: 0.82rem;
-  cursor: pointer;
-}
-
-.drink-weights-delete-btn {
-  border-color: #ffc7c7;
-  color: #b12626;
+/* Zeilen-Aktionen (components/Button.js) kompakt in der Tabellenzelle */
+.drink-weights-actions .ui-button {
+  padding: 0 12px;
+  white-space: nowrap;
 }
 
 .drink-weights-inline-input {
@@ -109,8 +100,6 @@
   color: #999;
 }
 
-[data-theme="dark"] .drink-weights-edit-btn,
-[data-theme="dark"] .drink-weights-delete-btn,
 [data-theme="dark"] .drink-weights-inline-input {
   background: #1d1d1d;
   border-color: #444;

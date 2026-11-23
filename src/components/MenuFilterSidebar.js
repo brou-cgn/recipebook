@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import StarIcon from './icons/StarIcon';
+import Button from './Button';
 import './MenuFilterSidebar.css';
 import { useTexte } from '../contexts/SpracheContext';
 import festtafelTexte from '../i18n/texte/festtafel';
@@ -42,15 +43,14 @@ function MenuFilterSidebar({ onAddMenu, showFavoritesOnly = false, onFavoritesTo
     >
       <div className="menu-filter-sidebar-header">
         {!collapsed && (
-          <button
-            type="button"
-            className="menu-filter-sidebar-add-button"
+          <Button
+            className="menu-filter-sidebar-add"
             onClick={onAddMenu}
             title={t('menueHinzufuegen')}
             aria-label={t('menueHinzufuegen')}
           >
             {t('plusMenue')}
-          </button>
+          </Button>
         )}
         <button
           type="button"

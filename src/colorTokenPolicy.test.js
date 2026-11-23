@@ -28,7 +28,7 @@ const BASELINE = {
   'components/CookDateModal.css': 12,
   'components/DeleteRowButton.css': 4,
   'components/DiscoverTopicsTab.css': 14,
-  'components/DrinkWeightsTab.css': 19,
+  'components/DrinkWeightsTab.css': 16,
   'components/EventsPage.css': 118,
   'components/EventsTable.css': 2,
   'components/FlowPage.css': 9,
@@ -37,41 +37,41 @@ const BASELINE = {
   'components/GroupCreateDialog.css': 15,
   'components/GroupDetail.css': 38,
   'components/GroupList.css': 9,
-  'components/Header.css': 60,
+  'components/Header.css': 53,
   'components/ImportProgressDialog.css': 16,
   'components/ImportProgressIndicator.css': 5,
   'components/KalibrierungsAuswertung.css': 4,
   'components/Login.css': 45,
   'components/MemberProfilePage.css': 3,
   'components/MenuDetail.css': 13,
-  'components/MenuFilterSidebar.css': 12,
-  'components/MenuForm.css': 53,
+  'components/MenuFilterSidebar.css': 8,
+  'components/MenuForm.css': 44,
   'components/MenuList.css': 6,
   'components/MobileSearchOverlay.css': 21,
-  'components/NutritionModal.css': 57,
+  'components/NutritionModal.css': 50,
   'components/OcrScanModal.css': 75,
   'components/PasswordChangeModal.css': 9,
   'components/PortionSelector.css': 8,
-  'components/PrintFormatEditor.css': 39,
+  'components/PrintFormatEditor.css': 35,
   'components/PrintPage.css': 16,
   'components/RatingModal.css': 13,
   'components/RecipeDetail.css': 83,
-  'components/RecipeFilterSidebar.css': 18,
+  'components/RecipeFilterSidebar.css': 14,
   'components/RecipeForm.css': 101,
   'components/RecipeImageCarousel.css': 4,
   'components/RecipeImportModal.css': 19,
-  'components/RecipeList.css': 24,
+  'components/RecipeList.css': 23,
   'components/RecipeRating.css': 7,
   'components/RecipeTimeline.css': 7,
   'components/RecipeTypeahead.css': 12,
   'components/SavingOverlay.css': 1,
-  'components/SeasonMatrixTab.css': 61,
-  'components/Settings.css': 188,
+  'components/SeasonMatrixTab.css': 58,
+  'components/Settings.css': 185,
   'components/SharePage.css': 9,
   'components/ShoppingListModal.css': 23,
   'components/SortCarousel.css': 1,
   'components/SplashScreen.css': 3,
-  'components/Startseite.css': 28,
+  'components/Startseite.css': 20,
   'components/StartseitenKarussell.css': 4,
   'components/Tagesmenu.css': 38,
   'components/TemplateFormatEditor.css': 25,
@@ -80,7 +80,7 @@ const BASELINE = {
   'components/TutorialForm.css': 4,
   'components/TutorialVideoModal.css': 10,
   'components/UniversalImportModal.css': 26,
-  'components/UserManagement.css': 74,
+  'components/UserManagement.css': 65,
   'components/WebImportModal.css': 19
 };
 
@@ -139,8 +139,10 @@ describe('Farb-Token-Richtlinie', () => {
 // „Chefkoch & mehr“ ersetzen die Kachel-Tokens in Kueche.css (Variante A). 928 → 904: die Regeln der
 // Unterseiten (Küchenstars, Eventplanung, Mise en Place, Küchenbetrieb) nach Variante A. 904 → 903:
 // der Privat-Knopf der Detailansichten hat keinen Rahmen mehr (gestaltet wie Teilen, App.css). 903 → 899:
-// Button-System Schritt 5a, alte Knopf-Regeln der Rezeptansicht (Tech-Check A8).
-const DARK_MODE_SELECTORS = 898;
+// Button-System Schritt 5a, alte Knopf-Regeln der Rezeptansicht (Tech-Check A8). 899 → 898: Löschen in
+// Kochtagebuch und Bewertung (D9). 898 → 888: Button-System Schritt 6, Knöpfe von Kochbuch, Festtafel und
+// Menüformular sowie tote Regeln (A8). 888 → 885: Schritt 7, Zeilen-Aktionen der Benutzerverwaltung (A8).
+const DARK_MODE_SELECTORS = 885;
 
 describe('darkMode.css (Altbestand)', () => {
   const css = fs.readFileSync(path.join(SRC, 'darkMode.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

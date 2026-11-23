@@ -407,21 +407,10 @@
   background: #f0e8dc;
 }
 
-.pfe-props-close-btn {
+/* „Schließen“ (components/Button.js, Neben-Knopf) unten rechts im Eigenschaften-Panel */
+.pfe-props-close {
   margin-top: 0.4rem;
-  padding: 0.3rem 0.6rem;
-  border: 1px solid #c8b8a2;
-  border-radius: 4px;
-  background: #fff;
-  cursor: pointer;
-  font-size: 0.8rem;
-  color: #5a3e2b;
   align-self: flex-end;
-  transition: background 0.1s;
-}
-
-.pfe-props-close-btn:hover {
-  background: #f0e8dc;
 }
 
 

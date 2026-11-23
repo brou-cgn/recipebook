@@ -136,23 +136,6 @@
   margin-bottom: 1rem;
 }
 
-.add-section-button {
-  background: #402C1C;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.add-section-button:hover {
-  background: #1a1a1a;
-  transform: translateY(-1px);
-}
-
 .new-section-input {
   background: #f9f6f3;
   padding: 1rem;
@@ -177,29 +160,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-}
-
-.quick-select-button {
-  background: white;
-  color: #402C1C;
-  border: 1px solid #402C1C;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.quick-select-button:hover:not(:disabled) {
-  background: #402C1C;
-  color: white;
-}
-
-.quick-select-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  border-color: #ccc;
-  color: #999;
 }
 
 .custom-section-input label {
@@ -947,22 +907,6 @@
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
-}
-
-.menu-drinks-link-btn {
-  background: #402C1C;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 0.6rem 1.2rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.menu-drinks-link-btn:hover {
-  background: #2c1f13;
 }
 
 .menu-image-remove-btn:disabled {

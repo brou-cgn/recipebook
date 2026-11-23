@@ -4,6 +4,7 @@ import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
 import { getAllCookDates } from '../utils/recipeCookDates';
 import { getUserFavorites } from '../utils/userFavorites';
 import TrendingCard from './TrendingCard';
+import Button from './Button';
 import StartseitenKarussell from './StartseitenKarussell';
 import FuerDichEntdecktKachel from './FuerDichEntdecktKachel';
 import { getDiscoverTopicInfo, readCachedDiscoverTopicInfo } from '../utils/discoverTopics';
@@ -655,14 +656,9 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         emptyText={showInspirationButtonInKochideen ? '' : leertext(kandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, 'kandidatenLeer')}
         emptyContent={showInspirationButtonInKochideen ? (
           <div className="startseite-inspiration-setup">
-            <button
-              type="button"
-              className="startseite-inspiration-btn"
-              onClick={handleCreateInspirationClick}
-              disabled={isCreatingInspiration}
-            >
+            <Button onClick={handleCreateInspirationClick} loading={isCreatingInspiration}>
               {isCreatingInspiration ? t('wirdAngelegt') : t('inspirationAnlegen')}
-            </button>
+            </Button>
           </div>
         ) : null}
         onMehr={handleKandidatenMehrClick}
@@ -697,14 +693,13 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         emptyText={showAlltagsklassikerSetupButton ? '' : leertext(alltagsklassikerLeertextValue, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, 'alltagsklassikerLeer')}
         emptyContent={showAlltagsklassikerSetupButton ? (
           <div className="startseite-inspiration-setup">
-            <button
-              type="button"
-              className="startseite-inspiration-btn"
+            <Button
               onClick={() => setShowAlltagsklassikerPicker(true)}
-              disabled={!onAssignEverydayClassicsList || privateListsForCurrentUser.length === 0 || isAssigningAlltagsklassiker}
+              disabled={!onAssignEverydayClassicsList || privateListsForCurrentUser.length === 0}
+              loading={isAssigningAlltagsklassiker}
             >
               {t('alltagsklassikerZuordnen')}
-            </button>
+            </Button>
           </div>
         ) : null}
         onMehr={handleAlltagsklassikerMehrClick}
@@ -725,13 +720,9 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         ) : null}
       />
       <div className="startseite-rezeptsammlungen-wrapper">
-        <button
-          type="button"
-          className="startseite-rezeptsammlungen-btn"
-          onClick={() => onViewChange?.('groups')}
-        >
+        <Button onClick={() => onViewChange?.('groups')}>
           {t('meineSammlungen')}
-        </button>
+        </Button>
       </div>
       <StartseitenKarussell
         title={t('imTrend')}

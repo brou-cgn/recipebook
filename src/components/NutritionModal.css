@@ -637,13 +637,26 @@
 
 .nutrition-reformulation-edit {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.3rem;
   width: 100%;
 }
 
+/* Abbrechen und Speichern (components/Button.js) neben dem Eingabefeld; bei wenig Platz in eigener Zeile rechts */
+.nutrition-reformulation-actions {
+  display: flex;
+  gap: 0.3rem;
+  margin-left: auto;
+}
+
+.nutrition-reformulation-actions .ui-button {
+  width: auto;
+  padding: 0 12px;
+}
+
 .nutrition-reformulation-input {
-  flex: 1;
+  flex: 1 1 10rem;
   padding: 0.25rem 0.5rem;
   border: 1.5px solid #402C1C;
   border-radius: 6px;
@@ -656,40 +669,6 @@
 .nutrition-reformulation-input:focus {
   outline: none;
   border-color: #1a1a1a;
-}
-
-.nutrition-reformulation-confirm-btn,
-.nutrition-reformulation-cancel-btn {
-  padding: 0.2rem 0.45rem;
-  border-radius: 5px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-  border: 1.5px solid transparent;
-  line-height: 1;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
-}
-
-.nutrition-reformulation-confirm-btn {
-  background: #2e7d32;
-  color: white;
-  border-color: #2e7d32;
-}
-
-.nutrition-reformulation-confirm-btn:hover {
-  background: #1b5e20;
-}
-
-.nutrition-reformulation-cancel-btn {
-  background: white;
-  color: #999;
-  border-color: #ccc;
-}
-
-.nutrition-reformulation-cancel-btn:hover {
-  background: #f5f5f5;
-  color: #555;
 }
 
 .nutrition-reformulation-edit-btn {
