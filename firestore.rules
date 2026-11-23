@@ -526,7 +526,8 @@ service cloud.firestore {
     match /aiInhaltUebersetzungLimits/{limitId} {
       allow read, write: if false;
     }
-    // Tageszähler von uebersetzeListenwerte (Übersetzungsvorschläge für Auswahllisten), je Admin.
+    // Tageszähler der Listenübersetzung: je Admin (Vorschläge, uebersetzeListenwerte) und `automatik`
+    // (Trigger uebersetzeListenwerteAutomatisch).
     match /aiListenUebersetzungLimits/{limitId} {
       allow read, write: if false;
     }

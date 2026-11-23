@@ -10,6 +10,11 @@
  * `wert` ist bei Textlisten der deutsche Wert, bei Einheiten die `id` der Einheit. Listen statt
  * Schlüssel, weil Werte wie „Pck.“ als Feldnamen in Firestore nicht taugen. Fehlt eine
  * Übersetzung, bleibt es beim Original.
+ *
+ * Fehlende Übersetzungen trägt die Function uebersetzeListenwerteAutomatisch ein, sobald sich eine
+ * Liste ändert (PR 6t, functions/shared/listenUebersetzung.js; ein Test gleicht quellwerte und die
+ * Listen mit dort ab). Was sie gefüllt hat, steht bis zur Prüfung in `kiUngeprueft`, z. B.
+ * `{ wert: 'Peruanische Küche', en: '…', fr: '…', kiUngeprueft: ['en', 'fr'] }`.
  */
 import { localeFuer, SPRACH_IDS, STANDARD_SPRACHE } from './sprachen';
 
@@ -26,6 +31,9 @@ export const UEBERSETZBARE_LISTEN = Object.freeze([
 
 /** Zielsprachen der Übersetzung: alle außer Deutsch. */
 export const ZIELSPRACHEN = Object.freeze(SPRACH_IDS.filter((sprache) => sprache !== STANDARD_SPRACHE));
+
+/** Feld am Eintrag: Sprachen, die die Automatik gefüllt hat und die noch niemand geprüft hat. */
+export const KI_UNGEPRUEFT = 'kiUngeprueft';
 
 const istText = (wert) => typeof wert === 'string' && wert.trim() !== '';
 const istEinheitText = (wert) => Boolean(wert) && istText(wert.einzahl) && istText(wert.mehrzahl);
@@ -130,9 +138,19 @@ export function fehlendeUebersetzungen(lists, uebersetzungen) {
     .map((quelle) => ({ liste: id, ...quelle })));
 }
 
+const ungepruefteSprachen = (eintrag) => (Array.isArray(eintrag?.[KI_UNGEPRUEFT]) ? eintrag[KI_UNGEPRUEFT] : []);
+
+/** Eintrag ohne die Markierung für diese Sprachen (alle, wenn keine genannt sind). */
+const ohneMarkierung = (eintrag, sprachen) => {
+  const { [KI_UNGEPRUEFT]: _markierung, ...rest } = eintrag;
+  const bleibt = sprachen ? ungepruefteSprachen(eintrag).filter((sprache) => !sprachen.includes(sprache)) : [];
+  return bleibt.length ? { ...rest, [KI_UNGEPRUEFT]: bleibt } : rest;
+};
+
 /**
  * Setzt einen Eintrag (eine Liste, ein Wert, eine Sprache) und gibt eine neue Struktur zurück.
- * Leere Texte entfernen die Übersetzung dieser Sprache.
+ * Leere Texte entfernen die Übersetzung dieser Sprache. Wer eine Übersetzung der Automatik ändert,
+ * hat sie geprüft: Ihre Markierung in kiUngeprueft entfällt.
  * @param {Object|null} uebersetzungen
  * @param {string} listeId
  * @param {string} wert
@@ -144,11 +162,48 @@ export function mitUebersetzung(uebersetzungen, listeId, wert, sprache, ueberset
   const liste = Array.isArray(uebersetzungen?.[listeId]) ? uebersetzungen[listeId] : [];
   const vorhanden = liste.find((eintrag) => eintrag?.wert === wert) || { wert };
   const leer = typeof uebersetzung === 'string' ? !istText(uebersetzung) : !uebersetzung;
-  const { [sprache]: _alt, ...rest } = vorhanden;
+  const { [sprache]: _alt, ...rest } = ohneMarkierung(vorhanden, [sprache]);
   const neu = leer ? rest : { ...rest, [sprache]: uebersetzung };
   const andere = liste.filter((eintrag) => eintrag?.wert !== wert);
   const hatUebersetzung = ZIELSPRACHEN.some((ziel) => neu[ziel] !== undefined);
   return { ...(uebersetzungen || {}), [listeId]: hatUebersetzung ? [...andere, neu] : andere };
+}
+
+/**
+ * Hat die Automatik diese Übersetzung eingetragen, ohne dass sie jemand geprüft hat?
+ * @param {Map} index - aus baueListenIndex
+ * @param {string} listeId
+ * @param {string} wert
+ * @param {string} sprache
+ * @returns {boolean}
+ */
+export function istUngeprueft(index, listeId, wert, sprache) {
+  return ungepruefteSprachen(index?.get(listeId)?.get(wert)).includes(sprache);
+}
+
+/**
+ * Werte der Listen mit ungeprüften Übersetzungen der Automatik.
+ * @param {Object} lists
+ * @param {Object|null} uebersetzungen
+ * @returns {Array<{liste: string, wert: string}>}
+ */
+export function ungepruefteWerte(lists, uebersetzungen) {
+  const index = baueListenIndex(uebersetzungen);
+  return UEBERSETZBARE_LISTEN.flatMap(({ id }) => quellwerte(lists, id)
+    .filter((quelle) => ungepruefteSprachen(index.get(id).get(quelle.wert)).length > 0)
+    .map((quelle) => ({ liste: id, wert: quelle.wert })));
+}
+
+/**
+ * Alle Übersetzungen der Automatik als geprüft markieren.
+ * @param {Object|null} uebersetzungen
+ * @returns {Object}
+ */
+export function alsGeprueft(uebersetzungen) {
+  return Object.fromEntries(Object.entries(uebersetzungen || {}).map(([listeId, eintraege]) => [
+    listeId,
+    Array.isArray(eintraege) ? eintraege.map((eintrag) => (eintrag && typeof eintrag === 'object' ? ohneMarkierung(eintrag) : eintrag)) : eintraege,
+  ]));
 }
 
 /**
