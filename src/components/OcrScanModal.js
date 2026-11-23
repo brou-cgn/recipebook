@@ -9,15 +9,17 @@ import { runPhotoScanImport } from '../utils/importRunners';
 import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 import { useTexte } from '../contexts/SpracheContext';
 import { ergebnisText } from '../i18n/texte';
+import { SPRACHEN } from '../i18n/sprachen';
 import rezeptimportTexte from '../i18n/texte/rezeptimport';
 import allgemeinTexte from '../i18n/texte/allgemein';
 
 const MAX_CAMERA_PHOTOS = 10;
 const MAX_UPLOAD_PAGES = 8;
 const UPLOAD_ACCEPT = 'image/jpeg,image/jpg,image/png,image/heic,image/heif,.heic,.heif';
-// Das Rezept entsteht immer auf Deutsch (Entscheidung „Primärsprache“, Tech-Check F23): Die KI erkennt die Sprache im
-// Bild selbst und übersetzt. Eine Sprachwahl im Dialog gibt es deshalb nicht mehr.
-const SCAN_SPRACHE = 'de';
+// Sprache des Rezepts im Bild, benannt in ihrer eigenen Sprache (Deutsch, English). Nur ein Hinweis für die Erkennung:
+// Das Rezept entsteht immer auf Deutsch (Entscheidungen „Primärsprache“ und „Auswahl bleibt als Hilfe“, Tech-Check F23,
+// Mehrsprachigkeit PR 6r).
+const SCAN_SPRACHEN = SPRACHEN.filter((eintrag) => eintrag.id === 'de' || eintrag.id === 'en');
 
 // initialImage: single image that triggers an immediate background scan (takes precedence over initialImages)
 // initialImages: array of base64 images to pre-fill the image-preview step
@@ -25,6 +27,7 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
   // initialImage queues immediately (no step UI shown); initialImages shows the
   // image-preview step; neither → upload step
   const [step, setStep] = useState(initialImage ? 'queuing' : (initialImages.length > 0 ? 'image-preview' : 'upload'));
+  const [language, setLanguage] = useState('de'); // 'de' or 'en'
   const [error, setError] = useState('');
   const [cameraActive, setCameraActive] = useState(false);
   const [uploadedImages, setUploadedImages] = useState(initialImages.length > 0 ? [...initialImages] : []);
@@ -48,8 +51,8 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
       label: images.length === 1 ? 'Foto-Scan' : `Foto-Scan (${images.length} Bilder)`,
       userId,
       context: importContext,
-      run: (onProgress, jobMeta) => runPhotoScanImport(images, SCAN_SPRACHE, onProgress, jobMeta),
-      source: { type: 'photo', images, language: SCAN_SPRACHE },
+      run: (onProgress, jobMeta) => runPhotoScanImport(images, language, onProgress, jobMeta),
+      source: { type: 'photo', images, language },
     });
     stopCamera();
     // Once the job is queued, hand control back to whoever wants to leave
@@ -218,6 +221,24 @@ function OcrScanModal({ onCancel, onImported, initialImage = '', initialImages =
               <p className="ocr-instructions">
                 {t('scanAnleitung')}
               </p>
+
+              <div className="language-selector">
+                <span className="language-label" id="ocr-scan-sprache">{t('sprache')}</span>
+                <div className="language-tabs" role="group" aria-labelledby="ocr-scan-sprache">
+                  {SCAN_SPRACHEN.map((eintrag) => (
+                    <button
+                      key={eintrag.id}
+                      type="button"
+                      className={`language-tab ${language === eintrag.id ? 'active' : ''}`}
+                      aria-pressed={language === eintrag.id}
+                      onClick={() => setLanguage(eintrag.id)}
+                    >
+                      {eintrag.name}
+                    </button>
+                  ))}
+                </div>
+                <p className="language-hint">{t('spracheHinweis')}</p>
+              </div>
 
               {!cameraActive && (
                 <div className="upload-buttons">

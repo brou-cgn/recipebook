@@ -537,25 +537,13 @@ describe('OcrScanModal in anderer Sprache (Mehrsprachigkeit PR 6i)', () => {
     jest.clearAllMocks();
   });
 
-  test('Englisch: Schritt und Anleitung übersetzt, keine Sprachwahl (Tech-Check F23)', () => {
+  test('Englisch: Schritt, Anleitung und Sprachen in ihrer eigenen Sprache', () => {
     renderWithProviders(<OcrScanModal onCancel={() => {}} />, { sprache: 'en' });
     expect(screen.getByText('Step 1 of 2')).toBeInTheDocument();
     expect(screen.getByText('Take a photo of a recipe or upload an image')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Deutsch' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'English' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Language:')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Deutsch' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'English' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start camera' })).toBeInTheDocument();
-  });
-
-  test('Englische Oberfläche: Der Scan läuft trotzdem mit Deutsch, das Rezept bleibt deutsch (Tech-Check F23)', () => {
-    renderWithProviders(
-      <OcrScanModal onCancel={() => {}} initialImages={['data:image/png;base64,AAA']} />,
-      { sprache: 'en' }
-    );
-    fireEvent.click(screen.getByRole('button', { name: /^Start analysis/ }));
-    expect(mockEnqueueImportJob).toHaveBeenCalledWith(
-      expect.objectContaining({ source: expect.objectContaining({ type: 'photo', language: 'de' }) })
-    );
   });
 
   test('Französisch: Vorschau mit Mehrzahl, gespeichert wird die deutsche Bezeichnung', () => {
@@ -579,5 +567,53 @@ describe('OcrScanModal: Meldungen der Bildprüfung (Mehrsprachigkeit PR 6o)', ()
     const datei = new File(['test'], 'gross.png', { type: 'image/png' });
     fireEvent.change(screen.getByLabelText('Upload image(s)'), { target: { files: [datei] } });
     expect(await screen.findByText('The image can be no larger than 5 MB.')).toBeInTheDocument();
+  });
+});
+
+describe('OcrScanModal: Sprachauswahl als Hilfe (Mehrsprachigkeit PR 6r, Tech-Check F23)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('Englisch: Beschriftung und Hinweis, dass das Rezept deutsch übernommen wird', () => {
+    renderWithProviders(<OcrScanModal onCancel={jest.fn()} />, { sprache: 'en' });
+    expect(screen.getByRole('group', { name: 'Recipe language:' })).toBeInTheDocument();
+    expect(screen.getByText('Helps with recognition. The recipe is always saved in German.')).toBeInTheDocument();
+  });
+
+  test('Deutsch: Hinweis unter der Auswahl, Deutsch ist vorgewählt', () => {
+    renderWithProviders(<OcrScanModal onCancel={jest.fn()} />);
+    expect(screen.getByRole('group', { name: 'Sprache des Rezepts:' })).toBeInTheDocument();
+    expect(screen.getByText('Hilft beim Erkennen. Übernommen wird das Rezept immer auf Deutsch.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Deutsch' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  test('die Auswahl geht als Hinweis mit dem Scan mit, ohne Auswahl Deutsch', async () => {
+    const { unmount } = renderWithProviders(
+      <OcrScanModal onCancel={() => {}} initialImages={['data:image/png;base64,AAA']} />,
+      { sprache: 'en' }
+    );
+    // Englische Oberfläche ändert nichts: vorgewählt bleibt Deutsch
+    fireEvent.click(screen.getByRole('button', { name: /^Start analysis/ }));
+    expect(mockEnqueueImportJob).toHaveBeenLastCalledWith(
+      expect.objectContaining({ source: expect.objectContaining({ type: 'photo', language: 'de' }) })
+    );
+    unmount();
+
+    // „English“ gewählt: geht als Hinweis mit dem Scan mit
+    const { fileToBase64 } = require('../utils/imageUtils');
+    fileToBase64.mockResolvedValue('data:image/png;base64,test');
+    renderWithProviders(<OcrScanModal onCancel={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'English' }));
+    expect(screen.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.change(screen.getByLabelText('Bild(er) hochladen'), {
+      target: { files: [new File(['test'], 'test.png', { type: 'image/png' })] },
+    });
+    await waitFor(() => expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument());
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
+    expect(mockEnqueueImportJob).toHaveBeenLastCalledWith(
+      expect.objectContaining({ source: expect.objectContaining({ type: 'photo', language: 'en' }) })
+    );
   });
 });

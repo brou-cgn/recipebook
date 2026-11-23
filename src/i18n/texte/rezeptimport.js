@@ -161,6 +161,9 @@ export default {
     schrittVon: 'Schritt {schritt} von 2',
     scanTitel: 'Rezept scannen',
     scanAnleitung: 'Fotografiere ein Rezept oder lade ein Bild hoch',
+    // Sprachauswahl im Foto-Scan: nur Hilfe für die Erkennung, das Rezept bleibt deutsch (PR 6r, Tech-Check F23)
+    sprache: 'Sprache des Rezepts:',
+    spracheHinweis: 'Hilft beim Erkennen. Übernommen wird das Rezept immer auf Deutsch.',
     kameraStarten: 'Kamera starten',
     bilderHochladen: 'Bild(er) hochladen',
     fotosAufgenommen: { one: '{anzahl} Foto aufgenommen', other: '{anzahl} Fotos aufgenommen' },
@@ -316,6 +319,9 @@ export default {
     schrittVon: 'Step {schritt} of 2',
     scanTitel: 'Scan recipe',
     scanAnleitung: 'Take a photo of a recipe or upload an image',
+    // Sprachauswahl im Foto-Scan: nur Hilfe für die Erkennung, das Rezept bleibt deutsch (PR 6r, Tech-Check F23)
+    sprache: 'Recipe language:',
+    spracheHinweis: 'Helps with recognition. The recipe is always saved in German.',
     kameraStarten: 'Start camera',
     bilderHochladen: 'Upload image(s)',
     fotosAufgenommen: { one: '{anzahl} photo taken', other: '{anzahl} photos taken' },
@@ -471,6 +477,9 @@ export default {
     schrittVon: 'Étape {schritt} sur 2',
     scanTitel: 'Scanner une recette',
     scanAnleitung: 'Photographie une recette ou charge une image',
+    // Sprachauswahl im Foto-Scan: nur Hilfe für die Erkennung, das Rezept bleibt deutsch (PR 6r, Tech-Check F23)
+    sprache: `Langue de la recette${NBSP}:`,
+    spracheHinweis: 'Aide à la reconnaissance. La recette est toujours enregistrée en allemand.',
     kameraStarten: 'Démarrer l’appareil photo',
     bilderHochladen: 'Charger une ou plusieurs images',
     fotosAufgenommen: { one: '{anzahl} photo prise', other: '{anzahl} photos prises' },
