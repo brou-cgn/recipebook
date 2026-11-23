@@ -37,15 +37,15 @@ jest.mock('../utils/userManagement', () => ({
 const AUTOR = { id: 'u1', role: 'edit' };
 const LESER = { id: 'u2', role: 'read' };
 
-function Menue({ menu, recipes, currentUser, isSharedView = false }) {
+function Menue({ menu, recipes, currentUser, isSharedView = false, icons = null }) {
   const wein = useMenueWeinbegleitung({ menu, recipes, currentUser, isSharedView });
   return (
     <div>
-      <WeinbegleitungUebersicht wein={wein} />
+      <WeinbegleitungUebersicht wein={wein} icons={icons} />
       {menu.sections.map((sektion, index) => (
         <section key={sektion.name} aria-label={sektion.name}>
           <h2>{sektion.name}</h2>
-          <WeinbegleitungGang wein={wein} sektionIndex={index} sektionName={sektion.name} />
+          <WeinbegleitungGang wein={wein} sektionIndex={index} sektionName={sektion.name} icons={icons} />
         </section>
       ))}
     </div>
@@ -64,8 +64,8 @@ const mitSnapshot = (menu, rezepte, optionen = {}) => {
   return { ...menu, weinbegleitung: erstelleSnapshot({ ergebnis, inputHash: optionen.inputHash ?? null, nutzerId: 'u1', jetzt: 1 }) };
 };
 
-const zeige = ({ menu, rezepte, nutzer = AUTOR, isSharedView = false }) => renderWithProviders(
-  <Menue menu={menu} recipes={rezepte} currentUser={nutzer} isSharedView={isSharedView} />,
+const zeige = ({ menu, rezepte, nutzer = AUTOR, isSharedView = false, icons = null }) => renderWithProviders(
+  <Menue menu={menu} recipes={rezepte} currentUser={nutzer} isSharedView={isSharedView} icons={icons} />,
 );
 
 const gespeicherterSnapshot = (aufruf = 0) => saveMenuWeinbegleitung.mock.calls[aufruf][1];
@@ -246,6 +246,59 @@ describe('Gespeicherte Weinbegleitung', () => {
     expect(zwischengang.getAllByRole('listitem')).toHaveLength(2);
     expect(zwischengang.getAllByText('passt bedingt')).toHaveLength(2);
     expect(zwischengang.queryByText(/Empfehlung ·/)).not.toBeInTheDocument();
+  });
+});
+
+describe('Eingerichtete Icons (wie im Rezept-Sheet)', () => {
+  const ICONS = {
+    rot: 'data:image/png;base64,ROT',
+    weiss: 'data:image/png;base64,WEISS',
+    suess: 'data:image/png;base64,SUESS',
+    keinStil: 'data:image/png;base64,BIER',
+  };
+  const bildIn = (element) => element.querySelector('img')?.getAttribute('src') ?? null;
+
+  it('zeigt je Weinzeile das Icon der Weinfarbe, zum Dessert das für Süßwein', () => {
+    const { menu, rezepte } = festtafel();
+    zeige({ menu: mitSnapshot(menu, rezepte), rezepte, nutzer: LESER, icons: ICONS });
+    const hauptgang = within(screen.getByRole('region', { name: 'Hauptgang' }));
+    expect(bildIn(hauptgang.getByRole('button', { name: /Rotwein, kräftig/ }))).toBe(ICONS.rot);
+    expect(bildIn(hauptgang.getByRole('button', { name: /Weißwein, vollmundig/ }))).toBe(ICONS.weiss);
+    // Likörwein ist rot, bekommt aber das Süßwein-Icon
+    const dessert = within(screen.getByRole('region', { name: 'Dessert' }));
+    expect(bildIn(dessert.getByRole('button', { name: /Likörwein/ }))).toBe(ICONS.suess);
+  });
+
+  it('zeigt auch im Kopf („Ein Wein für alles“) die Icons, das Glas des Kopfs bleibt eingebaut', () => {
+    const { menu, rezepte } = festtafel();
+    zeige({ menu: mitSnapshot(menu, rezepte, { modus: 'einWein' }), rezepte, nutzer: LESER, icons: ICONS });
+    const kopf = screen.getByRole('region', { name: 'Weinbegleitung' });
+    const optionen = within(screen.getByRole('list', { name: 'Ein Wein für alle Gänge' })).getAllByRole('button');
+    expect(optionen.map(bildIn).sort()).toEqual([ICONS.rot, ICONS.weiss].sort());
+    expect(bildIn(within(kopf).getByRole('button', { name: /Likörwein/ }))).toBe(ICONS.suess);
+    expect(kopf.querySelector('.weinbegleitung-kopf > svg.wein-glas')).not.toBeNull();
+  });
+
+  it('zeigt „Hier lieber Bier oder Wasser“ mit dem Icon dafür, ohne Icon mit dem leeren Glas', () => {
+    const menu = { id: 'm3', authorId: 'u1', sections: [{ name: 'Zwischengang', recipeIds: ['extrem'] }, { name: 'Hauptgang', recipeIds: ['braten'] }] };
+    const rezepte = [rezept('extrem', E3_EXTREM), rezept('braten', G5_RINDERSCHMORBRATEN)];
+    const { unmount } = zeige({ menu: mitSnapshot(menu, rezepte), rezepte, nutzer: LESER, icons: ICONS });
+    const hinweis = () => within(screen.getByRole('region', { name: 'Zwischengang' })).getByText(/Hier lieber Bier oder Wasser/);
+    expect(bildIn(hinweis())).toBe(ICONS.keinStil);
+    unmount();
+
+    zeige({ menu: mitSnapshot(menu, rezepte), rezepte, nutzer: LESER });
+    expect(hinweis().querySelector('img')).toBeNull();
+    expect(hinweis().querySelector('svg.wein-glas')).not.toBeNull();
+  });
+
+  it('bleibt ohne eingerichtete Icons beim Glas in der Weinfarbe', () => {
+    const { menu, rezepte } = festtafel();
+    zeige({ menu: mitSnapshot(menu, rezepte), rezepte, nutzer: LESER, icons: { rot: '', weiss: '', suess: '', keinStil: '' } });
+    const dessert = within(screen.getByRole('region', { name: 'Dessert' }));
+    const zeile = dessert.getByRole('button', { name: /Likörwein/ });
+    expect(zeile.querySelector('img')).toBeNull();
+    expect(zeile.querySelector('.wein-glas-fuellung--suess')).not.toBeNull();
   });
 });
 

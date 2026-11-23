@@ -72,7 +72,7 @@ describe('Icon Wichteln: Teilnehmer bearbeiten', () => {
 });
 
 describe('Icons „Wein dazu“ (Weinbegleitung)', () => {
-  test.each(['weinRot', 'weinWeiss', 'weinKeinStil'])(
+  test.each(['weinRot', 'weinWeiss', 'weinSuess', 'weinKeinStil'])(
     '%s ist einrichtbar, mit Dunkelmodus-Variante; leer = eingebautes Glas',
     (key) => {
       expect(DEFAULT_BUTTON_ICONS[key]).toBe('');
@@ -86,6 +86,14 @@ describe('Icons „Wein dazu“ (Weinbegleitung)', () => {
   test('das Icon für „Hier lieber Bier oder Wasser“ heißt in der Verwaltung so', () => {
     expect(mergeButtonIconRowDefs().find((r) => r.key === 'weinKeinStil').label)
       .toBe('Wein dazu: Bier oder Wasser (leer = Glas)');
+  });
+
+  test('das Icon für Süßweine heißt in der Verwaltung so und steht zwischen Weißwein und Bier oder Wasser', () => {
+    expect(mergeButtonIconRowDefs().find((r) => r.key === 'weinSuess').label)
+      .toBe('Wein dazu: Süßwein (leer = Glas)');
+    const keys = getDefaultButtonIconGroups().groups.find((g) => g.id === 'g-rezept-details').rowKeys.map((r) => r.key);
+    expect(keys.slice(keys.indexOf('weinRot'), keys.indexOf('weinKeinStil') + 1))
+      .toEqual(['weinRot', 'weinWeiss', 'weinSuess', 'weinKeinStil']);
   });
 });
 

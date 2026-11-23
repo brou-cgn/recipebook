@@ -5,7 +5,8 @@
  * Leert Auth- und Firestore-Emulator und legt dann an: ein Admin-Konto, sechs Rezepte mit
  * Platzhalterbildern, die öffentliche Liste, zwei private Listen (eine davon die interaktive
  * Inspirationssammlung), ein Menü, ein Event, einen Kochtagebuch-Eintrag, eine Bewertung, einen
- * Eintrag der Saisonmatrix und zwei Einträge der Kochschule. Die Startseite („Küche“) ist für Admins
+ * Eintrag der Saisonmatrix und zwei Einträge der Kochschule, dazu Weinprofile für die drei Gerichte des
+ * Menüs und eigene Test-Icons der Weinbegleitung (Rot, Weiß, Süß, Bier oder Wasser). Die Startseite („Küche“) ist für Admins
  * freigeschaltet und hat Inspirationssammlung und Alltagsklassiker gesetzt, damit ihre
  * Karussells samt Plus-Knöpfen erscheinen (Tech-Check T9).
  * Alles erfunden und als Testdaten erkennbar. Schreibt über die REST-Schnittstelle der
@@ -43,16 +44,21 @@ const docUrl = (path) => `${FIRESTORE}/v1/projects/${PROJECT}/databases/(default
 const setDoc = (path, data) => call('PATCH', docUrl(path), { fields: toValue(data).mapValue.fields }, { Authorization: 'Bearer owner' });
 
 /**
- * Ändert Felder des Testkontos für einzelne Bildschirme (capture.js); `undefined` entfernt ein Feld.
+ * Ändert Felder eines Dokuments für einzelne Bildschirme (capture.js); `undefined` entfernt ein Feld.
  * Der Bildschirm setzt sie danach zurück, damit die übrigen Bilder die Testdaten von main() zeigen.
  */
+async function patchDoc(docPath, fields) {
+  const mask = Object.keys(fields).map((f) => `updateMask.fieldPaths=${encodeURIComponent(f)}`).join('&');
+  const kept = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined));
+  await call('PATCH', `${docUrl(docPath)}?${mask}`, { fields: toValue(kept).mapValue.fields }, { Authorization: 'Bearer owner' });
+}
+
+/** Wie patchDoc, für das Testkonto. */
 async function patchAccount(fields) {
   const { localId: uid } = await call('POST', `${AUTH}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=demo-key`, {
     email: ACCOUNT.email, password: ACCOUNT.password, returnSecureToken: true,
   });
-  const mask = Object.keys(fields).map((f) => `updateMask.fieldPaths=${encodeURIComponent(f)}`).join('&');
-  const kept = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined));
-  await call('PATCH', `${docUrl(`users/${uid}`)}?${mask}`, { fields: toValue(kept).mapValue.fields }, { Authorization: 'Bearer owner' });
+  await patchDoc(`users/${uid}`, fields);
 }
 
 /** Platzhalterbild als SVG: Teller auf farbigem Grund, je Rezept ein anderer Farbton. */
@@ -77,6 +83,42 @@ const NUTRITION = {
   'rezept-aglio-olio': { calcPending: true, calcPendingAt: Date.parse('2026-11-20T17:30:00Z') },
   // Fehlgeschlagene Berechnung: Der Nährwert-Dialog zeigt die Meldung und „Erneut versuchen“
   'rezept-shakshuka': { calcError: 'Die Nährwertdatenbank war nicht erreichbar (Testdaten).' },
+};
+
+// Weinprofile für die drei Gerichte des Menüs „Sonntagsessen“ (Weinbegleitung, docs/vorhaben/weinbegleitung.md):
+// Spargel bekommt einen Weißwein, das scharfe Curry „Hier lieber Bier oder Wasser“, der Apfelkuchen einen
+// Süßwein. Der inputHash kommt aus der Cloud Function, damit die App die Profile als aktuell ansieht und
+// „Weinbegleitung erstellen“ ohne KI-Aufruf rechnet (capture.js, menue-weinbegleitung).
+const WEINPROFILE = {
+  'rezept-spargel': { rolle: 'vorspeise', hauptkomponente: 'spargel', zubereitung: 'gebraten', sauce: 'sahne_butter_kaese', intensitaet: 2, fett: 2, saeure: 1 },
+  'rezept-thai-curry': { rolle: 'hauptgericht', hauptkomponente: 'gemuese', zubereitung: 'geschmort', sauce: 'scharf_chili', intensitaet: 5, schaerfe: 3, saeure: 3, suesse: 2, bitter: 2 },
+  'rezept-apfelkuchen': { rolle: 'dessert', hauptkomponente: 'dessert_frucht', zubereitung: 'gebacken', sauce: 'keine', intensitaet: 3, suesse: 2, fett: 1 },
+};
+
+function weinprofilFuer(rezept) {
+  const { weinprofilInputHash, SCHEMA_VERSION } = require('../../functions/shared/weinprofil');
+  const { rolle, hauptkomponente, zubereitung, sauce, intensitaet, ...komponenten } = WEINPROFILE[rezept.id];
+  return {
+    rolle, hauptkomponente, zubereitung, sauce, intensitaet,
+    komponenten: { saeure: 0, suesse: 0, salz: 0, fett: 0, schaerfe: 0, bitter: 0, umami: 0, ...komponenten },
+    konfidenz: 0.9, inputHash: weinprofilInputHash(rezept), modell: 'testdaten', schemaVersion: SCHEMA_VERSION, erstelltAm: 0,
+  };
+}
+
+/** Erkennbares Test-Icon: Kreis mit Buchstabe (Button-Icons der Weinbegleitung). */
+function testIcon(buchstabe, farbe) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+<circle cx="24" cy="24" r="22" fill="${farbe}"/><text x="24" y="31" font-family="sans-serif" font-size="22" font-weight="700" fill="#fff" text-anchor="middle">${buchstabe}</text>
+</svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+// Eingerichtete Icons der Weinbegleitung (Einstellungen › Bilder & Icons, Gruppe „Rezept-Details“)
+const WEIN_ICONS = {
+  weinRot: testIcon('R', '#8c2f39'),
+  weinWeiss: testIcon('W', '#b8962e'),
+  weinSuess: testIcon('S', '#c46a1b'),
+  weinKeinStil: testIcon('B', '#3d6f8f'),
 };
 
 const RECIPES = [
@@ -157,7 +199,11 @@ async function main() {
       isPrivate: false,
       createdAt: new Date(now.getTime() - i * 86400000).toISOString(),
       ...(NUTRITION[id] ? { naehrwerte: NUTRITION[id] } : {}),
+      ...(WEINPROFILE[id] ? { weinprofil: weinprofilFuer(r) } : {}),
     });
+  }
+  for (const [schluessel, value] of Object.entries(WEIN_ICONS)) {
+    await setDoc(`buttonIcons/${schluessel}`, { value });
   }
 
   // Rezeptaufrufe der letzten Stunden, relativ zur echten Zeit: Sie liegen so immer im 14-Tage-Fenster
@@ -218,7 +264,7 @@ async function main() {
     guests: { adults: 18, children: 4 }, berechnung: { ergebnis: [] }, ownerId: uid, createdAt: now.toISOString(),
   });
 
-  console.log(`Testdaten angelegt: ${ACCOUNT.email} (Admin, mit Startseite), ${RECIPES.length} Rezepte, ${aufrufNr} Rezeptaufrufe, 3 Listen, 1 Menü, 1 Event, 1 Kochdatum, 1 Bewertung, 1 Saisonmatrix-Eintrag, 2 Kochschule-Einträge.`);
+  console.log(`Testdaten angelegt: ${ACCOUNT.email} (Admin, mit Startseite), ${RECIPES.length} Rezepte, ${aufrufNr} Rezeptaufrufe, 3 Listen, 1 Menü, 1 Event, 1 Kochdatum, 1 Bewertung, 1 Saisonmatrix-Eintrag, 2 Kochschule-Einträge, ${Object.keys(WEINPROFILE).length} Weinprofile, ${Object.keys(WEIN_ICONS).length} Wein-Icons.`);
 }
 
 if (require.main === module) {
@@ -228,4 +274,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { ACCOUNT, toValue, patchAccount };
+module.exports = { ACCOUNT, toValue, patchAccount, patchDoc };

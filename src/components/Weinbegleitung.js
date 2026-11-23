@@ -1,5 +1,5 @@
 import React, { useId, useState } from 'react';
-import { WeinGlas, Gruende, sichereId } from './WeinbegleitungTeile';
+import { WeinGlas, WeinSymbol, Gruende, sichereId } from './WeinbegleitungTeile';
 import { getStil, formatTemperatur } from '../utils/weinbegleitung/wissensbasis';
 import { beispieleFuerRegion } from '../utils/weinbegleitung/kulinarik';
 import {
@@ -10,7 +10,6 @@ import {
   HINWEIS_KEIN_GEMEINSAMER_STIL,
   LABEL_BEDINGT,
 } from '../utils/weinbegleitung/konstanten';
-import { weinfarbe } from '../utils/weinbegleitung/anzeige';
 import { snapshotZaehler, zeigtEinWeinImKopf } from '../utils/weinbegleitung/menue';
 import { beispielText, labelText, regionName, stilName } from '../utils/weinbegleitung/sprache';
 import { abschnittAnzeige } from '../utils/menuSections';
@@ -32,6 +31,9 @@ import './Weinbegleitung.css';
  * Jede Weinzeile klappt „Warum passt das?“ auf (ohne Quellen, wie im Rezept-Sheet);
  * Bearbeiter legen dort eine Option als Empfehlung fest. Leser und Freigabe-Seiten sehen nur
  * Ergebnisse, ohne Knöpfe.
+ * `icons`: die eingerichteten Icons wie im Rezept-Sheet (`weinIconsAus` in anzeige.js) für die
+ * Weinzeilen und „Hier lieber Bier oder Wasser“, leer = eingebautes Glas. Das Glas im Kopf bleibt
+ * das eingebaute (füllt sich beim Berechnen).
  *
  * Texte aus wein.js in der geltenden Sprache (Mehrsprachigkeit PR 6g); Stile, Rebsorten, Regionen und
  * Labels über sprache.js, Standardnamen der Gänge über abschnittAnzeige. Der Snapshot bleibt deutsch.
@@ -77,7 +79,7 @@ function arbeitText(arbeit, t) {
   return t('wirdBerechnet');
 }
 
-export function WeinbegleitungUebersicht({ wein }) {
+export function WeinbegleitungUebersicht({ wein, icons = null }) {
   const t = useTexte(weinTexte);
   const { sprache } = useSprache();
   if (!wein?.sichtbar) return null;
@@ -114,7 +116,7 @@ export function WeinbegleitungUebersicht({ wein }) {
         </div>
       )}
 
-      {zeigtEinWeinImKopf(snapshot) && <EinWeinKopf wein={wein} />}
+      {zeigtEinWeinImKopf(snapshot) && <EinWeinKopf wein={wein} icons={icons} />}
 
       {arbeit && (
         <p className="weinbegleitung-status" role="status">{arbeitText(arbeit, t)}</p>
@@ -143,11 +145,12 @@ export function WeinbegleitungUebersicht({ wein }) {
   );
 }
 
-function HinweisZeile({ gang, mitOptionen }) {
+function HinweisZeile({ gang, mitOptionen, icons }) {
   const t = useTexte(weinTexte);
   if (gang.hinweis === HINWEIS_KEIN_STIL) {
     return (
-      <p className="weinbegleitung-gang-hinweis">
+      <p className="weinbegleitung-gang-hinweis weinbegleitung-gang-hinweis--symbol">
+        <WeinSymbol stil={null} icons={icons} groesse={22} />
         {t('keinStil')}.{mitOptionen && ` ${t('trotzdemWein')}`}
       </p>
     );
@@ -182,11 +185,11 @@ function Pfeil({ offen }) {
 }
 
 /**
- * Eine Weinzeile: Stil mit Glas, drei Rebsorten, Temperatur und Label, darunter optional ein
- * Zusatz („Am besten zu: …“). Antippen klappt den Inhalt (`children`) auf. Die Rebsorten
- * kommen, wo es sie gibt, aus der Weinregion der Küche (`regionId`, kulinarik.js).
+ * Eine Weinzeile: Stil mit Symbol (eingerichtetes Icon oder Glas), drei Rebsorten, Temperatur und
+ * Label, darunter optional ein Zusatz („Am besten zu: …“). Antippen klappt den Inhalt (`children`)
+ * auf. Die Rebsorten kommen, wo es sie gibt, aus der Weinregion der Küche (`regionId`, kulinarik.js).
  */
-function OptionZeile({ stilId, label, istEmpfehlung = false, fixiert = false, zusatz = null, regionId = null, offen, onUmschalten, children }) {
+function OptionZeile({ stilId, label, istEmpfehlung = false, fixiert = false, zusatz = null, regionId = null, icons = null, offen, onUmschalten, children }) {
   const panelId = sichereId('weinbegleitung-option', useId());
   const t = useTexte(weinTexte);
   const { sprache } = useSprache();
@@ -201,7 +204,7 @@ function OptionZeile({ stilId, label, istEmpfehlung = false, fixiert = false, zu
         aria-controls={panelId}
         onClick={onUmschalten}
       >
-        <WeinGlas farbe={weinfarbe(stil)} groesse={22} />
+        <WeinSymbol stil={stil} icons={icons} groesse={22} />
         <span className="weinbegleitung-gang-text">
           <span className="weinbegleitung-gang-name">{stilName(stil, sprache)}</span>
           <span className="weinbegleitung-gang-details">
@@ -262,7 +265,7 @@ function amBestenZu(option, t, tFesttafel) {
  * (Empfehlung zuerst) mit dem Gang, zu dem sie am besten passt; aufgeklappt Label und Gründe
  * je Gang. Darunter der eigene Wein jedes Dessert-Gangs.
  */
-function EinWeinKopf({ wein }) {
+function EinWeinKopf({ wein, icons }) {
   const [offen, setOffen] = useState(null);
   const t = useTexte(weinTexte);
   const tFesttafel = useTexte(festtafelTexte);
@@ -289,6 +292,7 @@ function EinWeinKopf({ wein }) {
                 fixiert={istEmpfehlung && fixiert}
                 zusatz={amBestenZu(option, t, tFesttafel)}
                 regionId={wein.regionMenue}
+                icons={icons}
                 offen={offen === option.stilId}
                 onUmschalten={() => umschalten(option.stilId)}
               >
@@ -332,6 +336,7 @@ function EinWeinKopf({ wein }) {
                 stilId={gang.stilId}
                 label={gang.label}
                 regionId={wein.regionFuer?.(gang.sektionIndex)}
+                icons={icons}
                 offen={offen === schluessel}
                 onUmschalten={() => umschalten(schluessel)}
               >
@@ -347,7 +352,7 @@ function EinWeinKopf({ wein }) {
 }
 
 /** Weinzeile eines Gangs (Modus „Pro Gang“ und ältere Snapshots im Modus „Ein Wein“). */
-function GangOptionZeile({ wein, gang, eintrag, offen, onUmschalten, darfTauschen }) {
+function GangOptionZeile({ wein, gang, eintrag, icons, offen, onUmschalten, darfTauschen }) {
   const t = useTexte(weinTexte);
   const stil = getStil(eintrag.stilId);
   return (
@@ -357,6 +362,7 @@ function GangOptionZeile({ wein, gang, eintrag, offen, onUmschalten, darfTausche
       istEmpfehlung={eintrag.istEmpfehlung}
       fixiert={eintrag.istEmpfehlung && gang.fixiert}
       regionId={wein.regionFuer?.(gang.sektionIndex)}
+      icons={icons}
       offen={offen}
       onUmschalten={onUmschalten}
     >
@@ -381,7 +387,7 @@ function GangOptionZeile({ wein, gang, eintrag, offen, onUmschalten, darfTausche
  * den Hinweis und, wo vorhanden, die Optionen. Im Modus „Ein Wein“ stehen die Weine im Kopf,
  * am Gang nur der Hinweis, wenn er ohne Wein bleibt.
  */
-export function WeinbegleitungGang({ wein, sektionIndex, sektionName }) {
+export function WeinbegleitungGang({ wein, sektionIndex, sektionName, icons = null }) {
   const [offenesStil, setOffenesStil] = useState(null);
   const t = useTexte(weinTexte);
   const tFesttafel = useTexte(festtafelTexte);
@@ -391,7 +397,7 @@ export function WeinbegleitungGang({ wein, sektionIndex, sektionName }) {
 
   if (zeigtEinWeinImKopf(wein.snapshot)) {
     return gang.hinweis === HINWEIS_KEIN_STIL || gang.hinweis === HINWEIS_OHNE_PROFIL
-      ? <HinweisZeile gang={gang} mitOptionen={false} />
+      ? <HinweisZeile gang={gang} mitOptionen={false} icons={icons} />
       : null;
   }
 
@@ -405,7 +411,7 @@ export function WeinbegleitungGang({ wein, sektionIndex, sektionName }) {
       .filter((option) => option.stilId !== gang.stilId && getStil(option.stilId))
       .map((option) => ({ ...option, istEmpfehlung: false })),
   ];
-  const hinweis = gang.stilId ? null : <HinweisZeile gang={gang} mitOptionen={eintraege.length > 0} />;
+  const hinweis = gang.stilId ? null : <HinweisZeile gang={gang} mitOptionen={eintraege.length > 0} icons={icons} />;
   if (eintraege.length === 0) return hinweis;
 
   return (
@@ -418,6 +424,7 @@ export function WeinbegleitungGang({ wein, sektionIndex, sektionName }) {
             wein={wein}
             gang={gang}
             eintrag={eintrag}
+            icons={icons}
             offen={offenesStil === eintrag.stilId}
             onUmschalten={() => setOffenesStil((vorher) => (vorher === eintrag.stilId ? null : eintrag.stilId))}
             darfTauschen={darfTauschen}

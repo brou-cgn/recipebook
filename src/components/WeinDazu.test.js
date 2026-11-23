@@ -6,7 +6,7 @@ import { renderWithProviders } from '../test-utils';
 import WeinDazu from './WeinDazu';
 import { generiereWeinprofile } from '../utils/weinbegleitung/weinprofilCallable';
 import { weinprofilInputHash } from '../utils/weinbegleitung/profilHash';
-import { weinprofil, G5_RINDERSCHMORBRATEN, E3_EXTREM } from '../utils/weinbegleitung/__fixtures__/profile';
+import { weinprofil, G5_RINDERSCHMORBRATEN, G6_SCHOKOLADENMOUSSE, G7_APFELSTRUDEL, E3_EXTREM } from '../utils/weinbegleitung/__fixtures__/profile';
 
 jest.mock('../utils/weinbegleitung/weinprofilCallable', () => ({
   generiereWeinprofile: jest.fn(),
@@ -202,6 +202,28 @@ describe('WeinDazu mit Profil', () => {
     const chip = screen.getByRole('button', { name: 'Wein: Rotwein, kräftig' });
     expect(chip.querySelector('img')).toBeNull();
     expect(chip.querySelector('svg')).not.toBeNull();
+  });
+
+  // Süßweine sind weiß (Tokaji) oder rot (Portwein), haben aber ihr eigenes Icon
+  it.each([
+    ['Apfelstrudel', G7_APFELSTRUDEL, 'Wein: Süßwein, edelsüß'],
+    ['Schokoladenmousse', G6_SCHOKOLADENMOUSSE, 'Wein: Likörwein'],
+  ])('nutzt zum %s das eingerichtete Icon für Süßwein, nicht das für Weiß- oder Rotwein', (_gericht, profil, name) => {
+    const icons = { rot: 'data:image/png;base64,ROT', weiss: 'data:image/png;base64,WEISS', suess: 'data:image/png;base64,SUESS' };
+    zeige({ recipe: mitProfil(profil), icons });
+    const chip = screen.getByRole('button', { name });
+    expect(chip.querySelector('img')).toHaveAttribute('src', icons.suess);
+
+    fireEvent.click(chip);
+    const kopf = sheet().querySelector('.wein-dazu-stil-glas');
+    expect(kopf.querySelector('img')).toHaveAttribute('src', icons.suess);
+  });
+
+  it('zeigt einen Süßwein ohne eigenes Icon im Glas, auch wenn Weiß und Rot eines haben', () => {
+    zeige({ recipe: mitProfil(G7_APFELSTRUDEL), icons: { rot: 'data:image/png;base64,ROT', weiss: 'data:image/png;base64,WEISS', suess: '' } });
+    const chip = screen.getByRole('button', { name: 'Wein: Süßwein, edelsüß' });
+    expect(chip.querySelector('img')).toBeNull();
+    expect(chip.querySelector('.wein-glas-fuellung--suess')).not.toBeNull();
   });
 
   it('zeigt im R11-Fall „Hier lieber Bier oder Wasser“ mit Grund', () => {

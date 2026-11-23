@@ -609,10 +609,11 @@ export const DEFAULT_BUTTON_ICONS = {
   cookDate: defaultIcon('calendar'),
   // Folgen-Button (Rezeptdetail, Kochtagebuch)
   followButton: defaultIcon('follow'),
-  // Weinbegleitung: eigene Icons für Rot- und Weißwein und für „Hier lieber Bier oder Wasser“;
-  // leer = eingebautes Glas (in der Weinfarbe bzw. leer)
+  // Weinbegleitung (Rezept und Menü): eigene Icons für Rot-, Weiß- und Süßwein und für
+  // „Hier lieber Bier oder Wasser“; leer = eingebautes Glas (in der Weinfarbe bzw. leer)
   weinRot: '',
   weinWeiss: '',
+  weinSuess: '',
   weinKeinStil: '',
   addRecipe: defaultIcon('plus'),
   editRecipe: defaultIcon('pencil'),
@@ -705,6 +706,7 @@ export const DEFAULT_BUTTON_ICONS = {
   followButtonDark: '',
   weinRotDark: '',
   weinWeissDark: '',
+  weinSuessDark: '',
   weinKeinStilDark: '',
   addRecipeDark: '',
   editRecipeDark: '',
