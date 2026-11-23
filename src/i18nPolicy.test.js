@@ -56,9 +56,8 @@ const NUR_DEUTSCH = new Set([
   'components/templateEditor/TemplateGallery.js',
 ]);
 
-// Stand 23.11.2026 (PR 6k, Gäste, Getränke und Verbrauch): 460 Textstellen in 33 Dateien.
+// Stand 23.11.2026 (PR 6m, Meldungen): 417 Textstellen in 29 Dateien.
 const BASELINE = {
-  'App.js': 5,
   'components/AtelierCategorySelectionPage.js': 5,
   'components/AtelierOnboardingOverlay.js': 9,
   'components/AtelierSwipeTrainerOverlay.js': 8,
@@ -71,15 +70,12 @@ const BASELINE = {
   'components/GroupEditDialog.js': 21,
   'components/GroupList.js': 12,
   'components/KalibrierungsAuswertung.js': 14,
-  'components/Login.js': 18,
   'components/MeineKuechenstarsPage.js': 6,
   'components/MemberProfilePage.js': 6,
   'components/NetworkPage.js': 14,
-  'components/PasswordChangeModal.js': 8,
   'components/PrintPage.js': 2,
   'components/RecipeTimeline.js': 5,
   'components/RecipeVersionDescribe.js': 11,
-  'components/Register.js': 12,
   'components/SharePage.js': 3,
   'components/SplashScreen.js': 2,
   'components/Tagesmenu.js': 26,

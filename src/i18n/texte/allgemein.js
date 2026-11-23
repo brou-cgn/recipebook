@@ -27,6 +27,8 @@ export default {
     rueckgaengig: 'Rückgängig',
     // Löschknopf einer Zeile (DeleteRowButton.js) und kurze Knöpfe, PR 6g
     nameEntfernen: '{name} entfernen',
+    // Anzeigename von Gästen (anonyme Anmeldung); gespeichert bleibt vorname 'Gast' (userManagement.js)
+    gast: 'Gast',
     hinzufuegen: 'Hinzufügen',
     aendern: 'Ändern',
   },
@@ -51,6 +53,8 @@ export default {
     rueckgaengig: 'Undo',
     // Löschknopf einer Zeile (DeleteRowButton.js) und kurze Knöpfe, PR 6g
     nameEntfernen: 'Remove {name}',
+    // Anzeigename von Gästen (anonyme Anmeldung); gespeichert bleibt vorname 'Gast' (userManagement.js)
+    gast: 'Guest',
     hinzufuegen: 'Add',
     aendern: 'Change',
   },
@@ -75,6 +79,8 @@ export default {
     rueckgaengig: 'Annuler',
     // Löschknopf einer Zeile (DeleteRowButton.js) und kurze Knöpfe, PR 6g
     nameEntfernen: 'Retirer {name}',
+    // Anzeigename von Gästen (anonyme Anmeldung); gespeichert bleibt vorname 'Gast' (userManagement.js)
+    gast: 'Invité',
     hinzufuegen: 'Ajouter',
     aendern: 'Modifier',
   },

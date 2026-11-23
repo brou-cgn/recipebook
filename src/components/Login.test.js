@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Login from './Login';
+import { renderWithProviders } from '../test-utils';
 
 describe('Login Component', () => {
   const mockOnLogin = jest.fn();
@@ -189,5 +190,46 @@ describe('Login Component', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Zurück zur Anmeldung/i }));
     expect(screen.getByRole('heading', { name: /Anmelden/i })).toBeInTheDocument();
+  });
+});
+
+describe('Login in anderer Sprache (Mehrsprachigkeit PR 6l)', () => {
+  const NBSP = String.fromCharCode(160);
+  const zeige = (sprache, props = {}) => renderWithProviders(
+    <Login onLogin={jest.fn()} onSwitchToRegister={jest.fn()} onGuestLogin={jest.fn()} onResetPassword={jest.fn()} {...props} />,
+    { sprache }
+  );
+
+  test('Englisch: Formular und Fehlermeldung über ihren Schlüssel', async () => {
+    const onLogin = jest.fn().mockResolvedValue({ success: false, schluessel: 'fehlerAnmeldedaten', message: 'Ungültige E-Mail oder Passwort.' });
+    zeige('en', { onLogin });
+
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.getByText('Continue as guest')).toBeInTheDocument();
+    expect(screen.getByText('No account yet?')).toBeInTheDocument();
+    expect(screen.getByLabelText('EMAIL ADDRESS')).toHaveAttribute('placeholder', 'name@example.com');
+
+    fireEvent.change(screen.getByLabelText('EMAIL ADDRESS'), { target: { value: 'anna@example.com' } });
+    fireEvent.change(screen.getByLabelText('PASSWORD'), { target: { value: 'geheim' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(await screen.findByText('Invalid email or password.')).toBeInTheDocument();
+  });
+
+  test('Französisch: Passwort vergessen und Bestätigung des Versands', async () => {
+    const onResetPassword = jest.fn().mockResolvedValue({ success: true, schluessel: 'resetVersendet', message: 'Eine E-Mail …' });
+    zeige('fr', { onResetPassword });
+
+    // getByText vergleicht mit normalisierten Leerzeichen, textContent prüft das geschützte
+    const vergessen = screen.getByText('Mot de passe oublié ?');
+    expect(vergessen.textContent).toBe(`Mot de passe oublié${NBSP}?`);
+    fireEvent.click(vergessen);
+
+    expect(screen.getByRole('heading', { name: 'Réinitialiser le mot de passe' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('ADRESSE E-MAIL'), { target: { value: 'anna@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Envoyer l’e-mail' }));
+
+    expect(await screen.findByText('Si un compte existe avec cette adresse, un e-mail de réinitialisation du mot de passe a été envoyé.')).toBeInTheDocument();
+    expect(screen.getByText('Retour à la connexion')).toBeInTheDocument();
   });
 });

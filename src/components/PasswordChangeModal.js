@@ -2,12 +2,17 @@ import React, { useState } from 'react';
 import './PasswordChangeModal.css';
 import Button from './Button';
 import { changePassword, validatePassword } from '../utils/userManagement';
+import { useTexte } from '../contexts/SpracheContext';
+import { ergebnisText } from '../i18n/texte';
+import anmeldungTexte from '../i18n/texte/anmeldung';
 
 function PasswordChangeModal({ user, onPasswordChanged }) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // Texte des Passwortwechsels (Mehrsprachigkeit PR 6l)
+  const t = useTexte(anmeldungTexte);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,7 +22,7 @@ function PasswordChangeModal({ user, onPasswordChanged }) {
     try {
       // Validate passwords match
       if (newPassword !== confirmPassword) {
-        setError('Die Passwörter stimmen nicht überein.');
+        setError(t('passwoerterUngleich'));
         setIsLoading(false);
         return;
       }
@@ -25,7 +30,7 @@ function PasswordChangeModal({ user, onPasswordChanged }) {
       // Validate password strength
       const validation = validatePassword(newPassword);
       if (!validation.valid) {
-        setError(validation.message);
+        setError(ergebnisText(validation, t));
         setIsLoading(false);
         return;
       }
@@ -36,10 +41,10 @@ function PasswordChangeModal({ user, onPasswordChanged }) {
       if (result.success) {
         onPasswordChanged();
       } else {
-        setError(result.message);
+        setError(ergebnisText(result, t));
       }
     } catch (err) {
-      setError('Ein unerwarteter Fehler ist aufgetreten.');
+      setError(t('fehlerUnerwartet'));
     } finally {
       setIsLoading(false);
     }
@@ -48,40 +53,39 @@ function PasswordChangeModal({ user, onPasswordChanged }) {
   return (
     <div className="password-change-overlay">
       <div className="password-change-modal">
-        <h2>Passwort ändern erforderlich</h2>
+        <h2>{t('passwortAendernNoetig')}</h2>
         <p className="password-change-info">
-          Sie haben sich mit einem temporären Passwort angemeldet. 
-          Bitte vergeben Sie jetzt ein neues Passwort.
+          {t('temporaerHinweis')}
         </p>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="newPassword">Neues Passwort</label>
+            <label htmlFor="newPassword">{t('neuesPasswort')}</label>
             <input
               type="password"
               id="newPassword"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Mindestens 6 Zeichen"
+              placeholder={t('mindestensZeichen')}
               required
               autoFocus
               disabled={isLoading}
             />
           </div>
           <div className="form-group">
-            <label htmlFor="confirmPassword">Passwort bestätigen</label>
+            <label htmlFor="confirmPassword">{t('passwortBestaetigen')}</label>
             <input
               type="password"
               id="confirmPassword"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Passwort wiederholen"
+              placeholder={t('passwortWiederholen')}
               required
               disabled={isLoading}
             />
           </div>
           {error && <div className="error-message">{error}</div>}
           <Button variant="primary" type="submit" fullWidth loading={isLoading}>
-            {isLoading ? 'Passwort wird geändert...' : 'Passwort ändern'}
+            {isLoading ? t('passwortWirdGeaendert') : t('passwortAendern')}
           </Button>
         </form>
       </div>

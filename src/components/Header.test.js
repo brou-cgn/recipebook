@@ -650,3 +650,21 @@ describe('Header – Slogan in der geltenden Sprache (Vorhaben Mehrsprachigkeit)
     expect(document.title).toBe('brouBook - Nos meilleurs moments');
   });
 });
+
+describe('Header – Gäste in der geltenden Sprache (Vorhaben Mehrsprachigkeit)', () => {
+  test('nennt Gäste nicht mit dem gespeicherten „Gast“, sondern in der Sprache', () => {
+    render(
+      <SpracheProvider profilSprache="en" speicher={null}>
+        <Header
+          currentView="recipes"
+          currentUser={{ id: 'anonym1', vorname: 'Gast', nachname: '', role: 'guest', isGuest: true }}
+          onViewChange={() => {}}
+          onLogout={() => {}}
+        />
+      </SpracheProvider>
+    );
+    fireEvent.click(screen.getByLabelText('Open menu'));
+    expect(screen.getByRole('button', { name: 'Guest' })).toBeInTheDocument();
+    expect(screen.queryByText('Gast')).not.toBeInTheDocument();
+  });
+});

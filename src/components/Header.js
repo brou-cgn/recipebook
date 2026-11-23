@@ -17,6 +17,7 @@ import { useRecipeImportQueue } from '../contexts/RecipeImportQueueContext';
 import { useSprache, useTexte } from '../contexts/SpracheContext';
 import bereicheTexte from '../i18n/texte/bereiche';
 import kopfzeileTexte from '../i18n/texte/kopfzeile';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 const APP_NAME = 'brouBook';
 
@@ -69,6 +70,7 @@ const Header = forwardRef(function Header({
 }, ref) {
   const t = useTexte(kopfzeileTexte);
   const tB = useTexte(bereicheTexte);
+  const tA = useTexte(allgemeinTexte);
   // Sprache dieser Sitzung (Vorhaben Mehrsprachigkeit): Chip im Header (SprachWahl), nur mit der
   // Berechtigung sprachwahl. Solange seine Auswahl offen ist, liegt der Header wie beim Menü oben.
   const darfSprachwahl = Boolean(currentUser?.sprachwahl);
@@ -498,7 +500,7 @@ const Header = forwardRef(function Header({
                         disabled={!onChefkochClick}
                         aria-label={onChefkochClick ? t('seiteOeffnen', { name: tB('chefkoch') }) : undefined}
                       >
-                        {currentUser.vorname} {currentUser.nachname}
+                        {currentUser.isGuest ? tA('gast') : <>{currentUser.vorname} {currentUser.nachname}</>}
                       </button>
                       {currentUser.role === 'admin' && (
                         <span className="admin-badge">{t('admin')}</span>

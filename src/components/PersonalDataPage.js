@@ -17,6 +17,8 @@ import { formatiereDatum } from '../i18n/format';
 import allgemeinTexte from '../i18n/texte/allgemein';
 import bereicheTexte from '../i18n/texte/bereiche';
 import persoenlicheDatenTexte from '../i18n/texte/persoenlicheDaten';
+import anmeldungTexte from '../i18n/texte/anmeldung';
+import { ergebnisText } from '../i18n/texte';
 import kurzbefehlSchluesselTexte from '../i18n/texte/kurzbefehlSchluessel';
 
 const PUSH_LOG_ZEIT = { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' };
@@ -43,6 +45,8 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const tA = useTexte(allgemeinTexte);
   const tB = useTexte(bereicheTexte);
   const tKey = useTexte(kurzbefehlSchluesselTexte);
+  // Meldungen von changePassword und updateUserProfile (Schlüssel in anmeldung.js, Mehrsprachigkeit PR 6l und 6m)
+  const tAnmeldung = useTexte(anmeldungTexte);
   const { sprache } = useSprache();
   const idBasis = useId();
   const NO_LIST_OPTION = { id: '', name: t('keineVorauswahl') };
@@ -272,7 +276,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
     });
 
     setSaving(false);
-    setMessage({ success: result.success, text: result.success ? t('profilGespeichert') : result.message });
+    setMessage({ success: result.success, text: result.success ? t('profilGespeichert') : ergebnisText(result, tAnmeldung) });
 
     if (result.success && onProfileUpdated) {
       onProfileUpdated({
@@ -299,7 +303,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
     setSavingPassword(true);
     const result = await changePassword(currentUser.id, newPassword, currentPassword);
     setSavingPassword(false);
-    setPasswordMessage({ success: result.success, text: result.message });
+    setPasswordMessage({ success: result.success, text: ergebnisText(result, tAnmeldung) });
 
     if (result.success) {
       setCurrentPassword('');
