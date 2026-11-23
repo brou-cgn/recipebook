@@ -1,7 +1,8 @@
 # Screenshots und Sichtprüfung
 
 Ein Befehl fotografiert eine feste Liste von Bildschirmen der App: hell und dunkel, auf
-Desktop-Breite (1280 px) und Handy-Breite (iPhone 13). Die App läuft dafür lokal gegen die
+Desktop-Breite (1280 px) und Handy-Breite (iPhone 13), immer mit deutschem Browser (`locale: 'de-DE'`;
+Seiten ohne Anmeldung folgen sonst der Browsersprache). Die App läuft dafür lokal gegen die
 Firebase-Emulatoren mit erfundenen Testdaten, nicht gegen das echte Projekt. Zweck: UI-Änderungen
 vor dem PR ansehen, statt sie über mehrere PRs auszuprobieren (Tech-Check W2, Roadmap-Phase 7
 „UI-System“).

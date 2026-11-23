@@ -6,6 +6,9 @@ import { EmailIcon, LockIcon } from './LoginInputIcons';
 import './Login.css';
 import './Register.css';
 import { validatePassword } from '../utils/userManagement';
+import { useTexte } from '../contexts/SpracheContext';
+import { ergebnisText } from '../i18n/texte';
+import anmeldungTexte from '../i18n/texte/anmeldung';
 
 // Minimum seconds that must elapse between registration attempts
 const SUBMIT_COOLDOWN_SECONDS = 30;
@@ -21,6 +24,8 @@ function Register({ onRegister, onSwitchToLogin }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const lastSubmitRef = useRef(null);
+  // Texte der Registrierung (Mehrsprachigkeit PR 6l); ohne Anmeldung gilt die Sprache des Browsers
+  const t = useTexte(anmeldungTexte);
 
   const handleChange = (e) => {
     setFormData({
@@ -39,7 +44,7 @@ function Register({ onRegister, onSwitchToLogin }) {
       const elapsed = (now - lastSubmitRef.current) / 1000;
       if (elapsed < SUBMIT_COOLDOWN_SECONDS) {
         const remaining = Math.ceil(SUBMIT_COOLDOWN_SECONDS - elapsed);
-        setError(`Bitte warten Sie noch ${remaining} Sekunden vor dem nächsten Registrierungsversuch.`);
+        setError(t('wartenSekunden', { anzahl: remaining }));
         return;
       }
     }
@@ -53,7 +58,7 @@ function Register({ onRegister, onSwitchToLogin }) {
       
       // Validate passwords match
       if (password !== confirmPassword) {
-        setError('Passwörter stimmen nicht überein.');
+        setError(t('passwoerterUngleich'));
         setIsLoading(false);
         return;
       }
@@ -61,7 +66,7 @@ function Register({ onRegister, onSwitchToLogin }) {
       // Validate password strength
       const passwordValidation = validatePassword(password);
       if (!passwordValidation.valid) {
-        setError(passwordValidation.message);
+        setError(ergebnisText(passwordValidation, t));
         setIsLoading(false);
         return;
       }
@@ -77,10 +82,10 @@ function Register({ onRegister, onSwitchToLogin }) {
         // Redirect to login immediately – no automatic login after registration
         onSwitchToLogin();
       } else {
-        setError(result.message);
+        setError(ergebnisText(result, t));
       }
     } catch (err) {
-      setError('Ein unerwarteter Fehler ist aufgetreten.');
+      setError(t('fehlerUnerwartet'));
     } finally {
       setIsLoading(false);
     }
@@ -89,11 +94,11 @@ function Register({ onRegister, onSwitchToLogin }) {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h2 className="login-title">Registrierung</h2>
+        <h2 className="login-title">{t('registrierung')}</h2>
         <form onSubmit={handleSubmit}>
           <div className="register-name-row">
             <div className="login-field">
-              <label htmlFor="vorname" className="login-label">VORNAME *</label>
+              <label htmlFor="vorname" className="login-label">{t('vornameLabel')}</label>
               <input
                 type="text"
                 id="vorname"
@@ -107,7 +112,7 @@ function Register({ onRegister, onSwitchToLogin }) {
               />
             </div>
             <div className="login-field">
-              <label htmlFor="nachname" className="login-label">NACHNAME *</label>
+              <label htmlFor="nachname" className="login-label">{t('nachnameLabel')}</label>
               <input
                 type="text"
                 id="nachname"
@@ -122,7 +127,7 @@ function Register({ onRegister, onSwitchToLogin }) {
             </div>
           </div>
           <div className="login-field">
-            <label htmlFor="email" className="login-label">E-MAIL-ADRESSE *</label>
+            <label htmlFor="email" className="login-label">{t('emailLabelPflicht')}</label>
             <div className="login-input-wrap">
               <EmailIcon />
               <input
@@ -130,7 +135,7 @@ function Register({ onRegister, onSwitchToLogin }) {
                 id="email"
                 name="email"
                 className="login-input"
-                placeholder="name@beispiel.de"
+                placeholder={t('emailBeispiel')}
                 value={formData.email}
                 onChange={handleChange}
                 autoComplete="email"
@@ -141,7 +146,7 @@ function Register({ onRegister, onSwitchToLogin }) {
           </div>
           <div className="login-field">
             <label htmlFor="password" className="login-label">
-              PASSWORT * <span className="login-label-hint">(mind. 12 Zeichen, Zahl oder Sonderzeichen)</span>
+              {t('passwortLabelPflicht')} <span className="login-label-hint">{t('passwortRegel')}</span>
             </label>
             <div className="login-input-wrap">
               <LockIcon />
@@ -160,7 +165,7 @@ function Register({ onRegister, onSwitchToLogin }) {
             </div>
           </div>
           <div className="login-field">
-            <label htmlFor="confirmPassword" className="login-label">PASSWORT BESTÄTIGEN *</label>
+            <label htmlFor="confirmPassword" className="login-label">{t('passwortBestaetigenLabel')}</label>
             <div className="login-input-wrap">
               <LockIcon />
               <input
@@ -179,19 +184,19 @@ function Register({ onRegister, onSwitchToLogin }) {
           </div>
           {error && <div className="login-error">{error}</div>}
           <Button variant="primary" type="submit" fullWidth loading={isLoading} className="login-cta">
-            {isLoading ? 'Registrierung läuft …' : 'Registrieren'}
+            {isLoading ? t('registrierungLaeuft') : t('registrieren')}
           </Button>
         </form>
         <div className="login-footer">
           <p>
-            Bereits ein Konto?{' '}
+            {t('bereitsKonto')}{' '}
             <button
               type="button"
               className="login-register-link"
               onClick={onSwitchToLogin}
               disabled={isLoading}
             >
-              Jetzt anmelden
+              {t('jetztAnmelden')}
             </button>
           </p>
         </div>

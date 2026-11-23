@@ -103,6 +103,7 @@ import MemberProfilePage from './components/MemberProfilePage';
 import { RecipeImportQueueProvider, useRecipeImportQueue } from './contexts/RecipeImportQueueContext';
 import { useSprache, useSpracheFuerNutzer, useTexte } from './contexts/SpracheContext';
 import bereicheTexte from './i18n/texte/bereiche';
+import anmeldungTexte from './i18n/texte/anmeldung';
 import { updateAppBadge } from './utils/appBadge';
 import { resolveRecipeGroupContext, resolveImportGroupContext } from './utils/recipeGroupContext';
 import { openRecipeWithTransition } from './utils/recipeViewTransition';
@@ -489,6 +490,7 @@ function App() {
   // (Vorhaben docs/vorhaben/mehrsprachigkeit.md)
   useSpracheFuerNutzer(currentUser, { anmeldungGeprueft: !authLoading });
   const tBereiche = useTexte(bereicheTexte);
+  const tAnmeldung = useTexte(anmeldungTexte);
   const { setzeListenUebersetzungen } = useSprache();
   const [allUsers, setAllUsers] = useState([]);
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -2803,7 +2805,7 @@ function App() {
             fontSize: '0.95rem',
             color: '#1565C0'
           }}>
-            Bitte melde dich an, um das Rezept zu importieren.
+            {tAnmeldung('anmeldenZumImport')}
           </div>
         )}
         {authView === 'login' ? (
