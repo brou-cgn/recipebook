@@ -24,7 +24,7 @@
 
 import { db } from '../firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { updateGroup } from './groupFirestore';
+import { updateGroup, PUBLIC_GROUP_NAME } from './groupFirestore';
 
 export const FUER_DICH_ENTDECKT_SYSTEM_KEY = 'fuerDichEntdeckt';
 export const FUER_DICH_ENTDECKT_LIST_NAME = 'Für dich entdeckt';
@@ -36,13 +36,19 @@ export const isFuerDichEntdecktList = (group) =>
 
 /**
  * Anzeigename einer Liste (Mehrsprachigkeit PR 6p): „Für dich entdeckt“ legt das System mit deutschem
- * Namen an (FUER_DICH_ENTDECKT_LIST_NAME); er erscheint in der geltenden Sprache. Eigene Namen sind
- * Inhalt und bleiben, wie sie sind. In Komponenten über useListenName (src/hooks/useListenName.js).
+ * Namen an (FUER_DICH_ENTDECKT_LIST_NAME); er erscheint in der geltenden Sprache, seit PR 6s ebenso der Name
+ * der öffentlichen Gruppe (PUBLIC_GROUP_NAME). Eigene Namen sind Inhalt und bleiben, wie sie sind. In
+ * Komponenten über useListenName (src/hooks/useListenName.js).
  * @param {object|null|undefined} liste - Gruppe bzw. Liste aus Firestore
  * @param {Function} t - Übersetzungsfunktion für src/i18n/texte/startseite.js
+ * @param {Function} [tGruppen] - Übersetzungsfunktion für src/i18n/texte/gruppen.js (öffentliche Gruppe)
  * @returns {string}
  */
-export const listenAnzeigeName = (liste, t) => (isFuerDichEntdecktList(liste) ? t('fuerDichEntdeckt') : (liste?.name || ''));
+export const listenAnzeigeName = (liste, t, tGruppen) => {
+  if (isFuerDichEntdecktList(liste)) return t('fuerDichEntdeckt');
+  if (tGruppen && liste?.type === 'public' && liste?.name === PUBLIC_GROUP_NAME) return tGruppen('oeffentlich');
+  return liste?.name || '';
+};
 
 /**
  * Die "Für dich entdeckt"-Liste des Nutzers aus den geladenen Gruppen.

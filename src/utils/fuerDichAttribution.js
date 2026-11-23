@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
+import { erstelleT } from '../i18n/texte';
+import netzwerkTexte from '../i18n/texte/netzwerk';
 
 // Wer hinter den Rezepten von "Für dich entdeckt" steht (Vorhaben Follow, PR 6).
 // Die Rotation schreibt users/{uid}/fuerDichEntdeckt/current, nur der Eigentümer
@@ -8,58 +10,68 @@ import { db } from '../firebase';
 // `kind` ist 'cooked' oder 'created', `day` ein Kalendertag (YYYY-MM-DD).
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const ANONYMOUS_NAME = 'Ein Mitglied';
+// Ohne mitgegebenes `t` gilt Deutsch; die Texte stehen in src/i18n/texte/netzwerk.js (Mehrsprachigkeit PR 6s)
+const T_DEUTSCH = erstelleT(netzwerkTexte, 'de');
 
 const dayNumber = (value) => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || '');
   return match ? Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) / DAY_MS : null;
 };
 
-/** Grobe Zeitangabe zu einem Tag: "heute", "gestern", "diese Woche", "letzte Woche", sonst "vor n Wochen". */
-export const formatActionDay = (day, now = new Date()) => {
+/**
+ * Grobe Zeitangabe zu einem Tag: "heute", "gestern", "diese Woche", "letzte Woche", sonst "vor n Wochen".
+ * @param {string} day - Kalendertag (YYYY-MM-DD)
+ * @param {Date} [now]
+ * @param {Function} [t] - Übersetzungsfunktion für netzwerk.js, sonst Deutsch
+ */
+export const formatActionDay = (day, now = new Date(), t = T_DEUTSCH) => {
   const then = dayNumber(day);
   if (then === null) return '';
   const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / DAY_MS;
   const age = Math.max(0, Math.round(today - then));
-  if (age === 0) return 'heute';
-  if (age === 1) return 'gestern';
-  if (age < 7) return 'diese Woche';
-  if (age < 14) return 'letzte Woche';
-  return `vor ${Math.floor(age / 7)} Wochen`;
+  if (age === 0) return t('heute');
+  if (age === 1) return t('gestern');
+  if (age < 7) return t('dieseWoche');
+  if (age < 14) return t('letzteWoche');
+  return t('vorWochen', { anzahl: Math.floor(age / 7) });
 };
 
 /**
  * Satz für die Rezeptkarte als Bausteine: reiner Text, oder ein Name mit `userId`
  * (verlinkbar). Unbekannte Mitglieder erscheinen als "Ein Mitglied" ohne `userId`.
+ * Die Reihenfolge Name, Verb, Zeit trägt auch auf Englisch und Französisch („Anna cooked this ·
+ * yesterday“, „Anna l’a cuisiné · hier“); die Verben stehen in Einzahl und Mehrzahl in netzwerk.js.
  * @param {Array<{userId: string, kind: string, day: string}>} entries
  * @param {function(string): string} nameOf - UID -> Name ('' = unbekannt)
+ * @param {Date} [now]
+ * @param {Function} [t] - Übersetzungsfunktion für netzwerk.js, sonst Deutsch
  * @return {Array<{text: string, userId?: string}>} leer ohne Einträge
  */
-export const describeActorSegments = (entries, nameOf, now = new Date()) => {
+export const describeActorSegments = (entries, nameOf, now = new Date(), t = T_DEUTSCH) => {
   if (!Array.isArray(entries) || entries.length === 0) return [];
   const groups = ['cooked', 'created'].map((kind) => ({
     kind,
     actors: entries.filter((e) => e.kind === kind).map((e) => {
       const name = nameOf(e.userId);
-      return name ? { text: name, userId: e.userId } : { text: ANONYMOUS_NAME };
+      return name ? { text: name, userId: e.userId } : { text: t('einMitglied') };
     }),
   })).filter((g) => g.actors.length > 0);
   if (groups.length === 0) return [];
   const verbs = {
-    cooked: (n) => (n === 1 ? 'hat das gekocht' : 'haben das gekocht'),
-    created: (n) => (n === 1 ? 'hat es angelegt' : 'haben es angelegt'),
+    cooked: (n) => t('hatGekocht', { anzahl: n }),
+    created: (n) => t('hatAngelegt', { anzahl: n }),
   };
   const segments = [];
   groups.forEach((group, groupIndex) => {
     if (groupIndex > 0) segments.push({ text: ', ' });
     group.actors.forEach((actor, i) => {
-      if (i > 0) segments.push({ text: i === group.actors.length - 1 ? ' und ' : ', ' });
+      if (i > 0) segments.push({ text: i === group.actors.length - 1 ? t('und') : ', ' });
       segments.push(actor);
     });
     segments.push({ text: ` ${verbs[group.kind](group.actors.length)}` });
   });
   const newest = entries.map((e) => e.day).filter(Boolean).sort().pop();
-  const when = formatActionDay(newest, now);
+  const when = formatActionDay(newest, now, t);
   if (when) segments.push({ text: ` · ${when}` });
   return segments;
 };
@@ -73,8 +85,8 @@ export const describeActorSegments = (entries, nameOf, now = new Date()) => {
  * @param {function(string): string} nameOf - UID -> Name ('' = unbekannt)
  * @return {string} '' ohne Einträge
  */
-export const describeActors = (entries, nameOf, now = new Date()) =>
-  describeActorSegments(entries, nameOf, now).map((segment) => segment.text).join('');
+export const describeActors = (entries, nameOf, now = new Date(), t = T_DEUTSCH) =>
+  describeActorSegments(entries, nameOf, now, t).map((segment) => segment.text).join('');
 
 /**
  * Hört auf das private Attributionsdokument. Gilt nur für die zur aktuellen

@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import GroupList from './GroupList';
+import { SpracheProvider } from '../contexts/SpracheContext';
 
 // Mock customLists so icon loading resolves immediately
 jest.mock('../utils/customLists', () => ({
@@ -76,7 +77,7 @@ describe('GroupList', () => {
     );
     expect(screen.getByText('Familie')).toBeInTheDocument();
     expect(screen.getByText('Familienrezepte und Wochenplanung')).toBeInTheDocument();
-    expect(screen.getByText('2 Mitglied(er)')).toBeInTheDocument();
+    expect(screen.getByText('2 Mitglieder')).toBeInTheDocument();
   });
 
   it('renders the public group in the Systemgruppen section for admin users', () => {
@@ -275,5 +276,40 @@ describe('GroupList', () => {
     );
     fireEvent.click(container.querySelector('.add-group-fab-button'));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+});
+
+describe('GroupList in anderer Sprache (Mehrsprachigkeit PR 6s)', () => {
+  const zeige = (sprache, props = {}) => render(
+    <SpracheProvider profilSprache={sprache} speicher={null}>
+      <GroupList
+        groups={[mockPublicGroup, { ...mockPrivateGroup, listKind: 'interactive' }, { id: 'grp2', type: 'private', name: 'Solo', ownerId: 'user2', memberIds: ['user2'] }]}
+        allUsers={mockAllUsers}
+        currentUser={mockAdminUser}
+        onSelectGroup={jest.fn()}
+        onCreateGroup={jest.fn()}
+        {...props}
+      />
+    </SpracheProvider>
+  );
+
+  it('Englisch: Überschrift, Systemgruppe, Art und Mitglieder in Einzahl und Mehrzahl; eigene Namen bleiben', () => {
+    zeige('en');
+    expect(screen.getByRole('heading', { name: 'My mise en place' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '+ Create list' })).toBeInTheDocument();
+    expect(screen.getByText('System groups')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Public' })).toBeInTheDocument();
+    expect(screen.getByText('System-wide group for public content')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Familie' })).toBeInTheDocument();
+    expect(screen.getByText('Interactive list')).toBeInTheDocument();
+    expect(screen.getByText('2 members')).toBeInTheDocument();
+    expect(screen.getByText('1 member')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create list' })).toBeInTheDocument();
+  });
+
+  it('Französisch: leere Übersicht', () => {
+    zeige('fr', { groups: [], currentUser: mockCurrentUser });
+    expect(screen.getByText('Pas encore de listes privées !')).toBeInTheDocument();
+    expect(screen.getByText('Touche « Créer une liste » pour ajouter des listes.')).toBeInTheDocument();
   });
 });

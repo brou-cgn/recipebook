@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import GroupCreateDialog from './GroupCreateDialog';
+import { SpracheProvider } from '../contexts/SpracheContext';
 
 // Mock groupFirestore so LIST_KIND_OPTIONS is available without Firebase
 jest.mock('../utils/groupFirestore', () => ({
@@ -321,5 +322,28 @@ describe('GroupCreateDialog', () => {
         });
       });
     });
+  });
+});
+
+describe('GroupCreateDialog in anderer Sprache (Mehrsprachigkeit PR 6s)', () => {
+  it('Französisch: Titel, Arten, Ziel-Liste und Prüfung', () => {
+    render(
+      <SpracheProvider profilSprache="fr" speicher={null}>
+        <GroupCreateDialog allUsers={mockAllUsers} currentUser={mockCurrentUser} onSave={jest.fn()} onCancel={jest.fn()} privateLists={mockPrivateLists} />
+      </SpracheProvider>
+    );
+    expect(screen.getByRole('dialog', { name: 'Créer une liste' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Créer une nouvelle liste' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Liste interactive' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Collection classique' })).toBeInTheDocument();
+
+    // Direkt absenden: jsdom prüft sonst wie ein Browser die required-Felder (siehe oben)
+    fireEvent.submit(screen.getByRole('button', { name: 'Créer une liste' }).closest('form'));
+    expect(screen.getByText('Saisis un nom de liste.')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Type *'), { target: { value: 'interactive' } });
+    expect(screen.getByText('Les listes interactives ont besoin d’une liste cible vers laquelle déplacer les recettes.')).toBeInTheDocument();
+    expect(screen.getByText('Cette liste')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Fermer' })).toBeInTheDocument();
   });
 });

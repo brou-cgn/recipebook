@@ -5,9 +5,12 @@ import Button from './Button';
 import { UnterseiteKopf } from './Unterseite';
 import { useTexte } from '../contexts/SpracheContext';
 import bereicheTexte from '../i18n/texte/bereiche';
+import gruppenTexte from '../i18n/texte/gruppen';
+import chefkochTexte from '../i18n/texte/chefkochUndMehr';
+import useListenName from '../hooks/useListenName';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
-import { LIST_KIND_OPTIONS } from '../utils/groupFirestore';
+import { listenArtText } from '../utils/listenArt';
 
 /**
  * Lists the groups the current user belongs to.
@@ -24,6 +27,10 @@ import { LIST_KIND_OPTIONS } from '../utils/groupFirestore';
  */
 function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup, onBack, ausStartseite = false }) {
   const tB = useTexte(bereicheTexte);
+  // Texte der Listen (Mehrsprachigkeit PR 6s); Systemnamen übersetzt, eigene Namen bleiben
+  const t = useTexte(gruppenTexte);
+  const tChefkoch = useTexte(chefkochTexte);
+  const listenName = useListenName();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
@@ -64,27 +71,27 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
         aktionen={(
           <div className="group-list-actions">
             <Button variant="primary" className="add-group-button" onClick={() => setIsDialogOpen(true)}>
-              + Liste erstellen
+              {t('listeErstellenPlus')}
             </Button>
           </div>
         )}
       >
-        <h2>Meine Mise en Place</h2>
+        <h2>{tChefkoch('miseEnPlace')}</h2>
       </UnterseiteKopf>
 
       {publicGroup && currentUser?.role === 'admin' && (
         <div className="group-section">
-          <h3 className="group-section-title">Systemgruppen</h3>
+          <h3 className="group-section-title">{t('systemgruppen')}</h3>
           <div className="group-grid">
             <div className="group-card group-card-public">
               <div className="group-card-content">
-                <span className="group-type-indicator public">Öffentlich</span>
+                <span className="group-type-indicator public">{t('oeffentlich')}</span>
                 <h3>
                   <button type="button" className="group-card-knopf" onClick={() => onSelectGroup(publicGroup)}>
-                    {publicGroup.name}
+                    {listenName(publicGroup)}
                   </button>
                 </h3>
-                <p className="group-card-hint">Systemweite Gruppe für öffentliche Inhalte</p>
+                <p className="group-card-hint">{t('oeffentlichHinweis')}</p>
               </div>
             </div>
           </div>
@@ -94,9 +101,9 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
       <div className="group-section">
         {privateGroups.length === 0 ? (
           <div className="empty-state">
-            <p>Noch keine privaten Listen!</p>
+            <p>{t('keineListen')}</p>
             <p className="empty-hint">
-              Tippe auf „Liste erstellen", um Listen anzulegen.
+              {t('keineListenHinweis')}
             </p>
           </div>
         ) : (
@@ -109,22 +116,22 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
                   <div className="group-card-content">
                     <h3>
                       <button type="button" className="group-card-knopf" onClick={() => onSelectGroup(group)}>
-                        {group.name}
+                        {listenName(group)}
                       </button>
                     </h3>
                     {group.listKind && (
                       <span className={`group-list-kind-indicator group-list-kind-indicator--${group.listKind}`}>
-                        {LIST_KIND_OPTIONS.find((o) => o.value === group.listKind)?.label ?? group.listKind}
+                        {listenArtText(group.listKind, t)}
                       </span>
                     )}
                     {typeof group.description === 'string' && group.description.trim() && (
                       <p className="group-card-description">{group.description.trim()}</p>
                     )}
                     <div className="group-card-meta">
-                      <span>{(group.memberIds || []).length} Mitglied(er)</span>
+                      <span>{t('mitglieder', { anzahl: (group.memberIds || []).length })}</span>
                       {ownerName && (
                         <span className="group-card-owner">
-                          {isOwner ? 'Du (Besitzer)' : ownerName}
+                          {isOwner ? t('duBesitzer') : ownerName}
                         </span>
                       )}
                     </div>
@@ -161,11 +168,11 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
         onMouseDown={() => setAddFabPressed(true)}
         onMouseUp={() => setAddFabPressed(false)}
         onMouseLeave={() => setAddFabPressed(false)}
-        title="Liste erstellen"
-        aria-label="Liste erstellen"
+        title={t('listeErstellen')}
+        aria-label={t('listeErstellen')}
       >
         {isBase64Image(getEffectiveIcon(allButtonIcons, 'addRecipe', isDarkMode)) ? (
-          <img src={getEffectiveIcon(allButtonIcons, 'addRecipe', isDarkMode)} alt="Liste erstellen" className="button-icon-image" draggable="false" />
+          <img src={getEffectiveIcon(allButtonIcons, 'addRecipe', isDarkMode)} alt={t('listeErstellen')} className="button-icon-image" draggable="false" />
         ) : (
           getEffectiveIcon(allButtonIcons, 'addRecipe', isDarkMode)
         )}

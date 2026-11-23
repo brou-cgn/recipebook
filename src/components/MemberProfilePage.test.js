@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import MemberProfilePage from './MemberProfilePage';
+import { SpracheProvider } from '../contexts/SpracheContext';
 import FollowName from './FollowName';
 import { FollowProvider } from '../contexts/FollowContext';
 import { subscribeMyFollows, requestToFollow, stopFollowing } from '../utils/followFirestore';
@@ -120,5 +121,28 @@ describe('FollowName', () => {
     statuses = { anna: 'pending' };
     renderName({ enabled: false });
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+});
+
+describe('MemberProfilePage in anderer Sprache (Mehrsprachigkeit PR 6s)', () => {
+  test('Englisch: Status, Knopf, Rezepte mit übersetztem Titel', () => {
+    render(
+      <SpracheProvider profilSprache="en" speicher={null} inhalteUebersetzen>
+        <FollowProvider userId="me" enabled onOpenProfile={jest.fn()}>
+          <MemberProfilePage
+            userId="anna"
+            name="Anna"
+            recipes={[{ ...recipes[0], titelUebersetzung: { quelle: 'Linsensuppe', originalSprache: 'de', en: 'Lentil soup', fr: 'Soupe de lentilles' } }]}
+            onBack={() => {}}
+            onSelectRecipe={jest.fn()}
+          />
+        </FollowProvider>
+      </SpracheProvider>
+    );
+    expect(screen.getByText('You’re not following this person.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Follow' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Recipes' })).toBeInTheDocument();
+    expect(screen.getByText('Lentil soup')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument();
   });
 });

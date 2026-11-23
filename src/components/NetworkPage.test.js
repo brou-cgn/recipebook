@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import NetworkPage from './NetworkPage';
+import { SpracheProvider } from '../contexts/SpracheContext';
 import { FollowProvider } from '../contexts/FollowContext';
 import { getButtonIcons } from '../utils/customLists';
 import {
@@ -13,6 +14,7 @@ jest.mock('../utils/followFirestore', () => ({
   stopFollowing: jest.fn(() => Promise.resolve()),
   removeFollower: jest.fn(() => Promise.resolve()),
   subscribeMyFollows: jest.fn((uid, onChange) => { onChange({}); return () => {}; }),
+  ANONYMOUS_NAME: 'Ein Mitglied',
 }));
 
 jest.mock('../utils/customLists', () => ({
@@ -183,4 +185,38 @@ test('Namen in Anfragen, Ich folge und Follower öffnen das Profil, mit Rückweg
   fireEvent.click(screen.getByRole('tab', { name: 'Follower' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Profil von Dora Lenz öffnen' }));
   expect(onOpenProfile).toHaveBeenLastCalledWith('dora', { fromNetwork: true });
+});
+
+describe('NetworkPage in anderer Sprache (Mehrsprachigkeit PR 6s)', () => {
+  const zeige = (sprache) => render(
+    <SpracheProvider profilSprache={sprache} speicher={null}>
+      <NetworkPage currentUser={user} onBack={() => {}} />
+    </SpracheProvider>
+  );
+
+  test('Französisch: Reiter, Hinweis, Ersatzname und Meldung der Function', async () => {
+    loadNetwork.mockResolvedValue({ ...network(), requests: [{ id: 'anon', name: 'Ein Mitglied' }] });
+    respondToFollow.mockRejectedValueOnce(new Error('Diese Anfrage gibt es nicht mehr.'));
+    zeige('fr');
+    expect(await screen.findByText('Un membre')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Mon réseau' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Demandes/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Abonnements/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Qu’est-ce qui devient visible/ }));
+    expect(screen.getByText(/Rétroactif/)).toBeInTheDocument();
+    expect(screen.getByText('Bloqués')).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Accepter' }));
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent('Cette demande n’existe plus.');
+  });
+
+  test('Englisch: leere Liste', async () => {
+    loadNetwork.mockResolvedValue({ requests: [], following: [], followers: [], blocked: [] });
+    zeige('en');
+    expect(await screen.findByText('No open requests.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: /Following/ }));
+    expect(screen.getByText('You’re not following anyone yet.')).toBeInTheDocument();
+  });
 });

@@ -134,6 +134,23 @@ export function findeText(woerterbuch, text, schluesselListe) {
 }
 
 /**
+ * Gespeicherter oder gemeldeter deutscher Text in der geltenden Sprache (seit PR 6s): erkennt ihn mit
+ * findeText unter den genannten Schlüsseln und gibt die Übersetzung zurück, sonst den Text, wie er ist.
+ *
+ *   setFehler(erkannterText(netzwerkTexte, err.message, FOLGEN_MELDUNGEN, t));
+ *
+ * @param {Object<string, Object>} woerterbuch
+ * @param {string} text - deutscher Text, wie gespeichert oder gemeldet
+ * @param {string[]} schluesselListe - welche Schlüssel infrage kommen
+ * @param {Function} t - Übersetzungsfunktion desselben Wörterbuchs
+ * @returns {string}
+ */
+export function erkannterText(woerterbuch, text, schluesselListe, t) {
+  const treffer = findeText(woerterbuch, text, schluesselListe);
+  return treffer ? t(treffer.schluessel, treffer.werte) : text;
+}
+
+/**
  * Text eines Ergebnisses aus einer Hilfsfunktion in der geltenden Sprache (seit PR 6l, etwa
  * `loginUser` in src/utils/userManagement.js): Trägt das Ergebnis einen Schlüssel, kommt der Text
  * über `t`, sonst die mitgelieferte deutsche `message`.

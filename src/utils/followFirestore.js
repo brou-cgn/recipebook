@@ -9,7 +9,9 @@ import { httpsCallable } from 'firebase/functions';
 // (firestore.rules: `follows` darf von beiden Seiten gelöscht werden).
 
 const MAX_ROWS = 200;
-const ANONYMOUS_NAME = 'Ein Mitglied';
+// Ersatzname ohne Profil; angezeigt wird er in der geltenden Sprache (einMitglied in src/i18n/texte/netzwerk.js,
+// Mehrsprachigkeit PR 6s)
+export const ANONYMOUS_NAME = 'Ein Mitglied';
 
 export const followDocId = (followerId, followeeId) => `${followerId}_${followeeId}`;
 

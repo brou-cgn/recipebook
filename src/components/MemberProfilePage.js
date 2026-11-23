@@ -3,14 +3,18 @@ import './MemberProfilePage.css';
 import { useFollow } from '../contexts/FollowContext';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import UndoSnackbar from './UndoSnackbar';
-import { stopFollowing } from '../utils/followFirestore';
+import { stopFollowing, ANONYMOUS_NAME } from '../utils/followFirestore';
+import { useRezeptTitel, useTexte } from '../contexts/SpracheContext';
+import netzwerkTexte from '../i18n/texte/netzwerk';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
+// Schlüssel in src/i18n/texte/netzwerk.js (Mehrsprachigkeit PR 6s)
 const STATUS_TEXT = {
-  pending: 'Angefragt. Du siehst die Aktivität, sobald die Person zustimmt.',
-  accepted: 'Du folgst dieser Person.',
+  pending: 'statusAngefragt',
+  accepted: 'statusFolgst',
 };
 
-const WITHDRAW_LABEL = { pending: 'Anfrage zurückziehen', accepted: 'Nicht mehr folgen' };
+const WITHDRAW_LABEL = { pending: 'anfrageZurueckziehen', accepted: 'nichtMehrFolgen' };
 
 /**
  * Profil eines Mitglieds (Vorhaben Follow, PR 4b): Status der Beziehung und die
@@ -28,11 +32,16 @@ function MemberProfilePage({ userId, name, recipes = [], onBack, onSelectRecipe 
   const status = removing ? null : statusOf(userId);
   const lastBanner = banners[banners.length - 1];
   const ownRecipes = recipes.filter((r) => r.authorId === userId);
+  const t = useTexte(netzwerkTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const zeigeTitel = useRezeptTitel();
+  // Ohne Profil heißt eine Person „Ein Mitglied“ (ANONYMOUS_NAME); angezeigt in der geltenden Sprache
+  const anzeigeName = name === ANONYMOUS_NAME ? t('einMitglied') : name;
 
   // Zurückziehen/Beenden wirkt sofort in der Ansicht, gelöscht wird nach dem Undo-Fenster.
   const withdraw = () => scheduleDelete({
     key: `follow:${userId}`,
-    message: name,
+    message: anzeigeName,
     onConfirm: () => {
       Promise.resolve().then(() => stopFollowing(me, userId))
         .catch((err) => console.error('Follow beenden fehlgeschlagen:', err));
@@ -43,40 +52,40 @@ function MemberProfilePage({ userId, name, recipes = [], onBack, onSelectRecipe 
   return (
     <div className="member-profile">
       <div className="member-profile-header">
-        <button type="button" className="member-profile-back" onClick={onBack} aria-label="Zurück">&larr;</button>
-        <h2>{name}</h2>
+        <button type="button" className="member-profile-back" onClick={onBack} aria-label={tAllgemein('zurueck')}>&larr;</button>
+        <h2>{anzeigeName}</h2>
       </div>
 
       {enabled && !isSelf && (
-        <section className="member-profile-status" aria-label="Folgen">
+        <section className="member-profile-status" aria-label={t('folgen')}>
           {status ? (
             <>
-              <p>{STATUS_TEXT[status]}</p>
+              <p>{t(STATUS_TEXT[status])}</p>
               <button type="button" className="member-profile-btn" onClick={withdraw}>
-                {WITHDRAW_LABEL[status]}
+                {t(WITHDRAW_LABEL[status])}
               </button>
             </>
           ) : (
             <>
-              <p>Du folgst dieser Person nicht.</p>
+              <p>{t('folgstNicht')}</p>
               <button type="button" className="member-profile-btn member-profile-btn--primary"
-                onClick={() => request(userId, name)}>
-                Folgen
+                onClick={() => request(userId, anzeigeName)}>
+                {t('folgen')}
               </button>
             </>
           )}
         </section>
       )}
 
-      <h3 className="member-profile-subtitle">Rezepte</h3>
+      <h3 className="member-profile-subtitle">{t('rezepte')}</h3>
       {ownRecipes.length === 0 ? (
-        <p className="member-profile-empty">Keine Rezepte, die du sehen kannst.</p>
+        <p className="member-profile-empty">{t('keineRezepte')}</p>
       ) : (
         <ul className="member-profile-recipes">
           {ownRecipes.map((recipe) => (
             <li key={recipe.id}>
               <button type="button" className="member-profile-recipe" onClick={() => onSelectRecipe(recipe)}>
-                {recipe.title}
+                {zeigeTitel(recipe)}
               </button>
             </li>
           ))}

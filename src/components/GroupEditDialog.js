@@ -2,6 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import './GroupCreateDialog.css';
 import Button from './Button';
 import { LIST_KIND_OPTIONS } from '../utils/groupFirestore';
+import { listenArtText } from '../utils/listenArt';
+import { useTexte } from '../contexts/SpracheContext';
+import gruppenTexte from '../i18n/texte/gruppen';
+import allgemeinTexte from '../i18n/texte/allgemein';
+import useListenName from '../hooks/useListenName';
 
 /**
  * Dialog for editing an existing private group's properties (name, description, listKind, targetListId).
@@ -17,6 +22,10 @@ function GroupEditDialog({ group, onSave, onCancel, privateLists = [] }) {
   const [listKind, setListKind] = useState(group?.listKind || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // Texte der Listen (Mehrsprachigkeit PR 6s)
+  const t = useTexte(gruppenTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const listenName = useListenName();
 
   // Target list state (only used when listKind === 'interactive')
   const [targetListMode, setTargetListMode] = useState(() => {
@@ -50,24 +59,24 @@ function GroupEditDialog({ group, onSave, onCancel, privateLists = [] }) {
     e.preventDefault();
     setError('');
     if (!name.trim()) {
-      setError('Bitte gib einen Listennamen ein.');
+      setError(t('fehlerName'));
       return;
     }
     if (!listKind) {
-      setError('Bitte wähle eine Art der Liste aus.');
+      setError(t('fehlerArt'));
       return;
     }
     if (listKind === 'interactive') {
       if (!targetListMode) {
-        setError('Bitte wähle eine Ziel-Liste aus oder lege eine neue an.');
+        setError(t('fehlerZiel'));
         return;
       }
       if (targetListMode === 'select' && !targetListId) {
-        setError('Bitte wähle eine bestehende Liste als Ziel aus.');
+        setError(t('fehlerZielBestehend'));
         return;
       }
       if (targetListMode === 'create' && !newTargetListName.trim()) {
-        setError('Bitte gib einen Namen für die neue Ziel-Liste ein.');
+        setError(t('fehlerZielName'));
         return;
       }
     }
@@ -88,7 +97,7 @@ function GroupEditDialog({ group, onSave, onCancel, privateLists = [] }) {
       }
       await onSave(saveData);
     } catch (err) {
-      setError('Fehler beim Speichern. Bitte erneut versuchen.');
+      setError(t('fehlerSpeichern'));
       setSaving(false);
     }
   };
@@ -96,52 +105,52 @@ function GroupEditDialog({ group, onSave, onCancel, privateLists = [] }) {
   const isInteractive = listKind === 'interactive';
 
   return (
-    <div className="group-dialog-overlay" role="dialog" aria-modal="true" aria-label="Liste bearbeiten">
+    <div className="group-dialog-overlay" role="dialog" aria-modal="true" aria-label={t('listeBearbeiten')}>
       <div className="group-dialog">
         <div className="group-dialog-header">
-          <h2>Liste bearbeiten</h2>
-          <button className="group-dialog-close" onClick={onCancel} aria-label="Schließen">×</button>
+          <h2>{t('listeBearbeiten')}</h2>
+          <button className="group-dialog-close" onClick={onCancel} aria-label={tAllgemein('schliessen')}>×</button>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="group-dialog-field">
-            <label htmlFor="edit-group-name">Listenname *</label>
+            <label htmlFor="edit-group-name">{t('listenname')}</label>
             <input
               id="edit-group-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="z. B. Familie, Freunde, Team..."
+              placeholder={t('listennamePlatzhalter')}
               maxLength={80}
               autoFocus
             />
           </div>
 
           <div className="group-dialog-field">
-            <label htmlFor="edit-group-description">Beschreibung (optional)</label>
+            <label htmlFor="edit-group-description">{t('beschreibung')}</label>
             <textarea
               id="edit-group-description"
               ref={descriptionRef}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Notizen, Hinweise oder zusätzliche Infos zur Liste..."
+              placeholder={t('beschreibungPlatzhalter')}
               maxLength={300}
               rows={3}
             />
           </div>
 
           <div className="group-dialog-field">
-            <label htmlFor="edit-group-list-kind">Art *</label>
+            <label htmlFor="edit-group-list-kind">{t('art')}</label>
             <select
               id="edit-group-list-kind"
               value={listKind}
               onChange={(e) => setListKind(e.target.value)}
               required
             >
-              <option value="">– Bitte auswählen –</option>
+              <option value="">{t('bitteAuswaehlen')}</option>
               {LIST_KIND_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {listenArtText(opt.value, t)}
                 </option>
               ))}
             </select>
@@ -149,9 +158,9 @@ function GroupEditDialog({ group, onSave, onCancel, privateLists = [] }) {
 
           {isInteractive && (
             <div className="group-dialog-field">
-              <label>Ziel-Liste *</label>
+              <label>{t('zielListe')}</label>
               <p className="group-dialog-hint">
-                Interaktive Listen benötigen eine Ziel-Liste, in die Rezepte verschoben werden können.
+                {t('zielListeHinweis')}
               </p>
               <div className="group-target-list-options">
                 <label className="group-target-list-option">
@@ -163,7 +172,7 @@ function GroupEditDialog({ group, onSave, onCancel, privateLists = [] }) {
                     onChange={() => { setTargetListMode('select'); setTargetListId(''); setNewTargetListName(''); }}
                     disabled={privateLists.length === 0}
                   />
-                  <span>Bestehende Liste wählen</span>
+                  <span>{t('bestehendeWaehlen')}</span>
                 </label>
                 <label className="group-target-list-option">
                   <input
@@ -173,7 +182,7 @@ function GroupEditDialog({ group, onSave, onCancel, privateLists = [] }) {
                     checked={targetListMode === 'create'}
                     onChange={() => { setTargetListMode('create'); setTargetListId(''); }}
                   />
-                  <span>Neue Liste anlegen</span>
+                  <span>{t('neueAnlegen')}</span>
                 </label>
               </div>
 
@@ -182,12 +191,12 @@ function GroupEditDialog({ group, onSave, onCancel, privateLists = [] }) {
                   id="edit-target-list-select"
                   value={targetListId}
                   onChange={(e) => setTargetListId(e.target.value)}
-                  aria-label="Bestehende Liste auswählen"
+                  aria-label={t('bestehendeAuswaehlen')}
                 >
-                  <option value="">– Bitte auswählen –</option>
+                  <option value="">{t('bitteAuswaehlen')}</option>
                   {privateLists.map((list) => (
                     <option key={list.id} value={list.id}>
-                      {list.id === group?.id ? `${list.name} (diese Liste)` : list.name}
+                      {list.id === group?.id ? t('dieseListeName', { name: listenName(list) }) : listenName(list)}
                     </option>
                   ))}
                 </select>
@@ -199,9 +208,9 @@ function GroupEditDialog({ group, onSave, onCancel, privateLists = [] }) {
                   type="text"
                   value={newTargetListName}
                   onChange={(e) => setNewTargetListName(e.target.value)}
-                  placeholder="Name der neuen Liste..."
+                  placeholder={t('neueListePlatzhalter')}
                   maxLength={80}
-                  aria-label="Name der neuen Ziel-Liste"
+                  aria-label={t('neueZielListe')}
                 />
               )}
             </div>
@@ -211,10 +220,10 @@ function GroupEditDialog({ group, onSave, onCancel, privateLists = [] }) {
 
           <div className="group-dialog-actions">
             <Button variant="secondary" onClick={onCancel} disabled={saving}>
-              Abbrechen
+              {tAllgemein('abbrechen')}
             </Button>
             <Button variant="primary" type="submit" disabled={saving}>
-              {saving ? 'Speichern...' : 'Speichern'}
+              {saving ? t('speichernLaeuft') : tAllgemein('speichern')}
             </Button>
           </div>
         </form>
