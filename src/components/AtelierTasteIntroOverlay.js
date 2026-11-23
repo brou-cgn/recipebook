@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './AtelierTasteIntroOverlay.css';
 import { useTexte } from '../contexts/SpracheContext';
+import Button from './Button';
 import atelierTexte from '../i18n/texte/atelier';
 
 const PADDING = 6;
@@ -58,13 +59,9 @@ function AtelierTasteIntroOverlay({ onContinue }) {
         </div>
       )}
 
-      <button
-        className="atelier-taste-intro-overlay__btn"
-        onClick={onContinue}
-        type="button"
-      >
+      <Button variant="primary" fullWidth className="atelier-taste-intro-overlay__btn" onClick={onContinue}>
         {t('weiterNachDemKochen')}
-      </button>
+      </Button>
     </div>
   );
 }

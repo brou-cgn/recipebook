@@ -982,8 +982,8 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
               })}
             </div>
             <div className="portion-selector-footer">
-              <button
-                className="portion-selector-generate-btn"
+              <Button
+                variant="primary"
                 onClick={() => {
                   setShowPortionSelector(false);
                   missingSavedRef.current = false;
@@ -991,7 +991,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
                 }}
               >
                 {tRezept('einkaufslisteErstellen')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

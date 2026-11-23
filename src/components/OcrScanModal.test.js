@@ -68,7 +68,7 @@ describe('OcrScanModal', () => {
   test('close button calls onCancel', () => {
     render(<OcrScanModal onCancel={mockOnCancel} />);
 
-    const closeButton = screen.getByText('×');
+    const closeButton = screen.getByRole('button', { name: 'Schließen' });
     fireEvent.click(closeButton);
 
     expect(mockOnCancel).toHaveBeenCalledTimes(1);

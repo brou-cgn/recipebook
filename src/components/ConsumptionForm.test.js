@@ -277,7 +277,7 @@ describe('ConsumptionForm', () => {
     // Die vorbefuellte "Eingekauft"-Menge (20 Glaeser) wird als Portionenzahl uebernommen.
     expect(await screen.findByText('20')).toBeInTheDocument();
 
-    const generateBtn = await screen.findByText('Einkaufsliste erstellen', { selector: '.portion-selector-generate-btn' });
+    const generateBtn = await screen.findByText('Einkaufsliste erstellen', { selector: '.portion-selector-footer button' });
     fireEvent.click(generateBtn);
 
     expect(await screen.findByText('500 ml Aperol')).toBeInTheDocument();

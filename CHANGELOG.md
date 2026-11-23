@@ -66,6 +66,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Drucken im Dunkelmodus: Titel, Abschnittsüberschriften, Angaben wie Zeit und Portionen, Zutaten und Schritte kamen hellgrau aufs Papier, ebenso in der Druckvorschau. Das Papier bleibt jetzt in beiden Modi weiß mit dunkler Schrift.
 - Drucklayout (Einstellungen) im Dunkelmodus lesbar: Die Bedienflächen sind dunkel mit heller Schrift, statt hellgrauer Schrift auf hellem Grund; die Vorschau bleibt Papier.
 - Benutzerverwaltung: Die Spalte „Aktionen“ bleibt am rechten Rand stehen und ist ohne seitliches Scrollen erreichbar, auch bei 1280 px Breite und auf dem Handy.
+- CSV-Import im Dunkelmodus: Überschrift und Hinweis der Upload-Fläche standen hell auf hellem Grund; die Fläche ist jetzt dunkel mit heller Schrift.
 
 ### Sicherheit
 - Kurzbefehle melden sich nur noch mit dem persönlichen Schlüssel an. Der gemeinsame Schlüssel mit E-Mail-Adresse („X-Api-Key“ und „X-User-Email“) gilt nicht mehr: Wer ihn kannte, konnte im Namen jedes Mitglieds importieren. Ein Kurzbefehl, der ihn noch schickt, bekommt eine Meldung, wo der eigene Schlüssel erzeugt wird. Der Webimport-PIN ist damit überflüssig und entfällt samt der PIN-Abfrage vor dem Download des fertigen Kurzbefehls und dem Abschnitt in den persönlichen Daten; ein noch mitgeschicktes Feld „pin“ wird ignoriert.

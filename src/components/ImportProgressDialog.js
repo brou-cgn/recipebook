@@ -5,6 +5,7 @@ import './UndoSnackbar.css';
 import DeleteRowButton from './DeleteRowButton';
 import RestartIcon from './icons/RestartIcon';
 import CloseThinIcon from './icons/CloseThinIcon';
+import RowIconButton from './RowIconButton';
 import { useTexte } from '../contexts/SpracheContext';
 import rezeptimportTexte from '../i18n/texte/rezeptimport';
 import allgemeinTexte from '../i18n/texte/allgemein';
@@ -108,9 +109,9 @@ function ImportProgressDialog({ jobs, deleteBanners = [], onClose, onDismissJob,
               <span className="import-progress-dialog-count">{t('aktiv', { anzahl: jobs.length })}</span>
             )}
           </div>
-          <button className="close-button" onClick={onClose} aria-label={tAllgemein('schliessen')} title={tAllgemein('schliessen')}>
-            <CloseThinIcon size={13} />
-          </button>
+          <RowIconButton label={tAllgemein('schliessen')} onClick={onClose}>
+            <CloseThinIcon />
+          </RowIconButton>
         </div>
 
         <div className="import-progress-dialog-content">
