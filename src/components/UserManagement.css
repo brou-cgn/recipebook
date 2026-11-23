@@ -63,8 +63,30 @@
 
 .users-table {
   width: 100%;
-  border-collapse: collapse;
+  /* separate statt collapse: Die Unterkante der stehenbleibenden Spalte bleibt so an der Zelle */
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 14px;
+}
+
+/* Die Aktionen bleiben am rechten Rand sichtbar, die übrigen Spalten scrollen darunter durch
+   (Tech-Check P18): Bei 1280 px Breite war die Tabelle breiter als der Platz, „Aktionen“ lag
+   außerhalb. Die Zeile bekommt dafür eine deckende Fläche, die Zelle übernimmt sie, auch beim
+   Überfahren und für das eigene Konto. */
+.users-table th:last-child,
+.users-table td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  box-shadow: inset 1px 0 0 var(--color-border-subtle);
+}
+
+.users-table tbody tr {
+  background: var(--color-surface-card);
+}
+
+.users-table td:last-child {
+  background: inherit;
 }
 
 .users-table th,

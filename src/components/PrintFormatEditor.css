@@ -13,8 +13,8 @@
   align-items: center;
   gap: 1rem 2rem;
   padding: 0.6rem 0.75rem;
-  background: #fdf6ec;
-  border: 1px solid #d9c9b8;
+  background: var(--color-print-panel-strong);
+  border: 1px solid var(--color-print-border);
   border-radius: 6px;
 }
 
@@ -25,10 +25,10 @@
   flex-wrap: wrap;
 }
 
-.pfe-toolbar-label {
+.pfe-toolbar .pfe-toolbar-label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #5a3e2b;
+  color: var(--color-print-text);
   white-space: nowrap;
 }
 
@@ -42,10 +42,10 @@
 
 .pfe-select {
   padding: 0.25rem 0.5rem;
-  border: 1px solid #c8b8a2;
+  border: 1px solid var(--color-print-border-control);
   border-radius: 4px;
   font-size: 0.875rem;
-  background: #fff;
+  background: var(--color-surface);
   min-width: 160px;
 }
 
@@ -59,6 +59,10 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
+}
+
+.pfe-visibility-row .pfe-vis-chip {
+  color: var(--color-print-on-element);
 }
 
 .pfe-vis-chip {
@@ -164,7 +168,7 @@
   border-style: dashed;
 }
 
-.pfe-element-label {
+.pfe-element .pfe-element-label {
   font-size: 0.65rem;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.6);
@@ -250,8 +254,8 @@
 .pfe-props-panel {
   flex: 0 0 240px;
   min-width: 220px;
-  background: #fdf6ec;
-  border: 1px solid #d9c9b8;
+  background: var(--color-print-panel-strong);
+  border: 1px solid var(--color-print-border);
   border-radius: 6px;
   padding: 0.75rem;
   display: flex;
@@ -265,8 +269,8 @@
   gap: 0.5rem;
   font-size: 0.875rem;
   font-weight: 700;
-  color: #5a3e2b;
-  border-bottom: 1px solid #d9c9b8;
+  color: var(--color-print-text);
+  border-bottom: 1px solid var(--color-print-border);
   padding-bottom: 0.4rem;
   margin-bottom: 0.1rem;
 }
@@ -286,28 +290,28 @@
   flex-wrap: wrap;
 }
 
-.pfe-props-label {
+.pfe-props-panel .pfe-props-label {
   font-size: 0.8rem;
-  color: #5a3e2b;
+  color: var(--color-print-text);
   font-weight: 600;
   white-space: nowrap;
   min-width: 80px;
 }
 
-.pfe-props-label--sm {
+.pfe-props-panel .pfe-props-label--sm {
   min-width: 16px;
   font-size: 0.75rem;
 }
 
-.pfe-props-unit {
+span.pfe-props-unit {
   font-size: 0.8rem;
-  color: #888;
+  color: var(--color-text-soft);
 }
 
 .pfe-props-number {
   width: 56px;
   padding: 0.2rem 0.35rem;
-  border: 1px solid #c8b8a2;
+  border: 1px solid var(--color-print-border-control);
   border-radius: 4px;
   font-size: 0.85rem;
   text-align: right;
@@ -326,7 +330,7 @@
   width: 32px;
   height: 26px;
   padding: 1px 2px;
-  border: 1px solid #c8b8a2;
+  border: 1px solid var(--color-print-border-control);
   border-radius: 4px;
   cursor: pointer;
   background: none;
@@ -345,9 +349,10 @@
 .pfe-style-btn {
   width: 28px;
   height: 26px;
-  border: 1px solid #c8b8a2;
+  border: 1px solid var(--color-print-border-control);
   border-radius: 4px;
-  background: #fff;
+  background: var(--color-surface);
+  color: var(--color-text);
   cursor: pointer;
   font-size: 0.85rem;
   display: flex;
@@ -370,18 +375,18 @@
 }
 
 .pfe-style-btn--active {
-  background: #d9c9b8;
-  border-color: #8b5e3c;
+  background: var(--color-print-border);
+  border-color: var(--color-print-active-border);
 }
 
 .pfe-style-btn:hover:not(.pfe-style-btn--active) {
-  background: #f0e8dc;
+  background: var(--color-print-hover);
 }
 
 .pfe-props-section-label {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #5a3e2b;
+  color: var(--color-print-text);
   margin-top: 0.2rem;
 }
 
@@ -393,18 +398,18 @@
 .pfe-align-btn {
   flex: 1;
   padding: 0.22rem 0.2rem;
-  border: 1px solid #c8b8a2;
+  border: 1px solid var(--color-print-border-control);
   border-radius: 4px;
-  background: #fff;
+  background: var(--color-surface);
   cursor: pointer;
   font-size: 0.72rem;
   white-space: nowrap;
-  color: #5a3e2b;
+  color: var(--color-print-text);
   transition: background 0.1s;
 }
 
 .pfe-align-btn:hover {
-  background: #f0e8dc;
+  background: var(--color-print-hover);
 }
 
 /* „Schließen“ (components/Button.js, Neben-Knopf) unten rechts im Eigenschaften-Panel */
@@ -414,9 +419,9 @@
 }
 
 
-.pfe-hint {
+p.pfe-hint {
   font-size: 0.75rem;
-  color: #888;
+  color: var(--color-text-soft);
   margin: 0;
 }
 
@@ -446,14 +451,14 @@
   font-size: 0.8rem;
   cursor: pointer;
   padding: 0.1rem 0.3rem;
-  border: 1px solid #c8b8a2;
+  border: 1px solid var(--color-print-border-control);
   border-radius: 4px;
-  background: #fff;
+  background: var(--color-surface);
   user-select: none;
 }
 
 .pfe-border-side-label:hover {
-  background: #f0e8dc;
+  background: var(--color-print-hover);
 }
 
 .pfe-border-side-label input[type='checkbox'] {
@@ -470,7 +475,7 @@
     max-width: 100%;
   }
 
-  .pfe-element-label {
+  .pfe-element .pfe-element-label {
     font-size: 0.55rem;
   }
 

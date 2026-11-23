@@ -22,24 +22,24 @@
   align-items: center;
   gap: 0.35rem;
   padding: 0.4rem;
-  border: 2px solid #d9c9b8;
+  border: 2px solid var(--color-print-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--color-surface);
   cursor: pointer;
   font: inherit;
 }
 
 .tfe-template:hover {
-  border-color: #b9a58c;
+  border-color: var(--color-print-border-hover);
 }
 
 .tfe-template--active {
-  border-color: #1a73e8;
-  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+  border-color: var(--color-print-selected);
+  box-shadow: 0 0 0 2px var(--color-print-selected-glow);
 }
 
 .tfe-template:focus-visible {
-  outline: 2px solid #5a3e2b;
+  outline: 2px solid var(--color-print-text);
   outline-offset: 2px;
 }
 
@@ -53,10 +53,11 @@
   margin: 0;
 }
 
-.tfe-template-name {
+/* span: mindestens 0-1-1 gegen die pauschale Textfarbe aus darkMode.css (Tech-Check A7) */
+.tfe-template .tfe-template-name {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #5a3e2b;
+  color: var(--color-print-text);
 }
 
 /* ── Controls + preview ───────────────────────────────────────────────────── */
@@ -76,15 +77,15 @@
 }
 
 .tfe-section {
-  border: 1px solid #d9c9b8;
+  border: 1px solid var(--color-print-border);
   border-radius: 8px;
-  background: #fdfaf6;
+  background: var(--color-print-panel);
 }
 
 .tfe-section > summary {
   padding: 0.55rem 0.75rem;
   font-weight: 600;
-  color: #5a3e2b;
+  color: var(--color-print-text);
   cursor: pointer;
 }
 
@@ -107,15 +108,15 @@
   gap: 0.5rem;
 }
 
-.tfe-label {
+.tfe-panel .tfe-label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #5a3e2b;
+  color: var(--color-print-text);
 }
 
 .tfe-segmented {
   display: flex;
-  border: 1px solid #c8b8a2;
+  border: 1px solid var(--color-print-border-control);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -124,8 +125,9 @@
   flex: 1 1 auto;
   padding: 0.3rem 0.4rem;
   border: none;
-  border-right: 1px solid #c8b8a2;
-  background: #fff;
+  border-right: 1px solid var(--color-print-border-control);
+  background: var(--color-surface);
+  color: var(--color-text);
   font: inherit;
   font-size: 0.8rem;
   cursor: pointer;
@@ -137,12 +139,12 @@
 }
 
 .tfe-seg-btn--active {
-  background: #5a3e2b;
-  color: #fff;
+  background: var(--color-print-text);
+  color: var(--color-print-on-text);
 }
 
 .tfe-seg-btn:focus-visible {
-  outline: 2px solid #1a73e8;
+  outline: 2px solid var(--color-print-selected);
   outline-offset: -2px;
 }
 
@@ -175,17 +177,17 @@
   gap: 0.25rem;
   max-width: 100%;
   padding: 0.3rem 0.4rem;
-  background: #fff;
-  border: 1px solid #b9a58c;
+  background: var(--color-surface);
+  border: 1px solid var(--color-print-border-hover);
   border-radius: 8px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
 }
 
-.tfe-tb-title {
+.tfe-toolbar-float .tfe-tb-title {
   padding: 0 0.3rem;
   font-size: 0.75rem;
   font-weight: 700;
-  color: #5a3e2b;
+  color: var(--color-print-text);
 }
 
 .tfe-tb-btn {
@@ -195,13 +197,14 @@
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
+  color: var(--color-text);
   font: inherit;
   font-size: 0.85rem;
   cursor: pointer;
 }
 
 .tfe-tb-btn:hover:not(:disabled) {
-  background: #f0e8dc;
+  background: var(--color-print-hover);
 }
 
 .tfe-tb-btn:disabled {
@@ -210,12 +213,12 @@
 }
 
 .tfe-tb-btn--active {
-  background: #dbe8fb;
-  border-color: #1a73e8;
+  background: var(--color-print-selected-tint);
+  border-color: var(--color-print-selected);
 }
 
 .tfe-tb-btn:focus-visible {
-  outline: 2px solid #1a73e8;
+  outline: 2px solid var(--color-print-selected);
 }
 
 .tfe-tb-bold { font-weight: 700; }
@@ -232,9 +235,9 @@
   width: 32px;
   height: 32px;
   padding: 2px;
-  border: 1px solid #c8b8a2;
+  border: 1px solid var(--color-print-border-control);
   border-radius: 6px;
-  background: #fff;
+  background: var(--color-surface);
   cursor: pointer;
 }
 

@@ -13,12 +13,13 @@
   margin-top: 0;
 }
 
-.ppv-overflow-warning {
+/* p: stärker als die pauschale Textfarbe aus darkMode.css, sonst im Dunkelmodus hell auf Hellrot */
+.ppv-root .ppv-overflow-warning {
   margin: 0 0 0.5rem;
   padding: 0.4rem 0.6rem;
   border-radius: 6px;
-  background: #fdecea;
-  color: #a33a26;
+  background: var(--color-bad-tint);
+  color: var(--color-bad-text);
   font-size: 0.85rem;
 }
 
@@ -46,6 +47,24 @@
 .ppv-page--print {
   break-inside: avoid;
   page-break-after: avoid;
+}
+
+/* Papier bleibt Papier (Tech-Check P21): darkMode.css färbt h1–h6, p, span, label und li im
+   Dunkelmodus pauschal hell ([data-theme="dark"] li usw., 0-1-1). Das traf die Vorschau und den
+   Ausdruck, denn printRunner druckt im selben Dokument. Auf der Seite erben sie die Farbe wie im
+   Hellmodus: von der Seite oder von der Schriftfarbe des Elements. Eigene Farben stehen unten mit
+   .ppv-page davor, damit diese Regel sie nicht überschreibt. */
+.ppv-page h1,
+.ppv-page h2,
+.ppv-page h3,
+.ppv-page h4,
+.ppv-page h5,
+.ppv-page h6,
+.ppv-page p,
+.ppv-page span,
+.ppv-page label,
+.ppv-page li {
+  color: inherit;
 }
 
 .ppv-element {
@@ -95,7 +114,8 @@
   white-space: nowrap;
 }
 
-.ppv-el-metadata-item--difficulty {
+.ppv-page .ppv-el-metadata-item--difficulty,
+.ppf-sheet .ppv-el-metadata-item--difficulty {
   color: #8a7400;
 }
 
@@ -105,6 +125,11 @@
   border-bottom: 2px solid #333;
   font-size: 1.26em;
   font-weight: bold;
+}
+
+/* Abschnittsüberschriften sind schwarz, auch wenn das Element eine Schriftfarbe hat (wie bisher) */
+.ppv-page .ppv-el-section-heading,
+.ppf-sheet .ppv-el-section-heading {
   color: #000;
 }
 
@@ -135,7 +160,7 @@
   font-size: 0.9em;
 }
 
-.ppv-overflow-badge {
+.ppv-page .ppv-overflow-badge {
   position: absolute;
   top: 0;
   right: 0;
