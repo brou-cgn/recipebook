@@ -895,6 +895,30 @@ const IMAGE_FIELD_NAMES = [
   'timelineCookEventDefaultImage',
 ];
 
+// Felder in settings/app, die getSettings nicht in den Cache übernimmt: Altbestand, der beim
+// Laden in eigene Dokumente wandert (Bilder nach settings/images, buttonIcons und cuisineIcons in
+// die Collection buttonIcons, categoryImages in die Collection categoryImages) und große Daten.
+const APP_FIELDS_NOT_PASSED_THROUGH = new Set([
+  ...IMAGE_FIELD_NAMES,
+  'buttonIcons',
+  'cuisineIcons',
+  'categoryImages',
+]);
+
+/**
+ * Alle übrigen Felder aus settings/app (Tech-Check A12): Früher übernahm getSettings nur die
+ * aufgezählten Felder, und ein neues Feld ohne eigene Zeile fehlte nach jedem frischen Laden still
+ * (so geschehen mit listenUebersetzungen). Felder mit Standardwert oder Umrechnung stehen
+ * weiter unten einzeln und überschreiben diesen Teil.
+ * @param {Object} settings - Daten von settings/app
+ * @returns {Object}
+ */
+function appFieldsPassedThrough(settings) {
+  return Object.fromEntries(
+    Object.entries(settings || {}).filter(([key]) => !APP_FIELDS_NOT_PASSED_THROUGH.has(key))
+  );
+}
+
 /**
  * Migrate button icons from a plain object to the buttonIcons collection.
  * Each icon key becomes a separate document: buttonIcons/{key} = { value, updatedAt }.
@@ -1076,6 +1100,8 @@ export async function getSettings() {
 
       // Ensure all fields exist for backward compatibility
       settingsCache = {
+        // Felder ohne eigene Zeile unverändert (Tech-Check A12), die Zeilen danach gehen vor
+        ...appFieldsPassedThrough(settings),
         // Text configuration from settings/app
         cuisineTypes: resolvedCuisineTypes,
         cuisineGroups: settings.cuisineGroups || DEFAULT_CUISINE_GROUPS,
@@ -1087,9 +1113,8 @@ export async function getSettings() {
         drinkUnits: settings.drinkUnits || DEFAULT_DRINK_UNITS,
         conversionTable: settings.conversionTable || DEFAULT_CONVERSION_TABLE,
         customUnits: settings.customUnits || [],
-        // Übersetzungen der Auswahllisten (Mehrsprachigkeit PR 5): Ohne diese Zeile fehlt das Feld
-        // nach jedem frischen Laden, getListenUebersetzungen liefert null, und die Pflege unter
-        // „Listen & Kategorien“ überschriebe beim Speichern den gespeicherten Stand.
+        // Übersetzungen der Auswahllisten (Mehrsprachigkeit PR 5); fehlt das Feld, null. Bis zu
+        // Tech-Check A12 fehlte es ohne diese Zeile nach jedem frischen Laden.
         listenUebersetzungen: settings.listenUebersetzungen || null,
         customIngredientAdjectives: settings.customIngredientAdjectives || [],
         headerSlogan: settings.headerSlogan || DEFAULT_SLOGAN,

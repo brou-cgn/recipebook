@@ -234,8 +234,8 @@ service cloud.firestore {
           && request.resource.data.systemKey == 'fuerDichEntdeckt';
       }
       // Lesen: die öffentliche Systemgruppe (für alle mit Rolle, auch Gäste) und private
-      // Listen nur für Eigentümer und Mitglieder, dazu Admins (Tech-Check S16). In den
-      // Dokumenten stehen eingeladene E-Mail-Adressen, deshalb nicht mehr für jeden lesbar.
+      // Listen nur für Eigentümer und Mitglieder, dazu Admins (Tech-Check S16). Eingeladene
+      // E-Mail-Adressen liegen seit November 2026 in groupInvitations (siehe unten).
       // Regeln filtern keine Abfragen: der Client fragt gezielt (type == public,
       // ownerId == uid, memberIds array-contains uid), siehe groupFirestore.js.
       allow read: if (isAnyUser() && resource.data.type == 'public')
@@ -244,8 +244,27 @@ service cloud.firestore {
                         || ('memberIds' in resource.data && request.auth.uid in resource.data.memberIds)
                       ))
                   || isAdmin();
-      allow create, update: if isEditOrAdmin() || isOwnFuerDichEntdecktList();
+      // Eingeladene E-Mail-Adressen stehen nicht mehr im Listendokument, sondern in
+      // groupInvitations (nur Cloud Functions, Tech-Check S16). Das alte Feld invitedEmails darf
+      // ein Client nicht mehr befüllen, nur unverändert mitschicken oder leer schreiben, wie es
+      // ältere App-Versionen beim Hinzufügen von Mitgliedern tun. Deren Einladung per E-Mail
+      // scheitert, bis sie neu laden.
+      function keepsInvitedEmailsOut() {
+        return !('invitedEmails' in request.resource.data)
+          || request.resource.data.invitedEmails.size() == 0
+          || (resource != null && 'invitedEmails' in resource.data
+              && request.resource.data.invitedEmails == resource.data.invitedEmails);
+      }
+      allow create, update: if (isEditOrAdmin() || isOwnFuerDichEntdecktList()) && keepsInvitedEmailsOut();
       allow delete: if isEditOrAdmin();
+    }
+
+    // Einladungen in private Listen per E-Mail (Tech-Check S16): Adressen noch nicht registrierter
+    // Eingeladener. Nur die Cloud Functions sendGroupInvitationEmail,
+    // processGroupInvitationsOnUserRegistration und nightlyGroupInvitationsMigration lesen und
+    // schreiben, kein Client (auch keine Admins).
+    match /groupInvitations/{invitationId} {
+      allow read, write: if false;
     }
 
     // Shopping lists collection
