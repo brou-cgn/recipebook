@@ -132,6 +132,12 @@ jobs:
       # "Failed to list functions"). Ein
       # inhaltlicher Fehler bricht sofort ab, statt dreimal dasselbe zu
       # versuchen.
+      # Erfolg heisst Exit-Code 0 UND "Deploy complete!" in der Ausgabe, ohne
+      # gescheiterte Function (Tech-Check B7): Im Deploy-Lauf 2130 endete die CLI
+      # nach einem Kontingent-Fehler mit 0, obwohl eine Function auf altem Stand
+      # blieb und Hosting nicht freigegeben war. Ein solcher Lauf wird wiederholt
+      # (unveraenderte Functions ueberspringt die CLI) und nach dem letzten
+      # Versuch rot.
       # storage.rules gehört dazu (Tech-Check S25): bis Oktober 2026 wurde sie nur
       # von Hand deployt, eine Regeländerung ging dann getrennt vom Client live.
       - name: Deploy (Hosting, Functions, Firestore & Storage Rules, Indexes)
@@ -147,7 +153,17 @@ jobs:
             echo "$deploy_output"
 
             if [ "$deploy_exit_code" -eq 0 ]; then
-              exit 0
+              if grep -Fq "Deploy complete!" <<< "$deploy_output" \
+                && ! grep -Eiq "failed to (create|update|delete) function" <<< "$deploy_output"; then
+                exit 0
+              fi
+              if [ "$attempt" -lt "$max_attempts" ]; then
+                echo "Firebase deploy exited 0 but did not complete (no \"Deploy complete!\" or a function failed). Retrying in 30s..."
+                sleep 30
+                continue
+              fi
+              echo "::error::Firebase deploy did not complete after $max_attempts attempts (no \"Deploy complete!\" or a function failed)."
+              exit 1
             fi
 
             # Erneuter Deploy desselben Builds: Hosting lehnt ab, weil die

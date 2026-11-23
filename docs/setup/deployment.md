@@ -58,6 +58,17 @@ Concurrency-Gruppe `firebase-deploy` und bricht laufende Deploys **nicht** ab.
 Ein mitten im `firebase deploy` abgebrochener Lauf hinterlässt Hosting,
 Functions und Rules in unterschiedlichen Ständen.
 
+### Wann ein Deploy als erfolgreich gilt
+
+Exit-Code 0 der Firebase CLI reicht nicht. Der Schritt verlangt zusätzlich
+`Deploy complete!` in der Ausgabe und keine Zeile `failed to … function`
+(Tech-Check B7). Im Deploy-Lauf 2130 (23.11.2026) endete die CLI nach einem
+Kontingent-Fehler (HTTP 429) mit 0, obwohl eine Function auf dem alten Stand
+blieb und die neue Hosting-Version nicht freigegeben war. Ein solcher Lauf wird
+nach 30 Sekunden wiederholt; unveränderte Functions überspringt die CLI dabei.
+Nach drei Versuchen wird der Workflow rot. Die übrigen Wiederholungen fangen nur
+bekannte, vorübergehende Fehler der Firebase-APIs ab.
+
 ### Benötigte Secrets
 
 Settings → Secrets and variables → Actions:
