@@ -71,6 +71,8 @@ const EXPECTED_EXPORTS = [
   'sendGroupInvitationEmail',
   'setUserPassword',
   'setWebImportPin',
+  'createShortcutToken',
+  'revokeShortcutToken',
   'shareRecipe',
   'stripCallLogEmails',
   'submitConsumption',

@@ -6,6 +6,7 @@ const {getFirestore} = require('firebase-admin/firestore');
 const {getAuth} = require('firebase-admin/auth');
 const crypto = require('crypto');
 const {requireShortcutPin} = require('../webImportPin');
+const {verifyShortcutToken, hasShortcutToken} = require('../shortcutToken');
 const {shortcutApiKey} = require('./secrets');
 const {checkRateLimit} = require('./rateLimit');
 
@@ -33,10 +34,14 @@ async function resolveShortcutUserId(email) {
 }
 
 /**
- * Shared authentication for all Shortcut endpoints: validates the X-Api-Key
- * header against SHORTCUT_API_KEY (timing-safe), resolves X-User-Email to a
- * uid and checks the user's role. Writes the error response itself and
- * returns null on failure; the caller just has to `return`.
+ * Shared authentication for all Shortcut endpoints. Two ways in:
+ * - X-Shortcut-Token: the member's personal key (shortcutToken.js, Tech-Check S7); identifies the
+ *   account by itself, no e-mail needed.
+ * - Legacy: X-Api-Key validated against the shared SHORTCUT_API_KEY (timing-safe) plus X-User-Email
+ *   resolved to a uid. Refused for accounts that have a personal key, so whoever knows the shared key
+ *   can no longer act in their name.
+ * Then checks the user's role. Writes the error response itself and returns null on failure; the
+ * caller just has to `return`.
  * @param {object} req - Express request
  * @param {object} res - Express response
  * @param {string} fnName - endpoint name, used in log messages
@@ -45,45 +50,74 @@ async function resolveShortcutUserId(email) {
  * @return {Promise<{userId: string, userData: object, db: object}|null>}
  */
 async function authenticateShortcutRequest(req, res, fnName, {allowShortcutUser = true} = {}) {
-  const apiKeyHeader = req.headers['x-api-key'];
-  const userEmail = req.headers['x-user-email'];
-  if (!apiKeyHeader || !userEmail) {
-    res.status(401).json({
-      success: false,
-      error: 'Missing authentication headers',
-      requiredHeaders: ['X-Api-Key', 'X-User-Email'],
-    });
-    return null;
-  }
-
-  const validApiKey = shortcutApiKey.value();
-  if (!validApiKey) {
-    console.error(`${fnName}: SHORTCUT_API_KEY secret is not set`);
-    res.status(500).json({
-      success: false,
-      error: 'Server misconfiguration: SHORTCUT_API_KEY secret is not set',
-    });
-    return null;
-  }
-
-  let isValidKey;
-  try {
-    isValidKey = crypto.timingSafeEqual(Buffer.from(apiKeyHeader), Buffer.from(validApiKey));
-  } catch (_) {
-    isValidKey = false;
-  }
-  if (!isValidKey) {
-    console.warn(`${fnName}: invalid API key attempt`);
-    res.status(401).json({success: false, error: 'Invalid API key'});
-    return null;
-  }
-
-  const userId = await resolveShortcutUserId(userEmail);
   const db = getFirestore();
+  const tokenHeader = req.headers['x-shortcut-token'];
+  let userId;
+
+  if (tokenHeader) {
+    try {
+      userId = await verifyShortcutToken(db, tokenHeader);
+    } catch (err) {
+      console.error(`${fnName}: error verifying shortcut token:`, err);
+      res.status(500).json({success: false, error: 'Failed to validate user'});
+      return null;
+    }
+    if (!userId) {
+      console.warn(`${fnName}: invalid shortcut token attempt`);
+      res.status(401).json({success: false, error: 'Invalid shortcut token'});
+      return null;
+    }
+  } else {
+    const apiKeyHeader = req.headers['x-api-key'];
+    const userEmail = req.headers['x-user-email'];
+    if (!apiKeyHeader || !userEmail) {
+      res.status(401).json({
+        success: false,
+        error: 'Missing authentication headers',
+        requiredHeaders: ['X-Shortcut-Token'],
+        legacyHeaders: ['X-Api-Key', 'X-User-Email'],
+      });
+      return null;
+    }
+
+    const validApiKey = shortcutApiKey.value();
+    if (!validApiKey) {
+      console.error(`${fnName}: SHORTCUT_API_KEY secret is not set`);
+      res.status(500).json({
+        success: false,
+        error: 'Server misconfiguration: SHORTCUT_API_KEY secret is not set',
+      });
+      return null;
+    }
+
+    let isValidKey;
+    try {
+      isValidKey = crypto.timingSafeEqual(Buffer.from(apiKeyHeader), Buffer.from(validApiKey));
+    } catch (_) {
+      isValidKey = false;
+    }
+    if (!isValidKey) {
+      console.warn(`${fnName}: invalid API key attempt`);
+      res.status(401).json({success: false, error: 'Invalid API key'});
+      return null;
+    }
+
+    userId = await resolveShortcutUserId(userEmail);
+  }
+
   try {
     const userDoc = userId ? await db.collection('users').doc(userId).get() : null;
     if (!userId || !userDoc.exists) {
       res.status(403).json({success: false, error: 'Access denied'});
+      return null;
+    }
+    // Der gemeinsame Schlüssel gilt nicht mehr für Konten mit eigenem Schlüssel (Tech-Check S7)
+    if (!tokenHeader && await hasShortcutToken(db, userId)) {
+      res.status(403).json({
+        success: false,
+        error: 'Für dieses Konto gilt ein persönlicher Schlüssel: Im Kurzbefehl den Header ' +
+          'X-Shortcut-Token statt X-Api-Key und X-User-Email senden.',
+      });
       return null;
     }
     const userData = userDoc.data();

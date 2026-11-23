@@ -108,10 +108,10 @@ unabhängig vom Importweg gleich aussieht.
 
    **Bevorzugt — Live-Listen abfragen:** Hat Claude in der aktuellen
    Umgebung HTTP-Zugriff (z. B. `curl`/`WebFetch` in Claude Code) und
-   liegen API-Key + registrierte E-Mail des Nutzers vor (z. B. weil er sie
-   im Chat genannt hat oder ein Kurzbefehl sie mitschickt), rufe zuerst
+   liegt der persönliche Kurzbefehl-Schlüssel des Nutzers vor (oder, für
+   Konten ohne eigenen Schlüssel, API-Key + registrierte E-Mail), rufe zuerst
    `GET https://us-central1-<PROJECT-ID>.cloudfunctions.net/getRecipeOptionsShortcut`
-   auf (Headers `X-Api-Key`, `X-User-Email`; falls ein Webimport-PIN bekannt
+   auf (Header `X-Shortcut-Token`, sonst `X-Api-Key` und `X-User-Email`; falls ein Webimport-PIN bekannt
    ist, zusätzlich als Query-Parameter `?pin=<PIN>` anhängen — siehe
    `docs/setup/apple-shortcut.md`). Die Antwort liefert `cuisineTypes` und
    `mealCategories` als aktuell in der App konfigurierte Arrays — das ist
@@ -178,10 +178,14 @@ mit seinen eigenen Werten füllen muss:
 ```bash
 curl -X POST "https://us-central1-<PROJECT-ID>.cloudfunctions.net/addRecipeViaAPI" \
   -H "Content-Type: application/json" \
-  -H "X-Api-Key: <API-KEY>" \
-  -H "X-User-Email: <EMAIL>" \
+  -H "X-Shortcut-Token: <PERSÖNLICHER-SCHLÜSSEL>" \
   -d '<JSON hier einsetzen>'
 ```
+
+Den persönlichen Schlüssel erzeugt der Nutzer in der App unter Chefkoch ›
+Kurzbefehl-Schlüssel. Hat sein Konto noch keinen, gilt der alte Weg: statt
+`X-Shortcut-Token` die Header `X-Api-Key: <API-KEY>` und `X-User-Email: <EMAIL>`.
+Hat das Konto einen persönlichen Schlüssel, lehnt der Server den alten Weg ab.
 
 Danach kurz (2–3 Zeilen, kein eigener Abschnitt nötig) die geschätzten
 Felder benennen, z. B.: "Geschätzt habe ich `schwierigkeit` (2) und

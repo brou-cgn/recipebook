@@ -248,6 +248,8 @@ test('users: anonyme Gäste legen kein Profil an, Mitglieder nur mit Rolle read'
 test('Sammlungen nur für Cloud Functions bleiben für Clients gesperrt', async () => {
   await assertFails(as.user(env, 'admin').doc('jobRequests/j1').get());
   await assertFails(as.user(env, 'admin').doc('users/admin/security/webImportPin').get());
+  await assertFails(as.user(env, 'admin').doc('users/admin/security/shortcutToken').get());
+  await assertFails(as.user(env, 'editor').doc('users/editor/security/shortcutToken').set({ hash: 'x' }));
   await assertFails(as.user(env, 'admin').doc('invitations/jemand@example.test').get());
 });
 

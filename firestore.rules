@@ -315,6 +315,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Persönlicher Kurzbefehl-Schlüssel (Fingerabdruck, zuletzt benutzt; Tech-Check S7). Nur über die
+    // Cloud Functions createShortcutToken/revokeShortcutToken und die Kurzbefehl-Endpunkte (Admin SDK),
+    // kein Client-Zugriff, auch nicht durch den Owner.
+    match /users/{userId}/security/shortcutToken {
+      allow read, write: if false;
+    }
+
     // User favorites subcollection
     match /users/{userId}/favorites/{favoriteId} {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;

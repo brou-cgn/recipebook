@@ -74,6 +74,7 @@
 .events-manage-links,
 .events-page-header-actions,
 .personal-data-actions,
+.personal-data-token-zeile,
 .startseite-inspiration-setup,
 .startseite-rezeptsammlungen-wrapper {
   --color-button-secondary-bg: var(--color-button-secondary-page-bg);

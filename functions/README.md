@@ -41,10 +41,23 @@ Firebase Auth tokens and CORS automatically.
 
 ---
 
+### Shortcut authentication (all Shortcut endpoints)
+
+`shared/shortcutAuth.js` (`authenticateShortcutRequest`) accepts two ways in:
+
+- **Personal key (Tech-Check S7):** header `X-Shortcut-Token: rbk.<uid>.<secret>`. Members create or
+  revoke it in the app (Chefkoch › Kurzbefehl-Schlüssel) via the callables `createShortcutToken` /
+  `revokeShortcutToken` (`shortcutToken.js`). Only the SHA-256 hash of the secret is stored, in
+  `users/{uid}/security/shortcutToken` (no client access, see `firestore.rules`).
+- **Legacy:** `X-Api-Key` (shared `SHORTCUT_API_KEY`) plus `X-User-Email`. Refused for accounts that
+  have a personal key, so the shared key can no longer act in their name.
+
+Role checks and the optional Webimport-PIN apply to both.
+
 ### importRecipeShortcut
 
 HTTP endpoint for **Apple Shortcut** deep-link imports.
-Authenticates via `SHORTCUT_API_KEY` (same mechanism as `addRecipeViaAPI`).
+Authenticates via the personal key or `SHORTCUT_API_KEY` (same mechanism as `addRecipeViaAPI`).
 
 **Features:**
 - ✅ Authentication: API Key (`X-Api-Key` header) + User Email (`X-User-Email` header, resolved server-side to a Firebase uid via `getAuth().getUserByEmail`)

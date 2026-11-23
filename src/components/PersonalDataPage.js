@@ -8,6 +8,7 @@ import { previewAlarmSound } from '../utils/alarmAudioUtils';
 import { requestNotificationPermission, getMessagingServiceWorkerVersion } from '../utils/pushNotifications';
 import { readPushLog, clearPushLog } from '../utils/pushTapHandoff';
 import { setWebImportPin, clearWebImportPin } from '../utils/webImportPin';
+import { createShortcutToken, revokeShortcutToken } from '../utils/shortcutToken';
 import DeleteRowButton from './DeleteRowButton';
 import UndoSnackbar from './UndoSnackbar';
 import useUndoableDelete from '../hooks/useUndoableDelete';
@@ -18,6 +19,7 @@ import allgemeinTexte from '../i18n/texte/allgemein';
 import bereicheTexte from '../i18n/texte/bereiche';
 import persoenlicheDatenTexte from '../i18n/texte/persoenlicheDaten';
 import webimportPinTexte from '../i18n/texte/webimportPin';
+import kurzbefehlSchluesselTexte from '../i18n/texte/kurzbefehlSchluessel';
 
 const PIN_PATTERN = /^\d{4,8}$/;
 
@@ -45,6 +47,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const tA = useTexte(allgemeinTexte);
   const tB = useTexte(bereicheTexte);
   const tPin = useTexte(webimportPinTexte);
+  const tKey = useTexte(kurzbefehlSchluesselTexte);
   const { sprache } = useSprache();
   const idBasis = useId();
   const NO_LIST_OPTION = { id: '', name: t('keineVorauswahl') };
@@ -101,6 +104,17 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const [pinMessage, setPinMessage] = useState(null);
   const { banners: pinBanners, scheduleDelete: schedulePinDelete, undoDelete: undoPinDelete } = useUndoableDelete();
   const pinActive = webImportPinEnabled && !pinRemovedLocally;
+
+  // Persönlicher Kurzbefehl-Schlüssel (Tech-Check S7): wird nur beim Erzeugen einmal angezeigt
+  const [tokenEnabled, setTokenEnabled] = useState(Boolean(currentUser?.shortcutTokenEnabled));
+  const [tokenCreatedAt, setTokenCreatedAt] = useState(currentUser?.shortcutTokenCreatedAt || null);
+  const [tokenRevokedLocally, setTokenRevokedLocally] = useState(false);
+  const [newToken, setNewToken] = useState('');
+  const [tokenCopied, setTokenCopied] = useState(false);
+  const [creatingToken, setCreatingToken] = useState(false);
+  const [tokenFehler, setTokenFehler] = useState(null);
+  const { banners: tokenBanners, scheduleDelete: scheduleTokenRevoke, undoDelete: undoTokenRevoke } = useUndoableDelete();
+  const tokenActive = tokenEnabled && !tokenRevokedLocally;
 
   useEffect(() => {
     if (typeof Notification === 'undefined') {
@@ -353,6 +367,61 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
         }
       },
       onUndo: () => setPinRemovedLocally(false),
+    });
+  };
+
+  const handleCreateToken = async () => {
+    setTokenFehler(null);
+    setTokenCopied(false);
+    setCreatingToken(true);
+    try {
+      const token = await createShortcutToken();
+      const jetzt = new Date();
+      setNewToken(token);
+      setTokenEnabled(true);
+      setTokenRevokedLocally(false);
+      setTokenCreatedAt(jetzt);
+      if (onProfileUpdated) {
+        onProfileUpdated({ ...currentUser, shortcutTokenEnabled: true, shortcutTokenCreatedAt: jetzt }, SEITE_BLEIBT_OFFEN);
+      }
+    } catch (err) {
+      setTokenFehler(tKey('fehlerErzeugen'));
+    } finally {
+      setCreatingToken(false);
+    }
+  };
+
+  const handleCopyToken = async () => {
+    try {
+      await navigator.clipboard.writeText(newToken);
+      setTokenCopied(true);
+    } catch (err) {
+      // Ohne Zwischenablage bleibt der Schlüssel markierbar (user-select: all)
+      setTokenCopied(false);
+    }
+  };
+
+  // Widerrufen wie das Entfernen des PINs: sofort aus der Ansicht, wirksam nach dem Rückgängig-Fenster
+  const handleRevokeToken = () => {
+    setTokenRevokedLocally(true);
+    setNewToken('');
+    scheduleTokenRevoke({
+      key: 'shortcutToken',
+      message: tKey('name'),
+      onConfirm: async () => {
+        try {
+          await revokeShortcutToken();
+          setTokenEnabled(false);
+          setTokenCreatedAt(null);
+          if (onProfileUpdated) {
+            onProfileUpdated({ ...currentUser, shortcutTokenEnabled: false, shortcutTokenCreatedAt: null }, SEITE_BLEIBT_OFFEN);
+          }
+        } catch (err) {
+          setTokenRevokedLocally(false);
+          setTokenFehler(tKey('fehlerWiderrufen'));
+        }
+      },
+      onUndo: () => setTokenRevokedLocally(false),
     });
   };
 
@@ -785,9 +854,47 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           </div>
         </form>
       </section>
+
+      <section className="personal-data-abschnitt personal-data-kurzbefehl-section">
+        <h3 className="personal-data-section-title">{tKey('titel')}</h3>
+        <p className="personal-data-password-hint">{tKey('hinweis')}</p>
+        {tokenActive ? (
+          <div className="personal-data-gruppe">
+            <div className="settings-row settings-row--static delete-row-hover-target">
+              <span className="settings-row-label">
+                {tokenCreatedAt ? tKey('aktivSeit', { datum: formatiereDatum(tokenCreatedAt, sprache) }) : tKey('aktiv')}
+              </span>
+              <span className="settings-row-right">
+                <DeleteRowButton itemName={tKey('name')} onClick={handleRevokeToken} />
+              </span>
+            </div>
+          </div>
+        ) : (
+          <p className="personal-data-password-hint">{tKey('keiner')}</p>
+        )}
+        {newToken && tokenActive && (
+          <div className="personal-data-token">
+            <p className="personal-data-password-hint">{tKey('einmalig')}</p>
+            <div className="personal-data-token-zeile">
+              <code className="personal-data-token-wert">{newToken}</code>
+              <Button onClick={handleCopyToken}>{tokenCopied ? tKey('kopiert') : tKey('kopieren')}</Button>
+            </div>
+          </div>
+        )}
+        {tokenFehler && <div className="personal-data-message error">{tokenFehler}</div>}
+        {tokenActive && <p className="personal-data-password-hint">{tKey('neuHinweis')}</p>}
+        <div className="personal-data-actions">
+          <Button onClick={handleCreateToken} loading={creatingToken}>
+            {creatingToken ? tKey('wirdErzeugt') : tokenActive ? tKey('neuErzeugen') : tKey('erzeugen')}
+          </Button>
+        </div>
+      </section>
       </div>
       {pinBanners.length > 0 && (
         <UndoSnackbar itemName={tPin('name')} onUndo={() => undoPinDelete(pinBanners[0].id)} />
+      )}
+      {tokenBanners.length > 0 && (
+        <UndoSnackbar itemName={tKey('name')} onUndo={() => undoTokenRevoke(tokenBanners[0].id)} />
       )}
     </div>
   );

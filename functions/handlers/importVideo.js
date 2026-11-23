@@ -57,7 +57,7 @@ exports.getVideoUploadUrl = onRequest(
         res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
         res.set(
             'Access-Control-Allow-Headers',
-            'Content-Type, X-Api-Key, X-User-Email',
+            'Content-Type, X-Shortcut-Token, X-Api-Key, X-User-Email',
         );
         if (req.method === 'OPTIONS') {
           res.status(204).send('');

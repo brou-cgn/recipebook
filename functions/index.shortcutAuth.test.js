@@ -1,15 +1,21 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const {isFirebaseAdminRequest, firebaseAdminModule} = require('./testSupport');
 
 const API_KEY = 'test-secret';
 const PIN_HASH_DOC = {salt: 'abc', hash: 'x', failedAttempts: 0};
+// Persönlicher Kurzbefehl-Schlüssel (Tech-Check S7): rbk.<uid>.<43 Zeichen base64url>
+const TOKEN_SECRET = 'A'.repeat(42) + 'Q';
+const TOKEN = `rbk.u1.${TOKEN_SECRET}`;
+const TOKEN_DOC = {hash: crypto.createHash('sha256').update(TOKEN_SECRET).digest('hex')};
 
 // Lädt index.js mit gemocktem Firebase. `userData` ist das Nutzerdokument,
-// `pinDoc` das Sicherheitsdokument (null = Nutzer hat keinen PIN gesetzt),
+// `pinDoc` das Sicherheitsdokument des PINs (null = Nutzer hat keinen PIN gesetzt),
+// `tokenDoc` das des persönlichen Schlüssels (null = keiner erzeugt),
 // `scanCount` der heutige Stand des KI-Tageszählers (null = noch kein Scan heute),
 // `limitCheckFails` lässt die Transaktion des Tageszählers scheitern.
-function loadFunctions({userData, pinDoc = null, scanCount = null, limitCheckFails = false}) {
+function loadFunctions({userData, pinDoc = null, tokenDoc = null, scanCount = null, limitCheckFails = false}) {
   require('./testSupport').purgeFunctionsCache();
   const Module = require('module');
   const originalLoad = Module._load;
@@ -33,8 +39,11 @@ function loadFunctions({userData, pinDoc = null, scanCount = null, limitCheckFai
         get: async () => ({exists: name === 'users', data: () => userData}),
         set: async (data) => saved.push({name, id, data}),
         collection: () => ({
-          doc: () => ({
-            get: async () => ({exists: !!pinDoc, data: () => pinDoc}),
+          doc: (docId) => ({
+            get: async () => {
+              const securityDoc = docId === 'shortcutToken' ? tokenDoc : pinDoc;
+              return {exists: !!securityDoc, data: () => securityDoc};
+            },
             set: async () => {},
             update: async () => {},
           }),
@@ -164,6 +173,47 @@ test('Shortcut-Auth: falscher API-Key -> 401', async () => {
   req.headers['x-api-key'] = 'falsch';
   await mod.createRecipeImportFromText(req, res);
   assert.equal(res.statusCode, 401);
+});
+
+test('Shortcut-Auth: persönlicher Schlüssel ersetzt API-Key und E-Mail', async () => {
+  const {mod, saved} = loadFunctions({userData: {role: 'edit'}, tokenDoc: TOKEN_DOC});
+  const res = makeRes();
+  await mod.createRecipeImportFromText(makeReq({headers: {'x-shortcut-token': TOKEN}}), res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(saved.length, 1);
+});
+
+test('Shortcut-Auth: falscher, fremder oder kaputter persönlicher Schlüssel -> 401', async () => {
+  const falsch = `rbk.u1.${'B'.repeat(42)}Q`;
+  for (const [token, tokenDoc] of [[falsch, TOKEN_DOC], [TOKEN, null], ['rbk.u1.zu-kurz', TOKEN_DOC], ['kein-schluessel', TOKEN_DOC]]) {
+    const {mod, saved} = loadFunctions({userData: {role: 'edit'}, tokenDoc});
+    const res = makeRes();
+    await mod.createRecipeImportFromText(makeReq({headers: {'x-shortcut-token': token}}), res);
+    assert.equal(res.statusCode, 401, `Schlüssel ${token}`);
+    assert.equal(saved.length, 0);
+  }
+});
+
+test('Shortcut-Auth: Konto mit persönlichem Schlüssel lehnt den gemeinsamen Schlüssel ab', async () => {
+  const {mod, saved} = loadFunctions({userData: {role: 'edit'}, tokenDoc: TOKEN_DOC});
+  const res = makeRes();
+  await mod.createRecipeImportFromText(makeReq(), res);
+  assert.equal(res.statusCode, 403);
+  assert.match(res.body.error, /X-Shortcut-Token/);
+  assert.equal(saved.length, 0);
+});
+
+test('Shortcut-Auth: persönlicher Schlüssel prüft weiter Rolle und PIN', async () => {
+  const leser = loadFunctions({userData: {role: 'read'}, tokenDoc: TOKEN_DOC});
+  const res1 = makeRes();
+  await leser.mod.addRecipeViaAPI(makeReq({headers: {'x-shortcut-token': TOKEN}, body: {}}), res1);
+  assert.equal(res1.statusCode, 403, 'Rolle read darf keine Rezepte anlegen');
+
+  const mitPin = loadFunctions({userData: {role: 'edit'}, tokenDoc: TOKEN_DOC, pinDoc: PIN_HASH_DOC});
+  const res2 = makeRes();
+  await mitPin.mod.createRecipeImportFromText(makeReq({headers: {'x-shortcut-token': TOKEN}}), res2);
+  assert.equal(res2.statusCode, 400, 'gesetzter PIN gilt auch mit persönlichem Schlüssel');
+  assert.equal(mitPin.saved.length, 0);
 });
 
 test('Shortcut-Auth: Rolle read -> 403', async () => {

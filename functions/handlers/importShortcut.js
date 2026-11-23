@@ -56,7 +56,7 @@ exports.importRecipeShortcut = onRequest(
         res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
         res.set(
             'Access-Control-Allow-Headers',
-            'Content-Type, X-Api-Key, X-User-Email',
+            'Content-Type, X-Shortcut-Token, X-Api-Key, X-User-Email',
         );
         if (req.method === 'OPTIONS') {
           res.status(204).send('');
@@ -275,7 +275,7 @@ exports.scanRecipePhotoShortcut = onRequest(
         res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
         res.set(
             'Access-Control-Allow-Headers',
-            'Content-Type, X-Api-Key, X-User-Email',
+            'Content-Type, X-Shortcut-Token, X-Api-Key, X-User-Email',
         );
         if (req.method === 'OPTIONS') {
           res.status(204).send('');
@@ -501,7 +501,7 @@ exports.scrapeInstagramReelShortcut = onRequest(
         res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
         res.set(
             'Access-Control-Allow-Headers',
-            'Content-Type, X-Api-Key, X-User-Email',
+            'Content-Type, X-Shortcut-Token, X-Api-Key, X-User-Email',
         );
         if (req.method === 'OPTIONS') {
           res.status(204).send('');
@@ -779,7 +779,7 @@ exports.addRecipeViaAPI = onRequest(
       if (origin && ALLOWED_ORIGINS.includes(origin)) {
         res.set('Access-Control-Allow-Origin', origin);
         res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key, X-User-Email');
+        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Shortcut-Token, X-Api-Key, X-User-Email');
         if (req.method === 'OPTIONS') {
           res.status(204).send('');
           return;
@@ -933,7 +933,7 @@ exports.getRecipeOptionsShortcut = onRequest(
       if (origin && ALLOWED_ORIGINS.includes(origin)) {
         res.set('Access-Control-Allow-Origin', origin);
         res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key, X-User-Email');
+        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Shortcut-Token, X-Api-Key, X-User-Email');
         if (req.method === 'OPTIONS') {
           res.status(204).send('');
           return;
@@ -1010,7 +1010,7 @@ exports.createRecipeImportFromText = onRequest(
       if (origin && ALLOWED_ORIGINS.includes(origin)) {
         res.set('Access-Control-Allow-Origin', origin);
         res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key, X-User-Email');
+        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Shortcut-Token, X-Api-Key, X-User-Email');
         if (req.method === 'OPTIONS') {
           res.status(204).send('');
           return;
