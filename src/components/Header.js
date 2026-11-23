@@ -9,6 +9,7 @@ import { updatePageTitle } from '../utils/faviconUtils';
 import { sloganInSprache } from '../i18n/slogan';
 import { subscribeToFaqs } from '../utils/faqFirestore';
 import SearchIcon from './icons/SearchIcon';
+import ConfirmDialog from './ConfirmDialog';
 import ImportProgressIndicator from './ImportProgressIndicator';
 import ImportProgressDialog from './ImportProgressDialog';
 import { createShortcutToken } from '../utils/shortcutToken';
@@ -86,6 +87,7 @@ const Header = forwardRef(function Header({
   const [isApple] = useState(isAppleDevice);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [shortcutHinweis, setShortcutHinweis] = useState(null);
+  const [schluesselRueckfrage, setSchluesselRueckfrage] = useState(false);
   const menuRef = useRef(null);
   const dropdownRef = useRef(null);
   const searchRef = useRef(null);
@@ -277,8 +279,19 @@ const Header = forwardRef(function Header({
   // Schlüssel erzeugt (ein vorhandener gilt danach nicht mehr), in die Zwischenablage gelegt und der
   // Kurzbefehl geöffnet; dort wird er im ersten Textfeld eingesetzt. Fehlt die Zwischenablage oder
   // schlägt das Erzeugen fehl, öffnet sich der Kurzbefehl trotzdem, damit die Installation nicht hängt.
-  const handleInstallShortcutClick = async () => {
+  // Gilt schon ein Schlüssel, wird vorher gefragt: Ein neuer macht den alten und damit bereits
+  // installierte Kurzbefehle unbrauchbar.
+  const handleInstallShortcutClick = () => {
     setMenuOpen(false);
+    if (currentUser?.shortcutTokenEnabled) {
+      setSchluesselRueckfrage(true);
+      return;
+    }
+    installShortcut();
+  };
+
+  const installShortcut = async () => {
+    setSchluesselRueckfrage(false);
     setShortcutHinweis(null);
     let hinweis;
     try {
@@ -562,6 +575,17 @@ const Header = forwardRef(function Header({
             </div>
           </div>
         </div>
+      )}
+
+      {schluesselRueckfrage && (
+        <ConfirmDialog
+          title={t('kurzbefehlRueckfrageTitel')}
+          message={t('kurzbefehlRueckfrageText')}
+          confirmLabel={t('kurzbefehlRueckfrageWeiter')}
+          confirmVariant="primary"
+          onConfirm={installShortcut}
+          onCancel={() => setSchluesselRueckfrage(false)}
+        />
       )}
 
       {shortcutHinweis && (

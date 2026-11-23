@@ -512,6 +512,26 @@ describe('Header - Kurzbefehl installieren', () => {
     expect(screen.queryByText('Kurzbefehl installieren')).not.toBeInTheDocument();
   });
 
+  test('fragt vorher nach, wenn schon ein Schlüssel aktiv ist', async () => {
+    klickeInstallieren({ currentUser: { ...mockCurrentUser, shortcutTokenEnabled: true } });
+
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(mockCreateShortcutToken).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText('Neuen Schlüssel erzeugen', { selector: 'button' }));
+    await waitFor(() => expect(assignSpy).toHaveBeenCalledTimes(1));
+    expect(mockCreateShortcutToken).toHaveBeenCalledTimes(1);
+  });
+
+  test('Abbrechen der Rückfrage lässt den Schlüssel unberührt', () => {
+    klickeInstallieren({ currentUser: { ...mockCurrentUser, shortcutTokenEnabled: true } });
+    fireEvent.click(screen.getByText('Abbrechen'));
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(mockCreateShortcutToken).not.toHaveBeenCalled();
+    expect(assignSpy).not.toHaveBeenCalled();
+  });
+
   test('öffnet den Kurzbefehl auch, wenn der Schlüssel nicht erzeugt werden kann', async () => {
     mockCreateShortcutToken.mockRejectedValue(new Error('offline'));
     klickeInstallieren();
