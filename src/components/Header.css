@@ -748,3 +748,31 @@
 .faq-item-indented .faq-question-btn {
   padding-left: 2.5rem;
 }
+
+.header-shortcut-hinweis {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 24px;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--text-primary, #222);
+  color: var(--bg-primary, #fff);
+  font-size: 0.9rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.header-shortcut-hinweis button {
+  flex: none;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
