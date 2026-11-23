@@ -134,6 +134,22 @@ export const getraenkKategorieAnzeige = (kategorieId, t) => {
   return Object.prototype.hasOwnProperty.call(getraenkeTexte.de, schluessel) ? t(schluessel) : kategorieId;
 };
 
+// Deutscher Name eines vordefinierten Getränks -> Schlüssel getraenk_<id> in getraenke.js
+const VORDEFINIERT_NACH_NAME = new Map(PREDEFINED_DRINKS.map((drink) => [drink.name, `getraenk_${drink.id}`]));
+
+/**
+ * Name eines Getränks in der geltenden Sprache (Mehrsprachigkeit PR 6k). Vordefinierte Getränke behalten ihren
+ * deutschen Namen, auch als `drinkLabel` in der Berechnung eines Events (Cloud Function), und werden deshalb über
+ * den Namen erkannt. Andere Namen sind Inhalt und bleiben, wie sie sind; ohne `t` ebenso.
+ * @param {string} name - gespeicherter Name
+ * @param {Function} [t] - Übersetzungsfunktion für getraenke.js
+ * @returns {string}
+ */
+export const getraenkNameAnzeige = (name, t) => {
+  const schluessel = VORDEFINIERT_NACH_NAME.get(name);
+  return schluessel && t ? t(schluessel) : name;
+};
+
 export const getDrinkCategoryLabel = (kategorieId) => {
   for (const cat of DRINK_CATEGORIES) {
     if (cat.id === kategorieId) return cat.label;

@@ -8,11 +8,14 @@
  */
 
 import { decodeRecipeLink } from './recipeLinks';
+import { getraenkNameAnzeige } from './drinkCategories';
 
 /**
  * Resolves a drink reference for display.
  * @param {Object|string} drinkRef - custom drink object (with a `name` field) or a raw name/label string
  * @param {Array} [recipes] - currently loaded recipes (each with at least `id`, `title`, `ingredients`)
+ * @param {Function} [t] - Texte aus getraenke.js: zeigt den Namen vordefinierter Getränke in der geltenden
+ *   Sprache (getraenkNameAnzeige); ohne `t` bleibt er deutsch
  * @returns {{
  *   isRecipe: boolean,
  *   displayName: string,
@@ -21,14 +24,14 @@ import { decodeRecipeLink } from './recipeLinks';
  *   ingredients: Array,
  * }}
  */
-export const resolveDrinkDisplay = (drinkRef, recipes = []) => {
+export const resolveDrinkDisplay = (drinkRef, recipes = [], t) => {
   const rawName = typeof drinkRef === 'string' ? drinkRef : drinkRef?.name;
   const link = decodeRecipeLink(rawName);
 
   if (!link) {
     return {
       isRecipe: false,
-      displayName: rawName || '',
+      displayName: getraenkNameAnzeige(rawName || '', t),
       recipeId: null,
       recipe: null,
       ingredients: [],

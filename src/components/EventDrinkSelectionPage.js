@@ -9,6 +9,11 @@ import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import DeleteRowButton from './DeleteRowButton';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import Button from './Button';
+import { useSprache, useTexte } from '../contexts/SpracheContext';
+import { formatiereZahl } from '../i18n/format';
+import { STANDARD_SPRACHE } from '../i18n/sprachen';
+import getraenkeTexte from '../i18n/texte/getraenke';
+import allgemeinTexte from '../i18n/texte/allgemein';
 
 const MIN_DISTRIBUTION_FACTOR = 0.1;
 const MAX_DISTRIBUTION_FACTOR = 2.0;
@@ -21,18 +26,20 @@ const normalizeDistributionFactor = (value) => {
   return parsed;
 };
 
-const getEinheitSizeLabel = (einheit) => {
+// Größe einer Einheit im Zahlenformat der Sprache (Mehrsprachigkeit PR 6k; auf Deutsch wie bisher „1,5 l“).
+// Die Gebindeeinheit bleibt, wie sie gespeichert ist (Phase B).
+const getEinheitSizeLabel = (einheit, sprache = STANDARD_SPRACHE) => {
   if (!einheit) return '';
   const liters = Number(einheit.einheitsgroesse);
   if (liters < 1) {
     return `${Math.round(liters * 1000)} ml`;
   }
-  return `${liters.toFixed(1).replace('.', ',')} l`;
+  return `${formatiereZahl(liters, sprache, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} l`;
 };
 
-const getEinheitLabel = (einheit) => {
+const getEinheitLabel = (einheit, sprache = STANDARD_SPRACHE) => {
   if (!einheit) return '';
-  const sizeLabel = getEinheitSizeLabel(einheit);
+  const sizeLabel = getEinheitSizeLabel(einheit, sprache);
   return einheit.gebindeinheit ? `${sizeLabel} (${einheit.gebindeinheit})` : sizeLabel;
 };
 
@@ -52,6 +59,8 @@ function EinheitenTypeahead({ einheiten, selectedIndices, onToggle, drinkName, o
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
+  const t = useTexte(getraenkeTexte);
+  const { sprache } = useSprache();
 
   const unselectedEinheiten = einheiten
     .map((e, idx) => ({ einheit: e, idx }))
@@ -59,7 +68,7 @@ function EinheitenTypeahead({ einheiten, selectedIndices, onToggle, drinkName, o
 
   const filtered = query.trim()
     ? unselectedEinheiten.filter(({ einheit }) =>
-        getEinheitLabel(einheit).toLowerCase().includes(query.toLowerCase()),
+        getEinheitLabel(einheit, sprache).toLowerCase().includes(query.toLowerCase()),
       )
     : unselectedEinheiten;
 
@@ -97,9 +106,9 @@ function EinheitenTypeahead({ einheiten, selectedIndices, onToggle, drinkName, o
       <input
         type="text"
         className="events-einheiten-typeahead-input"
-        placeholder="Einheit hinzufügen …"
+        placeholder={t('einheitSuchenPlatzhalter')}
         value={query}
-        aria-label={`${drinkName} Einheit suchen`}
+        aria-label={t('einheitSuchen', { name: drinkName })}
         onChange={(e) => {
           setQuery(e.target.value);
           setOpen(true);
@@ -119,7 +128,7 @@ function EinheitenTypeahead({ einheiten, selectedIndices, onToggle, drinkName, o
                   setOpen(false);
                 }}
               >
-                {getEinheitLabel(einheit)}
+                {getEinheitLabel(einheit, sprache)}
               </button>
             </li>
           ))}
@@ -150,6 +159,9 @@ function DrinkRow({
     onDeleteVisibleChange: (visible) => (visible ? onSwipeDeleteVisible() : onSwipeDeleteHidden()),
   });
   const [factorInput, setFactorInput] = useState(factor.toFixed(2));
+  const t = useTexte(getraenkeTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
+  const { sprache } = useSprache();
   const [isUnitDropdownOpen, setIsUnitDropdownOpen] = useState(false);
 
   const handleSwipeDeleteClick = () => {
@@ -172,7 +184,7 @@ function DrinkRow({
             type="button"
             className="events-drink-row-swipe-action"
             onClick={handleSwipeDeleteClick}
-            aria-label={`${displayName} entfernen`}
+            aria-label={tAllgemein('nameEntfernen', { name: displayName })}
           >
             {isBase64Image(swipeDeleteIcon) ? (
               <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
@@ -205,8 +217,8 @@ function DrinkRow({
                   .map(({ einheit, idx }) => (
                     <UnitChip
                       key={idx}
-                      label={getEinheitSizeLabel(einheit)}
-                      ariaLabel={getEinheitLabel(einheit)}
+                      label={getEinheitSizeLabel(einheit, sprache)}
+                      ariaLabel={getEinheitLabel(einheit, sprache)}
                       selected={true}
                       onToggle={() => onToggleEinheit(idx)}
                     />
@@ -220,9 +232,9 @@ function DrinkRow({
                 />
               </div>
             ) : einheiten.length === 1 ? (
-              <span className="events-drink-row-single-unit">{getEinheitLabel(einheiten[0])}</span>
+              <span className="events-drink-row-single-unit">{getEinheitLabel(einheiten[0], sprache)}</span>
             ) : (
-              <span className="events-drink-row-empty-label">Keine Einheit ausgewählt</span>
+              <span className="events-drink-row-empty-label">{t('keineEinheitAusgewaehlt')}</span>
             )}
           </div>
           <div className="events-drink-row-factor">
@@ -238,7 +250,7 @@ function DrinkRow({
                 onUpdateFactor(e.target.value);
               }}
               onBlur={() => setFactorInput(factor.toFixed(2))}
-              aria-label={`${displayName} Faktor`}
+              aria-label={t('faktor', { name: displayName })}
             />
           </div>
         </div>
@@ -262,6 +274,9 @@ function EventDrinkSelectionPage({
 }) {
   const effectiveButtonIcons = buttonIcons || DEFAULT_BUTTON_ICONS;
   const swipeDeleteIcon = getEffectiveIcon(effectiveButtonIcons, 'swipeDelete', isDarkMode);
+  // Texte der Getränke (Mehrsprachigkeit PR 6k)
+  const t = useTexte(getraenkeTexte);
+  const tAllgemein = useTexte(allgemeinTexte);
   const [customDrinkIds, setCustomDrinkIds] = useState(initialCustomDrinkIds ?? []);
   const [drinkDistributionFactors, setDrinkDistributionFactors] = useState(
     initialDrinkDistributionFactors ?? {},
@@ -334,10 +349,10 @@ function EventDrinkSelectionPage({
   };
 
   const handleRemoveDrink = (drink) => {
-    const displayName = resolveDrinkDisplay(drink, recipes).displayName;
+    const displayName = resolveDrinkDisplay(drink, recipes, t).displayName;
     scheduleDelete({
       key: drink.id,
-      message: `"${displayName}" entfernt.`,
+      message: tAllgemein('entfernt', { name: displayName }),
       onConfirm: () => toggleCustomDrink(drink.id),
       onUndo: () => {},
     });
@@ -360,7 +375,7 @@ function EventDrinkSelectionPage({
   return (
     <div className="events-page-container events-drink-selection-page">
       <div className="events-page-header">
-        <h2>Getränke</h2>
+        <h2>{t('getraenke')}</h2>
       </div>
 
       <div className="events-form">
@@ -371,14 +386,14 @@ function EventDrinkSelectionPage({
                 <select
                   value={drinkToAdd}
                   onChange={(e) => setDrinkToAdd(e.target.value)}
-                  aria-label="Getränk auswählen"
+                  aria-label={t('getraenkAuswaehlen')}
                 >
-                  <option value="">Getränk auswählen …</option>
+                  <option value="">{t('getraenkAuswaehlenOption')}</option>
                   {customDrinks
                     .filter((d) => !customDrinkIds.includes(d.id))
                     .filter((d) => !showOwnOnly || !d.ownerId || d.ownerId === currentUserId)
                     .map((drink) => (
-                      <option key={drink.id} value={drink.id}>{resolveDrinkDisplay(drink, recipes).displayName}</option>
+                      <option key={drink.id} value={drink.id}>{resolveDrinkDisplay(drink, recipes, t).displayName}</option>
                     ))}
                 </select>
                 <button
@@ -391,21 +406,21 @@ function EventDrinkSelectionPage({
                     }
                   }}
                   disabled={!drinkToAdd}
-                  aria-label="Getränk hinzufügen"
+                  aria-label={t('getraenkHinzufuegen')}
                 >
-                  Hinzufügen
+                  {tAllgemein('hinzufuegen')}
                 </button>
               </div>
 
               <div className="drink-own-filter-row">
                 <label className="drink-own-filter-label">
-                  <span>Eigene Getränke</span>
+                  <span>{t('eigeneGetraenke')}</span>
                   <span className="drink-own-filter-toggle">
                     <input
                       type="checkbox"
                       checked={showOwnOnly}
                       onChange={(e) => setShowOwnOnly(e.target.checked)}
-                      aria-label="Nur eigene Getränke in der Auswahl anzeigen"
+                      aria-label={t('nurEigeneInAuswahl')}
                     />
                     <span className="drink-own-filter-toggle-slider" aria-hidden="true" />
                   </span>
@@ -423,7 +438,7 @@ function EventDrinkSelectionPage({
                       <DrinkRow
                         key={drink.id}
                         drink={drink}
-                        displayName={resolveDrinkDisplay(drink, recipes).displayName}
+                        displayName={resolveDrinkDisplay(drink, recipes, t).displayName}
                         factor={factor}
                         einheiten={einheiten}
                         selectedIndices={selectedIndices}
@@ -443,24 +458,24 @@ function EventDrinkSelectionPage({
               )}
             </>
           ) : (
-            <p className="events-info-text">Noch keine eigenen Getränke angelegt.</p>
+            <p className="events-info-text">{t('nochKeineEigenen')}</p>
           )}
           {deleteBanners.map((banner) => (
             <div key={banner.id} className="undo-snackbar" role="status">
               <span>{banner.message}</span>
               <button type="button" className="undo-snackbar-btn" onClick={() => undoDelete(banner.id)}>
-                Rückgängig
+                {tAllgemein('rueckgaengig')}
               </button>
             </div>
           ))}
 
           <span className="events-selected-count-badge">
-            {selectedDrinks.length} {selectedDrinks.length === 1 ? 'Getränk' : 'Getränke'} ausgewählt.
+            {t('getraenkeAusgewaehlt', { anzahl: selectedDrinks.length })}
           </span>
         </div>
 
         <label className="events-form-field">
-          <span>Puffer (%)</span>
+          <span>{t('puffer')}</span>
           <input
             type="number"
             min="0"
@@ -472,10 +487,10 @@ function EventDrinkSelectionPage({
 
         <div className="events-form-actions">
           <Button className="events-save-desktop-only" onClick={onBack}>
-            Abbrechen
+            {tAllgemein('abbrechen')}
           </Button>
           <Button variant="primary" className="events-save-desktop-only" onClick={handleSave}>
-            Speichern
+            {tAllgemein('speichern')}
           </Button>
         </div>
       </div>
@@ -490,11 +505,11 @@ function EventDrinkSelectionPage({
         onMouseLeave={() => setFabPressed(false)}
         onTouchStart={() => setFabPressed(true)}
         onTouchEnd={() => setFabPressed(false)}
-        aria-label="Getränkeauswahl speichern"
-        title="Speichern"
+        aria-label={t('getraenkeauswahlSpeichern')}
+        title={tAllgemein('speichern')}
       >
         {isBase64Image(getEffectiveIcon(effectiveButtonIcons, 'saveRecipe', isDarkMode)) ? (
-          <img src={getEffectiveIcon(effectiveButtonIcons, 'saveRecipe', isDarkMode)} alt="Speichern" className="button-icon-image" draggable="false" />
+          <img src={getEffectiveIcon(effectiveButtonIcons, 'saveRecipe', isDarkMode)} alt={tAllgemein('speichern')} className="button-icon-image" draggable="false" />
         ) : (
           getEffectiveIcon(effectiveButtonIcons, 'saveRecipe', isDarkMode)
         )}
@@ -511,11 +526,11 @@ function EventDrinkSelectionPage({
         onMouseDown={() => setCancelPressed(true)}
         onMouseUp={() => setCancelPressed(false)}
         onMouseLeave={() => setCancelPressed(false)}
-        title="Abbrechen"
-        aria-label="Getränkeauswahl abbrechen"
+        title={tAllgemein('abbrechen')}
+        aria-label={t('getraenkeauswahlAbbrechen')}
       >
         {isBase64Image(getEffectiveIcon(effectiveButtonIcons, 'closeButtonDefaultImg', isDarkMode)) ? (
-          <img src={getEffectiveIcon(effectiveButtonIcons, 'closeButtonDefaultImg', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
+          <img src={getEffectiveIcon(effectiveButtonIcons, 'closeButtonDefaultImg', isDarkMode)} alt={tAllgemein('abbrechen')} className="button-icon-image" draggable="false" />
         ) : (
           getEffectiveIcon(effectiveButtonIcons, 'closeButtonDefaultImg', isDarkMode)
         )}

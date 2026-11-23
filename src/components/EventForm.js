@@ -26,26 +26,6 @@ import eventsTexte from '../i18n/texte/events';
 import allgemeinTexte from '../i18n/texte/allgemein';
 import { eventTypAnzeige } from '../utils/eventAnzeige';
 
-const CATEGORY_LABELS = {
-  wasser: 'Wasser',
-  softdrinks: 'Softdrinks',
-  saft: 'Saft',
-  bier: 'Bier',
-  bier_koelsch: 'Kölsch',
-  bier_pils: 'Pils',
-  bier_weizen: 'Weizen',
-  bier_alkoholfrei: 'Alkoholfreies Bier',
-  wein: 'Wein',
-  wein_weisswein: 'Weißwein',
-  wein_rose: 'Rosé',
-  wein_rotwein: 'Rotwein',
-  sekt: 'Sekt',
-  spirituosen: 'Spirituosen',
-  longdrinks: 'Longdrinks',
-  kaffee: 'Kaffee',
-  tee: 'Tee',
-};
-
 const DEFAULT_PUFFER_PROZENT = 25;
 const DEFAULT_DISTRIBUTION_FACTOR = 1;
 
@@ -542,6 +522,4 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManage
   );
 }
 
-// CATEGORY_LABELS (deutsch) nutzt noch ConsumptionForm.js; umgestellt mit Mehrsprachigkeit PR 6k
-export { CATEGORY_LABELS };
 export default EventForm;

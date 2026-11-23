@@ -34,6 +34,7 @@ import { STANDARD_SPRACHE } from '../i18n/sprachen';
 import festtafelTexte from '../i18n/texte/festtafel';
 import rezeptansichtTexte from '../i18n/texte/rezeptansicht';
 import allgemeinTexte from '../i18n/texte/allgemein';
+import getraenkeTexte from '../i18n/texte/getraenke';
 
 const formatEventLiter = (value, sprache = STANDARD_SPRACHE) => {
   const num = Number(value);
@@ -64,6 +65,8 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   const t = useTexte(festtafelTexte);
   const tAnsicht = useTexte(rezeptansichtTexte);
   const tAllgemein = useTexte(allgemeinTexte);
+  // Namen vordefinierter Getränke in der geltenden Sprache (Mehrsprachigkeit PR 6k)
+  const tGetraenke = useTexte(getraenkeTexte);
   const { sprache } = useSprache();
   const zeigeTitel = useRezeptTitel();
   const [menuGuests, setMenuGuests] = useState([]);
@@ -257,7 +260,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     const allDrinks = mergePredefinedDrinks(manualDrinkCatalog, currentUser?.id);
     return drinkIds.map((drinkId) => {
       const drink = allDrinks.find((d) => d.id === drinkId);
-      const display = resolveDrinkDisplay(drink || drinkId, recipes);
+      const display = resolveDrinkDisplay(drink || drinkId, recipes, tGetraenke);
       return {
         id: drinkId,
         displayName: display.displayName || drinkId,
@@ -275,7 +278,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     const ids = Array.isArray(linkedEvent.customDrinkIds) ? linkedEvent.customDrinkIds : [];
     return ids.map((drinkId) => {
       const drink = allDrinks.find((d) => d.id === drinkId);
-      const display = resolveDrinkDisplay(drink || drinkId, recipes);
+      const display = resolveDrinkDisplay(drink || drinkId, recipes, tGetraenke);
       const ergebnisRow = (linkedEvent.berechnung?.ergebnis || []).find((row) => row.drinkId === drinkId);
       return {
         id: drinkId,
@@ -287,7 +290,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
       };
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [linkedEvent, linkedEventCustomDrinks, recipes, drinksCategoryImage]);
+  }, [linkedEvent, linkedEventCustomDrinks, recipes, drinksCategoryImage, tGetraenke]);
 
   const authorName = useMemo(() => {
     if (!menu.authorId || !allUsers || allUsers.length === 0) return null;
