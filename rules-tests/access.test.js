@@ -214,6 +214,16 @@ test('groups (Tech-Check S16): kein Client schreibt neue E-Mail-Adressen ins Lis
   await assertSucceeds(editor.collection('groups').add({ type: 'private', ownerId: 'editor', memberIds: ['editor'] }));
 });
 
+test('groups (BEKANNTE LÜCKE, Tech-Check S31): ein Editor ändert und löscht auch fremde private Listen, deren ID er kennt', async () => {
+  // Die ID steht an jedem Rezept der Liste (groupId), und Rezepte liest jedes Mitglied (S2).
+  await seed(env, (db) => db.doc('users/editor2').set({ role: 'edit', vorname: 'editor2' }));
+  const fremd = as.user(env, 'editor2');
+  await assertFails(fremd.doc('groups/g1').get());
+  await assertSucceeds(fremd.doc('groups/g1').update({ memberIds: ['editor', 'reader', 'editor2'] }));
+  await assertSucceeds(fremd.doc('groups/g1').get());
+  await assertSucceeds(fremd.doc('groups/g1').delete());
+});
+
 test('groupInvitations (Tech-Check S16): niemand liest oder schreibt, auch Eigentümer und Admins nicht', async () => {
   await seed(env, (db) => db.doc('groupInvitations/inv1').set({ groupId: 'g1', email: 'jemand@example.test', invitedBy: 'editor' }));
   const invitation = { groupId: 'g1', email: 'neu@example.test', invitedBy: 'editor' };
