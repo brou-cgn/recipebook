@@ -63,6 +63,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - GitHub Actions Workflow erweitert um automatisches Version-Bumping
 
 ### Behoben
+- Foto-Scan: Mit der Sprache „English“ kam das Rezept leer an, weil die Antwort der KI unter den falschen Feldnamen gelesen wurde. Die Sprachwahl im Scan-Dialog entfällt: Die KI erkennt die Sprache im Bild selbst, und Rezepte in anderen Sprachen werden ins Deutsche übersetzt, beim Foto-Scan wie bei der Website-Aufnahme. Rezepte entstehen damit immer auf Deutsch, Englisch und Französisch sind Übersetzungen davon.
 - Drucken im Dunkelmodus: Titel, Abschnittsüberschriften, Angaben wie Zeit und Portionen, Zutaten und Schritte kamen hellgrau aufs Papier, ebenso in der Druckvorschau. Das Papier bleibt jetzt in beiden Modi weiß mit dunkler Schrift.
 - Drucklayout (Einstellungen) im Dunkelmodus lesbar: Die Bedienflächen sind dunkel mit heller Schrift, statt hellgrauer Schrift auf hellem Grund; die Vorschau bleibt Papier.
 - Benutzerverwaltung: Die Spalte „Aktionen“ bleibt am rechten Rand stehen und ist ohne seitliches Scrollen erreichbar, auch bei 1280 px Breite und auf dem Handy.

@@ -554,3 +554,80 @@ test('reports failed-precondition when Gemini API key is missing', async () => {
     (err) => err.code === 'failed-precondition',
   );
 });
+
+// ---------------------------------------------------------------------------
+// Primärsprache: Das Rezept kommt immer deutsch, auch mit „English“ (Tech-Check F23)
+// ---------------------------------------------------------------------------
+
+const AUTH_EDIT = {uid: 'user-123', token: {firebase: {sign_in_provider: 'password'}, admin: false}};
+
+/** Zeichnet die Anfragen an Gemini auf und antwortet wie der Standard-Mock. */
+function geminiAufzeichnen() {
+  const anfragen = [];
+  global.fetch = async (url, init) => {
+    if (url && url.includes('generativelanguage.googleapis.com')) {
+      anfragen.push(JSON.parse(init.body));
+      return okResponse(GEMINI_SUCCESS_BODY);
+    }
+    return okResponse({});
+  };
+  return anfragen;
+}
+
+test('liest bei language "en" die deutschen Felder des Antwortschemas', async () => {
+  const result = await scanRecipeWithAI({auth: AUTH_EDIT, data: {imageBase64: VALID_IMAGE, language: 'en'}});
+
+  // Vorher las der Scan bei "en" title/ingredients/steps und bekam ein leeres Rezept.
+  assert.equal(result.title, 'Rührei');
+  assert.deepEqual(result.ingredients, ['4 Eier', '2 Esslöffel Butter', '1 Prise Salz']);
+  assert.equal(result.steps.length, 3);
+  assert.equal(result.servings, 2);
+  assert.equal(result.cuisine, 'Deutsche Küche');
+});
+
+test('hängt für jede Sprache die Regel „ins Deutsche übersetzen“ an den Prompt', async () => {
+  const {DEUTSCH_REGEL} = require('./shared/gemini');
+  const anfragen = geminiAufzeichnen();
+
+  await scanRecipeWithAI({auth: AUTH_EDIT, data: {imageBase64: VALID_IMAGE, language: 'de'}});
+  await scanRecipeWithAI({auth: AUTH_EDIT, data: {imageBase64: VALID_IMAGE, language: 'en'}});
+
+  assert.equal(anfragen.length, 2);
+  for (const anfrage of anfragen) {
+    const text = anfrage.contents[0].parts[0].text;
+    assert.ok(text.startsWith('Extrahiere Rezept.'), 'der Prompt aus den Einstellungen bleibt vorn');
+    assert.ok(text.endsWith(DEUTSCH_REGEL), 'die Regel steht als letzte Anweisung vor dem Bild');
+    assert.match(text, /übersetze Titel, Zutaten, Zubereitungsschritte und Notizen ins Deutsche/);
+  }
+});
+
+test('mehrere Bilder: deutscher Hinweis, Regel und deutsche Felder, auch bei "en"', async () => {
+  const {DEUTSCH_REGEL} = require('./shared/gemini');
+  const {callGeminiMultiImageAPI} = require('./shared/importJobs');
+  const anfragen = geminiAufzeichnen();
+  const bild = {mimeType: 'image/jpeg', base64Data: 'A'.repeat(200)};
+
+  const result = await callGeminiMultiImageAPI([bild, bild], 'en', 'test-gemini-api-key');
+
+  assert.equal(result.title, 'Rührei');
+  assert.equal(result.ingredients.length, 3);
+  const parts = anfragen[0].contents[0].parts;
+  assert.equal(parts.length, 3, 'Prompt und zwei Bilder');
+  assert.ok(parts[0].text.includes(DEUTSCH_REGEL));
+  assert.match(parts[0].text, /WICHTIGER HINWEIS ZU DEN BILDERN/);
+  assert.doesNotMatch(parts[0].text, /IMPORTANT NOTE ABOUT THE IMAGES/);
+});
+
+test('rezeptAusAntwort nimmt die deutschen Felder, die englischen nur als Rückfall', () => {
+  const {rezeptAusAntwort} = require('./shared/gemini');
+
+  const deutsch = rezeptAusAntwort({titel: 'Rührei', title: 'Scrambled eggs', zutaten: ['4 Eier']}, '{}', []);
+  assert.equal(deutsch.title, 'Rührei');
+  assert.deepEqual(deutsch.ingredients, ['4 Eier']);
+
+  const ohneSchema = rezeptAusAntwort({title: 'Pancakes', ingredients: ['2 Eier'], steps: ['Backen.']}, '{}', []);
+  assert.equal(ohneSchema.title, 'Pancakes');
+  assert.deepEqual(ohneSchema.ingredients, ['2 Eier']);
+  assert.deepEqual(ohneSchema.steps, ['Backen.']);
+  assert.equal(ohneSchema.rawResponse, '{}');
+});
