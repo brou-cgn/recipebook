@@ -9,7 +9,8 @@ import './GroupDetail.css';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getSortSettings, DEFAULT_TRENDING_DAYS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import { isWaterIngredient, scaleIngredient } from '../utils/ingredientUtils';
-import { sendGroupInvitation, LIST_KIND_OPTIONS } from '../utils/groupFirestore';
+import { sendGroupInvitation, invitationStored, LIST_KIND_OPTIONS } from '../utils/groupFirestore';
+import { getCallableErrorDetails } from '../utils/callableErrors';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getRecentRecipeViewCounts } from '../utils/recipeCallsFirestore';
 import { getAllCookDates } from '../utils/recipeCookDates';
@@ -397,36 +398,48 @@ function GroupDetail({
 
     setSaving(true);
     try {
-      const updatedMemberIds = [
-        ...(group.memberIds || []),
-        ...addMemberIds.filter((id) => !(group.memberIds || []).includes(id)),
-      ];
-      const updatedInvitedEmails = hasEmail
-        ? [...new Set([...(group.invitedEmails || []), emailTrimmed])]
-        : group.invitedEmails || [];
-
-      await onUpdateGroup(group.id, {
-        memberIds: updatedMemberIds,
-        invitedEmails: updatedInvitedEmails,
-      });
-
-      setAddMemberIds([]);
-      setInviteEmail('');
-      setShowAddMember(false);
-
-      if (hasEmail) {
+      if (hasSelections) {
+        const updatedMemberIds = [
+          ...(group.memberIds || []),
+          ...addMemberIds.filter((id) => !(group.memberIds || []).includes(id)),
+        ];
         try {
-          await sendGroupInvitation(emailTrimmed);
-          setAddMemberSuccess(`Einladung an ${emailTrimmed} wurde gespeichert. Falls die Adresse noch nicht eingeladen oder registriert ist, wird eine Einladungs-E-Mail versendet.`);
-        } catch (inviteErr) {
-          console.error('Error sending invitation email:', inviteErr);
-          setAddMemberSuccess(`Einladung an ${emailTrimmed} wurde gespeichert, aber die Einladungs-E-Mail konnte nicht versendet werden.`);
+          await onUpdateGroup(group.id, { memberIds: updatedMemberIds });
+        } catch (err) {
+          setAddMemberError('Fehler beim Hinzufügen. Bitte erneut versuchen.');
+          return;
         }
-      } else {
-        setAddMemberSuccess('Mitglied(er) erfolgreich hinzugefügt.');
+        setAddMemberIds([]);
       }
-    } catch (err) {
-      setAddMemberError('Fehler beim Hinzufügen. Bitte erneut versuchen.');
+
+      if (!hasEmail) {
+        setShowAddMember(false);
+        setAddMemberSuccess('Mitglied(er) erfolgreich hinzugefügt.');
+        return;
+      }
+
+      // Die Einladung speichert die Cloud Function (groupInvitations), nicht das Listendokument:
+      // dort konnte jedes Mitglied der Liste die Adresse lesen (Tech-Check S16).
+      try {
+        await sendGroupInvitation(group.id, emailTrimmed);
+        setInviteEmail('');
+        setShowAddMember(false);
+        setAddMemberSuccess(`Einladung an ${emailTrimmed} wurde gespeichert. Falls die Adresse noch nicht eingeladen oder registriert ist, wird eine Einladungs-E-Mail versendet.`);
+      } catch (inviteErr) {
+        console.error('Error sending invitation:', inviteErr);
+        if (invitationStored(inviteErr)) {
+          setInviteEmail('');
+          setShowAddMember(false);
+          setAddMemberSuccess(`Einladung an ${emailTrimmed} wurde gespeichert, aber die Einladungs-E-Mail konnte nicht versendet werden.`);
+        } else {
+          // Nicht gespeichert: Feld bleibt offen, damit man es erneut versuchen kann.
+          if (hasSelections) setAddMemberSuccess('Mitglied(er) erfolgreich hinzugefügt.');
+          const { code, message } = getCallableErrorDetails(inviteErr);
+          setAddMemberError(['permission-denied', 'resource-exhausted'].includes(code) && message
+            ? `Die Einladung wurde nicht gespeichert: ${message}`
+            : 'Die Einladung wurde nicht gespeichert. Bitte erneut versuchen.');
+        }
+      }
     } finally {
       setSaving(false);
     }

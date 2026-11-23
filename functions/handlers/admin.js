@@ -14,6 +14,9 @@ const {requireAiCaller} = require('../shared/auth');
 const {escapeHtml} = require('../shared/common');
 const {abrufOeffentlich} = require('../shared/oeffentlicherAbruf');
 const {cleanupFollowData} = require('../followCleanup');
+const {
+  acceptInvitations, assertCanInvite, migrateLegacyInvitedEmails, recordInvitation,
+} = require('../groupInvitations');
 const {deleteCookDatesOfUser, deleteNonPublicRecipesOfUser} = require('../accountCleanup');
 const {consolidateCallLogs, formatConsolidationSummary, normalizeTrendingDays} = require('../callLogConsolidation');
 
@@ -107,17 +110,25 @@ async function consumeInvitationQuota(uid) {
 }
 
 /**
- * Cloud Function: Send an invitation email to a new email address added to a private list.
- * Checks whether the address is already registered or has already received an invitation.
- * If neither, sends an invitation email and records the sent invitation in Firestore.
+ * Cloud Function: Invite an email address into a private list.
+ * Stores the invitation in `groupInvitations` (readable only by Cloud Functions,
+ * Tech-Check S16; until November 2026 the client wrote it into
+ * `groups/{id}.invitedEmails`, where every member of the list could read it).
+ * Registered addresses get no invitation. Otherwise the invitation is stored and,
+ * unless the address already received one, an invitation email is sent and the
+ * sent invitation is recorded in `invitations`.
  *
- * Only callers with the edit role or higher may invite, each sender is limited
- * to INVITATION_DAILY_LIMIT calls per day, and the response is identical whether
- * the address is registered, already invited or newly invited - so the function
- * neither works as a spam relay nor reveals which addresses are registered.
+ * Only the owner of the list (or an admin) with the edit role or higher may
+ * invite, each sender is limited to INVITATION_DAILY_LIMIT calls per day, and the
+ * response is identical whether the address is registered, already invited or
+ * newly invited - so the function neither works as a spam relay nor reveals
+ * which addresses are registered. Errors after the invitation was stored carry
+ * `details.gespeichert = true`, so the client can tell "stored, but no mail"
+ * from "not stored".
  *
  * Input data:
  * - email: The email address to invite
+ * - groupId: The private list the address is invited into
  *
  * Returns: { success: true }
  */
@@ -138,7 +149,7 @@ exports.sendGroupInvitationEmail = onCall(
         );
       }
 
-      await requireAiCaller(callerAuth).catch((err) => {
+      const caller = await requireAiCaller(callerAuth).catch((err) => {
         if (err.code === 'permission-denied') {
           throw new HttpsError(
               'permission-denied',
@@ -148,7 +159,7 @@ exports.sendGroupInvitationEmail = onCall(
         throw err;
       });
 
-      const {email} = request.data;
+      const {email, groupId} = request.data || {};
 
       if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
         throw new HttpsError('invalid-argument', 'Ungültige E-Mail-Adresse.');
@@ -158,6 +169,8 @@ exports.sendGroupInvitationEmail = onCall(
 
       const normalizedEmail = email.trim().toLowerCase();
       const db = getFirestore();
+
+      await assertCanInvite(db, HttpsError, {groupId, userId: callerAuth.uid, isAdmin: caller.isAdmin});
 
       // Check if the email address is already registered as a user
       try {
@@ -172,9 +185,19 @@ exports.sendGroupInvitationEmail = onCall(
         // auth/user-not-found → proceed
       }
 
+      await recordInvitation(db, {FieldValue}, {groupId, email: normalizedEmail, invitedBy: callerAuth.uid});
+      // From here on the invitation is stored; the client shows "stored, but no mail".
+      const stored = {gespeichert: true};
+
       // Check if an invitation has already been sent for this address
       const invitationRef = db.collection('invitations').doc(normalizedEmail);
-      const invitationSnap = await invitationRef.get();
+      let invitationSnap;
+      try {
+        invitationSnap = await invitationRef.get();
+      } catch (readError) {
+        console.error('sendGroupInvitationEmail: error reading sent invitations:', readError.code || readError.message);
+        throw new HttpsError('unavailable', 'Die Einladungs-E-Mail konnte gerade nicht versendet werden.', stored);
+      }
       if (invitationSnap.exists) {
         return {success: true};
       }
@@ -188,7 +211,7 @@ exports.sendGroupInvitationEmail = onCall(
 
       if (!smtpHostVal || !smtpUserVal || !smtpPasswordVal || !smtpFromVal) {
         console.warn('sendGroupInvitationEmail: SMTP secrets not fully configured – skipping email');
-        throw new HttpsError('unavailable', 'E-Mail-Versand ist momentan nicht konfiguriert.');
+        throw new HttpsError('unavailable', 'E-Mail-Versand ist momentan nicht konfiguriert.', stored);
       }
 
       const registrationUrl = 'https://broubook.web.app/';
@@ -232,15 +255,20 @@ exports.sendGroupInvitationEmail = onCall(
         console.log(`sendGroupInvitationEmail: invitation sent (inviter ${callerAuth.uid})`);
       } catch (mailError) {
         console.error('sendGroupInvitationEmail: error sending email:', mailFehlerCode(mailError));
-        throw new HttpsError('internal', 'Fehler beim Versenden der Einladungs-E-Mail.');
+        throw new HttpsError('internal', 'Fehler beim Versenden der Einladungs-E-Mail.', stored);
       }
 
-      // Record the sent invitation so it is only sent once
-      await invitationRef.set({
-        email: normalizedEmail,
-        sentAt: FieldValue.serverTimestamp(),
-        sentBy: callerAuth.uid,
-      });
+      // Record the sent invitation so it is only sent once. The mail is out already: a failure
+      // here only risks a second mail on a later invitation, so it is logged, not reported.
+      try {
+        await invitationRef.set({
+          email: normalizedEmail,
+          sentAt: FieldValue.serverTimestamp(),
+          sentBy: callerAuth.uid,
+        });
+      } catch (recordError) {
+        console.error('sendGroupInvitationEmail: error recording sent invitation:', recordError.code || recordError.message);
+      }
 
       return {success: true};
     },
@@ -248,7 +276,8 @@ exports.sendGroupInvitationEmail = onCall(
 
 /**
  * Firestore trigger: automatically add a newly registered user to all private groups
- * they were previously invited to by email.
+ * they were previously invited to by email (`groupInvitations`; until the nightly
+ * migration has run also the old field `groups.invitedEmails`, Tech-Check S16).
  * Triggered when a new document is created in the 'users' collection.
  */
 exports.processGroupInvitationsOnUserRegistration = onDocumentCreated(
@@ -273,34 +302,12 @@ exports.processGroupInvitationsOnUserRegistration = onDocumentCreated(
       const normalizedEmail = userEmail.trim().toLowerCase();
       const db = getFirestore();
 
-      // Find all groups where this email is listed in invitedEmails
-      const groupsSnapshot = await db.collection('groups')
-          .where('invitedEmails', 'array-contains', normalizedEmail)
-          .get();
-
-      if (groupsSnapshot.empty) {
+      const accepted = await acceptInvitations(db, {FieldValue}, {userId, email: normalizedEmail});
+      if (accepted.groups === 0 && accepted.invitations === 0) {
         console.log(`processGroupInvitationsOnUserRegistration: no pending group invitations for user ${userId}`);
         return;
       }
-
-      // Add the user to each group and remove the email from invitedEmails using a batch write
-      const batch = db.batch();
-      groupsSnapshot.forEach((groupDoc) => {
-        const groupData = groupDoc.data();
-        const updatedMemberIds = [...new Set([...(groupData.memberIds || []), userId])];
-        const updatedInvitedEmails = (groupData.invitedEmails || []).filter(
-            (e) => e.trim().toLowerCase() !== normalizedEmail
-        );
-        batch.update(groupDoc.ref, {
-          memberIds: updatedMemberIds,
-          invitedEmails: updatedInvitedEmails,
-          updatedAt: FieldValue.serverTimestamp(),
-        });
-        console.log(`processGroupInvitationsOnUserRegistration: adding user ${userId} to group ${groupDoc.id}`);
-      });
-
-      await batch.commit();
-      console.log(`processGroupInvitationsOnUserRegistration: processed ${groupsSnapshot.size} group(s) for user ${userId}`);
+      console.log(`processGroupInvitationsOnUserRegistration: processed ${accepted.groups} group(s) for user ${userId}`);
 
       // Mark the invitation as processed if a corresponding record exists.
       // The 'invitations' collection tracks invitation emails sent to unregistered
@@ -314,6 +321,31 @@ exports.processGroupInvitationsOnUserRegistration = onDocumentCreated(
         });
         console.log(`processGroupInvitationsOnUserRegistration: invitation marked as processed for user ${userId}`);
       }
+    },
+);
+
+/**
+ * Scheduled Cloud Function: move the old field `groups/{id}.invitedEmails` into
+ * `groupInvitations` (Tech-Check S16). Until November 2026 the client wrote the
+ * addresses of invited, not yet registered people into the list document, where
+ * every member of the list could read them. Idempotent: lists without the field are
+ * left alone, so after the first run each night only reads the list documents.
+ * Remove together with the old-field branch in acceptInvitations once a run has
+ * reported no lists left (Tracker: Tech-Check S16).
+ *
+ * Schedule: every day at 03:20 Europe/Berlin.
+ */
+exports.nightlyGroupInvitationsMigration = onSchedule(
+    {
+      schedule: '20 3 * * *',
+      timeZone: 'Europe/Berlin',
+    },
+    async (_event) => {
+      const result = await migrateLegacyInvitedEmails(getFirestore(), {FieldValue, FieldPath});
+      console.log(
+          `nightlyGroupInvitationsMigration: checked ${result.checked} list(s), cleaned ${result.groups}, ` +
+          `moved ${result.invitations} invitation(s)`,
+      );
     },
 );
 
