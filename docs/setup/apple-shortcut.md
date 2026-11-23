@@ -14,10 +14,20 @@ Der Link ist außerdem im Hamburger-Menü der App unter **Hilfe → Kurzbefehl i
 
 ## Authentifizierung
 
-Alle Shortcut-Endpoints (`importRecipeShortcut`, `addRecipeViaAPI`, `createRecipeImportFromText`, `getVideoUploadUrl`, `scrapeInstagramReelShortcut`, `scanRecipePhotoShortcut`, `getRecipeOptionsShortcut`) verwenden **API Key Authentifizierung** statt Firebase Auth Tokens. Ein API Key ist dauerhaft gültig und muss nur einmal im Kurzbefehl hinterlegt werden – derselbe Key funktioniert für alle Endpoints.
+Alle Shortcut-Endpoints (`importRecipeShortcut`, `addRecipeViaAPI`, `createRecipeImportFromText`, `getVideoUploadUrl`, `scrapeInstagramReelShortcut`, `scanRecipePhotoShortcut`, `getRecipeOptionsShortcut`) arbeiten ohne Anmeldung in der App. Der Kurzbefehl weist sich mit einem dauerhaft gültigen Schlüssel aus, der für alle Endpoints gilt.
 
-- **`X-Api-Key`** Header: dein persönlicher API Key (als Firebase Secret gespeichert)
-- **`X-User-Email`** Header: deine registrierte E-Mail-Adresse (wird serverseitig per `getAuth().getUserByEmail` zur Firebase User ID aufgelöst – du musst deine UID nicht mehr nachschlagen)
+**Empfohlen: persönlicher Schlüssel (Tech-Check S7).** Erzeuge ihn in der App unter **Chefkoch › Kurzbefehl-Schlüssel**. Er wird nur einmal angezeigt; kopiere ihn und trage im Kurzbefehl einen Header ein:
+
+- **`X-Shortcut-Token`**: dein persönlicher Schlüssel (`rbk.…`). `X-Api-Key` und `X-User-Email` entfallen.
+
+In den Header-Tabellen unten ersetzt diese eine Zeile die beiden Zeilen `X-Api-Key` und `X-User-Email`. Sobald dein Konto einen persönlichen Schlüssel hat, lehnt der Server für dein Konto den gemeinsamen Schlüssel ab: Wer den gemeinsamen Schlüssel kennt, kann dann nicht mehr in deinem Namen importieren. Ein neuer Schlüssel ersetzt den alten; widerrufen kannst du ihn an derselben Stelle.
+
+**Bisher: gemeinsamer Schlüssel mit E-Mail.** Für Konten ohne persönlichen Schlüssel gilt weiter:
+
+- **`X-Api-Key`** Header: der gemeinsame API Key (als Firebase Secret `SHORTCUT_API_KEY` gespeichert, für alle gleich)
+- **`X-User-Email`** Header: deine registrierte E-Mail-Adresse (wird serverseitig per `getAuth().getUserByEmail` zur Firebase User ID aufgelöst)
+
+Der fertige Kurzbefehl aus dem Menü (Deeplink, siehe oben) braucht keinen der beiden Wege, er öffnet die App. Ein gesetzter Webimport-PIN gilt bei beiden Wegen weiter (Feld `pin`).
 
 ---
 

@@ -20,6 +20,11 @@ exports.manageGuestProfile = require('./manageGuestProfile').manageGuestProfile;
 // die eingeloggte Web-App verlangen den PIN nicht.
 exports.setWebImportPin = require('./webImportPin').setWebImportPin;
 
+// Persönlicher Kurzbefehl-Schlüssel (Tech-Check S7): ersetzt für das eigene Konto den gemeinsamen
+// SHORTCUT_API_KEY samt X-User-Email; geprüft in shared/shortcutAuth.js
+exports.createShortcutToken = require('./shortcutToken').createShortcutToken;
+exports.revokeShortcutToken = require('./shortcutToken').revokeShortcutToken;
+
 // Server-seitige Aggregation von ratingAvg/ratingCount auf recipes/{recipeId}
 // aus der ratings-Subcollection (ersetzt den bisherigen offenen Client-Write).
 exports.aggregateRecipeRating = require('./recipeRatingAggregation').aggregateRecipeRating;
