@@ -296,3 +296,41 @@ describe('RecipeFilterSidebar: Systemliste „Für dich entdeckt“ (Mehrsprachi
     expect(screen.queryByRole('button', { name: 'Alltagsrezepte' })).not.toBeInTheDocument();
   });
 });
+
+describe('RecipeFilterSidebar: übersetzte Namen eigener Listen (Mehrsprachigkeit PR 6u)', () => {
+  const alltag = {
+    id: 'l1',
+    type: 'private',
+    name: 'Alltagsrezepte',
+    textUebersetzung: {
+      quelle: { name: 'Alltagsrezepte', description: '' },
+      en: { name: 'Everyday recipes', description: '' },
+      fr: { name: 'Recettes du quotidien', description: '' },
+      version: 1,
+    },
+  };
+  const zeige = (searchTerm) => render(
+    <SpracheProvider profilSprache="en" speicher={null} inhalteUebersetzen>
+      <RecipeFilterSidebar
+        recipes={mockRecipes}
+        currentUser={mockCurrentUser}
+        cuisineTypes={mockCuisineTypes}
+        cuisineGroups={mockCuisineGroups}
+        mealCategories={mockMealCategories}
+        availableAuthors={mockAuthors}
+        privateLists={[alltag, { id: 'l2', name: 'Inspirationen' }]}
+        showPrivateListFilters
+        searchTerm={searchTerm}
+      />
+    </SpracheProvider>
+  );
+
+  test('zeigt die Übersetzung; die Suche findet Übersetzung und Original', () => {
+    const { unmount } = zeige('everyday');
+    expect(screen.getByRole('button', { name: 'Everyday recipes' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Inspirationen' })).not.toBeInTheDocument();
+    unmount();
+    zeige('alltag');
+    expect(screen.getByRole('button', { name: 'Everyday recipes' })).toBeInTheDocument();
+  });
+});

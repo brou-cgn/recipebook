@@ -32,7 +32,7 @@ import UebersetzungBackfill from './UebersetzungBackfill';
 import ListenUebersetzungen from './ListenUebersetzungen';
 import { sloganUebersetzungenZumSpeichern } from '../i18n/slogan';
 import kopfzeileTexte from '../i18n/texte/kopfzeile';
-import { trageInhaltUebersetzungenNach, trageTitelUebersetzungenNach } from '../utils/uebersetzungCallables';
+import { trageInhaltUebersetzungenNach, trageListenUebersetzungenNach, trageTitelUebersetzungenNach } from '../utils/uebersetzungCallables';
 import UndoSnackbar from './UndoSnackbar';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
@@ -2293,6 +2293,19 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               <UebersetzungBackfill
                 aufruf={trageInhaltUebersetzungenNach}
                 textNurAdmins="Inhaltsübersetzungen nachtragen dürfen nur Admins."
+              />
+            </div>
+            <div className="settings-section">
+              <h3>Listen übersetzen</h3>
+              <p className="section-description">
+                Namen und Beschreibungen neuer und geänderter privater Listen übersetzt die App automatisch. Hier
+                trägst du die Übersetzungen für die bestehenden Listen aller Mitglieder nach; Listen mit passender
+                Übersetzung und die öffentliche Liste werden übersprungen. Zählt zum Tageslimit der Titel.
+              </p>
+              <UebersetzungBackfill
+                aufruf={trageListenUebersetzungenNach}
+                textNurAdmins="Listenübersetzungen nachtragen dürfen nur Admins."
+                einheit="Listen"
               />
             </div>
             <div className="settings-section">

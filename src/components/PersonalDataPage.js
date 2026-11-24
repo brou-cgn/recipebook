@@ -20,6 +20,7 @@ import persoenlicheDatenTexte from '../i18n/texte/persoenlicheDaten';
 import anmeldungTexte from '../i18n/texte/anmeldung';
 import { ergebnisText } from '../i18n/texte';
 import kurzbefehlSchluesselTexte from '../i18n/texte/kurzbefehlSchluessel';
+import useListenName from '../hooks/useListenName';
 
 const PUSH_LOG_ZEIT = { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' };
 
@@ -45,6 +46,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const tA = useTexte(allgemeinTexte);
   const tB = useTexte(bereicheTexte);
   const tKey = useTexte(kurzbefehlSchluesselTexte);
+  const listenAnzeigeName = useListenName();
   // Meldungen von changePassword und updateUserProfile (Schlüssel in anmeldung.js, Mehrsprachigkeit PR 6l und 6m)
   const tAnmeldung = useTexte(anmeldungTexte);
   const { sprache } = useSprache();
@@ -378,8 +380,11 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const themaOptionen = THEME_MODES.map((mode) => ({ wert: mode.key, label: t(mode.textKey) }));
   const spracheOptionen = SPRACHEN.map((eintrag) => ({ wert: eintrag.id, label: eintrag.name, lang: eintrag.id }));
   const alarmOptionen = ALARM_SOUNDS.map((sound) => ({ wert: sound.key, label: alarmName(sound.key) }));
-  const listenOptionen = [NO_LIST_OPTION, ...privateLists].map((list) => ({ wert: list.id, label: list.name }));
-  const listenName = (id) => privateLists.find((list) => list.id === id)?.name || NO_LIST_OPTION.name;
+  const listenOptionen = [NO_LIST_OPTION, ...privateLists].map((list) => ({ wert: list.id, label: list.id ? listenAnzeigeName(list) : list.name }));
+  const listenName = (id) => {
+    const liste = privateLists.find((list) => list.id === id);
+    return liste ? listenAnzeigeName(liste) : NO_LIST_OPTION.name;
+  };
   const themaLabelId = `${idBasis}-thema`;
   const spracheLabelId = `${idBasis}-sprache`;
 

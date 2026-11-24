@@ -255,7 +255,14 @@ service cloud.firestore {
           || (resource != null && 'invitedEmails' in resource.data
               && request.resource.data.invitedEmails == resource.data.invitedEmails);
       }
-      allow create, update: if (isEditOrAdmin() || isOwnFuerDichEntdecktList()) && keepsInvitedEmailsOut();
+      // textUebersetzung (Name und Beschreibung übersetzt, Mehrsprachigkeit PR 6u) schreiben nur die
+      // Cloud Functions uebersetzeListenTexte und backfillListenUebersetzungen. Ein Client bringt es
+      // nicht mit und ändert oder löscht es nicht; unverändert mitgeschickt (setDoc mit merge) zählt
+      // nicht als Änderung.
+      allow create: if (isEditOrAdmin() || isOwnFuerDichEntdecktList()) && keepsInvitedEmailsOut()
+                    && !('textUebersetzung' in request.resource.data);
+      allow update: if (isEditOrAdmin() || isOwnFuerDichEntdecktList()) && keepsInvitedEmailsOut()
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['textUebersetzung']);
       allow delete: if isEditOrAdmin();
     }
 
@@ -511,7 +518,8 @@ service cloud.firestore {
       allow read, write: if false;
     }
     // Tageszähler der Titelübersetzung (Mehrsprachigkeit): uebersetzeRezeptTitel unter
-    // `automatik`, backfillTitelUebersetzungen je Admin, je übersetztem Titel.
+    // `automatik`, backfillTitelUebersetzungen je Admin, je übersetztem Titel; Listen (PR 6u)
+    // uebersetzeListenTexte unter `automatikListen`, backfillListenUebersetzungen je Admin.
     match /aiTitelUebersetzungLimits/{limitId} {
       allow read, write: if false;
     }

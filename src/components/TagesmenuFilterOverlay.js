@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './MobileSearchOverlay.css';
 import { splitIntoTwoRows, reorderActiveFirst } from '../utils/pillCarousel';
 import { useListenwerte, useTexte } from '../contexts/SpracheContext';
-import useListenName from '../hooks/useListenName';
+import useListenName, { useListenNamenSuche, passtZurSuche } from '../hooks/useListenName';
 import tagesmenuTexte from '../i18n/texte/tagesmenu';
 
 const DEBOUNCE_DELAY_MS = 200;
@@ -42,6 +42,7 @@ function TagesmenuFilterOverlay({
   const listen = useListenwerte();
   // Systemliste „Für dich entdeckt“ in der geltenden Sprache, eigene Listennamen, wie sie sind (PR 6p)
   const listenName = useListenName();
+  const listenNamenSuche = useListenNamenSuche();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
   // panelBottom tracks how far from the bottom of the screen the panel sits
@@ -107,12 +108,12 @@ function TagesmenuFilterOverlay({
     let lists = interactiveLists || [];
     if (debouncedTerm) {
       const lower = debouncedTerm.toLowerCase();
-      lists = lists.filter((l) => listenName(l).toLowerCase().includes(lower));
+      lists = lists.filter((l) => passtZurSuche(listenNamenSuche(l), lower));
     }
     const active = lists.filter((l) => l.id === selectedListId);
     const inactive = lists.filter((l) => l.id !== selectedListId);
     return [...active, ...inactive];
-  }, [interactiveLists, selectedListId, debouncedTerm, listenName]);
+  }, [interactiveLists, selectedListId, debouncedTerm, listenNamenSuche]);
 
   const handleListPillClick = (listId) => {
     // Tapping the active pill lifts the list filter (all lists) when the parent supports it

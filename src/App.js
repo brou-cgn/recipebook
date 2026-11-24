@@ -707,7 +707,7 @@ function App() {
 
   // Name of the currently selected private list filter (if any).
   // Falls back to the single selectedPrivateList from the search overlay when no group filter is set.
-  // Systemlisten wie „Für dich entdeckt“ in der geltenden Sprache (useListenName), eigene Namen, wie sie sind.
+  // Systemlisten wie „Für dich entdeckt“ in der geltenden Sprache, eigene Namen übersetzt (useListenName, PR 6u).
   const activePrivateListName = useMemo(() => {
     const anzeigeName = (id) => {
       const gruppe = groups.find(g => g.id === id);

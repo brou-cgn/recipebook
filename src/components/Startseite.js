@@ -20,6 +20,7 @@ import { getKuechenbetriebFabConfig } from '../utils/kuechenbetriebTabs';
 import { useTexte } from '../contexts/SpracheContext';
 import startseiteTexte from '../i18n/texte/startseite';
 import allgemeinTexte from '../i18n/texte/allgemein';
+import useListenName from '../hooks/useListenName';
 
 const TRENDING_DAYS = 7;
 const TRENDING_TOP = 10;
@@ -33,6 +34,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   // Texte der Startseite (Mehrsprachigkeit PR 6e)
   const t = useTexte(startseiteTexte);
   const tAllgemein = useTexte(allgemeinTexte);
+  const listenName = useListenName();
   // Leertexte der Kacheln pflegen Admins in den Einstellungen (Inhalt). Steht dort noch der
   // Standardtext, erscheint er in der geltenden Sprache.
   const leertext = (wert, standard, schluessel) => (!wert || wert === standard ? t(schluessel) : wert);
@@ -588,7 +590,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
                   onClick={() => handleInspirationPickerSelect(list.id)}
                   disabled={isCreatingInspiration}
                 >
-                  {list.name}
+                  {listenName(list)}
                 </button>
               ))}
               <button
@@ -627,7 +629,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
                   onClick={() => handleAssignAlltagsklassikerList(list.id)}
                   disabled={isAssigningAlltagsklassiker}
                 >
-                  {list.name}
+                  {listenName(list)}
                 </button>
               ))}
             </div>

@@ -48,6 +48,7 @@ import { ergebnisText } from '../i18n/texte';
 import { STANDARD_SPRACHE } from '../i18n/sprachen';
 import rezeptformularTexte from '../i18n/texte/rezeptformular';
 import allgemeinTexte from '../i18n/texte/allgemein';
+import useListenName from '../hooks/useListenName';
 
 // Max. parallel recipe photo uploads when several photos are picked at once.
 const IMAGE_UPLOAD_CONCURRENCY = 3;
@@ -484,6 +485,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   // Texte des Rezeptformulars (Mehrsprachigkeit PR 6h). Kulinarik, Speisekategorien und Portionseinheiten
   // erscheinen übersetzt und werden auch unter ihrer Übersetzung gefunden; gespeichert bleiben die deutschen Werte.
   const t = useTexte(rezeptformularTexte);
+  const listenName = useListenName();
   const tAllgemein = useTexte(allgemeinTexte);
   const { sprache } = useSprache();
   const listen = useListenwerte();
@@ -1496,7 +1498,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                   <option value="">{t('keineOeffentlich')}</option>
                   {privateLists.map((list) => (
                     <option key={list.id} value={list.id}>
-                      {list.name}
+                      {listenName(list)}
                     </option>
                   ))}
                 </select>

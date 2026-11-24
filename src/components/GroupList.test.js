@@ -313,3 +313,49 @@ describe('GroupList in anderer Sprache (Mehrsprachigkeit PR 6s)', () => {
     expect(screen.getByText('Touche « Créer une liste » pour ajouter des listes.')).toBeInTheDocument();
   });
 });
+
+describe('GroupList: Name und Beschreibung eigener Listen übersetzt (Mehrsprachigkeit PR 6u)', () => {
+  const uebersetzteListe = {
+    ...mockPrivateGroup,
+    textUebersetzung: {
+      quelle: { name: 'Familie', description: 'Familienrezepte und Wochenplanung' },
+      originalSprache: 'de',
+      en: { name: 'Family', description: 'Family recipes and weekly planning' },
+      fr: { name: 'Famille', description: 'Recettes de famille et planning de la semaine' },
+      version: 1,
+    },
+  };
+  const zeige = (sprache, { inhalteUebersetzen = true, liste = uebersetzteListe } = {}) => render(
+    <SpracheProvider profilSprache={sprache} speicher={null} inhalteUebersetzen={inhalteUebersetzen}>
+      <GroupList
+        groups={[liste]}
+        allUsers={mockAllUsers}
+        currentUser={mockCurrentUser}
+        onSelectGroup={jest.fn()}
+        onCreateGroup={jest.fn()}
+      />
+    </SpracheProvider>
+  );
+
+  it('Englisch und Französisch mit der Berechtigung sprachwahl', () => {
+    const { unmount } = zeige('en');
+    expect(screen.getByRole('button', { name: 'Family' })).toBeInTheDocument();
+    expect(screen.getByText('Family recipes and weekly planning')).toBeInTheDocument();
+    unmount();
+    zeige('fr');
+    expect(screen.getByRole('button', { name: 'Famille' })).toBeInTheDocument();
+    expect(screen.getByText('Recettes de famille et planning de la semaine')).toBeInTheDocument();
+  });
+
+  it('ohne Berechtigung, auf Deutsch und nach einer Änderung bleibt das Original', () => {
+    const { unmount } = zeige('en', { inhalteUebersetzen: false });
+    expect(screen.getByRole('button', { name: 'Familie' })).toBeInTheDocument();
+    unmount();
+    const zweiter = zeige('de');
+    expect(screen.getByText('Familienrezepte und Wochenplanung')).toBeInTheDocument();
+    zweiter.unmount();
+    zeige('en', { liste: { ...uebersetzteListe, description: 'Nur noch Wochenplanung' } });
+    expect(screen.getByRole('button', { name: 'Family' })).toBeInTheDocument();
+    expect(screen.getByText('Nur noch Wochenplanung')).toBeInTheDocument();
+  });
+});

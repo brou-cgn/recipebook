@@ -214,6 +214,22 @@ test('groups (Tech-Check S16): kein Client schreibt neue E-Mail-Adressen ins Lis
   await assertSucceeds(editor.collection('groups').add({ type: 'private', ownerId: 'editor', memberIds: ['editor'] }));
 });
 
+test('groups (Mehrsprachigkeit PR 6u): textUebersetzung schreiben nur Cloud Functions', async () => {
+  await seed(env, async (db) => {
+    await db.doc('groups/g1').update({ name: 'Grillen', textUebersetzung: { quelle: { name: 'Grillen', description: '' } } });
+  });
+  for (const uid of ['editor', 'admin']) {
+    const db = as.user(env, uid);
+    await assertFails(db.doc('groups/g1').update({ textUebersetzung: { quelle: { name: 'Erfunden', description: '' } } }));
+    await assertFails(db.doc('groups/g1').update({ textUebersetzung: firebase.firestore.FieldValue.delete() }));
+    await assertFails(db.collection('groups').add({ type: 'private', ownerId: uid, memberIds: [uid], name: 'X', textUebersetzung: {} }));
+  }
+  // Name und Beschreibung ändern bleibt erlaubt; die alte Übersetzung bleibt stehen, bis der Trigger sie erneuert.
+  const editor = as.user(env, 'editor');
+  await assertSucceeds(editor.doc('groups/g1').update({ name: 'Grillabend', description: 'Sommer' }));
+  await assertSucceeds(editor.doc('groups/g1').set({ recipeIds: ['r1'] }, { merge: true }));
+});
+
 test('groups (BEKANNTE LÜCKE, Tech-Check S31): ein Editor ändert und löscht auch fremde private Listen, deren ID er kennt', async () => {
   // Die ID steht an jedem Rezept der Liste (groupId), und Rezepte liest jedes Mitglied (S2).
   await seed(env, (db) => db.doc('users/editor2').set({ role: 'edit', vorname: 'editor2' }));
