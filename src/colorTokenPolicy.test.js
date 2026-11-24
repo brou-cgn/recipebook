@@ -62,7 +62,6 @@ const BASELINE = {
   'components/RecipeImportModal.css': 10,
   'components/RecipeList.css': 23,
   'components/RecipeRating.css': 7,
-  'components/RecipeTimeline.css': 7,
   'components/RecipeTypeahead.css': 12,
   'components/SavingOverlay.css': 1,
   'components/SeasonMatrixTab.css': 58,
@@ -142,8 +141,9 @@ describe('Farb-Token-Richtlinie', () => {
 // Kochtagebuch und Bewertung (D9). 898 → 888: Button-System Schritt 6, Knöpfe von Kochbuch, Festtafel und
 // Menüformular sowie tote Regeln (A8). 888 → 885: Schritt 7, Zeilen-Aktionen der Benutzerverwaltung (A8).
 // 885 → 883: Stift der Verwaltungslisten als RowIconButton (A8). 868 → 865: Sprachwahl im Foto-Scan
-// entfallen (Tech-Check F23).
-const DARK_MODE_SELECTORS = 865;
+// entfallen (Tech-Check F23). 865 → 849: Zeitleiste „Mein Kochbuch“ nach Variante A, RecipeTimeline.css nur
+// mit Tokens (14 Regeln), dazu zwei tote Regeln (.timeline-version-badge, .timeline-no-data).
+const DARK_MODE_SELECTORS = 849;
 
 describe('darkMode.css (Altbestand)', () => {
   const css = fs.readFileSync(path.join(SRC, 'darkMode.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

@@ -4,10 +4,11 @@
  * bereiche.js. Aufbau und Regeln: src/i18n/texte.js.
  *
  * Die Mengen erscheinen als große Zahl über ihrer Bezeichnung; die Texte hier sind deshalb nur
- * die Bezeichnung in Einzahl und Mehrzahl, ohne {anzahl}.
+ * die Bezeichnung in Einzahl und Mehrzahl, ohne {anzahl}. Ausnahme: „+ 1 weiteres Rezept“ der Zeitleiste.
  *
  * Seit PR 6o auch die Seite „Meine Küchenstars“ (src/components/MeineKuechenstarsPage.js) und die
- * Zeitleiste (src/components/RecipeTimeline.js).
+ * Zeitleiste (src/components/RecipeTimeline.js, seit 24.11.2026 nach Variante A des Designvorschlags
+ * https://claude.ai/artifact/CxEY1RvbShLhAVRxTgz3pB).
  */
 export default {
   de: {
@@ -35,10 +36,20 @@ export default {
     kuechenstarsUntertitel: 'Hier sind deine Top 20 Rezepte nach Anzahl der Aufrufe der letzten 14 Tage.',
     kuechenstarsLeer: 'Noch keine Rezeptaufrufe vorhanden.',
     aufrufe: { one: 'Aufruf', other: 'Aufrufe' },
-    // Zeitleiste (RecipeTimeline.js), PR 6o; Anzahl im Stapel: „▸ 3 Rezepte“ mit rezepte/menues
-    kochereignisse: { one: 'Kochereignis', other: 'Kochereignisse' },
-    stapelEinklappen: 'Stapel einklappen',
-    stapelAusklappen: 'Stapel ausklappen',
+    // Zeitleiste (RecipeTimeline.js): Filter, Art unter dem Titel, weitere Einträge eines Tages, Linie „Heute“
+    zeitleisteFiltern: 'Zeitleiste filtern',
+    filterAlle: 'Alle',
+    filterRezepte: 'Rezepte',
+    filterMenues: 'Menüs',
+    filterGekocht: 'Gekocht',
+    typRezept: 'Neues Rezept',
+    typMenue: 'Menü',
+    typGekocht: 'Gekocht',
+    weitereRezepte: { one: '+ {anzahl} weiteres Rezept', other: '+ {anzahl} weitere Rezepte' },
+    weitereMenues: { one: '+ {anzahl} weiteres Menü', other: '+ {anzahl} weitere Menüs' },
+    weitereGerichte: { one: '+ {anzahl} weiteres Gericht', other: '+ {anzahl} weitere Gerichte' },
+    wenigerAnzeigen: 'Weniger anzeigen',
+    heuteAm: 'Heute · {datum}',
     zeitleisteKeineMenues: 'Keine Menüs vorhanden',
     zeitleisteKeineRezepte: 'Keine Rezepte vorhanden',
     datumUnbekannt: 'Unbekannt',
@@ -68,10 +79,20 @@ export default {
     kuechenstarsUntertitel: 'Here are your top 20 recipes by number of views over the last 14 days.',
     kuechenstarsLeer: 'No recipe views yet.',
     aufrufe: { one: 'view', other: 'views' },
-    // Zeitleiste (RecipeTimeline.js), PR 6o; Anzahl im Stapel: „▸ 3 Rezepte“ mit rezepte/menues
-    kochereignisse: { one: 'cooked dish', other: 'cooked dishes' },
-    stapelEinklappen: 'Collapse stack',
-    stapelAusklappen: 'Expand stack',
+    // Zeitleiste (RecipeTimeline.js): Filter, Art unter dem Titel, weitere Einträge eines Tages, Linie „Heute“
+    zeitleisteFiltern: 'Filter timeline',
+    filterAlle: 'All',
+    filterRezepte: 'Recipes',
+    filterMenues: 'Menus',
+    filterGekocht: 'Cooked',
+    typRezept: 'New recipe',
+    typMenue: 'Menu',
+    typGekocht: 'Cooked',
+    weitereRezepte: { one: '+ {anzahl} more recipe', other: '+ {anzahl} more recipes' },
+    weitereMenues: { one: '+ {anzahl} more menu', other: '+ {anzahl} more menus' },
+    weitereGerichte: { one: '+ {anzahl} more dish', other: '+ {anzahl} more dishes' },
+    wenigerAnzeigen: 'Show less',
+    heuteAm: 'Today · {datum}',
     zeitleisteKeineMenues: 'No menus yet',
     zeitleisteKeineRezepte: 'No recipes yet',
     datumUnbekannt: 'Unknown date',
@@ -101,10 +122,20 @@ export default {
     kuechenstarsUntertitel: 'Voici tes 20 recettes les plus consultées ces 14 derniers jours.',
     kuechenstarsLeer: 'Aucune consultation de recette pour l’instant.',
     aufrufe: { one: 'consultation', other: 'consultations' },
-    // Zeitleiste (RecipeTimeline.js), PR 6o; Anzahl im Stapel: „▸ 3 Rezepte“ mit rezepte/menues
-    kochereignisse: { one: 'plat cuisiné', other: 'plats cuisinés' },
-    stapelEinklappen: 'Replier la pile',
-    stapelAusklappen: 'Déplier la pile',
+    // Zeitleiste (RecipeTimeline.js): Filter, Art unter dem Titel, weitere Einträge eines Tages, Linie „Heute“
+    zeitleisteFiltern: 'Filtrer la chronologie',
+    filterAlle: 'Tout',
+    filterRezepte: 'Recettes',
+    filterMenues: 'Menus',
+    filterGekocht: 'Cuisiné',
+    typRezept: 'Nouvelle recette',
+    typMenue: 'Menu',
+    typGekocht: 'Cuisiné',
+    weitereRezepte: { one: '+ {anzahl} autre recette', other: '+ {anzahl} autres recettes' },
+    weitereMenues: { one: '+ {anzahl} autre menu', other: '+ {anzahl} autres menus' },
+    weitereGerichte: { one: '+ {anzahl} autre plat', other: '+ {anzahl} autres plats' },
+    wenigerAnzeigen: 'Afficher moins',
+    heuteAm: 'Aujourd’hui · {datum}',
     zeitleisteKeineMenues: 'Aucun menu pour l’instant',
     zeitleisteKeineRezepte: 'Aucune recette pour l’instant',
     datumUnbekannt: 'Date inconnue',

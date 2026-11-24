@@ -228,7 +228,7 @@ describe('Kueche', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Mein Kochbuch' }));
-    fireEvent.click(screen.getByText('My Menu').closest('.timeline-card'));
+    fireEvent.click(screen.getByRole('button', { name: 'My Menu' }));
     expect(handleSelectMenu).toHaveBeenCalledWith(mockMenus[0]);
   });
 

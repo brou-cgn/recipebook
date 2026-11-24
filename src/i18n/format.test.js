@@ -1,4 +1,4 @@
-import { formatiereDatum, formatiereZahl } from './format';
+import { formatiereAbstandInTagen, formatiereDatum, formatiereZahl } from './format';
 
 // Französisch trennt Tausender mit einem schmalen geschützten Leerzeichen.
 const normal = (text) => text.replace(/\s/g, ' ');
@@ -46,5 +46,28 @@ describe('formatiereDatum', () => {
     expect(formatiereDatum(undefined, 'de')).toBe('');
     expect(formatiereDatum('', 'de')).toBe('');
     expect(formatiereDatum('kein Datum', 'de')).toBe('');
+  });
+});
+
+describe('formatiereAbstandInTagen', () => {
+  it('nennt nahe Tage beim Namen und sonst die Zahl der Tage', () => {
+    expect(formatiereAbstandInTagen(1, 'de')).toBe('morgen');
+    expect(formatiereAbstandInTagen(2, 'de')).toBe('übermorgen');
+    expect(formatiereAbstandInTagen(30, 'de')).toBe('in 30 Tagen');
+    expect(formatiereAbstandInTagen(1, 'en')).toBe('tomorrow');
+    expect(formatiereAbstandInTagen(30, 'en')).toBe('in 30 days');
+    expect(formatiereAbstandInTagen(1, 'fr')).toBe('demain');
+    expect(normal(formatiereAbstandInTagen(30, 'fr'))).toBe('dans 30 jours');
+  });
+
+  it('rechnet ab 60 Tagen in Monaten', () => {
+    expect(formatiereAbstandInTagen(59, 'de')).toBe('in 59 Tagen');
+    expect(formatiereAbstandInTagen(61, 'de')).toBe('in 2 Monaten');
+    expect(formatiereAbstandInTagen(61, 'en')).toBe('in 2 months');
+  });
+
+  it('ohne Zahl leer', () => {
+    expect(formatiereAbstandInTagen(NaN, 'de')).toBe('');
+    expect(formatiereAbstandInTagen(undefined, 'de')).toBe('');
   });
 });
