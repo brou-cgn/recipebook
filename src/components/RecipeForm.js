@@ -2216,7 +2216,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
             {saveFabIcons.map(({ state, icon }) => (
               <span
                 key={state}
-                className={`save-fab-icon${saveFabState === state ? ' active' : ''}`}
+                className={`save-fab-icon${state !== 'save' ? ' is-ki' : ''}${saveFabState === state ? ' active' : ''}`}
                 aria-hidden="true"
               >
                 {isBase64Image(icon) ? (
