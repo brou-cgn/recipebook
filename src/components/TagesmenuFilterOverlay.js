@@ -3,6 +3,7 @@ import './MobileSearchOverlay.css';
 import { splitIntoTwoRows, reorderActiveFirst } from '../utils/pillCarousel';
 import { useListenwerte, useTexte } from '../contexts/SpracheContext';
 import useListenName, { useListenNamenSuche, passtZurSuche } from '../hooks/useListenName';
+import useModalScrollLock from '../hooks/useModalScrollLock';
 import tagesmenuTexte from '../i18n/texte/tagesmenu';
 
 const DEBOUNCE_DELAY_MS = 200;
@@ -49,6 +50,8 @@ function TagesmenuFilterOverlay({
   // (= 0 normally, > 0 when the software keyboard is visible on iOS)
   const [panelBottom, setPanelBottom] = useState(0);
   const inputRef = useRef(null);
+  // Seite hinter dem Filterdialog nicht mitscrollen lassen
+  useModalScrollLock(!!isOpen);
 
   // Reset search when overlay opens
   useEffect(() => {

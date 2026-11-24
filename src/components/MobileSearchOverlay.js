@@ -11,6 +11,7 @@ import kochbuchTexte from '../i18n/texte/kochbuch';
 import { titelFassungen } from '../i18n/rezeptTitel';
 import { splitIntoTwoRows, reorderActiveFirst } from '../utils/pillCarousel';
 import useFadeOutClose from '../hooks/useFadeOutClose';
+import useModalScrollLock from '../hooks/useModalScrollLock';
 import useListenName, { useListenNamenSuche, passtZurSuche } from '../hooks/useListenName';
 
 const DEBOUNCE_DELAY_MS = 200;
@@ -75,6 +76,8 @@ function computeTopCuisineTypes(recipes, cuisineTypes) {
 
 function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRecipe, onSearch, onClearSearch, currentUser, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly: showSeasonalOnlyProp, showRecipes: showRecipesProp, showTutorials: showTutorialsProp, onFavoritesToggle, onSeasonalToggle, onRecipesToggle, onTutorialsToggle, seasonMatrixEntries = [], cuisineTypes, cuisineGroups, onCuisineFilterChange, selectedCuisines: selectedCuisinesProp, mealCategories, onMealCategoryFilterChange, selectedCategories: selectedCategoriesProp, availableAuthors, onAuthorFilterChange, selectedAuthors: selectedAuthorsProp, privateLists, onPrivateListFilterChange, selectedPrivateLists: selectedPrivateListsProp, searchTerm: searchTermProp, showPrivateListFilters = true }) {
   const [closing, onClose] = useFadeOutClose(onCloseProp);
+  // Seite hinter dem Filterdialog nicht mitscrollen lassen
+  useModalScrollLock(!!isOpen);
   const { rows: nutritionReferenceRows } = useNutritionReference();
   // Mehrsprachigkeit PR 3: Titel in der geltenden Sprache, die Suche findet Original und Übersetzung
   const zeigeTitel = useRezeptTitel();
