@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { defaultIcon } from '../utils/defaultButtonIcons';
+import { defaultIcon, defaultButtonIcon } from '../utils/defaultButtonIcons';
 import StarIcon from './icons/StarIcon';
 import TrashIcon from './icons/TrashIcon';
 import './RecipeForm.css';
@@ -12,7 +12,8 @@ import { addCuisineProposal } from '../utils/cuisineProposalsFirestore';
 import { getUsers, isCurrentUserAdmin, getUserAiOcrScanCount } from '../utils/userManagement';
 import { getImageForCategories } from '../utils/categoryImages';
 import { formatIngredientSpacing, expandSaltAndPepperIngredients } from '../utils/ingredientUtils';
-import { rephraseRecipeSteps } from '../utils/aiOcrService';
+import { rephraseRecipeSteps, applyRecipeVersionChanges } from '../utils/aiOcrService';
+import { buildVersionRequest, mergeVersionChanges } from '../utils/versionChanges';
 import { encodeRecipeLink, decodeRecipeLink, containsHashForTypeahead } from '../utils/recipeLinks';
 import { getAutoAssignedIngredients } from '../utils/ingredientIdMatching';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
@@ -24,6 +25,7 @@ import WebImportModal from './WebImportModal';
 import RecipeTypeahead from './RecipeTypeahead';
 import DeleteRowButton from './DeleteRowButton';
 import SavingOverlay from './SavingOverlay';
+import RecipeVersionDescribe from './RecipeVersionDescribe';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import {
   DndContext,
@@ -52,6 +54,45 @@ import useListenName from '../hooks/useListenName';
 
 // Max. parallel recipe photo uploads when several photos are picked at once.
 const IMAGE_UPLOAD_CONCURRENCY = 3;
+
+// Die runden Buttons unten (Abbrechen, Speichern) gibt es nur bis 768 px Breite
+// (RecipeForm.css); darüber stehen Abbrechen und Aktualisieren im Kopf.
+const hasFormFab = () => window.innerWidth <= 768;
+
+/**
+ * Vergleichbarer Stand der Formularfelder, die gespeichert werden. Leere Zutaten- und
+ * Schrittzeilen zählen nicht (sie werden beim Speichern verworfen), Zahlen und Texte
+ * werden gleich behandelt (Eingabefelder liefern Text, das Rezept Zahlen).
+ * Dient der Frage, ob im Formular "Rezept bearbeiten" schon etwas geändert wurde.
+ * @param {Object} values - Werte der Formularfelder
+ * @returns {string}
+ */
+function formSnapshot(values) {
+  const scalar = (value) => (value === undefined || value === null ? '' : String(value));
+  const rows = (list) => (list || []).filter((item) => (item?.text || '').trim() !== '');
+  return JSON.stringify({
+    title: values.title,
+    image: values.image,
+    images: values.images,
+    portionen: scalar(values.portionen),
+    portionUnitId: values.portionUnitId,
+    kulinarik: values.kulinarik,
+    schwierigkeit: scalar(values.schwierigkeit),
+    kochdauer: scalar(values.kochdauer),
+    speisekategorie: values.speisekategorie,
+    ingredients: rows(values.ingredients),
+    steps: rows(values.steps),
+    isPrivate: Boolean(values.isPrivate),
+    sourceUrl: values.sourceUrl,
+    authorId: values.authorId,
+  });
+}
+
+// Ganze Zahl aus einem Eingabefeld (Zahl oder Text), sonst null.
+const toInteger = (value) => {
+  const parsed = parseInt(value, 10);
+  return Number.isInteger(parsed) ? parsed : null;
+};
 
 // Sortable Ingredient Item Component
 function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, onToggleType, swipeDeleteIcon }) {
@@ -478,6 +519,15 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [cancelPressed, setCancelPressed] = useState(false);
   const ingredientUndo = useUndoableDelete();
   const stepUndo = useUndoableDelete();
+  // Bearbeiten mit KI (Berechtigung versionDictation, wie "Eigene Version erstellen"):
+  // Stand der Felder beim Laden des Rezepts; solange das Formular ihm entspricht,
+  // zeigt der runde Button unten rechts "Bearbeiten" statt "Speichern".
+  const [formBaseline, setFormBaseline] = useState(null);
+  const [isDescribingEdit, setIsDescribingEdit] = useState(false);
+  const [aiEditHasText, setAiEditHasText] = useState(false);
+  const [aiEditSummary, setAiEditSummary] = useState('');
+  // Weiter-Aktion des Beschreibungs-Overlays; wird vom runden Button ausgelöst.
+  const aiEditContinueRef = useRef(null);
 
   // Nutrition reference rows for auto-assigning ingredient IDs
   const { rows: nutritionReferenceRows } = useNutritionReference();
@@ -599,51 +649,52 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
 
   useEffect(() => {
     if (recipe) {
-      setTitle(recipe.title || '');
-      setImage(recipe.image || '');
-      // Load images array: prefer stored images array, fall back to single image field
-      if (Array.isArray(recipe.images) && recipe.images.length > 0) {
-        setImages(recipe.images);
-      } else if (recipe.image) {
-        setImages([{ url: recipe.image, isDefault: true }]);
-      } else {
-        setImages([]);
-      }
-      setPortionen(recipe.portionen ?? '');
-      setPortionUnitId(recipe.portionUnitId || 'portion');
-      // Handle both old string format and new array format for kulinarik
-      if (Array.isArray(recipe.kulinarik)) {
-        setKulinarik(recipe.kulinarik);
-      } else if (recipe.kulinarik) {
-        setKulinarik([recipe.kulinarik]);
-      } else {
-        setKulinarik([]);
-      }
+      const loaded = {
+        title: recipe.title || '',
+        image: recipe.image || '',
+        // Load images array: prefer stored images array, fall back to single image field
+        images: Array.isArray(recipe.images) && recipe.images.length > 0
+          ? recipe.images
+          : (recipe.image ? [{ url: recipe.image, isDefault: true }] : []),
+        portionen: recipe.portionen ?? '',
+        portionUnitId: recipe.portionUnitId || 'portion',
+        // Handle both old string format and new array format for kulinarik
+        kulinarik: Array.isArray(recipe.kulinarik) ? recipe.kulinarik : (recipe.kulinarik ? [recipe.kulinarik] : []),
+        schwierigkeit: recipe.schwierigkeit || 3,
+        kochdauer: recipe.kochdauer ?? '',
+        // Handle both old string format and new array format for speisekategorie
+        speisekategorie: Array.isArray(recipe.speisekategorie)
+          ? recipe.speisekategorie
+          : (recipe.speisekategorie ? [recipe.speisekategorie] : []),
+        ingredients: recipe.ingredients?.length > 0 ? normalizeIngredients(recipe.ingredients) : [{ type: 'ingredient', text: '' }],
+        steps: recipe.steps?.length > 0 ? normalizeSteps(recipe.steps) : [{ type: 'step', text: '' }],
+        isPrivate: recipe.isPrivate || false,
+        sourceUrl: recipe.sourceUrl || '',
+        // If creating a version, set current user as author
+        authorId: isCreatingVersion ? (currentUser?.id || '') : (recipe.authorId || currentUser?.id || ''),
+      };
+      setTitle(loaded.title);
+      setImage(loaded.image);
+      setImages(loaded.images);
+      setPortionen(loaded.portionen);
+      setPortionUnitId(loaded.portionUnitId);
+      setKulinarik(loaded.kulinarik);
       setKulinarikVorschlag(Array.isArray(recipe.kulinarikVorschlag) ? recipe.kulinarikVorschlag : []);
-      setSchwierigkeit(recipe.schwierigkeit || 3);
-      setKochdauer(recipe.kochdauer ?? '');
-      // Handle both old string format and new array format for speisekategorie
-      if (Array.isArray(recipe.speisekategorie)) {
-        setSpeisekategorie(recipe.speisekategorie);
-      } else if (recipe.speisekategorie) {
-        setSpeisekategorie([recipe.speisekategorie]);
-      } else {
-        setSpeisekategorie([]);
-      }
-      setIngredients(recipe.ingredients?.length > 0 ? normalizeIngredients(recipe.ingredients) : [{ type: 'ingredient', text: '' }]);
-      setSteps(recipe.steps?.length > 0 ? normalizeSteps(recipe.steps) : [{ type: 'step', text: '' }]);
-      setIsPrivate(recipe.isPrivate || false);
-      setSourceUrl(recipe.sourceUrl || '');
-      
-      // If creating a version, set current user as author and track parent
-      if (isCreatingVersion) {
-        setAuthorId(currentUser?.id || '');
-        setParentRecipeId(recipe.id || '');
-      } else {
-        setAuthorId(recipe.authorId || currentUser?.id || '');
-        setParentRecipeId(recipe.parentRecipeId || '');
-      }
+      setSchwierigkeit(loaded.schwierigkeit);
+      setKochdauer(loaded.kochdauer);
+      setSpeisekategorie(loaded.speisekategorie);
+      setIngredients(loaded.ingredients);
+      setSteps(loaded.steps);
+      setIsPrivate(loaded.isPrivate);
+      setSourceUrl(loaded.sourceUrl);
+      setAuthorId(loaded.authorId);
+      // A version tracks its parent
+      setParentRecipeId(isCreatingVersion ? (recipe.id || '') : (recipe.parentRecipeId || ''));
+      setFormBaseline(formSnapshot(loaded));
+      setAiEditSummary('');
     } else {
+      setFormBaseline(null);
+      setAiEditSummary('');
       // New recipe - set current user as author
       setAuthorId(currentUser?.id || '');
       setParentRecipeId('');
@@ -1291,6 +1342,61 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     setFabPressed(false);
   };
 
+  // Bearbeiten mit KI: nur beim direkten Bearbeiten eines gespeicherten Rezepts
+  // (nicht bei neuer Version, neuem Rezept oder Import-Prüfung).
+  const currentSnapshot = useMemo(
+    () => formSnapshot({ title, image, images, portionen, portionUnitId, kulinarik, schwierigkeit, kochdauer, speisekategorie, ingredients, steps, isPrivate, sourceUrl, authorId }),
+    [title, image, images, portionen, portionUnitId, kulinarik, schwierigkeit, kochdauer, speisekategorie, ingredients, steps, isPrivate, sourceUrl, authorId]
+  );
+  const canAiEdit = Boolean(recipe?.id) && !isCreatingVersion && !recipe?.isTemp && Boolean(currentUser?.versionDictation);
+  const isUnchanged = formBaseline !== null && currentSnapshot === formBaseline;
+  // Zustände des runden Buttons unten rechts: Speichern, oder solange nichts geändert
+  // ist Bearbeiten → Beschreibung offen (noch ohne Text) → Text erfasst.
+  const saveFabState = isDescribingEdit
+    ? (aiEditHasText ? 'text' : 'describing')
+    : (canAiEdit && isUnchanged ? 'edit' : 'save');
+
+  const handleSaveFabClick = (e) => {
+    if (saveFabState === 'save') {
+      handleFabClick(e);
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    if (isDescribingEdit) {
+      aiEditContinueRef.current?.();
+    } else {
+      setIsDescribingEdit(true);
+    }
+  };
+
+  const closeAiEdit = () => setIsDescribingEdit(false);
+
+  // Beschreibung per KI in das aktuelle Rezept einarbeiten (gleiche Cloud Function wie
+  // bei "Eigene Version erstellen"); das Ergebnis steht danach zur Kontrolle im Formular.
+  // Wirft bei Fehlern, damit RecipeVersionDescribe die Meldung anzeigen kann.
+  const handleApplyAiEdit = async (description) => {
+    const current = {
+      title,
+      portionen: toInteger(portionen),
+      kochdauer: toInteger(kochdauer),
+      ingredients,
+      steps,
+    };
+    // Zusammenfassung in der geltenden Sprache, das Rezept bleibt deutsch (wie bei Versionen)
+    const result = await applyRecipeVersionChanges(buildVersionRequest(current), description, sprache);
+    const merged = mergeVersionChanges(current, result);
+    setTitle(merged.title);
+    // Unveränderte Angaben behalten ihren bisherigen Wert im Feld
+    if (merged.portionen !== current.portionen) setPortionen(merged.portionen ?? '');
+    if (merged.kochdauer !== current.kochdauer) setKochdauer(merged.kochdauer ?? '');
+    setIngredients(normalizeIngredients(merged.ingredients));
+    setSteps(normalizeSteps(merged.steps));
+    setAiEditSummary(result.summary || '');
+    setIsDescribingEdit(false);
+    window.scrollTo(0, 0);
+  };
+
   const handleImport = (importedRecipe) => {
     // Populate form with imported data
     setTitle(importedRecipe.title || '');
@@ -1402,6 +1508,20 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   };
 
   const addIngredientIcon = getEffectiveIcon(buttonIcons, 'addIngredient', isDarkMode) || defaultIcon('carrot');
+  // Icons des runden Buttons unten rechts beim Bearbeiten mit KI; Beschreibung offen und
+  // Text erfasst nutzen dieselben Icons wie der Versionsbutton im Rezept.
+  const saveFabIcons = [
+    { state: 'save', icon: getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode) },
+    { state: 'edit', icon: getEffectiveIcon(buttonIcons, 'editRecipe', isDarkMode) || defaultButtonIcon('editRecipe', isDarkMode) },
+    { state: 'describing', icon: getEffectiveIcon(buttonIcons, 'newVersionDescribing', isDarkMode) || defaultButtonIcon('newVersionDescribing', isDarkMode) },
+    { state: 'text', icon: getEffectiveIcon(buttonIcons, 'newVersionWithText', isDarkMode) || defaultButtonIcon('newVersionWithText', isDarkMode) },
+  ];
+  const saveFabLabel = {
+    save: recipe ? t('rezeptAktualisieren') : t('rezeptSpeichern'),
+    edit: t('mitKiBearbeiten'),
+    describing: t('kiZurueckZumFormular'),
+    text: t('kiEinarbeiten'),
+  }[saveFabState];
   const addStepIcon = addIngredientIcon;
   const swipeDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode);
 
@@ -1445,6 +1565,16 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                 {t('eingearbeitet', { zusammenfassung: versionChangeSummary })}
               </p>
             )}
+          </div>
+        </div>
+      )}
+
+      {aiEditSummary && !isCreatingVersion && (
+        <div className="version-info-banner">
+          <div className="version-info-text">
+            <p className="version-change-summary">
+              {t('eingearbeitet', { zusammenfassung: aiEditSummary })}
+            </p>
           </div>
         </div>
       )}
@@ -2054,21 +2184,50 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       {/* Loading overlay with animated dots while saving */}
       {isSaving && <SavingOverlay label={t('rezeptWirdGespeichert')} />}
 
-      {/* FAB Save Button */}
+      {isDescribingEdit && (
+        <RecipeVersionDescribe
+          modus="bearbeiten"
+          onApply={handleApplyAiEdit}
+          onSkip={closeAiEdit}
+          onCancel={closeAiEdit}
+          continueRef={aiEditContinueRef}
+          onHasTextChange={setAiEditHasText}
+          hasFab={hasFormFab}
+        />
+      )}
+
+      {/* FAB Save Button – solange beim Bearbeiten nichts geändert ist, der Bearbeiten-Button (KI) */}
       <button
         type="button"
-        className={`save-fab-button ${fabPressed ? 'pressed' : ''}`}
-        onClick={handleFabClick}
+        className={`save-fab-button ${fabPressed ? 'pressed' : ''}${isDescribingEdit ? ' version-describing' : ''}`}
+        onClick={handleSaveFabClick}
         onMouseDown={handleFabMouseDown}
         onMouseUp={handleFabMouseUp}
         onMouseLeave={handleFabMouseUp}
         onTouchStart={handleFabMouseDown}
         onTouchEnd={handleFabMouseUp}
         disabled={isSaving}
-        aria-label={recipe ? t('rezeptAktualisieren') : t('rezeptSpeichern')}
-        title={recipe ? t('rezeptAktualisieren') : t('rezeptSpeichern')}
+        aria-label={saveFabLabel}
+        title={saveFabLabel}
       >
-        {isBase64Image(getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)) ? (
+        {canAiEdit ? (
+          // Alle Icons liegen übereinander, nur das aktive ist sichtbar (wie beim Versionsbutton im Rezept).
+          <span className="save-fab-icons">
+            {saveFabIcons.map(({ state, icon }) => (
+              <span
+                key={state}
+                className={`save-fab-icon${saveFabState === state ? ' active' : ''}`}
+                aria-hidden="true"
+              >
+                {isBase64Image(icon) ? (
+                  <img src={icon} alt="" className="button-icon-image" draggable="false" />
+                ) : (
+                  icon
+                )}
+              </span>
+            ))}
+          </span>
+        ) : isBase64Image(getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)) ? (
           <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt={tAllgemein('speichern')} className="button-icon-image" draggable="false" />
         ) : (
           getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)

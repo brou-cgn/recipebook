@@ -139,8 +139,16 @@
   cursor: not-allowed;
 }
 
-/* Versionsbutton des Rezepts bleibt über dem Blur-Overlay erreichbar. */
+/* Im Rezeptformular (Bearbeiten mit KI) sitzt der runde Button 20 px über der
+   Unterkante, ohne Navigationsleiste (.save-fab-button in RecipeForm.css). */
+.version-describe.has-fab.im-formular {
+  padding-bottom: 20px;
+}
+
+/* Versionsbutton des Rezepts bzw. Speichern-Button des Formulars bleibt über dem
+   Blur-Overlay erreichbar. */
 .new-version-fab-button.version-describing,
-.edit-fab-button.version-describing {
+.edit-fab-button.version-describing,
+.save-fab-button.version-describing {
   z-index: 2400;
 }

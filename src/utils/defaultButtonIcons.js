@@ -162,6 +162,10 @@ export const DEFAULT_ICON_NAMES = {
   tagesmenuMeineAuswahl: 'list',
   tagesmenuZurueckZumStapel: 'layers',
   newVersion: 'copy',
+  // Versionsbutton (Rezept) und Speichern-Button des Formulars beim Bearbeiten mit KI:
+  // Beschreibung offen bzw. Text erfasst. Hier eingetragen, damit es Dunkelvarianten gibt.
+  newVersionDescribing: 'pencil',
+  newVersionWithText: 'check',
   printRecipe: 'printer',
   addSection: 'plus',
   kuecheFab: 'plus',

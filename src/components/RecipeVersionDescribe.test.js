@@ -106,6 +106,48 @@ test('Diktat hängt erkannten Text an das Textfeld an', () => {
   expect(screen.getByRole('button', { name: 'Diktat starten' })).toBeInTheDocument();
 });
 
+describe('Bearbeiten mit KI (modus „bearbeiten“, Rezeptformular)', () => {
+  test('eigene Texte, Weiter ohne Text führt zurück zum Formular', async () => {
+    const props = setup({ modus: 'bearbeiten', hasFab: () => false });
+    expect(screen.getByRole('dialog', { name: 'Rezept mit KI bearbeiten' })).toBeInTheDocument();
+    const feld = screen.getByLabelText('Was soll sich ändern?');
+    expect(feld).toHaveAttribute('placeholder', 'Was möchtest du am Rezept ändern?');
+    expect(screen.getByRole('button', { name: 'Einarbeiten' })).toHaveAttribute('title', 'Zurück zum Formular');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Einarbeiten' }));
+    expect(props.onSkip).toHaveBeenCalledTimes(1);
+
+    fireEvent.change(feld, { target: { value: 'Ersetze Butter durch Olivenöl' } });
+    expect(screen.getByRole('button', { name: 'Einarbeiten' })).toHaveAttribute('title', 'Änderungen einarbeiten – danach kannst du alles kontrollieren');
+    fireEvent.click(screen.getByRole('button', { name: 'Einarbeiten' }));
+    await waitFor(() => expect(props.onApply).toHaveBeenCalledWith('Ersetze Butter durch Olivenöl'));
+  });
+
+  test('hasFab entscheidet, ob der runde Button des Aufrufers Weiter übernimmt', () => {
+    setup({ modus: 'bearbeiten', hasFab: () => true });
+    expect(screen.queryByRole('button', { name: 'Einarbeiten' })).not.toBeInTheDocument();
+  });
+
+  test('Englisch und Französisch', () => {
+    const { unmount } = renderWithProviders(
+      <RecipeVersionDescribe modus="bearbeiten" hasFab={() => false} onApply={jest.fn()} onSkip={jest.fn()} onCancel={jest.fn()} />,
+      { sprache: 'en' },
+    );
+    expect(screen.getByRole('dialog', { name: 'Edit recipe with AI' })).toBeInTheDocument();
+    expect(screen.getByLabelText('What should change?')).toHaveAttribute('placeholder', 'What would you like to change in the recipe?');
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeInTheDocument();
+    unmount();
+
+    renderWithProviders(
+      <RecipeVersionDescribe modus="bearbeiten" hasFab={() => false} onApply={jest.fn()} onSkip={jest.fn()} onCancel={jest.fn()} />,
+      { sprache: 'fr' },
+    );
+    expect(screen.getByRole('dialog', { name: 'Modifier la recette avec l’IA' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Que faut-il changer ?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Intégrer' })).toHaveAttribute('title', 'Retour au formulaire');
+  });
+});
+
 describe('Mehrsprachigkeit (PR 6o)', () => {
   const zeige = (sprache, props = {}) => renderWithProviders(
     <RecipeVersionDescribe recipe={recipe} onApply={jest.fn()} onSkip={jest.fn()} onCancel={jest.fn()} {...props} />,

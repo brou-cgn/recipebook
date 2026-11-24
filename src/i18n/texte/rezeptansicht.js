@@ -132,6 +132,12 @@ export default {
     versionOhneBeschreibung: 'Ohne Beschreibung weiter',
     versionWirdEingearbeitet: 'Wird eingearbeitet …',
     versionFehler: 'Die Änderungen konnten nicht eingearbeitet werden.',
+    // Derselbe Dialog im Formular „Rezept bearbeiten“ (Bearbeiten mit KI, modus „bearbeiten“)
+    kiBearbeiten: 'Rezept mit KI bearbeiten',
+    kiBearbeitenWasAendern: 'Was soll sich ändern?',
+    kiBearbeitenPlatzhalter: 'Was möchtest du am Rezept ändern?',
+    kiBearbeitenEinarbeiten: 'Einarbeiten',
+    kiBearbeitenOhneAenderung: 'Zurück zum Formular',
     // Meldungen der Cloud Function (VERSION_MELDUNGEN)
     versionKiUnvollstaendig: 'Die KI hat kein vollständiges Rezept zurückgegeben.',
     versionTageslimit: 'Tageslimit für Versionsbeschreibungen erreicht ({limit}/{limit}). Versuche es morgen erneut.',
@@ -249,6 +255,12 @@ export default {
     versionOhneBeschreibung: 'Continue without a description',
     versionWirdEingearbeitet: 'Working in your changes …',
     versionFehler: 'The changes couldn’t be worked in.',
+    // Derselbe Dialog im Formular „Rezept bearbeiten“ (Bearbeiten mit KI, modus „bearbeiten“)
+    kiBearbeiten: 'Edit recipe with AI',
+    kiBearbeitenWasAendern: 'What should change?',
+    kiBearbeitenPlatzhalter: 'What would you like to change in the recipe?',
+    kiBearbeitenEinarbeiten: 'Apply',
+    kiBearbeitenOhneAenderung: 'Back to the form',
     // Meldungen der Cloud Function (VERSION_MELDUNGEN)
     versionKiUnvollstaendig: 'The AI didn’t return a complete recipe.',
     versionTageslimit: 'Daily limit for version descriptions reached ({limit}/{limit}). Try again tomorrow.',
@@ -366,6 +378,12 @@ export default {
     versionOhneBeschreibung: 'Continuer sans description',
     versionWirdEingearbeitet: 'Intégration en cours…',
     versionFehler: 'Impossible d’intégrer les modifications.',
+    // Derselbe Dialog im Formular „Rezept bearbeiten“ (Bearbeiten mit KI, modus „bearbeiten“)
+    kiBearbeiten: 'Modifier la recette avec l’IA',
+    kiBearbeitenWasAendern: `Que faut-il changer${NBSP}?`,
+    kiBearbeitenPlatzhalter: `Que veux-tu changer dans la recette${NBSP}?`,
+    kiBearbeitenEinarbeiten: 'Intégrer',
+    kiBearbeitenOhneAenderung: 'Retour au formulaire',
     // Meldungen der Cloud Function (VERSION_MELDUNGEN)
     versionKiUnvollstaendig: 'L’IA n’a pas renvoyé de recette complète.',
     versionTageslimit: 'Limite quotidienne de descriptions de version atteinte ({limit}/{limit}). Réessaie demain.',

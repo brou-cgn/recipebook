@@ -23,6 +23,10 @@ export default {
     speichert: 'Speichert …',
     aktualisieren: 'Aktualisieren',
     rezeptWirdGespeichert: 'Rezept wird gespeichert',
+    // Runder Button unten rechts, solange das Rezept unverändert ist (Bearbeiten mit KI)
+    mitKiBearbeiten: 'Rezept mit KI bearbeiten',
+    kiEinarbeiten: 'Änderungen einarbeiten',
+    kiZurueckZumFormular: 'Zurück zum Formular',
     // Hinweise oben (eigene Version, automatische Importe)
     neueVersionVon: 'Du erstellst eine neue Version von „{titel}“.',
     eingearbeitet: 'Eingearbeitet: {zusammenfassung} Bitte prüfe Zutaten und Schritte, bevor du speicherst.',
@@ -129,6 +133,10 @@ export default {
     speichert: 'Saving…',
     aktualisieren: 'Update',
     rezeptWirdGespeichert: 'Saving recipe',
+    // Runder Button unten rechts, solange das Rezept unverändert ist (Bearbeiten mit KI)
+    mitKiBearbeiten: 'Edit recipe with AI',
+    kiEinarbeiten: 'Apply changes',
+    kiZurueckZumFormular: 'Back to the form',
     // Hinweise oben (eigene Version, automatische Importe)
     neueVersionVon: 'You’re creating a new version of “{titel}”.',
     eingearbeitet: 'Incorporated: {zusammenfassung} Please check the ingredients and steps before saving.',
@@ -235,6 +243,10 @@ export default {
     speichert: 'Enregistrement…',
     aktualisieren: 'Mettre à jour',
     rezeptWirdGespeichert: 'Enregistrement de la recette',
+    // Runder Button unten rechts, solange das Rezept unverändert ist (Bearbeiten mit KI)
+    mitKiBearbeiten: 'Modifier la recette avec l’IA',
+    kiEinarbeiten: 'Intégrer les modifications',
+    kiZurueckZumFormular: 'Retour au formulaire',
     // Hinweise oben (eigene Version, automatische Importe)
     neueVersionVon: `Tu crées une nouvelle version de «${NBSP}{titel}${NBSP}».`,
     eingearbeitet: `Intégré${NBSP}: {zusammenfassung} Vérifie les ingrédients et les étapes avant d’enregistrer.`,

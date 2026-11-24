@@ -1187,8 +1187,10 @@ export const setUserSprache = async (userId, sprache) => {
  *
  * versionDictation schaltet bei "Eigene Version erstellen" (fremdes Rezept) den
  * vorgeschalteten Schritt frei, in dem die Abwandlung frei beschrieben (getippt
- * oder diktiert) und per KI ins Formular eingearbeitet wird
- * (Cloud Function applyRecipeVersionChanges prüft dasselbe Flag serverseitig).
+ * oder diktiert) und per KI ins Formular eingearbeitet wird, und ebenso das
+ * Bearbeiten mit KI im Formular "Rezept bearbeiten" (runder Button, solange nichts
+ * geändert ist; RecipeForm). Die Cloud Function applyRecipeVersionChanges prüft
+ * dasselbe Flag serverseitig.
  * Standardmäßig nur für Admins an.
  *
  * parallelKochen schaltet im Kochmodus (Handy, Hochformat) die Titelzeile mit
