@@ -828,3 +828,36 @@ describe('EventsPage in anderer Sprache (Mehrsprachigkeit PR 6j)', () => {
     expect(screen.getByText('Rotwein')).toBeInTheDocument();
   });
 });
+
+describe('EventsPage: Event-Namen übersetzt (Mehrsprachigkeit PR 6u)', () => {
+  const currentUser = { id: 'u1', role: 'edit' };
+  const event = {
+    id: 'e1',
+    eventName: 'Gartenparty',
+    date: '2025-07-01',
+    durationHours: 3,
+    eventType: 'grillfest',
+    status: 'geplant',
+    guests: { adults: 4, children: 0 },
+    textUebersetzung: {
+      quelle: { name: 'Gartenparty', description: '' },
+      en: { name: 'Garden party', description: '' },
+      fr: { name: 'Garden-party', description: '' },
+      version: 1,
+    },
+  };
+  const zeigeIn = (sprache, inhalteUebersetzen) => render(
+    <SpracheProvider profilSprache={sprache} speicher={null} inhalteUebersetzen={inhalteUebersetzen}>
+      <EventsPage currentUser={currentUser} events={[event]} />
+    </SpracheProvider>
+  );
+
+  test('Karte und Ansicht zeigen die Übersetzung, ohne Berechtigung das Original', () => {
+    const { unmount } = zeigeIn('en', true);
+    fireEvent.click(screen.getByText('Garden party'));
+    expect(screen.getByRole('heading', { level: 2, name: 'Garden party' })).toBeInTheDocument();
+    unmount();
+    zeigeIn('en', false);
+    expect(screen.getByText('Gartenparty')).toBeInTheDocument();
+  });
+});

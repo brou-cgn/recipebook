@@ -4,6 +4,7 @@ import { useSprache, useTexte } from '../contexts/SpracheContext';
 import { formatiereDatum } from '../i18n/format';
 import startseiteTexte from '../i18n/texte/startseite';
 import { listenAnzeigeName } from '../utils/fuerDichEntdeckt';
+import { useListenBeschreibung } from '../hooks/useListenName';
 import './StartseitenKarussell.css';
 import './FuerDichEntdecktKachel.css';
 
@@ -35,6 +36,7 @@ const formatMonthYear = (value, sprache) => {
 function FuerDichEntdecktKachel({ list, recipes = [], themeImage = '', themeTitle: themeTitleProp = '', onOpen }) {
   const t = useTexte(startseiteTexte);
   const { sprache } = useSprache();
+  const listenBeschreibung = useListenBeschreibung();
   if (!list) return null;
 
   // Übernommene Kandidaten (carriedRecipeIds) gehören nicht zum aktuellen Thema:
@@ -49,8 +51,9 @@ function FuerDichEntdecktKachel({ list, recipes = [], themeImage = '', themeTitl
     title: recipe.title,
     imageUrl: getRecipeCardImageUrl(recipe),
   }));
-  // Thema und Rubrik sind Inhalt (gepflegt bzw. vom System gesetzt), der Ersatztext ist Oberfläche
-  const themeTitle = (typeof list.description === 'string' && list.description.trim()) || themeTitleProp.trim() || t('themenStandard');
+  // Thema und Rubrik sind Inhalt (gepflegt bzw. vom System gesetzt), der Ersatztext ist Oberfläche. Das Thema
+  // steht als Beschreibung an der Liste und erscheint übersetzt wie die Beschreibungen eigener Listen (PR 6u).
+  const themeTitle = listenBeschreibung(list) || themeTitleProp.trim() || t('themenStandard');
   const themeLabel = (typeof list.themeLabel === 'string' && list.themeLabel.trim()) || '';
   const countText = t('rezepte', { anzahl: count });
   const monthYear = formatMonthYear(list.rotatedAt, sprache);

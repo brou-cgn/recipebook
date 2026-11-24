@@ -4,7 +4,7 @@ import Button from './Button';
 import { canEditRecipes } from '../utils/userManagement';
 import './RecipeFilterSidebar.css';
 import { useListenwerte, useTexte } from '../contexts/SpracheContext';
-import useListenName from '../hooks/useListenName';
+import useListenName, { useListenNamenSuche, passtZurSuche } from '../hooks/useListenName';
 import kochbuchTexte from '../i18n/texte/kochbuch';
 
 const COLLAPSED_STORAGE_KEY = 'recipeFilterSidebar_collapsed';
@@ -62,6 +62,7 @@ function RecipeFilterSidebar({
   const t = useTexte(kochbuchTexte);
   // Systemliste „Für dich entdeckt“ in der geltenden Sprache, eigene Listennamen, wie sie sind (PR 6p)
   const listenName = useListenName();
+  const listenNamenSuche = useListenNamenSuche();
   const [collapsed, setCollapsed] = useState(getStoredCollapsed);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [showAllCuisines, setShowAllCuisines] = useState(false);
@@ -172,8 +173,8 @@ function RecipeFilterSidebar({
 
   const visiblePrivateLists = useMemo(() => {
     if (!trimmedSearch) return privateLists;
-    return privateLists.filter((list) => listenName(list).toLowerCase().includes(trimmedSearch));
-  }, [privateLists, trimmedSearch, listenName]);
+    return privateLists.filter((list) => passtZurSuche(listenNamenSuche(list), trimmedSearch));
+  }, [privateLists, trimmedSearch, listenNamenSuche]);
 
   const hasActiveFilters = !!(
     searchTerm?.trim() ||

@@ -200,3 +200,35 @@ describe('MenuList in anderer Sprache (Mehrsprachigkeit PR 6f)', () => {
     expect(screen.getByRole('button', { name: 'Create menu' })).toBeInTheDocument();
   });
 });
+
+describe('MenuList: Name und Beschreibung übersetzt (Mehrsprachigkeit PR 6u)', () => {
+  const menue = {
+    id: 'm1',
+    name: 'Weihnachtsessen',
+    description: 'Mit der ganzen Familie',
+    recipeIds: [],
+    authorId: 'u1',
+    textUebersetzung: {
+      quelle: { name: 'Weihnachtsessen', description: 'Mit der ganzen Familie' },
+      en: { name: 'Christmas dinner', description: 'With the whole family' },
+      fr: { name: 'Repas de Noël', description: 'Avec toute la famille' },
+      version: 1,
+    },
+  };
+  const zeige = (optionen) => renderWithProviders(
+    <MenuList menus={[menue]} recipes={[]} onSelectMenu={() => {}} onAddMenu={() => {}} onToggleMenuFavorite={() => {}} currentUser={{ id: 'u1' }} allUsers={[]} />,
+    optionen
+  );
+
+  test('mit der Berechtigung sprachwahl in der geltenden Sprache', async () => {
+    zeige({ sprache: 'fr', inhalteUebersetzen: true });
+    expect(await screen.findByRole('heading', { name: 'Repas de Noël' })).toBeInTheDocument();
+    expect(screen.getByText('Avec toute la famille')).toBeInTheDocument();
+  });
+
+  test('ohne Berechtigung das Original', async () => {
+    zeige({ sprache: 'en' });
+    expect(await screen.findByRole('heading', { name: 'Weihnachtsessen' })).toBeInTheDocument();
+    expect(screen.getByText('Mit der ganzen Familie')).toBeInTheDocument();
+  });
+});

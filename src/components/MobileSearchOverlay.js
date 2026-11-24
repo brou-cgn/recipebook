@@ -11,7 +11,7 @@ import kochbuchTexte from '../i18n/texte/kochbuch';
 import { titelFassungen } from '../i18n/rezeptTitel';
 import { splitIntoTwoRows, reorderActiveFirst } from '../utils/pillCarousel';
 import useFadeOutClose from '../hooks/useFadeOutClose';
-import useListenName from '../hooks/useListenName';
+import useListenName, { useListenNamenSuche, passtZurSuche } from '../hooks/useListenName';
 
 const DEBOUNCE_DELAY_MS = 200;
 // Delay in ms before auto-focusing the input – gives the slide-up animation
@@ -82,6 +82,7 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
   const t = useTexte(kochbuchTexte);
   // Systemliste „Für dich entdeckt“ in der geltenden Sprache, eigene Listennamen, wie sie sind (PR 6p)
   const listenName = useListenName();
+  const listenNamenSuche = useListenNamenSuche();
   const { inhalteUebersetzen } = useSprache();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
@@ -448,12 +449,12 @@ function MobileSearchOverlay({ isOpen, onClose: onCloseProp, recipes, onSelectRe
     let lists = privateLists || [];
     if (debouncedTerm) {
       const lower = debouncedTerm.toLowerCase();
-      lists = lists.filter((l) => listenName(l).toLowerCase().includes(lower));
+      lists = lists.filter((l) => passtZurSuche(listenNamenSuche(l), lower));
     }
     const active = lists.filter((l) => selectedPrivateLists.includes(l.id));
     const inactive = lists.filter((l) => !selectedPrivateLists.includes(l.id));
     return [...active, ...inactive];
-  }, [privateLists, selectedPrivateLists, debouncedTerm, listenName]);
+  }, [privateLists, selectedPrivateLists, debouncedTerm, listenNamenSuche]);
 
   if (!isOpen) return null;
 

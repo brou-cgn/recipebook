@@ -53,6 +53,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useEventName } from '../hooks/useMenueEventText';
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -594,6 +595,8 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
   // Namen vordefinierter Getränke in der geltenden Sprache (Mehrsprachigkeit PR 6k)
   const tGetraenke = useTexte(getraenkeTexte);
   const { sprache, inhalteUebersetzen } = useSprache();
+  // Namen verknüpfbarer Events übersetzt (PR 6u); Name und Beschreibung des Menüs bleiben hier das Original
+  const eventName = useEventName();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -1682,7 +1685,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
             {availableEvents.map((event) => (
               <div key={event.id} className="events-card" onClick={() => handleLinkEvent(event.id)}>
                 <div className="events-card-main">
-                  <h3>{event.eventName}</h3>
+                  <h3>{eventName(event)}</h3>
                   <p className="events-card-meta">{formatEventDate(event.date, sprache)}</p>
                 </div>
               </div>
@@ -1868,7 +1871,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser, events: userEv
           {eventId ? (
             <div className="menu-event-linked">
               <p className="menu-event-linked-name">
-                {linkedEventLoading ? t('laedtKurz') : (linkedEvent?.eventName || t('eventFehlt'))}
+                {linkedEventLoading ? t('laedtKurz') : ((linkedEvent && eventName(linkedEvent)) || t('eventFehlt'))}
               </p>
               <div className="menu-drinks-link-actions">
                 <Button onClick={() => setFormSubView('linkPicker')}>

@@ -7,7 +7,7 @@ import { useTexte } from '../contexts/SpracheContext';
 import bereicheTexte from '../i18n/texte/bereiche';
 import gruppenTexte from '../i18n/texte/gruppen';
 import chefkochTexte from '../i18n/texte/chefkochUndMehr';
-import useListenName from '../hooks/useListenName';
+import useListenName, { useListenBeschreibung } from '../hooks/useListenName';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import { listenArtText } from '../utils/listenArt';
@@ -31,6 +31,7 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
   const t = useTexte(gruppenTexte);
   const tChefkoch = useTexte(chefkochTexte);
   const listenName = useListenName();
+  const listenBeschreibung = useListenBeschreibung();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
@@ -111,6 +112,7 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
             {privateGroups.map((group) => {
               const ownerName = getOwnerName(group);
               const isOwner = group.ownerId === currentUser?.id;
+              const beschreibung = listenBeschreibung(group);
               return (
                 <div key={group.id} className="group-card">
                   <div className="group-card-content">
@@ -124,8 +126,8 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
                         {listenArtText(group.listKind, t)}
                       </span>
                     )}
-                    {typeof group.description === 'string' && group.description.trim() && (
-                      <p className="group-card-description">{group.description.trim()}</p>
+                    {beschreibung && (
+                      <p className="group-card-description">{beschreibung}</p>
                     )}
                     <div className="group-card-meta">
                       <span>{t('mitglieder', { anzahl: (group.memberIds || []).length })}</span>

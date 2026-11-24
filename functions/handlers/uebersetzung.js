@@ -32,6 +32,12 @@
  * Einstellungen › Listen & Kategorien (settings/app.listenUebersetzungen).
  * uebersetzeListenwerteAutomatisch (Trigger auf settings/app, PR 6t) übersetzt neue Listenwerte
  * selbst, sobald eine Liste sich ändert, und füllt dabei nur leere Felder.
+ *
+ * uebersetzeListenTexte, uebersetzeMenueTexte und uebersetzeEventTexte (Trigger auf groups/{id},
+ * menus/{id} und users/{uid}/events/{id}, PR 6u) übersetzen Namen und Beschreibungen wie die
+ * Rezepttitel, sobald ein Dokument angelegt wird oder sich Name oder Beschreibung ändern, und
+ * schreiben das Feld `textUebersetzung` (Aufbau in shared/namenUebersetzung.js);
+ * backfillTextUebersetzungen (nur admin) trägt sie für den Bestand nach.
  */
 
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
@@ -50,6 +56,15 @@ const {
   brauchtTitelUebersetzung,
   baueTitelUebersetzung,
 } = require('../shared/titelUebersetzung');
+const {
+  MAX_NAMEN_JE_AUFRUF,
+  NAMEN_RESPONSE_SCHEMA,
+  quelleAus,
+  baueNamenPrompt,
+  pruefeNamenAntwort,
+  brauchtNamenUebersetzung,
+  baueNamenUebersetzung,
+} = require('../shared/namenUebersetzung');
 const {
   INHALT_RESPONSE_SCHEMA,
   inhaltQuellHash,
@@ -95,14 +110,14 @@ const GRUND = {
 };
 
 /**
- * Ein Gemini-Aufruf für einen oder mehrere Titel (temperature 0, JSON mit festem Schema).
- * Fehler betreffen nur diese Titel: Sie kommen als null zurück.
+ * Ein Gemini-Aufruf mit JSON-Antwort nach festem Schema (temperature 0), für Titel und Listen.
  * @param {string} apiKey
- * @param {string[]} titel
- * @return {Promise<Array<object|null>>} je Titel {en, fr} oder null
+ * @param {string} prompt
+ * @param {object} schema - responseSchema
+ * @param {string} protokoll - Präfix und Umfang für Protokolle, etwa „titelUebersetzung (3 Titel)“
+ * @return {Promise<*|null>} geparste Antwort oder null, wenn der KI-Dienst nicht brauchbar geantwortet hat
  */
-async function uebersetzeTitel(apiKey, titel) {
-  const ohneErgebnis = () => titel.map(() => null);
+async function geminiJson(apiKey, prompt, schema, protokoll) {
   const {url, headers} = geminiGenerateContentRequest(apiKey);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
@@ -112,35 +127,45 @@ async function uebersetzeTitel(apiKey, titel) {
       headers,
       signal: controller.signal,
       body: JSON.stringify({
-        contents: [{parts: [{text: baueTitelPrompt(titel)}]}],
+        contents: [{parts: [{text: prompt}]}],
         generationConfig: {
           temperature: 0,
           responseMimeType: 'application/json',
-          responseSchema: TITEL_RESPONSE_SCHEMA,
+          responseSchema: schema,
         },
       }),
     });
     if (!response.ok) {
-      console.error(`titelUebersetzung: Gemini antwortet ${response.status} (${titel.length} Titel)`);
-      return ohneErgebnis();
+      console.error(`${protokoll}: Gemini antwortet ${response.status}`);
+      return null;
     }
     const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    let geparst;
     try {
-      geparst = JSON.parse(text);
+      return JSON.parse(data?.candidates?.[0]?.content?.parts?.[0]?.text);
     } catch {
-      console.error(`titelUebersetzung: keine JSON-Antwort (${titel.length} Titel)`);
-      return ohneErgebnis();
+      console.error(`${protokoll}: keine JSON-Antwort`);
+      return null;
     }
-    return pruefeTitelAntwort(geparst, titel.length);
   } catch (error) {
     const art = error?.name === 'AbortError' ? 'Zeitüberschreitung' : error?.message;
-    console.error(`titelUebersetzung: Gemini nicht erreichbar: ${art}`);
-    return ohneErgebnis();
+    console.error(`${protokoll}: Gemini nicht erreichbar: ${art}`);
+    return null;
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * Ein Gemini-Aufruf für einen oder mehrere Titel. Fehler betreffen nur diese Titel: Sie kommen als
+ * null zurück.
+ * @param {string} apiKey
+ * @param {string[]} titel
+ * @return {Promise<Array<object|null>>} je Titel {en, fr} oder null
+ */
+async function uebersetzeTitel(apiKey, titel) {
+  const antwort = await geminiJson(apiKey, baueTitelPrompt(titel), TITEL_RESPONSE_SCHEMA,
+      `titelUebersetzung (${titel.length} Titel)`);
+  return antwort === null ? titel.map(() => null) : pruefeTitelAntwort(antwort, titel.length);
 }
 
 /** Vorbedingung lastUpdateTime verletzt: Das Rezept wurde seit dem Lesen geändert. */
@@ -219,13 +244,14 @@ exports.uebersetzeRezeptTitel = onDocumentWritten(
 
 /**
  * @param {*} data - request.data des Backfills
+ * @param {string} [idArt] - Art der Dokument-ID im Cursor, nur für die Fehlermeldung
  * @return {{cursor: (string|null), anzahl: number}}
  */
-function pruefeBackfillEingabe(data) {
+function pruefeBackfillEingabe(data, idArt = 'Rezept-ID') {
   const cursor = data?.cursor ?? null;
   if (cursor !== null &&
       (typeof cursor !== 'string' || !cursor.trim() || cursor.includes('/') || cursor.length > MAX_ID_LAENGE)) {
-    throw new HttpsError('invalid-argument', 'cursor muss eine Rezept-ID oder null sein');
+    throw new HttpsError('invalid-argument', `cursor muss eine ${idArt} oder null sein`);
   }
   const anzahl = data?.anzahl ?? BACKFILL_ANZAHL_STANDARD;
   if (!Number.isInteger(anzahl) || anzahl < 1 || anzahl > BACKFILL_ANZAHL_MAX) {
@@ -235,17 +261,17 @@ function pruefeBackfillEingabe(data) {
 }
 
 /**
- * Anzahl aller Rezepte über eine Zählabfrage (liest keine Dokumente), nur für die
- * Fortschrittsanzeige; scheitert sie, fehlt die Gesamtzahl.
- * @param {object} rezepte - Collection-Referenz
+ * Anzahl aller Dokumente (Rezepte, Listen) über eine Zählabfrage (liest keine Dokumente), nur für
+ * die Fortschrittsanzeige; scheitert sie, fehlt die Gesamtzahl.
+ * @param {object} sammlung - Collection-Referenz
  * @return {Promise<number|null>}
  */
-async function zaehleRezepte(rezepte) {
+async function zaehleDokumente(sammlung) {
   try {
-    const snap = await rezepte.count().get();
+    const snap = await sammlung.count().get();
     return snap.data().count;
   } catch (error) {
-    console.warn(`backfillTitelUebersetzungen: Zählen der Rezepte fehlgeschlagen: ${error?.message}`);
+    console.warn(`Backfill: Zählen in ${sammlung.id || 'der Collection'} fehlgeschlagen: ${error?.message}`);
     return null;
   }
 }
@@ -294,7 +320,7 @@ exports.backfillTitelUebersetzungen = onCall(
       if (cursor) abfrage = abfrage.startAfter(cursor);
       const [seite, gesamt] = await Promise.all([
         abfrage.get(),
-        cursor ? Promise.resolve(null) : zaehleRezepte(rezepte),
+        cursor ? Promise.resolve(null) : zaehleDokumente(rezepte),
       ]);
 
       let remainingRequests = null;
@@ -617,7 +643,7 @@ exports.backfillInhaltUebersetzungen = onCall(
       if (cursor) abfrage = abfrage.startAfter(cursor);
       const [seite, gesamt] = await Promise.all([
         abfrage.get(),
-        cursor ? Promise.resolve(null) : zaehleRezepte(rezepte),
+        cursor ? Promise.resolve(null) : zaehleDokumente(rezepte),
       ]);
 
       const eintraege = seite.docs.map((snap) => {
@@ -879,3 +905,286 @@ exports.uebersetzeListenwerteAutomatisch = onDocumentWritten(
       }
     },
 );
+
+// ── Namen und Beschreibungen von Listen, Menüs und Events (PR 6u) ───────────
+
+/**
+ * Tageslimits in aiTitelUebersetzungLimits (wie Rezepttitel, je übersetztem Dokument, fail closed):
+ * Die drei Trigger zählen gemeinsam unter einem eigenen Schlüssel, damit eine Schleife hier nicht die
+ * Rezepttitel aufhält; der Backfill zählt beim Admin mit seinen Titeln zusammen.
+ */
+const LIMIT_TEXTE_AUTOMATIK = 1000;
+const AUTOMATIK_TEXTE = {...AUTOMATIK, userId: 'automatikTexte'};
+/** Reihenfolge im Backfill; der Cursor nennt die Art („menue|<id>“). */
+const TEXT_ARTEN = ['liste', 'menue', 'event'];
+const EVENT_PFAD = /^users\/[^/]+\/events\/[^/]+$/;
+
+/**
+ * Ein Gemini-Aufruf für Name und Beschreibung eines oder mehrerer Dokumente einer Art.
+ * @param {string} apiKey
+ * @param {string} art - liste, menue oder event
+ * @param {Array<{name: string, description: string}>} quellen
+ * @return {Promise<Array<object|null>>} je Dokument {en, fr} oder null
+ */
+async function uebersetzeNamen(apiKey, art, quellen) {
+  const antwort = await geminiJson(apiKey, baueNamenPrompt(art, quellen), NAMEN_RESPONSE_SCHEMA,
+      `namenUebersetzung (${quellen.length} × ${art})`);
+  return antwort === null ? quellen.map(() => null) : pruefeNamenAntwort(antwort, quellen);
+}
+
+/**
+ * Schreibt die Übersetzung an das Dokument, nur das Feld textUebersetzung, mit Vorbedingung
+ * lastUpdateTime: Wurde es seit dem Lesen geändert, gewinnt die neuere Änderung.
+ * @param {{pfad: string, ref: object, quelle: object, updateTime: *}} eintrag
+ * @param {object} ergebnis - geprüftes Ergebnis aus uebersetzeNamen
+ * @return {Promise<'neu'|'ueberholt'|'speichern'>}
+ */
+async function speichereNamen(eintrag, ergebnis) {
+  const textUebersetzung = baueNamenUebersetzung(eintrag.quelle, ergebnis, GEMINI_MODEL, Date.now());
+  try {
+    if (eintrag.updateTime) {
+      await eintrag.ref.update({textUebersetzung}, {lastUpdateTime: eintrag.updateTime});
+    } else {
+      await eintrag.ref.update({textUebersetzung});
+    }
+    return 'neu';
+  } catch (error) {
+    if (istUeberholt(error)) return 'ueberholt';
+    console.error(`namenUebersetzung: Speichern für ${eintrag.pfad} fehlgeschlagen: ${error?.code || error?.message}`);
+    return 'speichern';
+  }
+}
+
+/**
+ * Trigger einer Art: übersetzt Name und Beschreibung eines neuen Dokuments oder nach einer Änderung
+ * an einem von beiden. Andere Änderungen (Rezepte, Mitglieder, Getränke) und das eigene Schreiben
+ * lösen keinen KI-Aufruf aus, weil `textUebersetzung` dann schon passt.
+ * @param {string} art - liste, menue oder event
+ * @param {string} document - Pfadmuster des Triggers
+ * @param {string} name - Name der Function, für Protokolle
+ * @return {Function}
+ */
+function namenTrigger(art, document, name) {
+  return onDocumentWritten(
+      {
+        document,
+        region: 'us-central1',
+        secrets: [geminiApiKey],
+        memory: '256MiB',
+        timeoutSeconds: 60,
+        maxInstances: 5,
+      },
+      async (event) => {
+        const nachher = event.data?.after;
+        if (!nachher?.exists) return;
+        const daten = nachher.data();
+        if (!brauchtNamenUebersetzung(art, daten)) return;
+
+        const pfad = nachher.ref?.path || nachher.id;
+        const apiKey = geminiApiKey.value();
+        if (!apiKey) {
+          console.error(`${name}: GEMINI_API_KEY ist nicht gesetzt`);
+          return;
+        }
+        let quota;
+        try {
+          quota = await consumeDailyQuota(LIMIT_COLLECTION, LIMIT_TEXTE_AUTOMATIK, AUTOMATIK_TEXTE);
+        } catch {
+          return; // nicht prüfbar: fail closed, consumeDailyQuota hat schon protokolliert
+        }
+        if (!quota.allowed) {
+          console.warn(`${name}: Tageslimit erreicht, ${pfad} bleibt vorerst unübersetzt`);
+          return;
+        }
+
+        const quelle = quelleAus(art, daten);
+        const [ergebnis] = await uebersetzeNamen(apiKey, art, [quelle]);
+        if (!ergebnis) {
+          console.error(`${name}: keine gültige Übersetzung für ${pfad}`);
+          return;
+        }
+        const stand = await speichereNamen({pfad, ref: nachher.ref, quelle, updateTime: nachher.updateTime}, ergebnis);
+        if (stand === 'ueberholt') {
+          console.log(`${name}: ${pfad} wurde inzwischen geändert, die neuere Änderung übersetzt`);
+        }
+      },
+  );
+}
+
+exports.uebersetzeListenTexte = namenTrigger('liste', 'groups/{groupId}', 'uebersetzeListenTexte');
+exports.uebersetzeMenueTexte = namenTrigger('menue', 'menus/{menuId}', 'uebersetzeMenueTexte');
+exports.uebersetzeEventTexte = namenTrigger('event', 'users/{userId}/events/{eventId}', 'uebersetzeEventTexte');
+
+/**
+ * Cursor des Backfills: null (Anfang), „<art>|“ (Anfang einer Art) oder „<art>|<nach>“, wobei
+ * <nach> die letzte Dokument-ID ist, bei Events der Pfad users/<uid>/events/<id> (Collection-Group).
+ * @param {*} data - request.data des Backfills
+ * @return {{art: string, nach: (string|null), anzahl: number}}
+ */
+function pruefeTextBackfillEingabe(data) {
+  const cursor = data?.cursor ?? null;
+  let art = TEXT_ARTEN[0];
+  let nach = null;
+  if (cursor !== null) {
+    const trenner = typeof cursor === 'string' ? cursor.indexOf('|') : -1;
+    art = trenner > 0 ? cursor.slice(0, trenner) : '';
+    nach = trenner > 0 ? cursor.slice(trenner + 1) || null : null;
+    const nachGueltig = nach === null || (nach.length <= MAX_ID_LAENGE * 2 &&
+      (art === 'event' ? EVENT_PFAD.test(nach) : !nach.includes('/') && nach.trim() === nach && nach !== ''));
+    if (!TEXT_ARTEN.includes(art) || !nachGueltig) {
+      throw new HttpsError('invalid-argument', 'cursor muss „<liste|menue|event>|<ID>“ oder null sein');
+    }
+  }
+  const anzahl = data?.anzahl ?? BACKFILL_ANZAHL_STANDARD;
+  if (!Number.isInteger(anzahl) || anzahl < 1 || anzahl > BACKFILL_ANZAHL_MAX) {
+    throw new HttpsError('invalid-argument', `anzahl muss eine ganze Zahl von 1 bis ${BACKFILL_ANZAHL_MAX} sein`);
+  }
+  return {art, nach, anzahl};
+}
+
+/**
+ * @param {object} db - Firestore
+ * @param {string} art
+ * @return {object} Collection bzw. Collection-Group der Art
+ */
+function textSammlung(db, art) {
+  if (art === 'liste') return db.collection('groups');
+  if (art === 'menue') return db.collection('menus');
+  return db.collectionGroup('events');
+}
+
+/**
+ * Cloud Function: Übersetzungen der Namen und Beschreibungen von Listen, Menüs und Events für den
+ * Bestand nachtragen (nur admin), wie backfillTitelUebersetzungen.
+ *
+ * Eingabe: {cursor: string|null, anzahl: 1 bis 50 (Standard 25)}. Geht die Arten nacheinander durch
+ * (Listen, Menüs, Events), je Aufruf eine Seite einer Art nach Dokument-ID bzw. Pfad ab dem Cursor.
+ * Übersprungen werden die öffentliche Systemliste, Dokumente ohne Namen und solche mit passender
+ * Übersetzung; die übrigen gehen mit bis zu 25 je Gemini-Aufruf an die KI. Jedes übersetzte Dokument
+ * zählt gegen das Tageslimit des Admins für Titel.
+ *
+ * Antwort wie backfillTitelUebersetzungen; `gesamt` (nur beim ersten Aufruf) zählt alle drei Arten,
+ * `naechsterCursor` nennt die Art.
+ */
+exports.backfillTextUebersetzungen = onCall(
+    {
+      secrets: [geminiApiKey],
+      cors: ALLOWED_ORIGINS,
+      invoker: 'public',
+      maxInstances: 1,
+      memory: '256MiB',
+      timeoutSeconds: 300,
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Anmeldung erforderlich');
+      }
+      const {art, nach, anzahl} = pruefeTextBackfillEingabe(request.data);
+      const caller = await requireAiCaller(request.auth);
+      if (!caller.isAdmin) {
+        throw new HttpsError('permission-denied', 'Übersetzungen von Listen, Menüs und Events nachtragen dürfen nur Admins.');
+      }
+      const apiKey = geminiApiKey.value();
+      if (!apiKey) {
+        console.error('backfillTextUebersetzungen: GEMINI_API_KEY ist nicht gesetzt');
+        throw new HttpsError('failed-precondition', 'Der KI-Dienst ist nicht eingerichtet.');
+      }
+
+      const db = getFirestore();
+      const sammlung = textSammlung(db, art);
+      let abfrage = sammlung.orderBy(FieldPath.documentId()).limit(anzahl);
+      if (nach) abfrage = abfrage.startAfter(art === 'event' ? db.doc(nach) : nach);
+      const anfang = request.data?.cursor == null;
+      const [seite, gesamt] = await Promise.all([
+        abfrage.get(),
+        anfang ? zaehleAlleTexte(db) : Promise.resolve(null),
+      ]);
+
+      let remainingRequests = null;
+      let tageslimitErreicht = false;
+      let letzter = nach;
+      let geprueft = 0;
+      let uebersprungen = 0;
+      const zuUebersetzen = [];
+      for (const snap of seite.docs) {
+        const daten = snap.data() || {};
+        const pfad = art === 'event' ? snap.ref.path : snap.id;
+        if (!brauchtNamenUebersetzung(art, daten)) {
+          uebersprungen += 1;
+        } else {
+          const quota = await consumeDailyQuota(LIMIT_COLLECTION, LIMIT_BACKFILL_ADMIN, caller);
+          if (!quota.allowed) {
+            tageslimitErreicht = true;
+            break;
+          }
+          remainingRequests = quota.remaining;
+          zuUebersetzen.push({pfad, ref: snap.ref, quelle: quelleAus(art, daten), updateTime: snap.updateTime});
+        }
+        letzter = pfad;
+        geprueft += 1;
+      }
+
+      if (tageslimitErreicht && geprueft === 0) {
+        throw new HttpsError(
+            'resource-exhausted',
+            `Tageslimit für Titelübersetzungen erreicht (${LIMIT_BACKFILL_ADMIN}). Versuche es morgen erneut.`,
+        );
+      }
+
+      let neu = 0;
+      const fehlgeschlagen = [];
+      const fehlerGruende = {};
+      for (let start = 0; start < zuUebersetzen.length; start += MAX_NAMEN_JE_AUFRUF) {
+        const block = zuUebersetzen.slice(start, start + MAX_NAMEN_JE_AUFRUF);
+        const ergebnisse = await uebersetzeNamen(apiKey, art, block.map((eintrag) => eintrag.quelle));
+        for (const [index, eintrag] of block.entries()) {
+          const kennung = `${art}|${eintrag.pfad}`;
+          if (!ergebnisse[index]) {
+            fehlgeschlagen.push(kennung);
+            fehlerGruende[kennung] = GRUND.KI;
+            continue;
+          }
+          const stand = await speichereNamen(eintrag, ergebnisse[index]);
+          if (stand === 'neu') {
+            neu += 1;
+          } else if (stand === 'ueberholt') {
+            uebersprungen += 1; // inzwischen geändert: der Trigger übersetzt den neuen Stand
+          } else {
+            fehlgeschlagen.push(kennung);
+            fehlerGruende[kennung] = GRUND.SPEICHERN;
+          }
+        }
+      }
+
+      const artFertig = !tageslimitErreicht && seite.docs.length < anzahl;
+      const naechsteArt = TEXT_ARTEN[TEXT_ARTEN.indexOf(art) + 1];
+      let naechsterCursor = `${art}|${letzter || ''}`;
+      if (artFertig) naechsterCursor = naechsteArt ? `${naechsteArt}|` : null;
+      const fertig = naechsterCursor === null;
+      console.log(`backfillTextUebersetzungen (${art}): ${geprueft} geprüft, ${neu} neu, ${uebersprungen} übersprungen, ` +
+        `${fehlgeschlagen.length} fehlgeschlagen${fertig ? ', fertig' : ''}`);
+      return {
+        geprueft,
+        neu,
+        uebersprungen,
+        fehlgeschlagen,
+        fehlerGruende,
+        naechsterCursor,
+        fertig,
+        tageslimitErreicht,
+        gesamt,
+        remainingRequests,
+        dailyLimit: LIMIT_BACKFILL_ADMIN,
+      };
+    },
+);
+
+/**
+ * Anzahl aller Listen, Menüs und Events für die Fortschrittsanzeige; fehlt eine Zahl, fehlt die Summe.
+ * @param {object} db - Firestore
+ * @return {Promise<number|null>}
+ */
+async function zaehleAlleTexte(db) {
+  const zahlen = await Promise.all(TEXT_ARTEN.map((art) => zaehleDokumente(textSammlung(db, art))));
+  return zahlen.some((zahl) => typeof zahl !== 'number') ? null : zahlen.reduce((summe, zahl) => summe + zahl, 0);
+}

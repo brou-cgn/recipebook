@@ -38,7 +38,7 @@ import kochbuchTexte from '../i18n/texte/kochbuch';
 import rezeptansichtTexte from '../i18n/texte/rezeptansicht';
 import chefkochTexte from '../i18n/texte/chefkochUndMehr';
 import allgemeinTexte from '../i18n/texte/allgemein';
-import useListenName from '../hooks/useListenName';
+import useListenName, { useListenBeschreibung } from '../hooks/useListenName';
 
 const DEFAULT_PORTIONS = 4;
 const TAB_RECIPES = 'rezepte';
@@ -145,6 +145,7 @@ function GroupDetail({
   const tChefkoch = useTexte(chefkochTexte);
   const tAllgemein = useTexte(allgemeinTexte);
   const listenName = useListenName();
+  const listenBeschreibung = useListenBeschreibung();
   const zeigeTitel = useRezeptTitel();
   const [saving, setSaving] = useState(false);
   // Mitglied entfernen: sofort ausgeblendet, geschrieben erst nach dem Undo-Fenster (CLAUDE.md)
@@ -375,8 +376,10 @@ function GroupDetail({
   const isMember = (group.memberIds || []).includes(currentUser?.id);
 
   const addRecipeLabel = tKochbuch(isPublic ? 'rezeptHinzufuegen' : 'privatesRezeptHinzufuegen');
-  // Name der Liste: Systemnamen („Öffentlich“, „Für dich entdeckt“) übersetzt, eigene Namen, wie sie sind
+  // Name der Liste: Systemnamen („Öffentlich“, „Für dich entdeckt“) übersetzt, eigene Namen über ihre
+  // Übersetzung (Mehrsprachigkeit PR 6u), ebenso die Beschreibung
   const gruppenName = listenName(group);
+  const gruppenBeschreibung = listenBeschreibung(group);
   const addRecipeIcon = getEffectiveIcon(allButtonIcons, isPublic ? 'addRecipe' : 'addPrivateRecipe', isDarkMode);
   const editGroupIcon = getEffectiveIcon(allButtonIcons, 'editRecipe', isDarkMode);
   const deleteGroupIcon = getEffectiveIcon(allButtonIcons, 'deleteRecipe', isDarkMode);
@@ -708,8 +711,8 @@ function GroupDetail({
         <>
           <div className="group-detail-section group-info-section">
             <h3>{t('listeneinstellungen')}</h3>
-            {typeof group.description === 'string' && group.description.trim() && (
-              <p className="group-info-description">{group.description.trim()}</p>
+            {gruppenBeschreibung && (
+              <p className="group-info-description">{gruppenBeschreibung}</p>
             )}
             <dl className="group-info-list">
               <div className="group-info-row">

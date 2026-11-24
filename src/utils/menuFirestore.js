@@ -47,17 +47,21 @@ export function isValidGridImage(gridImage) {
 
 /**
  * Sanitize menu data before writing to Firestore.
- * Clears any gridImage that is not a Firebase Storage URL.
+ * Clears any gridImage that is not a Firebase Storage URL and drops `textUebersetzung`: the
+ * translated name and description are written by the Cloud Function uebersetzeMenueTexte only
+ * (Mehrsprachigkeit PR 6u, firestore.rules), so a copied menu must not bring one along.
  *
  * @param {Object} menuData - Raw menu data
  * @returns {Object} Sanitized menu data safe to persist
  */
 function sanitizeMenuData(menuData) {
-  if (!isValidGridImage(menuData.gridImage)) {
+  // eslint-disable-next-line no-unused-vars
+  const { textUebersetzung, ...daten } = menuData;
+  if (!isValidGridImage(daten.gridImage)) {
     console.error('[menuFirestore] Invalid gridImage detected - setting to null before save');
-    return { ...menuData, gridImage: null };
+    return { ...daten, gridImage: null };
   }
-  return menuData;
+  return daten;
 }
 
 /**

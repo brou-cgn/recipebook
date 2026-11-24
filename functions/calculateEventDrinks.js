@@ -672,7 +672,10 @@ exports.calculateEventDrinks = onCall({maxInstances: 10}, async (request) => {
   const status = guestCount > 0 && hasCustomDrink ? 'berechnet' : 'geplant';
 
   const eventsRef = db.collection('users').doc(targetUid).collection('events');
-  const payload = {...event, berechnung: result, status};
+  // textUebersetzung (übersetzter Name, Mehrsprachigkeit PR 6u) schreibt nur uebersetzeEventTexte;
+  // was der Client davon mitschickt, fällt weg, eine vorhandene Übersetzung bleibt (mergeFields).
+  const {textUebersetzung: _ohneUebersetzung, ...eventDaten} = event;
+  const payload = {...eventDaten, berechnung: result, status};
   let docRef;
   if (eventId) {
     docRef = eventsRef.doc(eventId);

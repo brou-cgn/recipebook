@@ -37,6 +37,7 @@ import { getraenkKategorieAnzeige } from '../utils/drinkCategories';
 import getraenkeTexte from '../i18n/texte/getraenke';
 import rezeptansichtTexte from '../i18n/texte/rezeptansicht';
 import allgemeinTexte from '../i18n/texte/allgemein';
+import { useEventName } from '../hooks/useMenueEventText';
 
 // Groesse einer Einheit, unter 1 l in ml, sonst in l mit einer Nachkommastelle nach der Sprache.
 function getEinheitSizeLabel(einheitsgroesse, sprache = STANDARD_SPRACHE) {
@@ -332,6 +333,7 @@ function LockStateIcon({ state }) {
 }
 
 function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerId }) {
+  const eventName = useEventName();
   const effectiveOwnerId = ownerId || currentUser?.id;
   // Texte von Einkauf und Verbrauch (Mehrsprachigkeit PR 6k); Getraenke- und Gebindeeinheiten
   // bleiben deutsch gespeichert und angezeigt (Phase B)
@@ -908,7 +910,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser, ownerI
       {showShoppingListModal && (
         <ShoppingListModal
           items={getShoppingListIngredients()}
-          title={event.eventName}
+          title={eventName(event)}
           onClose={() => setShowShoppingListModal(false)}
           shareId={event.id}
           bringButtonIcon={bringButtonIcon}

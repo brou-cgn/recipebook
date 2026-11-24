@@ -3,13 +3,15 @@
  * Antwortaufbau in functions/handlers/uebersetzung.js):
  *  - backfillTitelUebersetzungen (PR 3): Rezepttitel,
  *  - backfillInhaltUebersetzungen (PR 4): Zutaten und Schritte,
+ *  - backfillTextUebersetzungen (PR 6u): Namen und Beschreibungen von Listen, Menüs und Events,
  *  - uebersetzeListenwerte (PR 5): Vorschläge für die Auswahllisten (schreibt nichts).
  */
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../firebase';
 
-/** Rezepte je Aufruf; die Functions erlauben 1 bis 50 (Titel) bzw. 1 bis 20 (Inhalt). */
+/** Rezepte bzw. Listen, Menüs und Events je Aufruf; die Functions erlauben 1 bis 50 (Titel, Texte) bzw. 1 bis 20 (Inhalt). */
 export const TITEL_BACKFILL_ANZAHL = 25;
+export const TEXT_BACKFILL_ANZAHL = 25;
 export const INHALT_BACKFILL_ANZAHL = 10;
 /** Etwas länger als das Zeitlimit der Functions (300 s bzw. 540 s). */
 const TITEL_TIMEOUT_MS = 310000;
@@ -32,6 +34,16 @@ export async function trageTitelUebersetzungenNach({ cursor = null } = {}) {
 export async function trageInhaltUebersetzungenNach({ cursor = null } = {}) {
   const callable = httpsCallable(functions, 'backfillInhaltUebersetzungen', { timeout: INHALT_TIMEOUT_MS });
   const ergebnis = await callable({ cursor, anzahl: INHALT_BACKFILL_ANZAHL });
+  return ergebnis?.data || null;
+}
+
+/**
+ * @param {{cursor?: string|null}} [optionen]
+ * @returns {Promise<object|null>} Antwort der Function
+ */
+export async function trageTextUebersetzungenNach({ cursor = null } = {}) {
+  const callable = httpsCallable(functions, 'backfillTextUebersetzungen', { timeout: TITEL_TIMEOUT_MS });
+  const ergebnis = await callable({ cursor, anzahl: TEXT_BACKFILL_ANZAHL });
   return ergebnis?.data || null;
 }
 

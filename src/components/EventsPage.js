@@ -25,6 +25,7 @@ import eventsTexte from '../i18n/texte/events';
 import getraenkeTexte from '../i18n/texte/getraenke';
 import allgemeinTexte from '../i18n/texte/allgemein';
 import bereicheTexte from '../i18n/texte/bereiche';
+import { useEventName } from '../hooks/useMenueEventText';
 
 // Status in der geltenden Sprache (Mehrsprachigkeit PR 6j); gespeichert bleibt die id
 const STATUS_SCHLUESSEL = {
@@ -133,6 +134,7 @@ const formatDrinkSummary = (berechnung) => {
 function EventCard({ event, ownerName, canManage, onSelect, onDelete, swipeDeleteIcon }) {
   const t = useTexte(eventsTexte);
   const { sprache } = useSprache();
+  const eventName = useEventName();
   const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ disabled: !canManage });
 
   return (
@@ -147,7 +149,7 @@ function EventCard({ event, ownerName, canManage, onSelect, onDelete, swipeDelet
               type="button"
               className="events-card-swipe-delete-action"
               onClick={() => { onDelete(event); reset(); }}
-              aria-label={t('eventLoeschenName', { name: event.eventName })}
+              aria-label={t('eventLoeschenName', { name: eventName(event) })}
             >
               {isBase64Image(swipeDeleteIcon) ? (
                 <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
@@ -164,7 +166,7 @@ function EventCard({ event, ownerName, canManage, onSelect, onDelete, swipeDelet
         onClick={offset < 0 || !canManage ? undefined : () => onSelect(event)}
         {...handlers}
       >
-        <h3>{event.eventName}</h3>
+        <h3>{eventName(event)}</h3>
         <div className="events-card-meta-row">
           <p className="events-card-meta">
             {formatDate(event.date, sprache)} · {eventTypAnzeige(event.eventType, t)}
@@ -214,8 +216,9 @@ function EventsPage({
   const allEventsLoading = !allEventsLoaded;
   const [allUsers, setAllUsers] = useState([]);
   const { banners: deleteBanners, pendingKeys: pendingDeleteKeys, scheduleDelete, undoDelete } = useUndoableDelete();
-  // Texte der Events (Mehrsprachigkeit PR 6j); Event-Namen sind Inhalt
+  // Texte der Events (Mehrsprachigkeit PR 6j); Event-Namen übersetzt die KI (PR 6u, useEventName)
   const t = useTexte(eventsTexte);
+  const eventName = useEventName();
   const tGetraenke = useTexte(getraenkeTexte);
   const tAllgemein = useTexte(allgemeinTexte);
   const tBereiche = useTexte(bereicheTexte);
@@ -378,7 +381,7 @@ function EventsPage({
     const ownerId = event.ownerId || currentUser.id;
     scheduleDelete({
       key: `${ownerId}_${event.id}`,
-      message: t('eventGeloescht', { name: event.eventName }),
+      message: t('eventGeloescht', { name: eventName(event) }),
       onConfirm: async () => {
         try {
           await deleteEvent(ownerId, event.id);
@@ -472,7 +475,7 @@ function EventsPage({
         {eventToDelete && (
           <ConfirmDialog
             title={t('eventLoeschen')}
-            message={t('loeschenFrage', { name: eventToDelete.eventName })}
+            message={t('loeschenFrage', { name: eventName(eventToDelete) })}
             onConfirm={handleDeleteConfirmed}
             onCancel={() => setEventToDelete(null)}
           />
@@ -507,7 +510,7 @@ function EventsPage({
     return (
       <div className="events-page-container">
         <div className="events-page-header">
-          <h2>{selectedEvent.eventName}</h2>
+          <h2>{eventName(selectedEvent)}</h2>
           <button
             className="app-close-button"
             onClick={() => {

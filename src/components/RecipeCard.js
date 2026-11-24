@@ -7,6 +7,7 @@ import RecipeRating from './RecipeRating';
 import { isBase64Image } from '../utils/imageUtils';
 import { useListenwerte, useRezeptTitel, useTexte } from '../contexts/SpracheContext';
 import kochbuchTexte from '../i18n/texte/kochbuch';
+import useListenName from '../hooks/useListenName';
 
 const MAX_KULINARIK_TAGS = 5;
 
@@ -39,6 +40,7 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
   const titel = useRezeptTitel()(recipe);
   const listen = useListenwerte();
   const t = useTexte(kochbuchTexte);
+  const listenName = useListenName();
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const isSwiping = useRef(false);
@@ -203,7 +205,7 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
               const isInList = list.recipeIds?.includes(recipe.id) || recipe.groupId === list.id;
               return (
                 <option key={list.id} value={list.id}>
-                  {isInList ? `✓ ${list.name}` : list.name}
+                  {isInList ? `✓ ${listenName(list)}` : listenName(list)}
                 </option>
               );
             })}
