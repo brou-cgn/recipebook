@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { useSensor, TouchSensor } from '@dnd-kit/core';
 import RecipeForm from './RecipeForm';
 import { SpracheProvider } from '../contexts/SpracheContext';
-import { rephraseRecipeSteps } from '../utils/aiOcrService';
+import { rephraseRecipeSteps, applyRecipeVersionChanges } from '../utils/aiOcrService';
 
 // Mock the utility modules
 jest.mock('../utils/emojiUtils', () => ({
@@ -129,6 +129,7 @@ jest.mock('../utils/cuisineProposalsFirestore', () => ({
 
 jest.mock('../utils/aiOcrService', () => ({
   rephraseRecipeSteps: jest.fn(),
+  applyRecipeVersionChanges: jest.fn(),
 }));
 
 jest.mock('../contexts/NutritionReferenceContext', () => ({
@@ -4147,5 +4148,167 @@ describe('RecipeForm in anderer Sprache (Mehrsprachigkeit PR 6h)', () => {
   test('Deutsch: eigene Version nennt den Titel in typografischen Anführungszeichen', () => {
     render(<RecipeForm recipe={nudelsalat} isCreatingVersion onSave={jest.fn()} onCancel={jest.fn()} currentUser={nutzer} />);
     expect(screen.getByText('Du erstellst eine neue Version von „Nudelsalat“.')).toBeInTheDocument();
+  });
+});
+
+describe('RecipeForm - Bearbeiten mit KI', () => {
+  const kiNutzer = { id: 'user-1', vorname: 'Regular', nachname: 'User', role: 'edit', versionDictation: true };
+  const rezept = {
+    id: 'r1',
+    title: 'Pfannkuchen',
+    portionen: 4,
+    kochdauer: 30,
+    ingredients: [
+      { type: 'ingredient', text: '200 g Mehl', ingredientID: 'mehl' },
+      { type: 'ingredient', text: '50 g Butter' },
+    ],
+    steps: ['Teig rühren.', 'In Butter ausbacken.'],
+    speisekategorie: ['Dessert'],
+    authorId: 'user-1',
+  };
+  const kiAntwort = {
+    title: 'Pfannkuchen',
+    portionen: 4,
+    kochdauer: 30,
+    ingredients: [
+      { type: 'ingredient', text: '200 g Mehl' },
+      { type: 'ingredient', text: '3 Esslöffel Olivenöl' },
+    ],
+    steps: [
+      { type: 'step', text: 'Teig rühren.' },
+      { type: 'step', text: 'In Olivenöl ausbacken.' },
+    ],
+    summary: 'Butter durch Olivenöl ersetzt.',
+  };
+  const originalInnerWidth = window.innerWidth;
+
+  const zeige = (props = {}) => render(
+    <RecipeForm recipe={rezept} onSave={jest.fn(() => Promise.resolve())} onCancel={jest.fn()} currentUser={kiNutzer} {...props} />
+  );
+  const kiButton = () => screen.queryByRole('button', { name: 'Rezept mit KI bearbeiten' });
+  // Kopfzeile (Desktop) und runder Button (Handy) heißen beim Speichern beide so.
+  const speichernButtons = () => screen.queryAllByRole('button', { name: 'Rezept aktualisieren' });
+
+  beforeEach(() => {
+    window.scrollTo = jest.fn();
+    // Handy: der runde Button übernimmt "Weiter" des Beschreibungs-Overlays
+    window.innerWidth = 400;
+  });
+
+  afterEach(() => {
+    window.innerWidth = originalInnerWidth;
+  });
+
+  test('unverändert zeigt der runde Button Bearbeiten statt Speichern, nach einer Änderung Speichern', () => {
+    zeige();
+    expect(kiButton()).toBeInTheDocument();
+    expect(speichernButtons()).toHaveLength(1);
+
+    fireEvent.change(screen.getByLabelText('Rezepttitel *'), { target: { value: 'Pfannkuchen mit Zimt' } });
+    expect(kiButton()).not.toBeInTheDocument();
+    expect(speichernButtons()).toHaveLength(2);
+
+    // Zurück auf den gespeicherten Stand: wieder Bearbeiten
+    fireEvent.change(screen.getByLabelText('Rezepttitel *'), { target: { value: 'Pfannkuchen' } });
+    expect(kiButton()).toBeInTheDocument();
+  });
+
+  test('eine neue, noch leere Zeile zählt nicht als Änderung, eine gelöschte schon', () => {
+    zeige();
+    fireEvent.click(screen.getByRole('button', { name: 'Zutat hinzufügen' }));
+    expect(kiButton()).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '50 g Butter entfernen' }));
+    expect(kiButton()).not.toBeInTheDocument();
+  });
+
+  test('ohne Berechtigung versionDictation bleibt es beim Speichern-Button', () => {
+    zeige({ currentUser: { ...kiNutzer, versionDictation: false } });
+    expect(kiButton()).not.toBeInTheDocument();
+    expect(speichernButtons()).toHaveLength(2);
+  });
+
+  test('bei eigener Version, neuem Rezept und Import-Prüfung kein Bearbeiten-Button', () => {
+    const { unmount } = zeige({ isCreatingVersion: true });
+    expect(kiButton()).not.toBeInTheDocument();
+    unmount();
+
+    const neu = zeige({ recipe: null });
+    expect(kiButton()).not.toBeInTheDocument();
+    neu.unmount();
+
+    zeige({ recipe: { ...rezept, isTemp: true } });
+    expect(kiButton()).not.toBeInTheDocument();
+  });
+
+  test('Klick startet den KI-Flow: Beschreibung wird ins aktuelle Rezept eingearbeitet', async () => {
+    applyRecipeVersionChanges.mockResolvedValue(kiAntwort);
+    const onSave = jest.fn(() => Promise.resolve());
+    zeige({ onSave });
+
+    fireEvent.click(kiButton());
+    expect(screen.getByRole('dialog', { name: 'Rezept mit KI bearbeiten' })).toBeInTheDocument();
+    // Ohne Text führt der runde Button zurück, mit Text arbeitet er ein
+    expect(screen.getByRole('button', { name: 'Zurück zum Formular' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Was soll sich ändern?'), { target: { value: '  Olivenöl statt Butter ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Änderungen einarbeiten' }));
+
+    await waitFor(() => expect(applyRecipeVersionChanges).toHaveBeenCalledWith(
+      {
+        title: 'Pfannkuchen',
+        portionen: 4,
+        kochdauer: 30,
+        ingredients: [
+          { type: 'ingredient', text: '200 g Mehl' },
+          { type: 'ingredient', text: '50 g Butter' },
+        ],
+        steps: [
+          { type: 'step', text: 'Teig rühren.' },
+          { type: 'step', text: 'In Butter ausbacken.' },
+        ],
+      },
+      'Olivenöl statt Butter',
+      'de'
+    ));
+
+    expect(await screen.findByText('Eingearbeitet: Butter durch Olivenöl ersetzt. Bitte prüfe Zutaten und Schritte, bevor du speicherst.')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('3 Esslöffel Olivenöl')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('In Olivenöl ausbacken.')).toBeInTheDocument();
+    // Jetzt gibt es eine Änderung: der runde Button speichert
+    expect(kiButton()).not.toBeInTheDocument();
+    expect(speichernButtons()).toHaveLength(2);
+
+    fireEvent.submit(document.querySelector('.recipe-form'));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    const gespeichert = onSave.mock.calls[0][0];
+    // Bearbeitet wird das Rezept selbst, keine neue Version
+    expect(gespeichert.id).toBe('r1');
+    expect(gespeichert.parentRecipeId).toBeNull();
+    // Unveränderte Zeilen behalten ihre Zusatzdaten
+    expect(gespeichert.ingredients[0]).toEqual(expect.objectContaining({ text: '200 g Mehl', ingredientID: 'mehl' }));
+    expect(gespeichert.ingredients[1]).toEqual(expect.objectContaining({ text: '3 Esslöffel Olivenöl' }));
+    expect(gespeichert.steps).toEqual(['Teig rühren.', 'In Olivenöl ausbacken.']);
+  });
+
+  test('ohne Text schließt der runde Button die Beschreibung wieder', () => {
+    zeige();
+    fireEvent.click(kiButton());
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück zum Formular' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(kiButton()).toBeInTheDocument();
+    expect(applyRecipeVersionChanges).not.toHaveBeenCalled();
+  });
+
+  test('Fehler der KI erscheint im Dialog, das Formular bleibt unverändert', async () => {
+    applyRecipeVersionChanges.mockRejectedValue(new Error('Tageslimit für Versionsbeschreibungen erreicht (40/40). Versuche es morgen erneut.'));
+    zeige();
+    fireEvent.click(kiButton());
+    fireEvent.change(screen.getByLabelText('Was soll sich ändern?'), { target: { value: 'Olivenöl statt Butter' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Änderungen einarbeiten' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Tageslimit für Versionsbeschreibungen erreicht (40/40).');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('50 g Butter')).toBeInTheDocument();
   });
 });

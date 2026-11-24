@@ -38,9 +38,32 @@ const MOBILE_BREAKPOINT = 480;
 const hasVersionFab = () => window.innerWidth <= TABLET_BREAKPOINT || window.innerHeight <= MOBILE_BREAKPOINT;
 
 /**
+ * Texte je Einsatz: „version“ beim Erstellen einer eigenen Version (Rezeptansicht),
+ * „bearbeiten“ beim Bearbeiten mit KI im Rezeptformular (das aktuelle Rezept wird geändert).
+ */
+const MODUS_TEXTE = {
+  version: {
+    dialog: 'eigeneVersion',
+    feld: 'versionWasAnders',
+    platzhalter: 'versionPlatzhalter',
+    weiter: 'versionErstellen',
+    weiterOhneText: 'versionOhneBeschreibung',
+  },
+  bearbeiten: {
+    dialog: 'kiBearbeiten',
+    feld: 'kiBearbeitenWasAendern',
+    platzhalter: 'kiBearbeitenPlatzhalter',
+    weiter: 'kiBearbeitenEinarbeiten',
+    weiterOhneText: 'kiBearbeitenOhneAenderung',
+  },
+};
+
+/**
  * Vorschritt von "Eigene Version erstellen" (Berechtigung versionDictation):
  * Die Abwandlung wird frei beschrieben (getippt oder diktiert); danach arbeitet
  * die KI sie ins Rezept ein und das Formular öffnet sich zur Kontrolle.
+ * Mit modus "bearbeiten" derselbe Schritt im Formular "Rezept bearbeiten": Die KI
+ * arbeitet die Beschreibung in das aktuelle Rezept ein (RecipeForm).
  *
  * @param {Object} props
  * @param {Object} props.recipe - das Rezept, von dem die Version abgeleitet wird
@@ -50,14 +73,18 @@ const hasVersionFab = () => window.innerWidth <= TABLET_BREAKPOINT || window.inn
  * @param {(hasText: boolean) => void} [props.onHasTextChange] - meldet, ob schon Text erfasst ist
  * @param {{current: ?Function}} [props.continueRef] - bekommt die Weiter-Aktion
  *   (ohne Text: onSkip, mit Text: einarbeiten) für den Versionsbutton des Rezepts
+ * @param {'version'|'bearbeiten'} [props.modus='version'] - wählt die Texte
+ * @param {() => boolean} [props.hasFab] - ob der runde Button des Aufrufers sichtbar ist
+ *   und "Weiter" übernimmt (dann kein eigener Weiter-Button in der Pille)
  */
-function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef, onHasTextChange }) {
+function RecipeVersionDescribe({ onApply, onSkip, onCancel, continueRef, onHasTextChange, modus = 'version', hasFab = hasVersionFab }) {
   const [text, setText] = useState('');
   const [isApplying, setIsApplying] = useState(false);
   // Fehler beim Einarbeiten: { meldung } wie geworfen, übersetzt erst bei der Anzeige
   const [error, setError] = useState(null);
   const t = useTexte(rezeptansichtTexte);
   const tDiktat = useTexte(diktatTexte);
+  const texte = MODUS_TEXTE[modus] || MODUS_TEXTE.version;
 
   const appendText = (chunk) => {
     setText((prev) => `${prev}${prev && !/\s$/.test(prev) ? ' ' : ''}${chunk}`.slice(0, MAX_LENGTH));
@@ -103,12 +130,12 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef,
 
   const canSubmit = hasText && !isApplying;
 
-  const [fabVisible, setFabVisible] = useState(hasVersionFab);
+  const [fabVisible, setFabVisible] = useState(hasFab);
   useEffect(() => {
-    const onResize = () => setFabVisible(hasVersionFab());
+    const onResize = () => setFabVisible(hasFab());
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, []);
+  }, [hasFab]);
 
   const submit = async () => {
     if (!canSubmit) return;
@@ -156,11 +183,11 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef,
       className="version-describe-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label={t('eigeneVersion')}
+      aria-label={t(texte.dialog)}
       onClick={handleOverlayClick}
       onKeyDown={(e) => { if (e.key === 'Escape' && !isApplying) onCancel(); }}
     >
-      <form className={`version-describe${fabVisible ? ' has-fab' : ''}`} onSubmit={handleSubmit}>
+      <form className={`version-describe${fabVisible ? ' has-fab' : ''}${modus === 'bearbeiten' ? ' im-formular' : ''}`} onSubmit={handleSubmit}>
         {note && (
           <p
             className={`version-describe-note${errorText || dictation.error ? ' is-error' : ''}`}
@@ -178,8 +205,8 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef,
             className="version-describe-textarea"
             value={text}
             onChange={(e) => setText(e.target.value.slice(0, MAX_LENGTH))}
-            aria-label={t('versionWasAnders')}
-            placeholder={t('versionPlatzhalter')}
+            aria-label={t(texte.feld)}
+            placeholder={t(texte.platzhalter)}
             rows={2}
             disabled={isApplying}
           />
@@ -202,10 +229,10 @@ function RecipeVersionDescribe({ recipe, onApply, onSkip, onCancel, continueRef,
               className="version-describe-continue"
               onClick={proceed}
               disabled={isApplying}
-              aria-label={t('versionErstellen')}
-              title={t(hasText ? 'versionEinarbeitenTitel' : 'versionOhneBeschreibung')}
+              aria-label={t(texte.weiter)}
+              title={t(hasText ? 'versionEinarbeitenTitel' : texte.weiterOhneText)}
             >
-              {t('versionErstellen')}
+              {t(texte.weiter)}
             </button>
           )}
         </div>

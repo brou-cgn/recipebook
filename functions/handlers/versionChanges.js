@@ -2,7 +2,9 @@
  * applyRecipeVersionChanges: arbeitet eine frei diktierte Beschreibung ("Ich habe
  * statt Butter Olivenöl genommen und 10 Minuten länger gebacken") in ein
  * bestehendes Rezept ein. Wird beim Erstellen einer eigenen Version eines
- * fremden Rezepts genutzt; das Ergebnis landet zur Kontrolle im Rezeptformular.
+ * fremden Rezepts genutzt und beim Bearbeiten mit KI im Formular "Rezept
+ * bearbeiten" (dort meist als Anweisung: "Ersetze Butter durch Olivenöl");
+ * das Ergebnis landet jeweils zur Kontrolle im Rezeptformular.
  */
 
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
@@ -39,7 +41,7 @@ const ZUSAMMENFASSUNG_SPRACHE = {de: 'Deutsch', en: 'Englisch', fr: 'Französisc
  * @param {string} sprache - de, en oder fr (normalisiereSprache)
  * @return {string} Prompt mit der Sprache der Zusammenfassung
  */
-const versionChangesPrompt = (sprache) => `Du bekommst ein Rezept als JSON (titel, portionen, kochdauer, zutaten, schritte) und eine Beschreibung, was jemand bei der Zubereitung anders gemacht hat. Die Beschreibung wurde diktiert und kann Füllwörter, Wiederholungen und Erkennungsfehler enthalten.
+const versionChangesPrompt = (sprache) => `Du bekommst ein Rezept als JSON (titel, portionen, kochdauer, zutaten, schritte) und eine Beschreibung von Änderungen: was jemand bei der Zubereitung anders gemacht hat oder was am Rezept geändert bzw. korrigiert werden soll. Die Beschreibung wurde getippt oder diktiert und kann Füllwörter, Wiederholungen und Erkennungsfehler enthalten.
 
 Arbeite die beschriebenen Änderungen in das Rezept ein und gib das vollständige geänderte Rezept zurück.
 

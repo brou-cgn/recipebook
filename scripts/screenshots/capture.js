@@ -174,6 +174,25 @@ const SCREENS = [
       await shot();
     },
   },
+  // Bearbeiten mit KI (Berechtigung versionDictation, Admin): Unverändert zeigt der runde Knopf unten
+  // rechts „Bearbeiten“ statt „Speichern“; ein Klick öffnet die Beschreibung, der Knopf wird zu
+  // „Einarbeiten“. Den runden Knopf gibt es nur auf dem Handy.
+  ...[['rezept-bearbeiten-ki', null], ['rezept-bearbeiten-ki-beschreibung', 'Ersetze den Kreuzkümmel durch geräuchertes Paprikapulver']].map(([name, beschreibung]) => ({
+    name,
+    variants: ['handy-hell', 'handy-dunkel'],
+    run: async (page, shot) => {
+      await openRecipe(page, 'Linsensuppe mit Kreuzkümmel');
+      await page.locator('.edit-fab-button').click();
+      await page.getByRole('button', { name: 'Rezept mit KI bearbeiten' }).waitFor();
+      await pause(page, 1200);
+      if (beschreibung) {
+        await page.getByRole('button', { name: 'Rezept mit KI bearbeiten' }).click();
+        await page.getByLabel('Was soll sich ändern?').fill(beschreibung);
+        await pause(page, 800);
+      }
+      await shot();
+    },
+  })),
   // Import-Dialoge (Button-System Schritt 4b); wie „rezept-bearbeiten“ nur am Desktop
   {
     name: 'import-web',

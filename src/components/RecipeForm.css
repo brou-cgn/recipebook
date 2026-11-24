@@ -1280,6 +1280,33 @@
   object-fit: contain;
 }
 
+/* Bearbeiten mit KI: Speichern, Bearbeiten, Beschreibung offen und Text erfasst liegen
+   übereinander; nur das aktive Icon ist sichtbar (wie .new-version-fab-icon im Rezept). */
+.save-fab-icons {
+  display: grid;
+  place-items: center;
+}
+
+.save-fab-icon {
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+}
+
+.save-fab-icon.active {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .save-fab-icon {
+    transition: none;
+  }
+}
+
 .cancel-fab-button .button-icon-image {
   width: 1.2rem;
   height: 1.2rem;
