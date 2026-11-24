@@ -15,62 +15,26 @@ import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { getMessaging, isSupported as isMessagingSupported } from 'firebase/messaging';
+import {
+  nutzungZeichen,
+  raeumeFirestoreZustand,
+  raeumeWegwerfSpeicher,
+  darfNeuLaden,
+  merkeNeuLaden,
+} from './utils/localStorageHygiene';
 
-// Firestore's multi-tab persistence (`persistentMultipleTabManager`) mirrors
-// small amounts of cross-tab coordination state (active query targets,
-// pending mutations, tab heartbeats) into localStorage under keys prefixed
-// with "firestore_". That state is disposable - the actual cached data lives
-// in IndexedDB - but stale entries left behind by tabs that were killed
-// rather than closed cleanly (common on mobile/PWA, where `beforeunload`
-// doesn't reliably fire) aren't always garbage-collected. Left unchecked they
-// can fill the localStorage quota and crash the SDK with an uncaught
-// QuotaExceededError ("FIRESTORE ... INTERNAL ASSERTION FAILED").
-const FIRESTORE_LOCALSTORAGE_PREFIX = 'firestore_';
-// Most browsers cap localStorage around 5MB, i.e. ~5,000,000 UTF-16 code
-// units for ASCII content. Clean up once usage nears that ceiling so there is
-// headroom left for Firestore's own writes.
+// Firestore legt seinen Abfragezustand im localStorage ab; ist der voll, stürzt das SDK mit
+// „INTERNAL ASSERTION FAILED“ ab und es kommen keine Daten mehr an. Aufräumen und Wiederherstellung
+// stehen in utils/localStorageHygiene.js.
 const LOCALSTORAGE_CLEANUP_THRESHOLD_CHARS = 3500000;
-const FIRESTORE_QUOTA_RELOAD_GUARD_KEY = 'firestoreQuotaRecoveryAttempted';
 
-function clearFirestoreLocalStorageState() {
-  try {
-    const staleKeys = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(FIRESTORE_LOCALSTORAGE_PREFIX)) {
-        staleKeys.push(key);
-      }
-    }
-    staleKeys.forEach((key) => localStorage.removeItem(key));
-  } catch {
-    // localStorage unavailable (private browsing, etc.) - nothing to do
-  }
+if (nutzungZeichen() > LOCALSTORAGE_CLEANUP_THRESHOLD_CHARS) {
+  console.warn('localStorage usage is high, clearing disposable caches to avoid quota errors.');
+  raeumeWegwerfSpeicher();
 }
 
-function getLocalStorageUsageChars() {
-  try {
-    let total = 0;
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      total += (key?.length || 0) + (localStorage.getItem(key)?.length || 0);
-    }
-    return total;
-  } catch {
-    return 0;
-  }
-}
-
-if (getLocalStorageUsageChars() > LOCALSTORAGE_CLEANUP_THRESHOLD_CHARS) {
-  console.warn('localStorage usage is high, clearing disposable Firestore state to avoid quota errors.');
-  clearFirestoreLocalStorageState();
-}
-
-// Safety net: if the proactive cleanup above wasn't enough and Firestore
-// still hits QuotaExceededError while persisting shared-tab state at
-// runtime, it throws an uncaught internal assertion error that otherwise
-// leaves the app permanently broken until a manual reload. Detect that
-// specific signature, clear the disposable state, and reload once (guarded
-// against reload loops if the underlying storage pressure isn't Firestore's).
+// Sicherheitsnetz: Trifft Firestore trotzdem auf den QuotaExceededError, räumen wir alles Wegwerfbare
+// weg und laden neu (höchstens einmal je 60 s, gegen Schleifen).
 function isFirestoreQuotaCrash(message) {
   return typeof message === 'string' &&
     message.includes('FIRESTORE') &&
@@ -81,15 +45,12 @@ function isFirestoreQuotaCrash(message) {
 function handleFirestoreQuotaCrash(event) {
   const message = event?.reason?.message || event?.reason?.toString?.() || event?.message || '';
   if (!isFirestoreQuotaCrash(message)) return;
-  if (sessionStorage.getItem(FIRESTORE_QUOTA_RELOAD_GUARD_KEY)) return;
+  if (!darfNeuLaden()) return;
 
-  console.warn('Recovering from Firestore localStorage quota crash: clearing disposable state and reloading.');
-  clearFirestoreLocalStorageState();
-  try {
-    sessionStorage.setItem(FIRESTORE_QUOTA_RELOAD_GUARD_KEY, 'true');
-  } catch {
-    // ignore - worst case we retry the recovery once more
-  }
+  console.warn('Recovering from Firestore localStorage quota crash: clearing disposable caches and reloading.');
+  raeumeFirestoreZustand();
+  raeumeWegwerfSpeicher();
+  merkeNeuLaden();
   window.location.reload();
 }
 
