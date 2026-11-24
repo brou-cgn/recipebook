@@ -83,8 +83,10 @@ import {
   deleteGroup as deleteGroupFromFirestore,
   ensurePublicGroup,
   addRecipeToGroup as addRecipeToGroupInFirestore,
-  removeRecipeFromGroup as removeRecipeFromGroupInFirestore
+  removeRecipeFromGroup as removeRecipeFromGroupInFirestore,
+  removeGroupMember as removeGroupMemberInFirestore
 } from './utils/groupFirestore';
+import { resolveSelectedGroup } from './utils/selectedGroup';
 import RecipeVersionDescribe from './components/RecipeVersionDescribe';
 import { applyRecipeVersionChanges } from './utils/aiOcrService';
 import { buildVersionRequest, mergeVersionChanges } from './utils/versionChanges';
@@ -449,7 +451,14 @@ function App() {
   const [editingMenu, setEditingMenu] = useState(null);
   const [groups, setGroups] = useState([]);
   const [groupsLoading, setGroupsLoading] = useState(true);
-  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [selectedGroupSnapshot, setSelectedGroup] = useState(null);
+  // Die geöffnete Liste immer aus dem Live-Abo `groups` lesen: der beim Öffnen gemerkte Stand
+  // veraltete, Änderungen (z. B. ein entferntes Mitglied) blieben bis zum erneuten Öffnen
+  // unsichtbar. Der gemerkte Stand dient nur als Rückfall, solange das Abo die Liste nicht führt.
+  const selectedGroup = useMemo(
+    () => resolveSelectedGroup(groups, selectedGroupSnapshot),
+    [groups, selectedGroupSnapshot]
+  );
   const [profileUserId, setProfileUserId] = useState(null);
   // Profil wurde aus der Netzwerk-Seite geöffnet: "Zurück" führt dorthin zurück.
   const [profileFromNetwork, setProfileFromNetwork] = useState(false);
@@ -2399,6 +2408,17 @@ function App() {
     }
   };
 
+  // Läuft nach dem Undo-Fenster von GroupDetail, auch wenn die Ansicht schon verlassen wurde
+  // (useUndoableDelete): darf deshalb nichts von GroupDetail voraussetzen.
+  const handleRemoveGroupMember = async (groupId, userId) => {
+    try {
+      await removeGroupMemberInFirestore(groupId, userId);
+    } catch (error) {
+      console.error('Error removing group member:', error);
+      alert(tMeldungen('fehlerGruppeAktualisieren'));
+    }
+  };
+
   const handleEditGroupProperties = async (groupId, editData) => {
     if (!currentUser) return;
     try {
@@ -3204,6 +3224,7 @@ function App() {
             currentUser={currentUser}
             onBack={handleBackToGroupList}
             onUpdateGroup={handleUpdateGroup}
+            onRemoveMember={handleRemoveGroupMember}
             onDeleteGroup={handleDeleteGroup}
             onAddRecipe={handleAddRecipe}
             recipes={selectedGroupRecipes}

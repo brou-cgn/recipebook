@@ -28,7 +28,9 @@ import {
   where,
   serverTimestamp,
   arrayUnion,
-  arrayRemove
+  arrayRemove,
+  deleteField,
+  FieldPath
 } from 'firebase/firestore';
 import { removeUndefinedFields } from './firestoreUtils';
 
@@ -232,6 +234,30 @@ export const removeRecipeFromGroup = async (groupId, recipeId) => {
     });
   } catch (error) {
     console.error('Error removing recipe from group:', error);
+    throw error;
+  }
+};
+
+/**
+ * Entfernt ein Mitglied aus einer Liste: aus memberIds und seine Rolle aus memberRoles.
+ * Atomar (arrayRemove, deleteField) statt einer neu berechneten Mitgliederliste: Wer kurz
+ * hintereinander zwei Mitglieder entfernt, schreibt sonst mit dem zweiten Aufruf einen
+ * veralteten Stand und holt das erste zurück (beide laufen erst nach dem Undo-Fenster).
+ * @param {string} groupId - ID der Liste
+ * @param {string} userId - ID des zu entfernenden Mitglieds
+ * @returns {Promise<void>}
+ */
+export const removeGroupMember = async (groupId, userId) => {
+  try {
+    const groupRef = doc(db, 'groups', groupId);
+    await updateDoc(
+      groupRef,
+      'memberIds', arrayRemove(userId),
+      new FieldPath('memberRoles', userId), deleteField(),
+      'updatedAt', serverTimestamp()
+    );
+  } catch (error) {
+    console.error('Error removing group member:', error);
     throw error;
   }
 };
