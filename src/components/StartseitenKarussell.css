@@ -8,7 +8,14 @@
    ========================================================= */
 
 .startseite-trending-section {
-  /* Sized so that exactly 2 tiles are fully visible in the carousel. */
+  /* Maße des Karussells (Designvorschlag „Startseiten-Karussell mit Anschnitt“, 24.11.2026):
+     --spalten Kacheln sind ganz zu sehen, die Nachbarkacheln ragen am Rand um --anschnitt
+     ins Bild, damit erkennbar ist, dass es weitergeht. --rand ist der Seitenabstand von
+     .startseite-container (padding: 20px), über den das Karussell bis an den Rand reicht. */
+  --rand: 20px;
+  --anschnitt: 12px;
+  --abstand: 12px;
+  --spalten: 2;
   --card-image-h: 110px;
   margin-bottom: 1rem;
 }
@@ -42,19 +49,38 @@
 
 .startseite-carousel {
   display: flex;
-  gap: 1rem;
+  gap: var(--abstand);
   height: 100%;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
+  /* Eingerastet bleibt von der vorigen Kachel --anschnitt sichtbar. */
+  scroll-padding-inline: calc(var(--anschnitt) + var(--abstand));
+  padding-left: var(--rand);
   align-items: flex-start;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   padding-bottom: 0.5rem;
 }
 
+/* Abstand nach der letzten Kachel als eigenes Element statt padding-right: Ältere Browser
+   zählen das padding-right eines scrollbaren Flex-Containers nicht zum Scrollbereich.
+   Zusammen mit dem gap davor ergibt es --rand. */
+.startseite-carousel::after {
+  content: '';
+  flex: 0 0 calc(var(--rand) - var(--abstand));
+}
+
 .startseite-carousel-wrap {
+  position: relative;
   height: calc(var(--card-image-h) + 3.4rem);
   overflow: hidden;
+}
+
+/* Mit Kacheln reicht das Karussell über den Seitenabstand bis an den Rand; Lade- und
+   Leerzustand bleiben bündig mit der Überschrift. */
+.startseite-carousel-wrap--randlos {
+  margin-left: calc(-1 * var(--rand));
+  margin-right: calc(-1 * var(--rand));
 }
 
 .startseite-carousel::-webkit-scrollbar {
@@ -62,38 +88,77 @@
 }
 
 .startseite-carousel-item {
-  flex: 0 0 calc((100% - 1rem) / 2);
-  width: calc((100% - 1rem) / 2);
+  /* 100 % ist die Breite des Karussells ohne seinen linken Innenabstand (--rand). */
+  --breite: calc((100% + var(--rand) - 2 * var(--anschnitt) - (var(--spalten) + 1) * var(--abstand)) / var(--spalten));
+  flex: 0 0 var(--breite);
+  width: var(--breite);
   scroll-snap-align: start;
+}
+
+.startseite-carousel-item .trending-card-image {
+  height: var(--card-image-h);
 }
 
 @media (min-width: 768px) {
   .startseite-trending-section {
-    --card-image-h: 132px;
-  }
-
-  .startseite-carousel-item {
-    flex: 0 0 calc((100% - 2rem) / 3);
-    width: calc((100% - 2rem) / 3);
-  }
-
-  .startseite-carousel-item .trending-card-image {
-    height: 132px;
+    --anschnitt: 14px;
+    --abstand: 16px;
+    --spalten: 3;
+    --card-image-h: 128px;
   }
 }
 
 @media (min-width: 1200px) {
   .startseite-trending-section {
-    --card-image-h: 148px;
+    --anschnitt: 16px;
+    --spalten: 4;
+    --card-image-h: 144px;
   }
+}
 
-  .startseite-carousel-item {
-    flex: 0 0 calc((100% - 3rem) / 4);
-    width: calc((100% - 3rem) / 4);
-  }
+/* =========================================================
+   Blättern-Pfeile
+   Nur mit Maus und ab Tablet-Breite; auf dem Handy wird gewischt. Schwebende runde
+   Symbol-Knöpfe ohne Text, außerhalb des Button-Systems (AGENTS.md, Knöpfe).
+   ========================================================= */
 
-  .startseite-carousel-item .trending-card-image {
-    height: 148px;
+.startseite-carousel-pfeil {
+  display: none;
+  position: absolute;
+  top: calc(var(--card-image-h) / 2 - 22px);
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-card);
+  color: var(--color-text);
+  box-shadow: 0 2px 8px var(--color-segment-shadow);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.startseite-carousel-pfeil:hover {
+  background: var(--color-surface-raised);
+}
+
+.startseite-carousel-pfeil--zurueck {
+  left: 8px;
+}
+
+.startseite-carousel-pfeil--zurueck svg {
+  transform: scaleX(-1);
+}
+
+.startseite-carousel-pfeil--weiter {
+  right: 8px;
+}
+
+@media (hover: hover) and (min-width: 768px) {
+  .startseite-carousel-pfeil {
+    display: flex;
   }
 }
 
@@ -110,7 +175,8 @@
 .startseite-mehr-btn {
   background: transparent;
   border: none;
-  color: var(--color-accent);
+  /* Akzent als Schrift (Tech-Check A13): --color-accent hätte auf Hell nur 2,8 : 1 */
+  color: var(--color-accent-text);
   font-size: 0.9rem;
   cursor: pointer;
   padding: 0.25rem 0;
