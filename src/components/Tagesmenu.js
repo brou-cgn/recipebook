@@ -10,7 +10,6 @@ import { getAllCookDates } from '../utils/recipeCookDates';
 import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
 import { isBase64Image } from '../utils/imageUtils';
-import { decodeRecipeLink } from '../utils/recipeLinks';
 import TagesmenuFilterOverlay from './TagesmenuFilterOverlay';
 import { isFuerDichEntdecktList, hideExpiredCarriedRecipes } from '../utils/fuerDichEntdeckt';
 import { describeActors, useFuerDichAttribution } from '../utils/fuerDichAttribution';
@@ -19,6 +18,7 @@ import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import { useOptionalNutritionReference } from '../contexts/NutritionReferenceContext';
 import { useListenwerte, useRezeptTitel, useTexte } from '../contexts/SpracheContext';
 import tagesmenuTexte from '../i18n/texte/tagesmenu';
+import TagesmenuKartenInhalt from './TagesmenuKartenInhalt';
 import bereicheTexte from '../i18n/texte/bereiche';
 
 /**
@@ -498,9 +498,6 @@ function Tagesmenu({
   };
 
   const getFollowedByText = (recipeId) => describeActors(attribution[recipeId], getAuthorName);
-
-  // Returns the display text for an ingredient or step item (string or object format).
-  const getItemText = (item) => (typeof item === 'string' ? item : item.text);
 
   // Lock page scroll while this view is shown – the only allowed motion is card swiping.
   useEffect(() => {
@@ -1768,49 +1765,7 @@ function Tagesmenu({
                       </div>
                     )}
 
-                  {Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0 && (
-                    <div className="tagesmenu-card-section">
-                      <h3 className="tagesmenu-card-section-title">{t('zutaten')}</h3>
-                      <ul className="tagesmenu-ingredients-list">
-                        {recipe.ingredients.map((item, i) => {
-                          if (typeof item === 'object' && item.type === 'heading') {
-                            return (
-                              <li key={`h-${i}`} className="tagesmenu-ingredient-heading">
-                                {item.text}
-                              </li>
-                            );
-                          }
-                          const text = getItemText(item);
-                          const recipeLink = decodeRecipeLink(text);
-                          if (recipeLink) {
-                            const linkedRecipe = recipes.find(r => r.id === recipeLink.recipeId);
-                            const displayName = linkedRecipe ? linkedRecipe.title : recipeLink.recipeName;
-                            const displayText = recipeLink.quantityPrefix ? `${recipeLink.quantityPrefix} ${displayName}` : displayName;
-                            return <li key={`i-${i}`}>{displayText}</li>;
-                          }
-                          return <li key={`i-${i}`}>{text}</li>;
-                        })}
-                      </ul>
-                    </div>
-                  )}
-
-                  {Array.isArray(recipe.steps) && recipe.steps.length > 0 && (
-                    <div className="tagesmenu-card-section">
-                      <h3 className="tagesmenu-card-section-title">{t('zubereitung')}</h3>
-                      <ol className="tagesmenu-steps-list">
-                        {recipe.steps.map((item, i) => {
-                          if (typeof item === 'object' && item.type === 'heading') {
-                            return (
-                              <li key={`h-${i}`} className="tagesmenu-step-heading">
-                                {item.text}
-                              </li>
-                            );
-                          }
-                          return <li key={`s-${i}`}>{getItemText(item)}</li>;
-                        })}
-                      </ol>
-                    </div>
-                  )}
+                  <TagesmenuKartenInhalt recipe={recipe} recipes={recipes} t={t} />
                 </div>
               </div>
             );
