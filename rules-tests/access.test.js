@@ -214,6 +214,31 @@ test('groups (Tech-Check S16): kein Client schreibt neue E-Mail-Adressen ins Lis
   await assertSucceeds(editor.collection('groups').add({ type: 'private', ownerId: 'editor', memberIds: ['editor'] }));
 });
 
+test('menus und events (Mehrsprachigkeit PR 6u): textUebersetzung schreiben nur Cloud Functions', async () => {
+  const uebersetzung = { quelle: { name: 'Grillen', description: '' }, en: { name: 'Barbecue', description: '' } };
+  await seed(env, async (db) => {
+    await db.doc('menus/m1').set({ name: 'Grillen', authorId: 'editor', textUebersetzung: uebersetzung });
+    await db.doc('users/editor/events/e1').set({ eventName: 'Grillen', textUebersetzung: uebersetzung });
+  });
+  for (const uid of ['editor', 'admin']) {
+    const db = as.user(env, uid);
+    await assertFails(db.doc('menus/m1').update({ textUebersetzung: { quelle: { name: 'Erfunden', description: '' } } }));
+    await assertFails(db.doc('menus/m1').update({ textUebersetzung: firebase.firestore.FieldValue.delete() }));
+    await assertFails(db.collection('menus').add({ name: 'X', authorId: uid, textUebersetzung: {} }));
+    await assertFails(db.doc('users/editor/events/e1').set({ textUebersetzung: {} }, { merge: true }));
+    await assertFails(db.doc('users/editor/events/e1').update({ textUebersetzung: firebase.firestore.FieldValue.delete() }));
+    await assertFails(db.doc(`users/${uid}/events/neu`).set({ eventName: 'X', textUebersetzung: {} }));
+  }
+  // Was die App heute schreibt, bleibt erlaubt: Menü speichern samt unverändertem Feld, Sperren am Event.
+  const editor = as.user(env, 'editor');
+  await assertSucceeds(editor.doc('menus/m1').update({ name: 'Grillabend', description: 'Sommer', textUebersetzung: uebersetzung }));
+  await assertSucceeds(editor.collection('menus').add({ name: 'Neu', authorId: 'editor' }));
+  await assertSucceeds(editor.doc('users/editor/events/e1').set({ einkaufGesperrt: { bier: 2 } }, { merge: true }));
+  await assertSucceeds(editor.doc('users/editor/events/neu').set({ status: 'geplant' }, { merge: true }));
+  await assertSucceeds(editor.doc('users/editor/events/e1').delete());
+  await assertFails(as.user(env, 'reader').doc('users/editor/events/e2').set({ eventName: 'Fremd' }));
+});
+
 test('groups (Mehrsprachigkeit PR 6u): textUebersetzung schreiben nur Cloud Functions', async () => {
   await seed(env, async (db) => {
     await db.doc('groups/g1').update({ name: 'Grillen', textUebersetzung: { quelle: { name: 'Grillen', description: '' } } });

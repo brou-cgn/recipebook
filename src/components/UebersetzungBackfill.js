@@ -3,14 +3,14 @@ import useSeitenweiserBackfill, { BACKFILL_STATUS } from '../hooks/useSeitenweis
 
 /**
  * Einstellungen › KI: Übersetzungen für den Bestand nachtragen (Vorhaben Mehrsprachigkeit: Rezepttitel
- * mit PR 3, Inhalte mit PR 4, Namen und Beschreibungen privater Listen mit PR 6u; nur Admins). Neue und
- * geänderte Rezepte und Listen übersetzen die Trigger ohnehin. Admin-Bereich, deshalb deutsch (NUR_DEUTSCH
+ * mit PR 3, Inhalte mit PR 4, Namen und Beschreibungen von Listen, Menüs und Events mit PR 6u; nur Admins).
+ * Neue und geänderte Einträge übersetzen die Trigger ohnehin. Admin-Bereich, deshalb deutsch (NUR_DEUTSCH
  * in src/i18nPolicy.test.js).
  *
  * @param {object} props
  * @param {function({cursor: (string|null)}): Promise<object>} props.aufruf - Callable einer Seite
  * @param {string} props.textNurAdmins - Meldung, wenn die Function den Aufruf ablehnt
- * @param {string} [props.einheit] - was gezählt wird, in der Mehrzahl („Rezepte“, „Listen“)
+ * @param {string} [props.einheit] - was gezählt wird, in der Mehrzahl („Rezepte“, „Einträge“)
  */
 function UebersetzungBackfill({ aufruf, textNurAdmins, einheit = 'Rezepte' }) {
   const { status, stand, fehler, kannFortsetzen, haltAngefragt, starten, fortsetzen, anhalten } =

@@ -89,7 +89,9 @@ const EXPECTED_EXPORTS = [
   'uebersetzeListenwerte',
   'uebersetzeListenwerteAutomatisch',
   'uebersetzeListenTexte',
-  'backfillListenUebersetzungen',
+  'uebersetzeMenueTexte',
+  'uebersetzeEventTexte',
+  'backfillTextUebersetzungen',
 ];
 
 function loadIndex() {

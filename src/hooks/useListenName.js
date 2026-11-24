@@ -3,7 +3,7 @@ import { useSprache, useTexte } from '../contexts/SpracheContext';
 import startseiteTexte from '../i18n/texte/startseite';
 import gruppenTexte from '../i18n/texte/gruppen';
 import { listenAnzeigeName } from '../utils/fuerDichEntdeckt';
-import { listenNamenFassungen, listenText } from '../i18n/listenText';
+import { namenFassungen, uebersetzterText } from '../i18n/textUebersetzung';
 
 /**
  * Anzeigename einer Liste in der geltenden Sprache (Mehrsprachigkeit PR 6p, PR 6s, PR 6u): die Systemliste
@@ -28,7 +28,7 @@ export default function useListenName() {
 export function useListenBeschreibung() {
   const { sprache, inhalteUebersetzen } = useSprache();
   return useCallback(
-    (liste) => listenText(liste, 'description', sprache, inhalteUebersetzen),
+    (liste) => uebersetzterText(liste, 'description', sprache, inhalteUebersetzen),
     [sprache, inhalteUebersetzen],
   );
 }
@@ -42,7 +42,7 @@ export function useListenNamenSuche() {
   const listenName = useListenName();
   const { inhalteUebersetzen } = useSprache();
   return useCallback(
-    (liste) => [...new Set([listenName(liste), ...listenNamenFassungen(liste, inhalteUebersetzen)])],
+    (liste) => [...new Set([listenName(liste), ...namenFassungen(liste, inhalteUebersetzen)])],
     [listenName, inhalteUebersetzen],
   );
 }

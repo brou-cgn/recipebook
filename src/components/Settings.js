@@ -32,7 +32,7 @@ import UebersetzungBackfill from './UebersetzungBackfill';
 import ListenUebersetzungen from './ListenUebersetzungen';
 import { sloganUebersetzungenZumSpeichern } from '../i18n/slogan';
 import kopfzeileTexte from '../i18n/texte/kopfzeile';
-import { trageInhaltUebersetzungenNach, trageListenUebersetzungenNach, trageTitelUebersetzungenNach } from '../utils/uebersetzungCallables';
+import { trageInhaltUebersetzungenNach, trageTextUebersetzungenNach, trageTitelUebersetzungenNach } from '../utils/uebersetzungCallables';
 import UndoSnackbar from './UndoSnackbar';
 import useUndoableDelete from '../hooks/useUndoableDelete';
 import useSwipeToDelete from '../hooks/useSwipeToDelete';
@@ -2296,16 +2296,17 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               />
             </div>
             <div className="settings-section">
-              <h3>Listen übersetzen</h3>
+              <h3>Listen, Menüs und Events übersetzen</h3>
               <p className="section-description">
-                Namen und Beschreibungen neuer und geänderter privater Listen übersetzt die App automatisch. Hier
-                trägst du die Übersetzungen für die bestehenden Listen aller Mitglieder nach; Listen mit passender
-                Übersetzung und die öffentliche Liste werden übersprungen. Zählt zum Tageslimit der Titel.
+                Namen und Beschreibungen neuer und geänderter privater Listen, Menüs und Events übersetzt die App
+                automatisch. Hier trägst du die Übersetzungen für den Bestand aller Mitglieder nach, erst die Listen,
+                dann die Menüs, dann die Events; Einträge mit passender Übersetzung und die öffentliche Liste werden
+                übersprungen. Zählt zum Tageslimit der Titel.
               </p>
               <UebersetzungBackfill
-                aufruf={trageListenUebersetzungenNach}
-                textNurAdmins="Listenübersetzungen nachtragen dürfen nur Admins."
-                einheit="Listen"
+                aufruf={trageTextUebersetzungenNach}
+                textNurAdmins="Übersetzungen von Listen, Menüs und Events nachtragen dürfen nur Admins."
+                einheit="Einträge"
               />
             </div>
             <div className="settings-section">

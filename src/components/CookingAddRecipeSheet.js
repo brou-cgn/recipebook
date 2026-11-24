@@ -7,6 +7,7 @@ import useFadeOutClose from '../hooks/useFadeOutClose';
 import { useRezeptTitel, useTexte } from '../contexts/SpracheContext';
 import kochmodusTexte from '../i18n/texte/kochmodus';
 import allgemeinTexte from '../i18n/texte/allgemein';
+import { useMenueText } from '../hooks/useMenueEventText';
 import './CookingAddRecipeSheet.css';
 
 /**
@@ -77,6 +78,7 @@ function CookingAddRecipeSheet({
   onClose: onCloseProp,
 }) {
   const t = useTexte(kochmodusTexte);
+  const menueText = useMenueText();
   const tAllgemein = useTexte(allgemeinTexte);
   // Titel in der geltenden Sprache (Mehrsprachigkeit PR 6a); die Suche findet Original und Übersetzung
   const zeigeTitel = useRezeptTitel();
@@ -183,7 +185,7 @@ function CookingAddRecipeSheet({
               ) : (
                 <>
                   <SuggestionSection
-                    title={menu?.name ? t('ausFesttafelName', { name: menu.name }) : t('ausFesttafel')}
+                    title={menu?.name ? t('ausFesttafelName', { name: menueText.name(menu) }) : t('ausFesttafel')}
                     recipes={menuSuggestions}
                     onSelect={onSelect}
                   />

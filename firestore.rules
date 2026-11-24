@@ -105,6 +105,18 @@ service cloud.firestore {
       return request.resource.data.keys().hasAny(['ratingAvg', 'ratingCount', 'weinprofil', 'titelUebersetzung']);
     }
 
+    // textUebersetzung (übersetzter Name und übersetzte Beschreibung, Mehrsprachigkeit PR 6u) an
+    // Listen, Menüs und Events schreiben nur die Cloud Functions uebersetzeListenTexte,
+    // uebersetzeMenueTexte, uebersetzeEventTexte und backfillTextUebersetzungen. Ein Client bringt es
+    // beim Anlegen nicht mit und ändert oder löscht es nicht; unverändert mitgeschickt (setDoc mit
+    // merge, Update mit dem ganzen Dokument) zählt nicht als Änderung.
+    function setsTextUebersetzung() {
+      return 'textUebersetzung' in request.resource.data;
+    }
+    function changesTextUebersetzung() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny(['textUebersetzung']);
+    }
+
     // Recipes collection
     match /recipes/{recipeId} {
       // Direct reads are for signed-in users with a profile only. Anonymous
@@ -152,7 +164,9 @@ service cloud.firestore {
       // getSharedRecipeByShareId/getSharedMenuByShareId/getSharedRecipesByIds.
       allow get: if isAnyUser() || resource.data.shareId != null;
       allow list: if isAnyUser() || resource.data.shareId != null;
-      allow create, update, delete: if isEditOrAdmin();
+      allow create: if isEditOrAdmin() && !setsTextUebersetzung();
+      allow update: if isEditOrAdmin() && !changesTextUebersetzung();
+      allow delete: if isEditOrAdmin();
     }
 
     // Season matrix collection
@@ -255,14 +269,11 @@ service cloud.firestore {
           || (resource != null && 'invitedEmails' in resource.data
               && request.resource.data.invitedEmails == resource.data.invitedEmails);
       }
-      // textUebersetzung (Name und Beschreibung übersetzt, Mehrsprachigkeit PR 6u) schreiben nur die
-      // Cloud Functions uebersetzeListenTexte und backfillListenUebersetzungen. Ein Client bringt es
-      // nicht mit und ändert oder löscht es nicht; unverändert mitgeschickt (setDoc mit merge) zählt
-      // nicht als Änderung.
+      // textUebersetzung schreiben nur Cloud Functions (setsTextUebersetzung, changesTextUebersetzung).
       allow create: if (isEditOrAdmin() || isOwnFuerDichEntdecktList()) && keepsInvitedEmailsOut()
-                    && !('textUebersetzung' in request.resource.data);
+                    && !setsTextUebersetzung();
       allow update: if (isEditOrAdmin() || isOwnFuerDichEntdecktList()) && keepsInvitedEmailsOut()
-                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['textUebersetzung']);
+                    && !changesTextUebersetzung();
       allow delete: if isEditOrAdmin();
     }
 
@@ -361,9 +372,12 @@ service cloud.firestore {
     // Event drink-calculation planning (Menüpunkt "Events").
     // Admins have full read/write access to any user's events, so they can
     // see, edit and delete events across the app.
+    // textUebersetzung schreiben nur Cloud Functions (setsTextUebersetzung, changesTextUebersetzung).
     match /users/{userId}/events/{eventId} {
       allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow create: if isAuthenticated() && (request.auth.uid == userId || isAdmin()) && !setsTextUebersetzung();
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin()) && !changesTextUebersetzung();
+      allow delete: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
 
     // User-defined custom drinks library (reusable across events).
@@ -519,7 +533,7 @@ service cloud.firestore {
     }
     // Tageszähler der Titelübersetzung (Mehrsprachigkeit): uebersetzeRezeptTitel unter
     // `automatik`, backfillTitelUebersetzungen je Admin, je übersetztem Titel; Listen (PR 6u)
-    // uebersetzeListenTexte unter `automatikListen`, backfillListenUebersetzungen je Admin.
+    // Listen, Menüs und Events (PR 6u) unter `automatikTexte`, backfillTextUebersetzungen je Admin.
     match /aiTitelUebersetzungLimits/{limitId} {
       allow read, write: if false;
     }

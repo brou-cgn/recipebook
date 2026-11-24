@@ -36,6 +36,7 @@ import festtafelTexte from '../i18n/texte/festtafel';
 import rezeptansichtTexte from '../i18n/texte/rezeptansicht';
 import allgemeinTexte from '../i18n/texte/allgemein';
 import getraenkeTexte from '../i18n/texte/getraenke';
+import { useMenueText } from '../hooks/useMenueEventText';
 
 const formatEventLiter = (value, sprache = STANDARD_SPRACHE) => {
   const num = Number(value);
@@ -70,6 +71,10 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   const tGetraenke = useTexte(getraenkeTexte);
   const { sprache } = useSprache();
   const zeigeTitel = useRezeptTitel();
+  // Name und Beschreibung übersetzt (Mehrsprachigkeit PR 6u); auf Freigabe-Seiten ohne Anmeldung das Original
+  const menueText = useMenueText();
+  const menuName = menueText.name(menu);
+  const menuBeschreibung = menueText.beschreibung(menu);
   const [menuGuests, setMenuGuests] = useState([]);
   const [favoriteMenuIds, setFavoriteMenuIds] = useState([]);
   const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
@@ -368,7 +373,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
 
   const handlePublish = async () => {
     if (!onPublish) return;
-    if (window.confirm(tAnsicht('veroeffentlichenFrage', { titel: menu.name }))) {
+    if (window.confirm(tAnsicht('veroeffentlichenFrage', { titel: menuName }))) {
       setPublishLoading(true);
       setMenu(prev => ({ ...prev, privat: false }));
       try {
@@ -418,7 +423,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     const url = getShareUrl();
     if (navigator.share) {
       try {
-        await navigator.share({ url, title: menu.name });
+        await navigator.share({ url, title: menuName });
         return;
       } catch (err) {
         if (err.name === 'AbortError') return;
@@ -636,7 +641,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
       <div className="menu-detail-content">
         {menu.image && (
           <div className="menu-detail-image">
-            <img src={menu.image} alt={menu.name} />
+            <img src={menu.image} alt={menuName} />
           </div>
         )}
 
@@ -739,7 +744,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
 
         <div className="menu-detail-body">
         <div className="menu-title-row">
-          <h1 className="menu-title">{menu.name}</h1>
+          <h1 className="menu-title">{menuName}</h1>
           <button className="app-close-button" onClick={onBack} aria-label={t('schliessenAnsicht')} title={t('schliessenAnsicht')}>
             {isBase64Image(closeButtonIcon) ? (
               <img src={closeButtonIcon} alt={t('schliessenAnsicht')} className="app-close-button-icon-img" />
@@ -756,8 +761,8 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
           </div>
         )}
 
-        {menu.description && (
-          <p className="menu-description">{menu.description}</p>
+        {menuBeschreibung && (
+          <p className="menu-description">{menuBeschreibung}</p>
         )}
 
         {menuGuestsText && (
@@ -915,7 +920,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
       {showDeleteConfirm && (
         <ConfirmDialog
           title={t('menueLoeschen')}
-          message={tAnsicht('loeschenFrage', { titel: menu.name })}
+          message={tAnsicht('loeschenFrage', { titel: menuName })}
           onConfirm={handleDeleteConfirmed}
           onCancel={() => setShowDeleteConfirm(false)}
         />
@@ -923,7 +928,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
       {showShoppingListModal && (
         <ShoppingListModal
           items={getMenuShoppingListIngredients()}
-          title={menu.name}
+          title={menuName}
           onClose={() => setShowShoppingListModal(false)}
           shareId={menu.shareId}
           bringButtonIcon={bringButtonIcon}

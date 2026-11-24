@@ -11,10 +11,12 @@ import { formatiereDatum } from '../i18n/format';
 import festtafelTexte from '../i18n/texte/festtafel';
 import rezeptansichtTexte from '../i18n/texte/rezeptansicht';
 import bereicheTexte from '../i18n/texte/bereiche';
+import { useMenueText } from '../hooks/useMenueEventText';
 
 function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorite, currentUser, allUsers }) {
   // Texte der Festtafel (Mehrsprachigkeit PR 6f)
   const t = useTexte(festtafelTexte);
+  const menueText = useMenueText();
   const tBereiche = useTexte(bereicheTexte);
   const tAnsicht = useTexte(rezeptansichtTexte);
   const { sprache } = useSprache();
@@ -183,7 +185,7 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
                     <div className="menu-card-image">
                       <img
                         src={displaySrc}
-                        alt={menu.name}
+                        alt={menueText.name(menu)}
                         className="menu-card-image-img"
                       />
                     </div>
@@ -210,9 +212,9 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
                   )}
                 </div>
                 <div className="menu-card-content">
-                  <h3>{menu.name}</h3>
-                  {menu.description && (
-                    <p className="menu-description">{menu.description}</p>
+                  <h3>{menueText.name(menu)}</h3>
+                  {menueText.beschreibung(menu) && (
+                    <p className="menu-description">{menueText.beschreibung(menu)}</p>
                   )}
                   {menuGuestsText && (
                     <p className="menu-description menu-guests-text">{menuGuestsText}</p>

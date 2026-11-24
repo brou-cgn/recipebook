@@ -31,6 +31,7 @@ import { formatiereZahl } from '../i18n/format';
 import bereicheTexte from '../i18n/texte/bereiche';
 import chefkochTexte from '../i18n/texte/chefkochUndMehr';
 import allgemeinTexte from '../i18n/texte/allgemein';
+import { useMenueText } from '../hooks/useMenueEventText';
 
 function getLastSixMonthsRecipeCounts(recipes) {
   const now = new Date();
@@ -238,6 +239,7 @@ function Kennzahl({ wert, label }) {
 function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated, onViewChange, openPersonalData, onPersonalDataOpened, openNetwork, onNetworkOpened, onPersonalDataVisibilityChange }) {
   const { rows: nutritionReferenceRows } = useNutritionReference();
   const t = useTexte(chefkochTexte);
+  const menueText = useMenueText();
   const tB = useTexte(bereicheTexte);
   const tA = useTexte(allgemeinTexte);
   const { sprache } = useSprache();
@@ -423,7 +425,7 @@ function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSe
   // Transform menus into the shape expected by RecipeTimeline
   const menuTimelineItems = filteredMenus.map(menu => ({
     id: menu.id,
-    title: menu.name,
+    title: menueText.name(menu),
     createdAt: menu.menuDate ? new Date(menu.menuDate) : menu.createdAt,
     ingredients: menu.recipeIds || [],
     steps: [],
