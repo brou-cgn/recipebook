@@ -1,7 +1,9 @@
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import RecipeTimeline from './RecipeTimeline';
 import { renderWithProviders } from '../test-utils';
+
+// Klick auf eine Karte: Der Titel ist der Knopf (sein ::after deckt im Browser die ganze Karte ab)
+const karteWaehlen = (titel) => fireEvent.click(screen.getByRole('button', { name: titel }));
 
 describe('RecipeTimeline', () => {
   const mockRecipes = [
@@ -37,15 +39,21 @@ describe('RecipeTimeline', () => {
     { id: 'user-2', vorname: 'Jane', nachname: 'Smith' },
   ];
 
+  const sameDay = new Date('2024-03-05');
+  const zweiAmSelbenTag = [
+    { id: 'a', title: 'Morning Cake', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
+    { id: 'b', title: 'Evening Stew', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
+  ];
+
   test('renders empty state when no recipes', () => {
     render(
-      <RecipeTimeline 
-        recipes={[]} 
+      <RecipeTimeline
+        recipes={[]}
         onSelectRecipe={() => {}}
         allUsers={[]}
       />
     );
-    
+
     expect(screen.getByText('Keine Rezepte vorhanden')).toBeInTheDocument();
   });
 
@@ -74,64 +82,140 @@ describe('RecipeTimeline', () => {
 
   test('renders recipes in reverse chronological order', () => {
     render(
-      <RecipeTimeline 
-        recipes={mockRecipes} 
+      <RecipeTimeline
+        recipes={mockRecipes}
         onSelectRecipe={() => {}}
         allUsers={mockUsers}
       />
     );
-    
+
     // Get all timeline cards
     const timelineCards = document.querySelectorAll('.timeline-card');
     expect(timelineCards).toHaveLength(3);
-    
+
     // Verify order: Recipe 2 (Jan 20) -> Recipe 1 (Jan 15) -> Recipe 3 (Jan 10)
-    const titles = Array.from(timelineCards).map(card => 
+    const titles = Array.from(timelineCards).map(card =>
       card.querySelector('.timeline-title').textContent
     );
     expect(titles).toEqual(['Recipe 2', 'Recipe 1', 'Recipe 3']);
   });
 
+  test('puts entries without a valid date last', () => {
+    render(
+      <RecipeTimeline
+        recipes={[
+          { id: 'x', title: 'Ohne Datum', createdAt: 'kein Datum' },
+          ...mockRecipes,
+        ]}
+        onSelectRecipe={() => {}}
+      />
+    );
+
+    const titles = Array.from(document.querySelectorAll('.timeline-title')).map((el) => el.textContent);
+    expect(titles).toEqual(['Recipe 2', 'Recipe 1', 'Recipe 3', 'Ohne Datum']);
+    expect(screen.getByText('Unbekannt')).toHaveClass('timeline-monat');
+  });
+
   test('displays recipe details correctly', () => {
     render(
-      <RecipeTimeline 
-        recipes={[mockRecipes[0]]} 
+      <RecipeTimeline
+        recipes={[mockRecipes[0]]}
         onSelectRecipe={() => {}}
         allUsers={mockUsers}
       />
     );
-    
+
     expect(screen.getByText('Recipe 1')).toBeInTheDocument();
-    expect(screen.getByText('15. Januar 2024')).toBeInTheDocument();
+    // Ganzes Datum für Screenreader, sichtbar sind Monat und Tag
+    expect(screen.getByText('15. Januar 2024')).toHaveClass('timeline-vorlesen');
+  });
+
+  test('shows the month as heading and the day with its weekday on the rail', () => {
+    render(
+      <RecipeTimeline
+        recipes={[mockRecipes[0], { id: 'f', title: 'Februar-Rezept', createdAt: new Date('2024-02-01') }]}
+        onSelectRecipe={() => {}}
+      />
+    );
+
+    const monate = screen.getAllByRole('heading', { level: 4 }).map((h) => h.textContent);
+    expect(monate).toEqual(['Februar 2024', 'Januar 2024']);
+
+    const tage = Array.from(document.querySelectorAll('.timeline-item'));
+    expect(tage).toHaveLength(2);
+    expect(tage[1].querySelector('.timeline-marker')).toHaveTextContent('15');
+    expect(tage[1].querySelector('.timeline-wochentag')).toHaveTextContent('Mo');
+    expect(tage[1].querySelector('.timeline-datum')).toHaveAttribute('aria-hidden', 'true');
   });
 
   test('displays author name when provided', () => {
     render(
-      <RecipeTimeline 
-        recipes={[mockRecipes[0]]} 
+      <RecipeTimeline
+        recipes={[mockRecipes[0]]}
         onSelectRecipe={() => {}}
         allUsers={mockUsers}
       />
     );
-    
+
     expect(screen.getByText('John')).toBeInTheDocument();
+  });
+
+  test('shows the name only for entries of other users', () => {
+    render(
+      <RecipeTimeline
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUserId="user-1"
+      />
+    );
+
+    expect(screen.queryByText('John')).not.toBeInTheDocument();
+    expect(screen.getByText('Jane')).toHaveClass('timeline-typ__zusatz');
+  });
+
+  test('shows the kind of entry instead of the author line', () => {
+    render(
+      <RecipeTimeline
+        recipes={[
+          { id: 'r', title: 'Suppe', createdAt: new Date('2024-01-03'), authorId: 'user-1' },
+          { id: 'm', title: 'Festessen', createdAt: new Date('2024-01-02'), itemType: 'menu', authorId: 'user-1' },
+          { id: 'c', title: 'Suppe', createdAt: new Date('2024-01-01'), itemType: 'cookEvent', authorId: 'user-1' },
+        ]}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUserId="user-1"
+      />
+    );
+
+    const typen = Array.from(document.querySelectorAll('.timeline-typ__text')).map((el) => el.textContent);
+    expect(typen).toEqual(['Neues Rezept', 'Menü', 'Gekocht']);
+    expect(document.querySelector('.timeline-marker--menue')).toBeInTheDocument();
+    expect(document.querySelector('.timeline-marker--gekocht')).toBeInTheDocument();
   });
 
   test('handles recipe click', () => {
     const handleSelectRecipe = jest.fn();
-    
+
     render(
-      <RecipeTimeline 
-        recipes={[mockRecipes[0]]} 
+      <RecipeTimeline
+        recipes={[mockRecipes[0]]}
         onSelectRecipe={handleSelectRecipe}
         allUsers={mockUsers}
       />
     );
-    
-    const timelineCard = document.querySelector('.timeline-card');
-    fireEvent.click(timelineCard);
-    
+
+    karteWaehlen('Recipe 1');
+
     expect(handleSelectRecipe).toHaveBeenCalledWith(mockRecipes[0]);
+    expect(handleSelectRecipe).toHaveBeenCalledTimes(1);
+  });
+
+  test('the card title is a heading with a real button (reachable by keyboard)', () => {
+    render(<RecipeTimeline recipes={[mockRecipes[0]]} onSelectRecipe={() => {}} />);
+
+    const heading = screen.getByRole('heading', { name: 'Recipe 1' });
+    expect(within(heading).getByRole('button', { name: 'Recipe 1' })).toHaveAttribute('type', 'button');
   });
 
   test('handles date formatting for different formats', () => {
@@ -139,27 +223,42 @@ describe('RecipeTimeline', () => {
       ...mockRecipes[0],
       createdAt: new Date('2024-02-01')
     };
-    
+
     render(
-      <RecipeTimeline 
-        recipes={[recipeWithStringDate]} 
+      <RecipeTimeline
+        recipes={[recipeWithStringDate]}
         onSelectRecipe={() => {}}
         allUsers={mockUsers}
       />
     );
-    
+
     expect(screen.getByText('01. Februar 2024')).toBeInTheDocument();
+  });
+
+  test('groups entries by calendar day in local time', () => {
+    render(
+      <RecipeTimeline
+        recipes={[
+          { id: 'spaet', title: 'Spät am Abend', createdAt: new Date(2024, 2, 5, 23, 30) },
+          { id: 'frueh', title: 'Früh am Morgen', createdAt: new Date(2024, 2, 6, 0, 30) },
+        ]}
+        onSelectRecipe={() => {}}
+      />
+    );
+
+    const tage = Array.from(document.querySelectorAll('.timeline-item .timeline-marker')).map((el) => el.textContent);
+    expect(tage).toEqual(['6', '5']);
   });
 
   test('displays recipe own image when provided', () => {
     render(
-      <RecipeTimeline 
-        recipes={[mockRecipes[0]]} 
+      <RecipeTimeline
+        recipes={[mockRecipes[0]]}
         onSelectRecipe={() => {}}
         allUsers={mockUsers}
       />
     );
-    
+
     const image = screen.getByAltText('Recipe 1');
     expect(image).toBeInTheDocument();
     expect(image).toHaveAttribute('src', 'https://example.com/image1.jpg');
@@ -167,171 +266,105 @@ describe('RecipeTimeline', () => {
 
   test('renders without image when recipe has no image', () => {
     render(
-      <RecipeTimeline 
-        recipes={[mockRecipes[1]]} 
+      <RecipeTimeline
+        recipes={[mockRecipes[1]]}
         onSelectRecipe={() => {}}
         allUsers={mockUsers}
       />
     );
-    
+
     expect(screen.queryByAltText('Recipe 2')).not.toBeInTheDocument();
   });
 
-  test('groups multiple recipes on the same day as a stack', () => {
-    const sameDay = new Date('2024-03-05');
-    const recipesOnSameDay = [
-      { id: 'a', title: 'Morning Cake', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
-      { id: 'b', title: 'Evening Stew', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
-    ];
-
+  test('shows several recipes of one day in one card with "+ 1 weiteres Rezept"', () => {
     render(
       <RecipeTimeline
-        recipes={recipesOnSameDay}
+        recipes={zweiAmSelbenTag}
         onSelectRecipe={() => {}}
         allUsers={[]}
       />
     );
 
-    // Should show only one timeline-item (one entry per day)
-    const timelineItems = document.querySelectorAll('.timeline-item');
-    expect(timelineItems).toHaveLength(1);
+    // One day, one group, only the first entry visible
+    expect(document.querySelectorAll('.timeline-item')).toHaveLength(1);
+    expect(document.querySelectorAll('.timeline-gruppe')).toHaveLength(1);
+    expect(screen.getByText('Morning Cake')).toBeInTheDocument();
+    expect(screen.queryByText('Evening Stew')).not.toBeInTheDocument();
 
-    // Should show the stack container and the count badge
-    expect(document.querySelector('.timeline-stack')).toBeInTheDocument();
-    expect(document.querySelector('.timeline-stack-badge')).toHaveTextContent('2');
-
-    // The toggle button should show the recipe count
-    expect(screen.getByText(/2 Rezepte/)).toBeInTheDocument();
+    const toggle = screen.getByRole('button', { name: '+ 1 weiteres Rezept' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
   });
 
-  test('expands stacked recipes when toggle is clicked', () => {
-    const sameDay = new Date('2024-03-05');
-    const recipesOnSameDay = [
-      { id: 'a', title: 'Morning Cake', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
-      { id: 'b', title: 'Evening Stew', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
-    ];
-    const handleSelect = jest.fn();
-
+  test('counts the further entries of a day in plural', () => {
     render(
       <RecipeTimeline
-        recipes={recipesOnSameDay}
-        onSelectRecipe={handleSelect}
+        recipes={[...zweiAmSelbenTag, { id: 'c', title: 'Gamma', createdAt: { toDate: () => sameDay } }]}
+        onSelectRecipe={() => {}}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: '+ 2 weitere Rezepte' })).toBeInTheDocument();
+  });
+
+  test('expands and collapses the further entries of a day', () => {
+    render(
+      <RecipeTimeline
+        recipes={zweiAmSelbenTag}
+        onSelectRecipe={() => {}}
         allUsers={[]}
       />
     );
 
-    // Before expanding: stack is visible, individual cards are not
-    expect(document.querySelector('.timeline-stack')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '+ 1 weiteres Rezept' }));
 
-    // Click the toggle button to expand
-    fireEvent.click(screen.getByRole('button', { name: /Stapel ausklappen/ }));
-
-    // After expanding: individual cards should be visible
     expect(screen.getByText('Morning Cake')).toBeInTheDocument();
     expect(screen.getByText('Evening Stew')).toBeInTheDocument();
-    expect(document.querySelector('.timeline-stack')).not.toBeInTheDocument();
+    const toggle = screen.getByRole('button', { name: 'Weniger anzeigen' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(document.querySelector('.timeline-gruppe')).toHaveClass('timeline-gruppe--offen');
+
+    fireEvent.click(toggle);
+
+    expect(screen.queryByText('Evening Stew')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '+ 1 weiteres Rezept' })).toHaveAttribute('aria-expanded', 'false');
   });
 
-  test('calls onSelectRecipe when an expanded stack card is clicked', () => {
-    const sameDay = new Date('2024-03-05');
-    const recipe1 = { id: 'a', title: 'Morning Cake', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] };
-    const recipe2 = { id: 'b', title: 'Evening Stew', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] };
+  test('calls onSelectRecipe when an expanded card is clicked and stays expanded', () => {
     const handleSelect = jest.fn();
 
     render(
       <RecipeTimeline
-        recipes={[recipe1, recipe2]}
+        recipes={zweiAmSelbenTag}
         onSelectRecipe={handleSelect}
         allUsers={[]}
       />
     );
 
-    // Expand the stack
-    fireEvent.click(screen.getByRole('button', { name: /Stapel ausklappen/ }));
+    fireEvent.click(screen.getByRole('button', { name: '+ 1 weiteres Rezept' }));
+    karteWaehlen('Evening Stew');
 
-    // Click on the second recipe card
-    fireEvent.click(screen.getByText('Evening Stew').closest('.timeline-card'));
-    expect(handleSelect).toHaveBeenCalledWith(recipe2);
+    expect(handleSelect).toHaveBeenCalledWith(zweiAmSelbenTag[1]);
+    expect(screen.getByRole('button', { name: 'Weniger anzeigen' })).toBeInTheDocument();
   });
 
-  test('calls onSelectRecipe when the front card of a stack is clicked (without expanding)', () => {
-    const sameDay = new Date('2024-03-05');
-    const recipe1 = { id: 'a', title: 'Morning Cake', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] };
-    const recipe2 = { id: 'b', title: 'Evening Stew', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] };
+  test('calls onSelectRecipe for the first entry without expanding', () => {
     const handleSelect = jest.fn();
 
     render(
       <RecipeTimeline
-        recipes={[recipe1, recipe2]}
+        recipes={zweiAmSelbenTag}
         onSelectRecipe={handleSelect}
         allUsers={[]}
       />
     );
 
-    // Stack is visible before click
-    expect(document.querySelector('.timeline-stack')).toBeInTheDocument();
+    karteWaehlen('Morning Cake');
 
-    // Click directly on the front card
-    fireEvent.click(document.querySelector('.timeline-stack-front'));
-
-    // onSelectRecipe should have been called with the primary (first) recipe
-    expect(handleSelect).toHaveBeenCalledWith(recipe1);
-
-    // Stack should still be visible (not expanded)
-    expect(document.querySelector('.timeline-stack')).toBeInTheDocument();
+    expect(handleSelect).toHaveBeenCalledWith(zweiAmSelbenTag[0]);
+    expect(screen.queryByText('Evening Stew')).not.toBeInTheDocument();
   });
 
-  test('expands the stack when the badge is clicked', () => {
-    const sameDay = new Date('2024-03-05');
-    const recipesOnSameDay = [
-      { id: 'a', title: 'Morning Cake', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
-      { id: 'b', title: 'Evening Stew', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
-    ];
-
-    render(
-      <RecipeTimeline
-        recipes={recipesOnSameDay}
-        onSelectRecipe={() => {}}
-        allUsers={[]}
-      />
-    );
-
-    // Click the badge to expand
-    fireEvent.click(document.querySelector('.timeline-stack-badge'));
-
-    // Stack should be gone, individual cards visible
-    expect(document.querySelector('.timeline-stack')).not.toBeInTheDocument();
-    expect(screen.getByText('Morning Cake')).toBeInTheDocument();
-    expect(screen.getByText('Evening Stew')).toBeInTheDocument();
-  });
-
-  test('expands the stack when a background card is clicked', () => {
-    const sameDay = new Date('2024-03-05');
-    const recipesOnSameDay = [
-      { id: 'a', title: 'Alpha', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
-      { id: 'b', title: 'Beta', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
-      { id: 'c', title: 'Gamma', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
-    ];
-
-    render(
-      <RecipeTimeline
-        recipes={recipesOnSameDay}
-        onSelectRecipe={() => {}}
-        allUsers={[]}
-      />
-    );
-
-    // Click the first background card
-    fireEvent.click(document.querySelector('.timeline-stack-bg-1'));
-
-    // Stack should be gone, individual cards visible
-    expect(document.querySelector('.timeline-stack')).not.toBeInTheDocument();
-    expect(screen.getByText('Alpha')).toBeInTheDocument();
-    expect(screen.getByText('Beta')).toBeInTheDocument();
-    expect(screen.getByText('Gamma')).toBeInTheDocument();
-  });
-
-  test('displays custom emoji icon in bubble marker', () => {
+  test('displays custom emoji icon next to the kind of entry', () => {
     render(
       <RecipeTimeline
         recipes={[mockRecipes[0]]}
@@ -341,10 +374,10 @@ describe('RecipeTimeline', () => {
       />
     );
 
-    expect(document.querySelector('.timeline-marker-emoji')).toHaveTextContent('🍕');
+    expect(document.querySelector('.timeline-typ__zeichen--icon')).toHaveTextContent('🍕');
   });
 
-  test('displays custom image icon in bubble marker', () => {
+  test('displays custom image icon next to the kind of entry', () => {
     const iconSrc = 'data:image/png;base64,abc123';
     render(
       <RecipeTimeline
@@ -355,9 +388,19 @@ describe('RecipeTimeline', () => {
       />
     );
 
-    const iconImg = document.querySelector('.timeline-marker-icon');
+    const iconImg = document.querySelector('.timeline-typ__icon');
     expect(iconImg).toBeInTheDocument();
     expect(iconImg).toHaveAttribute('src', iconSrc);
+    expect(iconImg).toHaveAttribute('alt', '');
+  });
+
+  test('shows a dot instead of an icon when none is configured', () => {
+    render(<RecipeTimeline recipes={[mockRecipes[0]]} onSelectRecipe={() => {}} />);
+
+    const zeichen = document.querySelector('.timeline-typ__zeichen');
+    expect(zeichen).toBeInTheDocument();
+    expect(zeichen).not.toHaveClass('timeline-typ__zeichen--icon');
+    expect(zeichen).toHaveAttribute('aria-hidden', 'true');
   });
 
   test('uses recipe own image instead of categoryImages for recipe', () => {
@@ -457,101 +500,7 @@ describe('RecipeTimeline', () => {
     expect(screen.getByText('Keine Menüs vorhanden')).toBeInTheDocument();
   });
 
-  test('collapses expanded stack when clicking on timeline-gutter', () => {
-    const sameDay = new Date('2024-03-05');
-    const recipesOnSameDay = [
-      { id: 'a', title: 'Morning Cake', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
-      { id: 'b', title: 'Evening Stew', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
-    ];
-
-    render(
-      <RecipeTimeline
-        recipes={recipesOnSameDay}
-        onSelectRecipe={() => {}}
-        allUsers={[]}
-      />
-    );
-
-    // Expand the stack
-    fireEvent.click(screen.getByRole('button', { name: /Stapel ausklappen/ }));
-    expect(screen.getByText('Morning Cake')).toBeInTheDocument();
-    expect(document.querySelector('.timeline-stack')).not.toBeInTheDocument();
-
-    // Click on the gutter to collapse
-    // Click the gutter to collapse
-    fireEvent.click(document.querySelector('.timeline-gutter'));
-    expect(document.querySelector('.timeline-stack')).toBeInTheDocument();
-  });
-
-  test('does not collapse stack when clicking a card in expanded stack', () => {
-    const sameDay = new Date('2024-03-05');
-    const recipe1 = { id: 'a', title: 'Morning Cake', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] };
-    const recipe2 = { id: 'b', title: 'Evening Stew', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] };
-    const handleSelect = jest.fn();
-
-    render(
-      <RecipeTimeline
-        recipes={[recipe1, recipe2]}
-        onSelectRecipe={handleSelect}
-        allUsers={[]}
-      />
-    );
-
-    // Expand the stack
-    fireEvent.click(screen.getByRole('button', { name: /Stapel ausklappen/ }));
-    expect(document.querySelector('.timeline-stack')).not.toBeInTheDocument();
-
-    // Click a card - should call onSelectRecipe, not collapse
-    fireEvent.click(screen.getByText('Morning Cake').closest('.timeline-card'));
-    expect(handleSelect).toHaveBeenCalledWith(recipe1);
-    // Stack should still be expanded (no stack container visible)
-    expect(document.querySelector('.timeline-stack')).not.toBeInTheDocument();
-  });
-
-  test('adds expanded class to timeline-item when stack is expanded', () => {
-    const sameDay = new Date('2024-03-05');
-    const recipesOnSameDay = [
-      { id: 'a', title: 'Morning Cake', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
-      { id: 'b', title: 'Evening Stew', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
-    ];
-
-    render(
-      <RecipeTimeline
-        recipes={recipesOnSameDay}
-        onSelectRecipe={() => {}}
-        allUsers={[]}
-      />
-    );
-
-    const timelineItem = document.querySelector('.timeline-item');
-    expect(timelineItem).not.toHaveClass('expanded');
-
-    fireEvent.click(screen.getByRole('button', { name: /Stapel ausklappen/ }));
-    expect(document.querySelector('.timeline-item')).toHaveClass('expanded');
-  });
-
-  test('does not collapse non-expanded stack when clicking timeline-gutter (gutter not present)', () => {
-    const sameDay = new Date('2024-03-05');
-    const recipesOnSameDay = [
-      { id: 'a', title: 'Morning Cake', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
-      { id: 'b', title: 'Evening Stew', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
-    ];
-
-    render(
-      <RecipeTimeline
-        recipes={recipesOnSameDay}
-        onSelectRecipe={() => {}}
-        allUsers={[]}
-      />
-    );
-
-    // Stack is not expanded initially - no gutter present
-    expect(document.querySelector('.timeline-stack')).toBeInTheDocument();
-    expect(document.querySelector('.timeline-gutter')).not.toBeInTheDocument();
-  });
-
-  test('stack toggle shows "X Menüs" label when itemType is menu', () => {
-    const sameDay = new Date('2024-03-05');
+  test('toggle shows "+ 1 weiteres Menü" when itemType is menu', () => {
     const menuItems = [
       { id: 'm1', title: 'Menu A', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
       { id: 'm2', title: 'Menu B', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
@@ -566,11 +515,10 @@ describe('RecipeTimeline', () => {
       />
     );
 
-    expect(screen.getByText(/2 Menüs/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '+ 1 weiteres Menü' })).toBeInTheDocument();
   });
 
-  test('menus and recipes on the same day are grouped into separate stacks', () => {
-    const sameDay = new Date('2024-03-05');
+  test('menus and recipes on the same day are separate groups under one date', () => {
     const mixedItems = [
       { id: 'r1', title: 'Recipe 1', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
       { id: 'r2', title: 'Recipe 2', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
@@ -586,18 +534,91 @@ describe('RecipeTimeline', () => {
       />
     );
 
-    // Should produce two separate timeline-item groups (one for recipes, one for menus)
-    const timelineItems = document.querySelectorAll('.timeline-item');
-    expect(timelineItems).toHaveLength(2);
-
-    // Each group should show its own stack badge with count 2
-    const badges = document.querySelectorAll('.timeline-stack-badge');
-    expect(badges).toHaveLength(2);
-    badges.forEach(badge => expect(badge).toHaveTextContent('2'));
+    // One date on the rail (neutral, two kinds), two groups beside it
+    expect(document.querySelectorAll('.timeline-item')).toHaveLength(1);
+    expect(document.querySelector('.timeline-marker')).toHaveClass('timeline-marker--gemischt');
+    expect(document.querySelectorAll('.timeline-gruppe')).toHaveLength(2);
 
     // Toggle labels reflect the correct type per group
-    expect(screen.getByText(/2 Rezepte/)).toBeInTheDocument();
-    expect(screen.getByText(/2 Menüs/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '+ 1 weiteres Rezept' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '+ 1 weiteres Menü' })).toBeInTheDocument();
+  });
+});
+
+describe('RecipeTimeline: Filter nach Art', () => {
+  const eintraege = [
+    { id: 'r', title: 'Linsensuppe', createdAt: new Date('2024-01-03') },
+    { id: 'm', title: 'Sonntagsessen', createdAt: new Date('2024-01-02'), itemType: 'menu' },
+    { id: 'c', title: 'Apfelkuchen', createdAt: new Date('2024-01-01'), itemType: 'cookEvent' },
+  ];
+
+  test('erscheint erst, wenn mehr als eine Art vorkommt', () => {
+    const { unmount } = render(<RecipeTimeline recipes={[eintraege[0]]} onSelectRecipe={() => {}} />);
+    expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
+    unmount();
+
+    render(<RecipeTimeline recipes={[eintraege[0], eintraege[2]]} onSelectRecipe={() => {}} />);
+    const filter = screen.getByRole('radiogroup', { name: 'Zeitleiste filtern' });
+    // Nur die Arten, die es gibt
+    expect(within(filter).getAllByRole('radio').map((r) => r.textContent)).toEqual(['Alle', 'Rezepte', 'Gekocht']);
+  });
+
+  test('zeigt nur die gewählte Art und wieder alles', () => {
+    render(<RecipeTimeline recipes={eintraege} onSelectRecipe={() => {}} />);
+
+    expect(screen.getByRole('radio', { name: 'Alle' })).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(screen.getByRole('radio', { name: 'Gekocht' }));
+
+    expect(screen.getByRole('radio', { name: 'Gekocht' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByText('Apfelkuchen')).toBeInTheDocument();
+    expect(screen.queryByText('Linsensuppe')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sonntagsessen')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Alle' }));
+    expect(screen.getByText('Linsensuppe')).toBeInTheDocument();
+    expect(screen.getByText('Sonntagsessen')).toBeInTheDocument();
+  });
+});
+
+describe('RecipeTimeline: Geplantes und die Linie „Heute“', () => {
+  beforeEach(() => {
+    jest.useFakeTimers({ now: new Date(2026, 10, 24, 12, 0) });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  const geplantesMenue = { id: 'm', title: 'Heiligabend-Menü', createdAt: new Date('2026-12-24'), itemType: 'menu' };
+  const gekocht = { id: 'c', title: 'Rote-Bete-Schaumsuppe', createdAt: new Date(2026, 10, 22, 19, 0), itemType: 'cookEvent' };
+
+  test('stellt Geplantes über „Heute“, gestrichelt und mit Abstand', () => {
+    render(<RecipeTimeline recipes={[gekocht, geplantesMenue]} onSelectRecipe={() => {}} />);
+
+    const reihenfolge = Array.from(document.querySelectorAll('.timeline-monat, .timeline-heute, .timeline-item'))
+      .map((el) => (el.classList.contains('timeline-item') ? el.querySelector('.timeline-marker').textContent : el.textContent));
+    expect(reihenfolge).toEqual(['Dezember 2026', '24', 'November 2026', 'Heute · Di., 24. Nov.', '22']);
+
+    const [geplant, vergangen] = document.querySelectorAll('.timeline-marker');
+    expect(geplant).toHaveClass('timeline-marker--geplant', 'timeline-marker--menue');
+    expect(vergangen).not.toHaveClass('timeline-marker--geplant');
+    expect(screen.getByText('in 30 Tagen')).toHaveClass('timeline-typ__zusatz');
+  });
+
+  test('ohne Geplantes keine Linie „Heute“', () => {
+    render(<RecipeTimeline recipes={[gekocht]} onSelectRecipe={() => {}} />);
+
+    expect(document.querySelector('.timeline-heute')).not.toBeInTheDocument();
+    expect(screen.queryByText(/in \d+ Tagen/)).not.toBeInTheDocument();
+  });
+
+  test('heute Gekochtes steht unter der Linie', () => {
+    const heuteGekocht = { ...gekocht, id: 'h', title: 'Pfannkuchen', createdAt: new Date(2026, 10, 24, 9, 0) };
+    render(<RecipeTimeline recipes={[heuteGekocht, geplantesMenue]} onSelectRecipe={() => {}} />);
+
+    const zeilen = Array.from(document.querySelectorAll('.timeline-heute, .timeline-item'));
+    expect(zeilen.map((el) => el.className.split(' ')[0])).toEqual(['timeline-item', 'timeline-heute', 'timeline-item']);
+    expect(zeilen[2].querySelector('.timeline-marker')).not.toHaveClass('timeline-marker--geplant');
   });
 });
 
@@ -615,18 +636,20 @@ describe('RecipeTimeline: Mehrsprachigkeit (PR 6o)', () => {
     { id: 'b', title: 'Eintopf', itemType: 'cookEvent', createdAt: { toDate: () => tag } },
   ];
 
-  test('Englisch: Datum, Anzahl im Stapel, Knopf und übersetzter Titel', () => {
+  test('Englisch: Datum, Monat, Art, weitere Einträge und übersetzter Titel', () => {
     renderWithProviders(
       <RecipeTimeline recipes={kochereignisse} onSelectRecipe={() => {}} />,
       { sprache: 'en', inhalteUebersetzen: true },
     );
     expect(screen.getByText('05 March 2024')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Expand stack' })).toHaveTextContent('▸ 2 cooked dishes');
+    expect(screen.getByRole('heading', { name: 'March 2024' })).toBeInTheDocument();
+    expect(screen.getByText('Cooked')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Pancakes' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Pancakes' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Expand stack' }));
-    expect(screen.getAllByRole('button', { name: 'Collapse stack' })).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: '+ 1 more dish' }));
+    expect(screen.getByRole('button', { name: 'Show less' })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Eintopf')).toBeInTheDocument();
   });
 
   test('Französisch: leere Zeitleiste der Menüs und Datum ohne gültigen Wert', () => {

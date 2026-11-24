@@ -16,7 +16,7 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { chromium, devices } = require('playwright');
-const { ACCOUNT, patchAccount, patchDoc } = require('./seed');
+const { ACCOUNT, SEED_NOW, patchAccount, patchDoc } = require('./seed');
 
 const ROOT = path.join(__dirname, '..', '..');
 const PORT = Number(process.env.SCREENSHOT_PORT || 5174);
@@ -554,6 +554,32 @@ const SCREENS = [
     },
   })),
   { name: 'chefkoch', fullPage: true, run: async (page, shot) => { await openMenuItem(page, 'Chefkoch & mehr'); await shot(); } },
+  {
+    // Zeitleiste „Mein Kochbuch“ (Variante A): Das Menü ist für die Aufnahme in 30 Tagen geplant (über der Linie
+    // „Heute“), die Shakshuka am selben Tag angelegt wie die Spaghetti (zwei Rezepte an einem Tag). Danach zurückgesetzt.
+    name: 'chefkoch-zeitleiste',
+    fullPage: true,
+    run: async (page, shot) => {
+      const geplant = new Date();
+      geplant.setDate(geplant.getDate() + 30);
+      const menuDate = `${geplant.getFullYear()}-${String(geplant.getMonth() + 1).padStart(2, '0')}-${String(geplant.getDate()).padStart(2, '0')}`;
+      const tageVorSeed = (tage, stunden = 0) => new Date(SEED_NOW.getTime() - tage * 86400000 + stunden * 3600000).toISOString();
+      await patchDoc('menus/menu-sonntag', { menuDate });
+      await patchDoc('recipes/rezept-shakshuka', { createdAt: tageVorSeed(1, -6) });
+      try {
+        await page.reload({ waitUntil: 'load' });
+        await page.locator('.hamburger-btn').waitFor({ timeout: 30000 });
+        await openMenuItem(page, 'Chefkoch & mehr');
+        await page.getByRole('button', { name: 'Mein Kochbuch', exact: true }).first().click();
+        await page.locator('.recipe-timeline-container').first().waitFor();
+        await pause(page, 1500);
+        await shot();
+      } finally {
+        await patchDoc('menus/menu-sonntag', { menuDate: undefined });
+        await patchDoc('recipes/rezept-shakshuka', { createdAt: tageVorSeed(2) });
+      }
+    },
+  },
   // Unterseiten von „Chefkoch & mehr“ (Variante A): über die Kachel geöffnet, ganze Seite
   ...[
     ['chefkoch-kuechenstars', 'Meine Küchenstars'],

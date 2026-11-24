@@ -27,3 +27,18 @@ export function formatiereDatum(datum, sprache, optionen = { day: 'numeric', mon
   if (!(wert instanceof Date) || Number.isNaN(wert.getTime())) return '';
   return new Intl.DateTimeFormat(localeFuer(sprache), optionen).format(wert);
 }
+
+/**
+ * Abstand zu einem Tag in Worten: „morgen“, „in 30 Tagen“ / „tomorrow“, „in 30 days“ / „demain“,
+ * „dans 30 jours“; ab 60 Tagen in Monaten („in 2 Monaten“). Negative Werte liegen zurück
+ * („gestern“, „vor 3 Tagen“).
+ * @param {number} tage - ganze Kalendertage ab heute
+ * @param {string} sprache - 'de', 'en' oder 'fr'
+ * @returns {string} leer, wenn `tage` keine endliche Zahl ist
+ */
+export function formatiereAbstandInTagen(tage, sprache) {
+  if (typeof tage !== 'number' || !Number.isFinite(tage)) return '';
+  const locale = localeFuer(sprache);
+  if (Math.abs(tage) < 60) return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(tage, 'day');
+  return new Intl.RelativeTimeFormat(locale, { numeric: 'always' }).format(Math.round(tage / 30.44), 'month');
+}

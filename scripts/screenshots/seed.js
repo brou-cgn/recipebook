@@ -160,6 +160,9 @@ const RECIPES = [
   },
 ];
 
+// Fester Zeitpunkt der Testdaten: Rezept i ist i Tage davor angelegt (capture.js rechnet damit)
+const SEED_NOW = new Date('2026-11-20T18:00:00Z');
+
 async function main() {
   // Emulatoren leeren, damit jeder Lauf dieselben Daten hat
   await call('DELETE', `${AUTH}/emulator/v1/projects/${PROJECT}/accounts`);
@@ -168,7 +171,7 @@ async function main() {
   const { localId: uid } = await call('POST', `${AUTH}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo-key`, {
     email: ACCOUNT.email, password: ACCOUNT.password, returnSecureToken: true,
   });
-  const now = new Date('2026-11-20T18:00:00Z');
+  const now = SEED_NOW;
 
   await setDoc(`users/${uid}`, {
     vorname: ACCOUNT.vorname, nachname: ACCOUNT.nachname, email: ACCOUNT.email,
@@ -274,4 +277,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { ACCOUNT, toValue, patchAccount, patchDoc };
+module.exports = { ACCOUNT, SEED_NOW, toValue, patchAccount, patchDoc };

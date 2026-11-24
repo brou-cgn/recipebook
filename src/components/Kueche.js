@@ -560,6 +560,7 @@ function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSe
                   recipes={combinedItems}
                   onSelectRecipe={handleSelectItem}
                   allUsers={allUsers}
+                  currentUserId={currentUser?.id}
                   timelineBubbleIcon={timelineBubbleIcon}
                   timelineMenuBubbleIcon={timelineMenuBubbleIcon}
                   timelineCookEventBubbleIcon={timelineCookEventBubbleIcon}
