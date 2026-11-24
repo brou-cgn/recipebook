@@ -107,6 +107,7 @@ const defaultProps = {
   currentUser: mockOwner,
   onBack: jest.fn(),
   onUpdateGroup: jest.fn().mockResolvedValue(undefined),
+  onRemoveMember: jest.fn().mockResolvedValue(undefined),
   onDeleteGroup: jest.fn().mockResolvedValue(undefined),
 };
 
@@ -439,6 +440,109 @@ describe('GroupDetail – leave group feature', () => {
     fireEvent.click(screen.getByRole('button', { name: /Liste verlassen/i }));
 
     expect(onUpdateGroup).not.toHaveBeenCalled();
+  });
+});
+
+// Mitglied entfernen ist eine Löschaktion (CLAUDE.md): DeleteRowButton am Desktop, Linksswipe
+// mobil, sofort ausgeblendet mit „Rückgängig“; geschrieben wird erst nach dem Undo-Fenster.
+describe('GroupDetail – Mitglied entfernen (Löschaktion)', () => {
+  const swipeLeft = (el, dx = -80) => {
+    fireEvent.touchStart(el, { touches: [{ clientX: 200, clientY: 10 }] });
+    fireEvent.touchMove(el, { touches: [{ clientX: 200 + dx, clientY: 10 }] });
+    fireEvent.touchEnd(el);
+  };
+  const memberRow = () => screen.queryByText('Ben Schmidt', { selector: '.group-member-name' });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('zeigt dem Besitzer den DeleteRowButton statt eines eigenen Entfernen-Knopfs', () => {
+    const { container } = render(<GroupDetail {...defaultProps} onRemoveMember={jest.fn()} />);
+    goToEinstellungen();
+    const button = container.querySelector('.delete-row-button.group-member-delete');
+    expect(button).toHaveAttribute('aria-label', 'Ben Schmidt entfernen');
+    expect(button).toHaveAttribute('title', 'Ben Schmidt entfernen');
+    expect(container.querySelector('.group-remove-btn')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Entfernen$/ })).not.toBeInTheDocument();
+  });
+
+  it('bietet für den Besitzer selbst keine Entfernen-Aktion', () => {
+    render(<GroupDetail {...defaultProps} onRemoveMember={jest.fn()} />);
+    goToEinstellungen();
+    expect(screen.queryByRole('button', { name: 'Anna Müller entfernen' })).not.toBeInTheDocument();
+  });
+
+  it('bietet Mitgliedern ohne Besitzerrecht keine Entfernen-Aktion', () => {
+    render(<GroupDetail {...defaultProps} currentUser={mockMember} onRemoveMember={jest.fn()} />);
+    goToEinstellungen();
+    expect(screen.queryByRole('button', { name: /entfernen$/ })).not.toBeInTheDocument();
+  });
+
+  it('blendet die Zeile sofort aus und entfernt erst nach dem Undo-Fenster', async () => {
+    const onRemoveMember = jest.fn().mockResolvedValue(undefined);
+    const { container } = render(<GroupDetail {...defaultProps} onRemoveMember={onRemoveMember} />);
+    goToEinstellungen();
+
+    fireEvent.click(container.querySelector('.group-member-delete'));
+
+    expect(memberRow()).not.toBeInTheDocument();
+    expect(screen.getByText('Mitglieder (1)')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('„Ben Schmidt“ entfernt');
+    expect(onRemoveMember).not.toHaveBeenCalled();
+
+    await act(async () => { jest.advanceTimersByTime(6000); });
+    expect(onRemoveMember).toHaveBeenCalledWith('grp1', 'member1');
+    expect(defaultProps.onUpdateGroup).not.toHaveBeenCalled();
+  });
+
+  it('Rückgängig stellt das Mitglied wieder her, ohne zu schreiben', async () => {
+    const onRemoveMember = jest.fn().mockResolvedValue(undefined);
+    const { container } = render(<GroupDetail {...defaultProps} onRemoveMember={onRemoveMember} />);
+    goToEinstellungen();
+
+    fireEvent.click(container.querySelector('.group-member-delete'));
+    fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+
+    expect(memberRow()).toBeInTheDocument();
+    expect(screen.getByText('Mitglieder (2)')).toBeInTheDocument();
+    await act(async () => { jest.advanceTimersByTime(6000); });
+    expect(onRemoveMember).not.toHaveBeenCalled();
+  });
+
+  it('entfernt sofort, wenn die Ansicht vor Ablauf des Undo-Fensters verlassen wird', async () => {
+    const onRemoveMember = jest.fn().mockResolvedValue(undefined);
+    const { container, unmount } = render(<GroupDetail {...defaultProps} onRemoveMember={onRemoveMember} />);
+    goToEinstellungen();
+
+    fireEvent.click(container.querySelector('.group-member-delete'));
+    unmount();
+    await act(async () => { await Promise.resolve(); });
+
+    expect(onRemoveMember).toHaveBeenCalledWith('grp1', 'member1');
+  });
+
+  it('Mobil: Linksswipe legt die Entfernen-Aktion frei und startet das Undo-Fenster', async () => {
+    const onRemoveMember = jest.fn().mockResolvedValue(undefined);
+    render(<GroupDetail {...defaultProps} onRemoveMember={onRemoveMember} />);
+    goToEinstellungen();
+
+    const content = memberRow().closest('.group-member-row-content');
+    swipeLeft(content);
+    const action = content.parentElement.querySelector('.swipe-delete-action');
+    expect(action).toHaveAttribute('tabindex', '0');
+    expect(action).toHaveAttribute('aria-label', 'Ben Schmidt entfernen');
+    fireEvent.click(action);
+
+    expect(memberRow()).not.toBeInTheDocument();
+    expect(onRemoveMember).not.toHaveBeenCalled();
+    await act(async () => { jest.advanceTimersByTime(6000); });
+    expect(onRemoveMember).toHaveBeenCalledWith('grp1', 'member1');
   });
 });
 
