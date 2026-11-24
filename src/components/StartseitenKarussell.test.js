@@ -177,3 +177,88 @@ describe('StartseitenKarussell in anderer Sprache (Mehrsprachigkeit PR 6e)', () 
     expect(screen.getByRole('button', { name: 'more' })).toBeInTheDocument();
   });
 });
+
+describe('StartseitenKarussell: Anschnitt und Blättern-Pfeile', () => {
+  const originale = {};
+  const ueberschreiben = (name, wert) => {
+    originale[name] = Object.getOwnPropertyDescriptor(HTMLElement.prototype, name);
+    Object.defineProperty(HTMLElement.prototype, name, {
+      configurable: true,
+      get() {
+        return this.classList && this.classList.contains('startseite-carousel') ? wert : 0;
+      },
+    });
+  };
+
+  afterEach(() => {
+    Object.entries(originale).forEach(([name, descriptor]) => {
+      if (descriptor) Object.defineProperty(HTMLElement.prototype, name, descriptor);
+      else delete HTMLElement.prototype[name];
+      delete originale[name];
+    });
+  });
+
+  test('reicht nur mit Kacheln bis an den Rand', () => {
+    const { container, rerender } = render(
+      <StartseitenKarussell title="Test" items={mockItems} renderItem={renderItem} />
+    );
+    expect(container.querySelector('.startseite-carousel-wrap')).toHaveClass('startseite-carousel-wrap--randlos');
+
+    rerender(<StartseitenKarussell title="Test" items={[]} renderItem={renderItem} emptyText="Leer" />);
+    expect(container.querySelector('.startseite-carousel-wrap')).not.toHaveClass('startseite-carousel-wrap--randlos');
+
+    rerender(<StartseitenKarussell title="Test" items={mockItems} loading renderItem={renderItem} />);
+    expect(container.querySelector('.startseite-carousel-wrap')).not.toHaveClass('startseite-carousel-wrap--randlos');
+  });
+
+  test('zeigt keine Pfeile, wenn alle Kacheln hineinpassen', () => {
+    render(<StartseitenKarussell title="Test" items={mockItems} renderItem={renderItem} />);
+    expect(screen.queryByRole('button', { name: 'Vorherige Rezepte' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Nächste Rezepte' })).not.toBeInTheDocument();
+  });
+
+  test('blättert weiter und blendet die Pfeile am Anfang und Ende aus', () => {
+    ueberschreiben('scrollWidth', 1000);
+    ueberschreiben('clientWidth', 400);
+    const { container } = render(
+      <StartseitenKarussell title="Test" items={mockItems} renderItem={renderItem} />
+    );
+    const carousel = container.querySelector('.startseite-carousel');
+    carousel.scrollBy = jest.fn();
+    container.querySelector('.startseite-carousel-item').getBoundingClientRect = () => ({ width: 160 });
+
+    // Am Anfang: nur „Nächste“
+    expect(screen.queryByRole('button', { name: 'Vorherige Rezepte' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Nächste Rezepte' }));
+    expect(carousel.scrollBy).toHaveBeenCalledWith(expect.objectContaining({ left: 160 }));
+
+    // Am Ende: nur „Vorherige“
+    Object.defineProperty(carousel, 'scrollLeft', { configurable: true, writable: true, value: 600 });
+    fireEvent.scroll(carousel);
+    expect(screen.queryByRole('button', { name: 'Nächste Rezepte' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Vorherige Rezepte' }));
+    expect(carousel.scrollBy).toHaveBeenLastCalledWith(expect.objectContaining({ left: -160 }));
+
+    // Dazwischen: beide
+    carousel.scrollLeft = 300;
+    fireEvent.scroll(carousel);
+    expect(screen.getByRole('button', { name: 'Vorherige Rezepte' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Nächste Rezepte' })).toBeInTheDocument();
+  });
+
+  test('Pfeile auf Englisch und Französisch', () => {
+    ueberschreiben('scrollWidth', 1000);
+    ueberschreiben('clientWidth', 400);
+    const { unmount } = renderWithProviders(
+      <StartseitenKarussell title="Trending" items={mockItems} renderItem={renderItem} />,
+      { sprache: 'en' }
+    );
+    expect(screen.getByRole('button', { name: 'Next recipes' })).toBeInTheDocument();
+    unmount();
+    renderWithProviders(
+      <StartseitenKarussell title="Tendances" items={mockItems} renderItem={renderItem} />,
+      { sprache: 'fr' }
+    );
+    expect(screen.getByRole('button', { name: 'Recettes suivantes' })).toBeInTheDocument();
+  });
+});
