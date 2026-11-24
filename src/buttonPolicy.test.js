@@ -49,7 +49,7 @@ const LIST_CONTAINER = /dropdown|context-menu|typeahead|matches|suggest|autocomp
 
 const BASELINE = {
   'components/FollowButton.css': 1,
-  'components/GroupDetail.css': 8,
+  'components/GroupDetail.css': 7,
   'components/MemberProfilePage.css': 2,
   'components/NetworkPage.css': 2,
   'components/PortionSelector.css': 2,

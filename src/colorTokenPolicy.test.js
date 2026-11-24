@@ -35,7 +35,7 @@ const BASELINE = {
   'components/FollowButton.css': 3,
   'components/FuerDichEntdecktKachel.css': 10,
   'components/GroupCreateDialog.css': 15,
-  'components/GroupDetail.css': 38,
+  'components/GroupDetail.css': 35,
   'components/GroupList.css': 9,
   'components/Header.css': 40,
   'components/ImportProgressDialog.css': 15,

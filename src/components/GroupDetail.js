@@ -4,6 +4,10 @@ import TrashIcon from './icons/TrashIcon';
 import { useLongPress } from '../utils/useLongPress';
 import './DeleteFabButton.css';
 import Button from './Button';
+import DeleteRowButton from './DeleteRowButton';
+import UndoSnackbar from './UndoSnackbar';
+import useUndoableDelete from '../hooks/useUndoableDelete';
+import useSwipeToDelete from '../hooks/useSwipeToDelete';
 import './PortionSelector.css';
 import './GroupDetail.css';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getSortSettings, DEFAULT_TRENDING_DAYS } from '../utils/customLists';
@@ -50,6 +54,44 @@ const resolveListSettingsActiveIcon = (icons, isDarkMode) => (
 const LONG_PRESS_DELAY_MS = 500;
 const LONG_PRESS_CLICK_SUPPRESSION_MS = 500;
 
+// Mitglied, das der Besitzer entfernen kann: Desktop zeigt den DeleteRowButton, mobil gilt die
+// Linksswipe-Geste (CLAUDE.md, Löschaktionen). Beide lösen dieselbe Entfernung aus.
+function GroupMemberRemovableRow({ name, onRemove }) {
+  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete();
+  const tAllgemein = useTexte(allgemeinTexte);
+
+  const handleSwipeRemove = (e) => {
+    e.stopPropagation();
+    onRemove();
+    reset();
+  };
+
+  return (
+    <li className={`group-member-row group-member-row--swipe${isDeleteVisible ? ' swipe-delete-active' : ''}`}>
+      <div className="swipe-delete-background" aria-hidden={!isDeleteVisible && offset === 0}>
+        <button
+          type="button"
+          className="swipe-delete-action"
+          onClick={handleSwipeRemove}
+          aria-label={tAllgemein('nameEntfernen', { name })}
+          tabIndex={isDeleteVisible ? 0 : -1}
+        >
+          <span className="swipe-delete-icon-text"><TrashIcon /></span>
+        </button>
+      </div>
+      <div
+        className="group-member-row-content delete-row-hover-target"
+        style={{ transform: `translateX(${offset}px)`, transition: 'transform 0.15s ease' }}
+        onClick={() => { if (isDeleteVisible) reset(); }}
+        {...handlers}
+      >
+        <span className="group-member-name">{name}</span>
+        <DeleteRowButton className="group-member-delete" itemName={name} onClick={onRemove} />
+      </div>
+    </li>
+  );
+}
+
 /**
  * Displays details of a single group including members and associated recipes.
  * Owners and members can add new members; only owners can remove members or delete the group.
@@ -60,6 +102,8 @@ const LONG_PRESS_CLICK_SUPPRESSION_MS = 500;
  * @param {Object} props.currentUser - The current authenticated user
  * @param {Function} props.onBack - Navigate back to GroupList
  * @param {Function} props.onUpdateGroup - Called with (groupId, updates) to persist changes
+ * @param {Function} [props.onRemoveMember] - Called with (groupId, userId) once the undo window of a
+ *   member removal has passed; may run after this view has been left (useUndoableDelete)
  * @param {Function} props.onDeleteGroup - Called with groupId to delete the group
  * @param {Function} [props.onAddRecipe] - Called with groupId to open the recipe form
  * @param {Array}  [props.recipes] - All recipes (filtered to this group's recipes)
@@ -73,6 +117,7 @@ function GroupDetail({
   currentUser,
   onBack,
   onUpdateGroup,
+  onRemoveMember,
   onDeleteGroup,
   onAddRecipe,
   recipes,
@@ -102,6 +147,8 @@ function GroupDetail({
   const listenName = useListenName();
   const zeigeTitel = useRezeptTitel();
   const [saving, setSaving] = useState(false);
+  // Mitglied entfernen: sofort ausgeblendet, geschrieben erst nach dem Undo-Fenster (CLAUDE.md)
+  const { banners: memberRemovalBanners, pendingKeys: pendingMemberIds, scheduleDelete, undoDelete } = useUndoableDelete();
   const [activeTab, setActiveTab] = useState(TAB_RECIPES);
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -344,18 +391,25 @@ function GroupDetail({
     return `${user.vorname} ${user.nachname}`.trim();
   };
 
-  const handleRemoveMember = async (userId) => {
-    if (!isOwner || userId === group.ownerId) return;
-    const updatedIds = (group.memberIds || []).filter((id) => id !== userId);
-    const updatedRoles = { ...(group.memberRoles || {}) };
-    delete updatedRoles[userId];
-    setSaving(true);
-    try {
-      await onUpdateGroup(group.id, { memberIds: updatedIds, memberRoles: updatedRoles });
-    } finally {
-      setSaving(false);
-    }
+  // Die Zeile verschwindet sofort; entfernt wird erst nach dem Undo-Fenster, auch wenn die Ansicht
+  // vorher verlassen wird. Rückgängig blendet sie am alten Platz wieder ein.
+  const handleRemoveMember = (userId) => {
+    if (!isOwner || userId === group.ownerId || !onRemoveMember) return;
+    const groupId = group.id;
+    scheduleDelete({
+      key: userId,
+      message: getMemberName(userId),
+      onConfirm: () => {
+        Promise.resolve()
+          .then(() => onRemoveMember(groupId, userId))
+          .catch((err) => console.error('Mitglied entfernen fehlgeschlagen:', err));
+      },
+      onUndo: () => {},
+    });
   };
+
+  const visibleMemberIds = (group.memberIds || []).filter((id) => !pendingMemberIds.has(id));
+  const lastMemberRemovalBanner = memberRemovalBanners[memberRemovalBanners.length - 1];
 
   const handleDelete = () => setShowDeleteConfirm(true);
 
@@ -682,7 +736,7 @@ function GroupDetail({
 
           <div className="group-detail-section">
             <div className="group-section-header">
-              <h3>{t('mitgliederAnzahl', { anzahl: (group.memberIds || []).length })}</h3>
+              <h3>{t('mitgliederAnzahl', { anzahl: visibleMemberIds.length })}</h3>
               {isOwner && (
                 <button
                   className="group-add-member-icon-btn"
@@ -754,11 +808,17 @@ function GroupDetail({
                 </div>
               </div>
             )}
-            {(group.memberIds || []).length === 0 ? (
+            {visibleMemberIds.length === 0 ? (
               <p className="group-empty-hint">{t('keineMitglieder')}</p>
             ) : (
               <ul className="group-member-list">
-                {(group.memberIds || []).map((userId) => (
+                {visibleMemberIds.map((userId) => (isOwner && userId !== group.ownerId && onRemoveMember ? (
+                  <GroupMemberRemovableRow
+                    key={userId}
+                    name={getMemberName(userId)}
+                    onRemove={() => handleRemoveMember(userId)}
+                  />
+                ) : (
                   <li key={userId} className="group-member-row">
                     <span className="group-member-name">
                       {getMemberName(userId)}
@@ -766,16 +826,6 @@ function GroupDetail({
                         <span className="group-owner-badge">{' '}{t('besitzer')}</span>
                       )}
                     </span>
-                    {isOwner && userId !== group.ownerId && (
-                      <button
-                        className="group-remove-btn"
-                        onClick={() => handleRemoveMember(userId)}
-                        disabled={saving}
-                        aria-label={tAllgemein('nameEntfernen', { name: getMemberName(userId) })}
-                      >
-                        {t('entfernen')}
-                      </button>
-                    )}
                     {!isOwner && userId === currentUser?.id && (
                       <button
                         className="group-leave-btn"
@@ -787,7 +837,7 @@ function GroupDetail({
                       </button>
                     )}
                   </li>
-                ))}
+                )))}
               </ul>
             )}
           </div>
@@ -977,6 +1027,10 @@ function GroupDetail({
           hideBringButton={true}
         />
       )}
+      <UndoSnackbar
+        itemName={lastMemberRemovalBanner?.message}
+        onUndo={() => lastMemberRemovalBanner && undoDelete(lastMemberRemovalBanner.id)}
+      />
     </div>
   );
 }

@@ -30,7 +30,9 @@ jest.mock('firebase/firestore', () => ({
   where: (...args) => mockWhere(...args),
   serverTimestamp: jest.fn(() => 'mock-timestamp'),
   arrayUnion: jest.fn((...args) => ({ _type: 'arrayUnion', elements: args })),
-  arrayRemove: jest.fn((...args) => ({ _type: 'arrayRemove', elements: args }))
+  arrayRemove: jest.fn((...args) => ({ _type: 'arrayRemove', elements: args })),
+  deleteField: jest.fn(() => ({ _type: 'deleteField' })),
+  FieldPath: jest.fn(function FieldPath(...segments) { this.segments = segments; })
 }));
 
 // Mock Firestore Utils
@@ -48,6 +50,7 @@ import {
   ensurePublicGroup,
   addRecipeToGroup,
   removeRecipeFromGroup,
+  removeGroupMember,
   PUBLIC_GROUP_NAME
 } from './groupFirestore';
 
@@ -426,6 +429,42 @@ describe('groupFirestore - removeRecipeFromGroup', () => {
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
     await expect(removeRecipeFromGroup('g1', 'recipe-1')).rejects.toThrow('Firestore error');
+    consoleSpy.mockRestore();
+  });
+});
+
+// Mitglied entfernen läuft erst nach dem Undo-Fenster; zwei kurz hintereinander entfernte
+// Mitglieder dürfen sich nicht gegenseitig mit einer veralteten Liste überschreiben.
+describe('groupFirestore - removeGroupMember', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDoc.mockImplementation((_db, ...path) => path.join('/'));
+    mockUpdateDoc.mockResolvedValue(undefined);
+    const firestore = jest.requireMock('firebase/firestore');
+    firestore.serverTimestamp.mockReturnValue('mock-timestamp');
+    firestore.arrayRemove.mockImplementation((...args) => ({ _type: 'arrayRemove', elements: args }));
+    firestore.deleteField.mockImplementation(() => ({ _type: 'deleteField' }));
+    firestore.FieldPath.mockImplementation(function FieldPath(...segments) { this.segments = segments; });
+  });
+
+  it('entfernt das Mitglied atomar aus memberIds und löscht nur seine Rolle', async () => {
+    await removeGroupMember('g1', 'user-2');
+
+    expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
+    const [ref, ...fieldsAndValues] = mockUpdateDoc.mock.calls[0];
+    expect(ref).toBe('groups/g1');
+    expect(fieldsAndValues[0]).toBe('memberIds');
+    expect(fieldsAndValues[1]).toEqual({ _type: 'arrayRemove', elements: ['user-2'] });
+    expect(fieldsAndValues[2].segments).toEqual(['memberRoles', 'user-2']);
+    expect(fieldsAndValues[3]).toEqual({ _type: 'deleteField' });
+    expect(fieldsAndValues.slice(4)).toEqual(['updatedAt', 'mock-timestamp']);
+  });
+
+  it('gibt Firestore-Fehler weiter', async () => {
+    mockUpdateDoc.mockRejectedValue(new Error('Firestore error'));
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+    await expect(removeGroupMember('g1', 'user-2')).rejects.toThrow('Firestore error');
     consoleSpy.mockRestore();
   });
 });

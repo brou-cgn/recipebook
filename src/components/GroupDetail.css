@@ -231,26 +231,43 @@
   font-weight: 600;
 }
 
-.group-remove-btn {
-  background: none;
-  border: 1px solid #c0392b;
-  color: #c0392b;
-  padding: 0.3rem 0.75rem;
-  border-radius: 16px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+/* Entfernbare Mitglieder (nur der Besitzer): Desktop mit DeleteRowButton am rechten Rand, mobil
+   per Linksswipe (useSwipeToDelete). Die Basis der Reveal-Fläche liegt in DeleteRowButton.css.
+   Der Inhalt erbt die Zeilenfarbe und deckt so die rote Fläche ab; bei Hover tönt ihn
+   .delete-row-hover-target (nur Desktop, dort gibt es keine Reveal-Fläche). */
+.group-member-row--swipe {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
 }
 
-.group-remove-btn:hover:not(:disabled) {
-  background: #c0392b;
-  color: white;
+.group-member-row-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.75rem;
+  background: inherit;
 }
 
-.group-remove-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.group-member-row--swipe.swipe-delete-active .swipe-delete-background {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Mobil (bis 768 px) blendet der Block zu den schwebenden Knöpfen weiter unten den
+   DeleteRowButton aus: dort löscht der Linksswipe. */
+
+/* Desktop: kein Touch-Swipe, die Reveal-Fläche greift nie. */
+@media (min-width: 769px) {
+  .group-member-row--swipe .swipe-delete-background {
+    display: none;
+  }
 }
 
 /* Recipe tiles section */
@@ -404,6 +421,11 @@
 
 @media (max-width: 768px) {
   .group-edit-btn {
+    display: none;
+  }
+
+  /* Mitglied entfernen: mobil per Linksswipe statt DeleteRowButton (CLAUDE.md) */
+  .delete-row-button.group-member-delete {
     display: none;
   }
 
