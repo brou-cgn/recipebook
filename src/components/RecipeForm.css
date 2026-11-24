@@ -1301,6 +1301,16 @@
   opacity: 1;
 }
 
+/* Bearbeiten, Beschreibung offen und Text erfasst: so groß wie in der Rezeptansicht
+   (.edit-fab-button und .new-version-fab-button, 1.4rem), damit der Button beim Wechsel
+   ins Formular gleich bleibt und der Haken auf allen Wegen gleich groß ist. Das
+   Speichern-Icon bleibt 1.2rem wie bei allen Speichern-Buttons. Drei Klassen, damit die
+   Regel auch gegen .save-fab-button .button-icon-image aus MenuForm.css gewinnt. */
+.save-fab-button .save-fab-icon.is-ki .button-icon-image {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .save-fab-icon {
     transition: none;
