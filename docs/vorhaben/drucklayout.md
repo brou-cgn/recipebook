@@ -2,8 +2,9 @@
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
 Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 25.11.2026
-(Stufen 1 bis 3 gemergt und ausgeliefert, Aufbau C gewählt; der Umfang der Optionen ist noch zu entscheiden,
-bevor Stufe 4 beginnt).
+(Stufen 1 bis 3 gemergt und ausgeliefert. Seit dem Abend des 25.11.2026 neue Richtung: Der Eigentümer will die
+Anordnung „frei wie in Word“; der Machbarkeitstest dazu ist zur Hälfte gelaufen und wartet auf eine von ihm in
+Word bearbeitete Vorlage. Die Stufen 4 bis 6 des bisherigen Plans ruhen bis zu dieser Entscheidung).
 
 **Ziel:** Die Konfiguration der Druckvorlagen unter Einstellungen › Drucklayout ist bedienbar und fühlt
 sich an wie Word: Menüband oben, das Blatt im Mittelpunkt, Formatvorlagen, Elemente verschiebbar. Dafür
@@ -298,6 +299,74 @@ dem gemeinsamen Stylesheet abgeleitet). Jetzt steht er um `--bottom-nav-offset` 
 passiven Touch-Listener auf (Meldung in der Konsole, betrifft alle Listen mit Linksswipe); die Geste
 funktioniert trotzdem.
 
+## Machbarkeitstest Word-Vorlage (25.11.2026, erster Teil)
+
+**Frage:** Kann eine Word-Datei die Druckvorlage sein: herunterladen, in Word frei umbauen, hochladen, und die
+App druckt Rezepte damit? Wegwerf-Code des Tests: `scripts/machbarkeit-word-vorlage/` (kein Teil der App).
+
+**Aufbau des Tests:**
+- Startvorlage „Klassisch“ als .docx (per Skript mit python-docx): Formatvorlagen für Titel, Überschrift und
+  Text, Platzhalter in geschweiften Klammern, ein Platzhalterbild mit dem Alternativtext „Foto 1“.
+- Eine frei angeordnete Variante als Stellvertreter für das, was in Word entsteht: Zutaten in einem Textfeld am
+  Rand, Foto frei platziert mit umfließendem Text, Kopfzeile, Fußzeile mit Seitenzahl. **Per Skript gebaut,
+  nicht in Word bearbeitet.**
+- Füllen mit eigenem Code (JSZip und ein XML-Parser, rund 230 Zeilen): Felder wie `{titel}`; die Blöcke
+  `{zutaten}` und `{zubereitung}` wiederholen ihren Absatz je Zeile samt Formatierung, Zwischenüberschriften
+  fett und ohne Aufzählung; Fotos werden über den Alternativtext getauscht, behalten Platz, Größe und
+  Textumbruch und werden auf den Rahmen zugeschnitten; ohne Foto entfällt der Platz.
+- Zwei Wege zum Druckbild: A Umwandler (LibreOffice 24.2 macht aus der gefüllten Datei ein PDF, so liefe es auf
+  einem Server), B Darstellung im Browser ohne Server (`docx-preview` 0.4.1), je mit kurzem Rezept, langem
+  Rezept (32 Zutaten, 24 Schritte) und Rezept ohne Foto.
+
+**Ergebnis:**
+
+| Prüfpunkt | A Umwandler auf dem Server | B Darstellung im Browser |
+|---|---|---|
+| Textfeld | da, an seinem Platz | fehlt ganz (die Zutaten erscheinen nicht) |
+| Frei platziertes Foto | an seinem Platz, Text fließt herum | an falscher Stelle, verdeckt Text |
+| Nummerierung, Aufzählung | richtig, läuft über Zwischenüberschriften weiter | Nummern und Aufzählungszeichen fehlen teils |
+| Kopf- und Fußzeile, Seitenzahl | richtig, auf jeder Seite | Seitenzahlen leer |
+| Langes Rezept | drei Seiten, sauber umbrochen | eine einzige überlange Seite, kein Umbruch |
+| Dauer in der Session | Füllen 0,03 bis 0,1 s, Umwandeln 0,5 s | 0,1 bis 0,2 s |
+
+- **Weg B scheidet aus.** Ohne Server lässt sich eine frei angeordnete Word-Datei nicht verlässlich zeichnen;
+  der Druck liefe an Word vorbei. Das gilt auch für eine Vorschau in den Einstellungen.
+- **Das Füllen ist robust:** Platzhalter werden auch gefunden, wenn Word sie über mehrere Textläufe verteilt
+  (nachgestellt: vier zerteilte Platzhalter, alle ersetzt), im Textfeld, in Kopf- und Fußzeile und in einer
+  Datei, die ein anderes Office-Programm neu gespeichert hat.
+
+**Grenzen, die der Test gezeigt hat:**
+- **Textfelder laufen nicht auf die nächste Seite.** Von 32 Zutaten im Textfeld erschienen 13, mit einem
+  Textfeld, das mit dem Inhalt wächst, 23; der Rest fehlt ohne Hinweis. Das liegt an Word-Textfeldern, nicht am
+  Umwandler, und ist dieselbe Schwäche wie beim entfernten freien Layout. Frei platzieren lässt sich, was eine
+  feste Größe hat (Titel, Infos, Foto, Logo); Listen gehören in den Fließtext oder eine Tabelle. Die App kann
+  beim Hochladen davor warnen.
+- **Umbruch weicht ab:** Mit der Absatzoption „nicht vom nächsten Absatz trennen“ in einer Tabellenzelle schob
+  LibreOffice die ganze Tabelle auf Seite 2 (halbleere erste Seite); ohne die Option beginnt sie auf Seite 1.
+  Wie Word dieselbe Datei umbricht, ist nicht geprüft.
+- **Schriften:** Der Umwandler kennt nur Schriften, die auf dem Server liegen. In der Session waren Ersatz für
+  Calibri, Cambria, Arial und Times New Roman vorhanden (Carlito, Caladea, Liberation), nicht aber Aptos
+  (Standardschrift neuerer Word-Versionen) und Georgia. Fehlt eine Schrift, wird sie ersetzt, und Zeilen- und
+  Seitenumbruch können sich verschieben.
+
+**Nicht geprüft:** eine in Word bearbeitete Datei und der Vergleich mit dem PDF aus Word (der eigentliche
+Test, wartet auf den Eigentümer); der Betrieb des Umwandlers in Google Cloud (Kaltstart, Kosten, Einrichtung);
+der Weg vom PDF zum Drucker am iPhone; Hochladen und Speichern der Vorlage.
+
+**Was der Ausbau bedeuten würde** (Vorschlag der Session, nichts davon entschieden):
+- Ein Druckformat ist entweder eine Vorlage der App (wie heute, Druck im Browser) oder eine Word-Vorlage
+  (Datei in Firebase Storage). Die Übersicht mit der Regel in Klartext bleibt für beide.
+- Word-Vorlagen drucken als PDF über einen Dienst: Eine Cloud Function prüft den Zugriff auf das Rezept, füllt
+  die gespeicherte Vorlage (der Code des Tests, die Functions haben `sharp` schon) und gibt sie an einen
+  Umwandler in Cloud Run ohne Zugriff von außen und ohne Netz nach außen. Gefüllt wird auf dem Server, damit
+  nur Vorlagen eines Admins den Umwandler erreichen, nicht beliebige Dateien. Drucken braucht dann Internet.
+- Beim Hochladen prüft die App die Vorlage: unbekannte Platzhalter, Listen in Textfeldern, Schriften, die der
+  Server nicht hat.
+- Der Editor der App bleibt, wie er ist; die Stufen 4 bis 6 (Menüband, Formatvorlagen, Elemente verschieben)
+  entfielen. Umfang grob fünf bis sechs Stufen in der Größe der bisherigen, dazu die einmalige Einrichtung des
+  Dienstes im Google-Cloud-Projekt, die der Eigentümer freigeben muss. Laufende Kosten und Wartezeit beim
+  ersten Druck sind geschätzt, nicht gemessen: voraussichtlich im kostenlosen Kontingent bzw. einige Sekunden.
+
 ## Bewusste Verhaltensänderungen
 
 | # | Vorher | Nachher | Stufe |
@@ -328,8 +397,10 @@ Format wie vorher.
   Bedienfeld, beide zugeklappt). Nicht einstellbar: die Reihenfolge der Teile und welche Seite Zutaten und
   Zubereitung haben. Vorschlag der Session: „Elemente verschieben“ (bisher Stufe 6) vorziehen und als nächste
   Stufe bauen, wie im Detailblatt gezeichnet (Reihenfolge je Format, Zutaten und Zubereitung tauschen die
-  Seiten, Foto an jeder Stelle oder neben dem Titel, auch per „Nach oben“ und „Nach unten“). Rückfrage an den
-  Eigentümer offen: Reicht Umsortieren, oder ist freies Platzieren wie in Word gemeint?
+  Seiten, Foto an jeder Stelle oder neben dem Titel, auch per „Nach oben“ und „Nach unten“). Auf die Rückfrage,
+  ob Umsortieren reicht oder freies Platzieren gemeint ist, antwortete der Eigentümer am 25.11.2026: **„Frei wie
+  in Word“**. Der Vorschlag, „Elemente verschieben“ vorzuziehen, ist damit nicht gewählt; es folgt der
+  Machbarkeitstest (eigener Abschnitt unten).
 - **Word-Weg** (Wunsch des Eigentümers vom 25.11.2026: „Layoutvorlage als docx herunterladen, dort bearbeiten
   und bearbeitet wieder hochladen“), nicht entschieden. Zwei Lesarten mit sehr unterschiedlichem Aufwand:
   (1) Die Word-Datei ist die Vorlage: Platzhalter für die Rezeptdaten, daraus ein PDF über einen Umwandler auf
@@ -343,7 +414,15 @@ Format wie vorher.
   Anordnung in der App lösen; den Word-Weg nur verfolgen, wenn freies Platzieren, eigene Inhalte oder Tabellen
   gebraucht werden, und dann mit einem Machbarkeitstest an einer Vorlage beginnen. Er widerspräche den
   Entscheidungen „keine neuen Druckfunktionen“ und „nur noch ein Layoutsystem“; die Stufen 4 und 5 sollten
-  dann nicht zusätzlich gebaut werden.
+  dann nicht zusätzlich gebaut werden. Stand 25.11.2026: Lesart (1) ist gewünscht („Frei wie in Word“), der
+  erste Teil des Machbarkeitstests ist gelaufen (Abschnitt „Machbarkeitstest Word-Vorlage“).
+- **Word-Vorlage, nächster Schritt** (Eigentümer): die Startvorlage `broubook-druckvorlage-klassisch.docx` (in
+  der Session übergeben; neu erzeugbar mit `scripts/machbarkeit-word-vorlage/vorlage_erzeugen.py`) im eigenen
+  Word so umbauen, wie eine Vorlage wirklich aussehen soll, und zurückgeben: die .docx und ein PDF, das Word
+  daraus speichert (als Maßstab). Erst der Vergleich damit sagt, ob der Umwandler nah genug an Word ist.
+- **Word-Vorlage, vor dem Ausbau zu entscheiden** (Eigentümer): ob ein eigener Dienst in Google Cloud dafür in
+  Ordnung ist (Einrichtung im Projekt, Drucken braucht Internet), ob die Vorlagen der App daneben bleiben
+  (Empfehlung: ja, ohne weiteren Ausbau) und ob die Stufen 4 bis 6 entfallen (Empfehlung: ja).
 - **Umfang wählen** (Eigentümer), vor Stufe 4: voll (alle heutigen Optionen, in Reitern neu geordnet) oder
   schlank (deutlich weniger Regler). Der Aufbau ist entschieden (C). Empfehlung der Session: voller Umfang,
   weil in Reitern nie mehr als etwa acht Regler zugleich zu sehen sind und der schlanke Umfang gespeicherte
