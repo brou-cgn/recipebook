@@ -47,7 +47,7 @@
   white-space: nowrap;
 }
 
-/* Eigene Icons für Rot-, Weiß- und Süßwein und „Bier oder Wasser“ (Button-Icons weinRot / weinWeiss / weinSuess / weinKeinStil) */
+/* Eigene Icons für Rot-, Weiß-, Rosé- und Süßwein und „Bier oder Wasser“ (Button-Icons weinRot / weinWeiss / weinRose / weinSuess / weinKeinStil) */
 .wein-symbol-bild {
   flex-shrink: 0;
   object-fit: contain;

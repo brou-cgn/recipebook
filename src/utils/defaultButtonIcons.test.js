@@ -72,7 +72,7 @@ describe('Icon Wichteln: Teilnehmer bearbeiten', () => {
 });
 
 describe('Icons „Wein dazu“ (Weinbegleitung)', () => {
-  test.each(['weinRot', 'weinWeiss', 'weinSuess', 'weinKeinStil'])(
+  test.each(['weinRot', 'weinWeiss', 'weinRose', 'weinSuess', 'weinKeinStil'])(
     '%s ist einrichtbar, mit Dunkelmodus-Variante; leer = eingebautes Glas',
     (key) => {
       expect(DEFAULT_BUTTON_ICONS[key]).toBe('');
@@ -88,12 +88,12 @@ describe('Icons „Wein dazu“ (Weinbegleitung)', () => {
       .toBe('Wein dazu: Bier oder Wasser (leer = Glas)');
   });
 
-  test('das Icon für Süßweine heißt in der Verwaltung so und steht zwischen Weißwein und Bier oder Wasser', () => {
+  test('das Icon für Süßweine heißt in der Verwaltung so und steht nach Rosé und vor Bier oder Wasser', () => {
     expect(mergeButtonIconRowDefs().find((r) => r.key === 'weinSuess').label)
       .toBe('Wein dazu: Süßwein (leer = Glas)');
     const keys = getDefaultButtonIconGroups().groups.find((g) => g.id === 'g-rezept-details').rowKeys.map((r) => r.key);
     expect(keys.slice(keys.indexOf('weinRot'), keys.indexOf('weinKeinStil') + 1))
-      .toEqual(['weinRot', 'weinWeiss', 'weinSuess', 'weinKeinStil']);
+      .toEqual(['weinRot', 'weinWeiss', 'weinRose', 'weinSuess', 'weinKeinStil']);
   });
 });
 

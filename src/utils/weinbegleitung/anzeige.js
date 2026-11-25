@@ -44,12 +44,12 @@ export function weinfarbe(stil) {
 
 /**
  * Button-Icons der Weinbegleitung (Rezept und Menü) je Art: die Weinfarben aus `weinfarbe`
- * und `keinStil` für „Hier lieber Bier oder Wasser“. Rosé hat kein eigenes Icon und bleibt
- * beim Glas. Süßweine (edelsüß, Likörwein) haben ihr eigenes, unabhängig von Weiß oder Rot.
+ * und `keinStil` für „Hier lieber Bier oder Wasser“. Süßweine (edelsüß, Likörwein) haben ihr eigenes, unabhängig von Weiß oder Rot.
  */
 export const WEIN_ICON_SCHLUESSEL = {
   rot: 'weinRot',
   weiss: 'weinWeiss',
+  rose: 'weinRose',
   suess: 'weinSuess',
   keinStil: 'weinKeinStil',
 };
@@ -58,7 +58,7 @@ export const WEIN_ICON_SCHLUESSEL = {
  * Die eingerichteten Icons der Weinbegleitung, leer = eingebautes Glas.
  * @param {Function} iconFuer - liefert das wirksame Icon zu einem Schlüssel
  *   (in der App `getEffectiveIcon` mit Dunkelmodus)
- * @returns {{rot: string, weiss: string, suess: string, keinStil: string}}
+ * @returns {{rot: string, weiss: string, rose: string, suess: string, keinStil: string}}
  */
 export function weinIconsAus(iconFuer) {
   return Object.fromEntries(
