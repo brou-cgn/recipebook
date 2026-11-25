@@ -2,7 +2,7 @@
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
 Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 25.11.2026
-(Stufen 1 und 2 gemergt und ausgeliefert, Aufbau C gewählt, Stufe 3 umgesetzt und als PR offen; der Umfang
+(Stufen 1 und 2 gemergt und ausgeliefert, Aufbau C gewählt, Stufe 3 umgesetzt, PR #3796 offen; der Umfang
 der Optionen ist noch zu entscheiden, bevor Stufe 4 beginnt).
 
 **Ziel:** Die Konfiguration der Druckvorlagen unter Einstellungen › Drucklayout ist bedienbar und fühlt
@@ -83,7 +83,7 @@ Alle Entscheidungen vom Eigentümer am 25.11.2026 per Auswahl, soweit nicht ande
 | 1 | **Freies Layout entfernen** (Tech-Check P5, Teil Druck). Freie Formate werden beim Lesen auf die Vorlage „Klassisch“ umgestellt (Regel unten), Editor, positionierter Renderer, Geometrie und Element-Registry entfallen. Sichtbar anders: siehe „Bewusste Verhaltensänderungen“. | gemergt 25.11.2026 (PR #3794, Merge c3ee8ae, Deploy-Lauf 2161 erfolgreich); Einzelheiten unter „Stufe 1: Umsetzung und Prüfung“ |
 | E | **Entwürfe** der neuen Konfiguration als Entscheidungsseite: drei Varianten, zeigen auch „gleicher Umfang“ gegen „weniger Regler“. | veröffentlicht 25.11.2026 (Link oben); Aufbau C gewählt, Umfang offen |
 | 2 | **Struktur**, verhaltensgleich: Druck-Dateien in eigene Ordner (`src/components/print/`, `src/utils/print/`), Persistenz aus `customLists.js` nach `src/utils/printFormatsFirestore.js` (AGENTS.md: Firestore-Zugriffe in `*Firestore.js`), Re-Exporte aus `customLists.js` entfernen, Druck-Abschnitt von `Settings.css` in den Druck-Ordner, `window.confirm` durch `ConfirmDialog` ersetzen, feste Drucktexte ins Wörterbuch (de/en/fr, gedruckt wird deutsch). | gemergt 25.11.2026 (PR #3795, Merge 6c476a9, Deploy-Lauf 2162 erfolgreich); Einzelheiten unter „Stufe 2: Umsetzung und Prüfung“ |
-| 3 | **Formatliste** nach Entwurf C: Übersicht mit einer Karte je Format und der Regel in Klartext, ein Format zur Zeit im Editor im Vollfenster, Speichern immer erreichbar, Einleitungstext neu (du). Der Vorlagen-Editor selbst (Galerie, Bedienfeld, schwebende Leiste) bleibt bis Stufe 4, wie er ist. | umgesetzt 25.11.2026, Branch claude/jolly-archimedes-ilygt4 (PR folgt); Einzelheiten unter „Stufe 3: Umsetzung und Prüfung“ |
+| 3 | **Formatliste** nach Entwurf C: Übersicht mit einer Karte je Format und der Regel in Klartext, ein Format zur Zeit im Editor im Vollfenster, Speichern immer erreichbar, Einleitungstext neu (du). Der Vorlagen-Editor selbst (Galerie, Bedienfeld, schwebende Leiste) bleibt bis Stufe 4, wie er ist. | umgesetzt 25.11.2026, PR #3796 (offen, noch nicht gemergt), Branch claude/jolly-archimedes-ilygt4, Commits 81fe133 und 462b58b; Einzelheiten unter „Stufe 3: Umsetzung und Prüfung“ |
 | 4 | **Editor nach Entwurf C**: Menüband oben, Blatt im Mittelpunkt (Zoom, Seitenzahl), Auswahl im Blatt, das Menüband formatiert das Angeklickte. Löst Seitenleiste und schwebende Leiste ab. | offen (wartet auf die Entscheidung zum Umfang) |
 | 5 | **Formatvorlagen**: Stile (Titel, Überschrift, Fließtext, Infos) statt Einzelformatierung je Element. Braucht eine Erweiterung des Datenmodells und eine Regel, wie gespeicherte Einzelformatierungen (`overrides`) übergehen. | offen (wartet auf die Entscheidung zum Umfang) |
 | 6 | **Elemente verschieben**: Blöcke im Blatt umsortieren, Fotos umsetzen. Neue Funktion; braucht eine Reihenfolge im Datenmodell. | offen |
@@ -275,8 +275,11 @@ Format, und am Handy beginnt die Vorschau erst 1.105 px unter dem oberen Rand, u
 - Druck danach: Rezept mit einem Foto druckt mit dem Format „höchstens 1 Foto“ (`@page { size: 14.8cm 21cm }`).
 - Handy: Linksswipe auf der Karte zeigt Entfernen, der Hinweis mit „Rückgängig“ liegt über der Navigation und
   stellt das Format am alten Platz wieder her.
-- Tests: Regeln (21), Übersicht und Speichern (39), Editor-Fenster (39), Papierformate (2), Lage des Rückgängig-Hinweises (2); `npm run lint:ci`
-  und `npm run test:ci` siehe PR.
+- Tests: Regeln (21), Übersicht und Speichern (39), Editor-Fenster (39), Papierformate (2), Lage des
+  Rückgängig-Hinweises (2). `npm run lint:ci` ohne Fehler, `npm run test:ci` grün (294 Suites, 5.526 Tests),
+  `npx vite build` läuft durch. Gegenprobe: Ohne Warteschlange beim Speichern, ohne Zurücknehmen nach einem
+  gescheiterten Speichern, ohne die Prüfung auf doppelte Fotoanzahl, ohne das Ausweichen beim „Rückgängig“ und
+  mit vertauschter Reihenfolge der Regel werden jeweils die passenden Tests rot.
 
 **Nicht geprüft:** iOS, Safari, Firefox; Bedienung nur mit Tastatur über den Fokus beim Öffnen und Schließen
 hinaus; zwei Admins gleichzeitig (wie bisher gewinnt das letzte Speichern).
@@ -285,13 +288,15 @@ hinaus; zwei Admins gleichzeitig (wie bisher gewinnt das letzte Speichern).
 mit Stufe 4 lösbar). Die Zurück-Taste des Browsers ist nicht eingebunden (die App hat dafür keinen gemeinsamen
 Baustein); vor dem Schließen des Fensters warnt der Browser. Die Miniaturen zeigen immer das Beispielrezept.
 
-**Aufgefallen und in Stufe 3 behoben** (Tech-Check: eigener Befund): Der Hinweis „… entfernt · Rückgängig“
+**Aufgefallen und in Stufe 3 behoben** (Tech-Check D12): Der Hinweis „… entfernt · Rückgängig“
 (`UndoSnackbar`) lag am Handy hinter der unteren Navigation (beide `z-index` 1200, der Hinweis 24 px über dem
 unteren Rand, die Navigation 85 px hoch) und war dort weder zu lesen noch anzutippen. Das betraf alle Bereiche
-mit unterer Navigation, nicht nur das Drucklayout. Jetzt steht er um `--bottom-nav-offset` höher.
+mit unterer Navigation, nicht nur das Drucklayout (gemessen im Reiter Drucklayout, für die übrigen Stellen aus
+dem gemeinsamen Stylesheet abgeleitet). Jetzt steht er um `--bottom-nav-offset` höher.
 
-**Aufgefallen, nicht behoben:** `useSwipeToDelete` ruft `preventDefault` in einem passiven Touch-Listener auf
-(Meldung in der Konsole, betrifft alle Listen mit Linksswipe); die Geste funktioniert trotzdem.
+**Aufgefallen, nicht behoben** (Tech-Check M20, offen): `useSwipeToDelete` ruft `preventDefault` in einem
+passiven Touch-Listener auf (Meldung in der Konsole, betrifft alle Listen mit Linksswipe); die Geste
+funktioniert trotzdem.
 
 ## Bewusste Verhaltensänderungen
 
@@ -337,7 +342,8 @@ Format wie vorher.
 - **Tech-Check:** P5 betrifft auch den Icon-Admin; mit Stufe 1 ist nur der Druck-Teil erledigt (P5 seit
   25.11.2026 „teilweise“). Die Bedienbarkeit der Vorlagen-Konfiguration ist dort Befund P27 (seit Stufe 3
   „teilweise“: „alles untereinander“ und „unklar, welches Format gilt“ sind erledigt, „Regler fern der
-  Vorschau“ und „zu viele, unklare Regler“ bleiben für die Stufen 4 und 5).
+  Vorschau“ und „zu viele, unklare Regler“ bleiben für die Stufen 4 und 5). Aus Stufe 3 stammen außerdem D12
+  (Rückgängig-Hinweis am Handy, behoben) und M20 (Linksswipe und passiver Touch-Listener, offen).
 
 ## Annahmen der Session (nicht ausdrücklich bestätigt)
 
