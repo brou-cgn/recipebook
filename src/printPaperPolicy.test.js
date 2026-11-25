@@ -14,11 +14,11 @@ const path = require('path');
 
 const read = (file) => fs.readFileSync(path.join(__dirname, file), 'utf8');
 const PAPER = [
-  { css: 'components/FlowPage.css', root: '.ppf-sheet' },
+  { css: 'components/print/FlowPage.css', root: '.ppf-sheet' },
 ];
 /** Stylesheets, die Elemente auf dem Blatt gestalten */
-const PAPER_CSS = ['components/PrintPage.css', 'components/FlowPage.css'];
-const RENDERERS = ['components/printElementRenderers.js', 'components/PrintPage.js', 'components/FlowPage.js'];
+const PAPER_CSS = ['components/print/PrintPage.css', 'components/print/FlowPage.css'];
+const RENDERERS = ['components/print/printElementRenderers.js', 'components/print/PrintPage.js', 'components/print/FlowPage.js'];
 
 /** Regeln einer CSS-Datei (Inhalt von @media-Blöcken eingeschlossen), ohne Kommentare. */
 function cssRules(css) {

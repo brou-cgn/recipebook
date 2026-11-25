@@ -2,8 +2,8 @@ import React, { useLayoutEffect, useRef, useState } from 'react';
 import './FlowPage.css';
 import { PRINT_ELEMENT_RENDERERS } from './printElementRenderers';
 import usePreviewScale, { CM_TO_PX } from './usePreviewScale';
-import { getPageSize, elementTextStyle } from '../utils/printLayout';
-import { getRecipeImages } from '../utils/printRecipe';
+import { getPageSize, elementTextStyle } from '../../utils/print/printLayout';
+import { getRecipeImages, druckTexte } from '../../utils/print/printRecipe';
 import {
   FLOW_BASE_SIZES,
   FLOW_SPACINGS,
@@ -11,7 +11,7 @@ import {
   FLOW_ELEMENTS,
   normalizeFlowOverrides,
   resolveFlowStyle,
-} from '../utils/printTemplates';
+} from '../../utils/print/printTemplates';
 
 const lookup = (options, value) => options.find((o) => o.value === value) || options[0];
 
@@ -19,6 +19,9 @@ const lookup = (options, value) => options.find((o) => o.value === value) || opt
  * FlowPage – a recipe on a template-based page. The content flows top to bottom
  * and continues on the next page when it is long (the browser paginates the print;
  * the preview marks the approximate page breaks).
+ *
+ * The fixed texts come from i18n/texte/druck.js in the language `sprache`; without it the
+ * page is German (today always, see printRecipe.js).
  *
  * Props are those of PrintPage plus:
  *   selectedElement   {string|null} id of the highlighted element (preview)
@@ -31,6 +34,7 @@ export default function FlowPage({
   servings,
   authorName,
   portionLabel,
+  sprache,
   mode = 'preview',
   embedded = false,
   selectedElement = null,
@@ -61,11 +65,14 @@ export default function FlowPage({
 
   const interactive = preview && !thumbnail && typeof onSelectElement === 'function';
   const effectiveServings = servings ?? recipe.portionen;
+  const t = druckTexte(sprache);
   const ctx = {
     servings: effectiveServings,
     authorName,
     portionLabel,
     mode,
+    sprache,
+    t,
   };
   const images = getRecipeImages(recipe).slice(0, style.photoCount);
   const photoSize = lookup(FLOW_PHOTO_SIZES, style.photoSize);
@@ -102,7 +109,7 @@ export default function FlowPage({
   const photos = () => {
     if (!hasPhotoArea) return null;
     if (images.length === 0) {
-      return block('photos', 'ppf-photos', <div className="ppv-el-placeholder">Kein Foto</div>);
+      return block('photos', 'ppf-photos', <div className="ppv-el-placeholder">{t('keinFoto')}</div>);
     }
     const element = { aspectRatio: style.photoAspect };
     return block(
@@ -210,13 +217,13 @@ export default function FlowPage({
               data-testid="page-break"
               style={{ top: `${(margin + (i + 1) * (page.heightCm - 2 * margin))}cm` }}
             >
-              <span>Seitenumbruch (ungefähr) · Seite {i + 2}</span>
+              <span>{t('seitenumbruch', { seite: i + 2 })}</span>
             </div>
           ))}
         </div>
       </div>
       {!embedded && !thumbnail && pageCount > 1 && (
-        <p className="ppv-overflow-warning" role="status">{pageCount} Seiten</p>
+        <p className="ppv-overflow-warning" role="status">{t('seitenzahl', { anzahl: pageCount })}</p>
       )}
     </div>
   );

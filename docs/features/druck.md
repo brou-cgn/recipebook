@@ -327,7 +327,7 @@ Konvention: **MUSS** = Abnahmekriterium, **SOLL** = wünschenswert. Neue Lösch-
 
 ## Druck-Layouts (Entwicklerdoku)
 
-_Stand: 25.11.2026 (Vorhaben Drucklayout, Stufe 1). Ursprung: `DRUCKLAYOUT.md` (zusammengeführt)._
+_Stand: 25.11.2026 (Vorhaben Drucklayout, Stufe 2). Ursprung: `DRUCKLAYOUT.md` (zusammengeführt)._
 
 Rezepte werden über **Druckformate** gedruckt. Die Formate liegen zentral in Firestore
 (`settings/app.printFormats`) und gelten für alle Nutzer. Bearbeitet werden sie in den Einstellungen
@@ -346,24 +346,41 @@ beim Lesen auf eine Vorlage umgestellt, siehe „Umstellung freier Formate“.
 
 ### Bausteine
 
+Seit Stufe 2 liegt das Modul in zwei eigenen Ordnern, dazu ein Firestore-Modul und ein Wörterbuch.
+
 | Datei | Aufgabe |
 |---|---|
-| `src/utils/printTemplates.js` | Vorlagen, Stiloptionen, Normalisierung von Stil und Einzelformatierung |
-| `src/utils/printFormats.js` | Formatwahl, Umstellung und Normalisierung beim Lesen (`migrateFormat`), Validierung, Erzeugen/Duplizieren |
-| `src/utils/printElements.js` | gemeinsame Konstanten: Seitenmaß A4, Schriftarten |
-| `src/utils/printLayout.js` | Seitengröße eines Formats, Textformatierung eines Elements |
-| `src/utils/printRecipe.js` | Rezeptdaten und Formulierungen für den Druck (eine Quelle) |
-| `src/components/PrintPage.js` | Einstieg des Renderers für Vorschau und Druck: reicht an `FlowPage` weiter und lädt `PrintPage.css` |
-| `src/components/FlowPage.js` | **der** Renderer: Fließlayout, Auswahl in der Vorschau, Seitenumbruch-Markierung |
-| `src/components/printElementRenderers.js` | ein Renderer je Teil des Rezepts (Titel, Autor & Datum, Infos, Zutaten, Zubereitung, Foto 1–4) |
-| `src/components/printRunner.js` | Druckablauf (`#print-root`, `@page`, `window.print()`, Aufräumen) |
-| `src/components/TemplateFormatEditor.js` + `templateEditor/` | Vorlagen-Galerie, Stilregler, schwebende Formatleiste |
-| `src/components/PrintFormatsSettings.js` | Formatliste, Speichern, Löschen mit Rückgängig, Hinweis an umgestellten Formaten |
-| `src/components/PrintFormatEditor.css` | nur noch gemeinsame Klassen der Einstellungen (`pfe-select`, `pfe-hint`, `pfe-props-number`, `pfe-props-color`); der Name stammt vom entfernten Editor und wird mit Stufe 2 bereinigt |
+| `src/utils/print/printTemplates.js` | Vorlagen, Stiloptionen, Normalisierung von Stil und Einzelformatierung |
+| `src/utils/print/printFormats.js` | Formatwahl, Umstellung und Normalisierung beim Lesen (`migrateFormat`), Validierung, Erzeugen/Duplizieren |
+| `src/utils/print/printLayout.js` | Seitenmaß A4 und Schriftarten, Seitengröße eines Formats, Textformatierung eines Elements |
+| `src/utils/print/printRecipe.js` | Rezeptdaten und Formulierungen für den Druck (eine Quelle); `druckTexte(sprache)` liefert die Texte aus dem Wörterbuch |
+| `src/utils/print/printSampleRecipe.js` | Beispielrezept für Miniaturen und die Vorschau ohne gewähltes Rezept |
+| `src/utils/printFormatsFirestore.js` | Laden und Speichern in `settings/app` (`getPrintFormats`, `loadPrintFormatsForEditing`, `savePrintFormats`), Sicherungen |
+| `src/i18n/texte/druck.js` | die festen Texte des Blatts auf Deutsch, Englisch und Französisch |
+| `src/components/print/PrintPage.js` | Einstieg des Renderers für Vorschau und Druck: reicht an `FlowPage` weiter und lädt `PrintPage.css` |
+| `src/components/print/FlowPage.js` | **der** Renderer: Fließlayout, Auswahl in der Vorschau, Seitenumbruch-Markierung |
+| `src/components/print/printElementRenderers.js` | ein Renderer je Teil des Rezepts (Titel, Autor & Datum, Infos, Zutaten, Zubereitung, Foto 1–4) |
+| `src/components/print/printRunner.js` | Druckablauf (`#print-root`, `@page`, `window.print()`, Aufräumen) |
+| `src/components/print/usePreviewScale.js` | Maßstab, mit dem das Blatt in die Vorschau passt |
+| `src/components/print/TemplateFormatEditor.js` + `templateEditor/` | Vorlagen-Galerie, Stilregler, schwebende Formatleiste; `TemplateFormatEditor.css` enthält auch die gemeinsamen Bedienelemente (`pfe-select`, `pfe-hint`, `pfe-props-number`, `pfe-props-color`) |
+| `src/components/print/PrintFormatsSettings.js` + `.css` | Formatliste, Speichern, Löschen mit Rückgängig, Hinweis an umgestellten Formaten |
 
-`customLists.js` re-exportiert die Print-Namen aus Kompatibilitätsgründen und enthält das Laden und
-Speichern (`getPrintFormats`, `loadPrintFormatsForEditing`, `savePrintFormats`). Beides zieht mit
-Stufe 2 des Vorhabens um.
+Von außen greifen nur drei Stellen zu: `Settings.js` bindet `PrintFormatsSettings` ein, `RecipeDetail.js`
+wählt das Format (`selectPrintFormat`, `getPrintFormats`) und druckt (`printRecipe`), `customLists.js` nimmt
+`DEFAULT_PRINT_FORMATS` als Standardwert der Settings. `customLists.js` re-exportiert nichts mehr aus dem
+Druckmodul. Der Settings-Cache gehört weiter `customLists.js`; das Firestore-Modul trägt dort über
+`updateSettingsCache` ein, was es gelesen oder gespeichert hat (Speicher und localStorage, sonst gälte nach
+einem Neuladen bis zu einer Stunde der alte Stand).
+
+### Sprache
+
+Gedruckt wird immer deutsch. Die festen Texte (Überschriften, „Von … erstellt am …“, Minuten, Schwierigkeit,
+Platzhalter der Vorschau) stehen in `src/i18n/texte/druck.js` in drei Sprachen. Weil das Blatt außerhalb des
+React-Baums der App entsteht, holt es sie nicht über `useTexte`, sondern über `druckTexte(sprache)`; ohne
+Sprache gilt Deutsch. `printRecipe`, `PrintPage` und `FlowPage` nehmen `sprache` schon entgegen, kein Aufrufer
+gibt sie mit. Phase B des Vorhabens Mehrsprachigkeit muss dort nur die Sprache der App durchreichen und die
+Rezeptinhalte übersetzt übergeben. Der Wortlaut folgt der Rezeptansicht (`rezeptansicht.js`). Das Datum kommt
+aus `formatiereDatum` (`src/i18n/format.js`).
 
 ### Datenmodell (layoutVersion 3)
 
@@ -385,7 +402,7 @@ Stufe 2 des Vorhabens um.
 ```
 
 * `style` ist immer vollständig (beim Anwenden einer Vorlage werden alle Werte geschrieben), `overrides` enthält nur
-  Abweichungen einzelner Elemente. Eine Vorlage anzuwenden setzt beides zurück (mit Rückfrage, wenn es Änderungen gibt).
+  Abweichungen einzelner Elemente. Eine Vorlage anzuwenden setzt beides zurück (mit Rückfrage im `ConfirmDialog`, wenn es Änderungen gibt).
 * Die Normalisierung (`normalizeFlowStyle`, `normalizeFlowOverrides`) korrigiert unbekannte oder ungültige Werte beim Lesen.
 * Der **Seitenrand** wird im Druck als `@page margin` gesetzt (`printRunner`), die Inhaltsbreite ist Seitenbreite minus Ränder.
   Der Browser bricht die Seiten um; Listeneinträge und Überschriften werden nicht getrennt.
@@ -441,7 +458,8 @@ in Firestore ab; `savePrintFormats` speichert `migrationNotes` nicht mit, der Hi
 
 Rollback: Inhalt des Feldes zurück nach `printFormats` kopieren. Frei drucken und bearbeiten lassen sich die
 Formate dann nur mit einer App-Version vor dem 25.11.2026; die aktuelle stellt sie beim Lesen wieder um.
-Als „gespeicherter Stand“ gilt, was der Einstellungs-Cache (`getSettings`) liefert.
+Als „gespeicherter Stand“ gilt, was der Einstellungs-Cache (`getSettings`) liefert; seit Stufe 2 führt jedes
+Speichern und jedes Laden für die Einstellungen ihn nach.
 
 **Ältere App-Versionen** (PWA-Cache): Solange niemand gespeichert hat, lesen sie weiter die freien Formate und
 drucken wie bisher. Nach dem Speichern liegen Vorlagen in Firestore, die jede Version seit Einführung der

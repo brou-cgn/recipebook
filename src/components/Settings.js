@@ -12,7 +12,7 @@ import { getCustomLists, saveCustomLists, clearSettingsCache, resetCustomLists, 
 import { getOnboardingTestmodeActive, saveOnboardingTestmodeActive } from '../utils/onboardingSettings';
 import { getAdventGlowTickerText, saveAdventGlowTickerText, ADVENT_GLOW_TICKER_MAX_LENGTH } from '../utils/adventGlowSettings';
 import { renameMealCategoryInImages, removeMealCategoryFromImages } from '../utils/categoryImages';
-import PrintFormatsSettings from './PrintFormatsSettings';
+import PrintFormatsSettings from './print/PrintFormatsSettings';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
 import { isCurrentUserAdmin, ROLES, getRolePermissions, canManageSeasonMatrix, canManageDrinkWeights } from '../utils/userManagement';
 import UserManagement from './UserManagement';

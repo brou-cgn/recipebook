@@ -261,3 +261,41 @@
     flex-basis: 100%;
   }
 }
+
+/* ── Gemeinsame Bedienelemente (Auswahlfeld, Zahlenfeld, Farbfeld, Hinweiszeile) ──
+   Bis Stufe 2 des Vorhabens Drucklayout in PrintFormatEditor.css, der Datei des entfernten
+   Drag-&-Drop-Editors. Stehen bewusst am Ende: Bei gleicher Spezifität gewinnen sie wie bisher
+   gegen die Regeln weiter oben (.pfe-select gegen .tfe-tb-select). */
+.pfe-select {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--color-print-border-control);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  background: var(--color-surface);
+  min-width: 160px;
+}
+
+.pfe-props-number {
+  width: 56px;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid var(--color-print-border-control);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  text-align: right;
+}
+
+.pfe-props-color {
+  width: 32px;
+  height: 26px;
+  padding: 1px 2px;
+  border: 1px solid var(--color-print-border-control);
+  border-radius: 4px;
+  cursor: pointer;
+  background: none;
+}
+
+p.pfe-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-soft);
+  margin: 0;
+}

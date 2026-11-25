@@ -1,11 +1,11 @@
 import React from 'react';
 import Segmented from './Segmented';
-import { PRINT_FONT_OPTIONS } from '../../utils/printElements';
+import { PRINT_FONT_OPTIONS } from '../../../utils/print/printLayout';
 import {
   FLOW_BASE_SIZES, FLOW_SPACINGS, FLOW_HEADING_STYLES, FLOW_PHOTO_POSITIONS, FLOW_PHOTO_SIZES,
   FLOW_PHOTO_ASPECTS, FLOW_COLUMNS, FLOW_METADATA_STYLES, FLOW_ALIGNMENTS, FLOW_ELEMENTS,
   PAPER_PRESETS, MIN_MARGIN_CM, MAX_MARGIN_CM,
-} from '../../utils/printTemplates';
+} from '../../../utils/print/printTemplates';
 
 const CUSTOM = 'custom';
 const sameSize = (p, w, h) => Math.abs(p.widthCm - w) < 0.05 && Math.abs(p.heightCm - h) < 0.05;

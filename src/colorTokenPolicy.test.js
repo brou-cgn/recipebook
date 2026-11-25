@@ -31,7 +31,6 @@ const BASELINE = {
   'components/DrinkWeightsTab.css': 16,
   'components/EventsPage.css': 108,
   'components/EventsTable.css': 2,
-  'components/FlowPage.css': 9,
   'components/FollowButton.css': 3,
   'components/FuerDichEntdecktKachel.css': 10,
   'components/GroupCreateDialog.css': 15,
@@ -52,7 +51,6 @@ const BASELINE = {
   'components/OcrScanModal.css': 67,
   'components/PasswordChangeModal.css': 9,
   'components/PortionSelector.css': 8,
-  'components/PrintPage.css': 9,
   'components/RatingModal.css': 13,
   'components/RecipeDetail.css': 83,
   'components/RecipeFilterSidebar.css': 14,
@@ -78,7 +76,9 @@ const BASELINE = {
   'components/TutorialVideoModal.css': 10,
   'components/UniversalImportModal.css': 26,
   'components/UserManagement.css': 65,
-  'components/WebImportModal.css': 19
+  'components/WebImportModal.css': 19,
+  'components/print/FlowPage.css': 9,
+  'components/print/PrintPage.css': 9,
 };
 
 function cssFiles(dir) {

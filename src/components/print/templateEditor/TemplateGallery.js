@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import PrintPage from '../PrintPage';
-import { PRINT_TEMPLATES, buildFlowFormat } from '../../utils/printTemplates';
-import { SAMPLE_RECIPE } from '../../utils/printSampleRecipe';
+import { PRINT_TEMPLATES, buildFlowFormat } from '../../../utils/print/printTemplates';
+import { SAMPLE_RECIPE } from '../../../utils/print/printSampleRecipe';
 
 /** Template cards with a live thumbnail each; the active template is marked. */
 export default function TemplateGallery({ activeId, onSelect }) {

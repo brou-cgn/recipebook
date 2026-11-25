@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import PrintPage from './PrintPage';
-import { createFlowFormat } from '../utils/printFormats';
+import { createFlowFormat } from '../../utils/print/printFormats';
 
 const recipe = {
   id: 'r1', title: 'Spaghetti', portionen: 2, kochdauer: 25, schwierigkeit: 3, kulinarik: ['Italienisch'],
@@ -209,5 +209,37 @@ describe('preview', () => {
       expect(screen.queryByTestId('page-break')).toBeNull();
       expect(screen.queryByRole('status')).toBeNull();
     });
+  });
+});
+
+describe('language of the fixed texts', () => {
+  const texts = (container) => ({
+    headings: Array.from(container.querySelectorAll('.ppv-el-section-heading')).map((n) => n.textContent),
+    author: container.querySelector('.ppv-el-author-date')?.textContent,
+    meta: Array.from(container.querySelectorAll('.ppv-el-metadata-item')).map((n) => n.textContent),
+  });
+
+  test('German without a language (preview and print)', () => {
+    ['preview', 'print'].forEach((mode) => {
+      const { container, unmount } = render(<PrintPage recipe={recipe} format={flow()} authorName="Anna" mode={mode} />);
+      expect(texts(container)).toEqual({
+        headings: ['Zutaten für 2 Portionen', 'Zubereitung'],
+        author: 'Von Anna erstellt am 2.1.2025',
+        meta: ['Italienisch', '25 Min.', '2 Portionen', 'Schwierigkeit 3/5'],
+      });
+      unmount();
+    });
+  });
+
+  test('`sprache` switches headings, author line, metadata and the placeholders', () => {
+    const { container } = render(<PrintPage recipe={recipe} format={flow()} authorName="Anna" sprache="en" mode="print" />);
+    expect(texts(container)).toEqual({
+      headings: ['Ingredients for 2 servings', 'Method'],
+      author: 'By Anna, created on 02/01/2025',
+      meta: ['Italienisch', '25 min', '2 servings', 'Difficulty 3/5'],
+    });
+    const noPhoto = render(<PrintPage recipe={{ ...recipe, images: [], title: '' }} format={flow()} sprache="fr" mode="preview" />);
+    expect(noPhoto.container.querySelector('.ppf-photos')).toHaveTextContent('Pas de photo');
+    expect(noPhoto.container.querySelector('.ppv-el-title')).toHaveTextContent('(sans titre)');
   });
 });

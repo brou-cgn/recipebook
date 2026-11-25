@@ -1,4 +1,7 @@
-import { getPageSize, elementTextStyle } from './printLayout';
+import {
+  getPageSize, elementTextStyle,
+  DEFAULT_PRINT_PAGE_WIDTH_CM, DEFAULT_PRINT_PAGE_HEIGHT_CM, DEFAULT_PRINT_FONT_FAMILY, PRINT_FONT_OPTIONS,
+} from './printLayout';
 
 const A4 = { widthCm: 21, heightCm: 29.7 };
 const A4_LANDSCAPE = { widthCm: 29.7, heightCm: 21 };
@@ -35,5 +38,18 @@ describe('elementTextStyle', () => {
   });
   test('switched-off flags leave no keys behind', () => {
     expect(elementTextStyle({ fontBold: false, fontItalic: false, fontUnderline: false })).toEqual({});
+  });
+});
+
+describe('print constants', () => {
+  test('default page is DIN A4 portrait', () => {
+    expect([DEFAULT_PRINT_PAGE_WIDTH_CM, DEFAULT_PRINT_PAGE_HEIGHT_CM]).toEqual([21, 29.7]);
+  });
+
+  test('font options are unique, labelled and contain the default font', () => {
+    const values = PRINT_FONT_OPTIONS.map((o) => o.value);
+    expect(new Set(values).size).toBe(values.length);
+    PRINT_FONT_OPTIONS.forEach((o) => expect(o.label).toBeTruthy());
+    expect(values).toContain(DEFAULT_PRINT_FONT_FAMILY);
   });
 });

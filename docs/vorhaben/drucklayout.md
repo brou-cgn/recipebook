@@ -2,8 +2,8 @@
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
 Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 25.11.2026
-(Vorhaben angelegt, Scope in drei Fragerunden geklärt, Stufe 1 umgesetzt, PR #3794 offen, Entwürfe
-veröffentlicht, Wahl des Entwurfs steht aus).
+(Stufe 1 gemergt und ausgeliefert, Stufe 2 umgesetzt, PR #3795 offen, Entwürfe veröffentlicht, Wahl des Entwurfs
+steht aus).
 
 **Ziel:** Die Konfiguration der Druckvorlagen unter Einstellungen › Drucklayout ist bedienbar und fühlt
 sich an wie Word: Menüband oben, das Blatt im Mittelpunkt, Formatvorlagen, Elemente verschiebbar. Dafür
@@ -49,6 +49,9 @@ Beobachtet:
   Format gedruckt wird; der Platzhalter ist abgeschnitten („Unbegren“).
 - Der Einleitungstext beschreibt Drag & Drop (freies Layout) und siezt.
 - Auf dem Handy ist „Duplizieren“ in der Kopfzeile abgeschnitten.
+- Die schwebende Formatleiste legt sich über Nachbarelemente und fängt deren Klicks ab: In der Vorlage „Karte“
+  (Foto links neben dem Titel) lässt sich das Foto nicht anklicken, solange die Leiste des Titels offen ist
+  (aufgefallen am 25.11.2026 beim Prüfskript zu Stufe 2).
 
 Umfang des Moduls vor dem Umbau: rund 3.100 Zeilen JS ohne Tests, 1.200 Zeilen CSS, 13 Testsuites
 (285 Tests, alle grün).
@@ -75,9 +78,9 @@ Alle Entscheidungen vom Eigentümer am 25.11.2026 per Auswahl, soweit nicht ande
 
 | Nr | Inhalt | Stand |
 |---|---|---|
-| 1 | **Freies Layout entfernen** (Tech-Check P5, Teil Druck). Freie Formate werden beim Lesen auf die Vorlage „Klassisch“ umgestellt (Regel unten), Editor, positionierter Renderer, Geometrie und Element-Registry entfallen. Sichtbar anders: siehe „Bewusste Verhaltensänderungen“. | umgesetzt 25.11.2026, PR #3794 (offen, noch nicht gemergt), Branch claude/jolly-archimedes-ilygt4, Commit eee1124; Einzelheiten unter „Stufe 1: Umsetzung und Prüfung“ |
+| 1 | **Freies Layout entfernen** (Tech-Check P5, Teil Druck). Freie Formate werden beim Lesen auf die Vorlage „Klassisch“ umgestellt (Regel unten), Editor, positionierter Renderer, Geometrie und Element-Registry entfallen. Sichtbar anders: siehe „Bewusste Verhaltensänderungen“. | gemergt 25.11.2026 (PR #3794, Merge c3ee8ae, Deploy-Lauf 2161 erfolgreich); Einzelheiten unter „Stufe 1: Umsetzung und Prüfung“ |
 | E | **Entwürfe** der neuen Konfiguration als Entscheidungsseite: drei Varianten, zeigen auch „gleicher Umfang“ gegen „weniger Regler“. | veröffentlicht 25.11.2026 (Link oben), Wahl offen |
-| 2 | **Struktur**, verhaltensgleich: Druck-Dateien in eigene Ordner (`src/components/print/`, `src/utils/print/`), Persistenz aus `customLists.js` nach `src/utils/printFormatsFirestore.js` (AGENTS.md: Firestore-Zugriffe in `*Firestore.js`), Re-Exporte aus `customLists.js` entfernen, verwaistes CSS im Druck-Abschnitt von `Settings.css` löschen, `window.confirm` durch `ConfirmDialog` ersetzen, feste Drucktexte ins Wörterbuch (de/en/fr, gedruckt wird deutsch). | offen |
+| 2 | **Struktur**, verhaltensgleich: Druck-Dateien in eigene Ordner (`src/components/print/`, `src/utils/print/`), Persistenz aus `customLists.js` nach `src/utils/printFormatsFirestore.js` (AGENTS.md: Firestore-Zugriffe in `*Firestore.js`), Re-Exporte aus `customLists.js` entfernen, Druck-Abschnitt von `Settings.css` in den Druck-Ordner, `window.confirm` durch `ConfirmDialog` ersetzen, feste Drucktexte ins Wörterbuch (de/en/fr, gedruckt wird deutsch). | umgesetzt 25.11.2026, PR #3795 (offen, noch nicht gemergt), Branch claude/jolly-archimedes-ilygt4, Commit 01f97f4; Einzelheiten unter „Stufe 2: Umsetzung und Prüfung“ |
 | 3 | **Formatliste**: kompakte Liste der Formate mit Regel in Klartext, ein Format zur Zeit geöffnet, Speichern immer erreichbar, Einleitungstext neu (du). Unabhängig von der Wahl des Entwurfs im Kern gleich; Lage und Aussehen folgen dem gewählten Entwurf. | offen (wartet auf E) |
 | 4 | **Editor nach gewähltem Entwurf**: Menüband oben, Blatt im Mittelpunkt (Zoom, Seitenzahl), Auswahl im Blatt, das Menüband formatiert das Angeklickte. Löst Seitenleiste und schwebende Leiste ab. | offen (wartet auf E) |
 | 5 | **Formatvorlagen**: Stile (Titel, Überschrift, Fließtext, Infos) statt Einzelformatierung je Element. Braucht eine Erweiterung des Datenmodells und eine Regel, wie gespeicherte Einzelformatierungen (`overrides`) übergehen. | offen (wartet auf E) |
@@ -147,6 +150,59 @@ Druck-Abschnitt von `Settings.css` und drei ungenutzte Tokens (`--color-print-pa
 **Bleibt für Stufe 2:** `PrintFormatEditor.css` (nur noch vier gemeinsame Regeln, Name passt nicht mehr),
 die kleinen Dateien `printElements.js` und `printLayout.js`, die Re-Exporte in `customLists.js`.
 
+## Stufe 2: Umsetzung und Prüfung (25.11.2026)
+
+**Struktur danach** (Einzelheiten je Datei: `docs/features/druck.md`, „Bausteine“):
+- `src/components/print/`: `PrintPage`, `FlowPage`, `printRunner`, `printElementRenderers`, `usePreviewScale`,
+  `PrintFormatsSettings` (jetzt mit eigener `PrintFormatsSettings.css`, vorher letzter Abschnitt von
+  `Settings.css`), `TemplateFormatEditor` und `templateEditor/`.
+- `src/utils/print/`: `printFormats`, `printTemplates`, `printRecipe`, `printSampleRecipe`, `printLayout`
+  (`printElements.js` ist darin aufgegangen).
+- `src/utils/printFormatsFirestore.js`: `getPrintFormats`, `loadPrintFormatsForEditing`, `savePrintFormats`, vorher
+  in `customLists.js`. Der Settings-Cache bleibt dort; neu ist der Export `updateSettingsCache(fields)`.
+- `customLists.js` re-exportiert nichts mehr aus dem Druckmodul (2.638 auf 2.549 Zeilen, 124 auf 119 Exporte) und
+  nimmt nur noch `DEFAULT_PRINT_FORMATS` als Standardwert der Settings.
+- `PrintFormatEditor.css` ist aufgelöst: Die vier gemeinsamen Regeln stehen am Ende von
+  `TemplateFormatEditor.css` (gleiche Reihenfolge in der Kaskade wie vorher). Die Klassen heißen weiter `pfe-*`;
+  umbenannt wird mit dem neuen Editor (Stufe 4).
+- Von außen greifen nur `Settings.js`, `RecipeDetail.js` und `customLists.js` auf das Modul zu.
+
+**Rückfrage:** Beim Anwenden einer Vorlage über eigene Anpassungen fragt jetzt `ConfirmDialog` („Vorlage
+„…“ anwenden?“, Knöpfe „Abbrechen“ und „Vorlage anwenden“ als Haupt-Knopf). Im Druckmodul gibt es kein
+`window.confirm` mehr.
+
+**Drucktexte:** Wörterbuch `src/i18n/texte/druck.js` (de/en/fr, Wortlaut wie in der Rezeptansicht). Das Blatt
+holt die Texte über `druckTexte(sprache)`, weil es außerhalb des React-Baums der App entsteht; `printRecipe`,
+`PrintPage` und `FlowPage` nehmen `sprache` entgegen, kein Aufrufer gibt sie mit, gedruckt wird also deutsch.
+Die i18n-Baseline des Drucks ist damit 0 (insgesamt 82 auf 77, nur noch Wichteln). Was Phase B noch tun muss,
+steht im Tracker Mehrsprachigkeit.
+
+**Geprüft:**
+- Verhaltensgleichheit per Vorher-nachher-Aufnahme gegen die Emulatoren (Chromium), vorher auf `main` c3ee8ae,
+  nachher auf dem Branch, mit drei gespeicherten Vorlagen-Formaten unterschiedlicher Optionen (Karte A5 mit
+  Einzelformatierungen, Klassisch quer mit zwei Fotos, Schlicht ohne Foto). Bytegleich sind: der Reiter als HTML
+  (leer, mit Vorschau-Rezept, mit Formatleiste), neun Bilder (Reiter Desktop hell und dunkel und Handy, mit
+  Vorschau-Rezept, Formatleiste an Titel und Foto, Bedienfeld mit allen Klappbereichen) und je Format der Druck:
+  HTML von `#print-root`, `@page`-Regel, Bild im Druckmodus. Die PDFs sind gleich groß und unterscheiden sich nur
+  in ihren Metadaten.
+- Neue Tests: Sprache der festen Texte (Hilfsfunktionen, Blatt, Druckablauf; Deutsch ohne Angabe, Englisch und
+  Französisch mit `sprache`), Rückfrage im Dialog, Settings-Cache nach dem Speichern. Gegenprobe: Ohne das
+  Schreiben in den localStorage werden zwei der Cache-Tests rot.
+
+- Der neue Dialog im Browser (Desktop hell und dunkel, Handy): keine Meldung des Browsers mehr, Dialog im
+  sichtbaren Bereich, Fokus auf „Vorlage anwenden“, „Abbrechen“ lässt die Vorlage, Bestätigen wendet sie an.
+- `npm run lint:ci` ohne Fehler, `npm run test:ci` grün (291 Suites, 5.454 Tests; eine Suite weniger, weil
+  `printElements.test.js` in `printLayout.test.js` aufgegangen ist).
+
+**Nicht geprüft:** iOS, Safari, Firefox.
+
+**Aufgefallen und in Stufe 2 behoben** (Tech-Check: eigener Befund): `savePrintFormats` führte nur den Cache
+im Speicher nach, nicht den im localStorage (eine Stunde gültig). Nach einem Neuladen druckte die App deshalb bis
+zu einer Stunde mit dem alten Stand, und die Sicherung `printFormatsBackupFreiesLayout` galt dann als nicht
+vorhanden. Dasselbe Muster haben neun weitere Schreibwege in `customLists.js` (Slogan, Favicon-Text,
+Umrechnungstabelle, KI-Prompt, Texte der Startseite, Einstellungen der Inspirationsliste); die sind **nicht**
+Teil dieses Vorhabens und stehen im Tech-Check als offen (Befund A15, „teilweise“).
+
 ## Bewusste Verhaltensänderungen
 
 | # | Vorher | Nachher | Stufe |
@@ -156,6 +212,8 @@ die kleinen Dateien `printElements.js` und `printLayout.js`, die Re-Exporte in `
 | V-3 | Einstellungen › Drucklayout bietet den Drag-&-Drop-Editor und „Auf Vorlage umstellen“ | Beides entfällt; jedes Format ist eine Vorlage | 1 |
 | V-4 | Freie Formate drucken randlos (`@page margin: 0`), der Abstand steckt in den Kästen | Sie drucken mit dem Seitenrand der Vorlage (1,5 cm) | 1 |
 | V-5 | Einleitungstext des Reiters siezt und beschreibt Drag & Drop | Neuer Text in Du-Form ohne Drag & Drop | 1 |
+| V-6 | Rückfrage beim Anwenden einer Vorlage als Meldung des Browsers (`window.confirm`) | Dialog der App (`ConfirmDialog`) | 2 |
+| V-7 | Nach dem Speichern und einem Neuladen druckt die App bis zu einer Stunde mit den alten Formaten | Gespeicherte Formate gelten sofort | 2 |
 
 Alles Übrige bleibt in Stufe 1 und 2 gleich: Vorlagen-Formate sehen in Vorschau und Druck aus wie vorher.
 

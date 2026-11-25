@@ -26,7 +26,7 @@ const EXEMPT_FILES = ['tokens.css', 'darkMode.css', 'Button.css'];
 const BUTTON_CLASS = /(^|[-_])(btn|button)([-_]|$)/;
 const OUTSIDE_SYSTEM = /fab|delete-row|row-icon|chip|tab|toggle|switch|pill|ui-button|image|img/;
 const NO_SURFACE = /^(transparent|none|inherit|initial|unset|revert)(\s*!important)?$/i;
-// Werkzeug-Schalter des Vorlagen-Editors (templateEditor/Segmented.js und FloatingToolbar.js):
+// Werkzeug-Schalter des Vorlagen-Editors (print/templateEditor/Segmented.js und FloatingToolbar.js):
 // aria-pressed bzw. role="radio", gehören nicht ins Rollen-System
 const EDITOR_TOOLS = /^(tfe-seg-btn|tfe-tb-btn)/;
 // Symbol-Knöpfe ohne Text: Ihre Gestalt ist das Symbol, keine Rolle, daher nicht über components/Button.js.

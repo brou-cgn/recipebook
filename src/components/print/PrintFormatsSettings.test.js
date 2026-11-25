@@ -1,12 +1,12 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import PrintFormatsSettings from './PrintFormatsSettings';
-import { createFlowFormat, migrateFormat } from '../utils/printFormats';
+import { createFlowFormat, migrateFormat } from '../../utils/print/printFormats';
 
-jest.mock('../utils/customLists', () => {
-  const actual = jest.requireActual('../utils/customLists');
-  return { ...actual, loadPrintFormatsForEditing: jest.fn(), savePrintFormats: jest.fn() };
-});
+jest.mock('../../utils/printFormatsFirestore', () => ({
+  loadPrintFormatsForEditing: jest.fn(),
+  savePrintFormats: jest.fn(),
+}));
 // The editor has its own tests; keep this suite about list management.
 jest.mock('./TemplateFormatEditor', () => function FakeTemplateEditor({ format, onChange, previewRecipe }) {
   return (
@@ -19,7 +19,7 @@ jest.mock('./TemplateFormatEditor', () => function FakeTemplateEditor({ format, 
   );
 });
 
-const { loadPrintFormatsForEditing, savePrintFormats } = require('../utils/customLists');
+const { loadPrintFormatsForEditing, savePrintFormats } = require('../../utils/printFormatsFirestore');
 
 const fmt = (id, name, maxPhotos) => ({ ...createFlowFormat(), id, name, maxPhotos });
 const stored = () => [fmt('one', 'Ein Foto', 1), fmt('all', 'Standard', null)];

@@ -2,10 +2,10 @@ import React from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import PrintPage from './PrintPage';
-import { getPageSize } from '../utils/printLayout';
-import { getFormatMarginCm } from '../utils/printTemplates';
-import { erstelleT } from '../i18n/texte';
-import rezeptansichtTexte from '../i18n/texte/rezeptansicht';
+import { getPageSize } from '../../utils/print/printLayout';
+import { getFormatMarginCm } from '../../utils/print/printTemplates';
+import { erstelleT } from '../../i18n/texte';
+import rezeptansichtTexte from '../../i18n/texte/rezeptansicht';
 
 // Ohne mitgegebenen Hinweis gilt der deutsche Text (Mehrsprachigkeit PR 6p)
 const T_DEUTSCH = erstelleT(rezeptansichtTexte, 'de');
@@ -47,10 +47,12 @@ const isIOS = () =>
  * @param {number} [options.servings]
  * @param {string} [options.authorName]
  * @param {string} [options.portionLabel]
+ * @param {string} [options.sprache] - Sprache der festen Texte auf dem Blatt; ohne Angabe Deutsch
+ *   (Phase B des Vorhabens Mehrsprachigkeit gibt hier die Sprache der App mit)
  * @param {string} [options.popupHinweis] - Hinweis in der geltenden Sprache, wenn iOS das Druckfenster blockiert
  * @returns {Promise<void>} resolves once the print dialog was handed over to the browser
  */
-export async function printRecipe({ recipe, format, servings, authorName, portionLabel, popupHinweis }) {
+export async function printRecipe({ recipe, format, servings, authorName, portionLabel, sprache, popupHinweis }) {
   // iOS needs the popup to be opened synchronously inside the click handler.
   const popup = isIOS() ? window.open('', '_blank') : null;
   if (isIOS() && !popup) {
@@ -92,6 +94,7 @@ export async function printRecipe({ recipe, format, servings, authorName, portio
         servings={servings}
         authorName={authorName}
         portionLabel={portionLabel}
+        sprache={sprache}
       />,
     );
   });

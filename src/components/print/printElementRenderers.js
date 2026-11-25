@@ -3,17 +3,21 @@ import {
   getRecipeImages,
   buildAuthorDateText,
   buildMetadataItems,
+  buildIngredientsHeading,
   buildIngredientLines,
   buildStepLines,
   getServingMultiplier,
-} from '../utils/printRecipe';
+  druckTexte,
+} from '../../utils/print/printRecipe';
 
 /**
  * Renderers for the parts of a printed recipe; FlowPage places them on the page.
  * Each renderer receives `{ recipe, ctx, element }` where ctx carries the print
- * context: { servings, authorName, portionLabel, mode }. A renderer returns null
- * when there is nothing to print.
+ * context: { servings, authorName, portionLabel, mode, sprache, t }. `t` is the
+ * translator of the print texts (i18n/texte/druck.js); without it the texts are German.
+ * A renderer returns null when there is nothing to print.
  */
+const textsOf = (ctx) => ctx?.t || druckTexte(ctx?.sprache);
 
 function Photo({ index, recipe, element }) {
   const img = getRecipeImages(recipe)[index];
@@ -25,19 +29,20 @@ function Photo({ index, recipe, element }) {
   return <img src={img.url} alt={recipe.title || ''} className="ppv-el-image" style={style} />;
 }
 
-function Title({ recipe }) {
-  return <h1 className="ppv-el-title">{recipe.title || '(kein Titel)'}</h1>;
+function Title({ recipe, ctx }) {
+  return <h1 className="ppv-el-title">{recipe.title || textsOf(ctx)('titelFehlt')}</h1>;
 }
 
 function AuthorDate({ recipe, ctx }) {
-  const text = buildAuthorDateText(ctx.authorName, recipe.createdAt);
+  const text = buildAuthorDateText(ctx.authorName, recipe.createdAt, { t: textsOf(ctx), sprache: ctx.sprache });
   return text ? <div className="ppv-el-author-date">{text}</div> : null;
 }
 
 function Metadata({ recipe, ctx }) {
-  const items = buildMetadataItems(recipe, { servings: ctx.servings, portionLabel: ctx.portionLabel });
+  const t = textsOf(ctx);
+  const items = buildMetadataItems(recipe, { servings: ctx.servings, portionLabel: ctx.portionLabel, t });
   if (items.length === 0) {
-    return ctx.mode === 'preview' ? <div className="ppv-el-placeholder">Metadaten</div> : null;
+    return ctx.mode === 'preview' ? <div className="ppv-el-placeholder">{t('infosPlatzhalter')}</div> : null;
   }
   return (
     <div className="ppv-el-metadata">
@@ -54,7 +59,7 @@ function Heading({ text }) {
 
 function Ingredients({ recipe, ctx }) {
   const lines = buildIngredientLines(recipe, getServingMultiplier(recipe, ctx.servings));
-  const heading = `Zutaten${ctx.servings ? ` für ${ctx.servings} ${ctx.portionLabel || 'Portionen'}` : ''}`;
+  const heading = buildIngredientsHeading({ servings: ctx.servings, portionLabel: ctx.portionLabel, t: textsOf(ctx) });
   return (
     <div className="ppv-el-ingredients">
       <Heading text={heading} />
@@ -67,11 +72,11 @@ function Ingredients({ recipe, ctx }) {
   );
 }
 
-function Steps({ recipe }) {
+function Steps({ recipe, ctx }) {
   const lines = buildStepLines(recipe);
   return (
     <div className="ppv-el-steps">
-      <Heading text="Zubereitung" />
+      <Heading text={textsOf(ctx)('zubereitung')} />
       <ol className="ppv-el-list ppv-el-steps-list">
         {lines.map((line, i) => (
           line.type === 'heading'
