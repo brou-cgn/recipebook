@@ -5,6 +5,7 @@ import PersonalDataPage from './PersonalDataPage';
 import NetworkPage from './NetworkPage';
 import WeinbegleitungSeite from './WeinbegleitungSeite';
 import { alleStile, alleQuellen } from '../utils/weinbegleitung/wissensbasis';
+import { weinIconsAus } from '../utils/weinbegleitung/anzeige';
 import {
   getTimelineBubbleIcon,
   getTimelineMenuBubbleIcon,
@@ -264,6 +265,11 @@ function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSe
   const hadPersonalDataOpenRef = React.useRef(false);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(() => getDarkModePreference());
+  // Wein-Icons wie in Rezept-Sheet und Menü, für die Seite „Weinbegleitung“ (leer = Glas)
+  const weinIcons = useMemo(
+    () => weinIconsAus((schluessel) => getEffectiveIcon(buttonIcons, schluessel, isDarkMode)),
+    [buttonIcons, isDarkMode]
+  );
   const [fabPressed, setFabPressed] = useState(false);
   const [cuisineProposals, setCuisineProposals] = useState([]);
   const [kalibrierungsSnapshots, setKalibrierungsSnapshots] = useState([]);
@@ -490,7 +496,7 @@ function Kueche({ followRequestCount = 0, recipes, menus = [], groups = [], onSe
   return (
     <div className="kueche-container">
       {showWeinbegleitung ? (
-        <WeinbegleitungSeite currentUser={currentUser} onBack={() => setShowWeinbegleitung(false)} />
+        <WeinbegleitungSeite currentUser={currentUser} onBack={() => setShowWeinbegleitung(false)} icons={weinIcons} />
       ) : showNetwork ? (
         <NetworkPage currentUser={currentUser} onBack={() => setShowNetwork(false)} />
       ) : showPersonalData ? (
