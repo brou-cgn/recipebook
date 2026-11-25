@@ -1,8 +1,11 @@
 .undo-snackbar {
   position: fixed;
   left: 50%;
-  /* Liegt unten eine Rezept-Leiste (CookingSessionDock), meldet sie ihre Höhe: Hinweis darüber */
-  bottom: calc(24px + var(--cooking-dock-offset, 0px));
+  /* Liegt unten eine Rezept-Leiste (CookingSessionDock), meldet sie ihre Höhe: Hinweis darüber.
+     Ebenso über der unteren Navigation des Handys (--bottom-nav-offset aus App.js, sonst 0): Beide
+     liegen auf derselben Ebene (z-index 1200), der Hinweis verschwand sonst hinter der Navigation
+     und „Rückgängig“ war nicht zu erreichen. */
+  bottom: calc(24px + var(--cooking-dock-offset, 0px) + var(--bottom-nav-offset, 0px));
   transform: translateX(-50%);
   z-index: 1200;
   display: flex;

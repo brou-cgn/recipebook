@@ -71,6 +71,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - GitHub Actions Workflow erweitert um automatisches Version-Bumping
 
 ### Behoben
+- „Rückgängig“ nach dem Entfernen ist am Handy wieder erreichbar: Der Hinweis lag hinter der unteren Navigation und ließ sich dort weder lesen noch antippen. Er erscheint jetzt darüber, in allen Bereichen mit unterer Navigation.
 - Drucklayout: Gespeicherte Druckformate gelten nach einem Neuladen der App sofort. Vorher druckte die App bis zu einer Stunde weiter mit dem alten Stand, weil der Zwischenspeicher der Einstellungen beim Speichern nicht mitgeführt wurde.
 - Zeitleiste in „Mein Kochbuch“: Einträge zwischen Mitternacht und 1 Uhr (Sommerzeit 2 Uhr) landeten beim Vortag, weil nach dem Tag in UTC gruppiert wurde; jetzt zählt der Kalendertag in Ortszeit, wie beim angezeigten Datum.
 - Foto-Scan: Mit der Sprache „English“ kam das Rezept leer an, weil die Antwort der KI unter den falschen Feldnamen gelesen wurde. Rezepte in anderen Sprachen werden jetzt ins Deutsche übersetzt, beim Foto-Scan wie bei der Website-Aufnahme: Rezepte entstehen immer auf Deutsch, Englisch und Französisch sind Übersetzungen davon. Die Auswahl im Scan-Dialog heißt „Sprache des Rezepts“ und hilft nur beim Erkennen; ein Hinweis darunter sagt, dass das Rezept deutsch übernommen wird.
