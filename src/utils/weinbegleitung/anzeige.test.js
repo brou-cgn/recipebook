@@ -35,9 +35,9 @@ describe('weinfarbe', () => {
 
 describe('weinIconsAus', () => {
   it('liest je Art das Button-Icon, fehlende werden leer (eingebautes Glas)', () => {
-    const icons = { weinRot: 'ROT', weinSuess: 'SUESS', weinKeinStil: undefined };
+    const icons = { weinRot: 'ROT', weinRose: 'ROSE', weinSuess: 'SUESS', weinKeinStil: undefined };
     expect(weinIconsAus((schluessel) => icons[schluessel])).toEqual({
-      rot: 'ROT', weiss: '', suess: 'SUESS', keinStil: '',
+      rot: 'ROT', weiss: '', rose: 'ROSE', suess: 'SUESS', keinStil: '',
     });
   });
 });

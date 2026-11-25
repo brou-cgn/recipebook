@@ -487,6 +487,9 @@ griff nicht zuverlässig, Drinks bekamen Empfehlungen. Kein Tech-Check-Befund be
   die Seite die Icons je Farbe zeigen? Teil entschieden 25.11.2026 (Hinweis des Eigentümers per Screenshot): Die Seite
   „Weinbegleitung“ zeigt die eingerichteten Icons je Stil (`WeinSymbol`; `Kueche.js` reicht `weinIconsAus` als `icons`
   durch, Rosé bleibt beim Glas). Offen bleibt nur der Kopf der Menü-Weinbegleitung.
+  Rosé-Icon 25.11.2026 (Wunsch des Eigentümers): neuer Button-Icon-Schlüssel `weinRose` (mit Dunkelmodus-Variante, leer =
+  Glas) in `customLists.js`/`buttonIconRows.js` (Gruppe Rezept-Details, nach Weißwein); `WeinSymbol` nimmt es für Rosé-Stile
+  in Rezept-Sheet, Menü und Seite.
 - **Quellen ungeprüft und sichtbar:** Im Rezept-Sheet stehen seit 14.11.2026 (#3664) keine Quellen mehr, im Menü
   noch. PR 5 bringt sie auf die Seite „Weinbegleitung“ unter „Chefkoch & mehr“ (Regeln mit Quellen und Quellenliste),
   wie in der Spezifikation geplant; der Eigentümer hat das nach Rückfrage ohne Änderungswunsch mergen lassen
