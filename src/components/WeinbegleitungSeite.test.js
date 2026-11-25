@@ -49,6 +49,15 @@ beforeEach(() => {
 });
 
 describe('WeinbegleitungSeite', () => {
+  it('zeigt bei den Weinstilen die eingerichteten Icons, sonst das Glas', async () => {
+    await zeige({ icons: { rot: 'data:image/png;base64,AAA', weiss: '🥂', suess: '', keinStil: '' } });
+    const stile = within(screen.getByRole('region', { name: 'Die Weinstile' }));
+    const rot = alleStile().filter((stil) => stil.farbe === 'rot' && !(stil.suesse >= 3)).length;
+    expect(stile.getAllByRole('listitem')[alleStile().findIndex((stil) => stil.farbe === 'rot' && !(stil.suesse >= 3))].querySelector('img.wein-symbol-bild')).not.toBeNull();
+    expect(rot).toBeGreaterThan(0);
+    expect(stile.getAllByText('🥂').length).toBeGreaterThan(0);
+  });
+
   it('zeigt Regeln, Weinstile und Quellen aus der Wissensbasis', async () => {
     await zeige({ currentUser: BEARBEITER });
 
