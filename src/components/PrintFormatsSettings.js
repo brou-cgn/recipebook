@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TrashIcon from './icons/TrashIcon';
-import PrintFormatEditor from './PrintFormatEditor';
 import TemplateFormatEditor from './TemplateFormatEditor';
 import DeleteRowButton from './DeleteRowButton';
 import UndoSnackbar from './UndoSnackbar';
@@ -14,9 +13,9 @@ import {
   validatePrintFormats,
   selectPrintFormat,
   createFlowFormat,
-  convertToFlowFormat,
   duplicatePrintFormat,
 } from '../utils/customLists';
+import { isConvertedFreeFormat } from '../utils/printFormats';
 import { getRecipeImages } from '../utils/printRecipe';
 import Button from './Button';
 
@@ -94,6 +93,9 @@ export default function PrintFormatsSettings({ allRecipes = [], allUsers = [] })
 
   const errors = useMemo(() => validatePrintFormats(formats), [formats]);
   const dirty = loadState === 'ready' && JSON.stringify(formats) !== savedJsonRef.current;
+  // Formats converted from the removed free layout are only stored once the admin saves,
+  // so saving is offered even though nothing was edited yet.
+  const conversionPending = loadState === 'ready' && formats.some(isConvertedFreeFormat);
 
   // Warn before leaving the page with unsaved changes.
   useEffect(() => {
@@ -133,11 +135,6 @@ export default function PrintFormatsSettings({ allRecipes = [], allUsers = [] })
       next.splice(index + 1, 0, duplicatePrintFormat(prev[index]));
       return next;
     });
-  };
-
-  const switchToTemplate = (index) => {
-    if (!window.confirm('Das freie Layout wird durch eine Vorlage ersetzt. Name, Fotolimit und Seitengröße bleiben erhalten. Fortfahren?')) return;
-    updateFormat(index, convertToFlowFormat(formats[index]));
   };
 
   const save = async () => {
@@ -182,9 +179,8 @@ export default function PrintFormatsSettings({ allRecipes = [], allUsers = [] })
   return (
     <div className="settings-section">
       <p className="section-description">
-        Konfigurieren Sie das Drucklayout für Rezepte. Platzieren Sie die Elemente per Drag &amp; Drop
-        frei auf der Seite und passen Sie ihre Größe durch Ziehen an den Rändern an.
-        Die Anzahl der Fotos bestimmt, welches Format angewendet wird.
+        Lege fest, wie Rezepte gedruckt werden: Wähle für jedes Format eine Vorlage und passe sie an.
+        Welches Format ein Rezept bekommt, bestimmt die Anzahl seiner Fotos.
       </p>
       {usingDefaults && (
         <p className="pfe-hint" role="note">Es sind noch keine Druckformate gespeichert; angezeigt wird das Standardformat.</p>
@@ -251,35 +247,24 @@ export default function PrintFormatsSettings({ allRecipes = [], allUsers = [] })
             </div>
           )}
 
-          {fmt.layoutType === 'flow' ? (
-            <TemplateFormatEditor
-              format={fmt}
-              onChange={(next) => updateFormat(index, next)}
-              previewRecipe={previewRecipe}
-              authorName={previewAuthor}
-            />
-          ) : (
-            <>
-              <p className="pfe-hint pf-free-hint">
-                Freies Layout (Expertenmodus): Elemente werden von Hand platziert und Text wird bei zu langem Inhalt abgeschnitten.{' '}
-                <Button onClick={() => switchToTemplate(index)}>
-                  Auf Vorlage umstellen
-                </Button>
-              </p>
-              <PrintFormatEditor
-                format={fmt}
-                onChange={(next) => updateFormat(index, next)}
-                previewRecipe={previewRecipe}
-                authorName={previewAuthor}
-              />
-            </>
+          {isConvertedFreeFormat(fmt) && (
+            <p className="pfe-hint pf-converted-hint" role="note">
+              Dieses Format war ein freies Layout und wurde auf die Vorlage „Klassisch“ umgestellt. Bitte prüfen und speichern.
+            </p>
           )}
+
+          <TemplateFormatEditor
+            format={fmt}
+            onChange={(next) => updateFormat(index, next)}
+            previewRecipe={previewRecipe}
+            authorName={previewAuthor}
+          />
         </div>
       ))}
 
       <div className="print-format-actions">
         <Button onClick={addFormat}>+ Neues Format hinzufügen</Button>
-        <Button variant="primary" loading={saving} disabled={errors.length > 0 || !dirty} onClick={save}>
+        <Button variant="primary" loading={saving} disabled={errors.length > 0 || !(dirty || conversionPending)} onClick={save}>
           {saving ? 'Speichert …' : 'Druckformate speichern'}
         </Button>
         {dirty && <span className="sort-settings-hint">Ungespeicherte Änderungen</span>}

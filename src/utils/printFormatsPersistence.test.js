@@ -15,14 +15,25 @@ jest.mock('firebase/firestore', () => ({
 import { getDoc, updateDoc } from 'firebase/firestore';
 import {
   getPrintFormats, savePrintFormats, clearSettingsCache, PrintFormatValidationError,
-  DEFAULT_PRINT_ELEMENTS_PORTRAIT,
 } from './customLists';
-import { createPrintFormat } from './printFormats';
+import { createFlowFormat, migrateFormat, isConvertedFreeFormat } from './printFormats';
 
+// Stored formats of the removed free layout: boxes positioned by hand, no layoutType.
+const BOXES = [
+  { id: 'title', x: 2, y: 1.4, w: 96, h: 9.9, visible: true },
+  { id: 'photo1', x: 2, y: 12.7, w: 96, h: 39.6, visible: true },
+  { id: 'ingredients', x: 2, y: 75, w: 45, h: 56.6, visible: true },
+  { id: 'steps', x: 51, y: 75, w: 47, h: 56.6, visible: true },
+];
 const legacyV2 = {
   id: 'old', name: 'Alt', maxPhotos: null, orientation: 'portrait', layoutVersion: 2,
-  imageColumns: 'auto', elements: DEFAULT_PRINT_ELEMENTS_PORTRAIT,
+  imageColumns: 'auto', elements: BOXES,
 };
+const freeV3 = {
+  id: 'frei', name: 'Frei', maxPhotos: null, orientation: 'portrait', layoutVersion: 3,
+  pageWidthCm: 21, pageHeightCm: 29.7, fontFamily: 'Arial, Helvetica, sans-serif', elements: BOXES,
+};
+const template = () => ({ ...createFlowFormat('card'), id: 'vorlage', name: 'Vorlage' });
 
 function mockSettings(data) {
   getDoc.mockImplementation(async () => ({ exists: () => true, data: () => data }));
@@ -42,73 +53,139 @@ afterEach(() => {
 });
 
 describe('getPrintFormats', () => {
-  test('migrates stored v2 formats to v3 without writing anything back', async () => {
-    mockSettings({ printFormats: [legacyV2] });
+  test('converts stored free formats to templates without writing anything back', async () => {
+    mockSettings({ printFormats: [legacyV2, freeV3] });
     const formats = await getPrintFormats();
-    expect(formats[0].layoutVersion).toBe(3);
-    expect(formats[0]).not.toHaveProperty('imageColumns');
+    formats.forEach((format) => {
+      expect(format).toMatchObject({ layoutType: 'flow', template: 'classic', layoutVersion: 3 });
+      expect(format).not.toHaveProperty('elements');
+      expect(format).not.toHaveProperty('imageColumns');
+      expect(isConvertedFreeFormat(format)).toBe(true);
+    });
+    expect(formats.map((f) => f.id)).toEqual(['old', 'frei']);
+    expect(formats[1].fontFamily).toBe('Arial, Helvetica, sans-serif');
     expect(updateDoc).not.toHaveBeenCalled();
   });
 
-  test('returns migrated defaults when nothing is stored', async () => {
+  test('stored template formats come back unchanged and unmarked', async () => {
+    const stored = template();
+    mockSettings({ printFormats: [stored] });
+    const formats = await getPrintFormats();
+    expect(formats).toEqual([stored]);
+    expect(isConvertedFreeFormat(formats[0])).toBe(false);
+  });
+
+  test('returns the default template when nothing is stored', async () => {
     mockSettings({});
     const formats = await getPrintFormats();
     expect(formats).toHaveLength(1);
-    expect(formats[0].layoutVersion).toBe(3);
+    expect(formats[0]).toMatchObject({ id: 'default', layoutType: 'flow', template: 'classic', layoutVersion: 3 });
+    expect(isConvertedFreeFormat(formats[0])).toBe(false);
   });
 });
 
 describe('savePrintFormats', () => {
   test('rejects invalid formats with a typed error and does not write', async () => {
     mockSettings({ printFormats: [legacyV2] });
-    const bad = [{ ...createPrintFormat(), maxPhotos: 2 }]; // no catch-all
+    const bad = [{ ...createFlowFormat(), maxPhotos: 2 }]; // no catch-all
     await expect(savePrintFormats(bad)).rejects.toBeInstanceOf(PrintFormatValidationError);
     expect(updateDoc).not.toHaveBeenCalled();
   });
 
   test('keeps a backup of pre-v3 formats on the first v3 save', async () => {
     mockSettings({ printFormats: [legacyV2] });
-    const next = [createPrintFormat()];
+    const next = [createFlowFormat()];
     await savePrintFormats(next);
     expect(updateDoc).toHaveBeenCalledTimes(1);
     const payload = updateDoc.mock.calls[0][1];
-    expect(payload.printFormats).toBe(next);
+    expect(payload.printFormats).toEqual(next);
     expect(payload.printFormatsBackup).toEqual([legacyV2]);
   });
 
   test('does not overwrite an existing backup', async () => {
     mockSettings({ printFormats: [legacyV2], printFormatsBackup: [{ id: 'first-backup' }] });
-    await savePrintFormats([createPrintFormat()]);
+    await savePrintFormats([createFlowFormat()]);
     expect(updateDoc.mock.calls[0][1]).not.toHaveProperty('printFormatsBackup');
   });
 
-  test('writes no backup when the stored formats are already v3', async () => {
-    mockSettings({ printFormats: [createPrintFormat()] });
-    await savePrintFormats([createPrintFormat()]);
-    expect(updateDoc.mock.calls[0][1]).not.toHaveProperty('printFormatsBackup');
+  test('writes no backup when the stored formats are already templates', async () => {
+    mockSettings({ printFormats: [template()] });
+    await savePrintFormats([createFlowFormat()]);
+    expect(Object.keys(updateDoc.mock.calls[0][1])).toEqual(['printFormats']);
   });
 
-  test('only touches printFormats (and the backup) in settings/app', async () => {
+  test('writes no backup when nothing is stored yet', async () => {
+    mockSettings({});
+    await savePrintFormats([createFlowFormat()]);
+    expect(Object.keys(updateDoc.mock.calls[0][1])).toEqual(['printFormats']);
+  });
+
+  test('keeps the stored free formats once in printFormatsBackupFreiesLayout', async () => {
+    mockSettings({ printFormats: [freeV3] });
+    await savePrintFormats([migrateFormat(freeV3)]);
+    const payload = updateDoc.mock.calls[0][1];
+    expect(payload.printFormatsBackupFreiesLayout).toEqual([freeV3]);
+    expect(payload).not.toHaveProperty('printFormatsBackup'); // already v3
+  });
+
+  test('a list with one free format is backed up as a whole', async () => {
+    const stored = [template(), freeV3];
+    mockSettings({ printFormats: stored });
+    await savePrintFormats(stored.map(migrateFormat));
+    expect(updateDoc.mock.calls[0][1].printFormatsBackupFreiesLayout).toEqual(stored);
+  });
+
+  test('does not overwrite an existing free-layout backup', async () => {
+    mockSettings({ printFormats: [freeV3], printFormatsBackupFreiesLayout: [{ id: 'first-backup' }] });
+    await savePrintFormats([migrateFormat(freeV3)]);
+    expect(updateDoc.mock.calls[0][1]).not.toHaveProperty('printFormatsBackupFreiesLayout');
+  });
+
+  test('the second save after a conversion writes no further backup (cache follows the save)', async () => {
+    mockSettings({ printFormats: [freeV3] });
+    await savePrintFormats([migrateFormat(freeV3)]);
+    await savePrintFormats([migrateFormat(freeV3)]);
+    expect(updateDoc).toHaveBeenCalledTimes(2);
+    expect(Object.keys(updateDoc.mock.calls[1][1])).toEqual(['printFormats']);
+  });
+
+  test('does not store the conversion note', async () => {
+    mockSettings({ printFormats: [freeV3] });
+    const converted = migrateFormat(freeV3);
+    expect(converted).toHaveProperty('migrationNotes');
+    await savePrintFormats([converted]);
+    const [saved] = updateDoc.mock.calls[0][1].printFormats;
+    expect(saved).not.toHaveProperty('migrationNotes');
+    const { migrationNotes, ...rest } = converted;
+    expect(saved).toEqual(rest);
+    expect(converted).toHaveProperty('migrationNotes'); // the caller's object is left alone
+    const [reread] = await getPrintFormats();
+    expect(isConvertedFreeFormat(reread)).toBe(false);
+  });
+
+  test('only touches printFormats (and the backups) in settings/app', async () => {
     mockSettings({ printFormats: [legacyV2] });
-    await savePrintFormats([createPrintFormat()]);
-    expect(Object.keys(updateDoc.mock.calls[0][1]).sort()).toEqual(['printFormats', 'printFormatsBackup']);
+    await savePrintFormats([createFlowFormat()]);
+    expect(Object.keys(updateDoc.mock.calls[0][1]).sort())
+      .toEqual(['printFormats', 'printFormatsBackup', 'printFormatsBackupFreiesLayout']);
   });
 
   test('propagates Firestore errors', async () => {
-    mockSettings({ printFormats: [createPrintFormat()] });
+    mockSettings({ printFormats: [template()] });
     updateDoc.mockRejectedValue(new Error('offline'));
-    await expect(savePrintFormats([createPrintFormat()])).rejects.toThrow('offline');
+    await expect(savePrintFormats([createFlowFormat()])).rejects.toThrow('offline');
   });
 });
 
 describe('loadPrintFormatsForEditing', () => {
   const { loadPrintFormatsForEditing } = require('./customLists');
 
-  test('returns the stored formats migrated to v3', async () => {
-    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ printFormats: [legacyV2] }) });
+  test('returns the stored formats as templates; converted ones are marked for the hint', async () => {
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ printFormats: [legacyV2, template()] }) });
     const { formats, usingDefaults } = await loadPrintFormatsForEditing();
     expect(usingDefaults).toBe(false);
-    expect(formats[0].layoutVersion).toBe(3);
+    expect(formats.map((f) => f.layoutType)).toEqual(['flow', 'flow']);
+    expect(formats.map(isConvertedFreeFormat)).toEqual([true, false]);
   });
 
   test('flags defaults when nothing is stored', async () => {
@@ -116,6 +193,7 @@ describe('loadPrintFormatsForEditing', () => {
     const { formats, usingDefaults } = await loadPrintFormatsForEditing();
     expect(usingDefaults).toBe(true);
     expect(formats).toHaveLength(1);
+    expect(isConvertedFreeFormat(formats[0])).toBe(false);
   });
 
   test('throws on a failed read instead of returning defaults', async () => {

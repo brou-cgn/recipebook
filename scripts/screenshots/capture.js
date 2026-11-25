@@ -668,17 +668,17 @@ const SCREENS = [
     },
   })),
   {
-    // Drucklayout im Vorlagen-Modus (TemplateFormatEditor); die Umstellung wird nicht gespeichert
-    name: 'einstellungen-druck-vorlage',
+    // Drucklayout mit angeklicktem Element: schwebende Formatleiste des Vorlagen-Editors. Den Editor
+    // selbst zeigt schon „einstellungen-druck“ (seit dem Wegfall des freien Layouts ist jedes Format
+    // eine Vorlage, auch das eingebaute Standardformat).
+    name: 'einstellungen-druck-formatleiste',
     fullPage: true,
     run: async (page, shot) => {
       await openMenuItem(page, 'Einstellungen');
       await page.locator('.tab-button', { hasText: 'Drucklayout' }).first().click();
       await pause(page, 1000);
-      // Die Umstellung fragt per window.confirm nach; Playwright würde die Rückfrage sonst ablehnen
-      page.once('dialog', (dialog) => dialog.accept());
-      await page.getByRole('button', { name: 'Auf Vorlage umstellen' }).first().click();
-      await pause(page, 1000);
+      await page.locator('.tfe-preview [data-flow-el="title"]').first().click();
+      await pause(page, 500);
       await shot();
     },
   },

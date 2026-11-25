@@ -75,10 +75,10 @@ describe('normalizeFlowOverrides', () => {
 describe('format helpers', () => {
   const flow = () => buildFlowFormat({ id: 'a', name: 'A', templateId: 'photo' });
 
-  test('isFlowFormat and margin: free layouts print edge to edge', () => {
+  test('isFlowFormat marks stored template formats; the margin always follows the resolved style', () => {
     expect(isFlowFormat(flow())).toBe(true);
     expect(isFlowFormat({})).toBe(false);
-    expect(getFormatMarginCm({})).toBe(0);
+    expect(getFormatMarginCm({})).toBe(FLOW_STYLE_DEFAULTS.marginCm);
     expect(getFormatMarginCm(flow())).toBe(FLOW_STYLE_DEFAULTS.marginCm);
     expect(getFormatMarginCm({ ...flow(), style: { marginCm: 3 } })).toBe(3);
   });

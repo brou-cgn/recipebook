@@ -63,9 +63,9 @@ erzwungen — wo das gilt, steht die Datei dabei.
   mindestens 0-1-1 schreiben, z. B. `.seite .hinweis` oder `span.hinweis`. Erzwungen durch
   `src/darkTextPolicy.test.js` (Baseline je Datei, darf nur sinken).
 - **Druckvorschau und Ausdruck sind Papier** (Tech-Check P21): weiß mit dunkler Schrift, auch im
-  Dunkelmodus, denn gedruckt wird im selben Dokument. Auf dem Blatt (`.ppv-page` in `PrintPage.css`,
-  `.ppf-sheet` in `FlowPage.css`) erben h1–h6, p, span, label und li die Farbe; eigene Textfarben dort
-  mit dem Blatt davor schreiben (`.ppv-page .klasse`). Erzwungen durch `src/printPaperPolicy.test.js`.
+  Dunkelmodus, denn gedruckt wird im selben Dokument. Auf dem Blatt (`.ppf-sheet` in `FlowPage.css`)
+  erben h1–h6, p, span, label und li die Farbe; eigene Textfarben dort mit dem Blatt davor schreiben
+  (`.ppf-sheet .klasse`, auch in `PrintPage.css`). Erzwungen durch `src/printPaperPolicy.test.js`.
 - **Löschaktionen**: ausschließlich `DeleteRowButton` (kein eigenes ×, kein gefüllter Kreis,
   kein Icon im Eingabefeld). 28 × 28 px, Radius 999, transparent; Rot `#a33a26` auf 12 % Fläche
   erst bei Hover/Fokus; am rechten Zeilenrand; Tooltip und `aria-label` „<Name> entfernen".

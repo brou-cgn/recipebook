@@ -18,14 +18,14 @@ const flow = (style = {}, extra = {}) => {
 const ids = (container) => Array.from(container.querySelectorAll('[data-flow-el]')).map((n) => n.dataset.flowEl);
 const el = (container, id) => container.querySelector(`[data-flow-el="${id}"]`);
 
-describe('dispatch', () => {
-  test('flow formats use the flow renderer, free formats the positioned one', () => {
+describe('entry point', () => {
+  test('PrintPage always renders the flow layout, also for a format without template data', () => {
     const { container, rerender } = render(<PrintPage recipe={recipe} format={flow()} mode="print" />);
     expect(container.querySelector('.ppf-sheet')).not.toBeNull();
     expect(container.querySelector('.ppv-element')).toBeNull();
     rerender(<PrintPage recipe={recipe} format={{ id: 'x', orientation: 'portrait' }} mode="print" />);
-    expect(container.querySelector('.ppf-sheet')).toBeNull();
-    expect(container.querySelector('.ppv-element')).not.toBeNull();
+    expect(container.querySelector('.ppf-sheet')).not.toBeNull();
+    expect(container.querySelector('.ppv-element')).toBeNull();
   });
 
   test('renders nothing without recipe or format', () => {

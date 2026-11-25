@@ -1,4 +1,6 @@
-/* ===== PrintPage – Rezept auf einer Druckseite (Vorschau und Druck) ===== */
+/* ===== PrintPage – Rezept auf einer Druckseite (Vorschau und Druck) =====
+   Rahmen der Vorschau, die Teile des Rezepts (.ppv-el-*) und die Druckregel. Das Blatt selbst
+   (.ppf-sheet) und sein Aufbau stehen in FlowPage.css. */
 
 /* Der Druck-Container ist am Bildschirm unsichtbar. */
 #print-root {
@@ -23,65 +25,9 @@
   font-size: 0.85rem;
 }
 
-.ppv-scaler {
-  position: relative;
-  width: 100%;
-  overflow: hidden;
-  background: #fff;
-  outline: 1.5px solid #bbb;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
-}
-
-/* Die Seite wird in ihrer echten Größe (cm) gelayoutet; die Vorschau skaliert sie nur. */
-.ppv-page {
-  position: relative;
-  box-sizing: border-box;
-  overflow: hidden;
-  background: #fff;
-  color: #000;
-  font-size: 15.2px;
-  line-height: 1.4;
-  transform-origin: top left;
-}
-
-.ppv-page--print {
-  break-inside: avoid;
-  page-break-after: avoid;
-}
-
-/* Papier bleibt Papier (Tech-Check P21): darkMode.css färbt h1–h6, p, span, label und li im
-   Dunkelmodus pauschal hell ([data-theme="dark"] li usw., 0-1-1). Das traf die Vorschau und den
-   Ausdruck, denn printRunner druckt im selben Dokument. Auf der Seite erben sie die Farbe wie im
-   Hellmodus: von der Seite oder von der Schriftfarbe des Elements. Eigene Farben stehen unten mit
-   .ppv-page davor, damit diese Regel sie nicht überschreibt. */
-.ppv-page h1,
-.ppv-page h2,
-.ppv-page h3,
-.ppv-page h4,
-.ppv-page h5,
-.ppv-page h6,
-.ppv-page p,
-.ppv-page span,
-.ppv-page label,
-.ppv-page li {
-  color: inherit;
-}
-
-.ppv-element {
-  position: absolute;
-  box-sizing: border-box;
-  overflow: hidden;
-  margin: 0;
-  padding: 0;
-}
-
-/* Titel, Autor/Datum und Metadaten sind standardmäßig zentriert (wie bisher im Druck). */
-.ppv-element--title,
-.ppv-element--authorDate,
-.ppv-element--metadata {
-  text-align: center;
-}
-
+/* Teile des Rezepts auf dem Blatt. Papier bleibt Papier (Tech-Check P21, Erklärung in
+   FlowPage.css): Eigene Textfarben für h1–h6, p, span, label und li stehen hier mit .ppf-sheet
+   davor, sonst gewinnt das Erben auf dem Blatt bzw. die pauschale Regel aus darkMode.css. */
 .ppv-el-title {
   margin: 0;
   font-size: 2.1em;
@@ -114,7 +60,6 @@
   white-space: nowrap;
 }
 
-.ppv-page .ppv-el-metadata-item--difficulty,
 .ppf-sheet .ppv-el-metadata-item--difficulty {
   color: #8a7400;
 }
@@ -128,7 +73,6 @@
 }
 
 /* Abschnittsüberschriften sind schwarz, auch wenn das Element eine Schriftfarbe hat (wie bisher) */
-.ppv-page .ppv-el-section-heading,
 .ppf-sheet .ppv-el-section-heading {
   color: #000;
 }
@@ -158,18 +102,6 @@
   color: #aaa;
   font-style: italic;
   font-size: 0.9em;
-}
-
-.ppv-page .ppv-overflow-badge {
-  position: absolute;
-  top: 0;
-  right: 0;
-  padding: 0.1em 0.5em;
-  border-radius: 0 0 0 6px;
-  background: var(--color-bad);
-  color: #fff;
-  font-size: 0.7em;
-  font-family: sans-serif;
 }
 
 /* ===== Druck: alles außer #print-root ausblenden ===== */

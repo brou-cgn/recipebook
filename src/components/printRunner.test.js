@@ -1,5 +1,5 @@
 import { printRecipe } from './printRunner';
-import { createPrintFormat, createFlowFormat } from '../utils/printFormats';
+import { createFlowFormat } from '../utils/printFormats';
 
 const recipe = { id: 'r', title: 'Testrezept', portionen: 2, ingredients: ['1 Ei'], steps: ['Kochen'] };
 
@@ -35,11 +35,11 @@ const leftovers = () => ({
 
 describe('printRecipe', () => {
   test('renders the page into #print-root, sets @page in cm and calls window.print once', async () => {
-    await printRecipe({ recipe, format: createPrintFormat(), servings: 2 });
+    await printRecipe({ recipe, format: createFlowFormat(), servings: 2 });
     expect(printSpy).toHaveBeenCalledTimes(1);
     expect(seenDuringPrint.root).not.toBeNull();
     expect(seenDuringPrint.title).toBe('Testrezept');
-    expect(seenDuringPrint.pageRule).toBe('@page { size: 21cm 29.7cm; margin: 0cm; }');
+    expect(seenDuringPrint.pageRule).toBe('@page { size: 21cm 29.7cm; margin: 1.5cm; }');
     expect(seenDuringPrint.bodyClass).toBe(true);
   });
 
@@ -54,12 +54,19 @@ describe('printRecipe', () => {
   });
 
   test('uses the format page size (landscape)', async () => {
-    await printRecipe({ recipe, format: createPrintFormat('landscape') });
+    await printRecipe({ recipe, format: createFlowFormat('classic', 'landscape') });
     expect(seenDuringPrint.pageRule).toContain('size: 29.7cm 21cm');
   });
 
+  test('a format without template data prints as the plain template: margin and content width agree', async () => {
+    await printRecipe({ recipe, format: { id: 'x', orientation: 'portrait' } });
+    expect(seenDuringPrint.pageRule).toBe('@page { size: 21cm 29.7cm; margin: 1.5cm; }');
+    expect(seenDuringPrint.root.querySelector('.ppf-sheet').style.width).toBe('18cm');
+    window.dispatchEvent(new Event('afterprint'));
+  });
+
   test('cleans up after afterprint and leaves no print styles or classes behind', async () => {
-    await printRecipe({ recipe, format: createPrintFormat() });
+    await printRecipe({ recipe, format: createFlowFormat() });
     expect(leftovers().root).not.toBeNull();
     window.dispatchEvent(new Event('afterprint'));
     expect(leftovers()).toEqual({ root: null, style: null, bodyClass: false, printStyles: 0 });
@@ -70,7 +77,7 @@ describe('printRecipe', () => {
     screenNode.className = 'recipe-detail-content';
     document.body.appendChild(screenNode);
     const htmlStyleBefore = document.documentElement.getAttribute('style');
-    await printRecipe({ recipe, format: createPrintFormat() });
+    await printRecipe({ recipe, format: createFlowFormat() });
     expect(screenNode.className).toBe('recipe-detail-content');
     expect(document.documentElement.getAttribute('style')).toBe(htmlStyleBefore);
     window.dispatchEvent(new Event('afterprint'));
@@ -78,14 +85,14 @@ describe('printRecipe', () => {
   });
 
   test('the print container holds no interactive elements', async () => {
-    await printRecipe({ recipe, format: createPrintFormat() });
+    await printRecipe({ recipe, format: createFlowFormat() });
     expect(seenDuringPrint.root.querySelectorAll('button, input, select, textarea, a')).toHaveLength(0);
     window.dispatchEvent(new Event('afterprint'));
   });
 
   test('fallback timer cleans up when afterprint never fires; double cleanup is harmless', async () => {
     jest.useFakeTimers();
-    await printRecipe({ recipe, format: createPrintFormat() });
+    await printRecipe({ recipe, format: createFlowFormat() });
     expect(leftovers().root).not.toBeNull();
     jest.advanceTimersByTime(30000);
     expect(leftovers().root).toBeNull();
@@ -95,9 +102,9 @@ describe('printRecipe', () => {
 
   test('a late afterprint after the fallback does not break a following print', async () => {
     jest.useFakeTimers();
-    await printRecipe({ recipe, format: createPrintFormat() });
+    await printRecipe({ recipe, format: createFlowFormat() });
     jest.advanceTimersByTime(30000);
-    await printRecipe({ recipe, format: createPrintFormat() });
+    await printRecipe({ recipe, format: createFlowFormat() });
     expect(leftovers().root).not.toBeNull();
     window.dispatchEvent(new Event('afterprint'));
     expect(leftovers().root).toBeNull();
@@ -107,7 +114,7 @@ describe('printRecipe', () => {
     const withImage = { ...recipe, images: [{ url: 'x.jpg', isDefault: true }] };
     jest.spyOn(HTMLImageElement.prototype, 'complete', 'get').mockReturnValue(false);
     jest.useFakeTimers();
-    const promise = printRecipe({ recipe: withImage, format: createPrintFormat() });
+    const promise = printRecipe({ recipe: withImage, format: createFlowFormat() });
     await Promise.resolve();
     expect(printSpy).not.toHaveBeenCalled();
     jest.advanceTimersByTime(5000);
@@ -121,7 +128,7 @@ describe('printRecipe', () => {
     const popup = { document: popupDoc, focus: jest.fn(), print: jest.fn(), close: jest.fn() };
     jest.spyOn(window, 'open').mockReturnValue(popup);
     jest.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
-    await printRecipe({ recipe, format: createPrintFormat() });
+    await printRecipe({ recipe, format: createFlowFormat() });
     expect(window.open).toHaveBeenCalledWith('', '_blank');
     expect(popupDoc.write.mock.calls[0][0]).toContain('id="print-root"');
     expect(popupDoc.write.mock.calls[0][0]).toContain('Testrezept');
@@ -135,7 +142,7 @@ describe('printRecipe', () => {
     jest.spyOn(window, 'open').mockReturnValue(null);
     jest.spyOn(window, 'alert').mockImplementation(() => {});
     jest.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X)');
-    await printRecipe({ recipe, format: createPrintFormat() });
+    await printRecipe({ recipe, format: createFlowFormat() });
     expect(window.alert).toHaveBeenCalledWith('Bitte erlaube Popups für diese Seite, um das Rezept zu drucken.');
     expect(printSpy).not.toHaveBeenCalled();
     expect(leftovers().root).toBeNull();
@@ -145,7 +152,7 @@ describe('printRecipe', () => {
     jest.spyOn(window, 'open').mockReturnValue(null);
     jest.spyOn(window, 'alert').mockImplementation(() => {});
     jest.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
-    await printRecipe({ recipe, format: createPrintFormat(), popupHinweis: 'Please allow pop-ups for this page to print the recipe.' });
+    await printRecipe({ recipe, format: createFlowFormat(), popupHinweis: 'Please allow pop-ups for this page to print the recipe.' });
     expect(window.alert).toHaveBeenCalledWith('Please allow pop-ups for this page to print the recipe.');
   });
 });
