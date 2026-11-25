@@ -48,9 +48,13 @@ const NUR_DEUTSCH = new Set([
   'components/CallLogPanel.js',
   'components/EventplanungPage.js',
   'components/KalibrierungsAuswertung.js',
-  // Einstellungen › Drucklayout: Formatliste und Vorlagen-Editor (Mehrsprachigkeit PR 6h; seit Stufe 2 des
-  // Vorhabens Drucklayout im Ordner components/print/). Die Druckausgabe selbst (FlowPage.js,
-  // printElementRenderers.js) holt ihre Texte aus src/i18n/texte/druck.js und wird gezählt.
+  // Einstellungen › Drucklayout: Übersicht der Formate, Editor im Vollfenster und Vorlagen-Editor
+  // (Mehrsprachigkeit PR 6h; seit Stufe 2 des Vorhabens Drucklayout im Ordner components/print/, seit
+  // Stufe 3 mit Übersicht, Karte und Editor-Fenster als eigenen Dateien). Die Druckausgabe selbst
+  // (FlowPage.js, printElementRenderers.js) holt ihre Texte aus src/i18n/texte/druck.js und wird gezählt.
+  'components/print/PrintFormatCard.js',
+  'components/print/PrintFormatScreen.js',
+  'components/print/PrintFormatsOverview.js',
   'components/print/PrintFormatsSettings.js',
   'components/print/TemplateFormatEditor.js',
   'components/print/templateEditor/FloatingToolbar.js',

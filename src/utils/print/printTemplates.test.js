@@ -1,7 +1,7 @@
 import {
   PRINT_TEMPLATES, FLOW_ELEMENTS, FLOW_STYLE_DEFAULTS, getTemplate, getTemplateStyle, normalizeFlowStyle,
   normalizeFlowOverrides, resolveFlowStyle, getFormatMarginCm, hasFlowCustomisations, applyTemplate,
-  buildFlowFormat, isFlowFormat, PAPER_PRESETS,
+  buildFlowFormat, isFlowFormat, PAPER_PRESETS, findPaperPreset, describePaper,
 } from './printTemplates';
 
 describe('templates', () => {
@@ -29,6 +29,25 @@ describe('templates', () => {
 
   test('paper presets are portrait and ordered large to small', () => {
     PAPER_PRESETS.forEach((p) => expect(p.heightCm).toBeGreaterThan(p.widthCm));
+  });
+
+  test('a page finds its paper preset in either orientation, a size of its own finds none', () => {
+    expect(findPaperPreset({ widthCm: 21, heightCm: 29.7 }).id).toBe('a4');
+    expect(findPaperPreset({ widthCm: 29.7, heightCm: 21 }).id).toBe('a4');
+    expect(findPaperPreset({ widthCm: 14.8, heightCm: 21 }).id).toBe('a5');
+    expect(findPaperPreset({ widthCm: 21.59, heightCm: 27.94 }).id).toBe('letter');
+    expect(findPaperPreset({ widthCm: 21.02, heightCm: 29.68 }).id).toBe('a4'); // rounding of stored values
+    expect(findPaperPreset({ widthCm: 20, heightCm: 20 })).toBeUndefined();
+  });
+
+  test('describes the page in words: paper name and orientation, or the size in cm', () => {
+    expect(describePaper({ widthCm: 21, heightCm: 29.7 })).toBe('A4 hoch');
+    expect(describePaper({ widthCm: 29.7, heightCm: 21 })).toBe('A4 quer');
+    expect(describePaper({ widthCm: 14.8, heightCm: 21 })).toBe('A5 hoch');
+    expect(describePaper({ widthCm: 14.8, heightCm: 10.5 })).toBe('A6 quer');
+    expect(describePaper({ widthCm: 27.94, heightCm: 21.59 })).toBe('Letter quer');
+    expect(describePaper({ widthCm: 12.5, heightCm: 20 })).toBe('12,5 × 20 cm');
+    expect(describePaper({ widthCm: 18.333, heightCm: 9 })).toBe('18,3 × 9 cm');
   });
 });
 
