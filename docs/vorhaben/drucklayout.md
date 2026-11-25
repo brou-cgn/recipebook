@@ -2,7 +2,7 @@
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
 Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 25.11.2026
-(Vorhaben angelegt, Scope in drei Fragerunden geklärt, Stufe 1 umgesetzt und als PR offen, Entwürfe
+(Vorhaben angelegt, Scope in drei Fragerunden geklärt, Stufe 1 umgesetzt, PR #3794 offen, Entwürfe
 veröffentlicht, Wahl des Entwurfs steht aus).
 
 **Ziel:** Die Konfiguration der Druckvorlagen unter Einstellungen › Drucklayout ist bedienbar und fühlt
@@ -75,7 +75,7 @@ Alle Entscheidungen vom Eigentümer am 25.11.2026 per Auswahl, soweit nicht ande
 
 | Nr | Inhalt | Stand |
 |---|---|---|
-| 1 | **Freies Layout entfernen** (Tech-Check P5, Teil Druck). Freie Formate werden beim Lesen auf die Vorlage „Klassisch“ umgestellt (Regel unten), Editor, positionierter Renderer, Geometrie und Element-Registry entfallen. Sichtbar anders: siehe „Bewusste Verhaltensänderungen“. | umgesetzt 25.11.2026, Branch claude/jolly-archimedes-ilygt4 (noch kein PR); Einzelheiten unter „Stufe 1: Umsetzung und Prüfung“ |
+| 1 | **Freies Layout entfernen** (Tech-Check P5, Teil Druck). Freie Formate werden beim Lesen auf die Vorlage „Klassisch“ umgestellt (Regel unten), Editor, positionierter Renderer, Geometrie und Element-Registry entfallen. Sichtbar anders: siehe „Bewusste Verhaltensänderungen“. | umgesetzt 25.11.2026, PR #3794 (offen, noch nicht gemergt), Branch claude/jolly-archimedes-ilygt4, Commit eee1124; Einzelheiten unter „Stufe 1: Umsetzung und Prüfung“ |
 | E | **Entwürfe** der neuen Konfiguration als Entscheidungsseite: drei Varianten, zeigen auch „gleicher Umfang“ gegen „weniger Regler“. | veröffentlicht 25.11.2026 (Link oben), Wahl offen |
 | 2 | **Struktur**, verhaltensgleich: Druck-Dateien in eigene Ordner (`src/components/print/`, `src/utils/print/`), Persistenz aus `customLists.js` nach `src/utils/printFormatsFirestore.js` (AGENTS.md: Firestore-Zugriffe in `*Firestore.js`), Re-Exporte aus `customLists.js` entfernen, verwaistes CSS im Druck-Abschnitt von `Settings.css` löschen, `window.confirm` durch `ConfirmDialog` ersetzen, feste Drucktexte ins Wörterbuch (de/en/fr, gedruckt wird deutsch). | offen |
 | 3 | **Formatliste**: kompakte Liste der Formate mit Regel in Klartext, ein Format zur Zeit geöffnet, Speichern immer erreichbar, Einleitungstext neu (du). Unabhängig von der Wahl des Entwurfs im Kern gleich; Lage und Aussehen folgen dem gewählten Entwurf. | offen (wartet auf E) |
@@ -177,7 +177,9 @@ Alles Übrige bleibt in Stufe 1 und 2 gleich: Vorlagen-Formate sehen in Vorschau
   speichern.
 - **Abnahme am Gerät:** Der Druck auf iPhone und iPad lässt sich in der Session nicht prüfen. Der iOS-Weg in
   `printRunner` wird in keiner Stufe logisch geändert; nach Stufe 1 trotzdem einmal am Gerät drucken.
-- **Tech-Check:** P5 betrifft auch den Icon-Admin; mit Stufe 1 wird nur der Druck-Teil erledigt.
+- **Tech-Check:** P5 betrifft auch den Icon-Admin; mit Stufe 1 ist nur der Druck-Teil erledigt (P5 seit
+  25.11.2026 „teilweise“). Die Bedienbarkeit der Vorlagen-Konfiguration ist dort Befund P27 (offen); die
+  Stufen 3 bis 6 setzen ihn um und tragen ihren Stand dort nach.
 
 ## Annahmen der Session (nicht ausdrücklich bestätigt)
 
