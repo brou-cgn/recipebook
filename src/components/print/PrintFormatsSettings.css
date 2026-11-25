@@ -1,119 +1,291 @@
-/* ===== Einstellungen › Drucklayout: Formatliste (PrintFormatsSettings) =====
-   Bis Stufe 2 des Vorhabens Drucklayout stand dieser Abschnitt am Ende von Settings.css.
-   Farben nur über Tokens (--color-print-* in tokens.css). */
+/* ===== Einstellungen › Drucklayout: Übersicht der Druckformate =====
+   PrintFormatsOverview und PrintFormatCard (Vorhaben Drucklayout, Stufe 3, Entwurf C). Der Editor im
+   Vollfenster steht in PrintFormatScreen.css. Farben nur über Tokens (--color-print-* in tokens.css);
+   Textfarben auf p, span, label und li mit mindestens 0-1-1 gegen die pauschale Regel aus darkMode.css
+   (Tech-Check A7). */
 
-/* Karte je Format */
-.print-format-item {
+/* Der Abschnitt ist der einzige des Reiters: ohne die Trennlinie aus Settings.css. Die fällt dort nur am
+   letzten div weg, und das ist der Abschnitt nicht mehr, solange der Rückgängig-Hinweis darunter steht. */
+.settings-section.pf-overview {
+  border-bottom: none;
+}
+
+/* ── Karten ───────────────────────────────────────────────────────────────── */
+.pf-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
+  gap: 16px;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.pf-card {
+  position: relative;
+  overflow: hidden;
   border: 1px solid var(--color-print-border);
-  border-radius: 8px;
-  padding: 1rem 1.25rem;
-  margin-bottom: 1.25rem;
+  border-radius: 12px;
   background: var(--color-print-panel);
 }
 
-.print-format-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+/* Das Format, mit dem das zur Prüfung gewählte Rezept gedruckt wird */
+.pf-card--active {
+  border-color: var(--color-print-selected);
+  box-shadow: 0 0 0 2px var(--color-print-selected-glow);
 }
 
-.print-format-name-input {
-  flex: 1;
-  padding: 0.4rem 0.6rem;
-  border: 1px solid var(--color-print-border-control);
-  border-radius: 4px;
-  font-size: 1rem;
-  font-weight: 600;
-  background: var(--color-surface);
-}
-
-.print-format-actions {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
-  flex-wrap: wrap;
-}
-
-/* Vorschau-Rezept und Kennzeichnung des aktiven Formats */
-.print-preview-selector {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.25rem;
-  flex-wrap: wrap;
-}
-
-/* label bzw. span: mindestens 0-1-1 gegen die pauschale Textfarbe aus darkMode.css (Tech-Check A7) */
-.print-preview-selector .print-preview-label {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-print-text);
-  white-space: nowrap;
-}
-
-.print-preview-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.6rem;
-  flex-wrap: wrap;
-}
-
-.print-preview-header .print-preview-title {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-print-text);
-}
-
-.print-preview-badge {
-  font-size: 0.75rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: 10px;
-  font-weight: 600;
-}
-
-.print-preview-header .print-preview-badge--active {
-  background: var(--color-ok-tint);
-  color: var(--color-ok-text);
-  border: 1px solid var(--color-ok-tint);
-}
-
-.print-preview-header .print-preview-badge--inactive {
-  background: var(--color-surface-raised);
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-}
-
-/* Kopfzeile eines Formats: Name, Duplizieren, Entfernen (auf dem Handy per Linksswipe) */
-.pf-header-row {
-  position: relative;
-  overflow: hidden;
-}
-
-.pf-header-row.pf-swipe-active .swipe-delete-background {
+.pf-card--swiping .swipe-delete-background {
   opacity: 1;
   pointer-events: auto;
 }
 
-.pf-header-content {
+.pf-card-content {
   position: relative;
   z-index: 1;
+  height: 100%;
+  box-sizing: border-box;
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
   background: var(--color-print-panel);
 }
 
-.pf-delete-btn {
+/* Miniatur: das Blatt auf dem Tisch. Das Blatt selbst bleibt Papier (FlowPage.css). */
+.pf-card-thumb {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--color-print-hover);
+  pointer-events: none;
+}
+
+.pf-card-paper {
+  overflow: hidden;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.25);
+}
+
+.pf-card-text {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pf-card .pf-card-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-strong);
+  overflow-wrap: anywhere;
+}
+
+.pf-card p.pf-card-rule {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-print-text);
+}
+
+.pf-card p.pf-card-rule--unused {
+  font-weight: 600;
+  color: var(--color-warning-text);
+}
+
+.pf-card p.pf-card-meta,
+.pf-card p.pf-card-note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.pf-card p.pf-card-badge {
+  align-self: flex-start;
+  margin: 4px 0 0;
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  background: var(--color-ok-tint);
+  color: var(--color-ok-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pf-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 -4px -4px;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.pf-card-spacer {
+  flex: 1 1 auto;
+}
+
+/* Entfernen als Knopf nur am Desktop; am Handy löscht der Linksswipe auf der Karte */
+.pf-card-delete {
   display: none;
-  margin-top: 0;
 }
 
 @media (min-width: 721px) {
-  .pf-delete-btn {
+  .pf-card-delete {
     display: inline-flex;
   }
+}
+
+/* Kachel „Neues Format“ */
+.pf-card--new {
+  border-style: dashed;
+  border-color: var(--color-print-border-control);
+  background: transparent;
+}
+
+.pf-card-new {
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 16px;
+  border: none;
+  background: transparent;
+  color: var(--color-print-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .pf-card-new:hover {
+    background: var(--color-print-hover);
+  }
+}
+
+.pf-card-new:focus-visible {
+  outline: 2px solid var(--color-button-focus);
+  outline-offset: -4px;
+}
+
+.pf-card-new span.pf-card-new-plus {
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 300;
+  color: var(--color-print-text);
+}
+
+.pf-card-new span.pf-card-new-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-strong);
+}
+
+.pf-card-new span.pf-card-new-text {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+/* ── „So wählt die App beim Drucken“ ──────────────────────────────────────── */
+.pf-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-print-border);
+  border-radius: 12px;
+  background: var(--color-print-panel);
+}
+
+.settings-section .pf-rules-title {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.pf-rules-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pf-rules-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 96px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-print-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+
+.pf-rules-item span.pf-rules-range {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.pf-rules-item span.pf-rules-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-text-strong);
+}
+
+.pf-check {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.pf-check label.pf-check-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-print-text);
+}
+
+.pf-check .pfe-select {
+  max-width: 100%;
+}
+
+.pf-check p.pf-check-result {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+/* ── Hinweise und Fehler ──────────────────────────────────────────────────── */
+.pf-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 1rem;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--color-warning-tint);
+}
+
+.pf-notice p,
+.pf-notice li {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-warning-text);
+}
+
+.pf-notice ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.pf-overview > p.pfe-hint {
+  margin-bottom: 1rem;
 }
 
 p.pf-error {
@@ -123,9 +295,4 @@ p.pf-error {
   background: var(--color-bad-tint);
   color: var(--color-bad-text);
   font-size: 0.85rem;
-}
-
-/* Hinweis an einem Format, das aus dem früheren freien Layout umgestellt wurde */
-.print-format-item .pf-converted-hint {
-  margin-bottom: 0.75rem;
 }

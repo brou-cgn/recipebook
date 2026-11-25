@@ -84,6 +84,25 @@ export const PAPER_PRESETS = [
   { id: 'letter', label: 'Letter (21,6 × 27,9 cm)', widthCm: 21.59, heightCm: 27.94 },
 ];
 
+const samePaper = (preset, widthCm, heightCm) =>
+  Math.abs(preset.widthCm - widthCm) < 0.05 && Math.abs(preset.heightCm - heightCm) < 0.05;
+
+/** The paper preset a page has in either orientation; undefined for a size of its own. */
+export function findPaperPreset(page) {
+  const short = Math.min(page.widthCm, page.heightCm);
+  const long = Math.max(page.widthCm, page.heightCm);
+  return PAPER_PRESETS.find((preset) => samePaper(preset, short, long));
+}
+
+const cm = (value) => String(Math.round(value * 10) / 10).replace('.', ',');
+
+/** Page size in words: "A4 hoch", "A5 quer", for a size of its own "14 × 20 cm". */
+export function describePaper(page) {
+  const preset = findPaperPreset(page);
+  if (!preset) return `${cm(page.widthCm)} × ${cm(page.heightCm)} cm`;
+  return `${preset.label.split(' (')[0]} ${page.widthCm >= page.heightCm ? 'quer' : 'hoch'}`;
+}
+
 export const MIN_MARGIN_CM = 0;
 export const MAX_MARGIN_CM = 5;
 export const FLOW_OVERRIDE_KEYS = ['fontSizeScale', 'fontBold', 'fontItalic', 'fontUnderline', 'fontColor', 'textAlignH'];

@@ -1,175 +1,163 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './PrintFormatsSettings.css';
-import TrashIcon from '../icons/TrashIcon';
-import TemplateFormatEditor from './TemplateFormatEditor';
-import DeleteRowButton from '../DeleteRowButton';
+import PrintFormatsOverview, { deleteBlocker } from './PrintFormatsOverview';
+import PrintFormatScreen from './PrintFormatScreen';
+import Button from '../Button';
 import UndoSnackbar from '../UndoSnackbar';
 import useUndoableDelete from '../../hooks/useUndoableDelete';
-import useSwipeToDelete from '../../hooks/useSwipeToDelete';
 import { loadPrintFormatsForEditing, savePrintFormats } from '../../utils/printFormatsFirestore';
-import {
-  DEFAULT_PRINT_FORMATS,
-  PrintFormatValidationError,
-  validatePrintFormats,
-  selectPrintFormat,
-  createFlowFormat,
-  duplicatePrintFormat,
-  isConvertedFreeFormat,
-} from '../../utils/print/printFormats';
-import { getRecipeImages } from '../../utils/print/printRecipe';
-import Button from '../Button';
+import { PrintFormatValidationError, createFlowFormat, duplicatePrintFormat } from '../../utils/print/printFormats';
+import { newFormatMaxPhotos, repairPrintFormats } from '../../utils/print/printFormatRules';
 
-const isCatchAll = (f) => f.maxPhotos === null || f.maxPhotos === undefined;
+const EMPTY = { formats: [], usingDefaults: false, repairs: [] };
+const errorText = (err) => (err instanceof PrintFormatValidationError ? err.message : `Fehler beim Speichern: ${err.message}`);
+const withoutNotes = ({ migrationNotes, ...format }) => format;
 
-function FormatHeader({ format, canDelete, deleteHint, onNameChange, onDuplicate, onDelete }) {
-  const { offset, isDeleteVisible, reset, handlers } = useSwipeToDelete({ disabled: !canDelete });
-  const label = format.name || 'Format';
-  return (
-    <div className={`print-format-header pf-header-row${offset < 0 ? ' pf-swipe-active' : ''}`}>
-      <div className="swipe-delete-background" aria-hidden={!isDeleteVisible}>
-        {isDeleteVisible && (
-          <button
-            type="button"
-            className="swipe-delete-action"
-            onClick={() => { onDelete(); reset(); }}
-            aria-label={`${label} entfernen`}
-          >
-            <span className="swipe-delete-icon-text"><TrashIcon /></span>
-          </button>
-        )}
-      </div>
-      <div
-        className="pf-header-content delete-row-hover-target"
-        style={{ transform: `translateX(${offset}px)`, transition: 'transform 0.15s ease' }}
-        {...handlers}
-      >
-        <input
-          type="text"
-          className="print-format-name-input"
-          value={format.name}
-          placeholder="Formatname"
-          aria-label="Formatname"
-          onChange={(e) => onNameChange(e.target.value)}
-        />
-        <Button onClick={onDuplicate} title="Format duplizieren">
-          Duplizieren
-        </Button>
-        <span className="pf-delete-wrap" title={canDelete ? undefined : deleteHint}>
-          <DeleteRowButton itemName={label} onClick={onDelete} className="pf-delete-btn" disabled={!canDelete} />
-        </span>
-      </div>
-    </div>
-  );
+/** What was read from Firestore as the state of the tab; a list that cannot be stored is repaired. */
+function loadedState({ formats, usingDefaults }) {
+  const repaired = repairPrintFormats(formats);
+  return { formats: repaired.formats, usingDefaults, repairs: repaired.repairs };
 }
 
 /**
- * "Drucklayout" settings tab: list, edit, duplicate, delete and save print formats.
+ * Reiter „Drucklayout“ der Einstellungen (Vorhaben Drucklayout, Stufe 3, Entwurf C): die Übersicht
+ * der Druckformate und, für ein Format zur Zeit, der Editor im Vollfenster.
+ *
+ * Gespeichert wird je Handlung, nicht mehr gesammelt: „Speichern“ im Editor schreibt dieses eine
+ * Format, Entfernen wirkt sofort (mit „Rückgängig“). Die Formate liegen als ein Feld in settings/app;
+ * jedes Speichern schreibt deshalb die ganze Liste, der Reihe nach (commit).
  */
 export default function PrintFormatsSettings({ allRecipes = [], allUsers = [] }) {
-  const [formats, setFormats] = useState(DEFAULT_PRINT_FORMATS);
+  const [state, setState] = useState(EMPTY);
   const [loadState, setLoadState] = useState('loading'); // 'loading' | 'ready' | 'error'
-  const [usingDefaults, setUsingDefaults] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState(null); // { type: 'success'|'error', text }
+  const [error, setError] = useState(null);
+  const [savingNow, setSavingNow] = useState(false);
+  const [editing, setEditing] = useState(null); // { format, isNew } | null
   const [previewRecipeId, setPreviewRecipeId] = useState('');
-  const savedJsonRef = useRef('');
   const undo = useUndoableDelete();
+
+  // Für Abläufe, die nach dem Rendern weiterlaufen (Speichern der Reihe nach, „Rückgängig“):
+  const formatsRef = useRef(EMPTY.formats); // die Liste, wie sie gerade gilt (auch schon vor dem Speichern)
+  const storedRef = useRef(EMPTY); // der letzte Stand aus Firestore: dahin zurück, wenn ein Speichern scheitert
+  const queueRef = useRef(Promise.resolve());
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  const show = useCallback((next) => {
+    formatsRef.current = next.formats;
+    if (mountedRef.current) setState(next);
+  }, []);
 
   const load = useCallback(async () => {
     setLoadState('loading');
     try {
-      const result = await loadPrintFormatsForEditing();
-      setFormats(result.formats);
-      setUsingDefaults(result.usingDefaults);
-      savedJsonRef.current = JSON.stringify(result.formats);
-      setLoadState('ready');
+      const loaded = loadedState(await loadPrintFormatsForEditing());
+      storedRef.current = loaded;
+      show(loaded);
+      if (mountedRef.current) setLoadState('ready');
     } catch (err) {
       console.error('Error loading print formats:', err);
-      setLoadState('error');
+      if (mountedRef.current) setLoadState('error');
     }
-  }, []);
+  }, [show]);
 
   useEffect(() => { load(); }, [load]);
 
-  const errors = useMemo(() => validatePrintFormats(formats), [formats]);
-  const dirty = loadState === 'ready' && JSON.stringify(formats) !== savedJsonRef.current;
-  // Formats converted from the removed free layout are only stored once the admin saves,
-  // so saving is offered even though nothing was edited yet.
-  const conversionPending = loadState === 'ready' && formats.some(isConvertedFreeFormat);
+  /**
+   * Zeigt die neue Liste sofort und speichert sie; mehrere Aufrufe laufen der Reihe nach.
+   * Liefert die Liste, wie sie danach gespeichert ist. Scheitert das Speichern, gilt wieder der
+   * letzte gespeicherte Stand (außer ein späterer Aufruf steht schon an) und das Versprechen
+   * schlägt fehl. Läuft auch nach dem Verlassen des Reiters zu Ende.
+   */
+  const commit = useCallback((formats) => {
+    show({ ...storedRef.current, formats });
+    const job = async () => {
+      try {
+        await savePrintFormats(formats);
+      } catch (err) {
+        if (formatsRef.current === formats) show(storedRef.current);
+        throw err;
+      }
+      let stored;
+      try {
+        // Anzeigen, was wirklich gespeichert ist
+        stored = loadedState(await loadPrintFormatsForEditing());
+      } catch (err) {
+        stored = { formats: formats.map(withoutNotes), usingDefaults: false, repairs: [] };
+      }
+      storedRef.current = stored;
+      if (formatsRef.current === formats) show(stored);
+      return stored.formats;
+    };
+    const result = queueRef.current.then(job);
+    queueRef.current = result.catch(() => {});
+    return result;
+  }, [show]);
 
-  // Warn before leaving the page with unsaved changes.
-  useEffect(() => {
-    if (!dirty) return undefined;
-    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [dirty]);
+  const report = (text) => (err) => {
+    console.error(text, err);
+    if (mountedRef.current) setError(`${text} ${errorText(err)}`);
+  };
 
-  const updateFormat = (index, next) => setFormats((prev) => prev.map((f, i) => (i === index ? next : f)));
+  const saveNow = () => {
+    setSavingNow(true);
+    setError(null);
+    commit(formatsRef.current)
+      .catch(report('Die Druckformate konnten nicht gespeichert werden.'))
+      .finally(() => { if (mountedRef.current) setSavingNow(false); });
+  };
 
-  const catchAllCount = formats.filter(isCatchAll).length;
-  const canDeleteAt = (f) => formats.length > 1 && !(isCatchAll(f) && catchAllCount === 1);
-
-  const deleteFormat = (index) => {
-    const removed = formats[index];
-    if (!removed || !canDeleteAt(removed)) return;
-    setFormats((prev) => prev.filter((_, i) => i !== index));
+  const deleteFormat = (format) => {
+    const current = formatsRef.current;
+    const index = current.findIndex((f) => f.id === format.id);
+    if (index < 0 || deleteBlocker(current, format)) return;
+    const name = format.name || 'Format';
+    setError(null);
+    commit(current.filter((f) => f.id !== format.id)).catch(report(`„${name}“ konnte nicht entfernt werden.`));
     undo.notifyDeleted({
-      id: removed.id,
-      name: removed.name || 'Format',
-      undo: () => setFormats((prev) => {
-        const next = [...prev];
-        next.splice(Math.min(index, next.length), 0, removed);
-        return next;
-      }),
+      id: format.id,
+      name,
+      undo: () => {
+        const now = formatsRef.current;
+        // Ist das Entfernen gescheitert, steht das Format schon wieder da
+        if (now.some((f) => f.id === format.id)) return;
+        // Hat inzwischen ein anderes Format dieselbe Fotoanzahl bekommen, kommt es ohne Regel zurück
+        const taken = format.maxPhotos != null && now.some((f) => f.maxPhotos === format.maxPhotos);
+        const next = [...now];
+        next.splice(Math.min(index, next.length), 0, taken ? { ...format, maxPhotos: null } : format);
+        commit(next).catch(report(`„${name}“ konnte nicht wiederhergestellt werden.`));
+      },
     });
   };
 
-  const addFormat = () => {
-    setFormats((prev) => [...prev, createFlowFormat('classic', 'portrait', `Format ${prev.length + 1}`)]);
+  const createFormat = () => {
+    const formats = formatsRef.current;
+    const format = { ...createFlowFormat('classic', 'portrait', 'Neues Format'), maxPhotos: newFormatMaxPhotos(formats) };
+    setEditing({ format, isNew: true });
+  };
+  const duplicateFormat = (source) => {
+    const format = { ...duplicatePrintFormat(source), maxPhotos: newFormatMaxPhotos(formatsRef.current) };
+    setEditing({ format, isNew: true });
   };
 
-  const duplicateFormat = (index) => {
-    setFormats((prev) => {
-      const next = [...prev];
-      next.splice(index + 1, 0, duplicatePrintFormat(prev[index]));
-      return next;
-    });
+  const saveEdited = (draft) => {
+    const current = formatsRef.current;
+    const next = current.some((f) => f.id === draft.id)
+      ? current.map((f) => (f.id === draft.id ? draft : f))
+      : [...current, draft];
+    setError(null);
+    return commit(next).then((stored) => stored.find((f) => f.id === draft.id) || draft);
   };
-
-  const save = async () => {
-    setSaving(true);
-    setStatus(null);
-    try {
-      await savePrintFormats(formats);
-      await load(); // show what is really stored (AK 7.3)
-      setStatus({ type: 'success', text: 'Druckformate gespeichert.' });
-    } catch (err) {
-      const text = err instanceof PrintFormatValidationError
-        ? err.message
-        : `Fehler beim Speichern der Druckformate: ${err.message}`;
-      setStatus({ type: 'error', text });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const previewRecipe = allRecipes.find((r) => r.id === previewRecipeId) || null;
-  const previewAuthor = previewRecipe
-    ? allUsers.find((u) => u.id === previewRecipe.authorId)?.vorname
-    : undefined;
-  const activeFormatId = previewRecipe
-    ? selectPrintFormat(formats, getRecipeImages(previewRecipe).length)?.id
-    : null;
-  const errorsFor = (index) => errors.filter((e) => e.index === index);
-  const listErrors = errors.filter((e) => e.index === -1);
 
   if (loadState === 'loading') return <p className="section-description">Druckformate werden geladen…</p>;
   if (loadState === 'error') {
     return (
       <div className="settings-section">
         <p className="pf-error" role="alert">
-          Die Druckformate konnten nicht geladen werden. Speichern ist gesperrt, damit die gespeicherten Formate nicht überschrieben werden.
+          Die Druckformate konnten nicht geladen werden. Bearbeiten ist gesperrt, damit die gespeicherten Formate nicht überschrieben werden.
         </p>
         <Button onClick={load}>Erneut laden</Button>
       </div>
@@ -177,105 +165,37 @@ export default function PrintFormatsSettings({ allRecipes = [], allUsers = [] })
   }
 
   return (
-    <div className="settings-section">
-      <p className="section-description">
-        Lege fest, wie Rezepte gedruckt werden: Wähle für jedes Format eine Vorlage und passe sie an.
-        Welches Format ein Rezept bekommt, bestimmt die Anzahl seiner Fotos.
-      </p>
-      {usingDefaults && (
-        <p className="pfe-hint" role="note">Es sind noch keine Druckformate gespeichert; angezeigt wird das Standardformat.</p>
+    <>
+      <PrintFormatsOverview
+        formats={state.formats}
+        usingDefaults={state.usingDefaults}
+        repairs={state.repairs}
+        saving={savingNow}
+        error={error}
+        recipes={allRecipes}
+        checkRecipeId={previewRecipeId}
+        onCheckRecipeChange={setPreviewRecipeId}
+        onEdit={(format) => setEditing({ format, isNew: false })}
+        onDuplicate={duplicateFormat}
+        onDelete={deleteFormat}
+        onCreate={createFormat}
+        onSaveNow={saveNow}
+      />
+      {editing && (
+        <PrintFormatScreen
+          key={editing.format.id}
+          format={editing.format}
+          isNew={editing.isNew}
+          formats={state.formats}
+          recipes={allRecipes}
+          users={allUsers}
+          previewRecipeId={previewRecipeId}
+          onPreviewRecipeChange={setPreviewRecipeId}
+          onSave={saveEdited}
+          onClose={() => setEditing(null)}
+        />
       )}
-
-      {allRecipes.length > 0 && (
-        <div className="print-preview-selector">
-          <label htmlFor="print-preview-recipe" className="print-preview-label">Vorschau-Rezept:</label>
-          <select
-            id="print-preview-recipe"
-            className="pfe-select"
-            value={previewRecipeId}
-            onChange={(e) => setPreviewRecipeId(e.target.value)}
-          >
-            <option value="">– kein Vorschau-Rezept –</option>
-            {[...allRecipes]
-              .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'de'))
-              .map((r) => <option key={r.id} value={r.id}>{r.title}</option>)}
-          </select>
-        </div>
-      )}
-
-      {listErrors.map((e, i) => <p key={i} className="pf-error" role="alert">{e.message}</p>)}
-
-      {formats.map((fmt, index) => (
-        <div key={fmt.id} className="print-format-item" data-testid="print-format-item">
-          <FormatHeader
-            format={fmt}
-            canDelete={canDeleteAt(fmt)}
-            deleteHint={formats.length <= 1
-              ? 'Es muss mindestens ein Druckformat vorhanden sein.'
-              : 'Mindestens ein Format ohne Fotolimit (Standardformat) muss vorhanden sein.'}
-            onNameChange={(name) => updateFormat(index, { ...fmt, name })}
-            onDuplicate={() => duplicateFormat(index)}
-            onDelete={() => deleteFormat(index)}
-          />
-
-          <div className="sort-settings-field" style={{ marginBottom: '0.75rem' }}>
-            <label htmlFor={`max-photos-${fmt.id}`}>Maximale Fotoanzahl:</label>
-            <input
-              id={`max-photos-${fmt.id}`}
-              type="number"
-              min="0"
-              placeholder="Unbegrenzt"
-              value={fmt.maxPhotos != null ? fmt.maxPhotos : ''}
-              onChange={(e) => {
-                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                updateFormat(index, { ...fmt, maxPhotos: Number.isNaN(val) ? null : val });
-              }}
-            />
-            <span className="sort-settings-hint">
-              Dieses Format wird verwendet, wenn die Anzahl der Fotos ≤ diesem Wert ist. Leer = gilt für alle.
-            </span>
-          </div>
-
-          {errorsFor(index).map((e, i) => <p key={i} className="pf-error" role="alert">{e.message}</p>)}
-
-          {previewRecipe && (
-            <div className="print-preview-header">
-              <span className="print-preview-title">Vorschau: {previewRecipe.title}</span>
-              <span className={`print-preview-badge print-preview-badge--${activeFormatId === fmt.id ? 'active' : 'inactive'}`}>
-                {activeFormatId === fmt.id ? 'Aktives Format für dieses Rezept' : 'Nicht aktiv für dieses Rezept'}
-              </span>
-            </div>
-          )}
-
-          {isConvertedFreeFormat(fmt) && (
-            <p className="pfe-hint pf-converted-hint" role="note">
-              Dieses Format war ein freies Layout und wurde auf die Vorlage „Klassisch“ umgestellt. Bitte prüfen und speichern.
-            </p>
-          )}
-
-          <TemplateFormatEditor
-            format={fmt}
-            onChange={(next) => updateFormat(index, next)}
-            previewRecipe={previewRecipe}
-            authorName={previewAuthor}
-          />
-        </div>
-      ))}
-
-      <div className="print-format-actions">
-        <Button onClick={addFormat}>+ Neues Format hinzufügen</Button>
-        <Button variant="primary" loading={saving} disabled={errors.length > 0 || !(dirty || conversionPending)} onClick={save}>
-          {saving ? 'Speichert …' : 'Druckformate speichern'}
-        </Button>
-        {dirty && <span className="sort-settings-hint">Ungespeicherte Änderungen</span>}
-      </div>
-      {status && (
-        <p className={status.type === 'error' ? 'pf-error' : 'sort-settings-hint'} role={status.type === 'error' ? 'alert' : 'status'}>
-          {status.text}
-        </p>
-      )}
-
       <UndoSnackbar itemName={undo.pendingName} onUndo={undo.undo} />
-    </div>
+    </>
   );
 }

@@ -1,0 +1,328 @@
+/* ===== Ein Druckformat im Vollfenster bearbeiten (PrintFormatScreen) =====
+   Vorhaben Drucklayout, Stufe 3, Entwurf C: Leiste oben (Zurück, Name, Regel, Speichern), darunter der
+   Vorlagen-Editor, unten das Rezept der Vorschau. Liegt über Kopfzeile und unterer Navigation (1200/1250),
+   aber unter den Dialogen (ConfirmDialog 2100). Farben nur über Tokens. */
+
+.pfs-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Den Fokus bekommt das Fenster nur beim Öffnen per Skript, es ist kein Bedienelement */
+.pfs-screen:focus {
+  outline: none;
+}
+
+/* Leiste und Inhalt. Am Desktop steht die Leiste, der Inhalt scrollt (.pfs-body); am Handy scrollt
+   beides zusammen, nur „Zurück“ und „Speichern“ bleiben oben stehen (siehe unten). */
+.pfs-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Leiste oben: bleibt stehen, der Inhalt darunter scrollt ──────────────── */
+.pfs-bar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px 20px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Überschrift nur für Screenreader: Die Leiste zeigt Name und Regel des Formats */
+.pfs-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pfs-back {
+  flex: 0 0 auto;
+  padding-left: 12px;
+}
+
+.pfs-back-icon {
+  display: inline-flex;
+  transform: rotate(180deg);
+}
+
+/* span im Knopf: die Schriftfarbe des Knopfs, nicht die pauschale aus darkMode.css */
+.pfs-back span.pfs-back-text {
+  color: inherit;
+}
+
+.pfs-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.pfs-field--name {
+  flex: 1 1 220px;
+  max-width: 340px;
+}
+
+.pfs-field--rule {
+  flex: 2 1 340px;
+}
+
+.pfs-field > p {
+  grid-column: 2;
+}
+
+.pfs-screen label.pfs-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-print-text);
+  white-space: nowrap;
+}
+
+.pfs-name {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--height-button);
+  padding: 0 0.6rem;
+  border: 1px solid var(--color-print-border-control);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text-strong);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.pfs-rule-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  min-width: 0;
+}
+
+.pfs-rule-row .pfs-rule-select,
+.pfs-rule-row .pfs-limit {
+  box-sizing: border-box;
+  min-height: var(--height-button);
+  color: var(--color-text-strong);
+}
+
+.pfs-rule-row .pfs-limit {
+  width: 64px;
+  font-size: 0.95rem;
+  background: var(--color-surface);
+}
+
+.pfs-rule-row span.pfs-limit-unit {
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.pfs-field p.pfs-rule-effect {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.pfs-field p.pfs-rule-effect--unused {
+  color: var(--color-warning-text);
+}
+
+.pfs-field p.pf-error {
+  margin: 0;
+}
+
+.pfs-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  min-height: var(--height-button);
+}
+
+.pfs-actions span.pfs-status {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.pfs-actions span.pfs-status--saved {
+  color: var(--color-ok-text);
+}
+
+.pfs-actions span.pfs-status--invalid {
+  color: var(--color-bad-text);
+}
+
+.pfs-errors {
+  flex: 1 1 100%;
+}
+
+.pfs-errors p.pf-error {
+  margin: 0;
+}
+
+/* ── Inhalt: der Vorlagen-Editor ──────────────────────────────────────────── */
+.pfs-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px;
+}
+
+.pfs-content {
+  box-sizing: border-box;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--color-surface-card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Leiste unten: Rezept der Vorschau ────────────────────────────────────── */
+.pfs-footer {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+}
+
+.pfs-footer .pfs-recipe-select {
+  max-width: 100%;
+}
+
+.pfs-footer span.pfs-chosen {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.pfs-footer span.pfs-chosen--this {
+  color: var(--color-ok-text);
+}
+
+/* Handy: Nur „Zurück“ und „Speichern“ bleiben oben stehen, Name und Regel scrollen mit dem Inhalt
+   weg, sonst bliebe vom Bildschirm zu wenig für das Blatt. */
+@media (max-width: 768px) {
+  .pfs-screen {
+    --pfs-top: calc(64px + env(safe-area-inset-top, 0px));
+  }
+
+  /* Fläche hinter den beiden stehenden Knöpfen */
+  .pfs-screen::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    height: var(--pfs-top);
+    box-sizing: border-box;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .pfs-scroll {
+    display: block;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pfs-bar {
+    gap: 8px 12px;
+    padding: calc(var(--pfs-top) + 10px) 12px 10px;
+  }
+
+  .pfs-back,
+  .pfs-actions {
+    position: fixed;
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    z-index: 3;
+  }
+
+  .pfs-back {
+    left: 12px;
+  }
+
+  .pfs-actions {
+    right: 12px;
+  }
+
+  /* In dieser Zeile steht der Haupt-Knopf neben „Zurück“, nicht in voller Breite (Button.css) */
+  .pfs-actions .pfs-save {
+    width: auto;
+  }
+
+  .pfs-field--name,
+  .pfs-field--rule {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .pfs-rule-row {
+    flex-wrap: nowrap;
+  }
+
+  .pfs-rule-row .pfs-rule-select {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .pfs-body {
+    overflow: visible;
+    padding: 8px;
+  }
+
+  .pfs-content {
+    padding: 10px;
+  }
+
+  .pfs-footer {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .pfs-footer .pfs-recipe-select {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .pfs-footer span.pfs-chosen {
+    flex: 1 1 100%;
+    font-size: 0.8rem;
+  }
+}
+
+/* Schmales Handy: „Zurück“ nur als Pfeil, damit Hinweis und „Speichern“ daneben passen */
+@media (max-width: 480px) {
+  .pfs-back {
+    padding: 0 12px;
+  }
+
+  .pfs-back span.pfs-back-text {
+    display: none;
+  }
+}
