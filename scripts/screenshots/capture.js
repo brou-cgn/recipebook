@@ -77,6 +77,30 @@ async function openRecipe(page, title) {
 
 // Jeder Bildschirm startet angemeldet auf der Startseite („Küche“; außer „anmeldung“ und „registrieren“).
 // `shot` macht das Bild; ein Eintrag darf mehrere Bilder machen.
+// Drei Druckformate für die Bildschirme des Drucklayouts (Einstellungen › Drucklayout): je eine andere
+// Vorlage, Papiergröße und Regel. Die Stile stehen vollständig hier, weil das Skript die Vorlagen der
+// App (src/utils/print/printTemplates.js, ES-Modul) nicht laden kann.
+const druckStil = (patch) => ({
+  fontFamily: "Georgia, 'Times New Roman', serif", baseSize: 'm', accent: '#333333', spacing: 'normal', headingStyle: 'underline',
+  titleAlign: 'center', metadataStyle: 'line', photoPosition: 'top', photoSize: 'l', photoAspect: '16/9', photoCount: 1,
+  columns: 'two', tintIngredients: false, marginCm: 1.5,
+  show: { title: true, authorDate: true, metadata: true, photos: true, ingredients: true, steps: true },
+  ...patch,
+});
+const druckFormat = (id, name, maxPhotos, template, [pageWidthCm, pageHeightCm], stil) => ({
+  id, name, maxPhotos, layoutType: 'flow', template, orientation: pageWidthCm >= pageHeightCm ? 'landscape' : 'portrait',
+  pageWidthCm, pageHeightCm, fontFamily: druckStil(stil).fontFamily, layoutVersion: 3, style: druckStil(stil), overrides: {},
+});
+const DRUCKFORMATE = [
+  druckFormat('fmt-karte', 'Karte A5', 1, 'card', [14.8, 21], {
+    accent: '#7a4e2d', titleAlign: 'left', photoPosition: 'left', photoSize: 'm', photoAspect: '1/1', tintIngredients: true,
+  }),
+  druckFormat('fmt-quer', 'Klassisch quer', 3, 'classic', [29.7, 21], { photoSize: 'm', photoCount: 2 }),
+  druckFormat('default', 'Standard', null, 'photo', [21, 29.7], {
+    fontFamily: 'Helvetica, Arial, sans-serif', accent: '#a33a26', headingStyle: 'bar', titleAlign: 'left', metadataStyle: 'plain', photoAspect: '4/3',
+  }),
+];
+
 const SCREENS = [
   { name: 'anmeldung', loggedOut: true, run: async (page, shot) => shot() },
   {
@@ -612,7 +636,6 @@ const SCREENS = [
   { name: 'einstellungen', run: async (page, shot) => { await openMenuItem(page, 'Einstellungen'); await shot(); } },
   // Weitere Reiter der Einstellungen (Admin), je als ganze Seite
   ...[
-    ['einstellungen-druck', 'Drucklayout'],
     ['einstellungen-kochatelier', 'Kochatelier'],
     ['einstellungen-entdeckt', 'Für dich entdeckt'],
     ['einstellungen-benutzer', 'Benutzerverwaltung'],
@@ -668,18 +691,58 @@ const SCREENS = [
     },
   })),
   {
-    // Drucklayout im Vorlagen-Modus (TemplateFormatEditor); die Umstellung wird nicht gespeichert
-    name: 'einstellungen-druck-vorlage',
+    // Drucklayout ohne gespeicherte Formate: ein Standardformat, keine Regel, Hinweis „noch keine
+    // Druckformate gespeichert“. Das Feld wird vorher entfernt, weil die App es beim ersten Start mit
+    // dem Standardformat anlegt (getSettings) und die Bildschirme darunter es überschreiben.
+    name: 'einstellungen-druck',
     fullPage: true,
     run: async (page, shot) => {
+      await patchDoc('settings/app', { printFormats: undefined });
       await openMenuItem(page, 'Einstellungen');
       await page.locator('.tab-button', { hasText: 'Drucklayout' }).first().click();
-      await pause(page, 1000);
-      // Die Umstellung fragt per window.confirm nach; Playwright würde die Rückfrage sonst ablehnen
-      page.once('dialog', (dialog) => dialog.accept());
-      await page.getByRole('button', { name: 'Auf Vorlage umstellen' }).first().click();
-      await pause(page, 1000);
+      await page.getByRole('button', { name: 'Standard bearbeiten' }).waitFor();
+      await pause(page, 800);
       await shot();
+    },
+  },
+  {
+    // Drucklayout mit drei gespeicherten Formaten: Übersicht mit Regel in Klartext je Karte, der Leiste
+    // „So wählt die App beim Drucken“ und der Probe mit einem Rezept.
+    name: 'einstellungen-druck-formate',
+    fullPage: true,
+    run: async (page, shot) => {
+      await patchDoc('settings/app', { printFormats: DRUCKFORMATE });
+      try {
+        await openMenuItem(page, 'Einstellungen');
+        await page.locator('.tab-button', { hasText: 'Drucklayout' }).first().click();
+        await page.getByRole('button', { name: 'Klassisch quer bearbeiten' }).waitFor();
+        await page.locator('#pf-check-recipe').selectOption({ index: 1 });
+        await pause(page, 800);
+        await shot();
+      } finally {
+        await patchDoc('settings/app', { printFormats: undefined });
+      }
+    },
+  },
+  {
+    // Ein Druckformat im Vollfenster: Leiste mit Name, Regel und Speichern, darunter der Vorlagen-Editor
+    // mit angeklicktem Titel (schwebende Formatleiste). Das Fenster liegt fest über der Seite, deshalb
+    // ohne fullPage.
+    name: 'einstellungen-druck-editor',
+    run: async (page, shot) => {
+      await patchDoc('settings/app', { printFormats: DRUCKFORMATE });
+      try {
+        await openMenuItem(page, 'Einstellungen');
+        await page.locator('.tab-button', { hasText: 'Drucklayout' }).first().click();
+        await page.getByRole('button', { name: 'Klassisch quer bearbeiten' }).click();
+        await page.locator('[data-testid="print-format-screen"]').waitFor();
+        await pause(page, 1000);
+        await page.locator('.tfe-preview [data-flow-el="title"]').first().click();
+        await pause(page, 500);
+        await shot();
+      } finally {
+        await patchDoc('settings/app', { printFormats: undefined });
+      }
     },
   },
   {

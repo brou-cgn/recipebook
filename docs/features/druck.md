@@ -1,5 +1,11 @@
 # Druck
 
+> **Stand 25.11.2026:** Das Druckmodul wird umgebaut (Vorhaben Drucklayout, Tracker
+> `docs/vorhaben/drucklayout.md`). Seit Stufe 1 gibt es nur noch Vorlagen; das freie Layout mit dem
+> Drag-&-Drop-Editor ist entfernt. Aktuell ist der Abschnitt „Druck-Layouts (Entwicklerdoku)“. Die
+> beiden anderen Abschnitte (Feature-Inventar mit Anforderungen und die Akzeptanzkriterien, beide vom
+> 04.10.2026) beschreiben den Stand **vor** dem Umbau und bleiben als Verlauf stehen.
+
 ## Druckfunktion – Feature-Inventar, Lückenanalyse, Anforderungsspezifikationen
 
 _Quelle: `DRUCKFUNKTION_ANFORDERUNGEN.md` (zusammengeführt)._
@@ -321,39 +327,102 @@ Konvention: **MUSS** = Abnahmekriterium, **SOLL** = wünschenswert. Neue Lösch-
 
 ## Druck-Layouts (Entwicklerdoku)
 
-_Quelle: `DRUCKLAYOUT.md` (zusammengeführt)._
+_Stand: 25.11.2026 (Vorhaben Drucklayout, Stufe 3). Ursprung: `DRUCKLAYOUT.md` (zusammengeführt)._
 
-Rezepte werden über frei gestaltbare **Druckformate** gedruckt. Die Formate liegen zentral in
-Firestore (`settings/app.printFormats`) und gelten für alle Nutzer. Bearbeitet werden sie in
-den Einstellungen im Tab **Drucklayout**.
+Rezepte werden über **Druckformate** gedruckt. Die Formate liegen zentral in Firestore
+(`settings/app.printFormats`) und gelten für alle Nutzer. Bearbeitet werden sie in den Einstellungen
+im Tab **Drucklayout**.
 
-### Zwei Layouttypen
+### Ein Layouttyp: Vorlagen
 
-| Typ | `layoutType` | Wofür |
-|---|---|---|
-| **Vorlage (Fließlayout)** | `'flow'` | Standard für neue Formate. Der Inhalt fließt von oben nach unten wie in Word und läuft bei langen Rezepten auf die nächste Seite. Bedienung: Vorlage wählen, wenige Regler, Elemente in der Vorschau anklicken und formatieren. |
-| **Freies Layout** (Expertenmodus) | fehlt / `'free'` | Elemente werden von Hand in cm platziert. Text wird abgeschnitten, wenn er nicht passt. Bestehende Formate bleiben so; „Auf Vorlage umstellen" konvertiert sie. |
+Jedes Format ist eine **Vorlage (Fließlayout)**, `layoutType: 'flow'`: Der Inhalt fließt von oben nach
+unten wie in Word und läuft bei langen Rezepten auf die nächste Seite. Bedienung im Editor heute: Vorlage
+wählen, Regler im Bedienfeld, Elemente in der Vorschau anklicken und formatieren (dieser Teil wird mit
+Stufe 4 des Vorhabens Drucklayout neu gestaltet).
 
-Beide werden von `PrintPage` gerendert (`FlowPage` für Vorlagen) und gedruckt.
+Das frühere **freie Layout** (Elemente von Hand in cm platziert, Formate ohne `layoutType`, Text wurde
+bei zu langem Inhalt abgeschnitten) ist seit dem 25.11.2026 entfernt. Gespeicherte freie Formate werden
+beim Lesen auf eine Vorlage umgestellt, siehe „Umstellung freier Formate“.
+
+### Einstellungen: Übersicht und Editor im Vollfenster
+
+Seit Stufe 3 (Entwurf C des Vorhabens) besteht der Reiter aus zwei Ansichten:
+
+- **Übersicht** (`PrintFormatsOverview`, `PrintFormatCard`): je Format eine Karte mit Miniatur, Name, Regel in
+  Klartext, Vorlage und Papier, dazu „Bearbeiten“, Duplizieren und Entfernen (`DeleteRowButton`, am Handy
+  Linksswipe). Darunter die Leiste „So wählt die App beim Drucken“ und „Prüfen mit Rezept“. Gibt es nur ein
+  Format, entfallen Regel und Leiste.
+- **Editor im Vollfenster** (`PrintFormatScreen`, Portal in `document.body`, `role="dialog"`): ein Format zur
+  Zeit. Oben die Leiste mit „Zurück“, Name, Regel und „Speichern“, darunter der `TemplateFormatEditor`, unten
+  das Rezept der Vorschau. Am Desktop steht die Leiste; am Handy bleiben nur „Zurück“ und „Speichern“ oben
+  stehen, Name und Regel scrollen mit. Escape schließt das Fenster nicht (die schwebende Formatleiste hört
+  auf dieselbe Taste), die Zurück-Taste des Browsers ist nicht eingebunden.
+
+**Regel in Klartext** (`src/utils/print/printFormatRules.js`): Gespeichert bleibt je Format das Fotolimit
+`maxPhotos` (oder `null` für „alle übrigen“), gewählt wird wie bisher mit `selectPrintFormat`.
+`describeFormatRules(formats)` macht daraus je Format einen Bereich (`range` von/bis, `rest` ab, `all`) oder
+`unused`, wenn das Format nie gewählt würde (zweites Format ohne Limit, das erste der Liste gewinnt). Ein
+Test hält die Beschreibung mit `selectPrintFormat` gleich. Im Editor stellt man „Rezepte mit höchstens N
+Fotos“ oder „alle übrigen Rezepte“ ein; die Zeile darunter nennt den Bereich, der sich mit den anderen
+Formaten ergibt, und welches Format dadurch verdrängt würde. Das einzige Format für den Rest kann seine
+Regel nicht wechseln und nicht entfernt werden.
+
+**Speichern** (`PrintFormatsSettings`, Funktion `commit`): Gespeichert wird je Handlung, nicht mehr gesammelt.
+Die Formate liegen als ein Feld in `settings/app`, jedes Speichern schreibt deshalb die ganze Liste. `commit`
+zeigt die neue Liste sofort, speichert der Reihe nach (ein zweites Speichern wartet auf das erste), lädt
+danach den gespeicherten Stand und nimmt die Anzeige zurück, wenn das Speichern scheitert.
+- „Speichern“ im Editor schreibt das eine Format an seinem Platz, ein neues ans Ende. „Neues Format“ und
+  „Duplizieren“ öffnen nur einen Entwurf mit der nächsten freien Fotoanzahl (`newFormatMaxPhotos`).
+- Entfernen speichert sofort; `useUndoableDelete` zeigt sechs Sekunden „Rückgängig“, das das Format am alten
+  Platz wieder einfügt und erneut speichert. Hat inzwischen ein anderes Format dieselbe Fotoanzahl, kommt es
+  ohne Regel zurück.
+- Mit ungespeicherten Änderungen fragt „Zurück“ nach (`ConfirmDialog`), der Browser warnt vor dem Schließen.
+
+**Listen, die sich nicht speichern lassen:** `repairPrintFormats` korrigiert beim Laden Namen und Regeln, die
+die Prüfung beim Speichern ablehnen würde (leerer Name, ungültige oder doppelte Fotoanzahl, kein Format für
+den Rest). Weil jedes Format einzeln bearbeitet wird, ließe sich eine solche Liste sonst nie wieder speichern.
+Die Übersicht nennt jede Korrektur und bietet „Jetzt speichern“ an; bis dahin ist nichts geschrieben.
 
 ### Bausteine
 
+Seit Stufe 2 liegt das Modul in zwei eigenen Ordnern, dazu ein Firestore-Modul und ein Wörterbuch.
+
 | Datei | Aufgabe |
 |---|---|
-| `src/utils/printElements.js` | **Element-Registry**: IDs, Labels, Farben, Defaults für Hoch-/Querformat |
-| `src/utils/printLayout.js` | reine Geometrie (cm/%, Rotation, Snap, CSS-Stil eines Elements) |
-| `src/utils/printFormats.js` | Formatwahl, Migration auf v3, Validierung, Erzeugen/Duplizieren |
-| `src/utils/printRecipe.js` | Rezeptdaten und Formulierungen für den Druck (eine Quelle) |
-| `src/components/PrintPage.js` | **der** Renderer für Vorschau und Druck |
-| `src/components/printElementRenderers.js` | ein Renderer pro Element |
-| `src/components/printRunner.js` | Druckablauf (`#print-root`, `@page`, `window.print()`, Aufräumen) |
-| `src/components/PrintFormatEditor.js` + `printEditor/` | WYSIWYG-Editor |
-| `src/components/PrintFormatsSettings.js` | Formatliste, Speichern, Löschen mit Rückgängig |
-| `src/utils/printTemplates.js` | Vorlagen, Stiloptionen, Normalisierung, Konvertierung |
-| `src/components/FlowPage.js` | Renderer für Vorlagen (Fließlayout, Seitenumbruch-Markierung) |
-| `src/components/TemplateFormatEditor.js` + `templateEditor/` | Vorlagen-Galerie, Stilregler, schwebende Formatleiste |
+| `src/utils/print/printTemplates.js` | Vorlagen, Stiloptionen, Normalisierung von Stil und Einzelformatierung, Papierformate (`findPaperPreset`, `describePaper`) |
+| `src/utils/print/printFormats.js` | Formatwahl, Umstellung und Normalisierung beim Lesen (`migrateFormat`), Validierung, Erzeugen/Duplizieren |
+| `src/utils/print/printFormatRules.js` | die Regel je Format in Worten (`describeFormatRules`, Sätze und Kurzformen), Fotoanzahl eines neuen Formats, Korrektur nicht speicherbarer Listen (`repairPrintFormats`) |
+| `src/utils/print/printLayout.js` | Seitenmaß A4 und Schriftarten, Seitengröße eines Formats, Textformatierung eines Elements |
+| `src/utils/print/printRecipe.js` | Rezeptdaten und Formulierungen für den Druck (eine Quelle); `druckTexte(sprache)` liefert die Texte aus dem Wörterbuch |
+| `src/utils/print/printSampleRecipe.js` | Beispielrezept für Miniaturen und die Vorschau ohne gewähltes Rezept |
+| `src/utils/printFormatsFirestore.js` | Laden und Speichern in `settings/app` (`getPrintFormats`, `loadPrintFormatsForEditing`, `savePrintFormats`), Sicherungen |
+| `src/i18n/texte/druck.js` | die festen Texte des Blatts auf Deutsch, Englisch und Französisch |
+| `src/components/print/PrintPage.js` | Einstieg des Renderers für Vorschau und Druck: reicht an `FlowPage` weiter und lädt `PrintPage.css` |
+| `src/components/print/FlowPage.js` | **der** Renderer: Fließlayout, Auswahl in der Vorschau, Seitenumbruch-Markierung |
+| `src/components/print/printElementRenderers.js` | ein Renderer je Teil des Rezepts (Titel, Autor & Datum, Infos, Zutaten, Zubereitung, Foto 1–4) |
+| `src/components/print/printRunner.js` | Druckablauf (`#print-root`, `@page`, `window.print()`, Aufräumen) |
+| `src/components/print/usePreviewScale.js` | Maßstab, mit dem das Blatt in die Vorschau passt |
+| `src/components/print/TemplateFormatEditor.js` + `templateEditor/` | Vorlagen-Galerie, Stilregler, schwebende Formatleiste; `TemplateFormatEditor.css` enthält auch die gemeinsamen Bedienelemente (`pfe-select`, `pfe-hint`, `pfe-props-number`, `pfe-props-color`) |
+| `src/components/print/PrintFormatsSettings.js` | Reiter „Drucklayout“: Laden, Speichern der Reihe nach (`commit`), Entfernen mit Rückgängig, welches Format gerade im Editor ist |
+| `src/components/print/PrintFormatsOverview.js`, `PrintFormatCard.js` + `PrintFormatsSettings.css` | Übersicht: Karten, Leiste „So wählt die App beim Drucken“, „Prüfen mit Rezept“, Hinweise zu umgestellten und korrigierten Formaten |
+| `src/components/print/PrintFormatScreen.js` + `.css` | Editor im Vollfenster: Leiste mit Name, Regel und Speichern, Rückfrage beim Verwerfen, Rezept der Vorschau |
 
-`customLists.js` re-exportiert die Print-Namen aus Kompatibilitätsgründen.
+Von außen greifen nur drei Stellen zu: `Settings.js` bindet `PrintFormatsSettings` ein, `RecipeDetail.js`
+wählt das Format (`selectPrintFormat`, `getPrintFormats`) und druckt (`printRecipe`), `customLists.js` nimmt
+`DEFAULT_PRINT_FORMATS` als Standardwert der Settings. `customLists.js` re-exportiert nichts mehr aus dem
+Druckmodul. Der Settings-Cache gehört weiter `customLists.js`; das Firestore-Modul trägt dort über
+`updateSettingsCache` ein, was es gelesen oder gespeichert hat (Speicher und localStorage, sonst gälte nach
+einem Neuladen bis zu einer Stunde der alte Stand).
+
+### Sprache
+
+Gedruckt wird immer deutsch. Die festen Texte (Überschriften, „Von … erstellt am …“, Minuten, Schwierigkeit,
+Platzhalter der Vorschau) stehen in `src/i18n/texte/druck.js` in drei Sprachen. Weil das Blatt außerhalb des
+React-Baums der App entsteht, holt es sie nicht über `useTexte`, sondern über `druckTexte(sprache)`; ohne
+Sprache gilt Deutsch. `printRecipe`, `PrintPage` und `FlowPage` nehmen `sprache` schon entgegen, kein Aufrufer
+gibt sie mit. Phase B des Vorhabens Mehrsprachigkeit muss dort nur die Sprache der App durchreichen und die
+Rezeptinhalte übersetzt übergeben. Der Wortlaut folgt der Rezeptansicht (`rezeptansicht.js`). Das Datum kommt
+aus `formatiereDatum` (`src/i18n/format.js`).
 
 ### Datenmodell (layoutVersion 3)
 
@@ -361,44 +430,21 @@ Beide werden von `PrintPage` gerendert (`FlowPage` für Vorlagen) und gedruckt.
 {
   id, name,
   maxPhotos,            // null = gilt für alle; sonst Format gilt bei Fotoanzahl <= maxPhotos
+  layoutType: 'flow',
+  template: 'classic',  // Vorlage, von der der Stil ausging
   orientation,          // 'portrait' | 'landscape' (aus Seitenmaßen abgeleitet)
   pageWidthCm, pageHeightCm,   // immer explizit, 5..200
-  fontFamily,
+  fontFamily,           // gleich style.fontFamily
   layoutVersion: 3,
-  elements: [{ id, x, y, w, h, visible, rotation?, fontSizeScale?, fontBold?, ..., aspectRatio? }],
-  migrationNotes?: ['legacy-layout-replaced']
-}
-```
-
-**Koordinaten:** `x, y, w, h` sind ALLE Prozent der **Seitenbreite**. Für CSS wird `y`/`h`
-mit `Breite/Höhe` auf Prozent der Seitenhöhe umgerechnet (`elementBox` in `printLayout.js`).
-
-**Formatwahl:** `selectPrintFormat(formats, fotoanzahl)` nimmt unter den Formaten mit
-`maxPhotos >= fotoanzahl` das mit dem kleinsten Wert (bei Gleichstand das zuerst gelistete).
-Gibt es keins, gilt das Format ohne `maxPhotos`.
-
-**Migration:** `migrateFormat` (v1 → v2 → v3) ist rein und idempotent und läuft beim **Lesen**.
-Es wird nie automatisch zurückgeschrieben. Erst „Druckformate speichern" persistiert v3.
-Vor dem ersten v3-Speichern wird der alte Stand einmalig in `settings/app.printFormatsBackup`
-gesichert (Rollback: Inhalt zurück nach `printFormats` kopieren). v3 bleibt abwärtskompatibel
-zu v2 (gleiche Koordinaten), ältere App-Versionen zeigen es weiter korrekt an.
-
-**Validierung** (`validatePrintFormats`, blockiert das Speichern): mindestens ein Format
-ohne `maxPhotos`, Name nicht leer, `maxPhotos` eindeutig und ganzzahlig ≥ 0, Seitenmaße
-5–200 cm, Format ≤ 8 KB.
-
-### Vorlagen (Fließlayout)
-
-```js
-{ layoutType: 'flow', template: 'classic',
   style: { fontFamily, baseSize, accent, spacing, headingStyle, titleAlign, metadataStyle,
            photoPosition, photoSize, photoAspect, photoCount, columns, tintIngredients,
            marginCm, show: { title, authorDate, metadata, photos, ingredients, steps } },
-  overrides: { title: { fontSizeScale, fontBold, fontItalic, fontUnderline, fontColor, textAlignH } } }
+  overrides: { title: { fontSizeScale, fontBold, fontItalic, fontUnderline, fontColor, textAlignH } }
+}
 ```
 
 * `style` ist immer vollständig (beim Anwenden einer Vorlage werden alle Werte geschrieben), `overrides` enthält nur
-  Abweichungen einzelner Elemente. Eine Vorlage anzuwenden setzt beides zurück (mit Rückfrage, wenn es Änderungen gibt).
+  Abweichungen einzelner Elemente. Eine Vorlage anzuwenden setzt beides zurück (mit Rückfrage im `ConfirmDialog`, wenn es Änderungen gibt).
 * Die Normalisierung (`normalizeFlowStyle`, `normalizeFlowOverrides`) korrigiert unbekannte oder ungültige Werte beim Lesen.
 * Der **Seitenrand** wird im Druck als `@page margin` gesetzt (`printRunner`), die Inhaltsbreite ist Seitenbreite minus Ränder.
   Der Browser bricht die Seiten um; Listeneinträge und Überschriften werden nicht getrennt.
@@ -406,35 +452,78 @@ ohne `maxPhotos`, Name nicht leer, `maxPhotos` eindeutig und ganzzahlig ≥ 0, S
 * **Klick in der Vorschau:** `FlowPage` zeichnet jedes Element mit `data-flow-el`; `TemplateFormatEditor` positioniert die
   Formatleiste (`FloatingToolbar`) am angeklickten Element.
 
+**Formatwahl:** `selectPrintFormat(formats, fotoanzahl)` nimmt unter den Formaten mit
+`maxPhotos >= fotoanzahl` das mit dem kleinsten Wert (bei Gleichstand das zuerst gelistete).
+Gibt es keins, gilt das Format ohne `maxPhotos`. Ist nichts gespeichert, gilt `DEFAULT_PRINT_FORMATS`:
+die Vorlage „Klassisch“ auf A4 hoch.
+
+**Validierung** (`validatePrintFormats`, blockiert das Speichern): mindestens ein Format
+ohne `maxPhotos`, Name nicht leer, `maxPhotos` eindeutig und ganzzahlig ≥ 0, Seitenmaße
+5–200 cm, Seitenrand 0–5 cm, Format ≤ 8 KB.
+
 **Neue Vorlage:** Eintrag in `PRINT_TEMPLATES` (`printTemplates.js`) mit den abweichenden Stilwerten. Ein Test prüft, dass jede
 Vorlage gültig ist und sich von den anderen unterscheidet.
+
+**Neuer Teil des Rezepts auf dem Blatt:** Eintrag in `FLOW_ELEMENTS` (`printTemplates.js`), Renderer in
+`PRINT_ELEMENT_RENDERERS` (`printElementRenderers.js`) und sein Platz in `FlowPage.js`. Achtung:
+`normalizeFlowStyle` zeigt jeden Teil an, den ein gespeichertes Format nicht ausdrücklich ausblendet. Soll ein
+neuer Teil in bestehenden Formaten zunächst fehlen, braucht er dort einen eigenen Standard.
+
+### Umstellung freier Formate
+
+`migrateFormat` (`printFormats.js`) ist rein und idempotent und läuft bei **jedem Lesen** (`getPrintFormats`
+für den Druck, `loadPrintFormatsForEditing` für die Einstellungen). Vorlagen-Formate werden dabei nur
+normalisiert. Alles ohne `layoutType: 'flow'` wird zur Vorlage „Klassisch“: das freie Layout jeder
+`layoutVersion`, das noch ältere Flex-Layout (`elementOrder`, `imageWidth`, `imageAlign`, `imageColumns`) und
+defekte Daten.
+
+| | |
+|---|---|
+| Übernommen | `id`, `name`, `maxPhotos`, Seitengröße und Ausrichtung (geklemmt auf 5–200 cm), Schriftart |
+| Sichtbarkeit | Titel, Autor & Datum, Infos, Zutaten und Zubereitung sind zu sehen, wenn ihr Kasten nicht ausgeblendet war |
+| Fotos | Die Zahl der sichtbaren Fotokästen (Foto 1–4) wird zur Fotoanzahl; war keiner sichtbar: „Ohne Foto“ |
+| Fehlende Kästen | zählen so, wie das freie Layout sie ergänzte: sichtbar, außer Foto 2–4 |
+| Nicht übernommen | Positionen, Größen, Drehung, Rahmen und die Formatierung einzelner Kästen, ebenso die eigenen Kästen „Überschrift Zutaten/Zubereitung“ (die Vorlage setzt die Überschriften selbst) |
+
+Umgestellte Formate tragen beim Lesen `migrationNotes: ['free-layout-converted']` (`isConvertedFreeFormat`).
+Daran hängt der Hinweis im Reiter Drucklayout (oben in der Übersicht und an der Karte); dort lässt sich dann
+auch ohne weitere Änderung speichern („Jetzt speichern“ in der Übersicht, „Speichern“ im Editor).
+
+**Schreiben:** Es wird nie automatisch zurückgeschrieben. Erst ein Speichern in den Einstellungen legt die
+Vorlagen in Firestore ab. Seit Stufe 3 ist das jedes Speichern dort: Weil immer die ganze Liste geschrieben
+wird, übernimmt auch das Speichern oder Entfernen eines anderen Formats die Umstellung (der Hinweis in der
+Übersicht sagt das). `savePrintFormats` speichert `migrationNotes` nicht mit, der Hinweis ist danach weg.
+
+**Sicherungen** in `settings/app`, je einmalig und nie überschrieben:
+
+| Feld | Inhalt |
+|---|---|
+| `printFormatsBackup` | Stand vor dem ersten Speichern einer Konfiguration mit `layoutVersion` < 3 (Umbau vom 04.10.2026) |
+| `printFormatsBackupFreiesLayout` | Stand vor dem ersten Speichern, das Formate des freien Layouts ersetzt (25.11.2026) |
+
+Rollback: Inhalt des Feldes zurück nach `printFormats` kopieren. Frei drucken und bearbeiten lassen sich die
+Formate dann nur mit einer App-Version vor dem 25.11.2026; die aktuelle stellt sie beim Lesen wieder um.
+Als „gespeicherter Stand“ gilt, was der Einstellungs-Cache (`getSettings`) liefert; seit Stufe 2 führt jedes
+Speichern und jedes Laden für die Einstellungen ihn nach.
+
+**Ältere App-Versionen** (PWA-Cache): Solange niemand gespeichert hat, lesen sie weiter die freien Formate und
+drucken wie bisher. Nach dem Speichern liegen Vorlagen in Firestore, die jede Version seit Einführung der
+Vorlagen druckt.
 
 ### Druckablauf
 
 1. `RecipeDetail.handlePrint` wählt das Format und ruft `printRecipe(...)`.
 2. `printRunner` rendert `<PrintPage mode="print">` in `#print-root` (am Bildschirm
-   `display: none`), setzt `@page { size: B cm H cm; margin: 0 }`, wartet auf Schriften
-   und Bilder und ruft `window.print()`.
+   `display: none`), setzt `@page { size: B cm H cm; margin: R cm }` (R = Seitenrand der Vorlage), wartet
+   auf Schriften und Bilder und ruft `window.print()`.
 3. Nach `afterprint` (Fallback 30 s) wird alles entfernt. Das Bildschirm-DOM wird nie verändert.
 4. `PrintPage.css` blendet im Druck alles außer `#print-root` aus.
 
 iOS: Das Popup wird synchron im Klick geöffnet und aus `#print-root` befüllt.
 
-Die Seite wird in echter Größe (cm) gelayoutet. Die Vorschau skaliert sie nur per
-`transform`, deshalb stimmen Umbrüche und Überlauf mit dem Druck überein.
-Text, der nicht in seine Box passt, wird abgeschnitten. In der Vorschau zeigt ein Badge
-„abgeschnitten" das an. Mehrseitiger Druck ist nicht umgesetzt.
-
-### Neues Element hinzufügen
-
-1. Eintrag in `PRINT_FORMAT_ELEMENTS` und Defaults in `DEFAULT_PRINT_ELEMENTS_PORTRAIT` und
-   `..._LANDSCAPE` (`printElements.js`). Neue Elemente standardmäßig `visible: false`, damit
-   gespeicherte Formate unverändert aussehen.
-2. Renderer in `PRINT_ELEMENT_RENDERERS` (`printElementRenderers.js`). Ein Test stellt sicher,
-   dass jede Registry-ID genau einen Renderer hat.
-3. Snapshot-Test in `printElements.test.js` aktualisieren (`-u`) und die Änderung bewusst prüfen.
-
-Editor, Vorschau, Druck und Settings brauchen keine Änderung.
+Das Blatt wird in echter Breite (cm) gelayoutet. Die Vorschau skaliert es nur per `transform`, deshalb
+stimmen die Zeilenumbrüche mit dem Druck überein. Abgeschnitten wird nichts: Ist der Inhalt länger als
+eine Seite, druckt der Browser weitere Seiten.
 
 ## Refactoring Druck-Layoutvorlagen – Akzeptanzkriterien
 

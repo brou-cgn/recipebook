@@ -33,7 +33,6 @@ const NUR_DEUTSCH = new Set([
   // Einstellungen › Listen & Kategorien: Übersetzungen der Listen (Mehrsprachigkeit PR 5)
   'components/ListenUebersetzungen.js',
   'components/NutritionReferenceTab.js',
-  'components/PrintFormatsSettings.js',
   'components/SeasonMatrixTab.js',
   'components/Settings.js',
   // Einstellungen › KI: Backfill der Titel- und Inhaltsübersetzungen (Mehrsprachigkeit PR 3 und 4)
@@ -49,27 +48,27 @@ const NUR_DEUTSCH = new Set([
   'components/CallLogPanel.js',
   'components/EventplanungPage.js',
   'components/KalibrierungsAuswertung.js',
-  // Einstellungen › Druckformate: Druck- und Vorlagen-Editor, nur über PrintFormatsSettings erreichbar
-  // (Mehrsprachigkeit PR 6h). Die Druckausgabe selbst (printElementRenderers.js) folgt mit Phase B.
-  'components/PrintFormatEditor.js',
-  'components/TemplateFormatEditor.js',
-  'components/printEditor/EditorCanvas.js',
-  'components/printEditor/EditorToolbar.js',
-  'components/printEditor/ElementPropsPanel.js',
-  'components/printEditor/VisibilityChips.js',
-  'components/templateEditor/FloatingToolbar.js',
-  'components/templateEditor/Segmented.js',
-  'components/templateEditor/StylePanel.js',
-  'components/templateEditor/TemplateGallery.js',
+  // Einstellungen › Drucklayout: Übersicht der Formate, Editor im Vollfenster und Vorlagen-Editor
+  // (Mehrsprachigkeit PR 6h; seit Stufe 2 des Vorhabens Drucklayout im Ordner components/print/, seit
+  // Stufe 3 mit Übersicht, Karte und Editor-Fenster als eigenen Dateien). Die Druckausgabe selbst
+  // (FlowPage.js, printElementRenderers.js) holt ihre Texte aus src/i18n/texte/druck.js und wird gezählt.
+  'components/print/PrintFormatCard.js',
+  'components/print/PrintFormatScreen.js',
+  'components/print/PrintFormatsOverview.js',
+  'components/print/PrintFormatsSettings.js',
+  'components/print/TemplateFormatEditor.js',
+  'components/print/templateEditor/FloatingToolbar.js',
+  'components/print/templateEditor/Segmented.js',
+  'components/print/templateEditor/StylePanel.js',
+  'components/print/templateEditor/TemplateGallery.js',
 ]);
 
-// Stand 23.11.2026 (PR 6s: Gruppen und Netzwerk): 85 Textstellen in 5 Dateien.
+// Stand 25.11.2026 (Vorhaben Drucklayout, Stufe 2: die Texte des Druckblatts stehen im Wörterbuch
+// src/i18n/texte/druck.js): 77 Textstellen in 2 Dateien. Davor am selben Tag 82 in 4 Dateien (Stufe 1),
+// am 23.11.2026 (PR 6s) 85 in 5 Dateien.
 const BASELINE = {
-  'components/FlowPage.js': 3,
-  'components/PrintPage.js': 2,
   'components/WichtelPage.js': 66,
   'components/WichtelTeilnehmerFormular.js': 11,
-  'components/printElementRenderers.js': 3,
 };
 
 function files(dir) {

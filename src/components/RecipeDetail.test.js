@@ -71,6 +71,10 @@ jest.mock('../utils/recipeVersioning', () => ({
   sortRecipeVersions: (recipes) => recipes,
 }));
 
+jest.mock('../utils/printFormatsFirestore', () => ({
+  getPrintFormats: jest.fn(() => Promise.resolve([])),
+}));
+
 jest.mock('../utils/customLists', () => ({
   getCustomLists: () => Promise.resolve({
     portionUnits: [
@@ -92,7 +96,6 @@ jest.mock('../utils/customLists', () => ({
   getTimelineBubbleIcon: () => Promise.resolve(null),
   getTimelineCookEventBubbleIcon: () => Promise.resolve(null),
   getTimelineCookEventDefaultImage: () => Promise.resolve(null),
-  getPrintFormats: () => Promise.resolve([]),
   DEFAULT_BUTTON_ICONS: { cookingMode: '👨‍🍳', closeButton: '✕' },
   getEffectiveIcon: (icons, key) => icons[key] ?? '',
   getEffectiveCuisineIcon: (cuisineIcons, cuisineName, isDarkMode) => {
@@ -196,7 +199,7 @@ describe('RecipeDetail - Portion Controller', () => {
     const getTimelineBubbleIconSpy = jest.spyOn(customLists, 'getTimelineBubbleIcon').mockReturnValue(bubbleIconPromise);
     const getTimelineCookEventBubbleIconSpy = jest.spyOn(customLists, 'getTimelineCookEventBubbleIcon').mockResolvedValue(null);
     const getTimelineCookEventDefaultImageSpy = jest.spyOn(customLists, 'getTimelineCookEventDefaultImage').mockResolvedValue(null);
-    const getPrintFormatsSpy = jest.spyOn(customLists, 'getPrintFormats').mockResolvedValue([]);
+    const getPrintFormatsSpy = jest.spyOn(require('../utils/printFormatsFirestore'), 'getPrintFormats').mockResolvedValue([]);
 
     try {
       render(

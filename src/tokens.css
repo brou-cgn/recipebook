@@ -117,23 +117,19 @@
      gepflegten Zeitleisten-Icons weiß sind (früher auf einer fast schwarzen Blase) */
   --color-timeline-bild: #f0f0f0;
   --color-timeline-rezept: #1a1a1a;
-  /* Druck- und Vorlagen-Editor (Einstellungen › Drucklayout): warme Bedienflächen, vorher feste Farben
-     in PrintFormatEditor.css, TemplateFormatEditor.css und Settings.css (Tech-Check P17). Die
-     Seitenvorschau ist Papier und bleibt in beiden Modi weiß mit dunkler Schrift (PrintPage.css). */
+  /* Vorlagen-Editor (Einstellungen › Drucklayout): warme Bedienflächen, vorher feste Farben
+     in components/print/ (TemplateFormatEditor.css, PrintFormatsSettings.css; Tech-Check P17). Die
+     Seitenvorschau ist Papier und bleibt in beiden Modi weiß mit dunkler Schrift (FlowPage.css). */
   --color-print-panel: #fdfaf6;
-  --color-print-panel-strong: #fdf6ec;
   --color-print-text: #5a3e2b;
   --color-print-on-text: #fff;
   --color-print-border: #d9c9b8;
   --color-print-border-control: #c8b8a2;
   --color-print-border-hover: #b9a58c;
   --color-print-hover: #f0e8dc;
-  --color-print-active-border: #8b5e3c;
   --color-print-selected: #1a73e8;
   --color-print-selected-tint: #dbe8fb;
   --color-print-selected-glow: rgba(26, 115, 232, 0.2);
-  /* Schrift auf den Pastellfarben der Druck-Elemente (Chips): in beiden Modi dunkel */
-  --color-print-on-element: #333;
   /* Maße der Knöpfe (Tech-Check A10): Höhe auf dem Handy bis 768 px Breite */
   --radius-button: 8px;
   --height-button: 40px;
@@ -238,16 +234,13 @@
   --color-timeline-rezept: #555;
   /* Druck-Editor dunkel: warme Flächen zwischen --color-surface-card und --color-surface */
   --color-print-panel: #24211e;
-  --color-print-panel-strong: #2b2621;
   --color-print-text: #e0c9b0;
   --color-print-on-text: #1e1a16;
   --color-print-border: #4a4037;
   --color-print-border-control: #5e5247;
   --color-print-border-hover: #7d6c5c;
   --color-print-hover: #3a322b;
-  --color-print-active-border: #c79b74;
   --color-print-selected: #7fb0ff;
   --color-print-selected-tint: #1d3352;
   --color-print-selected-glow: rgba(127, 176, 255, 0.3);
-  --color-print-on-element: #333;
 }

@@ -6,7 +6,7 @@ import { defaultIcon, DEFAULT_ICON_NAMES } from './defaultButtonIcons';
 import { DEFAULT_ADD_NUTRITION_ICON } from './nutritionIconUtils';
 import { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField, collection, writeBatch, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { normalizeNutritionReferenceId } from './nutritionReferenceUtils';
-import { DEFAULT_PRINT_FORMATS, migrateFormat, validatePrintFormats, PrintFormatValidationError } from './printFormats';
+import { DEFAULT_PRINT_FORMATS } from './print/printFormats';
 import { getDefaultButtonIconGroups, reconcileButtonIconGroups, reconcileCuisineTypeGroup, reconcileMealCategoriesGroup, cuisineTypeIconKey } from './buttonIconRows';
 import { ALARM_SOUND_DEFINITIONS, DEFAULT_ALARM_SOUND, normalizeAlarmSoundKey } from './alarmSounds';
 
@@ -232,25 +232,6 @@ export const DEFAULT_CONVERSION_TABLE = [
 
 export const DEFAULT_SLOGAN = 'Unsere besten Momente';
 export const DEFAULT_FAVICON_TEXT = 'brouBook';
-
-// Print format constants, element registry and format logic live in
-// printElements.js / printLayout.js / printFormats.js; re-exported here so
-// existing imports from customLists keep working.
-export * from './printElements';
-export {
-  PRINT_FORMAT_LAYOUT_VERSION,
-  DEFAULT_PRINT_FORMATS,
-  selectPrintFormat,
-  migrateFormatToV2,
-  migrateFormat,
-  validatePrintFormats,
-  PrintFormatValidationError,
-  createPrintFormat,
-  createFlowFormat,
-  convertToFlowFormat,
-  duplicatePrintFormat,
-} from './printFormats';
-export * from './printTemplates';
 
 /**
  * Default cuisine groups – each entry defines a parent type with its child types.
@@ -1812,6 +1793,20 @@ export async function saveFaviconText(text) {
 }
 
 /**
+ * Trägt Felder, die gerade aus settings/app gelesen oder dorthin geschrieben wurden, in den
+ * Settings-Cache ein (Speicher und localStorage), damit der Rest der App sie ohne neuen
+ * Lesezugriff sieht, auch nach einem Neuladen innerhalb der Cache-Lebensdauer. Ohne geladene
+ * Settings geschieht nichts. Für die *Firestore.js-Module, denen ein Feld von settings/app
+ * gehört (printFormatsFirestore.js).
+ * @param {Object} fields
+ */
+export function updateSettingsCache(fields) {
+  if (!settingsCache) return;
+  Object.assign(settingsCache, fields);
+  saveSettingsToLocalStorageCache(settingsCache);
+}
+
+/**
  * Clear the settings cache (useful when settings are updated)
  */
 export function clearSettingsCache() {
@@ -2554,73 +2549,3 @@ export async function saveInspirationListSettings({ inspirationListName, inspira
     throw error;
   }
 }
-
-/**
- * Get print format configurations from Firestore or return defaults.
- * @returns {Promise<Array>} Promise resolving to array of print format objects
- */
-export async function getPrintFormats() {
-  const settings = await getSettings();
-  const formats = settings.printFormats && settings.printFormats.length > 0
-    ? settings.printFormats
-    : DEFAULT_PRINT_FORMATS;
-  return formats.map(migrateFormat);
-}
-
-/**
- * Loads the print formats for the settings editor straight from Firestore.
- * Unlike getPrintFormats() this bypasses the settings cache and does NOT swallow
- * errors: a failed read throws, so the editor never mistakes the built-in defaults
- * for the stored formats and overwrites them on save.
- *
- * @returns {Promise<{formats: Array, usingDefaults: boolean}>}
- */
-export async function loadPrintFormatsForEditing() {
-  const snap = await getDoc(doc(db, 'settings', 'app'));
-  const stored = snap.exists() ? snap.data().printFormats : null;
-  const usingDefaults = !Array.isArray(stored) || stored.length === 0;
-  const formats = (usingDefaults ? DEFAULT_PRINT_FORMATS : stored).map(migrateFormat);
-  if (settingsCache && !usingDefaults) settingsCache.printFormats = stored;
-  return { formats, usingDefaults };
-}
-
-/**
- * Save print format configurations to Firestore.
- *
- * Validates first (throws PrintFormatValidationError). Before the first save of a
- * pre-v3 configuration the previous formats are kept in `printFormatsBackup`
- * so the migration can be rolled back; an existing backup is never overwritten.
- *
- * @param {Array} printFormats - Array of print format objects
- * @returns {Promise<void>}
- */
-export async function savePrintFormats(printFormats) {
-  const errors = validatePrintFormats(printFormats);
-  if (errors.length > 0) {
-    throw new PrintFormatValidationError(errors);
-  }
-  try {
-    const settingsRef = doc(db, 'settings', 'app');
-    const update = { printFormats };
-
-    const current = await getSettings();
-    const stored = current?.printFormats;
-    const needsBackup = Array.isArray(stored) && stored.length > 0
-      && stored.some((f) => (f?.layoutVersion || 1) < 3)
-      && !current.printFormatsBackup;
-    if (needsBackup) {
-      update.printFormatsBackup = stored;
-    }
-    await updateDoc(settingsRef, update);
-
-    // Update cache
-    if (settingsCache) {
-      settingsCache.printFormats = printFormats;
-      if (update.printFormatsBackup) settingsCache.printFormatsBackup = update.printFormatsBackup;
-    }
-  } catch (error) {
-    console.error('Error saving print formats:', error);
-    throw error;
-  }
-}
-

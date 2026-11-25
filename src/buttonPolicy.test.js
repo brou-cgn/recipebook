@@ -8,7 +8,7 @@
  * Regel setzt background oder background-color auf eine Farbe. Ausgenommen sind Bausteine
  * außerhalb des Systems: schwebende runde Knöpfe (fab), DeleteRowButton und sein neutrales Gegenstück
  * RowIconButton, Chips, Tabs, Schalter, Pillen, Bilder in Knöpfen (image, img), die Werkzeug-Schalter
- * der Druck- und Vorlagen-Editoren
+ * des Vorlagen-Editors der Druckformate
  * (Fett/Kursiv, Ausrichtung, Segmente, schwebende Werkzeugleiste: umschaltbare Formatierung, keine
  * Aktion mit Rolle), Symbol-Knöpfe ohne Text (konfigurierbare Icons, Suche und Menü in der Kopfzeile,
  * Suchfeld leeren), die Bedienelemente der Rezeptansicht mit eigener Gestalt (Plus/Minus der Portionen,
@@ -26,9 +26,9 @@ const EXEMPT_FILES = ['tokens.css', 'darkMode.css', 'Button.css'];
 const BUTTON_CLASS = /(^|[-_])(btn|button)([-_]|$)/;
 const OUTSIDE_SYSTEM = /fab|delete-row|row-icon|chip|tab|toggle|switch|pill|ui-button|image|img/;
 const NO_SURFACE = /^(transparent|none|inherit|initial|unset|revert)(\s*!important)?$/i;
-// Werkzeug-Schalter der Editoren (printEditor/ElementPropsPanel.js, templateEditor/Segmented.js und
-// FloatingToolbar.js): aria-pressed bzw. role="radio", gehören nicht ins Rollen-System
-const EDITOR_TOOLS = /^(pfe-style-btn|pfe-align-btn|tfe-seg-btn|tfe-tb-btn)/;
+// Werkzeug-Schalter des Vorlagen-Editors (print/templateEditor/Segmented.js und FloatingToolbar.js):
+// aria-pressed bzw. role="radio", gehören nicht ins Rollen-System
+const EDITOR_TOOLS = /^(tfe-seg-btn|tfe-tb-btn)/;
 // Symbol-Knöpfe ohne Text: Ihre Gestalt ist das Symbol, keine Rolle, daher nicht über components/Button.js.
 // Die Symbole, die unter „Bilder & Icons“ konfigurierbar sind (Rezeptansicht: Favorit, Privat, Kochdatum;
 // Rezeptformular: Zutat/Schritt hinzufügen, Webimport, Foto-Scan, Import; Rezept- und Menüliste: Filter, Favoriten,
@@ -129,7 +129,7 @@ describe('Button-System (Tech-Check A8)', () => {
       .toolbar button.ui-button { background: #fff; }
       .unit-typeahead-dropdown button:hover { background: #eee; }
       .ingredient-context-menu button:hover { background: #eee; }
-      .pfe-style-btn--active { background: #5a3e2b; }
+      .tfe-tb-btn--active { background: #5a3e2b; }
       .tfe-seg-btn { background: #fff; }
       .favorite-button--active { background: #fde8e8; }
       .serving-btn:hover { background: #402c1c; }
