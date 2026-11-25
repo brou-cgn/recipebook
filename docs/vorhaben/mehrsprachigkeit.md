@@ -190,8 +190,10 @@ aktualisieren.
   nach dem Deploy Fehler: eine gepflegte Liste geschützter Begriffe in den Einstellungen, die an beide Prompts geht und
   nach der Übersetzung geprüft wird (fehlt ein Begriff, wird die Übersetzung verworfen). Robust, aber deutlich mehr
   Aufwand; erst bauen, wenn es nötig ist.
-- **Rest der Baseline (85 Textstellen):** Wichteln (77, nach der Saison, siehe „Wichtel-Seite“) und der Druck
-  (`FlowPage.js`, `PrintPage.js`, `printElementRenderers.js`, 8, Phase B). Gruppen und Netzwerk seit PR 6s übersetzt.
+- **Rest der Baseline (82 Textstellen):** Wichteln (77, nach der Saison, siehe „Wichtel-Seite“) und der Druck
+  (`FlowPage.js`, `printElementRenderers.js`, 5, Phase B; bis 25.11.2026 waren es 85 und 8, drei Texte des freien
+  Layouts entfielen mit Stufe 1 des Vorhabens Drucklayout, `docs/vorhaben/drucklayout.md`). Gruppen und Netzwerk seit
+  PR 6s übersetzt.
 - **Automatisch übersetzte Listenwerte prüfen (PR 6t):** Nach dem Deploy füllt der Trigger beim ersten Speichern
   einer Liste auch alle älteren Lücken. Danach unter Einstellungen › Listen & Kategorien die mit „KI“ markierten
   Übersetzungen durchsehen, besonders Abkürzungen der Maßeinheiten, und erst dann „Als geprüft markieren“.

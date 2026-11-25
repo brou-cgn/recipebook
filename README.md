@@ -444,8 +444,9 @@ Once installed, RecipeBook works completely offline thanks to:
 
 ## Druck-Layouts
 
-Rezepte lassen sich mit frei gestaltbaren Druckformaten drucken (Einstellungen → Drucklayout).
-Aufbau, Datenmodell und Migration: siehe [Drucklayout](docs/features/druck.md).
+Rezepte werden über Druckformate gedruckt, die auf Vorlagen beruhen (Einstellungen → Drucklayout).
+Aufbau, Datenmodell und Migration: siehe [Drucklayout](docs/features/druck.md); Stand und Plan des
+laufenden Umbaus: [Vorhaben Drucklayout](docs/vorhaben/drucklayout.md).
 
 ## Technology Stack
 

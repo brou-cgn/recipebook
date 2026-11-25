@@ -26,8 +26,12 @@
   break-inside: auto;
 }
 
-/* Papier bleibt Papier, auch im Dunkelmodus und im Ausdruck (Tech-Check P21, siehe PrintPage.css).
-   Eigene Farben auf dem Blatt stehen mit .ppf-sheet davor oder sind spezifischer. */
+/* Papier bleibt Papier, auch im Dunkelmodus und im Ausdruck (Tech-Check P21): darkMode.css färbt
+   h1–h6, p, span, label und li im Dunkelmodus pauschal hell ([data-theme="dark"] li usw., 0-1-1).
+   Das traf die Vorschau und den Ausdruck, denn printRunner druckt im selben Dokument. Auf dem
+   Blatt erben sie die Farbe wie im Hellmodus: vom Blatt oder von der Schriftfarbe des Elements.
+   Eigene Farben auf dem Blatt stehen mit .ppf-sheet davor oder sind spezifischer (auch in
+   PrintPage.css), damit diese Regel sie nicht überschreibt. */
 .ppf-sheet h1,
 .ppf-sheet h2,
 .ppf-sheet h3,

@@ -66,8 +66,6 @@ export default function FlowPage({
     authorName,
     portionLabel,
     mode,
-    showIngredientsHeading: false,
-    showStepsHeading: false,
   };
   const images = getRecipeImages(recipe).slice(0, style.photoCount);
   const photoSize = lookup(FLOW_PHOTO_SIZES, style.photoSize);

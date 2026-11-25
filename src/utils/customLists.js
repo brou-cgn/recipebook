@@ -7,6 +7,7 @@ import { DEFAULT_ADD_NUTRITION_ICON } from './nutritionIconUtils';
 import { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, deleteField, collection, writeBatch, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { normalizeNutritionReferenceId } from './nutritionReferenceUtils';
 import { DEFAULT_PRINT_FORMATS, migrateFormat, validatePrintFormats, PrintFormatValidationError } from './printFormats';
+import { isFlowFormat } from './printTemplates';
 import { getDefaultButtonIconGroups, reconcileButtonIconGroups, reconcileCuisineTypeGroup, reconcileMealCategoriesGroup, cuisineTypeIconKey } from './buttonIconRows';
 import { ALARM_SOUND_DEFINITIONS, DEFAULT_ALARM_SOUND, normalizeAlarmSoundKey } from './alarmSounds';
 
@@ -233,21 +234,18 @@ export const DEFAULT_CONVERSION_TABLE = [
 export const DEFAULT_SLOGAN = 'Unsere besten Momente';
 export const DEFAULT_FAVICON_TEXT = 'brouBook';
 
-// Print format constants, element registry and format logic live in
-// printElements.js / printLayout.js / printFormats.js; re-exported here so
-// existing imports from customLists keep working.
+// Print format constants, templates and format logic live in printElements.js /
+// printFormats.js / printTemplates.js; re-exported here so existing imports from
+// customLists keep working.
 export * from './printElements';
 export {
   PRINT_FORMAT_LAYOUT_VERSION,
   DEFAULT_PRINT_FORMATS,
   selectPrintFormat,
-  migrateFormatToV2,
   migrateFormat,
   validatePrintFormats,
   PrintFormatValidationError,
-  createPrintFormat,
   createFlowFormat,
-  convertToFlowFormat,
   duplicatePrintFormat,
 } from './printFormats';
 export * from './printTemplates';
@@ -2585,9 +2583,14 @@ export async function loadPrintFormatsForEditing() {
 /**
  * Save print format configurations to Firestore.
  *
- * Validates first (throws PrintFormatValidationError). Before the first save of a
- * pre-v3 configuration the previous formats are kept in `printFormatsBackup`
- * so the migration can be rolled back; an existing backup is never overwritten.
+ * Validates first (throws PrintFormatValidationError). The note that marks a format as
+ * converted from the free layout (`migrationNotes`) is not stored.
+ *
+ * Two one-time backups keep the previous stored formats, so a migration can be rolled back
+ * by copying the field back to `printFormats`; an existing backup is never overwritten:
+ *  - `printFormatsBackup`: before the first save of a pre-v3 configuration,
+ *  - `printFormatsBackupFreiesLayout`: before the first save that replaces formats of the
+ *    removed free layout (stored formats without `layoutType: 'flow'`).
  *
  * @param {Array} printFormats - Array of print format objects
  * @returns {Promise<void>}
@@ -2599,22 +2602,33 @@ export async function savePrintFormats(printFormats) {
   }
   try {
     const settingsRef = doc(db, 'settings', 'app');
-    const update = { printFormats };
+    const formats = printFormats.map(({ migrationNotes, ...format }) => format);
+    const update = { printFormats: formats };
 
     const current = await getSettings();
     const stored = current?.printFormats;
-    const needsBackup = Array.isArray(stored) && stored.length > 0
+    const hasStored = Array.isArray(stored) && stored.length > 0;
+    const needsBackup = hasStored
       && stored.some((f) => (f?.layoutVersion || 1) < 3)
       && !current.printFormatsBackup;
     if (needsBackup) {
       update.printFormatsBackup = stored;
     }
+    const needsFreeLayoutBackup = hasStored
+      && stored.some((f) => !isFlowFormat(f))
+      && !current.printFormatsBackupFreiesLayout;
+    if (needsFreeLayoutBackup) {
+      update.printFormatsBackupFreiesLayout = stored;
+    }
     await updateDoc(settingsRef, update);
 
     // Update cache
     if (settingsCache) {
-      settingsCache.printFormats = printFormats;
+      settingsCache.printFormats = formats;
       if (update.printFormatsBackup) settingsCache.printFormatsBackup = update.printFormatsBackup;
+      if (update.printFormatsBackupFreiesLayout) {
+        settingsCache.printFormatsBackupFreiesLayout = update.printFormatsBackupFreiesLayout;
+      }
     }
   } catch (error) {
     console.error('Error saving print formats:', error);

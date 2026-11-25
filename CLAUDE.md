@@ -96,3 +96,8 @@ aktualisiert sie auch das Dashboard.
 Entscheidungen, Spezifikation, PR-Plan und offene Punkte stehen in `docs/vorhaben/weinbegleitung.md`.
 Jede Änderung daran trägt dort den Stand nach; berührt sie einen Tech-Check-Befund (z. B. S29, F20),
 aktualisiert sie auch das Dashboard.
+
+### Drucklayout (Vorlagen konfigurieren mit Word-Gefühl)
+Entscheidungen, Entwürfe, Stufenplan und offene Punkte stehen in `docs/vorhaben/drucklayout.md`.
+Jede Änderung am Druckmodul trägt dort den Stand nach; berührt sie einen Tech-Check-Befund (z. B. P5),
+aktualisiert sie auch das Dashboard.

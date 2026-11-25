@@ -9,19 +9,15 @@ import {
 } from '../utils/printRecipe';
 
 /**
- * Renderers for every print element of the registry (printElements.js).
+ * Renderers for the parts of a printed recipe; FlowPage places them on the page.
  * Each renderer receives `{ recipe, ctx, element }` where ctx carries the print
- * context: { servings, authorName, portionLabel, mode, showIngredientsHeading,
- * showStepsHeading }. A renderer returns null when there is nothing to print.
+ * context: { servings, authorName, portionLabel, mode }. A renderer returns null
+ * when there is nothing to print.
  */
 
-function Photo({ index, recipe, ctx, element }) {
+function Photo({ index, recipe, element }) {
   const img = getRecipeImages(recipe)[index];
-  if (!img) {
-    return ctx.mode === 'preview'
-      ? <div className="ppv-el-placeholder">Kein Foto {index + 1}</div>
-      : null;
-  }
+  if (!img) return null;
   const ratio = element?.aspectRatio;
   const style = ratio && ratio !== 'none'
     ? { aspectRatio: ratio, width: '100%', objectFit: 'cover', display: 'block' }
@@ -58,12 +54,10 @@ function Heading({ text }) {
 
 function Ingredients({ recipe, ctx }) {
   const lines = buildIngredientLines(recipe, getServingMultiplier(recipe, ctx.servings));
-  const heading = !ctx.showIngredientsHeading
-    ? `Zutaten${ctx.servings ? ` für ${ctx.servings} ${ctx.portionLabel || 'Portionen'}` : ''}`
-    : null;
+  const heading = `Zutaten${ctx.servings ? ` für ${ctx.servings} ${ctx.portionLabel || 'Portionen'}` : ''}`;
   return (
     <div className="ppv-el-ingredients">
-      {heading && <Heading text={heading} />}
+      <Heading text={heading} />
       <ul className="ppv-el-list">
         {lines.map((line, i) => (
           <li key={i} className={line.type === 'heading' ? 'ppv-el-list-heading' : undefined}>{line.text}</li>
@@ -73,11 +67,11 @@ function Ingredients({ recipe, ctx }) {
   );
 }
 
-function Steps({ recipe, ctx }) {
+function Steps({ recipe }) {
   const lines = buildStepLines(recipe);
   return (
     <div className="ppv-el-steps">
-      {!ctx.showStepsHeading && <Heading text="Zubereitung" />}
+      <Heading text="Zubereitung" />
       <ol className="ppv-el-list ppv-el-steps-list">
         {lines.map((line, i) => (
           line.type === 'heading'
@@ -89,15 +83,13 @@ function Steps({ recipe, ctx }) {
   );
 }
 
-/** id -> component. Must contain every id of PRINT_FORMAT_ELEMENTS (tested). */
+/** id -> component: the text blocks of FLOW_ELEMENTS (printTemplates.js) and one renderer per photo. */
 export const PRINT_ELEMENT_RENDERERS = {
   title: Title,
   authorDate: AuthorDate,
   metadata: Metadata,
   ingredients: Ingredients,
   steps: Steps,
-  ingredientsHeading: () => <Heading text="Zutaten" />,
-  stepsHeading: () => <Heading text="Zubereitung" />,
   photo1: (props) => <Photo index={0} {...props} />,
   photo2: (props) => <Photo index={1} {...props} />,
   photo3: (props) => <Photo index={2} {...props} />,

@@ -28,7 +28,7 @@ scripts/screenshots/run.sh entwurf --css entwurf.css --variants desktop-hell,han
 zu ändern; `--variants` beschränkt auf einzelne Varianten. Läuft auf dem Port des Dev-Servers
 (5174) schon ein Server, bricht der Lauf ab, damit die Bilder nicht dessen Stand zeigen.
 
-Ein voller Lauf macht 260 Bilder in vier Varianten. Jedes Bild meldet sich neu an und braucht in
+Ein voller Lauf macht 282 Bilder in vier Varianten (Stand 25.11.2026). Jedes Bild meldet sich neu an und braucht in
 der Cloud-Session gut fünf Sekunden (gemessen am 22.11.2026), der volle Lauf also gut 20 Minuten;
 für Vorher-nachher-Vergleiche einzelner Bildschirme reichen `--only` und `--variants`. Ergebnis:
 je Variante ein Ordner mit PNG-Dateien und eine `index.html` mit allen Bildern als Raster.

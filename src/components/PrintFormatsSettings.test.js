@@ -1,34 +1,27 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import PrintFormatsSettings from './PrintFormatsSettings';
-import { createPrintFormat, createFlowFormat } from '../utils/printFormats';
+import { createFlowFormat, migrateFormat } from '../utils/printFormats';
 
 jest.mock('../utils/customLists', () => {
   const actual = jest.requireActual('../utils/customLists');
   return { ...actual, loadPrintFormatsForEditing: jest.fn(), savePrintFormats: jest.fn() };
 });
 // The editor has its own tests; keep this suite about list management.
-jest.mock('./PrintFormatEditor', () => function FakeEditor({ format, onChange, previewRecipe }) {
+jest.mock('./TemplateFormatEditor', () => function FakeTemplateEditor({ format, onChange, previewRecipe }) {
   return (
-    <div data-testid="editor">
+    <div data-testid="template-editor">
+      <span>template {format.template}</span>
+      <button type="button" onClick={() => onChange({ ...format, template: 'minimal' })}>template edit {format.name}</button>
       <button type="button" onClick={() => onChange({ ...format, fontFamily: 'Arial, sans-serif' })}>edit {format.name}</button>
       {previewRecipe && <span>preview {previewRecipe.title}</span>}
     </div>
   );
 });
 
-jest.mock('./TemplateFormatEditor', () => function FakeTemplateEditor({ format, onChange }) {
-  return (
-    <div data-testid="template-editor">
-      <span>template {format.template}</span>
-      <button type="button" onClick={() => onChange({ ...format, template: 'minimal' })}>template edit {format.name}</button>
-    </div>
-  );
-});
-
 const { loadPrintFormatsForEditing, savePrintFormats } = require('../utils/customLists');
 
-const fmt = (id, name, maxPhotos) => ({ ...createPrintFormat(), id, name, maxPhotos });
+const fmt = (id, name, maxPhotos) => ({ ...createFlowFormat(), id, name, maxPhotos });
 const stored = () => [fmt('one', 'Ein Foto', 1), fmt('all', 'Standard', null)];
 
 async function renderLoaded(props = {}, formats = stored()) {
@@ -76,16 +69,28 @@ describe('loading', () => {
   });
 });
 
-describe('layout types', () => {
+describe('templates only', () => {
   const flowFmt = (id, name, maxPhotos) => ({ ...createFlowFormat('card'), id, name, maxPhotos });
+  // A stored format of the removed free layout, as loadPrintFormatsForEditing hands it over
+  const converted = (id, name, maxPhotos) => migrateFormat({
+    id, name, maxPhotos, orientation: 'portrait', layoutVersion: 3,
+    elements: [{ id: 'title', x: 2, y: 1, w: 96, h: 9, visible: true }],
+  });
+  const hint = /war ein freies Layout und wurde auf die Vorlage „Klassisch“ umgestellt/;
 
-  test('template formats use the template editor, free formats the positioning editor with an expert hint', async () => {
-    await renderLoaded({}, [flowFmt('f', 'Vorlage', 1), fmt('all', 'Frei', null)]);
-    expect(within(items()[0]).getByTestId('template-editor')).toBeInTheDocument();
-    expect(within(items()[0]).queryByTestId('editor')).toBeNull();
-    expect(within(items()[0]).queryByText(/Expertenmodus/)).toBeNull();
-    expect(within(items()[1]).getByTestId('editor')).toBeInTheDocument();
-    expect(within(items()[1]).getByText(/Expertenmodus/)).toBeInTheDocument();
+  test('every format uses the template editor; the free editor and its switch are gone', async () => {
+    await renderLoaded({}, [flowFmt('f', 'Vorlage', 1), fmt('all', 'Standard', null)]);
+    items().forEach((item) => expect(within(item).getByTestId('template-editor')).toBeInTheDocument());
+    expect(screen.queryByText(/Expertenmodus/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Auf Vorlage umstellen' })).toBeNull();
+    expect(screen.queryByText(hint)).toBeNull();
+  });
+
+  test('the introduction addresses the admin with du and no longer describes drag and drop', async () => {
+    await renderLoaded();
+    const intro = screen.getByText(/Lege fest, wie Rezepte gedruckt werden/);
+    expect(intro).toHaveTextContent('Welches Format ein Rezept bekommt, bestimmt die Anzahl seiner Fotos.');
+    expect(screen.queryByText(/Drag|Konfigurieren Sie/)).toBeNull();
   });
 
   test('a new format is template based (classic)', async () => {
@@ -95,16 +100,45 @@ describe('layout types', () => {
     expect(within(last).getByText('template classic')).toBeInTheDocument();
   });
 
-  test('switching a free layout to a template asks first and keeps name, limit and page', async () => {
-    const confirm = jest.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
-    await renderLoaded();
-    fireEvent.click(within(items()[0]).getByText('Auf Vorlage umstellen'));
-    expect(within(items()[0]).getByTestId('editor')).toBeInTheDocument(); // cancelled
-    fireEvent.click(within(items()[0]).getByText('Auf Vorlage umstellen'));
-    expect(confirm).toHaveBeenCalledTimes(2);
-    expect(within(items()[0]).getByTestId('template-editor')).toBeInTheDocument();
-    expect(within(items()[0]).getByLabelText('Formatname')).toHaveValue('Ein Foto');
-    expect(within(items()[0]).getByLabelText('Maximale Fotoanzahl:')).toHaveValue(1);
+  test('a format converted from the free layout carries a hint, only on that format', async () => {
+    await renderLoaded({}, [flowFmt('f', 'Vorlage', 1), converted('alt', 'Altes Layout', null)]);
+    expect(within(items()[0]).queryByText(hint)).toBeNull();
+    expect(within(items()[1]).getByRole('note')).toHaveTextContent(hint);
+    expect(within(items()[1]).getByText('template classic')).toBeInTheDocument();
+  });
+
+  test('converted formats can be saved without further edits; the hint is gone afterwards', async () => {
+    const stored = converted('alt', 'Altes Layout', null);
+    await renderLoaded({}, [stored]);
+    expect(saveButton()).toBeEnabled();
+    expect(screen.queryByText('Ungespeicherte Änderungen')).toBeNull();
+    const { migrationNotes, ...saved } = stored;
+    loadPrintFormatsForEditing.mockResolvedValue({ formats: [saved], usingDefaults: false });
+    await act(async () => { fireEvent.click(saveButton()); });
+    expect(savePrintFormats).toHaveBeenCalledTimes(1);
+    expect(savePrintFormats.mock.calls[0][0]).toEqual([stored]);
+    expect(screen.getByText('Druckformate gespeichert.')).toBeInTheDocument();
+    expect(screen.queryByText(hint)).toBeNull();
+    expect(saveButton()).toBeDisabled();
+  });
+
+  test('a pending conversion alone does not warn before leaving the page', async () => {
+    await renderLoaded({}, [converted('alt', 'Altes Layout', null)]);
+    const e = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(e);
+    expect(e.defaultPrevented).toBe(false);
+  });
+
+  test('a converted format with an invalid list still cannot be saved', async () => {
+    await renderLoaded({}, [converted('alt', 'Altes Layout', 2)]); // no catch-all
+    expect(saveButton()).toBeDisabled();
+  });
+
+  test('the copy of a converted format has no hint', async () => {
+    await renderLoaded({}, [converted('alt', 'Altes Layout', null)]);
+    fireEvent.click(within(items()[0]).getByText('Duplizieren'));
+    expect(screen.getAllByText(hint)).toHaveLength(1);
+    expect(within(items()[1]).queryByText(hint)).toBeNull();
   });
 
   test('template edits are saved with the formats', async () => {

@@ -49,27 +49,23 @@ const NUR_DEUTSCH = new Set([
   'components/CallLogPanel.js',
   'components/EventplanungPage.js',
   'components/KalibrierungsAuswertung.js',
-  // Einstellungen › Druckformate: Druck- und Vorlagen-Editor, nur über PrintFormatsSettings erreichbar
-  // (Mehrsprachigkeit PR 6h). Die Druckausgabe selbst (printElementRenderers.js) folgt mit Phase B.
-  'components/PrintFormatEditor.js',
+  // Einstellungen › Druckformate: Vorlagen-Editor, nur über PrintFormatsSettings erreichbar
+  // (Mehrsprachigkeit PR 6h; der Editor des freien Layouts entfiel am 25.11.2026, Vorhaben Drucklayout).
+  // Die Druckausgabe selbst (printElementRenderers.js) folgt mit Phase B.
   'components/TemplateFormatEditor.js',
-  'components/printEditor/EditorCanvas.js',
-  'components/printEditor/EditorToolbar.js',
-  'components/printEditor/ElementPropsPanel.js',
-  'components/printEditor/VisibilityChips.js',
   'components/templateEditor/FloatingToolbar.js',
   'components/templateEditor/Segmented.js',
   'components/templateEditor/StylePanel.js',
   'components/templateEditor/TemplateGallery.js',
 ]);
 
-// Stand 23.11.2026 (PR 6s: Gruppen und Netzwerk): 85 Textstellen in 5 Dateien.
+// Stand 25.11.2026 (Vorhaben Drucklayout, Stufe 1: freies Layout entfernt, PrintPage.js hat keine
+// eigenen Texte mehr): 82 Textstellen in 4 Dateien. Davor 23.11.2026 (PR 6s): 85 in 5 Dateien.
 const BASELINE = {
   'components/FlowPage.js': 3,
-  'components/PrintPage.js': 2,
   'components/WichtelPage.js': 66,
   'components/WichtelTeilnehmerFormular.js': 11,
-  'components/printElementRenderers.js': 3,
+  'components/printElementRenderers.js': 2,
 };
 
 function files(dir) {

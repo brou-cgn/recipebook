@@ -1,9 +1,10 @@
 import {
-  PRINT_FORMAT_LAYOUT_VERSION, DEFAULT_PRINT_FORMATS, selectPrintFormat, migrateFormatToV2,
-  migrateFormat, normalizeElement, createPrintFormat, duplicatePrintFormat, generateFormatId,
+  PRINT_FORMAT_LAYOUT_VERSION, DEFAULT_PRINT_FORMATS, selectPrintFormat,
+  migrateFormat, createFlowFormat, duplicatePrintFormat, generateFormatId,
   validatePrintFormats, PrintFormatValidationError,
+  FREE_LAYOUT_CONVERTED_NOTE, isConvertedFreeFormat,
 } from './printFormats';
-import { DEFAULT_PRINT_ELEMENTS_PORTRAIT, DEFAULT_PRINT_ELEMENTS_LANDSCAPE } from './printElements';
+import { getTemplateStyle } from './printTemplates';
 
 const fmt = (id, maxPhotos) => ({ id, name: id, maxPhotos });
 
@@ -45,52 +46,163 @@ describe('selectPrintFormat', () => {
   });
 });
 
-describe('migrateFormatToV2', () => {
-  test('scales y/h by the page ratio', () => {
-    const out = migrateFormatToV2({ orientation: 'portrait', elements: [{ id: 'title', x: 2, y: 10, w: 50, h: 10 }] });
-    expect(out.layoutVersion).toBe(2);
-    expect(out.elements[0].y).toBeCloseTo(14.14, 2);
-    expect(out.elements[0].h).toBeCloseTo(14.14, 2);
-    expect(out.elements[0].x).toBe(2);
-  });
-  test('landscape ratio', () => {
-    const out = migrateFormatToV2({ orientation: 'landscape', elements: [{ id: 't', x: 0, y: 10, w: 1, h: 10 }] });
-    expect(out.elements[0].y).toBeCloseTo(7.07, 2);
-  });
-  test('custom page size', () => {
-    const out = migrateFormatToV2({ pageWidthCm: 10, pageHeightCm: 20, elements: [{ id: 't', x: 0, y: 10, w: 1, h: 1 }] });
-    expect(out.elements[0].y).toBe(20);
-  });
-  test('v2 passes through unchanged', () => {
-    const f = { layoutVersion: 2, elements: [{ id: 't', x: 0, y: 10, w: 1, h: 1 }] };
-    expect(migrateFormatToV2(f)).toBe(f);
-  });
+// Formats of the removed free layout as they may still be stored in settings/app: the boxes the
+// built-in default format had until 25.11.2026 (x, y, w, h in % of the page width).
+const FREE_BOXES = [
+  { id: 'title',              x: 2,  y: 1.4,  w: 96, h: 9.9,  visible: true  },
+  { id: 'photo1',             x: 2,  y: 12.7, w: 96, h: 39.6, visible: true  },
+  { id: 'authorDate',         x: 2,  y: 53.7, w: 96, h: 7.1,  visible: true  },
+  { id: 'metadata',           x: 2,  y: 62.2, w: 96, h: 11.3, visible: true  },
+  { id: 'ingredients',        x: 2,  y: 75.0, w: 45, h: 56.6, visible: true  },
+  { id: 'steps',              x: 51, y: 75.0, w: 47, h: 56.6, visible: true  },
+  { id: 'ingredientsHeading', x: 2,  y: 75.0, w: 45, h: 7.1,  visible: false },
+  { id: 'stepsHeading',       x: 51, y: 75.0, w: 47, h: 7.1,  visible: false },
+  { id: 'photo2',             x: 2,  y: 12.7, w: 45, h: 39.6, visible: false },
+  { id: 'photo3',             x: 51, y: 12.7, w: 45, h: 39.6, visible: false },
+  { id: 'photo4',             x: 51, y: 53.7, w: 45, h: 19.8, visible: false },
+];
+const freeV3 = (patch = {}) => ({
+  id: 'free', name: 'Frei', maxPhotos: null, orientation: 'portrait',
+  fontFamily: "Georgia, 'Times New Roman', serif", pageWidthCm: 21, pageHeightCm: 29.7,
+  layoutVersion: 3, elements: FREE_BOXES.map((el) => ({ ...el })), ...patch,
 });
+const withBoxes = (changes) => freeV3({
+  elements: FREE_BOXES.map((el) => ({ ...el, ...(changes[el.id] || {}) })),
+});
+const v1 = {
+  id: 'a', name: 'Alt', maxPhotos: 2, orientation: 'portrait',
+  elements: [{ id: 'title', x: 2, y: 5, w: 96, h: 7, visible: true }],
+};
+const legacy = { id: 'l', name: 'L', elementOrder: ['steps', 'images'], imageWidth: 50, imageAlign: 'left', imageColumns: '2' };
 
-describe('migrateFormat', () => {
-  const v1 = {
-    id: 'a', name: 'Alt', maxPhotos: 2, orientation: 'portrait',
-    elements: [{ id: 'title', x: 2, y: 5, w: 96, h: 7, visible: true }],
-  };
-
-  test('v1 -> v3', () => {
-    const out = migrateFormat(v1);
-    expect(out.layoutVersion).toBe(PRINT_FORMAT_LAYOUT_VERSION);
-    expect(out.elements[0].y).toBeCloseTo(5 * (29.7 / 21), 2);
-    expect(out.pageWidthCm).toBe(21);
-    expect(out.pageHeightCm).toBe(29.7);
+describe('migrateFormat: formats of the removed free layout become the template "Klassisch"', () => {
+  test('keeps identity, photo limit, page size and font; drops the positioned layout', () => {
+    const out = migrateFormat(freeV3({
+      id: 'x', name: 'Karte quer', maxPhotos: 2, orientation: 'landscape', pageWidthCm: 14.8, pageHeightCm: 10.5,
+      fontFamily: 'Arial, Helvetica, sans-serif',
+    }));
+    expect(out).toMatchObject({
+      id: 'x', name: 'Karte quer', maxPhotos: 2, layoutType: 'flow', template: 'classic',
+      orientation: 'landscape', pageWidthCm: 14.8, pageHeightCm: 10.5,
+      fontFamily: 'Arial, Helvetica, sans-serif', layoutVersion: PRINT_FORMAT_LAYOUT_VERSION,
+    });
+    expect(out.style.fontFamily).toBe('Arial, Helvetica, sans-serif');
+    expect(out).not.toHaveProperty('elements');
+    expect(out.overrides).toEqual({});
+    expect(validatePrintFormats([{ ...out, maxPhotos: null }])).toEqual([]);
   });
+
+  test('the former default format equals the plain template', () => {
+    const out = migrateFormat(freeV3());
+    expect(out.style).toEqual(getTemplateStyle('classic'));
+    expect(out.fontFamily).toBe(getTemplateStyle('classic').fontFamily);
+  });
+
+  test('converted formats carry the note until they are saved; template formats never do', () => {
+    const out = migrateFormat(freeV3());
+    expect(out.migrationNotes).toEqual([FREE_LAYOUT_CONVERTED_NOTE]);
+    expect(isConvertedFreeFormat(out)).toBe(true);
+    expect(isConvertedFreeFormat(migrateFormat(createFlowFormat('card')))).toBe(false);
+    expect(migrateFormat({ ...createFlowFormat('card'), migrationNotes: ['legacy-layout-replaced'] }))
+      .not.toHaveProperty('migrationNotes');
+    expect(isConvertedFreeFormat(undefined)).toBe(false);
+  });
+
+  test.each(['title', 'authorDate', 'metadata', 'ingredients', 'steps'])('a hidden %s box hides that part', (id) => {
+    const show = migrateFormat(withBoxes({ [id]: { visible: false } })).style.show;
+    expect(show[id]).toBe(false);
+    expect(Object.entries(show).filter(([, on]) => !on).map(([key]) => key)).toEqual([id]);
+  });
+
+  test.each([
+    [{}, 1],
+    [{ photo2: { visible: true } }, 2],
+    [{ photo2: { visible: true }, photo3: { visible: true } }, 3],
+    [{ photo2: { visible: true }, photo3: { visible: true }, photo4: { visible: true } }, 4],
+    [{ photo1: { visible: false }, photo3: { visible: true }, photo4: { visible: true } }, 2],
+  ])('the number of visible photo boxes becomes the photo count: %j -> %i', (changes, count) => {
+    const { style } = migrateFormat(withBoxes(changes));
+    expect(style.photoCount).toBe(count);
+    expect(style.photoPosition).toBe('top');
+    expect(style.show.photos).toBe(true);
+  });
+
+  test('no visible photo box means "no photo"', () => {
+    const { style } = migrateFormat(withBoxes({ photo1: { visible: false } }));
+    expect(style.photoPosition).toBe('none');
+    expect(style.show.photos).toBe(false);
+  });
+
+  test('boxes a stored format does not list count as the free layout showed them', () => {
+    // The free layout filled missing boxes from its defaults: everything visible but photos 2 to 4.
+    const out = migrateFormat(freeV3({ elements: [{ id: 'steps', x: 0, y: 0, w: 50, h: 50, visible: false }] }));
+    expect(out.style.show).toEqual({ title: true, authorDate: true, metadata: true, photos: true, ingredients: true, steps: false });
+    expect(out.style.photoCount).toBe(1);
+  });
+
+  test('a box without a visible flag is visible', () => {
+    const out = migrateFormat(freeV3({ elements: [{ id: 'photo2', x: 0, y: 0, w: 10, h: 10 }] }));
+    expect(out.style.photoCount).toBe(2);
+  });
+
+  test('positions, rotation, borders and the formatting of single boxes are not kept', () => {
+    const out = migrateFormat(withBoxes({
+      title: { x: 30, y: 90, rotation: 90, fontBold: true, fontColor: '#ff0000', borderTop: true, textAlignH: 'right' },
+    }));
+    expect(out.overrides).toEqual({});
+    expect(JSON.stringify(out)).not.toMatch(/rotation|borderTop|#ff0000|"x":/);
+    expect(out.style.titleAlign).toBe(getTemplateStyle('classic').titleAlign);
+  });
+
+  test.each([
+    ['v1 (no layoutVersion)', v1],
+    ['v2', { ...freeV3(), layoutVersion: 2, imageColumns: 'auto' }],
+    ['v3', freeV3()],
+  ])('every version of the free layout is converted: %s', (_, input) => {
+    const out = migrateFormat(input);
+    expect(out).toMatchObject({ layoutType: 'flow', template: 'classic', layoutVersion: PRINT_FORMAT_LAYOUT_VERSION });
+    expect(out).not.toHaveProperty('elements');
+    expect(out).not.toHaveProperty('imageColumns');
+  });
+
+  test('the older flex layout without boxes gets the plain template; its fields are dropped', () => {
+    const out = migrateFormat(legacy);
+    expect(out).toMatchObject({ id: 'l', name: 'L', layoutType: 'flow', template: 'classic' });
+    expect(out.style).toEqual(getTemplateStyle('classic'));
+    expect(out.migrationNotes).toEqual([FREE_LAYOUT_CONVERTED_NOTE]);
+    ['elementOrder', 'imageWidth', 'imageAlign', 'imageColumns'].forEach((k) => expect(out).not.toHaveProperty(k));
+  });
+
+  test.each([
+    ['empty object', {}],
+    ['null', null],
+    ['a string', 'kaputt'],
+    ['elements is not an array', { id: 'x', elements: 'nope' }],
+    ['garbage elements', { elements: [null, 3, { id: 5 }, { id: 'title', x: 'a', y: NaN, w: -5, h: Infinity }] }],
+    ['defective values', { id: 'x', name: 7, maxPhotos: 'abc', fontFamily: 42, layoutVersion: 2, elements: [{ id: 'title', visible: 'no' }] }],
+  ])('defective data becomes a valid template format without throwing: %s', (_, input) => {
+    const out = migrateFormat(input);
+    expect(out).toMatchObject({ layoutType: 'flow', template: 'classic', maxPhotos: null });
+    expect(out.style).toEqual(getTemplateStyle('classic'));
+    expect(typeof out.id).toBe('string');
+    expect(typeof out.name).toBe('string');
+    expect(validatePrintFormats([{ ...out, name: out.name || 'x' }])).toEqual([]);
+  });
+
   test('does not mutate its input', () => {
-    const copy = JSON.parse(JSON.stringify(v1));
-    migrateFormat(v1);
-    expect(v1).toEqual(copy);
+    const input = freeV3();
+    const copy = JSON.parse(JSON.stringify(input));
+    migrateFormat(input);
+    expect(input).toEqual(copy);
   });
+
   test.each([
     ['v1 portrait', v1],
     ['v1 landscape', { ...v1, orientation: 'landscape' }],
-    ['custom size', { ...v1, layoutVersion: 2, pageWidthCm: 15, pageHeightCm: 21 }],
-    ['v2 defaults', { id: 'd', name: 'D', layoutVersion: 2, elements: DEFAULT_PRINT_ELEMENTS_PORTRAIT }],
-    ['legacy', { id: 'l', name: 'L', elementOrder: ['steps', 'images'], imageWidth: 50, imageAlign: 'left' }],
+    ['v2 custom size', { ...v1, layoutVersion: 2, pageWidthCm: 15, pageHeightCm: 21 }],
+    ['v3', freeV3()],
+    ['v3 without photos', withBoxes({ photo1: { visible: false } })],
+    ['flex layout', legacy],
     ['empty object', {}],
     ['null', null],
     ['garbage elements', { elements: [null, 3, { id: 5 }, { id: 'title', x: 'a', y: NaN, w: -5, h: Infinity }] }],
@@ -98,24 +210,7 @@ describe('migrateFormat', () => {
     const once = migrateFormat(input);
     expect(migrateFormat(once)).toEqual(once);
   });
-  test('v2 defaults keep their element coordinates', () => {
-    const out = migrateFormat({ id: 'd', layoutVersion: 2, elements: DEFAULT_PRINT_ELEMENTS_PORTRAIT });
-    expect(out.elements).toEqual(DEFAULT_PRINT_ELEMENTS_PORTRAIT);
-  });
-  test('landscape defaults keep their coordinates', () => {
-    const out = migrateFormat({ id: 'd', layoutVersion: 2, orientation: 'landscape', elements: DEFAULT_PRINT_ELEMENTS_LANDSCAPE });
-    expect(out.orientation).toBe('landscape');
-    expect(out.elements).toEqual(DEFAULT_PRINT_ELEMENTS_LANDSCAPE);
-  });
-  test('legacy formats get the default layout and a note; legacy fields are dropped', () => {
-    const out = migrateFormat({ id: 'l', elementOrder: ['steps'], imageWidth: 50, imageAlign: 'left', imageColumns: '2' });
-    expect(out.elements).toEqual(DEFAULT_PRINT_ELEMENTS_PORTRAIT);
-    expect(out.migrationNotes).toEqual(['legacy-layout-replaced']);
-    ['elementOrder', 'imageWidth', 'imageAlign', 'imageColumns'].forEach((k) => expect(out).not.toHaveProperty(k));
-  });
-  test('imageColumns alone does not trigger a note', () => {
-    expect(migrateFormat({ id: 'x', imageColumns: 'auto', elements: DEFAULT_PRINT_ELEMENTS_PORTRAIT }).migrationNotes).toBeUndefined();
-  });
+
   test('orientation is derived from explicit page size', () => {
     expect(migrateFormat({ id: 'a', orientation: 'portrait', pageWidthCm: 30, pageHeightCm: 20 }).orientation).toBe('landscape');
     expect(migrateFormat({ id: 'a', orientation: 'landscape', pageWidthCm: 15, pageHeightCm: 20 }).orientation).toBe('portrait');
@@ -128,86 +223,53 @@ describe('migrateFormat', () => {
     const out = migrateFormat({ id: 'a', pageWidthCm: 1, pageHeightCm: 500 });
     expect([out.pageWidthCm, out.pageHeightCm]).toEqual([5, 200]);
   });
-  test('defective values are normalised without throwing', () => {
-    const out = migrateFormat({
-      id: 'x', maxPhotos: 'abc', layoutVersion: 2,
-      elements: [
-        { id: 'title', x: -10, y: 9999, w: 500, h: -2, rotation: 45 },
-        { id: 'steps', x: 'a', y: null, w: NaN, h: undefined },
-      ],
-    });
-    expect(out.maxPhotos).toBeNull();
-    out.elements.forEach((el) => {
-      ['x', 'y', 'w', 'h'].forEach((k) => expect(Number.isFinite(el[k])).toBe(true));
-      expect(el.x).toBeGreaterThanOrEqual(0);
-      expect(el.x + el.w).toBeLessThanOrEqual(100.0001);
-      expect(el.rotation).toBeUndefined();
-    });
-  });
-  test('unknown element ids are kept so they survive a save', () => {
-    const out = migrateFormat({ id: 'a', layoutVersion: 2, elements: [{ id: 'future', x: 1, y: 1, w: 10, h: 10 }] });
-    expect(out.elements.some((e) => e.id === 'future')).toBe(true);
-  });
   test('missing id gets generated, missing name defaults', () => {
     const out = migrateFormat({});
     expect(out.id).toMatch(/^fmt-/);
     expect(out.name).toBe('Standard');
   });
-  test('keeps valid rotation and rotated bounds', () => {
-    const out = migrateFormat({ id: 'a', layoutVersion: 2, elements: [{ id: 'title', x: 90, y: 0, w: 40, h: 10, rotation: 90 }] });
-    expect(out.elements[0].rotation).toBe(90);
-    expect(out.elements[0].x + 10).toBeLessThanOrEqual(100.0001); // effective width is h
+});
+
+describe('DEFAULT_PRINT_FORMATS', () => {
+  test('one deterministic catch-all: template "Klassisch" on A4 portrait', () => {
+    expect(DEFAULT_PRINT_FORMATS).toHaveLength(1);
+    expect(DEFAULT_PRINT_FORMATS[0]).toMatchObject({
+      id: 'default', name: 'Standard', maxPhotos: null, layoutType: 'flow', template: 'classic',
+      orientation: 'portrait', pageWidthCm: 21, pageHeightCm: 29.7, layoutVersion: PRINT_FORMAT_LAYOUT_VERSION,
+    });
+    expect(DEFAULT_PRINT_FORMATS[0].style).toEqual(getTemplateStyle('classic'));
   });
-  test('DEFAULT_PRINT_FORMATS are already v3 and stable under migration', () => {
-    DEFAULT_PRINT_FORMATS.forEach((f) => expect(migrateFormat(f)).toEqual(f));
+  test('is valid, stable under migration and not marked as converted', () => {
+    expect(validatePrintFormats(DEFAULT_PRINT_FORMATS)).toEqual([]);
+    DEFAULT_PRINT_FORMATS.forEach((f) => {
+      expect(migrateFormat(f)).toEqual(f);
+      expect(isConvertedFreeFormat(f)).toBe(false);
+    });
   });
 });
 
-describe('normalizeElement', () => {
-  const page = { widthCm: 21, heightCm: 29.7 };
-  test('leaves a valid element untouched', () => {
-    const el = { id: 'a', x: 1, y: 1, w: 20, h: 10, visible: true };
-    expect(normalizeElement(el, page)).toEqual(el);
-  });
-  test('enforces minimum size', () => {
-    const out = normalizeElement({ id: 'a', x: 0, y: 0, w: 1, h: 0.1 }, page);
-    expect(out.w).toBe(5);
-    expect(out.h).toBe(3);
-  });
-});
-
-describe('createPrintFormat / duplicatePrintFormat / generateFormatId', () => {
-  test('createPrintFormat matches orientation defaults including page size', () => {
-    const l = createPrintFormat('landscape', 'Quer');
-    expect(l.name).toBe('Quer');
-    expect([l.pageWidthCm, l.pageHeightCm]).toEqual([29.7, 21]);
-    expect(l.elements).toEqual(DEFAULT_PRINT_ELEMENTS_LANDSCAPE);
-    const p = createPrintFormat();
-    expect(p.elements).toEqual(DEFAULT_PRINT_ELEMENTS_PORTRAIT);
-    expect(p.layoutVersion).toBe(PRINT_FORMAT_LAYOUT_VERSION);
-  });
-  test('created formats do not alias the shared default element objects', () => {
-    const p = createPrintFormat();
-    p.elements[0].x = 77;
-    expect(DEFAULT_PRINT_ELEMENTS_PORTRAIT[0].x).not.toBe(77);
-  });
+describe('createFlowFormat / duplicatePrintFormat / generateFormatId', () => {
   test('ids are unique even when generated in the same millisecond', () => {
     const ids = new Set(Array.from({ length: 500 }, generateFormatId));
     expect(ids.size).toBe(500);
   });
   test('duplicate is deep, has a new id, a copy name and no photo limit', () => {
-    const original = { ...createPrintFormat(), name: 'Mein Format', maxPhotos: 2 };
+    const original = { ...createFlowFormat(), name: 'Mein Format', maxPhotos: 2 };
     const copy = duplicatePrintFormat(original);
     expect(copy.id).not.toBe(original.id);
     expect(copy.name).toBe('Mein Format Kopie');
     expect(copy.maxPhotos).toBeNull();
-    copy.elements[0].x = 55;
-    expect(original.elements[0].x).not.toBe(55);
+    copy.style.show.title = false;
+    expect(original.style.show.title).toBe(true);
+  });
+  test('the copy of a converted format is an ordinary new format (no note)', () => {
+    const copy = duplicatePrintFormat(migrateFormat(freeV3()));
+    expect(copy).not.toHaveProperty('migrationNotes');
   });
 });
 
 describe('validatePrintFormats', () => {
-  const ok = (id, maxPhotos) => ({ ...createPrintFormat(), id, name: `Name ${id}`, maxPhotos });
+  const ok = (id, maxPhotos) => ({ ...createFlowFormat(), id, name: `Name ${id}`, maxPhotos });
 
   test('valid list has no errors', () => {
     expect(validatePrintFormats([ok('a', 1), ok('b', null)])).toEqual([]);
@@ -245,7 +307,7 @@ describe('validatePrintFormats', () => {
     expect(validatePrintFormats([big]).some((e) => e.field === 'size')).toBe(true);
   });
   test('a default format is well below the size limit', () => {
-    expect(JSON.stringify(createPrintFormat()).length).toBeLessThan(4000);
+    expect(JSON.stringify(createFlowFormat()).length).toBeLessThan(4000);
   });
   test('PrintFormatValidationError carries the error list', () => {
     const errors = validatePrintFormats([]);
@@ -257,7 +319,6 @@ describe('validatePrintFormats', () => {
 });
 
 describe('flow (template) formats', () => {
-  const { createFlowFormat, convertToFlowFormat } = require('./printFormats');
   const { FLOW_STYLE_DEFAULTS } = require('./printTemplates');
 
   test('createFlowFormat builds a valid, complete flow format', () => {
@@ -304,14 +365,5 @@ describe('flow (template) formats', () => {
     const f = createFlowFormat('classic');
     expect(validatePrintFormats([{ ...f, style: { ...f.style, marginCm: 9 } }]).some((e) => e.field === 'margin')).toBe(true);
     expect(validatePrintFormats([{ ...f, style: { ...f.style, marginCm: 0 } }])).toEqual([]);
-  });
-
-  test('convertToFlowFormat keeps identity and page size and drops positioned layout', () => {
-    const free = { ...createPrintFormat('landscape'), name: 'Alt', maxPhotos: 3, migrationNotes: ['legacy-layout-replaced'] };
-    const flow = convertToFlowFormat(free);
-    expect(flow).toMatchObject({ id: free.id, name: 'Alt', maxPhotos: 3, layoutType: 'flow', pageWidthCm: 29.7, pageHeightCm: 21 });
-    expect(flow.elements).toBeUndefined();
-    expect(flow.migrationNotes).toBeUndefined();
-    expect(flow.style).toBeDefined();
   });
 });

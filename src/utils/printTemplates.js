@@ -1,5 +1,5 @@
 /**
- * Print templates ("Vorlagen") for the flow layout.
+ * Print templates ("Vorlagen") for the flow layout, the only layout of a print format.
  *
  * A flow format does not position boxes: its content flows top to bottom like a
  * Word document (and continues on the next page when it is long). The format only
@@ -234,16 +234,20 @@ export function normalizeFlowOverrides(overrides) {
   return out;
 }
 
-/** The effective style of a format (flow formats only; other formats get the defaults). */
+/** The effective style of a format (a format without a valid style gets the defaults). */
 export function resolveFlowStyle(format) {
   return normalizeFlowStyle(format?.style);
 }
 
+/**
+ * True for a stored template format. Formats of the former free layout lack the marker;
+ * migrateFormat (printFormats.js) converts them when they are read.
+ */
 export const isFlowFormat = (format) => format?.layoutType === 'flow';
 
-/** Page margin in cm for printing; free layouts print edge to edge. */
+/** Page margin in cm for printing, the same value FlowPage lays the content out with. */
 export function getFormatMarginCm(format) {
-  return isFlowFormat(format) ? resolveFlowStyle(format).marginCm : 0;
+  return resolveFlowStyle(format).marginCm;
 }
 
 /** True when the format carries user changes beyond its template (used to ask before replacing them). */
@@ -284,10 +288,4 @@ export function applyTemplate(format, templateId) {
     style,
     overrides: {},
   };
-}
-
-/** Converts any format to a flow format, keeping name, photo limit and page size. */
-export function convertToFlowFormat(format, templateId = DEFAULT_TEMPLATE_ID) {
-  const { elements, migrationNotes, ...rest } = format;
-  return applyTemplate(rest, templateId);
 }
