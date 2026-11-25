@@ -484,7 +484,9 @@ griff nicht zuverlässig, Drinks bekamen Empfehlungen. Kein Tech-Check-Befund be
   Icons in allen Weinzeilen und beim Hinweis „Hier lieber Bier oder Wasser“ (Entscheidung des Eigentümers). Offen: Das
   rot gefüllte Glas im Kopf der Menü-Weinbegleitung (Zeichen „es gibt eine Weinbegleitung“, füllt sich beim Berechnen)
   und die Gläser der zwölf Stile auf der Seite „Weinbegleitung“ bleiben eingebaut. Soll der Kopf das Rotwein-Icon und
-  die Seite die Icons je Farbe zeigen? Entscheidung beim Eigentümer.
+  die Seite die Icons je Farbe zeigen? Teil entschieden 25.11.2026 (Hinweis des Eigentümers per Screenshot): Die Seite
+  „Weinbegleitung“ zeigt die eingerichteten Icons je Stil (`WeinSymbol`; `Kueche.js` reicht `weinIconsAus` als `icons`
+  durch, Rosé bleibt beim Glas). Offen bleibt nur der Kopf der Menü-Weinbegleitung.
 - **Quellen ungeprüft und sichtbar:** Im Rezept-Sheet stehen seit 14.11.2026 (#3664) keine Quellen mehr, im Menü
   noch. PR 5 bringt sie auf die Seite „Weinbegleitung“ unter „Chefkoch & mehr“ (Regeln mit Quellen und Quellenliste),
   wie in der Spezifikation geplant; der Eigentümer hat das nach Rückfrage ohne Änderungswunsch mergen lassen

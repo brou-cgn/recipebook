@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
-import { WeinGlas, Gruende } from './WeinbegleitungTeile';
+import { WeinSymbol, Gruende } from './WeinbegleitungTeile';
 import { alleStile, alleRegeln, alleQuellen, formatTemperatur } from '../utils/weinbegleitung/wissensbasis';
 import { RULES_VERSION } from '../utils/weinbegleitung/konstanten';
-import { weinfarbe, nurZuText } from '../utils/weinbegleitung/anzeige';
+import { nurZuText } from '../utils/weinbegleitung/anzeige';
 import { beispielText, stilName } from '../utils/weinbegleitung/sprache';
 import { useSprache, useTexte } from '../contexts/SpracheContext';
 import { findeText } from '../i18n/texte';
@@ -26,7 +26,8 @@ const datumAusIso = (iso) => {
   return new Date(jahr, monat - 1, tag);
 };
 
-function WeinbegleitungSeite({ currentUser, onBack }) {
+// icons: die eingerichteten Wein-Icons (`weinIconsAus` in anzeige.js), leer/null = eingebautes Glas
+function WeinbegleitungSeite({ currentUser, onBack, icons = null }) {
   // Wie in den Rules und im Server: allein die Rolle entscheidet über Admin.
   const istAdmin = currentUser?.role === 'admin';
   const t = useTexte(weinTexte);
@@ -71,7 +72,7 @@ function WeinbegleitungSeite({ currentUser, onBack }) {
         <ul className="wein-seite-stile">
           {alleStile().map((stil) => (
             <li key={stil.id} className="wein-seite-stil">
-              <WeinGlas farbe={weinfarbe(stil)} groesse={22} />
+              <WeinSymbol stil={stil} icons={icons} groesse={22} />
               <span className="wein-seite-stil-text">
                 <span className="wein-seite-stil-name">{stilName(stil, sprache)}</span>
                 <span className="wein-seite-stil-details">
