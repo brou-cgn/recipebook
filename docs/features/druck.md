@@ -327,7 +327,7 @@ Konvention: **MUSS** = Abnahmekriterium, **SOLL** = wünschenswert. Neue Lösch-
 
 ## Druck-Layouts (Entwicklerdoku)
 
-_Stand: 25.11.2026 (Vorhaben Drucklayout, Stufe 2). Ursprung: `DRUCKLAYOUT.md` (zusammengeführt)._
+_Stand: 25.11.2026 (Vorhaben Drucklayout, Stufe 3). Ursprung: `DRUCKLAYOUT.md` (zusammengeführt)._
 
 Rezepte werden über **Druckformate** gedruckt. Die Formate liegen zentral in Firestore
 (`settings/app.printFormats`) und gelten für alle Nutzer. Bearbeitet werden sie in den Einstellungen
@@ -336,13 +336,52 @@ im Tab **Drucklayout**.
 ### Ein Layouttyp: Vorlagen
 
 Jedes Format ist eine **Vorlage (Fließlayout)**, `layoutType: 'flow'`: Der Inhalt fließt von oben nach
-unten wie in Word und läuft bei langen Rezepten auf die nächste Seite. Bedienung heute: Vorlage wählen,
-Regler im Bedienfeld, Elemente in der Vorschau anklicken und formatieren (die Bedienung wird mit dem
-Vorhaben Drucklayout neu gestaltet).
+unten wie in Word und läuft bei langen Rezepten auf die nächste Seite. Bedienung im Editor heute: Vorlage
+wählen, Regler im Bedienfeld, Elemente in der Vorschau anklicken und formatieren (dieser Teil wird mit
+Stufe 4 des Vorhabens Drucklayout neu gestaltet).
 
 Das frühere **freie Layout** (Elemente von Hand in cm platziert, Formate ohne `layoutType`, Text wurde
 bei zu langem Inhalt abgeschnitten) ist seit dem 25.11.2026 entfernt. Gespeicherte freie Formate werden
 beim Lesen auf eine Vorlage umgestellt, siehe „Umstellung freier Formate“.
+
+### Einstellungen: Übersicht und Editor im Vollfenster
+
+Seit Stufe 3 (Entwurf C des Vorhabens) besteht der Reiter aus zwei Ansichten:
+
+- **Übersicht** (`PrintFormatsOverview`, `PrintFormatCard`): je Format eine Karte mit Miniatur, Name, Regel in
+  Klartext, Vorlage und Papier, dazu „Bearbeiten“, Duplizieren und Entfernen (`DeleteRowButton`, am Handy
+  Linksswipe). Darunter die Leiste „So wählt die App beim Drucken“ und „Prüfen mit Rezept“. Gibt es nur ein
+  Format, entfallen Regel und Leiste.
+- **Editor im Vollfenster** (`PrintFormatScreen`, Portal in `document.body`, `role="dialog"`): ein Format zur
+  Zeit. Oben die Leiste mit „Zurück“, Name, Regel und „Speichern“, darunter der `TemplateFormatEditor`, unten
+  das Rezept der Vorschau. Am Desktop steht die Leiste; am Handy bleiben nur „Zurück“ und „Speichern“ oben
+  stehen, Name und Regel scrollen mit. Escape schließt das Fenster nicht (die schwebende Formatleiste hört
+  auf dieselbe Taste), die Zurück-Taste des Browsers ist nicht eingebunden.
+
+**Regel in Klartext** (`src/utils/print/printFormatRules.js`): Gespeichert bleibt je Format das Fotolimit
+`maxPhotos` (oder `null` für „alle übrigen“), gewählt wird wie bisher mit `selectPrintFormat`.
+`describeFormatRules(formats)` macht daraus je Format einen Bereich (`range` von/bis, `rest` ab, `all`) oder
+`unused`, wenn das Format nie gewählt würde (zweites Format ohne Limit, das erste der Liste gewinnt). Ein
+Test hält die Beschreibung mit `selectPrintFormat` gleich. Im Editor stellt man „Rezepte mit höchstens N
+Fotos“ oder „alle übrigen Rezepte“ ein; die Zeile darunter nennt den Bereich, der sich mit den anderen
+Formaten ergibt, und welches Format dadurch verdrängt würde. Das einzige Format für den Rest kann seine
+Regel nicht wechseln und nicht entfernt werden.
+
+**Speichern** (`PrintFormatsSettings`, Funktion `commit`): Gespeichert wird je Handlung, nicht mehr gesammelt.
+Die Formate liegen als ein Feld in `settings/app`, jedes Speichern schreibt deshalb die ganze Liste. `commit`
+zeigt die neue Liste sofort, speichert der Reihe nach (ein zweites Speichern wartet auf das erste), lädt
+danach den gespeicherten Stand und nimmt die Anzeige zurück, wenn das Speichern scheitert.
+- „Speichern“ im Editor schreibt das eine Format an seinem Platz, ein neues ans Ende. „Neues Format“ und
+  „Duplizieren“ öffnen nur einen Entwurf mit der nächsten freien Fotoanzahl (`newFormatMaxPhotos`).
+- Entfernen speichert sofort; `useUndoableDelete` zeigt sechs Sekunden „Rückgängig“, das das Format am alten
+  Platz wieder einfügt und erneut speichert. Hat inzwischen ein anderes Format dieselbe Fotoanzahl, kommt es
+  ohne Regel zurück.
+- Mit ungespeicherten Änderungen fragt „Zurück“ nach (`ConfirmDialog`), der Browser warnt vor dem Schließen.
+
+**Listen, die sich nicht speichern lassen:** `repairPrintFormats` korrigiert beim Laden Namen und Regeln, die
+die Prüfung beim Speichern ablehnen würde (leerer Name, ungültige oder doppelte Fotoanzahl, kein Format für
+den Rest). Weil jedes Format einzeln bearbeitet wird, ließe sich eine solche Liste sonst nie wieder speichern.
+Die Übersicht nennt jede Korrektur und bietet „Jetzt speichern“ an; bis dahin ist nichts geschrieben.
 
 ### Bausteine
 
@@ -350,8 +389,9 @@ Seit Stufe 2 liegt das Modul in zwei eigenen Ordnern, dazu ein Firestore-Modul u
 
 | Datei | Aufgabe |
 |---|---|
-| `src/utils/print/printTemplates.js` | Vorlagen, Stiloptionen, Normalisierung von Stil und Einzelformatierung |
+| `src/utils/print/printTemplates.js` | Vorlagen, Stiloptionen, Normalisierung von Stil und Einzelformatierung, Papierformate (`findPaperPreset`, `describePaper`) |
 | `src/utils/print/printFormats.js` | Formatwahl, Umstellung und Normalisierung beim Lesen (`migrateFormat`), Validierung, Erzeugen/Duplizieren |
+| `src/utils/print/printFormatRules.js` | die Regel je Format in Worten (`describeFormatRules`, Sätze und Kurzformen), Fotoanzahl eines neuen Formats, Korrektur nicht speicherbarer Listen (`repairPrintFormats`) |
 | `src/utils/print/printLayout.js` | Seitenmaß A4 und Schriftarten, Seitengröße eines Formats, Textformatierung eines Elements |
 | `src/utils/print/printRecipe.js` | Rezeptdaten und Formulierungen für den Druck (eine Quelle); `druckTexte(sprache)` liefert die Texte aus dem Wörterbuch |
 | `src/utils/print/printSampleRecipe.js` | Beispielrezept für Miniaturen und die Vorschau ohne gewähltes Rezept |
@@ -363,7 +403,9 @@ Seit Stufe 2 liegt das Modul in zwei eigenen Ordnern, dazu ein Firestore-Modul u
 | `src/components/print/printRunner.js` | Druckablauf (`#print-root`, `@page`, `window.print()`, Aufräumen) |
 | `src/components/print/usePreviewScale.js` | Maßstab, mit dem das Blatt in die Vorschau passt |
 | `src/components/print/TemplateFormatEditor.js` + `templateEditor/` | Vorlagen-Galerie, Stilregler, schwebende Formatleiste; `TemplateFormatEditor.css` enthält auch die gemeinsamen Bedienelemente (`pfe-select`, `pfe-hint`, `pfe-props-number`, `pfe-props-color`) |
-| `src/components/print/PrintFormatsSettings.js` + `.css` | Formatliste, Speichern, Löschen mit Rückgängig, Hinweis an umgestellten Formaten |
+| `src/components/print/PrintFormatsSettings.js` | Reiter „Drucklayout“: Laden, Speichern der Reihe nach (`commit`), Entfernen mit Rückgängig, welches Format gerade im Editor ist |
+| `src/components/print/PrintFormatsOverview.js`, `PrintFormatCard.js` + `PrintFormatsSettings.css` | Übersicht: Karten, Leiste „So wählt die App beim Drucken“, „Prüfen mit Rezept“, Hinweise zu umgestellten und korrigierten Formaten |
+| `src/components/print/PrintFormatScreen.js` + `.css` | Editor im Vollfenster: Leiste mit Name, Regel und Speichern, Rückfrage beim Verwerfen, Rezept der Vorschau |
 
 Von außen greifen nur drei Stellen zu: `Settings.js` bindet `PrintFormatsSettings` ein, `RecipeDetail.js`
 wählt das Format (`selectPrintFormat`, `getPrintFormats`) und druckt (`printRecipe`), `customLists.js` nimmt
@@ -444,10 +486,13 @@ defekte Daten.
 | Nicht übernommen | Positionen, Größen, Drehung, Rahmen und die Formatierung einzelner Kästen, ebenso die eigenen Kästen „Überschrift Zutaten/Zubereitung“ (die Vorlage setzt die Überschriften selbst) |
 
 Umgestellte Formate tragen beim Lesen `migrationNotes: ['free-layout-converted']` (`isConvertedFreeFormat`).
-Daran hängt der Hinweis im Reiter Drucklayout; dort lässt sich dann auch ohne weitere Änderung speichern.
+Daran hängt der Hinweis im Reiter Drucklayout (oben in der Übersicht und an der Karte); dort lässt sich dann
+auch ohne weitere Änderung speichern („Jetzt speichern“ in der Übersicht, „Speichern“ im Editor).
 
-**Schreiben:** Es wird nie automatisch zurückgeschrieben. Erst „Druckformate speichern“ legt die Vorlagen
-in Firestore ab; `savePrintFormats` speichert `migrationNotes` nicht mit, der Hinweis ist danach weg.
+**Schreiben:** Es wird nie automatisch zurückgeschrieben. Erst ein Speichern in den Einstellungen legt die
+Vorlagen in Firestore ab. Seit Stufe 3 ist das jedes Speichern dort: Weil immer die ganze Liste geschrieben
+wird, übernimmt auch das Speichern oder Entfernen eines anderen Formats die Umstellung (der Hinweis in der
+Übersicht sagt das). `savePrintFormats` speichert `migrationNotes` nicht mit, der Hinweis ist danach weg.
 
 **Sicherungen** in `settings/app`, je einmalig und nie überschrieben:
 

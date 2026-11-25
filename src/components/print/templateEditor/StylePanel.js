@@ -4,17 +4,10 @@ import { PRINT_FONT_OPTIONS } from '../../../utils/print/printLayout';
 import {
   FLOW_BASE_SIZES, FLOW_SPACINGS, FLOW_HEADING_STYLES, FLOW_PHOTO_POSITIONS, FLOW_PHOTO_SIZES,
   FLOW_PHOTO_ASPECTS, FLOW_COLUMNS, FLOW_METADATA_STYLES, FLOW_ALIGNMENTS, FLOW_ELEMENTS,
-  PAPER_PRESETS, MIN_MARGIN_CM, MAX_MARGIN_CM,
+  PAPER_PRESETS, MIN_MARGIN_CM, MAX_MARGIN_CM, findPaperPreset,
 } from '../../../utils/print/printTemplates';
 
 const CUSTOM = 'custom';
-const sameSize = (p, w, h) => Math.abs(p.widthCm - w) < 0.05 && Math.abs(p.heightCm - h) < 0.05;
-
-function paperIdFor(page) {
-  const portraitW = Math.min(page.widthCm, page.heightCm);
-  const portraitH = Math.max(page.widthCm, page.heightCm);
-  return PAPER_PRESETS.find((p) => sameSize(p, portraitW, portraitH))?.id || CUSTOM;
-}
 
 function Section({ title, defaultOpen = false, children }) {
   return (
@@ -27,7 +20,7 @@ function Section({ title, defaultOpen = false, children }) {
 
 /** All options of a flow format as plain controls. */
 export default function StylePanel({ format, page, style, onStyle, onPage }) {
-  const paperId = paperIdFor(page);
+  const paperId = findPaperPreset(page)?.id || CUSTOM;
   const landscape = page.widthCm >= page.heightCm;
   const setPaper = (id) => {
     const p = PAPER_PRESETS.find((x) => x.id === id);
