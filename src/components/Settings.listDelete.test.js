@@ -29,7 +29,7 @@ jest.mock('../utils/faviconUtils', () => ({ applyFaviconSettings: jest.fn() }));
 jest.mock('../utils/ingredientUtils', () => ({ invalidateUnitsCache: jest.fn() }));
 jest.mock('../utils/recipeKeywordsCsv', () => ({ downloadRecipesKeywordCsv: jest.fn() }));
 jest.mock('./UserManagement', () => () => null);
-jest.mock('./PrintFormatsSettings', () => () => null);
+jest.mock('./print/PrintFormatsSettings', () => () => null);
 jest.mock('./SeasonMatrixTab', () => () => null);
 jest.mock('./NutritionReferenceTab', () => () => null);
 jest.mock('./DrinkWeightsTab', () => () => null);

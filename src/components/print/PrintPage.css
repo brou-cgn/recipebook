@@ -1,0 +1,124 @@
+/* ===== PrintPage – Rezept auf einer Druckseite (Vorschau und Druck) =====
+   Rahmen der Vorschau, die Teile des Rezepts (.ppv-el-*) und die Druckregel. Das Blatt selbst
+   (.ppf-sheet) und sein Aufbau stehen in FlowPage.css. */
+
+/* Der Druck-Container ist am Bildschirm unsichtbar. */
+#print-root {
+  display: none;
+}
+
+.ppv-root {
+  margin-top: 1rem;
+}
+
+.ppv-root--embedded {
+  margin-top: 0;
+}
+
+/* p: stärker als die pauschale Textfarbe aus darkMode.css, sonst im Dunkelmodus hell auf Hellrot */
+.ppv-root .ppv-overflow-warning {
+  margin: 0 0 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  background: var(--color-bad-tint);
+  color: var(--color-bad-text);
+  font-size: 0.85rem;
+}
+
+/* Teile des Rezepts auf dem Blatt. Papier bleibt Papier (Tech-Check P21, Erklärung in
+   FlowPage.css): Eigene Textfarben für h1–h6, p, span, label und li stehen hier mit .ppf-sheet
+   davor, sonst gewinnt das Erben auf dem Blatt bzw. die pauschale Regel aus darkMode.css. */
+.ppv-el-title {
+  margin: 0;
+  font-size: 2.1em;
+  font-weight: bold;
+  line-height: 1.2;
+}
+
+.ppv-el-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.ppv-el-author-date {
+  color: #555;
+  font-size: 0.9em;
+}
+
+.ppv-el-metadata {
+  padding: 0.2em 0;
+  border-top: 1px solid #ddd;
+  border-bottom: 1px solid #ddd;
+}
+
+.ppv-el-metadata-item {
+  display: inline-block;
+  margin: 0 0.5em;
+  white-space: nowrap;
+}
+
+.ppf-sheet .ppv-el-metadata-item--difficulty {
+  color: #8a7400;
+}
+
+.ppv-el-section-heading {
+  margin: 0 0 0.6em;
+  padding-bottom: 0.25em;
+  border-bottom: 2px solid #333;
+  font-size: 1.26em;
+  font-weight: bold;
+}
+
+/* Abschnittsüberschriften sind schwarz, auch wenn das Element eine Schriftfarbe hat (wie bisher) */
+.ppf-sheet .ppv-el-section-heading {
+  color: #000;
+}
+
+.ppv-el-list {
+  margin: 0;
+  padding-left: 1.5em;
+}
+
+.ppv-el-list li {
+  margin: 0;
+  line-height: 1.6;
+  break-inside: avoid;
+}
+
+.ppv-el-list .ppv-el-list-heading {
+  margin-left: -1.5em;
+  list-style: none;
+  font-weight: bold;
+}
+
+.ppv-el-steps-list {
+  list-style-type: decimal;
+}
+
+.ppv-el-placeholder {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+}
+
+/* ===== Druck: alles außer #print-root ausblenden ===== */
+@media print {
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  body > *:not(#print-root) {
+    display: none !important;
+  }
+
+  #print-root {
+    display: block !important;
+  }
+}

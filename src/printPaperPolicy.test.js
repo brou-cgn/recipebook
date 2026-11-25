@@ -2,22 +2,23 @@
  * Tech-Check P21: Druckvorschau und Ausdruck sind Papier, weiß mit dunkler Schrift, auch im
  * Dunkelmodus. darkMode.css färbt h1–h6, p, span, label und li dort pauschal hell
  * ([data-theme="dark"] li usw., Spezifität 0-1-1), und printRunner druckt im selben Dokument. Auf dem
- * Blatt erben diese Elemente deshalb die Farbe (color: inherit), in beiden Seitenarten: .ppv-page
- * (freies Layout, PrintPage.css) und .ppf-sheet (Vorlagen, FlowPage.css).
+ * Blatt erben diese Elemente deshalb die Farbe (color: inherit): .ppf-sheet in FlowPage.css. Seit dem
+ * Wegfall des freien Layouts (Vorhaben Drucklayout, Stufe 1) ist das die einzige Seitenart.
  *
- * Eigene Textfarben für Klassen auf diesen Elementen brauchen in den beiden Dateien dann mehr als
- * 0-1-1, also das Blatt oder die Vorschau davor (.ppv-page .klasse), sonst gewinnt das Erben bzw.
- * im Dunkelmodus die pauschale Regel.
+ * Eigene Textfarben für Klassen auf diesen Elementen brauchen dann mehr als 0-1-1, also das Blatt
+ * davor (.ppf-sheet .klasse), sonst gewinnt das Erben bzw. im Dunkelmodus die pauschale Regel. Das
+ * gilt in beiden Dateien, die das Blatt gestalten: FlowPage.css und PrintPage.css (Teile des Rezepts).
  */
 const fs = require('fs');
 const path = require('path');
 
 const read = (file) => fs.readFileSync(path.join(__dirname, file), 'utf8');
 const PAPER = [
-  { css: 'components/PrintPage.css', root: '.ppv-page' },
-  { css: 'components/FlowPage.css', root: '.ppf-sheet' },
+  { css: 'components/print/FlowPage.css', root: '.ppf-sheet' },
 ];
-const RENDERERS = ['components/printElementRenderers.js', 'components/PrintPage.js', 'components/FlowPage.js'];
+/** Stylesheets, die Elemente auf dem Blatt gestalten */
+const PAPER_CSS = ['components/print/PrintPage.css', 'components/print/FlowPage.css'];
+const RENDERERS = ['components/print/printElementRenderers.js', 'components/print/PrintPage.js', 'components/print/FlowPage.js'];
 
 /** Regeln einer CSS-Datei (Inhalt von @media-Blöcken eingeschlossen), ohne Kommentare. */
 function cssRules(css) {
@@ -91,7 +92,7 @@ describe('Papier der Druckvorschau und des Ausdrucks (Tech-Check P21)', () => {
   it('setzt eigene Textfarben auf dem Papier stärker als 0-1-1', () => {
     const classes = paperTextClasses(elements);
     const weak = [];
-    PAPER.forEach(({ css }) => {
+    PAPER_CSS.forEach((css) => {
       cssRules(read(css)).forEach(({ selectors, body }) => {
         const color = colorOf(body);
         if (!color || color === 'inherit') return;
