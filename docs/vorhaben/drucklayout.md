@@ -3,8 +3,9 @@
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
 Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 25.11.2026
 (Stufen 1 bis 3 gemergt und ausgeliefert. Seit dem Abend des 25.11.2026 neue Richtung: Der Eigentümer will die
-Anordnung „frei wie in Word“; der Machbarkeitstest dazu ist zur Hälfte gelaufen und wartet auf eine von ihm in
-Word bearbeitete Vorlage. Die Stufen 4 bis 6 des bisherigen Plans ruhen bis zu dieser Entscheidung).
+Anordnung „frei wie in Word“. Zwei Wege liegen dafür vor: die Word-Datei als Vorlage (Machbarkeitstest zur
+Hälfte gelaufen) und die freie Anordnung in der App ohne Word (Klick-Entwurf „Baukasten“, Empfehlung der
+Session). Die Wahl steht aus; die Stufen 4 bis 6 des bisherigen Plans ruhen bis dahin).
 
 **Ziel:** Die Konfiguration der Druckvorlagen unter Einstellungen › Drucklayout ist bedienbar und fühlt
 sich an wie Word: Menüband oben, das Blatt im Mittelpunkt, Formatvorlagen, Elemente verschiebbar. Dafür
@@ -367,6 +368,33 @@ der Weg vom PDF zum Drucker am iPhone; Hochladen und Speichern der Vorlage.
   Dienstes im Google-Cloud-Projekt, die der Eigentümer freigeben muss. Laufende Kosten und Wartezeit beim
   ersten Druck sind geschätzt, nicht gemessen: voraussichtlich im kostenlosen Kontingent bzw. einige Sekunden.
 
+## Entwurf „Baukasten“: freie Anordnung in der App, ohne Word (25.11.2026)
+
+Auf die Frage des Eigentümers „Und die Flexibilität in der App zu bauen ohne WORD?“ entstand ein Klick-Entwurf
+zum Ausprobieren: https://claude.ai/artifact/3GuwzhaHfuHeWac4oU7uLr (eigene Seite, kein Code der App; in der
+Session im Browser geprüft: Ziehen, Spalten bilden, Breite, Pfeile, langes Rezept, Handy, hell und dunkel).
+
+**Idee:** Das Blatt besteht aus Zeilen; jede Zeile hat eine bis drei Spalten, jede Spalte einen Stapel
+Bausteine (Titel, Foto, Autor & Datum, Infos, Zutaten, Zubereitung, dazu eigener Text und Trennlinie).
+- Ziehen im Blatt: Eine waagerechte blaue Linie heißt „darüber oder darunter“, eine senkrechte „daneben als
+  neue Spalte“. Spaltenbreiten ändert man am Zwischenraum.
+- Ohne Ziehen: Baustein anklicken, Pfeile in der Leiste (auch am Handy und per Tastatur); „nach links“ und „nach
+  rechts“ tauscht bei zwei Spalten die Seiten.
+- Alles fließt: Ein langes Rezept läuft auf die nächste Seite, nichts wird abgeschnitten. Die fünf Vorlagen
+  sind nur noch Startanordnungen.
+- Frei schwebend ablegen lassen sich Teile mit fester Größe (im Entwurf Logo und Stempel). Listen schweben
+  nicht: Sie würden abgeschnitten wie im Word-Textfeld und im entfernten freien Layout.
+
+**Was dieser Weg nicht kann:** Tabellen, Kopf- und Fußzeilen mit Seitenzahl, beliebig überlappende Teile,
+Listen in einem Kasten fester Größe. Das ginge nur mit der Word-Datei als Vorlage.
+
+**Was er für den Plan bedeutet** (Vorschlag, nicht entschieden): Er ist die bisherige Stufe 6 („Elemente
+verschieben“), vorgezogen und um Spalten erweitert. Geschätzt drei bis vier Stufen: (1) Datenmodell (Zeilen,
+Spalten, Bausteine je Format, zusätzlich zu den heutigen Einstellungen) und der Renderer dafür, ohne sichtbare
+Änderung an bestehenden Formaten; (2) Ziehen, Breiten und Pfeile im Editor; (3) eigene Bausteine (Text,
+Trennlinie, Logo) und frei schwebende Teile; (4) nach Bedarf Menüband und Formatvorlagen (bisher Stufen 4 und 5).
+Gedruckt wird weiter im Browser, ohne Server.
+
 ## Bewusste Verhaltensänderungen
 
 | # | Vorher | Nachher | Stufe |
@@ -391,6 +419,13 @@ Format wie vorher.
 
 ## Offen
 
+- **Richtung wählen** (Eigentümer): freie Anordnung **in der App** (Abschnitt „Entwurf Baukasten“,
+  Klick-Entwurf https://claude.ai/artifact/3GuwzhaHfuHeWac4oU7uLr) oder **Word-Datei als Vorlage** (Abschnitt
+  „Machbarkeitstest Word-Vorlage“). Empfehlung der Session: in der App. Gründe: kein Server, Druck wie heute
+  (auch ohne Netz und am iPhone), ein einziges Layoutsystem, das Blatt im Editor ist das gedruckte Blatt,
+  und der Aufwand ist kleiner (geschätzt drei bis vier Stufen gegen fünf bis sechs plus Cloud-Dienst). Für Word
+  spräche nur, wenn Tabellen, Kopf- und Fußzeilen mit Seitenzahl oder beliebig überlappende Teile gebraucht
+  werden. Beides zu bauen empfiehlt die Session nicht.
 - **Anordnung ändern** (Eigentümer am 25.11.2026, nach dem Deploy von Stufe 3): „Mir ist es im Moment noch zu
   unflexibel. Die Anordnung lässt sich noch nicht ändern.“ Heute einstellbar: Foto oben, links, rechts oder
   ohne; Zutaten und Zubereitung neben- oder untereinander; Teile ausblenden (Bereiche „Fotos“ und „Aufbau“ im
