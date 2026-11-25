@@ -322,6 +322,28 @@ Format wie vorher.
 
 ## Offen
 
+- **Anordnung ändern** (Eigentümer am 25.11.2026, nach dem Deploy von Stufe 3): „Mir ist es im Moment noch zu
+  unflexibel. Die Anordnung lässt sich noch nicht ändern.“ Heute einstellbar: Foto oben, links, rechts oder
+  ohne; Zutaten und Zubereitung neben- oder untereinander; Teile ausblenden (Bereiche „Fotos“ und „Aufbau“ im
+  Bedienfeld, beide zugeklappt). Nicht einstellbar: die Reihenfolge der Teile und welche Seite Zutaten und
+  Zubereitung haben. Vorschlag der Session: „Elemente verschieben“ (bisher Stufe 6) vorziehen und als nächste
+  Stufe bauen, wie im Detailblatt gezeichnet (Reihenfolge je Format, Zutaten und Zubereitung tauschen die
+  Seiten, Foto an jeder Stelle oder neben dem Titel, auch per „Nach oben“ und „Nach unten“). Rückfrage an den
+  Eigentümer offen: Reicht Umsortieren, oder ist freies Platzieren wie in Word gemeint?
+- **Word-Weg** (Wunsch des Eigentümers vom 25.11.2026: „Layoutvorlage als docx herunterladen, dort bearbeiten
+  und bearbeitet wieder hochladen“), nicht entschieden. Zwei Lesarten mit sehr unterschiedlichem Aufwand:
+  (1) Die Word-Datei ist die Vorlage: Platzhalter für die Rezeptdaten, daraus ein PDF über einen Umwandler auf
+  dem Server. Alles aus Word bleibt (Tabellen, Logo, Kopfzeile, freie Positionen), dafür ein zweites
+  Layoutsystem neben den Vorlagen (das freie Layout wurde in Stufe 1 gerade entfernt), Drucken braucht Internet,
+  und wie genau das PDF dem Bild in Word entspricht, ist ungeprüft. (2) Word als Stil-Editor: Die App liest aus
+  der hochgeladenen Datei nur Papier, Ränder, Schrift, Größen und Farben und druckt weiter wie heute; alles
+  andere ginge beim Hochladen verloren. Stand der Technik im Projekt: keine Word-Bibliothek, kein Umwandler
+  (die Functions haben nur Chromium); freie Bibliotheken zum Erzeugen und Füllen von docx gibt es (`docx`,
+  `docx-templates`, `docxtemplater`, je MIT, npm-Stand 25.11.2026). Empfehlung der Session: zuerst die
+  Anordnung in der App lösen; den Word-Weg nur verfolgen, wenn freies Platzieren, eigene Inhalte oder Tabellen
+  gebraucht werden, und dann mit einem Machbarkeitstest an einer Vorlage beginnen. Er widerspräche den
+  Entscheidungen „keine neuen Druckfunktionen“ und „nur noch ein Layoutsystem“; die Stufen 4 und 5 sollten
+  dann nicht zusätzlich gebaut werden.
 - **Umfang wählen** (Eigentümer), vor Stufe 4: voll (alle heutigen Optionen, in Reitern neu geordnet) oder
   schlank (deutlich weniger Regler). Der Aufbau ist entschieden (C). Empfehlung der Session: voller Umfang,
   weil in Reitern nie mehr als etwa acht Regler zugleich zu sehen sind und der schlanke Umfang gespeicherte
