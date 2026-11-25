@@ -2,8 +2,8 @@
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
 Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 25.11.2026
-(Stufen 1 und 2 gemergt und ausgeliefert, Aufbau C gewählt, Stufe 3 umgesetzt, PR #3796 offen; der Umfang
-der Optionen ist noch zu entscheiden, bevor Stufe 4 beginnt).
+(Stufen 1 bis 3 gemergt und ausgeliefert, Aufbau C gewählt; der Umfang der Optionen ist noch zu entscheiden,
+bevor Stufe 4 beginnt).
 
 **Ziel:** Die Konfiguration der Druckvorlagen unter Einstellungen › Drucklayout ist bedienbar und fühlt
 sich an wie Word: Menüband oben, das Blatt im Mittelpunkt, Formatvorlagen, Elemente verschiebbar. Dafür
@@ -83,7 +83,7 @@ Alle Entscheidungen vom Eigentümer am 25.11.2026 per Auswahl, soweit nicht ande
 | 1 | **Freies Layout entfernen** (Tech-Check P5, Teil Druck). Freie Formate werden beim Lesen auf die Vorlage „Klassisch“ umgestellt (Regel unten), Editor, positionierter Renderer, Geometrie und Element-Registry entfallen. Sichtbar anders: siehe „Bewusste Verhaltensänderungen“. | gemergt 25.11.2026 (PR #3794, Merge c3ee8ae, Deploy-Lauf 2161 erfolgreich); Einzelheiten unter „Stufe 1: Umsetzung und Prüfung“ |
 | E | **Entwürfe** der neuen Konfiguration als Entscheidungsseite: drei Varianten, zeigen auch „gleicher Umfang“ gegen „weniger Regler“. | veröffentlicht 25.11.2026 (Link oben); Aufbau C gewählt, Umfang offen |
 | 2 | **Struktur**, verhaltensgleich: Druck-Dateien in eigene Ordner (`src/components/print/`, `src/utils/print/`), Persistenz aus `customLists.js` nach `src/utils/printFormatsFirestore.js` (AGENTS.md: Firestore-Zugriffe in `*Firestore.js`), Re-Exporte aus `customLists.js` entfernen, Druck-Abschnitt von `Settings.css` in den Druck-Ordner, `window.confirm` durch `ConfirmDialog` ersetzen, feste Drucktexte ins Wörterbuch (de/en/fr, gedruckt wird deutsch). | gemergt 25.11.2026 (PR #3795, Merge 6c476a9, Deploy-Lauf 2162 erfolgreich); Einzelheiten unter „Stufe 2: Umsetzung und Prüfung“ |
-| 3 | **Formatliste** nach Entwurf C: Übersicht mit einer Karte je Format und der Regel in Klartext, ein Format zur Zeit im Editor im Vollfenster, Speichern immer erreichbar, Einleitungstext neu (du). Der Vorlagen-Editor selbst (Galerie, Bedienfeld, schwebende Leiste) bleibt bis Stufe 4, wie er ist. | umgesetzt 25.11.2026, PR #3796 (offen, noch nicht gemergt), Branch claude/jolly-archimedes-ilygt4, Commits 81fe133 und 462b58b; Einzelheiten unter „Stufe 3: Umsetzung und Prüfung“ |
+| 3 | **Formatliste** nach Entwurf C: Übersicht mit einer Karte je Format und der Regel in Klartext, ein Format zur Zeit im Editor im Vollfenster, Speichern immer erreichbar, Einleitungstext neu (du). Der Vorlagen-Editor selbst (Galerie, Bedienfeld, schwebende Leiste) bleibt bis Stufe 4, wie er ist. | gemergt 25.11.2026 (PR #3796, Merge e7f1c3c, Deploy-Lauf 2163 erfolgreich); Einzelheiten unter „Stufe 3: Umsetzung und Prüfung“ |
 | 4 | **Editor nach Entwurf C**: Menüband oben, Blatt im Mittelpunkt (Zoom, Seitenzahl), Auswahl im Blatt, das Menüband formatiert das Angeklickte. Löst Seitenleiste und schwebende Leiste ab. | offen (wartet auf die Entscheidung zum Umfang) |
 | 5 | **Formatvorlagen**: Stile (Titel, Überschrift, Fließtext, Infos) statt Einzelformatierung je Element. Braucht eine Erweiterung des Datenmodells und eine Regel, wie gespeicherte Einzelformatierungen (`overrides`) übergehen. | offen (wartet auf die Entscheidung zum Umfang) |
 | 6 | **Elemente verschieben**: Blöcke im Blatt umsortieren, Fotos umsetzen. Neue Funktion; braucht eine Reihenfolge im Datenmodell. | offen |
@@ -329,7 +329,10 @@ Format wie vorher.
   die Wahl „nur dieses Element“ entfällt (ein Konzept weniger; verloren geht nur, wenn zwei Elemente derselben
   Vorlage unterschiedlich formatiert waren).
 - **Stufe 3 bestätigen** (Eigentümer): das Speichern je Handlung und die Abweichungen vom gezeichneten Entwurf
-  (beides unter „Stufe 3: Umsetzung und Prüfung“). Was nicht passt, wird in Stufe 4 mit umgebaut.
+  (beides unter „Stufe 3: Umsetzung und Prüfung“). Stufe 3 ist gemergt und ausgeliefert; was im Gebrauch nicht
+  passt, wird in Stufe 4 mit umgebaut.
+- **Nach dem Deploy von Stufe 3 am Gerät ansehen:** Übersicht und Editor am iPhone (in der Session nur in
+  Chromium geprüft), dort auch einmal ein Format per Linksswipe entfernen und „Rückgängig“ antippen (D12).
 - **Formatvorlagen und gespeicherte Einzelformatierungen:** Wie gehen `overrides` je Element in Stile über?
   Entscheidung mit dem Entwurf.
 - **Elemente verschieben:** Welche Blöcke sind verschiebbar, und was bedeutet das für die fünf Vorlagen
