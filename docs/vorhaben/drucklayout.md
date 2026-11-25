@@ -2,7 +2,8 @@
 
 Tracker nach `CLAUDE.md`. Hier steht, was entschieden, was erledigt und was offen ist.
 Zu Beginn jeder Arbeit daran zuerst lesen, nicht auf alte Chats verlassen. Stand: 25.11.2026
-(Stufe 1 gemergt und ausgeliefert, Stufe 2 umgesetzt, Entwürfe veröffentlicht, Wahl des Entwurfs steht aus).
+(Stufe 1 gemergt und ausgeliefert, Stufe 2 umgesetzt, PR #3795 offen, Entwürfe veröffentlicht, Wahl des Entwurfs
+steht aus).
 
 **Ziel:** Die Konfiguration der Druckvorlagen unter Einstellungen › Drucklayout ist bedienbar und fühlt
 sich an wie Word: Menüband oben, das Blatt im Mittelpunkt, Formatvorlagen, Elemente verschiebbar. Dafür
@@ -79,7 +80,7 @@ Alle Entscheidungen vom Eigentümer am 25.11.2026 per Auswahl, soweit nicht ande
 |---|---|---|
 | 1 | **Freies Layout entfernen** (Tech-Check P5, Teil Druck). Freie Formate werden beim Lesen auf die Vorlage „Klassisch“ umgestellt (Regel unten), Editor, positionierter Renderer, Geometrie und Element-Registry entfallen. Sichtbar anders: siehe „Bewusste Verhaltensänderungen“. | gemergt 25.11.2026 (PR #3794, Merge c3ee8ae, Deploy-Lauf 2161 erfolgreich); Einzelheiten unter „Stufe 1: Umsetzung und Prüfung“ |
 | E | **Entwürfe** der neuen Konfiguration als Entscheidungsseite: drei Varianten, zeigen auch „gleicher Umfang“ gegen „weniger Regler“. | veröffentlicht 25.11.2026 (Link oben), Wahl offen |
-| 2 | **Struktur**, verhaltensgleich: Druck-Dateien in eigene Ordner (`src/components/print/`, `src/utils/print/`), Persistenz aus `customLists.js` nach `src/utils/printFormatsFirestore.js` (AGENTS.md: Firestore-Zugriffe in `*Firestore.js`), Re-Exporte aus `customLists.js` entfernen, Druck-Abschnitt von `Settings.css` in den Druck-Ordner, `window.confirm` durch `ConfirmDialog` ersetzen, feste Drucktexte ins Wörterbuch (de/en/fr, gedruckt wird deutsch). | umgesetzt 25.11.2026, Branch claude/jolly-archimedes-ilygt4 (noch kein PR); Einzelheiten unter „Stufe 2: Umsetzung und Prüfung“ |
+| 2 | **Struktur**, verhaltensgleich: Druck-Dateien in eigene Ordner (`src/components/print/`, `src/utils/print/`), Persistenz aus `customLists.js` nach `src/utils/printFormatsFirestore.js` (AGENTS.md: Firestore-Zugriffe in `*Firestore.js`), Re-Exporte aus `customLists.js` entfernen, Druck-Abschnitt von `Settings.css` in den Druck-Ordner, `window.confirm` durch `ConfirmDialog` ersetzen, feste Drucktexte ins Wörterbuch (de/en/fr, gedruckt wird deutsch). | umgesetzt 25.11.2026, PR #3795 (offen, noch nicht gemergt), Branch claude/jolly-archimedes-ilygt4, Commit 01f97f4; Einzelheiten unter „Stufe 2: Umsetzung und Prüfung“ |
 | 3 | **Formatliste**: kompakte Liste der Formate mit Regel in Klartext, ein Format zur Zeit geöffnet, Speichern immer erreichbar, Einleitungstext neu (du). Unabhängig von der Wahl des Entwurfs im Kern gleich; Lage und Aussehen folgen dem gewählten Entwurf. | offen (wartet auf E) |
 | 4 | **Editor nach gewähltem Entwurf**: Menüband oben, Blatt im Mittelpunkt (Zoom, Seitenzahl), Auswahl im Blatt, das Menüband formatiert das Angeklickte. Löst Seitenleiste und schwebende Leiste ab. | offen (wartet auf E) |
 | 5 | **Formatvorlagen**: Stile (Titel, Überschrift, Fließtext, Infos) statt Einzelformatierung je Element. Braucht eine Erweiterung des Datenmodells und eine Regel, wie gespeicherte Einzelformatierungen (`overrides`) übergehen. | offen (wartet auf E) |
@@ -200,7 +201,7 @@ im Speicher nach, nicht den im localStorage (eine Stunde gültig). Nach einem Ne
 zu einer Stunde mit dem alten Stand, und die Sicherung `printFormatsBackupFreiesLayout` galt dann als nicht
 vorhanden. Dasselbe Muster haben neun weitere Schreibwege in `customLists.js` (Slogan, Favicon-Text,
 Umrechnungstabelle, KI-Prompt, Texte der Startseite, Einstellungen der Inspirationsliste); die sind **nicht**
-Teil dieses Vorhabens und stehen im Tech-Check als offen.
+Teil dieses Vorhabens und stehen im Tech-Check als offen (Befund A15, „teilweise“).
 
 ## Bewusste Verhaltensänderungen
 
