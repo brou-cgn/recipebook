@@ -16,6 +16,7 @@ import FlowPage from './FlowPage';
  *   servings     {number}  chosen servings (default recipe.portionen)
  *   authorName   {string}  resolved author first name (not stored on the recipe)
  *   portionLabel {string}  e.g. "Portionen"
+ *   sprache      {string}  language of the fixed texts (default German; not passed by any caller yet)
  *   mode         {'preview'|'print'} preview: scaled, placeholders, page-break marks
  *   embedded     {boolean} preview only: no outer margin and no summary line
  * plus the preview props of FlowPage (selectedElement, onSelectElement, thumbnail).

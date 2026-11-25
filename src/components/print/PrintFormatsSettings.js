@@ -1,23 +1,23 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import TrashIcon from './icons/TrashIcon';
+import './PrintFormatsSettings.css';
+import TrashIcon from '../icons/TrashIcon';
 import TemplateFormatEditor from './TemplateFormatEditor';
-import DeleteRowButton from './DeleteRowButton';
-import UndoSnackbar from './UndoSnackbar';
-import useUndoableDelete from '../hooks/useUndoableDelete';
-import useSwipeToDelete from '../hooks/useSwipeToDelete';
+import DeleteRowButton from '../DeleteRowButton';
+import UndoSnackbar from '../UndoSnackbar';
+import useUndoableDelete from '../../hooks/useUndoableDelete';
+import useSwipeToDelete from '../../hooks/useSwipeToDelete';
+import { loadPrintFormatsForEditing, savePrintFormats } from '../../utils/printFormatsFirestore';
 import {
-  loadPrintFormatsForEditing,
-  savePrintFormats,
   DEFAULT_PRINT_FORMATS,
   PrintFormatValidationError,
   validatePrintFormats,
   selectPrintFormat,
   createFlowFormat,
   duplicatePrintFormat,
-} from '../utils/customLists';
-import { isConvertedFreeFormat } from '../utils/printFormats';
-import { getRecipeImages } from '../utils/printRecipe';
-import Button from './Button';
+  isConvertedFreeFormat,
+} from '../../utils/print/printFormats';
+import { getRecipeImages } from '../../utils/print/printRecipe';
+import Button from '../Button';
 
 const isCatchAll = (f) => f.maxPhotos === null || f.maxPhotos === undefined;
 

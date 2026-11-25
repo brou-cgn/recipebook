@@ -1,20 +1,21 @@
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import './TemplateFormatEditor.css';
-import './PrintFormatEditor.css';
 import PrintPage from './PrintPage';
 import TemplateGallery from './templateEditor/TemplateGallery';
 import StylePanel from './templateEditor/StylePanel';
 import FloatingToolbar from './templateEditor/FloatingToolbar';
-import { getPageSize } from '../utils/printLayout';
-import { SAMPLE_RECIPE } from '../utils/printSampleRecipe';
+import ConfirmDialog from '../ConfirmDialog';
+import { getPageSize } from '../../utils/print/printLayout';
+import { SAMPLE_RECIPE } from '../../utils/print/printSampleRecipe';
 import {
   applyTemplate,
+  getTemplate,
   hasFlowCustomisations,
   normalizeFlowOverrides,
   resolveFlowStyle,
-} from '../utils/printTemplates';
+} from '../../utils/print/printTemplates';
 
-const REPLACE_CONFIRM = 'Die Vorlage ersetzt deine bisherigen Einstellungen für dieses Format. Fortfahren?';
+const REPLACE_MESSAGE = 'Die Vorlage ersetzt deine bisherigen Einstellungen für dieses Format.';
 const TOOLBAR_GAP = 8;
 
 /**
@@ -32,6 +33,8 @@ export default function TemplateFormatEditor({ format, onChange, previewRecipe, 
   const toolbarRef = useRef(null);
   const [selected, setSelected] = useState(null);
   const [position, setPosition] = useState({ top: 0, left: 0 });
+  // Vorlage, die erst nach Rückfrage angewendet wird (das Format hat eigene Anpassungen)
+  const [pendingTemplate, setPendingTemplate] = useState(null);
 
   const page = getPageSize(format);
   const style = resolveFlowStyle(format);
@@ -56,11 +59,16 @@ export default function TemplateFormatEditor({ format, onChange, previewRecipe, 
     update({ overrides: rest });
   };
 
-  const chooseTemplate = (id) => {
-    if (id === format.template && !hasFlowCustomisations(format)) return;
-    if (hasFlowCustomisations(format) && !window.confirm(REPLACE_CONFIRM)) return;
+  const applyChosenTemplate = (id) => {
+    setPendingTemplate(null);
     setSelected(null);
     onChange(applyTemplate(format, id));
+  };
+  const chooseTemplate = (id) => {
+    const customised = hasFlowCustomisations(format);
+    if (id === format.template && !customised) return;
+    if (customised) setPendingTemplate(id);
+    else applyChosenTemplate(id);
   };
 
   // Keep the floating bar next to the selected element (above it, or below when there is no room).
@@ -122,6 +130,16 @@ export default function TemplateFormatEditor({ format, onChange, previewRecipe, 
           )}
         </div>
       </div>
+      {pendingTemplate && (
+        <ConfirmDialog
+          title={`Vorlage „${getTemplate(pendingTemplate).label}“ anwenden?`}
+          message={REPLACE_MESSAGE}
+          confirmLabel="Vorlage anwenden"
+          confirmVariant="primary"
+          onConfirm={() => applyChosenTemplate(pendingTemplate)}
+          onCancel={() => setPendingTemplate(null)}
+        />
+      )}
     </div>
   );
 }

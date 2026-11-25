@@ -1,5 +1,5 @@
 import { printRecipe } from './printRunner';
-import { createFlowFormat } from '../utils/printFormats';
+import { createFlowFormat } from '../../utils/print/printFormats';
 
 const recipe = { id: 'r', title: 'Testrezept', portionen: 2, ingredients: ['1 Ei'], steps: ['Kochen'] };
 
@@ -34,6 +34,17 @@ const leftovers = () => ({
 });
 
 describe('printRecipe', () => {
+  test('prints German; `sprache` is handed to the page for the fixed texts', async () => {
+    const headings = () => Array.from(document.querySelectorAll('#print-root .ppv-el-section-heading')).map((n) => n.textContent);
+    let seen;
+    printSpy.mockImplementation(() => { seen = headings(); });
+    await printRecipe({ recipe, format: createFlowFormat(), servings: 2 });
+    expect(seen).toEqual(['Zutaten für 2 Portionen', 'Zubereitung']);
+    window.dispatchEvent(new Event('afterprint'));
+    await printRecipe({ recipe, format: createFlowFormat(), servings: 2, sprache: 'fr' });
+    expect(seen).toEqual(['Ingrédients pour 2 portions', 'Préparation']);
+  });
+
   test('renders the page into #print-root, sets @page in cm and calls window.print once', async () => {
     await printRecipe({ recipe, format: createFlowFormat(), servings: 2 });
     expect(printSpy).toHaveBeenCalledTimes(1);

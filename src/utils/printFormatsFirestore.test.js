@@ -13,10 +13,11 @@ jest.mock('firebase/firestore', () => ({
 }));
 
 import { getDoc, updateDoc } from 'firebase/firestore';
+import { getPrintFormats, savePrintFormats, loadPrintFormatsForEditing } from './printFormatsFirestore';
+import { clearSettingsCache } from './customLists';
 import {
-  getPrintFormats, savePrintFormats, clearSettingsCache, PrintFormatValidationError,
-} from './customLists';
-import { createFlowFormat, migrateFormat, isConvertedFreeFormat } from './printFormats';
+  createFlowFormat, migrateFormat, isConvertedFreeFormat, PrintFormatValidationError,
+} from './print/printFormats';
 
 // Stored formats of the removed free layout: boxes positioned by hand, no layoutType.
 const BOXES = [
@@ -178,8 +179,6 @@ describe('savePrintFormats', () => {
 });
 
 describe('loadPrintFormatsForEditing', () => {
-  const { loadPrintFormatsForEditing } = require('./customLists');
-
   test('returns the stored formats as templates; converted ones are marked for the hint', async () => {
     getDoc.mockResolvedValue({ exists: () => true, data: () => ({ printFormats: [legacyV2, template()] }) });
     const { formats, usingDefaults } = await loadPrintFormatsForEditing();
@@ -199,5 +198,48 @@ describe('loadPrintFormatsForEditing', () => {
   test('throws on a failed read instead of returning defaults', async () => {
     getDoc.mockRejectedValue(new Error('offline'));
     await expect(loadPrintFormatsForEditing()).rejects.toThrow('offline');
+  });
+});
+
+describe('settings cache', () => {
+  // A reload: fresh modules (empty memory cache), same localStorage. Firestore still answers
+  // with the old formats, as it would for a client that only reads settings/images after a reload.
+  const afterReload = (storedInFirestore) => {
+    jest.resetModules();
+    const firestore = require('firebase/firestore');
+    firestore.getDoc.mockImplementation(async () => ({ exists: () => true, data: () => storedInFirestore }));
+    return require('./printFormatsFirestore');
+  };
+
+  test('saved formats are used after a reload, not the stale copy in localStorage', async () => {
+    const before = { printFormats: [template()] };
+    mockSettings(before);
+    expect((await getPrintFormats()).map((f) => f.name)).toEqual(['Vorlage']);
+    await savePrintFormats([{ ...template(), name: 'Geändert' }]);
+    expect((await getPrintFormats()).map((f) => f.name)).toEqual(['Geändert']);
+
+    const formats = await afterReload(before).getPrintFormats();
+    expect(formats.map((f) => f.name)).toEqual(['Geändert']);
+  });
+
+  test('the backup written with the save is cached too, so a second save does not overwrite it', async () => {
+    mockSettings({ printFormats: [freeV3] });
+    await getPrintFormats();
+    await savePrintFormats([createFlowFormat()]);
+    expect(updateDoc.mock.calls[0][1]).toHaveProperty('printFormatsBackupFreiesLayout');
+
+    const fresh = afterReload({ printFormats: [freeV3] });
+    const firestore = require('firebase/firestore');
+    firestore.updateDoc.mockResolvedValue(undefined);
+    await fresh.savePrintFormats([createFlowFormat()]);
+    expect(firestore.updateDoc.mock.calls[0][1]).not.toHaveProperty('printFormatsBackupFreiesLayout');
+  });
+
+  test('formats read for the editor replace the cached ones', async () => {
+    mockSettings({ printFormats: [template()] });
+    await getPrintFormats();
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ printFormats: [{ ...template(), name: 'Neu aus Firestore' }] }) });
+    await loadPrintFormatsForEditing();
+    expect((await getPrintFormats()).map((f) => f.name)).toEqual(['Neu aus Firestore']);
   });
 });

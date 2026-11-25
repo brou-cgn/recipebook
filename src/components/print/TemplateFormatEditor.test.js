@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import TemplateFormatEditor from './TemplateFormatEditor';
-import { createFlowFormat } from '../utils/printFormats';
-import { PRINT_TEMPLATES, getTemplateStyle } from '../utils/printTemplates';
+import { createFlowFormat } from '../../utils/print/printFormats';
+import { PRINT_TEMPLATES, getTemplateStyle } from '../../utils/print/printTemplates';
 
 let latest;
 function Harness({ initial, ...props }) {
@@ -32,23 +32,40 @@ describe('template gallery', () => {
     setup();
     fireEvent.click(screen.getByRole('radio', { name: /Kompakt/ }));
     expect(confirm).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alertdialog')).toBeNull();
     expect(latest.template).toBe('compact');
     expect(latest.style).toEqual(getTemplateStyle('compact'));
   });
 
-  test('own changes are only replaced after confirmation', () => {
-    const confirm = jest.spyOn(window, 'confirm').mockReturnValue(false);
+  test('own changes are only replaced after confirmation in the in-app dialog', () => {
+    const confirm = jest.spyOn(window, 'confirm');
     setup();
     fireEvent.click(radio('Schriftgröße', 'Groß'));
     const minimal = () => within(screen.getByRole('radiogroup', { name: 'Vorlage' })).getByRole('radio', { name: /Schlicht/ });
+
     fireEvent.click(minimal());
-    expect(confirm).toHaveBeenCalledTimes(1);
+    const dialog = screen.getByRole('alertdialog', { name: 'Vorlage „Schlicht“ anwenden?' });
+    expect(dialog).toHaveTextContent('Die Vorlage ersetzt deine bisherigen Einstellungen für dieses Format.');
+    expect(latest.template).toBe('classic');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Abbrechen' }));
+    expect(screen.queryByRole('alertdialog')).toBeNull();
     expect(latest.template).toBe('classic');
     expect(latest.style.baseSize).toBe('l');
-    confirm.mockReturnValue(true);
+
     fireEvent.click(minimal());
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Vorlage anwenden' }));
+    expect(screen.queryByRole('alertdialog')).toBeNull();
     expect(latest.template).toBe('minimal');
     expect(latest.style.baseSize).toBe('m');
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  test('the dialog also asks when the active template is chosen again to drop own changes', () => {
+    setup();
+    fireEvent.click(radio('Schriftgröße', 'Groß'));
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Vorlage' })).getByRole('radio', { name: /Klassisch/ }));
+    fireEvent.click(within(screen.getByRole('alertdialog', { name: 'Vorlage „Klassisch“ anwenden?' })).getByRole('button', { name: 'Vorlage anwenden' }));
+    expect(latest.style).toEqual(getTemplateStyle('classic'));
   });
 
   test('applying a template keeps name, photo limit and page size', () => {

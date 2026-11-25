@@ -2,8 +2,8 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import PrintPage from './PrintPage';
 import { PRINT_ELEMENT_RENDERERS } from './printElementRenderers';
-import { createFlowFormat, migrateFormat } from '../utils/printFormats';
-import { FLOW_ELEMENTS } from '../utils/printTemplates';
+import { createFlowFormat, migrateFormat } from '../../utils/print/printFormats';
+import { FLOW_ELEMENTS } from '../../utils/print/printTemplates';
 
 const recipe = {
   id: 'r1',

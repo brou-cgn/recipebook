@@ -2,7 +2,7 @@ import React, { forwardRef, useEffect } from 'react';
 import Segmented from './Segmented';
 import {
   FLOW_ELEMENTS, FLOW_PHOTO_SIZES, FLOW_PHOTO_ASPECTS, MIN_FONT_SCALE, MAX_FONT_SCALE,
-} from '../../utils/printTemplates';
+} from '../../../utils/print/printTemplates';
 
 const round1 = (n) => Math.round(n * 10) / 10;
 

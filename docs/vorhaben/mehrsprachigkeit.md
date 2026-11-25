@@ -190,10 +190,17 @@ aktualisieren.
   nach dem Deploy Fehler: eine gepflegte Liste geschützter Begriffe in den Einstellungen, die an beide Prompts geht und
   nach der Übersetzung geprüft wird (fehlt ein Begriff, wird die Übersetzung verworfen). Robust, aber deutlich mehr
   Aufwand; erst bauen, wenn es nötig ist.
-- **Rest der Baseline (82 Textstellen):** Wichteln (77, nach der Saison, siehe „Wichtel-Seite“) und der Druck
-  (`FlowPage.js`, `printElementRenderers.js`, 5, Phase B; bis 25.11.2026 waren es 85 und 8, drei Texte des freien
-  Layouts entfielen mit Stufe 1 des Vorhabens Drucklayout, `docs/vorhaben/drucklayout.md`). Gruppen und Netzwerk seit
-  PR 6s übersetzt.
+- **Rest der Baseline (77 Textstellen):** nur noch Wichteln (nach der Saison, siehe „Wichtel-Seite“). Gruppen und
+  Netzwerk seit PR 6s übersetzt. Der Druck steht nicht mehr in der Baseline (bis 25.11.2026: 8 Textstellen): Mit dem
+  Vorhaben Drucklayout (`docs/vorhaben/drucklayout.md`) entfielen drei mit dem freien Layout (Stufe 1), die übrigen
+  fünf stehen seit Stufe 2 im Wörterbuch `src/i18n/texte/druck.js` (de/en/fr).
+- **Druck in der Sprache der App (Phase B), vorbereitet:** Gedruckt wird weiter deutsch (Entscheidung des Eigentümers
+  vom 25.11.2026: nur vorbereiten). `printRecipe`, `PrintPage` und `FlowPage` nehmen `sprache` entgegen, kein Aufrufer
+  gibt sie mit; die Hilfsfunktionen in `src/utils/print/printRecipe.js` formulieren über `druckTexte(sprache)` und
+  formatieren das Datum mit `formatiereDatum`. Für Phase B bleibt: in `RecipeDetail.handlePrint` und in der Vorschau
+  der Einstellungen die Sprache der App durchreichen, Titel, Zutaten und Schritte übersetzt übergeben und die
+  Portionseinheit (`portionLabel`) in der Sprache liefern. Die Vorschau in den Einstellungen muss dieselbe Sprache
+  bekommen wie der Druck, sonst weichen beide voneinander ab.
 - **Automatisch übersetzte Listenwerte prüfen (PR 6t):** Nach dem Deploy füllt der Trigger beim ersten Speichern
   einer Liste auch alle älteren Lücken. Danach unter Einstellungen › Listen & Kategorien die mit „KI“ markierten
   Übersetzungen durchsehen, besonders Abkürzungen der Maßeinheiten, und erst dann „Als geprüft markieren“.

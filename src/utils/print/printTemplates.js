@@ -16,7 +16,7 @@ import {
   DEFAULT_PRINT_FONT_FAMILY,
   DEFAULT_PRINT_PAGE_WIDTH_CM,
   DEFAULT_PRINT_PAGE_HEIGHT_CM,
-} from './printElements';
+} from './printLayout';
 
 /** Elements of the flow layout (the photos are one element). */
 export const FLOW_ELEMENTS = [
