@@ -187,7 +187,7 @@ Umsetzungsnotizen PR 3:
   die neuen Tokens `--color-wein-laden-glas` (hell #1a1a1a, dunkel #e0d5c7) und `--color-wein-laden-wein` (#7b0f0f).
   Bei „Bewegung reduzieren“ steht das Glas halb voll. Das ruhende Glas (dünne Kontur) bleibt unverändert; im
   Menü-Kopf wechselt die Form deshalb für die Dauer der Berechnung. Test `WeinGlasLaden.test.js` (+3).
-  Stand: Branch claude/weinglas-ladeanimation (lokal committet, noch nicht gepusht, noch kein PR).
+  Stand: Branch claude/weinglas-ladeanimation (Commit 2562daf, noch kein PR).
 - Nachbesserung 14.11.2026: Ziehzone = Griff plus Titel (`touch-action: none`); ab 90 px oder mit Schwung
   (ab 30 px, 0,5 px/ms) schließt das Sheet und gleitet von der aktuellen Position nach unten, sonst federt es
   zurück. Der Griff ist ein Knopf „Schließen“ für Tastatur und Screenreader; das Antippen mit dem Finger
