@@ -180,6 +180,14 @@ Umsetzungsnotizen PR 3:
   Hintergrund oder Escape, der Fokus kehrt zum Chip zurück; Scroll-Sperre und Ausblenden wie bei den anderen
   Sheets (`useModalScrollLock`, `useFadeOutClose`).
 - Ladezustand: Glas füllt sich (CSS-Animation), bei „Bewegung reduzieren“ ohne Animation.
+- Ladeanimation 26.11.2026 (Vorlage des Eigentümers: je ein leeres und ein volles Glas für Hell und Dunkel):
+  Beim Einschätzen (Rezept, `WeinDazu`) und beim Erstellen bzw. Neuberechnen (Menü, Kopf der Weinbegleitung)
+  zeigt `WeinGlas laedt` jetzt `WeinGlasLaden` (`WeinbegleitungTeile.js`): gefülltes Glas nach Vorlage, der Wein
+  steigt mit einer Welle, bleibt kurz voll, blendet aus und beginnt neu (2,6 s je Durchlauf, nur CSS). Farben über
+  die neuen Tokens `--color-wein-laden-glas` (hell #1a1a1a, dunkel #e0d5c7) und `--color-wein-laden-wein` (#7b0f0f).
+  Bei „Bewegung reduzieren“ steht das Glas halb voll. Das ruhende Glas (dünne Kontur) bleibt unverändert; im
+  Menü-Kopf wechselt die Form deshalb für die Dauer der Berechnung. Test `WeinGlasLaden.test.js` (+3).
+  Stand: Branch claude/weinglas-ladeanimation (lokal committet, noch nicht gepusht, noch kein PR).
 - Nachbesserung 14.11.2026: Ziehzone = Griff plus Titel (`touch-action: none`); ab 90 px oder mit Schwung
   (ab 30 px, 0,5 px/ms) schließt das Sheet und gleitet von der aktuellen Position nach unten, sonst federt es
   zurück. Der Griff ist ein Knopf „Schließen“ für Tastatur und Screenreader; das Antippen mit dem Finger

@@ -70,6 +70,9 @@
   --color-wein-rose: #e8a0a8;
   --color-wein-rot: #7a1f2b;
   --color-wein-suess: #c9852e;
+  /* Ladeanimation der Weinbegleitung (WeinGlasLaden): Glas und Wein nach Vorlage des Eigentümers (26.11.2026) */
+  --color-wein-laden-glas: #1a1a1a;
+  --color-wein-laden-wein: #7b0f0f;
   /* Knöpfe (Button-System, components/Button.js; Tech-Check A8). Im Event-Bereich ist der
      Haupt-Knopf grün, siehe Button.css. */
   --color-button-primary-bg: var(--color-accent);
@@ -195,6 +198,8 @@
   --color-wein-rose: #f0aab3;
   --color-wein-rot: #c0485a;
   --color-wein-suess: #d89a45;
+  --color-wein-laden-glas: #e0d5c7;
+  --color-wein-laden-wein: #7b0f0f;
   --color-button-primary-bg: var(--color-accent);
   --color-button-primary-text: var(--color-on-accent);
   --color-button-secondary-bg: var(--color-surface-raised);
