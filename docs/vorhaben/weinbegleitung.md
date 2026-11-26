@@ -189,6 +189,7 @@ Umsetzungsnotizen PR 3:
   ruhende Glas im Kopf der Menü-Weinbegleitung die neue Form (`VorlageGlas`, Zustände „leer“, „voll“, „laedt“):
   leer ohne, gefüllt mit Weinbegleitung, damit die Form beim Berechnen nicht wechselt. Die übrigen Gläser
   (Weinzeilen, Chip, Sheet, Seite „Weinbegleitung“) bleiben das dünne Konturglas. Test `WeinGlasLaden.test.js` (+4).
+  Stand: PR #3799 (offen, 26.11.2026).
 - Nachbesserung 14.11.2026: Ziehzone = Griff plus Titel (`touch-action: none`); ab 90 px oder mit Schwung
   (ab 30 px, 0,5 px/ms) schließt das Sheet und gleitet von der aktuellen Position nach unten, sonst federt es
   zurück. Der Griff ist ein Knopf „Schließen“ für Tastatur und Screenreader; das Antippen mit dem Finger
