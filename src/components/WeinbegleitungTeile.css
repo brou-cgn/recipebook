@@ -11,16 +11,20 @@
 .wein-glas-fuellung--rot { fill: var(--color-wein-rot); }
 .wein-glas-fuellung--suess { fill: var(--color-wein-suess); }
 
-/* Ladezustand (WeinGlasLaden): das Glas füllt sich mit einer Welle, bleibt kurz voll, beginnt neu.
+/* Glas nach Vorlage (VorlageGlas). Ladezustand: das Glas füllt sich mit einer Welle, bleibt kurz voll, beginnt neu.
    Pegel in SVG-Einheiten: 165 = leer (unter dem Kelchboden), 0 = voll (über der Kelchöffnung). */
 .wein-laden-glas { fill: var(--color-wein-laden-glas); }
 .wein-laden-welle { fill: var(--color-wein-laden-wein); }
 
-.wein-laden-pegel {
+.wein-glas--voll .wein-laden-pegel {
+  transform: translateY(0);
+}
+
+.wein-glas--laedt .wein-laden-pegel {
   animation: wein-laden-fuellen 2.6s cubic-bezier(0.45, 0.05, 0.3, 1) infinite;
 }
 
-.wein-laden-welle {
+.wein-glas--laedt .wein-laden-welle {
   animation: wein-laden-welle 1.1s linear infinite;
 }
 
@@ -36,12 +40,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wein-laden-pegel {
+  .wein-glas--laedt .wein-laden-pegel {
     animation: none;
     transform: translateY(80px);
   }
 
-  .wein-laden-welle {
+  .wein-glas--laedt .wein-laden-welle {
     animation: none;
   }
 }

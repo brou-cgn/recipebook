@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react';
-import { WeinGlas } from './WeinbegleitungTeile';
+import { WeinGlas, VorlageGlas } from './WeinbegleitungTeile';
 
 describe('WeinGlas im Ladezustand', () => {
   it('zeigt die Ladeanimation mit Pegel, Welle und maskiertem Glas', () => {
@@ -25,5 +25,14 @@ describe('WeinGlas im Ladezustand', () => {
     expect(container.querySelector('.wein-glas--laedt')).toBeNull();
     expect(container.querySelector('.wein-laden-pegel')).toBeNull();
     expect(container.querySelector('.wein-glas-fuellung--rot')).not.toBeNull();
+  });
+
+  it('zeigt das Vorlage-Glas ruhend voll oder leer, ohne Animation', () => {
+    const { container: voll } = render(<VorlageGlas zustand="voll" />);
+    expect(voll.querySelector('svg.wein-glas--voll .wein-laden-welle')).not.toBeNull();
+    expect(voll.querySelector('.wein-glas--laedt')).toBeNull();
+    const { container: leer } = render(<VorlageGlas zustand="leer" />);
+    expect(leer.querySelector('svg.wein-glas--leer')).not.toBeNull();
+    expect(leer.querySelector('.wein-laden-welle')).toBeNull();
   });
 });

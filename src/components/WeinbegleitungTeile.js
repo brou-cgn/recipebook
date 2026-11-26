@@ -20,18 +20,18 @@ const LADEN_KELCH = 'M85 0C140 0 170 30 170 92C170 135 135 168 98 176H72C35 168 
 const LADEN_HOHLRAUM = 'M85 158C50 158 18 130 18 92C18 70 20 52 26 36H144C150 52 152 70 152 92C152 130 120 158 85 158Z';
 
 /**
- * Ladezustand der Weinbegleitung: ein Glas, das sich mit einer Welle füllt, kurz voll bleibt und
- * von vorn beginnt. Der Wein liegt hinter dem Glas und ist nur durch die Maske zu sehen (Hohlraum
- * und Kelchöffnung). Quadratische viewBox, damit das Glas denselben Platz belegt wie `WeinGlas`.
- * Bei „Bewegung reduzieren“ steht es halb voll.
+ * Glas nach Vorlage des Eigentümers, quadratische viewBox, damit es denselben Platz belegt wie
+ * `WeinGlas`. Der Wein liegt hinter dem Glas und ist nur durch die Maske zu sehen (Hohlraum und
+ * Kelchöffnung). `zustand`: „laedt“ = füllt sich mit einer Welle, bleibt kurz voll, beginnt von vorn
+ * (bei „Bewegung reduzieren“ halb voll); „voll“ = ruhend gefüllt; „leer“ = ohne Wein.
  */
-function WeinGlasLaden({ groesse }) {
+export function VorlageGlas({ zustand = 'leer', groesse = 24 }) {
   const id = useId();
-  const clipId = sichereId('wein-laden-clip', id);
-  const maskeId = sichereId('wein-laden-maske', id);
+  const clipId = sichereId('wein-vorlage-clip', id);
+  const maskeId = sichereId('wein-vorlage-maske', id);
   return (
     <svg
-      className="wein-glas wein-glas--laedt"
+      className={`wein-glas wein-glas--vorlage wein-glas--${zustand}`}
       width={groesse}
       height={groesse}
       viewBox="-53.5 0 277 277"
@@ -49,14 +49,16 @@ function WeinGlasLaden({ groesse }) {
           <ellipse cx="85" cy="25" rx="46" ry="13.5" fill="#000" />
         </mask>
       </defs>
-      <g clipPath={`url(#${clipId})`}>
-        <g className="wein-laden-pegel">
-          <path
-            className="wein-laden-welle"
-            d="M0 8Q21.25 0 42.5 8T85 8T127.5 8T170 8T212.5 8T255 8T297.5 8T340 8V200H0Z"
-          />
+      {zustand !== 'leer' && (
+        <g clipPath={`url(#${clipId})`}>
+          <g className="wein-laden-pegel">
+            <path
+              className="wein-laden-welle"
+              d="M0 8Q21.25 0 42.5 8T85 8T127.5 8T170 8T212.5 8T255 8T297.5 8T340 8V200H0Z"
+            />
+          </g>
         </g>
-      </g>
+      )}
       <g className="wein-laden-glas" mask={`url(#${maskeId})`}>
         <path d={LADEN_KELCH} />
         <rect x="74" y="170" width="22" height="60" />
@@ -68,11 +70,11 @@ function WeinGlasLaden({ groesse }) {
 
 /**
  * Weinglas als Inline-SVG. Mit `farbe` gefüllt (weiss, rose, rot, suess), sonst leer. Mit `laedt`
- * erscheint stattdessen die Ladeanimation `WeinGlasLaden`.
+ * erscheint stattdessen die Ladeanimation (`VorlageGlas` im Zustand „laedt“).
  */
 export function WeinGlas({ farbe = null, groesse = 20, laedt = false }) {
   const clipId = sichereId('wein-glas', useId());
-  if (laedt) return <WeinGlasLaden groesse={groesse} />;
+  if (laedt) return <VorlageGlas zustand="laedt" groesse={groesse} />;
   return (
     <svg
       className="wein-glas"
