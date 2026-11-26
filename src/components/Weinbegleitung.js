@@ -1,5 +1,5 @@
 import React, { useId, useState } from 'react';
-import { WeinGlas, WeinSymbol, Gruende, sichereId } from './WeinbegleitungTeile';
+import { VorlageGlas, WeinSymbol, Gruende, sichereId } from './WeinbegleitungTeile';
 import { getStil, formatTemperatur } from '../utils/weinbegleitung/wissensbasis';
 import { beispieleFuerRegion } from '../utils/weinbegleitung/kulinarik';
 import {
@@ -89,7 +89,7 @@ export function WeinbegleitungUebersicht({ wein, icons = null }) {
   return (
     <section className="weinbegleitung-uebersicht" aria-label={t('weinbegleitung')}>
       <div className="weinbegleitung-kopf">
-        <WeinGlas farbe={snapshot ? 'rot' : null} laedt={Boolean(arbeit)} groesse={24} />
+        <VorlageGlas zustand={arbeit ? 'laedt' : snapshot ? 'voll' : 'leer'} groesse={24} />
         <div className="weinbegleitung-kopf-text">
           <h2 className="weinbegleitung-titel">{t('weinbegleitung')}</h2>
           <p className="weinbegleitung-zusammenfassung">{zusammenfassung(snapshot, t, sprache)}</p>
