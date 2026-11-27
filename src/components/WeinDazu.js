@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { WeinGlas, WeinSymbol, Gruende, sichereId } from './WeinbegleitungTeile';
+import { WeinGlas, VorlageGlas, WeinSymbol, Gruende, sichereId } from './WeinbegleitungTeile';
 import WeinprofilEinblick from './WeinprofilEinblick';
 import { canEditRecipes } from '../utils/userManagement';
 import { empfehlungFuerWeinprofil } from '../utils/weinbegleitung/engine';
@@ -317,7 +317,8 @@ function WeinDazu({ recipe, currentUser, isSharedView = false, icons = null }) {
           </span>
         ) : empfehlung.status === STATUS_OHNE_PROFIL ? (
           <button type="button" className="wein-dazu-chip wein-dazu-chip--leer" onClick={schaetzen}>
-            <WeinGlas groesse={20} />
+            {/* Leeres Glas nach Vorlage, gleiche Form und Größe wie die Ladeanimation danach */}
+            <VorlageGlas zustand="leer" groesse={22} />
             {t('weinFinden')}
           </button>
         ) : (

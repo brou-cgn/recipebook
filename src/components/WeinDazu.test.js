@@ -64,6 +64,22 @@ describe('WeinDazu ohne Profil', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
+  it('zeigt im Knopf das leere Glas nach Vorlage, beim Einschätzen dasselbe Glas als Animation', async () => {
+    generiereWeinprofile.mockReturnValue(new Promise(() => {}));
+    zeige({ recipe: REZEPT });
+
+    const knopf = screen.getByRole('button', { name: 'Passenden Wein finden' });
+    const glas = knopf.querySelector('svg.wein-glas--vorlage');
+    expect(glas).toHaveClass('wein-glas--leer');
+    expect(glas.getAttribute('width')).toBe('22');
+    expect(glas.querySelector('.wein-laden-welle')).toBeNull();
+
+    fireEvent.click(knopf);
+    const laden = screen.getByRole('status').querySelector('svg.wein-glas--vorlage');
+    expect(laden).toHaveClass('wein-glas--laedt');
+    expect(laden.getAttribute('width')).toBe('22');
+  });
+
   it('meldet das Tageslimit aus der Antwort', async () => {
     generiereWeinprofile.mockResolvedValue({ profile: {}, uebersprungen: [], fehlgeschlagen: ['r1'], fehlerGruende: { r1: 'tageslimit' } });
     zeige({ recipe: REZEPT });
