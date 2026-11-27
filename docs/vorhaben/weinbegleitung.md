@@ -189,7 +189,12 @@ Umsetzungsnotizen PR 3:
   ruhende Glas im Kopf der Menü-Weinbegleitung die neue Form (`VorlageGlas`, Zustände „leer“, „voll“, „laedt“):
   leer ohne, gefüllt mit Weinbegleitung, damit die Form beim Berechnen nicht wechselt. Die übrigen Gläser
   (Weinzeilen, Chip, Sheet, Seite „Weinbegleitung“) bleiben das dünne Konturglas. Test `WeinGlasLaden.test.js` (+4).
-  Stand: PR #3799 (offen, 26.11.2026).
+  Stand: PR #3799 (gemergt, Merge b3b1542).
+  Nachtrag 27.11.2026 (Eigentümer: „Im Zustand Wein nicht berechnet soll die Weinglasanimation im leeren
+  Weinglaszustand angezeigt werden“): Der Knopf „Passenden Wein finden“ (Rezept, `WeinDazu`, Status ohne Profil)
+  zeigt `VorlageGlas` im Zustand „leer“ in 22 px statt des Konturglases, also dieselbe Form und Größe wie die
+  Ladeanimation, die beim Antippen startet. Chip mit Ergebnis, Sheet und Weinzeilen bleiben beim Konturglas bzw.
+  den eingerichteten Icons. Test in `WeinDazu.test.js` (+1). Stand: Branch claude/sharp-ramanujan-24txoj (Commit 6d4b49d, noch kein PR).
 - Nachbesserung 14.11.2026: Ziehzone = Griff plus Titel (`touch-action: none`); ab 90 px oder mit Schwung
   (ab 30 px, 0,5 px/ms) schließt das Sheet und gleitet von der aktuellen Position nach unten, sonst federt es
   zurück. Der Griff ist ein Knopf „Schließen“ für Tastatur und Screenreader; das Antippen mit dem Finger
