@@ -194,7 +194,7 @@ Umsetzungsnotizen PR 3:
   Weinglaszustand angezeigt werden“): Der Knopf „Passenden Wein finden“ (Rezept, `WeinDazu`, Status ohne Profil)
   zeigt `VorlageGlas` im Zustand „leer“ in 22 px statt des Konturglases, also dieselbe Form und Größe wie die
   Ladeanimation, die beim Antippen startet. Chip mit Ergebnis, Sheet und Weinzeilen bleiben beim Konturglas bzw.
-  den eingerichteten Icons. Test in `WeinDazu.test.js` (+1). Stand: Branch claude/sharp-ramanujan-24txoj, noch kein PR.
+  den eingerichteten Icons. Test in `WeinDazu.test.js` (+1). Stand: Branch claude/sharp-ramanujan-24txoj (Commit 6d4b49d, noch kein PR).
 - Nachbesserung 14.11.2026: Ziehzone = Griff plus Titel (`touch-action: none`); ab 90 px oder mit Schwung
   (ab 30 px, 0,5 px/ms) schließt das Sheet und gleitet von der aktuellen Position nach unten, sonst federt es
   zurück. Der Griff ist ein Knopf „Schließen“ für Tastatur und Screenreader; das Antippen mit dem Finger
